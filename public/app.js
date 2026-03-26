@@ -483,13 +483,22 @@ async function commitSessionChange() {
     await persistSessionNow();
 }
 
+function autoResizeTextarea(el) {
+    if (!el || el.tagName !== 'TEXTAREA') return;
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+}
+
 function bindItemControls(scope = document) {
     scope.querySelectorAll('[data-checkbox], [data-text], [data-scene-text]').forEach((field) => {
         if (field.dataset.boundInput) return;
         field.dataset.boundInput = '1';
 
+        if (field.tagName === 'TEXTAREA') autoResizeTextarea(field);
+
         const eventName = field.matches('input[type="checkbox"]') ? 'change' : 'input';
         field.addEventListener(eventName, async () => {
+            if (field.tagName === 'TEXTAREA') autoResizeTextarea(field);
             await commitSessionChange();
         });
     });
@@ -538,6 +547,7 @@ function createSceneCard(sceneData = {}) {
         if (field.type === 'textarea') {
             input = document.createElement('textarea');
             input.className = 'field field--textarea';
+            input.rows = 1;
         } else {
             input = document.createElement('input');
             input.type = 'text';
@@ -612,6 +622,10 @@ function applySessionData(session) {
     const scenes = Array.isArray(data.scenes) ? data.scenes : [];
     scenes.forEach((scene) => createSceneCard(scene));
 
+    document.querySelectorAll('textarea').forEach(textarea => {
+        autoResizeTextarea(textarea);
+    });
+
     applyUiState(data.ui || {});
     updateDoneStates();
     updateProgress();
@@ -679,6 +693,7 @@ function clearCurrentSession() {
 
     document.querySelectorAll('[data-text], [data-scene-text]').forEach((field) => {
         field.value = '';
+        if (field.tagName === 'TEXTAREA') field.style.height = 'auto';
     });
 
     document.querySelectorAll('.todo-item, .todo-section').forEach((node) => {
