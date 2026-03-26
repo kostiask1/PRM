@@ -1,0 +1,23 @@
+{
+  "name": "dnd-session-manager",
+  "version": "1.0.0",
+  "description": "Local DnD campaign and session manager",
+  "main": "campaign_session_server.js",
+  "scripts": {
+    "start": "node campaign_session_server.js",
+    "dev": "node --watch campaign_session_server.js"
+  },
+  "keywords": [
+    "dnd",
+    "campaign",
+    "session",
+    "manager",
+    "node",
+    "express"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
