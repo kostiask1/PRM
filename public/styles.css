@@ -459,6 +459,16 @@ button.status-badge:hover {
   padding: 0;
 }
 
+.chevron-icon {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.is-collapsed .chevron-icon {
+  transform: rotate(180deg);
+}
+
 .icon-btn:hover {
   background: rgba(51, 65, 85, 0.95);
 }

@@ -425,8 +425,6 @@ function applyUiState(ui = {}) {
 
     document.querySelectorAll('.todo-section').forEach((section) => {
         section.classList.toggle('is-collapsed', Boolean(sections[section.dataset.sectionKey]));
-        const toggle = section.querySelector('[data-toggle-section]');
-        if (toggle) toggle.textContent = section.classList.contains('is-collapsed') ? '+' : '−';
     });
 }
 
@@ -505,7 +503,6 @@ function bindSectionControls() {
         button.addEventListener('click', async () => {
             const section = button.closest('.todo-section');
             section.classList.toggle('is-collapsed');
-            button.textContent = section.classList.contains('is-collapsed') ? '+' : '−';
             await commitSessionChange();
         });
     });
@@ -558,12 +555,10 @@ function createSceneCard(sceneData = {}) {
 
     if (sceneData.collapsed) {
         card.classList.add('is-collapsed');
-        toggleBtn.textContent = '+';
     }
 
     toggleBtn.addEventListener('click', async () => {
         card.classList.toggle('is-collapsed');
-        toggleBtn.textContent = card.classList.contains('is-collapsed') ? '+' : '−';
         await commitSessionChange();
     });
 
@@ -688,10 +683,6 @@ function clearCurrentSession() {
 
     document.querySelectorAll('.todo-item, .todo-section').forEach((node) => {
         node.classList.remove('is-collapsed');
-    });
-
-    document.querySelectorAll('[data-toggle-section]').forEach((button) => {
-        button.textContent = '−';
     });
 
     el.sceneList.innerHTML = '';

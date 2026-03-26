@@ -49,7 +49,7 @@ function sessionFileName(name) {
 }
 
 function campaignDir(slug) {
-  return path.join(CAMPAIGNS_DIR, slug);
+  return path.join(CAMPAIGNS_DIR, path.basename(slug));
 }
 
 function campaignMetaPath(slug) {
@@ -57,7 +57,7 @@ function campaignMetaPath(slug) {
 }
 
 function sessionPath(slug, fileName) {
-  return path.join(campaignDir(slug), 'sessions', fileName);
+  return path.join(campaignDir(slug), 'sessions', path.basename(fileName));
 }
 
 async function ensureDir(dirPath) {
@@ -80,7 +80,10 @@ async function readJson(filePath) {
 
 async function writeJson(filePath, value) {
   await ensureDir(path.dirname(filePath));
-  await fs.writeFile(filePath, JSON.stringify(value, null, 2), 'utf8');
+  // Atomic write: write to temp file then rename
+  const tempPath = `${filePath}.${crypto.randomBytes(4).toString('hex')}.tmp`;
+  await fs.writeFile(tempPath, JSON.stringify(value, null, 2), 'utf8');
+  await fs.rename(tempPath, filePath);
 }
 
 async function initStorage() {
@@ -110,39 +113,38 @@ async function listSessions(slug) {
     .map((entry) => entry.name)
     .sort();
 
-  const sessions = [];
-  for (const file of files) {
+  const sessionPromises = files.map(async (file) => {
     const data = await readSession(slug, file);
-    sessions.push({
+    return {
       id: data.id,
       name: data.name,
       fileName: file,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
       completed: Boolean(data.completed),
-    });
-  }
+    };
+  });
 
-  return sessions;
+  return Promise.all(sessionPromises);
 }
 
 async function listCampaignsDetailed() {
   const slugs = await listCampaignSlugs();
-  const result = [];
 
-  for (const slug of slugs) {
+  const campaignPromises = slugs.map(async (slug) => {
     const meta = await readCampaign(slug);
     const sessions = await listSessions(slug);
-    result.push({
+    return {
       slug,
       name: meta.name,
       completed: Boolean(meta.completed),
       createdAt: meta.createdAt,
       updatedAt: meta.updatedAt,
       sessionCount: sessions.length,
-    });
-  }
+    };
+  });
 
+  const result = await Promise.all(campaignPromises);
   return result.sort((a, b) => a.name.localeCompare(b.name, 'uk'));
 }
 
