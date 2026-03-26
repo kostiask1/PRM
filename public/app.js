@@ -690,7 +690,7 @@ function clearCurrentSession() {
         node.classList.remove('is-collapsed');
     });
 
-    document.querySelectorAll('[data-toggle-item], [data-toggle-section]').forEach((button) => {
+    document.querySelectorAll('[data-toggle-section]').forEach((button) => {
         button.textContent = '−';
     });
 
