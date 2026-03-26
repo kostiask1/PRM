@@ -91,7 +91,6 @@ button {
   border: 1px solid rgba(51, 65, 85, 0.7);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  overflow: hidden;
 }
 
 .panel__header {
@@ -101,14 +100,7 @@ button {
   align-items: flex-start;
   padding: 24px 24px 16px;
   border-bottom: 1px solid rgba(51, 65, 85, 0.45);
-}
-
-.panel__header--sticky {
-  position: sticky;
-  top: 0;
-  z-index: 20;
   background: rgba(17, 24, 39, 0.96);
-  backdrop-filter: blur(10px);
 }
 
 .panel__header h2,
@@ -256,9 +248,27 @@ button.status-badge:hover {
   text-align: center;
 }
 
+.editable-title {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: opacity 0.15s ease;
+}
+
+.editable-title:hover {
+  opacity: 0.85;
+}
+
+.editable-title::after {
+  content: "✎";
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
 .progress-toolbar {
   position: sticky;
-  top: 89px;
+  top: 0px;
   z-index: 15;
   background: rgba(17, 24, 39, 0.95);
   border-bottom: 1px solid rgba(51, 65, 85, 0.45);

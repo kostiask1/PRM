@@ -1,3 +1,48 @@
+function navigateTo(url) {
+    window.history.pushState({}, '', url);
+}
+
+function getRoute() {
+    const path = window.location.pathname;
+    const parts = path.split('/').filter(Boolean);
+
+    if (parts.length === 0) return { view: 'home' };
+
+    if (parts[0] === 'campaign' && parts[1] && !parts[2]) {
+        return { view: 'campaign', slug: decodeURIComponent(parts[1]) };
+    }
+
+    if (parts[0] === 'campaign' && parts[1] && parts[2] === 'session' && parts[3]) {
+        return {
+            view: 'session',
+            slug: decodeURIComponent(parts[1]),
+            fileName: decodeURIComponent(parts[3]),
+        };
+    }
+
+    return { view: 'home' };
+}
+
+async function handleRoute() {
+    const route = getRoute();
+
+    if (route.view === 'home') {
+        showEmptyView();
+        return;
+    }
+
+    if (route.view === 'campaign') {
+        await openCampaign(route.slug, false);
+        return;
+    }
+
+    if (route.view === 'session') {
+        await openCampaign(route.slug, false);
+        await openSession(route.slug, route.fileName, false);
+        return;
+    }
+}
+
 const api = {
     async request(path, options = {}) {
         const response = await fetch(path, {
@@ -387,6 +432,7 @@ function applyUiState(ui = {}) {
 
 async function persistSessionNow() {
     if (!state.activeCampaign || !state.activeSession || !state.activeSessionFileName) return;
+
     if (state.isSaving) {
         state.saveQueued = true;
         return;
@@ -404,10 +450,21 @@ async function persistSessionNow() {
         state.activeSession = updated;
         state.activeSessionFileName = updated.fileName;
         state.sessionDirty = false;
+
         el.sessionMeta.textContent = `Створено ${formatDate(updated.createdAt)} · Оновлено ${formatDate(updated.updatedAt)}`;
 
-        const previousCampaignSlug = state.activeCampaign.slug;
-        await openCampaign(previousCampaignSlug);
+        await loadCampaigns();
+        state.activeCampaign = state.campaigns.find(
+            (campaign) => campaign.slug === state.activeCampaign.slug
+        ) || state.activeCampaign;
+
+        if (state.activeCampaign) {
+            state.sessions = await api.listSessions(state.activeCampaign.slug);
+            renderCampaigns();
+            renderCampaignHeader();
+            renderSessions();
+        }
+
         showSessionView();
     } catch (error) {
         console.error(error);
@@ -590,7 +647,7 @@ async function loadCampaigns() {
     renderCampaigns();
 }
 
-async function openCampaign(slug) {
+async function openCampaign(slug, pushHistory = true) {
     const campaign = state.campaigns.find((item) => item.slug === slug);
     if (!campaign) return;
 
@@ -601,13 +658,23 @@ async function openCampaign(slug) {
     renderCampaignHeader();
     renderSessions();
     showCampaignView();
+
+    if (pushHistory) {
+        navigateTo(`/campaign/${encodeURIComponent(slug)}`);
+    }
 }
 
-async function openSession(slug, fileName) {
+async function openSession(slug, fileName, pushHistory = true) {
     const session = await api.getSession(slug, fileName);
     session.fileName = fileName;
     applySessionData(session);
     showSessionView();
+
+    if (pushHistory) {
+        navigateTo(
+            `/campaign/${encodeURIComponent(slug)}/session/${encodeURIComponent(fileName)}`
+        );
+    }
 }
 
 function clearCurrentSession() {
@@ -636,7 +703,7 @@ async function init() {
     bindItemControls(document);
 
     await loadCampaigns();
-    showEmptyView();
+    await handleRoute();
 
     el.createCampaignBtn.addEventListener('click', async () => {
         const name = promptRequired('Назва нової кампанії');
@@ -651,14 +718,16 @@ async function init() {
         }
     });
 
-    el.renameCampaignBtn.addEventListener('click', async () => {
+    el.campaignTitle.addEventListener('click', async () => {
         if (!state.activeCampaign) return;
 
         const name = promptRequired('Нова назва кампанії', state.activeCampaign.name);
         if (!name) return;
 
         try {
-            const updated = await api.updateCampaign(state.activeCampaign.slug, { name });
+            const oldSlug = state.activeCampaign.slug;
+            const updated = await api.updateCampaign(oldSlug, { name });
+
             await loadCampaigns();
             await openCampaign(updated.slug);
         } catch (error) {
@@ -724,10 +793,11 @@ async function init() {
     });
 
     el.backToCampaignBtn.addEventListener('click', async () => {
-        showCampaignView();
+        if (!state.activeCampaign) return;
+        await openCampaign(state.activeCampaign.slug);
     });
 
-    el.renameSessionBtn.addEventListener('click', async () => {
+    el.sessionTitle.addEventListener('click', async () => {
         if (!state.activeCampaign || !state.activeSession) return;
 
         const name = promptRequired('Нова назва сесії', state.activeSession.name);
@@ -740,8 +810,27 @@ async function init() {
                 data: buildSessionPayload(),
             });
 
-            applySessionData(updated);
-            await openCampaign(state.activeCampaign.slug);
+            state.activeSession = updated;
+            state.activeSessionFileName = updated.fileName;
+
+            el.sessionTitle.textContent = updated.name;
+            el.sessionMeta.textContent = `Створено ${formatDate(updated.createdAt)} · Оновлено ${formatDate(updated.updatedAt)}`;
+
+            window.history.replaceState(
+                {},
+                '',
+                `/campaign/${encodeURIComponent(state.activeCampaign.slug)}/session/${encodeURIComponent(updated.fileName)}`
+            );
+
+            await loadCampaigns();
+            state.activeCampaign = state.campaigns.find(
+                (campaign) => campaign.slug === state.activeCampaign.slug
+            ) || state.activeCampaign;
+
+            state.sessions = await api.listSessions(state.activeCampaign.slug);
+            renderCampaigns();
+            renderCampaignHeader();
+            renderSessions();
             showSessionView();
         } catch (error) {
             console.error(error);
@@ -817,6 +906,10 @@ async function init() {
         if (!state.sessionDirty || state.isSaving) return;
         event.preventDefault();
         event.returnValue = '';
+    });
+
+    window.addEventListener('popstate', async () => {
+        await handleRoute();
     });
 }
 

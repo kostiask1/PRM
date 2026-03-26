@@ -2,352 +2,371 @@
 <html lang="uk">
 
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>D&D Session Manager</title>
-  <link rel="stylesheet" href="/styles.css" />
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>D&D Session Manager</title>
+	<link rel="stylesheet" href="/styles.css" />
 </head>
 
 <body>
-  <div id="app" class="app-shell">
-    <aside class="sidebar">
-      <div class="sidebar__header">
-        <h1>D&D Session Manager</h1>
-        <p>Кампанії, сесії та планування в одному локальному проєкті.</p>
-      </div>
+	<div id="app" class="app-shell">
+		<aside class="sidebar">
+			<div class="sidebar__header">
+				<h1>D&D Session Manager</h1>
+				<p>Кампанії, сесії та планування в одному локальному проєкті.</p>
+			</div>
 
-      <div class="sidebar__section">
-        <div class="section-row">
-          <h2>Кампанії</h2>
-          <button id="createCampaignBtn" class="btn btn--primary" type="button">+ Кампанія</button>
-        </div>
-        <div id="campaignList" class="campaign-list"></div>
-      </div>
-    </aside>
+			<div class="sidebar__section">
+				<div class="section-row">
+					<h2>Кампанії</h2>
+					<button id="createCampaignBtn" class="btn btn--primary" type="button">+ Кампанія</button>
+				</div>
+				<div id="campaignList" class="campaign-list"></div>
+			</div>
+		</aside>
 
-    <main class="main-content">
-      <section id="campaignView" class="panel hidden">
-        <div class="panel__header">
-          <div>
-            <h2 id="campaignTitle">Кампанія</h2>
-            <p id="campaignMeta" class="muted"></p>
-          </div>
-          <div class="header-actions">
-            <button id="renameCampaignBtn" class="btn" type="button">Перейменувати</button>
-            <button id="toggleCampaignCompleteBtn" class="btn" type="button">Завершити</button>
-            <button id="deleteCampaignBtn" class="btn btn--danger" type="button">Видалити</button>
-          </div>
-        </div>
+		<main class="main-content">
+			<section id="campaignView" class="panel hidden">
+				<div class="panel__header">
+					<div>
+						<h2 id="campaignTitle" class="editable-title" title="Натисни, щоб перейменувати">Кампанія</h2>
+						<p id="campaignMeta" class="muted"></p>
+					</div>
+					<div class="header-actions">
+						<button id="toggleCampaignCompleteBtn" class="btn" type="button">Завершити</button>
+						<button id="deleteCampaignBtn" class="btn btn--danger" type="button">Видалити</button>
+					</div>
+				</div>
 
-        <div class="panel__body">
-          <div class="section-row">
-            <h3>Сесії</h3>
-            <button id="createSessionBtn" class="btn btn--primary" type="button">+ Сесія</button>
-          </div>
-          <div id="sessionList" class="session-list"></div>
-        </div>
-      </section>
+				<div class="panel__body">
+					<div class="section-row">
+						<h3>Сесії</h3>
+						<button id="createSessionBtn" class="btn btn--primary" type="button">+ Сесія</button>
+					</div>
+					<div id="sessionList" class="session-list"></div>
+				</div>
+			</section>
 
-      <section id="sessionView" class="panel hidden">
-        <div class="panel__header panel__header--sticky">
-          <div>
-            <button id="backToCampaignBtn" class="btn btn--ghost" type="button">← Назад до кампанії</button>
-            <h2 id="sessionTitle">Сесія</h2>
-            <p id="sessionMeta" class="muted"></p>
-          </div>
-          <div class="header-actions">
-            <button id="renameSessionBtn" class="btn" type="button">Перейменувати</button>
-            <button id="toggleSessionCompleteBtn" class="btn" type="button">Завершити</button>
-            <button id="deleteSessionBtn" class="btn btn--danger" type="button">Видалити</button>
-          </div>
-        </div>
+			<section id="sessionView" class="panel hidden">
+				<div class="panel__header">
+					<div>
+						<button id="backToCampaignBtn" class="btn btn--ghost" type="button">← Назад до кампанії</button>
+						<h2 id="sessionTitle" class="editable-title" title="Натисни, щоб перейменувати">Сесія</h2>
+						<p id="sessionMeta" class="muted"></p>
+					</div>
+					<div class="header-actions">
+						<button id="toggleSessionCompleteBtn" class="btn" type="button">Завершити</button>
+						<button id="deleteSessionBtn" class="btn btn--danger" type="button">Видалити</button>
+					</div>
+				</div>
 
-        <div class="progress-toolbar">
-          <div class="progress-wrap">
-            <div class="progress-label">
-              <span>Прогрес підготовки</span>
-              <span id="progressText">0 / 0</span>
-            </div>
-            <div class="progress-bar" aria-hidden="true">
-              <div class="progress-fill" id="progressFill"></div>
-            </div>
-          </div>
-        </div>
+				<div class="progress-toolbar">
+					<div class="progress-wrap">
+						<div class="progress-label">
+							<span>Прогрес підготовки</span>
+							<span id="progressText">0 / 0</span>
+						</div>
+						<div class="progress-bar" aria-hidden="true">
+							<div class="progress-fill" id="progressFill"></div>
+						</div>
+					</div>
+				</div>
 
-        <div class="panel__body">
-          <div class="button-group card-controls">
-            <button id="checkAllBtn" class="btn" type="button">Позначити все</button>
-            <button id="clearChecksBtn" class="btn" type="button">Очистити позначки</button>
-            <button id="clearSessionBtn" class="btn btn--danger" type="button">Очистити все</button>
-          </div>
+				<div class="panel__body">
+					<div class="button-group card-controls">
+						<button id="checkAllBtn" class="btn" type="button">Позначити все</button>
+						<button id="clearChecksBtn" class="btn" type="button">Очистити позначки</button>
+						<button id="clearSessionBtn" class="btn btn--danger" type="button">Очистити все</button>
+					</div>
 
-          <div class="todo-card">
-            <section class="todo-section" data-section-key="core">
-              <div class="todo-section__header">
-                <button class="icon-btn section-toggle" type="button" data-toggle-section>−</button>
-                <h3>1. Ядро сесії</h3>
-              </div>
-              <div class="todo-section__body checklist">
-                <label class="todo-item" data-item-key="session-goal">
-                  <input type="checkbox" data-checkbox="session-goal" />
-                  <div class="todo-item__content">
-                    <div class="todo-item__title-row">
-                      <div>
-                        <div class="todo-item__title">Визначити головну мету сесії</div>
-                        <div class="todo-item__note">Що саме має рухати події сьогодні.</div>
-                      </div>
-                      <button class="icon-btn item-toggle" type="button" data-toggle-item>−</button>
-                    </div>
-                    <textarea data-text="session-goal-text" class="field field--textarea"
-                      placeholder="Наприклад:&#10;Гравці повинні знайти зниклого мага.&#10;Паралельно вони мають вирішити, чи довіряти місцевому барону."></textarea>
-                  </div>
-                </label>
+					<div class="todo-card">
+						<section class="todo-section" data-section-key="core">
+							<div class="todo-section__header">
+								<button class="icon-btn section-toggle" type="button" data-toggle-section>−</button>
+								<h3>1. Ядро сесії</h3>
+							</div>
+							<div class="todo-section__body checklist">
+								<label class="todo-item" data-item-key="session-goal">
+									<input type="checkbox" data-checkbox="session-goal" />
+									<div class="todo-item__content">
+										<div class="todo-item__title-row">
+											<div>
+												<div class="todo-item__title">Визначити головну мету сесії</div>
+												<div class="todo-item__note">Що саме має рухати події сьогодні.</div>
+											</div>
+											<button class="icon-btn item-toggle" type="button"
+												data-toggle-item>−</button>
+										</div>
+										<textarea data-text="session-goal-text" class="field field--textarea"
+											placeholder="Наприклад:&#10;Гравці повинні знайти зниклого мага.&#10;Паралельно вони мають вирішити, чи довіряти місцевому барону."></textarea>
+									</div>
+								</label>
 
-                <label class="todo-item" data-item-key="main-conflict">
-                  <input type="checkbox" data-checkbox="main-conflict" />
-                  <div class="todo-item__content">
-                    <div class="todo-item__title-row">
-                      <div>
-                        <div class="todo-item__title">Сформулювати основний конфлікт</div>
-                        <div class="todo-item__note">Хто або що створює проблему для гравців.</div>
-                      </div>
-                      <button class="icon-btn item-toggle" type="button" data-toggle-item>−</button>
-                    </div>
-                    <input data-text="main-conflict-text" class="field" type="text"
-                      placeholder="Хто антагоніст або проблема" />
-                  </div>
-                </label>
+								<label class="todo-item" data-item-key="main-conflict">
+									<input type="checkbox" data-checkbox="main-conflict" />
+									<div class="todo-item__content">
+										<div class="todo-item__title-row">
+											<div>
+												<div class="todo-item__title">Сформулювати основний конфлікт</div>
+												<div class="todo-item__note">Хто або що створює проблему для гравців.
+												</div>
+											</div>
+											<button class="icon-btn item-toggle" type="button"
+												data-toggle-item>−</button>
+										</div>
+										<input data-text="main-conflict-text" class="field" type="text"
+											placeholder="Хто антагоніст або проблема" />
+									</div>
+								</label>
 
-                <label class="todo-item" data-item-key="key-scenes">
-                  <input type="checkbox" data-checkbox="key-scenes" />
-                  <div class="todo-item__content">
-                    <div class="todo-item__title-row">
-                      <div>
-                        <div class="todo-item__title">Підготувати 2–3 ключові сцени</div>
-                        <div class="todo-item__note">Не жорсткий сюжет, а сильні моменти, які можуть відбутися.</div>
-                      </div>
-                      <button class="icon-btn item-toggle" type="button" data-toggle-item>−</button>
-                    </div>
-                  </div>
-                </label>
-              </div>
-            </section>
+								<label class="todo-item" data-item-key="key-scenes">
+									<input type="checkbox" data-checkbox="key-scenes" />
+									<div class="todo-item__content">
+										<div class="todo-item__title-row">
+											<div>
+												<div class="todo-item__title">Підготувати 2–3 ключові сцени</div>
+												<div class="todo-item__note">Не жорсткий сюжет, а сильні моменти, які
+													можуть відбутися.</div>
+											</div>
+											<button class="icon-btn item-toggle" type="button"
+												data-toggle-item>−</button>
+										</div>
+									</div>
+								</label>
+							</div>
+						</section>
 
-            <section class="todo-section" data-section-key="scenes">
-              <div class="todo-section__header">
-                <button class="icon-btn section-toggle" type="button" data-toggle-section>−</button>
-                <h3>2. Сцени</h3>
-              </div>
-              <div class="todo-section__body">
-                <div class="section-row section-row--inside">
-                  <h4>Список сцен</h4>
-                  <button id="addSceneBtn" class="btn btn--primary" type="button">Додати сцену</button>
-                </div>
-                <div id="sceneList" class="scene-list"></div>
-              </div>
-            </section>
+						<section class="todo-section" data-section-key="scenes">
+							<div class="todo-section__header">
+								<button class="icon-btn section-toggle" type="button" data-toggle-section>−</button>
+								<h3>2. Сцени</h3>
+							</div>
+							<div class="todo-section__body">
+								<div class="section-row section-row--inside">
+									<h4>Список сцен</h4>
+									<button id="addSceneBtn" class="btn btn--primary" type="button">Додати
+										сцену</button>
+								</div>
+								<div id="sceneList" class="scene-list"></div>
+							</div>
+						</section>
 
-            <section class="todo-section" data-section-key="npcs">
-              <div class="todo-section__header">
-                <button class="icon-btn section-toggle" type="button" data-toggle-section>−</button>
-                <h3>3. NPC і фракції</h3>
-              </div>
-              <div class="todo-section__body checklist">
-                <label class="todo-item" data-item-key="npc-goals">
-                  <input type="checkbox" data-checkbox="npc-goals" />
-                  <div class="todo-item__content">
-                    <div class="todo-item__title-row">
-                      <div>
-                        <div class="todo-item__title">Дати важливим NPC чіткі цілі</div>
-                        <div class="todo-item__note">Кожен важливий NPC має чогось хотіти.</div>
-                      </div>
-                      <button class="icon-btn item-toggle" type="button" data-toggle-item>−</button>
-                    </div>
-                  </div>
-                </label>
+						<section class="todo-section" data-section-key="npcs">
+							<div class="todo-section__header">
+								<button class="icon-btn section-toggle" type="button" data-toggle-section>−</button>
+								<h3>3. NPC і фракції</h3>
+							</div>
+							<div class="todo-section__body checklist">
+								<label class="todo-item" data-item-key="npc-goals">
+									<input type="checkbox" data-checkbox="npc-goals" />
+									<div class="todo-item__content">
+										<div class="todo-item__title-row">
+											<div>
+												<div class="todo-item__title">Дати важливим NPC чіткі цілі</div>
+												<div class="todo-item__note">Кожен важливий NPC має чогось хотіти.</div>
+											</div>
+											<button class="icon-btn item-toggle" type="button"
+												data-toggle-item>−</button>
+										</div>
+									</div>
+								</label>
 
-                <label class="todo-item" data-item-key="npc-personality">
-                  <input type="checkbox" data-checkbox="npc-personality" />
-                  <div class="todo-item__content">
-                    <div class="todo-item__title-row">
-                      <div>
-                        <div class="todo-item__title">Записати короткі риси або манеру мови NPC</div>
-                        <div class="todo-item__note">Щоб їх було легко відігравати за столом.</div>
-                      </div>
-                      <button class="icon-btn item-toggle" type="button" data-toggle-item>−</button>
-                    </div>
-                  </div>
-                </label>
+								<label class="todo-item" data-item-key="npc-personality">
+									<input type="checkbox" data-checkbox="npc-personality" />
+									<div class="todo-item__content">
+										<div class="todo-item__title-row">
+											<div>
+												<div class="todo-item__title">Записати короткі риси або манеру мови NPC
+												</div>
+												<div class="todo-item__note">Щоб їх було легко відігравати за столом.
+												</div>
+											</div>
+											<button class="icon-btn item-toggle" type="button"
+												data-toggle-item>−</button>
+										</div>
+									</div>
+								</label>
 
-                <label class="todo-item" data-item-key="npc-reaction">
-                  <input type="checkbox" data-checkbox="npc-reaction" />
-                  <div class="todo-item__content">
-                    <div class="todo-item__title-row">
-                      <div>
-                        <div class="todo-item__title">Продумати реакцію NPC на дії гравців</div>
-                        <div class="todo-item__note">Хто допоможе, хто зрадить, хто втече.</div>
-                      </div>
-                      <button class="icon-btn item-toggle" type="button" data-toggle-item>−</button>
-                    </div>
-                  </div>
-                </label>
-              </div>
-            </section>
+								<label class="todo-item" data-item-key="npc-reaction">
+									<input type="checkbox" data-checkbox="npc-reaction" />
+									<div class="todo-item__content">
+										<div class="todo-item__title-row">
+											<div>
+												<div class="todo-item__title">Продумати реакцію NPC на дії гравців</div>
+												<div class="todo-item__note">Хто допоможе, хто зрадить, хто втече.</div>
+											</div>
+											<button class="icon-btn item-toggle" type="button"
+												data-toggle-item>−</button>
+										</div>
+									</div>
+								</label>
+							</div>
+						</section>
 
-            <section class="todo-section" data-section-key="content">
-              <div class="todo-section__header">
-                <button class="icon-btn section-toggle" type="button" data-toggle-section>−</button>
-                <h3>4. Контент сесії</h3>
-              </div>
-              <div class="todo-section__body checklist">
-                <label class="todo-item" data-item-key="social-scene">
-                  <input type="checkbox" data-checkbox="social-scene" />
-                  <div class="todo-item__content">
-                    <div class="todo-item__title-row">
-                      <div>
-                        <div class="todo-item__title">Підготувати соціальну сцену</div>
-                        <div class="todo-item__note">Переговори, допит, торг, суперечка або знайомство.</div>
-                      </div>
-                      <button class="icon-btn item-toggle" type="button" data-toggle-item>−</button>
-                    </div>
-                  </div>
-                </label>
+						<section class="todo-section" data-section-key="content">
+							<div class="todo-section__header">
+								<button class="icon-btn section-toggle" type="button" data-toggle-section>−</button>
+								<h3>4. Контент сесії</h3>
+							</div>
+							<div class="todo-section__body checklist">
+								<label class="todo-item" data-item-key="social-scene">
+									<input type="checkbox" data-checkbox="social-scene" />
+									<div class="todo-item__content">
+										<div class="todo-item__title-row">
+											<div>
+												<div class="todo-item__title">Підготувати соціальну сцену</div>
+												<div class="todo-item__note">Переговори, допит, торг, суперечка або
+													знайомство.</div>
+											</div>
+											<button class="icon-btn item-toggle" type="button"
+												data-toggle-item>−</button>
+										</div>
+									</div>
+								</label>
 
-                <label class="todo-item" data-item-key="exploration">
-                  <input type="checkbox" data-checkbox="exploration" />
-                  <div class="todo-item__content">
-                    <div class="todo-item__title-row">
-                      <div>
-                        <div class="todo-item__title">Підготувати сцену дослідження</div>
-                        <div class="todo-item__note">Локація, загадка, сліди, пошук або пастка.</div>
-                      </div>
-                      <button class="icon-btn item-toggle" type="button" data-toggle-item>−</button>
-                    </div>
-                  </div>
-                </label>
+								<label class="todo-item" data-item-key="exploration">
+									<input type="checkbox" data-checkbox="exploration" />
+									<div class="todo-item__content">
+										<div class="todo-item__title-row">
+											<div>
+												<div class="todo-item__title">Підготувати сцену дослідження</div>
+												<div class="todo-item__note">Локація, загадка, сліди, пошук або пастка.
+												</div>
+											</div>
+											<button class="icon-btn item-toggle" type="button"
+												data-toggle-item>−</button>
+										</div>
+									</div>
+								</label>
 
-                <label class="todo-item" data-item-key="combat">
-                  <input type="checkbox" data-checkbox="combat" />
-                  <div class="todo-item__content">
-                    <div class="todo-item__title-row">
-                      <div>
-                        <div class="todo-item__title">Підготувати бій або іншу сцену напруги</div>
-                        <div class="todo-item__note">Не обов’язково бій, але має бути ризик і тиск.</div>
-                      </div>
-                      <button class="icon-btn item-toggle" type="button" data-toggle-item>−</button>
-                    </div>
-                  </div>
-                </label>
+								<label class="todo-item" data-item-key="combat">
+									<input type="checkbox" data-checkbox="combat" />
+									<div class="todo-item__content">
+										<div class="todo-item__title-row">
+											<div>
+												<div class="todo-item__title">Підготувати бій або іншу сцену напруги
+												</div>
+												<div class="todo-item__note">Не обов’язково бій, але має бути ризик і
+													тиск.</div>
+											</div>
+											<button class="icon-btn item-toggle" type="button"
+												data-toggle-item>−</button>
+										</div>
+									</div>
+								</label>
 
-                <label class="todo-item" data-item-key="reward">
-                  <input type="checkbox" data-checkbox="reward" />
-                  <div class="todo-item__content">
-                    <div class="todo-item__title-row">
-                      <div>
-                        <div class="todo-item__title">Визначити нагороду</div>
-                        <div class="todo-item__note">Інформація, предмет, союзник, доступ до нової локації.</div>
-                      </div>
-                      <button class="icon-btn item-toggle" type="button" data-toggle-item>−</button>
-                    </div>
-                  </div>
-                </label>
-              </div>
-            </section>
+								<label class="todo-item" data-item-key="reward">
+									<input type="checkbox" data-checkbox="reward" />
+									<div class="todo-item__content">
+										<div class="todo-item__title-row">
+											<div>
+												<div class="todo-item__title">Визначити нагороду</div>
+												<div class="todo-item__note">Інформація, предмет, союзник, доступ до
+													нової локації.</div>
+											</div>
+											<button class="icon-btn item-toggle" type="button"
+												data-toggle-item>−</button>
+										</div>
+									</div>
+								</label>
+							</div>
+						</section>
 
-            <section class="todo-section" data-section-key="result">
-              <div class="todo-section__header">
-                <button class="icon-btn section-toggle" type="button" data-toggle-section>−</button>
-                <h3>5. Результат сесії</h3>
-              </div>
-              <div class="todo-section__body">
-                <div class="session-result">
-                  <label class="session-result__label" for="sessionResultText">Підсумок того, що реально відбулося на
-                    сесії</label>
-                  <textarea id="sessionResultText" data-text="session-result-text"
-                    class="field field--textarea field--result"
-                    placeholder="Наприклад:&#10;• Герої домовилися з бароном.&#10;• Знайшли вхід у катакомби.&#10;• Один NPC виявився зрадником.&#10;• На наступну сесію: дослідити нижній рівень."></textarea>
-                </div>
-              </div>
-            </section>
-          </div>
-        </div>
-      </section>
+						<section class="todo-section" data-section-key="result">
+							<div class="todo-section__header">
+								<button class="icon-btn section-toggle" type="button" data-toggle-section>−</button>
+								<h3>5. Результат сесії</h3>
+							</div>
+							<div class="todo-section__body">
+								<div class="session-result">
+									<label class="session-result__label" for="sessionResultText">Підсумок того, що
+										реально відбулося на
+										сесії</label>
+									<textarea id="sessionResultText" data-text="session-result-text"
+										class="field field--textarea field--result"
+										placeholder="Наприклад:&#10;• Герої домовилися з бароном.&#10;• Знайшли вхід у катакомби.&#10;• Один NPC виявився зрадником.&#10;• На наступну сесію: дослідити нижній рівень."></textarea>
+								</div>
+							</div>
+						</section>
+					</div>
+				</div>
+			</section>
 
-      <section id="emptyView" class="empty-state panel">
-        <h2>Обери кампанію або створи нову</h2>
-        <p>Зліва знаходиться меню кампаній. Після вибору відкриється список сесій і редактор підготовки.</p>
-      </section>
-    </main>
-  </div>
+			<section id="emptyView" class="empty-state panel">
+				<h2>Обери кампанію або створи нову</h2>
+				<p>Зліва знаходиться меню кампаній. Після вибору відкриється список сесій і редактор підготовки.</p>
+			</section>
+		</main>
+	</div>
 
-  <template id="campaignItemTemplate">
-    <article class="list-card campaign-card">
-      <button class="campaign-card__main" type="button" data-action="open-campaign">
-        <div class="list-card__title" data-role="campaign-name"></div>
-        <div class="list-card__meta" data-role="campaign-meta"></div>
-      </button>
-      <span class="status-badge" data-role="campaign-status"></span>
-    </article>
-  </template>
+	<template id="campaignItemTemplate">
+		<article class="list-card campaign-card">
+			<button class="campaign-card__main" type="button" data-action="open-campaign">
+				<div class="list-card__title" data-role="campaign-name"></div>
+				<div class="list-card__meta" data-role="campaign-meta"></div>
+			</button>
+			<span class="status-badge" data-role="campaign-status"></span>
+		</article>
+	</template>
 
-  <template id="sessionItemTemplate">
-    <article class="list-card session-card">
-      <button class="session-card__main" type="button" data-action="open-session">
-        <div class="list-card__title" data-role="session-name"></div>
-        <div class="list-card__meta" data-role="session-meta"></div>
-      </button>
+	<template id="sessionItemTemplate">
+		<article class="list-card session-card">
+			<button class="session-card__main" type="button" data-action="open-session">
+				<div class="list-card__title" data-role="session-name"></div>
+				<div class="list-card__meta" data-role="session-meta"></div>
+			</button>
 
-      <button class="status-badge" type="button" data-action="toggle-session-status"
-        data-role="session-status"></button>
+			<button class="status-badge" type="button" data-action="toggle-session-status"
+				data-role="session-status"></button>
 
-      <button class="icon-btn icon-btn--danger" type="button" data-action="delete-session" aria-label="Видалити сесію"
-        title="Видалити сесію">
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor"
-          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 6h18"></path>
-          <path d="M8 6V4h8v2"></path>
-          <path d="M19 6l-1 14H6L5 6"></path>
-          <path d="M10 11v6"></path>
-          <path d="M14 11v6"></path>
-        </svg>
-      </button>
-    </article>
-  </template>
+			<button class="icon-btn icon-btn--danger" type="button" data-action="delete-session"
+				aria-label="Видалити сесію" title="Видалити сесію">
+				<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor"
+					stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M3 6h18"></path>
+					<path d="M8 6V4h8v2"></path>
+					<path d="M19 6l-1 14H6L5 6"></path>
+					<path d="M10 11v6"></path>
+					<path d="M14 11v6"></path>
+				</svg>
+			</button>
+		</article>
+	</template>
 
-  <template id="sceneTemplate">
-    <section class="scene-card">
-      <div class="scene-card__header">
-        <div class="scene-card__header-left">
-          <button class="icon-btn scene-toggle" type="button" data-toggle-scene aria-label="Згорнути сцену">
-            −
-          </button>
-          <div>
-            <div class="scene-card__title">Сцена <span data-scene-number></span></div>
-            <div class="scene-card__note">
-              Окремий блок для сцени або вузла сюжету. Тут можна описати локацію, NPC, цілі, ставки,
-              підказки й ускладнення.
-            </div>
-          </div>
-        </div>
+	<template id="sceneTemplate">
+		<section class="scene-card">
+			<div class="scene-card__header">
+				<div class="scene-card__header-left">
+					<button class="icon-btn scene-toggle" type="button" data-toggle-scene aria-label="Згорнути сцену">
+						−
+					</button>
+					<div>
+						<div class="scene-card__title">Сцена <span data-scene-number></span></div>
+						<div class="scene-card__note">
+							Окремий блок для сцени або вузла сюжету. Тут можна описати локацію, NPC, цілі, ставки,
+							підказки й ускладнення.
+						</div>
+					</div>
+				</div>
 
-        <button class="icon-btn icon-btn--danger" type="button" data-remove-scene aria-label="Видалити сцену"
-          title="Видалити сцену">
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor"
-            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 6h18"></path>
-            <path d="M8 6V4h8v2"></path>
-            <path d="M19 6l-1 14H6L5 6"></path>
-            <path d="M10 11v6"></path>
-            <path d="M14 11v6"></path>
-          </svg>
-        </button>
-      </div>
+				<button class="icon-btn icon-btn--danger" type="button" data-remove-scene aria-label="Видалити сцену"
+					title="Видалити сцену">
+					<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor"
+						stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M3 6h18"></path>
+						<path d="M8 6V4h8v2"></path>
+						<path d="M19 6l-1 14H6L5 6"></path>
+						<path d="M10 11v6"></path>
+						<path d="M14 11v6"></path>
+					</svg>
+				</button>
+			</div>
 
-      <div class="scene-grid"></div>
-    </section>
-  </template>
+			<div class="scene-grid"></div>
+		</section>
+	</template>
 
-  <script src="/app.js" defer></script>
+	<script src="/app.js" defer></script>
 </body>
 
 </html>
