@@ -148,6 +148,63 @@ async function listCampaignsDetailed() {
   return result.sort((a, b) => a.name.localeCompare(b.name, 'uk'));
 }
 
+async function exportCampaignBundle(slug) {
+  const meta = await readCampaign(slug);
+  const sessionFiles = await listSessions(slug);
+  const sessions = await Promise.all(
+    sessionFiles.map(async (s) => {
+      const content = await readSession(slug, s.fileName);
+      return { fileName: s.fileName, content };
+    })
+  );
+  return { meta, sessions };
+}
+
+async function importCampaignBundle(bundle) {
+  const { meta, sessions } = bundle;
+  if (!meta || !meta.name) throw new Error('Невірний формат бандла');
+
+  const slug = await ensureUniqueCampaignSlug(campaignSlug(meta.name));
+  const now = new Date().toISOString();
+  
+  const newMeta = {
+    ...meta,
+    slug,
+    createdAt: meta.createdAt || now,
+    updatedAt: now
+  };
+
+  await ensureDir(path.join(campaignDir(slug), 'sessions'));
+  await writeJson(campaignMetaPath(slug), newMeta);
+
+  for (const session of sessions) {
+    const fileName = await ensureUniqueSessionFile(slug, session.content.name);
+    await writeJson(sessionPath(slug, fileName), {
+      ...session.content,
+      updatedAt: now
+    });
+  }
+  return newMeta;
+}
+
+app.get('/api/export-all', async (req, res, next) => {
+  try {
+    const slugs = await listCampaignSlugs();
+    const data = await Promise.all(slugs.map(slug => exportCampaignBundle(slug)));
+    res.json(data);
+  } catch (error) { next(error); }
+});
+
+app.post('/api/import-all', async (req, res, next) => {
+  try {
+    const bundles = Array.isArray(req.body) ? req.body : [req.body];
+    for (const bundle of bundles) {
+      await importCampaignBundle(bundle);
+    }
+    res.status(201).json({ ok: true });
+  } catch (error) { next(error); }
+});
+
 async function ensureUniqueCampaignSlug(baseSlug) {
   let slug = baseSlug;
   let counter = 2;
@@ -263,6 +320,14 @@ app.patch('/api/campaigns/:slug', async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+});
+
+app.get('/api/campaigns/:slug/export', async (req, res, next) => {
+  try {
+    const slug = req.params.slug;
+    const bundle = await exportCampaignBundle(slug);
+    res.json(bundle);
+  } catch (error) { next(error); }
 });
 
 app.delete('/api/campaigns/:slug', async (req, res, next) => {

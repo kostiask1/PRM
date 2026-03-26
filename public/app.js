@@ -83,6 +83,28 @@ const api = {
         });
     },
 
+    exportCampaign(slug) {
+        return this.request(`/api/campaigns/${encodeURIComponent(slug)}/export`);
+    },
+
+    importCampaign(bundle) {
+        return this.request('/api/campaigns/import-all', {
+            method: 'POST',
+            body: JSON.stringify(bundle),
+        });
+    },
+
+    exportAll() {
+        return this.request('/api/export-all');
+    },
+
+    importAll(data) {
+        return this.request('/api/import-all', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    },
+
     listSessions(slug) {
         return this.request(`/api/campaigns/${encodeURIComponent(slug)}/sessions`);
     },
@@ -230,6 +252,11 @@ const el = {
     renameSessionBtn: document.getElementById('renameSessionBtn'),
     toggleSessionCompleteBtn: document.getElementById('toggleSessionCompleteBtn'),
     deleteSessionBtn: document.getElementById('deleteSessionBtn'),
+    exportCampaignBtn: document.getElementById('exportCampaignBtn'),
+    importCampaignBtn: document.getElementById('importCampaignBtn'),
+    exportAllBtn: document.getElementById('exportAllBtn'),
+    importAllBtn: document.getElementById('importAllBtn'),
+    globalFileInput: document.getElementById('globalFileInput'),
     checkAllBtn: document.getElementById('checkAllBtn'),
     clearChecksBtn: document.getElementById('clearChecksBtn'),
     addSceneBtn: document.getElementById('addSceneBtn'),
@@ -250,6 +277,16 @@ function promptRequired(message, initialValue = '') {
     if (result === null) return null;
     const trimmed = result.trim();
     return trimmed || null;
+}
+
+function downloadJson(data, filename) {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
 }
 
 function showEmptyView() {
@@ -299,7 +336,7 @@ function renderCampaignHeader() {
     if (!state.activeCampaign) return;
     el.campaignTitle.textContent = state.activeCampaign.name;
     el.campaignMeta.textContent = `Створено ${formatDate(state.activeCampaign.createdAt)} · Оновлено ${formatDate(state.activeCampaign.updatedAt)}`;
-    el.toggleCampaignCompleteBtn.textContent = state.activeCampaign.completed
+    el.toggleCampaignCompleteBtn.querySelector('span').textContent = state.activeCampaign.completed
         ? 'Позначити активною'
         : 'Позначити завершеною';
 }
@@ -588,7 +625,7 @@ function applySessionData(session) {
 
     el.sessionTitle.textContent = session.name;
     el.sessionMeta.textContent = `Створено ${formatDate(session.createdAt)} · Оновлено ${formatDate(session.updatedAt)}`;
-    el.toggleSessionCompleteBtn.textContent = session.completed
+    el.toggleSessionCompleteBtn.querySelector('span').textContent = session.completed
         ? 'Позначити активною'
         : 'Позначити завершеною';
 
@@ -708,6 +745,60 @@ async function init() {
             console.error(error);
             window.alert(error.message || 'Не вдалося створити кампанію.');
         }
+    });
+
+    el.exportCampaignBtn.addEventListener('click', async () => {
+        if (!state.activeCampaign) return;
+        try {
+            const bundle = await api.exportCampaign(state.activeCampaign.slug);
+            downloadJson(bundle, `campaign-${state.activeCampaign.slug}.json`);
+        } catch (error) {
+            window.alert('Помилка експорту: ' + error.message);
+        }
+    });
+
+    el.exportAllBtn.addEventListener('click', async () => {
+        try {
+            const data = await api.exportAll();
+            downloadJson(data, `prm-full-backup-${todayString()}.json`);
+        } catch (error) {
+            window.alert('Помилка експорту БД: ' + error.message);
+        }
+    });
+
+    const handleImport = async (event, isFullDb = false) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (isFullDb) {
+                    await api.importAll(data);
+                } else {
+                    await api.importCampaign(data);
+                }
+                await loadCampaigns();
+                window.alert('Імпорт завершено успішно!');
+            } catch (error) {
+                window.alert('Помилка імпорту: ' + error.message);
+            } finally {
+                event.target.value = '';
+            }
+        };
+        reader.readAsText(file);
+    };
+
+    el.importCampaignBtn.addEventListener('click', () => {
+        el.globalFileInput.onchange = (e) => handleImport(e, false);
+        el.globalFileInput.click();
+    });
+
+    el.importAllBtn.addEventListener('click', () => {
+        if (!window.confirm('Імпортувати всі дані? Це додасть кампанії з файлу до вашого списку.')) return;
+        el.globalFileInput.onchange = (e) => handleImport(e, true);
+        el.globalFileInput.click();
     });
 
     el.campaignTitle.addEventListener('click', async () => {
