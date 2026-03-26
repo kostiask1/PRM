@@ -132,7 +132,7 @@ button {
 
 .section-row {
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .section-row h2,
@@ -274,6 +274,29 @@ button.status-badge:hover {
 #backToCampaignBtn {
   margin-bottom: 4px;
   align-self: flex-start;
+}
+
+#createCampaignBtn,
+#createSessionBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 60px;
+  background: rgba(56, 189, 248, 0.04);
+  border: 2px dashed rgba(56, 189, 248, 0.25);
+  color: var(--accent);
+  font-weight: 600;
+  transition: all 0.2s ease;
+  border-radius: 14px;
+}
+
+#createCampaignBtn:hover,
+#createSessionBtn:hover {
+  background: rgba(56, 189, 248, 0.08);
+  border-color: var(--accent);
+  transform: translateY(-2px);
 }
 
 .editable-title::after {
