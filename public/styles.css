@@ -358,6 +358,7 @@ button.status-badge:hover {
   gap: 12px;
   align-items: flex-start;
   padding: 14px 14px 14px 16px;
+  cursor: pointer;
 }
 
 .todo-item__content {
@@ -392,6 +393,7 @@ button.status-badge:hover {
   accent-color: var(--accent-2);
   margin-top: 2px;
   flex: 0 0 auto;
+  cursor: pointer;
 }
 
 .todo-item.is-done .todo-item__title,
@@ -413,6 +415,7 @@ button.status-badge:hover {
   padding: 10px 12px;
   outline: none;
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  cursor: text;
 }
 
 .field:hover {
