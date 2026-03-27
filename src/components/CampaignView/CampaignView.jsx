@@ -89,6 +89,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
     try {
       const newSession = await api.createSession(campaign.slug, name);
       setSessions([...sessions, newSession]);
+      onRefreshCampaigns();
     } catch (err) {
       modal.alert("Помилка", "Не вдалося створити сесію");
     }
@@ -124,6 +125,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
       await api.deleteSession(campaign.slug, session.fileName);
       const data = await api.listSessions(campaign.slug);
       setSessions(data);
+      onRefreshCampaigns();
     } catch (err) {
       modal.alert("Помилка", "Не вдалося видалити сесію");
     }
@@ -335,9 +337,6 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
           <h3>Сесії</h3>
         </div>
         <div className="CampaignView__sessions">
-          <Button variant="create" onClick={handleCreateSession} icon="plus" strokeWidth={2.5}>
-            Нова сесія
-          </Button>
           {sessions.map(session => (
             <ListCard
               key={session.fileName}
@@ -363,6 +362,9 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
               <div className="ListCard__meta">Оновлено: {new Date(session.updatedAt).toLocaleDateString()}</div>
             </ListCard>
           ))}
+          <Button variant="create" onClick={handleCreateSession} icon="plus" strokeWidth={2.5}>
+            Нова сесія
+          </Button>
         </div>
       </div> {/* Цей закриваючий div належить до Panel__body, який неявно є дітьми компонента Panel */}
     </Panel>
