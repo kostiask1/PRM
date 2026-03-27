@@ -99,6 +99,9 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
         <div className="Sidebar__headerSection">
           <h2 className="Sidebar__sectionTitle">Кампанії</h2>
         </div>
+        <Button variant="ghost" onClick={() => onSelectCampaign('bestiary')} icon="database" style={{ marginBottom: '12px', width: '100%', justifyContent: 'flex-start' }}>
+          Бестіарій (Монстри)
+        </Button>
         <Button variant="create" onClick={onCreateCampaign} icon="plus">
           Нова кампанія
         </Button>

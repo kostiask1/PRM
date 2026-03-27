@@ -1,0 +1,130 @@
+.Bestiary__search {
+    margin-bottom: 20px;
+}
+
+.Bestiary__content {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 24px;
+    height: calc(100% - 60px);
+}
+
+.Bestiary__list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+.Bestiary__details {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(51, 65, 85, 0.4);
+    border-radius: 12px;
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.Bestiary__header-row {
+    display: flex;
+    gap: 24px;
+    margin: 16px 0;
+}
+
+.Bestiary__token-wrapper {
+    flex-shrink: 0;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.2);
+    overflow: visible;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.Bestiary__token-skeleton {
+    color: rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.Bestiary__token {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 0.3s ease;
+    cursor: zoom-in;
+}
+
+.Bestiary__token-wrapper:hover .Bestiary__token {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 80vh;
+    height: 80vh;
+    transform: translate(-50%, -50%);
+    z-index: 9999;
+    pointer-events: none;
+    filter: drop-shadow(0 0 50px rgba(0, 0, 0, 0.9));
+}
+
+.Bestiary__stats {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+.Bestiary__abilities {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    text-align: center;
+    gap: 8px;
+    cursor: pointer;
+    margin-bottom: 20px;
+    font-weight: bold;
+    background: var(--accent-transparent, rgba(56, 189, 248, 0.1));
+    padding: 12px;
+    border-radius: 8px;
+    color: var(--accent);
+}
+
+.Bestiary__damage {
+    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 5px;
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.Bestiary__section {
+    margin-top: 20px;
+}
+
+.Bestiary__ability {
+    margin-bottom: 15px;
+}
+
+.Bestiary__ability strong {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.Bestiary__action-rolls {
+    display: flex;
+    gap: 16px;
+    margin-top: 4px;
+}
+
+.stat-item {
+    padding: 5px;
+}
+
+.stat-item RollDice {
+    margin-left: 4px;
+}

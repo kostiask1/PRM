@@ -111,21 +111,19 @@
 }
 
 .DiceCalculator__lastResult {
-    text-align: center;
+    display: flex; /* Використовуємо flexbox для центрування вмісту */
+    flex-direction: column; /* Розміщуємо елементи вертикально */
+    align-items: center; /* Центруємо по горизонталі */
+    justify-content: center; /* Центруємо по вертикалі */
+    height: 100%; /* Займаємо всю доступну висоту */
 }
 
-.DiceCalculator__resultHeader {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin-bottom: 2px;
-}
-
-.DiceCalculator__formulaLabel {
-    font-size: 0.75rem;
-    color: var(--muted);
-    margin: 0;
+.DiceCalculator__totalValue-container {
+    position: relative; /* Для абсолютного позиціонування середнього значення */
+    display: inline-flex; /* Щоб контейнер займав лише необхідну ширину */
+    align-items: center; /* Вирівнюємо елементи по центру вертикалі */
+    justify-content: center; /* Центруємо основне значення кидка */
+    margin-top: 4px; /* Невеликий відступ від формули */
 }
 
 .DiceCalculator__totalValue {
@@ -134,18 +132,29 @@
     color: var(--accent);
 }
 
-.DiceCalculator__currentFormula {
-    min-height: 40px;
-    padding: 8px 12px;
-    background: rgba(2, 6, 23, 0.4);
-    border-radius: 8px;
-    font-size: 0.85rem;
-    color: var(--text-bright);
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px dashed rgba(51, 65, 85, 0.5);
+/* Видалено дублюючий блок .DiceCalculator__totalValue */
+
+.DiceCalculator__formulaLabel {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin: 0;
+}
+
+.DiceCalculator__totalValue {
+    /* Цей клас тепер застосовується до span всередині контейнера */
+    /* Властивості font-size, font-weight, color вже визначені вище */
+}
+
+.DiceCalculator__averageValue {
+    font-size: 1.1rem;
+    color: var(--muted);
+    font-weight: 400;
+    position: absolute; /* Абсолютне позиціонування відносно .DiceCalculator__totalValue-container */
+    left: 100%; /* Розміщуємо праворуч від основного значення */
+    top: 50%; /* Центруємо по вертикалі */
+    transform: translateY(-50%); /* Коригуємо для точного вертикального центрування */
+    white-space: nowrap; /* Запобігаємо переносу тексту */
+    margin-left: 8px; /* Відступ між основним та середнім значенням */
 }
 
 .DiceCalculator__group {
@@ -166,6 +175,10 @@
     font-size: 0.85rem;
     color: var(--muted);
     white-space: nowrap;
+}
+
+.DiceCalculator__manual {
+    margin-bottom: 12px;
 }
 
 .DiceCalculator__actions {

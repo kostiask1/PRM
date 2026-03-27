@@ -10,6 +10,7 @@ export default function DiceCalculator() {
     const [formula, setFormula] = useState([]); // [{type: 'die', value: 20}]
     const [modifier, setModifier] = useState(0);
     const [lastResult, setLastResult] = useState(null);
+    const [manualInput, setManualInput] = useState('');
 
     const diceTypes = [4, 6, 8, 10, 12, 20, 100];
 
@@ -19,6 +20,7 @@ export default function DiceCalculator() {
         const cleanStr = str.toLowerCase().replace(/\s+/g, '');
         const parts = cleanStr.split('+');
         let total = 0;
+        let averageTotal = 0;
         const details = [];
         const formulaParts = [];
 
@@ -31,6 +33,7 @@ export default function DiceCalculator() {
                 for (let i = 0; i < count; i++) {
                     const roll = Math.floor(Math.random() * sides) + 1;
                     dieTotal += roll;
+                    averageTotal += (sides + 1) / 2;
                     details.push({ val: roll, max: sides });
                 }
                 total += dieTotal;
@@ -39,6 +42,7 @@ export default function DiceCalculator() {
                 const num = parseInt(part);
                 if (!isNaN(num)) {
                     total += num;
+                    averageTotal += num;
                     details.push({ val: num, max: null });
                     formulaParts.push(num);
                 }
@@ -47,9 +51,10 @@ export default function DiceCalculator() {
 
         const entry = {
             id: Date.now(),
-            formula: formulaParts.join(' + '),
+            formula: formulaParts.join(' + ').replace(/\+\s-/g, '- '),
             breakdown: details,
-            total: total
+            total: total,
+            average: Math.floor(averageTotal)
         };
 
         setLastResult(entry);
@@ -72,89 +77,54 @@ export default function DiceCalculator() {
 
     const addToFormula = (type, value) => {
         if (type === 'die') {
-            if (lastResult) {
-                setLastResult(null); // Очищуємо попередній результат
-                setFormula([]); // Очищуємо формулу
-                setModifier(0); // Очищуємо модифікатор
+            if (lastResult) { // Якщо був попередній кидок, очищуємо все для нової формули
+                setLastResult(null);
+                setManualInput('');
+                setModifier(0);
             }
-            setFormula(prev => [...prev, { type, value }]);
+            setManualInput(prev => {
+                const currentInput = prev.trim();
+                if (currentInput === '' || currentInput.match(/(\D)$/)) { // Якщо порожньо або закінчується не цифрою/кубиком
+                    return `${currentInput}d${value}`;
+                }
+                return `${currentInput}+d${value}`; // Додаємо через '+'
+            });
         }
     };
 
     const clearFormula = () => {
-        setFormula([]);
+        setManualInput('');
         setModifier(0);
+        setLastResult(null);
     };
 
     const executeRoll = () => {
-        if (formula.length === 0 && modifier === 0) return;
-
-        let total = 0;
-        const details = [];
-        const diceCounts = {};
-
-        formula.forEach(item => {
-            diceCounts[item.value] = (diceCounts[item.value] || 0) + 1;
-            const roll = Math.floor(Math.random() * item.value) + 1;
-            total += roll;
-            details.push({ val: roll, max: item.value });
-        });
-
-        const formulaParts = Object.entries(diceCounts).map(([sides, count]) =>
-            `${count > 1 ? count : ''}d${sides}`
-        );
-
-        if (modifier !== 0) {
-            total += parseInt(modifier);
-            details.push({ val: parseInt(modifier), max: null });
-            formulaParts.push(modifier);
+        const trimmedInput = manualInput.trim();
+        if (trimmedInput) {
+            parseAndRoll(trimmedInput);
         }
-
-        const rollEntry = {
-            id: Date.now(),
-            formula: formulaParts.join(' + '),
-            breakdown: details,
-            total: total
-        };
-
-        setLastResult(rollEntry);
-        setHistory(prev => [rollEntry, ...prev].slice(0, 10)); // Тримаємо останні 10 кидків
     };
 
     const clearHistory = () => {
         setHistory([]);
         setLastResult(null);
     };
-
-    const currentFormulaString = formula.length > 0
-        ? formula.map(i => i.type === 'die' ? `d${i.value}` : i.value).join(' + ')
-        : 'Кидок...';
-
-    const renderBreakdown = (breakdown) => {
+    
+    const renderBreakdown = useCallback((breakdown) => {
         if (!Array.isArray(breakdown)) return breakdown;
         return breakdown.map((item, idx) => {
             const isMin = item.max && item.val === 1;
             const isMax = item.max && item.val === item.max;
             const className = isMin ? 'dice-min' : isMax ? 'dice-max' : '';
+            const sign = idx > 0 && item.val >= 0 ? ' + ' : '';
             
             return (
                 <React.Fragment key={idx}>
-                    <span className={className}>{item.val}</span>
-                    {idx < breakdown.length - 1 ? ' + ' : ''}
+                    {sign}<span className={className}>{item.val}</span>
                 </React.Fragment>
             );
         });
-    };
-
-    const displayFormula = formula.length > 0 || modifier !== 0
-        ? (() => {
-            const diceCounts = {};
-            formula.forEach(i => diceCounts[i.value] = (diceCounts[i.value] || 0) + 1);
-            const parts = Object.entries(diceCounts).map(([sides, count]) => `${count > 1 ? count : ''}d${sides}`);
-            if (modifier !== 0) parts.push(modifier);
-            return parts.join(' + ');
-        })()
-        : '';
+    }, []);
 
     return (
         <div className={`DiceCalculator ${isOpen ? 'is-open' : ''}`}>
@@ -171,15 +141,31 @@ export default function DiceCalculator() {
                                 <div className="DiceCalculator__formulaLabel">
                                     {lastResult.formula} ({renderBreakdown(lastResult.breakdown)})
                                 </div>
-                                <div className="DiceCalculator__totalValue">{lastResult.total}</div>
+                                <div className="DiceCalculator__totalValue-container">
+                                    <span className="DiceCalculator__totalValue">
+                                        {lastResult.total}
+                                    </span>
+                                    {lastResult.average !== undefined && (
+                                        <span className="DiceCalculator__averageValue">({lastResult.average})</span>
+                                    )}
+                                </div>
                             </div>
                         ) : (
                             <div className="DiceCalculator__placeholder">Очікування...</div>
                         )}
                     </div>
 
-                    <div className="DiceCalculator__currentFormula">
-                        {displayFormula}
+                    <div className="DiceCalculator__manual">
+                        <Input
+                            placeholder="Формула (напр. 1d12+5)"
+                            value={manualInput}
+                            onChange={(e) => setManualInput(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && manualInput.trim()) {
+                                    parseAndRoll(manualInput);
+                                }
+                            }}
+                        />
                     </div>
 
                     <div className="DiceCalculator__controls">
@@ -196,23 +182,13 @@ export default function DiceCalculator() {
                             ))}
                         </div>
                     </div>
-
-                    <div className="DiceCalculator__modifier">
-                        <label>Бонус:</label>
-                        <Input
-                            type="number"
-                            value={modifier}
-                            onChange={(e) => setModifier(parseInt(e.target.value) || 0)}
-                        />
-                    </div>
-
                     <div className="DiceCalculator__actions">
                         <Button variant="danger" size="small" onClick={clearFormula}>Clear</Button>
                         <Button
                             variant="primary"
                             className="DiceCalculator__rollBtn"
                             onClick={executeRoll}
-                            disabled={formula.length === 0}
+                            disabled={!manualInput.trim()}
                         >
                             ROLL
                         </Button>

@@ -1,8 +1,13 @@
 import React from 'react';
 import CampaignView from './CampaignView/CampaignView';
 import SessionView from './SessionView/SessionView';
+import Bestiary from './Bestiary/Bestiary';
 
 export default function MainContent({ campaign, activeSessionId, onSelectSession, onRefreshCampaigns, onNavigate, modal, onRollDice }) {
+  if (window.location.pathname === '/bestiary') {
+    return <main className="MainContent"><Bestiary /></main>;
+  }
+
   if (!campaign) {
     return (
       <main className="MainContent">

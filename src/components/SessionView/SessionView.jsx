@@ -130,7 +130,7 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
                             <Button variant="ghost" size="small" onClick={onBack} icon="back" className="SessionView__backBtn" />
                             <h2 className="editable-title" onClick={handleRename}>{session.name}</h2>
                         </div>
-                        <p className="muted" style={{ fontSize: '0.85rem' }}>
+                        <p className="muted">
                             {isSaving ? 'Зберігання...' : 'Всі зміни збережено'}
                         </p>
                     </div>
@@ -206,7 +206,7 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
                             >
                                 {SCENE_SCHEMA.map(field => (
                                     <div key={field.key} className="TodoItem__content">
-                                        <div className="TodoItem__title" style={{ fontSize: '0.85rem' }}>{field.title}</div>
+                                        <div className="TodoItem__title">{field.title}</div>
                                         <Input
                                             type={field.type}
                                             rows="1"
@@ -222,7 +222,7 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
                     </TodoSection>
 
                     <TodoSection title="3. Результат сесії">
-                        <div className="TodoItem__note" style={{ marginBottom: '8px' }}>
+                        <div className="TodoItem__note">
                             Запиши короткий підсумок того, що реально відбулося.
                         </div>
                         <Input
@@ -270,7 +270,7 @@ function TodoItem({ title, note, checked, onChange, children }) {
 function SceneCard({ number, onRemove, collapsed, onToggle, children }) {
     return (
         <div className="SceneCard">
-            <div className="SceneCard__header" onClick={onToggle} style={{ cursor: 'pointer' }}>
+            <div className="SceneCard__header" onClick={onToggle}>
                 <div className="SceneCard__titleGroup">
                     <div className="SceneCard__toggle">
                         <Icon name="chevron" className={collapsed ? 'Icon--rotated' : ''} />

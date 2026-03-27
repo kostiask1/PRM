@@ -22,6 +22,8 @@ export default function App() {
       if (parts[2] === 'session' && parts[3]) {
         session = decodeURIComponent(parts[3]);
       }
+    } else if (parts[0] === 'bestiary') {
+      campaign = 'bestiary';
     }
     return { campaign, session };
   };
@@ -83,11 +85,13 @@ export default function App() {
     setActiveSessionFileName(fileName);
 
     let url = '/';
-    if (slug) {
+    if (slug && slug !== 'bestiary') {
       url = `/campaign/${encodeURIComponent(slug)}`;
       if (fileName) {
         url += `/session/${encodeURIComponent(fileName)}`;
       }
+    } else if (slug === 'bestiary') {
+      url = '/bestiary';
     }
 
     if (replace) window.history.replaceState({}, '', url);
