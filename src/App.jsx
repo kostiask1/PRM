@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import MainContent from './components/MainContent';
+import Modal from './components/Modal';
 import { api } from './api';
 
 /**
@@ -28,6 +29,29 @@ export default function App() {
   const [campaigns, setCampaigns] = useState([]);
   const [activeCampaignSlug, setActiveCampaignSlug] = useState(initialRoute.campaign);
   const [activeSessionFileName, setActiveSessionFileName] = useState(initialRoute.session);
+
+  // Modal State
+  const [modalConfig, setModalConfig] = useState(null);
+
+  const showModal = (config) => {
+    return new Promise((resolve) => {
+      setModalConfig({
+        ...config,
+        onConfirm: (value) => {
+          setModalConfig(null);
+          resolve(value);
+        },
+        onCancel: config.isAlert ? null : () => {
+          setModalConfig(null);
+          resolve(null);
+        }
+      });
+    });
+  };
+
+  const alert = (title, message) => showModal({ title, message, type: 'error', isAlert: true });
+  const confirm = (title, message) => showModal({ title, message, type: 'error' });
+  const prompt = (title, message, defaultValue = '') => showModal({ title, message, type: 'confirm', showInput: true, defaultValue });
 
   const loadCampaigns = async () => {
     try {
@@ -87,13 +111,14 @@ export default function App() {
         activeCampaignId={activeCampaignSlug}
         onSelectCampaign={(slug) => navigate(slug)}
         onCreateCampaign={async () => {
-            const name = window.prompt("Назва нової кампанії:");
+            const name = await prompt("Нова кампанія", "Введіть назву для вашої пригоди:");
             if (name) {
               await api.createCampaign(name);
               await loadCampaigns();
             }
         }}
         onToggleCampaignStatus={handleToggleCampaignStatus}
+        modal={{ alert, confirm, prompt }}
       />
       <MainContent 
         campaign={activeCampaign}
@@ -101,7 +126,10 @@ export default function App() {
         onSelectSession={(fileName) => navigate(activeCampaignSlug, fileName)}
         onRefreshCampaigns={loadCampaigns}
         onNavigate={navigate}
+        modal={{ alert, confirm, prompt }}
       />
+
+      {modalConfig && <Modal {...modalConfig} />}
     </div>
   );
 }

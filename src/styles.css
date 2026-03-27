@@ -729,3 +729,65 @@ button.status-badge:hover {
   width: 18px;
   height: 18px;
 }
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(2, 6, 23, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: 100%;
+  max-width: 450px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  animation: slideUp 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.1);
+}
+
+.modal--error { border-color: rgba(239, 68, 68, 0.5); }
+.modal--confirm { border-color: rgba(56, 189, 248, 0.5); }
+
+.modal-card__header {
+  padding: 20px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+}
+
+.modal-card__header h3 { margin: 0; font-size: 1.2rem; }
+.modal-close { background: none; border: none; color: var(--muted); font-size: 1.8rem; line-height: 1; }
+
+.modal-card__body { padding: 24px; }
+.modal-card__body p { margin: 0 0 16px; line-height: 1.5; color: var(--text); }
+
+.modal-card__footer {
+  padding: 16px 24px;
+  background: rgba(15, 23, 42, 0.4);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}

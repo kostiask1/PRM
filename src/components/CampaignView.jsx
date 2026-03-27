@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
 
-export default function CampaignView({ campaign, onSelectSession, onNavigate, onRefreshCampaigns }) {
+export default function CampaignView({ campaign, onSelectSession, onNavigate, onRefreshCampaigns, modal }) {
   const [sessions, setSessions] = useState([]);
   const [draggingFileName, setDraggingFileName] = useState(null);
 
@@ -18,48 +18,48 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
   }, [campaign.slug]);
 
   const handleCreateSession = async () => {
-    const name = window.prompt("Назва нової сесії:");
-    if (!name) return;
+    const name = await modal.prompt("Нова сесія", "Введіть назву або залиште порожнім для поточної дати:");
+    if (name === null) return;
     try {
       const newSession = await api.createSession(campaign.slug, name);
       setSessions([...sessions, newSession]);
     } catch (err) {
-      alert("Помилка створення сесії");
+      modal.alert("Помилка", "Не вдалося створити сесію");
     }
   };
 
   const handleDeleteCampaign = async () => {
-    if (!window.confirm("Видалити цю кампанію? Усі сесії будуть втрачені.")) return;
+    if (!(await modal.confirm("Видалення кампанії", "Усі сесії цієї кампанії будуть втрачені назавжди. Продовжити?"))) return;
     try {
       await api.deleteCampaign(campaign.slug);
       onNavigate(null); // Повертаємось на головну
       onRefreshCampaigns();
     } catch (err) {
-      alert("Помилка видалення");
+      modal.alert("Помилка", "Не вдалося видалити кампанію");
     }
   };
 
   const handleRename = async () => {
-    const name = window.prompt("Нова назва кампанії:", campaign.name);
+    const name = await modal.prompt("Перейменування", "Вкажіть нову назву кампанії:", campaign.name);
     if (name && name !== campaign.name) {
       try {
         const updated = await api.updateCampaign(campaign.slug, { name });
         await onRefreshCampaigns(); // Спочатку оновлюємо список кампаній
         onNavigate(updated.slug, null, true); // Потім переходимо за новим посиланням
       } catch (err) {
-        alert("Помилка перейменування");
+        modal.alert("Помилка", "Не вдалося перейменувати кампанію");
       }
     }
   };
 
   const handleDeleteSession = async (session) => {
-    if (!window.confirm(`Видалити сесію "${session.name}"?`)) return;
+    if (!(await modal.confirm("Видалення сесії", `Ви дійсно хочете видалити сесію "${session.name}"?`))) return;
     try {
       await api.deleteSession(campaign.slug, session.fileName);
       const data = await api.listSessions(campaign.slug);
       setSessions(data);
     } catch (err) {
-      alert("Помилка видалення сесії");
+      modal.alert("Помилка", "Не вдалося видалити сесію");
     }
   };
 
@@ -84,7 +84,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      alert("Помилка експорту: " + err.message);
+      modal.alert("Помилка експорту", err.message);
     }
   };
 

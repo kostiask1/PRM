@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { api } from '../api';
 
-export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign, onCreateCampaign, onToggleCampaignStatus }) {
+export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign, onCreateCampaign, onToggleCampaignStatus, modal }) {
   const fileInputRef = useRef(null);
   
   // Локальний стан для миттєвого відображення змін черги
@@ -40,7 +40,7 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
         }
         window.location.reload();
       } catch (error) {
-        alert('Помилка імпорту: ' + error.message);
+        modal.alert('Помилка імпорту', error.message);
       }
     };
     reader.readAsText(file);
@@ -159,13 +159,13 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
               const data = await api.exportAll();
               downloadJson(data, `prm-full-backup-${new Date().toISOString().slice(0, 10)}.json`);
             } catch (err) {
-              alert("Помилка бекапу: " + (err.message || "Невідома помилка"));
+              modal.alert("Помилка бекапу", err.message || "Невідома помилка");
             }
           }}>
             <span>Бекап</span>
           </button>
-          <button className="btn btn--footer btn--small" onClick={() => {
-            if (window.confirm('Імпортувати всі дані? Це додасть кампанії з файлу до вашого списку.')) {
+          <button className="btn btn--footer btn--small" onClick={async () => {
+            if (await modal.confirm('Відновлення бази', 'Імпортувати всі дані? Це додасть кампанії з файлу до вашого списку.')) {
               importMode.current = 'all';
               fileInputRef.current.click();
             }

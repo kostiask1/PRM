@@ -10,7 +10,7 @@ const SCENE_SCHEMA = [
   { key: 'clues', title: 'Підказки', type: 'textarea', placeholder: 'Інформація, яку отримають гравці...' },
 ];
 
-export default function SessionView({ campaignSlug, sessionId, onBack, onNavigate, onRefreshCampaigns }) {
+export default function SessionView({ campaignSlug, sessionId, onBack, onNavigate, onRefreshCampaigns, modal }) {
   const [session, setSession] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const saveTimeout = useRef(null);
@@ -85,8 +85,8 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
     updateData('scenes', scenes);
   };
 
-  const removeScene = (sceneId) => {
-    if (!window.confirm("Видалити цю сцену?")) return;
+  const removeScene = async (sceneId) => {
+    if (!(await modal.confirm("Видалення сцени", "Ви впевнені, що хочете видалити цю сцену?"))) return;
     updateData('scenes', session.data.scenes.filter(s => s.id !== sceneId), true);
   };
 
@@ -105,7 +105,7 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
   const progress = Math.round((completedChecks / totalChecks) * 100);
 
   const handleRename = async () => {
-    const name = window.prompt("Нова назва сесії:", session.name);
+    const name = await modal.prompt("Перейменування", "Введіть нову назву сесії:", session.name);
     if (name && name !== session.name) updateSession({ name }, true);
   };
 
@@ -130,7 +130,7 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
             {session.completed ? 'Відновити' : 'Завершити'}
           </button>
           <button className="icon-btn icon-btn--danger" onClick={async () => {
-            if (window.confirm(`Видалити сесію "${session.name}"?`)) {
+            if (await modal.confirm("Видалення сесії", `Видалити сесію "${session.name}"?`)) {
               await api.deleteSession(campaignSlug, sessionId);
               onBack();
               onRefreshCampaigns();
