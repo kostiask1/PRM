@@ -4,8 +4,9 @@
   "description": "Local DnD campaign and session manager",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
+    "start": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "node --watch --watch-path=server.js server.js",
+    "client": "vite"
   },
   "keywords": [
     "dnd",
@@ -18,6 +19,13 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "concurrently": "^8.2.2",
+    "vite": "^5.4.2"
   }
 }

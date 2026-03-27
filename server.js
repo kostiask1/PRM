@@ -4,7 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 const ROOT_DIR = __dirname;
 const PUBLIC_DIR = path.join(ROOT_DIR, 'public');
@@ -13,8 +13,6 @@ const CAMPAIGNS_DIR = path.join(DATA_DIR, 'campaigns');
 
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
-
-app.use(express.static(PUBLIC_DIR));
 
 function todayString() {
   return new Date().toISOString().slice(0, 10);
@@ -78,12 +76,29 @@ async function readJson(filePath) {
   return JSON.parse(raw);
 }
 
+/**
+ * Safe rename with retries for Windows/OneDrive environments
+ */
+async function renameWithRetry(oldPath, newPath, retries = 3, delay = 50) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      await fs.rename(oldPath, newPath);
+      return;
+    } catch (err) {
+      const isLocked = ['EPERM', 'EBUSY'].includes(err.code);
+      if (isLocked && i < retries - 1) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
 async function writeJson(filePath, value) {
   await ensureDir(path.dirname(filePath));
-  // Atomic write: write to temp file then rename
-  const tempPath = `${filePath}.${crypto.randomBytes(4).toString('hex')}.tmp`;
-  await fs.writeFile(tempPath, JSON.stringify(value, null, 2), 'utf8');
-  await fs.rename(tempPath, filePath);
+  const content = JSON.stringify(value, null, 2);
+  await fs.writeFile(filePath, content, 'utf8');
 }
 
 async function initStorage() {
@@ -122,10 +137,12 @@ async function listSessions(slug) {
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
       completed: Boolean(data.completed),
+      order: data.order || 0,
     };
   });
 
-  return Promise.all(sessionPromises);
+  const result = await Promise.all(sessionPromises);
+  return result.sort((a, b) => (a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name, 'uk'));
 }
 
 async function listCampaignsDetailed() {
@@ -138,6 +155,7 @@ async function listCampaignsDetailed() {
       slug,
       name: meta.name,
       completed: Boolean(meta.completed),
+      order: meta.order || 0,
       createdAt: meta.createdAt,
       updatedAt: meta.updatedAt,
       sessionCount: sessions.length,
@@ -145,7 +163,7 @@ async function listCampaignsDetailed() {
   });
 
   const result = await Promise.all(campaignPromises);
-  return result.sort((a, b) => a.name.localeCompare(b.name, 'uk'));
+  return result.sort((a, b) => (a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name, 'uk'));
 }
 
 async function exportCampaignBundle(slug) {
@@ -205,14 +223,43 @@ app.post('/api/import-all', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-async function ensureUniqueCampaignSlug(baseSlug) {
+app.post('/api/campaigns/reorder', async (req, res, next) => {
+  try {
+    const { orders } = req.body; // { slug: order, ... }
+    for (const slug of Object.keys(orders)) {
+      if (await exists(campaignMetaPath(slug))) {
+        const meta = await readCampaign(slug);
+        meta.order = orders[slug];
+        await writeJson(campaignMetaPath(slug), meta);
+      }
+    }
+    res.json({ ok: true });
+  } catch (error) { next(error); }
+});
+
+app.post('/api/campaigns/:slug/sessions/reorder', async (req, res, next) => {
+  try {
+    const { slug } = req.params;
+    const { orders } = req.body; // { fileName: order, ... }
+    for (const fileName of Object.keys(orders)) {
+      const session = await readJson(sessionPath(slug, fileName));
+      session.order = orders[fileName];
+      await writeJson(sessionPath(slug, fileName), session);
+    }
+    res.json({ ok: true });
+  } catch (error) { next(error); }
+});
+
+async function ensureUniqueCampaignSlug(baseSlug, ignoreSlug = null) {
   let slug = baseSlug;
   let counter = 2;
-  while (await exists(campaignDir(slug))) {
+  while (true) {
+    const dir = campaignDir(slug);
+    const taken = await exists(dir);
+    if (!taken || slug === ignoreSlug) return slug;
     slug = `${baseSlug}-${counter}`;
     counter += 1;
   }
-  return slug;
 }
 
 async function ensureUniqueSessionFile(slug, desiredName, ignoreFileName = null) {
@@ -236,6 +283,7 @@ function makeDefaultSessionData(name) {
     id: createId(),
     name: sanitizeName(name) || todayString(),
     completed: false,
+    order: 0,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     data: {},
@@ -269,6 +317,7 @@ app.post('/api/campaigns', async (req, res, next) => {
       slug,
       name,
       completed: false,
+      order: 0,
       createdAt: now,
       updatedAt: now,
     };
@@ -299,12 +348,11 @@ app.patch('/api/campaigns/:slug', async (req, res, next) => {
       return res.status(400).json({ error: 'Назва кампанії не може бути порожньою.' });
     }
 
-    let nextSlug = oldSlug;
-    if (nextName !== current.name) {
-      nextSlug = await ensureUniqueCampaignSlug(campaignSlug(nextName));
-      if (nextSlug !== oldSlug) {
-        await fs.rename(campaignDir(oldSlug), campaignDir(nextSlug));
-      }
+    // Робимо логіку ідентичною до сесій
+    const nextSlug = await ensureUniqueCampaignSlug(campaignSlug(nextName), oldSlug);
+    
+    if (nextSlug !== oldSlug) {
+      await renameWithRetry(campaignDir(oldSlug), campaignDir(nextSlug));
     }
 
     const updated = {
@@ -433,7 +481,7 @@ app.patch('/api/campaigns/:slug/sessions/:fileName', async (req, res, next) => {
     };
 
     if (nextFileName !== fileName) {
-      await fs.rename(fullPath, sessionPath(slug, nextFileName));
+      await renameWithRetry(fullPath, sessionPath(slug, nextFileName));
     }
 
     await writeJson(sessionPath(slug, nextFileName), updated);
@@ -460,14 +508,6 @@ app.delete('/api/campaigns/:slug/sessions/:fileName', async (req, res, next) => 
   } catch (error) {
     next(error);
   }
-});
-
-app.get('/', (_req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
-});
-
-app.get('*', (_req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
 
 app.use((error, _req, res, _next) => {

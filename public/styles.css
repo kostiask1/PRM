@@ -244,6 +244,47 @@ button {
   border-radius: 14px;
   background: rgba(15, 23, 42, 0.55);
   padding: 12px 14px;
+  /* Додаємо transform у перехід для плавності зсуву */
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.1);
+  position: relative;
+  z-index: 1;
+  will-change: transform, opacity;
+}
+
+.list-card:hover {
+  border-color: rgba(56, 189, 248, 0.35);
+  background: rgba(15, 23, 42, 0.7);
+}
+
+.list-card.active {
+  border-color: var(--accent);
+  background: rgba(56, 189, 248, 0.1);
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.08);
+}
+
+.list-card.dragging {
+  opacity: 0.1; /* Робимо оригінал майже прозорим */
+  background: var(--panel-2);
+  border: 1px dashed var(--muted);
+  transform: scale(0.95);
+  z-index: 0;
+}
+
+.list-card.drag-over {
+  border-color: var(--accent);
+  background: rgba(56, 189, 248, 0.05);
+  /* Створюємо ефект "підстрибування" або зміщення */
+  transform: translateY(-4px); 
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Вимикаємо події миші для всього всередині карти під час драгу, щоб не було кліпання */
+.list-card * {
+  pointer-events: inherit;
+}
+
+.list-card.is-dragging-process * {
+  pointer-events: none !important;
 }
 
 .campaign-card__main,
@@ -281,9 +322,6 @@ button {
   border: 1px solid rgba(51, 65, 85, 0.75);
   background: rgba(15, 23, 42, 0.8);
   color: var(--muted);
-}
-
-button.status-badge {
   cursor: pointer;
 }
 
