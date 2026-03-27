@@ -112,18 +112,28 @@ export default function DiceCalculator() {
     
     const renderBreakdown = useCallback((breakdown) => {
         if (!Array.isArray(breakdown)) return breakdown;
-        return breakdown.map((item, idx) => {
+        
+        const limit = 10;
+        const itemsToShow = breakdown.slice(0, limit);
+        const hasMore = breakdown.length > limit;
+
+        const content = itemsToShow.map((item, idx) => {
             const isMin = item.max && item.val === 1;
             const isMax = item.max && item.val === item.max;
             const className = isMin ? 'dice-min' : isMax ? 'dice-max' : '';
             const sign = idx > 0 && item.val >= 0 ? ' + ' : '';
-            
             return (
                 <React.Fragment key={idx}>
                     {sign}<span className={className}>{item.val}</span>
                 </React.Fragment>
             );
         });
+
+        if (hasMore) {
+            content.push(<span key="more" className="muted"> + ...</span>);
+        }
+
+        return content;
     }, []);
 
     return (

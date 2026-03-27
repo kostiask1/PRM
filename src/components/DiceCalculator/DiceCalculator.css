@@ -36,7 +36,7 @@
 }
 
 .DiceCalculator__panel {
-    width: 280px;
+    width: 320px;
     background: rgba(15, 23, 42, 0.9);
     backdrop-filter: blur(12px);
     border: 1px solid rgba(51, 65, 85, 0.5);
@@ -111,19 +111,31 @@
 }
 
 .DiceCalculator__lastResult {
-    display: flex; /* Використовуємо flexbox для центрування вмісту */
-    flex-direction: column; /* Розміщуємо елементи вертикально */
-    align-items: center; /* Центруємо по горизонталі */
-    justify-content: center; /* Центруємо по вертикалі */
-    height: 100%; /* Займаємо всю доступну висоту */
+    text-align: center;
+    width: 100px;
+}
+
+.DiceCalculator__resultHeader {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 2px;
+}
+
+.DiceCalculator__formulaLabel {
+    display: block;
+    max-width: 100%;
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .DiceCalculator__totalValue-container {
-    position: relative; /* Для абсолютного позиціонування середнього значення */
-    display: inline-flex; /* Щоб контейнер займав лише необхідну ширину */
-    align-items: center; /* Вирівнюємо елементи по центру вертикалі */
-    justify-content: center; /* Центруємо основне значення кидка */
-    margin-top: 4px; /* Невеликий відступ від формули */
+    position: relative;
 }
 
 .DiceCalculator__totalValue {
@@ -132,29 +144,30 @@
     color: var(--accent);
 }
 
-/* Видалено дублюючий блок .DiceCalculator__totalValue */
-
-.DiceCalculator__formulaLabel {
-    font-size: 0.75rem;
-    color: var(--muted);
-    margin: 0;
-}
-
-.DiceCalculator__totalValue {
-    /* Цей клас тепер застосовується до span всередині контейнера */
-    /* Властивості font-size, font-weight, color вже визначені вище */
-}
-
 .DiceCalculator__averageValue {
+    position: absolute;
+    bottom: 8px;
+    right: 0;
+    transform: translateX(50%);
     font-size: 1.1rem;
+    line-height: 1;
     color: var(--muted);
     font-weight: 400;
-    position: absolute; /* Абсолютне позиціонування відносно .DiceCalculator__totalValue-container */
-    left: 100%; /* Розміщуємо праворуч від основного значення */
-    top: 50%; /* Центруємо по вертикалі */
-    transform: translateY(-50%); /* Коригуємо для точного вертикального центрування */
-    white-space: nowrap; /* Запобігаємо переносу тексту */
-    margin-left: 8px; /* Відступ між основним та середнім значенням */
+    vertical-align: middle;
+}
+
+.DiceCalculator__currentFormula {
+    min-height: 40px;
+    padding: 8px 12px;
+    background: rgba(2, 6, 23, 0.4);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: var(--text-bright);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed rgba(51, 65, 85, 0.5);
 }
 
 .DiceCalculator__group {
@@ -175,10 +188,6 @@
     font-size: 0.85rem;
     color: var(--muted);
     white-space: nowrap;
-}
-
-.DiceCalculator__manual {
-    margin-bottom: 12px;
 }
 
 .DiceCalculator__actions {
@@ -241,6 +250,10 @@
     display: flex;
     justify-content: space-between;
     width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    gap: 8px;
 }
 
 .dice-min {
