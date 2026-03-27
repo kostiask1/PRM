@@ -414,8 +414,12 @@ app.post('/api/campaigns/:slug/sessions', async (req, res, next) => {
       return res.status(404).json({ error: 'Кампанію не знайдено.' });
     }
 
+    const existingSessions = await listSessions(slug);
+    const maxOrder = existingSessions.reduce((max, s) => Math.max(max, s.order || 0), -1);
+
     const baseName = sanitizeName(req.body?.name) || todayString();
     const session = makeDefaultSessionData(baseName);
+    session.order = maxOrder + 1;
     const fileName = await ensureUniqueSessionFile(slug, session.name);
 
     if (req.body?.data && typeof req.body.data === 'object') {
@@ -431,6 +435,7 @@ app.post('/api/campaigns/:slug/sessions', async (req, res, next) => {
       createdAt: session.createdAt,
       updatedAt: session.updatedAt,
       completed: session.completed,
+      order: session.order,
     });
   } catch (error) {
     next(error);

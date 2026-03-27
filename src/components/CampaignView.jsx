@@ -52,6 +52,17 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
     }
   };
 
+  const handleDeleteSession = async (session) => {
+    if (!window.confirm(`Видалити сесію "${session.name}"?`)) return;
+    try {
+      await api.deleteSession(campaign.slug, session.fileName);
+      const data = await api.listSessions(campaign.slug);
+      setSessions(data);
+    } catch (err) {
+      alert("Помилка видалення сесії");
+    }
+  };
+
   const handleToggleSessionStatus = async (session) => {
     try {
       await api.updateSession(campaign.slug, session.fileName, { completed: !session.completed });
@@ -163,13 +174,27 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
                 <div className="list-card__title">{session.name}</div>
                 <div className="list-card__meta">Оновлено: {new Date(session.updatedAt).toLocaleDateString()}</div>
               </button>
-              <span 
-                className={`status-badge ${session.completed ? 'status-badge--done' : ''}`}
-                style={{ cursor: 'pointer' }}
-                onClick={() => handleToggleSessionStatus(session)}
-              >
-                {session.completed ? 'Завершена' : 'В підготовці'}
-              </span>
+              <div className="session-card__actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <span 
+                  className={`status-badge ${session.completed ? 'status-badge--done' : ''}`}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleToggleSessionStatus(session)}
+                >
+                  {session.completed ? 'Завершена' : 'В підготовці'}
+                </span>
+                <button 
+                  className="icon-btn icon-btn--danger" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteSession(session);
+                  }} 
+                  title="Видалити сесію"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" />
+                  </svg>
+                </button>
+              </div>
             </article>
           ))}
         </div>

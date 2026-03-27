@@ -310,7 +310,8 @@ button {
 }
 
 .session-card {
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
 }
 
@@ -683,15 +684,10 @@ button.status-badge:hover {
   }
 }
 
-.session-card {
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: center;
-}
-
 .session-card__actions {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
 }
 
