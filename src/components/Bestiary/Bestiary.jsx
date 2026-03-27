@@ -5,6 +5,7 @@ import ListCard from '../ListCard/ListCard';
 import Button from '../Button/Button';
 import RollDice from '../RollDice/RollDice';
 import Icon from '../Icon';
+import Notification from '../Notification/Notification';
 import './Bestiary.css';
 
 const getAbilityModifier = (abilityScore) => {
@@ -62,6 +63,7 @@ export default function Bestiary() {
     const [loading, setLoading] = useState(false);
     const [selectedMonster, setSelectedMonster] = useState(null);
     const [imageError, setImageError] = useState(false);
+    const [notification, setNotification] = useState(null);
 
     const fetchMonsters = useCallback(async (query = '') => {
         setLoading(true);
@@ -91,6 +93,11 @@ export default function Bestiary() {
         setImageError(false);
     }, [selectedMonster]);
 
+    const handleCopyName = (name) => {
+        navigator.clipboard.writeText(name);
+        setNotification(`Ім'я "${name}" скопійовано!`);
+    };
+
     const renderActionList = (actions, title) => {
         if (!actions || actions.length === 0) return null;
         return (
@@ -111,6 +118,21 @@ export default function Bestiary() {
                         </div>
                     </div>
                 ))}
+            </div>
+        );
+    };
+
+    const renderAbility = (label, value) => {
+        const mod = getAbilityModifier(value);
+        return (
+            <div 
+                className="Bestiary__ability-box" 
+                onClick={() => window.dispatchEvent(new CustomEvent('rollDice', { detail: `1d20${formatModifier(mod)}` }))}
+                title={`Кинути перевірку ${label}`}
+            >
+                <span className="ability-label">{label}</span>
+                <span className="ability-mod">{formatModifier(mod)}</span>
+                <span className="ability-score">{value}</span>
             </div>
         );
     };
@@ -150,7 +172,13 @@ export default function Bestiary() {
 
                     {selectedMonster && (
                         <div className="Bestiary__details">
-                            <h3>{selectedMonster.name}</h3>
+                            <h3 
+                                className="Bestiary__monster-name" 
+                                onClick={() => handleCopyName(selectedMonster.name)}
+                                title="Натисніть, щоб скопіювати ім'я"
+                            >
+                                {selectedMonster.name}
+                            </h3>
                             <div className="Bestiary__header-row">
                                 <div className="Bestiary__stats">
                                     <div className="stat-item">
@@ -176,47 +204,37 @@ export default function Bestiary() {
                                 </div>
                             </div>
                             <div className="Bestiary__abilities">
-                                <div onClick={() => window.dispatchEvent(new CustomEvent('rollDice', { detail: `1d20+${getAbilityModifier(selectedMonster.strength)}` }))}>
-                                    <strong>STR:</strong> {selectedMonster.strength} ({getAbilityModifier(selectedMonster.strength)})
-                                </div>
-                                <div onClick={() => window.dispatchEvent(new CustomEvent('rollDice', { detail: `1d20+${getAbilityModifier(selectedMonster.dexterity)}` }))}>
-                                    <strong>DEX:</strong> {selectedMonster.dexterity} ({getAbilityModifier(selectedMonster.dexterity)})
-                                </div>
-                                <div onClick={() => window.dispatchEvent(new CustomEvent('rollDice', { detail: `1d20+${getAbilityModifier(selectedMonster.constitution)}` }))}>
-                                    <strong>CON:</strong> {selectedMonster.constitution} ({getAbilityModifier(selectedMonster.constitution)})
-                                </div>
-                                <div onClick={() => window.dispatchEvent(new CustomEvent('rollDice', { detail: `1d20+${getAbilityModifier(selectedMonster.intelligence)}` }))}>
-                                    <strong>INT:</strong> {selectedMonster.intelligence} ({getAbilityModifier(selectedMonster.intelligence)})
-                                </div>
-                                <div onClick={() => window.dispatchEvent(new CustomEvent('rollDice', { detail: `1d20+${getAbilityModifier(selectedMonster.wisdom)}` }))}>
-                                    <strong>WIS:</strong> {selectedMonster.wisdom} ({getAbilityModifier(selectedMonster.wisdom)})
-                                </div>
-                                <div onClick={() => window.dispatchEvent(new CustomEvent('rollDice', { detail: `1d20+${getAbilityModifier(selectedMonster.charisma)}` }))}>
-                                    <strong>CHA:</strong> {selectedMonster.charisma} ({getAbilityModifier(selectedMonster.charisma)})
-                                </div>
+                                {renderAbility('STR', selectedMonster.strength)}
+                                {renderAbility('DEX', selectedMonster.dexterity)}
+                                {renderAbility('CON', selectedMonster.constitution)}
+                                {renderAbility('INT', selectedMonster.intelligence)}
+                                {renderAbility('WIS', selectedMonster.wisdom)}
+                                {renderAbility('CHA', selectedMonster.charisma)}
                             </div>
 
-                            {selectedMonster.damage_immunities && (
-                                <div className="Bestiary__damage">
-                                    <strong>Damage Immunities:</strong> {selectedMonster.damage_immunities}
-                                </div>
-                            )}
+                            <div className="Bestiary__properties">
+                                {selectedMonster.damage_immunities && (
+                                    <div className="Bestiary__damage">
+                                        <strong>Damage Immunities:</strong> {selectedMonster.damage_immunities}
+                                    </div>
+                                )}
 
-                            {selectedMonster.damage_vulnerabilities && (
-                                <div className="Bestiary__damage">
-                                    <strong>Damage Vulnerabilities:</strong> {selectedMonster.damage_vulnerabilities}
-                                </div>
-                            )}
+                                {selectedMonster.damage_vulnerabilities && (
+                                    <div className="Bestiary__damage">
+                                        <strong>Damage Vulnerabilities:</strong> {selectedMonster.damage_vulnerabilities}
+                                    </div>
+                                )}
 
-                            {selectedMonster.damage_resistances && (
-                                <div className="Bestiary__damage">
-                                    <strong>Damage Resistances:</strong> {selectedMonster.damage_resistances}
-                                </div>
-                            )}
+                                {selectedMonster.damage_resistances && (
+                                    <div className="Bestiary__damage">
+                                        <strong>Damage Resistances:</strong> {selectedMonster.damage_resistances}
+                                    </div>
+                                )}
 
-                            <div className="Bestiary__description">
-                                <p><strong>Senses:</strong> {selectedMonster.senses}</p>
-                                <p><strong>Languages:</strong> {selectedMonster.languages}</p>
+                                <div className="Bestiary__description">
+                                    <p><strong>Senses:</strong> {selectedMonster.senses}</p>
+                                    <p><strong>Languages:</strong> {selectedMonster.languages}</p>
+                                </div>
                             </div>
 
                             {renderActionList(selectedMonster.special_abilities, 'Special Abilities')}
@@ -228,6 +246,13 @@ export default function Bestiary() {
                     )}
                 </div>
             </div>
+
+            {notification && (
+                <Notification 
+                    message={notification} 
+                    onClose={() => setNotification(null)} 
+                />
+            )}
         </Panel>
     );
 }

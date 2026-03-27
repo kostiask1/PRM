@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { api } from '../../api';
 import Button from '../Button/Button';
+import Icon from '../Icon';
 import StatusBadge from '../StatusBadge/StatusBadge';
 import ListCard from '../ListCard/ListCard';
 import "./Sidebar.css"
@@ -94,14 +95,14 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
         <h1 className="Sidebar__title">D&D Session Manager</h1>
         <p className="Sidebar__description">Кампанії, сесії та планування в одному локальному проєкті.</p>
       </div>
-
+      <Button variant="ghost" onClick={() => onSelectCampaign('bestiary')} style={{ marginBottom: '12px', width: '100%', justifyContent: 'flex-start' }}>
+        <Icon name="bestiary" />
+        Бестіарій
+      </Button>
       <div className="Sidebar__section">
         <div className="Sidebar__headerSection">
           <h2 className="Sidebar__sectionTitle">Кампанії</h2>
         </div>
-        <Button variant="ghost" onClick={() => onSelectCampaign('bestiary')} icon="database" style={{ marginBottom: '12px', width: '100%', justifyContent: 'flex-start' }}>
-          Бестіарій (Монстри)
-        </Button>
         <Button variant="create" onClick={onCreateCampaign} icon="plus">
           Нова кампанія
         </Button>
