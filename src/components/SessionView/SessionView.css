@@ -158,11 +158,6 @@
     font-weight: 700;
 }
 
-.SceneCard__grid {
-    display: grid;
-    gap: 12px;
-}
-
 .SceneCard__toggle {
     padding: 4px !important;
     min-height: auto !important;
@@ -180,7 +175,7 @@
 
 .SceneCard__grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
     gap: 16px;
     padding: 16px;
 }
