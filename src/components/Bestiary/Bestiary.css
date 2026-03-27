@@ -57,6 +57,7 @@
     object-fit: contain;
     transition: transform 0.3s ease;
     cursor: zoom-in;
+    pointer-events: none;
 }
 
 .Bestiary__token-wrapper:hover .Bestiary__token {
