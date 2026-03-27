@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../api';
+import Icon from './Icon';
 
 const SCENE_SCHEMA = [
   { key: 'summary', title: 'Суть сцени', type: 'textarea', placeholder: 'Коротко опиши сцену...' },
@@ -114,9 +115,7 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
       <div className="panel__header">
         <div>
           <button className="btn btn--ghost" onClick={onBack} style={{ marginBottom: '12px' }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline>
-            </svg>
+            <Icon name="back" />
             <span>Назад до кампанії</span>
           </button>
           <h2 className="editable-title" onClick={handleRename}>{session.name}</h2>
@@ -136,7 +135,7 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
               onRefreshCampaigns();
             }
           }}>
-             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+             <Icon name="trash" />
           </button>
         </div>
       </div>
@@ -186,14 +185,19 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
           <section className="todo-section">
             <div className="todo-section__header">
               <h3>2. Сцени</h3>
-              <button className="btn btn--primary btn--small" style={{marginLeft: 'auto'}} onClick={addScene}>+ Додати</button>
+              <button className="btn btn--primary btn--small" style={{marginLeft: 'auto'}} onClick={addScene}>
+                <Icon name="plus" size={16} />
+                <span>Додати</span>
+              </button>
             </div>
             <div className="todo-section__body scene-list">
               {(session.data.scenes || []).map((scene, idx) => (
                 <div key={scene.id} className="scene-card">
                   <div className="scene-card__header">
                     <div className="scene-card__title">Сцена {idx + 1}</div>
-                    <button className="icon-btn icon-btn--danger" onClick={() => removeScene(scene.id)}>×</button>
+                    <button className="icon-btn icon-btn--danger" onClick={() => removeScene(scene.id)}>
+                      <Icon name="x" size={16} />
+                    </button>
                   </div>
                   <div className="scene-grid">
                     {SCENE_SCHEMA.map(field => (

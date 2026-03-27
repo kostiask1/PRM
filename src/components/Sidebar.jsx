@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { api } from '../api';
+import Icon from './Icon';
 
 export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign, onCreateCampaign, onToggleCampaignStatus, modal }) {
   const fileInputRef = useRef(null);
@@ -96,10 +97,7 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
           <h2 style={{ marginBottom: '12px' }}>Кампанії</h2>
         </div>
         <button className="btn btn--primary" onClick={onCreateCampaign}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
+          <Icon name="plus" strokeWidth={2.5} />
           <span>Нова кампанія</span>
         </button>
         
@@ -151,6 +149,7 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
           importMode.current = 'campaign';
           fileInputRef.current.click();
         }}>
+          <Icon name="import" />
           <span>Імпорт JSON</span>
         </button>
         <div className="footer-grid">
@@ -162,6 +161,7 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
               modal.alert("Помилка бекапу", err.message || "Невідома помилка");
             }
           }}>
+            <Icon name="database" size={16} />
             <span>Бекап</span>
           </button>
           <button className="btn btn--footer btn--small" onClick={async () => {
@@ -170,6 +170,7 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
               fileInputRef.current.click();
             }
           }}>
+            <Icon name="restore" size={16} />
             <span>Restore</span>
           </button>
         </div>

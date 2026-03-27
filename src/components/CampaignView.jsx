@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
+import Icon from './Icon';
 
 export default function CampaignView({ campaign, onSelectSession, onNavigate, onRefreshCampaigns, modal }) {
   const [sessions, setSessions] = useState([]);
@@ -126,17 +127,18 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
     <section className="panel">
       <div className="panel__header">
         <div>
-          <h2 className="editable-title" onClick={handleRename} title="Натисни, щоб перейменувати">{campaign.name}</h2>
+          <h2 className="editable-title" onClick={handleRename} title="Натисни, щоб перейменувати">
+            {campaign.name}
+          </h2>
           <p className="muted">Створено: {new Date(campaign.createdAt).toLocaleDateString()}</p>
         </div>
         <div className="header-actions">
           <button className="btn" type="button" onClick={handleExport}>
+            <Icon name="export" />
             <span>Експорт</span>
           </button>
           <button className="icon-btn icon-btn--danger" onClick={handleDeleteCampaign} title="Видалити кампанію">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" />
-            </svg>
+            <Icon name="trash" />
           </button>
         </div>
       </div>
@@ -145,9 +147,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
         <div className="section-row">
           <h3>Сесії</h3>
           <button className="btn btn--primary" onClick={handleCreateSession}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
+            <Icon name="plus" strokeWidth={2.5} />
             <span>Нова сесія</span>
           </button>
         </div>
@@ -190,9 +190,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
                   }} 
                   title="Видалити сесію"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" />
-                  </svg>
+                  <Icon name="trash" size={16} />
                 </button>
               </div>
             </article>
