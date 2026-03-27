@@ -8,7 +8,7 @@ const SCENE_SCHEMA = [
     { key: 'summary', title: 'Суть сцени', type: 'textarea', placeholder: 'Коротко опиши сцену...' },
     { key: 'goal', title: 'Мета гравців', type: 'textarea', placeholder: 'Чого персонажі хочуть досягти...' },
     { key: 'stakes', title: 'Ставки', type: 'textarea', placeholder: 'Що буде при успіху/провалі...' },
-    { key: 'location', title: 'Локація', type: 'text', placeholder: 'Де це відбувається...' },
+    { key: 'location', title: 'Локація', type: 'textarea', placeholder: 'Де це відбувається...' },
     { key: 'npcs', title: 'NPC / фракції', type: 'textarea', placeholder: 'Хто бере участь...' },
     { key: 'clues', title: 'Підказки', type: 'textarea', placeholder: 'Інформація, яку отримають гравці...' },
 ];

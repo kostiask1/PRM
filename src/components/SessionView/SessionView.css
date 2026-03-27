@@ -138,7 +138,14 @@
     gap: 8px;
 }
 
+.Icon--rotated {
+    transform: rotate(-90deg);
+    transition: transform 0.2s ease;
+}
+
 .SceneCard__grid {
     display: grid;
-    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+    padding: 16px;
 }
