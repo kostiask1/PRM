@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { api } from '../api';
-import Button from './Button/Button';
-import StatusBadge from './StatusBadge/StatusBadge';
+import { api } from '../../api';
+import Button from '../Button/Button';
+import StatusBadge from '../StatusBadge/StatusBadge';
 import './CampaignView.css';
 
 export default function CampaignView({ campaign, onSelectSession, onNavigate, onRefreshCampaigns, modal }) {
   const [sessions, setSessions] = useState([]);
   const [draggingFileName, setDraggingFileName] = useState(null);
+  const [draggingNoteId, setDraggingNoteId] = useState(null);
 
   // Локальний стан для сюжету та заміток
   const [description, setDescription] = useState(campaign.description || '');
   const [notes, setNotes] = useState(campaign.notes || []);
+  const [isNotesCollapsed, setIsNotesCollapsed] = useState(false);
   const saveTimeout = useRef(null);
 
   const autoResize = (e) => {
@@ -234,20 +236,64 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
 
         <div className="CampaignView__section">
           <div className="section-row">
-            <h3>Замітки</h3>
-            <Button 
-              variant="primary" 
-              size="small" 
-              onClick={handleAddNote} 
-              icon="plus" 
-              strokeWidth={2.5}
-            >
-              Нова замітка
-            </Button>
+            <div className="section-title-group" onClick={() => setIsNotesCollapsed(!isNotesCollapsed)} style={{ cursor: 'pointer' }}>
+              <Button
+                variant="ghost"
+                size="small"
+                icon="chevron"
+                className={`section-collapse-toggle ${isNotesCollapsed ? 'is-rotated' : ''}`}
+                onClick={(e) => { e.stopPropagation(); setIsNotesCollapsed(!isNotesCollapsed); }}
+              />
+              <h3>Замітки</h3>
+            </div>
+            {!isNotesCollapsed && (
+              <Button 
+                variant="primary" 
+                size="small" 
+                onClick={handleAddNote} 
+                icon="plus" 
+                strokeWidth={2.5}
+              >
+                Нова замітка
+              </Button>
+            )}
           </div>
-          <div className="CampaignView__notes">
+          {!isNotesCollapsed && (
+            <div className="CampaignView__notes">
             {notes.map(note => (
-              <div key={note.id} className={`note-card-simple ${note.collapsed ? 'is-collapsed' : ''}`}>
+              <div 
+                key={note.id} 
+                className={`note-card-simple ${note.collapsed ? 'is-collapsed' : ''} ${draggingNoteId === note.id ? 'note-card-simple--dragging' : ''}`}
+                draggable
+                onDragStart={(e) => {
+                  setDraggingNoteId(note.id);
+                  e.currentTarget.classList.add('dragging');
+                  e.dataTransfer.setData('text/plain', note.id);
+                  e.dataTransfer.effectAllowed = 'move';
+                }}
+                onDragEnd={() => {
+                  setDraggingNoteId(null);
+                  triggerSave({ notes });
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                }}
+                onDragEnter={() => {
+                  if (draggingNoteId === note.id || !draggingNoteId) return;
+
+                  const items = [...notes];
+                  const draggedIdx = items.findIndex(i => i.id === draggingNoteId);
+                  const targetIdx = items.findIndex(i => i.id === note.id);
+                  
+                  if (draggedIdx !== -1 && targetIdx !== -1) {
+                    const [removed] = items.splice(draggedIdx, 1);
+                    items.splice(targetIdx, 0, removed);
+                    setNotes(items);
+                  }
+                }}
+                onDrop={handleDrop}
+              >
                 <div className="note-card-simple__header">
                   <Button
                     variant="ghost"
@@ -277,6 +323,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
               </div>
             ))}
           </div>
+          )}
         </div>
 
         <div className="section-row">
