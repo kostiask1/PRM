@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { api } from '../api';
-import Button from './Button/Button';
-import StatusBadge from './StatusBadge/StatusBadge';
+import { api } from '../../api';
+import Button from '../Button/Button';
+import StatusBadge from '../StatusBadge/StatusBadge';
+import "./Sidebar.css"
 
 export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign, onCreateCampaign, onToggleCampaignStatus, modal }) {
   const fileInputRef = useRef(null);

@@ -4,6 +4,10 @@
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     margin: 16px;
+    max-height: calc(100vh - 32px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .Panel__header {
@@ -18,8 +22,7 @@
 }
 
 .Panel__body {
-    flex-grow: 1;
     padding: 20px;
     overflow-y: auto;
-    /* Дозволити прокрутку всередині тіла, якщо вміст переповнюється */
+    height: 100%;
 }

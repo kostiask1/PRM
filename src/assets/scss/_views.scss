@@ -43,9 +43,6 @@
 }
 
 .SessionView__progressToolbar {
-  position: sticky;
-  top: 0;
-  z-index: 10;
   background: var(--panel);
   padding: 16px 24px;
   border-bottom: 1px solid rgba(51, 65, 85, 0.45);

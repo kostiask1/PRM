@@ -2,21 +2,3 @@
 .App { display: grid; grid-template-columns: 320px minmax(0, 1fr); min-height: 100vh; }
 .App__sidebar { }
 .App__main { padding: 24px; min-width: 0; }
-
-.Sidebar { border-right: 1px solid rgba(51, 65, 85, 0.5); background: rgba(2, 6, 23, 0.55); backdrop-filter: blur(14px); padding: 24px; position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
-.Sidebar__header { margin-bottom: 28px; }
-.Sidebar__title { margin: 0 0 8px; font-size: 1.4rem; }
-.Sidebar__description { margin: 0; color: var(--muted); line-height: 1.5; font-size: 0.9rem; }
-
-.Sidebar__section { margin-top: 28px; flex: 1; overflow-y: auto; }
-.Sidebar__headerSection { margin-bottom: 12px; }
-.Sidebar__sectionTitle { margin: 0; font-size: 1.2rem; }
-.Sidebar__list { display: grid; gap: 12px; margin-top: 12px; }
-
-.Sidebar__footer { margin-top: auto; padding-top: 20px; border-top: 1px solid rgba(51, 65, 85, 0.4); display: flex; flex-direction: column; gap: 8px; }
-.Sidebar__footerGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-
-.Sidebar__card { display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(51, 65, 85, 0.7); border-radius: 14px; background: rgba(15, 23, 42, 0.55); padding: 0; transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.1); position: relative; z-index: 1; padding-right: 12px;}
-.Sidebar__card:hover { border-color: rgba(56, 189, 248, 0.35); background: rgba(15, 23, 42, 0.7); }
-.Sidebar__card--active { border-color: var(--accent) !important; background: rgba(56, 189, 248, 0.1) !important; box-shadow: 0 0 20px rgba(56, 189, 248, 0.08) !important; transform: none !important; }
-.Sidebar__card--dragging { opacity: 0.1; background: var(--panel-2); border: 1px dashed var(--muted); transform: scale(0.95); z-index: 0; }

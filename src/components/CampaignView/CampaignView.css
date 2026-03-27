@@ -78,10 +78,8 @@
 }
 
 .note-card-simple .field--textarea {
-    border: none;
-    background: transparent;
-    padding: 0 12px 12px 44px; /* Вирівнювання тексту під заголовком */
-    font-size: 0.95rem;
+    margin: 12px;
+    margin-top: 8px;
 }
 
 .note-card-simple.is-collapsed {
