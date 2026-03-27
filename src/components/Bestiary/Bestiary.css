@@ -1,10 +1,24 @@
+.Bestiary {
+    height: 100%;
+}
+
 .Bestiary__search {
     margin-bottom: 20px;
 }
 
+.Bestiary .Panel__body {
+    overflow: hidden;
+}
+
+.Bestiary__inner {
+    overflow: hidden;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
 .Bestiary__content {
-    display: grid;
-    grid-template-columns: 300px 1fr;
+    display: flex;
     gap: 24px;
     height: calc(100% - 60px);
 }
@@ -14,21 +28,10 @@
     flex-direction: column;
     gap: 8px;
     overflow-y: auto;
+    height: 100%;
     padding-right: 8px;
-}
-
-.Bestiary__details {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(51, 65, 85, 0.4);
-    border-radius: 12px;
-    padding: 24px;
-    overflow-y: auto;
-}
-
-.Bestiary__header-row {
-    display: flex;
-    gap: 24px;
-    margin: 16px 0;
+    width: 300px;
+    min-width: 300px;
 }
 
 .Bestiary__token-wrapper {

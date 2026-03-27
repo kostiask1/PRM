@@ -16,22 +16,27 @@ export default function App() {
     const parts = path.split('/').filter(Boolean);
     let campaign = null;
     let session = null;
+    let encounter = null;
 
     if (parts[0] === 'campaign' && parts[1]) {
       campaign = decodeURIComponent(parts[1]);
       if (parts[2] === 'session' && parts[3]) {
         session = decodeURIComponent(parts[3]);
+        if (parts[4] === 'encounter' && parts[5]) {
+          encounter = decodeURIComponent(parts[5]);
+        }
       }
     } else if (parts[0] === 'bestiary') {
       campaign = 'bestiary';
     }
-    return { campaign, session };
+    return { campaign, session, encounter };
   };
 
   const initialRoute = parseUrl();
   const [campaigns, setCampaigns] = useState([]);
   const [activeCampaignSlug, setActiveCampaignSlug] = useState(initialRoute.campaign);
   const [activeSessionFileName, setActiveSessionFileName] = useState(initialRoute.session);
+  const [activeEncounterId, setActiveEncounterId] = useState(initialRoute.encounter);
 
   // Modal State
   const [modalConfig, setModalConfig] = useState(null);
@@ -73,6 +78,7 @@ export default function App() {
       const route = parseUrl();
       setActiveCampaignSlug(route.campaign);
       setActiveSessionFileName(route.session);
+      setActiveEncounterId(route.encounter);
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -80,15 +86,19 @@ export default function App() {
   }, []);
 
   // Універсальна функція навігації
-  const navigate = (slug, fileName = null, replace = false) => {
+  const navigate = (slug, fileName = null, replace = false, encounterId = null) => {
     setActiveCampaignSlug(slug);
     setActiveSessionFileName(fileName);
+    setActiveEncounterId(encounterId);
 
     let url = '/';
     if (slug && slug !== 'bestiary') {
       url = `/campaign/${encodeURIComponent(slug)}`;
       if (fileName) {
         url += `/session/${encodeURIComponent(fileName)}`;
+        if (encounterId) {
+          url += `/encounter/${encodeURIComponent(encounterId)}`;
+        }
       }
     } else if (slug === 'bestiary') {
       url = '/bestiary';
@@ -152,6 +162,7 @@ export default function App() {
         className="App__main"
         campaign={activeCampaign}
         activeSessionId={activeSessionFileName}
+        activeEncounterId={activeEncounterId}
         onSelectSession={(fileName) => navigate(activeCampaignSlug, fileName)}
         onRefreshCampaigns={loadCampaigns}
         onNavigate={navigate}

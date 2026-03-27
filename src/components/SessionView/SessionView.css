@@ -171,6 +171,12 @@
     cursor: pointer;
 }
 
+.SceneCard__headerActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .SceneCard__titleGroup {
     display: flex;
     align-items: center;

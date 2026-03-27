@@ -1,0 +1,137 @@
+.EncounterView__body {
+    padding: 24px !important;
+}
+
+.EncounterView__main {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+.EncounterView__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.EncounterMonsterCard {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(51, 65, 85, 0.5);
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.EncounterMonsterCard:hover {
+    border-color: var(--accent);
+    background: rgba(56, 189, 248, 0.05);
+}
+
+.EncounterMonsterCard.is-active {
+    border-color: var(--accent);
+    box-shadow: 0 0 15px rgba(56, 189, 248, 0.15);
+}
+
+.EncounterMonsterCard__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.EncounterMonsterCard__name {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text-bright);
+}
+
+.EncounterMonsterCard__stats {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.EncounterMonsterCard__stat {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+}
+
+.EncounterMonsterCard__stat label {
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-weight: 800;
+    width: 24px;
+}
+
+.EncounterMonsterCard__maxHpInput {
+    opacity: 0.7;
+}
+
+.EncounterMonsterCard__stat input {
+    width: 50px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    color: var(--accent);
+    font-weight: 700;
+    padding: 2px 4px;
+    text-align: center;
+}
+
+.EncounterView__addSlot {
+    border: 2px dashed rgba(51, 65, 85, 0.5);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 120px;
+}
+
+.EncounterView__addSlot:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(56, 189, 248, 0.02);
+}
+
+.EncounterView__modal {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(2, 6, 23, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+}
+
+.EncounterView__modalContent {
+    width: 100%;
+    max-width: 1200px;
+    height: 90vh;
+    background: var(--panel);
+    border: 1px solid rgba(51, 65, 85, 0.7);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.EncounterView__modalHeader {
+    padding: 16px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(51, 65, 85, 0.45);
+}

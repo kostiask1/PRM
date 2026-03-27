@@ -1,0 +1,25 @@
+📋 Encounter Builder Implementation Plan
+1. The Data Foundation & Routing
+Goal: Define how an encounter is stored within a session and enable navigation to a dedicated Encounter page.
+
+Prompt: "In App.jsx, add a new route for encounter. An encounter should belong to a session (path: /campaign/:slug/session/:id/encounter/:encounterId). Update the api to support a new data structure inside the session JSON called encounters (an array of objects). Each encounter object should have an id, name, and an array of monsters. Ensure MainContent.jsx can render a new EncounterView component when this route is active."
+
+2. The Encounter View & Search Integration
+Goal: Create the main UI for the builder and reuse the Bestiary logic to find and add monsters.
+
+Prompt: "Create a EncounterView.jsx component using the Panel and ListCard components. On the left side, implement a 'Monster Search' sidebar that reuses the Open5e API logic from Bestiary.jsx. When a monster is clicked in search results, add a copy of it to the encounter's monsters list. Each monster in the encounter should have a unique instance ID so the user can add multiple 'Goblins' to the same fight."
+
+3. Monster Instance Management (HP & Actions)
+Goal: Allow DMs to track the state of individual monsters during a fight.
+
+Prompt: "In EncounterView.jsx, render the list of added monsters as cards. Each card must show the monster's name, AC, and an editable HP input (using the Input component). Add a 'Delete' button to remove a monster from the encounter. Integrate the RollDice component into the monster's stat block within the card so the DM can roll attacks and damage directly from the encounter page. Implement auto-save so HP changes are persisted to the session JSON."
+
+4. Session View Integration
+Goal: Link the Encounter Builder to the actual session planning page.
+
+Prompt: "In SessionView.jsx, add a new TodoSection titled '4. Бойові зіткнення (Encounters)'. Inside, show a list of encounters created for this session using ListCard. Add a 'Create New Encounter' button that generates a new ID and navigates the user to the EncounterView page. Ensure that when a session is deleted, its associated encounters are also managed (since they are stored within the session JSON)."
+
+5. UI Polishing & "Quick View"
+Goal: Make the interface feel world-class with smooth transitions and layout improvements.
+
+Prompt: "Refine the EncounterView.css to handle a 'Combat Mode' layout. When a monster card is clicked, expand it to show the full stat block (reusing Bestiary styles), while keeping the other monsters in a collapsed 'list' view for quick navigation. Add a 'Total XP' and 'Difficulty' calculator at the top based on the Challenge Rating (CR) of all added monsters."

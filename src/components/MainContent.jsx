@@ -2,8 +2,9 @@ import React from 'react';
 import CampaignView from './CampaignView/CampaignView';
 import SessionView from './SessionView/SessionView';
 import Bestiary from './Bestiary/Bestiary';
+import EncounterView from './EncounterView/EncounterView';
 
-export default function MainContent({ campaign, activeSessionId, onSelectSession, onRefreshCampaigns, onNavigate, modal, onRollDice }) {
+export default function MainContent({ campaign, activeSessionId, activeEncounterId, onSelectSession, onRefreshCampaigns, onNavigate, modal, onRollDice }) {
   if (window.location.pathname === '/bestiary') {
     return <main className="MainContent"><Bestiary /></main>;
   }
@@ -21,7 +22,17 @@ export default function MainContent({ campaign, activeSessionId, onSelectSession
 
   return (
     <main className="MainContent">
-      {activeSessionId ? (
+      {activeEncounterId ? (
+        <EncounterView
+          campaign={campaign}
+          sessionId={activeSessionId}
+          encounterId={activeEncounterId}
+          onBack={() => onNavigate(campaign.slug, activeSessionId)}
+          onRefreshCampaigns={onRefreshCampaigns}
+          modal={modal}
+          onRollDice={onRollDice}
+        />
+      ) : activeSessionId ? (
         <SessionView
           campaignSlug={campaign.slug}
           sessionId={activeSessionId}

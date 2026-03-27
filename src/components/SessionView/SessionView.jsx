@@ -97,6 +97,34 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
         updateData('scenes', scenes, true);
     };
 
+    const handleOpenEncounter = async (scene) => {
+        let encounterId = scene.encounterId;
+
+        if (!encounterId) {
+            const sceneIndex = session.data.scenes.findIndex(s => s.id === scene.id);
+            const name = await modal.prompt("Нове зіткнення", "Введіть назву для бою:", `Бій у сцені ${sceneIndex + 1}`);
+            if (name === null) return;
+
+            encounterId = Date.now().toString();
+            const newEncounter = { id: encounterId, name: name || `Бій у сцені ${sceneIndex + 1}`, monsters: [] };
+
+            const currentEncounters = session.data.encounters || [];
+            const updatedScenes = session.data.scenes.map(s =>
+                s.id === scene.id ? { ...s, encounterId } : s
+            );
+
+            updateSession({
+                data: {
+                    ...session.data,
+                    encounters: [...currentEncounters, newEncounter],
+                    scenes: updatedScenes
+                }
+            }, true);
+        }
+
+        onNavigate(campaignSlug, sessionId, false, encounterId);
+    };
+
     const removeScene = async (sceneId) => {
         if (!(await modal.confirm("Видалення сцени", "Ви впевнені, що хочете видалити цю сцену?"))) return;
         updateData('scenes', session.data.scenes.filter(s => s.id !== sceneId), true);
@@ -203,6 +231,8 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
                                 collapsed={scene.collapsed}
                                 onToggle={() => toggleSceneCollapse(scene.id)}
                                 onRemove={() => removeScene(scene.id)}
+                                onOpenEncounter={() => handleOpenEncounter(scene)}
+                                hasEncounter={!!scene.encounterId}
                             >
                                 {SCENE_SCHEMA.map(field => (
                                     <div key={field.key} className="TodoItem__content">
@@ -267,7 +297,7 @@ function TodoItem({ title, note, checked, onChange, children }) {
     );
 }
 
-function SceneCard({ number, onRemove, collapsed, onToggle, children }) {
+function SceneCard({ number, onRemove, collapsed, onToggle, onOpenEncounter, hasEncounter, children }) {
     return (
         <div className="SceneCard">
             <div className="SceneCard__header" onClick={onToggle}>
@@ -277,10 +307,22 @@ function SceneCard({ number, onRemove, collapsed, onToggle, children }) {
                     </div>
                     <div className="SceneCard__title">Сцена {number}</div>
                 </div>
-                <Button variant="danger" icon="x" iconSize={16} onClick={(e) => {
-                    e.stopPropagation();
-                    onRemove();
-                }} />
+                <div className="SceneCard__headerActions">
+                    <Button
+                        variant={hasEncounter ? "primary" : "ghost"}
+                        size="small"
+                        icon="d20"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenEncounter();
+                        }}
+                        title={hasEncounter ? "Відкрити зіткнення" : "Додати бойове зіткнення"}
+                    />
+                    <Button variant="danger" icon="x" iconSize={16} onClick={(e) => {
+                        e.stopPropagation();
+                        onRemove();
+                    }} />
+                </div>
             </div>
             {!collapsed && <div className="SceneCard__grid">{children}</div>}
         </div>
