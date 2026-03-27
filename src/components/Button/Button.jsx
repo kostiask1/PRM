@@ -2,16 +2,16 @@ import React from 'react';
 import Icon from '../Icon';
 import "./Button.scss";
 
-export default function Button({ 
-  children, 
-  onClick, 
+export default function Button({
+  children,
+  onClick,
   variant, // primary, danger, ghost, footer, create
   size, // small
-  icon, 
+  icon,
   iconSize = 18,
   type = "button",
   className = "",
-  ...props 
+  ...props
 }) {
   const classes = [
     'Button',
@@ -22,8 +22,16 @@ export default function Button({
 
   const strokeWidth = (variant === 'create' || size === 'small') ? 2.5 : 2;
 
+  const handleClick = (e) => {
+    if (props.disabled) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    onClick && onClick(e);
+  }
+
   return (
-    <button type={type} className={classes} onClick={onClick} {...props}>
+    <button type={type} className={classes} onClick={handleClick} {...props}>
       {icon && <Icon name={icon} size={iconSize} strokeWidth={strokeWidth} />}
       {children && <span>{children}</span>}
     </button>

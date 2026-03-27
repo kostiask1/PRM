@@ -129,6 +129,10 @@
 }
 
 .SceneCard {
+    padding: 16px;
+    margin-bottom: 12px;
+    display: grid;
+    gap: 14px;
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
@@ -141,12 +145,28 @@
     align-items: center;
     padding: 8px 12px;
     background: rgba(255, 255, 255, 0.03);
+    cursor: pointer;
 }
 
 .SceneCard__titleGroup {
     display: flex;
     align-items: center;
     gap: 8px;
+}
+
+.SceneCard__title {
+    font-weight: 700;
+}
+
+.SceneCard__grid {
+    display: grid;
+    gap: 12px;
+}
+
+.SceneCard__toggle {
+    padding: 4px !important;
+    min-height: auto !important;
+    width: auto !important;
 }
 
 .Icon--rotated {

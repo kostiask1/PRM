@@ -274,14 +274,17 @@ function TodoItem({ title, note, checked, onChange, children }) {
 function SceneCard({ number, onRemove, collapsed, onToggle, children }) {
     return (
         <div className="SceneCard">
-            <div className="SceneCard__header">
+            <div className="SceneCard__header" onClick={onToggle} style={{ cursor: 'pointer' }}>
                 <div className="SceneCard__titleGroup">
-                    <Button variant="ghost" size="small" onClick={onToggle} className="SceneCard__toggle">
+                    <div className="SceneCard__toggle">
                         <Icon name="chevron" className={collapsed ? 'Icon--rotated' : ''} />
-                    </Button>
+                    </div>
                     <div className="SceneCard__title">Сцена {number}</div>
                 </div>
-                <Button variant="danger" icon="x" iconSize={16} onClick={onRemove} />
+                <Button variant="danger" icon="x" iconSize={16} onClick={(e) => {
+                    e.stopPropagation();
+                    onRemove();
+                }} />
             </div>
             {!collapsed && <div className="SceneCard__grid">{children}</div>}
         </div>

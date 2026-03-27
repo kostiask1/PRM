@@ -131,43 +131,6 @@
   margin-top: 2px;
 }
 
-.SceneCard {
-  border: 1px solid rgba(51, 65, 85, 0.75);
-  border-radius: 14px;
-  padding: 16px;
-  margin-bottom: 12px;
-  background: rgba(15, 23, 42, 0.55);
-  display: grid;
-  gap: 14px;
-}
-
-.SceneCard__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.SceneCard__titleGroup {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.SceneCard__title {
-  font-weight: 700;
-}
-
-.SceneCard__grid {
-  display: grid;
-  gap: 12px;
-}
-
-.SceneCard__toggle {
-  padding: 4px !important;
-  min-height: auto !important;
-  width: auto !important;
-}
-
 .Modal__overlay {
   position: fixed;
   top: 0;
