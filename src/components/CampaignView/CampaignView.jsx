@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../../api';
 import Button from '../Button/Button';
+import Input from '../Input/Input';
 import StatusBadge from '../StatusBadge/StatusBadge';
 import './CampaignView.css';
 
@@ -173,7 +174,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
   const handleDragStart = (e, fileName) => {
     setDraggingFileName(fileName);
     e.currentTarget.classList.add('dragging');
-    
+
     e.dataTransfer.setData('text/plain', fileName);
     e.dataTransfer.effectAllowed = 'move';
   };
@@ -192,7 +193,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
     const items = [...sessions];
     const draggedIdx = items.findIndex(i => i.fileName === draggingFileName);
     const targetIdx = items.findIndex(i => i.fileName === targetFileName);
-    
+
     if (draggedIdx !== -1 && targetIdx !== -1) {
       const [removed] = items.splice(draggedIdx, 1);
       items.splice(targetIdx, 0, removed);
@@ -224,8 +225,9 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
       <div className="Panel__body">
         <div className="CampaignView__section">
           <h3>Сюжет кампанії</h3>
-          <textarea
-            className="field field--textarea"
+          <Input
+            type="textarea"
+            className="field--textarea"
             placeholder="Опишіть основну лінію сюжету, ключові події та цілі..."
             value={description}
             onChange={handleDescriptionChange}
@@ -247,11 +249,11 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
               <h3>Замітки</h3>
             </div>
             {!isNotesCollapsed && (
-              <Button 
-                variant="primary" 
-                size="small" 
-                onClick={handleAddNote} 
-                icon="plus" 
+              <Button
+                variant="primary"
+                size="small"
+                onClick={handleAddNote}
+                icon="plus"
                 strokeWidth={2.5}
               >
                 Нова замітка
@@ -260,82 +262,83 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
           </div>
           {!isNotesCollapsed && (
             <div className="CampaignView__notes">
-            {notes.map(note => (
-              <div 
-                key={note.id} 
-                className={`note-card-simple ${note.collapsed ? 'is-collapsed' : ''} ${draggingNoteId === note.id ? 'note-card-simple--dragging' : ''}`}
-                draggable
-                onDragStart={(e) => {
-                  setDraggingNoteId(note.id);
-                  e.currentTarget.classList.add('dragging');
-                  e.dataTransfer.setData('text/plain', note.id);
-                  e.dataTransfer.effectAllowed = 'move';
-                }}
-                onDragEnd={() => {
-                  setDraggingNoteId(null);
-                  triggerSave({ notes });
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.dataTransfer.dropEffect = 'move';
-                }}
-                onDragEnter={() => {
-                  if (draggingNoteId === note.id || !draggingNoteId) return;
+              {notes.map(note => (
+                <div
+                  key={note.id}
+                  className={`note-card-simple ${note.collapsed ? 'is-collapsed' : ''} ${draggingNoteId === note.id ? 'note-card-simple--dragging' : ''}`}
+                  draggable
+                  onDragStart={(e) => {
+                    setDraggingNoteId(note.id);
+                    e.currentTarget.classList.add('dragging');
+                    e.dataTransfer.setData('text/plain', note.id);
+                    e.dataTransfer.effectAllowed = 'move';
+                  }}
+                  onDragEnd={() => {
+                    setDraggingNoteId(null);
+                    triggerSave({ notes });
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                  }}
+                  onDragEnter={() => {
+                    if (draggingNoteId === note.id || !draggingNoteId) return;
 
-                  const items = [...notes];
-                  const draggedIdx = items.findIndex(i => i.id === draggingNoteId);
-                  const targetIdx = items.findIndex(i => i.id === note.id);
-                  
-                  if (draggedIdx !== -1 && targetIdx !== -1) {
-                    const [removed] = items.splice(draggedIdx, 1);
-                    items.splice(targetIdx, 0, removed);
-                    setNotes(items);
-                  }
-                }}
-                onDrop={handleDrop}
-              >
-                <div className="note-card-simple__header">
-                  <Button
-                    variant="ghost"
-                    size="small"
-                    icon="chevron"
-                    className={`note-card-simple__toggle ${note.collapsed ? 'is-rotated' : ''}`}
-                    onClick={() => handleToggleNoteCollapse(note.id)}
-                  />
-                  <div 
-                    className="note-card-simple__title"
+                    const items = [...notes];
+                    const draggedIdx = items.findIndex(i => i.id === draggingNoteId);
+                    const targetIdx = items.findIndex(i => i.id === note.id);
+
+                    if (draggedIdx !== -1 && targetIdx !== -1) {
+                      const [removed] = items.splice(draggedIdx, 1);
+                      items.splice(targetIdx, 0, removed);
+                      setNotes(items);
+                    }
+                  }}
+                  onDrop={handleDrop}
+                >
+                  <div
+                    className="note-card-simple__header"
                     onClick={() => handleToggleNoteCollapse(note.id)}
                   >
-                    {note.text.split('\n')[0].slice(0, 45) || 'Нова замітка'}
+                    <Button
+                      variant="ghost"
+                      size="small"
+                      icon="chevron"
+                      className={`note-card-simple__toggle ${note.collapsed ? 'is-rotated' : ''}`}
+                      onClick={() => handleToggleNoteCollapse(note.id)}
+                    />
+                    <div className="note-card-simple__title">
+                      {note.text.split('\n')[0].slice(0, 45) || 'Нова замітка'}
+                    </div>
+                    <Button variant="danger" icon="trash" size={14} onClick={() => handleDeleteNote(note.id)} title="Видалити замітку" />
                   </div>
-                  <Button variant="danger" icon="trash" size={14} onClick={() => handleDeleteNote(note.id)} title="Видалити замітку" />
+                  {!note.collapsed && (
+                    <Input
+                      type="textarea"
+                      className="field--textarea"
+                      value={note.text}
+                      onChange={(e) => handleNoteChange(note.id, e.target.value)}
+                      onInput={autoResize}
+                      placeholder="Текст замітки..."
+                      rows={1}
+                    />
+                  )}
                 </div>
-                {!note.collapsed && (
-                  <textarea
-                    className="field field--textarea"
-                    value={note.text}
-                    onChange={(e) => handleNoteChange(note.id, e.target.value)}
-                    onInput={autoResize}
-                    placeholder="Текст замітки..."
-                    rows={1}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
           )}
         </div>
 
         <div className="section-row">
           <h3>Сесії</h3>
-          <Button variant="primary" onClick={handleCreateSession} icon="plus" strokeWidth={2.5}>
-            Нова сесія
-          </Button>
         </div>
         <div className="CampaignView__sessions">
+          <Button variant="create" onClick={handleCreateSession} icon="plus" strokeWidth={2.5}>
+            Нова сесія
+          </Button>
           {sessions.map(session => (
-            <article 
-              key={session.fileName} 
+            <article
+              key={session.fileName}
               className={`list-card ${draggingFileName === session.fileName ? 'list-card--dragging' : ''}`}
               draggable
               onDragStart={(e) => handleDragStart(e, session.fileName)}
@@ -347,8 +350,8 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
               onDragEnter={() => handleDragEnter(session.fileName)}
               onDrop={handleDrop}
             >
-              <button 
-                className="list-card__main" 
+              <button
+                className="list-card__main"
                 onClick={() => onSelectSession(session.fileName)}
               >
                 <div className="list-card__title">{session.name}</div>
@@ -368,7 +371,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
                   onClick={(e) => {
                     e.stopPropagation();
                     handleDeleteSession(session);
-                  }} 
+                  }}
                   title="Видалити сесію"
                 />
               </div>

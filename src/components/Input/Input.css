@@ -1,0 +1,31 @@
+.Input {
+    width: 100%;
+    background: #020617;
+    border: 1px solid var(--border, rgba(51, 65, 85, 0.5));
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.95rem;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    outline: none;
+    display: block;
+}
+
+.Input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.16);
+}
+
+.Input--textarea {
+    min-height: 140px;
+    line-height: 1.5;
+    resize: vertical;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(71, 85, 105, 0.5) transparent;
+}
+
+.Input--result {
+    min-height: 220px;
+    background: rgba(2, 6, 23, 0.8);
+}

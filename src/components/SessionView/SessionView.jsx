@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../../api';
 import Icon from '../Icon';
 import Button from '../Button/Button';
+import Input from '../Input/Input';
 import './SessionView.css';
 
 const SCENE_SCHEMA = [
@@ -100,7 +101,7 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
         updateData('scenes', session.data.scenes.filter(s => s.id !== sceneId), true);
     };
 
-    if (!session) return <div className="panel empty-state"><h2>Завантаження...</h2></div>;
+    if (!session) return null;
 
     const checklistItems = [
         { id: 'goal', label: 'Визначити головну мету сесії', hasText: true },
@@ -174,8 +175,8 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
                                 note={item.note}
                             >
                                 {item.hasText && (
-                                    <textarea
-                                        className="field field--textarea"
+                                    <Input
+                                        type="textarea"
                                         rows="1"
                                         onInput={autoResize}
                                         value={session.data[`${item.id}_text`] || ''}
@@ -205,21 +206,14 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
                                 {SCENE_SCHEMA.map(field => (
                                     <div key={field.key} className="TodoItem__content">
                                         <div className="TodoItem__title" style={{ fontSize: '0.85rem' }}>{field.title}</div>
-                                        {field.type === 'textarea' ? (
-                                            <textarea
-                                                className="field field--textarea"
-                                                rows="1"
-                                                onInput={autoResize}
-                                                value={scene.texts[field.key] || ''}
-                                                onChange={(e) => updateScene(scene.id, field.key, e.target.value)}
-                                            />
-                                        ) : (
-                                            <input
-                                                className="field"
-                                                value={scene.texts[field.key] || ''}
-                                                onChange={(e) => updateScene(scene.id, field.key, e.target.value)}
-                                            />
-                                        )}
+                                        <Input
+                                            type={field.type}
+                                            rows="1"
+                                            onInput={field.type === 'textarea' ? autoResize : undefined}
+                                            value={scene.texts[field.key] || ''}
+                                            onChange={(e) => updateScene(scene.id, field.key, e.target.value)}
+                                            placeholder={field.placeholder}
+                                        />
                                     </div>
                                 ))}
                             </SceneCard>
@@ -230,8 +224,9 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
                         <div className="TodoItem__note" style={{ marginBottom: '8px' }}>
                             Запиши короткий підсумок того, що реально відбулося.
                         </div>
-                        <textarea
-                            className="field field--textarea field--result"
+                        <Input
+                            type="textarea"
+                            className="field--result"
                             placeholder="Підсумок того, що реально відбулося..."
                             onInput={autoResize}
                             value={session.data.result_text || ''}

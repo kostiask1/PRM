@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Button from './Button/Button';
+import Input from './Input/Input';
 
 export default function Modal({ title, message, type, defaultValue, onConfirm, onCancel, showInput }) {
   const [inputValue, setInputValue] = useState(defaultValue || '');
@@ -41,10 +42,8 @@ export default function Modal({ title, message, type, defaultValue, onConfirm, o
         <div className="Modal__body">
           <p>{message}</p>
           {showInput && (
-            <input
+            <Input
               ref={inputRef}
-              type="text"
-              className="field"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Введіть значення..."
