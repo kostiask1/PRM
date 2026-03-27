@@ -3,6 +3,7 @@ import { api } from '../../api';
 import Button from '../Button/Button';
 import Input from '../Input/Input';
 import StatusBadge from '../StatusBadge/StatusBadge';
+import ListCard from '../ListCard/ListCard';
 import Panel from '../Panel/Panel';
 import './CampaignView.css';
 
@@ -338,9 +339,10 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
             Нова сесія
           </Button>
           {sessions.map(session => (
-            <article
+            <ListCard
               key={session.fileName}
-              className={`list-card ${draggingFileName === session.fileName ? 'list-card--dragging' : ''}`}
+              dragging={draggingFileName === session.fileName}
+              onClick={() => onSelectSession(session.fileName)}
               draggable
               onDragStart={(e) => handleDragStart(e, session.fileName)}
               onDragEnd={handleDragEnd}
@@ -350,33 +352,16 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
               }}
               onDragEnter={() => handleDragEnter(session.fileName)}
               onDrop={handleDrop}
+              actions={
+                <>
+                  <StatusBadge completed={session.completed} completedAt={session.completedAt} onClick={() => handleToggleSessionStatus(session)} type="session" />
+                  <Button variant="danger" icon="trash" size={16} onClick={(e) => { e.stopPropagation(); handleDeleteSession(session); }} title="Видалити сесію" />
+                </>
+              }
             >
-              <button
-                className="list-card__main"
-                onClick={() => onSelectSession(session.fileName)}
-              >
-                <div className="list-card__title">{session.name}</div>
-                <div className="list-card__meta">Оновлено: {new Date(session.updatedAt).toLocaleDateString()}</div>
-              </button>
-              <div className="session-card__actions">
-                <StatusBadge
-                  completed={session.completed}
-                  completedAt={session.completedAt}
-                  onClick={() => handleToggleSessionStatus(session)}
-                  type="session"
-                />
-                <Button
-                  variant="danger"
-                  icon="trash"
-                  size={16}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteSession(session);
-                  }}
-                  title="Видалити сесію"
-                />
-              </div>
-            </article>
+              <div className="ListCard__title">{session.name}</div>
+              <div className="ListCard__meta">Оновлено: {new Date(session.updatedAt).toLocaleDateString()}</div>
+            </ListCard>
           ))}
         </div>
       </div> {/* Цей закриваючий div належить до Panel__body, який неявно є дітьми компонента Panel */}

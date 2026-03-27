@@ -1,0 +1,65 @@
+.ListCard {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid rgba(51, 65, 85, 0.7);
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.55);
+    transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.1);
+    position: relative;
+    z-index: 1;
+}
+
+.ListCard:hover {
+    border-color: rgba(56, 189, 248, 0.35);
+    background: rgba(15, 23, 42, 0.7);
+}
+
+.ListCard--active {
+    border-color: var(--accent) !important;
+    background: rgba(56, 189, 248, 0.1) !important;
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.08) !important;
+    transform: none !important;
+}
+
+.ListCard--dragging {
+    opacity: 0.1;
+    background: var(--panel-2); /* Припускаємо, що --panel-2 визначено */
+    border: 1px dashed var(--muted); /* Припускаємо, що --muted визначено */
+    transform: scale(0.95);
+    z-index: 0;
+}
+
+.ListCard__main {
+    flex-grow: 1;
+    text-align: left;
+    padding: 12px 16px; /* Внутрішній відступ для клікабельної області */
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: inherit;
+    font-family: inherit;
+    display: block; /* Щоб займати всю доступну ширину */
+    width: 100%;
+}
+
+.ListCard__title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text);
+}
+
+.ListCard__meta {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 4px;
+}
+
+.ListCard__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0; /* Запобігає зменшенню розміру елементів дій */
+    padding-right: 12px; /* Відступ праворуч для елементів дій */
+}

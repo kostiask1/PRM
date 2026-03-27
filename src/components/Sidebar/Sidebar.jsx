@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { api } from '../../api';
 import Button from '../Button/Button';
 import StatusBadge from '../StatusBadge/StatusBadge';
+import ListCard from '../ListCard/ListCard';
 import "./Sidebar.css"
 
 export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign, onCreateCampaign, onToggleCampaignStatus, modal }) {
@@ -104,9 +105,11 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
         
         <div className="Sidebar__list">
           {localCampaigns.map(campaign => (
-            <article 
-              key={campaign.slug} 
-              className={`Sidebar__card ${activeCampaignId === campaign.slug ? 'Sidebar__card--active' : ''} ${draggingSlug === campaign.slug ? 'Sidebar__card--dragging' : ''}`}
+            <ListCard
+              key={campaign.slug}
+              active={activeCampaignId === campaign.slug}
+              dragging={draggingSlug === campaign.slug}
+              onClick={() => onSelectCampaign(campaign.slug)}
               draggable
               onDragStart={(e) => handleDragStart(e, campaign.slug)}
               onDragEnd={handleDragEnd}
@@ -116,23 +119,13 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
               }}
               onDragEnter={() => handleDragEnter(campaign.slug)}
               onDrop={handleDrop}
+              actions={
+                <StatusBadge completed={campaign.completed} completedAt={campaign.completedAt} onClick={(e) => { e.stopPropagation(); onToggleCampaignStatus(campaign); }} />
+              }
             >
-              <button 
-                className="list-card__main" // Використовуємо спільний клас для кнопок-карток
-                onClick={() => onSelectCampaign(campaign.slug)}
-              >
-                <div className="list-card__title">{campaign.name}</div>
-                <div className="list-card__meta">{campaign.sessionCount || 0} сесій</div>
-              </button>
-              <StatusBadge
-                completed={campaign.completed}
-                completedAt={campaign.completedAt}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleCampaignStatus(campaign);
-                }}
-              />
-            </article>
+              <div className="ListCard__title">{campaign.name}</div>
+              <div className="ListCard__meta">{campaign.sessionCount || 0} сесій</div>
+            </ListCard>
           ))}
         </div>
       </div>
