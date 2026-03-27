@@ -1,6 +1,6 @@
 import React from 'react';
-import CampaignView from './CampaignView';
-import SessionView from './SessionView';
+import CampaignView from './CampaignView/CampaignView';
+import SessionView from './SessionView/SessionView';
 
 export default function MainContent({ campaign, activeSessionId, onSelectSession, onRefreshCampaigns, onNavigate, modal }) {
   if (!campaign) {

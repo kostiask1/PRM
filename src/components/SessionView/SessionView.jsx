@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { api } from '../api';
-import Icon from './Icon';
-import Button from './Button/Button';
+import { api } from '../../api';
+import Icon from '../Icon';
+import Button from '../Button/Button';
+import './SessionView.css';
 
 const SCENE_SCHEMA = [
     { key: 'summary', title: 'Суть сцени', type: 'textarea', placeholder: 'Коротко опиши сцену...' },
