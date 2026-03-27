@@ -2,10 +2,10 @@
   "name": "dnd-session-manager",
   "version": "1.0.0",
   "description": "Local DnD campaign and session manager",
-  "main": "campaign_session_server.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node campaign_session_server.js",
-    "dev": "node --watch campaign_session_server.js"
+    "start": "node server.js",
+    "dev": "node --watch server.js"
   },
   "keywords": [
     "dnd",
