@@ -1,0 +1,30 @@
+.Button {
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 10px 14px;
+  transition: background 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  justify-content: center;
+}
+
+.Button:hover { transform: translateY(-1px); background: #283548; }
+
+.Button--primary { background: rgba(56, 189, 248, 0.14); border-color: rgba(56, 189, 248, 0.35); }
+.Button--primary:hover { background: rgba(56, 189, 248, 0.2); }
+
+.Button--danger { background: rgba(239, 68, 68, 0.14); border-color: rgba(239, 68, 68, 0.35); color: #fecaca; }
+.Button--danger:hover { background: rgba(239, 68, 68, 0.22); }
+
+.Button--ghost { background: transparent; }
+.Button--small { padding: 8px 12px; font-size: 0.9rem; }
+.Button--footer { width: 100%; background: rgba(30, 41, 59, 0.4); font-size: 0.85rem; }
+
+.Button--create { width: 100%; min-height: 60px; background: rgba(56, 189, 248, 0.04); border: 2px dashed rgba(56, 189, 248, 0.25); color: var(--accent); font-weight: 600; border-radius: 14px; }
+.Button--create:hover { background: rgba(56, 189, 248, 0.08); border-color: var(--accent); transform: translateY(-2px); }

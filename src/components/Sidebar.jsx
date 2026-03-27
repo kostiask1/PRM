@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { api } from '../api';
-import Icon from './Icon';
+import Button from './Button';
+import StatusBadge from './StatusBadge';
 
 export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign, onCreateCampaign, onToggleCampaignStatus, modal }) {
   const fileInputRef = useRef(null);
@@ -86,26 +87,25 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
   };
 
   return (
-    <aside className="sidebar app__sidebar">
-      <div className="sidebar__header">
-        <h1>D&D Session Manager</h1>
-        <p>Кампанії, сесії та планування в одному локальному проєкті.</p>
+    <aside className="Sidebar App__sidebar">
+      <div className="Sidebar__header">
+        <h1 className="Sidebar__title">D&D Session Manager</h1>
+        <p className="Sidebar__description">Кампанії, сесії та планування в одному локальному проєкті.</p>
       </div>
 
-      <div className="sidebar__section">
-        <div className="sidebar__header-section">
-          <h2 style={{ marginBottom: '12px' }}>Кампанії</h2>
+      <div className="Sidebar__section">
+        <div className="Sidebar__headerSection">
+          <h2 className="Sidebar__sectionTitle">Кампанії</h2>
         </div>
-        <button className="btn btn--primary" onClick={onCreateCampaign}>
-          <Icon name="plus" strokeWidth={2.5} />
-          <span>Нова кампанія</span>
-        </button>
+        <Button variant="create" onClick={onCreateCampaign} icon="plus">
+          Нова кампанія
+        </Button>
         
-        <div className="sidebar__list">
+        <div className="Sidebar__list">
           {localCampaigns.map(campaign => (
             <article 
               key={campaign.slug} 
-              className={`list-card ${activeCampaignId === campaign.slug ? 'list-card--active' : ''} ${draggingSlug === campaign.slug ? 'list-card--dragging' : ''}`}
+              className={`Sidebar__card ${activeCampaignId === campaign.slug ? 'Sidebar__card--active' : ''} ${draggingSlug === campaign.slug ? 'Sidebar__card--dragging' : ''}`}
               draggable
               onDragStart={(e) => handleDragStart(e, campaign.slug)}
               onDragEnd={handleDragEnd}
@@ -117,31 +117,26 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
               onDrop={handleDrop}
             >
               <button 
-                className="list-card__main" 
+                className="list-card__main" // Використовуємо спільний клас для кнопок-карток
                 onClick={() => onSelectCampaign(campaign.slug)}
               >
                 <div className="list-card__title">{campaign.name}</div>
                 <div className="list-card__meta">{campaign.sessionCount || 0} сесій</div>
               </button>
-              <span 
-                className={`status-badge ${campaign.completed ? 'status-badge--done' : ''}`}
+              <StatusBadge
+                completed={campaign.completed}
+                completedAt={campaign.completedAt}
                 onClick={(e) => {
                   e.stopPropagation();
                   onToggleCampaignStatus(campaign);
                 }}
-              >
-                {campaign.completed ? (
-                  `Завершена ${campaign.completedAt ? new Date(campaign.completedAt).toLocaleDateString() : ''}`
-                ) : (
-                  'Активна'
-                )}
-              </span>
+              />
             </article>
           ))}
         </div>
       </div>
 
-      <div className="sidebar__footer">
+      <div className="Sidebar__footer">
         <input 
           type="file" 
           ref={fileInputRef} 
@@ -149,15 +144,14 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
           accept=".json" 
           onChange={handleFileChange} 
         />
-        <button className="btn btn--footer" onClick={() => {
+        <Button variant="footer" icon="import" onClick={() => {
           importMode.current = 'campaign';
           fileInputRef.current.click();
         }}>
-          <Icon name="import" />
-          <span>Імпорт кампанії</span>
-        </button>
-        <div className="footer-grid">
-          <button className="btn btn--footer btn--small" onClick={async () => {
+          Імпорт кампанії
+        </Button>
+        <div className="Sidebar__footerGrid">
+          <Button variant="footer" icon="database" iconSize={16} onClick={async () => {
             try {
               const data = await api.exportAll();
               downloadJson(data, `prm-full-backup-${new Date().toISOString().slice(0, 10)}.json`);
@@ -165,18 +159,16 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
               modal.alert("Помилка бекапу", err.message || "Невідома помилка");
             }
           }}>
-            <Icon name="database" size={16} />
-            <span>Бекап</span>
-          </button>
-          <button className="btn btn--footer btn--small" onClick={async () => {
+            Бекап
+          </Button>
+          <Button variant="footer" icon="restore" iconSize={16} onClick={async () => {
             if (await modal.confirm('Відновлення бази', 'Імпортувати всі дані? Це додасть кампанії з файлу до вашого списку.')) {
               importMode.current = 'all';
               fileInputRef.current.click();
             }
           }}>
-            <Icon name="restore" size={16} />
-            <span>Імпорт БД</span>
-          </button>
+            Імпорт БД
+          </Button>
         </div>
       </div>
     </aside>

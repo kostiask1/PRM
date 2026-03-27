@@ -14,6 +14,32 @@ body {
   color: var(--text);
 }
 
-button, input, textarea { font: inherit; }
-button { cursor: pointer; }
-.muted { color: var(--muted); }
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.muted {
+  color: var(--muted);
+  margin: 0;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  color: var(--text);
+}
+
+p {
+  margin: 0;
+  line-height: 1.5;
+}

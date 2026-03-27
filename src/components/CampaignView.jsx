@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
 import Icon from './Icon';
+import Button from './Button';
+import StatusBadge from './StatusBadge';
 
 export default function CampaignView({ campaign, onSelectSession, onNavigate, onRefreshCampaigns, modal }) {
   const [sessions, setSessions] = useState([]);
@@ -143,34 +145,30 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
   };
 
   return (
-    <section className="campaign-view panel">
-      <div className="panel__header">
+    <section className="CampaignView Panel">
+      <div className="Panel__header">
         <div>
           <h2 className="editable-title" onClick={handleRename} title="Натисни, щоб перейменувати">
             {campaign.name}
           </h2>
           <p className="muted">Створено: {new Date(campaign.createdAt).toLocaleDateString()}</p>
         </div>
-        <div className="campaign-view__header-actions">
-          <button className="btn" type="button" onClick={handleExport}>
-            <Icon name="export" />
-            <span>Експорт</span>
-          </button>
-          <button className="icon-btn icon-btn--danger" onClick={handleDeleteCampaign} title="Видалити кампанію">
-            <Icon name="trash" />
-          </button>
+        <div className="CampaignView__headerActions">
+          <Button onClick={handleExport} icon="export">
+            Експорт
+          </Button>
+          <Button variant="danger" icon="trash" onClick={handleDeleteCampaign} title="Видалити кампанію" />
         </div>
       </div>
 
-      <div className="panel__body">
+      <div className="Panel__body">
         <div className="section-row">
           <h3>Сесії</h3>
-          <button className="btn btn--primary" onClick={handleCreateSession}>
-            <Icon name="plus" strokeWidth={2.5} />
-            <span>Нова сесія</span>
-          </button>
+          <Button variant="primary" onClick={handleCreateSession} icon="plus" strokeWidth={2.5}>
+            Нова сесія
+          </Button>
         </div>
-        <div className="campaign-view__sessions">
+        <div className="CampaignView__sessions">
           {sessions.map(session => (
             <article 
               key={session.fileName} 
@@ -192,28 +190,23 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
                 <div className="list-card__title">{session.name}</div>
                 <div className="list-card__meta">Оновлено: {new Date(session.updatedAt).toLocaleDateString()}</div>
               </button>
-              <div className="session-card__actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <span 
-                  className={`status-badge ${session.completed ? 'status-badge--done' : ''}`}
-                  style={{ cursor: 'pointer' }}
+              <div className="session-card__actions">
+                <StatusBadge
+                  completed={session.completed}
+                  completedAt={session.completedAt}
                   onClick={() => handleToggleSessionStatus(session)}
-                >
-                  {session.completed ? (
-                    `Завершена ${session.completedAt ? new Date(session.completedAt).toLocaleDateString() : ''}`
-                  ) : (
-                    'В підготовці'
-                  )}
-                </span>
-                <button 
-                  className="icon-btn icon-btn--danger" 
+                  type="session"
+                />
+                <Button
+                  variant="danger"
+                  icon="trash"
+                  size={16}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleDeleteSession(session);
                   }} 
                   title="Видалити сесію"
-                >
-                  <Icon name="trash" size={16} />
-                </button>
+                />
               </div>
             </article>
           ))}

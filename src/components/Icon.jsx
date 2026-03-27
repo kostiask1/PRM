@@ -28,7 +28,7 @@ export default function Icon({ name, size = 18, strokeWidth = 2, className = "" 
       strokeWidth={strokeWidth} 
       strokeLinecap="round" 
       strokeLinejoin="round" 
-      className={`icon icon-${name} ${className}`}
+      className={`Icon Icon--${name} ${className}`}
     >
       {content}
     </svg>

@@ -5,8 +5,8 @@ import SessionView from './SessionView';
 export default function MainContent({ campaign, activeSessionId, onSelectSession, onRefreshCampaigns, onNavigate, modal }) {
   if (!campaign) {
     return (
-      <main className="main-content">
-        <section className="empty-state panel">
+      <main className="MainContent">
+        <section className="MainContent__emptyState Panel">
           <h2>Обери кампанію або створи нову</h2>
           <p>Зліва знаходиться меню кампаній.</p>
         </section>
@@ -15,7 +15,7 @@ export default function MainContent({ campaign, activeSessionId, onSelectSession
   }
 
   return (
-    <main className="main-content">
+    <main className="MainContent">
       {activeSessionId ? (
         <SessionView 
           campaignSlug={campaign.slug} 

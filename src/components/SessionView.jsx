@@ -1,250 +1,274 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../api';
 import Icon from './Icon';
+import Button from './Button';
 
 const SCENE_SCHEMA = [
-  { key: 'summary', title: 'Суть сцени', type: 'textarea', placeholder: 'Коротко опиши сцену...' },
-  { key: 'goal', title: 'Мета гравців', type: 'textarea', placeholder: 'Чого персонажі хочуть досягти...' },
-  { key: 'stakes', title: 'Ставки', type: 'textarea', placeholder: 'Що буде при успіху/провалі...' },
-  { key: 'location', title: 'Локація', type: 'text', placeholder: 'Де це відбувається...' },
-  { key: 'npcs', title: 'NPC / фракції', type: 'textarea', placeholder: 'Хто бере участь...' },
-  { key: 'clues', title: 'Підказки', type: 'textarea', placeholder: 'Інформація, яку отримають гравці...' },
+    { key: 'summary', title: 'Суть сцени', type: 'textarea', placeholder: 'Коротко опиши сцену...' },
+    { key: 'goal', title: 'Мета гравців', type: 'textarea', placeholder: 'Чого персонажі хочуть досягти...' },
+    { key: 'stakes', title: 'Ставки', type: 'textarea', placeholder: 'Що буде при успіху/провалі...' },
+    { key: 'location', title: 'Локація', type: 'text', placeholder: 'Де це відбувається...' },
+    { key: 'npcs', title: 'NPC / фракції', type: 'textarea', placeholder: 'Хто бере участь...' },
+    { key: 'clues', title: 'Підказки', type: 'textarea', placeholder: 'Інформація, яку отримають гравці...' },
 ];
 
 export default function SessionView({ campaignSlug, sessionId, onBack, onNavigate, onRefreshCampaigns, modal }) {
-  const [session, setSession] = useState(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const saveTimeout = useRef(null);
+    const [session, setSession] = useState(null);
+    const [isSaving, setIsSaving] = useState(false);
+    const saveTimeout = useRef(null);
 
-  const autoResize = (e) => {
-    e.target.style.height = 'auto';
-    e.target.style.height = e.target.scrollHeight + 'px';
-  };
-
-  useEffect(() => {
-    const loadSession = async () => {
-      try {
-        const data = await api.getSession(campaignSlug, sessionId);
-        setSession(data);
-      } catch (err) {
-        console.error("Failed to load session", err);
-      }
+    const autoResize = (e) => {
+        e.target.style.height = 'auto';
+        e.target.style.height = e.target.scrollHeight + 'px';
     };
-    loadSession();
-  }, [campaignSlug, sessionId]);
 
-  const saveToServer = useCallback(async (updatedSession) => {
-    if (saveTimeout.current) clearTimeout(saveTimeout.current);
-    setIsSaving(true);
-    try {
-      const result = await api.updateSession(campaignSlug, sessionId, updatedSession);
-      // Якщо після збереження змінився fileName (через ренейм), оновлюємо URL
-      if (result && result.fileName !== sessionId) {
-        onNavigate(campaignSlug, result.fileName, true);
-        onRefreshCampaigns();
-      }
-    } catch (err) {
-      console.error("Save failed", err);
-    } finally {
-      setIsSaving(false);
-    }
-  }, [campaignSlug, sessionId, onNavigate, onRefreshCampaigns]);
-
-  const triggerSave = useCallback((updatedSession, instant = false) => {
-    if (saveTimeout.current) clearTimeout(saveTimeout.current);
-    
-    if (instant) {
-      saveToServer(updatedSession);
-    } else {
-      setIsSaving(true);
-      saveTimeout.current = setTimeout(() => saveToServer(updatedSession), 250);
-    }
-  }, [saveToServer]);
-
-  const updateSession = (updates, instant = false) => {
-    setSession(prev => {
-      const next = { ...prev, ...updates };
-      triggerSave(next, instant);
-      return next;
-    });
-  };
-
-  const updateData = (key, value, instant = false) => {
-    const nextData = { ...session.data, [key]: value };
-    updateSession({ data: nextData }, instant);
-  };
-
-  const addScene = () => {
-    const scenes = session.data.scenes || [];
-    updateData('scenes', [...scenes, { id: Date.now(), texts: {}, collapsed: false }], true);
-  };
-
-  const updateScene = (sceneId, field, value) => {
-    const scenes = session.data.scenes.map(s => 
-      s.id === sceneId ? { ...s, texts: { ...s.texts, [field]: value } } : s
-    );
-    updateData('scenes', scenes);
-  };
-
-  const removeScene = async (sceneId) => {
-    if (!(await modal.confirm("Видалення сцени", "Ви впевнені, що хочете видалити цю сцену?"))) return;
-    updateData('scenes', session.data.scenes.filter(s => s.id !== sceneId), true);
-  };
-
-  if (!session) return <div className="panel empty-state"><h2>Завантаження...</h2></div>;
-
-  const checklistItems = [
-    { id: 'goal', label: 'Визначити головну мету сесії', hasText: true },
-    { id: 'conflict', label: 'Сформулювати основний конфлікт', hasText: true },
-    { id: 'social', label: 'Підготувати соціальну сцену', note: 'Переговори, допит, суперечка.' },
-    { id: 'exploration', label: 'Підготувати сцену дослідження', note: 'Локація, загадка, пастка.' },
-    { id: 'combat', label: 'Підготувати бій / сцену напруги', note: 'Ризик і тиск.' },
-  ];
-
-  const totalChecks = checklistItems.length;
-  const completedChecks = checklistItems.filter(item => session.data[`${item.id}_check`]).length;
-  const progress = Math.round((completedChecks / totalChecks) * 100);
-
-  const handleRename = async () => {
-    const name = await modal.prompt("Перейменування", "Введіть нову назву сесії:", session.name);
-    if (name && name !== session.name) updateSession({ name }, true);
-  };
-
-  return (
-    <section className="session-view panel">
-      <div className="panel__header">
-        <div className="session-view__header">
-          <button className="btn btn--ghost btn--small" onClick={onBack}>
-            <Icon name="back" />
-            <span>Назад до кампанії</span>
-          </button>
-          <div className="session-view__title-group">
-            <h2 className="editable-title" onClick={handleRename}>{session.name}</h2>
-            <p className="muted" style={{fontSize: '0.85rem'}}>
-              {isSaving ? 'Зберігання...' : 'Всі зміни збережено'}
-            </p>
-          </div>
-        </div>
-        <div className="session-view__header-actions">
-          <button 
-            className={`btn ${session.completed ? 'btn--primary' : ''}`} 
-            onClick={() => updateSession({ completed: !session.completed }, true)}
-          >
-            {session.completed ? 'Відновити' : 'Завершити'}
-          </button>
-          <button className="icon-btn icon-btn--danger" onClick={async () => {
-            if (await modal.confirm("Видалення сесії", `Видалити сесію "${session.name}"?`)) {
-              await api.deleteSession(campaignSlug, sessionId);
-              onBack();
-              onRefreshCampaigns();
+    useEffect(() => {
+        const loadSession = async () => {
+            try {
+                const data = await api.getSession(campaignSlug, sessionId);
+                setSession(data);
+            } catch (err) {
+                console.error("Failed to load session", err);
             }
-          }}>
-             <Icon name="trash" />
-          </button>
-        </div>
-      </div>
+        };
+        loadSession();
+    }, [campaignSlug, sessionId]);
 
-      <div className="progress-toolbar">
-        <div className="progress-wrap">
-          <div className="progress-label">
-            <span>Прогрес підготовки</span>
-            <span>{progress}%</span>
-          </div>
-          <div className="progress-bar">
-            <div className="progress-fill" style={{ width: `${progress}%` }}></div>
-          </div>
-        </div>
-      </div>
+    const saveToServer = useCallback(async (updatedSession) => {
+        if (saveTimeout.current) clearTimeout(saveTimeout.current);
+        setIsSaving(true);
+        try {
+            const result = await api.updateSession(campaignSlug, sessionId, updatedSession);
+            // Якщо після збереження змінився fileName (через ренейм), оновлюємо URL
+            if (result && result.fileName !== sessionId) {
+                onNavigate(campaignSlug, result.fileName, true);
+                onRefreshCampaigns();
+            }
+        } catch (err) {
+            console.error("Save failed", err);
+        } finally {
+            setIsSaving(false);
+        }
+    }, [campaignSlug, sessionId, onNavigate, onRefreshCampaigns]);
 
-      <div className="panel__body">
-        <div className="todo-card">
-          <section className="todo-section">
-            <div className="todo-section__header"><h3>1. Чекліст підготовки</h3></div>
-            <div className="todo-section__body checklist">
-              {checklistItems.map(item => (
-                <label key={item.id} className={`todo-item ${session.data[`${item.id}_check`] ? 'is-done' : ''}`}>
-                  <input 
-                    type="checkbox" 
-                    checked={!!session.data[`${item.id}_check`]} 
-                    onChange={(e) => updateData(`${item.id}_check`, e.target.checked, true)}
-                  />
-                  <div className="todo-item__content">
-                    <div className="todo-item__title">{item.label}</div>
-                    {item.note && <div className="todo-item__note">{item.note}</div>}
-                    {item.hasText && (
-                      <textarea 
-                        className="field field--textarea" 
-                        rows="1"
-                        onInput={autoResize}
-                        value={session.data[`${item.id}_text`] || ''}
-                        onChange={(e) => updateData(`${item.id}_text`, e.target.value)}
-                      />
-                    )}
-                  </div>
-                </label>
-              ))}
-            </div>
-          </section>
+    const triggerSave = useCallback((updatedSession, instant = false) => {
+        if (saveTimeout.current) clearTimeout(saveTimeout.current);
 
-          <section className="todo-section">
-            <div className="todo-section__header">
-              <h3>2. Сцени</h3>
-              <button className="btn btn--primary btn--small" style={{marginLeft: 'auto'}} onClick={addScene}>
-                <Icon name="plus" size={16} />
-                <span>Додати</span>
-              </button>
-            </div>
-            <div className="todo-section__body scene-list">
-              {(session.data.scenes || []).map((scene, idx) => (
-                <div key={scene.id} className="scene-card">
-                  <div className="scene-card__header">
-                    <div className="scene-card__title">Сцена {idx + 1}</div>
-                    <button className="icon-btn icon-btn--danger" onClick={() => removeScene(scene.id)}>
-                      <Icon name="x" size={16} />
-                    </button>
-                  </div>
-                  <div className="scene-grid">
-                    {SCENE_SCHEMA.map(field => (
-                      <div key={field.key} className="todo-item__content">
-                        <div className="todo-item__title" style={{fontSize: '0.85rem'}}>{field.title}</div>
-                        {field.type === 'textarea' ? (
-                          <textarea 
-                            className="field field--textarea" 
-                            rows="1"
-                            onInput={autoResize}
-                            value={scene.texts[field.key] || ''}
-                            onChange={(e) => updateScene(scene.id, field.key, e.target.value)}
-                          />
-                        ) : (
-                          <input 
-                            className="field" 
-                            value={scene.texts[field.key] || ''}
-                            onChange={(e) => updateScene(scene.id, field.key, e.target.value)}
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </div>
+        if (instant) {
+            saveToServer(updatedSession);
+        } else {
+            setIsSaving(true);
+            saveTimeout.current = setTimeout(() => saveToServer(updatedSession), 250);
+        }
+    }, [saveToServer]);
+
+    const updateSession = (updates, instant = false) => {
+        setSession(prev => {
+            const next = { ...prev, ...updates };
+            triggerSave(next, instant);
+            return next;
+        });
+    };
+
+    const updateData = (key, value, instant = false) => {
+        const nextData = { ...session.data, [key]: value };
+        updateSession({ data: nextData }, instant);
+    };
+
+    const addScene = () => {
+        const scenes = session.data.scenes || [];
+        updateData('scenes', [...scenes, { id: Date.now(), texts: {}, collapsed: false }], true);
+    };
+
+    const updateScene = (sceneId, field, value) => {
+        const scenes = session.data.scenes.map(s =>
+            s.id === sceneId ? { ...s, texts: { ...s.texts, [field]: value } } : s
+        );
+        updateData('scenes', scenes);
+    };
+
+    const removeScene = async (sceneId) => {
+        if (!(await modal.confirm("Видалення сцени", "Ви впевнені, що хочете видалити цю сцену?"))) return;
+        updateData('scenes', session.data.scenes.filter(s => s.id !== sceneId), true);
+    };
+
+    if (!session) return <div className="panel empty-state"><h2>Завантаження...</h2></div>;
+
+    const checklistItems = [
+        { id: 'goal', label: 'Визначити головну мету сесії', hasText: true },
+        { id: 'conflict', label: 'Сформулювати основний конфлікт', hasText: true },
+        { id: 'social', label: 'Підготувати соціальну сцену', note: 'Переговори, допит, суперечка.' },
+        { id: 'exploration', label: 'Підготувати сцену дослідження', note: 'Локація, загадка, пастка.' },
+        { id: 'combat', label: 'Підготувати бій / сцену напруги', note: 'Ризик і тиск.' },
+    ];
+
+    const totalChecks = checklistItems.length;
+    const completedChecks = checklistItems.filter(item => session.data[`${item.id}_check`]).length;
+    const progress = Math.round((completedChecks / totalChecks) * 100);
+
+    const handleRename = async () => {
+        const name = await modal.prompt("Перейменування", "Введіть нову назву сесії:", session.name);
+        if (name && name !== session.name) updateSession({ name }, true);
+    };
+
+    return (
+        <section className="SessionView Panel">
+            <div className="Panel__header">
+                <div className="SessionView__header">
+                    <Button variant="ghost" size="small" onClick={onBack} icon="back">
+                        Назад до кампанії
+                    </Button>
+                    <div className="SessionView__titleGroup">
+                        <h2 className="editable-title" onClick={handleRename}>{session.name}</h2>
+                        <p className="muted" style={{ fontSize: '0.85rem' }}>
+                            {isSaving ? 'Зберігання...' : 'Всі зміни збережено'}
+                        </p>
+                    </div>
                 </div>
-              ))}
+                <div className="SessionView__headerActions">
+                    <Button
+                        variant={session.completed ? 'primary' : ''}
+                        onClick={() => updateSession({ completed: !session.completed }, true)}
+                    >
+                        {session.completed ? 'Відновити' : 'Завершити'}
+                    </Button>
+                    <Button variant="danger" icon="trash" onClick={async () => {
+                        if (await modal.confirm("Видалення сесії", `Видалити сесію "${session.name}"?`)) {
+                            await api.deleteSession(campaignSlug, sessionId);
+                            onBack();
+                            onRefreshCampaigns();
+                        }
+                    }} />
+                </div>
             </div>
-          </section>
 
-          <section className="todo-section">
-             <div className="todo-section__header"><h3>3. Результат сесії</h3></div>
-             <div className="todo-section__body">
-                <div className="todo-item__note" style={{marginBottom: '8px'}}>Запиши короткий підсумок того, що реально відбулося.</div>
-                <textarea 
-                  className="field field--textarea field--result" 
-                  placeholder="Підсумок того, що реально відбулося..."
-                  onInput={autoResize}
-                  value={session.data.result_text || ''}
-                  onChange={(e) => updateData('result_text', e.target.value)}
-                ></textarea>
-             </div>
-          </section>
+            <div className="SessionView__progressToolbar">
+                <div className="SessionView__progressWrap">
+                    <div className="ProgressBar__label">
+                        <span>Прогрес підготовки</span>
+                        <span>{progress}%</span>
+                    </div>
+                    <div className="ProgressBar">
+                        <div className="ProgressBar__fill" style={{ width: `${progress}%` }}></div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="Panel__body">
+                <div className="SessionView__todoList">
+                    <TodoSection title="1. Чекліст підготовки">
+                        {checklistItems.map(item => (
+                            <TodoItem
+                                key={item.id}
+                                checked={!!session.data[`${item.id}_check`]}
+                                onChange={(val) => updateData(`${item.id}_check`, val, true)}
+                                title={item.label}
+                                note={item.note}
+                            >
+                                {item.hasText && (
+                                    <textarea
+                                        className="field field--textarea"
+                                        rows="1"
+                                        onInput={autoResize}
+                                        value={session.data[`${item.id}_text`] || ''}
+                                        onChange={(e) => updateData(`${item.id}_text`, e.target.value)}
+                                    />
+                                )}
+                            </TodoItem>
+                        ))}
+                    </TodoSection>
+
+                    <TodoSection
+                        title="2. Сцени"
+                        action={
+                            <Button variant="primary" size="small" onClick={addScene} icon="plus" iconSize={16}>
+                                Додати
+                            </Button>
+                        }
+                    >
+                        {(session.data.scenes || []).map((scene, idx) => (
+                            <SceneCard
+                                key={scene.id}
+                                number={idx + 1}
+                                onRemove={() => removeScene(scene.id)}
+                            >
+                                {SCENE_SCHEMA.map(field => (
+                                    <div key={field.key} className="TodoItem__content">
+                                        <div className="TodoItem__title" style={{ fontSize: '0.85rem' }}>{field.title}</div>
+                                        {field.type === 'textarea' ? (
+                                            <textarea
+                                                className="field field--textarea"
+                                                rows="1"
+                                                onInput={autoResize}
+                                                value={scene.texts[field.key] || ''}
+                                                onChange={(e) => updateScene(scene.id, field.key, e.target.value)}
+                                            />
+                                        ) : (
+                                            <input
+                                                className="field"
+                                                value={scene.texts[field.key] || ''}
+                                                onChange={(e) => updateScene(scene.id, field.key, e.target.value)}
+                                            />
+                                        )}
+                                    </div>
+                                ))}
+                            </SceneCard>
+                        ))}
+                    </TodoSection>
+
+                    <TodoSection title="3. Результат сесії">
+                        <div className="TodoItem__note" style={{ marginBottom: '8px' }}>
+                            Запиши короткий підсумок того, що реально відбулося.
+                        </div>
+                        <textarea
+                            className="field field--textarea field--result"
+                            placeholder="Підсумок того, що реально відбулося..."
+                            onInput={autoResize}
+                            value={session.data.result_text || ''}
+                            onChange={(e) => updateData('result_text', e.target.value)}
+                        />
+                    </TodoSection>
+                </div>
+            </div>
+        </section>
+    );
+}
+
+function TodoSection({ title, children, action }) {
+    return (
+        <section className="TodoSection">
+            <div className="TodoSection__header">
+                <h3>{title}</h3>
+                {action}
+            </div>
+            {children && children.length > 0 && (
+                <div className="TodoSection__body">{children}</div>
+            )}
+        </section>
+    );
+}
+
+function TodoItem({ title, note, checked, onChange, children }) {
+    return (
+        <label className={`TodoItem ${checked ? 'TodoItem--done' : ''}`}>
+            <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+            <div className="TodoItem__content">
+                <div className="TodoItem__title">{title}</div>
+                {note && <div className="TodoItem__note">{note}</div>}
+                {children}
+            </div>
+        </label>
+    );
+}
+
+function SceneCard({ number, onRemove, children }) {
+    return (
+        <div className="SceneCard">
+            <div className="SceneCard__header">
+                <div className="SceneCard__title">Сцена {number}</div>
+                <Button variant="danger" icon="x" iconSize={16} onClick={onRemove} />
+            </div>
+            <div className="SceneCard__grid">{children}</div>
         </div>
-      </div>
-    </section>
-  );
+    );
 }

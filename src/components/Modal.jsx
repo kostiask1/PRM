@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import Button from './Button';
 
 export default function Modal({ title, message, type, defaultValue, onConfirm, onCancel, showInput }) {
   const [inputValue, setInputValue] = useState(defaultValue || '');
@@ -31,13 +32,13 @@ export default function Modal({ title, message, type, defaultValue, onConfirm, o
   const isAlert = !onCancel;
 
   return (
-    <div className="modal__overlay" onClick={() => onCancel && onCancel()}>
-      <div className={`modal__card modal__card--${type}`} onClick={(e) => e.stopPropagation()}>
-        <div className="modal__header">
+    <div className="Modal__overlay" onClick={() => onCancel && onCancel()}>
+      <div className={`Modal__card Modal__card--${type}`} onClick={(e) => e.stopPropagation()}>
+        <div className="Modal__header">
           <h3>{title}</h3>
-          <button className="modal__close" onClick={() => onCancel && onCancel()}>&times;</button>
+          <button className="Modal__close" onClick={() => onCancel && onCancel()}>&times;</button>
         </div>
-        <div className="modal__body">
+        <div className="Modal__body">
           <p>{message}</p>
           {showInput && (
             <input
@@ -50,19 +51,19 @@ export default function Modal({ title, message, type, defaultValue, onConfirm, o
             />
           )}
         </div>
-        <div className="modal__footer">
+        <div className="Modal__footer">
           {onCancel && (
-            <button className="btn btn--ghost" onClick={onCancel}>
+            <Button variant="ghost" onClick={onCancel}>
               Скасувати
-            </button>
+            </Button>
           )}
-          <button 
+          <Button
             ref={confirmButtonRef}
-            className={`btn ${type === 'error' ? 'btn--danger' : 'btn--primary'}`} 
+            variant={type === 'error' ? 'danger' : 'primary'}
             onClick={() => onConfirm(showInput ? inputValue : true)}
           >
             {isAlert ? 'ОК' : 'Підтвердити'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
