@@ -175,7 +175,7 @@ export default function Bestiary() {
                             <h3 
                                 className="Bestiary__monster-name" 
                                 onClick={() => handleCopyName(selectedMonster.name)}
-                                title="Натисніть, щоб скопіювати ім'я"
+                                title={`Копіювати ім'я: ${selectedMonster.name}`}
                             >
                                 {selectedMonster.name}
                             </h3>

@@ -136,6 +136,16 @@ export default function DiceCalculator() {
         return content;
     }, []);
 
+    const getFullBreakdownString = useCallback((breakdown) => {
+        if (!Array.isArray(breakdown)) return "";
+        return breakdown.map((item, idx) => {
+            const isNegative = item.val < 0;
+            const sign = idx > 0 ? (isNegative ? ' - ' : ' + ') : (isNegative ? '-' : '');
+            const valueToShow = Math.abs(item.val);
+            return `${sign}${valueToShow}`;
+        }).join('');
+    }, []);
+
     return (
         <div className={`DiceCalculator ${isOpen ? 'is-open' : ''}`}>
             {isOpen && (
@@ -148,7 +158,10 @@ export default function DiceCalculator() {
                     <div className="DiceCalculator__display">
                         {lastResult ? (
                             <div className="DiceCalculator__lastResult">
-                                <div className="DiceCalculator__formulaLabel">
+                                <div 
+                                    className="DiceCalculator__formulaLabel"
+                                    title={`${lastResult.formula} (${getFullBreakdownString(lastResult.breakdown)})`}
+                                >
                                     {lastResult.formula} ({renderBreakdown(lastResult.breakdown)})
                                 </div>
                                 <div className="DiceCalculator__totalValue-container">
@@ -218,7 +231,10 @@ export default function DiceCalculator() {
                                         onClick={() => parseAndRoll(roll.formula)}
                                         title="Натисніть, щоб перекинути"
                                     >
-                                        <div className="DiceCalculator__historyInfo">
+                                        <div 
+                                            className="DiceCalculator__historyInfo"
+                                            title={`${roll.formula} = ${roll.total} (${getFullBreakdownString(roll.breakdown)})`}
+                                        >
                                             <span><strong>{roll.formula} = {roll.total}</strong></span>
                                             <span className="muted">({renderBreakdown(roll.breakdown)})</span>
                                         </div>
