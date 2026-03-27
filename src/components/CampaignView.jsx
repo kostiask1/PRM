@@ -1,12 +1,70 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../api';
-import Icon from './Icon';
-import Button from './Button';
-import StatusBadge from './StatusBadge';
+import Button from './Button/Button';
+import StatusBadge from './StatusBadge/StatusBadge';
+import './CampaignView.css';
 
 export default function CampaignView({ campaign, onSelectSession, onNavigate, onRefreshCampaigns, modal }) {
   const [sessions, setSessions] = useState([]);
   const [draggingFileName, setDraggingFileName] = useState(null);
+
+  // Локальний стан для сюжету та заміток
+  const [description, setDescription] = useState(campaign.description || '');
+  const [notes, setNotes] = useState(campaign.notes || []);
+  const saveTimeout = useRef(null);
+
+  const autoResize = (e) => {
+    e.target.style.height = 'auto';
+    e.target.style.height = e.target.scrollHeight + 'px';
+  };
+
+  // Синхронізація при зміні кампанії
+  useEffect(() => {
+    setDescription(campaign.description || '');
+    setNotes(campaign.notes || []);
+  }, [campaign.slug, campaign.description, campaign.notes]);
+
+  const triggerSave = useCallback((updates) => {
+    if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    saveTimeout.current = setTimeout(async () => {
+      try {
+        await api.updateCampaign(campaign.slug, updates);
+        onRefreshCampaigns();
+      } catch (err) {
+        console.error("Failed to save campaign updates", err);
+      }
+    }, 500);
+  }, [campaign.slug, onRefreshCampaigns]);
+
+  const handleDescriptionChange = (e) => {
+    const val = e.target.value;
+    setDescription(val);
+    triggerSave({ description: val });
+  };
+
+  const handleAddNote = () => {
+    const newNotes = [...notes, { id: Date.now(), text: '', collapsed: false }];
+    setNotes(newNotes);
+    triggerSave({ notes: newNotes });
+  };
+
+  const handleToggleNoteCollapse = (id) => {
+    const newNotes = notes.map(n => n.id === id ? { ...n, collapsed: !n.collapsed } : n);
+    setNotes(newNotes);
+    triggerSave({ notes: newNotes });
+  };
+
+  const handleNoteChange = (id, text) => {
+    const newNotes = notes.map(n => n.id === id ? { ...n, text } : n);
+    setNotes(newNotes);
+    triggerSave({ notes: newNotes });
+  };
+
+  const handleDeleteNote = (id) => {
+    const newNotes = notes.filter(n => n.id !== id);
+    setNotes(newNotes);
+    triggerSave({ notes: newNotes });
+  };
 
   useEffect(() => {
     const loadSessions = async () => {
@@ -162,6 +220,65 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
       </div>
 
       <div className="Panel__body">
+        <div className="CampaignView__section">
+          <h3>Сюжет кампанії</h3>
+          <textarea
+            className="field field--textarea"
+            placeholder="Опишіть основну лінію сюжету, ключові події та цілі..."
+            value={description}
+            onChange={handleDescriptionChange}
+            onInput={autoResize}
+            rows={1}
+          />
+        </div>
+
+        <div className="CampaignView__section">
+          <div className="section-row">
+            <h3>Замітки</h3>
+            <Button 
+              variant="primary" 
+              size="small" 
+              onClick={handleAddNote} 
+              icon="plus" 
+              strokeWidth={2.5}
+            >
+              Нова замітка
+            </Button>
+          </div>
+          <div className="CampaignView__notes">
+            {notes.map(note => (
+              <div key={note.id} className={`note-card-simple ${note.collapsed ? 'is-collapsed' : ''}`}>
+                <div className="note-card-simple__header">
+                  <Button
+                    variant="ghost"
+                    size="small"
+                    icon="chevron"
+                    className={`note-card-simple__toggle ${note.collapsed ? 'is-rotated' : ''}`}
+                    onClick={() => handleToggleNoteCollapse(note.id)}
+                  />
+                  <div 
+                    className="note-card-simple__title"
+                    onClick={() => handleToggleNoteCollapse(note.id)}
+                  >
+                    {note.text.split('\n')[0].slice(0, 45) || 'Нова замітка'}
+                  </div>
+                  <Button variant="danger" icon="trash" size={14} onClick={() => handleDeleteNote(note.id)} title="Видалити замітку" />
+                </div>
+                {!note.collapsed && (
+                  <textarea
+                    className="field field--textarea"
+                    value={note.text}
+                    onChange={(e) => handleNoteChange(note.id, e.target.value)}
+                    onInput={autoResize}
+                    placeholder="Текст замітки..."
+                    rows={1}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div className="section-row">
           <h3>Сесії</h3>
           <Button variant="primary" onClick={handleCreateSession} icon="plus" strokeWidth={2.5}>

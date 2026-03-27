@@ -1,5 +1,6 @@
 import React from 'react';
-import Icon from './Icon';
+import Icon from '../Icon';
+import "./Button.scss";
 
 export default function Button({ 
   children, 

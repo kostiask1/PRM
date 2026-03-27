@@ -1,4 +1,4 @@
-import React from 'react';
+import "./StatusBadge.scss";
 
 export default function StatusBadge({ completed, completedAt, onClick, className = "", type = "campaign" }) {
   const dateStr = completed && completedAt ? new Date(completedAt).toLocaleDateString() : '';

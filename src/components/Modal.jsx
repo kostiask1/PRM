@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Button from './Button';
+import Button from './Button/Button';
 
 export default function Modal({ title, message, type, defaultValue, onConfirm, onCancel, showInput }) {
   const [inputValue, setInputValue] = useState(defaultValue || '');

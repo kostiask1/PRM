@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../api';
 import Icon from './Icon';
-import Button from './Button';
+import Button from './Button/Button';
 
 const SCENE_SCHEMA = [
     { key: 'summary', title: 'Суть сцени', type: 'textarea', placeholder: 'Коротко опиши сцену...' },

@@ -153,13 +153,8 @@ async function listCampaignsDetailed() {
     const meta = await readCampaign(slug);
     const sessions = await listSessions(slug);
     return {
+      ...meta,
       slug,
-      name: meta.name,
-      completed: Boolean(meta.completed),
-      order: meta.order || 0,
-      completedAt: meta.completedAt || null,
-      createdAt: meta.createdAt,
-      updatedAt: meta.updatedAt,
       sessionCount: sessions.length,
     };
   });
@@ -363,6 +358,7 @@ app.patch('/api/campaigns/:slug', async (req, res, next) => {
 
     const updated = {
       ...current,
+      ...req.body,
       slug: nextSlug,
       name: nextName,
       completed,
