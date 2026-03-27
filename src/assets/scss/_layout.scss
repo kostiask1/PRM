@@ -1,4 +1,11 @@
 // Layout
-.App { display: grid; grid-template-columns: 320px minmax(0, 1fr); min-height: 100vh; }
-.App__sidebar { }
-.App__main { padding: 24px; min-width: 0; }
+.App {
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr);
+    min-height: 100vh;
+}
+
+.App__main {
+    padding: 24px;
+    min-width: 0;
+}

@@ -7,7 +7,7 @@ import "./Sidebar.css"
 
 export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign, onCreateCampaign, onToggleCampaignStatus, modal }) {
   const fileInputRef = useRef(null);
-  
+
   // Локальний стан для миттєвого відображення змін черги
   const [localCampaigns, setLocalCampaigns] = useState(campaigns);
   const [draggingSlug, setDraggingSlug] = useState(null);
@@ -52,13 +52,13 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
 
   const handleDragStart = (e, slug) => {
     setDraggingSlug(slug);
-    
+
     // Покращуємо візуальний "привид" елемента
     e.currentTarget.classList.add('dragging');
-    
+
     // Налаштування drag-image (можна додати кастомний елемент, якщо потрібно)
     e.dataTransfer.effectAllowed = 'move';
-    
+
     e.dataTransfer.setData('text/plain', slug);
   };
 
@@ -76,7 +76,7 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
     const items = [...localCampaigns];
     const draggedIdx = items.findIndex(i => i.slug === draggingSlug);
     const targetIdx = items.findIndex(i => i.slug === targetSlug);
-    
+
     if (draggedIdx !== -1 && targetIdx !== -1) {
       const [removed] = items.splice(draggedIdx, 1);
       items.splice(targetIdx, 0, removed);
@@ -102,7 +102,7 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
         <Button variant="create" onClick={onCreateCampaign} icon="plus">
           Нова кампанія
         </Button>
-        
+
         <div className="Sidebar__list">
           {localCampaigns.map(campaign => (
             <ListCard
@@ -131,12 +131,12 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
       </div>
 
       <div className="Sidebar__footer">
-        <input 
-          type="file" 
-          ref={fileInputRef} 
-          style={{ display: 'none' }} 
-          accept=".json" 
-          onChange={handleFileChange} 
+        <input
+          type="file"
+          ref={fileInputRef}
+          style={{ display: 'none' }}
+          accept=".json"
+          onChange={handleFileChange}
         />
         <Button variant="footer" icon="import" onClick={() => {
           importMode.current = 'campaign';

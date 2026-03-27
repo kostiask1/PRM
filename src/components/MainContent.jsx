@@ -17,18 +17,18 @@ export default function MainContent({ campaign, activeSessionId, onSelectSession
   return (
     <main className="MainContent">
       {activeSessionId ? (
-        <SessionView 
-          campaignSlug={campaign.slug} 
-          sessionId={activeSessionId} 
+        <SessionView
+          campaignSlug={campaign.slug}
+          sessionId={activeSessionId}
           onBack={() => onSelectSession(null)}
           onNavigate={onNavigate}
           onRefreshCampaigns={onRefreshCampaigns}
           modal={modal}
         />
       ) : (
-        <CampaignView 
-          campaign={campaign} 
-          onSelectSession={onSelectSession} 
+        <CampaignView
+          campaign={campaign}
+          onSelectSession={onSelectSession}
           onNavigate={onNavigate}
           onRefreshCampaigns={onRefreshCampaigns}
           modal={modal}

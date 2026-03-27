@@ -80,7 +80,7 @@ export default function App() {
   const navigate = (slug, fileName = null, replace = false) => {
     setActiveCampaignSlug(slug);
     setActiveSessionFileName(fileName);
-    
+
     let url = '/';
     if (slug) {
       url = `/campaign/${encodeURIComponent(slug)}`;
@@ -88,7 +88,7 @@ export default function App() {
         url += `/session/${encodeURIComponent(fileName)}`;
       }
     }
-    
+
     if (replace) window.history.replaceState({}, '', url);
     else window.history.pushState({}, '', url);
   };
@@ -114,7 +114,7 @@ export default function App() {
     }
 
     try {
-      await api.updateCampaign(campaign.slug, { 
+      await api.updateCampaign(campaign.slug, {
         completed: isCompleting,
         completedAt: completedAt
       });
@@ -128,22 +128,22 @@ export default function App() {
 
   return (
     <div className="App">
-      <Sidebar 
+      <Sidebar
         className="App__sidebar"
         campaigns={campaigns}
         activeCampaignId={activeCampaignSlug}
         onSelectCampaign={(slug) => navigate(slug)}
         onCreateCampaign={async () => {
-            const name = await prompt("Нова кампанія", "Введіть назву для вашої пригоди:");
-            if (name) {
-              await api.createCampaign(name);
-              await loadCampaigns();
-            }
+          const name = await prompt("Нова кампанія", "Введіть назву для вашої пригоди:");
+          if (name) {
+            await api.createCampaign(name);
+            await loadCampaigns();
+          }
         }}
         onToggleCampaignStatus={handleToggleCampaignStatus}
         modal={{ alert, confirm, prompt }}
       />
-      <MainContent 
+      <MainContent
         className="App__main"
         campaign={activeCampaign}
         activeSessionId={activeSessionFileName}

@@ -2,7 +2,7 @@ import "./StatusBadge.scss";
 
 export default function StatusBadge({ completed, completedAt, onClick, className = "", type = "campaign" }) {
   const dateStr = completed && completedAt ? new Date(completedAt).toLocaleDateString() : '';
-  
+
   let label = '';
   if (completed) {
     label = `Завершена ${dateStr}`;
@@ -11,7 +11,7 @@ export default function StatusBadge({ completed, completedAt, onClick, className
   }
 
   return (
-    <span 
+    <span
       className={`StatusBadge ${completed ? 'StatusBadge--done' : ''} ${className}`}
       onClick={onClick}
     >
