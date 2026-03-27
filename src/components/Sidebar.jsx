@@ -130,7 +130,11 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
                   onToggleCampaignStatus(campaign);
                 }}
               >
-                {campaign.completed ? 'Завершена' : 'Активна'}
+                {campaign.completed ? (
+                  `Завершена ${campaign.completedAt ? new Date(campaign.completedAt).toLocaleDateString() : ''}`
+                ) : (
+                  'Активна'
+                )}
               </span>
             </article>
           ))}

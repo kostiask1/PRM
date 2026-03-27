@@ -65,8 +65,27 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
   };
 
   const handleToggleSessionStatus = async (session) => {
+    const isCompleting = !session.completed;
+    let completedAt = session.completedAt;
+
+    if (isCompleting) {
+      const now = new Date().toISOString();
+      const todayLabel = new Date().toLocaleDateString();
+      const prevLabel = completedAt ? new Date(completedAt).toLocaleDateString() : null;
+
+      if (completedAt && todayLabel !== prevLabel) {
+        const confirmUpdate = await modal.confirm(
+          "Оновлення дати",
+          `Сесія вже була завершена ${prevLabel}. Оновити дату завершення на сьогодні?`
+        );
+        if (confirmUpdate) completedAt = now;
+      } else {
+        completedAt = now;
+      }
+    }
+
     try {
-      await api.updateSession(campaign.slug, session.fileName, { completed: !session.completed });
+      await api.updateSession(campaign.slug, session.fileName, { completed: isCompleting, completedAt });
       const data = await api.listSessions(campaign.slug);
       setSessions(data);
     } catch (err) {
@@ -180,7 +199,11 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
                   style={{ cursor: 'pointer' }}
                   onClick={() => handleToggleSessionStatus(session)}
                 >
-                  {session.completed ? 'Завершена' : 'В підготовці'}
+                  {session.completed ? (
+                    `Завершена ${session.completedAt ? new Date(session.completedAt).toLocaleDateString() : ''}`
+                  ) : (
+                    'В підготовці'
+                  )}
                 </span>
                 <button 
                   className="icon-btn icon-btn--danger" 

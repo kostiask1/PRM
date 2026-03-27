@@ -138,6 +138,7 @@ async function listSessions(slug) {
       updatedAt: data.updatedAt,
       completed: Boolean(data.completed),
       order: data.order || 0,
+      completedAt: data.completedAt || null,
     };
   });
 
@@ -156,6 +157,7 @@ async function listCampaignsDetailed() {
       name: meta.name,
       completed: Boolean(meta.completed),
       order: meta.order || 0,
+      completedAt: meta.completedAt || null,
       createdAt: meta.createdAt,
       updatedAt: meta.updatedAt,
       sessionCount: sessions.length,
@@ -284,6 +286,7 @@ function makeDefaultSessionData(name) {
     name: sanitizeName(name) || todayString(),
     completed: false,
     order: 0,
+    completedAt: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     data: {},
@@ -317,6 +320,7 @@ app.post('/api/campaigns', async (req, res, next) => {
       slug,
       name,
       completed: false,
+      completedAt: null,
       order: 0,
       createdAt: now,
       updatedAt: now,
@@ -343,6 +347,8 @@ app.patch('/api/campaigns/:slug', async (req, res, next) => {
     const nextName = req.body?.name ? sanitizeName(req.body.name) : current.name;
     const completed =
       typeof req.body?.completed === 'boolean' ? req.body.completed : current.completed;
+    const completedAt = 
+      req.body?.completedAt !== undefined ? req.body.completedAt : current.completedAt;
 
     if (!nextName) {
       return res.status(400).json({ error: 'Назва кампанії не може бути порожньою.' });
@@ -360,6 +366,7 @@ app.patch('/api/campaigns/:slug', async (req, res, next) => {
       slug: nextSlug,
       name: nextName,
       completed,
+      completedAt,
       updatedAt: new Date().toISOString(),
     };
 
@@ -436,6 +443,7 @@ app.post('/api/campaigns/:slug/sessions', async (req, res, next) => {
       updatedAt: session.updatedAt,
       completed: session.completed,
       order: session.order,
+      completedAt: session.completedAt || null,
     });
   } catch (error) {
     next(error);
@@ -469,6 +477,8 @@ app.patch('/api/campaigns/:slug/sessions/:fileName', async (req, res, next) => {
     const nextName = req.body?.name ? sanitizeName(req.body.name) : current.name;
     const nextCompleted =
       typeof req.body?.completed === 'boolean' ? req.body.completed : current.completed;
+    const nextCompletedAt = 
+      req.body?.completedAt !== undefined ? req.body.completedAt : current.completedAt;
     const nextData =
       req.body?.data && typeof req.body.data === 'object' ? req.body.data : current.data;
 
@@ -481,6 +491,7 @@ app.patch('/api/campaigns/:slug/sessions/:fileName', async (req, res, next) => {
       ...current,
       name: nextName,
       completed: nextCompleted,
+      completedAt: nextCompletedAt,
       updatedAt: new Date().toISOString(),
       data: nextData,
     };

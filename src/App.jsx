@@ -94,8 +94,30 @@ export default function App() {
   };
 
   const handleToggleCampaignStatus = async (campaign) => {
+    const isCompleting = !campaign.completed;
+    let completedAt = campaign.completedAt;
+
+    if (isCompleting) {
+      const now = new Date().toISOString();
+      const todayLabel = new Date().toLocaleDateString();
+      const prevLabel = completedAt ? new Date(completedAt).toLocaleDateString() : null;
+
+      if (completedAt && todayLabel !== prevLabel) {
+        const confirmUpdate = await modal.confirm(
+          "Оновлення дати",
+          `Кампанія вже була завершена ${prevLabel}. Оновити дату завершення на сьогодні?`
+        );
+        if (confirmUpdate) completedAt = now;
+      } else {
+        completedAt = now;
+      }
+    }
+
     try {
-      await api.updateCampaign(campaign.slug, { completed: !campaign.completed });
+      await api.updateCampaign(campaign.slug, { 
+        completed: isCompleting,
+        completedAt: completedAt
+      });
       await loadCampaigns();
     } catch (err) {
       console.error("Failed to toggle campaign status", err);
