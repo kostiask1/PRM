@@ -19,18 +19,37 @@
   &--primary {
     background: rgba(56, 189, 248, 0.14);
     border-color: rgba(56, 189, 248, 0.35);
-    &:hover { background: rgba(56, 189, 248, 0.2); }
+
+    &:hover {
+      background: rgba(56, 189, 248, 0.2);
+    }
   }
 
   &--danger {
     background: rgba(239, 68, 68, 0.14);
     border-color: rgba(239, 68, 68, 0.35);
     color: #fecaca;
-    &:hover { background: rgba(239, 68, 68, 0.22); }
+
+    &:hover {
+      background: rgba(239, 68, 68, 0.22);
+    }
   }
 
-  &--ghost { background: transparent; }
-  &--small { padding: 8px 12px; font-size: 0.9rem; }
+  &--ghost {
+    background: transparent;
+  }
+
+  &--small {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+  }
+
+  &--footer {
+    width: 100%;
+    justify-content: center;
+    background: rgba(30, 41, 59, 0.4);
+    font-size: 0.85rem;
+  }
 }
 
 .panel {
@@ -43,13 +62,15 @@
     display: flex;
     justify-content: space-between;
     gap: 24px;
-    align-items: flex-start;
+    align-items: center; // Вирівнюємо елементи по центру вертикалі
     padding: 24px;
     border-bottom: 1px solid rgba(51, 65, 85, 0.45);
     background: rgba(17, 24, 39, 0.96);
   }
 
-  &__body { padding: 24px; }
+  &__body {
+    padding: 24px;
+  }
 }
 
 .list-card {
@@ -71,10 +92,12 @@
     background: rgba(15, 23, 42, 0.7);
   }
 
-  &--active {
+  &--active,
+  &--active:hover {
     border-color: var(--accent);
     background: rgba(56, 189, 248, 0.1);
     box-shadow: 0 0 20px rgba(56, 189, 248, 0.08);
+    transform: none; // Запобігаємо зайвим рухам для активного елемента
   }
 
   &--dragging {
@@ -88,12 +111,19 @@
   &--drag-over {
     border-color: var(--accent);
     background: rgba(56, 189, 248, 0.05);
-    transform: translateY(-4px); 
+    transform: translateY(-4px);
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
   }
 
-  &__title { font-weight: 600; margin-bottom: 4px; }
-  &__meta { color: var(--muted); font-size: 0.92rem; }
+  &__title {
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  &__meta {
+    color: var(--muted);
+    font-size: 0.92rem;
+  }
 
   &__main {
     appearance: none;
@@ -106,6 +136,12 @@
     width: 100%;
     cursor: pointer;
   }
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
 }
 
 .status-badge {
@@ -140,8 +176,11 @@
     box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.16);
   }
 
-  &--textarea { min-height: 140px; resize: vertical; }
-  
+  &--textarea {
+    min-height: 140px;
+    resize: vertical;
+  }
+
   &--result {
     min-height: 220px;
     background: rgba(2, 6, 23, 0.8);
@@ -158,11 +197,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  
+
   &--danger {
     border-color: rgba(239, 68, 68, 0.35);
     background: rgba(239, 68, 68, 0.14);
-    &:hover { background: var(--danger); }
+
+    &:hover {
+      background: var(--danger);
+    }
   }
 }
 
@@ -205,5 +247,16 @@
   flex-shrink: 0;
 }
 
-.editable-title { cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
-.editable-title::after { content: "✎"; font-size: 0.85rem; color: var(--muted); }
+.editable-title {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 0;
+}
+
+.editable-title::after {
+  content: "✎";
+  font-size: 0.85rem;
+  color: var(--muted);
+}

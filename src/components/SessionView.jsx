@@ -57,7 +57,7 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
       saveToServer(updatedSession);
     } else {
       setIsSaving(true);
-      saveTimeout.current = setTimeout(() => saveToServer(updatedSession), 1000);
+      saveTimeout.current = setTimeout(() => saveToServer(updatedSession), 250);
     }
   }, [saveToServer]);
 

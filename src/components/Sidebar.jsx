@@ -154,7 +154,7 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
           fileInputRef.current.click();
         }}>
           <Icon name="import" />
-          <span>Імпорт JSON</span>
+          <span>Імпорт кампанії</span>
         </button>
         <div className="footer-grid">
           <button className="btn btn--footer btn--small" onClick={async () => {
@@ -175,7 +175,7 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
             }
           }}>
             <Icon name="restore" size={16} />
-            <span>Restore</span>
+            <span>Імпорт БД</span>
           </button>
         </div>
       </div>
