@@ -123,11 +123,11 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
         <section className="SessionView Panel">
             <div className="Panel__header">
                 <div className="SessionView__header">
-                    <Button variant="ghost" size="small" onClick={onBack} icon="back">
-                        Назад до кампанії
-                    </Button>
                     <div className="SessionView__titleGroup">
-                        <h2 className="editable-title" onClick={handleRename}>{session.name}</h2>
+                        <div className="SessionView__titleRow">
+                            <Button variant="ghost" size="small" onClick={onBack} icon="back" className="SessionView__backBtn" />
+                            <h2 className="editable-title" onClick={handleRename}>{session.name}</h2>
+                        </div>
                         <p className="muted" style={{ fontSize: '0.85rem' }}>
                             {isSaving ? 'Зберігання...' : 'Всі зміни збережено'}
                         </p>

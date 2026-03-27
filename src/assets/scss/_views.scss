@@ -168,15 +168,6 @@
   width: auto !important;
 }
 
-.Icon--rotated {
-  transform: rotate(-90deg);
-  transition: transform 0.2s ease;
-}
-
-.Icon:not(.Icon--rotated) {
-  transition: transform 0.2s ease;
-}
-
 .Modal__overlay {
   position: fixed;
   top: 0;

@@ -8,6 +8,17 @@
     flex-direction: column;
 }
 
+.SessionView__titleRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.SessionView__backBtn {
+    padding: 4px !important;
+    min-width: unset !important;
+}
+
 .SessionView__headerActions {
     display: flex;
     gap: 8px;
@@ -140,6 +151,10 @@
 
 .Icon--rotated {
     transform: rotate(-90deg);
+    transition: transform 0.2s ease;
+}
+
+.Icon:not(.Icon--rotated) {
     transition: transform 0.2s ease;
 }
 
