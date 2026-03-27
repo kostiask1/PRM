@@ -111,17 +111,21 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
   };
 
   return (
-    <section className="panel">
+    <section className="session-view panel">
       <div className="panel__header">
-        <div>
-          <button className="btn btn--ghost" onClick={onBack} style={{ marginBottom: '12px' }}>
+        <div className="session-view__header">
+          <button className="btn btn--ghost btn--small" onClick={onBack}>
             <Icon name="back" />
             <span>Назад до кампанії</span>
           </button>
-          <h2 className="editable-title" onClick={handleRename}>{session.name}</h2>
-          <p className="muted">{isSaving ? 'Зберігання...' : 'Всі зміни збережено'}</p>
+          <div className="session-view__title-group">
+            <h2 className="editable-title" onClick={handleRename}>{session.name}</h2>
+            <p className="muted" style={{fontSize: '0.85rem'}}>
+              {isSaving ? 'Зберігання...' : 'Всі зміни збережено'}
+            </p>
+          </div>
         </div>
-        <div className="header-actions">
+        <div className="session-view__header-actions">
           <button 
             className={`btn ${session.completed ? 'btn--primary' : ''}`} 
             onClick={() => updateSession({ completed: !session.completed }, true)}

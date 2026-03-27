@@ -31,13 +31,13 @@ export default function Modal({ title, message, type, defaultValue, onConfirm, o
   const isAlert = !onCancel;
 
   return (
-    <div className="modal-overlay" onClick={() => onCancel && onCancel()}>
-      <div className={`modal-card modal--${type}`} onClick={(e) => e.stopPropagation()}>
-        <div className="modal-card__header">
+    <div className="modal__overlay" onClick={() => onCancel && onCancel()}>
+      <div className={`modal__card modal__card--${type}`} onClick={(e) => e.stopPropagation()}>
+        <div className="modal__header">
           <h3>{title}</h3>
-          <button className="modal-close" onClick={() => onCancel && onCancel()}>&times;</button>
+          <button className="modal__close" onClick={() => onCancel && onCancel()}>&times;</button>
         </div>
-        <div className="modal-card__body">
+        <div className="modal__body">
           <p>{message}</p>
           {showInput && (
             <input
@@ -50,7 +50,7 @@ export default function Modal({ title, message, type, defaultValue, onConfirm, o
             />
           )}
         </div>
-        <div className="modal-card__footer">
+        <div className="modal__footer">
           {onCancel && (
             <button className="btn btn--ghost" onClick={onCancel}>
               Скасувати

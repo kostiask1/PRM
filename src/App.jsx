@@ -127,8 +127,9 @@ export default function App() {
   const activeCampaign = campaigns.find(c => c.slug === activeCampaignSlug);
 
   return (
-    <div className="app-shell">
+    <div className="app">
       <Sidebar 
+        className="app__sidebar"
         campaigns={campaigns}
         activeCampaignId={activeCampaignSlug}
         onSelectCampaign={(slug) => navigate(slug)}
@@ -143,6 +144,7 @@ export default function App() {
         modal={{ alert, confirm, prompt }}
       />
       <MainContent 
+        className="app__main"
         campaign={activeCampaign}
         activeSessionId={activeSessionFileName}
         onSelectSession={(fileName) => navigate(activeCampaignSlug, fileName)}

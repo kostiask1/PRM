@@ -86,14 +86,14 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
   };
 
   return (
-    <aside className="sidebar">
+    <aside className="sidebar app__sidebar">
       <div className="sidebar__header">
         <h1>D&D Session Manager</h1>
         <p>Кампанії, сесії та планування в одному локальному проєкті.</p>
       </div>
 
       <div className="sidebar__section">
-        <div className="sidebar__section-header">
+        <div className="sidebar__header-section">
           <h2 style={{ marginBottom: '12px' }}>Кампанії</h2>
         </div>
         <button className="btn btn--primary" onClick={onCreateCampaign}>
@@ -101,11 +101,11 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
           <span>Нова кампанія</span>
         </button>
         
-        <div className="campaign-list" style={{ marginTop: '12px' }}>
+        <div className="sidebar__list">
           {localCampaigns.map(campaign => (
             <article 
               key={campaign.slug} 
-              className={`list-card campaign-card ${activeCampaignId === campaign.slug ? 'active' : ''} ${draggingSlug === campaign.slug ? 'dragging' : ''}`}
+              className={`list-card ${activeCampaignId === campaign.slug ? 'list-card--active' : ''} ${draggingSlug === campaign.slug ? 'list-card--dragging' : ''}`}
               draggable
               onDragStart={(e) => handleDragStart(e, campaign.slug)}
               onDragEnd={handleDragEnd}
@@ -117,7 +117,7 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
               onDrop={handleDrop}
             >
               <button 
-                className="campaign-card__main" 
+                className="list-card__main" 
                 onClick={() => onSelectCampaign(campaign.slug)}
               >
                 <div className="list-card__title">{campaign.name}</div>

@@ -143,7 +143,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
   };
 
   return (
-    <section className="panel">
+    <section className="campaign-view panel">
       <div className="panel__header">
         <div>
           <h2 className="editable-title" onClick={handleRename} title="Натисни, щоб перейменувати">
@@ -151,7 +151,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
           </h2>
           <p className="muted">Створено: {new Date(campaign.createdAt).toLocaleDateString()}</p>
         </div>
-        <div className="header-actions">
+        <div className="campaign-view__header-actions">
           <button className="btn" type="button" onClick={handleExport}>
             <Icon name="export" />
             <span>Експорт</span>
@@ -170,12 +170,11 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
             <span>Нова сесія</span>
           </button>
         </div>
-        
-        <div className="session-list">
+        <div className="campaign-view__sessions">
           {sessions.map(session => (
             <article 
               key={session.fileName} 
-              className={`list-card session-card ${draggingFileName === session.fileName ? 'dragging' : ''}`}
+              className={`list-card ${draggingFileName === session.fileName ? 'list-card--dragging' : ''}`}
               draggable
               onDragStart={(e) => handleDragStart(e, session.fileName)}
               onDragEnd={handleDragEnd}
@@ -187,7 +186,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
               onDrop={handleDrop}
             >
               <button 
-                className="session-card__main" 
+                className="list-card__main" 
                 onClick={() => onSelectSession(session.fileName)}
               >
                 <div className="list-card__title">{session.name}</div>
