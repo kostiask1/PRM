@@ -343,6 +343,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
           {sessions.map(session => (
             <ListCard
               key={session.fileName}
+              href={`/campaign/${encodeURIComponent(campaign.slug)}/session/${encodeURIComponent(session.fileName)}`}
               dragging={draggingFileName === session.fileName}
               onClick={() => onSelectSession(session.fileName)}
               draggable

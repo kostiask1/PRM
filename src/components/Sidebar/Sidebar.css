@@ -11,6 +11,22 @@
     overflow-x: hidden;
 }
 
+.Sidebar__bestiary-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    color: var(--text);
+    text-decoration: none;
+    transition: background 0.2s;
+    margin-bottom: 12px;
+}
+
+.Sidebar__bestiary-link:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
 .Sidebar__header {
     margin-bottom: 28px;
 }

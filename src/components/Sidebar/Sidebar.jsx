@@ -95,10 +95,19 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
         <h1 className="Sidebar__title">D&D Session Manager</h1>
         <p className="Sidebar__description">Кампанії, сесії та планування в одному локальному проєкті.</p>
       </div>
-      <Button variant="ghost" onClick={() => onSelectCampaign('bestiary')} style={{ marginBottom: '12px', width: '100%', justifyContent: 'flex-start' }}>
+      <a 
+        href="/bestiary" 
+        className="Sidebar__bestiary-link"
+        onClick={(e) => {
+          if (!e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            onSelectCampaign('bestiary');
+          }
+        }}
+      >
         <Icon name="bestiary" />
         Бестіарій
-      </Button>
+      </a>
       <div className="Sidebar__section">
         <div className="Sidebar__headerSection">
           <h2 className="Sidebar__sectionTitle">Кампанії</h2>
@@ -113,6 +122,7 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
               key={campaign.slug}
               active={activeCampaignId === campaign.slug}
               dragging={draggingSlug === campaign.slug}
+              href={`/campaign/${encodeURIComponent(campaign.slug)}`}
               onClick={() => onSelectCampaign(campaign.slug)}
               draggable
               onDragStart={(e) => handleDragStart(e, campaign.slug)}

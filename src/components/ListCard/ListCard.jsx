@@ -7,19 +7,35 @@ export default function ListCard({
     active = false,
     dragging = false,
     onClick,
+    href,
     className = '',
     ...dragProps // Пропси для drag-and-drop (draggable, onDragStart, etc.)
 }) {
     const combinedClassName = `ListCard ${active ? 'ListCard--active' : ''} ${dragging ? 'ListCard--dragging' : ''} ${className}`.trim();
+
+    const handleClick = (e) => {
+        if (href && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+            e.preventDefault();
+            if (onClick) onClick();
+        } else if (!href && onClick) {
+            onClick();
+        }
+    };
+
+    const Component = href ? 'a' : 'button';
 
     return (
         <article
             className={combinedClassName}
             {...dragProps}
         >
-            <button className="ListCard__main" onClick={onClick}>
+            <Component 
+                className="ListCard__main" 
+                onClick={handleClick}
+                href={href}
+            >
                 {children}
-            </button>
+            </Component>
             {actions && <div className="ListCard__actions">{actions}</div>}
         </article>
     );
