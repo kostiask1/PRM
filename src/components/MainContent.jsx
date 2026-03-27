@@ -2,7 +2,7 @@ import React from 'react';
 import CampaignView from './CampaignView/CampaignView';
 import SessionView from './SessionView/SessionView';
 
-export default function MainContent({ campaign, activeSessionId, onSelectSession, onRefreshCampaigns, onNavigate, modal }) {
+export default function MainContent({ campaign, activeSessionId, onSelectSession, onRefreshCampaigns, onNavigate, modal, onRollDice }) {
   if (!campaign) {
     return (
       <main className="MainContent">
@@ -24,6 +24,7 @@ export default function MainContent({ campaign, activeSessionId, onSelectSession
           onNavigate={onNavigate}
           onRefreshCampaigns={onRefreshCampaigns}
           modal={modal}
+          onRollDice={onRollDice}
         />
       ) : (
         <CampaignView
@@ -32,6 +33,7 @@ export default function MainContent({ campaign, activeSessionId, onSelectSession
           onNavigate={onNavigate}
           onRefreshCampaigns={onRefreshCampaigns}
           modal={modal}
+          onRollDice={onRollDice}
         />
       )}
     </main>

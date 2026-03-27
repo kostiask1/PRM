@@ -15,7 +15,7 @@ const SCENE_SCHEMA = [
     { key: 'clues', title: 'Підказки', type: 'textarea', placeholder: 'Інформація, яку отримають гравці...' },
 ];
 
-export default function SessionView({ campaignSlug, sessionId, onBack, onNavigate, onRefreshCampaigns, modal }) {
+export default function SessionView({ campaignSlug, sessionId, onBack, onNavigate, onRefreshCampaigns, modal, onRollDice }) {
     const [session, setSession] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     const saveTimeout = useRef(null);

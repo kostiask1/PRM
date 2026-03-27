@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar/Sidebar';
 import MainContent from './components/MainContent';
 import Modal from './components/Modal';
 import { api } from './api';
+import DiceCalculator from './components/DiceCalculator/DiceCalculator';
 
 /**
  * Main Application Component
@@ -154,6 +155,8 @@ export default function App() {
       />
 
       {modalConfig && <Modal {...modalConfig} />}
+      {/* Передаємо команду для кидка та функцію для її скидання */}
+      <DiceCalculator />
     </div>
   );
 }
