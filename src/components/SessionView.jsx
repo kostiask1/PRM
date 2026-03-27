@@ -87,6 +87,13 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
         updateData('scenes', scenes);
     };
 
+    const toggleSceneCollapse = (sceneId) => {
+        const scenes = session.data.scenes.map(s =>
+            s.id === sceneId ? { ...s, collapsed: !s.collapsed } : s
+        );
+        updateData('scenes', scenes, true);
+    };
+
     const removeScene = async (sceneId) => {
         if (!(await modal.confirm("Видалення сцени", "Ви впевнені, що хочете видалити цю сцену?"))) return;
         updateData('scenes', session.data.scenes.filter(s => s.id !== sceneId), true);
@@ -190,6 +197,8 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
                             <SceneCard
                                 key={scene.id}
                                 number={idx + 1}
+                                collapsed={scene.collapsed}
+                                onToggle={() => toggleSceneCollapse(scene.id)}
                                 onRemove={() => removeScene(scene.id)}
                             >
                                 {SCENE_SCHEMA.map(field => (
@@ -261,14 +270,19 @@ function TodoItem({ title, note, checked, onChange, children }) {
     );
 }
 
-function SceneCard({ number, onRemove, children }) {
+function SceneCard({ number, onRemove, collapsed, onToggle, children }) {
     return (
         <div className="SceneCard">
             <div className="SceneCard__header">
-                <div className="SceneCard__title">Сцена {number}</div>
+                <div className="SceneCard__titleGroup">
+                    <Button variant="ghost" size="small" onClick={onToggle} className="SceneCard__toggle">
+                        <Icon name="chevron" className={collapsed ? 'Icon--rotated' : ''} />
+                    </Button>
+                    <div className="SceneCard__title">Сцена {number}</div>
+                </div>
                 <Button variant="danger" icon="x" iconSize={16} onClick={onRemove} />
             </div>
-            <div className="SceneCard__grid">{children}</div>
+            {!collapsed && <div className="SceneCard__grid">{children}</div>}
         </div>
     );
 }

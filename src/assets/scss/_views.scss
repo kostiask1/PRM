@@ -5,10 +5,10 @@
 }
 
 .CampaignView__sessions .session-card__actions {
+  padding: 12px 14px 12px 0;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px 12px 0;
 }
 
 .CampaignView__headerActions {
@@ -152,6 +152,12 @@
   align-items: center;
 }
 
+.SceneCard__titleGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .SceneCard__title {
   font-weight: 700;
 }
@@ -159,6 +165,21 @@
 .SceneCard__grid {
   display: grid;
   gap: 12px;
+}
+
+.SceneCard__toggle {
+  padding: 4px !important;
+  min-height: auto !important;
+  width: auto !important;
+}
+
+.Icon--rotated {
+  transform: rotate(-90deg);
+  transition: transform 0.2s ease;
+}
+
+.Icon:not(.Icon--rotated) {
+  transition: transform 0.2s ease;
 }
 
 .Modal__overlay {
