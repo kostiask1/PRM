@@ -3,6 +3,7 @@ import { api } from '../../api';
 import Button from '../Button/Button';
 import Input from '../Input/Input';
 import StatusBadge from '../StatusBadge/StatusBadge';
+import Panel from '../Panel/Panel';
 import './CampaignView.css';
 
 export default function CampaignView({ campaign, onSelectSession, onNavigate, onRefreshCampaigns, modal }) {
@@ -206,7 +207,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
   };
 
   return (
-    <section className="CampaignView Panel">
+    <Panel className="CampaignView">
       <div className="Panel__header">
         <div>
           <h2 className="editable-title" onClick={handleRename} title="Натисни, щоб перейменувати">
@@ -378,7 +379,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
             </article>
           ))}
         </div>
-      </div>
-    </section>
+      </div> {/* Цей закриваючий div належить до Panel__body, який неявно є дітьми компонента Panel */}
+    </Panel>
   );
 }

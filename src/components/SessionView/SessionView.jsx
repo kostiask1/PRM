@@ -3,6 +3,7 @@ import { api } from '../../api';
 import Icon from '../Icon';
 import Button from '../Button/Button';
 import Input from '../Input/Input';
+import Panel from '../Panel/Panel';
 import './SessionView.css';
 
 const SCENE_SCHEMA = [
@@ -121,7 +122,7 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
     };
 
     return (
-        <section className="SessionView Panel">
+        <Panel className="SessionView">
             <div className="Panel__header">
                 <div className="SessionView__header">
                     <div className="SessionView__titleGroup">
@@ -235,7 +236,7 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
                     </TodoSection>
                 </div>
             </div>
-        </section>
+        </Panel>
     );
 }
 
