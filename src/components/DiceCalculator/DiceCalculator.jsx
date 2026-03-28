@@ -18,43 +18,75 @@ export default function DiceCalculator() {
         if (!str) return;
 
         const cleanStr = str.toLowerCase().replace(/\s+/g, '');
-        const parts = cleanStr.split('+');
-        let total = 0;
+        // Підтримка віднімання та від'ємних модифікаторів
+        const normalizedStr = cleanStr.replace(/-/g, '+-');
+        const parts = normalizedStr.split('+').filter(Boolean);
+
+        let diceTotal = 0;
+        let modifierSum = 0;
         let averageTotal = 0;
         const details = [];
-        const formulaParts = [];
+        const diceMap = {}; // Об'єкт для групування кубиків за кількістю граней
+
+        let d20Count = 0;
+        let lastD20Value = 0;
 
         parts.forEach(part => {
             const dieMatch = part.match(/^(\d+)?d(\d+)$/);
             if (dieMatch) {
                 const count = parseInt(dieMatch[1]) || 1;
                 const sides = parseInt(dieMatch[2]);
+                
                 let dieTotal = 0;
+                // Додаємо до групи
+                diceMap[sides] = (diceMap[sides] || 0) + count;
+
                 for (let i = 0; i < count; i++) {
                     const roll = Math.floor(Math.random() * sides) + 1;
                     dieTotal += roll;
                     averageTotal += (sides + 1) / 2;
                     details.push({ val: roll, max: sides });
+
+                    if (sides === 20) {
+                        d20Count++;
+                        lastD20Value = roll;
+                    }
                 }
-                total += dieTotal;
-                formulaParts.push(`${count > 1 ? count : ''}d${sides}`);
+                diceTotal += dieTotal;
             } else {
                 const num = parseInt(part);
                 if (!isNaN(num)) {
-                    total += num;
+                    modifierSum += num;
                     averageTotal += num;
                     details.push({ val: num, max: null });
-                    formulaParts.push(num);
                 }
             }
         });
+
+        // Формуємо фінальну згруповану формулу
+        const formulaParts = [];
+        // Сортуємо кубики за кількістю граней (від d20 до d4)
+        Object.entries(diceMap)
+            .sort((a, b) => b[0] - a[0])
+            .forEach(([sides, count]) => {
+                formulaParts.push(`${count}d${sides}`);
+            });
+
+        if (modifierSum !== 0) {
+            formulaParts.push(modifierSum);
+        }
+
+        // Правило критичного результату для 1d20
+        const isCritical = d20Count === 1 && (lastD20Value === 1 || lastD20Value === 20);
+        const finalTotal = isCritical ? lastD20Value : (diceTotal + modifierSum);
 
         const entry = {
             id: Date.now(),
             formula: formulaParts.join(' + ').replace(/\+\s-/g, '- '),
             breakdown: details,
-            total: total,
-            average: Math.floor(averageTotal)
+            total: finalTotal,
+            average: Math.floor(averageTotal),
+            isCritical: isCritical
         };
 
         setLastResult(entry);
@@ -84,10 +116,19 @@ export default function DiceCalculator() {
             }
             setManualInput(prev => {
                 const currentInput = prev.trim();
-                if (currentInput === '' || currentInput.match(/(\D)$/)) { // Якщо порожньо або закінчується не цифрою/кубиком
-                    return `${currentInput}d${value}`;
+                const dieRegex = new RegExp(`(?:(\\d+))?d${value}(\\b)`, 'i');
+                const match = currentInput.match(dieRegex);
+
+                if (match) {
+                    const currentCount = parseInt(match[1] || '1');
+                    return currentInput.replace(dieRegex, `${currentCount + 1}d${value}`);
+                } else {
+                    const dieStr = `1d${value}`;
+                    if (currentInput === '' || /[+\-*/]$/.test(currentInput)) {
+                        return `${currentInput}${dieStr}`;
+                    }
+                    return `${currentInput}+${dieStr}`;
                 }
-                return `${currentInput}+d${value}`; // Додаємо через '+'
             });
         }
     };
@@ -165,7 +206,9 @@ export default function DiceCalculator() {
                                     {lastResult.formula} ({renderBreakdown(lastResult.breakdown)})
                                 </div>
                                 <div className="DiceCalculator__totalValue-container">
-                                    <span className="DiceCalculator__totalValue">
+                                    <span 
+                                        className={`DiceCalculator__totalValue ${lastResult.isCritical ? (lastResult.total === 20 ? 'dice-max' : 'dice-min') : ''}`}
+                                    >
                                         {lastResult.total}
                                     </span>
                                     {lastResult.average !== undefined && (
@@ -235,7 +278,12 @@ export default function DiceCalculator() {
                                             className="DiceCalculator__historyInfo"
                                             title={`${roll.formula} = ${roll.total} (${getFullBreakdownString(roll.breakdown)})`}
                                         >
-                                            <span><strong>{roll.formula} = {roll.total}</strong></span>
+                                                <span>
+                                                    <strong>
+                                                        {roll.formula} = 
+                                                        <span className={roll.isCritical ? (roll.total === 20 ? 'dice-max' : 'dice-min') : ''}> {roll.total}</span>
+                                                    </strong>
+                                                </span>
                                             <span className="muted">({renderBreakdown(roll.breakdown)})</span>
                                         </div>
                                     </div>

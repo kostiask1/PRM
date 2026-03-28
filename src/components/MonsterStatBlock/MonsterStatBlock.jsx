@@ -84,6 +84,29 @@ export default function MonsterStatBlock({ monster, onNameClick, nameTitle }) {
         );
     };
 
+    const renderSaves = () => {
+        const saveNames = {
+            strength_save: 'Str',
+            dexterity_save: 'Dex',
+            constitution_save: 'Con',
+            intelligence_save: 'Int',
+            wisdom_save: 'Wis',
+            charisma_save: 'Cha'
+        };
+
+        const activeSaves = Object.entries(saveNames)
+            .filter(([key]) => monster[key] !== null && monster[key] !== undefined)
+            .map(([key, label], idx, arr) => (
+                <React.Fragment key={key}>
+                    {label} <RollDice formula={`1d20${formatModifier(monster[key])}`}>{formatModifier(monster[key])}</RollDice>
+                    {idx < arr.length - 1 ? ', ' : ''}
+                </React.Fragment>
+            ));
+
+        if (activeSaves.length === 0) return null;
+        return <div className="Bestiary__damage"><strong>Saving Throws:</strong> {activeSaves}</div>;
+    };
+
     return (
         <div className="Bestiary__details">
             <h3 className="Bestiary__monster-name" onClick={() => onNameClick?.(monster)} title={nameTitle}>
@@ -92,7 +115,7 @@ export default function MonsterStatBlock({ monster, onNameClick, nameTitle }) {
             <div className="Bestiary__header-row">
                 <div className="Bestiary__stats">
                     <div className="stat-item"><strong>HP:</strong> {monster.hit_points} (<RollDice formula={monster.hit_dice} />)</div>
-                    <div className="stat-item"><strong>AC:</strong> {monster.armor_class} ({monster.armor_desc})</div>
+                    <div className="stat-item"><strong>AC:</strong> {monster.armor_class}{monster.armor_desc ? ` (${monster.armor_desc})` : ''}</div>
                     <div className="stat-item"><strong>Speed:</strong> {Object.entries(monster.speed || {}).map(([k, v]) => `${k} ${v}`).join(', ')}</div>
                     <div className="stat-item"><strong>Type:</strong> {monster.type}</div>
                 </div>
@@ -113,6 +136,20 @@ export default function MonsterStatBlock({ monster, onNameClick, nameTitle }) {
                 {renderAbility('CHA', monster.charisma)}
             </div>
             <div className="Bestiary__properties">
+                {renderSaves()}
+                
+                {monster.skills && Object.keys(monster.skills).length > 0 && (
+                    <div className="Bestiary__damage">
+                        <strong>Skills:</strong> {Object.entries(monster.skills).map(([name, value], idx, arr) => (
+                            <React.Fragment key={name}>
+                                <span style={{ textTransform: 'capitalize' }}>{name}</span>{' '}
+                                <RollDice formula={`1d20${formatModifier(value)}`}>{formatModifier(value)}</RollDice>
+                                {idx < arr.length - 1 ? ', ' : ''}
+                            </React.Fragment>
+                        ))}
+                    </div>
+                )}
+
                 {monster.damage_immunities && <div className="Bestiary__damage"><strong>Damage Immunities:</strong> {monster.damage_immunities}</div>}
                 {monster.damage_vulnerabilities && <div className="Bestiary__damage"><strong>Damage Vulnerabilities:</strong> {monster.damage_vulnerabilities}</div>}
                 {monster.damage_resistances && <div className="Bestiary__damage"><strong>Damage Resistances:</strong> {monster.damage_resistances}</div>}

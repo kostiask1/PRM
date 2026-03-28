@@ -100,6 +100,15 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
         saveEncounterState(updated);
     };
 
+    const handleRename = async () => {
+        const name = await modal.prompt("Перейменування", "Вкажіть нову назву зіткнення:", encounter.name);
+        if (name && name !== encounter.name) {
+            const updated = { ...encounter, name };
+            setEncounter(updated);
+            saveEncounterState(updated);
+        }
+    };
+
     const getHpColor = (current, max) => {
         const ratio = max > 0 ? Math.min(Math.max(0, current / max), 1) : 0;
         const hue = ratio * 120; // 120 - зелений, 0 - червоний
@@ -112,7 +121,9 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
         <Panel className="EncounterView">
             <div className="Panel__header">
                 <div>
-                    <h2>{encounter.name}</h2>
+                    <h2 className="editable-title" onClick={handleRename} title="Натисніть, щоб перейменувати">
+                        {encounter.name}
+                    </h2>
                     <p className="muted">Бойове зіткнення • {encounter.monsters.length} монстрів</p>
                 </div>
                 <Button onClick={onBack} icon="back">Назад до сесії</Button>
