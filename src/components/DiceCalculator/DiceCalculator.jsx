@@ -26,33 +26,59 @@ export default function DiceCalculator() {
         let modifierSum = 0;
         let averageTotal = 0;
         const details = [];
-        const diceMap = {}; // Об'єкт для групування кубиків за кількістю граней
+        const diceMap = {}; // Об'єкт для групування кубиків (включаючи h/l)
 
         let d20Count = 0;
         let lastD20Value = 0;
 
         parts.forEach(part => {
-            const dieMatch = part.match(/^(\d+)?d(\d+)$/);
+            const dieMatch = part.match(/^(\d+)?d(\d+)([hl]\d+)?$/i);
             if (dieMatch) {
                 const count = parseInt(dieMatch[1]) || 1;
                 const sides = parseInt(dieMatch[2]);
-                
-                let dieTotal = 0;
-                // Додаємо до групи
-                diceMap[sides] = (diceMap[sides] || 0) + count;
+                const keepSuffix = dieMatch[3]; // h3 або l2
 
+                // Додаємо до групи
+                const groupKey = `${sides}${keepSuffix || ''}`;
+                diceMap[groupKey] = (diceMap[groupKey] || 0) + count;
+
+                const currentRolls = [];
                 for (let i = 0; i < count; i++) {
                     const roll = Math.floor(Math.random() * sides) + 1;
-                    dieTotal += roll;
-                    averageTotal += (sides + 1) / 2;
-                    details.push({ val: roll, max: sides });
+                    currentRolls.push({ val: roll, max: sides });
 
-                    if (sides === 20) {
+                    if (sides === 20 && !keepSuffix) {
                         d20Count++;
                         lastD20Value = roll;
                     }
                 }
-                diceTotal += dieTotal;
+
+                if (keepSuffix) {
+                    const type = keepSuffix[0].toLowerCase();
+                    const keepCount = Math.min(parseInt(keepSuffix.slice(1)), count);
+                    
+                    // Сортуємо індекси, щоб помітити, які кубики скинути
+                    const indexed = currentRolls.map((r, idx) => ({ val: r.val, idx }));
+                    indexed.sort((a, b) => type === 'h' ? b.val - a.val : a.val - b.val);
+                    
+                    const keptIndices = new Set(indexed.slice(0, keepCount).map(r => r.idx));
+                    
+                    currentRolls.forEach((r, idx) => {
+                        if (keptIndices.has(idx)) {
+                            diceTotal += r.val;
+                            averageTotal += (sides + 1) / 2;
+                        } else {
+                            r.dropped = true;
+                        }
+                        details.push(r);
+                    });
+                } else {
+                    currentRolls.forEach(r => {
+                        diceTotal += r.val;
+                        averageTotal += (sides + 1) / 2;
+                        details.push(r);
+                    });
+                }
             } else {
                 const num = parseInt(part);
                 if (!isNaN(num)) {
@@ -66,10 +92,11 @@ export default function DiceCalculator() {
         // Формуємо фінальну згруповану формулу
         const formulaParts = [];
         // Сортуємо кубики за кількістю граней (від d20 до d4)
-        Object.entries(diceMap)
-            .sort((a, b) => b[0] - a[0])
-            .forEach(([sides, count]) => {
-                formulaParts.push(`${count}d${sides}`);
+        Object.keys(diceMap)
+            .sort((a, b) => parseInt(b) - parseInt(a))
+            .forEach((key) => {
+                const count = diceMap[key];
+                formulaParts.push(`${count}d${key}`);
             });
 
         if (modifierSum !== 0) {
@@ -161,11 +188,13 @@ export default function DiceCalculator() {
         const content = itemsToShow.map((item, idx) => {
             const isMin = item.max && item.val === 1;
             const isMax = item.max && item.val === item.max;
-            const className = isMin ? 'dice-min' : isMax ? 'dice-max' : '';
+            let className = isMin ? 'dice-min' : isMax ? 'dice-max' : '';
+            if (item.dropped) className += ' dice-dropped';
+
             const sign = idx > 0 && item.val >= 0 ? ' + ' : '';
             return (
                 <React.Fragment key={idx}>
-                    {sign}<span className={className}>{item.val}</span>
+                    {sign}<span className={className}>{item.dropped ? item.val : item.val}</span>
                 </React.Fragment>
             );
         });
@@ -183,7 +212,8 @@ export default function DiceCalculator() {
             const isNegative = item.val < 0;
             const sign = idx > 0 ? (isNegative ? ' - ' : ' + ') : (isNegative ? '-' : '');
             const valueToShow = Math.abs(item.val);
-            return `${sign}${valueToShow}`;
+            const text = item.dropped ? `[${valueToShow}]` : valueToShow;
+            return `${sign}${text}`;
         }).join('');
     }, []);
 

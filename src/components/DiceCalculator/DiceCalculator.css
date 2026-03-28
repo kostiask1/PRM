@@ -265,3 +265,8 @@
     color: #22c55e; /* Зелений для максимального значення */
     font-weight: bold;
 }
+
+.dice-dropped {
+    opacity: 0.4;
+    text-decoration: line-through;
+}
