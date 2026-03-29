@@ -59,6 +59,15 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
         return () => clearTimeout(timer);
     }, [search, fetchMonsters]);
 
+    useEffect(() => {
+        if (monsters.length > 0) {
+            const isStillInList = selectedMonster && monsters.some(m => m.slug === selectedMonster.slug);
+            if (!selectedMonster || !isStillInList) {
+                setSelectedMonster(monsters[0]);
+            }
+        }
+    }, [monsters, selectedMonster]);
+
     const handleCopyName = (name) => {
         navigator.clipboard.writeText(name);
         setNotification(`Ім'я "${name}" скопійовано!`);

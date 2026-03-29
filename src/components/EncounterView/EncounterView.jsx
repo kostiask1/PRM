@@ -27,12 +27,26 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
     }, []);
 
     useEffect(() => {
+        if (!showBestiary) return;
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') setShowBestiary(false);
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [showBestiary]);
+
+    useEffect(() => {
         const loadEncounter = async () => {
             try {
                 const session = await api.getSession(campaign.slug, sessionId);
                 // Очікувана структура: session.data.encounters = [{ id, name, monsters: [] }]
                 const found = (session.data.encounters || []).find(e => e.id.toString() === encounterId.toString());
+                
                 setEncounter(found);
+
+                if (found && found.monsters?.length > 0 && !selectedInstance) {
+                    setSelectedInstance(found.monsters[0]);
+                }
             } catch (err) {
                 console.error("Failed to load encounter", err);
             }
@@ -314,8 +328,8 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
             </div>
 
             {showBestiary && (
-                <div className="EncounterView__modal">
-                    <div className="EncounterView__modalContent">
+                <div className="EncounterView__modal" onClick={() => setShowBestiary(false)}>
+                    <div className="EncounterView__modalContent" onClick={(e) => e.stopPropagation()}>
                         <div className="EncounterView__modalHeader">
                             <h3>Вибір монстра</h3>
                             <Button variant="ghost" icon="x" onClick={() => setShowBestiary(false)} />
