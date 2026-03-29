@@ -233,6 +233,7 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
                                 onRemove={() => removeScene(scene.id)}
                                 onOpenEncounter={() => handleOpenEncounter(scene)}
                                 hasEncounter={!!scene.encounterId}
+                                encounterName={(session.data.encounters || []).find(e => e.id?.toString() === scene.encounterId?.toString())?.name}
                             >
                                 {SCENE_SCHEMA.map(field => (
                                     <div key={field.key} className="TodoItem__content">
@@ -297,7 +298,7 @@ function TodoItem({ title, note, checked, onChange, children }) {
     );
 }
 
-function SceneCard({ number, onRemove, collapsed, onToggle, onOpenEncounter, hasEncounter, children }) {
+function SceneCard({ number, onRemove, collapsed, onToggle, onOpenEncounter, hasEncounter, encounterName, children }) {
     return (
         <div className="SceneCard">
             <div className="SceneCard__header" onClick={onToggle}>
@@ -310,14 +311,24 @@ function SceneCard({ number, onRemove, collapsed, onToggle, onOpenEncounter, has
                 <div className="SceneCard__headerActions">
                     <Button
                         variant={hasEncounter ? "primary" : "ghost"}
-                        size="small"
-                        icon="d20"
                         onClick={(e) => {
                             e.stopPropagation();
                             onOpenEncounter();
                         }}
                         title={hasEncounter ? "Відкрити зіткнення" : "Додати бойове зіткнення"}
-                    />
+                    >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
+                            <path d="M14.5 17.5L3 6l3-3 11.5 11.5" />
+                            <path d="M13 19l6-6" />
+                            <path d="M16 16l4 4" />
+                            <path d="M9.5 17.5L21 6l-3-3L6.5 14.5" />
+                            <path d="M11 19L5 13" />
+                            <path d="M8 16l-4 4" />
+                        </svg>
+                        <span style={{ fontWeight: '600' }}>
+                            {hasEncounter ? encounterName : "Додати бій"}
+                        </span>
+                    </Button>
                     <Button variant="danger" icon="x" iconSize={16} onClick={(e) => {
                         e.stopPropagation();
                         onRemove();
