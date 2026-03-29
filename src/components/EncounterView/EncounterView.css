@@ -1,3 +1,7 @@
+.EncounterView {
+    height: 100%;
+}
+
 .EncounterView__body {
     padding: 24px !important;
 }
