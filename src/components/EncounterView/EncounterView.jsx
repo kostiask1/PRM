@@ -9,6 +9,8 @@ import Notification from '../Notification/Notification';
 import './EncounterView.css';
 import Icon from '../Icon';
 
+const MONSTER_FULL_DATA_CACHE = new Map();
+
 export default function EncounterView({ campaign, sessionId, encounterId, onBack, onRefreshCampaigns, modal }) {
     const [encounter, setEncounter] = useState(null);
     const [selectedInstance, setSelectedInstance] = useState(null);
@@ -69,10 +71,16 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
         if (!encounter) return;
         
         try {
-            // Fetch full monster data because search results are often truncated
-            // We use the slug to get the complete stat block
-            const response = await fetch(`https://api.open5e.com/monsters/${m.slug}/`);
-            const fullData = await response.json();
+            let fullData;
+            
+            if (MONSTER_FULL_DATA_CACHE.has(m.slug)) {
+                fullData = MONSTER_FULL_DATA_CACHE.get(m.slug);
+            } else {
+                // Fetch full monster data because search results are often truncated
+                const response = await fetch(`https://api.open5e.com/monsters/${m.slug}/`);
+                fullData = await response.json();
+                MONSTER_FULL_DATA_CACHE.set(m.slug, fullData);
+            }
 
             const newMonster = {
                 ...fullData, 

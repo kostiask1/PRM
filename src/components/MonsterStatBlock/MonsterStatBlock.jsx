@@ -22,14 +22,29 @@ const getDamageBonus = (action) => {
 
 const parseTextWithRolls = (text) => {
     if (!text) return text;
-    const regex = /(\d+d\d+(?:\s*[+-]\s*\d+)?)|([+-]\d+(?:\s+to\s+hit))/gi;
+    // Регулярний вираз для: нових рядків, жирного тексту (**...**), кубиків та бонусів атаки
+    const regex = /(\r?\n)|(\*\*.*?\*\*)|(\d+d\d+(?:\s*[+-]\s*\d+)?)|([+-]\d+(?:\s+to\s+hit))/gi;
     const parts = text.split(regex);
 
     return parts.map((part, i) => {
         if (!part) return null;
+
+        // Обробка переносів рядків
+        if (part === '\n' || part === '\r\n') {
+            return <br key={i} />;
+        }
+
+        // Обробка жирного тексту (**BoldText**)
+        if (part.startsWith('**') && part.endsWith('**')) {
+            return <strong key={i}>{part.slice(2, -2)}</strong>;
+        }
+
+        // Обробка кубиків (напр. 1d6+2)
         if (part.match(/^\d+d\d+/i)) {
             return <RollDice key={i} formula={part.replace(/\s+/g, '')}>{part}</RollDice>;
         }
+
+        // Обробка бонусів атаки (напр. +5 to hit)
         if (part.match(/^[+-]\d+\s+to\s+hit$/i)) {
             const bonus = part.split(' ')[0];
             return <RollDice key={i} formula={`1d20${formatModifier(parseInt(bonus))}`}>{part}</RollDice>;
@@ -157,6 +172,11 @@ export default function MonsterStatBlock({ monster, onNameClick, nameTitle }) {
                     <p><strong>Senses:</strong> {monster.senses}</p>
                     <p><strong>Languages:</strong> {monster.languages}</p>
                 </div>
+                {monster.desc && (
+                    <div className="Bestiary__monster-lore" style={{ marginTop: '12px', fontStyle: 'italic', opacity: 0.85, fontSize: '0.9rem', lineHeight: '1.4' }}>
+                        {parseTextWithRolls(monster.desc)}
+                    </div>
+                )}
             </div>
             {renderActionList(monster.special_abilities, 'Special Abilities')}
             {renderActionList(monster.actions, 'Actions')}

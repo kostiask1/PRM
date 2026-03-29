@@ -7,6 +7,8 @@ import Notification from '../Notification/Notification';
 import MonsterStatBlock from '../MonsterStatBlock/MonsterStatBlock';
 import './Bestiary.css';
 
+const SEARCH_CACHE = new Map();
+
 export default function Bestiary({ onAddMonster, isEmbedded = false }) {
     const [monsters, setMonsters] = useState([]);
     const [search, setSearch] = useState('');
@@ -17,13 +19,10 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
     const [sortOrder, setSortOrder] = useState('none'); // 'none', 'desc', 'asc'
 
     const fetchMonsters = useCallback(async (query = '', urlOverride = null) => {
-        setLoading(true);
-        try {
-            const url = urlOverride || `https://api.open5e.com/monsters/?search=${query}&limit=20`;
-            const response = await fetch(url);
-            const data = await response.json();
+        const url = urlOverride || `https://api.open5e.com/monsters/?search=${query}&limit=20`;
+
+        const applyData = (data) => {
             const results = data.results || [];
-            
             setMonsters(prev => {
                 const combined = urlOverride ? [...prev, ...results] : results;
                 // Використовуємо Map для гарантії унікальності за slug
@@ -31,6 +30,19 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
                 return Array.from(uniqueMap.values());
             });
             setNextPage(data.next);
+        };
+
+        if (SEARCH_CACHE.has(url)) {
+            applyData(SEARCH_CACHE.get(url));
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            SEARCH_CACHE.set(url, data);
+            applyData(data);
         } catch (error) {
             console.error("Failed to fetch monsters", error);
         } finally {
