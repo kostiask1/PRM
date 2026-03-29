@@ -1,5 +1,5 @@
 .Input {
-    width: 100%;
+    width: -webkit-fill-available;
     background: #020617;
     border: 1px solid var(--border, rgba(51, 65, 85, 0.5));
     border-radius: 10px;
