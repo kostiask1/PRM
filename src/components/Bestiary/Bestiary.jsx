@@ -111,7 +111,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
         }
     };
 
-    const innerContent = (
+    const renderBestiaryInner = () => (
         <div className="Bestiary Bestiary__inner">
             {!isEmbedded && (
                 <div className="Panel__header">
@@ -201,5 +201,27 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
         </div>
     );
 
-    return isEmbedded ? innerContent : <Panel className="Bestiary">{innerContent}</Panel>;
+    if (isEmbedded) {
+        return (
+            <>
+                {renderBestiaryInner()}
+                {notification && <Notification message={notification} onClose={() => setNotification(null)} />}
+            </>
+        );
+    }
+
+    return (
+        <Panel className="Bestiary">
+            <div className="Panel__header">
+                <div>
+                    <h2>Бестіарій</h2>
+                    <p className="muted">Каталог монстрів Open5e (SRD)</p>
+                </div>
+            </div>
+            <div className="Panel__body">
+                {renderBestiaryInner()}
+            </div>
+            {notification && <Notification message={notification} onClose={() => setNotification(null)} />}
+        </Panel>
+    );
 }

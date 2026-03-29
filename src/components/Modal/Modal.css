@@ -20,6 +20,9 @@
   width: 100%;
   max-width: 450px;
   box-shadow: var(--shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .Modal__card--error {
@@ -28,6 +31,12 @@
 
 .Modal__card--confirm {
   border-color: var(--accent);
+}
+
+/* Specific styles for Bestiary modal */
+.Modal__card--custom {
+    max-width: 1200px; /* Specific width for Bestiary modal */
+    height: 90vh; /* Specific height for Bestiary modal */
 }
 
 .Modal__header {
@@ -57,6 +66,7 @@
 
 .Modal__body {
   padding: 24px;
+  overflow: hidden;
 }
 
 .Modal__body p {

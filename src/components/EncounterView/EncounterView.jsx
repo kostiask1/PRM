@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { api } from '../../api';
 import Panel from '../Panel/Panel';
 import Button from '../Button/Button';
+import Modal from '../Modal/Modal';
 import Bestiary from '../Bestiary/Bestiary';
 import MonsterStatBlock from '../MonsterStatBlock/MonsterStatBlock';
 import Notification from '../Notification/Notification';
@@ -336,16 +337,15 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
                 </div>
             </div>
 
-            {showBestiary && (
-                <div className="EncounterView__modal" onClick={() => setShowBestiary(false)}>
-                    <div className="EncounterView__modalContent" onClick={(e) => e.stopPropagation()}>
-                        <div className="EncounterView__modalHeader">
-                            <h3>Вибір монстра</h3>
-                            <Button variant="ghost" icon="x" onClick={() => setShowBestiary(false)} />
-                        </div>
-                        <Bestiary onAddMonster={handleAddMonster} isEmbedded={true} />
-                    </div>
-                </div>
+            {showBestiary && ( // Render the generic Modal component
+                <Modal
+                    title="Вибір монстра"
+                    onCancel={() => setShowBestiary(false)}
+                    showFooter={false} // Bestiary handles its own add logic
+                    type="custom" // Use a custom type for specific styling
+                >
+                    <Bestiary onAddMonster={handleAddMonster} isEmbedded={true} />
+                </Modal>
             )}
 
             {notification && (

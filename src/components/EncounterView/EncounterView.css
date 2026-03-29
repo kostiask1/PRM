@@ -155,41 +155,4 @@
 .EncounterView__detailView {
     flex: 1;
     height: 100%;
-    overflow-y: auto;
-    background: rgba(15, 23, 42, 0.3);
-    border: 1px solid rgba(51, 65, 85, 0.3);
-    border-radius: 12px;
-    padding: 24px;
-}
-
-.EncounterView__modal {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(2, 6, 23, 0.85);
-    backdrop-filter: blur(8px);
-    z-index: 2000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 40px;
-}
-
-.EncounterView__modalContent {
-    width: 100%;
-    max-width: 1200px;
-    height: 90vh;
-    background: var(--panel);
-    border: 1px solid rgba(51, 65, 85, 0.7);
-    border-radius: 16px;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.EncounterView__modalHeader {
-    padding: 16px 24px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid rgba(51, 65, 85, 0.45);
 }

@@ -247,7 +247,7 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
                                 onRemove={() => removeScene(scene.id)}
                                 onOpenEncounter={() => handleOpenEncounter(scene)}
                                 hasEncounter={!!scene.encounterId}
-                                encounterName={(session.data.encounters || []).find(e => e.id?.toString() === scene.encounterId?.toString())?.name}
+                                encounterName={(session.data.encounters || []).find(e => e.id?.toString() === scene.encounterId?.toString())?.name || "Без назви"}
                             >
                                 {SCENE_SCHEMA.map(field => (
                                     <div key={field.key} className="TodoItem__content">

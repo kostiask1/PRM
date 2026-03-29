@@ -3,17 +3,19 @@ import Button from '../Button/Button';
 import Input from '../Input/Input';
 import './Modal.css';
 
-export default function Modal({ title, message, type, defaultValue, onConfirm, onCancel, showInput }) {
+export default function Modal({ title, message, type, defaultValue, onConfirm, onCancel, showInput, children, showFooter = true }) {
   const [inputValue, setInputValue] = useState(defaultValue || '');
   const inputRef = useRef(null);
   const confirmButtonRef = useRef(null);
 
   useEffect(() => {
-    if (showInput && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    } else if (!showInput && confirmButtonRef.current) {
-      confirmButtonRef.current.focus();
+    if (!children) { // Only manage focus for standard modals
+        if (showInput && inputRef.current) {
+            inputRef.current.focus();
+            inputRef.current.select();
+        } else if (!showInput && confirmButtonRef.current) {
+            confirmButtonRef.current.focus();
+        }
     }
   }, [showInput]);
 
@@ -23,7 +25,7 @@ export default function Modal({ title, message, type, defaultValue, onConfirm, o
         if (onCancel) onCancel();
       } else if (e.key === 'Enter') {
         e.preventDefault();
-        onConfirm(showInput ? inputValue : true);
+        if (!children) onConfirm(showInput ? inputValue : true); // Only confirm on Enter for standard modals
       }
     };
 
@@ -41,30 +43,32 @@ export default function Modal({ title, message, type, defaultValue, onConfirm, o
           <button className="Modal__close" onClick={() => onCancel && onCancel()}>&times;</button>
         </div>
         <div className="Modal__body">
-          <p>{message}</p>
-          {showInput && (
-            <Input
-              ref={inputRef}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Введіть значення..."
-            />
+          {children ? children : (
+            <>
+              <p>{message}</p>
+              {showInput && (
+                <Input
+                  ref={inputRef}
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  placeholder="Введіть значення..."
+                />
+              )}
+            </>
           )}
         </div>
-        <div className="Modal__footer">
-          {onCancel && (
-            <Button variant="ghost" onClick={onCancel}>
-              Скасувати
-            </Button>
-          )}
-          <Button
-            ref={confirmButtonRef}
-            variant={type === 'error' ? 'danger' : 'primary'}
-            onClick={() => onConfirm(showInput ? inputValue : true)}
-          >
-            {isAlert ? 'ОК' : 'Підтвердити'}
-          </Button>
-        </div>
+        {showFooter && (
+            <div className="Modal__footer">
+              {onCancel && (
+                <Button variant="ghost" onClick={onCancel}>Скасувати</Button>
+              )}
+              <Button
+                ref={confirmButtonRef}
+                variant={type === 'error' ? 'danger' : 'primary'}
+                onClick={() => onConfirm(showInput ? inputValue : true)}
+              >{isAlert ? 'ОК' : 'Підтвердити'}</Button>
+            </div>
+        )}
       </div>
     </div>
   );
