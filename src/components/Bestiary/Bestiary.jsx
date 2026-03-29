@@ -178,13 +178,13 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
                     </div>
 
                     {selectedMonster && (
-                        <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+                        <div className="Bestiary__detail-container">
                             {onAddMonster && (
                                 <Button 
                                     variant="primary" 
                                     icon="plus" 
                                     onClick={() => onAddMonster(selectedMonster)}
-                                    style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 10 }}
+                                    className="Bestiary__add-to-encounter-btn"
                                     title="Додати до зіткнення"
                                 />
                             )}

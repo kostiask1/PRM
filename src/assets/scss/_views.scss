@@ -75,22 +75,3 @@
   justify-content: flex-end;
   gap: 12px;
 }
-
-.scene-card {
-  border: 1px solid rgba(51, 65, 85, 0.75);
-  border-radius: 14px;
-  padding: 16px;
-  margin-bottom: 12px;
-}
-
-.scene-card__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 14px;
-}
-
-.scene-card__grid {
-  display: grid;
-  gap: 12px;
-}

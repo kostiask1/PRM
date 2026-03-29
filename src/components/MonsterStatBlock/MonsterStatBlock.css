@@ -1,19 +1,17 @@
-.Bestiary__details {
-    background: rgba(255, 255, 255, 0.03);
+.MonsterStatBlock {
     border: 1px solid rgba(51, 65, 85, 0.4);
     border-radius: 12px;
     padding: 24px;
     overflow-y: auto;
-    min-height: 0;
 }
 
-.Bestiary__header-row {
+.MonsterStatBlock__header {
     display: flex;
     gap: 24px;
     margin: 16px 0;
 }
 
-.Bestiary__token-wrapper {
+.MonsterStatBlock__token-wrapper {
     flex-shrink: 0;
     width: 120px;
     height: 120px;
@@ -26,28 +24,33 @@
     position: relative;
 }
 
-.Bestiary__token {
+.MonsterStatBlock__token {
     width: 100%;
     height: 100%;
     object-fit: contain;
-    transition: transform 0.3s ease;
     cursor: zoom-in;
     pointer-events: none;
 }
 
-.Bestiary__token-wrapper:hover .Bestiary__token {
+.MonsterStatBlock__token-wrapper:hover .MonsterStatBlock__token {
     position: fixed;
     top: 50%;
     left: 50%;
-    width: 80vh;
-    height: 80vh;
+    width: 50vh;
+    height: 50vh;
     transform: translate(-50%, -50%);
     z-index: 9999;
     pointer-events: none;
     filter: drop-shadow(0 0 50px rgba(0, 0, 0, 0.9));
 }
 
-.Bestiary__stats {
+.MonsterStatBlock__token-skeleton {
+    color: var(--muted);
+    font-size: 2rem;
+    opacity: 0.3;
+}
+
+.MonsterStatBlock__stats {
     flex: 1;
     display: flex;
     flex-wrap: wrap;
@@ -57,7 +60,7 @@
     border-radius: 8px;
 }
 
-.Bestiary__properties {
+.MonsterStatBlock__properties {
     background: rgba(15, 23, 42, 0.4);
     border: 1px solid rgba(51, 65, 85, 0.3);
     border-radius: 8px;
@@ -70,7 +73,15 @@
     gap: 12px;
 }
 
-.Bestiary__abilities {
+.MonsterStatBlock__property-item {
+    display: block;
+}
+
+.MonsterStatBlock__property-item strong {
+    color: var(--accent);
+}
+
+.MonsterStatBlock__abilities {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
     text-align: center;
@@ -78,7 +89,7 @@
     margin: 24px 0;
 }
 
-.Bestiary__ability-box {
+.MonsterStatBlock__ability-box {
     background: rgba(15, 23, 42, 0.6);
     border: 1px solid rgba(51, 65, 85, 0.5);
     border-radius: 10px;
@@ -90,22 +101,70 @@
     transition: all 0.2s ease;
 }
 
-.Bestiary__ability-box:hover {
+.MonsterStatBlock__ability-box:hover {
     border-color: var(--accent);
     background: rgba(56, 189, 248, 0.1);
     transform: translateY(-2px);
 }
 
-.Bestiary__section h4 {
+.MonsterStatBlock__ability-box .ability-label {
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: var(--muted);
+}
+
+.MonsterStatBlock__ability-box .ability-mod {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-bright);
+    margin: 2px 0;
+}
+
+.MonsterStatBlock__ability-box .ability-score {
+    font-size: 0.75rem;
+    opacity: 0.5;
+}
+
+.MonsterStatBlock__section {
+    margin-top: 24px;
+    border-top: 1px solid rgba(51, 65, 85, 0.3);
+    padding-top: 16px;
+}
+
+.MonsterStatBlock__section h4 {
     color: var(--accent);
     text-transform: uppercase;
     font-weight: 800;
     letter-spacing: 1.5px;
     margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
 }
 
-.Bestiary__monster-name { cursor: pointer; display: inline-block; }
-.Bestiary__monster-name:hover { color: var(--accent); }
+.MonsterStatBlock__action {
+    margin-bottom: 16px;
+    line-height: 1.5;
+    font-size: 0.95rem;
+}
+
+.MonsterStatBlock__action-rolls {
+    display: flex;
+    gap: 16px;
+    margin-top: 8px;
+}
+
+.MonsterStatBlock__lore {
+    margin-top: 12px;
+    font-style: italic;
+    opacity: 0.85;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.MonsterStatBlock__name {
+    cursor: pointer;
+    display: inline-block;
+    margin-bottom: 8px;
+}
+
+.MonsterStatBlock__name:hover {
+    color: var(--accent);
+}
