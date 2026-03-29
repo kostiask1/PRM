@@ -134,7 +134,21 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
                 <div className={`Bestiary__content ${isEmbedded ? 'Bestiary__content--stacked' : ''}`}>
                     <div className="Bestiary__list" onScroll={handleScroll}>
                         {displayedMonsters.map(monster => (
-                            <ListCard key={monster.slug} active={selectedMonster?.slug === monster.slug} onClick={() => setSelectedMonster(monster)}>
+                            <ListCard 
+                                key={monster.slug} 
+                                active={selectedMonster?.slug === monster.slug} 
+                                onClick={() => setSelectedMonster(monster)}
+                                onDoubleClick={() => onAddMonster && onAddMonster(monster)}
+                                actions={onAddMonster && (
+                                    <Button 
+                                        variant="ghost" 
+                                        size="small" 
+                                        icon="plus" 
+                                        onClick={(e) => { e.stopPropagation(); onAddMonster(monster); }}
+                                        title="Додати до зіткнення"
+                                    />
+                                )}
+                            >
                                 <div className="ListCard__title">{monster.name}</div>
                                 <div className="ListCard__meta">CR {monster.challenge_rating} • {monster.size} {monster.type}</div>
                             </ListCard>
@@ -143,11 +157,22 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
                     </div>
 
                     {selectedMonster && (
-                        <MonsterStatBlock
-                            monster={selectedMonster}
-                            onNameClick={onAddMonster ? (m) => onAddMonster(m) : (m) => handleCopyName(m.name)}
-                            nameTitle={onAddMonster ? "Додати до зіткнення" : "Копіювати ім'я"}
-                        />
+                        <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+                            {onAddMonster && (
+                                <Button 
+                                    variant="primary" 
+                                    icon="plus" 
+                                    onClick={() => onAddMonster(selectedMonster)}
+                                    style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 10 }}
+                                    title="Додати до зіткнення"
+                                />
+                            )}
+                            <MonsterStatBlock
+                                monster={selectedMonster}
+                                onNameClick={onAddMonster ? (m) => onAddMonster(m) : (m) => handleCopyName(m.name)}
+                                nameTitle={onAddMonster ? "Додати до зіткнення" : "Копіювати ім'я"}
+                            />
+                        </div>
                     )}
                 </div>
             </div>
