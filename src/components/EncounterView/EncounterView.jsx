@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../../api';
 import Panel from '../Panel/Panel';
 import Button from '../Button/Button';
@@ -15,6 +15,14 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
     const [showBestiary, setShowBestiary] = useState(false);
     const [notification, setNotification] = useState(null);
 
+    const saveTimeoutRef = useRef(null);
+
+    useEffect(() => {
+        return () => {
+            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        };
+    }, []);
+
     useEffect(() => {
         const loadEncounter = async () => {
             try {
@@ -29,22 +37,32 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
         loadEncounter();
     }, [campaign.slug, sessionId, encounterId]);
 
-    const saveEncounterState = async (updatedEncounter) => {
-        try {
-            const currentSession = await api.getSession(campaign.slug, sessionId);
-            const updatedEncounters = (currentSession.data.encounters || []).map(e => 
-                e.id.toString() === encounterId.toString() ? updatedEncounter : e
-            );
-            
-            await api.updateSession(campaign.slug, sessionId, {
-                ...currentSession,
-                data: { ...currentSession.data, encounters: updatedEncounters }
-            });
-            onRefreshCampaigns();
-        } catch (err) {
-            console.error("Failed to save encounter updates", err);
+    const saveEncounterState = useCallback((updatedEncounter, debounceMs = 0) => {
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+
+        const performSave = async () => {
+            try {
+                const currentSession = await api.getSession(campaign.slug, sessionId);
+                const updatedEncounters = (currentSession.data.encounters || []).map(e => 
+                    e.id.toString() === encounterId.toString() ? updatedEncounter : e
+                );
+                
+                await api.updateSession(campaign.slug, sessionId, {
+                    ...currentSession,
+                    data: { ...currentSession.data, encounters: updatedEncounters }
+                });
+                onRefreshCampaigns();
+            } catch (err) {
+                console.error("Failed to save encounter updates", err);
+            }
+        };
+
+        if (debounceMs > 0) {
+            saveTimeoutRef.current = setTimeout(performSave, debounceMs);
+        } else {
+            performSave();
         }
-    };
+    }, [campaign.slug, sessionId, encounterId, onRefreshCampaigns]);
 
     const handleAddMonster = async (m) => {
         if (!encounter) return;
@@ -87,7 +105,7 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
         setEncounter(updated);
         // Update selection if it's the same monster to keep the detail view in sync
         if (selectedInstance?.instanceId === instanceId) setSelectedInstance(updatedMonsters.find(m => m.instanceId === instanceId));
-        saveEncounterState(updated);
+        saveEncounterState(updated, 500);
     };
 
     const updateMonsterMaxHp = (instanceId, newMaxHp) => {
@@ -97,7 +115,7 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
         const updated = { ...encounter, monsters: updatedMonsters };
         setEncounter(updated);
         if (selectedInstance?.instanceId === instanceId) setSelectedInstance(updatedMonsters.find(m => m.instanceId === instanceId));
-        saveEncounterState(updated);
+        saveEncounterState(updated, 500);
     };
 
     const handleRename = async () => {
