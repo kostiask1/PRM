@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import Panel from '../Panel/Panel';
 import Input from '../Input/Input';
 import Button from '../Button/Button';
+import Icon from '../Icon';
 import ListCard from '../ListCard/ListCard';
 import Notification from '../Notification/Notification';
 import MonsterStatBlock from '../MonsterStatBlock/MonsterStatBlock';
@@ -132,23 +133,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
                         title="Сортувати за CR (Challenge Rating)"
                     >
                         <span className="Bestiary__sort-label">CR</span>
-                        <svg className={`Bestiary__sort-icon state-${sortOrder}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            {sortOrder === 'none' && (
-                                <path d="M7 15l5 5 5-5M7 9l5-5 5 5" strokeOpacity="0.5" />
-                            )}
-                            {sortOrder === 'desc' && (
-                                <>
-                                    <path d="M7 15l5 5 5-5" />
-                                    <path d="M12 4v16" strokeDasharray="2 2" strokeOpacity="0.3" />
-                                </>
-                            )}
-                            {sortOrder === 'asc' && (
-                                <>
-                                    <path d="M7 9l5-5 5 5" />
-                                    <path d="M12 4v16" strokeDasharray="2 2" strokeOpacity="0.3" />
-                                </>
-                            )}
-                        </svg>
+                        <Icon name={`sort-${sortOrder}`} className={`Bestiary__sort-icon state-${sortOrder}`} />
                     </Button>
                 </div>
 
