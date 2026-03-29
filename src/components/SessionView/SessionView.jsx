@@ -37,6 +37,20 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
         loadSession();
     }, [campaignSlug, sessionId]);
 
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Backspace') {
+                const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable;
+                if (!isInput) {
+                    e.preventDefault();
+                    onBack();
+                }
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [onBack]);
+
     const saveToServer = useCallback(async (updatedSession) => {
         if (saveTimeout.current) clearTimeout(saveTimeout.current);
         setIsSaving(true);

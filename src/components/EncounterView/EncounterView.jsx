@@ -27,13 +27,24 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
     }, []);
 
     useEffect(() => {
-        if (!showBestiary) return;
         const handleKeyDown = (e) => {
-            if (e.key === 'Escape') setShowBestiary(false);
+            if (e.key === 'Escape' && showBestiary) {
+                setShowBestiary(false);
+            } else if (e.key === 'Backspace') {
+                const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable;
+                if (!isInput) {
+                    e.preventDefault();
+                    if (showBestiary) {
+                        setShowBestiary(false);
+                    } else {
+                        onBack();
+                    }
+                }
+            }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [showBestiary]);
+    }, [showBestiary, onBack]);
 
     useEffect(() => {
         const loadEncounter = async () => {
