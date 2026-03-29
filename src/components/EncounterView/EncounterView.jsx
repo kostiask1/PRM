@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { api } from '../../api';
 import Panel from '../Panel/Panel';
 import Button from '../Button/Button';
@@ -190,6 +190,16 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
         return `hsl(${hue}, 80%, 60%)`;
     };
 
+    const averageInitiative = useMemo(() => {
+        if (!encounter || encounter.monsters.length === 0) return 0;
+        const total = encounter.monsters.reduce((sum, m) => {
+            const mod = Math.floor(((m.dexterity || 10) - 10) / 2);
+            return sum + 10.5 + mod;
+        }, 0);
+        const avg = total / encounter.monsters.length;
+        return avg % 1 === 0 ? avg : avg.toFixed(1);
+    }, [encounter]);
+
     if (!encounter) return <Panel className="EncounterView"><div className="Panel__body">Завантаження...</div></Panel>;
 
     return (
@@ -199,7 +209,10 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
                     <h2 className="editable-title" onClick={handleRename} title="Натисніть, щоб перейменувати">
                         {encounter.name}
                     </h2>
-                    <p className="muted">Бойове зіткнення • {encounter.monsters.length} монстрів</p>
+                    <p className="muted">
+                        Бойове зіткнення • {encounter.monsters.length} монстрів
+                        {encounter.monsters.length > 0 && ` • Сер. ініціатива: ${averageInitiative}`}
+                    </p>
                 </div>
                 <Button onClick={onBack} icon="back">Назад до сесії</Button>
             </div>

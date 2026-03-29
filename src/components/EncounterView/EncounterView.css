@@ -97,6 +97,22 @@
     font-size: 0.8rem;
     font-weight: 700;
     transition: border-color 0.2s;
+    appearance: textfield; /* Приховуємо стрілки у Firefox */
+}
+
+/* Приховуємо стандартні стрілки для Chrome, Safari, Edge та Opera */
+.EncounterMonsterRow__hpInput::-webkit-outer-spin-button,
+.EncounterMonsterRow__hpInput::-webkit-inner-spin-button,
+.EncounterMonsterRow__maxHpInput::-webkit-outer-spin-button,
+.EncounterMonsterRow__maxHpInput::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.EncounterMonsterRow__hpInput:hover,
+.EncounterMonsterRow__maxHpInput:hover {
+    border-color: rgba(56, 189, 248, 0.5);
+    background: rgba(15, 23, 42, 0.8);
 }
 
 .EncounterMonsterRow__hpInput:focus,
