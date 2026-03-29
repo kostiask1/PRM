@@ -141,6 +141,11 @@
     letter-spacing: 0.5px;
 }
 
+.EncounterMonsterRow__actions {
+    display: flex;
+    gap: 4px;
+}
+
 .EncounterMonsterRow__action {
     padding: 2px !important;
     min-width: 28px !important;
@@ -155,27 +160,6 @@
     border: 1px solid rgba(51, 65, 85, 0.3);
     border-radius: 12px;
     padding: 24px;
-}
-
-.EncounterView__addSlot {
-    border: 2px dashed rgba(51, 65, 85, 0.5);
-    border-radius: 12px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    min-height: 120px;
-}
-
-.EncounterView__addSlot:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-    background: rgba(56, 189, 248, 0.02);
 }
 
 .EncounterView__modal {

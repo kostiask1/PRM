@@ -304,7 +304,7 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
                                         </div>
                                     </div>
                                 </div>
-                                <div style={{ display: 'flex', gap: '4px' }}>
+                                <div className="EncounterMonsterRow__actions">
                                     <Button 
                                         variant="ghost" 
                                         size="small" 
