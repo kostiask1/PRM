@@ -14,6 +14,7 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
     const [selectedInstance, setSelectedInstance] = useState(null);
     const [showBestiary, setShowBestiary] = useState(false);
     const [notification, setNotification] = useState(null);
+    const [draggingId, setDraggingId] = useState(null);
 
     const saveTimeoutRef = useRef(null);
 
@@ -127,6 +128,62 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
         }
     };
 
+    const handleRenameMonster = async (instanceId, currentName) => {
+        const name = await modal.prompt("Перейменування", "Вкажіть нове ім'я монстра:", currentName);
+        if (name && name !== currentName) {
+            const updatedMonsters = encounter.monsters.map(m => 
+                m.instanceId === instanceId ? { ...m, name } : m
+            );
+            const updated = { ...encounter, monsters: updatedMonsters };
+            setEncounter(updated);
+            if (selectedInstance?.instanceId === instanceId) {
+                setSelectedInstance(updatedMonsters.find(m => m.instanceId === instanceId));
+            }
+            saveEncounterState(updated);
+        }
+    };
+
+    const duplicateMonster = (m) => {
+        const newMonster = {
+            ...m,
+            instanceId: `inst-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        };
+        const index = encounter.monsters.findIndex(item => item.instanceId === m.instanceId);
+        const updatedMonsters = [...encounter.monsters];
+        updatedMonsters.splice(index + 1, 0, newMonster);
+        
+        const updated = { ...encounter, monsters: updatedMonsters };
+        setEncounter(updated);
+        saveEncounterState(updated);
+    };
+
+    const handleDragStart = (e, instanceId) => {
+        setDraggingId(instanceId);
+        e.dataTransfer.effectAllowed = 'move';
+        // Додаємо невелику затримку, щоб браузер встиг зробити скріншот елемента перед зміною стилю
+        setTimeout(() => e.target.classList.add('is-dragging'), 0);
+    };
+
+    const handleDragEnd = (e) => {
+        e.target.classList.remove('is-dragging');
+        setDraggingId(null);
+        saveEncounterState(encounter);
+    };
+
+    const handleDragEnter = (targetId) => {
+        if (draggingId === targetId || !draggingId) return;
+
+        const items = [...encounter.monsters];
+        const draggedIdx = items.findIndex(m => m.instanceId === draggingId);
+        const targetIdx = items.findIndex(m => m.instanceId === targetId);
+
+        if (draggedIdx !== -1 && targetIdx !== -1) {
+            const [removed] = items.splice(draggedIdx, 1);
+            items.splice(targetIdx, 0, removed);
+            setEncounter({ ...encounter, monsters: items });
+        }
+    };
+
     const getHpColor = (current, max) => {
         const ratio = max > 0 ? Math.min(Math.max(0, current / max), 1) : 0;
         const hue = ratio * 120; // 120 - зелений, 0 - червоний
@@ -148,25 +205,44 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
             </div>
             <div className="Panel__body EncounterView__body">
                 <div className="EncounterView__main">
-                    <div className="EncounterView__grid">
+                    <div className="EncounterView__list">
+                        <Button 
+                            variant="create" 
+                            onClick={() => setShowBestiary(true)} 
+                            icon="plus" 
+                            className="EncounterView__addBtn"
+                        >
+                            Додати монстра
+                        </Button>
+
                         {encounter.monsters.map(m => (
                             <div 
                                 key={m.instanceId} 
-                                className={`EncounterMonsterCard ${selectedInstance?.instanceId === m.instanceId ? 'is-active' : ''}`}
+                                className={`EncounterMonsterRow ${selectedInstance?.instanceId === m.instanceId ? 'is-active' : ''} ${draggingId === m.instanceId ? 'is-dragging' : ''}`}
                                 onClick={() => setSelectedInstance(m)}
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, m.instanceId)}
+                                onDragEnd={handleDragEnd}
+                                onDragOver={(e) => e.preventDefault()}
+                                onDragEnter={() => handleDragEnter(m.instanceId)}
+                                onDrop={(e) => e.preventDefault()}
                             >
-                                <div className="EncounterMonsterCard__header">
-                                    <span className="EncounterMonsterCard__name">{m.name}</span>
-                                    <Button variant="ghost" size="small" icon="x" onClick={(e) => { e.stopPropagation(); removeMonster(m.instanceId); }} />
-                                </div>
-                                <div className="EncounterMonsterCard__stats">
-                                    <div className="EncounterMonsterCard__stat">
-                                        <label>HP</label>
+                                <div className="EncounterMonsterRow__content">
+                                    <div 
+                                        className="EncounterMonsterRow__name editable-title" 
+                                        onClick={(e) => { e.stopPropagation(); handleRenameMonster(m.instanceId, m.name); }}
+                                        title="Натисніть, щоб змінити ім'я"
+                                    >
+                                        {m.name}
+                                    </div>
+                                    <div className="EncounterMonsterRow__stats">
+                                        <div className="EncounterMonsterRow__hp">
                                         <input 
                                             type="number" 
                                             value={m.currentHp} 
                                             onChange={(e) => updateMonsterHp(m.instanceId, e.target.value)}
                                             onClick={(e) => e.stopPropagation()}
+                                            className="EncounterMonsterRow__hpInput"
                                             style={{ color: getHpColor(m.currentHp, m.hit_points) }}
                                         />
                                         <span className="muted">/</span>
@@ -175,22 +251,35 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
                                             value={m.hit_points} 
                                             onChange={(e) => updateMonsterMaxHp(m.instanceId, e.target.value)}
                                             onClick={(e) => e.stopPropagation()}
-                                            className="EncounterMonsterCard__maxHpInput"
+                                            className="EncounterMonsterRow__maxHpInput"
                                             title="Максимальне HP"
                                         />
+                                        </div>
+                                        <div className="EncounterMonsterRow__ac">
+                                            AC {m.armor_class}
+                                        </div>
                                     </div>
-                                    <div className="EncounterMonsterCard__stat">
-                                        <label>AC</label>
-                                        <span>{m.armor_class}</span>
-                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: '4px' }}>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="small" 
+                                        icon="plus" 
+                                        className="EncounterMonsterRow__action"
+                                        onClick={(e) => { e.stopPropagation(); duplicateMonster(m); }} 
+                                        title="Дублювати"
+                                    />
+                                    <Button 
+                                        variant="danger" 
+                                        size="small" 
+                                        icon="x" 
+                                        className="EncounterMonsterRow__action"
+                                        onClick={(e) => { e.stopPropagation(); removeMonster(m.instanceId); }} 
+                                        title="Видалити"
+                                    />
                                 </div>
                             </div>
                         ))}
-                        
-                        <button className="EncounterView__addSlot" onClick={() => setShowBestiary(true)}>
-                            <Icon name="plus" size={32} />
-                            <span>Додати монстра</span>
-                        </button>
                     </div>
 
                     <div className="EncounterView__detailView">
