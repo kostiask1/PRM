@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar/Sidebar';
 import MainContent from './components/MainContent';
-import Modal from './components/Modal';
+import Modal from './components/Modal/Modal';
 import { api } from './api';
 import DiceCalculator from './components/DiceCalculator/DiceCalculator';
 

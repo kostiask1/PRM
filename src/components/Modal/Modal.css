@@ -1,0 +1,73 @@
+
+.Modal__overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(2, 6, 23, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.Modal__card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: 100%;
+  max-width: 450px;
+  box-shadow: var(--shadow);
+}
+
+.Modal__card--error {
+  border-color: var(--danger);
+}
+
+.Modal__card--confirm {
+  border-color: var(--accent);
+}
+
+.Modal__header {
+  padding: 20px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+}
+
+.Modal__header h3 {
+  margin: 0;
+}
+
+.Modal__close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 1.8rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.Modal__close:hover {
+  color: var(--text);
+}
+
+.Modal__body {
+  padding: 24px;
+}
+
+.Modal__body p {
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.Modal__footer {
+  padding: 16px 24px;
+  background: rgba(15, 23, 42, 0.4);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
