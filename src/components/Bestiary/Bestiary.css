@@ -2,11 +2,6 @@
     height: 100%;
 }
 
-.Bestiary .Panel__header {
-    padding-bottom: 0;
-    /* Remove bottom padding from Panel__header when Bestiary is not embedded */
-}
-
 .Bestiary__search {
     margin-bottom: 20px;
     display: flex;

@@ -114,14 +114,6 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 
     const renderBestiaryInner = () => (
         <div className="Bestiary Bestiary__inner">
-            {!isEmbedded && (
-                <div className="Panel__header">
-                    <div>
-                        <h2>Бестіарій</h2>
-                        <p className="muted">Каталог монстрів Open5e (SRD)</p>
-                    </div>
-                </div>
-            )}
             <div className="Panel__body">
 
                 <div className="Bestiary__search">
