@@ -4,6 +4,42 @@
 
 .Bestiary__search {
     margin-bottom: 20px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.Bestiary__sort-btn {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px !important;
+    height: 40px;
+    min-width: 85px;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.Bestiary__sort-btn.is-active {
+    background: rgba(56, 189, 248, 0.15) !important;
+    border-color: var(--accent) !important;
+    color: var(--text-bright) !important;
+}
+
+.Bestiary__sort-label {
+    font-weight: 800;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+}
+
+.Bestiary__sort-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.Bestiary__sort-icon.state-desc,
+.Bestiary__sort-icon.state-asc {
+    color: var(--accent);
 }
 
 .Bestiary .Panel__body {
