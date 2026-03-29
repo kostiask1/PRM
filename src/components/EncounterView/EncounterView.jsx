@@ -1,13 +1,11 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { api } from '../../api';
 import Panel from '../Panel/Panel';
 import Button from '../Button/Button';
-import ListCard from '../ListCard/ListCard';
 import Bestiary from '../Bestiary/Bestiary';
 import MonsterStatBlock from '../MonsterStatBlock/MonsterStatBlock';
 import Notification from '../Notification/Notification';
 import './EncounterView.css';
-import Icon from '../Icon';
 
 const MONSTER_FULL_DATA_CACHE = new Map();
 

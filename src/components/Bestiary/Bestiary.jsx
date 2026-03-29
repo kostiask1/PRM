@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Panel from '../Panel/Panel';
 import Input from '../Input/Input';
 import Button from '../Button/Button';
