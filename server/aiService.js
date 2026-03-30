@@ -28,7 +28,10 @@ async function generateContent(type, sessionName, sessionData, userInstructions)
         description: sessionData.description || '',
         notes: sessionData.notes?.map(n => n.text) || [],
         scenes: sessionData.scenes?.map(s => s.texts) || [],
-        encounters: sessionData.encounters?.map(e => e.name) || []
+        encounters: sessionData.encounters?.map(e => ({
+            name: e.name,
+            participants: e.monsters?.map(p => p.name) || [],
+        })) || []
     });
 
     let userPrompt = "";
@@ -38,10 +41,10 @@ async function generateContent(type, sessionName, sessionData, userInstructions)
             userPrompt = `На основі назви кампанії "${sessionName}" та поточного сюжету: ${sessionData.description || 'відсутній'}, допоможи розвинути основну лінію та структурувати замітки. Враховуй існуючі замітки: ${JSON.stringify(sessionData.notes?.map(n => n.text) || [])}. Твоє завдання - оновити опис сюжету (поле description) та надати список цілісних логічних заміток (поле notes) у вигляді масиву рядків. У кожній замітці перший рядок — це короткий заголовок, а далі — розгорнутий запис. Не генеруй жодних сцен.`;
             break;
         case 'scene_ideas':
-            userPrompt = `На основі цієї сесії "${sessionName}" та даних: ${dataSummary}, запропонуй ідеї для нових цікавих сцен (соціальних, бойових або дослідницьких).`;
+            userPrompt = `На основі цієї сесії "${sessionName}" та даних: ${dataSummary}, запропонуй ідеї для нових (або доповни існуючі, залежно від подальших вказівок) цікавих сцен (соціальних, бойових або дослідницьких).`;
             break;
         case 'npc_ideas':
-            userPrompt = `На основі цієї сесії "${sessionName}" та даних: ${dataSummary}, створи нових унікальних NPC (ім'я, роль, характерна риса, таємниця).`;
+            userPrompt = `На основі цієї сесії "${sessionName}" та даних: ${dataSummary}, створи (або допрацюй, залежно від подальших вказівок) NPC (ім'я, роль, характерна риса, таємниця).`;
             break;
         case 'plot_twists':
             userPrompt = `На основі цієї сесії "${sessionName}" та даних: ${dataSummary}, придумай варіанти несподіваного сюжетного повороту.`;

@@ -555,9 +555,9 @@ app.post('/api/ai/generate', async (req, res, next) => {
               texts: s.texts,
               collapsed: false
             }));
-            data.scenes = [...(data.scenes || []), ...newScenes];
+            data.scenes = newScenes;
           } else if (type === 'npc_ideas' && generatedContent.npcs) {
-            data.npcs = [...(data.npcs || []), ...generatedContent.npcs];
+            data.npcs = generatedContent.npcs;
           } else {
             Object.assign(data, generatedContent);
           }
