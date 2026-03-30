@@ -51,10 +51,10 @@ const parseTextWithRolls = (text) => {
 };
 
 export default function MonsterStatBlock({ monster, onNameClick, nameTitle }) {
-    const [imageError, setImageError] = useState(false);
+    const [imageStatus, setImageStatus] = useState('primary'); // 'primary' | 'fallback' | 'none'
 
     useEffect(() => {
-        setImageError(false);
+        setImageStatus('primary');
     }, [monster]);
 
     const renderActionList = (actions, title) => {
@@ -132,9 +132,23 @@ export default function MonsterStatBlock({ monster, onNameClick, nameTitle }) {
                     <div className="stat-item"><strong>Type:</strong> {monster.type}</div>
                 </div>
                 <div className="MonsterStatBlock__token-wrapper">
-                    {!imageError ? (
-                        <img src={`https://5e.tools/img/bestiary/tokens/MM/${monster.name}.webp`} alt={monster.name} className="MonsterStatBlock__token" onError={() => setImageError(true)} />
-                    ) : (
+                    {imageStatus === 'primary' && (
+                        <img 
+                            src={`https://5e.tools/img/bestiary/tokens/MM/${monster.name}.webp`} 
+                            alt={monster.name} 
+                            className="MonsterStatBlock__token" 
+                            onError={() => setImageStatus('fallback')} 
+                        />
+                    )}
+                    {imageStatus === 'fallback' && (
+                        <img 
+                            src={`https://www.dnd5eapi.co/api/images/monsters/${monster.slug}.png`} 
+                            alt={monster.name} 
+                            className="MonsterStatBlock__token" 
+                            onError={() => setImageStatus('none')} 
+                        />
+                    )}
+                    {imageStatus === 'none' && (
                         <div className="MonsterStatBlock__token-skeleton"><Icon name="dice" /></div>
                     )}
                 </div>
