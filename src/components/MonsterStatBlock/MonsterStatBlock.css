@@ -139,7 +139,6 @@
 .MonsterStatBlock__action-rolls {
     display: flex;
     gap: 16px;
-    margin-top: 8px;
 }
 
 .MonsterStatBlock__lore {
