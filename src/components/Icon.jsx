@@ -13,7 +13,7 @@ const icons = {
   x: <><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>,
   chevron: <polyline points="6 9 12 15 18 9" />,
   dice: <><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><path d="M7.5 7.5h.01" strokeWidth="4" /><path d="M16.5 16.5h.01" strokeWidth="4" /><path d="M7.5 16.5h.01" strokeWidth="4" /><path d="M16.5 7.5h.01" strokeWidth="4" /><path d="M12 12h.01" strokeWidth="4" /></>,
-  swords: <><path d="M14.5 17.5L3 6l3-3 11.5 11.5" /><path d="M13 19l6-6" /><path d="M16 16l4 4" /><path d="M9.5 17.5L21 6l-3-3L6.5 14.5" /><path d="M11 19L5 13" /><path d="M8 16l-4 4" /></>,
+  swords: <><path d="M14.5 17.5 3 6V3h3l11.5 11.5" /><path d="m13 19 6-6" /><path d="m16 16 4 4" /><path d="m19 21 2-2" /><path d="M14.5 6.5 21 3v3l-11.5 11.5" /><path d="m5 13 6 6" /><path d="m8 16-4 4" /><path d="m3 21 2-2" /></>,
   undo: <><path d="M3 7v6h6" /><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" /></>,
   redo: <><path d="M21 7v6h-6" /><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13" /></>,
   "sort-none": <path d="M7 15l5 5 5-5M7 9l5-5 5 5" strokeOpacity="0.5" />,
