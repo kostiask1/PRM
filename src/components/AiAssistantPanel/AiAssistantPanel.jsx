@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Button from '../Button/Button';
 import Input from '../Input/Input';
+import Icon from '../Icon';
 import Notification from '../Notification/Notification';
 import './AiAssistantPanel.css';
 
@@ -90,6 +91,7 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
         <div className="AiAssistant">
             <div className="AiAssistant__header">
                 <h3>{isCampaign ? 'AI Сюжетний Помічник' : 'AI Помічник Сесії'}</h3>
+                <Icon name="wand" size={20} className="AiAssistant__header-icon" />
             </div>
 
             {!isCampaign && (
