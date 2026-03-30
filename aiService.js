@@ -17,7 +17,7 @@ async function generateContent(type, sessionName, sessionData, userInstructions)
         Якщо ти генеруєш сцени, використовуй структуру { "scenes": [{ "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "...", "npcs": "...", "clues": "..." } }, ...] }.
         Якщо ти генеруєш NPC, використовуй структуру { "npcs": [{ "name": "...", "role": "...", "trait": "...", "secret": "..." }, ...] }.
         Якщо ти генеруєш сюжетні повороти, використовуй структуру { "plot_twists": ["...", "..."] }.
-        Якщо ти генеруєш сюжет кампанії, використовуй структуру { "description": "..." }.
+        Якщо ти генеруєш сюжет кампанії, використовуй структуру { "description": "...", "notes": ["...", "..."] }. Не генеруй поле "scenes" для кампанії.
         Якщо ти генеруєш підсумок сесії, використовуй структуру { "result_text": "..." }.
         Якщо ти генеруєш наступні кроки, використовуй структуру { "next_steps": ["...", "..."] }.`
     });
@@ -37,7 +37,7 @@ async function generateContent(type, sessionName, sessionData, userInstructions)
 
     switch (type) {
         case 'campaign_plot':
-            userPrompt = `На основі назви кампанії "${sessionName}" та поточного сюжету: ${sessionData.description || 'відсутній'}, допоможи розвинути основну лінію. Враховуй замітки: ${JSON.stringify(sessionData.notes || [])}. Твоє завдання - доповнити або відредагувати існуючий опис відповідно до запиту користувача.`;
+            userPrompt = `На основі назви кампанії "${sessionName}" та поточного сюжету: ${sessionData.description || 'відсутній'}, допоможи розвинути основну лінію та структурувати замітки. Враховуй існуючі замітки: ${JSON.stringify(sessionData.notes?.map(n => n.text) || [])}. Твоє завдання - оновити опис сюжету (поле description) та надати список заміток (поле notes) у вигляді масиву рядків. Не генеруй жодних сцен.`;
             break;
         case 'scene_ideas':
             userPrompt = `На основі цієї сесії "${sessionName}" та даних: ${dataSummary}, запропонуй 3 ідеї для нових цікавих сцен (соціальних, бойових або дослідницьких).`;

@@ -576,7 +576,21 @@ app.post('/api/ai/generate', async (req, res, next) => {
         const metaPath = campaignMetaPath(slug);
         if (await exists(metaPath)) {
           const meta = await readJson(metaPath);
-          Object.assign(meta, generatedContent);
+          
+          // Оновлюємо лише опис та замітки, ігноруючи сторонні поля (наприклад, scenes)
+          if (generatedContent.description) {
+            meta.description = generatedContent.description;
+          }
+          
+          if (Array.isArray(generatedContent.notes)) {
+            // Перетворюємо масив рядків від ШІ у внутрішній формат заміток з ID
+            meta.notes = generatedContent.notes.map(text => ({
+              id: Date.now() + Math.random(),
+              text: text,
+              collapsed: false
+            }));
+          }
+
           meta.updatedAt = new Date().toISOString();
           await writeJson(metaPath, meta);
           updatedObject = meta;

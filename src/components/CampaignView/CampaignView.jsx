@@ -504,7 +504,13 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
                       className="note-card-simple__title"
                       title={note.text.split('\n')[0] || 'Нова замітка'}
                     >
-                      {note.text.split('\n')[0].slice(0, 45) || 'Нова замітка'}
+                      {note.text ? (
+                        <ReactMarkdown components={{ p: 'span' }}>
+                          {note.text.split('\n')[0].slice(0, 45)}
+                        </ReactMarkdown>
+                      ) : (
+                        <span className="muted">Нова замітка</span>
+                      )}
                     </div>
                     <Button variant="danger" icon="trash" size={14} onClick={() => handleDeleteNote(note.id)} title="Видалити замітку" />
                   </div>
