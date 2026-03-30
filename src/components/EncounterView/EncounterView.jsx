@@ -237,7 +237,8 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
     return (
         <Panel className="EncounterView">
             <div className="Panel__header">
-                <div>
+                <div className="EncounterView__header">
+                    <Button variant="ghost" size="small" onClick={onBack} icon="back" className="SessionView__backBtn" />
                     <h2 className="editable-title" onClick={handleRename} title="Натисніть, щоб перейменувати">
                         {encounter.name}
                     </h2>
@@ -246,7 +247,6 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
                         {encounter.monsters.length > 0 && ` • Сер. ініціатива: ${averageInitiative}`}
                     </p>
                 </div>
-                <Button onClick={onBack} icon="back">Назад до сесії</Button>
             </div>
             <div className="Panel__body EncounterView__body">
                 <div className="EncounterView__main">

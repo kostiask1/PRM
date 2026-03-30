@@ -2,6 +2,18 @@
     height: 100%;
 }
 
+.EncounterView__header {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+}
+
+.EncounterView__header p {
+    white-space: nowrap;
+    margin-left: auto;
+}
+
 .EncounterView__body {
     padding: 24px !important;
 }

@@ -60,6 +60,7 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
     // Undo/Redo state
     const [undoStack, setUndoStack] = useState([]);
     const [redoStack, setRedoStack] = useState([]);
+    console.log('undoStack:', undoStack)
     const isUpdatingHistory = useRef(false); // Flag to prevent circular updates
 
     const saveToServer = useCallback(async (updatedSession) => {
