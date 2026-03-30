@@ -367,8 +367,13 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
     e.preventDefault();
   };
 
-  const handleAiUpdate = () => {
-    // Синхронізуємо дані, перечитуючи кампанію з сервера
+  const handleAiUpdate = (updatedCampaign) => {
+    // Зберігаємо стан ДО змін ШІ в історію
+    pushToUndo();
+    if (updatedCampaign) {
+      setDescription(updatedCampaign.description || '');
+      setNotes(updatedCampaign.notes || []);
+    }
     onRefreshCampaigns();
   };
 

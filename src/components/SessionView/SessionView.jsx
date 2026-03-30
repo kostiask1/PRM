@@ -355,7 +355,7 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
                         size="small"
                         icon="undo"
                         onClick={handleUndo}
-                        disabled={undoStack.length <= 1 || isSaving} // Disable if only initial state or saving
+                        disabled={undoStack.length === 0 || isSaving}
                         title="Скасувати (Ctrl+Z)"
                     />
                     <Button
@@ -363,7 +363,7 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
                         size="small"
                         icon="redo"
                         onClick={handleRedo}
-                        disabled={redoStack.length === 0 || isSaving} // Disable if no redo states or saving
+                        disabled={redoStack.length === 0 || isSaving}
                         title="Повторити (Ctrl+Y)"
                     />
                     <Button
