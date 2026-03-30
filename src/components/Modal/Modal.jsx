@@ -3,7 +3,7 @@ import Button from '../Button/Button';
 import Input from '../Input/Input';
 import './Modal.css';
 
-export default function Modal({ title, message, type, defaultValue, onConfirm, onCancel, showInput, children, showFooter = true }) {
+export default function Modal({ title, message, type, defaultValue, onConfirm, onCancel, showInput, children, showFooter = true, confirmLabel }) {
   const [inputValue, setInputValue] = useState(defaultValue || '');
   const inputRef = useRef(null);
   const confirmButtonRef = useRef(null);
@@ -74,7 +74,7 @@ export default function Modal({ title, message, type, defaultValue, onConfirm, o
               ref={confirmButtonRef}
               variant={type === 'error' ? 'danger' : 'primary'}
               onClick={() => onConfirm(showInput ? inputValue : true)}
-            >{isAlert ? 'ОК' : 'Підтвердити'}</Button>
+            >{confirmLabel || (isAlert ? 'ОК' : 'Підтвердити')}</Button>
           </div>
         )}
       </div>

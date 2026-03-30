@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import Button from '../Button/Button';
 import Input from '../Input/Input';
 import Icon from '../Icon';
+import Modal from '../Modal/Modal';
 import Notification from '../Notification/Notification';
 import './AiAssistantPanel.css';
 
@@ -13,6 +14,8 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
     const [activeType, setActiveType] = useState('scene_ideas');
     const [userInstructions, setUserInstructions] = useState('');
     const [notification, setNotification] = useState(null);
+    const [showSceneSelector, setShowSceneSelector] = useState(false);
+    const [generatedPrompt, setGeneratedPrompt] = useState(null);
 
     const isCampaign = !sessionId;
 
@@ -28,7 +31,7 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
         );
     };
 
-    const generate = async (type) => {
+    const generate = async (overrideType = null, targetSceneId = null) => {
         setLoading(true);
         setError('');
         try {
@@ -39,17 +42,20 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
                 promptData.notes = campaignContext.notes;
             }
 
+            const typeToSend = overrideType || (isCampaign ? 'campaign_plot' : activeType);
+
             const response = await fetch('/api/ai/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    type: isCampaign ? 'campaign_plot' : activeType,
+                    type: typeToSend,
                     sessionName,
                     sessionData: promptData,
                     slug: campaignSlug,
                     fileName: sessionId,
-                    generateWithReplace,
-                    userInstructions
+                    generateWithReplace: targetSceneId ? false : generateWithReplace,
+                    userInstructions,
+                    sceneId: targetSceneId
                 })
             });
 
@@ -66,7 +72,9 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
             const data = await response.json(); // Це буде JSON-об'єкт від AI
 
             // Одразу оновлюємо стан в батьківському компоненті, бо в БД вже записано
-            if (data.updated && onInsertResult) {
+            if (data.prompt) {
+                setGeneratedPrompt(data.prompt);
+            } else if (data.updated && onInsertResult) {
                 onInsertResult(data.updated);
                 setUserInstructions(''); // Очищаємо поле після успіху
                 setNotification('Магія ШІ успішно застосована!');
@@ -78,6 +86,15 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
             setLoading(false);
         }
     };
+
+    const handleCopyGeneratedPrompt = useCallback(() => {
+        if (generatedPrompt) {
+            navigator.clipboard.writeText(generatedPrompt);
+            setNotification('Промпт скопійовано у буфер обміну!');
+        }
+        setGeneratedPrompt(null);
+    }, [generatedPrompt, setNotification]);
+
 
     const actions = [
         { id: 'scene_ideas', label: 'Ідеї сцен', icon: 'map' },
@@ -123,7 +140,17 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
                     >
                         {generateWithReplace ? "Додавання із заміною" : "Додати нові дані"}
                     </Button>
-                    :
+                    <Button
+                        variant="ghost"
+                        size="small"
+                        icon="image"
+                        onClick={() => setShowSceneSelector(true)}
+                        disabled={loading || !sessionData.scenes?.length}
+                        title="Згенерувати візуальний опис для сцени"
+                    >
+                        Промпт для фото
+                    </Button>
+                    <span className="muted" style={{ margin: '0 5px' }}>|</span>
                     {actions.map(action => (
                         <Button
                             key={action.id}
@@ -136,6 +163,47 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
                         </Button>
                     ))}
                 </div>
+            )}
+
+            {showSceneSelector && (
+                <Modal
+                    title="Оберіть сцену для генерації промпту"
+                    onCancel={() => setShowSceneSelector(false)}
+                    showFooter={false}
+                >
+                    <div className="AiAssistant__scene-list">
+                        {(sessionData.scenes || []).map((scene, idx) => (
+                            <div 
+                                key={scene.id} 
+                                className="AiAssistant__scene-option"
+                                onClick={() => {
+                                    setShowSceneSelector(false);
+                                    generate('image_prompt', scene.id);
+                                }}
+                            >
+                                <strong>Сцена {idx + 1}</strong>: {scene.texts?.summary?.slice(0, 60) || 'Без опису'}...
+                            </div>
+                        ))}
+                    </div>
+                </Modal>
+            )}
+
+            {generatedPrompt && (
+                <Modal
+                    title="Опис для генерації зображення"
+                    confirmLabel="Копіювати"
+                    onCancel={() => setGeneratedPrompt(null)}
+                    onConfirm={handleCopyGeneratedPrompt}
+                >
+                    <div className="AiAssistant__prompt-result">
+                        <textarea 
+                            className="AiAssistant__prompt-textarea-result"
+                            readOnly
+                            value={generatedPrompt}
+                            onClick={(e) => e.target.select()}
+                        />
+                    </div>
+                </Modal>
             )}
 
             <div className="AiAssistant__prompt-area" style={{ marginTop: '16px' }}>

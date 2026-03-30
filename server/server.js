@@ -537,6 +537,12 @@ app.post('/api/ai/generate', async (req, res, next) => {
       return res.status(500).json({ error: generatedContent.error, raw_response: generatedContent.raw_response });
     }
 
+    if (type === 'image_prompt') {
+      return res.json({
+        prompt: generatedContent,
+      });
+    }
+
     let updatedObject = null;
 
     // Автоматичний запис в БД
