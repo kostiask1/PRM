@@ -91,51 +91,105 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
     }, [saveToServer]);
 
     const handleUndo = useCallback(() => {
-        if (undoStack.length > 1) { // Keep at least the initial state
-            isUpdatingHistory.current = true;
-            setUndoStack(currentStack => {
-                const previousData = currentStack[currentStack.length - 1];
-                const newUndoStack = currentStack.slice(0, -1);
+        if (undoStack.length === 0) return;
 
-                setRedoStack(currentRedoStack => [session.data, ...currentRedoStack]);
-                setSession(prev => {
-                    const next = { ...prev, data: previousData };
-                    triggerSave(next, true); // Save immediately on undo/redo
-                    return next;
-                });
-                isUpdatingHistory.current = false;
-                return newUndoStack;
+        const currentState = {
+            data: session.data,
+            completed: session.completed,
+            completedAt: session.completedAt
+        };
+
+        let tempStack = [...undoStack];
+        let stateToRestore = null;
+
+        // Шукаємо перший стан у черзі, який реально відрізняється від поточного
+        while (tempStack.length > 0) {
+            const candidate = tempStack.pop();
+            const isDifferent = JSON.stringify(candidate.data) !== JSON.stringify(currentState.data) || 
+                              candidate.completed !== currentState.completed;
+            
+            if (isDifferent) {
+                stateToRestore = candidate;
+                break;
+            }
+        }
+
+        if (stateToRestore) {
+            isUpdatingHistory.current = true;
+            setRedoStack(prev => [currentState, ...prev]);
+            setUndoStack(tempStack);
+
+            setSession(prev => {
+                const updated = {
+                    ...prev,
+                    data: stateToRestore.data,
+                    completed: stateToRestore.completed,
+                    completedAt: stateToRestore.completedAt
+                };
+                triggerSave(updated, true);
+                return updated;
             });
+
+            setTimeout(() => { isUpdatingHistory.current = false; }, 0);
         }
     }, [undoStack, session, triggerSave]);
 
     const handleRedo = useCallback(() => {
-        if (redoStack.length > 0) {
-            isUpdatingHistory.current = true;
-            setRedoStack(currentRedoStack => {
-                const nextData = currentRedoStack[0];
-                const newRedoStack = currentRedoStack.slice(1);
+        if (redoStack.length === 0) return;
 
-                setUndoStack(currentUndoStack => [...currentUndoStack, session.data]);
-                setSession(prev => {
-                    const next = { ...prev, data: nextData };
-                    triggerSave(next, true); // Save immediately on undo/redo
-                    return next;
-                });
-                isUpdatingHistory.current = false;
-                return newRedoStack;
+        const currentState = {
+            data: session.data,
+            completed: session.completed,
+            completedAt: session.completedAt
+        };
+
+        let tempStack = [...redoStack];
+        let stateToRestore = null;
+
+        while (tempStack.length > 0) {
+            const candidate = tempStack.shift();
+            const isDifferent = JSON.stringify(candidate.data) !== JSON.stringify(currentState.data) || 
+                              candidate.completed !== currentState.completed;
+
+            if (isDifferent) {
+                stateToRestore = candidate;
+                break;
+            }
+        }
+
+        if (stateToRestore) {
+            isUpdatingHistory.current = true;
+            setUndoStack(prev => [...prev, currentState]);
+            setRedoStack(tempStack);
+
+            setSession(prev => {
+                const updated = {
+                    ...prev,
+                    data: stateToRestore.data,
+                    completed: stateToRestore.completed,
+                    completedAt: stateToRestore.completedAt
+                };
+                triggerSave(updated, true);
+                return updated;
             });
+
+            setTimeout(() => { isUpdatingHistory.current = false; }, 0);
         }
     }, [redoStack, session, triggerSave]);
+
+    const lastLoadedIdRef = useRef(null);
 
     useEffect(() => {
         const loadSession = async () => {
             try {
                 const data = await api.getSession(campaignSlug, sessionId);
                 setSession(data);
-                // Initialize undo stack with the loaded session data
-                setUndoStack([data.data]);
-                setRedoStack([]);
+                
+                if (lastLoadedIdRef.current !== data.id) {
+                    setUndoStack([]);
+                    setRedoStack([]);
+                    lastLoadedIdRef.current = data.id;
+                }
             } catch (err) {
                 console.error("Failed to load session", err);
             }
@@ -168,13 +222,24 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
 
     const updateSession = (updates, instant = false) => {
         setSession(prev => {
-            const next = { ...prev, ...updates };
-            // Manage undo/redo history only if not currently undoing/redoing
+            if (!isUpdatingHistory.current && prev) {
+                const currentState = {
+                    data: prev.data,
+                    completed: prev.completed,
+                    completedAt: prev.completedAt
+                };
+                
+                // Перевіряємо, чи нові дані реально відрізняються від поточних
+                const isDataChanged = updates.data && JSON.stringify(updates.data) !== JSON.stringify(prev.data);
+                const isStatusChanged = updates.completed !== undefined && updates.completed !== prev.completed;
 
-            if (!isUpdatingHistory.current && prev && prev.data) {
-                setUndoStack(currentStack => [...currentStack, prev.data]);
-                setRedoStack([]); // Clear redo stack on new changes
+                if (isDataChanged || isStatusChanged) {
+                    setUndoStack(currentStack => [...currentStack, currentState]);
+                    setRedoStack([]);
+                }
             }
+
+            const next = { ...prev, ...updates };
 
             triggerSave(next, instant);
             return next;
@@ -239,9 +304,15 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
     };
 
     const handleAiUpdate = (updatedSession) => {
-        // Коли AI оновлює, ми отримуємо *новий* updatedSession.
-        // Стан `session` *до* цього виклику - це той, до якого ми хочемо скасувати.
-        setUndoStack(currentStack => [...currentStack, session.data]);
+        // Зберігаємо ПОВНИЙ поточний стан перед оновленням від ШІ
+        setUndoStack(currentStack => [
+            ...currentStack, 
+            { 
+                data: session.data, 
+                completed: session.completed, 
+                completedAt: session.completedAt 
+            }
+        ]);
         setRedoStack([]); // Очищаємо redo stack при нових змінах
         setSession(updatedSession);
     };
@@ -425,8 +496,8 @@ function TodoItem({ title, note, checked, onChange, children }) {
         <div className={`TodoItem ${checked ? 'TodoItem--done' : ''}`}>
             <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
             <div className="TodoItem__content">
-                <div 
-                    onClick={() => onChange(!checked)} 
+                <div
+                    onClick={() => onChange(!checked)}
                     style={{ cursor: 'pointer' }}
                 >
                     {title && (<div className="TodoItem__title">{title}</div>)}

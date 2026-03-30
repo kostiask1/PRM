@@ -100,7 +100,7 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
                     onClick={generate}
                     style={{ width: '100%' }}
                 >
-                    {loading ? 'Магія працює...' : 'Згенерувати та зберегти'}
+                    {loading ? 'Магія працює...' : 'Згенерувати'}
                 </Button>
             </div>
 

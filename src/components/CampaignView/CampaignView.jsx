@@ -57,16 +57,18 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
   const [undoStack, setUndoStack] = useState([]);
   const [redoStack, setRedoStack] = useState([]);
   const isUpdatingHistory = useRef(false);
+  const lastSlugRef = useRef(campaign.slug);
 
   // Синхронізація при зміні кампанії
   useEffect(() => {
-    const desc = campaign.description || '';
-    const nts = campaign.notes || [];
-    setDescription(desc);
-    setNotes(nts);
-    // Ініціалізуємо історію при завантаженні
-    setUndoStack([{ description: desc, notes: nts }]);
-    setRedoStack([]);
+    setDescription(campaign.description || '');
+    setNotes(campaign.notes || []);
+
+    if (lastSlugRef.current !== campaign.slug) {
+      setUndoStack([]);
+      setRedoStack([]);
+      lastSlugRef.current = campaign.slug;
+    }
   }, [campaign.slug, campaign.description, campaign.notes]);
 
   const saveToServer = useCallback(async (updates) => {
@@ -82,83 +84,131 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
   }, [campaign.slug, onRefreshCampaigns]);
 
   const handleUndo = useCallback(() => {
-    if (undoStack.length > 1) {
-      isUpdatingHistory.current = true;
-      const currentState = { description, notes };
-      const previousState = undoStack[undoStack.length - 2];
+    if (undoStack.length === 0) return;
+
+    const currentState = { 
+      description, 
+      notes, 
+      completed: campaign.completed, 
+      completedAt: campaign.completedAt 
+    };
+
+    let tempStack = [...undoStack];
+    let stateToRestore = null;
+
+    while (tempStack.length > 0) {
+      const candidate = tempStack.pop();
+      const isDifferent = JSON.stringify(candidate.description) !== JSON.stringify(currentState.description) || 
+                        JSON.stringify(candidate.notes) !== JSON.stringify(currentState.notes) ||
+                        candidate.completed !== currentState.completed;
       
-      setRedoStack(prev => [currentState, ...prev]);
-      setUndoStack(prev => prev.slice(0, -1));
-      
-      setDescription(previousState.description);
-      setNotes(previousState.notes);
-      
-      saveToServer(previousState);
-      isUpdatingHistory.current = false;
+      if (isDifferent) {
+        stateToRestore = candidate;
+        break;
+      }
     }
-  }, [undoStack, description, notes, saveToServer]);
+
+    if (stateToRestore) {
+      isUpdatingHistory.current = true;
+      setRedoStack(prev => [currentState, ...prev]);
+      setUndoStack(tempStack);
+      
+      setDescription(stateToRestore.description);
+      setNotes(stateToRestore.notes);
+      saveToServer(stateToRestore);
+      
+      setTimeout(() => { isUpdatingHistory.current = false; }, 0);
+    }
+  }, [undoStack, description, notes, saveToServer, campaign.completed, campaign.completedAt]);
 
   const handleRedo = useCallback(() => {
-    if (redoStack.length > 0) {
+    if (redoStack.length === 0) return;
+
+    const currentState = { 
+      description, 
+      notes, 
+      completed: campaign.completed, 
+      completedAt: campaign.completedAt 
+    };
+
+    let tempStack = [...redoStack];
+    let stateToRestore = null;
+
+    while (tempStack.length > 0) {
+      const candidate = tempStack.shift();
+      const isDifferent = JSON.stringify(candidate.description) !== JSON.stringify(currentState.description) || 
+                        JSON.stringify(candidate.notes) !== JSON.stringify(currentState.notes) ||
+                        candidate.completed !== currentState.completed;
+
+      if (isDifferent) {
+        stateToRestore = candidate;
+        break;
+      }
+    }
+
+    if (stateToRestore) {
       isUpdatingHistory.current = true;
-      const currentState = { description, notes };
-      const nextState = redoStack[0];
-      
       setUndoStack(prev => [...prev, currentState]);
-      setRedoStack(prev => prev.slice(1));
+      setRedoStack(tempStack);
       
-      setDescription(nextState.description);
-      setNotes(nextState.notes);
+      setDescription(stateToRestore.description);
+      setNotes(stateToRestore.notes);
+      saveToServer(stateToRestore);
       
-      saveToServer(nextState);
       isUpdatingHistory.current = false;
     }
-  }, [redoStack, description, notes, saveToServer]);
+  }, [redoStack, description, notes, saveToServer, campaign.completed, campaign.completedAt]);
 
-  const triggerSave = useCallback((updates, isNoteChange = false) => {
-    if (saveTimeout.current) clearTimeout(saveTimeout.current);
-    
-    // Оновлюємо історію, якщо це не дія Undo/Redo
+  const pushToUndo = useCallback(() => {
     if (!isUpdatingHistory.current) {
-      // Важливо брати актуальний стан, якщо ми оновлюємо тільки частину
-      const lastState = { 
-        description: updates.description !== undefined ? updates.description : description,
-        notes: updates.notes !== undefined ? updates.notes : notes
-      };
-      setUndoStack(prev => [...prev, lastState]);
+      setUndoStack(prev => [...prev, { 
+        description, 
+        notes, 
+        completed: campaign.completed, 
+        completedAt: campaign.completedAt 
+      }]);
       setRedoStack([]);
     }
+  }, [description, notes, campaign.completed, campaign.completedAt]);
+
+  const triggerSave = useCallback((updates) => {
+    if (saveTimeout.current) clearTimeout(saveTimeout.current);
 
     saveTimeout.current = setTimeout(async () => {
       saveToServer(updates);
     }, 500);
-  }, [campaign.slug, description, notes, saveToServer]);
+  }, [saveToServer]);
 
   const handleDescriptionChange = (e) => {
     const val = e.target.value;
+    pushToUndo();
     setDescription(val);
     triggerSave({ description: val });
   };
 
   const handleAddNote = () => {
+    pushToUndo();
     const newNotes = [...notes, { id: Date.now(), text: '', collapsed: false }];
     setNotes(newNotes);
     triggerSave({ notes: newNotes });
   };
 
   const handleToggleNoteCollapse = (id) => {
+    // Згортання нотаток зазвичай не потребує Undo, але для консистентності можна додати
     const newNotes = notes.map(n => n.id === id ? { ...n, collapsed: !n.collapsed } : n);
     setNotes(newNotes);
     triggerSave({ notes: newNotes });
   };
 
   const handleNoteChange = (id, text) => {
+    pushToUndo();
     const newNotes = notes.map(n => n.id === id ? { ...n, text } : n);
     setNotes(newNotes);
     triggerSave({ notes: newNotes });
   };
 
   const handleDeleteNote = (id) => {
+    pushToUndo();
     const newNotes = notes.filter(n => n.id !== id);
     setNotes(newNotes);
     triggerSave({ notes: newNotes });
