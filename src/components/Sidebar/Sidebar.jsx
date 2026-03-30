@@ -108,6 +108,19 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
         <Icon name="bestiary" />
         Бестіарій
       </a>
+      <a
+        href="/spells"
+        className="Sidebar__bestiary-link"
+        onClick={(e) => {
+          if (!e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            onSelectCampaign('spells');
+          }
+        }}
+      >
+        <Icon name="book" />
+        Заклинання
+      </a>
       <div className="Sidebar__section">
         <div className="Sidebar__headerSection">
           <h2 className="Sidebar__sectionTitle">Кампанії</h2>

@@ -1,0 +1,48 @@
+.SpellCard__name {
+    margin: 0 0 4px 0;
+    color: #e2e2e2;
+    font-size: 1.5rem;
+}
+
+.SpellCard__meta {
+    font-style: italic;
+    color: #aaa;
+    margin-bottom: 16px;
+}
+
+.SpellCard__props {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.SpellCard__props p {
+    margin: 0;
+}
+
+.SpellCard__desc {
+    line-height: 1.6;
+    color: #ccc;
+}
+
+.SpellCard__desc p {
+    margin-bottom: 12px;
+}
+
+.SpellCard__higher {
+    margin-top: 12px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+.SpellCard__footer {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 0.9rem;
+    color: #999;
+}

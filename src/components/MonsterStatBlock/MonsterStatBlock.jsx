@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import RollDice from '../RollDice/RollDice';
 import Icon from '../Icon';
+import SpellCard from '../SpellCard/SpellCard';
 import './MonsterStatBlock.css';
+
+const SPELL_CACHE = new Map();
 
 const getAbilityModifier = (abilityScore) => {
     const score = parseInt(abilityScore, 10);
@@ -50,11 +53,41 @@ const parseTextWithRolls = (text) => {
     });
 };
 
-export default function MonsterStatBlock({ monster, onNameClick, nameTitle }) {
+export default function MonsterStatBlock({ monster, onNameClick, nameTitle, modal }) {
     const [imageStatus, setImageStatus] = useState('primary'); // 'primary' | 'fallback' | 'none'
+    const [spells, setSpells] = useState([]);
+    const [loadingSpells, setLoadingSpells] = useState(false);
 
     useEffect(() => {
         setImageStatus('primary');
+        setSpells([]);
+
+        if (monster.spell_list && monster.spell_list.length > 0) {
+            const fetchSpells = async () => {
+                setLoadingSpells(true);
+                try {
+                    console.log('monster.spell_list:', monster.spell_list)
+                    const loaded = await Promise.all(
+                        monster.spell_list.map(async (url) => {
+                            console.log('url:', url)
+                            const fixUrl = url.replace("https://api.open5e.com/v2/spells", "https://www.dnd5eapi.co/api/2014/spells");
+
+                            if (SPELL_CACHE.has(url)) return SPELL_CACHE.get(fixUrl);
+                            const res = await fetch(fixUrl);
+                            const data = await res.json();
+                            SPELL_CACHE.set(fixUrl, data);
+                            return data;
+                        })
+                    );
+                    setSpells(loaded.filter(Boolean));
+                } catch (e) {
+                    console.error("Error loading monster spells", e);
+                } finally {
+                    setLoadingSpells(false);
+                }
+            };
+            fetchSpells();
+        }
     }, [monster]);
 
     const renderActionList = (actions, title) => {
@@ -117,6 +150,43 @@ export default function MonsterStatBlock({ monster, onNameClick, nameTitle }) {
 
         if (activeSaves.length === 0) return null;
         return <div className="MonsterStatBlock__property-item"><strong>Saving Throws:</strong> {activeSaves}</div>;
+    };
+
+    const renderSpellcasting = () => {
+        if (loadingSpells) return <div className="MonsterStatBlock__section"><p className="muted">Завантаження заклинань...</p></div>;
+        if (spells.length === 0) return null;
+
+        const levels = spells.reduce((acc, s) => {
+            const lvl = s.level_int !== undefined ? s.level_int : s.level;
+            const key = lvl === 0 ? '0' : lvl.toString();
+            if (!acc[key]) acc[key] = [];
+            acc[key].push(s);
+            return acc;
+        }, {});
+
+        const sortedLevels = Object.keys(levels).sort((a, b) => parseInt(a) - parseInt(b));
+
+        return (
+            <div className="MonsterStatBlock__section MonsterStatBlock__spells">
+                <h4>Заклинання (Spells):</h4>
+                {sortedLevels.map(lvl => (
+                    <div key={lvl} style={{ marginBottom: '4px', lineHeight: '1.4' }}>
+                        <strong>{lvl === "0" ? 'Замовляння' : `${lvl}-й рівень`}:</strong>{' '}
+                        {levels[lvl].map((s, i) => (
+                            <React.Fragment key={s.slug || s.name}>
+                                <span 
+                                    style={{ color: 'var(--accent)', cursor: 'pointer', textDecoration: 'underline' }}
+                                    onClick={() => modal?.confirm(s.name, <SpellCard spell={s} />)}
+                                >
+                                    {s.name}
+                                </span>
+                                {i < levels[lvl].length - 1 ? ', ' : ''}
+                            </React.Fragment>
+                        ))}
+                    </div>
+                ))}
+            </div>
+        );
     };
 
     return (
@@ -189,6 +259,7 @@ export default function MonsterStatBlock({ monster, onNameClick, nameTitle }) {
                     </div>
                 )}
             </div>
+            {renderSpellcasting()}
             {renderActionList(monster.special_abilities, 'Special Abilities')}
             {renderActionList(monster.actions, 'Actions')}
             {renderActionList(monster.reactions, 'Reactions')}

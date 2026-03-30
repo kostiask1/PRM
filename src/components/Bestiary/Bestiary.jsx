@@ -10,7 +10,7 @@ import './Bestiary.css';
 
 const SEARCH_CACHE = new Map();
 
-export default function Bestiary({ onAddMonster, isEmbedded = false }) {
+export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
     const [monsters, setMonsters] = useState([]);
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(false);
@@ -169,6 +169,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
                                 monster={selectedMonster}
                                 onNameClick={onAddMonster ? (m) => onAddMonster(m) : (m) => handleCopyName(m.name)}
                                 nameTitle={onAddMonster ? "Додати до зіткнення" : "Копіювати ім'я"}
+                                modal={modal}
                             />
                         </div>
                     )}

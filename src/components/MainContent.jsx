@@ -3,10 +3,14 @@ import CampaignView from './CampaignView/CampaignView';
 import SessionView from './SessionView/SessionView';
 import Bestiary from './Bestiary/Bestiary';
 import EncounterView from './EncounterView/EncounterView';
+import Spells from './Spells/Spells';
 
 export default function MainContent({ campaign, activeSessionId, activeEncounterId, onSelectSession, onRefreshCampaigns, onNavigate, modal, onRollDice }) {
   if (window.location.pathname === '/bestiary') {
-    return <main className="MainContent"><Bestiary /></main>;
+    return <main className="MainContent"><Bestiary modal={modal} /></main>;
+  }
+  if (window.location.pathname === '/spells') {
+    return <main className="MainContent"><Spells /></main>;
   }
 
   if (!campaign) {

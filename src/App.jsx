@@ -28,6 +28,8 @@ export default function App() {
       }
     } else if (parts[0] === 'bestiary') {
       campaign = 'bestiary';
+    } else if (parts[0] === 'spells') {
+      campaign = 'spells';
     }
     return { campaign, session, encounter };
   };
@@ -63,7 +65,7 @@ export default function App() {
   };
   const confirm = (title, message, status = null) => {
     const fullMessage = status ? `[Статус: ${status}] ${message}` : message;
-    return showModal({ title, message: fullMessage, type: 'error' });
+    return showModal({ title, message: fullMessage, type: 'confirm' });
   };
   const prompt = (title, message, defaultValue = '') => showModal({ title, message, type: 'confirm', showInput: true, defaultValue });
 
@@ -98,7 +100,7 @@ export default function App() {
     setActiveEncounterId(encounterId);
 
     let url = '/';
-    if (slug && slug !== 'bestiary') {
+    if (slug && slug !== 'bestiary' && slug !== 'spells') {
       url = `/campaign/${encodeURIComponent(slug)}`;
       if (fileName) {
         url += `/session/${encodeURIComponent(fileName)}`;
@@ -108,6 +110,8 @@ export default function App() {
       }
     } else if (slug === 'bestiary') {
       url = '/bestiary';
+    } else if (slug === 'spells') {
+      url = '/spells';
     }
 
     if (replace) window.history.replaceState({}, '', url);
