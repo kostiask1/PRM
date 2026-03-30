@@ -132,6 +132,7 @@ export default function MonsterStatBlock({ monster, onNameClick, nameTitle }) {
                     <div className="stat-item"><strong>Type:</strong> {monster.type}</div>
                 </div>
                 <div className="MonsterStatBlock__token-wrapper">
+                    <img src={`https://www.dnd5eapi.co/api/images/monsters/${monster.name.toLowerCase().replaceAll(" ", "-")}.png`} alt={monster.name} className="MonsterStatBlock__token" onError={() => setImageError(true)} />
                     {!imageError ? (
                         <img src={`https://5e.tools/img/bestiary/tokens/MM/${monster.name}.webp`} alt={monster.name} className="MonsterStatBlock__token" onError={() => setImageError(true)} />
                     ) : (

@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const express = require('express');
 const fs = require('fs/promises');
 const path = require('path');
@@ -8,7 +8,7 @@ const aiService = require('./aiService');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-const ROOT_DIR = __dirname;
+const ROOT_DIR = path.join(__dirname, '..');
 const PUBLIC_DIR = path.join(ROOT_DIR, 'public');
 const DATA_DIR = path.join(ROOT_DIR, 'data');
 const CAMPAIGNS_DIR = path.join(DATA_DIR, 'campaigns');
@@ -558,11 +558,7 @@ app.post('/api/ai/generate', async (req, res, next) => {
             data.scenes = [...(data.scenes || []), ...newScenes];
           } else if (type === 'npc_ideas' && generatedContent.npcs) {
             data.npcs = [...(data.npcs || []), ...generatedContent.npcs];
-          } else if (type === 'session_recap' && generatedContent.result_text) {
-            const old = data.result_text || '';
-            data.result_text = old + (old ? '\n\n' : '') + generatedContent.result_text;
           } else {
-            // Для інших типів (plot_twists, what_next) просто додаємо в data
             Object.assign(data, generatedContent);
           }
 

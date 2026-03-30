@@ -18,9 +18,9 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
             "Налаштування Gemini AI",
             `Для використання функцій ШІ необхідно налаштувати API ключ:\n\n` +
             `1. Отримайте безкоштовний ключ у Google AI Studio (aistudio.google.com).\n` +
-            `2. Створіть файл .env у кореневій папці проекту (там, де server.js).\n` +
+            `2. Створіть файл .env у кореневій папці проекту.\n` +
             `3. Додайте в нього рядок: GEMINI_API_KEY=ваш_ключ\n` +
-            `4. Перезапустіть сервер (термінал з node server.js).\n\n` +
+            `4. Перезапустіть сервер.\n\n` +
             `Після цього магія ШІ стане доступною!`
         );
     };
