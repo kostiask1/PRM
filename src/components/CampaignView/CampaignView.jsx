@@ -1,11 +1,45 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { api } from '../../api';
 import Button from '../Button/Button';
 import Input from '../Input/Input';
+import AiAssistantPanel from '../AiAssistantPanel/AiAssistantPanel';
 import StatusBadge from '../StatusBadge/StatusBadge';
 import ListCard from '../ListCard/ListCard';
 import Panel from '../Panel/Panel';
 import './CampaignView.css';
+
+/**
+ * Допоміжний компонент для редагування Markdown по кліку
+ */
+function EditableMarkdownField({ title, value, onChange, placeholder, type, className }) {
+    const [isEditing, setIsEditing] = useState(false);
+
+    if (isEditing) {
+        return (
+            <div className={`EditableField ${className || ''}`}>
+                {title && <div className="TodoItem__title">{title}</div>}
+                <Input
+                    type={type}
+                    value={value}
+                    onChange={onChange}
+                    placeholder={placeholder}
+                    onBlur={() => setIsEditing(false)}
+                    autoFocus
+                />
+            </div>
+        );
+    }
+
+    return (
+        <div className={`EditableField ${className || ''}`} onClick={() => setIsEditing(true)}>
+            {title && <div className="TodoItem__title">{title}</div>}
+            <div className="MarkdownView">
+                {value ? <ReactMarkdown>{value}</ReactMarkdown> : <span className="muted">{placeholder}</span>}
+            </div>
+        </div>
+    );
+}
 
 export default function CampaignView({ campaign, onSelectSession, onNavigate, onRefreshCampaigns, modal }) {
   const [sessions, setSessions] = useState([]);
@@ -17,29 +51,88 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
   const [notes, setNotes] = useState(campaign.notes || []);
   const [isNotesCollapsed, setIsNotesCollapsed] = useState(false);
   const saveTimeout = useRef(null);
+  const isSavingRef = useRef(false);
 
-  const autoResize = (e) => {
-    e.target.style.height = 'auto';
-    e.target.style.height = e.target.scrollHeight + 'px';
-  };
+  // Undo/Redo state
+  const [undoStack, setUndoStack] = useState([]);
+  const [redoStack, setRedoStack] = useState([]);
+  const isUpdatingHistory = useRef(false);
 
   // Синхронізація при зміні кампанії
   useEffect(() => {
-    setDescription(campaign.description || '');
-    setNotes(campaign.notes || []);
+    const desc = campaign.description || '';
+    const nts = campaign.notes || [];
+    setDescription(desc);
+    setNotes(nts);
+    // Ініціалізуємо історію при завантаженні
+    setUndoStack([{ description: desc, notes: nts }]);
+    setRedoStack([]);
   }, [campaign.slug, campaign.description, campaign.notes]);
 
-  const triggerSave = useCallback((updates) => {
-    if (saveTimeout.current) clearTimeout(saveTimeout.current);
-    saveTimeout.current = setTimeout(async () => {
-      try {
-        await api.updateCampaign(campaign.slug, updates);
-        onRefreshCampaigns();
-      } catch (err) {
-        console.error("Failed to save campaign updates", err);
-      }
-    }, 500);
+  const saveToServer = useCallback(async (updates) => {
+    isSavingRef.current = true;
+    try {
+      await api.updateCampaign(campaign.slug, updates);
+      onRefreshCampaigns();
+    } catch (err) {
+      console.error("Failed to save campaign updates", err);
+    } finally {
+      isSavingRef.current = false;
+    }
   }, [campaign.slug, onRefreshCampaigns]);
+
+  const handleUndo = useCallback(() => {
+    if (undoStack.length > 1) {
+      isUpdatingHistory.current = true;
+      const currentState = { description, notes };
+      const previousState = undoStack[undoStack.length - 2];
+      
+      setRedoStack(prev => [currentState, ...prev]);
+      setUndoStack(prev => prev.slice(0, -1));
+      
+      setDescription(previousState.description);
+      setNotes(previousState.notes);
+      
+      saveToServer(previousState);
+      isUpdatingHistory.current = false;
+    }
+  }, [undoStack, description, notes, saveToServer]);
+
+  const handleRedo = useCallback(() => {
+    if (redoStack.length > 0) {
+      isUpdatingHistory.current = true;
+      const currentState = { description, notes };
+      const nextState = redoStack[0];
+      
+      setUndoStack(prev => [...prev, currentState]);
+      setRedoStack(prev => prev.slice(1));
+      
+      setDescription(nextState.description);
+      setNotes(nextState.notes);
+      
+      saveToServer(nextState);
+      isUpdatingHistory.current = false;
+    }
+  }, [redoStack, description, notes, saveToServer]);
+
+  const triggerSave = useCallback((updates, isNoteChange = false) => {
+    if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    
+    // Оновлюємо історію, якщо це не дія Undo/Redo
+    if (!isUpdatingHistory.current) {
+      // Важливо брати актуальний стан, якщо ми оновлюємо тільки частину
+      const lastState = { 
+        description: updates.description !== undefined ? updates.description : description,
+        notes: updates.notes !== undefined ? updates.notes : notes
+      };
+      setUndoStack(prev => [...prev, lastState]);
+      setRedoStack([]);
+    }
+
+    saveTimeout.current = setTimeout(async () => {
+      saveToServer(updates);
+    }, 500);
+  }, [campaign.slug, description, notes, saveToServer]);
 
   const handleDescriptionChange = (e) => {
     const val = e.target.value;
@@ -205,8 +298,28 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
     }
   };
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        handleUndo();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleUndo, handleRedo]);
+
   const handleDrop = (e) => {
     e.preventDefault();
+  };
+
+  const handleAiUpdate = () => {
+    // Синхронізуємо дані, перечитуючи кампанію з сервера
+    onRefreshCampaigns();
   };
 
   return (
@@ -219,6 +332,22 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
           <p className="muted">Створено: {new Date(campaign.createdAt).toLocaleDateString()}</p>
         </div>
         <div className="CampaignView__headerActions">
+          <Button
+            variant="ghost"
+            size="small"
+            icon="undo"
+            onClick={handleUndo}
+            disabled={undoStack.length <= 1}
+            title="Скасувати (Ctrl+Z)"
+          />
+          <Button
+            variant="ghost"
+            size="small"
+            icon="redo"
+            onClick={handleRedo}
+            disabled={redoStack.length === 0}
+            title="Повторити (Ctrl+Y)"
+          />
           <Button onClick={handleExport} icon="export">
             Експорт
           </Button>
@@ -229,14 +358,23 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
       <div className="Panel__body">
         <div className="CampaignView__section">
           <h3>Сюжет кампанії</h3>
-          <Input
+          <EditableMarkdownField
             type="textarea"
-            className="field--textarea"
             placeholder="Опишіть основну лінію сюжету, ключові події та цілі..."
             value={description}
             onChange={handleDescriptionChange}
-            onInput={autoResize}
-            rows={1}
+          />
+          
+          <AiAssistantPanel 
+            sessionName={campaign.name}
+            sessionData={{
+                ...campaign,
+                description,
+                notes
+            }}
+            campaignSlug={campaign.slug}
+            sessionId={null}
+            onInsertResult={handleAiUpdate}
           />
         </div>
 
@@ -320,14 +458,11 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
                     <Button variant="danger" icon="trash" size={14} onClick={() => handleDeleteNote(note.id)} title="Видалити замітку" />
                   </div>
                   {!note.collapsed && (
-                    <Input
+                    <EditableMarkdownField
                       type="textarea"
-                      className="field--textarea"
                       value={note.text}
                       onChange={(e) => handleNoteChange(note.id, e.target.value)}
-                      onInput={autoResize}
                       placeholder="Текст замітки..."
-                      rows={1}
                     />
                   )}
                 </div>

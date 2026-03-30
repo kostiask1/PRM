@@ -9,6 +9,8 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
     const [activeType, setActiveType] = useState('scene_ideas');
     const [userInstructions, setUserInstructions] = useState('');
 
+    const isCampaign = !sessionId;
+
     const generate = async (type) => {
         setLoading(true);
         setError('');
@@ -17,7 +19,7 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    type: activeType, 
+                    type: isCampaign ? 'campaign_plot' : activeType, 
                     sessionName, 
                     sessionData, 
                     slug: campaignSlug, 
@@ -50,29 +52,44 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
         { id: 'plot_twists', label: 'Сюжетні повороти', icon: 'zap' },
     ];
 
+    const getPlaceholder = () => {
+        if (isCampaign) {
+            return "Опишіть зміни або нові гілки сюжету (наприклад: 'додай політичні інтриги' або 'зроби фінал більш епічним')...";
+        }
+        switch (activeType) {
+            case 'scene_ideas': return "Опишіть стиль або умови (наприклад: 'занедбане підземне місто', 'атмосфера детективу')...";
+            case 'npc_ideas': return "Які риси мають бути? (наприклад: 'корумпований стражник', 'таємничий мандрівник з маскою')...";
+            case 'plot_twists': return "Задайте вектор (наприклад: 'зрада союзника', 'несподівана допомога від ворога')...";
+            default: return "Додайте деталі для ШІ...";
+        }
+    };
+
     // Допоміжна функція для відображення JSON-результату
     return (
         <div className="AiAssistant">
             <div className="AiAssistant__header">
-                <h3>AI Помічник Майстра</h3>
+                <h3>{isCampaign ? 'AI Сюжетний Помічник' : 'AI Помічник Сесії'}</h3>
             </div>
-            <div className="AiAssistant__actions">
-                {actions.map(action => (
-                    <Button
-                        key={action.id}
-                        variant={activeType === action.id ? 'primary' : 'ghost'}
-                        size="small"
-                        onClick={() => setActiveType(action.id)}
-                    >
-                        {action.label}
-                    </Button>
-                ))}
-            </div>
+
+            {!isCampaign && (
+                <div className="AiAssistant__actions">
+                    {actions.map(action => (
+                        <Button
+                            key={action.id}
+                            variant={activeType === action.id ? 'primary' : 'ghost'}
+                            size="small"
+                            onClick={() => setActiveType(action.id)}
+                        >
+                            {action.label}
+                        </Button>
+                    ))}
+                </div>
+            )}
 
             <div className="AiAssistant__prompt-area" style={{ marginTop: '16px' }}>
                 <Input
                     type="textarea"
-                    placeholder="Додайте деталі (наприклад: 'атмосфера жаху', 'NPC має бути ельфом')..."
+                    placeholder={getPlaceholder()}
                     value={userInstructions}
                     onChange={(e) => setUserInstructions(e.target.value)}
                     style={{ minHeight: '80px', marginBottom: '12px' }}

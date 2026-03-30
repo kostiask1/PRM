@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import RollDice from '../RollDice/RollDice';
 import Icon from '../Icon';
 import './MonsterStatBlock.css';
@@ -22,23 +23,12 @@ const getDamageBonus = (action) => {
 
 const parseTextWithRolls = (text) => {
     if (!text) return text;
-    // Регулярний вираз для: нових рядків, жирного тексту (**...**), кубиків та бонусів атаки
-    const regex = /(\r?\n)|(\*\*.*?\*\*)|(\d+d\d+(?:\s*[+-]\s*\d+)?)|([+-]\d+(?:\s+to\s+hit))/gi;
+    // Залишаємо в регулярному виразі лише кубики та бонуси атаки
+    const regex = /(\d+d\d+(?:\s*[+-]\s*\d+)?)|([+-]\d+(?:\s+to\s+hit))/gi;
     const parts = text.split(regex);
 
     return parts.map((part, i) => {
         if (!part) return null;
-
-        // Обробка переносів рядків
-        if (part === '\n' || part === '\r\n') {
-            return <br key={i} />;
-        }
-
-        // Обробка жирного тексту (**BoldText**)
-        if (part.startsWith('**') && part.endsWith('**')) {
-            return <strong key={i}>{part.slice(2, -2)}</strong>;
-        }
-
         // Обробка кубиків (напр. 1d6+2)
         if (part.match(/^\d+d\d+/i)) {
             return <RollDice key={i} formula={part.replace(/\s+/g, '')}>{part}</RollDice>;
@@ -49,7 +39,14 @@ const parseTextWithRolls = (text) => {
             const bonus = part.split(' ')[0];
             return <RollDice key={i} formula={`1d20${formatModifier(parseInt(bonus))}`}>{part}</RollDice>;
         }
-        return part;
+
+        // Рендеримо текст через ReactMarkdown. 
+        // components={{ p: 'span' }} дозволяє тексту залишатися в лінію, не створюючи зайвих відступів.
+        return (
+            <ReactMarkdown key={i} components={{ p: 'span' }}>
+                {part}
+            </ReactMarkdown>
+        );
     });
 };
 

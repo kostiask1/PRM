@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { api } from '../../api';
 import Icon from '../Icon';
 import Button from '../Button/Button';
@@ -16,41 +17,50 @@ const SCENE_SCHEMA = [
     { key: 'clues', title: 'Підказки', type: 'textarea', placeholder: 'Інформація, яку отримають гравці...' },
 ];
 
+/**
+ * Допоміжний компонент для редагування Markdown по кліку
+ */
+function EditableMarkdownField({ title, value, onChange, placeholder, type }) {
+    const [isEditing, setIsEditing] = useState(false);
+
+    if (isEditing) {
+        return (
+            <div className="TodoItem__content" onClick={(e) => e.stopPropagation()}>
+                {title && (<div className="TodoItem__title">{title}</div>)}
+                <Input
+                    type={type}
+                    value={value}
+                    onChange={onChange}
+                    placeholder={placeholder}
+                    onBlur={() => setIsEditing(false)}
+                    autoFocus
+                />
+            </div>
+        );
+    }
+
+    return (
+        <div className="TodoItem__content">
+            {title && (<div className="TodoItem__title">{title}</div>)}
+            <div className="MarkdownView" onClick={(e) => {
+                e.stopPropagation();
+                setIsEditing(true);
+            }}>
+                {value ? <ReactMarkdown>{value}</ReactMarkdown> : <span className="muted">{placeholder}</span>}
+            </div>
+        </div>
+    );
+}
+
 export default function SessionView({ campaignSlug, sessionId, onBack, onNavigate, onRefreshCampaigns, modal, onRollDice }) {
     const [session, setSession] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     const saveTimeout = useRef(null);
 
-    const autoResize = (e) => {
-        e.target.style.height = 'auto';
-        e.target.style.height = e.target.scrollHeight + 'px';
-    };
-
-    useEffect(() => {
-        const loadSession = async () => {
-            try {
-                const data = await api.getSession(campaignSlug, sessionId);
-                setSession(data);
-            } catch (err) {
-                console.error("Failed to load session", err);
-            }
-        };
-        loadSession();
-    }, [campaignSlug, sessionId]);
-
-    useEffect(() => {
-        const handleKeyDown = (e) => {
-            if (e.key === 'Backspace') {
-                const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable;
-                if (!isInput) {
-                    e.preventDefault();
-                    onBack();
-                }
-            }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [onBack]);
+    // Undo/Redo state
+    const [undoStack, setUndoStack] = useState([]);
+    const [redoStack, setRedoStack] = useState([]);
+    const isUpdatingHistory = useRef(false); // Flag to prevent circular updates
 
     const saveToServer = useCallback(async (updatedSession) => {
         if (saveTimeout.current) clearTimeout(saveTimeout.current);
@@ -80,9 +90,92 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
         }
     }, [saveToServer]);
 
+    const handleUndo = useCallback(() => {
+        if (undoStack.length > 1) { // Keep at least the initial state
+            isUpdatingHistory.current = true;
+            setUndoStack(currentStack => {
+                const previousData = currentStack[currentStack.length - 1];
+                const newUndoStack = currentStack.slice(0, -1);
+
+                setRedoStack(currentRedoStack => [session.data, ...currentRedoStack]);
+                setSession(prev => {
+                    const next = { ...prev, data: previousData };
+                    triggerSave(next, true); // Save immediately on undo/redo
+                    return next;
+                });
+                isUpdatingHistory.current = false;
+                return newUndoStack;
+            });
+        }
+    }, [undoStack, session, triggerSave]);
+
+    const handleRedo = useCallback(() => {
+        if (redoStack.length > 0) {
+            isUpdatingHistory.current = true;
+            setRedoStack(currentRedoStack => {
+                const nextData = currentRedoStack[0];
+                const newRedoStack = currentRedoStack.slice(1);
+
+                setUndoStack(currentUndoStack => [...currentUndoStack, session.data]);
+                setSession(prev => {
+                    const next = { ...prev, data: nextData };
+                    triggerSave(next, true); // Save immediately on undo/redo
+                    return next;
+                });
+                isUpdatingHistory.current = false;
+                return newRedoStack;
+            });
+        }
+    }, [redoStack, session, triggerSave]);
+
+    useEffect(() => {
+        const loadSession = async () => {
+            try {
+                const data = await api.getSession(campaignSlug, sessionId);
+                setSession(data);
+                // Initialize undo stack with the loaded session data
+                setUndoStack([data.data]);
+                setRedoStack([]);
+            } catch (err) {
+                console.error("Failed to load session", err);
+            }
+        };
+        loadSession();
+    }, [campaignSlug, sessionId]);
+
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Backspace') {
+                const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable;
+                if (!isInput) {
+                    e.preventDefault();
+                    onBack();
+                }
+            }
+            // Add keyboard shortcuts for Undo/Redo
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                e.preventDefault();
+                handleUndo();
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+                e.preventDefault();
+                handleRedo();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown); // Removed autoResize from dependencies
+    }, [onBack, handleUndo, handleRedo]);
+
     const updateSession = (updates, instant = false) => {
         setSession(prev => {
             const next = { ...prev, ...updates };
+            // Manage undo/redo history only if not currently undoing/redoing
+
+            if (!isUpdatingHistory.current && prev && prev.data) {
+                setUndoStack(currentStack => [...currentStack, prev.data]);
+                setRedoStack([]); // Clear redo stack on new changes
+            }
+
             triggerSave(next, instant);
             return next;
         });
@@ -146,10 +239,12 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
     };
 
     const handleAiUpdate = (updatedSession) => {
-        // Дані вже збережені на сервері, просто синхронізуємо локальний стан
+        // Коли AI оновлює, ми отримуємо *новий* updatedSession.
+        // Стан `session` *до* цього виклику - це той, до якого ми хочемо скасувати.
+        setUndoStack(currentStack => [...currentStack, session.data]);
+        setRedoStack([]); // Очищаємо redo stack при нових змінах
         setSession(updatedSession);
     };
-
     if (!session) return null;
 
     const checklistItems = [
@@ -184,6 +279,22 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
                     </div>
                 </div>
                 <div className="SessionView__headerActions">
+                    <Button
+                        variant="ghost"
+                        size="small"
+                        icon="undo"
+                        onClick={handleUndo}
+                        disabled={undoStack.length <= 1 || isSaving} // Disable if only initial state or saving
+                        title="Скасувати (Ctrl+Z)"
+                    />
+                    <Button
+                        variant="ghost"
+                        size="small"
+                        icon="redo"
+                        onClick={handleRedo}
+                        disabled={redoStack.length === 0 || isSaving} // Disable if no redo states or saving
+                        title="Повторити (Ctrl+Y)"
+                    />
                     <Button
                         variant={session.completed ? 'primary' : ''}
                         onClick={() => updateSession({ completed: !session.completed }, true)}
@@ -224,12 +335,11 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
                                 note={item.note}
                             >
                                 {item.hasText && (
-                                    <Input
+                                    <EditableMarkdownField
                                         type="textarea"
-                                        rows="1"
-                                        onInput={autoResize}
                                         value={session.data[`${item.id}_text`] || ''}
                                         onChange={(e) => updateData(`${item.id}_text`, e.target.value)}
+                                        placeholder="Додайте деталі..."
                                     />
                                 )}
                             </TodoItem>
@@ -256,17 +366,14 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
                                 encounterName={(session.data.encounters || []).find(e => e.id?.toString() === scene.encounterId?.toString())?.name || "Без назви"}
                             >
                                 {SCENE_SCHEMA.map(field => (
-                                    <div key={field.key} className="TodoItem__content">
-                                        <div className="TodoItem__title">{field.title}</div>
-                                        <Input
-                                            type={field.type}
-                                            rows="1"
-                                            onInput={field.type === 'textarea' ? autoResize : undefined}
-                                            value={scene.texts[field.key] || ''}
-                                            onChange={(e) => updateScene(scene.id, field.key, e.target.value)}
-                                            placeholder={field.placeholder}
-                                        />
-                                    </div>
+                                    <EditableMarkdownField
+                                        key={field.key}
+                                        title={field.title}
+                                        type={field.type}
+                                        value={scene.texts[field.key] || ''}
+                                        onChange={(e) => updateScene(scene.id, field.key, e.target.value)}
+                                        placeholder={field.placeholder}
+                                    />
                                 ))}
                             </SceneCard>
                         ))}
@@ -276,17 +383,17 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
                         <div className="TodoItem__note">
                             Запиши короткий підсумок того, що реально відбулося.
                         </div>
-                        <Input
+                        <EditableMarkdownField
                             type="textarea"
+                            title="Підсумок"
                             className="field--result"
                             placeholder="Підсумок того, що реально відбулося..."
-                            onInput={autoResize}
                             value={session.data.result_text || ''}
                             onChange={(e) => updateData('result_text', e.target.value)}
                         />
                     </TodoSection>
 
-                    <AiAssistantPanel 
+                    <AiAssistantPanel
                         sessionName={session.name}
                         sessionData={session.data}
                         campaignSlug={campaignSlug}
@@ -315,14 +422,19 @@ function TodoSection({ title, children, action }) {
 
 function TodoItem({ title, note, checked, onChange, children }) {
     return (
-        <label className={`TodoItem ${checked ? 'TodoItem--done' : ''}`}>
+        <div className={`TodoItem ${checked ? 'TodoItem--done' : ''}`}>
             <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
             <div className="TodoItem__content">
-                <div className="TodoItem__title">{title}</div>
-                {note && <div className="TodoItem__note">{note}</div>}
+                <div 
+                    onClick={() => onChange(!checked)} 
+                    style={{ cursor: 'pointer' }}
+                >
+                    {title && (<div className="TodoItem__title">{title}</div>)}
+                    {note && <div className="TodoItem__note">{note}</div>}
+                </div>
                 {children}
             </div>
-        </label>
+        </div>
     );
 }
 
