@@ -1,7 +1,9 @@
+require('dotenv').config();
 const express = require('express');
 const fs = require('fs/promises');
 const path = require('path');
 const crypto = require('crypto');
+const aiService = require('./aiService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -517,6 +519,75 @@ app.delete('/api/campaigns/:slug/sessions/:fileName', async (req, res, next) => 
 
     await fs.rm(fullPath, { force: true });
     res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/ai/generate', async (req, res, next) => {
+  try {
+    const { type, sessionName, sessionData, slug, fileName, userInstructions } = req.body;
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: 'GEMINI_API_KEY не налаштовано на сервері.' });
+    }
+
+    const generatedContent = await aiService.generateContent(type, sessionName, sessionData, userInstructions);
+
+    if (generatedContent.error) {
+        return res.status(500).json({ error: generatedContent.error, raw_response: generatedContent.raw_response });
+    }
+
+    let updatedObject = null;
+
+    // Автоматичний запис в БД
+    if (slug) {
+      if (fileName) {
+        // Оновлення СЕСІЇ
+        const fullPath = sessionPath(slug, fileName);
+        if (await exists(fullPath)) {
+          const session = await readJson(fullPath);
+          const data = session.data || {};
+
+          // Логіка інтеграції залежно від типу
+          if (type === 'scene_ideas' && generatedContent.scenes) {
+            const newScenes = generatedContent.scenes.map(s => ({
+              id: Date.now() + Math.random(),
+              texts: s.texts,
+              collapsed: false
+            }));
+            data.scenes = [...(data.scenes || []), ...newScenes];
+          } else if (type === 'npc_ideas' && generatedContent.npcs) {
+            data.npcs = [...(data.npcs || []), ...generatedContent.npcs];
+          } else if (type === 'session_recap' && generatedContent.result_text) {
+            const old = data.result_text || '';
+            data.result_text = old + (old ? '\n\n' : '') + generatedContent.result_text;
+          } else {
+            // Для інших типів (plot_twists, what_next) просто додаємо в data
+            Object.assign(data, generatedContent);
+          }
+
+          session.data = data;
+          session.updatedAt = new Date().toISOString();
+          await writeJson(fullPath, session);
+          updatedObject = { ...session, fileName };
+        }
+      } else {
+        // Оновлення КАМПАНІЇ (якщо fileName відсутній)
+        const metaPath = campaignMetaPath(slug);
+        if (await exists(metaPath)) {
+          const meta = await readJson(metaPath);
+          Object.assign(meta, generatedContent);
+          meta.updatedAt = new Date().toISOString();
+          await writeJson(metaPath, meta);
+          updatedObject = meta;
+        }
+      }
+    }
+
+    res.json({
+      generated: generatedContent,
+      updated: updatedObject
+    });
   } catch (error) {
     next(error);
   }

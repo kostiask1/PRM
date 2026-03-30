@@ -3,6 +3,7 @@ import { api } from '../../api';
 import Icon from '../Icon';
 import Button from '../Button/Button';
 import Input from '../Input/Input';
+import AiAssistantPanel from '../AiAssistantPanel/AiAssistantPanel';
 import Panel from '../Panel/Panel';
 import './SessionView.css';
 
@@ -144,6 +145,11 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
         updateData('scenes', session.data.scenes.filter(s => s.id !== sceneId), true);
     };
 
+    const handleAiUpdate = (updatedSession) => {
+        // Дані вже збережені на сервері, просто синхронізуємо локальний стан
+        setSession(updatedSession);
+    };
+
     if (!session) return null;
 
     const checklistItems = [
@@ -279,6 +285,14 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
                             onChange={(e) => updateData('result_text', e.target.value)}
                         />
                     </TodoSection>
+
+                    <AiAssistantPanel 
+                        sessionName={session.name}
+                        sessionData={session.data}
+                        campaignSlug={campaignSlug}
+                        sessionId={sessionId}
+                        onInsertResult={handleAiUpdate}
+                    />
                 </div>
             </div>
         </Panel>

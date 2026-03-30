@@ -83,12 +83,14 @@
     flex: 1;
     min-width: 0;
     display: grid;
+    align-content: baseline;
     gap: 8px;
 }
 
 .TodoItem__title {
     font-weight: 600;
     margin-bottom: 4px;
+    height: 30px;
 }
 
 .TodoItem__note {

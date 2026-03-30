@@ -1,0 +1,98 @@
+.AiAssistant {
+    background: rgba(var(--primary-rgb, 100, 100, 255), 0.05);
+    border: 1px dashed var(--border-color, #444);
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 30px;
+    transition: all 0.3s ease;
+}
+
+.AiAssistant__header h3 {
+    margin: 0 0 16px 0;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.AiAssistant__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.AiAssistant__loading {
+    font-style: italic;
+    color: var(--text-muted, #888);
+    padding: 12px 0;
+    animation: pulse 1.5s infinite;
+}
+
+.AiAssistant__error {
+    color: #ff5555;
+    background: rgba(255, 85, 85, 0.1);
+    padding: 12px;
+    border-radius: 6px;
+    margin: 12px 0;
+    font-size: 0.9rem;
+}
+
+.AiAssistant__result {
+    background: var(--bg-panel, #1e1e1e);
+    border: 1px solid var(--border-color, #333);
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.AiAssistant__text-preview {
+    max-height: 350px;
+    overflow-y: auto;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 16px;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+.AiAssistant__generated-item {
+    background: rgba(var(--primary-rgb, 100, 100, 255), 0.03);
+    border: 1px solid rgba(var(--primary-rgb, 100, 100, 255), 0.1);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+}
+
+.AiAssistant__generated-item h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: var(--primary-color);
+    font-size: 1.1rem;
+}
+
+.AiAssistant__generated-item h5 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    color: var(--primary-color);
+    font-size: 1rem;
+}
+
+.AiAssistant__generated-item p {
+    margin-bottom: 4px;
+    font-size: 0.9rem;
+}
+
+.AiAssistant__generated-item p:last-child {
+    margin-bottom: 0;
+}
+
+.AiAssistant__text-preview ul {
+    list-style-type: disc;
+    padding-left: 20px;
+}
