@@ -33,7 +33,7 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
         try {
             const promptData = { ...sessionData };
 
-            if (useCampaignContext) {
+            if (useCampaignContext && campaignContext) {
                 promptData.description = campaignContext.description;
                 promptData.notes = campaignContext.notes;
             }
@@ -112,6 +112,7 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
                     >
                         Використати контекст кампанії
                     </Button>
+                    :
                     {actions.map(action => (
                         <Button
                             key={action.id}
