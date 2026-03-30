@@ -159,3 +159,9 @@
 .MonsterStatBlock__name:hover {
     color: var(--accent);
 }
+
+.MonsterStatBlock__token-skeleton svg {
+    opacity: 0.3;
+    width: 32px;
+    height: 32px;
+}

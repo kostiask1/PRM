@@ -57,6 +57,8 @@ export default function MonsterStatBlock({ monster, onNameClick, nameTitle }) {
         setImageError(false);
     }, [monster]);
 
+    console.log('imageError:', imageError)
+
     const renderActionList = (actions, title) => {
         if (!actions || actions.length === 0) return null;
         return (
@@ -132,11 +134,10 @@ export default function MonsterStatBlock({ monster, onNameClick, nameTitle }) {
                     <div className="stat-item"><strong>Type:</strong> {monster.type}</div>
                 </div>
                 <div className="MonsterStatBlock__token-wrapper">
-                    <img src={`https://www.dnd5eapi.co/api/images/monsters/${monster.name.toLowerCase().replaceAll(" ", "-")}.png`} alt={monster.name} className="MonsterStatBlock__token" onError={() => setImageError(true)} />
                     {!imageError ? (
                         <img src={`https://5e.tools/img/bestiary/tokens/MM/${monster.name}.webp`} alt={monster.name} className="MonsterStatBlock__token" onError={() => setImageError(true)} />
                     ) : (
-                        <div className="MonsterStatBlock__token-skeleton"><Icon name="d20" /></div>
+                        <div className="MonsterStatBlock__token-skeleton"><Icon name="dice" /></div>
                     )}
                 </div>
             </div>
