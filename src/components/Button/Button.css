@@ -74,3 +74,26 @@
   align-items: center;
   gap: 8px;
 }
+
+/* Стилі для неактивного стану кнопки */
+.Button:disabled,
+.Button.is-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: grayscale(0.8) saturate(0.5);
+  pointer-events: none; /* Запобігає спрацюванню ховер-ефектів та кліків на рівні браузера */
+}
+
+/* Скидаємо ефекти при наведенні для неактивних кнопок */
+.Button:disabled:hover,
+.Button.is-disabled:hover {
+  transform: none !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border-color: rgba(51, 65, 85, 0.5) !important;
+}
+
+/* Якщо всередині є іконка, вона також стане тьмяною */
+.Button.is-disabled svg {
+  opacity: 0.6;
+}

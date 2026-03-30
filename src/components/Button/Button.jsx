@@ -17,6 +17,7 @@ export default function Button({
     'Button',
     variant ? `Button--${variant}` : '',
     size ? `Button--${size}` : '',
+    props.disabled ? 'is-disabled' : '',
     className
   ].filter(Boolean).join(' ');
 

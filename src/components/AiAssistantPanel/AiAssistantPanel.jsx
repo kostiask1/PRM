@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Button from '../Button/Button';
 import Input from '../Input/Input';
+import Notification from '../Notification/Notification';
 import './AiAssistantPanel.css';
 
 export default function AiAssistantPanel({ sessionName, sessionData, campaignSlug, sessionId, onInsertResult, modal }) {
@@ -8,6 +9,7 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
     const [error, setError] = useState('');
     const [activeType, setActiveType] = useState('scene_ideas');
     const [userInstructions, setUserInstructions] = useState('');
+    const [notification, setNotification] = useState(null);
 
     const isCampaign = !sessionId;
 
@@ -56,6 +58,7 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
             if (data.updated && onInsertResult) {
                 onInsertResult(data.updated);
                 setUserInstructions(''); // Очищаємо поле після успіху
+                setNotification('Магія ШІ успішно застосована!');
             }
         } catch (err) {
             setError('Не вдалося зв’язатися з AI. Перевірте ключ API або з’єднання.');
@@ -97,6 +100,7 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
                             variant={activeType === action.id ? 'primary' : 'ghost'}
                             size="small"
                             onClick={() => setActiveType(action.id)}
+                            disabled={loading}
                         >
                             {action.label}
                         </Button>
@@ -110,6 +114,7 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
                     placeholder={getPlaceholder()}
                     value={userInstructions}
                     onChange={(e) => setUserInstructions(e.target.value)}
+                    disabled={loading}
                     style={{ minHeight: '80px', marginBottom: '12px' }}
                 />
                 <Button
@@ -125,6 +130,8 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
             {loading && <div className="AiAssistant__loading">Магія працює, зачекайте...</div>}
 
             {error && <div className="AiAssistant__error">{error}</div>}
+
+            {notification && <Notification message={notification} onClose={() => setNotification(null)} />}
         </div>
     );
 }
