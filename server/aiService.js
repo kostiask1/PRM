@@ -15,6 +15,7 @@ async function generateContent(type, sessionName, sessionData, userInstructions)
         Ти можеш використовувати стандартну Markdown-розмітку (наприклад, жирний текст **текст**, марковані списки) для структурування тексту всередині значень JSON.
         Завжди відповідай у форматі JSON. Не включай жодного тексту до або після JSON. 
         JSON повинен містити лише згенеровані дані, без додаткових пояснень. 
+        Якщо ти враховуєш encounters (бойові сцени), НЕ редагуй дані encounters
         Якщо ти генеруєш сцени, використовуй структуру { "scenes": [{ "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "...", "npcs": "...", "clues": "..." } }, ...] }.
         Якщо ти генеруєш NPC, використовуй структуру { "npcs": [{ "name": "...", "role": "...", "trait": "...", "secret": "..." }, ...] }.
         Якщо ти генеруєш сюжетні повороти, використовуй структуру { "plot_twists": ["...", "..."] }.
@@ -54,7 +55,7 @@ async function generateContent(type, sessionName, sessionData, userInstructions)
     }
 
     if (userInstructions) {
-        userPrompt += `\n\nДодаткові побажання та контекст від користувача: ${userInstructions}`;
+        userPrompt += `\n\nДодаткові побажання та контекст від користувача. Надай наступному тексту більше уваги: ${userInstructions}`;
     }
 
     const result = await model.generateContent(userPrompt);
