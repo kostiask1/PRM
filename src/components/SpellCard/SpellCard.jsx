@@ -1,5 +1,6 @@
 import React from 'react';
 import './SpellCard.css';
+import { parseTextWithRolls } from '../../utils/diceParser.jsx';
 
 export default function SpellCard({ spell }) {
     if (!spell) return null;
@@ -11,16 +12,16 @@ export default function SpellCard({ spell }) {
                 {spell.level === 0 ? 'Замовляння' : `${spell.level}-й рівень`}, {spell.school?.name || spell.school}
             </div>
             <div className="SpellCard__props">
-                <p><strong>Час накладання:</strong> {spell.casting_time}</p>
-                <p><strong>Дистанція:</strong> {spell.range}</p>
-                <p><strong>Компоненти:</strong> {spell.components?.join(', ')} {spell.material && `(${spell.material})`}</p>
-                <p><strong>Тривалість:</strong> {spell.duration} {spell.concentration && '(Концентрація)'}</p>
+                <div><strong>Час накладання:</strong> {spell.casting_time}</div>
+                <div><strong>Дистанція:</strong> {spell.range}</div>
+                <div><strong>Компоненти:</strong> {spell.components?.join(', ')} {spell.material && `(${spell.material})`}</div>
+                <div><strong>Тривалість:</strong> {spell.duration} {spell.concentration && '(Концентрація)'}</div>
             </div>
             <div className="SpellCard__desc">
-                {spell.desc?.map((p, i) => <p key={i}>{p}</p>)}
+                {spell.desc?.map((p, i) => <div key={i}>{parseTextWithRolls(p)}</div>)}
                 {spell.higher_level?.length > 0 && (
                     <div className="SpellCard__higher">
-                        <strong>На вищих рівнях:</strong> {spell.higher_level.join(' ')}
+                        <strong>На вищих рівнях:</strong> {spell.higher_level.map((p, i) => <React.Fragment key={i}>{parseTextWithRolls(p)}</React.Fragment>)}
                     </div>
                 )}
             </div>
