@@ -112,30 +112,6 @@
   background: var(--danger);
 }
 
-.ProgressBar {
-  height: 10px;
-  border-radius: 999px;
-  overflow: hidden;
-  border: 1px solid rgba(51, 65, 85, 0.75);
-  background: #0b1220;
-}
-
-.ProgressBar__fill {
-  width: 0;
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
-  transition: width 0.3s ease;
-}
-
-.ProgressBar__label {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  color: var(--muted);
-  font-size: 0.92rem;
-  margin-bottom: 6px;
-}
-
 .header-actions {
   display: flex;
   align-items: center;
