@@ -19,7 +19,13 @@ const icons = {
   "sort-none": <path d="M7 15l5 5 5-5M7 9l5-5 5 5" strokeOpacity="0.5" />,
   "sort-asc": <><path d="M7 9l5-5 5 5" /><path d="M12 4v16" strokeDasharray="2 2" strokeOpacity="0.3" /></>,
   "sort-desc": <><path d="M7 15l5 5 5-5" /><path d="M12 4v16" strokeDasharray="2 2" strokeOpacity="0.3" /></>,
-  bestiary: <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+  bestiary: <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />,
+  book: <><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></>,
+  user: <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></>,
+  layers: <><polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" /></>,
+  monitor: <><rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></>,
+  map: <><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" /><line x1="8" y1="2" x2="8" y2="18" /><line x1="16" y1="6" x2="16" y2="22" /></>,
+  wand: <><path d="M15 4V2" /><path d="M15 16v-2" /><path d="M8 9h2" /><path d="M20 9h2" /><path d="M17.8 11.8L19 13" /><path d="M15 9l2.8-2.8" /><path d="M7.18 14.82L3 19v2h2l4.18-4.18z" /><path d="m9.01 10.58 5.41 5.41" /></>
 };
 
 export default function Icon({ name, size = 18, strokeWidth = 2, className = "" }) {

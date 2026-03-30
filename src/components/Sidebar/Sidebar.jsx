@@ -144,6 +144,32 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
         </div>
       </div>
 
+      <div className="Sidebar__section Sidebar__section--resources">
+        <div className="Sidebar__headerSection">
+          <h2 className="Sidebar__sectionTitle">Ресурси</h2>
+        </div>
+        <div className="Sidebar__resource-list">
+          <a href="https://homebrewery.naturalcrit.com/" target="_blank" rel="noopener noreferrer" className="Sidebar__resource-item">
+            <Icon name="book" size={16} /> Homebrewery
+          </a>
+          <a href="https://crowsnest.me/tokenizer/" target="_blank" rel="noopener noreferrer" className="Sidebar__resource-item">
+            <Icon name="user" size={16} /> Tokenizer
+          </a>
+          <a href="https://forgottenadventures.piwigo.com/index?/category/1351-fa_topdown_tokens" target="_blank" rel="noopener noreferrer" className="Sidebar__resource-item">
+            <Icon name="layers" size={16} /> FA Tokens
+          </a>
+          <a href="https://www.owlbear.rodeo/" target="_blank" rel="noopener noreferrer" className="Sidebar__resource-item">
+            <Icon name="monitor" size={16} /> Owlbear Rodeo
+          </a>
+          <a href="https://kemono.cr/patreon/user/16010661" target="_blank" rel="noopener noreferrer" className="Sidebar__resource-item">
+            <Icon name="map" size={16} /> Мапи Szepeku
+          </a>
+          <a href="https://chatgpt.com/g/g-69c24d157a348191b640bf111b486080-ttrpg-map-architect" target="_blank" rel="noopener noreferrer" className="Sidebar__resource-item">
+            <Icon name="wand" size={16} /> Map Architect (AI)
+          </a>
+        </div>
+      </div>
+
       <div className="Sidebar__footer">
         <input
           type="file"
