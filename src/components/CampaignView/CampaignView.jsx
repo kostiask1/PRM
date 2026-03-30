@@ -13,32 +13,32 @@ import './CampaignView.css';
  * Допоміжний компонент для редагування Markdown по кліку
  */
 function EditableMarkdownField({ title, value, onChange, placeholder, type, className }) {
-    const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
-    if (isEditing) {
-        return (
-            <div className={`EditableField ${className || ''}`}>
-                {title && <div className="TodoItem__title">{title}</div>}
-                <Input
-                    type={type}
-                    value={value}
-                    onChange={onChange}
-                    placeholder={placeholder}
-                    onBlur={() => setIsEditing(false)}
-                    autoFocus
-                />
-            </div>
-        );
-    }
-
+  if (isEditing) {
     return (
-        <div className={`EditableField ${className || ''}`} onClick={() => setIsEditing(true)}>
-            {title && <div className="TodoItem__title">{title}</div>}
-            <div className="MarkdownView">
-                {value ? <ReactMarkdown>{value}</ReactMarkdown> : <span className="muted">{placeholder}</span>}
-            </div>
-        </div>
+      <div className={`EditableField ${className || ''}`}>
+        {title && <div className="TodoItem__title">{title}</div>}
+        <Input
+          type={type}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          onBlur={() => setIsEditing(false)}
+          autoFocus
+        />
+      </div>
     );
+  }
+
+  return (
+    <div className={`EditableField ${className || ''}`} onClick={() => setIsEditing(true)}>
+      {title && <div className="TodoItem__title">{title}</div>}
+      <div className="MarkdownView">
+        {value ? <ReactMarkdown>{value}</ReactMarkdown> : <span className="muted">{placeholder}</span>}
+      </div>
+    </div>
+  );
 }
 
 export default function CampaignView({ campaign, onSelectSession, onNavigate, onRefreshCampaigns, modal }) {
@@ -86,11 +86,11 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
   const handleUndo = useCallback(() => {
     if (undoStack.length === 0) return;
 
-    const currentState = { 
-      description, 
-      notes, 
-      completed: campaign.completed, 
-      completedAt: campaign.completedAt 
+    const currentState = {
+      description,
+      notes,
+      completed: campaign.completed,
+      completedAt: campaign.completedAt
     };
 
     let tempStack = [...undoStack];
@@ -98,10 +98,10 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
 
     while (tempStack.length > 0) {
       const candidate = tempStack.pop();
-      const isDifferent = JSON.stringify(candidate.description) !== JSON.stringify(currentState.description) || 
-                        JSON.stringify(candidate.notes) !== JSON.stringify(currentState.notes) ||
-                        candidate.completed !== currentState.completed;
-      
+      const isDifferent = JSON.stringify(candidate.description) !== JSON.stringify(currentState.description) ||
+        JSON.stringify(candidate.notes) !== JSON.stringify(currentState.notes) ||
+        candidate.completed !== currentState.completed;
+
       if (isDifferent) {
         stateToRestore = candidate;
         break;
@@ -112,11 +112,11 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
       isUpdatingHistory.current = true;
       setRedoStack(prev => [currentState, ...prev]);
       setUndoStack(tempStack);
-      
+
       setDescription(stateToRestore.description);
       setNotes(stateToRestore.notes);
       saveToServer(stateToRestore);
-      
+
       setTimeout(() => { isUpdatingHistory.current = false; }, 0);
     }
   }, [undoStack, description, notes, saveToServer, campaign.completed, campaign.completedAt]);
@@ -124,11 +124,11 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
   const handleRedo = useCallback(() => {
     if (redoStack.length === 0) return;
 
-    const currentState = { 
-      description, 
-      notes, 
-      completed: campaign.completed, 
-      completedAt: campaign.completedAt 
+    const currentState = {
+      description,
+      notes,
+      completed: campaign.completed,
+      completedAt: campaign.completedAt
     };
 
     let tempStack = [...redoStack];
@@ -136,9 +136,9 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
 
     while (tempStack.length > 0) {
       const candidate = tempStack.shift();
-      const isDifferent = JSON.stringify(candidate.description) !== JSON.stringify(currentState.description) || 
-                        JSON.stringify(candidate.notes) !== JSON.stringify(currentState.notes) ||
-                        candidate.completed !== currentState.completed;
+      const isDifferent = JSON.stringify(candidate.description) !== JSON.stringify(currentState.description) ||
+        JSON.stringify(candidate.notes) !== JSON.stringify(currentState.notes) ||
+        candidate.completed !== currentState.completed;
 
       if (isDifferent) {
         stateToRestore = candidate;
@@ -150,22 +150,22 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
       isUpdatingHistory.current = true;
       setUndoStack(prev => [...prev, currentState]);
       setRedoStack(tempStack);
-      
+
       setDescription(stateToRestore.description);
       setNotes(stateToRestore.notes);
       saveToServer(stateToRestore);
-      
+
       setTimeout(() => { isUpdatingHistory.current = false; }, 0);
     }
   }, [redoStack, description, notes, saveToServer, campaign.completed, campaign.completedAt]);
 
   const pushToUndo = useCallback(() => {
     if (!isUpdatingHistory.current) {
-      setUndoStack(prev => [...prev, { 
-        description, 
-        notes, 
-        completed: campaign.completed, 
-        completedAt: campaign.completedAt 
+      setUndoStack(prev => [...prev, {
+        description,
+        notes,
+        completed: campaign.completed,
+        completedAt: campaign.completedAt
       }]);
       setRedoStack([]);
     }
@@ -414,19 +414,6 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
             value={description}
             onChange={handleDescriptionChange}
           />
-          
-          <AiAssistantPanel 
-            sessionName={campaign.name}
-            sessionData={{
-                ...campaign,
-                description,
-                notes
-            }}
-            campaignSlug={campaign.slug}
-            sessionId={null}
-            onInsertResult={handleAiUpdate}
-            modal={modal}
-          />
         </div>
 
         <div className="CampaignView__section">
@@ -500,7 +487,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
                       className={`note-card-simple__toggle ${note.collapsed ? 'is-rotated' : ''}`}
                       onClick={() => handleToggleNoteCollapse(note.id)}
                     />
-                    <div 
+                    <div
                       className="note-card-simple__title"
                       title={note.text.split('\n')[0] || 'Нова замітка'}
                     >
@@ -526,6 +513,18 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
               ))}
             </div>
           )}
+          <AiAssistantPanel
+            sessionName={campaign.name}
+            sessionData={{
+              ...campaign,
+              description,
+              notes
+            }}
+            campaignSlug={campaign.slug}
+            sessionId={null}
+            onInsertResult={handleAiUpdate}
+            modal={modal}
+          />
         </div>
 
         <div className="section-row">

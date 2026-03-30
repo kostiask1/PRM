@@ -105,9 +105,9 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
         // Шукаємо перший стан у черзі, який реально відрізняється від поточного
         while (tempStack.length > 0) {
             const candidate = tempStack.pop();
-            const isDifferent = JSON.stringify(candidate.data) !== JSON.stringify(currentState.data) || 
-                              candidate.completed !== currentState.completed;
-            
+            const isDifferent = JSON.stringify(candidate.data) !== JSON.stringify(currentState.data) ||
+                candidate.completed !== currentState.completed;
+
             if (isDifferent) {
                 stateToRestore = candidate;
                 break;
@@ -148,8 +148,8 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
 
         while (tempStack.length > 0) {
             const candidate = tempStack.shift();
-            const isDifferent = JSON.stringify(candidate.data) !== JSON.stringify(currentState.data) || 
-                              candidate.completed !== currentState.completed;
+            const isDifferent = JSON.stringify(candidate.data) !== JSON.stringify(currentState.data) ||
+                candidate.completed !== currentState.completed;
 
             if (isDifferent) {
                 stateToRestore = candidate;
@@ -184,7 +184,7 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
             try {
                 const data = await api.getSession(campaignSlug, sessionId);
                 setSession(data);
-                
+
                 if (lastLoadedIdRef.current !== data.id) {
                     setUndoStack([]);
                     setRedoStack([]);
@@ -228,7 +228,7 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
                     completed: prev.completed,
                     completedAt: prev.completedAt
                 };
-                
+
                 // Перевіряємо, чи нові дані реально відрізняються від поточних
                 const isDataChanged = updates.data && JSON.stringify(updates.data) !== JSON.stringify(prev.data);
                 const isStatusChanged = updates.completed !== undefined && updates.completed !== prev.completed;
@@ -306,11 +306,11 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
     const handleAiUpdate = (updatedSession) => {
         // Зберігаємо ПОВНИЙ поточний стан перед оновленням від ШІ
         setUndoStack(currentStack => [
-            ...currentStack, 
-            { 
-                data: session.data, 
-                completed: session.completed, 
-                completedAt: session.completedAt 
+            ...currentStack,
+            {
+                data: session.data,
+                completed: session.completed,
+                completedAt: session.completedAt
             }
         ]);
         setRedoStack([]); // Очищаємо redo stack при нових змінах
@@ -425,6 +425,14 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
                             </Button>
                         }
                     >
+                        <AiAssistantPanel
+                            sessionName={session.name}
+                            sessionData={session.data}
+                            campaignSlug={campaignSlug}
+                            sessionId={sessionId}
+                            onInsertResult={handleAiUpdate}
+                            modal={modal}
+                        />
                         {(session.data.scenes || []).map((scene, idx) => (
                             <SceneCard
                                 key={scene.id}
@@ -463,15 +471,6 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
                             onChange={(e) => updateData('result_text', e.target.value)}
                         />
                     </TodoSection>
-
-                    <AiAssistantPanel
-                        sessionName={session.name}
-                        sessionData={session.data}
-                        campaignSlug={campaignSlug}
-                        sessionId={sessionId}
-                        onInsertResult={handleAiUpdate}
-                        modal={modal}
-                    />
                 </div>
             </div>
         </Panel>
