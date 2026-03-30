@@ -239,7 +239,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
       onSelectSession(newSession.fileName);
       onRefreshCampaigns();
     } catch (err) {
-      modal.alert("Помилка", "Не вдалося створити сесію");
+      modal.alert("Помилка створення сесії", err.message, err.status);
     }
   };
 

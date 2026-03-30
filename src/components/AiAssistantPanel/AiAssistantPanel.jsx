@@ -70,7 +70,8 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
                 setNotification('Магія ШІ успішно застосована!');
             }
         } catch (err) {
-            setError('Не вдалося зв’язатися з AI. Перевірте ключ API або з’єднання.');
+            setError(err.message || 'Не вдалося зв’язатися з AI.');
+            modal.alert("Помилка ШІ", err.message, err.status);
         } finally {
             setLoading(false);
         }

@@ -603,11 +603,27 @@ app.post('/api/ai/generate', async (req, res, next) => {
   }
 });
 
-app.use((error, _req, res, _next) => {
-  console.error(error);
-  res.status(500).json({ error: 'Внутрішня помилка сервера.' });
-});
+app.use((err, _req, res, _next) => {
+  console.error(`[Error] ${err.stack || err.message}`);
 
+  let status = err.status || 500;
+  let message = err.message || 'Внутрішня помилка сервера.';
+
+  // Мапінг системних помилок Node.js
+  if (err.code === 'ENOENT') {
+    status = 404;
+    message = 'Ресурс не знайдено (файл або папка відсутні).';
+  } else if (err.code === 'EACCES') {
+    status = 403;
+    message = 'Доступ заборонено. Перевірте права доступу до папки data.';
+  }
+
+  res.status(status).json({
+    error: message,
+    status: status,
+    code: err.code
+  });
+});
 initStorage()
   .then(() => {
     app.listen(PORT, () => {

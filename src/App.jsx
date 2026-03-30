@@ -57,8 +57,14 @@ export default function App() {
     });
   };
 
-  const alert = (title, message) => showModal({ title, message, type: 'error', isAlert: true });
-  const confirm = (title, message) => showModal({ title, message, type: 'error' });
+  const alert = (title, message, status = null) => {
+    const fullMessage = status ? `[Статус: ${status}] ${message}` : message;
+    return showModal({ title, message: fullMessage, type: status >= 500 ? 'error' : 'error', isAlert: true });
+  };
+  const confirm = (title, message, status = null) => {
+    const fullMessage = status ? `[Статус: ${status}] ${message}` : message;
+    return showModal({ title, message: fullMessage, type: 'error' });
+  };
   const prompt = (title, message, defaultValue = '') => showModal({ title, message, type: 'confirm', showInput: true, defaultValue });
 
   const loadCampaigns = async () => {
