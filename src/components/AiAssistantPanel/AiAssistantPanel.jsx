@@ -9,6 +9,7 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [useCampaignContext, setUseCampaignContext] = useState(true);
+    const [generateWithReplace, setGenerateWithReplace] = useState(true);
     const [activeType, setActiveType] = useState('scene_ideas');
     const [userInstructions, setUserInstructions] = useState('');
     const [notification, setNotification] = useState(null);
@@ -47,6 +48,7 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
                     sessionData: promptData,
                     slug: campaignSlug,
                     fileName: sessionId,
+                    generateWithReplace,
                     userInstructions
                 })
             });
@@ -108,10 +110,18 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
                     <Button
                         variant={useCampaignContext ? 'primary' : 'ghost'}
                         size="small"
-                        onClick={() => setUseCampaignContext(useCampaignContext => !useCampaignContext)}
+                        onClick={() => setUseCampaignContext((useCampaignContext) => !useCampaignContext)}
                         disabled={loading}
                     >
                         Використати контекст кампанії
+                    </Button>
+                    <Button
+                        variant={generateWithReplace ? 'primary' : 'ghost'}
+                        size="small"
+                        onClick={() => setGenerateWithReplace((generateWithReplace) => !generateWithReplace)}
+                        disabled={loading}
+                    >
+                        {generateWithReplace ? "Додавання із заміною" : "Додати нові дані"}
                     </Button>
                     :
                     {actions.map(action => (

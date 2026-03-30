@@ -526,12 +526,12 @@ app.delete('/api/campaigns/:slug/sessions/:fileName', async (req, res, next) => 
 
 app.post('/api/ai/generate', async (req, res, next) => {
   try {
-    const { type, sessionName, sessionData, slug, fileName, userInstructions } = req.body;
+    const { type, sessionName, sessionData, slug, fileName, userInstructions, generateWithReplace } = req.body;
     if (!process.env.GEMINI_API_KEY) {
       return res.status(500).json({ error: 'GEMINI_API_KEY не налаштовано на сервері.' });
     }
 
-    const generatedContent = await aiService.generateContent(type, sessionName, sessionData, userInstructions);
+    const generatedContent = await aiService.generateContent(type, sessionName, sessionData, userInstructions, generateWithReplace);
 
     if (generatedContent.error) {
       return res.status(500).json({ error: generatedContent.error, raw_response: generatedContent.raw_response });
@@ -550,14 +550,28 @@ app.post('/api/ai/generate', async (req, res, next) => {
 
           // Логіка інтеграції залежно від типу
           if (type === 'scene_ideas' && generatedContent.scenes) {
-            const newScenes = generatedContent.scenes.map(s => ({
-              id: Date.now() + Math.random(),
-              texts: s.texts,
-              collapsed: false
-            }));
-            data.scenes = newScenes;
+            if (generateWithReplace) {
+              const newScenes = generatedContent.scenes.map((s, idx) => {
+                const existingScene = session.data?.scenes?.[idx] || {};
+
+                return {
+                  id: existingScene?.id || Date.now() + (Math.random() * 100000).toFixed(),
+                  texts: s.texts,
+                  collapsed: existingScene?.collapsed || false,
+                  encounterId: existingScene?.encounterId || "",
+                }
+              });
+
+              data.scenes = newScenes;
+            } else {
+              data.scenes = [...(session.data?.scenes || []), ...generatedContent.scenes]
+            }
           } else if (type === 'npc_ideas' && generatedContent.npcs) {
-            data.npcs = generatedContent.npcs;
+            if (generateWithReplace) {
+              data.npcs = generatedContent.npcs;
+            } else {
+              data.npcs = [...(session.data?.npcs || []), ...generatedContent.npcs]
+            }
           } else {
             Object.assign(data, generatedContent);
           }

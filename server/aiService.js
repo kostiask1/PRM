@@ -3,7 +3,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 console.log('process.env.GEMINI_API_KEY:', process.env.GEMINI_API_KEY)
 
-async function generateContent(type, sessionName, sessionData, userInstructions) {
+async function generateContent(type, sessionName, sessionData, userInstructions, generateWithReplace) {
     const model = genAI.getGenerativeModel({
         model: "gemini-2.5-flash",
         generationConfig: {
@@ -52,6 +52,14 @@ async function generateContent(type, sessionName, sessionData, userInstructions)
             break;
         default:
             userPrompt = `Допоможи мені з плануванням сесії "${sessionName}". Дані: ${dataSummary}`;
+    }
+
+    if (generateWithReplace) {
+        userPrompt += `\n\nГенеруй нові дані, із заміною (або доповненням) існуючих.
+        Якщо це сцени, створи нові сцени або заміни існуючі.
+        Якщо це NPC, створи нових NPC або заміни існуючих.
+        Якщо це сюжетні повороти, створи нові повороти або заміни існуючі.
+        Не залишай старі дані без змін, якщо вони не відповідають новому генерованому контенту.`;
     }
 
     if (userInstructions) {

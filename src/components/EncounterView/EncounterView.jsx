@@ -116,7 +116,6 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
             setEncounter(updated);
             saveEncounterState(updated);
 
-            setShowBestiary(false); // Close modal after adding
             setNotification(`${fullData.name} додано до бою.`);
         } catch (err) {
             console.error("Error adding monster:", err);

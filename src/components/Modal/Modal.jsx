@@ -22,7 +22,7 @@ export default function Modal({ title, message, type, defaultValue, onConfirm, o
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
       if (e.key === 'Escape') {
-        if (onCancel) onCancel();
+        handleClose();
       } else if (e.key === 'Enter') {
         e.preventDefault();
         if (!children) onConfirm(showInput ? inputValue : true); // Only confirm on Enter for standard modals
@@ -33,10 +33,18 @@ export default function Modal({ title, message, type, defaultValue, onConfirm, o
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [onCancel, onConfirm, showInput, inputValue]);
 
+  function handleClose() {
+    if (onCancel) {
+      onCancel();
+    } else {
+      onConfirm();
+    }
+  }
+
   const isAlert = !onCancel;
 
   return (
-    <div className="Modal__overlay" onClick={() => onCancel && onCancel()}>
+    <div className="Modal__overlay" onClick={handleClose}>
       <div className={`Modal__card Modal__card--${type}`} onClick={(e) => e.stopPropagation()}>
         <div className="Modal__header">
           <h3>{title}</h3>
