@@ -10,12 +10,12 @@ export default function Modal({ title, message, type, defaultValue, onConfirm, o
 
   useEffect(() => {
     if (!children) { // Only manage focus for standard modals
-        if (showInput && inputRef.current) {
-            inputRef.current.focus();
-            inputRef.current.select();
-        } else if (!showInput && confirmButtonRef.current) {
-            confirmButtonRef.current.focus();
-        }
+      if (showInput && inputRef.current) {
+        inputRef.current.focus();
+        inputRef.current.select();
+      } else if (!showInput && confirmButtonRef.current) {
+        confirmButtonRef.current.focus();
+      }
     }
   }, [showInput]);
 
@@ -58,16 +58,16 @@ export default function Modal({ title, message, type, defaultValue, onConfirm, o
           )}
         </div>
         {showFooter && (
-            <div className="Modal__footer">
-              {onCancel && (
-                <Button variant="ghost" onClick={onCancel}>Скасувати</Button>
-              )}
-              <Button
-                ref={confirmButtonRef}
-                variant={type === 'error' ? 'danger' : 'primary'}
-                onClick={() => onConfirm(showInput ? inputValue : true)}
-              >{isAlert ? 'ОК' : 'Підтвердити'}</Button>
-            </div>
+          <div className="Modal__footer">
+            {onCancel && (
+              <Button variant="ghost" onClick={onCancel}>Скасувати</Button>
+            )}
+            <Button
+              ref={confirmButtonRef}
+              variant={type === 'error' ? 'danger' : 'primary'}
+              onClick={() => onConfirm(showInput ? inputValue : true)}
+            >{isAlert ? 'ОК' : 'Підтвердити'}</Button>
+          </div>
         )}
       </div>
     </div>

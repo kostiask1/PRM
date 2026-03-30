@@ -1,4 +1,3 @@
-
 .Modal__overlay {
   position: fixed;
   top: 0;
@@ -14,7 +13,7 @@
 }
 
 .Modal__overlay .Panel__body {
-    padding: 0;
+  padding: 0;
 }
 
 .Modal__card {
@@ -39,8 +38,10 @@
 
 /* Specific styles for Bestiary modal */
 .Modal__card--custom {
-    max-width: 1200px; /* Specific width for Bestiary modal */
-    height: 90vh; /* Specific height for Bestiary modal */
+  max-width: 1200px;
+  /* Specific width for Bestiary modal */
+  height: 90vh;
+  /* Specific height for Bestiary modal */
 }
 
 .Modal__header {

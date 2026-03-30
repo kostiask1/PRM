@@ -95,8 +95,8 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
         <h1 className="Sidebar__title">D&D Session Manager</h1>
         <p className="Sidebar__description">Кампанії, сесії та планування в одному локальному проєкті.</p>
       </div>
-      <a 
-        href="/bestiary" 
+      <a
+        href="/bestiary"
         className="Sidebar__bestiary-link"
         onClick={(e) => {
           if (!e.ctrlKey && !e.metaKey) {

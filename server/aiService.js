@@ -4,8 +4,8 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 console.log('process.env.GEMINI_API_KEY:', process.env.GEMINI_API_KEY)
 
 async function generateContent(type, sessionName, sessionData, userInstructions) {
-    const model = genAI.getGenerativeModel({ 
-        model: "gemini-2.5-flash", 
+    const model = genAI.getGenerativeModel({
+        model: "gemini-2.5-flash",
         generationConfig: {
             responseMimeType: "application/json",
         },
@@ -27,7 +27,7 @@ async function generateContent(type, sessionName, sessionData, userInstructions)
         name: sessionName,
         description: sessionData.description || '',
         notes: sessionData.notes?.map(n => n.text) || [],
-        scenes: sessionData.scenes?.map(s => s.texts) || [], 
+        scenes: sessionData.scenes?.map(s => s.texts) || [],
         result: sessionData.result_text || '',
         encounters: sessionData.encounters?.map(e => e.name) || []
     });

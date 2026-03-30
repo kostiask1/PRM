@@ -29,8 +29,8 @@ export default function ListCard({
             className={combinedClassName}
             {...dragProps}
         >
-            <Component 
-                className="ListCard__main" 
+            <Component
+                className="ListCard__main"
                 onClick={handleClick}
                 href={href}
             >

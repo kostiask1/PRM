@@ -51,7 +51,7 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
                 const session = await api.getSession(campaign.slug, sessionId);
                 // Очікувана структура: session.data.encounters = [{ id, name, monsters: [] }]
                 const found = (session.data.encounters || []).find(e => e.id.toString() === encounterId.toString());
-                
+
                 setEncounter(found);
 
                 if (found && found.monsters?.length > 0 && !selectedInstance) {
@@ -70,10 +70,10 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
         const performSave = async () => {
             try {
                 const currentSession = await api.getSession(campaign.slug, sessionId);
-                const updatedEncounters = (currentSession.data.encounters || []).map(e => 
+                const updatedEncounters = (currentSession.data.encounters || []).map(e =>
                     e.id.toString() === encounterId.toString() ? updatedEncounter : e
                 );
-                
+
                 await api.updateSession(campaign.slug, sessionId, {
                     ...currentSession,
                     data: { ...currentSession.data, encounters: updatedEncounters }
@@ -93,10 +93,10 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
 
     const handleAddMonster = async (m) => {
         if (!encounter) return;
-        
+
         try {
             let fullData;
-            
+
             if (MONSTER_FULL_DATA_CACHE.has(m.slug)) {
                 fullData = MONSTER_FULL_DATA_CACHE.get(m.slug);
             } else {
@@ -107,7 +107,7 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
             }
 
             const newMonster = {
-                ...fullData, 
+                ...fullData,
                 instanceId: `inst-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
                 currentHp: fullData.hit_points || 0,
             };
@@ -115,7 +115,7 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
             const updated = { ...encounter, monsters: [...encounter.monsters, newMonster] };
             setEncounter(updated);
             saveEncounterState(updated);
-            
+
             setShowBestiary(false); // Close modal after adding
             setNotification(`${fullData.name} додано до бою.`);
         } catch (err) {
@@ -131,7 +131,7 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
     };
 
     const updateMonsterHp = (instanceId, newHp) => {
-        const updatedMonsters = encounter.monsters.map(m => 
+        const updatedMonsters = encounter.monsters.map(m =>
             m.instanceId === instanceId ? { ...m, currentHp: Math.max(0, parseInt(newHp) || 0) } : m
         );
         const updated = { ...encounter, monsters: updatedMonsters };
@@ -142,7 +142,7 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
     };
 
     const updateMonsterMaxHp = (instanceId, newMaxHp) => {
-        const updatedMonsters = encounter.monsters.map(m => 
+        const updatedMonsters = encounter.monsters.map(m =>
             m.instanceId === instanceId ? { ...m, hit_points: parseInt(newMaxHp) || 0 } : m
         );
         const updated = { ...encounter, monsters: updatedMonsters };
@@ -163,7 +163,7 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
     const handleRenameMonster = async (instanceId, currentName) => {
         const name = await modal.prompt("Перейменування", "Вкажіть нове ім'я монстра:", currentName);
         if (name && name !== currentName) {
-            const updatedMonsters = encounter.monsters.map(m => 
+            const updatedMonsters = encounter.monsters.map(m =>
                 m.instanceId === instanceId ? { ...m, name } : m
             );
             const updated = { ...encounter, monsters: updatedMonsters };
@@ -183,7 +183,7 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
         const index = encounter.monsters.findIndex(item => item.instanceId === m.instanceId);
         const updatedMonsters = [...encounter.monsters];
         updatedMonsters.splice(index + 1, 0, newMonster);
-        
+
         const updated = { ...encounter, monsters: updatedMonsters };
         setEncounter(updated);
         saveEncounterState(updated);
@@ -251,18 +251,18 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
             <div className="Panel__body EncounterView__body">
                 <div className="EncounterView__main">
                     <div className="EncounterView__list">
-                        <Button 
-                            variant="create" 
-                            onClick={() => setShowBestiary(true)} 
-                            icon="plus" 
+                        <Button
+                            variant="create"
+                            onClick={() => setShowBestiary(true)}
+                            icon="plus"
                             className="EncounterView__addBtn"
                         >
                             Додати монстра
                         </Button>
 
                         {encounter.monsters.map(m => (
-                            <div 
-                                key={m.instanceId} 
+                            <div
+                                key={m.instanceId}
                                 className={`EncounterMonsterRow ${selectedInstance?.instanceId === m.instanceId ? 'is-active' : ''} ${draggingId === m.instanceId ? 'is-dragging' : ''}`}
                                 onClick={() => setSelectedInstance(m)}
                                 draggable
@@ -273,8 +273,8 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
                                 onDrop={(e) => e.preventDefault()}
                             >
                                 <div className="EncounterMonsterRow__content">
-                                    <div 
-                                        className="EncounterMonsterRow__name editable-title" 
+                                    <div
+                                        className="EncounterMonsterRow__name editable-title"
                                         onClick={(e) => { e.stopPropagation(); handleRenameMonster(m.instanceId, m.name); }}
                                         title="Натисніть, щоб змінити ім'я"
                                     >
@@ -282,23 +282,23 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
                                     </div>
                                     <div className="EncounterMonsterRow__stats">
                                         <div className="EncounterMonsterRow__hp">
-                                        <input 
-                                            type="number" 
-                                            value={m.currentHp} 
-                                            onChange={(e) => updateMonsterHp(m.instanceId, e.target.value)}
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="EncounterMonsterRow__hpInput"
-                                            style={{ color: getHpColor(m.currentHp, m.hit_points) }}
-                                        />
-                                        <span className="muted">/</span>
-                                        <input 
-                                            type="number" 
-                                            value={m.hit_points} 
-                                            onChange={(e) => updateMonsterMaxHp(m.instanceId, e.target.value)}
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="EncounterMonsterRow__maxHpInput"
-                                            title="Максимальне HP"
-                                        />
+                                            <input
+                                                type="number"
+                                                value={m.currentHp}
+                                                onChange={(e) => updateMonsterHp(m.instanceId, e.target.value)}
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="EncounterMonsterRow__hpInput"
+                                                style={{ color: getHpColor(m.currentHp, m.hit_points) }}
+                                            />
+                                            <span className="muted">/</span>
+                                            <input
+                                                type="number"
+                                                value={m.hit_points}
+                                                onChange={(e) => updateMonsterMaxHp(m.instanceId, e.target.value)}
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="EncounterMonsterRow__maxHpInput"
+                                                title="Максимальне HP"
+                                            />
                                         </div>
                                         <div className="EncounterMonsterRow__ac">
                                             AC {m.armor_class}
@@ -306,20 +306,20 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
                                     </div>
                                 </div>
                                 <div className="EncounterMonsterRow__actions">
-                                    <Button 
-                                        variant="ghost" 
-                                        size="small" 
-                                        icon="plus" 
+                                    <Button
+                                        variant="ghost"
+                                        size="small"
+                                        icon="plus"
                                         className="EncounterMonsterRow__action"
-                                        onClick={(e) => { e.stopPropagation(); duplicateMonster(m); }} 
+                                        onClick={(e) => { e.stopPropagation(); duplicateMonster(m); }}
                                         title="Дублювати"
                                     />
-                                    <Button 
-                                        variant="danger" 
-                                        size="small" 
-                                        icon="x" 
+                                    <Button
+                                        variant="danger"
+                                        size="small"
+                                        icon="x"
                                         className="EncounterMonsterRow__action"
-                                        onClick={(e) => { e.stopPropagation(); removeMonster(m.instanceId); }} 
+                                        onClick={(e) => { e.stopPropagation(); removeMonster(m.instanceId); }}
                                         title="Видалити"
                                     />
                                 </div>
@@ -349,9 +349,9 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
             )}
 
             {notification && (
-                <Notification 
-                    message={notification} 
-                    onClose={() => setNotification(null)} 
+                <Notification
+                    message={notification}
+                    onClose={() => setNotification(null)}
                 />
             )}
         </Panel>

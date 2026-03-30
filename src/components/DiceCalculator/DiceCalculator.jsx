@@ -56,13 +56,13 @@ export default function DiceCalculator() {
                 if (keepSuffix) {
                     const type = keepSuffix[0].toLowerCase();
                     const keepCount = Math.min(parseInt(keepSuffix.slice(1)), count);
-                    
+
                     // Сортуємо індекси, щоб помітити, які кубики скинути
                     const indexed = currentRolls.map((r, idx) => ({ val: r.val, idx }));
                     indexed.sort((a, b) => type === 'h' ? b.val - a.val : a.val - b.val);
-                    
+
                     const keptIndices = new Set(indexed.slice(0, keepCount).map(r => r.idx));
-                    
+
                     currentRolls.forEach((r, idx) => {
                         if (keptIndices.has(idx)) {
                             diceTotal += r.val;
@@ -177,10 +177,10 @@ export default function DiceCalculator() {
         setHistory([]);
         setLastResult(null);
     };
-    
+
     const renderBreakdown = useCallback((breakdown) => {
         if (!Array.isArray(breakdown)) return breakdown;
-        
+
         const limit = 10;
         const itemsToShow = breakdown.slice(0, limit);
         const hasMore = breakdown.length > limit;
@@ -229,14 +229,14 @@ export default function DiceCalculator() {
                     <div className="DiceCalculator__display">
                         {lastResult ? (
                             <div className="DiceCalculator__lastResult">
-                                <div 
+                                <div
                                     className="DiceCalculator__formulaLabel"
                                     title={`${lastResult.formula} (${getFullBreakdownString(lastResult.breakdown)})`}
                                 >
                                     {lastResult.formula} ({renderBreakdown(lastResult.breakdown)})
                                 </div>
                                 <div className="DiceCalculator__totalValue-container">
-                                    <span 
+                                    <span
                                         className={`DiceCalculator__totalValue ${lastResult.isCritical ? (lastResult.total === 20 ? 'dice-max' : 'dice-min') : ''}`}
                                     >
                                         {lastResult.total}
@@ -304,16 +304,16 @@ export default function DiceCalculator() {
                                         onClick={() => parseAndRoll(roll.formula)}
                                         title="Натисніть, щоб перекинути"
                                     >
-                                        <div 
+                                        <div
                                             className="DiceCalculator__historyInfo"
                                             title={`${roll.formula} = ${roll.total} (${getFullBreakdownString(roll.breakdown)})`}
                                         >
-                                                <span>
-                                                    <strong>
-                                                        {roll.formula} = 
-                                                        <span className={roll.isCritical ? (roll.total === 20 ? 'dice-max' : 'dice-min') : ''}> {roll.total}</span>
-                                                    </strong>
-                                                </span>
+                                            <span>
+                                                <strong>
+                                                    {roll.formula} =
+                                                    <span className={roll.isCritical ? (roll.total === 20 ? 'dice-max' : 'dice-min') : ''}> {roll.total}</span>
+                                                </strong>
+                                            </span>
                                             <span className="muted">({renderBreakdown(roll.breakdown)})</span>
                                         </div>
                                     </div>

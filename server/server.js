@@ -183,7 +183,7 @@ async function importCampaignBundle(bundle) {
 
   const slug = await ensureUniqueCampaignSlug(campaignSlug(meta.name));
   const now = new Date().toISOString();
-  
+
   const newMeta = {
     ...meta,
     slug,
@@ -344,7 +344,7 @@ app.patch('/api/campaigns/:slug', async (req, res, next) => {
     const nextName = req.body?.name ? sanitizeName(req.body.name) : current.name;
     const completed =
       typeof req.body?.completed === 'boolean' ? req.body.completed : current.completed;
-    const completedAt = 
+    const completedAt =
       req.body?.completedAt !== undefined ? req.body.completedAt : current.completedAt;
 
     if (!nextName) {
@@ -353,7 +353,7 @@ app.patch('/api/campaigns/:slug', async (req, res, next) => {
 
     // Робимо логіку ідентичною до сесій
     const nextSlug = await ensureUniqueCampaignSlug(campaignSlug(nextName), oldSlug);
-    
+
     if (nextSlug !== oldSlug) {
       await renameWithRetry(campaignDir(oldSlug), campaignDir(nextSlug));
     }
@@ -475,7 +475,7 @@ app.patch('/api/campaigns/:slug/sessions/:fileName', async (req, res, next) => {
     const nextName = req.body?.name ? sanitizeName(req.body.name) : current.name;
     const nextCompleted =
       typeof req.body?.completed === 'boolean' ? req.body.completed : current.completed;
-    const nextCompletedAt = 
+    const nextCompletedAt =
       req.body?.completedAt !== undefined ? req.body.completedAt : current.completedAt;
     const nextData =
       req.body?.data && typeof req.body.data === 'object' ? req.body.data : current.data;
@@ -534,7 +534,7 @@ app.post('/api/ai/generate', async (req, res, next) => {
     const generatedContent = await aiService.generateContent(type, sessionName, sessionData, userInstructions);
 
     if (generatedContent.error) {
-        return res.status(500).json({ error: generatedContent.error, raw_response: generatedContent.raw_response });
+      return res.status(500).json({ error: generatedContent.error, raw_response: generatedContent.raw_response });
     }
 
     let updatedObject = null;
@@ -572,12 +572,12 @@ app.post('/api/ai/generate', async (req, res, next) => {
         const metaPath = campaignMetaPath(slug);
         if (await exists(metaPath)) {
           const meta = await readJson(metaPath);
-          
+
           // Оновлюємо лише опис та замітки, ігноруючи сторонні поля (наприклад, scenes)
           if (generatedContent.description) {
             meta.description = generatedContent.description;
           }
-          
+
           if (Array.isArray(generatedContent.notes)) {
             // Перетворюємо масив рядків від ШІ у внутрішній формат заміток з ID
             meta.notes = generatedContent.notes.map(text => ({

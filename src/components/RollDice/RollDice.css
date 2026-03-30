@@ -3,6 +3,8 @@
     color: var(--accent);
     text-decoration: underline;
     font-weight: 500;
-    white-space: nowrap; /* Запобігає розриву формули на кілька рядків */
-    user-select: none; /* Запобігає виділенню тексту при подвійному кліку */
+    white-space: nowrap;
+    /* Запобігає розриву формули на кілька рядків */
+    user-select: none;
+    /* Запобігає виділенню тексту при подвійному кліку */
 }

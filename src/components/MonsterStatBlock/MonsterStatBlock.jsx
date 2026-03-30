@@ -70,7 +70,7 @@ export default function MonsterStatBlock({ monster, onNameClick, nameTitle }) {
                                 <div className="stat-item">
                                     Atk: <RollDice formula={`1d20${formatModifier(action.attack_bonus)}`}>{formatModifier(action.attack_bonus)}</RollDice>
                                 </div>
-                            )}                            
+                            )}
                             {action.damage_dice && (
                                 <div className="stat-item">Dmg: <RollDice formula={`${action.damage_dice}${getDamageBonus(action)}`} /></div>
                             )}
@@ -84,8 +84,8 @@ export default function MonsterStatBlock({ monster, onNameClick, nameTitle }) {
     const renderAbility = (label, value) => {
         const mod = getAbilityModifier(value);
         return (
-            <div 
-                className="MonsterStatBlock__ability-box" 
+            <div
+                className="MonsterStatBlock__ability-box"
                 onClick={() => window.dispatchEvent(new CustomEvent('rollDice', { detail: `1d20${formatModifier(mod)}` }))}
                 title={`Кинути перевірку ${label}`}
             >
@@ -150,7 +150,7 @@ export default function MonsterStatBlock({ monster, onNameClick, nameTitle }) {
             </div>
             <div className="MonsterStatBlock__properties">
                 {renderSaves()}
-                
+
                 {monster.skills && Object.keys(monster.skills).length > 0 && (
                     <div className="MonsterStatBlock__property-item MonsterStatBlock__property-item--skills">
                         <strong>Skills:</strong> {Object.entries(monster.skills).map(([name, value], idx, arr) => (

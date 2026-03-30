@@ -94,7 +94,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 
     const displayedMonsters = useMemo(() => {
         if (sortOrder === 'none') return monsters;
-        
+
         return [...monsters].sort((a, b) => {
             const crA = parseCR(a.challenge_rating);
             const crB = parseCR(b.challenge_rating);
@@ -132,16 +132,16 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
                 <div className={`Bestiary__content ${isEmbedded ? 'Bestiary__content--stacked' : ''}`}>
                     <div className="Bestiary__list" onScroll={handleScroll}>
                         {displayedMonsters.map(monster => (
-                            <ListCard 
-                                key={monster.slug} 
-                                active={selectedMonster?.slug === monster.slug} 
+                            <ListCard
+                                key={monster.slug}
+                                active={selectedMonster?.slug === monster.slug}
                                 onClick={() => setSelectedMonster(monster)}
                                 onDoubleClick={() => onAddMonster && onAddMonster(monster)}
                                 actions={onAddMonster && (
-                                    <Button 
-                                        variant="ghost" 
-                                        size="small" 
-                                        icon="plus" 
+                                    <Button
+                                        variant="ghost"
+                                        size="small"
+                                        icon="plus"
                                         onClick={(e) => { e.stopPropagation(); onAddMonster(monster); }}
                                         title="Додати до зіткнення"
                                     />
@@ -157,9 +157,9 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
                     {selectedMonster && (
                         <div className="Bestiary__detail-container">
                             {onAddMonster && (
-                                <Button 
-                                    variant="primary" 
-                                    icon="plus" 
+                                <Button
+                                    variant="primary"
+                                    icon="plus"
                                     onClick={() => onAddMonster(selectedMonster)}
                                     className="Bestiary__add-to-encounter-btn"
                                     title="Додати до зіткнення"

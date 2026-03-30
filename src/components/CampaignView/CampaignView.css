@@ -1,21 +1,21 @@
 .CampaignView__sessions {
-  display: grid;
-  gap: 12px;
-  margin-top: 12px;
+    display: grid;
+    gap: 12px;
+    margin-top: 12px;
 }
 
 .CampaignView__sessions .session-card__actions {
-  padding: 12px 14px 12px 0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
+    padding: 12px 14px 12px 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .CampaignView__headerActions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
 .MarkdownView {

@@ -254,17 +254,19 @@
     gap: 8px;
 }
 
-.DiceCalculator__historyInfo:hover > span:first-child {
+.DiceCalculator__historyInfo:hover>span:first-child {
     text-decoration: underline;
 }
 
 .dice-min {
-    color: #ef4444; /* Червоний для одиниці */
+    color: #ef4444;
+    /* Червоний для одиниці */
     font-weight: bold;
 }
 
 .dice-max {
-    color: #22c55e; /* Зелений для максимального значення */
+    color: #22c55e;
+    /* Зелений для максимального значення */
     font-weight: bold;
 }
 

@@ -32,19 +32,19 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
             const response = await fetch('/api/ai/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    type: isCampaign ? 'campaign_plot' : activeType, 
-                    sessionName, 
-                    sessionData, 
-                    slug: campaignSlug, 
+                body: JSON.stringify({
+                    type: isCampaign ? 'campaign_plot' : activeType,
+                    sessionName,
+                    sessionData,
+                    slug: campaignSlug,
                     fileName: sessionId,
-                    userInstructions 
+                    userInstructions
                 })
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
-                
+
                 if (errorData.error?.includes('GEMINI_API_KEY')) {
                     showApiKeyInstructions();
                     return;
@@ -53,7 +53,7 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
                 throw new Error(errorData.error || 'Помилка сервера');
             }
             const data = await response.json(); // Це буде JSON-об'єкт від AI
-            
+
             // Одразу оновлюємо стан в батьківському компоненті, бо в БД вже записано
             if (data.updated && onInsertResult) {
                 onInsertResult(data.updated);

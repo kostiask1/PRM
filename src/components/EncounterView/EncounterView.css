@@ -101,7 +101,8 @@
     font-size: 0.8rem;
     font-weight: 700;
     transition: border-color 0.2s;
-    appearance: textfield; /* Приховуємо стрілки у Firefox */
+    appearance: textfield;
+    /* Приховуємо стрілки у Firefox */
 }
 
 /* Приховуємо стандартні стрілки для Chrome, Safari, Edge та Opera */
