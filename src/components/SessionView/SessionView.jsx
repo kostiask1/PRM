@@ -52,10 +52,12 @@ function EditableMarkdownField({ title, value, onChange, placeholder, type }) {
     );
 }
 
-export default function SessionView({ campaignSlug, sessionId, onBack, onNavigate, onRefreshCampaigns, modal, onRollDice }) {
+export default function SessionView({ campaign, sessionId, onBack, onNavigate, onRefreshCampaigns, modal, onRollDice }) {
     const [session, setSession] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     const saveTimeout = useRef(null);
+
+    const campaignSlug = campaign.slug;
 
     // Undo/Redo state
     const [undoStack, setUndoStack] = useState([]);
@@ -192,7 +194,7 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
             try {
                 const data = await api.getSession(campaignSlug, sessionId);
                 setSession(data);
-                
+
                 setUndoStack([]);
                 setRedoStack([]);
                 lastLoadedSessionIdRef.current = sessionId;
@@ -201,7 +203,7 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
             }
         };
         loadSession();
-    }, [campaignSlug, sessionId]); 
+    }, [campaignSlug, sessionId]);
 
     useEffect(() => {
         const handleKeyDown = (e) => {
@@ -212,7 +214,7 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
                     onBack();
                 }
             }
-            
+
             const isMod = e.ctrlKey || e.metaKey;
             const key = e.key.toLowerCase();
 
@@ -327,7 +329,7 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
             completedAt: session.completedAt
         }]);
         setRedoStack([]);
-        
+
         isUpdatingHistory.current = true;
         setSession(updatedSession);
         setTimeout(() => { isUpdatingHistory.current = false; }, 0);
@@ -444,6 +446,10 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
                         <AiAssistantPanel
                             sessionName={session.name}
                             sessionData={session.data}
+                            campaignContext={{
+                                description: campaign.description,
+                                notes: campaign.notes,
+                            }}
                             campaignSlug={campaignSlug}
                             sessionId={sessionId}
                             onInsertResult={handleAiUpdate}

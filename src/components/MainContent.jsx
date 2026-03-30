@@ -34,7 +34,7 @@ export default function MainContent({ campaign, activeSessionId, activeEncounter
         />
       ) : activeSessionId ? (
         <SessionView
-          campaignSlug={campaign.slug}
+          campaign={campaign}
           sessionId={activeSessionId}
           onBack={() => onSelectSession(null)}
           onNavigate={onNavigate}

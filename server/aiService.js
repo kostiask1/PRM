@@ -28,7 +28,6 @@ async function generateContent(type, sessionName, sessionData, userInstructions)
         description: sessionData.description || '',
         notes: sessionData.notes?.map(n => n.text) || [],
         scenes: sessionData.scenes?.map(s => s.texts) || [],
-        result: sessionData.result_text || '',
         encounters: sessionData.encounters?.map(e => e.name) || []
     });
 

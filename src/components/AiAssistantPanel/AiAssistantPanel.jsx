@@ -5,9 +5,10 @@ import Icon from '../Icon';
 import Notification from '../Notification/Notification';
 import './AiAssistantPanel.css';
 
-export default function AiAssistantPanel({ sessionName, sessionData, campaignSlug, sessionId, onInsertResult, modal }) {
+export default function AiAssistantPanel({ sessionName, sessionData, campaignSlug, campaignContext, sessionId, onInsertResult, modal }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [useCampaignContext, setUseCampaignContext] = useState(true);
     const [activeType, setActiveType] = useState('scene_ideas');
     const [userInstructions, setUserInstructions] = useState('');
     const [notification, setNotification] = useState(null);
@@ -30,13 +31,20 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
         setLoading(true);
         setError('');
         try {
+            const promptData = { ...sessionData };
+
+            if (useCampaignContext) {
+                promptData.description = campaignContext.description;
+                promptData.notes = campaignContext.notes;
+            }
+
             const response = await fetch('/api/ai/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     type: isCampaign ? 'campaign_plot' : activeType,
                     sessionName,
-                    sessionData,
+                    sessionData: promptData,
                     slug: campaignSlug,
                     fileName: sessionId,
                     userInstructions
@@ -96,6 +104,14 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
 
             {!isCampaign && (
                 <div className="AiAssistant__actions">
+                    <Button
+                        variant={useCampaignContext ? 'primary' : 'ghost'}
+                        size="small"
+                        onClick={() => setUseCampaignContext(useCampaignContext => !useCampaignContext)}
+                        disabled={loading}
+                    >
+                        Використати контекст кампанії
+                    </Button>
                     {actions.map(action => (
                         <Button
                             key={action.id}
