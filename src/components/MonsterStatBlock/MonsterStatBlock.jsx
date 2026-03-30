@@ -57,8 +57,6 @@ export default function MonsterStatBlock({ monster, onNameClick, nameTitle }) {
         setImageError(false);
     }, [monster]);
 
-    console.log('imageError:', imageError)
-
     const renderActionList = (actions, title) => {
         if (!actions || actions.length === 0) return null;
         return (
