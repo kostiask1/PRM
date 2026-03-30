@@ -46,22 +46,37 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
     }, [showBestiary, onBack]);
 
     useEffect(() => {
-        const loadEncounter = async () => {
+        let isMounted = true;
+        const loadEncounter = async (retries = 3) => {
             try {
                 const session = await api.getSession(campaign.slug, sessionId);
+                if (!isMounted) return;
+
                 // Очікувана структура: session.data.encounters = [{ id, name, monsters: [] }]
                 const found = (session.data.encounters || []).find(e => e.id.toString() === encounterId.toString());
 
-                setEncounter(found);
+                if (!found && retries > 0) {
+                    // Можлива затримка запису файлу на сервері, пробуємо ще раз через 300мс
+                    setTimeout(() => loadEncounter(retries - 1), 300);
+                    return;
+                }
 
+                if (!found) {
+                    modal.alert("Помилка", "Зіткнення не знайдено або дані ще оновлюються.");
+                    onBack();
+                    return;
+                }
+
+                setEncounter(found);
                 if (found && found.monsters?.length > 0 && !selectedInstance) {
                     setSelectedInstance(found.monsters[0]);
                 }
             } catch (err) {
-                console.error("Failed to load encounter", err);
+                if (isMounted) console.error("Failed to load encounter", err);
             }
         };
         loadEncounter();
+        return () => { isMounted = false; };
     }, [campaign.slug, sessionId, encounterId]);
 
     const saveEncounterState = useCallback((updatedEncounter, debounceMs = 0) => {

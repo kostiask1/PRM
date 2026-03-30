@@ -28,14 +28,16 @@
     border: 1px solid rgba(51, 65, 85, 0.7);
     border-radius: 16px;
     background: rgba(15, 23, 42, 0.45);
-    overflow: hidden;
 }
 
 .TodoSection__header {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    background: rgba(15, 23, 42, 1);
+    border-radius: 16px;
     position: sticky;
+    top: -24px;
     padding: 16px 18px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     padding-bottom: 8px;

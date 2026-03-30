@@ -302,21 +302,47 @@ export default function SessionView({ campaign, sessionId, onBack, onNavigate, o
                 s.id === scene.id ? { ...s, encounterId } : s
             );
 
-            updateSession({
-                data: {
-                    ...session.data,
-                    encounters: [...currentEncounters, newEncounter],
-                    scenes: updatedScenes
-                }
-            }, true);
+            const nextData = {
+                ...session.data,
+                encounters: [...currentEncounters, newEncounter],
+                scenes: updatedScenes
+            };
+
+            // Використовуємо прямий виклик API для очікування завершення операції
+            await api.updateSession(campaignSlug, sessionId, { ...session, data: nextData });
+            
+            // Оновлюємо локальний стан, щоб уникнути стрибків при поверненні
+            setSession(prev => ({ ...prev, data: nextData }));
         }
 
         onNavigate(campaignSlug, sessionId, false, encounterId);
     };
 
     const removeScene = async (sceneId) => {
-        if (!(await modal.confirm("Видалення сцени", "Ви впевнені, що хочете видалити цю сцену?"))) return;
-        updateData('scenes', session.data.scenes.filter(s => s.id !== sceneId), true);
+        const scene = session.data.scenes.find(s => s.id === sceneId);
+        if (!scene) return;
+
+        // Перевіряємо, чи є в сцені будь-які дані (текст або бій)
+        const hasTextData = Object.values(scene.texts || {}).some(val => val && val.trim() !== "");
+        const hasEncounter = !!scene.encounterId;
+
+        // Запитуємо підтвердження лише якщо сцена не порожня
+        if (hasTextData || hasEncounter) {
+            const confirmed = await modal.confirm("Видалення сцени", "Ви впевнені? Це також видалить пов'язане бойове зіткнення.");
+            if (!confirmed) return;
+        }
+
+        const nextData = { ...session.data };
+
+        // Видаляємо пов'язаний encounter, якщо він існує
+        if (scene.encounterId) {
+            nextData.encounters = (nextData.encounters || []).filter(e => e.id.toString() !== scene.encounterId.toString());
+        }
+
+        // Видаляємо саму сцену
+        nextData.scenes = (nextData.scenes || []).filter(s => s.id !== sceneId);
+
+        updateSession({ data: nextData }, true);
     };
 
     const handleAiUpdate = (updatedSession) => {
