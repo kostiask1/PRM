@@ -151,8 +151,9 @@ export default function App() {
         onCreateCampaign={async () => {
           const name = await prompt("Нова кампанія", "Введіть назву для вашої пригоди:");
           if (name) {
-            await api.createCampaign(name);
+            const newCampaign = await api.createCampaign(name);
             await loadCampaigns();
+            navigate(newCampaign.slug);
           }
         }}
         onToggleCampaignStatus={handleToggleCampaignStatus}

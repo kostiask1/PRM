@@ -236,6 +236,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
     try {
       const newSession = await api.createSession(campaign.slug, name);
       setSessions([...sessions, newSession]);
+      onSelectSession(newSession.fileName);
       onRefreshCampaigns();
     } catch (err) {
       modal.alert("Помилка", "Не вдалося створити сесію");
