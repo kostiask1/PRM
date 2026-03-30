@@ -3,13 +3,25 @@ import Button from '../Button/Button';
 import Input from '../Input/Input';
 import './AiAssistantPanel.css';
 
-export default function AiAssistantPanel({ sessionName, sessionData, campaignSlug, sessionId, onInsertResult }) {
+export default function AiAssistantPanel({ sessionName, sessionData, campaignSlug, sessionId, onInsertResult, modal }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [activeType, setActiveType] = useState('scene_ideas');
     const [userInstructions, setUserInstructions] = useState('');
 
     const isCampaign = !sessionId;
+
+    const showApiKeyInstructions = () => {
+        modal.alert(
+            "Налаштування Gemini AI",
+            `Для використання функцій ШІ необхідно налаштувати API ключ:\n\n` +
+            `1. Отримайте безкоштовний ключ у Google AI Studio (aistudio.google.com).\n` +
+            `2. Створіть файл .env у кореневій папці проекту (там, де server.js).\n` +
+            `3. Додайте в нього рядок: GEMINI_API_KEY=ваш_ключ\n` +
+            `4. Перезапустіть сервер (термінал з node server.js).\n\n` +
+            `Після цього магія ШІ стане доступною!`
+        );
+    };
 
     const generate = async (type) => {
         setLoading(true);
@@ -30,6 +42,12 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
 
             if (!response.ok) {
                 const errorData = await response.json();
+                
+                if (errorData.error?.includes('GEMINI_API_KEY')) {
+                    showApiKeyInstructions();
+                    return;
+                }
+
                 throw new Error(errorData.error || 'Помилка сервера');
             }
             const data = await response.json(); // Це буде JSON-об'єкт від AI
