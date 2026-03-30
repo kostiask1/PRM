@@ -60,11 +60,11 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
     // Undo/Redo state
     const [undoStack, setUndoStack] = useState([]);
     const [redoStack, setRedoStack] = useState([]);
-    console.log('undoStack:', undoStack)
     const isUpdatingHistory = useRef(false); // Flag to prevent circular updates
 
     const saveToServer = useCallback(async (updatedSession) => {
         if (saveTimeout.current) clearTimeout(saveTimeout.current);
+        saveTimeout.current = null;
         setIsSaving(true);
         try {
             const result = await api.updateSession(campaignSlug, sessionId, updatedSession);
@@ -84,10 +84,14 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
         if (saveTimeout.current) clearTimeout(saveTimeout.current);
 
         if (instant) {
+            saveTimeout.current = null;
             saveToServer(updatedSession);
         } else {
             setIsSaving(true);
-            saveTimeout.current = setTimeout(() => saveToServer(updatedSession), 250);
+            saveTimeout.current = setTimeout(() => {
+                saveTimeout.current = null;
+                saveToServer(updatedSession)
+            }, 250);
         }
     }, [saveToServer]);
 
@@ -178,25 +182,26 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
         }
     }, [redoStack, session, triggerSave]);
 
-    const lastLoadedIdRef = useRef(null);
+    const lastLoadedSessionIdRef = useRef(null);
 
     useEffect(() => {
         const loadSession = async () => {
+            // Завантажуємо дані лише якщо змінився ID сесії
+            if (lastLoadedSessionIdRef.current === sessionId) return;
+
             try {
                 const data = await api.getSession(campaignSlug, sessionId);
                 setSession(data);
-
-                if (lastLoadedIdRef.current !== data.id) {
-                    setUndoStack([]);
-                    setRedoStack([]);
-                    lastLoadedIdRef.current = data.id;
-                }
+                
+                setUndoStack([]);
+                setRedoStack([]);
+                lastLoadedSessionIdRef.current = sessionId;
             } catch (err) {
                 console.error("Failed to load session", err);
             }
         };
         loadSession();
-    }, [campaignSlug, sessionId]);
+    }, [campaignSlug, sessionId]); 
 
     useEffect(() => {
         const handleKeyDown = (e) => {
@@ -207,12 +212,19 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
                     onBack();
                 }
             }
-            // Add keyboard shortcuts for Undo/Redo
-            if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-                e.preventDefault();
-                handleUndo();
-            }
-            if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+            
+            const isMod = e.ctrlKey || e.metaKey;
+            const key = e.key.toLowerCase();
+
+            if (isMod && (key === 'z' || key === 'я')) {
+                if (e.shiftKey) {
+                    e.preventDefault();
+                    handleRedo();
+                } else {
+                    e.preventDefault();
+                    handleUndo();
+                }
+            } else if (isMod && (key === 'y' || key === 'н')) {
                 e.preventDefault();
                 handleRedo();
             }
@@ -234,7 +246,8 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
                 const isDataChanged = updates.data && JSON.stringify(updates.data) !== JSON.stringify(prev.data);
                 const isStatusChanged = updates.completed !== undefined && updates.completed !== prev.completed;
 
-                if (isDataChanged || isStatusChanged) {
+                // Записуємо в історію лише якщо це початок введення (таймер не активний) або миттєва дія
+                if ((isDataChanged || isStatusChanged) && (!saveTimeout.current || instant)) {
                     setUndoStack(currentStack => [...currentStack, currentState]);
                     setRedoStack([]);
                 }
@@ -305,17 +318,19 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
     };
 
     const handleAiUpdate = (updatedSession) => {
-        // Зберігаємо ПОВНИЙ поточний стан перед оновленням від ШІ
-        setUndoStack(currentStack => [
-            ...currentStack,
-            {
-                data: session.data,
-                completed: session.completed,
-                completedAt: session.completedAt
-            }
-        ]);
-        setRedoStack([]); // Очищаємо redo stack при нових змінах
+        if (!session) return;
+
+        // Зберігаємо стан ДО змін ШІ в історію
+        setUndoStack(prev => [...prev, {
+            data: session.data,
+            completed: session.completed,
+            completedAt: session.completedAt
+        }]);
+        setRedoStack([]);
+        
+        isUpdatingHistory.current = true;
         setSession(updatedSession);
+        setTimeout(() => { isUpdatingHistory.current = false; }, 0);
     };
     if (!session) return null;
 

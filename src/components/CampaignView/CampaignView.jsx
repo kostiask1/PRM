@@ -61,27 +61,28 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
 
   // Синхронізація при зміні кампанії
   useEffect(() => {
-    setDescription(campaign.description || '');
-    setNotes(campaign.notes || []);
-
+    // Оновлюємо локальний стан лише якщо перейшли в іншу кампанію
     if (lastSlugRef.current !== campaign.slug) {
+      setDescription(campaign.description || '');
+      setNotes(campaign.notes || []);
       setUndoStack([]);
       setRedoStack([]);
       lastSlugRef.current = campaign.slug;
     }
-  }, [campaign.slug, campaign.description, campaign.notes]);
+  }, [campaign.slug]); // Прибираємо description та notes з залежностей, щоб уникнути "підтягування"
 
   const saveToServer = useCallback(async (updates) => {
     isSavingRef.current = true;
     try {
       await api.updateCampaign(campaign.slug, updates);
-      onRefreshCampaigns();
+      // Прибираємо onRefreshCampaigns() для звичайного оновлення контенту, 
+      // щоб уникнути зайвих ререндерів зверху вниз.
     } catch (err) {
       console.error("Failed to save campaign updates", err);
     } finally {
       isSavingRef.current = false;
     }
-  }, [campaign.slug, onRefreshCampaigns]);
+  }, [campaign.slug]);
 
   const handleUndo = useCallback(() => {
     if (undoStack.length === 0) return;
@@ -175,13 +176,15 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
     if (saveTimeout.current) clearTimeout(saveTimeout.current);
 
     saveTimeout.current = setTimeout(async () => {
+      saveTimeout.current = null;
       saveToServer(updates);
     }, 500);
   }, [saveToServer]);
 
   const handleDescriptionChange = (e) => {
     const val = e.target.value;
-    pushToUndo();
+    // Робимо snapshot лише перед початком введення тексту
+    if (!saveTimeout.current) pushToUndo();
     setDescription(val);
     triggerSave({ description: val });
   };
@@ -202,6 +205,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
 
   const handleNoteChange = (id, text) => {
     pushToUndo();
+    if (!saveTimeout.current) pushToUndo();
     const newNotes = notes.map(n => n.id === id ? { ...n, text } : n);
     setNotes(newNotes);
     triggerSave({ notes: newNotes });
@@ -350,11 +354,18 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-        e.preventDefault();
-        handleUndo();
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+      const isMod = e.ctrlKey || e.metaKey;
+      const key = e.key.toLowerCase();
+
+      if (isMod && key === 'z') {
+        if (e.shiftKey) {
+          e.preventDefault();
+          handleRedo();
+        } else {
+          e.preventDefault();
+          handleUndo();
+        }
+      } else if (isMod && key === 'y') {
         e.preventDefault();
         handleRedo();
       }
