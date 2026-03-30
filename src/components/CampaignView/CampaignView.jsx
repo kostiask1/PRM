@@ -155,7 +155,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
       setNotes(stateToRestore.notes);
       saveToServer(stateToRestore);
       
-      isUpdatingHistory.current = false;
+      setTimeout(() => { isUpdatingHistory.current = false; }, 0);
     }
   }, [redoStack, description, notes, saveToServer, campaign.completed, campaign.completedAt]);
 
@@ -387,7 +387,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
             size="small"
             icon="undo"
             onClick={handleUndo}
-            disabled={undoStack.length <= 1}
+            disabled={undoStack.length === 0}
             title="Скасувати (Ctrl+Z)"
           />
           <Button
@@ -425,6 +425,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
             campaignSlug={campaign.slug}
             sessionId={null}
             onInsertResult={handleAiUpdate}
+            modal={modal}
           />
         </div>
 

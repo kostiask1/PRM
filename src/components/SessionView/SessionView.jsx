@@ -470,6 +470,7 @@ export default function SessionView({ campaignSlug, sessionId, onBack, onNavigat
                         campaignSlug={campaignSlug}
                         sessionId={sessionId}
                         onInsertResult={handleAiUpdate}
+                        modal={modal}
                     />
                 </div>
             </div>
