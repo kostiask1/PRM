@@ -1,8 +1,8 @@
 import React from 'react';
 import './SpellCard.css';
-import { parseTextWithRolls } from '../../utils/diceParser.jsx';
+import { parseRollsAndSpells } from '../../utils/diceParser.jsx';
 
-export default function SpellCard({ spell }) {
+export default function SpellCard({ spell, onSpellClick }) {
     if (!spell) return null;
 
     return (
@@ -21,20 +21,20 @@ export default function SpellCard({ spell }) {
                 {typeof spell.desc === 'object' ?
                     spell.desc?.map((p, i) => (
                         <div key={i}>
-                            {parseTextWithRolls(p)}
+                            {parseRollsAndSpells(p, onSpellClick)}
                         </div>
                     )) : (
                         <div>
-                            {parseTextWithRolls(spell.desc)}
+                            {parseRollsAndSpells(spell.desc, onSpellClick)}
                         </div>
                     )}
                 {spell.higher_level?.length > 0 && (
                     <div className="SpellCard__higher">
                         <strong>На вищих рівнях:&nbsp;</strong>
                         {typeof spell.higher_level === 'object' ? (
-                            spell.higher_level.map((p, i) => <React.Fragment key={i}>{parseTextWithRolls(p)}</React.Fragment>)
+                            spell.higher_level.map((p, i) => <React.Fragment key={i}>{parseRollsAndSpells(p, onSpellClick)}</React.Fragment>)
                         ) : (
-                            <React.Fragment>{parseTextWithRolls(spell.higher_level)}</React.Fragment>
+                            <React.Fragment>{parseRollsAndSpells(spell.higher_level, onSpellClick)}</React.Fragment>
                         )}
                     </div>
                 )}

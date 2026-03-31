@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import RollDice from '../RollDice/RollDice';
 import Icon from '../Icon';
 import SpellCard from '../SpellCard/SpellCard';
-import { getAbilityModifier, formatModifier, getDamageBonus, parseTextWithRolls } from '../../utils/diceParser.jsx';
+import { getAbilityModifier, formatModifier, getDamageBonus, parseRollsAndSpells } from '../../utils/diceParser.jsx';
 import './MonsterStatBlock.css';
 
 const SPELL_CACHE = new Map();
@@ -11,6 +11,25 @@ export default function MonsterStatBlock({ monster, onNameClick, nameTitle, moda
     const [imageStatus, setImageStatus] = useState('primary'); // 'primary' | 'fallback' | 'none'
     const [spells, setSpells] = useState([]);
     const [loadingSpells, setLoadingSpells] = useState(false);
+
+    const handleSpellClick = async (spellOrName) => {
+        let spell = spellOrName;
+
+        // Якщо передано назву (рядок), намагаємось знайти базові дані
+        if (typeof spellOrName === 'string') {
+            const slug = spellOrName.toLowerCase().replace(/\s+/g, '-');
+            try {
+                const res = await fetch(`https://www.dnd5eapi.co/api/2014/spells/${slug}`);
+                spell = await res.json();
+                if (!spell.name) throw new Error();
+            } catch (e) {
+                console.error("Failed to fetch linked spell", e);
+                return;
+            }
+        }
+
+        modal?.confirm(spell.name, <SpellCard spell={spell} onSpellClick={handleSpellClick} />);
+    };
 
     useEffect(() => {
         setImageStatus('primary');
@@ -23,7 +42,6 @@ export default function MonsterStatBlock({ monster, onNameClick, nameTitle, moda
                     console.log('monster.spell_list:', monster.spell_list)
                     const loaded = await Promise.all(
                         monster.spell_list.map(async (url) => {
-                            console.log('url:', url)
                             const fixUrl = url.replace("https://api.open5e.com/v2/spells", "https://www.dnd5eapi.co/api/2014/spells");
 
                             if (SPELL_CACHE.has(url)) return SPELL_CACHE.get(fixUrl);
@@ -51,7 +69,7 @@ export default function MonsterStatBlock({ monster, onNameClick, nameTitle, moda
                 <h4>{title}:</h4>
                 {actions.map((action, index) => (
                     <div key={index} className="MonsterStatBlock__action">
-                        <strong>{action.name}.</strong> {parseTextWithRolls(action.desc)}
+                        <strong>{action.name}.</strong> {parseRollsAndSpells(action.desc, handleSpellClick)}
                         <div className="MonsterStatBlock__action-rolls">
                             {action.attack_bonus && (
                                 <div className="stat-item">
@@ -128,9 +146,9 @@ export default function MonsterStatBlock({ monster, onNameClick, nameTitle, moda
                         <strong>{lvl === "0" ? 'Замовляння' : `${lvl}-й рівень`}:</strong>{' '}
                         {levels[lvl].map((s, i) => (
                             <React.Fragment key={s.slug || s.name}>
-                                <span 
+                                <span
                                     style={{ color: 'var(--accent)', cursor: 'pointer', textDecoration: 'underline' }}
-                                    onClick={() => modal?.confirm(s.name, <SpellCard spell={s} />)}
+                                    onClick={() => handleSpellClick(s)}
                                 >
                                     {s.name}
                                 </span>
@@ -157,19 +175,19 @@ export default function MonsterStatBlock({ monster, onNameClick, nameTitle, moda
                 </div>
                 <div className="MonsterStatBlock__token-wrapper">
                     {imageStatus === 'primary' && (
-                        <img 
-                            src={`https://5e.tools/img/bestiary/tokens/MM/${monster.name}.webp`} 
-                            alt={monster.name} 
-                            className="MonsterStatBlock__token" 
-                            onError={() => setImageStatus('fallback')} 
+                        <img
+                            src={`https://5e.tools/img/bestiary/tokens/MM/${monster.name}.webp`}
+                            alt={monster.name}
+                            className="MonsterStatBlock__token"
+                            onError={() => setImageStatus('fallback')}
                         />
                     )}
                     {imageStatus === 'fallback' && (
-                        <img 
-                            src={`https://www.dnd5eapi.co/api/images/monsters/${monster.slug}.png`} 
-                            alt={monster.name} 
-                            className="MonsterStatBlock__token" 
-                            onError={() => setImageStatus('none')} 
+                        <img
+                            src={`https://www.dnd5eapi.co/api/images/monsters/${monster.slug}.png`}
+                            alt={monster.name}
+                            className="MonsterStatBlock__token"
+                            onError={() => setImageStatus('none')}
                         />
                     )}
                     {imageStatus === 'none' && (
@@ -209,7 +227,7 @@ export default function MonsterStatBlock({ monster, onNameClick, nameTitle, moda
                 </div>
                 {monster.desc && (
                     <div className="MonsterStatBlock__lore">
-                        {parseTextWithRolls(monster.desc)}
+                        {parseRollsAndSpells(monster.desc, handleSpellClick)}
                     </div>
                 )}
             </div>

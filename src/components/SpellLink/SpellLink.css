@@ -1,0 +1,11 @@
+.SpellLink {
+    color: var(--accent);
+    cursor: pointer;
+    text-decoration: underline;
+    transition: opacity 0.2s;
+    margin: 0 5px;
+}
+
+.SpellLink:hover {
+    opacity: 0.8;
+}

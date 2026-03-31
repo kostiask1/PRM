@@ -33,6 +33,16 @@ export default function Spells() {
         fetchAllSpells();
     }, []);
 
+    useEffect(() => {
+        const handleSelect = (e) => {
+            const identifier = e.detail;
+            const found = allSpells.find(s => s.slug === identifier || s.index === identifier);
+            if (found) setSelectedSpell(found);
+        };
+        window.addEventListener('prm:select-spell', handleSelect);
+        return () => window.removeEventListener('prm:select-spell', handleSelect);
+    }, [allSpells]);
+
     const displayedSpells = useMemo(() => {
         let result = [...allSpells];
         if (search) {
@@ -124,7 +134,14 @@ export default function Spells() {
                         {detailLoading ? (
                             <p className="muted">Завантаження деталей...</p>
                         ) : spellDetail ? (
-                            <SpellCard spell={spellDetail} />
+                            <SpellCard 
+                                spell={spellDetail} 
+                                onSpellClick={(s) => {
+                                    const slug = typeof s === 'string' ? s.toLowerCase().replace(/\s+/g, '-') : (s.slug || s.index);
+                                    const found = allSpells.find(item => item.slug === slug || item.index === slug);
+                                    setSelectedSpell(found || { slug });
+                                }} 
+                            />
                         ) : (
                             <p className="muted">Оберіть заклинання зі списку, щоб переглянути опис.</p>
                         )}
