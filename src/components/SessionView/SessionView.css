@@ -36,7 +36,7 @@
     width: 0;
     height: 100%;
     background: linear-gradient(90deg, var(--accent), var(--accent-2));
-    transition: width 0.3s ease;
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .ProgressBar__label {
@@ -164,12 +164,6 @@
     background: rgba(255, 255, 255, 0.1);
     border-radius: 3px;
     overflow: hidden;
-}
-
-.ProgressBar__fill {
-    height: 100%;
-    background: var(--primary);
-    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .SessionView__todoList {

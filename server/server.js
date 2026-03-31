@@ -549,6 +549,7 @@ app.post('/api/ai/generate', async (req, res, next) => {
       if (fileName) {
         // Оновлення СЕСІЇ
         const fullPath = sessionPath(slug, fileName);
+
         if (await exists(fullPath)) {
           const session = await readJson(fullPath);
           const data = session.data || {};
@@ -571,18 +572,18 @@ app.post('/api/ai/generate', async (req, res, next) => {
             } else {
               data.scenes = [...(session.data?.scenes || []), ...generatedContent.scenes]
             }
-          } else {
-            Object.assign(data, generatedContent);
           }
 
           session.data = data;
           session.updatedAt = new Date().toISOString();
+
           await writeJson(fullPath, session);
           updatedObject = { ...session, fileName };
         }
       } else {
         // Оновлення КАМПАНІЇ (якщо fileName відсутній)
         const metaPath = campaignMetaPath(slug);
+
         if (await exists(metaPath)) {
           const meta = await readJson(metaPath);
 
