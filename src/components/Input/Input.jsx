@@ -1,4 +1,4 @@
-import React, { forwardRef, useRef, useLayoutEffect } from 'react';
+import { forwardRef, useRef, useLayoutEffect } from 'react';
 import './Input.css';
 
 const Input = forwardRef(({ type = 'text', className = '', ...props }, ref) => {

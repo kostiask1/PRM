@@ -52,7 +52,7 @@ function EditableMarkdownField({ title, value, onChange, placeholder, type }) {
     );
 }
 
-export default function SessionView({ campaign, sessionId, onBack, onNavigate, onRefreshCampaigns, modal, onRollDice }) {
+export default function SessionView({ campaign, sessionId, onBack, onNavigate, onRefreshCampaigns, modal }) {
     const [session, setSession] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     const saveTimeout = useRef(null);
@@ -310,7 +310,7 @@ export default function SessionView({ campaign, sessionId, onBack, onNavigate, o
 
             // Використовуємо прямий виклик API для очікування завершення операції
             await api.updateSession(campaignSlug, sessionId, { ...session, data: nextData });
-            
+
             // Оновлюємо локальний стан, щоб уникнути стрибків при поверненні
             setSession(prev => ({ ...prev, data: nextData }));
         }

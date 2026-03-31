@@ -17,6 +17,7 @@ export default function Modal({ title, message, type, defaultValue, onConfirm, o
         confirmButtonRef.current.focus();
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showInput]);
 
   useEffect(() => {
@@ -31,6 +32,7 @@ export default function Modal({ title, message, type, defaultValue, onConfirm, o
 
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onCancel, onConfirm, showInput, inputValue]);
 
   function handleClose() {

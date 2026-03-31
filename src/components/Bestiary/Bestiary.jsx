@@ -101,10 +101,11 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
         };
 
         initSelection();
-        
+
         // Слухаємо кнопки браузера Назад/Вперед
         window.addEventListener('popstate', initSelection);
         return () => window.removeEventListener('popstate', initSelection);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [monsters]); // Видалили selectedMonster?.slug із залежностей
 
     useEffect(() => {

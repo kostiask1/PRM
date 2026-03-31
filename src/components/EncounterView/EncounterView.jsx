@@ -77,6 +77,7 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
         };
         loadEncounter();
         return () => { isMounted = false; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [campaign.slug, sessionId, encounterId]);
 
     const saveEncounterState = useCallback((updatedEncounter, debounceMs = 0) => {

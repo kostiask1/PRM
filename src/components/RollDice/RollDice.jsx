@@ -1,4 +1,4 @@
-import React from 'react';
+
 import './RollDice.css';
 
 export default function RollDice({ formula, children }) {

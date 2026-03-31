@@ -1,4 +1,4 @@
-import React from 'react'; // Keep this import as JSX is used
+// Keep this import as JSX is used
 import ReactMarkdown from 'react-markdown';
 import RollDice from '../components/RollDice/RollDice';
 import SpellLink from '../components/SpellLink/SpellLink';
@@ -29,7 +29,7 @@ export const parseRollsAndSpells = (text, onSpellClick) => {
     const elements = [];
     for (let i = 0; i < parts.length; i += 8) {
         if (parts[i]) elements.push(<ReactMarkdown key={`t-${i}`} components={{ p: 'span' }}>{parts[i]}</ReactMarkdown>);
-        
+
         if (i + 1 < parts.length) {
             const roll = parts[i + 1];
             const hit = parts[i + 2];

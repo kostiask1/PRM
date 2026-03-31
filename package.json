@@ -6,7 +6,8 @@
   "scripts": {
     "start": "concurrently \"npm run server\" \"npm run client\"",
     "server": "node --watch --watch-path=server server/server.js",
-    "client": "vite"
+    "client": "vite",
+    "lint": "eslint ."
   },
   "keywords": [
     "dnd",
@@ -28,8 +29,14 @@
     "react-list": "^0.8.17"
   },
   "devDependencies": {
+    "@eslint/js": "^9.17.0",
     "@vitejs/plugin-react": "^4.3.1",
     "concurrently": "^8.2.2",
+    "eslint": "^9.17.0",
+    "eslint-plugin-react": "^7.37.2",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.16",
+    "globals": "^15.14.0",
     "sass": "^1.77.0",
     "sass-embedded": "^1.98.0",
     "vite": "^5.4.2"

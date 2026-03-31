@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import Sidebar from './components/Sidebar/Sidebar';
-import MainContent from './components/MainContent';
-import Modal from './components/Modal/Modal';
+import { useEffect, useState } from 'react';
 import { api } from './api';
 import DiceCalculator from './components/DiceCalculator/DiceCalculator';
+import MainContent from './components/MainContent';
+import Modal from './components/Modal/Modal';
+import Sidebar from './components/Sidebar/Sidebar';
 
 /**
  * Main Application Component
@@ -128,7 +128,7 @@ export default function App() {
       const prevLabel = completedAt ? new Date(completedAt).toLocaleDateString() : null;
 
       if (completedAt && todayLabel !== prevLabel) {
-        const confirmUpdate = await modal.confirm(
+        const confirmUpdate = await confirm(
           "Оновлення дати",
           `Кампанія вже була завершена ${prevLabel}. Оновити дату завершення на сьогодні?`
         );

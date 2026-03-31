@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { api } from '../../api';
 import Button from '../Button/Button';
@@ -69,6 +69,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
       setRedoStack([]);
       lastSlugRef.current = campaign.slug;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaign.slug]); // Прибираємо description та notes з залежностей, щоб уникнути "підтягування"
 
   const saveToServer = useCallback(async (updates) => {
@@ -250,7 +251,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
       onNavigate(null); // Повертаємось на головну
       onRefreshCampaigns();
     } catch (err) {
-      modal.alert("Помилка", "Не вдалося видалити кампанію");
+      modal.alert("Помилка", "Не вдалося видалити кампанію" + " " + err.message);
     }
   };
 
@@ -262,7 +263,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
         await onRefreshCampaigns(); // Спочатку оновлюємо список кампаній
         onNavigate(updated.slug, null, true); // Потім переходимо за новим посиланням
       } catch (err) {
-        modal.alert("Помилка", "Не вдалося перейменувати кампанію");
+        modal.alert("Помилка", "Не вдалося перейменувати кампанію" + " " + err.message);
       }
     }
   };
@@ -275,7 +276,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
       setSessions(data);
       onRefreshCampaigns();
     } catch (err) {
-      modal.alert("Помилка", "Не вдалося видалити сесію");
+      modal.alert("Помилка", "Не вдалося видалити сесію" + " " + err.message);
     }
   };
 

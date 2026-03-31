@@ -17,7 +17,7 @@ function getCleanHeaders(originalHeaders) {
   return cleanHeaders;
 }
 
-self.addEventListener('install', (event) => {
+self.addEventListener('install', () => {
   self.skipWaiting();
 });
 

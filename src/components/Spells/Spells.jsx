@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import ReactList from 'react-list';
 import Panel from '../Panel/Panel';
 import Input from '../Input/Input';
@@ -79,6 +79,7 @@ export default function Spells() {
 
         window.addEventListener('prm:select-spell', handleSelect);
         return () => window.removeEventListener('prm:select-spell', handleSelect);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [allSpells]);
 
     // Запис вибраного заклинання в URL
@@ -199,13 +200,13 @@ export default function Spells() {
                         {detailLoading ? (
                             <p className="muted">Завантаження деталей...</p>
                         ) : spellDetail ? (
-                            <SpellCard 
-                                spell={spellDetail} 
+                            <SpellCard
+                                spell={spellDetail}
                                 onSpellClick={(s) => {
                                     const slug = typeof s === 'string' ? s.toLowerCase().replace(/\s+/g, '-') : (s.slug || s.index);
                                     const found = allSpells.find(item => item.slug === slug || item.index === slug);
                                     setSelectedSpell(found || { slug });
-                                }} 
+                                }}
                             />
                         ) : (
                             <p className="muted">Оберіть заклинання зі списку, щоб переглянути опис.</p>

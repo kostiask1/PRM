@@ -1,4 +1,4 @@
-import React from 'react';
+
 
 const icons = {
   plus: <path d="M12 5v14M5 12h14" />,

@@ -1,7 +1,7 @@
-import React, { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import Button from '../Button/Button';
-import Input from '../Input/Input';
 import Icon from '../Icon';
+import Input from '../Input/Input';
 import Modal from '../Modal/Modal';
 import Notification from '../Notification/Notification';
 import './AiAssistantPanel.css';
@@ -173,8 +173,8 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
                 >
                     <div className="AiAssistant__scene-list">
                         {(sessionData.scenes || []).map((scene, idx) => (
-                            <div 
-                                key={scene.id} 
+                            <div
+                                key={scene.id}
                                 className="AiAssistant__scene-option"
                                 onClick={() => {
                                     setShowSceneSelector(false);
@@ -196,7 +196,7 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
                     onConfirm={handleCopyGeneratedPrompt}
                 >
                     <div className="AiAssistant__prompt-result">
-                        <textarea 
+                        <textarea
                             className="AiAssistant__prompt-textarea-result"
                             readOnly
                             value={generatedPrompt}

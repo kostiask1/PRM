@@ -9,7 +9,6 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 const ROOT_DIR = path.join(__dirname, '..');
-const PUBLIC_DIR = path.join(ROOT_DIR, 'public');
 const DATA_DIR = path.join(ROOT_DIR, 'data');
 const CAMPAIGNS_DIR = path.join(DATA_DIR, 'campaigns');
 

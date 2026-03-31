@@ -1,4 +1,4 @@
-import React from 'react';
+
 import CampaignView from './CampaignView/CampaignView';
 import SessionView from './SessionView/SessionView';
 import Bestiary from './Bestiary/Bestiary';

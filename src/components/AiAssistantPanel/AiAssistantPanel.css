@@ -110,6 +110,7 @@
     list-style-type: disc;
     padding-left: 20px;
 }
+
 .AiAssistant__scene-list {
     display: flex;
     flex-direction: column;

@@ -1,4 +1,4 @@
-import React from 'react';
+
 import './ListCard.css';
 
 export default function ListCard({
