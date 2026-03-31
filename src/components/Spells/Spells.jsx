@@ -3,6 +3,7 @@ import Panel from '../Panel/Panel';
 import Input from '../Input/Input';
 import ListCard from '../ListCard/ListCard';
 import SpellCard from '../SpellCard/SpellCard';
+import Icon from '../Icon';
 import './Spells.css';
 
 const SPELL_CACHE = new Map();
@@ -14,12 +15,13 @@ export default function Spells() {
     const [selectedSpell, setSelectedSpell] = useState(null);
     const [spellDetail, setSpellDetail] = useState(null);
     const [detailLoading, setDetailLoading] = useState(false);
+    const [sortOrder, setSortOrder] = useState('none'); // 'none', 'asc', 'desc'
 
     useEffect(() => {
         const fetchAllSpells = async () => {
             setLoading(true);
             try {
-                const res = await fetch('https://www.dnd5eapi.co/api/2014/spells');
+                const res = await fetch('https://api.open5e.com/spells/?limit=500');
                 const data = await res.json();
                 setAllSpells(data.results || []);
             } catch (err) {
@@ -31,27 +33,46 @@ export default function Spells() {
         fetchAllSpells();
     }, []);
 
-    const filteredSpells = useMemo(() => {
-        if (!search) return allSpells;
-        const lowSearch = search.toLowerCase();
-        return allSpells.filter(s => s.name.toLowerCase().includes(lowSearch));
-    }, [allSpells, search]);
+    const displayedSpells = useMemo(() => {
+        let result = [...allSpells];
+        if (search) {
+            const lowSearch = search.toLowerCase();
+            result = result.filter(s => s.name.toLowerCase().includes(lowSearch));
+        }
+        if (sortOrder !== 'none') {
+            result.sort((a, b) => {
+                const lvlA = a.level_int ?? 0;
+                const lvlB = b.level_int ?? 0;
+                if (lvlA === lvlB) return a.name.localeCompare(b.name);
+                return sortOrder === 'asc' ? lvlA - lvlB : lvlB - lvlA;
+            });
+        }
+        return result;
+    }, [allSpells, search, sortOrder]);
+
+    const toggleSort = () => {
+        setSortOrder(prev => prev === 'none' ? 'asc' : prev === 'asc' ? 'desc' : 'none');
+    };
 
     useEffect(() => {
         if (selectedSpell) {
             const fetchDetail = async () => {
-                if (SPELL_CACHE.has(selectedSpell.index)) {
-                    setSpellDetail(SPELL_CACHE.get(selectedSpell.index));
+                const spellId = selectedSpell.slug || selectedSpell.index;
+                if (SPELL_CACHE.has(spellId)) {
+                    setSpellDetail(SPELL_CACHE.get(spellId));
                     return;
                 }
                 setDetailLoading(true);
                 try {
-                    const res = await fetch(`https://www.dnd5eapi.co${selectedSpell.url}`);
+                    // Використовуємо dnd5eapi для деталей, якщо це можливо, або залишаємо дані з Open5e
+                    const res = await fetch(`https://www.dnd5eapi.co/api/2014/spells/${spellId}`);
                     const data = await res.json();
-                    SPELL_CACHE.set(selectedSpell.index, data);
+                    SPELL_CACHE.set(spellId, data);
                     setSpellDetail(data);
                 } catch (err) {
-                    console.error("Error fetching spell detail", err);
+                    // Якщо dnd5eapi не має цього заклинання, використовуємо дані з Open5e (вони вже повні)
+                    setSpellDetail(selectedSpell);
+                    SPELL_CACHE.set(spellId, selectedSpell);
                 } finally {
                     setDetailLoading(false);
                 }
@@ -70,22 +91,32 @@ export default function Spells() {
             </div>
             <div className="Panel__body Spells__body">
                 <div className="Spells__search">
-                    <Input 
-                        placeholder="Пошук заклинання..." 
-                        value={search} 
-                        onChange={(e) => setSearch(e.target.value)} 
+                    <Input
+                        placeholder="Пошук заклинання..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
                     />
+                    <button
+                        className={`Spells__sort-btn ${sortOrder !== 'none' ? 'is-active' : ''}`}
+                        onClick={toggleSort}
+                        title="Сортувати за рівнем"
+                    >
+                        LVL <Icon name={`sort-${sortOrder}`} />
+                    </button>
                 </div>
                 <div className="Spells__content">
                     <div className="Spells__list">
                         {loading && <p className="muted" style={{ textAlign: 'center' }}>Завантаження списку...</p>}
-                        {filteredSpells.map(spell => (
+                        {displayedSpells.map(spell => (
                             <ListCard
-                                key={spell.index}
-                                active={selectedSpell?.index === spell.index}
+                                key={spell.slug || spell.index}
+                                active={(selectedSpell?.slug || selectedSpell?.index) === (spell.slug || spell.index)}
                                 onClick={() => setSelectedSpell(spell)}
                             >
                                 <div className="ListCard__title">{spell.name}</div>
+                                <div className="ListCard__meta">
+                                    {spell.level_int === 0 ? 'Замовляння' : `${spell.level_int}-й рівень`} • {spell.school}
+                                </div>
                             </ListCard>
                         ))}
                     </div>

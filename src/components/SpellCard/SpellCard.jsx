@@ -14,14 +14,28 @@ export default function SpellCard({ spell }) {
             <div className="SpellCard__props">
                 <div><strong>Час накладання:</strong> {spell.casting_time}</div>
                 <div><strong>Дистанція:</strong> {spell.range}</div>
-                <div><strong>Компоненти:</strong> {spell.components?.join(', ')} {spell.material && `(${spell.material})`}</div>
+                <div><strong>Компоненти:</strong> {typeof spell.components === 'object' ? spell.components?.join(', ') : spell.components} {spell.material && `(${spell.material})`}</div>
                 <div><strong>Тривалість:</strong> {spell.duration} {spell.concentration && '(Концентрація)'}</div>
             </div>
             <div className="SpellCard__desc">
-                {spell.desc?.map((p, i) => <div key={i}>{parseTextWithRolls(p)}</div>)}
+                {typeof spell.desc === 'object' ?
+                    spell.desc?.map((p, i) => (
+                        <div key={i}>
+                            {parseTextWithRolls(p)}
+                        </div>
+                    )) : (
+                        <div>
+                            {parseTextWithRolls(spell.desc)}
+                        </div>
+                    )}
                 {spell.higher_level?.length > 0 && (
                     <div className="SpellCard__higher">
-                        <strong>На вищих рівнях:</strong> {spell.higher_level.map((p, i) => <React.Fragment key={i}>{parseTextWithRolls(p)}</React.Fragment>)}
+                        <strong>На вищих рівнях:&nbsp;</strong>
+                        {typeof spell.higher_level === 'object' ? (
+                            spell.higher_level.map((p, i) => <React.Fragment key={i}>{parseTextWithRolls(p)}</React.Fragment>)
+                        ) : (
+                            <React.Fragment>{parseTextWithRolls(spell.higher_level)}</React.Fragment>
+                        )}
                     </div>
                 )}
             </div>
