@@ -61,9 +61,6 @@
 }
 
 .Bestiary__list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
     overflow-y: auto;
     height: 100%;
     flex: 1;

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import ReactList from 'react-list';
 import Panel from '../Panel/Panel';
 import Input from '../Input/Input';
 import ListCard from '../ListCard/ListCard';
@@ -111,9 +112,27 @@ export default function Spells() {
 
     const handleScroll = (e) => {
         const { scrollTop, scrollHeight, clientHeight } = e.target;
-        if (scrollHeight - scrollTop <= clientHeight + 300 && nextPage && !loadingMore) {
+        const isNearBottom = scrollHeight - scrollTop - clientHeight < 300;
+        if (isNearBottom && nextPage && !loadingMore) {
             fetchSpells(search, nextPage);
         }
+    };
+
+    const renderSpellItem = (index, key) => {
+        const spell = displayedSpells[index];
+        return (
+            <div key={key} style={{ paddingBottom: '8px' }}>
+                <ListCard
+                    active={(selectedSpell?.slug || selectedSpell?.index) === (spell.slug || spell.index)}
+                    onClick={() => setSelectedSpell(spell)}
+                >
+                    <div className="ListCard__title">{spell.name}</div>
+                    <div className="ListCard__meta">
+                        {spell.level_int === 0 ? 'Замовляння' : `${spell.level_int}-й рівень`} • {spell.school}
+                    </div>
+                </ListCard>
+            </div>
+        );
     };
 
     useEffect(() => {
@@ -169,18 +188,11 @@ export default function Spells() {
                 <div className="Spells__content">
                     <div className="Spells__list" onScroll={handleScroll}>
                         {loading && <p className="muted" style={{ textAlign: 'center' }}>Завантаження списку...</p>}
-                        {displayedSpells.map(spell => (
-                            <ListCard
-                                key={spell.slug || spell.index}
-                                active={(selectedSpell?.slug || selectedSpell?.index) === (spell.slug || spell.index)}
-                                onClick={() => setSelectedSpell(spell)}
-                            >
-                                <div className="ListCard__title">{spell.name}</div>
-                                <div className="ListCard__meta">
-                                    {spell.level_int === 0 ? 'Замовляння' : `${spell.level_int}-й рівень`} • {spell.school}
-                                </div>
-                            </ListCard>
-                        ))}
+                        <ReactList
+                            itemRenderer={renderSpellItem}
+                            length={displayedSpells.length}
+                            type='uniform'
+                        />
                         {loadingMore && <p className="muted" style={{ padding: '10px', textAlign: 'center' }}>Завантаження ще...</p>}
                     </div>
                     <div className="Spells__detail">

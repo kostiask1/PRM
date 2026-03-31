@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import ReactList from 'react-list';
 import Panel from '../Panel/Panel';
 import Input from '../Input/Input';
 import Button from '../Button/Button';
@@ -154,9 +155,35 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 
     const handleScroll = (e) => {
         const { scrollTop, scrollHeight, clientHeight } = e.target;
-        if (scrollHeight - scrollTop <= clientHeight + 300 && nextPage && !loading) {
+        const isNearBottom = scrollHeight - scrollTop - clientHeight < 300;
+        if (isNearBottom && nextPage && !loading) {
             fetchMonsters(search, nextPage);
         }
+    };
+
+    const renderMonsterItem = (index, key) => {
+        const monster = displayedMonsters[index];
+        return (
+            <div key={key} style={{ paddingBottom: '8px' }}>
+                <ListCard
+                    active={selectedMonster?.slug === monster.slug}
+                    onClick={() => setSelectedMonster(monster)}
+                    onDoubleClick={() => onAddMonster && onAddMonster(monster)}
+                    actions={onAddMonster && (
+                        <Button
+                            variant="ghost"
+                            size="small"
+                            icon="plus"
+                            onClick={(e) => { e.stopPropagation(); onAddMonster(monster); }}
+                            title="Додати до зіткнення"
+                        />
+                    )}
+                >
+                    <div className="ListCard__title">{monster.name}</div>
+                    <div className="ListCard__meta">CR {monster.challenge_rating} • {monster.size} {monster.type}</div>
+                </ListCard>
+            </div>
+        );
     };
 
     const renderBestiaryInner = () => (
@@ -178,26 +205,11 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 
                 <div className={`Bestiary__content ${isEmbedded ? 'Bestiary__content--stacked' : ''}`}>
                     <div className="Bestiary__list" onScroll={handleScroll}>
-                        {displayedMonsters.map(monster => (
-                            <ListCard
-                                key={monster.slug}
-                                active={selectedMonster?.slug === monster.slug}
-                                onClick={() => setSelectedMonster(monster)}
-                                onDoubleClick={() => onAddMonster && onAddMonster(monster)}
-                                actions={onAddMonster && (
-                                    <Button
-                                        variant="ghost"
-                                        size="small"
-                                        icon="plus"
-                                        onClick={(e) => { e.stopPropagation(); onAddMonster(monster); }}
-                                        title="Додати до зіткнення"
-                                    />
-                                )}
-                            >
-                                <div className="ListCard__title">{monster.name}</div>
-                                <div className="ListCard__meta">CR {monster.challenge_rating} • {monster.size} {monster.type}</div>
-                            </ListCard>
-                        ))}
+                        <ReactList
+                            itemRenderer={renderMonsterItem}
+                            length={displayedMonsters.length}
+                            type='uniform'
+                        />
                         {loading && <p className="muted" style={{ padding: '10px', textAlign: 'center' }}>Завантаження...</p>}
                     </div>
 
