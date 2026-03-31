@@ -21,7 +21,7 @@ export default function Spells() {
     const [nextPage, setNextPage] = useState(null);
 
     const fetchSpells = useCallback(async (query = '', urlOverride = null) => {
-        const url = urlOverride || `https://api.open5e.com/spells/?search=${query}&limit=50`;
+        const url = urlOverride || `https://api.open5e.com/spells/?search=${query}&limit=150`;
 
         const applyData = (data) => {
             const results = data.results || [];
@@ -64,11 +64,33 @@ export default function Spells() {
         const handleSelect = (e) => {
             const identifier = e.detail;
             const found = allSpells.find(s => s.slug === identifier || s.index === identifier);
-            if (found) setSelectedSpell(found);
+            setSelectedSpell(found || { slug: identifier });
         };
+
+        // Перевірка URL при ініціалізації або завантаженні списку
+        const params = new URLSearchParams(window.location.search);
+        const urlSpellId = params.get('spell');
+        if (urlSpellId && !selectedSpell) {
+            const found = allSpells.find(s => (s.slug || s.index) === urlSpellId);
+            // Якщо знайдено в поточному списку - беремо об'єкт, якщо ні - створюємо "заглушку" для fetchDetail
+            setSelectedSpell(found || { slug: urlSpellId });
+        }
+
         window.addEventListener('prm:select-spell', handleSelect);
         return () => window.removeEventListener('prm:select-spell', handleSelect);
     }, [allSpells]);
+
+    // Запис вибраного заклинання в URL
+    useEffect(() => {
+        const spellId = selectedSpell?.slug || selectedSpell?.index;
+        if (spellId) {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('spell') !== spellId) {
+                params.set('spell', spellId);
+                window.history.pushState({}, '', `?${params.toString()}`);
+            }
+        }
+    }, [selectedSpell]);
 
     const displayedSpells = useMemo(() => {
         let result = [...allSpells];
@@ -89,7 +111,7 @@ export default function Spells() {
 
     const handleScroll = (e) => {
         const { scrollTop, scrollHeight, clientHeight } = e.target;
-        if (scrollHeight - scrollTop <= clientHeight + 100 && nextPage && !loadingMore) {
+        if (scrollHeight - scrollTop <= clientHeight + 300 && nextPage && !loadingMore) {
             fetchSpells(search, nextPage);
         }
     };

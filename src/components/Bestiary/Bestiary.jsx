@@ -9,6 +9,7 @@ import MonsterStatBlock from '../MonsterStatBlock/MonsterStatBlock';
 import './Bestiary.css';
 
 const SEARCH_CACHE = new Map();
+const MONSTER_CACHE = new Map();
 
 export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
     const [monsters, setMonsters] = useState([]);
@@ -20,7 +21,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
     const [sortOrder, setSortOrder] = useState('none'); // 'none', 'desc', 'asc'
 
     const fetchMonsters = useCallback(async (query = '', urlOverride = null) => {
-        const url = urlOverride || `https://api.open5e.com/monsters/?search=${query}&limit=20`;
+        const url = urlOverride || `https://api.open5e.com/monsters/?search=${query}&limit=100`;
 
         const applyData = (data) => {
             const results = data.results || [];
@@ -61,13 +62,59 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
     }, [search, fetchMonsters]);
 
     useEffect(() => {
-        if (monsters.length > 0) {
-            const isStillInList = selectedMonster && monsters.some(m => m.slug === selectedMonster.slug);
-            if (!selectedMonster || !isStillInList) {
-                setSelectedMonster(monsters[0]);
+        const initSelection = async () => {
+            const params = new URLSearchParams(window.location.search);
+            const urlMonsterSlug = params.get('monster');
+
+            if (!urlMonsterSlug) {
+                if (monsters.length > 0 && !selectedMonster) {
+                    setSelectedMonster(monsters[0]);
+                }
+                return;
+            }
+
+            // Якщо в URL той самий монстр, що вже вибраний - нічого не робимо
+            if (selectedMonster?.slug === urlMonsterSlug) return;
+
+            // Шукаємо в поточному завантаженому списку
+            const foundInList = monsters.find(m => m.slug === urlMonsterSlug);
+            if (foundInList) {
+                setSelectedMonster(foundInList);
+            } else {
+                // Якщо монстра немає в списку, перевіряємо кеш або завантажуємо окремо
+                if (MONSTER_CACHE.has(urlMonsterSlug)) {
+                    setSelectedMonster(MONSTER_CACHE.get(urlMonsterSlug));
+                } else {
+                    try {
+                        const response = await fetch(`https://api.open5e.com/monsters/${urlMonsterSlug}/`);
+                        const data = await response.json();
+                        if (data.slug) {
+                            MONSTER_CACHE.set(urlMonsterSlug, data);
+                            setSelectedMonster(data);
+                        }
+                    } catch (error) {
+                        console.error("Failed to fetch monster detail for URL", error);
+                    }
+                }
+            }
+        };
+
+        initSelection();
+        
+        // Слухаємо кнопки браузера Назад/Вперед
+        window.addEventListener('popstate', initSelection);
+        return () => window.removeEventListener('popstate', initSelection);
+    }, [monsters]); // Видалили selectedMonster?.slug із залежностей
+
+    useEffect(() => {
+        if (selectedMonster?.slug) {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('monster') !== selectedMonster.slug) {
+                params.set('monster', selectedMonster.slug);
+                window.history.pushState({}, '', `?${params.toString()}`);
             }
         }
-    }, [monsters, selectedMonster]);
+    }, [selectedMonster]);
 
     const handleCopyName = (name) => {
         navigator.clipboard.writeText(name);
@@ -107,7 +154,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 
     const handleScroll = (e) => {
         const { scrollTop, scrollHeight, clientHeight } = e.target;
-        if (scrollHeight - scrollTop <= clientHeight + 100 && nextPage && !loading) {
+        if (scrollHeight - scrollTop <= clientHeight + 300 && nextPage && !loading) {
             fetchMonsters(search, nextPage);
         }
     };
