@@ -2,17 +2,31 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Button from '../Button/Button';
 import Input from '../Input/Input';
 import Icon from '../Icon';
+
 import './DiceCalculator.css';
 
 export default function DiceCalculator() {
     const [isOpen, setIsOpen] = useState(false);
     const [history, setHistory] = useState([]);
-    const [formula, setFormula] = useState([]); // [{type: 'die', value: 20}]
-    const [modifier, setModifier] = useState(0);
     const [lastResult, setLastResult] = useState(null);
     const [manualInput, setManualInput] = useState('');
 
     const diceTypes = [4, 6, 8, 10, 12, 20, 100];
+
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            // Перевіряємо Ctrl+D (або Cmd+D для Mac)
+            if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'd' || e.key.toLowerCase() === 'в')) {
+                e.preventDefault(); // Запобігаємо відкриттю вікна закладок браузера
+                setIsOpen(prev => !prev);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, []);
 
     const parseAndRoll = useCallback((str) => {
         if (!str) return;
@@ -139,7 +153,6 @@ export default function DiceCalculator() {
             if (lastResult) { // Якщо був попередній кидок, очищуємо все для нової формули
                 setLastResult(null);
                 setManualInput('');
-                setModifier(0);
             }
             setManualInput(prev => {
                 const currentInput = prev.trim();
@@ -162,7 +175,6 @@ export default function DiceCalculator() {
 
     const clearFormula = () => {
         setManualInput('');
-        setModifier(0);
         setLastResult(null);
     };
 
