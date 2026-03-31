@@ -218,7 +218,7 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
                 <Button
                     variant="create"
                     disabled={loading}
-                    onClick={generate}
+                    onClick={() => generate()}
                     style={{ width: '100%' }}
                 >
                     {loading ? 'Магія працює...' : 'Згенерувати'}

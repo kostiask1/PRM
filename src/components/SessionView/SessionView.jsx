@@ -497,7 +497,7 @@ export default function SessionView({ campaign, sessionId, onBack, onNavigate, o
                                         key={field.key}
                                         title={field.title}
                                         type={field.type}
-                                        value={scene.texts[field.key] || ''}
+                                        value={scene.texts?.[field.key] || ''}
                                         onChange={(e) => updateScene(scene.id, field.key, e.target.value)}
                                         placeholder={field.placeholder}
                                     />
