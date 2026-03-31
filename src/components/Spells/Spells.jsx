@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Panel from '../Panel/Panel';
 import Input from '../Input/Input';
 import ListCard from '../ListCard/ListCard';
@@ -7,31 +7,58 @@ import Icon from '../Icon';
 import './Spells.css';
 
 const SPELL_CACHE = new Map();
+const SEARCH_CACHE = new Map();
 
 export default function Spells() {
     const [allSpells, setAllSpells] = useState([]);
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [selectedSpell, setSelectedSpell] = useState(null);
     const [spellDetail, setSpellDetail] = useState(null);
     const [detailLoading, setDetailLoading] = useState(false);
     const [sortOrder, setSortOrder] = useState('none'); // 'none', 'asc', 'desc'
+    const [nextPage, setNextPage] = useState(null);
+
+    const fetchSpells = useCallback(async (query = '', urlOverride = null) => {
+        const url = urlOverride || `https://api.open5e.com/spells/?search=${query}&limit=50`;
+
+        const applyData = (data) => {
+            const results = data.results || [];
+            setAllSpells(prev => {
+                const combined = urlOverride ? [...prev, ...results] : results;
+                // Гарантуємо унікальність за slug
+                const uniqueMap = new Map(combined.map(s => [s.slug, s]));
+                return Array.from(uniqueMap.values());
+            });
+            setNextPage(data.next);
+        };
+
+        if (SEARCH_CACHE.has(url)) {
+            applyData(SEARCH_CACHE.get(url));
+            return;
+        }
+
+        urlOverride ? setLoadingMore(true) : setLoading(true);
+        try {
+            const res = await fetch(url);
+            const data = await res.json();
+            SEARCH_CACHE.set(url, data);
+            applyData(data);
+        } catch (err) {
+            console.error("Failed to fetch spells", err);
+        } finally {
+            urlOverride ? setLoadingMore(false) : setLoading(false);
+        }
+    }, []);
 
     useEffect(() => {
-        const fetchAllSpells = async () => {
-            setLoading(true);
-            try {
-                const res = await fetch('https://api.open5e.com/spells/?limit=500');
-                const data = await res.json();
-                setAllSpells(data.results || []);
-            } catch (err) {
-                console.error("Failed to fetch spells", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchAllSpells();
-    }, []);
+        setNextPage(null);
+        const timer = setTimeout(() => {
+            fetchSpells(search);
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [search, fetchSpells]);
 
     useEffect(() => {
         const handleSelect = (e) => {
@@ -45,10 +72,6 @@ export default function Spells() {
 
     const displayedSpells = useMemo(() => {
         let result = [...allSpells];
-        if (search) {
-            const lowSearch = search.toLowerCase();
-            result = result.filter(s => s.name.toLowerCase().includes(lowSearch));
-        }
         if (sortOrder !== 'none') {
             result.sort((a, b) => {
                 const lvlA = a.level_int ?? 0;
@@ -58,10 +81,17 @@ export default function Spells() {
             });
         }
         return result;
-    }, [allSpells, search, sortOrder]);
+    }, [allSpells, sortOrder]);
 
     const toggleSort = () => {
         setSortOrder(prev => prev === 'none' ? 'asc' : prev === 'asc' ? 'desc' : 'none');
+    };
+
+    const handleScroll = (e) => {
+        const { scrollTop, scrollHeight, clientHeight } = e.target;
+        if (scrollHeight - scrollTop <= clientHeight + 100 && nextPage && !loadingMore) {
+            fetchSpells(search, nextPage);
+        }
     };
 
     useEffect(() => {
@@ -115,7 +145,7 @@ export default function Spells() {
                     </button>
                 </div>
                 <div className="Spells__content">
-                    <div className="Spells__list">
+                    <div className="Spells__list" onScroll={handleScroll}>
                         {loading && <p className="muted" style={{ textAlign: 'center' }}>Завантаження списку...</p>}
                         {displayedSpells.map(spell => (
                             <ListCard
@@ -129,6 +159,7 @@ export default function Spells() {
                                 </div>
                             </ListCard>
                         ))}
+                        {loadingMore && <p className="muted" style={{ padding: '10px', textAlign: 'center' }}>Завантаження ще...</p>}
                     </div>
                     <div className="Spells__detail">
                         {detailLoading ? (
