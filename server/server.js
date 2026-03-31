@@ -571,12 +571,6 @@ app.post('/api/ai/generate', async (req, res, next) => {
             } else {
               data.scenes = [...(session.data?.scenes || []), ...generatedContent.scenes]
             }
-          } else if (type === 'npc_ideas' && generatedContent.npcs) {
-            if (generateWithReplace) {
-              data.npcs = generatedContent.npcs;
-            } else {
-              data.npcs = [...(session.data?.npcs || []), ...generatedContent.npcs]
-            }
           } else {
             Object.assign(data, generatedContent);
           }

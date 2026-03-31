@@ -11,7 +11,6 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
     const [error, setError] = useState('');
     const [useCampaignContext, setUseCampaignContext] = useState(true);
     const [generateWithReplace, setGenerateWithReplace] = useState(true);
-    const [activeType, setActiveType] = useState('scene_ideas');
     const [userInstructions, setUserInstructions] = useState('');
     const [notification, setNotification] = useState(null);
     const [showSceneSelector, setShowSceneSelector] = useState(false);
@@ -42,7 +41,7 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
                 promptData.notes = campaignContext.notes;
             }
 
-            const typeToSend = overrideType || (isCampaign ? 'campaign_plot' : activeType);
+            const typeToSend = overrideType || (isCampaign ? 'campaign_plot' : 'scene_ideas');
 
             const response = await fetch('/api/ai/generate', {
                 method: 'POST',
@@ -95,22 +94,11 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
         setGeneratedPrompt(null);
     }, [generatedPrompt, setNotification]);
 
-
-    const actions = [
-        { id: 'scene_ideas', label: 'Ідеї сцен', icon: 'map' },
-        { id: 'npc_ideas', label: 'Генерація NPC', icon: 'users' },
-        { id: 'plot_twists', label: 'Сюжетні повороти', icon: 'zap' },
-    ];
-
     const getPlaceholder = () => {
         if (isCampaign) {
             return "Опишіть зміни або нові гілки сюжету (наприклад: 'додай політичні інтриги' або 'зроби фінал більш епічним')...";
-        }
-        switch (activeType) {
-            case 'scene_ideas': return "Опишіть стиль або умови (наприклад: 'занедбане підземне місто', 'атмосфера детективу')...";
-            case 'npc_ideas': return "Які риси мають бути? (наприклад: 'корумпований стражник', 'таємничий мандрівник з маскою')...";
-            case 'plot_twists': return "Задайте вектор (наприклад: 'зрада союзника', 'несподівана допомога від ворога')...";
-            default: return "Додайте деталі для ШІ...";
+        } else {
+            return "Опишіть стиль або умови (наприклад: 'занедбане підземне місто', 'атмосфера детективу')...";
         }
     };
 
@@ -150,18 +138,6 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
                     >
                         Промпт для фото
                     </Button>
-                    <span className="muted" style={{ margin: '0 5px' }}>|</span>
-                    {actions.map(action => (
-                        <Button
-                            key={action.id}
-                            variant={activeType === action.id ? 'primary' : 'ghost'}
-                            size="small"
-                            onClick={() => setActiveType(action.id)}
-                            disabled={loading}
-                        >
-                            {action.label}
-                        </Button>
-                    ))}
                 </div>
             )}
 
