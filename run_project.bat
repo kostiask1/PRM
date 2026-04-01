@@ -3,10 +3,10 @@ cd /d %~dp0
 
 REM Перевірка наявності папки node_modules
 IF NOT EXIST node_modules (
-    echo Папку node_modules не знайдено. Запускаємо npm install...
+    echo Installing node modules...
     call npm i
     IF %ERRORLEVEL% NEQ 0 (
-        echo npm install завершився з помилкою. Вихід.
+        echo npm install failed. Exiting.
         pause
         exit /b 1
     )
