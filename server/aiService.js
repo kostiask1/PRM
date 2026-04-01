@@ -53,7 +53,7 @@ const systemInstructions = {
                     `,
 }
 
-async function generateContent(type, sessionName, sessionData, userInstructions, generateWithReplace) {
+async function generateContent(type, sessionName, sessionData, userInstructions, generateWithReplace, sceneId) {
     let model;
     let userPrompt = "";
 
@@ -69,7 +69,7 @@ async function generateContent(type, sessionName, sessionData, userInstructions,
         name: sessionName,
         description: sessionData.description || '',
         notes: sessionData.notes?.map(n => n.text) || [],
-        scenes: sessionData.scenes?.map(s => s.texts) || [],
+        scenes: sceneId ? sessionData.scenes?.find(s => s.id === sceneId)?.texts : sessionData.scenes?.map(s => s.texts) || [],
         encounters: sessionData.encounters?.map(e => ({
             name: e.name,
             participants: e.monsters?.map(p => p.name) || [],

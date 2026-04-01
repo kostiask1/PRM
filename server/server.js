@@ -525,12 +525,12 @@ app.delete('/api/campaigns/:slug/sessions/:fileName', async (req, res, next) => 
 
 app.post('/api/ai/generate', async (req, res, next) => {
   try {
-    const { type, sessionName, sessionData, slug, fileName, userInstructions, generateWithReplace } = req.body;
+    const { type, sessionName, sessionData, slug, fileName, userInstructions, generateWithReplace, sceneId } = req.body;
     if (!process.env.GEMINI_API_KEY) {
       return res.status(500).json({ error: 'GEMINI_API_KEY не налаштовано на сервері.' });
     }
 
-    const generatedContent = await aiService.generateContent(type, sessionName, sessionData, userInstructions, generateWithReplace);
+    const generatedContent = await aiService.generateContent(type, sessionName, sessionData, userInstructions, generateWithReplace, sceneId);
 
     if (generatedContent.error) {
       return res.status(500).json({ error: generatedContent.error, raw_response: generatedContent.raw_response });
