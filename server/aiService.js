@@ -69,16 +69,20 @@ async function generateContent(type, sessionName, sessionData, userInstructions,
         name: sessionName,
         description: sessionData.description || '',
         notes: sessionData.notes?.map(n => n.text) || [],
-        scenes: sceneId ? sessionData.scenes?.find(s => s.id === sceneId)?.texts : sessionData.scenes?.map(s => s.texts) || [],
+        scenes: sessionData.scenes || [],
         encounters: sessionData.encounters?.map(e => ({
+            id: e.id,
             name: e.name,
             participants: e.monsters?.map(p => p.name) || [],
         })) || []
     });
 
-    userPrompt = dataSummary;
+    
+    if (type === "image_prompt") {
+        userPrompt = dataSummary;
 
-    if (type !== "image_prompt") {
+        userPrompt += `\n\nНадай головний пріорітет до scene.id ${sceneId}. Промпт повинен стосуватись саме її, проте інші дані можуть краще її доповнити (інформація чи опис NPC і персонажів, локація)`;
+    } else {
         switch (type) {
             case 'campaign_plot':
                 userPrompt = `На основі назви кампанії "${sessionName}" та поточного сюжету: <${sessionData.description || 'відсутній'}>, допоможи розвинути основну лінію та структурувати замітки. Враховуй існуючі замітки: <${JSON.stringify(sessionData.notes?.map(n => n.text) || [])}>. Твоє завдання - оновити опис сюжету (поле description) та надати список цілісних логічних заміток (поле notes) у вигляді масиву рядків. У кожній замітці перший рядок — це короткий заголовок, а далі — розгорнутий запис. Не генеруй жодних сцен.`;
