@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "concurrently \"npm run server\" \"npm run client\"",
-    "server": "node --watch --watch-path=server server/server.js",
+    "server": "node --watch --watch-path=server --watch-path=.env server/server.js",
     "client": "vite",
     "lint": "eslint ."
   },
