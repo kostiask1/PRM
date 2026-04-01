@@ -36,6 +36,7 @@ export default function App() {
 
   const initialRoute = parseUrl();
   const [campaigns, setCampaigns] = useState([]);
+  const [isCTRLPressed, setCTRLPressed] = useState(false);
   const [activeCampaignSlug, setActiveCampaignSlug] = useState(initialRoute.campaign);
   const [activeSessionFileName, setActiveSessionFileName] = useState(initialRoute.session);
   const [activeEncounterId, setActiveEncounterId] = useState(initialRoute.encounter);
@@ -79,6 +80,20 @@ export default function App() {
   };
 
   useEffect(() => {
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        setCTRLPressed(true);
+      }
+    });
+
+    document.addEventListener('keyup', (e) => {
+      if (!e.ctrlKey && !e.metaKey) {
+        setCTRLPressed(false);
+      }
+    });
+  }, [])
+
+  useEffect(() => {
     loadCampaigns();
 
     // Слухаємо кнопки Назад/Вперед у браузері
@@ -95,9 +110,6 @@ export default function App() {
 
   // Універсальна функція навігації
   const navigate = (slug, fileName = null, replace = false, encounterId = null) => {
-    setActiveCampaignSlug(slug);
-    setActiveSessionFileName(fileName);
-    setActiveEncounterId(encounterId);
 
     let url = '/';
     if (slug && slug !== 'bestiary' && slug !== 'spells') {
@@ -114,8 +126,16 @@ export default function App() {
       url = '/spells';
     }
 
-    if (replace) window.history.replaceState({}, '', url);
-    else window.history.pushState({}, '', url);
+    if (isCTRLPressed) {
+      window.open(url, '_blank')
+    } else {
+      setActiveCampaignSlug(slug);
+      setActiveSessionFileName(fileName);
+      setActiveEncounterId(encounterId);
+
+      if (replace) window.history.replaceState({}, '', url);
+      else window.history.pushState({}, '', url);
+    }
   };
 
   const handleToggleCampaignStatus = async (campaign) => {
