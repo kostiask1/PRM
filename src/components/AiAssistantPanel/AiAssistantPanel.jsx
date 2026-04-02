@@ -23,6 +23,7 @@ export default function AiAssistantPanel({
 	const [showSceneSelector, setShowSceneSelector] = useState(false);
 	const [useSessionsResults, setUseSessionsResults] = useState(true);
 	const [parseAIResponse, setParseAIResponse] = useState(false);
+	const [useContext, setUseContext] = useState(true);
 	const [generatedPrompt, setGeneratedPrompt] = useState(null);
 	const initialRoute = parseUrl();
 
@@ -51,6 +52,7 @@ export default function AiAssistantPanel({
 				sceneId: targetSceneId,
 				parseAIResponse: type === "image" ? false : parseAIResponse,
 				useSessionsResults,
+				useContext,
 			});
 
 			// Одразу оновлюємо стан в батьківському компоненті, бо в БД вже записано
@@ -97,6 +99,32 @@ export default function AiAssistantPanel({
 			</div>
 
 			<div className="AiAssistant__actions">
+				<Button
+					variant={useContext ? "primary" : "ghost"}
+					size="small"
+					icon="database"
+					onClick={() => setUseContext(!useContext)}
+					disabled={loading}
+					title={
+						useContext
+							? "Використовувати контекст кампанії, сесії та сценаріїв"
+							: "Без контексту"
+					}>
+					Контекст
+				</Button>
+				<Button
+					variant={useContext && useSessionsResults ? "primary" : "ghost"}
+					size="small"
+					icon="history"
+					onClick={() => useContext && setUseSessionsResults(!useSessionsResults)}
+					disabled={loading}
+					title={
+						useSessionsResults
+							? 'Використовувати дані з "Результат сесії" попередніх сесій'
+							: "Контекст лише кампанії і поточної сесії"
+					}>
+					Контекст сесій
+				</Button>
 				{!isCampaign && (
 					<Button
 						variant="ghost"
@@ -120,19 +148,6 @@ export default function AiAssistantPanel({
 							: "Показувати відповідь текстом у модальному вікні"
 					}>
 					Парсинг відповіді
-				</Button>
-				<Button
-					variant={useSessionsResults ? "primary" : "ghost"}
-					size="small"
-					icon="history"
-					onClick={() => setUseSessionsResults(!useSessionsResults)}
-					disabled={loading}
-					title={
-						useSessionsResults
-							? 'Використовувати дані з "Результат сесії" попередніх сесій'
-							: "Контекст лише кампанії і поточної сесії"
-					}>
-					Контекст сесій
 				</Button>
 			</div>
 

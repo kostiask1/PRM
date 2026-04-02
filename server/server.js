@@ -591,6 +591,7 @@ app.post("/api/ai/generate", async (req, res, next) => {
 			sceneId,
 			parseAIResponse,
 			useSessionsResults,
+			useContext,
 		} = req.body;
 		const campaign = await readCampaign(path.campaign);
 		const session = await readSession(path.campaign, path.session).catch(
@@ -630,6 +631,7 @@ app.post("/api/ai/generate", async (req, res, next) => {
 			sceneId,
 			parseAIResponse,
 			results,
+			useContext,
 		});
 
 		if (generatedContent.error) {

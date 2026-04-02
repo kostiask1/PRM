@@ -79,6 +79,7 @@ async function generateContent({
 	sceneId,
 	parseAIResponse,
 	results,
+	useContext,
 }) {
 	let model;
 	let userPrompt = "";
@@ -99,35 +100,36 @@ async function generateContent({
 		systemInstruction: systemInstructions[useKey],
 	});
 
-	const campaignData = {
-		name: campaign.name,
-		description: campaign.description || "",
-		notes: campaign.notes?.map((n) => n.text) || [],
-		characters: campaign.characters || [],
-		results,
-	};
+	if (useContext) {
+		const campaignData = {
+			name: campaign.name,
+			description: campaign.description || "",
+			notes: campaign.notes?.map((n) => n.text) || [],
+			characters: campaign.characters || [],
+			results,
+		};
 
-	let dataSummary = campaignData;
+		let dataSummary = campaignData;
 
-	if (session) {
-		dataSummary.name = session.name;
-		dataSummary.scenes = session.data.scenes || [];
-		dataSummary.encounters =
-			session.data.encounters?.map((e) => ({
-				id: e.id,
-				name: e.name,
-				participants: e.monsters?.map((p) => p.name) || [],
-			})) || [];
-	}
+		if (session) {
+			dataSummary.name = session.name;
+			dataSummary.scenes = session.data.scenes || [];
+			dataSummary.encounters =
+				session.data.encounters?.map((e) => ({
+					id: e.id,
+					name: e.name,
+					participants: e.monsters?.map((p) => p.name) || [],
+				})) || [];
+		}
 
-	dataSummary = JSON.stringify(dataSummary);
+		dataSummary = JSON.stringify(dataSummary);
 
-	if (useKey === "image") {
-		userPrompt = dataSummary;
+		if (useKey === "image") {
+			userPrompt = dataSummary;
 
-		userPrompt += `\nНадай головний пріорітет до scene.id ${sceneId}. Промпт повинен стосуватись саме її, проте інші дані можуть краще її доповнити (інформація чи опис NPC і персонажів, локація)`;
-	} else if (useKey === "prompt") {
-		userPrompt = `\nКампанія "${campaign.name}" ${campaign.description ? "- " + campaign.description : ""}:
+			userPrompt += `\nНадай головний пріорітет до scene.id ${sceneId}. Промпт повинен стосуватись саме її, проте інші дані можуть краще її доповнити (інформація чи опис NPC і персонажів, локація)`;
+		} else if (useKey === "prompt") {
+			userPrompt = `\nКампанія "${campaign.name}" ${campaign.description ? "- " + campaign.description : ""}:
         Замітки - ${(campaign.notes?.map((n) => n.text) || []).join("\n") || "відсутні"},
         Персонажі - ${
 					campaign.characters
@@ -140,8 +142,8 @@ async function generateContent({
 						.join(", ") || "відсутні"
 				}.`;
 
-		if (session) {
-			userPrompt += `\nПоточна сесія "${session.name}".
+			if (session) {
+				userPrompt += `\nПоточна сесія "${session.name}".
             Сцени: ${
 							session.data?.scenes
 								?.map(
@@ -165,20 +167,21 @@ async function generateContent({
 								)
 								.join(", ") || "відсутні"
 						}`;
-		}
-	} else {
-		if (session) {
-			userPrompt = `На основі цієї сесії "${session.name}" та даних: <${dataSummary}>, запропонуй ідеї для нових (або доповни існуючі, залежно від подальших вказівок) цікавих сцен (соціальних, бойових або дослідницьких).`;
+			}
 		} else {
-			userPrompt = `На основі назви кампанії "${campaign.name}" та поточного сюжету: <${campaign.description || "відсутній"}>, допоможи розвинути основну лінію та структурувати замітки. Враховуй існуючі замітки: notes <${JSON.stringify(campaign.notes?.map((n) => n.text) || [])}>, а також опису персонажів гравців: characters <${JSON.stringify(campaign.characters || [])}>. Твоє завдання - оновити опис сюжету (поле description) та надати список цілісних логічних заміток (поле notes) у вигляді масиву рядків. У кожній замітці перший рядок — це короткий заголовок, а далі — розгорнутий запис. Не генеруй жодних сцен.`;
+			if (session) {
+				userPrompt = `На основі цієї сесії "${session.name}" та даних: <${dataSummary}>, запропонуй ідеї для нових (або доповни існуючі, залежно від подальших вказівок) цікавих сцен (соціальних, бойових або дослідницьких).`;
+			} else {
+				userPrompt = `На основі назви кампанії "${campaign.name}" та поточного сюжету: <${campaign.description || "відсутній"}>, допоможи розвинути основну лінію та структурувати замітки. Враховуй існуючі замітки: notes <${JSON.stringify(campaign.notes?.map((n) => n.text) || [])}>, а також опису персонажів гравців: characters <${JSON.stringify(campaign.characters || [])}>. Твоє завдання - оновити опис сюжету (поле description) та надати список цілісних логічних заміток (поле notes) у вигляді масиву рядків. У кожній замітці перший рядок — це короткий заголовок, а далі — розгорнутий запис. Не генеруй жодних сцен.`;
+			}
 		}
-	}
 
-	if (useKey !== "image" && results && results.length > 0) {
-		userPrompt += `\nТакож врахуй результати усіх сесій кампанії: ${results
-			?.filter((session) => !!session.result)
-			.map((session) => `Сесія "${session.session}" - ${session.result}`)
-			.join("\n")}`;
+		if (useKey !== "image" && results && results.length > 0) {
+			userPrompt += `\nТакож врахуй результати усіх сесій кампанії: ${results
+				?.filter((session) => !!session.result)
+				.map((session) => `Сесія "${session.session}" - ${session.result}`)
+				.join("\n")}`;
+		}
 	}
 
 	if (userInstructions) {

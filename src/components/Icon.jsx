@@ -102,7 +102,7 @@ const icons = {
 			<path d="M12 4v16" strokeDasharray="2 2" strokeOpacity="0.3" />
 		</>
 	),
-	bestiary: (
+	database: (
 		<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
 	),
 	book: (
