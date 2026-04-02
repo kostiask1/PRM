@@ -21,8 +21,8 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
   const [description, setDescription] = useState(campaign.description || '');
   const [notes, setNotes] = useState(campaign.notes || []);
   const [characters, setCharacters] = useState(campaign.characters || []); // NEW: State for characters
-  const [isNotesCollapsed, setIsNotesCollapsed] = useState(false);
-  const [isCharactersCollapsed, setIsCharactersCollapsed] = useState(false); // NEW: State for characters collapse
+  const [isNotesCollapsed, setIsNotesCollapsed] = useState(campaign.isNotesCollapsed || false);
+  const [isCharactersCollapsed, setIsCharactersCollapsed] = useState(campaign.isCharactersCollapsed || false); // NEW: State for characters collapse
   const saveTimeout = useRef(null);
   const isSavingRef = useRef(false);
 
@@ -39,6 +39,8 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
       setDescription(campaign.description || '');
       setNotes(campaign.notes || []);
       setCharacters(campaign.characters || []); // NEW: Reset characters state
+      setIsNotesCollapsed(campaign.isNotesCollapsed || false);
+      setIsCharactersCollapsed(campaign.isCharactersCollapsed || false);
       setUndoStack([]);
       setRedoStack([]);
       lastSlugRef.current = campaign.slug;
@@ -457,13 +459,25 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
 
         <div className="CampaignView__section">
           <div className="section-row">
-            <div className="section-title-group" onClick={() => setIsNotesCollapsed(!isNotesCollapsed)}>
+            <div 
+              className="section-title-group" 
+              onClick={() => {
+                const next = !isNotesCollapsed;
+                setIsNotesCollapsed(next);
+                triggerSave({ isNotesCollapsed: next });
+              }}
+            >
               <Button
                 variant="ghost"
                 size="small"
                 icon="chevron"
                 className={`section-collapse-toggle ${isNotesCollapsed ? 'is-rotated' : ''}`}
-                onClick={(e) => { e.stopPropagation(); setIsNotesCollapsed(!isNotesCollapsed); }}
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  const next = !isNotesCollapsed;
+                  setIsNotesCollapsed(next);
+                  triggerSave({ isNotesCollapsed: next });
+                }}
               />
               <h3>Замітки</h3>
             </div>
@@ -557,13 +571,25 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
         {/* Characters Section */}
         <div className="CampaignView__section">
           <div className="section-row">
-            <div className="section-title-group" onClick={() => setIsCharactersCollapsed(!isCharactersCollapsed)}>
+            <div 
+              className="section-title-group" 
+              onClick={() => {
+                const next = !isCharactersCollapsed;
+                setIsCharactersCollapsed(next);
+                triggerSave({ isCharactersCollapsed: next });
+              }}
+            >
               <Button
                 variant="ghost"
                 size="small"
                 icon="chevron"
                 className={`section-collapse-toggle ${isCharactersCollapsed ? 'is-rotated' : ''}`}
-                onClick={(e) => { e.stopPropagation(); setIsCharactersCollapsed(!isCharactersCollapsed); }}
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  const next = !isCharactersCollapsed;
+                  setIsCharactersCollapsed(next);
+                  triggerSave({ isCharactersCollapsed: next });
+                }}
               />
               <h3>Персонажі</h3>
             </div>
