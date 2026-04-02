@@ -9,7 +9,7 @@ const systemInstructions = {
         Використовувати Markdown-розмітку (наприклад, жирний текст **текст**, марковані списки, розбиття рядку) для структурування тексту всередині значень JSON.
         Завжди відповідай у форматі JSON. Не включай жодного тексту до або після JSON. 
         JSON повинен містити лише згенеровані дані, без додаткових пояснень. 
-        Використовуй структуру { "description": "...", "notes": ["Заголовок\\nДеталі замітки...", ...], "characters": [{name: "...", "description": "..."}, ...] }. Кожна замітка в масиві notes повинна бути цілісним логічним блоком: перший рядок — це короткий заголовок, а наступні рядки — основний зміст. Не генеруй поле "scenes" для кампанії.
+        Використовуй структуру { "description": "...", "notes": ["Заголовок\nДеталі замітки...", ...], "characters": [{name: "...", "description": "..."}, ...] }. Кожна замітка в масиві notes повинна бути цілісним логічним блоком: перший рядок — це короткий заголовок, а наступні рядки — основний зміст. Не генеруй поле "scenes" для кампанії.
         `,
 	scene: `Ти досвідчений майстер підземель (Dungeon Master) для Dungeons & Dragons. 
         Твоя мета - допомагати в плануванні сесій. Відповідай виключно українською мовою. 
@@ -192,8 +192,20 @@ async function generateContent({
 	const response = await result.response;
 	let text = response.text();
 
+	// Допоміжна функція для рекурсивного виправлення екранованих символів переносу (\\n -> \n)
+	const fixNewLines = (val) => {
+		if (typeof val === "string") return val.replace(/\\n/g, "\n");
+		if (Array.isArray(val)) return val.map(fixNewLines);
+		if (val && typeof val === "object") {
+			const next = {};
+			for (const key in val) next[key] = fixNewLines(val[key]);
+			return next;
+		}
+		return val;
+	};
+
 	if (!parseAIResponse) {
-		return text;
+		return text.replace(/\\n/g, "\n");
 	}
 
 	try {
@@ -203,17 +215,13 @@ async function generateContent({
 			.replace(/```/g, "")
 			.trim();
 
-		return JSON.parse(cleanJson);
+		return fixNewLines(JSON.parse(cleanJson));
 	} catch (e) {
-		if (!parseAIResponse && e.message.includes("JSON.parse")) {
-			return text;
-		}
-
 		console.error("Failed to parse AI response as JSON:", text, e);
 		// Якщо парсинг не вдався, повертаємо структуровану помилку
 		return {
 			error: "AI повернув некоректний JSON. Спробуйте ще раз.",
-			raw_response: text,
+			raw_response: text.replace(/\\n/g, "\n"),
 		};
 	}
 }

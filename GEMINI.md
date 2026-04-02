@@ -51,7 +51,7 @@
   "notes": [
     { 
         "id": "Date timestamp",
-        "text": "Заголовок\\nЗміст замітки",
+        "text": "Заголовок\nЗміст замітки",
         "collapsed": false 
     }
   ],
