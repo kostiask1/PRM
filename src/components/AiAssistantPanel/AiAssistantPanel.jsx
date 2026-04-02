@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { api } from '../../api';
 import Button from '../Button/Button';
 import Icon from '../Icon';
 import Input from '../Input/Input';
@@ -42,32 +43,16 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
 
             const typeToSend = overrideType || (isCampaign ? 'campaign_plot' : 'scene_ideas');
 
-            const response = await fetch('/api/ai/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    type: typeToSend,
-                    sessionName,
-                    sessionData: promptData,
-                    slug: campaignSlug,
-                    fileName: sessionId,
-                    generateWithReplace: targetSceneId ? false : generateWithReplace,
-                    userInstructions,
-                    sceneId: targetSceneId
-                })
+            const data = await api.generateAi({
+                type: typeToSend,
+                sessionName,
+                sessionData: promptData,
+                slug: campaignSlug,
+                fileName: sessionId,
+                generateWithReplace: targetSceneId ? false : generateWithReplace,
+                userInstructions,
+                sceneId: targetSceneId
             });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-
-                if (errorData.error?.includes('GEMINI_API_KEY')) {
-                    showApiKeyInstructions();
-                    return;
-                }
-
-                throw new Error(errorData.error || 'Помилка сервера');
-            }
-            const data = await response.json(); // Це буде JSON-об'єкт від AI
 
             // Одразу оновлюємо стан в батьківському компоненті, бо в БД вже записано
             if (data.prompt) {
@@ -78,6 +63,10 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
                 setNotification('Магія ШІ успішно застосована!');
             }
         } catch (err) {
+            if (err.message?.includes('GEMINI_API_KEY')) {
+                showApiKeyInstructions();
+                return;
+            }
             setError(err.message || 'Не вдалося зв’язатися з AI.');
             modal.alert("Помилка ШІ", err.message, err.status);
         } finally {

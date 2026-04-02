@@ -70,4 +70,10 @@ export const api = {
     method: 'POST',
     body: JSON.stringify({ orders }),
   }),
+
+  // AI methods
+  generateAi: (payload) => api.request('/ai/generate', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
 };
