@@ -5,7 +5,7 @@ import Input from '../Input/Input';
 import Button from '../Button/Button';
 import Icon from '../Icon';
 import ListCard from '../ListCard/ListCard';
-import Notification from '../Notification/Notification';
+import ClickToCopy from '../ClickToCopy/ClickToCopy';
 import MonsterStatBlock from '../MonsterStatBlock/MonsterStatBlock';
 import './Bestiary.css';
 
@@ -17,7 +17,6 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(false);
     const [selectedMonster, setSelectedMonster] = useState(null);
-    const [notification, setNotification] = useState(null);
     const [nextPage, setNextPage] = useState(null);
     const [sortOrder, setSortOrder] = useState('none'); // 'none', 'desc', 'asc'
 
@@ -117,11 +116,6 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
             }
         }
     }, [selectedMonster]);
-
-    const handleCopyName = (name) => {
-        navigator.clipboard.writeText(name);
-        setNotification(`Ім'я "${name}" скопійовано!`);
-    };
 
     const toggleSort = () => {
         setSortOrder(prev => {
@@ -227,15 +221,14 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
                             )}
                             <MonsterStatBlock
                                 monster={selectedMonster}
-                                onNameClick={onAddMonster ? (m) => onAddMonster(m) : (m) => handleCopyName(m.name)}
-                                nameTitle={onAddMonster ? "Додати до зіткнення" : "Копіювати ім'я"}
+                                onNameClick={onAddMonster ? (m) => onAddMonster(m) : undefined}
+                                nameTitle={onAddMonster && "Додати до зіткнення"}
                                 modal={modal}
                             />
                         </div>
                     )}
                 </div>
             </div>
-            {notification && <Notification message={notification} onClose={() => setNotification(null)} />}
         </div>
     );
 
@@ -243,7 +236,6 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
         return (
             <>
                 {renderBestiaryInner()}
-                {notification && <Notification message={notification} onClose={() => setNotification(null)} />}
             </>
         );
     }
@@ -259,7 +251,6 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
             <div className="Panel__body">
                 {renderBestiaryInner()}
             </div>
-            {notification && <Notification message={notification} onClose={() => setNotification(null)} />}
         </Panel>
     );
 }

@@ -6,6 +6,7 @@ import Icon from '../Icon';
 import Input from '../Input/Input';
 import Modal from '../Modal/Modal';
 import Notification from '../Notification/Notification';
+import ClickToCopy from '../ClickToCopy/ClickToCopy';
 import './AiAssistantPanel.css';
 import { parseUrl } from '../../utils/navigation';
 import { isJsonString } from '../../utils/json';
@@ -70,14 +71,6 @@ export default function AiAssistantPanel({ sessionData, onInsertResult, modal })
             setLoading(false);
         }
     };
-
-    const handleCopyGeneratedPrompt = useCallback(() => {
-        if (generatedPrompt) {
-            navigator.clipboard.writeText(generatedPrompt);
-            setNotification('Промпт скопійовано у буфер обміну!');
-        }
-        setGeneratedPrompt(null);
-    }, [generatedPrompt, setNotification]);
 
     const getPlaceholder = () => {
         if (!parseAIResponse) {
@@ -160,35 +153,27 @@ export default function AiAssistantPanel({ sessionData, onInsertResult, modal })
             {generatedPrompt && (
                 <Modal
                     title="Відповідь"
-                    confirmLabel="Копіювати"
+                    confirmLabel="Закрити"
                     onCancel={() => setGeneratedPrompt(null)}
-                    onConfirm={handleCopyGeneratedPrompt}
+                    onConfirm={() => setGeneratedPrompt(null)}
                 >
-                    <div className="AiAssistant__prompt-result">
+                    <ClickToCopy 
+                        text={generatedPrompt} 
+                        message="Відповідь ШІ скопійовано у буфер обміну!"
+                        className="AiAssistant__prompt-result"
+                    >
                         {isResultJSONString ? (
                             <pre>
-                                <ReactMarkdown
-                                    className="AiAssistant__prompt-textarea-result"
-                                    onClick={(e) => e.target.select()}
-                                >
+                                <ReactMarkdown className="AiAssistant__prompt-textarea-result">
                                     {generatedPrompt}
                                 </ReactMarkdown>
                             </pre>
                         ) : (
-                            <ReactMarkdown
-                                className="AiAssistant__prompt-textarea-result"
-                                onClick={(e) => e.target.select()}
-                            >
+                            <ReactMarkdown className="AiAssistant__prompt-textarea-result">
                                 {generatedPrompt}
                             </ReactMarkdown>
-                            // <textarea
-                            //     className="AiAssistant__prompt-textarea-result"
-                            //     readOnly
-                            //     value={generatedPrompt}
-                            //     onClick={(e) => e.target.select()}
-                            // />
                         )}
-                    </div>
+                    </ClickToCopy>
                 </Modal>
             )}
 

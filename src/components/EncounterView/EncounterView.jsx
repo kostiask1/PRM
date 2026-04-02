@@ -145,11 +145,6 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
         saveEncounterState(updated);
     };
 
-    const handleCopyName = (name) => {
-        navigator.clipboard.writeText(name);
-        setNotification(`Ім'я "${name}" скопійовано!`);
-    };
-
     const updateMonsterHp = (instanceId, newHp) => {
         const updatedMonsters = encounter.monsters.map(m =>
             m.instanceId === instanceId ? { ...m, currentHp: Math.max(0, parseInt(newHp) || 0) } : m
@@ -321,10 +316,8 @@ export default function EncounterView({ campaign, sessionId, encounterId, onBack
 
                     <div className="EncounterView__detailView">
                         {selectedInstance ? (
-                            <MonsterStatBlock 
-                                monster={selectedInstance} 
-                                onNameClick={(m) => handleCopyName(m.name)}
-                                nameTitle="Копіювати ім'я"
+                            <MonsterStatBlock
+                                monster={selectedInstance}
                                 modal={modal}
                             />
                         ) : (

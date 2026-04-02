@@ -1,0 +1,8 @@
+.ClickToCopy {
+    cursor: pointer;
+    display: contents; /* Щоб не ламати верстку обгорткою */
+}
+
+.ClickToCopy:hover {
+    color: var(--accent);
+}

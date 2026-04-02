@@ -4,6 +4,7 @@ import Icon from '../Icon';
 import SpellCard from '../SpellCard/SpellCard';
 import { getAbilityModifier, formatModifier, getDamageBonus, parseRollsAndSpells } from '../../utils/diceParser.jsx';
 import './MonsterStatBlock.css';
+import ClickToCopy from '../ClickToCopy/ClickToCopy.jsx';
 
 const SPELL_CACHE = new Map();
 
@@ -163,9 +164,23 @@ export default function MonsterStatBlock({ monster, onNameClick, nameTitle, moda
 
     return (
         <div className="MonsterStatBlock">
-            <h3 className="MonsterStatBlock__name" onClick={() => onNameClick?.(monster)} title={nameTitle}>
-                {monster.name}
-            </h3>
+            {onNameClick ? (
+                <h3
+                    className="MonsterStatBlock__name"
+                    onClick={() => onNameClick?.(monster)}
+                    title={nameTitle}
+                >
+                    {monster.name}
+                </h3>
+            ) : (
+                <ClickToCopy
+                    className="MonsterStatBlock__name"
+                    text={monster.name}
+                    message={`Ім'я скопійовано!`}
+                >
+                    {monster.name}
+                </ClickToCopy>
+            )}
             <div className="MonsterStatBlock__header">
                 <div className="MonsterStatBlock__stats">
                     <div className="stat-item"><strong>HP:</strong> {monster.hit_points} (<RollDice formula={monster.hit_dice} />)</div>
