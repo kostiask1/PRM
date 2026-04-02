@@ -58,8 +58,6 @@ export default function AiAssistantPanel({
 			// Одразу оновлюємо стан в батьківському компоненті, бо в БД вже записано
 			if (data.prompt) {
 				setGeneratedPrompt(data.prompt);
-				console.log("data:", data);
-				console.log("data.prompt:", data.prompt);
 			} else if (data.updated && onInsertResult) {
 				onInsertResult(data.updated);
 				setUserInstructions(""); // Очищаємо поле після успіху
