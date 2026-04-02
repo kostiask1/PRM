@@ -1,10 +1,5 @@
+import "./Panel.css";
 
-import './Panel.css';
-
-export default function Panel({ children, className = '' }) {
-    return (
-        <section className={`Panel ${className}`}>
-            {children}
-        </section>
-    );
+export default function Panel({ children, className = "" }) {
+	return <section className={`Panel ${className}`}>{children}</section>;
 }

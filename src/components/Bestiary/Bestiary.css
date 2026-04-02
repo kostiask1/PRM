@@ -1,88 +1,88 @@
 .Bestiary {
-    height: 100%;
+	height: 100%;
 }
 
 .Bestiary__search {
-    margin-bottom: 20px;
-    display: flex;
-    gap: 12px;
-    align-items: center;
+	margin-bottom: 20px;
+	display: flex;
+	gap: 12px;
+	align-items: center;
 }
 
 .Bestiary__sort-btn {
-    display: flex !important;
-    align-items: center;
-    gap: 8px;
-    padding: 0 12px !important;
-    height: 40px;
-    min-width: 85px;
-    justify-content: center;
-    transition: all 0.2s ease;
+	display: flex !important;
+	align-items: center;
+	gap: 8px;
+	padding: 0 12px !important;
+	height: 40px;
+	min-width: 85px;
+	justify-content: center;
+	transition: all 0.2s ease;
 }
 
 .Bestiary__sort-btn.is-active {
-    background: rgba(56, 189, 248, 0.15) !important;
-    border-color: var(--accent) !important;
-    color: var(--text-bright) !important;
+	background: rgba(56, 189, 248, 0.15) !important;
+	border-color: var(--accent) !important;
+	color: var(--text-bright) !important;
 }
 
 .Bestiary__sort-label {
-    font-weight: 800;
-    font-size: 0.8rem;
-    letter-spacing: 0.5px;
+	font-weight: 800;
+	font-size: 0.8rem;
+	letter-spacing: 0.5px;
 }
 
 .Bestiary__sort-icon {
-    width: 16px;
-    height: 16px;
+	width: 16px;
+	height: 16px;
 }
 
 .Bestiary__sort-icon.state-desc,
 .Bestiary__sort-icon.state-asc {
-    color: var(--accent);
+	color: var(--accent);
 }
 
 .Bestiary .Panel__body,
 /* When Bestiary is not embedded, its Panel__body */
 .Modal__body>.Bestiary__search+.Bestiary__content {
-    /* When Bestiary is embedded, its content directly in Modal__body */
-    overflow: hidden;
-    max-height: 100%;
-    display: flex;
-    flex-direction: column;
+	/* When Bestiary is embedded, its content directly in Modal__body */
+	overflow: hidden;
+	max-height: 100%;
+	display: flex;
+	flex-direction: column;
 }
 
 .Bestiary__content {
-    display: flex;
-    gap: 24px;
-    height: calc(100% - 60px);
-    flex: 1;
-    /* Allow content to grow within its parent */
+	display: flex;
+	gap: 24px;
+	height: calc(100% - 60px);
+	flex: 1;
+	/* Allow content to grow within its parent */
 }
 
 .Bestiary__list {
-    overflow-y: auto;
-    height: 100%;
-    flex: 1;
-    /* Allow list to grow */
-    padding-right: 8px;
-    width: 300px;
-    min-width: 300px;
+	overflow-y: auto;
+	height: 100%;
+	flex: 1;
+	/* Allow list to grow */
+	padding-right: 8px;
+	width: 300px;
+	min-width: 300px;
 }
 
 .Bestiary__token-skeleton {
-    color: rgba(255, 255, 255, 0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+	color: rgba(255, 255, 255, 0.1);
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 .Bestiary__detail-container {
-    position: relative;
+	position: relative;
 }
 
 .Bestiary__add-to-encounter-btn {
-    position: absolute;
-    top: 20px;
-    right: 24px;
+	position: absolute;
+	top: 20px;
+	right: 24px;
 }

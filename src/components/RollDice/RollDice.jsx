@@ -1,16 +1,18 @@
-
-import './RollDice.css';
+import "./RollDice.css";
 
 export default function RollDice({ formula, children }) {
-    const handleClick = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        window.dispatchEvent(new CustomEvent('rollDice', { detail: formula }));
-    };
+	const handleClick = (e) => {
+		e.preventDefault();
+		e.stopPropagation();
+		window.dispatchEvent(new CustomEvent("rollDice", { detail: formula }));
+	};
 
-    return (
-        <span className="RollDice" onClick={handleClick} title={`Кинути ${formula}`}>
-            {children || formula}
-        </span>
-    );
+	return (
+		<span
+			className="RollDice"
+			onClick={handleClick}
+			title={`Кинути ${formula}`}>
+			{children || formula}
+		</span>
+	);
 }

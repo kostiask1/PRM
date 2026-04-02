@@ -1,300 +1,300 @@
 .SessionView__header {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	flex: 1;
 }
 
 .SessionView__titleGroup {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
 }
 
 .SessionView__headerActions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+	display: flex;
+	align-items: center;
+	gap: 10px;
 }
 
 .SessionView__progressToolbar {
-    background: var(--panel);
-    padding: 16px 24px;
-    border-bottom: 1px solid rgba(51, 65, 85, 0.45);
-    margin-bottom: 8px;
+	background: var(--panel);
+	padding: 16px 24px;
+	border-bottom: 1px solid rgba(51, 65, 85, 0.45);
+	margin-bottom: 8px;
 }
 
 .ProgressBar {
-    height: 10px;
-    border-radius: 999px;
-    overflow: hidden;
-    border: 1px solid rgba(51, 65, 85, 0.75);
-    background: #0b1220;
+	height: 10px;
+	border-radius: 999px;
+	overflow: hidden;
+	border: 1px solid rgba(51, 65, 85, 0.75);
+	background: #0b1220;
 }
 
 .ProgressBar__fill {
-    width: 0;
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent), var(--accent-2));
-    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+	width: 0;
+	height: 100%;
+	background: linear-gradient(90deg, var(--accent), var(--accent-2));
+	transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .ProgressBar__label {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    color: var(--muted);
-    font-size: 0.92rem;
-    margin-bottom: 6px;
+	display: flex;
+	justify-content: space-between;
+	gap: 10px;
+	color: var(--muted);
+	font-size: 0.92rem;
+	margin-bottom: 6px;
 }
 
 .TodoSection {
-    border: 1px solid rgba(51, 65, 85, 0.7);
-    border-radius: 16px;
-    background: rgba(15, 23, 42, 0.45);
+	border: 1px solid rgba(51, 65, 85, 0.7);
+	border-radius: 16px;
+	background: rgba(15, 23, 42, 0.45);
 }
 
 .TodoSection__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: rgba(15, 23, 42, 1);
-    border-radius: 16px;
-    position: sticky;
-    top: -24px;
-    padding: 16px 18px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    padding-bottom: 8px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	background: rgba(15, 23, 42, 1);
+	border-radius: 16px;
+	position: sticky;
+	top: -24px;
+	padding: 16px 18px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+	padding-bottom: 8px;
 }
 
 .TodoSection__header h3 {
-    margin: 0;
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--text-bright);
+	margin: 0;
+	font-size: 1.1rem;
+	font-weight: 600;
+	color: var(--text-bright);
 }
 
 .TodoSection__body {
-    padding: 18px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+	padding: 18px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
 }
 
 .TodoSection--collapsed .TodoSection__body {
-    display: none;
+	display: none;
 }
 
 .TodoItem {
-    display: flex;
-    gap: 12px;
-    padding: 14px;
-    border: 1px solid rgba(51, 65, 85, 0.75);
-    border-radius: 14px;
-    margin-bottom: 12px;
-    background: rgba(15, 23, 42, 0.55);
-    cursor: pointer;
+	display: flex;
+	gap: 12px;
+	padding: 14px;
+	border: 1px solid rgba(51, 65, 85, 0.75);
+	border-radius: 14px;
+	margin-bottom: 12px;
+	background: rgba(15, 23, 42, 0.55);
+	cursor: pointer;
 }
 
 .TodoItem--done {
-    border-color: rgba(34, 197, 94, 0.2);
+	border-color: rgba(34, 197, 94, 0.2);
 }
 
 .TodoItem--done .TodoItem__title {
-    text-decoration: line-through;
-    opacity: 0.7;
+	text-decoration: line-through;
+	opacity: 0.7;
 }
 
 .TodoItem__content {
-    flex: 1;
-    min-width: 0;
-    display: grid;
-    align-content: baseline;
-    gap: 8px;
+	flex: 1;
+	min-width: 0;
+	display: grid;
+	align-content: baseline;
+	gap: 8px;
 }
 
 .TodoItem__title {
-    font-weight: 600;
-    margin-bottom: 4px;
-    height: 30px;
+	font-weight: 600;
+	margin-bottom: 4px;
+	height: 30px;
 }
 
 .TodoItem__note {
-    font-size: 0.9rem;
-    color: var(--muted);
+	font-size: 0.9rem;
+	color: var(--muted);
 }
 
 .TodoItem input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
-    accent-color: var(--accent-2);
-    cursor: pointer;
-    flex-shrink: 0;
-    margin-top: 2px;
+	width: 20px;
+	height: 20px;
+	accent-color: var(--accent-2);
+	cursor: pointer;
+	flex-shrink: 0;
+	margin-top: 2px;
 }
 
 .SessionView__titleRow {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+	display: flex;
+	align-items: center;
+	gap: 12px;
 }
 
 .SessionView__backBtn {
-    padding: 4px !important;
-    min-width: unset !important;
+	padding: 4px !important;
+	min-width: unset !important;
 }
 
 .SessionView__progressWrap {
-    display: grid;
-    gap: 4px;
+	display: grid;
+	gap: 4px;
 }
 
 .ProgressBar__label {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.8rem;
-    margin-bottom: 6px;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+	display: flex;
+	justify-content: space-between;
+	font-size: 0.8rem;
+	margin-bottom: 6px;
+	color: var(--text-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
 }
 
 .ProgressBar {
-    height: 6px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 3px;
-    overflow: hidden;
+	height: 6px;
+	background: rgba(255, 255, 255, 0.1);
+	border-radius: 3px;
+	overflow: hidden;
 }
 
 .SessionView__todoList {
-    display: flex;
-    flex-direction: column;
-    gap: 32px;
+	display: flex;
+	flex-direction: column;
+	gap: 32px;
 }
 
 .SceneCard {
-    padding: 16px;
-    margin-bottom: 12px;
-    display: grid;
-    gap: 14px;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    overflow: hidden;
+	padding: 16px;
+	margin-bottom: 12px;
+	display: grid;
+	gap: 14px;
+	background: rgba(255, 255, 255, 0.02);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 8px;
+	overflow: hidden;
 }
 
 .SceneCard__header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px;
-    background: rgba(255, 255, 255, 0.02);
-    border-radius: var(--radius);
-    cursor: pointer;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 8px;
+	background: rgba(255, 255, 255, 0.02);
+	border-radius: var(--radius);
+	cursor: pointer;
 }
 
 .SceneCard__headerActions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
 }
 
 .SceneCard__titleGroup {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
 }
 
 .SceneCard__title {
-    font-weight: 700;
+	font-weight: 700;
 }
 
 .SceneCard__toggle {
-    padding: 4px !important;
-    min-height: auto !important;
-    width: auto !important;
+	padding: 4px !important;
+	min-height: auto !important;
+	width: auto !important;
 }
 
 .Icon--rotated {
-    transform: rotate(-90deg);
-    transition: transform 0.2s ease;
+	transform: rotate(-90deg);
+	transition: transform 0.2s ease;
 }
 
 .Icon:not(.Icon--rotated) {
-    transition: transform 0.2s ease;
+	transition: transform 0.2s ease;
 }
 
 .SceneCard__grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
-    gap: 16px;
-    padding: 16px;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+	gap: 16px;
+	padding: 16px;
 }
 
 .SessionView .field--result {
-    min-height: 300px;
+	min-height: 300px;
 }
 
 .MarkdownView {
-    cursor: pointer;
-    padding: 10px 12px;
-    border: 1px solid transparent;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.02);
-    min-height: 40px;
-    transition: all 0.2s ease;
-    line-height: 1.5;
-    font-size: 0.95rem;
+	cursor: pointer;
+	padding: 10px 12px;
+	border: 1px solid transparent;
+	border-radius: 10px;
+	background: rgba(255, 255, 255, 0.02);
+	min-height: 40px;
+	transition: all 0.2s ease;
+	line-height: 1.5;
+	font-size: 0.95rem;
 }
 
 .MarkdownView:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: var(--border);
+	background: rgba(255, 255, 255, 0.05);
+	border-color: var(--border);
 }
 
 .MarkdownView p:last-child {
-    margin-bottom: 0;
+	margin-bottom: 0;
 }
 
 .SessionView__npcs {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
 }
 
 .SceneCard__npcs-section {
-    padding: 0 16px 16px 16px;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+	padding: 0 16px 16px 16px;
+	border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .SceneCard__npcs-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-    margin-top: 12px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 12px;
+	margin-top: 12px;
 }
 
 .SceneCard__npcs-header h4 {
-    margin: 0;
-    font-size: 0.9rem;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+	margin: 0;
+	font-size: 0.9rem;
+	color: var(--muted);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
 }
 
 .SceneCard__encounter-icon {
-  margin-right: 8px;
+	margin-right: 8px;
 }
 
 .SceneCard__encounter-name {
-  font-weight: 600;
+	font-weight: 600;
 }
 
 .character-card-simple__content {
-  padding: 0 12px 12px 12px;
+	padding: 0 12px 12px 12px;
 }
 
 .TodoItem__trigger {
-  cursor: pointer;
+	cursor: pointer;
 }

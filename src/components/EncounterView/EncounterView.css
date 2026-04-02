@@ -1,119 +1,119 @@
 .EncounterView {
-    height: 100%;
+	height: 100%;
 }
 
 .EncounterView__header {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    width: 100%;
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	width: 100%;
 }
 
 .EncounterView__header p {
-    white-space: nowrap;
-    margin-left: auto;
+	white-space: nowrap;
+	margin-left: auto;
 }
 
 .EncounterView__body {
-    padding: 24px !important;
+	padding: 24px !important;
 }
 
 .EncounterView__main {
-    display: flex;
-    gap: 24px;
-    height: calc(100vh - 250px);
-    min-height: 600px;
-    align-items: flex-start;
+	display: flex;
+	gap: 24px;
+	height: calc(100vh - 250px);
+	min-height: 600px;
+	align-items: flex-start;
 }
 
 .EncounterView__list {
-    width: 380px;
-    min-width: 380px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    height: 100%;
-    overflow-y: auto;
-    padding: 5px 8px 5px 2px;
+	width: 380px;
+	min-width: 380px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	height: 100%;
+	overflow-y: auto;
+	padding: 5px 8px 5px 2px;
 }
 
 .EncounterView__addBtn {
-    width: 100%;
-    justify-content: center;
+	width: 100%;
+	justify-content: center;
 }
 
 .EncounterMonsterRow {
-    background: rgba(30, 41, 59, 0.4);
-    border: 1px solid rgba(51, 65, 85, 0.4);
-    border-radius: 8px;
-    padding: 10px 14px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    justify-content: space-between;
-    border-left: 3px solid transparent;
+	background: rgba(30, 41, 59, 0.4);
+	border: 1px solid rgba(51, 65, 85, 0.4);
+	border-radius: 8px;
+	padding: 10px 14px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	justify-content: space-between;
+	border-left: 3px solid transparent;
 }
 
 .EncounterMonsterRow:hover {
-    border-color: var(--accent);
-    background: rgba(56, 189, 248, 0.05);
+	border-color: var(--accent);
+	background: rgba(56, 189, 248, 0.05);
 }
 
 .EncounterMonsterRow.is-active {
-    border-color: rgba(56, 189, 248, 0.4);
-    border-left-color: var(--accent);
-    background: rgba(56, 189, 248, 0.08);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	border-color: rgba(56, 189, 248, 0.4);
+	border-left-color: var(--accent);
+	background: rgba(56, 189, 248, 0.08);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .EncounterMonsterRow.is-dragging {
-    opacity: 0.4;
-    border: 1px dashed var(--accent);
-    background: rgba(56, 189, 248, 0.05);
+	opacity: 0.4;
+	border: 1px dashed var(--accent);
+	background: rgba(56, 189, 248, 0.05);
 }
 
 .EncounterMonsterRow__content {
-    flex: 1;
-    min-width: 0;
+	flex: 1;
+	min-width: 0;
 }
 
 .EncounterMonsterRow__name {
-    font-weight: 700;
-    font-size: 0.95rem;
-    color: var(--text-bright);
-    margin-bottom: 4px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+	font-weight: 700;
+	font-size: 0.95rem;
+	color: var(--text-bright);
+	margin-bottom: 4px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .EncounterMonsterRow__stats {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+	display: flex;
+	align-items: center;
+	gap: 12px;
 }
 
 .EncounterMonsterRow__hp {
-    display: flex;
-    align-items: center;
-    gap: 4px;
+	display: flex;
+	align-items: center;
+	gap: 4px;
 }
 
 .EncounterMonsterRow__hpInput,
 .EncounterMonsterRow__maxHpInput {
-    width: 42px;
-    background: rgba(15, 23, 42, 0.6);
-    border: 1px solid rgba(51, 65, 85, 0.8);
-    border-radius: 4px;
-    padding: 3px 0;
-    text-align: center;
-    font-size: 0.8rem;
-    font-weight: 700;
-    transition: border-color 0.2s;
-    appearance: textfield;
-    /* Приховуємо стрілки у Firefox */
+	width: 42px;
+	background: rgba(15, 23, 42, 0.6);
+	border: 1px solid rgba(51, 65, 85, 0.8);
+	border-radius: 4px;
+	padding: 3px 0;
+	text-align: center;
+	font-size: 0.8rem;
+	font-weight: 700;
+	transition: border-color 0.2s;
+	appearance: textfield;
+	/* Приховуємо стрілки у Firefox */
 }
 
 /* Приховуємо стандартні стрілки для Chrome, Safari, Edge та Opera */
@@ -121,54 +121,54 @@
 .EncounterMonsterRow__hpInput::-webkit-inner-spin-button,
 .EncounterMonsterRow__maxHpInput::-webkit-outer-spin-button,
 .EncounterMonsterRow__maxHpInput::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
+	-webkit-appearance: none;
+	margin: 0;
 }
 
 .EncounterMonsterRow__hpInput:hover,
 .EncounterMonsterRow__maxHpInput:hover {
-    border-color: rgba(56, 189, 248, 0.5);
-    background: rgba(15, 23, 42, 0.8);
+	border-color: rgba(56, 189, 248, 0.5);
+	background: rgba(15, 23, 42, 0.8);
 }
 
 .EncounterMonsterRow__hpInput:focus,
 .EncounterMonsterRow__maxHpInput:focus {
-    border-color: var(--accent);
-    outline: none;
-    background: rgba(15, 23, 42, 0.9);
+	border-color: var(--accent);
+	outline: none;
+	background: rgba(15, 23, 42, 0.9);
 }
 
 .EncounterMonsterRow__hpInput {
-    color: var(--accent);
+	color: var(--accent);
 }
 
 .EncounterMonsterRow__maxHpInput {
-    color: var(--muted);
+	color: var(--muted);
 }
 
 .EncounterMonsterRow__ac {
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: var(--text);
-    background: rgba(51, 65, 85, 0.4);
-    padding: 2px 8px;
-    border-radius: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+	font-size: 0.75rem;
+	font-weight: 700;
+	color: var(--text);
+	background: rgba(51, 65, 85, 0.4);
+	padding: 2px 8px;
+	border-radius: 12px;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
 }
 
 .EncounterMonsterRow__actions {
-    display: flex;
-    gap: 4px;
+	display: flex;
+	gap: 4px;
 }
 
 .EncounterMonsterRow__action {
-    padding: 2px !important;
-    min-width: 28px !important;
-    height: 28px !important;
+	padding: 2px !important;
+	min-width: 28px !important;
+	height: 28px !important;
 }
 
 .EncounterView__detailView {
-    flex: 1;
-    height: 100%;
+	flex: 1;
+	height: 100%;
 }

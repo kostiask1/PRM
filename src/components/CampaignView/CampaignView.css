@@ -1,180 +1,184 @@
 .CampaignView__sessions {
-    display: grid;
-    gap: 12px;
-    margin-top: 12px;
+	display: grid;
+	gap: 12px;
+	margin-top: 12px;
 }
 
 .CampaignView__sessions .session-card__actions {
-    padding: 12px 14px 12px 0;
-    display: flex;
-    align-items: center;
-    gap: 12px;
+	padding: 12px 14px 12px 0;
+	display: flex;
+	align-items: center;
+	gap: 12px;
 }
 
 .CampaignView__headerActions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
 }
 
 .MarkdownView {
-    cursor: pointer;
-    padding: 10px 12px;
-    border: 1px solid transparent;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.02);
-    min-height: 40px;
-    transition: all 0.2s ease;
-    line-height: 1.5;
-    font-size: 0.95rem;
+	cursor: pointer;
+	padding: 10px 12px;
+	border: 1px solid transparent;
+	border-radius: 10px;
+	background: rgba(255, 255, 255, 0.02);
+	min-height: 40px;
+	transition: all 0.2s ease;
+	line-height: 1.5;
+	font-size: 0.95rem;
 }
 
 .MarkdownView:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: var(--border);
+	background: rgba(255, 255, 255, 0.05);
+	border-color: var(--border);
 }
 
 .MarkdownView p:last-child {
-    margin-bottom: 0;
+	margin-bottom: 0;
 }
 
 .CampaignView__section {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-bottom: 2rem;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	margin-bottom: 2rem;
 }
 
 .CampaignView__section h3 {
-    font-size: 1.1rem;
-    color: var(--text-bright);
+	font-size: 1.1rem;
+	color: var(--text-bright);
 }
 
 .section-title-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    user-select: none;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	user-select: none;
 }
 
 .section-collapse-toggle {
-    transition: transform 0.2s ease !important;
+	transition: transform 0.2s ease !important;
 }
 
 .section-collapse-toggle.is-rotated {
-    transform: rotate(-90deg);
+	transform: rotate(-90deg);
 }
 
 .note-card-simple {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    transition: border-color 0.2s ease, opacity 0.2s ease;
-    cursor: grab;
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 8px;
+	transition:
+		border-color 0.2s ease,
+		opacity 0.2s ease;
+	cursor: grab;
 }
 
 .note-card-simple:hover {
-    border-color: rgba(255, 255, 255, 0.2);
+	border-color: rgba(255, 255, 255, 0.2);
 }
 
 .note-card-simple--dragging {
-    opacity: 0.4;
-    border-style: dashed;
-    cursor: grabbing;
+	opacity: 0.4;
+	border-style: dashed;
+	cursor: grabbing;
 }
 
 .note-card-simple__header {
-    display: flex;
-    align-items: center;
-    padding: 8px 12px;
-    gap: 8px;
+	display: flex;
+	align-items: center;
+	padding: 8px 12px;
+	gap: 8px;
 }
 
 .note-card-simple__toggle {
-    transition: transform 0.2s ease !important;
-    width: 36px;
-    height: 36px;
+	transition: transform 0.2s ease !important;
+	width: 36px;
+	height: 36px;
 }
 
 .note-card-simple__toggle.is-rotated {
-    transform: rotate(-90deg);
+	transform: rotate(-90deg);
 }
 
 .note-card-simple__title {
-    flex: 1;
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: var(--text-muted);
-    cursor: pointer;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    user-select: none;
+	flex: 1;
+	font-size: 0.9rem;
+	font-weight: 500;
+	color: var(--text-muted);
+	cursor: pointer;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	user-select: none;
 }
 
 .note-card-simple:not(.is-collapsed) .note-card-simple__title {
-    color: var(--text-bright);
+	color: var(--text-bright);
 }
 
 .note-card-simple .field--textarea {
-    margin: 12px;
-    margin-top: 8px;
+	margin: 12px;
+	margin-top: 8px;
 }
 
 .note-card-simple.is-collapsed {
-    opacity: 0.8;
+	opacity: 0.8;
 }
 
 /* NEW: Styles for Characters Section */
 .CampaignView__characters {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
 }
 
 .character-card-simple {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    transition: border-color 0.2s ease, opacity 0.2s ease;
-    cursor: grab;
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 8px;
+	transition:
+		border-color 0.2s ease,
+		opacity 0.2s ease;
+	cursor: grab;
 }
 
 .character-card-simple:hover {
-    border-color: rgba(255, 255, 255, 0.2);
+	border-color: rgba(255, 255, 255, 0.2);
 }
 
 .character-card-simple--dragging {
-    opacity: 0.4;
-    border-style: dashed;
-    cursor: grabbing;
+	opacity: 0.4;
+	border-style: dashed;
+	cursor: grabbing;
 }
 
 .character-card-simple__header {
-    display: flex;
-    align-items: center;
-    padding: 8px 12px;
-    gap: 8px;
+	display: flex;
+	align-items: center;
+	padding: 8px 12px;
+	gap: 8px;
 }
 
 .character-card-simple__toggle {
-    transition: transform 0.2s ease !important;
-    width: 36px;
-    height: 36px;
+	transition: transform 0.2s ease !important;
+	width: 36px;
+	height: 36px;
 }
 
 .character-card-simple__toggle.is-rotated {
-    transform: rotate(-90deg);
+	transform: rotate(-90deg);
 }
 
 .character-card-simple__name {
-    flex: 1;
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: var(--text-bright);
+	flex: 1;
+	font-size: 0.9rem;
+	font-weight: 500;
+	color: var(--text-bright);
 }
 
 .character-card-simple.is-collapsed {
-    opacity: 0.8;
+	opacity: 0.8;
 }
