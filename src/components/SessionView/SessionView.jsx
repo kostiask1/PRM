@@ -562,7 +562,6 @@ export default function SessionView({ campaign, sessionId, onBack, onNavigate, o
                         </div>
                         <EditableMarkdownField
                             type="textarea"
-                            title="Підсумок"
                             className="field--result"
                             placeholder="Підсумок того, що реально відбулося..."
                             value={session.data.result_text || ''}
@@ -629,8 +628,12 @@ function SceneCard({
                         }}
                         title={hasEncounter ? "Відкрити зіткнення" : "Додати бойове зіткнення"}
                     >
-                        <Icon name="swords" size={18} style={{ marginRight: '8px' }} />
-                        <span style={{ fontWeight: '600' }}>
+                        <Icon
+                            name="swords"
+                            size={18}
+                            className="SceneCard__encounter-icon"
+                        />
+                        <span className="SceneCard__encounter-name">
                             {hasEncounter ? encounterName : "Додати бій"}
                         </span>
                     </Button>
@@ -703,7 +706,7 @@ function SceneCard({
                                         />
                                     </div>
                                     {!npc.collapsed && (
-                                        <div style={{ padding: '0 12px 12px 12px' }}>
+                                        <div className="character-card-simple__content">
                                             <EditableField
                                                 type="textarea"
                                                 value={npc.description}

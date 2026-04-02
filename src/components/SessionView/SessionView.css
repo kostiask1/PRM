@@ -282,3 +282,15 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
+
+.SceneCard__encounter-icon {
+  margin-right: 8px;
+}
+
+.SceneCard__encounter-name {
+  font-weight: 600;
+}
+
+.character-card-simple__content {
+  padding: 0 12px 12px 12px;
+}

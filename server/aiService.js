@@ -33,7 +33,9 @@ const systemInstructions = {
         - повертати JSON
         - використовувати ключі, дужки {}, []
         - показувати структуру даних
+
         Виводь фінальний результат у вигляді зв’язного, природного людьского тексту, ніби це звичайна розповідь або відповідь.
+        У відповіді необхідно використовувати Markdown розмітку.
 `,
     image: `Ти — генератор детальних промптів для створення зображень сцен.
                     Користувач надсилає дані у форматі JSON з такими ключами:
@@ -69,7 +71,7 @@ const systemInstructions = {
                     `,
 }
 
-async function generateContent({ type, session, campaign, userInstructions, sceneId, parseAIResponse }) {
+async function generateContent({ type, session, campaign, userInstructions, sceneId, parseAIResponse, results }) {
     let model;
     let userPrompt = "";
 
@@ -87,7 +89,8 @@ async function generateContent({ type, session, campaign, userInstructions, scen
         name: campaign.name,
         description: campaign.description || '',
         notes: campaign.notes?.map(n => n.text) || [],
-        characters: campaign.characters || []
+        characters: campaign.characters || [],
+        results
     };
 
     let dataSummary = campaignData;
@@ -107,22 +110,20 @@ async function generateContent({ type, session, campaign, userInstructions, scen
     if (useKey === "image") {
         userPrompt = dataSummary;
 
-        userPrompt += `\n\nНадай головний пріорітет до scene.id ${sceneId}. Промпт повинен стосуватись саме її, проте інші дані можуть краще її доповнити (інформація чи опис NPC і персонажів, локація)`;
+        userPrompt += `\nНадай головний пріорітет до scene.id ${sceneId}. Промпт повинен стосуватись саме її, проте інші дані можуть краще її доповнити (інформація чи опис NPC і персонажів, локація)`;
     } else if (useKey === "prompt") {
-        userPrompt = `\n\nДані кампанії:
-        Назва - ${campaign.name},
-        Опис - ${campaign.description || 'відсутній'},
-        Замітки - ${(campaign.notes?.map(n => n.text) || []).join(', ') || 'відсутні'},
+        userPrompt = `\nКампанія "${campaign.name}" ${campaign.description ? ("- " + campaign.description) : ""}:
+        Замітки - ${(campaign.notes?.map(n => n.text) || []).join('\n') || 'відсутні'},
         Персонажі - ${campaign.characters?.map((character) => (
-            `Ім'я - ${character.name},
+            `\n
+            Ім'я - ${character.name},
              Опис - ${character.description || 'відсутній'}`
         )).join(', ') || "відсутні"}.`
 
         if (session) {
-            userPrompt += `\n\nДані сесії:
-            Назва - ${session.name},
+            userPrompt += `\nПоточна сесія "${session.name}".
             Сцени: ${session.data?.scenes?.map((scene, index) => (
-                `
+                `\n
                     Сцена №${index + 1}:
                         - Суть сцени: ${scene.texts.summary}
                         - Мета гравців: ${scene.texts.goal}
@@ -140,17 +141,25 @@ async function generateContent({ type, session, campaign, userInstructions, scen
             userPrompt = `На основі назви кампанії "${campaign.name}" та поточного сюжету: <${campaign.description || 'відсутній'}>, допоможи розвинути основну лінію та структурувати замітки. Враховуй існуючі замітки: notes <${JSON.stringify(campaign.notes?.map(n => n.text) || [])}>, а також опису персонажів гравців: characters <${JSON.stringify(campaign.characters || [])}>. Твоє завдання - оновити опис сюжету (поле description) та надати список цілісних логічних заміток (поле notes) у вигляді масиву рядків. У кожній замітці перший рядок — це короткий заголовок, а далі — розгорнутий запис. Не генеруй жодних сцен.`;
         }
 
-        userPrompt += `\n\nГенеруй нові дані, із заміною (або доповненням) існуючих.
-                            Не залишай старі дані без змін, якщо вони не відповідають новому генерованому контенту.`;
+    }
+
+    if (useKey !== "image" && results && results.length > 0) {
+        userPrompt += `\nТакож врахуй результати усіх сесій кампанії: ${results?.filter((session) => !!session.result).map((session) => (
+            `Сесія "${session.session}" - ${session.result}`
+        )).join("\n")}`
     }
 
     if (userInstructions) {
-        userPrompt += `\n\nДодаткові побажання та контекст від користувача. Надай наступному тексту більше уваги: ${userInstructions}`;
+        userPrompt += `\nДодаткові побажання та контекст від користувача. Надай наступному тексту більше уваги: ${userInstructions}`;
     }
 
     const result = await model.generateContent(userPrompt);
     const response = await result.response;
     let text = response.text();
+
+    if (!parseAIResponse) {
+        return text;
+    }
 
     try {
         // Очищення від можливих markdown-тегів, якщо вони проскочили

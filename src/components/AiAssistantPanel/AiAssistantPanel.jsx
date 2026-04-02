@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { api } from '../../api';
 import Button from '../Button/Button';
 import Icon from '../Icon';
@@ -7,6 +8,7 @@ import Modal from '../Modal/Modal';
 import Notification from '../Notification/Notification';
 import './AiAssistantPanel.css';
 import { parseUrl } from '../../utils/navigation';
+import { isJsonString } from '../../utils/json';
 
 export default function AiAssistantPanel({ sessionData, onInsertResult, modal }) {
     const [loading, setLoading] = useState(false);
@@ -14,7 +16,8 @@ export default function AiAssistantPanel({ sessionData, onInsertResult, modal })
     const [userInstructions, setUserInstructions] = useState('');
     const [notification, setNotification] = useState(null);
     const [showSceneSelector, setShowSceneSelector] = useState(false);
-    const [parseAIResponse, setParseAIResponse] = useState(true);
+    const [useSessionsResults, setUseSessionsResults] = useState(true);
+    const [parseAIResponse, setParseAIResponse] = useState(false);
     const [generatedPrompt, setGeneratedPrompt] = useState(null);
     const initialRoute = parseUrl();
 
@@ -42,6 +45,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult, modal })
                 path: initialRoute,
                 sceneId: targetSceneId,
                 parseAIResponse: type === "image" ? false : parseAIResponse,
+                useSessionsResults,
             });
 
             // Одразу оновлюємо стан в батьківському компоненті, бо в БД вже записано
@@ -76,12 +80,16 @@ export default function AiAssistantPanel({ sessionData, onInsertResult, modal })
     }, [generatedPrompt, setNotification]);
 
     const getPlaceholder = () => {
-        if (isCampaign) {
+        if (!parseAIResponse) {
+            return "Надішліть свій запит. Відповідь буде отримана у вікні і не вплине на дані"
+        } else if (isCampaign) {
             return "Опишіть зміни або нові гілки сюжету (наприклад: 'додай політичні інтриги' або 'зроби фінал більш епічним')...";
         } else {
             return "Опишіть стиль або умови (наприклад: 'занедбане підземне місто', 'атмосфера детективу')...";
         }
     };
+
+    const isResultJSONString = isJsonString(generatedPrompt);
 
     // Допоміжна функція для відображення JSON-результату
     return (
@@ -107,12 +115,22 @@ export default function AiAssistantPanel({ sessionData, onInsertResult, modal })
                 <Button
                     variant={parseAIResponse ? "primary" : "ghost"}
                     size="small"
-                    icon="image"
+                    icon="list"
                     onClick={() => setParseAIResponse(!parseAIResponse)}
                     disabled={loading}
-                    title={parseAIResponse ? "Парсити відповідь ШІ" : "Показувати відповідь текстом"}
+                    title={parseAIResponse ? "Парсити відповідь ШІ у поля форми" : "Показувати відповідь текстом у модальному вікні"}
                 >
                     Парсинг відповіді
+                </Button>
+                <Button
+                    variant={useSessionsResults ? "primary" : "ghost"}
+                    size="small"
+                    icon="history"
+                    onClick={() => setUseSessionsResults(!useSessionsResults)}
+                    disabled={loading}
+                    title={useSessionsResults ? "Використовувати дані з \"Результат сесії\" попередніх сесій" : "Контекст лише кампанії і поточної сесії"}
+                >
+                    Контекст сесій
                 </Button>
             </div>
 
@@ -147,30 +165,47 @@ export default function AiAssistantPanel({ sessionData, onInsertResult, modal })
                     onConfirm={handleCopyGeneratedPrompt}
                 >
                     <div className="AiAssistant__prompt-result">
-                        <textarea
-                            className="AiAssistant__prompt-textarea-result"
-                            readOnly
-                            value={generatedPrompt}
-                            onClick={(e) => e.target.select()}
-                        />
+                        {isResultJSONString ? (
+                            <pre>
+                                <ReactMarkdown
+                                    className="AiAssistant__prompt-textarea-result"
+                                    onClick={(e) => e.target.select()}
+                                >
+                                    {generatedPrompt}
+                                </ReactMarkdown>
+                            </pre>
+                        ) : (
+                            <ReactMarkdown
+                                className="AiAssistant__prompt-textarea-result"
+                                onClick={(e) => e.target.select()}
+                            >
+                                {generatedPrompt}
+                            </ReactMarkdown>
+                            // <textarea
+                            //     className="AiAssistant__prompt-textarea-result"
+                            //     readOnly
+                            //     value={generatedPrompt}
+                            //     onClick={(e) => e.target.select()}
+                            // />
+                        )}
                     </div>
                 </Modal>
             )}
 
-            <div className="AiAssistant__prompt-area" style={{ marginTop: '16px' }}>
+            <div className="AiAssistant__prompt-area">
                 <Input
                     type="textarea"
+                    className="AiAssistant__prompt-input"
                     placeholder={getPlaceholder()}
                     value={userInstructions}
                     onChange={(e) => setUserInstructions(e.target.value)}
                     disabled={loading}
-                    style={{ minHeight: '80px', marginBottom: '12px' }}
                 />
                 <Button
                     variant="create"
+                    className="AiAssistant__generate-btn"
                     disabled={loading}
                     onClick={() => generate()}
-                    style={{ width: '100%' }}
                 >
                     {loading ? 'Магія працює...' : 'Згенерувати'}
                 </Button>

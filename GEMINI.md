@@ -55,6 +55,14 @@
         "collapsed": false 
     }
   ],
+  "characters": [
+    { 
+        "id": "Date timestamp",
+        "name": "Ім'я персонажа",
+        "description": "Опис персонажа",
+        "collapsed": false 
+    }
+  ],
   "createdAt": "ISO Date String",
   "updatedAt": "ISO Date String",
   "order": "order of campaign in sidebar",
@@ -84,7 +92,15 @@
           "location": "Опис місця",
           "npcs": "Хто присутній",
           "clues": "Що можна знайти"
-        }
+        },
+        "npcs": [
+          {
+            "id": 1775135844122,
+            "name": "Ім'я NPC",
+            "description": "Опис NPC, його мотивація, характер",
+            "collapsed": false
+          }
+        ]
       }
     ],
     "encounters": [

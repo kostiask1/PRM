@@ -525,7 +525,7 @@ app.delete('/api/campaigns/:slug/sessions/:fileName', async (req, res, next) => 
 
 app.post('/api/ai/generate', async (req, res, next) => {
   try {
-    const { type, userInstructions, path, sceneId, parseAIResponse } = req.body;
+    const { type, userInstructions, path, sceneId, parseAIResponse, useSessionsResults } = req.body;
     const campaign = await readCampaign(path.campaign)
     const session = await readSession(path.campaign, path.session).catch(() => null);
 
@@ -533,7 +533,24 @@ app.post('/api/ai/generate', async (req, res, next) => {
       return res.status(500).json({ error: 'GEMINI_API_KEY не налаштовано на сервері.' });
     }
 
-    const generatedContent = await aiService.generateContent({ type, session, campaign, userInstructions, sceneId, parseAIResponse });
+    let results;
+
+    if (useSessionsResults) {
+      const sessionFiles = await listSessions(path.campaign)
+      const sessions = await Promise.all(
+        sessionFiles.map(async (s) => {
+          const content = await readSession(path.campaign, s.fileName);
+          return content;
+        })
+      );
+
+      results = sessions.sort((a, b) => a.order - b.order).map((session) => ({
+        result: session.data.result_text,
+        session: session.name
+      }))
+    }
+
+    const generatedContent = await aiService.generateContent({ type, session, campaign, userInstructions, sceneId, parseAIResponse, results });
 
     if (generatedContent.error) {
       return res.status(500).json({ error: generatedContent.error, raw_response: generatedContent.raw_response });

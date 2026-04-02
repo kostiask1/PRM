@@ -26,6 +26,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  max-height: 90vh;
 }
 
 .Modal__card--error {
@@ -72,6 +73,7 @@
 .Modal__body {
   padding: 24px;
   overflow: hidden;
+  overflow-y: auto;
 }
 
 .Modal__body p {
