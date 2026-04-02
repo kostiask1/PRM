@@ -1,55 +1,28 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+
 import { api } from '../../api';
-import Button from '../Button/Button';
-import Input from '../Input/Input';
+
 import AiAssistantPanel from '../AiAssistantPanel/AiAssistantPanel';
-import StatusBadge from '../StatusBadge/StatusBadge';
+import Button from '../Button/Button';
+import EditableField from '../EditableField/EditableField';
 import ListCard from '../ListCard/ListCard';
 import Panel from '../Panel/Panel';
+import StatusBadge from '../StatusBadge/StatusBadge';
 import './CampaignView.css';
-
-/**
- * Допоміжний компонент для редагування Markdown по кліку
- */
-function EditableMarkdownField({ title, value, onChange, placeholder, type, className }) {
-  const [isEditing, setIsEditing] = useState(false);
-
-  if (isEditing) {
-    return (
-      <div className={`EditableField ${className || ''}`}>
-        {title && <div className="TodoItem__title">{title}</div>}
-        <Input
-          type={type}
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          onBlur={() => setIsEditing(false)}
-          autoFocus
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div className={`EditableField ${className || ''}`} onClick={() => setIsEditing(true)}>
-      {title && <div className="TodoItem__title">{title}</div>}
-      <div className="MarkdownView">
-        {value ? <ReactMarkdown>{value}</ReactMarkdown> : <span className="muted">{placeholder}</span>}
-      </div>
-    </div>
-  );
-}
 
 export default function CampaignView({ campaign, onSelectSession, onNavigate, onRefreshCampaigns, modal }) {
   const [sessions, setSessions] = useState([]);
   const [draggingFileName, setDraggingFileName] = useState(null);
   const [draggingNoteId, setDraggingNoteId] = useState(null);
+  const [draggingCharacterId, setDraggingCharacterId] = useState(null);
 
   // Локальний стан для сюжету та заміток
   const [description, setDescription] = useState(campaign.description || '');
   const [notes, setNotes] = useState(campaign.notes || []);
+  const [characters, setCharacters] = useState(campaign.characters || []); // NEW: State for characters
   const [isNotesCollapsed, setIsNotesCollapsed] = useState(false);
+  const [isCharactersCollapsed, setIsCharactersCollapsed] = useState(false); // NEW: State for characters collapse
   const saveTimeout = useRef(null);
   const isSavingRef = useRef(false);
 
@@ -65,6 +38,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
     if (lastSlugRef.current !== campaign.slug) {
       setDescription(campaign.description || '');
       setNotes(campaign.notes || []);
+      setCharacters(campaign.characters || []); // NEW: Reset characters state
       setUndoStack([]);
       setRedoStack([]);
       lastSlugRef.current = campaign.slug;
@@ -91,7 +65,8 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
     const currentState = {
       description,
       notes,
-      completed: campaign.completed,
+      characters, // NEW: Include characters in undo state
+      completed: campaign.completed, // Keep existing fields
       completedAt: campaign.completedAt
     };
 
@@ -100,9 +75,11 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
 
     while (tempStack.length > 0) {
       const candidate = tempStack.pop();
+      // Check for differences in description, notes, characters, and completed status
       const isDifferent = JSON.stringify(candidate.description) !== JSON.stringify(currentState.description) ||
         JSON.stringify(candidate.notes) !== JSON.stringify(currentState.notes) ||
-        candidate.completed !== currentState.completed;
+        JSON.stringify(candidate.characters) !== JSON.stringify(currentState.characters) || // NEW: Check characters
+        candidate.completed !== currentState.completed; // Keep existing check
 
       if (isDifferent) {
         stateToRestore = candidate;
@@ -117,11 +94,12 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
 
       setDescription(stateToRestore.description);
       setNotes(stateToRestore.notes);
+      setCharacters(stateToRestore.characters); // NEW: Restore characters
       saveToServer(stateToRestore);
 
       setTimeout(() => { isUpdatingHistory.current = false; }, 0);
     }
-  }, [undoStack, description, notes, saveToServer, campaign.completed, campaign.completedAt]);
+  }, [undoStack, description, notes, characters, saveToServer, campaign.completed, campaign.completedAt]);
 
   const handleRedo = useCallback(() => {
     if (redoStack.length === 0) return;
@@ -129,7 +107,8 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
     const currentState = {
       description,
       notes,
-      completed: campaign.completed,
+      characters, // NEW: Include characters in redo state
+      completed: campaign.completed, // Keep existing fields
       completedAt: campaign.completedAt
     };
 
@@ -138,9 +117,10 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
 
     while (tempStack.length > 0) {
       const candidate = tempStack.shift();
-      const isDifferent = JSON.stringify(candidate.description) !== JSON.stringify(currentState.description) ||
+      const isDifferent = JSON.stringify(candidate.description) !== JSON.stringify(currentState.description) || // Keep existing check
         JSON.stringify(candidate.notes) !== JSON.stringify(currentState.notes) ||
-        candidate.completed !== currentState.completed;
+        JSON.stringify(candidate.characters) !== JSON.stringify(currentState.characters) || // NEW: Check characters
+        candidate.completed !== currentState.completed; // Keep existing check
 
       if (isDifferent) {
         stateToRestore = candidate;
@@ -155,23 +135,25 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
 
       setDescription(stateToRestore.description);
       setNotes(stateToRestore.notes);
+      setCharacters(stateToRestore.characters);
       saveToServer(stateToRestore);
 
       setTimeout(() => { isUpdatingHistory.current = false; }, 0);
     }
-  }, [redoStack, description, notes, saveToServer, campaign.completed, campaign.completedAt]);
+  }, [redoStack, description, notes, characters, saveToServer, campaign.completed, campaign.completedAt]);
 
   const pushToUndo = useCallback(() => {
     if (!isUpdatingHistory.current) {
       setUndoStack(prev => [...prev, {
         description,
         notes,
+        characters,
         completed: campaign.completed,
         completedAt: campaign.completedAt
       }]);
       setRedoStack([]);
     }
-  }, [description, notes, campaign.completed, campaign.completedAt]);
+  }, [description, notes, campaign.completed, campaign.completedAt, characters]);
 
   const triggerSave = useCallback((updates) => {
     if (saveTimeout.current) clearTimeout(saveTimeout.current);
@@ -216,6 +198,44 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
     pushToUndo();
     const newNotes = notes.filter(n => n.id !== id);
     setNotes(newNotes);
+    triggerSave({ notes: newNotes });
+  };
+
+  // NEW: Character management handlers
+  const handleAddCharacter = () => {
+    pushToUndo();
+    const newCharacters = [...characters, { id: Date.now(), name: '', description: '', collapsed: false }];
+    setCharacters(newCharacters);
+    triggerSave({ characters: newCharacters });
+  };
+
+  const handleToggleCharacterCollapse = (id) => {
+    // Згортання персонажів зазвичай не потребує Undo, але для консистентності можна додати
+    const newCharacters = characters.map(c => c.id === id ? { ...c, collapsed: !c.collapsed } : c);
+    setCharacters(newCharacters);
+    triggerSave({ characters: newCharacters });
+  };
+
+  const handleCharacterNameChange = (id, name) => {
+    pushToUndo();
+    if (!saveTimeout.current) pushToUndo(); // Робимо snapshot лише перед початком введення тексту
+    const newCharacters = characters.map(c => c.id === id ? { ...c, name } : c);
+    setCharacters(newCharacters);
+    triggerSave({ characters: newCharacters });
+  };
+
+  const handleCharacterDescriptionChange = (id, description) => {
+    pushToUndo();
+    if (!saveTimeout.current) pushToUndo(); // Робимо snapshot лише перед початком введення тексту
+    const newCharacters = characters.map(c => c.id === id ? { ...c, description } : c);
+    setCharacters(newCharacters);
+    triggerSave({ characters: newCharacters });
+  };
+
+  const handleDeleteCharacter = (id) => {
+    pushToUndo();
+    const newCharacters = characters.filter(c => c.id !== id);
+    setCharacters(newCharacters);
     triggerSave({ notes: newNotes });
   };
 
@@ -386,6 +406,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
     if (updatedCampaign) {
       setDescription(updatedCampaign.description || '');
       setNotes(updatedCampaign.notes || []);
+      setCharacters(updatedCampaign.characters || []); // NEW: Update characters from AI
     }
     onRefreshCampaigns();
   };
@@ -426,7 +447,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
       <div className="Panel__body">
         <div className="CampaignView__section">
           <h3>Сюжет кампанії</h3>
-          <EditableMarkdownField
+          <EditableField
             type="textarea"
             placeholder="Опишіть основну лінію сюжету, ключові події та цілі..."
             value={description}
@@ -520,7 +541,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
                     <Button variant="danger" icon="trash" size={14} onClick={() => handleDeleteNote(note.id)} title="Видалити замітку" />
                   </div>
                   {!note.collapsed && (
-                    <EditableMarkdownField
+                    <EditableField
                       type="textarea"
                       value={note.text}
                       onChange={(e) => handleNoteChange(note.id, e.target.value)}
@@ -543,6 +564,102 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
             onInsertResult={handleAiUpdate}
             modal={modal}
           />
+        </div>
+
+        {/* Characters Section */}
+        <div className="CampaignView__section">
+          <div className="section-row">
+            <div className="section-title-group" onClick={() => setIsCharactersCollapsed(!isCharactersCollapsed)} style={{ cursor: 'pointer' }}>
+              <Button
+                variant="ghost"
+                size="small"
+                icon="chevron"
+                className={`section-collapse-toggle ${isCharactersCollapsed ? 'is-rotated' : ''}`}
+                onClick={(e) => { e.stopPropagation(); setIsCharactersCollapsed(!isCharactersCollapsed); }}
+              />
+              <h3>Персонажі</h3>
+            </div>
+            {!isCharactersCollapsed && (
+              <Button
+                variant="primary"
+                size="small"
+                onClick={handleAddCharacter}
+                icon="plus"
+                strokeWidth={2.5}
+              >
+                Новий персонаж
+              </Button>
+            )}
+          </div>
+          {!isCharactersCollapsed && (
+            <div className="CampaignView__characters">
+              {characters.map(character => (
+                <div
+                  key={character.id}
+                  className={`character-card-simple ${character.collapsed ? 'is-collapsed' : ''} ${draggingCharacterId === character.id ? 'character-card-simple--dragging' : ''}`}
+                  draggable
+                  onDragStart={(e) => {
+                    setDraggingCharacterId(character.id);
+                    e.currentTarget.classList.add('dragging');
+                    e.dataTransfer.setData('text/plain', character.id);
+                    e.dataTransfer.effectAllowed = 'move';
+                  }}
+                  onDragEnd={() => {
+                    setDraggingCharacterId(null);
+                    // Зберігаємо порядок
+                    // `characters` state is already updated by onDragEnter, so just save it.
+                    triggerSave({ characters });
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                  }}
+                  onDragEnter={() => {
+                    if (draggingCharacterId === character.id || !draggingCharacterId) return;
+
+                    const items = [...characters];
+                    const draggedIdx = items.findIndex(i => i.id === draggingCharacterId);
+                    const targetIdx = items.findIndex(i => i.id === character.id);
+
+                    if (draggedIdx !== -1 && targetIdx !== -1) {
+                      const [removed] = items.splice(draggedIdx, 1);
+                      items.splice(targetIdx, 0, removed);
+                      setCharacters(items);
+                    }
+                  }}
+                  onDrop={handleDrop}
+                >
+                  <div
+                    className="character-card-simple__header"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Button
+                      variant="ghost"
+                      size="small"
+                      icon="chevron"
+                      className={`character-card-simple__toggle ${character.collapsed ? 'is-rotated' : ''}`}
+                      onClick={() => handleToggleCharacterCollapse(character.id)}
+                    />
+                    <EditableField
+                      value={character.name}
+                      onChange={(e) => handleCharacterNameChange(character.id, e.target.value)}
+                      placeholder="Ім'я персонажа"
+                      className="character-card-simple__name"
+                    />
+                    <Button variant="danger" icon="trash" size={14} onClick={() => handleDeleteCharacter(character.id)} title="Видалити персонажа" />
+                  </div>
+                  {!character.collapsed && (
+                    <EditableField
+                      type="textarea"
+                      value={character.description}
+                      onChange={(e) => handleCharacterDescriptionChange(character.id, e.target.value)}
+                      placeholder="Опис персонажа..."
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="section-row">

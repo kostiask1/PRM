@@ -126,3 +126,56 @@
 .note-card-simple.is-collapsed {
     opacity: 0.8;
 }
+
+/* NEW: Styles for Characters Section */
+.CampaignView__characters {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.character-card-simple {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    transition: border-color 0.2s ease, opacity 0.2s ease;
+    cursor: grab;
+}
+
+.character-card-simple:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.character-card-simple--dragging {
+    opacity: 0.4;
+    border-style: dashed;
+    cursor: grabbing;
+}
+
+.character-card-simple__header {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    gap: 8px;
+}
+
+.character-card-simple__toggle {
+    transition: transform 0.2s ease !important;
+    width: 36px;
+    height: 36px;
+}
+
+.character-card-simple__toggle.is-rotated {
+    transform: rotate(-90deg);
+}
+
+.character-card-simple__name {
+    flex: 1;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-bright);
+}
+
+.character-card-simple.is-collapsed {
+    opacity: 0.8;
+}
