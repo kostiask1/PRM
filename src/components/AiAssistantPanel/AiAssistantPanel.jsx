@@ -212,13 +212,9 @@ export default function AiAssistantPanel({
 					className="AiAssistant__generate-btn"
 					disabled={loading}
 					onClick={() => generate()}>
-					{loading ? "Магія працює..." : "Згенерувати"}
+					{loading ? "Магія працює, зачекайте..." : "Згенерувати"}
 				</Button>
 			</div>
-
-			{loading && (
-				<div className="AiAssistant__loading">Магія працює, зачекайте...</div>
-			)}
 
 			{error && <div className="AiAssistant__error">{error}</div>}
 
