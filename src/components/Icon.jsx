@@ -196,6 +196,18 @@ const icons = {
 			<path d="m19 21-2-2" />
 		</>
 	),
+	skull: (
+		<>
+			<path d="M12 2C8.13 2 5 5.13 5 9v3c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V9c0-3.87-3.13-7-7-7Z" />
+			<path d="M8 14v4c0 1.1.9 2 2 2h4c1.1 0 2-.9 2-2v-4" />
+			<path d="M9 10h.01" strokeWidth="4" />
+			<path d="M15 10h.01" strokeWidth="4" />
+			<path d="m10 14 2-2 2 2" />
+			<path d="M10 17v3" />
+			<path d="M12 17v3" />
+			<path d="M14 17v3" />
+		</>
+	),
 };
 
 export default function Icon({

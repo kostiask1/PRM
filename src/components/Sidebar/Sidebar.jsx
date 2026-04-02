@@ -87,7 +87,7 @@ export default function Sidebar({
 							onSelectCampaign("bestiary");
 						}
 					}}>
-					<Icon name="database" />
+					<Icon name="skull" />
 					Бестіарій
 				</a>
 				<a
