@@ -30,12 +30,42 @@ const Input = forwardRef(({ type = "text", className = "", ...props }, ref) => {
 
 			const tag = key === "b" || key === "и" ? "**" : "*";
 			const { selectionStart, selectionEnd, value } = e.target;
-
-			const before = value.substring(0, selectionStart);
 			const selection = value.substring(selectionStart, selectionEnd);
-			const after = value.substring(selectionEnd);
 
-			const newValue = before + tag + selection + tag + after;
+			let newValue;
+			let newStart, newEnd;
+
+			// Перевірка на конфлікт: чи не намагаємось ми зняти курсив з тексту, який насправді жирний (**)
+			const isItalic = tag === "*";
+			const isInsideItalicConflict = isItalic && selection.startsWith("**") && !selection.startsWith("***");
+			const isOutsideItalicConflict = isItalic && value.substring(selectionStart - 2, selectionStart) === "**" && value.substring(selectionStart - 3, selectionStart) !== "***";
+
+			// 1. Якщо теги всередині виділення: [**текст**] -> [текст]
+			if (selection.startsWith(tag) && selection.endsWith(tag) && selection.length >= tag.length * 2 && !isInsideItalicConflict) {
+				newValue = value.substring(0, selectionStart) + 
+						   selection.substring(tag.length, selection.length - tag.length) + 
+						   value.substring(selectionEnd);
+				newStart = selectionStart;
+				newEnd = selectionEnd - (tag.length * 2);
+			}
+			// 2. Якщо теги зовні виділення: **[текст]** -> [текст]
+			else if (
+				selectionStart >= tag.length &&
+				value.substring(selectionStart - tag.length, selectionStart) === tag &&
+				value.substring(selectionEnd, selectionEnd + tag.length) === tag && !isOutsideItalicConflict
+			) {
+				newValue = value.substring(0, selectionStart - tag.length) + 
+						   selection + 
+						   value.substring(selectionEnd + tag.length);
+				newStart = selectionStart - tag.length;
+				newEnd = selectionEnd - tag.length;
+			}
+			// 3. Додаємо форматування
+			else {
+				newValue = value.substring(0, selectionStart) + tag + selection + tag + value.substring(selectionEnd);
+				newStart = selectionStart + tag.length;
+				newEnd = selectionEnd + tag.length;
+			}
 
 			// Викликаємо onChange для оновлення стану в батьківському компоненті
 			if (props.onChange) {
@@ -50,8 +80,6 @@ const Input = forwardRef(({ type = "text", className = "", ...props }, ref) => {
 				const node = internalRef.current;
 				if (node) {
 					node.focus();
-					const newStart = selectionStart + tag.length;
-					const newEnd = selectionEnd + tag.length;
 					node.setSelectionRange(newStart, newEnd);
 				}
 			}, 0);
