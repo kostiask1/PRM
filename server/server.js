@@ -525,18 +525,21 @@ app.delete('/api/campaigns/:slug/sessions/:fileName', async (req, res, next) => 
 
 app.post('/api/ai/generate', async (req, res, next) => {
   try {
-    const { type, sessionName, sessionData, slug, fileName, userInstructions, generateWithReplace, sceneId } = req.body;
+    const { type, userInstructions, path, sceneId, parseAIResponse } = req.body;
+    const campaign = await readCampaign(path.campaign)
+    const session = await readSession(path.campaign, path.session).catch(() => null);
+
     if (!process.env.GEMINI_API_KEY) {
       return res.status(500).json({ error: 'GEMINI_API_KEY не налаштовано на сервері.' });
     }
 
-    const generatedContent = await aiService.generateContent(type, sessionName, sessionData, userInstructions, generateWithReplace, sceneId);
+    const generatedContent = await aiService.generateContent({ type, session, campaign, userInstructions, sceneId, parseAIResponse });
 
     if (generatedContent.error) {
       return res.status(500).json({ error: generatedContent.error, raw_response: generatedContent.raw_response });
     }
 
-    if (type === 'image_prompt') {
+    if (!parseAIResponse) {
       return res.json({
         prompt: generatedContent,
       });
@@ -545,44 +548,40 @@ app.post('/api/ai/generate', async (req, res, next) => {
     let updatedObject = null;
 
     // Автоматичний запис в БД
-    if (slug) {
-      if (fileName) {
+    if (campaign) {
+      if (session) {
         // Оновлення СЕСІЇ
-        const fullPath = sessionPath(slug, fileName);
+        const fullPath = sessionPath(path.campaign, path.session);
 
         if (await exists(fullPath)) {
           const session = await readJson(fullPath);
           const data = session.data || {};
 
           // Логіка інтеграції залежно від типу
-          if (type === 'scene_ideas' && generatedContent.scenes) {
-            if (generateWithReplace) {
-              const newScenes = generatedContent.scenes.map((s, idx) => {
-                const existingScene = session.data?.scenes?.[idx] || {};
+          if (generatedContent.scenes) {
+            const newScenes = generatedContent.scenes.map((s, idx) => {
+              const existingScene = session.data?.scenes?.[idx] || {};
 
-                return {
-                  id: existingScene?.id || Date.now() + (Math.random() * 100000).toFixed(),
-                  texts: s.texts,
-                  collapsed: existingScene?.collapsed || false,
-                  encounterId: existingScene?.encounterId || "",
-                }
-              });
+              return {
+                id: existingScene?.id || Date.now() + +(Math.random() * 100000).toFixed(),
+                texts: s.texts,
+                npcs: s.npcs,
+                collapsed: existingScene?.collapsed || false,
+                encounterId: existingScene?.encounterId || "",
+              }
+            });
 
-              data.scenes = newScenes;
-            } else {
-              data.scenes = [...(session.data?.scenes || []), ...generatedContent.scenes]
-            }
+            data.scenes = newScenes;
           }
 
           session.data = data;
           session.updatedAt = new Date().toISOString();
 
           await writeJson(fullPath, session);
-          updatedObject = { ...session, fileName };
+          updatedObject = { ...session, fileName: path.session };
         }
       } else {
-        // Оновлення КАМПАНІЇ (якщо fileName відсутній)
-        const metaPath = campaignMetaPath(slug);
+        const metaPath = campaignMetaPath(path.campaign);
 
         if (await exists(metaPath)) {
           const meta = await readJson(metaPath);
@@ -593,10 +592,20 @@ app.post('/api/ai/generate', async (req, res, next) => {
           }
 
           if (Array.isArray(generatedContent.notes)) {
-            // Перетворюємо масив рядків від ШІ у внутрішній формат заміток з ID
+            // Перетворюємо масив рядків від ШІ у внутрішній формат заміток
             meta.notes = generatedContent.notes.map(text => ({
-              id: Date.now() + Math.random(),
+              id: Date.now() + +(Math.random() * 100000).toFixed(),
               text: text,
+              collapsed: false
+            }));
+          }
+
+          if (Array.isArray(generatedContent.characters)) {
+            // Перетворюємо масив рядків від ШІ у внутрішній формат персонажів
+            meta.characters = generatedContent.characters.map((character) => ({
+              id: Date.now() + +(Math.random() * 100000).toFixed(),
+              name: character.name,
+              description: character.description,
               collapsed: false
             }));
           }

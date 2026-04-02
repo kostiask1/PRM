@@ -236,7 +236,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
     pushToUndo();
     const newCharacters = characters.filter(c => c.id !== id);
     setCharacters(newCharacters);
-    triggerSave({ notes: newNotes });
+    triggerSave({ characters: newCharacters });
   };
 
   useEffect(() => {
@@ -552,19 +552,6 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
               ))}
             </div>
           )}
-          <AiAssistantPanel
-            sessionName={campaign.name}
-            sessionData={{
-              ...campaign,
-              description,
-              notes,
-              characters,
-            }}
-            campaignSlug={campaign.slug}
-            sessionId={null}
-            onInsertResult={handleAiUpdate}
-            modal={modal}
-          />
         </div>
 
         {/* Characters Section */}
@@ -661,6 +648,22 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
               ))}
             </div>
           )}
+        </div>
+
+        <div className="CampaignView__section">
+          <AiAssistantPanel
+            sessionName={campaign.name}
+            sessionData={{
+              ...campaign,
+              description,
+              notes,
+              characters,
+            }}
+            campaignSlug={campaign.slug}
+            sessionId={null}
+            onInsertResult={handleAiUpdate}
+            modal={modal}
+          />
         </div>
 
         <div className="section-row">

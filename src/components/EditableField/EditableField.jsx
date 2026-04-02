@@ -11,7 +11,7 @@ export default function EditableField({ value, onChange, placeholder, className,
   const handleClick = (e) => {
     e.stopPropagation();
     setIsEditing(!isEditing);
-    props?.onClick(e);
+    props.onClick && props.onClick(e);
   }
 
   if (isEditing) {

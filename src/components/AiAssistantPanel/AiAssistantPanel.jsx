@@ -6,18 +6,19 @@ import Input from '../Input/Input';
 import Modal from '../Modal/Modal';
 import Notification from '../Notification/Notification';
 import './AiAssistantPanel.css';
+import { parseUrl } from '../../utils/navigation';
 
-export default function AiAssistantPanel({ sessionName, sessionData, campaignSlug, campaignContext, sessionId, onInsertResult, modal }) {
+export default function AiAssistantPanel({ sessionData, onInsertResult, modal }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [useCampaignContext, setUseCampaignContext] = useState(true);
-    const [generateWithReplace, setGenerateWithReplace] = useState(true);
     const [userInstructions, setUserInstructions] = useState('');
     const [notification, setNotification] = useState(null);
     const [showSceneSelector, setShowSceneSelector] = useState(false);
+    const [parseAIResponse, setParseAIResponse] = useState(true);
     const [generatedPrompt, setGeneratedPrompt] = useState(null);
+    const initialRoute = parseUrl();
 
-    const isCampaign = !sessionId;
+    const isCampaign = !initialRoute.session;
 
     const showApiKeyInstructions = () => {
         modal.alert(
@@ -30,33 +31,24 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
         );
     };
 
-    const generate = async (overrideType = null, targetSceneId = null) => {
+    const generate = async (type = null, targetSceneId = null) => {
         setLoading(true);
         setError('');
+
         try {
-            const promptData = { ...sessionData };
-
-            if (useCampaignContext && campaignContext) {
-                promptData.description = campaignContext.description;
-                promptData.notes = campaignContext.notes;
-            }
-
-            const typeToSend = overrideType || (isCampaign ? 'campaign_plot' : 'scene_ideas');
-
             const data = await api.generateAi({
-                type: typeToSend,
-                sessionName,
-                sessionData: promptData,
-                slug: campaignSlug,
-                fileName: sessionId,
-                generateWithReplace: targetSceneId ? false : generateWithReplace,
+                type,
                 userInstructions,
-                sceneId: targetSceneId
+                path: initialRoute,
+                sceneId: targetSceneId,
+                parseAIResponse: type === "image" ? false : parseAIResponse,
             });
 
             // Одразу оновлюємо стан в батьківському компоненті, бо в БД вже записано
             if (data.prompt) {
                 setGeneratedPrompt(data.prompt);
+                console.log('data:', data)
+                console.log('data.prompt:', data.prompt)
             } else if (data.updated && onInsertResult) {
                 onInsertResult(data.updated);
                 setUserInstructions(''); // Очищаємо поле після успіху
@@ -67,6 +59,7 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
                 showApiKeyInstructions();
                 return;
             }
+
             setError(err.message || 'Не вдалося зв’язатися з AI.');
             modal.alert("Помилка ШІ", err.message, err.status);
         } finally {
@@ -98,24 +91,8 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
                 <Icon name="wand" size={20} className="AiAssistant__header-icon" />
             </div>
 
-            {!isCampaign && (
-                <div className="AiAssistant__actions">
-                    <Button
-                        variant={useCampaignContext ? 'primary' : 'ghost'}
-                        size="small"
-                        onClick={() => setUseCampaignContext((useCampaignContext) => !useCampaignContext)}
-                        disabled={loading}
-                    >
-                        Використати контекст кампанії
-                    </Button>
-                    <Button
-                        variant={generateWithReplace ? 'primary' : 'ghost'}
-                        size="small"
-                        onClick={() => setGenerateWithReplace((generateWithReplace) => !generateWithReplace)}
-                        disabled={loading}
-                    >
-                        {generateWithReplace ? "Додавання із заміною" : "Додати нові дані"}
-                    </Button>
+            <div className="AiAssistant__actions">
+                {!isCampaign && (
                     <Button
                         variant="ghost"
                         size="small"
@@ -126,8 +103,18 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
                     >
                         Промпт для фото
                     </Button>
-                </div>
-            )}
+                )}
+                <Button
+                    variant={parseAIResponse ? "primary" : "ghost"}
+                    size="small"
+                    icon="image"
+                    onClick={() => setParseAIResponse(!parseAIResponse)}
+                    disabled={loading}
+                    title={parseAIResponse ? "Парсити відповідь ШІ" : "Показувати відповідь текстом"}
+                >
+                    Парсинг відповіді
+                </Button>
+            </div>
 
             {showSceneSelector && (
                 <Modal
@@ -142,7 +129,7 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
                                 className="AiAssistant__scene-option"
                                 onClick={() => {
                                     setShowSceneSelector(false);
-                                    generate('image_prompt', scene.id);
+                                    generate('image', scene.id);
                                 }}
                             >
                                 <strong>Сцена {idx + 1}</strong>: {scene.texts?.summary?.slice(0, 60) || 'Без опису'}...
@@ -154,7 +141,7 @@ export default function AiAssistantPanel({ sessionName, sessionData, campaignSlu
 
             {generatedPrompt && (
                 <Modal
-                    title="Опис для генерації зображення"
+                    title="Відповідь"
                     confirmLabel="Копіювати"
                     onCancel={() => setGeneratedPrompt(null)}
                     onConfirm={handleCopyGeneratedPrompt}

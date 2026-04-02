@@ -3,23 +3,39 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const systemInstructions = {
-    campaign_plot: `Ти досвідчений майстер підземель (Dungeon Master) для Dungeons & Dragons. 
+    campaign: `Ти досвідчений майстер підземель (Dungeon Master) для Dungeons & Dragons. 
         Твоя мета - допомагати в плануванні сесій. Відповідай виключно українською мовою. 
         Твої відповіді мають бути структурованими, читабельними та корисними для гри. 
         Використовувати Markdown-розмітку (наприклад, жирний текст **текст**, марковані списки, розбиття рядку) для структурування тексту всередині значень JSON.
         Завжди відповідай у форматі JSON. Не включай жодного тексту до або після JSON. 
         JSON повинен містити лише згенеровані дані, без додаткових пояснень. 
-        Використовуй структуру { "description": "...", "notes": ["Заголовок\\nДеталі замітки...", ...] }. Кожна замітка в масиві notes повинна бути цілісним логічним блоком: перший рядок — це короткий заголовок, а наступні рядки — основний зміст. Не генеруй поле "scenes" для кампанії.
+        Використовуй структуру { "description": "...", "notes": ["Заголовок\\nДеталі замітки...", ...], "characters": [{name: "...", "description": "..."}, ...] }. Кожна замітка в масиві notes повинна бути цілісним логічним блоком: перший рядок — це короткий заголовок, а наступні рядки — основний зміст. Не генеруй поле "scenes" для кампанії.
         `,
-    scene_ideas: `Ти досвідчений майстер підземель (Dungeon Master) для Dungeons & Dragons. 
+    scene: `Ти досвідчений майстер підземель (Dungeon Master) для Dungeons & Dragons. 
         Твоя мета - допомагати в плануванні сесій. Відповідай виключно українською мовою. 
         Твої відповіді мають бути структурованими, читабельними та корисними для гри. 
         Використовувати Markdown-розмітку (наприклад, жирний текст **текст**, марковані списки, розбиття рядку) для структурування тексту всередині значень JSON.
         Завжди відповідай у форматі JSON. Не включай жодного тексту до або після JSON. 
         JSON повинен містити лише згенеровані дані, без додаткових пояснень. 
-        Коли генеруєш сцени, враховуй дані в ключі encounters, використовуй структуру { "scenes": [{ "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "...", "npcs": "...", "clues": "..." } }, ...] }.
+        Коли генеруєш сцени, враховуй дані в ключі encounters, використовуй структуру { "scenes": [{ "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "...", "clues": "..." }, "npcs": [{"name": "...", "description": "..."}, ...] }, ...] }.
         `,
-    image_prompt: `Ти — генератор детальних промптів для створення зображень сцен.
+    prompt: `Ти досвідчений майстер підземель (Dungeon Master) для Dungeons & Dragons. 
+        Твоя мета - допомагати в плануванні іншому майстру. Відповідай виключно українською мовою. 
+        Ти отримуєш дані та інструкцію користувача.
+        Проаналізуй дані самостійно, повністю виконай інструкцію, навіть якщо дані неповні або неоднозначні.
+        У таких випадках зроби найбільш логічні припущення.
+
+        НЕ СТАВ ЖОДНИХ УТОЧНЮЮЧИХ ЗАПИТАНЬ. НЕ ДАВАЙ ПОРАД ЯКЩО НЕ ПРОСИВ.
+        НЕ ЗВЕРТАЙ УВАГУ НА ПОРОЖНІ ДАНІ, ОПЕРУЙ ТИМ ЩО Є.
+
+        Сформуй відповідь виключно як звичайний текст для людини.
+        КАТЕГОРИЧНО ЗАБОРОНЕНО:
+        - повертати JSON
+        - використовувати ключі, дужки {}, []
+        - показувати структуру даних
+        Виводь фінальний результат у вигляді зв’язного, природного людьского тексту, ніби це звичайна розповідь або відповідь.
+`,
+    image: `Ти — генератор детальних промптів для створення зображень сцен.
                     Користувач надсилає дані у форматі JSON з такими ключами:
 
                     Ключі сцени (вищий пріоритет)
@@ -53,55 +69,83 @@ const systemInstructions = {
                     `,
 }
 
-async function generateContent(type, sessionName, sessionData, userInstructions, generateWithReplace, sceneId) {
+async function generateContent({ type, session, campaign, userInstructions, sceneId, parseAIResponse }) {
     let model;
     let userPrompt = "";
+
+    const useKey = type ? type : !parseAIResponse ? "prompt" : session ? "scene" : "campaign";
 
     model = genAI.getGenerativeModel({
         model: "gemini-2.5-flash",
         generationConfig: {
             responseMimeType: "application/json",
         },
-        systemInstruction: systemInstructions[type]
+        systemInstruction: systemInstructions[useKey],
     });
 
-    const dataSummary = JSON.stringify({
-        name: sessionName,
-        description: sessionData.description || '',
-        notes: sessionData.notes?.map(n => n.text) || [],
-        scenes: sessionData.scenes || [],
-        encounters: sessionData.encounters?.map(e => ({
+    const campaignData = {
+        name: campaign.name,
+        description: campaign.description || '',
+        notes: campaign.notes?.map(n => n.text) || [],
+        characters: campaign.characters || []
+    };
+
+    let dataSummary = campaignData;
+
+    if (session) {
+        dataSummary.name = session.name;
+        dataSummary.scenes = session.data.scenes || []
+        dataSummary.encounters = session.data.encounters?.map(e => ({
             id: e.id,
             name: e.name,
             participants: e.monsters?.map(p => p.name) || [],
         })) || []
-    });
+    }
 
-    
-    if (type === "image_prompt") {
+    dataSummary = JSON.stringify(dataSummary);
+
+    if (useKey === "image") {
         userPrompt = dataSummary;
 
         userPrompt += `\n\nНадай головний пріорітет до scene.id ${sceneId}. Промпт повинен стосуватись саме її, проте інші дані можуть краще її доповнити (інформація чи опис NPC і персонажів, локація)`;
+    } else if (useKey === "prompt") {
+        userPrompt = `\n\nДані кампанії:
+        Назва - ${campaign.name},
+        Опис - ${campaign.description || 'відсутній'},
+        Замітки - ${(campaign.notes?.map(n => n.text) || []).join(', ') || 'відсутні'},
+        Персонажі - ${campaign.characters?.map((character) => (
+            `Ім'я - ${character.name},
+             Опис - ${character.description || 'відсутній'}`
+        )).join(', ') || "відсутні"}.`
+
+        if (session) {
+            userPrompt += `\n\nДані сесії:
+            Назва - ${session.name},
+            Сцени: ${session.data?.scenes?.map((scene, index) => (
+                `
+                    Сцена №${index + 1}:
+                        - Суть сцени: ${scene.texts.summary}
+                        - Мета гравців: ${scene.texts.goal}
+                        - Ставки: ${scene.texts.stakes}
+                        - Локація: ${scene.texts.location}
+                        - Підказки: ${scene.texts.clues}
+                        - Бій проти ворогів: ${session.data?.encounters?.find((encounter) => encounter.id === scene.encounterId)?.monsters?.map((monster) => monster.name).join(', ') || "відсутні"}
+                `
+            )).join(', ') || "відсутні"}`;
+        }
     } else {
-        switch (type) {
-            case 'campaign_plot':
-                userPrompt = `На основі назви кампанії "${sessionName}" та поточного сюжету: <${sessionData.description || 'відсутній'}>, допоможи розвинути основну лінію та структурувати замітки. Враховуй існуючі замітки: <${JSON.stringify(sessionData.notes?.map(n => n.text) || [])}>. Твоє завдання - оновити опис сюжету (поле description) та надати список цілісних логічних заміток (поле notes) у вигляді масиву рядків. У кожній замітці перший рядок — це короткий заголовок, а далі — розгорнутий запис. Не генеруй жодних сцен.`;
-                break;
-            case 'scene_ideas':
-                userPrompt = `На основі цієї сесії "${sessionName}" та даних: <${dataSummary}>, запропонуй ідеї для нових (або доповни існуючі, залежно від подальших вказівок) цікавих сцен (соціальних, бойових або дослідницьких).`;
-                break;
-            default:
-                userPrompt = "";
+        if (session) {
+            userPrompt = `На основі цієї сесії "${session.name}" та даних: <${dataSummary}>, запропонуй ідеї для нових (або доповни існуючі, залежно від подальших вказівок) цікавих сцен (соціальних, бойових або дослідницьких).`;
+        } else {
+            userPrompt = `На основі назви кампанії "${campaign.name}" та поточного сюжету: <${campaign.description || 'відсутній'}>, допоможи розвинути основну лінію та структурувати замітки. Враховуй існуючі замітки: notes <${JSON.stringify(campaign.notes?.map(n => n.text) || [])}>, а також опису персонажів гравців: characters <${JSON.stringify(campaign.characters || [])}>. Твоє завдання - оновити опис сюжету (поле description) та надати список цілісних логічних заміток (поле notes) у вигляді масиву рядків. У кожній замітці перший рядок — це короткий заголовок, а далі — розгорнутий запис. Не генеруй жодних сцен.`;
         }
 
-        if (generateWithReplace) {
-            userPrompt += `\n\nГенеруй нові дані, із заміною (або доповненням) існуючих.
+        userPrompt += `\n\nГенеруй нові дані, із заміною (або доповненням) існуючих.
                             Не залишай старі дані без змін, якщо вони не відповідають новому генерованому контенту.`;
-        }
+    }
 
-        if (userInstructions) {
-            userPrompt += `\n\nДодаткові побажання та контекст від користувача. Надай наступному тексту більше уваги: ${userInstructions}`;
-        }
+    if (userInstructions) {
+        userPrompt += `\n\nДодаткові побажання та контекст від користувача. Надай наступному тексту більше уваги: ${userInstructions}`;
     }
 
     const result = await model.generateContent(userPrompt);
@@ -111,8 +155,13 @@ async function generateContent(type, sessionName, sessionData, userInstructions,
     try {
         // Очищення від можливих markdown-тегів, якщо вони проскочили
         const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
+
         return JSON.parse(cleanJson);
     } catch (e) {
+        if (!parseAIResponse && e.message.includes("JSON.parse")) {
+            return text;
+        }
+
         console.error("Failed to parse AI response as JSON:", text, e);
         // Якщо парсинг не вдався, повертаємо структуровану помилку
         return { error: "AI повернув некоректний JSON. Спробуйте ще раз.", raw_response: text };
