@@ -17,7 +17,11 @@ export default function EditableField({
 
 	const handleClick = (e) => {
 		e.stopPropagation();
-		setIsEditing(!isEditing);
+
+		if (!isEditing) {
+			setIsEditing(true);
+		}
+
 		props.onClick && props.onClick(e);
 	};
 
@@ -26,6 +30,7 @@ export default function EditableField({
 			<Input
 				{...props}
 				onClick={handleClick}
+				onBlur={handleClick}
 				type={type}
 				value={value}
 				onChange={onChange}
