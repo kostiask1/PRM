@@ -30,7 +30,6 @@ export default function EditableField({
 			<Input
 				{...props}
 				onClick={handleClick}
-				onBlur={handleClick}
 				type={type}
 				value={value}
 				onChange={onChange}
