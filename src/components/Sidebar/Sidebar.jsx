@@ -4,6 +4,7 @@ import Button from '../Button/Button';
 import Icon from '../Icon';
 import StatusBadge from '../StatusBadge/StatusBadge';
 import ListCard from '../ListCard/ListCard';
+import DraggableList from '../DraggableList/DraggableList';
 import "./Sidebar.css"
 
 export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign, onCreateCampaign, onToggleCampaignStatus, modal }) {
@@ -11,7 +12,6 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
 
   // Локальний стан для миттєвого відображення змін черги
   const [localCampaigns, setLocalCampaigns] = useState(campaigns);
-  const [draggingSlug, setDraggingSlug] = useState(null);
 
   // Синхронізація локального списку з пропсами
   useEffect(() => {
@@ -51,42 +51,11 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
     reader.readAsText(file);
   };
 
-  const handleDragStart = (e, slug) => {
-    setDraggingSlug(slug);
-
-    // Покращуємо візуальний "привид" елемента
-    e.currentTarget.classList.add('dragging');
-
-    // Налаштування drag-image (можна додати кастомний елемент, якщо потрібно)
-    e.dataTransfer.effectAllowed = 'move';
-
-    e.dataTransfer.setData('text/plain', slug);
-  };
-
-  const handleDragEnd = () => {
-    setDraggingSlug(null);
+  const handleDragEnd = (newList) => {
     // Зберігаємо фінальний порядок на сервері
     const orders = {};
-    localCampaigns.forEach((item, idx) => { orders[item.slug] = idx; });
+    newList.forEach((item, idx) => { orders[item.slug] = idx; });
     api.reorderCampaigns(orders);
-  };
-
-  const handleDragEnter = (targetSlug) => {
-    if (draggingSlug === targetSlug || !draggingSlug) return;
-
-    const items = [...localCampaigns];
-    const draggedIdx = items.findIndex(i => i.slug === draggingSlug);
-    const targetIdx = items.findIndex(i => i.slug === targetSlug);
-
-    if (draggedIdx !== -1 && targetIdx !== -1) {
-      const [removed] = items.splice(draggedIdx, 1);
-      items.splice(targetIdx, 0, removed);
-      setLocalCampaigns(items);
-    }
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
   };
 
   return (
@@ -131,23 +100,18 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
           Нова кампанія
         </Button>
 
-        <div className="Sidebar__list">
-          {localCampaigns.map(campaign => (
+        <DraggableList
+          items={localCampaigns}
+          className="Sidebar__list"
+          onReorder={setLocalCampaigns}
+          onDrop={() => handleDragEnd(localCampaigns)}
+          keyExtractor={(c) => c.slug}
+          renderItem={(campaign, isDragging) => (
             <ListCard
-              key={campaign.slug}
               active={activeCampaignId === campaign.slug}
-              dragging={draggingSlug === campaign.slug}
+              dragging={isDragging}
               href={`/campaign/${encodeURIComponent(campaign.slug)}`}
               onClick={() => onSelectCampaign(campaign.slug)}
-              draggable
-              onDragStart={(e) => handleDragStart(e, campaign.slug)}
-              onDragEnd={handleDragEnd}
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'move';
-              }}
-              onDragEnter={() => handleDragEnter(campaign.slug)}
-              onDrop={handleDrop}
               actions={
                 <StatusBadge completed={campaign.completed} completedAt={campaign.completedAt} onClick={(e) => { e.stopPropagation(); onToggleCampaignStatus(campaign); }} />
               }
@@ -155,8 +119,8 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
               <div className="ListCard__title">{campaign.name}</div>
               <div className="ListCard__meta">{campaign.sessionCount || 0} сесій</div>
             </ListCard>
-          ))}
-        </div>
+          )}
+        />
       </div>
 
       <div className="Sidebar__section Sidebar__section--resources">

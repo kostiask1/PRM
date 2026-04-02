@@ -9,13 +9,11 @@ import EditableField from '../EditableField/EditableField';
 import ListCard from '../ListCard/ListCard';
 import Panel from '../Panel/Panel';
 import StatusBadge from '../StatusBadge/StatusBadge';
+import DraggableList from '../DraggableList/DraggableList';
 import './CampaignView.css';
 
 export default function CampaignView({ campaign, onSelectSession, onNavigate, onRefreshCampaigns, modal }) {
   const [sessions, setSessions] = useState([]);
-  const [draggingFileName, setDraggingFileName] = useState(null);
-  const [draggingNoteId, setDraggingNoteId] = useState(null);
-  const [draggingCharacterId, setDraggingCharacterId] = useState(null);
 
   // Локальний стан для сюжету та заміток
   const [description, setDescription] = useState(campaign.description || '');
@@ -346,36 +344,6 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
     }
   };
 
-  const handleDragStart = (e, fileName) => {
-    setDraggingFileName(fileName);
-    e.currentTarget.classList.add('dragging');
-
-    e.dataTransfer.setData('text/plain', fileName);
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleDragEnd = () => {
-    setDraggingFileName(null);
-    // Зберігаємо порядок
-    const orders = {};
-    sessions.forEach((item, idx) => { orders[item.fileName] = idx; });
-    api.reorderSessions(campaign.slug, orders);
-  };
-
-  const handleDragEnter = (targetFileName) => {
-    if (draggingFileName === targetFileName || !draggingFileName) return;
-
-    const items = [...sessions];
-    const draggedIdx = items.findIndex(i => i.fileName === draggingFileName);
-    const targetIdx = items.findIndex(i => i.fileName === targetFileName);
-
-    if (draggedIdx !== -1 && targetIdx !== -1) {
-      const [removed] = items.splice(draggedIdx, 1);
-      items.splice(targetIdx, 0, removed);
-      setSessions(items);
-    }
-  };
-
   useEffect(() => {
     const handleKeyDown = (e) => {
       const isMod = e.ctrlKey || e.metaKey;
@@ -397,10 +365,6 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleUndo, handleRedo]);
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-  };
 
   const handleAiUpdate = (updatedCampaign) => {
     // Зберігаємо стан ДО змін ШІ в історію
@@ -494,41 +458,14 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
             )}
           </div>
           {!isNotesCollapsed && (
-            <div className="CampaignView__notes">
-              {notes.map(note => (
-                <div
-                  key={note.id}
-                  className={`note-card-simple ${note.collapsed ? 'is-collapsed' : ''} ${draggingNoteId === note.id ? 'note-card-simple--dragging' : ''}`}
-                  draggable
-                  onDragStart={(e) => {
-                    setDraggingNoteId(note.id);
-                    e.currentTarget.classList.add('dragging');
-                    e.dataTransfer.setData('text/plain', note.id);
-                    e.dataTransfer.effectAllowed = 'move';
-                  }}
-                  onDragEnd={() => {
-                    setDraggingNoteId(null);
-                    triggerSave({ notes });
-                  }}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = 'move';
-                  }}
-                  onDragEnter={() => {
-                    if (draggingNoteId === note.id || !draggingNoteId) return;
-
-                    const items = [...notes];
-                    const draggedIdx = items.findIndex(i => i.id === draggingNoteId);
-                    const targetIdx = items.findIndex(i => i.id === note.id);
-
-                    if (draggedIdx !== -1 && targetIdx !== -1) {
-                      const [removed] = items.splice(draggedIdx, 1);
-                      items.splice(targetIdx, 0, removed);
-                      setNotes(items);
-                    }
-                  }}
-                  onDrop={handleDrop}
-                >
+            <DraggableList
+              items={notes}
+              className="CampaignView__notes"
+              onReorder={setNotes}
+              onDrop={() => triggerSave({ notes })}
+              keyExtractor={(note) => note.id}
+              renderItem={(note, isDragging) => (
+                <div className={`note-card-simple ${note.collapsed ? 'is-collapsed' : ''} ${isDragging ? 'note-card-simple--dragging' : ''}`}>
                   <div
                     className="note-card-simple__header"
                     onClick={() => handleToggleNoteCollapse(note.id)}
@@ -563,8 +500,8 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
                     />
                   )}
                 </div>
-              ))}
-            </div>
+              )}
+            />
           )}
         </div>
 
@@ -606,43 +543,14 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
             )}
           </div>
           {!isCharactersCollapsed && (
-            <div className="CampaignView__characters">
-              {characters.map(character => (
-                <div
-                  key={character.id}
-                  className={`character-card-simple ${character.collapsed ? 'is-collapsed' : ''} ${draggingCharacterId === character.id ? 'character-card-simple--dragging' : ''}`}
-                  draggable
-                  onDragStart={(e) => {
-                    setDraggingCharacterId(character.id);
-                    e.currentTarget.classList.add('dragging');
-                    e.dataTransfer.setData('text/plain', character.id);
-                    e.dataTransfer.effectAllowed = 'move';
-                  }}
-                  onDragEnd={() => {
-                    setDraggingCharacterId(null);
-                    // Зберігаємо порядок
-                    // `characters` state is already updated by onDragEnter, so just save it.
-                    triggerSave({ characters });
-                  }}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = 'move';
-                  }}
-                  onDragEnter={() => {
-                    if (draggingCharacterId === character.id || !draggingCharacterId) return;
-
-                    const items = [...characters];
-                    const draggedIdx = items.findIndex(i => i.id === draggingCharacterId);
-                    const targetIdx = items.findIndex(i => i.id === character.id);
-
-                    if (draggedIdx !== -1 && targetIdx !== -1) {
-                      const [removed] = items.splice(draggedIdx, 1);
-                      items.splice(targetIdx, 0, removed);
-                      setCharacters(items);
-                    }
-                  }}
-                  onDrop={handleDrop}
-                >
+            <DraggableList
+              items={characters}
+              className="CampaignView__characters"
+              onReorder={setCharacters}
+              onDrop={() => triggerSave({ characters })}
+              keyExtractor={(char) => char.id}
+              renderItem={(character, isDragging) => (
+                <div className={`character-card-simple ${character.collapsed ? 'is-collapsed' : ''} ${isDragging ? 'character-card-simple--dragging' : ''}`}>
                   <div
                     className="character-card-simple__header"
                     onClick={(e) => e.stopPropagation()}
@@ -671,8 +579,8 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
                     />
                   )}
                 </div>
-              ))}
-            </div>
+              )}
+            />
           )}
         </div>
 
@@ -696,32 +604,32 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
           <h3>Сесії</h3>
         </div>
         <div className="CampaignView__sessions">
-          {sessions.map(session => (
-            <ListCard
-              key={session.fileName}
-              href={`/campaign/${encodeURIComponent(campaign.slug)}/session/${encodeURIComponent(session.fileName)}`}
-              dragging={draggingFileName === session.fileName}
-              onClick={() => onSelectSession(session.fileName)}
-              draggable
-              onDragStart={(e) => handleDragStart(e, session.fileName)}
-              onDragEnd={handleDragEnd}
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'move';
-              }}
-              onDragEnter={() => handleDragEnter(session.fileName)}
-              onDrop={handleDrop}
-              actions={
-                <>
-                  <StatusBadge completed={session.completed} completedAt={session.completedAt} onClick={() => handleToggleSessionStatus(session)} type="session" />
-                  <Button variant="danger" icon="trash" size={16} onClick={(e) => { e.stopPropagation(); handleDeleteSession(session); }} title="Видалити сесію" />
-                </>
-              }
-            >
-              <div className="ListCard__title">{session.name}</div>
-              <div className="ListCard__meta">Оновлено: {new Date(session.updatedAt).toLocaleDateString()}</div>
-            </ListCard>
-          ))}
+          <DraggableList
+            items={sessions}
+            onReorder={setSessions}
+            onDrop={() => {
+              const orders = {};
+              sessions.forEach((item, idx) => { orders[item.fileName] = idx; });
+              api.reorderSessions(campaign.slug, orders);
+            }}
+            keyExtractor={(session) => session.fileName}
+            renderItem={(session, isDragging) => (
+              <ListCard
+                href={`/campaign/${encodeURIComponent(campaign.slug)}/session/${encodeURIComponent(session.fileName)}`}
+                dragging={isDragging}
+                onClick={() => onSelectSession(session.fileName)}
+                actions={
+                  <>
+                    <StatusBadge completed={session.completed} completedAt={session.completedAt} onClick={() => handleToggleSessionStatus(session)} type="session" />
+                    <Button variant="danger" icon="trash" size={16} onClick={(e) => { e.stopPropagation(); handleDeleteSession(session); }} title="Видалити сесію" />
+                  </>
+                }
+              >
+                <div className="ListCard__title">{session.name}</div>
+                <div className="ListCard__meta">Оновлено: {new Date(session.updatedAt).toLocaleDateString()}</div>
+              </ListCard>
+            )}
+          />
           <Button variant="create" onClick={handleCreateSession} icon="plus" strokeWidth={2.5}>
             Нова сесія
           </Button>

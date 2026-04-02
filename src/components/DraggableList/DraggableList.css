@@ -1,0 +1,14 @@
+.DraggableList {
+    display: flex;
+    flex-direction: column;
+    gap: inherit;
+}
+
+.DraggableList .ListCard {
+    margin-bottom: 0;
+}
+
+.DraggableList>div.is-dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+}

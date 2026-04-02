@@ -7,6 +7,7 @@ import Input from '../Input/Input';
 import EditableField from '../EditableField/EditableField';
 import AiAssistantPanel from '../AiAssistantPanel/AiAssistantPanel';
 import Panel from '../Panel/Panel';
+import DraggableList from '../DraggableList/DraggableList';
 import './SessionView.css';
 
 const SCENE_SCHEMA = [
@@ -55,7 +56,6 @@ function EditableMarkdownField({ title, value, onChange, placeholder, type }) {
 export default function SessionView({ campaign, sessionId, onBack, onNavigate, onRefreshCampaigns, modal }) {
     const [session, setSession] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
-    const [draggingNpcId, setDraggingNpcId] = useState(null);
     const saveTimeout = useRef(null);
 
     const campaignSlug = campaign.slug;
@@ -523,37 +523,43 @@ export default function SessionView({ campaign, sessionId, onBack, onNavigate, o
                             onInsertResult={handleAiUpdate}
                             modal={modal}
                         />
-                        {(session.data.scenes || []).map((scene, idx) => (
-                            <SceneCard
-                                key={scene.id}
-                                number={idx + 1}
-                                collapsed={scene.collapsed}
-                                onToggle={() => toggleSceneCollapse(scene.id)}
-                                onRemove={() => removeScene(scene.id)}
-                                onOpenEncounter={() => handleOpenEncounter(scene)}
-                                hasEncounter={!!scene.encounterId}
-                                encounterName={(session.data.encounters || []).find(e => e.id?.toString() === scene.encounterId?.toString())?.name || "Без назви"}
-                                npcs={scene.npcs || []}
-                                onAddNpc={() => handleAddNpcToScene(scene.id)}
-                                onUpdateNpc={(npcId, updates) => handleUpdateNpcInScene(scene.id, npcId, updates)}
-                                onDeleteNpc={(npcId) => handleDeleteNpcFromScene(scene.id, npcId)}
-                                onReorderNpcs={(npcs) => handleReorderNpcsInScene(scene.id, npcs)}
-                                draggingNpcId={draggingNpcId}
-                                setDraggingNpcId={setDraggingNpcId}
-                                onTriggerSave={() => triggerSave(session, true)}
-                            >
-                                {SCENE_SCHEMA.map(field => (
-                                    <EditableMarkdownField
-                                        key={field.key}
-                                        title={field.title}
-                                        type={field.type}
-                                        value={scene.texts?.[field.key] || ''}
-                                        onChange={(e) => updateScene(scene.id, field.key, e.target.value)}
-                                        placeholder={field.placeholder}
-                                    />
-                                ))}
-                            </SceneCard>
-                        ))}
+                        <DraggableList
+                            items={session.data.scenes || []}
+                            onReorder={(newScenes) => updateData('scenes', newScenes)}
+                            onDrop={() => triggerSave(session, true)}
+                            keyExtractor={(scene) => scene.id}
+                            renderItem={(scene) => {
+                                const idx = (session.data.scenes || []).findIndex(s => s.id === scene.id);
+                                return (
+                                    <SceneCard
+                                        number={idx + 1}
+                                        collapsed={scene.collapsed}
+                                        onToggle={() => toggleSceneCollapse(scene.id)}
+                                        onRemove={() => removeScene(scene.id)}
+                                        onOpenEncounter={() => handleOpenEncounter(scene)}
+                                        hasEncounter={!!scene.encounterId}
+                                        encounterName={(session.data.encounters || []).find(e => e.id?.toString() === scene.encounterId?.toString())?.name || "Без назви"}
+                                        npcs={scene.npcs || []}
+                                        onAddNpc={() => handleAddNpcToScene(scene.id)}
+                                        onUpdateNpc={(npcId, updates) => handleUpdateNpcInScene(scene.id, npcId, updates)}
+                                        onDeleteNpc={(npcId) => handleDeleteNpcFromScene(scene.id, npcId)}
+                                        onReorderNpcs={(npcs) => handleReorderNpcsInScene(scene.id, npcs)}
+                                        onTriggerSave={() => triggerSave(session, true)}
+                                    >
+                                        {SCENE_SCHEMA.map(field => (
+                                            <EditableMarkdownField
+                                                key={field.key}
+                                                title={field.title}
+                                                type={field.type}
+                                                value={scene.texts?.[field.key] || ''}
+                                                onChange={(e) => updateScene(scene.id, field.key, e.target.value)}
+                                                placeholder={field.placeholder}
+                                            />
+                                        ))}
+                                    </SceneCard>
+                                );
+                            }}
+                        />
                     </TodoSection>
 
                     <TodoSection title="3. Результат сесії">
@@ -608,7 +614,7 @@ function TodoItem({ title, note, checked, onChange, children }) {
 
 function SceneCard({
     number, onRemove, collapsed, onToggle, onOpenEncounter, hasEncounter, encounterName, children,
-    npcs, onAddNpc, onUpdateNpc, onDeleteNpc, onReorderNpcs, draggingNpcId, setDraggingNpcId, onTriggerSave
+    npcs, onAddNpc, onUpdateNpc, onDeleteNpc, onReorderNpcs, onTriggerSave
 }) {
     return (
         <div className="SceneCard">
@@ -645,41 +651,19 @@ function SceneCard({
             </div>
             {!collapsed && (
                 <>
-                    <div className="SceneCard__grid">{children}</div>
                     <div className="SceneCard__npcs-section">
                         <div className="SceneCard__npcs-header">
                             <h4>NPC та фракції</h4>
                             <Button variant="ghost" size="small" icon="plus" onClick={onAddNpc}>Додати NPC</Button>
                         </div>
-                        <div className="SessionView__npcs">
-                            {npcs.map(npc => (
-                                <div
-                                    key={npc.id}
-                                    className={`character-card-simple ${npc.collapsed ? 'is-collapsed' : ''} ${draggingNpcId === npc.id ? 'character-card-simple--dragging' : ''}`}
-                                    draggable
-                                    onDragStart={(e) => {
-                                        setDraggingNpcId(npc.id);
-                                        e.currentTarget.classList.add('dragging');
-                                        e.dataTransfer.setData('text/plain', npc.id);
-                                    }}
-                                    onDragEnd={(e) => {
-                                        setDraggingNpcId(null);
-                                        e.currentTarget.classList.remove('dragging');
-                                        onTriggerSave();
-                                    }}
-                                    onDragOver={(e) => e.preventDefault()}
-                                    onDragEnter={() => {
-                                        if (draggingNpcId === npc.id || !draggingNpcId) return;
-                                        const items = [...npcs];
-                                        const draggedIdx = items.findIndex(i => i.id === draggingNpcId);
-                                        const targetIdx = items.findIndex(i => i.id === npc.id);
-                                        if (draggedIdx !== -1 && targetIdx !== -1) {
-                                            const [removed] = items.splice(draggedIdx, 1);
-                                            items.splice(targetIdx, 0, removed);
-                                            onReorderNpcs(items);
-                                        }
-                                    }}
-                                >
+                        <DraggableList
+                            items={npcs}
+                            className="SessionView__npcs"
+                            onReorder={onReorderNpcs}
+                            onDrop={onTriggerSave}
+                            keyExtractor={(npc) => npc.id}
+                            renderItem={(npc, isNpcDragging) => (
+                                <div className={`character-card-simple ${npc.collapsed ? 'is-collapsed' : ''} ${isNpcDragging ? 'character-card-simple--dragging' : ''}`}>
                                     <div
                                         className="character-card-simple__header"
                                         onClick={() => onUpdateNpc(npc.id, { collapsed: !npc.collapsed })}
@@ -716,9 +700,10 @@ function SceneCard({
                                         </div>
                                     )}
                                 </div>
-                            ))}
-                        </div>
+                            )}
+                        />
                     </div>
+                    <div className="SceneCard__grid">{children}</div>
                 </>
             )}
         </div>
