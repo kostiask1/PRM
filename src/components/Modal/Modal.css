@@ -21,7 +21,8 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   width: 100%;
-  max-width: 450px;
+  max-width: 35vw;
+  min-width: 300px;
   box-shadow: var(--shadow);
   overflow: hidden;
   display: flex;

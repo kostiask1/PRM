@@ -27,8 +27,14 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    line-height: 1.6;
+    line-height: 1.4;
     color: #ccc;
+}
+
+.SpellCard__desc ul {
+    display: flex;
+    margin: 0;
+    height: auto;
 }
 
 .SpellCard__desc p {
@@ -47,7 +53,7 @@
     padding-top: 16px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     font-size: 0.9rem;
-    color: #999;
+    color: #eee;
 }
 
 .SpellCard .RollDice {

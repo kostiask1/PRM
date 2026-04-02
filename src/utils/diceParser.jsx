@@ -25,8 +25,8 @@ export const parseRollsAndSpells = (text, onSpellClick) => {
     // Regex для пошуку кубиків, бонусів атаки, посилань {@spell Name} та Markdown посилань [Name](URL)
     const regex = /(\d+d\d+(?:\s*[+-]\s*\d+)?)|([+-]\d+(?:\s+to\s+hit))|(\{@spell\s+([^}]+)\})|(\[([^\]]+)\]\((?:https?:\/\/[^\s)]+\/spells\/)([^\/)]+)\/?\))/gi;
     const parts = text.split(regex);
-
     const elements = [];
+
     for (let i = 0; i < parts.length; i += 8) {
         if (parts[i]) elements.push(<ReactMarkdown key={`t-${i}`} components={{ p: 'span' }}>{parts[i]}</ReactMarkdown>);
 

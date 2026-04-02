@@ -164,3 +164,11 @@
     width: 32px;
     height: 32px;
 }
+
+.MonsterStatBlock__spell {
+    color: var(--accent);
+    text-decoration: underline;
+    cursor: pointer;
+    transition: color 0.2s;
+    font-weight: 500;
+}

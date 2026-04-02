@@ -18,7 +18,6 @@ export function isJSON(str) {
 export function isJsonString(str) {
     try {
         const result = JSON.parse(str);
-        console.log('result:', result)
 
         if (typeof result === "string") {
             return true

@@ -146,7 +146,10 @@ export default function MonsterStatBlock({ monster, onNameClick, nameTitle, moda
                         <strong>{lvl === "0" ? 'Замовляння' : `${lvl}-й рівень`}:</strong>{' '}
                         {levels[lvl].map((s, i) => (
                             <React.Fragment key={s.slug || s.name}>
-                                <span onClick={() => handleSpellClick(s)}>
+                                <span
+                                    className="MonsterStatBlock__spell"
+                                    onClick={() => handleSpellClick(s)}
+                                >
                                     {s.name}
                                 </span>
                                 {i < levels[lvl].length - 1 ? ', ' : ''}
