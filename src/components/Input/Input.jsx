@@ -93,23 +93,35 @@ const Input = forwardRef(({ type = "text", className = "", ...props }, ref) => {
 			e.preventDefault();
 			const { selectionStart, selectionEnd, value } = e.target;
 
-			// Знаходимо початок поточного рядка
-			const lineStart = value.lastIndexOf("\n", selectionStart - 1) + 1;
+			// Знаходимо початок першого та кінець останнього виділеного рядка
+			const startOfFirstLine = value.lastIndexOf("\n", selectionStart - 1) + 1;
+			let endOfLastLine = value.indexOf("\n", selectionEnd);
+			if (endOfLastLine === -1) endOfLastLine = value.length;
 
-			let newValue = value;
-			let shift = 0;
+			const before = value.substring(0, startOfFirstLine);
+			const after = value.substring(endOfLastLine);
+			const block = value.substring(startOfFirstLine, endOfLastLine);
 
-			if (isListAdd) {
-				// Додаємо маркер списку на початок рядка
-				newValue = value.slice(0, lineStart) + "- " + value.slice(lineStart);
-				shift = 2;
-			} else if (isListRemove) {
-				// Видаляємо маркер списку, якщо він є на початку рядка
-				if (value.slice(lineStart, lineStart + 2) === "- ") {
-					newValue = value.slice(0, lineStart) + value.slice(lineStart + 2);
-					shift = -2;
+			const lines = block.split("\n");
+			let firstLineShift = 0;
+			let totalShift = 0;
+
+			const newLines = lines.map((line, idx) => {
+				if (isListAdd) {
+					totalShift += 2;
+					if (idx === 0) firstLineShift = 2;
+					return "- " + line;
+				} else {
+					if (line.startsWith("- ")) {
+						totalShift -= 2;
+						if (idx === 0) firstLineShift = -2;
+						return line.slice(2);
+					}
+					return line;
 				}
-			}
+			});
+
+			const newValue = before + newLines.join("\n") + after;
 
 			if (newValue !== value) {
 				if (props.onChange) {
@@ -119,7 +131,10 @@ const Input = forwardRef(({ type = "text", className = "", ...props }, ref) => {
 					const node = internalRef.current;
 					if (node) {
 						node.focus();
-						node.setSelectionRange(Math.max(0, selectionStart + shift), Math.max(0, selectionEnd + shift));
+						node.setSelectionRange(
+							Math.max(0, selectionStart + firstLineShift),
+							Math.max(0, selectionEnd + totalShift)
+						);
 					}
 				}, 0);
 			}
