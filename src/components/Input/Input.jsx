@@ -57,6 +57,46 @@ const Input = forwardRef(({ type = "text", className = "", ...props }, ref) => {
 			}, 0);
 		}
 
+		// Підтримка Ctrl + ] (Додати список) та Ctrl + [ (Видалити список) + укр розкладка
+		const isListAdd = key === "]" || key === "ї";
+		const isListRemove = key === "[" || key === "х";
+
+		if (isMod && (isListAdd || isListRemove)) {
+			e.preventDefault();
+			const { selectionStart, selectionEnd, value } = e.target;
+
+			// Знаходимо початок поточного рядка
+			const lineStart = value.lastIndexOf("\n", selectionStart - 1) + 1;
+
+			let newValue = value;
+			let shift = 0;
+
+			if (isListAdd) {
+				// Додаємо маркер списку на початок рядка
+				newValue = value.slice(0, lineStart) + "- " + value.slice(lineStart);
+				shift = 2;
+			} else if (isListRemove) {
+				// Видаляємо маркер списку, якщо він є на початку рядка
+				if (value.slice(lineStart, lineStart + 2) === "- ") {
+					newValue = value.slice(0, lineStart) + value.slice(lineStart + 2);
+					shift = -2;
+				}
+			}
+
+			if (newValue !== value) {
+				if (props.onChange) {
+					props.onChange({ ...e, target: { ...e.target, value: newValue } });
+				}
+				setTimeout(() => {
+					const node = internalRef.current;
+					if (node) {
+						node.focus();
+						node.setSelectionRange(Math.max(0, selectionStart + shift), Math.max(0, selectionEnd + shift));
+					}
+				}, 0);
+			}
+		}
+
 		// Викликаємо оригінальний onKeyDown, якщо він був переданий
 		if (props.onKeyDown) props.onKeyDown(e);
 	};
