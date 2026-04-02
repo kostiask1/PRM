@@ -8,7 +8,6 @@ const Input = forwardRef(({ type = "text", className = "", ...props }, ref) => {
 	useLayoutEffect(() => {
 		if (type === "textarea" && internalRef.current) {
 			const node = internalRef.current;
-			node.style.height = "auto";
 			node.style.height = `${node.scrollHeight}px`;
 		}
 	}, [props.value, type]);
