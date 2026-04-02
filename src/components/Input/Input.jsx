@@ -140,6 +140,70 @@ const Input = forwardRef(({ type = "text", className = "", ...props }, ref) => {
 			}
 		}
 
+		// Підтримка Ctrl + 1-6 (Заголовки)
+		const isHeader = !isNaN(key) && key >= "1" && key <= "6";
+
+		if (isMod && isHeader) {
+			e.preventDefault();
+			const level = parseInt(key);
+			const headerTag = "#".repeat(level) + " ";
+			const { selectionStart, selectionEnd, value } = e.target;
+
+			const startOfFirstLine = value.lastIndexOf("\n", selectionStart - 1) + 1;
+			let endOfLastLine = value.indexOf("\n", selectionEnd);
+			if (endOfLastLine === -1) endOfLastLine = value.length;
+
+			const before = value.substring(0, startOfFirstLine);
+			const after = value.substring(endOfLastLine);
+			const block = value.substring(startOfFirstLine, endOfLastLine);
+
+			const lines = block.split("\n");
+			let firstLineShift = 0;
+			let totalShift = 0;
+
+			const newLines = lines.map((line, idx) => {
+				const existingHeaderMatch = line.match(/^#{1,6} /);
+				let newLine = line;
+				let shift = 0;
+
+				if (existingHeaderMatch) {
+					const existingHeader = existingHeaderMatch[0];
+					if (existingHeader === headerTag) {
+						newLine = line.slice(existingHeader.length);
+						shift = -existingHeader.length;
+					} else {
+						newLine = headerTag + line.slice(existingHeader.length);
+						shift = headerTag.length - existingHeader.length;
+					}
+				} else {
+					newLine = headerTag + line;
+					shift = headerTag.length;
+				}
+
+				if (idx === 0) firstLineShift = shift;
+				totalShift += shift;
+				return newLine;
+			});
+
+			const newValue = before + newLines.join("\n") + after;
+
+			if (newValue !== value) {
+				if (props.onChange) {
+					props.onChange({ ...e, target: { ...e.target, value: newValue } });
+				}
+				setTimeout(() => {
+					const node = internalRef.current;
+					if (node) {
+						node.focus();
+						node.setSelectionRange(
+							Math.max(0, selectionStart + firstLineShift),
+							Math.max(0, selectionEnd + totalShift)
+						);
+					}
+				}, 0);
+			}
+		}
+
 		// Викликаємо оригінальний onKeyDown, якщо він був переданий
 		if (props.onKeyDown) props.onKeyDown(e);
 	};
