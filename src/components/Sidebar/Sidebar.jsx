@@ -99,7 +99,7 @@ export default function Sidebar({
 							onSelectCampaign("spells");
 						}
 					}}>
-					<Icon name="book" />
+					<Icon name="magic" />
 					Заклинання
 				</a>
 			</div>
