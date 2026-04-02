@@ -204,6 +204,59 @@ const Input = forwardRef(({ type = "text", className = "", ...props }, ref) => {
 			}
 		}
 
+		// Підтримка Ctrl + Q (Цитата/Blockquote) + укр розкладка
+		if (isMod && (key === "q" || key === "й")) {
+			e.preventDefault();
+			const { selectionStart, selectionEnd, value } = e.target;
+
+			const startOfFirstLine = value.lastIndexOf("\n", selectionStart - 1) + 1;
+			let endOfLastLine = value.indexOf("\n", selectionEnd);
+			if (endOfLastLine === -1) endOfLastLine = value.length;
+
+			const before = value.substring(0, startOfFirstLine);
+			const after = value.substring(endOfLastLine);
+			const block = value.substring(startOfFirstLine, endOfLastLine);
+
+			const lines = block.split("\n");
+			let firstLineShift = 0;
+			let totalShift = 0;
+
+			const newLines = lines.map((line, idx) => {
+				let newLine = line;
+				let shift = 0;
+
+				if (line.startsWith("> ")) {
+					newLine = line.slice(2);
+					shift = -2;
+				} else {
+					newLine = "> " + line;
+					shift = 2;
+				}
+
+				if (idx === 0) firstLineShift = shift;
+				totalShift += shift;
+				return newLine;
+			});
+
+			const newValue = before + newLines.join("\n") + after;
+
+			if (newValue !== value) {
+				if (props.onChange) {
+					props.onChange({ ...e, target: { ...e.target, value: newValue } });
+				}
+				setTimeout(() => {
+					const node = internalRef.current;
+					if (node) {
+						node.focus();
+						node.setSelectionRange(
+							Math.max(0, selectionStart + firstLineShift),
+							Math.max(0, selectionEnd + totalShift)
+						);
+					}
+				}, 0);
+			}
+		}
+
 		// Викликаємо оригінальний onKeyDown, якщо він був переданий
 		if (props.onKeyDown) props.onKeyDown(e);
 	};
