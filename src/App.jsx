@@ -69,6 +69,8 @@ export default function App() {
         setCTRLPressed(false);
       }
     });
+
+    document.addEventListener('mouseup', () => setCTRLPressed(false));
   }, [])
 
   useEffect(() => {

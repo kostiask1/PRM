@@ -122,7 +122,7 @@ export default function Spells() {
     const renderSpellItem = (index, key) => {
         const spell = displayedSpells[index];
         return (
-            <div key={key} style={{ paddingBottom: '8px' }}>
+            <div key={key}>
                 <ListCard
                     active={(selectedSpell?.slug || selectedSpell?.index) === (spell.slug || spell.index)}
                     onClick={() => setSelectedSpell(spell)}
@@ -188,13 +188,13 @@ export default function Spells() {
                 </div>
                 <div className="Spells__content">
                     <div className="Spells__list" onScroll={handleScroll}>
-                        {loading && <p className="muted" style={{ textAlign: 'center' }}>Завантаження списку...</p>}
+                        {loading && <p className="muted">Завантаження списку...</p>}
                         <ReactList
                             itemRenderer={renderSpellItem}
                             length={displayedSpells.length}
                             type='uniform'
                         />
-                        {loadingMore && <p className="muted" style={{ padding: '10px', textAlign: 'center' }}>Завантаження ще...</p>}
+                        {loadingMore && <p className="muted">Завантаження ще...</p>}
                     </div>
                     <div className="Spells__detail">
                         {detailLoading ? (

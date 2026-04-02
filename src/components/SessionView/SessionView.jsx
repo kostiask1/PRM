@@ -595,7 +595,7 @@ function TodoItem({ title, note, checked, onChange, children }) {
             <div className="TodoItem__content">
                 <div
                     onClick={() => onChange(!checked)}
-                    style={{ cursor: 'pointer' }}
+                    className="TodoItem__trigger"
                 >
                     {title && (<div className="TodoItem__title">{title}</div>)}
                     {note && <div className="TodoItem__note">{note}</div>}

@@ -294,3 +294,7 @@
 .character-card-simple__content {
   padding: 0 12px 12px 12px;
 }
+
+.TodoItem__trigger {
+  cursor: pointer;
+}

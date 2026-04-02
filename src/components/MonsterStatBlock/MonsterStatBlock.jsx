@@ -142,14 +142,11 @@ export default function MonsterStatBlock({ monster, onNameClick, nameTitle, moda
             <div className="MonsterStatBlock__section MonsterStatBlock__spells">
                 <h4>Заклинання (Spells):</h4>
                 {sortedLevels.map(lvl => (
-                    <div key={lvl} style={{ marginBottom: '4px', lineHeight: '1.4' }}>
+                    <div key={lvl}>
                         <strong>{lvl === "0" ? 'Замовляння' : `${lvl}-й рівень`}:</strong>{' '}
                         {levels[lvl].map((s, i) => (
                             <React.Fragment key={s.slug || s.name}>
-                                <span
-                                    style={{ color: 'var(--accent)', cursor: 'pointer', textDecoration: 'underline' }}
-                                    onClick={() => handleSpellClick(s)}
-                                >
+                                <span onClick={() => handleSpellClick(s)}>
                                     {s.name}
                                 </span>
                                 {i < levels[lvl].length - 1 ? ', ' : ''}

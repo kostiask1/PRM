@@ -457,7 +457,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
 
         <div className="CampaignView__section">
           <div className="section-row">
-            <div className="section-title-group" onClick={() => setIsNotesCollapsed(!isNotesCollapsed)} style={{ cursor: 'pointer' }}>
+            <div className="section-title-group" onClick={() => setIsNotesCollapsed(!isNotesCollapsed)}>
               <Button
                 variant="ghost"
                 size="small"
@@ -557,7 +557,7 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
         {/* Characters Section */}
         <div className="CampaignView__section">
           <div className="section-row">
-            <div className="section-title-group" onClick={() => setIsCharactersCollapsed(!isCharactersCollapsed)} style={{ cursor: 'pointer' }}>
+            <div className="section-title-group" onClick={() => setIsCharactersCollapsed(!isCharactersCollapsed)}>
               <Button
                 variant="ghost"
                 size="small"

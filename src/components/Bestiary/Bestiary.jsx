@@ -165,7 +165,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
     const renderMonsterItem = (index, key) => {
         const monster = displayedMonsters[index];
         return (
-            <div key={key} style={{ paddingBottom: '8px' }}>
+            <div key={key}>
                 <ListCard
                     active={selectedMonster?.slug === monster.slug}
                     onClick={() => setSelectedMonster(monster)}
@@ -211,7 +211,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
                             length={displayedMonsters.length}
                             type='uniform'
                         />
-                        {loading && <p className="muted" style={{ padding: '10px', textAlign: 'center' }}>Завантаження...</p>}
+                        {loading && <p className="muted">Завантаження...</p>}
                     </div>
 
                     {selectedMonster && (

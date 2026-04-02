@@ -95,32 +95,34 @@ export default function Sidebar({ campaigns, activeCampaignId, onSelectCampaign,
         <h1 className="Sidebar__title">D&D Session Manager</h1>
         <p className="Sidebar__description">Кампанії, сесії та планування в одному локальному проєкті.</p>
       </div>
-      <a
-        href="/bestiary"
-        className="Sidebar__bestiary-link"
-        onClick={(e) => {
-          if (!e.ctrlKey && !e.metaKey) {
-            e.preventDefault();
-            onSelectCampaign('bestiary');
-          }
-        }}
-      >
-        <Icon name="bestiary" />
-        Бестіарій
-      </a>
-      <a
-        href="/spells"
-        className="Sidebar__bestiary-link"
-        onClick={(e) => {
-          if (!e.ctrlKey && !e.metaKey) {
-            e.preventDefault();
-            onSelectCampaign('spells');
-          }
-        }}
-      >
-        <Icon name="book" />
-        Заклинання
-      </a>
+      <div className="Sidebar__links">
+        <a
+          href="/bestiary"
+          className="Sidebar__link"
+          onClick={(e) => {
+            if (!e.ctrlKey && !e.metaKey) {
+              e.preventDefault();
+              onSelectCampaign('bestiary');
+            }
+          }}
+        >
+          <Icon name="bestiary" />
+          Бестіарій
+        </a>
+        <a
+          href="/spells"
+          className="Sidebar__link"
+          onClick={(e) => {
+            if (!e.ctrlKey && !e.metaKey) {
+              e.preventDefault();
+              onSelectCampaign('spells');
+            }
+          }}
+        >
+          <Icon name="book" />
+          Заклинання
+        </a>
+      </div>
       <div className="Sidebar__section">
         <div className="Sidebar__headerSection">
           <h2 className="Sidebar__sectionTitle">Кампанії</h2>

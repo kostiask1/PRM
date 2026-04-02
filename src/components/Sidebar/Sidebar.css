@@ -9,26 +9,22 @@
     display: flex;
     flex-direction: column;
     overflow-x: hidden;
+    gap: 16px;
 }
 
-.Sidebar__bestiary-link {
+.Sidebar__link {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 12px;
+    padding: 8px;
     border-radius: 8px;
     color: var(--text);
     text-decoration: none;
     transition: background 0.2s;
-    margin-bottom: 12px;
 }
 
-.Sidebar__bestiary-link:hover {
+.Sidebar__link:hover {
     background: rgba(255, 255, 255, 0.05);
-}
-
-.Sidebar__header {
-    margin-bottom: 28px;
 }
 
 .Sidebar__title {
@@ -37,20 +33,17 @@
 }
 
 .Sidebar__description {
-    margin: 0;
     color: var(--muted);
     line-height: 1.5;
     font-size: 0.9rem;
 }
 
 .Sidebar__section {
-    margin-top: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     flex: 1;
     overflow-y: auto;
-}
-
-.Sidebar__headerSection {
-    margin-bottom: 12px;
 }
 
 .Sidebar__sectionTitle {
@@ -60,14 +53,10 @@
 
 .Sidebar__list {
     display: grid;
-    gap: 12px;
-    margin-top: 12px;
 }
 
 .Sidebar__footer {
-    margin-top: auto;
     padding-top: 16px;
-    margin-top: 16px;
     border-top: 1px solid rgba(51, 65, 85, 0.4);
     display: flex;
     flex-direction: column;
