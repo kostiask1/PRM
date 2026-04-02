@@ -5,12 +5,20 @@ import Input from '../Input/Input';
 /**
  * Допоміжний компонент для редагування однорядкового тексту по кліку
  */
-export default function EditableField({ value, onChange, placeholder, className, type }) {
+export default function EditableField({ value, onChange, placeholder, className, type, ...props }) {
   const [isEditing, setIsEditing] = useState(false);
+
+  const handleClick = (e) => {
+    e.stopPropagation();
+    setIsEditing(!isEditing);
+    props?.onClick(e);
+  }
 
   if (isEditing) {
     return (
       <Input
+        {...props}
+        onClick={handleClick}
         type={type}
         value={value}
         onChange={onChange}
@@ -23,15 +31,10 @@ export default function EditableField({ value, onChange, placeholder, className,
   }
 
   return (
-    <div className={`EditableField ${className || ''}`} onClick={() => setIsEditing(true)}>
+    <div className={`EditableField ${className || ''}`} onClick={handleClick}>
       <div className="MarkdownView">
         {value ? <ReactMarkdown>{value}</ReactMarkdown> : <span className="muted">{placeholder}</span>}
       </div>
     </div>
-  );
-  return (
-    <span className={`EditableField ${className || ''}`} onClick={() => setIsEditing(true)}>
-      {value || <span className="muted">{placeholder}</span>}
-    </span>
   );
 }

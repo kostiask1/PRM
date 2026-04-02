@@ -557,7 +557,8 @@ export default function CampaignView({ campaign, onSelectSession, onNavigate, on
             sessionData={{
               ...campaign,
               description,
-              notes
+              notes,
+              characters,
             }}
             campaignSlug={campaign.slug}
             sessionId={null}

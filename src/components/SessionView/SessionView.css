@@ -255,3 +255,30 @@
 .MarkdownView p:last-child {
     margin-bottom: 0;
 }
+
+.SessionView__npcs {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.SceneCard__npcs-section {
+    padding: 0 16px 16px 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.SceneCard__npcs-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    margin-top: 12px;
+}
+
+.SceneCard__npcs-header h4 {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}

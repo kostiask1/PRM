@@ -4,6 +4,7 @@ import { api } from '../../api';
 import Icon from '../Icon';
 import Button from '../Button/Button';
 import Input from '../Input/Input';
+import EditableField from '../EditableField/EditableField';
 import AiAssistantPanel from '../AiAssistantPanel/AiAssistantPanel';
 import Panel from '../Panel/Panel';
 import './SessionView.css';
@@ -13,7 +14,6 @@ const SCENE_SCHEMA = [
     { key: 'goal', title: 'Мета гравців', type: 'textarea', placeholder: 'Чого персонажі хочуть досягти...' },
     { key: 'stakes', title: 'Ставки', type: 'textarea', placeholder: 'Що буде при успіху/провалі...' },
     { key: 'location', title: 'Локація', type: 'textarea', placeholder: 'Де це відбувається...' },
-    { key: 'npcs', title: 'NPC / фракції', type: 'textarea', placeholder: 'Хто бере участь...' },
     { key: 'clues', title: 'Підказки', type: 'textarea', placeholder: 'Інформація, яку отримають гравці...' },
 ];
 
@@ -55,6 +55,7 @@ function EditableMarkdownField({ title, value, onChange, placeholder, type }) {
 export default function SessionView({ campaign, sessionId, onBack, onNavigate, onRefreshCampaigns, modal }) {
     const [session, setSession] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [draggingNpcId, setDraggingNpcId] = useState(null);
     const saveTimeout = useRef(null);
 
     const campaignSlug = campaign.slug;
@@ -345,6 +346,47 @@ export default function SessionView({ campaign, sessionId, onBack, onNavigate, o
         updateSession({ data: nextData }, true);
     };
 
+    // Scene-specific NPC Management
+    const handleAddNpcToScene = (sceneId) => {
+        const scenes = session.data.scenes.map(s => {
+            if (s.id === sceneId) {
+                const npcs = s.npcs || [];
+                return { ...s, npcs: [...npcs, { id: Date.now(), name: '', description: '', collapsed: false }] };
+            }
+            return s;
+        });
+        updateData('scenes', scenes, true);
+    };
+
+    const handleUpdateNpcInScene = (sceneId, npcId, updates) => {
+        const scenes = session.data.scenes.map(s => {
+            if (s.id === sceneId) {
+                const npcs = (s.npcs || []).map(n => n.id === npcId ? { ...n, ...updates } : n);
+                return { ...s, npcs };
+            }
+            return s;
+        });
+        updateData('scenes', scenes);
+    };
+
+    const handleDeleteNpcFromScene = (sceneId, npcId) => {
+        const scenes = session.data.scenes.map(s => {
+            if (s.id === sceneId) {
+                const npcs = (s.npcs || []).filter(n => n.id !== npcId);
+                return { ...s, npcs };
+            }
+            return s;
+        });
+        updateData('scenes', scenes, true);
+    };
+
+    const handleReorderNpcsInScene = (sceneId, npcs) => {
+        const scenes = session.data.scenes.map(s =>
+            s.id === sceneId ? { ...s, npcs } : s
+        );
+        updateData('scenes', scenes);
+    };
+
     const handleAiUpdate = (updatedSession) => {
         if (!session) return;
 
@@ -491,6 +533,14 @@ export default function SessionView({ campaign, sessionId, onBack, onNavigate, o
                                 onOpenEncounter={() => handleOpenEncounter(scene)}
                                 hasEncounter={!!scene.encounterId}
                                 encounterName={(session.data.encounters || []).find(e => e.id?.toString() === scene.encounterId?.toString())?.name || "Без назви"}
+                                npcs={scene.npcs || []}
+                                onAddNpc={() => handleAddNpcToScene(scene.id)}
+                                onUpdateNpc={(npcId, updates) => handleUpdateNpcInScene(scene.id, npcId, updates)}
+                                onDeleteNpc={(npcId) => handleDeleteNpcFromScene(scene.id, npcId)}
+                                onReorderNpcs={(npcs) => handleReorderNpcsInScene(scene.id, npcs)}
+                                draggingNpcId={draggingNpcId}
+                                setDraggingNpcId={setDraggingNpcId}
+                                onTriggerSave={() => triggerSave(session, true)}
                             >
                                 {SCENE_SCHEMA.map(field => (
                                     <EditableMarkdownField
@@ -557,7 +607,10 @@ function TodoItem({ title, note, checked, onChange, children }) {
     );
 }
 
-function SceneCard({ number, onRemove, collapsed, onToggle, onOpenEncounter, hasEncounter, encounterName, children }) {
+function SceneCard({
+    number, onRemove, collapsed, onToggle, onOpenEncounter, hasEncounter, encounterName, children,
+    npcs, onAddNpc, onUpdateNpc, onDeleteNpc, onReorderNpcs, draggingNpcId, setDraggingNpcId, onTriggerSave
+}) {
     return (
         <div className="SceneCard">
             <div className="SceneCard__header" onClick={onToggle}>
@@ -587,7 +640,84 @@ function SceneCard({ number, onRemove, collapsed, onToggle, onOpenEncounter, has
                     }} />
                 </div>
             </div>
-            {!collapsed && <div className="SceneCard__grid">{children}</div>}
+            {!collapsed && (
+                <>
+                    <div className="SceneCard__grid">{children}</div>
+                    <div className="SceneCard__npcs-section">
+                        <div className="SceneCard__npcs-header">
+                            <h4>NPC та фракції</h4>
+                            <Button variant="ghost" size="small" icon="plus" onClick={onAddNpc}>Додати NPC</Button>
+                        </div>
+                        <div className="SessionView__npcs">
+                            {npcs.map(npc => (
+                                <div
+                                    key={npc.id}
+                                    className={`character-card-simple ${npc.collapsed ? 'is-collapsed' : ''} ${draggingNpcId === npc.id ? 'character-card-simple--dragging' : ''}`}
+                                    draggable
+                                    onDragStart={(e) => {
+                                        setDraggingNpcId(npc.id);
+                                        e.currentTarget.classList.add('dragging');
+                                        e.dataTransfer.setData('text/plain', npc.id);
+                                    }}
+                                    onDragEnd={(e) => {
+                                        setDraggingNpcId(null);
+                                        e.currentTarget.classList.remove('dragging');
+                                        onTriggerSave();
+                                    }}
+                                    onDragOver={(e) => e.preventDefault()}
+                                    onDragEnter={() => {
+                                        if (draggingNpcId === npc.id || !draggingNpcId) return;
+                                        const items = [...npcs];
+                                        const draggedIdx = items.findIndex(i => i.id === draggingNpcId);
+                                        const targetIdx = items.findIndex(i => i.id === npc.id);
+                                        if (draggedIdx !== -1 && targetIdx !== -1) {
+                                            const [removed] = items.splice(draggedIdx, 1);
+                                            items.splice(targetIdx, 0, removed);
+                                            onReorderNpcs(items);
+                                        }
+                                    }}
+                                >
+                                    <div
+                                        className="character-card-simple__header"
+                                        onClick={() => onUpdateNpc(npc.id, { collapsed: !npc.collapsed })}
+                                    >
+                                        <Button
+                                            variant="ghost"
+                                            size="small"
+                                            icon="chevron"
+                                            className={`character-card-simple__toggle ${npc.collapsed ? 'is-rotated' : ''}`}
+                                            onClick={() => onUpdateNpc(npc.id, { collapsed: !npc.collapsed })}
+                                        />
+                                        <EditableField
+                                            value={npc.name}
+                                            onChange={(e) => onUpdateNpc(npc.id, { name: e.target.value })}
+                                            placeholder="Ім'я NPC"
+                                            className="character-card-simple__name"
+                                        />
+                                        <Button
+                                            variant="danger"
+                                            icon="trash"
+                                            size={14}
+                                            onClick={(e) => { e.stopPropagation(); onDeleteNpc(npc.id); }}
+                                            title="Видалити"
+                                        />
+                                    </div>
+                                    {!npc.collapsed && (
+                                        <div style={{ padding: '0 12px 12px 12px' }}>
+                                            <EditableField
+                                                type="textarea"
+                                                value={npc.description}
+                                                onChange={(e) => onUpdateNpc(npc.id, { description: e.target.value })}
+                                                placeholder="Опис, мотивація..."
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 }
