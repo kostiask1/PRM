@@ -1,7 +1,5 @@
 const CACHE_NAME = 'prm-api-cache-v1';
 const CACHED_API_PATHS = [
-  'https://www.dnd5eapi.co/api',
-  'https://api.open5e.com',
   '/api/bestiary',
   '/api/spells'
 ];
@@ -42,11 +40,11 @@ self.addEventListener('fetch', (event) => {
             // Якщо це "заглушка" зі списку (немає опису), а ми хочемо деталі - ігноруємо кеш
             const isStub = await cachedResponse.clone().json().then(data => !data.desc).catch(() => true);
 
-            if (isFresh && !url.includes('/api/2014/spells/')) {
+            if (isFresh && !url.includes('/virtual/spells/')) {
               return cachedResponse;
             }
             // Для конкретних заклинань повертаємо кеш лише якщо це не порожня заглушка
-            if (isFresh && url.includes('/api/2014/spells/') && !isStub) {
+            if (isFresh && url.includes('/virtual/spells/') && !isStub) {
               return cachedResponse;
             }
           }
@@ -62,22 +60,6 @@ self.addEventListener('fetch', (event) => {
 
             cache.put(event.request, responseToCache);
 
-            // Розбиття списку заклинань
-            if (url.includes('api.open5e.com/spells') && !url.split('/').pop().includes('-')) {
-              networkResponse.clone().json().then(data => {
-                if (data.results) {
-                  data.results.forEach(spell => {
-                    const spellUrl = `https://www.dnd5eapi.co/api/2014/spells/${spell.slug}`;
-                    // Важливо: для заглушок не копіюємо всі заголовки мережі
-                    const stubHeaders = new Headers();
-                    stubHeaders.append('content-type', 'application/json');
-                    stubHeaders.append('sw-fetched-on', Date.now().toString());
-                    cache.put(spellUrl, new Response(JSON.stringify(spell), { headers: stubHeaders }));
-                  });
-                }
-              }).catch(() => { });
-            }
-
             // Кешування локального бестіарію
             if (url.includes('/api/bestiary/') && !url.includes('/sources')) {
               networkResponse.clone().json().then(data => {
@@ -86,7 +68,7 @@ self.addEventListener('fetch', (event) => {
                   monsters.forEach(monster => {
                     // Використовуємо name як ідентифікатор для кешу окремих монстрів
                     const identifier = monster.slug || monster.name;
-                    const monsterUrl = `${new URL(url).origin}/api/bestiary/monster/${encodeURIComponent(identifier)}`;
+                    const monsterUrl = `${new URL(url).origin}/api/bestiary/virtual/${encodeURIComponent(identifier)}`;
                     const stubHeaders = new Headers();
                     stubHeaders.append('content-type', 'application/json');
                     stubHeaders.append('sw-fetched-on', Date.now().toString());
@@ -106,7 +88,7 @@ self.addEventListener('fetch', (event) => {
                     const slug = (spell.slug || spell.name).toLowerCase()
                       .replace(/[^\p{L}\p{N}]+/gu, "-")
                       .replace(/^-+|-+$/g, "");
-                    const spellUrl = `https://www.dnd5eapi.co/api/2014/spells/${slug}`;
+                    const spellUrl = `${new URL(url).origin}/api/spells/virtual/${slug}`;
                     const stubHeaders = new Headers();
                     stubHeaders.append('content-type', 'application/json');
                     stubHeaders.append('sw-fetched-on', Date.now().toString());

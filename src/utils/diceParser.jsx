@@ -27,12 +27,12 @@ export const getDamageBonus = (action) => {
 
 export const parseRollsAndSpells = (text, onSpellClick) => {
     if (!text) return text;
-    // Regex для пошуку кубиків, бонусів атаки, посилань {@spell Name} та Markdown посилань [Name](URL)
-    const regex = /(\d+d\d+(?:\s*[+-]\s*\d+)?)|([+-]\d+(?:\s+to\s+hit))|(\{@spell\s+([^}]+)\})|(\[([^\]]+)\]\((?:https?:\/\/[^\s)]+\/spells\/)([^\/)]+)\/?\))/gi;
+    // Regex для пошуку кубиків, бонусів атаки та посилань {@spell Name}
+    const regex = /(\d+d\d+(?:\s*[+-]\s*\d+)?)|([+-]\d+(?:\s+to\s+hit))|(\{@spell\s+([^}]+)\})/gi;
     const parts = text.split(regex);
     const elements = [];
 
-    for (let i = 0; i < parts.length; i += 8) {
+    for (let i = 0; i < parts.length; i += 5) {
         if (parts[i]) elements.push(<ReactMarkdown key={`t-${i}`} components={{ p: 'span' }}>{parts[i]}</ReactMarkdown>);
 
         if (i + 1 < parts.length) {
@@ -40,9 +40,6 @@ export const parseRollsAndSpells = (text, onSpellClick) => {
             const hit = parts[i + 2];
             const spellFull = parts[i + 3];
             const spellName = parts[i + 4];
-            const mdLinkFull = parts[i + 5];
-            const mdLinkText = parts[i + 6];
-            const mdLinkSlug = parts[i + 7];
 
             if (roll) {
                 elements.push(<RollDice key={`r-${i}`} formula={roll.replace(/\s+/g, '')}>{roll}</RollDice>);
@@ -57,12 +54,6 @@ export const parseRollsAndSpells = (text, onSpellClick) => {
                 elements.push(
                     <SpellLink key={`s-${i}`} onClick={() => onSpellClick(displayText)}>
                         {displayText}
-                    </SpellLink>
-                );
-            } else if (mdLinkFull && onSpellClick) {
-                elements.push(
-                    <SpellLink key={`m-${i}`} onClick={() => onSpellClick(mdLinkSlug)}>
-                        {mdLinkText}
                     </SpellLink>
                 );
             }

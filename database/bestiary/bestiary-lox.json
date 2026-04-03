@@ -15,30 +15,6 @@
 	},
 	"monster": [
 		{
-			"name": "Aarakocra Spelljammer",
-			"source": "LoX",
-			"page": 43,
-			"_copy": {
-				"name": "Mage",
-				"source": "MM",
-				"_templates": [
-					{
-						"name": "Aarakocra",
-						"source": "DMG"
-					}
-				],
-				"_mod": {
-					"*": {
-						"mode": "replaceTxt",
-						"replace": "\\bmage\\b",
-						"with": "aarakocra"
-					}
-				}
-			},
-			"tokenCustom": true,
-			"hasToken": true
-		},
-		{
 			"name": "Agony",
 			"isNpc": true,
 			"isNamedCreature": true,
