@@ -143,9 +143,6 @@ export default function Sidebar({
 			</div>
 
 			<div className="Sidebar__section Sidebar__section--resources">
-				<div className="Sidebar__headerSection">
-					<h2 className="Sidebar__sectionTitle">Ресурси</h2>
-				</div>
 				<div className="Sidebar__resource-list">
 					<a
 						href="https://homebrewery.naturalcrit.com/"
