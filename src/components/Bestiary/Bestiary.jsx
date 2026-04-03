@@ -89,6 +89,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 
 				// Об'єднуємо дані монстрів з легендарними діями/регіональними ефектами
 				
+				// TODO: Реалізувати resolution для _copy монстрів на сервері
 				const enrichedMonsters = combinedList.map(monster => {
 					// Шукаємо групу: або за спеціальним посиланням legendaryGroup, або за ім'ям самого монстра
 					const groupRef = monster.legendaryGroup;

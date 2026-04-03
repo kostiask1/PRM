@@ -148,6 +148,8 @@
 	cursor: pointer;
 	display: inline-block;
 	margin-bottom: 8px;
+	font-size: 2em;
+	font-weight: 600;
 }
 
 .MonsterStatBlock__name:hover {
