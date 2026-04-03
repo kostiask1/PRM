@@ -129,11 +129,23 @@ export default function EncounterView({
 	const handleAddMonster = async (m) => {
 		if (!encounter) return;
 
-		// Тепер ми використовуємо вже завантажені локальні дані монстра
+		// Визначаємо HP та AC залежно від структури даних (legacy vs new)
+		const hpVal = typeof m.hp === "object" && m.hp?.average 
+			? m.hp.average 
+			: (m.hit_points || 0);
+
+		let acVal = m.armor_class || 0;
+		if (Array.isArray(m.ac) && m.ac[0]) {
+			const entry = m.ac[0];
+			acVal = typeof entry === "object" ? entry.ac : entry;
+		}
+
 		const newMonster = {
 			...m,
 			instanceId: `inst-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-			currentHp: m.hit_points || 0,
+			currentHp: hpVal,
+			hit_points: hpVal,
+			armor_class: acVal,
 		};
 
 		const updated = {
@@ -245,7 +257,8 @@ export default function EncounterView({
 	const averageInitiative = useMemo(() => {
 		if (!encounter || encounter.monsters.length === 0) return 0;
 		const total = encounter.monsters.reduce((sum, m) => {
-			const mod = Math.floor(((m.dexterity || 10) - 10) / 2);
+			const dex = m.dex ?? m.dexterity ?? 10;
+			const mod = Math.floor((dex - 10) / 2);
 			return sum + 10.5 + mod;
 		}, 0);
 		const avg = total / encounter.monsters.length;
