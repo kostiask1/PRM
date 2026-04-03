@@ -115,7 +115,7 @@ export default function Spells() {
 	}, [selectedSpell]);
 
 	const displayedSpells = useMemo(() => {
-		let result = [...spells];
+		let result = [...spells].sort((a, b) => a.name.localeCompare(b.name));
 		if (sortOrder !== "none") {
 			result.sort((a, b) => {
 				const lvlA = a.level ?? 0;
