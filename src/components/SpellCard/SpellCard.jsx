@@ -123,7 +123,7 @@ export default function SpellCard({ spell, onSpellClick }) {
 
 	return (
 		<div className="SpellCard">
-			<h3 className="SpellCard__name">{capitalizeWords(spell.name.split('|')[0])}</h3>
+			<div className="SpellCard__name">{capitalizeWords(spell.name.split('|')[0])}</div>
 			<div className="SpellCard__meta">
 				{spell.level === 0 ? "Замовляння" : `${spell.level}-й рівень`},{" "}
 				{schoolMap[spell.school] || spell.school}

@@ -1,7 +1,8 @@
 .SpellCard__name {
 	margin: 0 0 4px 0;
 	color: #e2e2e2;
-	font-size: 1.5rem;
+	font-weight: 600;
+	font-size: 1.7rem;
 }
 
 .SpellCard__meta {
