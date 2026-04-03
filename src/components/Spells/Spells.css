@@ -5,6 +5,10 @@
 	height: 100%;
 }
 
+.Spells {
+	height: 100%;
+}
+
 .Spells__content {
 	display: flex;
 	gap: 20px;
