@@ -1,11 +1,11 @@
 // Layout
 .App {
-    display: grid;
-    grid-template-columns: 320px minmax(0, 1fr);
-    min-height: 100vh;
+	display: grid;
+	grid-template-columns: 320px minmax(0, 1fr);
+	min-height: 100vh;
 }
 
 .App__main {
-    padding: 24px;
-    min-width: 0;
+	padding: 24px;
+	min-width: 0;
 }

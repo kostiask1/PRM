@@ -75,8 +75,8 @@ p {
 
 blockquote {
 	position: relative;
-  margin-left: 0;
-  padding-left: 2em;
+	margin-left: 0;
+	padding-left: 2em;
 }
 
 blockquote:before {
@@ -98,5 +98,5 @@ blockquote:after {
 	bottom: -5px;
 	left: 0;
 	width: 100%;
-	background: hsl(from var(--accent) h s l / .07);
+	background: hsl(from var(--accent) h s l / 0.07);
 }

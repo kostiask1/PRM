@@ -7,24 +7,38 @@ router.get("/", async (req, res, next) => {
 	try {
 		const campaigns = await storage.listCampaignsDetailed();
 		res.json(campaigns);
-	} catch (error) { next(error); }
+	} catch (error) {
+		next(error);
+	}
 });
 
 router.post("/", async (req, res, next) => {
 	try {
 		const name = storage.sanitizeName(req.body?.name);
-		if (!name) return res.status(400).json({ error: "Назва кампанії обов’язкова." });
-		const slug = await storage.ensureUniqueCampaignSlug(storage.campaignSlug(name));
+		if (!name)
+			return res.status(400).json({ error: "Назва кампанії обов’язкова." });
+		const slug = await storage.ensureUniqueCampaignSlug(
+			storage.campaignSlug(name),
+		);
 		const now = new Date().toISOString();
 		const meta = {
-			id: storage.createId(), slug, name,
-			completed: false, completedAt: null, order: 0,
-			createdAt: now, updatedAt: now,
+			id: storage.createId(),
+			slug,
+			name,
+			completed: false,
+			completedAt: null,
+			order: 0,
+			createdAt: now,
+			updatedAt: now,
 		};
-		await storage.ensureDir(require("path").join(storage.campaignDir(slug), "sessions"));
+		await storage.ensureDir(
+			require("path").join(storage.campaignDir(slug), "sessions"),
+		);
 		await storage.writeJson(storage.campaignMetaPath(slug), meta);
 		res.status(201).json(meta);
-	} catch (error) { next(error); }
+	} catch (error) {
+		next(error);
+	}
 });
 
 router.patch("/:slug", async (req, res, next) => {
@@ -34,36 +48,57 @@ router.patch("/:slug", async (req, res, next) => {
 			return res.status(404).json({ error: "Кампанію не знайдено." });
 		}
 		const current = await storage.readCampaign(oldSlug);
-		const nextName = req.body?.name ? storage.sanitizeName(req.body.name) : current.name;
-		if (!nextName) return res.status(400).json({ error: "Назва кампанії не може бути порожньою." });
+		const nextName = req.body?.name
+			? storage.sanitizeName(req.body.name)
+			: current.name;
+		if (!nextName)
+			return res
+				.status(400)
+				.json({ error: "Назва кампанії не може бути порожньою." });
 
-		const nextSlug = await storage.ensureUniqueCampaignSlug(storage.campaignSlug(nextName), oldSlug);
+		const nextSlug = await storage.ensureUniqueCampaignSlug(
+			storage.campaignSlug(nextName),
+			oldSlug,
+		);
 		if (nextSlug !== oldSlug) {
-			await storage.renameWithRetry(storage.campaignDir(oldSlug), storage.campaignDir(nextSlug));
+			await storage.renameWithRetry(
+				storage.campaignDir(oldSlug),
+				storage.campaignDir(nextSlug),
+			);
 		}
 		const updated = {
-			...current, ...req.body, slug: nextSlug, name: nextName,
+			...current,
+			...req.body,
+			slug: nextSlug,
+			name: nextName,
 			updatedAt: new Date().toISOString(),
 		};
 		await storage.writeJson(storage.campaignMetaPath(nextSlug), updated);
 		res.json(updated);
-	} catch (error) { next(error); }
+	} catch (error) {
+		next(error);
+	}
 });
 
 router.delete("/:slug", async (req, res, next) => {
 	try {
 		const slug = req.params.slug;
 		const dir = storage.campaignDir(slug);
-		if (!(await storage.exists(dir))) return res.status(404).json({ error: "Кампанію не знайдено." });
+		if (!(await storage.exists(dir)))
+			return res.status(404).json({ error: "Кампанію не знайдено." });
 		await fs.rm(dir, { recursive: true, force: true });
 		res.status(204).send();
-	} catch (error) { next(error); }
+	} catch (error) {
+		next(error);
+	}
 });
 
 router.get("/:slug/export", async (req, res, next) => {
 	try {
 		res.json(await storage.exportCampaignBundle(req.params.slug));
-	} catch (error) { next(error); }
+	} catch (error) {
+		next(error);
+	}
 });
 
 router.post("/reorder", async (req, res, next) => {
@@ -77,7 +112,9 @@ router.post("/reorder", async (req, res, next) => {
 			}
 		}
 		res.json({ ok: true });
-	} catch (error) { next(error); }
+	} catch (error) {
+		next(error);
+	}
 });
 
 module.exports = router;

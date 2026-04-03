@@ -36,32 +36,49 @@ const Input = forwardRef(({ type = "text", className = "", ...props }, ref) => {
 
 			// Перевірка на конфлікт: чи не намагаємось ми зняти курсив з тексту, який насправді жирний (**)
 			const isItalic = tag === "*";
-			const isInsideItalicConflict = isItalic && selection.startsWith("**") && !selection.startsWith("***");
-			const isOutsideItalicConflict = isItalic && value.substring(selectionStart - 2, selectionStart) === "**" && value.substring(selectionStart - 3, selectionStart) !== "***";
+			const isInsideItalicConflict =
+				isItalic && selection.startsWith("**") && !selection.startsWith("***");
+			const isOutsideItalicConflict =
+				isItalic &&
+				value.substring(selectionStart - 2, selectionStart) === "**" &&
+				value.substring(selectionStart - 3, selectionStart) !== "***";
 
 			// 1. Якщо теги всередині виділення: [**текст**] -> [текст]
-			if (selection.startsWith(tag) && selection.endsWith(tag) && selection.length >= tag.length * 2 && !isInsideItalicConflict) {
-				newValue = value.substring(0, selectionStart) + 
-						   selection.substring(tag.length, selection.length - tag.length) + 
-						   value.substring(selectionEnd);
+			if (
+				selection.startsWith(tag) &&
+				selection.endsWith(tag) &&
+				selection.length >= tag.length * 2 &&
+				!isInsideItalicConflict
+			) {
+				newValue =
+					value.substring(0, selectionStart) +
+					selection.substring(tag.length, selection.length - tag.length) +
+					value.substring(selectionEnd);
 				newStart = selectionStart;
-				newEnd = selectionEnd - (tag.length * 2);
+				newEnd = selectionEnd - tag.length * 2;
 			}
 			// 2. Якщо теги зовні виділення: **[текст]** -> [текст]
 			else if (
 				selectionStart >= tag.length &&
 				value.substring(selectionStart - tag.length, selectionStart) === tag &&
-				value.substring(selectionEnd, selectionEnd + tag.length) === tag && !isOutsideItalicConflict
+				value.substring(selectionEnd, selectionEnd + tag.length) === tag &&
+				!isOutsideItalicConflict
 			) {
-				newValue = value.substring(0, selectionStart - tag.length) + 
-						   selection + 
-						   value.substring(selectionEnd + tag.length);
+				newValue =
+					value.substring(0, selectionStart - tag.length) +
+					selection +
+					value.substring(selectionEnd + tag.length);
 				newStart = selectionStart - tag.length;
 				newEnd = selectionEnd - tag.length;
 			}
 			// 3. Додаємо форматування
 			else {
-				newValue = value.substring(0, selectionStart) + tag + selection + tag + value.substring(selectionEnd);
+				newValue =
+					value.substring(0, selectionStart) +
+					tag +
+					selection +
+					tag +
+					value.substring(selectionEnd);
 				newStart = selectionStart + tag.length;
 				newEnd = selectionEnd + tag.length;
 			}
@@ -132,7 +149,7 @@ const Input = forwardRef(({ type = "text", className = "", ...props }, ref) => {
 						node.focus();
 						node.setSelectionRange(
 							Math.max(0, selectionStart + firstLineShift),
-							Math.max(0, selectionEnd + totalShift)
+							Math.max(0, selectionEnd + totalShift),
 						);
 					}
 				}, 0);
@@ -196,7 +213,7 @@ const Input = forwardRef(({ type = "text", className = "", ...props }, ref) => {
 						node.focus();
 						node.setSelectionRange(
 							Math.max(0, selectionStart + firstLineShift),
-							Math.max(0, selectionEnd + totalShift)
+							Math.max(0, selectionEnd + totalShift),
 						);
 					}
 				}, 0);
@@ -249,7 +266,7 @@ const Input = forwardRef(({ type = "text", className = "", ...props }, ref) => {
 						node.focus();
 						node.setSelectionRange(
 							Math.max(0, selectionStart + firstLineShift),
-							Math.max(0, selectionEnd + totalShift)
+							Math.max(0, selectionEnd + totalShift),
 						);
 					}
 				}, 0);

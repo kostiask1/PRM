@@ -1,24 +1,22 @@
 export function isJsonObject(str) {
-    try {
-        const o = JSON.parse(str);
+	try {
+		const o = JSON.parse(str);
 
-        if (o && typeof o === "object") {
-            return true;
-        }
-    }
-    catch (e) { }
+		if (o && typeof o === "object") {
+			return true;
+		}
+	} catch (e) {}
 
-    return false;
+	return false;
 }
 
 export function isJsonString(str) {
-    try {
-        const result = JSON.parse(str);
+	try {
+		const result = JSON.parse(str);
 
-        if (typeof result === "string") {
-            return true
-        }
-    } catch (e) {
-    }
-    return false;
+		if (typeof result === "string") {
+			return true;
+		}
+	} catch (e) {}
+	return false;
 }

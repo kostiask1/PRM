@@ -114,7 +114,9 @@ export default function AiAssistantPanel({
 					variant={useContext && useSessionsResults ? "primary" : "ghost"}
 					size="small"
 					icon="history"
-					onClick={() => useContext && setUseSessionsResults(!useSessionsResults)}
+					onClick={() =>
+						useContext && setUseSessionsResults(!useSessionsResults)
+					}
 					disabled={loading}
 					title={
 						useSessionsResults

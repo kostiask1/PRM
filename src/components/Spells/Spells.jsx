@@ -50,8 +50,10 @@ export default function Spells() {
 			try {
 				let combinedList = [];
 				if (isAll) {
-					const results = await Promise.all(sources.map(s => api.getSpellData(s)));
-					results.forEach(data => {
+					const results = await Promise.all(
+						sources.map((s) => api.getSpellData(s)),
+					);
+					results.forEach((data) => {
 						combinedList.push(...data);
 					});
 				} else {
@@ -70,8 +72,8 @@ export default function Spells() {
 
 	// Фільтрація та початковий вибір
 	useEffect(() => {
-		const filtered = allSpells.filter(s => 
-			s.name.toLowerCase().includes(search.toLowerCase())
+		const filtered = allSpells.filter((s) =>
+			s.name.toLowerCase().includes(search.toLowerCase()),
 		);
 		setSpells(filtered);
 
@@ -89,9 +91,14 @@ export default function Spells() {
 			return;
 		}
 
-		if (urlSpellName && (!selectedSpell || selectedSpell.name !== urlSpellName)) {
-			spellToSelect = allSpells.find(s => 
-				s.name === urlSpellName && (!urlSpellSource || s.source === urlSpellSource)
+		if (
+			urlSpellName &&
+			(!selectedSpell || selectedSpell.name !== urlSpellName)
+		) {
+			spellToSelect = allSpells.find(
+				(s) =>
+					s.name === urlSpellName &&
+					(!urlSpellSource || s.source === urlSpellSource),
 			);
 
 			if (spellToSelect) {
@@ -135,18 +142,35 @@ export default function Spells() {
 
 	const renderSpellItem = (index, key) => {
 		const spell = displayedSpells[index];
-		const schoolMap = { "E": "Enchantment", "N": "Necromancy", "C": "Conjuration", "A": "Abjuration", "I": "Illusion", "D": "Divination", "P": "Transmutation", "T": "Thaumaturgy" };
+		const schoolMap = {
+			E: "Enchantment",
+			N: "Necromancy",
+			C: "Conjuration",
+			A: "Abjuration",
+			I: "Illusion",
+			D: "Divination",
+			P: "Transmutation",
+			T: "Thaumaturgy",
+		};
 		const schoolName = schoolMap[spell.school] || spell.school;
 
 		return (
 			<div key={key}>
 				<ListCard
-					active={selectedSpell?.name === spell.name && selectedSpell?.source === spell.source}
+					active={
+						selectedSpell?.name === spell.name &&
+						selectedSpell?.source === spell.source
+					}
 					onClick={() => setSelectedSpell(spell)}>
-					<div className="ListCard__title">{capitalizeWords(spell.name.split('|')[0])}</div>
+					<div className="ListCard__title">
+						{capitalizeWords(spell.name.split("|")[0])}
+					</div>
 					<div className="ListCard__meta">
-						{spell.level === 0 ? "Замовляння" : `${spell.level}-й рівень`} • {schoolName}
-						{spell.source && <span className="Bestiary__item-source"> • {spell.source}</span>}
+						{spell.level === 0 ? "Замовляння" : `${spell.level}-й рівень`} •{" "}
+						{schoolName}
+						{spell.source && (
+							<span className="Bestiary__item-source"> • {spell.source}</span>
+						)}
 					</div>
 				</ListCard>
 			</div>
@@ -169,7 +193,9 @@ export default function Spells() {
 							onChange={(e) => setSelectedSource(e.target.value)}>
 							<option value="all">УСІ ДЖЕРЕЛА</option>
 							{sources.map((s) => (
-								<option key={s} value={s}>{s.toUpperCase()}</option>
+								<option key={s} value={s}>
+									{s.toUpperCase()}
+								</option>
 							))}
 						</Select>
 					)}
@@ -193,23 +219,34 @@ export default function Spells() {
 							type="uniform"
 						/>
 					</div>
-					{loading && <div className="Bestiary__loader muted">Оновлення магії...</div>}
+					{loading && (
+						<div className="Bestiary__loader muted">Оновлення магії...</div>
+					)}
 
 					<div className="Spells__detail">
 						{selectedSpell ? (
 							<SpellCard
 								spell={selectedSpell}
 								onSpellClick={async (name) => {
-									const cleanName = name.split('|')[0].toLowerCase();
+									const cleanName = name.split("|")[0].toLowerCase();
 									// 1. Шукаємо в поточному завантаженому списку (найшвидше)
-									let found = allSpells.find(item => item.name.split('|')[0].toLowerCase() === cleanName);
+									let found = allSpells.find(
+										(item) =>
+											item.name.split("|")[0].toLowerCase() === cleanName,
+									);
 
 									if (!found) {
 										// 2. Якщо не знайшли локально, шукаємо по всіх джерелах через API
 										try {
-											const results = await api.searchSpells({ name: cleanName });
+											const results = await api.searchSpells({
+												name: cleanName,
+											});
 											// Шукаємо точний збіг назви серед результатів пошуку
-											found = results.find(s => s.name.split('|')[0].toLowerCase() === cleanName) || results[0];
+											found =
+												results.find(
+													(s) =>
+														s.name.split("|")[0].toLowerCase() === cleanName,
+												) || results[0];
 										} catch (err) {
 											console.error("Global spell search failed", err);
 										}

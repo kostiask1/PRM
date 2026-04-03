@@ -133,7 +133,10 @@ async function listSessions(slug) {
 	});
 
 	const result = await Promise.all(sessionPromises);
-	return result.sort((a, b) => (a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name, "uk"));
+	return result.sort(
+		(a, b) =>
+			(a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name, "uk"),
+	);
 }
 
 async function listCampaignsDetailed() {
@@ -144,7 +147,10 @@ async function listCampaignsDetailed() {
 		return { ...meta, slug, sessionCount: sessions.length };
 	});
 	const result = await Promise.all(campaignPromises);
-	return result.sort((a, b) => (a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name, "uk"));
+	return result.sort(
+		(a, b) =>
+			(a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name, "uk"),
+	);
 }
 
 async function exportCampaignBundle(slug) {
@@ -154,7 +160,7 @@ async function exportCampaignBundle(slug) {
 		sessionFiles.map(async (s) => {
 			const content = await readSession(slug, s.fileName);
 			return { fileName: s.fileName, content };
-		})
+		}),
 	);
 	return { meta, sessions };
 }
@@ -171,7 +177,11 @@ async function ensureUniqueCampaignSlug(baseSlug, ignoreSlug = null) {
 	}
 }
 
-async function ensureUniqueSessionFile(slug, desiredName, ignoreFileName = null) {
+async function ensureUniqueSessionFile(
+	slug,
+	desiredName,
+	ignoreFileName = null,
+) {
 	const parsed = path.parse(sessionFileName(desiredName));
 	let fileName = `${parsed.name}${parsed.ext || ".json"}`;
 	let counter = 2;
@@ -189,12 +199,20 @@ async function importCampaignBundle(bundle) {
 	if (!meta || !meta.name) throw new Error("Невірний формат бандла");
 	const slug = await ensureUniqueCampaignSlug(campaignSlug(meta.name));
 	const now = new Date().toISOString();
-	const newMeta = { ...meta, slug, createdAt: meta.createdAt || now, updatedAt: now };
+	const newMeta = {
+		...meta,
+		slug,
+		createdAt: meta.createdAt || now,
+		updatedAt: now,
+	};
 	await ensureDir(path.join(campaignDir(slug), "sessions"));
 	await writeJson(campaignMetaPath(slug), newMeta);
 	for (const session of sessions) {
 		const fileName = await ensureUniqueSessionFile(slug, session.content.name);
-		await writeJson(sessionPath(slug, fileName), { ...session.content, updatedAt: now });
+		await writeJson(sessionPath(slug, fileName), {
+			...session.content,
+			updatedAt: now,
+		});
 	}
 	return newMeta;
 }
@@ -213,11 +231,29 @@ function makeDefaultSessionData(name) {
 }
 
 module.exports = {
-	CAMPAIGNS_DIR, BESTIARY_DIR, SPELLS_DIR,
-	createId, sanitizeName, campaignSlug, sessionFileName, 
-	campaignDir, campaignMetaPath, sessionPath,
-	ensureDir, exists, readJson, writeJson, renameWithRetry,
-	listCampaignSlugs, readCampaign, readSession, listSessions, 
-	listCampaignsDetailed, exportCampaignBundle, importCampaignBundle,
-	ensureUniqueCampaignSlug, ensureUniqueSessionFile, makeDefaultSessionData
+	CAMPAIGNS_DIR,
+	BESTIARY_DIR,
+	SPELLS_DIR,
+	createId,
+	sanitizeName,
+	campaignSlug,
+	sessionFileName,
+	campaignDir,
+	campaignMetaPath,
+	sessionPath,
+	ensureDir,
+	exists,
+	readJson,
+	writeJson,
+	renameWithRetry,
+	listCampaignSlugs,
+	readCampaign,
+	readSession,
+	listSessions,
+	listCampaignsDetailed,
+	exportCampaignBundle,
+	importCampaignBundle,
+	ensureUniqueCampaignSlug,
+	ensureUniqueSessionFile,
+	makeDefaultSessionData,
 };

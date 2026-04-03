@@ -89,7 +89,10 @@ export default function MonsterStatBlock({
 				{actions.map((action, index) => (
 					<div key={index} className="MonsterStatBlock__action">
 						<strong>{action.name}.</strong>{" "}
-						{renderRecursiveContent(action.entries || action.desc, handleSpellClick)}
+						{renderRecursiveContent(
+							action.entries || action.desc,
+							handleSpellClick,
+						)}
 						<div className="MonsterStatBlock__action-rolls">
 							{action.attack_bonus && (
 								<div className="stat-item">
@@ -233,7 +236,9 @@ export default function MonsterStatBlock({
 					<div key={idx} className="MonsterStatBlock__action">
 						<h4>{sc.name}:</h4>
 						{sc.headerEntries && (
-							<p>{renderRecursiveContent(sc.headerEntries, handleSpellClick)}</p>
+							<p>
+								{renderRecursiveContent(sc.headerEntries, handleSpellClick)}
+							</p>
 						)}
 						{sc.will && (
 							<p>
@@ -262,17 +267,21 @@ export default function MonsterStatBlock({
 				))}
 				{monster.spellcasting.map((sc, idx) => (
 					<div key={`slots-${idx}`}>
-						{sc.spells && Object.entries(sc.spells).map(([lvl, info]) => (
-							<p key={lvl} className="MonsterStatBlock__action">
-								<strong>{lvl === "0" ? "Cantrips" : `Level ${lvl}`} {info.slots ? `(${info.slots} slots)` : ""}: </strong>
-								{info.spells.map((s, i) => (
-									<React.Fragment key={i}>
-										{renderRecursiveContent(s, handleSpellClick)}
-										{i < info.spells.length - 1 ? ", " : ""}
-									</React.Fragment>
-								))}
-							</p>
-						))}
+						{sc.spells &&
+							Object.entries(sc.spells).map(([lvl, info]) => (
+								<p key={lvl} className="MonsterStatBlock__action">
+									<strong>
+										{lvl === "0" ? "Cantrips" : `Level ${lvl}`}{" "}
+										{info.slots ? `(${info.slots} slots)` : ""}:{" "}
+									</strong>
+									{info.spells.map((s, i) => (
+										<React.Fragment key={i}>
+											{renderRecursiveContent(s, handleSpellClick)}
+											{i < info.spells.length - 1 ? ", " : ""}
+										</React.Fragment>
+									))}
+								</p>
+							))}
 					</div>
 				))}
 			</div>
@@ -457,7 +466,10 @@ export default function MonsterStatBlock({
 				</div>
 				{monster.desc && (
 					<div className="MonsterStatBlock__lore">
-						{parseRollsAndSpells(preprocessTags(monster.desc), handleSpellClick)}
+						{parseRollsAndSpells(
+							preprocessTags(monster.desc),
+							handleSpellClick,
+						)}
 					</div>
 				)}
 			</div>

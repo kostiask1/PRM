@@ -130,9 +130,10 @@ export default function EncounterView({
 		if (!encounter) return;
 
 		// Визначаємо HP та AC залежно від структури даних (legacy vs new)
-		const hpVal = typeof m.hp === "object" && m.hp?.average 
-			? m.hp.average 
-			: (m.hit_points || 0);
+		const hpVal =
+			typeof m.hp === "object" && m.hp?.average
+				? m.hp.average
+				: m.hit_points || 0;
 
 		let acVal = m.armor_class || 0;
 		if (Array.isArray(m.ac) && m.ac[0]) {

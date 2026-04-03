@@ -50,7 +50,10 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 					setSelectedSource(sourceFromUrl || "all");
 				}
 			} catch (err) {
-				console.error("Failed to load bestiary sources or legendary groups", err);
+				console.error(
+					"Failed to load bestiary sources or legendary groups",
+					err,
+				);
 			}
 		};
 		loadSourcesAndLegendary();
@@ -88,19 +91,23 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 				}
 
 				// Об'єднуємо дані монстрів з легендарними діями/регіональними ефектами
-				
+
 				// TODO: Реалізувати resolution для _copy монстрів на сервері
-				const enrichedMonsters = combinedList.map(monster => {
+				const enrichedMonsters = combinedList.map((monster) => {
 					// Шукаємо групу: або за спеціальним посиланням legendaryGroup, або за ім'ям самого монстра
 					const groupRef = monster.legendaryGroup;
 					const targetName = groupRef?.name || monster.name;
 					const targetSource = groupRef?.source || monster.source;
 
-					const legendaryEntry = legendaryGroups.find(lg =>
-						lg.name === targetName && lg.source === targetSource
+					const legendaryEntry = legendaryGroups.find(
+						(lg) => lg.name === targetName && lg.source === targetSource,
 					);
 					if (legendaryEntry) {
-						return { ...monster, lairActions: legendaryEntry.lairActions, regionalEffects: legendaryEntry.regionalEffects };
+						return {
+							...monster,
+							lairActions: legendaryEntry.lairActions,
+							regionalEffects: legendaryEntry.regionalEffects,
+						};
 					}
 					return monster;
 				});
@@ -118,7 +125,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 	useEffect(() => {
 		const filtered = allMonsters.filter((m) => {
 			const matchesName = m.name?.toLowerCase().includes(search.toLowerCase());
-			
+
 			// Покращений пошук по типу: об'єднуємо базовий тип (включаючи choose) та теги
 			const typeBase = getMonsterTypeString(m.type);
 			const tags = Array.isArray(m.type?.tags) ? m.type.tags.join(" ") : "";
@@ -147,13 +154,19 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 			}
 
 			// Якщо в URL той самий монстр, що вже вибраний - нічого не робимо
-			if (selectedMonster?.name === urlMonsterName && selectedMonster?.source === urlMonsterSource) return;
+			if (
+				selectedMonster?.name === urlMonsterName &&
+				selectedMonster?.source === urlMonsterSource
+			)
+				return;
 
 			// Шукаємо в поточному завантаженому списку
 			const foundInList = allMonsters.find(
-				(m) => m.name === urlMonsterName && (!urlMonsterSource || m.source === urlMonsterSource)
+				(m) =>
+					m.name === urlMonsterName &&
+					(!urlMonsterSource || m.source === urlMonsterSource),
 			);
-			
+
 			if (foundInList) {
 				setSelectedMonster(foundInList);
 			}
@@ -196,18 +209,19 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 	const parseCR = (monster) => {
 		const crValue = monster.cr?.cr !== undefined ? monster.cr.cr : monster.cr;
 		if (typeof crValue === "number") return crValue;
-		
+
 		const crStr = String(crValue || "0");
 		if (crStr.includes("/")) {
 			const [num, den] = crStr.split("/").map(Number);
 			return den ? num / den : 0;
 		}
-		
+
 		return parseFloat(crStr) || 0;
 	};
 
 	const displayedMonsters = useMemo(() => {
-		if (sortOrder === "none") return [...monsters].sort((a, b) => a.name.localeCompare(b.name));
+		if (sortOrder === "none")
+			return [...monsters].sort((a, b) => a.name.localeCompare(b.name));
 
 		return [...monsters].sort((a, b) => {
 			const crA = parseCR(a);
@@ -226,7 +240,10 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 		return (
 			<div key={key}>
 				<ListCard
-					active={selectedMonster?.name === monster.name && selectedMonster?.source === monster.source}
+					active={
+						selectedMonster?.name === monster.name &&
+						selectedMonster?.source === monster.source
+					}
 					onClick={() => setSelectedMonster(monster)}
 					onDoubleClick={() => onAddMonster && onAddMonster(monster)}
 					actions={
@@ -247,9 +264,8 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 						<div className="Bestiary__item-info">
 							<div className="ListCard__title">{monster.name}</div>
 							<div className="ListCard__meta">
-								{Array.isArray(monster.size) ? monster.size[0] : monster.size}
-								{" "}{getMonsterTypeString(monster.type)}
-								{" "}
+								{Array.isArray(monster.size) ? monster.size[0] : monster.size}{" "}
+								{getMonsterTypeString(monster.type)}{" "}
 								{monster.type?.tags?.join(", ")}
 								{monster.source && (
 									<span className="Bestiary__item-source">
@@ -278,7 +294,9 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 							onChange={(e) => setSelectedSource(e.target.value)}>
 							<option value="all">УСІ ДЖЕРЕЛА</option>
 							{sources.map((s) => (
-								<option key={s} value={s}>{s.toUpperCase()}</option>
+								<option key={s} value={s}>
+									{s.toUpperCase()}
+								</option>
 							))}
 						</Select>
 					)}
