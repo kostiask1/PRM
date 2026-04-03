@@ -277,7 +277,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 						</div>
 						<div className="Bestiary__item-cr" title="Challenge Rating">
 							<div className="Bestiary__cr-label">CR</div>
-							<div className="Bestiary__cr-value">{crValue}</div>
+							<div className="Bestiary__cr-value">{crValue || "--"}</div>
 						</div>
 					</div>
 				</ListCard>
