@@ -377,7 +377,7 @@ export default function DiceCalculator() {
 			<button
 				className="DiceCalculator__toggle"
 				onClick={() => setIsOpen(!isOpen)}
-				title="Калькулятор кубиків">
+				title="CTRL+D">
 				<Icon name="dice" size={28} />
 			</button>
 		</div>
