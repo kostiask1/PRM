@@ -14,6 +14,11 @@ export const formatModifier = (modifier) => {
     return modifier > 0 ? `+${modifier}` : `${modifier}`;
 };
 
+export const capitalizeWords = (str) => {
+    if (!str) return str;
+    return str.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+};
+
 export const getDamageBonus = (action) => {
     const bonus = parseInt(action?.damage_bonus);
     if (!bonus || isNaN(bonus)) return '';
@@ -47,9 +52,10 @@ export const parseRollsAndSpells = (text, onSpellClick) => {
             } else if (spellFull && onSpellClick) {
                 const spellParts = spellName.split('|');
                 const cleanName = spellParts[0];
-                const displayText = spellParts[2] || spellParts[0];
+                const rawDisplayText = spellParts[2] || spellParts[0];
+                const displayText = capitalizeWords(rawDisplayText);
                 elements.push(
-                    <SpellLink key={`s-${i}`} onClick={() => onSpellClick(cleanName)}>
+                    <SpellLink key={`s-${i}`} onClick={() => onSpellClick(displayText)}>
                         {displayText}
                     </SpellLink>
                 );

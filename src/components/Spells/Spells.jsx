@@ -3,9 +3,11 @@ import { api } from "../../api";
 import ReactList from "react-list";
 import Panel from "../Panel/Panel";
 import Input from "../Input/Input";
+import Select from "../Select/Select";
 import ListCard from "../ListCard/ListCard";
 import SpellCard from "../SpellCard/SpellCard";
 import Icon from "../Icon";
+import { capitalizeWords } from "../../utils/diceParser.jsx";
 import "./Spells.css";
 
 export default function Spells() {
@@ -106,10 +108,6 @@ export default function Spells() {
 				params.set("spell", selectedSpell.name);
 				changed = true;
 			}
-			if (params.get("s_source") !== selectedSpell.source) {
-				params.set("s_source", selectedSpell.source);
-				changed = true;
-			}
 			if (changed) {
 				window.history.pushState({}, "", `?${params.toString()}`);
 			}
@@ -145,7 +143,7 @@ export default function Spells() {
 				<ListCard
 					active={selectedSpell?.name === spell.name && selectedSpell?.source === spell.source}
 					onClick={() => setSelectedSpell(spell)}>
-					<div className="ListCard__title">{spell.name}</div>
+					<div className="ListCard__title">{capitalizeWords(spell.name.split('|')[0])}</div>
 					<div className="ListCard__meta">
 						{spell.level === 0 ? "Замовляння" : `${spell.level}-й рівень`} • {schoolName}
 						{spell.source && <span className="Bestiary__item-source"> • {spell.source}</span>}
@@ -166,15 +164,14 @@ export default function Spells() {
 			<div className="Panel__body Spells__body">
 				<div className="Spells__search">
 					{sources.length > 0 && (
-						<select
-							className="Bestiary__source-select"
+						<Select
 							value={selectedSource}
 							onChange={(e) => setSelectedSource(e.target.value)}>
 							<option value="all">УСІ ДЖЕРЕЛА</option>
 							{sources.map((s) => (
 								<option key={s} value={s}>{s.toUpperCase()}</option>
 							))}
-						</select>
+						</Select>
 					)}
 					<Input
 						placeholder="Пошук заклинання..."
@@ -202,7 +199,24 @@ export default function Spells() {
 						{selectedSpell ? (
 							<SpellCard
 								spell={selectedSpell}
-								onSpellClick={(s) => setSelectedSpell(allSpells.find(item => item.name === s) || selectedSpell)}
+								onSpellClick={async (name) => {
+									const cleanName = name.split('|')[0].toLowerCase();
+									// 1. Шукаємо в поточному завантаженому списку (найшвидше)
+									let found = allSpells.find(item => item.name.split('|')[0].toLowerCase() === cleanName);
+
+									if (!found) {
+										// 2. Якщо не знайшли локально, шукаємо по всіх джерелах через API
+										try {
+											const results = await api.searchSpells({ name: cleanName });
+											// Шукаємо точний збіг назви серед результатів пошуку
+											found = results.find(s => s.name.split('|')[0].toLowerCase() === cleanName) || results[0];
+										} catch (err) {
+											console.error("Global spell search failed", err);
+										}
+									}
+
+									if (found) setSelectedSpell(found);
+								}}
 							/>
 						) : (
 							<p className="muted">

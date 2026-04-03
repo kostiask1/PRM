@@ -8,6 +8,7 @@ import {
 	formatModifier,
 	getDamageBonus,
 	parseRollsAndSpells,
+	capitalizeWords,
 } from "../../utils/diceParser.jsx";
 import "./MonsterStatBlock.css";
 import ClickToCopy from "../ClickToCopy/ClickToCopy.jsx";
@@ -294,7 +295,7 @@ export default function MonsterStatBlock({
 								<span
 									className="MonsterStatBlock__spell"
 									onClick={() => handleSpellClick(s)}>
-									{s.name.split("|")[0]}
+									{capitalizeWords(s.name.split("|")[0])}
 								</span>
 								{i < levels[lvl].length - 1 ? ", " : ""}
 							</React.Fragment>

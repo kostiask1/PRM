@@ -9,27 +9,6 @@
 	align-items: center;
 }
 
-.Bestiary__source-select {
-	background: var(--panel-2);
-	border: 1px solid var(--border);
-	color: var(--text);
-	padding: 0 12px;
-	height: 40px;
-	border-radius: 12px;
-	outline: none;
-	cursor: pointer;
-	font-size: 0.85rem;
-	min-width: 160px;
-	transition: all 0.2s ease;
-	font-weight: 500;
-}
-
-.Bestiary__source-select:hover,
-.Bestiary__source-select:focus {
-	border-color: var(--accent);
-	background: var(--panel-3);
-}
-
 .Bestiary__sort-btn {
 	display: flex !important;
 	align-items: center;

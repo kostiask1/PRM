@@ -4,6 +4,7 @@ import ReactList from "react-list";
 import Panel from "../Panel/Panel";
 import Input from "../Input/Input";
 import Button from "../Button/Button";
+import Select from "../Select/Select";
 import Icon from "../Icon";
 import ListCard from "../ListCard/ListCard";
 import MonsterStatBlock from "../MonsterStatBlock/MonsterStatBlock";
@@ -271,17 +272,14 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 			<div className="Panel__body">
 				<div className="Bestiary__search">
 					{sources.length > 0 && (
-						<select
-							className="Bestiary__source-select"
+						<Select
 							value={selectedSource}
 							onChange={(e) => setSelectedSource(e.target.value)}>
 							<option value="all">УСІ ДЖЕРЕЛА</option>
 							{sources.map((s) => (
-								<option key={s} value={s}>
-									{s.toUpperCase()}
-								</option>
+								<option key={s} value={s}>{s.toUpperCase()}</option>
 							))}
-						</select>
+						</Select>
 					)}
 					<Input
 						icon="search"

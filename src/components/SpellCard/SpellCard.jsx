@@ -1,6 +1,6 @@
 import React from "react";
 import "./SpellCard.css";
-import { parseRollsAndSpells } from "../../utils/diceParser.jsx";
+import { parseRollsAndSpells, capitalizeWords } from "../../utils/diceParser.jsx";
 
 // Мапінг для скорочень здібностей
 const ABILITY_MAP = {
@@ -30,12 +30,11 @@ export default function SpellCard({ spell, onSpellClick }) {
 			// Нові парсери для @variantrule, @actSave, @recharge, @atkr
 			.replace(/{@actSaveFail}/gi, "On a failure,")
 			.replace(/{@actSaveSuccess}/gi, "On a success,")
-			.replace(/({@spell\s+[^|}]+)\|[^|}]+(\|[^}]+)?}/gi, "$1$2")
 			.replace(/{@variantrule\s+([^|}]+)(?:\|[^|}]*)?(?:\|([^}]*))?}/gi, (m, g1, g2) => g2 || g1)
 			.replace(/{@actSave\s+([a-z]{3})}/gi, (m, g1) => `${ABILITY_MAP[g1] || g1} saving throw`)
 			.replace(/{@recharge(?:\s+(\d+))?}/gi, (m, g1) => g1 ? `(Recharge ${g1}-6)` : "(Recharge)")
 			.replace(/{@atkr\s+([a-z,]+)}/gi, (m, g1) => `${ATTACK_TYPE_MAP[g1] || g1} Attack: `)
-			.replace(/{@(?:creature|skill|item|filter|quickref|book)\s+([^|}]+)(?:\|[^|}]*)?(?:\|([^}]*))?}/gi, (m, g1, g2) => g2 || g1) // Виключено 'spell'
+			.replace(/{@(?:creature|skill|item|filter|quickref|book)\s+([^|}]+)(?:\|[^|}]*)?(?:\|([^}]*))?}/gi, (m, g1, g2) => g2 || g1)
 			.replace(/{@i\s+([^}]+)}/gi, "*$1*")
 			.replace(/{@b\s+([^}]+)}/gi, "**$1**");
 	};
@@ -124,7 +123,7 @@ export default function SpellCard({ spell, onSpellClick }) {
 
 	return (
 		<div className="SpellCard">
-			<h3 className="SpellCard__name">{spell.name}</h3>
+			<h3 className="SpellCard__name">{capitalizeWords(spell.name.split('|')[0])}</h3>
 			<div className="SpellCard__meta">
 				{spell.level === 0 ? "Замовляння" : `${spell.level}-й рівень`},{" "}
 				{schoolMap[spell.school] || spell.school}
