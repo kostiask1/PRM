@@ -31,7 +31,7 @@ export default function SpellCard({ spell, onSpellClick }) {
 		if (!spell.range) return "—";
 		const d = spell.range.distance;
 		if (!d) return spell.range.type;
-		return `${d.amount} ${d.type === "feet" ? "фт." : d.type} (${spell.range.type})`;
+		return `${d.amount || ""} ${d.type === "feet" ? "фт." : d.type} (${spell.range.type})`;
 	};
 
 	const formatComponents = () => {
