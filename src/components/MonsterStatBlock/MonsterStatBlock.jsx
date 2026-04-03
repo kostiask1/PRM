@@ -11,8 +11,6 @@ import {
 	capitalizeWords,
 	preprocessTags,
 	renderRecursiveContent,
-	ABILITY_MAP,
-	ATTACK_TYPE_MAP,
 } from "../../utils/diceParser.jsx";
 import "./MonsterStatBlock.css";
 import ClickToCopy from "../ClickToCopy/ClickToCopy.jsx";

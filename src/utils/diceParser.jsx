@@ -220,7 +220,6 @@ export const parseRollsAndSpells = (text, onSpellClick) => {
 				);
 			} else if (spellFull && onSpellClick) {
 				const spellParts = spellName.split("|");
-				const cleanName = spellParts[0];
 				const rawDisplayText = spellParts[2] || spellParts[0];
 				const displayText = capitalizeWords(rawDisplayText);
 				elements.push(
