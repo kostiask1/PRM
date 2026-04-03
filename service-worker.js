@@ -1,7 +1,8 @@
 const CACHE_NAME = 'prm-api-cache-v1';
-const EXTERNAL_APIS = [
+const CACHED_API_PATHS = [
   'https://www.dnd5eapi.co/api',
-  'https://api.open5e.com'
+  'https://api.open5e.com',
+  '/api/bestiary'
 ];
 
 const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
@@ -27,9 +28,9 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const url = event.request.url;
-  const isExternalApi = EXTERNAL_APIS.some(api => url.startsWith(api));
+  const isTargetApi = CACHED_API_PATHS.some(path => url.includes(path));
 
-  if (isExternalApi && event.request.method === 'GET') {
+  if (isTargetApi && event.request.method === 'GET') {
     event.respondWith(
       caches.open(CACHE_NAME).then((cache) => {
         return cache.match(event.request).then(async (cachedResponse) => {
@@ -71,6 +72,25 @@ self.addEventListener('fetch', (event) => {
                     stubHeaders.append('content-type', 'application/json');
                     stubHeaders.append('sw-fetched-on', Date.now().toString());
                     cache.put(spellUrl, new Response(JSON.stringify(spell), { headers: stubHeaders }));
+                  });
+                }
+              }).catch(() => { });
+            }
+
+            // Кешування локального бестіарію
+            if (url.includes('/api/bestiary/') && !url.includes('/sources')) {
+              networkResponse.clone().json().then(data => {
+                const monsters = Array.isArray(data) ? data : (data.results || []);
+                if (monsters.length > 0) {
+                  monsters.forEach(monster => {
+                    // Використовуємо name як ідентифікатор для кешу окремих монстрів
+                    const identifier = monster.slug || monster.name;
+                    const monsterUrl = `${new URL(url).origin}/api/bestiary/monster/${encodeURIComponent(identifier)}`;
+                    const stubHeaders = new Headers();
+                    stubHeaders.append('content-type', 'application/json');
+                    stubHeaders.append('sw-fetched-on', Date.now().toString());
+                    
+                    cache.put(monsterUrl, new Response(JSON.stringify(monster), { headers: stubHeaders }));
                   });
                 }
               }).catch(() => { });

@@ -13,6 +13,7 @@ const PORT = process.env.PORT || 5000;
 const ROOT_DIR = path.join(__dirname, "..");
 const DATA_DIR = path.join(ROOT_DIR, "data");
 const CAMPAIGNS_DIR = path.join(DATA_DIR, "campaigns");
+const BESTIARY_DIR = path.join(ROOT_DIR, "database", "bestiary");
 
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
@@ -581,6 +582,99 @@ app.delete(
 		}
 	},
 );
+
+app.get("/api/bestiary/search", async (req, res, next) => {
+	try {
+		const { name, type } = req.query;
+		const nameQuery = name?.toLowerCase() || "";
+		const typeQuery = type?.toLowerCase() || "";
+
+		if (!(await exists(BESTIARY_DIR))) {
+			return res.json([]);
+		}
+
+		const entries = await fs.readdir(BESTIARY_DIR, { withFileTypes: true });
+		const files = entries
+			.filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+			.map((entry) => entry.name);
+
+		let results = [];
+		for (const file of files) {
+			const sourceName = path.parse(file).name;
+			const data = await readJson(path.join(BESTIARY_DIR, file));
+			// Підтримка різних форматів: масив, ключ 'monster', 'monsters' або 'results'
+			const monsters = Array.isArray(data) ? data : (data.monster || data.monsters || data.results || []);
+			
+			const filtered = monsters.filter(m => {
+				const matchName = nameQuery ? m.name?.toLowerCase().includes(nameQuery) : true;
+				const matchType = typeQuery ? m.type?.toLowerCase().includes(typeQuery) : true;
+				return matchName && matchType;
+			}).map(m => ({ 
+				...m, 
+				source: m.source || sourceName
+			}));
+			results.push(...filtered);
+		}
+		res.json(results);
+	} catch (error) {
+		next(error);
+	}
+});
+
+app.get("/api/bestiary/sources", async (req, res, next) => {
+	try {
+		if (!(await exists(BESTIARY_DIR))) {
+			return res.json([]);
+		}
+		const entries = await fs.readdir(BESTIARY_DIR, { withFileTypes: true });
+		const sources = entries
+			.filter((entry) => 
+				entry.isFile() && 
+				entry.name.endsWith(".json") && 
+				entry.name !== "legendarygroups.json"
+			)
+			.map((entry) => path.parse(entry.name).name);
+		res.json(sources);
+	} catch (error) {
+		next(error);
+	}
+});
+
+app.get("/api/bestiary/legendarygroups", async (req, res, next) => {
+	try {
+		const filePath = path.join(BESTIARY_DIR, "legendarygroups.json");
+		if (!(await exists(filePath))) {
+			return res.json([]);
+		}
+		const data = await readJson(filePath);
+		res.json(data.legendaryGroup || []);
+	} catch (error) {
+		next(error);
+	}
+});
+
+app.get("/api/bestiary/:source", async (req, res, next) => {
+	try {
+		const source = path.basename(req.params.source);
+		const filePath = path.join(BESTIARY_DIR, `${source}.json`);
+		if (!(await exists(filePath))) {
+			return res.status(404).json({ error: "Джерело бестіарію не знайдено." });
+		}
+		const data = await readJson(filePath);
+
+		const sourceName = path.parse(filePath).name;
+		const monsters = Array.isArray(data) ? data : (data.results || []);
+		// Шукаємо масив монстрів за всіма можливими ключами
+		const list = Array.isArray(data) ? data : (data.monster || data.monsters || data.results || []);
+		const result = list.map(m => ({ 
+			...m, 
+			source: m.source || sourceName
+		}));
+		res.json(result);
+	} catch (error) {
+		next(error);
+	}
+});
 
 app.post("/api/ai/generate", async (req, res, next) => {
 	try {

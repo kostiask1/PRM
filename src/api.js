@@ -76,4 +76,17 @@ export const api = {
     method: 'POST',
     body: JSON.stringify(payload),
   }),
+
+  // Bestiary methods
+  getBestiarySources: () => api.request('/bestiary/sources'),
+  getBestiaryData: (source) => api.request(
+    `/bestiary/${encodeURIComponent(source.toLowerCase())}`
+  ),
+  getLegendaryGroups: () => api.request('/bestiary/legendarygroups'),
+  searchBestiary: (name, type) => {
+    const params = new URLSearchParams();
+    if (name) params.append('name', name);
+    if (type) params.append('type', type);
+    return api.request(`/bestiary/search?${params.toString()}`);
+  },
 };

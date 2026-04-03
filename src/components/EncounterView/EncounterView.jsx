@@ -9,8 +9,6 @@ import Notification from "../Notification/Notification";
 import DraggableList from "../DraggableList/DraggableList";
 import "./EncounterView.css";
 
-const MONSTER_FULL_DATA_CACHE = new Map();
-
 export default function EncounterView({
 	campaign,
 	sessionId,
@@ -131,38 +129,21 @@ export default function EncounterView({
 	const handleAddMonster = async (m) => {
 		if (!encounter) return;
 
-		try {
-			let fullData;
+		// Тепер ми використовуємо вже завантажені локальні дані монстра
+		const newMonster = {
+			...m,
+			instanceId: `inst-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+			currentHp: m.hit_points || 0,
+		};
 
-			if (MONSTER_FULL_DATA_CACHE.has(m.slug)) {
-				fullData = MONSTER_FULL_DATA_CACHE.get(m.slug);
-			} else {
-				// Fetch full monster data because search results are often truncated
-				const response = await fetch(
-					`https://api.open5e.com/monsters/${m.slug}/`,
-				);
-				fullData = await response.json();
-				MONSTER_FULL_DATA_CACHE.set(m.slug, fullData);
-			}
+		const updated = {
+			...encounter,
+			monsters: [...encounter.monsters, newMonster],
+		};
 
-			const newMonster = {
-				...fullData,
-				instanceId: `inst-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-				currentHp: fullData.hit_points || 0,
-			};
-
-			const updated = {
-				...encounter,
-				monsters: [...encounter.monsters, newMonster],
-			};
-			setEncounter(updated);
-			saveEncounterState(updated);
-
-			setNotification(`${fullData.name} додано до бою.`);
-		} catch (err) {
-			console.error("Error adding monster:", err);
-			modal.alert("Помилка", "Не вдалося завантажити повні дані монстра.");
-		}
+		setEncounter(updated);
+		saveEncounterState(updated);
+		setNotification(`${m.name} додано до бою.`);
 	};
 
 	const removeMonster = (instanceId) => {

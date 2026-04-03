@@ -19,7 +19,7 @@ export default function MonsterStatBlock({
 	nameTitle,
 	modal,
 }) {
-	const [imageStatus, setImageStatus] = useState("primary"); // 'primary' | 'fallback' | 'none'
+	const [hasImageError, setHasImageError] = useState(false);
 	const [spells, setSpells] = useState([]);
 	const [loadingSpells, setLoadingSpells] = useState(false);
 
@@ -48,7 +48,7 @@ export default function MonsterStatBlock({
 	};
 
 	useEffect(() => {
-		setImageStatus("primary");
+		setHasImageError(false); // Скидаємо стан помилки зображення при зміні монстра
 		setSpells([]);
 
 		if (monster.spell_list && monster.spell_list.length > 0) {
@@ -81,6 +81,54 @@ export default function MonsterStatBlock({
 		}
 	}, [monster]);
 
+	// Рекурсивна функція для рендерингу складних структур entries/items
+	const renderContentRecursive = (content) => {
+		if (content === undefined || content === null) return null;
+
+		if (typeof content === "string") {
+			return parseRollsAndSpells(content, handleSpellClick);
+		}
+
+		if (Array.isArray(content)) {
+			return content.map((item, idx) => (
+				<React.Fragment key={idx}>
+					{renderContentRecursive(item)}
+				</React.Fragment>
+			));
+		}
+
+		if (typeof content === "object") {
+			if (content.type === "list" && content.items) {
+				return (
+					<ul
+						key={content.name || Math.random()}
+						className={
+							content.style === "list-hang-notitle" ? "list-hang-notitle" : ""
+						}>
+						{content.items.map((item, idx) => {
+							const isObject = typeof item === "object" && item !== null;
+							return (
+								<li key={idx}>
+									{isObject && item.name && <strong>{item.name}. </strong>}
+									{renderContentRecursive(isObject ? (item.entries || item.entry) : item)}
+								</li>
+							);
+						})}
+					</ul>
+				);
+			} else if (content.type === "entries" && content.entries) {
+				return (
+					<div key={content.name || Math.random()}>
+						{content.name && <strong>{content.name}. </strong>}
+						{renderContentRecursive(content.entries)}
+					</div>
+				);
+			}
+			// Fallback for other unexpected object types, stringify them
+			return parseRollsAndSpells(JSON.stringify(content), handleSpellClick);
+		}
+		return null;
+	};
 	const renderActionList = (actions, title) => {
 		if (!actions || actions.length === 0) return null;
 		return (
@@ -89,7 +137,7 @@ export default function MonsterStatBlock({
 				{actions.map((action, index) => (
 					<div key={index} className="MonsterStatBlock__action">
 						<strong>{action.name}.</strong>{" "}
-						{parseRollsAndSpells(action.desc, handleSpellClick)}
+						{renderContentRecursive(action.entries || action.desc)}
 						<div className="MonsterStatBlock__action-rolls">
 							{action.attack_bonus && (
 								<div className="stat-item">
@@ -136,7 +184,7 @@ export default function MonsterStatBlock({
 	};
 
 	const renderSaves = () => {
-		const saveNames = {
+		const legacyMap = {
 			strength_save: "Str",
 			dexterity_save: "Dex",
 			constitution_save: "Con",
@@ -145,22 +193,39 @@ export default function MonsterStatBlock({
 			charisma_save: "Cha",
 		};
 
-		const activeSaves = Object.entries(saveNames)
-			.filter(([key]) => monster[key] !== null && monster[key] !== undefined)
-			.map(([key, label], idx, arr) => (
-				<React.Fragment key={key}>
-					{label}{" "}
-					<RollDice formula={`1d20${formatModifier(monster[key])}`}>
-						{formatModifier(monster[key])}
-					</RollDice>
-					{idx < arr.length - 1 ? ", " : ""}
-				</React.Fragment>
-			));
+		const newMap = {
+			str: "Str",
+			dex: "Dex",
+			con: "Con",
+			int: "Int",
+			wis: "Wis",
+			cha: "Cha",
+		};
 
-		if (activeSaves.length === 0) return null;
+		let saves = [];
+		if (monster.save) {
+			saves = Object.entries(newMap)
+				.filter(([key]) => monster.save[key])
+				.map(([key, label]) => ({ label, val: monster.save[key] }));
+		} else {
+			saves = Object.entries(legacyMap)
+				.filter(([key]) => monster[key] !== null && monster[key] !== undefined)
+				.map(([key, label]) => ({ label, val: monster[key] }));
+		}
+
+		if (saves.length === 0) return null;
 		return (
 			<div className="MonsterStatBlock__property-item">
-				<strong>Saving Throws:</strong> {activeSaves}
+				<strong>Saving Throws:</strong>{" "}
+				{saves.map((s, idx) => (
+					<React.Fragment key={s.label}>
+						{s.label}{" "}
+						<RollDice formula={`1d20${formatModifier(s.val)}`}>
+							{formatModifier(s.val)}
+						</RollDice>
+						{idx < saves.length - 1 ? ", " : ""}
+					</React.Fragment>
+				))}
 			</div>
 		);
 	};
@@ -208,6 +273,92 @@ export default function MonsterStatBlock({
 		);
 	};
 
+	const renderNewSpellcasting = () => {
+		if (!monster.spellcasting || monster.spellcasting.length === 0) return null;
+		return (
+			<div className="MonsterStatBlock__section MonsterStatBlock__spells">
+				{monster.spellcasting.map((sc, idx) => (
+					<div key={idx} className="MonsterStatBlock__action">
+						<h4>{sc.name}:</h4>
+						{sc.headerEntries && (
+							<p>{renderContentRecursive(sc.headerEntries)}</p>
+						)}
+						{sc.will && (
+							<p>
+								<strong>At will:</strong>{" "}
+								{sc.will.map((s, i) => (
+									<React.Fragment key={i}>
+										{renderContentRecursive(s)}
+										{i < sc.will.length - 1 ? ", " : ""}
+									</React.Fragment>
+								))}
+							</p>
+						)}
+						{sc.daily &&
+							Object.entries(sc.daily).map(([freq, list]) => (
+								<p key={freq}>
+									<strong>{freq} each:</strong>{" "}
+									{list.map((s, i) => (
+										<React.Fragment key={i}>
+											{renderContentRecursive(s)}
+											{i < list.length - 1 ? ", " : ""}
+										</React.Fragment>
+									))}
+								</p>
+							))}
+					</div>
+				))}
+			</div>
+		);
+	};
+
+	// Допоміжні функції для парсингу нових структур даних
+	const getHP = () => {
+		if (typeof monster.hp === "object" && monster.hp?.average) {
+			return { val: monster.hp.average, formula: monster.hp.formula };
+		}
+		return { val: monster.hit_points, formula: monster.hit_dice };
+	};
+
+	const getAC = () => {
+		if (Array.isArray(monster.ac) && monster.ac[0]) {
+			const entry = monster.ac[0];
+			return {
+				val: typeof entry === "object" ? entry.ac : entry,
+				desc: entry.from ? entry.from.join(", ") : "",
+			};
+		}
+		return { val: monster.armor_class, desc: monster.armor_desc };
+	};
+
+	const formatSpeed = () => {
+		if (typeof monster.speed === "string") return monster.speed;
+		if (typeof monster.speed === "object") {
+			return Object.entries(monster.speed)
+				.map(([k, v]) => `${k} ${v}`)
+				.join(", ");
+		}
+		return "—";
+	};
+
+	const formatAlignment = (al) => {
+		if (typeof al === "string") return al;
+		if (Array.isArray(al)) return al.join("");
+		return "U";
+	};
+
+	const sizeMap = {
+		T: "Tiny",
+		S: "Small",
+		M: "Medium",
+		L: "Large",
+		H: "Huge",
+		G: "Gargantuan",
+	};
+	const formatSize = (sz) => {
+		const s = Array.isArray(sz) ? sz[0] : sz;
+		return sizeMap[s] || s;
+	};
 	return (
 		<div className="MonsterStatBlock">
 			{onNameClick ? (
@@ -225,44 +376,47 @@ export default function MonsterStatBlock({
 					{monster.name}
 				</ClickToCopy>
 			)}
+
+			<div className="MonsterStatBlock__meta-line">
+				{formatSize(monster.size)} {monster.type?.type || monster.type}
+				{monster.type?.tags && ` (${monster.type.tags.join(", ")})`},{" "}
+				{formatAlignment(monster.alignment)}
+			</div>
+
 			<div className="MonsterStatBlock__header">
 				<div className="MonsterStatBlock__stats">
 					<div className="stat-item">
-						<strong>HP:</strong> {monster.hit_points} (
-						<RollDice formula={monster.hit_dice} />)
+						<strong>HP:</strong> {getHP().val}{" "}
+						{getHP().formula && (
+							<>
+								(<RollDice formula={getHP().formula} />)
+							</>
+						)}
 					</div>
 					<div className="stat-item">
-						<strong>AC:</strong> {monster.armor_class}
-						{monster.armor_desc ? ` (${monster.armor_desc})` : ""}
+						<strong>AC:</strong> {getAC().val}{" "}
+						{getAC().desc && `(${getAC().desc})`}
 					</div>
 					<div className="stat-item">
-						<strong>Speed:</strong>{" "}
-						{Object.entries(monster.speed || {})
-							.map(([k, v]) => `${k} ${v}`)
-							.join(", ")}
+						<strong>Speed:</strong> {formatSpeed()}
 					</div>
-					<div className="stat-item">
-						<strong>Type:</strong> {monster.type}
-					</div>
+					{monster.source && (
+						<div className="stat-item">
+							<strong>Source:</strong>{" "}
+							<span className="Bestiary__item-source">{monster.source}</span>
+						</div>
+					)}
 				</div>
 				<div className="MonsterStatBlock__token-wrapper">
-					{imageStatus === "primary" && (
+					{!hasImageError && (
 						<img
-							src={`https://5e.tools/img/bestiary/tokens/MM/${monster.name}.webp`}
+							src={`/database/bestiary/tokens/${monster.source}/${monster.name}.webp`}
 							alt={monster.name}
 							className="MonsterStatBlock__token"
-							onError={() => setImageStatus("fallback")}
+							onError={() => setHasImageError(true)}
 						/>
 					)}
-					{imageStatus === "fallback" && (
-						<img
-							src={`https://www.dnd5eapi.co/api/images/monsters/${monster.slug}.png`}
-							alt={monster.name}
-							className="MonsterStatBlock__token"
-							onError={() => setImageStatus("none")}
-						/>
-					)}
-					{imageStatus === "none" && (
+					{hasImageError && (
 						<div className="MonsterStatBlock__token-skeleton">
 							<Icon name="dice" />
 						</div>
@@ -270,28 +424,34 @@ export default function MonsterStatBlock({
 				</div>
 			</div>
 			<div className="MonsterStatBlock__abilities">
-				{renderAbility("STR", monster.strength)}
-				{renderAbility("DEX", monster.dexterity)}
-				{renderAbility("CON", monster.constitution)}
-				{renderAbility("INT", monster.intelligence)}
-				{renderAbility("WIS", monster.wisdom)}
-				{renderAbility("CHA", monster.charisma)}
+				{renderAbility("STR", monster.str ?? monster.strength)}
+				{renderAbility("DEX", monster.dex ?? monster.dexterity)}
+				{renderAbility("CON", monster.con ?? monster.constitution)}
+				{renderAbility("INT", monster.int ?? monster.intelligence)}
+				{renderAbility("WIS", monster.wis ?? monster.wisdom)}
+				{renderAbility("CHA", monster.cha ?? monster.charisma)}
 			</div>
 			<div className="MonsterStatBlock__properties">
 				{renderSaves()}
 
-				{monster.skills && Object.keys(monster.skills).length > 0 && (
+				{(monster.skill || monster.skills) && (
 					<div className="MonsterStatBlock__property-item MonsterStatBlock__property-item--skills">
 						<strong>Skills:</strong>{" "}
-						{Object.entries(monster.skills).map(([name, value], idx, arr) => (
-							<React.Fragment key={name}>
-								<span className="skill-name">{name}</span>{" "}
-								<RollDice formula={`1d20${formatModifier(value)}`}>
-									{formatModifier(value)}
-								</RollDice>
-								{idx < arr.length - 1 ? ", " : ""}
-							</React.Fragment>
-						))}
+						{Object.entries(monster.skill || monster.skills).map(
+							([name, value], idx, arr) => (
+								<React.Fragment key={name}>
+									<span
+										className="skill-name"
+										style={{ textTransform: "capitalize" }}>
+										{name}
+									</span>{" "}
+									<RollDice formula={`1d20${formatModifier(value)}`}>
+										{formatModifier(value)}
+									</RollDice>
+									{idx < arr.length - 1 ? ", " : ""}
+								</React.Fragment>
+							),
+						)}
 					</div>
 				)}
 
@@ -313,23 +473,48 @@ export default function MonsterStatBlock({
 				)}
 				<div className="MonsterStatBlock__description">
 					<p>
-						<strong>Senses:</strong> {monster.senses}
+						<strong>Senses:</strong>{" "}
+						{Array.isArray(monster.senses)
+							? monster.senses.join(", ")
+							: monster.senses}
 					</p>
 					<p>
-						<strong>Languages:</strong> {monster.languages}
+						<strong>Languages:</strong>{" "}
+						{Array.isArray(monster.languages)
+							? monster.languages.join(", ")
+							: monster.languages}
+					</p>
+					<p>
+						<strong>Challenge:</strong> {monster.cr?.cr || monster.cr}
 					</p>
 				</div>
 				{monster.desc && (
 					<div className="MonsterStatBlock__lore">
-						{parseRollsAndSpells(monster.desc, handleSpellClick)}
+						{parseRollsAndSpells(monster.desc)}
 					</div>
 				)}
 			</div>
 			{renderSpellcasting()}
-			{renderActionList(monster.special_abilities, "Special Abilities")}
-			{renderActionList(monster.actions, "Actions")}
-			{renderActionList(monster.reactions, "Reactions")}
-			{renderActionList(monster.legendary_actions, "Legendary Actions")}
+			{renderNewSpellcasting()}
+			{renderActionList(monster.trait || monster.special_abilities, "Traits")}
+			{renderActionList(monster.action || monster.actions, "Actions")}
+			{renderActionList(monster.reaction || monster.reactions, "Reactions")}
+			{renderActionList(
+				monster.legendary || monster.legendary_actions,
+				"Legendary Actions",
+			)}
+			{monster.lairActions && monster.lairActions.length > 0 && (
+				<div className="MonsterStatBlock__section">
+					<h4>Lair Actions:</h4>
+					{renderContentRecursive(monster.lairActions)}
+				</div>
+			)}
+			{monster.regionalEffects && monster.regionalEffects.length > 0 && (
+				<div className="MonsterStatBlock__section">
+					<h4>Regional Effects:</h4>
+					{renderContentRecursive(monster.regionalEffects)}
+				</div>
+			)}
 		</div>
 	);
 }
