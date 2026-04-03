@@ -159,11 +159,11 @@ export default function Sidebar({
 						<Icon name="user" size={16} /> Tokenizer
 					</a>
 					<a
-						href="https://forgottenadventures.piwigo.com/index?/category/1351-fa_topdown_tokens"
+						href="https://forgottenadventures.piwigo.com"
 						target="_blank"
 						rel="noopener noreferrer"
 						className="Sidebar__resource-item">
-						<Icon name="layers" size={16} /> FA Tokens
+						<Icon name="layers" size={16} /> Assets
 					</a>
 					<a
 						href="https://www.owlbear.rodeo/"
