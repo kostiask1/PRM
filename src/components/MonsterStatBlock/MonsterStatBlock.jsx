@@ -44,7 +44,7 @@ export default function MonsterStatBlock({
 		}
 
 		modal?.confirm(
-			spell.name,
+			capitalizeWords(spell.name.split("|")[0]),
 			<SpellCard spell={spell} onSpellClick={handleSpellClick} />,
 		);
 	};

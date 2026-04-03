@@ -408,7 +408,7 @@ export default function EncounterView({
 					showFooter={false} // Bestiary handles its own add logic
 					type="custom" // Use a custom type for specific styling
 				>
-					<Bestiary onAddMonster={handleAddMonster} isEmbedded={true} />
+					<Bestiary onAddMonster={handleAddMonster} isEmbedded={true} modal={modal} />
 				</Modal>
 			)}
 
