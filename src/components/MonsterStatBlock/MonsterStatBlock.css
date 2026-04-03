@@ -17,11 +17,14 @@
 	width: 120px;
 	height: 120px;
 	border-radius: 50%;
-	background: rgba(0, 0, 0, 0.2);
 	overflow: visible;
 	display: flex;
 	align-items: center;
 	justify-content: center;
+}
+
+.MonsterStatBlock__token-wrapper.error {
+	background: rgba(0, 0, 0, 0.2);
 }
 
 .MonsterStatBlock__token-wrapper:hover .MonsterStatBlock__token {

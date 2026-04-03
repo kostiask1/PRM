@@ -317,7 +317,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 					</div>
 					{loading && (
 						<div className="Bestiary__loader muted">
-							Оновлення бази даних...
+							Індексація бази даних...
 						</div>
 					)}
 

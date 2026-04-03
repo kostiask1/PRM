@@ -9,23 +9,15 @@ import {
 	getDamageBonus,
 	parseRollsAndSpells,
 	capitalizeWords,
+	preprocessTags,
+	renderRecursiveContent,
+	ABILITY_MAP,
+	ATTACK_TYPE_MAP,
 } from "../../utils/diceParser.jsx";
 import "./MonsterStatBlock.css";
 import ClickToCopy from "../ClickToCopy/ClickToCopy.jsx";
 
 const SPELL_CACHE = new Map();
-
-// Мапінг для скорочень здібностей
-const ABILITY_MAP = {
-	str: "Strength", dex: "Dexterity", con: "Constitution",
-	int: "Intelligence", wis: "Wisdom", cha: "Charisma"
-};
-
-// Мапінг для скорочень типів атак
-const ATTACK_TYPE_MAP = {
-	m: "Melee", r: "Ranged", "m,r": "Melee or Ranged"
-};
-
 
 export default function MonsterStatBlock({
 	monster,
@@ -89,79 +81,6 @@ export default function MonsterStatBlock({
 		}
 	}, [monster]);
 
-	const preprocessText = (text) => {
-		if (typeof text !== "string") return text;
-		return text
-			.replace(/{@h}/gi, "Hit: ")
-			.replace(/{@dc\s+(\d+)}/gi, "DC $1")
-			.replace(/{@status\s+([^|}]+)(?:\|[^|}]*)?(?:\|([^}]*))?}/gi, (m, g1, g2) => g2 || g1)
-			.replace(/{@condition\s+([^|}]+)(?:\|[^|}]*)?(?:\|([^}]*))?}/gi, (m, g1, g2) => g2 || g1)
-			.replace(/{@atk\s+mw}/gi, "Melee Weapon Attack: ")
-			.replace(/{@atk\s+rw}/gi, "Ranged Weapon Attack: ")
-			.replace(/{@atk\s+mw,rw}/gi, "Melee or Ranged Weapon Attack: ")
-			.replace(/{@hit\s+([+-]?\d+)}/gi, (m, g1) => g1.startsWith("+") || g1.startsWith("-") ? g1 : `+${g1}`)
-			.replace(/{@dice\s+([^|}]+)(?:\|[^|}]*)?(?:\|([^}]*))?}/gi, (m, g1, g2) => g2 || g1)
-			.replace(/{@damage\s+([^|}]+)(?:\|[^|}]*)?(?:\|([^}]*))?}/gi, (m, g1, g2) => g2 || g1)// Нові парсери для @variantrule, @actSave, @recharge, @atkr
-			.replace(/{@actSaveFail}/gi, "On a failure,")
-			.replace(/{@actSaveSuccess}/gi, "On a success,")
-			.replace(/{@variantrule\s+([^|}]+)(?:\|[^|}]*)?(?:\|([^}]*))?}/gi, (m, g1, g2) => g2 || g1)
-			.replace(/{@actSave\s+([a-z]{3})}/gi, (m, g1) => `${ABILITY_MAP[g1] || g1} saving throw`)
-			.replace(/{@recharge(?:\s+(\d+))?}/gi, (m, g1) => g1 ? `(Recharge ${g1}-6)` : "(Recharge)")
-			.replace(/{@atkr\s+([a-z,]+)}/gi, (m, g1) => `${ATTACK_TYPE_MAP[g1] || g1} Attack: `)
-			// Виключено 'spell' з цього regex, щоб parseRollsAndSpells міг обробити його окремо
-			.replace(/{@(?:creature|skill|item|filter|quickref|book)\s+([^|}]+)(?:\|[^|}]*)?(?:\|([^}]*))?}/gi, (m, g1, g2) => g2 || g1)
-			.replace(/{@i\s+([^}]+)}/gi, "*$1*")
-			.replace(/{@b\s+([^}]+)}/gi, "**$1**");
-	};
-
-	// Рекурсивна функція для рендерингу складних структур entries/items
-	const renderContentRecursive = (content) => {
-		if (content === undefined || content === null) return null;
-
-		if (typeof content === "string") {
-			return parseRollsAndSpells(preprocessText(content), handleSpellClick);
-		}
-
-		if (Array.isArray(content)) {
-			return content.map((item, idx) => (
-				<React.Fragment key={idx}>
-					{renderContentRecursive(item)}
-				</React.Fragment>
-			));
-		}
-
-		if (typeof content === "object") {
-			if (content.type === "list" && content.items) {
-				return (
-					<ul
-						key={content.name || Math.random()}
-						className={
-							content.style === "list-hang-notitle" ? "list-hang-notitle" : ""
-						}>
-						{content.items.map((item, idx) => {
-							const isObject = typeof item === "object" && item !== null;
-							return (
-								<li key={idx}>
-									{isObject && item.name && <strong>{item.name}. </strong>}
-									{renderContentRecursive(isObject ? (item.entries || item.entry) : item)}
-								</li>
-							);
-						})}
-					</ul>
-				);
-			} else if (content.type === "entries" && content.entries) {
-				return (
-					<div key={content.name || Math.random()}>
-						{content.name && <strong>{content.name}. </strong>}
-						{renderContentRecursive(content.entries)}
-					</div>
-				);
-			}
-			// Fallback for other unexpected object types, stringify them
-			return parseRollsAndSpells(JSON.stringify(content), handleSpellClick);
-		}
-		return null;
-	};
 	const renderActionList = (actions, title) => {
 		if (!actions || actions.length === 0) return null;
 		return (
@@ -170,7 +89,7 @@ export default function MonsterStatBlock({
 				{actions.map((action, index) => (
 					<div key={index} className="MonsterStatBlock__action">
 						<strong>{action.name}.</strong>{" "}
-						{renderContentRecursive(action.entries || action.desc)}
+						{renderRecursiveContent(action.entries || action.desc, handleSpellClick)}
 						<div className="MonsterStatBlock__action-rolls">
 							{action.attack_bonus && (
 								<div className="stat-item">
@@ -314,14 +233,14 @@ export default function MonsterStatBlock({
 					<div key={idx} className="MonsterStatBlock__action">
 						<h4>{sc.name}:</h4>
 						{sc.headerEntries && (
-							<p>{renderContentRecursive(sc.headerEntries)}</p>
+							<p>{renderRecursiveContent(sc.headerEntries, handleSpellClick)}</p>
 						)}
 						{sc.will && (
 							<p>
 								<strong>At will:</strong>{" "}
 								{sc.will.map((s, i) => (
 									<React.Fragment key={i}>
-										{renderContentRecursive(s)}
+										{renderRecursiveContent(s, handleSpellClick)}
 										{i < sc.will.length - 1 ? ", " : ""}
 									</React.Fragment>
 								))}
@@ -333,12 +252,27 @@ export default function MonsterStatBlock({
 									<strong>{freq} each:</strong>{" "}
 									{list.map((s, i) => (
 										<React.Fragment key={i}>
-											{renderContentRecursive(s)}
+											{renderRecursiveContent(s, handleSpellClick)}
 											{i < list.length - 1 ? ", " : ""}
 										</React.Fragment>
 									))}
 								</p>
 							))}
+					</div>
+				))}
+				{monster.spellcasting.map((sc, idx) => (
+					<div key={`slots-${idx}`}>
+						{sc.spells && Object.entries(sc.spells).map(([lvl, info]) => (
+							<p key={lvl} className="MonsterStatBlock__action">
+								<strong>{lvl === "0" ? "Cantrips" : `Level ${lvl}`} {info.slots ? `(${info.slots} slots)` : ""}: </strong>
+								{info.spells.map((s, i) => (
+									<React.Fragment key={i}>
+										{renderRecursiveContent(s, handleSpellClick)}
+										{i < info.spells.length - 1 ? ", " : ""}
+									</React.Fragment>
+								))}
+							</p>
+						))}
 					</div>
 				))}
 			</div>
@@ -523,7 +457,7 @@ export default function MonsterStatBlock({
 				</div>
 				{monster.desc && (
 					<div className="MonsterStatBlock__lore">
-						{parseRollsAndSpells(preprocessText(monster.desc), handleSpellClick)}
+						{parseRollsAndSpells(preprocessTags(monster.desc), handleSpellClick)}
 					</div>
 				)}
 			</div>
@@ -539,13 +473,13 @@ export default function MonsterStatBlock({
 			{monster.lairActions && monster.lairActions.length > 0 && (
 				<div className="MonsterStatBlock__section">
 					<h4>Lair Actions:</h4>
-					{renderContentRecursive(monster.lairActions)}
+					{renderRecursiveContent(monster.lairActions, handleSpellClick)}
 				</div>
 			)}
 			{monster.regionalEffects && monster.regionalEffects.length > 0 && (
 				<div className="MonsterStatBlock__section">
 					<h4>Regional Effects:</h4>
-					{renderContentRecursive(monster.regionalEffects)}
+					{renderRecursiveContent(monster.regionalEffects, handleSpellClick)}
 				</div>
 			)}
 		</div>

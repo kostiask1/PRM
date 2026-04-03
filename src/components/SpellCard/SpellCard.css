@@ -25,16 +25,19 @@
 }
 
 .SpellCard__desc {
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
 	line-height: 1.4;
 	color: #ccc;
 }
 
+.SpellCard__desc > * {
+	margin: 12px 0;
+}
+
 .SpellCard__desc ul {
 	display: flex;
-	margin: 0;
+	flex-direction: column;
+	gap: 8px;
+	margin: 8px 0;
 	height: auto;
 }
 
