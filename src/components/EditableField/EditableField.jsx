@@ -25,6 +25,17 @@ export default function EditableField({
 		props.onClick && props.onClick(e);
 	};
 
+	
+	const shortcutsHelp = [
+		"Гарячі клавіші:",
+		"Ctrl+B — Жирний",
+		"Ctrl+I — Курсив",
+		"Ctrl+1-6 — Заголовки",
+		"Ctrl+] — Список",
+		"Ctrl+[ — Зняти список",
+		"Ctrl+Q — Цитата",
+	].join("\n");
+
 	if (isEditing) {
 		return (
 			<Input
@@ -34,6 +45,7 @@ export default function EditableField({
 				value={value}
 				onChange={onChange}
 				placeholder={placeholder}
+				title={shortcutsHelp}
 				onBlur={() => setIsEditing(false)}
 				autoFocus
 				className={className}

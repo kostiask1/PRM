@@ -280,39 +280,24 @@ const Input = forwardRef(({ type = "text", className = "", ...props }, ref) => {
 	const baseClass = type === "textarea" ? "Input Input--textarea" : "Input";
 	const combinedClassName = `${baseClass} ${className}`.trim();
 
-	const shortcutsHelp = [
-		"Гарячі клавіші:",
-		"Ctrl+B — Жирний",
-		"Ctrl+I — Курсив",
-		"Ctrl+1-6 — Заголовки",
-		"Ctrl+] — Список",
-		"Ctrl+[ — Зняти список",
-		"Ctrl+Q — Цитата",
-	].join("\n");
-
-	const { title, ...restProps } = props;
-	const finalTitle = title ? `${title}\n\n${shortcutsHelp}` : shortcutsHelp;
-
 	if (type === "textarea") {
 		return (
 			<textarea
+				{...props}
 				ref={setRefs}
 				className={combinedClassName}
 				onKeyDown={handleKeyDown}
-				title={finalTitle}
-				{...restProps}
 			/>
 		);
 	}
 
 	return (
 		<input
+			{...props}
 			ref={setRefs}
 			className={combinedClassName}
 			type={type}
 			onKeyDown={handleKeyDown}
-			title={finalTitle}
-			{...restProps}
 		/>
 	);
 });
