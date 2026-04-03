@@ -295,7 +295,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 							<option value="all">УСІ ДЖЕРЕЛА</option>
 							{sources.map((s) => (
 								<option key={s} value={s}>
-									{s.toUpperCase()}
+									{s.replace(/^bestiary-/i, "").toUpperCase()}
 								</option>
 							))}
 						</Select>

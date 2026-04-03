@@ -28,7 +28,7 @@ async function getBestiaryIndex() {
 
 		// Визначаємо основне джерело файлу з метаданих або назви файлу
 		let fileSource = (
-			data._meta?.sources?.[0]?.json || path.parse(file.name).name
+			data._meta?.sources?.[0]?.json || path.parse(file.name).name.replace(/^bestiary-/i, "")
 		).toUpperCase();
 
 		const monsters = Array.isArray(data)
@@ -189,12 +189,17 @@ router.get("/sources", async (req, res, next) => {
 		res.json(
 			entries
 				.filter(
-					(e) =>
-						e.isFile() &&
-						e.name.endsWith(".json") &&
-						e.name !== "legendarygroups.json",
+					(e) => {
+						const name = e.name.toLowerCase();
+						return (
+							e.isFile() &&
+							name.endsWith(".json") &&
+							name !== "legendarygroups.json" &&
+							name !== "index.json"
+						);
+					}
 				)
-				.map((e) => path.parse(e.name).name),
+				.map((e) => path.parse(e.name).name.replace(/^bestiary-/i, "")),
 		);
 	} catch (error) {
 		next(error);
@@ -216,10 +221,17 @@ router.get("/legendarygroups", async (req, res, next) => {
 
 router.get("/:source", async (req, res, next) => {
 	try {
-		const filePath = path.join(
-			storage.BESTIARY_DIR,
-			`${path.basename(req.params.source)}.json`,
-		);
+		const sourceParam = req.params.source;
+		let filePath = path.join(storage.BESTIARY_DIR, `${path.basename(sourceParam)}.json`);
+
+		if (!(await storage.exists(filePath))) {
+			// Спробуємо знайти файл з префіксом bestiary-, якщо прямий шлях не знайдено
+			const prefixedPath = path.join(storage.BESTIARY_DIR, `bestiary-${path.basename(sourceParam)}.json`);
+			if (await storage.exists(prefixedPath)) {
+				filePath = prefixedPath;
+			}
+		}
+
 		if (!(await storage.exists(filePath)))
 			return res.status(404).json({ error: "Джерело не знайдено." });
 		const data = await storage.readJson(filePath);
@@ -230,7 +242,7 @@ router.get("/:source", async (req, res, next) => {
 		const index = await getBestiaryIndex();
 		const resolvedList = monsters.map((m) =>
 			resolveMonster(
-				{ ...m, source: m.source || path.parse(filePath).name },
+				{ ...m, source: m.source || path.parse(filePath).name.replace(/^bestiary-/i, "") },
 				index,
 			),
 		);

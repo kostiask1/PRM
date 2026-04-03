@@ -377,7 +377,7 @@ export default function MonsterStatBlock({
 					{monster.source && (
 						<div className="stat-item">
 							<strong>Source:</strong>{" "}
-							<span className="Bestiary__item-source">{monster.source}</span>
+							<span className="Bestiary__item-source">{monster.source.replace(/^bestiary-/i, "")}</span>
 						</div>
 					)}
 				</div>
