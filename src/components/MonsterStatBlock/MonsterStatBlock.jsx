@@ -81,12 +81,32 @@ export default function MonsterStatBlock({
 		}
 	}, [monster]);
 
+	const preprocessText = (text) => {
+		if (typeof text !== "string") return text;
+		return text
+			.replace(/{@h}/gi, "Hit: ")
+			.replace(/{@dc\s+(\d+)}/gi, "DC $1")
+			.replace(/{@status\s+([^|}]+)(?:\|[^|}]*)?(?:\|([^}]*))?}/gi, (m, g1, g2) => g2 || g1)
+			.replace(/{@condition\s+([^|}]+)(?:\|[^|}]*)?(?:\|([^}]*))?}/gi, (m, g1, g2) => g2 || g1)
+			.replace(/{@atk\s+mw}/gi, "Melee Weapon Attack: ")
+			.replace(/{@atk\s+rw}/gi, "Ranged Weapon Attack: ")
+			.replace(/{@atk\s+mw,rw}/gi, "Melee or Ranged Weapon Attack: ")
+			.replace(/{@hit\s+([+-]?\d+)}/gi, (m, g1) =>
+				g1.startsWith("+") || g1.startsWith("-") ? g1 : `+${g1}`,
+			)
+			.replace(/{@dice\s+([^|}]+)(?:\|[^|}]*)?(?:\|([^}]*))?}/gi, (m, g1, g2) => g2 || g1)
+			.replace(/{@damage\s+([^|}]+)(?:\|[^|}]*)?(?:\|([^}]*))?}/gi, (m, g1, g2) => g2 || g1)
+			.replace(/{@(?:creature|skill|item|filter|quickref|book)\s+([^|}]+)(?:\|[^|}]*)?(?:\|([^}]*))?}/gi, (m, g1, g2) => g2 || g1)
+			.replace(/{@i\s+([^}]+)}/gi, "*$1*")
+			.replace(/{@b\s+([^}]+)}/gi, "**$1**");
+	};
+
 	// Рекурсивна функція для рендерингу складних структур entries/items
 	const renderContentRecursive = (content) => {
 		if (content === undefined || content === null) return null;
 
 		if (typeof content === "string") {
-			return parseRollsAndSpells(content, handleSpellClick);
+			return parseRollsAndSpells(preprocessText(content), handleSpellClick);
 		}
 
 		if (Array.isArray(content)) {
@@ -490,7 +510,7 @@ export default function MonsterStatBlock({
 				</div>
 				{monster.desc && (
 					<div className="MonsterStatBlock__lore">
-						{parseRollsAndSpells(monster.desc)}
+						{parseRollsAndSpells(preprocessText(monster.desc), handleSpellClick)}
 					</div>
 				)}
 			</div>
