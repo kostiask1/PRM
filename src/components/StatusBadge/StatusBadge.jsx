@@ -12,7 +12,7 @@ export default function StatusBadge({
 
 	let label = "";
 	if (completed) {
-		label = `Завершена ${dateStr}`;
+		label = `Завершена`;
 	} else {
 		label = type === "campaign" ? "Активна" : "В підготовці";
 	}
