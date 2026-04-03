@@ -190,12 +190,16 @@ export const parseRollsAndSpells = (text, onSpellClick) => {
 	const elements = [];
 
 	for (let i = 0; i < parts.length; i += 5) {
-		if (parts[i])
+		if (parts[i]) {
+			// Екрануємо символи, які Markdown може сприйняти як початок списку (+, -, *, цифри з крапкою)
+			// особливо якщо вони опинилися на початку фрагмента після розбиття тексту
+			const safeText = parts[i].replace(/^(\s*([-+*]|\d+\.))(\s)/gm, "$1");
 			elements.push(
 				<ReactMarkdown key={`t-${i}`} components={{ p: "span" }}>
-					{parts[i]}
+					{safeText}
 				</ReactMarkdown>,
 			);
+		}
 
 		if (i + 1 < parts.length) {
 			const roll = parts[i + 1];
