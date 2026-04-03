@@ -14,6 +14,7 @@ const ROOT_DIR = path.join(__dirname, "..");
 const DATA_DIR = path.join(ROOT_DIR, "data");
 const CAMPAIGNS_DIR = path.join(DATA_DIR, "campaigns");
 const BESTIARY_DIR = path.join(ROOT_DIR, "database", "bestiary");
+const SPELLS_DIR = path.join(ROOT_DIR, "database", "spells");
 
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
@@ -670,6 +671,73 @@ app.get("/api/bestiary/:source", async (req, res, next) => {
 			...m, 
 			source: m.source || sourceName
 		}));
+		res.json(result);
+	} catch (error) {
+		next(error);
+	}
+});
+
+app.get("/api/spells/search", async (req, res, next) => {
+	try {
+		const { name, level, school } = req.query;
+		const nameQuery = name?.toLowerCase() || "";
+		const schoolQuery = school?.toLowerCase() || "";
+
+		if (!(await exists(SPELLS_DIR))) return res.json([]);
+
+		const indexPath = path.join(SPELLS_DIR, "index.json");
+		if (!(await exists(indexPath))) return res.json([]);
+		
+		const index = await readJson(indexPath);
+		let results = [];
+
+		for (const [sourceKey, fileName] of Object.entries(index)) {
+			const data = await readJson(path.join(SPELLS_DIR, fileName));
+			const spells = Array.isArray(data) ? data : (data.spell || data.spells || data.results || []);
+			
+			const filtered = spells.filter(s => {
+				const matchName = nameQuery ? s.name?.toLowerCase().includes(nameQuery) : true;
+				const matchLevel = level !== undefined ? String(s.level) === String(level) : true;
+				const matchSchool = schoolQuery ? s.school?.toLowerCase() === schoolQuery : true;
+				return matchName && matchLevel && matchSchool;
+			}).map(s => ({ ...s, source: sourceKey }));
+			
+			results.push(...filtered);
+		}
+		res.json(results);
+	} catch (error) {
+		next(error);
+	}
+});
+
+app.get("/api/spells/sources", async (req, res, next) => {
+	try {
+		const indexPath = path.join(SPELLS_DIR, "index.json");
+		if (!(await exists(indexPath))) return res.json([]);
+		const index = await readJson(indexPath);
+		res.json(Object.keys(index));
+	} catch (error) {
+		next(error);
+	}
+});
+
+app.get("/api/spells/:source", async (req, res, next) => {
+	try {
+		const sourceKey = req.params.source;
+		const indexPath = path.join(SPELLS_DIR, "index.json");
+		if (!(await exists(indexPath))) {
+			return res.status(404).json({ error: "Індекс заклинань не знайдено." });
+		}
+		const index = await readJson(indexPath);
+		const fileName = index[sourceKey];
+		
+		if (!fileName) {
+			return res.status(404).json({ error: "Джерело заклинань не знайдено." });
+		}
+
+		const data = await readJson(path.join(SPELLS_DIR, fileName));
+		const list = Array.isArray(data) ? data : (data.spell || data.spells || data.results || []);
+		const result = list.map(s => ({ ...s, source: sourceKey }));
 		res.json(result);
 	} catch (error) {
 		next(error);

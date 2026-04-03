@@ -2,7 +2,8 @@ const CACHE_NAME = 'prm-api-cache-v1';
 const CACHED_API_PATHS = [
   'https://www.dnd5eapi.co/api',
   'https://api.open5e.com',
-  '/api/bestiary'
+  '/api/bestiary',
+  '/api/spells'
 ];
 
 const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
@@ -91,6 +92,26 @@ self.addEventListener('fetch', (event) => {
                     stubHeaders.append('sw-fetched-on', Date.now().toString());
                     
                     cache.put(monsterUrl, new Response(JSON.stringify(monster), { headers: stubHeaders }));
+                  });
+                }
+              }).catch(() => { });
+            }
+
+            // Кешування локальних заклинань
+            if (url.includes('/api/spells/') && !url.includes('/sources') && !url.includes('/search')) {
+              networkResponse.clone().json().then(data => {
+                const spells = Array.isArray(data) ? data : (data.spell || data.spells || data.results || []);
+                if (spells.length > 0) {
+                  spells.forEach(spell => {
+                    const slug = (spell.slug || spell.name).toLowerCase()
+                      .replace(/[^\p{L}\p{N}]+/gu, "-")
+                      .replace(/^-+|-+$/g, "");
+                    const spellUrl = `https://www.dnd5eapi.co/api/2014/spells/${slug}`;
+                    const stubHeaders = new Headers();
+                    stubHeaders.append('content-type', 'application/json');
+                    stubHeaders.append('sw-fetched-on', Date.now().toString());
+                    
+                    cache.put(spellUrl, new Response(JSON.stringify(spell), { headers: stubHeaders }));
                   });
                 }
               }).catch(() => { });

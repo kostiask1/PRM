@@ -45,9 +45,12 @@ export const parseRollsAndSpells = (text, onSpellClick) => {
                 const bonus = hit.split(' ')[0];
                 elements.push(<RollDice key={`h-${i}`} formula={`1d20${formatModifier(parseInt(bonus))}`}>{hit}</RollDice>);
             } else if (spellFull && onSpellClick) {
+                const spellParts = spellName.split('|');
+                const cleanName = spellParts[0];
+                const displayText = spellParts[2] || spellParts[0];
                 elements.push(
-                    <SpellLink key={`s-${i}`} onClick={() => onSpellClick(spellName)}>
-                        {spellName}
+                    <SpellLink key={`s-${i}`} onClick={() => onSpellClick(cleanName)}>
+                        {displayText}
                     </SpellLink>
                 );
             } else if (mdLinkFull && onSpellClick) {

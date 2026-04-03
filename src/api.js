@@ -89,4 +89,17 @@ export const api = {
     if (type) params.append('type', type);
     return api.request(`/bestiary/search?${params.toString()}`);
   },
+
+  // Spells methods
+  getSpellSources: () => api.request('/spells/sources'),
+  getSpellData: (source) => api.request(
+    `/spells/${encodeURIComponent(source)}`
+  ),
+  searchSpells: (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.name) query.append('name', params.name);
+    if (params.level !== undefined) query.append('level', params.level);
+    if (params.school) query.append('school', params.school);
+    return api.request(`/spells/search?${query.toString()}`);
+  },
 };

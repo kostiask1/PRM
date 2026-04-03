@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { api } from "../../api";
 import RollDice from "../RollDice/RollDice";
 import Icon from "../Icon";
 import SpellCard from "../SpellCard/SpellCard";
@@ -12,6 +13,18 @@ import "./MonsterStatBlock.css";
 import ClickToCopy from "../ClickToCopy/ClickToCopy.jsx";
 
 const SPELL_CACHE = new Map();
+
+// Мапінг для скорочень здібностей
+const ABILITY_MAP = {
+	str: "Strength", dex: "Dexterity", con: "Constitution",
+	int: "Intelligence", wis: "Wisdom", cha: "Charisma"
+};
+
+// Мапінг для скорочень типів атак
+const ATTACK_TYPE_MAP = {
+	m: "Melee", r: "Ranged", "m,r": "Melee or Ranged"
+};
+
 
 export default function MonsterStatBlock({
 	monster,
@@ -28,13 +41,11 @@ export default function MonsterStatBlock({
 
 		// Якщо передано назву (рядок), намагаємось знайти базові дані
 		if (typeof spellOrName === "string") {
-			const slug = spellOrName.toLowerCase().replace(/\s+/g, "-");
+			const cleanName = spellOrName.split("|")[0];
 			try {
-				const res = await fetch(
-					`https://www.dnd5eapi.co/api/2014/spells/${slug}`,
-				);
-				spell = await res.json();
-				if (!spell.name) throw new Error();
+				const results = await api.searchSpells({ name: cleanName });
+				spell = results?.[0];
+				if (!spell) throw new Error("Spell not found");
 			} catch (e) {
 				console.error("Failed to fetch linked spell", e);
 				return;
@@ -55,18 +66,14 @@ export default function MonsterStatBlock({
 			const fetchSpells = async () => {
 				setLoadingSpells(true);
 				try {
-					console.log("monster.spell_list:", monster.spell_list);
 					const loaded = await Promise.all(
 						monster.spell_list.map(async (url) => {
-							const fixUrl = url.replace(
-								"https://api.open5e.com/v2/spells",
-								"https://www.dnd5eapi.co/api/2014/spells",
-							);
+							const slug = url.split("/").filter(Boolean).pop();
 
-							if (SPELL_CACHE.has(url)) return SPELL_CACHE.get(fixUrl);
-							const res = await fetch(fixUrl);
-							const data = await res.json();
-							SPELL_CACHE.set(fixUrl, data);
+							if (SPELL_CACHE.has(slug)) return SPELL_CACHE.get(slug);
+							const results = await api.searchSpells({ name: slug });
+							const data = results?.[0] || null;
+							if (data) SPELL_CACHE.set(slug, data);
 							return data;
 						}),
 					);
@@ -91,11 +98,16 @@ export default function MonsterStatBlock({
 			.replace(/{@atk\s+mw}/gi, "Melee Weapon Attack: ")
 			.replace(/{@atk\s+rw}/gi, "Ranged Weapon Attack: ")
 			.replace(/{@atk\s+mw,rw}/gi, "Melee or Ranged Weapon Attack: ")
-			.replace(/{@hit\s+([+-]?\d+)}/gi, (m, g1) =>
-				g1.startsWith("+") || g1.startsWith("-") ? g1 : `+${g1}`,
-			)
+			.replace(/{@hit\s+([+-]?\d+)}/gi, (m, g1) => g1.startsWith("+") || g1.startsWith("-") ? g1 : `+${g1}`)
 			.replace(/{@dice\s+([^|}]+)(?:\|[^|}]*)?(?:\|([^}]*))?}/gi, (m, g1, g2) => g2 || g1)
-			.replace(/{@damage\s+([^|}]+)(?:\|[^|}]*)?(?:\|([^}]*))?}/gi, (m, g1, g2) => g2 || g1)
+			.replace(/{@damage\s+([^|}]+)(?:\|[^|}]*)?(?:\|([^}]*))?}/gi, (m, g1, g2) => g2 || g1)// Нові парсери для @variantrule, @actSave, @recharge, @atkr
+			.replace(/{@actSaveFail}/gi, "On a failure,")
+			.replace(/{@actSaveSuccess}/gi, "On a success,")
+			.replace(/{@variantrule\s+([^|}]+)(?:\|[^|}]*)?(?:\|([^}]*))?}/gi, (m, g1, g2) => g2 || g1)
+			.replace(/{@actSave\s+([a-z]{3})}/gi, (m, g1) => `${ABILITY_MAP[g1] || g1} saving throw`)
+			.replace(/{@recharge(?:\s+(\d+))?}/gi, (m, g1) => g1 ? `(Recharge ${g1}-6)` : "(Recharge)")
+			.replace(/{@atkr\s+([a-z,]+)}/gi, (m, g1) => `${ATTACK_TYPE_MAP[g1] || g1} Attack: `)
+			// Виключено 'spell' з цього regex, щоб parseRollsAndSpells міг обробити його окремо
 			.replace(/{@(?:creature|skill|item|filter|quickref|book)\s+([^|}]+)(?:\|[^|}]*)?(?:\|([^}]*))?}/gi, (m, g1, g2) => g2 || g1)
 			.replace(/{@i\s+([^}]+)}/gi, "*$1*")
 			.replace(/{@b\s+([^}]+)}/gi, "**$1**");
@@ -163,8 +175,8 @@ export default function MonsterStatBlock({
 								<div className="stat-item">
 									Atk:{" "}
 									<RollDice
-										formula={`1d20${formatModifier(action.attack_bonus)}`}>
-										{formatModifier(action.attack_bonus)}
+										formula={`1d20${formatModifier(parseInt(action.attack_bonus))}`}>
+										{formatModifier(parseInt(action.attack_bonus))}
 									</RollDice>
 								</div>
 							)}
@@ -240,8 +252,8 @@ export default function MonsterStatBlock({
 				{saves.map((s, idx) => (
 					<React.Fragment key={s.label}>
 						{s.label}{" "}
-						<RollDice formula={`1d20${formatModifier(s.val)}`}>
-							{formatModifier(s.val)}
+						<RollDice formula={`1d20${formatModifier(parseInt(s.val))}`}>
+							{formatModifier(parseInt(s.val))}
 						</RollDice>
 						{idx < saves.length - 1 ? ", " : ""}
 					</React.Fragment>
@@ -282,7 +294,7 @@ export default function MonsterStatBlock({
 								<span
 									className="MonsterStatBlock__spell"
 									onClick={() => handleSpellClick(s)}>
-									{s.name}
+									{s.name.split("|")[0]}
 								</span>
 								{i < levels[lvl].length - 1 ? ", " : ""}
 							</React.Fragment>
@@ -465,8 +477,8 @@ export default function MonsterStatBlock({
 										style={{ textTransform: "capitalize" }}>
 										{name}
 									</span>{" "}
-									<RollDice formula={`1d20${formatModifier(value)}`}>
-										{formatModifier(value)}
+									<RollDice formula={`1d20${formatModifier(parseInt(value))}`}>
+										{formatModifier(parseInt(value))}
 									</RollDice>
 									{idx < arr.length - 1 ? ", " : ""}
 								</React.Fragment>

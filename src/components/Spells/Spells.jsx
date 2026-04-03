@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { api } from "../../api";
 import ReactList from "react-list";
 import Panel from "../Panel/Panel";
 import Input from "../Input/Input";
@@ -7,108 +8,126 @@ import SpellCard from "../SpellCard/SpellCard";
 import Icon from "../Icon";
 import "./Spells.css";
 
-const SPELL_CACHE = new Map();
-const SEARCH_CACHE = new Map();
-
 export default function Spells() {
+	const [sources, setSources] = useState([]);
+	const [selectedSource, setSelectedSource] = useState("all");
 	const [allSpells, setAllSpells] = useState([]);
+	const [spells, setSpells] = useState([]);
 	const [search, setSearch] = useState("");
 	const [loading, setLoading] = useState(false);
-	const [loadingMore, setLoadingMore] = useState(false);
 	const [selectedSpell, setSelectedSpell] = useState(null);
-	const [spellDetail, setSpellDetail] = useState(null);
-	const [detailLoading, setDetailLoading] = useState(false);
 	const [sortOrder, setSortOrder] = useState("none"); // 'none', 'asc', 'desc'
-	const [nextPage, setNextPage] = useState(null);
 
-	const fetchSpells = useCallback(async (query = "", urlOverride = null) => {
-		const url =
-			urlOverride || `https://api.open5e.com/spells/?search=${query}&limit=150`;
-
-		const applyData = (data) => {
-			const results = data.results || [];
-			setAllSpells((prev) => {
-				const combined = urlOverride ? [...prev, ...results] : results;
-				// Гарантуємо унікальність за slug
-				const uniqueMap = new Map(combined.map((s) => [s.slug, s]));
-				return Array.from(uniqueMap.values());
-			});
-			setNextPage(data.next);
+	// Завантаження списку доступних джерел
+	useEffect(() => {
+		const loadSources = async () => {
+			try {
+				const data = await api.getSpellSources();
+				setSources(data);
+				const params = new URLSearchParams(window.location.search);
+				const sourceFromUrl = params.get("s_source");
+				if (sourceFromUrl) setSelectedSource(sourceFromUrl);
+			} catch (err) {
+				console.error("Failed to load spell sources", err);
+			}
 		};
+		loadSources();
+	}, []);
 
-		if (SEARCH_CACHE.has(url)) {
-			applyData(SEARCH_CACHE.get(url));
+	// Завантаження даних заклинань
+	useEffect(() => {
+		const isAll = selectedSource === "all";
+		if (isAll && sources.length === 0) return;
+
+		const params = new URLSearchParams(window.location.search);
+		params.set("s_source", selectedSource);
+		window.history.replaceState({}, "", `?${params.toString()}`);
+
+		const loadData = async () => {
+			setLoading(true);
+			try {
+				let combinedList = [];
+				if (isAll) {
+					const results = await Promise.all(sources.map(s => api.getSpellData(s)));
+					results.forEach(data => {
+						combinedList.push(...data);
+					});
+				} else {
+					const data = await api.getSpellData(selectedSource);
+					combinedList = data;
+				}
+				setAllSpells(combinedList);
+			} catch (error) {
+				console.error("Failed to load local spells", error);
+			} finally {
+				setLoading(false);
+			}
+		};
+		loadData();
+	}, [selectedSource, sources]);
+
+	// Фільтрація та початковий вибір
+	useEffect(() => {
+		const filtered = allSpells.filter(s => 
+			s.name.toLowerCase().includes(search.toLowerCase())
+		);
+		setSpells(filtered);
+
+		// Початковий вибір заклинання, якщо ще нічого не вибрано
+		// Ця логіка повинна виконуватися лише при зміні allSpells або search,
+		// але не при зміні selectedSpell, щоб уникнути рекурсії.
+		// Перевіряємо, чи selectedSpell вже встановлено, щоб не перезаписувати вибір користувача.
+		const params = new URLSearchParams(window.location.search);
+		const urlSpellName = params.get("spell");
+		const urlSpellSource = params.get("s_source");
+		let spellToSelect = null;
+
+		if (!urlSpellName && allSpells.length > 0 && !selectedSpell) {
+			setSelectedSpell(allSpells[0]);
 			return;
 		}
 
-		urlOverride ? setLoadingMore(true) : setLoading(true);
-		try {
-			const res = await fetch(url);
-			const data = await res.json();
-			SEARCH_CACHE.set(url, data);
-			applyData(data);
-		} catch (err) {
-			console.error("Failed to fetch spells", err);
-		} finally {
-			urlOverride ? setLoadingMore(false) : setLoading(false);
-		}
-	}, []);
-
-	useEffect(() => {
-		setNextPage(null);
-		const timer = setTimeout(() => {
-			fetchSpells(search);
-		}, 500);
-		return () => clearTimeout(timer);
-	}, [search, fetchSpells]);
-
-	useEffect(() => {
-		const handleSelect = (e) => {
-			const identifier = e.detail;
-			const found = allSpells.find(
-				(s) => s.slug === identifier || s.index === identifier,
+		if (urlSpellName && (!selectedSpell || selectedSpell.name !== urlSpellName)) {
+			spellToSelect = allSpells.find(s => 
+				s.name === urlSpellName && (!urlSpellSource || s.source === urlSpellSource)
 			);
-			setSelectedSpell(found || { slug: identifier });
-		};
 
-		// Перевірка URL при ініціалізації або завантаженні списку
-		const params = new URLSearchParams(window.location.search);
-		const urlSpellId = params.get("spell");
-		if (urlSpellId && !selectedSpell) {
-			const found = allSpells.find((s) => (s.slug || s.index) === urlSpellId);
-			// Якщо знайдено в поточному списку - беремо об'єкт, якщо ні - створюємо "заглушку" для fetchDetail
-			setSelectedSpell(found || { slug: urlSpellId });
+			if (spellToSelect) {
+				setSelectedSpell(spellToSelect);
+			}
 		}
+	}, [search, allSpells]);
 
-		window.addEventListener("prm:select-spell", handleSelect);
-		return () => window.removeEventListener("prm:select-spell", handleSelect);
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [allSpells]);
-
-	// Запис вибраного заклинання в URL
 	useEffect(() => {
-		const spellId = selectedSpell?.slug || selectedSpell?.index;
-		if (spellId) {
+		if (selectedSpell?.name) {
 			const params = new URLSearchParams(window.location.search);
-			if (params.get("spell") !== spellId) {
-				params.set("spell", spellId);
+			let changed = false;
+			if (params.get("spell") !== selectedSpell.name) {
+				params.set("spell", selectedSpell.name);
+				changed = true;
+			}
+			if (params.get("s_source") !== selectedSpell.source) {
+				params.set("s_source", selectedSpell.source);
+				changed = true;
+			}
+			if (changed) {
 				window.history.pushState({}, "", `?${params.toString()}`);
 			}
 		}
 	}, [selectedSpell]);
 
 	const displayedSpells = useMemo(() => {
-		let result = [...allSpells];
+		let result = [...spells];
 		if (sortOrder !== "none") {
 			result.sort((a, b) => {
-				const lvlA = a.level_int ?? 0;
-				const lvlB = b.level_int ?? 0;
+				const lvlA = a.level ?? 0;
+				const lvlB = b.level ?? 0;
 				if (lvlA === lvlB) return a.name.localeCompare(b.name);
 				return sortOrder === "asc" ? lvlA - lvlB : lvlB - lvlA;
 			});
 		}
 		return result;
-	}, [allSpells, sortOrder]);
+	}, [spells, sortOrder]);
 
 	const toggleSort = () => {
 		setSortOrder((prev) =>
@@ -116,64 +135,25 @@ export default function Spells() {
 		);
 	};
 
-	const handleScroll = (e) => {
-		const { scrollTop, scrollHeight, clientHeight } = e.target;
-		const isNearBottom = scrollHeight - scrollTop - clientHeight < 300;
-		if (isNearBottom && nextPage && !loadingMore) {
-			fetchSpells(search, nextPage);
-		}
-	};
-
 	const renderSpellItem = (index, key) => {
 		const spell = displayedSpells[index];
+		const schoolMap = { "E": "Enchantment", "N": "Necromancy", "C": "Conjuration", "A": "Abjuration", "I": "Illusion", "D": "Divination", "P": "Transmutation", "T": "Thaumaturgy" };
+		const schoolName = schoolMap[spell.school] || spell.school;
+
 		return (
 			<div key={key}>
 				<ListCard
-					active={
-						(selectedSpell?.slug || selectedSpell?.index) ===
-						(spell.slug || spell.index)
-					}
+					active={selectedSpell?.name === spell.name && selectedSpell?.source === spell.source}
 					onClick={() => setSelectedSpell(spell)}>
 					<div className="ListCard__title">{spell.name}</div>
 					<div className="ListCard__meta">
-						{spell.level_int === 0
-							? "Замовляння"
-							: `${spell.level_int}-й рівень`}{" "}
-						• {spell.school}
+						{spell.level === 0 ? "Замовляння" : `${spell.level}-й рівень`} • {schoolName}
+						{spell.source && <span className="Bestiary__item-source"> • {spell.source}</span>}
 					</div>
 				</ListCard>
 			</div>
 		);
 	};
-
-	useEffect(() => {
-		if (selectedSpell) {
-			const fetchDetail = async () => {
-				const spellId = selectedSpell.slug || selectedSpell.index;
-				if (SPELL_CACHE.has(spellId)) {
-					setSpellDetail(SPELL_CACHE.get(spellId));
-					return;
-				}
-				setDetailLoading(true);
-				try {
-					// Використовуємо dnd5eapi для деталей, якщо це можливо, або залишаємо дані з Open5e
-					const res = await fetch(
-						`https://www.dnd5eapi.co/api/2014/spells/${spellId}`,
-					);
-					const data = await res.json();
-					SPELL_CACHE.set(spellId, data);
-					setSpellDetail(data);
-				} catch (err) {
-					// Якщо dnd5eapi не має цього заклинання, використовуємо дані з Open5e (вони вже повні)
-					setSpellDetail(selectedSpell);
-					SPELL_CACHE.set(spellId, selectedSpell);
-				} finally {
-					setDetailLoading(false);
-				}
-			};
-			fetchDetail();
-		}
-	}, [selectedSpell]);
 
 	return (
 		<Panel className="Spells">
@@ -185,6 +165,17 @@ export default function Spells() {
 			</div>
 			<div className="Panel__body Spells__body">
 				<div className="Spells__search">
+					{sources.length > 0 && (
+						<select
+							className="Bestiary__source-select"
+							value={selectedSource}
+							onChange={(e) => setSelectedSource(e.target.value)}>
+							<option value="all">УСІ ДЖЕРЕЛА</option>
+							{sources.map((s) => (
+								<option key={s} value={s}>{s.toUpperCase()}</option>
+							))}
+						</select>
+					)}
 					<Input
 						placeholder="Пошук заклинання..."
 						value={search}
@@ -198,31 +189,20 @@ export default function Spells() {
 					</button>
 				</div>
 				<div className="Spells__content">
-					<div className="Spells__list" onScroll={handleScroll}>
-						{loading && <p className="muted">Завантаження списку...</p>}
+					<div className="Spells__list">
 						<ReactList
 							itemRenderer={renderSpellItem}
 							length={displayedSpells.length}
 							type="uniform"
 						/>
-						{loadingMore && <p className="muted">Завантаження ще...</p>}
 					</div>
+					{loading && <div className="Bestiary__loader muted">Оновлення магії...</div>}
+
 					<div className="Spells__detail">
-						{detailLoading ? (
-							<p className="muted">Завантаження деталей...</p>
-						) : spellDetail ? (
+						{selectedSpell ? (
 							<SpellCard
-								spell={spellDetail}
-								onSpellClick={(s) => {
-									const slug =
-										typeof s === "string"
-											? s.toLowerCase().replace(/\s+/g, "-")
-											: s.slug || s.index;
-									const found = allSpells.find(
-										(item) => item.slug === slug || item.index === slug,
-									);
-									setSelectedSpell(found || { slug });
-								}}
+								spell={selectedSpell}
+								onSpellClick={(s) => setSelectedSpell(allSpells.find(item => item.name === s) || selectedSpell)}
 							/>
 						) : (
 							<p className="muted">
