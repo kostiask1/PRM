@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
 
 import { api } from "../../api";
 
@@ -242,7 +241,6 @@ export default function CampaignView({
 	};
 
 	const handleNoteChange = (id, text) => {
-		pushToUndo();
 		if (!saveTimeout.current) pushToUndo();
 		const newNotes = notes.map((n) => (n.id === id ? { ...n, text } : n));
 		setNotes(newNotes);
@@ -580,22 +578,24 @@ export default function CampaignView({
 											className={`note-card-simple__toggle ${note.collapsed ? "is-rotated" : ""}`}
 											onClick={() => handleToggleNoteCollapse(note.id)}
 										/>
-										<div
+										<EditableField
+											value={note.text.split("\n")[0]}
+											onChange={(e) => {
+												const lines = note.text.split("\n");
+												lines[0] = e.target.value;
+												handleNoteChange(note.id, lines.join("\n"));
+											}}
+											placeholder="Нова замітка"
 											className="note-card-simple__title"
-											title={note.text.split("\n")[0] || "Нова замітка"}>
-											{note.text ? (
-												<ReactMarkdown components={{ p: "span" }}>
-													{note.text.split("\n")[0].slice(0, 45)}
-												</ReactMarkdown>
-											) : (
-												<span className="muted">Нова замітка</span>
-											)}
-										</div>
+										/>
 										<Button
 											variant="danger"
 											icon="trash"
 											size={14}
-											onClick={() => handleDeleteNote(note.id)}
+											onClick={(e) => {
+												e.stopPropagation();
+												handleDeleteNote(note.id);
+											}}
 											title="Видалити замітку"
 										/>
 									</div>
@@ -684,7 +684,10 @@ export default function CampaignView({
 											variant="danger"
 											icon="trash"
 											size={14}
-											onClick={() => handleDeleteCharacter(character.id)}
+											onClick={(e) => {
+												e.stopPropagation();
+												handleDeleteCharacter(character.id);
+											}}
 											title="Видалити персонажа"
 										/>
 									</div>
