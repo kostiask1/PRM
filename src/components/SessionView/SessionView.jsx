@@ -1,9 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import ReactMarkdown from "react-markdown";
 import { api } from "../../api";
 import Icon from "../Icon";
 import Button from "../Button/Button";
-import Input from "../Input/Input";
 import EditableField from "../EditableField/EditableField";
 import AiAssistantPanel from "../AiAssistantPanel/AiAssistantPanel";
 import Panel from "../Panel/Panel";
@@ -42,47 +40,6 @@ const SCENE_SCHEMA = [
 		placeholder: "Інформація, яку отримають гравці...",
 	},
 ];
-
-/**
- * Допоміжний компонент для редагування Markdown по кліку
- */
-function EditableMarkdownField({ title, value, onChange, placeholder, type }) {
-	const [isEditing, setIsEditing] = useState(false);
-
-	if (isEditing) {
-		return (
-			<div className="TodoItem__content" onClick={(e) => e.stopPropagation()}>
-				{title && <div className="TodoItem__title">{title}</div>}
-				<Input
-					type={type}
-					value={value}
-					onChange={onChange}
-					placeholder={placeholder}
-					onBlur={() => setIsEditing(false)}
-					autoFocus
-				/>
-			</div>
-		);
-	}
-
-	return (
-		<div className="TodoItem__content">
-			{title && <div className="TodoItem__title">{title}</div>}
-			<div
-				className="MarkdownView"
-				onClick={(e) => {
-					e.stopPropagation();
-					setIsEditing(true);
-				}}>
-				{value ? (
-					<ReactMarkdown>{value}</ReactMarkdown>
-				) : (
-					<span className="muted">{placeholder}</span>
-				)}
-			</div>
-		</div>
-	);
-}
 
 export default function SessionView({
 	campaign,
@@ -630,7 +587,7 @@ export default function SessionView({
 								title={item.label}
 								note={item.note}>
 								{item.hasText && (
-									<EditableMarkdownField
+									<EditableField
 										type="textarea"
 										value={session.data[`${item.id}_text`] || ""}
 										onChange={(e) =>
@@ -703,16 +660,17 @@ export default function SessionView({
 										}
 										onTriggerSave={() => triggerSave(session, true)}>
 										{SCENE_SCHEMA.map((field) => (
-											<EditableMarkdownField
-												key={field.key}
-												title={field.title}
-												type={field.type}
-												value={scene.texts?.[field.key] || ""}
-												onChange={(e) =>
-													updateScene(scene.id, field.key, e.target.value)
-												}
-												placeholder={field.placeholder}
-											/>
+											<div key={field.key} className="TodoItem__content">
+												<div className="TodoItem__title">{field.title}</div>
+												<EditableField
+													type={field.type}
+													value={scene.texts?.[field.key] || ""}
+													onChange={(e) =>
+														updateScene(scene.id, field.key, e.target.value)
+													}
+													placeholder={field.placeholder}
+												/>
+											</div>
 										))}
 									</SceneCard>
 								);
@@ -724,7 +682,7 @@ export default function SessionView({
 						<div className="TodoItem__note">
 							Запиши короткий підсумок того, що реально відбулося.
 						</div>
-						<EditableMarkdownField
+						<EditableField
 							type="textarea"
 							className="field--result"
 							placeholder="Підсумок того, що реально відбулося..."
