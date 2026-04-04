@@ -1,4 +1,5 @@
 import { useState } from "react";
+import remarkBreaks from "remark-breaks";
 import ReactMarkdown from "react-markdown";
 import Input from "../Input/Input";
 
@@ -57,7 +58,9 @@ export default function EditableField({
 		<div className={`EditableField ${className || ""}`} onClick={handleClick}>
 			<div className="MarkdownView">
 				{value ? (
-					<ReactMarkdown>{value}</ReactMarkdown>
+					<ReactMarkdown remarkPlugins={[remarkBreaks]}>
+						{value.replace(/\n/gi, "&nbsp; \n")}
+					</ReactMarkdown>
 				) : (
 					<span className="muted">{placeholder}</span>
 				)}

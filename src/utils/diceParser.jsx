@@ -1,5 +1,6 @@
 // Keep this import as JSX is used
 import React from "react";
+import remarkBreaks from "remark-breaks";
 import ReactMarkdown from "react-markdown";
 import RollDice from "../components/RollDice/RollDice";
 import SpellLink from "../components/SpellLink/SpellLink";
@@ -196,9 +197,14 @@ export const parseRollsAndSpells = (text, onSpellClick) => {
 			// Виправлено: тепер коректно екранує маркери списків, а не видаляє їх.
 			// Шукає необов'язкові пробіли на початку рядка, потім маркер списку (+, -, *, або цифра з крапкою),
 			// а потім пробіл. Екранує знайдений маркер.
-			const safeText = parts[i].replace(/^(\s*)([+\-*]|\d+\.)(\s)/gm, "$1\\$2$3");
+			const safeText = parts[i]
+				.replace(/^(\s*)([+\-*]|\d+\.)(\s)/gm, "$1\\$2$3")
+				.replace(/\n/gi, "&nbsp; \n");
 			elements.push(
-				<ReactMarkdown key={`t-${i}`} components={{ p: "span" }} breakLines>
+				<ReactMarkdown
+					key={`t-${i}`}
+					components={{ p: "span" }}
+					remarkPlugins={[remarkBreaks]}>
 					{safeText}
 				</ReactMarkdown>,
 			);
