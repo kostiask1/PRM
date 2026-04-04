@@ -193,9 +193,12 @@ export const parseRollsAndSpells = (text, onSpellClick) => {
 		if (parts[i]) {
 			// Екрануємо символи, які Markdown може сприйняти як початок списку (+, -, *, цифри з крапкою)
 			// особливо якщо вони опинилися на початку фрагмента після розбиття тексту
-			const safeText = parts[i].replace(/^(\s*([-+*]|\d+\.))(\s)/gm, "$1");
+			// Виправлено: тепер коректно екранує маркери списків, а не видаляє їх.
+			// Шукає необов'язкові пробіли на початку рядка, потім маркер списку (+, -, *, або цифра з крапкою),
+			// а потім пробіл. Екранує знайдений маркер.
+			const safeText = parts[i].replace(/^(\s*)([+\-*]|\d+\.)(\s)/gm, "$1\\$2$3");
 			elements.push(
-				<ReactMarkdown key={`t-${i}`} components={{ p: "span" }}>
+				<ReactMarkdown key={`t-${i}`} components={{ p: "span" }} breakLines>
 					{safeText}
 				</ReactMarkdown>,
 			);
