@@ -1,8 +1,8 @@
-import CampaignView from "./CampaignView/CampaignView";
-import SessionView from "./SessionView/SessionView";
-import Bestiary from "./Bestiary/Bestiary";
-import EncounterView from "./EncounterView/EncounterView";
-import Spells from "./Spells/Spells";
+import CampaignView from "./CampaignView";
+import SessionView from "./SessionView";
+import Bestiary from "./Bestiary";
+import EncounterView from "./EncounterView";
+import Spells from "./Spells";
 
 export default function MainContent({
 	campaign,

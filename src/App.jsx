@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { api } from "./api";
-import DiceCalculator from "./components/DiceCalculator/DiceCalculator";
+import DiceCalculator from "./components/DiceCalculator";
 import MainContent from "./components/MainContent";
-import Modal from "./components/Modal/Modal";
-import Sidebar from "./components/Sidebar/Sidebar";
+import Modal from "./components/Modal";
+import Sidebar from "./components/Sidebar";
 import { parseUrl } from "./utils/navigation";
 
 /**

@@ -1,8 +1,8 @@
 // Keep this import as JSX is used
 import React from "react";
 import ReactMarkdown from "react-markdown";
-import RollDice from "../components/RollDice/RollDice";
-import SpellLink from "../components/SpellLink/SpellLink";
+import RollDice from "../components/RollDice";
+import SpellLink from "../components/SpellLink";
 
 // Мапінг для скорочень здібностей
 export const ABILITY_MAP = {
