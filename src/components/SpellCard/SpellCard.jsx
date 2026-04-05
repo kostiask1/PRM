@@ -14,6 +14,7 @@ export default function SpellCard({ spell, onSpellClick }) {
 		E: "Enchantment (Очарування)",
 		I: "Illusion (Ілюзія)",
 		N: "Necromancy (Некромантія)",
+		T: "Thaumaturgy (Тауматургія)",
 		P: "Transmutation (Перетворення)",
 		V: "Evocation (Втілення)",
 	};

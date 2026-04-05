@@ -9,3 +9,55 @@
 	padding: 24px;
 	min-width: 0;
 }
+
+// Таблиці в парсері контенту (SpellCard, Bestiary)
+.ParserTable__wrapper {
+	margin: 16px 0;
+	overflow-x: auto;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	background: rgba(15, 23, 42, 0.2);
+}
+
+.ParserTable__caption {
+	padding: 8px 12px;
+	background: var(--panel-2);
+	color: var(--accent);
+	font-weight: 700;
+	font-size: 0.9rem;
+	border-bottom: 1px solid var(--border);
+}
+
+.ParserTable {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.85rem;
+	color: var(--text);
+
+	th, td {
+		padding: 10px 12px;
+		border: 1px solid var(--border);
+		text-align: left;
+		vertical-align: middle;
+	}
+
+	th {
+		background: rgba(56, 189, 248, 0.05);
+		color: var(--text-bright);
+		font-weight: 600;
+		text-transform: uppercase;
+		font-size: 0.75rem;
+		letter-spacing: 0.5px;
+	}
+
+	tbody tr:nth-child(even) {
+		background: rgba(255, 255, 255, 0.02);
+	}
+
+	// Допоміжні класи з JSON-структур
+	.text-center { text-align: center; }
+	.col-1 { width: 8%; }
+	.col-2 { width: 16%; }
+	.col-6 { width: 50%; }
+	.col-11 { width: 90%; }
+}

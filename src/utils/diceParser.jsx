@@ -114,8 +114,11 @@ export const preprocessTags = (text) => {
 		.replace(/{@note\s+([^}]+)}/gi, "$1")
 		.replace(/{@loader\s+[^}]+}/gi, "")
 		.replace(
-			/{@(?:creature|action|link|skill|item|filter|quickref|book|sense|area|hazard|trap|deck|optfeature|reward|feat|charoption|background|race)\s+([^|}]+)(?:\|[^|}]*)?(?:\|([^}]*))?}/gi,
-			(m, g1, g2) => g2 || g1,
+			/{@(creature|action|link|skill|item|filter|quickref|book|sense|area|hazard|trap|deck|optfeature|reward|feat|charoption|background|race)\s+([^|}]+)(?:\|([^|}]+))?(?:\|([^|}]+))?[^}]*}/gi,
+			(m, tag, name, source, label) => {
+				if (tag === "filter") return name;
+				return label || name;
+			},
 		)
 		.replace(/{@(?:i|italic)\s+([^}]+)}/gi, "*$1*")
 		.replace(/{@(?:b|bold)\s+([^}]+)}/gi, "**$1**");
@@ -170,6 +173,36 @@ export const renderRecursiveContent = (content, onSpellClick) => {
 				<div key={content.name || Math.random()} className="parser-section">
 					{content.name && <strong>{content.name}. </strong>}
 					{renderRecursiveContent(content.entries, onSpellClick)}
+				</div>
+			);
+		} else if (content.type === "table") {
+			return (
+				<div className="ParserTable__wrapper" key={content.caption || Math.random()}>
+					{content.caption && <div className="ParserTable__caption">{content.caption}</div>}
+					<table className="ParserTable">
+						{content.colLabels && (
+							<thead>
+								<tr>
+									{content.colLabels.map((lbl, i) => (
+										<th key={i} className={content.colStyles?.[i]}>
+											{renderRecursiveContent(lbl, onSpellClick)}
+										</th>
+									))}
+								</tr>
+							</thead>
+						)}
+						<tbody>
+							{content.rows.map((row, i) => (
+								<tr key={i}>
+									{row.map((cell, j) => (
+										<td key={j} className={content.colStyles?.[j]}>
+											{renderRecursiveContent(cell, onSpellClick)}
+										</td>
+									))}
+								</tr>
+							))}
+						</tbody>
+					</table>
 				</div>
 			);
 		}
