@@ -1,331 +1,415 @@
 import { forwardRef, useRef, useLayoutEffect } from "react";
 import "./Input.css";
 
-const Input = forwardRef(({ type = "text", className = "", ...props }, ref) => {
-	const internalRef = useRef(null);
+function resolveInitialCursorPosition(initialSelection, rawValue = "") {
+	if (initialSelection == null) return rawValue.length;
 
-	// Синхронізуємо висоту textarea з контентом
-	useLayoutEffect(() => {
-		if (type === "textarea" && internalRef.current) {
-			const node = internalRef.current;
-			node.style.height = `${node.scrollHeight}px`;
+	if (typeof initialSelection === "number") {
+		return Math.min(Math.max(0, initialSelection), rawValue.length);
+	}
+
+	if (typeof initialSelection.index === "number") {
+		return Math.min(Math.max(0, initialSelection.index), rawValue.length);
+	}
+
+	if (
+		typeof initialSelection.previewOffset === "number" &&
+		Array.isArray(initialSelection.previewToRaw)
+	) {
+		const { previewOffset, previewToRaw } = initialSelection;
+
+		if (previewToRaw.length === 0) return 0;
+		if (previewOffset <= 0) return Math.max(0, previewToRaw[0] ?? 0);
+
+		if (previewOffset >= previewToRaw.length) {
+			return rawValue.length;
 		}
-	}, [props.value, type]);
 
-	// Об'єднуємо зовнішній ref (від forwardRef) та внутрішній internalRef
-	const setRefs = (node) => {
-		internalRef.current = node;
-		if (typeof ref === "function") ref(node);
-		else if (ref) ref.current = node;
-	};
+		const rawPos = previewToRaw[previewOffset];
+		return Math.min(Math.max(0, rawPos ?? rawValue.length), rawValue.length);
+	}
 
-	const handleKeyDown = (e) => {
-		const isMod = e.ctrlKey || e.metaKey;
-		const key = e.key.toLowerCase();
+	return rawValue.length;
+}
 
-		if (key === "tab") {
-			e.preventDefault();
+const Input = forwardRef(
+	(
+		{
+			type = "text",
+			className = "",
+			initialSelection,
+			initialHeight,
+			...props
+		},
+		ref,
+	) => {
+		const internalRef = useRef(null);
 
-			const { selectionStart, selectionEnd, value } = e.target;
-			const left = value.substring(0, selectionStart);
-			const right = value.substring(selectionEnd);
-			const newValue = left + "\t" + right;
-
-			if (props.onChange) {
-				props.onChange({
-					...e,
-					target: { ...e.target, value: newValue },
-				});
-			}
-			setTimeout(() => {
+		// Синхронізуємо висоту textarea з контентом
+		useLayoutEffect(() => {
+			if (type === "textarea" && internalRef.current) {
 				const node = internalRef.current;
-				if (node) {
-					node.focus();
-					node.setSelectionRange(
-						Math.max(0, selectionStart + 1),
-						Math.max(0, selectionEnd + 1),
-					);
+
+				if (!initialHeight || node.value !== props.value) {
+					node.style.height = "auto";
+					node.style.height = `${node.scrollHeight}px`;
 				}
-			}, 0);
-		}
-
-		// Підтримка Ctrl+B (Жирний) та Ctrl+I (Курсив) + укр розкладка
-		if (isMod && (key === "b" || key === "и" || key === "i" || key === "ш")) {
-			e.preventDefault();
-
-			const tag = key === "b" || key === "и" ? "**" : "*";
-			const { selectionStart, selectionEnd, value } = e.target;
-			const selection = value.substring(selectionStart, selectionEnd);
-
-			let newValue;
-			let newStart, newEnd;
-
-			// Перевірка на конфлікт: чи не намагаємось ми зняти курсив з тексту, який насправді жирний (**)
-			const isItalic = tag === "*";
-			const isInsideItalicConflict =
-				isItalic && selection.startsWith("**") && !selection.startsWith("***");
-			const isOutsideItalicConflict =
-				isItalic &&
-				value.substring(selectionStart - 2, selectionStart) === "**" &&
-				value.substring(selectionStart - 3, selectionStart) !== "***";
-
-			// 1. Якщо теги всередині виділення: [**текст**] -> [текст]
-			if (
-				selection.startsWith(tag) &&
-				selection.endsWith(tag) &&
-				selection.length >= tag.length * 2 &&
-				!isInsideItalicConflict
-			) {
-				newValue =
-					value.substring(0, selectionStart) +
-					selection.substring(tag.length, selection.length - tag.length) +
-					value.substring(selectionEnd);
-				newStart = selectionStart;
-				newEnd = selectionEnd - tag.length * 2;
 			}
-			// 2. Якщо теги зовні виділення: **[текст]** -> [текст]
-			else if (
-				selectionStart >= tag.length &&
-				value.substring(selectionStart - tag.length, selectionStart) === tag &&
-				value.substring(selectionEnd, selectionEnd + tag.length) === tag &&
-				!isOutsideItalicConflict
-			) {
-				newValue =
-					value.substring(0, selectionStart - tag.length) +
-					selection +
-					value.substring(selectionEnd + tag.length);
-				newStart = selectionStart - tag.length;
-				newEnd = selectionEnd - tag.length;
-			}
-			// 3. Додаємо форматування
-			else {
-				newValue =
-					value.substring(0, selectionStart) +
-					tag +
-					selection +
-					tag +
-					value.substring(selectionEnd);
-				newStart = selectionStart + tag.length;
-				newEnd = selectionEnd + tag.length;
-			}
+		}, [props.value, type, initialHeight]);
 
-			// Викликаємо onChange для оновлення стану в батьківському компоненті
-			if (props.onChange) {
-				props.onChange({
-					...e,
-					target: { ...e.target, value: newValue },
-				});
-			}
-
-			// Повертаємо фокус та виділення тексту після оновлення DOM
-			setTimeout(() => {
+		// Встановлюємо фокус, висоту та каретку
+		useLayoutEffect(() => {
+			if (internalRef.current) {
 				const node = internalRef.current;
-				if (node) {
-					node.focus();
-					node.setSelectionRange(newStart, newEnd);
+
+				if (type === "textarea" && initialHeight) {
+					node.style.height = `${initialHeight}px`;
 				}
-			}, 0);
-		}
 
-		// Підтримка Ctrl + ] (Додати список) та Ctrl + [ (Видалити список) + укр розкладка
-		const isListAdd = key === "]" || key === "ї";
-		const isListRemove = key === "[" || key === "х";
+				const pos = resolveInitialCursorPosition(
+					initialSelection,
+					props.value || "",
+				);
 
-		if (isMod && (isListAdd || isListRemove)) {
-			e.preventDefault();
-			const { selectionStart, selectionEnd, value } = e.target;
+				node.focus({ preventScroll: true });
+				node.setSelectionRange(pos, pos);
+			}
+		}, [initialSelection, initialHeight, props.value, type]);
 
-			// Знаходимо початок першого та кінець останнього виділеного рядка
-			const startOfFirstLine = value.lastIndexOf("\n", selectionStart - 1) + 1;
-			let endOfLastLine = value.indexOf("\n", selectionEnd);
-			if (endOfLastLine === -1) endOfLastLine = value.length;
+		const setRefs = (node) => {
+			internalRef.current = node;
+			if (typeof ref === "function") ref(node);
+			else if (ref) ref.current = node;
+		};
 
-			const before = value.substring(0, startOfFirstLine);
-			const after = value.substring(endOfLastLine);
-			const block = value.substring(startOfFirstLine, endOfLastLine);
+		const handleKeyDown = (e) => {
+			const isMod = e.ctrlKey || e.metaKey;
+			const key = e.key.toLowerCase();
 
-			const lines = block.split("\n");
-			let firstLineShift = 0;
-			let totalShift = 0;
+			if (key === "tab") {
+				e.preventDefault();
 
-			const newLines = lines.map((line, idx) => {
-				if (isListAdd) {
-					totalShift += 2;
-					if (idx === 0) firstLineShift = 2;
-					return "- " + line;
+				const { selectionStart, selectionEnd, value } = e.target;
+				const left = value.substring(0, selectionStart);
+				const right = value.substring(selectionEnd);
+				const newValue = left + "\t" + right;
+
+				if (props.onChange) {
+					props.onChange({
+						...e,
+						target: { ...e.target, value: newValue },
+					});
+				}
+
+				setTimeout(() => {
+					const node = internalRef.current;
+					if (node) {
+						node.focus();
+						node.setSelectionRange(
+							Math.max(0, selectionStart + 1),
+							Math.max(0, selectionStart + 1),
+						);
+					}
+				}, 0);
+
+				return;
+			}
+
+			// Підтримка Ctrl+B (Жирний) та Ctrl+I (Курсив) + укр розкладка
+			if (isMod && (key === "b" || key === "и" || key === "i" || key === "ш")) {
+				e.preventDefault();
+
+				const tag = key === "b" || key === "и" ? "**" : "*";
+				const { selectionStart, selectionEnd, value } = e.target;
+				const selection = value.substring(selectionStart, selectionEnd);
+
+				let newValue;
+				let newStart, newEnd;
+
+				const isItalic = tag === "*";
+				const isInsideItalicConflict =
+					isItalic &&
+					selection.startsWith("**") &&
+					!selection.startsWith("***");
+				const isOutsideItalicConflict =
+					isItalic &&
+					value.substring(selectionStart - 2, selectionStart) === "**" &&
+					value.substring(selectionStart - 3, selectionStart) !== "***";
+
+				if (
+					selection.startsWith(tag) &&
+					selection.endsWith(tag) &&
+					selection.length >= tag.length * 2 &&
+					!isInsideItalicConflict
+				) {
+					newValue =
+						value.substring(0, selectionStart) +
+						selection.substring(tag.length, selection.length - tag.length) +
+						value.substring(selectionEnd);
+					newStart = selectionStart;
+					newEnd = selectionEnd - tag.length * 2;
+				} else if (
+					selectionStart >= tag.length &&
+					value.substring(selectionStart - tag.length, selectionStart) ===
+						tag &&
+					value.substring(selectionEnd, selectionEnd + tag.length) === tag &&
+					!isOutsideItalicConflict
+				) {
+					newValue =
+						value.substring(0, selectionStart - tag.length) +
+						selection +
+						value.substring(selectionEnd + tag.length);
+					newStart = selectionStart - tag.length;
+					newEnd = selectionEnd - tag.length;
 				} else {
+					newValue =
+						value.substring(0, selectionStart) +
+						tag +
+						selection +
+						tag +
+						value.substring(selectionEnd);
+					newStart = selectionStart + tag.length;
+					newEnd = selectionEnd + tag.length;
+				}
+
+				if (props.onChange) {
+					props.onChange({
+						...e,
+						target: { ...e.target, value: newValue },
+					});
+				}
+
+				setTimeout(() => {
+					const node = internalRef.current;
+					if (node) {
+						node.focus();
+						node.setSelectionRange(newStart, newEnd);
+					}
+				}, 0);
+
+				return;
+			}
+
+			// Підтримка Ctrl + ] / Ctrl + [
+			const isListAdd = key === "]" || key === "ї";
+			const isListRemove = key === "[" || key === "х";
+
+			if (isMod && (isListAdd || isListRemove)) {
+				e.preventDefault();
+				const { selectionStart, selectionEnd, value } = e.target;
+
+				const startOfFirstLine =
+					value.lastIndexOf("\n", selectionStart - 1) + 1;
+				let endOfLastLine = value.indexOf("\n", selectionEnd);
+				if (endOfLastLine === -1) endOfLastLine = value.length;
+
+				const before = value.substring(0, startOfFirstLine);
+				const after = value.substring(endOfLastLine);
+				const block = value.substring(startOfFirstLine, endOfLastLine);
+
+				const lines = block.split("\n");
+				let firstLineShift = 0;
+				let totalShift = 0;
+
+				const newLines = lines.map((line, idx) => {
+					if (isListAdd) {
+						totalShift += 2;
+						if (idx === 0) firstLineShift = 2;
+						return "- " + line;
+					}
+
 					if (line.startsWith("- ")) {
 						totalShift -= 2;
 						if (idx === 0) firstLineShift = -2;
 						return line.slice(2);
 					}
+
 					return line;
-				}
-			});
+				});
 
-			const newValue = before + newLines.join("\n") + after;
+				const newValue = before + newLines.join("\n") + after;
 
-			if (newValue !== value) {
-				if (props.onChange) {
-					props.onChange({ ...e, target: { ...e.target, value: newValue } });
-				}
-				setTimeout(() => {
-					const node = internalRef.current;
-					if (node) {
-						node.focus();
-						node.setSelectionRange(
-							Math.max(0, selectionStart + firstLineShift),
-							Math.max(0, selectionEnd + totalShift),
-						);
+				if (newValue !== value) {
+					if (props.onChange) {
+						props.onChange({
+							...e,
+							target: { ...e.target, value: newValue },
+						});
 					}
-				}, 0);
+
+					setTimeout(() => {
+						const node = internalRef.current;
+						if (node) {
+							node.focus();
+							node.setSelectionRange(
+								Math.max(0, selectionStart + firstLineShift),
+								Math.max(0, selectionEnd + totalShift),
+							);
+						}
+					}, 0);
+				}
+
+				return;
 			}
-		}
 
-		// Підтримка Ctrl + 1-6 (Заголовки)
-		const isHeader = !isNaN(key) && key >= "1" && key <= "6";
+			// Ctrl + 1..6
+			const isHeader = !isNaN(key) && key >= "1" && key <= "6";
 
-		if (isMod && isHeader) {
-			e.preventDefault();
-			const level = parseInt(key);
-			const headerTag = "#".repeat(level) + " ";
-			const { selectionStart, selectionEnd, value } = e.target;
+			if (isMod && isHeader) {
+				e.preventDefault();
+				const level = parseInt(key, 10);
+				const headerTag = "#".repeat(level) + " ";
+				const { selectionStart, selectionEnd, value } = e.target;
 
-			const startOfFirstLine = value.lastIndexOf("\n", selectionStart - 1) + 1;
-			let endOfLastLine = value.indexOf("\n", selectionEnd);
-			if (endOfLastLine === -1) endOfLastLine = value.length;
+				const startOfFirstLine =
+					value.lastIndexOf("\n", selectionStart - 1) + 1;
+				let endOfLastLine = value.indexOf("\n", selectionEnd);
+				if (endOfLastLine === -1) endOfLastLine = value.length;
 
-			const before = value.substring(0, startOfFirstLine);
-			const after = value.substring(endOfLastLine);
-			const block = value.substring(startOfFirstLine, endOfLastLine);
+				const before = value.substring(0, startOfFirstLine);
+				const after = value.substring(endOfLastLine);
+				const block = value.substring(startOfFirstLine, endOfLastLine);
 
-			const lines = block.split("\n");
-			let firstLineShift = 0;
-			let totalShift = 0;
+				const lines = block.split("\n");
+				let firstLineShift = 0;
+				let totalShift = 0;
 
-			const newLines = lines.map((line, idx) => {
-				const existingHeaderMatch = line.match(/^#{1,6} /);
-				let newLine = line;
-				let shift = 0;
+				const newLines = lines.map((line, idx) => {
+					const existingHeaderMatch = line.match(/^#{1,6} /);
+					let newLine = line;
+					let shift = 0;
 
-				if (existingHeaderMatch) {
-					const existingHeader = existingHeaderMatch[0];
-					if (existingHeader === headerTag) {
-						newLine = line.slice(existingHeader.length);
-						shift = -existingHeader.length;
+					if (existingHeaderMatch) {
+						const existingHeader = existingHeaderMatch[0];
+						if (existingHeader === headerTag) {
+							newLine = line.slice(existingHeader.length);
+							shift = -existingHeader.length;
+						} else {
+							newLine = headerTag + line.slice(existingHeader.length);
+							shift = headerTag.length - existingHeader.length;
+						}
 					} else {
-						newLine = headerTag + line.slice(existingHeader.length);
-						shift = headerTag.length - existingHeader.length;
+						newLine = headerTag + line;
+						shift = headerTag.length;
 					}
-				} else {
-					newLine = headerTag + line;
-					shift = headerTag.length;
+
+					if (idx === 0) firstLineShift = shift;
+					totalShift += shift;
+					return newLine;
+				});
+
+				const newValue = before + newLines.join("\n") + after;
+
+				if (newValue !== value) {
+					if (props.onChange) {
+						props.onChange({
+							...e,
+							target: { ...e.target, value: newValue },
+						});
+					}
+
+					setTimeout(() => {
+						const node = internalRef.current;
+						if (node) {
+							node.focus();
+							node.setSelectionRange(
+								Math.max(0, selectionStart + firstLineShift),
+								Math.max(0, selectionEnd + totalShift),
+							);
+						}
+					}, 0);
 				}
 
-				if (idx === 0) firstLineShift = shift;
-				totalShift += shift;
-				return newLine;
-			});
-
-			const newValue = before + newLines.join("\n") + after;
-
-			if (newValue !== value) {
-				if (props.onChange) {
-					props.onChange({ ...e, target: { ...e.target, value: newValue } });
-				}
-				setTimeout(() => {
-					const node = internalRef.current;
-					if (node) {
-						node.focus();
-						node.setSelectionRange(
-							Math.max(0, selectionStart + firstLineShift),
-							Math.max(0, selectionEnd + totalShift),
-						);
-					}
-				}, 0);
+				return;
 			}
+
+			// Ctrl + Q
+			if (isMod && (key === "q" || key === "й")) {
+				e.preventDefault();
+				const { selectionStart, selectionEnd, value } = e.target;
+
+				const startOfFirstLine =
+					value.lastIndexOf("\n", selectionStart - 1) + 1;
+				let endOfLastLine = value.indexOf("\n", selectionEnd);
+				if (endOfLastLine === -1) endOfLastLine = value.length;
+
+				const before = value.substring(0, startOfFirstLine);
+				const after = value.substring(endOfLastLine);
+				const block = value.substring(startOfFirstLine, endOfLastLine);
+
+				const lines = block.split("\n");
+				let firstLineShift = 0;
+				let totalShift = 0;
+
+				const newLines = lines.map((line, idx) => {
+					let newLine = line;
+					let shift = 0;
+
+					if (line.startsWith("> ")) {
+						newLine = line.slice(2);
+						shift = -2;
+					} else {
+						newLine = "> " + line;
+						shift = 2;
+					}
+
+					if (idx === 0) firstLineShift = shift;
+					totalShift += shift;
+					return newLine;
+				});
+
+				const newValue = before + newLines.join("\n") + after;
+
+				if (newValue !== value) {
+					if (props.onChange) {
+						props.onChange({
+							...e,
+							target: { ...e.target, value: newValue },
+						});
+					}
+
+					setTimeout(() => {
+						const node = internalRef.current;
+						if (node) {
+							node.focus();
+							node.setSelectionRange(
+								Math.max(0, selectionStart + firstLineShift),
+								Math.max(0, selectionEnd + totalShift),
+							);
+						}
+					}, 0);
+				}
+
+				return;
+			}
+
+			props.onKeyDown?.(e);
+		};
+
+		const baseClass = type === "textarea" ? "Input Input--textarea" : "Input";
+		const combinedClassName = `${baseClass} ${className}`.trim();
+
+		if (type === "textarea") {
+			return (
+				<textarea
+					{...props}
+					ref={setRefs}
+					className={combinedClassName}
+					onKeyDown={handleKeyDown}
+				/>
+			);
 		}
 
-		// Підтримка Ctrl + Q (Цитата/Blockquote) + укр розкладка
-		if (isMod && (key === "q" || key === "й")) {
-			e.preventDefault();
-			const { selectionStart, selectionEnd, value } = e.target;
-
-			const startOfFirstLine = value.lastIndexOf("\n", selectionStart - 1) + 1;
-			let endOfLastLine = value.indexOf("\n", selectionEnd);
-			if (endOfLastLine === -1) endOfLastLine = value.length;
-
-			const before = value.substring(0, startOfFirstLine);
-			const after = value.substring(endOfLastLine);
-			const block = value.substring(startOfFirstLine, endOfLastLine);
-
-			const lines = block.split("\n");
-			let firstLineShift = 0;
-			let totalShift = 0;
-
-			const newLines = lines.map((line, idx) => {
-				let newLine = line;
-				let shift = 0;
-
-				if (line.startsWith("> ")) {
-					newLine = line.slice(2);
-					shift = -2;
-				} else {
-					newLine = "> " + line;
-					shift = 2;
-				}
-
-				if (idx === 0) firstLineShift = shift;
-				totalShift += shift;
-				return newLine;
-			});
-
-			const newValue = before + newLines.join("\n") + after;
-
-			if (newValue !== value) {
-				if (props.onChange) {
-					props.onChange({ ...e, target: { ...e.target, value: newValue } });
-				}
-				setTimeout(() => {
-					const node = internalRef.current;
-					if (node) {
-						node.focus();
-						node.setSelectionRange(
-							Math.max(0, selectionStart + firstLineShift),
-							Math.max(0, selectionEnd + totalShift),
-						);
-					}
-				}, 0);
-			}
-		}
-
-		// Викликаємо оригінальний onKeyDown, якщо він був переданий
-		if (props.onKeyDown) props.onKeyDown(e);
-	};
-
-	const baseClass = type === "textarea" ? "Input Input--textarea" : "Input";
-	const combinedClassName = `${baseClass} ${className}`.trim();
-
-	if (type === "textarea") {
 		return (
-			<textarea
+			<input
 				{...props}
 				ref={setRefs}
 				className={combinedClassName}
+				type={type}
 				onKeyDown={handleKeyDown}
 			/>
 		);
-	}
-
-	return (
-		<input
-			{...props}
-			ref={setRefs}
-			className={combinedClassName}
-			type={type}
-			onKeyDown={handleKeyDown}
-		/>
-	);
-});
+	},
+);
 
 export default Input;

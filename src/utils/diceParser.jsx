@@ -200,9 +200,7 @@ export const parseRollsAndSpells = (text, onSpellClick) => {
 				.replace(/^(\s*)([+\-*]|\d+\.)(\s)/gm, "$1\\$2$3")
 				.replace(/\n/gi, "&nbsp; \n");
 			elements.push(
-				<ReactMarkdown
-					key={`t-${i}`}
-					components={{ p: "span" }}
+				<ReactMarkdown key={`t-${i}`} components={{ p: "span" }}>
 					{safeText}
 				</ReactMarkdown>,
 			);
