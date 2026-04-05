@@ -74,7 +74,7 @@ const Input = forwardRef(
 				node.focus({ preventScroll: true });
 				node.setSelectionRange(pos, pos);
 			}
-		}, [initialSelection, initialHeight, props.value, type]);
+		}, [initialSelection]);
 
 		const setRefs = (node) => {
 			internalRef.current = node;
