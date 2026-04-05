@@ -23,6 +23,32 @@ const Input = forwardRef(({ type = "text", className = "", ...props }, ref) => {
 		const isMod = e.ctrlKey || e.metaKey;
 		const key = e.key.toLowerCase();
 
+		if (key === "tab") {
+			e.preventDefault();
+
+			const { selectionStart, selectionEnd, value } = e.target;
+			const left = value.substring(0, selectionStart);
+			const right = value.substring(selectionEnd);
+			const newValue = left + "\t" + right;
+
+			if (props.onChange) {
+				props.onChange({
+					...e,
+					target: { ...e.target, value: newValue },
+				});
+			}
+			setTimeout(() => {
+				const node = internalRef.current;
+				if (node) {
+					node.focus();
+					node.setSelectionRange(
+						Math.max(0, selectionStart + 1),
+						Math.max(0, selectionEnd + 1),
+					);
+				}
+			}, 0);
+		}
+
 		// Підтримка Ctrl+B (Жирний) та Ctrl+I (Курсив) + укр розкладка
 		if (isMod && (key === "b" || key === "и" || key === "i" || key === "ш")) {
 			e.preventDefault();

@@ -58,8 +58,8 @@ export default function EditableField({
 		<div className={`EditableField ${className || ""}`} onClick={handleClick}>
 			<div className="MarkdownView">
 				{value ? (
-					<ReactMarkdown remarkPlugins={[remarkBreaks]}>
-						{value.replace(/\n/gi, "&nbsp; \n")}
+					<ReactMarkdown >
+						{value.replace(/\n/gi, "&nbsp; \n").replace(/\t/gi, "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")}
 					</ReactMarkdown>
 				) : (
 					<span className="muted">{placeholder}</span>
