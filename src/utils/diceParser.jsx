@@ -1,6 +1,5 @@
 // Keep this import as JSX is used
 import React from "react";
-import remarkBreaks from "remark-breaks";
 import ReactMarkdown from "react-markdown";
 import RollDice from "../components/RollDice/RollDice";
 import SpellLink from "../components/SpellLink/SpellLink";
@@ -204,7 +203,6 @@ export const parseRollsAndSpells = (text, onSpellClick) => {
 				<ReactMarkdown
 					key={`t-${i}`}
 					components={{ p: "span" }}
-					remarkPlugins={[remarkBreaks]}>
 					{safeText}
 				</ReactMarkdown>,
 			);

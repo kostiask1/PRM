@@ -1,5 +1,4 @@
 import { useState } from "react";
-import remarkBreaks from "remark-breaks";
 import ReactMarkdown from "react-markdown";
 import Input from "../Input/Input";
 
