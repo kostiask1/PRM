@@ -1,6 +1,6 @@
 .Sidebar {
-	border-right: 1px solid rgba(51, 65, 85, 0.5);
-	background: rgba(2, 6, 23, 0.55);
+	border-right: 1px solid color-mix(in srgb, var(--border), transparent 50%);
+	background: color-mix(in srgb, var(--bg-2), transparent 45%);
 	backdrop-filter: blur(14px);
 	padding: 24px;
 	position: sticky;
@@ -24,7 +24,7 @@
 }
 
 .Sidebar__link:hover {
-	background: rgba(255, 255, 255, 0.05);
+	background: color-mix(in srgb, var(--text-bright), transparent 95%);
 }
 
 .Sidebar__title {
@@ -57,7 +57,7 @@
 
 .Sidebar__footer {
 	padding-top: 16px;
-	border-top: 1px solid rgba(51, 65, 85, 0.4);
+	border-top: 1px solid color-mix(in srgb, var(--border), transparent 60%);
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
@@ -73,9 +73,9 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	border: 1px solid rgba(51, 65, 85, 0.7);
+	border: 1px solid color-mix(in srgb, var(--border), transparent 30%);
 	border-radius: 14px;
-	background: rgba(15, 23, 42, 0.55);
+	background: color-mix(in srgb, var(--bg), transparent 45%);
 	padding: 0;
 	transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.1);
 	position: relative;
@@ -84,14 +84,14 @@
 }
 
 .Sidebar__card:hover {
-	border-color: rgba(56, 189, 248, 0.35);
-	background: rgba(15, 23, 42, 0.7);
+	border-color: color-mix(in srgb, var(--accent), transparent 65%);
+	background: color-mix(in srgb, var(--bg), transparent 30%);
 }
 
 .Sidebar__card--active {
 	border-color: var(--accent) !important;
-	background: rgba(56, 189, 248, 0.1) !important;
-	box-shadow: 0 0 20px rgba(56, 189, 248, 0.08) !important;
+	background: color-mix(in srgb, var(--accent), transparent 90%) !important;
+	box-shadow: 0 0 20px color-mix(in srgb, var(--accent), transparent 92%) !important;
 	transform: none !important;
 }
 
@@ -114,15 +114,14 @@
 	align-items: center;
 	gap: 10px;
 	font-size: 0.9rem;
-	color: var(--text-muted);
+	color: var(--muted);
 	padding: 4px 0;
 	text-decoration: none;
 	transition: all 0.2s;
 }
 
 .Sidebar__resource-item:hover {
-	color: var(--primary-color);
-	text-decoration: underline;
+	color: var(--text);
 	padding-left: 5px;
 }
 

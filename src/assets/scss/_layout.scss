@@ -16,7 +16,7 @@
 	overflow-x: auto;
 	border: 1px solid var(--border);
 	border-radius: 8px;
-	background: rgba(15, 23, 42, 0.2);
+	background: color-mix(in srgb, var(--bg), transparent 80%);
 }
 
 .ParserTable__caption {
@@ -42,7 +42,7 @@
 	}
 
 	th {
-		background: rgba(56, 189, 248, 0.05);
+		background: color-mix(in srgb, var(--accent), transparent 95%);
 		color: var(--text-bright);
 		font-weight: 600;
 		text-transform: uppercase;
@@ -51,7 +51,7 @@
 	}
 
 	tbody tr:nth-child(even) {
-		background: rgba(255, 255, 255, 0.02);
+		background: color-mix(in srgb, var(--text-bright), transparent 98%);
 	}
 
 	// Допоміжні класи з JSON-структур

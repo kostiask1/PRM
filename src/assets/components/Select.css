@@ -60,7 +60,7 @@
 	z-index: 1000;
 	max-height: 300px;
 	overflow-y: auto;
-	box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+	box-shadow: var(--shadow);
 	padding: 6px;
 }
 
@@ -70,16 +70,16 @@
 	cursor: pointer;
 	font-size: 0.85rem;
 	transition: all 0.15s ease;
-	color: var(--text-muted);
+	color: var(--muted);
 }
 
 .Select__option:hover {
-	background: rgba(255, 255, 255, 0.05);
+	background: color-mix(in srgb, var(--text-bright), transparent 95%);
 	color: var(--text);
 }
 
 .Select__option.is-selected {
-	background: rgba(56, 189, 248, 0.15);
+	background: color-mix(in srgb, var(--accent), transparent 85%);
 	color: var(--accent);
 	font-weight: 600;
 }

@@ -19,26 +19,26 @@
 
 .Button:hover {
 	transform: translateY(-1px);
-	background: #283548;
+	background: var(--panel-2);
 }
 
 .Button--primary {
-	background: rgba(56, 189, 248, 0.14);
-	border-color: rgba(56, 189, 248, 0.35);
+	background: color-mix(in srgb, var(--accent), transparent 86%);
+	border-color: color-mix(in srgb, var(--accent), transparent 65%);
 }
 
 .Button--primary:hover {
-	background: rgba(56, 189, 248, 0.2);
+	background: color-mix(in srgb, var(--accent), transparent 80%);
 }
 
 .Button--danger {
-	background: rgba(239, 68, 68, 0.14);
-	border-color: rgba(239, 68, 68, 0.35);
-	color: #fecaca;
+	background: color-mix(in srgb, var(--danger), transparent 86%);
+	border-color: color-mix(in srgb, var(--danger), transparent 65%);
+	color: var(--text-bright);
 }
 
 .Button--danger:hover {
-	background: rgba(239, 68, 68, 0.22);
+	background: color-mix(in srgb, var(--danger), transparent 78%);
 }
 
 .Button--ghost {
@@ -52,22 +52,22 @@
 
 .Button--footer {
 	width: 100%;
-	background: rgba(30, 41, 59, 0.4);
+	background: color-mix(in srgb, var(--border), transparent 60%);
 	font-size: 0.85rem;
 }
 
 .Button--create {
 	width: 100%;
 	min-height: 60px;
-	background: rgba(56, 189, 248, 0.04);
-	border: 2px dashed rgba(56, 189, 248, 0.25);
+	background: color-mix(in srgb, var(--accent), transparent 96%);
+	border: 2px dashed color-mix(in srgb, var(--accent), transparent 75%);
 	color: var(--accent);
 	font-weight: 600;
 	border-radius: 14px;
 }
 
 .Button--create:hover {
-	background: rgba(56, 189, 248, 0.08);
+	background: color-mix(in srgb, var(--accent), transparent 92%);
 	border-color: var(--accent);
 	transform: translateY(-2px);
 }
@@ -94,7 +94,7 @@
 	transform: none !important;
 	background-color: transparent !important;
 	box-shadow: none !important;
-	border-color: rgba(51, 65, 85, 0.5) !important;
+	border-color: var(--border) !important;
 }
 
 /* Якщо всередині є іконка, вона також стане тьмяною */
