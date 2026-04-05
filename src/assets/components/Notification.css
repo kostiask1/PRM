@@ -2,11 +2,11 @@
 	position: fixed;
 	top: 16px;
 	right: 16px;
-	background: var(--accent, #38bdf8);
-	color: white;
+	background: var(--accent);
+	color: var(--text-bright);
 	padding: 12px 24px;
 	border-radius: var(--radius);
-	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+	box-shadow: 0 4px 15px color-mix(in srgb, black, transparent 60%);
 	z-index: 10000;
 	font-weight: 500;
 	animation: slideUp 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);

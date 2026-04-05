@@ -4,7 +4,7 @@
 	left: 0;
 	right: 0;
 	bottom: 0;
-	background: rgba(2, 6, 23, 0.85);
+	background: var(--overlay);
 	backdrop-filter: blur(8px);
 	display: flex;
 	align-items: center;
@@ -51,7 +51,7 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+	border-bottom: 1px solid color-mix(in srgb, var(--border), transparent 60%);
 }
 
 .Modal__header h3 {
@@ -85,7 +85,7 @@
 
 .Modal__footer {
 	padding: 16px 24px;
-	background: rgba(15, 23, 42, 0.4);
+	background: color-mix(in srgb, var(--bg), transparent 60%);
 	display: flex;
 	justify-content: flex-end;
 	gap: 12px;

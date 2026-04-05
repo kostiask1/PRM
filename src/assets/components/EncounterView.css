@@ -43,8 +43,8 @@
 }
 
 .EncounterMonsterRow {
-	background: rgba(30, 41, 59, 0.4);
-	border: 1px solid rgba(51, 65, 85, 0.4);
+	background: color-mix(in srgb, var(--border), transparent 60%);
+	border: 1px solid color-mix(in srgb, var(--border), transparent 60%);
 	border-radius: 8px;
 	padding: 10px 14px;
 	cursor: pointer;
@@ -58,20 +58,20 @@
 
 .EncounterMonsterRow:hover {
 	border-color: var(--accent);
-	background: rgba(56, 189, 248, 0.05);
+	background: color-mix(in srgb, var(--accent), transparent 95%);
 }
 
 .EncounterMonsterRow.is-active {
-	border-color: rgba(56, 189, 248, 0.4);
+	border-color: color-mix(in srgb, var(--accent), transparent 60%);
 	border-left-color: var(--accent);
-	background: rgba(56, 189, 248, 0.08);
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	background: color-mix(in srgb, var(--accent), transparent 92%);
+	box-shadow: var(--shadow-sm);
 }
 
 .EncounterMonsterRow.is-dragging {
 	opacity: 0.4;
 	border: 1px dashed var(--accent);
-	background: rgba(56, 189, 248, 0.05);
+	background: color-mix(in srgb, var(--accent), transparent 95%);
 }
 
 .EncounterMonsterRow__content {
@@ -104,8 +104,8 @@
 .EncounterMonsterRow__hpInput,
 .EncounterMonsterRow__maxHpInput {
 	width: 42px;
-	background: rgba(15, 23, 42, 0.6);
-	border: 1px solid rgba(51, 65, 85, 0.8);
+	background: color-mix(in srgb, var(--bg), transparent 40%);
+	border: 1px solid color-mix(in srgb, var(--border), transparent 20%);
 	border-radius: 4px;
 	padding: 3px 0;
 	text-align: center;
@@ -127,15 +127,15 @@
 
 .EncounterMonsterRow__hpInput:hover,
 .EncounterMonsterRow__maxHpInput:hover {
-	border-color: rgba(56, 189, 248, 0.5);
-	background: rgba(15, 23, 42, 0.8);
+	border-color: color-mix(in srgb, var(--accent), transparent 50%);
+	background: color-mix(in srgb, var(--bg), transparent 20%);
 }
 
 .EncounterMonsterRow__hpInput:focus,
 .EncounterMonsterRow__maxHpInput:focus {
 	border-color: var(--accent);
 	outline: none;
-	background: rgba(15, 23, 42, 0.9);
+	background: var(--bg);
 }
 
 .EncounterMonsterRow__hpInput {
@@ -150,7 +150,7 @@
 	font-size: 0.75rem;
 	font-weight: 700;
 	color: var(--text);
-	background: rgba(51, 65, 85, 0.4);
+	background: color-mix(in srgb, var(--border), transparent 60%);
 	padding: 2px 8px;
 	border-radius: 12px;
 	text-transform: uppercase;

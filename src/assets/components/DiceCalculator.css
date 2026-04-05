@@ -14,14 +14,14 @@
 	width: 56px;
 	height: 56px;
 	border-radius: 50%;
-	background: var(--accent, #38bdf8);
+	background: var(--accent);
 	border: none;
-	color: white;
+	color: var(--text-bright);
 	cursor: pointer;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	box-shadow: 0 4px 20px rgba(56, 189, 248, 0.4);
+	box-shadow: 0 4px 20px color-mix(in srgb, var(--accent), transparent 60%);
 	transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
@@ -31,18 +31,18 @@
 
 .DiceCalculator.is-open .DiceCalculator__toggle {
 	transform: rotate(45deg);
-	background: #1e293b;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+	background: var(--panel-2);
+	box-shadow: var(--shadow-sm);
 }
 
 .DiceCalculator__panel {
 	width: 320px;
-	background: rgba(15, 23, 42, 0.9);
+	background: color-mix(in srgb, var(--bg), transparent 10%);
 	backdrop-filter: blur(12px);
-	border: 1px solid rgba(51, 65, 85, 0.5);
+	border: 1px solid color-mix(in srgb, var(--border), transparent 50%);
 	border-radius: 16px;
 	padding: 16px;
-	box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+	box-shadow: var(--shadow);
 	animation: slideIn 0.2s ease-out;
 	display: flex;
 	flex-direction: column;
@@ -71,13 +71,13 @@
 }
 
 .DiceCalculator__display {
-	background: rgba(2, 6, 23, 0.6);
+	background: color-mix(in srgb, var(--bg-2), transparent 40%);
 	border-radius: 10px;
 	height: 60px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	border: 1px inset rgba(255, 255, 255, 0.05);
+	border: 1px inset color-mix(in srgb, var(--text-bright), transparent 95%);
 }
 
 .DiceCalculator__resultValue {
@@ -95,8 +95,8 @@
 }
 
 .DiceButton {
-	background: rgba(51, 65, 85, 0.3);
-	border: 1px solid rgba(255, 255, 255, 0.1);
+	background: color-mix(in srgb, var(--border), transparent 70%);
+	border: 1px solid color-mix(in srgb, var(--text-bright), transparent 90%);
 	border-radius: 8px;
 	padding: 8px 0;
 	color: var(--text);
@@ -107,7 +107,7 @@
 
 .DiceButton:hover {
 	background: var(--accent);
-	color: white;
+	color: var(--text-bright);
 	transform: translateY(-2px);
 }
 
@@ -167,7 +167,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	border: 1px dashed rgba(51, 65, 85, 0.5);
+	border: 1px dashed color-mix(in srgb, var(--border), transparent 50%);
 }
 
 .DiceCalculator__group {
@@ -203,7 +203,7 @@
 
 .DiceCalculator__history {
 	font-size: 0.75rem;
-	border-top: 1px solid rgba(51, 65, 85, 0.4);
+	border-top: 1px solid color-mix(in srgb, var(--border), transparent 60%);
 	padding-top: 12px;
 }
 

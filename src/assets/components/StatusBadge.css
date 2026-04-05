@@ -1,16 +1,32 @@
-.StatusBadge {
+.StatusBadge,
+.status-badge {
 	white-space: nowrap;
 	border-radius: 999px;
 	padding: 6px 10px;
 	font-size: 0.82rem;
-	border: 1px solid rgba(51, 65, 85, 0.75);
-	background: rgba(15, 23, 42, 0.8);
+	border: 1px solid color-mix(in srgb, var(--border), transparent 25%);
+	background: color-mix(in srgb, var(--bg), transparent 20%);
 	color: var(--muted);
 	cursor: pointer;
+	transition: all 0.2s ease;
 }
 
-.StatusBadge--done {
-	color: #bbf7d0;
-	border-color: rgba(34, 197, 94, 0.35);
-	background: rgba(34, 197, 94, 0.12);
+.StatusBadge:hover,
+.status-badge:hover {
+	border-color: var(--border);
+	background: color-mix(in srgb, var(--bg), var(--text-bright) 5%);
+	color: var(--text);
+}
+
+.StatusBadge--done,
+.status-badge--done {
+	color: color-mix(in srgb, var(--success), white 60%);
+	border-color: color-mix(in srgb, var(--success), transparent 65%);
+	background: color-mix(in srgb, var(--success), transparent 88%);
+}
+
+.StatusBadge--done:hover,
+.status-badge--done:hover {
+	background: color-mix(in srgb, var(--success), transparent 80%);
+	border-color: color-mix(in srgb, var(--success), transparent 40%);
 }

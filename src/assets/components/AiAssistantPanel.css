@@ -1,6 +1,6 @@
 .AiAssistant {
-	background: rgba(var(--primary-rgb, 100, 100, 255), 0.05);
-	border: 1px dashed var(--border-color, #444);
+	background: color-mix(in srgb, var(--accent), transparent 95%);
+	border: 1px dashed var(--border);
 	border-radius: 12px;
 	padding: 20px;
 	transition: all 0.3s ease;
@@ -30,14 +30,14 @@
 
 .AiAssistant__loading {
 	font-style: italic;
-	color: var(--text-muted, #888);
+	color: var(--muted);
 	padding: 12px 0;
 	animation: pulse 1.5s infinite;
 }
 
 .AiAssistant__error {
-	color: #ff5555;
-	background: rgba(255, 85, 85, 0.1);
+	color: var(--danger);
+	background: color-mix(in srgb, var(--danger), transparent 90%);
 	padding: 12px;
 	border-radius: 6px;
 	margin: 12px 0;
@@ -46,8 +46,8 @@
 }
 
 .AiAssistant__result {
-	background: var(--bg-panel, #1e1e1e);
-	border: 1px solid var(--border-color, #333);
+	background: var(--bg-2);
+	border: 1px solid var(--border);
 	border-radius: 8px;
 	padding: 16px;
 	margin-top: 16px;
@@ -77,8 +77,8 @@
 }
 
 .AiAssistant__generated-item {
-	background: rgba(var(--primary-rgb, 100, 100, 255), 0.03);
-	border: 1px solid rgba(var(--primary-rgb, 100, 100, 255), 0.1);
+	background: color-mix(in srgb, var(--accent), transparent 97%);
+	border: 1px solid color-mix(in srgb, var(--accent), transparent 90%);
 	border-radius: 8px;
 	padding: 12px;
 	margin-bottom: 10px;
@@ -87,14 +87,14 @@
 .AiAssistant__generated-item h4 {
 	margin-top: 0;
 	margin-bottom: 10px;
-	color: var(--primary-color);
+	color: var(--accent);
 	font-size: 1.1rem;
 }
 
 .AiAssistant__generated-item h5 {
 	margin-top: 0;
 	margin-bottom: 8px;
-	color: var(--primary-color);
+	color: var(--accent);
 	font-size: 1rem;
 }
 
@@ -123,25 +123,25 @@
 
 .AiAssistant__scene-option {
 	padding: 12px;
-	background: rgba(255, 255, 255, 0.03);
-	border: 1px solid var(--border-color, #444);
+	background: color-mix(in srgb, var(--text-bright), transparent 97%);
+	border: 1px solid var(--border);
 	border-radius: 8px;
 	cursor: pointer;
 	transition: all 0.2s;
 }
 
 .AiAssistant__scene-option:hover {
-	background: rgba(var(--primary-rgb), 0.1);
-	border-color: var(--primary-color);
+	background: color-mix(in srgb, var(--accent), transparent 90%);
+	border-color: var(--accent);
 }
 
 .AiAssistant__prompt-textarea-result {
 	width: 100%;
 	min-height: 180px;
-	background: rgba(0, 0, 0, 0.2);
-	border: 1px solid var(--border-color, #444);
+	background: color-mix(in srgb, black, transparent 80%);
+	border: 1px solid var(--border);
 	border-radius: 8px;
-	color: var(--text-bright, #fff);
+	color: var(--text-bright);
 	padding: 12px;
 	font-family: inherit;
 	font-size: 0.95rem;
