@@ -7,7 +7,7 @@ import Select from "../Select/Select";
 import ListCard from "../ListCard/ListCard";
 import SpellCard from "../SpellCard/SpellCard";
 import Icon from "../Icon";
-import { capitalizeWords } from "../../utils/diceParser.jsx";
+import { capitalizeWords } from "../../utils/parser.jsx";
 import "./Spells.css";
 
 export default function Spells() {

@@ -2,7 +2,7 @@ import "./SpellCard.css";
 import {
 	capitalizeWords,
 	renderRecursiveContent,
-} from "../../utils/diceParser.jsx";
+} from "../../utils/parser.jsx";
 
 export default function SpellCard({ spell, onSpellClick }) {
 	if (!spell) return null;
