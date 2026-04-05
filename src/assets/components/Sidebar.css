@@ -106,7 +106,6 @@
 .Sidebar__resource-list {
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
 	padding: 0 4px;
 }
 
@@ -116,13 +115,15 @@
 	gap: 10px;
 	font-size: 0.9rem;
 	color: var(--text-muted);
+	padding: 4px 0;
 	text-decoration: none;
-	transition: color 0.2s;
+	transition: all 0.2s;
 }
 
 .Sidebar__resource-item:hover {
 	color: var(--primary-color);
 	text-decoration: underline;
+	padding-left: 5px;
 }
 
 .Sidebar__section--resources {
