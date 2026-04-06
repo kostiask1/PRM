@@ -82,6 +82,7 @@
 
 .MonsterStatBlock__property-item {
 	display: block;
+	text-transform: capitalize;
 }
 
 .MonsterStatBlock__property-item strong {

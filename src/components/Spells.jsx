@@ -180,10 +180,7 @@ export default function Spells() {
 	return (
 		<Panel className="Spells">
 			<div className="Panel__header">
-				<div>
-					<h2>Заклинання</h2>
-					<p className="muted">Каталог заклинань D&D 5e (SRD)</p>
-				</div>
+				<h2>Заклинання</h2>
 			</div>
 			<div className="Panel__body Spells__body">
 				<div className="Spells__search">

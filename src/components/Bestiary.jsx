@@ -370,10 +370,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 	return (
 		<Panel className="Bestiary">
 			<div className="Panel__header">
-				<div>
-					<h2>Бестіарій</h2>
-					<p className="muted">Локальний каталог монстрів</p>
-				</div>
+				<h2>Бестіарій</h2>
 			</div>
 			<div className="Panel__body">{renderBestiaryInner()}</div>
 		</Panel>

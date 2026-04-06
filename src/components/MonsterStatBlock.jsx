@@ -386,7 +386,7 @@ export default function MonsterStatBlock({
 					return "";
 				})
 				.filter(Boolean)
-				.join("; ");
+				.join(", ");
 		}
 		return null;
 	};

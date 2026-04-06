@@ -3,7 +3,6 @@
 	cursor: pointer;
 	text-decoration: underline;
 	transition: opacity 0.2s;
-	margin: 0 5px;
 }
 
 .SpellLink:hover {
