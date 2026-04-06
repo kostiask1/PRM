@@ -96,9 +96,20 @@ async function renameWithRetry(oldPath, newPath, retries = 3, delay = 50) {
 
 async function listCampaignSlugs() {
 	const entries = await fs.readdir(CAMPAIGNS_DIR, { withFileTypes: true });
-	return entries
-		.filter((entry) => entry.isDirectory())
-		.map((entry) => entry.name);
+	const slugs = [];
+
+	for (const entry of entries) {
+		if (entry.isDirectory()) {
+			slugs.push(entry.name);
+		} else if (entry.isSymbolicLink()) {
+			const stats = await fs.stat(path.join(CAMPAIGNS_DIR, entry.name)).catch(() => null);
+			if (stats?.isDirectory()) {
+				slugs.push(entry.name);
+			}
+		}
+	}
+
+	return slugs;
 }
 
 async function readCampaign(slug) {
@@ -113,10 +124,20 @@ async function listSessions(slug) {
 	const sessionsDir = path.join(campaignDir(slug), "sessions");
 	await ensureDir(sessionsDir);
 	const entries = await fs.readdir(sessionsDir, { withFileTypes: true });
-	const files = entries
-		.filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
-		.map((entry) => entry.name)
-		.sort();
+	const files = [];
+
+	for (const entry of entries) {
+		if (!entry.name.endsWith(".json")) continue;
+		if (entry.isFile()) {
+			files.push(entry.name);
+		} else if (entry.isSymbolicLink()) {
+			const stats = await fs.stat(path.join(sessionsDir, entry.name)).catch(() => null);
+			if (stats?.isFile()) {
+				files.push(entry.name);
+			}
+		}
+	}
+	files.sort();
 
 	const sessionPromises = files.map(async (file) => {
 		const data = await readSession(slug, file);
@@ -142,11 +163,15 @@ async function listSessions(slug) {
 async function listCampaignsDetailed() {
 	const slugs = await listCampaignSlugs();
 	const campaignPromises = slugs.map(async (slug) => {
-		const meta = await readCampaign(slug);
-		const sessions = await listSessions(slug);
-		return { ...meta, slug, sessionCount: sessions.length };
+		try {
+			const meta = await readCampaign(slug);
+			const sessions = await listSessions(slug);
+			return { ...meta, slug, sessionCount: sessions.length };
+		} catch (error) {
+			return null;
+		}
 	});
-	const result = await Promise.all(campaignPromises);
+	const result = (await Promise.all(campaignPromises)).filter(Boolean);
 	return result.sort(
 		(a, b) =>
 			(a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name, "uk"),
