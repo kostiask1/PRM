@@ -83,7 +83,10 @@ export const preprocessTags = (text) => {
 			/{@scaledice\s+([^|}]+)(?:\|([^|}]*))?(?:\|([^|}]*))?}/gi,
 			(m, name, src, label) => label || name,
 		)
-		.replace(/{@hitYourSpellAttack}/gi, "your spell attack bonus")
+		.replace(
+			/{@hitYourSpellAttack(?:\s+([^}]+))?}/gi, 
+			(m, label) => label || "your spell attack bonus"
+		)
 		.replace(/{@actSaveFail}/gi, "On a failure,")
 		.replace(/{@actSaveFail\s+(\d+)}/gi, "On a failure by $1 or more,")
 		.replace(/{@actSaveSuccess}/gi, "On a success,")
@@ -107,6 +110,7 @@ export const preprocessTags = (text) => {
 		.replace(/{@recharge(?:\s+(\d+))?}/gi, (m, g1) =>
 			g1 ? `(Recharge ${g1}-6)` : "(Recharge)",
 		)
+		.replace(/{@atkr\s+([a-z,]+)}/gi, (m, g1) => `${ATTACK_TYPE_MAP[g1] || g1} Attack: `)
 		.replace(
 			/{@atkr\s+([a-z,]+)}/gi,
 			(m, g1) => `${ATTACK_TYPE_MAP[g1] || g1} Attack: `,

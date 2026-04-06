@@ -313,10 +313,22 @@ export default function MonsterStatBlock({
 
 	const formatSpeed = () => {
 		if (typeof monster.speed === "string") return monster.speed;
-		if (typeof monster.speed === "object") {
-			return Object.entries(monster.speed)
-				.map(([k, v]) => `${k} ${v}`)
-				.join(", ");
+		if (typeof monster.speed === "object" && monster.speed !== null) {
+			const parts = Object.entries(monster.speed)
+				.filter(([k]) => k !== "canHover")
+				.map(([k, v]) => {
+					const label = k === "walk" ? "" : k;
+					if (typeof v === "object" && v !== null) {
+						return `${label} ${v.number} ft. ${v.condition || ""}`.trim();
+					}
+					return `${label} ${v} ft.`.trim();
+				});
+			
+			let res = parts.join(", ");
+			if (monster.speed.canHover && !res.toLowerCase().includes("hover")) {
+				res += " (hover)";
+			}
+			return res || "—";
 		}
 		return "—";
 	};
@@ -419,7 +431,7 @@ export default function MonsterStatBlock({
 					</div>
 					<div className="MonsterStatBlock__stats">
 						<div className="stat-item">
-							<strong>HP:</strong> {getHP().val}
+							<strong>HP:</strong> {renderRecursiveContent(getHP().val, handleSpellClick)}
 							{getHP().formula && (
 								<>
 									(<RollDice formula={getHP().formula} />)
@@ -427,8 +439,8 @@ export default function MonsterStatBlock({
 							)}
 						</div>
 						<div className="stat-item ac">
-							<strong>AC:</strong> {getAC().val}{" "}
-							{renderRecursiveContent(getAC().desc)}
+							<strong>AC:</strong> {renderRecursiveContent(getAC().val, handleSpellClick)}
+							{" "}{renderRecursiveContent(getAC().desc, handleSpellClick)}
 						</div>
 						<div className="stat-item">
 							<strong>Speed:</strong> {formatSpeed()}
