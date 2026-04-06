@@ -160,7 +160,7 @@
 .DiceCalculator__currentFormula {
 	min-height: 40px;
 	padding: 8px 12px;
-	background: rgba(2, 6, 23, 0.4);
+	background: color-mix(in srgb, var(--bg-2), transparent 60%);
 	border-radius: 8px;
 	font-size: 0.85rem;
 	color: var(--text-bright);
@@ -232,7 +232,7 @@
 	justify-content: space-between;
 	align-items: center;
 	width: 100%;
-	border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+	border-bottom: 1px solid color-mix(in srgb, var(--text-bright), transparent 95%);
 	cursor: pointer;
 	transition: background 0.2s ease;
 	padding: 8px;
@@ -241,7 +241,7 @@
 }
 
 .DiceCalculator__historyItem:hover {
-	background: rgba(255, 255, 255, 0.05);
+	background: color-mix(in srgb, var(--text-bright), transparent 95%);
 }
 
 .DiceCalculator__historyInfo {
@@ -259,13 +259,13 @@
 }
 
 .dice-min {
-	color: #ef4444;
+	color: var(--danger);
 	/* Червоний для одиниці */
 	font-weight: bold;
 }
 
 .dice-max {
-	color: #22c55e;
+	color: var(--success);
 	/* Зелений для максимального значення */
 	font-weight: bold;
 }

@@ -2,7 +2,13 @@ import React, { useState, useRef, useEffect } from "react";
 import Icon from "./Icon";
 import "../assets/components/Select.css";
 
-export default function Select({ value, onChange, children, className = "", ...props }) {
+export default function Select({
+	value,
+	onChange,
+	children,
+	className = "",
+	...props
+}) {
 	const [isOpen, setIsOpen] = useState(false);
 	const containerRef = useRef(null);
 
@@ -15,11 +21,15 @@ export default function Select({ value, onChange, children, className = "", ...p
 		};
 	}).filter(Boolean);
 
-	const selectedOption = options.find((opt) => opt.value === value) || options[0];
+	const selectedOption =
+		options.find((opt) => opt.value === value) || options[0];
 
 	useEffect(() => {
 		const handleClickOutside = (event) => {
-			if (containerRef.current && !containerRef.current.contains(event.target)) {
+			if (
+				containerRef.current &&
+				!containerRef.current.contains(event.target)
+			) {
 				setIsOpen(false);
 			}
 		};

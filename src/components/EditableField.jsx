@@ -2,7 +2,7 @@ import { useMemo, useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import Input from "./Input";
 import Button from "./Button";
-import "../assets/components/EditableField.css"
+import "../assets/components/EditableField.css";
 
 const TAB_PREVIEW = "       "; // 7 пробілів, як у тебе зараз
 
@@ -154,7 +154,7 @@ function convertHtmlToMarkdown(html) {
 	const doc = parser.parseFromString(html, "text/html");
 	return nodesToMarkdown(doc.body)
 		.replace(/\u00A0\u00A0\u00A0\u00A0/g, "\t") // Пробуємо детектувати "таби" з пробілів Word
-		.replace(/\u00A0/g, " ") 
+		.replace(/\u00A0/g, " ")
 		.replace(/[ \t]+\n/g, "\n") // Видаляємо пробіли в кінці рядків
 		.replace(/ {2,}/g, " ") // Схлопуємо лише звичайні пробіли, не чіпаючи \t
 		.replace(/\n{3,}/g, "\n\n") // Схлопуємо 3+ переноси до двох
@@ -205,17 +205,17 @@ function nodesToMarkdown(node) {
 
 			// Визначаємо наявність табуляції через стилі (Word часто шле margin/padding)
 			const style = child.style || {};
-			const indent = parseFloat(style.marginLeft || 0) + 
-			               parseFloat(style.paddingLeft || 0) + 
-			               parseFloat(style.textIndent || 0);
-			const hasIndent = indent > 15; 
-			const tabPrefix = hasIndent ? "\t" : "";
+			const indent =
+				parseFloat(style.marginLeft || 0) +
+				parseFloat(style.paddingLeft || 0) +
+				parseFloat(style.textIndent || 0);
+			const hasIndent = indent > 15;
 
 			let rawContent = nodesToMarkdown(child);
-			
+
 			// Видаляємо лише вертикальні переноси на початку/в кінці, щоб зберегти \t всередині контенту
 			const content = rawContent.replace(/^[\n\r]+|[\n\r]+$/g, "");
-			
+
 			// Відокремлюємо існуючу табуляцію або пробіли на початку тексту
 			const leadingWsMatch = content.match(/^([ \t]+)/);
 			const leadingWs = leadingWsMatch ? leadingWsMatch[1] : "";
@@ -224,7 +224,8 @@ function nodesToMarkdown(node) {
 			if (!actualText && tagName !== "br") return;
 
 			// Фінальний префікс: комбінуємо відступ стилю та відступ з тексту
-			const prefix = (hasIndent && !leadingWs.includes("\t")) ? "\t" + leadingWs : leadingWs;
+			const prefix =
+				hasIndent && !leadingWs.includes("\t") ? "\t" + leadingWs : leadingWs;
 
 			if (styleHeaderLevel > 0 && !tagName.match(/^h[1-6]$/)) {
 				result += `\n\n${prefix}${"#".repeat(styleHeaderLevel)} ${actualText}\n\n`;
@@ -240,8 +241,12 @@ function nodesToMarkdown(node) {
 				case "i":
 					result += `${prefix}*${actualText}*`;
 					break;
-				case "h1": case "h2": case "h3": 
-				case "h4": case "h5": case "h6":
+				case "h1":
+				case "h2":
+				case "h3":
+				case "h4":
+				case "h5":
+				case "h6":
 					const level = parseInt(tagName[1]);
 					result += `\n\n${prefix}${"#".repeat(level)} ${actualText}\n\n`;
 					break;
@@ -266,7 +271,9 @@ function nodesToMarkdown(node) {
 					result += `${prefix}${actualText}`;
 					break;
 				default:
-					result += (hasIndent && !rawContent.startsWith("\t") ? "\t" : "") + rawContent;
+					result +=
+						(hasIndent && !rawContent.startsWith("\t") ? "\t" : "") +
+						rawContent;
 			}
 		}
 	});
@@ -403,7 +410,10 @@ export default function EditableField({
 	}
 
 	return (
-		<div className={`EditableField ${className || ""}`} onClick={handleClick} style={{ position: "relative" }}>
+		<div
+			className={`EditableField ${className || ""}`}
+			onClick={handleClick}
+			style={{ position: "relative" }}>
 			{!isEditing && value && (
 				<Button
 					variant="ghost"

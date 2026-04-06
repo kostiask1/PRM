@@ -177,8 +177,12 @@ export const renderRecursiveContent = (content, onSpellClick) => {
 			);
 		} else if (content.type === "table") {
 			return (
-				<div className="ParserTable__wrapper" key={content.caption || Math.random()}>
-					{content.caption && <div className="ParserTable__caption">{content.caption}</div>}
+				<div
+					className="ParserTable__wrapper"
+					key={content.caption || Math.random()}>
+					{content.caption && (
+						<div className="ParserTable__caption">{content.caption}</div>
+					)}
 					<table className="ParserTable">
 						{content.colLabels && (
 							<thead>

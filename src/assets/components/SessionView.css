@@ -63,7 +63,8 @@
 	position: sticky;
 	top: -24px;
 	padding: 16px 18px;
-	border-bottom: 1px solid color-mix(in srgb, var(--text-bright), transparent 95%);
+	border-bottom: 1px solid
+		color-mix(in srgb, var(--text-bright), transparent 95%);
 	padding-bottom: 8px;
 }
 

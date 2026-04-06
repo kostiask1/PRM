@@ -34,7 +34,8 @@
 	font-size: 0.85rem;
 	color: var(--text);
 
-	th, td {
+	th,
+	td {
 		padding: 10px 12px;
 		border: 1px solid var(--border);
 		text-align: left;
@@ -55,9 +56,19 @@
 	}
 
 	// Допоміжні класи з JSON-структур
-	.text-center { text-align: center; }
-	.col-1 { width: 8%; }
-	.col-2 { width: 16%; }
-	.col-6 { width: 50%; }
-	.col-11 { width: 90%; }
+	.text-center {
+		text-align: center;
+	}
+	.col-1 {
+		width: 8%;
+	}
+	.col-2 {
+		width: 16%;
+	}
+	.col-6 {
+		width: 50%;
+	}
+	.col-11 {
+		width: 90%;
+	}
 }

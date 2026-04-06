@@ -1,8 +1,5 @@
 import "../assets/components/SpellCard.css";
-import {
-	capitalizeWords,
-	renderRecursiveContent,
-} from "../utils/parser.jsx";
+import { capitalizeWords, renderRecursiveContent } from "../utils/parser.jsx";
 
 export default function SpellCard({ spell, onSpellClick }) {
 	if (!spell) return null;

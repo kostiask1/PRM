@@ -778,7 +778,6 @@ export default function CampaignView({
 									<>
 										<StatusBadge
 											completed={session.completed}
-											completedAt={session.completedAt}
 											onClick={() => handleToggleSessionStatus(session)}
 											type="session"
 										/>

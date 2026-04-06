@@ -126,7 +126,6 @@ export default function Sidebar({
 							actions={
 								<StatusBadge
 									completed={campaign.completed}
-									completedAt={campaign.completedAt}
 									onClick={(e) => {
 										e.stopPropagation();
 										onToggleCampaignStatus(campaign);
