@@ -38,10 +38,6 @@
 	border-color: var(--border);
 }
 
-.MarkdownView p:first-child {
-	padding-right: 24px;
-}
-
 .MarkdownView p:last-child {
 	margin-bottom: 0;
 }

@@ -44,6 +44,19 @@ function buildPreviewMap(rawValue = "") {
 			continue;
 		}
 
+		// markdown на початку рядка: #, >, -, *, +, 1.
+		if (lineStart) {
+			// Детектуємо маркери блоків (заголовки, списки, цитати).
+			// Пропускаємо весь префікс (відступ + маркер + пробіли після нього),
+			// бо ReactMarkdown не включає їх у текстові вузли контенту.
+			const markerMatch = rawValue.slice(i).match(/^([ \t]*)(#{1,6}[ \t]+|[-*+][ \t]+|\d+\.[ \t]+|> ?)/);
+			if (markerMatch) {
+				i += markerMatch[0].length;
+				lineStart = false;
+				continue;
+			}
+		}
+
 		// \t => 7 пробілів
 		if (char === "\t") {
 			for (let k = 0; k < TAB_PREVIEW.length; k++) {
@@ -54,40 +67,15 @@ function buildPreviewMap(rawValue = "") {
 			continue;
 		}
 
-		// markdown на початку рядка: #, >, -
-		if (lineStart) {
-			// heading: #{1,6} + пробіл
-			const headingMatch = rawValue.slice(i).match(/^(#{1,6})\s/);
-			if (headingMatch) {
-				i += headingMatch[0].length;
-				lineStart = false;
-				continue;
-			}
-
-			// quote: >
-			if (rawValue.slice(i, i + 2) === "> ") {
-				i += 2;
-				lineStart = false;
-				continue;
-			}
-
-			// list: -
-			if (rawValue.slice(i, i + 2) === "- ") {
-				i += 2;
-				lineStart = false;
-				continue;
-			}
-		}
-
-		// жирний **
-		if (rawValue.slice(i, i + 2) === "**") {
+		// жирний ** або __
+		if (rawValue.slice(i, i + 2) === "**" || rawValue.slice(i, i + 2) === "__") {
 			i += 2;
 			lineStart = false;
 			continue;
 		}
 
-		// курсив *
-		if (char === "*") {
+		// курсив * або _
+		if (char === "*" || char === "_") {
 			i += 1;
 			lineStart = false;
 			continue;
