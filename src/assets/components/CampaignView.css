@@ -21,8 +21,8 @@
 .CampaignView__section {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
-	margin-bottom: 2rem;
+	gap: 8px;
+	margin-bottom: 1rem;
 }
 
 .CampaignView__section h3 {
@@ -35,6 +35,12 @@
 	align-items: center;
 	gap: 8px;
 	user-select: none;
+	width: 100%;
+	cursor: pointer;
+}
+
+.section-row .Button {
+	white-space: nowrap;
 }
 
 .section-collapse-toggle {

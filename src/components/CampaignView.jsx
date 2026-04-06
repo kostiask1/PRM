@@ -24,6 +24,9 @@ export default function CampaignView({
 	const [description, setDescription] = useState(campaign.description || "");
 	const [notes, setNotes] = useState(campaign.notes || []);
 	const [characters, setCharacters] = useState(campaign.characters || []); // NEW: State for characters
+	const [isDescriptionCollapsed, setIsDescriptionCollapsed] = useState(
+		campaign.isDescriptionCollapsed || false,
+	);
 	const [isNotesCollapsed, setIsNotesCollapsed] = useState(
 		campaign.isNotesCollapsed || false,
 	);
@@ -46,6 +49,7 @@ export default function CampaignView({
 			setDescription(campaign.description || "");
 			setNotes(campaign.notes || []);
 			setCharacters(campaign.characters || []); // NEW: Reset characters state
+			setIsDescriptionCollapsed(campaign.isDescriptionCollapsed || false);
 			setIsNotesCollapsed(campaign.isNotesCollapsed || false);
 			setIsCharactersCollapsed(campaign.isCharactersCollapsed || false);
 			setUndoStack([]);
@@ -515,13 +519,37 @@ export default function CampaignView({
 			</div>
 			<div className="Panel__body">
 				<div className="CampaignView__section">
-					<h3>Сюжет кампанії</h3>
-					<EditableField
-						type="textarea"
-						placeholder="Опишіть основну лінію сюжету, ключові події та цілі..."
-						value={description}
-						onChange={handleDescriptionChange}
-					/>
+					<div className="section-row">
+						<div
+							className="section-title-group"
+							onClick={() => {
+								const next = !isDescriptionCollapsed;
+								setIsDescriptionCollapsed(next);
+								triggerSave({ isDescriptionCollapsed: next });
+							}}>
+							<Button
+								variant="ghost"
+								size="small"
+								icon="chevron"
+								className={`section-collapse-toggle ${isDescriptionCollapsed ? "is-rotated" : ""}`}
+								onClick={(e) => {
+									e.stopPropagation();
+									const next = !isDescriptionCollapsed;
+									setIsDescriptionCollapsed(next);
+									triggerSave({ isDescriptionCollapsed: next });
+								}}
+							/>
+							<h3>Сюжет кампанії</h3>
+						</div>
+					</div>
+					{!isDescriptionCollapsed && (
+						<EditableField
+							type="textarea"
+							placeholder="Опишіть основну лінію сюжету, ключові події та цілі..."
+							value={description}
+							onChange={handleDescriptionChange}
+						/>
+					)}
 				</div>
 
 				<div className="CampaignView__section">
