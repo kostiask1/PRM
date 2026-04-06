@@ -10,9 +10,15 @@
 	transition: opacity 0.2s ease;
 	background: var(--panel) !important;
 	border-color: var(--border) !important;
+	border-radius: 8px;
 	padding: 0;
-	height: 36px;
-	width: 36px;
+	height: 30px;
+	width: 30px;
+}
+
+.EditableField__copy-btn svg {
+	width: 14px;
+	height: 14px;
 }
 
 .MarkdownView {
