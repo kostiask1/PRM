@@ -73,12 +73,12 @@ export default function Sidebar({
 	return (
 		<aside className="Sidebar App__sidebar">
 			<div className="Sidebar__header">
-				<h1 className="Sidebar__title">D&D Session Manager</h1>
+				<h1 className="Sidebar__title">
+					D&D Session Manager
+					<ColorThemeSwitcher />
+				</h1>
 				<p className="Sidebar__description">
 					Кампанії, сесії та планування в одному локальному проєкті.
-				</p>
-				<p className="Sidebar__theme-switcher">
-					<ColorThemeSwitcher />
 				</p>
 			</div>
 			<div className="Sidebar__links">

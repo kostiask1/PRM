@@ -45,6 +45,14 @@
 
 .section-collapse-toggle {
 	transition: transform 0.2s ease !important;
+	width: 32px;
+	height: 32px;
+	padding: 0;
+}
+
+.section-collapse-toggle svg {
+	width: 16px;
+	height: 16px;
 }
 
 .section-collapse-toggle.is-rotated {

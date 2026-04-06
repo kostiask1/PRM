@@ -23,12 +23,21 @@
 	transition: background 0.2s;
 }
 
+.Sidebar__header {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
 .Sidebar__link:hover {
 	background: color-mix(in srgb, var(--text-bright), transparent 95%);
 }
 
 .Sidebar__title {
-	margin: 0 0 8px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	white-space: nowrap;
 	font-size: 1.4rem;
 }
 

@@ -212,9 +212,9 @@
 }
 
 .SceneCard__toggle {
-	padding: 4px !important;
-	min-height: auto !important;
-	width: auto !important;
+	display: flex;
+	min-height: auto;
+	width: auto;
 }
 
 .Icon--rotated {
