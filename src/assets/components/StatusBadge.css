@@ -1,5 +1,4 @@
-.StatusBadge,
-.status-badge {
+.StatusBadge {
 	white-space: nowrap;
 	border-radius: 999px;
 	padding: 6px 10px;
@@ -11,22 +10,19 @@
 	transition: all 0.2s ease;
 }
 
-.StatusBadge:hover,
-.status-badge:hover {
+.StatusBadge:hover {
 	border-color: var(--border);
 	background: color-mix(in srgb, var(--bg), var(--text-bright) 5%);
 	color: var(--text);
 }
 
-.StatusBadge--done,
-.status-badge--done {
-	color: color-mix(in srgb, var(--success), white 60%);
+.StatusBadge--done {
+	color: color-mix(in srgb, var(--success), var(--text) 60%);
 	border-color: color-mix(in srgb, var(--success), transparent 65%);
 	background: color-mix(in srgb, var(--success), transparent 88%);
 }
 
-.StatusBadge--done:hover,
-.status-badge--done:hover {
+.StatusBadge--done:hover {
 	background: color-mix(in srgb, var(--success), transparent 80%);
 	border-color: color-mix(in srgb, var(--success), transparent 40%);
 }
