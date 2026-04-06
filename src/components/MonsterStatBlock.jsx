@@ -315,9 +315,24 @@ export default function MonsterStatBlock({
 		return "—";
 	};
 
+	const alignmentMap = {
+		L: "Lawful",
+		C: "Chaotic",
+		G: "Good",
+		E: "Evil",
+		N: "Neutral",
+		U: "Unaligned",
+	};
+
 	const formatAlignment = (al) => {
 		if (typeof al === "string") return al;
-		if (Array.isArray(al)) return al.join("");
+		if (Array.isArray(al)) {
+			return al
+				.map((abbr) => alignmentMap[abbr] || abbr)
+				.filter(Boolean)
+				.join(" ");
+		}
+		// Якщо світогляд не вказано або невідомий, повертаємо "Unaligned"
 		return "U";
 	};
 
