@@ -144,6 +144,133 @@ function getAbsolutePreviewOffset(container, targetNode, targetOffset) {
 	return total;
 }
 
+/**
+ * Конвертує базовий HTML (з Word/LibreOffice) у Markdown.
+ */
+function convertHtmlToMarkdown(html) {
+	const parser = new DOMParser();
+	const doc = parser.parseFromString(html, "text/html");
+	return nodesToMarkdown(doc.body)
+		.replace(/\u00A0\u00A0\u00A0\u00A0/g, "\t") // Пробуємо детектувати "таби" з пробілів Word
+		.replace(/\u00A0/g, " ") 
+		.replace(/[ \t]+\n/g, "\n") // Видаляємо пробіли в кінці рядків
+		.replace(/ {2,}/g, " ") // Схлопуємо лише звичайні пробіли, не чіпаючи \t
+		.replace(/\n{3,}/g, "\n\n") // Схлопуємо 3+ переноси до двох
+		.replace(/\s+$/g, "") // Чистимо кінець
+		.trim();
+}
+
+/**
+ * Визначає рівень заголовка на основі інлайнового стилю font-size або атрибуту size.
+ * Корисно для тексту з Word/LibreOffice, де заголовки часто приходять як <p> або <span> зі стилями.
+ */
+function getHeaderLevelFromStyle(node) {
+	// Підтримка атрибуту size (для <font size="...">)
+	const attrSize = node.getAttribute?.("size");
+	if (attrSize) {
+		const s = parseInt(attrSize);
+		if (s >= 6) return 1;
+		if (s === 5) return 2;
+		if (s === 4) return 3;
+	}
+
+	const fontSize = node.style?.fontSize;
+	if (!fontSize) return 0;
+
+	const val = parseFloat(fontSize);
+	if (isNaN(val)) return 0;
+
+	// Word зазвичай шле pt (поінти). 12pt — звичайний текст.
+	// Якщо браузер перерахував у px, 1pt ≈ 1.33px.
+	const isPt = fontSize.includes("pt");
+	const size = isPt ? val : val * 0.75; // Приводимо px до масштабу pt для порівняння
+
+	if (size >= 20) return 1;
+	if (size >= 16) return 2;
+	if (size >= 13) return 3;
+	return 0;
+}
+
+function nodesToMarkdown(node) {
+	let result = "";
+	node.childNodes.forEach((child) => {
+		if (child.nodeType === Node.TEXT_NODE) {
+			// Замінюємо переноси рядків на пробіли, щоб уникнути злипання слів при вставці з Word
+			result += child.textContent.replace(/\r?\n|\r/g, " ");
+		} else if (child.nodeType === Node.ELEMENT_NODE) {
+			const tagName = child.tagName.toLowerCase();
+			const styleHeaderLevel = getHeaderLevelFromStyle(child);
+
+			// Визначаємо наявність табуляції через стилі (Word часто шле margin/padding)
+			const style = child.style || {};
+			const indent = parseFloat(style.marginLeft || 0) + 
+			               parseFloat(style.paddingLeft || 0) + 
+			               parseFloat(style.textIndent || 0);
+			const hasIndent = indent > 15; 
+			const tabPrefix = hasIndent ? "\t" : "";
+
+			let rawContent = nodesToMarkdown(child);
+			
+			// Видаляємо лише вертикальні переноси на початку/в кінці, щоб зберегти \t всередині контенту
+			const content = rawContent.replace(/^[\n\r]+|[\n\r]+$/g, "");
+			
+			// Відокремлюємо існуючу табуляцію або пробіли на початку тексту
+			const leadingWsMatch = content.match(/^([ \t]+)/);
+			const leadingWs = leadingWsMatch ? leadingWsMatch[1] : "";
+			const actualText = content.slice(leadingWs.length).trim();
+
+			if (!actualText && tagName !== "br") return;
+
+			// Фінальний префікс: комбінуємо відступ стилю та відступ з тексту
+			const prefix = (hasIndent && !leadingWs.includes("\t")) ? "\t" + leadingWs : leadingWs;
+
+			if (styleHeaderLevel > 0 && !tagName.match(/^h[1-6]$/)) {
+				result += `\n\n${prefix}${"#".repeat(styleHeaderLevel)} ${actualText}\n\n`;
+				return;
+			}
+
+			switch (tagName) {
+				// case "strong":
+				case "b":
+					result += `${prefix}**${actualText}**`;
+					break;
+				case "em":
+				case "i":
+					result += `${prefix}*${actualText}*`;
+					break;
+				case "h1": case "h2": case "h3": 
+				case "h4": case "h5": case "h6":
+					const level = parseInt(tagName[1]);
+					result += `\n\n${prefix}${"#".repeat(level)} ${actualText}\n\n`;
+					break;
+				case "p":
+				case "div":
+					result += `\n\n${prefix}${actualText}\n\n`;
+					break;
+				case "blockquote":
+					result += `\n\n${prefix}> ${actualText}\n\n`;
+					break;
+				case "br":
+					result += `\n`;
+					break;
+				case "ul":
+				case "ol":
+					result += `\n\n${rawContent}\n\n`;
+					break;
+				case "li":
+					result += `\n- ${prefix}${actualText}`;
+					break;
+				case "a":
+					result += `${prefix}${actualText}`;
+					break;
+				default:
+					result += (hasIndent && !rawContent.startsWith("\t") ? "\t" : "") + rawContent;
+			}
+		}
+	});
+	return result;
+}
+
 export default function EditableField({
 	value,
 	onChange,
@@ -195,6 +322,37 @@ export default function EditableField({
 		props.onClick?.(e);
 	};
 
+	const handlePaste = (e) => {
+		const html = e.clipboardData.getData("text/html");
+		console.log("html:", html);
+		if (!html) return; // Якщо немає HTML, працює стандартна вставка тексту
+
+		e.preventDefault();
+		const markdown = convertHtmlToMarkdown(html);
+		console.log("markdown:", markdown);
+
+		const { selectionStart, selectionEnd, value } = e.target;
+		const newValue =
+			value.substring(0, selectionStart) +
+			markdown +
+			value.substring(selectionEnd);
+
+		if (onChange) {
+			onChange({
+				...e,
+				target: { ...e.target, value: newValue },
+			});
+		}
+
+		// setTimeout(() => {
+		// 	const node = internalRef.current;
+		// 	if (node) {
+		// 		const newPos = selectionStart + markdown.length;
+		// 		node.setSelectionRange(newPos, newPos);
+		// 	}
+		// }, 0);
+	};
+
 	const shortcutsHelp = [
 		"Гарячі клавіші:",
 		"Ctrl+B — Жирний",
@@ -218,6 +376,7 @@ export default function EditableField({
 				className={className}
 				initialSelection={initialSelection}
 				initialHeight={initialHeight}
+				onPaste={handlePaste}
 			/>
 		);
 	}
