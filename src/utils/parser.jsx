@@ -212,6 +212,7 @@ export const renderRecursiveContent = (content, onSpellClick) => {
 				</div>
 			);
 		}
+
 		return parseRollsAndSpells(
 			preprocessTags(JSON.stringify(content)),
 			onSpellClick,

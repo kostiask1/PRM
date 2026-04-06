@@ -420,9 +420,9 @@ export default function MonsterStatBlock({
 								</>
 							)}
 						</div>
-						<div className="stat-item">
+						<div className="stat-item ac">
 							<strong>AC:</strong> {getAC().val}{" "}
-							{getAC().desc && `(${getAC().desc})`}
+							{renderRecursiveContent(getAC().desc)}
 						</div>
 						<div className="stat-item">
 							<strong>Speed:</strong> {formatSpeed()}
