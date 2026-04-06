@@ -144,6 +144,7 @@ export default function EncounterView({
 		const newMonster = {
 			...m,
 			instanceId: `inst-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+			originalBestiaryName: m.name, // Зберігаємо оригінальну назву з бестіарію
 			currentHp: hpVal,
 			hit_points: hpVal,
 			armor_class: acVal,

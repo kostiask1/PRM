@@ -333,6 +333,31 @@ export default function MonsterStatBlock({
 		const s = Array.isArray(sz) ? sz[0] : sz;
 		return sizeMap[s] || s;
 	};
+
+	const formatDamageProp = (prop) => {
+		if (!prop) return null;
+		if (typeof prop === "string") return prop;
+		if (Array.isArray(prop)) {
+			return prop
+				.map((item) => {
+					if (typeof item === "string") return item;
+					if (typeof item === "object" && item !== null) {
+						const subProp =
+							item.resist ||
+							item.immune ||
+							item.vulnerable ||
+							item.conditionImmune;
+						const base = Array.isArray(subProp) ? subProp.join(", ") : subProp;
+						return `${item.preNote ? item.preNote + " " : ""}${base || ""}${item.note ? " " + item.note : ""}`.trim();
+					}
+					return "";
+				})
+				.filter(Boolean)
+				.join("; ");
+		}
+		return null;
+	};
+
 	return (
 		<div className="MonsterStatBlock">
 			{onNameClick ? (
@@ -360,7 +385,7 @@ export default function MonsterStatBlock({
 			<div className="MonsterStatBlock__header">
 				<div className="MonsterStatBlock__stats">
 					<div className="stat-item">
-						<strong>HP:</strong> {getHP().val}{" "}
+						<strong>HP:</strong> {getHP().val}
 						{getHP().formula && (
 							<>
 								(<RollDice formula={getHP().formula} />)
@@ -386,7 +411,9 @@ export default function MonsterStatBlock({
 				<div className="MonsterStatBlock__token-wrapper">
 					{!hasImageError && (
 						<img
-							src={`/database/bestiary/tokens/${monster.source}/${monster.name}.webp`}
+							src={`/database/bestiary/tokens/${monster.source}/${
+								monster.originalBestiaryName || monster.name
+							}.webp`}
 							alt={monster.name}
 							className="MonsterStatBlock__token"
 							onError={() => setHasImageError(true)}
@@ -431,22 +458,31 @@ export default function MonsterStatBlock({
 					</div>
 				)}
 
-				{monster.damage_immunities && (
-					<div className="MonsterStatBlock__property-item">
-						<strong>Damage Immunities:</strong> {monster.damage_immunities}
-					</div>
-				)}
-				{monster.damage_vulnerabilities && (
+				{monster.vulnerable && (
 					<div className="MonsterStatBlock__property-item">
 						<strong>Damage Vulnerabilities:</strong>{" "}
-						{monster.damage_vulnerabilities}
+						{formatDamageProp(monster.vulnerable)}
 					</div>
 				)}
-				{monster.damage_resistances && (
+				{monster.resist && (
 					<div className="MonsterStatBlock__property-item">
-						<strong>Damage Resistances:</strong> {monster.damage_resistances}
+						<strong>Damage Resistances:</strong>{" "}
+						{formatDamageProp(monster.resist)}
 					</div>
 				)}
+				{monster.immune && (
+					<div className="MonsterStatBlock__property-item">
+						<strong>Damage Immunities:</strong>{" "}
+						{formatDamageProp(monster.immune)}
+					</div>
+				)}
+				{monster.conditionImmune && (
+					<div className="MonsterStatBlock__property-item">
+						<strong>Condition Immunities:</strong>{" "}
+						{formatDamageProp(monster.conditionImmune)}
+					</div>
+				)}
+
 				<div className="MonsterStatBlock__description">
 					<p>
 						<strong>Senses:</strong>{" "}
@@ -475,13 +511,10 @@ export default function MonsterStatBlock({
 			</div>
 			{renderSpellcasting()}
 			{renderNewSpellcasting()}
-			{renderActionList(monster.trait || monster.special_abilities, "Traits")}
-			{renderActionList(monster.action || monster.actions, "Actions")}
-			{renderActionList(monster.reaction || monster.reactions, "Reactions")}
-			{renderActionList(
-				monster.legendary || monster.legendary_actions,
-				"Legendary Actions",
-			)}
+			{renderActionList(monster.trait, "Traits")}
+			{renderActionList(monster.action, "Actions")}
+			{renderActionList(monster.reaction, "Reactions")}
+			{renderActionList(monster.legendary, "Legendary Actions")}
 			{monster.lairActions && monster.lairActions.length > 0 && (
 				<div className="MonsterStatBlock__section">
 					<h4>Lair Actions:</h4>
