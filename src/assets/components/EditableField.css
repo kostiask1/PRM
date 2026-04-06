@@ -1,0 +1,41 @@
+.EditableField {
+	position: relative;
+}
+
+.EditableField:hover .EditableField__copy-btn {
+	opacity: 1 !important;
+}
+
+.EditableField__copy-btn {
+	transition: opacity 0.2s ease;
+	background: var(--panel) !important;
+	border-color: var(--border) !important;
+	padding: 0;
+	height: 36px;
+	width: 36px;
+}
+
+.MarkdownView {
+	cursor: pointer;
+	padding: 10px 12px;
+	border: 1px solid transparent;
+	border-radius: 10px;
+	background: color-mix(in srgb, var(--text-bright), transparent 98%);
+	min-height: 40px;
+	transition: all 0.2s ease;
+	line-height: 1.5;
+	font-size: 0.95rem;
+}
+
+.MarkdownView:hover {
+	background: color-mix(in srgb, var(--text-bright), transparent 95%);
+	border-color: var(--border);
+}
+
+.MarkdownView p:first-child {
+	padding-right: 24px;
+}
+
+.MarkdownView p:last-child {
+	margin-bottom: 0;
+}

@@ -1,6 +1,8 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import Input from "./Input";
+import Button from "./Button";
+import "../assets/components/EditableField.css"
 
 const TAB_PREVIEW = "       "; // 7 пробілів, як у тебе зараз
 
@@ -282,8 +284,35 @@ export default function EditableField({
 	const [isEditing, setIsEditing] = useState(false);
 	const [initialSelection, setInitialSelection] = useState(null);
 	const [initialHeight, setInitialHeight] = useState(null);
+	const [copied, setCopied] = useState(false);
+	const viewRef = useRef(null);
 
 	const previewMap = useMemo(() => buildPreviewMap(value || ""), [value]);
+
+	const handleCopy = async (e) => {
+		e.stopPropagation();
+		if (!viewRef.current || !value) return;
+
+		try {
+			// Отримуємо відрендерений HTML для Word
+			const html = viewRef.current.innerHTML;
+			// Markdown як звичайний текст для блокнотів
+			const text = value;
+
+			const data = [
+				new ClipboardItem({
+					"text/html": new Blob([html], { type: "text/html" }),
+					"text/plain": new Blob([text], { type: "text/plain" }),
+				}),
+			];
+
+			await navigator.clipboard.write(data);
+			setCopied(true);
+			setTimeout(() => setCopied(false), 2000);
+		} catch (err) {
+			console.error("Failed to copy formatted text:", err);
+		}
+	};
 
 	const handleClick = (e) => {
 		e.stopPropagation();
@@ -343,14 +372,6 @@ export default function EditableField({
 				target: { ...e.target, value: newValue },
 			});
 		}
-
-		// setTimeout(() => {
-		// 	const node = internalRef.current;
-		// 	if (node) {
-		// 		const newPos = selectionStart + markdown.length;
-		// 		node.setSelectionRange(newPos, newPos);
-		// 	}
-		// }, 0);
 	};
 
 	const shortcutsHelp = [
@@ -382,8 +403,25 @@ export default function EditableField({
 	}
 
 	return (
-		<div className={`EditableField ${className || ""}`} onClick={handleClick}>
-			<div className="MarkdownView">
+		<div className={`EditableField ${className || ""}`} onClick={handleClick} style={{ position: "relative" }}>
+			{!isEditing && value && (
+				<Button
+					variant="ghost"
+					size="small"
+					icon={copied ? "check" : "copy"}
+					className="EditableField__copy-btn"
+					onClick={handleCopy}
+					title="Копіювати форматований текст для Word"
+					style={{
+						position: "absolute",
+						top: "4px",
+						right: "4px",
+						zIndex: 10,
+						opacity: 0,
+					}}
+				/>
+			)}
+			<div className="MarkdownView" ref={viewRef}>
 				{value ? (
 					<ReactMarkdown>
 						{value
