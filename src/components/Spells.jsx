@@ -15,6 +15,7 @@ export default function Spells() {
 	const [selectedSource, setSelectedSource] = useState("all");
 	const [allSpells, setAllSpells] = useState([]);
 	const [spells, setSpells] = useState([]);
+	const [selectedLevel, setSelectedLevel] = useState("all");
 	const [search, setSearch] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [selectedSpell, setSelectedSpell] = useState(null);
@@ -72,9 +73,11 @@ export default function Spells() {
 
 	// Фільтрація та початковий вибір
 	useEffect(() => {
-		const filtered = allSpells.filter((s) =>
-			s.name.toLowerCase().includes(search.toLowerCase()),
-		);
+		const filtered = allSpells.filter((s) => {
+			const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase());
+			const matchesLevel = selectedLevel === "all" || String(s.level) === selectedLevel;
+			return matchesSearch && matchesLevel;
+		});
 		setSpells(filtered);
 
 		// Початковий вибір заклинання, якщо ще нічого не вибрано
@@ -105,7 +108,7 @@ export default function Spells() {
 				setSelectedSpell(spellToSelect);
 			}
 		}
-	}, [search, allSpells]);
+	}, [search, allSpells, selectedLevel]);
 
 	useEffect(() => {
 		if (selectedSpell?.name) {
@@ -196,6 +199,19 @@ export default function Spells() {
 							))}
 						</Select>
 					)}
+					<Select
+						value={selectedLevel}
+						onChange={(e) => setSelectedLevel(e.target.value)}
+						className="Spells__level-select"
+					>
+						<option value="all">УСІ РІВНІ</option>
+						<option value="0">Замовляння (0)</option>
+						{[1, 2, 3, 4, 5, 6, 7, 8, 9].map((lvl) => (
+							<option key={lvl} value={String(lvl)}>
+								Рівень {lvl}
+							</option>
+						))}
+					</Select>
 					<Input
 						placeholder="Пошук заклинання..."
 						value={search}
