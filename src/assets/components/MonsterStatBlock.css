@@ -24,7 +24,7 @@
 }
 
 .MonsterStatBlock__token-wrapper.error {
-	background: color-mix(in srgb, black, transparent 80%);
+	background: var(--bg);
 }
 
 .MonsterStatBlock__token-wrapper:hover .MonsterStatBlock__token {
@@ -45,7 +45,7 @@
 	flex-wrap: wrap;
 	gap: 12px 20px;
 	padding: 12px;
-	background: color-mix(in srgb, black, transparent 80%);
+	background: var(--bg);
 	border-radius: 8px;
 }
 

@@ -138,7 +138,7 @@
 .AiAssistant__prompt-textarea-result {
 	width: 100%;
 	min-height: 180px;
-	background: color-mix(in srgb, black, transparent 80%);
+	background: var(--bg);
 	border: 1px solid var(--border);
 	border-radius: 8px;
 	color: var(--text-bright);

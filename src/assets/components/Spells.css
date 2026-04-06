@@ -51,7 +51,7 @@
 .Spells__detail {
 	flex: 1;
 	overflow-y: auto;
-	background: color-mix(in srgb, black, transparent 80%);
+	background: var(--bg);
 	padding: 24px;
 	border-radius: 8px;
 	border: 1px solid color-mix(in srgb, var(--text-bright), transparent 90%);

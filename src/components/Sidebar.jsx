@@ -4,6 +4,7 @@ import Button from "./Button";
 import Icon from "./Icon";
 import StatusBadge from "./StatusBadge";
 import ListCard from "./ListCard";
+import ColorThemeSwitcher from "./ColorThemeSwitcher"; // Імпортуємо новий компонент
 import DraggableList from "./DraggableList";
 import "../assets/components/Sidebar.css";
 
@@ -75,6 +76,9 @@ export default function Sidebar({
 				<h1 className="Sidebar__title">D&D Session Manager</h1>
 				<p className="Sidebar__description">
 					Кампанії, сесії та планування в одному локальному проєкті.
+				</p>
+				<p className="Sidebar__theme-switcher">
+					<ColorThemeSwitcher />
 				</p>
 			</div>
 			<div className="Sidebar__links">

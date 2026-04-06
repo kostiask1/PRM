@@ -66,6 +66,7 @@
 	border-bottom: 1px solid
 		color-mix(in srgb, var(--text-bright), transparent 95%);
 	padding-bottom: 8px;
+	z-index: 1;
 }
 
 .TodoSection__header h3 {
