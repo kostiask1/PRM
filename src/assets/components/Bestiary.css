@@ -54,7 +54,7 @@
 
 .Bestiary__content {
 	display: flex;
-	gap: 24px;
+	gap: 16px;
 	height: calc(100% - 60px);
 	flex: 1;
 	/* Allow content to grow within its parent */

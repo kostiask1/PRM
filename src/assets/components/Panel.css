@@ -22,7 +22,7 @@
 }
 
 .Panel__body {
-	padding: 20px;
+	padding: 16px;
 	overflow-y: auto;
 	height: 100%;
 }
