@@ -375,59 +375,75 @@ export default function MonsterStatBlock({
 
 	return (
 		<div className="MonsterStatBlock">
-			{onNameClick ? (
-				<h3
-					className="MonsterStatBlock__name"
-					onClick={() => onNameClick?.(monster)}
-					title={nameTitle}>
-					{monster.name}
-				</h3>
-			) : (
-				<ClickToCopy
-					className="MonsterStatBlock__name"
-					text={monster.name}
-					message={`Ім'я скопійовано!`}>
-					{monster.name}
-				</ClickToCopy>
-			)}
-
-			{monster.originalBestiaryName && monster.originalBestiaryName !== monster.name && (
-				<div className="MonsterStatBlock__original-name muted" style={{ fontSize: '0.9em', marginTop: '-4px', marginBottom: '8px' }}>
-					({monster.originalBestiaryName})
-				</div>
-			)}
-
-			<div className="MonsterStatBlock__meta-line">
-				{formatSize(monster.size)} {monster.type?.type || monster.type}
-				{monster.type?.tags && ` (${monster.type.tags.join(", ")})`},{" "}
-				{formatAlignment(monster.alignment)}
-			</div>
-
 			<div className="MonsterStatBlock__header">
-				<div className="MonsterStatBlock__stats">
-					<div className="stat-item">
-						<strong>HP:</strong> {getHP().val}
-						{getHP().formula && (
-							<>
-								(<RollDice formula={getHP().formula} />)
-							</>
+				<div className="MonsterStatBlock__header__details">
+					{onNameClick ? (
+						<h3
+							className="MonsterStatBlock__name"
+							onClick={() => onNameClick?.(monster)}
+							title={nameTitle}>
+							{monster.name}
+						</h3>
+					) : (
+						<ClickToCopy
+							className="MonsterStatBlock__name"
+							text={monster.name}
+							message={`Ім'я скопійовано!`}>
+							{monster.name}
+						</ClickToCopy>
+					)}
+
+					{monster.originalBestiaryName &&
+						monster.originalBestiaryName !== monster.name && (
+							<div
+								className="MonsterStatBlock__original-name muted"
+								style={{
+									fontSize: "0.9em",
+									marginTop: "-4px",
+									marginBottom: "8px",
+								}}>
+								({monster.originalBestiaryName})
+							</div>
+						)}
+
+					<div className="MonsterStatBlock__meta-line">
+						{formatSize(monster.size)} {monster.type?.type || monster.type}
+						{monster.type?.tags && ` (${monster.type.tags.join(", ")})`},{" "}
+						{formatAlignment(monster.alignment)}
+					</div>
+					<div className="MonsterStatBlock__stats">
+						<div className="stat-item">
+							<strong>HP:</strong> {getHP().val}
+							{getHP().formula && (
+								<>
+									(<RollDice formula={getHP().formula} />)
+								</>
+							)}
+						</div>
+						<div className="stat-item">
+							<strong>AC:</strong> {getAC().val}{" "}
+							{getAC().desc && `(${getAC().desc})`}
+						</div>
+						<div className="stat-item">
+							<strong>Speed:</strong> {formatSpeed()}
+						</div>
+						{monster.source && (
+							<div className="stat-item">
+								<strong>Source:</strong>{" "}
+								<span className="Bestiary__item-source">
+									{monster.source.replace(/^bestiary-/i, "")}
+								</span>
+							</div>
 						)}
 					</div>
-					<div className="stat-item">
-						<strong>AC:</strong> {getAC().val}{" "}
-						{getAC().desc && `(${getAC().desc})`}
+					<div className="MonsterStatBlock__abilities">
+						{renderAbility("STR", monster.str ?? monster.strength)}
+						{renderAbility("DEX", monster.dex ?? monster.dexterity)}
+						{renderAbility("CON", monster.con ?? monster.constitution)}
+						{renderAbility("INT", monster.int ?? monster.intelligence)}
+						{renderAbility("WIS", monster.wis ?? monster.wisdom)}
+						{renderAbility("CHA", monster.cha ?? monster.charisma)}
 					</div>
-					<div className="stat-item">
-						<strong>Speed:</strong> {formatSpeed()}
-					</div>
-					{monster.source && (
-						<div className="stat-item">
-							<strong>Source:</strong>{" "}
-							<span className="Bestiary__item-source">
-								{monster.source.replace(/^bestiary-/i, "")}
-							</span>
-						</div>
-					)}
 				</div>
 				<div className="MonsterStatBlock__token-wrapper">
 					{!hasImageError && (
@@ -446,14 +462,6 @@ export default function MonsterStatBlock({
 						</div>
 					)}
 				</div>
-			</div>
-			<div className="MonsterStatBlock__abilities">
-				{renderAbility("STR", monster.str ?? monster.strength)}
-				{renderAbility("DEX", monster.dex ?? monster.dexterity)}
-				{renderAbility("CON", monster.con ?? monster.constitution)}
-				{renderAbility("INT", monster.int ?? monster.intelligence)}
-				{renderAbility("WIS", monster.wis ?? monster.wisdom)}
-				{renderAbility("CHA", monster.cha ?? monster.charisma)}
 			</div>
 			<div className="MonsterStatBlock__properties">
 				{renderSaves()}
@@ -516,8 +524,7 @@ export default function MonsterStatBlock({
 							: monster.languages.join(", ")}
 					</p>
 					<p>
-						<strong>Challenge:</strong>{" "}
-						{monster.cr?.cr || monster.cr}
+						<strong>Challenge:</strong> {monster.cr?.cr || monster.cr}
 					</p>
 				</div>
 				{monster.desc && (
