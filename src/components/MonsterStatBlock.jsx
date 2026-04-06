@@ -288,8 +288,11 @@ export default function MonsterStatBlock({
 
 	// Допоміжні функції для парсингу нових структур даних
 	const getHP = () => {
-		if (typeof monster.hp === "object" && monster.hp?.average) {
-			return { val: monster.hp.average, formula: monster.hp.formula };
+		if (monster.hp && typeof monster.hp === "object") {
+			return {
+				val: monster.hp.special || monster.hp.average,
+				formula: monster.hp.formula,
+			};
 		}
 		return { val: monster.hit_points, formula: monster.hit_dice };
 	};
@@ -297,10 +300,13 @@ export default function MonsterStatBlock({
 	const getAC = () => {
 		if (Array.isArray(monster.ac) && monster.ac[0]) {
 			const entry = monster.ac[0];
-			return {
-				val: typeof entry === "object" ? entry.ac : entry,
-				desc: entry.from ? entry.from.join(", ") : "",
-			};
+			if (typeof entry === "object") {
+				return {
+					val: entry.special || entry.ac,
+					desc: entry.from ? entry.from.join(", ") : "",
+				};
+			}
+			return { val: entry, desc: "" };
 		}
 		return { val: monster.armor_class, desc: monster.armor_desc };
 	};
