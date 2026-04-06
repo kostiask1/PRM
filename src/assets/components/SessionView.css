@@ -232,8 +232,8 @@
 	padding: 16px;
 }
 
-.SessionView .field--result {
-	min-height: 300px;
+.SessionView .field--result .MarkdownView {
+	min-height: 200px;
 }
 
 .SessionView__npcs {
