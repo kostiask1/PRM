@@ -55,12 +55,12 @@ export const preprocessTags = (text) => {
 		.replace(/{@h}/gi, "Hit: ")
 		.replace(/{@dc\s+(\d+)}/gi, "DC $1")
 		.replace(
-			/{@status\s+([^|}]+)(?:\|[^|}]*)?(?:\|([^}]*))?}/gi,
-			(m, g1, g2) => g2 || g1,
+			/{@status\s+([^|}]+)(?:\|([^|}]*))?(?:\|([^|}]*))?}/gi,
+			(m, name, src, label) => label || name,
 		)
 		.replace(
-			/{@condition\s+([^|}]+)(?:\|[^|}]*)?(?:\|([^}]*))?}/gi,
-			(m, g1, g2) => g2 || g1,
+			/{@condition\s+([^|}]+)(?:\|([^|}]*))?(?:\|([^|}]*))?}/gi,
+			(m, name, src, label) => label || name,
 		)
 		.replace(/{@atk\s+mw}/gi, "Melee Weapon Attack: ")
 		.replace(/{@atk\s+rw}/gi, "Ranged Weapon Attack: ")
@@ -72,28 +72,29 @@ export const preprocessTags = (text) => {
 			g1.startsWith("+") || g1.startsWith("-") ? g1 : `+${g1}`,
 		)
 		.replace(
-			/{@dice\s+([^|}]+)(?:\|[^|}]*)?(?:\|([^}]*))?}/gi,
-			(m, g1, g2) => g2 || g1,
+			/{@damage\s+([^|}]+)(?:\|([^|}]*))?(?:\|([^|}]*))?}/gi,
+			(m, name, src, label) => label || name,
 		)
 		.replace(
-			/{@damage\s+([^|}]+)(?:\|[^|}]*)?(?:\|([^}]*))?}/gi,
-			(m, g1, g2) => g2 || g1,
+			/{@scaledamage\s+([^|}]+)(?:\|([^|}]*))?(?:\|([^|}]*))?}/gi,
+			(m, name, src, label) => label || name,
 		)
 		.replace(
-			/{@scaledamage\s+([^|}]+)(?:\|[^|}]*)?(?:\|([^}]*))?}/gi,
-			(m, g1, g2) => g2 || g1,
-		)
-		.replace(
-			/{@scaledice\s+([^|}]+)(?:\|[^|}]*)?(?:\|([^}]*))?}/gi,
-			(m, g1, g2) => g2 || g1,
+			/{@scaledice\s+([^|}]+)(?:\|([^|}]*))?(?:\|([^|}]*))?}/gi,
+			(m, name, src, label) => label || name,
 		)
 		.replace(/{@hitYourSpellAttack}/gi, "your spell attack bonus")
 		.replace(/{@actSaveFail}/gi, "On a failure,")
+		.replace(/{@actSaveFail\s+(\d+)}/gi, "On a failure by $1 or more,")
 		.replace(/{@actSaveSuccess}/gi, "On a success,")
+		.replace(/{@actSaveSuccessOrFail}/gi, "On a success or failure,")
 		.replace(
-			/{@variantrule\s+([^|}]+)(?:\|[^|}]*)?(?:\|([^}]*))?}/gi,
-			(m, g1, g2) => g2 || g1,
+			/{@dice\s+([^|}]+)(?:\|([^|}]*))?[^}]*}/gi,
+			(m, formula, label) => label || formula,
 		)
+		.replace(/{@variantrule\s+([^|}]+)(?:\|([^|}]+))?(?:\|([^|}]+))?}/gi, (m, name, src, label) => {
+			return `*${label || name}*`;
+		})
 		.replace(/{@ability\s+([a-z]{3})}/gi, (m, g1) => ABILITY_MAP[g1] || g1)
 		.replace(
 			/{@savingThrow\s+([a-z]{3})}/gi,
@@ -112,9 +113,10 @@ export const preprocessTags = (text) => {
 		)
 		.replace(/{@chance\s+(\d+)}/gi, "$1%")
 		.replace(/{@note\s+([^}]+)}/gi, "$1")
+		.replace(/{@hom}/gi, "")
 		.replace(/{@loader\s+[^}]+}/gi, "")
 		.replace(
-			/{@(creature|action|link|skill|item|filter|quickref|book|sense|area|hazard|trap|deck|optfeature|reward|feat|charoption|background|race)\s+([^|}]+)(?:\|([^|}]+))?(?:\|([^|}]+))?[^}]*}/gi,
+			/{@(creature|action|link|skill|item|filter|quickref|book|sense|area|hazard|trap|deck|optfeature|reward|feat|charoption|background|race)\s+([^|}]+)(?:\|([^|}]*))?(?:\|([^|}]*))?[^}]*}/gi,
 			(m, tag, name, source, label) => {
 				if (tag === "filter") return name;
 				return label || name;

@@ -376,6 +376,12 @@ export default function MonsterStatBlock({
 				</ClickToCopy>
 			)}
 
+			{monster.originalBestiaryName && monster.originalBestiaryName !== monster.name && (
+				<div className="MonsterStatBlock__original-name muted" style={{ fontSize: '0.9em', marginTop: '-4px', marginBottom: '8px' }}>
+					({monster.originalBestiaryName})
+				</div>
+			)}
+
 			<div className="MonsterStatBlock__meta-line">
 				{formatSize(monster.size)} {monster.type?.type || monster.type}
 				{monster.type?.tags && ` (${monster.type.tags.join(", ")})`},{" "}
@@ -486,18 +492,17 @@ export default function MonsterStatBlock({
 				<div className="MonsterStatBlock__description">
 					<p>
 						<strong>Senses:</strong>{" "}
-						{Array.isArray(monster.senses)
-							? monster.senses.join(", ")
-							: monster.senses}
+						{renderRecursiveContent(monster.senses, handleSpellClick)}
 					</p>
 					<p>
 						<strong>Languages:</strong>{" "}
-						{Array.isArray(monster.languages)
-							? monster.languages.join(", ")
-							: monster.languages}
+						{typeof monster.languages === "string"
+							? monster.languages
+							: monster.languages.join(", ")}
 					</p>
 					<p>
-						<strong>Challenge:</strong> {monster.cr?.cr || monster.cr}
+						<strong>Challenge:</strong>{" "}
+						{monster.cr?.cr || monster.cr}
 					</p>
 				</div>
 				{monster.desc && (
@@ -512,6 +517,7 @@ export default function MonsterStatBlock({
 			{renderSpellcasting()}
 			{renderNewSpellcasting()}
 			{renderActionList(monster.trait, "Traits")}
+			{renderActionList(monster.bonus, "Bonus Actions")}
 			{renderActionList(monster.action, "Actions")}
 			{renderActionList(monster.reaction, "Reactions")}
 			{renderActionList(monster.legendary, "Legendary Actions")}
