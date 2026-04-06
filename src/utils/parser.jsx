@@ -52,7 +52,7 @@ export const getDamageBonus = (action) => {
 export const preprocessTags = (text) => {
 	if (typeof text !== "string") return text;
 	return text
-		.replace(/{@h}/gi, "Hit: ")
+		.replace(/{@h}/gi, "Hit:")
 		.replace(/{@dc\s+(\d+)}/gi, "DC $1")
 		.replace(
 			/{@status\s+([^|}]+)(?:\|([^|}]*))?(?:\|([^|}]*))?}/gi,
@@ -62,12 +62,12 @@ export const preprocessTags = (text) => {
 			/{@condition\s+([^|}]+)(?:\|([^|}]*))?(?:\|([^|}]*))?}/gi,
 			(m, name, src, label) => label || name,
 		)
-		.replace(/{@atk\s+mw}/gi, "Melee Weapon Attack: ")
-		.replace(/{@atk\s+rw}/gi, "Ranged Weapon Attack: ")
-		.replace(/{@atk\s+mw\s*,\s*rw}/gi, "Melee or Ranged Weapon Attack: ")
-		.replace(/{@atk\s+ms}/gi, "Melee Spell Attack: ")
-		.replace(/{@atk\s+rs}/gi, "Ranged Spell Attack: ")
-		.replace(/{@atk\s+ms\s*,\s*rs}/gi, "Melee or Ranged Spell Attack: ")
+		.replace(/{@atk\s+mw}/gi, "Melee Weapon Attack:")
+		.replace(/{@atk\s+rw}/gi, "Ranged Weapon Attack:")
+		.replace(/{@atk\s+mw\s*,\s*rw}/gi, "Melee or Ranged Weapon Attack:")
+		.replace(/{@atk\s+ms}/gi, "Melee Spell Attack:")
+		.replace(/{@atk\s+rs}/gi, "Ranged Spell Attack:")
+		.replace(/{@atk\s+ms\s*,\s*rs}/gi, "Melee or Ranged Spell Attack:")
 		.replace(/{@hit\s+([+-]?\d+)}/gi, (m, g1) =>
 			g1.startsWith("+") || g1.startsWith("-") ? g1 : `+${g1}`,
 		)
@@ -107,9 +107,10 @@ export const preprocessTags = (text) => {
 			/{@actSave\s+([a-z]{3})}/gi,
 			(m, g1) => `${ABILITY_MAP[g1] || g1} saving throw`,
 		)
-		.replace(/{@recharge(?:\s+(\d+))?}/gi, (m, g1) =>
-			g1 ? `(Recharge ${g1}-6)` : "(Recharge)",
-		)
+		.replace(/{@recharge(?:\s+(\d+))?}/gi, (m, g1) => {
+			const num = g1 || "6";
+			return num === "6" ? "(Recharge 6)" : `(Recharge ${num}-6)`;
+		})
 		.replace(/{@atkr\s+([a-z,]+)}/gi, (m, g1) => `${ATTACK_TYPE_MAP[g1] || g1} Attack: `)
 		.replace(/{@chance\s+(\d+)}/gi, "$1%")
 		.replace(/{@note\s+([^}]+)}/gi, "$1")

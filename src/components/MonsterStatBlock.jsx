@@ -86,7 +86,7 @@ export default function MonsterStatBlock({
 				<h4>{title}:</h4>
 				{actions.map((action, index) => (
 					<div key={index} className="MonsterStatBlock__action">
-						<strong>{action.name}.</strong>{" "}
+						<strong>{renderRecursiveContent(action.name)}.</strong>{" "}
 						{renderRecursiveContent(
 							action.entries || action.desc,
 							handleSpellClick,

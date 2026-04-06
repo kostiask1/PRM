@@ -190,6 +190,12 @@
 	font-weight: 500;
 }
 
+.MonsterStatBlock ul {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
 .MonsterStatBlock ul.list-hang-notitle {
 	list-style: none;
 	padding-left: 0;
