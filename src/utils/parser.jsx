@@ -111,10 +111,6 @@ export const preprocessTags = (text) => {
 			g1 ? `(Recharge ${g1}-6)` : "(Recharge)",
 		)
 		.replace(/{@atkr\s+([a-z,]+)}/gi, (m, g1) => `${ATTACK_TYPE_MAP[g1] || g1} Attack: `)
-		.replace(
-			/{@atkr\s+([a-z,]+)}/gi,
-			(m, g1) => `${ATTACK_TYPE_MAP[g1] || g1} Attack: `,
-		)
 		.replace(/{@chance\s+(\d+)}/gi, "$1%")
 		.replace(/{@note\s+([^}]+)}/gi, "$1")
 		.replace(/{@hom}/gi, "")
@@ -135,6 +131,10 @@ export const renderRecursiveContent = (content, onSpellClick) => {
 
 	if (typeof content === "string") {
 		return parseRollsAndSpells(preprocessTags(content), onSpellClick);
+	}
+
+	if (typeof content === "number") {
+		return content;
 	}
 
 	if (Array.isArray(content)) {
@@ -236,15 +236,19 @@ export const parseRollsAndSpells = (text, onSpellClick) => {
 	for (let i = 0; i < parts.length; i += 5) {
 		if (parts[i]) {
 			// Екрануємо символи, які Markdown може сприйняти як початок списку (+, -, *, цифри з крапкою)
-			// особливо якщо вони опинилися на початку фрагмента після розбиття тексту
-			// Виправлено: тепер коректно екранує маркери списків, а не видаляє їх.
-			// Шукає необов'язкові пробіли на початку рядка, потім маркер списку (+, -, *, або цифра з крапкою),
-			// а потім пробіл. Екранує знайдений маркер.
-			const safeText = parts[i]
+			let safeText = parts[i]
 				.replace(/^(\s*)([+\-*]|\d+\.)(\s)/gm, "$1\\$2$3")
 				.replace(/\n/gi, "&nbsp; \n");
+
+			// Замінюємо пробіли на краях фрагмента на нерозривні (NBSP), 
+			// щоб ReactMarkdown не "з'їдав" їх при рендерингу поруч із RollDice/SpellLink
+			safeText = safeText.replace(/^ /g, "\u00A0").replace(/ $/g, "\u00A0");
+
 			elements.push(
-				<ReactMarkdown key={`t-${i}`} components={{ p: "span" }}>
+				<ReactMarkdown
+					key={`t-${i}`}
+					components={{ p: "span" }}
+				>
 					{safeText}
 				</ReactMarkdown>,
 			);
