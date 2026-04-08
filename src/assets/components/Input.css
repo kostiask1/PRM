@@ -21,6 +21,7 @@
 
 .Input--textarea {
 	line-height: 1.5;
+	flex-grow: 1;
 	resize: none;
 	scrollbar-width: thin;
 	scrollbar-color: color-mix(in srgb, var(--border), var(--text) 20%) transparent;
