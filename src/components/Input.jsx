@@ -33,16 +33,7 @@ function resolveInitialCursorPosition(initialSelection, rawValue = "") {
 }
 
 const Input = forwardRef(
-	(
-		{
-			type = "text",
-			className = "",
-			initialSelection,
-			initialHeight,
-			...props
-		},
-		ref,
-	) => {
+	({ type = "text", className = "", initialSelection, ...props }, ref) => {
 		const internalRef = useRef(null);
 
 		// Синхронізуємо висоту textarea з контентом
@@ -50,21 +41,15 @@ const Input = forwardRef(
 			if (type === "textarea" && internalRef.current) {
 				const node = internalRef.current;
 
-				if (!initialHeight || node.value !== props.value) {
-					node.style.height = "auto";
-					node.style.height = `${node.scrollHeight}px`;
-				}
+				node.style.height = "auto";
+				node.style.height = `${node.scrollHeight}px`;
 			}
-		}, [props.value, type, initialHeight]);
+		}, [props.value, type]);
 
 		// Встановлюємо фокус, висоту та каретку
 		useLayoutEffect(() => {
 			if (internalRef.current) {
 				const node = internalRef.current;
-
-				if (type === "textarea" && initialHeight) {
-					node.style.height = `${initialHeight}px`;
-				}
 
 				const pos = resolveInitialCursorPosition(
 					initialSelection,

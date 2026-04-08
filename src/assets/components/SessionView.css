@@ -110,15 +110,22 @@
 .TodoItem__content {
 	flex: 1;
 	min-width: 0;
-	display: grid;
-	align-content: baseline;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
 	gap: 8px;
+}
+
+.TodoItem__content .EditableField,
+.TodoItem__content .Input,
+.TodoItem__content .MarkdownView {
+	height: 100%;
 }
 
 .TodoItem__title {
 	font-weight: 600;
-	margin-bottom: 4px;
-	height: 30px;
+	min-height: 24px;
+	height: 24px;
 }
 
 .TodoItem__note {

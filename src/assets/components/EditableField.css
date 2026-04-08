@@ -33,6 +33,11 @@
 	font-size: 0.95rem;
 }
 
+.MarkdownView ul {
+	margin: 0;
+	padding-left: 1rem;
+}
+
 .MarkdownView:hover {
 	background: color-mix(in srgb, var(--accent), transparent 90%);
 	border-color: var(--border);

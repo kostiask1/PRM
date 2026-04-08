@@ -278,7 +278,6 @@ export default function EditableField({
 }) {
 	const [isEditing, setIsEditing] = useState(false);
 	const [initialSelection, setInitialSelection] = useState(null);
-	const [initialHeight, setInitialHeight] = useState(null);
 	const [copied, setCopied] = useState(false);
 	const viewRef = useRef(null);
 
@@ -338,7 +337,6 @@ export default function EditableField({
 			}
 
 			const rect = e.currentTarget.getBoundingClientRect();
-			setInitialHeight(rect.height);
 			setInitialSelection(selectionData);
 			setIsEditing(true);
 		}
@@ -391,7 +389,6 @@ export default function EditableField({
 				onBlur={() => setIsEditing(false)}
 				className={className}
 				initialSelection={initialSelection}
-				initialHeight={initialHeight}
 				onPaste={handlePaste}
 			/>
 		);
@@ -423,7 +420,7 @@ export default function EditableField({
 				{value ? (
 					<ReactMarkdown>
 						{value
-							.replace(/\n/g, "&nbsp; \n")
+							.replace(/(?<!(?:^|\n)-  [^\n]*\n)\n(?!\n)|(?<!(?:^|\n)-  [^\n]*)\n(?=\n)/g, "&nbsp;\n\n")
 							.replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")}
 					</ReactMarkdown>
 				) : (
