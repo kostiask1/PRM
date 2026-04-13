@@ -40,7 +40,7 @@
 }
 
 .MonsterStatBlock__token-wrapper:hover .MonsterStatBlock__token {
-	transform: scale(1.16);
+	transform: scale(1.1);
 }
 
 .MonsterStatBlock__token {

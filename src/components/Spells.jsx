@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { api } from "../api.js";
 import ReactList from "react-list";
 import Panel from "./Panel";
@@ -20,6 +20,20 @@ export default function Spells() {
 	const [loading, setLoading] = useState(false);
 	const [selectedSpell, setSelectedSpell] = useState(null);
 	const [sortOrder, setSortOrder] = useState("none"); // 'none', 'asc', 'desc'
+	const listRef = useRef(null);
+
+	const displayedSpells = useMemo(() => {
+		let result = [...spells].sort((a, b) => a.name.localeCompare(b.name));
+		if (sortOrder !== "none") {
+			result.sort((a, b) => {
+				const lvlA = a.level ?? 0;
+				const lvlB = b.level ?? 0;
+				if (lvlA === lvlB) return a.name.localeCompare(b.name);
+				return sortOrder === "asc" ? lvlA - lvlB : lvlB - lvlA;
+			});
+		}
+		return result;
+	}, [spells, sortOrder]);
 
 	// Завантаження списку доступних джерел
 	useEffect(() => {
@@ -71,7 +85,7 @@ export default function Spells() {
 		loadData();
 	}, [selectedSource, sources]);
 
-	// Фільтрація та початковий вибір
+	// Фільтрація
 	useEffect(() => {
 		const filtered = allSpells.filter((s) => {
 			const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase());
@@ -79,9 +93,12 @@ export default function Spells() {
 			return matchesSearch && matchesLevel;
 		});
 		setSpells(filtered);
+	}, [search, allSpells, selectedLevel]);
 
+	// початковий вибір
+	useEffect(() => {
 		// Початковий вибір заклинання, якщо ще нічого не вибрано
-		// Ця логіка повинна виконуватися лише при зміні allSpells або search,
+		// Ця логіка повинна виконуватися лише при зміні displayedSpells або search,
 		// але не при зміні selectedSpell, щоб уникнути рекурсії.
 		// Перевіряємо, чи selectedSpell вже встановлено, щоб не перезаписувати вибір користувача.
 		const params = new URLSearchParams(window.location.search);
@@ -89,8 +106,8 @@ export default function Spells() {
 		const urlSpellSource = params.get("s_source");
 		let spellToSelect = null;
 
-		if (!urlSpellName && allSpells.length > 0 && !selectedSpell) {
-			setSelectedSpell(allSpells[0]);
+		if (!urlSpellName && displayedSpells.length > 0 && !selectedSpell) {
+			setSelectedSpell(displayedSpells[0]);
 			return;
 		}
 
@@ -98,17 +115,19 @@ export default function Spells() {
 			urlSpellName &&
 			(!selectedSpell || selectedSpell.name !== urlSpellName)
 		) {
-			spellToSelect = allSpells.find(
+			spellToSelect = displayedSpells.findIndex(
 				(s) =>
 					s.name === urlSpellName &&
-					(!urlSpellSource || s.source === urlSpellSource),
+					((!urlSpellSource || urlSpellSource === "all") || s.source === urlSpellSource),
 			);
+			const spell = displayedSpells[spellToSelect];
 
-			if (spellToSelect) {
-				setSelectedSpell(spellToSelect);
+			if (spell) {
+				setSelectedSpell(spell);
+				setTimeout(() => listRef?.current?.scrollTo(spellToSelect), 0);
 			}
 		}
-	}, [search, allSpells, selectedLevel]);
+	}, [search, displayedSpells, selectedLevel]);
 
 	useEffect(() => {
 		if (selectedSpell?.name) {
@@ -123,19 +142,6 @@ export default function Spells() {
 			}
 		}
 	}, [selectedSpell]);
-
-	const displayedSpells = useMemo(() => {
-		let result = [...spells].sort((a, b) => a.name.localeCompare(b.name));
-		if (sortOrder !== "none") {
-			result.sort((a, b) => {
-				const lvlA = a.level ?? 0;
-				const lvlB = b.level ?? 0;
-				if (lvlA === lvlB) return a.name.localeCompare(b.name);
-				return sortOrder === "asc" ? lvlA - lvlB : lvlB - lvlA;
-			});
-		}
-		return result;
-	}, [spells, sortOrder]);
 
 	const toggleSort = () => {
 		setSortOrder((prev) =>
@@ -202,8 +208,7 @@ export default function Spells() {
 					<Select
 						value={selectedLevel}
 						onChange={(e) => setSelectedLevel(e.target.value)}
-						className="Spells__level-select"
-					>
+						className="Spells__level-select">
 						<option value="all">УСІ РІВНІ</option>
 						<option value="0">Замовляння (0)</option>
 						{[1, 2, 3, 4, 5, 6, 7, 8, 9].map((lvl) => (
@@ -227,6 +232,7 @@ export default function Spells() {
 				<div className="Spells__content">
 					<div className="Spells__list">
 						<ReactList
+							ref={listRef}
 							itemRenderer={renderSpellItem}
 							length={displayedSpells.length}
 							type="uniform"

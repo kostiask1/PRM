@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { api } from "../api";
 import ReactList from "react-list";
 import Panel from "./Panel";
@@ -21,6 +21,21 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 	const [selectedMonster, setSelectedMonster] = useState(null);
 	const [legendaryGroups, setLegendaryGroups] = useState([]);
 	const [sortOrder, setSortOrder] = useState("none"); // 'none', 'desc', 'asc'
+	const listRef = useRef(null);
+
+	const displayedMonsters = useMemo(() => {
+		if (sortOrder === "none")
+			return [...monsters].sort((a, b) => a.name.localeCompare(b.name));
+
+		return [...monsters].sort((a, b) => {
+			const crA = parseCR(a);
+			const crB = parseCR(b);
+			if (crA === crB) {
+				return a.name.localeCompare(b.name);
+			}
+			return sortOrder === "desc" ? crB - crA : crA - crB;
+		});
+	}, [monsters, sortOrder]);
 
 	// Допоміжна функція для отримання текстового представлення типу монстра
 	const getMonsterTypeString = useCallback((monsterType) => {
@@ -147,8 +162,8 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 
 			if (!urlMonsterName) {
 				// Якщо нічого не вибрано в URL, але монстри завантажені — вибираємо першого
-				if (allMonsters.length > 0 && !selectedMonster?.name) {
-					setSelectedMonster(allMonsters[0]);
+				if (displayedMonsters.length > 0 && !selectedMonster?.name) {
+					setSelectedMonster(displayedMonsters[0]);
 				}
 				return;
 			}
@@ -161,24 +176,27 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 				return;
 
 			// Шукаємо в поточному завантаженому списку
-			const foundInList = allMonsters.find(
+			const foundInList = displayedMonsters.findIndex(
 				(m) =>
 					m.name === urlMonsterName &&
 					(!urlMonsterSource || m.source === urlMonsterSource),
 			);
 
-			if (foundInList) {
-				setSelectedMonster(foundInList);
+			const monster = displayedMonsters[foundInList];
+
+			if (monster) {
+				setSelectedMonster(monster);
+				setTimeout(() => listRef?.current?.scrollTo(foundInList), 0);
 			}
 		};
 
 		// Ініціалізація при зміні списку всіх монстрів
-		if (allMonsters.length > 0) initSelection();
+		if (displayedMonsters.length > 0) initSelection();
 
 		window.addEventListener("popstate", initSelection);
 		return () => window.removeEventListener("popstate", initSelection);
 		// Видалили selectedMonster?.name із залежностей, щоб уникнути циклу
-	}, [allMonsters]);
+	}, [displayedMonsters]);
 
 	useEffect(() => {
 		if (selectedMonster?.name) {
@@ -206,7 +224,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 		});
 	};
 
-	const parseCR = (monster) => {
+	function parseCR(monster) {
 		const crValue = monster.cr?.cr !== undefined ? monster.cr.cr : monster.cr;
 		if (typeof crValue === "number") return crValue;
 
@@ -217,21 +235,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 		}
 
 		return parseFloat(crStr) || 0;
-	};
-
-	const displayedMonsters = useMemo(() => {
-		if (sortOrder === "none")
-			return [...monsters].sort((a, b) => a.name.localeCompare(b.name));
-
-		return [...monsters].sort((a, b) => {
-			const crA = parseCR(a);
-			const crB = parseCR(b);
-			if (crA === crB) {
-				return a.name.localeCompare(b.name);
-			}
-			return sortOrder === "desc" ? crB - crA : crA - crB;
-		});
-	}, [monsters, sortOrder]);
+	}
 
 	const renderMonsterItem = (index, key) => {
 		const monster = displayedMonsters[index];
@@ -284,6 +288,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 			</div>
 		);
 	};
+
 	const renderBestiaryInner = () => (
 		<div className="Bestiary Bestiary__inner">
 			<div className="Panel__body">
@@ -328,6 +333,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 					className={`Bestiary__content ${isEmbedded ? "Bestiary__content--stacked" : ""}`}>
 					<div className="Bestiary__list">
 						<ReactList
+							ref={listRef}
 							itemRenderer={renderMonsterItem}
 							length={displayedMonsters.length}
 							type="uniform"
