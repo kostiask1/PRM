@@ -323,7 +323,7 @@ export default function MonsterStatBlock({
 					}
 					return `${label} ${v} ft.`.trim();
 				});
-			
+
 			let res = parts.join(", ");
 			if (monster.speed.canHover && !res.toLowerCase().includes("hover")) {
 				res += " (hover)";
@@ -391,6 +391,29 @@ export default function MonsterStatBlock({
 		return null;
 	};
 
+	const imageName = monster.originalBestiaryName || monster.name;
+	const localSrc = `/database/bestiary/tokens/${monster.source}/${imageName}.webp`;
+	const externalSrc = `https://5e.tools/img/bestiary/tokens/${monster.source}/${imageName}.webp`;
+
+	function handleDragStart(e) {
+		e.dataTransfer.effectAllowed = "copy";
+
+		// Найчастіше корисні типи для веб-дропзон
+		e.dataTransfer.setData("text/uri-list", externalSrc);
+		e.dataTransfer.setData("text/plain", externalSrc);
+		e.dataTransfer.setData(
+			"text/html",
+			`<img src="${externalSrc}" alt="${monster.name}">`,
+		);
+
+		// Не обов'язково, але іноді допомагає стороннім дропзонам
+		// Формат: mimeType:filename:url
+		e.dataTransfer.setData(
+			"DownloadURL",
+			`image/webp:${imageName}.webp:${externalSrc}`,
+		);
+	}
+
 	return (
 		<div className="MonsterStatBlock">
 			<div className="MonsterStatBlock__header">
@@ -431,7 +454,8 @@ export default function MonsterStatBlock({
 					</div>
 					<div className="MonsterStatBlock__stats">
 						<div className="stat-item">
-							<strong>HP:</strong> {renderRecursiveContent(getHP().val, handleSpellClick)}{" "}
+							<strong>HP:</strong>{" "}
+							{renderRecursiveContent(getHP().val, handleSpellClick)}{" "}
 							{getHP().formula && (
 								<>
 									(<RollDice formula={getHP().formula} />)
@@ -439,8 +463,9 @@ export default function MonsterStatBlock({
 							)}
 						</div>
 						<div className="stat-item ac">
-							<strong>AC:</strong> {renderRecursiveContent(getAC().val, handleSpellClick)}
-							{" "}{renderRecursiveContent(getAC().desc, handleSpellClick)}
+							<strong>AC:</strong>{" "}
+							{renderRecursiveContent(getAC().val, handleSpellClick)}{" "}
+							{renderRecursiveContent(getAC().desc, handleSpellClick)}
 						</div>
 						<div className="stat-item">
 							<strong>Speed:</strong> {formatSpeed()}
@@ -465,14 +490,18 @@ export default function MonsterStatBlock({
 				</div>
 				<div className="MonsterStatBlock__token-wrapper">
 					{!hasImageError && (
-						<img
-							src={`/database/bestiary/tokens/${monster.source}/${
-								monster.originalBestiaryName || monster.name
-							}.webp`}
-							alt={monster.name}
-							className="MonsterStatBlock__token"
-							onError={() => setHasImageError(true)}
-						/>
+						<div
+							className="MonsterStatBlock__tokenDragProxy"
+							draggable
+							onDragStart={handleDragStart}>
+							<img
+								src={localSrc}
+								alt={monster.name}
+								className="MonsterStatBlock__token"
+								draggable={false}
+								onError={() => setHasImageError(true)}
+							/>
+						</div>
 					)}
 					{hasImageError && (
 						<div className="MonsterStatBlock__token-skeleton">
