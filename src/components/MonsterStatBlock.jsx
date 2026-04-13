@@ -392,8 +392,12 @@ export default function MonsterStatBlock({
 	};
 
 	const imageName = monster.originalBestiaryName || monster.name;
+	const encodedImageName = encodeURIComponent(imageName);
+
 	const localSrc = `/database/bestiary/tokens/${monster.source}/${imageName}.webp`;
-	const externalSrc = `https://5e.tools/img/bestiary/tokens/${monster.source}/${imageName}.webp`;
+	const externalSrc = `https://5e.tools/img/bestiary/tokens/${encodeURIComponent(
+		monster.source,
+	)}/${encodedImageName}.webp`;
 
 	function handleDragStart(e) {
 		e.dataTransfer.effectAllowed = "copy";
