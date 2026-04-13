@@ -288,9 +288,7 @@ export default function MonsterStatBlock({
 
 	// Допоміжні функції для парсингу нових структур даних
 	const getHP = () => {
-		console.log('monster:', monster)
 		if (monster.hp && typeof monster.hp === "object") {
-			console.log('monster.hp:', monster.hp)
 			return {
 				val: monster.hp.special || monster.hp.average,
 				formula: monster.hp.formula,
@@ -541,7 +539,7 @@ export default function MonsterStatBlock({
 						<strong>Languages:</strong>{" "}
 						{typeof monster.languages === "string"
 							? monster.languages
-							: monster.languages.join(", ")}
+							: monster.languages?.join(", ")}
 					</p>
 					<p>
 						<strong>Challenge:</strong> {monster.cr?.cr || monster.cr}
