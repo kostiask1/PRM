@@ -233,12 +233,12 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 		});
 	}, [monsters, sortOrder]);
 
-	const renderMonsterItem = (index, key) => {
-		const monster = displayedMonsters[index];
+	const renderMonsterItem = (monster) => {
+		// const monster = displayedMonsters[index];
 		const crValue = monster.cr?.cr !== undefined ? monster.cr.cr : monster.cr;
 
 		return (
-			<div key={key}>
+			<div key={monster}>
 				<ListCard
 					active={
 						selectedMonster?.name === monster.name &&
@@ -327,11 +327,12 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 				<div
 					className={`Bestiary__content ${isEmbedded ? "Bestiary__content--stacked" : ""}`}>
 					<div className="Bestiary__list">
-						<ReactList
+					{displayedMonsters.map(renderMonsterItem)}
+						{/* <ReactList
 							itemRenderer={renderMonsterItem}
 							length={displayedMonsters.length}
 							type="uniform"
-						/>
+						/> */}
 					</div>
 					{loading && (
 						<div className="Bestiary__loader muted">
