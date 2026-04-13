@@ -213,6 +213,11 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 			if (changed) {
 				window.history.pushState({}, "", `?${params.toString()}`);
 			}
+		} else if (selectedMonster === "") {
+			const params = new URLSearchParams(window.location.search);
+			params.delete("monster");
+
+			window.history.pushState({}, "", `?${params.toString()}`);
 		}
 	}, [selectedMonster]);
 
@@ -240,15 +245,15 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 	const renderMonsterItem = (index, key) => {
 		const monster = displayedMonsters[index];
 		const crValue = monster.cr?.cr !== undefined ? monster.cr.cr : monster.cr;
+		const isSelected =
+			selectedMonster?.name === monster.name &&
+			selectedMonster?.source === monster.source;
 
 		return (
 			<div key={key}>
 				<ListCard
-					active={
-						selectedMonster?.name === monster.name &&
-						selectedMonster?.source === monster.source
-					}
-					onClick={() => setSelectedMonster(monster)}
+					active={isSelected}
+					onClick={() => setSelectedMonster(isSelected ? "" : monster)}
 					onDoubleClick={() => onAddMonster && onAddMonster(monster)}
 					actions={
 						onAddMonster && (

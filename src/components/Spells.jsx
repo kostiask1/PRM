@@ -89,7 +89,8 @@ export default function Spells() {
 	useEffect(() => {
 		const filtered = allSpells.filter((s) => {
 			const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase());
-			const matchesLevel = selectedLevel === "all" || String(s.level) === selectedLevel;
+			const matchesLevel =
+				selectedLevel === "all" || String(s.level) === selectedLevel;
 			return matchesSearch && matchesLevel;
 		});
 		setSpells(filtered);
@@ -118,7 +119,9 @@ export default function Spells() {
 			spellToSelect = displayedSpells.findIndex(
 				(s) =>
 					s.name === urlSpellName &&
-					((!urlSpellSource || urlSpellSource === "all") || s.source === urlSpellSource),
+					(!urlSpellSource ||
+						urlSpellSource === "all" ||
+						s.source === urlSpellSource),
 			);
 			const spell = displayedSpells[spellToSelect];
 
@@ -140,6 +143,11 @@ export default function Spells() {
 			if (changed) {
 				window.history.pushState({}, "", `?${params.toString()}`);
 			}
+		} else if (selectedSpell === "") {
+			const params = new URLSearchParams(window.location.search);
+			params.delete("spell");
+
+			window.history.pushState({}, "", `?${params.toString()}`);
 		}
 	}, [selectedSpell]);
 
@@ -162,15 +170,15 @@ export default function Spells() {
 			T: "Thaumaturgy",
 		};
 		const schoolName = schoolMap[spell.school] || spell.school;
+		const isSelected =
+			selectedSpell?.name === spell.name &&
+			selectedSpell?.source === spell.source;
 
 		return (
 			<div key={key}>
 				<ListCard
-					active={
-						selectedSpell?.name === spell.name &&
-						selectedSpell?.source === spell.source
-					}
-					onClick={() => setSelectedSpell(spell)}>
+					active={isSelected}
+					onClick={() => setSelectedSpell(isSelected ? "" : spell)}>
 					<div className="ListCard__title">
 						{capitalizeWords(spell.name.split("|")[0])}
 					</div>
