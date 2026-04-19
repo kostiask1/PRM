@@ -37,6 +37,7 @@ export default function AiAssistantPanel({
 	const initialRoute = parseUrl();
 
 	const isCampaign = !initialRoute.session;
+	const isEncounter = !!initialRoute.encounter;
 
 	const showApiKeyInstructions = () => {
 		modal.alert(
@@ -154,6 +155,8 @@ export default function AiAssistantPanel({
 			return "Надішліть свій запит. Відповідь буде отримана у вікні і не вплине на дані";
 		} else if (isCampaign) {
 			return "Опишіть зміни або нові гілки сюжету (наприклад: 'додай політичні інтриги' або 'зроби фінал більш епічним')...";
+		} else if (isEncounter) {
+			return "Опишіть, як змінити або наповнити цей бій (наприклад: 'зроби бій складнішим' або 'додай свиту для боса')...";
 		} else {
 			return "Опишіть стиль або умови (наприклад: 'занедбане підземне місто', 'атмосфера детективу')...";
 		}
@@ -175,14 +178,14 @@ export default function AiAssistantPanel({
 			<button
 				className="AiAssistant__toggle"
 				onClick={() => setIsOpen(true)}
-				title={isCampaign ? "AI Сюжетний Помічник" : "AI Помічник Сесії"}
+				title={isCampaign ? "AI Сюжетний Помічник" : isEncounter ? "AI Помічник Бою" : "AI Помічник Сесії"}
 			>
 				<Icon name="wand" size={28} />
 			</button>
 
 			{isOpen && (
 				<Modal
-					title={isCampaign ? "AI Сюжетний Помічник" : "AI Помічник Сесії"}
+					title={isCampaign ? "AI Сюжетний Помічник" : isEncounter ? "AI Помічник Бою" : "AI Помічник Сесії"}
 					onCancel={() => setIsOpen(false)}
 					showFooter={false}
 				>

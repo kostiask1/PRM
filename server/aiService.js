@@ -22,6 +22,14 @@ const systemInstructions = {
         Якщо бій не потрібен, не додавай encounterIndex.
         Підбирай монстрів згідно з рівнем та кількістю персонажів гравців у контексті, щоб складність була доречною.
 `,
+	encounter: `Ти досвідчений майстер підземель (Dungeon Master) для Dungeons & Dragons. 
+        Твоя мета - допомагати в наповненні конкретного бойового зіткнення. Відповідай виключно українською мовою. 
+        Твої відповіді мають бути структурованими та корисними для гри. 
+        Використовувати Markdown-розмітку (наприклад, жирний текст **текст**, марковані списки, розбиття рядку) для структурування тексту всередині значень JSON.
+        Завжди відповідай у форматі JSON. Не включай жодного тексту до або після JSON. 
+        JSON повинен містити структуру: { "name": "Назва бою", "monsters": [{ "monsterName": "Official D&D Monster Name", "name": "Опціональне ім'я" }] }.
+        Підбирай монстрів згідно з рівнем та кількістю персонажів гравців у контексті.
+`,
 	prompt: `Ти досвідчений майстер підземель (Dungeon Master) для Dungeons & Dragons. 
         Твоя мета - допомагати в плануванні іншому майстру. Відповідай виключно українською мовою. 
         Ти отримуєш дані та інструкцію користувача.
@@ -77,6 +85,7 @@ async function generateContent({
 	session,
 	campaign,
 	userInstructions,
+	encounterId,
 	sceneId,
 	parseAIResponse,
 	contextData,
@@ -89,9 +98,11 @@ async function generateContent({
 		? type
 		: !parseAIResponse
 			? "prompt"
-			: session
-				? "scene"
-				: "campaign";
+			: encounterId
+				? "encounter"
+				: session
+					? "scene"
+					: "campaign";
 
 	model = genAI.getGenerativeModel({
 		model: "gemini-2.5-flash",
@@ -173,6 +184,8 @@ async function generateContent({
 	// Додаємо специфічні інструкції залежно від типу задачі
 	if (useKey === "image") {
 		userPrompt += `ЗАДАЧА: Згенерувати промпт для сцени з ID: ${sceneId}\n`;
+	} else if (useKey === "encounter") {
+		userPrompt += `ЗАДАЧА: Оновити поточне бойове зіткнення (ID: ${encounterId}). Підбери монстрів, які відповідають ситуації.\n`;
 	} else if (useKey === "scene") {
 		userPrompt += `ЗАДАЧА: На основі поточної сесії та контексту, запропонуй ідеї для нових або доповни існуючі сцени.\n`;
 		if (generateEncounters) {

@@ -51,6 +51,7 @@ router.post("/generate", async (req, res, next) => {
 			session,
 			campaign,
 			userInstructions,
+			encounterId: path.encounter,
 			sceneId,
 			parseAIResponse,
 			contextData,
@@ -65,6 +66,69 @@ router.post("/generate", async (req, res, next) => {
 			if (session) {
 				const fullPath = storage.sessionPath(path.campaign, path.session);
 				const sessionData = await storage.readJson(fullPath);
+
+				// 0. Обробка конкретного бою (Encounter), якщо ми в режимі редагування одного бою
+				if (path.encounter) {
+					if (!sessionData.data.encounters) sessionData.data.encounters = [];
+					const encIdx = sessionData.data.encounters.findIndex(e => e.id.toString() === path.encounter.toString());
+					
+					if (encIdx !== -1) {
+						let aiEnc = null;
+						if (generatedContent.monsters) aiEnc = generatedContent;
+						else if (Array.isArray(generatedContent.encounters) && generatedContent.encounters[0]) aiEnc = generatedContent.encounters[0];
+
+						if (aiEnc) {
+							const bestiaryIndex = await storage.getBestiaryIndex();
+							if (aiEnc.name) sessionData.data.encounters[encIdx].name = aiEnc.name;
+							
+							if (Array.isArray(aiEnc.monsters)) {
+								const monsters = [];
+								for (const m of aiEnc.monsters) {
+									const mName = m.monsterName || m.name;
+									let foundBase = null;
+									const searchKey = mName.toLowerCase();
+									for (const [key, data] of bestiaryIndex.entries()) {
+										if (key.startsWith(searchKey + "|")) {
+											foundBase = data;
+											break;
+										}
+									}
+									let resolved = null;
+									if (foundBase) resolved = storage.resolveMonster(foundBase, bestiaryIndex);
+
+									const instance = {
+										...(resolved || {}),
+										instanceId: `inst-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+										name: m.name || (resolved ? resolved.name : m.monsterName),
+										originalBestiaryName: resolved ? resolved.name : m.monsterName,
+										source: resolved ? resolved.source : (m.source || "Unknown")
+									};
+
+									if (resolved) {
+										const hpVal = typeof resolved.hp === "object" ? (resolved.hp.average || 0) : (resolved.hit_points || 0);
+										instance.currentHp = hpVal;
+										instance.hit_points = hpVal;
+										let acVal = resolved.armor_class || 0;
+										if (Array.isArray(resolved.ac) && resolved.ac[0]) {
+											const entry = resolved.ac[0];
+											acVal = typeof entry === "object" ? (entry.ac || 0) : entry;
+										}
+										instance.armor_class = acVal;
+									} else {
+										instance.currentHp = 0;
+										instance.hit_points = 0;
+										instance.armor_class = 0;
+									}
+									monsters.push(instance);
+								}
+								sessionData.data.encounters[encIdx].monsters = monsters;
+							}
+							sessionData.updatedAt = new Date().toISOString();
+							await storage.writeJson(fullPath, sessionData);
+							return res.json({ generated: generatedContent, updated: { ...sessionData, fileName: path.session } });
+						}
+					}
+				}
 
 				// 1. Обробка згенерованих боїв (Encounters)
 				const encounterMap = new Map(); // Тимчасова мапа для зв'язку індексів AI з новими ID
