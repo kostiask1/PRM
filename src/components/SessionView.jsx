@@ -9,6 +9,7 @@ import DraggableList from "./DraggableList";
 import Modal from "./Modal";
 import NoteCard from "./NoteCard";
 import CharacterCard from "./CharacterCard";
+import Checkbox from "./Checkbox";
 import "../assets/components/SessionView.css";
 
 const SCENE_SCHEMA = [
@@ -300,6 +301,7 @@ export default function SessionView({
 	};
 
 	const updateData = (key, value, instant = false) => {
+		console.log("value:", value);
 		const nextData = { ...session.data, [key]: value };
 		updateSession({ data: nextData }, instant);
 	};
@@ -823,18 +825,19 @@ function TodoSection({ title, children, action }) {
 function TodoItem({ title, note, checked, onChange, children }) {
 	return (
 		<div className={`TodoItem ${checked ? "TodoItem--done" : ""}`}>
-			<input
-				type="checkbox"
+			<Checkbox
 				checked={checked}
-				onChange={(e) => onChange(e.target.checked)}
+				onChange={onChange}
+				label={
+					<div className="TodoItem__content">
+						<div className="TodoItem__trigger">
+							{title && <div className="TodoItem__title">{title}</div>}
+							{note && <div className="TodoItem__note">{note}</div>}
+						</div>
+						{children}
+					</div>
+				}
 			/>
-			<div className="TodoItem__content">
-				<div onClick={() => onChange(!checked)} className="TodoItem__trigger">
-					{title && <div className="TodoItem__title">{title}</div>}
-					{note && <div className="TodoItem__note">{note}</div>}
-				</div>
-				{children}
-			</div>
 		</div>
 	);
 }

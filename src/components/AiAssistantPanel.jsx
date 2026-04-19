@@ -8,6 +8,7 @@ import ClickToCopy from "./ClickToCopy";
 import Icon from "./Icon";
 import Input from "./Input";
 import Modal from "./Modal";
+import Checkbox from "./Checkbox";
 import Notification from "./Notification";
 import "../assets/components/AiAssistantPanel.css";
 
@@ -97,6 +98,7 @@ export default function AiAssistantPanel({
 				}
 				current = current[path[i]];
 			}
+			console.log('value:', value)
 			current[path[path.length - 1]] = value;
 			return next;
 		});
@@ -220,20 +222,18 @@ export default function AiAssistantPanel({
 									<section>
 										<h4>Кампанія</h4>
 										<div className="AiAssistant__context-row">
-											<input
-												type="checkbox"
+											<Checkbox
 												checked={contextConfig.campaignNotes}
-												onChange={(e) => setContextConfig((prev) => ({ ...prev, campaignNotes: e.target.checked }))}
+												onChange={(val) => setContextConfig((prev) => ({ ...prev, campaignNotes: val }))}
+												label="Нотатки кампанії"
 											/>
-											<span>Нотатки кампанії</span>
 										</div>
 										<div className="AiAssistant__context-row">
-											<input
-												type="checkbox"
+											<Checkbox
 												checked={contextConfig.campaignCharacters}
-												onChange={(e) => setContextConfig((prev) => ({ ...prev, campaignCharacters: e.target.checked }))}
+												onChange={(val) => setContextConfig((prev) => ({ ...prev, campaignCharacters: val }))}
+												label="Персонажі"
 											/>
-											<span>Персонажі</span>
 										</div>
 									</section>
 
@@ -247,18 +247,17 @@ export default function AiAssistantPanel({
 											return (
 												<div key={slug} className="AiAssistant__session-context">
 													<div className="AiAssistant__context-row">
-														<input
-															type="checkbox"
+														<Checkbox
 															checked={config.included}
-															onChange={(e) => {
-																const included = e.target.checked;
+															onChange={(included) => {
 																setContextConfig((prev) => ({
 																	...prev,
 																	sessions: { ...prev.sessions, [slug]: { ...config, included } },
 																}));
 															}}
+															label={session.name}
+															className="AiAssistant__session-name"
 														/>
-														<span className="AiAssistant__session-name">{session.name}</span>
 														<Button
 															icon="chevron"
 															variant="ghost"
@@ -270,20 +269,18 @@ export default function AiAssistantPanel({
 													{isExpanded && config.data && (
 														<div className="AiAssistant__context-details">
 															<div className="AiAssistant__context-row">
-																<input
-																	type="checkbox"
+																<Checkbox
 																	checked={config.notes}
-																	onChange={(e) => updateContextConfig(["sessions", slug, "notes"], e.target.checked)}
+																	onChange={(val) => updateContextConfig(["sessions", slug, "notes"], val)}
+																	label="Нотатки"
 																/>
-																<span>Нотатки</span>
 															</div>
 															<div className="AiAssistant__context-row">
-																<input
-																	type="checkbox"
+																<Checkbox
 																	checked={config.result_text}
-																	onChange={(e) => updateContextConfig(["sessions", slug, "result_text"], e.target.checked)}
+																	onChange={(val) => updateContextConfig(["sessions", slug, "result_text"], val)}
+																	label="Підсумок"
 																/>
-																<span>Підсумок</span>
 															</div>
 															<div className="AiAssistant__scenes-context">
 																{(config.data.scenes || []).map((scene, idx) => {
@@ -297,24 +294,21 @@ export default function AiAssistantPanel({
 																	return (
 																		<div key={scene.id} className="AiAssistant__scene-item">
 																			<div className="AiAssistant__context-row">
-																				<input
-																					type="checkbox"
+																				<Checkbox
 																					checked={sceneConf.included}
-																					onChange={(e) => updateContextConfig(["sessions", slug, "scenes", scene.id, "included"], e.target.checked)}
+																					onChange={(val) => updateContextConfig(["sessions", slug, "scenes", scene.id, "included"], val)}
+																					label={`Сцена ${idx + 1}`}
 																				/>
-																				<span>Сцена {idx + 1}</span>
 																			</div>
 																			{sceneConf.included && (
 																				<div className="AiAssistant__scene-fields">
 																					{SCENE_FIELDS.map((f) => (
-																						<label key={f.key}>
-																							<input
-																								type="checkbox"
-																								checked={sceneConf[f.key]}
-																								onChange={(e) => updateContextConfig(["sessions", slug, "scenes", scene.id, f.key], e.target.checked)}
-																							/>
-																							{f.label}
-																						</label>
+																						<Checkbox
+																							key={f.key}
+																							checked={sceneConf[f.key]}
+																							onChange={(val) => updateContextConfig(["sessions", slug, "scenes", scene.id, f.key], val)}
+																							label={f.label}
+																						/>
 																					))}
 																				</div>
 																			)}

@@ -134,3 +134,24 @@
 	color: var(--accent);
 	line-height: 1.2;
 }
+
+.Bestiary__item-fav-btn {
+	width: 24px;
+	height: 24px;
+	padding: 0;
+	border: unset;
+}
+
+.Bestiary__item-fav-btn .Icon {
+	width: 14px;
+	height: 14px;
+}
+
+.Bestiary__item-fav-btn.is-active .Icon {
+	fill: var(--accent);
+	color: var(--accent);
+}
+
+.Bestiary__item-fav-btn:hover .Icon {
+	color: var(--accent);
+}

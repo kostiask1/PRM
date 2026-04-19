@@ -24,7 +24,7 @@ export default function MonsterStatBlock({
 	nameTitle,
 	modal,
 	isFavorite,
-	onToggleFavorite
+	onToggleFavorite,
 }) {
 	const [hasImageError, setHasImageError] = useState(false);
 	const [spells, setSpells] = useState([]);
@@ -425,30 +425,31 @@ export default function MonsterStatBlock({
 		<div className="MonsterStatBlock">
 			<div className="MonsterStatBlock__header">
 				<div className="MonsterStatBlock__header__details">
-					{onNameClick ? (
-						<h3
-							className="MonsterStatBlock__name"
-							onClick={() => onNameClick?.(monster)}
-							title={nameTitle}>
-							{monster.name}
-						</h3>
-					) : (
-						<ClickToCopy
-							className="MonsterStatBlock__name"
-							text={monster.name}
-							message={`Ім'я скопійовано!`}>
-							{monster.name}
-						</ClickToCopy>
-					)}
-
-					<Button
-						variant="ghost"
-						size="small"
-						icon="star"
-						className={`MonsterStatBlock__favorite-btn ${isFavorite ? "is-active" : ""}`}
-						onClick={() => onToggleFavorite?.(monster)}
-						title={isFavorite ? "Видалити з обраного" : "Додати в обране"}
-					/>
+					<div className="MonsterStatBlock__name__row">
+						{onNameClick ? (
+							<h3
+								className="MonsterStatBlock__name"
+								onClick={() => onNameClick?.(monster)}
+								title={nameTitle}>
+								{monster.name}
+							</h3>
+						) : (
+							<ClickToCopy
+								className="MonsterStatBlock__name"
+								text={monster.name}
+								message={`Ім'я скопійовано!`}>
+								{monster.name}
+							</ClickToCopy>
+						)}
+						<Button
+							variant="ghost"
+							size="small"
+							icon="star"
+							className={`MonsterStatBlock__favorite-btn ${isFavorite ? "is-active" : ""}`}
+							onClick={() => onToggleFavorite?.(monster)}
+							title={isFavorite ? "Видалити з обраного" : "Додати в обране"}
+						/>
+					</div>
 
 					{monster.originalBestiaryName &&
 						monster.originalBestiaryName !== monster.name && (

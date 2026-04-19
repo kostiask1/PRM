@@ -237,10 +237,14 @@
 	margin-bottom: 8px;
 }
 
+.AiAssistant__scenes-context {
+	transform: translateX(-10px);
+}
+
 .AiAssistant__scene-fields {
 	display: flex;
-	flex-wrap: wrap;
-	gap: 14px;
+	flex-direction: column;
+	gap: 12px;
 	margin-left: 28px;
 	margin-top: 8px;
 	font-size: 0.85rem;

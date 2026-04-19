@@ -165,10 +165,17 @@
 	line-height: 1.4;
 }
 
+.MonsterStatBlock__name__row {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+}
+
 .MonsterStatBlock__name {
 	cursor: pointer;
 	display: inline-block;
 	font-size: 2.2em;
+	line-height: 1;
 	font-weight: 600;
 }
 
@@ -205,4 +212,17 @@
 	text-indent: -1.5em;
 	/* Adjust as needed for hanging indent */
 	padding-left: 1.5em;
+}
+
+.MonsterStatBlock__favorite-btn {
+	border-radius: 100%;
+	border: unset;
+	width: 36px;
+	height: 36px;
+	padding: 0;
+}
+
+.MonsterStatBlock__favorite-btn.is-active svg {
+	fill:var(--accent);
+	stroke:var(--accent);
 }

@@ -276,6 +276,17 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 					onDoubleClick={() => onAddMonster && onAddMonster(monster)}
 					actions={
 						<>
+							<Button
+								variant="ghost"
+								size="small"
+								icon="star"
+								className={`Bestiary__item-fav-btn ${isFavorite ? "is-active" : ""}`}
+								onClick={(e) => {
+									e.stopPropagation();
+									handleToggleFavorite(monster);
+								}}
+								title={isFavorite ? "Видалити з обраного" : "Додати в обране"}
+							/>
 							{onAddMonster && (
 								<Button
 									variant="ghost"
@@ -287,9 +298,6 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 									}}
 									title="Додати до зіткнення"
 								/>
-							)}
-							{isFavorite && (
-								<Icon name="star" size={14} className="Bestiary__fav-indicator" />
 							)}
 						</>
 					}>
