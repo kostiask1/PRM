@@ -11,26 +11,33 @@ router.post("/generate", async (req, res, next) => {
 			path,
 			sceneId,
 			parseAIResponse,
-			useSessionsResults,
-			useContext,
+			contextConfig,
 		} = req.body;
 		if (!process.env.GEMINI_API_KEY)
 			return res.status(500).json({ error: "GEMINI_API_KEY не налаштовано." });
 
 		const campaign = await storage.readCampaign(path.campaign);
-		const session = await storage
+		let session = await storage
 			.readSession(path.campaign, path.session)
 			.catch(() => null);
 
-		let results = [];
-		if (useSessionsResults) {
-			const sessionFiles = await storage.listSessions(path.campaign);
-			const sessions = await Promise.all(
-				sessionFiles.map((s) => storage.readSession(path.campaign, s.fileName)),
-			);
-			results = sessions
-				.sort((a, b) => a.order - b.order)
-				.map((s) => ({ result: s.data.result_text, session: s.name }));
+		let contextData = { campaign: {}, sessions: [] };
+		if (contextConfig) {
+			if (contextConfig.campaignNotes) contextData.campaign.notes = campaign.notes;
+			if (contextConfig.campaignCharacters) contextData.campaign.characters = campaign.characters;
+
+			if (contextConfig.sessions) {
+				for (const [slug, conf] of Object.entries(contextConfig.sessions)) {
+					if (conf.included) {
+						const sData = await storage.readSession(path.campaign, slug);
+						contextData.sessions.push({
+							name: sData.name,
+							conf,
+							data: sData.data,
+						});
+					}
+				}
+			}
 		}
 
 		const generatedContent = await aiService.generateContent({
@@ -40,8 +47,7 @@ router.post("/generate", async (req, res, next) => {
 			userInstructions,
 			sceneId,
 			parseAIResponse,
-			results,
-			useContext,
+			contextData,
 		});
 
 		if (generatedContent.error) return res.status(500).json(generatedContent);

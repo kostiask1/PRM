@@ -35,12 +35,6 @@ const SCENE_SCHEMA = [
 		type: "textarea",
 		placeholder: "Де це відбувається...",
 	},
-	{
-		key: "clues",
-		title: "Підказки",
-		type: "textarea",
-		placeholder: "Інформація, яку отримають гравці...",
-	},
 ];
 
 export default function SessionView({

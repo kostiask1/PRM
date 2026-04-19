@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { api } from "../api";
 import { isJsonString } from "../utils/json";
@@ -17,14 +17,20 @@ export default function AiAssistantPanel({
 	modal,
 }) {
 	const [isOpen, setIsOpen] = useState(false);
+	const [isContextModalOpen, setIsContextModalOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
 	const [userInstructions, setUserInstructions] = useState("");
 	const [notification, setNotification] = useState(null);
 	const [showSceneSelector, setShowSceneSelector] = useState(false);
-	const [useSessionsResults, setUseSessionsResults] = useState(true);
 	const [parseAIResponse, setParseAIResponse] = useState(false);
-	const [useContext, setUseContext] = useState(true);
+	const [sessionsList, setSessionsList] = useState([]);
+	const [expandedSessions, setExpandedSessions] = useState({});
+	const [contextConfig, setContextConfig] = useState({
+		campaignNotes: true,
+		campaignCharacters: true,
+		sessions: {}, // { [slug]: { included: bool, notes: bool, result_text: bool, scenes: {}, data: {} } }
+	});
 	const [generatedPrompt, setGeneratedPrompt] = useState(null);
 	const initialRoute = parseUrl();
 
@@ -41,6 +47,61 @@ export default function AiAssistantPanel({
 		);
 	};
 
+	useEffect(() => {
+		if (isContextModalOpen && sessionsList.length === 0) {
+			api.listSessions(initialRoute.campaign).then(setSessionsList);
+		}
+	}, [isContextModalOpen, initialRoute.campaign, sessionsList.length]);
+
+	const toggleSessionDetails = async (sessionSlug) => {
+		const isExpanded = !!expandedSessions[sessionSlug];
+		if (!isExpanded && !contextConfig.sessions[sessionSlug]?.data) {
+			setLoading(true);
+			try {
+				const fullData = await api.getSession(initialRoute.campaign, sessionSlug);
+				setContextConfig((prev) => ({
+					...prev,
+					sessions: {
+						...prev.sessions,
+						[sessionSlug]: {
+							...(prev.sessions[sessionSlug] || {
+								included: false,
+								notes: true,
+								result_text: true,
+								scenes: {},
+							}),
+							data: fullData.data,
+						},
+					},
+				}));
+			} catch (err) {
+				console.error("Failed to fetch session details", err);
+			} finally {
+				setLoading(false);
+			}
+		}
+		setExpandedSessions((prev) => ({ ...prev, [sessionSlug]: !isExpanded }));
+	};
+
+	const updateContextConfig = (path, value) => {
+		setContextConfig((prev) => {
+			const next = JSON.parse(JSON.stringify(prev));
+			let current = next;
+			for (let i = 0; i < path.length - 1; i++) {
+				if (!current[path[i]]) {
+					if (path[i - 1] === "scenes") {
+						current[path[i]] = { included: true, summary: true, goal: true, stakes: true, location: true };
+					} else {
+						current[path[i]] = {};
+					}
+				}
+				current = current[path[i]];
+			}
+			current[path[path.length - 1]] = value;
+			return next;
+		});
+	};
+
 	const generate = async (type = null, targetSceneId = null) => {
 		setLoading(true);
 		setError("");
@@ -52,8 +113,7 @@ export default function AiAssistantPanel({
 				path: initialRoute,
 				sceneId: targetSceneId,
 				parseAIResponse: type === "image" ? false : parseAIResponse,
-				useSessionsResults,
-				useContext,
+				contextConfig,
 			});
 
 			// Одразу оновлюємо стан в батьківському компоненті, бо в БД вже записано
@@ -87,6 +147,13 @@ export default function AiAssistantPanel({
 		}
 	};
 
+	const SCENE_FIELDS = [
+		{ key: "summary", label: "Суть сцени" },
+		{ key: "goal", label: "Мета гравців" },
+		{ key: "stakes", label: "Ставки" },
+		{ key: "location", label: "Локація" },
+	];
+
 	const isResultJSONString = isJsonString(generatedPrompt);
 
 	return (
@@ -109,33 +176,14 @@ export default function AiAssistantPanel({
 				>
 					<div className="AiAssistant__content">
 						<div className="AiAssistant__actions">
-							<Button
-								variant={useContext ? "primary" : "ghost"}
+							<Button 
+								variant="primary"
 								size="small"
 								icon="database"
-								onClick={() => setUseContext(!useContext)}
+								onClick={() => setIsContextModalOpen(true)}
 								disabled={loading}
-								title={
-									useContext
-										? "Використовувати контекст кампанії, сесії та сценаріїв"
-										: "Без контексту"
-								}>
+								title="Налаштувати контекст для ШІ">
 								Контекст
-							</Button>
-							<Button
-								variant={useContext && useSessionsResults ? "primary" : "ghost"}
-								size="small"
-								icon="history"
-								onClick={() =>
-									useContext && setUseSessionsResults(!useSessionsResults)
-								}
-								disabled={loading}
-								title={
-									useSessionsResults
-										? 'Використовувати дані з "Результат сесії" попередніх сесій'
-										: "Контекст лише кампанії і поточної сесії"
-								}>
-								Контекст сесій
 							</Button>
 							{!isCampaign && (
 								<Button
@@ -162,6 +210,129 @@ export default function AiAssistantPanel({
 								Парсинг відповіді
 							</Button>
 						</div>
+
+						{isContextModalOpen && (
+							<Modal
+								title="Налаштування контексту"
+								onCancel={() => setIsContextModalOpen(false)}
+								onConfirm={() => setIsContextModalOpen(false)}
+								confirmLabel="Зберегти"
+								type="custom">
+								<div className="AiAssistant__context-manager">
+									<section>
+										<h4>Кампанія</h4>
+										<div className="AiAssistant__context-row">
+											<input
+												type="checkbox"
+												checked={contextConfig.campaignNotes}
+												onChange={(e) => setContextConfig((prev) => ({ ...prev, campaignNotes: e.target.checked }))}
+											/>
+											<span>Нотатки кампанії</span>
+										</div>
+										<div className="AiAssistant__context-row">
+											<input
+												type="checkbox"
+												checked={contextConfig.campaignCharacters}
+												onChange={(e) => setContextConfig((prev) => ({ ...prev, campaignCharacters: e.target.checked }))}
+											/>
+											<span>Персонажі</span>
+										</div>
+									</section>
+
+									<section>
+										<h4>Сесії</h4>
+										{sessionsList.map((session) => {
+											const slug = session.fileName;
+											const config = contextConfig.sessions[slug] || { included: false, notes: true, result_text: true, scenes: {} };
+											const isExpanded = !!expandedSessions[slug];
+
+											return (
+												<div key={slug} className="AiAssistant__session-context">
+													<div className="AiAssistant__context-row">
+														<input
+															type="checkbox"
+															checked={config.included}
+															onChange={(e) => {
+																const included = e.target.checked;
+																setContextConfig((prev) => ({
+																	...prev,
+																	sessions: { ...prev.sessions, [slug]: { ...config, included } },
+																}));
+															}}
+														/>
+														<span className="AiAssistant__session-name">{session.name}</span>
+														<Button
+															icon="chevron"
+															variant="ghost"
+															size="small"
+															className={isExpanded ? "is-rotated" : ""}
+															onClick={() => toggleSessionDetails(slug)}
+														/>
+													</div>
+													{isExpanded && config.data && (
+														<div className="AiAssistant__context-details">
+															<div className="AiAssistant__context-row">
+																<input
+																	type="checkbox"
+																	checked={config.notes}
+																	onChange={(e) => updateContextConfig(["sessions", slug, "notes"], e.target.checked)}
+																/>
+																<span>Нотатки</span>
+															</div>
+															<div className="AiAssistant__context-row">
+																<input
+																	type="checkbox"
+																	checked={config.result_text}
+																	onChange={(e) => updateContextConfig(["sessions", slug, "result_text"], e.target.checked)}
+																/>
+																<span>Підсумок</span>
+															</div>
+															<div className="AiAssistant__scenes-context">
+																{(config.data.scenes || []).map((scene, idx) => {
+																	const sceneConf = config.scenes[scene.id] || {
+																		included: true,
+																		summary: true,
+																		goal: true,
+																		stakes: true,
+																		location: true,
+																	};
+																	return (
+																		<div key={scene.id} className="AiAssistant__scene-item">
+																			<div className="AiAssistant__context-row">
+																				<input
+																					type="checkbox"
+																					checked={sceneConf.included}
+																					onChange={(e) => updateContextConfig(["sessions", slug, "scenes", scene.id, "included"], e.target.checked)}
+																				/>
+																				<span>Сцена {idx + 1}</span>
+																			</div>
+																			{sceneConf.included && (
+																				<div className="AiAssistant__scene-fields">
+																					{SCENE_FIELDS.map((f) => (
+																						<label key={f.key}>
+																							<input
+																								type="checkbox"
+																								checked={sceneConf[f.key]}
+																								onChange={(e) => updateContextConfig(["sessions", slug, "scenes", scene.id, f.key], e.target.checked)}
+																							/>
+																							{f.label}
+																						</label>
+																					))}
+																				</div>
+																			)}
+																		</div>
+																	);
+																})}
+															</div>
+														</div>
+													)}
+												</div>
+											);
+										})}
+									</section>
+								</div>
+							</Modal>
+						)}
 
 						{showSceneSelector && (
 							<Modal

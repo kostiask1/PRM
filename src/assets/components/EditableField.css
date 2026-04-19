@@ -17,6 +17,7 @@
 	position: absolute;
 	top: 8px;
 	right: 8px;
+	opacity: 0;
 }
 
 .EditableField__copy-btn svg {

@@ -185,3 +185,68 @@
 .AiAssistant__generate-btn {
 	width: 100%;
 }
+
+.AiAssistant__context-manager {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+	max-height: 65vh;
+	overflow-y: auto;
+	padding: 10px;
+}
+
+.AiAssistant__context-manager h4 {
+	margin: 0 0 10px 0;
+	border-bottom: 1px solid var(--border);
+	padding-bottom: 8px;
+	color: var(--accent);
+	text-transform: uppercase;
+	font-size: 0.85rem;
+	letter-spacing: 0.05em;
+}
+
+.AiAssistant__context-row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 6px 0;
+}
+
+.AiAssistant__session-context {
+	border: 1px solid color-mix(in srgb, var(--border), transparent 60%);
+	border-radius: 12px;
+	padding: 12px;
+	margin-bottom: 12px;
+	background: color-mix(in srgb, var(--bg-2), transparent 40%);
+}
+
+.AiAssistant__context-details {
+	margin-left: 28px;
+	margin-top: 12px;
+	padding-top: 12px;
+	border-top: 1px dashed var(--border);
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.AiAssistant__scene-item {
+	background: color-mix(in srgb, var(--bg), transparent 30%);
+	padding: 10px;
+	border-radius: 8px;
+	margin-bottom: 8px;
+}
+
+.AiAssistant__scene-fields {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 14px;
+	margin-left: 28px;
+	margin-top: 8px;
+	font-size: 0.85rem;
+}
+
+.AiAssistant__session-name {
+	flex: 1;
+	font-weight: 600;
+}
