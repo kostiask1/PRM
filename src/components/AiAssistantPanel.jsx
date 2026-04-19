@@ -172,7 +172,6 @@ export default function AiAssistantPanel({
 					title={isCampaign ? "AI Сюжетний Помічник" : "AI Помічник Сесії"}
 					onCancel={() => setIsOpen(false)}
 					showFooter={false}
-					type="custom"
 				>
 					<div className="AiAssistant__content">
 						<div className="AiAssistant__actions">
@@ -216,8 +215,7 @@ export default function AiAssistantPanel({
 								title="Налаштування контексту"
 								onCancel={() => setIsContextModalOpen(false)}
 								onConfirm={() => setIsContextModalOpen(false)}
-								confirmLabel="Зберегти"
-								type="custom">
+								confirmLabel="Зберегти">
 								<div className="AiAssistant__context-manager">
 									<section>
 										<h4>Кампанія</h4>

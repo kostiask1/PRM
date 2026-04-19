@@ -27,7 +27,7 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const url = event.request.url;
-  const isTargetApi = CACHED_API_PATHS.some(path => url.includes(path));
+  const isTargetApi = CACHED_API_PATHS.some(path => url.includes(path)) && !url.includes('/favorites');
 
   if (isTargetApi && event.request.method === 'GET') {
     event.respondWith(

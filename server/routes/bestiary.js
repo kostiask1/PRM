@@ -28,7 +28,8 @@ async function getBestiaryIndex() {
 
 		// Визначаємо основне джерело файлу з метаданих або назви файлу
 		let fileSource = (
-			data._meta?.sources?.[0]?.json || path.parse(file.name).name.replace(/^bestiary-/i, "")
+			data._meta?.sources?.[0]?.json ||
+			path.parse(file.name).name.replace(/^bestiary-/i, "")
 		).toUpperCase();
 
 		const monsters = Array.isArray(data)
@@ -198,6 +199,36 @@ router.get("/search", async (req, res, next) => {
 	}
 });
 
+router.get("/favorites", async (req, res, next) => {
+	try {
+		const favorites = await storage.readFavorites();
+		res.json(favorites.map(f => ({ ...f, source: f.source?.toUpperCase() })));
+	} catch (error) {
+		next(error);
+	}
+});
+
+router.post("/favorites/toggle", async (req, res, next) => {
+	try {
+		const { name, source } = req.body;
+		const normalizedSource = source?.toUpperCase();
+		
+		let favorites = await storage.readFavorites();
+		const index = favorites.findIndex(f => f.name === name && f.source?.toUpperCase() === normalizedSource);
+		
+		if (index > -1) {
+			favorites.splice(index, 1);
+		} else {
+			favorites.push({ name, source: normalizedSource });
+		}
+		
+		await storage.writeFavorites(favorites);
+		res.json(favorites);
+	} catch (error) {
+		next(error);
+	}
+});
+
 router.get("/sources", async (req, res, next) => {
 	try {
 		if (!(await storage.exists(storage.BESTIARY_DIR))) return res.json([]);
@@ -206,17 +237,15 @@ router.get("/sources", async (req, res, next) => {
 		});
 		res.json(
 			entries
-				.filter(
-					(e) => {
-						const name = e.name.toLowerCase();
-						return (
-							e.isFile() &&
-							name.endsWith(".json") &&
-							name !== "legendarygroups.json" &&
-							name !== "index.json"
-						);
-					}
-				)
+				.filter((e) => {
+					const name = e.name.toLowerCase();
+					return (
+						e.isFile() &&
+						name.endsWith(".json") &&
+						name !== "legendarygroups.json" &&
+						name !== "index.json"
+					);
+				})
 				.map((e) => path.parse(e.name).name.replace(/^bestiary-/i, "")),
 		);
 	} catch (error) {
@@ -240,11 +269,17 @@ router.get("/legendarygroups", async (req, res, next) => {
 router.get("/:source", async (req, res, next) => {
 	try {
 		const sourceParam = req.params.source;
-		let filePath = path.join(storage.BESTIARY_DIR, `${path.basename(sourceParam)}.json`);
+		let filePath = path.join(
+			storage.BESTIARY_DIR,
+			`${path.basename(sourceParam)}.json`,
+		);
 
 		if (!(await storage.exists(filePath))) {
 			// Спробуємо знайти файл з префіксом bestiary-, якщо прямий шлях не знайдено
-			const prefixedPath = path.join(storage.BESTIARY_DIR, `bestiary-${path.basename(sourceParam)}.json`);
+			const prefixedPath = path.join(
+				storage.BESTIARY_DIR,
+				`bestiary-${path.basename(sourceParam)}.json`,
+			);
 			if (await storage.exists(prefixedPath)) {
 				filePath = prefixedPath;
 			}
@@ -260,7 +295,11 @@ router.get("/:source", async (req, res, next) => {
 		const index = await getBestiaryIndex();
 		const resolvedList = monsters.map((m) =>
 			resolveMonster(
-				{ ...m, source: m.source || path.parse(filePath).name.replace(/^bestiary-/i, "") },
+				{
+					...m,
+					source:
+						(m.source || path.parse(filePath).name.replace(/^bestiary-/i, "")).toUpperCase(),
+				},
 				index,
 			),
 		);

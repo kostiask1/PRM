@@ -7,6 +7,7 @@ const DATA_DIR = path.join(ROOT_DIR, "data");
 const CAMPAIGNS_DIR = path.join(DATA_DIR, "campaigns");
 const BESTIARY_DIR = path.join(ROOT_DIR, "database", "bestiary");
 const SPELLS_DIR = path.join(ROOT_DIR, "database", "spells");
+const FAVORITES_PATH = path.join(DATA_DIR, "favorites.json");
 
 function todayString() {
 	return new Date().toISOString().slice(0, 10);
@@ -122,6 +123,15 @@ async function listCampaignSlugs() {
 
 async function readCampaign(slug) {
 	return readJson(campaignMetaPath(slug));
+}
+
+async function readFavorites() {
+	if (!(await exists(FAVORITES_PATH))) return [];
+	return readJson(FAVORITES_PATH);
+}
+
+async function writeFavorites(favorites) {
+	await writeJson(FAVORITES_PATH, favorites);
 }
 
 async function listEntities(campaignSlug, type) {
@@ -325,6 +335,8 @@ module.exports = {
 	readEntity,
 	writeEntity,
 	deleteEntity,
+	readFavorites,
+	writeFavorites,
 	listCampaignSlugs,
 	readCampaign,
 	readSession,

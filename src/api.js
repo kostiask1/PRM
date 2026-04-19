@@ -109,6 +109,11 @@ export const api = {
 	getBestiaryData: (source) =>
 		api.request(`/bestiary/${encodeURIComponent(source.toLowerCase())}`),
 	getLegendaryGroups: () => api.request("/bestiary/legendarygroups"),
+	getBestiaryFavorites: () => api.request("/bestiary/favorites"),
+	toggleBestiaryFavorite: (name, source) => api.request("/bestiary/favorites/toggle", {
+		method: "POST",
+		body: JSON.stringify({ name, source })
+	}),
 	searchBestiary: (name, type) => {
 		const params = new URLSearchParams();
 		if (name) params.append("name", name);

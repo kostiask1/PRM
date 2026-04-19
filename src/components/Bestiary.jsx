@@ -20,14 +20,16 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 	const [loading, setLoading] = useState(false);
 	const [selectedMonster, setSelectedMonster] = useState(null);
 	const [legendaryGroups, setLegendaryGroups] = useState([]);
+	const [favorites, setFavorites] = useState([]);
+	const [onlyFavorites, setOnlyFavorites] = useState(false);
 	const [sortOrder, setSortOrder] = useState("none"); // 'none', 'desc', 'asc'
 	const listRef = useRef(null);
 
 	const displayedMonsters = useMemo(() => {
-		if (sortOrder === "none")
-			return [...monsters].sort((a, b) => a.name.localeCompare(b.name));
+		let list = [...monsters];
+		if (sortOrder === "none") list = list.sort((a, b) => a.name.localeCompare(b.name));
 
-		return [...monsters].sort((a, b) => {
+		return list.sort((a, b) => {
 			const crA = parseCR(a);
 			const crB = parseCR(b);
 			if (crA === crB) {
@@ -51,14 +53,16 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 
 	// Завантаження списку доступних джерел (файлів)
 	useEffect(() => {
-		const loadSourcesAndLegendary = async () => {
+		const loadInitialData = async () => {
 			try {
-				const [sourcesData, legendaryData] = await Promise.all([
+				const [sourcesData, legendaryData, favData] = await Promise.all([
 					api.getBestiarySources(),
 					api.getLegendaryGroups(),
+					api.getBestiaryFavorites(),
 				]);
 				setSources(sourcesData);
 				setLegendaryGroups(legendaryData); // Зберігаємо дані легендарних груп
+				setFavorites(favData);
 				if (sourcesData.length > 0) {
 					const params = new URLSearchParams(window.location.search);
 					const sourceFromUrl = params.get("source");
@@ -71,7 +75,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 				);
 			}
 		};
-		loadSourcesAndLegendary();
+		loadInitialData();
 	}, []); // Залежності порожні, щоб завантажувати один раз
 
 	// Завантаження повного списку монстрів з обраного джерела
@@ -139,6 +143,9 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 	// Локальна фільтрація списку за пошуковим запитом
 	useEffect(() => {
 		const filtered = allMonsters.filter((m) => {
+			const isFav = favorites.some(f => f.name === m.name && f.source?.toUpperCase() === m.source?.toUpperCase());
+			if (onlyFavorites && !isFav) return false;
+
 			const matchesName = m.name?.toLowerCase().includes(search.toLowerCase());
 
 			// Покращений пошук по типу: об'єднуємо базовий тип (включаючи choose) та теги
@@ -152,7 +159,16 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 			return matchesName && matchesType;
 		});
 		setMonsters(filtered);
-	}, [search, typeSearch, allMonsters, getMonsterTypeString]);
+	}, [search, typeSearch, allMonsters, getMonsterTypeString, onlyFavorites, favorites]);
+
+	const handleToggleFavorite = async (monster) => {
+		try {
+			const newFavs = await api.toggleBestiaryFavorite(monster.name, monster.source);
+			setFavorites(newFavs);
+		} catch (err) {
+			console.error("Failed to toggle favorite", err);
+		}
+	};
 
 	useEffect(() => {
 		const initSelection = async () => {
@@ -248,6 +264,9 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 		const isSelected =
 			selectedMonster?.name === monster.name &&
 			selectedMonster?.source === monster.source;
+		const isFavorite = favorites.some(
+			(f) => f.name === monster.name && f.source?.toUpperCase() === monster.source?.toUpperCase(),
+		);
 
 		return (
 			<div key={key}>
@@ -256,18 +275,23 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 					onClick={() => setSelectedMonster(isSelected ? "" : monster)}
 					onDoubleClick={() => onAddMonster && onAddMonster(monster)}
 					actions={
-						onAddMonster && (
-							<Button
-								variant="ghost"
-								size="small"
-								icon="plus"
-								onClick={(e) => {
-									e.stopPropagation();
-									onAddMonster(monster);
-								}}
-								title="Додати до зіткнення"
-							/>
-						)
+						<>
+							{onAddMonster && (
+								<Button
+									variant="ghost"
+									size="small"
+									icon="plus"
+									onClick={(e) => {
+										e.stopPropagation();
+										onAddMonster(monster);
+									}}
+									title="Додати до зіткнення"
+								/>
+							)}
+							{isFavorite && (
+								<Icon name="star" size={14} className="Bestiary__fav-indicator" />
+							)}
+						</>
 					}>
 					<div className="Bestiary__item-content">
 						<div className="Bestiary__item-info">
@@ -322,6 +346,13 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 						onChange={(e) => setTypeSearch(e.target.value)}
 					/>
 					<Button
+						variant={onlyFavorites ? "primary" : "ghost"}
+						icon="star"
+						onClick={() => setOnlyFavorites(!onlyFavorites)}
+						title="Тільки обрані"
+						className="Bestiary__filter-fav-btn"
+					/>
+					<Button
 						className={`Bestiary__sort-btn ${sortOrder !== "none" ? "is-active" : ""}`}
 						variant="ghost"
 						onClick={toggleSort}
@@ -366,6 +397,12 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 								onNameClick={onAddMonster ? (m) => onAddMonster(m) : undefined}
 								nameTitle={onAddMonster && "Додати до зіткнення"}
 								modal={modal}
+								isFavorite={favorites.some(
+									(f) =>
+										f.name === selectedMonster.name &&
+										f.source?.toUpperCase() === selectedMonster.source?.toUpperCase(),
+								)}
+								onToggleFavorite={handleToggleFavorite}
 							/>
 						</div>
 					)}

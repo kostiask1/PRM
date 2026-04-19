@@ -756,8 +756,7 @@ export default function SessionView({
 				<Modal
 					title="Чекліст підготовки"
 					onCancel={() => setIsChecklistOpen(false)}
-					showFooter={false}
-					type="custom">
+					showFooter={false}>
 					<div className="SessionView__checklistModal">
 						<div className="SessionView__progressWrap">
 							<div className="ProgressBar__label">
@@ -796,8 +795,7 @@ export default function SessionView({
 					title="Створити нового NPC"
 					onCancel={() => setNpcToCreate(null)}
 					onConfirm={handleSaveNpc}
-					confirmLabel="Зберегти NPC"
-					type="custom">
+					confirmLabel="Зберегти NPC">
 					<CharacterCard
 						character={npcToCreate}
 						onChange={(id, updated) => setNpcToCreate(updated)}
