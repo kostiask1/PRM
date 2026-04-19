@@ -73,15 +73,13 @@
 	color: var(--muted);
 	line-height: 1.5;
 	font-size: 0.9rem;
-	white-space: nowrap;
-	width: 280px;
+	min-width: 280px;
 	opacity: 0;
 	transition: opacity 0.2s;
 }
 
 .Sidebar:hover .Sidebar__description {
 	opacity: 1;
-	white-space: unset;
 }
 
 .Sidebar__section {
@@ -100,6 +98,7 @@
 
 .Sidebar__list {
 	display: grid;
+	padding: 0 0.1px;
 }
 
 .Sidebar__footer {
@@ -211,6 +210,10 @@
 
 .Sidebar:not(:hover) span {
 	position: absolute;
+}
+
+.Sidebar:not(:hover) .Sidebar__sectionTitle span {
+	position: static;
 }
 
 .Sidebar:not(:hover) .Sidebar__footerGrid {
