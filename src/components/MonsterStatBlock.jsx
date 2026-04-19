@@ -23,12 +23,54 @@ export default function MonsterStatBlock({
 	onNameClick,
 	nameTitle,
 	modal,
-	isFavorite,
-	onToggleFavorite,
+	onFavoriteChange,
 }) {
 	const [hasImageError, setHasImageError] = useState(false);
 	const [spells, setSpells] = useState([]);
 	const [loadingSpells, setLoadingSpells] = useState(false);
+	const [isFavorite, setIsFavorite] = useState(false);
+
+	const effectiveName = monster.originalBestiaryName || monster.name;
+
+	useEffect(() => {
+		const checkFavoriteStatus = async () => {
+			try {
+				const favs = await api.getBestiaryFavorites();
+				const found = favs.some(
+					(f) =>
+						f.name === effectiveName &&
+						f.source?.toUpperCase() === monster.source?.toUpperCase(),
+				);
+				setIsFavorite(found);
+			} catch (e) {
+				console.error("Failed to fetch favorite status", e);
+			}
+		};
+
+		if (monster.name && monster.source) {
+			checkFavoriteStatus();
+		} else {
+			setIsFavorite(false);
+		}
+	}, [effectiveName, monster.source]);
+
+	const handleToggleFavorite = async () => {
+		try {
+			const newFavs = await api.toggleBestiaryFavorite(
+				effectiveName,
+				monster.source,
+			);
+			const found = newFavs.some(
+				(f) =>
+					f.name === effectiveName &&
+					f.source?.toUpperCase() === monster.source?.toUpperCase(),
+			);
+			setIsFavorite(found);
+			if (onFavoriteChange) onFavoriteChange(newFavs);
+		} catch (err) {
+			console.error("Failed to toggle favorite", err);
+		}
+	};
 
 	const handleSpellClick = async (spellOrName) => {
 		let spell = spellOrName;
@@ -394,10 +436,9 @@ export default function MonsterStatBlock({
 		return null;
 	};
 
-	const imageName = monster.originalBestiaryName || monster.name;
-	const encodedImageName = encodeURIComponent(imageName);
+	const encodedImageName = encodeURIComponent(effectiveName);
 
-	const localSrc = `/database/bestiary/tokens/${monster.source}/${imageName}.webp`;
+	const localSrc = `/database/bestiary/tokens/${monster.source}/${effectiveName}.webp`;
 	const externalSrc = `https://5e.tools/img/bestiary/tokens/${encodeURIComponent(
 		monster.source,
 	)}/${encodedImageName}.webp`;
@@ -417,7 +458,7 @@ export default function MonsterStatBlock({
 		// Формат: mimeType:filename:url
 		e.dataTransfer.setData(
 			"DownloadURL",
-			`image/webp:${imageName}.webp:${externalSrc}`,
+			`image/webp:${effectiveName}.webp:${externalSrc}`,
 		);
 	}
 
@@ -446,7 +487,7 @@ export default function MonsterStatBlock({
 							size="small"
 							icon="star"
 							className={`MonsterStatBlock__favorite-btn ${isFavorite ? "is-active" : ""}`}
-							onClick={() => onToggleFavorite?.(monster)}
+							onClick={handleToggleFavorite}
 							title={isFavorite ? "Видалити з обраного" : "Додати в обране"}
 						/>
 					</div>

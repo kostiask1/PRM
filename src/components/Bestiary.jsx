@@ -405,12 +405,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 								onNameClick={onAddMonster ? (m) => onAddMonster(m) : undefined}
 								nameTitle={onAddMonster && "Додати до зіткнення"}
 								modal={modal}
-								isFavorite={favorites.some(
-									(f) =>
-										f.name === selectedMonster.name &&
-										f.source?.toUpperCase() === selectedMonster.source?.toUpperCase(),
-								)}
-								onToggleFavorite={handleToggleFavorite}
+								onFavoriteChange={(newFavs) => setFavorites(newFavs)}
 							/>
 						</div>
 					)}
