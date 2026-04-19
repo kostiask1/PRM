@@ -9,6 +9,7 @@ import ListCard from "./ListCard";
 import Panel from "./Panel";
 import StatusBadge from "./StatusBadge";
 import DraggableList from "./DraggableList";
+import NoteCard from "./NoteCard";
 import "../assets/components/CampaignView.css";
 
 export default function CampaignView({
@@ -624,48 +625,15 @@ export default function CampaignView({
 							onDrop={() => triggerSave({ notes })}
 							keyExtractor={(note) => note.id}
 							renderItem={(note, isDragging, index) => (
-								<div
-									className={`note-card-simple ${note.collapsed ? "is-collapsed" : ""} ${isDragging ? "note-card-simple--dragging" : ""}`}>
-									<div
-										className="note-card-simple__header"
-										onClick={() => handleToggleNoteCollapse(note.id)}>
-										<Button
-											variant="ghost"
-											size="small"
-											icon="chevron"
-											className={`note-card-simple__toggle ${note.collapsed ? "is-rotated" : ""}`}
-											onClick={() => handleToggleNoteCollapse(note.id)}
-										/>
-										<EditableField
-											value={note.title || ""}
-											onChange={(e) => handleNoteTitleChange(note.id, e.target.value)}
-											placeholder="Нова замітка"
-											className="note-card-simple__title"
-										/>
-										{index !== notes.length - 1 && (
-											<Button
-												variant="danger"
-												icon="trash"
-												size={14}
-												onClick={(e) => {
-													e.stopPropagation();
-													handleDeleteNote(note.id);
-												}}
-												title="Видалити замітку"
-											/>
-										)}
-									</div>
-									{!note.collapsed && (
-										<EditableField
-											type="textarea"
-											value={note.text}
-											onChange={(e) =>
-												handleNoteChange(note.id, e.target.value)
-											}
-											placeholder="Текст замітки..."
-										/>
-									)}
-								</div>
+								<NoteCard
+									note={note}
+									isLast={index === notes.length - 1}
+									isDragging={isDragging}
+									onToggleCollapse={handleToggleNoteCollapse}
+									onTitleChange={handleNoteTitleChange}
+									onTextChange={handleNoteChange}
+									onDelete={handleDeleteNote}
+								/>
 							)}
 						/>
 					)}

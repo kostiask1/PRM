@@ -59,68 +59,6 @@
 	transform: rotate(-90deg);
 }
 
-.note-card-simple {
-	background: color-mix(in srgb, var(--text-bright), transparent 97%);
-	border: 1px solid color-mix(in srgb, var(--text-bright), transparent 90%);
-	border-radius: 8px;
-	transition:
-		border-color 0.2s ease,
-		opacity 0.2s ease;
-	cursor: grab;
-}
-
-.note-card-simple:hover {
-	border-color: color-mix(in srgb, var(--text-bright), transparent 80%);
-}
-
-.note-card-simple--dragging {
-	opacity: 0.4;
-	border-style: dashed;
-	cursor: grabbing;
-}
-
-.note-card-simple__header {
-	display: flex;
-	align-items: center;
-	padding: 8px 12px;
-	gap: 8px;
-}
-
-.note-card-simple__toggle {
-	transition: transform 0.2s ease !important;
-	width: 36px;
-	height: 36px;
-}
-
-.note-card-simple__toggle.is-rotated {
-	transform: rotate(-90deg);
-}
-
-.note-card-simple__title {
-	flex: 1;
-	font-size: 0.9rem;
-	font-weight: 500;
-	color: var(--muted);
-	cursor: pointer;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	user-select: none;
-}
-
-.note-card-simple:not(.is-collapsed) .note-card-simple__title {
-	color: var(--text-bright);
-}
-
-.note-card-simple .field--textarea {
-	margin: 12px;
-	margin-top: 8px;
-}
-
-.note-card-simple.is-collapsed {
-	opacity: 0.8;
-}
-
 /* NEW: Styles for Characters Section */
 .CampaignView__characters {
 	display: flex;

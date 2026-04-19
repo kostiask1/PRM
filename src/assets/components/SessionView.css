@@ -149,6 +149,7 @@
 .SessionView__progressWrap {
 	display: grid;
 	gap: 4px;
+	margin-bottom: 40px;
 }
 
 .ProgressBar__label {
@@ -290,8 +291,7 @@
 /* Стилі для плаваючої кнопки чекліста */
 .SessionView__checklistToggle {
 	position: fixed;
-	bottom: 150px;
-	/* Вище за AiAssistant (85px) та DiceCalculator (20px) */
+	top: 130px;
 	right: 20px;
 	width: 52px;
 	height: 52px;
@@ -327,60 +327,4 @@
 
 .SessionView__checklistModal {
 	padding: 4px;
-}
-
-/* Note Card Styles (copied from Campaign patterns) */
-.note-card-simple {
-	background: color-mix(in srgb, var(--text-bright), transparent 97%);
-	border: 1px solid color-mix(in srgb, var(--text-bright), transparent 90%);
-	border-radius: 8px;
-	margin-bottom: 8px;
-	overflow: hidden;
-	transition: all 0.2s ease;
-}
-
-.note-card-simple:hover {
-	border-color: color-mix(in srgb, var(--text-bright), transparent 80%);
-}
-
-.note-card-simple--dragging {
-	opacity: 0.5;
-	border-style: dashed;
-}
-
-.note-card-simple__header {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	padding: 8px 12px;
-	cursor: pointer;
-	background: color-mix(in srgb, var(--text-bright), transparent 98%);
-}
-
-.note-card-simple__toggle {
-	padding: 0 !important;
-	min-width: unset !important;
-	transition: transform 0.2s ease;
-}
-
-.note-card-simple__toggle.is-rotated {
-	transform: rotate(-90deg);
-}
-
-.note-card-simple__title {
-	flex: 1;
-	font-weight: 600;
-	font-size: 0.95rem;
-}
-
-.note-card-simple__title .Input {
-	background: transparent;
-	border: none;
-	padding: 0;
-	font-weight: inherit;
-}
-
-.note-card-simple__content {
-	padding: 0 12px 12px 40px;
-	border-top: 1px solid color-mix(in srgb, var(--text-bright), transparent 95%);
 }

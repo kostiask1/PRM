@@ -7,6 +7,7 @@ import AiAssistantPanel from "./AiAssistantPanel";
 import Panel from "./Panel";
 import DraggableList from "./DraggableList";
 import Modal from "./Modal";
+import NoteCard from "./NoteCard";
 import "../assets/components/SessionView.css";
 
 const SCENE_SCHEMA = [
@@ -210,8 +211,16 @@ export default function SessionView({
 
 				let sessionNotes = data.data.notes || [];
 				const lastNote = sessionNotes[sessionNotes.length - 1];
-				if (sessionNotes.length === 0 || (lastNote && (lastNote.text?.trim() || lastNote.title?.trim()))) {
-					sessionNotes.push({ id: Date.now(), title: "", text: "", collapsed: false });
+				if (
+					sessionNotes.length === 0 ||
+					(lastNote && (lastNote.text?.trim() || lastNote.title?.trim()))
+				) {
+					sessionNotes.push({
+						id: Date.now(),
+						title: "",
+						text: "",
+						collapsed: false,
+					});
 				}
 				data.data.notes = sessionNotes;
 
@@ -456,7 +465,10 @@ export default function SessionView({
 		let newNotes = notes.map((n) => (n.id === id ? { ...n, title } : n));
 
 		const lastNote = newNotes[newNotes.length - 1];
-		if (lastNote && (lastNote.text.trim() !== "" || lastNote.title?.trim() !== "")) {
+		if (
+			lastNote &&
+			(lastNote.text.trim() !== "" || lastNote.title?.trim() !== "")
+		) {
 			newNotes.push({
 				id: Date.now(),
 				title: "",
@@ -474,7 +486,10 @@ export default function SessionView({
 
 		// Автоматичне додавання нової замітки, якщо остання заповнена
 		const lastNote = newNotes[newNotes.length - 1];
-		if (lastNote && (lastNote.text.trim() !== "" || lastNote.title?.trim() !== "")) {
+		if (
+			lastNote &&
+			(lastNote.text.trim() !== "" || lastNote.title?.trim() !== "")
+		) {
 			newNotes.push({
 				id: Date.now(),
 				title: "",
@@ -526,13 +541,20 @@ export default function SessionView({
 		isUpdatingHistory.current = true;
 
 		// Перевіряємо замітки після оновлення від ШІ
-		const last = updatedSession.data.notes ? updatedSession.data.notes[updatedSession.data.notes.length - 1] : null;
+		const last = updatedSession.data.notes
+			? updatedSession.data.notes[updatedSession.data.notes.length - 1]
+			: null;
 		if (
 			updatedSession.data.notes &&
 			(updatedSession.data.notes.length === 0 ||
 				(last && (last.text?.trim() !== "" || last.title?.trim() !== "")))
 		) {
-			updatedSession.data.notes.push({ id: Date.now(), title: "", text: "", collapsed: false });
+			updatedSession.data.notes.push({
+				id: Date.now(),
+				title: "",
+				text: "",
+				collapsed: false,
+			});
 		}
 
 		setSession(updatedSession);
@@ -543,8 +565,8 @@ export default function SessionView({
 	if (!session) return null;
 
 	const checklistItems = [
-		{ id: "goal", label: "Визначити головну мету сесії", hasText: true },
-		{ id: "conflict", label: "Сформулювати основний конфлікт", hasText: true },
+		{ id: "goal", label: "Визначити головну мету сесії" },
+		{ id: "conflict", label: "Сформулювати основний конфлікт" },
 		{
 			id: "social",
 			label: "Підготувати соціальну сцену",
@@ -656,51 +678,15 @@ export default function SessionView({
 								onDrop={() => triggerSave(session, true)}
 								keyExtractor={(note) => note.id}
 								renderItem={(note, isDragging, index) => (
-									<div
-										className={`note-card-simple ${note.collapsed ? "is-collapsed" : ""} ${isDragging ? "note-card-simple--dragging" : ""}`}>
-										{/* notesArr потрібен для визначення довжини масиву заміток */}
-										<div
-											className="note-card-simple__header"
-											onClick={() => handleToggleNoteCollapse(note.id)}>
-											<Button
-												variant="ghost"
-												size="small"
-												icon="chevron"
-												className={`note-card-simple__toggle ${note.collapsed ? "is-rotated" : ""}`}
-												onClick={() => handleToggleNoteCollapse(note.id)}
-											/>
-											<EditableField
-												value={note.title || ""}
-												onChange={(e) => handleNoteTitleChange(note.id, e.target.value)}
-												placeholder="Нова замітка"
-												className="note-card-simple__title"
-											/>
-											{index !== (session.data.notes || []).length - 1 && (
-												<Button
-													variant="danger"
-													icon="trash"
-													size={14}
-													onClick={(e) => {
-														e.stopPropagation();
-														handleDeleteNote(note.id);
-													}}
-													title="Видалити замітку"
-												/>
-											)}
-										</div>
-										{!note.collapsed && (
-											<div className="note-card-simple__content">
-												<EditableField
-													type="textarea"
-													value={note.text}
-													onChange={(e) =>
-														handleNoteChange(note.id, e.target.value)
-													}
-													placeholder="Текст замітки..."
-												/>
-											</div>
-										)}
-									</div>
+									<NoteCard
+										note={note}
+										isLast={index === (session.data.notes || []).length - 1}
+										isDragging={isDragging}
+										onToggleCollapse={handleToggleNoteCollapse}
+										onTitleChange={handleNoteTitleChange}
+										onTextChange={handleNoteChange}
+										onDelete={handleDeleteNote}
+									/>
 								)}
 							/>
 						)}
@@ -805,10 +791,9 @@ export default function SessionView({
 					title="Чекліст підготовки"
 					onCancel={() => setIsChecklistOpen(false)}
 					showFooter={false}
-					type="custom"
-				>
+					type="custom">
 					<div className="SessionView__checklistModal">
-						<div className="SessionView__progressWrap" style={{ marginBottom: '20px', padding: '0 4px' }}>
+						<div className="SessionView__progressWrap">
 							<div className="ProgressBar__label">
 								<span>Прогрес підготовки</span>
 								<span>{progress}%</span>
@@ -825,18 +810,8 @@ export default function SessionView({
 								checked={!!session.data[`${item.id}_check`]}
 								onChange={(val) => updateData(`${item.id}_check`, val, true)}
 								title={item.label}
-								note={item.note}>
-								{item.hasText && (
-									<EditableField
-										type="textarea"
-										value={session.data[`${item.id}_text`] || ""}
-										onChange={(e) =>
-											updateData(`${item.id}_text`, e.target.value)
-										}
-										placeholder="Додайте деталі..."
-									/>
-								)}
-							</TodoItem>
+								note={item.note}
+							/>
 						))}
 					</div>
 				</Modal>
@@ -845,8 +820,7 @@ export default function SessionView({
 			<button
 				className="SessionView__checklistToggle"
 				onClick={() => setIsChecklistOpen(true)}
-				title="Чекліст підготовки"
-			>
+				title="Чекліст підготовки">
 				<Icon name="list" size={28} />
 				{progress < 100 && <span className="SessionView__checklistBadge" />}
 			</button>
@@ -861,9 +835,7 @@ function TodoSection({ title, children, action }) {
 				<h3>{title}</h3>
 				{action}
 			</div>
-			{children && (
-				<div className="TodoSection__body">{children}</div>
-			)}
+			{children && <div className="TodoSection__body">{children}</div>}
 		</section>
 	);
 }
