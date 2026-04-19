@@ -17,6 +17,10 @@ export default function AiAssistantPanel({
 	onInsertResult,
 	modal,
 }) {
+	const initialRoute = parseUrl();
+	const isCampaign = !initialRoute.session;
+	const isEncounter = !!initialRoute.encounter;
+
 	const [isOpen, setIsOpen] = useState(false);
 	const [isContextModalOpen, setIsContextModalOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
@@ -24,8 +28,8 @@ export default function AiAssistantPanel({
 	const [userInstructions, setUserInstructions] = useState("");
 	const [notification, setNotification] = useState(null);
 	const [showSceneSelector, setShowSceneSelector] = useState(false);
-	const [parseAIResponse, setParseAIResponse] = useState(false);
-	const [generateEncounters, setGenerateEncounters] = useState(false);
+	const [parseAIResponse, setParseAIResponse] = useState(isEncounter);
+	const [generateEncounters, setGenerateEncounters] = useState(isEncounter);
 	const [sessionsList, setSessionsList] = useState([]);
 	const [expandedSessions, setExpandedSessions] = useState({});
 	const [contextConfig, setContextConfig] = useState({
@@ -34,10 +38,6 @@ export default function AiAssistantPanel({
 		sessions: {}, // { [slug]: { included: bool, notes: bool, result_text: bool, scenes: {}, data: {} } }
 	});
 	const [generatedPrompt, setGeneratedPrompt] = useState(null);
-	const initialRoute = parseUrl();
-
-	const isCampaign = !initialRoute.session;
-	const isEncounter = !!initialRoute.encounter;
 
 	const showApiKeyInstructions = () => {
 		modal.alert(
@@ -216,7 +216,7 @@ export default function AiAssistantPanel({
 								size="small"
 								icon="list"
 								onClick={() => setParseAIResponse(!parseAIResponse)}
-								disabled={loading}
+								disabled={loading || isEncounter}
 								title={
 									parseAIResponse
 										? "Парсити відповідь ШІ у поля форми"
@@ -224,13 +224,13 @@ export default function AiAssistantPanel({
 								}>
 								Парсинг відповіді
 							</Button>
-							{!isCampaign && parseAIResponse && (
+							{!isCampaign && (parseAIResponse || isEncounter) && (
 								<Button
 									variant={generateEncounters ? "primary" : "ghost"}
 									size="small"
 									icon="swords"
 									onClick={() => setGenerateEncounters(!generateEncounters)}
-									disabled={loading}
+									disabled={loading || isEncounter}
 									title="ШІ спробує підібрати монстрів для кожної сцени на основі рівня персонажів"
 								>
 									Генерація боїв
