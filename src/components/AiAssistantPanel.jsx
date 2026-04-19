@@ -24,6 +24,7 @@ export default function AiAssistantPanel({
 	const [isOpen, setIsOpen] = useState(false);
 	const [isContextModalOpen, setIsContextModalOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
+	const [useContext, setUseContext] = useState(true);
 	const [error, setError] = useState("");
 	const [userInstructions, setUserInstructions] = useState("");
 	const [notification, setNotification] = useState(null);
@@ -126,7 +127,7 @@ export default function AiAssistantPanel({
 				sceneId: targetSceneId,
 				parseAIResponse: type === "image" ? false : parseAIResponse,
 				generateEncounters: !isCampaign && generateEncounters,
-				contextConfig: configToSend,
+				contextConfig: useContext ? configToSend : null,
 			});
 
 			// Одразу оновлюємо стан в батьківському компоненті, бо в БД вже записано
@@ -191,15 +192,22 @@ export default function AiAssistantPanel({
 				>
 					<div className="AiAssistant__content">
 						<div className="AiAssistant__actions">
-							<Button 
-								variant="primary"
-								size="small"
-								icon="database"
-								onClick={() => setIsContextModalOpen(true)}
-								disabled={loading}
-								title="Налаштувати контекст для ШІ">
-								Контекст
-							</Button>
+							<div className={`AiAssistant__context-toggle ${useContext ? 'is-active' : ''}`}>
+								<Checkbox
+									checked={useContext}
+									onChange={(val) => setUseContext(val)}
+									title={useContext ? "Вимкнути використання контексту" : "Увімкнути використання контексту"}
+								/>
+								<Button 
+									variant={useContext ? "primary" : "ghost"}
+									size="small"
+									icon="database"
+									onClick={() => setIsContextModalOpen(true)}
+									disabled={loading}
+									title="Налаштувати деталі контексту для ШІ">
+									Контекст
+								</Button>
+							</div>
 							{!isCampaign && (
 								<Button
 									variant="ghost"
@@ -242,8 +250,7 @@ export default function AiAssistantPanel({
 							<Modal
 								title="Налаштування контексту"
 								onCancel={() => setIsContextModalOpen(false)}
-								onConfirm={() => setIsContextModalOpen(false)}
-								confirmLabel="Зберегти">
+								showFooter={false}>
 								<div className="AiAssistant__context-manager">
 									<section>
 										<h4>Кампанія</h4>
