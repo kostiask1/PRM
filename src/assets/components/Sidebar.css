@@ -12,7 +12,7 @@
 	overflow-x: hidden;
 	gap: 16px;
 	width: 78px;
-	transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease;
+	transition: width 0.1s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease;
 	z-index: 1000;
 	box-shadow: 0 0 0 rgba(0, 0, 0, 0);
 	align-items: center;
@@ -35,7 +35,7 @@
 	width: 100%;
 	color: var(--text);
 	text-decoration: none;
-	transition: background 0.2s;
+	transition: background 0.1s;
 	white-space: nowrap;
 }
 
@@ -75,7 +75,7 @@
 	font-size: 0.9rem;
 	min-width: 280px;
 	opacity: 0;
-	transition: opacity 0.2s;
+	transition: opacity 0.1s;
 }
 
 .Sidebar:hover .Sidebar__description {
@@ -123,7 +123,7 @@
 	border-radius: 14px;
 	background: color-mix(in srgb, var(--bg), transparent 45%);
 	padding: 0;
-	transition: all 0.2s ease;
+	transition: all 0.1s ease;
 	position: relative;
 	z-index: 1;
 	overflow: hidden;
@@ -150,7 +150,7 @@
 .ListCard__sidebar-icon {
 	flex-shrink: 0;
 	color: var(--muted);
-	transition: color 0.2s;
+	transition: color 0.1s;
 }
 
 .ListCard--active .ListCard__sidebar-icon {
@@ -159,7 +159,7 @@
 
 .ListCard__sidebar-info {
 	opacity: 0;
-	transition: opacity 0.2s;
+	transition: opacity 0.1s;
 }
 
 .Sidebar:hover .ListCard__sidebar-info {
@@ -255,7 +255,7 @@
 	color: var(--muted);
 	padding: 4px 0;
 	text-decoration: none;
-	transition: all 0.2s;
+	transition: all 0.1s;
 }
 
 .Sidebar__resource-item:hover {
