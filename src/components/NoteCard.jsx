@@ -20,7 +20,7 @@ export default function NoteCard({
 			<div
 				className="note-card-simple__header"
 				onClick={() => !isLast && onToggleCollapse(note.id)}>
-				{!isLast ? (
+				{!isLast && (
 					<Button
 						variant="ghost"
 						size="small"
@@ -31,8 +31,6 @@ export default function NoteCard({
 							onToggleCollapse(note.id);
 						}}
 					/>
-				) : (
-					<div style={{ width: "32px" }} /> /* Спейсер для вирівнювання заголовка */
 				)}
 				<EditableField
 					value={note.title || ""}

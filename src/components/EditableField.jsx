@@ -408,13 +408,6 @@ export default function EditableField({
 					className="EditableField__copy-btn"
 					onClick={handleCopy}
 					title="Копіювати форматований текст для Word"
-					style={{
-						position: "absolute",
-						top: "4px",
-						right: "4px",
-						zIndex: 10,
-						opacity: 0,
-					}}
 				/>
 			)}
 			<div className="MarkdownView" ref={viewRef}>

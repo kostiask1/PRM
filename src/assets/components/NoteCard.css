@@ -1,60 +1,71 @@
 .note-card-simple {
-	background: color-mix(in srgb, var(--text-bright), transparent 97%);
-	border: 1px solid color-mix(in srgb, var(--text-bright), transparent 90%);
-	border-radius: 8px;
-	margin-bottom: 8px;
-	overflow: hidden;
-	transition: all 0.2s ease;
-	cursor: grab;
+    background: color-mix(in srgb, var(--text-bright), transparent 97%);
+    border: 1px solid color-mix(in srgb, var(--text-bright), transparent 90%);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    cursor: grab;
 }
 
 .note-card-simple:hover {
-	border-color: color-mix(in srgb, var(--text-bright), transparent 80%);
+    border-color: color-mix(in srgb, var(--text-bright), transparent 80%);
 }
 
 .note-card-simple--dragging {
-	opacity: 0.5;
-	border-style: dashed;
-	cursor: grabbing;
+    opacity: 0.5;
+    border-style: dashed;
+    cursor: grabbing;
 }
 
 .note-card-simple__header {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	padding: 8px 12px;
-	cursor: pointer;
-	background: color-mix(in srgb, var(--text-bright), transparent 98%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    background: color-mix(in srgb, var(--text-bright), transparent 98%);
 }
 
 .note-card-simple__toggle {
-	padding: 0 !important;
-	min-width: unset !important;
-	transition: transform 0.2s ease !important;
+    padding: 0 !important;
+    min-width: unset !important;
+    transition: transform 0.2s ease !important;
 }
 
 .note-card-simple__toggle.is-rotated {
-	transform: rotate(-90deg);
+    transform: rotate(-90deg);
 }
 
 .note-card-simple__title {
-	flex: 1;
-	font-weight: 600;
-	font-size: 0.95rem;
+    flex: 1;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.note-card-simple__title .MarkdownView,
+.note-card-simple__title .Input {
+    padding-right: 46px;
 }
 
 .note-card-simple__title .Input {
-	background: transparent;
-	border: none;
-	padding: 0;
-	font-weight: inherit;
+    background: transparent;
+    border: none;
+    padding: 0;
+    font-weight: inherit;
 }
 
 .note-card-simple__content {
-	padding: 0 12px 12px 40px;
-	border-top: 1px solid color-mix(in srgb, var(--text-bright), transparent 95%);
+    padding: 0;
+    border-top: 1px solid color-mix(in srgb, var(--text-bright), transparent 95%);
+}
+
+.note-card-simple__content .MarkdownView,
+.note-card-simple__content .Input {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
 }
 
 .note-card-simple.is-collapsed {
-	opacity: 0.8;
+    opacity: 0.8;
 }
