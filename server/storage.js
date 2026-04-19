@@ -121,6 +121,129 @@ async function listCampaignSlugs() {
 	return slugs;
 }
 
+async function getBestiaryIndex() {
+	if (!(await exists(BESTIARY_DIR))) return new Map();
+
+	const entries = await fs.readdir(BESTIARY_DIR, { withFileTypes: true });
+	const files = entries.filter(
+		(e) =>
+			e.isFile() &&
+			e.name.endsWith(".json") &&
+			e.name !== "legendarygroups.json",
+	);
+
+	const index = new Map();
+	for (const file of files) {
+		const data = await readJson(path.join(BESTIARY_DIR, file.name));
+
+		let fileSource = (
+			data._meta?.sources?.[0]?.json ||
+			path.parse(file.name).name.replace(/^bestiary-/i, "")
+		).toUpperCase();
+
+		const monsters = Array.isArray(data)
+			? data
+			: data.monster || data.monsters || data.results || [];
+
+		for (const m of monsters) {
+			if (!m.name) continue;
+			const monsterSource = (m.source || fileSource).toUpperCase();
+			const key = `${m.name.trim().toLowerCase()}|${monsterSource}`;
+			index.set(key, { ...m, source: monsterSource });
+		}
+	}
+	return index;
+}
+
+function resolveMonster(monster, index, depth = 0) {
+	if (depth > 10 || !monster._copy) return monster;
+
+	const baseName = monster._copy.name;
+	const baseSource = (
+		monster._copy.source ||
+		monster.source ||
+		""
+	).toUpperCase();
+	const baseKey = `${baseName.toLowerCase()}|${baseSource}`;
+
+	let base = index.get(baseKey);
+	if (!base) {
+		const keys = Array.from(index.keys());
+		const foundKey = keys.find((k) =>
+			k.startsWith(`${baseName.toLowerCase()}|`),
+		);
+		if (foundKey) base = index.get(foundKey);
+	}
+
+	if (!base) return monster;
+
+	const resolvedBase = resolveMonster(
+		JSON.parse(JSON.stringify(base)),
+		index,
+		depth + 1,
+	);
+
+	let resolved = { ...resolvedBase };
+
+	for (const key in monster) {
+		if (key !== "_copy" && key !== "_mod") {
+			resolved[key] = monster[key];
+		}
+	}
+
+	if (monster._copy._mod) {
+		const mods = monster._copy._mod;
+		if (mods["*"]) {
+			const globalMods = Array.isArray(mods["*"]) ? mods["*"] : [mods["*"]];
+			globalMods.forEach((mod) => {
+				if (mod.mode === "replaceTxt") {
+					resolved = applyReplaceTxt(resolved, mod);
+				}
+			});
+		}
+
+		for (const prop in mods) {
+			if (prop === "*") continue;
+			const propMods = Array.isArray(mods[prop]) ? mods[prop] : [mods[prop]];
+			propMods.forEach((mod) => {
+				if (!resolved[prop]) resolved[prop] = [];
+				if (mod.mode === "appendArr") {
+					const items = Array.isArray(mod.items) ? mod.items : [mod.items];
+					resolved[prop] = [...resolved[prop], ...items];
+				} else if (mod.mode === "prependArr") {
+					const items = Array.isArray(mod.items) ? mod.items : [mod.items];
+					resolved[prop] = [...items, ...resolved[prop]];
+				} else if (mod.mode === "replaceArr") {
+					const items = Array.isArray(mod.items) ? mod.items : [mod.items];
+					const toReplace = mod.replace;
+					resolved[prop] = resolved[prop].map((item) =>
+						item.name === toReplace ? items[0] : item,
+					);
+				} else if (mod.mode === "removeArr") {
+					const toRemove = Array.isArray(mod.names) ? mod.names : [mod.names];
+					resolved[prop] = resolved[prop].filter(
+						(item) => !toRemove.includes(item.name),
+					);
+				}
+			});
+		}
+	}
+
+	return resolved;
+}
+
+function applyReplaceTxt(obj, mod) {
+	try {
+		const escapedReplace = mod.replace.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+		let json = JSON.stringify(obj);
+		const regex = new RegExp(escapedReplace, mod.flags || "g");
+		json = json.replace(regex, mod.with);
+		return JSON.parse(json);
+	} catch (e) {
+		return obj;
+	}
+}
+
 async function readCampaign(slug) {
 	return readJson(campaignMetaPath(slug));
 }
@@ -347,4 +470,6 @@ module.exports = {
 	ensureUniqueCampaignSlug,
 	ensureUniqueSessionFile,
 	makeDefaultSessionData,
+	getBestiaryIndex,
+	resolveMonster,
 };

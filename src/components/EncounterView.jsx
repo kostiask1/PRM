@@ -4,6 +4,7 @@ import Panel from "./Panel";
 import Button from "./Button";
 import Modal from "./Modal";
 import Bestiary from "./Bestiary";
+import AiAssistantPanel from "./AiAssistantPanel";
 import MonsterStatBlock from "./MonsterStatBlock";
 import Notification from "./Notification";
 import DraggableList from "./DraggableList";
@@ -125,6 +126,24 @@ export default function EncounterView({
 		},
 		[campaign.slug, sessionId, encounterId, onRefreshCampaigns],
 	);
+
+	const handleAiUpdate = (updatedSession) => {
+		if (!updatedSession) return;
+		const sData = updatedSession.data || updatedSession;
+		const found = (sData.encounters || []).find(
+			(e) => e.id.toString() === encounterId.toString(),
+		);
+		if (found) {
+			setEncounter(found);
+			if (selectedInstance) {
+				const stillExists = found.monsters.find(
+					(m) => m.instanceId === selectedInstance.instanceId,
+				);
+				setSelectedInstance(stillExists || found.monsters[0] || null);
+			}
+		}
+		onRefreshCampaigns();
+	};
 
 	const handleAddMonster = async (m) => {
 		if (!encounter) return;
@@ -400,6 +419,11 @@ export default function EncounterView({
 						)}
 					</div>
 				</div>
+				<AiAssistantPanel
+					sessionData={encounter}
+					onInsertResult={handleAiUpdate}
+					modal={modal}
+				/>
 			</div>
 
 			{showBestiary && ( // Render the generic Modal component

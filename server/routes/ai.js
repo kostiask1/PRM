@@ -71,23 +71,65 @@ router.post("/generate", async (req, res, next) => {
 				if (Array.isArray(generatedContent.encounters)) {
 					if (!sessionData.data.encounters) sessionData.data.encounters = [];
 
-					generatedContent.encounters.forEach((enc, idx) => {
+					const bestiaryIndex = await storage.getBestiaryIndex();
+
+					for (const [idx, enc] of generatedContent.encounters.entries()) {
 						const newId = storage.createId();
+						
+						const monsters = [];
+						for (const m of (enc.monsters || [])) {
+							const mName = m.monsterName || m.name;
+							// Шукаємо монстра в індексі (регістронезалежно)
+							let foundBase = null;
+							const searchKey = mName.toLowerCase();
+							
+							for (const [key, data] of bestiaryIndex.entries()) {
+								if (key.startsWith(searchKey + "|")) {
+									foundBase = data;
+									break;
+								}
+							}
+
+							let resolved = null;
+							if (foundBase) {
+								resolved = storage.resolveMonster(foundBase, bestiaryIndex);
+							}
+
+							const instance = {
+								...(resolved || {}),
+								instanceId: `inst-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+								name: m.name || (resolved ? resolved.name : m.monsterName),
+								originalBestiaryName: resolved ? resolved.name : m.monsterName,
+								source: resolved ? resolved.source : (m.source || "Unknown")
+							};
+
+							if (resolved) {
+								const hpVal = typeof resolved.hp === "object" ? (resolved.hp.average || 0) : (resolved.hit_points || 0);
+								instance.currentHp = hpVal;
+								instance.hit_points = hpVal;
+								
+								let acVal = resolved.armor_class || 0;
+								if (Array.isArray(resolved.ac) && resolved.ac[0]) {
+									const entry = resolved.ac[0];
+									acVal = typeof entry === "object" ? (entry.ac || 0) : entry;
+								}
+								instance.armor_class = acVal;
+							} else {
+								instance.currentHp = 0;
+								instance.hit_points = 0;
+								instance.armor_class = 0;
+							}
+							monsters.push(instance);
+						}
+
 						const newEncounter = {
 							id: newId,
 							name: enc.name || `Бій ${sessionData.data.encounters.length + 1}`,
-							monsters: (enc.monsters || []).map(m => ({
-								...m,
-								instanceId: `inst-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
-								name: m.name || m.monsterName,
-								currentHp: 0, // Буде заповнено при відкритті
-								hit_points: 0,
-								armor_class: 0
-							}))
+							monsters
 						};
 						sessionData.data.encounters.push(newEncounter);
 						encounterMap.set(idx, newId);
-					});
+					}
 				}
 
 				// 2. Обробка сцен
