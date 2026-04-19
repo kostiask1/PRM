@@ -390,6 +390,7 @@ export default function EditableField({
 				className={className}
 				initialSelection={initialSelection}
 				onPaste={handlePaste}
+				onClick={handleClick}
 			/>
 		);
 	}

@@ -1,9 +1,30 @@
 .AiAssistant {
-	background: color-mix(in srgb, var(--accent), transparent 95%);
-	border: 1px dashed var(--border);
-	border-radius: 12px;
-	padding: 20px;
-	transition: all 0.3s ease;
+	/* Контейнер тепер не займає місця в потоці документа */
+}
+
+.AiAssistant__toggle {
+	position: fixed;
+	bottom: 85px; /* Розташовуємо вище за DiceCalculator, який зазвичай на 20px */
+	right: 20px;
+	width: 52px;
+	height: 52px;
+	border-radius: 50%;
+	background: var(--bg-2);
+	border: 1px solid var(--border);
+	color: var(--accent);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	z-index: 100;
+	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+	transition: all 0.2s ease;
+}
+
+.AiAssistant__toggle:hover {
+	background: var(--panel-2);
+	transform: scale(1.1) translateY(-2px);
+	border-color: var(--accent);
 }
 
 .AiAssistant__header {

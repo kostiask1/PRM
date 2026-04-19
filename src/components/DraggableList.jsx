@@ -47,7 +47,7 @@ export default function DraggableList({
 					onDragEnd={handleDragEnd}
 					onDragOver={(e) => e.preventDefault()}
 					className={`${itemClassName} ${draggingIndex === index ? "is-dragging" : ""}`}>
-					{renderItem(item, draggingIndex === index)}
+					{renderItem(item, draggingIndex === index, index)}
 				</div>
 			))}
 		</div>

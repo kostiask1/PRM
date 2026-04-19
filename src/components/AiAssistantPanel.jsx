@@ -16,6 +16,7 @@ export default function AiAssistantPanel({
 	onInsertResult,
 	modal,
 }) {
+	const [isOpen, setIsOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
 	const [userInstructions, setUserInstructions] = useState("");
@@ -88,135 +89,149 @@ export default function AiAssistantPanel({
 
 	const isResultJSONString = isJsonString(generatedPrompt);
 
-	// Допоміжна функція для відображення JSON-результату
 	return (
 		<div className="AiAssistant">
-			<div className="AiAssistant__header">
-				<h3>{isCampaign ? "AI Сюжетний Помічник" : "AI Помічник Сесії"}</h3>
-				<Icon name="wand" size={20} className="AiAssistant__header-icon" />
-			</div>
+			{/* Кнопка виклику AI, аналогічно до DiceCalculator */}
+			<button
+				className="AiAssistant__toggle"
+				onClick={() => setIsOpen(true)}
+				title={isCampaign ? "AI Сюжетний Помічник" : "AI Помічник Сесії"}
+			>
+				<Icon name="wand" size={28} />
+			</button>
 
-			<div className="AiAssistant__actions">
-				<Button
-					variant={useContext ? "primary" : "ghost"}
-					size="small"
-					icon="database"
-					onClick={() => setUseContext(!useContext)}
-					disabled={loading}
-					title={
-						useContext
-							? "Використовувати контекст кампанії, сесії та сценаріїв"
-							: "Без контексту"
-					}>
-					Контекст
-				</Button>
-				<Button
-					variant={useContext && useSessionsResults ? "primary" : "ghost"}
-					size="small"
-					icon="history"
-					onClick={() =>
-						useContext && setUseSessionsResults(!useSessionsResults)
-					}
-					disabled={loading}
-					title={
-						useSessionsResults
-							? 'Використовувати дані з "Результат сесії" попередніх сесій'
-							: "Контекст лише кампанії і поточної сесії"
-					}>
-					Контекст сесій
-				</Button>
-				{!isCampaign && (
-					<Button
-						variant="ghost"
-						size="small"
-						icon="image"
-						onClick={() => setShowSceneSelector(true)}
-						disabled={loading || !sessionData.scenes?.length}
-						title="Згенерувати візуальний опис для сцени">
-						Промпт для фото
-					</Button>
-				)}
-				<Button
-					variant={parseAIResponse ? "primary" : "ghost"}
-					size="small"
-					icon="list"
-					onClick={() => setParseAIResponse(!parseAIResponse)}
-					disabled={loading}
-					title={
-						parseAIResponse
-							? "Парсити відповідь ШІ у поля форми"
-							: "Показувати відповідь текстом у модальному вікні"
-					}>
-					Парсинг відповіді
-				</Button>
-			</div>
-
-			{showSceneSelector && (
+			{isOpen && (
 				<Modal
-					title="Оберіть сцену для генерації промпту"
-					onCancel={() => setShowSceneSelector(false)}
-					showFooter={false}>
-					<div className="AiAssistant__scene-list">
-						{(sessionData.scenes || []).map((scene, idx) => (
-							<div
-								key={scene.id}
-								className="AiAssistant__scene-option"
-								onClick={() => {
-									setShowSceneSelector(false);
-									generate("image", scene.id);
-								}}>
-								<strong>Сцена {idx + 1}</strong>:{" "}
-								{scene.texts?.summary?.slice(0, 60) || "Без опису"}...
-							</div>
-						))}
+					title={isCampaign ? "AI Сюжетний Помічник" : "AI Помічник Сесії"}
+					onCancel={() => setIsOpen(false)}
+					showFooter={false}
+					type="custom"
+				>
+					<div className="AiAssistant__content">
+						<div className="AiAssistant__actions">
+							<Button
+								variant={useContext ? "primary" : "ghost"}
+								size="small"
+								icon="database"
+								onClick={() => setUseContext(!useContext)}
+								disabled={loading}
+								title={
+									useContext
+										? "Використовувати контекст кампанії, сесії та сценаріїв"
+										: "Без контексту"
+								}>
+								Контекст
+							</Button>
+							<Button
+								variant={useContext && useSessionsResults ? "primary" : "ghost"}
+								size="small"
+								icon="history"
+								onClick={() =>
+									useContext && setUseSessionsResults(!useSessionsResults)
+								}
+								disabled={loading}
+								title={
+									useSessionsResults
+										? 'Використовувати дані з "Результат сесії" попередніх сесій'
+										: "Контекст лише кампанії і поточної сесії"
+								}>
+								Контекст сесій
+							</Button>
+							{!isCampaign && (
+								<Button
+									variant="ghost"
+									size="small"
+									icon="image"
+									onClick={() => setShowSceneSelector(true)}
+									disabled={loading || !sessionData.scenes?.length}
+									title="Згенерувати візуальний опис для сцени">
+									Промпт для фото
+								</Button>
+							)}
+							<Button
+								variant={parseAIResponse ? "primary" : "ghost"}
+								size="small"
+								icon="list"
+								onClick={() => setParseAIResponse(!parseAIResponse)}
+								disabled={loading}
+								title={
+									parseAIResponse
+										? "Парсити відповідь ШІ у поля форми"
+										: "Показувати відповідь текстом у модальному вікні"
+								}>
+								Парсинг відповіді
+							</Button>
+						</div>
+
+						{showSceneSelector && (
+							<Modal
+								title="Оберіть сцену для генерації промпту"
+								onCancel={() => setShowSceneSelector(false)}
+								showFooter={false}>
+								<div className="AiAssistant__scene-list">
+									{(sessionData.scenes || []).map((scene, idx) => (
+										<div
+											key={scene.id}
+											className="AiAssistant__scene-option"
+											onClick={() => {
+												setShowSceneSelector(false);
+												generate("image", scene.id);
+											}}>
+											<strong>Сцена {idx + 1}</strong>:{" "}
+											{scene.texts?.summary?.slice(0, 60) || "Без опису"}...
+										</div>
+									))}
+								</div>
+							</Modal>
+						)}
+
+						{generatedPrompt && (
+							<Modal
+								title="Відповідь"
+								confirmLabel="Закрити"
+								onCancel={() => setGeneratedPrompt(null)}
+								onConfirm={() => setGeneratedPrompt(null)}>
+								<ClickToCopy
+									text={generatedPrompt}
+									message="Відповідь ШІ скопійовано у буфер обміну!"
+									className="AiAssistant__prompt-result">
+									{isResultJSONString ? (
+										<pre>
+											<ReactMarkdown className="AiAssistant__prompt-textarea-result">
+												{generatedPrompt}
+											</ReactMarkdown>
+										</pre>
+									) : (
+										<ReactMarkdown className="AiAssistant__prompt-textarea-result">
+											{generatedPrompt}
+										</ReactMarkdown>
+									)}
+								</ClickToCopy>
+							</Modal>
+						)}
+
+						<div className="AiAssistant__prompt-area">
+							<Input
+								type="textarea"
+								className="AiAssistant__prompt-input"
+								placeholder={getPlaceholder()}
+								value={userInstructions}
+								onChange={(e) => setUserInstructions(e.target.value)}
+								disabled={loading}
+							/>
+							<Button
+								variant="create"
+								className="AiAssistant__generate-btn"
+								disabled={loading}
+								onClick={() => generate()}>
+								{loading ? "Магія працює, зачекайте..." : "Згенерувати"}
+							</Button>
+						</div>
+
+						{error && <div className="AiAssistant__error">{error}</div>}
 					</div>
 				</Modal>
 			)}
-
-			{generatedPrompt && (
-				<Modal
-					title="Відповідь"
-					confirmLabel="Закрити"
-					onCancel={() => setGeneratedPrompt(null)}
-					onConfirm={() => setGeneratedPrompt(null)}>
-					<ClickToCopy
-						text={generatedPrompt}
-						message="Відповідь ШІ скопійовано у буфер обміну!"
-						className="AiAssistant__prompt-result">
-						{isResultJSONString ? (
-							<pre>
-								<ReactMarkdown className="AiAssistant__prompt-textarea-result">
-									{generatedPrompt}
-								</ReactMarkdown>
-							</pre>
-						) : (
-							<ReactMarkdown className="AiAssistant__prompt-textarea-result">
-								{generatedPrompt}
-							</ReactMarkdown>
-						)}
-					</ClickToCopy>
-				</Modal>
-			)}
-
-			<div className="AiAssistant__prompt-area">
-				<Input
-					type="textarea"
-					className="AiAssistant__prompt-input"
-					placeholder={getPlaceholder()}
-					value={userInstructions}
-					onChange={(e) => setUserInstructions(e.target.value)}
-					disabled={loading}
-				/>
-				<Button
-					variant="create"
-					className="AiAssistant__generate-btn"
-					disabled={loading}
-					onClick={() => generate()}>
-					{loading ? "Магія працює, зачекайте..." : "Згенерувати"}
-				</Button>
-			</div>
-
-			{error && <div className="AiAssistant__error">{error}</div>}
 
 			{notification && (
 				<Notification

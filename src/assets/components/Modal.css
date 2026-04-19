@@ -42,7 +42,7 @@
 .Modal__card--custom {
 	max-width: 1200px;
 	/* Specific width for Bestiary modal */
-	height: 90vh;
+	max-height: 90vh;
 	/* Specific height for Bestiary modal */
 }
 

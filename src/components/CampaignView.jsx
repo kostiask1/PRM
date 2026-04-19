@@ -47,7 +47,13 @@ export default function CampaignView({
 		// Оновлюємо локальний стан лише якщо перейшли в іншу кампанію
 		if (lastSlugRef.current !== campaign.slug) {
 			setDescription(campaign.description || "");
-			setNotes(campaign.notes || []);
+			let initialNotes = campaign.notes || [];
+			
+			const last = initialNotes[initialNotes.length - 1];
+			if (initialNotes.length === 0 || (last && (last.text?.trim() || last.title?.trim()))) {
+				initialNotes.push({ id: Date.now(), title: "", text: "", collapsed: false });
+			}
+			setNotes(initialNotes);
 			setCharacters(campaign.characters || []); // NEW: Reset characters state
 			setIsDescriptionCollapsed(campaign.isDescriptionCollapsed || false);
 			setIsNotesCollapsed(campaign.isNotesCollapsed || false);
@@ -228,32 +234,58 @@ export default function CampaignView({
 		triggerSave({ description: val });
 	};
 
-	const handleAddNote = () => {
-		pushToUndo();
-		const newNotes = [...notes, { id: Date.now(), text: "", collapsed: false }];
-		setNotes(newNotes);
-		triggerSave({ notes: newNotes });
-	};
-
 	const handleToggleNoteCollapse = (id) => {
 		// Згортання нотаток зазвичай не потребує Undo, але для консистентності можна додати
 		const newNotes = notes.map((n) =>
 			n.id === id ? { ...n, collapsed: !n.collapsed } : n,
 		);
+		// Ми не додаємо нову замітки при згортанні, тому просто зберігаємо
+		setNotes(newNotes);
+		triggerSave({ notes: newNotes });
+	};
+
+	const handleNoteTitleChange = (id, title) => {
+		if (!saveTimeout.current) pushToUndo();
+		let newNotes = notes.map((n) => (n.id === id ? { ...n, title } : n));
+
+		const lastNote = newNotes[newNotes.length - 1];
+		if (lastNote && (lastNote.text.trim() !== "" || lastNote.title?.trim() !== "")) {
+			newNotes.push({ id: Date.now(), title: "", text: "", collapsed: false });
+		}
+
 		setNotes(newNotes);
 		triggerSave({ notes: newNotes });
 	};
 
 	const handleNoteChange = (id, text) => {
 		if (!saveTimeout.current) pushToUndo();
-		const newNotes = notes.map((n) => (n.id === id ? { ...n, text } : n));
+		let newNotes = notes.map((n) => (n.id === id ? { ...n, text } : n));
+
+		// Логіка нескінченних заміток:
+		// Якщо остання замітка має заголовок АБО текст — додаємо нову порожню в кінець
+		const lastNote = newNotes[newNotes.length - 1];
+		if (lastNote && (lastNote.text.trim() !== "" || lastNote.title?.trim() !== "")) {
+			newNotes.push({
+				id: Date.now(),
+				title: "",
+				text: "",
+				collapsed: false,
+			});
+		}
+
 		setNotes(newNotes);
 		triggerSave({ notes: newNotes });
 	};
 
 	const handleDeleteNote = (id) => {
 		pushToUndo();
-		const newNotes = notes.filter((n) => n.id !== id);
+		let newNotes = notes.filter((n) => n.id !== id);
+
+		// Завжди тримаємо хоча б одну замітку
+		if (newNotes.length === 0) {
+			newNotes.push({ id: Date.now(), title: "", text: "", collapsed: false });
+		}
+
 		setNotes(newNotes);
 		triggerSave({ notes: newNotes });
 	};
@@ -469,7 +501,15 @@ export default function CampaignView({
 		pushToUndo();
 		if (updatedCampaign) {
 			setDescription(updatedCampaign.description || "");
-			setNotes(updatedCampaign.notes || []);
+			let newNotes = updatedCampaign.notes || [];
+			const last = newNotes[newNotes.length - 1];
+			if (
+				newNotes.length === 0 ||
+				(last && (last.text?.trim() !== "" || last.title?.trim() !== ""))
+			) {
+				newNotes.push({ id: Date.now(), title: "", text: "", collapsed: false });
+			}
+			setNotes(newNotes);
 			setCharacters(updatedCampaign.characters || []); // NEW: Update characters from AI
 		}
 		onRefreshCampaigns();
@@ -575,16 +615,6 @@ export default function CampaignView({
 							/>
 							<h3>Замітки</h3>
 						</div>
-						{!isNotesCollapsed && (
-							<Button
-								variant="primary"
-								size="small"
-								onClick={handleAddNote}
-								icon="plus"
-								strokeWidth={2.5}>
-								Нова замітка
-							</Button>
-						)}
 					</div>
 					{!isNotesCollapsed && (
 						<DraggableList
@@ -593,7 +623,7 @@ export default function CampaignView({
 							onReorder={setNotes}
 							onDrop={() => triggerSave({ notes })}
 							keyExtractor={(note) => note.id}
-							renderItem={(note, isDragging) => (
+							renderItem={(note, isDragging, index) => (
 								<div
 									className={`note-card-simple ${note.collapsed ? "is-collapsed" : ""} ${isDragging ? "note-card-simple--dragging" : ""}`}>
 									<div
@@ -607,25 +637,23 @@ export default function CampaignView({
 											onClick={() => handleToggleNoteCollapse(note.id)}
 										/>
 										<EditableField
-											value={note.text.split("\n")[0]}
-											onChange={(e) => {
-												const lines = note.text.split("\n");
-												lines[0] = e.target.value;
-												handleNoteChange(note.id, lines.join("\n"));
-											}}
+											value={note.title || ""}
+											onChange={(e) => handleNoteTitleChange(note.id, e.target.value)}
 											placeholder="Нова замітка"
 											className="note-card-simple__title"
 										/>
-										<Button
-											variant="danger"
-											icon="trash"
-											size={14}
-											onClick={(e) => {
-												e.stopPropagation();
-												handleDeleteNote(note.id);
-											}}
-											title="Видалити замітку"
-										/>
+										{index !== notes.length - 1 && (
+											<Button
+												variant="danger"
+												icon="trash"
+												size={14}
+												onClick={(e) => {
+													e.stopPropagation();
+													handleDeleteNote(note.id);
+												}}
+												title="Видалити замітку"
+											/>
+										)}
 									</div>
 									{!note.collapsed && (
 										<EditableField
