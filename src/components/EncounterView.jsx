@@ -24,6 +24,7 @@ export default function EncounterView({
 	const [notification, setNotification] = useState(null);
 
 	const saveTimeoutRef = useRef(null);
+	const fileInputRef = useRef(null);
 
 	useEffect(() => {
 		return () => {
@@ -253,6 +254,56 @@ export default function EncounterView({
 		}
 	};
 
+	const handleExport = () => {
+		const data = {
+			name: encounter.name,
+			monsters: encounter.monsters,
+		};
+		const filename = `encounter-${encounter.name.toLowerCase().replace(/\s+/g, "-")}.json`;
+		const blob = new Blob([JSON.stringify(data, null, 2)], {
+			type: "application/json",
+		});
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement("a");
+		a.href = url;
+		a.download = filename;
+		a.click();
+		URL.revokeObjectURL(url);
+	};
+
+	const handleFileChange = (e) => {
+		const file = e.target.files[0];
+		if (!file) return;
+
+		const reader = new FileReader();
+		reader.onload = async (event) => {
+			try {
+				const imported = JSON.parse(event.target.result);
+				if (!imported.monsters || !Array.isArray(imported.monsters)) {
+					throw new Error("Невірний формат файлу (відсутній список монстрів)");
+				}
+
+				const updated = {
+					...encounter,
+					name: imported.name || encounter.name,
+					monsters: imported.monsters.map((m, idx) => ({
+						...m,
+						instanceId: `inst-${Date.now()}-${idx}-${Math.floor(Math.random() * 1000)}`,
+					})),
+				};
+
+				setEncounter(updated);
+				saveEncounterState(updated);
+				setSelectedInstance(updated.monsters[0] || null);
+				setNotification("Бій успішно імпортовано.");
+			} catch (err) {
+				modal.alert("Помилка імпорту", err.message);
+			}
+			e.target.value = "";
+		};
+		reader.readAsText(file);
+	};
+
 	const duplicateMonster = (m) => {
 		const newMonster = {
 			...m,
@@ -315,6 +366,29 @@ export default function EncounterView({
 						{encounter.monsters.length > 0 &&
 							` • Сер. ініціатива: ${averageInitiative}`}
 					</p>
+				</div>
+				<div className="EncounterView__headerActions">
+					<input
+						type="file"
+						ref={fileInputRef}
+						style={{ display: "none" }}
+						accept=".json"
+						onChange={handleFileChange}
+					/>
+					<Button
+						variant="ghost"
+						size="small"
+						icon="import"
+						onClick={() => fileInputRef.current?.click()}
+						title="Імпортувати бій"
+					/>
+					<Button
+						variant="ghost"
+						size="small"
+						icon="export"
+						onClick={handleExport}
+						title="Експортувати бій"
+					/>
 				</div>
 			</div>
 			<div className="Panel__body EncounterView__body">

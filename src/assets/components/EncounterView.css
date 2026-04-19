@@ -14,13 +14,9 @@
 	margin-left: auto;
 }
 
-.EncounterView__body {
-	padding: 24px !important;
-}
-
 .EncounterView__main {
 	display: flex;
-	gap: 24px;
+	gap: 12px;
 	height: 100%;
 	min-height: 600px;
 	align-items: flex-start;
@@ -171,4 +167,9 @@
 .EncounterView__detailView {
 	flex: 1;
 	height: 100%;
+}
+
+.EncounterView__headerActions {
+	display: flex;
+	gap: 8px;
 }
