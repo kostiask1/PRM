@@ -2,14 +2,28 @@
 	border-right: 1px solid color-mix(in srgb, var(--border), transparent 50%);
 	background: color-mix(in srgb, var(--bg-2), transparent 45%);
 	backdrop-filter: blur(14px);
-	padding: 24px;
-	position: sticky;
+	padding: 24px 0;
+	position: fixed;
+	left: 0;
 	top: 0;
 	height: 100vh;
 	display: flex;
 	flex-direction: column;
 	overflow-x: hidden;
 	gap: 16px;
+	width: 78px;
+	transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease;
+	z-index: 1000;
+	box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+	align-items: center;
+	white-space: nowrap;
+}
+
+.Sidebar:hover {
+	width: 320px;
+	padding: 24px 16px;
+	align-items: stretch;
+	box-shadow: 10px 0 30px color-mix(in srgb, var(--bg), transparent 50%);
 }
 
 .Sidebar__link {
@@ -18,9 +32,18 @@
 	gap: 8px;
 	padding: 8px;
 	border-radius: 8px;
+	width: 100%;
 	color: var(--text);
 	text-decoration: none;
 	transition: background 0.2s;
+	white-space: nowrap;
+}
+
+.Sidebar:not(:hover) .Sidebar__link {
+	width: 48px;
+	height: 38px;
+	justify-content: center;
+	padding: 0;
 }
 
 .Sidebar__header {
@@ -36,15 +59,29 @@
 .Sidebar__title {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: 12px;
 	white-space: nowrap;
 	font-size: 1.4rem;
+}
+
+.Sidebar:not(:hover) .Sidebar__title {
+	justify-content: center;
+	width: 100%;
 }
 
 .Sidebar__description {
 	color: var(--muted);
 	line-height: 1.5;
 	font-size: 0.9rem;
+	white-space: nowrap;
+	width: 280px;
+	opacity: 0;
+	transition: opacity 0.2s;
+}
+
+.Sidebar:hover .Sidebar__description {
+	opacity: 1;
+	white-space: unset;
 }
 
 .Sidebar__section {
@@ -53,6 +90,7 @@
 	gap: 8px;
 	flex: 1;
 	overflow-y: auto;
+	overflow-x: hidden;
 }
 
 .Sidebar__sectionTitle {
@@ -80,17 +118,105 @@
 
 .Sidebar__card {
 	display: flex;
-	justify-content: space-between;
+	justify-content: center;
 	align-items: center;
 	border: 1px solid color-mix(in srgb, var(--border), transparent 30%);
 	border-radius: 14px;
 	background: color-mix(in srgb, var(--bg), transparent 45%);
 	padding: 0;
-	transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.1);
+	transition: all 0.2s ease;
 	position: relative;
 	z-index: 1;
-	padding-right: 12px;
+	overflow: hidden;
 }
+
+/* Стилі для контенту всередині картки в сайдбарі */
+.ListCard__sidebar-content {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 0 12px;
+	width: 100%;
+	overflow: hidden;
+	height: 48px;
+	justify-content: flex-start;
+}
+
+.Sidebar:not(:hover) .ListCard__sidebar-content {
+	justify-content: center;
+	padding: 0;
+	gap: 0;
+}
+
+.ListCard__sidebar-icon {
+	flex-shrink: 0;
+	color: var(--muted);
+	transition: color 0.2s;
+}
+
+.ListCard--active .ListCard__sidebar-icon {
+	color: var(--accent);
+}
+
+.ListCard__sidebar-info {
+	opacity: 0;
+	transition: opacity 0.2s;
+}
+
+.Sidebar:hover .ListCard__sidebar-info {
+	opacity: 1;
+	width: auto;
+}
+
+.Sidebar:not(:hover) .Button,
+.Sidebar:not(:hover) .Sidebar__card {
+	width: 48px;
+	height: 48px;
+	padding: 0 !important;
+	justify-content: center;
+	align-items: center;
+	margin: 0 auto;
+}
+
+.Sidebar:not(:hover) .Sidebar__resource-item {
+	width: 48px;
+	height: 28px;
+	justify-content: center;
+	padding: 0;
+	margin: 0 auto;
+}
+
+.Sidebar:not(:hover) .ListCard__sidebar-content {
+	width: 48px;
+	justify-content: center;
+	gap: 0;
+	padding: 0;
+}
+
+/* Плавне приховування текстів */
+.Sidebar:not(:hover) span,
+.Sidebar:not(:hover) .Sidebar__title,
+.Sidebar:not(:hover) .Sidebar__description,
+.Sidebar:not(:hover) .Sidebar__sectionTitle,
+.Sidebar:not(:hover) .ListCard__title,
+.Sidebar:not(:hover) .ListCard__meta,
+.Sidebar:not(:hover) .ListCard__actions,
+.Sidebar:not(:hover) .Sidebar__footerGrid {
+	opacity: 0;
+	visibility: hidden;
+	width: 0;
+	margin: 0;
+	padding: 0;
+}
+
+.Sidebar:not(:hover) span {
+	position: absolute;
+}
+
+.Sidebar:not(:hover) .Sidebar__footerGrid {
+	display: none; /* Футер-сітка все одно не влізе, її краще прибрати */
+}
+
 
 .Sidebar__card:hover {
 	border-color: color-mix(in srgb, var(--accent), transparent 65%);

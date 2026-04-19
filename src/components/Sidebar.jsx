@@ -92,7 +92,7 @@ export default function Sidebar({
 						}
 					}}>
 					<Icon name="skull" />
-					Бестіарій
+					<span>Бестіарій</span>
 				</a>
 				<a
 					href="/spells"
@@ -104,15 +104,15 @@ export default function Sidebar({
 						}
 					}}>
 					<Icon name="magic" />
-					Заклинання
+					<span>Заклинання</span>
 				</a>
 			</div>
 			<div className="Sidebar__section">
 				<div className="Sidebar__headerSection">
-					<h2 className="Sidebar__sectionTitle">Кампанії</h2>
+					<h2 className="Sidebar__sectionTitle"><span>Кампанії</span></h2>
 				</div>
 				<Button variant="create" onClick={onCreateCampaign} icon="plus">
-					Нова кампанія
+					<span>Нова кампанія</span>
 				</Button>
 
 				<DraggableList
@@ -136,9 +136,14 @@ export default function Sidebar({
 									}}
 								/>
 							}>
-							<div className="ListCard__title">{campaign.name}</div>
-							<div className="ListCard__meta">
-								{campaign.sessionCount || 0} сесій
+							<div className="ListCard__sidebar-content">
+								<Icon name="map" className="ListCard__sidebar-icon" />
+								<div className="ListCard__sidebar-info">
+									<div className="ListCard__title">{campaign.name}</div>
+									<div className="ListCard__meta">
+										{campaign.sessionCount || 0} сесій
+									</div>
+								</div>
 							</div>
 						</ListCard>
 					)}
@@ -152,42 +157,42 @@ export default function Sidebar({
 						target="_blank"
 						rel="noopener noreferrer"
 						className="Sidebar__resource-item">
-						<Icon name="book" size={16} /> Homebrewery
+						<Icon name="book" size={16} /> <span>Homebrewery</span>
 					</a>
 					<a
 						href="https://crowsnest.me/tokenizer/"
 						target="_blank"
 						rel="noopener noreferrer"
 						className="Sidebar__resource-item">
-						<Icon name="user" size={16} /> Tokenizer
+						<Icon name="user" size={16} /> <span>Tokenizer</span>
 					</a>
 					<a
 						href="https://forgottenadventures.piwigo.com"
 						target="_blank"
 						rel="noopener noreferrer"
 						className="Sidebar__resource-item">
-						<Icon name="layers" size={16} /> Assets
+						<Icon name="layers" size={16} /> <span>Assets</span>
 					</a>
 					<a
 						href="https://www.owlbear.rodeo/"
 						target="_blank"
 						rel="noopener noreferrer"
 						className="Sidebar__resource-item">
-						<Icon name="monitor" size={16} /> Owlbear Rodeo
+						<Icon name="monitor" size={16} /> <span>Owlbear Rodeo</span>
 					</a>
 					<a
 						href="https://kemono.cr/patreon/user/16010661"
 						target="_blank"
 						rel="noopener noreferrer"
 						className="Sidebar__resource-item">
-						<Icon name="map" size={16} /> Мапи Szepeku
+						<Icon name="map" size={16} /> <span>Мапи Szepeku</span>
 					</a>
 					<a
 						href="https://chatgpt.com/g/g-69c24d157a348191b640bf111b486080-ttrpg-map-architect"
 						target="_blank"
 						rel="noopener noreferrer"
 						className="Sidebar__resource-item">
-						<Icon name="wand" size={16} /> Map Architect (AI)
+						<Icon name="wand" size={16} /> <span>Map Architect (AI)</span>
 					</a>
 				</div>
 			</div>
@@ -207,7 +212,7 @@ export default function Sidebar({
 						importMode.current = "campaign";
 						fileInputRef.current.click();
 					}}>
-					Імпорт кампанії
+					<span>Імпорт кампанії</span>
 				</Button>
 				<div className="Sidebar__footerGrid">
 					<Button
