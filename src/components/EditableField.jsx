@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from "react";
+import React, { useMemo, useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import Input from "./Input";
 import Button from "./Button";
@@ -344,9 +344,17 @@ export default function EditableField({
 		props.onClick?.(e);
 	};
 
+	const handleKeyDown = (e) => {
+		// Для звичайних полів (input) Enter завершує редагування
+		if (type !== "textarea" && e.key === "Enter") {
+			e.preventDefault();
+			setIsEditing(false);
+		}
+	};
+
 	const handlePaste = (e) => {
 		const html = e.clipboardData.getData("text/html");
-		console.log("html:", html);
+
 		if (!html) return; // Якщо немає HTML, працює стандартна вставка тексту
 
 		e.preventDefault();
@@ -364,6 +372,37 @@ export default function EditableField({
 				...e,
 				target: { ...e.target, value: newValue },
 			});
+		}
+	};
+
+	// Кастомний рендерер для тексту, що знаходить [Ім'я]
+	const components = {
+		p: ({ children }) => {
+			const processChild = (child) => {
+				if (typeof child !== 'string') return child;
+				
+				const parts = child.split(/(\[[^\]]+\])/g);
+				return parts.map((part, i) => {
+					if (part.startsWith('[') && part.endsWith(']')) {
+						const name = part.slice(1, -1);
+						return (
+							<a 
+								key={i} 
+								className="mention-link" 
+								onClick={(e) => {
+									e.stopPropagation();
+									// Логіка відкриття модалки персонажа буде передана через контекст або пропси
+									window.dispatchEvent(new CustomEvent('open-entity-modal', { detail: { name } }));
+								}}
+							>
+								{name}
+							</a>
+						);
+					}
+					return part;
+				});
+			};
+			return <p>{React.Children.map(children, processChild)}</p>;
 		}
 	};
 
@@ -385,12 +424,13 @@ export default function EditableField({
 				value={value}
 				onChange={onChange}
 				placeholder={placeholder}
-				title={shortcutsHelp}
+				title={type === "textarea" ? shortcutsHelp : props.title}
 				onBlur={() => setIsEditing(false)}
 				className={className}
 				initialSelection={initialSelection}
 				onPaste={handlePaste}
 				onClick={handleClick}
+				onKeyDown={handleKeyDown}
 			/>
 		);
 	}
@@ -411,12 +451,16 @@ export default function EditableField({
 				/>
 			)}
 			<div className="MarkdownView" ref={viewRef}>
-				{value ? (
-					<ReactMarkdown>
-						{value
+				{value || value === 0 ? (
+					type === "textarea" ? (
+					<ReactMarkdown components={components}>
+						{String(value)
 							.replace(/(?<!(?:^|\n)-  [^\n]*\n)\n(?!\n)|(?<!(?:^|\n)-  [^\n]*)\n(?=\n)/g, "&nbsp;\n\n")
 							.replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")}
 					</ReactMarkdown>
+					) : (
+						<span>{value}</span>
+					)
 				) : (
 					<span className="muted">{placeholder}</span>
 				)}

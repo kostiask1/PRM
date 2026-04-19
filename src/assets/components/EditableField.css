@@ -50,3 +50,9 @@
 .MarkdownView p:last-child {
 	margin-bottom: 0;
 }
+
+.mention-link {
+	color: var(--accent);
+	text-decoration: underline;
+	cursor: pointer;
+}

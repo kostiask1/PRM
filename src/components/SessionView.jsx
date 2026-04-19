@@ -8,6 +8,7 @@ import Panel from "./Panel";
 import DraggableList from "./DraggableList";
 import Modal from "./Modal";
 import NoteCard from "./NoteCard";
+import CharacterCard from "./CharacterCard";
 import "../assets/components/SessionView.css";
 
 const SCENE_SCHEMA = [
@@ -47,6 +48,7 @@ export default function SessionView({
 }) {
 	const [session, setSession] = useState(null);
 	const [isSaving, setIsSaving] = useState(false);
+	const [npcToCreate, setNpcToCreate] = useState(null);
 	const [isChecklistOpen, setIsChecklistOpen] = useState(false);
 	const saveTimeout = useRef(null);
 
@@ -404,56 +406,37 @@ export default function SessionView({
 		updateSession({ data: nextData }, true);
 	};
 
-	// Scene-specific NPC Management
-	const handleAddNpcToScene = (sceneId) => {
-		const scenes = session.data.scenes.map((s) => {
-			if (s.id === sceneId) {
-				const npcs = s.npcs || [];
-				return {
-					...s,
-					npcs: [
-						...npcs,
-						{ id: Date.now(), name: "", description: "", collapsed: false },
-					],
-				};
-			}
-			return s;
-		});
-		updateData("scenes", scenes, true);
-	};
-
-	const handleUpdateNpcInScene = (sceneId, npcId, updates) => {
-		const scenes = session.data.scenes.map((s) => {
-			if (s.id === sceneId) {
-				const npcs = (s.npcs || []).map((n) =>
-					n.id === npcId ? { ...n, ...updates } : n,
-				);
-				return { ...s, npcs };
-			}
-			return s;
-		});
-		updateData("scenes", scenes);
-	};
-
-	const handleDeleteNpcFromScene = (sceneId, npcId) => {
-		const scenes = session.data.scenes.map((s) => {
-			if (s.id === sceneId) {
-				const npcs = (s.npcs || []).filter((n) => n.id !== npcId);
-				return { ...s, npcs };
-			}
-			return s;
-		});
-		updateData("scenes", scenes, true);
-	};
-
-	const handleReorderNpcsInScene = (sceneId, npcs) => {
-		const scenes = session.data.scenes.map((s) =>
-			s.id === sceneId ? { ...s, npcs } : s,
-		);
-		updateData("scenes", scenes);
-	};
-
 	// Notes Management
+	const handleOpenNpcCreate = () => {
+		setNpcToCreate({
+			id: Date.now(),
+			firstName: "",
+			lastName: "",
+			race: "",
+			class: "",
+			level: 1,
+			motivation: "",
+			trait: "",
+			notes: [{ id: Date.now() + 1, title: "", text: "", collapsed: false }],
+			collapsed: false,
+		});
+	};
+
+	const handleSaveNpc = async () => {
+		if (!npcToCreate.firstName?.trim()) {
+			modal.alert("Помилка", "Ім'я NPC обов'язкове для створення.");
+			return;
+		}
+
+		try {
+			await api.createEntity(campaignSlug, "npc", npcToCreate);
+			setNpcToCreate(null);
+			window.dispatchEvent(new CustomEvent("refresh-entities"));
+		} catch (err) {
+			console.error("Failed to create NPC", err);
+		}
+	};
+
 	const handleNoteTitleChange = (id, title) => {
 		let notes = session.data.notes || [];
 		let newNotes = notes.map((n) => (n.id === id ? { ...n, title } : n));
@@ -685,7 +668,6 @@ export default function SessionView({
 							/>
 						)}
 					</TodoSection>
-
 					<TodoSection
 						title="Сцени"
 						action={
@@ -726,23 +708,13 @@ export default function SessionView({
 										onToggle={() => toggleSceneCollapse(scene.id)}
 										onRemove={() => removeScene(scene.id)}
 										onOpenEncounter={() => handleOpenEncounter(scene)}
+										handleOpenNpcCreate={handleOpenNpcCreate}
 										hasEncounter={!!scene.encounterId}
 										encounterName={
 											(session.data.encounters || []).find(
 												(e) =>
 													e.id?.toString() === scene.encounterId?.toString(),
 											)?.name || "Без назви"
-										}
-										npcs={scene.npcs || []}
-										onAddNpc={() => handleAddNpcToScene(scene.id)}
-										onUpdateNpc={(npcId, updates) =>
-											handleUpdateNpcInScene(scene.id, npcId, updates)
-										}
-										onDeleteNpc={(npcId) =>
-											handleDeleteNpcFromScene(scene.id, npcId)
-										}
-										onReorderNpcs={(npcs) =>
-											handleReorderNpcsInScene(scene.id, npcs)
 										}
 										onTriggerSave={() => triggerSave(session, true)}>
 										{SCENE_SCHEMA.map((field) => (
@@ -818,6 +790,22 @@ export default function SessionView({
 				<Icon name="list" size={28} />
 				{progress < 100 && <span className="SessionView__checklistBadge" />}
 			</button>
+
+			{npcToCreate && (
+				<Modal
+					title="Створити нового NPC"
+					onCancel={() => setNpcToCreate(null)}
+					onConfirm={handleSaveNpc}
+					confirmLabel="Зберегти NPC"
+					type="custom">
+					<CharacterCard
+						character={npcToCreate}
+						onChange={(id, updated) => setNpcToCreate(updated)}
+						onDelete={() => setNpcToCreate(null)}
+						onToggleCollapse={() => {}}
+					/>
+				</Modal>
+			)}
 		</Panel>
 	);
 }
@@ -861,13 +849,8 @@ function SceneCard({
 	onOpenEncounter,
 	hasEncounter,
 	encounterName,
+	handleOpenNpcCreate,
 	children,
-	npcs,
-	onAddNpc,
-	onUpdateNpc,
-	onDeleteNpc,
-	onReorderNpcs,
-	onTriggerSave,
 }) {
 	return (
 		<div className="SceneCard">
@@ -879,6 +862,13 @@ function SceneCard({
 					<div className="SceneCard__title">Сцена {number}</div>
 				</div>
 				<div className="SceneCard__headerActions">
+					<Button
+						variant="ghost"
+						onClick={handleOpenNpcCreate}
+						icon="plus"
+						strokeWidth={2.5}>
+						Створити NPC
+					</Button>
 					<Button
 						variant={hasEncounter ? "primary" : "ghost"}
 						onClick={(e) => {
@@ -908,80 +898,7 @@ function SceneCard({
 					/>
 				</div>
 			</div>
-			{!collapsed && (
-				<>
-					<div className="SceneCard__npcs-section">
-						<div className="SceneCard__npcs-header">
-							<h4>NPC та фракції</h4>
-							<Button
-								variant="ghost"
-								size="small"
-								icon="plus"
-								onClick={onAddNpc}>
-								Додати NPC
-							</Button>
-						</div>
-						<DraggableList
-							items={npcs}
-							className="SessionView__npcs"
-							onReorder={onReorderNpcs}
-							onDrop={onTriggerSave}
-							keyExtractor={(npc) => npc.id}
-							renderItem={(npc, isNpcDragging) => (
-								<div
-									className={`character-card-simple ${npc.collapsed ? "is-collapsed" : ""} ${isNpcDragging ? "character-card-simple--dragging" : ""}`}>
-									<div
-										className="character-card-simple__header"
-										onClick={() =>
-											onUpdateNpc(npc.id, { collapsed: !npc.collapsed })
-										}>
-										<Button
-											variant="ghost"
-											size="small"
-											icon="chevron"
-											className={`character-card-simple__toggle ${npc.collapsed ? "is-rotated" : ""}`}
-											onClick={() =>
-												onUpdateNpc(npc.id, { collapsed: !npc.collapsed })
-											}
-										/>
-										<EditableField
-											value={npc.name}
-											onChange={(e) =>
-												onUpdateNpc(npc.id, { name: e.target.value })
-											}
-											placeholder="Ім'я NPC"
-											className="character-card-simple__name"
-										/>
-										<Button
-											variant="danger"
-											icon="trash"
-											size={14}
-											onClick={(e) => {
-												e.stopPropagation();
-												onDeleteNpc(npc.id);
-											}}
-											title="Видалити"
-										/>
-									</div>
-									{!npc.collapsed && (
-										<div className="character-card-simple__content">
-											<EditableField
-												type="textarea"
-												value={npc.description}
-												onChange={(e) =>
-													onUpdateNpc(npc.id, { description: e.target.value })
-												}
-												placeholder="Опис, мотивація..."
-											/>
-										</div>
-									)}
-								</div>
-							)}
-						/>
-					</div>
-					<div className="SceneCard__grid">{children}</div>
-				</>
-			)}
+			{!collapsed && <div className="SceneCard__grid">{children}</div>}
 		</div>
 	);
 }

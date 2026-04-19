@@ -50,6 +50,14 @@ function campaignMetaPath(slug) {
 	return path.join(campaignDir(slug), "_campaign.json");
 }
 
+function characterDir(campaignSlug, charSlug) {
+	return path.join(campaignDir(campaignSlug), "characters", path.basename(charSlug));
+}
+
+function npcDir(campaignSlug, npcSlug) {
+	return path.join(campaignDir(campaignSlug), "npc", path.basename(npcSlug));
+}
+
 function sessionPath(slug, fileName) {
 	return path.join(campaignDir(slug), "sessions", path.basename(fileName));
 }
@@ -114,6 +122,46 @@ async function listCampaignSlugs() {
 
 async function readCampaign(slug) {
 	return readJson(campaignMetaPath(slug));
+}
+
+async function listEntities(campaignSlug, type) {
+	const entitiesDir = path.join(campaignDir(campaignSlug), type); // type: 'characters' or 'npc'
+	await ensureDir(entitiesDir);
+	const entries = await fs.readdir(entitiesDir, { withFileTypes: true });
+	const result = [];
+
+	for (const entry of entries) {
+		if (entry.isDirectory()) {
+			const infoPath = path.join(entitiesDir, entry.name, "info.json");
+			if (await exists(infoPath)) {
+				const data = await readJson(infoPath);
+				result.push({ ...data, slug: entry.name });
+			}
+		}
+	}
+	return result;
+}
+
+async function readEntity(campaignSlug, type, entitySlug) {
+	const infoPath = path.join(campaignDir(campaignSlug), type, entitySlug, "info.json");
+	return readJson(infoPath);
+}
+
+async function writeEntity(campaignSlug, type, entitySlug, data) {
+	const entityPath = path.join(campaignDir(campaignSlug), type, entitySlug);
+	await ensureDir(entityPath);
+	const infoPath = path.join(entityPath, "info.json");
+	await writeJson(infoPath, {
+		...data,
+		slug: entitySlug,
+		updatedAt: new Date().toISOString()
+	});
+	return data;
+}
+
+async function deleteEntity(campaignSlug, type, entitySlug) {
+	const entityPath = path.join(campaignDir(campaignSlug), type, entitySlug);
+	await fs.rm(entityPath, { recursive: true, force: true });
 }
 
 async function readSession(slug, fileName) {
@@ -264,6 +312,8 @@ module.exports = {
 	campaignSlug,
 	sessionFileName,
 	campaignDir,
+	characterDir,
+	npcDir,
 	campaignMetaPath,
 	sessionPath,
 	ensureDir,
@@ -271,6 +321,10 @@ module.exports = {
 	readJson,
 	writeJson,
 	renameWithRetry,
+	listEntities,
+	readEntity,
+	writeEntity,
+	deleteEntity,
 	listCampaignSlugs,
 	readCampaign,
 	readSession,

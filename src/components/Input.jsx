@@ -71,7 +71,7 @@ const Input = forwardRef(
 			const isMod = e.ctrlKey || e.metaKey;
 			const key = e.key.toLowerCase();
 
-			if (key === "tab") {
+			if (type === "textarea" && key === "tab") {
 				e.preventDefault();
 
 				const { selectionStart, selectionEnd, value } = e.target;
@@ -100,8 +100,40 @@ const Input = forwardRef(
 				return;
 			}
 
+			// Підтримка Ctrl+K (Посилання/Mention) + укр розкладка
+			if (type === "textarea" && isMod && (key === "k" || key === "л")) {
+				e.preventDefault();
+
+				const { selectionStart, selectionEnd, value } = e.target;
+				const selection = value.substring(selectionStart, selectionEnd);
+
+				const newValue =
+					value.substring(0, selectionStart) +
+					"[" +
+					selection +
+					"]" +
+					value.substring(selectionEnd);
+
+				if (props.onChange) {
+					props.onChange({
+						...e,
+						target: { ...e.target, value: newValue },
+					});
+				}
+
+				setTimeout(() => {
+					const node = internalRef.current;
+					if (node) {
+						node.focus();
+						node.setSelectionRange(selectionStart + 1, selectionEnd + 1);
+					}
+				}, 0);
+
+				return;
+			}
+
 			// Підтримка Ctrl+B (Жирний) та Ctrl+I (Курсив) + укр розкладка
-			if (isMod && (key === "b" || key === "и" || key === "i" || key === "ш")) {
+			if (type === "textarea" && isMod && (key === "b" || key === "и" || key === "i" || key === "ш")) {
 				e.preventDefault();
 
 				const tag = key === "b" || key === "и" ? "**" : "*";
@@ -179,7 +211,7 @@ const Input = forwardRef(
 			const isListAdd = key === "]" || key === "ї";
 			const isListRemove = key === "[" || key === "х";
 
-			if (isMod && (isListAdd || isListRemove)) {
+			if (type === "textarea" && isMod && (isListAdd || isListRemove)) {
 				e.preventDefault();
 				const { selectionStart, selectionEnd, value } = e.target;
 
@@ -240,7 +272,7 @@ const Input = forwardRef(
 			// Ctrl + 1..6
 			const isHeader = !isNaN(key) && key >= "1" && key <= "6";
 
-			if (isMod && isHeader) {
+			if (type === "textarea" && isMod && isHeader) {
 				e.preventDefault();
 				const level = parseInt(key, 10);
 				const headerTag = "#".repeat(level) + " ";
@@ -309,7 +341,7 @@ const Input = forwardRef(
 			}
 
 			// Ctrl + Q
-			if (isMod && (key === "q" || key === "й")) {
+			if (type === "textarea" && isMod && (key === "q" || key === "й")) {
 				e.preventDefault();
 				const { selectionStart, selectionEnd, value } = e.target;
 
@@ -372,7 +404,8 @@ const Input = forwardRef(
 		};
 
 		const baseClass = type === "textarea" ? "Input Input--textarea" : "Input";
-		const combinedClassName = `${baseClass} ${className}`.trim();
+		// Додаємо клас для підсвітки спеціального синтаксису, якщо потрібно
+		const combinedClassName = `${baseClass} ${className} ${typeof props.value === 'string' && props.value?.includes('[') ? 'has-mentions' : ''}`.trim();
 
 		if (type === "textarea") {
 			return (

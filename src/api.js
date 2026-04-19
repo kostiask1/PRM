@@ -47,6 +47,16 @@ export const api = {
 			method: "POST",
 			body: JSON.stringify({ orders }),
 		}),
+	getEntities: (slug, type) => api.request(`/campaigns/${slug}/entities/${type}`),
+	createEntity: (slug, type, payload) => api.request(`/campaigns/${slug}/entities/${type}`, {
+		method: "POST", body: JSON.stringify(payload)
+	}),
+	updateEntity: (slug, type, entitySlug, payload) => api.request(`/campaigns/${slug}/entities/${type}/${entitySlug}`, {
+		method: "PATCH", body: JSON.stringify(payload)
+	}),
+	deleteEntity: (slug, type, entitySlug) => api.request(`/campaigns/${slug}/entities/${type}/${entitySlug}`, {
+		method: "DELETE"
+	}),
 
 	// Global Backup/Restore
 	exportAll: () => api.request("/export-all"),

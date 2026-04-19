@@ -5,9 +5,9 @@
 .AiAssistant__toggle {
 	position: fixed;
 	bottom: 85px; /* Розташовуємо вище за DiceCalculator, який зазвичай на 20px */
-	right: 20px;
-	width: 52px;
-	height: 52px;
+	right: 16px;
+	width: 56px;
+	height: 56px;
 	border-radius: 50%;
 	background: var(--bg-2);
 	border: 1px solid var(--border);

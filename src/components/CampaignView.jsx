@@ -10,6 +10,7 @@ import Panel from "./Panel";
 import StatusBadge from "./StatusBadge";
 import DraggableList from "./DraggableList";
 import NoteCard from "./NoteCard";
+import CharacterCard from "./CharacterCard";
 import "../assets/components/CampaignView.css";
 
 export default function CampaignView({
@@ -25,6 +26,7 @@ export default function CampaignView({
 	const [description, setDescription] = useState(campaign.description || "");
 	const [notes, setNotes] = useState(campaign.notes || []);
 	const [characters, setCharacters] = useState(campaign.characters || []); // NEW: State for characters
+	const [npcs, setNpcs] = useState([]);
 	const [isDescriptionCollapsed, setIsDescriptionCollapsed] = useState(
 		campaign.isDescriptionCollapsed || false,
 	);
@@ -34,6 +36,9 @@ export default function CampaignView({
 	const [isCharactersCollapsed, setIsCharactersCollapsed] = useState(
 		campaign.isCharactersCollapsed || false,
 	); // NEW: State for characters collapse
+	const [isNpcsCollapsed, setIsNpcsCollapsed] = useState(
+		campaign.isNpcsCollapsed || false,
+	);
 	const saveTimeout = useRef(null);
 	const isSavingRef = useRef(false);
 
@@ -43,28 +48,64 @@ export default function CampaignView({
 	const isUpdatingHistory = useRef(false);
 	const lastSlugRef = useRef(campaign.slug);
 
+	const loadCharacters = useCallback(async () => {
+		try {
+			const data = await api.getEntities(campaign.slug, "characters");
+			setCharacters(data);
+		} catch (err) {
+			console.error("Failed to load characters", err);
+		}
+	}, [campaign.slug]);
+
+	const loadNpcs = useCallback(async () => {
+		try {
+			const data = await api.getEntities(campaign.slug, "npc");
+			setNpcs(data);
+		} catch (err) {
+			console.error("Failed to load NPCs", err);
+		}
+	}, [campaign.slug]);
+
+	useEffect(() => {
+		loadCharacters();
+		loadNpcs();
+	}, []);
+
 	// Синхронізація при зміні кампанії
 	useEffect(() => {
 		// Оновлюємо локальний стан лише якщо перейшли в іншу кампанію
 		if (lastSlugRef.current !== campaign.slug) {
 			setDescription(campaign.description || "");
 			let initialNotes = campaign.notes || [];
-			
+
 			const last = initialNotes[initialNotes.length - 1];
-			if (initialNotes.length === 0 || (last && (last.text?.trim() || last.title?.trim()))) {
-				initialNotes.push({ id: Date.now(), title: "", text: "", collapsed: false });
+			if (
+				initialNotes.length === 0 ||
+				(last && (last.text?.trim() || last.title?.trim()))
+			) {
+				initialNotes.push({
+					id: Date.now(),
+					title: "",
+					text: "",
+					collapsed: false,
+				});
 			}
 			setNotes(initialNotes);
-			setCharacters(campaign.characters || []); // NEW: Reset characters state
 			setIsDescriptionCollapsed(campaign.isDescriptionCollapsed || false);
 			setIsNotesCollapsed(campaign.isNotesCollapsed || false);
 			setIsCharactersCollapsed(campaign.isCharactersCollapsed || false);
 			setUndoStack([]);
 			setRedoStack([]);
 			lastSlugRef.current = campaign.slug;
+			loadCharacters();
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [campaign.slug]); // Прибираємо description та notes з залежностей, щоб уникнути "підтягування"
+	}, [campaign.slug]);
+
+	// Слухаємо глобальну подію оновлення сутностей (наприклад, після редагування в модалці)
+	useEffect(() => {
+		window.addEventListener("refresh-entities", loadCharacters);
+		return () => window.removeEventListener("refresh-entities", loadCharacters);
+	}, [loadCharacters]);
 
 	const saveToServer = useCallback(
 		async (updates) => {
@@ -250,7 +291,10 @@ export default function CampaignView({
 		let newNotes = notes.map((n) => (n.id === id ? { ...n, title } : n));
 
 		const lastNote = newNotes[newNotes.length - 1];
-		if (lastNote && (lastNote.text.trim() !== "" || lastNote.title?.trim() !== "")) {
+		if (
+			lastNote &&
+			(lastNote.text.trim() !== "" || lastNote.title?.trim() !== "")
+		) {
 			newNotes.push({ id: Date.now(), title: "", text: "", collapsed: false });
 		}
 
@@ -265,7 +309,10 @@ export default function CampaignView({
 		// Логіка нескінченних заміток:
 		// Якщо остання замітка має заголовок АБО текст — додаємо нову порожню в кінець
 		const lastNote = newNotes[newNotes.length - 1];
-		if (lastNote && (lastNote.text.trim() !== "" || lastNote.title?.trim() !== "")) {
+		if (
+			lastNote &&
+			(lastNote.text.trim() !== "" || lastNote.title?.trim() !== "")
+		) {
 			newNotes.push({
 				id: Date.now(),
 				title: "",
@@ -292,14 +339,28 @@ export default function CampaignView({
 	};
 
 	// NEW: Character management handlers
-	const handleAddCharacter = () => {
-		pushToUndo();
-		const newCharacters = [
-			...characters,
-			{ id: Date.now(), name: "", description: "", collapsed: false },
-		];
-		setCharacters(newCharacters);
-		triggerSave({ characters: newCharacters });
+	const handleAddCharacter = async () => {
+		const newChar = {
+			firstName: "",
+			lastName: "",
+			race: "",
+			class: "",
+			level: 1,
+			motivation: "",
+			trait: "",
+			notes: [{ id: Date.now() + 1, title: "", text: "", collapsed: false }],
+			collapsed: false,
+		};
+		try {
+			const saved = await api.createEntity(
+				campaign.slug,
+				"characters",
+				newChar,
+			);
+			setCharacters([...characters, saved]);
+		} catch (err) {
+			console.error("Failed to create character", err);
+		}
 	};
 
 	const handleToggleCharacterCollapse = (id) => {
@@ -311,31 +372,75 @@ export default function CampaignView({
 		triggerSave({ characters: newCharacters });
 	};
 
-	const handleCharacterNameChange = (id, name) => {
-		pushToUndo();
-		if (!saveTimeout.current) pushToUndo(); // Робимо snapshot лише перед початком введення тексту
-		const newCharacters = characters.map((c) =>
-			c.id === id ? { ...c, name } : c,
-		);
-		setCharacters(newCharacters);
-		triggerSave({ characters: newCharacters });
+	const handleCharacterChange = async (id, updatedChar) => {
+		// Оновлюємо локально для швидкості
+		setCharacters((prev) => prev.map((c) => (c.id === id ? updatedChar : c)));
+
+		// Зберігаємо у файл
+		if (saveTimeout.current) clearTimeout(saveTimeout.current);
+		saveTimeout.current = setTimeout(() => {
+			api.updateEntity(
+				campaign.slug,
+				"characters",
+				updatedChar.slug,
+				updatedChar,
+			);
+		}, 500);
 	};
 
-	const handleCharacterDescriptionChange = (id, description) => {
-		pushToUndo();
-		if (!saveTimeout.current) pushToUndo(); // Робимо snapshot лише перед початком введення тексту
-		const newCharacters = characters.map((c) =>
-			c.id === id ? { ...c, description } : c,
-		);
-		setCharacters(newCharacters);
-		triggerSave({ characters: newCharacters });
+	const handleDeleteCharacter = async (id) => {
+		const char = characters.find((c) => c.id === id);
+		if (!char) return;
+		await api.deleteEntity(campaign.slug, "characters", char.slug);
+		setCharacters((prev) => prev.filter((c) => c.id !== id));
 	};
 
-	const handleDeleteCharacter = (id) => {
-		pushToUndo();
-		const newCharacters = characters.filter((c) => c.id !== id);
-		setCharacters(newCharacters);
-		triggerSave({ characters: newCharacters });
+	const handleAddNpc = async () => {
+		const newNpc = {
+			firstName: "",
+			lastName: "",
+			race: "",
+			class: "",
+			level: 1,
+			motivation: "",
+			trait: "",
+			notes: [{ id: Date.now() + 1, title: "", text: "", collapsed: false }],
+			collapsed: false,
+		};
+		try {
+			const saved = await api.createEntity(campaign.slug, "npc", newNpc);
+			setNpcs([...npcs, saved]);
+		} catch (err) {
+			console.error("Failed to create NPC", err);
+		}
+	};
+
+	const handleToggleNpcCollapse = (id) => {
+		const next = npcs.map((n) =>
+			n.id === id ? { ...n, collapsed: !n.collapsed } : n,
+		);
+		setNpcs(next);
+	};
+
+	const handleNpcChange = async (id, updatedNpc) => {
+		setNpcs((prev) => prev.map((n) => (n.id === id ? updatedNpc : n)));
+
+		if (saveTimeout.current) clearTimeout(saveTimeout.current);
+		saveTimeout.current = setTimeout(() => {
+			api.updateEntity(
+				campaign.slug,
+				"npc",
+				updatedNpc.slug,
+				updatedNpc,
+			);
+		}, 500);
+	};
+
+	const handleNpcDelete = async (id) => {
+		const npc = npcs.find((n) => n.id === id);
+		if (!npc) return;
+		await api.deleteEntity(campaign.slug, "npc", npc.slug);
+		setNpcs((prev) => prev.filter((n) => n.id !== id));
 	};
 
 	useEffect(() => {
@@ -508,7 +613,12 @@ export default function CampaignView({
 				newNotes.length === 0 ||
 				(last && (last.text?.trim() !== "" || last.title?.trim() !== ""))
 			) {
-				newNotes.push({ id: Date.now(), title: "", text: "", collapsed: false });
+				newNotes.push({
+					id: Date.now(),
+					title: "",
+					text: "",
+					collapsed: false,
+				});
 			}
 			setNotes(newNotes);
 			setCharacters(updatedCampaign.characters || []); // NEW: Update characters from AI
@@ -682,53 +792,68 @@ export default function CampaignView({
 							onDrop={() => triggerSave({ characters })}
 							keyExtractor={(char) => char.id}
 							renderItem={(character, isDragging) => (
-								<div
-									className={`character-card-simple ${character.collapsed ? "is-collapsed" : ""} ${isDragging ? "character-card-simple--dragging" : ""}`}>
-									<div
-										className="character-card-simple__header"
-										onClick={(e) => e.stopPropagation()}>
-										<Button
-											variant="ghost"
-											size="small"
-											icon="chevron"
-											className={`character-card-simple__toggle ${character.collapsed ? "is-rotated" : ""}`}
-											onClick={() =>
-												handleToggleCharacterCollapse(character.id)
-											}
-										/>
-										<EditableField
-											value={character.name}
-											onChange={(e) =>
-												handleCharacterNameChange(character.id, e.target.value)
-											}
-											placeholder="Ім'я персонажа"
-											className="character-card-simple__name"
-										/>
-										<Button
-											variant="danger"
-											icon="trash"
-											size={14}
-											onClick={(e) => {
-												e.stopPropagation();
-												handleDeleteCharacter(character.id);
-											}}
-											title="Видалити персонажа"
-										/>
-									</div>
-									{!character.collapsed && (
-										<EditableField
-											type="textarea"
-											value={character.description}
-											onChange={(e) =>
-												handleCharacterDescriptionChange(
-													character.id,
-													e.target.value,
-												)
-											}
-											placeholder="Опис персонажа..."
-										/>
-									)}
-								</div>
+								<CharacterCard
+									character={character}
+									isDragging={isDragging}
+									onToggleCollapse={handleToggleCharacterCollapse}
+									onChange={handleCharacterChange}
+									onDelete={handleDeleteCharacter}
+								/>
+							)}
+						/>
+					)}
+				</div>
+
+				{/* NPC Section */}
+				<div className="CampaignView__section">
+					<div className="section-row">
+						<div
+							className="section-title-group"
+							onClick={() => {
+								const next = !isNpcsCollapsed;
+								setIsNpcsCollapsed(next);
+								triggerSave({ isNpcsCollapsed: next });
+							}}>
+							<Button
+								variant="ghost"
+								size="small"
+								icon="chevron"
+								className={`section-collapse-toggle ${isNpcsCollapsed ? "is-rotated" : ""}`}
+								onClick={(e) => {
+									e.stopPropagation();
+									const next = !isNpcsCollapsed;
+									setIsNpcsCollapsed(next);
+									triggerSave({ isNpcsCollapsed: next });
+								}}
+							/>
+							<h3>NPC</h3>
+						</div>
+						{!isNpcsCollapsed && (
+							<Button
+								variant="primary"
+								size="small"
+								onClick={handleAddNpc}
+								icon="plus"
+								strokeWidth={2.5}>
+								Новий NPC
+							</Button>
+						)}
+					</div>
+					{!isNpcsCollapsed && (
+						<DraggableList
+							items={npcs}
+							className="CampaignView__characters"
+							onReorder={setNpcs}
+							onDrop={() => {}}
+							keyExtractor={(npc) => npc.id}
+							renderItem={(npc, isDragging) => (
+								<CharacterCard
+									character={npc}
+									isDragging={isDragging}
+									onToggleCollapse={handleToggleNpcCollapse}
+									onChange={handleNpcChange}
+									onDelete={handleNpcDelete}
+								/>
 							)}
 						/>
 					)}
@@ -742,6 +867,7 @@ export default function CampaignView({
 							description,
 							notes,
 							characters,
+							npcs,
 						}}
 						campaignSlug={campaign.slug}
 						sessionId={null}

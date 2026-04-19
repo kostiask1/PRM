@@ -87,12 +87,15 @@ router.post("/generate", async (req, res, next) => {
 					}));
 				}
 				if (Array.isArray(generatedContent.characters)) {
-					meta.characters = generatedContent.characters.map((c) => ({
-						id: Date.now() + Math.floor(Math.random() * 100000),
-						name: c.name,
-						description: c.description,
-						collapsed: false,
-					}));
+					for (const c of generatedContent.characters) {
+						const name = c.firstName || c.name;
+						const charSlug = storage.campaignSlug(name);
+						await storage.writeEntity(path.campaign, "characters", charSlug, {
+							id: storage.createId(),
+							...c,
+							collapsed: false
+						});
+					}
 				}
 				meta.updatedAt = new Date().toISOString();
 				await storage.writeJson(metaPath, meta);

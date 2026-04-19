@@ -101,6 +101,61 @@ router.get("/:slug/export", async (req, res, next) => {
 	}
 });
 
+router.get("/:slug/entities/:type", async (req, res, next) => {
+	try {
+		const entities = await storage.listEntities(req.params.slug, req.params.type);
+		res.json(entities);
+	} catch (error) {
+		next(error);
+	}
+});
+
+router.post("/:slug/entities/:type", async (req, res, next) => {
+	try {
+		const { slug: campaignSlug, type } = req.params;
+		const name = storage.sanitizeName(req.body.firstName || req.body.name);
+		const entitySlug = storage.campaignSlug(name);
+		const data = {
+			id: storage.createId(),
+			firstName: req.body.firstName || name,
+			lastName: req.body.lastName || "",
+			race: req.body.race || "",
+			class: req.body.class || "",
+			level: req.body.level || 1,
+			motivation: req.body.motivation || "",
+			trait: req.body.trait || "",
+			notes: [],
+			...req.body
+		};
+		const saved = await storage.writeEntity(campaignSlug, type, entitySlug, data);
+		res.status(201).json(saved);
+	} catch (error) {
+		next(error);
+	}
+});
+
+router.patch("/:slug/entities/:type/:entitySlug", async (req, res, next) => {
+	try {
+		const { slug: campaignSlug, type, entitySlug } = req.params;
+		const current = await storage.readEntity(campaignSlug, type, entitySlug);
+		const updated = { ...current, ...req.body, updatedAt: new Date().toISOString() };
+		await storage.writeEntity(campaignSlug, type, entitySlug, updated);
+		res.json(updated);
+	} catch (error) {
+		next(error);
+	}
+});
+
+router.delete("/:slug/entities/:type/:entitySlug", async (req, res, next) => {
+	try {
+		const { slug: campaignSlug, type, entitySlug } = req.params;
+		await storage.deleteEntity(campaignSlug, type, entitySlug);
+		res.status(204).send();
+	} catch (error) {
+		next(error);
+	}
+});
+
 router.post("/reorder", async (req, res, next) => {
 	try {
 		const { orders } = req.body;

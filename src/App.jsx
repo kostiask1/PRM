@@ -4,7 +4,33 @@ import DiceCalculator from "./components/DiceCalculator";
 import MainContent from "./components/MainContent";
 import Modal from "./components/Modal";
 import Sidebar from "./components/Sidebar";
+import CharacterCard from "./components/CharacterCard";
 import { parseUrl } from "./utils/navigation";
+
+/**
+ * Допоміжний компонент для керування станом сутності всередині модального вікна.
+ * Забезпечує реактивність при редагуванні полів персонажа.
+ */
+const EntityModalContent = ({ initialEntity, campaignSlug, type, onClose }) => {
+	const [entity, setEntity] = useState(initialEntity);
+	const handleUpdate = async (id, updated) => {
+		setEntity(updated);
+		await api.updateEntity(campaignSlug, type, updated.slug, updated);
+		window.dispatchEvent(new CustomEvent("refresh-entities"));
+	};
+	return (
+		<CharacterCard
+			character={{ ...entity, collapsed: false }}
+			onChange={handleUpdate}
+			onDelete={async () => {
+				await api.deleteEntity(campaignSlug, type, entity.slug);
+				window.dispatchEvent(new CustomEvent("refresh-entities"));
+				onClose();
+			}}
+			onToggleCollapse={() => {}}
+		/>
+	);
+};
 
 /**
  * Main Application Component
@@ -106,6 +132,56 @@ export default function App() {
 		window.addEventListener("popstate", handlePopState);
 		return () => window.removeEventListener("popstate", handlePopState);
 	}, []);
+
+	useEffect(() => {
+		const handleOpenEntity = async (e) => {
+			const { name } = e.detail;
+			if (!activeCampaignSlug || !name) return;
+
+			try {
+				// Завантажуємо персонажів та NPC
+				const [chars, npcs] = await Promise.all([
+					api.getEntities(activeCampaignSlug, "characters"),
+					api.getEntities(activeCampaignSlug, "npc").catch(() => []),
+				]);
+
+				const allEntities = [...chars, ...npcs];
+				const searchName = name.trim().toLowerCase();
+
+				// Пошук за логікою: Ім'я, Прізвище або Повне ім'я
+				const found = allEntities.find((ent) => {
+					const first = (ent.firstName || "").toLowerCase();
+					const last = (ent.lastName || "").toLowerCase();
+					const full = `${first} ${last}`.trim().toLowerCase();
+					return (
+						first === searchName || last === searchName || full === searchName
+					);
+				});
+
+				if (found) {
+					const type = chars.some((c) => c.id === found.id) ? "characters" : "npc";
+					showModal({
+						title: `Персонаж: ${found.firstName} ${found.lastName}`,
+						type: "custom",
+						showFooter: false,
+						children: (
+							<EntityModalContent
+								initialEntity={found}
+								campaignSlug={activeCampaignSlug}
+								type={type}
+								onClose={() => setModalConfig(null)}
+							/>
+						),
+					});
+				}
+			} catch (err) {
+				console.error("Error opening entity modal:", err);
+			}
+		};
+
+		window.addEventListener("open-entity-modal", handleOpenEntity);
+		return () => window.removeEventListener("open-entity-modal", handleOpenEntity);
+	}, [activeCampaignSlug]);
 
 	// Універсальна функція навігації
 	const navigate = (

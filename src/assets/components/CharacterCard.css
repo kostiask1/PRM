@@ -1,0 +1,93 @@
+.character-card {
+    background: color-mix(in srgb, var(--text-bright), transparent 97%);
+    border: 1px solid color-mix(in srgb, var(--text-bright), transparent 90%);
+    border-radius: 12px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.character-card__header {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    gap: 12px;
+    cursor: pointer;
+    background: color-mix(in srgb, var(--text-bright), transparent 98%);
+}
+
+.character-card__title-group {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.character-card__name {
+    font-weight: 600;
+    color: var(--text-bright);
+}
+
+.character-card__meta-brief {
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+
+.character-card__toggle {
+    padding: 0 !important;
+    min-width: unset !important;
+    transition: transform 0.2s ease !important;
+}
+
+.character-card__toggle.is-rotated {
+    transform: rotate(-90deg);
+}
+
+.character-card__body {
+    padding: 16px;
+    border-top: 1px solid color-mix(in srgb, var(--text-bright), transparent 95%);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.character-card__grid {
+    display: grid;
+    grid-template-columns: 2fr 2fr 1.5fr 1.5fr 0.8fr;
+    gap: 10px;
+}
+
+.character-card .Select {
+    min-width: unset;
+}
+
+.character-card .Select,
+.character-card .Select__trigger {
+    height: 44px;
+}
+
+.character-card__details {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.character-card__field label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+}
+
+.character-card__notes label {
+    display: block;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+}
