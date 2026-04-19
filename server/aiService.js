@@ -10,15 +10,18 @@ const systemInstructions = {
         Завжди відповідай у форматі JSON. Не включай жодного тексту до або після JSON. 
         JSON повинен містити лише згенеровані дані, без додаткових пояснень. 
         Використовуй структуру { "description": "...", "notes": ["Заголовок\nДеталі замітки...", ...], "characters": [{name: "...", "description": "..."}, ...] }. Кожна замітка в масиві notes повинна бути цілісним логічним блоком: перший рядок — це короткий заголовок, а наступні рядки — основний зміст. Не генеруй поле "scenes" для кампанії.
-        `,
+`,
 	scene: `Ти досвідчений майстер підземель (Dungeon Master) для Dungeons & Dragons. 
         Твоя мета - допомагати в плануванні сесій. Відповідай виключно українською мовою. 
         Твої відповіді мають бути структурованими, читабельними та корисними для гри. 
         Використовувати Markdown-розмітку (наприклад, жирний текст **текст**, марковані списки, розбиття рядку) для структурування тексту всередині значень JSON.
         Завжди відповідай у форматі JSON. Не включай жодного тексту до або після JSON. 
         JSON повинен містити лише згенеровані дані, без додаткових пояснень. 
-        Коли генеруєш сцени, враховуй дані в ключі encounters, використовуй структуру { "scenes": [{ "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "..." }, "npcs": [{"name": "...", "description": "..."}, ...] }, ...] }.
-        `,
+        Коли генеруєш сцени, використовуй структуру { "scenes": [{ "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "..." }, "npcs": [{"name": "...", "description": "..."}, ...], "encounterIndex": 0 }, ...], "encounters": [{ "name": "Назва бою", "monsters": [{ "monsterName": "Official D&D Monster Name", "name": "Опціональне ім'я" }] }] }.
+        Поле encounterIndex у сцені повинно вказувати на індекс у масиві encounters, якщо для цієї сцени потрібен бій. 
+        Якщо бій не потрібен, не додавай encounterIndex.
+        Підбирай монстрів згідно з рівнем та кількістю персонажів гравців у контексті, щоб складність була доречною.
+`,
 	prompt: `Ти досвідчений майстер підземель (Dungeon Master) для Dungeons & Dragons. 
         Твоя мета - допомагати в плануванні іншому майстру. Відповідай виключно українською мовою. 
         Ти отримуєш дані та інструкцію користувача.
@@ -77,6 +80,7 @@ async function generateContent({
 	sceneId,
 	parseAIResponse,
 	contextData,
+	generateEncounters,
 }) {
 	let model;
 	let userPrompt = "";
@@ -97,20 +101,71 @@ async function generateContent({
 		systemInstruction: systemInstructions[useKey],
 	});
 
-	// Формуємо основний блок даних у форматі JSON
+	// 1. Гнучка фільтрація сесій згідно з налаштованим контекстом
+	const filteredSessions = (contextData?.sessions || []).map(s => {
+		const sessionContext = { name: s.name };
+		const conf = s.conf || {};
+		const data = s.data || {};
+
+		// Додаємо нотатки, якщо обрано
+		if (conf.included && conf.notes && data.notes) {
+			sessionContext.notes = data.notes
+				.map(n => n.text)
+				.filter(t => t && t.trim() !== "");
+		}
+		
+		// Додаємо результат сесії, якщо обрано
+		if (conf.included && conf.result_text && data.result_text) {
+			sessionContext.result = data.result_text;
+		}
+
+		// Додаємо лише вибрані сцени та їх конкретні поля
+		if (conf.included && conf.scenes && data.scenes) {
+			const sceneFields = ["summary", "goal", "stakes", "location", "encounter"];
+			const filteredScenes = data.scenes.filter(scene => {
+				return conf.scenes[scene.id]?.included;
+			}).map(scene => {
+				const sceneConf = conf.scenes[scene.id];
+				const resultScene = {};
+				
+				// Якщо обрано енкаунтер, шукаємо імена монстрів
+				if (sceneConf.encounter && scene.encounterId) {
+					const encounter = (data.encounters || []).find(e => e.id.toString() === scene.encounterId.toString());
+					if (encounter && encounter.monsters) {
+						resultScene.monsters = encounter.monsters.map(m => m.name || m.monsterName);
+					}
+				}
+
+				sceneFields.forEach(field => {
+					if (field === "encounter") return; // Вже оброблено вище
+					if (sceneConf[field]) resultScene[field] = scene.texts?.[field];
+				});
+				return resultScene;
+			});
+
+			if (filteredScenes.length > 0) {
+				sessionContext.scenes = filteredScenes;
+			}
+		}
+
+		return sessionContext;
+	}).filter(s => s.notes || s.result || s.scenes); // Прибираємо сесії без контенту
+
+	// 2. Формуємо фінальний JSON контексту для Gemini
 	const contextJson = {
 		campaign: {
 			name: campaign.name,
 			description: campaign.description,
-			notes: contextData?.campaign?.notes,
-			characters: contextData?.campaign?.characters,
+			notes: contextData?.campaign?.notes?.map(n => n.text).filter(Boolean),
+			characters: contextData?.campaign?.characters?.map(c => ({
+				name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.name,
+				race: c.race,
+				class: c.class,
+				level: c.level,
+				motivation: c.motivation,
+			})).filter(c => c.name || c.motivation),
 		},
-		currentSession: session ? {
-			name: session.name,
-			scenes: session.data?.scenes,
-			result_text: session.data?.result_text
-		} : null,
-		selectedContext: contextData?.sessions
+		selectedSessions: filteredSessions
 	};
 
 	userPrompt = `ВХІДНІ ДАНІ (JSON):\n${JSON.stringify(contextJson, null, 2)}\n\n`;
@@ -120,6 +175,10 @@ async function generateContent({
 		userPrompt += `ЗАДАЧА: Згенерувати промпт для сцени з ID: ${sceneId}\n`;
 	} else if (useKey === "scene") {
 		userPrompt += `ЗАДАЧА: На основі поточної сесії та контексту, запропонуй ідеї для нових або доповни існуючі сцени.\n`;
+		if (generateEncounters) {
+			userPrompt += `ВАЖЛИВО: Для кожної сцени, де можливий конфлікт, обов'язково згенеруй об'єкт зіткнення (encounter) у масиві encounters. 
+            Підбирай монстрів (назви англійською), враховуючи рівні та класи персонажів для балансу.\n`;
+		}
 	} else if (useKey === "campaign") {
 		userPrompt += `ЗАДАЧА: Онови опис сюжету та структуруй замітки кампанії.\n`;
 	}

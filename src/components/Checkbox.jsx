@@ -18,6 +18,7 @@ export default function Checkbox({
 			<input
 				type="checkbox"
 				checked={checked}
+				readOnly
 				{...props}
 			/>
 			<div className="Checkbox__indicator" />

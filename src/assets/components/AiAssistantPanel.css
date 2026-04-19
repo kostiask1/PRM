@@ -212,6 +212,10 @@
 	padding: 6px 0;
 }
 
+.AiAssistant__context-row .Checkbox {
+	width: 100%;
+}
+
 .AiAssistant__session-context {
 	border: 1px solid color-mix(in srgb, var(--border), transparent 60%);
 	border-radius: 12px;

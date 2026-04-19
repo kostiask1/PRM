@@ -25,6 +25,7 @@ export default function AiAssistantPanel({
 	const [notification, setNotification] = useState(null);
 	const [showSceneSelector, setShowSceneSelector] = useState(false);
 	const [parseAIResponse, setParseAIResponse] = useState(false);
+	const [generateEncounters, setGenerateEncounters] = useState(false);
 	const [sessionsList, setSessionsList] = useState([]);
 	const [expandedSessions, setExpandedSessions] = useState({});
 	const [contextConfig, setContextConfig] = useState({
@@ -91,14 +92,13 @@ export default function AiAssistantPanel({
 			for (let i = 0; i < path.length - 1; i++) {
 				if (!current[path[i]]) {
 					if (path[i - 1] === "scenes") {
-						current[path[i]] = { included: true, summary: true, goal: true, stakes: true, location: true };
+						current[path[i]] = { included: true, summary: true, goal: true, stakes: true, location: true, encounter: true };
 					} else {
 						current[path[i]] = {};
 					}
 				}
 				current = current[path[i]];
 			}
-			console.log('value:', value)
 			current[path[path.length - 1]] = value;
 			return next;
 		});
@@ -108,6 +108,15 @@ export default function AiAssistantPanel({
 		setLoading(true);
 		setError("");
 
+		// Створюємо чисту копію конфігурації без важких даних сесій (data)
+		// Сервер сам завантажить необхідні файли за потребою
+		const configToSend = JSON.parse(JSON.stringify(contextConfig));
+		if (configToSend.sessions) {
+			Object.keys(configToSend.sessions).forEach(slug => {
+				delete configToSend.sessions[slug].data;
+			});
+		}
+
 		try {
 			const data = await api.generateAi({
 				type,
@@ -115,7 +124,8 @@ export default function AiAssistantPanel({
 				path: initialRoute,
 				sceneId: targetSceneId,
 				parseAIResponse: type === "image" ? false : parseAIResponse,
-				contextConfig,
+				generateEncounters: !isCampaign && generateEncounters,
+				contextConfig: configToSend,
 			});
 
 			// Одразу оновлюємо стан в батьківському компоненті, бо в БД вже записано
@@ -154,6 +164,7 @@ export default function AiAssistantPanel({
 		{ key: "goal", label: "Мета гравців" },
 		{ key: "stakes", label: "Ставки" },
 		{ key: "location", label: "Локація" },
+		{ key: "encounter", label: "Енкаунтер (монстри)" },
 	];
 
 	const isResultJSONString = isJsonString(generatedPrompt);
@@ -210,6 +221,18 @@ export default function AiAssistantPanel({
 								}>
 								Парсинг відповіді
 							</Button>
+							{!isCampaign && parseAIResponse && (
+								<Button
+									variant={generateEncounters ? "primary" : "ghost"}
+									size="small"
+									icon="swords"
+									onClick={() => setGenerateEncounters(!generateEncounters)}
+									disabled={loading}
+									title="ШІ спробує підібрати монстрів для кожної сцени на основі рівня персонажів"
+								>
+									Генерація боїв
+								</Button>
+							)}
 						</div>
 
 						{isContextModalOpen && (
@@ -290,6 +313,7 @@ export default function AiAssistantPanel({
 																		goal: true,
 																		stakes: true,
 																		location: true,
+																		encounter: true,
 																	};
 																	return (
 																		<div key={scene.id} className="AiAssistant__scene-item">

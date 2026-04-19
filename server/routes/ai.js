@@ -11,6 +11,7 @@ router.post("/generate", async (req, res, next) => {
 			path,
 			sceneId,
 			parseAIResponse,
+			generateEncounters,
 			contextConfig,
 		} = req.body;
 		if (!process.env.GEMINI_API_KEY)
@@ -24,7 +25,12 @@ router.post("/generate", async (req, res, next) => {
 		let contextData = { campaign: {}, sessions: [] };
 		if (contextConfig) {
 			if (contextConfig.campaignNotes) contextData.campaign.notes = campaign.notes;
-			if (contextConfig.campaignCharacters) contextData.campaign.characters = campaign.characters;
+			if (contextConfig.campaignCharacters) {
+				// Збираємо і персонажів, і NPC в один масив персонажів для контексту сюжету
+				const chars = await storage.listEntities(path.campaign, "characters");
+				const npcs = await storage.listEntities(path.campaign, "npc");
+				contextData.campaign.characters = [...chars, ...npcs];
+			}
 
 			if (contextConfig.sessions) {
 				for (const [slug, conf] of Object.entries(contextConfig.sessions)) {
@@ -48,6 +54,7 @@ router.post("/generate", async (req, res, next) => {
 			sceneId,
 			parseAIResponse,
 			contextData,
+			generateEncounters,
 		});
 
 		if (generatedContent.error) return res.status(500).json(generatedContent);
@@ -58,16 +65,51 @@ router.post("/generate", async (req, res, next) => {
 			if (session) {
 				const fullPath = storage.sessionPath(path.campaign, path.session);
 				const sessionData = await storage.readJson(fullPath);
+
+				// 1. Обробка згенерованих боїв (Encounters)
+				const encounterMap = new Map(); // Тимчасова мапа для зв'язку індексів AI з новими ID
+				if (Array.isArray(generatedContent.encounters)) {
+					if (!sessionData.data.encounters) sessionData.data.encounters = [];
+
+					generatedContent.encounters.forEach((enc, idx) => {
+						const newId = storage.createId();
+						const newEncounter = {
+							id: newId,
+							name: enc.name || `Бій ${sessionData.data.encounters.length + 1}`,
+							monsters: (enc.monsters || []).map(m => ({
+								...m,
+								instanceId: `inst-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+								name: m.name || m.monsterName,
+								currentHp: 0, // Буде заповнено при відкритті
+								hit_points: 0,
+								armor_class: 0
+							}))
+						};
+						sessionData.data.encounters.push(newEncounter);
+						encounterMap.set(idx, newId);
+					});
+				}
+
+				// 2. Обробка сцен
 				if (generatedContent.scenes) {
 					sessionData.data.scenes = generatedContent.scenes.map((s, idx) => {
 						const existing = sessionData.data?.scenes?.[idx] || {};
+						
+						// Визначаємо ID зіткнення:
+						// Пріоритет 1: Нове згенероване зіткнення по індексу
+						// Пріоритет 2: Існуюче зіткнення в сцені
+						let encounterId = existing?.encounterId || "";
+						if (s.encounterIndex !== undefined && encounterMap.has(s.encounterIndex)) {
+							encounterId = encounterMap.get(s.encounterIndex);
+						}
+
 						return {
 							id:
 								existing?.id || Date.now() + Math.floor(Math.random() * 100000),
 							texts: s.texts,
 							npcs: s.npcs,
 							collapsed: existing?.collapsed || false,
-							encounterId: existing?.encounterId || "",
+							encounterId: encounterId,
 						};
 					});
 				}
