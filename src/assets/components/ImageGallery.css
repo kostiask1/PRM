@@ -337,12 +337,6 @@
 	text-align: center;
 }
 
-.ImageGallery__status {
-	grid-column: 1 / -1;
-	text-align: center;
-	padding: 40px;
-}
-
 .BreadcrumbSeparator {
 	transform: rotate(270deg);
 }

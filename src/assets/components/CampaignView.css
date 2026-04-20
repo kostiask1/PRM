@@ -61,8 +61,8 @@
 
 /* NEW: Styles for Characters Section */
 .CampaignView__characters {
-	display: flex;
-	flex-direction: column;
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(440px, 50%));
 	gap: 12px;
 }
 

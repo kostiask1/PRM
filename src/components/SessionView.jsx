@@ -8,6 +8,8 @@ import Panel from "./Panel";
 import DraggableList from "./DraggableList";
 import Modal from "./Modal";
 import NoteCard from "./NoteCard";
+import ImageDropzone from "./ImageDropzone";
+import ImageGallery from "./ImageGallery";
 import CharacterCard from "./CharacterCard";
 import Checkbox from "./Checkbox";
 import "../assets/components/SessionView.css";
@@ -315,10 +317,12 @@ export default function SessionView({
 		);
 	};
 
-	const updateScene = (sceneId, field, value) => {
-		const scenes = session.data.scenes.map((s) =>
-			s.id === sceneId ? { ...s, texts: { ...s.texts, [field]: value } } : s,
-		);
+	const updateScene = (sceneId, field, value, isTopLevel = false) => {
+		const scenes = session.data.scenes.map((s) => {
+			if (s.id !== sceneId) return s;
+			if (isTopLevel) return { ...s, [field]: value };
+			return { ...s, texts: { ...s.texts, [field]: value } };
+		});
 		updateData("scenes", scenes);
 	};
 
@@ -711,6 +715,10 @@ export default function SessionView({
 										onRemove={() => removeScene(scene.id)}
 										onOpenEncounter={() => handleOpenEncounter(scene)}
 										handleOpenNpcCreate={handleOpenNpcCreate}
+										imageUrl={scene.imageUrl}
+										onImageChange={(url) => updateScene(scene.id, "imageUrl", url, true)}
+										campaignSlug={campaignSlug}
+										modal={modal}
 										hasEncounter={!!scene.encounterId}
 										encounterName={
 											(session.data.encounters || []).find(
@@ -806,6 +814,7 @@ export default function SessionView({
 						campaignSlug={campaignSlug}
 						modal={modal}
 						type="npc"
+						initialEditing={true}
 					/>
 				</Modal>
 			)}
@@ -854,8 +863,14 @@ function SceneCard({
 	hasEncounter,
 	encounterName,
 	handleOpenNpcCreate,
+	imageUrl,
+	onImageChange,
+	campaignSlug,
+	modal,
 	children,
 }) {
+	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+
 	return (
 		<div className="SceneCard">
 			<div className="SceneCard__header" onClick={onToggle}>
@@ -902,7 +917,56 @@ function SceneCard({
 					/>
 				</div>
 			</div>
-			{!collapsed && <div className="SceneCard__grid">{children}</div>}
+			{!collapsed && (
+				<div className="SceneCard__content">
+					<div className="SceneCard__image-side">
+						<div className="SceneCard__portrait-container">
+							{imageUrl ? (
+								<div className="SceneCard__portrait-wrapper">
+									<img
+										src={imageUrl}
+										alt={`Scene ${number}`}
+										onClick={(e) => {
+											e.stopPropagation();
+											setIsGalleryOpen(true);
+										}}
+									/>
+									<Button
+										variant="danger"
+										size="small"
+										icon="x"
+										onClick={(e) => {
+											e.stopPropagation();
+											onImageChange(null);
+										}}
+										className="SceneCard__image-delete"
+										title="Видалити зображення"
+									/>
+								</div>
+							) : (
+								<ImageDropzone
+									campaignSlug={campaignSlug}
+									modal={modal}
+									onUploadSuccess={(res) => onImageChange(res.url)}
+								/>
+							)}
+						</div>
+					</div>
+					<div className="SceneCard__grid">{children}</div>
+				</div>
+			)}
+
+			<ImageGallery
+				isOpen={isGalleryOpen}
+				onClose={() => setIsGalleryOpen(false)}
+				onSelect={(img) => {
+					onImageChange(img.url);
+					setIsGalleryOpen(false);
+				}}
+				modal={modal}
+				initialSource={campaignSlug}
+				initialCategory="scenes"
+			/>
 		</div>
 	);
 }

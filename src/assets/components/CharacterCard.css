@@ -91,7 +91,8 @@
     width: 100%;
     aspect-ratio: 1/1.2;
     border-radius: 8px;
-    overflow: visible; /* To allow delete button overlap if needed */
+    overflow: visible;
+    /* To allow delete button overlap if needed */
 }
 
 .character-card__portrait-wrapper img {
@@ -151,12 +152,32 @@
     margin-bottom: 6px;
 }
 
+.character-card__notes-header {
+    display: flex;
+    cursor: pointer;
+    align-items: center;
+    width: 100%;
+    gap: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 10px;
+}
+
 .character-card__notes label {
     display: block;
     font-size: 0.8rem;
+    width: 100%;
     text-transform: uppercase;
+    cursor: pointer;
     color: var(--muted);
-    margin-bottom: 10px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--border);
+}
+
+.character-card__notes-toggle {
+    border: unset;
+    padding: 0;
+}
+
+.character-card__notes-toggle .Icon {
+    width: 14px;
+    height: 14px;
 }

@@ -17,9 +17,10 @@ export default function CharacterCard({
 	onDelete,
 	campaignSlug,
 	modal,
+	initialEditing = false,
 	type = "characters",
 }) {
-	const [isEditing, setIsEditing] = useState(false);
+	const [isEditing, setIsEditing] = useState(initialEditing);
 	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 
 	const updateField = (field, value) => {
@@ -88,7 +89,7 @@ export default function CharacterCard({
 					{character.collapsed && (
 						<span className="character-card__meta-brief">
 							{character.race} {character.class}{" "}
-							{character.level && `• ${character.level} ур.`}
+							{character.level && `• ${character.level} рів.`}
 						</span>
 					)}
 				</div>
@@ -163,7 +164,7 @@ export default function CharacterCard({
 									<div className="character-card__main-info">
 										<div className="character-card__meta-line">
 											<strong>{character.race || "Раса"}</strong> •{" "}
-											{character.class || "Клас"} ({character.level} ур.)
+											{character.class || "Клас"} ({character.level} рів.)
 										</div>
 									</div>
 								</div>
@@ -248,25 +249,43 @@ export default function CharacterCard({
 					</div>
 
 					<div className="character-card__notes">
-						<label>Замітки персонажа</label>
-						<div className="character-card__notes-list">
-							{(character.notes || []).map((note, index) => (
-								<NoteCard
-									key={note.id}
-									note={note}
-									isLast={index === (character.notes || []).length - 1}
-									onToggleCollapse={(id) => {
-										const notes = character.notes.map((n) =>
-											n.id === id ? { ...n, collapsed: !n.collapsed } : n,
-										);
-										updateField("notes", notes);
-									}}
-									onTitleChange={handleNoteTitleChange}
-									onTextChange={handleNoteTextChange}
-									onDelete={handleNoteDelete}
-								/>
-							))}
+						<div
+							className="character-card__notes-header"
+							onClick={() =>
+								updateField("isNotesCollapsed", !character.isNotesCollapsed)
+							}>
+							<Button
+								variant="ghost"
+								size="small"
+								icon="chevron"
+								className={`character-card__notes-toggle ${character.isNotesCollapsed ? "is-rotated" : ""}`}
+								onClick={(e) => {
+									e.stopPropagation();
+									updateField("isNotesCollapsed", !character.isNotesCollapsed);
+								}}
+							/>
+							<label>Замітки персонажа</label>
 						</div>
+						{!character.isNotesCollapsed && (
+							<div className="character-card__notes-list">
+								{(character.notes || []).map((note, index) => (
+									<NoteCard
+										key={note.id}
+										note={note}
+										isLast={index === (character.notes || []).length - 1}
+										onToggleCollapse={(id) => {
+											const notes = character.notes.map((n) =>
+												n.id === id ? { ...n, collapsed: !n.collapsed } : n,
+											);
+											updateField("notes", notes);
+										}}
+										onTitleChange={handleNoteTitleChange}
+										onTextChange={handleNoteTextChange}
+										onDelete={handleNoteDelete}
+									/>
+								))}
+							</div>
+						)}
 					</div>
 				</div>
 			)}

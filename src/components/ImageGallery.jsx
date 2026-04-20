@@ -45,6 +45,7 @@ export default function ImageGallery({
 	const [images, setImages] = useState([]);
 	const [selectedFilenames, setSelectedFilenames] = useState(new Set());
 	const [selectedSubs, setSelectedSubs] = useState(new Set());
+	const [lastSelectedIndex, setLastSelectedIndex] = useState(null);
 	const [loading, setLoading] = useState(false);
 	const [isCreatingSub, setIsCreatingSub] = useState(false);
 	const [newSubName, setNewSubName] = useState("");
@@ -62,7 +63,7 @@ export default function ImageGallery({
 				const cat = CATEGORIES.find((c) => c.id === initialCategory);
 				if (cat) {
 					setSelectedCat(cat);
-					setSelectedSub(initialSubcategory || (cat.subs ? cat.subs[0] : ""));
+					setSelectedSub(initialSubcategory || "");
 				}
 			}
 		}
@@ -75,6 +76,7 @@ export default function ImageGallery({
 		}
 		setSelectedFilenames(new Set()); // Clear selection on category/source change
 		setSelectedSubs(new Set());
+		setLastSelectedIndex(null);
 		setEditingSubName(null); // Clear editing state
 	}, [selectedSource, selectedCat, selectedSub, isOpen]);
 
@@ -342,6 +344,51 @@ export default function ImageGallery({
 		]),
 	);
 
+	const handleItemClick = (name, type, index, e) => {
+		e.stopPropagation();
+
+		if (e.shiftKey && lastSelectedIndex !== null) {
+			const start = Math.min(index, lastSelectedIndex);
+			const end = Math.max(index, lastSelectedIndex);
+			
+			// Якщо затиснутий Ctrl/Cmd + Shift, додаємо до існуючого вибору
+			// Інакше — створюємо новий вибір діапазону
+			const isAdditive = e.ctrlKey || e.metaKey;
+			const nextFilenames = new Set(isAdditive ? selectedFilenames : []);
+			const nextSubs = new Set(isAdditive ? selectedSubs : []);
+
+			const combinedItems = [
+				...allSubs.map(s => ({ name: s, type: 'sub' })),
+				...images.map(i => ({ name: i.name, type: 'image' }))
+			];
+
+			for (let i = start; i <= end; i++) {
+				const item = combinedItems[i];
+				if (item.type === 'sub') nextSubs.add(item.name);
+				else nextFilenames.add(item.name);
+			}
+
+			setSelectedFilenames(nextFilenames);
+			setSelectedSubs(nextSubs);
+		} else if (e.ctrlKey || e.metaKey) {
+			toggleSelect(name, type, e);
+			setLastSelectedIndex(index);
+		} else {
+			const isSelected = type === 'image' ? selectedFilenames.has(name) : selectedSubs.has(name);
+			const totalSelected = selectedFilenames.size + selectedSubs.size;
+
+			if (isSelected && totalSelected === 1) {
+				setSelectedFilenames(new Set());
+				setSelectedSubs(new Set());
+				setLastSelectedIndex(null);
+			} else {
+				setSelectedFilenames(type === 'image' ? new Set([name]) : new Set());
+				setSelectedSubs(type === 'sub' ? new Set([name]) : new Set());
+				setLastSelectedIndex(index);
+			}
+		}
+	};
+
 	return (
 		<Modal
 			title="Галерея активів"
@@ -402,7 +449,7 @@ export default function ImageGallery({
 								className={`TabBtn ${selectedCat.id === cat.id ? "is-active" : ""} ${dragOverTarget?.id === cat.id ? "is-drag-over" : ""}`}
 								onClick={() => {
 									setSelectedCat(cat);
-									setSelectedSub(cat.subs ? cat.subs[0] : "");
+									setSelectedSub("");
 								}}
 								onDragOver={(e) => {
 									e.preventDefault();
@@ -532,23 +579,11 @@ export default function ImageGallery({
 						)}
 
 						{/* Рендеринг папок у сітці */}
-						{!loading && allSubs.map(sub => (
+						{!loading && allSubs.map((sub, index) => (
 							<div
 								key={sub}
 								className={`ImageGallery__item ImageGallery__item--folder ${selectedSubs.has(sub) ? "is-selected" : ""} ${dragOverTarget?.id === sub ? "is-drag-over" : ""}`}
-								onClick={(e) => {
-									if (e.ctrlKey || e.metaKey) {
-										toggleSelect(sub, "sub", e);
-									} else {
-										const isSelected = selectedSubs.has(sub);
-										if (isSelected && selectedSubs.size === 1 && selectedFilenames.size === 0) {
-											setSelectedSubs(new Set());
-										} else {
-											setSelectedSubs(new Set([sub]));
-											setSelectedFilenames(new Set());
-										}
-									}
-								}}
+								onClick={(e) => handleItemClick(sub, "sub", index, e)}
 								onDoubleClick={() => {
 									const nextPath = selectedSub ? `${selectedSub}/${sub}` : sub;
 									setSelectedSub(nextPath);
@@ -587,26 +622,12 @@ export default function ImageGallery({
 						))}
 
 						{/* Рендеринг зображень */}
-						{loading ? (
-							<div className="ImageGallery__status">Завантаження...</div>
-						) : images.length > 0 ? (
-							images.map((img) => (
+						{!loading && images.length > 0 && (
+							images.map((img, index) => (
 								<div
 									key={img.url}
 									className={`ImageGallery__item ${selectedFilenames.has(img.name) ? "is-selected" : ""}`}
-									onClick={(e) => {
-										if (e.ctrlKey || e.metaKey) {
-											toggleSelect(img.name, "image", e);
-										} else {
-											const isSelected = selectedFilenames.has(img.name);
-											if (isSelected && selectedFilenames.size === 1 && selectedSubs.size === 0) {
-												setSelectedFilenames(new Set());
-											} else {
-												setSelectedFilenames(new Set([img.name]));
-												setSelectedSubs(new Set());
-											}
-										}
-									}}
+									onClick={(e) => handleItemClick(img.name, "image", allSubs.length + index, e)}
 									onDoubleClick={() => onSelect?.(img)}
 									onContextMenu={async (e) => {
 										e.preventDefault();
@@ -639,10 +660,6 @@ export default function ImageGallery({
 									</span>
 								</div>
 							))
-						) : (
-							<div className="ImageGallery__status muted">
-								Зображень не знайдено
-							</div>
 						)}
 					</div>
 				</main>
