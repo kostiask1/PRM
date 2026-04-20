@@ -119,58 +119,6 @@ export default function CharacterCard({
 			{!character.collapsed && (
 				<div className="character-card__body">
 					<div className="character-card__main-layout">
-						<div className="character-card__info-side">
-							{isEditing ? (
-								<div className="character-card__grid">
-									<EditableField
-										type="text"
-										value={character.firstName}
-										onChange={(e) => updateField("firstName", e.target.value)}
-										placeholder="Ім'я"
-									/>
-									<EditableField
-										type="text"
-										value={character.lastName}
-										onChange={(e) => updateField("lastName", e.target.value)}
-										placeholder="Прізвище"
-									/>
-									<EditableField
-										type="text"
-										value={character.race}
-										onChange={(e) => updateField("race", e.target.value)}
-										placeholder="Раса"
-									/>
-									<EditableField
-										type="text"
-										value={character.class}
-										onChange={(e) => updateField("class", e.target.value)}
-										placeholder="Клас"
-									/>
-									<Select
-										value={character.level}
-										onChange={(e) => updateField("level", e.target.value)}>
-										{Array.from(Array(20)).map((_, index) => {
-											const level = index + 1;
-											return (
-												<option key={level} value={level}>
-													{level} рівень
-												</option>
-											);
-										})}
-									</Select>
-								</div>
-							) : (
-								<div className="character-card__view-mode">
-									<div className="character-card__main-info">
-										<div className="character-card__meta-line">
-											<strong>{character.race || "Раса"}</strong> •{" "}
-											{character.class || "Клас"} ({character.level} рів.)
-										</div>
-									</div>
-								</div>
-							)}
-						</div>
-
 						<div className="character-card__image-side">
 							<div className="character-card__portrait-container">
 								{character.imageUrl && (
@@ -210,41 +158,105 @@ export default function CharacterCard({
 								)}
 							</div>
 						</div>
-					</div>
-					<div className="character-card__details">
-						<div className="character-card__field">
-							<label>Мотивація</label>
-							{isEditing ? (
-								<EditableField
-									type="textarea"
-									value={character.motivation}
-									onChange={(e) => updateField("motivation", e.target.value)}
-									placeholder="Чого прагне персонаж..."
-								/>
-							) : (
-								<div className="character-card__text-content">
-									<ReactMarkdown>
-										{character.motivation || "*Мотивація не вказана*"}
-									</ReactMarkdown>
+
+						<div className="character-card__content-side">
+							<div className="character-card__info-side">
+								{isEditing ? (
+									<div className="character-card__grid">
+										<EditableField
+											type="text"
+											value={character.firstName}
+											onChange={(e) => updateField("firstName", e.target.value)}
+											placeholder="Ім'я"
+										/>
+										<EditableField
+											type="text"
+											value={character.lastName}
+											onChange={(e) => updateField("lastName", e.target.value)}
+											placeholder="Прізвище"
+										/>
+										<div className="character-card__row-trio">
+											<EditableField
+												type="text"
+												value={character.race}
+												onChange={(e) => updateField("race", e.target.value)}
+												placeholder="Раса"
+											/>
+											<EditableField
+												type="text"
+												value={character.class}
+												onChange={(e) => updateField("class", e.target.value)}
+												placeholder="Клас"
+											/>
+											<Select
+												value={character.level}
+												onChange={(e) => updateField("level", e.target.value)}>
+												{Array.from(Array(20)).map((_, index) => {
+													const level = index + 1;
+													return (
+														<option key={level} value={level}>
+															{level} рівень
+														</option>
+													);
+												})}
+											</Select>
+										</div>
+									</div>
+								) : (
+									<div className="character-card__view-mode">
+										<div className="character-card__main-info">
+											<div className="character-card__meta-line">
+												<h2>
+													{character.firstName} {character.lastName}
+												</h2>
+											</div>
+											<div className="character-card__meta-line">
+												<strong>{character.race || "Раса"}</strong> •{" "}
+												{character.class || "Клас"} ({character.level} рів.)
+											</div>
+										</div>
+									</div>
+								)}
+							</div>
+
+							<div className="character-card__details">
+								<div className="character-card__field">
+									<label>Мотивація</label>
+									{isEditing ? (
+										<EditableField
+											type="textarea"
+											value={character.motivation}
+											onChange={(e) =>
+												updateField("motivation", e.target.value)
+											}
+											placeholder="Чого прагне персонаж..."
+										/>
+									) : (
+										<div className="character-card__text-content">
+											<ReactMarkdown>
+												{character.motivation || "*Мотивація не вказана*"}
+											</ReactMarkdown>
+										</div>
+									)}
 								</div>
-							)}
-						</div>
-						<div className="character-card__field">
-							<label>Особливість</label>
-							{isEditing ? (
-								<EditableField
-									type="textarea"
-									value={character.trait}
-									onChange={(e) => updateField("trait", e.target.value)}
-									placeholder="Характерна риса або звичка..."
-								/>
-							) : (
-								<div className="character-card__text-content">
-									<ReactMarkdown>
-										{character.trait || "*Особливості не вказані*"}
-									</ReactMarkdown>
+								<div className="character-card__field">
+									<label>Особливість</label>
+									{isEditing ? (
+										<EditableField
+											type="textarea"
+											value={character.trait}
+											onChange={(e) => updateField("trait", e.target.value)}
+											placeholder="Характерна риса або звичка..."
+										/>
+									) : (
+										<div className="character-card__text-content">
+											<ReactMarkdown>
+												{character.trait || "*Особливості не вказані*"}
+											</ReactMarkdown>
+										</div>
+									)}
 								</div>
-							)}
+							</div>
 						</div>
 					</div>
 

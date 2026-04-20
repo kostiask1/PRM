@@ -1,5 +1,7 @@
 .Input {
 	width: -webkit-fill-available;
+	min-width: 0;
+	min-height: 0;
 	background: var(--input);
 	border: 1px solid var(--border);
 	border-radius: 10px;
@@ -29,6 +31,5 @@
 }
 
 .Input--result {
-	min-height: 220px;
 	background: color-mix(in srgb, var(--bg-2), transparent 20%);
 }

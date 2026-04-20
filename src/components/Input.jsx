@@ -410,6 +410,7 @@ const Input = forwardRef(
 		if (type === "textarea") {
 			return (
 				<textarea
+					rows={1}
 					{...props}
 					ref={setRefs}
 					className={combinedClassName}

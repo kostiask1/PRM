@@ -488,7 +488,7 @@ export default function ImageGallery({
 											setSelectedSub(newPath);
 										}}
 									>
-										{part}
+										{SUB_LABELS[part] || part}
 									</button>
 								</React.Fragment>
 							))}
