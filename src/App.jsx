@@ -110,6 +110,7 @@ export default function App() {
 			setCampaigns(data);
 		} catch (err) {
 			console.error("Failed to load campaigns", err);
+			alert("Помилка", "Не вдалося завантажити список кампаній");
 		}
 	};
 
@@ -188,6 +189,7 @@ export default function App() {
 				}
 			} catch (err) {
 				console.error("Error opening entity modal:", err);
+				alert("Помилка", "Не вдалося відкрити картку персонажа");
 			}
 		};
 
@@ -259,6 +261,7 @@ export default function App() {
 			await loadCampaigns();
 		} catch (err) {
 			console.error("Failed to toggle campaign status", err);
+			alert("Помилка", "Не вдалося оновити статус кампанії");
 		}
 	};
 

@@ -278,6 +278,10 @@ export default function CharacterCard({
 					updateField("imageUrl", img.url);
 					setIsGalleryOpen(false);
 				}}
+				modal={modal}
+				initialSource={campaignSlug}
+				initialCategory={type === "npc" ? "tokens" : "characters"}
+				initialSubcategory={type === "npc" ? "npc" : "players"}
 			/>
 		</div>
 	);

@@ -139,8 +139,8 @@ export const api = {
 	// Image methods
 	uploadImage: (slug, category, subcategory, file) => {
 		const formData = new FormData();
-		formData.append("image", file);
 		if (subcategory) formData.append("subcategory", subcategory);
+		formData.append("image", file); // Файл має бути останнім, щоб multer бачив інші поля
 		
 		return api.request(`/campaigns/${encodeURIComponent(slug)}/images/${category}`, {
 			method: "POST",
@@ -160,13 +160,19 @@ export const api = {
 			method: "POST",
 			body: JSON.stringify({ name })
 		}),
-	getSubcategories: (slug, category) => 
-		api.request(`/campaigns/${encodeURIComponent(slug)}/images/${category}/subcategories`),
+	getSubcategories: (slug, category, subcategory = "") => 
+		api.request(`/campaigns/${encodeURIComponent(slug)}/images/${category}/subcategories${subcategory ? `?subcategory=${encodeURIComponent(subcategory)}` : ""}`),
 	
 	renameSubcategory: (slug, category, oldName, newName) =>
 		api.request(`/campaigns/${encodeURIComponent(slug)}/images/${category}/subcategories/${encodeURIComponent(oldName)}`, {
 			method: "PATCH",
 			body: JSON.stringify({ newName })
+		}),
+	
+	renameImage: (slug, category, subcategory, oldName, newName) =>
+		api.request(`/campaigns/${encodeURIComponent(slug)}/images/${category}/rename`, {
+			method: "PATCH",
+			body: JSON.stringify({ subcategory, oldName, newName })
 		}),
 	
 	deleteImages: (payload) => api.request("/images/delete", {

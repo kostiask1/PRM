@@ -150,6 +150,7 @@ export default function ImageDropzone({ campaignSlug, onUploadSuccess, modal }) 
 					onUploadSuccess?.(img);
 					setIsGalleryOpen(false);
 				}} 
+				modal={modal}
 			/>
 		</div>
 	);

@@ -458,8 +458,8 @@ async function listImages(slug, category, subcategory = "") {
 		}));
 }
 
-async function listSubcategories(slug, category) {
-	const dir = path.join(IMAGES_DIR, path.basename(slug), category);
+async function listSubcategories(slug, category, subcategory = "") {
+	const dir = campaignImagesDir(slug, category, subcategory);
 	if (!(await exists(dir))) return [];
 	const entries = await fs.readdir(dir, { withFileTypes: true });
 	return entries.filter((e) => e.isDirectory()).map((e) => e.name);
@@ -567,6 +567,24 @@ async function moveImages(items, src, dest) {
 	return results;
 }
 
+async function renameImage(slug, category, subcategory, oldName, newName) {
+	const dir = campaignImagesDir(slug, category, subcategory);
+	const oldPath = path.join(dir, oldName);
+	const newPath = path.join(dir, newName);
+
+	if (!(await exists(oldPath))) throw new Error(`Файл '${oldName}' не знайдено.`);
+	if (oldPath !== newPath && (await exists(newPath))) throw new Error(`Файл '${newName}' вже існує.`);
+
+	await renameWithRetry(oldPath, newPath);
+
+	const sSub = subcategory || "";
+	const oldUrl = `/api/images/${encodeURIComponent(slug)}/${encodeURIComponent(category)}${sSub ? "/" + sSub.split(path.sep).join("/") : ""}/${encodeURIComponent(oldName)}`;
+	const newUrl = `/api/images/${encodeURIComponent(slug)}/${encodeURIComponent(category)}${sSub ? "/" + sSub.split(path.sep).join("/") : ""}/${encodeURIComponent(newName)}`;
+
+	await updateAllImageReferences([{ oldUrl, newUrl }]);
+	return { oldUrl, newUrl };
+}
+
 async function deleteImages(items, src) {
 	const dir = campaignImagesDir(src.slug, src.category, src.subcategory);
 	for (const name of items) {
@@ -576,14 +594,14 @@ async function deleteImages(items, src) {
 }
 
 async function renameSubcategory(slug, category, oldName, newName) {
-	const parentDir = path.join(IMAGES_DIR, path.basename(slug), category);
-	const oldPath = path.join(parentDir, oldName);
-	const newPath = path.join(parentDir, newName);
+	const root = path.join(IMAGES_DIR, path.basename(slug), category);
+	const oldPath = path.join(root, oldName);
+	const newPath = path.join(root, newName);
 
 	if (!(await exists(oldPath))) {
 		throw new Error(`Підкатегорія '${oldName}' не знайдена.`);
 	}
-	if (await exists(newPath)) {
+	if (oldPath !== newPath && await exists(newPath)) {
 		throw new Error(`Підкатегорія '${newName}' вже існує.`);
 	}
 	await fs.rename(oldPath, newPath);
@@ -631,4 +649,6 @@ module.exports = {
 	listSubcategories,
 	moveImages,
 	renameSubcategory,
+	renameImage,
+	deleteImages,
 };

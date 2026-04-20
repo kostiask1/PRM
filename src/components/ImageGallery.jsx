@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { api } from "../api";
 import Modal from "./Modal";
 import Icon from "./Icon";
@@ -21,7 +21,20 @@ const CATEGORIES = [
 	{ id: "attachments", label: "Вкладення", icon: "layers" },
 ];
 
-export default function ImageGallery({ isOpen, onClose, onSelect }) {
+const SUB_LABELS = {
+	npc: "NPC",
+	players: "Гравці",
+};
+
+export default function ImageGallery({
+	isOpen,
+	onClose,
+	onSelect,
+	modal,
+	initialSource,
+	initialCategory,
+	initialSubcategory,
+}) {
 	const [campaigns, setCampaigns] = useState([]);
 	const [selectedSource, setSelectedSource] = useState("general");
 	const [selectedCat, setSelectedCat] = useState(CATEGORIES[0]);
@@ -43,6 +56,15 @@ export default function ImageGallery({ isOpen, onClose, onSelect }) {
 	useEffect(() => {
 		if (isOpen) {
 			api.listCampaigns().then(setCampaigns);
+
+			if (initialSource) setSelectedSource(initialSource);
+			if (initialCategory) {
+				const cat = CATEGORIES.find((c) => c.id === initialCategory);
+				if (cat) {
+					setSelectedCat(cat);
+					setSelectedSub(initialSubcategory || (cat.subs ? cat.subs[0] : ""));
+				}
+			}
 		}
 	}, [isOpen]);
 
@@ -56,9 +78,15 @@ export default function ImageGallery({ isOpen, onClose, onSelect }) {
 		setEditingSubName(null); // Clear editing state
 	}, [selectedSource, selectedCat, selectedSub, isOpen]);
 
+	const getCleanName = (name) => {
+		// Видаляємо розширення та часовий штамп (напр. -1715432... )
+		return name.replace(/\.[^/.]+$/, "").replace(/-\d{10,}$/, "");
+	};
+
 	useEffect(() => {
 		const handleKeyDown = (e) => {
-			if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+			if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")
+				return;
 
 			if (e.key === "Delete") {
 				handleBulkDelete();
@@ -76,7 +104,7 @@ export default function ImageGallery({ isOpen, onClose, onSelect }) {
 
 	const loadSubcategories = async () => {
 		try {
-			const subs = await api.getSubcategories(selectedSource, selectedCat.id);
+			const subs = await api.getSubcategories(selectedSource, selectedCat.id, selectedSub);
 			setDynamicSubs(subs);
 		} catch (err) {
 			console.error(err);
@@ -103,12 +131,13 @@ export default function ImageGallery({ isOpen, onClose, onSelect }) {
 	const handleCreateSub = async () => {
 		if (!newSubName.trim()) return;
 		try {
-			await api.createSubcategory(selectedSource, selectedCat.id, newSubName);
+			const fullPath = selectedSub ? `${selectedSub}/${newSubName}` : newSubName;
+			await api.createSubcategory(selectedSource, selectedCat.id, fullPath);
 			setNewSubName("");
 			setIsCreatingSub(false);
 			loadSubcategories();
 		} catch (err) {
-			alert(err.message);
+			modal?.alert("Помилка", err.message);
 		}
 	};
 
@@ -118,11 +147,14 @@ export default function ImageGallery({ isOpen, onClose, onSelect }) {
 			return;
 		}
 		try {
+			const oldPath = selectedSub ? `${selectedSub}/${oldName}` : oldName;
+			const newPath = selectedSub ? `${selectedSub}/${newName}` : newName;
+			
 			await api.renameSubcategory(
 				selectedSource,
 				selectedCat.id,
-				oldName,
-				newName,
+				oldPath,
+				newPath,
 			);
 			setEditingSubName(null);
 			setTempSubName("");
@@ -130,18 +162,36 @@ export default function ImageGallery({ isOpen, onClose, onSelect }) {
 			loadImages(); // Refresh images in case the current subcategory was renamed
 			if (selectedSub === oldName) setSelectedSub(newName); // Update selected sub if it was renamed
 		} catch (err) {
-			alert(`Помилка перейменування: ${err.message}`);
+			modal?.alert("Помилка перейменування", err.message);
 		}
 	};
 
-	const handleDragStart = (e, name, type = 'image') => {
-		const imagesToMove = type === 'image' && selectedFilenames.has(name) 
-			? Array.from(selectedFilenames) 
-			: (type === 'image' ? [name] : []);
-			
-		const subsToMove = type === 'sub' && selectedSubs.has(name)
-			? Array.from(selectedSubs)
-			: (type === 'sub' ? [name] : []);
+	const handleRenameImage = async (oldName, newName) => {
+		if (!newName.trim() || oldName === newName) return;
+		try {
+			await api.renameImage(selectedSource, selectedCat.id, selectedSub, oldName, newName);
+			loadImages();
+		} catch (err) {
+			modal?.alert("Помилка", err.message);
+		}
+	};
+
+	const handleDragStart = (e, item, type = "image") => {
+		const itemName = type === 'image' ? item.name : item;
+		
+		const imagesToMove =
+			type === "image" && selectedFilenames.has(itemName)
+				? Array.from(selectedFilenames)
+				: type === "image"
+					? [itemName]
+					: [];
+
+		const subsToMove =
+			type === "sub" && selectedSubs.has(itemName)
+				? Array.from(selectedSubs)
+				: type === "sub"
+					? [itemName]
+					: [];
 
 		e.dataTransfer.setData(
 			"application/json",
@@ -155,7 +205,11 @@ export default function ImageGallery({ isOpen, onClose, onSelect }) {
 			}),
 		);
 		e.dataTransfer.effectAllowed = "move";
-		setDragSource({ slug: selectedSource, category: selectedCat.id, subcategory: selectedSub });
+		setDragSource({
+			slug: selectedSource,
+			category: selectedCat.id,
+			subcategory: selectedSub,
+		});
 	};
 
 	const handleDragEnd = () => {
@@ -172,7 +226,7 @@ export default function ImageGallery({ isOpen, onClose, onSelect }) {
 
 		try {
 			const jsonData = e.dataTransfer.getData("application/json");
-			
+
 			// Якщо це переміщення існуючих зображень всередині галереї
 			if (jsonData) {
 				const data = JSON.parse(jsonData);
@@ -200,7 +254,7 @@ export default function ImageGallery({ isOpen, onClose, onSelect }) {
 				setSelectedSubs(new Set());
 				loadImages();
 				loadSubcategories();
-			} 
+			}
 			// Якщо це файли з комп'ютера
 			else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
 				await handleFileUpload(e.dataTransfer.files);
@@ -235,7 +289,7 @@ export default function ImageGallery({ isOpen, onClose, onSelect }) {
 
 	const toggleSelect = (name, type, e) => {
 		e.stopPropagation();
-		if (type === 'image') {
+		if (type === "image") {
 			const next = new Set(selectedFilenames);
 			if (next.has(name)) next.delete(name);
 			else next.add(name);
@@ -251,26 +305,41 @@ export default function ImageGallery({ isOpen, onClose, onSelect }) {
 	const handleBulkDelete = async () => {
 		const total = selectedFilenames.size + selectedSubs.size;
 		if (!total) return;
-		if (!(await api.request("/health") && confirm(`Видалити вибрані об'єкти (${total})?`))) return;
-		
+
 		setLoading(true);
 		try {
+			const confirmed = modal 
+				? await modal.confirm("Видалення", `Видалити вибрані об'єкти (${total})?`)
+				: confirm(`Видалити вибрані об'єкти (${total})?`);
+
+			if (!confirmed) return;
+
 			await api.deleteImages({
 				items: [...Array.from(selectedFilenames), ...Array.from(selectedSubs)],
-				src: { slug: selectedSource, category: selectedCat.id, subcategory: selectedSub }
+				src: {
+					slug: selectedSource,
+					category: selectedCat.id,
+					subcategory: selectedSub,
+				},
 			});
 			setSelectedFilenames(new Set());
 			setSelectedSubs(new Set());
 			loadImages();
 			loadSubcategories();
-		} catch (err) { alert(err.message); }
-		finally { setLoading(false); }
+		} catch (err) {
+			modal?.alert("Помилка видалення", err.message);
+		} finally {
+			setLoading(false);
+		}
 	};
 
 	if (!isOpen) return null;
 
 	const allSubs = Array.from(
-		new Set([...(selectedCat.subs || []), ...dynamicSubs]),
+		new Set([
+			...(selectedSub === "" ? (selectedCat.subs || []) : []),
+			...dynamicSubs
+		]),
 	);
 
 	return (
@@ -282,11 +351,12 @@ export default function ImageGallery({ isOpen, onClose, onSelect }) {
 			<div className="ImageGallery">
 				<aside className="ImageGallery__sidebar">
 					<button
-						className={`SourceBtn ${selectedSource === "general" ? "is-active" : ""} ${dragOverTarget?.id === 'general' ? 'is-drag-over' : ''}`}
+						className={`SourceBtn ${selectedSource === "general" ? "is-active" : ""} ${dragOverTarget?.id === "general" ? "is-drag-over" : ""}`}
 						onClick={() => setSelectedSource("general")}
 						onDragOver={(e) => {
 							e.preventDefault();
-							if (dragOverTarget?.id !== 'general') setDragOverTarget({ type: 'source', id: 'general' });
+							if (dragOverTarget?.id !== "general")
+								setDragOverTarget({ type: "source", id: "general" });
 						}}
 						onDragLeave={() => setDragOverTarget(null)}
 						onDrop={(e) =>
@@ -303,11 +373,12 @@ export default function ImageGallery({ isOpen, onClose, onSelect }) {
 					{campaigns.map((c) => (
 						<button
 							key={c.slug}
-							className={`SourceBtn ${selectedSource === c.slug ? "is-active" : ""} ${dragOverTarget?.id === c.slug ? 'is-drag-over' : ''}`}
+							className={`SourceBtn ${selectedSource === c.slug ? "is-active" : ""} ${dragOverTarget?.id === c.slug ? "is-drag-over" : ""}`}
 							onClick={() => setSelectedSource(c.slug)}
 							onDragOver={(e) => {
 								e.preventDefault();
-								if (dragOverTarget?.id !== c.slug) setDragOverTarget({ type: 'source', id: c.slug });
+								if (dragOverTarget?.id !== c.slug)
+									setDragOverTarget({ type: "source", id: c.slug });
 							}}
 							onDragLeave={() => setDragOverTarget(null)}
 							onDrop={(e) =>
@@ -328,14 +399,15 @@ export default function ImageGallery({ isOpen, onClose, onSelect }) {
 						{CATEGORIES.map((cat) => (
 							<button
 								key={cat.id}
-								className={`TabBtn ${selectedCat.id === cat.id ? "is-active" : ""} ${dragOverTarget?.id === cat.id ? 'is-drag-over' : ''}`}
+								className={`TabBtn ${selectedCat.id === cat.id ? "is-active" : ""} ${dragOverTarget?.id === cat.id ? "is-drag-over" : ""}`}
 								onClick={() => {
 									setSelectedCat(cat);
 									setSelectedSub(cat.subs ? cat.subs[0] : "");
 								}}
 								onDragOver={(e) => {
 									e.preventDefault();
-									if (dragOverTarget?.id !== cat.id) setDragOverTarget({ type: 'cat', id: cat.id });
+									if (dragOverTarget?.id !== cat.id)
+										setDragOverTarget({ type: "cat", id: cat.id });
 								}}
 								onDragLeave={() => setDragOverTarget(null)}
 								onDrop={(e) =>
@@ -344,8 +416,7 @@ export default function ImageGallery({ isOpen, onClose, onSelect }) {
 										category: cat.id,
 										subcategory: "",
 									})
-								}
-							>
+								}>
 								<Icon name={cat.icon} size={14} />
 								<span>{cat.label}</span>
 							</button>
@@ -353,96 +424,68 @@ export default function ImageGallery({ isOpen, onClose, onSelect }) {
 					</header>
 
 					<div className="ImageGallery__toolbar">
-						<div className="ImageGallery__subtabs">
-							{allSubs.map((sub) => {
-								const isSelected = selectedSubs.has(sub);
-								return (
-								<div key={sub} className={`ImageGallery__subtab-wrapper ${isSelected ? 'is-selected' : ''}`}>
-									{dynamicSubs.includes(sub) && editingSubName === sub ? (
-										<input
-											autoFocus
-											value={tempSubName}
-											onChange={(e) => setTempSubName(e.target.value)}
-											onBlur={async () => {
-												await handleRenameSub(sub, tempSubName);
-											}}
-											onKeyDown={async (e) => {
-												if (e.key === "Enter") {
-													await handleRenameSub(sub, tempSubName);
-												} else if (e.key === "Escape") {
-													setEditingSubName(null);
-												}
-											}}
-											className="ImageGallery__sub-rename-input"
-										/>
-									) : (
-										<button
-											className={`SubTabBtn ${selectedSub === sub ? "is-active" : ""} ${selectedSubs.has(sub) ? 'is-selected' : ''} ${dragOverTarget?.id === sub ? 'is-drag-over' : ''}`}
-											onClick={(e) => {
-												if (e.ctrlKey || e.metaKey) {
-													toggleSelect(sub, 'sub', e);
-												} else {
-													setSelectedSubs(new Set([sub]));
-													setSelectedFilenames(new Set());
-												}
-											}}
-											onDoubleClick={() => {
-												setSelectedSub(selectedSub === sub ? "" : sub);
-											}}
-											draggable
-											onDragStart={(e) => handleDragStart(e, sub, 'sub')}
-											onDragEnd={handleDragEnd}
-											onDragOver={(e) => {
-												e.preventDefault();
-												if (dragOverTarget?.id !== sub) setDragOverTarget({ type: 'sub', id: sub });
-											}}
-											onDragLeave={() => setDragOverTarget(null)}
-											onDrop={(e) =>
-												handleDrop(e, {
-													slug: selectedSource,
-													category: selectedCat.id,
-													subcategory: sub,
-												})
-											}>
-											{sub.toUpperCase()}
-										</button>
-									)}
-								</div>);
-							})}
-							{selectedSource !== "general" && // Only allow creating subfolders in campaigns
-								(isCreatingSub ? (
-									<div className="ImageGallery__new-sub">
-										<input
-											autoFocus
-											value={newSubName}
-											onChange={(e) => setNewSubName(e.target.value)}
-											onKeyDown={(e) => e.key === "Enter" && handleCreateSub()}
-											placeholder="Назва..."
-										/>
-										<Button
-											size="small"
-											icon="check"
-											onClick={handleCreateSub}
-										/>
-										<Button
-											size="small"
-											icon="x"
-											onClick={() => setIsCreatingSub(false)}
-										/>
-									</div>
-								) : (
-									<Button
-										variant="ghost"
-										size="small"
-										icon="plus"
-										onClick={() => setIsCreatingSub(true)}
-										title="Створити підпапку"
+						<div className="ImageGallery__breadcrumbs">
+							<button 
+								className={`BreadcrumbItem ${selectedSub === "" ? "is-active" : ""}`}
+								onClick={() => setSelectedSub("")}
+							>
+								<Icon name="home" size={14} />
+							</button>
+							{selectedSub.split('/').filter(Boolean).map((part, idx, arr) => (
+								<React.Fragment key={idx}>
+									<Icon name="chevron" size={10} className="BreadcrumbSeparator" />
+									<button 
+										className={`BreadcrumbItem ${idx === arr.length - 1 ? "is-active" : ""}`}
+										onClick={() => {
+											const newPath = arr.slice(0, idx + 1).join('/');
+											setSelectedSub(newPath);
+										}}
+									>
+										{part}
+									</button>
+								</React.Fragment>
+							))}
+						</div>
+
+						<div className="ImageGallery__actions">
+							{isCreatingSub ? (
+								<div className="ImageGallery__new-sub">
+									<input
+										autoFocus
+										value={newSubName}
+										onChange={(e) => setNewSubName(e.target.value)}
+										onKeyDown={(e) => e.key === "Enter" && handleCreateSub()}
+										placeholder="Назва папки..."
 									/>
-								))}
+									<Button
+										size="small"
+										icon="check"
+										onClick={handleCreateSub}
+									/>
+									<Button
+										size="small"
+										icon="x"
+										onClick={() => setIsCreatingSub(false)}
+									/>
+								</div>
+							) : (
+								<Button
+									variant="ghost"
+									size="small"
+									icon="plus"
+									onClick={() => setIsCreatingSub(true)}
+									title="Створити підпапку"
+								/>
+							)}
 						</div>
 						<div className="ImageGallery__upload-actions">
 							{hasSelection && (
-								<Button variant="danger" size="small" icon="trash" onClick={handleBulkDelete}>
+								<Button
+									className="ImageGallery__deleteBtn"
+									variant="danger"
+									size="small"
+									icon="trash"
+									onClick={handleBulkDelete}>
 									Видалити ({selectedFilenames.size + selectedSubs.size})
 								</Button>
 							)}
@@ -465,11 +508,12 @@ export default function ImageGallery({ isOpen, onClose, onSelect }) {
 						onDragOver={(e) => {
 							e.preventDefault();
 							// Не показуємо оверлей, якщо джерело — та сама папка
-							const isSameLocation = dragSource && 
-								dragSource.slug === selectedSource && 
-								dragSource.category === selectedCat.id && 
+							const isSameLocation =
+								dragSource &&
+								dragSource.slug === selectedSource &&
+								dragSource.category === selectedCat.id &&
 								dragSource.subcategory === selectedSub;
-							
+
 							if (!isSameLocation) setIsDraggingOver(true);
 						}}
 						onDragLeave={() => setIsDraggingOver(false)}
@@ -486,6 +530,63 @@ export default function ImageGallery({ isOpen, onClose, onSelect }) {
 								<p>Відпустіть, щоб завантажити сюди</p>
 							</div>
 						)}
+
+						{/* Рендеринг папок у сітці */}
+						{!loading && allSubs.map(sub => (
+							<div
+								key={sub}
+								className={`ImageGallery__item ImageGallery__item--folder ${selectedSubs.has(sub) ? "is-selected" : ""} ${dragOverTarget?.id === sub ? "is-drag-over" : ""}`}
+								onClick={(e) => {
+									if (e.ctrlKey || e.metaKey) {
+										toggleSelect(sub, "sub", e);
+									} else {
+										const isSelected = selectedSubs.has(sub);
+										if (isSelected && selectedSubs.size === 1 && selectedFilenames.size === 0) {
+											setSelectedSubs(new Set());
+										} else {
+											setSelectedSubs(new Set([sub]));
+											setSelectedFilenames(new Set());
+										}
+									}
+								}}
+								onDoubleClick={() => {
+									const nextPath = selectedSub ? `${selectedSub}/${sub}` : sub;
+									setSelectedSub(nextPath);
+								}}
+								onContextMenu={async (e) => {
+									e.preventDefault();
+									if (!modal) return;
+									const newName = await modal.prompt("Перейменувати папку", "Введіть нову назву:", sub);
+									if (newName) handleRenameSub(sub, newName);
+								}}
+								draggable
+								onDragStart={(e) => handleDragStart(e, sub, "sub")}
+								onDragEnd={handleDragEnd}
+								onDragOver={(e) => {
+									e.preventDefault();
+									if (dragOverTarget?.id !== sub) setDragOverTarget({ type: "sub", id: sub });
+								}}
+								onDragLeave={() => setDragOverTarget(null)}
+								onDrop={(e) => {
+									const destSub = selectedSub ? `${selectedSub}/${sub}` : sub;
+									handleDrop(e, {
+										slug: selectedSource,
+										category: selectedCat.id,
+										subcategory: destSub,
+									});
+								}}
+							>
+								<div className="ImageGallery__image-wrap">
+									<Icon name="folder" size={48} />
+									<div className="ImageGallery__checkbox" onClick={(e) => toggleSelect(sub, "sub", e)}>
+										<Icon name={selectedSubs.has(sub) ? "check" : "plus"} size={12} />
+									</div>
+								</div>
+								<span className="ImageGallery__name">{SUB_LABELS[sub] || sub}</span>
+							</div>
+						))}
+
+						{/* Рендеринг зображень */}
 						{loading ? (
 							<div className="ImageGallery__status">Завантаження...</div>
 						) : images.length > 0 ? (
@@ -495,21 +596,36 @@ export default function ImageGallery({ isOpen, onClose, onSelect }) {
 									className={`ImageGallery__item ${selectedFilenames.has(img.name) ? "is-selected" : ""}`}
 									onClick={(e) => {
 										if (e.ctrlKey || e.metaKey) {
-											toggleSelect(img.name, 'image', e);
+											toggleSelect(img.name, "image", e);
 										} else {
-											setSelectedFilenames(new Set([img.name]));
-											setSelectedSubs(new Set());
+											const isSelected = selectedFilenames.has(img.name);
+											if (isSelected && selectedFilenames.size === 1 && selectedSubs.size === 0) {
+												setSelectedFilenames(new Set());
+											} else {
+												setSelectedFilenames(new Set([img.name]));
+												setSelectedSubs(new Set());
+											}
 										}
 									}}
 									onDoubleClick={() => onSelect?.(img)}
+									onContextMenu={async (e) => {
+										e.preventDefault();
+										if (!modal) return;
+										const currentClean = getCleanName(img.name);
+										const newBaseName = await modal.prompt("Перейменувати файл", "Введіть нову назву:", currentClean);
+										if (newBaseName && newBaseName !== currentClean) {
+											const ext = img.name.split('.').pop();
+											handleRenameImage(img.name, `${newBaseName}.${ext}`);
+										}
+									}}
 									draggable
-									onDragStart={(e) => handleDragStart(e, img.name, 'image')}
+									onDragStart={(e) => handleDragStart(e, img, "image")}
 									onDragEnd={handleDragEnd}>
 									<div className="ImageGallery__image-wrap">
 										<img src={img.url} alt="" />
 										<div
 											className="ImageGallery__checkbox"
-											onClick={(e) => toggleSelect(img.name, 'image', e)}>
+											onClick={(e) => toggleSelect(img.name, "image", e)}>
 											<Icon
 												name={
 													selectedFilenames.has(img.name) ? "check" : "plus"
@@ -519,7 +635,7 @@ export default function ImageGallery({ isOpen, onClose, onSelect }) {
 										</div>
 									</div>
 									<span className="ImageGallery__name" title={img.name}>
-										{img.name}
+										{getCleanName(img.name)}
 									</span>
 								</div>
 							))

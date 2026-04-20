@@ -84,7 +84,11 @@ app.post("/api/campaigns/:slug/images/:category", upload.single("image"), (req, 
 
 app.get("/api/campaigns/:slug/images/:category/subcategories", async (req, res, next) => {
 	try {
-		const subs = await storage.listSubcategories(req.params.slug, req.params.category);
+		const subs = await storage.listSubcategories(
+			req.params.slug, 
+			req.params.category,
+			req.query.subcategory || ""
+		);
 		res.json(subs);
 	} catch (error) {
 		next(error);
@@ -96,6 +100,17 @@ app.post("/api/campaigns/:slug/images/:category/subcategories", async (req, res,
 		const dir = storage.campaignImagesDir(req.params.slug, req.params.category, req.body.name);
 		await storage.ensureDir(dir);
 		res.status(201).json({ ok: true });
+	} catch (error) {
+		next(error);
+	}
+});
+
+app.patch("/api/campaigns/:slug/images/:category/rename", async (req, res, next) => {
+	try {
+		const { slug, category } = req.params;
+		const { subcategory, oldName, newName } = req.body;
+		const result = await storage.renameImage(slug, category, subcategory, oldName, newName);
+		res.json(result);
 	} catch (error) {
 		next(error);
 	}
@@ -125,7 +140,6 @@ app.post("/api/images/delete", async (req, res, next) => {
 	try {
 		await storage.deleteImages(req.body.items, req.body.src);
 		res.json({ ok: true });
-		res.json(results);
 	} catch (error) {
 		next(error);
 	}

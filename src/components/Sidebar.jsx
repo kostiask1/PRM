@@ -270,6 +270,7 @@ export default function Sidebar({
 			<ImageGallery 
 				isOpen={isGalleryOpen} 
 				onClose={() => setIsGalleryOpen(false)} 
+				modal={modal}
 			/>
 		</aside>
 	);

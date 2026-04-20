@@ -28,6 +28,8 @@ const icons = {
 			<line x1="12" y1="15" x2="12" y2="3" />
 		</>
 	),
+	home: <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />,
+	folder: <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />,
 	restore: (
 		<>
 			<path d="M3 2v6h6" />
