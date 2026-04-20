@@ -179,25 +179,16 @@ export default function ImageGallery({
 
 	const handleDragStart = (e, item, type = "image") => {
 		const itemName = type === 'image' ? item.name : item;
-		
-		const imagesToMove =
-			type === "image" && selectedFilenames.has(itemName)
-				? Array.from(selectedFilenames)
-				: type === "image"
-					? [itemName]
-					: [];
+		const isSelected = type === 'image' ? selectedFilenames.has(itemName) : selectedSubs.has(itemName);
 
-		const subsToMove =
-			type === "sub" && selectedSubs.has(itemName)
-				? Array.from(selectedSubs)
-				: type === "sub"
-					? [itemName]
-					: [];
+		const itemsToMove = isSelected 
+			? [...Array.from(selectedFilenames), ...Array.from(selectedSubs)]
+			: [itemName];
 
 		e.dataTransfer.setData(
 			"application/json",
 			JSON.stringify({
-				items: [...imagesToMove, ...subsToMove],
+				items: itemsToMove,
 				src: {
 					slug: selectedSource,
 					category: selectedCat.id,
