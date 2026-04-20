@@ -1,0 +1,134 @@
+.ImageDropzone {
+	border: 2px dashed var(--border);
+	border-radius: 12px;
+	padding: 40px 20px;
+	text-align: center;
+	background: color-mix(in srgb, var(--bg-2), transparent 40%);
+	transition: all 0.2s ease;
+	cursor: pointer;
+	position: relative;
+	margin: 16px 0;
+}
+
+.ImageDropzone:hover,
+.ImageDropzone.is-dragging {
+	border-color: var(--accent);
+	background: color-mix(in srgb, var(--accent), transparent 95%);
+}
+
+.ImageDropzone__content {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 12px;
+	color: var(--muted);
+}
+
+.ImageDropzone__content p {
+	margin: 0;
+	font-size: 0.95rem;
+}
+
+.ImageDropzone__label {
+	color: var(--accent);
+	font-weight: 600;
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+/* Settings in Modal */
+.ImageDropzone__settings {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.ImageDropzone__preview {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	background: var(--bg);
+	padding: 12px;
+	border-radius: 8px;
+	border: 1px solid var(--border);
+}
+
+.ImageDropzone__preview img {
+	width: 60px;
+	height: 60px;
+	object-fit: cover;
+	border-radius: 4px;
+}
+
+.ImageDropzone__preview span {
+	font-size: 0.9rem;
+	color: var(--text-bright);
+	word-break: break-all;
+}
+
+.ImageDropzone__categories label,
+.ImageDropzone__subcategories label {
+	display: block;
+	font-size: 0.85rem;
+	color: var(--muted);
+	margin-bottom: 8px;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+.ImageDropzone__grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+	gap: 8px;
+}
+
+.CategoryBtn {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 10px;
+	background: var(--panel-2);
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	color: var(--text);
+	cursor: pointer;
+	transition: all 0.2s;
+	font-size: 0.9rem;
+}
+
+.CategoryBtn:hover {
+	border-color: var(--accent);
+}
+
+.CategoryBtn.is-active {
+	background: color-mix(in srgb, var(--accent), transparent 90%);
+	border-color: var(--accent);
+	color: var(--accent);
+}
+
+.ImageDropzone__tabs {
+	display: flex;
+	gap: 8px;
+	background: var(--bg);
+	padding: 4px;
+	border-radius: 8px;
+}
+
+.TabBtn {
+	flex: 1;
+	padding: 8px;
+	border: none;
+	background: transparent;
+	color: var(--muted);
+	border-radius: 6px;
+	cursor: pointer;
+	font-weight: 600;
+	font-size: 0.8rem;
+	transition: all 0.2s;
+}
+
+.TabBtn.is-active {
+	background: var(--panel-2);
+	color: var(--accent);
+	box-shadow: var(--shadow-sm);
+}

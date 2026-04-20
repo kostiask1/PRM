@@ -2,11 +2,14 @@ const API_BASE = "/api";
 
 export const api = {
 	async request(path, options = {}) {
+		const isFormData = options.body instanceof FormData;
 		const response = await fetch(`${API_BASE}${path}`, {
-			headers: {
-				"Content-Type": "application/json",
-				...(options.headers || {}),
-			},
+			headers: isFormData 
+				? { ...(options.headers || {}) }
+				: {
+					"Content-Type": "application/json",
+					...(options.headers || {}),
+				},
 			...options,
 		});
 		if (response.status === 204) return null;
@@ -132,4 +135,42 @@ export const api = {
 		if (params.school) query.append("school", params.school);
 		return api.request(`/spells/search?${query.toString()}`);
 	},
+
+	// Image methods
+	uploadImage: (slug, category, subcategory, file) => {
+		const formData = new FormData();
+		formData.append("image", file);
+		if (subcategory) formData.append("subcategory", subcategory);
+		
+		return api.request(`/campaigns/${encodeURIComponent(slug)}/images/${category}`, {
+			method: "POST",
+			body: formData,
+		});
+	},
+	getImages: (slug, category, subcategory) => 
+		api.request(`/campaigns/${encodeURIComponent(slug)}/images/${category}${subcategory ? `?subcategory=${encodeURIComponent(subcategory)}` : ""}`),
+	
+	moveImages: (payload) => api.request("/images/move", {
+		method: "POST",
+		body: JSON.stringify(payload)
+	}),
+	
+	createSubcategory: (slug, category, name) => 
+		api.request(`/campaigns/${encodeURIComponent(slug)}/images/${category}/subcategories`, {
+			method: "POST",
+			body: JSON.stringify({ name })
+		}),
+	getSubcategories: (slug, category) => 
+		api.request(`/campaigns/${encodeURIComponent(slug)}/images/${category}/subcategories`),
+	
+	renameSubcategory: (slug, category, oldName, newName) =>
+		api.request(`/campaigns/${encodeURIComponent(slug)}/images/${category}/subcategories/${encodeURIComponent(oldName)}`, {
+			method: "PATCH",
+			body: JSON.stringify({ newName })
+		}),
+	
+	deleteImages: (payload) => api.request("/images/delete", {
+		method: "POST",
+		body: JSON.stringify(payload)
+	}),
 };

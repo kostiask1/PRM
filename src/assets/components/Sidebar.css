@@ -98,7 +98,12 @@
 
 .Sidebar__list {
 	display: grid;
-	padding: 0 0.1px;
+	padding: 0 1px;
+}
+
+.Sidebar__list .ListCard__main {
+	padding-left: 0;
+	padding-right: 0;
 }
 
 .Sidebar__footer {

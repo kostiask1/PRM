@@ -803,6 +803,9 @@ export default function SessionView({
 						onChange={(id, updated) => setNpcToCreate(updated)}
 						onDelete={() => setNpcToCreate(null)}
 						onToggleCollapse={() => {}}
+						campaignSlug={campaignSlug}
+						modal={modal}
+						type="npc"
 					/>
 				</Modal>
 			)}

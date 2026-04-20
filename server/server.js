@@ -2,6 +2,9 @@ require("dotenv").config({
 	path: require("path").join(__dirname, "..", ".env"),
 });
 const express = require("express");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs/promises");
 const storage = require("./storage");
 
 const app = express();
@@ -34,6 +37,101 @@ app.post("/api/import-all", async (req, res, next) => {
 app.get("/api/health", async (_req, res) => {
 	res.json({ ok: true });
 });
+
+// Image Upload Configuration
+const upload = multer({
+	storage: multer.diskStorage({
+		destination: async (req, file, cb) => {
+			const { slug, category } = req.params;
+			const subcategory = req.body.subcategory || "";
+			const dir = storage.campaignImagesDir(slug, category, subcategory);
+			await storage.ensureDir(dir);
+			cb(null, dir);
+		},
+		filename: (req, file, cb) => {
+			// Виправлення кодування для кириличних назв файлів
+			const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+			const ext = path.extname(originalName);
+			const name = storage.sanitizeName(path.parse(originalName).name);
+			cb(null, `${name}-${Date.now()}${ext}`);
+		},
+	}),
+});
+
+// Image Routes
+app.get("/api/campaigns/:slug/images/:category", async (req, res, next) => {
+	try {
+		const images = await storage.listImages(
+			req.params.slug, 
+			req.params.category, 
+			req.query.subcategory || "" // Виправлення: гарантуємо, що передається рядок, а не undefined
+		);
+		res.json(images);
+	} catch (error) {
+		next(error);
+	}
+});
+
+app.post("/api/campaigns/:slug/images/:category", upload.single("image"), (req, res) => {
+	const sub = req.body.subcategory ? `/${encodeURIComponent(req.body.subcategory)}` : "";
+	const slug = encodeURIComponent(req.params.slug);
+	const cat = encodeURIComponent(req.params.category);
+	res.status(201).json({ 
+		name: req.file.filename,
+		url: `/api/images/${slug}/${cat}${sub}/${encodeURIComponent(req.file.filename)}` 
+	});
+});
+
+app.get("/api/campaigns/:slug/images/:category/subcategories", async (req, res, next) => {
+	try {
+		const subs = await storage.listSubcategories(req.params.slug, req.params.category);
+		res.json(subs);
+	} catch (error) {
+		next(error);
+	}
+});
+
+app.post("/api/campaigns/:slug/images/:category/subcategories", async (req, res, next) => {
+	try {
+		const dir = storage.campaignImagesDir(req.params.slug, req.params.category, req.body.name);
+		await storage.ensureDir(dir);
+		res.status(201).json({ ok: true });
+	} catch (error) {
+		next(error);
+	}
+});
+
+app.patch("/api/campaigns/:slug/images/:category/subcategories/:oldName", async (req, res, next) => {
+	try {
+		const { slug, category, oldName } = req.params;
+		const { newName } = req.body;
+		await storage.renameSubcategory(slug, category, oldName, newName);
+		res.json({ ok: true });
+	} catch (error) {
+		next(error);
+	}
+});
+
+app.post("/api/images/move", async (req, res, next) => {
+	try {
+		const results = await storage.moveImages(req.body.items, req.body.src, req.body.dest);
+		res.json(results);
+	} catch (error) {
+		next(error);
+	}
+});
+
+app.post("/api/images/delete", async (req, res, next) => {
+	try {
+		await storage.deleteImages(req.body.items, req.body.src);
+		res.json({ ok: true });
+		res.json(results);
+	} catch (error) {
+		next(error);
+	}
+});
+
+app.use("/api/images", express.static(storage.IMAGES_DIR));
 
 app.use("/api/campaigns", require("./routes/campaigns"));
 app.use(

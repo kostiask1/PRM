@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import Button from "./Button";
 import Input from "./Input";
 import "../assets/components/Modal.css";
@@ -57,7 +58,7 @@ export default function Modal({
 
 	const isAlert = !onCancel;
 
-	return (
+	return createPortal(
 		<div className="Modal__overlay" onClick={handleClose}>
 			<div
 				className={`Modal__card Modal__card--${type}`}
@@ -103,6 +104,7 @@ export default function Modal({
 					</div>
 				)}
 			</div>
-		</div>
+		</div>,
+		document.body
 	);
 }

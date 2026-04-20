@@ -117,6 +117,12 @@ const icons = {
 			<polyline points="2 12 12 17 22 12" />
 		</>
 	),
+	file: (
+		<>
+			<path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
+			<polyline points="13 2 13 9 20 9" />
+		</>
+	),
 	monitor: (
 		<>
 			<rect x="2" y="3" width="20" height="14" rx="2" ry="2" />

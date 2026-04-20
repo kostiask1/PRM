@@ -38,6 +38,10 @@
 	border-color: var(--accent);
 }
 
+.Modal__card--success {
+	border-color: var(--success);
+}
+
 /* Specific styles for Bestiary modal */
 .Modal__card--custom {
 	max-width: 1200px;

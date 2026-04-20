@@ -798,6 +798,9 @@ export default function CampaignView({
 									onToggleCollapse={handleToggleCharacterCollapse}
 									onChange={handleCharacterChange}
 									onDelete={handleDeleteCharacter}
+									campaignSlug={campaign.slug}
+									modal={modal}
+									type="characters"
 								/>
 							)}
 						/>
@@ -853,6 +856,9 @@ export default function CampaignView({
 									onToggleCollapse={handleToggleNpcCollapse}
 									onChange={handleNpcChange}
 									onDelete={handleNpcDelete}
+									campaignSlug={campaign.slug}
+									modal={modal}
+									type="npc"
 								/>
 							)}
 						/>

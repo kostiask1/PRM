@@ -55,14 +55,6 @@
         "collapsed": false 
     }
   ],
-  "characters": [
-    { 
-        "id": "Date timestamp",
-        "name": "Ім'я персонажа",
-        "description": "Опис персонажа",
-        "collapsed": false 
-    }
-  ],
   "createdAt": "ISO Date String",
   "updatedAt": "ISO Date String",
   "order": "order of campaign in sidebar",

@@ -11,7 +11,7 @@ import { parseUrl } from "./utils/navigation";
  * Допоміжний компонент для керування станом сутності всередині модального вікна.
  * Забезпечує реактивність при редагуванні полів персонажа.
  */
-const EntityModalContent = ({ initialEntity, campaignSlug, type, onClose }) => {
+const EntityModalContent = ({ initialEntity, campaignSlug, type, onClose, modal }) => {
 	const [entity, setEntity] = useState(initialEntity);
 	const handleUpdate = async (id, updated) => {
 		setEntity(updated);
@@ -28,6 +28,9 @@ const EntityModalContent = ({ initialEntity, campaignSlug, type, onClose }) => {
 				onClose();
 			}}
 			onToggleCollapse={() => {}}
+			campaignSlug={campaignSlug}
+			modal={modal}
+			type={type}
 		/>
 	);
 };
@@ -77,6 +80,14 @@ export default function App() {
 			title,
 			message: fullMessage,
 			type: status >= 500 ? "error" : "error",
+			isAlert: true,
+		});
+	};
+	const success = (title, message) => {
+		return showModal({
+			title,
+			message,
+			type: "success",
 			isAlert: true,
 		});
 	};
@@ -169,6 +180,7 @@ export default function App() {
 								initialEntity={found}
 								campaignSlug={activeCampaignSlug}
 								type={type}
+								modal={{ alert, confirm, prompt, success }}
 								onClose={() => setModalConfig(null)}
 							/>
 						),
@@ -271,7 +283,7 @@ export default function App() {
 					}
 				}}
 				onToggleCampaignStatus={handleToggleCampaignStatus}
-				modal={{ alert, confirm, prompt }}
+				modal={{ alert, confirm, prompt, success }}
 			/>
 			<MainContent
 				className="App__main"
@@ -281,7 +293,7 @@ export default function App() {
 				onSelectSession={(fileName) => navigate(activeCampaignSlug, fileName)}
 				onRefreshCampaigns={loadCampaigns}
 				onNavigate={navigate}
-				modal={{ alert, confirm, prompt }}
+				modal={{ alert, confirm, prompt, success }}
 			/>
 
 			{modalConfig && <Modal {...modalConfig} />}

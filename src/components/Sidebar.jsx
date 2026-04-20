@@ -6,6 +6,7 @@ import StatusBadge from "./StatusBadge";
 import ListCard from "./ListCard";
 import ColorThemeSwitcher from "./ColorThemeSwitcher"; // Імпортуємо новий компонент
 import DraggableList from "./DraggableList";
+import ImageGallery from "./ImageGallery";
 import "../assets/components/Sidebar.css";
 
 export default function Sidebar({
@@ -20,6 +21,7 @@ export default function Sidebar({
 
 	// Локальний стан для миттєвого відображення змін черги
 	const [localCampaigns, setLocalCampaigns] = useState(campaigns);
+	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 
 	// Синхронізація локального списку з пропсами
 	useEffect(() => {
@@ -82,6 +84,16 @@ export default function Sidebar({
 				</p>
 			</div>
 			<div className="Sidebar__links">
+				<a
+					href="#"
+					className="Sidebar__link"
+					onClick={(e) => {
+						e.preventDefault();
+						setIsGalleryOpen(true);
+					}}>
+					<Icon name="image" />
+					<span>Галерея</span>
+				</a>
 				<a
 					href="/bestiary"
 					className="Sidebar__link"
@@ -254,6 +266,11 @@ export default function Sidebar({
 					</Button>
 				</div>
 			</div>
+
+			<ImageGallery 
+				isOpen={isGalleryOpen} 
+				onClose={() => setIsGalleryOpen(false)} 
+			/>
 		</aside>
 	);
 }

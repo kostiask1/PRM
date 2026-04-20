@@ -8,6 +8,7 @@ const CAMPAIGNS_DIR = path.join(DATA_DIR, "campaigns");
 const BESTIARY_DIR = path.join(ROOT_DIR, "database", "bestiary");
 const SPELLS_DIR = path.join(ROOT_DIR, "database", "spells");
 const FAVORITES_PATH = path.join(DATA_DIR, "favorites.json");
+const IMAGES_DIR = path.join(DATA_DIR, "images");
 
 function todayString() {
 	return new Date().toISOString().slice(0, 10);
@@ -49,6 +50,13 @@ function campaignDir(slug) {
 
 function campaignMetaPath(slug) {
 	return path.join(campaignDir(slug), "_campaign.json");
+}
+
+function campaignImagesDir(slug, category, subcategory = "") {
+	const safeSlug = path.basename(String(slug || "general"));
+	const safeCat = String(category || "attachments");
+	const safeSub = String(subcategory || "");
+	return path.join(IMAGES_DIR, safeSlug, safeCat, safeSub);
 }
 
 function characterDir(campaignSlug, charSlug) {
@@ -436,15 +444,162 @@ function makeDefaultSessionData(name) {
 	};
 }
 
+async function listImages(slug, category, subcategory = "") {
+	const sub = subcategory || ""; // Захист від null/undefined
+	const dir = campaignImagesDir(slug, category, sub);
+	if (!(await exists(dir))) return [];
+	const entries = await fs.readdir(dir, { withFileTypes: true });
+	return entries
+		.filter((e) => e.isFile() && /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(e.name))
+		.map((e) => ({
+			name: e.name,
+			url: `/api/images/${encodeURIComponent(slug)}/${encodeURIComponent(category)}${sub ? "/" + encodeURIComponent(sub) : ""}/${encodeURIComponent(e.name)}`,
+			path: path.join(category, sub, e.name)
+		}));
+}
+
+async function listSubcategories(slug, category) {
+	const dir = path.join(IMAGES_DIR, path.basename(slug), category);
+	if (!(await exists(dir))) return [];
+	const entries = await fs.readdir(dir, { withFileTypes: true });
+	return entries.filter((e) => e.isDirectory()).map((e) => e.name);
+}
+
+async function updateAllImageReferences(moveResults) {
+	if (!moveResults.length) return;
+	
+	const campaigns = await listCampaignSlugs();
+	for (const slug of campaigns) {
+		// 1. Оновлення мети кампанії
+		const metaPath = campaignMetaPath(slug);
+		if (await exists(metaPath)) {
+			let meta = await readJson(metaPath);
+			let changed = false;
+			for (const res of moveResults) {
+				if (meta.imageUrl === res.oldUrl) { meta.imageUrl = res.newUrl; changed = true; }
+			}
+			if (changed) await writeJson(metaPath, meta);
+		}
+
+		// 2. Оновлення персонажів та NPC
+		for (const type of ["characters", "npc"]) {
+			const entities = await listEntities(slug, type);
+			for (const entity of entities) {
+				let changed = false;
+				for (const res of moveResults) {
+					if (entity.imageUrl === res.oldUrl) { entity.imageUrl = res.newUrl; changed = true; }
+				}
+				if (changed) {
+					await writeEntity(slug, type, entity.slug, entity);
+				}
+			}
+		}
+
+		// 3. Оновлення сесій (тексти сцен, опис)
+		const sessions = await listSessions(slug);
+		for (const s of sessions) {
+			const sPath = sessionPath(slug, s.fileName);
+			let sessionData = await readJson(sPath);
+			let json = JSON.stringify(sessionData);
+			let changed = false;
+			for (const res of moveResults) {
+				if (json.includes(res.oldUrl)) {
+					json = json.split(res.oldUrl).join(res.newUrl);
+					changed = true;
+				}
+			}
+			if (changed) await writeJson(sPath, JSON.parse(json));
+		}
+	}
+}
+
+async function moveImages(items, src, dest) {
+	const sSlug = decodeURIComponent(src.slug);
+	const dSlug = decodeURIComponent(dest.slug);
+	const sSub = src.subcategory || "";
+	const dSub = dest.subcategory || "";
+
+	const srcDir = campaignImagesDir(sSlug, src.category, sSub);
+	const destDir = campaignImagesDir(dSlug, dest.category, dSub);
+
+	if (srcDir === destDir) return [];
+	await ensureDir(destDir);
+
+	const results = [];
+	for (const name of items) {
+		const oldPath = path.join(srcDir, name);
+		const newPath = path.join(destDir, name);
+
+		if (await exists(oldPath)) {
+			const isDir = (await fs.stat(oldPath)).isDirectory();
+			
+			// Збираємо список файлів для оновлення посилань
+			const filesToTrack = [];
+			if (isDir) {
+				const walk = async (dir, sub = "") => {
+					const entries = await fs.readdir(dir, { withFileTypes: true });
+					for (const e of entries) {
+						if (e.isFile()) filesToTrack.push(path.join(sub, e.name));
+						else if (e.isDirectory()) await walk(path.join(dir, e.name), path.join(sub, e.name));
+					}
+				};
+				await walk(oldPath);
+			} else {
+				filesToTrack.push("");
+			}
+
+			await renameWithRetry(oldPath, newPath);
+
+			for (const relPath of filesToTrack) {
+				const fileName = isDir ? relPath : name;
+				const oldSub = sSub ? (isDir ? path.join(sSub, name, relPath) : sSub) : (isDir ? path.join(name, relPath) : "");
+				const newSub = dSub ? (isDir ? path.join(dSub, name, relPath) : dSub) : (isDir ? path.join(name, relPath) : "");
+				
+				results.push({
+					oldUrl: `/api/images/${encodeURIComponent(sSlug)}/${encodeURIComponent(src.category)}${oldSub ? "/" + oldSub.split(path.sep).join("/") : ""}${isDir ? "" : "/" + encodeURIComponent(fileName)}`,
+					newUrl: `/api/images/${encodeURIComponent(dSlug)}/${encodeURIComponent(dest.category)}${newSub ? "/" + newSub.split(path.sep).join("/") : ""}${isDir ? "" : "/" + encodeURIComponent(fileName)}`
+				});
+			}
+		}
+	}
+	
+	await updateAllImageReferences(results);
+	return results;
+}
+
+async function deleteImages(items, src) {
+	const dir = campaignImagesDir(src.slug, src.category, src.subcategory);
+	for (const name of items) {
+		const target = path.join(dir, name);
+		await fs.rm(target, { recursive: true, force: true });
+	}
+}
+
+async function renameSubcategory(slug, category, oldName, newName) {
+	const parentDir = path.join(IMAGES_DIR, path.basename(slug), category);
+	const oldPath = path.join(parentDir, oldName);
+	const newPath = path.join(parentDir, newName);
+
+	if (!(await exists(oldPath))) {
+		throw new Error(`Підкатегорія '${oldName}' не знайдена.`);
+	}
+	if (await exists(newPath)) {
+		throw new Error(`Підкатегорія '${newName}' вже існує.`);
+	}
+	await fs.rename(oldPath, newPath);
+}
+
 module.exports = {
 	CAMPAIGNS_DIR,
 	BESTIARY_DIR,
 	SPELLS_DIR,
+	IMAGES_DIR,
 	createId,
 	sanitizeName,
 	campaignSlug,
 	sessionFileName,
 	campaignDir,
+	campaignImagesDir,
 	characterDir,
 	npcDir,
 	campaignMetaPath,
@@ -472,4 +627,8 @@ module.exports = {
 	makeDefaultSessionData,
 	getBestiaryIndex,
 	resolveMonster,
+	listImages,
+	listSubcategories,
+	moveImages,
+	renameSubcategory,
 };
