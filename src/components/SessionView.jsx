@@ -237,6 +237,9 @@ export default function SessionView({
 
 	useEffect(() => {
 		const handleKeyDown = (e) => {
+			// Якщо відкрита будь-яка модалка, ігноруємо гарячі клавіші сесії
+			if (document.querySelector(".Modal__overlay")) return;
+
 			if (e.key === "Backspace") {
 				const isInput =
 					e.target.tagName === "INPUT" ||

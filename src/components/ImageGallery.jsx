@@ -86,22 +86,27 @@ export default function ImageGallery({
 
 	useEffect(() => {
 		const handleKeyDown = (e) => {
+			if (!isOpen) return;
+
 			if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")
 				return;
 
 			if (e.key === "Delete") {
 				handleBulkDelete();
 			} else if (e.key === "Backspace") {
+				// Завжди запобігаємо навігації назад у браузері/батьківських компонентах
+				e.preventDefault();
 				if (selectedSub) {
-					e.preventDefault();
-					setSelectedSub("");
+					const parts = selectedSub.split("/").filter(Boolean);
+					parts.pop();
+					setSelectedSub(parts.join("/"));
 				}
 			}
 		};
 
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [selectedFilenames, selectedSubs, selectedSub, hasSelection]);
+	}, [selectedFilenames, selectedSubs, selectedSub, hasSelection, isOpen]);
 
 	const loadSubcategories = async () => {
 		try {

@@ -1,6 +1,16 @@
 import { forwardRef, useRef, useLayoutEffect } from "react";
 import "../assets/components/Input.css";
 
+function isRangeInsideSquareBrackets(value = "", start = 0, end = start) {
+	const openIndex = value.lastIndexOf("[", Math.max(0, start - 1));
+	if (openIndex === -1) return false;
+
+	const closeIndex = value.indexOf("]", openIndex + 1);
+	if (closeIndex === -1) return false;
+
+	return start > openIndex && end <= closeIndex;
+}
+
 function resolveInitialCursorPosition(initialSelection, rawValue = "") {
 	if (initialSelection == null) return rawValue.length;
 
@@ -106,6 +116,26 @@ const Input = forwardRef(
 
 				const { selectionStart, selectionEnd, value } = e.target;
 				const selection = value.substring(selectionStart, selectionEnd);
+				const hasWrappedSelection =
+					selection.startsWith("[") &&
+					selection.endsWith("]") &&
+					selection.length >= 2;
+				const hasWrappedAroundSelection =
+					selectionStart > 0 &&
+					selectionEnd < value.length &&
+					value[selectionStart - 1] === "[" &&
+					value[selectionEnd] === "]";
+
+				if (hasWrappedSelection || hasWrappedAroundSelection) {
+					setTimeout(() => {
+						const node = internalRef.current;
+						if (node) {
+							node.focus();
+							node.setSelectionRange(selectionStart, selectionEnd);
+						}
+					}, 0);
+					return;
+				}
 
 				const newValue =
 					value.substring(0, selectionStart) +
@@ -403,6 +433,49 @@ const Input = forwardRef(
 			props.onKeyDown?.(e);
 		};
 
+		const handlePaste = (e) => {
+			if (type !== "textarea") {
+				props.onPaste?.(e);
+				return;
+			}
+
+			const { selectionStart, selectionEnd, value } = e.target;
+			const shouldPastePlainText = isRangeInsideSquareBrackets(
+				value,
+				selectionStart,
+				selectionEnd,
+			);
+
+			if (!shouldPastePlainText) {
+				props.onPaste?.(e);
+				return;
+			}
+
+			e.preventDefault();
+
+			const plainText = e.clipboardData.getData("text/plain");
+			const newValue =
+				value.substring(0, selectionStart) +
+				plainText +
+				value.substring(selectionEnd);
+
+			if (props.onChange) {
+				props.onChange({
+					...e,
+					target: { ...e.target, value: newValue },
+				});
+			}
+
+			const cursor = selectionStart + plainText.length;
+			setTimeout(() => {
+				const node = internalRef.current;
+				if (node) {
+					node.focus();
+					node.setSelectionRange(cursor, cursor);
+				}
+			}, 0);
+		};
+
 		const baseClass = type === "textarea" ? "Input Input--textarea" : "Input";
 		// Додаємо клас для підсвітки спеціального синтаксису, якщо потрібно
 		const combinedClassName = `${baseClass} ${className} ${typeof props.value === 'string' && props.value?.includes('[') ? 'has-mentions' : ''}`.trim();
@@ -415,6 +488,7 @@ const Input = forwardRef(
 					ref={setRefs}
 					className={combinedClassName}
 					onKeyDown={handleKeyDown}
+					onPaste={handlePaste}
 				/>
 			);
 		}
@@ -426,6 +500,7 @@ const Input = forwardRef(
 				className={combinedClassName}
 				type={type}
 				onKeyDown={handleKeyDown}
+				onPaste={handlePaste}
 			/>
 		);
 	},
