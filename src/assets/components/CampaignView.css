@@ -70,6 +70,7 @@
 .CampaignView__characters > div {
 	flex: 1 1 550px;
 	max-width: 800px;
+    user-select: auto;
 }
 
 .character-card-simple {
