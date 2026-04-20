@@ -85,6 +85,7 @@
 .CategoryBtn {
 	display: flex;
 	align-items: center;
+	justify-content: center;
 	gap: 8px;
 	padding: 10px;
 	background: var(--panel-2);
@@ -115,6 +116,10 @@
 }
 
 .TabBtn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
 	flex: 1;
 	padding: 8px;
 	border: none;

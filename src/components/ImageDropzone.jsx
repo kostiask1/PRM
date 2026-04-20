@@ -56,7 +56,6 @@ export default function ImageDropzone({ campaignSlug, onUploadSuccess, modal }) 
 			);
 			if (onUploadSuccess) onUploadSuccess(result);
 			setPendingFile(null);
-			modal.success("Успіх", "Зображення завантажено!");
 		} catch (err) {
 			modal.alert("Помилка", err.message);
 		} finally {
