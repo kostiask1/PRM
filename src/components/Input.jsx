@@ -126,12 +126,48 @@ const Input = forwardRef(
 					value[selectionStart - 1] === "[" &&
 					value[selectionEnd] === "]";
 
-				if (hasWrappedSelection || hasWrappedAroundSelection) {
+				if (hasWrappedSelection) {
+					const unwrappedSelection = selection.substring(1, selection.length - 1);
+					const newValue =
+						value.substring(0, selectionStart) +
+						unwrappedSelection +
+						value.substring(selectionEnd);
+
+					if (props.onChange) {
+						props.onChange({
+							...e,
+							target: { ...e.target, value: newValue },
+						});
+					}
+
 					setTimeout(() => {
 						const node = internalRef.current;
 						if (node) {
 							node.focus();
-							node.setSelectionRange(selectionStart, selectionEnd);
+							node.setSelectionRange(selectionStart, selectionEnd - 2);
+						}
+					}, 0);
+					return;
+				}
+
+				if (hasWrappedAroundSelection) {
+					const newValue =
+						value.substring(0, selectionStart - 1) +
+						selection +
+						value.substring(selectionEnd + 1);
+
+					if (props.onChange) {
+						props.onChange({
+							...e,
+							target: { ...e.target, value: newValue },
+						});
+					}
+
+					setTimeout(() => {
+						const node = internalRef.current;
+						if (node) {
+							node.focus();
+							node.setSelectionRange(selectionStart - 1, selectionEnd - 1);
 						}
 					}, 0);
 					return;
@@ -453,7 +489,10 @@ const Input = forwardRef(
 
 			e.preventDefault();
 
-			const plainText = e.clipboardData.getData("text/plain");
+			const plainText = (e.clipboardData.getData("text/plain") || "").replace(
+				/\r\n/g,
+				"\n",
+			);
 			const newValue =
 				value.substring(0, selectionStart) +
 				plainText +
