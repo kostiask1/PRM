@@ -152,6 +152,10 @@
     margin-bottom: 6px;
 }
 
+.character-card__notes {
+    margin-top: 16px;
+}
+
 .character-card__notes-header {
     display: flex;
     cursor: pointer;

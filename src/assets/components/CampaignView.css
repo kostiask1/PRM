@@ -62,7 +62,7 @@
 /* NEW: Styles for Characters Section */
 .CampaignView__characters {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(440px, 50%));
+	grid-template-columns: repeat(auto-fill, minmax(440px, calc(50% - 6px)));
 	gap: 12px;
 }
 
@@ -74,6 +74,11 @@
 		border-color 0.2s ease,
 		opacity 0.2s ease;
 	cursor: grab;
+	height: 100%;
+}
+
+.CampaignView__characters .character-card {
+	height: 100%;
 }
 
 .character-card-simple:hover {

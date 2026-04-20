@@ -357,7 +357,7 @@ export default function CampaignView({
 				"characters",
 				newChar,
 			);
-			setCharacters([...characters, saved]);
+			setCharacters([...characters, { ...saved, _isNew: true }]);
 		} catch (err) {
 			console.error("Failed to create character", err);
 		}
@@ -409,7 +409,7 @@ export default function CampaignView({
 		};
 		try {
 			const saved = await api.createEntity(campaign.slug, "npc", newNpc);
-			setNpcs([...npcs, saved]);
+			setNpcs([...npcs, { ...saved, _isNew: true }]);
 		} catch (err) {
 			console.error("Failed to create NPC", err);
 		}
@@ -801,6 +801,7 @@ export default function CampaignView({
 									campaignSlug={campaign.slug}
 									modal={modal}
 									type="characters"
+									initialEditing={character._isNew}
 								/>
 							)}
 						/>
@@ -859,6 +860,7 @@ export default function CampaignView({
 									campaignSlug={campaign.slug}
 									modal={modal}
 									type="npc"
+									initialEditing={npc._isNew}
 								/>
 							)}
 						/>
