@@ -174,7 +174,7 @@ export default function App() {
 					const type = chars.some((c) => c.id === found.id) ? "characters" : "npc";
 					showModal({
 						title: `Персонаж: ${found.firstName} ${found.lastName}`,
-						type: "custom",
+						type: "character",
 						showFooter: false,
 						children: (
 							<EntityModalContent

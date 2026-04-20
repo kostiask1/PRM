@@ -1,10 +1,8 @@
 import { useState, useEffect } from "react";
-import ReactMarkdown from "react-markdown";
 import { api } from "../api";
-import { isJsonString } from "../utils/json";
 import { parseUrl } from "../utils/navigation";
 import Button from "./Button";
-import ClickToCopy from "./ClickToCopy";
+import EditableField from "./EditableField";
 import Icon from "./Icon";
 import Input from "./Input";
 import Modal from "./Modal";
@@ -170,8 +168,6 @@ export default function AiAssistantPanel({
 		{ key: "location", label: "Локація" },
 		{ key: "encounter", label: "Енкаунтер (монстри)" },
 	];
-
-	const isResultJSONString = isJsonString(generatedPrompt);
 
 	return (
 		<div className="AiAssistant">
@@ -388,22 +384,13 @@ export default function AiAssistantPanel({
 								confirmLabel="Закрити"
 								onCancel={() => setGeneratedPrompt(null)}
 								onConfirm={() => setGeneratedPrompt(null)}>
-								<ClickToCopy
-									text={generatedPrompt}
-									message="Відповідь ШІ скопійовано у буфер обміну!"
-									className="AiAssistant__prompt-result">
-									{isResultJSONString ? (
-										<pre>
-											<ReactMarkdown className="AiAssistant__prompt-textarea-result">
-												{generatedPrompt}
-											</ReactMarkdown>
-										</pre>
-									) : (
-										<ReactMarkdown className="AiAssistant__prompt-textarea-result">
-											{generatedPrompt}
-										</ReactMarkdown>
-									)}
-								</ClickToCopy>
+								<EditableField
+									type="textarea"
+									value={generatedPrompt}
+									onChange={(e) => setGeneratedPrompt(e.target.value)}
+									showCopyButton={true}
+									className="AiAssistant__prompt-result"
+								/>
 							</Modal>
 						)}
 

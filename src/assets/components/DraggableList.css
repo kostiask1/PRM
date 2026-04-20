@@ -12,3 +12,7 @@
 	opacity: 0.5;
 	cursor: grabbing;
 }
+
+.DraggableList:has(.Input:focus) > div {
+	-webkit-user-drag: none
+}

@@ -94,3 +94,7 @@
 	justify-content: flex-end;
 	gap: 12px;
 }
+
+.Modal__card--character {
+	min-width: 800px;
+}

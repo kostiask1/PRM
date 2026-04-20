@@ -274,6 +274,7 @@ export default function EditableField({
 	placeholder,
 	className,
 	type,
+	showCopyButton = false,
 	...props
 }) {
 	const [isEditing, setIsEditing] = useState(false);
@@ -440,7 +441,7 @@ export default function EditableField({
 			className={`EditableField ${className || ""}`}
 			onClick={handleClick}
 			style={{ position: "relative" }}>
-			{!isEditing && value && (
+			{!isEditing && value && showCopyButton && (
 				<Button
 					variant="ghost"
 					size="small"
