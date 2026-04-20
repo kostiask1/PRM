@@ -5,6 +5,8 @@ import MainContent from "./components/MainContent";
 import Modal from "./components/Modal";
 import Sidebar from "./components/Sidebar";
 import CharacterCard from "./components/CharacterCard";
+import Input from "./components/Input";
+import Button from "./components/Button";
 import { parseUrl } from "./utils/navigation";
 
 /**
@@ -32,6 +34,61 @@ const EntityModalContent = ({ initialEntity, campaignSlug, type, onClose, modal 
 			modal={modal}
 			type={type}
 		/>
+	);
+};
+
+const MentionPickerModalContent = ({ entities, onSelect, onCancel }) => {
+	const [query, setQuery] = useState("");
+
+	const normalizedQuery = query.trim().toLowerCase();
+	const filteredEntities = entities.filter((entity) => {
+		if (!normalizedQuery) return true;
+		const name = (entity.name || "").toLowerCase();
+		const firstName = (entity.firstName || "").toLowerCase();
+		const lastName = (entity.lastName || "").toLowerCase();
+		const fullName = `${firstName} ${lastName}`.trim();
+		return (
+			name.includes(normalizedQuery) ||
+			firstName.includes(normalizedQuery) ||
+			lastName.includes(normalizedQuery) ||
+			fullName.includes(normalizedQuery)
+		);
+	});
+
+	return (
+		<div className="MentionPicker">
+			<Input
+				value={query}
+				onChange={(e) => setQuery(e.target.value)}
+				placeholder="Пошук NPC або персонажа..."
+				autoFocus
+			/>
+
+			<div className="MentionPicker__list">
+				{filteredEntities.length > 0 ? (
+					filteredEntities.map((entity) => (
+						<button
+							key={`${entity.type}-${entity.id}-${entity.name}`}
+							type="button"
+							className="MentionPicker__item"
+							onClick={() => onSelect(entity.name)}>
+							<span>{entity.name}</span>
+							<span className="muted">
+								{entity.type === "npc" ? "NPC" : "Персонаж"}
+							</span>
+						</button>
+					))
+				) : (
+					<p className="muted">Нічого не знайдено.</p>
+				)}
+			</div>
+
+			<div className="MentionPicker__actions">
+				<Button variant="ghost" onClick={onCancel}>
+					Скасувати
+				</Button>
+			</div>
+		</div>
 	);
 };
 
@@ -195,6 +252,88 @@ export default function App() {
 
 		window.addEventListener("open-entity-modal", handleOpenEntity);
 		return () => window.removeEventListener("open-entity-modal", handleOpenEntity);
+	}, [activeCampaignSlug]);
+
+	useEffect(() => {
+		const handleOpenMentionPicker = async (e) => {
+			const detail = e.detail || {};
+			if (typeof detail.select !== "function" || typeof detail.cancel !== "function") {
+				return;
+			}
+
+			detail.handled = true;
+
+			if (!activeCampaignSlug) {
+				detail.cancel();
+				return;
+			}
+
+			try {
+				const [characters, npcs] = await Promise.all([
+					api.getEntities(activeCampaignSlug, "characters"),
+					api.getEntities(activeCampaignSlug, "npc").catch(() => []),
+				]);
+
+				const toEntityOption = (entity, type) => {
+					const firstName = (entity.firstName || "").trim();
+					const lastName = (entity.lastName || "").trim();
+					const fullName = `${firstName} ${lastName}`.trim();
+					const name = fullName || (entity.name || "").trim();
+					if (!name) return null;
+
+					return {
+						id: entity.id || entity.slug || name,
+						type,
+						name,
+						firstName,
+						lastName,
+					};
+				};
+
+				const entities = [
+					...characters
+						.map((entity) => toEntityOption(entity, "characters"))
+						.filter(Boolean),
+					...npcs.map((entity) => toEntityOption(entity, "npc")).filter(Boolean),
+				].sort((a, b) => a.name.localeCompare(b.name, "uk"));
+
+				if (entities.length === 0) {
+					detail.cancel();
+					return;
+				}
+
+				const closePicker = () => setModalConfig(null);
+				setModalConfig({
+					title: "Вибір згадки",
+					type: "confirm",
+					showFooter: false,
+					onCancel: () => {
+						closePicker();
+						detail.cancel();
+					},
+					children: (
+						<MentionPickerModalContent
+							entities={entities}
+							onSelect={(name) => {
+								closePicker();
+								detail.select(name);
+							}}
+							onCancel={() => {
+								closePicker();
+								detail.cancel();
+							}}
+						/>
+					),
+				});
+			} catch (err) {
+				console.error("Error opening mention picker:", err);
+				detail.cancel();
+			}
+		};
+
+		window.addEventListener("open-mention-picker", handleOpenMentionPicker);
+		return () =>
+			window.removeEventListener("open-mention-picker", handleOpenMentionPicker);
 	}, [activeCampaignSlug]);
 
 	// Універсальна функція навігації

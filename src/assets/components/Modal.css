@@ -98,3 +98,42 @@
 .Modal__card--character {
 	min-width: 800px;
 }
+
+.MentionPicker {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.MentionPicker__list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	max-height: min(50vh, 420px);
+	overflow-y: auto;
+	padding-right: 4px;
+}
+
+.MentionPicker__item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
+	padding: 10px 12px;
+	border: 1px solid var(--border);
+	background: var(--panel);
+	color: var(--text);
+	border-radius: 10px;
+	cursor: pointer;
+	text-align: left;
+}
+
+.MentionPicker__item:hover {
+	border-color: var(--accent);
+	background: color-mix(in srgb, var(--accent), var(--panel) 92%);
+}
+
+.MentionPicker__actions {
+	display: flex;
+	justify-content: flex-end;
+}

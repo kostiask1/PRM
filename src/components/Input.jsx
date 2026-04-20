@@ -1,6 +1,22 @@
 import { forwardRef, useRef, useLayoutEffect } from "react";
 import "../assets/components/Input.css";
 
+function requestMentionSelection() {
+	return new Promise((resolve) => {
+		const detail = {
+			handled: false,
+			select: (name) => resolve({ status: "selected", name: name || "" }),
+			cancel: () => resolve({ status: "cancelled" }),
+		};
+
+		window.dispatchEvent(new CustomEvent("open-mention-picker", { detail }));
+
+		if (!detail.handled) {
+			resolve({ status: "unhandled" });
+		}
+	});
+}
+
 function isRangeInsideSquareBrackets(value = "", start = 0, end = start) {
 	const openIndex = value.lastIndexOf("[", Math.max(0, start - 1));
 	if (openIndex === -1) return false;
@@ -115,6 +131,46 @@ const Input = forwardRef(
 				e.preventDefault();
 
 				const { selectionStart, selectionEnd, value } = e.target;
+				const hasSelection = selectionEnd > selectionStart;
+				const targetNode = e.target;
+				const initialValue = value;
+				const initialSelectionStart = selectionStart;
+				const initialSelectionEnd = selectionEnd;
+
+				if (!hasSelection) {
+					requestMentionSelection().then((result) => {
+						if (result.status === "cancelled") return;
+
+						const cursorStart = initialSelectionStart;
+						const cursorEnd = initialSelectionEnd;
+						const sourceValue = initialValue;
+
+						const mentionText =
+							result.status === "selected" && result.name
+								? `[${result.name}]`
+								: "[]";
+						const nextValue =
+							sourceValue.substring(0, cursorStart) +
+							mentionText +
+							sourceValue.substring(cursorEnd);
+
+						props.onChange?.({
+							...e,
+							target: { ...targetNode, value: nextValue },
+						});
+
+						const newCursor =
+							cursorStart + (result.status === "selected" ? mentionText.length : 1);
+						setTimeout(() => {
+							const activeNode = internalRef.current;
+							if (!activeNode) return;
+							activeNode.focus();
+							activeNode.setSelectionRange(newCursor, newCursor);
+						}, 0);
+					});
+					return;
+				}
+
 				const selection = value.substring(selectionStart, selectionEnd);
 				const hasWrappedSelection =
 					selection.startsWith("[") &&

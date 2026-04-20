@@ -415,6 +415,7 @@ export default function EditableField({
 		"Ctrl+] — Список",
 		"Ctrl+[ — Зняти список",
 		"Ctrl+Q — Цитата",
+		"Ctrl+K — Додати посилання на персонажа",
 	].join("\n");
 
 	if (isEditing) {
