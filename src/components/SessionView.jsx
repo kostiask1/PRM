@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { api } from "../api";
+import { useState } from "react";
 import Icon from "./Icon";
 import Button from "./Button";
 import EditableField from "./EditableField";
@@ -13,6 +12,7 @@ import ImageGallery from "./ImageGallery";
 import CharacterCard from "./CharacterCard";
 import Checkbox from "./Checkbox";
 import "../assets/components/SessionView.css";
+import withSessionView from "../hoc/withSessionView";
 
 const SCENE_SCHEMA = [
 	{
@@ -41,549 +41,44 @@ const SCENE_SCHEMA = [
 	},
 ];
 
-export default function SessionView({
+function SessionView({
 	campaign,
 	sessionId,
 	onBack,
-	onNavigate,
-	onRefreshCampaigns,
 	modal,
+	session,
+	isSaving,
+	npcToCreate,
+	setNpcToCreate,
+	isChecklistOpen,
+	setIsChecklistOpen,
+	undoStack,
+	redoStack,
+	campaignSlug,
+	triggerSave,
+	handleUndo,
+	handleRedo,
+	updateSession,
+	updateData,
+	addScene,
+	updateScene,
+	toggleSceneCollapse,
+	handleOpenEncounter,
+	removeScene,
+	handleOpenNpcCreate,
+	handleSaveNpc,
+	handleNoteTitleChange,
+	handleNoteChange,
+	handleToggleNoteCollapse,
+	handleDeleteNote,
+	handleToggleSectionCollapse,
+	handleAiUpdate,
+	checklistItems,
+	progress,
+	handleRename,
+	handleDeleteSessionAndBack,
 }) {
-	const [session, setSession] = useState(null);
-	const [isSaving, setIsSaving] = useState(false);
-	const [npcToCreate, setNpcToCreate] = useState(null);
-	const [isChecklistOpen, setIsChecklistOpen] = useState(false);
-	const saveTimeout = useRef(null);
-
-	const campaignSlug = campaign.slug;
-
-	// Undo/Redo state
-	const [undoStack, setUndoStack] = useState([]);
-	const [redoStack, setRedoStack] = useState([]);
-	const isUpdatingHistory = useRef(false); // Flag to prevent circular updates
-
-	const saveToServer = useCallback(
-		async (updatedSession) => {
-			if (saveTimeout.current) clearTimeout(saveTimeout.current);
-			saveTimeout.current = null;
-			setIsSaving(true);
-			try {
-				const result = await api.updateSession(
-					campaignSlug,
-					sessionId,
-					updatedSession,
-				);
-				// Якщо після збереження змінився fileName (через ренейм), оновлюємо URL
-				if (result && result.fileName !== sessionId) {
-					onNavigate(campaignSlug, result.fileName, true);
-					onRefreshCampaigns();
-				}
-			} catch (err) {
-				console.error("Save failed", err);
-			} finally {
-				setIsSaving(false);
-			}
-		},
-		[campaignSlug, sessionId, onNavigate, onRefreshCampaigns],
-	);
-
-	const triggerSave = useCallback(
-		(updatedSession, instant = false) => {
-			if (saveTimeout.current) clearTimeout(saveTimeout.current);
-
-			if (instant) {
-				saveTimeout.current = null;
-				saveToServer(updatedSession);
-			} else {
-				setIsSaving(true);
-				saveTimeout.current = setTimeout(() => {
-					saveTimeout.current = null;
-					saveToServer(updatedSession);
-				}, 250);
-			}
-		},
-		[saveToServer],
-	);
-
-	const handleUndo = useCallback(() => {
-		if (undoStack.length === 0) return;
-
-		const currentState = {
-			data: session.data,
-			completed: session.completed,
-			completedAt: session.completedAt,
-		};
-
-		let tempStack = [...undoStack];
-		let stateToRestore = null;
-
-		// Шукаємо перший стан у черзі, який реально відрізняється від поточного
-		while (tempStack.length > 0) {
-			const candidate = tempStack.pop();
-			const isDifferent =
-				JSON.stringify(candidate.data) !== JSON.stringify(currentState.data) ||
-				candidate.completed !== currentState.completed;
-
-			if (isDifferent) {
-				stateToRestore = candidate;
-				break;
-			}
-		}
-
-		if (stateToRestore) {
-			isUpdatingHistory.current = true;
-			setRedoStack((prev) => [currentState, ...prev]);
-			setUndoStack(tempStack);
-
-			setSession((prev) => {
-				const updated = {
-					...prev,
-					data: stateToRestore.data,
-					completed: stateToRestore.completed,
-					completedAt: stateToRestore.completedAt,
-				};
-				triggerSave(updated, true);
-				return updated;
-			});
-
-			setTimeout(() => {
-				isUpdatingHistory.current = false;
-			}, 0);
-		}
-	}, [undoStack, session, triggerSave]);
-
-	const handleRedo = useCallback(() => {
-		if (redoStack.length === 0) return;
-
-		const currentState = {
-			data: session.data,
-			completed: session.completed,
-			completedAt: session.completedAt,
-		};
-
-		let tempStack = [...redoStack];
-		let stateToRestore = null;
-
-		while (tempStack.length > 0) {
-			const candidate = tempStack.shift();
-			const isDifferent =
-				JSON.stringify(candidate.data) !== JSON.stringify(currentState.data) ||
-				candidate.completed !== currentState.completed;
-
-			if (isDifferent) {
-				stateToRestore = candidate;
-				break;
-			}
-		}
-
-		if (stateToRestore) {
-			isUpdatingHistory.current = true;
-			setUndoStack((prev) => [...prev, currentState]);
-			setRedoStack(tempStack);
-
-			setSession((prev) => {
-				const updated = {
-					...prev,
-					data: stateToRestore.data,
-					completed: stateToRestore.completed,
-					completedAt: stateToRestore.completedAt,
-				};
-				triggerSave(updated, true);
-				return updated;
-			});
-
-			setTimeout(() => {
-				isUpdatingHistory.current = false;
-			}, 0);
-		}
-	}, [redoStack, session, triggerSave]);
-
-	const lastLoadedSessionIdRef = useRef(null);
-
-	useEffect(() => {
-		const loadSession = async () => {
-			// Завантажуємо дані лише якщо змінився ID сесії
-			if (lastLoadedSessionIdRef.current === sessionId) return;
-
-			try {
-				const data = await api.getSession(campaignSlug, sessionId);
-
-				let sessionNotes = data.data.notes || [];
-				const lastNote = sessionNotes[sessionNotes.length - 1];
-				if (
-					sessionNotes.length === 0 ||
-					(lastNote && (lastNote.text?.trim() || lastNote.title?.trim()))
-				) {
-					sessionNotes.push({
-						id: Date.now(),
-						title: "",
-						text: "",
-						collapsed: false,
-					});
-				}
-				data.data.notes = sessionNotes;
-
-				setSession(data);
-
-				setUndoStack([]);
-				setRedoStack([]);
-				lastLoadedSessionIdRef.current = sessionId;
-			} catch (err) {
-				console.error("Failed to load session", err);
-			}
-		};
-		loadSession();
-	}, [campaignSlug, sessionId]);
-
-	useEffect(() => {
-		const handleKeyDown = (e) => {
-			// Якщо відкрита будь-яка модалка, ігноруємо гарячі клавіші сесії
-			if (document.querySelector(".Modal__overlay")) return;
-
-			if (e.key === "Backspace") {
-				const isInput =
-					e.target.tagName === "INPUT" ||
-					e.target.tagName === "TEXTAREA" ||
-					e.target.isContentEditable;
-				if (!isInput) {
-					e.preventDefault();
-					onBack();
-				}
-			}
-
-			const isMod = e.ctrlKey || e.metaKey;
-			const key = e.key.toLowerCase();
-
-			if (isMod && (key === "z" || key === "я")) {
-				if (e.shiftKey) {
-					e.preventDefault();
-					handleRedo();
-				} else {
-					e.preventDefault();
-					handleUndo();
-				}
-			} else if (isMod && (key === "y" || key === "н")) {
-				e.preventDefault();
-				handleRedo();
-			}
-		};
-		window.addEventListener("keydown", handleKeyDown);
-		return () => window.removeEventListener("keydown", handleKeyDown); // Removed autoResize from dependencies
-	}, [onBack, handleUndo, handleRedo]);
-
-	const updateSession = (updates, instant = false) => {
-		setSession((prev) => {
-			if (!isUpdatingHistory.current && prev) {
-				const currentState = {
-					data: prev.data,
-					completed: prev.completed,
-					completedAt: prev.completedAt,
-				};
-
-				// Перевіряємо, чи нові дані реально відрізняються від поточних
-				const isDataChanged =
-					updates.data &&
-					JSON.stringify(updates.data) !== JSON.stringify(prev.data);
-				const isStatusChanged =
-					updates.completed !== undefined &&
-					updates.completed !== prev.completed;
-
-				// Записуємо в історію лише якщо це початок введення (таймер не активний) або миттєва дія
-				if (
-					(isDataChanged || isStatusChanged) &&
-					(!saveTimeout.current || instant)
-				) {
-					setUndoStack((currentStack) => [...currentStack, currentState]);
-					setRedoStack([]);
-				}
-			}
-
-			const next = { ...prev, ...updates };
-
-			triggerSave(next, instant);
-			return next;
-		});
-	};
-
-	const updateData = (key, value, instant = false) => {
-		console.log("value:", value);
-		const nextData = { ...session.data, [key]: value };
-		updateSession({ data: nextData }, instant);
-	};
-
-	const addScene = () => {
-		const scenes = session.data.scenes || [];
-		updateData(
-			"scenes",
-			[...scenes, { id: Date.now(), texts: {}, collapsed: false }],
-			true,
-		);
-	};
-
-	const updateScene = (sceneId, field, value, isTopLevel = false) => {
-		const scenes = session.data.scenes.map((s) => {
-			if (s.id !== sceneId) return s;
-			if (isTopLevel) return { ...s, [field]: value };
-			return { ...s, texts: { ...s.texts, [field]: value } };
-		});
-		updateData("scenes", scenes);
-	};
-
-	const toggleSceneCollapse = (sceneId) => {
-		const scenes = session.data.scenes.map((s) =>
-			s.id === sceneId ? { ...s, collapsed: !s.collapsed } : s,
-		);
-		updateData("scenes", scenes, true);
-	};
-
-	const handleOpenEncounter = async (scene) => {
-		let encounterId = scene.encounterId;
-
-		if (!encounterId) {
-			const sceneIndex = session.data.scenes.findIndex(
-				(s) => s.id === scene.id,
-			);
-			const name = await modal.prompt(
-				"Нове зіткнення",
-				"Введіть назву для бою:",
-				`Бій у сцені ${sceneIndex + 1}`,
-			);
-			if (name === null) return;
-
-			encounterId = Date.now().toString();
-			const newEncounter = {
-				id: encounterId,
-				name: name || `Бій у сцені ${sceneIndex + 1}`,
-				monsters: [],
-			};
-
-			const currentEncounters = session.data.encounters || [];
-			const updatedScenes = session.data.scenes.map((s) =>
-				s.id === scene.id ? { ...s, encounterId } : s,
-			);
-
-			const nextData = {
-				...session.data,
-				encounters: [...currentEncounters, newEncounter],
-				scenes: updatedScenes,
-			};
-
-			// Використовуємо прямий виклик API для очікування завершення операції
-			await api.updateSession(campaignSlug, sessionId, {
-				...session,
-				data: nextData,
-			});
-
-			// Оновлюємо локальний стан, щоб уникнути стрибків при поверненні
-			setSession((prev) => ({ ...prev, data: nextData }));
-		}
-
-		onNavigate(campaignSlug, sessionId, false, encounterId);
-	};
-
-	const removeScene = async (sceneId) => {
-		const scene = session.data.scenes.find((s) => s.id === sceneId);
-		if (!scene) return;
-
-		// Перевіряємо, чи є в сцені будь-які дані (текст або бій)
-		const hasTextData = Object.values(scene.texts || {}).some(
-			(val) => val && val.trim() !== "",
-		);
-		const hasEncounter = !!scene.encounterId;
-
-		// Запитуємо підтвердження лише якщо сцена не порожня
-		if (hasTextData || hasEncounter) {
-			const confirmed = await modal.confirm(
-				"Видалення сцени",
-				"Ви впевнені? Це також видалить пов'язане бойове зіткнення.",
-			);
-			if (!confirmed) return;
-		}
-
-		const nextData = { ...session.data };
-
-		// Видаляємо пов'язаний encounter, якщо він існує
-		if (scene.encounterId) {
-			nextData.encounters = (nextData.encounters || []).filter(
-				(e) => e.id.toString() !== scene.encounterId.toString(),
-			);
-		}
-
-		// Видаляємо саму сцену
-		nextData.scenes = (nextData.scenes || []).filter((s) => s.id !== sceneId);
-
-		updateSession({ data: nextData }, true);
-	};
-
-	// Notes Management
-	const handleOpenNpcCreate = () => {
-		setNpcToCreate({
-			id: Date.now(),
-			firstName: "",
-			lastName: "",
-			race: "",
-			class: "",
-			level: 1,
-			motivation: "",
-			trait: "",
-			notes: [{ id: Date.now() + 1, title: "", text: "", collapsed: false }],
-			collapsed: false,
-		});
-	};
-
-	const handleSaveNpc = async () => {
-		if (!npcToCreate.firstName?.trim()) {
-			modal.alert("Помилка", "Ім'я NPC обов'язкове для створення.");
-			return;
-		}
-
-		try {
-			await api.createEntity(campaignSlug, "npc", npcToCreate);
-			setNpcToCreate(null);
-			window.dispatchEvent(new CustomEvent("refresh-entities"));
-		} catch (err) {
-			console.error("Failed to create NPC", err);
-		}
-	};
-
-	const handleNoteTitleChange = (id, title) => {
-		let notes = session.data.notes || [];
-		let newNotes = notes.map((n) => (n.id === id ? { ...n, title } : n));
-
-		const lastNote = newNotes[newNotes.length - 1];
-		if (
-			lastNote &&
-			(lastNote.text.trim() !== "" || lastNote.title?.trim() !== "")
-		) {
-			newNotes.push({
-				id: Date.now(),
-				title: "",
-				text: "",
-				collapsed: false,
-			});
-		}
-
-		updateData("notes", newNotes);
-	};
-
-	const handleNoteChange = (id, text) => {
-		let notes = session.data.notes || [];
-		let newNotes = notes.map((n) => (n.id === id ? { ...n, text } : n));
-
-		// Автоматичне додавання нової замітки, якщо остання заповнена
-		const lastNote = newNotes[newNotes.length - 1];
-		if (
-			lastNote &&
-			(lastNote.text.trim() !== "" || lastNote.title?.trim() !== "")
-		) {
-			newNotes.push({
-				id: Date.now(),
-				title: "",
-				text: "",
-				collapsed: false,
-			});
-		}
-
-		updateData("notes", newNotes);
-	};
-
-	const handleToggleNoteCollapse = (id) => {
-		const notes = session.data.notes.map((n) =>
-			n.id === id ? { ...n, collapsed: !n.collapsed } : n,
-		);
-		updateData("notes", notes, true);
-	};
-
-	const handleDeleteNote = (id) => {
-		let newNotes = (session.data.notes || []).filter((n) => n.id !== id);
-
-		// Гарантуємо, що список не буде порожнім
-		if (newNotes.length === 0) {
-			newNotes.push({ id: Date.now(), title: "", text: "", collapsed: false });
-		}
-
-		updateData("notes", newNotes, true);
-	};
-
-	const handleToggleSectionCollapse = (key) => {
-		const isCollapsed = !!session.data[`is${key}Collapsed`];
-		updateData(`is${key}Collapsed`, !isCollapsed, true);
-	};
-
-	const handleAiUpdate = (updatedSession) => {
-		if (!session) return;
-
-		// Зберігаємо стан ДО змін ШІ в історію
-		setUndoStack((prev) => [
-			...prev,
-			{
-				data: session.data,
-				completed: session.completed,
-				completedAt: session.completedAt,
-			},
-		]);
-		setRedoStack([]);
-
-		isUpdatingHistory.current = true;
-
-		// Перевіряємо замітки після оновлення від ШІ
-		const last = updatedSession.data.notes
-			? updatedSession.data.notes[updatedSession.data.notes.length - 1]
-			: null;
-		if (
-			updatedSession.data.notes &&
-			(updatedSession.data.notes.length === 0 ||
-				(last && (last.text?.trim() !== "" || last.title?.trim() !== "")))
-		) {
-			updatedSession.data.notes.push({
-				id: Date.now(),
-				title: "",
-				text: "",
-				collapsed: false,
-			});
-		}
-
-		setSession(updatedSession);
-		setTimeout(() => {
-			isUpdatingHistory.current = false;
-		}, 0);
-	};
 	if (!session) return null;
-
-	const checklistItems = [
-		{ id: "goal", label: "Визначити головну мету сесії" },
-		{ id: "conflict", label: "Сформулювати основний конфлікт" },
-		{
-			id: "social",
-			label: "Підготувати соціальну сцену",
-			note: "Переговори, допит, суперечка.",
-		},
-		{
-			id: "exploration",
-			label: "Підготувати сцену дослідження",
-			note: "Локація, загадка, пастка.",
-		},
-		{
-			id: "combat",
-			label: "Підготувати бій / сцену напруги",
-			note: "Ризик і тиск.",
-		},
-	];
-
-	const totalChecks = checklistItems.length;
-	const completedChecks = checklistItems.filter(
-		(item) => session.data[`${item.id}_check`],
-	).length;
-	const progress = Math.round((completedChecks / totalChecks) * 100);
-
-	const handleRename = async () => {
-		const name = await modal.prompt(
-			"Перейменування",
-			"Введіть нову назву сесії:",
-			session.name,
-		);
-		if (name && name !== session.name) updateSession({ name }, true);
-	};
 
 	return (
 		<Panel className="SessionView">
@@ -634,18 +129,7 @@ export default function SessionView({
 					<Button
 						variant="danger"
 						icon="trash"
-						onClick={async () => {
-							if (
-								await modal.confirm(
-									"Видалення сесії",
-									`Видалити сесію "${session.name}"?`,
-								)
-							) {
-								await api.deleteSession(campaignSlug, sessionId);
-								onBack();
-								onRefreshCampaigns();
-							}
-						}}
+						onClick={handleDeleteSessionAndBack}
 					/>
 				</div>
 			</div>
@@ -719,7 +203,9 @@ export default function SessionView({
 										onOpenEncounter={() => handleOpenEncounter(scene)}
 										handleOpenNpcCreate={handleOpenNpcCreate}
 										imageUrl={scene.imageUrl}
-										onImageChange={(url) => updateScene(scene.id, "imageUrl", url, true)}
+										onImageChange={(url) =>
+											updateScene(scene.id, "imageUrl", url, true)
+										}
 										campaignSlug={campaignSlug}
 										modal={modal}
 										hasEncounter={!!scene.encounterId}
@@ -764,7 +250,6 @@ export default function SessionView({
 				</div>
 			</div>
 
-			{/* Модальне вікно з чеклістом */}
 			{isChecklistOpen && (
 				<Modal
 					title="Чекліст підготовки"
@@ -824,6 +309,10 @@ export default function SessionView({
 		</Panel>
 	);
 }
+
+export { SessionView };
+const SessionViewWithHOC = withSessionView(SessionView);
+export default SessionViewWithHOC;
 
 function TodoSection({ title, children, action }) {
 	return (
