@@ -16,7 +16,6 @@ const CATEGORIES = [
 		subs: ["npc", "players"],
 	},
 	{ id: "props", label: "Предмети", icon: "book" },
-	{ id: "mounts", label: "Тварини", icon: "skull" },
 	{ id: "notes", label: "Нотатки", icon: "file" },
 	{ id: "attachments", label: "Вкладення", icon: "layers" },
 ];

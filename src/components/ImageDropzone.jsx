@@ -12,7 +12,6 @@ const CATEGORIES = [
 	{ id: "tokens", label: "Токени", icon: "user", subs: ["npc", "players"] },
 	{ id: "characters", label: "Персонажі", icon: "users", subs: ["npc", "players"] },
 	{ id: "props", label: "Предмети", icon: "book" },
-	{ id: "mounts", label: "Тварини/Транспорт", icon: "skull" },
 	{ id: "notes", label: "Нотатки", icon: "file" },
 	{ id: "attachments", label: "Вкладення", icon: "layers" },
 ];
