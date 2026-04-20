@@ -17,7 +17,6 @@ export default function CharacterCard({
 	onChange,
 	onDelete,
 	campaignSlug,
-	modal,
 	initialEditing = false,
 	type = "characters",
 }) {
@@ -122,7 +121,6 @@ export default function CharacterCard({
 								{!character.imageUrl && isEditing && (
 									<ImageDropzone
 										campaignSlug={campaignSlug}
-										modal={modal}
 										onUploadSuccess={(res) => updateField("imageUrl", res.url)}
 									/>
 								)}
@@ -273,7 +271,6 @@ export default function CharacterCard({
 					updateField("imageUrl", img.url);
 					setIsGalleryOpen(false);
 				}}
-				modal={modal}
 				initialSource={campaignSlug}
 				initialCategory={type === "npc" ? "tokens" : "characters"}
 				initialSubcategory={type === "npc" ? "npc" : "players"}

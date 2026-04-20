@@ -19,7 +19,6 @@ function SessionView({
 	campaign,
 	sessionId,
 	onBack,
-	modal,
 	session,
 	isSaving,
 	npcToCreate,
@@ -154,7 +153,6 @@ function SessionView({
 							campaignSlug={campaignSlug}
 							sessionId={sessionId}
 							onInsertResult={handleAiUpdate}
-							modal={modal}
 						/>
 						<DraggableList
 							items={viewModel.scenes}
@@ -176,7 +174,6 @@ function SessionView({
 											updateScene(scene.id, "imageUrl", url, true)
 										}
 										campaignSlug={campaignSlug}
-										modal={modal}
 										hasEncounter={!!scene.encounterId}
 										encounterName={viewModel.findEncounterName(scene)}
 										onTriggerSave={() => triggerSave(session, true)}>
@@ -264,7 +261,6 @@ function SessionView({
 						onDelete={() => setNpcToCreate(null)}
 						onToggleCollapse={() => {}}
 						campaignSlug={campaignSlug}
-						modal={modal}
 						type="npc"
 						initialEditing={true}
 					/>
@@ -322,7 +318,6 @@ function SceneCard({
 	imageUrl,
 	onImageChange,
 	campaignSlug,
-	modal,
 	children,
 }) {
 	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
@@ -402,7 +397,6 @@ function SceneCard({
 							) : (
 								<ImageDropzone
 									campaignSlug={campaignSlug}
-									modal={modal}
 									onUploadSuccess={(res) => onImageChange(res.url)}
 								/>
 							)}
@@ -419,7 +413,6 @@ function SceneCard({
 					onImageChange(img.url);
 					setIsGalleryOpen(false);
 				}}
-				modal={modal}
 				initialSource={campaignSlug}
 				initialCategory="scenes"
 			/>

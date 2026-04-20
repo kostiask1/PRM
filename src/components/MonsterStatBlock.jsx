@@ -16,6 +16,7 @@ import "../assets/components/MonsterStatBlock.css";
 import ClickToCopy from "./ClickToCopy.jsx";
 import Button from "./Button.jsx";
 import MonsterStatBlockModel from "../models/MonsterStatBlockModel.js";
+import { useModal } from "../context/ModalContext";
 
 const SPELL_CACHE = new Map();
 
@@ -23,9 +24,9 @@ export default function MonsterStatBlock({
 	monster,
 	onNameClick,
 	nameTitle,
-	modal,
 	onFavoriteChange,
 }) {
+	const modal = useModal();
 	const [hasImageError, setHasImageError] = useState(false);
 	const [spells, setSpells] = useState([]);
 	const [loadingSpells, setLoadingSpells] = useState(false);

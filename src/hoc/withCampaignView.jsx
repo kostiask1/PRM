@@ -1,13 +1,15 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 
 import { api } from "../api";
+import { useModal } from "../context/ModalContext";
 
 export default function withCampaignView(WrappedComponent) {
 	const ComponentWithCampaignView = memo(function ComponentWithCampaignView(
 		props,
 	) {
-		const { campaign, onSelectSession, onNavigate, onRefreshCampaigns, modal } =
+		const { campaign, onSelectSession, onNavigate, onRefreshCampaigns } =
 			props;
+		const modal = useModal();
 
 		const [sessions, setSessions] = useState([]);
 		const [description, setDescription] = useState(campaign.description || "");

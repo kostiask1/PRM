@@ -1,11 +1,13 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 
 import { api } from "../api";
+import { useModal } from "../context/ModalContext";
 
 export default function withSessionView(WrappedComponent) {
 	const ComponentWithSessionView = memo(function ComponentWithSessionView(props) {
-		const { campaign, sessionId, onBack, onNavigate, onRefreshCampaigns, modal } =
+		const { campaign, sessionId, onBack, onNavigate, onRefreshCampaigns } =
 			props;
+		const modal = useModal();
 
 		const [session, setSession] = useState(null);
 		const [isSaving, setIsSaving] = useState(false);

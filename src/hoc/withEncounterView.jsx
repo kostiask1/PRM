@@ -1,12 +1,13 @@
-﻿import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api";
+import { useModal } from "../context/ModalContext";
 
 export default function withEncounterView(WrappedComponent) {
 	const ComponentWithEncounterView = memo(function ComponentWithEncounterView(
 		props,
 	) {
-		const { campaign, sessionId, encounterId, onBack, onRefreshCampaigns, modal } =
-			props;
+		const { campaign, sessionId, encounterId, onBack, onRefreshCampaigns } = props;
+		const modal = useModal();
 
 		const [encounter, setEncounter] = useState(null);
 		const [selectedInstance, setSelectedInstance] = useState(null);

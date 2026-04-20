@@ -8,13 +8,14 @@ import Input from "./Input";
 import Modal from "./Modal";
 import Checkbox from "./Checkbox";
 import Notification from "./Notification";
+import { useModal } from "../context/ModalContext";
 import "../assets/components/AiAssistantPanel.css";
 
 export default function AiAssistantPanel({
 	sessionData,
 	onInsertResult,
-	modal,
 }) {
+	const modal = useModal();
 	const initialRoute = parseUrl();
 	const isCampaign = !initialRoute.session;
 	const isEncounter = !!initialRoute.encounter;

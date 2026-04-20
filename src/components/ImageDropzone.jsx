@@ -1,9 +1,10 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { api } from "../api";
 import Button from "./Button";
 import Icon from "./Icon";
 import Modal from "./Modal";
 import ImageGallery from "./ImageGallery";
+import { useModal } from "../context/ModalContext";
 import "../assets/components/ImageDropzone.css";
 
 const CATEGORIES = [
@@ -16,7 +17,8 @@ const CATEGORIES = [
 	{ id: "attachments", label: "Вкладення", icon: "layers" },
 ];
 
-export default function ImageDropzone({ campaignSlug, onUploadSuccess, modal }) {
+export default function ImageDropzone({ campaignSlug, onUploadSuccess }) {
+	const modal = useModal();
 	const [isDragging, setIsDragging] = useState(false);
 	const [pendingFile, setPendingFile] = useState(null);
 	const [uploadConfig, setUploadConfig] = useState({ category: "maps", subcategory: "" });
@@ -148,7 +150,6 @@ export default function ImageDropzone({ campaignSlug, onUploadSuccess, modal }) 
 					onUploadSuccess?.(img);
 					setIsGalleryOpen(false);
 				}} 
-				modal={modal}
 			/>
 		</div>
 	);

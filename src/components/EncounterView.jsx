@@ -11,7 +11,6 @@ import "../assets/components/EncounterView.css";
 
 function EncounterView({
 	onBack,
-	modal,
 	encounter,
 	selectedInstance,
 	setSelectedInstance,
@@ -182,7 +181,7 @@ function EncounterView({
 
 					<div className="EncounterView__detailView">
 						{selectedInstance ? (
-							<MonsterStatBlock monster={selectedInstance} modal={modal} />
+							<MonsterStatBlock monster={selectedInstance} />
 						) : (
 							<p className="muted">
 								Оберіть монстра зі списку, щоб побачити його характеристики.
@@ -193,7 +192,6 @@ function EncounterView({
 				<AiAssistantPanel
 					sessionData={encounter}
 					onInsertResult={handleAiUpdate}
-					modal={modal}
 				/>
 			</div>
 
@@ -203,7 +201,7 @@ function EncounterView({
 					onCancel={() => setShowBestiary(false)}
 					showFooter={false}
 					type="custom">
-					<Bestiary onAddMonster={handleAddMonster} isEmbedded={true} modal={modal} />
+					<Bestiary onAddMonster={handleAddMonster} isEmbedded={true} />
 				</Modal>
 			)}
 

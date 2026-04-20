@@ -4,6 +4,7 @@ import Icon from "./Icon";
 import "../assets/components/ImageGallery.css";
 import Button from "./Button";
 import withImageGallery from "../hoc/withImageGallery";
+import { useModal } from "../context/ModalContext";
 
 const CATEGORIES = [
 	{ id: "maps", label: "Мапи", icon: "map" },
@@ -29,7 +30,6 @@ function ImageGallery({
 	isOpen,
 	onClose,
 	onSelect,
-	modal,
 	campaigns,
 	selectedSource,
 	setSelectedSource,
@@ -64,6 +64,7 @@ function ImageGallery({
 	getCleanName,
 	handleRenameImage,
 }) {
+	const modal = useModal();
 	if (!isOpen) return null;
 
 	return (

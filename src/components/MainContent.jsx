@@ -11,13 +11,12 @@ export default function MainContent({
 	onSelectSession,
 	onRefreshCampaigns,
 	onNavigate,
-	modal,
 	onRollDice,
 }) {
 	if (window.location.pathname === "/bestiary") {
 		return (
 			<main className="MainContent">
-				<Bestiary modal={modal} />
+				<Bestiary />
 			</main>
 		);
 	}
@@ -49,7 +48,6 @@ export default function MainContent({
 					encounterId={activeEncounterId}
 					onBack={() => onNavigate(campaign.slug, activeSessionId)}
 					onRefreshCampaigns={onRefreshCampaigns}
-					modal={modal}
 					onRollDice={onRollDice}
 				/>
 			) : activeSessionId ? (
@@ -59,7 +57,6 @@ export default function MainContent({
 					onBack={() => onSelectSession(null)}
 					onNavigate={onNavigate}
 					onRefreshCampaigns={onRefreshCampaigns}
-					modal={modal}
 					onRollDice={onRollDice}
 				/>
 			) : (
@@ -68,7 +65,6 @@ export default function MainContent({
 					onSelectSession={onSelectSession}
 					onNavigate={onNavigate}
 					onRefreshCampaigns={onRefreshCampaigns}
-					modal={modal}
 					onRollDice={onRollDice}
 				/>
 			)}

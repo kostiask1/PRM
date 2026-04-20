@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useState } from "react";
 
 import { api } from "../api";
+import { useModal } from "../context/ModalContext";
 
 const CATEGORIES = [
 	{ id: "maps", label: "Мапи", icon: "map" },
@@ -23,11 +24,11 @@ export default function withImageGallery(WrappedComponent) {
 	) {
 		const {
 			isOpen,
-			modal,
 			initialSource,
 			initialCategory,
 			initialSubcategory,
 		} = props;
+		const modal = useModal();
 
 		const [campaigns, setCampaigns] = useState([]);
 		const [selectedSource, setSelectedSource] = useState("general");

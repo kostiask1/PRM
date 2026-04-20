@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "./api";
 import DiceCalculator from "./components/DiceCalculator";
 import MainContent from "./components/MainContent";
@@ -8,12 +8,13 @@ import CharacterCard from "./components/CharacterCard";
 import Input from "./components/Input";
 import Button from "./components/Button";
 import { parseUrl } from "./utils/navigation";
+import { ModalContext } from "./context/ModalContext";
 
 /**
  * Допоміжний компонент для керування станом сутності всередині модального вікна.
  * Забезпечує реактивність при редагуванні полів персонажа.
  */
-const EntityModalContent = ({ initialEntity, campaignSlug, type, onClose, modal }) => {
+const EntityModalContent = ({ initialEntity, campaignSlug, type, onClose }) => {
 	const [entity, setEntity] = useState(initialEntity);
 	const handleUpdate = async (id, updated) => {
 		setEntity(updated);
@@ -31,7 +32,6 @@ const EntityModalContent = ({ initialEntity, campaignSlug, type, onClose, modal 
 			}}
 			onToggleCollapse={() => {}}
 			campaignSlug={campaignSlug}
-			modal={modal}
 			type={type}
 		/>
 	);
@@ -113,53 +113,9 @@ export default function App() {
 	// Modal State
 	const [modalConfig, setModalConfig] = useState(null);
 
-	const showModal = (config) => {
-		return new Promise((resolve) => {
-			setModalConfig({
-				...config,
-				onConfirm: (value) => {
-					setModalConfig(null);
-					resolve(value);
-				},
-				onCancel: config.isAlert
-					? null
-					: () => {
-							setModalConfig(null);
-							resolve(null);
-						},
-			});
-		});
-	};
-
-	const alert = (title, message, status = null) => {
-		const fullMessage = status ? `[Статус: ${status}] ${message}` : message;
-		return showModal({
-			title,
-			message: fullMessage,
-			type: status >= 500 ? "error" : "error",
-			isAlert: true,
-		});
-	};
-	const success = (title, message) => {
-		return showModal({
-			title,
-			message,
-			type: "success",
-			isAlert: true,
-		});
-	};
-	const confirm = (title, message, status = null) => {
-		const fullMessage = status ? `[Статус: ${status}] ${message}` : message;
-		return showModal({ title, message: fullMessage, type: "confirm" });
-	};
-	const prompt = (title, message, defaultValue = "") =>
-		showModal({
-			title,
-			message,
-			type: "confirm",
-			showInput: true,
-			defaultValue,
-		});
+	const modal = useMemo(() => Modal.createApi(setModalConfig), []);
+	const { open: openModal, close: closeModal, alert, confirm, prompt } =
+		modal;
 
 	const loadCampaigns = async () => {
 		try {
@@ -229,18 +185,17 @@ export default function App() {
 
 				if (found) {
 					const type = chars.some((c) => c.id === found.id) ? "characters" : "npc";
-					showModal({
+					openModal({
 						title: `Персонаж: ${found.firstName} ${found.lastName}`,
 						type: "character",
 						showFooter: false,
 						children: (
-							<EntityModalContent
-								initialEntity={found}
-								campaignSlug={activeCampaignSlug}
-								type={type}
-								modal={{ alert, confirm, prompt, success }}
-								onClose={() => setModalConfig(null)}
-							/>
+								<EntityModalContent
+									initialEntity={found}
+									campaignSlug={activeCampaignSlug}
+									type={type}
+									onClose={closeModal}
+								/>
 						),
 					});
 				}
@@ -302,7 +257,7 @@ export default function App() {
 					return;
 				}
 
-				const closePicker = () => setModalConfig(null);
+				const closePicker = closeModal;
 				setModalConfig({
 					title: "Вибір згадки",
 					type: "confirm",
@@ -407,7 +362,8 @@ export default function App() {
 	const activeCampaign = campaigns.find((c) => c.slug === activeCampaignSlug);
 
 	return (
-		<div className="App">
+		<ModalContext.Provider value={modal}>
+			<div className="App">
 			<Sidebar
 				className="App__sidebar"
 				campaigns={campaigns}
@@ -424,23 +380,23 @@ export default function App() {
 						navigate(newCampaign.slug);
 					}
 				}}
-				onToggleCampaignStatus={handleToggleCampaignStatus}
-				modal={{ alert, confirm, prompt, success }}
-			/>
+					onToggleCampaignStatus={handleToggleCampaignStatus}
+				/>
 			<MainContent
 				className="App__main"
 				campaign={activeCampaign}
 				activeSessionId={activeSessionFileName}
 				activeEncounterId={activeEncounterId}
 				onSelectSession={(fileName) => navigate(activeCampaignSlug, fileName)}
-				onRefreshCampaigns={loadCampaigns}
-				onNavigate={navigate}
-				modal={{ alert, confirm, prompt, success }}
-			/>
+					onRefreshCampaigns={loadCampaigns}
+					onNavigate={navigate}
+				/>
 
 			{modalConfig && <Modal {...modalConfig} />}
 			{/* Передаємо команду для кидка та функцію для її скидання */}
 			<DiceCalculator />
-		</div>
+			</div>
+		</ModalContext.Provider>
 	);
 }
+

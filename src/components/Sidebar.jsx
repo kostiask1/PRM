@@ -7,6 +7,7 @@ import ListCard from "./ListCard";
 import ColorThemeSwitcher from "./ColorThemeSwitcher"; // Імпортуємо новий компонент
 import DraggableList from "./DraggableList";
 import ImageGallery from "./ImageGallery";
+import { useModal } from "../context/ModalContext";
 import "../assets/components/Sidebar.css";
 
 export default function Sidebar({
@@ -15,8 +16,8 @@ export default function Sidebar({
 	onSelectCampaign,
 	onCreateCampaign,
 	onToggleCampaignStatus,
-	modal,
 }) {
+	const modal = useModal();
 	const fileInputRef = useRef(null);
 
 	// Локальний стан для миттєвого відображення змін черги
@@ -270,7 +271,6 @@ export default function Sidebar({
 			<ImageGallery 
 				isOpen={isGalleryOpen} 
 				onClose={() => setIsGalleryOpen(false)} 
-				modal={modal}
 			/>
 		</aside>
 	);

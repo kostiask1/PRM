@@ -4,7 +4,62 @@ import Button from "./Button";
 import Input from "./Input";
 import "../assets/components/Modal.css";
 
-export default function Modal({
+function createModalApi(setModalConfig) {
+	const open = (config) =>
+		new Promise((resolve) => {
+			setModalConfig({
+				...config,
+				onConfirm: (value) => {
+					setModalConfig(null);
+					resolve(value);
+				},
+				onCancel: config.isAlert
+					? null
+					: () => {
+							setModalConfig(null);
+							resolve(null);
+						},
+			});
+		});
+
+	const close = () => setModalConfig(null);
+
+	const alert = (title, message, status = null) => {
+		const fullMessage = status ? `[Статус: ${status}] ${message}` : message;
+		return open({
+			title,
+			message: fullMessage,
+			type: "error",
+			isAlert: true,
+		});
+	};
+
+	const success = (title, message) =>
+		open({
+			title,
+			message,
+			type: "success",
+			isAlert: true,
+		});
+
+	const confirm = (title, message, status = null) => {
+		const fullMessage = status ? `[Статус: ${status}] ${message}` : message;
+		return open({ title, message: fullMessage, type: "confirm" });
+	};
+
+	const prompt = (title, message, defaultValue = "") =>
+		open({
+			title,
+			message,
+			type: "confirm",
+			showInput: true,
+			defaultValue,
+		});
+
+	return { open, close, alert, success, confirm, prompt };
+}
+
+function Modal({
 	title,
 	message,
 	type,
@@ -15,6 +70,7 @@ export default function Modal({
 	children,
 	showFooter = true,
 	confirmLabel,
+	className = "",
 }) {
 	const [inputValue, setInputValue] = useState(defaultValue || "");
 	const inputRef = useRef(null);
@@ -61,7 +117,7 @@ export default function Modal({
 	return createPortal(
 		<div className="Modal__overlay" onClick={handleClose}>
 			<div
-				className={`Modal__card Modal__card--${type}`}
+				className={`Modal__card Modal__card--${type} ${className}`.trim()}
 				onClick={(e) => e.stopPropagation()}>
 				<div className="Modal__header">
 					<h3>{title}</h3>
@@ -108,3 +164,7 @@ export default function Modal({
 		document.body
 	);
 }
+
+Modal.createApi = createModalApi;
+
+export default Modal;

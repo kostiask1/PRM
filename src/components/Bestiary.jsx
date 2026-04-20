@@ -10,7 +10,7 @@ import ListCard from "./ListCard";
 import MonsterStatBlock from "./MonsterStatBlock";
 import "../assets/components/Bestiary.css";
 
-export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
+export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	const [sources, setSources] = useState([]);
 	const [selectedSource, setSelectedSource] = useState("all");
 	const [allMonsters, setAllMonsters] = useState([]);
@@ -404,7 +404,6 @@ export default function Bestiary({ onAddMonster, isEmbedded = false, modal }) {
 								monster={selectedMonster}
 								onNameClick={onAddMonster ? (m) => onAddMonster(m) : undefined}
 								nameTitle={onAddMonster && "Додати до зіткнення"}
-								modal={modal}
 								onFavoriteChange={(newFavs) => setFavorites(newFavs)}
 							/>
 						</div>

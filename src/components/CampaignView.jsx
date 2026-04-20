@@ -14,7 +14,6 @@ import CampaignViewModel from "../models/CampaignViewModel.js";
 function CampaignView({
 	campaign,
 	onSelectSession,
-	modal,
 	sessions,
 	setSessions,
 	description,
@@ -231,7 +230,6 @@ function CampaignView({
 									onChange={handleCharacterChange}
 									onDelete={handleDeleteCharacter}
 									campaignSlug={campaign.slug}
-									modal={modal}
 									type="characters"
 									initialEditing={character._isNew}
 								/>
@@ -289,7 +287,6 @@ function CampaignView({
 									onChange={handleNpcChange}
 									onDelete={handleNpcDelete}
 									campaignSlug={campaign.slug}
-									modal={modal}
 									type="npc"
 									initialEditing={npc._isNew}
 								/>
@@ -311,7 +308,6 @@ function CampaignView({
 						campaignSlug={campaign.slug}
 						sessionId={null}
 						onInsertResult={handleAiUpdate}
-						modal={modal}
 					/>
 				</div>
 
