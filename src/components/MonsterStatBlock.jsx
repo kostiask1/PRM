@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { api } from "../api.js";
 import RollDice from "./RollDice";
 import Icon from "./Icon.jsx";
@@ -15,6 +15,7 @@ import {
 import "../assets/components/MonsterStatBlock.css";
 import ClickToCopy from "./ClickToCopy.jsx";
 import Button from "./Button.jsx";
+import MonsterStatBlockModel from "../models/MonsterStatBlockModel.js";
 
 const SPELL_CACHE = new Map();
 
@@ -30,7 +31,8 @@ export default function MonsterStatBlock({
 	const [loadingSpells, setLoadingSpells] = useState(false);
 	const [isFavorite, setIsFavorite] = useState(false);
 
-	const effectiveName = monster.originalBestiaryName || monster.name;
+	const model = useMemo(() => new MonsterStatBlockModel(monster), [monster]);
+	const effectiveName = model.effectiveName;
 
 	useEffect(() => {
 		const checkFavoriteStatus = async () => {
@@ -182,46 +184,17 @@ export default function MonsterStatBlock({
 	};
 
 	const renderSaves = () => {
-		const legacyMap = {
-			strength_save: "Str",
-			dexterity_save: "Dex",
-			constitution_save: "Con",
-			intelligence_save: "Int",
-			wisdom_save: "Wis",
-			charisma_save: "Cha",
-		};
-
-		const newMap = {
-			str: "Str",
-			dex: "Dex",
-			con: "Con",
-			int: "Int",
-			wis: "Wis",
-			cha: "Cha",
-		};
-
-		let saves = [];
-		if (monster.save) {
-			saves = Object.entries(newMap)
-				.filter(([key]) => monster.save[key])
-				.map(([key, label]) => ({ label, val: monster.save[key] }));
-		} else {
-			saves = Object.entries(legacyMap)
-				.filter(([key]) => monster[key] !== null && monster[key] !== undefined)
-				.map(([key, label]) => ({ label, val: monster[key] }));
-		}
-
-		if (saves.length === 0) return null;
+		if (model.saves.length === 0) return null;
 		return (
 			<div className="MonsterStatBlock__property-item">
 				<strong>Saving Throws:</strong>{" "}
-				{saves.map((s, idx) => (
+				{model.saves.map((s, idx) => (
 					<React.Fragment key={s.label}>
 						{s.label}{" "}
 						<RollDice formula={`1d20${formatModifier(parseInt(s.val))}`}>
 							{formatModifier(parseInt(s.val))}
 						</RollDice>
-						{idx < saves.length - 1 ? ", " : ""}
+						{idx < model.saves.length - 1 ? ", " : ""}
 					</React.Fragment>
 				))}
 			</div>
@@ -332,116 +305,9 @@ export default function MonsterStatBlock({
 	};
 
 	// Допоміжні функції для парсингу нових структур даних
-	const getHP = () => {
-		if (monster.hp && typeof monster.hp === "object") {
-			return {
-				val: monster.hp.special || monster.hp.average,
-				formula: monster.hp.formula,
-			};
-		}
-		return { val: monster.hit_points, formula: monster.hit_dice };
-	};
 
-	const getAC = () => {
-		if (Array.isArray(monster.ac) && monster.ac[0]) {
-			const entry = monster.ac[0];
-			if (typeof entry === "object") {
-				return {
-					val: entry.special || entry.ac,
-					desc: entry.from ? entry.from.join(", ") : "",
-				};
-			}
-			return { val: entry, desc: "" };
-		}
-		return { val: monster.armor_class, desc: monster.armor_desc };
-	};
-
-	const formatSpeed = () => {
-		if (typeof monster.speed === "string") return monster.speed;
-		if (typeof monster.speed === "object" && monster.speed !== null) {
-			const parts = Object.entries(monster.speed)
-				.filter(([k]) => k !== "canHover")
-				.map(([k, v]) => {
-					const label = k === "walk" ? "" : k;
-					if (typeof v === "object" && v !== null) {
-						return `${label} ${v.number} ft. ${v.condition || ""}`.trim();
-					}
-					return `${label} ${v} ft.`.trim();
-				});
-
-			let res = parts.join(", ");
-			if (monster.speed.canHover && !res.toLowerCase().includes("hover")) {
-				res += " (hover)";
-			}
-			return res || "—";
-		}
-		return "—";
-	};
-
-	const alignmentMap = {
-		L: "Lawful",
-		C: "Chaotic",
-		G: "Good",
-		E: "Evil",
-		N: "Neutral",
-		U: "Unaligned",
-	};
-
-	const formatAlignment = (al) => {
-		if (typeof al === "string") return al;
-		if (Array.isArray(al)) {
-			return al
-				.map((abbr) => alignmentMap[abbr] || abbr)
-				.filter(Boolean)
-				.join(" ");
-		}
-		// Якщо світогляд не вказано або невідомий, повертаємо "Unaligned"
-		return "U";
-	};
-
-	const sizeMap = {
-		T: "Tiny",
-		S: "Small",
-		M: "Medium",
-		L: "Large",
-		H: "Huge",
-		G: "Gargantuan",
-	};
-	const formatSize = (sz) => {
-		const s = Array.isArray(sz) ? sz[0] : sz;
-		return sizeMap[s] || s;
-	};
-
-	const formatDamageProp = (prop) => {
-		if (!prop) return null;
-		if (typeof prop === "string") return prop;
-		if (Array.isArray(prop)) {
-			return prop
-				.map((item) => {
-					if (typeof item === "string") return item;
-					if (typeof item === "object" && item !== null) {
-						const subProp =
-							item.resist ||
-							item.immune ||
-							item.vulnerable ||
-							item.conditionImmune;
-						const base = Array.isArray(subProp) ? subProp.join(", ") : subProp;
-						return `${item.preNote ? item.preNote + " " : ""}${base || ""}${item.note ? " " + item.note : ""}`.trim();
-					}
-					return "";
-				})
-				.filter(Boolean)
-				.join(", ");
-		}
-		return null;
-	};
-
-	const encodedImageName = encodeURIComponent(effectiveName);
-
-	const localSrc = `/database/bestiary/tokens/${monster.source}/${effectiveName}.webp`;
-	const externalSrc = `https://5e.tools/img/bestiary/tokens/${encodeURIComponent(
-		monster.source,
-	)}/${encodedImageName}.webp`;
+	const localSrc = model.localTokenSrc;
+	const externalSrc = model.externalTokenSrc;
 
 	function handleDragStart(e) {
 		e.dataTransfer.effectAllowed = "copy";
@@ -506,44 +372,42 @@ export default function MonsterStatBlock({
 						)}
 
 					<div className="MonsterStatBlock__meta-line">
-						{formatSize(monster.size)} {monster.type?.type || monster.type}
-						{monster.type?.tags && ` (${monster.type.tags.join(", ")})`},{" "}
-						{formatAlignment(monster.alignment)}
+						{model.size} {model.typeLabel}, {model.alignment}
 					</div>
 					<div className="MonsterStatBlock__stats">
 						<div className="stat-item">
 							<strong>HP:</strong>{" "}
-							{renderRecursiveContent(getHP().val, handleSpellClick)}{" "}
-							{getHP().formula && (
+							{renderRecursiveContent(model.hp.val, handleSpellClick)}{" "}
+							{model.hp.formula && (
 								<>
-									(<RollDice formula={getHP().formula} />)
+									(<RollDice formula={model.hp.formula} />)
 								</>
 							)}
 						</div>
 						<div className="stat-item ac">
 							<strong>AC:</strong>{" "}
-							{renderRecursiveContent(getAC().val, handleSpellClick)}{" "}
-							{renderRecursiveContent(getAC().desc, handleSpellClick)}
+							{renderRecursiveContent(model.ac.val, handleSpellClick)}{" "}
+							{renderRecursiveContent(model.ac.desc, handleSpellClick)}
 						</div>
 						<div className="stat-item">
-							<strong>Speed:</strong> {formatSpeed()}
+							<strong>Speed:</strong> {model.speed}
 						</div>
 						{monster.source && (
 							<div className="stat-item">
 								<strong>Source:</strong>{" "}
 								<span className="Bestiary__item-source">
-									{monster.source.replace(/^bestiary-/i, "")}
+									{model.sourceLabel}
 								</span>
 							</div>
 						)}
 					</div>
 					<div className="MonsterStatBlock__abilities">
-						{renderAbility("STR", monster.str ?? monster.strength)}
-						{renderAbility("DEX", monster.dex ?? monster.dexterity)}
-						{renderAbility("CON", monster.con ?? monster.constitution)}
-						{renderAbility("INT", monster.int ?? monster.intelligence)}
-						{renderAbility("WIS", monster.wis ?? monster.wisdom)}
-						{renderAbility("CHA", monster.cha ?? monster.charisma)}
+						{renderAbility("STR", model.abilityScores.str)}
+						{renderAbility("DEX", model.abilityScores.dex)}
+						{renderAbility("CON", model.abilityScores.con)}
+						{renderAbility("INT", model.abilityScores.int)}
+						{renderAbility("WIS", model.abilityScores.wis)}
+						{renderAbility("CHA", model.abilityScores.cha)}
 					</div>
 				</div>
 				<div className="MonsterStatBlock__token-wrapper">
@@ -571,10 +435,10 @@ export default function MonsterStatBlock({
 			<div className="MonsterStatBlock__properties">
 				{renderSaves()}
 
-				{(monster.skill || monster.skills) && (
+				{model.skills.length > 0 && (
 					<div className="MonsterStatBlock__property-item MonsterStatBlock__property-item--skills">
 						<strong>Skills:</strong>{" "}
-						{Object.entries(monster.skill || monster.skills).map(
+						{model.skills.map(
 							([name, value], idx, arr) => (
 								<React.Fragment key={name}>
 									<span
@@ -595,25 +459,25 @@ export default function MonsterStatBlock({
 				{monster.vulnerable && (
 					<div className="MonsterStatBlock__property-item">
 						<strong>Damage Vulnerabilities:</strong>{" "}
-						{formatDamageProp(monster.vulnerable)}
+						{model.formatDamageProperty(monster.vulnerable)}
 					</div>
 				)}
 				{monster.resist && (
 					<div className="MonsterStatBlock__property-item">
 						<strong>Damage Resistances:</strong>{" "}
-						{formatDamageProp(monster.resist)}
+						{model.formatDamageProperty(monster.resist)}
 					</div>
 				)}
 				{monster.immune && (
 					<div className="MonsterStatBlock__property-item">
 						<strong>Damage Immunities:</strong>{" "}
-						{formatDamageProp(monster.immune)}
+						{model.formatDamageProperty(monster.immune)}
 					</div>
 				)}
 				{monster.conditionImmune && (
 					<div className="MonsterStatBlock__property-item">
 						<strong>Condition Immunities:</strong>{" "}
-						{formatDamageProp(monster.conditionImmune)}
+						{model.formatDamageProperty(monster.conditionImmune)}
 					</div>
 				)}
 
@@ -624,12 +488,10 @@ export default function MonsterStatBlock({
 					</p>
 					<p>
 						<strong>Languages:</strong>{" "}
-						{typeof monster.languages === "string"
-							? monster.languages
-							: monster.languages?.join(", ")}
+						{model.languages}
 					</p>
 					<p>
-						<strong>Challenge:</strong> {monster.cr?.cr || monster.cr}
+						<strong>Challenge:</strong> {model.challenge}
 					</p>
 				</div>
 				{monster.desc && (
@@ -663,3 +525,4 @@ export default function MonsterStatBlock({
 		</div>
 	);
 }
+

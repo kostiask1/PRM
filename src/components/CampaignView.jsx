@@ -9,6 +9,7 @@ import NoteCard from "./NoteCard";
 import CharacterCard from "./CharacterCard";
 import "../assets/components/CampaignView.css";
 import withCampaignView from "../hoc/withCampaignView";
+import CampaignViewModel from "../models/CampaignViewModel.js";
 
 function CampaignView({
 	campaign,
@@ -58,6 +59,8 @@ function CampaignView({
 	handleAiUpdate,
 	handleSessionReorderDrop,
 }) {
+	const viewModel = new CampaignViewModel(campaign);
+
 	return (
 		<Panel className="CampaignView">
 			<div className="Panel__header">
@@ -66,11 +69,9 @@ function CampaignView({
 						className="editable-title"
 						onClick={handleRename}
 						title="Натисни, щоб перейменувати">
-						{campaign.name}
+						{viewModel.name}
 					</h2>
-					<p className="muted">
-						Створено: {new Date(campaign.createdAt).toLocaleDateString()}
-					</p>
+					<p className="muted">Створено: {viewModel.createdAtLabel}</p>
 				</div>
 				<div className="CampaignView__headerActions">
 					<Button
@@ -325,7 +326,7 @@ function CampaignView({
 						keyExtractor={(session) => session.fileName}
 						renderItem={(session, isDragging) => (
 							<ListCard
-								href={`/campaign/${encodeURIComponent(campaign.slug)}/session/${encodeURIComponent(session.fileName)}`}
+								href={viewModel.buildSessionHref(session.fileName)}
 								dragging={isDragging}
 								onClick={() => onSelectSession(session.fileName)}
 								actions={
@@ -349,7 +350,7 @@ function CampaignView({
 								}>
 								<div className="ListCard__title">{session.name}</div>
 								<div className="ListCard__meta">
-									Оновлено: {new Date(session.updatedAt).toLocaleDateString()}
+									Оновлено: {viewModel.formatSessionUpdatedAt(session.updatedAt)}
 								</div>
 							</ListCard>
 						)}

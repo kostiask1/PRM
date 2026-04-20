@@ -8,6 +8,7 @@ import ImageGallery from "./ImageGallery";
 import ReactMarkdown from "react-markdown";
 import "../assets/components/CharacterCard.css";
 import Select from "./Select";
+import CharacterCardModel from "../models/CharacterCardModel.js";
 
 export default function CharacterCard({
 	character,
@@ -22,46 +23,22 @@ export default function CharacterCard({
 }) {
 	const [isEditing, setIsEditing] = useState(initialEditing);
 	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+	const characterModel = new CharacterCardModel(character);
 
 	const updateField = (field, value) => {
-		onChange(character.id, { ...character, [field]: value });
-	};
-
-	const handleNoteUpdate = (noteId, updates) => {
-		const newNotes = character.notes.map((n) =>
-			n.id === noteId ? { ...n, ...updates } : n,
-		);
-		updateField("notes", newNotes);
+		onChange(character.id, characterModel.withField(field, value));
 	};
 
 	const handleNoteTitleChange = (noteId, title) => {
-		let notes = character.notes || [];
-		let newNotes = notes.map((n) => (n.id === noteId ? { ...n, title } : n));
-
-		const lastNote = newNotes[newNotes.length - 1];
-		if (lastNote && (lastNote.text?.trim() || lastNote.title?.trim())) {
-			newNotes.push({ id: Date.now(), title: "", text: "", collapsed: false });
-		}
-		updateField("notes", newNotes);
+		updateField("notes", characterModel.withUpdatedNote(noteId, { title }));
 	};
 
 	const handleNoteTextChange = (noteId, text) => {
-		let notes = character.notes || [];
-		let newNotes = notes.map((n) => (n.id === noteId ? { ...n, text } : n));
-
-		const lastNote = newNotes[newNotes.length - 1];
-		if (lastNote && (lastNote.text?.trim() || lastNote.title?.trim())) {
-			newNotes.push({ id: Date.now(), title: "", text: "", collapsed: false });
-		}
-		updateField("notes", newNotes);
+		updateField("notes", characterModel.withUpdatedNote(noteId, { text }));
 	};
 
 	const handleNoteDelete = (noteId) => {
-		let newNotes = character.notes.filter((n) => n.id !== noteId);
-		if (newNotes.length === 0) {
-			newNotes.push({ id: Date.now(), title: "", text: "", collapsed: false });
-		}
-		updateField("notes", newNotes);
+		updateField("notes", characterModel.withDeletedNote(noteId));
 	};
 
 	return (
@@ -83,13 +60,11 @@ export default function CharacterCard({
 				)}
 				<div className="character-card__title-group">
 					<span className="character-card__name">
-						{character.firstName || character.name || "Новий персонаж"}{" "}
-						{character.lastName}
+						{characterModel.displayName} {character.lastName}
 					</span>
 					{character.collapsed && (
 						<span className="character-card__meta-brief">
-							{character.race} {character.class}{" "}
-							{character.level && `• ${character.level} рів.`}
+							{characterModel.briefMeta}
 						</span>
 					)}
 				</div>
@@ -189,16 +164,13 @@ export default function CharacterCard({
 												placeholder="Клас"
 											/>
 											<Select
-												value={character.level}
+												value={characterModel.level}
 												onChange={(e) => updateField("level", e.target.value)}>
-												{Array.from(Array(20)).map((_, index) => {
-													const level = index + 1;
-													return (
-														<option key={level} value={level}>
-															{level} рівень
-														</option>
-													);
-												})}
+												{CharacterCardModel.getLevelOptions().map((level) => (
+													<option key={level} value={level}>
+														{level} рівень
+													</option>
+												))}
 											</Select>
 										</div>
 									</div>
@@ -206,13 +178,10 @@ export default function CharacterCard({
 									<div className="character-card__view-mode">
 										<div className="character-card__main-info">
 											<div className="character-card__meta-line">
-												<h2>
-													{character.firstName} {character.lastName}
-												</h2>
+												<h2>{characterModel.fullName}</h2>
 											</div>
 											<div className="character-card__meta-line">
-												<strong>{character.race || "Раса"}</strong> •{" "}
-												{character.class || "Клас"} ({character.level} рів.)
+												<strong>{character.race || "Раса"}</strong> • {character.class || "Клас"} ({characterModel.level} рів.)
 											</div>
 										</div>
 									</div>
@@ -226,9 +195,7 @@ export default function CharacterCard({
 										<EditableField
 											type="textarea"
 											value={character.motivation}
-											onChange={(e) =>
-												updateField("motivation", e.target.value)
-											}
+											onChange={(e) => updateField("motivation", e.target.value)}
 											placeholder="Чого прагне персонаж..."
 										/>
 									) : (
@@ -280,16 +247,13 @@ export default function CharacterCard({
 						</div>
 						{!character.isNotesCollapsed && (
 							<div className="character-card__notes-list">
-								{(character.notes || []).map((note, index) => (
+								{characterModel.notes.map((note, index) => (
 									<NoteCard
 										key={note.id}
 										note={note}
-										isLast={index === (character.notes || []).length - 1}
+										isLast={index === characterModel.notes.length - 1}
 										onToggleCollapse={(id) => {
-											const notes = character.notes.map((n) =>
-												n.id === id ? { ...n, collapsed: !n.collapsed } : n,
-											);
-											updateField("notes", notes);
+											updateField("notes", characterModel.toggleNoteCollapse(id));
 										}}
 										onTitleChange={handleNoteTitleChange}
 										onTextChange={handleNoteTextChange}

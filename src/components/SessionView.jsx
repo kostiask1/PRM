@@ -13,33 +13,7 @@ import CharacterCard from "./CharacterCard";
 import Checkbox from "./Checkbox";
 import "../assets/components/SessionView.css";
 import withSessionView from "../hoc/withSessionView";
-
-const SCENE_SCHEMA = [
-	{
-		key: "summary",
-		title: "Суть сцени",
-		type: "textarea",
-		placeholder: "Коротко опиши сцену...",
-	},
-	{
-		key: "goal",
-		title: "Мета гравців",
-		type: "textarea",
-		placeholder: "Чого персонажі хочуть досягти...",
-	},
-	{
-		key: "stakes",
-		title: "Ставки",
-		type: "textarea",
-		placeholder: "Що буде при успіху/провалі...",
-	},
-	{
-		key: "location",
-		title: "Локація",
-		type: "textarea",
-		placeholder: "Де це відбувається...",
-	},
-];
+import SessionViewModel from "../models/SessionViewModel.js";
 
 function SessionView({
 	campaign,
@@ -79,6 +53,7 @@ function SessionView({
 	handleDeleteSessionAndBack,
 }) {
 	if (!session) return null;
+	const viewModel = new SessionViewModel({ ...session, isSaving });
 
 	return (
 		<Panel className="SessionView">
@@ -97,9 +72,7 @@ function SessionView({
 								{session.name}
 							</h2>
 						</div>
-						<p className="muted">
-							{isSaving ? "Зберігання..." : "Всі зміни збережено"}
-						</p>
+						<p className="muted">{viewModel.saveStatusLabel}</p>
 					</div>
 				</div>
 				<div className="SessionView__headerActions">
@@ -120,11 +93,9 @@ function SessionView({
 						title="Повторити (Ctrl+Y)"
 					/>
 					<Button
-						variant={session.completed ? "primary" : ""}
-						onClick={() =>
-							updateSession({ completed: !session.completed }, true)
-						}>
-						{session.completed ? "Відновити" : "Завершити"}
+						variant={viewModel.isCompleted ? "primary" : ""}
+						onClick={() => updateSession({ completed: !session.completed }, true)}>
+						{viewModel.completeButtonLabel}
 					</Button>
 					<Button
 						variant="danger"
@@ -142,7 +113,7 @@ function SessionView({
 						onToggle={() => handleToggleSectionCollapse("Notes")}>
 						{!session.data.isNotesCollapsed && (
 							<DraggableList
-								items={session.data.notes || []}
+								items={viewModel.notes}
 								className="SessionView__notes"
 								onReorder={(notes) => updateData("notes", notes)}
 								onDrop={() => triggerSave(session, true)}
@@ -150,7 +121,7 @@ function SessionView({
 								renderItem={(note, isDragging, index) => (
 									<NoteCard
 										note={note}
-										isLast={index === (session.data.notes || []).length - 1}
+										isLast={index === viewModel.notes.length - 1}
 										isDragging={isDragging}
 										onToggleCollapse={handleToggleNoteCollapse}
 										onTitleChange={handleNoteTitleChange}
@@ -186,14 +157,12 @@ function SessionView({
 							modal={modal}
 						/>
 						<DraggableList
-							items={session.data.scenes || []}
+							items={viewModel.scenes}
 							onReorder={(newScenes) => updateData("scenes", newScenes)}
 							onDrop={() => triggerSave(session, true)}
 							keyExtractor={(scene) => scene.id}
 							renderItem={(scene) => {
-								const idx = (session.data.scenes || []).findIndex(
-									(s) => s.id === scene.id,
-								);
+								const idx = viewModel.scenes.findIndex((s) => s.id === scene.id);
 								return (
 									<SceneCard
 										number={idx + 1}
@@ -209,14 +178,9 @@ function SessionView({
 										campaignSlug={campaignSlug}
 										modal={modal}
 										hasEncounter={!!scene.encounterId}
-										encounterName={
-											(session.data.encounters || []).find(
-												(e) =>
-													e.id?.toString() === scene.encounterId?.toString(),
-											)?.name || "Без назви"
-										}
+										encounterName={viewModel.findEncounterName(scene)}
 										onTriggerSave={() => triggerSave(session, true)}>
-										{SCENE_SCHEMA.map((field) => (
+										{SessionViewModel.sceneSchema.map((field) => (
 											<div key={field.key} className="TodoItem__content">
 												<div className="TodoItem__title">{field.title}</div>
 												<EditableField
