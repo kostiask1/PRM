@@ -115,7 +115,7 @@ function CampaignView(props) {
 								triggerSave({ isDescriptionCollapsed: next });
 							}}>
 							<CollapseToggleButton
-								size={32}
+								size="md"
 								collapsed={isDescriptionCollapsed}
 								onClick={() => {
 									const next = !isDescriptionCollapsed;
@@ -147,7 +147,7 @@ function CampaignView(props) {
 								triggerSave({ isNotesCollapsed: next });
 							}}>
 							<CollapseToggleButton
-								size={32}
+								size="md"
 								collapsed={isNotesCollapsed}
 								onClick={() => {
 									const next = !isNotesCollapsed;
@@ -190,7 +190,7 @@ function CampaignView(props) {
 								triggerSave({ isCharactersCollapsed: next });
 							}}>
 							<CollapseToggleButton
-								size={32}
+								size="md"
 								collapsed={isCharactersCollapsed}
 								onClick={() => {
 									const next = !isCharactersCollapsed;
@@ -244,7 +244,7 @@ function CampaignView(props) {
 								triggerSave({ isNpcsCollapsed: next });
 							}}>
 							<CollapseToggleButton
-								size={32}
+								size="md"
 								collapsed={isNpcsCollapsed}
 								onClick={() => {
 									const next = !isNpcsCollapsed;

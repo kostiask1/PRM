@@ -23,7 +23,7 @@ export default function NoteCard({
 				onClick={() => !isLast && onToggleCollapse(note.id)}>
 				{!isLast && (
 					<CollapseToggleButton
-						size={24}
+						size="sm"
 						collapsed={isCollapsed}
 						onClick={() => onToggleCollapse(note.id)}
 					/>

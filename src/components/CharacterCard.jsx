@@ -50,7 +50,7 @@ export default function CharacterCard({
 				className="character-card__header"
 				onClick={() => onToggleCollapse(character.id)}>
 				<CollapseToggleButton
-					size={24}
+					size="sm"
 					collapsed={character.collapsed}
 					onClick={() => onToggleCollapse(character.id)}
 				/>
@@ -244,7 +244,7 @@ export default function CharacterCard({
 								updateField("isNotesCollapsed", !character.isNotesCollapsed)
 							}>
 							<CollapseToggleButton
-								size={24}
+								size="sm"
 								collapsed={character.isNotesCollapsed}
 								onClick={() =>
 									updateField("isNotesCollapsed", !character.isNotesCollapsed)

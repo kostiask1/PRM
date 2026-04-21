@@ -291,7 +291,7 @@ export default function AiAssistantPanel({
 															className="AiAssistant__session-name"
 														/>
 														<CollapseToggleButton
-															size={24}
+															size="sm"
 															rotated={isExpanded}
 															onClick={() => toggleSessionDetails(slug)}
 														/>

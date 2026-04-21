@@ -16,7 +16,7 @@ export default function SceneCardHeader({
 		<div className="SceneCard__header">
 			<div className="SceneCard__titleGroup" onClick={onToggle}>
 				<CollapseToggleButton
-					size={24}
+					size="sm"
 					collapsed={collapsed}
 					onClick={onToggle}
 				/>

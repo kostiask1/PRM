@@ -342,7 +342,7 @@ function SceneCard({
 								className="SceneCard__notes-header"
 								onClick={onToggleNotesCollapse}>
 								<CollapseToggleButton
-									size={24}
+									size="sm"
 									collapsed={scene.isNotesCollapsed}
 									onClick={onToggleNotesCollapse}
 								/>
