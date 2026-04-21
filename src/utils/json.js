@@ -5,7 +5,9 @@ export function isJsonObject(str) {
 		if (o && typeof o === "object") {
 			return true;
 		}
-	} catch (e) {}
+	} catch {
+		return false;
+	}
 
 	return false;
 }
@@ -17,6 +19,8 @@ export function isJsonString(str) {
 		if (typeof result === "string") {
 			return true;
 		}
-	} catch (e) {}
+	} catch {
+		return false;
+	}
 	return false;
 }

@@ -7,6 +7,7 @@
     "start": "concurrently \"npm run server\" \"npm run client\"",
     "server": "node --watch --watch-path=server --watch-path=.env server/server.js",
     "client": "vite",
+    "test": "node --experimental-specifier-resolution=node tests/run-tests.mjs",
     "lint": "eslint . && npm run check:uk",
     "check:uk": "node scripts/check-ukrainian-encoding.mjs"
   },

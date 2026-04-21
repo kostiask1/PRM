@@ -19,12 +19,15 @@ function createId() {
 }
 
 function sanitizeName(name) {
-	return String(name || "")
+	const cleaned = String(name || "")
 		.trim()
-		.replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
+		.replace(/[<>:"/\\|?*]/g, "")
 		.replace(/\.+$/g, "")
 		.replace(/\s+/g, " ")
 		.slice(0, 120);
+	return [...cleaned]
+		.filter((char) => char.charCodeAt(0) >= 32)
+		.join("");
 }
 
 function campaignSlug(name) {
@@ -247,7 +250,7 @@ function applyReplaceTxt(obj, mod) {
 		const regex = new RegExp(escapedReplace, mod.flags || "g");
 		json = json.replace(regex, mod.with);
 		return JSON.parse(json);
-	} catch (e) {
+	} catch {
 		return obj;
 	}
 }
@@ -356,7 +359,7 @@ async function listCampaignsDetailed() {
 			const meta = await readCampaign(slug);
 			const sessions = await listSessions(slug);
 			return { ...meta, slug, sessionCount: sessions.length };
-		} catch (error) {
+		} catch {
 			return null;
 		}
 	});

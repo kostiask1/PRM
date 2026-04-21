@@ -235,9 +235,11 @@ function nodesToMarkdown(node) {
 				case "h4":
 				case "h5":
 				case "h6":
+				{
 					const level = parseInt(tagName[1]);
 					result += `\n\n${prefix}${"#".repeat(level)} ${actualText}\n\n`;
 					break;
+				}
 				case "p":
 				case "div":
 					result += `\n\n${prefix}${actualText}\n\n`;
@@ -337,7 +339,6 @@ export default function EditableField({
 				};
 			}
 
-			const rect = e.currentTarget.getBoundingClientRect();
 			setInitialSelection(selectionData);
 			setIsEditing(true);
 		}
@@ -360,8 +361,6 @@ export default function EditableField({
 
 		e.preventDefault();
 		const markdown = convertHtmlToMarkdown(html);
-		console.log("markdown:", markdown);
-
 		const { selectionStart, selectionEnd, value } = e.target;
 		const newValue =
 			value.substring(0, selectionStart) +
@@ -457,7 +456,7 @@ export default function EditableField({
 					type === "textarea" ? (
 					<ReactMarkdown components={components}>
 						{String(value)
-							.replace(/(?<!(?:^|\n)-  [^\n]*\n)\n(?!\n)|(?<!(?:^|\n)-  [^\n]*)\n(?=\n)/g, "&nbsp;\n\n")
+							.replace(/(?<!(?:^|\n)- {2}[^\n]*\n)\n(?!\n)|(?<!(?:^|\n)- {2}[^\n]*)\n(?=\n)/g, "&nbsp;\n\n")
 							.replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")}
 					</ReactMarkdown>
 					) : (

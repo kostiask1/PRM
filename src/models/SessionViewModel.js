@@ -1,4 +1,4 @@
-import { idsEqual } from "../utils/id";
+import { idsEqual } from "../utils/id.js";
 
 const SCENE_SCHEMA = [
 	{

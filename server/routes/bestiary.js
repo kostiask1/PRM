@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 const path = require("path");
 const storage = require("../storage");
-const fs = require("fs/promises");
 
 router.get("/search", async (req, res, next) => {
 	try {

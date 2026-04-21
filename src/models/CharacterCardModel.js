@@ -1,7 +1,7 @@
 import {
 	appendTrailingEmptyNote,
 	createEmptyNote,
-} from "../utils/noteUtils";
+} from "../utils/noteUtils.js";
 
 /**
  * @typedef {Object} CharacterNote

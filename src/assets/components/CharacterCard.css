@@ -272,3 +272,9 @@
     width: 100%;
     height: 100%;
 }
+
+.character-card__notes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
