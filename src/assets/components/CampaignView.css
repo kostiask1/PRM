@@ -1,3 +1,80 @@
+.CampaignView__layout {
+	display: grid;
+	grid-template-columns: minmax(280px, 360px) 1fr;
+	gap: var(--space-4);
+	align-items: start;
+}
+
+.CampaignView__sessionsPane {
+	position: sticky;
+	top: 0;
+	max-height: calc(100vh - 190px);
+	overflow: hidden;
+	border: 1px solid color-mix(in srgb, var(--border), transparent 30%);
+	border-radius: 12px;
+	background: color-mix(in srgb, var(--panel), transparent 5%);
+	display: flex;
+	flex-direction: column;
+}
+
+.CampaignView__sessionsPaneHeader {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	gap: var(--space-2);
+	padding: var(--space-3);
+	border-bottom: 1px solid color-mix(in srgb, var(--border), transparent 45%);
+}
+
+.CampaignView__sessionsPaneHeader h3 {
+	margin: 0;
+}
+
+.CampaignView__sessionsPaneControls {
+	display: grid;
+	gap: var(--space-2);
+	padding: var(--space-3);
+	border-bottom: 1px solid color-mix(in srgb, var(--border), transparent 55%);
+}
+
+.CampaignView__sessionSearch {
+	height: 34px;
+	border: 1px solid var(--border);
+	background: var(--bg);
+	color: var(--text);
+	border-radius: 8px;
+	padding: 0 var(--space-2);
+}
+
+.CampaignView__sessionFilterRow {
+	display: flex;
+	gap: var(--space-1);
+	flex-wrap: wrap;
+}
+
+.CampaignView__sessionsPaneList {
+	overflow-y: auto;
+	padding: var(--space-2);
+}
+
+.CampaignView__sessionsPaneList .DraggableList {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.CampaignView__emptySessions {
+	padding: var(--space-3);
+	text-align: center;
+}
+
+.CampaignView__contentPane {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+	min-width: 0;
+}
+
 .CampaignView__sessions {
 	display: grid;
 	gap: var(--space-2);
@@ -89,6 +166,16 @@
 }
 
 @media (max-width: 900px) {
+	.CampaignView__layout {
+		grid-template-columns: 1fr;
+	}
+
+	.CampaignView__sessionsPane {
+		position: static;
+		max-height: none;
+		order: -1;
+	}
+
 	.CampaignView__characters>div {
 		flex: 1 1 100%;
 		max-width: none;

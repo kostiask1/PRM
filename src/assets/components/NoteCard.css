@@ -47,12 +47,17 @@
 .note-card-simple__content {
     padding: 0;
     border-top: 1px solid color-mix(in srgb, var(--text-bright), transparent 95%);
+    height: 100%;
 }
 
+.note-card-simple__content .EditableField {
+    height: 100%;
+}
 .note-card-simple__content .MarkdownView,
 .note-card-simple__content .Input {
     border-top-left-radius: 0;
     border-top-right-radius: 0;
+    height: 100%;
 }
 
 .note-card-simple.is-collapsed {
