@@ -49,6 +49,11 @@ function SessionView(props) {
 		handleNoteChange,
 		handleToggleNoteCollapse,
 		handleDeleteNote,
+		handleToggleSceneNotesCollapse,
+		handleSceneNoteTitleChange,
+		handleSceneNoteChange,
+		handleSceneToggleNoteCollapse,
+		handleSceneDeleteNote,
 		handleToggleSectionCollapse,
 		handleAiUpdate,
 		checklistItems,
@@ -191,6 +196,21 @@ function SessionView(props) {
 										onUpdateField={(field, value) =>
 											updateScene(scene.id, field, value)
 										}
+										onToggleNotesCollapse={() =>
+											handleToggleSceneNotesCollapse(scene.id)
+										}
+										onSceneNoteTitleChange={(noteId, title) =>
+											handleSceneNoteTitleChange(scene.id, noteId, title)
+										}
+										onSceneNoteChange={(noteId, text) =>
+											handleSceneNoteChange(scene.id, noteId, text)
+										}
+										onSceneNoteToggleCollapse={(noteId) =>
+											handleSceneToggleNoteCollapse(scene.id, noteId)
+										}
+										onSceneNoteDelete={(noteId) =>
+											handleSceneDeleteNote(scene.id, noteId)
+										}
 									/>
 								);
 							}}
@@ -286,6 +306,11 @@ function SceneCard({
 	onImageChange,
 	campaignSlug,
 	onUpdateField,
+	onToggleNotesCollapse,
+	onSceneNoteTitleChange,
+	onSceneNoteChange,
+	onSceneNoteToggleCollapse,
+	onSceneNoteDelete,
 }) {
 	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 	const [isImagePreviewOpen, setIsImagePreviewOpen] = useState(false);
@@ -311,6 +336,38 @@ function SceneCard({
 							scene={scene}
 							onUpdateField={onUpdateField}
 						/>
+						<div className="SceneCard__notes">
+							<div
+								className="SceneCard__notes-header"
+								onClick={onToggleNotesCollapse}>
+								<Button
+									variant="ghost"
+									size="small"
+									icon="chevron"
+									className={`SceneCard__notes-toggle ${scene.isNotesCollapsed ? "is-rotated" : ""}`}
+									onClick={(event) => {
+										event.stopPropagation();
+										onToggleNotesCollapse();
+									}}
+								/>
+								<label>Замітки сцени</label>
+							</div>
+							{!scene.isNotesCollapsed && (
+								<div className="SceneCard__notes-list">
+									{(scene.notes || []).map((note, index) => (
+										<NoteCard
+											key={note.id}
+											note={note}
+											isLast={index === (scene.notes || []).length - 1}
+											onToggleCollapse={onSceneNoteToggleCollapse}
+											onTitleChange={onSceneNoteTitleChange}
+											onTextChange={onSceneNoteChange}
+											onDelete={onSceneNoteDelete}
+										/>
+									))}
+								</div>
+							)}
+						</div>
 					</div>
 					<SceneCardMedia
 						number={number}

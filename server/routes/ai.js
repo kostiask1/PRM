@@ -198,6 +198,19 @@ router.post("/generate", async (req, res, next) => {
 
 				// 2. Обробка сцен
 				if (generatedContent.scenes) {
+					const toSceneNotes = (notes) => {
+						if (!Array.isArray(notes)) return [];
+						return notes
+							.map((entry) => String(entry || "").trim())
+							.filter(Boolean)
+							.map((text) => ({
+								id: Date.now() + Math.floor(Math.random() * 100000),
+								title: "",
+								text,
+								collapsed: false,
+							}));
+					};
+
 					sessionData.data.scenes = generatedContent.scenes.map((s, idx) => {
 						const existing = sessionData.data?.scenes?.[idx] || {};
 						
@@ -213,6 +226,10 @@ router.post("/generate", async (req, res, next) => {
 							id:
 								existing?.id || Date.now() + Math.floor(Math.random() * 100000),
 							texts: s.texts,
+							notes: Array.isArray(s.notes)
+								? toSceneNotes(s.notes)
+								: (existing?.notes || []),
+							isNotesCollapsed: existing?.isNotesCollapsed || false,
 							npcs: s.npcs,
 							collapsed: existing?.collapsed || false,
 							encounterId: encounterId,

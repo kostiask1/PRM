@@ -72,6 +72,24 @@
 	color: var(--text-bright);
 }
 
+.TodoSection__titleGroup {
+	display: flex;
+	align-items: center;
+	gap: var(--space-1);
+}
+
+.TodoSection__header.is-collapsible {
+	cursor: pointer;
+}
+
+.TodoSection__toggle {
+	height: 32px;
+	min-height: 32px;
+	width: 32px;
+	min-width: 32px;
+	padding: 0;
+}
+
 .TodoSection__body {
 	padding: var(--space-3);
 }
@@ -245,6 +263,37 @@
 
 .SceneCard__encounter-name {
 	font-weight: 600;
+}
+
+.SceneCard__notes {
+	margin-top: var(--space-3);
+}
+
+.SceneCard__notes-header {
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+	cursor: pointer;
+	margin-top: var(--space-6);
+	margin-bottom: var(--space-2);
+}
+
+.SceneCard__notes-header label {
+	font-weight: 600;
+}
+
+.SceneCard__notes-toggle {
+	min-height: auto;
+	height: 24px;
+	min-height: 24px;
+	width: 24px;
+	min-width: 24px;
+	padding: 0;
+}
+
+.SceneCard__notes-list {
+	display: grid;
+	gap: var(--space-2);
 }
 
 .SessionView__checklistToggle {

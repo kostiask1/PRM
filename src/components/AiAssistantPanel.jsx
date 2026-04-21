@@ -93,7 +93,7 @@ export default function AiAssistantPanel({
 			for (let i = 0; i < path.length - 1; i++) {
 				if (!current[path[i]]) {
 					if (path[i - 1] === "scenes") {
-						current[path[i]] = { included: true, summary: true, goal: true, stakes: true, location: true, encounter: true };
+						current[path[i]] = { included: true, summary: true, goal: true, stakes: true, location: true, notes: true, encounter: true };
 					} else {
 						current[path[i]] = {};
 					}
@@ -167,6 +167,7 @@ export default function AiAssistantPanel({
 		{ key: "goal", label: "Мета гравців" },
 		{ key: "stakes", label: "Ставки" },
 		{ key: "location", label: "Локація" },
+		{ key: "notes", label: "Замітки сцени" },
 		{ key: "encounter", label: "Енкаунтер (монстри)" },
 	];
 
@@ -320,6 +321,7 @@ export default function AiAssistantPanel({
 																		goal: true,
 																		stakes: true,
 																		location: true,
+																		notes: true,
 																		encounter: true,
 																	};
 																	return (

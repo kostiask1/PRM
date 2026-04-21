@@ -5,6 +5,7 @@ import { useModal } from "../context/ModalContext";
 import {
 	appendTrailingEmptyNote,
 	ensureAtLeastOneNote,
+	createEmptyNote,
 } from "../utils/noteUtils";
 import { idsEqual } from "../utils/id";
 
@@ -23,6 +24,16 @@ export default function useSessionView(props) {
 		const [undoStack, setUndoStack] = useState([]);
 		const [redoStack, setRedoStack] = useState([]);
 		const isUpdatingHistory = useRef(false);
+		const normalizeSceneNotes = useCallback((scenes = []) => {
+			return (scenes || []).map((scene) => {
+				const notes = appendTrailingEmptyNote(scene.notes || []);
+				return {
+					...scene,
+					notes,
+					isNotesCollapsed: !!scene.isNotesCollapsed,
+				};
+			});
+		}, []);
 
 		const saveToServer = useCallback(
 			async (updatedSession) => {
@@ -168,6 +179,7 @@ export default function useSessionView(props) {
 					const data = await api.getSession(campaignSlug, sessionId);
 
 					data.data.notes = appendTrailingEmptyNote(data.data.notes || []);
+					data.data.scenes = normalizeSceneNotes(data.data.scenes || []);
 
 					setSession(data);
 					setUndoStack([]);
@@ -178,7 +190,7 @@ export default function useSessionView(props) {
 				}
 			};
 			loadSession();
-		}, [campaignSlug, sessionId]);
+		}, [campaignSlug, sessionId, normalizeSceneNotes]);
 
 		useEffect(() => {
 			const handleKeyDown = (e) => {
@@ -254,7 +266,16 @@ export default function useSessionView(props) {
 			const scenes = session.data.scenes || [];
 			updateData(
 				"scenes",
-				[...scenes, { id: Date.now(), texts: {}, collapsed: false }],
+				[
+					...scenes,
+					{
+						id: Date.now(),
+						texts: {},
+						collapsed: false,
+						isNotesCollapsed: false,
+						notes: [createEmptyNote()],
+					},
+				],
 				true,
 			);
 		};
@@ -415,6 +436,72 @@ export default function useSessionView(props) {
 			updateData("notes", newNotes, true);
 		};
 
+		const updateSceneById = (sceneId, updater, instant = false) => {
+			if (!session) return;
+			const scenes = (session.data.scenes || []).map((scene) =>
+				scene.id === sceneId ? updater(scene) : scene,
+			);
+			updateData("scenes", scenes, instant);
+		};
+
+		const handleToggleSceneNotesCollapse = (sceneId) => {
+			updateSceneById(
+				sceneId,
+				(scene) => ({ ...scene, isNotesCollapsed: !scene.isNotesCollapsed }),
+				true,
+			);
+		};
+
+		const handleSceneNoteTitleChange = (sceneId, noteId, title) => {
+			updateSceneById(sceneId, (scene) => {
+				const notes = appendTrailingEmptyNote(
+					(scene.notes || []).map((note) =>
+						note.id === noteId ? { ...note, title } : note,
+					),
+				);
+				return { ...scene, notes };
+			});
+		};
+
+		const handleSceneNoteChange = (sceneId, noteId, text) => {
+			updateSceneById(sceneId, (scene) => {
+				const notes = appendTrailingEmptyNote(
+					(scene.notes || []).map((note) =>
+						note.id === noteId ? { ...note, text } : note,
+					),
+				);
+				return { ...scene, notes };
+			});
+		};
+
+		const handleSceneToggleNoteCollapse = (sceneId, noteId) => {
+			updateSceneById(
+				sceneId,
+				(scene) => ({
+					...scene,
+					notes: (scene.notes || []).map((note) =>
+						note.id === noteId
+							? { ...note, collapsed: !note.collapsed }
+							: note,
+					),
+				}),
+				true,
+			);
+		};
+
+		const handleSceneDeleteNote = (sceneId, noteId) => {
+			updateSceneById(
+				sceneId,
+				(scene) => {
+					let notes = (scene.notes || []).filter((note) => note.id !== noteId);
+					notes = ensureAtLeastOneNote(notes);
+					notes = appendTrailingEmptyNote(notes);
+					return { ...scene, notes };
+				},
+				true,
+			);
+		};
+
 		const handleToggleSectionCollapse = (key) => {
 			if (!session) return;
 			const isCollapsed = !!session.data[`is${key}Collapsed`];
@@ -438,6 +525,9 @@ export default function useSessionView(props) {
 
 			updatedSession.data.notes = appendTrailingEmptyNote(
 				updatedSession.data.notes || [],
+			);
+			updatedSession.data.scenes = normalizeSceneNotes(
+				updatedSession.data.scenes || [],
 			);
 
 			setSession(updatedSession);
@@ -522,6 +612,11 @@ export default function useSessionView(props) {
 		handleNoteChange,
 		handleToggleNoteCollapse,
 		handleDeleteNote,
+		handleToggleSceneNotesCollapse,
+		handleSceneNoteTitleChange,
+		handleSceneNoteChange,
+		handleSceneToggleNoteCollapse,
+		handleSceneDeleteNote,
 		handleToggleSectionCollapse,
 		handleAiUpdate,
 		checklistItems,

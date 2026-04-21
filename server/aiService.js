@@ -17,7 +17,7 @@ const systemInstructions = {
         Використовувати Markdown-розмітку (наприклад, жирний текст **текст**, марковані списки, розбиття рядку) для структурування тексту всередині значень JSON.
         Завжди відповідай у форматі JSON. Не включай жодного тексту до або після JSON. 
         JSON повинен містити лише згенеровані дані, без додаткових пояснень. 
-        Коли генеруєш сцени, використовуй структуру { "scenes": [{ "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "..." }, "npcs": [{"name": "...", "description": "..."}, ...], "encounterIndex": 0 }, ...], "encounters": [{ "name": "Назва бою", "monsters": [{ "monsterName": "Official D&D Monster Name", "name": "Опціональне ім'я" }] }] }.
+        Коли генеруєш сцени, використовуй структуру { "scenes": [{ "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "..." }, "notes": ["Коротка замітка 1", "Коротка замітка 2"], "npcs": [{"name": "...", "description": "..."}, ...], "encounterIndex": 0 }, ...], "encounters": [{ "name": "Назва бою", "monsters": [{ "monsterName": "Official D&D Monster Name", "name": "Опціональне ім'я" }] }] }.
         Поле encounterIndex у сцені повинно вказувати на індекс у масиві encounters, якщо для цієї сцени потрібен бій. 
         Якщо бій не потрібен, не додавай encounterIndex.
         Підбирай монстрів згідно з рівнем та кількістю персонажів гравців у контексті, щоб складність була доречною.
@@ -144,7 +144,7 @@ async function generateContent({
 
 		// Додаємо лише вибрані сцени та їх конкретні поля
 		if (conf.included && conf.scenes && data.scenes) {
-			const sceneFields = ["summary", "goal", "stakes", "location", "encounter"];
+			const sceneFields = ["summary", "goal", "stakes", "location", "encounter", "notes"];
 			const filteredScenes = data.scenes.filter(scene => {
 				return conf.scenes[scene.id]?.included;
 			}).map(scene => {
@@ -161,6 +161,10 @@ async function generateContent({
 
 				sceneFields.forEach(field => {
 					if (field === "encounter") return; // Вже оброблено вище
+					if (field === "notes") {
+						if (sceneConf[field]) resultScene[field] = scene.notes || [];
+						return;
+					}
 					if (sceneConf[field]) resultScene[field] = scene.texts?.[field];
 				});
 				return resultScene;

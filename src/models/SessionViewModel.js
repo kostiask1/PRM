@@ -40,6 +40,8 @@ const SCENE_SCHEMA = [
  * @property {number|string} id
  * @property {boolean} collapsed
  * @property {{summary?: string, goal?: string, stakes?: string, location?: string, [key: string]: string}} [texts]
+ * @property {SessionNote[]} [notes]
+ * @property {boolean} [isNotesCollapsed]
  * @property {string|null} [imageUrl]
  * @property {string|number|null} [encounterId]
  */
