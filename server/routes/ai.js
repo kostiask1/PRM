@@ -3,6 +3,231 @@ const router = express.Router();
 const storage = require("../storage");
 const aiService = require("../aiService");
 
+function makeId() {
+	return `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+}
+
+function asText(value) {
+	return typeof value === "string" ? value.trim() : "";
+}
+
+function parseNameParts(raw = {}) {
+	const firstName = asText(raw.firstName || raw.first_name);
+	const lastName = asText(raw.lastName || raw.last_name);
+	if (firstName || lastName) {
+		return { firstName, lastName };
+	}
+
+	const fullName = asText(raw.name || raw.fullName || raw.title);
+	if (!fullName) return { firstName: "", lastName: "" };
+	const parts = fullName.split(/\s+/).filter(Boolean);
+	if (parts.length === 1) return { firstName: parts[0], lastName: "" };
+	return {
+		firstName: parts[0],
+		lastName: parts.slice(1).join(" "),
+	};
+}
+
+function normalizeLevel(rawLevel) {
+	const parsed = Number.parseInt(String(rawLevel ?? "1"), 10);
+	if (!Number.isFinite(parsed)) return 1;
+	if (parsed < 1) return 1;
+	if (parsed > 20) return 20;
+	return parsed;
+}
+
+function parseNoteParts(value) {
+	const text = asText(value);
+	if (!text) return { title: "", text: "" };
+
+	const lines = text
+		.split("\n")
+		.map((line) => line.trim())
+		.filter(Boolean);
+
+	if (lines.length <= 1) {
+		return { title: "", text };
+	}
+
+	return {
+		title: lines[0],
+		text: lines.slice(1).join("\n"),
+	};
+}
+
+function normalizeNote(note) {
+	if (typeof note === "string") {
+		const parsed = parseNoteParts(note);
+		return {
+			id: makeId(),
+			title: parsed.title,
+			text: parsed.text,
+			collapsed: false,
+		};
+	}
+
+	if (!note || typeof note !== "object") {
+		return null;
+	}
+
+	const rawTitle = asText(note.title || note.name);
+	const rawText = asText(note.text || note.description || note.content);
+	const parsed = rawText && !rawTitle ? parseNoteParts(rawText) : null;
+
+	return {
+		id: note.id || makeId(),
+		title: rawTitle || parsed?.title || "",
+		text: rawText || parsed?.text || "",
+		collapsed: Boolean(note.collapsed),
+	};
+}
+
+function normalizeNotes(notes, { keepAtLeastOne = false } = {}) {
+	const list = Array.isArray(notes) ? notes : [];
+	const normalized = list.map(normalizeNote).filter((note) => note && (note.title || note.text));
+	if (keepAtLeastOne && normalized.length === 0) {
+		normalized.push({ id: makeId(), title: "", text: "", collapsed: false });
+	}
+	return normalized;
+}
+
+function normalizeCharacter(raw, existing = null) {
+	const nameParts = parseNameParts(raw);
+	const fallbackDescription = asText(raw.description || raw.bio || raw.backstory);
+	const notesSource = Array.isArray(raw.notes)
+		? raw.notes
+		: fallbackDescription
+			? [fallbackDescription]
+			: [];
+
+	return {
+		id: existing?.id || storage.createId(),
+		firstName: nameParts.firstName,
+		lastName: nameParts.lastName,
+		race: asText(raw.race || raw.species),
+		class: asText(raw.class || raw.role),
+		level: normalizeLevel(raw.level),
+		motivation: asText(raw.motivation || raw.goal || raw.description),
+		trait: asText(raw.trait || raw.personality || raw.quirk),
+		notes: normalizeNotes(notesSource, { keepAtLeastOne: true }),
+		collapsed: Boolean(existing?.collapsed ?? raw.collapsed ?? false),
+		isNotesCollapsed: Boolean(
+			existing?.isNotesCollapsed ?? raw.isNotesCollapsed ?? false,
+		),
+		// Never overwrite existing image links with AI output.
+		imageUrl: existing?.imageUrl ?? raw.imageUrl ?? null,
+	};
+}
+
+function normalizeSceneTexts(rawScene = {}) {
+	const source =
+		rawScene.texts && typeof rawScene.texts === "object"
+			? rawScene.texts
+			: rawScene;
+	return {
+		summary: asText(source.summary),
+		goal: asText(source.goal),
+		stakes: asText(source.stakes),
+		location: asText(source.location),
+	};
+}
+
+function normalizeSceneNpcs(npcs) {
+	if (!Array.isArray(npcs)) return [];
+	return npcs
+		.map((npc) => {
+			if (typeof npc === "string") {
+				const name = asText(npc);
+				return name ? { name, description: "" } : null;
+			}
+			if (!npc || typeof npc !== "object") return null;
+			const name = asText(npc.name || npc.firstName);
+			if (!name) return null;
+			return {
+				name,
+				description: asText(npc.description || npc.trait || ""),
+			};
+		})
+		.filter(Boolean);
+}
+
+function normalizeScene(scene, existing, encounterMap) {
+	let encounterId = existing?.encounterId || "";
+	if (scene.encounterIndex !== undefined && encounterMap.has(scene.encounterIndex)) {
+		encounterId = encounterMap.get(scene.encounterIndex);
+	}
+
+	const notesFromAi = normalizeNotes(scene.notes || []);
+
+	return {
+		id: existing?.id || storage.createId(),
+		texts: normalizeSceneTexts(scene),
+		notes: notesFromAi.length > 0 ? notesFromAi : existing?.notes || [],
+		isNotesCollapsed: Boolean(existing?.isNotesCollapsed),
+		npcs: normalizeSceneNpcs(scene.npcs),
+		collapsed: Boolean(existing?.collapsed),
+		encounterId,
+		// Keep existing scene image reference unchanged unless scene is new.
+		imageUrl: existing?.imageUrl ?? scene.imageUrl ?? null,
+	};
+}
+
+function buildMonsterInstance(monster, bestiaryIndex) {
+	const monsterName = asText(monster?.monsterName || monster?.name);
+	if (!monsterName) return null;
+
+	let foundBase = null;
+	const searchKey = monsterName.toLowerCase();
+	for (const [key, data] of bestiaryIndex.entries()) {
+		if (key.startsWith(`${searchKey}|`)) {
+			foundBase = data;
+			break;
+		}
+	}
+
+	const resolved = foundBase ? storage.resolveMonster(foundBase, bestiaryIndex) : null;
+	const instance = {
+		...(resolved || {}),
+		instanceId: `inst-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+		name: asText(monster?.name) || (resolved ? resolved.name : monsterName),
+		originalBestiaryName: resolved ? resolved.name : monsterName,
+		source: resolved ? resolved.source : asText(monster?.source) || "Unknown",
+	};
+
+	if (resolved) {
+		const hpVal =
+			typeof resolved.hp === "object"
+				? resolved.hp.average || 0
+				: resolved.hit_points || 0;
+		instance.currentHp = hpVal;
+		instance.hit_points = hpVal;
+
+		let acVal = resolved.armor_class || 0;
+		if (Array.isArray(resolved.ac) && resolved.ac[0]) {
+			const entry = resolved.ac[0];
+			acVal = typeof entry === "object" ? entry.ac || 0 : entry;
+		}
+		instance.armor_class = acVal;
+	} else {
+		instance.currentHp = 0;
+		instance.hit_points = 0;
+		instance.armor_class = 0;
+	}
+
+	return instance;
+}
+
+function normalizeEncounterFromAi(rawEncounter, bestiaryIndex, fallbackName) {
+	const monsters = (Array.isArray(rawEncounter?.monsters) ? rawEncounter.monsters : [])
+		.map((monster) => buildMonsterInstance(monster, bestiaryIndex))
+		.filter(Boolean);
+
+	return {
+		name: asText(rawEncounter?.name) || fallbackName,
+		monsters,
+	};
+}
+
 router.post("/generate", async (req, res, next) => {
 	try {
 		const {
@@ -14,19 +239,19 @@ router.post("/generate", async (req, res, next) => {
 			generateEncounters,
 			contextConfig,
 		} = req.body;
-		if (!process.env.GEMINI_API_KEY)
+		if (!process.env.GEMINI_API_KEY) {
 			return res.status(500).json({ error: "GEMINI_API_KEY не налаштовано." });
+		}
 
 		const campaign = await storage.readCampaign(path.campaign);
-		let session = await storage
+		const session = await storage
 			.readSession(path.campaign, path.session)
 			.catch(() => null);
 
-		let contextData = { campaign: {}, sessions: [] };
+		const contextData = { campaign: {}, sessions: [] };
 		if (contextConfig) {
 			if (contextConfig.campaignNotes) contextData.campaign.notes = campaign.notes;
 			if (contextConfig.campaignCharacters) {
-				// Збираємо і персонажів, і NPC в один масив персонажів для контексту сюжету
 				const chars = await storage.listEntities(path.campaign, "characters");
 				const npcs = await storage.listEntities(path.campaign, "npc");
 				contextData.campaign.characters = [...chars, ...npcs];
@@ -34,14 +259,13 @@ router.post("/generate", async (req, res, next) => {
 
 			if (contextConfig.sessions) {
 				for (const [slug, conf] of Object.entries(contextConfig.sessions)) {
-					if (conf.included) {
-						const sData = await storage.readSession(path.campaign, slug);
-						contextData.sessions.push({
-							name: sData.name,
-							conf,
-							data: sData.data,
-						});
-					}
+					if (!conf.included) continue;
+					const sData = await storage.readSession(path.campaign, slug);
+					contextData.sessions.push({
+						name: sData.name,
+						conf,
+						data: sData.data,
+					});
 				}
 			}
 		}
@@ -66,202 +290,142 @@ router.post("/generate", async (req, res, next) => {
 			if (session) {
 				const fullPath = storage.sessionPath(path.campaign, path.session);
 				const sessionData = await storage.readJson(fullPath);
+				sessionData.data = sessionData.data || {};
 
-				// 0. Обробка конкретного бою (Encounter), якщо ми в режимі редагування одного бою
 				if (path.encounter) {
-					if (!sessionData.data.encounters) sessionData.data.encounters = [];
-					const encIdx = sessionData.data.encounters.findIndex(e => e.id.toString() === path.encounter.toString());
-					
+					sessionData.data.encounters = sessionData.data.encounters || [];
+					const encIdx = sessionData.data.encounters.findIndex(
+						(e) => String(e.id) === String(path.encounter),
+					);
+
 					if (encIdx !== -1) {
-						let aiEnc = null;
-						if (generatedContent.monsters) aiEnc = generatedContent;
-						else if (Array.isArray(generatedContent.encounters) && generatedContent.encounters[0]) aiEnc = generatedContent.encounters[0];
+						let aiEncounter = null;
+						if (Array.isArray(generatedContent?.monsters)) {
+							aiEncounter = generatedContent;
+						} else if (Array.isArray(generatedContent?.encounters) && generatedContent.encounters[0]) {
+							aiEncounter = generatedContent.encounters[0];
+						}
 
-						if (aiEnc) {
+						if (aiEncounter) {
 							const bestiaryIndex = await storage.getBestiaryIndex();
-							if (aiEnc.name) sessionData.data.encounters[encIdx].name = aiEnc.name;
-							
-							if (Array.isArray(aiEnc.monsters)) {
-								const monsters = [];
-								for (const m of aiEnc.monsters) {
-									const mName = m.monsterName || m.name;
-									let foundBase = null;
-									const searchKey = mName.toLowerCase();
-									for (const [key, data] of bestiaryIndex.entries()) {
-										if (key.startsWith(searchKey + "|")) {
-											foundBase = data;
-											break;
-										}
-									}
-									let resolved = null;
-									if (foundBase) resolved = storage.resolveMonster(foundBase, bestiaryIndex);
-
-									const instance = {
-										...(resolved || {}),
-										instanceId: `inst-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
-										name: m.name || (resolved ? resolved.name : m.monsterName),
-										originalBestiaryName: resolved ? resolved.name : m.monsterName,
-										source: resolved ? resolved.source : (m.source || "Unknown")
-									};
-
-									if (resolved) {
-										const hpVal = typeof resolved.hp === "object" ? (resolved.hp.average || 0) : (resolved.hit_points || 0);
-										instance.currentHp = hpVal;
-										instance.hit_points = hpVal;
-										let acVal = resolved.armor_class || 0;
-										if (Array.isArray(resolved.ac) && resolved.ac[0]) {
-											const entry = resolved.ac[0];
-											acVal = typeof entry === "object" ? (entry.ac || 0) : entry;
-										}
-										instance.armor_class = acVal;
-									} else {
-										instance.currentHp = 0;
-										instance.hit_points = 0;
-										instance.armor_class = 0;
-									}
-									monsters.push(instance);
-								}
-								sessionData.data.encounters[encIdx].monsters = monsters;
-							}
+							const normalized = normalizeEncounterFromAi(
+								aiEncounter,
+								bestiaryIndex,
+								sessionData.data.encounters[encIdx].name || "Бій",
+							);
+							sessionData.data.encounters[encIdx].name = normalized.name;
+							sessionData.data.encounters[encIdx].monsters = normalized.monsters;
 							sessionData.updatedAt = new Date().toISOString();
 							await storage.writeJson(fullPath, sessionData);
-							return res.json({ generated: generatedContent, updated: { ...sessionData, fileName: path.session } });
+							return res.json({
+								generated: generatedContent,
+								updated: { ...sessionData, fileName: path.session },
+							});
 						}
 					}
 				}
 
-				// 1. Обробка згенерованих боїв (Encounters)
-				const encounterMap = new Map(); // Тимчасова мапа для зв'язку індексів AI з новими ID
+				const encounterMap = new Map();
 				if (Array.isArray(generatedContent.encounters)) {
-					if (!sessionData.data.encounters) sessionData.data.encounters = [];
-
+					sessionData.data.encounters = sessionData.data.encounters || [];
 					const bestiaryIndex = await storage.getBestiaryIndex();
 
-					for (const [idx, enc] of generatedContent.encounters.entries()) {
+					for (const [index, enc] of generatedContent.encounters.entries()) {
+						const normalized = normalizeEncounterFromAi(
+							enc,
+							bestiaryIndex,
+							`Бій ${sessionData.data.encounters.length + 1}`,
+						);
 						const newId = storage.createId();
-						
-						const monsters = [];
-						for (const m of (enc.monsters || [])) {
-							const mName = m.monsterName || m.name;
-							// Шукаємо монстра в індексі (регістронезалежно)
-							let foundBase = null;
-							const searchKey = mName.toLowerCase();
-							
-							for (const [key, data] of bestiaryIndex.entries()) {
-								if (key.startsWith(searchKey + "|")) {
-									foundBase = data;
-									break;
-								}
-							}
-
-							let resolved = null;
-							if (foundBase) {
-								resolved = storage.resolveMonster(foundBase, bestiaryIndex);
-							}
-
-							const instance = {
-								...(resolved || {}),
-								instanceId: `inst-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
-								name: m.name || (resolved ? resolved.name : m.monsterName),
-								originalBestiaryName: resolved ? resolved.name : m.monsterName,
-								source: resolved ? resolved.source : (m.source || "Unknown")
-							};
-
-							if (resolved) {
-								const hpVal = typeof resolved.hp === "object" ? (resolved.hp.average || 0) : (resolved.hit_points || 0);
-								instance.currentHp = hpVal;
-								instance.hit_points = hpVal;
-								
-								let acVal = resolved.armor_class || 0;
-								if (Array.isArray(resolved.ac) && resolved.ac[0]) {
-									const entry = resolved.ac[0];
-									acVal = typeof entry === "object" ? (entry.ac || 0) : entry;
-								}
-								instance.armor_class = acVal;
-							} else {
-								instance.currentHp = 0;
-								instance.hit_points = 0;
-								instance.armor_class = 0;
-							}
-							monsters.push(instance);
-						}
-
-						const newEncounter = {
+						sessionData.data.encounters.push({
 							id: newId,
-							name: enc.name || `Бій ${sessionData.data.encounters.length + 1}`,
-							monsters
-						};
-						sessionData.data.encounters.push(newEncounter);
-						encounterMap.set(idx, newId);
+							name: normalized.name,
+							monsters: normalized.monsters,
+						});
+						encounterMap.set(index, newId);
 					}
 				}
 
-				// 2. Обробка сцен
-				if (generatedContent.scenes) {
-					const toSceneNotes = (notes) => {
-						if (!Array.isArray(notes)) return [];
-						return notes
-							.map((entry) => String(entry || "").trim())
-							.filter(Boolean)
-							.map((text) => ({
-								id: Date.now() + Math.floor(Math.random() * 100000),
-								title: "",
-								text,
-								collapsed: false,
-							}));
-					};
+				if (Array.isArray(generatedContent.scenes)) {
+					const existingScenes = Array.isArray(sessionData.data.scenes)
+						? sessionData.data.scenes
+						: [];
 
-					sessionData.data.scenes = generatedContent.scenes.map((s, idx) => {
-						const existing = sessionData.data?.scenes?.[idx] || {};
-						
-						// Визначаємо ID зіткнення:
-						// Пріоритет 1: Нове згенероване зіткнення по індексу
-						// Пріоритет 2: Існуюче зіткнення в сцені
-						let encounterId = existing?.encounterId || "";
-						if (s.encounterIndex !== undefined && encounterMap.has(s.encounterIndex)) {
-							encounterId = encounterMap.get(s.encounterIndex);
-						}
-
-						return {
-							id:
-								existing?.id || Date.now() + Math.floor(Math.random() * 100000),
-							texts: s.texts,
-							notes: Array.isArray(s.notes)
-								? toSceneNotes(s.notes)
-								: (existing?.notes || []),
-							isNotesCollapsed: existing?.isNotesCollapsed || false,
-							npcs: s.npcs,
-							collapsed: existing?.collapsed || false,
-							encounterId: encounterId,
-						};
-					});
+					sessionData.data.scenes = generatedContent.scenes.map((scene, idx) =>
+						normalizeScene(scene, existingScenes[idx], encounterMap),
+					);
 				}
+
 				sessionData.updatedAt = new Date().toISOString();
 				await storage.writeJson(fullPath, sessionData);
 				updatedObject = { ...sessionData, fileName: path.session };
 			} else {
 				const metaPath = storage.campaignMetaPath(path.campaign);
 				const meta = await storage.readJson(metaPath);
-				if (generatedContent.description)
+
+				if (asText(generatedContent.description)) {
 					meta.description = generatedContent.description;
-				if (Array.isArray(generatedContent.notes)) {
-					meta.notes = generatedContent.notes.map((text) => ({
-						id: Date.now() + Math.floor(Math.random() * 100000),
-						text,
-						collapsed: false,
-					}));
 				}
+
+				if (Array.isArray(generatedContent.notes)) {
+					meta.notes = normalizeNotes(generatedContent.notes);
+				}
+
 				if (Array.isArray(generatedContent.characters)) {
-					for (const c of generatedContent.characters) {
-						const name = c.firstName || c.name;
-						const charSlug = storage.campaignSlug(name);
-						await storage.writeEntity(path.campaign, "characters", charSlug, {
-							id: storage.createId(),
-							...c,
-							collapsed: false
-						});
+					const existing = await storage.listEntities(path.campaign, "characters");
+					const bySlug = new Map(existing.map((entity) => [entity.slug, entity]));
+					const byName = new Map(
+						existing
+							.map((entity) => ({
+								key: `${asText(entity.firstName).toLowerCase()} ${asText(entity.lastName).toLowerCase()}`.trim(),
+								entity,
+							}))
+							.filter(({ key }) => Boolean(key))
+							.map(({ key, entity }) => [key, entity]),
+					);
+
+					for (const rawCharacter of generatedContent.characters) {
+						const nameParts = parseNameParts(rawCharacter);
+						const fullNameKey = `${nameParts.firstName.toLowerCase()} ${nameParts.lastName.toLowerCase()}`.trim();
+						const baseSlug = storage.campaignSlug(
+							nameParts.firstName || rawCharacter.name || "character",
+						);
+
+						const existingEntity =
+							bySlug.get(rawCharacter.slug) ||
+							(fullNameKey ? byName.get(fullNameKey) : null) ||
+							null;
+
+						const normalized = normalizeCharacter(rawCharacter, existingEntity);
+
+						if (existingEntity) {
+							const payload = {
+								...existingEntity,
+								...normalized,
+								slug: existingEntity.slug,
+								id: existingEntity.id,
+								imageUrl: existingEntity.imageUrl ?? normalized.imageUrl ?? null,
+							};
+							await storage.writeEntity(path.campaign, "characters", existingEntity.slug, payload);
+							bySlug.set(existingEntity.slug, payload);
+							if (fullNameKey) byName.set(fullNameKey, payload);
+						} else {
+							const uniqueSlug = await storage.ensureUniqueEntitySlug(
+								path.campaign,
+								"characters",
+								baseSlug,
+							);
+							const payload = {
+								...normalized,
+								slug: uniqueSlug,
+							};
+							await storage.writeEntity(path.campaign, "characters", uniqueSlug, payload);
+							bySlug.set(uniqueSlug, payload);
+							if (fullNameKey) byName.set(fullNameKey, payload);
+						}
 					}
 				}
+
 				meta.updatedAt = new Date().toISOString();
 				await storage.writeJson(metaPath, meta);
 				updatedObject = meta;

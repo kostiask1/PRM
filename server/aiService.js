@@ -2,6 +2,14 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
+function noteToPromptText(note) {
+	if (!note) return "";
+	if (typeof note === "string") return note.trim();
+	const title = String(note.title || "").trim();
+	const text = String(note.text || "").trim();
+	return [title, text].filter(Boolean).join("\n");
+}
+
 const systemInstructions = {
 	campaign: `Ти досвідчений майстер підземель (Dungeon Master) для Dungeons & Dragons. 
         Твоя мета - допомагати в плануванні сесій. Відповідай виключно українською мовою. 
@@ -117,7 +125,8 @@ async function generateContent({
 					: "campaign";
 
 	model = genAI.getGenerativeModel({
-		model: "gemini-2.5-flash",
+		// model: "gemini-2.5-flash",
+		model: "gemini-3.1-flash-lite-preview",
 		generationConfig: {
 			responseMimeType: "application/json",
 		},
@@ -133,7 +142,7 @@ async function generateContent({
 		// Додаємо нотатки, якщо обрано
 		if (conf.included && conf.notes && data.notes) {
 			sessionContext.notes = data.notes
-				.map(n => n.text)
+				.map(noteToPromptText)
 				.filter(t => t && t.trim() !== "");
 		}
 		
@@ -162,7 +171,7 @@ async function generateContent({
 				sceneFields.forEach(field => {
 					if (field === "encounter") return; // Вже оброблено вище
 					if (field === "notes") {
-						if (sceneConf[field]) resultScene[field] = scene.notes || [];
+						if (sceneConf[field]) resultScene[field] = (scene.notes || []).map(noteToPromptText).filter(Boolean);
 						return;
 					}
 					if (sceneConf[field]) resultScene[field] = scene.texts?.[field];
@@ -183,16 +192,18 @@ async function generateContent({
 		campaign: {
 			name: campaign.name,
 			description: campaign.description,
-			notes: contextData?.campaign?.notes?.map(n => n.text).filter(Boolean),
-			characters: contextData?.campaign?.characters?.map(c => ({
-				name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.name,
-				race: c.race,
-				class: c.class,
-				level: c.level,
-				motivation: c.motivation,
-			})).filter(c => c.name || c.motivation),
-		}
-	};
+			notes: contextData?.campaign?.notes?.map(noteToPromptText).filter(Boolean),
+				characters: contextData?.campaign?.characters?.map(c => ({
+					name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.name,
+					race: c.race,
+					class: c.class,
+					level: c.level,
+					motivation: c.motivation,
+					trait: c.trait,
+					notes: (c.notes || []).map(noteToPromptText).filter(Boolean),
+				})).filter(c => c.name || c.motivation),
+			}
+		};
 
 	if (filteredSessions.length > 0) {
 		contextJson.selectedSessions = filteredSessions;
@@ -273,3 +284,4 @@ async function generateContent({
 }
 
 module.exports = { generateContent };
+
