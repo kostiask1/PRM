@@ -20,6 +20,26 @@ export default function CreateCampaignModalContent({
 			/>
 
 			<div className="CreateCampaignModal__actions">
+				<div className="CreateCampaignModal__import">
+					<input
+						ref={fileInputRef}
+						type="file"
+						accept=".json,.gz,.prma,.prma.gz"
+						style={{ display: "none" }}
+						onChange={(event) => {
+							const file = event.target.files?.[0];
+							if (!file) return;
+							onImportCampaign(file);
+							event.target.value = "";
+						}}
+					/>
+					<Button
+						variant="footer"
+						icon="import"
+						onClick={() => fileInputRef.current?.click()}>
+						Імпорт кампанії
+					</Button>
+				</div>
 				<Button
 					variant="primary"
 					onClick={() => onCreateCampaign(name)}
@@ -28,28 +48,6 @@ export default function CreateCampaignModalContent({
 				</Button>
 				<Button variant="ghost" onClick={onClose}>
 					Скасувати
-				</Button>
-			</div>
-
-			<div className="CreateCampaignModal__import">
-				<div className="CreateCampaignModal__label">Імпорт кампанії</div>
-				<input
-					ref={fileInputRef}
-					type="file"
-					accept=".json,.gz,.prma,.prma.gz"
-					style={{ display: "none" }}
-					onChange={(event) => {
-						const file = event.target.files?.[0];
-						if (!file) return;
-						onImportCampaign(file);
-						event.target.value = "";
-					}}
-				/>
-				<Button
-					variant="footer"
-					icon="import"
-					onClick={() => fileInputRef.current?.click()}>
-					Імпорт кампанії
 				</Button>
 			</div>
 		</div>

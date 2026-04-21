@@ -26,7 +26,7 @@ export default function Sidebar({
 }) {
 	const modal = useModal();
 	const fileInputRef = useRef(null);
-	const [dbImportStrategy, setDbImportStrategy] = useState("append");
+	const [dbImportStrategy, setDbImportStrategy] = useState("");
 
 	const [localCampaigns, setLocalCampaigns] = useState(campaigns);
 	const [isGalleryOpen, setIsGalleryOpen] = useState(false);

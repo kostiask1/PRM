@@ -123,9 +123,9 @@
 
 .Sidebar__importStrategyRow {
 	display: flex;
-	flex-direction: column;
+	align-items: center;
+	justify-content: center;
 	gap: var(--space-1);
-	margin-top: var(--space-1);
 }
 
 .Sidebar__importStrategyModal {
