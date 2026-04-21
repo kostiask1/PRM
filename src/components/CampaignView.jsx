@@ -120,7 +120,7 @@ function CampaignView(props) {
 	return (
 		<Panel className="CampaignView">
 			<div className="Panel__header">
-				<div>
+				<div className="CampaignView__header">
 					<h2
 						className="editable-title"
 						onClick={handleRename}

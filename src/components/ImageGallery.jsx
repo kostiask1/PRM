@@ -13,6 +13,11 @@ const SUB_LABELS = {
 	players: "Гравці",
 };
 
+const SUB_ICON_NAMES = {
+	npc: "folder-npc",
+	players: "folder-players",
+};
+
 function ImageGallery({
 	isOpen,
 	onClose,
@@ -64,6 +69,7 @@ function ImageGallery({
 		handleDragEnd,
 		getCleanName,
 		handleRenameImage,
+		isProtectedSystemSub,
 	} = useImageGallery({
 		isOpen,
 		initialSource,
@@ -320,11 +326,17 @@ function ImageGallery({
 						)}
 
 						{!loading &&
-							allSubs.map((sub, index) => (
+							allSubs.map((sub, index) => {
+								const isProtected = isProtectedSystemSub(sub);
+								const folderIcon = SUB_ICON_NAMES[sub] || "folder";
+								return (
 								<div
 									key={sub}
-									className={`ImageGallery__item ImageGallery__item--folder ${selectedSubs.has(sub) ? "is-selected" : ""} ${dragOverTarget?.id === sub ? "is-drag-over" : ""}`}
-									onClick={(e) => handleItemClick(sub, "sub", index, e)}
+									className={`ImageGallery__item ImageGallery__item--folder ${selectedSubs.has(sub) ? "is-selected" : ""} ${dragOverTarget?.id === sub ? "is-drag-over" : ""} ${isProtected ? "is-protected" : ""}`}
+									onClick={(e) => {
+										if (isProtected) return;
+										handleItemClick(sub, "sub", index, e);
+									}}
 									onDoubleClick={() => {
 										const nextPath = selectedSub
 											? `${selectedSub}/${sub}`
@@ -332,6 +344,7 @@ function ImageGallery({
 										setSelectedSub(nextPath);
 									}}
 									onContextMenu={async (e) => {
+										if (isProtected) return;
 										e.preventDefault();
 										if (!modal) return;
 										const newName = await modal.prompt(
@@ -341,7 +354,7 @@ function ImageGallery({
 										);
 										if (newName) handleRenameSub(sub, newName);
 									}}
-									draggable
+									draggable={!isProtected}
 									onDragStart={(e) => handleDragStart(e, sub, "sub")}
 									onDragEnd={handleDragEnd}
 									onDragOver={(e) => {
@@ -360,21 +373,24 @@ function ImageGallery({
 										});
 									}}>
 									<div className="ImageGallery__image-wrap">
-										<Icon name="folder" size={48} />
-										<div
-											className="ImageGallery__checkbox"
-											onClick={(e) => toggleSelect(sub, "sub", e)}>
-											<Icon
-												name={selectedSubs.has(sub) ? "check" : "plus"}
-												size={12}
-											/>
-										</div>
+										<Icon name={folderIcon} size={48} />
+										{!isProtected && (
+											<div
+												className="ImageGallery__checkbox"
+												onClick={(e) => toggleSelect(sub, "sub", e)}>
+												<Icon
+													name={selectedSubs.has(sub) ? "check" : "plus"}
+													size={12}
+												/>
+											</div>
+										)}
 									</div>
 									<span className="ImageGallery__name">
 										{SUB_LABELS[sub] || sub}
 									</span>
 								</div>
-							))}
+								);
+							})}
 
 						{!loading &&
 							images.length > 0 &&
@@ -470,3 +486,6 @@ function ImageGallery({
 
 export { ImageGallery };
 export default ImageGallery;
+
+
+

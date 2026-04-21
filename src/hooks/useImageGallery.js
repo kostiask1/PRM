@@ -42,6 +42,13 @@ export default function useImageGallery({
 	const [dragSource, setDragSource] = useState(null);
 	const [dragOverTarget, setDragOverTarget] = useState(null);
 	const hasSelection = selectedFilenames.size > 0 || selectedSubs.size > 0;
+	const isProtectedSystemSub = useCallback(
+		(name) =>
+			selectedSub === "" &&
+			(selectedCat.id === "tokens" || selectedCat.id === "characters") &&
+			(name === "players" || name === "npc"),
+		[selectedCat.id, selectedSub],
+	);
 
 	const getCleanName = useCallback((name) => {
 		return name.replace(/\.[^/.]+$/, "").replace(/-\d{10,}$/, "");
@@ -167,7 +174,10 @@ export default function useImageGallery({
 
 	const handleMoveSelection = useCallback(
 		async (dest) => {
-			const items = [...Array.from(selectedFilenames), ...Array.from(selectedSubs)];
+			const safeSubs = Array.from(selectedSubs).filter(
+				(name) => !isProtectedSystemSub(name),
+			);
+			const items = [...Array.from(selectedFilenames), ...safeSubs];
 			if (!items.length) return false;
 
 			const src = {
@@ -205,6 +215,7 @@ export default function useImageGallery({
 		[
 			selectedFilenames,
 			selectedSubs,
+			isProtectedSystemSub,
 			selectedSource,
 			selectedCat.id,
 			selectedSub,
@@ -283,17 +294,21 @@ export default function useImageGallery({
 				else next.add(name);
 				setSelectedFilenames(next);
 			} else {
+				if (isProtectedSystemSub(name)) return;
 				const next = new Set(selectedSubs);
 				if (next.has(name)) next.delete(name);
 				else next.add(name);
 				setSelectedSubs(next);
 			}
 		},
-		[selectedFilenames, selectedSubs],
+		[selectedFilenames, selectedSubs, isProtectedSystemSub],
 	);
 
 	const handleBulkDelete = useCallback(async () => {
-		const total = selectedFilenames.size + selectedSubs.size;
+		const safeSubs = Array.from(selectedSubs).filter(
+			(name) => !isProtectedSystemSub(name),
+		);
+		const total = selectedFilenames.size + safeSubs.length;
 		if (!total) return;
 
 		setLoading(true);
@@ -305,7 +320,7 @@ export default function useImageGallery({
 			if (!confirmed) return;
 
 			await api.deleteImages({
-				items: [...Array.from(selectedFilenames), ...Array.from(selectedSubs)],
+				items: [...Array.from(selectedFilenames), ...safeSubs],
 				src: {
 					slug: selectedSource,
 					category: selectedCat.id,
@@ -324,6 +339,7 @@ export default function useImageGallery({
 	}, [
 		selectedFilenames,
 		selectedSubs,
+		isProtectedSystemSub,
 		selectedSource,
 		selectedCat.id,
 		selectedSub,
@@ -375,7 +391,9 @@ export default function useImageGallery({
 
 				for (let i = start; i <= end; i++) {
 					const item = combinedItems[i];
-					if (item.type === "sub") nextSubs.add(item.name);
+					if (item.type === "sub") {
+						if (!isProtectedSystemSub(item.name)) nextSubs.add(item.name);
+					}
 					else nextFilenames.add(item.name);
 				}
 
@@ -385,6 +403,7 @@ export default function useImageGallery({
 				toggleSelect(name, type, e);
 				setLastSelectedIndex(index);
 			} else {
+				if (type === "sub" && isProtectedSystemSub(name)) return;
 				const isSelected =
 					type === "image"
 						? selectedFilenames.has(name)
@@ -409,12 +428,17 @@ export default function useImageGallery({
 			selectedFilenames,
 			selectedSubs,
 			toggleSelect,
+			isProtectedSystemSub,
 		],
 	);
 
 	const handleDragStart = useCallback(
 		(e, item, type = "image") => {
 			const itemName = type === "image" ? item.name : item;
+			if (type === "sub" && isProtectedSystemSub(itemName)) {
+				e.preventDefault();
+				return;
+			}
 			const isSelected =
 				type === "image"
 					? selectedFilenames.has(itemName)
@@ -445,6 +469,7 @@ export default function useImageGallery({
 		[
 			selectedFilenames,
 			selectedSubs,
+			isProtectedSystemSub,
 			selectedSource,
 			selectedCat.id,
 			selectedSub,
@@ -492,6 +517,7 @@ export default function useImageGallery({
 		handleDragEnd,
 		getCleanName,
 		handleRenameImage,
+		isProtectedSystemSub,
 	};
 }
 

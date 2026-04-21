@@ -30,6 +30,24 @@ const icons = {
 	),
 	home: <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />,
 	folder: <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />,
+	"folder-players": (
+		<>
+			<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+			<circle cx="9" cy="14" r="1.8" />
+			<circle cx="14.5" cy="13.5" r="1.5" />
+			<path d="M6.5 18.5c.6-1.2 1.7-1.9 3.1-1.9s2.5.7 3.1 1.9" />
+			<path d="M13.2 18.5c.4-.9 1.2-1.4 2.3-1.4s1.9.5 2.3 1.4" />
+		</>
+	),
+	"folder-npc": (
+		<>
+			<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+			<circle cx="12" cy="14" r="2.2" />
+			<circle cx="11.2" cy="13.8" r="0.2" fill="currentColor" />
+			<circle cx="12.8" cy="13.8" r="0.2" fill="currentColor" />
+			<path d="M10.9 15.7h2.2" />
+		</>
+	),
 	restore: (
 		<>
 			<path d="M3 2v6h6" />
