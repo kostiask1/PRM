@@ -60,6 +60,22 @@
 	transform: rotate(-90deg);
 }
 
+.CampaignView__notes {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: var(--space-2);
+}
+
+.CampaignView__notes .note-card-simple {
+	height: 100%;
+}
+
+.CampaignView__notes > div {
+	flex: 1 1 550px;
+	max-width: 100%;
+}
+
 .CampaignView__characters {
 	display: flex;
 	flex-wrap: wrap;

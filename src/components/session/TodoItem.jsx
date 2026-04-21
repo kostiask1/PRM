@@ -1,4 +1,5 @@
 import Checkbox from "../Checkbox";
+import "../../assets/components/TodoItem.css";
 
 export default function TodoItem({ title, note, checked, onChange, children }) {
 	return (

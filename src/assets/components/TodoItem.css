@@ -1,0 +1,50 @@
+.TodoItem {
+	display: flex;
+	gap: var(--space-3);
+	padding: var(--space-3);
+	border: 1px solid color-mix(in srgb, var(--border), transparent 25%);
+	border-radius: 14px;
+	margin-bottom: 8px;
+	background: color-mix(in srgb, var(--bg), transparent 45%);
+	cursor: pointer;
+}
+
+.TodoItem--done {
+	border-color: color-mix(in srgb, var(--success), transparent 74%);
+}
+
+.TodoItem--done .TodoItem__title {
+	text-decoration: line-through;
+	opacity: 0.72;
+}
+
+.TodoItem__content {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: var(--space-2);
+}
+
+.TodoItem__content .EditableField,
+.TodoItem__content .Input,
+.TodoItem__content .MarkdownView {
+	height: 100%;
+	width: 100%;
+}
+
+.TodoItem__title {
+	font-weight: 700;
+	min-height: 24px;
+	height: 24px;
+}
+
+.TodoItem__note {
+	font-size: 0.92rem;
+	color: var(--muted);
+}
+
+.TodoItem__trigger {
+	cursor: pointer;
+}

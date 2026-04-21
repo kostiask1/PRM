@@ -84,7 +84,7 @@ export default function ImageDropzone({ campaignSlug, onUploadSuccess }) {
 					size="small"
 					onClick={() => setIsGalleryOpen(true)}
 				>
-					Обрати з галереї
+					З галереї
 				</Button>
 			</div>
 
