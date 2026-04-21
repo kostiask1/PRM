@@ -17,11 +17,9 @@ import ClickToCopy from "./ClickToCopy.jsx";
 import Button from "./Button.jsx";
 import MonsterStatBlockModel from "../models/MonsterStatBlockModel.js";
 import { useModal } from "../context/ModalContext";
-import { loadConditionsMap, normalizeConditionName } from "../utils/conditions.js";
-import {
-	getConditionByName,
-	getSpellByName,
-} from "../utils/referencePreview.js";
+import { getSpellByName } from "../utils/referencePreview.js";
+import { resolveSpellInput } from "../utils/referenceResolvers.js";
+import useConditionReference from "../hooks/useConditionReference.jsx";
 
 const SPELL_CACHE = new Map();
 
@@ -82,20 +80,8 @@ export default function MonsterStatBlock({
 	};
 
 	const handleSpellClick = async (spellOrName) => {
-		let spell = spellOrName;
-
-		// Якщо передано назву (рядок), намагаємось знайти базові дані
-		if (typeof spellOrName === "string") {
-			const cleanName = spellOrName.split("|")[0];
-			try {
-				const results = await api.searchSpells({ name: cleanName });
-				spell = results?.[0];
-				if (!spell) throw new Error("Spell not found");
-			} catch (e) {
-				console.error("Failed to fetch linked spell", e);
-				return;
-			}
-		}
+		const spell = await resolveSpellInput(spellOrName);
+		if (!spell) return;
 
 		modal?.open({
 			title: capitalizeWords(spell.name.split("|")[0]),
@@ -111,39 +97,11 @@ export default function MonsterStatBlock({
 		});
 	};
 
-	const handleConditionClick = async (nameOrCondition) => {
-		const rawName =
-			typeof nameOrCondition === "string"
-				? nameOrCondition
-				: nameOrCondition?.name || "";
-		const normalizedName = normalizeConditionName(rawName);
-		if (!normalizedName) return;
-
-		try {
-			const conditionsMap = await loadConditionsMap();
-			const condition = conditionsMap.get(normalizedName);
-			if (!condition) return;
-
-			modal?.open({
-				title: condition.name,
-				type: "confirm",
-				showFooter: false,
-				children: (
-					<div className="MonsterStatBlock__section">
-						{renderRecursiveContent(
-							condition.entries,
-							handleSpellClick,
-							handleConditionClick,
-							handleSpellHover,
-							handleConditionHover,
-						)}
-					</div>
-				),
-			});
-		} catch (error) {
-			console.error("Failed to open condition", error);
-		}
-	};
+	const { handleConditionClick, handleConditionHover } = useConditionReference({
+		onSpellClick: handleSpellClick,
+		getSpellHoverHandler: () => handleSpellHover,
+		modalContentClassName: "MonsterStatBlock__section",
+	});
 
 	const handleSpellHover = async (spellName) => {
 		const spell = await getSpellByName(spellName);
@@ -159,19 +117,6 @@ export default function MonsterStatBlock({
 		);
 	};
 
-	const handleConditionHover = async (conditionName) => {
-		const condition = await getConditionByName(conditionName);
-		if (!condition) return null;
-		return (
-			<div>
-				<div className="Tooltip__title">{condition.name}</div>
-				{condition.source && <div className="Tooltip__meta">{condition.source}</div>}
-				<div className="Tooltip__text">
-					{renderRecursiveContent(condition.entries, null, null, null, null)}
-				</div>
-			</div>
-		);
-	};
 
 	useEffect(() => {
 		setSpells([]);

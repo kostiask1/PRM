@@ -1,48 +1,19 @@
 import "../assets/components/SpellCard.css";
 import { capitalizeWords, renderRecursiveContent } from "../utils/parser.jsx";
 import SpellCardModel from "../models/SpellCardModel.js";
-import { useModal } from "../context/ModalContext";
-import {
-	getConditionByName,
-	getSpellByName,
-} from "../utils/referencePreview.js";
+import { getSpellByName } from "../utils/referencePreview.js";
+import useConditionReference from "../hooks/useConditionReference.jsx";
 
 export default function SpellCard({ spell, onSpellClick, onConditionClick }) {
-	const modal = useModal();
+	const { handleConditionClick, handleConditionHover } = useConditionReference({
+		externalOnConditionClick: onConditionClick,
+		onSpellClick,
+		getSpellHoverHandler: () => handleSpellHover,
+		modalContentClassName: "SpellCard__desc",
+	});
 	if (!spell) return null;
 
 	const model = new SpellCardModel(spell);
-
-	const handleConditionClick = async (name) => {
-		if (onConditionClick) {
-			onConditionClick(name);
-			return;
-		}
-
-		try {
-			const condition = await getConditionByName(name);
-			if (!condition) return;
-
-			modal?.open({
-				title: condition.name,
-				type: "confirm",
-				showFooter: false,
-				children: (
-					<div className="SpellCard__desc">
-						{renderRecursiveContent(
-							condition.entries,
-							onSpellClick,
-							handleConditionClick,
-							handleSpellHover,
-							handleConditionHover,
-						)}
-					</div>
-				),
-			});
-		} catch (error) {
-			console.error("Failed to open condition details", error);
-		}
-	};
 
 	const handleSpellHover = async (spellName) => {
 		const spell = await getSpellByName(spellName);
@@ -54,20 +25,6 @@ export default function SpellCard({ spell, onSpellClick, onConditionClick }) {
 					onSpellClick={onSpellClick}
 					onConditionClick={handleConditionClick}
 				/>
-			</div>
-		);
-	};
-
-	const handleConditionHover = async (conditionName) => {
-		const condition = await getConditionByName(conditionName);
-		if (!condition) return null;
-		return (
-			<div>
-				<div className="Tooltip__title">{condition.name}</div>
-				{condition.source && <div className="Tooltip__meta">{condition.source}</div>}
-				<div className="Tooltip__text">
-					{renderRecursiveContent(condition.entries, null, null, null, null)}
-				</div>
 			</div>
 		);
 	};
