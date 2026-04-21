@@ -1,25 +1,10 @@
-import React from "react";
+﻿import React from "react";
 import Modal from "./Modal";
 import Icon from "./Icon";
 import "../assets/components/ImageGallery.css";
 import Button from "./Button";
-import withImageGallery from "../hoc/withImageGallery";
+import useImageGallery from "../hooks/useImageGallery";
 import { useModal } from "../context/ModalContext";
-
-const CATEGORIES = [
-	{ id: "maps", label: "Мапи", icon: "map" },
-	{ id: "scenes", label: "Сцени", icon: "image" },
-	{ id: "tokens", label: "Токени", icon: "user", subs: ["npc", "players"] },
-	{
-		id: "characters",
-		label: "Персонажі",
-		icon: "users",
-		subs: ["npc", "players"],
-	},
-	{ id: "props", label: "Предмети", icon: "book" },
-	{ id: "notes", label: "Нотатки", icon: "file" },
-	{ id: "attachments", label: "Вкладення", icon: "layers" },
-];
 
 const SUB_LABELS = {
 	npc: "NPC",
@@ -30,41 +15,52 @@ function ImageGallery({
 	isOpen,
 	onClose,
 	onSelect,
-	campaigns,
-	selectedSource,
-	setSelectedSource,
-	selectedCat,
-	setSelectedCat,
-	selectedSub,
-	setSelectedSub,
-	images,
-	selectedFilenames,
-	selectedSubs,
-	loading,
-	isCreatingSub,
-	setIsCreatingSub,
-	newSubName,
-	setNewSubName,
-	isDraggingOver,
-	setIsDraggingOver,
-	dragSource,
-	dragOverTarget,
-	setDragOverTarget,
-	hasSelection,
-	allSubs,
-	handleCreateSub,
-	handleBulkDelete,
-	handleFileUpload,
-	handleDrop,
-	handleItemClick,
-	toggleSelect,
-	handleRenameSub,
-	handleDragStart,
-	handleDragEnd,
-	getCleanName,
-	handleRenameImage,
+	initialSource,
+	initialCategory,
+	initialSubcategory,
 }) {
 	const modal = useModal();
+	const {
+		campaigns,
+		categories,
+		selectedSource,
+		setSelectedSource,
+		selectedCat,
+		setSelectedCat,
+		selectedSub,
+		setSelectedSub,
+		images,
+		selectedFilenames,
+		selectedSubs,
+		loading,
+		isCreatingSub,
+		setIsCreatingSub,
+		newSubName,
+		setNewSubName,
+		isDraggingOver,
+		setIsDraggingOver,
+		dragSource,
+		dragOverTarget,
+		setDragOverTarget,
+		hasSelection,
+		allSubs,
+		handleCreateSub,
+		handleBulkDelete,
+		handleFileUpload,
+		handleDrop,
+		handleItemClick,
+		toggleSelect,
+		handleRenameSub,
+		handleDragStart,
+		handleDragEnd,
+		getCleanName,
+		handleRenameImage,
+	} = useImageGallery({
+		isOpen,
+		initialSource,
+		initialCategory,
+		initialSubcategory,
+	});
 	if (!isOpen) return null;
 
 	return (
@@ -123,7 +119,7 @@ function ImageGallery({
 
 				<main className="ImageGallery__main">
 					<header className="ImageGallery__tabs">
-						{CATEGORIES.map((cat) => (
+						{categories.map((cat) => (
 							<button
 								key={cat.id}
 								className={`TabBtn ${selectedCat.id === cat.id ? "is-active" : ""} ${dragOverTarget?.id === cat.id ? "is-drag-over" : ""}`}
@@ -368,5 +364,4 @@ function ImageGallery({
 }
 
 export { ImageGallery };
-const ImageGalleryWithHOC = withImageGallery(ImageGallery);
-export default ImageGalleryWithHOC;
+export default ImageGallery;

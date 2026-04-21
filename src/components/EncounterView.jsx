@@ -6,34 +6,47 @@ import AiAssistantPanel from "./AiAssistantPanel";
 import MonsterStatBlock from "./MonsterStatBlock";
 import Notification from "./Notification";
 import DraggableList from "./DraggableList";
-import withEncounterView from "../hoc/withEncounterView";
+import useEncounterView from "../hooks/useEncounterView";
 import "../assets/components/EncounterView.css";
 
 function EncounterView({
+	campaign,
+	sessionId,
+	encounterId,
+	onRefreshCampaigns,
 	onBack,
-	encounter,
-	selectedInstance,
-	setSelectedInstance,
-	showBestiary,
-	setShowBestiary,
-	notification,
-	setNotification,
-	fileInputRef,
-	averageInitiative,
-	handleFileChange,
-	handleExport,
-	handleRename,
-	handleAddMonster,
-	handleAiUpdate,
-	removeMonster,
-	updateMonsterHp,
-	updateMonsterMaxHp,
-	handleRenameMonster,
-	duplicateMonster,
-	getHpColor,
-	handleReorderMonsters,
-	handleMonstersDrop,
 }) {
+	const {
+		encounter,
+		selectedInstance,
+		setSelectedInstance,
+		showBestiary,
+		setShowBestiary,
+		notification,
+		setNotification,
+		fileInputRef,
+		averageInitiative,
+		handleFileChange,
+		handleExport,
+		handleRename,
+		handleAddMonster,
+		handleAiUpdate,
+		removeMonster,
+		updateMonsterHp,
+		updateMonsterMaxHp,
+		handleRenameMonster,
+		duplicateMonster,
+		getHpColor,
+		handleReorderMonsters,
+		handleMonstersDrop,
+	} = useEncounterView({
+		campaign,
+		sessionId,
+		encounterId,
+		onBack,
+		onRefreshCampaigns,
+	});
+
 	if (!encounter) {
 		return (
 			<Panel className="EncounterView">
@@ -213,6 +226,5 @@ function EncounterView({
 }
 
 export { EncounterView };
-const EncounterViewWithHOC = withEncounterView(EncounterView);
-export default EncounterViewWithHOC;
+export default EncounterView;
 
