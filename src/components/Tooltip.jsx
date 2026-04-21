@@ -4,7 +4,48 @@ import "../assets/components/Tooltip.css";
 
 const GAP = 8;
 const VIEWPORT_MARGIN = 8;
-const TOOLTIP_OPEN_EVENT = "prm-tooltip-open";
+const CLOSE_DELAY = 90;
+
+let activeTooltipId = null;
+const activeSubscribers = new Set();
+const tooltipParentById = new Map();
+const tooltipTimeoutControllers = new Map();
+
+function subscribeActiveTooltip(listener) {
+	activeSubscribers.add(listener);
+	return () => activeSubscribers.delete(listener);
+}
+
+function setActiveTooltip(id) {
+	activeTooltipId = id || null;
+	activeSubscribers.forEach((listener) => listener(activeTooltipId));
+}
+
+function cancelOtherTooltipTimeouts(exceptId) {
+	tooltipTimeoutControllers.forEach((controllers, id) => {
+		if (id === exceptId) return;
+		controllers.cancelOpen?.();
+		controllers.cancelClose?.();
+	});
+}
+
+function findParentTooltipId(element, selfId) {
+	if (!element?.parentElement) return null;
+	let parent = element.parentElement.closest("[data-tooltip-id]");
+	while (parent && parent.dataset.tooltipId === selfId) {
+		parent = parent.parentElement?.closest("[data-tooltip-id]") || null;
+	}
+	return parent?.dataset.tooltipId || null;
+}
+
+function isAncestorTooltip(ancestorId, childId) {
+	let current = tooltipParentById.get(childId) || null;
+	while (current) {
+		if (current === ancestorId) return true;
+		current = tooltipParentById.get(current) || null;
+	}
+	return false;
+}
 
 function calculatePosition(triggerRect, tooltipRect, viewportWidth, viewportHeight) {
 	let left = triggerRect.left + triggerRect.width / 2 - tooltipRect.width / 2;
@@ -37,10 +78,13 @@ export default function Tooltip({
 	disabled = false,
 }) {
 	const tooltipIdRef = useRef(`tooltip-${Math.random().toString(36).slice(2)}`);
+	const closeTimerRef = useRef(null);
+	const parentTooltipIdRef = useRef(null);
 	const triggerRef = useRef(null);
 	const tooltipRef = useRef(null);
 	const timerRef = useRef(null);
 	const [isOpen, setIsOpen] = useState(false);
+	const [activeId, setActiveId] = useState(activeTooltipId);
 	const [position, setPosition] = useState({ top: 0, left: 0, ready: false });
 
 	const hasContent = Boolean(content);
@@ -50,35 +94,84 @@ export default function Tooltip({
 			clearTimeout(timerRef.current);
 			timerRef.current = null;
 		}
+		if (closeTimerRef.current) {
+			clearTimeout(closeTimerRef.current);
+			closeTimerRef.current = null;
+		}
 		setIsOpen(false);
+		if (activeTooltipId === tooltipIdRef.current) {
+			setActiveTooltip(parentTooltipIdRef.current || null);
+		}
+	};
+
+	const cancelOpenTooltip = () => {
+		if (timerRef.current) {
+			clearTimeout(timerRef.current);
+			timerRef.current = null;
+		}
+	};
+
+	const scheduleCloseTooltip = () => {
+		if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+		closeTimerRef.current = setTimeout(() => {
+			closeTooltip();
+		}, CLOSE_DELAY);
+	};
+
+	const cancelCloseTooltip = () => {
+		if (closeTimerRef.current) {
+			clearTimeout(closeTimerRef.current);
+			closeTimerRef.current = null;
+		}
 	};
 
 	const openTooltip = () => {
-		if (disabled) return;
-		if (timerRef.current) clearTimeout(timerRef.current);
+		if (disabled || !hasContent) return;
+		cancelOpenTooltip();
+		cancelCloseTooltip();
+		cancelOtherTooltipTimeouts(tooltipIdRef.current);
 		timerRef.current = setTimeout(() => {
-			window.dispatchEvent(
-				new CustomEvent(TOOLTIP_OPEN_EVENT, {
-					detail: { id: tooltipIdRef.current },
-				}),
+			const parentId = findParentTooltipId(
+				triggerRef.current,
+				tooltipIdRef.current,
 			);
+			parentTooltipIdRef.current = parentId;
+			tooltipParentById.set(tooltipIdRef.current, parentId);
 			setPosition((prev) => ({ ...prev, ready: false }));
 			setIsOpen(true);
+			setActiveTooltip(tooltipIdRef.current);
+			timerRef.current = null;
 		}, delay);
 	};
 
-	useEffect(() => {
-		const handleTooltipOpened = (event) => {
-			const openedTooltipId = event?.detail?.id;
-			if (!openedTooltipId || openedTooltipId === tooltipIdRef.current) return;
-			closeTooltip();
-		};
+	const handleTriggerEnter = () => {
+		cancelOtherTooltipTimeouts(tooltipIdRef.current);
+		openTooltip();
+	};
 
-		window.addEventListener(TOOLTIP_OPEN_EVENT, handleTooltipOpened);
+	const handleTooltipEnter = () => {
+		cancelOtherTooltipTimeouts(tooltipIdRef.current);
+		cancelCloseTooltip();
+	};
+
+	useEffect(() => {
+		const unsubscribe = subscribeActiveTooltip(setActiveId);
+		tooltipTimeoutControllers.set(tooltipIdRef.current, {
+			cancelOpen: cancelOpenTooltip,
+			cancelClose: cancelCloseTooltip,
+		});
 		return () => {
-			window.removeEventListener(TOOLTIP_OPEN_EVENT, handleTooltipOpened);
+			unsubscribe();
+			tooltipTimeoutControllers.delete(tooltipIdRef.current);
 		};
 	}, []);
+
+	useEffect(() => {
+		if (!isOpen) return;
+		if (!activeId || activeId === tooltipIdRef.current) return;
+		if (isAncestorTooltip(tooltipIdRef.current, activeId)) return;
+		closeTooltip();
+	}, [activeId, isOpen]);
 
 	useLayoutEffect(() => {
 		if (!isOpen || !triggerRef.current || !tooltipRef.current) return;
@@ -121,18 +214,30 @@ export default function Tooltip({
 	useEffect(
 		() => () => {
 			if (timerRef.current) clearTimeout(timerRef.current);
+			if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+			tooltipParentById.delete(tooltipIdRef.current);
+			if (activeTooltipId === tooltipIdRef.current) {
+				setActiveTooltip(parentTooltipIdRef.current || null);
+			}
 		},
 		[],
 	);
 
+	const hiddenByChild =
+		isOpen &&
+		activeId &&
+		activeId !== tooltipIdRef.current &&
+		isAncestorTooltip(tooltipIdRef.current, activeId);
+
 	return (
 		<>
 			<span
+				data-tooltip-id={tooltipIdRef.current}
 				ref={triggerRef}
-				onMouseEnter={openTooltip}
-				onMouseLeave={closeTooltip}
-				onBlur={closeTooltip}
-				onFocus={openTooltip}
+				onMouseEnter={handleTriggerEnter}
+				onMouseLeave={scheduleCloseTooltip}
+				onBlur={scheduleCloseTooltip}
+				onFocus={handleTriggerEnter}
 				className="Tooltip__trigger">
 				{children}
 			</span>
@@ -140,11 +245,15 @@ export default function Tooltip({
 				? createPortal(
 						<div
 							ref={tooltipRef}
+							data-tooltip-id={tooltipIdRef.current}
 							className="Tooltip"
+							onMouseEnter={handleTooltipEnter}
+							onMouseLeave={scheduleCloseTooltip}
 							style={{
 								top: `${position.top}px`,
 								left: `${position.left}px`,
-								visibility: position.ready ? "visible" : "hidden",
+								visibility:
+									position.ready && !hiddenByChild ? "visible" : "hidden",
 							}}>
 							{content}
 						</div>,

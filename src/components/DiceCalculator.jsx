@@ -343,47 +343,43 @@ export default function DiceCalculator() {
 							</div>
 							<div className="DiceCalculator__historyList">
 								{history.map((roll) => (
-									<Tooltip
-										delay={500}
-										key={roll.id}
-										content="Натисніть, щоб перекинути">
-										<div
-											className="DiceCalculator__historyItem"
-											onClick={() => parseAndRoll(roll.formula)}>
-											<Tooltip
-												delay={500}
-												content={`${roll.formula} = ${roll.total} (${getFullBreakdownString(roll.breakdown)})`}>
-												<div className="DiceCalculator__historyInfo">
-													<span>
-														<strong>
-															{roll.formula} =
-															<span
-																className={
-																	roll.isCritical
-																		? roll.total === 20
-																			? "dice-max"
-																			: "dice-min"
-																		: ""
-																}>
-																{" "}
-																{roll.total}
-															</span>
-														</strong>
-													</span>
-													<span className="muted">
-														({renderBreakdown(roll.breakdown)})
-													</span>
-												</div>
-											</Tooltip>
-										</div>
-									</Tooltip>
+									<div
+										className="DiceCalculator__historyItem"
+										onClick={() => parseAndRoll(roll.formula)}
+										key={roll.id}>
+										<Tooltip
+											delay={750}
+											content={`${roll.formula} = ${roll.total} (${getFullBreakdownString(roll.breakdown)})`}>
+											<div className="DiceCalculator__historyInfo">
+												<span>
+													<strong>
+														{roll.formula} =
+														<span
+															className={
+																roll.isCritical
+																	? roll.total === 20
+																		? "dice-max"
+																		: "dice-min"
+																	: ""
+															}>
+															{" "}
+															{roll.total}
+														</span>
+													</strong>
+												</span>
+												<span className="muted">
+													({renderBreakdown(roll.breakdown)})
+												</span>
+											</div>
+										</Tooltip>
+									</div>
 								))}
 							</div>
 						</div>
 					)}
 				</div>
 			)}
-			<Tooltip content="CTRL+D" delay={1000}>
+			<Tooltip content="CTRL+D" delay={500}>
 				<button
 					className="DiceCalculator__toggle"
 					onClick={() => setIsOpen(!isOpen)}>
