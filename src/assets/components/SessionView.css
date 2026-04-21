@@ -232,6 +232,7 @@
 .SceneCard__image-side .ImageDropzone {
 	height: 100%;
 	min-height: 180px;
+	margin: 0;
 }
 
 .SceneCard__image-side .ImageDropzone__content {
