@@ -174,34 +174,38 @@ function ImageGallery({
 										</button>
 									</React.Fragment>
 								))}
-						</div>
-
-						<div className="ImageGallery__actions">
-							{isCreatingSub ? (
-								<div className="ImageGallery__new-sub">
-									<input
-										autoFocus
-										value={newSubName}
-										onChange={(e) => setNewSubName(e.target.value)}
-										onKeyDown={(e) => e.key === "Enter" && handleCreateSub()}
-										placeholder="Назва папки..."
-									/>
-									<Button size="small" icon="check" onClick={handleCreateSub} />
+							<Icon name="chevron" size={10} className="BreadcrumbSeparator" />
+							<div className="ImageGallery__new-sub">
+								{isCreatingSub ? (
+									<>
+										<input
+											autoFocus
+											value={newSubName}
+											onChange={(e) => setNewSubName(e.target.value)}
+											onKeyDown={(e) => e.key === "Enter" && handleCreateSub()}
+											placeholder="Назва папки..."
+										/>
+										<Button
+											size="small"
+											icon="check"
+											onClick={handleCreateSub}
+										/>
+										<Button
+											size="small"
+											icon="x"
+											onClick={() => setIsCreatingSub(false)}
+										/>
+									</>
+								) : (
 									<Button
+										variant="ghost"
 										size="small"
-										icon="x"
-										onClick={() => setIsCreatingSub(false)}
+										icon="plus"
+										onClick={() => setIsCreatingSub(true)}
+										title="Створити підпапку"
 									/>
-								</div>
-							) : (
-								<Button
-									variant="ghost"
-									size="small"
-									icon="plus"
-									onClick={() => setIsCreatingSub(true)}
-									title="Створити підпапку"
-								/>
-							)}
+								)}
+							</div>
 						</div>
 						<div className="ImageGallery__upload-actions">
 							{hasSelection && (
@@ -262,7 +266,9 @@ function ImageGallery({
 									className={`ImageGallery__item ImageGallery__item--folder ${selectedSubs.has(sub) ? "is-selected" : ""} ${dragOverTarget?.id === sub ? "is-drag-over" : ""}`}
 									onClick={(e) => handleItemClick(sub, "sub", index, e)}
 									onDoubleClick={() => {
-										const nextPath = selectedSub ? `${selectedSub}/${sub}` : sub;
+										const nextPath = selectedSub
+											? `${selectedSub}/${sub}`
+											: sub;
 										setSelectedSub(nextPath);
 									}}
 									onContextMenu={async (e) => {
@@ -304,7 +310,9 @@ function ImageGallery({
 											/>
 										</div>
 									</div>
-									<span className="ImageGallery__name">{SUB_LABELS[sub] || sub}</span>
+									<span className="ImageGallery__name">
+										{SUB_LABELS[sub] || sub}
+									</span>
 								</div>
 							))}
 
@@ -346,7 +354,9 @@ function ImageGallery({
 											className="ImageGallery__checkbox"
 											onClick={(e) => toggleSelect(img.name, "image", e)}>
 											<Icon
-												name={selectedFilenames.has(img.name) ? "check" : "plus"}
+												name={
+													selectedFilenames.has(img.name) ? "check" : "plus"
+												}
 												size={12}
 											/>
 										</div>

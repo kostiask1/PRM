@@ -173,6 +173,7 @@ export default function useImageGallery({
 			setNewSubName("");
 			setIsCreatingSub(false);
 			loadSubcategories();
+			setSelectedSub(fullPath);
 		} catch (err) {
 			modal?.alert("Помилка", err.message);
 		}
