@@ -40,7 +40,8 @@
 }
 
 .Modal__card--custom {
-	max-width: min(1200px, 96vw);
+	max-width: min(1400px, 96vw);
+	width: 100%;
 	height: 90vh;
 }
 
@@ -131,6 +132,35 @@
 .MentionPicker__actions {
 	display: flex;
 	justify-content: flex-end;
+}
+
+.CreateCampaignModal {
+	display: grid;
+	gap: var(--space-3);
+}
+
+.CreateCampaignModal__label {
+	font-size: 0.82rem;
+	color: var(--muted);
+}
+
+.CreateCampaignModal__actions {
+	display: flex;
+	gap: var(--space-2);
+	justify-content: flex-end;
+}
+
+.CreateCampaignModal__import {
+	padding-top: var(--space-2);
+	border-top: 1px solid color-mix(in srgb, var(--border), transparent 45%);
+	display: grid;
+	gap: var(--space-2);
+}
+
+.CreateCampaignModal__strategyRow {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-1);
 }
 
 @media (max-width: 768px) {
