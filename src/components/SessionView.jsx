@@ -7,10 +7,13 @@ import Panel from "./Panel";
 import DraggableList from "./DraggableList";
 import Modal from "./Modal";
 import NoteCard from "./NoteCard";
-import ImageDropzone from "./ImageDropzone";
 import ImageGallery from "./ImageGallery";
 import CharacterCard from "./CharacterCard";
-import Checkbox from "./Checkbox";
+import TodoSection from "./session/TodoSection";
+import TodoItem from "./session/TodoItem";
+import SceneCardHeader from "./session/SceneCardHeader";
+import SceneCardMedia from "./session/SceneCardMedia";
+import SceneCardFields from "./session/SceneCardFields";
 import "../assets/components/SessionView.css";
 import withSessionView from "../hoc/withSessionView";
 import SessionViewModel from "../models/SessionViewModel.js";
@@ -164,6 +167,8 @@ function SessionView({
 								return (
 									<SceneCard
 										number={idx + 1}
+										scene={scene}
+										fields={SessionViewModel.sceneSchema}
 										collapsed={scene.collapsed}
 										onToggle={() => toggleSceneCollapse(scene.id)}
 										onRemove={() => removeScene(scene.id)}
@@ -176,21 +181,10 @@ function SessionView({
 										campaignSlug={campaignSlug}
 										hasEncounter={!!scene.encounterId}
 										encounterName={viewModel.findEncounterName(scene)}
-										onTriggerSave={() => triggerSave(session, true)}>
-										{SessionViewModel.sceneSchema.map((field) => (
-											<div key={field.key} className="TodoItem__content">
-												<div className="TodoItem__title">{field.title}</div>
-												<EditableField
-													type={field.type}
-													value={scene.texts?.[field.key] || ""}
-													onChange={(e) =>
-														updateScene(scene.id, field.key, e.target.value)
-													}
-													placeholder={field.placeholder}
-												/>
-											</div>
-										))}
-									</SceneCard>
+										onUpdateField={(field, value) =>
+											updateScene(scene.id, field, value)
+										}
+									/>
 								);
 							}}
 						/>
@@ -274,40 +268,10 @@ export { SessionView };
 const SessionViewWithHOC = withSessionView(SessionView);
 export default SessionViewWithHOC;
 
-function TodoSection({ title, children, action }) {
-	return (
-		<section className="TodoSection">
-			<div className="TodoSection__header">
-				<h3>{title}</h3>
-				{action}
-			</div>
-			{children && <div className="TodoSection__body">{children}</div>}
-		</section>
-	);
-}
-
-function TodoItem({ title, note, checked, onChange, children }) {
-	return (
-		<div className={`TodoItem ${checked ? "TodoItem--done" : ""}`}>
-			<Checkbox
-				checked={checked}
-				onChange={onChange}
-				label={
-					<div className="TodoItem__content">
-						<div className="TodoItem__trigger">
-							{title && <div className="TodoItem__title">{title}</div>}
-							{note && <div className="TodoItem__note">{note}</div>}
-						</div>
-						{children}
-					</div>
-				}
-			/>
-		</div>
-	);
-}
-
 function SceneCard({
 	number,
+	scene,
+	fields,
 	onRemove,
 	collapsed,
 	onToggle,
@@ -318,91 +282,38 @@ function SceneCard({
 	imageUrl,
 	onImageChange,
 	campaignSlug,
-	children,
+	onUpdateField,
 }) {
 	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+	const encounterLabel = hasEncounter ? encounterName : "Encounter";
 
 	return (
 		<div className="SceneCard">
-			<div className="SceneCard__header" onClick={onToggle}>
-				<div className="SceneCard__titleGroup">
-					<div className="SceneCard__toggle">
-						<Icon name="chevron" className={collapsed ? "Icon--rotated" : ""} />
-					</div>
-					<div className="SceneCard__title">Сцена {number}</div>
-				</div>
-				<div className="SceneCard__headerActions">
-					<Button
-						variant="ghost"
-						onClick={handleOpenNpcCreate}
-						icon="plus"
-						strokeWidth={2.5}>
-						Створити NPC
-					</Button>
-					<Button
-						variant={hasEncounter ? "primary" : "ghost"}
-						onClick={(e) => {
-							e.stopPropagation();
-							onOpenEncounter();
-						}}
-						title={
-							hasEncounter ? "Відкрити зіткнення" : "Додати бойове зіткнення"
-						}>
-						<Icon
-							name="swords"
-							size={18}
-							className="SceneCard__encounter-icon"
-						/>
-						<span className="SceneCard__encounter-name">
-							{hasEncounter ? encounterName : "Додати бій"}
-						</span>
-					</Button>
-					<Button
-						variant="danger"
-						icon="x"
-						iconSize={16}
-						onClick={(e) => {
-							e.stopPropagation();
-							onRemove();
-						}}
-					/>
-				</div>
-			</div>
+			<SceneCardHeader
+				number={number}
+				collapsed={collapsed}
+				onToggle={onToggle}
+				onOpenNpcCreate={handleOpenNpcCreate}
+				onOpenEncounter={onOpenEncounter}
+				onRemove={onRemove}
+				hasEncounter={hasEncounter}
+				encounterName={encounterLabel}
+			/>
 			{!collapsed && (
 				<div className="SceneCard__content">
-					<div className="SceneCard__image-side">
-						<div className="SceneCard__portrait-container">
-							{imageUrl ? (
-								<div className="SceneCard__portrait-wrapper">
-									<img
-										src={imageUrl}
-										alt={`Scene ${number}`}
-										onClick={(e) => {
-											e.stopPropagation();
-											setIsGalleryOpen(true);
-										}}
-									/>
-									<Button
-										variant="danger"
-										size="small"
-										icon="x"
-										onClick={(e) => {
-											e.stopPropagation();
-											onImageChange(null);
-										}}
-										className="SceneCard__image-delete"
-										title="Видалити зображення"
-									/>
-								</div>
-							) : (
-								<ImageDropzone
-									campaignSlug={campaignSlug}
-									onUploadSuccess={(res) => onImageChange(res.url)}
-								/>
-							)}
-						</div>
-					</div>
-					<div className="SceneCard__grid">{children}</div>
+					<SceneCardMedia
+						number={number}
+						imageUrl={imageUrl}
+						onImageClick={() => setIsGalleryOpen(true)}
+						onImageClear={() => onImageChange(null)}
+						campaignSlug={campaignSlug}
+						onUploadSuccess={(result) => onImageChange(result.url)}
+					/>
+					<SceneCardFields
+						fields={fields}
+						scene={scene}
+						onUpdateField={onUpdateField}
+					/>
 				</div>
 			)}
 

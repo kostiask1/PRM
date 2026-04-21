@@ -4,93 +4,10 @@ import DiceCalculator from "./components/DiceCalculator";
 import MainContent from "./components/MainContent";
 import Modal from "./components/Modal";
 import Sidebar from "./components/Sidebar";
-import CharacterCard from "./components/CharacterCard";
-import Input from "./components/Input";
-import Button from "./components/Button";
+import EntityModalContent from "./components/modals/EntityModalContent";
+import MentionPickerModalContent from "./components/modals/MentionPickerModalContent";
 import { parseUrl } from "./utils/navigation";
 import { ModalContext } from "./context/ModalContext";
-
-/**
- * Допоміжний компонент для керування станом сутності всередині модального вікна.
- * Забезпечує реактивність при редагуванні полів персонажа.
- */
-const EntityModalContent = ({ initialEntity, campaignSlug, type, onClose }) => {
-	const [entity, setEntity] = useState(initialEntity);
-	const handleUpdate = async (id, updated) => {
-		setEntity(updated);
-		await api.updateEntity(campaignSlug, type, updated.slug, updated);
-		window.dispatchEvent(new CustomEvent("refresh-entities"));
-	};
-	return (
-		<CharacterCard
-			character={{ ...entity, collapsed: false }}
-			onChange={handleUpdate}
-			onDelete={async () => {
-				await api.deleteEntity(campaignSlug, type, entity.slug);
-				window.dispatchEvent(new CustomEvent("refresh-entities"));
-				onClose();
-			}}
-			onToggleCollapse={() => {}}
-			campaignSlug={campaignSlug}
-			type={type}
-		/>
-	);
-};
-
-const MentionPickerModalContent = ({ entities, onSelect, onCancel }) => {
-	const [query, setQuery] = useState("");
-
-	const normalizedQuery = query.trim().toLowerCase();
-	const filteredEntities = entities.filter((entity) => {
-		if (!normalizedQuery) return true;
-		const name = (entity.name || "").toLowerCase();
-		const firstName = (entity.firstName || "").toLowerCase();
-		const lastName = (entity.lastName || "").toLowerCase();
-		const fullName = `${firstName} ${lastName}`.trim();
-		return (
-			name.includes(normalizedQuery) ||
-			firstName.includes(normalizedQuery) ||
-			lastName.includes(normalizedQuery) ||
-			fullName.includes(normalizedQuery)
-		);
-	});
-
-	return (
-		<div className="MentionPicker">
-			<Input
-				value={query}
-				onChange={(e) => setQuery(e.target.value)}
-				placeholder="Пошук NPC або персонажа..."
-				autoFocus
-			/>
-
-			<div className="MentionPicker__list">
-				{filteredEntities.length > 0 ? (
-					filteredEntities.map((entity) => (
-						<button
-							key={`${entity.type}-${entity.id}-${entity.name}`}
-							type="button"
-							className="MentionPicker__item"
-							onClick={() => onSelect(entity.name)}>
-							<span>{entity.name}</span>
-							<span className="muted">
-								{entity.type === "npc" ? "NPC" : "Персонаж"}
-							</span>
-						</button>
-					))
-				) : (
-					<p className="muted">Нічого не знайдено.</p>
-				)}
-			</div>
-
-			<div className="MentionPicker__actions">
-				<Button variant="ghost" onClick={onCancel}>
-					Скасувати
-				</Button>
-			</div>
-		</div>
-	);
-};
 
 /**
  * Main Application Component
