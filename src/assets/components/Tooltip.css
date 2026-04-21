@@ -1,0 +1,34 @@
+.Tooltip__trigger {
+	max-width: 100%;
+}
+
+.Tooltip {
+	position: fixed;
+	z-index: 2100;
+	max-width: min(680px, calc(100vw - 24px));
+	background: var(--panel-2);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	box-shadow: var(--shadow);
+	padding: var(--space-3);
+	pointer-events: none;
+	color: var(--text);
+	font-size: 0.9rem;
+	line-height: 1.4;
+}
+
+.Tooltip__title {
+	font-weight: 700;
+	margin-bottom: var(--space-1);
+}
+
+.Tooltip__meta {
+	font-size: 0.8rem;
+	color: var(--muted);
+	margin-bottom: var(--space-2);
+}
+
+.Tooltip__text {
+	white-space: normal;
+	overflow-wrap: anywhere;
+}

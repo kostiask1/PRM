@@ -17,6 +17,11 @@ import ClickToCopy from "./ClickToCopy.jsx";
 import Button from "./Button.jsx";
 import MonsterStatBlockModel from "../models/MonsterStatBlockModel.js";
 import { useModal } from "../context/ModalContext";
+import { loadConditionsMap, normalizeConditionName } from "../utils/conditions.js";
+import {
+	getConditionByName,
+	getSpellByName,
+} from "../utils/referencePreview.js";
 
 const SPELL_CACHE = new Map();
 
@@ -92,9 +97,79 @@ export default function MonsterStatBlock({
 			}
 		}
 
-		modal?.confirm(
-			capitalizeWords(spell.name.split("|")[0]),
-			<SpellCard spell={spell} onSpellClick={handleSpellClick} />,
+		modal?.open({
+			title: capitalizeWords(spell.name.split("|")[0]),
+			type: "confirm",
+			showFooter: false,
+			children: (
+				<SpellCard
+					spell={spell}
+					onSpellClick={handleSpellClick}
+					onConditionClick={handleConditionClick}
+				/>
+			),
+		});
+	};
+
+	const handleConditionClick = async (nameOrCondition) => {
+		const rawName =
+			typeof nameOrCondition === "string"
+				? nameOrCondition
+				: nameOrCondition?.name || "";
+		const normalizedName = normalizeConditionName(rawName);
+		if (!normalizedName) return;
+
+		try {
+			const conditionsMap = await loadConditionsMap();
+			const condition = conditionsMap.get(normalizedName);
+			if (!condition) return;
+
+			modal?.open({
+				title: condition.name,
+				type: "confirm",
+				showFooter: false,
+				children: (
+					<div className="MonsterStatBlock__section">
+						{renderRecursiveContent(
+							condition.entries,
+							handleSpellClick,
+							handleConditionClick,
+							handleSpellHover,
+							handleConditionHover,
+						)}
+					</div>
+				),
+			});
+		} catch (error) {
+			console.error("Failed to open condition", error);
+		}
+	};
+
+	const handleSpellHover = async (spellName) => {
+		const spell = await getSpellByName(spellName);
+		if (!spell) return null;
+		return (
+			<div className="Tooltip__spell-card">
+				<SpellCard
+					spell={spell}
+					onSpellClick={handleSpellClick}
+					onConditionClick={handleConditionClick}
+				/>
+			</div>
+		);
+	};
+
+	const handleConditionHover = async (conditionName) => {
+		const condition = await getConditionByName(conditionName);
+		if (!condition) return null;
+		return (
+			<div>
+				<div className="Tooltip__title">{condition.name}</div>
+				{condition.source && <div className="Tooltip__meta">{condition.source}</div>}
+				<div className="Tooltip__text">
+					{renderRecursiveContent(condition.entries, null, null, null, null)}
+				</div>
+			</div>
 		);
 	};
 
@@ -138,10 +213,22 @@ export default function MonsterStatBlock({
 				<h4>{title}:</h4>
 				{actions.map((action, index) => (
 					<div key={index} className="MonsterStatBlock__action">
-						<strong>{renderRecursiveContent(action.name)}.</strong>{" "}
+						<strong>
+							{renderRecursiveContent(
+								action.name,
+								handleSpellClick,
+								handleConditionClick,
+								handleSpellHover,
+								handleConditionHover,
+							)}
+							.
+						</strong>{" "}
 						{renderRecursiveContent(
 							action.entries || action.desc,
 							handleSpellClick,
+							handleConditionClick,
+							handleSpellHover,
+							handleConditionHover,
 						)}
 						<div className="MonsterStatBlock__action-rolls">
 							{action.attack_bonus && (
@@ -258,7 +345,13 @@ export default function MonsterStatBlock({
 						<h4>{sc.name}:</h4>
 						{sc.headerEntries && (
 							<p>
-								{renderRecursiveContent(sc.headerEntries, handleSpellClick)}
+								{renderRecursiveContent(
+									sc.headerEntries,
+									handleSpellClick,
+									handleConditionClick,
+									handleSpellHover,
+									handleConditionHover,
+								)}
 							</p>
 						)}
 						{sc.will && (
@@ -266,7 +359,13 @@ export default function MonsterStatBlock({
 								<strong>At will:</strong>{" "}
 								{sc.will.map((s, i) => (
 									<React.Fragment key={i}>
-										{renderRecursiveContent(s, handleSpellClick)}
+										{renderRecursiveContent(
+											s,
+											handleSpellClick,
+											handleConditionClick,
+											handleSpellHover,
+											handleConditionHover,
+										)}
 										{i < sc.will.length - 1 ? ", " : ""}
 									</React.Fragment>
 								))}
@@ -278,7 +377,13 @@ export default function MonsterStatBlock({
 									<strong>{freq} each:</strong>{" "}
 									{list.map((s, i) => (
 										<React.Fragment key={i}>
-											{renderRecursiveContent(s, handleSpellClick)}
+											{renderRecursiveContent(
+												s,
+												handleSpellClick,
+												handleConditionClick,
+												handleSpellHover,
+												handleConditionHover,
+											)}
 											{i < list.length - 1 ? ", " : ""}
 										</React.Fragment>
 									))}
@@ -297,7 +402,13 @@ export default function MonsterStatBlock({
 									</strong>
 									{info.spells.map((s, i) => (
 										<React.Fragment key={i}>
-											{renderRecursiveContent(s, handleSpellClick)}
+											{renderRecursiveContent(
+												s,
+												handleSpellClick,
+												handleConditionClick,
+												handleSpellHover,
+												handleConditionHover,
+											)}
 											{i < info.spells.length - 1 ? ", " : ""}
 										</React.Fragment>
 									))}
@@ -382,7 +493,13 @@ export default function MonsterStatBlock({
 					<div className="MonsterStatBlock__stats">
 						<div className="stat-item">
 							<strong>HP:</strong>{" "}
-							{renderRecursiveContent(model.hp.val, handleSpellClick)}{" "}
+							{renderRecursiveContent(
+								model.hp.val,
+								handleSpellClick,
+								handleConditionClick,
+								handleSpellHover,
+								handleConditionHover,
+							)}{" "}
 							{model.hp.formula && (
 								<>
 									(<RollDice formula={model.hp.formula} />)
@@ -391,8 +508,20 @@ export default function MonsterStatBlock({
 						</div>
 						<div className="stat-item ac">
 							<strong>AC:</strong>{" "}
-							{renderRecursiveContent(model.ac.val, handleSpellClick)}{" "}
-							{renderRecursiveContent(model.ac.desc, handleSpellClick)}
+							{renderRecursiveContent(
+								model.ac.val,
+								handleSpellClick,
+								handleConditionClick,
+								handleSpellHover,
+								handleConditionHover,
+							)}{" "}
+							{renderRecursiveContent(
+								model.ac.desc,
+								handleSpellClick,
+								handleConditionClick,
+								handleSpellHover,
+								handleConditionHover,
+							)}
 						</div>
 						<div className="stat-item">
 							<strong>Speed:</strong> {model.speed}
@@ -489,7 +618,13 @@ export default function MonsterStatBlock({
 				<div className="MonsterStatBlock__description">
 					<p>
 						<strong>Senses:</strong>{" "}
-						{renderRecursiveContent(monster.senses, handleSpellClick)}
+						{renderRecursiveContent(
+							monster.senses,
+							handleSpellClick,
+							handleConditionClick,
+							handleSpellHover,
+							handleConditionHover,
+						)}
 					</p>
 					<p>
 						<strong>Languages:</strong>{" "}
@@ -504,6 +639,9 @@ export default function MonsterStatBlock({
 						{parseRollsAndSpells(
 							preprocessTags(monster.desc),
 							handleSpellClick,
+							handleConditionClick,
+							handleSpellHover,
+							handleConditionHover,
 						)}
 					</div>
 				)}
@@ -518,13 +656,25 @@ export default function MonsterStatBlock({
 			{monster.lairActions && monster.lairActions.length > 0 && (
 				<div className="MonsterStatBlock__section">
 					<h4>Lair Actions:</h4>
-					{renderRecursiveContent(monster.lairActions, handleSpellClick)}
+					{renderRecursiveContent(
+						monster.lairActions,
+						handleSpellClick,
+						handleConditionClick,
+						handleSpellHover,
+						handleConditionHover,
+					)}
 				</div>
 			)}
 			{monster.regionalEffects && monster.regionalEffects.length > 0 && (
 				<div className="MonsterStatBlock__section">
 					<h4>Regional Effects:</h4>
-					{renderRecursiveContent(monster.regionalEffects, handleSpellClick)}
+					{renderRecursiveContent(
+						monster.regionalEffects,
+						handleSpellClick,
+						handleConditionClick,
+						handleSpellHover,
+						handleConditionHover,
+					)}
 				</div>
 			)}
 		</div>

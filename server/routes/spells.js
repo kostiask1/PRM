@@ -3,6 +3,23 @@ const router = express.Router();
 const path = require("path");
 const storage = require("../storage");
 
+function getSourcePriority(source) {
+	const normalized = String(source || "").toUpperCase();
+	if (normalized === "XPHB") return 3;
+	if (normalized === "PHB") return 2;
+	return 1;
+}
+
+function pickPreferredRecord(current, candidate) {
+	if (!current) return candidate;
+	const currentPriority = getSourcePriority(current.source);
+	const candidatePriority = getSourcePriority(candidate.source);
+	if (candidatePriority !== currentPriority) {
+		return candidatePriority > currentPriority ? candidate : current;
+	}
+	return current;
+}
+
 router.get("/search", async (req, res, next) => {
 	try {
 		const { name, level, school } = req.query;
@@ -66,6 +83,39 @@ router.get("/sources", async (req, res, next) => {
 		if (!(await storage.exists(indexPath))) return res.json([]);
 		const index = await storage.readJson(indexPath);
 		res.json(Object.keys(index));
+	} catch (error) {
+		next(error);
+	}
+});
+
+router.get("/conditions", async (_req, res, next) => {
+	try {
+		const conditionsPath = path.join(__dirname, "..", "..", "database", "conditions.json");
+		if (!(await storage.exists(conditionsPath))) return res.json([]);
+
+		const data = await storage.readJson(conditionsPath);
+		const conditionList = Array.isArray(data?.condition) ? data.condition : [];
+		const statusList = Array.isArray(data?.status) ? data.status : [];
+		const merged = [...conditionList, ...statusList];
+		const byName = new Map();
+
+		for (const item of merged) {
+			const name = String(item?.name || "").trim();
+			if (!name) continue;
+			const key = name.toLowerCase();
+			const normalized = {
+				name,
+				source: item?.source || null,
+				page: item?.page || null,
+				entries: item?.entries || [],
+			};
+			byName.set(key, pickPreferredRecord(byName.get(key), normalized));
+		}
+
+		const list = Array.from(byName.values()).sort((a, b) =>
+			a.name.localeCompare(b.name),
+		);
+		res.json(list);
 	} catch (error) {
 		next(error);
 	}

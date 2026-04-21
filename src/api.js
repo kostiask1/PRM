@@ -163,6 +163,7 @@ export const api = {
 	getSpellSources: () => api.request("/spells/sources"),
 	getSpellData: (source) =>
 		api.request(`/spells/${encodeURIComponent(source)}`),
+	getConditions: () => api.request("/spells/conditions"),
 	searchSpells: (params = {}) => {
 		const query = new URLSearchParams();
 		if (params.name) query.append("name", params.name);
