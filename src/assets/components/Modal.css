@@ -72,7 +72,7 @@
 }
 
 .Modal__body {
-	padding: var(--space-6);
+	padding: var(--space-4) var(--space-6);
 	overflow: hidden;
 	overflow-y: auto;
 }

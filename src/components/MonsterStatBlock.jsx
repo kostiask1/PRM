@@ -100,7 +100,6 @@ export default function MonsterStatBlock({
 	const { handleConditionClick, handleConditionHover } = useConditionReference({
 		onSpellClick: handleSpellClick,
 		getSpellHoverHandler: () => handleSpellHover,
-		modalContentClassName: "MonsterStatBlock__section",
 	});
 
 	const handleSpellHover = async (spellName) => {
