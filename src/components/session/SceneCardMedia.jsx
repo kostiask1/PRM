@@ -1,54 +1,28 @@
-import Button from "../Button";
-import ImageDropzone from "../ImageDropzone";
+﻿import ImageAssetField from "../ImageAssetField";
 
 export default function SceneCardMedia({
 	number,
 	imageUrl,
-	onImagePreview,
-	onImageReplace,
-	onImageClear,
 	campaignSlug,
-	onUploadSuccess,
+	onImageChange,
 }) {
 	return (
 		<div className="SceneCard__image-side">
-			<div className="SceneCard__portrait-container">
-				{imageUrl ? (
-					<div className="SceneCard__portrait-wrapper">
-						<img
-							src={imageUrl}
-							alt={`Сцена ${number}`}
-							onClick={(event) => {
-								event.stopPropagation();
-								onImagePreview();
-							}}
-							onContextMenu={(event) => {
-								event.preventDefault();
-								event.stopPropagation();
-								onImageReplace();
-							}}
-						/>
-						<Button
-							variant="danger"
-							size="small"
-							icon="x"
-							onClick={(event) => {
-								event.stopPropagation();
-								onImageClear();
-							}}
-							className="SceneCard__image-delete"
-						/>
-					</div>
-				) : (
-					<ImageDropzone
-						campaignSlug={campaignSlug}
-						initialSource={campaignSlug}
-						initialCategory="scenes"
-						initialSubcategory=""
-						onUploadSuccess={onUploadSuccess}
-					/>
-				)}
-			</div>
+			<ImageAssetField
+				imageUrl={imageUrl}
+				campaignSlug={campaignSlug}
+				target="scene"
+				onImageChange={onImageChange}
+				imageAlt={`Сцена ${number}`}
+				enableContextReplace={true}
+				showClearButton={true}
+				containerClassName="SceneCard__portrait-container"
+				wrapperClassName="SceneCard__portrait-wrapper"
+				deleteButtonClassName="SceneCard__image-delete"
+				previewTitle={`Сцена ${number}`}
+				previewModalClassName="SceneImageModal"
+				previewContentClassName="SceneImageModal__content"
+			/>
 		</div>
 	);
 }

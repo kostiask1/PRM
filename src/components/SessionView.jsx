@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import Icon from "./Icon";
 import Button from "./Button";
 import EditableField from "./EditableField";
@@ -7,7 +6,6 @@ import Panel from "./Panel";
 import DraggableList from "./DraggableList";
 import Modal from "./Modal";
 import NoteCard from "./NoteCard";
-import ImageGallery from "./ImageGallery";
 import CharacterCard from "./CharacterCard";
 import CollapseToggleButton from "./CollapseToggleButton";
 import TodoSection from "./session/TodoSection";
@@ -313,31 +311,7 @@ function SceneCard({
 	onSceneNoteToggleCollapse,
 	onSceneNoteDelete,
 }) {
-	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
-	const [isImagePreviewOpen, setIsImagePreviewOpen] = useState(false);
-	const [galleryLocation, setGalleryLocation] = useState({
-		source: campaignSlug || "general",
-		category: "scenes",
-		subcategory: "",
-	});
 	const encounterLabel = hasEncounter ? encounterName : "Encounter";
-
-	useEffect(() => {
-		setGalleryLocation((prev) => ({
-			...prev,
-			source: campaignSlug || "general",
-			category: "scenes",
-		}));
-	}, [campaignSlug]);
-
-	const openGalleryAtImageLocation = () => {
-		setGalleryLocation({
-			source: campaignSlug || "general",
-			category: "scenes",
-			subcategory: "",
-		});
-		setIsGalleryOpen(true);
-	};
 
 	return (
 		<div className="SceneCard">
@@ -390,41 +364,12 @@ function SceneCard({
 					<SceneCardMedia
 						number={number}
 						imageUrl={imageUrl}
-						onImagePreview={() => setIsImagePreviewOpen(true)}
-						onImageReplace={openGalleryAtImageLocation}
-						onImageClear={() => onImageChange(null)}
 						campaignSlug={campaignSlug}
-						onUploadSuccess={(result) => onImageChange(result.url)}
+						onImageChange={onImageChange}
 					/>
 				</div>
 			)}
 
-			{isImagePreviewOpen && imageUrl && (
-				<Modal
-					title={`Сцена ${number}`}
-					type="custom"
-					className="SceneImageModal"
-					onCancel={() => setIsImagePreviewOpen(false)}
-					showFooter={false}>
-					<div
-						className="SceneImageModal__content"
-						onClick={() => setIsImagePreviewOpen(false)}>
-						<img src={imageUrl} alt={`Сцена ${number}`} />
-					</div>
-				</Modal>
-			)}
-
-			<ImageGallery
-				isOpen={isGalleryOpen}
-				onClose={() => setIsGalleryOpen(false)}
-				onSelect={(img) => {
-					onImageChange(img.url);
-					setIsGalleryOpen(false);
-				}}
-				initialSource={galleryLocation.source}
-				initialCategory={galleryLocation.category}
-				initialSubcategory={galleryLocation.subcategory}
-			/>
 		</div>
 	);
 }

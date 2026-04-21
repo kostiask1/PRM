@@ -517,21 +517,19 @@ export default function MonsterStatBlock({
 				{model.skills.length > 0 && (
 					<div className="MonsterStatBlock__property-item MonsterStatBlock__property-item--skills">
 						<strong>Skills:</strong>{" "}
-						{model.skills.map(
-							([name, value], idx, arr) => (
-								<React.Fragment key={name}>
-									<span
-										className="skill-name"
-										style={{ textTransform: "capitalize" }}>
-										{name}
-									</span>{" "}
-									<RollDice formula={`1d20${formatModifier(parseInt(value))}`}>
-										{formatModifier(parseInt(value))}
-									</RollDice>
-									{idx < arr.length - 1 ? ", " : ""}
-								</React.Fragment>
-							),
-						)}
+						{model.skills.map(([name, value], idx, arr) => (
+							<React.Fragment key={name}>
+								<span
+									className="skill-name"
+									style={{ textTransform: "capitalize" }}>
+									{name}
+								</span>{" "}
+								<RollDice formula={`1d20${formatModifier(parseInt(value))}`}>
+									{formatModifier(parseInt(value))}
+								</RollDice>
+								{idx < arr.length - 1 ? ", " : ""}
+							</React.Fragment>
+						))}
 					</div>
 				)}
 
@@ -572,11 +570,10 @@ export default function MonsterStatBlock({
 						)}
 					</p>
 					<p>
-						<strong>Languages:</strong>{" "}
-						{model.languages}
+						<strong>Languages:</strong> {model.languages}
 					</p>
 					<p>
-						<strong>Challenge:</strong> {model.challenge}
+						<strong>CR:</strong> {model.challenge}
 					</p>
 				</div>
 				{monster.desc && (

@@ -2,16 +2,12 @@ import { useState } from "react";
 import Button from "./Button";
 import EditableField from "./EditableField";
 import NoteCard from "./NoteCard";
-import Icon from "./Icon";
-import ImageDropzone from "./ImageDropzone";
-import ImageGallery from "./ImageGallery";
-import Modal from "./Modal";
+import ImageAssetField from "./ImageAssetField";
 import ReactMarkdown from "react-markdown";
 import "../assets/components/CharacterCard.css";
 import Select from "./Select";
 import CharacterCardModel from "../models/CharacterCardModel.js";
 import CollapseToggleButton from "./CollapseToggleButton";
-import { resolveImageGalleryLocation } from "../utils/imageLocation.js";
 
 export default function CharacterCard({
 	character,
@@ -24,13 +20,6 @@ export default function CharacterCard({
 	type = "characters",
 }) {
 	const [isEditing, setIsEditing] = useState(initialEditing);
-	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
-	const [isImagePreviewOpen, setIsImagePreviewOpen] = useState(false);
-	const [galleryLocation, setGalleryLocation] = useState({
-		source: campaignSlug,
-		category: type === "npc" ? "tokens" : "characters",
-		subcategory: type === "npc" ? "npc" : "players",
-	});
 	const characterModel = new CharacterCardModel(character);
 
 	const updateField = (field, value) => {
@@ -49,16 +38,6 @@ export default function CharacterCard({
 		updateField("notes", characterModel.withDeletedNote(noteId));
 	};
 
-	const openGalleryAtImageLocation = () => {
-		setGalleryLocation(
-			resolveImageGalleryLocation(character.imageUrl, {
-				source: campaignSlug,
-				category: type === "npc" ? "tokens" : "characters",
-				subcategory: type === "npc" ? "npc" : "players",
-			}),
-		);
-		setIsGalleryOpen(true);
-	};
 
 	return (
 		<div
@@ -113,48 +92,21 @@ export default function CharacterCard({
 				<div className="character-card__body">
 					<div className="character-card__main-layout">
 						<div className="character-card__image-side">
-							<div className="character-card__portrait-container">
-								{character.imageUrl && (
-									<div
-										className={`character-card__portrait-wrapper ${isEditing ? "is-editable" : ""}`}>
-										<img
-											src={character.imageUrl}
-											alt="Portrait"
-											onClick={() => {
-												if (isEditing) {
-													openGalleryAtImageLocation();
-													return;
-												}
-												setIsImagePreviewOpen(true);
-											}}
-										/>
-										{isEditing && (
-											<Button
-												variant="danger"
-												size="small"
-												icon="x"
-												onClick={(e) => {
-													e.stopPropagation();
-													updateField("imageUrl", null);
-												}}
-												className="character-card__image-delete"
-												title="Видалити зображення"
-											/>
-										)}
-									</div>
-								)}
-								{!character.imageUrl && isEditing && (
-									<ImageDropzone
-										campaignSlug={campaignSlug}
-										onUploadSuccess={(res) => updateField("imageUrl", res.url)}
-									/>
-								)}
-								{!character.imageUrl && !isEditing && (
-									<div className="character-card__portrait-placeholder">
-										<Icon name="user" size={48} />
-									</div>
-								)}
-							</div>
+							<ImageAssetField
+								imageUrl={character.imageUrl}
+								campaignSlug={campaignSlug}
+								target={type === "npc" ? "npc" : "character"}
+								isEditing={isEditing}
+								showClearButton={isEditing}
+								onImageChange={(url) => updateField("imageUrl", url)}
+								imageAlt="Portrait"
+								containerClassName="character-card__portrait-container"
+								wrapperClassName={`character-card__portrait-wrapper ${isEditing ? "is-editable" : ""}`}
+								deleteButtonClassName="character-card__image-delete"
+								previewTitle={characterModel.fullName || "Portrait"}
+								previewModalClassName="CharacterImageModal"
+								previewContentClassName="CharacterImageModal__content"
+							/>
 						</div>
 
 						<div className="character-card__content-side">
@@ -293,32 +245,6 @@ export default function CharacterCard({
 				</div>
 			)}
 
-			<ImageGallery
-				isOpen={isGalleryOpen}
-				onClose={() => setIsGalleryOpen(false)}
-				onSelect={(img) => {
-					updateField("imageUrl", img.url);
-					setIsGalleryOpen(false);
-				}}
-				initialSource={galleryLocation.source}
-				initialCategory={galleryLocation.category}
-				initialSubcategory={galleryLocation.subcategory}
-			/>
-
-			{!isEditing && isImagePreviewOpen && character.imageUrl && (
-				<Modal
-					title={characterModel.fullName || "Portrait"}
-					type="custom"
-					className="CharacterImageModal"
-					onCancel={() => setIsImagePreviewOpen(false)}
-					showFooter={false}>
-					<div
-						className="CharacterImageModal__content"
-						onClick={() => setIsImagePreviewOpen(false)}>
-						<img src={character.imageUrl} alt="Character portrait preview" />
-					</div>
-				</Modal>
-			)}
 		</div>
 	);
 }
