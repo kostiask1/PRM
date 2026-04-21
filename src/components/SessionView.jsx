@@ -99,7 +99,9 @@ function SessionView(props) {
 					/>
 					<Button
 						variant={viewModel.isCompleted ? "primary" : ""}
-						onClick={() => updateSession({ completed: !session.completed }, true)}>
+						onClick={() =>
+							updateSession({ completed: !session.completed }, true)
+						}>
 						{viewModel.completeButtonLabel}
 					</Button>
 					<Button
@@ -166,7 +168,9 @@ function SessionView(props) {
 							onDrop={() => triggerSave(session, true)}
 							keyExtractor={(scene) => scene.id}
 							renderItem={(scene) => {
-								const idx = viewModel.scenes.findIndex((s) => s.id === scene.id);
+								const idx = viewModel.scenes.findIndex(
+									(s) => s.id === scene.id,
+								);
 								return (
 									<SceneCard
 										number={idx + 1}
@@ -327,7 +331,9 @@ function SceneCard({
 					className="SceneImageModal"
 					onCancel={() => setIsImagePreviewOpen(false)}
 					showFooter={false}>
-					<div className="SceneImageModal__content">
+					<div
+						className="SceneImageModal__content"
+						onClick={() => setIsImagePreviewOpen(false)}>
 						<img src={imageUrl} alt={`Scene ${number}`} />
 					</div>
 				</Modal>

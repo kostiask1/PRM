@@ -299,7 +299,9 @@ export default function CharacterCard({
 					className="CharacterImageModal"
 					onCancel={() => setIsImagePreviewOpen(false)}
 					showFooter={false}>
-					<div className="CharacterImageModal__content">
+					<div
+						className="CharacterImageModal__content"
+						onClick={() => setIsImagePreviewOpen(false)}>
 						<img src={character.imageUrl} alt="Character portrait preview" />
 					</div>
 				</Modal>
