@@ -52,6 +52,7 @@ export default function CharacterCard({
 					variant="ghost"
 					size="small"
 					icon="chevron"
+					onClick={() => onToggleCollapse(character.id)}
 					className={`character-card__toggle ${character.collapsed ? "is-rotated" : ""}`}
 				/>
 				{character.imageUrl && character.collapsed && (
@@ -187,7 +188,9 @@ export default function CharacterCard({
 												<h2>{characterModel.fullName}</h2>
 											</div>
 											<div className="character-card__meta-line">
-												<strong>{character.race || "Раса"}</strong> • {character.class || "Клас"} ({characterModel.level} рів.)
+												<strong>{character.race || "Раса"}</strong> •{" "}
+												{character.class || "Клас"} ({characterModel.level}{" "}
+												рів.)
 											</div>
 										</div>
 									</div>
@@ -201,7 +204,9 @@ export default function CharacterCard({
 										<EditableField
 											type="textarea"
 											value={character.motivation}
-											onChange={(e) => updateField("motivation", e.target.value)}
+											onChange={(e) =>
+												updateField("motivation", e.target.value)
+											}
 											placeholder="Чого прагне персонаж..."
 										/>
 									) : (
@@ -259,7 +264,10 @@ export default function CharacterCard({
 										note={note}
 										isLast={index === characterModel.notes.length - 1}
 										onToggleCollapse={(id) => {
-											updateField("notes", characterModel.toggleNoteCollapse(id));
+											updateField(
+												"notes",
+												characterModel.toggleNoteCollapse(id),
+											);
 										}}
 										onTitleChange={handleNoteTitleChange}
 										onTextChange={handleNoteTextChange}

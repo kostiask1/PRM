@@ -2,7 +2,6 @@
     background: color-mix(in srgb, var(--text-bright), transparent 97%);
     border: 1px solid color-mix(in srgb, var(--text-bright), transparent 90%);
     border-radius: 8px;
-    margin-bottom: 8px;
     overflow: hidden;
     transition: all 0.2s ease;
     cursor: grab;
