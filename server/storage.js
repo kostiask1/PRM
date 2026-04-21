@@ -376,7 +376,11 @@ async function exportCampaignBundle(slug) {
 			return { fileName: s.fileName, content };
 		}),
 	);
-	return { meta, sessions };
+	const entities = {
+		characters: await listEntities(slug, "characters"),
+		npc: await listEntities(slug, "npc"),
+	};
+	return { meta, sessions, entities };
 }
 
 async function ensureUniqueCampaignSlug(baseSlug, ignoreSlug = null) {
@@ -408,27 +412,206 @@ async function ensureUniqueSessionFile(
 	}
 }
 
-async function importCampaignBundle(bundle) {
-	const { meta, sessions } = bundle;
+async function ensureUniqueEntitySlug(campaignSlugValue, type, baseSlug) {
+	const normalizedBase =
+		path.basename(String(baseSlug || "")) || `${type}-${Date.now()}`;
+	let slug = normalizedBase;
+	let counter = 2;
+	while (true) {
+		const infoPath = path.join(campaignDir(campaignSlugValue), type, slug, "info.json");
+		if (!(await exists(infoPath))) return slug;
+		slug = `${normalizedBase}-${counter}`;
+		counter += 1;
+	}
+}
+
+async function findCampaignSlugById(campaignId) {
+	if (!campaignId) return null;
+	const slugs = await listCampaignSlugs();
+	for (const slug of slugs) {
+		const metaPath = campaignMetaPath(slug);
+		if (!(await exists(metaPath))) continue;
+		const meta = await readJson(metaPath);
+		if (String(meta.id) === String(campaignId)) {
+			return slug;
+		}
+	}
+	return null;
+}
+
+async function deleteCampaignData(slug) {
+	if (!slug) return;
+	await fs.rm(campaignDir(slug), { recursive: true, force: true });
+	await fs.rm(path.join(IMAGES_DIR, path.basename(slug)), {
+		recursive: true,
+		force: true,
+	});
+}
+
+async function clearAllCampaignData() {
+	await fs.rm(CAMPAIGNS_DIR, { recursive: true, force: true });
+	await fs.rm(IMAGES_DIR, { recursive: true, force: true });
+	await ensureDir(CAMPAIGNS_DIR);
+	await ensureDir(IMAGES_DIR);
+}
+
+function replaceImageSlugReferences(value, oldSlug, newSlug) {
+	if (!value || !oldSlug || !newSlug || oldSlug === newSlug) return value;
+	const oldSegment = `/api/images/${encodeURIComponent(oldSlug)}/`;
+	const newSegment = `/api/images/${encodeURIComponent(newSlug)}/`;
+	const serialized = JSON.stringify(value);
+	if (!serialized.includes(oldSegment)) return value;
+	return JSON.parse(serialized.split(oldSegment).join(newSegment));
+}
+
+async function importCampaignBundle(bundle, options = {}) {
+	const { meta, sessions = [], entities = {} } = bundle;
 	if (!meta || !meta.name) throw new Error("Невірний формат бандла");
-	const slug = await ensureUniqueCampaignSlug(campaignSlug(meta.name));
+	const sourceSlug = meta.slug || campaignSlug(meta.name);
+	const forcedSlug = options.forcedSlug ? path.basename(options.forcedSlug) : null;
+	const slug = forcedSlug
+		? forcedSlug
+		: await ensureUniqueCampaignSlug(campaignSlug(meta.name));
+
+	if (forcedSlug && options.replaceExisting && (await exists(campaignDir(slug)))) {
+		await deleteCampaignData(slug);
+	}
 	const now = new Date().toISOString();
 	const newMeta = {
-		...meta,
+		...replaceImageSlugReferences(meta, sourceSlug, slug),
 		slug,
 		createdAt: meta.createdAt || now,
 		updatedAt: now,
 	};
 	await ensureDir(path.join(campaignDir(slug), "sessions"));
 	await writeJson(campaignMetaPath(slug), newMeta);
+
 	for (const session of sessions) {
-		const fileName = await ensureUniqueSessionFile(slug, session.content.name);
+		const desiredName =
+			session.fileName ||
+			`${sanitizeName(session.content?.name) || todayString()}.json`;
+		const fileName = await ensureUniqueSessionFile(slug, desiredName);
+		const normalizedContent = replaceImageSlugReferences(
+			session.content || {},
+			sourceSlug,
+			slug,
+		);
 		await writeJson(sessionPath(slug, fileName), {
-			...session.content,
+			...normalizedContent,
 			updatedAt: now,
 		});
 	}
+
+	for (const type of ["characters", "npc"]) {
+		const list = Array.isArray(entities[type]) ? entities[type] : [];
+		for (const entity of list) {
+			const desiredSlug =
+				entity.slug ||
+				campaignSlug(entity.firstName || entity.name || type);
+			const entitySlug = await ensureUniqueEntitySlug(slug, type, desiredSlug);
+			const normalizedEntity = replaceImageSlugReferences(
+				entity,
+				sourceSlug,
+				slug,
+			);
+			await writeEntity(slug, type, entitySlug, {
+				...normalizedEntity,
+				slug: entitySlug,
+			});
+		}
+	}
+
 	return newMeta;
+}
+
+async function listCampaignImagesForArchive(slug) {
+	const root = path.join(IMAGES_DIR, path.basename(String(slug || "")));
+	if (!(await exists(root))) return [];
+
+	const files = [];
+	async function walk(dir) {
+		const entries = await fs.readdir(dir, { withFileTypes: true });
+		for (const entry of entries) {
+			const fullPath = path.join(dir, entry.name);
+			if (entry.isDirectory()) {
+				await walk(fullPath);
+				continue;
+			}
+			if (!entry.isFile()) continue;
+			const relPath = path.relative(root, fullPath).split(path.sep).join("/");
+			const buf = await fs.readFile(fullPath);
+			files.push({
+				relativePath: relPath,
+				base64: buf.toString("base64"),
+			});
+		}
+	}
+
+	await walk(root);
+	return files;
+}
+
+async function restoreCampaignImagesFromArchive(slug, files = []) {
+	if (!Array.isArray(files) || files.length === 0) return;
+
+	const root = path.join(IMAGES_DIR, path.basename(String(slug || "")));
+	const resolvedRoot = path.resolve(root);
+
+	for (const file of files) {
+		const rel = String(file?.relativePath || "")
+			.replace(/\\/g, "/")
+			.replace(/^\/+/, "");
+		if (!rel || !file?.base64) continue;
+
+		const targetPath = path.resolve(root, rel);
+		if (
+			targetPath !== resolvedRoot &&
+			!targetPath.startsWith(`${resolvedRoot}${path.sep}`)
+		) {
+			continue;
+		}
+
+		await ensureDir(path.dirname(targetPath));
+		await fs.writeFile(targetPath, Buffer.from(file.base64, "base64"));
+	}
+}
+
+async function exportCampaignArchiveBundle(slug) {
+	return {
+		bundle: await exportCampaignBundle(slug),
+		images: await listCampaignImagesForArchive(slug),
+	};
+}
+
+async function importCampaignArchiveBundle(archiveBundle) {
+	const importedMeta = await importCampaignBundle(
+		archiveBundle.bundle || archiveBundle,
+	);
+	await restoreCampaignImagesFromArchive(importedMeta.slug, archiveBundle.images || []);
+	return importedMeta;
+}
+
+async function importCampaignArchiveBundleWithStrategy(
+	archiveBundle,
+	strategy = "append",
+) {
+	if (strategy === "replace_by_id") {
+		const bundle = archiveBundle.bundle || archiveBundle;
+		const campaignId = bundle?.meta?.id;
+		const existingSlug = await findCampaignSlugById(campaignId);
+		if (existingSlug) {
+			const importedMeta = await importCampaignBundle(bundle, {
+				forcedSlug: existingSlug,
+				replaceExisting: true,
+			});
+			await restoreCampaignImagesFromArchive(
+				importedMeta.slug,
+				archiveBundle.images || [],
+			);
+			return importedMeta;
+		}
+	}
+	return importCampaignArchiveBundle(archiveBundle);
 }
 
 function makeDefaultSessionData(name) {
@@ -639,7 +822,13 @@ module.exports = {
 	listSessions,
 	listCampaignsDetailed,
 	exportCampaignBundle,
+	exportCampaignArchiveBundle,
 	importCampaignBundle,
+	importCampaignArchiveBundle,
+	importCampaignArchiveBundleWithStrategy,
+	findCampaignSlugById,
+	deleteCampaignData,
+	clearAllCampaignData,
 	ensureUniqueCampaignSlug,
 	ensureUniqueSessionFile,
 	makeDefaultSessionData,

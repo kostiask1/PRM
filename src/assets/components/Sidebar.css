@@ -121,6 +121,31 @@
 	gap: var(--space-2);
 }
 
+.Sidebar__importStrategyRow {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+	margin-top: var(--space-1);
+}
+
+.Sidebar__importStrategyModal {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+}
+
+.Sidebar__importStrategyText {
+	margin: 0;
+	color: var(--muted);
+	font-size: 0.9rem;
+}
+
+.Sidebar__importStrategyActions {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: var(--space-2);
+}
+
 .Sidebar .Button--create {
 	min-height: 40px;
 	padding: 0 var(--space-3);
@@ -195,10 +220,8 @@
 
 .Sidebar:not(:hover) .Sidebar__resource-item {
 	width: 40px;
-	height: 24px;
+	height: 28px;
 	justify-content: center;
-	padding: 0;
-	margin: 0 auto;
 }
 
 .Sidebar:not(:hover) .ListCard__sidebar-content {
@@ -229,10 +252,6 @@
 
 .Sidebar:not(:hover) .Sidebar__sectionTitle span {
 	position: static;
-}
-
-.Sidebar:not(:hover) .Sidebar__footerGrid {
-	display: none;
 }
 
 .Sidebar__card:hover {

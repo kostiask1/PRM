@@ -22,6 +22,25 @@ export const api = {
 		return data;
 	},
 
+	async requestBlob(path, options = {}) {
+		const response = await fetch(`${API_BASE}${path}`, {
+			...options,
+		});
+		if (!response.ok) {
+			let message = "Помилка запиту";
+			try {
+				const data = await response.json();
+				message = data?.error || message;
+			} catch {
+				// ignore parse failures for binary responses
+			}
+			const error = new Error(message);
+			error.status = response.status;
+			throw error;
+		}
+		return response.blob();
+	},
+
 	// Campaign methods
 	listCampaigns: () => api.request("/campaigns"),
 	createCampaign: (name) =>
@@ -40,6 +59,8 @@ export const api = {
 		}),
 	exportCampaign: (slug) =>
 		api.request(`/campaigns/${encodeURIComponent(slug)}/export`),
+	exportCampaignArchive: (slug) =>
+		api.requestBlob(`/campaigns/${encodeURIComponent(slug)}/export/archive`),
 	importCampaign: (bundle) =>
 		api.request("/import-all", {
 			method: "POST",
@@ -63,11 +84,24 @@ export const api = {
 
 	// Global Backup/Restore
 	exportAll: () => api.request("/export-all"),
-	importAll: (data) =>
-		api.request("/import-all", {
+	exportAllArchive: () => api.requestBlob("/export-all/archive"),
+	importAll: (data, strategy = "append") =>
+		api.request(`/import-all?strategy=${encodeURIComponent(strategy)}`, {
 			method: "POST",
 			body: JSON.stringify(data),
 		}),
+	importArchive: (file, mode = "all", strategy = "append") => {
+		const formData = new FormData();
+		formData.append("archive", file);
+		const query = new URLSearchParams({
+			mode: String(mode),
+			strategy: String(strategy),
+		});
+		return api.request(`/import-archive?${query.toString()}`, {
+			method: "POST",
+			body: formData,
+		});
+	},
 
 	// Session methods
 	listSessions: (slug) =>

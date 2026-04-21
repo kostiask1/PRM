@@ -6,7 +6,7 @@ import {
 	appendTrailingEmptyNote,
 	ensureAtLeastOneNote,
 } from "../utils/noteUtils";
-import { downloadJsonFile } from "../utils/download";
+import { downloadBlob } from "../utils/download";
 
 export default function useCampaignView(props) {
 		const { campaign, onSelectSession, onNavigate, onRefreshCampaigns } =
@@ -485,12 +485,15 @@ export default function useCampaignView(props) {
 
 		const handleExport = async () => {
 			try {
-				const bundle = await api.exportCampaign(campaign.slug);
-				downloadJsonFile(bundle, `campaign-${campaign.slug}.json`);
-			} catch (err) {
-				modal.alert("Помилка експорту", err.message);
-			}
-		};
+				const blob = await api.exportCampaignArchive(campaign.slug);
+				downloadBlob(
+					blob,
+					`campaign-${campaign.slug}-${new Date().toISOString().slice(0, 10)}.prma.gz`,
+				);
+				} catch (err) {
+					modal.alert("Помилка експорту", err.message);
+				}
+			};
 
 		const handleSessionReorderDrop = useCallback(() => {
 			const orders = {};

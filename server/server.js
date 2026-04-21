@@ -5,6 +5,7 @@ const express = require("express");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs/promises");
+const zlib = require("zlib");
 const storage = require("./storage");
 
 const app = express();
@@ -12,6 +13,20 @@ const PORT = process.env.PORT || 5000;
 
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
+
+function parseArchivePayload(buffer) {
+	const isGzip = buffer?.length >= 2 && buffer[0] === 0x1f && buffer[1] === 0x8b;
+	const raw = isGzip ? zlib.gunzipSync(buffer) : buffer;
+	return JSON.parse(raw.toString("utf8"));
+}
+
+function normalizeImportStrategy(strategy) {
+	const value = String(strategy || "append").toLowerCase();
+	if (["append", "replace_by_id", "wipe_and_replace"].includes(value)) {
+		return value;
+	}
+	return "append";
+}
 
 app.get("/api/export-all", async (req, res, next) => {
 	try {
@@ -24,11 +39,116 @@ app.get("/api/export-all", async (req, res, next) => {
 	}
 });
 
+app.get("/api/export-all/archive", async (req, res, next) => {
+	try {
+		const slugs = await storage.listCampaignSlugs();
+		const campaigns = await Promise.all(
+			slugs.map((slug) => storage.exportCampaignArchiveBundle(slug)),
+		);
+		const payload = {
+			version: 2,
+			scope: "all",
+			exportedAt: new Date().toISOString(),
+			campaigns,
+		};
+		const buffer = zlib.gzipSync(Buffer.from(JSON.stringify(payload), "utf8"));
+		const date = new Date().toISOString().slice(0, 10);
+		res.setHeader("Content-Type", "application/gzip");
+		res.setHeader(
+			"Content-Disposition",
+			`attachment; filename="prm-full-backup-${date}.prma.gz"`,
+		);
+		res.send(buffer);
+	} catch (error) {
+		next(error);
+	}
+});
+
+app.get("/api/campaigns/:slug/export/archive", async (req, res, next) => {
+	try {
+		const payload = {
+			version: 2,
+			scope: "campaign",
+			exportedAt: new Date().toISOString(),
+			campaigns: [await storage.exportCampaignArchiveBundle(req.params.slug)],
+		};
+		const buffer = zlib.gzipSync(Buffer.from(JSON.stringify(payload), "utf8"));
+		const date = new Date().toISOString().slice(0, 10);
+		res.setHeader("Content-Type", "application/gzip");
+		res.setHeader(
+			"Content-Disposition",
+			`attachment; filename="campaign-${req.params.slug}-${date}.prma.gz"`,
+		);
+		res.send(buffer);
+	} catch (error) {
+		next(error);
+	}
+});
+
 app.post("/api/import-all", async (req, res, next) => {
 	try {
+		const strategy = normalizeImportStrategy(req.query.strategy);
 		const bundles = Array.isArray(req.body) ? req.body : [req.body];
-		for (const bundle of bundles) await storage.importCampaignBundle(bundle);
-		res.status(201).json({ ok: true });
+		if (strategy === "wipe_and_replace") {
+			await storage.clearAllCampaignData();
+		}
+		for (const bundle of bundles) {
+			if (strategy === "replace_by_id") {
+				const existingSlug = await storage.findCampaignSlugById(bundle?.meta?.id);
+				if (existingSlug) {
+					await storage.importCampaignBundle(bundle, {
+						forcedSlug: existingSlug,
+						replaceExisting: true,
+					});
+					continue;
+				}
+			}
+			await storage.importCampaignBundle(bundle);
+		}
+		res.status(201).json({ ok: true, imported: bundles.length, strategy });
+	} catch (error) {
+		next(error);
+	}
+});
+
+const archiveUpload = multer({
+	storage: multer.memoryStorage(),
+	limits: { fileSize: 200 * 1024 * 1024 },
+});
+
+app.post("/api/import-archive", archiveUpload.single("archive"), async (req, res, next) => {
+	try {
+		if (!req.file?.buffer) {
+			return res.status(400).json({ error: "Файл архіву не передано." });
+		}
+
+		const mode = req.query.mode === "campaign" ? "campaign" : "all";
+		const strategy = normalizeImportStrategy(req.query.strategy);
+		const effectiveStrategy = mode === "all" ? strategy : "append";
+		const parsed = parseArchivePayload(req.file.buffer);
+		const campaigns = Array.isArray(parsed)
+			? parsed
+			: Array.isArray(parsed?.campaigns)
+				? parsed.campaigns
+				: [parsed];
+		const selected = mode === "campaign" ? campaigns.slice(0, 1) : campaigns;
+
+		if (effectiveStrategy === "wipe_and_replace") {
+			await storage.clearAllCampaignData();
+		}
+
+		for (const archiveBundle of selected) {
+			await storage.importCampaignArchiveBundleWithStrategy(
+				archiveBundle,
+				effectiveStrategy,
+			);
+		}
+
+		res.status(201).json({
+			ok: true,
+			imported: selected.length,
+			strategy: effectiveStrategy,
+		});
 	} catch (error) {
 		next(error);
 	}

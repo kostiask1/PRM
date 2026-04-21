@@ -6,6 +6,7 @@ import Modal from "./components/Modal";
 import Sidebar from "./components/Sidebar";
 import EntityModalContent from "./components/modals/EntityModalContent";
 import MentionPickerModalContent from "./components/modals/MentionPickerModalContent";
+import CreateCampaignModalContent from "./components/modals/CreateCampaignModalContent";
 import { parseUrl } from "./utils/navigation";
 import { ModalContext } from "./context/ModalContext";
 
@@ -31,7 +32,7 @@ export default function App() {
 	const [modalConfig, setModalConfig] = useState(null);
 
 	const modal = useMemo(() => Modal.createApi(setModalConfig), []);
-	const { open: openModal, close: closeModal, alert, confirm, prompt } =
+	const { open: openModal, close: closeModal, alert, confirm } =
 		modal;
 
 	const loadCampaigns = async () => {
@@ -278,6 +279,41 @@ export default function App() {
 
 	const activeCampaign = campaigns.find((c) => c.slug === activeCampaignSlug);
 
+	const openCreateCampaignModal = () => {
+		const handleClose = closeModal;
+		setModalConfig({
+			title: "Нова кампанія",
+			type: "confirm",
+			showFooter: false,
+			onCancel: handleClose,
+			children: (
+				<CreateCampaignModalContent
+					onClose={handleClose}
+					onCreateCampaign={async (name) => {
+						if (!name?.trim()) return;
+						try {
+							const newCampaign = await api.createCampaign(name.trim());
+							await loadCampaigns();
+							handleClose();
+							navigate(newCampaign.slug);
+						} catch (err) {
+							alert("Помилка", err.message || "Не вдалося створити кампанію");
+						}
+					}}
+					onImportCampaign={async (file) => {
+						try {
+							await api.importArchive(file, "campaign");
+							await loadCampaigns();
+							handleClose();
+						} catch (err) {
+							alert("Помилка імпорту", err.message || "Не вдалося імпортувати кампанію");
+						}
+					}}
+				/>
+			),
+		});
+	};
+
 	return (
 		<ModalContext.Provider value={modal}>
 			<div className="App">
@@ -286,17 +322,7 @@ export default function App() {
 				campaigns={campaigns}
 				activeCampaignId={activeCampaignSlug}
 				onSelectCampaign={(slug) => navigate(slug)}
-				onCreateCampaign={async () => {
-					const name = await prompt(
-						"Нова кампанія",
-						"Введіть назву для вашої пригоди:",
-					);
-					if (name) {
-						const newCampaign = await api.createCampaign(name);
-						await loadCampaigns();
-						navigate(newCampaign.slug);
-					}
-				}}
+				onCreateCampaign={openCreateCampaignModal}
 					onToggleCampaignStatus={handleToggleCampaignStatus}
 				/>
 			<MainContent

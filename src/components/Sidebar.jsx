@@ -1,15 +1,21 @@
-import { useRef, useState, useEffect } from "react";
+﻿import { useRef, useState, useEffect } from "react";
 import { api } from "../api";
 import Button from "./Button";
 import Icon from "./Icon";
 import StatusBadge from "./StatusBadge";
 import ListCard from "./ListCard";
-import ColorThemeSwitcher from "./ColorThemeSwitcher"; // Імпортуємо новий компонент
+import ColorThemeSwitcher from "./ColorThemeSwitcher";
 import DraggableList from "./DraggableList";
 import ImageGallery from "./ImageGallery";
 import { useModal } from "../context/ModalContext";
-import { downloadJsonFile } from "../utils/download";
+import { downloadBlob } from "../utils/download";
 import "../assets/components/Sidebar.css";
+
+const DB_IMPORT_STRATEGIES = [
+	{ id: "append", label: "Додати до наявних даних" },
+	{ id: "replace_by_id", label: "Замінити дані за ID" },
+	{ id: "wipe_and_replace", label: "Повністю очистити і замінити" },
+];
 
 export default function Sidebar({
 	campaigns,
@@ -20,46 +26,70 @@ export default function Sidebar({
 }) {
 	const modal = useModal();
 	const fileInputRef = useRef(null);
+	const [dbImportStrategy, setDbImportStrategy] = useState("append");
 
-	// Локальний стан для миттєвого відображення змін черги
 	const [localCampaigns, setLocalCampaigns] = useState(campaigns);
 	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 
-	// Синхронізація локального списку з пропсами
 	useEffect(() => {
 		setLocalCampaigns(campaigns);
 	}, [campaigns]);
-
-	const importMode = useRef("campaign"); // 'campaign' or 'all'
 
 	const handleFileChange = async (event) => {
 		const file = event.target.files[0];
 		if (!file) return;
 
-		const reader = new FileReader();
-		reader.onload = async (e) => {
-			try {
-				const data = JSON.parse(e.target.result);
-				if (importMode.current === "all") {
-					await api.importAll(data);
-				} else {
-					await api.importCampaign(data);
-				}
-				window.location.reload();
-			} catch (error) {
-				modal.alert("Помилка імпорту", error.message);
-			}
-		};
-		reader.readAsText(file);
+		try {
+			await api.importArchive(file, "all", dbImportStrategy);
+			window.location.reload();
+		} catch (error) {
+			modal.alert("Помилка імпорту", error.message);
+		} finally {
+			event.target.value = "";
+		}
 	};
 
 	const handleDragEnd = (newList) => {
-		// Зберігаємо фінальний порядок на сервері
 		const orders = {};
 		newList.forEach((item, idx) => {
 			orders[item.slug] = idx;
 		});
 		api.reorderCampaigns(orders);
+	};
+
+	const handleSelectImportStrategy = (strategyId) => {
+		setDbImportStrategy(strategyId);
+		modal.close();
+		setTimeout(() => fileInputRef.current?.click(), 0);
+	};
+
+	const handleOpenImportDb = () => {
+		modal.open({
+			title: "Імпорт бази даних",
+			type: "confirm",
+			showFooter: false,
+			children: (
+				<div className="Sidebar__importStrategyModal">
+					<p className="Sidebar__importStrategyText">Оберіть режим імпорту:</p>
+					<div className="Sidebar__importStrategyRow">
+						{DB_IMPORT_STRATEGIES.map((item) => (
+							<Button
+								key={item.id}
+								size="small"
+								variant={dbImportStrategy === item.id ? "primary" : "ghost"}
+								onClick={() => handleSelectImportStrategy(item.id)}>
+								{item.label}
+							</Button>
+						))}
+					</div>
+					<div className="Sidebar__importStrategyActions">
+						<Button variant="ghost" onClick={() => modal.close()}>
+							Скасувати
+						</Button>
+					</div>
+				</div>
+			),
+		});
 	};
 
 	return (
@@ -73,6 +103,7 @@ export default function Sidebar({
 					Кампанії, сесії та планування в одному локальному проєкті.
 				</p>
 			</div>
+
 			<div className="Sidebar__links">
 				<a
 					href="#"
@@ -109,9 +140,12 @@ export default function Sidebar({
 					<span>Заклинання</span>
 				</a>
 			</div>
+
 			<div className="Sidebar__section">
 				<div className="Sidebar__headerSection">
-					<h2 className="Sidebar__sectionTitle"><span>Кампанії</span></h2>
+					<h2 className="Sidebar__sectionTitle">
+						<span>Кампанії</span>
+					</h2>
 				</div>
 				<Button variant="create" onClick={onCreateCampaign} icon="plus">
 					<span>Нова кампанія</span>
@@ -204,18 +238,9 @@ export default function Sidebar({
 					type="file"
 					ref={fileInputRef}
 					style={{ display: "none" }}
-					accept=".json"
+					accept=".json,.gz,.prma,.prma.gz"
 					onChange={handleFileChange}
 				/>
-				<Button
-					variant="footer"
-					icon="import"
-					onClick={() => {
-						importMode.current = "campaign";
-						fileInputRef.current.click();
-					}}>
-					<span>Імпорт кампанії</span>
-				</Button>
 				<div className="Sidebar__footerGrid">
 					<Button
 						variant="footer"
@@ -223,10 +248,10 @@ export default function Sidebar({
 						iconSize={16}
 						onClick={async () => {
 							try {
-								const data = await api.exportAll();
-								downloadJsonFile(
-									data,
-									`prm-full-backup-${new Date().toISOString().slice(0, 10)}.json`,
+								const blob = await api.exportAllArchive();
+								downloadBlob(
+									blob,
+									`prm-full-backup-${new Date().toISOString().slice(0, 10)}.prma.gz`,
 								);
 							} catch (err) {
 								modal.alert(
@@ -241,25 +266,15 @@ export default function Sidebar({
 						variant="footer"
 						icon="restore"
 						iconSize={16}
-						onClick={async () => {
-							if (
-								await modal.confirm(
-									"Відновлення бази",
-									"Імпортувати всі дані? Це додасть кампанії з файлу до вашого списку.",
-								)
-							) {
-								importMode.current = "all";
-								fileInputRef.current.click();
-							}
-						}}>
+						onClick={handleOpenImportDb}>
 						Імпорт БД
 					</Button>
 				</div>
 			</div>
 
-			<ImageGallery 
-				isOpen={isGalleryOpen} 
-				onClose={() => setIsGalleryOpen(false)} 
+			<ImageGallery
+				isOpen={isGalleryOpen}
+				onClose={() => setIsGalleryOpen(false)}
 			/>
 		</aside>
 	);
