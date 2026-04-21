@@ -137,6 +137,11 @@ export default function AiAssistantPanel({
 				onInsertResult(data.updated);
 				setUserInstructions(""); // Очищаємо поле після успіху
 				setNotification("Магія ШІ успішно застосована!");
+				if (parseAIResponse || isEncounter) {
+					setIsOpen(false);
+					setIsContextModalOpen(false);
+					setShowSceneSelector(false);
+				}
 			}
 		} catch (err) {
 			if (err.message?.includes("GEMINI_API_KEY")) {
