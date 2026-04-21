@@ -194,9 +194,6 @@ function SessionView(props) {
 					</TodoSection>
 
 					<TodoSection title="Результат сесії">
-						<div className="TodoItem__note">
-							Запиши короткий підсумок того, що реально відбулося.
-						</div>
 						<EditableField
 							type="textarea"
 							className="field--result"
@@ -287,6 +284,7 @@ function SceneCard({
 	onUpdateField,
 }) {
 	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+	const [isImagePreviewOpen, setIsImagePreviewOpen] = useState(false);
 	const encounterLabel = hasEncounter ? encounterName : "Encounter";
 
 	return (
@@ -313,12 +311,26 @@ function SceneCard({
 					<SceneCardMedia
 						number={number}
 						imageUrl={imageUrl}
-						onImageClick={() => setIsGalleryOpen(true)}
+						onImagePreview={() => setIsImagePreviewOpen(true)}
+						onImageReplace={() => setIsGalleryOpen(true)}
 						onImageClear={() => onImageChange(null)}
 						campaignSlug={campaignSlug}
 						onUploadSuccess={(result) => onImageChange(result.url)}
 					/>
 				</div>
+			)}
+
+			{isImagePreviewOpen && imageUrl && (
+				<Modal
+					title={`Scene ${number}`}
+					type="custom"
+					className="SceneImageModal"
+					onCancel={() => setIsImagePreviewOpen(false)}
+					showFooter={false}>
+					<div className="SceneImageModal__content">
+						<img src={imageUrl} alt={`Scene ${number}`} />
+					</div>
+				</Modal>
 			)}
 
 			<ImageGallery

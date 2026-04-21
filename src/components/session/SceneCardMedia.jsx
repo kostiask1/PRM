@@ -4,7 +4,8 @@ import ImageDropzone from "../ImageDropzone";
 export default function SceneCardMedia({
 	number,
 	imageUrl,
-	onImageClick,
+	onImagePreview,
+	onImageReplace,
 	onImageClear,
 	campaignSlug,
 	onUploadSuccess,
@@ -19,7 +20,12 @@ export default function SceneCardMedia({
 							alt={`Scene ${number}`}
 							onClick={(event) => {
 								event.stopPropagation();
-								onImageClick();
+								onImagePreview();
+							}}
+							onContextMenu={(event) => {
+								event.preventDefault();
+								event.stopPropagation();
+								onImageReplace();
 							}}
 						/>
 						<Button

@@ -5,6 +5,7 @@ import NoteCard from "./NoteCard";
 import Icon from "./Icon";
 import ImageDropzone from "./ImageDropzone";
 import ImageGallery from "./ImageGallery";
+import Modal from "./Modal";
 import ReactMarkdown from "react-markdown";
 import "../assets/components/CharacterCard.css";
 import Select from "./Select";
@@ -22,6 +23,7 @@ export default function CharacterCard({
 }) {
 	const [isEditing, setIsEditing] = useState(initialEditing);
 	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+	const [isImagePreviewOpen, setIsImagePreviewOpen] = useState(false);
 	const characterModel = new CharacterCardModel(character);
 
 	const updateField = (field, value) => {
@@ -101,7 +103,13 @@ export default function CharacterCard({
 										<img
 											src={character.imageUrl}
 											alt="Portrait"
-											onClick={() => isEditing && setIsGalleryOpen(true)}
+											onClick={() => {
+												if (isEditing) {
+													setIsGalleryOpen(true);
+													return;
+												}
+												setIsImagePreviewOpen(true);
+											}}
 										/>
 										{isEditing && (
 											<Button
@@ -275,6 +283,19 @@ export default function CharacterCard({
 				initialCategory={type === "npc" ? "tokens" : "characters"}
 				initialSubcategory={type === "npc" ? "npc" : "players"}
 			/>
+
+			{!isEditing && isImagePreviewOpen && character.imageUrl && (
+				<Modal
+					title={characterModel.fullName || "Portrait"}
+					type="custom"
+					className="CharacterImageModal"
+					onCancel={() => setIsImagePreviewOpen(false)}
+					showFooter={false}>
+					<div className="CharacterImageModal__content">
+						<img src={character.imageUrl} alt="Character portrait preview" />
+					</div>
+				</Modal>
+			)}
 		</div>
 	);
 }
