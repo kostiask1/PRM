@@ -1,10 +1,13 @@
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { api } from "../api";
 import { useModal } from "../context/ModalContext";
+import {
+	appendTrailingEmptyNote,
+	ensureAtLeastOneNote,
+} from "../services/noteHelpers";
 
-export default function withSessionView(WrappedComponent) {
-	const ComponentWithSessionView = memo(function ComponentWithSessionView(props) {
+export default function useSessionView(props) {
 		const { campaign, sessionId, onBack, onNavigate, onRefreshCampaigns } =
 			props;
 		const modal = useModal();
@@ -163,20 +166,7 @@ export default function withSessionView(WrappedComponent) {
 				try {
 					const data = await api.getSession(campaignSlug, sessionId);
 
-					let sessionNotes = data.data.notes || [];
-					const lastNote = sessionNotes[sessionNotes.length - 1];
-					if (
-						sessionNotes.length === 0 ||
-						(lastNote && (lastNote.text?.trim() || lastNote.title?.trim()))
-					) {
-						sessionNotes.push({
-							id: Date.now(),
-							title: "",
-							text: "",
-							collapsed: false,
-						});
-					}
-					data.data.notes = sessionNotes;
+					data.data.notes = appendTrailingEmptyNote(data.data.notes || []);
 
 					setSession(data);
 					setUndoStack([]);
@@ -393,18 +383,7 @@ export default function withSessionView(WrappedComponent) {
 			let notes = session.data.notes || [];
 			let newNotes = notes.map((n) => (n.id === id ? { ...n, title } : n));
 
-			const lastNote = newNotes[newNotes.length - 1];
-			if (
-				lastNote &&
-				(lastNote.text.trim() !== "" || lastNote.title?.trim() !== "")
-			) {
-				newNotes.push({
-					id: Date.now(),
-					title: "",
-					text: "",
-					collapsed: false,
-				});
-			}
+			newNotes = appendTrailingEmptyNote(newNotes);
 
 			updateData("notes", newNotes);
 		};
@@ -414,18 +393,7 @@ export default function withSessionView(WrappedComponent) {
 			let notes = session.data.notes || [];
 			let newNotes = notes.map((n) => (n.id === id ? { ...n, text } : n));
 
-			const lastNote = newNotes[newNotes.length - 1];
-			if (
-				lastNote &&
-				(lastNote.text.trim() !== "" || lastNote.title?.trim() !== "")
-			) {
-				newNotes.push({
-					id: Date.now(),
-					title: "",
-					text: "",
-					collapsed: false,
-				});
-			}
+			newNotes = appendTrailingEmptyNote(newNotes);
 
 			updateData("notes", newNotes);
 		};
@@ -441,10 +409,7 @@ export default function withSessionView(WrappedComponent) {
 		const handleDeleteNote = (id) => {
 			if (!session) return;
 			let newNotes = (session.data.notes || []).filter((n) => n.id !== id);
-
-			if (newNotes.length === 0) {
-				newNotes.push({ id: Date.now(), title: "", text: "", collapsed: false });
-			}
+			newNotes = ensureAtLeastOneNote(newNotes);
 
 			updateData("notes", newNotes, true);
 		};
@@ -470,21 +435,9 @@ export default function withSessionView(WrappedComponent) {
 
 			isUpdatingHistory.current = true;
 
-			const last = updatedSession.data.notes
-				? updatedSession.data.notes[updatedSession.data.notes.length - 1]
-				: null;
-			if (
-				updatedSession.data.notes &&
-				(updatedSession.data.notes.length === 0 ||
-					(last && (last.text?.trim() !== "" || last.title?.trim() !== "")))
-			) {
-				updatedSession.data.notes.push({
-					id: Date.now(),
-					title: "",
-					text: "",
-					collapsed: false,
-				});
-			}
+			updatedSession.data.notes = appendTrailingEmptyNote(
+				updatedSession.data.notes || [],
+			);
 
 			setSession(updatedSession);
 			setTimeout(() => {
@@ -542,45 +495,37 @@ export default function withSessionView(WrappedComponent) {
 			}
 		};
 
-		return (
-			<WrappedComponent
-				{...props}
-				session={session}
-				isSaving={isSaving}
-				npcToCreate={npcToCreate}
-				setNpcToCreate={setNpcToCreate}
-				isChecklistOpen={isChecklistOpen}
-				setIsChecklistOpen={setIsChecklistOpen}
-				undoStack={undoStack}
-				redoStack={redoStack}
-				campaignSlug={campaignSlug}
-				triggerSave={triggerSave}
-				handleUndo={handleUndo}
-				handleRedo={handleRedo}
-				updateSession={updateSession}
-				updateData={updateData}
-				addScene={addScene}
-				updateScene={updateScene}
-				toggleSceneCollapse={toggleSceneCollapse}
-				handleOpenEncounter={handleOpenEncounter}
-				removeScene={removeScene}
-				handleOpenNpcCreate={handleOpenNpcCreate}
-				handleSaveNpc={handleSaveNpc}
-				handleNoteTitleChange={handleNoteTitleChange}
-				handleNoteChange={handleNoteChange}
-				handleToggleNoteCollapse={handleToggleNoteCollapse}
-				handleDeleteNote={handleDeleteNote}
-				handleToggleSectionCollapse={handleToggleSectionCollapse}
-				handleAiUpdate={handleAiUpdate}
-				checklistItems={checklistItems}
-				progress={progress}
-				handleRename={handleRename}
-				handleDeleteSessionAndBack={handleDeleteSessionAndBack}
-			/>
-		);
-	});
-
-	ComponentWithSessionView.displayName = `withSessionView(${WrappedComponent.displayName || WrappedComponent.name || "Component"})`;
-
-	return ComponentWithSessionView;
+		return {
+		session,
+		isSaving,
+		npcToCreate,
+		setNpcToCreate,
+		isChecklistOpen,
+		setIsChecklistOpen,
+		undoStack,
+		redoStack,
+		campaignSlug,
+		triggerSave,
+		handleUndo,
+		handleRedo,
+		updateSession,
+		updateData,
+		addScene,
+		updateScene,
+		toggleSceneCollapse,
+		handleOpenEncounter,
+		removeScene,
+		handleOpenNpcCreate,
+		handleSaveNpc,
+		handleNoteTitleChange,
+		handleNoteChange,
+		handleToggleNoteCollapse,
+		handleDeleteNote,
+		handleToggleSectionCollapse,
+		handleAiUpdate,
+		checklistItems,
+		progress,
+		handleRename,
+		handleDeleteSessionAndBack,
+	};
 }

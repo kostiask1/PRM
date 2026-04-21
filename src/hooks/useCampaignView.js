@@ -1,12 +1,13 @@
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { api } from "../api";
 import { useModal } from "../context/ModalContext";
+import {
+	appendTrailingEmptyNote,
+	ensureAtLeastOneNote,
+} from "../services/noteHelpers";
 
-export default function withCampaignView(WrappedComponent) {
-	const ComponentWithCampaignView = memo(function ComponentWithCampaignView(
-		props,
-	) {
+export default function useCampaignView(props) {
 		const { campaign, onSelectSession, onNavigate, onRefreshCampaigns } =
 			props;
 		const modal = useModal();
@@ -61,21 +62,7 @@ export default function withCampaignView(WrappedComponent) {
 		useEffect(() => {
 			if (lastSlugRef.current !== campaign.slug) {
 				setDescription(campaign.description || "");
-				let initialNotes = campaign.notes || [];
-
-				const last = initialNotes[initialNotes.length - 1];
-				if (
-					initialNotes.length === 0 ||
-					(last && (last.text?.trim() || last.title?.trim()))
-				) {
-					initialNotes.push({
-						id: Date.now(),
-						title: "",
-						text: "",
-						collapsed: false,
-					});
-				}
-				setNotes(initialNotes);
+				setNotes(appendTrailingEmptyNote(campaign.notes || []));
 				setIsDescriptionCollapsed(campaign.isDescriptionCollapsed || false);
 				setIsNotesCollapsed(campaign.isNotesCollapsed || false);
 				setIsCharactersCollapsed(campaign.isCharactersCollapsed || false);
@@ -266,13 +253,7 @@ export default function withCampaignView(WrappedComponent) {
 			if (!saveTimeout.current) pushToUndo();
 			let newNotes = notes.map((n) => (n.id === id ? { ...n, title } : n));
 
-			const lastNote = newNotes[newNotes.length - 1];
-			if (
-				lastNote &&
-				(lastNote.text.trim() !== "" || lastNote.title?.trim() !== "")
-			) {
-				newNotes.push({ id: Date.now(), title: "", text: "", collapsed: false });
-			}
+			newNotes = appendTrailingEmptyNote(newNotes);
 
 			setNotes(newNotes);
 			triggerSave({ notes: newNotes });
@@ -282,18 +263,7 @@ export default function withCampaignView(WrappedComponent) {
 			if (!saveTimeout.current) pushToUndo();
 			let newNotes = notes.map((n) => (n.id === id ? { ...n, text } : n));
 
-			const lastNote = newNotes[newNotes.length - 1];
-			if (
-				lastNote &&
-				(lastNote.text.trim() !== "" || lastNote.title?.trim() !== "")
-			) {
-				newNotes.push({
-					id: Date.now(),
-					title: "",
-					text: "",
-					collapsed: false,
-				});
-			}
+			newNotes = appendTrailingEmptyNote(newNotes);
 
 			setNotes(newNotes);
 			triggerSave({ notes: newNotes });
@@ -302,10 +272,7 @@ export default function withCampaignView(WrappedComponent) {
 		const handleDeleteNote = (id) => {
 			pushToUndo();
 			let newNotes = notes.filter((n) => n.id !== id);
-
-			if (newNotes.length === 0) {
-				newNotes.push({ id: Date.now(), title: "", text: "", collapsed: false });
-			}
+			newNotes = ensureAtLeastOneNote(newNotes);
 
 			setNotes(newNotes);
 			triggerSave({ notes: newNotes });
@@ -566,76 +533,55 @@ export default function withCampaignView(WrappedComponent) {
 			pushToUndo();
 			if (updatedCampaign) {
 				setDescription(updatedCampaign.description || "");
-				let newNotes = updatedCampaign.notes || [];
-				const last = newNotes[newNotes.length - 1];
-				if (
-					newNotes.length === 0 ||
-					(last && (last.text?.trim() !== "" || last.title?.trim() !== ""))
-				) {
-					newNotes.push({
-						id: Date.now(),
-						title: "",
-						text: "",
-						collapsed: false,
-					});
-				}
-				setNotes(newNotes);
+				setNotes(appendTrailingEmptyNote(updatedCampaign.notes || []));
 				setCharacters(updatedCampaign.characters || []);
 			}
 			onRefreshCampaigns();
 		};
 
-		return (
-			<WrappedComponent
-				{...props}
-				sessions={sessions}
-				setSessions={setSessions}
-				description={description}
-				notes={notes}
-				setNotes={setNotes}
-				characters={characters}
-				setCharacters={setCharacters}
-				npcs={npcs}
-				setNpcs={setNpcs}
-				isDescriptionCollapsed={isDescriptionCollapsed}
-				setIsDescriptionCollapsed={setIsDescriptionCollapsed}
-				isNotesCollapsed={isNotesCollapsed}
-				setIsNotesCollapsed={setIsNotesCollapsed}
-				isCharactersCollapsed={isCharactersCollapsed}
-				setIsCharactersCollapsed={setIsCharactersCollapsed}
-				isNpcsCollapsed={isNpcsCollapsed}
-				setIsNpcsCollapsed={setIsNpcsCollapsed}
-				undoStack={undoStack}
-				redoStack={redoStack}
-				handleUndo={handleUndo}
-				handleRedo={handleRedo}
-				triggerSave={triggerSave}
-				handleDescriptionChange={handleDescriptionChange}
-				handleToggleNoteCollapse={handleToggleNoteCollapse}
-				handleNoteTitleChange={handleNoteTitleChange}
-				handleNoteChange={handleNoteChange}
-				handleDeleteNote={handleDeleteNote}
-				handleAddCharacter={handleAddCharacter}
-				handleToggleCharacterCollapse={handleToggleCharacterCollapse}
-				handleCharacterChange={handleCharacterChange}
-				handleDeleteCharacter={handleDeleteCharacter}
-				handleAddNpc={handleAddNpc}
-				handleToggleNpcCollapse={handleToggleNpcCollapse}
-				handleNpcChange={handleNpcChange}
-				handleNpcDelete={handleNpcDelete}
-				handleCreateSession={handleCreateSession}
-				handleDeleteCampaign={handleDeleteCampaign}
-				handleRename={handleRename}
-				handleDeleteSession={handleDeleteSession}
-				handleToggleSessionStatus={handleToggleSessionStatus}
-				handleExport={handleExport}
-				handleAiUpdate={handleAiUpdate}
-				handleSessionReorderDrop={handleSessionReorderDrop}
-			/>
-		);
-	});
-
-	ComponentWithCampaignView.displayName = `withCampaignView(${WrappedComponent.displayName || WrappedComponent.name || "Component"})`;
-
-	return ComponentWithCampaignView;
+		return {
+		sessions,
+		setSessions,
+		description,
+		notes,
+		setNotes,
+		characters,
+		setCharacters,
+		npcs,
+		setNpcs,
+		isDescriptionCollapsed,
+		setIsDescriptionCollapsed,
+		isNotesCollapsed,
+		setIsNotesCollapsed,
+		isCharactersCollapsed,
+		setIsCharactersCollapsed,
+		isNpcsCollapsed,
+		setIsNpcsCollapsed,
+		undoStack,
+		redoStack,
+		handleUndo,
+		handleRedo,
+		triggerSave,
+		handleDescriptionChange,
+		handleToggleNoteCollapse,
+		handleNoteTitleChange,
+		handleNoteChange,
+		handleDeleteNote,
+		handleAddCharacter,
+		handleToggleCharacterCollapse,
+		handleCharacterChange,
+		handleDeleteCharacter,
+		handleAddNpc,
+		handleToggleNpcCollapse,
+		handleNpcChange,
+		handleNpcDelete,
+		handleCreateSession,
+		handleDeleteCampaign,
+		handleRename,
+		handleDeleteSession,
+		handleToggleSessionStatus,
+		handleExport,
+		handleAiUpdate,
+		handleSessionReorderDrop,
+	};
 }

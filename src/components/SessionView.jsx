@@ -15,45 +15,48 @@ import SceneCardHeader from "./session/SceneCardHeader";
 import SceneCardMedia from "./session/SceneCardMedia";
 import SceneCardFields from "./session/SceneCardFields";
 import "../assets/components/SessionView.css";
-import withSessionView from "../hoc/withSessionView";
+import useSessionView from "../hooks/useSessionView";
 import SessionViewModel from "../models/SessionViewModel.js";
 
-function SessionView({
-	campaign,
-	sessionId,
-	onBack,
-	session,
-	isSaving,
-	npcToCreate,
-	setNpcToCreate,
-	isChecklistOpen,
-	setIsChecklistOpen,
-	undoStack,
-	redoStack,
-	campaignSlug,
-	triggerSave,
-	handleUndo,
-	handleRedo,
-	updateSession,
-	updateData,
-	addScene,
-	updateScene,
-	toggleSceneCollapse,
-	handleOpenEncounter,
-	removeScene,
-	handleOpenNpcCreate,
-	handleSaveNpc,
-	handleNoteTitleChange,
-	handleNoteChange,
-	handleToggleNoteCollapse,
-	handleDeleteNote,
-	handleToggleSectionCollapse,
-	handleAiUpdate,
-	checklistItems,
-	progress,
-	handleRename,
-	handleDeleteSessionAndBack,
-}) {
+function SessionView(props) {
+	const sessionViewProps = useSessionView(props);
+	const {
+		campaign,
+		sessionId,
+		onBack,
+		session,
+		isSaving,
+		npcToCreate,
+		setNpcToCreate,
+		isChecklistOpen,
+		setIsChecklistOpen,
+		undoStack,
+		redoStack,
+		campaignSlug,
+		triggerSave,
+		handleUndo,
+		handleRedo,
+		updateSession,
+		updateData,
+		addScene,
+		updateScene,
+		toggleSceneCollapse,
+		handleOpenEncounter,
+		removeScene,
+		handleOpenNpcCreate,
+		handleSaveNpc,
+		handleNoteTitleChange,
+		handleNoteChange,
+		handleToggleNoteCollapse,
+		handleDeleteNote,
+		handleToggleSectionCollapse,
+		handleAiUpdate,
+		checklistItems,
+		progress,
+		handleRename,
+		handleDeleteSessionAndBack,
+	} = { ...props, ...sessionViewProps };
+
 	if (!session) return null;
 	const viewModel = new SessionViewModel({ ...session, isSaving });
 
@@ -265,8 +268,7 @@ function SessionView({
 }
 
 export { SessionView };
-const SessionViewWithHOC = withSessionView(SessionView);
-export default SessionViewWithHOC;
+export default SessionView;
 
 function SceneCard({
 	number,

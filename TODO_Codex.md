@@ -20,25 +20,25 @@
 
 ## 1. Розбиття на підкомпоненти
 
-- [ ] Винести з `src/App.jsx` модальні блоки `EntityModalContent` і `MentionPickerModalContent` у `src/components/modals/*`.
+- [x] Винести з `src/App.jsx` модальні блоки `EntityModalContent` і `MentionPickerModalContent` у `src/components/modals/*`.
 - [ ] Винести роутинг-логіку з `src/components/MainContent.jsx` у окремий компонент/хук (щоб прибрати залежність від `window.location.pathname` у рендері).
 - [ ] Винести повторюваний заголовок секції з кнопкою згортання з `CampaignView`/`SessionView` у універсальний `CollapsibleSection`.
 - [ ] Винести повторювані списки з `DraggableList + ListCard` у композиційні компоненти:
   - `CampaignList`
   - `SessionList`
   - `EntityList` (characters/npc)
-- [ ] Розбити `SceneCard` (всередині `SessionView.jsx`) на підкомпоненти:
+- [x] Розбити `SceneCard` (всередині `SessionView.jsx`) на підкомпоненти:
   - `SceneCardHeader`
   - `SceneCardMedia`
   - `SceneCardFields`
 
 ## 2. Допрацювання структури та архітектури
 
-- [ ] Зменшити "товсті" HOC:
+- [x] Зменшити "товсті" HOC:
   - `src/hoc/withCampaignView.jsx`
   - `src/hoc/withSessionView.jsx`
   - рознести на `hooks + services + ui-state` (наприклад: `useCampaignEditor`, `useSessionEditor`).
-- [ ] Винести загальні CRUD-операції для нотаток/персонажів/NPC у `src/services` або `src/utils/editor`.
+- [x] Винести загальні CRUD-операції для нотаток/персонажів/NPC у `src/services` або `src/utils/editor`.
 - [ ] Прибрати direct `window.dispatchEvent`/`window.addEventListener` для внутрішньої взаємодії і замінити на React Context/подієвий bus в межах застосунку.
 - [ ] Стандартизувати схему даних між сервером та клієнтом:
   - єдині типи для `id`, `slug`, `fileName`
@@ -57,7 +57,7 @@
 ## 4. Допрацювання логіки
 
 - [ ] Усунути потенційні витоки подій у `App.jsx` (додати cleanup для `keydown/keyup/mouseup` слухачів).
-- [ ] Уніфікувати debounce/autosave логіку (зараз різні таймаути/підходи в `withCampaignView` і `withSessionView`).
+- [ ] Уніфікувати debounce/autosave логіку (зараз різні таймаути/підходи).
 - [ ] Замінити порівняння через `JSON.stringify` у history/undo-logic на більш контрольований diff.
 - [ ] Виправити інконсистентність оновлення NPC у `CampaignView` (перевірити, що reorder/collapse/save працюють однаково з characters).
 - [ ] Додати оптимістичні оновлення з rollback для критичних CRUD дій.
@@ -88,12 +88,12 @@
   - autosave
   - робота з NPC/персонажами.
 - [ ] Додати smoke-тести для API-роутів `campaigns/sessions/entities/images`.
-- [ ] Додати lint-правила/перевірку на кодування текстів перед комітом (UTF-8 guard).
+- [x] Додати lint-правила/перевірку на кодування текстів перед комітом (UTF-8 guard).
 
 ## Рекомендований порядок виконання
 
 - [x] Крок 1: P0 аудит кодування + виправлення текстів.
 - [x] Крок 2: декомпозиція `App.jsx`, `CampaignView.jsx`, `SessionView.jsx`.
-- [ ] Крок 3: рефактор HOC у hooks/services.
+- [x] Крок 3: рефактор HOC у hooks/services.
 - [ ] Крок 4: уніфікація стилів і токенів.
 - [ ] Крок 5: оптимізація і тести.

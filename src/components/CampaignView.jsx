@@ -8,56 +8,59 @@ import DraggableList from "./DraggableList";
 import NoteCard from "./NoteCard";
 import CharacterCard from "./CharacterCard";
 import "../assets/components/CampaignView.css";
-import withCampaignView from "../hoc/withCampaignView";
+import useCampaignView from "../hooks/useCampaignView";
 import CampaignViewModel from "../models/CampaignViewModel.js";
 
-function CampaignView({
-	campaign,
-	onSelectSession,
-	sessions,
-	setSessions,
-	description,
-	notes,
-	setNotes,
-	characters,
-	setCharacters,
-	npcs,
-	setNpcs,
-	isDescriptionCollapsed,
-	setIsDescriptionCollapsed,
-	isNotesCollapsed,
-	setIsNotesCollapsed,
-	isCharactersCollapsed,
-	setIsCharactersCollapsed,
-	isNpcsCollapsed,
-	setIsNpcsCollapsed,
-	undoStack,
-	redoStack,
-	handleUndo,
-	handleRedo,
-	triggerSave,
-	handleDescriptionChange,
-	handleToggleNoteCollapse,
-	handleNoteTitleChange,
-	handleNoteChange,
-	handleDeleteNote,
-	handleAddCharacter,
-	handleToggleCharacterCollapse,
-	handleCharacterChange,
-	handleDeleteCharacter,
-	handleAddNpc,
-	handleToggleNpcCollapse,
-	handleNpcChange,
-	handleNpcDelete,
-	handleCreateSession,
-	handleDeleteCampaign,
-	handleRename,
-	handleDeleteSession,
-	handleToggleSessionStatus,
-	handleExport,
-	handleAiUpdate,
-	handleSessionReorderDrop,
-}) {
+function CampaignView(props) {
+	const campaignViewProps = useCampaignView(props);
+	const {
+		campaign,
+		onSelectSession,
+		sessions,
+		setSessions,
+		description,
+		notes,
+		setNotes,
+		characters,
+		setCharacters,
+		npcs,
+		setNpcs,
+		isDescriptionCollapsed,
+		setIsDescriptionCollapsed,
+		isNotesCollapsed,
+		setIsNotesCollapsed,
+		isCharactersCollapsed,
+		setIsCharactersCollapsed,
+		isNpcsCollapsed,
+		setIsNpcsCollapsed,
+		undoStack,
+		redoStack,
+		handleUndo,
+		handleRedo,
+		triggerSave,
+		handleDescriptionChange,
+		handleToggleNoteCollapse,
+		handleNoteTitleChange,
+		handleNoteChange,
+		handleDeleteNote,
+		handleAddCharacter,
+		handleToggleCharacterCollapse,
+		handleCharacterChange,
+		handleDeleteCharacter,
+		handleAddNpc,
+		handleToggleNpcCollapse,
+		handleNpcChange,
+		handleNpcDelete,
+		handleCreateSession,
+		handleDeleteCampaign,
+		handleRename,
+		handleDeleteSession,
+		handleToggleSessionStatus,
+		handleExport,
+		handleAiUpdate,
+		handleSessionReorderDrop,
+	} = { ...props, ...campaignViewProps };
+
 	const viewModel = new CampaignViewModel(campaign);
 
 	return (
@@ -365,5 +368,4 @@ function CampaignView({
 }
 
 export { CampaignView };
-const CampaignViewWithHOC = withCampaignView(CampaignView);
-export default CampaignViewWithHOC;
+export default CampaignView;
