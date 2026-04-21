@@ -135,6 +135,7 @@ export const api = {
 		}),
 
 	// AI methods
+	listAiModels: () => api.request("/ai/models"),
 	generateAi: (payload) =>
 		api.request("/ai/generate", {
 			method: "POST",

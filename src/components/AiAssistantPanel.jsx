@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { api } from "../api";
 import { parseUrl } from "../utils/navigation";
 import Button from "./Button";
@@ -6,6 +6,7 @@ import EditableField from "./EditableField";
 import Icon from "./Icon";
 import Input from "./Input";
 import Modal from "./Modal";
+import Select from "./Select";
 import Checkbox from "./Checkbox";
 import Notification from "./Notification";
 import CollapseToggleButton from "./CollapseToggleButton";
@@ -30,7 +31,9 @@ export default function AiAssistantPanel({
 	const [notification, setNotification] = useState(null);
 	const [showSceneSelector, setShowSceneSelector] = useState(false);
 	const [parseAIResponse, setParseAIResponse] = useState(isEncounter);
-	const [generateEncounters, setGenerateEncounters] = useState(isEncounter);
+	const [generateEncounters, setGenerateEncounters] = useState(false);
+	const [aiModels, setAiModels] = useState([]);
+	const [selectedModel, setSelectedModel] = useState("");
 	const [sessionsList, setSessionsList] = useState([]);
 	const [expandedSessions, setExpandedSessions] = useState({});
 	const [contextConfig, setContextConfig] = useState({
@@ -56,6 +59,21 @@ export default function AiAssistantPanel({
 			api.listSessions(initialRoute.campaign).then(setSessionsList);
 		}
 	}, [isContextModalOpen, initialRoute.campaign, sessionsList.length]);
+
+	useEffect(() => {
+		if (!isOpen || aiModels.length > 0) return;
+		api.listAiModels()
+			.then((result) => {
+				const models = Array.isArray(result?.models) ? result.models : [];
+				setAiModels(models);
+				if (!selectedModel) {
+					setSelectedModel(result?.defaultModel || models[0]?.name || "");
+				}
+			})
+			.catch((err) => {
+				console.error("Failed to load AI models", err);
+			});
+	}, [isOpen, aiModels.length, selectedModel]);
 
 	const toggleSessionDetails = async (sessionSlug) => {
 		const isExpanded = !!expandedSessions[sessionSlug];
@@ -122,6 +140,7 @@ export default function AiAssistantPanel({
 		try {
 			const data = await api.generateAi({
 				type,
+				modelName: selectedModel || undefined,
 				userInstructions,
 				path: initialRoute,
 				sceneId: targetSceneId,
@@ -196,6 +215,24 @@ export default function AiAssistantPanel({
 				>
 					<div className="AiAssistant__content">
 						<div className="AiAssistant__actions">
+							<label className="AiAssistant__modelPicker">
+								<Select
+									className={`AiAssistant__modelSelect ${loading || aiModels.length === 0 ? "is-disabled" : ""}`}
+									disabled={loading || aiModels.length === 0}
+									value={selectedModel}
+									onChange={(event) => {
+										if (loading || aiModels.length === 0) return;
+										setSelectedModel(event.target.value);
+									}}>
+									{aiModels.length > 0
+										? aiModels.map((model) => (
+												<option key={model.name} value={model.name}>
+													{model.displayName || model.name}
+												</option>
+											))
+										: <option key="loading" value="">Завантаження моделей...</option>}
+								</Select>
+							</label>
 							<div className={`AiAssistant__context-toggle ${useContext ? 'is-active' : ''}`}>
 								<Checkbox
 									checked={useContext}
@@ -433,3 +470,7 @@ export default function AiAssistantPanel({
 		</div>
 	);
 }
+
+
+
+

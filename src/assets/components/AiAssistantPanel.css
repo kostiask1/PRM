@@ -51,6 +51,29 @@
 	margin-bottom: 16px;
 }
 
+.AiAssistant__modelPicker {
+	display: grid;
+	gap: var(--space-1);
+	font-size: 0.8rem;
+	color: var(--muted);
+}
+
+.AiAssistant__modelSelect {
+	min-width: 260px;
+	max-width: 360px;
+	width: 100%;
+}
+
+.AiAssistant__modelSelect .Select__trigger {
+	height: 38px;
+	border-radius: 8px;
+	border-color: var(--border);
+}
+
+.AiAssistant__modelSelect .Select__label {
+	font-size: 0.8rem;
+}
+
 .AiAssistant__context-toggle {
 	display: flex;
 	align-items: center;
@@ -285,4 +308,14 @@
 .AiAssistant__session-name {
 	flex: 1;
 	font-weight: 600;
+}
+
+@media (max-width: 720px) {
+	.AiAssistant__modelPicker {
+		width: 100%;
+	}
+
+	.AiAssistant__modelSelect {
+		max-width: none;
+	}
 }

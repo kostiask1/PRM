@@ -1,6 +1,25 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const GEMINI_MODELS_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
+const MODEL_CACHE_TTL_MS = 10 * 60 * 1000;
+const CORE_TEXT_MODELS = [
+	"gemini-2.5-flash",
+	"gemini-2.5-pro",
+	"gemini-2.5-flash-lite",
+	"gemini-2.0-flash",
+];
+const FALLBACK_TEXT_MODELS = ["gemini-2.5-flash", "gemini-2.5-pro"];
+const PREFERRED_FAST_TEXT_MODELS = [
+	"gemini-2.5-flash",
+	"gemini-2.5-flash-lite",
+	"gemini-2.0-flash",
+	"gemini-1.5-flash",
+];
+let modelCache = {
+	expiresAt: 0,
+	data: null,
+};
 
 function noteToPromptText(note) {
 	if (!note) return "";
@@ -8,6 +27,107 @@ function noteToPromptText(note) {
 	const title = String(note.title || "").trim();
 	const text = String(note.text || "").trim();
 	return [title, text].filter(Boolean).join("\n");
+}
+
+function normalizeModelName(name) {
+	return String(name || "").replace(/^models\//, "").trim();
+}
+
+function isLikelyTextModel(name) {
+	const lower = normalizeModelName(name).toLowerCase();
+	return !["imagen", "veo", "embedding", "aqa", "learnlm"].some((token) =>
+		lower.includes(token),
+	);
+}
+
+function isCoreTextModel(name) {
+	const lower = normalizeModelName(name).toLowerCase();
+	return CORE_TEXT_MODELS.some(
+		(core) => lower === core || lower.startsWith(`${core}-`),
+	);
+}
+
+function pickDefaultModel(models) {
+	for (const preferred of PREFERRED_FAST_TEXT_MODELS) {
+		if (models.some((model) => model.name === preferred)) return preferred;
+	}
+	return models[0]?.name || FALLBACK_TEXT_MODELS[0];
+}
+
+async function listAvailableModels({ forceRefresh = false } = {}) {
+	const now = Date.now();
+	if (!forceRefresh && modelCache.data && modelCache.expiresAt > now) {
+		return modelCache.data;
+	}
+
+	if (!process.env.GEMINI_API_KEY) {
+		const fallback = {
+			models: FALLBACK_TEXT_MODELS.map((name) => ({ name, displayName: name })),
+			defaultModel: FALLBACK_TEXT_MODELS[0],
+			source: "fallback",
+		};
+		modelCache = { data: fallback, expiresAt: now + MODEL_CACHE_TTL_MS };
+		return fallback;
+	}
+
+	try {
+		const response = await fetch(
+			`${GEMINI_MODELS_ENDPOINT}?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`,
+		);
+		if (!response.ok) {
+			throw new Error(`Gemini models request failed: ${response.status}`);
+		}
+		const payload = await response.json();
+		const models = (payload.models || [])
+			.filter((model) => Array.isArray(model.supportedGenerationMethods))
+			.filter((model) => model.supportedGenerationMethods.includes("generateContent"))
+			.map((model) => ({
+				name: normalizeModelName(model.name),
+				displayName: model.displayName || normalizeModelName(model.name),
+				description: model.description || "",
+				inputTokenLimit: model.inputTokenLimit,
+				outputTokenLimit: model.outputTokenLimit,
+			}))
+			.filter((model) => model.name)
+			.filter((model) => isLikelyTextModel(model.name));
+
+		const deduped = Array.from(
+			new Map(models.map((model) => [model.name, model])).values(),
+		).filter((model) => isCoreTextModel(model.name));
+
+		const ordered = deduped.sort((a, b) => {
+			const aName = a.name.toLowerCase();
+			const bName = b.name.toLowerCase();
+			const aIdx = CORE_TEXT_MODELS.findIndex(
+				(core) => aName === core || aName.startsWith(`${core}-`),
+			);
+			const bIdx = CORE_TEXT_MODELS.findIndex(
+				(core) => bName === core || bName.startsWith(`${core}-`),
+			);
+			const safeA = aIdx === -1 ? Number.MAX_SAFE_INTEGER : aIdx;
+			const safeB = bIdx === -1 ? Number.MAX_SAFE_INTEGER : bIdx;
+			return safeA - safeB || a.name.localeCompare(b.name);
+		});
+
+		const result = {
+			models: ordered.length
+				? ordered
+				: FALLBACK_TEXT_MODELS.map((name) => ({ name, displayName: name })),
+			defaultModel: pickDefaultModel(ordered),
+			source: "api",
+		};
+		modelCache = { data: result, expiresAt: now + MODEL_CACHE_TTL_MS };
+		return result;
+	} catch (error) {
+		const fallback = {
+			models: FALLBACK_TEXT_MODELS.map((name) => ({ name, displayName: name })),
+			defaultModel: FALLBACK_TEXT_MODELS[0],
+			source: "fallback",
+			error: error.message,
+		};
+		modelCache = { data: fallback, expiresAt: now + MODEL_CACHE_TTL_MS };
+		return fallback;
+	}
 }
 
 const systemInstructions = {
@@ -110,6 +230,7 @@ async function generateContent({
 	parseAIResponse,
 	contextData,
 	generateEncounters,
+	modelName,
 }) {
 	let model;
 	let userPrompt = "";
@@ -124,9 +245,16 @@ async function generateContent({
 					? "scene"
 					: "campaign";
 
+	const availableModels = await listAvailableModels();
+	const requestedModel = normalizeModelName(modelName);
+	const selectedModel = availableModels.models.some(
+		(item) => item.name === requestedModel,
+	)
+		? requestedModel
+		: availableModels.defaultModel;
+
 	model = genAI.getGenerativeModel({
-		// model: "gemini-2.5-flash",
-		model: "gemini-3.1-flash-lite-preview",
+		model: selectedModel,
 		generationConfig: {
 			responseMimeType: "application/json",
 		},
@@ -193,17 +321,19 @@ async function generateContent({
 			name: campaign.name,
 			description: campaign.description,
 			notes: contextData?.campaign?.notes?.map(noteToPromptText).filter(Boolean),
-				characters: contextData?.campaign?.characters?.map(c => ({
-					name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.name,
+			characters: contextData?.campaign?.characters
+				?.map((c) => ({
+					name: `${c.firstName || ""} ${c.lastName || ""}`.trim() || c.name,
 					race: c.race,
 					class: c.class,
 					level: c.level,
 					motivation: c.motivation,
 					trait: c.trait,
 					notes: (c.notes || []).map(noteToPromptText).filter(Boolean),
-				})).filter(c => c.name || c.motivation),
-			}
-		};
+				}))
+				.filter((c) => c.name || c.motivation),
+		},
+	};
 
 	if (filteredSessions.length > 0) {
 		contextJson.selectedSessions = filteredSessions;
@@ -225,6 +355,10 @@ async function generateContent({
 	}
 
 	userPrompt = `ВХІДНІ ДАНІ (JSON):\n${JSON.stringify(contextJson, null, 2)}\n\n`;
+	userPrompt +=
+		"IMPORTANT: In all generated text fields, wrap every mention of character or NPC names in square brackets, for example [Iryna] or [Borin Stonehelm]. Do not wrap JSON keys.\n";
+	userPrompt +=
+		"IMPORTANT: Never alter, translate, decline, or paraphrase character/NPC names. Always use names exactly as provided in the input JSON, preserving original spelling, and only wrap them in square brackets.\n";
 
 	// Додаємо специфічні інструкції залежно від типу задачі
 	if (useKey === "image") {
@@ -283,5 +417,5 @@ async function generateContent({
 	}
 }
 
-module.exports = { generateContent };
+module.exports = { generateContent, listAvailableModels };
 

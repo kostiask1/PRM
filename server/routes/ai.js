@@ -228,10 +228,259 @@ function normalizeEncounterFromAi(rawEncounter, bestiaryIndex, fallbackName) {
 	};
 }
 
+function escapeRegExp(value) {
+	return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getCharacterDisplayName(entity = {}) {
+	const firstName = asText(entity.firstName || entity.first_name);
+	const lastName = asText(entity.lastName || entity.last_name);
+	const combined = `${firstName} ${lastName}`.trim();
+	if (combined) return combined;
+	return asText(entity.name || entity.title);
+}
+
+function normalizeMentionCandidates(names = []) {
+	return Array.from(
+		new Set(
+			names
+				.map((name) => asText(name))
+				.filter((name) => name.length >= 2),
+		),
+	).sort((a, b) => b.length - a.length);
+}
+
+function wrapMentionsInText(text, names) {
+	if (!text || !names.length) return text;
+	let output = String(text);
+
+	for (const name of names) {
+		const pattern = new RegExp(`(?<!\\[)${escapeRegExp(name)}(?!\\])`, "giu");
+		output = output.replace(pattern, (match, offset, source) => {
+			const before = source[offset - 1];
+			const after = source[offset + match.length];
+			if (before === "[" && after === "]") return match;
+			return `[${match}]`;
+		});
+	}
+
+	return output;
+}
+
+function normalizeNameForMatch(value) {
+	return String(value || "")
+		.toLowerCase()
+		.replace(/[`'’]/g, "")
+		.replace(/[^\p{L}\p{N}\s-]+/gu, " ")
+		.replace(/\s+/g, " ")
+		.trim();
+}
+
+function levenshteinDistance(a, b) {
+	const left = String(a);
+	const right = String(b);
+	if (left === right) return 0;
+	if (!left.length) return right.length;
+	if (!right.length) return left.length;
+
+	const prev = Array.from({ length: right.length + 1 }, (_, i) => i);
+	for (let i = 1; i <= left.length; i += 1) {
+		let prevDiag = prev[0];
+		prev[0] = i;
+		for (let j = 1; j <= right.length; j += 1) {
+			const temp = prev[j];
+			const cost = left[i - 1] === right[j - 1] ? 0 : 1;
+			prev[j] = Math.min(
+				prev[j] + 1,
+				prev[j - 1] + 1,
+				prevDiag + cost,
+			);
+			prevDiag = temp;
+		}
+	}
+	return prev[right.length];
+}
+
+function resolveCanonicalName(rawName, canonicalNames) {
+	const raw = asText(rawName);
+	if (!raw || !canonicalNames.length) return rawName;
+
+	const exact = canonicalNames.find(
+		(name) => normalizeNameForMatch(name) === normalizeNameForMatch(raw),
+	);
+	if (exact) return exact;
+
+	const normalizedRaw = normalizeNameForMatch(raw);
+	if (!normalizedRaw) return rawName;
+
+	let best = null;
+	let bestDistance = Number.MAX_SAFE_INTEGER;
+	for (const candidate of canonicalNames) {
+		const normalizedCandidate = normalizeNameForMatch(candidate);
+		if (!normalizedCandidate) continue;
+		const distance = levenshteinDistance(normalizedRaw, normalizedCandidate);
+		if (distance < bestDistance) {
+			bestDistance = distance;
+			best = candidate;
+		}
+	}
+
+	if (!best) return rawName;
+	const threshold = normalizedRaw.length >= 10 ? 3 : 2;
+	return bestDistance <= threshold ? best : rawName;
+}
+
+function canonicalizeBracketedMentions(text, names) {
+	if (!text || !names.length) return text;
+	return String(text).replace(/\[([^[\]]+)\]/g, (_full, rawName) => {
+		const canonical = resolveCanonicalName(rawName, names);
+		return `[${canonical}]`;
+	});
+}
+
+function applyMentionsToGeneratedContent(generatedContent, names) {
+	if (!generatedContent || typeof generatedContent !== "object" || !names.length) {
+		return generatedContent;
+	}
+
+	if (typeof generatedContent.description === "string") {
+		generatedContent.description = wrapMentionsInText(
+			generatedContent.description,
+			names,
+		);
+		generatedContent.description = canonicalizeBracketedMentions(
+			generatedContent.description,
+			names,
+		);
+	}
+
+	if (Array.isArray(generatedContent.notes)) {
+		generatedContent.notes = generatedContent.notes.map((note) =>
+			typeof note === "string"
+				? canonicalizeBracketedMentions(wrapMentionsInText(note, names), names)
+				: note,
+		);
+	}
+
+	if (Array.isArray(generatedContent.characters)) {
+		generatedContent.characters = generatedContent.characters.map((character) => {
+			if (!character || typeof character !== "object") return character;
+			const next = { ...character };
+			for (const key of ["description", "motivation", "trait"]) {
+				if (typeof next[key] === "string") {
+					next[key] = canonicalizeBracketedMentions(
+						wrapMentionsInText(next[key], names),
+						names,
+					);
+				}
+			}
+			if (Array.isArray(next.notes)) {
+				next.notes = next.notes.map((note) =>
+					typeof note === "string"
+						? canonicalizeBracketedMentions(wrapMentionsInText(note, names), names)
+						: note,
+				);
+			}
+			return next;
+		});
+	}
+
+	if (Array.isArray(generatedContent.scenes)) {
+		generatedContent.scenes = generatedContent.scenes.map((scene) => {
+			if (!scene || typeof scene !== "object") return scene;
+			const nextScene = { ...scene };
+
+			if (nextScene.texts && typeof nextScene.texts === "object") {
+				nextScene.texts = { ...nextScene.texts };
+				for (const key of ["summary", "goal", "stakes", "location"]) {
+					if (typeof nextScene.texts[key] === "string") {
+						nextScene.texts[key] = canonicalizeBracketedMentions(
+							wrapMentionsInText(nextScene.texts[key], names),
+							names,
+						);
+					}
+				}
+			}
+
+			if (Array.isArray(nextScene.notes)) {
+				nextScene.notes = nextScene.notes.map((note) =>
+					typeof note === "string"
+						? canonicalizeBracketedMentions(wrapMentionsInText(note, names), names)
+						: note,
+				);
+			}
+
+			if (Array.isArray(nextScene.npcs)) {
+				nextScene.npcs = nextScene.npcs.map((npc) => {
+					if (!npc || typeof npc !== "object") return npc;
+					const nextNpc = { ...npc };
+					if (typeof nextNpc.description === "string") {
+						nextNpc.description = canonicalizeBracketedMentions(
+							wrapMentionsInText(nextNpc.description, names),
+							names,
+						);
+					}
+					return nextNpc;
+				});
+			}
+
+			return nextScene;
+		});
+	}
+
+	return generatedContent;
+}
+
+async function collectMentionCandidates(campaignSlug, sessionData, generatedContent) {
+	const [characters, npcs] = await Promise.all([
+		storage.listEntities(campaignSlug, "characters"),
+		storage.listEntities(campaignSlug, "npc"),
+	]);
+
+	const names = [
+		...characters.map(getCharacterDisplayName),
+		...npcs.map(getCharacterDisplayName),
+	];
+
+	if (sessionData?.data?.scenes) {
+		for (const scene of sessionData.data.scenes) {
+			for (const npc of scene?.npcs || []) {
+				names.push(asText(npc?.name));
+			}
+		}
+	}
+
+	if (Array.isArray(generatedContent?.characters)) {
+		for (const character of generatedContent.characters) {
+			names.push(getCharacterDisplayName(character));
+		}
+	}
+
+	if (Array.isArray(generatedContent?.scenes)) {
+		for (const scene of generatedContent.scenes) {
+			for (const npc of scene?.npcs || []) {
+				names.push(asText(npc?.name));
+			}
+		}
+	}
+
+	return normalizeMentionCandidates(names);
+}
+
+router.get("/models", async (_req, res, next) => {
+	try {
+		const result = await aiService.listAvailableModels();
+		res.json(result);
+	} catch (error) {
+		next(error);
+	}
+});
+
 router.post("/generate", async (req, res, next) => {
 	try {
 		const {
 			type,
+			modelName,
 			userInstructions,
 			path,
 			sceneId,
@@ -275,12 +524,42 @@ router.post("/generate", async (req, res, next) => {
 			session,
 			campaign,
 			userInstructions,
+			modelName,
 			encounterId: path.encounter,
 			sceneId,
 			parseAIResponse,
 			contextData,
 			generateEncounters,
 		});
+
+		if (parseAIResponse && generatedContent && typeof generatedContent === "object") {
+			const mentionNames = await collectMentionCandidates(
+				path.campaign,
+				session,
+				generatedContent,
+			);
+			applyMentionsToGeneratedContent(generatedContent, mentionNames);
+		}
+
+		if (
+			parseAIResponse &&
+			session &&
+			!path.encounter &&
+			!generateEncounters &&
+			generatedContent &&
+			typeof generatedContent === "object"
+		) {
+			if (Array.isArray(generatedContent.encounters)) {
+				delete generatedContent.encounters;
+			}
+			if (Array.isArray(generatedContent.scenes)) {
+				generatedContent.scenes = generatedContent.scenes.map((scene) => {
+					if (!scene || typeof scene !== "object") return scene;
+					const { encounterIndex, ...safeScene } = scene;
+					return safeScene;
+				});
+			}
+		}
 
 		if (generatedContent.error) return res.status(500).json(generatedContent);
 		if (!parseAIResponse) return res.json({ prompt: generatedContent });
