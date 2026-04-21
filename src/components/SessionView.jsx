@@ -379,7 +379,7 @@ function SceneCard({
 
 			{isImagePreviewOpen && imageUrl && (
 				<Modal
-					title={`Scene ${number}`}
+					title={`Сцена ${number}`}
 					type="custom"
 					className="SceneImageModal"
 					onCancel={() => setIsImagePreviewOpen(false)}
@@ -387,7 +387,7 @@ function SceneCard({
 					<div
 						className="SceneImageModal__content"
 						onClick={() => setIsImagePreviewOpen(false)}>
-						<img src={imageUrl} alt={`Scene ${number}`} />
+						<img src={imageUrl} alt={`Сцена ${number}`} />
 					</div>
 				</Modal>
 			)}

@@ -20,7 +20,7 @@ export default function SceneCardHeader({
 					collapsed={collapsed}
 					onClick={onToggle}
 				/>
-				<div className="SceneCard__title">{`Scene ${number}`}</div>
+				<div className="SceneCard__title">{`Сцена ${number}`}</div>
 			</div>
 			<div className="SceneCard__headerActions">
 				<Button

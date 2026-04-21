@@ -17,7 +17,7 @@ export default function SceneCardMedia({
 					<div className="SceneCard__portrait-wrapper">
 						<img
 							src={imageUrl}
-							alt={`Scene ${number}`}
+							alt={`Сцена ${number}`}
 							onClick={(event) => {
 								event.stopPropagation();
 								onImagePreview();
