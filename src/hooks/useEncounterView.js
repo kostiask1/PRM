@@ -16,6 +16,7 @@ export default function useEncounterView({
 	const [selectedInstance, setSelectedInstance] = useState(null);
 	const [showBestiary, setShowBestiary] = useState(false);
 	const [notification, setNotification] = useState(null);
+	const [entityImageMap, setEntityImageMap] = useState(new Map());
 
 	const saveTimeoutRef = useRef(null);
 	const fileInputRef = useRef(null);
@@ -87,6 +88,69 @@ export default function useEncounterView({
 			isMounted = false;
 		};
 	}, [campaign.slug, sessionId, encounterId, modal, onBack]);
+
+	useEffect(() => {
+		let isMounted = true;
+
+		const normalizeName = (value) =>
+			String(value || "")
+				.trim()
+				.toLowerCase()
+				.replace(/\s+/g, " ");
+
+		const getEntityNames = (entity) => {
+			const firstName = String(entity?.firstName || "").trim();
+			const lastName = String(entity?.lastName || "").trim();
+			const fullName = `${firstName} ${lastName}`.trim();
+			const fallbackName = String(entity?.name || "").trim();
+			return Array.from(
+				new Set([fullName, fallbackName].map((name) => normalizeName(name)).filter(Boolean)),
+			);
+		};
+
+		const loadEntityImages = async () => {
+			try {
+				const [characters, npcs] = await Promise.all([
+					api.getEntities(campaign.slug, "characters"),
+					api.getEntities(campaign.slug, "npc"),
+				]);
+
+				if (!isMounted) return;
+
+				const nextMap = new Map();
+				[...(characters || []), ...(npcs || [])].forEach((entity) => {
+					if (!entity?.imageUrl) return;
+					getEntityNames(entity).forEach((name) => {
+						if (!nextMap.has(name)) {
+							nextMap.set(name, entity.imageUrl);
+						}
+					});
+				});
+				setEntityImageMap(nextMap);
+			} catch (error) {
+				if (isMounted) {
+					console.error("Failed to load entity images for encounter", error);
+				}
+			}
+		};
+
+		loadEntityImages();
+		return () => {
+			isMounted = false;
+		};
+	}, [campaign.slug]);
+
+	const getMonsterImageOverride = useCallback(
+		(monster) => {
+			const normalizedName = String(monster?.name || "")
+				.trim()
+				.toLowerCase()
+				.replace(/\s+/g, " ");
+			if (!normalizedName) return null;
+			return entityImageMap.get(normalizedName) || null;
+		},
+		[entityImageMap],
+	);
 
 	const saveEncounterState = useCallback(
 		(updatedEncounter, debounceMs = 0) => {
@@ -381,5 +445,6 @@ export default function useEncounterView({
 		getHpColor,
 		handleReorderMonsters,
 		handleMonstersDrop,
+		getMonsterImageOverride,
 	};
 }

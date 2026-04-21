@@ -25,6 +25,7 @@ export default function MonsterStatBlock({
 	onNameClick,
 	nameTitle,
 	onFavoriteChange,
+	tokenImageOverrideUrl = null,
 }) {
 	const modal = useModal();
 	const [hasImageError, setHasImageError] = useState(false);
@@ -98,7 +99,6 @@ export default function MonsterStatBlock({
 	};
 
 	useEffect(() => {
-		setHasImageError(false); // Скидаємо стан помилки зображення при зміні монстра
 		setSpells([]);
 
 		if (monster.spell_list && monster.spell_list.length > 0) {
@@ -126,6 +126,10 @@ export default function MonsterStatBlock({
 			fetchSpells();
 		}
 	}, [monster]);
+
+	useEffect(() => {
+		setHasImageError(false);
+	}, [monster, tokenImageOverrideUrl]);
 
 	const renderActionList = (actions, title) => {
 		if (!actions || actions.length === 0) return null;
@@ -307,8 +311,8 @@ export default function MonsterStatBlock({
 
 	// Допоміжні функції для парсингу нових структур даних
 
-	const localSrc = model.localTokenSrc;
-	const externalSrc = model.externalTokenSrc;
+	const localSrc = tokenImageOverrideUrl || model.localTokenSrc;
+	const externalSrc = tokenImageOverrideUrl || model.externalTokenSrc;
 
 	function handleDragStart(e) {
 		e.dataTransfer.effectAllowed = "copy";
@@ -526,4 +530,6 @@ export default function MonsterStatBlock({
 		</div>
 	);
 }
+
+
 

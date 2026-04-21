@@ -39,6 +39,7 @@ function EncounterView({
 		getHpColor,
 		handleReorderMonsters,
 		handleMonstersDrop,
+		getMonsterImageOverride,
 	} = useEncounterView({
 		campaign,
 		sessionId,
@@ -194,7 +195,10 @@ function EncounterView({
 
 					<div className="EncounterView__detailView">
 						{selectedInstance ? (
-							<MonsterStatBlock monster={selectedInstance} />
+							<MonsterStatBlock
+								monster={selectedInstance}
+								tokenImageOverrideUrl={getMonsterImageOverride(selectedInstance)}
+							/>
 						) : (
 							<p className="muted">
 								Оберіть монстра зі списку, щоб побачити його характеристики.

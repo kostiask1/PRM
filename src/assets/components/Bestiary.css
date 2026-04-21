@@ -2,6 +2,20 @@
 	height: 100%;
 }
 
+.Bestiary__inner {
+	height: 100%;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.Bestiary__inner > .Panel__body {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+}
+
 .Bestiary__search {
 	margin-bottom: 20px;
 	display: flex;
@@ -43,9 +57,7 @@
 }
 
 .Bestiary .Panel__body,
-/* When Bestiary is not embedded, its Panel__body */
-.Modal__body>.Bestiary__search+.Bestiary__content {
-	/* When Bestiary is embedded, its content directly in Modal__body */
+.Modal__body > .Bestiary__search + .Bestiary__content {
 	overflow: hidden;
 	max-height: 100%;
 	display: flex;
@@ -57,15 +69,17 @@
 	gap: var(--space-4);
 	height: calc(100% - 60px);
 	flex: 1;
-	/* Allow content to grow within its parent */
+	min-height: 0;
 }
 
 .Bestiary__list {
 	overflow-y: auto;
 	height: 100%;
+	min-height: 0;
 	flex: 0 0 320px;
-	/* Фіксована ширина списку */
 	padding-right: 8px;
+	overscroll-behavior: contain;
+	-webkit-overflow-scrolling: touch;
 }
 
 .Bestiary__token-skeleton {
@@ -78,8 +92,8 @@
 .Bestiary__detail-container {
 	position: relative;
 	flex: 1;
-	/* Деталі займають весь залишок простору */
 	overflow-y: auto;
+	min-height: 0;
 }
 
 .Bestiary__add-to-encounter-btn {
