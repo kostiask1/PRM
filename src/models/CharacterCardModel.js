@@ -1,4 +1,9 @@
-﻿/**
+import {
+	appendTrailingEmptyNote,
+	createEmptyNote,
+} from "../utils/noteUtils";
+
+/**
  * @typedef {Object} CharacterNote
  * @property {number|string} id
  * @property {string} title
@@ -53,12 +58,7 @@ export default class CharacterCardModel {
 	}
 
 	static createEmptyNote() {
-		return {
-			id: Date.now(),
-			title: "",
-			text: "",
-			collapsed: false,
-		};
+		return createEmptyNote();
 	}
 
 	get data() {
@@ -133,12 +133,7 @@ export default class CharacterCardModel {
 	}
 
 	ensureTrailingEmptyNote(notes = this.notes) {
-		const next = [...notes];
-		const lastNote = next[next.length - 1];
-		if (lastNote && (lastNote.text?.trim() || lastNote.title?.trim())) {
-			next.push(CharacterCardModel.createEmptyNote());
-		}
-		return next;
+		return appendTrailingEmptyNote(notes);
 	}
 
 	static getLevelOptions(max = 20) {

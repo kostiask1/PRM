@@ -1,4 +1,6 @@
-﻿const SCENE_SCHEMA = [
+import { idsEqual } from "../utils/id";
+
+const SCENE_SCHEMA = [
 	{
 		key: "summary",
 		title: "Суть сцени",
@@ -133,7 +135,7 @@ export default class SessionViewModel {
 	findEncounterName(scene) {
 		const entry = this.encounters.find(
 			(encounter) =>
-				encounter.id?.toString() === scene.encounterId?.toString(),
+				idsEqual(encounter.id, scene.encounterId),
 		);
 		return entry?.name || "Без назви";
 	}

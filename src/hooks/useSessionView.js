@@ -5,7 +5,8 @@ import { useModal } from "../context/ModalContext";
 import {
 	appendTrailingEmptyNote,
 	ensureAtLeastOneNote,
-} from "../services/noteHelpers";
+} from "../utils/noteUtils";
+import { idsEqual } from "../utils/id";
 
 export default function useSessionView(props) {
 		const { campaign, sessionId, onBack, onNavigate, onRefreshCampaigns } =
@@ -340,7 +341,7 @@ export default function useSessionView(props) {
 
 			if (scene.encounterId) {
 				nextData.encounters = (nextData.encounters || []).filter(
-					(e) => e.id.toString() !== scene.encounterId.toString(),
+					(e) => !idsEqual(e.id, scene.encounterId),
 				);
 			}
 

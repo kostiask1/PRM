@@ -5,7 +5,8 @@ import { useModal } from "../context/ModalContext";
 import {
 	appendTrailingEmptyNote,
 	ensureAtLeastOneNote,
-} from "../services/noteHelpers";
+} from "../utils/noteUtils";
+import { downloadJsonFile } from "../utils/download";
 
 export default function useCampaignView(props) {
 		const { campaign, onSelectSession, onNavigate, onRefreshCampaigns } =
@@ -485,15 +486,7 @@ export default function useCampaignView(props) {
 		const handleExport = async () => {
 			try {
 				const bundle = await api.exportCampaign(campaign.slug);
-				const blob = new Blob([JSON.stringify(bundle, null, 2)], {
-					type: "application/json",
-				});
-				const url = URL.createObjectURL(blob);
-				const a = document.createElement("a");
-				a.href = url;
-				a.download = `campaign-${campaign.slug}.json`;
-				a.click();
-				URL.revokeObjectURL(url);
+				downloadJsonFile(bundle, `campaign-${campaign.slug}.json`);
 			} catch (err) {
 				modal.alert("Помилка експорту", err.message);
 			}

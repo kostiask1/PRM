@@ -8,6 +8,7 @@ import ColorThemeSwitcher from "./ColorThemeSwitcher"; // Імпортуємо �
 import DraggableList from "./DraggableList";
 import ImageGallery from "./ImageGallery";
 import { useModal } from "../context/ModalContext";
+import { downloadJsonFile } from "../utils/download";
 import "../assets/components/Sidebar.css";
 
 export default function Sidebar({
@@ -30,18 +31,6 @@ export default function Sidebar({
 	}, [campaigns]);
 
 	const importMode = useRef("campaign"); // 'campaign' or 'all'
-
-	const downloadJson = (data, filename) => {
-		const blob = new Blob([JSON.stringify(data, null, 2)], {
-			type: "application/json",
-		});
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement("a");
-		a.href = url;
-		a.download = filename;
-		a.click();
-		URL.revokeObjectURL(url);
-	};
 
 	const handleFileChange = async (event) => {
 		const file = event.target.files[0];
@@ -235,7 +224,7 @@ export default function Sidebar({
 						onClick={async () => {
 							try {
 								const data = await api.exportAll();
-								downloadJson(
+								downloadJsonFile(
 									data,
 									`prm-full-backup-${new Date().toISOString().slice(0, 10)}.json`,
 								);
