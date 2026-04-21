@@ -9,15 +9,21 @@ import { IMAGE_GALLERY_CATEGORIES } from "../hooks/useImageGallery";
 import { useModal } from "../context/ModalContext";
 import "../assets/components/ImageDropzone.css";
 
-export default function ImageDropzone({ campaignSlug, onUploadSuccess }) {
+export default function ImageDropzone({
+	campaignSlug,
+	onUploadSuccess,
+	initialSource,
+	initialCategory = "maps",
+	initialSubcategory = "",
+}) {
 	const modal = useModal();
 	const [isDragging, setIsDragging] = useState(false);
 	const [pendingFile, setPendingFile] = useState(null);
 	const [campaigns, setCampaigns] = useState([]);
 	const [uploadConfig, setUploadConfig] = useState({
-		source: campaignSlug || "general",
-		category: "maps",
-		subcategory: "",
+		source: initialSource || campaignSlug || "general",
+		category: initialCategory,
+		subcategory: initialSubcategory,
 	});
 	const [isUploading, setIsUploading] = useState(false);
 	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
@@ -41,9 +47,9 @@ export default function ImageDropzone({ campaignSlug, onUploadSuccess }) {
 	useEffect(() => {
 		setUploadConfig((prev) => ({
 			...prev,
-			source: campaignSlug || "general",
+			source: initialSource || campaignSlug || "general",
 		}));
-	}, [campaignSlug]);
+	}, [campaignSlug, initialSource]);
 
 	const sourceOptions = useMemo(
 		() => [
@@ -159,6 +165,9 @@ export default function ImageDropzone({ campaignSlug, onUploadSuccess }) {
 					onUploadSuccess?.(img);
 					setIsGalleryOpen(false);
 				}}
+				initialSource={initialSource || campaignSlug || "general"}
+				initialCategory={initialCategory}
+				initialSubcategory={initialSubcategory}
 			/>
 		</div>
 	);

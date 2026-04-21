@@ -42,6 +42,9 @@ export default function SceneCardMedia({
 				) : (
 					<ImageDropzone
 						campaignSlug={campaignSlug}
+						initialSource={campaignSlug}
+						initialCategory="scenes"
+						initialSubcategory=""
 						onUploadSuccess={onUploadSuccess}
 					/>
 				)}

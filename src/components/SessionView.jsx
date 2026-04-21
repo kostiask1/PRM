@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Icon from "./Icon";
 import Button from "./Button";
 import EditableField from "./EditableField";
@@ -18,7 +18,6 @@ import SceneCardFields from "./session/SceneCardFields";
 import "../assets/components/SessionView.css";
 import useSessionView from "../hooks/useSessionView";
 import SessionViewModel from "../models/SessionViewModel.js";
-import { resolveImageGalleryLocation } from "../utils/imageLocation.js";
 
 function SessionView(props) {
 	const sessionViewProps = useSessionView(props);
@@ -317,20 +316,26 @@ function SceneCard({
 	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 	const [isImagePreviewOpen, setIsImagePreviewOpen] = useState(false);
 	const [galleryLocation, setGalleryLocation] = useState({
-		source: campaignSlug,
+		source: campaignSlug || "general",
 		category: "scenes",
 		subcategory: "",
 	});
 	const encounterLabel = hasEncounter ? encounterName : "Encounter";
 
+	useEffect(() => {
+		setGalleryLocation((prev) => ({
+			...prev,
+			source: campaignSlug || "general",
+			category: "scenes",
+		}));
+	}, [campaignSlug]);
+
 	const openGalleryAtImageLocation = () => {
-		setGalleryLocation(
-			resolveImageGalleryLocation(imageUrl, {
-				source: campaignSlug,
-				category: "scenes",
-				subcategory: "",
-			}),
-		);
+		setGalleryLocation({
+			source: campaignSlug || "general",
+			category: "scenes",
+			subcategory: "",
+		});
 		setIsGalleryOpen(true);
 	};
 
