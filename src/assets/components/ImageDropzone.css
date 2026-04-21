@@ -36,8 +36,7 @@
 	cursor: pointer;
 }
 
-/* Settings in Modal */
-.ImageDropzone__settings {
+.ImageDropzone__upload-settings {
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-6);
@@ -64,76 +63,4 @@
 	font-size: 0.9rem;
 	color: var(--text-bright);
 	word-break: break-all;
-}
-
-.ImageDropzone__categories label,
-.ImageDropzone__subcategories label {
-	display: block;
-	font-size: 0.85rem;
-	color: var(--muted);
-	margin-bottom: 8px;
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
-}
-
-.ImageDropzone__grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-	gap: var(--space-2);
-}
-
-.CategoryBtn {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: var(--space-2);
-	padding: var(--space-3);
-	background: var(--panel-2);
-	border: 1px solid var(--border);
-	border-radius: 8px;
-	color: var(--text);
-	cursor: pointer;
-	transition: all 0.2s;
-	font-size: 0.9rem;
-}
-
-.CategoryBtn:hover {
-	border-color: var(--accent);
-}
-
-.CategoryBtn.is-active {
-	background: color-mix(in srgb, var(--accent), transparent 90%);
-	border-color: var(--accent);
-	color: var(--accent);
-}
-
-.ImageDropzone__tabs {
-	display: flex;
-	gap: var(--space-2);
-	background: var(--bg);
-	padding: var(--space-1);
-	border-radius: 8px;
-}
-
-.TabBtn {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: var(--space-2);
-	flex: 1;
-	padding: var(--space-2);
-	border: none;
-	background: transparent;
-	color: var(--muted);
-	border-radius: 6px;
-	cursor: pointer;
-	font-weight: 600;
-	font-size: 0.8rem;
-	transition: all 0.2s;
-}
-
-.TabBtn.is-active {
-	background: var(--panel-2);
-	color: var(--accent);
-	box-shadow: var(--shadow-sm);
 }

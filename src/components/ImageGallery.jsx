@@ -1,10 +1,12 @@
-﻿import React from "react";
+import React from "react";
 import Modal from "./Modal";
 import Icon from "./Icon";
 import "../assets/components/ImageGallery.css";
 import Button from "./Button";
 import useImageGallery from "../hooks/useImageGallery";
 import { useModal } from "../context/ModalContext";
+import ImageTargetSettings from "./ImageTargetSettings";
+import { api } from "../api";
 
 const SUB_LABELS = {
 	npc: "NPC",
@@ -20,7 +22,12 @@ function ImageGallery({
 	initialSubcategory,
 }) {
 	const modal = useModal();
-	const isSelectionMode = typeof onSelect === "function";
+	const [isMoveModalOpen, setIsMoveModalOpen] = React.useState(false);
+	const [moveTarget, setMoveTarget] = React.useState({
+		slug: "general",
+		category: "attachments",
+		subcategory: "",
+	});
 	const {
 		campaigns,
 		categories,
@@ -47,6 +54,7 @@ function ImageGallery({
 		allSubs,
 		handleCreateSub,
 		handleBulkDelete,
+		handleMoveSelection,
 		handleFileUpload,
 		handleDrop,
 		handleItemClick,
@@ -61,9 +69,19 @@ function ImageGallery({
 		initialSource,
 		initialCategory,
 		initialSubcategory,
-		allowInternalReorder: !isSelectionMode,
 	});
 	if (!isOpen) return null;
+
+	const availableSources = [{ slug: "general", name: "Загальні" }, ...campaigns];
+
+	const openMoveModal = () => {
+		setMoveTarget({
+			slug: selectedSource,
+			category: selectedCat.id,
+			subcategory: selectedSub,
+		});
+		setIsMoveModalOpen(true);
+	};
 
 	return (
 		<Modal
@@ -77,7 +95,6 @@ function ImageGallery({
 						className={`SourceBtn ${selectedSource === "general" ? "is-active" : ""} ${dragOverTarget?.id === "general" ? "is-drag-over" : ""}`}
 						onClick={() => setSelectedSource("general")}
 						onDragOver={(e) => {
-							if (isSelectionMode) return;
 							e.preventDefault();
 							if (dragOverTarget?.id !== "general") {
 								setDragOverTarget({ type: "source", id: "general" });
@@ -101,7 +118,6 @@ function ImageGallery({
 							className={`SourceBtn ${selectedSource === c.slug ? "is-active" : ""} ${dragOverTarget?.id === c.slug ? "is-drag-over" : ""}`}
 							onClick={() => setSelectedSource(c.slug)}
 							onDragOver={(e) => {
-								if (isSelectionMode) return;
 								e.preventDefault();
 								if (dragOverTarget?.id !== c.slug) {
 									setDragOverTarget({ type: "source", id: c.slug });
@@ -132,7 +148,6 @@ function ImageGallery({
 									setSelectedSub("");
 								}}
 								onDragOver={(e) => {
-									if (isSelectionMode) return;
 									e.preventDefault();
 									if (dragOverTarget?.id !== cat.id) {
 										setDragOverTarget({ type: "cat", id: cat.id });
@@ -158,7 +173,6 @@ function ImageGallery({
 								className={`BreadcrumbItem ${selectedSub === "" ? "is-active" : ""} ${dragOverTarget?.type === "breadcrumb" && dragOverTarget?.id === "__root__" ? "is-drag-over" : ""}`}
 								onClick={() => setSelectedSub("")}
 								onDragOver={(e) => {
-									if (isSelectionMode) return;
 									e.preventDefault();
 									setDragOverTarget({ type: "breadcrumb", id: "__root__" });
 								}}
@@ -191,7 +205,6 @@ function ImageGallery({
 												setSelectedSub(breadcrumbPath);
 											}}
 											onDragOver={(e) => {
-												if (isSelectionMode) return;
 												e.preventDefault();
 												setDragOverTarget({
 													type: "breadcrumb",
@@ -247,14 +260,23 @@ function ImageGallery({
 						</div>
 						<div className="ImageGallery__upload-actions">
 							{hasSelection && (
-								<Button
-									className="ImageGallery__deleteBtn"
-									variant="danger"
-									size="small"
-									icon="trash"
-									onClick={handleBulkDelete}>
-									Видалити ({selectedFilenames.size + selectedSubs.size})
-								</Button>
+								<>
+									<Button
+										variant="ghost"
+										size="small"
+										icon="move"
+										onClick={openMoveModal}>
+										Перемістити ({selectedFilenames.size + selectedSubs.size})
+									</Button>
+									<Button
+										className="ImageGallery__deleteBtn"
+										variant="danger"
+										size="small"
+										icon="trash"
+										onClick={handleBulkDelete}>
+										Видалити ({selectedFilenames.size + selectedSubs.size})
+									</Button>
+								</>
 							)}
 							<label className="UploadBtn">
 								<Icon name="plus" size={14} />
@@ -273,7 +295,6 @@ function ImageGallery({
 					<div
 						className={`ImageGallery__grid ${isDraggingOver ? "is-dragging" : ""}`}
 						onDragOver={(e) => {
-							if (isSelectionMode) return;
 							e.preventDefault();
 							const isSameLocation =
 								dragSource &&
@@ -320,11 +341,10 @@ function ImageGallery({
 										);
 										if (newName) handleRenameSub(sub, newName);
 									}}
-									draggable={!isSelectionMode}
+									draggable
 									onDragStart={(e) => handleDragStart(e, sub, "sub")}
 									onDragEnd={handleDragEnd}
 									onDragOver={(e) => {
-										if (isSelectionMode) return;
 										e.preventDefault();
 										if (dragOverTarget?.id !== sub) {
 											setDragOverTarget({ type: "sub", id: sub });
@@ -385,7 +405,7 @@ function ImageGallery({
 											handleRenameImage(img.name, `${newBaseName}.${ext}`);
 										}
 									}}
-									draggable={!isSelectionMode}
+									draggable
 									onDragStart={(e) => handleDragStart(e, img, "image")}
 									onDragEnd={handleDragEnd}>
 									<div className="ImageGallery__image-wrap">
@@ -409,6 +429,41 @@ function ImageGallery({
 					</div>
 				</main>
 			</div>
+
+			{isMoveModalOpen && (
+				<Modal
+					title="Перемістити обрані об'єкти"
+					onCancel={() => setIsMoveModalOpen(false)}
+					onConfirm={async () => {
+						const moved = await handleMoveSelection(moveTarget);
+						if (moved) setIsMoveModalOpen(false);
+					}}
+					confirmLabel="Перемістити">
+					<ImageTargetSettings
+						sources={availableSources.map((source) => ({
+							id: source.slug,
+							label: source.name,
+							icon: source.slug === "general" ? "database" : "map",
+						}))}
+						categories={categories}
+						value={{
+							source: moveTarget.slug,
+							category: moveTarget.category,
+							subcategory: moveTarget.subcategory,
+						}}
+						onChange={(next) =>
+							setMoveTarget({
+								slug: next.source,
+								category: next.category,
+								subcategory: next.subcategory || "",
+							})
+						}
+						loadSubcategories={({ source, category, subcategory }) =>
+							api.getSubcategories(source, category, subcategory)
+						}
+					/>
+				</Modal>
+			)}
 		</Modal>
 	);
 }

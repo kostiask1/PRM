@@ -23,7 +23,6 @@ export default function useImageGallery({
 	initialSource,
 	initialCategory,
 	initialSubcategory,
-	allowInternalReorder = true,
 }) {
 	const modal = useModal();
 
@@ -129,7 +128,6 @@ export default function useImageGallery({
 				const jsonData = e.dataTransfer.getData("application/json");
 
 				if (jsonData) {
-					if (!allowInternalReorder) return;
 					const data = JSON.parse(jsonData);
 					if (!data.items?.length) return;
 
@@ -164,7 +162,56 @@ export default function useImageGallery({
 				setLoading(false);
 			}
 		},
-		[allowInternalReorder, handleFileUpload, loadImages, loadSubcategories],
+		[handleFileUpload, loadImages, loadSubcategories],
+	);
+
+	const handleMoveSelection = useCallback(
+		async (dest) => {
+			const items = [...Array.from(selectedFilenames), ...Array.from(selectedSubs)];
+			if (!items.length) return false;
+
+			const src = {
+				slug: selectedSource,
+				category: selectedCat.id,
+				subcategory: selectedSub,
+			};
+			const sSub = src.subcategory || "";
+			const dSub = dest.subcategory || "";
+			if (
+				src.slug === dest.slug &&
+				src.category === dest.category &&
+				sSub === dSub
+			) {
+				return false;
+			}
+
+			setLoading(true);
+			try {
+				await api.moveImages({ items, src, dest });
+				setSelectedFilenames(new Set());
+				setSelectedSubs(new Set());
+				setLastSelectedIndex(null);
+				loadImages();
+				loadSubcategories();
+				return true;
+			} catch (err) {
+				console.error("Move failed", err);
+				modal?.alert("Помилка переміщення", err.message);
+				return false;
+			} finally {
+				setLoading(false);
+			}
+		},
+		[
+			selectedFilenames,
+			selectedSubs,
+			selectedSource,
+			selectedCat.id,
+			selectedSub,
+			loadImages,
+			loadSubcategories,
+			modal,
+		],
 	);
 
 	const handleCreateSub = useCallback(async () => {
@@ -367,10 +414,6 @@ export default function useImageGallery({
 
 	const handleDragStart = useCallback(
 		(e, item, type = "image") => {
-			if (!allowInternalReorder) {
-				e.preventDefault();
-				return;
-			}
 			const itemName = type === "image" ? item.name : item;
 			const isSelected =
 				type === "image"
@@ -400,7 +443,6 @@ export default function useImageGallery({
 			});
 		},
 		[
-			allowInternalReorder,
 			selectedFilenames,
 			selectedSubs,
 			selectedSource,
@@ -440,6 +482,7 @@ export default function useImageGallery({
 		allSubs,
 		handleCreateSub,
 		handleBulkDelete,
+		handleMoveSelection,
 		handleFileUpload,
 		handleDrop,
 		handleItemClick,
@@ -451,3 +494,4 @@ export default function useImageGallery({
 		handleRenameImage,
 	};
 }
+

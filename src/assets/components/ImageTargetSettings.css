@@ -1,0 +1,115 @@
+.ImageDropzone__settings {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-6);
+}
+
+.ImageDropzone__categories label,
+.ImageDropzone__subcategories label {
+	display: block;
+	font-size: 0.85rem;
+	color: var(--muted);
+	margin-bottom: var(--space-2);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+.ImageDropzone__grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+	gap: var(--space-2);
+}
+
+.ImageDropzone__categoryBtn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-2);
+	padding: var(--space-3);
+	background: var(--panel-2);
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	color: var(--text);
+	cursor: pointer;
+	transition: all 0.2s;
+	font-size: 0.9rem;
+}
+
+.ImageDropzone__categoryBtn:hover {
+	border-color: var(--accent);
+}
+
+.ImageDropzone__categoryBtn.is-active {
+	background: color-mix(in srgb, var(--accent), transparent 90%);
+	border-color: var(--accent);
+	color: var(--accent);
+}
+
+.ImageDropzone__tabs {
+	display: flex;
+	gap: var(--space-2);
+	background: var(--bg);
+	padding: var(--space-1);
+	border-radius: 8px;
+}
+
+.ImageDropzone__tabBtn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-2);
+	flex: 1;
+	padding: var(--space-2);
+	border: none;
+	background: transparent;
+	color: var(--muted);
+	border-radius: 6px;
+	cursor: pointer;
+	font-weight: 600;
+	font-size: 0.8rem;
+	transition: all 0.2s;
+}
+
+.ImageDropzone__tabBtn.is-active {
+	background: var(--panel-2);
+	color: var(--accent);
+	box-shadow: var(--shadow-sm);
+}
+
+.ImageDropzone__tabBtn:disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+}
+
+.ImageDropzone__pathBar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-1);
+	margin-bottom: var(--space-2);
+}
+
+.ImageDropzone__pathBtn {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-1);
+	border: 1px solid var(--border);
+	background: var(--bg-2);
+	color: var(--muted);
+	border-radius: 6px;
+	padding: var(--space-1) var(--space-2);
+	cursor: pointer;
+	font-size: 0.8rem;
+}
+
+.ImageDropzone__pathBtn.is-active {
+	border-color: var(--accent);
+	color: var(--accent);
+	background: color-mix(in srgb, var(--accent), transparent 92%);
+}
+
+.ImageDropzone__emptySubs {
+	color: var(--muted);
+	font-size: 0.8rem;
+	align-self: center;
+	padding: 0 var(--space-2);
+}
