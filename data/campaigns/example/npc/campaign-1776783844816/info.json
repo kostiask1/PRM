@@ -1,0 +1,24 @@
+{
+  "id": "c1288ba8-d713-4de5-881a-796f31b6895e",
+  "firstName": "Awebo",
+  "lastName": "Bo$$",
+  "race": "Aarakocra",
+  "class": "Monk",
+  "level": 20,
+  "motivation": "Знищити [Awebo]",
+  "trait": "",
+  "notes": [
+    {
+      "id": 1776783844814,
+      "title": "",
+      "text": "",
+      "collapsed": false
+    }
+  ],
+  "collapsed": false,
+  "slug": "campaign-1776783844816",
+  "updatedAt": "2026-04-21T15:05:56.602Z",
+  "_isNew": true,
+  "_isPending": false,
+  "imageUrl": "/api/images/example/characters/npc/bo%24%24.jpg"
+}

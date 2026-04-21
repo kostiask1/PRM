@@ -1,0 +1,1080 @@
+{
+  "id": "1263cfe5-fd91-4650-88ad-14a1eb9d0052",
+  "name": "Пролог",
+  "completed": false,
+  "order": 0,
+  "completedAt": null,
+  "createdAt": "2026-04-21T15:06:11.710Z",
+  "updatedAt": "2026-04-21T15:52:11.257Z",
+  "data": {
+    "encounters": [
+      {
+        "id": "5523c3e2-41c7-4840-b9e9-da65a48ec163",
+        "name": "Перша засідка Вартових",
+        "monsters": [
+          {
+            "name": "Мовчазний Вартовий-асасин",
+            "source": "MM",
+            "page": 343,
+            "srd": true,
+            "referenceSources": [
+              "BGDIA",
+              "CM",
+              "CoA",
+              "CoS",
+              "CRCotN",
+              "EGW",
+              "GoS",
+              "HotDQ",
+              "IDRotF",
+              "IMR",
+              "JttRC",
+              "KftGV",
+              "MOT",
+              "OotA",
+              "OoW",
+              "PotA",
+              "RoT",
+              "SatO",
+              "SKT",
+              "TCE",
+              "TftYP",
+              "ToA",
+              "ToFW",
+              "VEoR",
+              "WDH",
+              "WDMM"
+            ],
+            "reprintedAs": [
+              "Assassin|XMM"
+            ],
+            "size": [
+              "M"
+            ],
+            "type": {
+              "type": "humanoid",
+              "tags": [
+                "any race"
+              ]
+            },
+            "alignment": [
+              "L",
+              "NX",
+              "C",
+              "NY",
+              "E"
+            ],
+            "ac": [
+              {
+                "ac": 15,
+                "from": [
+                  "{@item studded leather armor|phb|studded leather}"
+                ]
+              }
+            ],
+            "hp": {
+              "average": 78,
+              "formula": "12d8 + 24"
+            },
+            "speed": {
+              "walk": 30
+            },
+            "str": 11,
+            "dex": 16,
+            "con": 14,
+            "int": 13,
+            "wis": 11,
+            "cha": 10,
+            "save": {
+              "dex": "+6",
+              "int": "+4"
+            },
+            "skill": {
+              "acrobatics": "+6",
+              "deception": "+3",
+              "perception": "+3",
+              "stealth": "+9"
+            },
+            "passive": 13,
+            "resist": [
+              "poison"
+            ],
+            "languages": [
+              "Thieves' cant plus any two languages"
+            ],
+            "cr": "8",
+            "trait": [
+              {
+                "name": "Assassinate",
+                "entries": [
+                  "During its first turn, the assassin has advantage on attack rolls against any creature that hasn't taken a turn. Any hit the assassin scores against a {@status surprised} creature is a critical hit."
+                ]
+              },
+              {
+                "name": "Evasion",
+                "entries": [
+                  "If the assassin is subjected to an effect that allows it to make a Dexterity saving throw to take only half damage, the assassin instead takes no damage if it succeeds on the saving throw, and only half damage if it fails."
+                ]
+              },
+              {
+                "name": "Sneak Attack (1/Turn)",
+                "entries": [
+                  "The assassin deals an extra 14 ({@damage 4d6}) damage when it hits a target with a weapon attack and has advantage on the attack roll, or when the target is within 5 feet of an ally of the assassin that isn't {@condition incapacitated} and the assassin doesn't have disadvantage on the attack roll."
+                ]
+              }
+            ],
+            "action": [
+              {
+                "name": "Multiattack",
+                "entries": [
+                  "The assassin makes two shortsword attacks."
+                ]
+              },
+              {
+                "name": "Shortsword",
+                "entries": [
+                  "{@atk mw} {@hit 6} to hit, reach 5 ft., one target. {@h}6 ({@damage 1d6 + 3}) piercing damage, and the target must make a {@dc 15} Constitution saving throw, taking 24 ({@damage 7d6}) poison damage on a failed save, or half as much damage on a successful one."
+                ]
+              },
+              {
+                "name": "Light Crossbow",
+                "entries": [
+                  "{@atk rw} {@hit 6} to hit, range 80/320 ft., one target. {@h}7 ({@damage 1d8 + 3}) piercing damage, and the target must make a {@dc 15} Constitution saving throw, taking 24 ({@damage 7d6}) poison damage on a failed save, or half as much damage on a successful one."
+                ]
+              }
+            ],
+            "environment": [
+              "urban"
+            ],
+            "soundClip": {
+              "type": "internal",
+              "path": "bestiary/assassin.mp3"
+            },
+            "attachedItems": [
+              "light crossbow|phb",
+              "shortsword|phb"
+            ],
+            "traitTags": [
+              "Sneak Attack"
+            ],
+            "actionTags": [
+              "Multiattack"
+            ],
+            "languageTags": [
+              "TC",
+              "X"
+            ],
+            "damageTags": [
+              "I",
+              "P"
+            ],
+            "miscTags": [
+              "MLW",
+              "MW",
+              "RNG",
+              "RW"
+            ],
+            "savingThrowForced": [
+              "constitution"
+            ],
+            "hasToken": true,
+            "hasFluff": true,
+            "hasFluffImages": true,
+            "instanceId": "inst-1776784010878-8679",
+            "originalBestiaryName": "Assassin",
+            "currentHp": 78,
+            "hit_points": 78,
+            "armor_class": 15
+          },
+          {
+            "name": "Магічний птах-шпигун",
+            "source": "MM",
+            "page": 349,
+            "srd": true,
+            "referenceSources": [
+              "AZfyT",
+              "BGDIA",
+              "CM",
+              "CoA",
+              "CoS",
+              "CRCotN",
+              "DC",
+              "DIP",
+              "DSotDQ",
+              "EGW",
+              "GoS",
+              "HotDQ",
+              "IDRotF",
+              "JttRC",
+              "KftGV",
+              "MOT",
+              "OotA",
+              "OoW",
+              "PotA",
+              "QftIS",
+              "RoT",
+              "SatO",
+              "SDW",
+              "SKT",
+              "SLW",
+              "TftYP",
+              "ToA",
+              "VNotEE",
+              "WBtW",
+              "WDMM",
+              "XMtS"
+            ],
+            "reprintedAs": [
+              "Scout|XMM"
+            ],
+            "size": [
+              "M"
+            ],
+            "type": {
+              "type": "humanoid",
+              "tags": [
+                "any race"
+              ]
+            },
+            "alignment": [
+              "A"
+            ],
+            "ac": [
+              {
+                "ac": 13,
+                "from": [
+                  "{@item leather armor|phb}"
+                ]
+              }
+            ],
+            "hp": {
+              "average": 16,
+              "formula": "3d8 + 3"
+            },
+            "speed": {
+              "walk": 30
+            },
+            "str": 11,
+            "dex": 14,
+            "con": 12,
+            "int": 11,
+            "wis": 13,
+            "cha": 11,
+            "skill": {
+              "nature": "+4",
+              "perception": "+5",
+              "stealth": "+6",
+              "survival": "+5"
+            },
+            "passive": 15,
+            "languages": [
+              "any one language (usually Common)"
+            ],
+            "cr": "1/2",
+            "trait": [
+              {
+                "name": "Keen Hearing and Sight",
+                "entries": [
+                  "The scout has advantage on Wisdom ({@skill Perception}) checks that rely on hearing or sight."
+                ]
+              }
+            ],
+            "action": [
+              {
+                "name": "Multiattack",
+                "entries": [
+                  "The scout makes two melee attacks or two ranged attacks."
+                ]
+              },
+              {
+                "name": "Shortsword",
+                "entries": [
+                  "{@atk mw} {@hit 4} to hit, reach 5 ft., one target. {@h}5 ({@damage 1d6 + 2}) piercing damage."
+                ]
+              },
+              {
+                "name": "Longbow",
+                "entries": [
+                  "{@atk rw} {@hit 4} to hit, ranged 150/600 ft., one target. {@h}6 ({@damage 1d8 + 2}) piercing damage."
+                ]
+              }
+            ],
+            "environment": [
+              "coastal",
+              "mountain",
+              "grassland",
+              "hill",
+              "arctic",
+              "forest",
+              "swamp",
+              "underdark",
+              "desert"
+            ],
+            "soundClip": {
+              "type": "internal",
+              "path": "bestiary/scout.mp3"
+            },
+            "attachedItems": [
+              "longbow|phb",
+              "shortsword|phb"
+            ],
+            "traitTags": [
+              "Keen Senses"
+            ],
+            "actionTags": [
+              "Multiattack"
+            ],
+            "languageTags": [
+              "C",
+              "X"
+            ],
+            "damageTags": [
+              "P"
+            ],
+            "miscTags": [
+              "MLW",
+              "MW",
+              "RNG",
+              "RW"
+            ],
+            "hasToken": true,
+            "hasFluff": true,
+            "hasFluffImages": true,
+            "instanceId": "inst-1776784010879-7406",
+            "originalBestiaryName": "Scout",
+            "currentHp": 16,
+            "hit_points": 16,
+            "armor_class": 13
+          }
+        ]
+      },
+      {
+        "id": "8177cd22-bc0b-4b90-9a17-26e91ec32aa7",
+        "name": "Засідка в лісі",
+        "monsters": [
+          {
+            "name": "Мовчазний Вартовий",
+            "source": "MM",
+            "page": 349,
+            "srd": true,
+            "referenceSources": [
+              "AZfyT",
+              "BGDIA",
+              "CM",
+              "CoA",
+              "CoS",
+              "CRCotN",
+              "DC",
+              "DIP",
+              "DSotDQ",
+              "EGW",
+              "GoS",
+              "HotDQ",
+              "IDRotF",
+              "JttRC",
+              "KftGV",
+              "MOT",
+              "OotA",
+              "OoW",
+              "PotA",
+              "QftIS",
+              "RoT",
+              "SatO",
+              "SDW",
+              "SKT",
+              "SLW",
+              "TftYP",
+              "ToA",
+              "VNotEE",
+              "WBtW",
+              "WDMM",
+              "XMtS"
+            ],
+            "reprintedAs": [
+              "Scout|XMM"
+            ],
+            "size": [
+              "M"
+            ],
+            "type": {
+              "type": "humanoid",
+              "tags": [
+                "any race"
+              ]
+            },
+            "alignment": [
+              "A"
+            ],
+            "ac": [
+              {
+                "ac": 13,
+                "from": [
+                  "{@item leather armor|phb}"
+                ]
+              }
+            ],
+            "hp": {
+              "average": 16,
+              "formula": "3d8 + 3"
+            },
+            "speed": {
+              "walk": 30
+            },
+            "str": 11,
+            "dex": 14,
+            "con": 12,
+            "int": 11,
+            "wis": 13,
+            "cha": 11,
+            "skill": {
+              "nature": "+4",
+              "perception": "+5",
+              "stealth": "+6",
+              "survival": "+5"
+            },
+            "passive": 15,
+            "languages": [
+              "any one language (usually Common)"
+            ],
+            "cr": "1/2",
+            "trait": [
+              {
+                "name": "Keen Hearing and Sight",
+                "entries": [
+                  "The scout has advantage on Wisdom ({@skill Perception}) checks that rely on hearing or sight."
+                ]
+              }
+            ],
+            "action": [
+              {
+                "name": "Multiattack",
+                "entries": [
+                  "The scout makes two melee attacks or two ranged attacks."
+                ]
+              },
+              {
+                "name": "Shortsword",
+                "entries": [
+                  "{@atk mw} {@hit 4} to hit, reach 5 ft., one target. {@h}5 ({@damage 1d6 + 2}) piercing damage."
+                ]
+              },
+              {
+                "name": "Longbow",
+                "entries": [
+                  "{@atk rw} {@hit 4} to hit, ranged 150/600 ft., one target. {@h}6 ({@damage 1d8 + 2}) piercing damage."
+                ]
+              }
+            ],
+            "environment": [
+              "coastal",
+              "mountain",
+              "grassland",
+              "hill",
+              "arctic",
+              "forest",
+              "swamp",
+              "underdark",
+              "desert"
+            ],
+            "soundClip": {
+              "type": "internal",
+              "path": "bestiary/scout.mp3"
+            },
+            "attachedItems": [
+              "longbow|phb",
+              "shortsword|phb"
+            ],
+            "traitTags": [
+              "Keen Senses"
+            ],
+            "actionTags": [
+              "Multiattack"
+            ],
+            "languageTags": [
+              "C",
+              "X"
+            ],
+            "damageTags": [
+              "P"
+            ],
+            "miscTags": [
+              "MLW",
+              "MW",
+              "RNG",
+              "RW"
+            ],
+            "hasToken": true,
+            "hasFluff": true,
+            "hasFluffImages": true,
+            "instanceId": "inst-1776785481722-8592",
+            "originalBestiaryName": "Scout",
+            "currentHp": 16,
+            "hit_points": 16,
+            "armor_class": 13
+          },
+          {
+            "name": "Мовчазний Вартовий",
+            "source": "MM",
+            "page": 349,
+            "srd": true,
+            "referenceSources": [
+              "AZfyT",
+              "BGDIA",
+              "CM",
+              "CoA",
+              "CoS",
+              "CRCotN",
+              "DC",
+              "DIP",
+              "DSotDQ",
+              "EGW",
+              "GoS",
+              "HotDQ",
+              "IDRotF",
+              "JttRC",
+              "KftGV",
+              "MOT",
+              "OotA",
+              "OoW",
+              "PotA",
+              "QftIS",
+              "RoT",
+              "SatO",
+              "SDW",
+              "SKT",
+              "SLW",
+              "TftYP",
+              "ToA",
+              "VNotEE",
+              "WBtW",
+              "WDMM",
+              "XMtS"
+            ],
+            "reprintedAs": [
+              "Scout|XMM"
+            ],
+            "size": [
+              "M"
+            ],
+            "type": {
+              "type": "humanoid",
+              "tags": [
+                "any race"
+              ]
+            },
+            "alignment": [
+              "A"
+            ],
+            "ac": [
+              {
+                "ac": 13,
+                "from": [
+                  "{@item leather armor|phb}"
+                ]
+              }
+            ],
+            "hp": {
+              "average": 16,
+              "formula": "3d8 + 3"
+            },
+            "speed": {
+              "walk": 30
+            },
+            "str": 11,
+            "dex": 14,
+            "con": 12,
+            "int": 11,
+            "wis": 13,
+            "cha": 11,
+            "skill": {
+              "nature": "+4",
+              "perception": "+5",
+              "stealth": "+6",
+              "survival": "+5"
+            },
+            "passive": 15,
+            "languages": [
+              "any one language (usually Common)"
+            ],
+            "cr": "1/2",
+            "trait": [
+              {
+                "name": "Keen Hearing and Sight",
+                "entries": [
+                  "The scout has advantage on Wisdom ({@skill Perception}) checks that rely on hearing or sight."
+                ]
+              }
+            ],
+            "action": [
+              {
+                "name": "Multiattack",
+                "entries": [
+                  "The scout makes two melee attacks or two ranged attacks."
+                ]
+              },
+              {
+                "name": "Shortsword",
+                "entries": [
+                  "{@atk mw} {@hit 4} to hit, reach 5 ft., one target. {@h}5 ({@damage 1d6 + 2}) piercing damage."
+                ]
+              },
+              {
+                "name": "Longbow",
+                "entries": [
+                  "{@atk rw} {@hit 4} to hit, ranged 150/600 ft., one target. {@h}6 ({@damage 1d8 + 2}) piercing damage."
+                ]
+              }
+            ],
+            "environment": [
+              "coastal",
+              "mountain",
+              "grassland",
+              "hill",
+              "arctic",
+              "forest",
+              "swamp",
+              "underdark",
+              "desert"
+            ],
+            "soundClip": {
+              "type": "internal",
+              "path": "bestiary/scout.mp3"
+            },
+            "attachedItems": [
+              "longbow|phb",
+              "shortsword|phb"
+            ],
+            "traitTags": [
+              "Keen Senses"
+            ],
+            "actionTags": [
+              "Multiattack"
+            ],
+            "languageTags": [
+              "C",
+              "X"
+            ],
+            "damageTags": [
+              "P"
+            ],
+            "miscTags": [
+              "MLW",
+              "MW",
+              "RNG",
+              "RW"
+            ],
+            "hasToken": true,
+            "hasFluff": true,
+            "hasFluffImages": true,
+            "instanceId": "inst-1776785481723-3026",
+            "originalBestiaryName": "Scout",
+            "currentHp": 16,
+            "hit_points": 16,
+            "armor_class": 13
+          }
+        ]
+      },
+      {
+        "id": "583d582b-b252-4cdc-af39-c68d7297b590",
+        "name": "Двобій з [Awebo Bo$$]",
+        "monsters": [
+          {
+            "name": "Awebo Bo$$",
+            "group": [
+              "Sphinxes"
+            ],
+            "source": "PSA",
+            "page": 31,
+            "srd": true,
+            "referenceSources": [
+              "CM",
+              "EGW",
+              "MOT",
+              "SatO"
+            ],
+            "reprintedAs": [
+              "Sphinx of Valor|XMM"
+            ],
+            "size": [
+              "L"
+            ],
+            "type": "monstrosity",
+            "alignment": [
+              "L",
+              "N"
+            ],
+            "ac": [
+              {
+                "ac": 17,
+                "from": [
+                  "natural armor"
+                ]
+              }
+            ],
+            "hp": {
+              "average": 199,
+              "formula": "19d10 + 95"
+            },
+            "speed": {
+              "walk": 40,
+              "fly": 60
+            },
+            "str": 22,
+            "dex": 10,
+            "con": 20,
+            "int": 16,
+            "wis": 18,
+            "cha": 23,
+            "save": {
+              "dex": "+6",
+              "con": "+11",
+              "int": "+9",
+              "wis": "+10"
+            },
+            "skill": {
+              "arcana": "+9",
+              "perception": "+10",
+              "religion": "+15"
+            },
+            "senses": [
+              "truesight 120 ft."
+            ],
+            "passive": 20,
+            "immune": [
+              "psychic",
+              {
+                "immune": [
+                  "bludgeoning",
+                  "piercing",
+                  "slashing"
+                ],
+                "note": "from nonmagical attacks",
+                "cond": true
+              }
+            ],
+            "conditionImmune": [
+              "charmed",
+              "frightened"
+            ],
+            "languages": [
+              "Common",
+              "Sphinx"
+            ],
+            "cr": "17",
+            "spellcasting": [
+              {
+                "name": "Spellcasting",
+                "type": "spellcasting",
+                "headerEntries": [
+                  "The sphinx is a 12th-level spellcaster. Its spellcasting ability is Wisdom (spell save {@dc 18}, {@hit 10} to hit with spell attacks). It requires no material components to cast its spells. The sphinx has the following cleric spells prepared:"
+                ],
+                "spells": {
+                  "0": {
+                    "spells": [
+                      "{@spell sacred flame}",
+                      "{@spell spare the dying}",
+                      "{@spell thaumaturgy}"
+                    ]
+                  },
+                  "1": {
+                    "slots": 4,
+                    "spells": [
+                      "{@spell command}",
+                      "{@spell detect evil and good}",
+                      "{@spell detect magic}"
+                    ]
+                  },
+                  "2": {
+                    "slots": 3,
+                    "spells": [
+                      "{@spell lesser restoration}",
+                      "{@spell zone of truth}"
+                    ]
+                  },
+                  "3": {
+                    "slots": 3,
+                    "spells": [
+                      "{@spell dispel magic}",
+                      "{@spell tongues}"
+                    ]
+                  },
+                  "4": {
+                    "slots": 3,
+                    "spells": [
+                      "{@spell banishment}",
+                      "{@spell freedom of movement}"
+                    ]
+                  },
+                  "5": {
+                    "slots": 2,
+                    "spells": [
+                      "{@spell flame strike}",
+                      "{@spell greater restoration}"
+                    ]
+                  },
+                  "6": {
+                    "slots": 1,
+                    "spells": [
+                      "{@spell heroes' feast}"
+                    ]
+                  }
+                },
+                "ability": "wis"
+              }
+            ],
+            "trait": [
+              {
+                "name": "Inscrutable",
+                "entries": [
+                  "The sphinx is immune to any effect that would sense its emotions or read its thoughts, as well as any divination spell that it refuses. Wisdom ({@skill Insight}) checks made to ascertain the sphinx's intentions or sincerity have disadvantage."
+                ]
+              },
+              {
+                "name": "Magic Weapons",
+                "entries": [
+                  "The sphinx's weapon attacks are magical."
+                ]
+              }
+            ],
+            "action": [
+              {
+                "name": "Multiattack",
+                "entries": [
+                  "The sphinx makes two claw attacks."
+                ]
+              },
+              {
+                "name": "Claw",
+                "entries": [
+                  "{@atk mw} {@hit 12} to hit, reach 5 ft., one target. {@h}17 ({@damage 2d10 + 6}) slashing damage."
+                ]
+              },
+              {
+                "name": "Roar (3/Day)",
+                "entries": [
+                  "The sphinx emits a magical roar. Each time it roars before finishing a long rest, the roar is louder and the effect is different, as detailed below. Each creature within 500 feet of the sphinx and able to hear the roar must make a saving throw.",
+                  {
+                    "type": "list",
+                    "style": "list-hang-notitle",
+                    "items": [
+                      {
+                        "type": "item",
+                        "name": "First Roar",
+                        "entry": "Each creature that fails a {@dc 18} Wisdom saving throw is {@condition frightened} for 1 minute. A {@condition frightened} creature can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success."
+                      },
+                      {
+                        "type": "item",
+                        "name": "Second Roar",
+                        "entry": "Each creature that fails a {@dc 18} Wisdom saving throw is {@condition deafened} and {@condition frightened} for 1 minute. A {@condition frightened} creature is {@condition paralyzed} and can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success."
+                      },
+                      {
+                        "type": "item",
+                        "name": "Third Roar",
+                        "entry": "Each creature makes a {@dc 18} Constitution saving throw. On a failed save, a creature takes 44 ({@damage 8d10}) thunder damage and is knocked {@condition prone}. On a successful save, the creature takes half as much damage and isn't knocked {@condition prone}."
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "legendary": [
+              {
+                "name": "Claw Attack",
+                "entries": [
+                  "The sphinx makes one claw attack."
+                ]
+              },
+              {
+                "name": "Teleport (Costs 2 Actions)",
+                "entries": [
+                  "The sphinx magically teleports, along with any equipment it is wearing or carrying, up to 120 feet to an unoccupied space it can see."
+                ]
+              },
+              {
+                "name": "Cast a Spell (Costs 3 Actions)",
+                "entries": [
+                  "The sphinx casts a spell from its list of prepared spells, using a spell slot as normal."
+                ]
+              }
+            ],
+            "legendaryGroup": {
+              "name": "Sphinx",
+              "source": "MM"
+            },
+            "environment": [
+              "desert"
+            ],
+            "soundClip": {
+              "type": "internal",
+              "path": "bestiary/androsphinx.mp3"
+            },
+            "traitTags": [
+              "Magic Weapons"
+            ],
+            "senseTags": [
+              "U"
+            ],
+            "actionTags": [
+              "Multiattack"
+            ],
+            "languageTags": [
+              "C",
+              "OTH"
+            ],
+            "damageTags": [
+              "S",
+              "T"
+            ],
+            "damageTagsLegendary": [],
+            "damageTagsSpell": [
+              "F",
+              "R"
+            ],
+            "spellcastingTags": [
+              "CC"
+            ],
+            "miscTags": [
+              "AOE",
+              "MW"
+            ],
+            "conditionInflict": [
+              "deafened",
+              "frightened",
+              "paralyzed",
+              "prone"
+            ],
+            "conditionInflictSpell": [
+              "incapacitated",
+              "prone"
+            ],
+            "savingThrowForced": [
+              "constitution",
+              "wisdom"
+            ],
+            "savingThrowForcedLegendary": [
+              "constitution"
+            ],
+            "savingThrowForcedSpell": [
+              "charisma",
+              "dexterity",
+              "wisdom"
+            ],
+            "hasToken": true,
+            "hasFluff": true,
+            "hasFluffImages": true,
+            "lairActions": [
+              "On initiative count 20 (losing initiative ties), the sphinx can take a lair action to cause one of the following magical effects; the sphinx can't use an effect again until it finishes a short or long rest:",
+              {
+                "type": "list",
+                "items": [
+                  "The flow of time is altered such that every creature in the lair must reroll initiative. The sphinx can choose not to reroll.",
+                  "The effects of time are altered such that every creature in the lair must succeed on a {@dc 15} Constitution saving throw or become {@dice 1d20} years older or younger (the sphinx's choice), but never any younger than 1 year old. A {@spell greater restoration} spell can restore a creature's age to normal.",
+                  "The flow of time within the lair is altered such that everything within moves up to 10 years forward or backward (sphinx's choice). Only the sphinx is immediately aware of the time change. A {@spell wish} spell can return the caster and up to seven other creatures designated by the caster to their normal time.",
+                  "The sphinx shifts itself and up to seven other creatures it can see within in its lair to another plane of existence. Once outside its lair, the sphinx can't use lair actions, but it can return to its lair as a bonus action on its turn, taking up to seven creatures with it."
+                ]
+              }
+            ],
+            "instanceId": "inst-1776786721857-707",
+            "originalBestiaryName": "Amonkhet Sphinx",
+            "currentHp": 199,
+            "hit_points": 199,
+            "armor_class": 17
+          }
+        ]
+      }
+    ],
+    "scenes": [
+      {
+        "id": 1776784046901,
+        "texts": {
+          "summary": "[Авебо] намагається сховатися в густому лісі, але відчуває, що за ним стежать. Ліс стає дедалі моторошнішим, дерева ніби здригаються, а тіні стають глибшими.",
+          "goal": "Дослідити ліс, знайти приховане місце для відпочинку та уникнути першої зустрічі з Мовчазними Вартовими.",
+          "stakes": "Якщо [Авебо] не зможе сховатися, Мовчазні Вартові схоплять його, а артефакт буде втрачено.",
+          "location": "Темний, густий ліс, оточений скелястими пагорбами."
+        },
+        "notes": [
+          {
+            "id": "1776785481724-42022",
+            "title": "",
+            "text": "Використати опис лісу для створення атмосфери напруги.",
+            "collapsed": false
+          },
+          {
+            "id": "1776785481724-25762",
+            "title": "",
+            "text": "Згадати про магічних птахів Вартових, які можуть пролітати над головою.",
+            "collapsed": false
+          },
+          {
+            "id": 1776785537918,
+            "title": "",
+            "text": "",
+            "collapsed": false
+          }
+        ],
+        "isNotesCollapsed": false,
+        "npcs": [
+          {
+            "name": "Мовчазний Вартовий (Scout)",
+            "description": "Висока, худа постать у темному одязі, обличчя приховане срібною маскою. Рухається тихо і невловимо."
+          },
+          {
+            "name": "Мовчазний Вартовий (Scout)",
+            "description": "Висока, худа постать у темному одязі, обличчя приховане срібною маскою. Рухається тихо і невловимо."
+          }
+        ],
+        "collapsed": false,
+        "encounterId": "8177cd22-bc0b-4b90-9a17-26e91ec32aa7",
+        "imageUrl": "/api/images/example/scenes/%D0%9B%D1%96%D1%81.webp"
+      },
+      {
+        "id": "c1b21e8a-36d6-4307-a930-966cb630f106",
+        "texts": {
+          "summary": "Коли [Awebo] нарешті знаходить розчину, шлях йому перетинає грізна постать. Це [Awebo Bo$$], чиї крила розсікають повітря, а очі сповнені ненависті. Починається нерівна битва.",
+          "goal": "Вижити у зіткненні з [Awebo Bo$$] або знайти спосіб втекти.",
+          "stakes": "Життя [Awebo] та доля артефакту знаходяться під прямою загрозою.",
+          "location": "Галявина посеред лісу, освітлена тьмяним блакитним сяйвом артефакту."
+        },
+        "notes": [
+          {
+            "id": "1776786564650-19171",
+            "title": "",
+            "text": "Підкреслити контраст між молодим [Awebo] та майстерністю [Awebo Bo$$].",
+            "collapsed": false
+          },
+          {
+            "id": "1776786564650-46733",
+            "title": "",
+            "text": "Артефакт може непередбачувано відреагувати під час бою.",
+            "collapsed": false
+          },
+          {
+            "id": 1776786680267,
+            "title": "",
+            "text": "",
+            "collapsed": false
+          }
+        ],
+        "isNotesCollapsed": false,
+        "npcs": [
+          {
+            "name": "Awebo Bo$$",
+            "description": "Aarakocra-monk 20 рівня, чия швидкість та точність ударів вражають."
+          }
+        ],
+        "collapsed": false,
+        "encounterId": "583d582b-b252-4cdc-af39-c68d7297b590",
+        "imageUrl": null
+      }
+    ],
+    "notes": [
+      {
+        "id": 1776784024595,
+        "title": "",
+        "text": "",
+        "collapsed": false
+      }
+    ]
+  },
+  "fileName": "Пролог.json"
+}

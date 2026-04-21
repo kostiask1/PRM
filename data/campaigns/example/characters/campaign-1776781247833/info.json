@@ -1,0 +1,23 @@
+{
+  "id": "6b7c0c76-b85e-4cd6-969e-ba6d154bec4e",
+  "firstName": "Awebo",
+  "lastName": "",
+  "race": "",
+  "class": "",
+  "level": 1,
+  "motivation": "Кайфанути",
+  "trait": "Молодий і амбітний герой, який володіє унікальною здатністю відчувати енергію минулих епох. Його очі зрідка спалахують сріблястим світлом, коли він використовує свій артефакт.",
+  "notes": [
+    {
+      "id": 1776783682623,
+      "title": "",
+      "text": "",
+      "collapsed": false
+    }
+  ],
+  "collapsed": false,
+  "slug": "campaign-1776781247833",
+  "updatedAt": "2026-04-21T15:58:47.678Z",
+  "imageUrl": "/api/images/example/characters/players/Right%20click%20to%20rename.png",
+  "isNotesCollapsed": false
+}
