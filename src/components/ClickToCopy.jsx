@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Notification from "./Notification";
+import Tooltip from "./Tooltip";
 import "../assets/components/ClickToCopy.css";
 
 /**
@@ -25,12 +26,13 @@ export default function ClickToCopy({
 
 	return (
 		<>
-			<div
-				className={`ClickToCopy ${className}`}
-				onClick={handleCopy}
-				title="Натисніть, щоб скопіювати">
-				{children}
-			</div>
+			<Tooltip content="Натисніть, щоб скопіювати">
+				<div
+					className={`ClickToCopy ${className}`}
+					onClick={handleCopy}>
+					{children}
+				</div>
+			</Tooltip>
 			{notification && (
 				<Notification
 					message={notification}

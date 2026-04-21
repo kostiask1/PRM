@@ -4,7 +4,7 @@
 
 .Tooltip {
 	position: fixed;
-	z-index: 2100;
+	z-index: 9999;
 	max-width: min(680px, calc(100vw - 24px));
 	background: var(--panel-2);
 	border: 1px solid var(--border);

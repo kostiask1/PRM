@@ -4,6 +4,7 @@ import "../assets/components/Tooltip.css";
 
 const GAP = 8;
 const VIEWPORT_MARGIN = 8;
+const TOOLTIP_OPEN_EVENT = "prm-tooltip-open";
 
 function calculatePosition(triggerRect, tooltipRect, viewportWidth, viewportHeight) {
 	let left = triggerRect.left + triggerRect.width / 2 - tooltipRect.width / 2;
@@ -35,6 +36,7 @@ export default function Tooltip({
 	delay = 160,
 	disabled = false,
 }) {
+	const tooltipIdRef = useRef(`tooltip-${Math.random().toString(36).slice(2)}`);
 	const triggerRef = useRef(null);
 	const tooltipRef = useRef(null);
 	const timerRef = useRef(null);
@@ -55,10 +57,28 @@ export default function Tooltip({
 		if (disabled) return;
 		if (timerRef.current) clearTimeout(timerRef.current);
 		timerRef.current = setTimeout(() => {
+			window.dispatchEvent(
+				new CustomEvent(TOOLTIP_OPEN_EVENT, {
+					detail: { id: tooltipIdRef.current },
+				}),
+			);
 			setPosition((prev) => ({ ...prev, ready: false }));
 			setIsOpen(true);
 		}, delay);
 	};
+
+	useEffect(() => {
+		const handleTooltipOpened = (event) => {
+			const openedTooltipId = event?.detail?.id;
+			if (!openedTooltipId || openedTooltipId === tooltipIdRef.current) return;
+			closeTooltip();
+		};
+
+		window.addEventListener(TOOLTIP_OPEN_EVENT, handleTooltipOpened);
+		return () => {
+			window.removeEventListener(TOOLTIP_OPEN_EVENT, handleTooltipOpened);
+		};
+	}, []);
 
 	useLayoutEffect(() => {
 		if (!isOpen || !triggerRef.current || !tooltipRef.current) return;

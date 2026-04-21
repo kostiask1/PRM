@@ -20,6 +20,7 @@ import { useModal } from "../context/ModalContext";
 import { getSpellByName } from "../utils/referencePreview.js";
 import { resolveSpellInput } from "../utils/referenceResolvers.js";
 import useConditionReference from "../hooks/useConditionReference.jsx";
+import Tooltip from "./Tooltip.jsx";
 
 const SPELL_CACHE = new Map();
 
@@ -202,20 +203,21 @@ export default function MonsterStatBlock({
 	const renderAbility = (label, value) => {
 		const mod = getAbilityModifier(value);
 		return (
-			<div
-				className="MonsterStatBlock__ability-box"
-				onClick={() =>
-					window.dispatchEvent(
-						new CustomEvent("rollDice", {
-							detail: `1d20${formatModifier(mod)}`,
-						}),
-					)
-				}
-				title={`Кинути перевірку ${label}`}>
-				<span className="ability-label">{label}</span>
-				<span className="ability-mod">{formatModifier(mod)}</span>
-				<span className="ability-score">{value}</span>
-			</div>
+			<Tooltip content={`Кинути перевірку ${label}`}>
+				<div
+					className="MonsterStatBlock__ability-box"
+					onClick={() =>
+						window.dispatchEvent(
+							new CustomEvent("rollDice", {
+								detail: `1d20${formatModifier(mod)}`,
+							}),
+						)
+					}>
+					<span className="ability-label">{label}</span>
+					<span className="ability-mod">{formatModifier(mod)}</span>
+					<span className="ability-score">{value}</span>
+				</div>
+			</Tooltip>
 		);
 	};
 
@@ -394,12 +396,13 @@ export default function MonsterStatBlock({
 				<div className="MonsterStatBlock__header__details">
 					<div className="MonsterStatBlock__name__row">
 						{onNameClick ? (
-							<h3
-								className="MonsterStatBlock__name"
-								onClick={() => onNameClick?.(monster)}
-								title={nameTitle}>
-								{monster.name}
-							</h3>
+							<Tooltip content={nameTitle} disabled={!nameTitle}>
+								<h3
+									className="MonsterStatBlock__name"
+									onClick={() => onNameClick?.(monster)}>
+									{monster.name}
+								</h3>
+							</Tooltip>
 						) : (
 							<ClickToCopy
 								className="MonsterStatBlock__name"

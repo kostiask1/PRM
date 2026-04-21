@@ -7,6 +7,7 @@ import MonsterStatBlock from "./MonsterStatBlock";
 import Notification from "./Notification";
 import DraggableList from "./DraggableList";
 import useEncounterView from "../hooks/useEncounterView";
+import Tooltip from "./Tooltip";
 import "../assets/components/EncounterView.css";
 
 function EncounterView({
@@ -67,12 +68,11 @@ function EncounterView({
 						icon="back"
 						className="SessionView__backBtn"
 					/>
-					<h2
-						className="editable-title"
-						onClick={handleRename}
-						title="Натисніть, щоб перейменувати">
-						{encounter.name}
-					</h2>
+					<Tooltip content="Натисніть, щоб перейменувати">
+						<h2 className="editable-title" onClick={handleRename}>
+							{encounter.name}
+						</h2>
+					</Tooltip>
 					<p className="muted">
 						Бойове зіткнення • {encounter.monsters.length} монстрів
 						{encounter.monsters.length > 0 &&
@@ -124,15 +124,16 @@ function EncounterView({
 									className={`EncounterMonsterRow ${selectedInstance?.instanceId === m.instanceId ? "is-active" : ""} ${isDragging ? "is-dragging" : ""}`}
 									onClick={() => setSelectedInstance(m)}>
 									<div className="EncounterMonsterRow__content">
-										<div
-											className="EncounterMonsterRow__name editable-title"
-											onClick={(e) => {
-												e.stopPropagation();
-												handleRenameMonster(m.instanceId, m.name);
-											}}
-											title="Натисніть, щоб змінити ім'я">
-											{m.name}
-										</div>
+										<Tooltip content="Натисніть, щоб змінити ім'я">
+											<div
+												className="EncounterMonsterRow__name editable-title"
+												onClick={(e) => {
+													e.stopPropagation();
+													handleRenameMonster(m.instanceId, m.name);
+												}}>
+												{m.name}
+											</div>
+										</Tooltip>
 										<div className="EncounterMonsterRow__stats">
 											<div className="EncounterMonsterRow__hp">
 												<input
@@ -148,16 +149,17 @@ function EncounterView({
 													}}
 												/>
 												<span className="muted">/</span>
-												<input
-													type="number"
-													value={m.hit_points}
-													onChange={(e) =>
-														updateMonsterMaxHp(m.instanceId, e.target.value)
-													}
-													onClick={(e) => e.stopPropagation()}
-													className="EncounterMonsterRow__maxHpInput"
-													title="Максимальне HP"
-												/>
+												<Tooltip content="Максимальне HP">
+													<input
+														type="number"
+														value={m.hit_points}
+														onChange={(e) =>
+															updateMonsterMaxHp(m.instanceId, e.target.value)
+														}
+														onClick={(e) => e.stopPropagation()}
+														className="EncounterMonsterRow__maxHpInput"
+													/>
+												</Tooltip>
 											</div>
 											<div className="EncounterMonsterRow__ac">
 												AC {m.armor_class}

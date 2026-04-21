@@ -49,7 +49,9 @@ function buildPreviewMap(rawValue = "") {
 			// Детектуємо маркери блоків (заголовки, списки, цитати).
 			// Пропускаємо весь префікс (відступ + маркер + пробіли після нього),
 			// бо ReactMarkdown не включає їх у текстові вузли контенту.
-			const markerMatch = rawValue.slice(i).match(/^([ \t]*)(#{1,6}[ \t]+|[-*+][ \t]+|\d+\.[ \t]+|> ?)/);
+			const markerMatch = rawValue
+				.slice(i)
+				.match(/^([ \t]*)(#{1,6}[ \t]+|[-*+][ \t]+|\d+\.[ \t]+|> ?)/);
 			if (markerMatch) {
 				i += markerMatch[0].length;
 				lineStart = false;
@@ -68,7 +70,10 @@ function buildPreviewMap(rawValue = "") {
 		}
 
 		// жирний ** або __
-		if (rawValue.slice(i, i + 2) === "**" || rawValue.slice(i, i + 2) === "__") {
+		if (
+			rawValue.slice(i, i + 2) === "**" ||
+			rawValue.slice(i, i + 2) === "__"
+		) {
 			i += 2;
 			lineStart = false;
 			continue;
@@ -234,8 +239,7 @@ function nodesToMarkdown(node) {
 				case "h3":
 				case "h4":
 				case "h5":
-				case "h6":
-				{
+				case "h6": {
 					const level = parseInt(tagName[1]);
 					result += `\n\n${prefix}${"#".repeat(level)} ${actualText}\n\n`;
 					break;
@@ -454,7 +458,7 @@ export default function EditableField({
 		"Ctrl+[ — Зняти список",
 		"Ctrl+Q — Цитата",
 		"Ctrl+K — Додати посилання на персонажа",
-	].join("\n");
+	].map((info) => <div key={info}>{info}</div>);
 
 	if (isEditing) {
 		return (
@@ -493,11 +497,14 @@ export default function EditableField({
 			<div className="MarkdownView" ref={viewRef}>
 				{value || value === 0 ? (
 					type === "textarea" ? (
-					<ReactMarkdown components={components}>
-						{String(value)
-							.replace(/(?<!(?:^|\n)- {2}[^\n]*\n)\n(?!\n)|(?<!(?:^|\n)- {2}[^\n]*)\n(?=\n)/g, "&nbsp;\n\n")
-							.replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")}
-					</ReactMarkdown>
+						<ReactMarkdown components={components}>
+							{String(value)
+								.replace(
+									/(?<!(?:^|\n)- {2}[^\n]*\n)\n(?!\n)|(?<!(?:^|\n)- {2}[^\n]*)\n(?=\n)/g,
+									"&nbsp;\n\n",
+								)
+								.replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")}
+						</ReactMarkdown>
 					) : (
 						<span>{value}</span>
 					)

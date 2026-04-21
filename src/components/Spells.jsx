@@ -7,6 +7,7 @@ import Select from "./Select";
 import ListCard from "./ListCard";
 import SpellCard from "./SpellCard";
 import Icon from "./Icon.jsx";
+import Tooltip from "./Tooltip";
 import { capitalizeWords } from "../utils/parser.jsx";
 import "../assets/components/Spells.css";
 
@@ -230,12 +231,13 @@ export default function Spells() {
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
 					/>
-					<button
-						className={`Spells__sort-btn ${sortOrder !== "none" ? "is-active" : ""}`}
-						onClick={toggleSort}
-						title="Сортувати за рівнем">
-						LVL <Icon name={`sort-${sortOrder}`} />
-					</button>
+					<Tooltip content="Сортувати за рівнем">
+						<button
+							className={`Spells__sort-btn ${sortOrder !== "none" ? "is-active" : ""}`}
+							onClick={toggleSort}>
+							LVL <Icon name={`sort-${sortOrder}`} />
+						</button>
+					</Tooltip>
 				</div>
 				<div className="Spells__content">
 					<div className="Spells__list">

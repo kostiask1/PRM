@@ -1,5 +1,6 @@
 import { forwardRef, useRef, useLayoutEffect } from "react";
 import "../assets/components/Input.css";
+import Tooltip from "./Tooltip";
 
 function requestMentionSelection() {
 	return new Promise((resolve) => {
@@ -59,7 +60,7 @@ function resolveInitialCursorPosition(initialSelection, rawValue = "") {
 }
 
 const Input = forwardRef(
-	({ type = "text", className = "", initialSelection, ...props }, ref) => {
+	({ type = "text", className = "", initialSelection, title, ...props }, ref) => {
 		const internalRef = useRef(null);
 
 		// Синхронізуємо висоту textarea з контентом
@@ -576,7 +577,7 @@ const Input = forwardRef(
 		const combinedClassName = `${baseClass} ${className} ${typeof props.value === 'string' && props.value?.includes('[') ? 'has-mentions' : ''}`.trim();
 
 		if (type === "textarea") {
-			return (
+			const textareaNode = (
 				<textarea
 					rows={1}
 					{...props}
@@ -586,9 +587,13 @@ const Input = forwardRef(
 					onPaste={handlePaste}
 				/>
 			);
+			if (title) {
+				return <Tooltip content={title}>{textareaNode}</Tooltip>;
+			}
+			return textareaNode;
 		}
 
-		return (
+		const inputNode = (
 			<input
 				{...props}
 				ref={setRefs}
@@ -598,6 +603,10 @@ const Input = forwardRef(
 				onPaste={handlePaste}
 			/>
 		);
+		if (title) {
+			return <Tooltip content={title}>{inputNode}</Tooltip>;
+		}
+		return inputNode;
 	},
 );
 

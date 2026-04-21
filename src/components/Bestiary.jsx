@@ -8,6 +8,7 @@ import Select from "./Select";
 import Icon from "./Icon";
 import ListCard from "./ListCard";
 import MonsterStatBlock from "./MonsterStatBlock";
+import Tooltip from "./Tooltip";
 import "../assets/components/Bestiary.css";
 
 export default function Bestiary({ onAddMonster, isEmbedded = false }) {
@@ -316,10 +317,12 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 								)}
 							</div>
 						</div>
-						<div className="Bestiary__item-cr" title="Challenge Rating">
-							<div className="Bestiary__cr-label">CR</div>
-							<div className="Bestiary__cr-value">{crValue || "--"}</div>
-						</div>
+						<Tooltip content="Challenge Rating">
+							<div className="Bestiary__item-cr">
+								<div className="Bestiary__cr-label">CR</div>
+								<div className="Bestiary__cr-value">{crValue || "--"}</div>
+							</div>
+						</Tooltip>
 					</div>
 				</ListCard>
 			</div>

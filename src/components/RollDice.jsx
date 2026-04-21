@@ -1,4 +1,5 @@
 import "../assets/components/RollDice.css";
+import Tooltip from "./Tooltip";
 
 export default function RollDice({ formula, children }) {
 	const handleClick = (e) => {
@@ -8,11 +9,10 @@ export default function RollDice({ formula, children }) {
 	};
 
 	return (
-		<span
-			className="RollDice"
-			onClick={handleClick}
-			title={`Кинути ${formula}`}>
-			{children || formula}
-		</span>
+		<Tooltip content={`Кинути ${formula}`}>
+			<span className="RollDice" onClick={handleClick}>
+				{children || formula}
+			</span>
+		</Tooltip>
 	);
 }

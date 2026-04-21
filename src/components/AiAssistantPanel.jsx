@@ -11,6 +11,7 @@ import Checkbox from "./Checkbox";
 import Notification from "./Notification";
 import CollapseToggleButton from "./CollapseToggleButton";
 import { useModal } from "../context/ModalContext";
+import Tooltip from "./Tooltip";
 import "../assets/components/AiAssistantPanel.css";
 
 export default function AiAssistantPanel({
@@ -208,13 +209,18 @@ export default function AiAssistantPanel({
 	return (
 		<div className="AiAssistant">
 			{/* Кнопка виклику AI, аналогічно до DiceCalculator */}
-			<button
-				className="AiAssistant__toggle"
-				onClick={() => setIsOpen(true)}
-				title={isCampaign ? "AI Сюжетний Помічник" : isEncounter ? "AI Помічник Бою" : "AI Помічник Сесії"}
-			>
-				<Icon name="wand" size={28} />
-			</button>
+			<Tooltip
+				content={
+					isCampaign
+						? "AI Сюжетний Помічник"
+						: isEncounter
+							? "AI Помічник Бою"
+							: "AI Помічник Сесії"
+				}>
+				<button className="AiAssistant__toggle" onClick={() => setIsOpen(true)}>
+					<Icon name="wand" size={28} />
+				</button>
+			</Tooltip>
 
 			{isOpen && (
 				<Modal

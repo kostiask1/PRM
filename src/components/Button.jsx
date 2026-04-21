@@ -1,4 +1,5 @@
 import Icon from "./Icon";
+import Tooltip from "./Tooltip";
 import "../assets/components/Button.css";
 
 export default function Button({
@@ -10,6 +11,7 @@ export default function Button({
 	iconSize = 18,
 	type = "button",
 	className = "",
+	title,
 	...props
 }) {
 	const classes = [
@@ -32,10 +34,16 @@ export default function Button({
 		onClick && onClick(e);
 	};
 
-	return (
+	const buttonNode = (
 		<button type={type} className={classes} onClick={handleClick} {...props}>
 			{icon && <Icon name={icon} size={iconSize} strokeWidth={strokeWidth} />}
 			{children && <span>{children}</span>}
 		</button>
 	);
+
+	if (title) {
+		return <Tooltip content={title}>{buttonNode}</Tooltip>;
+	}
+
+	return buttonNode;
 }

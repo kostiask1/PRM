@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Icon from './Icon';
+import Tooltip from "./Tooltip";
 import '../assets/components/ColorThemeSwitcher.css';
 
 const THEME_STORAGE_KEY = 'app-theme';
@@ -39,12 +40,13 @@ export default function ColorThemeSwitcher() {
     };
 
     return (
-        <button
-            className="ColorThemeSwitcher"
-            onClick={toggleTheme}
-            title={theme === 'light' ? 'Перемкнути на темну тему' : 'Перемкнути на світлу тему'}
-        >
-            <Icon name={theme === 'light' ? 'moon' : 'sun'} size={20} />
-        </button>
+        <Tooltip content={theme === 'light' ? 'Перемкнути на темну тему' : 'Перемкнути на світлу тему'}>
+            <button
+                className="ColorThemeSwitcher"
+                onClick={toggleTheme}
+            >
+                <Icon name={theme === 'light' ? 'moon' : 'sun'} size={20} />
+            </button>
+        </Tooltip>
     );
 }

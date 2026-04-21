@@ -7,6 +7,7 @@ import useImageGallery from "../hooks/useImageGallery";
 import { useModal } from "../context/ModalContext";
 import ImageTargetSettings from "./ImageTargetSettings";
 import { api } from "../api";
+import Tooltip from "./Tooltip";
 
 const SUB_LABELS = {
 	npc: "NPC",
@@ -437,9 +438,11 @@ function ImageGallery({
 											/>
 										</div>
 									</div>
-									<span className="ImageGallery__name" title={img.name}>
-										{getCleanName(img.name)}
-									</span>
+									<Tooltip content={img.name}>
+										<span className="ImageGallery__name">
+											{getCleanName(img.name)}
+										</span>
+									</Tooltip>
 								</div>
 							))}
 					</div>

@@ -9,6 +9,7 @@ import DraggableList from "./DraggableList";
 import NoteCard from "./NoteCard";
 import CharacterCard from "./CharacterCard";
 import CollapseToggleButton from "./CollapseToggleButton";
+import Tooltip from "./Tooltip";
 import "../assets/components/CampaignView.css";
 import useCampaignView from "../hooks/useCampaignView";
 import CampaignViewModel from "../models/CampaignViewModel.js";
@@ -121,12 +122,13 @@ function CampaignView(props) {
 		<Panel className="CampaignView">
 			<div className="Panel__header">
 				<div className="CampaignView__header">
-					<h2
-						className="editable-title"
-						onClick={handleRename}
-						title="Натисни, щоб перейменувати">
-						{viewModel.name}
-					</h2>
+					<Tooltip content="Натисни, щоб перейменувати">
+						<h2
+							className="editable-title"
+							onClick={handleRename}>
+							{viewModel.name}
+						</h2>
+					</Tooltip>
 					<p className="muted">Створено: {viewModel.createdAtLabel}</p>
 				</div>
 				<div className="CampaignView__headerActions">

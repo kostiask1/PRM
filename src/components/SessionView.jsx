@@ -13,6 +13,7 @@ import TodoItem from "./session/TodoItem";
 import SceneCardHeader from "./session/SceneCardHeader";
 import SceneCardMedia from "./session/SceneCardMedia";
 import SceneCardFields from "./session/SceneCardFields";
+import Tooltip from "./Tooltip";
 import "../assets/components/SessionView.css";
 import useSessionView from "../hooks/useSessionView";
 import SessionViewModel from "../models/SessionViewModel.js";
@@ -258,13 +259,14 @@ function SessionView(props) {
 				</Modal>
 			)}
 
-			<button
-				className="SessionView__checklistToggle"
-				onClick={() => setIsChecklistOpen(true)}
-				title="Чекліст підготовки">
-				<Icon name="list" size={28} />
-				{progress < 100 && <span className="SessionView__checklistBadge" />}
-			</button>
+			<Tooltip content="Чекліст підготовки">
+				<button
+					className="SessionView__checklistToggle"
+					onClick={() => setIsChecklistOpen(true)}>
+					<Icon name="list" size={28} />
+					{progress < 100 && <span className="SessionView__checklistBadge" />}
+				</button>
+			</Tooltip>
 
 			{npcToCreate && (
 				<Modal
