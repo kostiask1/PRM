@@ -295,12 +295,13 @@ async function writeEntity(campaignSlug, type, entitySlug, data) {
 	const entityPath = path.join(campaignDir(campaignSlug), type, entitySlug);
 	await ensureDir(entityPath);
 	const infoPath = path.join(entityPath, "info.json");
-	await writeJson(infoPath, {
+	const payload = {
 		...data,
 		slug: entitySlug,
 		updatedAt: new Date().toISOString()
-	});
-	return data;
+	};
+	await writeJson(infoPath, payload);
+	return payload;
 }
 
 async function deleteEntity(campaignSlug, type, entitySlug) {
@@ -834,6 +835,7 @@ module.exports = {
 	clearAllCampaignData,
 	ensureUniqueCampaignSlug,
 	ensureUniqueSessionFile,
+	ensureUniqueEntitySlug,
 	makeDefaultSessionData,
 	getBestiaryIndex,
 	resolveMonster,

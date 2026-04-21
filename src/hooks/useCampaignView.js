@@ -31,6 +31,7 @@ export default function useCampaignView(props) {
 			campaign.isNpcsCollapsed || false,
 		);
 		const saveTimeout = useRef(null);
+		const entitySaveTimeoutsRef = useRef({});
 		const isSavingRef = useRef(false);
 		const [undoStack, setUndoStack] = useState([]);
 		const [redoStack, setRedoStack] = useState([]);
@@ -235,6 +236,33 @@ export default function useCampaignView(props) {
 			[saveToServer],
 		);
 
+		const clearEntitySaveTimers = useCallback(() => {
+			Object.values(entitySaveTimeoutsRef.current).forEach((timer) =>
+				clearTimeout(timer),
+			);
+			entitySaveTimeoutsRef.current = {};
+		}, []);
+
+		const scheduleEntityUpdate = useCallback(
+			(type, entity) => {
+				if (!entity?.slug || entity._isPending) return;
+				const key = `${type}:${entity.id}`;
+				const currentTimer = entitySaveTimeoutsRef.current[key];
+				if (currentTimer) clearTimeout(currentTimer);
+
+				entitySaveTimeoutsRef.current[key] = setTimeout(async () => {
+					try {
+						await api.updateEntity(campaign.slug, type, entity.slug, entity);
+					} catch (err) {
+						console.error(`Failed to update ${type} entity`, err);
+					} finally {
+						delete entitySaveTimeoutsRef.current[key];
+					}
+				}, 500);
+			},
+			[campaign.slug],
+		);
+
 		const handleDescriptionChange = (e) => {
 			const val = e.target.value;
 			if (!saveTimeout.current) pushToUndo();
@@ -291,11 +319,34 @@ export default function useCampaignView(props) {
 				notes: [{ id: Date.now() + 1, title: "", text: "", collapsed: false }],
 				collapsed: false,
 			};
+			const tempId = `temp-character-${Date.now()}`;
+			const draft = {
+				...newChar,
+				id: tempId,
+				slug: tempId,
+				_isNew: true,
+				_isPending: true,
+			};
+			setCharacters((prev) => [...prev, draft]);
 			try {
 				const saved = await api.createEntity(campaign.slug, "characters", newChar);
-				setCharacters([...characters, { ...saved, _isNew: true }]);
+				setCharacters((prev) => {
+					const local = prev.find((c) => c.id === tempId);
+					if (!local) return prev;
+					const merged = {
+						...saved,
+						...local,
+						id: saved.id,
+						slug: saved.slug,
+						_isPending: false,
+						_isNew: true,
+					};
+					scheduleEntityUpdate("characters", merged);
+					return prev.map((c) => (c.id === tempId ? merged : c));
+				});
 			} catch (err) {
 				console.error("Failed to create character", err);
+				setCharacters((prev) => prev.filter((c) => c.id !== tempId));
 			}
 		};
 
@@ -309,11 +360,8 @@ export default function useCampaignView(props) {
 
 		const handleCharacterChange = async (id, updatedChar) => {
 			setCharacters((prev) => prev.map((c) => (c.id === id ? updatedChar : c)));
-
-			if (saveTimeout.current) clearTimeout(saveTimeout.current);
-			saveTimeout.current = setTimeout(() => {
-				api.updateEntity(campaign.slug, "characters", updatedChar.slug, updatedChar);
-			}, 500);
+			if (updatedChar._isPending) return;
+			scheduleEntityUpdate("characters", updatedChar);
 		};
 
 		const handleDeleteCharacter = async (id) => {
@@ -335,11 +383,34 @@ export default function useCampaignView(props) {
 				notes: [{ id: Date.now() + 1, title: "", text: "", collapsed: false }],
 				collapsed: false,
 			};
+			const tempId = `temp-npc-${Date.now()}`;
+			const draft = {
+				...newNpc,
+				id: tempId,
+				slug: tempId,
+				_isNew: true,
+				_isPending: true,
+			};
+			setNpcs((prev) => [...prev, draft]);
 			try {
 				const saved = await api.createEntity(campaign.slug, "npc", newNpc);
-				setNpcs([...npcs, { ...saved, _isNew: true }]);
+				setNpcs((prev) => {
+					const local = prev.find((n) => n.id === tempId);
+					if (!local) return prev;
+					const merged = {
+						...saved,
+						...local,
+						id: saved.id,
+						slug: saved.slug,
+						_isPending: false,
+						_isNew: true,
+					};
+					scheduleEntityUpdate("npc", merged);
+					return prev.map((n) => (n.id === tempId ? merged : n));
+				});
 			} catch (err) {
 				console.error("Failed to create NPC", err);
+				setNpcs((prev) => prev.filter((n) => n.id !== tempId));
 			}
 		};
 
@@ -352,11 +423,8 @@ export default function useCampaignView(props) {
 
 		const handleNpcChange = async (id, updatedNpc) => {
 			setNpcs((prev) => prev.map((n) => (n.id === id ? updatedNpc : n)));
-
-			if (saveTimeout.current) clearTimeout(saveTimeout.current);
-			saveTimeout.current = setTimeout(() => {
-				api.updateEntity(campaign.slug, "npc", updatedNpc.slug, updatedNpc);
-			}, 500);
+			if (updatedNpc._isPending) return;
+			scheduleEntityUpdate("npc", updatedNpc);
 		};
 
 		const handleNpcDelete = async (id) => {
@@ -524,6 +592,16 @@ export default function useCampaignView(props) {
 			window.addEventListener("keydown", handleKeyDown);
 			return () => window.removeEventListener("keydown", handleKeyDown);
 		}, [handleUndo, handleRedo]);
+
+		useEffect(() => {
+			return () => {
+				if (saveTimeout.current) {
+					clearTimeout(saveTimeout.current);
+					saveTimeout.current = null;
+				}
+				clearEntitySaveTimers();
+			};
+		}, [clearEntitySaveTimers]);
 
 		const handleAiUpdate = (updatedCampaign) => {
 			pushToUndo();

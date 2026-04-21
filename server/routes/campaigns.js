@@ -114,7 +114,12 @@ router.post("/:slug/entities/:type", async (req, res, next) => {
 	try {
 		const { slug: campaignSlug, type } = req.params;
 		const name = storage.sanitizeName(req.body.firstName || req.body.name);
-		const entitySlug = storage.campaignSlug(name);
+		const baseSlug = storage.campaignSlug(name);
+		const entitySlug = await storage.ensureUniqueEntitySlug(
+			campaignSlug,
+			type,
+			baseSlug,
+		);
 		const data = {
 			id: storage.createId(),
 			firstName: req.body.firstName || name,
