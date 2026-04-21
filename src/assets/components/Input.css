@@ -4,25 +4,35 @@
 	min-height: 0;
 	background: var(--input);
 	border: 1px solid var(--border);
-	border-radius: 10px;
-	padding: 10px 12px;
+	border-radius: var(--radius-sm);
+	padding: var(--space-3) var(--space-3);
+	min-height: var(--control-h);
 	color: var(--text);
-	font-family: inherit;
+	font-family: var(--font-body);
 	font-size: 0.95rem;
 	transition:
 		border-color 0.15s ease,
-		box-shadow 0.15s ease;
+		box-shadow 0.15s ease,
+		background-color 0.15s ease;
 	outline: none;
 	display: block;
 }
 
+.Input:hover {
+	border-color: color-mix(in srgb, var(--border), var(--accent) 25%);
+}
+
 .Input:focus {
 	border-color: var(--accent);
-	box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent), transparent 84%);
+	box-shadow: var(--focus-ring);
+}
+
+.Input::placeholder {
+	color: color-mix(in srgb, var(--muted), transparent 10%);
 }
 
 .Input--textarea {
-	line-height: 1.5;
+	line-height: 1.55;
 	flex-grow: 1;
 	resize: none;
 	scrollbar-width: thin;

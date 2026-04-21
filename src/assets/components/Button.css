@@ -2,52 +2,66 @@
 	border: 1px solid var(--border);
 	background: var(--panel-2);
 	color: var(--text);
-	border-radius: 12px;
-	padding: 10px 14px;
+	border-radius: var(--radius-sm);
+	padding: 0 var(--space-3);
+	min-height: var(--control-h);
 	transition:
 		background 0.15s ease,
 		transform 0.15s ease,
-		border-color 0.15s ease;
+		border-color 0.15s ease,
+		box-shadow 0.15s ease;
 	display: inline-flex;
 	align-items: center;
-	gap: 8px;
+	gap: var(--space-2);
 	line-height: 1;
 	text-decoration: none;
 	cursor: pointer;
 	justify-content: center;
+	font-weight: 600;
 }
 
 .Button:hover {
 	transform: translateY(-1px);
-	background: var(--panel-2);
+	background: color-mix(in srgb, var(--panel-2), var(--accent) 6%);
+	border-color: color-mix(in srgb, var(--border), var(--accent) 25%);
+}
+
+.Button:focus-visible {
+	box-shadow: var(--focus-ring);
 }
 
 .Button--primary {
-	background: color-mix(in srgb, var(--accent), transparent 86%);
-	border-color: color-mix(in srgb, var(--accent), transparent 65%);
+	background: var(--accent);
+	border-color: color-mix(in srgb, var(--accent), #000 12%);
+	color: var(--text-on-accent);
 }
 
 .Button--primary:hover {
-	background: color-mix(in srgb, var(--accent), transparent 80%);
+	background: color-mix(in srgb, var(--accent), #000 8%);
 }
 
 .Button--danger {
-	background: color-mix(in srgb, var(--danger), transparent 86%);
-	border-color: color-mix(in srgb, var(--danger), transparent 65%);
-	color: var(--text-bright);
+	background: color-mix(in srgb, var(--danger), transparent 10%);
+	border-color: color-mix(in srgb, var(--danger), #000 8%);
+	color: var(--text-on-accent);
 }
 
 .Button--danger:hover {
-	background: color-mix(in srgb, var(--danger), transparent 78%);
+	background: color-mix(in srgb, var(--danger), #000 10%);
 }
 
 .Button--ghost {
 	background: transparent;
 }
 
+.Button--ghost:hover {
+	background: color-mix(in srgb, var(--accent), transparent 92%);
+}
+
 .Button--small {
-	padding: 8px 12px;
-	font-size: 0.9rem;
+	min-height: var(--control-h-sm);
+	padding: 0 var(--space-3);
+	font-size: 0.85rem;
 }
 
 .Button--footer {
@@ -58,16 +72,17 @@
 
 .Button--create {
 	width: 100%;
-	min-height: 60px;
-	background: color-mix(in srgb, var(--accent), transparent 96%);
-	border: 2px dashed color-mix(in srgb, var(--accent), transparent 75%);
-	color: var(--accent);
+	min-height: 46px;
+	background: color-mix(in srgb, var(--accent), transparent 95%);
+	border: 2px dashed color-mix(in srgb, var(--accent), transparent 65%);
+	color: color-mix(in srgb, var(--accent), var(--text) 18%);
 	font-weight: 600;
-	border-radius: 14px;
+	border-radius: 12px;
+	font-size: 0.92rem;
 }
 
 .Button--create:hover {
-	background: color-mix(in srgb, var(--accent), transparent 92%);
+	background: color-mix(in srgb, var(--accent), transparent 90%);
 	border-color: var(--accent);
 	transform: translateY(-2px);
 }
@@ -75,29 +90,24 @@
 .Button span {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: var(--space-2);
 }
 
-/* Стилі для неактивного стану кнопки */
 .Button:disabled,
 .Button.is-disabled {
-	opacity: 0.4;
+	opacity: 0.45;
 	cursor: not-allowed;
-	filter: grayscale(0.8) saturate(0.5);
+	filter: grayscale(0.75) saturate(0.55);
 	pointer-events: none;
-	/* Запобігає спрацюванню ховер-ефектів та кліків на рівні браузера */
 }
 
-/* Скидаємо ефекти при наведенні для неактивних кнопок */
 .Button:disabled:hover,
 .Button.is-disabled:hover {
 	transform: none !important;
-	background-color: transparent !important;
 	box-shadow: none !important;
 	border-color: var(--border) !important;
 }
 
-/* Якщо всередині є іконка, вона також стане тьмяною */
 .Button.is-disabled svg {
 	opacity: 0.6;
 }

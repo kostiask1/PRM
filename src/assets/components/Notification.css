@@ -4,7 +4,7 @@
 	right: 16px;
 	background: var(--accent);
 	color: var(--text-bright);
-	padding: 12px 24px;
+	padding: var(--space-3) var(--space-6);
 	border-radius: var(--radius);
 	box-shadow: 0 4px 15px color-mix(in srgb, black, transparent 60%);
 	z-index: 10000;

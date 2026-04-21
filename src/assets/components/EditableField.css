@@ -27,7 +27,7 @@
 
 .MarkdownView {
 	cursor: pointer;
-	padding: 10px 12px;
+	padding: var(--space-3) var(--space-3);
 	border: 1px solid transparent;
 	border-radius: 10px;
 	background: color-mix(in srgb, var(--accent), transparent 95%);

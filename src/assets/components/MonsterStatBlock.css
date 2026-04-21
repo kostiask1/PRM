@@ -1,14 +1,14 @@
 .MonsterStatBlock {
 	border: 1px solid color-mix(in srgb, var(--border), transparent 60%);
 	border-radius: 12px;
-	padding: 16px;
+	padding: var(--space-4);
 	overflow-y: auto;
 	height: 100%;
 }
 
 .MonsterStatBlock__header {
 	display: flex;
-	gap: 24px;
+	gap: var(--space-6);
 	margin-bottom: 16px;
 	width: 100%;
 }
@@ -16,7 +16,7 @@
 .MonsterStatBlock__header__details {
 	display: flex;
 	flex-direction: column;
-	gap: 20px;
+	gap: var(--space-6);
 	width: 100%;
 }
 
@@ -55,8 +55,8 @@
 	flex: 1;
 	display: flex;
 	flex-wrap: wrap;
-	gap: 12px 20px;
-	padding: 12px;
+	gap: var(--space-3) var(--space-6);
+	padding: var(--space-3);
 	background: var(--bg);
 	border-radius: 8px;
 }
@@ -65,19 +65,19 @@
 	background: color-mix(in srgb, var(--bg), transparent 60%);
 	border: 1px solid color-mix(in srgb, var(--border), transparent 70%);
 	border-radius: 8px;
-	padding: 12px;
+	padding: var(--space-3);
 	margin-bottom: 20px;
 	font-size: 0.9rem;
 	line-height: 1.4;
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
+	gap: var(--space-2);
 }
 
 .MonsterStatBlock__description {
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
+	gap: var(--space-2);
 }
 
 .MonsterStatBlock__property-item {
@@ -93,14 +93,14 @@
 	display: grid;
 	grid-template-columns: repeat(6, 1fr);
 	text-align: center;
-	gap: 12px;
+	gap: var(--space-3);
 }
 
 .MonsterStatBlock__ability-box {
 	background: color-mix(in srgb, var(--bg), transparent 40%);
 	border: 1px solid color-mix(in srgb, var(--border), transparent 50%);
 	border-radius: 10px;
-	padding: 10px 4px;
+	padding: var(--space-3) var(--space-1);
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -124,7 +124,7 @@
 	font-size: 1.2rem;
 	font-weight: 700;
 	color: var(--text-bright);
-	margin: 2px 0;
+	margin: var(--space-1) 0;
 }
 
 .MonsterStatBlock__ability-box .ability-score {
@@ -154,7 +154,7 @@
 
 .MonsterStatBlock__action-rolls {
 	display: flex;
-	gap: 16px;
+	gap: var(--space-4);
 }
 
 .MonsterStatBlock__lore {
@@ -168,7 +168,7 @@
 .MonsterStatBlock__name__row {
 	display: flex;
 	align-items: center;
-	gap: 16px;
+	gap: var(--space-4);
 }
 
 .MonsterStatBlock__name {
@@ -200,7 +200,7 @@
 .MonsterStatBlock ul {
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
+	gap: var(--space-2);
 }
 
 .MonsterStatBlock ul.list-hang-notitle {

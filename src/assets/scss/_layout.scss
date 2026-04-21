@@ -2,17 +2,17 @@
 .App {
 	display: grid;
 	min-height: 100vh;
-	margin-left: 78px;
+	margin-left: var(--sidebar-collapsed);
 }
 
 .App__main {
-	padding: 24px;
+	padding: var(--space-6);
 	min-width: 0;
 }
 
 // Таблиці в парсері контенту (SpellCard, Bestiary)
 .ParserTable__wrapper {
-	margin: 16px 0;
+	margin: var(--space-4) 0;
 	overflow-x: auto;
 	border: 1px solid var(--border);
 	border-radius: 8px;
@@ -20,7 +20,7 @@
 }
 
 .ParserTable__caption {
-	padding: 8px 12px;
+	padding: var(--space-2) var(--space-3);
 	background: var(--panel-2);
 	color: var(--accent);
 	font-weight: 700;
@@ -36,7 +36,7 @@
 
 	th,
 	td {
-		padding: 10px 12px;
+		padding: var(--space-3) var(--space-3);
 		border: 1px solid var(--border);
 		text-align: left;
 		vertical-align: middle;
@@ -55,7 +55,6 @@
 		background: color-mix(in srgb, var(--text-bright), transparent 98%);
 	}
 
-	// Допоміжні класи з JSON-структур
 	.text-center {
 		text-align: center;
 	}
@@ -70,5 +69,15 @@
 	}
 	.col-11 {
 		width: 90%;
+	}
+}
+
+@media (max-width: 1024px) {
+	.App {
+		margin-left: 0;
+	}
+
+	.App__main {
+		padding: var(--space-4);
 	}
 }

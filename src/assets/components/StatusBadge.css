@@ -1,7 +1,7 @@
 .StatusBadge {
 	white-space: nowrap;
 	border-radius: 999px;
-	padding: 6px 10px;
+	padding: var(--space-2) var(--space-3);
 	font-size: 0.82rem;
 	border: 1px solid color-mix(in srgb, var(--border), transparent 25%);
 	background: color-mix(in srgb, var(--bg), transparent 20%);

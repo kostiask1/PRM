@@ -1,5 +1,5 @@
 .SpellCard__name {
-	margin: 0 0 4px 0;
+	margin: 0 0 var(--space-1) 0;
 	color: var(--text);
 	font-weight: 600;
 	font-size: 1.7rem;
@@ -14,7 +14,7 @@
 .SpellCard__props {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: var(--space-1);
 	margin-bottom: 16px;
 	padding-bottom: 16px;
 	border-bottom: 1px solid
@@ -31,14 +31,14 @@
 }
 
 .SpellCard__desc > * {
-	margin: 12px 0;
+	margin: var(--space-3) 0;
 }
 
 .SpellCard__desc ul {
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
-	margin: 8px 0;
+	gap: var(--space-2);
+	margin: var(--space-2) 0;
 	height: auto;
 }
 
@@ -48,7 +48,7 @@
 
 .SpellCard__higher {
 	margin-top: 12px;
-	padding: 12px;
+	padding: var(--space-3);
 	background: color-mix(in srgb, var(--text-bright), transparent 95%);
 	border-radius: 4px;
 }
@@ -62,11 +62,11 @@
 }
 
 .SpellCard .RollDice {
-	margin: 0 4px;
+	margin: 0 var(--space-1);
 }
 
 .SpellCard__list {
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
+	gap: var(--space-2);
 }

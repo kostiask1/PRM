@@ -1,13 +1,13 @@
 .ImageDropzone {
 	border: 2px dashed var(--border);
 	border-radius: 12px;
-	padding: 40px 20px;
+	padding: var(--space-7) var(--space-6);
 	text-align: center;
 	background: color-mix(in srgb, var(--bg-2), transparent 40%);
 	transition: all 0.2s ease;
 	cursor: pointer;
 	position: relative;
-	margin: 16px 0;
+	margin: var(--space-4) 0;
 }
 
 .ImageDropzone:hover,
@@ -20,7 +20,7 @@
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 12px;
+	gap: var(--space-3);
 	color: var(--muted);
 }
 
@@ -40,15 +40,15 @@
 .ImageDropzone__settings {
 	display: flex;
 	flex-direction: column;
-	gap: 20px;
+	gap: var(--space-6);
 }
 
 .ImageDropzone__preview {
 	display: flex;
 	align-items: center;
-	gap: 16px;
+	gap: var(--space-4);
 	background: var(--bg);
-	padding: 12px;
+	padding: var(--space-3);
 	border-radius: 8px;
 	border: 1px solid var(--border);
 }
@@ -79,15 +79,15 @@
 .ImageDropzone__grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-	gap: 8px;
+	gap: var(--space-2);
 }
 
 .CategoryBtn {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	gap: 8px;
-	padding: 10px;
+	gap: var(--space-2);
+	padding: var(--space-3);
 	background: var(--panel-2);
 	border: 1px solid var(--border);
 	border-radius: 8px;
@@ -109,9 +109,9 @@
 
 .ImageDropzone__tabs {
 	display: flex;
-	gap: 8px;
+	gap: var(--space-2);
 	background: var(--bg);
-	padding: 4px;
+	padding: var(--space-1);
 	border-radius: 8px;
 }
 
@@ -119,9 +119,9 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	gap: 8px;
+	gap: var(--space-2);
 	flex: 1;
-	padding: 8px;
+	padding: var(--space-2);
 	border: none;
 	background: transparent;
 	color: var(--muted);
