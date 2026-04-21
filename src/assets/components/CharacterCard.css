@@ -45,7 +45,6 @@
 
 .character-card__body {
     padding: var(--space-4);
-    padding-bottom: 0;
     border-top: 1px solid color-mix(in srgb, var(--text-bright), transparent 95%);
     display: flex;
     flex-direction: column;

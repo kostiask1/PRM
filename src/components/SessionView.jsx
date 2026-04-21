@@ -303,6 +303,13 @@ function SceneCard({
 			/>
 			{!collapsed && (
 				<div className="SceneCard__content">
+					<div className="SceneCard__text-side">
+						<SceneCardFields
+							fields={fields}
+							scene={scene}
+							onUpdateField={onUpdateField}
+						/>
+					</div>
 					<SceneCardMedia
 						number={number}
 						imageUrl={imageUrl}
@@ -310,11 +317,6 @@ function SceneCard({
 						onImageClear={() => onImageChange(null)}
 						campaignSlug={campaignSlug}
 						onUploadSuccess={(result) => onImageChange(result.url)}
-					/>
-					<SceneCardFields
-						fields={fields}
-						scene={scene}
-						onUpdateField={onUpdateField}
 					/>
 				</div>
 			)}
