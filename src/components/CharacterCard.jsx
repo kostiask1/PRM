@@ -11,6 +11,7 @@ import "../assets/components/CharacterCard.css";
 import Select from "./Select";
 import CharacterCardModel from "../models/CharacterCardModel.js";
 import CollapseToggleButton from "./CollapseToggleButton";
+import { resolveImageGalleryLocation } from "../utils/imageLocation.js";
 
 export default function CharacterCard({
 	character,
@@ -25,6 +26,11 @@ export default function CharacterCard({
 	const [isEditing, setIsEditing] = useState(initialEditing);
 	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 	const [isImagePreviewOpen, setIsImagePreviewOpen] = useState(false);
+	const [galleryLocation, setGalleryLocation] = useState({
+		source: campaignSlug,
+		category: type === "npc" ? "tokens" : "characters",
+		subcategory: type === "npc" ? "npc" : "players",
+	});
 	const characterModel = new CharacterCardModel(character);
 
 	const updateField = (field, value) => {
@@ -41,6 +47,17 @@ export default function CharacterCard({
 
 	const handleNoteDelete = (noteId) => {
 		updateField("notes", characterModel.withDeletedNote(noteId));
+	};
+
+	const openGalleryAtImageLocation = () => {
+		setGalleryLocation(
+			resolveImageGalleryLocation(character.imageUrl, {
+				source: campaignSlug,
+				category: type === "npc" ? "tokens" : "characters",
+				subcategory: type === "npc" ? "npc" : "players",
+			}),
+		);
+		setIsGalleryOpen(true);
 	};
 
 	return (
@@ -105,7 +122,7 @@ export default function CharacterCard({
 											alt="Portrait"
 											onClick={() => {
 												if (isEditing) {
-													setIsGalleryOpen(true);
+													openGalleryAtImageLocation();
 													return;
 												}
 												setIsImagePreviewOpen(true);
@@ -283,9 +300,9 @@ export default function CharacterCard({
 					updateField("imageUrl", img.url);
 					setIsGalleryOpen(false);
 				}}
-				initialSource={campaignSlug}
-				initialCategory={type === "npc" ? "tokens" : "characters"}
-				initialSubcategory={type === "npc" ? "npc" : "players"}
+				initialSource={galleryLocation.source}
+				initialCategory={galleryLocation.category}
+				initialSubcategory={galleryLocation.subcategory}
 			/>
 
 			{!isEditing && isImagePreviewOpen && character.imageUrl && (

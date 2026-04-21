@@ -18,6 +18,7 @@ import SceneCardFields from "./session/SceneCardFields";
 import "../assets/components/SessionView.css";
 import useSessionView from "../hooks/useSessionView";
 import SessionViewModel from "../models/SessionViewModel.js";
+import { resolveImageGalleryLocation } from "../utils/imageLocation.js";
 
 function SessionView(props) {
 	const sessionViewProps = useSessionView(props);
@@ -315,7 +316,23 @@ function SceneCard({
 }) {
 	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 	const [isImagePreviewOpen, setIsImagePreviewOpen] = useState(false);
+	const [galleryLocation, setGalleryLocation] = useState({
+		source: campaignSlug,
+		category: "scenes",
+		subcategory: "",
+	});
 	const encounterLabel = hasEncounter ? encounterName : "Encounter";
+
+	const openGalleryAtImageLocation = () => {
+		setGalleryLocation(
+			resolveImageGalleryLocation(imageUrl, {
+				source: campaignSlug,
+				category: "scenes",
+				subcategory: "",
+			}),
+		);
+		setIsGalleryOpen(true);
+	};
 
 	return (
 		<div className="SceneCard">
@@ -369,7 +386,7 @@ function SceneCard({
 						number={number}
 						imageUrl={imageUrl}
 						onImagePreview={() => setIsImagePreviewOpen(true)}
-						onImageReplace={() => setIsGalleryOpen(true)}
+						onImageReplace={openGalleryAtImageLocation}
 						onImageClear={() => onImageChange(null)}
 						campaignSlug={campaignSlug}
 						onUploadSuccess={(result) => onImageChange(result.url)}
@@ -399,8 +416,9 @@ function SceneCard({
 					onImageChange(img.url);
 					setIsGalleryOpen(false);
 				}}
-				initialSource={campaignSlug}
-				initialCategory="scenes"
+				initialSource={galleryLocation.source}
+				initialCategory={galleryLocation.category}
+				initialSubcategory={galleryLocation.subcategory}
 			/>
 		</div>
 	);

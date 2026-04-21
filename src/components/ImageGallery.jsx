@@ -20,6 +20,7 @@ function ImageGallery({
 	initialSubcategory,
 }) {
 	const modal = useModal();
+	const isSelectionMode = typeof onSelect === "function";
 	const {
 		campaigns,
 		categories,
@@ -60,6 +61,7 @@ function ImageGallery({
 		initialSource,
 		initialCategory,
 		initialSubcategory,
+		allowInternalReorder: !isSelectionMode,
 	});
 	if (!isOpen) return null;
 
@@ -75,6 +77,7 @@ function ImageGallery({
 						className={`SourceBtn ${selectedSource === "general" ? "is-active" : ""} ${dragOverTarget?.id === "general" ? "is-drag-over" : ""}`}
 						onClick={() => setSelectedSource("general")}
 						onDragOver={(e) => {
+							if (isSelectionMode) return;
 							e.preventDefault();
 							if (dragOverTarget?.id !== "general") {
 								setDragOverTarget({ type: "source", id: "general" });
@@ -98,6 +101,7 @@ function ImageGallery({
 							className={`SourceBtn ${selectedSource === c.slug ? "is-active" : ""} ${dragOverTarget?.id === c.slug ? "is-drag-over" : ""}`}
 							onClick={() => setSelectedSource(c.slug)}
 							onDragOver={(e) => {
+								if (isSelectionMode) return;
 								e.preventDefault();
 								if (dragOverTarget?.id !== c.slug) {
 									setDragOverTarget({ type: "source", id: c.slug });
@@ -128,6 +132,7 @@ function ImageGallery({
 									setSelectedSub("");
 								}}
 								onDragOver={(e) => {
+									if (isSelectionMode) return;
 									e.preventDefault();
 									if (dragOverTarget?.id !== cat.id) {
 										setDragOverTarget({ type: "cat", id: cat.id });
@@ -150,8 +155,21 @@ function ImageGallery({
 					<div className="ImageGallery__toolbar">
 						<div className="ImageGallery__breadcrumbs">
 							<button
-								className={`BreadcrumbItem ${selectedSub === "" ? "is-active" : ""}`}
-								onClick={() => setSelectedSub("")}>
+								className={`BreadcrumbItem ${selectedSub === "" ? "is-active" : ""} ${dragOverTarget?.type === "breadcrumb" && dragOverTarget?.id === "__root__" ? "is-drag-over" : ""}`}
+								onClick={() => setSelectedSub("")}
+								onDragOver={(e) => {
+									if (isSelectionMode) return;
+									e.preventDefault();
+									setDragOverTarget({ type: "breadcrumb", id: "__root__" });
+								}}
+								onDragLeave={() => setDragOverTarget(null)}
+								onDrop={(e) =>
+									handleDrop(e, {
+										slug: selectedSource,
+										category: selectedCat.id,
+										subcategory: "",
+									})
+								}>
 								<Icon name="home" size={14} />
 							</button>
 							{selectedSub
@@ -164,14 +182,34 @@ function ImageGallery({
 											size={10}
 											className="BreadcrumbSeparator"
 										/>
+										{(() => {
+											const breadcrumbPath = arr.slice(0, idx + 1).join("/");
+											return (
 										<button
-											className={`BreadcrumbItem ${idx === arr.length - 1 ? "is-active" : ""}`}
+											className={`BreadcrumbItem ${idx === arr.length - 1 ? "is-active" : ""} ${dragOverTarget?.type === "breadcrumb" && dragOverTarget?.id === breadcrumbPath ? "is-drag-over" : ""}`}
 											onClick={() => {
-												const newPath = arr.slice(0, idx + 1).join("/");
-												setSelectedSub(newPath);
-											}}>
+												setSelectedSub(breadcrumbPath);
+											}}
+											onDragOver={(e) => {
+												if (isSelectionMode) return;
+												e.preventDefault();
+												setDragOverTarget({
+													type: "breadcrumb",
+													id: breadcrumbPath,
+												});
+											}}
+											onDragLeave={() => setDragOverTarget(null)}
+											onDrop={(e) =>
+												handleDrop(e, {
+													slug: selectedSource,
+													category: selectedCat.id,
+													subcategory: breadcrumbPath,
+												})
+											}>
 											{SUB_LABELS[part] || part}
 										</button>
+											);
+										})()}
 									</React.Fragment>
 								))}
 							<Icon name="chevron" size={10} className="BreadcrumbSeparator" />
@@ -235,6 +273,7 @@ function ImageGallery({
 					<div
 						className={`ImageGallery__grid ${isDraggingOver ? "is-dragging" : ""}`}
 						onDragOver={(e) => {
+							if (isSelectionMode) return;
 							e.preventDefault();
 							const isSameLocation =
 								dragSource &&
@@ -281,10 +320,11 @@ function ImageGallery({
 										);
 										if (newName) handleRenameSub(sub, newName);
 									}}
-									draggable
+									draggable={!isSelectionMode}
 									onDragStart={(e) => handleDragStart(e, sub, "sub")}
 									onDragEnd={handleDragEnd}
 									onDragOver={(e) => {
+										if (isSelectionMode) return;
 										e.preventDefault();
 										if (dragOverTarget?.id !== sub) {
 											setDragOverTarget({ type: "sub", id: sub });
@@ -345,7 +385,7 @@ function ImageGallery({
 											handleRenameImage(img.name, `${newBaseName}.${ext}`);
 										}
 									}}
-									draggable
+									draggable={!isSelectionMode}
 									onDragStart={(e) => handleDragStart(e, img, "image")}
 									onDragEnd={handleDragEnd}>
 									<div className="ImageGallery__image-wrap">

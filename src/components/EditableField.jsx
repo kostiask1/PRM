@@ -375,36 +375,75 @@ export default function EditableField({
 		}
 	};
 
-	// Кастомний рендерер для тексту, що знаходить [Ім'я]
-	const components = {
-		p: ({ children }) => {
-			const processChild = (child) => {
-				if (typeof child !== 'string') return child;
-				
-				const parts = child.split(/(\[[^\]]+\])/g);
-				return parts.map((part, i) => {
-					if (part.startsWith('[') && part.endsWith(']')) {
-						const name = part.slice(1, -1);
-						return (
-							<a 
-								key={i} 
-								className="mention-link" 
-								onClick={(e) => {
-									e.stopPropagation();
-									// Логіка відкриття модалки персонажа буде передана через контекст або пропси
-									window.dispatchEvent(new CustomEvent('open-entity-modal', { detail: { name } }));
-								}}
-							>
-								{name}
-							</a>
-						);
-					}
-					return part;
-				});
-			};
-			return <p>{React.Children.map(children, processChild)}</p>;
-		}
+	const renderMentionText = (text, keyPrefix = "mention") => {
+		const parts = text.split(/(\[[^\]]+\])/g);
+		return parts.map((part, index) => {
+			if (part.startsWith("[") && part.endsWith("]")) {
+				const name = part.slice(1, -1);
+				return (
+					<a
+						key={`${keyPrefix}-${index}`}
+						className="mention-link"
+						onClick={(e) => {
+							e.stopPropagation();
+							window.dispatchEvent(
+								new CustomEvent("open-entity-modal", { detail: { name } }),
+							);
+						}}>
+						{name}
+					</a>
+				);
+			}
+			return part;
+		});
 	};
+
+	const renderMentionChildren = (children, keyPrefix = "mention-node") =>
+		React.Children.map(children, (child, index) => {
+			const nextKey = `${keyPrefix}-${index}`;
+			if (typeof child === "string") {
+				return renderMentionText(child, nextKey);
+			}
+			if (React.isValidElement(child) && child.props?.children) {
+				return React.cloneElement(child, {
+					...child.props,
+					children: renderMentionChildren(child.props.children, nextKey),
+				});
+			}
+			return child;
+		});
+
+	const markdownTagsWithMentions = [
+		"p",
+		"strong",
+		"em",
+		"del",
+		"code",
+		"blockquote",
+		"li",
+		"h1",
+		"h2",
+		"h3",
+		"h4",
+		"h5",
+		"h6",
+		"td",
+		"th",
+		"a",
+		"span",
+	];
+
+	const components = Object.fromEntries(
+		markdownTagsWithMentions.map((tag) => [
+			tag,
+			({ children, ...tagProps }) =>
+				React.createElement(
+					tag,
+					tagProps,
+					renderMentionChildren(children, `mention-${tag}`),
+				),
+		]),
+	);
 
 	const shortcutsHelp = [
 		"Гарячі клавіші:",

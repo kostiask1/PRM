@@ -23,6 +23,7 @@ export default function useImageGallery({
 	initialSource,
 	initialCategory,
 	initialSubcategory,
+	allowInternalReorder = true,
 }) {
 	const modal = useModal();
 
@@ -128,6 +129,7 @@ export default function useImageGallery({
 				const jsonData = e.dataTransfer.getData("application/json");
 
 				if (jsonData) {
+					if (!allowInternalReorder) return;
 					const data = JSON.parse(jsonData);
 					if (!data.items?.length) return;
 
@@ -162,7 +164,7 @@ export default function useImageGallery({
 				setLoading(false);
 			}
 		},
-		[handleFileUpload, loadImages, loadSubcategories],
+		[allowInternalReorder, handleFileUpload, loadImages, loadSubcategories],
 	);
 
 	const handleCreateSub = useCallback(async () => {
@@ -365,6 +367,10 @@ export default function useImageGallery({
 
 	const handleDragStart = useCallback(
 		(e, item, type = "image") => {
+			if (!allowInternalReorder) {
+				e.preventDefault();
+				return;
+			}
 			const itemName = type === "image" ? item.name : item;
 			const isSelected =
 				type === "image"
@@ -393,7 +399,14 @@ export default function useImageGallery({
 				subcategory: selectedSub,
 			});
 		},
-		[selectedFilenames, selectedSubs, selectedSource, selectedCat.id, selectedSub],
+		[
+			allowInternalReorder,
+			selectedFilenames,
+			selectedSubs,
+			selectedSource,
+			selectedCat.id,
+			selectedSub,
+		],
 	);
 
 	const handleDragEnd = useCallback(() => {
