@@ -8,6 +8,7 @@ import Input from "./Input";
 import Modal from "./Modal";
 import Checkbox from "./Checkbox";
 import Notification from "./Notification";
+import CollapseToggleButton from "./CollapseToggleButton";
 import { useModal } from "../context/ModalContext";
 import "../assets/components/AiAssistantPanel.css";
 
@@ -289,11 +290,9 @@ export default function AiAssistantPanel({
 															label={session.name}
 															className="AiAssistant__session-name"
 														/>
-														<Button
-															icon="chevron"
-															variant="ghost"
-															size="small"
-															className={isExpanded ? "is-rotated" : ""}
+														<CollapseToggleButton
+															size={24}
+															rotated={isExpanded}
 															onClick={() => toggleSessionDetails(slug)}
 														/>
 													</div>

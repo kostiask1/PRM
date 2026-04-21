@@ -82,14 +82,6 @@
 	cursor: pointer;
 }
 
-.TodoSection__toggle {
-	height: 32px;
-	min-height: 32px;
-	width: 32px;
-	min-width: 32px;
-	padding: 0;
-}
-
 .TodoSection__body {
 	padding: var(--space-3);
 }
@@ -171,21 +163,6 @@
 
 .SceneCard__title {
 	font-weight: 700;
-}
-
-.SceneCard__toggle {
-	display: flex;
-	min-height: auto;
-	width: auto;
-}
-
-.Icon--rotated {
-	transform: rotate(-90deg);
-	transition: transform 0.2s ease;
-}
-
-.Icon:not(.Icon--rotated) {
-	transition: transform 0.2s ease;
 }
 
 .SceneCard__content {
@@ -270,7 +247,7 @@
 }
 
 .SceneCard__notes-header {
-	display: flex;
+	display: inline-flex;
 	align-items: center;
 	gap: var(--space-3);
 	cursor: pointer;
@@ -280,15 +257,6 @@
 
 .SceneCard__notes-header label {
 	font-weight: 600;
-}
-
-.SceneCard__notes-toggle {
-	min-height: auto;
-	height: 24px;
-	min-height: 24px;
-	width: 24px;
-	min-width: 24px;
-	padding: 0;
 }
 
 .SceneCard__notes-list {

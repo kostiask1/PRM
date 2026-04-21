@@ -1,4 +1,5 @@
 import Button from "../Button";
+import CollapseToggleButton from "../CollapseToggleButton";
 import Icon from "../Icon";
 
 export default function SceneCardHeader({
@@ -14,9 +15,11 @@ export default function SceneCardHeader({
 	return (
 		<div className="SceneCard__header">
 			<div className="SceneCard__titleGroup" onClick={onToggle}>
-				<div className="SceneCard__toggle">
-					<Icon name="chevron" className={collapsed ? "Icon--rotated" : ""} />
-				</div>
+				<CollapseToggleButton
+					size={24}
+					collapsed={collapsed}
+					onClick={onToggle}
+				/>
 				<div className="SceneCard__title">{`Scene ${number}`}</div>
 			</div>
 			<div className="SceneCard__headerActions">

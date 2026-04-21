@@ -10,6 +10,7 @@ import ReactMarkdown from "react-markdown";
 import "../assets/components/CharacterCard.css";
 import Select from "./Select";
 import CharacterCardModel from "../models/CharacterCardModel.js";
+import CollapseToggleButton from "./CollapseToggleButton";
 
 export default function CharacterCard({
 	character,
@@ -48,12 +49,10 @@ export default function CharacterCard({
 			<div
 				className="character-card__header"
 				onClick={() => onToggleCollapse(character.id)}>
-				<Button
-					variant="ghost"
-					size="small"
-					icon="chevron"
+				<CollapseToggleButton
+					size={24}
+					collapsed={character.collapsed}
 					onClick={() => onToggleCollapse(character.id)}
-					className={`character-card__toggle ${character.collapsed ? "is-rotated" : ""}`}
 				/>
 				{character.imageUrl && character.collapsed && (
 					<div className="character-card__mini-portrait">
@@ -244,15 +243,12 @@ export default function CharacterCard({
 							onClick={() =>
 								updateField("isNotesCollapsed", !character.isNotesCollapsed)
 							}>
-							<Button
-								variant="ghost"
-								size="small"
-								icon="chevron"
-								className={`character-card__notes-toggle ${character.isNotesCollapsed ? "is-rotated" : ""}`}
-								onClick={(e) => {
-									e.stopPropagation();
-									updateField("isNotesCollapsed", !character.isNotesCollapsed);
-								}}
+							<CollapseToggleButton
+								size={24}
+								collapsed={character.isNotesCollapsed}
+								onClick={() =>
+									updateField("isNotesCollapsed", !character.isNotesCollapsed)
+								}
 							/>
 							<label>Замітки персонажа</label>
 						</div>

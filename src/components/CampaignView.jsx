@@ -7,6 +7,7 @@ import StatusBadge from "./StatusBadge";
 import DraggableList from "./DraggableList";
 import NoteCard from "./NoteCard";
 import CharacterCard from "./CharacterCard";
+import CollapseToggleButton from "./CollapseToggleButton";
 import "../assets/components/CampaignView.css";
 import useCampaignView from "../hooks/useCampaignView";
 import CampaignViewModel from "../models/CampaignViewModel.js";
@@ -113,13 +114,10 @@ function CampaignView(props) {
 								setIsDescriptionCollapsed(next);
 								triggerSave({ isDescriptionCollapsed: next });
 							}}>
-							<Button
-								variant="ghost"
-								size="small"
-								icon="chevron"
-								className={`section-collapse-toggle ${isDescriptionCollapsed ? "is-rotated" : ""}`}
-								onClick={(e) => {
-									e.stopPropagation();
+							<CollapseToggleButton
+								size={32}
+								collapsed={isDescriptionCollapsed}
+								onClick={() => {
 									const next = !isDescriptionCollapsed;
 									setIsDescriptionCollapsed(next);
 									triggerSave({ isDescriptionCollapsed: next });
@@ -148,13 +146,10 @@ function CampaignView(props) {
 								setIsNotesCollapsed(next);
 								triggerSave({ isNotesCollapsed: next });
 							}}>
-							<Button
-								variant="ghost"
-								size="small"
-								icon="chevron"
-								className={`section-collapse-toggle ${isNotesCollapsed ? "is-rotated" : ""}`}
-								onClick={(e) => {
-									e.stopPropagation();
+							<CollapseToggleButton
+								size={32}
+								collapsed={isNotesCollapsed}
+								onClick={() => {
 									const next = !isNotesCollapsed;
 									setIsNotesCollapsed(next);
 									triggerSave({ isNotesCollapsed: next });
@@ -194,13 +189,10 @@ function CampaignView(props) {
 								setIsCharactersCollapsed(next);
 								triggerSave({ isCharactersCollapsed: next });
 							}}>
-							<Button
-								variant="ghost"
-								size="small"
-								icon="chevron"
-								className={`section-collapse-toggle ${isCharactersCollapsed ? "is-rotated" : ""}`}
-								onClick={(e) => {
-									e.stopPropagation();
+							<CollapseToggleButton
+								size={32}
+								collapsed={isCharactersCollapsed}
+								onClick={() => {
 									const next = !isCharactersCollapsed;
 									setIsCharactersCollapsed(next);
 									triggerSave({ isCharactersCollapsed: next });
@@ -251,13 +243,10 @@ function CampaignView(props) {
 								setIsNpcsCollapsed(next);
 								triggerSave({ isNpcsCollapsed: next });
 							}}>
-							<Button
-								variant="ghost"
-								size="small"
-								icon="chevron"
-								className={`section-collapse-toggle ${isNpcsCollapsed ? "is-rotated" : ""}`}
-								onClick={(e) => {
-									e.stopPropagation();
+							<CollapseToggleButton
+								size={32}
+								collapsed={isNpcsCollapsed}
+								onClick={() => {
 									const next = !isNpcsCollapsed;
 									setIsNpcsCollapsed(next);
 									triggerSave({ isNpcsCollapsed: next });

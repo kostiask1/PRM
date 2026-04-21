@@ -1,4 +1,4 @@
-import Button from "../Button";
+import CollapseToggleButton from "../CollapseToggleButton";
 
 export default function TodoSection({
 	title,
@@ -18,15 +18,10 @@ export default function TodoSection({
 				}}>
 				<div className="TodoSection__titleGroup">
 					{isCollapsible && (
-						<Button
-							variant="ghost"
-							size="small"
-							icon="chevron"
-							className={`TodoSection__toggle ${collapsed ? "is-rotated" : ""}`}
-							onClick={(event) => {
-								event.stopPropagation();
-								onToggle();
-							}}
+						<CollapseToggleButton
+							size={32}
+							collapsed={collapsed}
+							onClick={() => onToggle()}
 						/>
 					)}
 					<h3>{title}</h3>

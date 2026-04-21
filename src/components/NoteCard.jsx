@@ -1,5 +1,6 @@
 import Button from "./Button";
 import EditableField from "./EditableField";
+import CollapseToggleButton from "./CollapseToggleButton";
 import "../assets/components/NoteCard.css";
 
 export default function NoteCard({
@@ -21,15 +22,10 @@ export default function NoteCard({
 				className="note-card-simple__header"
 				onClick={() => !isLast && onToggleCollapse(note.id)}>
 				{!isLast && (
-					<Button
-						variant="ghost"
-						size="small"
-						icon="chevron"
-						className={`note-card-simple__toggle ${isCollapsed ? "is-rotated" : ""}`}
-						onClick={(e) => {
-							e.stopPropagation();
-							onToggleCollapse(note.id);
-						}}
+					<CollapseToggleButton
+						size={24}
+						collapsed={isCollapsed}
+						onClick={() => onToggleCollapse(note.id)}
 					/>
 				)}
 				<EditableField

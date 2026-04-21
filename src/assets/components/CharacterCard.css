@@ -33,16 +33,6 @@
     color: var(--muted);
 }
 
-.character-card__toggle {
-    padding: 0 !important;
-    min-width: var(--control-h-sm) !important;
-    transition: transform 0.2s ease !important;
-}
-
-.character-card__toggle.is-rotated {
-    transform: rotate(-90deg);
-}
-
 .character-card__body {
     padding: var(--space-4);
     border-top: 1px solid color-mix(in srgb, var(--text-bright), transparent 95%);
@@ -222,16 +212,6 @@
     text-transform: uppercase;
     cursor: pointer;
     color: var(--muted);
-}
-
-.character-card__notes-toggle {
-    border: unset;
-    padding: 0;
-}
-
-.character-card__notes-toggle .Icon {
-    width: 14px;
-    height: 14px;
 }
 
 .CharacterImageModal {

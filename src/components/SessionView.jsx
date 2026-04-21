@@ -9,6 +9,7 @@ import Modal from "./Modal";
 import NoteCard from "./NoteCard";
 import ImageGallery from "./ImageGallery";
 import CharacterCard from "./CharacterCard";
+import CollapseToggleButton from "./CollapseToggleButton";
 import TodoSection from "./session/TodoSection";
 import TodoItem from "./session/TodoItem";
 import SceneCardHeader from "./session/SceneCardHeader";
@@ -340,15 +341,10 @@ function SceneCard({
 							<div
 								className="SceneCard__notes-header"
 								onClick={onToggleNotesCollapse}>
-								<Button
-									variant="ghost"
-									size="small"
-									icon="chevron"
-									className={`SceneCard__notes-toggle ${scene.isNotesCollapsed ? "is-rotated" : ""}`}
-									onClick={(event) => {
-										event.stopPropagation();
-										onToggleNotesCollapse();
-									}}
+								<CollapseToggleButton
+									size={24}
+									collapsed={scene.isNotesCollapsed}
+									onClick={onToggleNotesCollapse}
 								/>
 								<label>Замітки сцени</label>
 							</div>

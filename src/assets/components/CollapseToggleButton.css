@@ -1,0 +1,23 @@
+.CollapseToggleButton {
+	padding: 0 !important;
+	min-width: 0 !important;
+	transition: transform 0.2s ease !important;
+}
+
+.CollapseToggleButton--32 {
+	width: 32px;
+	min-width: 32px;
+	height: 32px;
+	min-height: 32px;
+}
+
+.CollapseToggleButton--24 {
+	width: 24px;
+	min-width: 24px;
+	height: 24px;
+	min-height: 24px;
+}
+
+.CollapseToggleButton.is-rotated {
+	transform: rotate(-90deg);
+}
