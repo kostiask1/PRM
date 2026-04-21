@@ -131,6 +131,7 @@ function CampaignView(props) {
 					{!isDescriptionCollapsed && (
 						<EditableField
 							type="textarea"
+							className="CampaignView__script"
 							placeholder="Опишіть основну лінію сюжету, ключові події та цілі..."
 							value={description}
 							onChange={handleDescriptionChange}

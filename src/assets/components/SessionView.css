@@ -213,8 +213,9 @@
 	padding: 0;
 }
 
-.SessionView .field--result .MarkdownView {
-	min-height: 200px;
+.SessionView .field--result .MarkdownView,
+.SessionView .field--result {
+	min-height: 200px!important;
 }
 
 .SceneCard__encounter-icon {

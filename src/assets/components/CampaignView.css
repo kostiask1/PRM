@@ -71,7 +71,12 @@
 	height: 100%;
 }
 
-.CampaignView__notes > div {
+.CampaignView__script,
+.CampaignView__script .MarkdownView {
+	min-height: 200px;
+}
+
+.CampaignView__notes>div {
 	flex: 1 1 550px;
 	max-width: 100%;
 }
@@ -83,7 +88,7 @@
 	gap: var(--space-3);
 }
 
-.CampaignView__characters > div {
+.CampaignView__characters>div {
 	flex: 1 1 550px;
 	max-width: 100%;
 	user-select: auto;
@@ -101,7 +106,7 @@
 }
 
 @media (max-width: 900px) {
-	.CampaignView__characters > div {
+	.CampaignView__characters>div {
 		flex: 1 1 100%;
 		max-width: none;
 	}
