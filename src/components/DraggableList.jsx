@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import "../assets/components/DraggableList.css";
 
 /**
@@ -14,13 +14,28 @@ export default function DraggableList({
 	itemClassName = "",
 }) {
 	const [draggingIndex, setDraggingIndex] = useState(null);
+	const isListDragRef = useRef(false);
+
+	const isNativeMediaDrag = (e) => {
+		const target = e.target;
+		if (!(target instanceof Element)) return false;
+		return Boolean(target.closest("img, [data-no-list-drag='true']"));
+	};
 
 	const handleDragStart = (e, index) => {
+		if (isNativeMediaDrag(e)) {
+			isListDragRef.current = false;
+			setDraggingIndex(null);
+			return;
+		}
+
+		isListDragRef.current = true;
 		setDraggingIndex(index);
 		e.dataTransfer.effectAllowed = "move";
 	};
 
 	const handleDragEnter = (targetIndex) => {
+		if (!isListDragRef.current) return;
 		if (draggingIndex === null || draggingIndex === targetIndex) return;
 
 		const newList = [...items];
@@ -32,8 +47,10 @@ export default function DraggableList({
 	};
 
 	const handleDragEnd = () => {
+		const wasListDrag = isListDragRef.current;
+		isListDragRef.current = false;
 		setDraggingIndex(null);
-		if (onDrop) onDrop();
+		if (wasListDrag && onDrop) onDrop();
 	};
 
 	return (
