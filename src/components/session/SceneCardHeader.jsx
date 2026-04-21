@@ -12,8 +12,8 @@ export default function SceneCardHeader({
 	encounterName,
 }) {
 	return (
-		<div className="SceneCard__header" onClick={onToggle}>
-			<div className="SceneCard__titleGroup">
+		<div className="SceneCard__header">
+			<div className="SceneCard__titleGroup" onClick={onToggle}>
 				<div className="SceneCard__toggle">
 					<Icon name="chevron" className={collapsed ? "Icon--rotated" : ""} />
 				</div>
