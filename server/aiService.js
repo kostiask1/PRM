@@ -4,6 +4,8 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const GEMINI_MODELS_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 const MODEL_CACHE_TTL_MS = 10 * 60 * 1000;
 const CORE_TEXT_MODELS = [
+	"gemini-3-flash-preview",
+	"gemini-3.1-flash-lite-preview",
 	"gemini-2.5-flash",
 	"gemini-2.5-pro",
 	"gemini-2.5-flash-lite",
@@ -11,6 +13,8 @@ const CORE_TEXT_MODELS = [
 ];
 const FALLBACK_TEXT_MODELS = ["gemini-2.5-flash", "gemini-2.5-pro"];
 const PREFERRED_FAST_TEXT_MODELS = [
+	"gemini-3-flash-preview",
+	"gemini-3.1-flash-lite-preview",
 	"gemini-2.5-flash",
 	"gemini-2.5-flash-lite",
 	"gemini-2.0-flash",
@@ -280,12 +284,28 @@ async function generateContent({
 		}
 
 		// Додаємо лише вибрані сцени та їх конкретні поля
-		if (conf.included && conf.scenes && data.scenes) {
+		if (conf.included && data.scenes) {
+			const hasSceneConfig =
+				conf.scenes &&
+				typeof conf.scenes === "object" &&
+				Object.keys(conf.scenes).length > 0;
+			const defaultSceneConf = {
+				included: true,
+				summary: true,
+				goal: true,
+				stakes: true,
+				location: true,
+				notes: true,
+				encounter: true,
+			};
 			const sceneFields = ["summary", "goal", "stakes", "location", "encounter", "notes"];
 			const filteredScenes = data.scenes.filter(scene => {
+				if (!hasSceneConfig) return true;
 				return conf.scenes[scene.id]?.included;
 			}).map(scene => {
-				const sceneConf = conf.scenes[scene.id];
+				const sceneConf = hasSceneConfig
+					? (conf.scenes[scene.id] || defaultSceneConf)
+					: defaultSceneConf;
 				const resultScene = {};
 				
 				// Якщо обрано енкаунтер, шукаємо імена монстрів

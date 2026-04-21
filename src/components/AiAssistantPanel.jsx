@@ -36,11 +36,20 @@ export default function AiAssistantPanel({
 	const [selectedModel, setSelectedModel] = useState("");
 	const [sessionsList, setSessionsList] = useState([]);
 	const [expandedSessions, setExpandedSessions] = useState({});
-	const [contextConfig, setContextConfig] = useState({
+	const [contextConfig, setContextConfig] = useState(() => ({
 		campaignNotes: true,
 		campaignCharacters: true,
-		sessions: {}, // { [slug]: { included: bool, notes: bool, result_text: bool, scenes: {}, data: {} } }
-	});
+		sessions: initialRoute.session
+			? {
+					[initialRoute.session]: {
+						included: true,
+						notes: true,
+						result_text: true,
+						scenes: {},
+					},
+				}
+			: {}, // { [slug]: { included: bool, notes: bool, result_text: bool, scenes: {}, data: {} } }
+	}));
 	const [generatedPrompt, setGeneratedPrompt] = useState(null);
 
 	const showApiKeyInstructions = () => {

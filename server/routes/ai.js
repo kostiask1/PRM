@@ -338,6 +338,58 @@ function canonicalizeBracketedMentions(text, names) {
 	});
 }
 
+function shouldAppendScenesRequest(userInstructions) {
+	const text = asText(userInstructions).toLowerCase();
+	if (!text) return false;
+	const appendHints = [
+		"нова сцена",
+		"нову сцену",
+		"додай сцен",
+		"додати сцен",
+		"create new scene",
+		"add scene",
+		"new scene",
+	];
+	return appendHints.some((hint) => text.includes(hint));
+}
+
+function sceneTextSignature(texts = {}) {
+	return {
+		summary: asText(texts.summary),
+		goal: asText(texts.goal),
+		stakes: asText(texts.stakes),
+		location: asText(texts.location),
+	};
+}
+
+function sceneNotesSignature(notes = []) {
+	return (Array.isArray(notes) ? notes : [])
+		.map((note) => ({
+			title: asText(note?.title),
+			text: asText(note?.text),
+		}))
+		.filter((note) => note.title || note.text);
+}
+
+function sceneNpcsSignature(npcs = []) {
+	return (Array.isArray(npcs) ? npcs : [])
+		.map((npc) => ({
+			name: asText(npc?.name),
+			description: asText(npc?.description),
+		}))
+		.filter((npc) => npc.name || npc.description);
+}
+
+function sceneSignature(scene) {
+	const payload = {
+		texts: sceneTextSignature(scene?.texts),
+		notes: sceneNotesSignature(scene?.notes),
+		npcs: sceneNpcsSignature(scene?.npcs),
+		encounterId: asText(scene?.encounterId),
+	};
+	return JSON.stringify(payload);
+}
+
 function applyMentionsToGeneratedContent(generatedContent, names) {
 	if (!generatedContent || typeof generatedContent !== "object" || !names.length) {
 		return generatedContent;
@@ -629,10 +681,35 @@ router.post("/generate", async (req, res, next) => {
 					const existingScenes = Array.isArray(sessionData.data.scenes)
 						? sessionData.data.scenes
 						: [];
+					const appendScenes = shouldAppendScenesRequest(userInstructions);
+					const existingSignatures = new Set(existingScenes.map(sceneSignature));
 
-					sessionData.data.scenes = generatedContent.scenes.map((scene, idx) =>
-						normalizeScene(scene, existingScenes[idx], encounterMap),
-					);
+					if (appendScenes) {
+						const appendedScenes = [];
+						for (const scene of generatedContent.scenes) {
+							const normalized = normalizeScene(scene, null, encounterMap);
+							const signature = sceneSignature(normalized);
+							if (existingSignatures.has(signature)) continue;
+							existingSignatures.add(signature);
+							appendedScenes.push(normalized);
+						}
+						sessionData.data.scenes = [...existingScenes, ...appendedScenes];
+					} else {
+						const mergedScenes = [...existingScenes];
+						generatedContent.scenes.forEach((scene, idx) => {
+							if (idx < mergedScenes.length) {
+								mergedScenes[idx] = normalizeScene(scene, mergedScenes[idx], encounterMap);
+							} else {
+								const normalized = normalizeScene(scene, null, encounterMap);
+								const signature = sceneSignature(normalized);
+								if (!existingSignatures.has(signature)) {
+									existingSignatures.add(signature);
+									mergedScenes.push(normalized);
+								}
+							}
+						});
+						sessionData.data.scenes = mergedScenes;
+					}
 				}
 
 				sessionData.updatedAt = new Date().toISOString();
