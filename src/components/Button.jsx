@@ -1,5 +1,6 @@
 import Icon from "./Icon";
 import Tooltip from "./Tooltip";
+import classNames from "../utils/classNames";
 import "../assets/components/Button.css";
 
 export default function Button({
@@ -14,15 +15,13 @@ export default function Button({
 	title,
 	...props
 }) {
-	const classes = [
+	const classes = classNames(
 		"Button",
-		variant ? `Button--${variant}` : "",
-		size ? `Button--${size}` : "",
-		props.disabled ? "is-disabled" : "",
+		variant && `Button--${variant}`,
+		size && `Button--${size}`,
+		props.disabled && "is-disabled",
 		className,
-	]
-		.filter(Boolean)
-		.join(" ");
+	);
 
 	const strokeWidth = variant === "create" || size === "small" ? 2.5 : 2;
 

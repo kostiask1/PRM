@@ -21,6 +21,7 @@ import { getSpellByName } from "../utils/referencePreview.js";
 import { resolveSpellInput } from "../utils/referenceResolvers.js";
 import useConditionReference from "../hooks/useConditionReference.jsx";
 import Tooltip from "./Tooltip.jsx";
+import classNames from "../utils/classNames";
 
 const SPELL_CACHE = new Map();
 
@@ -415,7 +416,9 @@ export default function MonsterStatBlock({
 							variant="ghost"
 							size="small"
 							icon="star"
-							className={`MonsterStatBlock__favorite-btn ${isFavorite ? "is-active" : ""}`}
+							className={classNames("MonsterStatBlock__favorite-btn", {
+								"is-active": isFavorite,
+							})}
 							onClick={handleToggleFavorite}
 							title={isFavorite ? "Видалити з обраного" : "Додати в обране"}
 						/>

@@ -12,6 +12,7 @@ import Notification from "./Notification";
 import CollapseToggleButton from "./CollapseToggleButton";
 import { useModal } from "../context/ModalContext";
 import Tooltip from "./Tooltip";
+import classNames from "../utils/classNames";
 import "../assets/components/AiAssistantPanel.css";
 
 export default function AiAssistantPanel({
@@ -232,7 +233,9 @@ export default function AiAssistantPanel({
 						<div className="AiAssistant__actions">
 							<label className="AiAssistant__modelPicker">
 								<Select
-									className={`AiAssistant__modelSelect ${loading || aiModels.length === 0 ? "is-disabled" : ""}`}
+									className={classNames("AiAssistant__modelSelect", {
+										"is-disabled": loading || aiModels.length === 0,
+									})}
 									disabled={loading || aiModels.length === 0}
 									value={selectedModel}
 									onChange={(event) => {
@@ -248,7 +251,10 @@ export default function AiAssistantPanel({
 										: <option key="loading" value="">Завантаження моделей...</option>}
 								</Select>
 							</label>
-							<div className={`AiAssistant__context-toggle ${useContext ? 'is-active' : ''}`}>
+							<div
+								className={classNames("AiAssistant__context-toggle", {
+									"is-active": useContext,
+								})}>
 								<Checkbox
 									checked={useContext}
 									onChange={(val) => setUseContext(val)}

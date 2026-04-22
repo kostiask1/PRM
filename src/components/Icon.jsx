@@ -1,3 +1,5 @@
+import classNames from "../utils/classNames";
+
 const icons = {
 	plus: <path d="M12 5v14M5 12h14" />,
 	trash: (
@@ -267,7 +269,7 @@ export default function Icon({
 			strokeWidth={strokeWidth}
 			strokeLinecap="round"
 			strokeLinejoin="round"
-			className={`Icon Icon--${name} ${className}`}>
+			className={classNames("Icon", `Icon--${name}`, className)}>
 			{content}
 		</svg>
 	);

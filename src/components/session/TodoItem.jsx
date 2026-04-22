@@ -1,9 +1,10 @@
 import Checkbox from "../Checkbox";
 import "../../assets/components/TodoItem.css";
+import classNames from "../../utils/classNames";
 
 export default function TodoItem({ title, note, checked, onChange, children }) {
 	return (
-		<div className={`TodoItem ${checked ? "TodoItem--done" : ""}`}>
+		<div className={classNames("TodoItem", { "TodoItem--done": checked })}>
 			<Checkbox
 				checked={checked}
 				onChange={onChange}

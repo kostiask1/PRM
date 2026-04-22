@@ -9,6 +9,7 @@ import Icon from "./Icon";
 import ListCard from "./ListCard";
 import MonsterStatBlock from "./MonsterStatBlock";
 import Tooltip from "./Tooltip";
+import classNames from "../utils/classNames";
 import "../assets/components/Bestiary.css";
 
 export default function Bestiary({ onAddMonster, isEmbedded = false }) {
@@ -281,7 +282,9 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 								variant="ghost"
 								size="small"
 								icon="star"
-								className={`Bestiary__item-fav-btn ${isFavorite ? "is-active" : ""}`}
+								className={classNames("Bestiary__item-fav-btn", {
+									"is-active": isFavorite,
+								})}
 								onClick={(e) => {
 									e.stopPropagation();
 									handleToggleFavorite(monster);
@@ -364,20 +367,24 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 						className="Bestiary__filter-fav-btn"
 					/>
 					<Button
-						className={`Bestiary__sort-btn ${sortOrder !== "none" ? "is-active" : ""}`}
+						className={classNames("Bestiary__sort-btn", {
+							"is-active": sortOrder !== "none",
+						})}
 						variant="ghost"
 						onClick={toggleSort}
 						title="Сортувати за CR (Challenge Rating)">
 						<span className="Bestiary__sort-label">CR</span>
 						<Icon
 							name={`sort-${sortOrder}`}
-							className={`Bestiary__sort-icon state-${sortOrder}`}
+							className={classNames("Bestiary__sort-icon", `state-${sortOrder}`)}
 						/>
 					</Button>
 				</div>
 
 				<div
-					className={`Bestiary__content ${isEmbedded ? "Bestiary__content--stacked" : ""}`}>
+					className={classNames("Bestiary__content", {
+						"Bestiary__content--stacked": isEmbedded,
+					})}>
 					<div className="Bestiary__list">
 						<ReactList
 							ref={listRef}

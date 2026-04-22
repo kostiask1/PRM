@@ -8,6 +8,7 @@ import Notification from "./Notification";
 import DraggableList from "./DraggableList";
 import useEncounterView from "../hooks/useEncounterView";
 import Tooltip from "./Tooltip";
+import classNames from "../utils/classNames";
 import "../assets/components/EncounterView.css";
 
 function EncounterView({
@@ -122,7 +123,10 @@ function EncounterView({
 							keyExtractor={(m) => m.instanceId}
 							renderItem={(m, isDragging) => (
 								<div
-									className={`EncounterMonsterRow ${selectedInstance?.instanceId === m.instanceId ? "is-active" : ""} ${isDragging ? "is-dragging" : ""}`}
+									className={classNames("EncounterMonsterRow", {
+										"is-active": selectedInstance?.instanceId === m.instanceId,
+										"is-dragging": isDragging,
+									})}
 									onClick={() => setSelectedInstance(m)}>
 									<div className="EncounterMonsterRow__content">
 										<Tooltip content="Натисніть, щоб змінити ім'я">

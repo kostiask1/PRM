@@ -8,6 +8,7 @@ import { useModal } from "../context/ModalContext";
 import ImageTargetSettings from "./ImageTargetSettings";
 import { api } from "../api";
 import Tooltip from "./Tooltip";
+import classNames from "../utils/classNames";
 
 const SUB_LABELS = {
 	npc: "NPC",
@@ -99,7 +100,10 @@ function ImageGallery({
 			<div className="ImageGallery">
 				<aside className="ImageGallery__sidebar">
 					<button
-						className={`SourceBtn ${selectedSource === "general" ? "is-active" : ""} ${dragOverTarget?.id === "general" ? "is-drag-over" : ""}`}
+						className={classNames("SourceBtn", {
+							"is-active": selectedSource === "general",
+							"is-drag-over": dragOverTarget?.id === "general",
+						})}
 						onClick={() => setSelectedSource("general")}
 						onDragOver={(e) => {
 							e.preventDefault();
@@ -122,7 +126,10 @@ function ImageGallery({
 					{campaigns.map((c) => (
 						<button
 							key={c.slug}
-							className={`SourceBtn ${selectedSource === c.slug ? "is-active" : ""} ${dragOverTarget?.id === c.slug ? "is-drag-over" : ""}`}
+							className={classNames("SourceBtn", {
+								"is-active": selectedSource === c.slug,
+								"is-drag-over": dragOverTarget?.id === c.slug,
+							})}
 							onClick={() => setSelectedSource(c.slug)}
 							onDragOver={(e) => {
 								e.preventDefault();
@@ -149,7 +156,10 @@ function ImageGallery({
 						{categories.map((cat) => (
 							<button
 								key={cat.id}
-								className={`TabBtn ${selectedCat.id === cat.id ? "is-active" : ""} ${dragOverTarget?.id === cat.id ? "is-drag-over" : ""}`}
+								className={classNames("TabBtn", {
+									"is-active": selectedCat.id === cat.id,
+									"is-drag-over": dragOverTarget?.id === cat.id,
+								})}
 								onClick={() => {
 									setSelectedCat(cat);
 									setSelectedSub("");
@@ -177,7 +187,12 @@ function ImageGallery({
 					<div className="ImageGallery__toolbar">
 						<div className="ImageGallery__breadcrumbs">
 							<button
-								className={`BreadcrumbItem ${selectedSub === "" ? "is-active" : ""} ${dragOverTarget?.type === "breadcrumb" && dragOverTarget?.id === "__root__" ? "is-drag-over" : ""}`}
+								className={classNames("BreadcrumbItem", {
+									"is-active": selectedSub === "",
+									"is-drag-over":
+										dragOverTarget?.type === "breadcrumb" &&
+										dragOverTarget?.id === "__root__",
+								})}
 								onClick={() => setSelectedSub("")}
 								onDragOver={(e) => {
 									e.preventDefault();
@@ -207,7 +222,12 @@ function ImageGallery({
 											const breadcrumbPath = arr.slice(0, idx + 1).join("/");
 											return (
 										<button
-											className={`BreadcrumbItem ${idx === arr.length - 1 ? "is-active" : ""} ${dragOverTarget?.type === "breadcrumb" && dragOverTarget?.id === breadcrumbPath ? "is-drag-over" : ""}`}
+											className={classNames("BreadcrumbItem", {
+												"is-active": idx === arr.length - 1,
+												"is-drag-over":
+													dragOverTarget?.type === "breadcrumb" &&
+													dragOverTarget?.id === breadcrumbPath,
+											})}
 											onClick={() => {
 												setSelectedSub(breadcrumbPath);
 											}}
@@ -300,7 +320,9 @@ function ImageGallery({
 					</div>
 
 					<div
-						className={`ImageGallery__grid ${isDraggingOver ? "is-dragging" : ""}`}
+						className={classNames("ImageGallery__grid", {
+							"is-dragging": isDraggingOver,
+						})}
 						onDragOver={(e) => {
 							e.preventDefault();
 							const isSameLocation =
@@ -333,7 +355,15 @@ function ImageGallery({
 								return (
 								<div
 									key={sub}
-									className={`ImageGallery__item ImageGallery__item--folder ${selectedSubs.has(sub) ? "is-selected" : ""} ${dragOverTarget?.id === sub ? "is-drag-over" : ""} ${isProtected ? "is-protected" : ""}`}
+									className={classNames(
+										"ImageGallery__item",
+										"ImageGallery__item--folder",
+										{
+											"is-selected": selectedSubs.has(sub),
+											"is-drag-over": dragOverTarget?.id === sub,
+											"is-protected": isProtected,
+										},
+									)}
 									onClick={(e) => {
 										if (isProtected) return;
 										handleItemClick(sub, "sub", index, e);
@@ -398,7 +428,9 @@ function ImageGallery({
 							images.map((img, index) => (
 								<div
 									key={img.url}
-									className={`ImageGallery__item ${selectedFilenames.has(img.name) ? "is-selected" : ""}`}
+									className={classNames("ImageGallery__item", {
+										"is-selected": selectedFilenames.has(img.name),
+									})}
 									onClick={(e) =>
 										handleItemClick(
 											img.name,

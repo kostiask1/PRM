@@ -5,6 +5,7 @@ import Icon from "./Icon";
 import Tooltip from "./Tooltip";
 import { rollDiceFormula } from "../utils/dice";
 import { DICE_ROLL_EVENT, DICE_ROLLED_EVENT } from "../utils/diceEvents";
+import classNames from "../utils/classNames";
 
 import "../assets/components/DiceCalculator.css";
 
@@ -166,7 +167,7 @@ export default function DiceCalculator() {
 	}, []);
 
 	return (
-		<div className={`DiceCalculator ${isOpen ? "is-open" : ""}`}>
+		<div className={classNames("DiceCalculator", { "is-open": isOpen })}>
 			{isOpen && (
 				<div className="DiceCalculator__panel">
 					<div className="DiceCalculator__header">
@@ -192,7 +193,10 @@ export default function DiceCalculator() {
 								</Tooltip>
 								<div className="DiceCalculator__totalValue-container">
 									<span
-										className={`DiceCalculator__totalValue ${lastResult.isCritical ? (lastResult.total === 20 ? "dice-max" : "dice-min") : ""}`}>
+										className={classNames("DiceCalculator__totalValue", {
+											"dice-max": lastResult.isCritical && lastResult.total === 20,
+											"dice-min": lastResult.isCritical && lastResult.total !== 20,
+										})}>
 										{lastResult.total}
 									</span>
 									{lastResult.average !== undefined && (

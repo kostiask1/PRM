@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import Button from "./Button";
 import Input from "./Input";
 import "../assets/components/Modal.css";
+import classNames from "../utils/classNames";
 
 function createModalApi(setModalConfig) {
 	const open = (config) =>
@@ -117,7 +118,7 @@ function Modal({
 	return createPortal(
 		<div className="Modal__overlay" onClick={handleClose}>
 			<div
-				className={`Modal__card Modal__card--${type} ${className}`.trim()}
+				className={classNames("Modal__card", `Modal__card--${type}`, className)}
 				onClick={(e) => e.stopPropagation()}>
 				<div className="Modal__header">
 					<h3>{title}</h3>

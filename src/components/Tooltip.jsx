@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import "../assets/components/Tooltip.css";
+import classNames from "../utils/classNames";
 
 const GAP = 8;
 const VIEWPORT_MARGIN = 8;
@@ -76,6 +77,7 @@ export default function Tooltip({
 	children,
 	delay = 160,
 	disabled = false,
+	className,
 }) {
 	const tooltipIdRef = useRef(`tooltip-${Math.random().toString(36).slice(2)}`);
 	const closeTimerRef = useRef(null);
@@ -238,7 +240,7 @@ export default function Tooltip({
 				onMouseLeave={scheduleCloseTooltip}
 				onBlur={scheduleCloseTooltip}
 				onFocus={handleTriggerEnter}
-				className="Tooltip__trigger">
+				className={classNames("Tooltip__trigger", className)}>
 				{children}
 			</span>
 			{isOpen && hasContent

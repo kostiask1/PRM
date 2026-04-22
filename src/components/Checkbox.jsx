@@ -1,5 +1,6 @@
 import "../assets/components/Checkbox.css";
 import Tooltip from "./Tooltip";
+import classNames from "../utils/classNames";
 
 export default function Checkbox({
 	checked,
@@ -16,7 +17,9 @@ export default function Checkbox({
 		onChange(!checked);
 	};
 	const checkboxNode = (
-		<label className={`Checkbox ${className} ${checked ? "is-checked" : ""}`} onClick={handleChange}>
+		<label
+			className={classNames("Checkbox", className, { "is-checked": checked })}
+			onClick={handleChange}>
 			<input
 				type="checkbox"
 				checked={checked}

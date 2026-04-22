@@ -259,10 +259,10 @@ function SessionView(props) {
 				</Modal>
 			)}
 
-			<Tooltip content="Чекліст підготовки">
-				<button
-					className="SessionView__checklistToggle"
-					onClick={() => setIsChecklistOpen(true)}>
+			<Tooltip
+				content="Чекліст підготовки"
+				className="SessionView__checklistToggle">
+				<button onClick={() => setIsChecklistOpen(true)}>
 					<Icon name="list" size={28} />
 					{progress < 100 && <span className="SessionView__checklistBadge" />}
 				</button>
@@ -371,7 +371,6 @@ function SceneCard({
 					/>
 				</div>
 			)}
-
 		</div>
 	);
 }

@@ -1,4 +1,5 @@
 import CollapseToggleButton from "../CollapseToggleButton";
+import classNames from "../../utils/classNames";
 
 export default function TodoSection({
 	title,
@@ -12,7 +13,9 @@ export default function TodoSection({
 	return (
 		<section className="TodoSection">
 			<div
-				className={`TodoSection__header ${isCollapsible ? "is-collapsible" : ""}`}
+				className={classNames("TodoSection__header", {
+					"is-collapsible": isCollapsible,
+				})}
 				onClick={() => {
 					if (isCollapsible) onToggle();
 				}}>

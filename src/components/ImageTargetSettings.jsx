@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Icon from "./Icon";
 import "../assets/components/ImageTargetSettings.css";
+import classNames from "../utils/classNames";
 
 const SUB_LABELS = {
 	npc: "NPC",
@@ -105,7 +106,9 @@ export default function ImageTargetSettings({
 							<button
 								key={source.id}
 								type="button"
-								className={`ImageDropzone__categoryBtn ${value.source === source.id ? "is-active" : ""}`}
+								className={classNames("ImageDropzone__categoryBtn", {
+									"is-active": value.source === source.id,
+								})}
 								onClick={() => setPatch({ source: source.id, subcategory: "" })}>
 								<Icon name={source.icon || "database"} size={18} />
 								{source.label}
@@ -122,7 +125,9 @@ export default function ImageTargetSettings({
 						<button
 							key={cat.id}
 							type="button"
-							className={`ImageDropzone__categoryBtn ${value.category === cat.id ? "is-active" : ""}`}
+							className={classNames("ImageDropzone__categoryBtn", {
+								"is-active": value.category === cat.id,
+							})}
 							onClick={() => handleSelectCategory(cat)}>
 							<Icon name={cat.icon} size={18} />
 							{cat.label}
@@ -137,7 +142,9 @@ export default function ImageTargetSettings({
 				<div className="ImageDropzone__pathBar">
 					<button
 						type="button"
-						className={`ImageDropzone__pathBtn ${atRoot ? "is-active" : ""}`}
+						className={classNames("ImageDropzone__pathBtn", {
+							"is-active": atRoot,
+						})}
 						onClick={() => handleNavigateToPart(-1)}>
 						<Icon name="home" size={14} />
 					</button>
@@ -145,7 +152,9 @@ export default function ImageTargetSettings({
 						<button
 							key={`${part}-${index}`}
 							type="button"
-							className={`ImageDropzone__pathBtn ${index === pathParts.length - 1 ? "is-active" : ""}`}
+							className={classNames("ImageDropzone__pathBtn", {
+								"is-active": index === pathParts.length - 1,
+							})}
 							onClick={() => handleNavigateToPart(index)}>
 							{SUB_LABELS[part] || part}
 						</button>

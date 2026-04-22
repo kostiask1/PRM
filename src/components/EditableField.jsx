@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import Input from "./Input";
 import Button from "./Button";
 import "../assets/components/EditableField.css";
+import classNames from "../utils/classNames";
 
 const TAB_PREVIEW = "       "; // 7 пробілів, як у тебе зараз
 
@@ -481,7 +482,7 @@ export default function EditableField({
 
 	return (
 		<div
-			className={`EditableField ${className || ""}`}
+			className={classNames("EditableField", className)}
 			onClick={handleClick}
 			style={{ position: "relative" }}>
 			{!isEditing && value && showCopyButton && (

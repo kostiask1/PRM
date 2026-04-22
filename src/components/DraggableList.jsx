@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import "../assets/components/DraggableList.css";
+import classNames from "../utils/classNames";
 
 /**
  * Універсальний компонент для сортування списків перетягуванням.
@@ -54,7 +55,7 @@ export default function DraggableList({
 	};
 
 	return (
-		<div className={`DraggableList ${className}`}>
+		<div className={classNames("DraggableList", className)}>
 			{items.map((item, index) => (
 				<div
 					key={keyExtractor(item)}
@@ -63,7 +64,9 @@ export default function DraggableList({
 					onDragEnter={() => handleDragEnter(index)}
 					onDragEnd={handleDragEnd}
 					onDragOver={(e) => e.preventDefault()}
-					className={`${itemClassName} ${draggingIndex === index ? "is-dragging" : ""}`}>
+					className={classNames(itemClassName, {
+						"is-dragging": draggingIndex === index,
+					})}>
 					{renderItem(item, draggingIndex === index, index)}
 				</div>
 			))}

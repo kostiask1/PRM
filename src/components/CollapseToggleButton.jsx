@@ -1,5 +1,6 @@
 import Button from "./Button";
 import "../assets/components/CollapseToggleButton.css";
+import classNames from "../utils/classNames";
 
 export default function CollapseToggleButton({
 	collapsed = false,
@@ -22,7 +23,12 @@ export default function CollapseToggleButton({
 			size="small"
 			icon="chevron"
 			iconSize={iconSize}
-			className={`CollapseToggleButton ${sizeClass} ${isRotated ? "is-rotated" : ""} ${className}`.trim()}
+			className={classNames(
+				"CollapseToggleButton",
+				sizeClass,
+				{ "is-rotated": isRotated },
+				className,
+			)}
 			onClick={(event) => {
 				event.stopPropagation();
 				onClick?.(event);

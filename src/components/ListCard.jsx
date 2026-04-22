@@ -1,4 +1,5 @@
 import "../assets/components/ListCard.css";
+import classNames from "../utils/classNames";
 
 export default function ListCard({
 	children, // Основний контент картки (назва, мета)
@@ -10,8 +11,10 @@ export default function ListCard({
 	className = "",
 	...dragProps // Пропси для drag-and-drop (draggable, onDragStart, etc.)
 }) {
-	const combinedClassName =
-		`ListCard ${active ? "ListCard--active" : ""} ${dragging ? "ListCard--dragging" : ""} ${className}`.trim();
+	const combinedClassName = classNames("ListCard", className, {
+		"ListCard--active": active,
+		"ListCard--dragging": dragging,
+	});
 
 	const handleClick = (e) => {
 		if (href && !e.ctrlKey && !e.metaKey && !e.shiftKey) {

@@ -8,6 +8,7 @@ import ImageTargetSettings from "./ImageTargetSettings";
 import { IMAGE_GALLERY_CATEGORIES } from "../hooks/useImageGallery";
 import { useModal } from "../context/ModalContext";
 import "../assets/components/ImageDropzone.css";
+import classNames from "../utils/classNames";
 
 export default function ImageDropzone({
 	campaignSlug,
@@ -104,7 +105,7 @@ export default function ImageDropzone({
 
 	return (
 		<div
-			className={`ImageDropzone ${isDragging ? "is-dragging" : ""}`}
+			className={classNames("ImageDropzone", { "is-dragging": isDragging })}
 			onDragOver={handleDragOver}
 			onDragLeave={handleDragLeave}
 			onDrop={handleDrop}>

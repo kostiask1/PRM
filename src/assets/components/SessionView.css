@@ -97,7 +97,7 @@
 	height: 100%;
 }
 
-.SessionView__notes > div {
+.SessionView__notes>div {
 	flex: 1 1 550px;
 	max-width: 100%;
 }
@@ -210,7 +210,7 @@
 
 .SessionView .field--result .MarkdownView,
 .SessionView .field--result {
-	min-height: 200px!important;
+	min-height: 200px !important;
 }
 
 .SceneCard__encounter-icon {
@@ -269,22 +269,25 @@
 	position: fixed;
 	top: 112px;
 	right: 16px;
-	width: 52px;
-	height: 52px;
-	border-radius: 50%;
-	background: var(--bg-2);
-	border: 1px solid var(--border);
-	color: var(--accent);
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	cursor: pointer;
 	z-index: 100;
+}
+
+.SessionView__checklistToggle button {
+	width: 52px;
+	height: 52px;
+	background: var(--bg-2);
+	border-radius: 50%;
+	border: 1px solid var(--border);
 	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+	color: var(--accent);
 	transition: all 0.2s ease;
 }
 
-.SessionView__checklistToggle:hover {
+.SessionView__checklistToggle:hover button {
 	background: var(--panel-2);
 	transform: scale(1.08) translateY(-2px);
 	border-color: var(--accent);

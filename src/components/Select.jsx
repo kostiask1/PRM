@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import Icon from "./Icon";
 import "../assets/components/Select.css";
+import classNames from "../utils/classNames";
 
 const DROPDOWN_OFFSET = 4;
 const DROPDOWN_VIEWPORT_GAP = 8;
@@ -117,7 +118,9 @@ export default function Select({
 				{options.map((opt) => (
 					<div
 						key={opt.value}
-						className={`Select__option ${opt.value === value ? "is-selected" : ""}`}
+						className={classNames("Select__option", {
+							"is-selected": opt.value === value,
+						})}
 						onClick={() => handleSelect(opt.value)}>
 						{opt.label}
 					</div>
@@ -129,7 +132,10 @@ export default function Select({
 	return (
 		<>
 			<div
-				className={`Select ${className} ${isOpen ? "is-open" : ""} ${disabled ? "is-disabled" : ""}`}
+				className={classNames("Select", className, {
+					"is-open": isOpen,
+					"is-disabled": disabled,
+				})}
 				ref={containerRef}
 				{...props}>
 				<div

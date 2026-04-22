@@ -1,6 +1,7 @@
 import { forwardRef, useRef, useLayoutEffect } from "react";
 import "../assets/components/Input.css";
 import Tooltip from "./Tooltip";
+import classNames from "../utils/classNames";
 
 function requestMentionSelection() {
 	return new Promise((resolve) => {
@@ -574,7 +575,11 @@ const Input = forwardRef(
 
 		const baseClass = type === "textarea" ? "Input Input--textarea" : "Input";
 		// Додаємо клас для підсвітки спеціального синтаксису, якщо потрібно
-		const combinedClassName = `${baseClass} ${className} ${typeof props.value === 'string' && props.value?.includes('[') ? 'has-mentions' : ''}`.trim();
+		const combinedClassName = classNames(
+			baseClass,
+			className,
+			typeof props.value === "string" && props.value?.includes("[") && "has-mentions",
+		);
 
 		if (type === "textarea") {
 			const textareaNode = (

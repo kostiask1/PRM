@@ -10,6 +10,7 @@ import Icon from "./Icon.jsx";
 import Tooltip from "./Tooltip";
 import { capitalizeWords } from "../utils/parser.jsx";
 import "../assets/components/Spells.css";
+import classNames from "../utils/classNames";
 
 export default function Spells() {
 	const [sources, setSources] = useState([]);
@@ -233,7 +234,9 @@ export default function Spells() {
 					/>
 					<Tooltip content="Сортувати за рівнем">
 						<button
-							className={`Spells__sort-btn ${sortOrder !== "none" ? "is-active" : ""}`}
+							className={classNames("Spells__sort-btn", {
+								"is-active": sortOrder !== "none",
+							})}
 							onClick={toggleSort}>
 							LVL <Icon name={`sort-${sortOrder}`} />
 						</button>

@@ -8,6 +8,7 @@ import "../assets/components/CharacterCard.css";
 import Select from "./Select";
 import CharacterCardModel from "../models/CharacterCardModel.js";
 import CollapseToggleButton from "./CollapseToggleButton";
+import classNames from "../utils/classNames";
 
 export default function CharacterCard({
 	character,
@@ -41,7 +42,10 @@ export default function CharacterCard({
 
 	return (
 		<div
-			className={`character-card ${character.collapsed ? "is-collapsed" : ""} ${isDragging ? "is-dragging" : ""}`}>
+			className={classNames("character-card", {
+				"is-collapsed": character.collapsed,
+				"is-dragging": isDragging,
+			})}>
 			<div
 				className="character-card__header"
 				onClick={() => onToggleCollapse(character.id)}>
@@ -101,7 +105,9 @@ export default function CharacterCard({
 								onImageChange={(url) => updateField("imageUrl", url)}
 								imageAlt="Portrait"
 								containerClassName="character-card__portrait-container"
-								wrapperClassName={`character-card__portrait-wrapper ${isEditing ? "is-editable" : ""}`}
+								wrapperClassName={classNames("character-card__portrait-wrapper", {
+									"is-editable": isEditing,
+								})}
 								deleteButtonClassName="character-card__image-delete"
 								previewTitle={characterModel.fullName || "Portrait"}
 								previewModalClassName="CharacterImageModal"
