@@ -450,31 +450,34 @@ export default function useEncounterView({
 		const rolledHp = Math.max(1, Number(result.total) || 0);
 		if (!rolledHp) return;
 
-		let updatedEncounter = null;
+		if (!encounter) return;
 		let updatedMonster = null;
-
-		setEncounter((prev) => {
-			if (!prev) return prev;
-			const updatedMonsters = prev.monsters.map((monster) => {
-				if (monster.instanceId !== context.instanceId) return monster;
-				updatedMonster = {
-					...monster,
-					hit_points: rolledHp,
-					currentHp: rolledHp,
-				};
-				return updatedMonster;
-			});
-			updatedEncounter = { ...prev, monsters: updatedMonsters };
-			return updatedEncounter;
+		const updatedMonsters = encounter.monsters.map((monster) => {
+			if (monster.instanceId !== context.instanceId) return monster;
+			updatedMonster = {
+				...monster,
+				hit_points: rolledHp,
+				currentHp: rolledHp,
+			};
+			return updatedMonster;
 		});
+		if (!updatedMonster) return;
 
-		if (!updatedEncounter || !updatedMonster) return;
+		const updatedEncounter = { ...encounter, monsters: updatedMonsters };
+		setEncounter(updatedEncounter);
 
 		setSelectedInstance((prev) =>
 			prev?.instanceId === context.instanceId ? updatedMonster : prev,
 		);
 		saveEncounterState(updatedEncounter);
-	}, [campaign.slug, diceRolledResult, sessionId, encounterId, saveEncounterState]);
+	}, [
+		campaign.slug,
+		diceRolledResult,
+		sessionId,
+		encounterId,
+		encounter,
+		saveEncounterState,
+	]);
 
 	const getHpColor = useCallback((current, max) => {
 		const ratio = max > 0 ? Math.min(Math.max(0, current / max), 1) : 0;
