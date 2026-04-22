@@ -1,11 +1,11 @@
-.ImageDropzone__settings {
+.ImageTargetSettings {
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-6);
 }
 
-.ImageDropzone__categories label,
-.ImageDropzone__subcategories label {
+.ImageTargetSettings__categories label,
+.ImageTargetSettings__subcategories label {
 	display: block;
 	font-size: 0.85rem;
 	color: var(--muted);
@@ -14,13 +14,13 @@
 	letter-spacing: 0.05em;
 }
 
-.ImageDropzone__grid {
+.ImageTargetSettings__grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
 	gap: var(--space-2);
 }
 
-.ImageDropzone__categoryBtn {
+.ImageTargetSettings__categoryBtn {
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -35,60 +35,93 @@
 	font-size: 0.9rem;
 }
 
-.ImageDropzone__categoryBtn:hover {
+.ImageTargetSettings__categoryBtn:hover {
 	border-color: var(--accent);
 }
 
-.ImageDropzone__categoryBtn.is-active {
+.ImageTargetSettings__categoryBtn.is-active {
 	background: color-mix(in srgb, var(--accent), transparent 90%);
 	border-color: var(--accent);
 	color: var(--accent);
 }
 
-.ImageDropzone__tabs {
+.ImageTargetSettings__tabs {
 	display: flex;
+	flex-direction: column;
 	gap: var(--space-2);
-	background: var(--bg);
-	padding: var(--space-1);
-	border-radius: 8px;
+	background: var(--bg-2);
+	border: 1px solid var(--border);
+	padding: var(--space-2);
+	border-radius: 10px;
 }
 
-.ImageDropzone__tabBtn {
+.ImageTargetSettings__tabsHeader {
 	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-2);
+}
+
+.ImageTargetSettings__tabsTitle {
+	font-size: 0.78rem;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--muted);
+	font-weight: 700;
+}
+
+.ImageTargetSettings__tabsList {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-2);
+	min-height: 36px;
+}
+
+.ImageTargetSettings__tabBtn {
+	display: inline-flex;
 	align-items: center;
 	justify-content: center;
 	gap: var(--space-2);
-	flex: 1;
-	padding: var(--space-2);
-	border: none;
-	background: transparent;
-	color: var(--muted);
+	padding: 6px 10px;
+	border: 1px solid var(--border);
+	background: var(--bg);
+	color: var(--text);
 	border-radius: 6px;
 	cursor: pointer;
-	font-weight: 600;
+	font-weight: 500;
 	font-size: 0.8rem;
-	transition: all 0.2s;
+	line-height: 1.2;
+	transition:
+		border-color 0.2s,
+		color 0.2s,
+		background 0.2s;
 }
 
-.ImageDropzone__tabBtn.is-active {
-	background: var(--panel-2);
+.ImageTargetSettings__tabBtn:hover {
+	border-color: var(--accent);
 	color: var(--accent);
-	box-shadow: var(--shadow-sm);
 }
 
-.ImageDropzone__tabBtn:disabled {
+.ImageTargetSettings__tabBtn--back {
+	padding: 5px 10px;
+	font-weight: 600;
+	background: var(--panel-2);
+}
+
+.ImageTargetSettings__tabBtn:disabled {
 	opacity: 0.55;
 	cursor: not-allowed;
 }
 
-.ImageDropzone__pathBar {
+.ImageTargetSettings__pathBar {
 	display: flex;
 	flex-wrap: wrap;
+	align-items: center;
 	gap: var(--space-1);
 	margin-bottom: var(--space-2);
 }
 
-.ImageDropzone__pathBtn {
+.ImageTargetSettings__pathBtn {
 	display: inline-flex;
 	align-items: center;
 	gap: var(--space-1);
@@ -101,15 +134,57 @@
 	font-size: 0.8rem;
 }
 
-.ImageDropzone__pathBtn.is-active {
+.ImageTargetSettings__pathBtn.is-active {
 	border-color: var(--accent);
 	color: var(--accent);
 	background: color-mix(in srgb, var(--accent), transparent 92%);
 }
 
-.ImageDropzone__emptySubs {
+.ImageTargetSettings__emptySubs {
 	color: var(--muted);
 	font-size: 0.8rem;
 	align-self: center;
 	padding: 0 var(--space-2);
+	line-height: 1.4;
+}
+
+.ImageTargetSettings__newSub {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-1);
+	margin-left: var(--space-1);
+}
+
+.ImageTargetSettings__newSub input {
+	min-width: 130px;
+	max-width: 180px;
+	border: 1px solid var(--border);
+	background: var(--bg-2);
+	color: var(--text);
+	border-radius: 6px;
+	padding: var(--space-1) var(--space-2);
+	font-size: 0.8rem;
+}
+
+.ImageTargetSettings__newSubBtn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border: 1px solid var(--border);
+	background: var(--bg-2);
+	color: var(--muted);
+	border-radius: 6px;
+	cursor: pointer;
+}
+
+.ImageTargetSettings__newSubBtn:hover {
+	border-color: var(--accent);
+	color: var(--accent);
+}
+
+.ImageTargetSettings__newSubBtn:disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
 }

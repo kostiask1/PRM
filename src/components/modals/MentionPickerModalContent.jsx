@@ -1,7 +1,7 @@
 import { useState } from "react";
 
-import Button from "../Button";
-import Input from "../Input";
+import Button from "../form/Button";
+import Input from "../form/Input";
 
 export default function MentionPickerModalContent({
 	entities,

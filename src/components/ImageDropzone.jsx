@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { alert } from "../actions/app";
 import { api } from "../api";
-import Button from "./Button";
-import Icon from "./Icon";
-import Modal from "./Modal";
+import Button from "./form/Button";
+import Icon from "./common/Icon";
+import Modal from "./common/Modal";
 import ImageGallery from "./ImageGallery";
 import ImageTargetSettings from "./ImageTargetSettings";
 import { IMAGE_GALLERY_CATEGORIES } from "../hooks/useImageGallery";
@@ -155,6 +155,9 @@ export default function ImageDropzone({
 							loadSubcategories={({ source, category, subcategory }) =>
 								api.getSubcategories(source, category, subcategory)
 							}
+							createSubcategory={({ source, category, fullPath }) =>
+								api.createSubcategory(source, category, fullPath)
+							}
 						/>
 					</div>
 				</Modal>
@@ -174,4 +177,3 @@ export default function ImageDropzone({
 		</div>
 	);
 }
-

@@ -3,8 +3,8 @@ import { useMemo, useState } from "react";
 import { alert, refreshEntitiesAction } from "../actions/app";
 import { api } from "../api";
 import { useAppDispatch } from "../store/appStore";
-import Button from "./Button";
-import Modal from "./Modal";
+import Button from "./form/Button";
+import Modal from "./common/Modal";
 import CharacterCard from "./CharacterCard";
 import "../assets/components/CreateCharacterButton.css";
 
@@ -35,7 +35,7 @@ export default function CreateCharacterButton({
 	icon = "plus",
 	strokeWidth = 2.5,
 }) {
-		const dispatch = useAppDispatch();
+	const dispatch = useAppDispatch();
 	const [isOpen, setIsOpen] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [draft, setDraft] = useState(() => createEmptyDraft(entityType));
@@ -130,40 +130,37 @@ export default function CreateCharacterButton({
 					type="confirm"
 					showFooter={false}
 					onConfirm={closeModal}
-					onCancel={closeModal}
-					children={
-						<div className="CreateCharacterModal">
-							<CharacterCard
-								character={draft}
-								onChange={(_id, updated) => setDraft(updated)}
-								onDelete={() => {}}
-								onToggleCollapse={null}
-								campaignSlug={campaignSlug}
-								type={entityType}
-								viewMode="modal"
-								initialEditing
-								showDeleteButton={false}
-								showHeader={false}
-							/>
-							<div className="CreateCharacterModal__actions">
-								<Button
-									variant="primary"
-									onClick={handleSubmit}
-									disabled={isSubmitting || !draft.firstName?.trim()}>
-									Створити
-								</Button>
-								<Button
-									variant="ghost"
-									onClick={closeModal}
-									disabled={isSubmitting}>
-									Скасувати
-								</Button>
-							</div>
+					onCancel={closeModal}>
+					<div className="CreateCharacterModal">
+						<CharacterCard
+							character={draft}
+							onChange={(_id, updated) => setDraft(updated)}
+							onDelete={() => {}}
+							onToggleCollapse={null}
+							campaignSlug={campaignSlug}
+							type={entityType}
+							viewMode="modal"
+							initialEditing
+							showDeleteButton={false}
+							showHeader={false}
+						/>
+						<div className="CreateCharacterModal__actions">
+							<Button
+								variant="primary"
+								onClick={handleSubmit}
+								disabled={isSubmitting || !draft.firstName?.trim()}>
+								Створити
+							</Button>
+							<Button
+								variant="ghost"
+								onClick={closeModal}
+								disabled={isSubmitting}>
+								Скасувати
+							</Button>
 						</div>
-					}
-				/>
+					</div>
+				</Modal>
 			)}
 		</>
 	);
 }
-

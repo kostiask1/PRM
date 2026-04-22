@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
-import "../assets/components/DraggableList.css";
-import classNames from "../utils/classNames";
+import "../../assets/components/DraggableList.css";
+import classNames from "../../utils/classNames";
 
 /**
  * Універсальний компонент для сортування списків перетягуванням.

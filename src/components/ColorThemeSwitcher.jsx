@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import Icon from './Icon';
-import Tooltip from "./Tooltip";
+import Icon from './common/Icon';
+import Tooltip from "./common/Tooltip";
 import '../assets/components/ColorThemeSwitcher.css';
 
 const THEME_STORAGE_KEY = 'app-theme';

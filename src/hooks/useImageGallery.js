@@ -315,14 +315,42 @@ export default function useImageGallery({
 
 		setLoading(true);
 		try {
+			let hasNonEmptySelectedFolders = false;
+			if (safeSubs.length > 0) {
+				const checks = await Promise.all(
+					safeSubs.map(async (folderName) => {
+						const folderPath = selectedSub
+							? `${selectedSub}/${folderName}`
+							: folderName;
+						const [folderImages, nestedFolders] = await Promise.all([
+							api.getImages(selectedSource, selectedCat.id, folderPath),
+							api.getSubcategories(selectedSource, selectedCat.id, folderPath),
+						]);
+						return (
+							(Array.isArray(folderImages) ? folderImages.length : 0) > 0 ||
+							(Array.isArray(nestedFolders) ? nestedFolders.length : 0) > 0
+						);
+					}),
+				);
+				hasNonEmptySelectedFolders = checks.some(Boolean);
+			}
+
 			const confirmed = await dispatch(
 				confirm({
 					title: "Видалення",
 					message: `Видалити вибрані об'єкти (${total})?`,
+					checkboxLabel: hasNonEmptySelectedFolders
+						? "Видобути вміст із папки?"
+						: null,
+					checkboxDefaultChecked: false,
+					getConfirmValue: (_value, extractFolderContents) => ({
+						confirmed: true,
+						extractFolderContents: Boolean(extractFolderContents),
+					}),
 				}),
 			);
 
-			if (!confirmed) return;
+			if (!confirmed?.confirmed) return;
 
 			await api.deleteImages({
 				items: [...Array.from(selectedFilenames), ...safeSubs],
@@ -330,6 +358,11 @@ export default function useImageGallery({
 					slug: selectedSource,
 					category: selectedCat.id,
 					subcategory: selectedSub,
+				},
+				options: {
+					extractFolderContents:
+						hasNonEmptySelectedFolders &&
+						Boolean(confirmed.extractFolderContents),
 				},
 			});
 			setSelectedFilenames(new Set());

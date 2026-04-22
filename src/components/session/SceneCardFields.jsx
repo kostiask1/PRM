@@ -1,4 +1,4 @@
-import EditableField from "../EditableField";
+import EditableField from "../form/EditableField";
 import "../../assets/components/SceneCardFields.css";
 
 export default function SceneCardFields({ fields, scene, onUpdateField }) {

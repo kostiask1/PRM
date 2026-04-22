@@ -772,10 +772,42 @@ async function renameImage(slug, category, subcategory, oldName, newName) {
 	return { oldUrl, newUrl };
 }
 
-async function deleteImages(items, src) {
-	const dir = campaignImagesDir(src.slug, src.category, src.subcategory);
+async function deleteImages(items, src, options = {}) {
+	const extractFolderContents = Boolean(options.extractFolderContents);
+	const slug = decodeURIComponent(src.slug);
+	const category = src.category;
+	const subcategory = src.subcategory || "";
+	const dir = campaignImagesDir(slug, category, subcategory);
+
 	for (const name of items) {
 		const target = path.join(dir, name);
+		if (!(await exists(target))) continue;
+
+		const stats = await fs.stat(target);
+		if (!extractFolderContents || !stats.isDirectory()) {
+			await fs.rm(target, { recursive: true, force: true });
+			continue;
+		}
+
+		const nestedItems = await fs.readdir(target);
+		if (nestedItems.length > 0) {
+			const nestedSubcategory = subcategory
+				? path.join(subcategory, name)
+				: name;
+			await moveImages(
+				nestedItems,
+				{
+					slug,
+					category,
+					subcategory: nestedSubcategory,
+				},
+				{
+					slug,
+					category,
+					subcategory,
+				},
+			);
+		}
 		await fs.rm(target, { recursive: true, force: true });
 	}
 }

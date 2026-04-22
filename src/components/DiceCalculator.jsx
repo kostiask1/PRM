@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import Button from "./Button";
-import Input from "./Input";
-import Icon from "./Icon";
-import Tooltip from "./Tooltip";
+import Button from "./form/Button";
+import Input from "./form/Input";
+import Icon from "./common/Icon";
+import Tooltip from "./common/Tooltip";
 import {
 	publishDiceResultAction,
 	requestDiceRollAction,

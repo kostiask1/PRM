@@ -1,5 +1,5 @@
-import "../assets/components/StatusBadge.css";
-import classNames from "../utils/classNames";
+import "../../assets/components/StatusBadge.css";
+import classNames from "../../utils/classNames";
 
 export default function StatusBadge({
 	completed,

@@ -1,5 +1,5 @@
-import "../assets/components/ListCard.css";
-import classNames from "../utils/classNames";
+import "../../assets/components/ListCard.css";
+import classNames from "../../utils/classNames";
 
 export default function ListCard({
 	children, // Основний контент картки (назва, мета)

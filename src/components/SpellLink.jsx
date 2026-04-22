@@ -1,5 +1,5 @@
 import { useState } from "react";
-import Tooltip from "./Tooltip.jsx";
+import Tooltip from "./common/Tooltip.jsx";
 import "../assets/components/SpellLink.css";
 
 export default function SpellLink({ children, onClick, onHoverResolve }) {

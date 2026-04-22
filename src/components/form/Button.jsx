@@ -1,7 +1,7 @@
-import Icon from "./Icon";
-import Tooltip from "./Tooltip";
-import classNames from "../utils/classNames";
-import "../assets/components/Button.css";
+import Icon from "../common/Icon";
+import Tooltip from "../common/Tooltip";
+import classNames from "../../utils/classNames";
+import "../../assets/components/Button.css";
 
 export default function Button({
 	children,

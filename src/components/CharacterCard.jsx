@@ -1,14 +1,14 @@
 import React, { useMemo, useState } from "react";
-import Button from "./Button";
-import EditableField from "./EditableField";
-import NoteCard from "./NoteCard";
+import Button from "./form/Button";
+import EditableField from "./form/EditableField";
+import NoteCard from "./common/NoteCard.jsx";
 import ImageAssetField from "./ImageAssetField";
 import ReactMarkdown from "react-markdown";
-import EntityLink from "./EntityLink";
+import EntityLink from "./common/EntityLink.jsx";
 import "../assets/components/CharacterCard.css";
-import Select from "./Select";
+import Select from "./form/Select";
 import CharacterCardModel from "../models/CharacterCardModel.js";
-import CollapseToggleButton from "./CollapseToggleButton";
+import CollapseToggleButton from "./common/CollapseToggleButton.jsx";
 import classNames from "../utils/classNames";
 
 const markdownTagsWithMentions = [

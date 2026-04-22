@@ -1,6 +1,6 @@
-import Button from "./Button";
-import "../assets/components/CollapseToggleButton.css";
-import classNames from "../utils/classNames";
+import Button from "../form/Button";
+import "../../assets/components/CollapseToggleButton.css";
+import classNames from "../../utils/classNames";
 
 export default function CollapseToggleButton({
 	collapsed = false,

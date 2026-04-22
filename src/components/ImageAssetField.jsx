@@ -1,8 +1,8 @@
 ﻿import { useEffect, useMemo, useState } from "react";
-import Button from "./Button";
+import Button from "./form/Button";
 import ImageDropzone from "./ImageDropzone";
 import ImageGallery from "./ImageGallery";
-import Modal from "./Modal";
+import Modal from "./common/Modal";
 
 const TARGET_PRESETS = {
 	character: { category: "characters", subcategory: "players" },

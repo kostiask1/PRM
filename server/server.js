@@ -257,7 +257,11 @@ app.post("/api/images/move", async (req, res, next) => {
 
 app.post("/api/images/delete", async (req, res, next) => {
 	try {
-		await storage.deleteImages(req.body.items, req.body.src);
+		await storage.deleteImages(
+			req.body.items,
+			req.body.src,
+			req.body.options || {},
+		);
 		res.json({ ok: true });
 	} catch (error) {
 		next(error);

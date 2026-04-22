@@ -1,20 +1,28 @@
 import { useCallback, useMemo, useState } from "react";
 
-import { api } from "../api";
-import { parseUrl } from "../utils/navigation";
+import { api } from "../../api";
+import { parseUrl } from "../../utils/navigation";
 import Modal from "./Modal";
-import EntityModalContent from "./modals/EntityModalContent";
-import classNames from "../utils/classNames";
+import EntityModalContent from "../modals/EntityModalContent";
+import classNames from "../../utils/classNames";
 
 function findEntityByName(entities, name) {
-	const searchName = String(name || "").trim().toLowerCase();
+	const searchName = String(name || "")
+		.trim()
+		.toLowerCase();
 	if (!searchName) return null;
 
 	return entities.find((entity) => {
-		const first = String(entity.firstName || "").trim().toLowerCase();
-		const last = String(entity.lastName || "").trim().toLowerCase();
+		const first = String(entity.firstName || "")
+			.trim()
+			.toLowerCase();
+		const last = String(entity.lastName || "")
+			.trim()
+			.toLowerCase();
 		const full = `${first} ${last}`.trim();
-		const fallback = String(entity.name || "").trim().toLowerCase();
+		const fallback = String(entity.name || "")
+			.trim()
+			.toLowerCase();
 		return (
 			first === searchName ||
 			last === searchName ||
@@ -85,16 +93,14 @@ export default function EntityLink({
 					type="character"
 					showFooter={false}
 					onConfirm={handleCloseModal}
-					onCancel={handleCloseModal}
-					children={
-						<EntityModalContent
-							initialEntity={modalState.entity}
-							campaignSlug={resolvedCampaignSlug}
-							type={modalState.type}
-							onClose={handleCloseModal}
-						/>
-					}
-				/>
+					onCancel={handleCloseModal}>
+					<EntityModalContent
+						initialEntity={modalState.entity}
+						campaignSlug={resolvedCampaignSlug}
+						type={modalState.type}
+						onClose={handleCloseModal}
+					/>
+				</Modal>
 			)}
 		</>
 	);

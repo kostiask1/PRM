@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import "../assets/components/Tooltip.css";
-import classNames from "../utils/classNames";
+import "../../assets/components/Tooltip.css";
+import classNames from "../../utils/classNames";
 
 const GAP = 8;
 const VIEWPORT_MARGIN = 8;

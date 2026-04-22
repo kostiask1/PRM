@@ -5,9 +5,7 @@ import EncounterView from "./EncounterView";
 import Spells from "./Spells";
 import { useAppSelector } from "../store/appStore";
 
-export default function MainContent({
-	campaign,
-}) {
+export default function MainContent({ campaign }) {
 	const { activeSessionFileName, activeEncounterId } = useAppSelector(
 		(state) => state.navigation,
 	);
@@ -47,10 +45,7 @@ export default function MainContent({
 					encounterId={activeEncounterId}
 				/>
 			) : activeSessionFileName ? (
-				<SessionView
-					campaign={campaign}
-					sessionId={activeSessionFileName}
-				/>
+				<SessionView campaign={campaign} sessionId={activeSessionFileName} />
 			) : (
 				<CampaignView campaign={campaign} />
 			)}

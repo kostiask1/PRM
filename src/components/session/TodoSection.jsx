@@ -1,4 +1,4 @@
-import CollapseToggleButton from "../CollapseToggleButton";
+import CollapseToggleButton from "../common/CollapseToggleButton";
 import classNames from "../../utils/classNames";
 
 export default function TodoSection({

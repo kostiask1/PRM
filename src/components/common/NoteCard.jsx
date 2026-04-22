@@ -1,8 +1,8 @@
-import Button from "./Button";
-import EditableField from "./EditableField";
+import Button from "../form/Button";
+import EditableField from "../form/EditableField";
 import CollapseToggleButton from "./CollapseToggleButton";
-import "../assets/components/NoteCard.css";
-import classNames from "../utils/classNames";
+import "../../assets/components/NoteCard.css";
+import classNames from "../../utils/classNames";
 
 export default function NoteCard({
 	note,

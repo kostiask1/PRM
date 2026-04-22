@@ -1,9 +1,9 @@
 import { forwardRef, useRef, useLayoutEffect } from "react";
-import "../assets/components/Input.css";
-import Tooltip from "./Tooltip";
-import classNames from "../utils/classNames";
-import { openMentionPickerAction } from "../actions/app";
-import { useAppDispatch } from "../store/appStore";
+import "../../assets/components/Input.css";
+import Tooltip from "../common/Tooltip";
+import classNames from "../../utils/classNames";
+import { openMentionPickerAction } from "../../actions/app";
+import { useAppDispatch } from "../../store/appStore";
 
 function requestMentionSelection(dispatch) {
 	return new Promise((resolve) => {

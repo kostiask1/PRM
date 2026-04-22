@@ -1,4 +1,4 @@
-import Checkbox from "../Checkbox";
+import Checkbox from "../form/Checkbox";
 import "../../assets/components/TodoItem.css";
 import classNames from "../../utils/classNames";
 

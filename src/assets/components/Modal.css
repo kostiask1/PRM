@@ -83,6 +83,10 @@
 	overflow-x: auto;
 }
 
+.Modal__option {
+	margin: 0 0 var(--space-4);
+}
+
 .Modal__footer {
 	padding: var(--space-4) var(--space-6);
 	background: color-mix(in srgb, var(--bg), transparent 60%);

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { api } from "../api.js";
 import RollDice from "./RollDice";
-import Icon from "./Icon.jsx";
+import Icon from "./common/Icon.jsx";
 import SpellCard from "./SpellCard";
 import {
 	getAbilityModifier,
@@ -13,13 +13,13 @@ import {
 	renderRecursiveContent,
 } from "../utils/parser.jsx";
 import "../assets/components/MonsterStatBlock.css";
-import ClickToCopy from "./ClickToCopy.jsx";
-import Button from "./Button.jsx";
+import ClickToCopy from "./common/ClickToCopy.jsx";
+import Button from "./form/Button.jsx";
 import MonsterStatBlockModel from "../models/MonsterStatBlockModel.js";
 import { getSpellByName } from "../utils/referencePreview.js";
 import { resolveSpellInput } from "../utils/referenceResolvers.js";
 import useConditionReference from "../hooks/useConditionReference.jsx";
-import Tooltip from "./Tooltip.jsx";
+import Tooltip from "./common/Tooltip.jsx";
 import classNames from "../utils/classNames";
 import { requestDiceRollAction } from "../actions/app";
 import { openModalRequest, useAppDispatch } from "../store/appStore";

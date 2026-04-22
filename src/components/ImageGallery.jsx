@@ -1,13 +1,13 @@
 import React from "react";
-import Modal from "./Modal";
-import Icon from "./Icon";
+import Modal from "./common/Modal";
+import Icon from "./common/Icon";
 import "../assets/components/ImageGallery.css";
 import { prompt } from "../actions/app";
-import Button from "./Button";
+import Button from "./form/Button";
 import useImageGallery from "../hooks/useImageGallery";
 import ImageTargetSettings from "./ImageTargetSettings";
 import { api } from "../api";
-import Tooltip from "./Tooltip";
+import Tooltip from "./common/Tooltip";
 import classNames from "../utils/classNames";
 import { useAppDispatch } from "../store/appStore";
 
@@ -515,6 +515,9 @@ function ImageGallery({
 						loadSubcategories={({ source, category, subcategory }) =>
 							api.getSubcategories(source, category, subcategory)
 						}
+						createSubcategory={({ source, category, fullPath }) =>
+							api.createSubcategory(source, category, fullPath)
+						}
 					/>
 				</Modal>
 			)}
@@ -524,7 +527,6 @@ function ImageGallery({
 
 export { ImageGallery };
 export default ImageGallery;
-
 
 
 

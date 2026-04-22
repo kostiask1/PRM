@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { api } from "../api";
 import ReactList from "react-list";
-import Panel from "./Panel";
-import Input from "./Input";
-import Button from "./Button";
-import Select from "./Select";
-import Icon from "./Icon";
-import ListCard from "./ListCard";
+import Panel from "./common/Panel";
+import Input from "./form/Input";
+import Button from "./form/Button";
+import Select from "./form/Select";
+import Icon from "./common/Icon";
+import ListCard from "./common/ListCard";
 import MonsterStatBlock from "./MonsterStatBlock";
-import Tooltip from "./Tooltip";
+import Tooltip from "./common/Tooltip";
 import classNames from "../utils/classNames";
 import "../assets/components/Bestiary.css";
 

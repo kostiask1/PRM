@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { alert } from "../actions/app";
 import { api } from "../api";
-import Button from "./Button";
-import Icon from "./Icon";
-import StatusBadge from "./StatusBadge";
-import ListCard from "./ListCard";
+import Button from "./form/Button";
+import Icon from "./common/Icon";
+import StatusBadge from "./common/StatusBadge";
+import ListCard from "./common/ListCard";
 import ColorThemeSwitcher from "./ColorThemeSwitcher";
-import DraggableList from "./DraggableList";
+import DraggableList from "./common/DraggableList";
 import ImageGallery from "./ImageGallery";
 import { downloadBlob } from "../utils/download";
 import {

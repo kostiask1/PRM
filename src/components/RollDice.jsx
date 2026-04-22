@@ -1,5 +1,5 @@
 import "../assets/components/RollDice.css";
-import Tooltip from "./Tooltip";
+import Tooltip from "./common/Tooltip";
 import { requestDiceRollAction } from "../actions/app";
 import { useAppDispatch } from "../store/appStore";
 

@@ -1,15 +1,15 @@
-﻿import { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import AiAssistantPanel from "./AiAssistantPanel";
-import Button from "./Button";
-import EditableField from "./EditableField";
-import ListCard from "./ListCard";
-import Panel from "./Panel";
-import StatusBadge from "./StatusBadge";
-import DraggableList from "./DraggableList";
-import NoteCard from "./NoteCard";
+import Button from "./form/Button";
+import EditableField from "./form/EditableField";
+import ListCard from "./common/ListCard.jsx";
+import Panel from "./common/Panel.jsx";
+import StatusBadge from "./common/StatusBadge.jsx";
+import DraggableList from "./common/DraggableList.jsx";
+import NoteCard from "./common/NoteCard.jsx";
 import CharacterCard from "./CharacterCard";
-import CollapseToggleButton from "./CollapseToggleButton";
-import Tooltip from "./Tooltip";
+import CollapseToggleButton from "./common/CollapseToggleButton.jsx";
+import Tooltip from "./common/Tooltip.jsx";
 import CreateCharacterButton from "./CreateCharacterButton";
 import "../assets/components/CampaignView.css";
 import useCampaignView from "../hooks/useCampaignView";
@@ -17,59 +17,15 @@ import CampaignViewModel from "../models/CampaignViewModel.js";
 import { navigateTo } from "../store/appStore";
 
 function CampaignView(props) {
-	const campaignViewProps = useCampaignView(props);
-	const {
-		campaign,
-		sessions,
-		setSessions,
-		description,
-		notes,
-		setNotes,
-		characters,
-		setCharacters,
-		npcs,
-		setNpcs,
-		isDescriptionCollapsed,
-		setIsDescriptionCollapsed,
-		isNotesCollapsed,
-		setIsNotesCollapsed,
-		isCharactersCollapsed,
-		setIsCharactersCollapsed,
-		isNpcsCollapsed,
-		setIsNpcsCollapsed,
-		undoStack,
-		redoStack,
-		handleUndo,
-		handleRedo,
-		triggerSave,
-		handleDescriptionChange,
-		handleToggleNoteCollapse,
-		handleNoteTitleChange,
-		handleNoteChange,
-		handleDeleteNote,
-		handleToggleCharacterCollapse,
-		handleCharacterChange,
-		handleDeleteCharacter,
-		handleToggleNpcCollapse,
-		handleNpcChange,
-		handleNpcDelete,
-		handleCreateSession,
-		handleDeleteCampaign,
-		handleRename,
-		handleDeleteSession,
-		handleToggleSessionStatus,
-		handleExport,
-		handleAiUpdate,
-		handleSessionReorderDrop,
-	} = { ...props, ...campaignViewProps };
-
+	const campaign = props.campaign;
+	const view = useCampaignView(props);
 	const viewModel = new CampaignViewModel(campaign);
 	const [sessionSearch, setSessionSearch] = useState("");
 	const [sessionStatusFilter, setSessionStatusFilter] = useState("all");
 
 	const filteredSessions = useMemo(() => {
 		const query = sessionSearch.trim().toLowerCase();
-		return sessions.filter((session) => {
+		return view.sessions.filter((session) => {
 			const matchesQuery =
 				!query || String(session.name || "").toLowerCase().includes(query);
 			const matchesStatus =
@@ -80,7 +36,7 @@ function CampaignView(props) {
 						: !session.completed;
 			return matchesQuery && matchesStatus;
 		});
-	}, [sessions, sessionSearch, sessionStatusFilter]);
+	}, [view.sessions, sessionSearch, sessionStatusFilter]);
 
 	const canReorderSessions =
 		sessionStatusFilter === "all" && sessionSearch.trim().length === 0;
@@ -95,7 +51,7 @@ function CampaignView(props) {
 				<>
 					<StatusBadge
 						completed={session.completed}
-						onClick={() => handleToggleSessionStatus(session)}
+						onClick={() => view.handleToggleSessionStatus(session)}
 						type="session"
 					/>
 					<Button
@@ -104,7 +60,7 @@ function CampaignView(props) {
 						size={16}
 						onClick={(e) => {
 							e.stopPropagation();
-							handleDeleteSession(session);
+							view.handleDeleteSession(session);
 						}}
 						title="Видалити сесію"
 					/>
@@ -122,9 +78,7 @@ function CampaignView(props) {
 			<div className="Panel__header">
 				<div className="CampaignView__header">
 					<Tooltip content="Натисни, щоб перейменувати">
-						<h2
-							className="editable-title"
-							onClick={handleRename}>
+						<h2 className="editable-title" onClick={view.handleRename}>
 							{viewModel.name}
 						</h2>
 					</Tooltip>
@@ -135,25 +89,25 @@ function CampaignView(props) {
 						variant="ghost"
 						size="small"
 						icon="undo"
-						onClick={handleUndo}
-						disabled={undoStack.length === 0}
+						onClick={view.handleUndo}
+						disabled={view.undoStack.length === 0}
 						title="Скасувати (Ctrl+Z)"
 					/>
 					<Button
 						variant="ghost"
 						size="small"
 						icon="redo"
-						onClick={handleRedo}
-						disabled={redoStack.length === 0}
+						onClick={view.handleRedo}
+						disabled={view.redoStack.length === 0}
 						title="Повторити (Ctrl+Y)"
 					/>
-					<Button onClick={handleExport} icon="export">
+					<Button onClick={view.handleExport} icon="export">
 						Експорт
 					</Button>
 					<Button
 						variant="danger"
 						icon="trash"
-						onClick={handleDeleteCampaign}
+						onClick={view.handleDeleteCampaign}
 						title="Видалити кампанію"
 					/>
 				</div>
@@ -165,7 +119,7 @@ function CampaignView(props) {
 							<h3>Сесії</h3>
 							<Button
 								variant="create"
-								onClick={handleCreateSession}
+								onClick={view.handleCreateSession}
 								icon="plus"
 								size="small"
 								strokeWidth={2.5}>
@@ -204,8 +158,8 @@ function CampaignView(props) {
 							{canReorderSessions ? (
 								<DraggableList
 									items={filteredSessions}
-									onReorder={setSessions}
-									onDrop={handleSessionReorderDrop}
+									onReorder={view.setSessions}
+									onDrop={view.handleSessionReorderDrop}
 									keyExtractor={(session) => session.fileName}
 									renderItem={(session, isDragging) =>
 										renderSessionCard(session, isDragging)
@@ -230,29 +184,29 @@ function CampaignView(props) {
 								<div
 									className="section-title-group"
 									onClick={() => {
-										const next = !isDescriptionCollapsed;
-										setIsDescriptionCollapsed(next);
-										triggerSave({ isDescriptionCollapsed: next });
+										const next = !view.isDescriptionCollapsed;
+										view.setIsDescriptionCollapsed(next);
+										view.triggerSave({ isDescriptionCollapsed: next });
 									}}>
 									<CollapseToggleButton
 										size="md"
-										collapsed={isDescriptionCollapsed}
+										collapsed={view.isDescriptionCollapsed}
 										onClick={() => {
-											const next = !isDescriptionCollapsed;
-											setIsDescriptionCollapsed(next);
-											triggerSave({ isDescriptionCollapsed: next });
+											const next = !view.isDescriptionCollapsed;
+											view.setIsDescriptionCollapsed(next);
+											view.triggerSave({ isDescriptionCollapsed: next });
 										}}
 									/>
 									<h3>Сюжет кампанії</h3>
 								</div>
 							</div>
-							{!isDescriptionCollapsed && (
+							{!view.isDescriptionCollapsed && (
 								<EditableField
 									type="textarea"
 									className="CampaignView__script"
 									placeholder="Опишіть основну лінію сюжету, ключові події та цілі..."
-									value={description}
-									onChange={handleDescriptionChange}
+									value={view.description}
+									onChange={view.handleDescriptionChange}
 								/>
 							)}
 						</div>
@@ -262,38 +216,38 @@ function CampaignView(props) {
 								<div
 									className="section-title-group"
 									onClick={() => {
-										const next = !isNotesCollapsed;
-										setIsNotesCollapsed(next);
-										triggerSave({ isNotesCollapsed: next });
+										const next = !view.isNotesCollapsed;
+										view.setIsNotesCollapsed(next);
+										view.triggerSave({ isNotesCollapsed: next });
 									}}>
 									<CollapseToggleButton
 										size="md"
-										collapsed={isNotesCollapsed}
+										collapsed={view.isNotesCollapsed}
 										onClick={() => {
-											const next = !isNotesCollapsed;
-											setIsNotesCollapsed(next);
-											triggerSave({ isNotesCollapsed: next });
+											const next = !view.isNotesCollapsed;
+											view.setIsNotesCollapsed(next);
+											view.triggerSave({ isNotesCollapsed: next });
 										}}
 									/>
 									<h3>Замітки</h3>
 								</div>
 							</div>
-							{!isNotesCollapsed && (
+							{!view.isNotesCollapsed && (
 								<DraggableList
-									items={notes}
+									items={view.notes}
 									className="CampaignView__notes"
-									onReorder={setNotes}
-									onDrop={() => triggerSave({ notes })}
+									onReorder={view.setNotes}
+									onDrop={() => view.triggerSave({ notes: view.notes })}
 									keyExtractor={(note) => note.id}
 									renderItem={(note, isDragging, index) => (
 										<NoteCard
 											note={note}
-											isLast={index === notes.length - 1}
+											isLast={index === view.notes.length - 1}
 											isDragging={isDragging}
-											onToggleCollapse={handleToggleNoteCollapse}
-											onTitleChange={handleNoteTitleChange}
-											onTextChange={handleNoteChange}
-											onDelete={handleDeleteNote}
+											onToggleCollapse={view.handleToggleNoteCollapse}
+											onTitleChange={view.handleNoteTitleChange}
+											onTextChange={view.handleNoteChange}
+											onDelete={view.handleDeleteNote}
 										/>
 									)}
 								/>
@@ -305,42 +259,42 @@ function CampaignView(props) {
 								<div
 									className="section-title-group"
 									onClick={() => {
-										const next = !isCharactersCollapsed;
-										setIsCharactersCollapsed(next);
-										triggerSave({ isCharactersCollapsed: next });
+										const next = !view.isCharactersCollapsed;
+										view.setIsCharactersCollapsed(next);
+										view.triggerSave({ isCharactersCollapsed: next });
 									}}>
 									<CollapseToggleButton
 										size="md"
-										collapsed={isCharactersCollapsed}
+										collapsed={view.isCharactersCollapsed}
 										onClick={() => {
-											const next = !isCharactersCollapsed;
-											setIsCharactersCollapsed(next);
-											triggerSave({ isCharactersCollapsed: next });
+											const next = !view.isCharactersCollapsed;
+											view.setIsCharactersCollapsed(next);
+											view.triggerSave({ isCharactersCollapsed: next });
 										}}
 									/>
 									<h3>Персонажі</h3>
 								</div>
-								{!isCharactersCollapsed && (
+								{!view.isCharactersCollapsed && (
 									<CreateCharacterButton
 										campaignSlug={campaign.slug}
 										entityType="characters"
 									/>
 								)}
 							</div>
-							{!isCharactersCollapsed && (
+							{!view.isCharactersCollapsed && (
 								<DraggableList
-									items={characters}
+									items={view.characters}
 									className="CampaignView__characters"
-									onReorder={setCharacters}
-									onDrop={() => triggerSave({ characters })}
+									onReorder={view.setCharacters}
+									onDrop={() => view.triggerSave({ characters: view.characters })}
 									keyExtractor={(char) => char.id}
 									renderItem={(character, isDragging) => (
 										<CharacterCard
 											character={character}
 											isDragging={isDragging}
-											onToggleCollapse={handleToggleCharacterCollapse}
-											onChange={handleCharacterChange}
-											onDelete={handleDeleteCharacter}
+											onToggleCollapse={view.handleToggleCharacterCollapse}
+											onChange={view.handleCharacterChange}
+											onDelete={view.handleDeleteCharacter}
 											campaignSlug={campaign.slug}
 											type="characters"
 										/>
@@ -354,42 +308,42 @@ function CampaignView(props) {
 								<div
 									className="section-title-group"
 									onClick={() => {
-										const next = !isNpcsCollapsed;
-										setIsNpcsCollapsed(next);
-										triggerSave({ isNpcsCollapsed: next });
+										const next = !view.isNpcsCollapsed;
+										view.setIsNpcsCollapsed(next);
+										view.triggerSave({ isNpcsCollapsed: next });
 									}}>
 									<CollapseToggleButton
 										size="md"
-										collapsed={isNpcsCollapsed}
+										collapsed={view.isNpcsCollapsed}
 										onClick={() => {
-											const next = !isNpcsCollapsed;
-											setIsNpcsCollapsed(next);
-											triggerSave({ isNpcsCollapsed: next });
+											const next = !view.isNpcsCollapsed;
+											view.setIsNpcsCollapsed(next);
+											view.triggerSave({ isNpcsCollapsed: next });
 										}}
 									/>
 									<h3>NPC</h3>
 								</div>
-								{!isNpcsCollapsed && (
+								{!view.isNpcsCollapsed && (
 									<CreateCharacterButton
 										campaignSlug={campaign.slug}
 										entityType="npc"
 									/>
 								)}
 							</div>
-							{!isNpcsCollapsed && (
+							{!view.isNpcsCollapsed && (
 								<DraggableList
-									items={npcs}
+									items={view.npcs}
 									className="CampaignView__characters"
-									onReorder={setNpcs}
+									onReorder={view.setNpcs}
 									onDrop={() => {}}
 									keyExtractor={(npc) => npc.id}
 									renderItem={(npc, isDragging) => (
 										<CharacterCard
 											character={npc}
 											isDragging={isDragging}
-											onToggleCollapse={handleToggleNpcCollapse}
-											onChange={handleNpcChange}
-											onDelete={handleNpcDelete}
+											onToggleCollapse={view.handleToggleNpcCollapse}
+											onChange={view.handleNpcChange}
+											onDelete={view.handleNpcDelete}
 											campaignSlug={campaign.slug}
 											type="npc"
 										/>
@@ -403,14 +357,14 @@ function CampaignView(props) {
 								sessionName={campaign.name}
 								sessionData={{
 									...campaign,
-									description,
-									notes,
-									characters,
-									npcs,
+									description: view.description,
+									notes: view.notes,
+									characters: view.characters,
+									npcs: view.npcs,
 								}}
 								campaignSlug={campaign.slug}
 								sessionId={null}
-								onInsertResult={handleAiUpdate}
+								onInsertResult={view.handleAiUpdate}
 							/>
 						</div>
 					</div>
@@ -422,4 +376,3 @@ function CampaignView(props) {
 
 export { CampaignView };
 export default CampaignView;
-

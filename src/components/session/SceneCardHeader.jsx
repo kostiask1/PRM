@@ -1,7 +1,7 @@
-import Button from "../Button";
-import CollapseToggleButton from "../CollapseToggleButton";
+import Button from "../form/Button";
+import CollapseToggleButton from "../common/CollapseToggleButton";
 import CreateCharacterButton from "../CreateCharacterButton";
-import Icon from "../Icon";
+import Icon from "../common/Icon";
 
 export default function SceneCardHeader({
 	number,

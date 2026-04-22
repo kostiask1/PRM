@@ -1,8 +1,8 @@
 import { useState } from "react";
 import Notification from "./Notification";
 import Tooltip from "./Tooltip";
-import "../assets/components/ClickToCopy.css";
-import classNames from "../utils/classNames";
+import "../../assets/components/ClickToCopy.css";
+import classNames from "../../utils/classNames";
 
 /**
  * Універсальний компонент для копіювання тексту в буфер обміну.

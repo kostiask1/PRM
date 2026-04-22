@@ -2,9 +2,9 @@ import React, { useMemo, useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import Input from "./Input";
 import Button from "./Button";
-import EntityLink from "./EntityLink";
-import "../assets/components/EditableField.css";
-import classNames from "../utils/classNames";
+import EntityLink from "../common/EntityLink";
+import "../../assets/components/EditableField.css";
+import classNames from "../../utils/classNames";
 
 const TAB_PREVIEW = "       "; // 7 пробілів, як у тебе зараз
 

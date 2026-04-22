@@ -1,64 +1,30 @@
-import Icon from "./Icon";
-import Button from "./Button";
-import EditableField from "./EditableField";
+import Icon from "./common/Icon.jsx";
+import Button from "./form/Button";
+import EditableField from "./form/EditableField";
 import AiAssistantPanel from "./AiAssistantPanel";
-import Panel from "./Panel";
-import DraggableList from "./DraggableList";
-import Modal from "./Modal";
-import NoteCard from "./NoteCard";
-import CollapseToggleButton from "./CollapseToggleButton";
+import Panel from "./common/Panel.jsx";
+import DraggableList from "./common/DraggableList.jsx";
+import Modal from "./common/Modal.jsx";
+import NoteCard from "./common/NoteCard.jsx";
+import CollapseToggleButton from "./common/CollapseToggleButton.jsx";
 import TodoSection from "./session/TodoSection";
 import TodoItem from "./session/TodoItem";
 import SceneCardHeader from "./session/SceneCardHeader";
 import SceneCardMedia from "./session/SceneCardMedia";
 import SceneCardFields from "./session/SceneCardFields";
-import Tooltip from "./Tooltip";
+import Tooltip from "./common/Tooltip.jsx";
 import "../assets/components/SessionView.css";
 import useSessionView from "../hooks/useSessionView";
 import SessionViewModel from "../models/SessionViewModel.js";
 
 function SessionView(props) {
-	const sessionViewProps = useSessionView(props);
-	const {
-		campaign,
-		sessionId,
-		session,
-		isSaving,
-		isChecklistOpen,
-		setIsChecklistOpen,
-		undoStack,
-		redoStack,
-		campaignSlug,
-		triggerSave,
-		handleUndo,
-		handleRedo,
-		updateSession,
-		updateData,
-		addScene,
-		updateScene,
-		toggleSceneCollapse,
-		handleOpenEncounter,
-		removeScene,
-		handleNoteTitleChange,
-		handleNoteChange,
-		handleToggleNoteCollapse,
-		handleDeleteNote,
-		handleToggleSceneNotesCollapse,
-		handleSceneNoteTitleChange,
-		handleSceneNoteChange,
-		handleSceneToggleNoteCollapse,
-		handleSceneDeleteNote,
-		handleToggleSectionCollapse,
-		handleAiUpdate,
-		checklistItems,
-		progress,
-		handleBack,
-		handleRename,
-		handleDeleteSessionAndBack,
-	} = { ...props, ...sessionViewProps };
+	const campaign = props.campaign;
+	const sessionId = props.sessionId;
+	const view = useSessionView(props);
+	const session = view.session;
 
 	if (!session) return null;
-	const viewModel = new SessionViewModel({ ...session, isSaving });
+	const viewModel = new SessionViewModel({ ...session, isSaving: view.isSaving });
 
 	return (
 		<Panel className="SessionView">
@@ -69,11 +35,11 @@ function SessionView(props) {
 							<Button
 								variant="ghost"
 								size="small"
-								onClick={handleBack}
+								onClick={view.handleBack}
 								icon="back"
 								className="SessionView__backBtn"
 							/>
-							<h2 className="editable-title" onClick={handleRename}>
+							<h2 className="editable-title" onClick={view.handleRename}>
 								{session.name}
 							</h2>
 						</div>
@@ -85,29 +51,27 @@ function SessionView(props) {
 						variant="ghost"
 						size="small"
 						icon="undo"
-						onClick={handleUndo}
-						disabled={undoStack.length === 0 || isSaving}
+						onClick={view.handleUndo}
+						disabled={view.undoStack.length === 0 || view.isSaving}
 						title="Скасувати (Ctrl+Z)"
 					/>
 					<Button
 						variant="ghost"
 						size="small"
 						icon="redo"
-						onClick={handleRedo}
-						disabled={redoStack.length === 0 || isSaving}
+						onClick={view.handleRedo}
+						disabled={view.redoStack.length === 0 || view.isSaving}
 						title="Повторити (Ctrl+Y)"
 					/>
 					<Button
 						variant={viewModel.isCompleted ? "primary" : ""}
-						onClick={() =>
-							updateSession({ completed: !session.completed }, true)
-						}>
+						onClick={() => view.updateSession({ completed: !session.completed }, true)}>
 						{viewModel.completeButtonLabel}
 					</Button>
 					<Button
 						variant="danger"
 						icon="trash"
-						onClick={handleDeleteSessionAndBack}
+						onClick={view.handleDeleteSessionAndBack}
 					/>
 				</div>
 			</div>
@@ -117,23 +81,23 @@ function SessionView(props) {
 					<TodoSection
 						title="Замітки"
 						collapsed={!!session.data.isNotesCollapsed}
-						onToggle={() => handleToggleSectionCollapse("Notes")}>
+						onToggle={() => view.handleToggleSectionCollapse("Notes")}>
 						{!session.data.isNotesCollapsed && (
 							<DraggableList
 								items={viewModel.notes}
 								className="SessionView__notes"
-								onReorder={(notes) => updateData("notes", notes)}
-								onDrop={() => triggerSave(session, true)}
+								onReorder={(notes) => view.updateData("notes", notes)}
+								onDrop={() => view.triggerSave(session, true)}
 								keyExtractor={(note) => note.id}
 								renderItem={(note, isDragging, index) => (
 									<NoteCard
 										note={note}
 										isLast={index === viewModel.notes.length - 1}
 										isDragging={isDragging}
-										onToggleCollapse={handleToggleNoteCollapse}
-										onTitleChange={handleNoteTitleChange}
-										onTextChange={handleNoteChange}
-										onDelete={handleDeleteNote}
+										onToggleCollapse={view.handleToggleNoteCollapse}
+										onTitleChange={view.handleNoteTitleChange}
+										onTextChange={view.handleNoteChange}
+										onDelete={view.handleDeleteNote}
 									/>
 								)}
 							/>
@@ -145,7 +109,7 @@ function SessionView(props) {
 							<Button
 								variant="primary"
 								size="small"
-								onClick={addScene}
+								onClick={view.addScene}
 								icon="plus"
 								iconSize={16}>
 								Додати
@@ -158,52 +122,50 @@ function SessionView(props) {
 								description: campaign.description,
 								notes: campaign.notes,
 							}}
-							campaignSlug={campaignSlug}
+							campaignSlug={view.campaignSlug}
 							sessionId={sessionId}
-							onInsertResult={handleAiUpdate}
+							onInsertResult={view.handleAiUpdate}
 						/>
 						<DraggableList
 							items={viewModel.scenes}
-							onReorder={(newScenes) => updateData("scenes", newScenes)}
-							onDrop={() => triggerSave(session, true)}
+							onReorder={(newScenes) => view.updateData("scenes", newScenes)}
+							onDrop={() => view.triggerSave(session, true)}
 							keyExtractor={(scene) => scene.id}
 							renderItem={(scene) => {
-								const idx = viewModel.scenes.findIndex(
-									(s) => s.id === scene.id,
-								);
+								const idx = viewModel.scenes.findIndex((s) => s.id === scene.id);
 								return (
 									<SceneCard
 										number={idx + 1}
 										scene={scene}
 										fields={SessionViewModel.sceneSchema}
 										collapsed={scene.collapsed}
-										onToggle={() => toggleSceneCollapse(scene.id)}
-										onRemove={() => removeScene(scene.id)}
-										onOpenEncounter={() => handleOpenEncounter(scene)}
+										onToggle={() => view.toggleSceneCollapse(scene.id)}
+										onRemove={() => view.removeScene(scene.id)}
+										onOpenEncounter={() => view.handleOpenEncounter(scene)}
 										imageUrl={scene.imageUrl}
 										onImageChange={(url) =>
-											updateScene(scene.id, "imageUrl", url, true)
+											view.updateScene(scene.id, "imageUrl", url, true)
 										}
-										campaignSlug={campaignSlug}
+										campaignSlug={view.campaignSlug}
 										hasEncounter={!!scene.encounterId}
 										encounterName={viewModel.findEncounterName(scene)}
 										onUpdateField={(field, value) =>
-											updateScene(scene.id, field, value)
+											view.updateScene(scene.id, field, value)
 										}
 										onToggleNotesCollapse={() =>
-											handleToggleSceneNotesCollapse(scene.id)
+											view.handleToggleSceneNotesCollapse(scene.id)
 										}
 										onSceneNoteTitleChange={(noteId, title) =>
-											handleSceneNoteTitleChange(scene.id, noteId, title)
+											view.handleSceneNoteTitleChange(scene.id, noteId, title)
 										}
 										onSceneNoteChange={(noteId, text) =>
-											handleSceneNoteChange(scene.id, noteId, text)
+											view.handleSceneNoteChange(scene.id, noteId, text)
 										}
 										onSceneNoteToggleCollapse={(noteId) =>
-											handleSceneToggleNoteCollapse(scene.id, noteId)
+											view.handleSceneToggleNoteCollapse(scene.id, noteId)
 										}
 										onSceneNoteDelete={(noteId) =>
-											handleSceneDeleteNote(scene.id, noteId)
+											view.handleSceneDeleteNote(scene.id, noteId)
 										}
 									/>
 								);
@@ -217,34 +179,34 @@ function SessionView(props) {
 							className="field--result"
 							placeholder="Підсумок того, що реально відбулося..."
 							value={session.data.result_text || ""}
-							onChange={(e) => updateData("result_text", e.target.value)}
+							onChange={(e) => view.updateData("result_text", e.target.value)}
 						/>
 					</TodoSection>
 				</div>
 			</div>
 
-			{isChecklistOpen && (
+			{view.isChecklistOpen && (
 				<Modal
 					title="Чекліст підготовки"
-					onCancel={() => setIsChecklistOpen(false)}
+					onCancel={() => view.setIsChecklistOpen(false)}
 					showFooter={false}>
 					<div className="SessionView__checklistModal">
 						<div className="SessionView__progressWrap">
 							<div className="ProgressBar__label">
 								<span>Прогрес підготовки</span>
-								<span>{progress}%</span>
+								<span>{view.progress}%</span>
 							</div>
 							<div className="ProgressBar">
 								<div
 									className="ProgressBar__fill"
-									style={{ width: `${progress}%` }}></div>
+									style={{ width: `${view.progress}%` }}></div>
 							</div>
 						</div>
-						{checklistItems.map((item) => (
+						{view.checklistItems.map((item) => (
 							<TodoItem
 								key={item.id}
 								checked={!!session.data[`${item.id}_check`]}
-								onChange={(val) => updateData(`${item.id}_check`, val, true)}
+								onChange={(val) => view.updateData(`${item.id}_check`, val, true)}
 								title={item.label}
 								note={item.note}
 							/>
@@ -256,12 +218,11 @@ function SessionView(props) {
 			<Tooltip
 				content="Чекліст підготовки"
 				className="SessionView__checklistToggle">
-				<button onClick={() => setIsChecklistOpen(true)}>
+				<button onClick={() => view.setIsChecklistOpen(true)}>
 					<Icon name="list" size={28} />
-					{progress < 100 && <span className="SessionView__checklistBadge" />}
+					{view.progress < 100 && <span className="SessionView__checklistBadge" />}
 				</button>
 			</Tooltip>
-
 		</Panel>
 	);
 }
@@ -269,70 +230,51 @@ function SessionView(props) {
 export { SessionView };
 export default SessionView;
 
-function SceneCard({
-	number,
-	scene,
-	fields,
-	onRemove,
-	collapsed,
-	onToggle,
-	onOpenEncounter,
-	hasEncounter,
-	encounterName,
-	imageUrl,
-	onImageChange,
-	campaignSlug,
-	onUpdateField,
-	onToggleNotesCollapse,
-	onSceneNoteTitleChange,
-	onSceneNoteChange,
-	onSceneNoteToggleCollapse,
-	onSceneNoteDelete,
-}) {
-	const encounterLabel = hasEncounter ? encounterName : "Encounter";
+function SceneCard(props) {
+	const encounterLabel = props.hasEncounter ? props.encounterName : "Encounter";
 
 	return (
 		<div className="SceneCard">
 			<SceneCardHeader
-				number={number}
-				collapsed={collapsed}
-				onToggle={onToggle}
-				campaignSlug={campaignSlug}
-				onOpenEncounter={onOpenEncounter}
-				onRemove={onRemove}
-				hasEncounter={hasEncounter}
+				number={props.number}
+				collapsed={props.collapsed}
+				onToggle={props.onToggle}
+				campaignSlug={props.campaignSlug}
+				onOpenEncounter={props.onOpenEncounter}
+				onRemove={props.onRemove}
+				hasEncounter={props.hasEncounter}
 				encounterName={encounterLabel}
 			/>
-			{!collapsed && (
+			{!props.collapsed && (
 				<div className="SceneCard__content">
 					<div className="SceneCard__text-side">
 						<SceneCardFields
-							fields={fields}
-							scene={scene}
-							onUpdateField={onUpdateField}
+							fields={props.fields}
+							scene={props.scene}
+							onUpdateField={props.onUpdateField}
 						/>
 						<div className="SceneCard__notes">
 							<div
 								className="SceneCard__notes-header"
-								onClick={onToggleNotesCollapse}>
+								onClick={props.onToggleNotesCollapse}>
 								<CollapseToggleButton
 									size="sm"
-									collapsed={scene.isNotesCollapsed}
-									onClick={onToggleNotesCollapse}
+									collapsed={props.scene.isNotesCollapsed}
+									onClick={props.onToggleNotesCollapse}
 								/>
 								<label>Замітки сцени</label>
 							</div>
-							{!scene.isNotesCollapsed && (
+							{!props.scene.isNotesCollapsed && (
 								<div className="SceneCard__notes-list">
-									{(scene.notes || []).map((note, index) => (
+									{(props.scene.notes || []).map((note, index) => (
 										<NoteCard
 											key={note.id}
 											note={note}
-											isLast={index === (scene.notes || []).length - 1}
-											onToggleCollapse={onSceneNoteToggleCollapse}
-											onTitleChange={onSceneNoteTitleChange}
-											onTextChange={onSceneNoteChange}
-											onDelete={onSceneNoteDelete}
+											isLast={index === (props.scene.notes || []).length - 1}
+											onToggleCollapse={props.onSceneNoteToggleCollapse}
+											onTitleChange={props.onSceneNoteTitleChange}
+											onTextChange={props.onSceneNoteChange}
+											onDelete={props.onSceneNoteDelete}
 										/>
 									))}
 								</div>
@@ -340,10 +282,10 @@ function SceneCard({
 						</div>
 					</div>
 					<SceneCardMedia
-						number={number}
-						imageUrl={imageUrl}
-						campaignSlug={campaignSlug}
-						onImageChange={onImageChange}
+						number={props.number}
+						imageUrl={props.imageUrl}
+						campaignSlug={props.campaignSlug}
+						onImageChange={props.onImageChange}
 					/>
 				</div>
 			)}

@@ -1,5 +1,5 @@
-import { hideMessageBox } from "../actions/app";
-import { useAppDispatch, useAppSelector } from "../store/appStore";
+import { hideMessageBox } from "../../actions/app";
+import { useAppDispatch, useAppSelector } from "../../store/appStore";
 import Modal from "./Modal";
 
 export default function MessageBox() {

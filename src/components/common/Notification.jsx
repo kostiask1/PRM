@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import "../assets/components/Notification.css";
+import "../../assets/components/Notification.css";
 
 export default function Notification({ message, onClose, duration = 3000 }) {
 	useEffect(() => {

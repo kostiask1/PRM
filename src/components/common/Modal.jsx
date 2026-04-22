@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import Button from "./Button";
-import Input from "./Input";
-import "../assets/components/Modal.css";
-import classNames from "../utils/classNames";
+import Button from "../form/Button";
+import Checkbox from "../form/Checkbox";
+import Input from "../form/Input";
+import "../../assets/components/Modal.css";
+import classNames from "../../utils/classNames";
 
 function createModalApi(setModalConfig) {
 	const open = (config) =>
@@ -72,10 +73,22 @@ function Modal({
 	showFooter = true,
 	confirmLabel,
 	className = "",
+	checkboxLabel,
+	checkboxDefaultChecked = false,
+	getConfirmValue,
 }) {
 	const [inputValue, setInputValue] = useState(defaultValue || "");
+	const [checkboxValue, setCheckboxValue] = useState(Boolean(checkboxDefaultChecked));
 	const inputRef = useRef(null);
 	const confirmButtonRef = useRef(null);
+
+	function resolveConfirmValue() {
+		const value = showInput ? inputValue : true;
+		if (typeof getConfirmValue === "function") {
+			return getConfirmValue(value, checkboxValue);
+		}
+		return value;
+	}
 
 	useEffect(() => {
 		if (!children) {
@@ -96,7 +109,7 @@ function Modal({
 				handleClose();
 			} else if (e.key === "Enter") {
 				e.preventDefault();
-				if (!children) onConfirm(showInput ? inputValue : true); // Only confirm on Enter for standard modals
+				if (!children) onConfirm(resolveConfirmValue()); // Only confirm on Enter for standard modals
 			}
 		};
 
@@ -134,6 +147,15 @@ function Modal({
 					) : (
 						<>
 							<p>{message}</p>
+							{checkboxLabel && (
+								<div className="Modal__option">
+									<Checkbox
+										checked={checkboxValue}
+										onChange={setCheckboxValue}
+										label={checkboxLabel}
+									/>
+								</div>
+							)}
 							{showInput && (
 								<Input
 									ref={inputRef}
@@ -155,7 +177,7 @@ function Modal({
 						<Button
 							ref={confirmButtonRef}
 							variant={type === "error" ? "danger" : "primary"}
-							onClick={() => onConfirm(showInput ? inputValue : true)}>
+							onClick={() => onConfirm(resolveConfirmValue())}>
 							{confirmLabel || (isAlert ? "ОК" : "Підтвердити")}
 						</Button>
 					</div>
