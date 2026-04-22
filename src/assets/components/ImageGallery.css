@@ -198,6 +198,12 @@
 	border: 1px solid var(--border);
 }
 
+.ImageGallery__new-sub .Tooltip__trigger {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
 .ImageGallery__new-sub input {
 	background: transparent;
 	border: none;
