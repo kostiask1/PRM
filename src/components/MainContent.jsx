@@ -3,16 +3,15 @@ import SessionView from "./SessionView";
 import Bestiary from "./Bestiary";
 import EncounterView from "./EncounterView";
 import Spells from "./Spells";
+import { useAppSelector } from "../store/appStore";
 
 export default function MainContent({
 	campaign,
-	activeSessionId,
-	activeEncounterId,
-	onSelectSession,
-	onRefreshCampaigns,
-	onNavigate,
-	onRollDice,
 }) {
+	const { activeSessionFileName, activeEncounterId } = useAppSelector(
+		(state) => state.navigation,
+	);
+
 	if (window.location.pathname === "/bestiary") {
 		return (
 			<main className="MainContent">
@@ -44,29 +43,16 @@ export default function MainContent({
 			{activeEncounterId ? (
 				<EncounterView
 					campaign={campaign}
-					sessionId={activeSessionId}
+					sessionId={activeSessionFileName}
 					encounterId={activeEncounterId}
-					onBack={() => onNavigate(campaign.slug, activeSessionId)}
-					onRefreshCampaigns={onRefreshCampaigns}
-					onRollDice={onRollDice}
 				/>
-			) : activeSessionId ? (
+			) : activeSessionFileName ? (
 				<SessionView
 					campaign={campaign}
-					sessionId={activeSessionId}
-					onBack={() => onSelectSession(null)}
-					onNavigate={onNavigate}
-					onRefreshCampaigns={onRefreshCampaigns}
-					onRollDice={onRollDice}
+					sessionId={activeSessionFileName}
 				/>
 			) : (
-				<CampaignView
-					campaign={campaign}
-					onSelectSession={onSelectSession}
-					onNavigate={onNavigate}
-					onRefreshCampaigns={onRefreshCampaigns}
-					onRollDice={onRollDice}
-				/>
+				<CampaignView campaign={campaign} />
 			)}
 		</main>
 	);

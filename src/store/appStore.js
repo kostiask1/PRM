@@ -7,11 +7,32 @@ import {
 	OPEN_MODAL,
 	PUBLISH_DICE_RESULT,
 	REFRESH_ENTITIES,
+	REQUEST_CAMPAIGNS_RELOAD,
 	REQUEST_DICE_ROLL,
+	SET_CAMPAIGNS,
+	SET_NAVIGATION,
 	SHOW_MESSAGE_BOX,
 	closeModalAction,
 	openModalAction,
+	setNavigationAction,
 } from "../actions/app";
+import { parseUrl } from "../utils/navigation";
+
+function getInitialNavigation() {
+	if (typeof window === "undefined") {
+		return {
+			activeCampaignSlug: null,
+			activeSessionFileName: null,
+			activeEncounterId: null,
+		};
+	}
+	const route = parseUrl();
+	return {
+		activeCampaignSlug: route.campaign || null,
+		activeSessionFileName: route.session || null,
+		activeEncounterId: route.encounter || null,
+	};
+}
 
 const initialState = {
 	modal: {
@@ -25,6 +46,11 @@ const initialState = {
 		rolledResult: null,
 	},
 	messageBox: null,
+	navigation: getInitialNavigation(),
+	campaigns: {
+		items: [],
+		reloadVersion: 0,
+	},
 };
 
 let state = initialState;
@@ -95,6 +121,30 @@ function reducer(currentState, action) {
 				...currentState,
 				messageBox: null,
 			};
+		case SET_NAVIGATION:
+			return {
+				...currentState,
+				navigation: {
+					...currentState.navigation,
+					...action.payload,
+				},
+			};
+		case SET_CAMPAIGNS:
+			return {
+				...currentState,
+				campaigns: {
+					...currentState.campaigns,
+					items: action.payload,
+				},
+			};
+		case REQUEST_CAMPAIGNS_RELOAD:
+			return {
+				...currentState,
+				campaigns: {
+					...currentState.campaigns,
+					reloadVersion: currentState.campaigns.reloadVersion + 1,
+				},
+			};
 		default:
 			return currentState;
 	}
@@ -152,4 +202,52 @@ export function resolveModalRequest(requestId, value) {
 export function closeActiveModal(value = null) {
 	const requestId = appStore.getState().modal.requestId;
 	resolveModalRequest(requestId, value);
+}
+
+function buildNavigationUrl(slug, fileName = null, encounterId = null) {
+	if (!slug) return "/";
+	if (slug === "bestiary") return "/bestiary";
+	if (slug === "spells") return "/spells";
+	let url = `/campaign/${encodeURIComponent(slug)}`;
+	if (fileName) {
+		url += `/session/${encodeURIComponent(fileName)}`;
+		if (encounterId) {
+			url += `/encounter/${encodeURIComponent(encounterId)}`;
+		}
+	}
+	return url;
+}
+
+export function syncNavigationFromUrl() {
+	const route = parseUrl();
+	appStore.dispatch(
+		setNavigationAction({
+			activeCampaignSlug: route.campaign || null,
+			activeSessionFileName: route.session || null,
+			activeEncounterId: route.encounter || null,
+		}),
+	);
+}
+
+export function navigateTo(
+	slug,
+	fileName = null,
+	replace = false,
+	encounterId = null,
+	openInNewTab = false,
+) {
+	const url = buildNavigationUrl(slug, fileName, encounterId);
+	if (openInNewTab) {
+		window.open(url, "_blank");
+		return;
+	}
+	appStore.dispatch(
+		setNavigationAction({
+			activeCampaignSlug: slug || null,
+			activeSessionFileName: fileName || null,
+			activeEncounterId: encounterId || null,
+		}),
+	);
+	if (replace) window.history.replaceState({}, "", url);
+	else window.history.pushState({}, "", url);
 }

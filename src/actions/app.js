@@ -7,6 +7,9 @@ export const REQUEST_DICE_ROLL = "dice/requestRoll";
 export const PUBLISH_DICE_RESULT = "dice/publishResult";
 export const SHOW_MESSAGE_BOX = "messageBox/show";
 export const HIDE_MESSAGE_BOX = "messageBox/hide";
+export const SET_NAVIGATION = "navigation/set";
+export const SET_CAMPAIGNS = "campaigns/set";
+export const REQUEST_CAMPAIGNS_RELOAD = "campaigns/requestReload";
 
 let mentionRequestSeq = 1;
 let diceRollRequestSeq = 1;
@@ -25,6 +28,24 @@ export function closeModalAction() {
 
 export function refreshEntitiesAction() {
 	return { type: REFRESH_ENTITIES };
+}
+
+export function setNavigationAction(payload) {
+	return {
+		type: SET_NAVIGATION,
+		payload,
+	};
+}
+
+export function setCampaignsAction(payload) {
+	return {
+		type: SET_CAMPAIGNS,
+		payload: Array.isArray(payload) ? payload : [],
+	};
+}
+
+export function requestCampaignsReloadAction() {
+	return { type: REQUEST_CAMPAIGNS_RELOAD };
 }
 
 export function openMentionPickerAction(request) {

@@ -22,7 +22,6 @@ function SessionView(props) {
 	const {
 		campaign,
 		sessionId,
-		onBack,
 		session,
 		isSaving,
 		isChecklistOpen,
@@ -53,6 +52,7 @@ function SessionView(props) {
 		handleAiUpdate,
 		checklistItems,
 		progress,
+		handleBack,
 		handleRename,
 		handleDeleteSessionAndBack,
 	} = { ...props, ...sessionViewProps };
@@ -69,7 +69,7 @@ function SessionView(props) {
 							<Button
 								variant="ghost"
 								size="small"
-								onClick={onBack}
+								onClick={handleBack}
 								icon="back"
 								className="SessionView__backBtn"
 							/>

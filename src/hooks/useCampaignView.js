@@ -4,9 +4,14 @@ import {
 	alert,
 	confirm,
 	prompt,
+	requestCampaignsReloadAction,
 } from "../actions/app";
 import { api } from "../api";
-import { useAppDispatch, useAppSelector } from "../store/appStore";
+import {
+	navigateTo,
+	useAppDispatch,
+	useAppSelector,
+} from "../store/appStore";
 import {
 	appendTrailingEmptyNote,
 	ensureAtLeastOneNote,
@@ -21,8 +26,7 @@ const sanitizeEntityForSave = (entity) =>
 const sanitizeLoadedEntity = (entity) => sanitizeEntityForSave(entity);
 
 export default function useCampaignView(props) {
-		const { campaign, onSelectSession, onNavigate, onRefreshCampaigns } =
-			props;
+		const { campaign } = props;
 		const dispatch = useAppDispatch();
 
 		const [sessions, setSessions] = useState([]);
@@ -393,8 +397,8 @@ export default function useCampaignView(props) {
 			try {
 				const newSession = await api.createSession(campaign.slug, name);
 				setSessions([...sessions, newSession]);
-				onSelectSession(newSession.fileName);
-				onRefreshCampaigns();
+				navigateTo(campaign.slug, newSession.fileName);
+				dispatch(requestCampaignsReloadAction());
 			} catch (err) {
 				dispatch(
 					alert({
@@ -420,8 +424,8 @@ export default function useCampaignView(props) {
 				return;
 			try {
 				await api.deleteCampaign(campaign.slug);
-				onNavigate(null);
-				onRefreshCampaigns();
+				navigateTo(null);
+				dispatch(requestCampaignsReloadAction());
 			} catch (err) {
 				dispatch(
 					alert({
@@ -443,8 +447,8 @@ export default function useCampaignView(props) {
 			if (name && name !== campaign.name) {
 				try {
 					const updated = await api.updateCampaign(campaign.slug, { name });
-					await onRefreshCampaigns();
-					onNavigate(updated.slug, null, true);
+					dispatch(requestCampaignsReloadAction());
+					navigateTo(updated.slug, null, true);
 				} catch (err) {
 					dispatch(
 						alert({
@@ -470,7 +474,7 @@ export default function useCampaignView(props) {
 				await api.deleteSession(campaign.slug, session.fileName);
 				const data = await api.listSessions(campaign.slug);
 				setSessions(data);
-				onRefreshCampaigns();
+				dispatch(requestCampaignsReloadAction());
 			} catch (err) {
 				dispatch(
 					alert({
@@ -576,7 +580,7 @@ export default function useCampaignView(props) {
 				setNotes(appendTrailingEmptyNote(updatedCampaign.notes || []));
 				setCharacters((updatedCampaign.characters || []).map(sanitizeLoadedEntity));
 			}
-			onRefreshCampaigns();
+			dispatch(requestCampaignsReloadAction());
 		};
 
 		return {

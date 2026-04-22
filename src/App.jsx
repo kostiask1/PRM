@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "./api";
 import DiceCalculator from "./components/DiceCalculator";
 import MainContent from "./components/MainContent";
@@ -7,89 +7,85 @@ import Modal from "./components/Modal";
 import Sidebar from "./components/Sidebar";
 import MentionPickerModalContent from "./components/modals/MentionPickerModalContent";
 import CreateCampaignModalContent from "./components/modals/CreateCampaignModalContent";
-import { parseUrl } from "./utils/navigation";
 import {
-	closeMentionPickerAction,
 	alert,
+	closeMentionPickerAction,
 	confirm,
+	requestCampaignsReloadAction,
+	setCampaignsAction,
 } from "./actions/app";
 import {
 	closeActiveModal,
+	navigateTo,
 	openModalRequest,
 	resolveModalRequest,
+	syncNavigationFromUrl,
 	useAppDispatch,
 	useAppSelector,
 } from "./store/appStore";
 
-/**
- * Main Application Component
- * Orchestrates the sidebar navigation and the main content area.
- */
 export default function App() {
-	const initialRoute = parseUrl();
-	const [campaigns, setCampaigns] = useState([]);
-	const [isCTRLPressed, setCTRLPressed] = useState(false);
-	const [activeCampaignSlug, setActiveCampaignSlug] = useState(
-		initialRoute.campaign,
-	);
-	const [activeSessionFileName, setActiveSessionFileName] = useState(
-		initialRoute.session,
-	);
-	const [activeEncounterId, setActiveEncounterId] = useState(
-		initialRoute.encounter,
-	);
-
 	const dispatch = useAppDispatch();
+	const [isCTRLPressed, setCTRLPressed] = useState(false);
 	const modalState = useAppSelector((store) => store.modal);
 	const mentionPickerRequest = useAppSelector(
 		(store) => store.mentionPickerRequest,
 	);
+	const campaigns = useAppSelector((store) => store.campaigns.items);
+	const campaignsReloadVersion = useAppSelector(
+		(store) => store.campaigns.reloadVersion,
+	);
+	const { activeCampaignSlug } = useAppSelector((store) => store.navigation);
 
-	const loadCampaigns = async () => {
+	const loadCampaigns = useCallback(async () => {
 		try {
 			const data = await api.listCampaigns();
-			setCampaigns(data);
+			dispatch(setCampaignsAction(data));
 		} catch (err) {
 			console.error("Failed to load campaigns", err);
 			dispatch(
 				alert({
-				title: "Помилка",
-				message: "Не вдалося завантажити список кампаній",
+					title: "Помилка",
+					message: "Не вдалося завантажити список кампаній",
 				}),
 			);
 		}
-	};
+	}, [dispatch]);
 
 	useEffect(() => {
-		document.addEventListener("keydown", (e) => {
+		const handleKeyDown = (e) => {
 			if (e.ctrlKey || e.metaKey) {
 				setCTRLPressed(true);
 			}
-		});
-
-		document.addEventListener("keyup", (e) => {
+		};
+		const handleKeyUp = (e) => {
 			if (!e.ctrlKey && !e.metaKey) {
 				setCTRLPressed(false);
 			}
-		});
+		};
+		const handleMouseUp = () => setCTRLPressed(false);
 
-		document.addEventListener("mouseup", () => setCTRLPressed(false));
+		document.addEventListener("keydown", handleKeyDown);
+		document.addEventListener("keyup", handleKeyUp);
+		document.addEventListener("mouseup", handleMouseUp);
+
+		return () => {
+			document.removeEventListener("keydown", handleKeyDown);
+			document.removeEventListener("keyup", handleKeyUp);
+			document.removeEventListener("mouseup", handleMouseUp);
+		};
+	}, []);
+
+	useEffect(() => {
+		syncNavigationFromUrl();
+		const handlePopState = () => syncNavigationFromUrl();
+		window.addEventListener("popstate", handlePopState);
+		return () => window.removeEventListener("popstate", handlePopState);
 	}, []);
 
 	useEffect(() => {
 		loadCampaigns();
-
-		// Слухаємо кнопки Назад/Вперед у браузері
-		const handlePopState = () => {
-			const route = parseUrl();
-			setActiveCampaignSlug(route.campaign);
-			setActiveSessionFileName(route.session);
-			setActiveEncounterId(route.encounter);
-		};
-
-		window.addEventListener("popstate", handlePopState);
-		return () => window.removeEventListener("popstate", handlePopState);
-	}, []);
+	}, [loadCampaigns, campaignsReloadVersion]);
 
 	useEffect(() => {
 		const handleMentionPicker = async () => {
@@ -176,40 +172,6 @@ export default function App() {
 		handleMentionPicker();
 	}, [activeCampaignSlug, dispatch, mentionPickerRequest]);
 
-	// Універсальна функція навігації
-	const navigate = (
-		slug,
-		fileName = null,
-		replace = false,
-		encounterId = null,
-	) => {
-		let url = "/";
-		if (slug && slug !== "bestiary" && slug !== "spells") {
-			url = `/campaign/${encodeURIComponent(slug)}`;
-			if (fileName) {
-				url += `/session/${encodeURIComponent(fileName)}`;
-				if (encounterId) {
-					url += `/encounter/${encodeURIComponent(encounterId)}`;
-				}
-			}
-		} else if (slug === "bestiary") {
-			url = "/bestiary";
-		} else if (slug === "spells") {
-			url = "/spells";
-		}
-
-		if (isCTRLPressed) {
-			window.open(url, "_blank");
-		} else {
-			setActiveCampaignSlug(slug);
-			setActiveSessionFileName(fileName);
-			setActiveEncounterId(encounterId);
-
-			if (replace) window.history.replaceState({}, "", url);
-			else window.history.pushState({}, "", url);
-		}
-	};
-
 	const handleToggleCampaignStatus = async (campaign) => {
 		const isCompleting = !campaign.completed;
 		let completedAt = campaign.completedAt;
@@ -224,8 +186,8 @@ export default function App() {
 			if (completedAt && todayLabel !== prevLabel) {
 				const confirmUpdate = await dispatch(
 					confirm({
-					title: "Оновлення дати",
-					message: `Кампанія вже була завершена ${prevLabel}. Оновити дату завершення на сьогодні?`,
+						title: "Оновлення дати",
+						message: `Кампанія вже була завершена ${prevLabel}. Оновити дату завершення на сьогодні?`,
 					}),
 				);
 				if (confirmUpdate) completedAt = now;
@@ -237,15 +199,15 @@ export default function App() {
 		try {
 			await api.updateCampaign(campaign.slug, {
 				completed: isCompleting,
-				completedAt: completedAt,
+				completedAt,
 			});
-			await loadCampaigns();
+			dispatch(requestCampaignsReloadAction());
 		} catch (err) {
 			console.error("Failed to toggle campaign status", err);
 			dispatch(
 				alert({
-				title: "Помилка",
-				message: "Не вдалося оновити статус кампанії",
+					title: "Помилка",
+					message: "Не вдалося оновити статус кампанії",
 				}),
 			);
 		}
@@ -266,14 +228,14 @@ export default function App() {
 						if (!name?.trim()) return;
 						try {
 							const newCampaign = await api.createCampaign(name.trim());
-							await loadCampaigns();
+							dispatch(requestCampaignsReloadAction());
 							handleClose();
-							navigate(newCampaign.slug);
+							navigateTo(newCampaign.slug);
 						} catch (err) {
 							dispatch(
 								alert({
-								title: "Помилка",
-								message: err.message || "Не вдалося створити кампанію",
+									title: "Помилка",
+									message: err.message || "Не вдалося створити кампанію",
 								}),
 							);
 						}
@@ -281,13 +243,13 @@ export default function App() {
 					onImportCampaign={async (file) => {
 						try {
 							await api.importArchive(file, "campaign");
-							await loadCampaigns();
+							dispatch(requestCampaignsReloadAction());
 							handleClose();
 						} catch (err) {
 							dispatch(
 								alert({
-								title: "Помилка імпорту",
-								message: err.message || "Не вдалося імпортувати кампанію",
+									title: "Помилка імпорту",
+									message: err.message || "Не вдалося імпортувати кампанію",
 								}),
 							);
 						}
@@ -303,19 +265,11 @@ export default function App() {
 				className="App__sidebar"
 				campaigns={campaigns}
 				activeCampaignId={activeCampaignSlug}
-				onSelectCampaign={(slug) => navigate(slug)}
+				onSelectCampaign={(slug) => navigateTo(slug, null, false, null, isCTRLPressed)}
 				onCreateCampaign={openCreateCampaignModal}
-					onToggleCampaignStatus={handleToggleCampaignStatus}
-				/>
-			<MainContent
-				className="App__main"
-				campaign={activeCampaign}
-				activeSessionId={activeSessionFileName}
-				activeEncounterId={activeEncounterId}
-				onSelectSession={(fileName) => navigate(activeCampaignSlug, fileName)}
-					onRefreshCampaigns={loadCampaigns}
-					onNavigate={navigate}
-				/>
+				onToggleCampaignStatus={handleToggleCampaignStatus}
+			/>
+			<MainContent className="App__main" campaign={activeCampaign} />
 
 			{modalState.config && (
 				<Modal
@@ -334,11 +288,7 @@ export default function App() {
 				/>
 			)}
 			<MessageBox />
-			{/* Передаємо команду для кидка та функцію для її скидання */}
 			<DiceCalculator />
 		</div>
 	);
 }
-
-
-

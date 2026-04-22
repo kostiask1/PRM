@@ -14,12 +14,12 @@ import CreateCharacterButton from "./CreateCharacterButton";
 import "../assets/components/CampaignView.css";
 import useCampaignView from "../hooks/useCampaignView";
 import CampaignViewModel from "../models/CampaignViewModel.js";
+import { navigateTo } from "../store/appStore";
 
 function CampaignView(props) {
 	const campaignViewProps = useCampaignView(props);
 	const {
 		campaign,
-		onSelectSession,
 		sessions,
 		setSessions,
 		description,
@@ -90,7 +90,7 @@ function CampaignView(props) {
 			key={session.fileName}
 			href={viewModel.buildSessionHref(session.fileName)}
 			dragging={isDragging}
-			onClick={() => onSelectSession(session.fileName)}
+			onClick={() => navigateTo(campaign.slug, session.fileName)}
 			actions={
 				<>
 					<StatusBadge

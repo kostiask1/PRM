@@ -41,13 +41,15 @@
 }
 
 .Button--danger {
-	background: color-mix(in srgb, var(--danger), transparent 10%);
+	background: transparent;
+	border-width: 2px;
 	border-color: color-mix(in srgb, var(--danger), #000 8%);
 	color: var(--text-on-accent);
 }
 
 .Button--danger:hover {
 	background: color-mix(in srgb, var(--danger), #000 10%);
+	border-color: color-mix(in srgb, var(--danger), #000 8%);
 }
 
 .Button--ghost {

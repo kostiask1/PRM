@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	confirm,
 	prompt,
+	requestCampaignsReloadAction,
 } from "../actions/app";
 import { api } from "../api";
 import {
@@ -11,11 +12,10 @@ import {
 	createEmptyNote,
 } from "../utils/noteUtils";
 import { idsEqual } from "../utils/id";
-import { useAppDispatch } from "../store/appStore";
+import { navigateTo, useAppDispatch } from "../store/appStore";
 
 export default function useSessionView(props) {
-		const { campaign, sessionId, onBack, onNavigate, onRefreshCampaigns } =
-			props;
+		const { campaign, sessionId } = props;
 		const dispatch = useAppDispatch();
 
 		const [session, setSession] = useState(null);
@@ -24,6 +24,9 @@ export default function useSessionView(props) {
 		const saveTimeout = useRef(null);
 
 		const campaignSlug = campaign.slug;
+		const handleBack = useCallback(() => {
+			navigateTo(campaignSlug, null);
+		}, [campaignSlug]);
 		const [undoStack, setUndoStack] = useState([]);
 		const [redoStack, setRedoStack] = useState([]);
 		const isUpdatingHistory = useRef(false);
@@ -47,11 +50,11 @@ export default function useSessionView(props) {
 					const result = await api.updateSession(
 						campaignSlug,
 						sessionId,
-						updatedSession,
+					updatedSession,
 					);
 					if (result && result.fileName !== sessionId) {
-						onNavigate(campaignSlug, result.fileName, true);
-						onRefreshCampaigns();
+						navigateTo(campaignSlug, result.fileName, true);
+						dispatch(requestCampaignsReloadAction());
 					}
 				} catch (err) {
 					console.error("Save failed", err);
@@ -59,7 +62,7 @@ export default function useSessionView(props) {
 					setIsSaving(false);
 				}
 			},
-			[campaignSlug, sessionId, onNavigate, onRefreshCampaigns],
+			[campaignSlug, sessionId, dispatch],
 		);
 
 		const triggerSave = useCallback(
@@ -206,7 +209,7 @@ export default function useSessionView(props) {
 						e.target.isContentEditable;
 					if (!isInput) {
 						e.preventDefault();
-						onBack();
+						handleBack();
 					}
 				}
 
@@ -228,7 +231,7 @@ export default function useSessionView(props) {
 			};
 			window.addEventListener("keydown", handleKeyDown);
 			return () => window.removeEventListener("keydown", handleKeyDown);
-		}, [onBack, handleUndo, handleRedo]);
+		}, [handleBack, handleUndo, handleRedo]);
 
 		const updateSession = (updates, instant = false) => {
 			setSession((prev) => {
@@ -342,7 +345,7 @@ export default function useSessionView(props) {
 				setSession((prev) => ({ ...prev, data: nextData }));
 			}
 
-			onNavigate(campaignSlug, sessionId, false, encounterId);
+			navigateTo(campaignSlug, sessionId, false, encounterId);
 		};
 
 		const removeScene = async (sceneId) => {
@@ -562,8 +565,8 @@ export default function useSessionView(props) {
 				)
 			) {
 				await api.deleteSession(campaignSlug, sessionId);
-				onBack();
-				onRefreshCampaigns();
+				handleBack();
+				dispatch(requestCampaignsReloadAction());
 			}
 		};
 
@@ -598,6 +601,7 @@ export default function useSessionView(props) {
 		handleAiUpdate,
 		checklistItems,
 		progress,
+		handleBack,
 		handleRename,
 		handleDeleteSessionAndBack,
 	};

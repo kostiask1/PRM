@@ -3,19 +3,26 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	alert,
 	prompt,
+	requestCampaignsReloadAction,
 	requestDiceRollAction,
 } from "../actions/app";
 import { api } from "../api";
-import { useAppDispatch, useAppSelector } from "../store/appStore";
+import {
+	navigateTo,
+	useAppDispatch,
+	useAppSelector,
+} from "../store/appStore";
 
 export default function useEncounterView({
 	campaign,
 	sessionId,
 	encounterId,
-	onBack,
-	onRefreshCampaigns,
 }) {
 	const dispatch = useAppDispatch();
+	const handleBack = useCallback(
+		() => navigateTo(campaign.slug, sessionId),
+		[campaign.slug, sessionId],
+	);
 
 	const [encounter, setEncounter] = useState(null);
 	const [selectedInstance, setSelectedInstance] = useState(null);
@@ -48,14 +55,14 @@ export default function useEncounterView({
 					if (showBestiary) {
 						setShowBestiary(false);
 					} else {
-						onBack();
+						handleBack();
 					}
 				}
 			}
 		};
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [showBestiary, onBack]);
+	}, [showBestiary, handleBack]);
 
 	useEffect(() => {
 		let isMounted = true;
@@ -80,7 +87,7 @@ export default function useEncounterView({
 							message: "Зіткнення не знайдено або дані ще оновлюються.",
 						}),
 					);
-					onBack();
+					handleBack();
 					return;
 				}
 
@@ -96,7 +103,7 @@ export default function useEncounterView({
 		return () => {
 			isMounted = false;
 		};
-	}, [campaign.slug, sessionId, encounterId, onBack, dispatch]);
+	}, [campaign.slug, sessionId, encounterId, dispatch, handleBack]);
 
 	useEffect(() => {
 		let isMounted = true;
@@ -176,7 +183,7 @@ export default function useEncounterView({
 						...currentSession,
 						data: { ...currentSession.data, encounters: updatedEncounters },
 					});
-					onRefreshCampaigns();
+					dispatch(requestCampaignsReloadAction());
 				} catch (err) {
 					console.error("Failed to save encounter updates", err);
 				}
@@ -188,7 +195,7 @@ export default function useEncounterView({
 				performSave();
 			}
 		},
-		[campaign.slug, sessionId, encounterId, onRefreshCampaigns],
+		[campaign.slug, sessionId, encounterId, dispatch],
 	);
 
 	const handleAiUpdate = useCallback(
@@ -208,9 +215,9 @@ export default function useEncounterView({
 					return stillExists || found.monsters[0] || null;
 				});
 			}
-			onRefreshCampaigns();
+			dispatch(requestCampaignsReloadAction());
 		},
-		[encounterId, onRefreshCampaigns],
+		[encounterId, dispatch],
 	);
 
 	const handleAddMonster = useCallback(
@@ -537,6 +544,7 @@ export default function useEncounterView({
 		handleReorderMonsters,
 		handleMonstersDrop,
 		getMonsterImageOverride,
+		handleBack,
 	};
 }
 

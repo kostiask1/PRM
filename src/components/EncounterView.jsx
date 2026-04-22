@@ -15,8 +15,6 @@ function EncounterView({
 	campaign,
 	sessionId,
 	encounterId,
-	onRefreshCampaigns,
-	onBack,
 }) {
 	const {
 		encounter,
@@ -43,12 +41,11 @@ function EncounterView({
 		handleReorderMonsters,
 		handleMonstersDrop,
 		getMonsterImageOverride,
+		handleBack,
 	} = useEncounterView({
 		campaign,
 		sessionId,
 		encounterId,
-		onBack,
-		onRefreshCampaigns,
 	});
 
 	if (!encounter) {
@@ -66,7 +63,7 @@ function EncounterView({
 					<Button
 						variant="ghost"
 						size="small"
-						onClick={onBack}
+						onClick={handleBack}
 						icon="back"
 						className="SessionView__backBtn"
 					/>
