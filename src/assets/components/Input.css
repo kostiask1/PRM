@@ -43,3 +43,13 @@
 .Input--result {
 	background: color-mix(in srgb, var(--bg-2), transparent 20%);
 }
+
+.Input__tooltip {
+	display: flex;
+	height: 100%;
+	width: 100%;
+}
+
+.Input__tooltip .Input--textarea {
+	min-height: 100%;
+}

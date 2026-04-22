@@ -10,12 +10,26 @@
 .SceneCardFields__item .EditableField,
 .SceneCardFields__item .Input,
 .SceneCardFields__item .MarkdownView {
-	height: 100%;
+	flex-grow: 1;
 	width: 100%;
+}
+
+.SceneCardFields__item .MarkdownView {
+	height: 100%;
+}
+
+
+.SceneCardFields__item .Input {
+	min-height: 100%;
 }
 
 .SceneCardFields__title {
 	font-weight: 700;
 	min-height: 24px;
 	height: 24px;
+}
+
+.SceneCardFields__item .Tooltip__trigger {
+	width: 100%;
+	height: 100%;
 }

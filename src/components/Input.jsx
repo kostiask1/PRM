@@ -61,7 +61,10 @@ function resolveInitialCursorPosition(initialSelection, rawValue = "") {
 }
 
 const Input = forwardRef(
-	({ type = "text", className = "", initialSelection, title, ...props }, ref) => {
+	(
+		{ type = "text", className = "", initialSelection, title, ...props },
+		ref,
+	) => {
 		const internalRef = useRef(null);
 
 		// Синхронізуємо висоту textarea з контентом
@@ -162,7 +165,8 @@ const Input = forwardRef(
 						});
 
 						const newCursor =
-							cursorStart + (result.status === "selected" ? mentionText.length : 1);
+							cursorStart +
+							(result.status === "selected" ? mentionText.length : 1);
 						setTimeout(() => {
 							const activeNode = internalRef.current;
 							if (!activeNode) return;
@@ -185,7 +189,10 @@ const Input = forwardRef(
 					value[selectionEnd] === "]";
 
 				if (hasWrappedSelection) {
-					const unwrappedSelection = selection.substring(1, selection.length - 1);
+					const unwrappedSelection = selection.substring(
+						1,
+						selection.length - 1,
+					);
 					const newValue =
 						value.substring(0, selectionStart) +
 						unwrappedSelection +
@@ -257,7 +264,11 @@ const Input = forwardRef(
 			}
 
 			// Підтримка Ctrl+B (Жирний) та Ctrl+I (Курсив) + укр розкладка
-			if (type === "textarea" && isMod && (key === "b" || key === "и" || key === "i" || key === "ш")) {
+			if (
+				type === "textarea" &&
+				isMod &&
+				(key === "b" || key === "и" || key === "i" || key === "ш")
+			) {
 				e.preventDefault();
 
 				const tag = key === "b" || key === "и" ? "**" : "*";
@@ -578,7 +589,9 @@ const Input = forwardRef(
 		const combinedClassName = classNames(
 			baseClass,
 			className,
-			typeof props.value === "string" && props.value?.includes("[") && "has-mentions",
+			typeof props.value === "string" &&
+				props.value?.includes("[") &&
+				"has-mentions",
 		);
 
 		if (type === "textarea") {
@@ -593,7 +606,11 @@ const Input = forwardRef(
 				/>
 			);
 			if (title) {
-				return <Tooltip content={title}>{textareaNode}</Tooltip>;
+				return (
+					<Tooltip content={title} className="Input__tooltip">
+						{textareaNode}
+					</Tooltip>
+				);
 			}
 			return textareaNode;
 		}
@@ -609,7 +626,11 @@ const Input = forwardRef(
 			/>
 		);
 		if (title) {
-			return <Tooltip content={title}>{inputNode}</Tooltip>;
+			return (
+				<Tooltip content={title} className="Input__tooltip">
+					{inputNode}
+				</Tooltip>
+			);
 		}
 		return inputNode;
 	},
