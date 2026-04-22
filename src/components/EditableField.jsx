@@ -284,7 +284,7 @@ export default function EditableField({
 	showCopyButton = false,
 	...props
 }) {
-	const [isEditing, setIsEditing] = useState(true);
+	const [isEditing, setIsEditing] = useState(false);
 	const [initialSelection, setInitialSelection] = useState(null);
 	const [copied, setCopied] = useState(false);
 	const viewRef = useRef(null);
