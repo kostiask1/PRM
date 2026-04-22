@@ -2,11 +2,13 @@ import { useSyncExternalStore } from "react";
 import {
 	CLOSE_MENTION_PICKER,
 	CLOSE_MODAL,
+	HIDE_MESSAGE_BOX,
 	OPEN_MENTION_PICKER,
 	OPEN_MODAL,
 	PUBLISH_DICE_RESULT,
 	REFRESH_ENTITIES,
 	REQUEST_DICE_ROLL,
+	SHOW_MESSAGE_BOX,
 	closeModalAction,
 	openModalAction,
 } from "../actions/app";
@@ -22,6 +24,7 @@ const initialState = {
 		rollRequest: null,
 		rolledResult: null,
 	},
+	messageBox: null,
 };
 
 let state = initialState;
@@ -82,6 +85,16 @@ function reducer(currentState, action) {
 					rolledResult: action.payload,
 				},
 			};
+		case SHOW_MESSAGE_BOX:
+			return {
+				...currentState,
+				messageBox: action.payload,
+			};
+		case HIDE_MESSAGE_BOX:
+			return {
+				...currentState,
+				messageBox: null,
+			};
 		default:
 			return currentState;
 	}
@@ -92,8 +105,12 @@ export const appStore = {
 		return state;
 	},
 	dispatch(action) {
+		if (typeof action === "function") {
+			return action(appStore.dispatch, appStore.getState);
+		}
 		state = reducer(state, action);
 		emitChange();
+		return action;
 	},
 	subscribe(listener) {
 		listeners.add(listener);

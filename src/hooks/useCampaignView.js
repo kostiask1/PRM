@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import {
+	alert,
+	confirm,
+	prompt,
+} from "../actions/app";
 import { api } from "../api";
-import { useModal } from "../context/ModalContext";
-import { useAppSelector } from "../store/appStore";
+import { useAppDispatch, useAppSelector } from "../store/appStore";
 import {
 	appendTrailingEmptyNote,
 	ensureAtLeastOneNote,
@@ -19,7 +23,7 @@ const sanitizeLoadedEntity = (entity) => sanitizeEntityForSave(entity);
 export default function useCampaignView(props) {
 		const { campaign, onSelectSession, onNavigate, onRefreshCampaigns } =
 			props;
-		const modal = useModal();
+		const dispatch = useAppDispatch();
 
 		const [sessions, setSessions] = useState([]);
 		const [description, setDescription] = useState(campaign.description || "");
@@ -379,9 +383,11 @@ export default function useCampaignView(props) {
 		}, [campaign.slug]);
 
 		const handleCreateSession = async () => {
-			const name = await modal.prompt(
-				"Нова сесія",
-				"Введіть назву або залиште порожнім для поточної дати:",
+			const name = await dispatch(
+				prompt({
+					title: "Нова сесія",
+					message: "Введіть назву або залиште порожнім для поточної дати:",
+				}),
 			);
 			if (name === null) return;
 			try {
@@ -390,15 +396,25 @@ export default function useCampaignView(props) {
 				onSelectSession(newSession.fileName);
 				onRefreshCampaigns();
 			} catch (err) {
-				modal.alert("Помилка створення сесії", err.message, err.status);
+				dispatch(
+					alert({
+						title: "Помилка створення сесії",
+						message: err.status
+							? `[Статус: ${err.status}] ${err.message}`
+							: err.message,
+					}),
+				);
 			}
 		};
 
 		const handleDeleteCampaign = async () => {
 			if (
-				!(await modal.confirm(
-					"Видалення кампанії",
-					"Усі сесії цієї кампанії будуть втрачені назавжди. Продовжити?",
+				!(await dispatch(
+					confirm({
+						title: "Видалення кампанії",
+						message:
+							"Усі сесії цієї кампанії будуть втрачені назавжди. Продовжити?",
+					}),
 				))
 			)
 				return;
@@ -407,15 +423,22 @@ export default function useCampaignView(props) {
 				onNavigate(null);
 				onRefreshCampaigns();
 			} catch (err) {
-				modal.alert("Помилка", "Не вдалося видалити кампанію" + " " + err.message);
+				dispatch(
+					alert({
+						title: "Помилка",
+						message: "Не вдалося видалити кампанію" + " " + err.message,
+					}),
+				);
 			}
 		};
 
 		const handleRename = async () => {
-			const name = await modal.prompt(
-				"Перейменування",
-				"Вкажіть нову назву кампанії:",
-				campaign.name,
+			const name = await dispatch(
+				prompt({
+					title: "Перейменування",
+					message: "Вкажіть нову назву кампанії:",
+					defaultValue: campaign.name,
+				}),
 			);
 			if (name && name !== campaign.name) {
 				try {
@@ -423,9 +446,11 @@ export default function useCampaignView(props) {
 					await onRefreshCampaigns();
 					onNavigate(updated.slug, null, true);
 				} catch (err) {
-					modal.alert(
-						"Помилка",
-						"Не вдалося перейменувати кампанію" + " " + err.message,
+					dispatch(
+						alert({
+							title: "Помилка",
+							message: "Не вдалося перейменувати кампанію" + " " + err.message,
+						}),
 					);
 				}
 			}
@@ -433,9 +458,11 @@ export default function useCampaignView(props) {
 
 		const handleDeleteSession = async (session) => {
 			if (
-				!(await modal.confirm(
-					"Видалення сесії",
-					`Ви дійсно хочете видалити сесію "${session.name}"?`,
+				!(await dispatch(
+					confirm({
+						title: "Видалення сесії",
+						message: `Ви дійсно хочете видалити сесію "${session.name}"?`,
+					}),
 				))
 			)
 				return;
@@ -445,7 +472,12 @@ export default function useCampaignView(props) {
 				setSessions(data);
 				onRefreshCampaigns();
 			} catch (err) {
-				modal.alert("Помилка", "Не вдалося видалити сесію" + " " + err.message);
+				dispatch(
+					alert({
+						title: "Помилка",
+						message: "Не вдалося видалити сесію" + " " + err.message,
+					}),
+				);
 			}
 		};
 
@@ -461,9 +493,11 @@ export default function useCampaignView(props) {
 					: null;
 
 				if (completedAt && todayLabel !== prevLabel) {
-					const confirmUpdate = await modal.confirm(
-						"Оновлення дати",
-						`Сесія вже була завершена ${prevLabel}. Оновити дату завершення на сьогодні?`,
+					const confirmUpdate = await dispatch(
+						confirm({
+							title: "Оновлення дати",
+							message: `Сесія вже була завершена ${prevLabel}. Оновити дату завершення на сьогодні?`,
+						}),
 					);
 					if (confirmUpdate) completedAt = now;
 				} else {
@@ -491,7 +525,7 @@ export default function useCampaignView(props) {
 					`campaign-${campaign.slug}-${new Date().toISOString().slice(0, 10)}.prma.gz`,
 				);
 				} catch (err) {
-					modal.alert("Помилка експорту", err.message);
+					dispatch(alert({ title: "Помилка експорту", message: err.message }));
 				}
 			};
 
@@ -589,3 +623,4 @@ export default function useCampaignView(props) {
 		handleSessionReorderDrop,
 	};
 }
+

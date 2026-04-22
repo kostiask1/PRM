@@ -1,4 +1,5 @@
-﻿import { useRef, useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import { alert } from "../actions/app";
 import { api } from "../api";
 import Button from "./Button";
 import Icon from "./Icon";
@@ -7,8 +8,12 @@ import ListCard from "./ListCard";
 import ColorThemeSwitcher from "./ColorThemeSwitcher";
 import DraggableList from "./DraggableList";
 import ImageGallery from "./ImageGallery";
-import { useModal } from "../context/ModalContext";
 import { downloadBlob } from "../utils/download";
+import {
+	closeActiveModal,
+	openModalRequest,
+	useAppDispatch,
+} from "../store/appStore";
 import "../assets/components/Sidebar.css";
 
 const DB_IMPORT_STRATEGIES = [
@@ -24,10 +29,9 @@ export default function Sidebar({
 	onCreateCampaign,
 	onToggleCampaignStatus,
 }) {
-	const modal = useModal();
+	const dispatch = useAppDispatch();
 	const fileInputRef = useRef(null);
 	const [dbImportStrategy, setDbImportStrategy] = useState("");
-
 	const [localCampaigns, setLocalCampaigns] = useState(campaigns);
 	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 
@@ -43,7 +47,7 @@ export default function Sidebar({
 			await api.importArchive(file, "all", dbImportStrategy);
 			window.location.reload();
 		} catch (error) {
-			modal.alert("Помилка імпорту", error.message);
+			dispatch(alert({ title: "Помилка імпорту", message: error.message }));
 		} finally {
 			event.target.value = "";
 		}
@@ -59,12 +63,12 @@ export default function Sidebar({
 
 	const handleSelectImportStrategy = (strategyId) => {
 		setDbImportStrategy(strategyId);
-		modal.close();
+		closeActiveModal();
 		setTimeout(() => fileInputRef.current?.click(), 0);
 	};
 
 	const handleOpenImportDb = () => {
-		modal.open({
+		openModalRequest({
 			title: "Імпорт бази даних",
 			type: "confirm",
 			showFooter: false,
@@ -83,7 +87,7 @@ export default function Sidebar({
 						))}
 					</div>
 					<div className="Sidebar__importStrategyActions">
-						<Button variant="ghost" onClick={() => modal.close()}>
+						<Button variant="ghost" onClick={() => closeActiveModal()}>
 							Скасувати
 						</Button>
 					</div>
@@ -254,9 +258,11 @@ export default function Sidebar({
 									`prm-full-backup-${new Date().toISOString().slice(0, 10)}.prma.gz`,
 								);
 							} catch (err) {
-								modal.alert(
-									"Помилка бекапу",
-									err.message || "Невідома помилка",
+								dispatch(
+									alert({
+										title: "Помилка бекапу",
+										message: err.message || "Невідома помилка",
+									}),
 								);
 							}
 						}}>

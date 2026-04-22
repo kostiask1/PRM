@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { alert } from "../actions/app";
 import { api } from "../api";
 import Button from "./Button";
 import Icon from "./Icon";
@@ -6,9 +7,9 @@ import Modal from "./Modal";
 import ImageGallery from "./ImageGallery";
 import ImageTargetSettings from "./ImageTargetSettings";
 import { IMAGE_GALLERY_CATEGORIES } from "../hooks/useImageGallery";
-import { useModal } from "../context/ModalContext";
 import "../assets/components/ImageDropzone.css";
 import classNames from "../utils/classNames";
+import { useAppDispatch } from "../store/appStore";
 
 export default function ImageDropzone({
 	campaignSlug,
@@ -17,7 +18,7 @@ export default function ImageDropzone({
 	initialCategory = "maps",
 	initialSubcategory = "",
 }) {
-	const modal = useModal();
+	const dispatch = useAppDispatch();
 	const [isDragging, setIsDragging] = useState(false);
 	const [pendingFile, setPendingFile] = useState(null);
 	const [campaigns, setCampaigns] = useState([]);
@@ -97,7 +98,7 @@ export default function ImageDropzone({
 			onUploadSuccess?.(result);
 			setPendingFile(null);
 		} catch (err) {
-			modal.alert("Помилка", err.message);
+			dispatch(alert({ title: "Помилка", message: err.message }));
 		} finally {
 			setIsUploading(false);
 		}
@@ -173,3 +174,4 @@ export default function ImageDropzone({
 		</div>
 	);
 }
+

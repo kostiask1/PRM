@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { requestDiceRollAction } from "../actions/app";
+import {
+	alert,
+	prompt,
+	requestDiceRollAction,
+} from "../actions/app";
 import { api } from "../api";
-import { useModal } from "../context/ModalContext";
 import { useAppDispatch, useAppSelector } from "../store/appStore";
 
 export default function useEncounterView({
@@ -12,7 +15,6 @@ export default function useEncounterView({
 	onBack,
 	onRefreshCampaigns,
 }) {
-	const modal = useModal();
 	const dispatch = useAppDispatch();
 
 	const [encounter, setEncounter] = useState(null);
@@ -72,9 +74,11 @@ export default function useEncounterView({
 				}
 
 				if (!found) {
-					modal.alert(
-						"Помилка",
-						"Зіткнення не знайдено або дані ще оновлюються.",
+					dispatch(
+						alert({
+							title: "Помилка",
+							message: "Зіткнення не знайдено або дані ще оновлюються.",
+						}),
 					);
 					onBack();
 					return;
@@ -92,7 +96,7 @@ export default function useEncounterView({
 		return () => {
 			isMounted = false;
 		};
-	}, [campaign.slug, sessionId, encounterId, modal, onBack]);
+	}, [campaign.slug, sessionId, encounterId, onBack, dispatch]);
 
 	useEffect(() => {
 		let isMounted = true;
@@ -292,25 +296,29 @@ export default function useEncounterView({
 
 	const handleRename = useCallback(async () => {
 		if (!encounter) return;
-		const name = await modal.prompt(
-			"Перейменування",
-			"Вкажіть нову назву зіткнення:",
-			encounter.name,
+		const name = await dispatch(
+			prompt({
+				title: "Перейменування",
+				message: "Вкажіть нову назву зіткнення:",
+				defaultValue: encounter.name,
+			}),
 		);
 		if (name && name !== encounter.name) {
 			const updated = { ...encounter, name };
 			setEncounter(updated);
 			saveEncounterState(updated);
 		}
-	}, [encounter, modal, saveEncounterState]);
+	}, [encounter, saveEncounterState, dispatch]);
 
 	const handleRenameMonster = useCallback(
 		async (instanceId, currentName) => {
 			if (!encounter) return;
-			const name = await modal.prompt(
-				"Перейменування",
-				"Вкажіть нове ім'я монстра:",
-				currentName,
+			const name = await dispatch(
+				prompt({
+					title: "Перейменування",
+					message: "Вкажіть нове ім'я монстра:",
+					defaultValue: currentName,
+				}),
 			);
 			if (name && name !== currentName) {
 				const updatedMonsters = encounter.monsters.map((m) =>
@@ -324,7 +332,7 @@ export default function useEncounterView({
 				saveEncounterState(updated);
 			}
 		},
-		[encounter, modal, selectedInstance, saveEncounterState],
+		[encounter, selectedInstance, saveEncounterState, dispatch],
 	);
 
 	const handleExport = useCallback(() => {
@@ -373,13 +381,13 @@ export default function useEncounterView({
 					setSelectedInstance(updated.monsters[0] || null);
 					setNotification("Бій успішно імпортовано.");
 				} catch (err) {
-					modal.alert("Помилка імпорту", err.message);
+					dispatch(alert({ title: "Помилка імпорту", message: err.message }));
 				}
 				e.target.value = "";
 			};
 			reader.readAsText(file);
 		},
-		[encounter, modal, saveEncounterState],
+		[encounter, saveEncounterState, dispatch],
 	);
 
 	const duplicateMonster = useCallback(
@@ -531,3 +539,4 @@ export default function useEncounterView({
 		getMonsterImageOverride,
 	};
 }
+

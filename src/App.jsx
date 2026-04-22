@@ -2,14 +2,20 @@
 import { api } from "./api";
 import DiceCalculator from "./components/DiceCalculator";
 import MainContent from "./components/MainContent";
+import MessageBox from "./components/MessageBox";
 import Modal from "./components/Modal";
 import Sidebar from "./components/Sidebar";
 import MentionPickerModalContent from "./components/modals/MentionPickerModalContent";
 import CreateCampaignModalContent from "./components/modals/CreateCampaignModalContent";
 import { parseUrl } from "./utils/navigation";
-import { useModal } from "./context/ModalContext";
-import { closeMentionPickerAction } from "./actions/app";
 import {
+	closeMentionPickerAction,
+	alert,
+	confirm,
+} from "./actions/app";
+import {
+	closeActiveModal,
+	openModalRequest,
 	resolveModalRequest,
 	useAppDispatch,
 	useAppSelector,
@@ -33,8 +39,6 @@ export default function App() {
 		initialRoute.encounter,
 	);
 
-	const modal = useModal();
-	const { close: closeModal, alert, confirm } = modal;
 	const dispatch = useAppDispatch();
 	const modalState = useAppSelector((store) => store.modal);
 	const mentionPickerRequest = useAppSelector(
@@ -47,7 +51,12 @@ export default function App() {
 			setCampaigns(data);
 		} catch (err) {
 			console.error("Failed to load campaigns", err);
-			alert("Помилка", "Не вдалося завантажити список кампаній");
+			dispatch(
+				alert({
+				title: "Помилка",
+				message: "Не вдалося завантажити список кампаній",
+				}),
+			);
 		}
 	};
 
@@ -133,7 +142,7 @@ export default function App() {
 					return;
 				}
 
-				modal.open({
+				openModalRequest({
 					title: "Вибір згадки",
 					type: "confirm",
 					showFooter: false,
@@ -147,12 +156,12 @@ export default function App() {
 							onSelect={(name) => {
 								select(name);
 								dispatch(closeMentionPickerAction());
-								closeModal();
+								closeActiveModal();
 							}}
 							onCancel={() => {
 								cancel();
 								dispatch(closeMentionPickerAction());
-								closeModal();
+								closeActiveModal();
 							}}
 						/>
 					),
@@ -165,7 +174,7 @@ export default function App() {
 		};
 
 		handleMentionPicker();
-	}, [activeCampaignSlug, closeModal, dispatch, mentionPickerRequest, modal]);
+	}, [activeCampaignSlug, dispatch, mentionPickerRequest]);
 
 	// Універсальна функція навігації
 	const navigate = (
@@ -213,9 +222,11 @@ export default function App() {
 				: null;
 
 			if (completedAt && todayLabel !== prevLabel) {
-				const confirmUpdate = await confirm(
-					"Оновлення дати",
-					`Кампанія вже була завершена ${prevLabel}. Оновити дату завершення на сьогодні?`,
+				const confirmUpdate = await dispatch(
+					confirm({
+					title: "Оновлення дати",
+					message: `Кампанія вже була завершена ${prevLabel}. Оновити дату завершення на сьогодні?`,
+					}),
 				);
 				if (confirmUpdate) completedAt = now;
 			} else {
@@ -231,15 +242,20 @@ export default function App() {
 			await loadCampaigns();
 		} catch (err) {
 			console.error("Failed to toggle campaign status", err);
-			alert("Помилка", "Не вдалося оновити статус кампанії");
+			dispatch(
+				alert({
+				title: "Помилка",
+				message: "Не вдалося оновити статус кампанії",
+				}),
+			);
 		}
 	};
 
 	const activeCampaign = campaigns.find((c) => c.slug === activeCampaignSlug);
 
 	const openCreateCampaignModal = () => {
-		const handleClose = closeModal;
-		modal.open({
+		const handleClose = () => closeActiveModal();
+		openModalRequest({
 			title: "Нова кампанія",
 			type: "confirm",
 			showFooter: false,
@@ -254,7 +270,12 @@ export default function App() {
 							handleClose();
 							navigate(newCampaign.slug);
 						} catch (err) {
-							alert("Помилка", err.message || "Не вдалося створити кампанію");
+							dispatch(
+								alert({
+								title: "Помилка",
+								message: err.message || "Не вдалося створити кампанію",
+								}),
+							);
 						}
 					}}
 					onImportCampaign={async (file) => {
@@ -263,7 +284,12 @@ export default function App() {
 							await loadCampaigns();
 							handleClose();
 						} catch (err) {
-							alert("Помилка імпорту", err.message || "Не вдалося імпортувати кампанію");
+							dispatch(
+								alert({
+								title: "Помилка імпорту",
+								message: err.message || "Не вдалося імпортувати кампанію",
+								}),
+							);
 						}
 					}}
 				/>
@@ -307,6 +333,7 @@ export default function App() {
 					}
 				/>
 			)}
+			<MessageBox />
 			{/* Передаємо команду для кидка та функцію для її скидання */}
 			<DiceCalculator />
 		</div>

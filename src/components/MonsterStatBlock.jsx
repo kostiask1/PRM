@@ -16,14 +16,13 @@ import "../assets/components/MonsterStatBlock.css";
 import ClickToCopy from "./ClickToCopy.jsx";
 import Button from "./Button.jsx";
 import MonsterStatBlockModel from "../models/MonsterStatBlockModel.js";
-import { useModal } from "../context/ModalContext";
 import { getSpellByName } from "../utils/referencePreview.js";
 import { resolveSpellInput } from "../utils/referenceResolvers.js";
 import useConditionReference from "../hooks/useConditionReference.jsx";
 import Tooltip from "./Tooltip.jsx";
 import classNames from "../utils/classNames";
 import { requestDiceRollAction } from "../actions/app";
-import { useAppDispatch } from "../store/appStore";
+import { openModalRequest, useAppDispatch } from "../store/appStore";
 
 const SPELL_CACHE = new Map();
 
@@ -34,7 +33,6 @@ export default function MonsterStatBlock({
 	onFavoriteChange,
 	tokenImageOverrideUrl = null,
 }) {
-	const modal = useModal();
 	const dispatch = useAppDispatch();
 	const [hasImageError, setHasImageError] = useState(false);
 	const [spells, setSpells] = useState([]);
@@ -88,7 +86,7 @@ export default function MonsterStatBlock({
 		const spell = await resolveSpellInput(spellOrName);
 		if (!spell) return;
 
-		modal?.open({
+		openModalRequest({
 			title: capitalizeWords(spell.name.split("|")[0]),
 			type: "confirm",
 			showFooter: false,

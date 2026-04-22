@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
 
-import { refreshEntitiesAction } from "../actions/app";
+import { alert, refreshEntitiesAction } from "../actions/app";
 import { api } from "../api";
-import { useModal } from "../context/ModalContext";
 import { useAppDispatch } from "../store/appStore";
 import Button from "./Button";
 import Modal from "./Modal";
@@ -36,8 +35,7 @@ export default function CreateCharacterButton({
 	icon = "plus",
 	strokeWidth = 2.5,
 }) {
-	const modal = useModal();
-	const dispatch = useAppDispatch();
+		const dispatch = useAppDispatch();
 	const [isOpen, setIsOpen] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [draft, setDraft] = useState(() => createEmptyDraft(entityType));
@@ -67,7 +65,12 @@ export default function CreateCharacterButton({
 
 	const handleSubmit = async () => {
 		if (!draft.firstName?.trim()) {
-			modal.alert("Помилка", "Ім'я обов'язкове для створення.");
+			dispatch(
+				alert({
+					title: "Помилка",
+					message: "Ім'я обов'язкове для створення.",
+				}),
+			);
 			return;
 		}
 
@@ -98,7 +101,12 @@ export default function CreateCharacterButton({
 			setIsOpen(false);
 		} catch (error) {
 			console.error("Failed to create entity from modal", error);
-			modal.alert("Помилка", "Не вдалося створити сутність.");
+			dispatch(
+				alert({
+					title: "Помилка",
+					message: "Не вдалося створити сутність.",
+				}),
+			);
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -158,3 +166,4 @@ export default function CreateCharacterButton({
 		</>
 	);
 }
+

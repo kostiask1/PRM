@@ -10,7 +10,7 @@ import Select from "./Select";
 import Checkbox from "./Checkbox";
 import Notification from "./Notification";
 import CollapseToggleButton from "./CollapseToggleButton";
-import { dispatchAlert } from "../actions/app";
+import { alert } from "../actions/app";
 import Tooltip from "./Tooltip";
 import classNames from "../utils/classNames";
 import { useAppDispatch } from "../store/appStore";
@@ -53,7 +53,8 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	const [generatedPrompt, setGeneratedPrompt] = useState(null);
 
 	const showApiKeyInstructions = () => {
-		dispatchAlert(dispatch, {
+		dispatch(
+			alert({
 			title: "Налаштування Gemini AI",
 			message:
 				`Для використання функцій ШІ необхідно налаштувати API ключ:\n\n` +
@@ -61,7 +62,8 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 				`2. Створіть файл .env у кореневій папці проекту.\n` +
 				`3. Додайте в нього рядок: GEMINI_API_KEY=ваш_ключ\n` +
 				`Після цього магія ШІ стане доступною!`,
-		});
+			}),
+		);
 	};
 
 	useEffect(() => {
@@ -191,12 +193,14 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 			}
 
 			setError(err.message || "Не вдалося зв’язатися з AI.");
-			dispatchAlert(dispatch, {
+			dispatch(
+				alert({
 				title: "Помилка ШІ",
 				message: err.status
 					? `[Статус: ${err.status}] ${err.message}`
 					: err.message,
-			});
+				}),
+			);
 		} finally {
 			setLoading(false);
 		}

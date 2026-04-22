@@ -1,6 +1,6 @@
-﻿import { useModal } from "../context/ModalContext";
 import { renderRecursiveContent } from "../utils/parser.jsx";
 import { resolveConditionInput } from "../utils/referenceResolvers.js";
+import { openModalRequest } from "../store/appStore";
 
 export default function useConditionReference({
 	externalOnConditionClick = null,
@@ -8,8 +8,6 @@ export default function useConditionReference({
 	getSpellHoverHandler = null,
 	modalContentClassName,
 }) {
-	const modal = useModal();
-
 	const handleConditionHover = async (conditionName) => {
 		const condition = await resolveConditionInput(conditionName);
 		if (!condition) return null;
@@ -37,7 +35,7 @@ export default function useConditionReference({
 
 		const spellHoverHandler = getSpellHoverHandler?.() || null;
 
-		modal?.open({
+		openModalRequest({
 			title: condition.name,
 			type: "confirm",
 			showFooter: false,

@@ -2,13 +2,14 @@ import React from "react";
 import Modal from "./Modal";
 import Icon from "./Icon";
 import "../assets/components/ImageGallery.css";
+import { prompt } from "../actions/app";
 import Button from "./Button";
 import useImageGallery from "../hooks/useImageGallery";
-import { useModal } from "../context/ModalContext";
 import ImageTargetSettings from "./ImageTargetSettings";
 import { api } from "../api";
 import Tooltip from "./Tooltip";
 import classNames from "../utils/classNames";
+import { useAppDispatch } from "../store/appStore";
 
 const SUB_LABELS = {
 	npc: "NPC",
@@ -28,7 +29,7 @@ function ImageGallery({
 	initialCategory,
 	initialSubcategory,
 }) {
-	const modal = useModal();
+	const dispatch = useAppDispatch();
 	const [isMoveModalOpen, setIsMoveModalOpen] = React.useState(false);
 	const [moveTarget, setMoveTarget] = React.useState({
 		slug: "general",
@@ -377,12 +378,13 @@ function ImageGallery({
 									onContextMenu={async (e) => {
 										if (isProtected) return;
 										e.preventDefault();
-										if (!modal) return;
-										const newName = await modal.prompt(
-											"Перейменувати папку",
-											"Введіть нову назву:",
-											sub,
-										);
+																				const newName = await dispatch(
+																					prompt({
+																						title: "Перейменувати папку",
+																						message: "Введіть нову назву:",
+																						defaultValue: sub,
+																					}),
+																				);
 										if (newName) handleRenameSub(sub, newName);
 									}}
 									draggable={!isProtected}
@@ -442,12 +444,13 @@ function ImageGallery({
 									onDoubleClick={() => onSelect?.(img)}
 									onContextMenu={async (e) => {
 										e.preventDefault();
-										if (!modal) return;
-										const currentClean = getCleanName(img.name);
-										const newBaseName = await modal.prompt(
-											"Перейменувати файл",
-											"Введіть нову назву:",
-											currentClean,
+																				const currentClean = getCleanName(img.name);
+										const newBaseName = await dispatch(
+											prompt({
+												title: "Перейменувати файл",
+												message: "Введіть нову назву:",
+												defaultValue: currentClean,
+											}),
 										);
 										if (newBaseName && newBaseName !== currentClean) {
 											const ext = img.name.split(".").pop();
@@ -521,6 +524,7 @@ function ImageGallery({
 
 export { ImageGallery };
 export default ImageGallery;
+
 
 
 

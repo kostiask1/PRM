@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 
+import {
+	alert,
+	confirm,
+} from "../actions/app";
 import { api } from "../api";
-import { useModal } from "../context/ModalContext";
+import { useAppDispatch } from "../store/appStore";
 
 export const IMAGE_GALLERY_CATEGORIES = [
 	{ id: "maps", label: "Мапи", icon: "map" },
@@ -24,7 +28,7 @@ export default function useImageGallery({
 	initialCategory,
 	initialSubcategory,
 }) {
-	const modal = useModal();
+	const dispatch = useAppDispatch();
 
 	const [campaigns, setCampaigns] = useState([]);
 	const [selectedSource, setSelectedSource] = useState("general");
@@ -206,7 +210,7 @@ export default function useImageGallery({
 				return true;
 			} catch (err) {
 				console.error("Move failed", err);
-				modal?.alert("Помилка переміщення", err.message);
+				dispatch(alert({ title: "Помилка переміщення", message: err.message }));
 				return false;
 			} finally {
 				setLoading(false);
@@ -220,8 +224,7 @@ export default function useImageGallery({
 			selectedCat.id,
 			selectedSub,
 			loadImages,
-			loadSubcategories,
-			modal,
+			loadSubcategories, dispatch,
 		],
 	);
 
@@ -235,9 +238,9 @@ export default function useImageGallery({
 			loadSubcategories();
 			setSelectedSub(fullPath);
 		} catch (err) {
-			modal?.alert("Помилка", err.message);
+			dispatch(alert({ title: "Помилка", message: err.message }));
 		}
-	}, [newSubName, selectedSub, selectedSource, selectedCat.id, loadSubcategories, modal]);
+	}, [newSubName, selectedSub, selectedSource, selectedCat.id, loadSubcategories, dispatch]);
 
 	const handleRenameSub = useCallback(
 		async (oldName, newName) => {
@@ -253,7 +256,7 @@ export default function useImageGallery({
 				loadImages();
 				if (selectedSub === oldName) setSelectedSub(newName);
 			} catch (err) {
-				modal?.alert("Помилка перейменування", err.message);
+				dispatch(alert({ title: "Помилка перейменування", message: err.message }));
 			}
 		},
 		[
@@ -261,8 +264,7 @@ export default function useImageGallery({
 			selectedSource,
 			selectedCat.id,
 			loadSubcategories,
-			loadImages,
-			modal,
+			loadImages, dispatch,
 		],
 	);
 
@@ -279,10 +281,10 @@ export default function useImageGallery({
 				);
 				loadImages();
 			} catch (err) {
-				modal?.alert("Помилка", err.message);
+				dispatch(alert({ title: "Помилка", message: err.message }));
 			}
 		},
-		[selectedSource, selectedCat.id, selectedSub, loadImages, modal],
+		[selectedSource, selectedCat.id, selectedSub, loadImages, dispatch],
 	);
 
 	const toggleSelect = useCallback(
@@ -313,9 +315,12 @@ export default function useImageGallery({
 
 		setLoading(true);
 		try {
-			const confirmed = modal
-				? await modal.confirm("Видалення", `Видалити вибрані об'єкти (${total})?`)
-				: confirm(`Видалити вибрані об'єкти (${total})?`);
+			const confirmed = await dispatch(
+				confirm({
+					title: "Видалення",
+					message: `Видалити вибрані об'єкти (${total})?`,
+				}),
+			);
 
 			if (!confirmed) return;
 
@@ -332,7 +337,7 @@ export default function useImageGallery({
 			loadImages();
 			loadSubcategories();
 		} catch (err) {
-			modal?.alert("Помилка видалення", err.message);
+			dispatch(alert({ title: "Помилка видалення", message: err.message }));
 		} finally {
 			setLoading(false);
 		}
@@ -344,8 +349,7 @@ export default function useImageGallery({
 		selectedCat.id,
 		selectedSub,
 		loadImages,
-		loadSubcategories,
-		modal,
+		loadSubcategories, dispatch,
 	]);
 
 	useEffect(() => {
@@ -520,4 +524,6 @@ export default function useImageGallery({
 		isProtectedSystemSub,
 	};
 }
+
+
 

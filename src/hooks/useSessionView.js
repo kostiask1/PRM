@@ -1,18 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import {
+	confirm,
+	prompt,
+} from "../actions/app";
 import { api } from "../api";
-import { useModal } from "../context/ModalContext";
 import {
 	appendTrailingEmptyNote,
 	ensureAtLeastOneNote,
 	createEmptyNote,
 } from "../utils/noteUtils";
 import { idsEqual } from "../utils/id";
+import { useAppDispatch } from "../store/appStore";
 
 export default function useSessionView(props) {
 		const { campaign, sessionId, onBack, onNavigate, onRefreshCampaigns } =
 			props;
-		const modal = useModal();
+		const dispatch = useAppDispatch();
 
 		const [session, setSession] = useState(null);
 		const [isSaving, setIsSaving] = useState(false);
@@ -303,10 +307,12 @@ export default function useSessionView(props) {
 
 			if (!encounterId) {
 				const sceneIndex = session.data.scenes.findIndex((s) => s.id === scene.id);
-				const name = await modal.prompt(
-					"Нове зіткнення",
-					"Введіть назву для бою:",
-					`Бій у сцені ${sceneIndex + 1}`,
+				const name = await dispatch(
+					prompt({
+						title: "Нове зіткнення",
+						message: "Введіть назву для бою:",
+						defaultValue: `Бій у сцені ${sceneIndex + 1}`,
+					}),
 				);
 				if (name === null) return;
 
@@ -350,9 +356,11 @@ export default function useSessionView(props) {
 			const hasEncounter = !!scene.encounterId;
 
 			if (hasTextData || hasEncounter) {
-				const confirmed = await modal.confirm(
-					"Видалення сцени",
-					"Ви впевнені? Це також видалить пов'язане бойове зіткнення.",
+				const confirmed = await dispatch(
+					confirm({
+						title: "Видалення сцени",
+						message: "Ви впевнені? Це також видалить пов'язане бойове зіткнення.",
+					}),
 				);
 				if (!confirmed) return;
 			}
@@ -533,10 +541,12 @@ export default function useSessionView(props) {
 
 		const handleRename = async () => {
 			if (!session) return;
-			const name = await modal.prompt(
-				"Перейменування",
-				"Введіть нову назву сесії:",
-				session.name,
+			const name = await dispatch(
+				prompt({
+					title: "Перейменування",
+					message: "Введіть нову назву сесії:",
+					defaultValue: session.name,
+				}),
 			);
 			if (name && name !== session.name) updateSession({ name }, true);
 		};
@@ -544,9 +554,11 @@ export default function useSessionView(props) {
 		const handleDeleteSessionAndBack = async () => {
 			if (!session) return;
 			if (
-				await modal.confirm(
-					"Видалення сесії",
-					`Видалити сесію "${session.name}"?`,
+				await dispatch(
+					confirm({
+						title: "Видалення сесії",
+						message: `Видалити сесію "${session.name}"?`,
+					}),
 				)
 			) {
 				await api.deleteSession(campaignSlug, sessionId);
@@ -590,3 +602,4 @@ export default function useSessionView(props) {
 		handleDeleteSessionAndBack,
 	};
 }
+
