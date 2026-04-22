@@ -411,7 +411,7 @@
 
 .ImageGallery__previewWrap {
 	width: 100%;
-	height: calc(96vh - 70px);
+	height: 100%;
 	display: flex;
 	align-items: center;
 	justify-content: center;

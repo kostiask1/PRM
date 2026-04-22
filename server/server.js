@@ -4,6 +4,7 @@ require("dotenv").config({
 const express = require("express");
 const multer = require("multer");
 const path = require("path");
+const fs = require("fs/promises");
 const zlib = require("zlib");
 const storage = require("./storage");
 
@@ -171,8 +172,31 @@ const upload = multer({
 			// Виправлення кодування для кириличних назв файлів
 			const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
 			const ext = path.extname(originalName);
-			const name = storage.sanitizeName(path.parse(originalName).name);
-			cb(null, `${name}-${Date.now()}${ext}`);
+			const baseName = storage.sanitizeName(path.parse(originalName).name) || "image";
+			const dir = storage.campaignImagesDir(
+				req.params.slug,
+				req.params.category,
+				req.body.subcategory || "",
+			);
+
+			const resolveFileName = async () => {
+				let candidate = `${baseName}${ext}`;
+				let counter = 2;
+				while (true) {
+					const candidatePath = path.join(dir, candidate);
+					try {
+						await fs.access(candidatePath);
+						candidate = `${baseName}-${counter}${ext}`;
+						counter += 1;
+					} catch {
+						return candidate;
+					}
+				}
+			};
+
+			resolveFileName()
+				.then((name) => cb(null, name))
+				.catch((err) => cb(err));
 		},
 	}),
 });
