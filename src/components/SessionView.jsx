@@ -6,7 +6,6 @@ import Panel from "./Panel";
 import DraggableList from "./DraggableList";
 import Modal from "./Modal";
 import NoteCard from "./NoteCard";
-import CharacterCard from "./CharacterCard";
 import CollapseToggleButton from "./CollapseToggleButton";
 import TodoSection from "./session/TodoSection";
 import TodoItem from "./session/TodoItem";
@@ -26,8 +25,6 @@ function SessionView(props) {
 		onBack,
 		session,
 		isSaving,
-		npcToCreate,
-		setNpcToCreate,
 		isChecklistOpen,
 		setIsChecklistOpen,
 		undoStack,
@@ -43,8 +40,6 @@ function SessionView(props) {
 		toggleSceneCollapse,
 		handleOpenEncounter,
 		removeScene,
-		handleOpenNpcCreate,
-		handleSaveNpc,
 		handleNoteTitleChange,
 		handleNoteChange,
 		handleToggleNoteCollapse,
@@ -185,7 +180,6 @@ function SessionView(props) {
 										onToggle={() => toggleSceneCollapse(scene.id)}
 										onRemove={() => removeScene(scene.id)}
 										onOpenEncounter={() => handleOpenEncounter(scene)}
-										handleOpenNpcCreate={handleOpenNpcCreate}
 										imageUrl={scene.imageUrl}
 										onImageChange={(url) =>
 											updateScene(scene.id, "imageUrl", url, true)
@@ -268,23 +262,6 @@ function SessionView(props) {
 				</button>
 			</Tooltip>
 
-			{npcToCreate && (
-				<Modal
-					title="Створити нового NPC"
-					onCancel={() => setNpcToCreate(null)}
-					onConfirm={handleSaveNpc}
-					confirmLabel="Зберегти NPC">
-					<CharacterCard
-						character={npcToCreate}
-						onChange={(id, updated) => setNpcToCreate(updated)}
-						onDelete={() => setNpcToCreate(null)}
-						onToggleCollapse={() => {}}
-						campaignSlug={campaignSlug}
-						type="npc"
-						initialEditing={true}
-					/>
-				</Modal>
-			)}
 		</Panel>
 	);
 }
@@ -302,7 +279,6 @@ function SceneCard({
 	onOpenEncounter,
 	hasEncounter,
 	encounterName,
-	handleOpenNpcCreate,
 	imageUrl,
 	onImageChange,
 	campaignSlug,
@@ -321,7 +297,7 @@ function SceneCard({
 				number={number}
 				collapsed={collapsed}
 				onToggle={onToggle}
-				onOpenNpcCreate={handleOpenNpcCreate}
+				campaignSlug={campaignSlug}
 				onOpenEncounter={onOpenEncounter}
 				onRemove={onRemove}
 				hasEncounter={hasEncounter}

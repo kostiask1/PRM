@@ -16,7 +16,6 @@ export default function useSessionView(props) {
 
 		const [session, setSession] = useState(null);
 		const [isSaving, setIsSaving] = useState(false);
-		const [npcToCreate, setNpcToCreate] = useState(null);
 		const [isChecklistOpen, setIsChecklistOpen] = useState(false);
 		const saveTimeout = useRef(null);
 
@@ -370,36 +369,6 @@ export default function useSessionView(props) {
 			updateSession({ data: nextData }, true);
 		};
 
-		const handleOpenNpcCreate = () => {
-			setNpcToCreate({
-				id: Date.now(),
-				firstName: "",
-				lastName: "",
-				race: "",
-				class: "",
-				level: 1,
-				motivation: "",
-				trait: "",
-				notes: [{ id: Date.now() + 1, title: "", text: "", collapsed: false }],
-				collapsed: false,
-			});
-		};
-
-		const handleSaveNpc = async () => {
-			if (!npcToCreate?.firstName?.trim()) {
-				modal.alert("Помилка", "Ім'я NPC обов'язкове для створення.");
-				return;
-			}
-
-			try {
-				await api.createEntity(campaignSlug, "npc", npcToCreate);
-				setNpcToCreate(null);
-				window.dispatchEvent(new CustomEvent("refresh-entities"));
-			} catch (err) {
-				console.error("Failed to create NPC", err);
-			}
-		};
-
 		const handleNoteTitleChange = (id, title) => {
 			if (!session) return;
 			let notes = session.data.notes || [];
@@ -589,8 +558,6 @@ export default function useSessionView(props) {
 		return {
 		session,
 		isSaving,
-		npcToCreate,
-		setNpcToCreate,
 		isChecklistOpen,
 		setIsChecklistOpen,
 		undoStack,
@@ -606,8 +573,6 @@ export default function useSessionView(props) {
 		toggleSceneCollapse,
 		handleOpenEncounter,
 		removeScene,
-		handleOpenNpcCreate,
-		handleSaveNpc,
 		handleNoteTitleChange,
 		handleNoteChange,
 		handleToggleNoteCollapse,

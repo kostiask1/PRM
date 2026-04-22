@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import AiAssistantPanel from "./AiAssistantPanel";
 import Button from "./Button";
 import EditableField from "./EditableField";
@@ -10,6 +10,7 @@ import NoteCard from "./NoteCard";
 import CharacterCard from "./CharacterCard";
 import CollapseToggleButton from "./CollapseToggleButton";
 import Tooltip from "./Tooltip";
+import CreateCharacterButton from "./CreateCharacterButton";
 import "../assets/components/CampaignView.css";
 import useCampaignView from "../hooks/useCampaignView";
 import CampaignViewModel from "../models/CampaignViewModel.js";
@@ -46,11 +47,9 @@ function CampaignView(props) {
 		handleNoteTitleChange,
 		handleNoteChange,
 		handleDeleteNote,
-		handleAddCharacter,
 		handleToggleCharacterCollapse,
 		handleCharacterChange,
 		handleDeleteCharacter,
-		handleAddNpc,
 		handleToggleNpcCollapse,
 		handleNpcChange,
 		handleNpcDelete,
@@ -322,14 +321,10 @@ function CampaignView(props) {
 									<h3>Персонажі</h3>
 								</div>
 								{!isCharactersCollapsed && (
-									<Button
-										variant="primary"
-										size="small"
-										onClick={handleAddCharacter}
-										icon="plus"
-										strokeWidth={2.5}>
-										Новий персонаж
-									</Button>
+									<CreateCharacterButton
+										campaignSlug={campaign.slug}
+										entityType="characters"
+									/>
 								)}
 							</div>
 							{!isCharactersCollapsed && (
@@ -348,7 +343,6 @@ function CampaignView(props) {
 											onDelete={handleDeleteCharacter}
 											campaignSlug={campaign.slug}
 											type="characters"
-											initialEditing={!!character._isNew && !!character._isPending}
 										/>
 									)}
 								/>
@@ -376,14 +370,10 @@ function CampaignView(props) {
 									<h3>NPC</h3>
 								</div>
 								{!isNpcsCollapsed && (
-									<Button
-										variant="primary"
-										size="small"
-										onClick={handleAddNpc}
-										icon="plus"
-										strokeWidth={2.5}>
-										Новий NPC
-									</Button>
+									<CreateCharacterButton
+										campaignSlug={campaign.slug}
+										entityType="npc"
+									/>
 								)}
 							</div>
 							{!isNpcsCollapsed && (
@@ -402,7 +392,6 @@ function CampaignView(props) {
 											onDelete={handleNpcDelete}
 											campaignSlug={campaign.slug}
 											type="npc"
-											initialEditing={!!npc._isNew && !!npc._isPending}
 										/>
 									)}
 								/>
@@ -433,3 +422,4 @@ function CampaignView(props) {
 
 export { CampaignView };
 export default CampaignView;
+

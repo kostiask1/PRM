@@ -1,12 +1,13 @@
 import Button from "../Button";
 import CollapseToggleButton from "../CollapseToggleButton";
+import CreateCharacterButton from "../CreateCharacterButton";
 import Icon from "../Icon";
 
 export default function SceneCardHeader({
 	number,
 	collapsed,
 	onToggle,
-	onOpenNpcCreate,
+	campaignSlug,
 	onOpenEncounter,
 	onRemove,
 	hasEncounter,
@@ -23,13 +24,13 @@ export default function SceneCardHeader({
 				<div className="SceneCard__title">{`Сцена ${number}`}</div>
 			</div>
 			<div className="SceneCard__headerActions">
-				<Button
-					variant="ghost"
-					onClick={onOpenNpcCreate}
-					icon="plus"
-					strokeWidth={2.5}>
-					NPC
-				</Button>
+				<CreateCharacterButton
+					campaignSlug={campaignSlug}
+					entityType="npc"
+					buttonLabel="NPC"
+					buttonVariant="ghost"
+					buttonSize="small"
+				/>
 				<Button
 					variant={hasEncounter ? "primary" : "ghost"}
 					onClick={(event) => {

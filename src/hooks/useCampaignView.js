@@ -13,6 +13,8 @@ const sanitizeEntityForSave = (entity) =>
 		Object.entries(entity || {}).filter(([key]) => !key.startsWith("_")),
 	);
 
+const sanitizeLoadedEntity = (entity) => sanitizeEntityForSave(entity);
+
 export default function useCampaignView(props) {
 		const { campaign, onSelectSession, onNavigate, onRefreshCampaigns } =
 			props;
@@ -46,7 +48,7 @@ export default function useCampaignView(props) {
 		const loadCharacters = useCallback(async () => {
 			try {
 				const data = await api.getEntities(campaign.slug, "characters");
-				setCharacters(data);
+				setCharacters((data || []).map(sanitizeLoadedEntity));
 			} catch (err) {
 				console.error("Failed to load characters", err);
 			}
@@ -55,7 +57,7 @@ export default function useCampaignView(props) {
 		const loadNpcs = useCallback(async () => {
 			try {
 				const data = await api.getEntities(campaign.slug, "npc");
-				setNpcs(data);
+				setNpcs((data || []).map(sanitizeLoadedEntity));
 			} catch (err) {
 				console.error("Failed to load NPCs", err);
 			}
@@ -77,13 +79,19 @@ export default function useCampaignView(props) {
 				setRedoStack([]);
 				lastSlugRef.current = campaign.slug;
 				loadCharacters();
+				loadNpcs();
 			}
 		}, [campaign.slug]);
 
 		useEffect(() => {
-			window.addEventListener("refresh-entities", loadCharacters);
-			return () => window.removeEventListener("refresh-entities", loadCharacters);
-		}, [loadCharacters]);
+			const handleRefreshEntities = () => {
+				loadCharacters();
+				loadNpcs();
+			};
+			window.addEventListener("refresh-entities", handleRefreshEntities);
+			return () =>
+				window.removeEventListener("refresh-entities", handleRefreshEntities);
+		}, [loadCharacters, loadNpcs]);
 
 		const saveToServer = useCallback(
 			async (updates) => {
@@ -317,49 +325,6 @@ export default function useCampaignView(props) {
 			triggerSave({ notes: newNotes });
 		};
 
-		const handleAddCharacter = async () => {
-			const newChar = {
-				firstName: "",
-				lastName: "",
-				race: "",
-				class: "",
-				level: 1,
-				motivation: "",
-				trait: "",
-				notes: [{ id: Date.now() + 1, title: "", text: "", collapsed: false }],
-				collapsed: false,
-			};
-			const tempId = `temp-character-${Date.now()}`;
-			const draft = {
-				...newChar,
-				id: tempId,
-				slug: tempId,
-				_isNew: true,
-				_isPending: true,
-			};
-			setCharacters((prev) => [...prev, draft]);
-			try {
-				const saved = await api.createEntity(campaign.slug, "characters", newChar);
-				setCharacters((prev) => {
-					const local = prev.find((c) => c.id === tempId);
-					if (!local) return prev;
-					const merged = {
-						...saved,
-						...local,
-						id: saved.id,
-						slug: saved.slug,
-						_isPending: false,
-						_isNew: true,
-					};
-					scheduleEntityUpdate("characters", merged);
-					return prev.map((c) => (c.id === tempId ? merged : c));
-				});
-			} catch (err) {
-				console.error("Failed to create character", err);
-				setCharacters((prev) => prev.filter((c) => c.id !== tempId));
-			}
-		};
-
 		const handleToggleCharacterCollapse = (id) => {
 			const newCharacters = characters.map((c) =>
 				c.id === id ? { ...c, collapsed: !c.collapsed } : c,
@@ -379,49 +344,6 @@ export default function useCampaignView(props) {
 			if (!char) return;
 			await api.deleteEntity(campaign.slug, "characters", char.slug);
 			setCharacters((prev) => prev.filter((c) => c.id !== id));
-		};
-
-		const handleAddNpc = async () => {
-			const newNpc = {
-				firstName: "",
-				lastName: "",
-				race: "",
-				class: "",
-				level: 1,
-				motivation: "",
-				trait: "",
-				notes: [{ id: Date.now() + 1, title: "", text: "", collapsed: false }],
-				collapsed: false,
-			};
-			const tempId = `temp-npc-${Date.now()}`;
-			const draft = {
-				...newNpc,
-				id: tempId,
-				slug: tempId,
-				_isNew: true,
-				_isPending: true,
-			};
-			setNpcs((prev) => [...prev, draft]);
-			try {
-				const saved = await api.createEntity(campaign.slug, "npc", newNpc);
-				setNpcs((prev) => {
-					const local = prev.find((n) => n.id === tempId);
-					if (!local) return prev;
-					const merged = {
-						...saved,
-						...local,
-						id: saved.id,
-						slug: saved.slug,
-						_isPending: false,
-						_isNew: true,
-					};
-					scheduleEntityUpdate("npc", merged);
-					return prev.map((n) => (n.id === tempId ? merged : n));
-				});
-			} catch (err) {
-				console.error("Failed to create NPC", err);
-				setNpcs((prev) => prev.filter((n) => n.id !== tempId));
-			}
 		};
 
 		const handleToggleNpcCollapse = (id) => {
@@ -618,7 +540,7 @@ export default function useCampaignView(props) {
 			if (updatedCampaign) {
 				setDescription(updatedCampaign.description || "");
 				setNotes(appendTrailingEmptyNote(updatedCampaign.notes || []));
-				setCharacters(updatedCampaign.characters || []);
+				setCharacters((updatedCampaign.characters || []).map(sanitizeLoadedEntity));
 			}
 			onRefreshCampaigns();
 		};
@@ -651,11 +573,9 @@ export default function useCampaignView(props) {
 		handleNoteTitleChange,
 		handleNoteChange,
 		handleDeleteNote,
-		handleAddCharacter,
 		handleToggleCharacterCollapse,
 		handleCharacterChange,
 		handleDeleteCharacter,
-		handleAddNpc,
 		handleToggleNpcCollapse,
 		handleNpcChange,
 		handleNpcDelete,

@@ -85,6 +85,8 @@ export default function CharacterCard({
 	initialEditing = false,
 	type = "characters",
 	viewMode = "card",
+	showDeleteButton = true,
+	showHeader = true,
 }) {
 	const [isEditing, setIsEditing] = useState(initialEditing);
 	const characterModel = new CharacterCardModel(character);
@@ -129,6 +131,7 @@ export default function CharacterCard({
 				"is-dragging": isDragging,
 				"character-card--modal": isModalView,
 			})}>
+			{showHeader && (
 			<div
 				className="character-card__header"
 				onClick={
@@ -170,16 +173,19 @@ export default function CharacterCard({
 						title={isEditing ? "Завершити редагування" : "Редагувати"}
 					/>
 				)}
-				<Button
-					variant="danger"
-					icon="trash"
-					size={14}
-					onClick={(e) => {
-						e.stopPropagation();
-						onDelete(character.id);
-					}}
-				/>
+				{showDeleteButton && (
+					<Button
+						variant="danger"
+						icon="trash"
+						size={14}
+						onClick={(e) => {
+							e.stopPropagation();
+							onDelete(character.id);
+						}}
+					/>
+				)}
 			</div>
+			)}
 
 			{!isCollapsed && (
 				<div className="character-card__body">

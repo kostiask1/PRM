@@ -232,7 +232,7 @@
 	padding: 0;
 }
 
-.Sidebar:not(:hover) span,
+.Sidebar:not(:hover) span:not(.Tooltip__trigger),
 .Sidebar:not(:hover) .Sidebar__title,
 .Sidebar:not(:hover) .Sidebar__description,
 .Sidebar:not(:hover) .Sidebar__sectionTitle,
@@ -247,7 +247,7 @@
 	padding: 0;
 }
 
-.Sidebar:not(:hover) span {
+.Sidebar:not(:hover) span:not(.Tooltip__trigger) {
 	position: absolute;
 }
 
@@ -315,7 +315,7 @@
 		box-shadow: 0 6px 18px color-mix(in srgb, var(--bg), transparent 70%);
 	}
 
-	.Sidebar:not(:hover) span,
+	.Sidebar:not(:hover) span:not(.Tooltip__trigger),
 	.Sidebar:not(:hover) .Sidebar__title,
 	.Sidebar:not(:hover) .Sidebar__description,
 	.Sidebar:not(:hover) .Sidebar__sectionTitle,
