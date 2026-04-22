@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { api } from "./api";
 import DiceCalculator from "./components/DiceCalculator";
 import MainContent from "./components/MainContent";
 import Modal from "./components/Modal";
 import Sidebar from "./components/Sidebar";
-import EntityModalContent from "./components/modals/EntityModalContent";
 import MentionPickerModalContent from "./components/modals/MentionPickerModalContent";
 import CreateCampaignModalContent from "./components/modals/CreateCampaignModalContent";
 import { parseUrl } from "./utils/navigation";
@@ -32,8 +31,7 @@ export default function App() {
 	const [modalConfig, setModalConfig] = useState(null);
 
 	const modal = useMemo(() => Modal.createApi(setModalConfig), []);
-	const { open: openModal, close: closeModal, alert, confirm } =
-		modal;
+	const { close: closeModal, alert, confirm } = modal;
 
 	const loadCampaigns = async () => {
 		try {
@@ -75,57 +73,6 @@ export default function App() {
 		window.addEventListener("popstate", handlePopState);
 		return () => window.removeEventListener("popstate", handlePopState);
 	}, []);
-
-	useEffect(() => {
-		const handleOpenEntity = async (e) => {
-			const { name } = e.detail;
-			if (!activeCampaignSlug || !name) return;
-
-			try {
-				// Завантажуємо персонажів та NPC
-				const [chars, npcs] = await Promise.all([
-					api.getEntities(activeCampaignSlug, "characters"),
-					api.getEntities(activeCampaignSlug, "npc").catch(() => []),
-				]);
-
-				const allEntities = [...chars, ...npcs];
-				const searchName = name.trim().toLowerCase();
-
-				// Пошук за логікою: Ім'я, Прізвище або Повне ім'я
-				const found = allEntities.find((ent) => {
-					const first = (ent.firstName || "").toLowerCase();
-					const last = (ent.lastName || "").toLowerCase();
-					const full = `${first} ${last}`.trim().toLowerCase();
-					return (
-						first === searchName || last === searchName || full === searchName
-					);
-				});
-
-				if (found) {
-					const type = chars.some((c) => c.id === found.id) ? "characters" : "npc";
-					openModal({
-						title: `Персонаж: ${found.firstName} ${found.lastName}`,
-						type: "character",
-						showFooter: false,
-						children: (
-								<EntityModalContent
-									initialEntity={found}
-									campaignSlug={activeCampaignSlug}
-									type={type}
-									onClose={closeModal}
-								/>
-						),
-					});
-				}
-			} catch (err) {
-				console.error("Error opening entity modal:", err);
-				alert("Помилка", "Не вдалося відкрити картку персонажа");
-			}
-		};
-
-		window.addEventListener("open-entity-modal", handleOpenEntity);
-		return () => window.removeEventListener("open-entity-modal", handleOpenEntity);
-	}, [activeCampaignSlug]);
 
 	useEffect(() => {
 		const handleOpenMentionPicker = async (e) => {
@@ -342,4 +289,5 @@ export default function App() {
 		</ModalContext.Provider>
 	);
 }
+
 

@@ -348,7 +348,7 @@ function CampaignView(props) {
 											onDelete={handleDeleteCharacter}
 											campaignSlug={campaign.slug}
 											type="characters"
-											initialEditing={character._isNew}
+											initialEditing={!!character._isNew && !!character._isPending}
 										/>
 									)}
 								/>
@@ -402,7 +402,7 @@ function CampaignView(props) {
 											onDelete={handleNpcDelete}
 											campaignSlug={campaign.slug}
 											type="npc"
-											initialEditing={npc._isNew}
+											initialEditing={!!npc._isNew && !!npc._isPending}
 										/>
 									)}
 								/>

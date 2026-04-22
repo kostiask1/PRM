@@ -1,14 +1,79 @@
-import { useState } from "react";
+import React, { useMemo, useState } from "react";
 import Button from "./Button";
 import EditableField from "./EditableField";
 import NoteCard from "./NoteCard";
 import ImageAssetField from "./ImageAssetField";
 import ReactMarkdown from "react-markdown";
+import EntityLink from "./EntityLink";
 import "../assets/components/CharacterCard.css";
 import Select from "./Select";
 import CharacterCardModel from "../models/CharacterCardModel.js";
 import CollapseToggleButton from "./CollapseToggleButton";
 import classNames from "../utils/classNames";
+
+const markdownTagsWithMentions = [
+	"p",
+	"strong",
+	"em",
+	"del",
+	"code",
+	"blockquote",
+	"li",
+	"h1",
+	"h2",
+	"h3",
+	"h4",
+	"h5",
+	"h6",
+	"td",
+	"th",
+	"a",
+	"span",
+];
+
+function renderMentionText(text, keyPrefix = "mention", campaignSlug) {
+	const parts = String(text || "").split(/(\[[^\]]+\])/g);
+	return parts.map((part, index) => {
+		if (part.startsWith("[") && part.endsWith("]")) {
+			const name = part.slice(1, -1).trim();
+			return (
+				<EntityLink
+					key={`${keyPrefix}-${index}`}
+					name={name}
+					campaignSlug={campaignSlug}
+					className="mention-link"
+				>
+					{name}
+				</EntityLink>
+			);
+		}
+		return part;
+	});
+}
+
+function renderMentionChildren(
+	children,
+	keyPrefix = "mention-node",
+	campaignSlug,
+) {
+	return React.Children.map(children, (child, index) => {
+		const nextKey = `${keyPrefix}-${index}`;
+		if (typeof child === "string") {
+			return renderMentionText(child, nextKey, campaignSlug);
+		}
+		if (React.isValidElement(child) && child.props?.children) {
+			return React.cloneElement(child, {
+				...child.props,
+				children: renderMentionChildren(
+					child.props.children,
+					nextKey,
+					campaignSlug,
+				),
+			});
+		}
+		return child;
+	});
+}
 
 export default function CharacterCard({
 	character,
@@ -19,9 +84,27 @@ export default function CharacterCard({
 	campaignSlug,
 	initialEditing = false,
 	type = "characters",
+	viewMode = "card",
 }) {
 	const [isEditing, setIsEditing] = useState(initialEditing);
 	const characterModel = new CharacterCardModel(character);
+	const isModalView = viewMode === "modal";
+	const isCollapsed = isModalView ? false : !!character.collapsed;
+	const mentionComponents = useMemo(
+		() =>
+			Object.fromEntries(
+				markdownTagsWithMentions.map((tag) => [
+					tag,
+					({ children, ...tagProps }) =>
+						React.createElement(
+							tag,
+							tagProps,
+							renderMentionChildren(children, `mention-${tag}`, campaignSlug),
+						),
+				]),
+			),
+		[campaignSlug],
+	);
 
 	const updateField = (field, value) => {
 		onChange(character.id, characterModel.withField(field, value));
@@ -39,22 +122,28 @@ export default function CharacterCard({
 		updateField("notes", characterModel.withDeletedNote(noteId));
 	};
 
-
 	return (
 		<div
 			className={classNames("character-card", {
-				"is-collapsed": character.collapsed,
+				"is-collapsed": isCollapsed,
 				"is-dragging": isDragging,
+				"character-card--modal": isModalView,
 			})}>
 			<div
 				className="character-card__header"
-				onClick={() => onToggleCollapse(character.id)}>
-				<CollapseToggleButton
-					size="sm"
-					collapsed={character.collapsed}
-					onClick={() => onToggleCollapse(character.id)}
-				/>
-				{character.imageUrl && character.collapsed && (
+				onClick={
+					isModalView || typeof onToggleCollapse !== "function"
+						? undefined
+						: () => onToggleCollapse(character.id)
+				}>
+				{!isModalView && typeof onToggleCollapse === "function" && (
+					<CollapseToggleButton
+						size="sm"
+						collapsed={isCollapsed}
+						onClick={() => onToggleCollapse(character.id)}
+					/>
+				)}
+				{character.imageUrl && isCollapsed && (
 					<div className="character-card__mini-portrait">
 						<img src={character.imageUrl} alt="" />
 					</div>
@@ -63,13 +152,13 @@ export default function CharacterCard({
 					<span className="character-card__name">
 						{characterModel.displayName} {character.lastName}
 					</span>
-					{character.collapsed && (
+					{isCollapsed && (
 						<span className="character-card__meta-brief">
 							{characterModel.briefMeta}
 						</span>
 					)}
 				</div>
-				{!character.collapsed && (
+				{!isCollapsed && (
 					<Button
 						variant={isEditing ? "primary" : "ghost"}
 						icon={isEditing ? "check" : "edit"}
@@ -92,7 +181,7 @@ export default function CharacterCard({
 				/>
 			</div>
 
-			{!character.collapsed && (
+			{!isCollapsed && (
 				<div className="character-card__body">
 					<div className="character-card__main-layout">
 						<div className="character-card__image-side">
@@ -185,7 +274,7 @@ export default function CharacterCard({
 										/>
 									) : (
 										<div className="character-card__text-content">
-											<ReactMarkdown>
+											<ReactMarkdown components={mentionComponents}>
 												{character.motivation || "*Мотивація не вказана*"}
 											</ReactMarkdown>
 										</div>
@@ -202,7 +291,7 @@ export default function CharacterCard({
 										/>
 									) : (
 										<div className="character-card__text-content">
-											<ReactMarkdown>
+											<ReactMarkdown components={mentionComponents}>
 												{character.trait || "*Особливості не вказані*"}
 											</ReactMarkdown>
 										</div>
@@ -250,7 +339,6 @@ export default function CharacterCard({
 					</div>
 				</div>
 			)}
-
 		</div>
 	);
 }

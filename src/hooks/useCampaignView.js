@@ -8,6 +8,11 @@ import {
 } from "../utils/noteUtils";
 import { downloadBlob } from "../utils/download";
 
+const sanitizeEntityForSave = (entity) =>
+	Object.fromEntries(
+		Object.entries(entity || {}).filter(([key]) => !key.startsWith("_")),
+	);
+
 export default function useCampaignView(props) {
 		const { campaign, onSelectSession, onNavigate, onRefreshCampaigns } =
 			props;
@@ -252,7 +257,12 @@ export default function useCampaignView(props) {
 
 				entitySaveTimeoutsRef.current[key] = setTimeout(async () => {
 					try {
-						await api.updateEntity(campaign.slug, type, entity.slug, entity);
+						await api.updateEntity(
+							campaign.slug,
+							type,
+							entity.slug,
+							sanitizeEntityForSave(entity),
+						);
 					} catch (err) {
 						console.error(`Failed to update ${type} entity`, err);
 					} finally {

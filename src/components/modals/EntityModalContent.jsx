@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { api } from "../../api";
 import CharacterCard from "../CharacterCard";
@@ -11,6 +11,10 @@ export default function EntityModalContent({
 }) {
 	const [entity, setEntity] = useState(initialEntity);
 
+	useEffect(() => {
+		setEntity(initialEntity);
+	}, [initialEntity]);
+
 	const handleUpdate = async (_id, updated) => {
 		setEntity(updated);
 		await api.updateEntity(campaignSlug, type, updated.slug, updated);
@@ -19,6 +23,7 @@ export default function EntityModalContent({
 
 	return (
 		<CharacterCard
+			key={entity?.id || entity?.slug || "entity-modal-card"}
 			character={{ ...entity, collapsed: false }}
 			onChange={handleUpdate}
 			onDelete={async () => {
@@ -26,9 +31,10 @@ export default function EntityModalContent({
 				window.dispatchEvent(new CustomEvent("refresh-entities"));
 				onClose();
 			}}
-			onToggleCollapse={() => {}}
+			onToggleCollapse={null}
 			campaignSlug={campaignSlug}
 			type={type}
+			viewMode="modal"
 		/>
 	);
 }

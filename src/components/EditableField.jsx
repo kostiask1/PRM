@@ -2,6 +2,7 @@ import React, { useMemo, useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import Input from "./Input";
 import Button from "./Button";
+import EntityLink from "./EntityLink";
 import "../assets/components/EditableField.css";
 import classNames from "../utils/classNames";
 
@@ -386,17 +387,16 @@ export default function EditableField({
 			if (part.startsWith("[") && part.endsWith("]")) {
 				const name = part.slice(1, -1);
 				return (
-					<a
+					<span
 						key={`${keyPrefix}-${index}`}
-						className="mention-link"
-						onClick={(e) => {
-							e.stopPropagation();
-							window.dispatchEvent(
-								new CustomEvent("open-entity-modal", { detail: { name } }),
-							);
-						}}>
-						{name}
-					</a>
+						onClick={(e) => e.stopPropagation()}>
+						<EntityLink
+							name={name}
+							campaignSlug={props.campaignSlug}
+							className="mention-link">
+							{name}
+						</EntityLink>
+					</span>
 				);
 			}
 			return part;
