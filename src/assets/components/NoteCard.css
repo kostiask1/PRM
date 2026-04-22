@@ -55,6 +55,7 @@
 .note-card-simple__content .EditableField {
     height: 100%;
 }
+
 .note-card-simple__content .MarkdownView,
 .note-card-simple__content .Input {
     border-top-left-radius: 0;

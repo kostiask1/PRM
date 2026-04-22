@@ -80,7 +80,11 @@ const SCENE_SCHEMA = [
  */
 
 export const SESSION_FIELD_SCHEMA = {
-	fileName: { type: "string", required: true, values: "Ідентифікатор файлу сесії" },
+	fileName: {
+		type: "string",
+		required: true,
+		values: "Ідентифікатор файлу сесії",
+	},
 	name: { type: "string", required: true, values: "Назва сесії" },
 	completed: { type: "boolean", values: "Статус завершення" },
 	completedAt: { type: "string|null", values: "ISO date-time завершення" },
@@ -135,9 +139,8 @@ export default class SessionViewModel {
 
 	/** @param {SessionScene} scene */
 	findEncounterName(scene) {
-		const entry = this.encounters.find(
-			(encounter) =>
-				idsEqual(encounter.id, scene.encounterId),
+		const entry = this.encounters.find((encounter) =>
+			idsEqual(encounter.id, scene.encounterId),
 		);
 		return entry?.name || "Без назви";
 	}

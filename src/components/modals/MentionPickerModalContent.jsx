@@ -41,7 +41,8 @@ export default function MentionPickerModalContent({
 							key={`${entity.type}-${entity.id}-${entity.name}`}
 							type="button"
 							className="MentionPicker__item"
-							onClick={() => onSelect(entity.name)}>
+							onClick={() => onSelect(entity.name)}
+						>
 							<span>{entity.name}</span>
 							<span className="muted">
 								{entity.type === "npc" ? "NPC" : "Персонаж"}

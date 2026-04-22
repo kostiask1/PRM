@@ -223,6 +223,6 @@
 }
 
 .MonsterStatBlock__favorite-btn.is-active svg {
-	fill:var(--accent);
-	stroke:var(--accent);
+	fill: var(--accent);
+	stroke: var(--accent);
 }

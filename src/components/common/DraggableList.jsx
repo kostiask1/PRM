@@ -66,7 +66,8 @@ export default function DraggableList({
 					onDragOver={(e) => e.preventDefault()}
 					className={classNames(itemClassName, {
 						"is-dragging": draggingIndex === index,
-					})}>
+					})}
+				>
 					{renderItem(item, draggingIndex === index, index)}
 				</div>
 			))}

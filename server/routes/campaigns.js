@@ -103,7 +103,10 @@ router.get("/:slug/export", async (req, res, next) => {
 
 router.get("/:slug/entities/:type", async (req, res, next) => {
 	try {
-		const entities = await storage.listEntities(req.params.slug, req.params.type);
+		const entities = await storage.listEntities(
+			req.params.slug,
+			req.params.type,
+		);
 		res.json(entities);
 	} catch (error) {
 		next(error);
@@ -130,9 +133,14 @@ router.post("/:slug/entities/:type", async (req, res, next) => {
 			motivation: req.body.motivation || "",
 			trait: req.body.trait || "",
 			notes: [],
-			...req.body
+			...req.body,
 		};
-		const saved = await storage.writeEntity(campaignSlug, type, entitySlug, data);
+		const saved = await storage.writeEntity(
+			campaignSlug,
+			type,
+			entitySlug,
+			data,
+		);
 		res.status(201).json(saved);
 	} catch (error) {
 		next(error);
@@ -143,7 +151,11 @@ router.patch("/:slug/entities/:type/:entitySlug", async (req, res, next) => {
 	try {
 		const { slug: campaignSlug, type, entitySlug } = req.params;
 		const current = await storage.readEntity(campaignSlug, type, entitySlug);
-		const updated = { ...current, ...req.body, updatedAt: new Date().toISOString() };
+		const updated = {
+			...current,
+			...req.body,
+			updatedAt: new Date().toISOString(),
+		};
 		await storage.writeEntity(campaignSlug, type, entitySlug, updated);
 		res.json(updated);
 	} catch (error) {

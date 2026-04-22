@@ -46,7 +46,9 @@ export function rollDiceFormula(input) {
 				const keepCount = Math.min(parseInt(keepSuffix.slice(1), 10), count);
 				const indexed = currentRolls.map((r, idx) => ({ val: r.val, idx }));
 				indexed.sort((a, b) => (type === "h" ? b.val - a.val : a.val - b.val));
-				const keptIndices = new Set(indexed.slice(0, keepCount).map((r) => r.idx));
+				const keptIndices = new Set(
+					indexed.slice(0, keepCount).map((r) => r.idx),
+				);
 
 				currentRolls.forEach((r, idx) => {
 					if (keptIndices.has(idx)) {
@@ -86,7 +88,8 @@ export function rollDiceFormula(input) {
 		formulaParts.push(modifierSum);
 	}
 
-	const isCritical = d20Count === 1 && (lastD20Value === 1 || lastD20Value === 20);
+	const isCritical =
+		d20Count === 1 && (lastD20Value === 1 || lastD20Value === 20);
 	const finalTotal = isCritical ? lastD20Value : diceTotal + modifierSum;
 
 	return {

@@ -130,63 +130,65 @@ export default function CharacterCard({
 				"is-collapsed": isCollapsed,
 				"is-dragging": isDragging,
 				"character-card--modal": isModalView,
-			})}>
+			})}
+		>
 			{showHeader && (
-			<div
-				className="character-card__header"
-				onClick={
-					isModalView || typeof onToggleCollapse !== "function"
-						? undefined
-						: () => onToggleCollapse(character.id)
-				}>
-				{!isModalView && typeof onToggleCollapse === "function" && (
-					<CollapseToggleButton
-						size={Button.SIZES.SMALL}
-						collapsed={isCollapsed}
-						onClick={() => onToggleCollapse(character.id)}
-					/>
-				)}
-				{character.imageUrl && isCollapsed && (
-					<div className="character-card__mini-portrait">
-						<img src={character.imageUrl} alt="" />
-					</div>
-				)}
-				<div className="character-card__title-group">
-					<span className="character-card__name">
-						{characterModel.displayName} {character.lastName}
-					</span>
-					{isCollapsed && (
-						<span className="character-card__meta-brief">
-							{characterModel.briefMeta}
+				<div
+					className="character-card__header"
+					onClick={
+						isModalView || typeof onToggleCollapse !== "function"
+							? undefined
+							: () => onToggleCollapse(character.id)
+					}
+				>
+					{!isModalView && typeof onToggleCollapse === "function" && (
+						<CollapseToggleButton
+							size={Button.SIZES.SMALL}
+							collapsed={isCollapsed}
+							onClick={() => onToggleCollapse(character.id)}
+						/>
+					)}
+					{character.imageUrl && isCollapsed && (
+						<div className="character-card__mini-portrait">
+							<img src={character.imageUrl} alt="" />
+						</div>
+					)}
+					<div className="character-card__title-group">
+						<span className="character-card__name">
+							{characterModel.displayName} {character.lastName}
 						</span>
+						{isCollapsed && (
+							<span className="character-card__meta-brief">
+								{characterModel.briefMeta}
+							</span>
+						)}
+					</div>
+					{!isCollapsed && (
+						<Button
+							variant={isEditing ? "primary" : "ghost"}
+							icon={isEditing ? "check" : "edit"}
+							size={Button.SIZES.SMALL}
+							iconSize={14}
+							onClick={(e) => {
+								e.stopPropagation();
+								setIsEditing(!isEditing);
+							}}
+							title={isEditing ? "Завершити редагування" : "Редагувати"}
+						/>
+					)}
+					{showDeleteButton && (
+						<Button
+							variant="danger"
+							icon="trash"
+							size={Button.SIZES.SMALL}
+							iconSize={14}
+							onClick={(e) => {
+								e.stopPropagation();
+								onDelete(character.id);
+							}}
+						/>
 					)}
 				</div>
-				{!isCollapsed && (
-					<Button
-						variant={isEditing ? "primary" : "ghost"}
-						icon={isEditing ? "check" : "edit"}
-						size={Button.SIZES.SMALL}
-						iconSize={14}
-						onClick={(e) => {
-							e.stopPropagation();
-							setIsEditing(!isEditing);
-						}}
-						title={isEditing ? "Завершити редагування" : "Редагувати"}
-					/>
-				)}
-				{showDeleteButton && (
-					<Button
-						variant="danger"
-						icon="trash"
-						size={Button.SIZES.SMALL}
-						iconSize={14}
-						onClick={(e) => {
-							e.stopPropagation();
-							onDelete(character.id);
-						}}
-					/>
-				)}
-			</div>
 			)}
 
 			{!isCollapsed && (
@@ -202,9 +204,12 @@ export default function CharacterCard({
 								onImageChange={(url) => updateField("imageUrl", url)}
 								imageAlt="Portrait"
 								containerClassName="character-card__portrait-container"
-								wrapperClassName={classNames("character-card__portrait-wrapper", {
-									"is-editable": isEditing,
-								})}
+								wrapperClassName={classNames(
+									"character-card__portrait-wrapper",
+									{
+										"is-editable": isEditing,
+									},
+								)}
 								deleteButtonClassName="character-card__image-delete"
 								previewTitle={characterModel.fullName || "Portrait"}
 								previewModalClassName="CharacterImageModal"
@@ -243,7 +248,8 @@ export default function CharacterCard({
 											/>
 											<Select
 												value={characterModel.level}
-												onChange={(e) => updateField("level", e.target.value)}>
+												onChange={(e) => updateField("level", e.target.value)}
+											>
 												{CharacterCardModel.getLevelOptions().map((level) => (
 													<option key={level} value={level}>
 														{level} рівень
@@ -314,7 +320,8 @@ export default function CharacterCard({
 							className="character-card__notes-header"
 							onClick={() =>
 								updateField("isNotesCollapsed", !character.isNotesCollapsed)
-							}>
+							}
+						>
 							<CollapseToggleButton
 								size={Button.SIZES.SMALL}
 								collapsed={character.isNotesCollapsed}

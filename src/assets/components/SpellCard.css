@@ -17,8 +17,7 @@
 	gap: var(--space-1);
 	margin-bottom: 16px;
 	padding-bottom: 16px;
-	border-bottom: 1px solid
-		color-mix(in srgb, var(--text-bright), transparent 90%);
+	border-bottom: 1px solid color-mix(in srgb, var(--text-bright), transparent 90%);
 }
 
 .SpellCard__props p {
@@ -30,7 +29,7 @@
 	color: var(--text);
 }
 
-.SpellCard__desc > * {
+.SpellCard__desc>* {
 	margin: var(--space-3) 0;
 }
 

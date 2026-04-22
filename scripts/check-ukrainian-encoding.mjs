@@ -18,7 +18,8 @@ const ALLOWED_EXTENSIONS = new Set([
 const mojibakePattern = /(?:[ÐÑ][\u0080-\u00BF]|Ã[\u0080-\u00BF]|ï¿½|�)/u;
 
 // Suspicious replacement with '?' inside Cyrillic word fragments.
-const badQuestionMarkBetweenCyrillicPattern = /[\u0400-\u04FF]\?[\u0400-\u04FF]/u;
+const badQuestionMarkBetweenCyrillicPattern =
+	/[\u0400-\u04FF]\?[\u0400-\u04FF]/u;
 
 // Long runs of '?' are usually broken text placeholders, not code operators.
 const suspiciousQuestionRunPattern = /\?{4,}/;

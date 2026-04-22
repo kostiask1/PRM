@@ -102,7 +102,10 @@ export const preprocessTags = (text) => {
 			const num = g1 || "6";
 			return num === "6" ? "(Recharge 6)" : `(Recharge ${num}-6)`;
 		})
-		.replace(/{@atkr\s+([a-z,]+)}/gi, (m, g1) => `${ATTACK_TYPE_MAP[g1] || g1} Attack: `)
+		.replace(
+			/{@atkr\s+([a-z,]+)}/gi,
+			(m, g1) => `${ATTACK_TYPE_MAP[g1] || g1} Attack: `,
+		)
 		.replace(/{@chance\s+(\d+)}/gi, "$1%")
 		.replace(/{@note\s+([^}]+)}/gi, "$1")
 		.replace(/{@hom}/gi, "")
@@ -172,7 +175,8 @@ export const renderRecursiveContent = (
 					key={content.name || Math.random()}
 					className={
 						content.style === "list-hang-notitle" ? "list-hang-notitle" : ""
-					}>
+					}
+				>
 					{content.items.map((item, idx) => {
 						const isObject = typeof item === "object" && item !== null;
 						return (
@@ -192,7 +196,10 @@ export const renderRecursiveContent = (
 			);
 		}
 
-		if ((content.type === "entries" || content.type === "section") && content.entries) {
+		if (
+			(content.type === "entries" || content.type === "section") &&
+			content.entries
+		) {
 			return (
 				<div key={content.name || Math.random()} className="parser-section">
 					{content.name && <strong>{content.name}. </strong>}
@@ -209,7 +216,10 @@ export const renderRecursiveContent = (
 
 		if (content.type === "table") {
 			return (
-				<div className="ParserTable__wrapper" key={content.caption || Math.random()}>
+				<div
+					className="ParserTable__wrapper"
+					key={content.caption || Math.random()}
+				>
 					{content.caption && (
 						<div className="ParserTable__caption">{content.caption}</div>
 					)}
@@ -333,7 +343,8 @@ export const parseRollsAndSpells = (
 			elements.push(
 				<RollDice
 					key={`h-${matchIndex}`}
-					formula={`1d20${formatModifier(parseInt(bonus, 10))}`}>
+					formula={`1d20${formatModifier(parseInt(bonus, 10))}`}
+				>
 					{hit}
 				</RollDice>,
 			);
@@ -345,8 +356,11 @@ export const parseRollsAndSpells = (
 						key={`s-${matchIndex}`}
 						onClick={() => onSpellClick(displayText)}
 						onHoverResolve={
-							onSpellHover ? () => onSpellHover(rawSpellName, displayText) : null
-						}>
+							onSpellHover
+								? () => onSpellHover(rawSpellName, displayText)
+								: null
+						}
+					>
 						{displayText}
 					</SpellLink>,
 				);
@@ -367,12 +381,17 @@ export const parseRollsAndSpells = (
 							onConditionHover
 								? () => onConditionHover(rawCondition, displayText)
 								: null
-						}>
+						}
+					>
 						{displayText}
 					</SpellLink>,
 				);
 			} else {
-				pushSafeMarkdownText(elements, displayText, `t-${matchIndex}-condition`);
+				pushSafeMarkdownText(
+					elements,
+					displayText,
+					`t-${matchIndex}-condition`,
+				);
 			}
 		} else {
 			pushSafeMarkdownText(elements, fullMatch, `t-${matchIndex}-raw`);

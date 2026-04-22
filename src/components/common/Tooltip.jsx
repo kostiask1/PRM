@@ -48,7 +48,12 @@ function isAncestorTooltip(ancestorId, childId) {
 	return false;
 }
 
-function calculatePosition(triggerRect, tooltipRect, viewportWidth, viewportHeight) {
+function calculatePosition(
+	triggerRect,
+	tooltipRect,
+	viewportWidth,
+	viewportHeight,
+) {
 	let left = triggerRect.left + triggerRect.width / 2 - tooltipRect.width / 2;
 	left = Math.max(
 		VIEWPORT_MARGIN,
@@ -56,7 +61,8 @@ function calculatePosition(triggerRect, tooltipRect, viewportWidth, viewportHeig
 	);
 
 	let top = triggerRect.bottom + GAP;
-	const bottomOverflow = top + tooltipRect.height > viewportHeight - VIEWPORT_MARGIN;
+	const bottomOverflow =
+		top + tooltipRect.height > viewportHeight - VIEWPORT_MARGIN;
 	if (bottomOverflow) {
 		const topCandidate = triggerRect.top - tooltipRect.height - GAP;
 		if (topCandidate >= VIEWPORT_MARGIN) {
@@ -240,7 +246,8 @@ export default function Tooltip({
 				onMouseLeave={scheduleCloseTooltip}
 				onBlur={scheduleCloseTooltip}
 				onFocus={handleTriggerEnter}
-				className={classNames("Tooltip__trigger", className)}>
+				className={classNames("Tooltip__trigger", className)}
+			>
 				{children}
 			</span>
 			{isOpen && hasContent
@@ -256,11 +263,12 @@ export default function Tooltip({
 								left: `${position.left}px`,
 								visibility:
 									position.ready && !hiddenByChild ? "visible" : "hidden",
-							}}>
+							}}
+						>
 							{content}
 						</div>,
 						document.body,
-				  )
+					)
 				: null}
 		</>
 	);

@@ -9,7 +9,7 @@
 	flex-direction: column;
 }
 
-.Bestiary__inner > .Panel__body {
+.Bestiary__inner>.Panel__body {
 	flex: 1;
 	min-height: 0;
 	display: flex;
@@ -57,7 +57,7 @@
 }
 
 .Bestiary .Panel__body,
-.Modal__body > .Bestiary__search + .Bestiary__content {
+.Modal__body>.Bestiary__search+.Bestiary__content {
 	overflow: hidden;
 	max-height: 100%;
 	display: flex;

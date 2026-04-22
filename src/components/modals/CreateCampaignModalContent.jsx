@@ -36,14 +36,16 @@ export default function CreateCampaignModalContent({
 					<Button
 						variant="footer"
 						icon="import"
-						onClick={() => fileInputRef.current?.click()}>
+						onClick={() => fileInputRef.current?.click()}
+					>
 						Імпорт кампанії
 					</Button>
 				</div>
 				<Button
 					variant="primary"
 					onClick={() => onCreateCampaign(name)}
-					disabled={!name.trim()}>
+					disabled={!name.trim()}
+				>
 					Створити
 				</Button>
 				<Button variant="ghost" onClick={onClose}>

@@ -90,7 +90,13 @@ router.get("/sources", async (req, res, next) => {
 
 router.get("/conditions", async (_req, res, next) => {
 	try {
-		const conditionsPath = path.join(__dirname, "..", "..", "database", "conditions.json");
+		const conditionsPath = path.join(
+			__dirname,
+			"..",
+			"..",
+			"database",
+			"conditions.json",
+		);
 		if (!(await storage.exists(conditionsPath))) return res.json([]);
 
 		const data = await storage.readJson(conditionsPath);

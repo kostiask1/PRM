@@ -120,7 +120,8 @@ export default function CreateCharacterButton({
 				onClick={openModal}
 				className={buttonClassName}
 				icon={icon}
-				strokeWidth={strokeWidth}>
+				strokeWidth={strokeWidth}
+			>
 				{buttonLabel || uiText.button}
 			</Button>
 
@@ -130,7 +131,8 @@ export default function CreateCharacterButton({
 					type="confirm"
 					showFooter={false}
 					onConfirm={closeModal}
-					onCancel={closeModal}>
+					onCancel={closeModal}
+				>
 					<div className="CreateCharacterModal">
 						<CharacterCard
 							character={draft}
@@ -148,13 +150,15 @@ export default function CreateCharacterButton({
 							<Button
 								variant="primary"
 								onClick={handleSubmit}
-								disabled={isSubmitting || !draft.firstName?.trim()}>
+								disabled={isSubmitting || !draft.firstName?.trim()}
+							>
 								Створити
 							</Button>
 							<Button
 								variant="ghost"
 								onClick={closeModal}
-								disabled={isSubmitting}>
+								disabled={isSubmitting}
+							>
 								Скасувати
 							</Button>
 						</div>

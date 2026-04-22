@@ -27,7 +27,10 @@ function CampaignView(props) {
 		const query = sessionSearch.trim().toLowerCase();
 		return view.sessions.filter((session) => {
 			const matchesQuery =
-				!query || String(session.name || "").toLowerCase().includes(query);
+				!query ||
+				String(session.name || "")
+					.toLowerCase()
+					.includes(query);
 			const matchesStatus =
 				sessionStatusFilter === "all"
 					? true
@@ -66,7 +69,8 @@ function CampaignView(props) {
 						title="Видалити сесію"
 					/>
 				</>
-			}>
+			}
+		>
 			<div className="ListCard__title">{session.name}</div>
 			<div className="ListCard__meta">
 				Оновлено: {viewModel.formatSessionUpdatedAt(session.updatedAt)}
@@ -123,7 +127,8 @@ function CampaignView(props) {
 								onClick={view.handleCreateSession}
 								icon="plus"
 								size={Button.SIZES.SMALL}
-								strokeWidth={2.5}>
+								strokeWidth={2.5}
+							>
 								Нова сесія
 							</Button>
 						</div>
@@ -138,19 +143,26 @@ function CampaignView(props) {
 								<Button
 									variant={sessionStatusFilter === "all" ? "primary" : "ghost"}
 									size={Button.SIZES.SMALL}
-									onClick={() => setSessionStatusFilter("all")}>
+									onClick={() => setSessionStatusFilter("all")}
+								>
 									Всі
 								</Button>
 								<Button
-									variant={sessionStatusFilter === "active" ? "primary" : "ghost"}
+									variant={
+										sessionStatusFilter === "active" ? "primary" : "ghost"
+									}
 									size={Button.SIZES.SMALL}
-									onClick={() => setSessionStatusFilter("active")}>
+									onClick={() => setSessionStatusFilter("active")}
+								>
 									Активні
 								</Button>
 								<Button
-									variant={sessionStatusFilter === "completed" ? "primary" : "ghost"}
+									variant={
+										sessionStatusFilter === "completed" ? "primary" : "ghost"
+									}
 									size={Button.SIZES.SMALL}
-									onClick={() => setSessionStatusFilter("completed")}>
+									onClick={() => setSessionStatusFilter("completed")}
+								>
 									Завершені
 								</Button>
 							</div>
@@ -168,7 +180,9 @@ function CampaignView(props) {
 								/>
 							) : (
 								<div className="CampaignView__sessions">
-									{filteredSessions.map((session) => renderSessionCard(session))}
+									{filteredSessions.map((session) =>
+										renderSessionCard(session),
+									)}
 								</div>
 							)}
 							{filteredSessions.length === 0 && (
@@ -188,7 +202,8 @@ function CampaignView(props) {
 										const next = !view.isDescriptionCollapsed;
 										view.setIsDescriptionCollapsed(next);
 										view.triggerSave({ isDescriptionCollapsed: next });
-									}}>
+									}}
+								>
 									<CollapseToggleButton
 										size={Button.SIZES.MEDIUM}
 										collapsed={view.isDescriptionCollapsed}
@@ -220,7 +235,8 @@ function CampaignView(props) {
 										const next = !view.isNotesCollapsed;
 										view.setIsNotesCollapsed(next);
 										view.triggerSave({ isNotesCollapsed: next });
-									}}>
+									}}
+								>
 									<CollapseToggleButton
 										size={Button.SIZES.MEDIUM}
 										collapsed={view.isNotesCollapsed}
@@ -263,7 +279,8 @@ function CampaignView(props) {
 										const next = !view.isCharactersCollapsed;
 										view.setIsCharactersCollapsed(next);
 										view.triggerSave({ isCharactersCollapsed: next });
-									}}>
+									}}
+								>
 									<CollapseToggleButton
 										size={Button.SIZES.MEDIUM}
 										collapsed={view.isCharactersCollapsed}
@@ -287,7 +304,9 @@ function CampaignView(props) {
 									items={view.characters}
 									className="CampaignView__characters"
 									onReorder={view.setCharacters}
-									onDrop={() => view.triggerSave({ characters: view.characters })}
+									onDrop={() =>
+										view.triggerSave({ characters: view.characters })
+									}
 									keyExtractor={(char) => char.id}
 									renderItem={(character, isDragging) => (
 										<CharacterCard
@@ -312,7 +331,8 @@ function CampaignView(props) {
 										const next = !view.isNpcsCollapsed;
 										view.setIsNpcsCollapsed(next);
 										view.triggerSave({ isNpcsCollapsed: next });
-									}}>
+									}}
+								>
 									<CollapseToggleButton
 										size={Button.SIZES.MEDIUM}
 										collapsed={view.isNpcsCollapsed}

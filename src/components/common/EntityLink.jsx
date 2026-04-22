@@ -84,7 +84,8 @@ export default function EntityLink({
 			<a
 				href="#"
 				className={classNames("mention-link", className)}
-				onClick={handleOpenModal}>
+				onClick={handleOpenModal}
+			>
 				{children || name}
 			</a>
 			{modalState && (
@@ -93,7 +94,8 @@ export default function EntityLink({
 					type="character"
 					showFooter={false}
 					onConfirm={handleCloseModal}
-					onCancel={handleCloseModal}>
+					onCancel={handleCloseModal}
+				>
 					<EntityModalContent
 						initialEntity={modalState.entity}
 						campaignSlug={resolvedCampaignSlug}

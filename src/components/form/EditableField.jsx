@@ -389,11 +389,13 @@ export default function EditableField({
 				return (
 					<span
 						key={`${keyPrefix}-${index}`}
-						onClick={(e) => e.stopPropagation()}>
+						onClick={(e) => e.stopPropagation()}
+					>
 						<EntityLink
 							name={name}
 							campaignSlug={props.campaignSlug}
-							className="mention-link">
+							className="mention-link"
+						>
 							{name}
 						</EntityLink>
 					</span>
@@ -484,7 +486,8 @@ export default function EditableField({
 		<div
 			className={classNames("EditableField", className)}
 			onClick={handleClick}
-			style={{ position: "relative" }}>
+			style={{ position: "relative" }}
+		>
 			{!isEditing && value && showCopyButton && (
 				<Button
 					variant="ghost"

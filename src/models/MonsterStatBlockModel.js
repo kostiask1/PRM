@@ -112,7 +112,10 @@ export const MONSTER_FIELD_SCHEMA = {
 	skill: { type: "object", values: "Назва навички -> бонус" },
 	languages: { type: "string|string[]", values: "Мови або тире" },
 	cr: { type: "string|number|object", values: "1/4, 2, 30, { cr }" },
-	spellcasting: { type: "array", values: "Блоки заклять з header/will/daily/spells" },
+	spellcasting: {
+		type: "array",
+		values: "Блоки заклять з header/will/daily/spells",
+	},
 	spell_list: { type: "string[]", values: "URL або slug заклять" },
 	originalBestiaryName: { type: "string", values: "Локальне поле застосунку" },
 };
@@ -197,7 +200,10 @@ export default class MonsterStatBlockModel {
 			});
 
 		let formatted = parts.join(", ");
-		if (this.monster.speed.canHover && !formatted.toLowerCase().includes("hover")) {
+		if (
+			this.monster.speed.canHover &&
+			!formatted.toLowerCase().includes("hover")
+		) {
 			formatted += " (hover)";
 		}
 		return formatted || "-";
@@ -265,7 +271,8 @@ export default class MonsterStatBlockModel {
 	}
 
 	get languages() {
-		if (typeof this.monster.languages === "string") return this.monster.languages;
+		if (typeof this.monster.languages === "string")
+			return this.monster.languages;
 		return this.monster.languages?.join(", ");
 	}
 
@@ -283,7 +290,10 @@ export default class MonsterStatBlockModel {
 				if (typeof item === "string") return item;
 				if (typeof item === "object" && item !== null) {
 					const nestedValue =
-						item.resist || item.immune || item.vulnerable || item.conditionImmune;
+						item.resist ||
+						item.immune ||
+						item.vulnerable ||
+						item.conditionImmune;
 					const base = Array.isArray(nestedValue)
 						? nestedValue.join(", ")
 						: nestedValue;

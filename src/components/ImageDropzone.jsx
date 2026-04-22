@@ -109,20 +109,27 @@ export default function ImageDropzone({
 			className={classNames("ImageDropzone", { "is-dragging": isDragging })}
 			onDragOver={handleDragOver}
 			onDragLeave={handleDragLeave}
-			onDrop={handleDrop}>
+			onDrop={handleDrop}
+		>
 			<div className="ImageDropzone__content">
 				<Icon name="image" size={48} />
 				<p>Перетягніть зображення сюди або</p>
 				<label className="ImageDropzone__label">
 					виберіть файл
-					<input type="file" accept="image/*" onChange={handleFileSelect} hidden />
+					<input
+						type="file"
+						accept="image/*"
+						onChange={handleFileSelect}
+						hidden
+					/>
 				</label>
 				<div className="ImageDropzone__divider">або</div>
 				<Button
 					variant="ghost"
 					icon="database"
 					size={Button.SIZES.SMALL}
-					onClick={() => setIsGalleryOpen(true)}>
+					onClick={() => setIsGalleryOpen(true)}
+				>
 					З галереї
 				</Button>
 			</div>
@@ -133,7 +140,8 @@ export default function ImageDropzone({
 					onCancel={() => setPendingFile(null)}
 					onConfirm={executeUpload}
 					confirmLabel={isUploading ? "Завантаження..." : "Завантажити"}
-					disabled={isUploading}>
+					disabled={isUploading}
+				>
 					<div className="ImageDropzone__upload-settings">
 						<div className="ImageDropzone__preview">
 							<img src={URL.createObjectURL(pendingFile)} alt="Preview" />

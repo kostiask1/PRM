@@ -4,7 +4,9 @@ let conditionMapCache = null;
 let conditionPromise = null;
 
 export function normalizeConditionName(name) {
-	return String(name || "").trim().toLowerCase();
+	return String(name || "")
+		.trim()
+		.toLowerCase();
 }
 
 function toConditionMap(list) {

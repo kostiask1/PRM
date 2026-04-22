@@ -1,6 +1,7 @@
 :root {
 	--font-body: "Manrope", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-	--font-heading: "IBM Plex Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+	--font-heading:
+		"IBM Plex Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 	--font-mono: "IBM Plex Mono", "Consolas", "SFMono-Regular", monospace;
 	--space-0: 0;
 	--space-1: 4px;
@@ -20,7 +21,7 @@
 	--text-on-accent: #f8fafc;
 }
 
-:root[data-theme='light'] {
+:root[data-theme="light"] {
 	--bg: #eef3f9;
 	--bg-2: #dfe7f2;
 	--input: #ffffff;
@@ -42,7 +43,7 @@
 	--text-bright: #07101f;
 }
 
-:root[data-theme='dark'] {
+:root[data-theme="dark"] {
 	--bg: #0d1627;
 	--bg-2: #07101d;
 	--input: #0a1424;

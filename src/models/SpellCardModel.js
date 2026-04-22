@@ -65,8 +65,14 @@ export const SPELL_FIELD_SCHEMA = {
 	school: { type: "string", required: true, values: "A/C/D/E/I/N/T/P/V" },
 	time: { type: "array", values: "[{ number, unit, condition? }]" },
 	range: { type: "object", values: "{ type, distance? }" },
-	components: { type: "object", values: "V/S/M; M може бути string або object" },
-	duration: { type: "array", values: "instant/timed/permanent + concentration" },
+	components: {
+		type: "object",
+		values: "V/S/M; M може бути string або object",
+	},
+	duration: {
+		type: "array",
+		values: "instant/timed/permanent + concentration",
+	},
 	entries: { type: "array", values: "Основний опис закляття" },
 	entriesHigherLevel: { type: "array", values: "Опис на вищих рівнях" },
 };

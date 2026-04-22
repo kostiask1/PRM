@@ -25,9 +25,7 @@ function sanitizeName(name) {
 		.replace(/\.+$/g, "")
 		.replace(/\s+/g, " ")
 		.slice(0, 120);
-	return [...cleaned]
-		.filter((char) => char.charCodeAt(0) >= 32)
-		.join("");
+	return [...cleaned].filter((char) => char.charCodeAt(0) >= 32).join("");
 }
 
 function campaignSlug(name) {
@@ -63,7 +61,11 @@ function campaignImagesDir(slug, category, subcategory = "") {
 }
 
 function characterDir(campaignSlug, charSlug) {
-	return path.join(campaignDir(campaignSlug), "characters", path.basename(charSlug));
+	return path.join(
+		campaignDir(campaignSlug),
+		"characters",
+		path.basename(charSlug),
+	);
 }
 
 function npcDir(campaignSlug, npcSlug) {
@@ -122,7 +124,9 @@ async function listCampaignSlugs() {
 		if (entry.isDirectory()) {
 			slugs.push(entry.name);
 		} else if (entry.isSymbolicLink()) {
-			const stats = await fs.stat(path.join(CAMPAIGNS_DIR, entry.name)).catch(() => null);
+			const stats = await fs
+				.stat(path.join(CAMPAIGNS_DIR, entry.name))
+				.catch(() => null);
 			if (stats?.isDirectory()) {
 				slugs.push(entry.name);
 			}
@@ -287,7 +291,12 @@ async function listEntities(campaignSlug, type) {
 }
 
 async function readEntity(campaignSlug, type, entitySlug) {
-	const infoPath = path.join(campaignDir(campaignSlug), type, entitySlug, "info.json");
+	const infoPath = path.join(
+		campaignDir(campaignSlug),
+		type,
+		entitySlug,
+		"info.json",
+	);
 	return readJson(infoPath);
 }
 
@@ -298,7 +307,7 @@ async function writeEntity(campaignSlug, type, entitySlug, data) {
 	const payload = {
 		...data,
 		slug: entitySlug,
-		updatedAt: new Date().toISOString()
+		updatedAt: new Date().toISOString(),
 	};
 	await writeJson(infoPath, payload);
 	return payload;
@@ -324,7 +333,9 @@ async function listSessions(slug) {
 		if (entry.isFile()) {
 			files.push(entry.name);
 		} else if (entry.isSymbolicLink()) {
-			const stats = await fs.stat(path.join(sessionsDir, entry.name)).catch(() => null);
+			const stats = await fs
+				.stat(path.join(sessionsDir, entry.name))
+				.catch(() => null);
 			if (stats?.isFile()) {
 				files.push(entry.name);
 			}
@@ -422,7 +433,12 @@ async function ensureUniqueEntitySlug(campaignSlugValue, type, baseSlug) {
 	let slug = normalizedBase;
 	let counter = 2;
 	while (true) {
-		const infoPath = path.join(campaignDir(campaignSlugValue), type, slug, "info.json");
+		const infoPath = path.join(
+			campaignDir(campaignSlugValue),
+			type,
+			slug,
+			"info.json",
+		);
 		if (!(await exists(infoPath))) return slug;
 		slug = `${normalizedBase}-${counter}`;
 		counter += 1;
@@ -472,12 +488,18 @@ async function importCampaignBundle(bundle, options = {}) {
 	const { meta, sessions = [], entities = {} } = bundle;
 	if (!meta || !meta.name) throw new Error("Невірний формат бандла");
 	const sourceSlug = meta.slug || campaignSlug(meta.name);
-	const forcedSlug = options.forcedSlug ? path.basename(options.forcedSlug) : null;
+	const forcedSlug = options.forcedSlug
+		? path.basename(options.forcedSlug)
+		: null;
 	const slug = forcedSlug
 		? forcedSlug
 		: await ensureUniqueCampaignSlug(campaignSlug(meta.name));
 
-	if (forcedSlug && options.replaceExisting && (await exists(campaignDir(slug)))) {
+	if (
+		forcedSlug &&
+		options.replaceExisting &&
+		(await exists(campaignDir(slug)))
+	) {
 		await deleteCampaignData(slug);
 	}
 	const now = new Date().toISOString();
@@ -510,8 +532,7 @@ async function importCampaignBundle(bundle, options = {}) {
 		const list = Array.isArray(entities[type]) ? entities[type] : [];
 		for (const entity of list) {
 			const desiredSlug =
-				entity.slug ||
-				campaignSlug(entity.firstName || entity.name || type);
+				entity.slug || campaignSlug(entity.firstName || entity.name || type);
 			const entitySlug = await ensureUniqueEntitySlug(slug, type, desiredSlug);
 			const normalizedEntity = replaceImageSlugReferences(
 				entity,
@@ -591,7 +612,10 @@ async function importCampaignArchiveBundle(archiveBundle) {
 	const importedMeta = await importCampaignBundle(
 		archiveBundle.bundle || archiveBundle,
 	);
-	await restoreCampaignImagesFromArchive(importedMeta.slug, archiveBundle.images || []);
+	await restoreCampaignImagesFromArchive(
+		importedMeta.slug,
+		archiveBundle.images || [],
+	);
 	return importedMeta;
 }
 
@@ -641,7 +665,7 @@ async function listImages(slug, category, subcategory = "") {
 		.map((e) => ({
 			name: e.name,
 			url: `/api/images/${encodeURIComponent(slug)}/${encodeURIComponent(category)}${sub ? "/" + encodeURIComponent(sub) : ""}/${encodeURIComponent(e.name)}`,
-			path: path.join(category, sub, e.name)
+			path: path.join(category, sub, e.name),
 		}));
 }
 
@@ -654,7 +678,7 @@ async function listSubcategories(slug, category, subcategory = "") {
 
 async function updateAllImageReferences(moveResults) {
 	if (!moveResults.length) return;
-	
+
 	const campaigns = await listCampaignSlugs();
 	for (const slug of campaigns) {
 		// 1. Оновлення мети кампанії
@@ -663,7 +687,10 @@ async function updateAllImageReferences(moveResults) {
 			let meta = await readJson(metaPath);
 			let changed = false;
 			for (const res of moveResults) {
-				if (meta.imageUrl === res.oldUrl) { meta.imageUrl = res.newUrl; changed = true; }
+				if (meta.imageUrl === res.oldUrl) {
+					meta.imageUrl = res.newUrl;
+					changed = true;
+				}
 			}
 			if (changed) await writeJson(metaPath, meta);
 		}
@@ -674,7 +701,10 @@ async function updateAllImageReferences(moveResults) {
 			for (const entity of entities) {
 				let changed = false;
 				for (const res of moveResults) {
-					if (entity.imageUrl === res.oldUrl) { entity.imageUrl = res.newUrl; changed = true; }
+					if (entity.imageUrl === res.oldUrl) {
+						entity.imageUrl = res.newUrl;
+						changed = true;
+					}
 				}
 				if (changed) {
 					await writeEntity(slug, type, entity.slug, entity);
@@ -719,7 +749,7 @@ async function moveImages(items, src, dest) {
 
 		if (await exists(oldPath)) {
 			const isDir = (await fs.stat(oldPath)).isDirectory();
-			
+
 			// Збираємо список файлів для оновлення посилань
 			const filesToTrack = [];
 			if (isDir) {
@@ -727,7 +757,8 @@ async function moveImages(items, src, dest) {
 					const entries = await fs.readdir(dir, { withFileTypes: true });
 					for (const e of entries) {
 						if (e.isFile()) filesToTrack.push(path.join(sub, e.name));
-						else if (e.isDirectory()) await walk(path.join(dir, e.name), path.join(sub, e.name));
+						else if (e.isDirectory())
+							await walk(path.join(dir, e.name), path.join(sub, e.name));
 					}
 				};
 				await walk(oldPath);
@@ -739,17 +770,29 @@ async function moveImages(items, src, dest) {
 
 			for (const relPath of filesToTrack) {
 				const fileName = isDir ? relPath : name;
-				const oldSub = sSub ? (isDir ? path.join(sSub, name, relPath) : sSub) : (isDir ? path.join(name, relPath) : "");
-				const newSub = dSub ? (isDir ? path.join(dSub, name, relPath) : dSub) : (isDir ? path.join(name, relPath) : "");
-				
+				const oldSub = sSub
+					? isDir
+						? path.join(sSub, name, relPath)
+						: sSub
+					: isDir
+						? path.join(name, relPath)
+						: "";
+				const newSub = dSub
+					? isDir
+						? path.join(dSub, name, relPath)
+						: dSub
+					: isDir
+						? path.join(name, relPath)
+						: "";
+
 				results.push({
 					oldUrl: `/api/images/${encodeURIComponent(sSlug)}/${encodeURIComponent(src.category)}${oldSub ? "/" + oldSub.split(path.sep).join("/") : ""}${isDir ? "" : "/" + encodeURIComponent(fileName)}`,
-					newUrl: `/api/images/${encodeURIComponent(dSlug)}/${encodeURIComponent(dest.category)}${newSub ? "/" + newSub.split(path.sep).join("/") : ""}${isDir ? "" : "/" + encodeURIComponent(fileName)}`
+					newUrl: `/api/images/${encodeURIComponent(dSlug)}/${encodeURIComponent(dest.category)}${newSub ? "/" + newSub.split(path.sep).join("/") : ""}${isDir ? "" : "/" + encodeURIComponent(fileName)}`,
 				});
 			}
 		}
 	}
-	
+
 	await updateAllImageReferences(results);
 	return results;
 }
@@ -759,8 +802,10 @@ async function renameImage(slug, category, subcategory, oldName, newName) {
 	const oldPath = path.join(dir, oldName);
 	const newPath = path.join(dir, newName);
 
-	if (!(await exists(oldPath))) throw new Error(`Файл '${oldName}' не знайдено.`);
-	if (oldPath !== newPath && (await exists(newPath))) throw new Error(`Файл '${newName}' вже існує.`);
+	if (!(await exists(oldPath)))
+		throw new Error(`Файл '${oldName}' не знайдено.`);
+	if (oldPath !== newPath && (await exists(newPath)))
+		throw new Error(`Файл '${newName}' вже існує.`);
 
 	await renameWithRetry(oldPath, newPath);
 
@@ -820,7 +865,7 @@ async function renameSubcategory(slug, category, oldName, newName) {
 	if (!(await exists(oldPath))) {
 		throw new Error(`Підкатегорія '${oldName}' не знайдена.`);
 	}
-	if (oldPath !== newPath && await exists(newPath)) {
+	if (oldPath !== newPath && (await exists(newPath))) {
 		throw new Error(`Підкатегорія '${newName}' вже існує.`);
 	}
 	await fs.rename(oldPath, newPath);

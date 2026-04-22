@@ -36,7 +36,11 @@
  */
 
 export const CAMPAIGN_FIELD_SCHEMA = {
-	slug: { type: "string", required: true, values: "URL-safe ідентифікатор кампанії" },
+	slug: {
+		type: "string",
+		required: true,
+		values: "URL-safe ідентифікатор кампанії",
+	},
 	name: { type: "string", required: true, values: "Назва кампанії" },
 	createdAt: { type: "string", values: "ISO date-time" },
 	description: { type: "string", values: "Текст сюжету кампанії" },

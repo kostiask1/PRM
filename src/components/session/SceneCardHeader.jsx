@@ -37,7 +37,8 @@ export default function SceneCardHeader({
 						event.stopPropagation();
 						onOpenEncounter();
 					}}
-					title={encounterName}>
+					title={encounterName}
+				>
 					<Icon name="swords" size={18} className="SceneCard__encounter-icon" />
 					<span className="SceneCard__encounter-name">{encounterName}</span>
 				</Button>

@@ -78,7 +78,9 @@ function Modal({
 	getConfirmValue,
 }) {
 	const [inputValue, setInputValue] = useState(defaultValue || "");
-	const [checkboxValue, setCheckboxValue] = useState(Boolean(checkboxDefaultChecked));
+	const [checkboxValue, setCheckboxValue] = useState(
+		Boolean(checkboxDefaultChecked),
+	);
 	const inputRef = useRef(null);
 	const confirmButtonRef = useRef(null);
 
@@ -133,12 +135,14 @@ function Modal({
 		<div className="Modal__overlay" onClick={handleClose}>
 			<div
 				className={classNames("Modal__card", `Modal__card--${type}`, className)}
-				onClick={(e) => e.stopPropagation()}>
+				onClick={(e) => e.stopPropagation()}
+			>
 				<div className="Modal__header">
 					<h3>{title}</h3>
 					<button
 						className="Modal__close"
-						onClick={() => onCancel && onCancel()}>
+						onClick={() => onCancel && onCancel()}
+					>
 						&times;
 					</button>
 				</div>
@@ -178,14 +182,15 @@ function Modal({
 						<Button
 							ref={confirmButtonRef}
 							variant={type === "error" ? "danger" : "primary"}
-							onClick={() => onConfirm(resolveConfirmValue())}>
+							onClick={() => onConfirm(resolveConfirmValue())}
+						>
 							{confirmLabel || (isAlert ? "ОК" : "Підтвердити")}
 						</Button>
 					</div>
 				)}
 			</div>
 		</div>,
-		document.body
+		document.body,
 	);
 }
 

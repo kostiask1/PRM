@@ -81,7 +81,8 @@ export default function Sidebar({
 								key={item.id}
 								size={Button.SIZES.SMALL}
 								variant={dbImportStrategy === item.id ? "primary" : "ghost"}
-								onClick={() => handleSelectImportStrategy(item.id)}>
+								onClick={() => handleSelectImportStrategy(item.id)}
+							>
 								{item.label}
 							</Button>
 						))}
@@ -115,7 +116,8 @@ export default function Sidebar({
 					onClick={(e) => {
 						e.preventDefault();
 						setIsGalleryOpen(true);
-					}}>
+					}}
+				>
 					<Icon name="image" />
 					<span>Галерея</span>
 				</a>
@@ -127,7 +129,8 @@ export default function Sidebar({
 							e.preventDefault();
 							onSelectCampaign("bestiary");
 						}
-					}}>
+					}}
+				>
 					<Icon name="skull" />
 					<span>Бестіарій</span>
 				</a>
@@ -139,7 +142,8 @@ export default function Sidebar({
 							e.preventDefault();
 							onSelectCampaign("spells");
 						}
-					}}>
+					}}
+				>
 					<Icon name="magic" />
 					<span>Заклинання</span>
 				</a>
@@ -175,7 +179,8 @@ export default function Sidebar({
 										onToggleCampaignStatus(campaign);
 									}}
 								/>
-							}>
+							}
+						>
 							<div className="ListCard__sidebar-content">
 								<Icon name="map" className="ListCard__sidebar-icon" />
 								<div className="ListCard__sidebar-info">
@@ -196,42 +201,48 @@ export default function Sidebar({
 						href="https://homebrewery.naturalcrit.com/"
 						target="_blank"
 						rel="noopener noreferrer"
-						className="Sidebar__resource-item">
+						className="Sidebar__resource-item"
+					>
 						<Icon name="book" size={16} /> <span>Homebrewery</span>
 					</a>
 					<a
 						href="https://crowsnest.me/tokenizer/"
 						target="_blank"
 						rel="noopener noreferrer"
-						className="Sidebar__resource-item">
+						className="Sidebar__resource-item"
+					>
 						<Icon name="user" size={16} /> <span>Tokenizer</span>
 					</a>
 					<a
 						href="https://forgottenadventures.piwigo.com"
 						target="_blank"
 						rel="noopener noreferrer"
-						className="Sidebar__resource-item">
+						className="Sidebar__resource-item"
+					>
 						<Icon name="layers" size={16} /> <span>Assets</span>
 					</a>
 					<a
 						href="https://www.owlbear.rodeo/"
 						target="_blank"
 						rel="noopener noreferrer"
-						className="Sidebar__resource-item">
+						className="Sidebar__resource-item"
+					>
 						<Icon name="monitor" size={16} /> <span>Owlbear Rodeo</span>
 					</a>
 					<a
 						href="https://kemono.cr/patreon/user/16010661"
 						target="_blank"
 						rel="noopener noreferrer"
-						className="Sidebar__resource-item">
+						className="Sidebar__resource-item"
+					>
 						<Icon name="map" size={16} /> <span>Мапи Szepeku</span>
 					</a>
 					<a
 						href="https://chatgpt.com/g/g-69c24d157a348191b640bf111b486080-ttrpg-map-architect"
 						target="_blank"
 						rel="noopener noreferrer"
-						className="Sidebar__resource-item">
+						className="Sidebar__resource-item"
+					>
 						<Icon name="wand" size={16} /> <span>Map Architect (AI)</span>
 					</a>
 				</div>
@@ -265,14 +276,16 @@ export default function Sidebar({
 									}),
 								);
 							}
-						}}>
+						}}
+					>
 						Бекап
 					</Button>
 					<Button
 						variant="footer"
 						icon="restore"
 						iconSize={16}
-						onClick={handleOpenImportDb}>
+						onClick={handleOpenImportDb}
+					>
 						Імпорт БД
 					</Button>
 				</div>

@@ -180,7 +180,8 @@ export default function Spells() {
 			<div key={key}>
 				<ListCard
 					active={isSelected}
-					onClick={() => setSelectedSpell(isSelected ? "" : spell)}>
+					onClick={() => setSelectedSpell(isSelected ? "" : spell)}
+				>
 					<div className="ListCard__title">
 						{capitalizeWords(spell.name.split("|")[0])}
 					</div>
@@ -206,7 +207,8 @@ export default function Spells() {
 					{sources.length > 0 && (
 						<Select
 							value={selectedSource}
-							onChange={(e) => setSelectedSource(e.target.value)}>
+							onChange={(e) => setSelectedSource(e.target.value)}
+						>
 							<option value="all">УСІ ДЖЕРЕЛА</option>
 							{sources.map((s) => (
 								<option key={s} value={s}>
@@ -218,7 +220,8 @@ export default function Spells() {
 					<Select
 						value={selectedLevel}
 						onChange={(e) => setSelectedLevel(e.target.value)}
-						className="Spells__level-select">
+						className="Spells__level-select"
+					>
 						<option value="all">УСІ РІВНІ</option>
 						<option value="0">Замовляння (0)</option>
 						{[1, 2, 3, 4, 5, 6, 7, 8, 9].map((lvl) => (
@@ -237,7 +240,8 @@ export default function Spells() {
 							className={classNames("Spells__sort-btn", {
 								"is-active": sortOrder !== "none",
 							})}
-							onClick={toggleSort}>
+							onClick={toggleSort}
+						>
 							LVL <Icon name={`sort-${sortOrder}`} />
 						</button>
 					</Tooltip>

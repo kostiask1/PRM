@@ -3,10 +3,7 @@ import Button from "./form/Button";
 import Input from "./form/Input";
 import Icon from "./common/Icon";
 import Tooltip from "./common/Tooltip";
-import {
-	publishDiceResultAction,
-	requestDiceRollAction,
-} from "../actions/app";
+import { publishDiceResultAction, requestDiceRollAction } from "../actions/app";
 import { rollDiceFormula } from "../utils/dice";
 import { useAppDispatch, useAppSelector } from "../store/appStore";
 import classNames from "../utils/classNames";
@@ -41,17 +38,20 @@ export default function DiceCalculator() {
 		};
 	}, []);
 
-	const parseAndRoll = useCallback((str, context = null) => {
-		if (!str) return;
+	const parseAndRoll = useCallback(
+		(str, context = null) => {
+			if (!str) return;
 
-		const entry = rollDiceFormula(str);
-		if (!entry) return;
+			const entry = rollDiceFormula(str);
+			if (!entry) return;
 
-		setLastResult(entry);
-		setHistory((prev) => [entry, ...prev].slice(0, 10));
-		setIsOpen(true);
-		dispatch(publishDiceResultAction(entry, context));
-	}, [dispatch]);
+			setLastResult(entry);
+			setHistory((prev) => [entry, ...prev].slice(0, 10));
+			setIsOpen(true);
+			dispatch(publishDiceResultAction(entry, context));
+		},
+		[dispatch],
+	);
 
 	useEffect(() => {
 		const requestId = diceRollRequest?.requestId;
@@ -181,7 +181,8 @@ export default function DiceCalculator() {
 							<div className="DiceCalculator__lastResult">
 								<Tooltip
 									delay={500}
-									content={`${lastResult.formula} (${getFullBreakdownString(lastResult.breakdown)})`}>
+									content={`${lastResult.formula} (${getFullBreakdownString(lastResult.breakdown)})`}
+								>
 									<div className="DiceCalculator__formulaLabel">
 										{lastResult.formula} (
 										{renderBreakdown(lastResult.breakdown)})
@@ -190,9 +191,12 @@ export default function DiceCalculator() {
 								<div className="DiceCalculator__totalValue-container">
 									<span
 										className={classNames("DiceCalculator__totalValue", {
-											"dice-max": lastResult.isCritical && lastResult.total === 20,
-											"dice-min": lastResult.isCritical && lastResult.total !== 20,
-										})}>
+											"dice-max":
+												lastResult.isCritical && lastResult.total === 20,
+											"dice-min":
+												lastResult.isCritical && lastResult.total !== 20,
+										})}
+									>
 										{lastResult.total}
 									</span>
 									{lastResult.average !== undefined && (
@@ -227,21 +231,27 @@ export default function DiceCalculator() {
 									key={sides}
 									variant="ghost"
 									size={Button.SIZES.SMALL}
-									onClick={() => addToFormula("die", sides)}>
+									onClick={() => addToFormula("die", sides)}
+								>
 									d{sides}
 								</Button>
 							))}
 						</div>
 					</div>
 					<div className="DiceCalculator__actions">
-						<Button variant="danger" size={Button.SIZES.SMALL} onClick={clearFormula}>
+						<Button
+							variant="danger"
+							size={Button.SIZES.SMALL}
+							onClick={clearFormula}
+						>
 							Clear
 						</Button>
 						<Button
 							variant="primary"
 							className="DiceCalculator__rollBtn"
 							onClick={executeRoll}
-							disabled={!manualInput.trim()}>
+							disabled={!manualInput.trim()}
+						>
 							ROLL
 						</Button>
 					</div>
@@ -252,7 +262,8 @@ export default function DiceCalculator() {
 								<span>Історія</span>
 								<button
 									onClick={clearHistory}
-									className="DiceCalculator__clearHistoryBtn">
+									className="DiceCalculator__clearHistoryBtn"
+								>
 									Очистити
 								</button>
 							</div>
@@ -263,10 +274,12 @@ export default function DiceCalculator() {
 										onClick={() =>
 											dispatch(requestDiceRollAction(roll.formula))
 										}
-										key={roll.id}>
+										key={roll.id}
+									>
 										<Tooltip
 											delay={750}
-											content={`${roll.formula} = ${roll.total} (${getFullBreakdownString(roll.breakdown)})`}>
+											content={`${roll.formula} = ${roll.total} (${getFullBreakdownString(roll.breakdown)})`}
+										>
 											<div className="DiceCalculator__historyInfo">
 												<span>
 													<strong>
@@ -278,7 +291,8 @@ export default function DiceCalculator() {
 																		? "dice-max"
 																		: "dice-min"
 																	: ""
-															}>
+															}
+														>
 															{" "}
 															{roll.total}
 														</span>
@@ -299,7 +313,8 @@ export default function DiceCalculator() {
 			<Tooltip content="CTRL+D">
 				<button
 					className="DiceCalculator__toggle"
-					onClick={() => setIsOpen(!isOpen)}>
+					onClick={() => setIsOpen(!isOpen)}
+				>
 					<Icon name="dice" size={28} />
 				</button>
 			</Tooltip>

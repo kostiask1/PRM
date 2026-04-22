@@ -57,7 +57,7 @@ router.get("/search", async (req, res, next) => {
 router.get("/favorites", async (req, res, next) => {
 	try {
 		const favorites = await storage.readFavorites();
-		res.json(favorites.map(f => ({ ...f, source: f.source?.toUpperCase() })));
+		res.json(favorites.map((f) => ({ ...f, source: f.source?.toUpperCase() })));
 	} catch (error) {
 		next(error);
 	}
@@ -67,16 +67,18 @@ router.post("/favorites/toggle", async (req, res, next) => {
 	try {
 		const { name, source } = req.body;
 		const normalizedSource = source?.toUpperCase();
-		
+
 		let favorites = await storage.readFavorites();
-		const index = favorites.findIndex(f => f.name === name && f.source?.toUpperCase() === normalizedSource);
-		
+		const index = favorites.findIndex(
+			(f) => f.name === name && f.source?.toUpperCase() === normalizedSource,
+		);
+
 		if (index > -1) {
 			favorites.splice(index, 1);
 		} else {
 			favorites.push({ name, source: normalizedSource });
 		}
-		
+
 		await storage.writeFavorites(favorites);
 		res.json(favorites);
 	} catch (error) {
@@ -152,8 +154,9 @@ router.get("/:source", async (req, res, next) => {
 			storage.resolveMonster(
 				{
 					...m,
-					source:
-						(m.source || path.parse(filePath).name.replace(/^bestiary-/i, "")).toUpperCase(),
+					source: (
+						m.source || path.parse(filePath).name.replace(/^bestiary-/i, "")
+					).toUpperCase(),
 				},
 				index,
 			),

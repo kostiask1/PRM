@@ -7,17 +7,9 @@ import {
 	requestDiceRollAction,
 } from "../actions/app";
 import { api } from "../api";
-import {
-	navigateTo,
-	useAppDispatch,
-	useAppSelector,
-} from "../store/appStore";
+import { navigateTo, useAppDispatch, useAppSelector } from "../store/appStore";
 
-export default function useEncounterView({
-	campaign,
-	sessionId,
-	encounterId,
-}) {
+export default function useEncounterView({ campaign, sessionId, encounterId }) {
 	const dispatch = useAppDispatch();
 	const handleBack = useCallback(
 		() => navigateTo(campaign.slug, sessionId),
@@ -120,7 +112,11 @@ export default function useEncounterView({
 			const fullName = `${firstName} ${lastName}`.trim();
 			const fallbackName = String(entity?.name || "").trim();
 			return Array.from(
-				new Set([fullName, fallbackName].map((name) => normalizeName(name)).filter(Boolean)),
+				new Set(
+					[fullName, fallbackName]
+						.map((name) => normalizeName(name))
+						.filter(Boolean),
+				),
 			);
 		};
 
@@ -175,8 +171,9 @@ export default function useEncounterView({
 			const performSave = async () => {
 				try {
 					const currentSession = await api.getSession(campaign.slug, sessionId);
-					const updatedEncounters = (currentSession.data.encounters || []).map((e) =>
-						e.id.toString() === encounterId.toString() ? updatedEncounter : e,
+					const updatedEncounters = (currentSession.data.encounters || []).map(
+						(e) =>
+							e.id.toString() === encounterId.toString() ? updatedEncounter : e,
 					);
 
 					await api.updateSession(campaign.slug, sessionId, {
@@ -225,7 +222,9 @@ export default function useEncounterView({
 			if (!encounter) return;
 
 			const hpVal =
-				typeof m.hp === "object" && m.hp?.average ? m.hp.average : m.hit_points || 0;
+				typeof m.hp === "object" && m.hp?.average
+					? m.hp.average
+					: m.hit_points || 0;
 
 			let acVal = m.armor_class || 0;
 			if (Array.isArray(m.ac) && m.ac[0]) {
@@ -278,7 +277,9 @@ export default function useEncounterView({
 			const updated = { ...encounter, monsters: updatedMonsters };
 			setEncounter(updated);
 			if (selectedInstance?.instanceId === instanceId) {
-				setSelectedInstance(updatedMonsters.find((m) => m.instanceId === instanceId));
+				setSelectedInstance(
+					updatedMonsters.find((m) => m.instanceId === instanceId),
+				);
 			}
 			saveEncounterState(updated, 500);
 		},
@@ -289,12 +290,16 @@ export default function useEncounterView({
 		(instanceId, newMaxHp) => {
 			if (!encounter) return;
 			const updatedMonsters = encounter.monsters.map((m) =>
-				m.instanceId === instanceId ? { ...m, hit_points: parseInt(newMaxHp, 10) || 0 } : m,
+				m.instanceId === instanceId
+					? { ...m, hit_points: parseInt(newMaxHp, 10) || 0 }
+					: m,
 			);
 			const updated = { ...encounter, monsters: updatedMonsters };
 			setEncounter(updated);
 			if (selectedInstance?.instanceId === instanceId) {
-				setSelectedInstance(updatedMonsters.find((m) => m.instanceId === instanceId));
+				setSelectedInstance(
+					updatedMonsters.find((m) => m.instanceId === instanceId),
+				);
 			}
 			saveEncounterState(updated, 500);
 		},
@@ -334,7 +339,9 @@ export default function useEncounterView({
 				const updated = { ...encounter, monsters: updatedMonsters };
 				setEncounter(updated);
 				if (selectedInstance?.instanceId === instanceId) {
-					setSelectedInstance(updatedMonsters.find((m) => m.instanceId === instanceId));
+					setSelectedInstance(
+						updatedMonsters.find((m) => m.instanceId === instanceId),
+					);
 				}
 				saveEncounterState(updated);
 			}
@@ -371,7 +378,9 @@ export default function useEncounterView({
 				try {
 					const imported = JSON.parse(event.target.result);
 					if (!imported.monsters || !Array.isArray(imported.monsters)) {
-						throw new Error("Невірний формат файлу (відсутній список монстрів)");
+						throw new Error(
+							"Невірний формат файлу (відсутній список монстрів)",
+						);
 					}
 
 					const updated = {
@@ -421,7 +430,9 @@ export default function useEncounterView({
 		(instanceId) => {
 			if (!encounter) return;
 
-			const target = encounter.monsters.find((monster) => monster.instanceId === instanceId);
+			const target = encounter.monsters.find(
+				(monster) => monster.instanceId === instanceId,
+			);
 			if (!target) return;
 
 			const hpFormula =
@@ -429,20 +440,23 @@ export default function useEncounterView({
 				target.hit_dice ||
 				"";
 
-			if (!String(hpFormula || "").trim() || !/d/i.test(String(hpFormula || ""))) {
+			if (
+				!String(hpFormula || "").trim() ||
+				!/d/i.test(String(hpFormula || ""))
+			) {
 				setNotification(`Для ${target.name} не знайдено формулу HP.`);
 				return;
 			}
 			dispatch(
 				requestDiceRollAction({
-				formula: hpFormula,
-				context: {
-					kind: "encounter_hp",
-					campaignSlug: campaign.slug,
-					sessionId: String(sessionId),
-					encounterId: String(encounterId),
-					instanceId,
-				},
+					formula: hpFormula,
+					context: {
+						kind: "encounter_hp",
+						campaignSlug: campaign.slug,
+						sessionId: String(sessionId),
+						encounterId: String(encounterId),
+						instanceId,
+					},
 				}),
 			);
 		},
@@ -547,4 +561,3 @@ export default function useEncounterView({
 		handleBack,
 	};
 }
-

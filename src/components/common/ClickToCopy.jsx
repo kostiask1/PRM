@@ -30,7 +30,8 @@ export default function ClickToCopy({
 			<Tooltip content="Натисніть, щоб скопіювати">
 				<div
 					className={classNames("ClickToCopy", className)}
-					onClick={handleCopy}>
+					onClick={handleCopy}
+				>
 					{children}
 				</div>
 			</Tooltip>

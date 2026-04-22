@@ -15,7 +15,8 @@ app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 function parseArchivePayload(buffer) {
-	const isGzip = buffer?.length >= 2 && buffer[0] === 0x1f && buffer[1] === 0x8b;
+	const isGzip =
+		buffer?.length >= 2 && buffer[0] === 0x1f && buffer[1] === 0x8b;
 	const raw = isGzip ? zlib.gunzipSync(buffer) : buffer;
 	return JSON.parse(raw.toString("utf8"));
 }
@@ -94,7 +95,9 @@ app.post("/api/import-all", async (req, res, next) => {
 		}
 		for (const bundle of bundles) {
 			if (strategy === "replace_by_id") {
-				const existingSlug = await storage.findCampaignSlugById(bundle?.meta?.id);
+				const existingSlug = await storage.findCampaignSlugById(
+					bundle?.meta?.id,
+				);
 				if (existingSlug) {
 					await storage.importCampaignBundle(bundle, {
 						forcedSlug: existingSlug,
@@ -116,43 +119,47 @@ const archiveUpload = multer({
 	limits: { fileSize: 200 * 1024 * 1024 },
 });
 
-app.post("/api/import-archive", archiveUpload.single("archive"), async (req, res, next) => {
-	try {
-		if (!req.file?.buffer) {
-			return res.status(400).json({ error: "Файл архіву не передано." });
+app.post(
+	"/api/import-archive",
+	archiveUpload.single("archive"),
+	async (req, res, next) => {
+		try {
+			if (!req.file?.buffer) {
+				return res.status(400).json({ error: "Файл архіву не передано." });
+			}
+
+			const mode = req.query.mode === "campaign" ? "campaign" : "all";
+			const strategy = normalizeImportStrategy(req.query.strategy);
+			const effectiveStrategy = mode === "all" ? strategy : "append";
+			const parsed = parseArchivePayload(req.file.buffer);
+			const campaigns = Array.isArray(parsed)
+				? parsed
+				: Array.isArray(parsed?.campaigns)
+					? parsed.campaigns
+					: [parsed];
+			const selected = mode === "campaign" ? campaigns.slice(0, 1) : campaigns;
+
+			if (effectiveStrategy === "wipe_and_replace") {
+				await storage.clearAllCampaignData();
+			}
+
+			for (const archiveBundle of selected) {
+				await storage.importCampaignArchiveBundleWithStrategy(
+					archiveBundle,
+					effectiveStrategy,
+				);
+			}
+
+			res.status(201).json({
+				ok: true,
+				imported: selected.length,
+				strategy: effectiveStrategy,
+			});
+		} catch (error) {
+			next(error);
 		}
-
-		const mode = req.query.mode === "campaign" ? "campaign" : "all";
-		const strategy = normalizeImportStrategy(req.query.strategy);
-		const effectiveStrategy = mode === "all" ? strategy : "append";
-		const parsed = parseArchivePayload(req.file.buffer);
-		const campaigns = Array.isArray(parsed)
-			? parsed
-			: Array.isArray(parsed?.campaigns)
-				? parsed.campaigns
-				: [parsed];
-		const selected = mode === "campaign" ? campaigns.slice(0, 1) : campaigns;
-
-		if (effectiveStrategy === "wipe_and_replace") {
-			await storage.clearAllCampaignData();
-		}
-
-		for (const archiveBundle of selected) {
-			await storage.importCampaignArchiveBundleWithStrategy(
-				archiveBundle,
-				effectiveStrategy,
-			);
-		}
-
-		res.status(201).json({
-			ok: true,
-			imported: selected.length,
-			strategy: effectiveStrategy,
-		});
-	} catch (error) {
-		next(error);
-	}
-});
+	},
+);
 
 app.get("/api/health", async (_req, res) => {
 	res.json({ ok: true });
@@ -170,9 +177,12 @@ const upload = multer({
 		},
 		filename: (req, file, cb) => {
 			// Виправлення кодування для кириличних назв файлів
-			const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+			const originalName = Buffer.from(file.originalname, "latin1").toString(
+				"utf8",
+			);
 			const ext = path.extname(originalName);
-			const baseName = storage.sanitizeName(path.parse(originalName).name) || "image";
+			const baseName =
+				storage.sanitizeName(path.parse(originalName).name) || "image";
 			const dir = storage.campaignImagesDir(
 				req.params.slug,
 				req.params.category,
@@ -205,9 +215,9 @@ const upload = multer({
 app.get("/api/campaigns/:slug/images/:category", async (req, res, next) => {
 	try {
 		const images = await storage.listImages(
-			req.params.slug, 
-			req.params.category, 
-			req.query.subcategory || "" // Виправлення: гарантуємо, що передається рядок, а не undefined
+			req.params.slug,
+			req.params.category,
+			req.query.subcategory || "", // Виправлення: гарантуємо, що передається рядок, а не undefined
 		);
 		res.json(images);
 	} catch (error) {
@@ -215,64 +225,96 @@ app.get("/api/campaigns/:slug/images/:category", async (req, res, next) => {
 	}
 });
 
-app.post("/api/campaigns/:slug/images/:category", upload.single("image"), (req, res) => {
-	const sub = req.body.subcategory ? `/${encodeURIComponent(req.body.subcategory)}` : "";
-	const slug = encodeURIComponent(req.params.slug);
-	const cat = encodeURIComponent(req.params.category);
-	res.status(201).json({ 
-		name: req.file.filename,
-		url: `/api/images/${slug}/${cat}${sub}/${encodeURIComponent(req.file.filename)}` 
-	});
-});
+app.post(
+	"/api/campaigns/:slug/images/:category",
+	upload.single("image"),
+	(req, res) => {
+		const sub = req.body.subcategory
+			? `/${encodeURIComponent(req.body.subcategory)}`
+			: "";
+		const slug = encodeURIComponent(req.params.slug);
+		const cat = encodeURIComponent(req.params.category);
+		res.status(201).json({
+			name: req.file.filename,
+			url: `/api/images/${slug}/${cat}${sub}/${encodeURIComponent(req.file.filename)}`,
+		});
+	},
+);
 
-app.get("/api/campaigns/:slug/images/:category/subcategories", async (req, res, next) => {
-	try {
-		const subs = await storage.listSubcategories(
-			req.params.slug, 
-			req.params.category,
-			req.query.subcategory || ""
-		);
-		res.json(subs);
-	} catch (error) {
-		next(error);
-	}
-});
+app.get(
+	"/api/campaigns/:slug/images/:category/subcategories",
+	async (req, res, next) => {
+		try {
+			const subs = await storage.listSubcategories(
+				req.params.slug,
+				req.params.category,
+				req.query.subcategory || "",
+			);
+			res.json(subs);
+		} catch (error) {
+			next(error);
+		}
+	},
+);
 
-app.post("/api/campaigns/:slug/images/:category/subcategories", async (req, res, next) => {
-	try {
-		const dir = storage.campaignImagesDir(req.params.slug, req.params.category, req.body.name);
-		await storage.ensureDir(dir);
-		res.status(201).json({ ok: true });
-	} catch (error) {
-		next(error);
-	}
-});
+app.post(
+	"/api/campaigns/:slug/images/:category/subcategories",
+	async (req, res, next) => {
+		try {
+			const dir = storage.campaignImagesDir(
+				req.params.slug,
+				req.params.category,
+				req.body.name,
+			);
+			await storage.ensureDir(dir);
+			res.status(201).json({ ok: true });
+		} catch (error) {
+			next(error);
+		}
+	},
+);
 
-app.patch("/api/campaigns/:slug/images/:category/rename", async (req, res, next) => {
-	try {
-		const { slug, category } = req.params;
-		const { subcategory, oldName, newName } = req.body;
-		const result = await storage.renameImage(slug, category, subcategory, oldName, newName);
-		res.json(result);
-	} catch (error) {
-		next(error);
-	}
-});
+app.patch(
+	"/api/campaigns/:slug/images/:category/rename",
+	async (req, res, next) => {
+		try {
+			const { slug, category } = req.params;
+			const { subcategory, oldName, newName } = req.body;
+			const result = await storage.renameImage(
+				slug,
+				category,
+				subcategory,
+				oldName,
+				newName,
+			);
+			res.json(result);
+		} catch (error) {
+			next(error);
+		}
+	},
+);
 
-app.patch("/api/campaigns/:slug/images/:category/subcategories/:oldName", async (req, res, next) => {
-	try {
-		const { slug, category, oldName } = req.params;
-		const { newName } = req.body;
-		await storage.renameSubcategory(slug, category, oldName, newName);
-		res.json({ ok: true });
-	} catch (error) {
-		next(error);
-	}
-});
+app.patch(
+	"/api/campaigns/:slug/images/:category/subcategories/:oldName",
+	async (req, res, next) => {
+		try {
+			const { slug, category, oldName } = req.params;
+			const { newName } = req.body;
+			await storage.renameSubcategory(slug, category, oldName, newName);
+			res.json({ ok: true });
+		} catch (error) {
+			next(error);
+		}
+	},
+);
 
 app.post("/api/images/move", async (req, res, next) => {
 	try {
-		const results = await storage.moveImages(req.body.items, req.body.src, req.body.dest);
+		const results = await storage.moveImages(
+			req.body.items,
+			req.body.src,
+			req.body.dest,
+		);
 		res.json(results);
 	} catch (error) {
 		next(error);

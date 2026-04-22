@@ -98,7 +98,10 @@ function ImageGallery({
 
 	if (!isOpen) return null;
 
-	const availableSources = [{ slug: "general", name: "Загальні" }, ...campaigns];
+	const availableSources = [
+		{ slug: "general", name: "Загальні" },
+		...campaigns,
+	];
 
 	const openMoveModal = () => {
 		setMoveTarget({
@@ -114,7 +117,8 @@ function ImageGallery({
 			title="Галерея активів"
 			onCancel={onClose}
 			showFooter={false}
-			type="custom">
+			type="custom"
+		>
 			<div className="ImageGallery">
 				<aside className="ImageGallery__sidebar">
 					<button
@@ -136,7 +140,8 @@ function ImageGallery({
 								category: selectedCat.id,
 								subcategory: selectedSub,
 							})
-						}>
+						}
+					>
 						<Icon name="database" size={16} />
 						<span>Загальні</span>
 					</button>
@@ -162,7 +167,8 @@ function ImageGallery({
 									category: selectedCat.id,
 									subcategory: selectedSub,
 								})
-							}>
+							}
+						>
 							<Icon name="map" size={16} />
 							<span>{c.name}</span>
 						</button>
@@ -195,7 +201,8 @@ function ImageGallery({
 										category: cat.id,
 										subcategory: "",
 									})
-								}>
+								}
+							>
 								<Icon name={cat.icon} size={14} />
 								<span>{cat.label}</span>
 							</button>
@@ -223,7 +230,8 @@ function ImageGallery({
 										category: selectedCat.id,
 										subcategory: "",
 									})
-								}>
+								}
+							>
 								<Icon name="home" size={14} />
 							</button>
 							{selectedSub
@@ -239,33 +247,34 @@ function ImageGallery({
 										{(() => {
 											const breadcrumbPath = arr.slice(0, idx + 1).join("/");
 											return (
-										<button
-											className={classNames("BreadcrumbItem", {
-												"is-active": idx === arr.length - 1,
-												"is-drag-over":
-													dragOverTarget?.type === "breadcrumb" &&
-													dragOverTarget?.id === breadcrumbPath,
-											})}
-											onClick={() => {
-												setSelectedSub(breadcrumbPath);
-											}}
-											onDragOver={(e) => {
-												e.preventDefault();
-												setDragOverTarget({
-													type: "breadcrumb",
-													id: breadcrumbPath,
-												});
-											}}
-											onDragLeave={() => setDragOverTarget(null)}
-											onDrop={(e) =>
-												handleDrop(e, {
-													slug: selectedSource,
-													category: selectedCat.id,
-													subcategory: breadcrumbPath,
-												})
-											}>
-											{SUB_LABELS[part] || part}
-										</button>
+												<button
+													className={classNames("BreadcrumbItem", {
+														"is-active": idx === arr.length - 1,
+														"is-drag-over":
+															dragOverTarget?.type === "breadcrumb" &&
+															dragOverTarget?.id === breadcrumbPath,
+													})}
+													onClick={() => {
+														setSelectedSub(breadcrumbPath);
+													}}
+													onDragOver={(e) => {
+														e.preventDefault();
+														setDragOverTarget({
+															type: "breadcrumb",
+															id: breadcrumbPath,
+														});
+													}}
+													onDragLeave={() => setDragOverTarget(null)}
+													onDrop={(e) =>
+														handleDrop(e, {
+															slug: selectedSource,
+															category: selectedCat.id,
+															subcategory: breadcrumbPath,
+														})
+													}
+												>
+													{SUB_LABELS[part] || part}
+												</button>
 											);
 										})()}
 									</React.Fragment>
@@ -310,7 +319,8 @@ function ImageGallery({
 										variant="ghost"
 										size={Button.SIZES.SMALL}
 										icon="move"
-										onClick={openMoveModal}>
+										onClick={openMoveModal}
+									>
 										Перемістити ({selectedFilenames.size + selectedSubs.size})
 									</Button>
 									<Button
@@ -318,7 +328,8 @@ function ImageGallery({
 										variant="danger"
 										size={Button.SIZES.SMALL}
 										icon="trash"
-										onClick={handleBulkDelete}>
+										onClick={handleBulkDelete}
+									>
 										Видалити ({selectedFilenames.size + selectedSubs.size})
 									</Button>
 								</>
@@ -358,7 +369,8 @@ function ImageGallery({
 								category: selectedCat.id,
 								subcategory: selectedSub,
 							})
-						}>
+						}
+					>
 						{isDraggingOver && (
 							<div className="ImageGallery__drop-overlay">
 								<Icon name="import" size={48} />
@@ -371,78 +383,83 @@ function ImageGallery({
 								const isProtected = isProtectedSystemSub(sub);
 								const folderIcon = SUB_ICON_NAMES[sub] || "folder";
 								return (
-								<div
-									key={sub}
-									className={classNames(
-										"ImageGallery__item",
-										"ImageGallery__item--folder",
-										{
-											"is-selected": selectedSubs.has(sub),
-											"is-drag-over": dragOverTarget?.id === sub,
-											"is-protected": isProtected,
-										},
-									)}
-									onClick={(e) => {
-										if (isProtected) return;
-										handleItemClick(sub, "sub", index, e);
-									}}
-									onDoubleClick={() => {
-										const nextPath = selectedSub
-											? `${selectedSub}/${sub}`
-											: sub;
-										setSelectedSub(nextPath);
-									}}
-									draggable={!isProtected}
-									onDragStart={(e) => handleDragStart(e, sub, "sub")}
-									onDragEnd={handleDragEnd}
-									onDragOver={(e) => {
-										e.preventDefault();
-										if (dragOverTarget?.id !== sub) {
-											setDragOverTarget({ type: "sub", id: sub });
-										}
-									}}
-									onDragLeave={() => setDragOverTarget(null)}
-									onDrop={(e) => {
-										const destSub = selectedSub ? `${selectedSub}/${sub}` : sub;
-										handleDrop(e, {
-											slug: selectedSource,
-											category: selectedCat.id,
-											subcategory: destSub,
-										});
-									}}>
-									<div className="ImageGallery__image-wrap">
-										<Icon name={folderIcon} size={48} />
-										{!isProtected && (
-											<div
-												className="ImageGallery__checkbox"
-												onClick={(e) => toggleSelect(sub, "sub", e)}>
-												<Icon
-													name={selectedSubs.has(sub) ? "check" : "plus"}
-													size={12}
-												/>
-											</div>
+									<div
+										key={sub}
+										className={classNames(
+											"ImageGallery__item",
+											"ImageGallery__item--folder",
+											{
+												"is-selected": selectedSubs.has(sub),
+												"is-drag-over": dragOverTarget?.id === sub,
+												"is-protected": isProtected,
+											},
 										)}
+										onClick={(e) => {
+											if (isProtected) return;
+											handleItemClick(sub, "sub", index, e);
+										}}
+										onDoubleClick={() => {
+											const nextPath = selectedSub
+												? `${selectedSub}/${sub}`
+												: sub;
+											setSelectedSub(nextPath);
+										}}
+										draggable={!isProtected}
+										onDragStart={(e) => handleDragStart(e, sub, "sub")}
+										onDragEnd={handleDragEnd}
+										onDragOver={(e) => {
+											e.preventDefault();
+											if (dragOverTarget?.id !== sub) {
+												setDragOverTarget({ type: "sub", id: sub });
+											}
+										}}
+										onDragLeave={() => setDragOverTarget(null)}
+										onDrop={(e) => {
+											const destSub = selectedSub
+												? `${selectedSub}/${sub}`
+												: sub;
+											handleDrop(e, {
+												slug: selectedSource,
+												category: selectedCat.id,
+												subcategory: destSub,
+											});
+										}}
+									>
+										<div className="ImageGallery__image-wrap">
+											<Icon name={folderIcon} size={48} />
+											{!isProtected && (
+												<div
+													className="ImageGallery__checkbox"
+													onClick={(e) => toggleSelect(sub, "sub", e)}
+												>
+													<Icon
+														name={selectedSubs.has(sub) ? "check" : "plus"}
+														size={12}
+													/>
+												</div>
+											)}
+										</div>
+										<span className="ImageGallery__name">
+											<button
+												type="button"
+												className="ImageGallery__nameBtn"
+												onClick={async (e) => {
+													if (isProtected) return;
+													e.stopPropagation();
+													const newName = await dispatch(
+														prompt({
+															title: "Перейменувати папку",
+															message: "Введіть нову назву:",
+															defaultValue: sub,
+														}),
+													);
+													if (newName) handleRenameSub(sub, newName);
+												}}
+											>
+												{SUB_LABELS[sub] || sub}
+											</button>
+										</span>
 									</div>
-									<span className="ImageGallery__name">
-										<button
-											type="button"
-											className="ImageGallery__nameBtn"
-											onClick={async (e) => {
-												if (isProtected) return;
-												e.stopPropagation();
-												const newName = await dispatch(
-													prompt({
-														title: "Перейменувати папку",
-														message: "Введіть нову назву:",
-														defaultValue: sub,
-													}),
-												);
-												if (newName) handleRenameSub(sub, newName);
-											}}>
-											{SUB_LABELS[sub] || sub}
-										</button>
-									</span>
-								</div>
 								);
 							})}
 
@@ -469,12 +486,14 @@ function ImageGallery({
 									}}
 									draggable
 									onDragStart={(e) => handleDragStart(e, img, "image")}
-									onDragEnd={handleDragEnd}>
+									onDragEnd={handleDragEnd}
+								>
 									<div className="ImageGallery__image-wrap">
 										<img src={img.url} alt="" />
 										<div
 											className="ImageGallery__checkbox"
-											onClick={(e) => toggleSelect(img.name, "image", e)}>
+											onClick={(e) => toggleSelect(img.name, "image", e)}
+										>
 											<Icon
 												name={
 													selectedFilenames.has(img.name) ? "check" : "plus"
@@ -500,9 +519,13 @@ function ImageGallery({
 													);
 													if (newBaseName && newBaseName !== currentClean) {
 														const ext = img.name.split(".").pop();
-														handleRenameImage(img.name, `${newBaseName}.${ext}`);
+														handleRenameImage(
+															img.name,
+															`${newBaseName}.${ext}`,
+														);
 													}
-												}}>
+												}}
+											>
 												{getCleanName(img.name)}
 											</button>
 										</span>
@@ -521,7 +544,8 @@ function ImageGallery({
 						const moved = await handleMoveSelection(moveTarget);
 						if (moved) setIsMoveModalOpen(false);
 					}}
-					confirmLabel="Перемістити">
+					confirmLabel="Перемістити"
+				>
 					<ImageTargetSettings
 						sources={availableSources.map((source) => ({
 							id: source.slug,
@@ -557,7 +581,8 @@ function ImageGallery({
 					type="custom"
 					className="ImageGallery__previewModal"
 					showFooter={false}
-					onCancel={() => setPreviewImage(null)}>
+					onCancel={() => setPreviewImage(null)}
+				>
 					<div className="ImageGallery__previewWrap">
 						<img
 							className="ImageGallery__previewImg"
@@ -573,6 +598,3 @@ function ImageGallery({
 
 export { ImageGallery };
 export default ImageGallery;
-
-
-

@@ -1,7 +1,8 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const GEMINI_MODELS_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
+const GEMINI_MODELS_ENDPOINT =
+	"https://generativelanguage.googleapis.com/v1beta/models";
 const MODEL_CACHE_TTL_MS = 10 * 60 * 1000;
 const CORE_TEXT_MODELS = [
 	"gemini-3-flash-preview",
@@ -34,7 +35,9 @@ function noteToPromptText(note) {
 }
 
 function normalizeModelName(name) {
-	return String(name || "").replace(/^models\//, "").trim();
+	return String(name || "")
+		.replace(/^models\//, "")
+		.trim();
 }
 
 function isLikelyTextModel(name) {
@@ -84,7 +87,9 @@ async function listAvailableModels({ forceRefresh = false } = {}) {
 		const payload = await response.json();
 		const models = (payload.models || [])
 			.filter((model) => Array.isArray(model.supportedGenerationMethods))
-			.filter((model) => model.supportedGenerationMethods.includes("generateContent"))
+			.filter((model) =>
+				model.supportedGenerationMethods.includes("generateContent"),
+			)
 			.map((model) => ({
 				name: normalizeModelName(model.name),
 				displayName: model.displayName || normalizeModelName(model.name),
@@ -266,81 +271,101 @@ async function generateContent({
 	});
 
 	// 1. Гнучка фільтрація сесій згідно з налаштованим контекстом
-	const filteredSessions = (contextData?.sessions || []).map(s => {
-		const sessionContext = { name: s.name };
-		const conf = s.conf || {};
-		const data = s.data || {};
+	const filteredSessions = (contextData?.sessions || [])
+		.map((s) => {
+			const sessionContext = { name: s.name };
+			const conf = s.conf || {};
+			const data = s.data || {};
 
-		// Додаємо нотатки, якщо обрано
-		if (conf.included && conf.notes && data.notes) {
-			sessionContext.notes = data.notes
-				.map(noteToPromptText)
-				.filter(t => t && t.trim() !== "");
-		}
-		
-		// Додаємо результат сесії, якщо обрано
-		if (conf.included && conf.result_text && data.result_text) {
-			sessionContext.result = data.result_text;
-		}
-
-		// Додаємо лише вибрані сцени та їх конкретні поля
-		if (conf.included && data.scenes) {
-			const hasSceneConfig =
-				conf.scenes &&
-				typeof conf.scenes === "object" &&
-				Object.keys(conf.scenes).length > 0;
-			const defaultSceneConf = {
-				included: true,
-				summary: true,
-				goal: true,
-				stakes: true,
-				location: true,
-				notes: true,
-				encounter: true,
-			};
-			const sceneFields = ["summary", "goal", "stakes", "location", "encounter", "notes"];
-			const filteredScenes = data.scenes.filter(scene => {
-				if (!hasSceneConfig) return true;
-				return conf.scenes[scene.id]?.included;
-			}).map(scene => {
-				const sceneConf = hasSceneConfig
-					? (conf.scenes[scene.id] || defaultSceneConf)
-					: defaultSceneConf;
-				const resultScene = {};
-				
-				// Якщо обрано енкаунтер, шукаємо імена монстрів
-				if (sceneConf.encounter && scene.encounterId) {
-					const encounter = (data.encounters || []).find(e => e.id.toString() === scene.encounterId.toString());
-					if (encounter && encounter.monsters) {
-						resultScene.monsters = encounter.monsters.map(m => m.name || m.monsterName);
-					}
-				}
-
-				sceneFields.forEach(field => {
-					if (field === "encounter") return; // Вже оброблено вище
-					if (field === "notes") {
-						if (sceneConf[field]) resultScene[field] = (scene.notes || []).map(noteToPromptText).filter(Boolean);
-						return;
-					}
-					if (sceneConf[field]) resultScene[field] = scene.texts?.[field];
-				});
-				return resultScene;
-			});
-
-			if (filteredScenes.length > 0) {
-				sessionContext.scenes = filteredScenes;
+			// Додаємо нотатки, якщо обрано
+			if (conf.included && conf.notes && data.notes) {
+				sessionContext.notes = data.notes
+					.map(noteToPromptText)
+					.filter((t) => t && t.trim() !== "");
 			}
-		}
 
-		return sessionContext;
-	}).filter(s => s.notes || s.result || s.scenes); // Прибираємо сесії без контенту
+			// Додаємо результат сесії, якщо обрано
+			if (conf.included && conf.result_text && data.result_text) {
+				sessionContext.result = data.result_text;
+			}
+
+			// Додаємо лише вибрані сцени та їх конкретні поля
+			if (conf.included && data.scenes) {
+				const hasSceneConfig =
+					conf.scenes &&
+					typeof conf.scenes === "object" &&
+					Object.keys(conf.scenes).length > 0;
+				const defaultSceneConf = {
+					included: true,
+					summary: true,
+					goal: true,
+					stakes: true,
+					location: true,
+					notes: true,
+					encounter: true,
+				};
+				const sceneFields = [
+					"summary",
+					"goal",
+					"stakes",
+					"location",
+					"encounter",
+					"notes",
+				];
+				const filteredScenes = data.scenes
+					.filter((scene) => {
+						if (!hasSceneConfig) return true;
+						return conf.scenes[scene.id]?.included;
+					})
+					.map((scene) => {
+						const sceneConf = hasSceneConfig
+							? conf.scenes[scene.id] || defaultSceneConf
+							: defaultSceneConf;
+						const resultScene = {};
+
+						// Якщо обрано енкаунтер, шукаємо імена монстрів
+						if (sceneConf.encounter && scene.encounterId) {
+							const encounter = (data.encounters || []).find(
+								(e) => e.id.toString() === scene.encounterId.toString(),
+							);
+							if (encounter && encounter.monsters) {
+								resultScene.monsters = encounter.monsters.map(
+									(m) => m.name || m.monsterName,
+								);
+							}
+						}
+
+						sceneFields.forEach((field) => {
+							if (field === "encounter") return; // Вже оброблено вище
+							if (field === "notes") {
+								if (sceneConf[field])
+									resultScene[field] = (scene.notes || [])
+										.map(noteToPromptText)
+										.filter(Boolean);
+								return;
+							}
+							if (sceneConf[field]) resultScene[field] = scene.texts?.[field];
+						});
+						return resultScene;
+					});
+
+				if (filteredScenes.length > 0) {
+					sessionContext.scenes = filteredScenes;
+				}
+			}
+
+			return sessionContext;
+		})
+		.filter((s) => s.notes || s.result || s.scenes); // Прибираємо сесії без контенту
 
 	// 2. Формуємо фінальний JSON контексту для Gemini
 	const contextJson = {
 		campaign: {
 			name: campaign.name,
 			description: campaign.description,
-			notes: contextData?.campaign?.notes?.map(noteToPromptText).filter(Boolean),
+			notes: contextData?.campaign?.notes
+				?.map(noteToPromptText)
+				.filter(Boolean),
 			characters: contextData?.campaign?.characters
 				?.map((c) => ({
 					name: `${c.firstName || ""} ${c.lastName || ""}`.trim() || c.name,
@@ -361,15 +386,17 @@ async function generateContent({
 
 	// Додаємо дані про поточний бій, якщо ми в режимі Encounter
 	if (encounterId && session) {
-		const currentEnc = (session.data.encounters || []).find(e => e.id.toString() === encounterId.toString());
+		const currentEnc = (session.data.encounters || []).find(
+			(e) => e.id.toString() === encounterId.toString(),
+		);
 		if (currentEnc) {
 			contextJson.currentEncounter = {
 				name: currentEnc.name,
-				monsters: (currentEnc.monsters || []).map(m => ({
+				monsters: (currentEnc.monsters || []).map((m) => ({
 					name: m.name,
 					monsterName: m.originalBestiaryName || m.name,
-					cr: m.cr || m.challenge_rating
-				}))
+					cr: m.cr || m.challenge_rating,
+				})),
 			};
 		}
 	}
@@ -438,4 +465,3 @@ async function generateContent({
 }
 
 module.exports = { generateContent, listAvailableModels };
-

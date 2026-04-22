@@ -32,7 +32,11 @@ import {
  */
 
 export const CHARACTER_FIELD_SCHEMA = {
-	id: { type: "number|string", required: true, values: "Date.now() або id з бекенду" },
+	id: {
+		type: "number|string",
+		required: true,
+		values: "Date.now() або id з бекенду",
+	},
 	slug: { type: "string", values: "slug сутності на бекенді" },
 	firstName: { type: "string", values: "Ім'я" },
 	lastName: { type: "string", values: "Прізвище" },
@@ -41,7 +45,10 @@ export const CHARACTER_FIELD_SCHEMA = {
 	level: { type: "number|string", values: "1..20" },
 	motivation: { type: "string", values: "Мотивація персонажа" },
 	trait: { type: "string", values: "Особливість/звичка" },
-	notes: { type: "CharacterNote[]", values: "Список нотаток, завжди має 1+ елемент" },
+	notes: {
+		type: "CharacterNote[]",
+		values: "Список нотаток, завжди має 1+ елемент",
+	},
 	collapsed: { type: "boolean", values: "Стан згортання картки" },
 	isNotesCollapsed: { type: "boolean", values: "Стан згортання блоку нотаток" },
 	imageUrl: { type: "string|null", values: "URL портрета" },
@@ -80,12 +87,16 @@ export default class CharacterCardModel {
 	get briefMeta() {
 		const race = this.character.race || "";
 		const className = this.character.class || "";
-		const levelPart = this.character.level ? `• ${this.character.level} рів.` : "";
+		const levelPart = this.character.level
+			? `• ${this.character.level} рів.`
+			: "";
 		return `${race} ${className} ${levelPart}`.trim();
 	}
 
 	get notes() {
-		const notes = Array.isArray(this.character.notes) ? [...this.character.notes] : [];
+		const notes = Array.isArray(this.character.notes)
+			? [...this.character.notes]
+			: [];
 		if (notes.length === 0) {
 			notes.push(CharacterCardModel.createEmptyNote());
 		}

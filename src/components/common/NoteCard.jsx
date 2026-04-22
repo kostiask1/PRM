@@ -21,10 +21,12 @@ export default function NoteCard({
 			className={classNames("note-card-simple", {
 				"is-collapsed": isCollapsed,
 				"note-card-simple--dragging": isDragging,
-			})}>
+			})}
+		>
 			<div
 				className="note-card-simple__header"
-				onClick={() => !isLast && onToggleCollapse(note.id)}>
+				onClick={() => !isLast && onToggleCollapse(note.id)}
+			>
 				{!isLast && (
 					<CollapseToggleButton
 						size={Button.SIZES.SMALL}

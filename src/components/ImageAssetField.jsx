@@ -106,10 +106,12 @@ export default function ImageAssetField({
 					type="custom"
 					className={previewModalClassName}
 					onCancel={() => setIsImagePreviewOpen(false)}
-					showFooter={false}>
+					showFooter={false}
+				>
 					<div
 						className={previewContentClassName}
-						onClick={() => setIsImagePreviewOpen(false)}>
+						onClick={() => setIsImagePreviewOpen(false)}
+					>
 						<img src={imageUrl} alt={imageAlt} />
 					</div>
 				</Modal>

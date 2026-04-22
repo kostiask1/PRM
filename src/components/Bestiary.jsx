@@ -29,7 +29,8 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 
 	const displayedMonsters = useMemo(() => {
 		let list = [...monsters];
-		if (sortOrder === "none") list = list.sort((a, b) => a.name.localeCompare(b.name));
+		if (sortOrder === "none")
+			list = list.sort((a, b) => a.name.localeCompare(b.name));
 
 		return list.sort((a, b) => {
 			const crA = parseCR(a);
@@ -145,7 +146,11 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	// Локальна фільтрація списку за пошуковим запитом
 	useEffect(() => {
 		const filtered = allMonsters.filter((m) => {
-			const isFav = favorites.some(f => f.name === m.name && f.source?.toUpperCase() === m.source?.toUpperCase());
+			const isFav = favorites.some(
+				(f) =>
+					f.name === m.name &&
+					f.source?.toUpperCase() === m.source?.toUpperCase(),
+			);
 			if (onlyFavorites && !isFav) return false;
 
 			const matchesName = m.name?.toLowerCase().includes(search.toLowerCase());
@@ -161,11 +166,21 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			return matchesName && matchesType;
 		});
 		setMonsters(filtered);
-	}, [search, typeSearch, allMonsters, getMonsterTypeString, onlyFavorites, favorites]);
+	}, [
+		search,
+		typeSearch,
+		allMonsters,
+		getMonsterTypeString,
+		onlyFavorites,
+		favorites,
+	]);
 
 	const handleToggleFavorite = async (monster) => {
 		try {
-			const newFavs = await api.toggleBestiaryFavorite(monster.name, monster.source);
+			const newFavs = await api.toggleBestiaryFavorite(
+				monster.name,
+				monster.source,
+			);
 			setFavorites(newFavs);
 		} catch (err) {
 			console.error("Failed to toggle favorite", err);
@@ -267,7 +282,9 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			selectedMonster?.name === monster.name &&
 			selectedMonster?.source === monster.source;
 		const isFavorite = favorites.some(
-			(f) => f.name === monster.name && f.source?.toUpperCase() === monster.source?.toUpperCase(),
+			(f) =>
+				f.name === monster.name &&
+				f.source?.toUpperCase() === monster.source?.toUpperCase(),
 		);
 
 		return (
@@ -304,7 +321,8 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 								/>
 							)}
 						</>
-					}>
+					}
+				>
 					<div className="Bestiary__item-content">
 						<div className="Bestiary__item-info">
 							<div className="ListCard__title">{monster.name}</div>
@@ -339,7 +357,8 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 					{sources.length > 0 && (
 						<Select
 							value={selectedSource}
-							onChange={(e) => setSelectedSource(e.target.value)}>
+							onChange={(e) => setSelectedSource(e.target.value)}
+						>
 							<option value="all">УСІ ДЖЕРЕЛА</option>
 							{sources.map((s) => (
 								<option key={s} value={s}>
@@ -372,11 +391,15 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 						})}
 						variant="ghost"
 						onClick={toggleSort}
-						title="Сортувати за CR (Challenge Rating)">
+						title="Сортувати за CR (Challenge Rating)"
+					>
 						<span className="Bestiary__sort-label">CR</span>
 						<Icon
 							name={`sort-${sortOrder}`}
-							className={classNames("Bestiary__sort-icon", `state-${sortOrder}`)}
+							className={classNames(
+								"Bestiary__sort-icon",
+								`state-${sortOrder}`,
+							)}
 						/>
 					</Button>
 				</div>
@@ -384,7 +407,8 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 				<div
 					className={classNames("Bestiary__content", {
 						"Bestiary__content--stacked": isEmbedded,
-					})}>
+					})}
+				>
 					<div className="Bestiary__list">
 						<ReactList
 							ref={listRef}

@@ -18,7 +18,8 @@ export default function TodoSection({
 				})}
 				onClick={() => {
 					if (isCollapsible) onToggle();
-				}}>
+				}}
+			>
 				<div className="TodoSection__titleGroup">
 					{isCollapsible && (
 						<CollapseToggleButton
@@ -31,7 +32,9 @@ export default function TodoSection({
 				</div>
 				{action}
 			</div>
-			{!collapsed && children && <div className="TodoSection__body">{children}</div>}
+			{!collapsed && children && (
+				<div className="TodoSection__body">{children}</div>
+			)}
 		</section>
 	);
 }

@@ -254,7 +254,7 @@
 	gap: var(--space-2);
 }
 
-.DiceCalculator__historyInfo:hover > span:first-child {
+.DiceCalculator__historyInfo:hover>span:first-child {
 	text-decoration: underline;
 }
 

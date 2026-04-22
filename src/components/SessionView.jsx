@@ -24,7 +24,10 @@ function SessionView(props) {
 	const session = view.session;
 
 	if (!session) return null;
-	const viewModel = new SessionViewModel({ ...session, isSaving: view.isSaving });
+	const viewModel = new SessionViewModel({
+		...session,
+		isSaving: view.isSaving,
+	});
 
 	return (
 		<Panel className="SessionView">
@@ -65,7 +68,10 @@ function SessionView(props) {
 					/>
 					<Button
 						variant={viewModel.isCompleted ? "primary" : ""}
-						onClick={() => view.updateSession({ completed: !session.completed }, true)}>
+						onClick={() =>
+							view.updateSession({ completed: !session.completed }, true)
+						}
+					>
 						{viewModel.completeButtonLabel}
 					</Button>
 					<Button
@@ -81,7 +87,8 @@ function SessionView(props) {
 					<TodoSection
 						title="Замітки"
 						collapsed={!!session.data.isNotesCollapsed}
-						onToggle={() => view.handleToggleSectionCollapse("Notes")}>
+						onToggle={() => view.handleToggleSectionCollapse("Notes")}
+					>
 						{!session.data.isNotesCollapsed && (
 							<DraggableList
 								items={viewModel.notes}
@@ -111,10 +118,12 @@ function SessionView(props) {
 								size={Button.SIZES.SMALL}
 								onClick={view.addScene}
 								icon="plus"
-								iconSize={16}>
+								iconSize={16}
+							>
 								Додати
 							</Button>
-						}>
+						}
+					>
 						<AiAssistantPanel
 							sessionName={session.name}
 							sessionData={session.data}
@@ -132,7 +141,9 @@ function SessionView(props) {
 							onDrop={() => view.triggerSave(session, true)}
 							keyExtractor={(scene) => scene.id}
 							renderItem={(scene) => {
-								const idx = viewModel.scenes.findIndex((s) => s.id === scene.id);
+								const idx = viewModel.scenes.findIndex(
+									(s) => s.id === scene.id,
+								);
 								return (
 									<SceneCard
 										number={idx + 1}
@@ -189,7 +200,8 @@ function SessionView(props) {
 				<Modal
 					title="Чекліст підготовки"
 					onCancel={() => view.setIsChecklistOpen(false)}
-					showFooter={false}>
+					showFooter={false}
+				>
 					<div className="SessionView__checklistModal">
 						<div className="SessionView__progressWrap">
 							<div className="ProgressBar__label">
@@ -199,14 +211,17 @@ function SessionView(props) {
 							<div className="ProgressBar">
 								<div
 									className="ProgressBar__fill"
-									style={{ width: `${view.progress}%` }}></div>
+									style={{ width: `${view.progress}%` }}
+								></div>
 							</div>
 						</div>
 						{view.checklistItems.map((item) => (
 							<TodoItem
 								key={item.id}
 								checked={!!session.data[`${item.id}_check`]}
-								onChange={(val) => view.updateData(`${item.id}_check`, val, true)}
+								onChange={(val) =>
+									view.updateData(`${item.id}_check`, val, true)
+								}
 								title={item.label}
 								note={item.note}
 							/>
@@ -217,10 +232,13 @@ function SessionView(props) {
 
 			<Tooltip
 				content="Чекліст підготовки"
-				className="SessionView__checklistToggle">
+				className="SessionView__checklistToggle"
+			>
 				<button onClick={() => view.setIsChecklistOpen(true)}>
 					<Icon name="list" size={28} />
-					{view.progress < 100 && <span className="SessionView__checklistBadge" />}
+					{view.progress < 100 && (
+						<span className="SessionView__checklistBadge" />
+					)}
 				</button>
 			</Tooltip>
 		</Panel>
@@ -256,7 +274,8 @@ function SceneCard(props) {
 						<div className="SceneCard__notes">
 							<div
 								className="SceneCard__notes-header"
-								onClick={props.onToggleNotesCollapse}>
+								onClick={props.onToggleNotesCollapse}
+							>
 								<CollapseToggleButton
 									size={Button.SIZES.SMALL}
 									collapsed={props.scene.isNotesCollapsed}

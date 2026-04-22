@@ -252,7 +252,8 @@ export default function ImageTargetSettings({
 							type="button"
 							className="ImageTargetSettings__tabBtn ImageTargetSettings__tabBtn--back"
 							onClick={handleBack}
-							disabled={atRoot}>
+							disabled={atRoot}
+						>
 							Назад
 						</button>
 					</div>
@@ -262,7 +263,8 @@ export default function ImageTargetSettings({
 								key={sub}
 								type="button"
 								className="ImageTargetSettings__tabBtn"
-								onClick={() => handleEnterSubfolder(sub)}>
+								onClick={() => handleEnterSubfolder(sub)}
+							>
 								{SUB_LABELS[sub] || sub}
 							</button>
 						))}

@@ -82,7 +82,8 @@ function EncounterView(props) {
 							variant="create"
 							onClick={() => view.setShowBestiary(true)}
 							icon="plus"
-							className="EncounterView__addBtn">
+							className="EncounterView__addBtn"
+						>
 							Додати монстра
 						</Button>
 
@@ -94,10 +95,12 @@ function EncounterView(props) {
 							renderItem={(m, isDragging) => (
 								<div
 									className={classNames("EncounterMonsterRow", {
-										"is-active": view.selectedInstance?.instanceId === m.instanceId,
+										"is-active":
+											view.selectedInstance?.instanceId === m.instanceId,
 										"is-dragging": isDragging,
 									})}
-									onClick={() => view.setSelectedInstance(m)}>
+									onClick={() => view.setSelectedInstance(m)}
+								>
 									<div className="EncounterMonsterRow__content">
 										<Tooltip content="Натисніть, щоб змінити ім'я">
 											<div
@@ -105,7 +108,8 @@ function EncounterView(props) {
 												onClick={(e) => {
 													e.stopPropagation();
 													view.handleRenameMonster(m.instanceId, m.name);
-												}}>
+												}}
+											>
 												{m.name}
 											</div>
 										</Tooltip>
@@ -129,7 +133,10 @@ function EncounterView(props) {
 														type="number"
 														value={m.hit_points}
 														onChange={(e) =>
-															view.updateMonsterMaxHp(m.instanceId, e.target.value)
+															view.updateMonsterMaxHp(
+																m.instanceId,
+																e.target.value,
+															)
 														}
 														onClick={(e) => e.stopPropagation()}
 														className="EncounterMonsterRow__maxHpInput"
@@ -185,7 +192,9 @@ function EncounterView(props) {
 						{view.selectedInstance ? (
 							<MonsterStatBlock
 								monster={view.selectedInstance}
-								tokenImageOverrideUrl={view.getMonsterImageOverride(view.selectedInstance)}
+								tokenImageOverrideUrl={view.getMonsterImageOverride(
+									view.selectedInstance,
+								)}
 							/>
 						) : (
 							<p className="muted">
@@ -205,13 +214,17 @@ function EncounterView(props) {
 					title="Вибір монстра"
 					onCancel={() => view.setShowBestiary(false)}
 					showFooter={false}
-					type="custom">
+					type="custom"
+				>
 					<Bestiary onAddMonster={view.handleAddMonster} isEmbedded={true} />
 				</Modal>
 			)}
 
 			{view.notification && (
-				<Notification message={view.notification} onClose={() => view.setNotification(null)} />
+				<Notification
+					message={view.notification}
+					onClose={() => view.setNotification(null)}
+				/>
 			)}
 		</Panel>
 	);
@@ -219,4 +232,3 @@ function EncounterView(props) {
 
 export { EncounterView };
 export default EncounterView;
-

@@ -8,11 +8,11 @@
 	margin-bottom: 0;
 }
 
-.DraggableList > div.is-dragging {
+.DraggableList>div.is-dragging {
 	opacity: 0.5;
 	cursor: grabbing;
 }
 
-.DraggableList:has(.Input:focus) > div {
+.DraggableList:has(.Input:focus)>div {
 	-webkit-user-drag: none
 }

@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-import {
-	alert,
-	confirm,
-} from "../actions/app";
+import { alert, confirm } from "../actions/app";
 import { api } from "../api";
 import { useAppDispatch } from "../store/appStore";
 
@@ -80,7 +77,11 @@ export default function useImageGallery({
 	const loadImages = useCallback(async () => {
 		setLoading(true);
 		try {
-			const data = await api.getImages(selectedSource, selectedCat.id, selectedSub);
+			const data = await api.getImages(
+				selectedSource,
+				selectedCat.id,
+				selectedSub,
+			);
 			setImages(data || []);
 		} catch (err) {
 			console.error("Failed to load images:", err);
@@ -96,7 +97,9 @@ export default function useImageGallery({
 
 			if (initialSource) setSelectedSource(initialSource);
 			if (initialCategory) {
-				const cat = IMAGE_GALLERY_CATEGORIES.find((c) => c.id === initialCategory);
+				const cat = IMAGE_GALLERY_CATEGORIES.find(
+					(c) => c.id === initialCategory,
+				);
 				if (cat) {
 					setSelectedCat(cat);
 					setSelectedSub(initialSubcategory || "");
@@ -113,7 +116,14 @@ export default function useImageGallery({
 		setSelectedFilenames(new Set());
 		setSelectedSubs(new Set());
 		setLastSelectedIndex(null);
-	}, [selectedSource, selectedCat, selectedSub, isOpen, loadImages, loadSubcategories]);
+	}, [
+		selectedSource,
+		selectedCat,
+		selectedSub,
+		isOpen,
+		loadImages,
+		loadSubcategories,
+	]);
 
 	const handleFileUpload = useCallback(
 		async (files) => {
@@ -121,7 +131,12 @@ export default function useImageGallery({
 			try {
 				for (const file of Array.from(files || [])) {
 					if (!file.type.startsWith("image/")) continue;
-					await api.uploadImage(selectedSource, selectedCat.id, selectedSub, file);
+					await api.uploadImage(
+						selectedSource,
+						selectedCat.id,
+						selectedSub,
+						file,
+					);
 				}
 				loadImages();
 			} catch (err) {
@@ -230,14 +245,17 @@ export default function useImageGallery({
 			selectedCat.id,
 			selectedSub,
 			loadImages,
-			loadSubcategories, dispatch,
+			loadSubcategories,
+			dispatch,
 		],
 	);
 
 	const handleCreateSub = useCallback(async () => {
 		if (!newSubName.trim()) return;
 		try {
-			const fullPath = selectedSub ? `${selectedSub}/${newSubName}` : newSubName;
+			const fullPath = selectedSub
+				? `${selectedSub}/${newSubName}`
+				: newSubName;
 			await api.createSubcategory(selectedSource, selectedCat.id, fullPath);
 			setNewSubName("");
 			setIsCreatingSub(false);
@@ -246,7 +264,14 @@ export default function useImageGallery({
 		} catch (err) {
 			dispatch(alert({ title: "Помилка", message: err.message }));
 		}
-	}, [newSubName, selectedSub, selectedSource, selectedCat.id, loadSubcategories, dispatch]);
+	}, [
+		newSubName,
+		selectedSub,
+		selectedSource,
+		selectedCat.id,
+		loadSubcategories,
+		dispatch,
+	]);
 
 	const handleRenameSub = useCallback(
 		async (oldName, newName) => {
@@ -257,12 +282,19 @@ export default function useImageGallery({
 				const oldPath = selectedSub ? `${selectedSub}/${oldName}` : oldName;
 				const newPath = selectedSub ? `${selectedSub}/${newName}` : newName;
 
-				await api.renameSubcategory(selectedSource, selectedCat.id, oldPath, newPath);
+				await api.renameSubcategory(
+					selectedSource,
+					selectedCat.id,
+					oldPath,
+					newPath,
+				);
 				loadSubcategories();
 				loadImages();
 				if (selectedSub === oldName) setSelectedSub(newName);
 			} catch (err) {
-				dispatch(alert({ title: "Помилка перейменування", message: err.message }));
+				dispatch(
+					alert({ title: "Помилка перейменування", message: err.message }),
+				);
 			}
 		},
 		[
@@ -270,7 +302,8 @@ export default function useImageGallery({
 			selectedSource,
 			selectedCat.id,
 			loadSubcategories,
-			loadImages, dispatch,
+			loadImages,
+			dispatch,
 		],
 	);
 
@@ -388,13 +421,15 @@ export default function useImageGallery({
 		selectedCat.id,
 		selectedSub,
 		loadImages,
-		loadSubcategories, dispatch,
+		loadSubcategories,
+		dispatch,
 	]);
 
 	useEffect(() => {
 		const handleKeyDown = (e) => {
 			if (!isOpen) return;
-			if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+			if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")
+				return;
 
 			if (e.key === "Delete") {
 				handleBulkDelete();
@@ -413,7 +448,10 @@ export default function useImageGallery({
 	}, [selectedSub, isOpen, handleBulkDelete]);
 
 	const allSubs = Array.from(
-		new Set([...(selectedSub === "" ? selectedCat.subs || [] : []), ...dynamicSubs]),
+		new Set([
+			...(selectedSub === "" ? selectedCat.subs || [] : []),
+			...dynamicSubs,
+		]),
 	);
 
 	const handleItemClick = useCallback(
@@ -436,8 +474,7 @@ export default function useImageGallery({
 					const item = combinedItems[i];
 					if (item.type === "sub") {
 						if (!isProtectedSystemSub(item.name)) nextSubs.add(item.name);
-					}
-					else nextFilenames.add(item.name);
+					} else nextFilenames.add(item.name);
 				}
 
 				setSelectedFilenames(nextFilenames);
@@ -564,6 +601,3 @@ export default function useImageGallery({
 		isProtectedSystemSub,
 	};
 }
-
-
-

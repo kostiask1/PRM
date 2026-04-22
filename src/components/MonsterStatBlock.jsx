@@ -119,7 +119,6 @@ export default function MonsterStatBlock({
 		);
 	};
 
-
 	useEffect(() => {
 		setSpells([]);
 
@@ -182,7 +181,8 @@ export default function MonsterStatBlock({
 								<div className="stat-item">
 									Atk:{" "}
 									<RollDice
-										formula={`1d20${formatModifier(parseInt(action.attack_bonus))}`}>
+										formula={`1d20${formatModifier(parseInt(action.attack_bonus))}`}
+									>
 										{formatModifier(parseInt(action.attack_bonus))}
 									</RollDice>
 								</div>
@@ -206,11 +206,12 @@ export default function MonsterStatBlock({
 		const mod = getAbilityModifier(value);
 		return (
 			<Tooltip content={`Кинути перевірку ${label}`}>
-					<div
-						className="MonsterStatBlock__ability-box"
-						onClick={() =>
-							dispatch(requestDiceRollAction(`1d20${formatModifier(mod)}`))
-						}>
+				<div
+					className="MonsterStatBlock__ability-box"
+					onClick={() =>
+						dispatch(requestDiceRollAction(`1d20${formatModifier(mod)}`))
+					}
+				>
 					<span className="ability-label">{label}</span>
 					<span className="ability-mod">{formatModifier(mod)}</span>
 					<span className="ability-score">{value}</span>
@@ -268,7 +269,8 @@ export default function MonsterStatBlock({
 							<React.Fragment key={s.slug || s.name}>
 								<span
 									className="MonsterStatBlock__spell"
-									onClick={() => handleSpellClick(s)}>
+									onClick={() => handleSpellClick(s)}
+								>
 									{capitalizeWords(s.name.split("|")[0])}
 								</span>
 								{i < levels[lvl].length - 1 ? ", " : ""}
@@ -397,7 +399,8 @@ export default function MonsterStatBlock({
 							<Tooltip content={nameTitle} disabled={!nameTitle}>
 								<h3
 									className="MonsterStatBlock__name"
-									onClick={() => onNameClick?.(monster)}>
+									onClick={() => onNameClick?.(monster)}
+								>
 									{monster.name}
 								</h3>
 							</Tooltip>
@@ -405,7 +408,8 @@ export default function MonsterStatBlock({
 							<ClickToCopy
 								className="MonsterStatBlock__name"
 								text={monster.name}
-								message={`Ім'я скопійовано!`}>
+								message={`Ім'я скопійовано!`}
+							>
 								{monster.name}
 							</ClickToCopy>
 						)}
@@ -429,7 +433,8 @@ export default function MonsterStatBlock({
 									fontSize: "0.9em",
 									marginTop: "-4px",
 									marginBottom: "8px",
-								}}>
+								}}
+							>
 								({monster.originalBestiaryName})
 							</div>
 						)}
@@ -496,7 +501,8 @@ export default function MonsterStatBlock({
 						<div
 							className="MonsterStatBlock__tokenDragProxy"
 							draggable
-							onDragStart={handleDragStart}>
+							onDragStart={handleDragStart}
+						>
 							<img
 								src={localSrc}
 								alt={monster.name}
@@ -523,7 +529,8 @@ export default function MonsterStatBlock({
 							<React.Fragment key={name}>
 								<span
 									className="skill-name"
-									style={{ textTransform: "capitalize" }}>
+									style={{ textTransform: "capitalize" }}
+								>
 									{name}
 								</span>{" "}
 								<RollDice formula={`1d20${formatModifier(parseInt(value))}`}>
@@ -624,6 +631,3 @@ export default function MonsterStatBlock({
 		</div>
 	);
 }
-
-
-

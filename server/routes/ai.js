@@ -84,7 +84,9 @@ function normalizeNote(note) {
 
 function normalizeNotes(notes, { keepAtLeastOne = false } = {}) {
 	const list = Array.isArray(notes) ? notes : [];
-	const normalized = list.map(normalizeNote).filter((note) => note && (note.title || note.text));
+	const normalized = list
+		.map(normalizeNote)
+		.filter((note) => note && (note.title || note.text));
 	if (keepAtLeastOne && normalized.length === 0) {
 		normalized.push({ id: makeId(), title: "", text: "", collapsed: false });
 	}
@@ -93,7 +95,9 @@ function normalizeNotes(notes, { keepAtLeastOne = false } = {}) {
 
 function normalizeCharacter(raw, existing = null) {
 	const nameParts = parseNameParts(raw);
-	const fallbackDescription = asText(raw.description || raw.bio || raw.backstory);
+	const fallbackDescription = asText(
+		raw.description || raw.bio || raw.backstory,
+	);
 	const notesSource = Array.isArray(raw.notes)
 		? raw.notes
 		: fallbackDescription
@@ -153,7 +157,10 @@ function normalizeSceneNpcs(npcs) {
 
 function normalizeScene(scene, existing, encounterMap) {
 	let encounterId = existing?.encounterId || "";
-	if (scene.encounterIndex !== undefined && encounterMap.has(scene.encounterIndex)) {
+	if (
+		scene.encounterIndex !== undefined &&
+		encounterMap.has(scene.encounterIndex)
+	) {
 		encounterId = encounterMap.get(scene.encounterIndex);
 	}
 
@@ -185,7 +192,9 @@ function buildMonsterInstance(monster, bestiaryIndex) {
 		}
 	}
 
-	const resolved = foundBase ? storage.resolveMonster(foundBase, bestiaryIndex) : null;
+	const resolved = foundBase
+		? storage.resolveMonster(foundBase, bestiaryIndex)
+		: null;
 	const instance = {
 		...(resolved || {}),
 		instanceId: `inst-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
@@ -218,7 +227,9 @@ function buildMonsterInstance(monster, bestiaryIndex) {
 }
 
 function normalizeEncounterFromAi(rawEncounter, bestiaryIndex, fallbackName) {
-	const monsters = (Array.isArray(rawEncounter?.monsters) ? rawEncounter.monsters : [])
+	const monsters = (
+		Array.isArray(rawEncounter?.monsters) ? rawEncounter.monsters : []
+	)
 		.map((monster) => buildMonsterInstance(monster, bestiaryIndex))
 		.filter(Boolean);
 
@@ -243,9 +254,7 @@ function getCharacterDisplayName(entity = {}) {
 function normalizeMentionCandidates(names = []) {
 	return Array.from(
 		new Set(
-			names
-				.map((name) => asText(name))
-				.filter((name) => name.length >= 2),
+			names.map((name) => asText(name)).filter((name) => name.length >= 2),
 		),
 	).sort((a, b) => b.length - a.length);
 }
@@ -290,11 +299,7 @@ function levenshteinDistance(a, b) {
 		for (let j = 1; j <= right.length; j += 1) {
 			const temp = prev[j];
 			const cost = left[i - 1] === right[j - 1] ? 0 : 1;
-			prev[j] = Math.min(
-				prev[j] + 1,
-				prev[j - 1] + 1,
-				prevDiag + cost,
-			);
+			prev[j] = Math.min(prev[j] + 1, prev[j - 1] + 1, prevDiag + cost);
 			prevDiag = temp;
 		}
 	}
@@ -391,7 +396,11 @@ function sceneSignature(scene) {
 }
 
 function applyMentionsToGeneratedContent(generatedContent, names) {
-	if (!generatedContent || typeof generatedContent !== "object" || !names.length) {
+	if (
+		!generatedContent ||
+		typeof generatedContent !== "object" ||
+		!names.length
+	) {
 		return generatedContent;
 	}
 
@@ -415,26 +424,31 @@ function applyMentionsToGeneratedContent(generatedContent, names) {
 	}
 
 	if (Array.isArray(generatedContent.characters)) {
-		generatedContent.characters = generatedContent.characters.map((character) => {
-			if (!character || typeof character !== "object") return character;
-			const next = { ...character };
-			for (const key of ["description", "motivation", "trait"]) {
-				if (typeof next[key] === "string") {
-					next[key] = canonicalizeBracketedMentions(
-						wrapMentionsInText(next[key], names),
-						names,
+		generatedContent.characters = generatedContent.characters.map(
+			(character) => {
+				if (!character || typeof character !== "object") return character;
+				const next = { ...character };
+				for (const key of ["description", "motivation", "trait"]) {
+					if (typeof next[key] === "string") {
+						next[key] = canonicalizeBracketedMentions(
+							wrapMentionsInText(next[key], names),
+							names,
+						);
+					}
+				}
+				if (Array.isArray(next.notes)) {
+					next.notes = next.notes.map((note) =>
+						typeof note === "string"
+							? canonicalizeBracketedMentions(
+									wrapMentionsInText(note, names),
+									names,
+								)
+							: note,
 					);
 				}
-			}
-			if (Array.isArray(next.notes)) {
-				next.notes = next.notes.map((note) =>
-					typeof note === "string"
-						? canonicalizeBracketedMentions(wrapMentionsInText(note, names), names)
-						: note,
-				);
-			}
-			return next;
-		});
+				return next;
+			},
+		);
 	}
 
 	if (Array.isArray(generatedContent.scenes)) {
@@ -457,7 +471,10 @@ function applyMentionsToGeneratedContent(generatedContent, names) {
 			if (Array.isArray(nextScene.notes)) {
 				nextScene.notes = nextScene.notes.map((note) =>
 					typeof note === "string"
-						? canonicalizeBracketedMentions(wrapMentionsInText(note, names), names)
+						? canonicalizeBracketedMentions(
+								wrapMentionsInText(note, names),
+								names,
+							)
 						: note,
 				);
 			}
@@ -483,7 +500,11 @@ function applyMentionsToGeneratedContent(generatedContent, names) {
 	return generatedContent;
 }
 
-async function collectMentionCandidates(campaignSlug, sessionData, generatedContent) {
+async function collectMentionCandidates(
+	campaignSlug,
+	sessionData,
+	generatedContent,
+) {
 	const [characters, npcs] = await Promise.all([
 		storage.listEntities(campaignSlug, "characters"),
 		storage.listEntities(campaignSlug, "npc"),
@@ -551,7 +572,8 @@ router.post("/generate", async (req, res, next) => {
 
 		const contextData = { campaign: {}, sessions: [] };
 		if (contextConfig) {
-			if (contextConfig.campaignNotes) contextData.campaign.notes = campaign.notes;
+			if (contextConfig.campaignNotes)
+				contextData.campaign.notes = campaign.notes;
 			if (contextConfig.campaignCharacters) {
 				const chars = await storage.listEntities(path.campaign, "characters");
 				const npcs = await storage.listEntities(path.campaign, "npc");
@@ -584,7 +606,11 @@ router.post("/generate", async (req, res, next) => {
 			generateEncounters,
 		});
 
-		if (parseAIResponse && generatedContent && typeof generatedContent === "object") {
+		if (
+			parseAIResponse &&
+			generatedContent &&
+			typeof generatedContent === "object"
+		) {
 			const mentionNames = await collectMentionCandidates(
 				path.campaign,
 				session,
@@ -633,7 +659,10 @@ router.post("/generate", async (req, res, next) => {
 						let aiEncounter = null;
 						if (Array.isArray(generatedContent?.monsters)) {
 							aiEncounter = generatedContent;
-						} else if (Array.isArray(generatedContent?.encounters) && generatedContent.encounters[0]) {
+						} else if (
+							Array.isArray(generatedContent?.encounters) &&
+							generatedContent.encounters[0]
+						) {
 							aiEncounter = generatedContent.encounters[0];
 						}
 
@@ -645,7 +674,8 @@ router.post("/generate", async (req, res, next) => {
 								sessionData.data.encounters[encIdx].name || "Бій",
 							);
 							sessionData.data.encounters[encIdx].name = normalized.name;
-							sessionData.data.encounters[encIdx].monsters = normalized.monsters;
+							sessionData.data.encounters[encIdx].monsters =
+								normalized.monsters;
 							sessionData.updatedAt = new Date().toISOString();
 							await storage.writeJson(fullPath, sessionData);
 							return res.json({
@@ -682,7 +712,9 @@ router.post("/generate", async (req, res, next) => {
 						? sessionData.data.scenes
 						: [];
 					const appendScenes = shouldAppendScenesRequest(userInstructions);
-					const existingSignatures = new Set(existingScenes.map(sceneSignature));
+					const existingSignatures = new Set(
+						existingScenes.map(sceneSignature),
+					);
 
 					if (appendScenes) {
 						const appendedScenes = [];
@@ -698,7 +730,11 @@ router.post("/generate", async (req, res, next) => {
 						const mergedScenes = [...existingScenes];
 						generatedContent.scenes.forEach((scene, idx) => {
 							if (idx < mergedScenes.length) {
-								mergedScenes[idx] = normalizeScene(scene, mergedScenes[idx], encounterMap);
+								mergedScenes[idx] = normalizeScene(
+									scene,
+									mergedScenes[idx],
+									encounterMap,
+								);
 							} else {
 								const normalized = normalizeScene(scene, null, encounterMap);
 								const signature = sceneSignature(normalized);
@@ -728,8 +764,13 @@ router.post("/generate", async (req, res, next) => {
 				}
 
 				if (Array.isArray(generatedContent.characters)) {
-					const existing = await storage.listEntities(path.campaign, "characters");
-					const bySlug = new Map(existing.map((entity) => [entity.slug, entity]));
+					const existing = await storage.listEntities(
+						path.campaign,
+						"characters",
+					);
+					const bySlug = new Map(
+						existing.map((entity) => [entity.slug, entity]),
+					);
 					const byName = new Map(
 						existing
 							.map((entity) => ({
@@ -742,7 +783,8 @@ router.post("/generate", async (req, res, next) => {
 
 					for (const rawCharacter of generatedContent.characters) {
 						const nameParts = parseNameParts(rawCharacter);
-						const fullNameKey = `${nameParts.firstName.toLowerCase()} ${nameParts.lastName.toLowerCase()}`.trim();
+						const fullNameKey =
+							`${nameParts.firstName.toLowerCase()} ${nameParts.lastName.toLowerCase()}`.trim();
 						const baseSlug = storage.campaignSlug(
 							nameParts.firstName || rawCharacter.name || "character",
 						);
@@ -760,9 +802,15 @@ router.post("/generate", async (req, res, next) => {
 								...normalized,
 								slug: existingEntity.slug,
 								id: existingEntity.id,
-								imageUrl: existingEntity.imageUrl ?? normalized.imageUrl ?? null,
+								imageUrl:
+									existingEntity.imageUrl ?? normalized.imageUrl ?? null,
 							};
-							await storage.writeEntity(path.campaign, "characters", existingEntity.slug, payload);
+							await storage.writeEntity(
+								path.campaign,
+								"characters",
+								existingEntity.slug,
+								payload,
+							);
 							bySlug.set(existingEntity.slug, payload);
 							if (fullNameKey) byName.set(fullNameKey, payload);
 						} else {
@@ -775,7 +823,12 @@ router.post("/generate", async (req, res, next) => {
 								...normalized,
 								slug: uniqueSlug,
 							};
-							await storage.writeEntity(path.campaign, "characters", uniqueSlug, payload);
+							await storage.writeEntity(
+								path.campaign,
+								"characters",
+								uniqueSlug,
+								payload,
+							);
 							bySlug.set(uniqueSlug, payload);
 							if (fullNameKey) byName.set(fullNameKey, payload);
 						}

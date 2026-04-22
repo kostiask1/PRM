@@ -129,7 +129,9 @@ export default function App() {
 					...characters
 						.map((entity) => toEntityOption(entity, "characters"))
 						.filter(Boolean),
-					...npcs.map((entity) => toEntityOption(entity, "npc")).filter(Boolean),
+					...npcs
+						.map((entity) => toEntityOption(entity, "npc"))
+						.filter(Boolean),
 				].sort((a, b) => a.name.localeCompare(b.name, "uk"));
 
 				if (entities.length === 0) {
@@ -265,7 +267,9 @@ export default function App() {
 				className="App__sidebar"
 				campaigns={campaigns}
 				activeCampaignId={activeCampaignSlug}
-				onSelectCampaign={(slug) => navigateTo(slug, null, false, null, isCTRLPressed)}
+				onSelectCampaign={(slug) =>
+					navigateTo(slug, null, false, null, isCTRLPressed)
+				}
 				onCreateCampaign={openCreateCampaignModal}
 				onToggleCampaignStatus={handleToggleCampaignStatus}
 			/>

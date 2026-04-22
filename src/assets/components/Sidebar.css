@@ -303,6 +303,7 @@
 }
 
 @media (max-width: 1024px) {
+
 	.Sidebar,
 	.Sidebar:hover {
 		position: sticky;

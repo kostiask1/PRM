@@ -30,7 +30,8 @@ export default function Select({
 			};
 		})?.filter(Boolean) || [];
 
-	const selectedOption = options.find((opt) => opt.value === value) || options[0];
+	const selectedOption =
+		options.find((opt) => opt.value === value) || options[0];
 
 	const updateDropdownPosition = useCallback(() => {
 		if (!containerRef.current) return;
@@ -114,14 +115,16 @@ export default function Select({
 			<div
 				ref={dropdownRef}
 				className="Select__dropdown Select__dropdown--portal"
-				style={dropdownStyle}>
+				style={dropdownStyle}
+			>
 				{options.map((opt) => (
 					<div
 						key={opt.value}
 						className={classNames("Select__option", {
 							"is-selected": opt.value === value,
 						})}
-						onClick={() => handleSelect(opt.value)}>
+						onClick={() => handleSelect(opt.value)}
+					>
 						{opt.label}
 					</div>
 				))}
@@ -137,13 +140,15 @@ export default function Select({
 					"is-disabled": disabled,
 				})}
 				ref={containerRef}
-				{...props}>
+				{...props}
+			>
 				<div
 					className="Select__trigger"
 					onClick={() => {
 						if (disabled) return;
 						setIsOpen((prev) => !prev);
-					}}>
+					}}
+				>
 					<span className="Select__label">{selectedOption?.label}</span>
 					<Icon name="chevron" className="Select__icon" />
 				</div>

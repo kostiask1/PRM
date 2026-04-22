@@ -4,12 +4,12 @@ export const api = {
 	async request(path, options = {}) {
 		const isFormData = options.body instanceof FormData;
 		const response = await fetch(`${API_BASE}${path}`, {
-			headers: isFormData 
+			headers: isFormData
 				? { ...(options.headers || {}) }
 				: {
-					"Content-Type": "application/json",
-					...(options.headers || {}),
-				},
+						"Content-Type": "application/json",
+						...(options.headers || {}),
+					},
 			...options,
 		});
 		if (response.status === 204) return null;
@@ -71,16 +71,22 @@ export const api = {
 			method: "POST",
 			body: JSON.stringify({ orders }),
 		}),
-	getEntities: (slug, type) => api.request(`/campaigns/${slug}/entities/${type}`),
-	createEntity: (slug, type, payload) => api.request(`/campaigns/${slug}/entities/${type}`, {
-		method: "POST", body: JSON.stringify(payload)
-	}),
-	updateEntity: (slug, type, entitySlug, payload) => api.request(`/campaigns/${slug}/entities/${type}/${entitySlug}`, {
-		method: "PATCH", body: JSON.stringify(payload)
-	}),
-	deleteEntity: (slug, type, entitySlug) => api.request(`/campaigns/${slug}/entities/${type}/${entitySlug}`, {
-		method: "DELETE"
-	}),
+	getEntities: (slug, type) =>
+		api.request(`/campaigns/${slug}/entities/${type}`),
+	createEntity: (slug, type, payload) =>
+		api.request(`/campaigns/${slug}/entities/${type}`, {
+			method: "POST",
+			body: JSON.stringify(payload),
+		}),
+	updateEntity: (slug, type, entitySlug, payload) =>
+		api.request(`/campaigns/${slug}/entities/${type}/${entitySlug}`, {
+			method: "PATCH",
+			body: JSON.stringify(payload),
+		}),
+	deleteEntity: (slug, type, entitySlug) =>
+		api.request(`/campaigns/${slug}/entities/${type}/${entitySlug}`, {
+			method: "DELETE",
+		}),
 
 	// Global Backup/Restore
 	exportAll: () => api.request("/export-all"),
@@ -148,10 +154,11 @@ export const api = {
 		api.request(`/bestiary/${encodeURIComponent(source.toLowerCase())}`),
 	getLegendaryGroups: () => api.request("/bestiary/legendarygroups"),
 	getBestiaryFavorites: () => api.request("/bestiary/favorites"),
-	toggleBestiaryFavorite: (name, source) => api.request("/bestiary/favorites/toggle", {
-		method: "POST",
-		body: JSON.stringify({ name, source })
-	}),
+	toggleBestiaryFavorite: (name, source) =>
+		api.request("/bestiary/favorites/toggle", {
+			method: "POST",
+			body: JSON.stringify({ name, source }),
+		}),
 	searchBestiary: (name, type) => {
 		const params = new URLSearchParams();
 		if (name) params.append("name", name);
@@ -177,42 +184,60 @@ export const api = {
 		const formData = new FormData();
 		if (subcategory) formData.append("subcategory", subcategory);
 		formData.append("image", file); // Файл має бути останнім, щоб multer бачив інші поля
-		
-		return api.request(`/campaigns/${encodeURIComponent(slug)}/images/${category}`, {
-			method: "POST",
-			body: formData,
-		});
+
+		return api.request(
+			`/campaigns/${encodeURIComponent(slug)}/images/${category}`,
+			{
+				method: "POST",
+				body: formData,
+			},
+		);
 	},
-	getImages: (slug, category, subcategory) => 
-		api.request(`/campaigns/${encodeURIComponent(slug)}/images/${category}${subcategory ? `?subcategory=${encodeURIComponent(subcategory)}` : ""}`),
-	
-	moveImages: (payload) => api.request("/images/move", {
-		method: "POST",
-		body: JSON.stringify(payload)
-	}),
-	
-	createSubcategory: (slug, category, name) => 
-		api.request(`/campaigns/${encodeURIComponent(slug)}/images/${category}/subcategories`, {
+	getImages: (slug, category, subcategory) =>
+		api.request(
+			`/campaigns/${encodeURIComponent(slug)}/images/${category}${subcategory ? `?subcategory=${encodeURIComponent(subcategory)}` : ""}`,
+		),
+
+	moveImages: (payload) =>
+		api.request("/images/move", {
 			method: "POST",
-			body: JSON.stringify({ name })
+			body: JSON.stringify(payload),
 		}),
-	getSubcategories: (slug, category, subcategory = "") => 
-		api.request(`/campaigns/${encodeURIComponent(slug)}/images/${category}/subcategories${subcategory ? `?subcategory=${encodeURIComponent(subcategory)}` : ""}`),
-	
+
+	createSubcategory: (slug, category, name) =>
+		api.request(
+			`/campaigns/${encodeURIComponent(slug)}/images/${category}/subcategories`,
+			{
+				method: "POST",
+				body: JSON.stringify({ name }),
+			},
+		),
+	getSubcategories: (slug, category, subcategory = "") =>
+		api.request(
+			`/campaigns/${encodeURIComponent(slug)}/images/${category}/subcategories${subcategory ? `?subcategory=${encodeURIComponent(subcategory)}` : ""}`,
+		),
+
 	renameSubcategory: (slug, category, oldName, newName) =>
-		api.request(`/campaigns/${encodeURIComponent(slug)}/images/${category}/subcategories/${encodeURIComponent(oldName)}`, {
-			method: "PATCH",
-			body: JSON.stringify({ newName })
-		}),
-	
+		api.request(
+			`/campaigns/${encodeURIComponent(slug)}/images/${category}/subcategories/${encodeURIComponent(oldName)}`,
+			{
+				method: "PATCH",
+				body: JSON.stringify({ newName }),
+			},
+		),
+
 	renameImage: (slug, category, subcategory, oldName, newName) =>
-		api.request(`/campaigns/${encodeURIComponent(slug)}/images/${category}/rename`, {
-			method: "PATCH",
-			body: JSON.stringify({ subcategory, oldName, newName })
+		api.request(
+			`/campaigns/${encodeURIComponent(slug)}/images/${category}/rename`,
+			{
+				method: "PATCH",
+				body: JSON.stringify({ subcategory, oldName, newName }),
+			},
+		),
+
+	deleteImages: (payload) =>
+		api.request("/images/delete", {
+			method: "POST",
+			body: JSON.stringify(payload),
 		}),
-	
-	deleteImages: (payload) => api.request("/images/delete", {
-		method: "POST",
-		body: JSON.stringify(payload)
-	}),
 };

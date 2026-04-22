@@ -45,7 +45,8 @@ function Button({
 		className,
 	);
 
-	const strokeWidth = variant === "create" || normalizedSize === BUTTON_SIZES.SMALL ? 2.5 : 2;
+	const strokeWidth =
+		variant === "create" || normalizedSize === BUTTON_SIZES.SMALL ? 2.5 : 2;
 
 	const handleClick = (e) => {
 		if (props.disabled) return;

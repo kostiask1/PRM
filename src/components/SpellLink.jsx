@@ -27,7 +27,11 @@ export default function SpellLink({ children, onClick, onHoverResolve }) {
 
 	return (
 		<Tooltip content={resolvedContent}>
-			<span className="SpellLink" onClick={onClick} onMouseEnter={handleMouseEnter}>
+			<span
+				className="SpellLink"
+				onClick={onClick}
+				onMouseEnter={handleMouseEnter}
+			>
 				{children}
 			</span>
 		</Tooltip>
