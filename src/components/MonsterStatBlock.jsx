@@ -22,6 +22,8 @@ import { resolveSpellInput } from "../utils/referenceResolvers.js";
 import useConditionReference from "../hooks/useConditionReference.jsx";
 import Tooltip from "./Tooltip.jsx";
 import classNames from "../utils/classNames";
+import { requestDiceRollAction } from "../actions/app";
+import { useAppDispatch } from "../store/appStore";
 
 const SPELL_CACHE = new Map();
 
@@ -33,6 +35,7 @@ export default function MonsterStatBlock({
 	tokenImageOverrideUrl = null,
 }) {
 	const modal = useModal();
+	const dispatch = useAppDispatch();
 	const [hasImageError, setHasImageError] = useState(false);
 	const [spells, setSpells] = useState([]);
 	const [loadingSpells, setLoadingSpells] = useState(false);
@@ -205,15 +208,11 @@ export default function MonsterStatBlock({
 		const mod = getAbilityModifier(value);
 		return (
 			<Tooltip content={`Кинути перевірку ${label}`}>
-				<div
-					className="MonsterStatBlock__ability-box"
-					onClick={() =>
-						window.dispatchEvent(
-							new CustomEvent("rollDice", {
-								detail: `1d20${formatModifier(mod)}`,
-							}),
-						)
-					}>
+					<div
+						className="MonsterStatBlock__ability-box"
+						onClick={() =>
+							dispatch(requestDiceRollAction(`1d20${formatModifier(mod)}`))
+						}>
 					<span className="ability-label">{label}</span>
 					<span className="ability-mod">{formatModifier(mod)}</span>
 					<span className="ability-score">{value}</span>

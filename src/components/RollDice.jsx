@@ -1,12 +1,14 @@
 import "../assets/components/RollDice.css";
 import Tooltip from "./Tooltip";
-import { DICE_ROLL_EVENT } from "../utils/diceEvents";
+import { requestDiceRollAction } from "../actions/app";
+import { useAppDispatch } from "../store/appStore";
 
 export default function RollDice({ formula, children }) {
+	const dispatch = useAppDispatch();
 	const handleClick = (e) => {
 		e.preventDefault();
 		e.stopPropagation();
-		window.dispatchEvent(new CustomEvent(DICE_ROLL_EVENT, { detail: formula }));
+		dispatch(requestDiceRollAction(formula));
 	};
 
 	return (

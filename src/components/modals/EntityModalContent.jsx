@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 
+import { refreshEntitiesAction } from "../../actions/app";
 import { api } from "../../api";
+import { useAppDispatch } from "../../store/appStore";
 import CharacterCard from "../CharacterCard";
 
 export default function EntityModalContent({
@@ -9,6 +11,7 @@ export default function EntityModalContent({
 	type,
 	onClose,
 }) {
+	const dispatch = useAppDispatch();
 	const [entity, setEntity] = useState(initialEntity);
 
 	useEffect(() => {
@@ -18,7 +21,7 @@ export default function EntityModalContent({
 	const handleUpdate = async (_id, updated) => {
 		setEntity(updated);
 		await api.updateEntity(campaignSlug, type, updated.slug, updated);
-		window.dispatchEvent(new CustomEvent("refresh-entities"));
+		dispatch(refreshEntitiesAction());
 	};
 
 	return (
@@ -28,7 +31,7 @@ export default function EntityModalContent({
 			onChange={handleUpdate}
 			onDelete={async () => {
 				await api.deleteEntity(campaignSlug, type, entity.slug);
-				window.dispatchEvent(new CustomEvent("refresh-entities"));
+				dispatch(refreshEntitiesAction());
 				onClose();
 			}}
 			onToggleCollapse={null}

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { requestDiceRollAction } from "../actions/app";
 import { api } from "../api";
 import { useModal } from "../context/ModalContext";
-import { DICE_ROLL_EVENT, DICE_ROLLED_EVENT } from "../utils/diceEvents";
+import { useAppDispatch, useAppSelector } from "../store/appStore";
 
 export default function useEncounterView({
 	campaign,
@@ -12,15 +13,18 @@ export default function useEncounterView({
 	onRefreshCampaigns,
 }) {
 	const modal = useModal();
+	const dispatch = useAppDispatch();
 
 	const [encounter, setEncounter] = useState(null);
 	const [selectedInstance, setSelectedInstance] = useState(null);
 	const [showBestiary, setShowBestiary] = useState(false);
 	const [notification, setNotification] = useState(null);
 	const [entityImageMap, setEntityImageMap] = useState(new Map());
+	const diceRolledResult = useAppSelector((state) => state.dice.rolledResult);
 
 	const saveTimeoutRef = useRef(null);
 	const fileInputRef = useRef(null);
+	const processedDiceResultIdRef = useRef(null);
 
 	useEffect(() => {
 		return () => {
@@ -414,68 +418,63 @@ export default function useEncounterView({
 				setNotification(`Для ${target.name} не знайдено формулу HP.`);
 				return;
 			}
-			window.dispatchEvent(
-				new CustomEvent(DICE_ROLL_EVENT, {
-					detail: {
-						formula: hpFormula,
-						context: {
-							kind: "encounter_hp",
-							campaignSlug: campaign.slug,
-							sessionId: String(sessionId),
-							encounterId: String(encounterId),
-							instanceId,
-						},
-					},
+			dispatch(
+				requestDiceRollAction({
+				formula: hpFormula,
+				context: {
+					kind: "encounter_hp",
+					campaignSlug: campaign.slug,
+					sessionId: String(sessionId),
+					encounterId: String(encounterId),
+					instanceId,
+				},
 				}),
 			);
 		},
-		[encounter, campaign.slug, sessionId, encounterId],
+		[dispatch, encounter, campaign.slug, sessionId, encounterId],
 	);
 
 	useEffect(() => {
-		const handleDiceRolled = (event) => {
-			const result = event.detail?.result;
-			const context = event.detail?.context;
-			if (!result || !context) return;
-			if (context.kind !== "encounter_hp") return;
-			if (context.campaignSlug !== campaign.slug) return;
-			if (String(context.sessionId) !== String(sessionId)) return;
-			if (String(context.encounterId) !== String(encounterId)) return;
+		const resultId = diceRolledResult?.resultId;
+		if (!resultId || processedDiceResultIdRef.current === resultId) return;
 
-			const rolledHp = Math.max(1, Number(result.total) || 0);
-			if (!rolledHp) return;
+		processedDiceResultIdRef.current = resultId;
+		const result = diceRolledResult?.result;
+		const context = diceRolledResult?.context;
+		if (!result || !context) return;
+		if (context.kind !== "encounter_hp") return;
+		if (context.campaignSlug !== campaign.slug) return;
+		if (String(context.sessionId) !== String(sessionId)) return;
+		if (String(context.encounterId) !== String(encounterId)) return;
 
-			let updatedEncounter = null;
-			let updatedMonster = null;
+		const rolledHp = Math.max(1, Number(result.total) || 0);
+		if (!rolledHp) return;
 
-			setEncounter((prev) => {
-				if (!prev) return prev;
-				const updatedMonsters = prev.monsters.map((monster) => {
-					if (monster.instanceId !== context.instanceId) return monster;
-					updatedMonster = {
-						...monster,
-						hit_points: rolledHp,
-						currentHp: rolledHp,
-					};
-					return updatedMonster;
-				});
-				updatedEncounter = { ...prev, monsters: updatedMonsters };
-				return updatedEncounter;
+		let updatedEncounter = null;
+		let updatedMonster = null;
+
+		setEncounter((prev) => {
+			if (!prev) return prev;
+			const updatedMonsters = prev.monsters.map((monster) => {
+				if (monster.instanceId !== context.instanceId) return monster;
+				updatedMonster = {
+					...monster,
+					hit_points: rolledHp,
+					currentHp: rolledHp,
+				};
+				return updatedMonster;
 			});
+			updatedEncounter = { ...prev, monsters: updatedMonsters };
+			return updatedEncounter;
+		});
 
-			if (!updatedEncounter || !updatedMonster) return;
+		if (!updatedEncounter || !updatedMonster) return;
 
-			setSelectedInstance((prev) =>
-				prev?.instanceId === context.instanceId ? updatedMonster : prev,
-			);
-			saveEncounterState(updatedEncounter);
-		};
-
-		window.addEventListener(DICE_ROLLED_EVENT, handleDiceRolled);
-		return () => {
-			window.removeEventListener(DICE_ROLLED_EVENT, handleDiceRolled);
-		};
-	}, [campaign.slug, sessionId, encounterId, saveEncounterState]);
+		setSelectedInstance((prev) =>
+			prev?.instanceId === context.instanceId ? updatedMonster : prev,
+		);
+		saveEncounterState(updatedEncounter);
+	}, [campaign.slug, diceRolledResult, sessionId, encounterId, saveEncounterState]);
 
 	const getHpColor = useCallback((current, max) => {
 		const ratio = max > 0 ? Math.min(Math.max(0, current / max), 1) : 0;

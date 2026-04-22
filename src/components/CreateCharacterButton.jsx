@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 
+import { refreshEntitiesAction } from "../actions/app";
 import { api } from "../api";
 import { useModal } from "../context/ModalContext";
+import { useAppDispatch } from "../store/appStore";
 import Button from "./Button";
 import Modal from "./Modal";
 import CharacterCard from "./CharacterCard";
@@ -35,6 +37,7 @@ export default function CreateCharacterButton({
 	strokeWidth = 2.5,
 }) {
 	const modal = useModal();
+	const dispatch = useAppDispatch();
 	const [isOpen, setIsOpen] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [draft, setDraft] = useState(() => createEmptyDraft(entityType));
@@ -91,7 +94,7 @@ export default function CreateCharacterButton({
 		setIsSubmitting(true);
 		try {
 			await api.createEntity(campaignSlug, entityType, payload);
-			window.dispatchEvent(new CustomEvent("refresh-entities"));
+			dispatch(refreshEntitiesAction());
 			setIsOpen(false);
 		} catch (error) {
 			console.error("Failed to create entity from modal", error);

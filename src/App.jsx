@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { api } from "./api";
 import DiceCalculator from "./components/DiceCalculator";
 import MainContent from "./components/MainContent";
@@ -7,7 +7,13 @@ import Sidebar from "./components/Sidebar";
 import MentionPickerModalContent from "./components/modals/MentionPickerModalContent";
 import CreateCampaignModalContent from "./components/modals/CreateCampaignModalContent";
 import { parseUrl } from "./utils/navigation";
-import { ModalContext } from "./context/ModalContext";
+import { useModal } from "./context/ModalContext";
+import { closeMentionPickerAction } from "./actions/app";
+import {
+	resolveModalRequest,
+	useAppDispatch,
+	useAppSelector,
+} from "./store/appStore";
 
 /**
  * Main Application Component
@@ -27,11 +33,13 @@ export default function App() {
 		initialRoute.encounter,
 	);
 
-	// Modal State
-	const [modalConfig, setModalConfig] = useState(null);
-
-	const modal = useMemo(() => Modal.createApi(setModalConfig), []);
+	const modal = useModal();
 	const { close: closeModal, alert, confirm } = modal;
+	const dispatch = useAppDispatch();
+	const modalState = useAppSelector((store) => store.modal);
+	const mentionPickerRequest = useAppSelector(
+		(store) => store.mentionPickerRequest,
+	);
 
 	const loadCampaigns = async () => {
 		try {
@@ -75,16 +83,18 @@ export default function App() {
 	}, []);
 
 	useEffect(() => {
-		const handleOpenMentionPicker = async (e) => {
-			const detail = e.detail || {};
-			if (typeof detail.select !== "function" || typeof detail.cancel !== "function") {
+		const handleMentionPicker = async () => {
+			if (!mentionPickerRequest) return;
+			const { select, cancel } = mentionPickerRequest;
+
+			if (typeof select !== "function" || typeof cancel !== "function") {
+				dispatch(closeMentionPickerAction());
 				return;
 			}
 
-			detail.handled = true;
-
 			if (!activeCampaignSlug) {
-				detail.cancel();
+				cancel();
+				dispatch(closeMentionPickerAction());
 				return;
 			}
 
@@ -118,43 +128,44 @@ export default function App() {
 				].sort((a, b) => a.name.localeCompare(b.name, "uk"));
 
 				if (entities.length === 0) {
-					detail.cancel();
+					cancel();
+					dispatch(closeMentionPickerAction());
 					return;
 				}
 
-				const closePicker = closeModal;
-				setModalConfig({
+				modal.open({
 					title: "Вибір згадки",
 					type: "confirm",
 					showFooter: false,
-					onCancel: () => {
-						closePicker();
-						detail.cancel();
+					onCancelAction: () => {
+						cancel();
+						dispatch(closeMentionPickerAction());
 					},
 					children: (
 						<MentionPickerModalContent
 							entities={entities}
 							onSelect={(name) => {
-								closePicker();
-								detail.select(name);
+								select(name);
+								dispatch(closeMentionPickerAction());
+								closeModal();
 							}}
 							onCancel={() => {
-								closePicker();
-								detail.cancel();
+								cancel();
+								dispatch(closeMentionPickerAction());
+								closeModal();
 							}}
 						/>
 					),
 				});
 			} catch (err) {
 				console.error("Error opening mention picker:", err);
-				detail.cancel();
+				cancel();
+				dispatch(closeMentionPickerAction());
 			}
 		};
 
-		window.addEventListener("open-mention-picker", handleOpenMentionPicker);
-		return () =>
-			window.removeEventListener("open-mention-picker", handleOpenMentionPicker);
-	}, [activeCampaignSlug]);
+		handleMentionPicker();
+	}, [activeCampaignSlug, closeModal, dispatch, mentionPickerRequest, modal]);
 
 	// Універсальна функція навігації
 	const navigate = (
@@ -228,11 +239,10 @@ export default function App() {
 
 	const openCreateCampaignModal = () => {
 		const handleClose = closeModal;
-		setModalConfig({
+		modal.open({
 			title: "Нова кампанія",
 			type: "confirm",
 			showFooter: false,
-			onCancel: handleClose,
 			children: (
 				<CreateCampaignModalContent
 					onClose={handleClose}
@@ -262,8 +272,7 @@ export default function App() {
 	};
 
 	return (
-		<ModalContext.Provider value={modal}>
-			<div className="App">
+		<div className="App">
 			<Sidebar
 				className="App__sidebar"
 				campaigns={campaigns}
@@ -282,12 +291,27 @@ export default function App() {
 					onNavigate={navigate}
 				/>
 
-			{modalConfig && <Modal {...modalConfig} />}
+			{modalState.config && (
+				<Modal
+					{...modalState.config}
+					onConfirm={(value) =>
+						resolveModalRequest(modalState.requestId, value)
+					}
+					onCancel={
+						modalState.config?.isAlert
+							? null
+							: () => {
+									modalState.config?.onCancelAction?.();
+									resolveModalRequest(modalState.requestId, null);
+								}
+					}
+				/>
+			)}
 			{/* Передаємо команду для кидка та функцію для її скидання */}
 			<DiceCalculator />
-			</div>
-		</ModalContext.Provider>
+		</div>
 	);
 }
+
 
 

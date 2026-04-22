@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { api } from "../api";
 import { useModal } from "../context/ModalContext";
+import { useAppSelector } from "../store/appStore";
 import {
 	appendTrailingEmptyNote,
 	ensureAtLeastOneNote,
@@ -44,6 +45,9 @@ export default function useCampaignView(props) {
 		const [redoStack, setRedoStack] = useState([]);
 		const isUpdatingHistory = useRef(false);
 		const lastSlugRef = useRef(campaign.slug);
+		const entityRefreshVersion = useAppSelector(
+			(store) => store.entityRefreshVersion,
+		);
 
 		const loadCharacters = useCallback(async () => {
 			try {
@@ -84,14 +88,10 @@ export default function useCampaignView(props) {
 		}, [campaign.slug]);
 
 		useEffect(() => {
-			const handleRefreshEntities = () => {
-				loadCharacters();
-				loadNpcs();
-			};
-			window.addEventListener("refresh-entities", handleRefreshEntities);
-			return () =>
-				window.removeEventListener("refresh-entities", handleRefreshEntities);
-		}, [loadCharacters, loadNpcs]);
+			if (entityRefreshVersion === 0) return;
+			loadCharacters();
+			loadNpcs();
+		}, [entityRefreshVersion, loadCharacters, loadNpcs]);
 
 		const saveToServer = useCallback(
 			async (updates) => {

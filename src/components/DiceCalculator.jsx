@@ -1,10 +1,14 @@
-﻿import React, { useState, useEffect, useCallback } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Button from "./Button";
 import Input from "./Input";
 import Icon from "./Icon";
 import Tooltip from "./Tooltip";
+import {
+	publishDiceResultAction,
+	requestDiceRollAction,
+} from "../actions/app";
 import { rollDiceFormula } from "../utils/dice";
-import { DICE_ROLL_EVENT, DICE_ROLLED_EVENT } from "../utils/diceEvents";
+import { useAppDispatch, useAppSelector } from "../store/appStore";
 import classNames from "../utils/classNames";
 
 import "../assets/components/DiceCalculator.css";
@@ -14,17 +18,19 @@ export default function DiceCalculator() {
 	const [history, setHistory] = useState([]);
 	const [lastResult, setLastResult] = useState(null);
 	const [manualInput, setManualInput] = useState("");
+	const dispatch = useAppDispatch();
+	const diceRollRequest = useAppSelector((state) => state.dice.rollRequest);
+	const processedRollRequestIdRef = useRef(null);
 
 	const diceTypes = [4, 6, 8, 10, 12, 20, 100];
 
 	useEffect(() => {
 		const handleKeyDown = (e) => {
-			// Перевіряємо Ctrl+D (або Cmd+D для Mac)
 			if (
 				(e.ctrlKey || e.metaKey) &&
 				(e.key.toLowerCase() === "d" || e.key.toLowerCase() === "в")
 			) {
-				e.preventDefault(); // Запобігаємо відкриттю вікна закладок браузера
+				e.preventDefault();
 				setIsOpen((prev) => !prev);
 			}
 		};
@@ -44,39 +50,31 @@ export default function DiceCalculator() {
 		setLastResult(entry);
 		setHistory((prev) => [entry, ...prev].slice(0, 10));
 		setIsOpen(true);
-		window.dispatchEvent(
-			new CustomEvent(DICE_ROLLED_EVENT, {
-				detail: { result: entry, context },
-			}),
-		);
-	}, []);
+		dispatch(publishDiceResultAction(entry, context));
+	}, [dispatch]);
 
 	useEffect(() => {
-		const handleRollDiceEvent = (event) => {
-			const detail = event.detail;
-			if (!detail) return;
+		const requestId = diceRollRequest?.requestId;
+		if (!requestId || processedRollRequestIdRef.current === requestId) return;
 
-			if (typeof detail === "string") {
-				parseAndRoll(detail);
-				return;
-			}
+		processedRollRequestIdRef.current = requestId;
+		const detail = diceRollRequest?.data;
+		if (!detail) return;
 
-			if (typeof detail === "object") {
-				const formula = detail.formula || detail.value || "";
-				parseAndRoll(formula, detail.context || null);
-			}
-		};
+		if (typeof detail === "string") {
+			parseAndRoll(detail);
+			return;
+		}
 
-		window.addEventListener(DICE_ROLL_EVENT, handleRollDiceEvent);
-		return () => {
-			window.removeEventListener(DICE_ROLL_EVENT, handleRollDiceEvent);
-		};
-	}, [parseAndRoll]);
+		if (typeof detail === "object") {
+			const formula = detail.formula || detail.value || "";
+			parseAndRoll(formula, detail.context || null);
+		}
+	}, [diceRollRequest, parseAndRoll]);
 
 	const addToFormula = (type, value) => {
 		if (type === "die") {
 			if (lastResult) {
-				// Якщо був попередній кидок, очищуємо все для нової формули
 				setLastResult(null);
 				setManualInput("");
 			}
@@ -86,15 +84,15 @@ export default function DiceCalculator() {
 				const match = currentInput.match(dieRegex);
 
 				if (match) {
-					const currentCount = parseInt(match[1] || "1");
+					const currentCount = parseInt(match[1] || "1", 10);
 					return currentInput.replace(dieRegex, `${currentCount + 1}d${value}`);
-				} else {
-					const dieStr = `1d${value}`;
-					if (currentInput === "" || /[+\-*/]$/.test(currentInput)) {
-						return `${currentInput}${dieStr}`;
-					}
-					return `${currentInput}+${dieStr}`;
 				}
+
+				const dieStr = `1d${value}`;
+				if (currentInput === "" || /[+\-*/]$/.test(currentInput)) {
+					return `${currentInput}${dieStr}`;
+				}
+				return `${currentInput}+${dieStr}`;
 			});
 		}
 	};
@@ -107,7 +105,7 @@ export default function DiceCalculator() {
 	const executeRoll = () => {
 		const trimmedInput = manualInput.trim();
 		if (trimmedInput) {
-			parseAndRoll(trimmedInput);
+			dispatch(requestDiceRollAction(trimmedInput));
 		}
 	};
 
@@ -126,16 +124,14 @@ export default function DiceCalculator() {
 		const content = itemsToShow.map((item, idx) => {
 			const isMin = item.max && item.val === 1;
 			const isMax = item.max && item.val === item.max;
-			let className = isMin ? "dice-min" : isMax ? "dice-max" : "";
-			if (item.dropped) className += " dice-dropped";
+			let dynamicClassName = isMin ? "dice-min" : isMax ? "dice-max" : "";
+			if (item.dropped) dynamicClassName += " dice-dropped";
 
 			const sign = idx > 0 && item.val >= 0 ? " + " : "";
 			return (
 				<React.Fragment key={idx}>
 					{sign}
-					<span className={className}>
-						{item.dropped ? item.val : item.val}
-					</span>
+					<span className={dynamicClassName}>{item.val}</span>
 				</React.Fragment>
 			);
 		});
@@ -218,7 +214,7 @@ export default function DiceCalculator() {
 							onChange={(e) => setManualInput(e.target.value)}
 							onKeyDown={(e) => {
 								if (e.key === "Enter" && manualInput.trim()) {
-									parseAndRoll(manualInput);
+									dispatch(requestDiceRollAction(manualInput));
 								}
 							}}
 						/>
@@ -264,7 +260,9 @@ export default function DiceCalculator() {
 								{history.map((roll) => (
 									<div
 										className="DiceCalculator__historyItem"
-										onClick={() => parseAndRoll(roll.formula)}
+										onClick={() =>
+											dispatch(requestDiceRollAction(roll.formula))
+										}
 										key={roll.id}>
 										<Tooltip
 											delay={750}

@@ -2,20 +2,17 @@ import { forwardRef, useRef, useLayoutEffect } from "react";
 import "../assets/components/Input.css";
 import Tooltip from "./Tooltip";
 import classNames from "../utils/classNames";
+import { openMentionPickerAction } from "../actions/app";
+import { useAppDispatch } from "../store/appStore";
 
-function requestMentionSelection() {
+function requestMentionSelection(dispatch) {
 	return new Promise((resolve) => {
-		const detail = {
-			handled: false,
-			select: (name) => resolve({ status: "selected", name: name || "" }),
-			cancel: () => resolve({ status: "cancelled" }),
-		};
-
-		window.dispatchEvent(new CustomEvent("open-mention-picker", { detail }));
-
-		if (!detail.handled) {
-			resolve({ status: "unhandled" });
-		}
+		dispatch(
+			openMentionPickerAction({
+				select: (name) => resolve({ status: "selected", name: name || "" }),
+				cancel: () => resolve({ status: "cancelled" }),
+			}),
+		);
 	});
 }
 
@@ -65,6 +62,7 @@ const Input = forwardRef(
 		{ type = "text", className = "", initialSelection, title, ...props },
 		ref,
 	) => {
+		const dispatch = useAppDispatch();
 		const internalRef = useRef(null);
 
 		// Синхронізуємо висоту textarea з контентом
@@ -143,7 +141,7 @@ const Input = forwardRef(
 				const initialSelectionEnd = selectionEnd;
 
 				if (!hasSelection) {
-					requestMentionSelection().then((result) => {
+					requestMentionSelection(dispatch).then((result) => {
 						if (result.status === "cancelled") return;
 
 						const cursorStart = initialSelectionStart;
