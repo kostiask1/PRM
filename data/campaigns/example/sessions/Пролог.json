@@ -5,7 +5,7 @@
   "order": 0,
   "completedAt": null,
   "createdAt": "2026-04-21T15:06:11.710Z",
-  "updatedAt": "2026-04-21T15:52:11.257Z",
+  "updatedAt": "2026-04-22T07:46:06.699Z",
   "data": {
     "encounters": [
       {
@@ -508,8 +508,8 @@
             "hasFluffImages": true,
             "instanceId": "inst-1776785481722-8592",
             "originalBestiaryName": "Scout",
-            "currentHp": 16,
-            "hit_points": 16,
+            "currentHp": 14,
+            "hit_points": 14,
             "armor_class": 13
           },
           {
@@ -668,8 +668,8 @@
             "hasFluffImages": true,
             "instanceId": "inst-1776785481723-3026",
             "originalBestiaryName": "Scout",
-            "currentHp": 16,
-            "hit_points": 16,
+            "currentHp": 13,
+            "hit_points": 13,
             "armor_class": 13
           }
         ]
