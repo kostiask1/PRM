@@ -138,6 +138,7 @@
 }
 
 .CampaignView__script,
+.CampaignView__script.Input,
 .CampaignView__script .MarkdownView {
 	min-height: 200px;
 }
