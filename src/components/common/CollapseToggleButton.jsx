@@ -16,9 +16,8 @@ function CollapseToggleButton({
 	disabled = false,
 }) {
 	const isRotated = typeof rotated === "boolean" ? rotated : collapsed;
-	const sizeClass = `CollapseToggleButton--${normalizedSize}`;
-	const iconSize =
-		normalizedSize === COLLAPSE_TOGGLE_BUTTON_SIZES.SMALL ? 14 : 16;
+	const sizeClass = `CollapseToggleButton--${size}`;
+	const iconSize = size === Button.SIZES.SMALL ? 14 : 16;
 
 	return (
 		<Button
@@ -41,7 +40,5 @@ function CollapseToggleButton({
 		/>
 	);
 }
-
-Button.SIZES = COLLAPSE_TOGGLE_BUTTON_SIZES;
 
 export default CollapseToggleButton;
