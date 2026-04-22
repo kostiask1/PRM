@@ -141,7 +141,7 @@ export default function CharacterCard({
 				}>
 				{!isModalView && typeof onToggleCollapse === "function" && (
 					<CollapseToggleButton
-						size="sm"
+						size={Button.SIZES.SMALL}
 						collapsed={isCollapsed}
 						onClick={() => onToggleCollapse(character.id)}
 					/>
@@ -165,7 +165,8 @@ export default function CharacterCard({
 					<Button
 						variant={isEditing ? "primary" : "ghost"}
 						icon={isEditing ? "check" : "edit"}
-						size={14}
+						size={Button.SIZES.SMALL}
+						iconSize={14}
 						onClick={(e) => {
 							e.stopPropagation();
 							setIsEditing(!isEditing);
@@ -177,7 +178,8 @@ export default function CharacterCard({
 					<Button
 						variant="danger"
 						icon="trash"
-						size={14}
+						size={Button.SIZES.SMALL}
+						iconSize={14}
 						onClick={(e) => {
 							e.stopPropagation();
 							onDelete(character.id);
@@ -314,7 +316,7 @@ export default function CharacterCard({
 								updateField("isNotesCollapsed", !character.isNotesCollapsed)
 							}>
 							<CollapseToggleButton
-								size="sm"
+								size={Button.SIZES.SMALL}
 								collapsed={character.isNotesCollapsed}
 								onClick={() =>
 									updateField("isNotesCollapsed", !character.isNotesCollapsed)

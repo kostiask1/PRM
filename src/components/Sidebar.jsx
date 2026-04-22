@@ -79,7 +79,7 @@ export default function Sidebar({
 						{DB_IMPORT_STRATEGIES.map((item) => (
 							<Button
 								key={item.id}
-								size="small"
+								size={Button.SIZES.SMALL}
 								variant={dbImportStrategy === item.id ? "primary" : "ghost"}
 								onClick={() => handleSelectImportStrategy(item.id)}>
 								{item.label}

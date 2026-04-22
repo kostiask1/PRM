@@ -27,7 +27,7 @@ export default function NoteCard({
 				onClick={() => !isLast && onToggleCollapse(note.id)}>
 				{!isLast && (
 					<CollapseToggleButton
-						size="sm"
+						size={Button.SIZES.SMALL}
 						collapsed={isCollapsed}
 						onClick={() => onToggleCollapse(note.id)}
 					/>
@@ -42,7 +42,8 @@ export default function NoteCard({
 					<Button
 						variant="danger"
 						icon="trash"
-						size={14}
+						size={Button.SIZES.SMALL}
+						iconSize={14}
 						onClick={(e) => {
 							e.stopPropagation();
 							onDelete(note.id);

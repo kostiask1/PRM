@@ -30,7 +30,7 @@ export default function CreateCharacterButton({
 	entityType = "characters",
 	buttonLabel,
 	buttonVariant = "primary",
-	buttonSize = "small",
+	buttonSize = Button.SIZES.SMALL,
 	buttonClassName,
 	icon = "plus",
 	strokeWidth = 2.5,

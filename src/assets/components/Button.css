@@ -44,7 +44,7 @@
 	background: transparent;
 	border-width: 2px;
 	border-color: color-mix(in srgb, var(--danger), transparent 50%);
-	color: var(--text-on-accent);
+	color: var(--text-danger-icon);
 }
 
 .Button--danger:hover {
@@ -60,10 +60,22 @@
 	background: color-mix(in srgb, var(--accent), transparent 92%);
 }
 
-.Button--small {
+.Button--sm {
 	min-height: var(--control-h-sm);
 	padding: 0 var(--space-3);
 	font-size: 0.85rem;
+}
+
+.Button--md {
+	min-height: var(--control-h);
+	padding: 0 var(--space-3);
+	font-size: 0.92rem;
+}
+
+.Button--lg {
+	min-height: calc(var(--control-h) + 6px);
+	padding: 0 var(--space-4);
+	font-size: 0.98rem;
 }
 
 .Button--footer {

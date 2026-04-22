@@ -34,7 +34,7 @@ function SessionView(props) {
 						<div className="SessionView__titleRow">
 							<Button
 								variant="ghost"
-								size="small"
+								size={Button.SIZES.SMALL}
 								onClick={view.handleBack}
 								icon="back"
 								className="SessionView__backBtn"
@@ -49,7 +49,7 @@ function SessionView(props) {
 				<div className="SessionView__headerActions">
 					<Button
 						variant="ghost"
-						size="small"
+						size={Button.SIZES.SMALL}
 						icon="undo"
 						onClick={view.handleUndo}
 						disabled={view.undoStack.length === 0 || view.isSaving}
@@ -57,7 +57,7 @@ function SessionView(props) {
 					/>
 					<Button
 						variant="ghost"
-						size="small"
+						size={Button.SIZES.SMALL}
 						icon="redo"
 						onClick={view.handleRedo}
 						disabled={view.redoStack.length === 0 || view.isSaving}
@@ -108,7 +108,7 @@ function SessionView(props) {
 						action={
 							<Button
 								variant="primary"
-								size="small"
+								size={Button.SIZES.SMALL}
 								onClick={view.addScene}
 								icon="plus"
 								iconSize={16}>
@@ -258,7 +258,7 @@ function SceneCard(props) {
 								className="SceneCard__notes-header"
 								onClick={props.onToggleNotesCollapse}>
 								<CollapseToggleButton
-									size="sm"
+									size={Button.SIZES.SMALL}
 									collapsed={props.scene.isNotesCollapsed}
 									onClick={props.onToggleNotesCollapse}
 								/>

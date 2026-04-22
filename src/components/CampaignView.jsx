@@ -57,7 +57,8 @@ function CampaignView(props) {
 					<Button
 						variant="danger"
 						icon="trash"
-						size={16}
+						size={Button.SIZES.SMALL}
+						iconSize={16}
 						onClick={(e) => {
 							e.stopPropagation();
 							view.handleDeleteSession(session);
@@ -87,7 +88,7 @@ function CampaignView(props) {
 				<div className="CampaignView__headerActions">
 					<Button
 						variant="ghost"
-						size="small"
+						size={Button.SIZES.SMALL}
 						icon="undo"
 						onClick={view.handleUndo}
 						disabled={view.undoStack.length === 0}
@@ -95,7 +96,7 @@ function CampaignView(props) {
 					/>
 					<Button
 						variant="ghost"
-						size="small"
+						size={Button.SIZES.SMALL}
 						icon="redo"
 						onClick={view.handleRedo}
 						disabled={view.redoStack.length === 0}
@@ -121,7 +122,7 @@ function CampaignView(props) {
 								variant="create"
 								onClick={view.handleCreateSession}
 								icon="plus"
-								size="small"
+								size={Button.SIZES.SMALL}
 								strokeWidth={2.5}>
 								Нова сесія
 							</Button>
@@ -136,19 +137,19 @@ function CampaignView(props) {
 							<div className="CampaignView__sessionFilterRow">
 								<Button
 									variant={sessionStatusFilter === "all" ? "primary" : "ghost"}
-									size="small"
+									size={Button.SIZES.SMALL}
 									onClick={() => setSessionStatusFilter("all")}>
 									Всі
 								</Button>
 								<Button
 									variant={sessionStatusFilter === "active" ? "primary" : "ghost"}
-									size="small"
+									size={Button.SIZES.SMALL}
 									onClick={() => setSessionStatusFilter("active")}>
 									Активні
 								</Button>
 								<Button
 									variant={sessionStatusFilter === "completed" ? "primary" : "ghost"}
-									size="small"
+									size={Button.SIZES.SMALL}
 									onClick={() => setSessionStatusFilter("completed")}>
 									Завершені
 								</Button>
@@ -189,7 +190,7 @@ function CampaignView(props) {
 										view.triggerSave({ isDescriptionCollapsed: next });
 									}}>
 									<CollapseToggleButton
-										size="md"
+										size={Button.SIZES.MEDIUM}
 										collapsed={view.isDescriptionCollapsed}
 										onClick={() => {
 											const next = !view.isDescriptionCollapsed;
@@ -221,7 +222,7 @@ function CampaignView(props) {
 										view.triggerSave({ isNotesCollapsed: next });
 									}}>
 									<CollapseToggleButton
-										size="md"
+										size={Button.SIZES.MEDIUM}
 										collapsed={view.isNotesCollapsed}
 										onClick={() => {
 											const next = !view.isNotesCollapsed;
@@ -264,7 +265,7 @@ function CampaignView(props) {
 										view.triggerSave({ isCharactersCollapsed: next });
 									}}>
 									<CollapseToggleButton
-										size="md"
+										size={Button.SIZES.MEDIUM}
 										collapsed={view.isCharactersCollapsed}
 										onClick={() => {
 											const next = !view.isCharactersCollapsed;
@@ -313,7 +314,7 @@ function CampaignView(props) {
 										view.triggerSave({ isNpcsCollapsed: next });
 									}}>
 									<CollapseToggleButton
-										size="md"
+										size={Button.SIZES.MEDIUM}
 										collapsed={view.isNpcsCollapsed}
 										onClick={() => {
 											const next = !view.isNpcsCollapsed;

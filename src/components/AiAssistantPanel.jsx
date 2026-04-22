@@ -296,7 +296,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 								/>
 								<Button
 									variant={useContext ? "primary" : "ghost"}
-									size="small"
+									size={Button.SIZES.SMALL}
 									icon="database"
 									onClick={() => setIsContextModalOpen(true)}
 									disabled={loading}
@@ -307,7 +307,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 							{!isCampaign && (
 								<Button
 									variant="ghost"
-									size="small"
+									size={Button.SIZES.SMALL}
 									icon="image"
 									onClick={() => setShowSceneSelector(true)}
 									disabled={loading || !sessionData.scenes?.length}
@@ -317,7 +317,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 							)}
 							<Button
 								variant={parseAIResponse ? "primary" : "ghost"}
-								size="small"
+								size={Button.SIZES.SMALL}
 								icon="list"
 								onClick={() => setParseAIResponse(!parseAIResponse)}
 								disabled={loading || isEncounter}
@@ -331,7 +331,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 							{!isCampaign && (parseAIResponse || isEncounter) && (
 								<Button
 									variant={generateEncounters ? "primary" : "ghost"}
-									size="small"
+									size={Button.SIZES.SMALL}
 									icon="swords"
 									onClick={() => setGenerateEncounters(!generateEncounters)}
 									disabled={loading || isEncounter}
@@ -407,7 +407,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 															className="AiAssistant__session-name"
 														/>
 														<CollapseToggleButton
-															size="sm"
+															size={Button.SIZES.SMALL}
 															rotated={isExpanded}
 															onClick={() => toggleSessionDetails(slug)}
 														/>

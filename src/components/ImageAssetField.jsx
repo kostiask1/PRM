@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Button from "./form/Button";
 import ImageDropzone from "./ImageDropzone";
 import ImageGallery from "./ImageGallery";
@@ -79,7 +79,7 @@ export default function ImageAssetField({
 						{showClearButton && (
 							<Button
 								variant="danger"
-								size="small"
+								size={Button.SIZES.SMALL}
 								icon="x"
 								className={deleteButtonClassName}
 								onClick={(event) => {

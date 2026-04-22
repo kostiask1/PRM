@@ -2,25 +2,28 @@ import Button from "../form/Button";
 import "../../assets/components/CollapseToggleButton.css";
 import classNames from "../../utils/classNames";
 
-export default function CollapseToggleButton({
+/**
+ * @param {Object} props
+ * @param {"sm"|"md"|"lg"} [props.size]
+ */
+function CollapseToggleButton({
 	collapsed = false,
 	rotated,
-	size = "md",
+	size = Button.SIZES.MEDIUM,
 	onClick,
 	className = "",
 	title,
 	disabled = false,
 }) {
 	const isRotated = typeof rotated === "boolean" ? rotated : collapsed;
-	const allowedSizes = new Set(["sm", "md", "lg"]);
-	const normalizedSize = allowedSizes.has(size) ? size : "md";
 	const sizeClass = `CollapseToggleButton--${normalizedSize}`;
-	const iconSize = normalizedSize === "sm" ? 14 : 16;
+	const iconSize =
+		normalizedSize === COLLAPSE_TOGGLE_BUTTON_SIZES.SMALL ? 14 : 16;
 
 	return (
 		<Button
 			variant="ghost"
-			size="small"
+			size={size}
 			icon="chevron"
 			iconSize={iconSize}
 			className={classNames(
@@ -38,3 +41,7 @@ export default function CollapseToggleButton({
 		/>
 	);
 }
+
+Button.SIZES = COLLAPSE_TOGGLE_BUTTON_SIZES;
+
+export default CollapseToggleButton;

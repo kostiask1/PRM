@@ -280,7 +280,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 						<>
 							<Button
 								variant="ghost"
-								size="small"
+								size={Button.SIZES.SMALL}
 								icon="star"
 								className={classNames("Bestiary__item-fav-btn", {
 									"is-active": isFavorite,
@@ -294,7 +294,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 							{onAddMonster && (
 								<Button
 									variant="ghost"
-									size="small"
+									size={Button.SIZES.SMALL}
 									icon="plus"
 									onClick={(e) => {
 										e.stopPropagation();

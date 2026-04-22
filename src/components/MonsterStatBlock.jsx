@@ -411,7 +411,7 @@ export default function MonsterStatBlock({
 						)}
 						<Button
 							variant="ghost"
-							size="small"
+							size={Button.SIZES.SMALL}
 							icon="star"
 							className={classNames("MonsterStatBlock__favorite-btn", {
 								"is-active": isFavorite,

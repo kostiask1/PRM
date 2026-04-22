@@ -282,12 +282,12 @@ function ImageGallery({
 											placeholder="Назва папки..."
 										/>
 										<Button
-											size="small"
+											size={Button.SIZES.SMALL}
 											icon="check"
 											onClick={handleCreateSub}
 										/>
 										<Button
-											size="small"
+											size={Button.SIZES.SMALL}
 											icon="x"
 											onClick={() => setIsCreatingSub(false)}
 										/>
@@ -295,7 +295,7 @@ function ImageGallery({
 								) : (
 									<Button
 										variant="ghost"
-										size="small"
+										size={Button.SIZES.SMALL}
 										icon="plus"
 										onClick={() => setIsCreatingSub(true)}
 										title="Створити підпапку"
@@ -308,7 +308,7 @@ function ImageGallery({
 								<>
 									<Button
 										variant="ghost"
-										size="small"
+										size={Button.SIZES.SMALL}
 										icon="move"
 										onClick={openMoveModal}>
 										Перемістити ({selectedFilenames.size + selectedSubs.size})
@@ -316,7 +316,7 @@ function ImageGallery({
 									<Button
 										className="ImageGallery__deleteBtn"
 										variant="danger"
-										size="small"
+										size={Button.SIZES.SMALL}
 										icon="trash"
 										onClick={handleBulkDelete}>
 										Видалити ({selectedFilenames.size + selectedSubs.size})

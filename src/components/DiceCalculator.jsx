@@ -170,7 +170,7 @@ export default function DiceCalculator() {
 						<span>Dice Roller</span>
 						<Button
 							variant="ghost"
-							size="small"
+							size={Button.SIZES.SMALL}
 							icon="x"
 							onClick={() => setIsOpen(false)}
 						/>
@@ -226,7 +226,7 @@ export default function DiceCalculator() {
 								<Button
 									key={sides}
 									variant="ghost"
-									size="small"
+									size={Button.SIZES.SMALL}
 									onClick={() => addToFormula("die", sides)}>
 									d{sides}
 								</Button>
@@ -234,7 +234,7 @@ export default function DiceCalculator() {
 						</div>
 					</div>
 					<div className="DiceCalculator__actions">
-						<Button variant="danger" size="small" onClick={clearFormula}>
+						<Button variant="danger" size={Button.SIZES.SMALL} onClick={clearFormula}>
 							Clear
 						</Button>
 						<Button

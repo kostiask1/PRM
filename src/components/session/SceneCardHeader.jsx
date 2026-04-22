@@ -17,7 +17,7 @@ export default function SceneCardHeader({
 		<div className="SceneCard__header">
 			<div className="SceneCard__titleGroup" onClick={onToggle}>
 				<CollapseToggleButton
-					size="sm"
+					size={Button.SIZES.SMALL}
 					collapsed={collapsed}
 					onClick={onToggle}
 				/>
@@ -29,7 +29,7 @@ export default function SceneCardHeader({
 					entityType="npc"
 					buttonLabel="NPC"
 					buttonVariant="ghost"
-					buttonSize="small"
+					buttonSize={Button.SIZES.SMALL}
 				/>
 				<Button
 					variant={hasEncounter ? "primary" : "ghost"}

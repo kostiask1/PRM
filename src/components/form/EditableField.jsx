@@ -488,7 +488,7 @@ export default function EditableField({
 			{!isEditing && value && showCopyButton && (
 				<Button
 					variant="ghost"
-					size="small"
+					size={Button.SIZES.SMALL}
 					icon={copied ? "check" : "copy"}
 					className="EditableField__copy-btn"
 					onClick={handleCopy}

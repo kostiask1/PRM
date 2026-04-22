@@ -15,9 +15,9 @@
 	--radius: 18px;
 	--radius-sm: 12px;
 	--focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent), transparent 78%);
-	--text-on-accent: #f8fafc;
 	--sidebar-collapsed: 64px;
 	--sidebar-expanded: 280px;
+	--text-on-accent: #f8fafc;
 }
 
 :root[data-theme='light'] {
@@ -34,6 +34,7 @@
 	--accent: #0077c8;
 	--success: #198754;
 	--danger: #c52929;
+	--danger-icon: #18191c;
 	--overlay: rgba(9, 20, 38, 0.42);
 	--warning: #b97800;
 	--shadow: 0 22px 55px rgba(7, 18, 33, 0.14);
@@ -55,6 +56,7 @@
 	--accent: #53b4ff;
 	--success: #4dd391;
 	--danger: #ff6666;
+	--danger-icon: #f8fafc;
 	--overlay: rgba(3, 8, 16, 0.84);
 	--warning: #ffc15a;
 	--shadow: 0 22px 55px rgba(0, 0, 0, 0.4);

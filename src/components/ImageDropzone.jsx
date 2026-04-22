@@ -121,7 +121,7 @@ export default function ImageDropzone({
 				<Button
 					variant="ghost"
 					icon="database"
-					size="small"
+					size={Button.SIZES.SMALL}
 					onClick={() => setIsGalleryOpen(true)}>
 					З галереї
 				</Button>

@@ -35,7 +35,7 @@ function EncounterView(props) {
 				<div className="EncounterView__header">
 					<Button
 						variant="ghost"
-						size="small"
+						size={Button.SIZES.SMALL}
 						onClick={view.handleBack}
 						icon="back"
 						className="SessionView__backBtn"
@@ -61,14 +61,14 @@ function EncounterView(props) {
 					/>
 					<Button
 						variant="ghost"
-						size="small"
+						size={Button.SIZES.SMALL}
 						icon="import"
 						onClick={() => view.fileInputRef.current?.click()}
 						title="Імпортувати бій"
 					/>
 					<Button
 						variant="ghost"
-						size="small"
+						size={Button.SIZES.SMALL}
 						icon="export"
 						onClick={view.handleExport}
 						title="Експортувати бій"
@@ -144,7 +144,7 @@ function EncounterView(props) {
 									<div className="EncounterMonsterRow__actions">
 										<Button
 											variant="ghost"
-											size="small"
+											size={Button.SIZES.SMALL}
 											icon="dice"
 											className="EncounterMonsterRow__action"
 											onClick={(e) => {
@@ -155,7 +155,7 @@ function EncounterView(props) {
 										/>
 										<Button
 											variant="ghost"
-											size="small"
+											size={Button.SIZES.SMALL}
 											icon="plus"
 											className="EncounterMonsterRow__action"
 											onClick={(e) => {
@@ -166,7 +166,7 @@ function EncounterView(props) {
 										/>
 										<Button
 											variant="danger"
-											size="small"
+											size={Button.SIZES.SMALL}
 											icon="x"
 											className="EncounterMonsterRow__action"
 											onClick={(e) => {
