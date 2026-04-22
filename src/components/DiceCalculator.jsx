@@ -296,7 +296,7 @@ export default function DiceCalculator() {
 					)}
 				</div>
 			)}
-			<Tooltip content="CTRL+D" delay={500}>
+			<Tooltip content="CTRL+D">
 				<button
 					className="DiceCalculator__toggle"
 					onClick={() => setIsOpen(!isOpen)}>

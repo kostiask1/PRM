@@ -6,24 +6,27 @@
 
 .AiAssistant__toggle {
 	position: fixed;
-	bottom: 85px; /* Розташовуємо вище за DiceCalculator, який зазвичай на 20px */
+	bottom: 85px;
 	right: 16px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	z-index: 100;
+}
+
+.AiAssistant__toggle button {
 	width: 56px;
 	height: 56px;
 	border-radius: 50%;
 	background: var(--bg-2);
 	border: 1px solid var(--border);
 	color: var(--accent);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	cursor: pointer;
-	z-index: 100;
 	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 	transition: all 0.2s ease;
 }
 
-.AiAssistant__toggle:hover {
+.AiAssistant__toggle:hover button {
 	background: var(--panel-2);
 	transform: scale(1.1) translateY(-2px);
 	border-color: var(--accent);
@@ -83,7 +86,8 @@
 	padding-left: 10px;
 	background: var(--panel-2);
 	transition: all 0.2s ease;
-	height: 38px; /* Фіксована висота для вирівнювання з іншими кнопками */
+	height: 38px;
+	/* Фіксована висота для вирівнювання з іншими кнопками */
 }
 
 .AiAssistant__context-toggle:hover {

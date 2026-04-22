@@ -10,16 +10,14 @@ import Select from "./Select";
 import Checkbox from "./Checkbox";
 import Notification from "./Notification";
 import CollapseToggleButton from "./CollapseToggleButton";
-import { useModal } from "../context/ModalContext";
+import { dispatchAlert } from "../actions/app";
 import Tooltip from "./Tooltip";
 import classNames from "../utils/classNames";
+import { useAppDispatch } from "../store/appStore";
 import "../assets/components/AiAssistantPanel.css";
 
-export default function AiAssistantPanel({
-	sessionData,
-	onInsertResult,
-}) {
-	const modal = useModal();
+export default function AiAssistantPanel({ sessionData, onInsertResult }) {
+	const dispatch = useAppDispatch();
 	const initialRoute = parseUrl();
 	const isCampaign = !initialRoute.session;
 	const isEncounter = !!initialRoute.encounter;
@@ -55,14 +53,15 @@ export default function AiAssistantPanel({
 	const [generatedPrompt, setGeneratedPrompt] = useState(null);
 
 	const showApiKeyInstructions = () => {
-		modal.alert(
-			"Налаштування Gemini AI",
-			`Для використання функцій ШІ необхідно налаштувати API ключ:\n\n` +
+		dispatchAlert(dispatch, {
+			title: "Налаштування Gemini AI",
+			message:
+				`Для використання функцій ШІ необхідно налаштувати API ключ:\n\n` +
 				`1. Отримайте безкоштовний ключ у Google AI Studio (aistudio.google.com).\n` +
 				`2. Створіть файл .env у кореневій папці проекту.\n` +
 				`3. Додайте в нього рядок: GEMINI_API_KEY=ваш_ключ\n` +
 				`Після цього магія ШІ стане доступною!`,
-		);
+		});
 	};
 
 	useEffect(() => {
@@ -73,7 +72,8 @@ export default function AiAssistantPanel({
 
 	useEffect(() => {
 		if (!isOpen || aiModels.length > 0) return;
-		api.listAiModels()
+		api
+			.listAiModels()
 			.then((result) => {
 				const models = Array.isArray(result?.models) ? result.models : [];
 				setAiModels(models);
@@ -91,7 +91,10 @@ export default function AiAssistantPanel({
 		if (!isExpanded && !contextConfig.sessions[sessionSlug]?.data) {
 			setLoading(true);
 			try {
-				const fullData = await api.getSession(initialRoute.campaign, sessionSlug);
+				const fullData = await api.getSession(
+					initialRoute.campaign,
+					sessionSlug,
+				);
 				setContextConfig((prev) => ({
 					...prev,
 					sessions: {
@@ -123,7 +126,15 @@ export default function AiAssistantPanel({
 			for (let i = 0; i < path.length - 1; i++) {
 				if (!current[path[i]]) {
 					if (path[i - 1] === "scenes") {
-						current[path[i]] = { included: true, summary: true, goal: true, stakes: true, location: true, notes: true, encounter: true };
+						current[path[i]] = {
+							included: true,
+							summary: true,
+							goal: true,
+							stakes: true,
+							location: true,
+							notes: true,
+							encounter: true,
+						};
 					} else {
 						current[path[i]] = {};
 					}
@@ -143,7 +154,7 @@ export default function AiAssistantPanel({
 		// Сервер сам завантажить необхідні файли за потребою
 		const configToSend = JSON.parse(JSON.stringify(contextConfig));
 		if (configToSend.sessions) {
-			Object.keys(configToSend.sessions).forEach(slug => {
+			Object.keys(configToSend.sessions).forEach((slug) => {
 				delete configToSend.sessions[slug].data;
 			});
 		}
@@ -180,7 +191,12 @@ export default function AiAssistantPanel({
 			}
 
 			setError(err.message || "Не вдалося зв’язатися з AI.");
-			modal.alert("Помилка ШІ", err.message, err.status);
+			dispatchAlert(dispatch, {
+				title: "Помилка ШІ",
+				message: err.status
+					? `[Статус: ${err.status}] ${err.message}`
+					: err.message,
+			});
 		} finally {
 			setLoading(false);
 		}
@@ -211,6 +227,7 @@ export default function AiAssistantPanel({
 		<div className="AiAssistant">
 			{/* Кнопка виклику AI, аналогічно до DiceCalculator */}
 			<Tooltip
+				className="AiAssistant__toggle"
 				content={
 					isCampaign
 						? "AI Сюжетний Помічник"
@@ -218,17 +235,22 @@ export default function AiAssistantPanel({
 							? "AI Помічник Бою"
 							: "AI Помічник Сесії"
 				}>
-				<button className="AiAssistant__toggle" onClick={() => setIsOpen(true)}>
+				<button onClick={() => setIsOpen(true)}>
 					<Icon name="wand" size={28} />
 				</button>
 			</Tooltip>
 
 			{isOpen && (
 				<Modal
-					title={isCampaign ? "AI Сюжетний Помічник" : isEncounter ? "AI Помічник Бою" : "AI Помічник Сесії"}
+					title={
+						isCampaign
+							? "AI Сюжетний Помічник"
+							: isEncounter
+								? "AI Помічник Бою"
+								: "AI Помічник Сесії"
+					}
 					onCancel={() => setIsOpen(false)}
-					showFooter={false}
-				>
+					showFooter={false}>
 					<div className="AiAssistant__content">
 						<div className="AiAssistant__actions">
 							<label className="AiAssistant__modelPicker">
@@ -242,13 +264,17 @@ export default function AiAssistantPanel({
 										if (loading || aiModels.length === 0) return;
 										setSelectedModel(event.target.value);
 									}}>
-									{aiModels.length > 0
-										? aiModels.map((model) => (
-												<option key={model.name} value={model.name}>
-													{model.displayName || model.name}
-												</option>
-											))
-										: <option key="loading" value="">Завантаження моделей...</option>}
+									{aiModels.length > 0 ? (
+										aiModels.map((model) => (
+											<option key={model.name} value={model.name}>
+												{model.displayName || model.name}
+											</option>
+										))
+									) : (
+										<option key="loading" value="">
+											Завантаження моделей...
+										</option>
+									)}
 								</Select>
 							</label>
 							<div
@@ -258,9 +284,13 @@ export default function AiAssistantPanel({
 								<Checkbox
 									checked={useContext}
 									onChange={(val) => setUseContext(val)}
-									title={useContext ? "Вимкнути використання контексту" : "Увімкнути використання контексту"}
+									title={
+										useContext
+											? "Вимкнути використання контексту"
+											: "Увімкнути використання контексту"
+									}
 								/>
-								<Button 
+								<Button
 									variant={useContext ? "primary" : "ghost"}
 									size="small"
 									icon="database"
@@ -301,8 +331,7 @@ export default function AiAssistantPanel({
 									icon="swords"
 									onClick={() => setGenerateEncounters(!generateEncounters)}
 									disabled={loading || isEncounter}
-									title="ШІ спробує підібрати монстрів для кожної сцени на основі рівня персонажів"
-								>
+									title="ШІ спробує підібрати монстрів для кожної сцени на основі рівня персонажів">
 									Генерація боїв
 								</Button>
 							)}
@@ -319,14 +348,24 @@ export default function AiAssistantPanel({
 										<div className="AiAssistant__context-row">
 											<Checkbox
 												checked={contextConfig.campaignNotes}
-												onChange={(val) => setContextConfig((prev) => ({ ...prev, campaignNotes: val }))}
+												onChange={(val) =>
+													setContextConfig((prev) => ({
+														...prev,
+														campaignNotes: val,
+													}))
+												}
 												label="Нотатки кампанії"
 											/>
 										</div>
 										<div className="AiAssistant__context-row">
 											<Checkbox
 												checked={contextConfig.campaignCharacters}
-												onChange={(val) => setContextConfig((prev) => ({ ...prev, campaignCharacters: val }))}
+												onChange={(val) =>
+													setContextConfig((prev) => ({
+														...prev,
+														campaignCharacters: val,
+													}))
+												}
 												label="Персонажі"
 											/>
 										</div>
@@ -336,18 +375,28 @@ export default function AiAssistantPanel({
 										<h4>Сесії</h4>
 										{sessionsList.map((session) => {
 											const slug = session.fileName;
-											const config = contextConfig.sessions[slug] || { included: false, notes: true, result_text: true, scenes: {} };
+											const config = contextConfig.sessions[slug] || {
+												included: false,
+												notes: true,
+												result_text: true,
+												scenes: {},
+											};
 											const isExpanded = !!expandedSessions[slug];
 
 											return (
-												<div key={slug} className="AiAssistant__session-context">
+												<div
+													key={slug}
+													className="AiAssistant__session-context">
 													<div className="AiAssistant__context-row">
 														<Checkbox
 															checked={config.included}
 															onChange={(included) => {
 																setContextConfig((prev) => ({
 																	...prev,
-																	sessions: { ...prev.sessions, [slug]: { ...config, included } },
+																	sessions: {
+																		...prev.sessions,
+																		[slug]: { ...config, included },
+																	},
 																}));
 															}}
 															label={session.name}
@@ -364,52 +413,90 @@ export default function AiAssistantPanel({
 															<div className="AiAssistant__context-row">
 																<Checkbox
 																	checked={config.notes}
-																	onChange={(val) => updateContextConfig(["sessions", slug, "notes"], val)}
+																	onChange={(val) =>
+																		updateContextConfig(
+																			["sessions", slug, "notes"],
+																			val,
+																		)
+																	}
 																	label="Нотатки"
 																/>
 															</div>
 															<div className="AiAssistant__context-row">
 																<Checkbox
 																	checked={config.result_text}
-																	onChange={(val) => updateContextConfig(["sessions", slug, "result_text"], val)}
+																	onChange={(val) =>
+																		updateContextConfig(
+																			["sessions", slug, "result_text"],
+																			val,
+																		)
+																	}
 																	label="Підсумок"
 																/>
 															</div>
 															<div className="AiAssistant__scenes-context">
-																{(config.data.scenes || []).map((scene, idx) => {
-																	const sceneConf = config.scenes[scene.id] || {
-																		included: true,
-																		summary: true,
-																		goal: true,
-																		stakes: true,
-																		location: true,
-																		notes: true,
-																		encounter: true,
-																	};
-																	return (
-																		<div key={scene.id} className="AiAssistant__scene-item">
-																			<div className="AiAssistant__context-row">
-																				<Checkbox
-																					checked={sceneConf.included}
-																					onChange={(val) => updateContextConfig(["sessions", slug, "scenes", scene.id, "included"], val)}
-																					label={`Сцена ${idx + 1}`}
-																				/>
-																			</div>
-																			{sceneConf.included && (
-																				<div className="AiAssistant__scene-fields">
-																					{SCENE_FIELDS.map((f) => (
-																						<Checkbox
-																							key={f.key}
-																							checked={sceneConf[f.key]}
-																							onChange={(val) => updateContextConfig(["sessions", slug, "scenes", scene.id, f.key], val)}
-																							label={f.label}
-																						/>
-																					))}
+																{(config.data.scenes || []).map(
+																	(scene, idx) => {
+																		const sceneConf = config.scenes[
+																			scene.id
+																		] || {
+																			included: true,
+																			summary: true,
+																			goal: true,
+																			stakes: true,
+																			location: true,
+																			notes: true,
+																			encounter: true,
+																		};
+																		return (
+																			<div
+																				key={scene.id}
+																				className="AiAssistant__scene-item">
+																				<div className="AiAssistant__context-row">
+																					<Checkbox
+																						checked={sceneConf.included}
+																						onChange={(val) =>
+																							updateContextConfig(
+																								[
+																									"sessions",
+																									slug,
+																									"scenes",
+																									scene.id,
+																									"included",
+																								],
+																								val,
+																							)
+																						}
+																						label={`Сцена ${idx + 1}`}
+																					/>
 																				</div>
-																			)}
-																		</div>
-																	);
-																})}
+																				{sceneConf.included && (
+																					<div className="AiAssistant__scene-fields">
+																						{SCENE_FIELDS.map((f) => (
+																							<Checkbox
+																								key={f.key}
+																								checked={sceneConf[f.key]}
+																								onChange={(val) =>
+																									updateContextConfig(
+																										[
+																											"sessions",
+																											slug,
+																											"scenes",
+																											scene.id,
+																											f.key,
+																										],
+																										val,
+																									)
+																								}
+																								label={f.label}
+																							/>
+																						))}
+																					</div>
+																				)}
+																			</div>
+																		);
+																	},
+																)}
 															</div>
 														</div>
 													)}
@@ -491,7 +578,3 @@ export default function AiAssistantPanel({
 		</div>
 	);
 }
-
-
-
-
