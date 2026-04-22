@@ -105,6 +105,7 @@ function Modal({
 
 	useEffect(() => {
 		const handleGlobalKeyDown = (e) => {
+			if (e.defaultPrevented) return;
 			if (e.key === "Escape") {
 				handleClose();
 			} else if (e.key === "Enter") {

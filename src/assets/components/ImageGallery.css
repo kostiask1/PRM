@@ -76,7 +76,7 @@
 .ImageGallery__tabs {
 	display: flex;
 	padding: var(--space-2);
-	gap: var(--space-1);
+	gap: var(--space-2);
 	background: var(--bg-2);
 	border-bottom: 1px solid var(--border);
 	overflow-x: auto;
@@ -382,6 +382,46 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 	text-align: center;
+}
+
+.ImageGallery__nameBtn {
+	background: transparent;
+	border: none;
+	color: inherit;
+	font: inherit;
+	padding: 0;
+	margin: 0;
+	width: 100%;
+	text-align: center;
+	cursor: pointer;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.ImageGallery__nameBtn:hover {
+	color: var(--accent);
+	text-decoration: underline;
+}
+
+.ImageGallery__previewModal {
+	width: min(98vw, 1600px);
+	height: 96vh;
+}
+
+.ImageGallery__previewWrap {
+	width: 100%;
+	height: calc(96vh - 70px);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--bg);
+}
+
+.ImageGallery__previewImg {
+	max-width: 100%;
+	max-height: 100%;
+	object-fit: contain;
 }
 
 .BreadcrumbSeparator {

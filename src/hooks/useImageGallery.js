@@ -46,6 +46,12 @@ export default function useImageGallery({
 	const [dragSource, setDragSource] = useState(null);
 	const [dragOverTarget, setDragOverTarget] = useState(null);
 	const hasSelection = selectedFilenames.size > 0 || selectedSubs.size > 0;
+
+	const clearSelection = useCallback(() => {
+		setSelectedFilenames(new Set());
+		setSelectedSubs(new Set());
+		setLastSelectedIndex(null);
+	}, []);
 	const isProtectedSystemSub = useCallback(
 		(name) =>
 			selectedSub === "" &&
@@ -541,6 +547,7 @@ export default function useImageGallery({
 		dragOverTarget,
 		setDragOverTarget,
 		hasSelection,
+		clearSelection,
 		allSubs,
 		handleCreateSub,
 		handleBulkDelete,

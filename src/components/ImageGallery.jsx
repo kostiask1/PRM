@@ -31,6 +31,7 @@ function ImageGallery({
 }) {
 	const dispatch = useAppDispatch();
 	const [isMoveModalOpen, setIsMoveModalOpen] = React.useState(false);
+	const [previewImage, setPreviewImage] = React.useState(null);
 	const [moveTarget, setMoveTarget] = React.useState({
 		slug: "general",
 		category: "attachments",
@@ -59,6 +60,7 @@ function ImageGallery({
 		dragOverTarget,
 		setDragOverTarget,
 		hasSelection,
+		clearSelection,
 		allSubs,
 		handleCreateSub,
 		handleBulkDelete,
@@ -79,6 +81,21 @@ function ImageGallery({
 		initialCategory,
 		initialSubcategory,
 	});
+
+	React.useEffect(() => {
+		const handleEscapeSelection = (e) => {
+			if (e.key !== "Escape") return;
+			if (!hasSelection) return;
+			e.preventDefault();
+			e.stopPropagation();
+			clearSelection();
+		};
+
+		window.addEventListener("keydown", handleEscapeSelection, true);
+		return () =>
+			window.removeEventListener("keydown", handleEscapeSelection, true);
+	}, [hasSelection, clearSelection]);
+
 	if (!isOpen) return null;
 
 	const availableSources = [{ slug: "general", name: "Загальні" }, ...campaigns];
@@ -375,18 +392,6 @@ function ImageGallery({
 											: sub;
 										setSelectedSub(nextPath);
 									}}
-									onContextMenu={async (e) => {
-										if (isProtected) return;
-										e.preventDefault();
-																				const newName = await dispatch(
-																					prompt({
-																						title: "Перейменувати папку",
-																						message: "Введіть нову назву:",
-																						defaultValue: sub,
-																					}),
-																				);
-										if (newName) handleRenameSub(sub, newName);
-									}}
 									draggable={!isProtected}
 									onDragStart={(e) => handleDragStart(e, sub, "sub")}
 									onDragEnd={handleDragEnd}
@@ -419,7 +424,23 @@ function ImageGallery({
 										)}
 									</div>
 									<span className="ImageGallery__name">
-										{SUB_LABELS[sub] || sub}
+										<button
+											type="button"
+											className="ImageGallery__nameBtn"
+											onClick={async (e) => {
+												if (isProtected) return;
+												e.stopPropagation();
+												const newName = await dispatch(
+													prompt({
+														title: "Перейменувати папку",
+														message: "Введіть нову назву:",
+														defaultValue: sub,
+													}),
+												);
+												if (newName) handleRenameSub(sub, newName);
+											}}>
+											{SUB_LABELS[sub] || sub}
+										</button>
 									</span>
 								</div>
 								);
@@ -442,20 +463,9 @@ function ImageGallery({
 										)
 									}
 									onDoubleClick={() => onSelect?.(img)}
-									onContextMenu={async (e) => {
+									onContextMenu={(e) => {
 										e.preventDefault();
-																				const currentClean = getCleanName(img.name);
-										const newBaseName = await dispatch(
-											prompt({
-												title: "Перейменувати файл",
-												message: "Введіть нову назву:",
-												defaultValue: currentClean,
-											}),
-										);
-										if (newBaseName && newBaseName !== currentClean) {
-											const ext = img.name.split(".").pop();
-											handleRenameImage(img.name, `${newBaseName}.${ext}`);
-										}
+										setPreviewImage(img);
 									}}
 									draggable
 									onDragStart={(e) => handleDragStart(e, img, "image")}
@@ -475,7 +485,26 @@ function ImageGallery({
 									</div>
 									<Tooltip content={img.name}>
 										<span className="ImageGallery__name">
-											{getCleanName(img.name)}
+											<button
+												type="button"
+												className="ImageGallery__nameBtn"
+												onClick={async (e) => {
+													e.stopPropagation();
+													const currentClean = getCleanName(img.name);
+													const newBaseName = await dispatch(
+														prompt({
+															title: "Перейменувати файл",
+															message: "Введіть нову назву:",
+															defaultValue: currentClean,
+														}),
+													);
+													if (newBaseName && newBaseName !== currentClean) {
+														const ext = img.name.split(".").pop();
+														handleRenameImage(img.name, `${newBaseName}.${ext}`);
+													}
+												}}>
+												{getCleanName(img.name)}
+											</button>
 										</span>
 									</Tooltip>
 								</div>
@@ -519,6 +548,23 @@ function ImageGallery({
 							api.createSubcategory(source, category, fullPath)
 						}
 					/>
+				</Modal>
+			)}
+
+			{previewImage && (
+				<Modal
+					title={previewImage.name}
+					type="custom"
+					className="ImageGallery__previewModal"
+					showFooter={false}
+					onCancel={() => setPreviewImage(null)}>
+					<div className="ImageGallery__previewWrap">
+						<img
+							className="ImageGallery__previewImg"
+							src={previewImage.url}
+							alt={previewImage.name}
+						/>
+					</div>
 				</Modal>
 			)}
 		</Modal>
