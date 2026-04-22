@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useCallback } from "react";
+﻿import React, { useState, useEffect, useCallback } from "react";
 import Button from "./Button";
 import Input from "./Input";
 import Icon from "./Icon";
 import Tooltip from "./Tooltip";
+import { rollDiceFormula } from "../utils/dice";
+import { DICE_ROLL_EVENT, DICE_ROLLED_EVENT } from "../utils/diceEvents";
 
 import "../assets/components/DiceCalculator.css";
 
@@ -32,128 +34,41 @@ export default function DiceCalculator() {
 		};
 	}, []);
 
-	const parseAndRoll = useCallback((str) => {
+	const parseAndRoll = useCallback((str, context = null) => {
 		if (!str) return;
 
-		const cleanStr = str.toLowerCase().replace(/\s+/g, "");
-		// Підтримка віднімання та від'ємних модифікаторів
-		const normalizedStr = cleanStr.replace(/-/g, "+-");
-		const parts = normalizedStr.split("+").filter(Boolean);
-
-		let diceTotal = 0;
-		let modifierSum = 0;
-		let averageTotal = 0;
-		const details = [];
-		const diceMap = {}; // Об'єкт для групування кубиків (включаючи h/l)
-
-		let d20Count = 0;
-		let lastD20Value = 0;
-
-		parts.forEach((part) => {
-			const dieMatch = part.match(/^(\d+)?d(\d+)([hl]\d+)?$/i);
-			if (dieMatch) {
-				const count = parseInt(dieMatch[1]) || 1;
-				const sides = parseInt(dieMatch[2]);
-				const keepSuffix = dieMatch[3]; // h3 або l2
-
-				// Додаємо до групи
-				const groupKey = `${sides}${keepSuffix || ""}`;
-				diceMap[groupKey] = (diceMap[groupKey] || 0) + count;
-
-				const currentRolls = [];
-				for (let i = 0; i < count; i++) {
-					const roll = Math.floor(Math.random() * sides) + 1;
-					currentRolls.push({ val: roll, max: sides });
-
-					if (sides === 20 && !keepSuffix) {
-						d20Count++;
-						lastD20Value = roll;
-					}
-				}
-
-				if (keepSuffix) {
-					const type = keepSuffix[0].toLowerCase();
-					const keepCount = Math.min(parseInt(keepSuffix.slice(1)), count);
-
-					// Сортуємо індекси, щоб помітити, які кубики скинути
-					const indexed = currentRolls.map((r, idx) => ({ val: r.val, idx }));
-					indexed.sort((a, b) =>
-						type === "h" ? b.val - a.val : a.val - b.val,
-					);
-
-					const keptIndices = new Set(
-						indexed.slice(0, keepCount).map((r) => r.idx),
-					);
-
-					currentRolls.forEach((r, idx) => {
-						if (keptIndices.has(idx)) {
-							diceTotal += r.val;
-							averageTotal += (sides + 1) / 2;
-						} else {
-							r.dropped = true;
-						}
-						details.push(r);
-					});
-				} else {
-					currentRolls.forEach((r) => {
-						diceTotal += r.val;
-						averageTotal += (sides + 1) / 2;
-						details.push(r);
-					});
-				}
-			} else {
-				const num = parseInt(part);
-				if (!isNaN(num)) {
-					modifierSum += num;
-					averageTotal += num;
-					details.push({ val: num, max: null });
-				}
-			}
-		});
-
-		// Формуємо фінальну згруповану формулу
-		const formulaParts = [];
-		// Сортуємо кубики за кількістю граней (від d20 до d4)
-		Object.keys(diceMap)
-			.sort((a, b) => parseInt(b) - parseInt(a))
-			.forEach((key) => {
-				const count = diceMap[key];
-				formulaParts.push(`${count}d${key}`);
-			});
-
-		if (modifierSum !== 0) {
-			formulaParts.push(modifierSum);
-		}
-
-		// Правило критичного результату для 1d20
-		const isCritical =
-			d20Count === 1 && (lastD20Value === 1 || lastD20Value === 20);
-		const finalTotal = isCritical ? lastD20Value : diceTotal + modifierSum;
-
-		const entry = {
-			id: Date.now(),
-			formula: formulaParts.join(" + ").replace(/\+\s-/g, "- "),
-			breakdown: details,
-			total: finalTotal,
-			average: Math.floor(averageTotal),
-			isCritical: isCritical,
-		};
+		const entry = rollDiceFormula(str);
+		if (!entry) return;
 
 		setLastResult(entry);
 		setHistory((prev) => [entry, ...prev].slice(0, 10));
 		setIsOpen(true);
+		window.dispatchEvent(
+			new CustomEvent(DICE_ROLLED_EVENT, {
+				detail: { result: entry, context },
+			}),
+		);
 	}, []);
 
 	useEffect(() => {
 		const handleRollDiceEvent = (event) => {
-			if (event.detail) {
-				parseAndRoll(event.detail);
+			const detail = event.detail;
+			if (!detail) return;
+
+			if (typeof detail === "string") {
+				parseAndRoll(detail);
+				return;
+			}
+
+			if (typeof detail === "object") {
+				const formula = detail.formula || detail.value || "";
+				parseAndRoll(formula, detail.context || null);
 			}
 		};
 
-		window.addEventListener("rollDice", handleRollDiceEvent);
+		window.addEventListener(DICE_ROLL_EVENT, handleRollDiceEvent);
 		return () => {
-			window.removeEventListener("rollDice", handleRollDiceEvent);
+			window.removeEventListener(DICE_ROLL_EVENT, handleRollDiceEvent);
 		};
 	}, [parseAndRoll]);
 

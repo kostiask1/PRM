@@ -37,6 +37,7 @@ function EncounterView({
 		updateMonsterMaxHp,
 		handleRenameMonster,
 		duplicateMonster,
+		rollMonsterHp,
 		getHpColor,
 		handleReorderMonsters,
 		handleMonstersDrop,
@@ -167,6 +168,17 @@ function EncounterView({
 										</div>
 									</div>
 									<div className="EncounterMonsterRow__actions">
+										<Button
+											variant="ghost"
+											size="small"
+											icon="dice"
+											className="EncounterMonsterRow__action"
+											onClick={(e) => {
+												e.stopPropagation();
+												rollMonsterHp(m.instanceId);
+											}}
+											title="Кинути HP за формулою"
+										/>
 										<Button
 											variant="ghost"
 											size="small"
