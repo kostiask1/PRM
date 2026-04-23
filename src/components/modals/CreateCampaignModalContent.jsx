@@ -1,6 +1,7 @@
 ﻿import { useRef, useState } from "react";
 import Button from "../form/Button";
 import Input from "../form/Input";
+import { lang } from "../../services/localization";
 
 export default function CreateCampaignModalContent({
 	onCreateCampaign,
@@ -12,11 +13,11 @@ export default function CreateCampaignModalContent({
 
 	return (
 		<div className="CreateCampaignModal">
-			<label className="CreateCampaignModal__label">Назва кампанії</label>
+			<label className="CreateCampaignModal__label">{lang.t("Campaign name")}</label>
 			<Input
 				value={name}
 				onChange={(event) => setName(event.target.value)}
-				placeholder="Введіть назву кампанії..."
+				placeholder={lang.t("Enter a campaign name...")}
 			/>
 
 			<div className="CreateCampaignModal__actions">
@@ -38,7 +39,7 @@ export default function CreateCampaignModalContent({
 						icon="import"
 						onClick={() => fileInputRef.current?.click()}
 					>
-						Імпорт кампанії
+						{lang.t("Import campaign")}
 					</Button>
 				</div>
 				<Button
@@ -46,10 +47,10 @@ export default function CreateCampaignModalContent({
 					onClick={() => onCreateCampaign(name)}
 					disabled={!name.trim()}
 				>
-					Створити
+					{lang.t("Create")}
 				</Button>
 				<Button variant="ghost" onClick={onClose}>
-					Скасувати
+					{lang.t("Cancel")}
 				</Button>
 			</div>
 		</div>

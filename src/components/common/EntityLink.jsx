@@ -5,6 +5,7 @@ import { parseUrl } from "../../utils/navigation";
 import Modal from "./Modal";
 import EntityModalContent from "../modals/EntityModalContent";
 import classNames from "../../utils/classNames";
+import { lang } from "../../services/localization";
 
 function findEntityByName(entities, name) {
 	const searchName = String(name || "")
@@ -90,7 +91,11 @@ export default function EntityLink({
 			</a>
 			{modalState && (
 				<Modal
-					title={`Персонаж: ${modalState.entity.firstName || ""} ${modalState.entity.lastName || ""}`.trim()}
+					title={lang
+						.t("Character: {name}", {
+							name: `${modalState.entity.firstName || ""} ${modalState.entity.lastName || ""}`.trim(),
+						})
+						.trim()}
 					type="character"
 					showFooter={false}
 					onConfirm={handleCloseModal}

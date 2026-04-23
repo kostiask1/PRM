@@ -1,4 +1,5 @@
 ﻿import ImageAssetField from "../ImageAssetField";
+import { lang } from "../../services/localization";
 
 export default function SceneCardMedia({
 	number,
@@ -13,13 +14,13 @@ export default function SceneCardMedia({
 				campaignSlug={campaignSlug}
 				target="scene"
 				onImageChange={onImageChange}
-				imageAlt={`Сцена ${number}`}
+				imageAlt={lang.t("Scene {number}", { number })}
 				enableContextReplace={true}
 				showClearButton={true}
 				containerClassName="SceneCard__portrait-container"
 				wrapperClassName="SceneCard__portrait-wrapper"
 				deleteButtonClassName="SceneCard__image-delete"
-				previewTitle={`Сцена ${number}`}
+				previewTitle={lang.t("Scene {number}", { number })}
 				previewModalClassName="SceneImageModal"
 				previewContentClassName="SceneImageModal__content"
 			/>

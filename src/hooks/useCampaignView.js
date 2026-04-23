@@ -13,6 +13,7 @@ import {
 	ensureAtLeastOneNote,
 } from "../utils/noteUtils";
 import { downloadBlob } from "../utils/download";
+import { lang } from "../services/localization";
 
 const sanitizeEntityForSave = (entity) =>
 	Object.fromEntries(
@@ -387,8 +388,10 @@ export default function useCampaignView(props) {
 	const handleCreateSession = async () => {
 		const name = await dispatch(
 			prompt({
-				title: "Нова сесія",
-				message: "Введіть назву або залиште порожнім для поточної дати:",
+				title: lang.t("New session"),
+				message: lang.t(
+					"Enter a name or leave empty to use current date:",
+				),
 			}),
 		);
 		if (name === null) return;
@@ -400,9 +403,9 @@ export default function useCampaignView(props) {
 		} catch (err) {
 			dispatch(
 				alert({
-					title: "Помилка створення сесії",
+					title: lang.t("Session creation error"),
 					message: err.status
-						? `[Статус: ${err.status}] ${err.message}`
+						? `[${lang.t("Status")}: ${err.status}] ${err.message}`
 						: err.message,
 				}),
 			);
@@ -413,9 +416,10 @@ export default function useCampaignView(props) {
 		if (
 			!(await dispatch(
 				confirm({
-					title: "Видалення кампанії",
-					message:
-						"Усі сесії цієї кампанії будуть втрачені назавжди. Продовжити?",
+					title: lang.t("Delete campaign"),
+					message: lang.t(
+						"All sessions in this campaign will be permanently lost. Continue?",
+					),
 				}),
 			))
 		)
@@ -427,8 +431,10 @@ export default function useCampaignView(props) {
 		} catch (err) {
 			dispatch(
 				alert({
-					title: "Помилка",
-					message: "Не вдалося видалити кампанію" + " " + err.message,
+					title: lang.t("Error"),
+					message: lang.t("Failed to delete campaign: {error}", {
+						error: err.message,
+					}),
 				}),
 			);
 		}
@@ -437,8 +443,8 @@ export default function useCampaignView(props) {
 	const handleRename = async () => {
 		const name = await dispatch(
 			prompt({
-				title: "Перейменування",
-				message: "Вкажіть нову назву кампанії:",
+				title: lang.t("Rename"),
+				message: lang.t("Enter a new campaign name:"),
 				defaultValue: campaign.name,
 			}),
 		);
@@ -450,8 +456,10 @@ export default function useCampaignView(props) {
 			} catch (err) {
 				dispatch(
 					alert({
-						title: "Помилка",
-						message: "Не вдалося перейменувати кампанію" + " " + err.message,
+						title: lang.t("Error"),
+						message: lang.t("Failed to rename campaign: {error}", {
+							error: err.message,
+						}),
 					}),
 				);
 			}
@@ -462,8 +470,10 @@ export default function useCampaignView(props) {
 		if (
 			!(await dispatch(
 				confirm({
-					title: "Видалення сесії",
-					message: `Ви дійсно хочете видалити сесію "${session.name}"?`,
+					title: lang.t("Delete session"),
+					message: lang.t('Do you really want to delete session "{name}"?', {
+						name: session.name,
+					}),
 				}),
 			))
 		)
@@ -476,8 +486,10 @@ export default function useCampaignView(props) {
 		} catch (err) {
 			dispatch(
 				alert({
-					title: "Помилка",
-					message: "Не вдалося видалити сесію" + " " + err.message,
+					title: lang.t("Error"),
+					message: lang.t("Failed to delete session: {error}", {
+						error: err.message,
+					}),
 				}),
 			);
 		}
@@ -497,8 +509,11 @@ export default function useCampaignView(props) {
 			if (completedAt && todayLabel !== prevLabel) {
 				const confirmUpdate = await dispatch(
 					confirm({
-						title: "Оновлення дати",
-						message: `Сесія вже була завершена ${prevLabel}. Оновити дату завершення на сьогодні?`,
+						title: lang.t("Update date"),
+						message: lang.t(
+							"Session was already completed on {date}. Update completion date to today?",
+							{ date: prevLabel },
+						),
 					}),
 				);
 				if (confirmUpdate) completedAt = now;
@@ -527,7 +542,9 @@ export default function useCampaignView(props) {
 				`campaign-${campaign.slug}-${new Date().toISOString().slice(0, 10)}.prma.gz`,
 			);
 		} catch (err) {
-			dispatch(alert({ title: "Помилка експорту", message: err.message }));
+			dispatch(
+				alert({ title: lang.t("Export error"), message: err.message }),
+			);
 		}
 	};
 

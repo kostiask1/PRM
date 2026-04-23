@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+﻿import { useCallback, useEffect, useState } from "react";
 import { api } from "./api";
 import DiceCalculator from "./components/DiceCalculator";
 import MainContent from "./components/MainContent";
@@ -7,6 +7,7 @@ import Modal from "./components/common/Modal";
 import Sidebar from "./components/Sidebar";
 import MentionPickerModalContent from "./components/modals/MentionPickerModalContent";
 import CreateCampaignModalContent from "./components/modals/CreateCampaignModalContent";
+import { lang } from "./services/localization";
 import {
 	alert,
 	closeMentionPickerAction,
@@ -36,6 +37,7 @@ export default function App() {
 		(store) => store.campaigns.reloadVersion,
 	);
 	const { activeCampaignSlug } = useAppSelector((store) => store.navigation);
+	const currentLanguage = useAppSelector((store) => store.localization.language);
 
 	const loadCampaigns = useCallback(async () => {
 		try {
@@ -45,8 +47,8 @@ export default function App() {
 			console.error("Failed to load campaigns", err);
 			dispatch(
 				alert({
-					title: "Помилка",
-					message: "Не вдалося завантажити список кампаній",
+					title: lang.t("Error"),
+					message: lang.t("Failed to load campaigns"),
 				}),
 			);
 		}
@@ -140,8 +142,8 @@ export default function App() {
 					return;
 				}
 
-				openModalRequest({
-					title: "Вибір згадки",
+					openModalRequest({
+						title: lang.t("Choose mention"),
 					type: "confirm",
 					showFooter: false,
 					onCancelAction: () => {
@@ -187,10 +189,13 @@ export default function App() {
 
 			if (completedAt && todayLabel !== prevLabel) {
 				const confirmUpdate = await dispatch(
-					confirm({
-						title: "Оновлення дати",
-						message: `Кампанія вже була завершена ${prevLabel}. Оновити дату завершення на сьогодні?`,
-					}),
+						confirm({
+							title: lang.t("Update completion date"),
+							message: lang.t(
+								"Campaign was already completed on {date}. Update completion date to today?",
+								{ date: prevLabel },
+							),
+						}),
 				);
 				if (confirmUpdate) completedAt = now;
 			} else {
@@ -208,8 +213,8 @@ export default function App() {
 			console.error("Failed to toggle campaign status", err);
 			dispatch(
 				alert({
-					title: "Помилка",
-					message: "Не вдалося оновити статус кампанії",
+					title: lang.t("Error"),
+					message: lang.t("Failed to update campaign status"),
 				}),
 			);
 		}
@@ -220,7 +225,7 @@ export default function App() {
 	const openCreateCampaignModal = () => {
 		const handleClose = () => closeActiveModal();
 		openModalRequest({
-			title: "Нова кампанія",
+			title: lang.t("New campaign"),
 			type: "confirm",
 			showFooter: false,
 			children: (
@@ -234,12 +239,12 @@ export default function App() {
 							handleClose();
 							navigateTo(newCampaign.slug);
 						} catch (err) {
-							dispatch(
-								alert({
-									title: "Помилка",
-									message: err.message || "Не вдалося створити кампанію",
-								}),
-							);
+								dispatch(
+									alert({
+										title: lang.t("Error"),
+										message: err.message || lang.t("Failed to create campaign"),
+									}),
+								);
 						}
 					}}
 					onImportCampaign={async (file) => {
@@ -248,12 +253,12 @@ export default function App() {
 							dispatch(requestCampaignsReloadAction());
 							handleClose();
 						} catch (err) {
-							dispatch(
-								alert({
-									title: "Помилка імпорту",
-									message: err.message || "Не вдалося імпортувати кампанію",
-								}),
-							);
+								dispatch(
+									alert({
+										title: lang.t("Import error"),
+										message: err.message || lang.t("Failed to import campaign"),
+									}),
+								);
 						}
 					}}
 				/>
@@ -262,7 +267,7 @@ export default function App() {
 	};
 
 	return (
-		<div className="App">
+		<div className="App" data-lang={currentLanguage}>
 			<Sidebar
 				className="App__sidebar"
 				campaigns={campaigns}

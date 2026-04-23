@@ -4,6 +4,7 @@ import ImageDropzone from "./ImageDropzone";
 import ImageGallery from "./ImageGallery";
 import Modal from "./common/Modal";
 import Tooltip from "./common/Tooltip";
+import { lang } from "../services/localization";
 
 const TARGET_PRESETS = {
 	character: { category: "characters", subcategory: "players" },
@@ -28,11 +29,11 @@ export default function ImageAssetField({
 	showClearButton = false,
 	enableContextReplace = false,
 	onImageChange,
-	imageAlt = "Image",
+	imageAlt = lang.t("Image"),
 	containerClassName,
 	wrapperClassName,
 	deleteButtonClassName,
-	previewTitle = "Preview",
+	previewTitle = lang.t("Preview"),
 	previewModalClassName,
 	previewContentClassName,
 }) {
@@ -59,7 +60,7 @@ export default function ImageAssetField({
 				{hasValidImage ? (
 					<div className={wrapperClassName}>
 						<Tooltip
-							content="ПКМ: замінити зображення через галерею"
+							content={lang.t("Right-click: replace image via gallery")}
 							disabled={!enableContextReplace}
 						>
 							<img

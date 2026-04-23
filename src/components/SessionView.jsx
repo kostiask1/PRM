@@ -16,6 +16,7 @@ import Tooltip from "./common/Tooltip.jsx";
 import "../assets/components/SessionView.css";
 import useSessionView from "../hooks/useSessionView";
 import SessionViewModel from "../models/SessionViewModel.js";
+import { lang } from "../services/localization";
 
 function SessionView(props) {
 	const campaign = props.campaign;
@@ -46,7 +47,7 @@ function SessionView(props) {
 								{session.name}
 							</h2>
 						</div>
-						<p className="muted">{viewModel.saveStatusLabel}</p>
+						<p className="muted">{lang.t(viewModel.saveStatusLabel)}</p>
 					</div>
 				</div>
 				<div className="SessionView__headerActions">
@@ -56,7 +57,7 @@ function SessionView(props) {
 						icon="undo"
 						onClick={view.handleUndo}
 						disabled={view.undoStack.length === 0 || view.isSaving}
-						title="Скасувати (Ctrl+Z)"
+						title={lang.t("Undo (Ctrl+Z)")}
 					/>
 					<Button
 						variant="ghost"
@@ -64,7 +65,7 @@ function SessionView(props) {
 						icon="redo"
 						onClick={view.handleRedo}
 						disabled={view.redoStack.length === 0 || view.isSaving}
-						title="Повторити (Ctrl+Y)"
+						title={lang.t("Redo (Ctrl+Y)")}
 					/>
 					<Button
 						variant={viewModel.isCompleted ? "primary" : ""}
@@ -72,7 +73,7 @@ function SessionView(props) {
 							view.updateSession({ completed: !session.completed }, true)
 						}
 					>
-						{viewModel.completeButtonLabel}
+						{lang.t(viewModel.completeButtonLabel)}
 					</Button>
 					<Button
 						variant="danger"
@@ -85,7 +86,7 @@ function SessionView(props) {
 			<div className="Panel__body">
 				<div className="SessionView__todoList">
 					<TodoSection
-						title="Замітки"
+						title={lang.t("Notes")}
 						collapsed={!!session.data.isNotesCollapsed}
 						onToggle={() => view.handleToggleSectionCollapse("Notes")}
 					>
@@ -111,7 +112,7 @@ function SessionView(props) {
 						)}
 					</TodoSection>
 					<TodoSection
-						title="Сцени"
+						title={lang.t("Scenes")}
 						action={
 							<Button
 								variant="primary"
@@ -120,7 +121,7 @@ function SessionView(props) {
 								icon="plus"
 								iconSize={16}
 							>
-								Додати
+								{lang.t("Add")}
 							</Button>
 						}
 					>
@@ -159,7 +160,9 @@ function SessionView(props) {
 										}
 										campaignSlug={view.campaignSlug}
 										hasEncounter={!!scene.encounterId}
-										encounterName={viewModel.findEncounterName(scene)}
+										encounterName={lang.t(
+											viewModel.findEncounterName(scene),
+										)}
 										onUpdateField={(field, value) =>
 											view.updateScene(scene.id, field, value)
 										}
@@ -184,11 +187,11 @@ function SessionView(props) {
 						/>
 					</TodoSection>
 
-					<TodoSection title="Результат сесії">
+					<TodoSection title={lang.t("Session result")}>
 						<EditableField
 							type="textarea"
 							className="field--result"
-							placeholder="Підсумок того, що реально відбулося..."
+							placeholder={lang.t("Summary of what actually happened...")}
 							value={session.data.result_text || ""}
 							onChange={(e) => view.updateData("result_text", e.target.value)}
 						/>
@@ -198,14 +201,14 @@ function SessionView(props) {
 
 			{view.isChecklistOpen && (
 				<Modal
-					title="Чекліст підготовки"
+					title={lang.t("Preparation checklist")}
 					onCancel={() => view.setIsChecklistOpen(false)}
 					showFooter={false}
 				>
 					<div className="SessionView__checklistModal">
 						<div className="SessionView__progressWrap">
 							<div className="ProgressBar__label">
-								<span>Прогрес підготовки</span>
+								<span>{lang.t("Preparation progress")}</span>
 								<span>{view.progress}%</span>
 							</div>
 							<div className="ProgressBar">
@@ -231,7 +234,7 @@ function SessionView(props) {
 			)}
 
 			<Tooltip
-				content="Чекліст підготовки"
+				content={lang.t("Preparation checklist")}
 				className="SessionView__checklistToggle"
 			>
 				<button onClick={() => view.setIsChecklistOpen(true)}>
@@ -249,7 +252,9 @@ export { SessionView };
 export default SessionView;
 
 function SceneCard(props) {
-	const encounterLabel = props.hasEncounter ? props.encounterName : "Encounter";
+	const encounterLabel = props.hasEncounter
+		? props.encounterName
+		: lang.t("Encounter");
 
 	return (
 		<div className="SceneCard">
@@ -281,7 +286,7 @@ function SceneCard(props) {
 									collapsed={props.scene.isNotesCollapsed}
 									onClick={props.onToggleNotesCollapse}
 								/>
-								<label>Замітки сцени</label>
+								<label>{lang.t("Scene notes")}</label>
 							</div>
 							{!props.scene.isNotesCollapsed && (
 								<div className="SceneCard__notes-list">

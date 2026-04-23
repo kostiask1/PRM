@@ -8,6 +8,7 @@ import {
 } from "../actions/app";
 import { api } from "../api";
 import { navigateTo, useAppDispatch, useAppSelector } from "../store/appStore";
+import { lang } from "../services/localization";
 
 export default function useEncounterView({ campaign, sessionId, encounterId }) {
 	const dispatch = useAppDispatch();
@@ -75,8 +76,10 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 				if (!found) {
 					dispatch(
 						alert({
-							title: "Помилка",
-							message: "Зіткнення не знайдено або дані ще оновлюються.",
+							title: lang.t("Error"),
+							message: lang.t(
+								"Encounter not found or data is still updating.",
+							),
 						}),
 					);
 					handleBack();
@@ -248,7 +251,11 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 
 			setEncounter(updated);
 			saveEncounterState(updated);
-			setNotification(`${m.name} додано до бою.`);
+			setNotification(
+				lang.t("{name} added to encounter.", {
+					name: m.name,
+				}),
+			);
 		},
 		[encounter, saveEncounterState],
 	);
@@ -310,8 +317,8 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 		if (!encounter) return;
 		const name = await dispatch(
 			prompt({
-				title: "Перейменування",
-				message: "Вкажіть нову назву зіткнення:",
+				title: lang.t("Rename"),
+				message: lang.t("Enter a new encounter name:"),
 				defaultValue: encounter.name,
 			}),
 		);
@@ -327,8 +334,8 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 			if (!encounter) return;
 			const name = await dispatch(
 				prompt({
-					title: "Перейменування",
-					message: "Вкажіть нове ім'я монстра:",
+					title: lang.t("Rename"),
+					message: lang.t("Enter a new monster name:"),
 					defaultValue: currentName,
 				}),
 			);
@@ -379,7 +386,7 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 					const imported = JSON.parse(event.target.result);
 					if (!imported.monsters || !Array.isArray(imported.monsters)) {
 						throw new Error(
-							"Невірний формат файлу (відсутній список монстрів)",
+							lang.t("Invalid file format (monster list is missing)"),
 						);
 					}
 
@@ -395,9 +402,11 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 					setEncounter(updated);
 					saveEncounterState(updated);
 					setSelectedInstance(updated.monsters[0] || null);
-					setNotification("Бій успішно імпортовано.");
+					setNotification(lang.t("Encounter imported successfully."));
 				} catch (err) {
-					dispatch(alert({ title: "Помилка імпорту", message: err.message }));
+					dispatch(
+						alert({ title: lang.t("Import error"), message: err.message }),
+					);
 				}
 				e.target.value = "";
 			};
@@ -444,7 +453,9 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 				!String(hpFormula || "").trim() ||
 				!/d/i.test(String(hpFormula || ""))
 			) {
-				setNotification(`Для ${target.name} не знайдено формулу HP.`);
+				setNotification(
+					lang.t("No HP formula found for {name}.", { name: target.name }),
+				);
 				return;
 			}
 			dispatch(

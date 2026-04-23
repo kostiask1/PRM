@@ -73,7 +73,7 @@ export default class CharacterCardModel {
 	}
 
 	get displayName() {
-		return this.character.firstName || this.character.name || "Новий персонаж";
+		return this.character.firstName || this.character.name || "New character";
 	}
 
 	get fullName() {
@@ -88,7 +88,7 @@ export default class CharacterCardModel {
 		const race = this.character.race || "";
 		const className = this.character.class || "";
 		const levelPart = this.character.level
-			? `• ${this.character.level} рів.`
+			? `• Lvl. ${this.character.level}`
 			: "";
 		return `${race} ${className} ${levelPart}`.trim();
 	}

@@ -11,6 +11,7 @@ import MonsterStatBlock from "./MonsterStatBlock";
 import Tooltip from "./common/Tooltip";
 import classNames from "../utils/classNames";
 import "../assets/components/Bestiary.css";
+import { lang } from "../services/localization";
 
 export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	const [sources, setSources] = useState([]);
@@ -306,7 +307,11 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 									e.stopPropagation();
 									handleToggleFavorite(monster);
 								}}
-								title={isFavorite ? "Видалити з обраного" : "Додати в обране"}
+								title={
+									isFavorite
+										? lang.t("Remove from favorites")
+										: lang.t("Add to favorites")
+								}
 							/>
 							{onAddMonster && (
 								<Button
@@ -317,7 +322,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 										e.stopPropagation();
 										onAddMonster(monster);
 									}}
-									title="Додати до зіткнення"
+									title={lang.t("Add to encounter")}
 								/>
 							)}
 						</>
@@ -338,7 +343,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 								)}
 							</div>
 						</div>
-						<Tooltip content="Challenge Rating">
+						<Tooltip content={lang.t("Challenge Rating")}>
 							<div className="Bestiary__item-cr">
 								<div className="Bestiary__cr-label">CR</div>
 								<div className="Bestiary__cr-value">{crValue || "--"}</div>
@@ -359,7 +364,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 							value={selectedSource}
 							onChange={(e) => setSelectedSource(e.target.value)}
 						>
-							<option value="all">УСІ ДЖЕРЕЛА</option>
+							<option value="all">{lang.t("All sources")}</option>
 							{sources.map((s) => (
 								<option key={s} value={s}>
 									{s.replace(/^bestiary-/i, "").toUpperCase()}
@@ -369,12 +374,12 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 					)}
 					<Input
 						icon="search"
-						placeholder="Пошук назви..."
+						placeholder={lang.t("Search by name...")}
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
 					/>
 					<Input
-						placeholder="Тип (напр. dragon)..."
+						placeholder={lang.t("Type (e.g. dragon)...")}
 						value={typeSearch}
 						onChange={(e) => setTypeSearch(e.target.value)}
 					/>
@@ -382,7 +387,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 						variant={onlyFavorites ? "primary" : "ghost"}
 						icon="star"
 						onClick={() => setOnlyFavorites(!onlyFavorites)}
-						title="Тільки обрані"
+						title={lang.t("Only favorites")}
 						className="Bestiary__filter-fav-btn"
 					/>
 					<Button
@@ -391,7 +396,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 						})}
 						variant="ghost"
 						onClick={toggleSort}
-						title="Сортувати за CR (Challenge Rating)"
+						title={lang.t("Sort by CR (Challenge Rating)")}
 					>
 						<span className="Bestiary__sort-label">CR</span>
 						<Icon
@@ -419,7 +424,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 					</div>
 					{loading && (
 						<div className="Bestiary__loader muted">
-							Індексація бази даних...
+							{lang.t("Indexing database...")}
 						</div>
 					)}
 
@@ -431,13 +436,13 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 									icon="plus"
 									onClick={() => onAddMonster(selectedMonster)}
 									className="Bestiary__add-to-encounter-btn"
-									title="Додати до зіткнення"
+									title={lang.t("Add to encounter")}
 								/>
 							)}
 							<MonsterStatBlock
 								monster={selectedMonster}
 								onNameClick={onAddMonster ? (m) => onAddMonster(m) : undefined}
-								nameTitle={onAddMonster && "Додати до зіткнення"}
+								nameTitle={onAddMonster && lang.t("Add to encounter")}
 								onFavoriteChange={(newFavs) => setFavorites(newFavs)}
 							/>
 						</div>
@@ -454,7 +459,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	return (
 		<Panel className="Bestiary">
 			<div className="Panel__header">
-				<h2>Бестіарій</h2>
+				<h2>{lang.t("Bestiary")}</h2>
 			</div>
 			<div className="Panel__body">{renderBestiaryInner()}</div>
 		</Panel>

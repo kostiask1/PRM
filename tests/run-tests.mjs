@@ -129,10 +129,10 @@ await run("SessionViewModel encounter lookup and labels", () => {
 			encounters: [{ id: "enc-1", name: "Fight" }],
 		},
 	});
-	assert.equal(model.completeButtonLabel, "Завершити");
-	assert.equal(model.saveStatusLabel, "Зберігання...");
+	assert.equal(model.completeButtonLabel, "Complete");
+	assert.equal(model.saveStatusLabel, "Saving...");
 	assert.equal(model.findEncounterName(model.scenes[0]), "Fight");
-	assert.equal(model.findEncounterName({ encounterId: "missing" }), "Без назви");
+	assert.equal(model.findEncounterName({ encounterId: "missing" }), "Untitled");
 });
 
 await run("CharacterCardModel derives fields and maintains notes", () => {

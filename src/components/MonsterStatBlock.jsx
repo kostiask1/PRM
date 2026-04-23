@@ -23,6 +23,7 @@ import Tooltip from "./common/Tooltip.jsx";
 import classNames from "../utils/classNames";
 import { requestDiceRollAction } from "../actions/app";
 import { openModalRequest, useAppDispatch } from "../store/appStore";
+import { lang } from "../services/localization.js";
 
 const SPELL_CACHE = new Map();
 
@@ -205,7 +206,7 @@ export default function MonsterStatBlock({
 	const renderAbility = (label, value) => {
 		const mod = getAbilityModifier(value);
 		return (
-			<Tooltip content={`Кинути перевірку ${label}`}>
+			<Tooltip content={lang.t("Roll {label} check", { label })}>
 				<div
 					className="MonsterStatBlock__ability-box"
 					onClick={() =>
@@ -242,7 +243,7 @@ export default function MonsterStatBlock({
 		if (loadingSpells)
 			return (
 				<div className="MonsterStatBlock__section">
-					<p className="muted">Завантаження заклинань...</p>
+					<p className="muted">Loading spells...</p>
 				</div>
 			);
 		if (spells.length === 0) return null;
@@ -261,10 +262,10 @@ export default function MonsterStatBlock({
 
 		return (
 			<div className="MonsterStatBlock__section MonsterStatBlock__spells">
-				<h4>Заклинання (Spells):</h4>
+				<h4>Spells:</h4>
 				{sortedLevels.map((lvl) => (
 					<div key={lvl}>
-						<strong>{lvl === "0" ? "Замовляння" : `${lvl}-й рівень`}:</strong>{" "}
+						<strong>{lvl === "0" ? "Cantrip" : `${lvl}-level`}:</strong>{" "}
 						{levels[lvl].map((s, i) => (
 							<React.Fragment key={s.slug || s.name}>
 								<span
@@ -408,7 +409,7 @@ export default function MonsterStatBlock({
 							<ClickToCopy
 								className="MonsterStatBlock__name"
 								text={monster.name}
-								message={`Ім'я скопійовано!`}
+								message={lang.t("Name copied!")}
 							>
 								{monster.name}
 							</ClickToCopy>
@@ -421,20 +422,13 @@ export default function MonsterStatBlock({
 								"is-active": isFavorite,
 							})}
 							onClick={handleToggleFavorite}
-							title={isFavorite ? "Видалити з обраного" : "Додати в обране"}
+							title={isFavorite ? "Remove from favorites" : "Add to favorites"}
 						/>
 					</div>
 
 					{monster.originalBestiaryName &&
 						monster.originalBestiaryName !== monster.name && (
-							<div
-								className="MonsterStatBlock__original-name muted"
-								style={{
-									fontSize: "0.9em",
-									marginTop: "-4px",
-									marginBottom: "8px",
-								}}
-							>
+							<div className="MonsterStatBlock__original-name muted">
 								({monster.originalBestiaryName})
 							</div>
 						)}

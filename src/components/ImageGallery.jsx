@@ -10,10 +10,11 @@ import { api } from "../api";
 import Tooltip from "./common/Tooltip";
 import classNames from "../utils/classNames";
 import { useAppDispatch } from "../store/appStore";
+import { lang } from "../services/localization";
 
 const SUB_LABELS = {
 	npc: "NPC",
-	players: "Гравці",
+	players: "Players",
 };
 
 const SUB_ICON_NAMES = {
@@ -99,7 +100,7 @@ function ImageGallery({
 	if (!isOpen) return null;
 
 	const availableSources = [
-		{ slug: "general", name: "Загальні" },
+		{ slug: "general", name: lang.t("General") },
 		...campaigns,
 	];
 
@@ -112,7 +113,9 @@ function ImageGallery({
 		setIsMoveModalOpen(true);
 	};
 	const modalTitle =
-		typeof onSelect === "function" ? "Оберіть зображення..." : "Галерея зображень";
+		typeof onSelect === "function"
+			? lang.t("Choose an image")
+			: lang.t("Image gallery");
 
 	return (
 		<Modal
@@ -145,9 +148,11 @@ function ImageGallery({
 						}
 					>
 						<Icon name="database" size={16} />
-						<span>Загальні</span>
+						<span>{lang.t("General")}</span>
 					</button>
-					<div className="ImageGallery__sidebar-divider">Кампанії</div>
+					<div className="ImageGallery__sidebar-divider">
+						{lang.t("Campaigns")}
+					</div>
 					{campaigns.map((c) => (
 						<button
 							key={c.slug}
@@ -206,7 +211,7 @@ function ImageGallery({
 								}
 							>
 								<Icon name={cat.icon} size={14} />
-								<span>{cat.label}</span>
+								<span>{lang.t(cat.label)}</span>
 							</button>
 						))}
 					</header>
@@ -275,7 +280,7 @@ function ImageGallery({
 														})
 													}
 												>
-													{SUB_LABELS[part] || part}
+													{lang.t(SUB_LABELS[part] || part)}
 												</button>
 											);
 										})()}
@@ -290,7 +295,7 @@ function ImageGallery({
 											value={newSubName}
 											onChange={(e) => setNewSubName(e.target.value)}
 											onKeyDown={(e) => e.key === "Enter" && handleCreateSub()}
-											placeholder="Назва папки..."
+											placeholder={lang.t("Folder name...")}
 										/>
 										<Button
 											size={Button.SIZES.SMALL}
@@ -309,7 +314,7 @@ function ImageGallery({
 										size={Button.SIZES.SMALL}
 										icon="plus"
 										onClick={() => setIsCreatingSub(true)}
-										title="Створити підпапку"
+										title={lang.t("Create subfolder")}
 									/>
 								)}
 							</div>
@@ -321,9 +326,10 @@ function ImageGallery({
 										variant="ghost"
 										size={Button.SIZES.SMALL}
 										icon="move"
-										onClick={openMoveModal}
-									>
-										Перемістити ({selectedFilenames.size + selectedSubs.size})
+									onClick={openMoveModal}
+								>
+										{lang.t("Move")} (
+										{selectedFilenames.size + selectedSubs.size})
 									</Button>
 									<Button
 										className="ImageGallery__deleteBtn"
@@ -332,13 +338,14 @@ function ImageGallery({
 										icon="trash"
 										onClick={handleBulkDelete}
 									>
-										Видалити ({selectedFilenames.size + selectedSubs.size})
+										{lang.t("Delete")} (
+										{selectedFilenames.size + selectedSubs.size})
 									</Button>
 								</>
 							)}
 							<label className="UploadBtn">
 								<Icon name="plus" size={14} />
-								<span>Завантажити</span>
+								<span>{lang.t("Upload")}</span>
 								<input
 									type="file"
 									multiple
@@ -376,7 +383,7 @@ function ImageGallery({
 						{isDraggingOver && (
 							<div className="ImageGallery__drop-overlay">
 								<Icon name="import" size={48} />
-								<p>Відпустіть, щоб завантажити сюди</p>
+								<p>{lang.t("Release to upload here")}</p>
 							</div>
 						)}
 
@@ -450,15 +457,15 @@ function ImageGallery({
 													e.stopPropagation();
 													const newName = await dispatch(
 														prompt({
-															title: "Перейменувати папку",
-															message: "Введіть нову назву:",
+															title: lang.t("Rename folder"),
+															message: lang.t("Enter a new name:"),
 															defaultValue: sub,
 														}),
 													);
 													if (newName) handleRenameSub(sub, newName);
 												}}
 											>
-												{SUB_LABELS[sub] || sub}
+												{lang.t(SUB_LABELS[sub] || sub)}
 											</button>
 										</span>
 									</div>
@@ -468,7 +475,10 @@ function ImageGallery({
 						{!loading &&
 							images.length > 0 &&
 							images.map((img, index) => (
-								<Tooltip key={img.url} content="ПКМ: відкрити на весь екран">
+								<Tooltip
+									key={img.url}
+									content={lang.t("Right-click: open fullscreen")}
+								>
 									<div
 										className={classNames("ImageGallery__item", {
 											"is-selected": selectedFilenames.has(img.name),
@@ -514,8 +524,8 @@ function ImageGallery({
 														const currentClean = getCleanName(img.name);
 														const newBaseName = await dispatch(
 															prompt({
-																title: "Перейменувати файл",
-																message: "Введіть нову назву:",
+																title: lang.t("Rename file"),
+																message: lang.t("Enter a new name:"),
 																defaultValue: currentClean,
 															}),
 														);
@@ -541,13 +551,13 @@ function ImageGallery({
 
 			{isMoveModalOpen && (
 				<Modal
-					title="Перемістити обрані об'єкти"
+					title={lang.t("Move selected items")}
 					onCancel={() => setIsMoveModalOpen(false)}
 					onConfirm={async () => {
 						const moved = await handleMoveSelection(moveTarget);
 						if (moved) setIsMoveModalOpen(false);
 					}}
-					confirmLabel="Перемістити"
+					confirmLabel={lang.t("Move")}
 				>
 					<ImageTargetSettings
 						sources={availableSources.map((source) => ({

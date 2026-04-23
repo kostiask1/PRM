@@ -11,6 +11,7 @@ import Tooltip from "./common/Tooltip.jsx";
 import { capitalizeWords } from "../utils/parser.jsx";
 import "../assets/components/Spells.css";
 import classNames from "../utils/classNames";
+import { lang } from "../services/localization";
 
 export default function Spells() {
 	const [sources, setSources] = useState([]);
@@ -186,7 +187,10 @@ export default function Spells() {
 						{capitalizeWords(spell.name.split("|")[0])}
 					</div>
 					<div className="ListCard__meta">
-						{spell.level === 0 ? "Замовляння" : `${spell.level}-й рівень`} •{" "}
+						{spell.level === 0
+							? lang.t("Cantrip")
+							: lang.t("{level}-level", { level: spell.level })}{" "}
+						•{" "}
 						{schoolName}
 						{spell.source && (
 							<span className="Bestiary__item-source"> • {spell.source}</span>
@@ -200,7 +204,7 @@ export default function Spells() {
 	return (
 		<Panel className="Spells">
 			<div className="Panel__header">
-				<h2>Заклинання</h2>
+				<h2>{lang.t("Spells")}</h2>
 			</div>
 			<div className="Panel__body Spells__body">
 				<div className="Spells__search">
@@ -209,7 +213,7 @@ export default function Spells() {
 							value={selectedSource}
 							onChange={(e) => setSelectedSource(e.target.value)}
 						>
-							<option value="all">УСІ ДЖЕРЕЛА</option>
+							<option value="all">{lang.t("All sources")}</option>
 							{sources.map((s) => (
 								<option key={s} value={s}>
 									{s.toUpperCase()}
@@ -222,20 +226,20 @@ export default function Spells() {
 						onChange={(e) => setSelectedLevel(e.target.value)}
 						className="Spells__level-select"
 					>
-						<option value="all">УСІ РІВНІ</option>
-						<option value="0">Замовляння (0)</option>
+						<option value="all">{lang.t("All levels")}</option>
+						<option value="0">{lang.t("Cantrip (0)")}</option>
 						{[1, 2, 3, 4, 5, 6, 7, 8, 9].map((lvl) => (
 							<option key={lvl} value={String(lvl)}>
-								Рівень {lvl}
+								{lang.t("Level {level}", { level: lvl })}
 							</option>
 						))}
 					</Select>
 					<Input
-						placeholder="Пошук заклинання..."
+						placeholder={lang.t("Search spell...")}
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
 					/>
-					<Tooltip content="Сортувати за рівнем">
+					<Tooltip content={lang.t("Sort by level")}>
 						<button
 							className={classNames("Spells__sort-btn", {
 								"is-active": sortOrder !== "none",
@@ -256,7 +260,9 @@ export default function Spells() {
 						/>
 					</div>
 					{loading && (
-						<div className="Bestiary__loader muted">Оновлення магії...</div>
+						<div className="Bestiary__loader muted">
+							{lang.t("Updating spells...")}
+						</div>
 					)}
 
 					<div className="Spells__detail">
@@ -293,7 +299,7 @@ export default function Spells() {
 							/>
 						) : (
 							<p className="muted">
-								Оберіть заклинання зі списку, щоб переглянути опис.
+								{lang.t("Select a spell from the list to view details.")}
 							</p>
 						)}
 					</div>

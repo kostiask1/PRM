@@ -10,6 +10,7 @@ import Select from "./form/Select";
 import CharacterCardModel from "../models/CharacterCardModel.js";
 import CollapseToggleButton from "./common/CollapseToggleButton.jsx";
 import classNames from "../utils/classNames";
+import { lang } from "../services/localization";
 
 const markdownTagsWithMentions = [
 	"p",
@@ -173,7 +174,11 @@ export default function CharacterCard({
 								e.stopPropagation();
 								setIsEditing(!isEditing);
 							}}
-							title={isEditing ? "Завершити редагування" : "Редагувати"}
+							title={
+								isEditing
+									? lang.t("Finish editing")
+									: lang.t("Edit")
+							}
 						/>
 					)}
 					{showDeleteButton && (
@@ -202,7 +207,7 @@ export default function CharacterCard({
 								isEditing={isEditing}
 								showClearButton={isEditing}
 								onImageChange={(url) => updateField("imageUrl", url)}
-								imageAlt="Portrait"
+								imageAlt={lang.t("Portrait")}
 								containerClassName="character-card__portrait-container"
 								wrapperClassName={classNames(
 									"character-card__portrait-wrapper",
@@ -211,7 +216,7 @@ export default function CharacterCard({
 									},
 								)}
 								deleteButtonClassName="character-card__image-delete"
-								previewTitle={characterModel.fullName || "Portrait"}
+								previewTitle={characterModel.fullName || lang.t("Portrait")}
 								previewModalClassName="CharacterImageModal"
 								previewContentClassName="CharacterImageModal__content"
 							/>
@@ -225,26 +230,26 @@ export default function CharacterCard({
 											type="text"
 											value={character.firstName}
 											onChange={(e) => updateField("firstName", e.target.value)}
-											placeholder="Ім'я"
+											placeholder={lang.t("First name")}
 										/>
 										<EditableField
 											type="text"
 											value={character.lastName}
 											onChange={(e) => updateField("lastName", e.target.value)}
-											placeholder="Прізвище"
+											placeholder={lang.t("Last name")}
 										/>
 										<div className="character-card__row-trio">
 											<EditableField
 												type="text"
 												value={character.race}
 												onChange={(e) => updateField("race", e.target.value)}
-												placeholder="Раса"
+												placeholder={lang.t("Race")}
 											/>
 											<EditableField
 												type="text"
 												value={character.class}
 												onChange={(e) => updateField("class", e.target.value)}
-												placeholder="Клас"
+												placeholder={lang.t("Class")}
 											/>
 											<Select
 												value={characterModel.level}
@@ -252,7 +257,7 @@ export default function CharacterCard({
 											>
 												{CharacterCardModel.getLevelOptions().map((level) => (
 													<option key={level} value={level}>
-														{level} рівень
+														{lang.t("Level {level}", { level })}
 													</option>
 												))}
 											</Select>
@@ -265,9 +270,12 @@ export default function CharacterCard({
 												<h2>{characterModel.fullName}</h2>
 											</div>
 											<div className="character-card__meta-line">
-												<strong>{character.race || "Раса"}</strong> •{" "}
-												{character.class || "Клас"} ({characterModel.level}{" "}
-												рів.)
+												<strong>{character.race || lang.t("Race")}</strong> •{" "}
+												{character.class || lang.t("Class")} (
+												{lang.t("Lvl. {level}", {
+													level: characterModel.level,
+												})}
+												)
 											</div>
 										</div>
 									</div>
@@ -276,7 +284,7 @@ export default function CharacterCard({
 
 							<div className="character-card__details">
 								<div className="character-card__field">
-									<label>Мотивація</label>
+									<label>{lang.t("Motivation")}</label>
 									{isEditing ? (
 										<EditableField
 											type="textarea"
@@ -284,29 +292,29 @@ export default function CharacterCard({
 											onChange={(e) =>
 												updateField("motivation", e.target.value)
 											}
-											placeholder="Чого прагне персонаж..."
+											placeholder={lang.t("What does the character want...")}
 										/>
 									) : (
 										<div className="character-card__text-content">
 											<ReactMarkdown components={mentionComponents}>
-												{character.motivation || "*Мотивація не вказана*"}
+												{character.motivation || `*${lang.t("Motivation is not set")}*`}
 											</ReactMarkdown>
 										</div>
 									)}
 								</div>
 								<div className="character-card__field">
-									<label>Особливість</label>
+									<label>{lang.t("Trait")}</label>
 									{isEditing ? (
 										<EditableField
 											type="textarea"
 											value={character.trait}
 											onChange={(e) => updateField("trait", e.target.value)}
-											placeholder="Характерна риса або звичка..."
+											placeholder={lang.t("Distinctive trait or habit...")}
 										/>
 									) : (
 										<div className="character-card__text-content">
 											<ReactMarkdown components={mentionComponents}>
-												{character.trait || "*Особливості не вказані*"}
+												{character.trait || `*${lang.t("Traits are not set")}*`}
 											</ReactMarkdown>
 										</div>
 									)}
@@ -329,7 +337,7 @@ export default function CharacterCard({
 									updateField("isNotesCollapsed", !character.isNotesCollapsed)
 								}
 							/>
-							<label>Замітки персонажа</label>
+							<label>{lang.t("Character notes")}</label>
 						</div>
 						{!character.isNotesCollapsed && (
 							<div className="character-card__notes-list">

@@ -26,6 +26,28 @@ let modelCache = {
 	data: null,
 };
 
+function normalizeResponseLanguage(language) {
+	const code = String(language || "")
+		.trim()
+		.toLowerCase();
+	if (!code) {
+		throw new Error("language is required");
+	}
+
+	const aliases = {
+		uk: "Ukrainian",
+		ua: "Ukrainian",
+		ukrainian: "Ukrainian",
+		en: "English",
+		english: "English",
+	};
+
+	return {
+		code,
+		label: aliases[code] || code,
+	};
+}
+
 function noteToPromptText(note) {
 	if (!note) return "";
 	if (typeof note === "string") return note.trim();
@@ -140,93 +162,72 @@ async function listAvailableModels({ forceRefresh = false } = {}) {
 }
 
 const systemInstructions = {
-	campaign: `Ти досвідчений майстер підземель (Dungeon Master) для Dungeons & Dragons. 
-        Твоя мета - допомагати в плануванні сесій. Відповідай виключно українською мовою. 
-        Твої відповіді мають бути структурованими, читабельними та корисними для гри. 
-        Використовувати Markdown-розмітку (наприклад, жирний текст **текст**, марковані списки, розбиття рядку) для структурування тексту всередині значень JSON.
-        Завжди відповідай у форматі JSON. Не включай жодного тексту до або після JSON. 
-        JSON повинен містити лише згенеровані дані, без додаткових пояснень. 
-        Використовуй структуру { "description": "...", "notes": ["Заголовок\nДеталі замітки...", ...], "characters": [{name: "...", "description": "..."}, ...] }. Кожна замітка в масиві notes повинна бути цілісним логічним блоком: перший рядок — це короткий заголовок, а наступні рядки — основний зміст. Не генеруй поле "scenes" для кампанії.
-`,
-	scene: `Ти досвідчений майстер підземель (Dungeon Master) для Dungeons & Dragons. 
-        Твоя мета - допомагати в плануванні сесій. Відповідай виключно українською мовою. 
-        Твої відповіді мають бути структурованими, читабельними та корисними для гри. 
-        Використовувати Markdown-розмітку (наприклад, жирний текст **текст**, марковані списки, розбиття рядку) для структурування тексту всередині значень JSON.
-        Завжди відповідай у форматі JSON. Не включай жодного тексту до або після JSON. 
-        JSON повинен містити лише згенеровані дані, без додаткових пояснень. 
-        Коли генеруєш сцени, використовуй структуру { "scenes": [{ "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "..." }, "notes": ["Коротка замітка 1", "Коротка замітка 2"], "npcs": [{"name": "...", "description": "..."}, ...], "encounterIndex": 0 }, ...], "encounters": [{ "name": "Назва бою", "monsters": [{ "monsterName": "Official D&D Monster Name", "name": "Опціональне ім'я" }] }] }.
-        Поле encounterIndex у сцені повинно вказувати на індекс у масиві encounters, якщо для цієї сцени потрібен бій. 
-        Якщо бій не потрібен, не додавай encounterIndex.
-        Підбирай монстрів згідно з рівнем та кількістю персонажів гравців у контексті, щоб складність була доречною.
-        Якщо в інструкціях користувача вказано рівень складності (легкий, смертельний тощо), суворо дотримуйся його.
-`,
-	encounter: `Ти досвідчений майстер підземель (Dungeon Master) для Dungeons & Dragons 5e. 
-        Твоя мета - допомагати в наповненні конкретного бойового зіткнення. Відповідай виключно українською мовою. 
-        Твої відповіді мають бути структурованими та корисними для гри. 
-        Використовувати Markdown-розмітку (наприклад, жирний текст **текст**, марковані списки, розбиття рядку) для структурування тексту всередині значень JSON.
-        Завжди відповідай у форматі JSON. Не включай жодного тексту до або після JSON. 
-        JSON повинен містити структуру: { "name": "Назва бою", "monsters": [{ "monsterName": "Official D&D Monster Name", "name": "Опціональне ім'я" }] }.
-        
-        ПРАВИЛА БАЛАНСУ ТА СКЛАДНОСТІ:
-        1. Проаналізуй масив characters: їхню кількість та рівні.
-        2. Визнач складність на основі ІНСТРУКЦІЇ КОРИСТУВАЧА. Якщо складності не вказано, роби "середній" бій.
-        3. Складність за шкалою D&D 5e:
-           - Легка: Група майже не витратить ресурсів.
-           - Середня: Гравці витратять кілька заклинань або отримають невелику шкоду.
-           - Важка: Є реальний ризик, що хтось із героїв впаде без свідомості.
-           - Смертельна: Високий ризик загибелі одного або кількох персонажів.
-        4. Враховуй "Економіку дій": один сильний монстр (Boss) проти 4-5 гравців часто слабший за групу слабших монстрів.
-        5. Якщо надано currentEncounter, ти можеш додати до нього монстрів або повністю замінити склад, якщо того вимагає інструкція.
-        6. Назви монстрів у monsterName ПОВИННІ бути англійською (як в офіційному бестіарії).
-`,
-	prompt: `Ти досвідчений майстер підземель (Dungeon Master) для Dungeons & Dragons. 
-        Твоя мета - допомагати в плануванні іншому майстру. Відповідай виключно українською мовою. 
-        Ти отримуєш дані та інструкцію користувача.
-        Проаналізуй дані самостійно, повністю виконай інструкцію, навіть якщо дані неповні або неоднозначні.
-        У таких випадках зроби найбільш логічні припущення.
-
-        НЕ СТАВ ЖОДНИХ УТОЧНЮЮЧИХ ЗАПИТАНЬ. НЕ ДАВАЙ ПОРАД ЯКЩО НЕ ПРОСИВ.
-        НЕ ЗВЕРТАЙ УВАГУ НА ПОРОЖНІ ДАНІ, ОПЕРУЙ ТИМ ЩО Є.
-
-        Сформуй відповідь виключно як звичайний текст для людини.
-        КАТЕГОРИЧНО ЗАБОРОНЕНО:
-        - повертати JSON
-        - використовувати ключі, дужки {}, []
-        - показувати структуру даних
-
-        Виводь фінальний результат у вигляді зв’язного, природного людьского тексту, ніби це звичайна розповідь або відповідь.
-        У відповіді необхідно використовувати Markdown розмітку.
-`,
-	image: `Ти — генератор детальних промптів для створення зображень сцен.
-                    Користувач надсилає дані у форматі JSON з такими ключами:
-
-                    Ключі сцени (вищий пріоритет)
-                    summary — короткий опис того, що відбувається в сцені
-                    goal — мета персонажа(ів) у сцені
-                    stakes — що поставлено на кону, небезпека, ризик
-                    location — місце подій
-                    npcs — NPC або персонажі у сцені
-                    Загальні ключі (нижчий пріоритет)
-                    notes — додаткові нотатки
-                    description — загальний опис світу, сюжету, атмосфери.
-
-                    На основі отриманих даних згенерувати детальний промпт для створення зображення сцени.
-                    Промпт має бути англійською мовою.
-                    Не описуй JSON — пиши лише фінальний промпт для генерації зображення.
-                    Виводь тільки готовий промпт, без пояснень, без JSON, без списків.
-
-                    При генерації промпта описуй сцену в такому порядку:
-
-                    Загальний план сцени
-                    Локація та оточення
-                    Персонажі та їх дії
-                    Освітлення
-                    Атмосфера
-                    Стиль (cinematic, photorealistic, concept art, etc.)
-
-                    Стиль за замовчуванням (додавати в кінець промпта) - cinematic, photorealistic, ultra realistic, high detail, 8k, dramatic lighting, volumetric light, sharp focus, depth of field, film still, concept art
-                    Ось вхідні дані у вигляді JSON: 
-                    `,
+	campaign: `You are an experienced Dungeon Master for Dungeons & Dragons.
+Your goal is to help with campaign planning.
+Keep responses structured and practical for real gameplay.
+Always return JSON only, with no text before or after JSON.
+The JSON must contain generated data only, without extra commentary.
+Use this shape:
+{ "description": "...", "notes": ["Title\\nDetailed note...", ...], "characters": [{ "name": "...", "description": "..." }, ...] }.
+Each note in "notes" must be a complete block where the first line is a short title and the following lines are details.
+Do not generate a "scenes" field for campaign mode.`,
+	scene: `You are an experienced Dungeon Master for Dungeons & Dragons.
+Your goal is to help with session planning.
+Keep responses structured and practical for real gameplay.
+Always return JSON only, with no text before or after JSON.
+The JSON must contain generated data only, without extra commentary.
+When generating scenes, use this shape:
+{ "scenes": [{ "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "..." }, "notes": ["Short note 1", "Short note 2"], "npcs": [{ "name": "...", "description": "..." }], "encounterIndex": 0 }], "encounters": [{ "name": "Encounter name", "monsters": [{ "monsterName": "Official D&D Monster Name", "name": "Optional display name" }] }] }.
+If a scene requires combat, "encounterIndex" must point to the encounter index in "encounters".
+If combat is not needed, omit "encounterIndex".
+Pick monsters according to party level and party size from context.
+If user instructions specify encounter difficulty, follow that strictly.`,
+	encounter: `You are an experienced Dungeon Master for Dungeons & Dragons 5e.
+Your goal is to help build a specific combat encounter.
+Keep responses structured and practical for real gameplay.
+Always return JSON only, with no text before or after JSON.
+The JSON must use:
+{ "name": "Encounter name", "monsters": [{ "monsterName": "Official D&D Monster Name", "name": "Optional display name" }] }.
+Balance rules:
+1. Analyze characters array: count and levels.
+2. Determine difficulty from user instructions. If not specified, build a medium encounter.
+3. Difficulty scale:
+- Easy: party spends minimal resources.
+- Medium: party spends some resources and takes moderate damage.
+- Hard: real risk of a character dropping to 0 HP.
+- Deadly: high risk of character death.
+4. Consider action economy: one boss vs 4-5 PCs is often weaker than multiple enemies.
+5. If "currentEncounter" exists, you may add monsters or fully replace composition according to instructions.
+6. "monsterName" must always be in English using official bestiary names.`,
+	prompt: `You are an experienced Dungeon Master for Dungeons & Dragons.
+Your goal is to help another DM with planning.
+You receive data and user instructions.
+Analyze data independently and fully execute instructions, even when data is incomplete or ambiguous.
+In those cases, make the most reasonable assumptions.
+Do not ask clarifying questions.
+Do not give generic advice unless explicitly requested.
+Ignore empty fields and work with what is available.
+Return plain natural text for humans only.
+Do not return JSON.
+Do not output keys, braces {}, or arrays [].
+Do not expose raw data structure.
+Use markdown formatting in your final response.`,
+	image: `You generate detailed scene-image prompts.
+Input is JSON with keys:
+Scene fields (higher priority): summary, goal, stakes, location, npcs.
+General fields (lower priority): notes, description.
+Generate one final image-generation prompt from this data.
+Output only the final prompt, with no explanations, no JSON, and no lists.
+Describe in this order:
+1) Scene overview
+2) Location and environment
+3) Characters and actions
+4) Lighting
+5) Atmosphere
+6) Style (cinematic, photorealistic, concept art, etc.)
+Default style suffix:
+cinematic, photorealistic, ultra realistic, high detail, 8k, dramatic lighting, volumetric light, sharp focus, depth of field, film still, concept art
+Input JSON:`,
 };
 
 async function generateContent({
@@ -240,9 +241,11 @@ async function generateContent({
 	contextData,
 	generateEncounters,
 	modelName,
+	language,
 }) {
 	let model;
 	let userPrompt = "";
+	const responseLanguage = normalizeResponseLanguage(language);
 
 	const useKey = type
 		? type
@@ -267,7 +270,7 @@ async function generateContent({
 		generationConfig: {
 			responseMimeType: "application/json",
 		},
-		systemInstruction: systemInstructions[useKey],
+		systemInstruction: `${systemInstructions[useKey]}\n\nMANDATORY LANGUAGE RULE: You must write all user-visible output strictly in ${responseLanguage.label}.`,
 	});
 
 	// 1. Гнучка фільтрація сесій згідно з налаштованим контекстом
@@ -401,7 +404,8 @@ async function generateContent({
 		}
 	}
 
-	userPrompt = `ВХІДНІ ДАНІ (JSON):\n${JSON.stringify(contextJson, null, 2)}\n\n`;
+	userPrompt = `INPUT DATA (JSON):\n${JSON.stringify(contextJson, null, 2)}\n\n`;
+	userPrompt += `MANDATORY: Reply strictly in ${responseLanguage.label}.\n`;
 	userPrompt +=
 		"IMPORTANT: In all generated text fields, wrap every mention of character or NPC names in square brackets, for example [Iryna] or [Borin Stonehelm]. Do not wrap JSON keys.\n";
 	userPrompt +=
@@ -409,21 +413,21 @@ async function generateContent({
 
 	// Додаємо специфічні інструкції залежно від типу задачі
 	if (useKey === "image") {
-		userPrompt += `ЗАДАЧА: Згенерувати промпт для сцени з ID: ${sceneId}\n`;
+		userPrompt += `TASK: Generate an image prompt for scene ID: ${sceneId}\n`;
 	} else if (useKey === "encounter") {
-		userPrompt += `ЗАДАЧА: Оновити поточне бойове зіткнення (ID: ${encounterId}). Враховуй рівні персонажів та бажану складність (легка, середня, важка, смертельна). Підбери монстрів, які відповідають ситуації.\n`;
+		userPrompt += `TASK: Update current combat encounter (ID: ${encounterId}). Consider character levels and requested difficulty (easy, medium, hard, deadly). Pick monsters that fit the scenario.\n`;
 	} else if (useKey === "scene") {
-		userPrompt += `ЗАДАЧА: На основі поточної сесії та контексту, запропонуй ідеї для нових або доповни існуючі сцени.\n`;
+		userPrompt += `TASK: Based on current session and context, propose ideas for new scenes or expand existing ones.\n`;
 		if (generateEncounters) {
-			userPrompt += `ВАЖЛИВО: Для кожної сцени, де можливий конфлікт, обов'язково згенеруй об'єкт зіткнення (encounter) у масиві encounters. 
-            Підбирай монстрів (назви англійською), враховуючи рівні та класи персонажів для балансу.\n`;
+			userPrompt += `IMPORTANT: For each scene where conflict is possible, generate an encounter object in the encounters array.
+Pick monsters (English names) while considering character levels and classes for balance.\n`;
 		}
 	} else if (useKey === "campaign") {
-		userPrompt += `ЗАДАЧА: Онови опис сюжету та структуруй замітки кампанії.\n`;
+		userPrompt += `TASK: Update campaign story description and structure campaign notes.\n`;
 	}
 
 	if (userInstructions) {
-		userPrompt += `ІНСТРУКЦІЯ КОРИСТУВАЧА (ПРІОРІТЕТ): ${userInstructions}\n`;
+		userPrompt += `USER INSTRUCTIONS (PRIORITY): ${userInstructions}\n`;
 	}
 
 	const result = await model.generateContent(userPrompt);

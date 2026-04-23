@@ -3,20 +3,21 @@ import { useCallback, useEffect, useState } from "react";
 import { alert, confirm } from "../actions/app";
 import { api } from "../api";
 import { useAppDispatch } from "../store/appStore";
+import { lang } from "../services/localization";
 
 export const IMAGE_GALLERY_CATEGORIES = [
-	{ id: "maps", label: "Мапи", icon: "map" },
-	{ id: "scenes", label: "Сцени", icon: "image" },
-	{ id: "tokens", label: "Токени", icon: "user", subs: ["npc", "players"] },
+	{ id: "maps", label: "Maps", icon: "map" },
+	{ id: "scenes", label: "Scenes", icon: "image" },
+	{ id: "tokens", label: "Tokens", icon: "user", subs: ["npc", "players"] },
 	{
 		id: "characters",
-		label: "Персонажі",
+		label: "Characters",
 		icon: "users",
 		subs: ["npc", "players"],
 	},
-	{ id: "props", label: "Предмети", icon: "book" },
-	{ id: "notes", label: "Нотатки", icon: "file" },
-	{ id: "attachments", label: "Вкладення", icon: "layers" },
+	{ id: "props", label: "Props", icon: "book" },
+	{ id: "notes", label: "Notes", icon: "file" },
+	{ id: "attachments", label: "Attachments", icon: "layers" },
 ];
 
 export default function useImageGallery({
@@ -231,7 +232,9 @@ export default function useImageGallery({
 				return true;
 			} catch (err) {
 				console.error("Move failed", err);
-				dispatch(alert({ title: "Помилка переміщення", message: err.message }));
+				dispatch(
+					alert({ title: lang.t("Move error"), message: err.message }),
+				);
 				return false;
 			} finally {
 				setLoading(false);
@@ -262,7 +265,7 @@ export default function useImageGallery({
 			loadSubcategories();
 			setSelectedSub(fullPath);
 		} catch (err) {
-			dispatch(alert({ title: "Помилка", message: err.message }));
+			dispatch(alert({ title: lang.t("Error"), message: err.message }));
 		}
 	}, [
 		newSubName,
@@ -293,7 +296,7 @@ export default function useImageGallery({
 				if (selectedSub === oldName) setSelectedSub(newName);
 			} catch (err) {
 				dispatch(
-					alert({ title: "Помилка перейменування", message: err.message }),
+					alert({ title: lang.t("Rename error"), message: err.message }),
 				);
 			}
 		},
@@ -320,7 +323,7 @@ export default function useImageGallery({
 				);
 				loadImages();
 			} catch (err) {
-				dispatch(alert({ title: "Помилка", message: err.message }));
+				dispatch(alert({ title: lang.t("Error"), message: err.message }));
 			}
 		},
 		[selectedSource, selectedCat.id, selectedSub, loadImages, dispatch],
@@ -376,10 +379,10 @@ export default function useImageGallery({
 
 			const confirmed = await dispatch(
 				confirm({
-					title: "Видалення",
-					message: `Видалити вибрані об'єкти (${total})?`,
+					title: lang.t("Delete"),
+					message: lang.t("Delete selected items ({count})?", { count: total }),
 					checkboxLabel: hasNonEmptySelectedFolders
-						? "Видобути вміст із папки?"
+						? lang.t("Extract contents from folder?")
 						: null,
 					checkboxDefaultChecked: false,
 					getConfirmValue: (_value, extractFolderContents) => ({
@@ -409,7 +412,9 @@ export default function useImageGallery({
 			loadImages();
 			loadSubcategories();
 		} catch (err) {
-			dispatch(alert({ title: "Помилка видалення", message: err.message }));
+			dispatch(
+				alert({ title: lang.t("Delete error"), message: err.message }),
+			);
 		} finally {
 			setLoading(false);
 		}

@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import Icon from "./common/Icon";
 import "../assets/components/ImageTargetSettings.css";
 import classNames from "../utils/classNames";
+import { lang } from "../services/localization";
 
 const SUB_LABELS = {
 	npc: "NPC",
-	players: "Гравці",
+	players: "Players",
 };
 
 function normalizePath(path) {
@@ -15,10 +16,10 @@ function normalizePath(path) {
 }
 
 export default function ImageTargetSettings({
-	title = "Категорія",
+	title = "Category",
 	categories = [],
 	sources = [],
-	sourceTitle = "Джерело",
+	sourceTitle = "Source",
 	value,
 	onChange,
 	loadSubcategories,
@@ -131,7 +132,7 @@ export default function ImageTargetSettings({
 		<div className="ImageTargetSettings">
 			{sources.length > 0 && (
 				<div className="ImageTargetSettings__categories">
-					<label>{sourceTitle}:</label>
+					<label>{lang.t(sourceTitle)}:</label>
 					<div className="ImageTargetSettings__grid">
 						{sources.map((source) => (
 							<button
@@ -151,7 +152,7 @@ export default function ImageTargetSettings({
 			)}
 
 			<div className="ImageTargetSettings__categories">
-				<label>{title}:</label>
+				<label>{lang.t(title)}:</label>
 				<div className="ImageTargetSettings__grid">
 					{categories.map((cat) => (
 						<button
@@ -163,14 +164,14 @@ export default function ImageTargetSettings({
 							onClick={() => handleSelectCategory(cat)}
 						>
 							<Icon name={cat.icon} size={18} />
-							{cat.label}
+							{lang.t(cat.label)}
 						</button>
 					))}
 				</div>
 			</div>
 
 			<div className="ImageTargetSettings__subcategories">
-				<label>Підкатегорія:</label>
+				<label>{lang.t("Subcategory")}:</label>
 
 				<div className="ImageTargetSettings__pathBar">
 					<button
@@ -191,7 +192,7 @@ export default function ImageTargetSettings({
 							})}
 							onClick={() => handleNavigateToPart(index)}
 						>
-							{SUB_LABELS[part] || part}
+							{lang.t(SUB_LABELS[part] || part)}
 						</button>
 					))}
 					{typeof createSubcategory === "function" && (
@@ -209,7 +210,7 @@ export default function ImageTargetSettings({
 												setNewSubName("");
 											}
 										}}
-										placeholder="Назва папки..."
+										placeholder={lang.t("Folder name...")}
 									/>
 									<button
 										type="button"
@@ -236,7 +237,7 @@ export default function ImageTargetSettings({
 									type="button"
 									className="ImageTargetSettings__newSubBtn"
 									onClick={() => setIsCreatingSub(true)}
-									title="Створити підпапку"
+									title={lang.t("Create subfolder")}
 								>
 									<Icon name="plus" size={14} />
 								</button>
@@ -247,14 +248,16 @@ export default function ImageTargetSettings({
 
 				<div className="ImageTargetSettings__tabs">
 					<div className="ImageTargetSettings__tabsHeader">
-						<div className="ImageTargetSettings__tabsTitle">Підпапки</div>
+						<div className="ImageTargetSettings__tabsTitle">
+							{lang.t("Subfolders")}
+						</div>
 						<button
 							type="button"
 							className="ImageTargetSettings__tabBtn ImageTargetSettings__tabBtn--back"
 							onClick={handleBack}
 							disabled={atRoot}
 						>
-							Назад
+							{lang.t("Back")}
 						</button>
 					</div>
 					<div className="ImageTargetSettings__tabsList">
@@ -265,17 +268,17 @@ export default function ImageTargetSettings({
 								className="ImageTargetSettings__tabBtn"
 								onClick={() => handleEnterSubfolder(sub)}
 							>
-								{SUB_LABELS[sub] || sub}
+								{lang.t(SUB_LABELS[sub] || sub)}
 							</button>
 						))}
 						{!isLoadingSubs && subButtons.length === 0 && (
 							<span className="ImageTargetSettings__emptySubs">
-								Немає підпапок
+								{lang.t("No subfolders")}
 							</span>
 						)}
 						{isLoadingSubs && (
 							<span className="ImageTargetSettings__emptySubs">
-								Завантаження...
+								{lang.t("Loading...")}
 							</span>
 						)}
 					</div>

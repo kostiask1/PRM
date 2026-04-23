@@ -15,6 +15,7 @@ import "../assets/components/CampaignView.css";
 import useCampaignView from "../hooks/useCampaignView";
 import CampaignViewModel from "../models/CampaignViewModel.js";
 import { navigateTo } from "../store/appStore";
+import { lang } from "../services/localization";
 
 function CampaignView(props) {
 	const campaign = props.campaign;
@@ -66,14 +67,15 @@ function CampaignView(props) {
 							e.stopPropagation();
 							view.handleDeleteSession(session);
 						}}
-						title="Видалити сесію"
+						title={lang.t("Delete session")}
 					/>
 				</>
 			}
 		>
 			<div className="ListCard__title">{session.name}</div>
 			<div className="ListCard__meta">
-				Оновлено: {viewModel.formatSessionUpdatedAt(session.updatedAt)}
+				{lang.t("Updated")}:{" "}
+				{viewModel.formatSessionUpdatedAt(session.updatedAt)}
 			</div>
 		</ListCard>
 	);
@@ -82,12 +84,14 @@ function CampaignView(props) {
 		<Panel className="CampaignView">
 			<div className="Panel__header">
 				<div className="CampaignView__header">
-					<Tooltip content="Натисни, щоб перейменувати">
+					<Tooltip content={lang.t("Click to rename")}>
 						<h2 className="editable-title" onClick={view.handleRename}>
 							{viewModel.name}
 						</h2>
 					</Tooltip>
-					<p className="muted">Створено: {viewModel.createdAtLabel}</p>
+					<p className="muted">
+						{lang.t("Created")}: {viewModel.createdAtLabel}
+					</p>
 				</div>
 				<div className="CampaignView__headerActions">
 					<Button
@@ -96,7 +100,7 @@ function CampaignView(props) {
 						icon="undo"
 						onClick={view.handleUndo}
 						disabled={view.undoStack.length === 0}
-						title="Скасувати (Ctrl+Z)"
+						title={lang.t("Undo (Ctrl+Z)")}
 					/>
 					<Button
 						variant="ghost"
@@ -104,16 +108,16 @@ function CampaignView(props) {
 						icon="redo"
 						onClick={view.handleRedo}
 						disabled={view.redoStack.length === 0}
-						title="Повторити (Ctrl+Y)"
+						title={lang.t("Redo (Ctrl+Y)")}
 					/>
 					<Button onClick={view.handleExport} icon="export">
-						Експорт
+						{lang.t("Export")}
 					</Button>
 					<Button
 						variant="danger"
 						icon="trash"
 						onClick={view.handleDeleteCampaign}
-						title="Видалити кампанію"
+						title={lang.t("Delete campaign")}
 					/>
 				</div>
 			</div>
@@ -121,7 +125,7 @@ function CampaignView(props) {
 				<div className="CampaignView__layout">
 					<aside className="CampaignView__sessionsPane" id="campaign-sessions">
 						<div className="CampaignView__sessionsPaneHeader">
-							<h3>Сесії</h3>
+							<h3>{lang.t("Sessions")}</h3>
 							<Button
 								variant="create"
 								onClick={view.handleCreateSession}
@@ -129,13 +133,13 @@ function CampaignView(props) {
 								size={Button.SIZES.SMALL}
 								strokeWidth={2.5}
 							>
-								Нова сесія
+								{lang.t("New session")}
 							</Button>
 						</div>
 						<div className="CampaignView__sessionsPaneControls">
 							<input
 								className="CampaignView__sessionSearch"
-								placeholder="Пошук сесій..."
+								placeholder={lang.t("Search sessions...")}
 								value={sessionSearch}
 								onChange={(e) => setSessionSearch(e.target.value)}
 							/>
@@ -145,7 +149,7 @@ function CampaignView(props) {
 									size={Button.SIZES.SMALL}
 									onClick={() => setSessionStatusFilter("all")}
 								>
-									Всі
+									{lang.t("All")}
 								</Button>
 								<Button
 									variant={
@@ -154,7 +158,7 @@ function CampaignView(props) {
 									size={Button.SIZES.SMALL}
 									onClick={() => setSessionStatusFilter("active")}
 								>
-									Активні
+									{lang.t("Active")}
 								</Button>
 								<Button
 									variant={
@@ -163,7 +167,7 @@ function CampaignView(props) {
 									size={Button.SIZES.SMALL}
 									onClick={() => setSessionStatusFilter("completed")}
 								>
-									Завершені
+									{lang.t("Completed")}
 								</Button>
 							</div>
 						</div>
@@ -187,7 +191,7 @@ function CampaignView(props) {
 							)}
 							{filteredSessions.length === 0 && (
 								<div className="muted CampaignView__emptySessions">
-									Сесій не знайдено.
+									{lang.t("No sessions found.")}
 								</div>
 							)}
 						</div>
@@ -213,14 +217,16 @@ function CampaignView(props) {
 											view.triggerSave({ isDescriptionCollapsed: next });
 										}}
 									/>
-									<h3>Сюжет кампанії</h3>
+									<h3>{lang.t("Campaign story")}</h3>
 								</div>
 							</div>
 							{!view.isDescriptionCollapsed && (
 								<EditableField
 									type="textarea"
 									className="CampaignView__script"
-									placeholder="Опишіть основну лінію сюжету, ключові події та цілі..."
+									placeholder={lang.t(
+										"Describe the main plotline, key events, and goals...",
+									)}
 									value={view.description}
 									onChange={view.handleDescriptionChange}
 								/>
@@ -246,7 +252,7 @@ function CampaignView(props) {
 											view.triggerSave({ isNotesCollapsed: next });
 										}}
 									/>
-									<h3>Замітки</h3>
+									<h3>{lang.t("Notes")}</h3>
 								</div>
 							</div>
 							{!view.isNotesCollapsed && (
@@ -290,7 +296,7 @@ function CampaignView(props) {
 											view.triggerSave({ isCharactersCollapsed: next });
 										}}
 									/>
-									<h3>Персонажі</h3>
+									<h3>{lang.t("Characters")}</h3>
 								</div>
 								{!view.isCharactersCollapsed && (
 									<CreateCharacterButton
@@ -342,7 +348,7 @@ function CampaignView(props) {
 											view.triggerSave({ isNpcsCollapsed: next });
 										}}
 									/>
-									<h3>NPC</h3>
+									<h3>{lang.t("NPC")}</h3>
 								</div>
 								{!view.isNpcsCollapsed && (
 									<CreateCharacterButton

@@ -75,7 +75,7 @@
 	color: var(--muted);
 	line-height: 1.5;
 	font-size: 0.83rem;
-	min-width: 280px;
+	min-width: calc((var(--sidebar-expanded) - var(--space-3)));
 	opacity: 0;
 	transition: opacity 0.1s;
 }
@@ -91,16 +91,6 @@
 .Sidebar__langLabel {
 	font-size: 0.8rem;
 	color: var(--muted);
-}
-
-.Sidebar__langSelect {
-	flex: 1;
-	min-height: 28px;
-	border: 1px solid var(--border);
-	background: var(--panel);
-	color: var(--text);
-	border-radius: var(--radius-sm);
-	padding: 0 var(--space-2);
 }
 
 .Sidebar:hover .Sidebar__description {

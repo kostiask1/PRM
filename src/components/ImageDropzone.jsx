@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { alert } from "../actions/app";
 import { api } from "../api";
 import Button from "./form/Button";
@@ -10,6 +10,7 @@ import { IMAGE_GALLERY_CATEGORIES } from "../hooks/useImageGallery";
 import "../assets/components/ImageDropzone.css";
 import classNames from "../utils/classNames";
 import { useAppDispatch } from "../store/appStore";
+import { lang } from "../services/localization";
 
 export default function ImageDropzone({
 	campaignSlug,
@@ -53,17 +54,14 @@ export default function ImageDropzone({
 		}));
 	}, [campaignSlug, initialSource]);
 
-	const sourceOptions = useMemo(
-		() => [
-			{ id: "general", label: "Загальні", icon: "database" },
-			...campaigns.map((campaign) => ({
-				id: campaign.slug,
-				label: campaign.name,
-				icon: "map",
-			})),
-		],
-		[campaigns],
-	);
+	const sourceOptions = [
+		{ id: "general", label: lang.t("General"), icon: "database" },
+		...campaigns.map((campaign) => ({
+			id: campaign.slug,
+			label: campaign.name,
+			icon: "map",
+		})),
+	];
 
 	const handleDragOver = (e) => {
 		e.preventDefault();
@@ -98,7 +96,7 @@ export default function ImageDropzone({
 			onUploadSuccess?.(result);
 			setPendingFile(null);
 		} catch (err) {
-			dispatch(alert({ title: "Помилка", message: err.message }));
+			dispatch(alert({ title: lang.t("Error"), message: err.message }));
 		} finally {
 			setIsUploading(false);
 		}
@@ -113,9 +111,9 @@ export default function ImageDropzone({
 		>
 			<div className="ImageDropzone__content">
 				<Icon name="image" size={48} />
-				<p>Перетягніть зображення сюди або</p>
+				<p>{lang.t("Drag an image here or")}</p>
 				<label className="ImageDropzone__label">
-					виберіть файл
+					{lang.t("choose a file")}
 					<input
 						type="file"
 						accept="image/*"
@@ -123,33 +121,38 @@ export default function ImageDropzone({
 						hidden
 					/>
 				</label>
-				<div className="ImageDropzone__divider">або</div>
+				<div className="ImageDropzone__divider">{lang.t("or")}</div>
 				<Button
 					variant="ghost"
 					icon="database"
 					size={Button.SIZES.SMALL}
 					onClick={() => setIsGalleryOpen(true)}
 				>
-					З галереї
+					{lang.t("From gallery")}
 				</Button>
 			</div>
 
 			{pendingFile && (
 				<Modal
-					title="Налаштування завантаження"
+					title={lang.t("Upload settings")}
 					onCancel={() => setPendingFile(null)}
 					onConfirm={executeUpload}
-					confirmLabel={isUploading ? "Завантаження..." : "Завантажити"}
+					confirmLabel={
+						isUploading ? lang.t("Uploading...") : lang.t("Upload")
+					}
 					disabled={isUploading}
 				>
 					<div className="ImageDropzone__upload-settings">
 						<div className="ImageDropzone__preview">
-							<img src={URL.createObjectURL(pendingFile)} alt="Preview" />
+							<img
+								src={URL.createObjectURL(pendingFile)}
+								alt={lang.t("Preview")}
+							/>
 							<span>{pendingFile.name}</span>
 						</div>
 						<ImageTargetSettings
 							sources={sourceOptions}
-							sourceTitle="Джерело"
+							sourceTitle={lang.t("Source")}
 							categories={IMAGE_GALLERY_CATEGORIES}
 							value={uploadConfig}
 							onChange={(next) =>

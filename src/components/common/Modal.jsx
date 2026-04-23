@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import Button from "../form/Button";
 import Checkbox from "../form/Checkbox";
 import Input from "../form/Input";
+import { lang } from "../../services/localization";
 import "../../assets/components/Modal.css";
 import classNames from "../../utils/classNames";
 
@@ -166,7 +167,7 @@ function Modal({
 									ref={inputRef}
 									value={inputValue}
 									onChange={(e) => setInputValue(e.target.value)}
-									placeholder="Введіть значення..."
+									placeholder={lang.t("Enter a value...")}
 								/>
 							)}
 						</>
@@ -176,7 +177,7 @@ function Modal({
 					<div className="Modal__footer">
 						{onCancel && (
 							<Button variant="ghost" onClick={onCancel}>
-								Скасувати
+								{lang.t("Cancel")}
 							</Button>
 						)}
 						<Button
@@ -184,7 +185,7 @@ function Modal({
 							variant={type === "error" ? "danger" : "primary"}
 							onClick={() => onConfirm(resolveConfirmValue())}
 						>
-							{confirmLabel || (isAlert ? "ОК" : "Підтвердити")}
+							{confirmLabel || (isAlert ? lang.t("OK") : lang.t("Confirm"))}
 						</Button>
 					</div>
 				)}

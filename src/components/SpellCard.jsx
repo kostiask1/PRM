@@ -3,6 +3,7 @@ import { capitalizeWords, renderRecursiveContent } from "../utils/parser.jsx";
 import SpellCardModel from "../models/SpellCardModel.js";
 import { getSpellByName } from "../utils/referencePreview.js";
 import useConditionReference from "../hooks/useConditionReference.jsx";
+import { lang } from "../services/localization";
 
 export default function SpellCard({ spell, onSpellClick, onConditionClick }) {
 	const { handleConditionClick, handleConditionHover } = useConditionReference({
@@ -37,16 +38,16 @@ export default function SpellCard({ spell, onSpellClick, onConditionClick }) {
 			</div>
 			<div className="SpellCard__props">
 				<div>
-					<strong>Час накладання:</strong> {model.castingTimeLabel}
+					<strong>{lang.t("Casting time")}:</strong> {model.castingTimeLabel}
 				</div>
 				<div>
-					<strong>Дистанція:</strong> {model.rangeLabel}
+					<strong>{lang.t("Range")}:</strong> {model.rangeLabel}
 				</div>
 				<div>
-					<strong>Компоненти:</strong> {model.componentsLabel}
+					<strong>{lang.t("Components")}:</strong> {model.componentsLabel}
 				</div>
 				<div>
-					<strong>Тривалість:</strong> {model.durationLabel}
+					<strong>{lang.t("Duration")}:</strong> {model.durationLabel}
 				</div>
 			</div>
 			<div className="SpellCard__desc">
@@ -73,7 +74,7 @@ export default function SpellCard({ spell, onSpellClick, onConditionClick }) {
 			<div className="SpellCard__footer">
 				{spell.source && (
 					<div>
-						<strong>Джерело:</strong> {model.sourceLabel}
+						<strong>{lang.t("Source")}:</strong> {model.sourceLabel}
 					</div>
 				)}
 			</div>

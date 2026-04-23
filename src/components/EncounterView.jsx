@@ -10,6 +10,7 @@ import useEncounterView from "../hooks/useEncounterView";
 import Tooltip from "./common/Tooltip";
 import classNames from "../utils/classNames";
 import "../assets/components/EncounterView.css";
+import { lang } from "../services/localization";
 
 function EncounterView(props) {
 	const campaign = props.campaign;
@@ -24,7 +25,7 @@ function EncounterView(props) {
 	if (!view.encounter) {
 		return (
 			<Panel className="EncounterView">
-				<div className="Panel__body">Завантаження...</div>
+				<div className="Panel__body">{lang.t("Loading...")}</div>
 			</Panel>
 		);
 	}
@@ -40,15 +41,18 @@ function EncounterView(props) {
 						icon="back"
 						className="SessionView__backBtn"
 					/>
-					<Tooltip content="Натисніть, щоб перейменувати">
+					<Tooltip content={lang.t("Click to rename")}>
 						<h2 className="editable-title" onClick={view.handleRename}>
 							{view.encounter.name}
 						</h2>
 					</Tooltip>
 					<p className="muted">
-						Бойове зіткнення • {view.encounter.monsters.length} монстрів
+						{lang.t("Combat encounter")} •{" "}
+						{lang.t("{count} monsters", {
+							count: view.encounter.monsters.length,
+						})}
 						{view.encounter.monsters.length > 0 &&
-							` • Сер. ініціатива: ${view.averageInitiative}`}
+							` • ${lang.t("Avg initiative")}: ${view.averageInitiative}`}
 					</p>
 				</div>
 				<div className="EncounterView__headerActions">
@@ -64,14 +68,14 @@ function EncounterView(props) {
 						size={Button.SIZES.SMALL}
 						icon="import"
 						onClick={() => view.fileInputRef.current?.click()}
-						title="Імпортувати бій"
+						title={lang.t("Import encounter")}
 					/>
 					<Button
 						variant="ghost"
 						size={Button.SIZES.SMALL}
 						icon="export"
 						onClick={view.handleExport}
-						title="Експортувати бій"
+						title={lang.t("Export encounter")}
 					/>
 				</div>
 			</div>
@@ -84,7 +88,7 @@ function EncounterView(props) {
 							icon="plus"
 							className="EncounterView__addBtn"
 						>
-							Додати монстра
+							{lang.t("Add monster")}
 						</Button>
 
 						<DraggableList
@@ -102,7 +106,7 @@ function EncounterView(props) {
 									onClick={() => view.setSelectedInstance(m)}
 								>
 									<div className="EncounterMonsterRow__content">
-										<Tooltip content="Натисніть, щоб змінити ім'я">
+										<Tooltip content={lang.t("Click to rename")}>
 											<div
 												className="EncounterMonsterRow__name editable-title"
 												onClick={(e) => {
@@ -128,7 +132,7 @@ function EncounterView(props) {
 													}}
 												/>
 												<span className="muted">/</span>
-												<Tooltip content="Максимальне HP">
+												<Tooltip content={lang.t("Max HP")}>
 													<input
 														type="number"
 														value={m.hit_points}
@@ -144,7 +148,7 @@ function EncounterView(props) {
 												</Tooltip>
 											</div>
 											<div className="EncounterMonsterRow__ac">
-												AC {m.armor_class}
+												{lang.t("AC")} {m.armor_class}
 											</div>
 										</div>
 									</div>
@@ -158,7 +162,7 @@ function EncounterView(props) {
 												e.stopPropagation();
 												view.rollMonsterHp(m.instanceId);
 											}}
-											title="Кинути HP за формулою"
+											title={lang.t("Roll HP by formula")}
 										/>
 										<Button
 											variant="ghost"
@@ -169,7 +173,7 @@ function EncounterView(props) {
 												e.stopPropagation();
 												view.duplicateMonster(m);
 											}}
-											title="Дублювати"
+											title={lang.t("Duplicate")}
 										/>
 										<Button
 											variant="danger"
@@ -180,7 +184,7 @@ function EncounterView(props) {
 												e.stopPropagation();
 												view.removeMonster(m.instanceId);
 											}}
-											title="Видалити"
+											title={lang.t("Delete")}
 										/>
 									</div>
 								</div>
@@ -198,7 +202,9 @@ function EncounterView(props) {
 							/>
 						) : (
 							<p className="muted">
-								Оберіть монстра зі списку, щоб побачити його характеристики.
+								{lang.t(
+									"Select a monster from the list to see its stats.",
+								)}
 							</p>
 						)}
 					</div>
@@ -211,7 +217,7 @@ function EncounterView(props) {
 
 			{view.showBestiary && (
 				<Modal
-					title="Вибір монстра"
+					title={lang.t("Choose monster")}
 					onCancel={() => view.setShowBestiary(false)}
 					showFooter={false}
 					type="custom"

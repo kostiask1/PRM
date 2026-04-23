@@ -147,7 +147,7 @@
 }
 
 .MonsterStatBlock__action {
-	margin-bottom: 16px;
+	margin-bottom: var(--space-3);
 	line-height: 1.5;
 	font-size: 0.95rem;
 }
@@ -225,4 +225,8 @@
 .MonsterStatBlock__favorite-btn.is-active svg {
 	fill: var(--accent);
 	stroke: var(--accent);
+}
+
+.MonsterStatBlock__original-name.muted {
+	margin-top: -12px;
 }

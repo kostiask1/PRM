@@ -7,6 +7,7 @@ import { publishDiceResultAction, requestDiceRollAction } from "../actions/app";
 import { rollDiceFormula } from "../utils/dice";
 import { useAppDispatch, useAppSelector } from "../store/appStore";
 import classNames from "../utils/classNames";
+import { lang } from "../services/localization";
 
 import "../assets/components/DiceCalculator.css";
 
@@ -167,7 +168,7 @@ export default function DiceCalculator() {
 			{isOpen && (
 				<div className="DiceCalculator__panel">
 					<div className="DiceCalculator__header">
-						<span>Dice Roller</span>
+						<span>{lang.t("Dice Roller")}</span>
 						<Button
 							variant="ghost"
 							size={Button.SIZES.SMALL}
@@ -207,13 +208,15 @@ export default function DiceCalculator() {
 								</div>
 							</div>
 						) : (
-							<div className="DiceCalculator__placeholder">Очікування...</div>
+							<div className="DiceCalculator__placeholder">
+								{lang.t("Waiting...")}
+							</div>
 						)}
 					</div>
 
 					<div className="DiceCalculator__manual">
 						<Input
-							placeholder="Формула (напр. 1d12+5)"
+							placeholder={lang.t("Formula (e.g. 1d12+5)")}
 							value={manualInput}
 							onChange={(e) => setManualInput(e.target.value)}
 							onKeyDown={(e) => {
@@ -244,7 +247,7 @@ export default function DiceCalculator() {
 							size={Button.SIZES.SMALL}
 							onClick={clearFormula}
 						>
-							Clear
+							{lang.t("Clear")}
 						</Button>
 						<Button
 							variant="primary"
@@ -252,19 +255,19 @@ export default function DiceCalculator() {
 							onClick={executeRoll}
 							disabled={!manualInput.trim()}
 						>
-							ROLL
+							{lang.t("ROLL")}
 						</Button>
 					</div>
 
 					{history.length > 0 && (
 						<div className="DiceCalculator__history">
 							<div className="DiceCalculator__historyHeader">
-								<span>Історія</span>
+								<span>{lang.t("History")}</span>
 								<button
 									onClick={clearHistory}
 									className="DiceCalculator__clearHistoryBtn"
 								>
-									Очистити
+									{lang.t("Clear")}
 								</button>
 							</div>
 							<div className="DiceCalculator__historyList">

@@ -560,7 +560,12 @@ router.post("/generate", async (req, res, next) => {
 			parseAIResponse,
 			generateEncounters,
 			contextConfig,
+			language,
 		} = req.body;
+		const responseLanguage = String(language || "").trim().toLowerCase();
+		if (!responseLanguage) {
+			return res.status(400).json({ error: "language is required." });
+		}
 		if (!process.env.GEMINI_API_KEY) {
 			return res.status(500).json({ error: "GEMINI_API_KEY не налаштовано." });
 		}
@@ -604,6 +609,7 @@ router.post("/generate", async (req, res, next) => {
 			parseAIResponse,
 			contextData,
 			generateEncounters,
+			language: responseLanguage,
 		});
 
 		if (

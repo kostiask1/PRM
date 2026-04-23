@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Tooltip from "./common/Tooltip.jsx";
 import "../assets/components/SpellLink.css";
+import { lang } from "../services/localization";
 
 export default function SpellLink({ children, onClick, onHoverResolve }) {
 	const [tooltipContent, setTooltipContent] = useState(null);
@@ -23,7 +24,9 @@ export default function SpellLink({ children, onClick, onHoverResolve }) {
 
 	const resolvedContent =
 		tooltipContent ||
-		(isLoading ? <div className="Tooltip__text">Завантаження...</div> : null);
+		(isLoading ? (
+			<div className="Tooltip__text">{lang.t("Loading...")}</div>
+		) : null);
 
 	return (
 		<Tooltip content={resolvedContent}>

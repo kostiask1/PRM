@@ -3,27 +3,27 @@ import { idsEqual } from "../utils/id.js";
 const SCENE_SCHEMA = [
 	{
 		key: "summary",
-		title: "Суть сцени",
+		title: "Scene summary",
 		type: "textarea",
-		placeholder: "Коротко опиши сцену...",
+		placeholder: "Briefly describe the scene...",
 	},
 	{
 		key: "goal",
-		title: "Мета гравців",
+		title: "Players' goal",
 		type: "textarea",
-		placeholder: "Чого персонажі хочуть досягти...",
+		placeholder: "What do the characters want to achieve...",
 	},
 	{
 		key: "stakes",
-		title: "Ставки",
+		title: "Stakes",
 		type: "textarea",
-		placeholder: "Що буде при успіху/провалі...",
+		placeholder: "What happens on success or failure...",
 	},
 	{
 		key: "location",
-		title: "Локація",
+		title: "Location",
 		type: "textarea",
-		placeholder: "Де це відбувається...",
+		placeholder: "Where does this happen...",
 	},
 ];
 
@@ -118,11 +118,11 @@ export default class SessionViewModel {
 	}
 
 	get completeButtonLabel() {
-		return this.isCompleted ? "Відновити" : "Завершити";
+		return this.isCompleted ? "Reopen" : "Complete";
 	}
 
 	get saveStatusLabel() {
-		return this.session.isSaving ? "Зберігання..." : "Всі зміни збережено";
+		return this.session.isSaving ? "Saving..." : "All changes saved";
 	}
 
 	get notes() {
@@ -142,6 +142,6 @@ export default class SessionViewModel {
 		const entry = this.encounters.find((encounter) =>
 			idsEqual(encounter.id, scene.encounterId),
 		);
-		return entry?.name || "Без назви";
+		return entry?.name || "Untitled";
 	}
 }

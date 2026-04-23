@@ -1,5 +1,6 @@
 import "../../assets/components/StatusBadge.css";
 import classNames from "../../utils/classNames";
+import { lang } from "../../services/localization";
 
 export default function StatusBadge({
 	completed,
@@ -9,9 +10,12 @@ export default function StatusBadge({
 }) {
 	let label = "";
 	if (completed) {
-		label = `Завершена`;
+		label = lang.t("Completed");
 	} else {
-		label = type === "campaign" ? "Активна" : "В підготовці";
+		label =
+			type === "campaign"
+				? lang.t("Active")
+				: lang.t("In preparation");
 	}
 
 	return (

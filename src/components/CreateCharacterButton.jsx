@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import { alert, refreshEntitiesAction } from "../actions/app";
 import { api } from "../api";
 import { useAppDispatch } from "../store/appStore";
+import { lang } from "../services/localization";
 import Button from "./form/Button";
 import Modal from "./common/Modal";
 import CharacterCard from "./CharacterCard";
@@ -40,18 +41,16 @@ export default function CreateCharacterButton({
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [draft, setDraft] = useState(() => createEmptyDraft(entityType));
 
-	const uiText = useMemo(() => {
-		if (entityType === "npc") {
-			return {
-				button: "Новий NPC",
-				title: "Новий NPC",
-			};
-		}
-		return {
-			button: "Новий персонаж",
-			title: "Новий персонаж",
-		};
-	}, [entityType]);
+	const uiText =
+		entityType === "npc"
+			? {
+					button: lang.t("New NPC"),
+					title: lang.t("New NPC"),
+				}
+			: {
+					button: lang.t("New character"),
+					title: lang.t("New character"),
+				};
 
 	const openModal = () => {
 		setDraft(createEmptyDraft(entityType));
@@ -67,8 +66,8 @@ export default function CreateCharacterButton({
 		if (!draft.firstName?.trim()) {
 			dispatch(
 				alert({
-					title: "Помилка",
-					message: "Ім'я обов'язкове для створення.",
+					title: lang.t("Error"),
+					message: lang.t("Name is required to create an entry."),
 				}),
 			);
 			return;
@@ -103,8 +102,8 @@ export default function CreateCharacterButton({
 			console.error("Failed to create entity from modal", error);
 			dispatch(
 				alert({
-					title: "Помилка",
-					message: "Не вдалося створити сутність.",
+					title: lang.t("Error"),
+					message: lang.t("Failed to create entity."),
 				}),
 			);
 		} finally {
@@ -152,14 +151,14 @@ export default function CreateCharacterButton({
 								onClick={handleSubmit}
 								disabled={isSubmitting || !draft.firstName?.trim()}
 							>
-								Створити
+								{lang.t("Create")}
 							</Button>
 							<Button
 								variant="ghost"
 								onClick={closeModal}
 								disabled={isSubmitting}
 							>
-								Скасувати
+								{lang.t("Cancel")}
 							</Button>
 						</div>
 					</div>

@@ -17,6 +17,7 @@ import {
 } from "../store/appStore";
 import { lang } from "../services/localization";
 import "../assets/components/Sidebar.css";
+import Select from "./form/Select";
 
 const DB_IMPORT_STRATEGIES = [
 	{ id: "append", labelKey: "Add to existing data" },
@@ -124,11 +125,11 @@ export default function Sidebar({
 					<label className="Sidebar__langLabel" htmlFor="SidebarLanguageSelect">
 						{lang.t("Language")}
 					</label>
-					<select
-						id="SidebarLanguageSelect"
-						className="Sidebar__langSelect"
+					<Select
 						value={currentLanguage}
-						onChange={(event) => dispatch(setLanguageAction(event.target.value))}
+						onChange={(event) =>
+							dispatch(setLanguageAction(event.target.value))
+						}
 					>
 						{availableLanguages.map((languageCode) => (
 							<option key={languageCode} value={languageCode}>
@@ -139,7 +140,7 @@ export default function Sidebar({
 										: languageCode.toUpperCase()}
 							</option>
 						))}
-					</select>
+					</Select>
 				</div>
 			</div>
 
@@ -271,8 +272,7 @@ export default function Sidebar({
 						rel="noopener noreferrer"
 						className="Sidebar__resource-item"
 					>
-						<Icon name="map" size={16} />{" "}
-						<span>{lang.t("Szepeku maps")}</span>
+						<Icon name="map" size={16} /> <span>{lang.t("Szepeku maps")}</span>
 					</a>
 					<a
 						href="https://chatgpt.com/g/g-69c24d157a348191b640bf111b486080-ttrpg-map-architect"

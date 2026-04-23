@@ -5,6 +5,7 @@ import Button from "./Button";
 import EntityLink from "../common/EntityLink";
 import "../../assets/components/EditableField.css";
 import classNames from "../../utils/classNames";
+import { lang } from "../../services/localization";
 
 const TAB_PREVIEW = "       "; // 7 пробілів, як у тебе зараз
 
@@ -453,14 +454,14 @@ export default function EditableField({
 	);
 
 	const shortcutsHelp = [
-		"Гарячі клавіші:",
-		"Ctrl+B — Жирний",
-		"Ctrl+I — Курсив",
-		"Ctrl+1-6 — Заголовки",
-		"Ctrl+] — Список",
-		"Ctrl+[ — Зняти список",
-		"Ctrl+Q — Цитата",
-		"Ctrl+K — Додати посилання на персонажа",
+		lang.t("Hotkeys:"),
+		lang.t("Ctrl+B — Bold"),
+		lang.t("Ctrl+I — Italic"),
+		lang.t("Ctrl+1-6 — Headings"),
+		lang.t("Ctrl+] — List"),
+		lang.t("Ctrl+[ — Remove list"),
+		lang.t("Ctrl+Q — Quote"),
+		lang.t("Ctrl+K — Add character link"),
 	].map((info) => <div key={info}>{info}</div>);
 
 	if (isEditing) {
@@ -495,7 +496,7 @@ export default function EditableField({
 					icon={copied ? "check" : "copy"}
 					className="EditableField__copy-btn"
 					onClick={handleCopy}
-					title="Копіювати форматований текст для Word"
+					title={lang.t("Copy formatted text for Word")}
 				/>
 			)}
 			<div className="MarkdownView" ref={viewRef}>

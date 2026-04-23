@@ -9,6 +9,7 @@ import {
 } from "../utils/noteUtils";
 import { idsEqual } from "../utils/id";
 import { navigateTo, useAppDispatch } from "../store/appStore";
+import { lang } from "../services/localization";
 
 export default function useSessionView(props) {
 	const { campaign, sessionId } = props;
@@ -313,9 +314,11 @@ export default function useSessionView(props) {
 			);
 			const name = await dispatch(
 				prompt({
-					title: "Нове зіткнення",
-					message: "Введіть назву для бою:",
-					defaultValue: `Бій у сцені ${sceneIndex + 1}`,
+					title: lang.t("New encounter"),
+					message: lang.t("Enter encounter name:"),
+					defaultValue: lang.t("Encounter in scene {number}", {
+						number: sceneIndex + 1,
+					}),
 				}),
 			);
 			if (name === null) return;
@@ -323,7 +326,9 @@ export default function useSessionView(props) {
 			encounterId = Date.now().toString();
 			const newEncounter = {
 				id: encounterId,
-				name: name || `Бій у сцені ${sceneIndex + 1}`,
+				name:
+					name ||
+					lang.t("Encounter in scene {number}", { number: sceneIndex + 1 }),
 				monsters: [],
 			};
 
@@ -362,8 +367,10 @@ export default function useSessionView(props) {
 		if (hasTextData || hasEncounter) {
 			const confirmed = await dispatch(
 				confirm({
-					title: "Видалення сцени",
-					message: "Ви впевнені? Це також видалить пов'язане бойове зіткнення.",
+					title: lang.t("Delete scene"),
+					message: lang.t(
+						"Are you sure? This will also delete the linked combat encounter.",
+					),
 				}),
 			);
 			if (!confirmed) return;
@@ -516,22 +523,22 @@ export default function useSessionView(props) {
 	};
 
 	const checklistItems = [
-		{ id: "goal", label: "Визначити головну мету сесії" },
-		{ id: "conflict", label: "Сформулювати основний конфлікт" },
+		{ id: "goal", label: lang.t("Define the main session goal") },
+		{ id: "conflict", label: lang.t("Formulate the main conflict") },
 		{
 			id: "social",
-			label: "Підготувати соціальну сцену",
-			note: "Переговори, допит, суперечка.",
+			label: lang.t("Prepare a social scene"),
+			note: lang.t("Negotiation, interrogation, argument."),
 		},
 		{
 			id: "exploration",
-			label: "Підготувати сцену дослідження",
-			note: "Локація, загадка, пастка.",
+			label: lang.t("Prepare an exploration scene"),
+			note: lang.t("Location, puzzle, trap."),
 		},
 		{
 			id: "combat",
-			label: "Підготувати бій / сцену напруги",
-			note: "Ризик і тиск.",
+			label: lang.t("Prepare a combat / tension scene"),
+			note: lang.t("Risk and pressure."),
 		},
 	];
 
@@ -545,8 +552,8 @@ export default function useSessionView(props) {
 		if (!session) return;
 		const name = await dispatch(
 			prompt({
-				title: "Перейменування",
-				message: "Введіть нову назву сесії:",
+				title: lang.t("Rename"),
+				message: lang.t("Enter a new session name:"),
 				defaultValue: session.name,
 			}),
 		);
@@ -558,8 +565,10 @@ export default function useSessionView(props) {
 		if (
 			await dispatch(
 				confirm({
-					title: "Видалення сесії",
-					message: `Видалити сесію "${session.name}"?`,
+					title: lang.t("Delete session"),
+					message: lang.t('Delete session "{name}"?', {
+						name: session.name,
+					}),
 				}),
 			)
 		) {

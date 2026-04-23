@@ -1,7 +1,8 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 
 import Button from "../form/Button";
 import Input from "../form/Input";
+import { lang } from "../../services/localization";
 
 export default function MentionPickerModalContent({
 	entities,
@@ -30,7 +31,7 @@ export default function MentionPickerModalContent({
 			<Input
 				value={query}
 				onChange={(e) => setQuery(e.target.value)}
-				placeholder="Пошук NPC або персонажа..."
+				placeholder={lang.t("Search NPC or character...")}
 				autoFocus
 			/>
 
@@ -45,18 +46,18 @@ export default function MentionPickerModalContent({
 						>
 							<span>{entity.name}</span>
 							<span className="muted">
-								{entity.type === "npc" ? "NPC" : "Персонаж"}
+								{entity.type === "npc" ? "NPC" : lang.t("Character")}
 							</span>
 						</button>
 					))
 				) : (
-					<p className="muted">Нічого не знайдено.</p>
+					<p className="muted">{lang.t("Nothing found.")}</p>
 				)}
 			</div>
 
 			<div className="MentionPicker__actions">
 				<Button variant="ghost" onClick={onCancel}>
-					Скасувати
+					{lang.t("Cancel")}
 				</Button>
 			</div>
 		</div>

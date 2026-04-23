@@ -2,6 +2,7 @@ import Button from "../form/Button";
 import CollapseToggleButton from "../common/CollapseToggleButton";
 import CreateCharacterButton from "../CreateCharacterButton";
 import Icon from "../common/Icon";
+import { lang } from "../../services/localization";
 
 export default function SceneCardHeader({
 	number,
@@ -21,7 +22,9 @@ export default function SceneCardHeader({
 					collapsed={collapsed}
 					onClick={onToggle}
 				/>
-				<div className="SceneCard__title">{`Сцена ${number}`}</div>
+				<div className="SceneCard__title">
+					{lang.t("Scene {number}", { number })}
+				</div>
 			</div>
 			<div className="SceneCard__headerActions">
 				<CreateCharacterButton

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Icon from "./common/Icon";
 import Tooltip from "./common/Tooltip";
 import "../assets/components/ColorThemeSwitcher.css";
+import { lang } from "../services/localization";
 
 const THEME_STORAGE_KEY = "app-theme";
 
@@ -45,8 +46,8 @@ export default function ColorThemeSwitcher() {
 		<Tooltip
 			content={
 				theme === "light"
-					? "Перемкнути на темну тему"
-					: "Перемкнути на світлу тему"
+					? lang.t("Switch to dark theme")
+					: lang.t("Switch to light theme")
 			}
 		>
 			<button className="ColorThemeSwitcher" onClick={toggleTheme}>

@@ -3,6 +3,7 @@ import EditableField from "../form/EditableField";
 import CollapseToggleButton from "./CollapseToggleButton";
 import "../../assets/components/NoteCard.css";
 import classNames from "../../utils/classNames";
+import { lang } from "../../services/localization";
 
 export default function NoteCard({
 	note,
@@ -37,7 +38,7 @@ export default function NoteCard({
 				<EditableField
 					value={note.title || ""}
 					onChange={(e) => onTitleChange(note.id, e.target.value)}
-					placeholder="Нова замітка"
+					placeholder={lang.t("New note")}
 					className="note-card-simple__title"
 				/>
 				{!isLast && (
@@ -50,7 +51,7 @@ export default function NoteCard({
 							e.stopPropagation();
 							onDelete(note.id);
 						}}
-						title="Видалити замітку"
+						title={lang.t("Delete note")}
 					/>
 				)}
 			</div>
@@ -60,7 +61,7 @@ export default function NoteCard({
 						type="textarea"
 						value={note.text}
 						onChange={(e) => onTextChange(note.id, e.target.value)}
-						placeholder="Текст замітки..."
+						placeholder={lang.t("Note text...")}
 					/>
 				</div>
 			)}

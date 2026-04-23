@@ -2,6 +2,7 @@ import "../assets/components/RollDice.css";
 import Tooltip from "./common/Tooltip";
 import { requestDiceRollAction } from "../actions/app";
 import { useAppDispatch } from "../store/appStore";
+import { lang } from "../services/localization";
 
 export default function RollDice({ formula, children }) {
 	const dispatch = useAppDispatch();
@@ -12,7 +13,7 @@ export default function RollDice({ formula, children }) {
 	};
 
 	return (
-		<Tooltip content={`Кинути ${formula}`}>
+		<Tooltip content={lang.t("Roll {formula}", { formula })}>
 			<span className="RollDice" onClick={handleClick}>
 				{children || formula}
 			</span>

@@ -13,11 +13,13 @@ import CollapseToggleButton from "./common/CollapseToggleButton";
 import { alert } from "../actions/app";
 import Tooltip from "./common/Tooltip";
 import classNames from "../utils/classNames";
-import { useAppDispatch } from "../store/appStore";
+import { useAppDispatch, useAppSelector } from "../store/appStore";
+import { lang } from "../services/localization";
 import "../assets/components/AiAssistantPanel.css";
 
 export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	const dispatch = useAppDispatch();
+	const currentLanguage = useAppSelector((state) => state.localization.language);
 	const initialRoute = parseUrl();
 	const isCampaign = !initialRoute.session;
 	const isEncounter = !!initialRoute.encounter;
@@ -55,13 +57,13 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	const showApiKeyInstructions = () => {
 		dispatch(
 			alert({
-				title: "Налаштування Gemini AI",
+				title: lang.t("Gemini AI setup"),
 				message:
-					`Для використання функцій ШІ необхідно налаштувати API ключ:\n\n` +
-					`1. Отримайте безкоштовний ключ у Google AI Studio (aistudio.google.com).\n` +
-					`2. Створіть файл .env у кореневій папці проекту.\n` +
-					`3. Додайте в нього рядок: GEMINI_API_KEY=ваш_ключ\n` +
-					`Після цього магія ШІ стане доступною!`,
+					`${lang.t("To use AI features, configure an API key:")}\n\n` +
+					`1. ${lang.t("Get a free key in Google AI Studio (aistudio.google.com).")}\n` +
+					`2. ${lang.t("Create a .env file in the project root.")}\n` +
+					`3. ${lang.t("Add this line: GEMINI_API_KEY=your_key")}\n` +
+					`${lang.t("After that, AI features will be available.")}`,
 			}),
 		);
 	};
@@ -171,6 +173,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 				parseAIResponse: type === "image" ? false : parseAIResponse,
 				generateEncounters: !isCampaign && generateEncounters,
 				contextConfig: useContext ? configToSend : null,
+				language: currentLanguage,
 			});
 
 			// Одразу оновлюємо стан в батьківському компоненті, бо в БД вже записано
@@ -179,7 +182,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 			} else if (data.updated && onInsertResult) {
 				onInsertResult(data.updated);
 				setUserInstructions(""); // Очищаємо поле після успіху
-				setNotification("Магія ШІ успішно застосована!");
+				setNotification(lang.t("AI changes applied successfully!"));
 				if (parseAIResponse || isEncounter) {
 					setIsOpen(false);
 					setIsContextModalOpen(false);
@@ -192,10 +195,10 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 				return;
 			}
 
-			setError(err.message || "Не вдалося зв’язатися з AI.");
+			setError(err.message || lang.t("Failed to connect to AI."));
 			dispatch(
 				alert({
-					title: "Помилка ШІ",
+					title: lang.t("AI error"),
 					message: err.status
 						? `[Статус: ${err.status}] ${err.message}`
 						: err.message,
@@ -208,23 +211,31 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 
 	const getPlaceholder = () => {
 		if (!parseAIResponse) {
-			return "Надішліть свій запит. Відповідь буде отримана у вікні і не вплине на дані";
+			return lang.t(
+				"Send your request. The response will appear in a dialog and will not change your data.",
+			);
 		} else if (isCampaign) {
-			return "Опишіть зміни або нові гілки сюжету (наприклад: 'додай політичні інтриги' або 'зроби фінал більш епічним')...";
+			return lang.t(
+				"Describe changes or new plot branches (for example: 'add political intrigue' or 'make the finale more epic')...",
+			);
 		} else if (isEncounter) {
-			return "Опишіть зміни (наприклад: 'зроби бій смертельним', 'це легка сутичка', 'додай охорону для боса')...";
+			return lang.t(
+				"Describe changes (for example: 'make the fight deadly', 'this is an easy skirmish', 'add guards for the boss')...",
+			);
 		} else {
-			return "Опишіть стиль або умови (наприклад: 'занедбане підземне місто', 'атмосфера детективу')...";
+			return lang.t(
+				"Describe style or constraints (for example: 'abandoned underground city', 'detective atmosphere')...",
+			);
 		}
 	};
 
 	const SCENE_FIELDS = [
-		{ key: "summary", label: "Суть сцени" },
-		{ key: "goal", label: "Мета гравців" },
-		{ key: "stakes", label: "Ставки" },
-		{ key: "location", label: "Локація" },
-		{ key: "notes", label: "Замітки сцени" },
-		{ key: "encounter", label: "Енкаунтер (монстри)" },
+		{ key: "summary", label: "Scene summary" },
+		{ key: "goal", label: "Players' goal" },
+		{ key: "stakes", label: "Stakes" },
+		{ key: "location", label: "Location" },
+		{ key: "notes", label: "Scene notes" },
+		{ key: "encounter", label: "Encounter (monsters)" },
 	];
 
 	return (
@@ -234,10 +245,10 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 				className="AiAssistant__toggle"
 				content={
 					isCampaign
-						? "AI Сюжетний Помічник"
+						? lang.t("AI Story Assistant")
 						: isEncounter
-							? "AI Помічник Бою"
-							: "AI Помічник Сесії"
+							? lang.t("AI Encounter Assistant")
+							: lang.t("AI Session Assistant")
 				}
 			>
 				<button onClick={() => setIsOpen(true)}>
@@ -249,10 +260,10 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 				<Modal
 					title={
 						isCampaign
-							? "AI Сюжетний Помічник"
+							? lang.t("AI Story Assistant")
 							: isEncounter
-								? "AI Помічник Бою"
-								: "AI Помічник Сесії"
+								? lang.t("AI Encounter Assistant")
+								: lang.t("AI Session Assistant")
 					}
 					onCancel={() => setIsOpen(false)}
 					showFooter={false}
@@ -279,7 +290,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 										))
 									) : (
 										<option key="loading" value="">
-											Завантаження моделей...
+											{lang.t("Loading models...")}
 										</option>
 									)}
 								</Select>
@@ -294,8 +305,8 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 									onChange={(val) => setUseContext(val)}
 									title={
 										useContext
-											? "Вимкнути використання контексту"
-											: "Увімкнути використання контексту"
+											? lang.t("Disable context usage")
+											: lang.t("Enable context usage")
 									}
 								/>
 								<Button
@@ -304,9 +315,9 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 									icon="database"
 									onClick={() => setIsContextModalOpen(true)}
 									disabled={loading}
-									title="Налаштувати деталі контексту для ШІ"
+									title={lang.t("Configure context details for AI")}
 								>
-									Контекст
+									{lang.t("Context")}
 								</Button>
 							</div>
 							{!isCampaign && (
@@ -316,9 +327,9 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 									icon="image"
 									onClick={() => setShowSceneSelector(true)}
 									disabled={loading || !sessionData.scenes?.length}
-									title="Згенерувати візуальний опис для сцени"
+									title={lang.t("Generate visual prompt for a scene")}
 								>
-									Промпт для фото
+									{lang.t("Image prompt")}
 								</Button>
 							)}
 							<Button
@@ -329,11 +340,11 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 								disabled={loading || isEncounter}
 								title={
 									parseAIResponse
-										? "Парсити відповідь ШІ у поля форми"
-										: "Показувати відповідь текстом у модальному вікні"
+										? lang.t("Parse AI response into form fields")
+										: lang.t("Show response as text in a modal")
 								}
 							>
-								Парсинг відповіді
+								{lang.t("Response parsing")}
 							</Button>
 							{!isCampaign && (parseAIResponse || isEncounter) && (
 								<Button
@@ -342,22 +353,24 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 									icon="swords"
 									onClick={() => setGenerateEncounters(!generateEncounters)}
 									disabled={loading || isEncounter}
-									title="ШІ спробує підібрати монстрів для кожної сцени на основі рівня персонажів"
+									title={lang.t(
+										"AI will try to pick monsters for each scene based on character levels",
+									)}
 								>
-									Генерація боїв
+									{lang.t("Encounter generation")}
 								</Button>
 							)}
 						</div>
 
 						{isContextModalOpen && (
 							<Modal
-								title="Налаштування контексту"
+								title={lang.t("Context settings")}
 								onCancel={() => setIsContextModalOpen(false)}
 								showFooter={false}
 							>
 								<div className="AiAssistant__context-manager">
 									<section>
-										<h4>Кампанія</h4>
+										<h4>{lang.t("Campaign")}</h4>
 										<div className="AiAssistant__context-row">
 											<Checkbox
 												checked={contextConfig.campaignNotes}
@@ -367,7 +380,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 														campaignNotes: val,
 													}))
 												}
-												label="Нотатки кампанії"
+												label={lang.t("Campaign notes")}
 											/>
 										</div>
 										<div className="AiAssistant__context-row">
@@ -379,13 +392,13 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 														campaignCharacters: val,
 													}))
 												}
-												label="Персонажі"
+												label={lang.t("Characters")}
 											/>
 										</div>
 									</section>
 
 									<section>
-										<h4>Сесії</h4>
+										<h4>{lang.t("Sessions")}</h4>
 										{sessionsList.map((session) => {
 											const slug = session.fileName;
 											const config = contextConfig.sessions[slug] || {
@@ -433,7 +446,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 																			val,
 																		)
 																	}
-																	label="Нотатки"
+																	label={lang.t("Notes")}
 																/>
 															</div>
 															<div className="AiAssistant__context-row">
@@ -445,7 +458,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 																			val,
 																		)
 																	}
-																	label="Підсумок"
+																	label={lang.t("Summary")}
 																/>
 															</div>
 															<div className="AiAssistant__scenes-context">
@@ -482,7 +495,9 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 																								val,
 																							)
 																						}
-																						label={`Сцена ${idx + 1}`}
+																						label={lang.t("Scene {number}", {
+																							number: idx + 1,
+																						})}
 																					/>
 																				</div>
 																				{sceneConf.included && (
@@ -503,7 +518,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 																										val,
 																									)
 																								}
-																								label={f.label}
+																								label={lang.t(f.label)}
 																							/>
 																						))}
 																					</div>
@@ -525,7 +540,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 
 						{showSceneSelector && (
 							<Modal
-								title="Оберіть сцену для генерації промпту"
+								title={lang.t("Choose a scene to generate a prompt")}
 								onCancel={() => setShowSceneSelector(false)}
 								showFooter={false}
 							>
@@ -539,8 +554,13 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 												generate("image", scene.id);
 											}}
 										>
-											<strong>Сцена {idx + 1}</strong>:{" "}
-											{scene.texts?.summary?.slice(0, 60) || "Без опису"}...
+											<strong>
+												{lang.t("Scene {number}", { number: idx + 1 })}
+											</strong>
+											:{" "}
+											{scene.texts?.summary?.slice(0, 60) ||
+												lang.t("No description")}
+											...
 										</div>
 									))}
 								</div>
@@ -549,8 +569,8 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 
 						{generatedPrompt && (
 							<Modal
-								title="Відповідь"
-								confirmLabel="Закрити"
+								title={lang.t("Response")}
+								confirmLabel={lang.t("Close")}
 								onCancel={() => setGeneratedPrompt(null)}
 								onConfirm={() => setGeneratedPrompt(null)}
 							>
@@ -579,7 +599,9 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 								disabled={loading}
 								onClick={() => generate()}
 							>
-								{loading ? "Магія працює, зачекайте..." : "Згенерувати"}
+								{loading
+									? lang.t("AI is working, please wait...")
+									: lang.t("Generate")}
 							</Button>
 						</div>
 
