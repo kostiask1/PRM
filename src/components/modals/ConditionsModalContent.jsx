@@ -4,7 +4,6 @@ import { alert } from "../../actions/app";
 import { api } from "../../api";
 import "../../assets/components/ConditionsModal.css";
 import SpellCard from "../SpellCard";
-import Icon from "../common/Icon";
 import Input from "../form/Input";
 import { lang } from "../../services/localization";
 import { openModalRequest, useAppDispatch } from "../../store/appStore";
@@ -179,11 +178,6 @@ export default function ConditionsModalContent({ initialConditionName = "" }) {
 								key={item.name}
 								onClick={() => setSelectedConditionName(item.name)}
 								active={selectedConditionName === item.name}
-								actions={
-									<div onClick={() => setSelectedConditionName(item.name)}>
-										<Icon name="chevron" size={14} />
-									</div>
-								}
 							>
 								<div className="ListCard__title">{item.name}</div>
 							</ListCard>

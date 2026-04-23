@@ -31,10 +31,6 @@
 	padding: 0 var(--space-1);
 }
 
-.ConditionsModal__list .ListCard__actions .Icon {
-	transform: rotate(-90deg);
-}
-
 .ConditionsModal__content {
 	min-width: 0;
 	border: 1px solid color-mix(in srgb, var(--border), transparent 30%);
