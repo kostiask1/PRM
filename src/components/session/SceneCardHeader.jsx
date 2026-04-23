@@ -28,11 +28,9 @@ export default function SceneCardHeader({
 			</div>
 			<div className="SceneCard__headerActions">
 				<CreateCharacterButton
+					buttonVariant="ghost"
 					campaignSlug={campaignSlug}
 					entityType="npc"
-					buttonLabel="NPC"
-					buttonVariant="ghost"
-					buttonSize={Button.SIZES.SMALL}
 				/>
 				<Button
 					variant={hasEncounter ? "primary" : "ghost"}

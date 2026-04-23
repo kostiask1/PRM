@@ -151,7 +151,17 @@
 	display: flex;
 	align-items: center;
 	gap: var(--space-2);
-	flex-wrap: wrap;
+}
+
+.SceneCard__headerActions .Button {
+	height: 100%;
+	min-height: unset;
+	height: var(--control-h);
+}
+
+.SceneCard__headerActions .Button--danger {
+	padding: 0;
+	width: var(--control-h);
 }
 
 .SceneCard__titleGroup {
@@ -211,10 +221,6 @@
 .SessionView .field--result .MarkdownView,
 .SessionView .field--result {
 	min-height: 200px !important;
-}
-
-.SceneCard__encounter-icon {
-	margin-right: 8px;
 }
 
 .SceneCard__image-delete {
