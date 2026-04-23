@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import Modal from "./common/Modal";
 import Icon from "./common/Icon";
 import "../assets/components/ImageGallery.css";
@@ -111,10 +111,12 @@ function ImageGallery({
 		});
 		setIsMoveModalOpen(true);
 	};
+	const modalTitle =
+		typeof onSelect === "function" ? "Оберіть зображення..." : "Галерея зображень";
 
 	return (
 		<Modal
-			title="Галерея активів"
+			title={modalTitle}
 			onCancel={onClose}
 			showFooter={false}
 			type="custom"
