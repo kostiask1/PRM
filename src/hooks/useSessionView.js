@@ -198,7 +198,7 @@ export default function useSessionView(props) {
 		const handleKeyDown = (e) => {
 			if (document.querySelector(".Modal__overlay")) return;
 
-			if (e.key === "Backspace") {
+			if (e.key === "Backspace" || e.key === "Escape") {
 				const isInput =
 					e.target.tagName === "INPUT" ||
 					e.target.tagName === "TEXTAREA" ||

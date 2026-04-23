@@ -37,7 +37,7 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 		const handleKeyDown = (e) => {
 			if (e.key === "Escape" && showBestiary) {
 				setShowBestiary(false);
-			} else if (e.key === "Backspace") {
+			} else if (e.key === "Backspace" || e.key === "Escape") {
 				const isInput =
 					e.target.tagName === "INPUT" ||
 					e.target.tagName === "TEXTAREA" ||
