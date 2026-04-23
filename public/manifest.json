@@ -1,8 +1,8 @@
 {
 	"name": "D&D Session Manager",
 	"short_name": "PRM",
-	"description": "Локальний менеджер кампаній, сесій, монстрів і заклинань для D&D.",
-	"lang": "uk",
+	"description": "Local DnD campaign and session manager.",
+	"lang": "en",
 	"start_url": "/",
 	"display": "browser",
 	"background_color": "#121212",
