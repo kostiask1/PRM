@@ -13,12 +13,15 @@ import "../assets/components/DiceCalculator.css";
 
 export default function DiceCalculator() {
 	const [isOpen, setIsOpen] = useState(false);
+	const [isRolling, setIsRolling] = useState(false);
 	const [history, setHistory] = useState([]);
 	const [lastResult, setLastResult] = useState(null);
 	const [manualInput, setManualInput] = useState("");
 	const dispatch = useAppDispatch();
 	const diceRollRequest = useAppSelector((state) => state.dice.rollRequest);
 	const processedRollRequestIdRef = useRef(null);
+	const rollingTimeoutRef = useRef(null);
+	const rollingAnimationFrameRef = useRef(null);
 
 	const diceTypes = [4, 6, 8, 10, 12, 20, 100];
 
@@ -39,12 +42,43 @@ export default function DiceCalculator() {
 		};
 	}, []);
 
+	useEffect(
+		() => () => {
+			if (rollingTimeoutRef.current) {
+				clearTimeout(rollingTimeoutRef.current);
+			}
+			if (rollingAnimationFrameRef.current) {
+				cancelAnimationFrame(rollingAnimationFrameRef.current);
+			}
+		},
+		[],
+	);
+
 	const parseAndRoll = useCallback(
 		(str, context = null) => {
 			if (!str) return;
 
 			const entry = rollDiceFormula(str);
 			if (!entry) return;
+
+			if (rollingTimeoutRef.current) {
+				clearTimeout(rollingTimeoutRef.current);
+			}
+			if (rollingAnimationFrameRef.current) {
+				cancelAnimationFrame(rollingAnimationFrameRef.current);
+			}
+
+			setIsRolling(false);
+			rollingAnimationFrameRef.current = requestAnimationFrame(() => {
+				rollingAnimationFrameRef.current = requestAnimationFrame(() => {
+					setIsRolling(true);
+					rollingTimeoutRef.current = setTimeout(() => {
+						setIsRolling(false);
+						rollingTimeoutRef.current = null;
+					}, 420);
+					rollingAnimationFrameRef.current = null;
+				});
+			});
 
 			setLastResult(entry);
 			setHistory((prev) => [entry, ...prev].slice(0, 10));
@@ -315,10 +349,18 @@ export default function DiceCalculator() {
 			)}
 			<Tooltip content="CTRL+D">
 				<button
-					className="DiceCalculator__toggle"
+					className={classNames("DiceCalculator__toggle", {
+						"is-rolling": isRolling,
+					})}
 					onClick={() => setIsOpen(!isOpen)}
 				>
-					<Icon name="dice" size={28} />
+					<Icon
+						name="dice"
+						size={28}
+						className={classNames("DiceCalculator__toggleIcon", {
+							"is-rolling": isRolling,
+						})}
+					/>
 				</button>
 			</Tooltip>
 		</div>
