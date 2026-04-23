@@ -4,7 +4,7 @@
 	"description": "Локальний менеджер кампаній, сесій, монстрів і заклинань для D&D.",
 	"lang": "uk",
 	"start_url": "/",
-	"display": "standalone",
+	"display": "browser",
 	"background_color": "#121212",
 	"theme_color": "#c59a4a",
 	"icons": [
