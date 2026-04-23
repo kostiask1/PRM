@@ -47,7 +47,6 @@ function SessionView(props) {
 								{session.name}
 							</h2>
 						</div>
-						<p className="muted">{lang.t(viewModel.saveStatusLabel)}</p>
 					</div>
 				</div>
 				<div className="SessionView__headerActions">

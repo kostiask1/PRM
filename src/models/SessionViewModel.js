@@ -121,10 +121,6 @@ export default class SessionViewModel {
 		return this.isCompleted ? "Reopen" : "Complete";
 	}
 
-	get saveStatusLabel() {
-		return this.session.isSaving ? "Saving..." : "All changes saved";
-	}
-
 	get notes() {
 		return this.session?.data?.notes || [];
 	}
