@@ -5,8 +5,10 @@
   "main": "server.js",
   "scripts": {
     "start": "concurrently \"npm run server\" \"npm run client\"",
+    "build": "vite build",
     "server": "node --watch --watch-path=server --watch-path=.env server/server.js",
     "client": "vite",
+    "start:prod": "node server/server.js",
     "test": "node --experimental-specifier-resolution=node tests/run-tests.mjs",
     "lint": "eslint . && npm run check:uk",
     "check:uk": "node scripts/check-ukrainian-encoding.mjs"

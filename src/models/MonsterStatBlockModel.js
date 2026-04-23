@@ -143,7 +143,7 @@ export default class MonsterStatBlockModel {
 	}
 
 	get localTokenSrc() {
-		return `/database/bestiary/tokens/${this.monster.source}/${this.effectiveName}.webp`;
+		return `/assets/bestiary/tokens/${encodeURIComponent(this.monster.source || "")}/${this.encodedImageName}.webp`;
 	}
 
 	get externalTokenSrc() {

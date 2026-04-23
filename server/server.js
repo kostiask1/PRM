@@ -10,6 +10,8 @@ const storage = require("./storage");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const DIST_DIR = path.join(__dirname, "..", "dist");
+const BESTIARY_TOKENS_DIR = path.join(storage.BESTIARY_DIR, "tokens");
 
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
@@ -335,6 +337,7 @@ app.post("/api/images/delete", async (req, res, next) => {
 });
 
 app.use("/api/images", express.static(storage.IMAGES_DIR));
+app.use("/assets/bestiary/tokens", express.static(BESTIARY_TOKENS_DIR));
 
 app.use("/api/campaigns", require("./routes/campaigns"));
 app.use(
@@ -348,6 +351,19 @@ app.use(
 app.use("/api/bestiary", require("./routes/bestiary"));
 app.use("/api/spells", require("./routes/spells"));
 app.use("/api/ai", require("./routes/ai"));
+
+app.use(express.static(DIST_DIR));
+
+app.get("*", async (req, res, next) => {
+	if (req.path.startsWith("/api/")) return next();
+
+	try {
+		await fs.access(path.join(DIST_DIR, "index.html"));
+		res.sendFile(path.join(DIST_DIR, "index.html"));
+	} catch {
+		next();
+	}
+});
 
 app.use((err, _req, res, _next) => {
 	let status = err.status || 500;
