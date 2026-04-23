@@ -38,7 +38,7 @@ export default function SceneCardHeader({
 					variant={hasEncounter ? "primary" : "ghost"}
 					onClick={(event) => {
 						event.stopPropagation();
-						onOpenEncounter();
+						onOpenEncounter(event);
 					}}
 					title={encounterName}
 				>

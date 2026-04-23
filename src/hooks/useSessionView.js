@@ -304,9 +304,10 @@ export default function useSessionView(props) {
 		updateData("scenes", scenes, true);
 	};
 
-	const handleOpenEncounter = async (scene) => {
+	const handleOpenEncounter = async (scene, event = null) => {
 		if (!session) return;
 		let encounterId = scene.encounterId;
+		const openInNewTab = Boolean(event?.ctrlKey || event?.metaKey);
 
 		if (!encounterId) {
 			const sceneIndex = session.data.scenes.findIndex(
@@ -351,7 +352,7 @@ export default function useSessionView(props) {
 			setSession((prev) => ({ ...prev, data: nextData }));
 		}
 
-		navigateTo(campaignSlug, sessionId, false, encounterId);
+		navigateTo(campaignSlug, sessionId, false, encounterId, openInNewTab);
 	};
 
 	const removeScene = async (sceneId) => {

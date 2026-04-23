@@ -75,6 +75,7 @@
 	padding: var(--space-4) var(--space-6);
 	overflow: hidden;
 	overflow-y: auto;
+	flex-grow: 1;
 }
 
 .Modal__body p {

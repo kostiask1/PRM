@@ -13,6 +13,10 @@
 	min-width: 0;
 }
 
+.ConditionsModal__sidebar .Input {
+	margin: var(--space-1);
+}
+
 .ConditionsModal__filters {
 	display: flex;
 	flex-wrap: wrap;
@@ -22,54 +26,9 @@
 .ConditionsModal__list {
 	display: flex;
 	flex-direction: column;
-	gap: var(--space-2);
 	min-height: 0;
 	overflow-y: auto;
-}
-
-.ConditionsModal__item {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: var(--space-2);
-	width: 100%;
-	border: 1px solid color-mix(in srgb, var(--border), transparent 25%);
-	border-radius: 12px;
-	background: color-mix(in srgb, var(--bg-2), transparent 25%);
-	padding: var(--space-2);
-	color: var(--text);
-	text-align: left;
-	cursor: pointer;
-	transition:
-		border-color 0.15s ease,
-		background 0.15s ease,
-		transform 0.15s ease;
-}
-
-.ConditionsModal__item:hover,
-.ConditionsModal__item.is-active {
-	border-color: color-mix(in srgb, var(--accent), transparent 45%);
-	background: color-mix(in srgb, var(--accent), transparent 92%);
-}
-
-.ConditionsModal__item:hover {
-	transform: translateY(-1px);
-}
-
-.ConditionsModal__itemMain {
-	display: flex;
-	flex-direction: column;
-	gap: 4px;
-	min-width: 0;
-}
-
-.ConditionsModal__itemName {
-	font-weight: 600;
-}
-
-.ConditionsModal__itemMeta {
-	color: var(--muted);
-	font-size: 0.85rem;
+	padding: 0 var(--space-1);
 }
 
 .ConditionsModal__content {

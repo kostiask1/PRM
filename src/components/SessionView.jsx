@@ -153,7 +153,9 @@ function SessionView(props) {
 										collapsed={scene.collapsed}
 										onToggle={() => view.toggleSceneCollapse(scene.id)}
 										onRemove={() => view.removeScene(scene.id)}
-										onOpenEncounter={() => view.handleOpenEncounter(scene)}
+										onOpenEncounter={(event) =>
+											view.handleOpenEncounter(scene, event)
+										}
 										imageUrl={scene.imageUrl}
 										onImageChange={(url) =>
 											view.updateScene(scene.id, "imageUrl", url, true)

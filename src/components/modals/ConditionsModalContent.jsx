@@ -10,11 +10,13 @@ import { lang } from "../../services/localization";
 import { openModalRequest, useAppDispatch } from "../../store/appStore";
 import { renderRecursiveContent } from "../../utils/parser.jsx";
 import { getSpellByName } from "../../utils/referencePreview.js";
-import { resolveConditionInput, resolveSpellInput } from "../../utils/referenceResolvers.js";
+import {
+	resolveConditionInput,
+	resolveSpellInput,
+} from "../../utils/referenceResolvers.js";
+import ListCard from "../common/ListCard.jsx";
 
-export default function ConditionsModalContent({
-	initialConditionName = "",
-}) {
+export default function ConditionsModalContent({ initialConditionName = "" }) {
 	const dispatch = useAppDispatch();
 	const [query, setQuery] = useState("");
 	const [conditions, setConditions] = useState([]);
@@ -77,7 +79,7 @@ export default function ConditionsModalContent({
 		return conditions.filter((item) => {
 			if (!normalizedQuery) return true;
 
-			return [item.name, item.source, item.kind]
+			return [item.name, item.source]
 				.filter(Boolean)
 				.some((value) => String(value).toLowerCase().includes(normalizedQuery));
 		});
@@ -152,13 +154,7 @@ export default function ConditionsModalContent({
 					<div className="Tooltip__meta">{condition.source}</div>
 				)}
 				<div className="Tooltip__text">
-					{renderRecursiveContent(
-						condition.entries,
-						null,
-						null,
-						null,
-						null,
-					)}
+					{renderRecursiveContent(condition.entries, null, null, null, null)}
 				</div>
 			</div>
 		);
@@ -179,21 +175,18 @@ export default function ConditionsModalContent({
 						<p className="muted">{lang.t("Loading...")}</p>
 					) : filteredConditions.length ? (
 						filteredConditions.map((item) => (
-							<button
-								key={`${item.kind}-${item.name}`}
-								type="button"
-								className={`ConditionsModal__item${selectedConditionName === item.name ? " is-active" : ""}`}
+							<ListCard
+								key={item.name}
 								onClick={() => setSelectedConditionName(item.name)}
+								active={selectedConditionName === item.name}
+								actions={
+									<div onClick={() => setSelectedConditionName(item.name)}>
+										<Icon name="chevron" size={14} />
+									</div>
+								}
 							>
-								<div className="ConditionsModal__itemMain">
-									<span className="ConditionsModal__itemName">{item.name}</span>
-									<span className="ConditionsModal__itemMeta">
-										{lang.t(item.kind === "status" ? "Status" : "Condition")}
-										{item.source ? ` | ${item.source}` : ""}
-									</span>
-								</div>
-								<Icon name="chevron" size={14} />
-							</button>
+								<div className="ListCard__title">{item.name}</div>
+							</ListCard>
 						))
 					) : (
 						<p className="muted">
@@ -212,11 +205,7 @@ export default function ConditionsModalContent({
 									{selectedCondition.name}
 								</h3>
 								<div className="ConditionsModal__meta">
-									{lang.t(
-										selectedCondition.kind === "status"
-											? "Status"
-											: "Condition",
-									)}
+									{lang.t("Condition")}
 									{selectedCondition.source
 										? ` | ${lang.t("Source")}: ${selectedCondition.source}`
 										: ""}
