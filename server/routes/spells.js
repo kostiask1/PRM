@@ -102,7 +102,10 @@ router.get("/conditions", async (_req, res, next) => {
 		const data = await storage.readJson(conditionsPath);
 		const conditionList = Array.isArray(data?.condition) ? data.condition : [];
 		const statusList = Array.isArray(data?.status) ? data.status : [];
-		const merged = [...conditionList, ...statusList];
+		const merged = [
+			...conditionList.map((item) => ({ ...item, kind: "condition" })),
+			...statusList.map((item) => ({ ...item, kind: "status" })),
+		];
 		const byName = new Map();
 
 		for (const item of merged) {
@@ -111,6 +114,7 @@ router.get("/conditions", async (_req, res, next) => {
 			const key = name.toLowerCase();
 			const normalized = {
 				name,
+				kind: item?.kind || "condition",
 				source: item?.source || null,
 				page: item?.page || null,
 				entries: item?.entries || [],

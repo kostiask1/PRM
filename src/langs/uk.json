@@ -264,5 +264,10 @@
 	"Location": "Локація",
 	"All changes saved": "Усі зміни збережено",
 	"choose a file": "оберіть файл",
-	"or": "або"
+	"or": "або",
+	"Condition": "Стан",
+	"Conditions": "Стани",
+	"Statuses": "Статуси",
+	"Search condition or status...": "Пошук стану або статусу...",
+	"No conditions or statuses found.": "Станів або статусів не знайдено."
 }

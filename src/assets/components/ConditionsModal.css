@@ -1,0 +1,139 @@
+.ConditionsModal {
+	display: grid;
+	grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+	gap: var(--space-3);
+	height: 100%;
+}
+
+.ConditionsModal__sidebar {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+	overflow-y: scroll;
+	min-width: 0;
+}
+
+.ConditionsModal__filters {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-1);
+}
+
+.ConditionsModal__list {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+	min-height: 0;
+	overflow-y: auto;
+}
+
+.ConditionsModal__item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-2);
+	width: 100%;
+	border: 1px solid color-mix(in srgb, var(--border), transparent 25%);
+	border-radius: 12px;
+	background: color-mix(in srgb, var(--bg-2), transparent 25%);
+	padding: var(--space-2);
+	color: var(--text);
+	text-align: left;
+	cursor: pointer;
+	transition:
+		border-color 0.15s ease,
+		background 0.15s ease,
+		transform 0.15s ease;
+}
+
+.ConditionsModal__item:hover,
+.ConditionsModal__item.is-active {
+	border-color: color-mix(in srgb, var(--accent), transparent 45%);
+	background: color-mix(in srgb, var(--accent), transparent 92%);
+}
+
+.ConditionsModal__item:hover {
+	transform: translateY(-1px);
+}
+
+.ConditionsModal__itemMain {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+}
+
+.ConditionsModal__itemName {
+	font-weight: 600;
+}
+
+.ConditionsModal__itemMeta {
+	color: var(--muted);
+	font-size: 0.85rem;
+}
+
+.ConditionsModal__content {
+	min-width: 0;
+	border: 1px solid color-mix(in srgb, var(--border), transparent 30%);
+	border-radius: 16px;
+	background: color-mix(in srgb, var(--bg), transparent 10%);
+	padding: var(--space-3);
+	overflow-y: auto;
+}
+
+.ConditionsModal__contentHeader {
+	padding-bottom: var(--space-3);
+	margin-bottom: var(--space-3);
+	border-bottom: 1px solid color-mix(in srgb, var(--border), transparent 45%);
+}
+
+.ConditionsModal__title {
+	margin: 0 0 4px;
+	font-size: 1.35rem;
+}
+
+.ConditionsModal__meta {
+	color: var(--muted);
+	font-size: 0.92rem;
+}
+
+.ConditionsModal__entryContent {
+	line-height: 1.5;
+	color: var(--text);
+}
+
+.ConditionsModal__entryContent > * {
+	margin: var(--space-3) 0;
+}
+
+.ConditionsModal__entryContent ul {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+	margin: var(--space-2) 0;
+}
+
+.ConditionsModal__entryContent > .parser-section {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+}
+
+.ConditionsModal__empty {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 100%;
+	text-align: center;
+}
+
+@media (max-width: 900px) {
+	.ConditionsModal {
+		grid-template-columns: 1fr;
+		min-height: auto;
+	}
+
+	.ConditionsModal__list {
+		max-height: 260px;
+	}
+}

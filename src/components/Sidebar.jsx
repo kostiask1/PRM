@@ -8,6 +8,7 @@ import ListCard from "./common/ListCard";
 import ColorThemeSwitcher from "./ColorThemeSwitcher";
 import DraggableList from "./common/DraggableList";
 import ImageGallery from "./ImageGallery";
+import ConditionsModalContent from "./modals/ConditionsModalContent";
 import { downloadBlob } from "../utils/download";
 import {
 	closeActiveModal,
@@ -111,6 +112,16 @@ export default function Sidebar({
 		});
 	};
 
+	const handleOpenConditions = () => {
+		openModalRequest({
+			title: lang.t("Conditions"),
+			type: "confirm",
+			showFooter: false,
+			type: "custom",
+			children: <ConditionsModalContent />,
+		});
+	};
+
 	return (
 		<aside className="Sidebar App__sidebar">
 			<div className="Sidebar__header">
@@ -168,6 +179,17 @@ export default function Sidebar({
 				>
 					<Icon name="skull" />
 					<span>{lang.t("Bestiary")}</span>
+				</a>
+				<a
+					href="#"
+					className="Sidebar__link"
+					onClick={(e) => {
+						e.preventDefault();
+						handleOpenConditions();
+					}}
+				>
+					<Icon name="list" />
+					<span>{lang.t("Conditions")}</span>
 				</a>
 				<a
 					href="/spells"

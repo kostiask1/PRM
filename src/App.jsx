@@ -37,7 +37,9 @@ export default function App() {
 		(store) => store.campaigns.reloadVersion,
 	);
 	const { activeCampaignSlug } = useAppSelector((store) => store.navigation);
-	const currentLanguage = useAppSelector((store) => store.localization.language);
+	const currentLanguage = useAppSelector(
+		(store) => store.localization.language,
+	);
 
 	const loadCampaigns = useCallback(async () => {
 		try {
@@ -142,8 +144,8 @@ export default function App() {
 					return;
 				}
 
-					openModalRequest({
-						title: lang.t("Choose mention"),
+				openModalRequest({
+					title: lang.t("Choose mention"),
 					type: "confirm",
 					showFooter: false,
 					onCancelAction: () => {
@@ -189,13 +191,13 @@ export default function App() {
 
 			if (completedAt && todayLabel !== prevLabel) {
 				const confirmUpdate = await dispatch(
-						confirm({
-							title: lang.t("Update completion date"),
-							message: lang.t(
-								"Campaign was already completed on {date}. Update completion date to today?",
-								{ date: prevLabel },
-							),
-						}),
+					confirm({
+						title: lang.t("Update completion date"),
+						message: lang.t(
+							"Campaign was already completed on {date}. Update completion date to today?",
+							{ date: prevLabel },
+						),
+					}),
 				);
 				if (confirmUpdate) completedAt = now;
 			} else {
@@ -239,12 +241,12 @@ export default function App() {
 							handleClose();
 							navigateTo(newCampaign.slug);
 						} catch (err) {
-								dispatch(
-									alert({
-										title: lang.t("Error"),
-										message: err.message || lang.t("Failed to create campaign"),
-									}),
-								);
+							dispatch(
+								alert({
+									title: lang.t("Error"),
+									message: err.message || lang.t("Failed to create campaign"),
+								}),
+							);
 						}
 					}}
 					onImportCampaign={async (file) => {
@@ -253,12 +255,12 @@ export default function App() {
 							dispatch(requestCampaignsReloadAction());
 							handleClose();
 						} catch (err) {
-								dispatch(
-									alert({
-										title: lang.t("Import error"),
-										message: err.message || lang.t("Failed to import campaign"),
-									}),
-								);
+							dispatch(
+								alert({
+									title: lang.t("Import error"),
+									message: err.message || lang.t("Failed to import campaign"),
+								}),
+							);
 						}
 					}}
 				/>
