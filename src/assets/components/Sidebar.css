@@ -84,6 +84,8 @@
 .Sidebar__lang {
 	display: flex;
 	align-items: center;
+	justify-content: space-between;
+	width: 100%;
 	gap: var(--space-2);
 	opacity: 0;
 	transition: opacity 0.1s;
