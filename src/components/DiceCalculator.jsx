@@ -224,7 +224,9 @@ export default function DiceCalculator() {
 								>
 									<div className="DiceCalculator__formulaLabel">
 										{lastResult.formula} (
-										{renderBreakdown(lastResult.breakdown)})
+										<Tooltip delay={500} content={lang.t("Rolled values")}>
+											{renderBreakdown(lastResult.breakdown)})
+										</Tooltip>
 									</div>
 								</Tooltip>
 								<div className="DiceCalculator__totalValue-container">
@@ -237,12 +239,14 @@ export default function DiceCalculator() {
 										})}
 									>
 										={lastResult.total}
+										{lastResult.average !== undefined && (
+											<Tooltip delay={500} content={lang.t("Average value")}>
+												<span className="DiceCalculator__averageValue">
+													({lastResult.average})
+												</span>
+											</Tooltip>
+										)}
 									</span>
-									{lastResult.average !== undefined && (
-										<span className="DiceCalculator__averageValue">
-											({lastResult.average})
-										</span>
-									)}
 								</div>
 							</div>
 						) : (

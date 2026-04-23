@@ -263,10 +263,17 @@
 .DiceCalculator__lastResult {
 	display: flex;
 	flex-direction: column;
-	justify-content: space-between;
+	justify-content: space-around;
 	text-align: center;
-	width: 100px;
 	height: 100%;
+	cursor: default;
+}
+
+.DiceCalculator__lastResult .Tooltip__trigger {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
 }
 
 .DiceCalculator__resultHeader {
@@ -278,31 +285,35 @@
 }
 
 .DiceCalculator__formulaLabel {
-	display: block;
-	max-width: 100%;
+	display: flex;
+	max-width: 90%;
 	font-size: 0.75rem;
 	color: var(--muted);
 	margin: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+	cursor: default;
 }
 
 .DiceCalculator__totalValue-container {
-	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 .DiceCalculator__totalValue {
+	display: flex;
+	align-items: flex-end;
 	font-size: 2rem;
+	line-height: 1;
 	font-weight: 800;
 	color: var(--accent);
+	gap: var(--space-2);
+
 }
 
 .DiceCalculator__averageValue {
-	position: absolute;
-	bottom: 8px;
-	right: 0;
-	transform: translateX(50%);
 	font-size: 1.1rem;
 	line-height: 1;
 	color: var(--muted);

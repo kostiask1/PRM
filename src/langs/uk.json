@@ -270,5 +270,7 @@
 	"Conditions": "Стани",
 	"Statuses": "Статуси",
 	"Search": "Пошук",
+	"Average value": "Середнє значення",
+	"Rolled values": "Кинуті значення",
 	"No conditions or statuses found.": "Станів або статусів не знайдено."
 }
