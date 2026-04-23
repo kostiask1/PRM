@@ -166,7 +166,7 @@ export default function ConditionsModalContent({ initialConditionName = "" }) {
 				<Input
 					value={query}
 					onChange={(event) => setQuery(event.target.value)}
-					placeholder={lang.t("Search condition or status...")}
+					placeholder={lang.t("Search")}
 					autoFocus
 				/>
 
@@ -200,17 +200,9 @@ export default function ConditionsModalContent({ initialConditionName = "" }) {
 				{selectedCondition && (
 					<>
 						<div className="ConditionsModal__contentHeader">
-							<div>
-								<h3 className="ConditionsModal__title">
-									{selectedCondition.name}
-								</h3>
-								<div className="ConditionsModal__meta">
-									{lang.t("Condition")}
-									{selectedCondition.source
-										? ` | ${lang.t("Source")}: ${selectedCondition.source}`
-										: ""}
-								</div>
-							</div>
+							<h3 className="ConditionsModal__title">
+								{selectedCondition.name}
+							</h3>
 						</div>
 
 						<div className="ConditionsModal__entryContent">
