@@ -86,16 +86,26 @@ function ImageGallery({
 	React.useEffect(() => {
 		const handleEscapeSelection = (e) => {
 			if (e.key !== "Escape") return;
-			if (!hasSelection) return;
-			e.preventDefault();
-			e.stopPropagation();
-			clearSelection();
+
+			// Fullscreen preview has priority on Escape.
+			if (previewImage) {
+				e.preventDefault();
+				e.stopPropagation();
+				setPreviewImage(null);
+				return;
+			}
+
+			if (hasSelection) {
+				e.preventDefault();
+				e.stopPropagation();
+				clearSelection();
+			}
 		};
 
 		window.addEventListener("keydown", handleEscapeSelection, true);
 		return () =>
 			window.removeEventListener("keydown", handleEscapeSelection, true);
-	}, [hasSelection, clearSelection]);
+	}, [hasSelection, clearSelection, previewImage]);
 
 	if (!isOpen) return null;
 
@@ -601,6 +611,7 @@ function ImageGallery({
 							className="ImageGallery__previewImg"
 							src={previewImage.url}
 							alt={previewImage.name}
+							onClick={() => setPreviewImage(null)}
 						/>
 					</div>
 				</Modal>
