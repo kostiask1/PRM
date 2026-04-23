@@ -45,16 +45,12 @@
 
 .DiceCalculator__toggle::before {
 	background:
-		radial-gradient(
-			circle at 30% 30%,
+		radial-gradient(circle at 30% 30%,
 			color-mix(in srgb, white, transparent 15%),
-			transparent 45%
-		),
-		radial-gradient(
-			circle at 70% 75%,
+			transparent 45%),
+		radial-gradient(circle at 70% 75%,
 			color-mix(in srgb, var(--accent), white 10%),
-			transparent 55%
-		);
+			transparent 55%);
 	z-index: -1;
 }
 
@@ -208,6 +204,29 @@
 	align-items: center;
 	justify-content: center;
 	border: 1px inset color-mix(in srgb, var(--text-bright), transparent 95%);
+	position: relative;
+	overflow: hidden;
+}
+
+.DiceCalculator__display.is-rolling {
+	animation: DiceCalculatorDisplayFlash 0.42s ease-out;
+}
+
+@keyframes DiceCalculatorDisplayFlash {
+	0% {
+		background: color-mix(in srgb, var(--bg-2), transparent 40%);
+		filter: brightness(1);
+	}
+
+	24% {
+		background: color-mix(in srgb, var(--accent), transparent 88%);
+		filter: brightness(1.05);
+	}
+
+	100% {
+		background: color-mix(in srgb, var(--bg-2), transparent 40%);
+		filter: brightness(1);
+	}
 }
 
 .DiceCalculator__resultValue {

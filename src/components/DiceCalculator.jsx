@@ -211,7 +211,11 @@ export default function DiceCalculator() {
 						/>
 					</div>
 
-					<div className="DiceCalculator__display">
+					<div
+						className={classNames("DiceCalculator__display", {
+							"is-rolling": isRolling,
+						})}
+					>
 						{lastResult ? (
 							<div className="DiceCalculator__lastResult">
 								<Tooltip
@@ -232,7 +236,7 @@ export default function DiceCalculator() {
 												lastResult.isCritical && lastResult.total !== 20,
 										})}
 									>
-										{lastResult.total}
+										={lastResult.total}
 									</span>
 									{lastResult.average !== undefined && (
 										<span className="DiceCalculator__averageValue">
