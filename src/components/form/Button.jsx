@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import Icon from "../common/Icon";
 import Tooltip from "../common/Tooltip";
 import classNames from "../../utils/classNames";
@@ -24,7 +25,7 @@ function normalizeButtonSize(size) {
  * @param {Object} props
  * @param {"sm"|"md"|"lg"} [props.size]
  */
-function Button({
+const Button = forwardRef(function Button({
 	children,
 	onClick,
 	variant, // primary, danger, ghost, footer, create
@@ -35,7 +36,7 @@ function Button({
 	className = "",
 	title,
 	...props
-}) {
+}, ref) {
 	const normalizedSize = normalizeButtonSize(size);
 	const classes = classNames(
 		"Button",
@@ -57,7 +58,7 @@ function Button({
 	};
 
 	const buttonNode = (
-		<button type={type} className={classes} onClick={handleClick} {...props}>
+		<button ref={ref} type={type} className={classes} onClick={handleClick} {...props}>
 			{icon && <Icon name={icon} size={iconSize} strokeWidth={strokeWidth} />}
 			{children && <span>{children}</span>}
 		</button>
@@ -68,7 +69,7 @@ function Button({
 	}
 
 	return buttonNode;
-}
+});
 
 Button.SIZES = BUTTON_SIZES;
 
