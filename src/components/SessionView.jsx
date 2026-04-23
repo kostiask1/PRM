@@ -162,9 +162,7 @@ function SessionView(props) {
 										}
 										campaignSlug={view.campaignSlug}
 										hasEncounter={!!scene.encounterId}
-										encounterName={lang.t(
-											viewModel.findEncounterName(scene),
-										)}
+										encounterName={lang.t(viewModel.findEncounterName(scene))}
 										onUpdateField={(field, value) =>
 											view.updateScene(scene.id, field, value)
 										}

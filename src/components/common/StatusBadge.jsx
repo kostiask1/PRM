@@ -12,10 +12,7 @@ export default function StatusBadge({
 	if (completed) {
 		label = lang.t("Completed");
 	} else {
-		label =
-			type === "campaign"
-				? lang.t("Active")
-				: lang.t("In preparation");
+		label = type === "campaign" ? lang.t("Active") : lang.t("In preparation");
 	}
 
 	return (

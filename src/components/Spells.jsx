@@ -190,8 +190,7 @@ export default function Spells() {
 						{spell.level === 0
 							? lang.t("Cantrip")
 							: lang.t("{level}-level", { level: spell.level })}{" "}
-						•{" "}
-						{schoolName}
+						• {schoolName}
 						{spell.source && (
 							<span className="Bestiary__item-source"> • {spell.source}</span>
 						)}

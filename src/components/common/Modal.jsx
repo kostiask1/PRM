@@ -145,7 +145,7 @@ function Modal({
 						className="Modal__close"
 						onClick={() => onCancel && onCancel()}
 					>
-						<Icon name="x"/>
+						<Icon name="x" />
 					</button>
 				</div>
 				<div className="Modal__body">

@@ -17,17 +17,22 @@ function loadLanguagePacks() {
 }
 
 function formatTemplate(template, variables = {}) {
-	return String(template || "").replace(/\{([a-zA-Z0-9_]+)\}/g, (fullMatch, key) => {
-		if (Object.prototype.hasOwnProperty.call(variables, key)) {
-			return String(variables[key]);
-		}
-		return fullMatch;
-	});
+	return String(template || "").replace(
+		/\{([a-zA-Z0-9_]+)\}/g,
+		(fullMatch, key) => {
+			if (Object.prototype.hasOwnProperty.call(variables, key)) {
+				return String(variables[key]);
+			}
+			return fullMatch;
+		},
+	);
 }
 
 class Localization {
 	constructor(options = {}) {
-		this.defaultLanguage = String(options.defaultLanguage || DEFAULT_LANGUAGE).toLowerCase();
+		this.defaultLanguage = String(
+			options.defaultLanguage || DEFAULT_LANGUAGE,
+		).toLowerCase();
 		this.storageKey = options.storageKey || LANG_STORAGE_KEY;
 		this.packs = loadLanguagePacks();
 

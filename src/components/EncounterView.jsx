@@ -202,9 +202,7 @@ function EncounterView(props) {
 							/>
 						) : (
 							<p className="muted">
-								{lang.t(
-									"Select a monster from the list to see its stats.",
-								)}
+								{lang.t("Select a monster from the list to see its stats.")}
 							</p>
 						)}
 					</div>

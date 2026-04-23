@@ -10,7 +10,10 @@ import ListCard from "./common/ListCard";
 import MonsterStatBlock from "./MonsterStatBlock";
 import Tooltip from "./common/Tooltip";
 import classNames from "../utils/classNames";
-import { getMonsterTypeString, matchesMonsterSearch } from "../utils/bestiary.js";
+import {
+	getMonsterTypeString,
+	matchesMonsterSearch,
+} from "../utils/bestiary.js";
 import "../assets/components/Bestiary.css";
 import { lang } from "../services/localization";
 
@@ -148,12 +151,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			// Покращений пошук по типу: об'єднуємо базовий тип (включаючи choose) та теги
 		});
 		setMonsters(filtered);
-	}, [
-		search,
-		allMonsters,
-		onlyFavorites,
-		favorites,
-	]);
+	}, [search, allMonsters, onlyFavorites, favorites]);
 
 	const handleToggleFavorite = async (monster) => {
 		try {

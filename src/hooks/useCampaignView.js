@@ -389,9 +389,7 @@ export default function useCampaignView(props) {
 		const name = await dispatch(
 			prompt({
 				title: lang.t("New session"),
-				message: lang.t(
-					"Enter a name or leave empty to use current date:",
-				),
+				message: lang.t("Enter a name or leave empty to use current date:"),
 			}),
 		);
 		if (name === null) return;
@@ -542,9 +540,7 @@ export default function useCampaignView(props) {
 				`campaign-${campaign.slug}-${new Date().toISOString().slice(0, 10)}.prma.gz`,
 			);
 		} catch (err) {
-			dispatch(
-				alert({ title: lang.t("Export error"), message: err.message }),
-			);
+			dispatch(alert({ title: lang.t("Export error"), message: err.message }));
 		}
 	};
 

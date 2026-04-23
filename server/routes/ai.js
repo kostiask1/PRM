@@ -562,7 +562,9 @@ router.post("/generate", async (req, res, next) => {
 			contextConfig,
 			language,
 		} = req.body;
-		const responseLanguage = String(language || "").trim().toLowerCase();
+		const responseLanguage = String(language || "")
+			.trim()
+			.toLowerCase();
 		if (!responseLanguage) {
 			return res.status(400).json({ error: "language is required." });
 		}

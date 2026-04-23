@@ -336,8 +336,8 @@ function ImageGallery({
 										variant="ghost"
 										size={Button.SIZES.SMALL}
 										icon="move"
-									onClick={openMoveModal}
-								>
+										onClick={openMoveModal}
+									>
 										{lang.t("Move")} (
 										{selectedFilenames.size + selectedSubs.size})
 									</Button>

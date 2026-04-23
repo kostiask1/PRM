@@ -19,7 +19,9 @@ import "../assets/components/AiAssistantPanel.css";
 
 export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	const dispatch = useAppDispatch();
-	const currentLanguage = useAppSelector((state) => state.localization.language);
+	const currentLanguage = useAppSelector(
+		(state) => state.localization.language,
+	);
 	const initialRoute = parseUrl();
 	const isCampaign = !initialRoute.session;
 	const isEncounter = !!initialRoute.encounter;

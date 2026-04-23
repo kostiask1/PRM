@@ -13,7 +13,9 @@ export default function CreateCampaignModalContent({
 
 	return (
 		<div className="CreateCampaignModal">
-			<label className="CreateCampaignModal__label">{lang.t("Campaign name")}</label>
+			<label className="CreateCampaignModal__label">
+				{lang.t("Campaign name")}
+			</label>
 			<Input
 				value={name}
 				onChange={(event) => setName(event.target.value)}

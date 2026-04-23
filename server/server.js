@@ -337,6 +337,7 @@ app.post("/api/images/delete", async (req, res, next) => {
 });
 
 app.use("/api/images", express.static(storage.IMAGES_DIR));
+app.use("/api/bestiary/tokens", express.static(BESTIARY_TOKENS_DIR));
 app.use("/assets/bestiary/tokens", express.static(BESTIARY_TOKENS_DIR));
 
 app.use("/api/campaigns", require("./routes/campaigns"));

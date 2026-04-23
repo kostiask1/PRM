@@ -174,11 +174,7 @@ export default function CharacterCard({
 								e.stopPropagation();
 								setIsEditing(!isEditing);
 							}}
-							title={
-								isEditing
-									? lang.t("Finish editing")
-									: lang.t("Edit")
-							}
+							title={isEditing ? lang.t("Finish editing") : lang.t("Edit")}
 						/>
 					)}
 					{showDeleteButton && (
@@ -297,7 +293,8 @@ export default function CharacterCard({
 									) : (
 										<div className="character-card__text-content">
 											<ReactMarkdown components={mentionComponents}>
-												{character.motivation || `*${lang.t("Motivation is not set")}*`}
+												{character.motivation ||
+													`*${lang.t("Motivation is not set")}*`}
 											</ReactMarkdown>
 										</div>
 									)}

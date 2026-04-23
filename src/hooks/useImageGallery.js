@@ -232,9 +232,7 @@ export default function useImageGallery({
 				return true;
 			} catch (err) {
 				console.error("Move failed", err);
-				dispatch(
-					alert({ title: lang.t("Move error"), message: err.message }),
-				);
+				dispatch(alert({ title: lang.t("Move error"), message: err.message }));
 				return false;
 			} finally {
 				setLoading(false);
@@ -412,9 +410,7 @@ export default function useImageGallery({
 			loadImages();
 			loadSubcategories();
 		} catch (err) {
-			dispatch(
-				alert({ title: lang.t("Delete error"), message: err.message }),
-			);
+			dispatch(alert({ title: lang.t("Delete error"), message: err.message }));
 		} finally {
 			setLoading(false);
 		}

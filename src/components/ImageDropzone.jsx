@@ -137,9 +137,7 @@ export default function ImageDropzone({
 					title={lang.t("Upload settings")}
 					onCancel={() => setPendingFile(null)}
 					onConfirm={executeUpload}
-					confirmLabel={
-						isUploading ? lang.t("Uploading...") : lang.t("Upload")
-					}
+					confirmLabel={isUploading ? lang.t("Uploading...") : lang.t("Upload")}
 					disabled={isUploading}
 				>
 					<div className="ImageDropzone__upload-settings">
