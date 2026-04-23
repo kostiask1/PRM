@@ -5,6 +5,7 @@ import path from "node:path";
 
 import { idsEqual } from "../src/utils/id.js";
 import { isJsonObject, isJsonString } from "../src/utils/json.js";
+import { matchesMonsterSearch, getMonsterTypeString } from "../src/utils/bestiary.js";
 import classNames from "../src/utils/classNames.js";
 import { rollDiceFormula } from "../src/utils/dice.js";
 import { normalizeConditionName, loadConditionsMap } from "../src/utils/conditions.js";
@@ -13,7 +14,11 @@ import {
 	appendTrailingEmptyNote,
 	ensureAtLeastOneNote,
 } from "../src/utils/noteUtils.js";
-import { parseUrl } from "../src/utils/navigation.js";
+import {
+	buildNavigationUrl,
+	parseUrl,
+	shouldOpenInNewTabFromEvent,
+} from "../src/utils/navigation.js";
 import { downloadBlob, downloadJsonFile } from "../src/utils/download.js";
 import { getSpellByName, getConditionByName } from "../src/utils/referencePreview.js";
 import { resolveSpellInput, resolveConditionInput } from "../src/utils/referenceResolvers.js";
@@ -26,6 +31,7 @@ import { api } from "../src/api.js";
 
 const require = createRequire(import.meta.url);
 const storage = require("../server/storage.js");
+const spellsRouter = require("../server/routes/spells.js");
 
 const results = [];
 const TEST_PREFIX = `autotest-${Date.now()}`;
@@ -105,6 +111,21 @@ await run("parseUrl supports campaign/session/encounter and static sections", ()
 	} finally {
 		global.window = originalWindow;
 	}
+});
+
+await run("navigation helpers support modifier tab-open and URL building", () => {
+	assert.equal(shouldOpenInNewTabFromEvent({ ctrlKey: true }), true);
+	assert.equal(shouldOpenInNewTabFromEvent({ metaKey: true }), true);
+	assert.equal(shouldOpenInNewTabFromEvent({ ctrlKey: false, metaKey: false }), false);
+	assert.equal(shouldOpenInNewTabFromEvent(null), false);
+
+	assert.equal(buildNavigationUrl(null), "/");
+	assert.equal(buildNavigationUrl("bestiary"), "/bestiary");
+	assert.equal(buildNavigationUrl("spells"), "/spells");
+	assert.equal(
+		buildNavigationUrl("camp", "sess 1", "enc-1"),
+		"/campaign/camp/session/sess%201/encounter/enc-1",
+	);
 });
 
 await run("CampaignViewModel formats links and dates", () => {
@@ -264,6 +285,34 @@ await run("classNames merges strings arrays objects and falsy values", () => {
 	assert.equal(classNames(null, false, 0, "", { test: 1, hidden: 0 }), "test");
 });
 
+await run("bestiary search helpers match by name, type and tags", () => {
+	const dragon = {
+		name: "Young Red Dragon",
+		type: {
+			type: "dragon",
+			tags: ["fire", "chromatic"],
+		},
+	};
+	const chooser = {
+		name: "Shifter Beast",
+		type: {
+			type: { choose: ["fiend", "undead"] },
+			tags: ["shapechanger"],
+		},
+	};
+
+	assert.equal(getMonsterTypeString("beast"), "beast");
+	assert.equal(getMonsterTypeString({ type: "dragon" }), "dragon");
+	assert.equal(getMonsterTypeString({ type: { choose: ["fiend", "undead"] } }), "fiend/undead");
+	assert.equal(matchesMonsterSearch(dragon, ""), true);
+	assert.equal(matchesMonsterSearch(dragon, "red"), true);
+	assert.equal(matchesMonsterSearch(dragon, "dragon"), true);
+	assert.equal(matchesMonsterSearch(dragon, "chromatic"), true);
+	assert.equal(matchesMonsterSearch(dragon, "construct"), false);
+	assert.equal(matchesMonsterSearch(chooser, "undead"), true);
+	assert.equal(matchesMonsterSearch(chooser, "shapechanger"), true);
+});
+
 await run("rollDiceFormula computes deterministic totals keep suffix and critical", () => {
 	const originalRandom = Math.random;
 	const originalNow = Date.now;
@@ -359,6 +408,54 @@ await run("conditions and reference resolvers use normalized keys and cache", as
 	} finally {
 		api.searchSpells = originalSearchSpells;
 		api.getConditions = originalGetConditions;
+	}
+});
+
+await run("spells conditions route merges kinds and prefers newer sources", async () => {
+	const originalExists = storage.exists;
+	const originalReadJson = storage.readJson;
+	const layer = spellsRouter.stack.find((item) => item.route?.path === "/conditions");
+	assert.ok(layer);
+	const handler = layer.route.stack[0].handle;
+
+	storage.exists = async () => true;
+	storage.readJson = async () => ({
+		condition: [
+			{ name: "Blinded", source: "PHB", page: 1, entries: ["old"] },
+			{ name: "Blinded", source: "XPHB", page: 2, entries: ["new"] },
+		],
+		status: [{ name: "Concentration", source: "PHB", page: 3, entries: ["status"] }],
+	});
+
+	try {
+		let jsonPayload = null;
+		await handler(
+			{},
+			{
+				json(value) {
+					jsonPayload = value;
+					return value;
+				},
+			},
+			(error) => {
+				throw error;
+			},
+		);
+
+		assert.ok(Array.isArray(jsonPayload));
+		assert.equal(jsonPayload.length, 2);
+		assert.deepEqual(jsonPayload.map((item) => item.name), ["Blinded", "Concentration"]);
+
+		const blinded = jsonPayload.find((item) => item.name === "Blinded");
+		const concentration = jsonPayload.find((item) => item.name === "Concentration");
+		assert.equal(blinded.kind, "condition");
+		assert.equal(blinded.source, "XPHB");
+		assert.deepEqual(blinded.entries, ["new"]);
+		assert.equal(concentration.kind, "status");
+		assert.equal(concentration.source, "PHB");
+	} finally {
+		storage.exists = originalExists;
+		storage.readJson = originalReadJson;
 	}
 });
 

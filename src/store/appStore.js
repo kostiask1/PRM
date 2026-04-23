@@ -17,7 +17,7 @@ import {
 	openModalAction,
 	setNavigationAction,
 } from "../actions/app";
-import { parseUrl } from "../utils/navigation";
+import { buildNavigationUrl, parseUrl } from "../utils/navigation";
 import { lang } from "../services/localization";
 
 function getInitialNavigation() {
@@ -222,20 +222,6 @@ export function resolveModalRequest(requestId, value) {
 export function closeActiveModal(value = null) {
 	const requestId = appStore.getState().modal.requestId;
 	resolveModalRequest(requestId, value);
-}
-
-function buildNavigationUrl(slug, fileName = null, encounterId = null) {
-	if (!slug) return "/";
-	if (slug === "bestiary") return "/bestiary";
-	if (slug === "spells") return "/spells";
-	let url = `/campaign/${encodeURIComponent(slug)}`;
-	if (fileName) {
-		url += `/session/${encodeURIComponent(fileName)}`;
-		if (encounterId) {
-			url += `/encounter/${encodeURIComponent(encounterId)}`;
-		}
-	}
-	return url;
 }
 
 export function syncNavigationFromUrl() {

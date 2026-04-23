@@ -21,3 +21,21 @@ export const parseUrl = () => {
 	}
 	return { campaign, session, encounter };
 };
+
+export function buildNavigationUrl(slug, fileName = null, encounterId = null) {
+	if (!slug) return "/";
+	if (slug === "bestiary") return "/bestiary";
+	if (slug === "spells") return "/spells";
+	let url = `/campaign/${encodeURIComponent(slug)}`;
+	if (fileName) {
+		url += `/session/${encodeURIComponent(fileName)}`;
+		if (encounterId) {
+			url += `/encounter/${encodeURIComponent(encounterId)}`;
+		}
+	}
+	return url;
+}
+
+export function shouldOpenInNewTabFromEvent(event) {
+	return Boolean(event?.ctrlKey || event?.metaKey);
+}

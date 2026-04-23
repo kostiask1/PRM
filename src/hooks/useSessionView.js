@@ -8,6 +8,7 @@ import {
 	createEmptyNote,
 } from "../utils/noteUtils";
 import { idsEqual } from "../utils/id";
+import { shouldOpenInNewTabFromEvent } from "../utils/navigation.js";
 import { navigateTo, useAppDispatch } from "../store/appStore";
 import { lang } from "../services/localization";
 
@@ -307,7 +308,7 @@ export default function useSessionView(props) {
 	const handleOpenEncounter = async (scene, event = null) => {
 		if (!session) return;
 		let encounterId = scene.encounterId;
-		const openInNewTab = Boolean(event?.ctrlKey || event?.metaKey);
+		const openInNewTab = shouldOpenInNewTabFromEvent(event);
 
 		if (!encounterId) {
 			const sceneIndex = session.data.scenes.findIndex(

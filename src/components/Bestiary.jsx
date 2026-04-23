@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { api } from "../api";
 import ReactList from "react-list";
 import Panel from "./common/Panel";
@@ -10,6 +10,7 @@ import ListCard from "./common/ListCard";
 import MonsterStatBlock from "./MonsterStatBlock";
 import Tooltip from "./common/Tooltip";
 import classNames from "../utils/classNames";
+import { getMonsterTypeString, matchesMonsterSearch } from "../utils/bestiary.js";
 import "../assets/components/Bestiary.css";
 import { lang } from "../services/localization";
 
@@ -43,17 +44,6 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	}, [monsters, sortOrder]);
 
 	// Допоміжна функція для отримання текстового представлення типу монстра
-	const getMonsterTypeString = useCallback((monsterType) => {
-		if (!monsterType) return "";
-		if (typeof monsterType === "string") return monsterType;
-		if (typeof monsterType === "object") {
-			const t = monsterType.type;
-			if (typeof t === "string") return t;
-			if (typeof t === "object" && t.choose) return t.choose.join("/");
-		}
-		return "";
-	}, []);
-
 	// Завантаження списку доступних джерел (файлів)
 	useEffect(() => {
 		const loadInitialData = async () => {
@@ -153,24 +143,14 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			);
 			if (onlyFavorites && !isFav) return false;
 
-			const normalizedSearch = search.trim().toLowerCase();
+			return matchesMonsterSearch(m, search);
 
 			// Покращений пошук по типу: об'єднуємо базовий тип (включаючи choose) та теги
-			const typeBase = getMonsterTypeString(m.type);
-			const tags = Array.isArray(m.type?.tags) ? m.type.tags.join(" ") : "";
-			const searchableText = [m.name, typeBase, tags]
-				.filter(Boolean)
-				.join(" ")
-				.toLowerCase();
-
-			if (!normalizedSearch) return true;
-			return searchableText.includes(normalizedSearch);
 		});
 		setMonsters(filtered);
 	}, [
 		search,
 		allMonsters,
-		getMonsterTypeString,
 		onlyFavorites,
 		favorites,
 	]);
