@@ -21,6 +21,11 @@
 	display: flex;
 	gap: var(--space-3);
 	align-items: center;
+	padding: var(--space-1) 0;
+}
+
+.Bestiary__search .Input {
+	height: 40px;
 }
 
 .Bestiary__sort-btn {

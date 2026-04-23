@@ -36,7 +36,7 @@
 }
 
 .DiceCalculator__panel {
-	width: 320px;
+	width: 380px;
 	background: color-mix(in srgb, var(--bg), transparent 10%);
 	backdrop-filter: blur(12px);
 	border: 1px solid color-mix(in srgb, var(--border), transparent 50%);
@@ -73,7 +73,7 @@
 .DiceCalculator__display {
 	background: color-mix(in srgb, var(--bg-2), transparent 40%);
 	border-radius: 10px;
-	height: 60px;
+	height: 70px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -112,8 +112,12 @@
 }
 
 .DiceCalculator__lastResult {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
 	text-align: center;
 	width: 100px;
+	height: 100%;
 }
 
 .DiceCalculator__resultHeader {

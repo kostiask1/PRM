@@ -34,7 +34,9 @@ export default function Sidebar({
 	onToggleCampaignStatus,
 }) {
 	const dispatch = useAppDispatch();
-	const currentLanguage = useAppSelector((state) => state.localization.language);
+	const currentLanguage = useAppSelector(
+		(state) => state.localization.language,
+	);
 	const availableLanguages = useAppSelector(
 		(state) => state.localization.availableLanguages,
 	);
@@ -180,17 +182,6 @@ export default function Sidebar({
 					<span>{lang.t("Bestiary")}</span>
 				</a>
 				<a
-					href="#"
-					className="Sidebar__link"
-					onClick={(e) => {
-						e.preventDefault();
-						handleOpenConditions();
-					}}
-				>
-					<Icon name="list" />
-					<span>{lang.t("Conditions")}</span>
-				</a>
-				<a
 					href="/spells"
 					className="Sidebar__link"
 					onClick={(e) => {
@@ -202,6 +193,17 @@ export default function Sidebar({
 				>
 					<Icon name="magic" />
 					<span>{lang.t("Spells")}</span>
+				</a>
+				<a
+					href="#"
+					className="Sidebar__link"
+					onClick={(e) => {
+						e.preventDefault();
+						handleOpenConditions();
+					}}
+				>
+					<Icon name="list" />
+					<span>{lang.t("Conditions")}</span>
 				</a>
 			</div>
 

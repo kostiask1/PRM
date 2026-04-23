@@ -19,7 +19,6 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	const [allMonsters, setAllMonsters] = useState([]);
 	const [monsters, setMonsters] = useState([]);
 	const [search, setSearch] = useState("");
-	const [typeSearch, setTypeSearch] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [selectedMonster, setSelectedMonster] = useState(null);
 	const [legendaryGroups, setLegendaryGroups] = useState([]);
@@ -154,22 +153,22 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			);
 			if (onlyFavorites && !isFav) return false;
 
-			const matchesName = m.name?.toLowerCase().includes(search.toLowerCase());
+			const normalizedSearch = search.trim().toLowerCase();
 
 			// Покращений пошук по типу: об'єднуємо базовий тип (включаючи choose) та теги
 			const typeBase = getMonsterTypeString(m.type);
 			const tags = Array.isArray(m.type?.tags) ? m.type.tags.join(" ") : "";
-			const searchableType = `${typeBase} ${tags}`.toLowerCase();
+			const searchableText = [m.name, typeBase, tags]
+				.filter(Boolean)
+				.join(" ")
+				.toLowerCase();
 
-			const matchesType = typeSearch
-				? searchableType.includes(typeSearch.toLowerCase())
-				: true;
-			return matchesName && matchesType;
+			if (!normalizedSearch) return true;
+			return searchableText.includes(normalizedSearch);
 		});
 		setMonsters(filtered);
 	}, [
 		search,
-		typeSearch,
 		allMonsters,
 		getMonsterTypeString,
 		onlyFavorites,
@@ -374,14 +373,9 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 					)}
 					<Input
 						icon="search"
-						placeholder={lang.t("Search by name...")}
+						placeholder={lang.t("Search by name or type...")}
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
-					/>
-					<Input
-						placeholder={lang.t("Type (e.g. dragon)...")}
-						value={typeSearch}
-						onChange={(e) => setTypeSearch(e.target.value)}
 					/>
 					<Button
 						variant={onlyFavorites ? "primary" : "ghost"}
