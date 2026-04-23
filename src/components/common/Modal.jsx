@@ -6,6 +6,7 @@ import Input from "../form/Input";
 import { lang } from "../../services/localization";
 import "../../assets/components/Modal.css";
 import classNames from "../../utils/classNames";
+import Icon from "./Icon";
 
 function createModalApi(setModalConfig) {
 	const open = (config) =>
@@ -144,7 +145,7 @@ function Modal({
 						className="Modal__close"
 						onClick={() => onCancel && onCancel()}
 					>
-						&times;
+						<Icon name="x"/>
 					</button>
 				</div>
 				<div className="Modal__body">

@@ -59,12 +59,16 @@
 }
 
 .Modal__close {
+	display: flex;
+	align-items: center;
+	justify-content: center;
 	background: none;
 	border: none;
 	color: var(--muted);
 	font-size: 1.8rem;
 	line-height: 1;
 	cursor: pointer;
+	padding: 0;
 }
 
 .Modal__close:hover {
