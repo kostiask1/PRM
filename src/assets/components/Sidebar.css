@@ -80,7 +80,34 @@
 	transition: opacity 0.1s;
 }
 
+.Sidebar__lang {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	opacity: 0;
+	transition: opacity 0.1s;
+}
+
+.Sidebar__langLabel {
+	font-size: 0.8rem;
+	color: var(--muted);
+}
+
+.Sidebar__langSelect {
+	flex: 1;
+	min-height: 28px;
+	border: 1px solid var(--border);
+	background: var(--panel);
+	color: var(--text);
+	border-radius: var(--radius-sm);
+	padding: 0 var(--space-2);
+}
+
 .Sidebar:hover .Sidebar__description {
+	opacity: 1;
+}
+
+.Sidebar:hover .Sidebar__lang {
 	opacity: 1;
 }
 
@@ -235,6 +262,7 @@
 .Sidebar:not(:hover) span:not(.Tooltip__trigger),
 .Sidebar:not(:hover) .Sidebar__title,
 .Sidebar:not(:hover) .Sidebar__description,
+.Sidebar:not(:hover) .Sidebar__lang,
 .Sidebar:not(:hover) .Sidebar__sectionTitle,
 .Sidebar:not(:hover) .ListCard__title,
 .Sidebar:not(:hover) .ListCard__meta,
@@ -319,6 +347,7 @@
 	.Sidebar:not(:hover) span:not(.Tooltip__trigger),
 	.Sidebar:not(:hover) .Sidebar__title,
 	.Sidebar:not(:hover) .Sidebar__description,
+	.Sidebar:not(:hover) .Sidebar__lang,
 	.Sidebar:not(:hover) .Sidebar__sectionTitle,
 	.Sidebar:not(:hover) .ListCard__title,
 	.Sidebar:not(:hover) .ListCard__meta,

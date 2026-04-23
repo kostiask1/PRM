@@ -10,6 +10,7 @@ export const HIDE_MESSAGE_BOX = "messageBox/hide";
 export const SET_NAVIGATION = "navigation/set";
 export const SET_CAMPAIGNS = "campaigns/set";
 export const REQUEST_CAMPAIGNS_RELOAD = "campaigns/requestReload";
+export const SET_LANGUAGE = "language/set";
 
 let mentionRequestSeq = 1;
 let diceRollRequestSeq = 1;
@@ -46,6 +47,13 @@ export function setCampaignsAction(payload) {
 
 export function requestCampaignsReloadAction() {
 	return { type: REQUEST_CAMPAIGNS_RELOAD };
+}
+
+export function setLanguageAction(payload) {
+	return {
+		type: SET_LANGUAGE,
+		payload: String(payload || "").toLowerCase(),
+	};
 }
 
 export function openMentionPickerAction(request) {

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { alert } from "../actions/app";
+﻿import { useEffect, useRef, useState } from "react";
+import { alert, setLanguageAction } from "../actions/app";
 import { api } from "../api";
 import Button from "./form/Button";
 import Icon from "./common/Icon";
@@ -13,13 +13,15 @@ import {
 	closeActiveModal,
 	openModalRequest,
 	useAppDispatch,
+	useAppSelector,
 } from "../store/appStore";
+import { lang } from "../services/localization";
 import "../assets/components/Sidebar.css";
 
 const DB_IMPORT_STRATEGIES = [
-	{ id: "append", label: "Додати до наявних даних" },
-	{ id: "replace_by_id", label: "Замінити дані за ID" },
-	{ id: "wipe_and_replace", label: "Повністю очистити і замінити" },
+	{ id: "append", labelKey: "Add to existing data" },
+	{ id: "replace_by_id", labelKey: "Replace data by ID" },
+	{ id: "wipe_and_replace", labelKey: "Replace all existing data" },
 ];
 
 export default function Sidebar({
@@ -30,6 +32,10 @@ export default function Sidebar({
 	onToggleCampaignStatus,
 }) {
 	const dispatch = useAppDispatch();
+	const currentLanguage = useAppSelector((state) => state.localization.language);
+	const availableLanguages = useAppSelector(
+		(state) => state.localization.availableLanguages,
+	);
 	const fileInputRef = useRef(null);
 	const [dbImportStrategy, setDbImportStrategy] = useState("");
 	const [localCampaigns, setLocalCampaigns] = useState(campaigns);
@@ -47,7 +53,12 @@ export default function Sidebar({
 			await api.importArchive(file, "all", dbImportStrategy);
 			window.location.reload();
 		} catch (error) {
-			dispatch(alert({ title: "Помилка імпорту", message: error.message }));
+			dispatch(
+				alert({
+					title: lang.t("Import data"),
+					message: error.message,
+				}),
+			);
 		} finally {
 			event.target.value = "";
 		}
@@ -69,12 +80,14 @@ export default function Sidebar({
 
 	const handleOpenImportDb = () => {
 		openModalRequest({
-			title: "Імпорт бази даних",
+			title: lang.t("Import data"),
 			type: "confirm",
 			showFooter: false,
 			children: (
 				<div className="Sidebar__importStrategyModal">
-					<p className="Sidebar__importStrategyText">Оберіть режим імпорту:</p>
+					<p className="Sidebar__importStrategyText">
+						{lang.t("Choose import mode:")}
+					</p>
 					<div className="Sidebar__importStrategyRow">
 						{DB_IMPORT_STRATEGIES.map((item) => (
 							<Button
@@ -83,13 +96,13 @@ export default function Sidebar({
 								variant={dbImportStrategy === item.id ? "primary" : "ghost"}
 								onClick={() => handleSelectImportStrategy(item.id)}
 							>
-								{item.label}
+								{lang.t(item.labelKey)}
 							</Button>
 						))}
 					</div>
 					<div className="Sidebar__importStrategyActions">
 						<Button variant="ghost" onClick={() => closeActiveModal()}>
-							Скасувати
+							{lang.t("Cancel")}
 						</Button>
 					</div>
 				</div>
@@ -105,8 +118,29 @@ export default function Sidebar({
 					<ColorThemeSwitcher />
 				</h1>
 				<p className="Sidebar__description">
-					Кампанії, сесії та планування в одному локальному проєкті.
+					{lang.t("Campaigns, sessions, and planning in one local workspace.")}
 				</p>
+				<div className="Sidebar__lang">
+					<label className="Sidebar__langLabel" htmlFor="SidebarLanguageSelect">
+						{lang.t("Language")}
+					</label>
+					<select
+						id="SidebarLanguageSelect"
+						className="Sidebar__langSelect"
+						value={currentLanguage}
+						onChange={(event) => dispatch(setLanguageAction(event.target.value))}
+					>
+						{availableLanguages.map((languageCode) => (
+							<option key={languageCode} value={languageCode}>
+								{languageCode === "uk"
+									? lang.t("Ukrainian")
+									: languageCode === "en"
+										? lang.t("English")
+										: languageCode.toUpperCase()}
+							</option>
+						))}
+					</select>
+				</div>
 			</div>
 
 			<div className="Sidebar__links">
@@ -119,7 +153,7 @@ export default function Sidebar({
 					}}
 				>
 					<Icon name="image" />
-					<span>Галерея</span>
+					<span>{lang.t("Gallery")}</span>
 				</a>
 				<a
 					href="/bestiary"
@@ -132,7 +166,7 @@ export default function Sidebar({
 					}}
 				>
 					<Icon name="skull" />
-					<span>Бестіарій</span>
+					<span>{lang.t("Bestiary")}</span>
 				</a>
 				<a
 					href="/spells"
@@ -145,18 +179,18 @@ export default function Sidebar({
 					}}
 				>
 					<Icon name="magic" />
-					<span>Заклинання</span>
+					<span>{lang.t("Spells")}</span>
 				</a>
 			</div>
 
 			<div className="Sidebar__section">
 				<div className="Sidebar__headerSection">
 					<h2 className="Sidebar__sectionTitle">
-						<span>Кампанії</span>
+						<span>{lang.t("Campaigns")}</span>
 					</h2>
 				</div>
 				<Button variant="create" onClick={onCreateCampaign} icon="plus">
-					<span>Нова кампанія</span>
+					<span>{lang.t("New campaign")}</span>
 				</Button>
 
 				<DraggableList
@@ -186,7 +220,9 @@ export default function Sidebar({
 								<div className="ListCard__sidebar-info">
 									<div className="ListCard__title">{campaign.name}</div>
 									<div className="ListCard__meta">
-										{campaign.sessionCount || 0} сесій
+										{lang.t("{count} sessions", {
+											count: campaign.sessionCount || 0,
+										})}
 									</div>
 								</div>
 							</div>
@@ -235,7 +271,8 @@ export default function Sidebar({
 						rel="noopener noreferrer"
 						className="Sidebar__resource-item"
 					>
-						<Icon name="map" size={16} /> <span>Мапи Szepeku</span>
+						<Icon name="map" size={16} />{" "}
+						<span>{lang.t("Szepeku maps")}</span>
 					</a>
 					<a
 						href="https://chatgpt.com/g/g-69c24d157a348191b640bf111b486080-ttrpg-map-architect"
@@ -271,14 +308,14 @@ export default function Sidebar({
 							} catch (err) {
 								dispatch(
 									alert({
-										title: "Помилка бекапу",
-										message: err.message || "Невідома помилка",
+										title: lang.t("Backup error"),
+										message: err.message || lang.t("Unknown error"),
 									}),
 								);
 							}
 						}}
 					>
-						Бекап
+						{lang.t("Backup")}
 					</Button>
 					<Button
 						variant="footer"
@@ -286,7 +323,7 @@ export default function Sidebar({
 						iconSize={16}
 						onClick={handleOpenImportDb}
 					>
-						Імпорт БД
+						{lang.t("Import DB")}
 					</Button>
 				</div>
 			</div>

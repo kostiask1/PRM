@@ -8,6 +8,7 @@ import {
 	PUBLISH_DICE_RESULT,
 	REFRESH_ENTITIES,
 	REQUEST_CAMPAIGNS_RELOAD,
+	SET_LANGUAGE,
 	REQUEST_DICE_ROLL,
 	SET_CAMPAIGNS,
 	SET_NAVIGATION,
@@ -17,6 +18,7 @@ import {
 	setNavigationAction,
 } from "../actions/app";
 import { parseUrl } from "../utils/navigation";
+import { lang } from "../services/localization";
 
 function getInitialNavigation() {
 	if (typeof window === "undefined") {
@@ -50,6 +52,10 @@ const initialState = {
 	campaigns: {
 		items: [],
 		reloadVersion: 0,
+	},
+	localization: {
+		language: lang.getLanguage(),
+		availableLanguages: lang.getAvailableLanguages(),
 	},
 };
 
@@ -145,6 +151,14 @@ function reducer(currentState, action) {
 					reloadVersion: currentState.campaigns.reloadVersion + 1,
 				},
 			};
+		case SET_LANGUAGE:
+			return {
+				...currentState,
+				localization: {
+					...currentState.localization,
+					language: action.payload,
+				},
+			};
 		default:
 			return currentState;
 	}
@@ -157,6 +171,12 @@ export const appStore = {
 	dispatch(action) {
 		if (typeof action === "function") {
 			return action(appStore.dispatch, appStore.getState);
+		}
+		if (action.type === SET_LANGUAGE) {
+			action = {
+				...action,
+				payload: lang.setLanguage(action.payload),
+			};
 		}
 		state = reducer(state, action);
 		emitChange();

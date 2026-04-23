@@ -1,0 +1,23 @@
+{
+	"Language": "Мова",
+	"English": "Англійська",
+	"Ukrainian": "Українська",
+	"Import data": "Імпорт даних",
+	"Choose import mode:": "Оберіть режим імпорту:",
+	"Add to existing data": "Додати до наявних даних",
+	"Replace data by ID": "Замінити дані за ID",
+	"Replace all existing data": "Замінити всі наявні дані",
+	"Cancel": "Скасувати",
+	"Campaigns, sessions, and planning in one local workspace.": "Кампанії, сесії та планування в одному локальному проєкті.",
+	"Gallery": "Галерея",
+	"Bestiary": "Бестіарій",
+	"Spells": "Заклинання",
+	"Campaigns": "Кампанії",
+	"New campaign": "Нова кампанія",
+	"{count} sessions": "{count} сесій",
+	"Szepeku maps": "Мапи Szepeku",
+	"Backup error": "Помилка бекапу",
+	"Unknown error": "Невідома помилка",
+	"Backup": "Бекап",
+	"Import DB": "Імпорт БД"
+}
