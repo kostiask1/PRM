@@ -134,7 +134,7 @@ export default function Sidebar({
 					{lang.t("Campaigns, sessions, and planning in one local workspace.")}
 				</p>
 				<div className="Sidebar__lang">
-					<label className="Sidebar__langLabel" htmlFor="SidebarLanguageSelect">
+					<label className="Sidebar__langLabel">
 						{lang.t("Language")}
 					</label>
 					<Select
