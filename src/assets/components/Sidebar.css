@@ -19,7 +19,8 @@
 	white-space: nowrap;
 }
 
-.Sidebar:hover {
+.Sidebar.Sidebar--hovered,
+.Sidebar.Sidebar--select-open {
 	width: var(--sidebar-expanded);
 	padding: var(--space-4) var(--space-3);
 	align-items: stretch;
@@ -39,7 +40,7 @@
 	white-space: nowrap;
 }
 
-.Sidebar:not(:hover) .Sidebar__link {
+.Sidebar:not(.Sidebar--hovered):not(.Sidebar--select-open) .Sidebar__link {
 	width: 40px;
 	height: 40px;
 	justify-content: center;
@@ -66,7 +67,7 @@
 	font-family: var(--font-heading);
 }
 
-.Sidebar:not(:hover) .Sidebar__title {
+.Sidebar:not(.Sidebar--hovered):not(.Sidebar--select-open) .Sidebar__title {
 	justify-content: center;
 	width: 100%;
 }
@@ -93,11 +94,13 @@
 	color: var(--muted);
 }
 
-.Sidebar:hover .Sidebar__description {
+.Sidebar.Sidebar--hovered .Sidebar__description,
+.Sidebar.Sidebar--select-open .Sidebar__description {
 	opacity: 1;
 }
 
-.Sidebar:hover .Sidebar__lang {
+.Sidebar.Sidebar--hovered .Sidebar__lang,
+.Sidebar.Sidebar--select-open .Sidebar__lang {
 	opacity: 1;
 }
 
@@ -200,7 +203,7 @@
 	justify-content: flex-start;
 }
 
-.Sidebar:not(:hover) .ListCard__sidebar-content {
+.Sidebar:not(.Sidebar--hovered):not(.Sidebar--select-open) .ListCard__sidebar-content {
 	justify-content: center;
 	padding: 0;
 	gap: 0;
@@ -221,13 +224,14 @@
 	transition: opacity 0.1s;
 }
 
-.Sidebar:hover .ListCard__sidebar-info {
+.Sidebar.Sidebar--hovered .ListCard__sidebar-info,
+.Sidebar.Sidebar--select-open .ListCard__sidebar-info {
 	opacity: 1;
 	width: auto;
 }
 
-.Sidebar:not(:hover) .Button,
-.Sidebar:not(:hover) .Sidebar__card {
+.Sidebar:not(.Sidebar--hovered):not(.Sidebar--select-open) .Button,
+.Sidebar:not(.Sidebar--hovered):not(.Sidebar--select-open) .Sidebar__card {
 	width: 40px;
 	height: 40px;
 	padding: 0 !important;
@@ -236,28 +240,28 @@
 	margin: 0 auto;
 }
 
-.Sidebar:not(:hover) .Sidebar__resource-item {
+.Sidebar:not(.Sidebar--hovered):not(.Sidebar--select-open) .Sidebar__resource-item {
 	width: 40px;
 	height: 28px;
 	justify-content: center;
 }
 
-.Sidebar:not(:hover) .ListCard__sidebar-content {
+.Sidebar:not(.Sidebar--hovered):not(.Sidebar--select-open) .ListCard__sidebar-content {
 	width: 40px;
 	justify-content: center;
 	gap: 0;
 	padding: 0;
 }
 
-.Sidebar:not(:hover) span:not(.Tooltip__trigger),
-.Sidebar:not(:hover) .Sidebar__title,
-.Sidebar:not(:hover) .Sidebar__description,
-.Sidebar:not(:hover) .Sidebar__lang,
-.Sidebar:not(:hover) .Sidebar__sectionTitle,
-.Sidebar:not(:hover) .ListCard__title,
-.Sidebar:not(:hover) .ListCard__meta,
-.Sidebar:not(:hover) .ListCard__actions,
-.Sidebar:not(:hover) .Sidebar__footerGrid {
+.Sidebar:not(.Sidebar--hovered):not(.Sidebar--select-open) span:not(.Tooltip__trigger),
+.Sidebar:not(.Sidebar--hovered):not(.Sidebar--select-open) .Sidebar__title,
+.Sidebar:not(.Sidebar--hovered):not(.Sidebar--select-open) .Sidebar__description,
+.Sidebar:not(.Sidebar--hovered):not(.Sidebar--select-open) .Sidebar__lang,
+.Sidebar:not(.Sidebar--hovered):not(.Sidebar--select-open) .Sidebar__sectionTitle,
+.Sidebar:not(.Sidebar--hovered):not(.Sidebar--select-open) .ListCard__title,
+.Sidebar:not(.Sidebar--hovered):not(.Sidebar--select-open) .ListCard__meta,
+.Sidebar:not(.Sidebar--hovered):not(.Sidebar--select-open) .ListCard__actions,
+.Sidebar:not(.Sidebar--hovered):not(.Sidebar--select-open) .Sidebar__footerGrid {
 	opacity: 0;
 	visibility: hidden;
 	width: 0;
@@ -265,11 +269,11 @@
 	padding: 0;
 }
 
-.Sidebar:not(:hover) span:not(.Tooltip__trigger) {
+.Sidebar:not(.Sidebar--hovered):not(.Sidebar--select-open) span:not(.Tooltip__trigger) {
 	position: absolute;
 }
 
-.Sidebar:not(:hover) .Sidebar__sectionTitle span {
+.Sidebar:not(.Sidebar--hovered):not(.Sidebar--select-open) .Sidebar__sectionTitle span {
 	position: static;
 }
 
@@ -323,7 +327,8 @@
 @media (max-width: 1024px) {
 
 	.Sidebar,
-	.Sidebar:hover {
+	.Sidebar.Sidebar--hovered,
+	.Sidebar.Sidebar--select-open {
 		position: sticky;
 		top: 0;
 		left: 0;
@@ -334,15 +339,15 @@
 		box-shadow: 0 6px 18px color-mix(in srgb, var(--bg), transparent 70%);
 	}
 
-	.Sidebar:not(:hover) span:not(.Tooltip__trigger),
-	.Sidebar:not(:hover) .Sidebar__title,
-	.Sidebar:not(:hover) .Sidebar__description,
-	.Sidebar:not(:hover) .Sidebar__lang,
-	.Sidebar:not(:hover) .Sidebar__sectionTitle,
-	.Sidebar:not(:hover) .ListCard__title,
-	.Sidebar:not(:hover) .ListCard__meta,
-	.Sidebar:not(:hover) .ListCard__actions,
-	.Sidebar:not(:hover) .Sidebar__footerGrid {
+	.Sidebar span:not(.Tooltip__trigger),
+	.Sidebar .Sidebar__title,
+	.Sidebar .Sidebar__description,
+	.Sidebar .Sidebar__lang,
+	.Sidebar .Sidebar__sectionTitle,
+	.Sidebar .ListCard__title,
+	.Sidebar .ListCard__meta,
+	.Sidebar .ListCard__actions,
+	.Sidebar .Sidebar__footerGrid {
 		opacity: 1;
 		visibility: visible;
 		width: auto;
@@ -353,11 +358,11 @@
 		max-height: 42vh;
 	}
 
-	.Sidebar:not(:hover) .Button,
-	.Sidebar:not(:hover) .Sidebar__card,
-	.Sidebar:not(:hover) .Sidebar__link,
-	.Sidebar:not(:hover) .Sidebar__resource-item,
-	.Sidebar:not(:hover) .ListCard__sidebar-content {
+	.Sidebar .Button,
+	.Sidebar .Sidebar__card,
+	.Sidebar .Sidebar__link,
+	.Sidebar .Sidebar__resource-item,
+	.Sidebar .ListCard__sidebar-content {
 		width: 100%;
 		height: auto;
 		padding: initial !important;

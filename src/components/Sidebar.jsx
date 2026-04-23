@@ -8,7 +8,7 @@ import ListCard from "./common/ListCard";
 import ColorThemeSwitcher from "./ColorThemeSwitcher";
 import DraggableList from "./common/DraggableList";
 import ImageGallery from "./ImageGallery";
-import ConditionsModalContent from "./modals/ConditionsModalContent";
+import { openConditionsModal } from "./modals/openConditionsModal";
 import { downloadBlob } from "../utils/download";
 import {
 	closeActiveModal,
@@ -42,6 +42,7 @@ export default function Sidebar({
 	const [dbImportStrategy, setDbImportStrategy] = useState("");
 	const [localCampaigns, setLocalCampaigns] = useState(campaigns);
 	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+	const [isSidebarHovered, setIsSidebarHovered] = useState(false);
 
 	useEffect(() => {
 		setLocalCampaigns(campaigns);
@@ -113,17 +114,15 @@ export default function Sidebar({
 	};
 
 	const handleOpenConditions = () => {
-		openModalRequest({
-			title: lang.t("Conditions"),
-			type: "confirm",
-			showFooter: false,
-			type: "custom",
-			children: <ConditionsModalContent />,
-		});
+		openConditionsModal();
 	};
 
 	return (
-		<aside className="Sidebar App__sidebar">
+		<aside
+			className={`Sidebar App__sidebar${isSidebarHovered ? " Sidebar--hovered" : ""}`}
+			onMouseEnter={() => setIsSidebarHovered(true)}
+			onMouseLeave={() => setIsSidebarHovered(false)}
+		>
 			<div className="Sidebar__header">
 				<h1 className="Sidebar__title">
 					D&D Session Manager

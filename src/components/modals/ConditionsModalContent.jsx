@@ -5,18 +5,16 @@ import { api } from "../../api";
 import "../../assets/components/ConditionsModal.css";
 import SpellCard from "../SpellCard";
 import Icon from "../common/Icon";
-import Button from "../form/Button";
 import Input from "../form/Input";
 import { lang } from "../../services/localization";
 import { openModalRequest, useAppDispatch } from "../../store/appStore";
 import { renderRecursiveContent } from "../../utils/parser.jsx";
 import { getSpellByName } from "../../utils/referencePreview.js";
-import {
-	resolveConditionInput,
-	resolveSpellInput,
-} from "../../utils/referenceResolvers.js";
+import { resolveConditionInput, resolveSpellInput } from "../../utils/referenceResolvers.js";
 
-export default function ConditionsModalContent() {
+export default function ConditionsModalContent({
+	initialConditionName = "",
+}) {
 	const dispatch = useAppDispatch();
 	const [query, setQuery] = useState("");
 	const [conditions, setConditions] = useState([]);
@@ -32,8 +30,15 @@ export default function ConditionsModalContent() {
 				const list = await api.getConditions();
 				if (!isMounted) return;
 
-				setConditions(Array.isArray(list) ? list : []);
-				setSelectedConditionName(list?.[0]?.name || "");
+				const normalizedList = Array.isArray(list) ? list : [];
+				setConditions(normalizedList);
+
+				const preferredCondition = normalizedList.find(
+					(item) => item.name === initialConditionName,
+				);
+				setSelectedConditionName(
+					preferredCondition?.name || normalizedList?.[0]?.name || "",
+				);
 			} catch (error) {
 				if (!isMounted) return;
 
@@ -53,7 +58,18 @@ export default function ConditionsModalContent() {
 		return () => {
 			isMounted = false;
 		};
-	}, [dispatch]);
+	}, [dispatch, initialConditionName]);
+
+	useEffect(() => {
+		if (!initialConditionName || !conditions.length) return;
+
+		const preferredCondition = conditions.find(
+			(item) => item.name === initialConditionName,
+		);
+		if (preferredCondition) {
+			setSelectedConditionName(preferredCondition.name);
+		}
+	}, [conditions, initialConditionName]);
 
 	const filteredConditions = useMemo(() => {
 		const normalizedQuery = query.trim().toLowerCase();
