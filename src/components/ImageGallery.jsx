@@ -468,71 +468,72 @@ function ImageGallery({
 						{!loading &&
 							images.length > 0 &&
 							images.map((img, index) => (
-								<div
-									key={img.url}
-									className={classNames("ImageGallery__item", {
-										"is-selected": selectedFilenames.has(img.name),
-									})}
-									onClick={(e) =>
-										handleItemClick(
-											img.name,
-											"image",
-											allSubs.length + index,
-											e,
-										)
-									}
-									onDoubleClick={() => onSelect?.(img)}
-									onContextMenu={(e) => {
-										e.preventDefault();
-										setPreviewImage(img);
-									}}
-									draggable
-									onDragStart={(e) => handleDragStart(e, img, "image")}
-									onDragEnd={handleDragEnd}
-								>
-									<div className="ImageGallery__image-wrap">
-										<img src={img.url} alt="" />
-										<div
-											className="ImageGallery__checkbox"
-											onClick={(e) => toggleSelect(img.name, "image", e)}
-										>
-											<Icon
-												name={
-													selectedFilenames.has(img.name) ? "check" : "plus"
-												}
-												size={12}
-											/>
-										</div>
-									</div>
-									<Tooltip content={img.name}>
-										<span className="ImageGallery__name">
-											<button
-												type="button"
-												className="ImageGallery__nameBtn"
-												onClick={async (e) => {
-													e.stopPropagation();
-													const currentClean = getCleanName(img.name);
-													const newBaseName = await dispatch(
-														prompt({
-															title: "Перейменувати файл",
-															message: "Введіть нову назву:",
-															defaultValue: currentClean,
-														}),
-													);
-													if (newBaseName && newBaseName !== currentClean) {
-														const ext = img.name.split(".").pop();
-														handleRenameImage(
-															img.name,
-															`${newBaseName}.${ext}`,
-														);
-													}
-												}}
+								<Tooltip key={img.url} content="ПКМ: відкрити на весь екран">
+									<div
+										className={classNames("ImageGallery__item", {
+											"is-selected": selectedFilenames.has(img.name),
+										})}
+										onClick={(e) =>
+											handleItemClick(
+												img.name,
+												"image",
+												allSubs.length + index,
+												e,
+											)
+										}
+										onDoubleClick={() => onSelect?.(img)}
+										onContextMenu={(e) => {
+											e.preventDefault();
+											setPreviewImage(img);
+										}}
+										draggable
+										onDragStart={(e) => handleDragStart(e, img, "image")}
+										onDragEnd={handleDragEnd}
+									>
+										<div className="ImageGallery__image-wrap">
+											<img src={img.url} alt="" />
+											<div
+												className="ImageGallery__checkbox"
+												onClick={(e) => toggleSelect(img.name, "image", e)}
 											>
-												{getCleanName(img.name)}
-											</button>
-										</span>
-									</Tooltip>
-								</div>
+												<Icon
+													name={
+														selectedFilenames.has(img.name) ? "check" : "plus"
+													}
+													size={12}
+												/>
+											</div>
+										</div>
+										<Tooltip content={img.name}>
+											<span className="ImageGallery__name">
+												<button
+													type="button"
+													className="ImageGallery__nameBtn"
+													onClick={async (e) => {
+														e.stopPropagation();
+														const currentClean = getCleanName(img.name);
+														const newBaseName = await dispatch(
+															prompt({
+																title: "Перейменувати файл",
+																message: "Введіть нову назву:",
+																defaultValue: currentClean,
+															}),
+														);
+														if (newBaseName && newBaseName !== currentClean) {
+															const ext = img.name.split(".").pop();
+															handleRenameImage(
+																img.name,
+																`${newBaseName}.${ext}`,
+															);
+														}
+													}}
+												>
+													{getCleanName(img.name)}
+												</button>
+											</span>
+										</Tooltip>
+									</div>
+								</Tooltip>
 							))}
 					</div>
 				</main>

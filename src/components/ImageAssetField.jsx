@@ -3,6 +3,7 @@ import Button from "./form/Button";
 import ImageDropzone from "./ImageDropzone";
 import ImageGallery from "./ImageGallery";
 import Modal from "./common/Modal";
+import Tooltip from "./common/Tooltip";
 
 const TARGET_PRESETS = {
 	character: { category: "characters", subcategory: "players" },
@@ -57,25 +58,30 @@ export default function ImageAssetField({
 			<div className={containerClassName}>
 				{hasValidImage ? (
 					<div className={wrapperClassName}>
-						<img
-							src={imageUrl}
-							alt={imageAlt}
-							onError={() => setHasImageError(true)}
-							onClick={(event) => {
-								event.stopPropagation();
-								if (isEditing) {
+						<Tooltip
+							content="ПКМ: замінити зображення через галерею"
+							disabled={!enableContextReplace}
+						>
+							<img
+								src={imageUrl}
+								alt={imageAlt}
+								onError={() => setHasImageError(true)}
+								onClick={(event) => {
+									event.stopPropagation();
+									if (isEditing) {
+										openGallery();
+										return;
+									}
+									setIsImagePreviewOpen(true);
+								}}
+								onContextMenu={(event) => {
+									if (!enableContextReplace) return;
+									event.preventDefault();
+									event.stopPropagation();
 									openGallery();
-									return;
-								}
-								setIsImagePreviewOpen(true);
-							}}
-							onContextMenu={(event) => {
-								if (!enableContextReplace) return;
-								event.preventDefault();
-								event.stopPropagation();
-								openGallery();
-							}}
-						/>
+								}}
+							/>
+						</Tooltip>
 						{showClearButton && (
 							<Button
 								variant="danger"
