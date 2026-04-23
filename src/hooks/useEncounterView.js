@@ -39,6 +39,8 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 			if (e.key === "Escape" && showBestiary) {
 				setShowBestiary(false);
 			} else if (e.key === "Backspace" || e.key === "Escape") {
+				if (document.querySelector(".Modal__overlay")) return;
+
 				const isInput =
 					e.target.tagName === "INPUT" ||
 					e.target.tagName === "TEXTAREA" ||
@@ -77,9 +79,7 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 					dispatch(
 						alert({
 							title: lang.t("Error"),
-							message: lang.t(
-								"Encounter not found or data is still updating.",
-							),
+							message: lang.t("Encounter not found or data is still updating."),
 						}),
 					);
 					handleBack();
