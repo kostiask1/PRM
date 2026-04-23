@@ -39,10 +39,10 @@
 }
 
 .EncounterMonsterRow {
-	background: color-mix(in srgb, var(--border), transparent 60%);
+	background: color-mix(in srgb, var(--bg), transparent 45%);
 	border: 1px solid color-mix(in srgb, var(--border), transparent 60%);
 	border-radius: 8px;
-	padding: var(--space-3) var(--space-4);
+	padding: var(--space-2) var(--space-2);
 	cursor: pointer;
 	transition: all 0.2s ease;
 	display: flex;
@@ -61,7 +61,7 @@
 	border-color: color-mix(in srgb, var(--accent), transparent 60%);
 	border-left-color: var(--accent);
 	background: color-mix(in srgb, var(--accent), transparent 92%);
-	box-shadow: var(--shadow-sm);
+	box-shadow: 0 0 20px color-mix(in srgb, var(--accent), transparent 92%) !important;
 }
 
 .EncounterMonsterRow.is-dragging {
