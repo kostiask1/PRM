@@ -64,6 +64,7 @@ const Input = forwardRef(
 	) => {
 		const dispatch = useAppDispatch();
 		const internalRef = useRef(null);
+		const hasAppliedInitialSelectionRef = useRef(false);
 
 		// Синхронізуємо висоту textarea з контентом
 		useLayoutEffect(() => {
@@ -77,18 +78,18 @@ const Input = forwardRef(
 
 		// Встановлюємо фокус, висоту та каретку
 		useLayoutEffect(() => {
-			if (internalRef.current) {
-				const node = internalRef.current;
+			if (!internalRef.current || hasAppliedInitialSelectionRef.current) return;
 
-				const pos = resolveInitialCursorPosition(
-					initialSelection,
-					props.value || "",
-				);
+			const node = internalRef.current;
+			const pos = resolveInitialCursorPosition(
+				initialSelection,
+				props.value || "",
+			);
 
-				node.focus({ preventScroll: true });
-				node.setSelectionRange(pos, pos);
-			}
-		}, [initialSelection]);
+			node.focus({ preventScroll: true });
+			node.setSelectionRange(pos, pos);
+			hasAppliedInitialSelectionRef.current = true;
+		}, [initialSelection, props.value]);
 
 		const setRefs = (node) => {
 			internalRef.current = node;
