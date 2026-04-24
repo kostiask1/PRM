@@ -2,6 +2,7 @@ import Button from "../form/Button";
 import CollapseToggleButton from "../common/CollapseToggleButton";
 import Icon from "../common/Icon";
 import { lang } from "../../services/localization";
+import { renderMentionText } from "../../utils/parser";
 
 export default function SceneCardHeader({
 	number,
@@ -34,7 +35,7 @@ export default function SceneCardHeader({
 					title={encounterName}
 				>
 					<Icon name="swords" size={18} className="SceneCard__encounter-icon" />
-					<span className="SceneCard__encounter-name">{encounterName}</span>
+					<span className="SceneCard__encounter-name">{renderMentionText(encounterName)}</span>
 				</Button>
 				<Button
 					variant="danger"

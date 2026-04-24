@@ -4,7 +4,6 @@ import EditableField from "./form/EditableField";
 import NoteCard from "./common/NoteCard.jsx";
 import ImageAssetField from "./ImageAssetField";
 import ReactMarkdown from "react-markdown";
-import EntityLink from "./common/EntityLink.jsx";
 import "../assets/components/CharacterCard.css";
 import Select from "./form/Select";
 import CharacterCardModel from "../models/CharacterCardModel.js";
@@ -34,24 +33,15 @@ const markdownTagsWithMentions = [
 	"span",
 ];
 
-function renderMentionChildren(
-	children,
-	keyPrefix = "mention-node",
-	campaignSlug,
-) {
-	return React.Children.map(children, (child, index) => {
-		const nextKey = `${keyPrefix}-${index}`;
+function renderMentionChildren(children) {
+	return React.Children.map(children, (child) => {
 		if (typeof child === "string") {
-			return renderMentionText(child, nextKey, campaignSlug);
+			return renderMentionText(child);
 		}
 		if (React.isValidElement(child) && child.props?.children) {
 			return React.cloneElement(child, {
 				...child.props,
-				children: renderMentionChildren(
-					child.props.children,
-					nextKey,
-					campaignSlug,
-				),
+				children: renderMentionChildren(child.props.children),
 			});
 		}
 		return child;
@@ -101,11 +91,7 @@ export default function CharacterCard({
 				markdownTagsWithMentions.map((tag) => [
 					tag,
 					({ children, ...tagProps }) =>
-						React.createElement(
-							tag,
-							tagProps,
-							renderMentionChildren(children, `mention-${tag}`, campaignSlug),
-						),
+						React.createElement(tag, tagProps, renderMentionChildren(children)),
 				]),
 			),
 		[campaignSlug],
@@ -139,9 +125,7 @@ export default function CharacterCard({
 				<div
 					className="character-card__header"
 					onClick={
-						!canCollapseCard
-							? undefined
-							: () => onToggleCollapse(character.id)
+						!canCollapseCard ? undefined : () => onToggleCollapse(character.id)
 					}
 				>
 					{canCollapseCard && (

@@ -36,14 +36,13 @@ function findEntityByName(entities, name) {
 export default function EntityLink({
 	name,
 	children,
-	campaignSlug,
 	className = "",
 }) {
 	const [modalState, setModalState] = useState(null);
 
 	const resolvedCampaignSlug = useMemo(
-		() => campaignSlug || parseUrl().campaign,
-		[campaignSlug],
+		() => parseUrl().campaign,
+		[],
 	);
 
 	const handleCloseModal = useCallback(() => setModalState(null), []);

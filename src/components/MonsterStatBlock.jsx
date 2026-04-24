@@ -403,7 +403,7 @@ export default function MonsterStatBlock({
 									className="MonsterStatBlock__name"
 									onClick={() => onNameClick?.(monster)}
 								>
-									{renderMentionText(String(monster.name), "plain-mention")}
+									{renderMentionText(String(monster.name))}
 								</h3>
 							</Tooltip>
 						) : (
@@ -412,7 +412,7 @@ export default function MonsterStatBlock({
 								text={monster.name}
 								message={lang.t("Name copied!")}
 							>
-								{renderMentionText(String(monster.name), "plain-mention")}
+								{renderMentionText(String(monster.name))}
 							</ClickToCopy>
 						)}
 						<Button

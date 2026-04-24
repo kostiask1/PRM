@@ -44,7 +44,7 @@ function EncounterView(props) {
 					/>
 					<Tooltip content={lang.t("Click to rename")}>
 						<h2 className="editable-title" onClick={view.handleRename}>
-							{view.encounter.name}
+							{renderMentionText(view.encounter.name)}
 						</h2>
 					</Tooltip>
 					<p className="muted">
@@ -131,7 +131,7 @@ function EncounterView(props) {
 													view.handleRenameMonster(m.instanceId, m.name);
 												}}
 											>
-												{renderMentionText(String(m.name), "plain-mention", campaign.slug)}
+												{renderMentionText(String(m.name))}
 											</div>
 										</Tooltip>
 										<div className="EncounterMonsterRow__stats">

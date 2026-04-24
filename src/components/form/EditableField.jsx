@@ -2,7 +2,6 @@ import React, { useMemo, useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import Input from "./Input";
 import Button from "./Button";
-import EntityLink from "../common/EntityLink";
 import "../../assets/components/EditableField.css";
 import classNames from "../../utils/classNames";
 import { lang } from "../../services/localization";
@@ -384,16 +383,15 @@ export default function EditableField({
 		}
 	};
 
-	const renderMentionChildren = (children, keyPrefix = "mention-node") =>
-		React.Children.map(children, (child, index) => {
-			const nextKey = `${keyPrefix}-${index}`;
+	const renderMentionChildren = (children) =>
+		React.Children.map(children, (child) => {
 			if (typeof child === "string") {
-				return renderMentionText(child, nextKey, props.campaignSlug);
+				return renderMentionText(child);
 			}
 			if (React.isValidElement(child) && child.props?.children) {
 				return React.cloneElement(child, {
 					...child.props,
-					children: renderMentionChildren(child.props.children, nextKey),
+					children: renderMentionChildren(child.props.children),
 				});
 			}
 			return child;
@@ -423,11 +421,7 @@ export default function EditableField({
 		markdownTagsWithMentions.map((tag) => [
 			tag,
 			({ children, ...tagProps }) =>
-				React.createElement(
-					tag,
-					tagProps,
-					renderMentionChildren(children, `mention-${tag}`),
-				),
+				React.createElement(tag, tagProps, renderMentionChildren(children)),
 		]),
 	);
 
@@ -482,7 +476,7 @@ export default function EditableField({
 					type === "textarea" ? (
 						plainTextPreview ? (
 							<span style={{ whiteSpace: "pre-wrap" }}>
-								{renderMentionText(String(value), "plain-mention", props.campaignSlug)}
+								{renderMentionText(String(value))}
 							</span>
 						) : (
 							<ReactMarkdown components={components}>

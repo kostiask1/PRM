@@ -406,16 +406,15 @@ export const parseRollsAndSpells = (
 	return elements;
 };
 
-export function renderMentionText(text, keyPrefix = "mention", campaignSlug) {
+export function renderMentionText(text) {
 	const parts = String(text || "").split(/(\[[^\]]+\])/g);
 	return parts.map((part, index) => {
 		if (part.startsWith("[") && part.endsWith("]")) {
 			const name = part.slice(1, -1).trim();
 			return (
 				<EntityLink
-					key={`${keyPrefix}-${index}`}
+					key={index}
 					name={name}
-					campaignSlug={campaignSlug}
 					className="mention-link"
 				>
 					{name}

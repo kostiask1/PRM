@@ -21,6 +21,7 @@ import { getNotesForRender, sanitizeNotesForSave } from "../utils/noteUtils";
 import { navigateTo } from "../store/appStore";
 import { shouldOpenInNewTabFromEvent } from "../utils/navigation.js";
 import CreateCharacterButton from "./CreateCharacterButton.jsx";
+import { renderMentionText } from "../utils/parser.jsx";
 
 function SessionView(props) {
 	const campaign = props.campaign;
@@ -98,11 +99,11 @@ function SessionView(props) {
 												openEncounterFromQuickAccess(encounter.id, event)
 											}
 										>
-											{encounter.sceneNumber
+											{renderMentionText(encounter.sceneNumber
 												? `${lang.t("Scene {number}", {
 														number: encounter.sceneNumber,
 													})}: ${encounter.name}`
-												: encounter.name}
+												: encounter.name)}
 										</Button>
 									))}
 								</div>

@@ -79,7 +79,7 @@ export default function NoteCard({
 			)}
 			{showSimplifiedActions && isCollapsed && (
 				<span>
-					{renderMentionText(shortText, "plain-mention", campaignSlug)}
+					{renderMentionText(shortText)}
 					{note.text.length > SHORT_TEXT_LENGTH && "..."}
 				</span>
 			)}
