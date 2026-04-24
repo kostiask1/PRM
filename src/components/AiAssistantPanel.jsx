@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { api } from "../api";
 import { parseUrl } from "../utils/navigation";
 import Button from "./form/Button";
@@ -60,6 +60,14 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	}));
 	const [generatedPrompt, setGeneratedPrompt] = useState(null);
 	const [assistantMode, setAssistantMode] = useState("content");
+	const activeGenerateControllerRef = useRef(null);
+	const [canCancelGenerate, setCanCancelGenerate] = useState(false);
+
+	const cancelGenerateRequest = () => {
+		activeGenerateControllerRef.current?.abort();
+		activeGenerateControllerRef.current = null;
+		setCanCancelGenerate(false);
+	};
 
 	const showApiKeyInstructions = () => {
 		dispatch(
@@ -162,6 +170,10 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 		targetSceneId = null,
 		{ forceParseAIResponse = null } = {},
 	) => {
+		cancelGenerateRequest();
+		const controller = new AbortController();
+		activeGenerateControllerRef.current = controller;
+		setCanCancelGenerate(true);
 		setLoading(true);
 		setError("");
 
@@ -190,20 +202,23 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 				: initialRoute;
 
 		try {
-			const data = await api.generateAi({
-				type,
-				modelName: selectedModel || undefined,
-				userInstructions,
-				path: requestPath,
-				sceneId: targetSceneId,
-				parseAIResponse: shouldParseResponse,
-				generateEncounters:
-					type === "character" || type === "npc"
-						? false
-						: !isCampaign && generateEncounters,
-				contextConfig: useContext ? configToSend : null,
-				language: currentLanguage,
-			});
+			const data = await api.generateAi(
+				{
+					type,
+					modelName: selectedModel || undefined,
+					userInstructions,
+					path: requestPath,
+					sceneId: targetSceneId,
+					parseAIResponse: shouldParseResponse,
+					generateEncounters:
+						type === "character" || type === "npc"
+							? false
+							: !isCampaign && generateEncounters,
+					contextConfig: useContext ? configToSend : null,
+					language: currentLanguage,
+				},
+				{ signal: controller.signal },
+			);
 
 			// Одразу оновлюємо стан в батьківському компоненті, бо в БД вже записано
 			if (data.prompt) {
@@ -236,6 +251,10 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 				}
 			}
 		} catch (err) {
+			if (err?.name === "AbortError") {
+				return;
+			}
+
 			if (err.message?.includes("GEMINI_API_KEY")) {
 				showApiKeyInstructions();
 				return;
@@ -251,6 +270,10 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 				}),
 			);
 		} finally {
+			if (activeGenerateControllerRef.current === controller) {
+				activeGenerateControllerRef.current = null;
+				setCanCancelGenerate(false);
+			}
 			setLoading(false);
 		}
 	};
@@ -309,6 +332,12 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 		}
 	}, [isEntityCreationMode, parseAIResponse]);
 
+	useEffect(() => {
+		return () => {
+			cancelGenerateRequest();
+		};
+	}, []);
+
 	return (
 		<div className="AiAssistant">
 			{/* Кнопка виклику AI, аналогічно до DiceCalculator */}
@@ -336,7 +365,10 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 								? lang.t("AI Encounter Assistant")
 								: lang.t("AI Session Assistant")
 					}
-					onCancel={() => setIsOpen(false)}
+					onCancel={() => {
+						cancelGenerateRequest();
+						setIsOpen(false);
+					}}
 					showFooter={false}
 				>
 					<div className="AiAssistant__content">
@@ -721,10 +753,19 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 									? lang.t("AI is working, please wait...")
 									: isCharacterCreationMode
 										? lang.t("Create characters")
-										: isNpcCreationMode
+									: isNpcCreationMode
 											? lang.t("Create NPCs")
 											: lang.t("Generate")}
 							</Button>
+							{canCancelGenerate && (
+								<Button
+									variant="danger"
+									className="AiAssistant__cancel-btn"
+									onClick={cancelGenerateRequest}
+								>
+									{lang.t("Cancel")}
+								</Button>
+							)}
 						</div>
 
 						{error && <div className="AiAssistant__error">{error}</div>}

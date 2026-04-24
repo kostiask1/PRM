@@ -150,10 +150,11 @@ export const api = {
 
 	// AI methods
 	listAiModels: () => api.request("/ai/models"),
-	generateAi: (payload) =>
+	generateAi: (payload, options = {}) =>
 		api.request("/ai/generate", {
 			method: "POST",
 			body: JSON.stringify(payload),
+			...options,
 		}),
 
 	// Bestiary methods
