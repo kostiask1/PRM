@@ -12,6 +12,51 @@ const TARGET_PRESETS = {
 	scene: { category: "scenes", subcategory: "" },
 };
 
+function decodeSegment(value) {
+	try {
+		return decodeURIComponent(value || "");
+	} catch {
+		return String(value || "");
+	}
+}
+
+function parseGalleryLocationFromImageUrl(imageUrl) {
+	if (!imageUrl) return null;
+
+	let pathname = "";
+	try {
+		if (typeof window !== "undefined") {
+			pathname = new URL(imageUrl, window.location.origin).pathname;
+		} else {
+			pathname = String(imageUrl || "");
+		}
+	} catch {
+		pathname = String(imageUrl || "");
+	}
+
+	const parts = pathname.split("/").filter(Boolean);
+	if (parts.length < 5 || parts[0] !== "api" || parts[1] !== "images") {
+		return null;
+	}
+
+	const source = decodeSegment(parts[2]);
+	const category = decodeSegment(parts[3]);
+	const tail = parts.slice(4);
+	if (!source || !category || tail.length === 0) return null;
+
+	const subcategory = tail
+		.slice(0, -1)
+		.map((segment) => decodeSegment(segment))
+		.filter(Boolean)
+		.join("/");
+
+	return {
+		source,
+		category,
+		subcategory,
+	};
+}
+
 function getPreset(target, campaignSlug) {
 	const preset = TARGET_PRESETS[target] || TARGET_PRESETS.character;
 	return {
@@ -27,7 +72,7 @@ export default function ImageAssetField({
 	target = "character",
 	isEditing = false,
 	showClearButton = false,
-	enableContextReplace = false,
+	enableContextReplace = true,
 	onImageChange,
 	imageAlt = lang.t("Image"),
 	containerClassName,
@@ -41,10 +86,11 @@ export default function ImageAssetField({
 	const [isImagePreviewOpen, setIsImagePreviewOpen] = useState(false);
 	const [hasImageError, setHasImageError] = useState(false);
 
-	const location = useMemo(
-		() => getPreset(target, campaignSlug),
-		[target, campaignSlug],
-	);
+	const location = useMemo(() => {
+		const parsed = parseGalleryLocationFromImageUrl(imageUrl);
+		if (parsed) return parsed;
+		return getPreset(target, campaignSlug);
+	}, [imageUrl, target, campaignSlug]);
 
 	useEffect(() => {
 		setHasImageError(false);
