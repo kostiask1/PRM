@@ -18,6 +18,8 @@ import useSessionView from "../hooks/useSessionView";
 import SessionViewModel from "../models/SessionViewModel.js";
 import { lang } from "../services/localization";
 import { getNotesForRender, sanitizeNotesForSave } from "../utils/noteUtils";
+import { navigateTo } from "../store/appStore";
+import { shouldOpenInNewTabFromEvent } from "../utils/navigation.js";
 
 function SessionView(props) {
 	const campaign = props.campaign;
@@ -39,6 +41,29 @@ function SessionView(props) {
 	const isSessionNotesCollapsed = hasSessionNotesData
 		? !!session.data.isNotesCollapsed
 		: false;
+	const encounterSceneNumbers = new Map();
+	(viewModel.scenes || []).forEach((scene, index) => {
+		if (scene?.encounterId == null) return;
+		const key = String(scene.encounterId);
+		if (!encounterSceneNumbers.has(key)) {
+			encounterSceneNumbers.set(key, index + 1);
+		}
+	});
+	const sessionEncounters = (viewModel.encounters || []).map((encounter) => ({
+		id: encounter.id,
+		name: encounter.name || lang.t("Untitled"),
+		sceneNumber: encounterSceneNumbers.get(String(encounter.id)) || null,
+	}));
+
+	const openEncounterFromQuickAccess = (encounterId, event) => {
+		navigateTo(
+			view.campaignSlug,
+			sessionId,
+			false,
+			encounterId,
+			shouldOpenInNewTabFromEvent(event),
+		);
+	};
 
 	return (
 		<Panel className="SessionView">
@@ -57,6 +82,31 @@ function SessionView(props) {
 								{session.name}
 							</h2>
 						</div>
+						{sessionEncounters.length > 0 && (
+							<div className="SessionView__encountersQuickAccess">
+								<span className="SessionView__encountersLabel">
+									{lang.t("Combat encounter")}:
+								</span>
+								<div className="SessionView__encountersList">
+									{sessionEncounters.map((encounter) => (
+										<Button
+											key={encounter.id}
+											variant="ghost"
+											size={Button.SIZES.SMALL}
+											onClick={(event) =>
+												openEncounterFromQuickAccess(encounter.id, event)
+											}
+										>
+											{encounter.sceneNumber
+												? `${lang.t("Scene {number}", {
+														number: encounter.sceneNumber,
+													})}: ${encounter.name}`
+												: encounter.name}
+										</Button>
+									))}
+								</div>
+							</div>
+						)}
 					</div>
 				</div>
 				<div className="SessionView__headerActions">
