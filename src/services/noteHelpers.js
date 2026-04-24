@@ -1,5 +1,6 @@
 export {
 	createEmptyNote,
-	appendTrailingEmptyNote,
-	ensureAtLeastOneNote,
+	getNotesForRender,
+	upsertNoteById,
+	sanitizeNotesForSave,
 } from "../utils/noteUtils";

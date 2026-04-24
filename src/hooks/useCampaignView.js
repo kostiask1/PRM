@@ -9,8 +9,8 @@ import {
 import { api } from "../api";
 import { navigateTo, useAppDispatch, useAppSelector } from "../store/appStore";
 import {
-	appendTrailingEmptyNote,
-	ensureAtLeastOneNote,
+	sanitizeNotesForSave,
+	upsertNoteById,
 } from "../utils/noteUtils";
 import { downloadBlob } from "../utils/download";
 import { lang } from "../services/localization";
@@ -28,7 +28,7 @@ export default function useCampaignView(props) {
 
 	const [sessions, setSessions] = useState([]);
 	const [description, setDescription] = useState(campaign.description || "");
-	const [notes, setNotes] = useState(appendTrailingEmptyNote(campaign.notes || []));
+	const [notes, setNotes] = useState(campaign.notes || []);
 	const [characters, setCharacters] = useState(campaign.characters || []);
 	const [npcs, setNpcs] = useState([]);
 	const [isDescriptionCollapsed, setIsDescriptionCollapsed] = useState(
@@ -80,7 +80,7 @@ export default function useCampaignView(props) {
 	useEffect(() => {
 		if (lastSlugRef.current !== campaign.slug) {
 			setDescription(campaign.description || "");
-			setNotes(appendTrailingEmptyNote(campaign.notes || []));
+			setNotes(campaign.notes || []);
 			setIsDescriptionCollapsed(campaign.isDescriptionCollapsed || false);
 			setIsNotesCollapsed(campaign.isNotesCollapsed || false);
 			setIsCharactersCollapsed(campaign.isCharactersCollapsed || false);
@@ -300,36 +300,31 @@ export default function useCampaignView(props) {
 			n.id === id ? { ...n, collapsed: !n.collapsed } : n,
 		);
 		setNotes(newNotes);
-		triggerSave({ notes: newNotes });
+		triggerSave({ notes: sanitizeNotesForSave(newNotes) });
 	};
 
 	const handleNoteTitleChange = (id, title) => {
 		if (!saveTimeout.current) pushToUndo();
-		let newNotes = notes.map((n) => (n.id === id ? { ...n, title } : n));
-
-		newNotes = appendTrailingEmptyNote(newNotes);
+		const newNotes = upsertNoteById(notes, id, { title });
 
 		setNotes(newNotes);
-		triggerSave({ notes: newNotes });
+		triggerSave({ notes: sanitizeNotesForSave(newNotes) });
 	};
 
 	const handleNoteChange = (id, text) => {
 		if (!saveTimeout.current) pushToUndo();
-		let newNotes = notes.map((n) => (n.id === id ? { ...n, text } : n));
-
-		newNotes = appendTrailingEmptyNote(newNotes);
+		const newNotes = upsertNoteById(notes, id, { text });
 
 		setNotes(newNotes);
-		triggerSave({ notes: newNotes });
+		triggerSave({ notes: sanitizeNotesForSave(newNotes) });
 	};
 
 	const handleDeleteNote = (id) => {
 		pushToUndo();
-		let newNotes = notes.filter((n) => n.id !== id);
-		newNotes = ensureAtLeastOneNote(newNotes);
+		const newNotes = notes.filter((n) => n.id !== id);
 
 		setNotes(newNotes);
-		triggerSave({ notes: newNotes });
+		triggerSave({ notes: sanitizeNotesForSave(newNotes) });
 	};
 
 	const handleToggleCharacterCollapse = (id) => {
@@ -588,7 +583,7 @@ export default function useCampaignView(props) {
 		pushToUndo();
 		if (updatedCampaign) {
 			setDescription(updatedCampaign.description || "");
-			setNotes(appendTrailingEmptyNote(updatedCampaign.notes || []));
+			setNotes(updatedCampaign.notes || []);
 			setCharacters(
 				(updatedCampaign.characters || []).map(sanitizeLoadedEntity),
 			);

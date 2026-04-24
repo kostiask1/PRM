@@ -1,6 +1,6 @@
 import {
-	appendTrailingEmptyNote,
 	createEmptyNote,
+	upsertNoteById,
 } from "../utils/noteUtils.js";
 
 /**
@@ -94,13 +94,7 @@ export default class CharacterCardModel {
 	}
 
 	get notes() {
-		const notes = Array.isArray(this.character.notes)
-			? [...this.character.notes]
-			: [];
-		if (notes.length === 0) {
-			notes.push(CharacterCardModel.createEmptyNote());
-		}
-		return notes;
+		return Array.isArray(this.character.notes) ? [...this.character.notes] : [];
 	}
 
 	get hasImage() {
@@ -123,28 +117,17 @@ export default class CharacterCardModel {
 	}
 
 	withUpdatedNote(noteId, updates = {}) {
-		const next = this.notes.map((note) =>
-			note.id === noteId ? { ...note, ...updates } : note,
-		);
-		return this.ensureTrailingEmptyNote(next);
+		return upsertNoteById(this.notes, noteId, updates);
 	}
 
 	withDeletedNote(noteId) {
-		const next = this.notes.filter((note) => note.id !== noteId);
-		if (next.length === 0) {
-			next.push(CharacterCardModel.createEmptyNote());
-		}
-		return next;
+		return this.notes.filter((note) => note.id !== noteId);
 	}
 
 	toggleNoteCollapse(noteId) {
 		return this.notes.map((note) =>
 			note.id === noteId ? { ...note, collapsed: !note.collapsed } : note,
 		);
-	}
-
-	ensureTrailingEmptyNote(notes = this.notes) {
-		return appendTrailingEmptyNote(notes);
 	}
 
 	static getLevelOptions(max = 20) {

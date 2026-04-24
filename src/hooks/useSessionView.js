@@ -3,9 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { confirm, prompt, requestCampaignsReloadAction } from "../actions/app";
 import { api } from "../api";
 import {
-	appendTrailingEmptyNote,
-	ensureAtLeastOneNote,
-	createEmptyNote,
+	upsertNoteById,
 } from "../utils/noteUtils";
 import { idsEqual } from "../utils/id";
 import { shouldOpenInNewTabFromEvent } from "../utils/navigation.js";
@@ -30,7 +28,7 @@ export default function useSessionView(props) {
 	const isUpdatingHistory = useRef(false);
 	const normalizeSceneNotes = useCallback((scenes = []) => {
 		return (scenes || []).map((scene) => {
-			const notes = appendTrailingEmptyNote(scene.notes || []);
+			const notes = scene.notes || [];
 			return {
 				...scene,
 				notes,
@@ -182,7 +180,7 @@ export default function useSessionView(props) {
 			try {
 				const data = await api.getSession(campaignSlug, sessionId);
 
-				data.data.notes = appendTrailingEmptyNote(data.data.notes || []);
+				data.data.notes = data.data.notes || [];
 				data.data.scenes = normalizeSceneNotes(data.data.scenes || []);
 
 				setSession(data);
@@ -280,7 +278,7 @@ export default function useSessionView(props) {
 					texts: {},
 					collapsed: false,
 					isNotesCollapsed: false,
-					notes: [createEmptyNote()],
+					notes: [],
 				},
 			],
 			true,
@@ -392,20 +390,16 @@ export default function useSessionView(props) {
 
 	const handleNoteTitleChange = (id, title) => {
 		if (!session) return;
-		let notes = session.data.notes || [];
-		let newNotes = notes.map((n) => (n.id === id ? { ...n, title } : n));
-
-		newNotes = appendTrailingEmptyNote(newNotes);
+		const notes = session.data.notes || [];
+		const newNotes = upsertNoteById(notes, id, { title });
 
 		updateData("notes", newNotes);
 	};
 
 	const handleNoteChange = (id, text) => {
 		if (!session) return;
-		let notes = session.data.notes || [];
-		let newNotes = notes.map((n) => (n.id === id ? { ...n, text } : n));
-
-		newNotes = appendTrailingEmptyNote(newNotes);
+		const notes = session.data.notes || [];
+		const newNotes = upsertNoteById(notes, id, { text });
 
 		updateData("notes", newNotes);
 	};
@@ -420,8 +414,7 @@ export default function useSessionView(props) {
 
 	const handleDeleteNote = (id) => {
 		if (!session) return;
-		let newNotes = (session.data.notes || []).filter((n) => n.id !== id);
-		newNotes = ensureAtLeastOneNote(newNotes);
+		const newNotes = (session.data.notes || []).filter((n) => n.id !== id);
 
 		updateData("notes", newNotes, true);
 	};
@@ -444,22 +437,14 @@ export default function useSessionView(props) {
 
 	const handleSceneNoteTitleChange = (sceneId, noteId, title) => {
 		updateSceneById(sceneId, (scene) => {
-			const notes = appendTrailingEmptyNote(
-				(scene.notes || []).map((note) =>
-					note.id === noteId ? { ...note, title } : note,
-				),
-			);
+			const notes = upsertNoteById(scene.notes || [], noteId, { title });
 			return { ...scene, notes };
 		});
 	};
 
 	const handleSceneNoteChange = (sceneId, noteId, text) => {
 		updateSceneById(sceneId, (scene) => {
-			const notes = appendTrailingEmptyNote(
-				(scene.notes || []).map((note) =>
-					note.id === noteId ? { ...note, text } : note,
-				),
-			);
+			const notes = upsertNoteById(scene.notes || [], noteId, { text });
 			return { ...scene, notes };
 		});
 	};
@@ -481,9 +466,7 @@ export default function useSessionView(props) {
 		updateSceneById(
 			sceneId,
 			(scene) => {
-				let notes = (scene.notes || []).filter((note) => note.id !== noteId);
-				notes = ensureAtLeastOneNote(notes);
-				notes = appendTrailingEmptyNote(notes);
+				const notes = (scene.notes || []).filter((note) => note.id !== noteId);
 				return { ...scene, notes };
 			},
 			true,
@@ -511,9 +494,7 @@ export default function useSessionView(props) {
 
 		isUpdatingHistory.current = true;
 
-		updatedSession.data.notes = appendTrailingEmptyNote(
-			updatedSession.data.notes || [],
-		);
+		updatedSession.data.notes = updatedSession.data.notes || [];
 		updatedSession.data.scenes = normalizeSceneNotes(
 			updatedSession.data.scenes || [],
 		);

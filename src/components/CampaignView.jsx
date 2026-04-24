@@ -16,6 +16,7 @@ import useCampaignView from "../hooks/useCampaignView";
 import CampaignViewModel from "../models/CampaignViewModel.js";
 import { navigateTo } from "../store/appStore";
 import { lang } from "../services/localization";
+import { getNotesForRender, sanitizeNotesForSave } from "../utils/noteUtils";
 
 function CampaignView(props) {
 	const campaign = props.campaign;
@@ -29,6 +30,7 @@ function CampaignView(props) {
 			String(note?.title || "").trim().length > 0 ||
 			String(note?.text || "").trim().length > 0,
 	);
+	const notesForRender = getNotesForRender(view.notes || []);
 	const hasCharactersData = (view.characters || []).length > 0;
 	const hasNpcsData = (view.npcs || []).length > 0;
 	const isDescriptionCollapsed = hasDescriptionData
@@ -279,15 +281,21 @@ function CampaignView(props) {
 							</div>
 							{!isNotesCollapsed && (
 								<DraggableList
-									items={view.notes}
+									items={notesForRender}
 									className="CampaignView__notes"
-									onReorder={view.setNotes}
-									onDrop={() => view.triggerSave({ notes: view.notes })}
+									onReorder={(newNotes) =>
+										view.setNotes(sanitizeNotesForSave(newNotes))
+									}
+									onDrop={() =>
+										view.triggerSave({
+											notes: sanitizeNotesForSave(view.notes),
+										})
+									}
 									keyExtractor={(note) => note.id}
 									renderItem={(note, isDragging, index) => (
 										<NoteCard
 											note={note}
-											isLast={index === view.notes.length - 1}
+											isLast={index === notesForRender.length - 1}
 											isDragging={isDragging}
 											campaignSlug={campaign.slug}
 											onToggleCollapse={view.handleToggleNoteCollapse}

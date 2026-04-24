@@ -17,6 +17,7 @@ import "../assets/components/SessionView.css";
 import useSessionView from "../hooks/useSessionView";
 import SessionViewModel from "../models/SessionViewModel.js";
 import { lang } from "../services/localization";
+import { getNotesForRender, sanitizeNotesForSave } from "../utils/noteUtils";
 
 function SessionView(props) {
 	const campaign = props.campaign;
@@ -34,6 +35,7 @@ function SessionView(props) {
 			String(note?.title || "").trim().length > 0 ||
 			String(note?.text || "").trim().length > 0,
 	);
+	const sessionNotesForRender = getNotesForRender(viewModel.notes || []);
 	const isSessionNotesCollapsed = hasSessionNotesData
 		? !!session.data.isNotesCollapsed
 		: false;
@@ -103,15 +105,17 @@ function SessionView(props) {
 					>
 						{!isSessionNotesCollapsed && (
 							<DraggableList
-								items={viewModel.notes}
+								items={sessionNotesForRender}
 								className="SessionView__notes"
-								onReorder={(notes) => view.updateData("notes", notes)}
+								onReorder={(notes) =>
+									view.updateData("notes", sanitizeNotesForSave(notes))
+								}
 								onDrop={() => view.triggerSave(session, true)}
 								keyExtractor={(note) => note.id}
 								renderItem={(note, isDragging, index) => (
 									<NoteCard
 										note={note}
-										isLast={index === viewModel.notes.length - 1}
+										isLast={index === sessionNotesForRender.length - 1}
 										isDragging={isDragging}
 										campaignSlug={view.campaignSlug}
 										onToggleCollapse={view.handleToggleNoteCollapse}
@@ -270,6 +274,7 @@ function SceneCard(props) {
 		? props.encounterName
 		: lang.t("Encounter");
 	const sceneNotes = props.scene.notes || [];
+	const sceneNotesForRender = getNotesForRender(sceneNotes);
 	const hasSceneNotesData = sceneNotes.some(
 		(note) =>
 			String(note?.title || "").trim().length > 0 ||
@@ -317,11 +322,11 @@ function SceneCard(props) {
 							</div>
 							{!isSceneNotesCollapsed && (
 								<div className="SceneCard__notes-list">
-									{sceneNotes.map((note, index) => (
+									{sceneNotesForRender.map((note, index) => (
 										<NoteCard
 											key={note.id}
 											note={note}
-											isLast={index === sceneNotes.length - 1}
+											isLast={index === sceneNotesForRender.length - 1}
 											campaignSlug={props.campaignSlug}
 											onToggleCollapse={props.onSceneNoteToggleCollapse}
 											onTitleChange={props.onSceneNoteTitleChange}

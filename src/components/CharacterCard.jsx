@@ -12,6 +12,7 @@ import CollapseToggleButton from "./common/CollapseToggleButton.jsx";
 import classNames from "../utils/classNames";
 import { lang } from "../services/localization";
 import { renderMentionText } from "../utils/parser.jsx";
+import { getNotesForRender } from "../utils/noteUtils";
 
 const markdownTagsWithMentions = [
 	"p",
@@ -78,6 +79,7 @@ export default function CharacterCard({
 			String(note?.title || "").trim().length > 0 ||
 			String(note?.text || "").trim().length > 0,
 	);
+	const notesForRender = getNotesForRender(characterModel.notes);
 	const hasCardData =
 		String(character.firstName || "").trim().length > 0 ||
 		String(character.lastName || "").trim().length > 0 ||
@@ -346,11 +348,11 @@ export default function CharacterCard({
 						</div>
 						{!isNotesCollapsed && (
 							<div className="character-card__notes-list">
-								{characterModel.notes.map((note, index) => (
+								{notesForRender.map((note, index) => (
 									<NoteCard
 										key={note.id}
 										note={note}
-										isLast={index === characterModel.notes.length - 1}
+										isLast={index === notesForRender.length - 1}
 										campaignSlug={campaignSlug}
 										onToggleCollapse={(id) => {
 											updateField(
