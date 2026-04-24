@@ -6,6 +6,8 @@ import Button from "../form/Button";
 import EditableField from "../form/EditableField";
 import CollapseToggleButton from "./CollapseToggleButton";
 
+const SHORT_TEXT_LENGTH = 60;
+
 export default function NoteCard({
 	note,
 	isLast,
@@ -23,6 +25,7 @@ export default function NoteCard({
 	const isCollapsed = !isLast && note.collapsed;
 	const showClassicHeader = !simplifiedNotesEnabled;
 	const showSimplifiedActions = simplifiedNotesEnabled && !isLast;
+	const shortText = note.text.slice(0, SHORT_TEXT_LENGTH);
 
 	return (
 		<div
@@ -31,7 +34,9 @@ export default function NoteCard({
 				"note-card-simple--dragging": isDragging,
 				"note-card-simple--simplified": simplifiedNotesEnabled,
 			})}
-			onClick={() => isCollapsed && simplifiedNotesEnabled && onToggleCollapse(note.id)}
+			onClick={() =>
+				isCollapsed && simplifiedNotesEnabled && onToggleCollapse(note.id)
+			}
 		>
 			{showClassicHeader && (
 				<div
@@ -67,7 +72,10 @@ export default function NoteCard({
 				</div>
 			)}
 			{showSimplifiedActions && isCollapsed && (
-				<div>{note.text.slice(0, 40)}</div>
+				<div>
+					{shortText}
+					{note.text.length > SHORT_TEXT_LENGTH && "..."}
+				</div>
 			)}
 			{showSimplifiedActions && (
 				<div className="note-card-simple__simpleActions">
@@ -101,9 +109,7 @@ export default function NoteCard({
 						value={note.text}
 						onChange={(event) => onTextChange(note.id, event.target.value)}
 						placeholder={lang.t("Note text...")}
-						plainTextPreview={
-							simplifiedNotesEnabled && !forceMarkdownPreview
-						}
+						plainTextPreview={simplifiedNotesEnabled && !forceMarkdownPreview}
 						campaignSlug={campaignSlug}
 					/>
 				</div>
