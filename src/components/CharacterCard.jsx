@@ -73,7 +73,26 @@ export default function CharacterCard({
 	const [isEditing, setIsEditing] = useState(initialEditing);
 	const characterModel = new CharacterCardModel(character);
 	const isModalView = viewMode === "modal";
-	const isCollapsed = isModalView ? false : !!character.collapsed;
+	const hasCharacterNotesData = characterModel.notes.some(
+		(note) =>
+			String(note?.title || "").trim().length > 0 ||
+			String(note?.text || "").trim().length > 0,
+	);
+	const hasCardData =
+		String(character.firstName || "").trim().length > 0 ||
+		String(character.lastName || "").trim().length > 0 ||
+		String(character.race || "").trim().length > 0 ||
+		String(character.class || "").trim().length > 0 ||
+		String(character.motivation || "").trim().length > 0 ||
+		String(character.trait || "").trim().length > 0 ||
+		String(character.imageUrl || "").trim().length > 0 ||
+		hasCharacterNotesData;
+	const canCollapseCard =
+		!isModalView && typeof onToggleCollapse === "function" && hasCardData;
+	const isCollapsed = canCollapseCard ? !!character.collapsed : false;
+	const isNotesCollapsed = hasCharacterNotesData
+		? !!character.isNotesCollapsed
+		: false;
 	const mentionComponents = useMemo(
 		() =>
 			Object.fromEntries(
@@ -118,12 +137,12 @@ export default function CharacterCard({
 				<div
 					className="character-card__header"
 					onClick={
-						isModalView || typeof onToggleCollapse !== "function"
+						!canCollapseCard
 							? undefined
 							: () => onToggleCollapse(character.id)
 					}
 				>
-					{!isModalView && typeof onToggleCollapse === "function" && (
+					{canCollapseCard && (
 						<CollapseToggleButton
 							size={Button.SIZES.SMALL}
 							collapsed={isCollapsed}
@@ -304,20 +323,28 @@ export default function CharacterCard({
 					<div className="character-card__notes">
 						<div
 							className="character-card__notes-header"
-							onClick={() =>
-								updateField("isNotesCollapsed", !character.isNotesCollapsed)
+							onClick={
+								hasCharacterNotesData
+									? () =>
+											updateField(
+												"isNotesCollapsed",
+												!character.isNotesCollapsed,
+											)
+									: undefined
 							}
 						>
-							<CollapseToggleButton
-								size={Button.SIZES.SMALL}
-								collapsed={character.isNotesCollapsed}
-								onClick={() =>
-									updateField("isNotesCollapsed", !character.isNotesCollapsed)
-								}
-							/>
+							{hasCharacterNotesData && (
+								<CollapseToggleButton
+									size={Button.SIZES.SMALL}
+									collapsed={isNotesCollapsed}
+									onClick={() =>
+										updateField("isNotesCollapsed", !character.isNotesCollapsed)
+									}
+								/>
+							)}
 							<label>{lang.t("Character notes")}</label>
 						</div>
-						{!character.isNotesCollapsed && (
+						{!isNotesCollapsed && (
 							<div className="character-card__notes-list">
 								{characterModel.notes.map((note, index) => (
 									<NoteCard

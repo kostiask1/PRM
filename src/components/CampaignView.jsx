@@ -23,6 +23,22 @@ function CampaignView(props) {
 	const viewModel = new CampaignViewModel(campaign);
 	const [sessionSearch, setSessionSearch] = useState("");
 	const [sessionStatusFilter, setSessionStatusFilter] = useState("all");
+	const hasDescriptionData = String(view.description || "").trim().length > 0;
+	const hasNotesData = (view.notes || []).some(
+		(note) =>
+			String(note?.title || "").trim().length > 0 ||
+			String(note?.text || "").trim().length > 0,
+	);
+	const hasCharactersData = (view.characters || []).length > 0;
+	const hasNpcsData = (view.npcs || []).length > 0;
+	const isDescriptionCollapsed = hasDescriptionData
+		? view.isDescriptionCollapsed
+		: false;
+	const isNotesCollapsed = hasNotesData ? view.isNotesCollapsed : false;
+	const isCharactersCollapsed = hasCharactersData
+		? view.isCharactersCollapsed
+		: false;
+	const isNpcsCollapsed = hasNpcsData ? view.isNpcsCollapsed : false;
 
 	const filteredSessions = useMemo(() => {
 		const query = sessionSearch.trim().toLowerCase();
@@ -203,24 +219,27 @@ function CampaignView(props) {
 								<div
 									className="section-title-group"
 									onClick={() => {
-										const next = !view.isDescriptionCollapsed;
+										if (!hasDescriptionData) return;
+										const next = !isDescriptionCollapsed;
 										view.setIsDescriptionCollapsed(next);
 										view.triggerSave({ isDescriptionCollapsed: next });
 									}}
 								>
-									<CollapseToggleButton
-										size={Button.SIZES.MEDIUM}
-										collapsed={view.isDescriptionCollapsed}
-										onClick={() => {
-											const next = !view.isDescriptionCollapsed;
-											view.setIsDescriptionCollapsed(next);
-											view.triggerSave({ isDescriptionCollapsed: next });
-										}}
-									/>
+									{hasDescriptionData && (
+										<CollapseToggleButton
+											size={Button.SIZES.MEDIUM}
+											collapsed={isDescriptionCollapsed}
+											onClick={() => {
+												const next = !isDescriptionCollapsed;
+												view.setIsDescriptionCollapsed(next);
+												view.triggerSave({ isDescriptionCollapsed: next });
+											}}
+										/>
+									)}
 									<h3>{lang.t("Campaign story")}</h3>
 								</div>
 							</div>
-							{!view.isDescriptionCollapsed && (
+							{!isDescriptionCollapsed && (
 								<EditableField
 									type="textarea"
 									className="CampaignView__script"
@@ -238,24 +257,27 @@ function CampaignView(props) {
 								<div
 									className="section-title-group"
 									onClick={() => {
-										const next = !view.isNotesCollapsed;
+										if (!hasNotesData) return;
+										const next = !isNotesCollapsed;
 										view.setIsNotesCollapsed(next);
 										view.triggerSave({ isNotesCollapsed: next });
 									}}
 								>
-									<CollapseToggleButton
-										size={Button.SIZES.MEDIUM}
-										collapsed={view.isNotesCollapsed}
-										onClick={() => {
-											const next = !view.isNotesCollapsed;
-											view.setIsNotesCollapsed(next);
-											view.triggerSave({ isNotesCollapsed: next });
-										}}
-									/>
+									{hasNotesData && (
+										<CollapseToggleButton
+											size={Button.SIZES.MEDIUM}
+											collapsed={isNotesCollapsed}
+											onClick={() => {
+												const next = !isNotesCollapsed;
+												view.setIsNotesCollapsed(next);
+												view.triggerSave({ isNotesCollapsed: next });
+											}}
+										/>
+									)}
 									<h3>{lang.t("Notes")}</h3>
 								</div>
 							</div>
-							{!view.isNotesCollapsed && (
+							{!isNotesCollapsed && (
 								<DraggableList
 									items={view.notes}
 									className="CampaignView__notes"
@@ -283,30 +305,33 @@ function CampaignView(props) {
 								<div
 									className="section-title-group"
 									onClick={() => {
-										const next = !view.isCharactersCollapsed;
+										if (!hasCharactersData) return;
+										const next = !isCharactersCollapsed;
 										view.setIsCharactersCollapsed(next);
 										view.triggerSave({ isCharactersCollapsed: next });
 									}}
 								>
-									<CollapseToggleButton
-										size={Button.SIZES.MEDIUM}
-										collapsed={view.isCharactersCollapsed}
-										onClick={() => {
-											const next = !view.isCharactersCollapsed;
-											view.setIsCharactersCollapsed(next);
-											view.triggerSave({ isCharactersCollapsed: next });
-										}}
-									/>
+									{hasCharactersData && (
+										<CollapseToggleButton
+											size={Button.SIZES.MEDIUM}
+											collapsed={isCharactersCollapsed}
+											onClick={() => {
+												const next = !isCharactersCollapsed;
+												view.setIsCharactersCollapsed(next);
+												view.triggerSave({ isCharactersCollapsed: next });
+											}}
+										/>
+									)}
 									<h3>{lang.t("Characters")}</h3>
 								</div>
-								{!view.isCharactersCollapsed && (
+								{!isCharactersCollapsed && (
 									<CreateCharacterButton
 										campaignSlug={campaign.slug}
 										entityType="characters"
 									/>
 								)}
 							</div>
-							{!view.isCharactersCollapsed && (
+							{!isCharactersCollapsed && (
 								<DraggableList
 									items={view.characters}
 									className="CampaignView__characters"
@@ -335,30 +360,33 @@ function CampaignView(props) {
 								<div
 									className="section-title-group"
 									onClick={() => {
-										const next = !view.isNpcsCollapsed;
+										if (!hasNpcsData) return;
+										const next = !isNpcsCollapsed;
 										view.setIsNpcsCollapsed(next);
 										view.triggerSave({ isNpcsCollapsed: next });
 									}}
 								>
-									<CollapseToggleButton
-										size={Button.SIZES.MEDIUM}
-										collapsed={view.isNpcsCollapsed}
-										onClick={() => {
-											const next = !view.isNpcsCollapsed;
-											view.setIsNpcsCollapsed(next);
-											view.triggerSave({ isNpcsCollapsed: next });
-										}}
-									/>
+									{hasNpcsData && (
+										<CollapseToggleButton
+											size={Button.SIZES.MEDIUM}
+											collapsed={isNpcsCollapsed}
+											onClick={() => {
+												const next = !isNpcsCollapsed;
+												view.setIsNpcsCollapsed(next);
+												view.triggerSave({ isNpcsCollapsed: next });
+											}}
+										/>
+									)}
 									<h3>{lang.t("NPC")}</h3>
 								</div>
-								{!view.isNpcsCollapsed && (
+								{!isNpcsCollapsed && (
 									<CreateCharacterButton
 										campaignSlug={campaign.slug}
 										entityType="npc"
 									/>
 								)}
 							</div>
-							{!view.isNpcsCollapsed && (
+							{!isNpcsCollapsed && (
 								<DraggableList
 									items={view.npcs}
 									className="CampaignView__characters"

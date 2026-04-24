@@ -29,6 +29,14 @@ function SessionView(props) {
 		...session,
 		isSaving: view.isSaving,
 	});
+	const hasSessionNotesData = (viewModel.notes || []).some(
+		(note) =>
+			String(note?.title || "").trim().length > 0 ||
+			String(note?.text || "").trim().length > 0,
+	);
+	const isSessionNotesCollapsed = hasSessionNotesData
+		? !!session.data.isNotesCollapsed
+		: false;
 
 	return (
 		<Panel className="SessionView">
@@ -86,10 +94,14 @@ function SessionView(props) {
 				<div className="SessionView__todoList">
 					<TodoSection
 						title={lang.t("Notes")}
-						collapsed={!!session.data.isNotesCollapsed}
-						onToggle={() => view.handleToggleSectionCollapse("Notes")}
+						collapsed={isSessionNotesCollapsed}
+						onToggle={
+							hasSessionNotesData
+								? () => view.handleToggleSectionCollapse("Notes")
+								: undefined
+						}
 					>
-						{!session.data.isNotesCollapsed && (
+						{!isSessionNotesCollapsed && (
 							<DraggableList
 								items={viewModel.notes}
 								className="SessionView__notes"
@@ -257,6 +269,15 @@ function SceneCard(props) {
 	const encounterLabel = props.hasEncounter
 		? props.encounterName
 		: lang.t("Encounter");
+	const sceneNotes = props.scene.notes || [];
+	const hasSceneNotesData = sceneNotes.some(
+		(note) =>
+			String(note?.title || "").trim().length > 0 ||
+			String(note?.text || "").trim().length > 0,
+	);
+	const isSceneNotesCollapsed = hasSceneNotesData
+		? !!props.scene.isNotesCollapsed
+		: false;
 
 	return (
 		<div className="SceneCard">
@@ -281,22 +302,26 @@ function SceneCard(props) {
 						<div className="SceneCard__notes">
 							<div
 								className="SceneCard__notes-header"
-								onClick={props.onToggleNotesCollapse}
+								onClick={
+									hasSceneNotesData ? props.onToggleNotesCollapse : undefined
+								}
 							>
-								<CollapseToggleButton
-									size={Button.SIZES.SMALL}
-									collapsed={props.scene.isNotesCollapsed}
-									onClick={props.onToggleNotesCollapse}
-								/>
+								{hasSceneNotesData && (
+									<CollapseToggleButton
+										size={Button.SIZES.SMALL}
+										collapsed={isSceneNotesCollapsed}
+										onClick={props.onToggleNotesCollapse}
+									/>
+								)}
 								<label>{lang.t("Scene notes")}</label>
 							</div>
-							{!props.scene.isNotesCollapsed && (
+							{!isSceneNotesCollapsed && (
 								<div className="SceneCard__notes-list">
-									{(props.scene.notes || []).map((note, index) => (
+									{sceneNotes.map((note, index) => (
 										<NoteCard
 											key={note.id}
 											note={note}
-											isLast={index === (props.scene.notes || []).length - 1}
+											isLast={index === sceneNotes.length - 1}
 											campaignSlug={props.campaignSlug}
 											onToggleCollapse={props.onSceneNoteToggleCollapse}
 											onTitleChange={props.onSceneNoteTitleChange}

@@ -22,7 +22,10 @@ export default function NoteCard({
 	const simplifiedNotesEnabled = useAppSelector(
 		(state) => state.ui.simplifiedNotes,
 	);
-	const isCollapsed = !isLast && note.collapsed;
+	const noteTitle = String(note.title || "").trim();
+	const noteText = String(note.text || "").trim();
+	const canCollapse = !isLast && (noteTitle.length > 0 || noteText.length > 0);
+	const isCollapsed = canCollapse && note.collapsed;
 	const showClassicHeader = !simplifiedNotesEnabled;
 	const showSimplifiedActions = simplifiedNotesEnabled && !isLast;
 	const shortText = note.text.slice(0, SHORT_TEXT_LENGTH);
@@ -35,15 +38,18 @@ export default function NoteCard({
 				"note-card-simple--simplified": simplifiedNotesEnabled,
 			})}
 			onClick={() =>
-				isCollapsed && simplifiedNotesEnabled && onToggleCollapse(note.id)
+				isCollapsed &&
+				simplifiedNotesEnabled &&
+				canCollapse &&
+				onToggleCollapse(note.id)
 			}
 		>
 			{showClassicHeader && (
 				<div
 					className="note-card-simple__header"
-					onClick={() => !isLast && onToggleCollapse(note.id)}
+					onClick={() => canCollapse && onToggleCollapse(note.id)}
 				>
-					{!isLast && (
+					{canCollapse && (
 						<CollapseToggleButton
 							size={Button.SIZES.SMALL}
 							collapsed={isCollapsed}
@@ -79,15 +85,17 @@ export default function NoteCard({
 			)}
 			{showSimplifiedActions && (
 				<div className="note-card-simple__simpleActions">
-					<CollapseToggleButton
-						size={Button.SIZES.SMALL}
-						collapsed={isCollapsed}
-						onClick={() => onToggleCollapse(note.id)}
-						title={
-							isCollapsed ? lang.t("Expand note") : lang.t("Collapse note")
-						}
-						className="note-card-simple__actionBtn"
-					/>
+					{canCollapse && (
+						<CollapseToggleButton
+							size={Button.SIZES.SMALL}
+							collapsed={isCollapsed}
+							onClick={() => onToggleCollapse(note.id)}
+							title={
+								isCollapsed ? lang.t("Expand note") : lang.t("Collapse note")
+							}
+							className="note-card-simple__actionBtn"
+						/>
+					)}
 					<Button
 						variant="ghost"
 						icon="trash"
