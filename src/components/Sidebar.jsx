@@ -14,6 +14,7 @@ import {
 	closeActiveModal,
 	openModalRequest,
 	useAppDispatch,
+	useAppSelector,
 } from "../store/appStore";
 import { lang } from "../services/localization";
 import "../assets/components/Sidebar.css";
@@ -37,6 +38,12 @@ export default function Sidebar({
 	const [localCampaigns, setLocalCampaigns] = useState(campaigns);
 	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 	const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+	const activeNavigationSlug = useAppSelector(
+		(store) => store.navigation.activeCampaignSlug,
+	);
+	const effectiveActiveSlug = activeCampaignId || activeNavigationSlug;
+	const isBestiaryActive = effectiveActiveSlug === "bestiary";
+	const isSpellsActive = effectiveActiveSlug === "spells";
 
 	useEffect(() => {
 		setLocalCampaigns(campaigns);
@@ -167,7 +174,7 @@ export default function Sidebar({
 					</a>
 					<a
 						href="/bestiary"
-						className="Sidebar__link"
+						className={`Sidebar__link${isBestiaryActive ? " Sidebar__link--active" : ""}`}
 						onClick={(e) => {
 							if (!e.ctrlKey && !e.metaKey) {
 								e.preventDefault();
@@ -180,7 +187,7 @@ export default function Sidebar({
 					</a>
 					<a
 						href="/spells"
-						className="Sidebar__link"
+						className={`Sidebar__link${isSpellsActive ? " Sidebar__link--active" : ""}`}
 						onClick={(e) => {
 							if (!e.ctrlKey && !e.metaKey) {
 								e.preventDefault();
