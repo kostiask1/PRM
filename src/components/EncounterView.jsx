@@ -1,4 +1,5 @@
-﻿import Panel from "./common/Panel";
+import { useEffect, useRef, useState } from "react";
+import Panel from "./common/Panel";
 import Button from "./form/Button";
 import Modal from "./common/Modal";
 import Bestiary from "./Bestiary";
@@ -10,18 +11,36 @@ import useEncounterView from "../hooks/useEncounterView";
 import Tooltip from "./common/Tooltip";
 import classNames from "../utils/classNames";
 import "../assets/components/EncounterView.css";
+import { api } from "../api";
+import { setUiSettingsAction } from "../actions/app";
 import { lang } from "../services/localization";
+import { useAppDispatch, useAppSelector } from "../store/appStore";
 import { renderMentionText } from "../utils/parser";
 
 function EncounterView(props) {
 	const campaign = props.campaign;
 	const sessionId = props.sessionId;
 	const encounterId = props.encounterId;
+	const dispatch = useAppDispatch();
+	const displayMode = useAppSelector(
+		(state) => state.ui.encounterViewMode || "single",
+	);
+	const [focusedMonsterId, setFocusedMonsterId] = useState(null);
+	const gridItemRefs = useRef(new Map());
+	const focusTimeoutRef = useRef(null);
 	const view = useEncounterView({
 		campaign,
 		sessionId,
 		encounterId,
 	});
+
+	useEffect(() => {
+		return () => {
+			if (focusTimeoutRef.current) {
+				clearTimeout(focusTimeoutRef.current);
+			}
+		};
+	}, []);
 
 	if (!view.encounter) {
 		return (
@@ -30,6 +49,45 @@ function EncounterView(props) {
 			</Panel>
 		);
 	}
+
+	const setGridItemRef = (instanceId, node) => {
+		if (node) {
+			gridItemRefs.current.set(instanceId, node);
+		} else {
+			gridItemRefs.current.delete(instanceId);
+		}
+	};
+
+	const focusMonsterInGrid = (instanceId) => {
+		const node = gridItemRefs.current.get(instanceId);
+		if (node) {
+			node.scrollIntoView({ behavior: "auto", block: "center" });
+		}
+		setFocusedMonsterId(instanceId);
+		if (focusTimeoutRef.current) {
+			clearTimeout(focusTimeoutRef.current);
+		}
+		focusTimeoutRef.current = setTimeout(() => {
+			setFocusedMonsterId((current) =>
+				current === instanceId ? null : current,
+			);
+		}, 1800);
+	};
+
+	const handleSelectMonster = (monster) => {
+		view.setSelectedInstance(monster);
+		if (displayMode === "grid") {
+			focusMonsterInGrid(monster.instanceId);
+		}
+	};
+
+	const updateEncounterViewMode = (mode) => {
+		const nextMode = mode === "grid" ? "grid" : "single";
+		dispatch(setUiSettingsAction({ encounterViewMode: nextMode }));
+		api.updateSettings({ encounterViewMode: nextMode }).catch((error) => {
+			console.error("Failed to save encounter view mode setting", error);
+		});
+	};
 
 	return (
 		<Panel className="EncounterView">
@@ -57,6 +115,22 @@ function EncounterView(props) {
 					</p>
 				</div>
 				<div className="EncounterView__headerActions">
+					<div className="EncounterView__viewModeSwitch">
+						<Button
+							variant={displayMode === "single" ? "primary" : "ghost"}
+							size={Button.SIZES.SMALL}
+							icon="list"
+							onClick={() => updateEncounterViewMode("single")}
+							title={lang.t("Preview")}
+						/>
+						<Button
+							variant={displayMode === "grid" ? "primary" : "ghost"}
+							size={Button.SIZES.SMALL}
+							icon="layers"
+							onClick={() => updateEncounterViewMode("grid")}
+							title={lang.t("All")}
+						/>
+					</div>
 					<Button
 						variant="ghost"
 						size={Button.SIZES.SMALL}
@@ -120,7 +194,7 @@ function EncounterView(props) {
 											view.selectedInstance?.instanceId === m.instanceId,
 										"is-dragging": isDragging,
 									})}
-									onClick={() => view.setSelectedInstance(m)}
+									onClick={() => handleSelectMonster(m)}
 								>
 									<div className="EncounterMonsterRow__content">
 										<Tooltip content={lang.t("Click to rename")}>
@@ -209,18 +283,55 @@ function EncounterView(props) {
 						/>
 					</div>
 
-					<div className="EncounterView__detailView">
-						{view.selectedInstance ? (
-							<MonsterStatBlock
-								monster={view.selectedInstance}
-								tokenImageOverrideUrl={view.getMonsterImageOverride(
-									view.selectedInstance,
-								)}
-							/>
+					<div
+						className={classNames("EncounterView__detailView", {
+							"EncounterView__detailView--grid": displayMode === "grid",
+							"EncounterView__detailView--single": displayMode !== "grid",
+						})}
+					>
+						{displayMode === "grid" ? (
+							view.encounter.monsters.length > 0 ? (
+								<div className="EncounterView__grid">
+									{view.encounter.monsters.map((monster) => (
+										<div
+											key={monster.instanceId}
+											ref={(node) => setGridItemRef(monster.instanceId, node)}
+											className={classNames("EncounterView__gridItem", {
+												"is-selected":
+													view.selectedInstance?.instanceId ===
+													monster.instanceId,
+												"is-focused": focusedMonsterId === monster.instanceId,
+											})}
+										>
+											<MonsterStatBlock
+												monster={monster}
+												tokenImageOverrideUrl={view.getMonsterImageOverride(
+													monster,
+												)}
+											/>
+										</div>
+									))}
+								</div>
+							) : (
+								<p className="muted">
+									{lang.t("Select a monster from the list to see its stats.")}
+								</p>
+							)
 						) : (
-							<p className="muted">
-								{lang.t("Select a monster from the list to see its stats.")}
-							</p>
+							<>
+								{view.selectedInstance ? (
+									<MonsterStatBlock
+										monster={view.selectedInstance}
+										tokenImageOverrideUrl={view.getMonsterImageOverride(
+											view.selectedInstance,
+										)}
+									/>
+								) : (
+									<p className="muted">
+										{lang.t("Select a monster from the list to see its stats.")}
+									</p>
+								)}
+							</>
 						)}
 					</div>
 				</div>

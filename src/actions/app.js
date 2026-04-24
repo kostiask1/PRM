@@ -64,6 +64,13 @@ export function setUiSettingsAction(payload) {
 	}
 	if (
 		payload &&
+		Object.prototype.hasOwnProperty.call(payload, "encounterViewMode")
+	) {
+		nextPayload.encounterViewMode =
+			payload.encounterViewMode === "grid" ? "grid" : "single";
+	}
+	if (
+		payload &&
 		Object.prototype.hasOwnProperty.call(payload, "simplifiedNotes")
 	) {
 		nextPayload.simplifiedNotes = Boolean(payload.simplifiedNotes);

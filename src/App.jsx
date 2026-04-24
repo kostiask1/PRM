@@ -111,6 +111,7 @@ export default function App() {
 				dispatch(
 					setUiSettingsAction({
 						theme: settings.theme,
+						encounterViewMode: settings.encounterViewMode,
 						simplifiedNotes: settings.simplifiedNotes,
 					}),
 				);

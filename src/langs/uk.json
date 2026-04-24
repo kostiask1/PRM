@@ -55,6 +55,7 @@
 	"Click to rename": "Натисніть, щоб перейменувати",
 	"Close": "Закрити",
 	"Combat encounter": "Бойове зіткнення",
+	"Combat appearance": "Вигляд бою",
 	"Combat encounters": "Бойові зіткнення",
 	"Completed": "Завершено",
 	"Components": "Компоненти",
@@ -282,7 +283,9 @@
 	"Settings": "Налаштування",
 	"Theme": "Тема",
 	"Simplified notes mode": "Спрощений режим нотаток",
+	"Single monster preview": "Перегляд одного монстра",
 	"Use plain text notes without title and markdown preview": "Використовувати прості текстові нотатки без заголовка і markdown-перегляду",
+	"Grid of all monsters": "Сітка всіх монстрів",
 	"Expand note": "Розгорнути нотатку",
 	"Collapse note": "Згорнути нотатку"
 }

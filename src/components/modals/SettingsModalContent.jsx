@@ -18,6 +18,9 @@ export default function SettingsModalContent({ onCancel }) {
 		(state) => state.localization.availableLanguages,
 	);
 	const currentTheme = useAppSelector((state) => state.ui.theme);
+	const encounterViewMode = useAppSelector(
+		(state) => state.ui.encounterViewMode || "single",
+	);
 	const simplifiedNotesEnabled = useAppSelector(
 		(state) => state.ui.simplifiedNotes,
 	);
@@ -32,12 +35,7 @@ export default function SettingsModalContent({ onCancel }) {
 
 	const handleThemeToggle = () => {
 		const nextTheme = currentTheme === THEMES.DARK ? THEMES.LIGHT : THEMES.DARK;
-		dispatch(
-			setUiSettingsAction({
-				theme: nextTheme,
-				simplifiedNotes: simplifiedNotesEnabled,
-			}),
-		);
+		dispatch(setUiSettingsAction({ theme: nextTheme }));
 		patchSettings({ theme: nextTheme });
 	};
 
@@ -47,13 +45,14 @@ export default function SettingsModalContent({ onCancel }) {
 	};
 
 	const handleSimplifiedNotesChange = (enabled) => {
-		dispatch(
-			setUiSettingsAction({
-				theme: currentTheme,
-				simplifiedNotes: enabled,
-			}),
-		);
+		dispatch(setUiSettingsAction({ simplifiedNotes: enabled }));
 		patchSettings({ simplifiedNotes: enabled });
+	};
+
+	const handleEncounterViewModeChange = (mode) => {
+		const nextMode = mode === "grid" ? "grid" : "single";
+		dispatch(setUiSettingsAction({ encounterViewMode: nextMode }));
+		patchSettings({ encounterViewMode: nextMode });
 	};
 
 	return (
@@ -89,6 +88,21 @@ export default function SettingsModalContent({ onCancel }) {
 										: languageCode.toUpperCase()}
 							</option>
 						))}
+					</Select>
+				</div>
+
+				<div className="SettingsModal__lang">
+					<label className="SettingsModal__label">
+						{lang.t("Combat appearance")}
+					</label>
+					<Select
+						value={encounterViewMode}
+						onChange={(event) =>
+							handleEncounterViewModeChange(event.target.value)
+						}
+					>
+						<option value="single">{lang.t("Single monster preview")}</option>
+						<option value="grid">{lang.t("Grid of all monsters")}</option>
 					</Select>
 				</div>
 

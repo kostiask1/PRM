@@ -14,6 +14,7 @@ const SETTINGS_PATH = path.join(DATA_DIR, "settings.json");
 const DEFAULT_APP_SETTINGS = Object.freeze({
 	language: "uk",
 	theme: "light",
+	encounterViewMode: "single",
 	simplifiedNotes: false,
 });
 
@@ -283,6 +284,8 @@ function normalizeSettings(settings = {}) {
 	return {
 		language: settings.language === "en" ? "en" : "uk",
 		theme: settings.theme === "dark" ? "dark" : "light",
+		encounterViewMode:
+			settings.encounterViewMode === "grid" ? "grid" : "single",
 		simplifiedNotes: Boolean(settings.simplifiedNotes),
 	};
 }

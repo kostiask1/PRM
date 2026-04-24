@@ -40,6 +40,7 @@ function getInitialNavigation() {
 function getInitialUiSettings() {
 	return {
 		theme: "light",
+		encounterViewMode: "single",
 		simplifiedNotes: false,
 	};
 }

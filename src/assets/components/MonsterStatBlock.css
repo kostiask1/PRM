@@ -96,6 +96,10 @@
 	gap: var(--space-3);
 }
 
+.MonsterStatBlock__abilities .Tooltip__trigger {
+	width: 100%;
+}
+
 .MonsterStatBlock__ability-box {
 	background: color-mix(in srgb, var(--bg), transparent 40%);
 	border: 1px solid color-mix(in srgb, var(--border), transparent 50%);

@@ -173,3 +173,62 @@
 	display: flex;
 	gap: var(--space-2);
 }
+
+.EncounterView__viewModeSwitch {
+	display: flex;
+	gap: var(--space-1);
+	padding-right: var(--space-1);
+	border-right: 1px solid color-mix(in srgb, var(--border), transparent 50%);
+	margin-right: var(--space-1);
+}
+
+.EncounterView__detailView--single {
+	overflow-y: auto;
+	padding-right: var(--space-1);
+}
+
+.EncounterView__detailView--grid {
+	overflow-y: auto;
+	padding-right: var(--space-1);
+}
+
+.EncounterView__grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 500px), 1fr));
+	gap: var(--space-3) var(--space-7);
+	align-items: start;
+}
+
+.EncounterView__gridItem {
+	border: 1px solid color-mix(in srgb, var(--border), transparent 45%);
+	border-radius: 10px;
+	padding: var(--space-2);
+	background: color-mix(in srgb, var(--bg), transparent 20%);
+	transition: box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.EncounterView__gridItem.is-selected {
+	border-color: color-mix(in srgb, var(--accent), transparent 45%);
+}
+
+.EncounterView__gridItem.is-focused {
+	border-color: var(--accent);
+	background: color-mix(in srgb, var(--accent), transparent 90%);
+	box-shadow:
+		0 0 0 3px color-mix(in srgb, var(--accent), transparent 60%),
+		0 0 28px color-mix(in srgb, var(--accent), transparent 65%);
+}
+
+.EncounterView__gridItem .MonsterStatBlock {
+	height: auto;
+	max-height: 70vh;
+}
+
+.EncounterView__gridItem .MonsterStatBlock__token-wrapper {
+	width: 220px;
+	height: 220px;
+}
+
+.EncounterView__gridItem .MonsterStatBlock__token-wrapper:hover .MonsterStatBlock__token {
+	transform: translate(-20%, 20%) scale(1.4);
+}
