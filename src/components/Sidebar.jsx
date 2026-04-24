@@ -148,6 +148,17 @@ export default function Sidebar({
 						className="Sidebar__link"
 						onClick={(e) => {
 							e.preventDefault();
+							handleOpenSettings();
+						}}
+					>
+						<Icon name="settings" />
+						<span>{lang.t("Settings")}</span>
+					</a>
+					<a
+						href="#"
+						className="Sidebar__link"
+						onClick={(e) => {
+							e.preventDefault();
 							setIsGalleryOpen(true);
 						}}
 					>
@@ -190,17 +201,6 @@ export default function Sidebar({
 					>
 						<Icon name="list" />
 						<span>{lang.t("Conditions")}</span>
-					</a>
-					<a
-						href="#"
-						className="Sidebar__link"
-						onClick={(e) => {
-							e.preventDefault();
-							handleOpenSettings();
-						}}
-					>
-						<Icon name="settings" />
-						<span>{lang.t("Settings")}</span>
 					</a>
 				</div>
 
