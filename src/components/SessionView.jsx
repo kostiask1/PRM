@@ -86,7 +86,7 @@ function SessionView(props) {
 						{sessionEncounters.length > 0 && (
 							<div className="SessionView__encountersQuickAccess">
 								<span className="SessionView__encountersLabel">
-									{lang.t("Combat encounter")}:
+									{lang.t("Combat encounters")}:
 								</span>
 								<div className="SessionView__encountersList">
 									{sessionEncounters.map((encounter) => (
