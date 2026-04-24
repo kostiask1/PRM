@@ -32,6 +32,7 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 	const [redoStack, setRedoStack] = useState([]);
 	const [isSaving, setIsSaving] = useState(false);
 	const diceRolledResult = useAppSelector((state) => state.dice.rolledResult);
+	const storeTheme = useAppSelector((state) => state.ui.theme);
 
 	const saveTimeoutRef = useRef(null);
 	const fileInputRef = useRef(null);
@@ -217,22 +218,30 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 		[campaign.slug, sessionId, encounterId, dispatch],
 	);
 
-	const syncSelectedInstance = useCallback((nextEncounter, preferredId = null) => {
-		setSelectedInstance((prev) => {
-			if (!nextEncounter?.monsters?.length) return null;
-			const targetId = preferredId || prev?.instanceId;
-			if (!targetId) return nextEncounter.monsters[0];
-			return (
-				nextEncounter.monsters.find((m) => m.instanceId === targetId) ||
-				nextEncounter.monsters[0]
-			);
-		});
-	}, []);
+	const syncSelectedInstance = useCallback(
+		(nextEncounter, preferredId = null) => {
+			setSelectedInstance((prev) => {
+				if (!nextEncounter?.monsters?.length) return null;
+				const targetId = preferredId || prev?.instanceId;
+				if (!targetId) return nextEncounter.monsters[0];
+				return (
+					nextEncounter.monsters.find((m) => m.instanceId === targetId) ||
+					nextEncounter.monsters[0]
+				);
+			});
+		},
+		[],
+	);
 
 	const applyEncounterUpdate = useCallback(
 		(
 			nextEncounter,
-			{ saveDebounceMs = 0, pushUndo = true, persist = true, preferredId = null } = {},
+			{
+				saveDebounceMs = 0,
+				pushUndo = true,
+				persist = true,
+				preferredId = null,
+			} = {},
 		) => {
 			if (!nextEncounter) return;
 			const current = encounterRef.current;
@@ -504,7 +513,9 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 						})),
 					};
 
-					applyEncounterUpdate(updated, { preferredId: updated.monsters[0]?.instanceId });
+					applyEncounterUpdate(updated, {
+						preferredId: updated.monsters[0]?.instanceId,
+					});
 					setNotification(lang.t("Encounter imported successfully."));
 				} catch (err) {
 					dispatch(
@@ -618,8 +629,8 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 
 	const getHpColor = useCallback((current, max) => {
 		const ratio = max > 0 ? Math.min(Math.max(0, current / max), 1) : 0;
-		const hue = ratio * 120;
-		return `hsl(${hue}, 80%, 60%)`;
+		const hue = ratio * 110;
+		return `hsl(${hue}, 80%, ${storeTheme === "dark" ? "60" : "43"}%)`;
 	}, []);
 
 	const averageInitiative = useMemo(() => {
@@ -633,17 +644,22 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 		return avg % 1 === 0 ? avg : avg.toFixed(1);
 	}, [encounter]);
 
-	const handleReorderMonsters = useCallback((newMonsters) => {
-		if (!reorderStartRef.current && encounterRef.current) {
-			reorderStartRef.current = cloneEncounterSnapshot(encounterRef.current);
-		}
-		setEncounter((prev) => (prev ? { ...prev, monsters: newMonsters } : prev));
-		syncSelectedInstance(
-			encounterRef.current
-				? { ...encounterRef.current, monsters: newMonsters }
-				: null,
-		);
-	}, [syncSelectedInstance]);
+	const handleReorderMonsters = useCallback(
+		(newMonsters) => {
+			if (!reorderStartRef.current && encounterRef.current) {
+				reorderStartRef.current = cloneEncounterSnapshot(encounterRef.current);
+			}
+			setEncounter((prev) =>
+				prev ? { ...prev, monsters: newMonsters } : prev,
+			);
+			syncSelectedInstance(
+				encounterRef.current
+					? { ...encounterRef.current, monsters: newMonsters }
+					: null,
+			);
+		},
+		[syncSelectedInstance],
+	);
 
 	const handleMonstersDrop = useCallback(() => {
 		const current = encounterRef.current;
