@@ -5,8 +5,9 @@ import "../../assets/components/NoteCard.css";
 import Button from "../form/Button";
 import EditableField from "../form/EditableField";
 import CollapseToggleButton from "./CollapseToggleButton";
+import { renderMentionText } from "../../utils/parser";
 
-const SHORT_TEXT_LENGTH = 60;
+const SHORT_TEXT_LENGTH = 50;
 
 export default function NoteCard({
 	note,
@@ -71,10 +72,10 @@ export default function NoteCard({
 				</div>
 			)}
 			{showSimplifiedActions && isCollapsed && (
-				<div>
-					{shortText}
+				<span>
+					{renderMentionText(shortText, "plain-mention", campaignSlug)}
 					{note.text.length > SHORT_TEXT_LENGTH && "..."}
-				</div>
+				</span>
 			)}
 			{showSimplifiedActions && (
 				<div className="note-card-simple__simpleActions">
