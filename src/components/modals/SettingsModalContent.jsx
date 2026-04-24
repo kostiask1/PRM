@@ -11,7 +11,9 @@ import ColorThemeSwitcher from "../ColorThemeSwitcher";
 
 export default function SettingsModalContent({ onCancel }) {
 	const dispatch = useAppDispatch();
-	const currentLanguage = useAppSelector((state) => state.localization.language);
+	const currentLanguage = useAppSelector(
+		(state) => state.localization.language,
+	);
 	const availableLanguages = useAppSelector(
 		(state) => state.localization.availableLanguages,
 	);
@@ -29,8 +31,7 @@ export default function SettingsModalContent({ onCancel }) {
 	};
 
 	const handleThemeToggle = () => {
-		const nextTheme =
-			currentTheme === THEMES.DARK ? THEMES.LIGHT : THEMES.DARK;
+		const nextTheme = currentTheme === THEMES.DARK ? THEMES.LIGHT : THEMES.DARK;
 		dispatch(
 			setUiSettingsAction({
 				theme: nextTheme,
@@ -58,8 +59,6 @@ export default function SettingsModalContent({ onCancel }) {
 	return (
 		<div className="SettingsModal">
 			<div className="SettingsModal__group">
-				<h4 className="SettingsModal__title">{lang.t("General")}</h4>
-
 				<div className="SettingsModal__themeRow">
 					<div className="SettingsModal__themeInfo">
 						<div className="SettingsModal__label">{lang.t("Theme")}</div>
@@ -75,21 +74,23 @@ export default function SettingsModalContent({ onCancel }) {
 					/>
 				</div>
 
-				<label className="SettingsModal__label">{lang.t("Language")}</label>
-				<Select
-					value={currentLanguage}
-					onChange={(event) => handleLanguageChange(event.target.value)}
-				>
-					{availableLanguages.map((languageCode) => (
-						<option key={languageCode} value={languageCode}>
-							{languageCode === "uk"
-								? lang.t("Ukrainian")
-								: languageCode === "en"
-									? lang.t("English")
-									: languageCode.toUpperCase()}
-						</option>
-					))}
-				</Select>
+				<div className="SettingsModal__lang">
+					<label className="SettingsModal__label">{lang.t("Language")}</label>
+					<Select
+						value={currentLanguage}
+						onChange={(event) => handleLanguageChange(event.target.value)}
+					>
+						{availableLanguages.map((languageCode) => (
+							<option key={languageCode} value={languageCode}>
+								{languageCode === "uk"
+									? lang.t("Ukrainian")
+									: languageCode === "en"
+										? lang.t("English")
+										: languageCode.toUpperCase()}
+							</option>
+						))}
+					</Select>
+				</div>
 
 				<Switch
 					checked={simplifiedNotesEnabled}

@@ -410,6 +410,8 @@ async function generateContent({
 		"IMPORTANT: In all generated text fields, wrap every mention of character or NPC names in square brackets, for example [Iryna] or [Borin Stonehelm]. Do not wrap JSON keys.\n";
 	userPrompt +=
 		"IMPORTANT: Never alter, translate, decline, or paraphrase character/NPC names. Always use names exactly as provided in the input JSON, preserving original spelling, and only wrap them in square brackets.\n";
+	userPrompt +=
+		"IMPORTANT: Never transliterate names between alphabets (for example, Latin <-> Cyrillic). Keep the exact original characters from input. Mention format must be a single pair of brackets only: [Name]. Never output [[Name]] or nested brackets.\n";
 
 	// Додаємо специфічні інструкції залежно від типу задачі
 	if (useKey === "image") {

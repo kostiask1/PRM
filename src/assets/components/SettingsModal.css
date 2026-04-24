@@ -10,12 +10,6 @@
 	gap: var(--space-3);
 }
 
-.SettingsModal__title {
-	margin: 0;
-	font-size: 0.95rem;
-	font-family: var(--font-heading);
-}
-
 .SettingsModal__label {
 	font-size: 0.82rem;
 	color: var(--muted);
@@ -28,8 +22,9 @@
 
 .SettingsModal__themeRow {
 	display: flex;
+	justify-content: start;
+	flex-direction: row-reverse;
 	align-items: center;
-	justify-content: space-between;
 	gap: var(--space-3);
 }
 

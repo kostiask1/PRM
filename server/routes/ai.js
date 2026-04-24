@@ -276,6 +276,22 @@ function wrapMentionsInText(text, names) {
 	return output;
 }
 
+function collapseNestedMentionBrackets(text) {
+	if (typeof text !== "string" || !text) return text;
+	let output = text;
+
+	// Collapse repeated opening/closing mention brackets: [[Name]] -> [Name]
+	for (let i = 0; i < 5; i += 1) {
+		const next = output
+			.replace(/\[\s*\[+/g, "[")
+			.replace(/\]+\s*\]/g, "]");
+		if (next === output) break;
+		output = next;
+	}
+
+	return output;
+}
+
 function normalizeNameForMatch(value) {
 	return String(value || "")
 		.toLowerCase()
@@ -343,6 +359,13 @@ function canonicalizeBracketedMentions(text, names) {
 	});
 }
 
+function processGeneratedTextMentions(text, names) {
+	if (typeof text !== "string") return text;
+	const wrapped = wrapMentionsInText(text, names);
+	const canonicalized = canonicalizeBracketedMentions(wrapped, names);
+	return collapseNestedMentionBrackets(canonicalized);
+}
+
 function shouldAppendScenesRequest(userInstructions) {
 	const text = asText(userInstructions).toLowerCase();
 	if (!text) return false;
@@ -405,11 +428,7 @@ function applyMentionsToGeneratedContent(generatedContent, names) {
 	}
 
 	if (typeof generatedContent.description === "string") {
-		generatedContent.description = wrapMentionsInText(
-			generatedContent.description,
-			names,
-		);
-		generatedContent.description = canonicalizeBracketedMentions(
+		generatedContent.description = processGeneratedTextMentions(
 			generatedContent.description,
 			names,
 		);
@@ -417,9 +436,7 @@ function applyMentionsToGeneratedContent(generatedContent, names) {
 
 	if (Array.isArray(generatedContent.notes)) {
 		generatedContent.notes = generatedContent.notes.map((note) =>
-			typeof note === "string"
-				? canonicalizeBracketedMentions(wrapMentionsInText(note, names), names)
-				: note,
+			typeof note === "string" ? processGeneratedTextMentions(note, names) : note,
 		);
 	}
 
@@ -430,19 +447,13 @@ function applyMentionsToGeneratedContent(generatedContent, names) {
 				const next = { ...character };
 				for (const key of ["description", "motivation", "trait"]) {
 					if (typeof next[key] === "string") {
-						next[key] = canonicalizeBracketedMentions(
-							wrapMentionsInText(next[key], names),
-							names,
-						);
+						next[key] = processGeneratedTextMentions(next[key], names);
 					}
 				}
 				if (Array.isArray(next.notes)) {
 					next.notes = next.notes.map((note) =>
 						typeof note === "string"
-							? canonicalizeBracketedMentions(
-									wrapMentionsInText(note, names),
-									names,
-								)
+							? processGeneratedTextMentions(note, names)
 							: note,
 					);
 				}
@@ -460,8 +471,8 @@ function applyMentionsToGeneratedContent(generatedContent, names) {
 				nextScene.texts = { ...nextScene.texts };
 				for (const key of ["summary", "goal", "stakes", "location"]) {
 					if (typeof nextScene.texts[key] === "string") {
-						nextScene.texts[key] = canonicalizeBracketedMentions(
-							wrapMentionsInText(nextScene.texts[key], names),
+						nextScene.texts[key] = processGeneratedTextMentions(
+							nextScene.texts[key],
 							names,
 						);
 					}
@@ -471,10 +482,7 @@ function applyMentionsToGeneratedContent(generatedContent, names) {
 			if (Array.isArray(nextScene.notes)) {
 				nextScene.notes = nextScene.notes.map((note) =>
 					typeof note === "string"
-						? canonicalizeBracketedMentions(
-								wrapMentionsInText(note, names),
-								names,
-							)
+						? processGeneratedTextMentions(note, names)
 						: note,
 				);
 			}
@@ -484,8 +492,8 @@ function applyMentionsToGeneratedContent(generatedContent, names) {
 					if (!npc || typeof npc !== "object") return npc;
 					const nextNpc = { ...npc };
 					if (typeof nextNpc.description === "string") {
-						nextNpc.description = canonicalizeBracketedMentions(
-							wrapMentionsInText(nextNpc.description, names),
+						nextNpc.description = processGeneratedTextMentions(
+							nextNpc.description,
 							names,
 						);
 					}
