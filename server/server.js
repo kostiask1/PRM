@@ -167,6 +167,24 @@ app.get("/api/health", async (_req, res) => {
 	res.json({ ok: true });
 });
 
+app.get("/api/settings", async (_req, res, next) => {
+	try {
+		const settings = await storage.readSettings();
+		res.json(settings);
+	} catch (error) {
+		next(error);
+	}
+});
+
+app.patch("/api/settings", async (req, res, next) => {
+	try {
+		const settings = await storage.updateSettings(req.body || {});
+		res.json(settings);
+	} catch (error) {
+		next(error);
+	}
+});
+
 // Image Upload Configuration
 const upload = multer({
 	storage: multer.diskStorage({

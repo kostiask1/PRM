@@ -27,6 +27,45 @@
     background: color-mix(in srgb, var(--text-bright), transparent 98%);
 }
 
+.note-card-simple__simpleActions {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-2);
+    z-index: 3;
+}
+
+.note-card-simple.is-collapsed .note-card-simple__simpleActions {
+    position: static;
+}
+
+.note-card-simple__actionBtn.Button {
+    height: 28px;
+    width: 28px;
+    min-height: 28px;
+    border-radius: 7px;
+}
+
+.note-card-simple__actionBtn--danger.Button {
+    color: var(--danger);
+    border-color: color-mix(in srgb, var(--danger), transparent 70%);
+    padding: 0;
+}
+
+.note-card-simple--simplified {
+    position: relative;
+}
+
+.note-card-simple--simplified .note-card-simple__content .MarkdownView,
+.note-card-simple--simplified .note-card-simple__content .Input {
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+
 .note-card-simple__header .Button {
     height: 30px;
     width: 30px;

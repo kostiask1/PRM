@@ -1,3 +1,5 @@
+import { appStore } from "../store/appStore";
+
 export function createEmptyNote() {
 	return {
 		id: Date.now(),
@@ -7,12 +9,19 @@ export function createEmptyNote() {
 	};
 }
 
+function isSimplifiedNotesEnabled() {
+	return Boolean(appStore.getState()?.ui?.simplifiedNotes);
+}
+
 export function appendTrailingEmptyNote(notes = []) {
 	const next = [...notes];
 	const last = next[next.length - 1];
+	const isSimplifiedMode = isSimplifiedNotesEnabled();
 	if (
 		next.length === 0 ||
-		(last && (last.text?.trim() !== "" || last.title?.trim() !== ""))
+		(last &&
+			(last.text?.trim() !== "" ||
+				(!isSimplifiedMode && last.title?.trim() !== "")))
 	) {
 		next.push(createEmptyNote());
 	}

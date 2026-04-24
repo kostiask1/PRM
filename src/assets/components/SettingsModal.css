@@ -1,0 +1,46 @@
+.SettingsModal {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-4);
+}
+
+.SettingsModal__group {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+}
+
+.SettingsModal__title {
+	margin: 0;
+	font-size: 0.95rem;
+	font-family: var(--font-heading);
+}
+
+.SettingsModal__label {
+	font-size: 0.82rem;
+	color: var(--muted);
+}
+
+.SettingsModal__hint {
+	font-size: 0.78rem;
+	color: var(--muted);
+}
+
+.SettingsModal__themeRow {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-3);
+}
+
+.SettingsModal__themeInfo {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.SettingsModal__actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--space-2);
+}

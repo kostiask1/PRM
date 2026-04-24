@@ -284,6 +284,7 @@ export default function EditableField({
 	className,
 	type,
 	showCopyButton = false,
+	plainTextPreview = false,
 	...props
 }) {
 	const [isEditing, setIsEditing] = useState(false);
@@ -502,14 +503,18 @@ export default function EditableField({
 			<div className="MarkdownView" ref={viewRef}>
 				{value || value === 0 ? (
 					type === "textarea" ? (
-						<ReactMarkdown components={components}>
-							{String(value)
-								.replace(
-									/(?<!(?:^|\n)- {2}[^\n]*\n)\n(?!\n)|(?<!(?:^|\n)- {2}[^\n]*)\n(?=\n)/g,
-									"&nbsp;\n\n",
-								)
-								.replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")}
-						</ReactMarkdown>
+						plainTextPreview ? (
+							<span style={{ whiteSpace: "pre-wrap" }}>{String(value)}</span>
+						) : (
+							<ReactMarkdown components={components}>
+								{String(value)
+									.replace(
+										/(?<!(?:^|\n)- {2}[^\n]*\n)\n(?!\n)|(?<!(?:^|\n)- {2}[^\n]*)\n(?=\n)/g,
+										"&nbsp;\n\n",
+									)
+									.replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")}
+							</ReactMarkdown>
+						)
 					) : (
 						<span>{value}</span>
 					)

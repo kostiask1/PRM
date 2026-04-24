@@ -1,24 +1,22 @@
-﻿import { useEffect, useRef, useState } from "react";
-import { alert, setLanguageAction } from "../actions/app";
+import { useEffect, useRef, useState } from "react";
+import { alert } from "../actions/app";
 import { api } from "../api";
 import Button from "./form/Button";
 import Icon from "./common/Icon";
 import StatusBadge from "./common/StatusBadge";
 import ListCard from "./common/ListCard";
-import ColorThemeSwitcher from "./ColorThemeSwitcher";
 import DraggableList from "./common/DraggableList";
 import ImageGallery from "./ImageGallery";
 import { openConditionsModal } from "./modals/openConditionsModal";
+import SettingsModalContent from "./modals/SettingsModalContent";
 import { downloadBlob } from "../utils/download";
 import {
 	closeActiveModal,
 	openModalRequest,
 	useAppDispatch,
-	useAppSelector,
 } from "../store/appStore";
 import { lang } from "../services/localization";
 import "../assets/components/Sidebar.css";
-import Select from "./form/Select";
 
 const DB_IMPORT_STRATEGIES = [
 	{ id: "append", labelKey: "Add to existing data" },
@@ -34,12 +32,6 @@ export default function Sidebar({
 	onToggleCampaignStatus,
 }) {
 	const dispatch = useAppDispatch();
-	const currentLanguage = useAppSelector(
-		(state) => state.localization.language,
-	);
-	const availableLanguages = useAppSelector(
-		(state) => state.localization.availableLanguages,
-	);
 	const fileInputRef = useRef(null);
 	const [dbImportStrategy, setDbImportStrategy] = useState("");
 	const [localCampaigns, setLocalCampaigns] = useState(campaigns);
@@ -119,6 +111,21 @@ export default function Sidebar({
 		openConditionsModal();
 	};
 
+	const handleOpenSettings = () => {
+		dispatch(() => {
+			openModalRequest({
+				title: lang.t("Settings"),
+				type: "confirm",
+				showFooter: false,
+				children: (
+					<SettingsModalContent
+						onCancel={() => closeActiveModal()}
+					/>
+				),
+			});
+		});
+	};
+
 	return (
 		<>
 			<aside
@@ -127,34 +134,12 @@ export default function Sidebar({
 				onMouseLeave={() => setIsSidebarHovered(false)}
 			>
 				<div className="Sidebar__header">
-					<h1 className="Sidebar__title">
-						D&D Session Manager
-						<ColorThemeSwitcher />
-					</h1>
+					<h1 className="Sidebar__title">D&D Session Manager</h1>
 					<p className="Sidebar__description">
 						{lang.t(
 							"Campaigns, sessions, and planning in one local workspace.",
 						)}
 					</p>
-					<div className="Sidebar__lang">
-						<label className="Sidebar__langLabel">{lang.t("Language")}</label>
-						<Select
-							value={currentLanguage}
-							onChange={(event) =>
-								dispatch(setLanguageAction(event.target.value))
-							}
-						>
-							{availableLanguages.map((languageCode) => (
-								<option key={languageCode} value={languageCode}>
-									{languageCode === "uk"
-										? lang.t("Ukrainian")
-										: languageCode === "en"
-											? lang.t("English")
-											: languageCode.toUpperCase()}
-								</option>
-							))}
-						</Select>
-					</div>
 				</div>
 
 				<div className="Sidebar__links">
@@ -205,6 +190,17 @@ export default function Sidebar({
 					>
 						<Icon name="list" />
 						<span>{lang.t("Conditions")}</span>
+					</a>
+					<a
+						href="#"
+						className="Sidebar__link"
+						onClick={(e) => {
+							e.preventDefault();
+							handleOpenSettings();
+						}}
+					>
+						<Icon name="settings" />
+						<span>{lang.t("Settings")}</span>
 					</a>
 				</div>
 
@@ -296,8 +292,7 @@ export default function Sidebar({
 							rel="noopener noreferrer"
 							className="Sidebar__resource-item"
 						>
-							<Icon name="map" size={16} />{" "}
-							<span>{lang.t("Szepeku maps")}</span>
+							<Icon name="map" size={16} /> <span>{lang.t("Szepeku maps")}</span>
 						</a>
 						<a
 							href="https://chatgpt.com/g/g-69c24d157a348191b640bf111b486080-ttrpg-map-architect"

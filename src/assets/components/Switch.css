@@ -1,0 +1,72 @@
+.Switch {
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+	cursor: pointer;
+	user-select: none;
+}
+
+.Switch input {
+	position: absolute;
+	opacity: 0;
+	width: 0;
+	height: 0;
+	pointer-events: none;
+}
+
+.Switch__track {
+	position: relative;
+	width: 42px;
+	height: 24px;
+	flex-shrink: 0;
+	border-radius: 999px;
+	border: 1px solid var(--border);
+	background: color-mix(in srgb, var(--panel-2), var(--bg) 25%);
+	transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.Switch__thumb {
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	background: var(--text);
+	transition: transform 0.2s ease;
+}
+
+.Switch__content {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.Switch__label {
+	font-size: 0.9rem;
+	color: var(--text);
+}
+
+.Switch__description {
+	font-size: 0.78rem;
+	color: var(--muted);
+}
+
+.Switch:hover .Switch__track {
+	border-color: color-mix(in srgb, var(--accent), transparent 45%);
+}
+
+.Switch.is-checked .Switch__track {
+	background: color-mix(in srgb, var(--accent), var(--bg) 30%);
+	border-color: color-mix(in srgb, var(--accent), transparent 20%);
+}
+
+.Switch.is-checked .Switch__thumb {
+	transform: translateX(18px);
+	background: #fff;
+}
+
+.Switch.is-disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+}

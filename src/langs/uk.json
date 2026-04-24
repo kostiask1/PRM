@@ -198,7 +198,7 @@
 	"Rename file": "Перейменувати файл",
 	"Rename folder": "Перейменувати папку",
 	"Response": "Відповідь",
-	"Response parsing": "Обробка відповіді",
+	"Response parsing": "Парсинг відповіді",
 	"Right-click: open fullscreen": "ПКМ: відкрити на весь екран",
 	"Right-click: replace image via gallery": "ПКМ: замінити зображення через галерею",
 	"Risk and pressure.": "Ризик і тиск.",
@@ -270,5 +270,11 @@
 	"Search": "Пошук",
 	"Average value": "Середнє значення",
 	"Rolled values": "Кинуті значення",
-	"No conditions or statuses found.": "Станів або статусів не знайдено."
+	"No conditions or statuses found.": "Станів або статусів не знайдено.",
+	"Settings": "Налаштування",
+	"Theme": "Тема",
+	"Simplified notes mode": "Спрощений режим нотаток",
+	"Use plain text notes without title and markdown preview": "Використовувати прості текстові нотатки без заголовка і markdown-перегляду",
+	"Expand note": "Розгорнути нотатку",
+	"Collapse note": "Згорнути нотатку"
 }

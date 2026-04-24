@@ -30,6 +30,14 @@ router.post("/", async (req, res, next) => {
 			order: 0,
 			createdAt: now,
 			updatedAt: now,
+			notes: [
+				{
+					id: Date.now(),
+					title: "",
+					text: "",
+					collapsed: false,
+				},
+			],
 		};
 		await storage.ensureDir(
 			require("path").join(storage.campaignDir(slug), "sessions"),

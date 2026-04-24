@@ -13,8 +13,11 @@ import {
 	closeMentionPickerAction,
 	confirm,
 	requestCampaignsReloadAction,
+	setLanguageAction,
 	setCampaignsAction,
+	setUiSettingsAction,
 } from "./actions/app";
+import { applyTheme } from "./services/uiSettings";
 import {
 	closeActiveModal,
 	navigateTo,
@@ -40,6 +43,7 @@ export default function App() {
 	const currentLanguage = useAppSelector(
 		(store) => store.localization.language,
 	);
+	const currentTheme = useAppSelector((store) => store.ui.theme);
 
 	const loadCampaigns = useCallback(async () => {
 		try {
@@ -90,6 +94,37 @@ export default function App() {
 	useEffect(() => {
 		loadCampaigns();
 	}, [loadCampaigns, campaignsReloadVersion]);
+
+	useEffect(() => {
+		applyTheme(currentTheme);
+	}, [currentTheme]);
+
+	useEffect(() => {
+		let isMounted = true;
+
+		const loadSettings = async () => {
+			try {
+				const settings = await api.getSettings();
+				if (!isMounted || !settings) return;
+
+				dispatch(setLanguageAction(settings.language));
+				dispatch(
+					setUiSettingsAction({
+						theme: settings.theme,
+						simplifiedNotes: settings.simplifiedNotes,
+					}),
+				);
+			} catch (error) {
+				console.error("Failed to load settings", error);
+			}
+		};
+
+		loadSettings();
+
+		return () => {
+			isMounted = false;
+		};
+	}, [dispatch]);
 
 	useEffect(() => {
 		const handleMentionPicker = async () => {

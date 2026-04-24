@@ -9,6 +9,7 @@ import {
 	REFRESH_ENTITIES,
 	REQUEST_CAMPAIGNS_RELOAD,
 	SET_LANGUAGE,
+	SET_UI_SETTINGS,
 	REQUEST_DICE_ROLL,
 	SET_CAMPAIGNS,
 	SET_NAVIGATION,
@@ -36,6 +37,13 @@ function getInitialNavigation() {
 	};
 }
 
+function getInitialUiSettings() {
+	return {
+		theme: "light",
+		simplifiedNotes: false,
+	};
+}
+
 const initialState = {
 	modal: {
 		requestId: null,
@@ -57,6 +65,7 @@ const initialState = {
 		language: lang.getLanguage(),
 		availableLanguages: lang.getAvailableLanguages(),
 	},
+	ui: getInitialUiSettings(),
 };
 
 let state = initialState;
@@ -157,6 +166,14 @@ function reducer(currentState, action) {
 				localization: {
 					...currentState.localization,
 					language: action.payload,
+				},
+			};
+		case SET_UI_SETTINGS:
+			return {
+				...currentState,
+				ui: {
+					...currentState.ui,
+					...action.payload,
 				},
 			};
 		default:

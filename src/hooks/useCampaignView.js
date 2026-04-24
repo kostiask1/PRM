@@ -28,7 +28,7 @@ export default function useCampaignView(props) {
 
 	const [sessions, setSessions] = useState([]);
 	const [description, setDescription] = useState(campaign.description || "");
-	const [notes, setNotes] = useState(campaign.notes || []);
+	const [notes, setNotes] = useState(appendTrailingEmptyNote(campaign.notes || []));
 	const [characters, setCharacters] = useState(campaign.characters || []);
 	const [npcs, setNpcs] = useState([]);
 	const [isDescriptionCollapsed, setIsDescriptionCollapsed] = useState(

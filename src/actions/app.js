@@ -11,6 +11,7 @@ export const SET_NAVIGATION = "navigation/set";
 export const SET_CAMPAIGNS = "campaigns/set";
 export const REQUEST_CAMPAIGNS_RELOAD = "campaigns/requestReload";
 export const SET_LANGUAGE = "language/set";
+export const SET_UI_SETTINGS = "ui/setSettings";
 
 let mentionRequestSeq = 1;
 let diceRollRequestSeq = 1;
@@ -53,6 +54,24 @@ export function setLanguageAction(payload) {
 	return {
 		type: SET_LANGUAGE,
 		payload: String(payload || "").toLowerCase(),
+	};
+}
+
+export function setUiSettingsAction(payload) {
+	const nextPayload = {};
+	if (payload && Object.prototype.hasOwnProperty.call(payload, "theme")) {
+		nextPayload.theme = payload.theme === "dark" ? "dark" : "light";
+	}
+	if (
+		payload &&
+		Object.prototype.hasOwnProperty.call(payload, "simplifiedNotes")
+	) {
+		nextPayload.simplifiedNotes = Boolean(payload.simplifiedNotes);
+	}
+
+	return {
+		type: SET_UI_SETTINGS,
+		payload: nextPayload,
 	};
 }
 

@@ -9,6 +9,13 @@ const BESTIARY_DIR = path.join(ROOT_DIR, "database", "bestiary");
 const SPELLS_DIR = path.join(ROOT_DIR, "database", "spells");
 const FAVORITES_PATH = path.join(DATA_DIR, "favorites.json");
 const IMAGES_DIR = path.join(DATA_DIR, "images");
+const SETTINGS_PATH = path.join(DATA_DIR, "settings.json");
+
+const DEFAULT_APP_SETTINGS = Object.freeze({
+	language: "uk",
+	theme: "light",
+	simplifiedNotes: false,
+});
 
 function todayString() {
 	return new Date().toISOString().slice(0, 10);
@@ -270,6 +277,43 @@ async function readFavorites() {
 
 async function writeFavorites(favorites) {
 	await writeJson(FAVORITES_PATH, favorites);
+}
+
+function normalizeSettings(settings = {}) {
+	return {
+		language: settings.language === "en" ? "en" : "uk",
+		theme: settings.theme === "dark" ? "dark" : "light",
+		simplifiedNotes: Boolean(settings.simplifiedNotes),
+	};
+}
+
+async function readSettings() {
+	if (!(await exists(SETTINGS_PATH))) {
+		await writeJson(SETTINGS_PATH, DEFAULT_APP_SETTINGS);
+		return { ...DEFAULT_APP_SETTINGS };
+	}
+
+	try {
+		const saved = await readJson(SETTINGS_PATH);
+		const normalized = normalizeSettings(saved);
+		if (JSON.stringify(saved) !== JSON.stringify(normalized)) {
+			await writeJson(SETTINGS_PATH, normalized);
+		}
+		return normalized;
+	} catch {
+		await writeJson(SETTINGS_PATH, DEFAULT_APP_SETTINGS);
+		return { ...DEFAULT_APP_SETTINGS };
+	}
+}
+
+async function updateSettings(patch = {}) {
+	const current = await readSettings();
+	const next = normalizeSettings({
+		...current,
+		...patch,
+	});
+	await writeJson(SETTINGS_PATH, next);
+	return next;
 }
 
 async function listEntities(campaignSlug, type) {
@@ -876,6 +920,8 @@ module.exports = {
 	BESTIARY_DIR,
 	SPELLS_DIR,
 	IMAGES_DIR,
+	SETTINGS_PATH,
+	DEFAULT_APP_SETTINGS,
 	createId,
 	sanitizeName,
 	campaignSlug,
@@ -897,6 +943,8 @@ module.exports = {
 	deleteEntity,
 	readFavorites,
 	writeFavorites,
+	readSettings,
+	updateSettings,
 	listCampaignSlugs,
 	readCampaign,
 	readSession,

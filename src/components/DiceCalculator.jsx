@@ -301,58 +301,54 @@ export default function DiceCalculator() {
 						</Button>
 					</div>
 
-					{history.length > 0 && (
-						<div className="DiceCalculator__history">
-							<div className="DiceCalculator__historyHeader">
-								<span>{lang.t("History")}</span>
-								<button
-									onClick={clearHistory}
-									className="DiceCalculator__clearHistoryBtn"
-								>
-									{lang.t("Clear")}
-								</button>
-							</div>
-							<div className="DiceCalculator__historyList">
-								{history.map((roll) => (
-									<div
-										className="DiceCalculator__historyItem"
-										onClick={() =>
-											dispatch(requestDiceRollAction(roll.formula))
-										}
-										key={roll.id}
-									>
-										<Tooltip
-											delay={750}
-											content={`${roll.formula} = ${roll.total} (${getFullBreakdownString(roll.breakdown)})`}
-										>
-											<div className="DiceCalculator__historyInfo">
-												<span>
-													<strong>
-														{roll.formula} =
-														<span
-															className={
-																roll.isCritical
-																	? roll.total === 20
-																		? "dice-max"
-																		: "dice-min"
-																	: ""
-															}
-														>
-															{" "}
-															{roll.total}
-														</span>
-													</strong>
-												</span>
-												<span className="muted">
-													({renderBreakdown(roll.breakdown)})
-												</span>
-											</div>
-										</Tooltip>
-									</div>
-								))}
-							</div>
+					<div className="DiceCalculator__history">
+						<div className="DiceCalculator__historyHeader">
+							<span>{lang.t("History")}</span>
+							<button
+								onClick={clearHistory}
+								className="DiceCalculator__clearHistoryBtn"
+							>
+								{lang.t("Clear")}
+							</button>
 						</div>
-					)}
+						<div className="DiceCalculator__historyList">
+							{history.map((roll) => (
+								<div
+									className="DiceCalculator__historyItem"
+									onClick={() => dispatch(requestDiceRollAction(roll.formula))}
+									key={roll.id}
+								>
+									<Tooltip
+										delay={750}
+										content={`${roll.formula} = ${roll.total} (${getFullBreakdownString(roll.breakdown)})`}
+									>
+										<div className="DiceCalculator__historyInfo">
+											<span>
+												<strong>
+													{roll.formula} =
+													<span
+														className={
+															roll.isCritical
+																? roll.total === 20
+																	? "dice-max"
+																	: "dice-min"
+																: ""
+														}
+													>
+														{" "}
+														{roll.total}
+													</span>
+												</strong>
+											</span>
+											<span className="muted">
+												({renderBreakdown(roll.breakdown)})
+											</span>
+										</div>
+									</Tooltip>
+								</div>
+							))}
+						</div>
+					</div>
 				</div>
 			)}
 			<Tooltip content="CTRL+D">

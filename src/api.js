@@ -109,6 +109,14 @@ export const api = {
 		});
 	},
 
+	// App settings
+	getSettings: () => api.request("/settings"),
+	updateSettings: (payload) =>
+		api.request("/settings", {
+			method: "PATCH",
+			body: JSON.stringify(payload),
+		}),
+
 	// Session methods
 	listSessions: (slug) =>
 		api.request(`/campaigns/${encodeURIComponent(slug)}/sessions`),

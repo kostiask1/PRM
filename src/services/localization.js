@@ -1,4 +1,3 @@
-export const LANG_STORAGE_KEY = "prm.language";
 export const DEFAULT_LANGUAGE = "uk";
 
 function loadLanguagePacks() {
@@ -33,15 +32,9 @@ class Localization {
 		this.defaultLanguage = String(
 			options.defaultLanguage || DEFAULT_LANGUAGE,
 		).toLowerCase();
-		this.storageKey = options.storageKey || LANG_STORAGE_KEY;
 		this.packs = loadLanguagePacks();
 
-		const initialLanguage =
-			options.initialLanguage ||
-			(typeof localStorage !== "undefined"
-				? localStorage.getItem(this.storageKey)
-				: null) ||
-			this.defaultLanguage;
+		const initialLanguage = options.initialLanguage || this.defaultLanguage;
 
 		this.currentLanguage = this.normalizeLanguage(initialLanguage);
 	}
@@ -64,9 +57,6 @@ class Localization {
 
 	setLanguage(code) {
 		this.currentLanguage = this.normalizeLanguage(code);
-		if (typeof localStorage !== "undefined") {
-			localStorage.setItem(this.storageKey, this.currentLanguage);
-		}
 		return this.currentLanguage;
 	}
 

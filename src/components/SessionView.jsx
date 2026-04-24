@@ -135,55 +135,57 @@ function SessionView(props) {
 							sessionId={sessionId}
 							onInsertResult={view.handleAiUpdate}
 						/>
-						<DraggableList
-							items={viewModel.scenes}
-							onReorder={(newScenes) => view.updateData("scenes", newScenes)}
-							onDrop={() => view.triggerSave(session, true)}
-							keyExtractor={(scene) => scene.id}
-							renderItem={(scene) => {
-								const idx = viewModel.scenes.findIndex(
-									(s) => s.id === scene.id,
-								);
-								return (
-									<SceneCard
-										number={idx + 1}
-										scene={scene}
-										fields={SessionViewModel.sceneSchema}
-										collapsed={scene.collapsed}
-										onToggle={() => view.toggleSceneCollapse(scene.id)}
-										onRemove={() => view.removeScene(scene.id)}
-										onOpenEncounter={(event) =>
-											view.handleOpenEncounter(scene, event)
-										}
-										imageUrl={scene.imageUrl}
-										onImageChange={(url) =>
-											view.updateScene(scene.id, "imageUrl", url, true)
-										}
-										campaignSlug={view.campaignSlug}
-										hasEncounter={!!scene.encounterId}
-										encounterName={lang.t(viewModel.findEncounterName(scene))}
-										onUpdateField={(field, value) =>
-											view.updateScene(scene.id, field, value)
-										}
-										onToggleNotesCollapse={() =>
-											view.handleToggleSceneNotesCollapse(scene.id)
-										}
-										onSceneNoteTitleChange={(noteId, title) =>
-											view.handleSceneNoteTitleChange(scene.id, noteId, title)
-										}
-										onSceneNoteChange={(noteId, text) =>
-											view.handleSceneNoteChange(scene.id, noteId, text)
-										}
-										onSceneNoteToggleCollapse={(noteId) =>
-											view.handleSceneToggleNoteCollapse(scene.id, noteId)
-										}
-										onSceneNoteDelete={(noteId) =>
-											view.handleSceneDeleteNote(scene.id, noteId)
-										}
-									/>
-								);
-							}}
-						/>
+						{viewModel.scenes.length > 0 && (
+							<DraggableList
+								items={viewModel.scenes}
+								onReorder={(newScenes) => view.updateData("scenes", newScenes)}
+								onDrop={() => view.triggerSave(session, true)}
+								keyExtractor={(scene) => scene.id}
+								renderItem={(scene) => {
+									const idx = viewModel.scenes.findIndex(
+										(s) => s.id === scene.id,
+									);
+									return (
+										<SceneCard
+											number={idx + 1}
+											scene={scene}
+											fields={SessionViewModel.sceneSchema}
+											collapsed={scene.collapsed}
+											onToggle={() => view.toggleSceneCollapse(scene.id)}
+											onRemove={() => view.removeScene(scene.id)}
+											onOpenEncounter={(event) =>
+												view.handleOpenEncounter(scene, event)
+											}
+											imageUrl={scene.imageUrl}
+											onImageChange={(url) =>
+												view.updateScene(scene.id, "imageUrl", url, true)
+											}
+											campaignSlug={view.campaignSlug}
+											hasEncounter={!!scene.encounterId}
+											encounterName={lang.t(viewModel.findEncounterName(scene))}
+											onUpdateField={(field, value) =>
+												view.updateScene(scene.id, field, value)
+											}
+											onToggleNotesCollapse={() =>
+												view.handleToggleSceneNotesCollapse(scene.id)
+											}
+											onSceneNoteTitleChange={(noteId, title) =>
+												view.handleSceneNoteTitleChange(scene.id, noteId, title)
+											}
+											onSceneNoteChange={(noteId, text) =>
+												view.handleSceneNoteChange(scene.id, noteId, text)
+											}
+											onSceneNoteToggleCollapse={(noteId) =>
+												view.handleSceneToggleNoteCollapse(scene.id, noteId)
+											}
+											onSceneNoteDelete={(noteId) =>
+												view.handleSceneDeleteNote(scene.id, noteId)
+											}
+										/>
+									);
+								}}
+							/>
+						)}
 					</TodoSection>
 
 					<TodoSection title={lang.t("Session result")}>
