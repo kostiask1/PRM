@@ -57,6 +57,22 @@ function EncounterView(props) {
 					</p>
 				</div>
 				<div className="EncounterView__headerActions">
+					<Button
+						variant="ghost"
+						size={Button.SIZES.SMALL}
+						icon="undo"
+						onClick={view.handleUndo}
+						disabled={view.undoStack.length === 0 || view.isSaving}
+						title={lang.t("Undo (Ctrl+Z)")}
+					/>
+					<Button
+						variant="ghost"
+						size={Button.SIZES.SMALL}
+						icon="redo"
+						onClick={view.handleRedo}
+						disabled={view.redoStack.length === 0 || view.isSaving}
+						title={lang.t("Redo (Ctrl+Y)")}
+					/>
 					<input
 						type="file"
 						ref={view.fileInputRef}
