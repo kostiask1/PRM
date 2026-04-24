@@ -20,6 +20,7 @@ import { lang } from "../services/localization";
 import { getNotesForRender, sanitizeNotesForSave } from "../utils/noteUtils";
 import { navigateTo } from "../store/appStore";
 import { shouldOpenInNewTabFromEvent } from "../utils/navigation.js";
+import CreateCharacterButton from "./CreateCharacterButton.jsx";
 
 function SessionView(props) {
 	const campaign = props.campaign;
@@ -110,6 +111,11 @@ function SessionView(props) {
 					</div>
 				</div>
 				<div className="SessionView__headerActions">
+					<CreateCharacterButton
+						buttonVariant="ghost"
+						campaignSlug={view.campaignSlug}
+						entityType="npc"
+					/>
 					<Button
 						variant="ghost"
 						size={Button.SIZES.SMALL}
@@ -322,7 +328,7 @@ export default SessionView;
 function SceneCard(props) {
 	const encounterLabel = props.hasEncounter
 		? props.encounterName
-		: lang.t("Encounter");
+		: lang.t("New encounter");
 	const sceneNotes = props.scene.notes || [];
 	const sceneNotesForRender = getNotesForRender(sceneNotes);
 	const hasSceneNotesData = sceneNotes.some(
@@ -340,7 +346,6 @@ function SceneCard(props) {
 				number={props.number}
 				collapsed={props.collapsed}
 				onToggle={props.onToggle}
-				campaignSlug={props.campaignSlug}
 				onOpenEncounter={props.onOpenEncounter}
 				onRemove={props.onRemove}
 				hasEncounter={props.hasEncounter}
