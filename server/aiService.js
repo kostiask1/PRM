@@ -177,7 +177,8 @@ Keep responses structured and practical for real gameplay.
 Always return JSON only, with no text before or after JSON.
 The JSON must contain generated data only, without extra commentary.
 When generating scenes, use this shape:
-{ "scenes": [{ "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "..." }, "notes": ["Short note 1", "Short note 2"], "npcs": [{ "name": "...", "description": "..." }], "encounterIndex": 0 }], "encounters": [{ "name": "Encounter name", "monsters": [{ "monsterName": "Official D&D Monster Name", "name": "Optional display name" }] }] }.
+{ "notes": ["Title\\nDetailed session note...", ...], "scenes": [{ "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "..." }, "notes": ["Short note 1", "Short note 2"], "npcs": [{ "name": "...", "description": "..." }], "encounterIndex": 0 }], "encounters": [{ "name": "Encounter name", "monsters": [{ "monsterName": "Official D&D Monster Name", "name": "Optional display name" }] }] }.
+Top-level "notes" are general notes for the whole session (not scene notes).
 If a scene requires combat, "encounterIndex" must point to the encounter index in "encounters".
 If combat is not needed, omit "encounterIndex".
 Pick monsters according to party level and party size from context.

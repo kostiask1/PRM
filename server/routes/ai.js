@@ -862,6 +862,12 @@ router.post("/generate", async (req, res, next) => {
 					}
 				}
 
+				if (Array.isArray(generatedContent.notes)) {
+					sessionData.data.notes = normalizeNotes(generatedContent.notes, {
+						keepAtLeastOne: true,
+					});
+				}
+
 				sessionData.updatedAt = new Date().toISOString();
 				await storage.writeJson(fullPath, sessionData);
 				updatedObject = { ...sessionData, fileName: path.session };
