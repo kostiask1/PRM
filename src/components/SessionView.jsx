@@ -101,6 +101,7 @@ function SessionView(props) {
 										note={note}
 										isLast={index === viewModel.notes.length - 1}
 										isDragging={isDragging}
+										campaignSlug={view.campaignSlug}
 										onToggleCollapse={view.handleToggleNoteCollapse}
 										onTitleChange={view.handleNoteTitleChange}
 										onTextChange={view.handleNoteChange}
@@ -296,6 +297,7 @@ function SceneCard(props) {
 											key={note.id}
 											note={note}
 											isLast={index === (props.scene.notes || []).length - 1}
+											campaignSlug={props.campaignSlug}
 											onToggleCollapse={props.onSceneNoteToggleCollapse}
 											onTitleChange={props.onSceneNoteTitleChange}
 											onTextChange={props.onSceneNoteChange}

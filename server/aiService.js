@@ -199,6 +199,19 @@ Balance rules:
 4. Consider action economy: one boss vs 4-5 PCs is often weaker than multiple enemies.
 5. If "currentEncounter" exists, you may add monsters or fully replace composition according to instructions.
 6. "monsterName" must always be in English using official bestiary names.`,
+	character: `You are an experienced Dungeon Master for Dungeons & Dragons.
+Your goal is to create player characters for a campaign.
+Always return JSON only, with no text before or after JSON.
+The JSON must use this shape:
+{ "characters": [{ "name": "...", "race": "...", "class": "...", "level": 1, "motivation": "...", "trait": "...", "notes": ["Title\\nDetailed note...", "..."] }] }.
+Create complete and playable character concepts.
+Use realistic D&D class/race combinations and sensible levels.`,
+	npc: `You are an experienced Dungeon Master for Dungeons & Dragons.
+Your goal is to create NPCs for a campaign.
+Always return JSON only, with no text before or after JSON.
+The JSON must use this shape:
+{ "npcs": [{ "name": "...", "description": "...", "motivation": "...", "trait": "...", "notes": ["Title\\nDetailed note...", "..."] }] }.
+Create distinct NPCs with clear story function and personality.`,
 	prompt: `You are an experienced Dungeon Master for Dungeons & Dragons.
 Your goal is to help another DM with planning.
 You receive data and user instructions.
@@ -322,9 +335,12 @@ async function generateContent({
 					})
 					.map((scene) => {
 						const sceneConf = hasSceneConfig
-							? conf.scenes[scene.id] || defaultSceneConf
+							? {
+									...defaultSceneConf,
+									...(conf.scenes[scene.id] || {}),
+								}
 							: defaultSceneConf;
-						const resultScene = {};
+						const resultScene = { id: scene.id };
 
 						// Якщо обрано енкаунтер, шукаємо імена монстрів
 						if (sceneConf.encounter && scene.encounterId) {
@@ -347,7 +363,12 @@ async function generateContent({
 										.filter(Boolean);
 								return;
 							}
-							if (sceneConf[field]) resultScene[field] = scene.texts?.[field];
+							if (sceneConf[field]) {
+								const value = scene.texts?.[field];
+								if (value !== undefined && value !== null) {
+									resultScene[field] = value;
+								}
+							}
 						});
 						return resultScene;
 					});
@@ -409,6 +430,8 @@ async function generateContent({
 	userPrompt +=
 		"IMPORTANT: In all generated text fields, wrap every mention of character or NPC names in square brackets, for example [Iryna] or [Borin Stonehelm]. Do not wrap JSON keys.\n";
 	userPrompt +=
+		"IMPORTANT: Do NOT wrap structured name fields in brackets. Fields like name, firstName, lastName, and monsterName must contain plain names without [] symbols.\n";
+	userPrompt +=
 		"IMPORTANT: Never alter, translate, decline, or paraphrase character/NPC names. Always use names exactly as provided in the input JSON, preserving original spelling, and only wrap them in square brackets.\n";
 	userPrompt +=
 		"IMPORTANT: Never transliterate names between alphabets (for example, Latin <-> Cyrillic). Keep the exact original characters from input. Mention format must be a single pair of brackets only: [Name]. Never output [[Name]] or nested brackets.\n";
@@ -416,6 +439,10 @@ async function generateContent({
 	// Додаємо специфічні інструкції залежно від типу задачі
 	if (useKey === "image") {
 		userPrompt += `TASK: Generate an image prompt for scene ID: ${sceneId}\n`;
+	} else if (useKey === "character") {
+		userPrompt += `TASK: Create new player characters for this campaign based on user instructions.\n`;
+	} else if (useKey === "npc") {
+		userPrompt += `TASK: Create new NPCs for this campaign based on user instructions.\n`;
 	} else if (useKey === "encounter") {
 		userPrompt += `TASK: Update current combat encounter (ID: ${encounterId}). Consider character levels and requested difficulty (easy, medium, hard, deadly). Pick monsters that fit the scenario.\n`;
 	} else if (useKey === "scene") {

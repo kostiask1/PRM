@@ -343,6 +343,8 @@ export default function CharacterCard({
 										key={note.id}
 										note={note}
 										isLast={index === characterModel.notes.length - 1}
+										campaignSlug={campaignSlug}
+										forceMarkdownPreview={true}
 										onToggleCollapse={(id) => {
 											updateField(
 												"notes",

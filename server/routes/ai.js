@@ -11,14 +11,26 @@ function asText(value) {
 	return typeof value === "string" ? value.trim() : "";
 }
 
+function sanitizeEntityName(value) {
+	let name = asText(value);
+	if (!name) return "";
+
+	// Remove any outer mention brackets from structured name fields: [John] -> John
+	while (name.startsWith("[") && name.endsWith("]")) {
+		name = name.slice(1, -1).trim();
+	}
+
+	return name.replace(/\s+/g, " ");
+}
+
 function parseNameParts(raw = {}) {
-	const firstName = asText(raw.firstName || raw.first_name);
-	const lastName = asText(raw.lastName || raw.last_name);
+	const firstName = sanitizeEntityName(raw.firstName || raw.first_name);
+	const lastName = sanitizeEntityName(raw.lastName || raw.last_name);
 	if (firstName || lastName) {
 		return { firstName, lastName };
 	}
 
-	const fullName = asText(raw.name || raw.fullName || raw.title);
+	const fullName = sanitizeEntityName(raw.name || raw.fullName || raw.title);
 	if (!fullName) return { firstName: "", lastName: "" };
 	const parts = fullName.split(/\s+/).filter(Boolean);
 	if (parts.length === 1) return { firstName: parts[0], lastName: "" };
@@ -121,6 +133,66 @@ function normalizeCharacter(raw, existing = null) {
 		// Never overwrite existing image links with AI output.
 		imageUrl: existing?.imageUrl ?? raw.imageUrl ?? null,
 	};
+}
+
+function entityNameKey(raw) {
+	const nameParts = parseNameParts(raw || {});
+	return `${nameParts.firstName.toLowerCase()} ${nameParts.lastName.toLowerCase()}`.trim();
+}
+
+async function upsertGeneratedEntities(campaignSlug, type, generatedEntities) {
+	if (!Array.isArray(generatedEntities) || generatedEntities.length === 0) return;
+
+	const existing = await storage.listEntities(campaignSlug, type);
+	const bySlug = new Map(existing.map((entity) => [entity.slug, entity]));
+	const byName = new Map(
+		existing
+			.map((entity) => ({ key: entityNameKey(entity), entity }))
+			.filter(({ key }) => Boolean(key))
+			.map(({ key, entity }) => [key, entity]),
+	);
+
+	for (const rawEntity of generatedEntities) {
+		const nameParts = parseNameParts(rawEntity);
+		const fullNameKey = entityNameKey(rawEntity);
+		const baseSlug = storage.campaignSlug(
+			nameParts.firstName || rawEntity.name || type,
+		);
+
+		const existingEntity =
+			bySlug.get(rawEntity.slug) ||
+			(fullNameKey ? byName.get(fullNameKey) : null) ||
+			null;
+
+		const normalized = normalizeCharacter(rawEntity, existingEntity);
+
+		if (existingEntity) {
+			const payload = {
+				...existingEntity,
+				...normalized,
+				slug: existingEntity.slug,
+				id: existingEntity.id,
+				imageUrl: existingEntity.imageUrl ?? normalized.imageUrl ?? null,
+			};
+			await storage.writeEntity(campaignSlug, type, existingEntity.slug, payload);
+			bySlug.set(existingEntity.slug, payload);
+			if (fullNameKey) byName.set(fullNameKey, payload);
+			continue;
+		}
+
+		const uniqueSlug = await storage.ensureUniqueEntitySlug(
+			campaignSlug,
+			type,
+			baseSlug,
+		);
+		const payload = {
+			...normalized,
+			slug: uniqueSlug,
+		};
+		await storage.writeEntity(campaignSlug, type, uniqueSlug, payload);
+		bySlug.set(uniqueSlug, payload);
+		if (fullNameKey) byName.set(fullNameKey, payload);
+	}
 }
 
 function normalizeSceneTexts(rawScene = {}) {
@@ -462,6 +534,26 @@ function applyMentionsToGeneratedContent(generatedContent, names) {
 		);
 	}
 
+	if (Array.isArray(generatedContent.npcs)) {
+		generatedContent.npcs = generatedContent.npcs.map((npc) => {
+			if (!npc || typeof npc !== "object") return npc;
+			const next = { ...npc };
+			for (const key of ["description", "motivation", "trait"]) {
+				if (typeof next[key] === "string") {
+					next[key] = processGeneratedTextMentions(next[key], names);
+				}
+			}
+			if (Array.isArray(next.notes)) {
+				next.notes = next.notes.map((note) =>
+					typeof note === "string"
+						? processGeneratedTextMentions(note, names)
+						: note,
+				);
+			}
+			return next;
+		});
+	}
+
 	if (Array.isArray(generatedContent.scenes)) {
 		generatedContent.scenes = generatedContent.scenes.map((scene) => {
 			if (!scene || typeof scene !== "object") return scene;
@@ -534,6 +626,12 @@ async function collectMentionCandidates(
 	if (Array.isArray(generatedContent?.characters)) {
 		for (const character of generatedContent.characters) {
 			names.push(getCharacterDisplayName(character));
+		}
+	}
+
+	if (Array.isArray(generatedContent?.npcs)) {
+		for (const npc of generatedContent.npcs) {
+			names.push(getCharacterDisplayName(npc));
 		}
 	}
 
@@ -779,77 +877,12 @@ router.post("/generate", async (req, res, next) => {
 					meta.notes = normalizeNotes(generatedContent.notes);
 				}
 
-				if (Array.isArray(generatedContent.characters)) {
-					const existing = await storage.listEntities(
-						path.campaign,
-						"characters",
-					);
-					const bySlug = new Map(
-						existing.map((entity) => [entity.slug, entity]),
-					);
-					const byName = new Map(
-						existing
-							.map((entity) => ({
-								key: `${asText(entity.firstName).toLowerCase()} ${asText(entity.lastName).toLowerCase()}`.trim(),
-								entity,
-							}))
-							.filter(({ key }) => Boolean(key))
-							.map(({ key, entity }) => [key, entity]),
-					);
-
-					for (const rawCharacter of generatedContent.characters) {
-						const nameParts = parseNameParts(rawCharacter);
-						const fullNameKey =
-							`${nameParts.firstName.toLowerCase()} ${nameParts.lastName.toLowerCase()}`.trim();
-						const baseSlug = storage.campaignSlug(
-							nameParts.firstName || rawCharacter.name || "character",
-						);
-
-						const existingEntity =
-							bySlug.get(rawCharacter.slug) ||
-							(fullNameKey ? byName.get(fullNameKey) : null) ||
-							null;
-
-						const normalized = normalizeCharacter(rawCharacter, existingEntity);
-
-						if (existingEntity) {
-							const payload = {
-								...existingEntity,
-								...normalized,
-								slug: existingEntity.slug,
-								id: existingEntity.id,
-								imageUrl:
-									existingEntity.imageUrl ?? normalized.imageUrl ?? null,
-							};
-							await storage.writeEntity(
-								path.campaign,
-								"characters",
-								existingEntity.slug,
-								payload,
-							);
-							bySlug.set(existingEntity.slug, payload);
-							if (fullNameKey) byName.set(fullNameKey, payload);
-						} else {
-							const uniqueSlug = await storage.ensureUniqueEntitySlug(
-								path.campaign,
-								"characters",
-								baseSlug,
-							);
-							const payload = {
-								...normalized,
-								slug: uniqueSlug,
-							};
-							await storage.writeEntity(
-								path.campaign,
-								"characters",
-								uniqueSlug,
-								payload,
-							);
-							bySlug.set(uniqueSlug, payload);
-							if (fullNameKey) byName.set(fullNameKey, payload);
-						}
-					}
-				}
+				await upsertGeneratedEntities(
+					path.campaign,
+					"characters",
+					generatedContent.characters,
+				);
+				await upsertGeneratedEntities(path.campaign, "npc", generatedContent.npcs);
 
 				meta.updatedAt = new Date().toISOString();
 				await storage.writeJson(metaPath, meta);

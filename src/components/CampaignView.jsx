@@ -267,6 +267,7 @@ function CampaignView(props) {
 											note={note}
 											isLast={index === view.notes.length - 1}
 											isDragging={isDragging}
+											campaignSlug={campaign.slug}
 											onToggleCollapse={view.handleToggleNoteCollapse}
 											onTitleChange={view.handleNoteTitleChange}
 											onTextChange={view.handleNoteChange}

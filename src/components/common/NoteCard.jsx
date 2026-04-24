@@ -10,6 +10,8 @@ export default function NoteCard({
 	note,
 	isLast,
 	isDragging,
+	campaignSlug,
+	forceMarkdownPreview = false,
 	onToggleCollapse,
 	onTitleChange,
 	onTextChange,
@@ -29,6 +31,7 @@ export default function NoteCard({
 				"note-card-simple--dragging": isDragging,
 				"note-card-simple--simplified": simplifiedNotesEnabled,
 			})}
+			onClick={() => isCollapsed && simplifiedNotesEnabled && onToggleCollapse(note.id)}
 		>
 			{showClassicHeader && (
 				<div
@@ -63,6 +66,9 @@ export default function NoteCard({
 					)}
 				</div>
 			)}
+			{showSimplifiedActions && isCollapsed && (
+				<div>{note.text.slice(0, 40)}</div>
+			)}
 			{showSimplifiedActions && (
 				<div className="note-card-simple__simpleActions">
 					<CollapseToggleButton
@@ -95,7 +101,10 @@ export default function NoteCard({
 						value={note.text}
 						onChange={(event) => onTextChange(note.id, event.target.value)}
 						placeholder={lang.t("Note text...")}
-						plainTextPreview={simplifiedNotesEnabled}
+						plainTextPreview={
+							simplifiedNotesEnabled && !forceMarkdownPreview
+						}
+						campaignSlug={campaignSlug}
 					/>
 				</div>
 			)}
