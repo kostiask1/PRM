@@ -59,9 +59,8 @@
 	border-radius: 16px;
 	position: sticky;
 	top: -20px;
-	padding: var(--space-4) var(--space-5);
+	padding: var(--space-3);
 	border-bottom: 1px solid color-mix(in srgb, var(--text-bright), transparent 95%);
-	padding-bottom: 8px;
 	z-index: 1;
 }
 
