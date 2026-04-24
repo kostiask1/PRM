@@ -11,6 +11,7 @@ import Tooltip from "./common/Tooltip";
 import classNames from "../utils/classNames";
 import "../assets/components/EncounterView.css";
 import { lang } from "../services/localization";
+import { renderMentionText } from "../utils/parser";
 
 function EncounterView(props) {
 	const campaign = props.campaign;
@@ -114,7 +115,7 @@ function EncounterView(props) {
 													view.handleRenameMonster(m.instanceId, m.name);
 												}}
 											>
-												{m.name}
+												{renderMentionText(String(m.name), "plain-mention", campaign.slug)}
 											</div>
 										</Tooltip>
 										<div className="EncounterMonsterRow__stats">

@@ -3,6 +3,7 @@ import React from "react";
 import ReactMarkdown from "react-markdown";
 import RollDice from "../components/RollDice";
 import SpellLink from "../components/SpellLink";
+import EntityLink from "../components/common/EntityLink";
 
 export const ABILITY_MAP = {
 	str: "Strength",
@@ -404,3 +405,23 @@ export const parseRollsAndSpells = (
 	pushSafeMarkdownText(elements, text.slice(lastIndex), `t-${matchIndex}-tail`);
 	return elements;
 };
+
+export function renderMentionText(text, keyPrefix = "mention", campaignSlug) {
+	const parts = String(text || "").split(/(\[[^\]]+\])/g);
+	return parts.map((part, index) => {
+		if (part.startsWith("[") && part.endsWith("]")) {
+			const name = part.slice(1, -1).trim();
+			return (
+				<EntityLink
+					key={`${keyPrefix}-${index}`}
+					name={name}
+					campaignSlug={campaignSlug}
+					className="mention-link"
+				>
+					{name}
+				</EntityLink>
+			);
+		}
+		return part;
+	});
+}

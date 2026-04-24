@@ -6,6 +6,7 @@ import EntityLink from "../common/EntityLink";
 import "../../assets/components/EditableField.css";
 import classNames from "../../utils/classNames";
 import { lang } from "../../services/localization";
+import { renderMentionText } from "../../utils/parser";
 
 const TAB_PREVIEW = "       "; // 7 пробілів, як у тебе зараз
 
@@ -383,35 +384,11 @@ export default function EditableField({
 		}
 	};
 
-	const renderMentionText = (text, keyPrefix = "mention") => {
-		const parts = text.split(/(\[[^\]]+\])/g);
-		return parts.map((part, index) => {
-			if (part.startsWith("[") && part.endsWith("]")) {
-				const name = part.slice(1, -1);
-				return (
-					<span
-						key={`${keyPrefix}-${index}`}
-						onClick={(e) => e.stopPropagation()}
-					>
-						<EntityLink
-							name={name}
-							campaignSlug={props.campaignSlug}
-							className="mention-link"
-						>
-							{name}
-						</EntityLink>
-					</span>
-				);
-			}
-			return part;
-		});
-	};
-
 	const renderMentionChildren = (children, keyPrefix = "mention-node") =>
 		React.Children.map(children, (child, index) => {
 			const nextKey = `${keyPrefix}-${index}`;
 			if (typeof child === "string") {
-				return renderMentionText(child, nextKey);
+				return renderMentionText(child, nextKey, props.campaignSlug);
 			}
 			if (React.isValidElement(child) && child.props?.children) {
 				return React.cloneElement(child, {
@@ -504,7 +481,9 @@ export default function EditableField({
 				{value || value === 0 ? (
 					type === "textarea" ? (
 						plainTextPreview ? (
-							<span style={{ whiteSpace: "pre-wrap" }}>{String(value)}</span>
+							<span style={{ whiteSpace: "pre-wrap" }}>
+								{renderMentionText(String(value), "plain-mention", props.campaignSlug)}
+							</span>
 						) : (
 							<ReactMarkdown components={components}>
 								{String(value)

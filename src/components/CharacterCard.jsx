@@ -11,6 +11,7 @@ import CharacterCardModel from "../models/CharacterCardModel.js";
 import CollapseToggleButton from "./common/CollapseToggleButton.jsx";
 import classNames from "../utils/classNames";
 import { lang } from "../services/localization";
+import { renderMentionText } from "../utils/parser.jsx";
 
 const markdownTagsWithMentions = [
 	"p",
@@ -31,26 +32,6 @@ const markdownTagsWithMentions = [
 	"a",
 	"span",
 ];
-
-function renderMentionText(text, keyPrefix = "mention", campaignSlug) {
-	const parts = String(text || "").split(/(\[[^\]]+\])/g);
-	return parts.map((part, index) => {
-		if (part.startsWith("[") && part.endsWith("]")) {
-			const name = part.slice(1, -1).trim();
-			return (
-				<EntityLink
-					key={`${keyPrefix}-${index}`}
-					name={name}
-					campaignSlug={campaignSlug}
-					className="mention-link"
-				>
-					{name}
-				</EntityLink>
-			);
-		}
-		return part;
-	});
-}
 
 function renderMentionChildren(
 	children,
@@ -344,7 +325,6 @@ export default function CharacterCard({
 										note={note}
 										isLast={index === characterModel.notes.length - 1}
 										campaignSlug={campaignSlug}
-										forceMarkdownPreview={true}
 										onToggleCollapse={(id) => {
 											updateField(
 												"notes",

@@ -11,6 +11,7 @@ import {
 	capitalizeWords,
 	preprocessTags,
 	renderRecursiveContent,
+	renderMentionText,
 } from "../utils/parser.jsx";
 import "../assets/components/MonsterStatBlock.css";
 import ClickToCopy from "./common/ClickToCopy.jsx";
@@ -402,7 +403,7 @@ export default function MonsterStatBlock({
 									className="MonsterStatBlock__name"
 									onClick={() => onNameClick?.(monster)}
 								>
-									{monster.name}
+									{renderMentionText(String(monster.name), "plain-mention")}
 								</h3>
 							</Tooltip>
 						) : (
@@ -411,7 +412,7 @@ export default function MonsterStatBlock({
 								text={monster.name}
 								message={lang.t("Name copied!")}
 							>
-								{monster.name}
+								{renderMentionText(String(monster.name), "plain-mention")}
 							</ClickToCopy>
 						)}
 						<Button

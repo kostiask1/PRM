@@ -13,7 +13,6 @@ export default function NoteCard({
 	isLast,
 	isDragging,
 	campaignSlug,
-	forceMarkdownPreview = false,
 	onToggleCollapse,
 	onTitleChange,
 	onTextChange,
@@ -109,7 +108,7 @@ export default function NoteCard({
 						value={note.text}
 						onChange={(event) => onTextChange(note.id, event.target.value)}
 						placeholder={lang.t("Note text...")}
-						plainTextPreview={simplifiedNotesEnabled && !forceMarkdownPreview}
+						plainTextPreview={simplifiedNotesEnabled}
 						campaignSlug={campaignSlug}
 					/>
 				</div>
