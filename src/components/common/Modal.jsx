@@ -124,6 +124,11 @@ function Modal({
 	}, [onCancel, onConfirm, showInput, inputValue]);
 
 	function handleClose() {
+		const activeElement = document.activeElement;
+		if (activeElement && typeof activeElement.blur === "function") {
+			activeElement.blur();
+		}
+
 		if (onCancel) {
 			onCancel();
 		} else {
@@ -131,10 +136,26 @@ function Modal({
 		}
 	}
 
+	function handleCloseWithEvent(event) {
+		event?.preventDefault?.();
+		event?.stopPropagation?.();
+		handleClose();
+	}
+
 	const isAlert = !onCancel;
 
 	return createPortal(
-		<div className="Modal__overlay" onClick={handleClose}>
+		<div
+			className="Modal__overlay"
+			onClick={(event) => {
+				if (event.target !== event.currentTarget) return;
+				handleCloseWithEvent(event);
+			}}
+			onMouseDown={(event) => {
+				if (event.target !== event.currentTarget) return;
+				event.preventDefault();
+			}}
+		>
 			<div
 				className={classNames("Modal__card", `Modal__card--${type}`, className)}
 				onClick={(e) => e.stopPropagation()}
@@ -143,7 +164,14 @@ function Modal({
 					<h3>{title}</h3>
 					<button
 						className="Modal__close"
-						onClick={() => onCancel && onCancel()}
+						onMouseDown={(event) => {
+							event.preventDefault();
+							event.stopPropagation();
+						}}
+						onClick={(event) => {
+							if (!onCancel) return;
+							handleCloseWithEvent(event);
+						}}
 					>
 						<Icon name="x" />
 					</button>
@@ -177,7 +205,14 @@ function Modal({
 				{showFooter && (
 					<div className="Modal__footer">
 						{onCancel && (
-							<Button variant="ghost" onClick={onCancel}>
+							<Button
+								variant="ghost"
+								onMouseDown={(event) => {
+									event.preventDefault();
+									event.stopPropagation();
+								}}
+								onClick={(event) => handleCloseWithEvent(event)}
+							>
 								{lang.t("Cancel")}
 							</Button>
 						)}
