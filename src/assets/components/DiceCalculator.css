@@ -387,7 +387,7 @@
 }
 
 .DiceCalculator__historyList {
-	max-height: 120px;
+	height: 120px;
 	overflow-y: auto;
 }
 
