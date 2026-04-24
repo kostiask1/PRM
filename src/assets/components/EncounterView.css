@@ -23,8 +23,8 @@
 }
 
 .EncounterView__list {
-	width: 380px;
-	min-width: 380px;
+	width: 350px;
+	min-width: 350px;
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-2);
