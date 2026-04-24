@@ -192,6 +192,24 @@
 	padding-right: var(--space-1);
 }
 
+.EncounterView__detailView--grid .MonsterStatBlock__header__details {
+	gap: var(--space-4);
+}
+
+.EncounterView__detailView--grid .MonsterStatBlock__properties {
+	margin-bottom: var(--space-3);
+}
+
+.EncounterView__detailView--grid .MonsterStatBlock__stats {
+	flex-direction: column;
+	padding: var(--space-1) 0;
+	gap: var(--space-1);
+}
+
+.EncounterView__detailView--grid .MonsterStatBlock__abilities {
+	margin-bottom: var(--space-3);
+}
+
 .EncounterView__grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(min(100%, 500px), 1fr));
@@ -225,8 +243,8 @@
 }
 
 .EncounterView__gridItem .MonsterStatBlock__token-wrapper {
-	width: 220px;
-	height: 220px;
+	width: 200px;
+	height: 200px;
 }
 
 .EncounterView__gridItem .MonsterStatBlock__token-wrapper:hover .MonsterStatBlock__token {

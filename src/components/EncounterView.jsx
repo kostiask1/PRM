@@ -308,6 +308,7 @@ function EncounterView(props) {
 												tokenImageOverrideUrl={view.getMonsterImageOverride(
 													monster,
 												)}
+												layoutMode="grid"
 											/>
 										</div>
 									))}

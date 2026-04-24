@@ -34,6 +34,7 @@ export default function MonsterStatBlock({
 	nameTitle,
 	onFavoriteChange,
 	tokenImageOverrideUrl = null,
+	layoutMode = "single",
 }) {
 	const dispatch = useAppDispatch();
 	const [hasImageError, setHasImageError] = useState(false);
@@ -482,14 +483,16 @@ export default function MonsterStatBlock({
 							</div>
 						)}
 					</div>
-					<div className="MonsterStatBlock__abilities">
-						{renderAbility("STR", model.abilityScores.str)}
-						{renderAbility("DEX", model.abilityScores.dex)}
-						{renderAbility("CON", model.abilityScores.con)}
-						{renderAbility("INT", model.abilityScores.int)}
-						{renderAbility("WIS", model.abilityScores.wis)}
-						{renderAbility("CHA", model.abilityScores.cha)}
-					</div>
+					{layoutMode !== "grid" && (
+						<div className="MonsterStatBlock__abilities">
+							{renderAbility("STR", model.abilityScores.str)}
+							{renderAbility("DEX", model.abilityScores.dex)}
+							{renderAbility("CON", model.abilityScores.con)}
+							{renderAbility("INT", model.abilityScores.int)}
+							{renderAbility("WIS", model.abilityScores.wis)}
+							{renderAbility("CHA", model.abilityScores.cha)}
+						</div>
+					)}
 				</div>
 				<div className="MonsterStatBlock__token-wrapper">
 					{!hasImageError && (
@@ -514,6 +517,16 @@ export default function MonsterStatBlock({
 					)}
 				</div>
 			</div>
+			{layoutMode === "grid" && (
+				<div className="MonsterStatBlock__abilities">
+					{renderAbility("STR", model.abilityScores.str)}
+					{renderAbility("DEX", model.abilityScores.dex)}
+					{renderAbility("CON", model.abilityScores.con)}
+					{renderAbility("INT", model.abilityScores.int)}
+					{renderAbility("WIS", model.abilityScores.wis)}
+					{renderAbility("CHA", model.abilityScores.cha)}
+				</div>
+			)}
 			<div className="MonsterStatBlock__properties">
 				{renderSaves()}
 
