@@ -1,8 +1,16 @@
-import { useState, useEffect, useRef } from "react";
+import {
+	Children,
+	cloneElement,
+	createElement,
+	isValidElement,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
+import ReactMarkdown from "react-markdown";
 import { api } from "../api";
 import { parseUrl } from "../utils/navigation";
 import Button from "./form/Button";
-import EditableField from "./form/EditableField";
 import Icon from "./common/Icon";
 import Input from "./form/Input";
 import Modal from "./common/Modal";
@@ -19,7 +27,51 @@ import Tooltip from "./common/Tooltip";
 import classNames from "../utils/classNames";
 import { useAppDispatch, useAppSelector } from "../store/appStore";
 import { lang } from "../services/localization";
+import { renderMentionText } from "../utils/parser.jsx";
 import "../assets/components/AiAssistantPanel.css";
+
+const markdownTagsWithMentions = [
+	"p",
+	"strong",
+	"em",
+	"del",
+	"code",
+	"blockquote",
+	"li",
+	"h1",
+	"h2",
+	"h3",
+	"h4",
+	"h5",
+	"h6",
+	"td",
+	"th",
+	"a",
+	"span",
+];
+
+function renderMentionChildren(children) {
+	return Children.map(children, (child) => {
+		if (typeof child === "string") {
+			return renderMentionText(child);
+		}
+		if (isValidElement(child) && child.props?.children) {
+			return cloneElement(child, {
+				...child.props,
+				children: renderMentionChildren(child.props.children),
+			});
+		}
+		return child;
+	});
+}
+
+const markdownMentionComponents = Object.fromEntries(
+	markdownTagsWithMentions.map((tag) => [
+		tag,
+		({ children, ...tagProps }) =>
+			createElement(tag, tagProps, renderMentionChildren(children)),
+	]),
+);
 
 export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	const dispatch = useAppDispatch();
@@ -61,12 +113,37 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	const [generatedPrompt, setGeneratedPrompt] = useState(null);
 	const [assistantMode, setAssistantMode] = useState("content");
 	const activeGenerateControllerRef = useRef(null);
+	const generatedPromptRef = useRef(null);
 	const [canCancelGenerate, setCanCancelGenerate] = useState(false);
+	const [isGeneratedPromptCopied, setIsGeneratedPromptCopied] = useState(false);
 
 	const cancelGenerateRequest = () => {
 		activeGenerateControllerRef.current?.abort();
 		activeGenerateControllerRef.current = null;
 		setCanCancelGenerate(false);
+	};
+
+	const copyGeneratedPrompt = async () => {
+		if (!generatedPromptRef.current || !generatedPrompt) return;
+
+		try {
+			const html = generatedPromptRef.current.innerHTML;
+			const data = [
+				new ClipboardItem({
+					"text/html": new Blob([html], { type: "text/html" }),
+					"text/plain": new Blob([generatedPrompt], { type: "text/plain" }),
+				}),
+			];
+
+			await navigator.clipboard.write(data);
+			setIsGeneratedPromptCopied(true);
+			setTimeout(() => setIsGeneratedPromptCopied(false), 2000);
+		} catch (err) {
+			console.error("Failed to copy formatted text:", err);
+			await navigator.clipboard.writeText(generatedPrompt);
+			setIsGeneratedPromptCopied(true);
+			setTimeout(() => setIsGeneratedPromptCopied(false), 2000);
+		}
 	};
 
 	const showApiKeyInstructions = () => {
@@ -733,17 +810,28 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 						{generatedPrompt && (
 							<Modal
 								title={lang.t("Response")}
-								confirmLabel={lang.t("Close")}
 								onCancel={() => setGeneratedPrompt(null)}
-								onConfirm={() => setGeneratedPrompt(null)}
+								showFooter={false}
 							>
-								<EditableField
-									type="textarea"
-									value={generatedPrompt}
-									onChange={(e) => setGeneratedPrompt(e.target.value)}
-									showCopyButton={true}
-									className="AiAssistant__prompt-result"
-								/>
+								<div className="AiAssistant__prompt-result-wrap">
+									<div className="AiAssistant__prompt-result-actions">
+										<Button
+											variant="ghost"
+											size={Button.SIZES.SMALL}
+											icon={isGeneratedPromptCopied ? "check" : "copy"}
+											onClick={copyGeneratedPrompt}
+											title={lang.t("Copy formatted text for Word")}
+										/>
+									</div>
+									<div
+										className="AiAssistant__prompt-result"
+										ref={generatedPromptRef}
+									>
+										<ReactMarkdown components={markdownMentionComponents}>
+											{generatedPrompt}
+										</ReactMarkdown>
+									</div>
+								</div>
 							</Modal>
 						)}
 

@@ -229,6 +229,100 @@
 	overflow-y: auto;
 }
 
+.AiAssistant__prompt-result-wrap {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.AiAssistant__prompt-result-actions {
+	display: flex;
+	justify-content: flex-end;
+}
+
+.AiAssistant__prompt-result {
+	max-height: 65vh;
+	overflow: auto;
+	word-break: break-word;
+	color: var(--text-bright);
+	font-size: 0.95rem;
+	line-height: 1.6;
+}
+
+.AiAssistant__prompt-result > :first-child,
+.AiAssistant__prompt-result > div > :first-child {
+	margin-top: 0;
+}
+
+.AiAssistant__prompt-result > :last-child,
+.AiAssistant__prompt-result > div > :last-child {
+	margin-bottom: 0;
+}
+
+.AiAssistant__prompt-result h1,
+.AiAssistant__prompt-result h2,
+.AiAssistant__prompt-result h3,
+.AiAssistant__prompt-result h4 {
+	margin: 1rem 0 0.5rem;
+	line-height: 1.25;
+	color: var(--text-bright);
+}
+
+.AiAssistant__prompt-result p,
+.AiAssistant__prompt-result ul,
+.AiAssistant__prompt-result ol,
+.AiAssistant__prompt-result blockquote,
+.AiAssistant__prompt-result pre,
+.AiAssistant__prompt-result table {
+	margin: 0 0 0.8rem;
+}
+
+.AiAssistant__prompt-result ul,
+.AiAssistant__prompt-result ol {
+	padding-left: 1.4rem;
+}
+
+.AiAssistant__prompt-result blockquote {
+	padding-left: var(--space-3);
+	border-left: 3px solid var(--accent);
+	color: var(--muted);
+}
+
+.AiAssistant__prompt-result code {
+	background: var(--bg-2);
+	border: 1px solid var(--border);
+	border-radius: 4px;
+	padding: 0.1rem 0.25rem;
+}
+
+.AiAssistant__prompt-result pre {
+	padding: var(--space-3);
+	background: var(--bg-2);
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	overflow-x: auto;
+}
+
+.AiAssistant__prompt-result pre code {
+	padding: 0;
+	border: none;
+	background: transparent;
+}
+
+.AiAssistant__prompt-result table {
+	width: 100%;
+	border-collapse: collapse;
+	overflow: hidden;
+}
+
+.AiAssistant__prompt-result th,
+.AiAssistant__prompt-result td {
+	border: 1px solid var(--border);
+	padding: 0.4rem 0.55rem;
+	text-align: left;
+	vertical-align: top;
+}
+
 .AiAssistant__prompt-area {
 	margin-top: 16px;
 }
