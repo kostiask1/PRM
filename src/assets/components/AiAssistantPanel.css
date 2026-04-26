@@ -193,8 +193,16 @@
 	margin: 0 0 16px;
 }
 
-.AiAssistant__response-history h4 {
+.AiAssistant__response-history-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-3);
 	margin: 0 0 var(--space-2);
+}
+
+.AiAssistant__response-history-header h4 {
+	margin: 0;
 	color: var(--accent);
 	font-size: 0.85rem;
 	text-transform: uppercase;

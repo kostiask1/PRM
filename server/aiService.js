@@ -283,6 +283,9 @@ async function generateContent({
 	const systemInstructionParts = [
 		systemInstructions[useKey],
 		`MANDATORY LANGUAGE RULE: You must write all user-visible output strictly in ${responseLanguage.label}.`,
+		`NAME LANGUAGE RULE: Any new names you invent must be written in ${responseLanguage.label}. This includes new character names, NPC names, place names, scene names, encounter names, aliases, titles, and display names.
+EXISTING NAME PROTECTION: Names that already exist in the input data must keep their exact original spelling and alphabet. Do not translate, transliterate, decline, paraphrase, rename, or otherwise alter existing names unless the user explicitly asks you to do that.
+Exception: technical lookup fields that require official English names, such as "monsterName", must remain official English bestiary names.`,
 	];
 	if (useKey === "scene" && encounterGenerationEnabled) {
 		systemInstructionParts.push(
@@ -457,9 +460,10 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 	userPrompt +=
 		"IMPORTANT: Do NOT wrap structured name fields in brackets. Fields like name, firstName, lastName, and monsterName must contain plain names without [] symbols.\n";
 	userPrompt +=
-		"IMPORTANT: Never alter, translate, decline, or paraphrase character/NPC names. Always use names exactly as provided in the input JSON, preserving original spelling, and only wrap them in square brackets.\n";
+		"IMPORTANT: Never alter, translate, decline, or paraphrase existing character/NPC names unless the user explicitly asks you to rename or translate them. Always use existing names exactly as provided in the input JSON, preserving original spelling, and only wrap them in square brackets.\n";
 	userPrompt +=
-		"IMPORTANT: Never transliterate names between alphabets (for example, Latin <-> Cyrillic). Keep the exact original characters from input. Mention format must be a single pair of brackets only: [Name]. Never output [[Name]] or nested brackets.\n";
+		"IMPORTANT: Never transliterate existing names between alphabets (for example, Latin <-> Cyrillic) unless the user explicitly asks you to transliterate them. Keep the exact original characters from input. Mention format must be a single pair of brackets only: [Name]. Never output [[Name]] or nested brackets.\n";
+	userPrompt += `IMPORTANT: For new names you invent, use ${responseLanguage.label}. For existing names from input, keep the original spelling unless the user explicitly requests a rename, translation, or transliteration. Keep official lookup fields such as monsterName in English when the schema requires official D&D names.\n`;
 
 	// Додаємо специфічні інструкції залежно від типу задачі
 	if (useKey === "image") {

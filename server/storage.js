@@ -10,6 +10,7 @@ const SPELLS_DIR = path.join(ROOT_DIR, "database", "spells");
 const FAVORITES_PATH = path.join(DATA_DIR, "favorites.json");
 const IMAGES_DIR = path.join(DATA_DIR, "images");
 const SETTINGS_PATH = path.join(DATA_DIR, "settings.json");
+const AI_RESPONSES_PATH = path.join(DATA_DIR, "aiResponses.json");
 
 const DEFAULT_APP_SETTINGS = Object.freeze({
 	language: "uk",
@@ -278,6 +279,77 @@ async function readFavorites() {
 
 async function writeFavorites(favorites) {
 	await writeJson(FAVORITES_PATH, favorites);
+}
+
+function normalizeAiResponse(raw = {}) {
+	const text = typeof raw.text === "string" ? raw.text : "";
+	if (!text.trim()) return null;
+	return {
+		id: String(raw.id || createId()),
+		text,
+		path:
+			raw.path && typeof raw.path === "object"
+				? {
+						campaign: raw.path.campaign || null,
+						session: raw.path.session || null,
+						encounter: raw.path.encounter || null,
+					}
+				: null,
+		type: raw.type || null,
+		modelName: raw.modelName || null,
+		language: raw.language || null,
+		userInstructions: raw.userInstructions || "",
+		createdAt: raw.createdAt || new Date().toISOString(),
+	};
+}
+
+async function readAiResponses() {
+	if (!(await exists(AI_RESPONSES_PATH))) return [];
+	try {
+		const saved = await readJson(AI_RESPONSES_PATH);
+		const list = Array.isArray(saved) ? saved : saved?.responses || [];
+		return list
+			.map(normalizeAiResponse)
+			.filter(Boolean)
+			.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+	} catch {
+		return [];
+	}
+}
+
+async function writeAiResponses(responses) {
+	const normalized = (Array.isArray(responses) ? responses : [])
+		.map(normalizeAiResponse)
+		.filter(Boolean)
+		.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+	await writeJson(AI_RESPONSES_PATH, normalized);
+	return normalized;
+}
+
+async function addAiResponse(payload) {
+	const responses = await readAiResponses();
+	const entry = normalizeAiResponse({
+		...payload,
+		id: createId(),
+		createdAt: new Date().toISOString(),
+	});
+	if (!entry) {
+		throw new Error("AI response text is required.");
+	}
+	await writeAiResponses([entry, ...responses]);
+	return entry;
+}
+
+async function deleteAiResponse(id) {
+	const responses = await readAiResponses();
+	const next = responses.filter((entry) => entry.id !== String(id));
+	await writeAiResponses(next);
+	return next;
+}
+
+async function clearAiResponses() {
+	await writeAiResponses([]);
+	return [];
 }
 
 function normalizeSettings(settings = {}) {
@@ -924,6 +996,7 @@ module.exports = {
 	SPELLS_DIR,
 	IMAGES_DIR,
 	SETTINGS_PATH,
+	AI_RESPONSES_PATH,
 	DEFAULT_APP_SETTINGS,
 	createId,
 	sanitizeName,
@@ -946,6 +1019,10 @@ module.exports = {
 	deleteEntity,
 	readFavorites,
 	writeFavorites,
+	readAiResponses,
+	addAiResponse,
+	deleteAiResponse,
+	clearAiResponses,
 	readSettings,
 	updateSettings,
 	listCampaignSlugs,

@@ -150,6 +150,15 @@ export const api = {
 
 	// AI methods
 	listAiModels: () => api.request("/ai/models"),
+	listAiResponses: () => api.request("/ai/responses"),
+	deleteAiResponse: (id) =>
+		api.request(`/ai/responses/${encodeURIComponent(id)}`, {
+			method: "DELETE",
+		}),
+	clearAiResponses: () =>
+		api.request("/ai/responses", {
+			method: "DELETE",
+		}),
 	generateAi: (payload, options = {}) =>
 		api.request("/ai/generate", {
 			method: "POST",

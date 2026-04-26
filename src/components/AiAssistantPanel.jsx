@@ -21,6 +21,7 @@ import CollapseToggleButton from "./common/CollapseToggleButton";
 import ListCard from "./common/ListCard";
 import {
 	alert,
+	confirm,
 	refreshEntitiesAction,
 	requestCampaignsReloadAction,
 } from "../actions/app";
@@ -85,6 +86,12 @@ function getResponsePreview(text) {
 		.trim();
 }
 
+function formatResponseDate(date, language) {
+	const parsed = new Date(date);
+	if (Number.isNaN(parsed.getTime())) return "";
+	return parsed.toLocaleString(language);
+}
+
 export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	const dispatch = useAppDispatch();
 	const currentLanguage = useAppSelector(
@@ -123,6 +130,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 			: {}, // { [slug]: { included: bool, notes: bool, result_text: bool, scenes: {}, data: {} } }
 	}));
 	const [generatedPrompt, setGeneratedPrompt] = useState(null);
+	const [selectedResponseId, setSelectedResponseId] = useState(null);
 	const [responseHistory, setResponseHistory] = useState([]);
 	const [assistantMode, setAssistantMode] = useState("content");
 	const activeGenerateControllerRef = useRef(null);
@@ -136,8 +144,19 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 		setCanCancelGenerate(false);
 	};
 
-	const showGeneratedPrompt = (text) => {
-		setGeneratedPrompt(text);
+	const showGeneratedPrompt = (response) => {
+		const entry =
+			response && typeof response === "object"
+				? response
+				: { id: null, text: response };
+		setGeneratedPrompt(entry.text);
+		setSelectedResponseId(entry.id || null);
+		setIsGeneratedPromptCopied(false);
+	};
+
+	const closeGeneratedPrompt = () => {
+		setGeneratedPrompt(null);
+		setSelectedResponseId(null);
 		setIsGeneratedPromptCopied(false);
 	};
 
@@ -199,6 +218,56 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 				console.error("Failed to load AI models", err);
 			});
 	}, [isOpen, aiModels.length, selectedModel]);
+
+	useEffect(() => {
+		if (!isOpen) return;
+		api
+			.listAiResponses()
+			.then((responses) => {
+				setResponseHistory(Array.isArray(responses) ? responses : []);
+			})
+			.catch((err) => {
+				console.error("Failed to load AI response history", err);
+			});
+	}, [isOpen]);
+
+	const deleteResponseHistoryEntry = async (entry) => {
+		const confirmed = await dispatch(
+			confirm({
+				title: lang.t("Delete response"),
+				message: lang.t("Delete this AI response?"),
+			}),
+		);
+		if (!confirmed) return;
+
+		try {
+			const responses = await api.deleteAiResponse(entry.id);
+			setResponseHistory(Array.isArray(responses) ? responses : []);
+			if (selectedResponseId === entry.id) {
+				closeGeneratedPrompt();
+			}
+		} catch (err) {
+			dispatch(alert({ title: lang.t("Delete error"), message: err.message }));
+		}
+	};
+
+	const clearResponseHistory = async () => {
+		const confirmed = await dispatch(
+			confirm({
+				title: lang.t("Clear response history"),
+				message: lang.t("Delete all saved AI responses?"),
+			}),
+		);
+		if (!confirmed) return;
+
+		try {
+			const responses = await api.clearAiResponses();
+			setResponseHistory(Array.isArray(responses) ? responses : []);
+			closeGeneratedPrompt();
+		} catch (err) {
+			dispatch(alert({ title: lang.t("Delete error"), message: err.message }));
+		}
+	};
 
 	const toggleSessionDetails = async (sessionSlug) => {
 		const isExpanded = !!expandedSessions[sessionSlug];
@@ -317,13 +386,16 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 
 			// Одразу оновлюємо стан в батьківському компоненті, бо в БД вже записано
 			if (data.prompt) {
-				const historyEntry = {
+				const historyEntry = data.aiResponse || {
 					id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
 					text: data.prompt,
 					createdAt: new Date().toISOString(),
 				};
-				setResponseHistory((prev) => [historyEntry, ...prev]);
-				showGeneratedPrompt(data.prompt);
+				setResponseHistory((prev) => [
+					historyEntry,
+					...prev.filter((entry) => entry.id !== historyEntry.id),
+				]);
+				showGeneratedPrompt(historyEntry);
 			} else if (data.updated) {
 				const updatedIsSessionLike =
 					data.updated &&
@@ -628,20 +700,41 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 
 						{responseHistory.length > 0 && (
 							<section className="AiAssistant__response-history">
-								<h4>{lang.t("Response history")}</h4>
+								<div className="AiAssistant__response-history-header">
+									<h4>{lang.t("Response history")}</h4>
+									<Button
+										variant="ghost"
+										size={Button.SIZES.SMALL}
+										icon="trash"
+										onClick={clearResponseHistory}
+										title={lang.t("Clear response history")}
+									>
+										{lang.t("Clear")}
+									</Button>
+								</div>
 								<div className="AiAssistant__response-history-list">
 									{responseHistory.map((entry) => (
 										<ListCard
 											key={entry.id}
-											onClick={() => showGeneratedPrompt(entry.text)}
+											onClick={() => showGeneratedPrompt(entry)}
 											className="AiAssistant__history-card"
+											actions={
+												<Button
+													variant="ghost"
+													size={Button.SIZES.SMALL}
+													icon="trash"
+													onClick={() => deleteResponseHistoryEntry(entry)}
+													title={lang.t("Delete response")}
+												/>
+											}
 										>
 											<div className="ListCard__title AiAssistant__history-title">
 												{getResponsePreview(entry.text) ||
 													lang.t("AI response")}
 											</div>
 											<div className="ListCard__meta">
-												{new Date(entry.createdAt).toLocaleString(
+												{formatResponseDate(
+													entry.createdAt,
 													currentLanguage,
 												)}
 											</div>
@@ -859,7 +952,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 						{generatedPrompt && (
 							<Modal
 								title={lang.t("Response")}
-								onCancel={() => setGeneratedPrompt(null)}
+								onCancel={closeGeneratedPrompt}
 								showFooter={false}
 							>
 								<div className="AiAssistant__prompt-result-wrap">

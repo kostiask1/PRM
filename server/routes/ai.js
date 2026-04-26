@@ -661,6 +661,30 @@ router.get("/models", async (_req, res, next) => {
 	}
 });
 
+router.get("/responses", async (_req, res, next) => {
+	try {
+		res.json(await storage.readAiResponses());
+	} catch (error) {
+		next(error);
+	}
+});
+
+router.delete("/responses/:id", async (req, res, next) => {
+	try {
+		res.json(await storage.deleteAiResponse(req.params.id));
+	} catch (error) {
+		next(error);
+	}
+});
+
+router.delete("/responses", async (_req, res, next) => {
+	try {
+		res.json(await storage.clearAiResponses());
+	} catch (error) {
+		next(error);
+	}
+});
+
 router.post("/generate", async (req, res, next) => {
 	try {
 		const {
@@ -764,7 +788,17 @@ router.post("/generate", async (req, res, next) => {
 		}
 
 		if (generatedContent.error) return res.status(500).json(generatedContent);
-		if (!shouldParseAIResponse) return res.json({ prompt: generatedContent });
+		if (!shouldParseAIResponse) {
+			const aiResponse = await storage.addAiResponse({
+				text: generatedContent,
+				path,
+				type,
+				modelName,
+				language: responseLanguage,
+				userInstructions,
+			});
+			return res.json({ prompt: generatedContent, aiResponse });
+		}
 
 		let updatedObject = null;
 		if (campaign) {
