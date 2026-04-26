@@ -168,17 +168,21 @@ Keep responses structured and practical for real gameplay.
 Always return JSON only, with no text before or after JSON.
 The JSON must contain generated data only, without extra commentary.
 Use this shape:
-{ "description": "...", "notes": ["Title\\nDetailed note...", ...], "characters": [{ "name": "...", "description": "..." }, ...] }.
+{ "description": "...", "notes": ["Title\\nDetailed note...", ...], "characters": [{ "name": "...", "race": "...", "class": "...", "level": 1, "motivation": "...", "trait": "...", "notes": ["Title\\nDetailed note...", "..."] }], "npcs": [{ "name": "...", "race": "...", "class": "...", "level": 1, "description": "...", "motivation": "...", "trait": "...", "notes": ["Title\\nDetailed note...", "..."] }] }.
 Each note in "notes" must be a complete block where the first line is a short title and the following lines are details.
-Do not generate a "scenes" field for campaign mode.`,
+When updating story description or notes, return the full updated picture, not only newly added material. Preserve useful existing description/notes from the input, revise them as needed, and add new material on top of them.
+Do not generate a "scenes" field for campaign mode.
+Include "characters" and "npcs" only when the task instructions explicitly allow those categories.`,
 	scene: `You are an experienced Dungeon Master for Dungeons & Dragons.
 Your goal is to help with session planning.
 Keep responses structured and practical for real gameplay.
 Always return JSON only, with no text before or after JSON.
 The JSON must contain generated data only, without extra commentary.
 When generating scenes, use this base shape:
-{ "notes": ["Title\\nDetailed session note...", ...], "scenes": [{ "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "..." }, "notes": ["Short note 1", "Short note 2"], "npcs": [{ "name": "...", "description": "..." }] }] }.
+{ "notes": ["Title\\nDetailed session note...", ...], "scenes": [{ "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "..." }, "notes": ["Short note 1", "Short note 2"], "npcs": [{ "name": "...", "description": "..." }] }], "characters": [{ "name": "...", "race": "...", "class": "...", "level": 1, "motivation": "...", "trait": "...", "notes": ["Title\\nDetailed note...", "..."] }], "npcs": [{ "name": "...", "race": "...", "class": "...", "level": 1, "description": "...", "motivation": "...", "trait": "...", "notes": ["Title\\nDetailed note...", "..."] }] }.
 Top-level "notes" are general notes for the whole session (not scene notes).
+When updating notes or scenes, return the full updated picture, not only newly added material. Preserve useful existing notes/scenes from the input, revise them as needed, and add new material on top of them.
+Include top-level "characters", top-level "npcs", and scene "npcs" only when task instructions explicitly allow those categories.
 Do not include combat encounter fields unless task instructions explicitly say encounter generation is enabled.`,
 	encounter: `You are an experienced Dungeon Master for Dungeons & Dragons 5e.
 Your goal is to help build a specific combat encounter.
@@ -254,6 +258,8 @@ async function generateContent({
 	sceneId,
 	parseAIResponse,
 	contextData,
+	generateCharacters,
+	generateNpcs,
 	generateEncounters,
 	modelName,
 	language,
@@ -262,6 +268,8 @@ async function generateContent({
 	let userPrompt = "";
 	const responseLanguage = normalizeResponseLanguage(language);
 	const encounterGenerationEnabled = Boolean(generateEncounters);
+	const characterGenerationEnabled = generateCharacters !== false;
+	const npcGenerationEnabled = generateNpcs !== false;
 	const effectiveParseAIResponse =
 		Boolean(parseAIResponse) && (!encounterId || encounterGenerationEnabled);
 	const requestedType =
@@ -303,6 +311,18 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 	} else if (useKey === "scene") {
 		systemInstructionParts.push(
 			`Encounter generation is disabled. Do not create or edit combat encounters.`,
+		);
+	}
+	if (["campaign", "scene"].includes(useKey)) {
+		systemInstructionParts.push(
+			characterGenerationEnabled
+				? `Character generation is enabled. You may include a top-level "characters" array only when new player characters are useful for the user's request.`
+				: `Character generation is disabled. Do not create or edit player characters. Do not include a top-level "characters" array.`,
+		);
+		systemInstructionParts.push(
+			npcGenerationEnabled
+				? `NPC generation is enabled. You may include NPC data only when new NPCs are useful for the user's request. Use a top-level "npcs" array for NPC cards; scene-local NPC references may be included in scene "npcs".`
+				: `NPC generation is disabled. Do not create or edit NPCs. Do not include top-level "npcs" or scene "npcs".`,
 		);
 	}
 
@@ -483,14 +503,36 @@ IMPORTANT: Include race, class, and level for every generated NPC when possible.
 		userPrompt += `TASK: Update current combat encounter (ID: ${encounterId}). Consider character levels and requested difficulty (easy, medium, hard, deadly). Pick monsters that fit the scenario.\n`;
 	} else if (useKey === "scene") {
 		userPrompt += `TASK: Based on current session and context, propose ideas for new scenes or expand existing ones.\n`;
+		userPrompt += `IMPORTANT: Return the complete updated session content for the fields you output. For notes and scenes, include existing useful items from the input together with your revisions/additions. Do not return only a delta or only the newly added content.\n`;
+		if (characterGenerationEnabled) {
+			userPrompt += `IMPORTANT: Character generation is enabled. If the user asks for new player characters or they are clearly useful, include them in a top-level "characters" array.\n`;
+		} else {
+			userPrompt += `IMPORTANT: Character generation is disabled. Do not create or edit player characters and do not output "characters".\n`;
+		}
+		if (npcGenerationEnabled) {
+			userPrompt += `IMPORTANT: NPC generation is enabled. If the user asks for new NPCs or they are clearly useful, include NPC cards in a top-level "npcs" array. Scene-local NPC references may also be included in scene "npcs".\n`;
+		} else {
+			userPrompt += `IMPORTANT: NPC generation is disabled. Do not create or edit NPCs and do not output top-level "npcs" or scene "npcs".\n`;
+		}
 		if (encounterGenerationEnabled) {
 			userPrompt += `IMPORTANT: For each scene where conflict is possible, generate an encounter object in the encounters array.
 Pick monsters (English names) while considering character levels and classes for balance.\n`;
 		} else {
-			userPrompt += `IMPORTANT: Encounter generation is disabled. Do not create or edit combat encounters".\n`;
+			userPrompt += `IMPORTANT: Encounter generation is disabled. Do not create or edit combat encounters, do not pick monsters, and do not output "encounters", "encounterIndex", or "encounterId".\n`;
 		}
 	} else if (useKey === "campaign") {
 		userPrompt += `TASK: Update campaign story description and structure campaign notes.\n`;
+		userPrompt += `IMPORTANT: Return the complete updated campaign story content for the fields you output. For description and notes, include existing useful material from the input together with your revisions/additions. Do not return only a delta or only the newly added content.\n`;
+		if (characterGenerationEnabled) {
+			userPrompt += `IMPORTANT: Character generation is enabled. If the user asks for new player characters or they are clearly useful, include them in "characters".\n`;
+		} else {
+			userPrompt += `IMPORTANT: Character generation is disabled. Do not create or edit player characters and do not output "characters".\n`;
+		}
+		if (npcGenerationEnabled) {
+			userPrompt += `IMPORTANT: NPC generation is enabled. If the user asks for new NPCs or they are clearly useful, include them in "npcs". NPCs should include race, class, level, description, motivation, trait, and notes when possible.\n`;
+		} else {
+			userPrompt += `IMPORTANT: NPC generation is disabled. Do not create or edit NPCs and do not output "npcs".\n`;
+		}
 	}
 
 	if (userInstructions) {

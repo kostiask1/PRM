@@ -284,6 +284,34 @@ async function writeFavorites(favorites) {
 function normalizeAiResponse(raw = {}) {
 	const text = typeof raw.text === "string" ? raw.text : "";
 	if (!text.trim()) return null;
+	const rawRequest =
+		raw.request && typeof raw.request === "object" ? raw.request : {};
+	const userInstructions =
+		typeof rawRequest.userInstructions === "string"
+			? rawRequest.userInstructions
+			: typeof raw.userInstructions === "string"
+				? raw.userInstructions
+				: "";
+	const request = {
+		userInstructions,
+		options:
+			rawRequest.options && typeof rawRequest.options === "object"
+				? rawRequest.options
+				: {},
+		optionsSummary:
+			typeof rawRequest.optionsSummary === "string"
+				? rawRequest.optionsSummary
+				: "",
+		context:
+			rawRequest.context && typeof rawRequest.context === "object"
+				? rawRequest.context
+				: {},
+		contextSummary:
+			typeof rawRequest.contextSummary === "string"
+				? rawRequest.contextSummary
+				: "",
+	};
+
 	return {
 		id: String(raw.id || createId()),
 		text,
@@ -298,7 +326,8 @@ function normalizeAiResponse(raw = {}) {
 		type: raw.type || null,
 		modelName: raw.modelName || null,
 		language: raw.language || null,
-		userInstructions: raw.userInstructions || "",
+		userInstructions,
+		request,
 		createdAt: raw.createdAt || new Date().toISOString(),
 	};
 }

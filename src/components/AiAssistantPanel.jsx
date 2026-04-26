@@ -92,6 +92,60 @@ function formatResponseDate(date, language) {
 	return parsed.toLocaleString(language);
 }
 
+function getHistoryRequestText(entry) {
+	return String(
+		entry?.request?.userInstructions || entry?.userInstructions || "",
+	).trim();
+}
+
+function getHistoryModeName(mode) {
+	const labels = {
+		image: "Image prompt",
+		encounter: "AI Encounter Assistant",
+		session: "AI Session Assistant",
+		campaign: "AI Story Assistant",
+	};
+	return lang.t(labels[mode] || mode || "AI response");
+}
+
+function getOnOffLabel(value) {
+	return value ? lang.t("On") : lang.t("Off");
+}
+
+function getHistoryOptionsSummary(entry) {
+	const options = entry?.request?.options;
+	if (!options || typeof options !== "object" || !options.mode) {
+		return entry?.request?.optionsSummary || "";
+	}
+
+	return [
+		`${lang.t("Mode")}: ${getHistoryModeName(options.mode)}`,
+		`${lang.t("Response parsing")}: ${getOnOffLabel(options.responseParsing)}`,
+		`${lang.t("Create characters")}: ${getOnOffLabel(options.characterGeneration)}`,
+		`${lang.t("Create NPCs")}: ${getOnOffLabel(options.npcGeneration)}`,
+		`${lang.t("Encounter generation")}: ${getOnOffLabel(options.encounterGeneration)}`,
+		`${lang.t("Context")}: ${getOnOffLabel(options.contextEnabled)}`,
+	].join("; ");
+}
+
+function getHistoryContextSummary(entry) {
+	const context = entry?.request?.context;
+	if (!context || typeof context !== "object") {
+		return entry?.request?.contextSummary || "";
+	}
+	if (!context.enabled) {
+		return `${lang.t("Context")}: ${lang.t("Off")}`;
+	}
+
+	const parts = [];
+	if (context.campaignNotes) parts.push(`${lang.t("Notes")}: ${context.campaignNotes}`);
+	if (context.campaignCharacters)
+		parts.push(`${lang.t("Characters")}: ${context.campaignCharacters}`);
+	if (context.sessions) parts.push(`${lang.t("Sessions")}: ${context.sessions}`);
+	if (context.scenes) parts.push(`${lang.t("Scenes")}: ${context.scenes}`);
+	return `${lang.t("Context")}: ${parts.length ? parts.join(", ") : lang.t("Empty")}`;
+}
+
 export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	const dispatch = useAppDispatch();
 	const currentLanguage = useAppSelector(
@@ -110,7 +164,9 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	const [notification, setNotification] = useState(null);
 	const [showSceneSelector, setShowSceneSelector] = useState(false);
 	const [parseAIResponse, setParseAIResponse] = useState(isEncounter);
-	const [generateEncounters, setGenerateEncounters] = useState(isEncounter);
+	const [generateCharacters, setGenerateCharacters] = useState(true);
+	const [generateNpcs, setGenerateNpcs] = useState(true);
+	const [generateEncounters, setGenerateEncounters] = useState(!isCampaign);
 	const [aiModels, setAiModels] = useState([]);
 	const [selectedModel, setSelectedModel] = useState("");
 	const [sessionsList, setSessionsList] = useState([]);
@@ -132,7 +188,6 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	const [generatedPrompt, setGeneratedPrompt] = useState(null);
 	const [selectedResponseId, setSelectedResponseId] = useState(null);
 	const [responseHistory, setResponseHistory] = useState([]);
-	const [assistantMode, setAssistantMode] = useState("content");
 	const activeGenerateControllerRef = useRef(null);
 	const generatedPromptRef = useRef(null);
 	const [canCancelGenerate, setCanCancelGenerate] = useState(false);
@@ -356,28 +411,18 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 				: forceParseAIResponse === null
 					? parseAIResponse
 					: forceParseAIResponse;
-		const requestPath =
-			type === "character" || type === "npc"
-				? {
-						campaign: initialRoute.campaign,
-						session: null,
-						encounter: null,
-					}
-				: initialRoute;
-
 		try {
 			const data = await api.generateAi(
 				{
 					type,
 					modelName: selectedModel || undefined,
 					userInstructions,
-					path: requestPath,
+					path: initialRoute,
 					sceneId: targetSceneId,
 					parseAIResponse: shouldParseResponse,
-					generateEncounters:
-						type === "character" || type === "npc"
-							? false
-							: !isCampaign && generateEncounters,
+					generateCharacters: !isEncounter && generateCharacters,
+					generateNpcs: !isEncounter && generateNpcs,
+					generateEncounters: !isCampaign && generateEncounters,
 					contextConfig: useContext ? configToSend : null,
 					language: currentLanguage,
 				},
@@ -414,7 +459,10 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 
 				setUserInstructions(""); // Очищаємо поле після успіху
 				setNotification(lang.t("AI changes applied successfully!"));
-				if (type === "character" || type === "npc") {
+				if (
+					Array.isArray(data.generated?.characters) ||
+					Array.isArray(data.generated?.npcs)
+				) {
 					dispatch(refreshEntitiesAction());
 				}
 				if (shouldParseResponse || isEncounter) {
@@ -452,16 +500,6 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	};
 
 	const getPlaceholder = () => {
-		if (assistantMode === "character") {
-			return lang.t(
-				"Describe what characters to create (count, role in story, race/class, motivation, key traits)...",
-			);
-		}
-		if (assistantMode === "npc") {
-			return lang.t(
-				"Describe what NPCs to create (count, function in scene, personality, goals, secrets)...",
-			);
-		}
 		if (!parseAIResponse) {
 			return lang.t(
 				"Send your request. The response will appear in a dialog and will not change your data.",
@@ -490,15 +528,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 		{ key: "encounter", label: "Encounter (monsters)" },
 	];
 
-	const isCharacterCreationMode = assistantMode === "character";
-	const isNpcCreationMode = assistantMode === "npc";
-	const isEntityCreationMode = isCharacterCreationMode || isNpcCreationMode;
-	const isResponseParsingLocked = isEntityCreationMode || generateEncounters;
-	const generationType = isCharacterCreationMode
-		? "character"
-		: isNpcCreationMode
-			? "npc"
-			: null;
+	const isResponseParsingLocked = generateEncounters;
 
 	useEffect(() => {
 		if (isResponseParsingLocked && !parseAIResponse) {
@@ -612,28 +642,20 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 							{!isEncounter && (
 								<>
 									<Button
-										variant={isCharacterCreationMode ? "primary" : "ghost"}
+										variant={generateCharacters ? "primary" : "ghost"}
 										size={Button.SIZES.SMALL}
 										icon="users"
-										onClick={() =>
-											setAssistantMode((prev) =>
-												prev === "character" ? "content" : "character",
-											)
-										}
+										onClick={() => setGenerateCharacters((prev) => !prev)}
 										disabled={loading}
 										title={lang.t("Create characters with AI")}
 									>
 										{lang.t("Create characters")}
 									</Button>
 									<Button
-										variant={isNpcCreationMode ? "primary" : "ghost"}
+										variant={generateNpcs ? "primary" : "ghost"}
 										size={Button.SIZES.SMALL}
 										icon="folder-npc"
-										onClick={() =>
-											setAssistantMode((prev) =>
-												prev === "npc" ? "content" : "npc",
-											)
-										}
+										onClick={() => setGenerateNpcs((prev) => !prev)}
 										disabled={loading}
 										title={lang.t("Create NPCs with AI")}
 									>
@@ -655,20 +677,16 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 								}}
 								disabled={loading || isResponseParsingLocked}
 								title={
-									isEntityCreationMode
-										? lang.t(
-												"Parsing is required when creating characters or NPCs",
-											)
-										: generateEncounters
-											? lang.t("Parsing is required when generating encounters")
-											: parseAIResponse
-												? lang.t("Parse AI response into form fields")
-												: lang.t("Show response as text in a modal")
+									generateEncounters
+										? lang.t("Parsing is required when generating encounters")
+										: parseAIResponse
+											? lang.t("Parse AI response into form fields")
+											: lang.t("Show response as text in a modal")
 								}
 							>
 								{lang.t("Response parsing")}
 							</Button>
-							{!isCampaign && !isEntityCreationMode && (
+							{!isCampaign && (
 								<Button
 									variant={generateEncounters ? "primary" : "ghost"}
 									size={Button.SIZES.SMALL}
@@ -713,33 +731,47 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 									</Button>
 								</div>
 								<div className="AiAssistant__response-history-list">
-									{responseHistory.map((entry) => (
-										<ListCard
-											key={entry.id}
-											onClick={() => showGeneratedPrompt(entry)}
-											className="AiAssistant__history-card"
-											actions={
-												<Button
-													variant="ghost"
-													size={Button.SIZES.SMALL}
-													icon="trash"
-													onClick={() => deleteResponseHistoryEntry(entry)}
-													title={lang.t("Delete response")}
-												/>
-											}
-										>
-											<div className="ListCard__title AiAssistant__history-title">
-												{getResponsePreview(entry.text) ||
-													lang.t("AI response")}
-											</div>
-											<div className="ListCard__meta">
-												{formatResponseDate(
-													entry.createdAt,
-													currentLanguage,
-												)}
-											</div>
-										</ListCard>
-									))}
+									{responseHistory.map((entry) => {
+										const requestPreview = getResponsePreview(
+											getHistoryRequestText(entry),
+										);
+										const optionsSummary =
+											getHistoryOptionsSummary(entry);
+										const contextSummary =
+											getHistoryContextSummary(entry);
+										return (
+											<ListCard
+												key={entry.id}
+												onClick={() => showGeneratedPrompt(entry)}
+												className="AiAssistant__history-card"
+												actions={
+													<Button
+														variant="ghost"
+														size={Button.SIZES.SMALL}
+														icon="trash"
+														onClick={() => deleteResponseHistoryEntry(entry)}
+														title={lang.t("Delete response")}
+													/>
+												}
+											>
+												<div className="ListCard__title AiAssistant__history-title">
+													{requestPreview ||
+														getResponsePreview(entry.text) ||
+														lang.t("AI response")}
+												</div>
+												<div className="ListCard__meta AiAssistant__history-meta">
+													<span>
+														{formatResponseDate(
+															entry.createdAt,
+															currentLanguage,
+														)}
+													</span>
+													{optionsSummary && <span>{optionsSummary}</span>}
+													{contextSummary && <span>{contextSummary}</span>}
+												</div>
+											</ListCard>
+										);
+									})}
 								</div>
 							</section>
 						)}
@@ -990,19 +1022,11 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 								variant="create"
 								className="AiAssistant__generate-btn"
 								disabled={loading}
-								onClick={() =>
-									generate(generationType, null, {
-										forceParseAIResponse: generationType ? true : null,
-									})
-								}
+								onClick={() => generate()}
 							>
 								{loading
 									? lang.t("AI is working, please wait...")
-									: isCharacterCreationMode
-										? lang.t("Create characters")
-										: isNpcCreationMode
-											? lang.t("Create NPCs")
-											: lang.t("Generate")}
+									: lang.t("Generate")}
 							</Button>
 							{canCancelGenerate && (
 								<Button

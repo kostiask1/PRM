@@ -227,6 +227,12 @@
 	-webkit-box-orient: vertical;
 }
 
+.AiAssistant__history-meta {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
 .AiAssistant__scene-list {
 	display: flex;
 	flex-direction: column;

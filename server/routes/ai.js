@@ -628,6 +628,148 @@ function enforceEntityGenerationScope(generatedContent, type) {
 	return generatedContent;
 }
 
+function stripSceneEntityFields(scene, { allowNpcs, allowEncounters }) {
+	if (!scene || typeof scene !== "object") return scene;
+	const next = { ...scene };
+	if (!allowNpcs) {
+		delete next.npcs;
+	}
+	if (!allowEncounters) {
+		delete next.encounterId;
+		delete next.encounterIndex;
+		delete next.monsters;
+	}
+	return next;
+}
+
+function enforceAiGenerationPermissions(
+	generatedContent,
+	{ allowCharacters, allowNpcs, allowEncounters },
+) {
+	if (!generatedContent || typeof generatedContent !== "object") {
+		return generatedContent;
+	}
+
+	if (!allowCharacters) {
+		delete generatedContent.characters;
+	}
+	if (!allowNpcs) {
+		delete generatedContent.npcs;
+	}
+	if (!allowEncounters) {
+		delete generatedContent.encounters;
+	}
+	if (Array.isArray(generatedContent.scenes)) {
+		generatedContent.scenes = generatedContent.scenes.map((scene) =>
+			stripSceneEntityFields(scene, { allowNpcs, allowEncounters }),
+		);
+	}
+	return generatedContent;
+}
+
+function getAiRequestMode(type, path = {}) {
+	if (type) return type;
+	if (path.encounter) return "encounter";
+	if (path.session) return "session";
+	return "campaign";
+}
+
+function buildAiOptionsSummary(options) {
+	const parts = [
+		`mode: ${options.mode}`,
+		`parse: ${options.responseParsing ? "on" : "off"}`,
+		`characters: ${options.characterGeneration ? "on" : "off"}`,
+		`npcs: ${options.npcGeneration ? "on" : "off"}`,
+		`encounters: ${options.encounterGeneration ? "on" : "off"}`,
+		`context: ${options.contextEnabled ? "on" : "off"}`,
+	];
+	if (options.modelName) parts.push(`model: ${options.modelName}`);
+	if (options.sceneId) parts.push(`scene: ${options.sceneId}`);
+	return parts.join("; ");
+}
+
+function buildAiContextSummary(contextConfig, contextData = {}) {
+	if (!contextConfig) {
+		return {
+			enabled: false,
+			campaignNotes: 0,
+			campaignCharacters: 0,
+			sessions: 0,
+			scenes: 0,
+			summary: "context: off",
+		};
+	}
+
+	const sessions = Array.isArray(contextData.sessions)
+		? contextData.sessions
+		: [];
+	const scenes = sessions.reduce(
+		(total, session) =>
+			total + (Array.isArray(session?.data?.scenes) ? session.data.scenes.length : 0),
+		0,
+	);
+	const campaignNotes = Array.isArray(contextData.campaign?.notes)
+		? contextData.campaign.notes.length
+		: 0;
+	const campaignCharacters = Array.isArray(contextData.campaign?.characters)
+		? contextData.campaign.characters.length
+		: 0;
+
+	const parts = [];
+	if (contextConfig.campaignNotes) parts.push(`notes: ${campaignNotes}`);
+	if (contextConfig.campaignCharacters)
+		parts.push(`chars/npcs: ${campaignCharacters}`);
+	if (sessions.length) parts.push(`sessions: ${sessions.length}`);
+	if (scenes) parts.push(`scenes: ${scenes}`);
+
+	return {
+		enabled: true,
+		campaignNotes,
+		campaignCharacters,
+		sessions: sessions.length,
+		scenes,
+		summary: parts.length ? `context: ${parts.join(", ")}` : "context: empty",
+	};
+}
+
+function buildAiRequestSnapshot({
+	type,
+	modelName,
+	userInstructions,
+	path,
+	sceneId,
+	parseAIResponse,
+	shouldParseAIResponse,
+	generateEncounters,
+	generateCharacters,
+	generateNpcs,
+	contextConfig,
+	contextData,
+	language,
+}) {
+	const options = {
+		mode: getAiRequestMode(type, path),
+		modelName: modelName || null,
+		language,
+		responseParsing: Boolean(shouldParseAIResponse),
+		requestedResponseParsing: Boolean(parseAIResponse),
+		characterGeneration: Boolean(generateCharacters),
+		npcGeneration: Boolean(generateNpcs),
+		encounterGeneration: Boolean(generateEncounters),
+		contextEnabled: Boolean(contextConfig),
+		sceneId: sceneId || null,
+	};
+	const context = buildAiContextSummary(contextConfig, contextData);
+
+	return {
+		userInstructions: asText(userInstructions),
+		options,
+		optionsSummary: buildAiOptionsSummary(options),
+		context,
+		contextSummary: context.summary,
+	};
+}
+
 async function collectMentionCandidates(
 	campaignSlug,
 	sessionData,
@@ -716,6 +858,8 @@ router.post("/generate", async (req, res, next) => {
 			path,
 			sceneId,
 			parseAIResponse,
+			generateCharacters,
+			generateNpcs,
 			generateEncounters,
 			contextConfig,
 			language,
@@ -730,6 +874,8 @@ router.post("/generate", async (req, res, next) => {
 			return res.status(500).json({ error: "GEMINI_API_KEY не налаштовано." });
 		}
 		const encounterGenerationEnabled = Boolean(generateEncounters);
+		const characterGenerationEnabled = generateCharacters !== false;
+		const npcGenerationEnabled = generateNpcs !== false;
 		const shouldParseAIResponse =
 			Boolean(parseAIResponse || encounterGenerationEnabled) &&
 			(!path.encounter || encounterGenerationEnabled);
@@ -772,11 +918,18 @@ router.post("/generate", async (req, res, next) => {
 			sceneId,
 			parseAIResponse: shouldParseAIResponse,
 			contextData,
+			generateCharacters: characterGenerationEnabled,
+			generateNpcs: npcGenerationEnabled,
 			generateEncounters: encounterGenerationEnabled,
 			language: responseLanguage,
 		});
 
 		enforceEntityGenerationScope(generatedContent, type);
+		enforceAiGenerationPermissions(generatedContent, {
+			allowCharacters: characterGenerationEnabled,
+			allowNpcs: npcGenerationEnabled,
+			allowEncounters: encounterGenerationEnabled,
+		});
 
 		if (
 			shouldParseAIResponse &&
@@ -813,6 +966,21 @@ router.post("/generate", async (req, res, next) => {
 
 		if (generatedContent.error) return res.status(500).json(generatedContent);
 		if (!shouldParseAIResponse) {
+			const requestSnapshot = buildAiRequestSnapshot({
+				type,
+				modelName,
+				userInstructions,
+				path,
+				sceneId,
+				parseAIResponse,
+				shouldParseAIResponse,
+				generateCharacters: characterGenerationEnabled,
+				generateNpcs: npcGenerationEnabled,
+				generateEncounters: encounterGenerationEnabled,
+				contextConfig,
+				contextData,
+				language: responseLanguage,
+			});
 			const aiResponse = await storage.addAiResponse({
 				text: generatedContent,
 				path,
@@ -820,6 +988,7 @@ router.post("/generate", async (req, res, next) => {
 				modelName,
 				language: responseLanguage,
 				userInstructions,
+				request: requestSnapshot,
 			});
 			return res.json({ prompt: generatedContent, aiResponse });
 		}
@@ -867,6 +1036,13 @@ router.post("/generate", async (req, res, next) => {
 						}
 					}
 				}
+
+				await upsertGeneratedEntities(
+					path.campaign,
+					"characters",
+					generatedContent.characters,
+				);
+				await upsertGeneratedEntities(path.campaign, "npc", generatedContent.npcs);
 
 				const encounterMap = new Map();
 				if (Array.isArray(generatedContent.encounters)) {
