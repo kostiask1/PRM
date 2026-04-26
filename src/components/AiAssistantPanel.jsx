@@ -39,7 +39,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	const [notification, setNotification] = useState(null);
 	const [showSceneSelector, setShowSceneSelector] = useState(false);
 	const [parseAIResponse, setParseAIResponse] = useState(isEncounter);
-	const [generateEncounters, setGenerateEncounters] = useState(false);
+	const [generateEncounters, setGenerateEncounters] = useState(isEncounter);
 	const [aiModels, setAiModels] = useState([]);
 	const [selectedModel, setSelectedModel] = useState("");
 	const [sessionsList, setSessionsList] = useState([]);
@@ -320,6 +320,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	const isCharacterCreationMode = assistantMode === "character";
 	const isNpcCreationMode = assistantMode === "npc";
 	const isEntityCreationMode = isCharacterCreationMode || isNpcCreationMode;
+	const isResponseParsingLocked = isEntityCreationMode || generateEncounters;
 	const generationType = isCharacterCreationMode
 		? "character"
 		: isNpcCreationMode
@@ -327,10 +328,10 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 			: null;
 
 	useEffect(() => {
-		if (isEntityCreationMode && !parseAIResponse) {
+		if (isResponseParsingLocked && !parseAIResponse) {
 			setParseAIResponse(true);
 		}
-	}, [isEntityCreationMode, parseAIResponse]);
+	}, [isResponseParsingLocked, parseAIResponse]);
 
 	useEffect(() => {
 		return () => {
@@ -469,39 +470,55 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 							)}
 							<Button
 								variant={
-									parseAIResponse || isEntityCreationMode ? "primary" : "ghost"
+									parseAIResponse || isResponseParsingLocked
+										? "primary"
+										: "ghost"
 								}
 								size={Button.SIZES.SMALL}
 								icon="list"
 								onClick={() => {
-									if (isEntityCreationMode) return;
+									if (isResponseParsingLocked) return;
 									setParseAIResponse(!parseAIResponse);
 								}}
-								disabled={loading || isEncounter || isEntityCreationMode}
+								disabled={loading || isResponseParsingLocked}
 								title={
 									isEntityCreationMode
 										? lang.t(
 												"Parsing is required when creating characters or NPCs",
 											)
-										: parseAIResponse
-										? lang.t("Parse AI response into form fields")
-										: lang.t("Show response as text in a modal")
+										: generateEncounters
+											? lang.t("Parsing is required when generating encounters")
+											: parseAIResponse
+												? lang.t("Parse AI response into form fields")
+												: lang.t("Show response as text in a modal")
 								}
 							>
 								{lang.t("Response parsing")}
 							</Button>
-							{!isCampaign &&
-								(parseAIResponse || isEncounter) &&
-								!isEntityCreationMode && (
+							{!isCampaign && !isEntityCreationMode && (
 								<Button
 									variant={generateEncounters ? "primary" : "ghost"}
 									size={Button.SIZES.SMALL}
 									icon="swords"
-									onClick={() => setGenerateEncounters(!generateEncounters)}
-									disabled={loading || isEncounter}
-									title={lang.t(
-										"AI will try to pick monsters for each scene based on character levels",
-									)}
+									onClick={() => {
+										const enabled = !generateEncounters;
+										setGenerateEncounters(enabled);
+										if (enabled) {
+											setParseAIResponse(true);
+										} else if (isEncounter) {
+											setParseAIResponse(false);
+										}
+									}}
+									disabled={loading}
+									title={
+										isEncounter
+											? lang.t(
+													"AI will update the current encounter with monsters based on character levels",
+												)
+											: lang.t(
+													"AI will try to pick monsters for each scene based on character levels",
+												)
+									}
 								>
 									{lang.t("Encounter generation")}
 								</Button>
@@ -753,7 +770,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 									? lang.t("AI is working, please wait...")
 									: isCharacterCreationMode
 										? lang.t("Create characters")
-									: isNpcCreationMode
+										: isNpcCreationMode
 											? lang.t("Create NPCs")
 											: lang.t("Generate")}
 							</Button>

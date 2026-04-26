@@ -141,7 +141,8 @@ function entityNameKey(raw) {
 }
 
 async function upsertGeneratedEntities(campaignSlug, type, generatedEntities) {
-	if (!Array.isArray(generatedEntities) || generatedEntities.length === 0) return;
+	if (!Array.isArray(generatedEntities) || generatedEntities.length === 0)
+		return;
 
 	const existing = await storage.listEntities(campaignSlug, type);
 	const bySlug = new Map(existing.map((entity) => [entity.slug, entity]));
@@ -174,7 +175,12 @@ async function upsertGeneratedEntities(campaignSlug, type, generatedEntities) {
 				id: existingEntity.id,
 				imageUrl: existingEntity.imageUrl ?? normalized.imageUrl ?? null,
 			};
-			await storage.writeEntity(campaignSlug, type, existingEntity.slug, payload);
+			await storage.writeEntity(
+				campaignSlug,
+				type,
+				existingEntity.slug,
+				payload,
+			);
 			bySlug.set(existingEntity.slug, payload);
 			if (fullNameKey) byName.set(fullNameKey, payload);
 			continue;
@@ -354,9 +360,7 @@ function collapseNestedMentionBrackets(text) {
 
 	// Collapse repeated opening/closing mention brackets: [[Name]] -> [Name]
 	for (let i = 0; i < 5; i += 1) {
-		const next = output
-			.replace(/\[\s*\[+/g, "[")
-			.replace(/\]+\s*\]/g, "]");
+		const next = output.replace(/\[\s*\[+/g, "[").replace(/\]+\s*\]/g, "]");
 		if (next === output) break;
 		output = next;
 	}
@@ -508,7 +512,9 @@ function applyMentionsToGeneratedContent(generatedContent, names) {
 
 	if (Array.isArray(generatedContent.notes)) {
 		generatedContent.notes = generatedContent.notes.map((note) =>
-			typeof note === "string" ? processGeneratedTextMentions(note, names) : note,
+			typeof note === "string"
+				? processGeneratedTextMentions(note, names)
+				: note,
 		);
 	}
 
@@ -677,6 +683,10 @@ router.post("/generate", async (req, res, next) => {
 		if (!process.env.GEMINI_API_KEY) {
 			return res.status(500).json({ error: "GEMINI_API_KEY не налаштовано." });
 		}
+		const encounterGenerationEnabled = Boolean(generateEncounters);
+		const shouldParseAIResponse =
+			Boolean(parseAIResponse || encounterGenerationEnabled) &&
+			(!path.encounter || encounterGenerationEnabled);
 
 		const campaign = await storage.readCampaign(path.campaign);
 		const session = await storage
@@ -714,14 +724,14 @@ router.post("/generate", async (req, res, next) => {
 			modelName,
 			encounterId: path.encounter,
 			sceneId,
-			parseAIResponse,
+			parseAIResponse: shouldParseAIResponse,
 			contextData,
-			generateEncounters,
+			generateEncounters: encounterGenerationEnabled,
 			language: responseLanguage,
 		});
 
 		if (
-			parseAIResponse &&
+			shouldParseAIResponse &&
 			generatedContent &&
 			typeof generatedContent === "object"
 		) {
@@ -734,10 +744,10 @@ router.post("/generate", async (req, res, next) => {
 		}
 
 		if (
-			parseAIResponse &&
+			shouldParseAIResponse &&
 			session &&
 			!path.encounter &&
-			!generateEncounters &&
+			!encounterGenerationEnabled &&
 			generatedContent &&
 			typeof generatedContent === "object"
 		) {
@@ -747,14 +757,14 @@ router.post("/generate", async (req, res, next) => {
 			if (Array.isArray(generatedContent.scenes)) {
 				generatedContent.scenes = generatedContent.scenes.map((scene) => {
 					if (!scene || typeof scene !== "object") return scene;
-					const { encounterIndex, ...safeScene } = scene;
+					const { encounterId, encounterIndex, monsters, ...safeScene } = scene;
 					return safeScene;
 				});
 			}
 		}
 
 		if (generatedContent.error) return res.status(500).json(generatedContent);
-		if (!parseAIResponse) return res.json({ prompt: generatedContent });
+		if (!shouldParseAIResponse) return res.json({ prompt: generatedContent });
 
 		let updatedObject = null;
 		if (campaign) {
@@ -888,7 +898,11 @@ router.post("/generate", async (req, res, next) => {
 					"characters",
 					generatedContent.characters,
 				);
-				await upsertGeneratedEntities(path.campaign, "npc", generatedContent.npcs);
+				await upsertGeneratedEntities(
+					path.campaign,
+					"npc",
+					generatedContent.npcs,
+				);
 
 				meta.updatedAt = new Date().toISOString();
 				await storage.writeJson(metaPath, meta);

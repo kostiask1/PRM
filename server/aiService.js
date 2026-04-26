@@ -176,13 +176,10 @@ Your goal is to help with session planning.
 Keep responses structured and practical for real gameplay.
 Always return JSON only, with no text before or after JSON.
 The JSON must contain generated data only, without extra commentary.
-When generating scenes, use this shape:
-{ "notes": ["Title\\nDetailed session note...", ...], "scenes": [{ "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "..." }, "notes": ["Short note 1", "Short note 2"], "npcs": [{ "name": "...", "description": "..." }], "encounterIndex": 0 }], "encounters": [{ "name": "Encounter name", "monsters": [{ "monsterName": "Official D&D Monster Name", "name": "Optional display name" }] }] }.
+When generating scenes, use this base shape:
+{ "notes": ["Title\\nDetailed session note...", ...], "scenes": [{ "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "..." }, "notes": ["Short note 1", "Short note 2"], "npcs": [{ "name": "...", "description": "..." }] }] }.
 Top-level "notes" are general notes for the whole session (not scene notes).
-If a scene requires combat, "encounterIndex" must point to the encounter index in "encounters".
-If combat is not needed, omit "encounterIndex".
-Pick monsters according to party level and party size from context.
-If user instructions specify encounter difficulty, follow that strictly.`,
+Do not include combat encounter fields unless task instructions explicitly say encounter generation is enabled.`,
 	encounter: `You are an experienced Dungeon Master for Dungeons & Dragons 5e.
 Your goal is to help build a specific combat encounter.
 Keep responses structured and practical for real gameplay.
@@ -260,10 +257,15 @@ async function generateContent({
 	let model;
 	let userPrompt = "";
 	const responseLanguage = normalizeResponseLanguage(language);
+	const encounterGenerationEnabled = Boolean(generateEncounters);
+	const effectiveParseAIResponse =
+		Boolean(parseAIResponse) && (!encounterId || encounterGenerationEnabled);
+	const requestedType =
+		type === "encounter" && !encounterGenerationEnabled ? null : type;
 
-	const useKey = type
-		? type
-		: !parseAIResponse
+	const useKey = requestedType
+		? requestedType
+		: !effectiveParseAIResponse
 			? "prompt"
 			: encounterId
 				? "encounter"
@@ -278,13 +280,35 @@ async function generateContent({
 	)
 		? requestedModel
 		: availableModels.defaultModel;
+	const systemInstructionParts = [
+		systemInstructions[useKey],
+		`MANDATORY LANGUAGE RULE: You must write all user-visible output strictly in ${responseLanguage.label}.`,
+	];
+	if (useKey === "scene" && encounterGenerationEnabled) {
+		systemInstructionParts.push(
+			`Encounter generation is enabled. You may create combat encounters using this shape:
+{ "notes": ["Title\\nDetailed session note...", ...], "scenes": [{ "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "..." }, "notes": ["Short note 1", "Short note 2"], "npcs": [{ "name": "...", "description": "..." }], "encounterIndex": 0 }], "encounters": [{ "name": "Encounter name", "monsters": [{ "monsterName": "Official D&D Monster Name", "name": "Optional display name" }] }] }.
+If a scene requires combat, "encounterIndex" must point to the encounter index in "encounters".
+If combat is not needed, omit "encounterIndex".
+Pick monsters according to party level and party size from context.
+If user instructions specify encounter difficulty, follow that strictly.`,
+		);
+	} else if (useKey === "scene") {
+		systemInstructionParts.push(
+			`Encounter generation is disabled. Do not create or edit combat encounters.`,
+		);
+	}
 
 	model = genAI.getGenerativeModel({
 		model: selectedModel,
-		generationConfig: {
-			responseMimeType: "application/json",
-		},
-		systemInstruction: `${systemInstructions[useKey]}\n\nMANDATORY LANGUAGE RULE: You must write all user-visible output strictly in ${responseLanguage.label}.`,
+		...(useKey === "prompt" || useKey === "image"
+			? {}
+			: {
+					generationConfig: {
+						responseMimeType: "application/json",
+					},
+				}),
+		systemInstruction: systemInstructionParts.join("\n\n"),
 	});
 
 	// 1. Гнучка фільтрація сесій згідно з налаштованим контекстом
@@ -448,9 +472,11 @@ async function generateContent({
 		userPrompt += `TASK: Update current combat encounter (ID: ${encounterId}). Consider character levels and requested difficulty (easy, medium, hard, deadly). Pick monsters that fit the scenario.\n`;
 	} else if (useKey === "scene") {
 		userPrompt += `TASK: Based on current session and context, propose ideas for new scenes or expand existing ones.\n`;
-		if (generateEncounters) {
+		if (encounterGenerationEnabled) {
 			userPrompt += `IMPORTANT: For each scene where conflict is possible, generate an encounter object in the encounters array.
 Pick monsters (English names) while considering character levels and classes for balance.\n`;
+		} else {
+			userPrompt += `IMPORTANT: Encounter generation is disabled. Do not create or edit combat encounters".\n`;
 		}
 	} else if (useKey === "campaign") {
 		userPrompt += `TASK: Update campaign story description and structure campaign notes.\n`;
@@ -476,7 +502,7 @@ Pick monsters (English names) while considering character levels and classes for
 		return val;
 	};
 
-	if (!parseAIResponse) {
+	if (!effectiveParseAIResponse) {
 		return text.replace(/\\n/g, "\n");
 	}
 
