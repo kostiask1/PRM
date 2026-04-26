@@ -18,6 +18,7 @@ import Select from "./form/Select";
 import Checkbox from "./form/Checkbox";
 import Notification from "./common/Notification";
 import CollapseToggleButton from "./common/CollapseToggleButton";
+import ListCard from "./common/ListCard";
 import {
 	alert,
 	refreshEntitiesAction,
@@ -73,6 +74,17 @@ const markdownMentionComponents = Object.fromEntries(
 	]),
 );
 
+function getResponsePreview(text) {
+	const plainText = ["#", "*", "_", "`", ">", "|", "~", "[", "]", "(", ")"].reduce(
+		(value, marker) => value.split(marker).join(""),
+		String(text || ""),
+	);
+
+	return plainText
+		.replace(/\s+/g, " ")
+		.trim();
+}
+
 export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	const dispatch = useAppDispatch();
 	const currentLanguage = useAppSelector(
@@ -111,6 +123,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 			: {}, // { [slug]: { included: bool, notes: bool, result_text: bool, scenes: {}, data: {} } }
 	}));
 	const [generatedPrompt, setGeneratedPrompt] = useState(null);
+	const [responseHistory, setResponseHistory] = useState([]);
 	const [assistantMode, setAssistantMode] = useState("content");
 	const activeGenerateControllerRef = useRef(null);
 	const generatedPromptRef = useRef(null);
@@ -121,6 +134,11 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 		activeGenerateControllerRef.current?.abort();
 		activeGenerateControllerRef.current = null;
 		setCanCancelGenerate(false);
+	};
+
+	const showGeneratedPrompt = (text) => {
+		setGeneratedPrompt(text);
+		setIsGeneratedPromptCopied(false);
 	};
 
 	const copyGeneratedPrompt = async () => {
@@ -299,7 +317,13 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 
 			// Одразу оновлюємо стан в батьківському компоненті, бо в БД вже записано
 			if (data.prompt) {
-				setGeneratedPrompt(data.prompt);
+				const historyEntry = {
+					id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+					text: data.prompt,
+					createdAt: new Date().toISOString(),
+				};
+				setResponseHistory((prev) => [historyEntry, ...prev]);
+				showGeneratedPrompt(data.prompt);
 			} else if (data.updated) {
 				const updatedIsSessionLike =
 					data.updated &&
@@ -601,6 +625,31 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 								</Button>
 							)}
 						</div>
+
+						{responseHistory.length > 0 && (
+							<section className="AiAssistant__response-history">
+								<h4>{lang.t("Response history")}</h4>
+								<div className="AiAssistant__response-history-list">
+									{responseHistory.map((entry) => (
+										<ListCard
+											key={entry.id}
+											onClick={() => showGeneratedPrompt(entry.text)}
+											className="AiAssistant__history-card"
+										>
+											<div className="ListCard__title AiAssistant__history-title">
+												{getResponsePreview(entry.text) ||
+													lang.t("AI response")}
+											</div>
+											<div className="ListCard__meta">
+												{new Date(entry.createdAt).toLocaleString(
+													currentLanguage,
+												)}
+											</div>
+										</ListCard>
+									))}
+								</div>
+							</section>
+						)}
 
 						{isContextModalOpen && (
 							<Modal
