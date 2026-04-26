@@ -202,14 +202,18 @@ Your goal is to create player characters for a campaign.
 Always return JSON only, with no text before or after JSON.
 The JSON must use this shape:
 { "characters": [{ "name": "...", "race": "...", "class": "...", "level": 1, "motivation": "...", "trait": "...", "notes": ["Title\\nDetailed note...", "..."] }] }.
+Return only the top-level "characters" field. Do not include "npcs", campaign notes, scenes, encounters, or story description.
 Create complete and playable character concepts.
 Use realistic D&D class/race combinations and sensible levels.`,
 	npc: `You are an experienced Dungeon Master for Dungeons & Dragons.
 Your goal is to create NPCs for a campaign.
 Always return JSON only, with no text before or after JSON.
 The JSON must use this shape:
-{ "npcs": [{ "name": "...", "description": "...", "motivation": "...", "trait": "...", "notes": ["Title\\nDetailed note...", "..."] }] }.
-Create distinct NPCs with clear story function and personality.`,
+{ "npcs": [{ "name": "...", "race": "...", "class": "...", "level": 1, "description": "...", "motivation": "...", "trait": "...", "notes": ["Title\\nDetailed note...", "..."] }] }.
+Return only the top-level "npcs" field. Do not include "characters", campaign notes, scenes, encounters, or story description.
+Create distinct NPCs with clear story function and personality.
+For each NPC, include race, class, and level when they can reasonably be inferred from the request or story role.
+Use sensible D&D race/class/level values for the NPC's function. If a class is not appropriate, use a concise role or archetype instead of leaving the field empty.`,
 	prompt: `You are an experienced Dungeon Master for Dungeons & Dragons.
 Your goal is to help another DM with planning.
 You receive data and user instructions.
@@ -469,9 +473,12 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 	if (useKey === "image") {
 		userPrompt += `TASK: Generate an image prompt for scene ID: ${sceneId}\n`;
 	} else if (useKey === "character") {
-		userPrompt += `TASK: Create new player characters for this campaign based on user instructions.\n`;
+		userPrompt += `TASK: Create new player characters for this campaign based on user instructions.
+IMPORTANT: This request is strictly for player characters. Return only "characters". Do not create NPCs or any other content category.\n`;
 	} else if (useKey === "npc") {
-		userPrompt += `TASK: Create new NPCs for this campaign based on user instructions.\n`;
+		userPrompt += `TASK: Create new NPCs for this campaign based on user instructions.
+IMPORTANT: This request is strictly for NPCs. Return only "npcs". Do not create player characters or any other content category.
+IMPORTANT: Include race, class, and level for every generated NPC when possible. If a formal class does not fit, put a role/archetype in "class".\n`;
 	} else if (useKey === "encounter") {
 		userPrompt += `TASK: Update current combat encounter (ID: ${encounterId}). Consider character levels and requested difficulty (easy, medium, hard, deadly). Pick monsters that fit the scenario.\n`;
 	} else if (useKey === "scene") {

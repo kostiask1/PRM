@@ -606,6 +606,28 @@ function applyMentionsToGeneratedContent(generatedContent, names) {
 	return generatedContent;
 }
 
+function enforceEntityGenerationScope(generatedContent, type) {
+	if (
+		!generatedContent ||
+		typeof generatedContent !== "object" ||
+		!["character", "npc"].includes(type)
+	) {
+		return generatedContent;
+	}
+
+	if (type === "character") {
+		delete generatedContent.npcs;
+	} else {
+		delete generatedContent.characters;
+	}
+
+	delete generatedContent.description;
+	delete generatedContent.notes;
+	delete generatedContent.scenes;
+	delete generatedContent.encounters;
+	return generatedContent;
+}
+
 async function collectMentionCandidates(
 	campaignSlug,
 	sessionData,
@@ -753,6 +775,8 @@ router.post("/generate", async (req, res, next) => {
 			generateEncounters: encounterGenerationEnabled,
 			language: responseLanguage,
 		});
+
+		enforceEntityGenerationScope(generatedContent, type);
 
 		if (
 			shouldParseAIResponse &&
@@ -919,24 +943,38 @@ router.post("/generate", async (req, res, next) => {
 				const metaPath = storage.campaignMetaPath(path.campaign);
 				const meta = await storage.readJson(metaPath);
 
-				if (asText(generatedContent.description)) {
-					meta.description = generatedContent.description;
-				}
+				if (type === "character") {
+					await upsertGeneratedEntities(
+						path.campaign,
+						"characters",
+						generatedContent.characters,
+					);
+				} else if (type === "npc") {
+					await upsertGeneratedEntities(
+						path.campaign,
+						"npc",
+						generatedContent.npcs,
+					);
+				} else {
+					if (asText(generatedContent.description)) {
+						meta.description = generatedContent.description;
+					}
 
-				if (Array.isArray(generatedContent.notes)) {
-					meta.notes = normalizeNotes(generatedContent.notes);
-				}
+					if (Array.isArray(generatedContent.notes)) {
+						meta.notes = normalizeNotes(generatedContent.notes);
+					}
 
-				await upsertGeneratedEntities(
-					path.campaign,
-					"characters",
-					generatedContent.characters,
-				);
-				await upsertGeneratedEntities(
-					path.campaign,
-					"npc",
-					generatedContent.npcs,
-				);
+					await upsertGeneratedEntities(
+						path.campaign,
+						"characters",
+						generatedContent.characters,
+					);
+					await upsertGeneratedEntities(
+						path.campaign,
+						"npc",
+						generatedContent.npcs,
+					);
+				}
 
 				meta.updatedAt = new Date().toISOString();
 				await storage.writeJson(metaPath, meta);
