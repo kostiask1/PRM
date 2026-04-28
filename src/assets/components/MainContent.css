@@ -1,0 +1,91 @@
+.MainContent {
+	min-width: 0;
+}
+
+.MainContent__emptyState {
+	padding: var(--space-7);
+	text-align: center;
+}
+
+.ProjectTutorial {
+	text-align: left;
+	max-height: none;
+	height: auto;
+	margin-top: 100px;
+}
+
+.ProjectTutorial__heading {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+}
+
+.ProjectTutorial__heading h2,
+.ProjectTutorial__heading p {
+	margin: 0;
+}
+
+.ProjectTutorial__layout {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(260px, 0.36fr);
+	gap: var(--space-5);
+	align-items: start;
+	margin-top: var(--space-4);
+}
+
+.ProjectTutorial__features {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	gap: var(--space-3);
+}
+
+.ProjectTutorial__feature {
+	border: 1px solid color-mix(in srgb, var(--border), transparent 35%);
+	border-radius: 8px;
+	padding: var(--space-3);
+	background: color-mix(in srgb, var(--text-bright), transparent 97%);
+	min-height: 132px;
+}
+
+.ProjectTutorial__feature h3,
+.ProjectTutorial__workflow h3 {
+	margin: 0 0 var(--space-2);
+	color: var(--text-bright);
+	font-size: 1rem;
+	font-family: var(--font-heading);
+}
+
+.ProjectTutorial__feature p {
+	margin: 0;
+	line-height: 1.5;
+	color: var(--text);
+}
+
+.ProjectTutorial__workflow {
+	border-left: 1px solid color-mix(in srgb, var(--border), transparent 35%);
+	padding-left: var(--space-4);
+}
+
+.ProjectTutorial__workflow ol {
+	margin: 0;
+	padding-left: 1.3rem;
+	display: grid;
+	gap: var(--space-2);
+}
+
+.ProjectTutorial__workflow li {
+	line-height: 1.45;
+}
+
+@media (max-width: 900px) {
+	.ProjectTutorial__layout {
+		grid-template-columns: 1fr;
+	}
+
+	.ProjectTutorial__workflow {
+		border-left: 0;
+		border-top: 1px solid color-mix(in srgb, var(--border), transparent 35%);
+		padding-left: 0;
+		padding-top: var(--space-4);
+	}
+}

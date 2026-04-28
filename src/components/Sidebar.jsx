@@ -41,6 +41,12 @@ export default function Sidebar({
 	const activeNavigationSlug = useAppSelector(
 		(store) => store.navigation.activeCampaignSlug,
 	);
+	const activeSessionFileName = useAppSelector(
+		(store) => store.navigation.activeSessionFileName,
+	);
+	const activeEncounterId = useAppSelector(
+		(store) => store.navigation.activeEncounterId,
+	);
 	const effectiveActiveSlug = activeCampaignId || activeNavigationSlug;
 	const isBestiaryActive = effectiveActiveSlug === "bestiary";
 	const isSpellsActive = effectiveActiveSlug === "spells";
@@ -124,13 +130,17 @@ export default function Sidebar({
 				title: lang.t("Settings"),
 				type: "confirm",
 				showFooter: false,
-				children: (
-					<SettingsModalContent
-						onCancel={() => closeActiveModal()}
-					/>
-				),
+				children: <SettingsModalContent onCancel={() => closeActiveModal()} />,
 			});
 		});
+	};
+
+	const handleCampaignClick = (campaignSlug) => {
+		const shouldClearSession =
+			effectiveActiveSlug === campaignSlug &&
+			!(activeSessionFileName || activeEncounterId);
+
+		onSelectCampaign(shouldClearSession ? "" : campaignSlug);
 	};
 
 	return (
@@ -232,7 +242,7 @@ export default function Sidebar({
 								active={activeCampaignId === campaign.slug}
 								dragging={isDragging}
 								href={`/campaign/${encodeURIComponent(campaign.slug)}`}
-								onClick={() => onSelectCampaign(campaign.slug)}
+								onClick={() => handleCampaignClick(campaign.slug)}
 								actions={
 									<StatusBadge
 										completed={campaign.completed}
@@ -299,7 +309,8 @@ export default function Sidebar({
 							rel="noopener noreferrer"
 							className="Sidebar__resource-item"
 						>
-							<Icon name="map" size={16} /> <span>{lang.t("Szepeku maps")}</span>
+							<Icon name="map" size={16} />{" "}
+							<span>{lang.t("Szepeku maps")}</span>
 						</a>
 						<a
 							href="https://chatgpt.com/g/g-69c24d157a348191b640bf111b486080-ttrpg-map-architect"
