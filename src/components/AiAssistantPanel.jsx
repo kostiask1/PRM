@@ -76,14 +76,21 @@ const markdownMentionComponents = Object.fromEntries(
 );
 
 function getResponsePreview(text) {
-	const plainText = ["#", "*", "_", "`", ">", "|", "~", "[", "]", "(", ")"].reduce(
-		(value, marker) => value.split(marker).join(""),
-		String(text || ""),
-	);
+	const plainText = [
+		"#",
+		"*",
+		"_",
+		"`",
+		">",
+		"|",
+		"~",
+		"[",
+		"]",
+		"(",
+		")",
+	].reduce((value, marker) => value.split(marker).join(""), String(text || ""));
 
-	return plainText
-		.replace(/\s+/g, " ")
-		.trim();
+	return plainText.replace(/\s+/g, " ").trim();
 }
 
 function formatResponseDate(date, language) {
@@ -113,8 +120,7 @@ function getOnOffLabel(value) {
 }
 
 function getLocationContextKey(location) {
-	return String(location?.slug || location?.id || location?.name || "")
-		.trim();
+	return String(location?.slug || location?.id || location?.name || "").trim();
 }
 
 function getLocationDisplayName(location) {
@@ -148,12 +154,14 @@ function getHistoryContextSummary(entry) {
 	}
 
 	const parts = [];
-	if (context.campaignNotes) parts.push(`${lang.t("Notes")}: ${context.campaignNotes}`);
+	if (context.campaignNotes)
+		parts.push(`${lang.t("Notes")}: ${context.campaignNotes}`);
 	if (context.campaignCharacters)
 		parts.push(`${lang.t("Characters")}: ${context.campaignCharacters}`);
 	if (context.campaignLocations)
 		parts.push(`${lang.t("Locations/Factions")}: ${context.campaignLocations}`);
-	if (context.sessions) parts.push(`${lang.t("Sessions")}: ${context.sessions}`);
+	if (context.sessions)
+		parts.push(`${lang.t("Sessions")}: ${context.sessions}`);
 	if (context.scenes) parts.push(`${lang.t("Scenes")}: ${context.scenes}`);
 	return `${lang.t("Context")}: ${parts.length ? parts.join(", ") : lang.t("Empty")}`;
 }
@@ -168,7 +176,8 @@ function getHistoryDetailRows(entry, language) {
 	if (requestText) rows.push({ label: lang.t("Request"), value: requestText });
 	if (optionsSummary)
 		rows.push({ label: lang.t("Settings"), value: optionsSummary });
-	if (contextSummary) rows.push({ label: lang.t("Context"), value: contextSummary });
+	if (contextSummary)
+		rows.push({ label: lang.t("Context"), value: contextSummary });
 	if (createdAt) rows.push({ label: lang.t("Sent"), value: createdAt });
 
 	return rows;
@@ -843,57 +852,6 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 								</Button>
 							)}
 						</div>
-
-						{responseHistory.length > 0 && (
-							<section className="AiAssistant__response-history">
-								<div className="AiAssistant__response-history-header">
-									<h4>{lang.t("Response history")}</h4>
-									<Button
-										variant="ghost"
-										size={Button.SIZES.SMALL}
-										icon="trash"
-										onClick={clearResponseHistory}
-										title={lang.t("Clear response history")}
-									>
-										{lang.t("Clear")}
-									</Button>
-								</div>
-								<div className="AiAssistant__response-history-list">
-									{responseHistory.map((entry) => {
-										const responsePreview = getResponsePreview(entry.text);
-										return (
-											<ListCard
-												key={entry.id}
-												onClick={() => showGeneratedPrompt(entry)}
-												className="AiAssistant__history-card"
-												actions={
-													<Button
-														variant="ghost"
-														size={Button.SIZES.SMALL}
-														icon="trash"
-														onClick={() => deleteResponseHistoryEntry(entry)}
-														title={lang.t("Delete response")}
-													/>
-												}
-											>
-												<div className="ListCard__title AiAssistant__history-title">
-													{responsePreview || lang.t("AI response")}
-												</div>
-												<div className="ListCard__meta AiAssistant__history-meta">
-													<span>
-														{formatResponseDate(
-															entry.createdAt,
-															currentLanguage,
-														)}
-													</span>
-												</div>
-											</ListCard>
-										);
-									})}
-								</div>
-							</section>
-						)}
-
 						{isContextModalOpen && (
 							<Modal
 								title={lang.t("Context settings")}
@@ -964,8 +922,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 												</div>
 												{locationsList.length > 0 ? (
 													locationsList.map((location) => {
-														const locationKey =
-															getLocationContextKey(location);
+														const locationKey = getLocationContextKey(location);
 														if (!locationKey) return null;
 														return (
 															<div
@@ -1249,6 +1206,56 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 						</div>
 
 						{error && <div className="AiAssistant__error">{error}</div>}
+
+						{responseHistory.length > 0 && (
+							<section className="AiAssistant__response-history">
+								<div className="AiAssistant__response-history-header">
+									<h4>{lang.t("Response history")}</h4>
+									<Button
+										variant="ghost"
+										size={Button.SIZES.SMALL}
+										icon="trash"
+										onClick={clearResponseHistory}
+										title={lang.t("Clear response history")}
+									>
+										{lang.t("Clear")}
+									</Button>
+								</div>
+								<div className="AiAssistant__response-history-list">
+									{responseHistory.map((entry) => {
+										const responsePreview = getResponsePreview(entry.text);
+										return (
+											<ListCard
+												key={entry.id}
+												onClick={() => showGeneratedPrompt(entry)}
+												className="AiAssistant__history-card"
+												actions={
+													<Button
+														variant="ghost"
+														size={Button.SIZES.SMALL}
+														icon="trash"
+														onClick={() => deleteResponseHistoryEntry(entry)}
+														title={lang.t("Delete response")}
+													/>
+												}
+											>
+												<div className="ListCard__title AiAssistant__history-title">
+													{responsePreview || lang.t("AI response")}
+												</div>
+												<div className="ListCard__meta AiAssistant__history-meta">
+													<span>
+														{formatResponseDate(
+															entry.createdAt,
+															currentLanguage,
+														)}
+													</span>
+												</div>
+											</ListCard>
+										);
+									})}
+								</div>
+							</section>
+						)}
 					</div>
 				</Modal>
 			)}

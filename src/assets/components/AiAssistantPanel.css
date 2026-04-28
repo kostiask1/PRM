@@ -190,7 +190,10 @@
 }
 
 .AiAssistant__response-history {
-	margin: 0 0 16px;
+	margin-top: var(--space-4);
+	max-height: 400px;
+	overflow-y: scroll;
+	margin-right: -8px;
 }
 
 .AiAssistant__response-history-header {
