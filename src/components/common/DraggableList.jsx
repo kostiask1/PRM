@@ -13,6 +13,7 @@ export default function DraggableList({
 	keyExtractor,
 	className = "",
 	itemClassName = "",
+	dragData,
 }) {
 	const [draggingIndex, setDraggingIndex] = useState(null);
 	const isListDragRef = useRef(false);
@@ -33,6 +34,14 @@ export default function DraggableList({
 		isListDragRef.current = true;
 		setDraggingIndex(index);
 		e.dataTransfer.effectAllowed = "move";
+		if (typeof dragData === "function") {
+			const payload = dragData(items[index], index);
+			if (payload) {
+				const serialized = JSON.stringify(payload);
+				e.dataTransfer.setData("application/x-prm-entity-drag", serialized);
+				e.dataTransfer.setData("text/plain", serialized);
+			}
+		}
 	};
 
 	const handleDragEnter = (targetIndex) => {

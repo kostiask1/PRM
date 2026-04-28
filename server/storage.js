@@ -467,6 +467,33 @@ async function deleteEntity(campaignSlug, type, entitySlug) {
 	await fs.rm(entityPath, { recursive: true, force: true });
 }
 
+async function moveEntity(campaignSlug, sourceType, entitySlug, targetType) {
+	if (sourceType === targetType) {
+		return readEntity(campaignSlug, sourceType, entitySlug);
+	}
+	if (!ENTITY_TYPES.includes(sourceType) || !ENTITY_TYPES.includes(targetType)) {
+		throw new Error("Invalid entity type");
+	}
+
+	const safeSlug = path.basename(entitySlug);
+	const sourcePath = path.join(campaignDir(campaignSlug), sourceType, safeSlug);
+	const current = await readEntity(campaignSlug, sourceType, safeSlug);
+	const targetSlug = await ensureUniqueEntitySlug(
+		campaignSlug,
+		targetType,
+		safeSlug,
+	);
+	const targetPath = path.join(campaignDir(campaignSlug), targetType, targetSlug);
+
+	await ensureDir(path.dirname(targetPath));
+	await fs.rename(sourcePath, targetPath);
+	return writeEntity(campaignSlug, targetType, targetSlug, {
+		...current,
+		slug: targetSlug,
+		updatedAt: new Date().toISOString(),
+	});
+}
+
 async function readSession(slug, fileName) {
 	return readJson(sessionPath(slug, fileName));
 }
@@ -1049,6 +1076,7 @@ module.exports = {
 	readEntity,
 	writeEntity,
 	deleteEntity,
+	moveEntity,
 	readFavorites,
 	writeFavorites,
 	readAiResponses,

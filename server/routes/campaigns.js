@@ -208,6 +208,35 @@ router.delete("/:slug/entities/:type/:entitySlug", async (req, res, next) => {
 	}
 });
 
+router.post("/:slug/entities/:type/:entitySlug/move", async (req, res, next) => {
+	try {
+		const { slug: campaignSlug, type, entitySlug } = req.params;
+		const { targetType } = req.body || {};
+		if (!validateEntityType(type, res)) return;
+		if (!validateEntityType(targetType, res)) return;
+		if (
+			!(
+				(type === "characters" && targetType === "npc") ||
+				(type === "npc" && targetType === "characters")
+			)
+		) {
+			res.status(400).json({
+				error: "Entity can only be moved between characters and NPC.",
+			});
+			return;
+		}
+		const moved = await storage.moveEntity(
+			campaignSlug,
+			type,
+			entitySlug,
+			targetType,
+		);
+		res.json(moved);
+	} catch (error) {
+		next(error);
+	}
+});
+
 router.post("/reorder", async (req, res, next) => {
 	try {
 		const { orders } = req.body;

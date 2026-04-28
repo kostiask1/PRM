@@ -87,6 +87,11 @@ export const api = {
 		api.request(`/campaigns/${slug}/entities/${type}/${entitySlug}`, {
 			method: "DELETE",
 		}),
+	moveEntity: (slug, type, entitySlug, targetType) =>
+		api.request(`/campaigns/${slug}/entities/${type}/${entitySlug}/move`, {
+			method: "POST",
+			body: JSON.stringify({ targetType }),
+		}),
 
 	// Global Backup/Restore
 	exportAll: () => api.request("/export-all"),

@@ -20,6 +20,26 @@ import { navigateTo } from "../store/appStore";
 import { lang } from "../services/localization";
 import { getNotesForRender, sanitizeNotesForSave } from "../utils/noteUtils";
 
+function readCharacterDragPayload(event) {
+	const raw =
+		event.dataTransfer.getData("application/x-prm-entity-drag") ||
+		event.dataTransfer.getData("text/plain");
+	if (!raw) return null;
+	try {
+		const payload = JSON.parse(raw);
+		if (payload?.kind !== "campaign-character") return null;
+		return payload;
+	} catch {
+		return null;
+	}
+}
+
+function hasCharacterDragPayload(event) {
+	return Array.from(event.dataTransfer.types || []).includes(
+		"application/x-prm-entity-drag",
+	);
+}
+
 function CampaignView(props) {
 	const campaign = props.campaign;
 	const view = useCampaignView(props);
@@ -68,6 +88,24 @@ function CampaignView(props) {
 
 	const canReorderSessions =
 		sessionStatusFilter === "all" && sessionSearch.trim().length === 0;
+
+	const handleCharacterTypeDragOver = (event) => {
+		if (!hasCharacterDragPayload(event)) return;
+		event.preventDefault();
+		event.dataTransfer.dropEffect = "move";
+	};
+
+	const handleCharacterTypeDrop = (targetType) => (event) => {
+		const payload = readCharacterDragPayload(event);
+		if (!payload) return;
+		event.preventDefault();
+		event.stopPropagation();
+		view.handleCharacterTypeDrop({
+			sourceType: payload.sourceType,
+			targetType,
+			id: payload.id,
+		});
+	};
 
 	const renderSessionCard = (session, isDragging = false) => (
 		<ListCard
@@ -314,7 +352,11 @@ function CampaignView(props) {
 							)}
 						</div>
 
-						<div className="CampaignView__section">
+						<div
+							className="CampaignView__section"
+							onDragOver={handleCharacterTypeDragOver}
+							onDrop={handleCharacterTypeDrop("characters")}
+						>
 							<div className="section-row">
 								<div
 									className="section-title-group"
@@ -353,6 +395,11 @@ function CampaignView(props) {
 									onDrop={() =>
 										view.triggerSave({ characters: view.characters })
 									}
+									dragData={(character) => ({
+										kind: "campaign-character",
+										sourceType: "characters",
+										id: character.id,
+									})}
 									keyExtractor={(char) => char.id}
 									renderItem={(character, isDragging) => (
 										<CharacterCard
@@ -369,7 +416,11 @@ function CampaignView(props) {
 							)}
 						</div>
 
-						<div className="CampaignView__section">
+						<div
+							className="CampaignView__section"
+							onDragOver={handleCharacterTypeDragOver}
+							onDrop={handleCharacterTypeDrop("npc")}
+						>
 							<div className="section-row">
 								<div
 									className="section-title-group"
@@ -406,6 +457,11 @@ function CampaignView(props) {
 									className="CampaignView__characters"
 									onReorder={view.setNpcs}
 									onDrop={() => {}}
+									dragData={(npc) => ({
+										kind: "campaign-character",
+										sourceType: "npc",
+										id: npc.id,
+									})}
 									keyExtractor={(npc) => npc.id}
 									renderItem={(npc, isDragging) => (
 										<CharacterCard

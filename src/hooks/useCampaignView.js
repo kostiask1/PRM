@@ -287,6 +287,14 @@ export default function useCampaignView(props) {
 		entitySaveTimeoutsRef.current = {};
 	}, []);
 
+	const clearEntitySaveTimer = useCallback((type, id) => {
+		const key = `${type}:${id}`;
+		if (entitySaveTimeoutsRef.current[key]) {
+			clearTimeout(entitySaveTimeoutsRef.current[key]);
+			delete entitySaveTimeoutsRef.current[key];
+		}
+	}, []);
+
 	const scheduleEntityUpdate = useCallback(
 		(type, entity) => {
 			if (!entity?.slug || entity._isPending) return;
@@ -390,6 +398,52 @@ export default function useCampaignView(props) {
 		if (!npc) return;
 		await api.deleteEntity(campaign.slug, "npc", npc.slug);
 		setNpcs((prev) => prev.filter((n) => n.id !== id));
+	};
+
+	const handleCharacterTypeDrop = async ({ sourceType, targetType, id }) => {
+		if (
+			!id ||
+			sourceType === targetType ||
+			!["characters", "npc"].includes(sourceType) ||
+			!["characters", "npc"].includes(targetType)
+		) {
+			return;
+		}
+
+		const sourceList = sourceType === "characters" ? characters : npcs;
+		const entity = sourceList.find((item) => item.id === id);
+		if (!entity?.slug) return;
+
+		clearEntitySaveTimer(sourceType, id);
+		try {
+			await api.updateEntity(
+				campaign.slug,
+				sourceType,
+				entity.slug,
+				sanitizeEntityForSave(entity),
+			);
+			const moved = sanitizeLoadedEntity(
+				await api.moveEntity(campaign.slug, sourceType, entity.slug, targetType),
+			);
+
+			if (sourceType === "characters") {
+				setCharacters((prev) => prev.filter((item) => item.id !== id));
+				setNpcs((prev) => [...prev, moved]);
+				return;
+			}
+			setNpcs((prev) => prev.filter((item) => item.id !== id));
+			setCharacters((prev) => [...prev, moved]);
+		} catch (err) {
+			console.error("Failed to move character entity", err);
+			dispatch(
+				alert({
+					title: lang.t("Error"),
+					message: lang.t("Failed to move entity."),
+				}),
+			);
+			loadCharacters();
+			loadNpcs();
+		}
 	};
 
 	const handleToggleLocationCollapse = (id) => {
@@ -686,6 +740,7 @@ export default function useCampaignView(props) {
 		handleToggleNpcCollapse,
 		handleNpcChange,
 		handleNpcDelete,
+		handleCharacterTypeDrop,
 		handleToggleLocationCollapse,
 		handleLocationChange,
 		handleLocationDelete,

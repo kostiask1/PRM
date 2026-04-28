@@ -139,6 +139,7 @@
 	"Failed to connect to AI.": "Не вдалося підключитися до ШІ.",
 	"Failed to create campaign": "Не вдалося створити кампанію",
 	"Failed to create entity.": "Не вдалося створити сутність.",
+	"Failed to move entity.": "Не вдалося перемістити сутність.",
 	"Failed to delete campaign: {error}": "Не вдалося видалити кампанію: {error}",
 	"Failed to delete session: {error}": "Не вдалося видалити сесію: {error}",
 	"Failed to import campaign": "Не вдалося імпортувати кампанію",

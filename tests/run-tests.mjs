@@ -371,6 +371,35 @@ await run("storage core helpers sanitize and build identifiers", () => {
 	assert.equal(storage.campaignDir("../unsafe").includes(".."), false);
 });
 
+await run("storage moveEntity transfers characters and preserves data", async () => {
+	await withTestSlug("move-entity", async (slug) => {
+		await storage.writeEntity(slug, "characters", "hero", {
+			id: "hero-id",
+			firstName: "Hero",
+			lastName: "One",
+			notes: [{ id: 1, title: "N", text: "T" }],
+		});
+
+		const moved = await storage.moveEntity(slug, "characters", "hero", "npc");
+
+		assert.equal(moved.slug, "hero");
+		assert.equal(moved.id, "hero-id");
+		assert.equal(moved.firstName, "Hero");
+		assert.equal(
+			await storage.exists(path.join(storage.campaignDir(slug), "characters", "hero")),
+			false,
+		);
+		assert.equal(
+			await storage.exists(path.join(storage.campaignDir(slug), "npc", "hero")),
+			true,
+		);
+
+		const npcs = await storage.listEntities(slug, "npc");
+		assert.equal(npcs.length, 1);
+		assert.equal(npcs[0].notes[0].text, "T");
+	});
+});
+
 await run("classNames merges strings arrays objects and falsy values", () => {
 	assert.equal(classNames("a", "b"), "a b");
 	assert.equal(
