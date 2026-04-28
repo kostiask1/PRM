@@ -141,9 +141,9 @@ export default function CharacterCard({
 						</div>
 					)}
 					<div className="character-card__title-group">
-						<span className="character-card__name">
+						{viewMode !== "modal" && (<span className="character-card__name">
 							{characterModel.displayName} {character.lastName}
-						</span>
+						</span>)}
 						{isCollapsed && (
 							<span className="character-card__meta-brief">
 								{characterModel.briefMeta}

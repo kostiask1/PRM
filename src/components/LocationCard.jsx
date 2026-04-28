@@ -249,7 +249,7 @@ export default function LocationCard({
 											}
 										/>
 									)}
-									<label>{lang.t("Location/faction notes")}</label>
+									<label>{lang.t("Notes")}</label>
 								</div>
 								{!isNotesCollapsed && (
 									<div className="location-card__notes-list">

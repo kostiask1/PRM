@@ -39,6 +39,15 @@
     z-index: 3;
 }
 
+.note-card-simple--simplified .note-card-simple__simpleActions {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.note-card-simple--simplified:hover .note-card-simple__simpleActions {
+    opacity: 1;
+}
+
 .note-card-simple.is-collapsed .note-card-simple__simpleActions {
     position: static;
 }
