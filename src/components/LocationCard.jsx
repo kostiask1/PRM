@@ -11,7 +11,6 @@ import classNames from "../utils/classNames";
 import { lang } from "../services/localization";
 import { renderMentionText } from "../utils/parser.jsx";
 import { getNotesForRender } from "../utils/noteUtils";
-import "../assets/components/CharacterCard.css";
 import "../assets/components/LocationCard.css";
 
 const markdownTagsWithMentions = [
@@ -114,15 +113,15 @@ export default function LocationCard({
 
 	return (
 		<div
-			className={classNames("character-card location-card", {
+			className={classNames("location-card", {
 				"is-collapsed": isCollapsed,
 				"is-dragging": isDragging,
-				"character-card--modal": isModalView,
+				"location-card--modal": isModalView,
 			})}
 		>
 			{showHeader && (
 				<div
-					className="character-card__header"
+					className="location-card__header"
 					onClick={
 						!canCollapseCard ? undefined : () => onToggleCollapse(location.id)
 					}
@@ -135,14 +134,14 @@ export default function LocationCard({
 						/>
 					)}
 					{location.imageUrl && isCollapsed && (
-						<div className="character-card__mini-portrait">
+						<div className="location-card__mini-image">
 							<img src={location.imageUrl} alt="" />
 						</div>
 					)}
-					<div className="character-card__title-group">
-						<span className="character-card__name">{displayName}</span>
+					<div className="location-card__title-group">
+						{viewMode !== "modal" &&<span className="location-card__name">{displayName}</span>}
 						{isCollapsed && locationModel.briefMeta && (
-							<span className="character-card__meta-brief">
+							<span className="location-card__meta-brief">
 								{locationModel.briefMeta}
 							</span>
 						)}
@@ -176,12 +175,12 @@ export default function LocationCard({
 			)}
 
 			{!isCollapsed && (
-				<div className="character-card__body">
-					<div className="character-card__main-layout location-card__main-layout">
-						<div className="character-card__content-side location-card__content-side">
-							<div className="character-card__info-side">
+				<div className="location-card__body">
+					<div className="location-card__main-layout">
+						<div className="location-card__content-side">
+							<div className="location-card__info-side">
 								{isEditing ? (
-									<div className="character-card__grid location-card__grid">
+									<div className="location-card__grid">
 										<EditableField
 											type="text"
 											value={location.name || ""}
@@ -190,9 +189,9 @@ export default function LocationCard({
 										/>
 									</div>
 								) : (
-									<div className="character-card__view-mode">
-										<div className="character-card__main-info">
-											<div className="character-card__meta-line">
+									<div className="location-card__view-mode">
+										<div className="location-card__main-info">
+											<div className="location-card__meta-line">
 												<h2>{displayName}</h2>
 											</div>
 										</div>
@@ -200,8 +199,8 @@ export default function LocationCard({
 								)}
 							</div>
 
-							<div className="character-card__details">
-								<div className="character-card__field">
+							<div className="location-card__details">
+								<div className="location-card__field">
 									<label>{lang.t("Description")}</label>
 									{isEditing ? (
 										<EditableField
@@ -215,7 +214,7 @@ export default function LocationCard({
 											)}
 										/>
 									) : (
-										<div className="character-card__text-content">
+										<div className="location-card__text-content">
 											<ReactMarkdown components={mentionComponents}>
 												{location.description ||
 													`*${lang.t("No description")}*`}
@@ -225,9 +224,9 @@ export default function LocationCard({
 								</div>
 							</div>
 
-							<div className="character-card__notes">
+							<div className="location-card__notes">
 								<div
-									className="character-card__notes-header"
+									className="location-card__notes-header"
 									onClick={
 										hasLocationNotesData
 											? () =>
@@ -253,7 +252,7 @@ export default function LocationCard({
 									<label>{lang.t("Location/faction notes")}</label>
 								</div>
 								{!isNotesCollapsed && (
-									<div className="character-card__notes-list">
+									<div className="location-card__notes-list">
 										{notesForRender.map((note, index) => (
 											<NoteCard
 												key={note.id}
@@ -276,7 +275,7 @@ export default function LocationCard({
 							</div>
 						</div>
 
-						<div className="character-card__image-side location-card__image-side">
+						<div className="location-card__image-side">
 							<ImageAssetField
 								imageUrl={location.imageUrl}
 								campaignSlug={campaignSlug}
@@ -285,18 +284,17 @@ export default function LocationCard({
 								showClearButton={isEditing}
 								onImageChange={(url) => updateField("imageUrl", url)}
 								imageAlt={lang.t("Image")}
-								containerClassName="character-card__portrait-container location-card__image-container"
+								containerClassName="location-card__image-container"
 								wrapperClassName={classNames(
-									"character-card__portrait-wrapper",
 									"location-card__image-wrapper",
 									{
 										"is-editable": isEditing,
 									},
 								)}
-								deleteButtonClassName="character-card__image-delete"
+								deleteButtonClassName="location-card__image-delete"
 								previewTitle={displayName || lang.t("Image")}
-								previewModalClassName="CharacterImageModal"
-								previewContentClassName="CharacterImageModal__content"
+								previewModalClassName="LocationImageModal"
+								previewContentClassName="LocationImageModal__content"
 							/>
 						</div>
 					</div>

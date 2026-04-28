@@ -116,6 +116,9 @@ export default function EntityLink({
 						})
 						.trim()}
 					type={modalState.type === "locations" ? "location" : "character"}
+					className={
+						modalState.type === "locations" ? "EntityLinkModal--location" : ""
+					}
 					showFooter={false}
 					onConfirm={handleCloseModal}
 					onCancel={handleCloseModal}

@@ -1,20 +1,55 @@
-.location-card__grid {
-    grid-template-columns: 1fr;
+.location-card {
+    background: color-mix(in srgb, var(--text-bright), transparent 97%);
+    border: 1px solid color-mix(in srgb, var(--text-bright), transparent 90%);
+    border-radius: 12px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    transition: all 0.2s ease;
 }
 
-.location-card__image-wrapper {
-    aspect-ratio: auto;
+.location-card__header {
+    display: flex;
+    align-items: center;
+    padding: var(--space-3) var(--space-4);
+    gap: var(--space-3);
+    cursor: pointer;
+    background: color-mix(in srgb, var(--text-bright), transparent 98%);
+}
+
+.location-card__title-group {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.location-card__name {
+    font-weight: 600;
+    color: var(--text-bright);
+}
+
+.location-card__meta-brief {
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+
+.location-card__body {
+    padding: var(--space-4);
+    border-top: 1px solid color-mix(in srgb, var(--text-bright), transparent 95%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
 }
 
 .location-card__main-layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--space-6);
     align-items: start;
 }
 
 .location-card__content-side,
 .location-card__image-side {
-    width: auto;
     min-width: 0;
 }
 
@@ -22,21 +57,211 @@
     justify-self: stretch;
 }
 
+.location-card__info-side {
+    margin-bottom: 16px;
+}
+
+.location-card__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-2) var(--space-3);
+}
+
+.location-card__details {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.location-card__field label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+}
+
+.location-card__meta-line {
+    font-size: 1.05rem;
+    color: var(--text-bright);
+}
+
+.location-card__meta-line h2 {
+    margin-bottom: 4px;
+}
+
+.location-card__image-container {
+    width: 100%;
+    position: relative;
+}
+
+.location-card__image-container .ImageDropzone {
+    margin: 0;
+    padding: var(--space-3);
+}
+
+.location-card__image-container .ImageDropzone .Icon--image {
+    width: 24px;
+    height: 24px;
+}
+
+.location-card__image-wrapper {
+    position: relative;
+    width: 100%;
+    border-radius: 8px;
+    overflow: visible;
+}
+
 .location-card__image-wrapper img {
+    width: 100%;
     height: auto;
     max-height: 520px;
+    object-fit: contain;
+    object-position: top;
+    border-radius: 8px;
+    display: block;
+}
+
+.location-card__image-wrapper:not(.is-editable) img {
+    cursor: zoom-in;
+}
+
+.location-card__image-wrapper.is-editable img {
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.location-card__image-wrapper.is-editable img:hover {
+    border-color: var(--accent);
+}
+
+.location-card__image-delete {
+    position: absolute;
+    top: 0;
+    right: 0;
+    border: unset;
+    background: unset;
+    padding: 0;
+    width: 28px;
+    height: 28px;
+    box-shadow: var(--shadow);
+    z-index: 2;
+}
+
+.location-card__notes {
+    margin-top: 16px;
+}
+
+.location-card__notes-header {
+    display: flex;
+    cursor: pointer;
+    align-items: center;
+    width: 100%;
+    gap: var(--space-3);
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 10px;
+}
+
+.location-card__notes label {
+    display: block;
+    font-size: 0.8rem;
+    width: 100%;
+    text-transform: uppercase;
+    cursor: pointer;
+    color: var(--muted);
+}
+
+.location-card__notes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.location-card__mini-image {
+    width: 56px;
+    height: 56px;
+}
+
+.location-card__mini-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.location-card--modal {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    margin: 0;
+    overflow: visible;
+}
+
+.location-card--modal .location-card__header {
+    padding: 0 0 var(--space-3) 0;
+    gap: var(--space-2);
+    cursor: default;
+    background: transparent;
+}
+
+.location-card--modal .location-card__body {
+    padding: 0;
+    border-top: 0;
+}
+
+.LocationImageModal {
+    width: min(98vw, 1600px);
+    max-width: 98vw;
+    height: 96vh;
+}
+
+.LocationImageModal .Modal__body {
+    padding: var(--space-1);
+    height: 100%;
+    overflow: hidden;
+}
+
+.LocationImageModal__content {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--bg-2), black 20%);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.LocationImageModal__content img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
 }
 
 .Modal__card.CreateLocationModal {
     width: min(96vw, 960px);
 }
 
+.Modal__card.EntityLinkModal--location,
+.Modal__card--location {
+    width: min(96vw, 1120px);
+}
+
 @media (max-width: 768px) {
+    .Modal__card.CreateLocationModal,
+    .Modal__card.EntityLinkModal--location,
+    .Modal__card--location {
+        width: 100%;
+    }
+
     .location-card__main-layout {
         grid-template-columns: 1fr;
+        gap: var(--space-4);
     }
 
     .location-card__image-side {
+        width: 100%;
         max-width: none;
     }
 }
