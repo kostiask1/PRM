@@ -48,9 +48,10 @@ function normalizeLevel(rawLevel) {
 	return parsed;
 }
 
-function parseNoteParts(value) {
+function parseNoteParts(value, { simplifiedNotes = false } = {}) {
 	const text = asText(value);
 	if (!text) return { title: "", text: "" };
+	if (simplifiedNotes) return { title: "", text };
 
 	const lines = text
 		.split("\n")
@@ -67,9 +68,9 @@ function parseNoteParts(value) {
 	};
 }
 
-function normalizeNote(note) {
+function normalizeNote(note, { simplifiedNotes = false } = {}) {
 	if (typeof note === "string") {
-		const parsed = parseNoteParts(note);
+		const parsed = parseNoteParts(note, { simplifiedNotes });
 		return {
 			id: makeId(),
 			title: parsed.title,
@@ -82,9 +83,12 @@ function normalizeNote(note) {
 		return null;
 	}
 
-	const rawTitle = asText(note.title || note.name);
+	const rawTitle = simplifiedNotes ? "" : asText(note.title || note.name);
 	const rawText = asText(note.text || note.description || note.content);
-	const parsed = rawText && !rawTitle ? parseNoteParts(rawText) : null;
+	const parsed =
+		rawText && !rawTitle
+			? parseNoteParts(rawText, { simplifiedNotes })
+			: null;
 
 	return {
 		id: note.id || makeId(),
@@ -94,10 +98,13 @@ function normalizeNote(note) {
 	};
 }
 
-function normalizeNotes(notes, { keepAtLeastOne = false } = {}) {
+function normalizeNotes(
+	notes,
+	{ keepAtLeastOne = false, simplifiedNotes = false } = {},
+) {
 	const list = Array.isArray(notes) ? notes : [];
 	const normalized = list
-		.map(normalizeNote)
+		.map((note) => normalizeNote(note, { simplifiedNotes }))
 		.filter((note) => note && (note.title || note.text));
 	if (keepAtLeastOne && normalized.length === 0) {
 		normalized.push({ id: makeId(), title: "", text: "", collapsed: false });
@@ -105,7 +112,7 @@ function normalizeNotes(notes, { keepAtLeastOne = false } = {}) {
 	return normalized;
 }
 
-function normalizeCharacter(raw, existing = null) {
+function normalizeCharacter(raw, existing = null, { simplifiedNotes = false } = {}) {
 	const nameParts = parseNameParts(raw);
 	const fallbackDescription = asText(
 		raw.description || raw.bio || raw.backstory,
@@ -125,7 +132,10 @@ function normalizeCharacter(raw, existing = null) {
 		level: normalizeLevel(raw.level),
 		motivation: asText(raw.motivation || raw.goal || raw.description),
 		trait: asText(raw.trait || raw.personality || raw.quirk),
-		notes: normalizeNotes(notesSource, { keepAtLeastOne: true }),
+		notes: normalizeNotes(notesSource, {
+			keepAtLeastOne: true,
+			simplifiedNotes,
+		}),
 		collapsed: Boolean(existing?.collapsed ?? raw.collapsed ?? false),
 		isNotesCollapsed: Boolean(
 			existing?.isNotesCollapsed ?? raw.isNotesCollapsed ?? false,
@@ -135,7 +145,7 @@ function normalizeCharacter(raw, existing = null) {
 	};
 }
 
-function normalizeLocation(raw, existing = null) {
+function normalizeLocation(raw, existing = null, { simplifiedNotes = false } = {}) {
 	const fallbackDescription = asText(raw.description || raw.summary || raw.text);
 	const notesSource = Array.isArray(raw.notes) ? raw.notes : [];
 
@@ -143,7 +153,10 @@ function normalizeLocation(raw, existing = null) {
 		id: existing?.id || storage.createId(),
 		name: sanitizeEntityName(raw.name || raw.title),
 		description: fallbackDescription,
-		notes: normalizeNotes(notesSource, { keepAtLeastOne: true }),
+		notes: normalizeNotes(notesSource, {
+			keepAtLeastOne: true,
+			simplifiedNotes,
+		}),
 		collapsed: Boolean(existing?.collapsed ?? raw.collapsed ?? false),
 		isNotesCollapsed: Boolean(
 			existing?.isNotesCollapsed ?? raw.isNotesCollapsed ?? false,
@@ -163,7 +176,12 @@ function locationNameKey(raw = {}) {
 		.trim();
 }
 
-async function upsertGeneratedEntities(campaignSlug, type, generatedEntities) {
+async function upsertGeneratedEntities(
+	campaignSlug,
+	type,
+	generatedEntities,
+	{ simplifiedNotes = false } = {},
+) {
 	if (!Array.isArray(generatedEntities) || generatedEntities.length === 0)
 		return;
 
@@ -188,7 +206,9 @@ async function upsertGeneratedEntities(campaignSlug, type, generatedEntities) {
 			(fullNameKey ? byName.get(fullNameKey) : null) ||
 			null;
 
-		const normalized = normalizeCharacter(rawEntity, existingEntity);
+		const normalized = normalizeCharacter(rawEntity, existingEntity, {
+			simplifiedNotes,
+		});
 
 		if (existingEntity) {
 			const payload = {
@@ -224,7 +244,11 @@ async function upsertGeneratedEntities(campaignSlug, type, generatedEntities) {
 	}
 }
 
-async function upsertGeneratedLocations(campaignSlug, generatedLocations) {
+async function upsertGeneratedLocations(
+	campaignSlug,
+	generatedLocations,
+	{ simplifiedNotes = false } = {},
+) {
 	if (!Array.isArray(generatedLocations) || generatedLocations.length === 0)
 		return;
 
@@ -248,7 +272,9 @@ async function upsertGeneratedLocations(campaignSlug, generatedLocations) {
 			(fullNameKey ? byName.get(fullNameKey) : null) ||
 			null;
 
-		const normalized = normalizeLocation(rawLocation, existingLocation);
+		const normalized = normalizeLocation(rawLocation, existingLocation, {
+			simplifiedNotes,
+		});
 
 		if (existingLocation) {
 			const payload = {
@@ -316,7 +342,12 @@ function normalizeSceneNpcs(npcs) {
 		.filter(Boolean);
 }
 
-function normalizeScene(scene, existing, encounterMap) {
+function normalizeScene(
+	scene,
+	existing,
+	encounterMap,
+	{ simplifiedNotes = false } = {},
+) {
 	let encounterId = existing?.encounterId || "";
 	if (
 		scene.encounterIndex !== undefined &&
@@ -325,7 +356,7 @@ function normalizeScene(scene, existing, encounterMap) {
 		encounterId = encounterMap.get(scene.encounterIndex);
 	}
 
-	const notesFromAi = normalizeNotes(scene.notes || []);
+	const notesFromAi = normalizeNotes(scene.notes || [], { simplifiedNotes });
 
 	return {
 		id: existing?.id || storage.createId(),
@@ -1040,6 +1071,8 @@ router.post("/generate", async (req, res, next) => {
 		const shouldParseAIResponse =
 			Boolean(parseAIResponse || encounterGenerationEnabled) &&
 			(!path.encounter || encounterGenerationEnabled);
+		const settings = await storage.readSettings();
+		const simplifiedNotesEnabled = Boolean(settings.simplifiedNotes);
 
 		const campaign = await storage.readCampaign(path.campaign);
 		const session = await storage
@@ -1094,6 +1127,7 @@ router.post("/generate", async (req, res, next) => {
 			generateLocations: locationGenerationEnabled,
 			generateEncounters: encounterGenerationEnabled,
 			language: responseLanguage,
+			simplifiedNotes: simplifiedNotesEnabled,
 		});
 
 		enforceEntityGenerationScope(generatedContent, type);
@@ -1215,11 +1249,18 @@ router.post("/generate", async (req, res, next) => {
 					path.campaign,
 					"characters",
 					generatedContent.characters,
+					{ simplifiedNotes: simplifiedNotesEnabled },
 				);
-				await upsertGeneratedEntities(path.campaign, "npc", generatedContent.npcs);
+				await upsertGeneratedEntities(
+					path.campaign,
+					"npc",
+					generatedContent.npcs,
+					{ simplifiedNotes: simplifiedNotesEnabled },
+				);
 				await upsertGeneratedLocations(
 					path.campaign,
 					generatedContent.locations,
+					{ simplifiedNotes: simplifiedNotesEnabled },
 				);
 
 				const encounterMap = new Map();
@@ -1255,7 +1296,9 @@ router.post("/generate", async (req, res, next) => {
 					if (appendScenes) {
 						const appendedScenes = [];
 						for (const scene of generatedContent.scenes) {
-							const normalized = normalizeScene(scene, null, encounterMap);
+							const normalized = normalizeScene(scene, null, encounterMap, {
+								simplifiedNotes: simplifiedNotesEnabled,
+							});
 							const signature = sceneSignature(normalized);
 							if (existingSignatures.has(signature)) continue;
 							existingSignatures.add(signature);
@@ -1270,9 +1313,12 @@ router.post("/generate", async (req, res, next) => {
 									scene,
 									mergedScenes[idx],
 									encounterMap,
+									{ simplifiedNotes: simplifiedNotesEnabled },
 								);
 							} else {
-								const normalized = normalizeScene(scene, null, encounterMap);
+								const normalized = normalizeScene(scene, null, encounterMap, {
+									simplifiedNotes: simplifiedNotesEnabled,
+								});
 								const signature = sceneSignature(normalized);
 								if (!existingSignatures.has(signature)) {
 									existingSignatures.add(signature);
@@ -1287,6 +1333,7 @@ router.post("/generate", async (req, res, next) => {
 				if (Array.isArray(generatedContent.notes)) {
 					sessionData.data.notes = normalizeNotes(generatedContent.notes, {
 						keepAtLeastOne: true,
+						simplifiedNotes: simplifiedNotesEnabled,
 					});
 				}
 
@@ -1302,17 +1349,20 @@ router.post("/generate", async (req, res, next) => {
 						path.campaign,
 						"characters",
 						generatedContent.characters,
+						{ simplifiedNotes: simplifiedNotesEnabled },
 					);
 				} else if (type === "npc") {
 					await upsertGeneratedEntities(
 						path.campaign,
 						"npc",
 						generatedContent.npcs,
+						{ simplifiedNotes: simplifiedNotesEnabled },
 					);
 				} else if (type === "location") {
 					await upsertGeneratedLocations(
 						path.campaign,
 						generatedContent.locations,
+						{ simplifiedNotes: simplifiedNotesEnabled },
 					);
 				} else {
 					if (asText(generatedContent.description)) {
@@ -1320,22 +1370,27 @@ router.post("/generate", async (req, res, next) => {
 					}
 
 					if (Array.isArray(generatedContent.notes)) {
-						meta.notes = normalizeNotes(generatedContent.notes);
+						meta.notes = normalizeNotes(generatedContent.notes, {
+							simplifiedNotes: simplifiedNotesEnabled,
+						});
 					}
 
 					await upsertGeneratedEntities(
 						path.campaign,
 						"characters",
 						generatedContent.characters,
+						{ simplifiedNotes: simplifiedNotesEnabled },
 					);
 					await upsertGeneratedEntities(
 						path.campaign,
 						"npc",
 						generatedContent.npcs,
+						{ simplifiedNotes: simplifiedNotesEnabled },
 					);
 					await upsertGeneratedLocations(
 						path.campaign,
 						generatedContent.locations,
+						{ simplifiedNotes: simplifiedNotesEnabled },
 					);
 				}
 

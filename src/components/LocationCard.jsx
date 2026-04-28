@@ -224,7 +224,6 @@ export default function LocationCard({
 
 							<div className="location-card__details">
 								<div className="location-card__field">
-									<label>{lang.t("Description")}</label>
 									{isEditing ? (
 										<EditableField
 											type="textarea"

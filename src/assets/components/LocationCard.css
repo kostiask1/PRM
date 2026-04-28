@@ -72,16 +72,6 @@
     gap: var(--space-4);
 }
 
-.location-card__field label {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 6px;
-}
-
 .location-card__meta-line {
     font-size: 1.05rem;
     color: var(--text-bright);

@@ -48,10 +48,10 @@ function normalizeResponseLanguage(language) {
 	};
 }
 
-function noteToPromptText(note) {
+function noteToPromptText(note, { includeTitle = true } = {}) {
 	if (!note) return "";
 	if (typeof note === "string") return note.trim();
-	const title = String(note.title || "").trim();
+	const title = includeTitle ? String(note.title || "").trim() : "";
 	const text = String(note.text || "").trim();
 	return [title, text].filter(Boolean).join("\n");
 }
@@ -264,10 +264,14 @@ async function generateContent({
 	generateEncounters,
 	modelName,
 	language,
+	simplifiedNotes,
 }) {
 	let model;
 	let userPrompt = "";
 	const responseLanguage = normalizeResponseLanguage(language);
+	const simplifiedNotesEnabled = Boolean(simplifiedNotes);
+	const noteToContextText = (note) =>
+		noteToPromptText(note, { includeTitle: !simplifiedNotesEnabled });
 	const encounterGenerationEnabled = Boolean(generateEncounters);
 	const characterGenerationEnabled = generateCharacters !== false;
 	const npcGenerationEnabled = generateNpcs !== false;
@@ -301,6 +305,11 @@ async function generateContent({
 EXISTING NAME PROTECTION: Names that already exist in the input data must keep their exact original spelling and alphabet. Do not translate, transliterate, decline, paraphrase, rename, or otherwise alter existing names unless the user explicitly asks you to do that.
 Exception: technical lookup fields that require official English names, such as "monsterName", must remain official English bestiary names.`,
 	];
+	if (simplifiedNotesEnabled) {
+		systemInstructionParts.push(
+			`SIMPLIFIED NOTES MODE IS ENABLED. Notes are plain text only. In all note arrays, return each note as a plain string with no separate title, no first-line title convention, and no note objects with "title" fields. When using input notes as context, treat only their text as meaningful and ignore any title fields.`,
+		);
+	}
 	if (useKey === "scene" && encounterGenerationEnabled) {
 		systemInstructionParts.push(
 			`Encounter generation is enabled. You may create combat encounters using this shape:
@@ -355,7 +364,7 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 			// Додаємо нотатки, якщо обрано
 			if (conf.included && conf.notes && data.notes) {
 				sessionContext.notes = data.notes
-					.map(noteToPromptText)
+					.map(noteToContextText)
 					.filter((t) => t && t.trim() !== "");
 			}
 
@@ -418,7 +427,7 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 							if (field === "notes") {
 								if (sceneConf[field])
 									resultScene[field] = (scene.notes || [])
-										.map(noteToPromptText)
+										.map(noteToContextText)
 										.filter(Boolean);
 								return;
 							}
@@ -447,7 +456,7 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 			name: campaign.name,
 			description: campaign.description,
 			notes: contextData?.campaign?.notes
-				?.map(noteToPromptText)
+				?.map(noteToContextText)
 				.filter(Boolean),
 			characters: contextData?.campaign?.characters
 				?.map((c) => ({
@@ -457,7 +466,7 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 					level: c.level,
 					motivation: c.motivation,
 					trait: c.trait,
-					notes: (c.notes || []).map(noteToPromptText).filter(Boolean),
+					notes: (c.notes || []).map(noteToContextText).filter(Boolean),
 				}))
 				.filter((c) => c.name || c.motivation),
 			locations: contextData?.campaign?.locations
@@ -465,7 +474,7 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 					name: location.name || location.title,
 					description: location.description,
 					notes: (location.notes || [])
-						.map(noteToPromptText)
+						.map(noteToContextText)
 						.filter(Boolean),
 				}))
 				.filter((location) => location.name || location.description),
@@ -504,6 +513,10 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 	userPrompt +=
 		"IMPORTANT: Never transliterate existing names between alphabets (for example, Latin <-> Cyrillic) unless the user explicitly asks you to transliterate them. Keep the exact original characters from input. Mention format must be a single pair of brackets only: [Name]. Never output [[Name]] or nested brackets.\n";
 	userPrompt += `IMPORTANT: For new names you invent, use ${responseLanguage.label}. For existing names from input, keep the original spelling unless the user explicitly requests a rename, translation, or transliteration. Keep official lookup fields such as monsterName in English when the schema requires official D&D names.\n`;
+	if (simplifiedNotesEnabled) {
+		userPrompt +=
+			'IMPORTANT: Simplified notes mode is enabled. For every "notes" array in your JSON, output plain strings only. Do not output note titles, do not split a note into "title" and "text", and do not use the first line as a title.\n';
+	}
 
 	// Додаємо специфічні інструкції залежно від типу задачі
 	if (useKey === "image") {
