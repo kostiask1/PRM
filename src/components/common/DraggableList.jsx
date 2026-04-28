@@ -17,6 +17,7 @@ export default function DraggableList({
 }) {
 	const [draggingIndex, setDraggingIndex] = useState(null);
 	const isListDragRef = useRef(false);
+	const draggingIndexRef = useRef(null);
 
 	const isNativeMediaDrag = (e) => {
 		const target = e.target;
@@ -32,6 +33,7 @@ export default function DraggableList({
 		}
 
 		isListDragRef.current = true;
+		draggingIndexRef.current = index;
 		setDraggingIndex(index);
 		e.dataTransfer.effectAllowed = "move";
 		if (typeof dragData === "function") {
@@ -44,14 +46,25 @@ export default function DraggableList({
 		}
 	};
 
-	const handleDragEnter = (targetIndex) => {
+	const handleDragOver = (e, targetIndex) => {
+		e.preventDefault();
 		if (!isListDragRef.current) return;
-		if (draggingIndex === null || draggingIndex === targetIndex) return;
+		const sourceIndex = draggingIndexRef.current;
+		if (sourceIndex === null || sourceIndex === targetIndex) return;
+
+		const rect = e.currentTarget.getBoundingClientRect();
+		const midpoint = rect.top + rect.height / 2;
+		const isMovingDown = sourceIndex < targetIndex;
+		const isMovingUp = sourceIndex > targetIndex;
+
+		if (isMovingDown && e.clientY < midpoint) return;
+		if (isMovingUp && e.clientY > midpoint) return;
 
 		const newList = [...items];
-		const draggedItem = newList.splice(draggingIndex, 1)[0];
+		const draggedItem = newList.splice(sourceIndex, 1)[0];
 		newList.splice(targetIndex, 0, draggedItem);
 
+		draggingIndexRef.current = targetIndex;
 		setDraggingIndex(targetIndex);
 		onReorder(newList);
 	};
@@ -59,6 +72,7 @@ export default function DraggableList({
 	const handleDragEnd = () => {
 		const wasListDrag = isListDragRef.current;
 		isListDragRef.current = false;
+		draggingIndexRef.current = null;
 		setDraggingIndex(null);
 		if (wasListDrag && onDrop) onDrop();
 	};
@@ -70,9 +84,8 @@ export default function DraggableList({
 					key={keyExtractor(item)}
 					draggable
 					onDragStart={(e) => handleDragStart(e, index)}
-					onDragEnter={() => handleDragEnter(index)}
 					onDragEnd={handleDragEnd}
-					onDragOver={(e) => e.preventDefault()}
+					onDragOver={(e) => handleDragOver(e, index)}
 					className={classNames(itemClassName, {
 						"is-dragging": draggingIndex === index,
 					})}
