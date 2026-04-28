@@ -453,7 +453,7 @@ function CampaignView(props) {
 							{!isLocationsCollapsed && (
 								<DraggableList
 									items={view.locations}
-									className="CampaignView__characters"
+									className="CampaignView__locations"
 									onReorder={view.setLocations}
 									onDrop={() => {}}
 									keyExtractor={(location) => location.id}

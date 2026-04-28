@@ -161,6 +161,19 @@
 	user-select: auto;
 }
 
+.CampaignView__locations {
+	display: flex;
+	flex-wrap: wrap;
+	flex-direction: row;
+	gap: var(--space-3);
+}
+
+.CampaignView__locations>div {
+	flex: 1 1 800px;
+	max-width: 100%;
+	user-select: auto;
+}
+
 .section-row {
 	display: flex;
 	justify-content: space-between;
