@@ -83,6 +83,11 @@ export const api = {
 			method: "PATCH",
 			body: JSON.stringify(payload),
 		}),
+	replaceEntities: (slug, type, entities) =>
+		api.request(`/campaigns/${slug}/entities/${type}`, {
+			method: "PUT",
+			body: JSON.stringify({ entities }),
+		}),
 	deleteEntity: (slug, type, entitySlug) =>
 		api.request(`/campaigns/${slug}/entities/${type}/${entitySlug}`, {
 			method: "DELETE",

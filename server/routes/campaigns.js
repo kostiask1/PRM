@@ -188,6 +188,38 @@ router.post("/:slug/entities/:type", async (req, res, next) => {
 	}
 });
 
+router.put("/:slug/entities/:type", async (req, res, next) => {
+	try {
+		const { slug: campaignSlug, type } = req.params;
+		if (!validateEntityType(type, res)) return;
+		const entities = Array.isArray(req.body?.entities) ? req.body.entities : [];
+		const current = await storage.listEntities(campaignSlug, type);
+		const targetSlugs = new Set(
+			entities
+				.map((entity) => storage.campaignSlug(entity?.slug || entity?.name || entity?.firstName))
+				.filter(Boolean),
+		);
+
+		for (const entity of current) {
+			if (!targetSlugs.has(entity.slug)) {
+				await storage.deleteEntity(campaignSlug, type, entity.slug);
+			}
+		}
+
+		for (const entity of entities) {
+			const slug = storage.campaignSlug(
+				entity?.slug || entity?.name || entity?.firstName,
+			);
+			if (!slug) continue;
+			await storage.writeEntity(campaignSlug, type, slug, entity);
+		}
+
+		res.json(await storage.listEntities(campaignSlug, type));
+	} catch (error) {
+		next(error);
+	}
+});
+
 router.patch("/:slug/entities/:type/:entitySlug", async (req, res, next) => {
 	try {
 		const { slug: campaignSlug, type, entitySlug } = req.params;

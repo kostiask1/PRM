@@ -8,10 +8,7 @@ import {
 } from "../actions/app";
 import { api } from "../api";
 import { navigateTo, useAppDispatch, useAppSelector } from "../store/appStore";
-import {
-	sanitizeNotesForSave,
-	upsertNoteById,
-} from "../utils/noteUtils";
+import { sanitizeNotesForSave, upsertNoteById } from "../utils/noteUtils";
 import { downloadBlob } from "../utils/download";
 import { lang } from "../services/localization";
 
@@ -31,7 +28,9 @@ const normalizeMentionName = (value) =>
 const replaceBracketedMentionNames = (value, oldName, newName) => {
 	if (typeof value !== "string") return value;
 	const normalizedOldName = normalizeMentionName(oldName);
-	const nextName = String(newName || "").trim().replace(/\s+/g, " ");
+	const nextName = String(newName || "")
+		.trim()
+		.replace(/\s+/g, " ");
 	if (!normalizedOldName || !nextName) return value;
 
 	return value.replace(/\[([^[\]]+)\]/g, (fullMatch, rawName) => {
@@ -64,6 +63,19 @@ const getCharacterDisplayName = (entity) =>
 
 const getLocationDisplayName = (entity) =>
 	String(entity?.name || entity?.title || "").trim();
+
+const cloneHistoryList = (items) =>
+	JSON.parse(JSON.stringify((items || []).map(sanitizeLoadedEntity)));
+
+const areHistoryStatesEqual = (left, right) =>
+	JSON.stringify(left) === JSON.stringify(right);
+
+const campaignHistoryPayload = (state) => ({
+	description: state.description || "",
+	notes: sanitizeNotesForSave(state.notes || []),
+	completed: Boolean(state.completed),
+	completedAt: state.completedAt || null,
+});
 
 export default function useCampaignView(props) {
 	const { campaign } = props;
@@ -100,6 +112,13 @@ export default function useCampaignView(props) {
 	const entityRefreshVersion = useAppSelector(
 		(store) => store.entityRefreshVersion,
 	);
+
+	const clearEntitySaveTimers = useCallback(() => {
+		Object.values(entitySaveTimeoutsRef.current).forEach((timer) =>
+			clearTimeout(timer),
+		);
+		entitySaveTimeoutsRef.current = {};
+	}, []);
 
 	const loadCharacters = useCallback(async () => {
 		try {
@@ -179,32 +198,66 @@ export default function useCampaignView(props) {
 		[campaign.slug],
 	);
 
-	const handleUndo = useCallback(() => {
-		if (undoStack.length === 0) return;
-
-		const currentState = {
+	const createHistoryState = useCallback(
+		() => ({
+			description,
+			notes: cloneHistoryList(notes),
+			characters: cloneHistoryList(characters),
+			npcs: cloneHistoryList(npcs),
+			locations: cloneHistoryList(locations),
+			completed: campaign.completed,
+			completedAt: campaign.completedAt,
+		}),
+		[
 			description,
 			notes,
 			characters,
-			completed: campaign.completed,
-			completedAt: campaign.completedAt,
-		};
+			npcs,
+			locations,
+			campaign.completed,
+			campaign.completedAt,
+		],
+	);
 
+	const restoreHistoryState = useCallback(
+		async (state) => {
+			clearEntitySaveTimers();
+			if (saveTimeout.current) {
+				clearTimeout(saveTimeout.current);
+				saveTimeout.current = null;
+			}
+
+			const nextNotes = cloneHistoryList(state.notes);
+			const nextCharacters = cloneHistoryList(state.characters);
+			const nextNpcs = cloneHistoryList(state.npcs);
+			const nextLocations = cloneHistoryList(state.locations);
+
+			setDescription(state.description || "");
+			setNotes(nextNotes);
+			setCharacters(nextCharacters);
+			setNpcs(nextNpcs);
+			setLocations(nextLocations);
+
+			await Promise.all([
+				api.updateCampaign(campaign.slug, campaignHistoryPayload(state)),
+				api.replaceEntities(campaign.slug, "characters", nextCharacters),
+				api.replaceEntities(campaign.slug, "npc", nextNpcs),
+				api.replaceEntities(campaign.slug, "locations", nextLocations),
+			]);
+		},
+		[campaign.slug, clearEntitySaveTimers],
+	);
+
+	const handleUndo = useCallback(async () => {
+		if (undoStack.length === 0) return;
+
+		const currentState = createHistoryState();
 		let tempStack = [...undoStack];
 		let stateToRestore = null;
 
 		while (tempStack.length > 0) {
 			const candidate = tempStack.pop();
-			const isDifferent =
-				JSON.stringify(candidate.description) !==
-					JSON.stringify(currentState.description) ||
-				JSON.stringify(candidate.notes) !==
-					JSON.stringify(currentState.notes) ||
-				JSON.stringify(candidate.characters) !==
-					JSON.stringify(currentState.characters) ||
-				candidate.completed !== currentState.completed;
-
-			if (isDifferent) {
+			if (!areHistoryStatesEqual(candidate, currentState)) {
 				stateToRestore = candidate;
 				break;
 			}
@@ -215,51 +268,43 @@ export default function useCampaignView(props) {
 			setRedoStack((prev) => [currentState, ...prev]);
 			setUndoStack(tempStack);
 
-			setDescription(stateToRestore.description);
-			setNotes(stateToRestore.notes);
-			setCharacters(stateToRestore.characters);
-			saveToServer(stateToRestore);
-
-			setTimeout(() => {
+			try {
+				await restoreHistoryState(stateToRestore);
+			} catch (err) {
+				console.error("Failed to restore campaign undo state", err);
+				dispatch(
+					alert({
+						title: lang.t("Error"),
+						message: lang.t("Failed to update entity."),
+					}),
+				);
+				loadCharacters();
+				loadNpcs();
+				loadLocations();
+			} finally {
 				isUpdatingHistory.current = false;
-			}, 0);
+			}
 		}
 	}, [
 		undoStack,
-		description,
-		notes,
-		characters,
-		saveToServer,
-		campaign.completed,
-		campaign.completedAt,
+		createHistoryState,
+		restoreHistoryState,
+		dispatch,
+		loadCharacters,
+		loadNpcs,
+		loadLocations,
 	]);
 
-	const handleRedo = useCallback(() => {
+	const handleRedo = useCallback(async () => {
 		if (redoStack.length === 0) return;
 
-		const currentState = {
-			description,
-			notes,
-			characters,
-			completed: campaign.completed,
-			completedAt: campaign.completedAt,
-		};
-
+		const currentState = createHistoryState();
 		let tempStack = [...redoStack];
 		let stateToRestore = null;
 
 		while (tempStack.length > 0) {
 			const candidate = tempStack.shift();
-			const isDifferent =
-				JSON.stringify(candidate.description) !==
-					JSON.stringify(currentState.description) ||
-				JSON.stringify(candidate.notes) !==
-					JSON.stringify(currentState.notes) ||
-				JSON.stringify(candidate.characters) !==
-					JSON.stringify(currentState.characters) ||
-				candidate.completed !== currentState.completed;
-
-			if (isDifferent) {
+			if (!areHistoryStatesEqual(candidate, currentState)) {
 				stateToRestore = candidate;
 				break;
 			}
@@ -270,46 +315,39 @@ export default function useCampaignView(props) {
 			setUndoStack((prev) => [...prev, currentState]);
 			setRedoStack(tempStack);
 
-			setDescription(stateToRestore.description);
-			setNotes(stateToRestore.notes);
-			setCharacters(stateToRestore.characters);
-			saveToServer(stateToRestore);
-
-			setTimeout(() => {
+			try {
+				await restoreHistoryState(stateToRestore);
+			} catch (err) {
+				console.error("Failed to restore campaign redo state", err);
+				dispatch(
+					alert({
+						title: lang.t("Error"),
+						message: lang.t("Failed to update entity."),
+					}),
+				);
+				loadCharacters();
+				loadNpcs();
+				loadLocations();
+			} finally {
 				isUpdatingHistory.current = false;
-			}, 0);
+			}
 		}
 	}, [
 		redoStack,
-		description,
-		notes,
-		characters,
-		saveToServer,
-		campaign.completed,
-		campaign.completedAt,
+		createHistoryState,
+		restoreHistoryState,
+		dispatch,
+		loadCharacters,
+		loadNpcs,
+		loadLocations,
 	]);
 
 	const pushToUndo = useCallback(() => {
 		if (!isUpdatingHistory.current) {
-			setUndoStack((prev) => [
-				...prev,
-				{
-					description,
-					notes,
-					characters,
-					completed: campaign.completed,
-					completedAt: campaign.completedAt,
-				},
-			]);
+			setUndoStack((prev) => [...prev, createHistoryState()]);
 			setRedoStack([]);
 		}
-	}, [
-		description,
-		notes,
-		campaign.completed,
-		campaign.completedAt,
-		characters,
-	]);
+	}, [createHistoryState]);
 
 	const triggerSave = useCallback(
 		(updates) => {
@@ -322,13 +360,6 @@ export default function useCampaignView(props) {
 		},
 		[saveToServer],
 	);
-
-	const clearEntitySaveTimers = useCallback(() => {
-		Object.values(entitySaveTimeoutsRef.current).forEach((timer) =>
-			clearTimeout(timer),
-		);
-		entitySaveTimeoutsRef.current = {};
-	}, []);
 
 	const clearEntitySaveTimer = useCallback((type, id) => {
 		const key = `${type}:${id}`;
@@ -446,7 +477,10 @@ export default function useCampaignView(props) {
 			c.id === id ? { ...c, collapsed: !c.collapsed } : c,
 		);
 		setCharacters(newCharacters);
-		triggerSave({ characters: newCharacters });
+		const updatedCharacter = newCharacters.find(
+			(character) => character.id === id,
+		);
+		if (updatedCharacter) scheduleEntityUpdate("characters", updatedCharacter);
 	};
 
 	const handleCharacterChange = async (id, updatedChar) => {
@@ -500,6 +534,8 @@ export default function useCampaignView(props) {
 			n.id === id ? { ...n, collapsed: !n.collapsed } : n,
 		);
 		setNpcs(next);
+		const updatedNpc = next.find((npc) => npc.id === id);
+		if (updatedNpc) scheduleEntityUpdate("npc", updatedNpc);
 	};
 
 	const handleNpcChange = async (id, updatedNpc) => {
@@ -571,7 +607,12 @@ export default function useCampaignView(props) {
 				sanitizeEntityForSave(entity),
 			);
 			const moved = sanitizeLoadedEntity(
-				await api.moveEntity(campaign.slug, sourceType, entity.slug, targetType),
+				await api.moveEntity(
+					campaign.slug,
+					sourceType,
+					entity.slug,
+					targetType,
+				),
 			);
 
 			if (sourceType === "characters") {
@@ -607,15 +648,18 @@ export default function useCampaignView(props) {
 
 	const handleLocationChange = async (id, updatedLocation) => {
 		setLocations((prev) =>
-			prev.map((location) =>
-				location.id === id ? updatedLocation : location,
-			),
+			prev.map((location) => (location.id === id ? updatedLocation : location)),
 		);
 		if (updatedLocation._isPending) return;
 		scheduleEntityUpdate("locations", updatedLocation);
 	};
 
-	const handleLocationNameBlur = async (id, updatedLocation, oldName, newName) => {
+	const handleLocationNameBlur = async (
+		id,
+		updatedLocation,
+		oldName,
+		newName,
+	) => {
 		const entity =
 			locations.find((location) => location.id === id) || updatedLocation;
 		if (!entity?.slug || entity._isPending) return true;
@@ -869,19 +913,23 @@ export default function useCampaignView(props) {
 		};
 	}, [clearEntitySaveTimers]);
 
-	const handleAiUpdate = (updatedCampaign) => {
+	const handleAiUpdate = async (updatedCampaign) => {
 		pushToUndo();
 		if (updatedCampaign) {
 			setDescription(updatedCampaign.description || "");
 			setNotes(updatedCampaign.notes || []);
-			setCharacters(
-				(updatedCampaign.characters || []).map(sanitizeLoadedEntity),
-			);
-			if (Array.isArray(updatedCampaign.locations)) {
-				setLocations(
-					(updatedCampaign.locations || []).map(sanitizeLoadedEntity),
-				);
-			}
+		}
+		try {
+			const [nextCharacters, nextNpcs, nextLocations] = await Promise.all([
+				api.getEntities(campaign.slug, "characters"),
+				api.getEntities(campaign.slug, "npc"),
+				api.getEntities(campaign.slug, "locations"),
+			]);
+			setCharacters((nextCharacters || []).map(sanitizeLoadedEntity));
+			setNpcs((nextNpcs || []).map(sanitizeLoadedEntity));
+			setLocations((nextLocations || []).map(sanitizeLoadedEntity));
+		} catch (err) {
+			console.error("Failed to reload AI-updated entities", err);
 		}
 		dispatch(requestCampaignsReloadAction());
 	};
