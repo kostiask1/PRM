@@ -798,6 +798,12 @@ await run(
 				class: "Fighter",
 				imageUrl: oldUrl,
 			});
+			await storage.writeEntity(slug, "locations", "city", {
+				id: "city-1",
+				name: "City",
+				description: "A test location",
+				imageUrl: oldUrl,
+			});
 
 			const sessionFile = "session.json";
 			await storage.writeJson(storage.sessionPath(slug, sessionFile), {
@@ -826,6 +832,8 @@ await run(
 			assert.equal(meta.imageUrl, expectedNewUrl);
 			const entities = await storage.listEntities(slug, "characters");
 			assert.equal(entities[0].imageUrl, expectedNewUrl);
+			const locations = await storage.listEntities(slug, "locations");
+			assert.equal(locations[0].imageUrl, expectedNewUrl);
 			const session = await storage.readSession(slug, sessionFile);
 			assert.equal(JSON.stringify(session).includes(expectedNewUrl), true);
 			assert.equal(JSON.stringify(session).includes(oldUrl), false);

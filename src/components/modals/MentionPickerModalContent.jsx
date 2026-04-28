@@ -31,7 +31,7 @@ export default function MentionPickerModalContent({
 			<Input
 				value={query}
 				onChange={(e) => setQuery(e.target.value)}
-				placeholder={lang.t("Search NPC or character...")}
+				placeholder={lang.t("Search NPC, character, or location...")}
 				autoFocus
 			/>
 
@@ -46,7 +46,11 @@ export default function MentionPickerModalContent({
 						>
 							<span>{entity.name}</span>
 							<span className="muted">
-								{entity.type === "npc" ? "NPC" : lang.t("Character")}
+								{entity.type === "locations"
+									? lang.t("Location/Faction")
+									: entity.type === "npc"
+										? "NPC"
+										: lang.t("Character")}
 							</span>
 						</button>
 					))

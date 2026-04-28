@@ -1,0 +1,42 @@
+.location-card__grid {
+    grid-template-columns: 1fr;
+}
+
+.location-card__image-wrapper {
+    aspect-ratio: auto;
+}
+
+.location-card__main-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+}
+
+.location-card__content-side,
+.location-card__image-side {
+    width: auto;
+    min-width: 0;
+}
+
+.location-card__image-side {
+    justify-self: stretch;
+}
+
+.location-card__image-wrapper img {
+    height: auto;
+    max-height: 520px;
+}
+
+.Modal__card.CreateLocationModal {
+    width: min(96vw, 960px);
+}
+
+@media (max-width: 768px) {
+    .location-card__main-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .location-card__image-side {
+        max-width: none;
+    }
+}

@@ -144,16 +144,17 @@ export default function App() {
 			}
 
 			try {
-				const [characters, npcs] = await Promise.all([
+				const [characters, npcs, locations] = await Promise.all([
 					api.getEntities(activeCampaignSlug, "characters"),
 					api.getEntities(activeCampaignSlug, "npc").catch(() => []),
+					api.getEntities(activeCampaignSlug, "locations").catch(() => []),
 				]);
 
 				const toEntityOption = (entity, type) => {
 					const firstName = (entity.firstName || "").trim();
 					const lastName = (entity.lastName || "").trim();
 					const fullName = `${firstName} ${lastName}`.trim();
-					const name = fullName || (entity.name || "").trim();
+					const name = fullName || (entity.name || entity.title || "").trim();
 					if (!name) return null;
 
 					return {
@@ -171,6 +172,9 @@ export default function App() {
 						.filter(Boolean),
 					...npcs
 						.map((entity) => toEntityOption(entity, "npc"))
+						.filter(Boolean),
+					...locations
+						.map((entity) => toEntityOption(entity, "locations"))
 						.filter(Boolean),
 				].sort((a, b) => a.name.localeCompare(b.name, "uk"));
 

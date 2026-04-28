@@ -9,6 +9,7 @@ import { lang } from "../services/localization";
 const TARGET_PRESETS = {
 	character: { category: "characters", subcategory: "players" },
 	npc: { category: "tokens", subcategory: "npc" },
+	location: { category: "maps", subcategory: "" },
 	scene: { category: "scenes", subcategory: "" },
 };
 

@@ -8,9 +8,11 @@ import StatusBadge from "./common/StatusBadge.jsx";
 import DraggableList from "./common/DraggableList.jsx";
 import NoteCard from "./common/NoteCard.jsx";
 import CharacterCard from "./CharacterCard";
+import LocationCard from "./LocationCard";
 import CollapseToggleButton from "./common/CollapseToggleButton.jsx";
 import Tooltip from "./common/Tooltip.jsx";
 import CreateCharacterButton from "./CreateCharacterButton";
+import CreateLocationButton from "./CreateLocationButton";
 import "../assets/components/CampaignView.css";
 import useCampaignView from "../hooks/useCampaignView";
 import CampaignViewModel from "../models/CampaignViewModel.js";
@@ -33,6 +35,7 @@ function CampaignView(props) {
 	const notesForRender = getNotesForRender(view.notes || []);
 	const hasCharactersData = (view.characters || []).length > 0;
 	const hasNpcsData = (view.npcs || []).length > 0;
+	const hasLocationsData = (view.locations || []).length > 0;
 	const isDescriptionCollapsed = hasDescriptionData
 		? view.isDescriptionCollapsed
 		: false;
@@ -41,6 +44,9 @@ function CampaignView(props) {
 		? view.isCharactersCollapsed
 		: false;
 	const isNpcsCollapsed = hasNpcsData ? view.isNpcsCollapsed : false;
+	const isLocationsCollapsed = hasLocationsData
+		? view.isLocationsCollapsed
+		: false;
 
 	const filteredSessions = useMemo(() => {
 		const query = sessionSearch.trim().toLowerCase();
@@ -215,7 +221,7 @@ function CampaignView(props) {
 						</div>
 					</aside>
 
-					<div className="CampaignView__contentPane">
+					<div className="CampaignView__contentPanel">
 						<div className="CampaignView__section">
 							<div className="section-row">
 								<div
@@ -417,6 +423,55 @@ function CampaignView(props) {
 						</div>
 
 						<div className="CampaignView__section">
+							<div className="section-row">
+								<div
+									className="section-title-group"
+									onClick={() => {
+										if (!hasLocationsData) return;
+										const next = !isLocationsCollapsed;
+										view.setIsLocationsCollapsed(next);
+										view.triggerSave({ isLocationsCollapsed: next });
+									}}
+								>
+									{hasLocationsData && (
+										<CollapseToggleButton
+											size={Button.SIZES.MEDIUM}
+											collapsed={isLocationsCollapsed}
+											onClick={() => {
+												const next = !isLocationsCollapsed;
+												view.setIsLocationsCollapsed(next);
+												view.triggerSave({ isLocationsCollapsed: next });
+											}}
+										/>
+									)}
+									<h3>{lang.t("Locations/Factions")}</h3>
+								</div>
+								{!isLocationsCollapsed && (
+									<CreateLocationButton campaignSlug={campaign.slug} />
+								)}
+							</div>
+							{!isLocationsCollapsed && (
+								<DraggableList
+									items={view.locations}
+									className="CampaignView__characters"
+									onReorder={view.setLocations}
+									onDrop={() => {}}
+									keyExtractor={(location) => location.id}
+									renderItem={(location, isDragging) => (
+										<LocationCard
+											location={location}
+											isDragging={isDragging}
+											onToggleCollapse={view.handleToggleLocationCollapse}
+											onChange={view.handleLocationChange}
+											onDelete={view.handleLocationDelete}
+											campaignSlug={campaign.slug}
+										/>
+									)}
+								/>
+							)}
+						</div>
+
+						<div className="CampaignView__section">
 							<AiAssistantPanel
 								sessionName={campaign.name}
 								sessionData={{
@@ -425,6 +480,7 @@ function CampaignView(props) {
 									notes: view.notes,
 									characters: view.characters,
 									npcs: view.npcs,
+									locations: view.locations,
 								}}
 								campaignSlug={campaign.slug}
 								sessionId={null}

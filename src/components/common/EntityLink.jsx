@@ -13,7 +13,7 @@ function findEntityByName(entities, name) {
 		.toLowerCase();
 	if (!searchName) return null;
 
-	return entities.find((entity) => {
+	return entities.find(({ entity }) => {
 		const first = String(entity.firstName || "")
 			.trim()
 			.toLowerCase();
@@ -21,7 +21,7 @@ function findEntityByName(entities, name) {
 			.trim()
 			.toLowerCase();
 		const full = `${first} ${last}`.trim();
-		const fallback = String(entity.name || "")
+		const fallback = String(entity.name || entity.title || "")
 			.trim()
 			.toLowerCase();
 		return (
@@ -31,6 +31,16 @@ function findEntityByName(entities, name) {
 			fallback === searchName
 		);
 	});
+}
+
+function getEntityDisplayName(entity, type) {
+	if (type === "locations") {
+		return String(entity.name || entity.title || "").trim();
+	}
+	return (
+		`${entity.firstName || ""} ${entity.lastName || ""}`.trim() ||
+		String(entity.name || entity.title || "").trim()
+	);
 }
 
 export default function EntityLink({
@@ -55,22 +65,23 @@ export default function EntityLink({
 			if (!resolvedCampaignSlug || !name) return;
 
 			try {
-				const [characters, npcs] = await Promise.all([
+				const [characters, npcs, locations] = await Promise.all([
 					api.getEntities(resolvedCampaignSlug, "characters"),
 					api.getEntities(resolvedCampaignSlug, "npc").catch(() => []),
+					api.getEntities(resolvedCampaignSlug, "locations").catch(() => []),
 				]);
 
-				const allEntities = [...characters, ...npcs];
+				const allEntities = [
+					...characters.map((entity) => ({ entity, type: "characters" })),
+					...npcs.map((entity) => ({ entity, type: "npc" })),
+					...locations.map((entity) => ({ entity, type: "locations" })),
+				];
 				const found = findEntityByName(allEntities, name);
 				if (!found) return;
 
-				const type = characters.some((item) => item.id === found.id)
-					? "characters"
-					: "npc";
-
 				setModalState({
-					entity: found,
-					type,
+					entity: found.entity,
+					type: found.type,
 				});
 			} catch (error) {
 				console.error("Failed to open entity link modal", error);
@@ -91,11 +102,20 @@ export default function EntityLink({
 			{modalState && (
 				<Modal
 					title={lang
-						.t("Character: {name}", {
-							name: `${modalState.entity.firstName || ""} ${modalState.entity.lastName || ""}`.trim(),
+						.t("{type}: {name}", {
+							type:
+								modalState.type === "locations"
+									? lang.t("Location/Faction")
+									: modalState.type === "npc"
+										? "NPC"
+										: lang.t("Character"),
+							name: getEntityDisplayName(
+								modalState.entity,
+								modalState.type,
+							),
 						})
 						.trim()}
-					type="character"
+					type={modalState.type === "locations" ? "location" : "character"}
 					showFooter={false}
 					onConfirm={handleCloseModal}
 					onCancel={handleCloseModal}

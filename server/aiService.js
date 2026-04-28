@@ -168,21 +168,21 @@ Keep responses structured and practical for real gameplay.
 Always return JSON only, with no text before or after JSON.
 The JSON must contain generated data only, without extra commentary.
 Use this shape:
-{ "description": "...", "notes": ["Title\\nDetailed note...", ...], "characters": [{ "name": "...", "race": "...", "class": "...", "level": 1, "motivation": "...", "trait": "...", "notes": ["Title\\nDetailed note...", "..."] }], "npcs": [{ "name": "...", "race": "...", "class": "...", "level": 1, "description": "...", "motivation": "...", "trait": "...", "notes": ["Title\\nDetailed note...", "..."] }] }.
+{ "description": "...", "notes": ["Title\\nDetailed note...", ...], "characters": [{ "name": "...", "race": "...", "class": "...", "level": 1, "motivation": "...", "trait": "...", "notes": ["Title\\nDetailed note...", "..."] }], "npcs": [{ "name": "...", "race": "...", "class": "...", "level": 1, "description": "...", "motivation": "...", "trait": "...", "notes": ["Title\\nDetailed note...", "..."] }], "locations": [{ "name": "...", "description": "...", "notes": ["Title\\nDetailed note...", "..."] }] }.
 Each note in "notes" must be a complete block where the first line is a short title and the following lines are details.
 When updating story description or notes, return the full updated picture, not only newly added material. Preserve useful existing description/notes from the input, revise them as needed, and add new material on top of them.
 Do not generate a "scenes" field for campaign mode.
-Include "characters" and "npcs" only when the task instructions explicitly allow those categories.`,
+Include "characters", "npcs", and "locations" only when the task instructions explicitly allow those categories.`,
 	scene: `You are an experienced Dungeon Master for Dungeons & Dragons.
 Your goal is to help with session planning.
 Keep responses structured and practical for real gameplay.
 Always return JSON only, with no text before or after JSON.
 The JSON must contain generated data only, without extra commentary.
 When generating scenes, use this base shape:
-{ "notes": ["Title\\nDetailed session note...", ...], "scenes": [{ "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "..." }, "notes": ["Short note 1", "Short note 2"], "npcs": [{ "name": "...", "description": "..." }] }], "characters": [{ "name": "...", "race": "...", "class": "...", "level": 1, "motivation": "...", "trait": "...", "notes": ["Title\\nDetailed note...", "..."] }], "npcs": [{ "name": "...", "race": "...", "class": "...", "level": 1, "description": "...", "motivation": "...", "trait": "...", "notes": ["Title\\nDetailed note...", "..."] }] }.
+{ "notes": ["Title\\nDetailed session note...", ...], "scenes": [{ "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "..." }, "notes": ["Short note 1", "Short note 2"], "npcs": [{ "name": "...", "description": "..." }] }], "characters": [{ "name": "...", "race": "...", "class": "...", "level": 1, "motivation": "...", "trait": "...", "notes": ["Title\\nDetailed note...", "..."] }], "npcs": [{ "name": "...", "race": "...", "class": "...", "level": 1, "description": "...", "motivation": "...", "trait": "...", "notes": ["Title\\nDetailed note...", "..."] }], "locations": [{ "name": "...", "description": "...", "notes": ["Title\\nDetailed note...", "..."] }] }.
 Top-level "notes" are general notes for the whole session (not scene notes).
 When updating notes or scenes, return the full updated picture, not only newly added material. Preserve useful existing notes/scenes from the input, revise them as needed, and add new material on top of them.
-Include top-level "characters", top-level "npcs", and scene "npcs" only when task instructions explicitly allow those categories.
+Include top-level "characters", top-level "npcs", top-level "locations", and scene "npcs" only when task instructions explicitly allow those categories.
 Do not include combat encounter fields unless task instructions explicitly say encounter generation is enabled.`,
 	encounter: `You are an experienced Dungeon Master for Dungeons & Dragons 5e.
 Your goal is to help build a specific combat encounter.
@@ -260,6 +260,7 @@ async function generateContent({
 	contextData,
 	generateCharacters,
 	generateNpcs,
+	generateLocations,
 	generateEncounters,
 	modelName,
 	language,
@@ -270,6 +271,7 @@ async function generateContent({
 	const encounterGenerationEnabled = Boolean(generateEncounters);
 	const characterGenerationEnabled = generateCharacters !== false;
 	const npcGenerationEnabled = generateNpcs !== false;
+	const locationGenerationEnabled = generateLocations !== false;
 	const effectiveParseAIResponse =
 		Boolean(parseAIResponse) && (!encounterId || encounterGenerationEnabled);
 	const requestedType =
@@ -323,6 +325,11 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 			npcGenerationEnabled
 				? `NPC generation is enabled. You may include NPC data only when new NPCs are useful for the user's request. Use a top-level "npcs" array for NPC cards; scene-local NPC references may be included in scene "npcs".`
 				: `NPC generation is disabled. Do not create or edit NPCs. Do not include top-level "npcs" or scene "npcs".`,
+		);
+		systemInstructionParts.push(
+			locationGenerationEnabled
+				? `Location/faction generation is enabled. You may include a top-level "locations" array only when new locations or factions are useful for the user's request. Each item should include name, description, and notes.`
+				: `Location/faction generation is disabled. Do not create or edit locations/factions. Do not include a top-level "locations" array.`,
 		);
 	}
 
@@ -453,6 +460,15 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 					notes: (c.notes || []).map(noteToPromptText).filter(Boolean),
 				}))
 				.filter((c) => c.name || c.motivation),
+			locations: contextData?.campaign?.locations
+				?.map((location) => ({
+					name: location.name || location.title,
+					description: location.description,
+					notes: (location.notes || [])
+						.map(noteToPromptText)
+						.filter(Boolean),
+				}))
+				.filter((location) => location.name || location.description),
 		},
 	};
 
@@ -480,11 +496,11 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 	userPrompt = `INPUT DATA (JSON):\n${JSON.stringify(contextJson, null, 2)}\n\n`;
 	userPrompt += `MANDATORY: Reply strictly in ${responseLanguage.label}.\n`;
 	userPrompt +=
-		"IMPORTANT: In all generated text fields, wrap every mention of character or NPC names in square brackets, for example [Iryna] or [Borin Stonehelm]. Do not wrap JSON keys.\n";
+		"IMPORTANT: In all generated text fields, wrap every mention of character, NPC, location, or faction names in square brackets, for example [Iryna], [Borin Stonehelm], or [Iron Gate]. Do not wrap JSON keys.\n";
 	userPrompt +=
 		"IMPORTANT: Do NOT wrap structured name fields in brackets. Fields like name, firstName, lastName, and monsterName must contain plain names without [] symbols.\n";
 	userPrompt +=
-		"IMPORTANT: Never alter, translate, decline, or paraphrase existing character/NPC names unless the user explicitly asks you to rename or translate them. Always use existing names exactly as provided in the input JSON, preserving original spelling, and only wrap them in square brackets.\n";
+		"IMPORTANT: Never alter, translate, decline, or paraphrase existing character/NPC/location/faction names unless the user explicitly asks you to rename or translate them. Always use existing names exactly as provided in the input JSON, preserving original spelling, and only wrap them in square brackets.\n";
 	userPrompt +=
 		"IMPORTANT: Never transliterate existing names between alphabets (for example, Latin <-> Cyrillic) unless the user explicitly asks you to transliterate them. Keep the exact original characters from input. Mention format must be a single pair of brackets only: [Name]. Never output [[Name]] or nested brackets.\n";
 	userPrompt += `IMPORTANT: For new names you invent, use ${responseLanguage.label}. For existing names from input, keep the original spelling unless the user explicitly requests a rename, translation, or transliteration. Keep official lookup fields such as monsterName in English when the schema requires official D&D names.\n`;
@@ -514,6 +530,11 @@ IMPORTANT: Include race, class, and level for every generated NPC when possible.
 		} else {
 			userPrompt += `IMPORTANT: NPC generation is disabled. Do not create or edit NPCs and do not output top-level "npcs" or scene "npcs".\n`;
 		}
+		if (locationGenerationEnabled) {
+			userPrompt += `IMPORTANT: Location/faction generation is enabled. If the user asks for new places, factions, organizations, landmarks, regions, or they are clearly useful, include them in a top-level "locations" array. Locations/factions should include name, description, and notes when possible.\n`;
+		} else {
+			userPrompt += `IMPORTANT: Location/faction generation is disabled. Do not create or edit locations/factions and do not output "locations".\n`;
+		}
 		if (encounterGenerationEnabled) {
 			userPrompt += `IMPORTANT: For each scene where conflict is possible, generate an encounter object in the encounters array.
 Pick monsters (English names) while considering character levels and classes for balance.\n`;
@@ -532,6 +553,11 @@ Pick monsters (English names) while considering character levels and classes for
 			userPrompt += `IMPORTANT: NPC generation is enabled. If the user asks for new NPCs or they are clearly useful, include them in "npcs". NPCs should include race, class, level, description, motivation, trait, and notes when possible.\n`;
 		} else {
 			userPrompt += `IMPORTANT: NPC generation is disabled. Do not create or edit NPCs and do not output "npcs".\n`;
+		}
+		if (locationGenerationEnabled) {
+			userPrompt += `IMPORTANT: Location/faction generation is enabled. If the user asks for new places, factions, organizations, landmarks, regions, or they are clearly useful, include them in "locations". Locations/factions should include name, description, and notes when possible.\n`;
+		} else {
+			userPrompt += `IMPORTANT: Location/faction generation is disabled. Do not create or edit locations/factions and do not output "locations".\n`;
 		}
 	}
 

@@ -27,10 +27,12 @@
  * @property {CampaignNote[]} [notes]
  * @property {Object[]} [characters]
  * @property {Object[]} [npcs]
+ * @property {Object[]} [locations]
  * @property {boolean} [isDescriptionCollapsed]
  * @property {boolean} [isNotesCollapsed]
  * @property {boolean} [isCharactersCollapsed]
  * @property {boolean} [isNpcsCollapsed]
+ * @property {boolean} [isLocationsCollapsed]
  * @property {boolean} [completed]
  * @property {string|null} [completedAt]
  */
@@ -47,10 +49,15 @@ export const CAMPAIGN_FIELD_SCHEMA = {
 	notes: { type: "CampaignNote[]", values: "Замітки кампанії" },
 	characters: { type: "CharacterData[]", values: "Персонажі гравців" },
 	npcs: { type: "CharacterData[]", values: "NPC сутності кампанії" },
+	locations: { type: "LocationData[]", values: "Локації та фракції кампанії" },
 	isDescriptionCollapsed: { type: "boolean", values: "Стан секції опису" },
 	isNotesCollapsed: { type: "boolean", values: "Стан секції заміток" },
 	isCharactersCollapsed: { type: "boolean", values: "Стан секції персонажів" },
 	isNpcsCollapsed: { type: "boolean", values: "Стан секції NPC" },
+	isLocationsCollapsed: {
+		type: "boolean",
+		values: "Стан секції локацій та фракцій",
+	},
 };
 
 export default class CampaignViewModel {

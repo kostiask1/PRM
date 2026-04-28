@@ -293,6 +293,44 @@
 	line-height: 1.6;
 }
 
+.AiAssistant__response-details {
+	margin-top: var(--space-4);
+	padding: var(--space-3);
+	border: 1px solid color-mix(in srgb, var(--accent), transparent 65%);
+	border-radius: 8px;
+	background: color-mix(in srgb, var(--accent), transparent 92%);
+	color: var(--text-bright);
+	font-size: 0.85rem;
+	line-height: 1.45;
+}
+
+.AiAssistant__response-details-title {
+	margin-bottom: var(--space-2);
+	font-weight: 700;
+	color: var(--accent);
+	text-transform: uppercase;
+	font-size: 0.75rem;
+	letter-spacing: 0.04em;
+}
+
+.AiAssistant__response-details-row {
+	display: grid;
+	grid-template-columns: minmax(110px, 0.28fr) 1fr;
+	gap: var(--space-2);
+	padding: 6px 0;
+	border-top: 1px solid color-mix(in srgb, var(--accent), transparent 80%);
+}
+
+.AiAssistant__response-details-label {
+	color: var(--muted);
+	font-weight: 600;
+}
+
+.AiAssistant__response-details-value {
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
 .AiAssistant__prompt-result > :first-child,
 .AiAssistant__prompt-result > div > :first-child {
 	margin-top: 0;
@@ -414,6 +452,28 @@
 	width: 100%;
 }
 
+.AiAssistant__location-context {
+	margin-left: 28px;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+}
+
+.AiAssistant__location-actions {
+	display: flex;
+	gap: var(--space-2);
+	margin: 0 0 var(--space-1);
+}
+
+.AiAssistant__location-row {
+	padding: var(--space-1) 0;
+}
+
+.AiAssistant__empty-context {
+	padding: var(--space-2) 0;
+	font-size: 0.9rem;
+}
+
 .AiAssistant__session-context {
 	border: 1px solid color-mix(in srgb, var(--border), transparent 60%);
 	border-radius: 12px;
@@ -464,5 +524,10 @@
 
 	.AiAssistant__modelSelect {
 		max-width: none;
+	}
+
+	.AiAssistant__response-details-row {
+		grid-template-columns: 1fr;
+		gap: 2px;
 	}
 }

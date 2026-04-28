@@ -11,6 +11,7 @@ const FAVORITES_PATH = path.join(DATA_DIR, "favorites.json");
 const IMAGES_DIR = path.join(DATA_DIR, "images");
 const SETTINGS_PATH = path.join(DATA_DIR, "settings.json");
 const AI_RESPONSES_PATH = path.join(DATA_DIR, "aiResponses.json");
+const ENTITY_TYPES = Object.freeze(["characters", "npc", "locations"]);
 
 const DEFAULT_APP_SETTINGS = Object.freeze({
 	language: "uk",
@@ -421,7 +422,7 @@ async function updateSettings(patch = {}) {
 }
 
 async function listEntities(campaignSlug, type) {
-	const entitiesDir = path.join(campaignDir(campaignSlug), type); // type: 'characters' or 'npc'
+	const entitiesDir = path.join(campaignDir(campaignSlug), type);
 	await ensureDir(entitiesDir);
 	const entries = await fs.readdir(entitiesDir, { withFileTypes: true });
 	const result = [];
@@ -539,10 +540,11 @@ async function exportCampaignBundle(slug) {
 			return { fileName: s.fileName, content };
 		}),
 	);
-	const entities = {
-		characters: await listEntities(slug, "characters"),
-		npc: await listEntities(slug, "npc"),
-	};
+	const entities = Object.fromEntries(
+		await Promise.all(
+			ENTITY_TYPES.map(async (type) => [type, await listEntities(slug, type)]),
+		),
+	);
 	return { meta, sessions, entities };
 }
 
@@ -676,7 +678,7 @@ async function importCampaignBundle(bundle, options = {}) {
 		});
 	}
 
-	for (const type of ["characters", "npc"]) {
+	for (const type of ENTITY_TYPES) {
 		const list = Array.isArray(entities[type]) ? entities[type] : [];
 		for (const entity of list) {
 			const desiredSlug =
@@ -843,8 +845,8 @@ async function updateAllImageReferences(moveResults) {
 			if (changed) await writeJson(metaPath, meta);
 		}
 
-		// 2. Оновлення персонажів та NPC
-		for (const type of ["characters", "npc"]) {
+		// 2. Оновлення персонажів, NPC та локацій
+		for (const type of ENTITY_TYPES) {
 			const entities = await listEntities(slug, type);
 			for (const entity of entities) {
 				let changed = false;
@@ -1026,6 +1028,7 @@ module.exports = {
 	IMAGES_DIR,
 	SETTINGS_PATH,
 	AI_RESPONSES_PATH,
+	ENTITY_TYPES,
 	DEFAULT_APP_SETTINGS,
 	createId,
 	sanitizeName,

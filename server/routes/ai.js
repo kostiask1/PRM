@@ -135,9 +135,32 @@ function normalizeCharacter(raw, existing = null) {
 	};
 }
 
+function normalizeLocation(raw, existing = null) {
+	const fallbackDescription = asText(raw.description || raw.summary || raw.text);
+	const notesSource = Array.isArray(raw.notes) ? raw.notes : [];
+
+	return {
+		id: existing?.id || storage.createId(),
+		name: sanitizeEntityName(raw.name || raw.title),
+		description: fallbackDescription,
+		notes: normalizeNotes(notesSource, { keepAtLeastOne: true }),
+		collapsed: Boolean(existing?.collapsed ?? raw.collapsed ?? false),
+		isNotesCollapsed: Boolean(
+			existing?.isNotesCollapsed ?? raw.isNotesCollapsed ?? false,
+		),
+		imageUrl: existing?.imageUrl ?? raw.imageUrl ?? null,
+	};
+}
+
 function entityNameKey(raw) {
 	const nameParts = parseNameParts(raw || {});
 	return `${nameParts.firstName.toLowerCase()} ${nameParts.lastName.toLowerCase()}`.trim();
+}
+
+function locationNameKey(raw = {}) {
+	return sanitizeEntityName(raw.name || raw.title)
+		.toLowerCase()
+		.trim();
 }
 
 async function upsertGeneratedEntities(campaignSlug, type, generatedEntities) {
@@ -196,6 +219,66 @@ async function upsertGeneratedEntities(campaignSlug, type, generatedEntities) {
 			slug: uniqueSlug,
 		};
 		await storage.writeEntity(campaignSlug, type, uniqueSlug, payload);
+		bySlug.set(uniqueSlug, payload);
+		if (fullNameKey) byName.set(fullNameKey, payload);
+	}
+}
+
+async function upsertGeneratedLocations(campaignSlug, generatedLocations) {
+	if (!Array.isArray(generatedLocations) || generatedLocations.length === 0)
+		return;
+
+	const existing = await storage.listEntities(campaignSlug, "locations");
+	const bySlug = new Map(existing.map((location) => [location.slug, location]));
+	const byName = new Map(
+		existing
+			.map((location) => ({ key: locationNameKey(location), location }))
+			.filter(({ key }) => Boolean(key))
+			.map(({ key, location }) => [key, location]),
+	);
+
+	for (const rawLocation of generatedLocations) {
+		if (!rawLocation || typeof rawLocation !== "object") continue;
+
+		const fullNameKey = locationNameKey(rawLocation);
+		if (!fullNameKey) continue;
+
+		const existingLocation =
+			bySlug.get(rawLocation.slug) ||
+			(fullNameKey ? byName.get(fullNameKey) : null) ||
+			null;
+
+		const normalized = normalizeLocation(rawLocation, existingLocation);
+
+		if (existingLocation) {
+			const payload = {
+				...existingLocation,
+				...normalized,
+				slug: existingLocation.slug,
+				id: existingLocation.id,
+				imageUrl: existingLocation.imageUrl ?? normalized.imageUrl ?? null,
+			};
+			await storage.writeEntity(
+				campaignSlug,
+				"locations",
+				existingLocation.slug,
+				payload,
+			);
+			bySlug.set(existingLocation.slug, payload);
+			if (fullNameKey) byName.set(fullNameKey, payload);
+			continue;
+		}
+
+		const uniqueSlug = await storage.ensureUniqueEntitySlug(
+			campaignSlug,
+			"locations",
+			storage.campaignSlug(normalized.name || "locations"),
+		);
+		const payload = {
+			...normalized,
+			slug: uniqueSlug,
+		};
+		await storage.writeEntity(campaignSlug, "locations", uniqueSlug, payload);
 		bySlug.set(uniqueSlug, payload);
 		if (fullNameKey) byName.set(fullNameKey, payload);
 	}
@@ -327,6 +410,32 @@ function getCharacterDisplayName(entity = {}) {
 	const combined = `${firstName} ${lastName}`.trim();
 	if (combined) return combined;
 	return asText(entity.name || entity.title);
+}
+
+function getLocationDisplayName(entity = {}) {
+	return asText(entity.name || entity.title);
+}
+
+function getLocationContextKey(entity = {}) {
+	return asText(entity.slug || entity.id || getLocationDisplayName(entity));
+}
+
+function filterLocationsByContext(locations = [], locationConfig) {
+	if (!locationConfig) return [];
+	if (locationConfig === true) return locations;
+	if (locationConfig.included === false) return [];
+
+	const items = locationConfig.items || {};
+	const selectedKeys = Object.entries(items)
+		.filter(([, included]) => included !== false)
+		.map(([key]) => key);
+
+	if (Object.keys(items).length === 0) return locations;
+
+	const selected = new Set(selectedKeys);
+	return locations.filter((location) =>
+		selected.has(getLocationContextKey(location)),
+	);
 }
 
 function normalizeMentionCandidates(names = []) {
@@ -560,6 +669,27 @@ function applyMentionsToGeneratedContent(generatedContent, names) {
 		});
 	}
 
+	if (Array.isArray(generatedContent.locations)) {
+		generatedContent.locations = generatedContent.locations.map((location) => {
+			if (!location || typeof location !== "object") return location;
+			const next = { ...location };
+			if (typeof next.description === "string") {
+				next.description = processGeneratedTextMentions(
+					next.description,
+					names,
+				);
+			}
+			if (Array.isArray(next.notes)) {
+				next.notes = next.notes.map((note) =>
+					typeof note === "string"
+						? processGeneratedTextMentions(note, names)
+						: note,
+				);
+			}
+			return next;
+		});
+	}
+
 	if (Array.isArray(generatedContent.scenes)) {
 		generatedContent.scenes = generatedContent.scenes.map((scene) => {
 			if (!scene || typeof scene !== "object") return scene;
@@ -610,15 +740,20 @@ function enforceEntityGenerationScope(generatedContent, type) {
 	if (
 		!generatedContent ||
 		typeof generatedContent !== "object" ||
-		!["character", "npc"].includes(type)
+		!["character", "npc", "location"].includes(type)
 	) {
 		return generatedContent;
 	}
 
 	if (type === "character") {
 		delete generatedContent.npcs;
+		delete generatedContent.locations;
+	} else if (type === "npc") {
+		delete generatedContent.characters;
+		delete generatedContent.locations;
 	} else {
 		delete generatedContent.characters;
+		delete generatedContent.npcs;
 	}
 
 	delete generatedContent.description;
@@ -644,7 +779,7 @@ function stripSceneEntityFields(scene, { allowNpcs, allowEncounters }) {
 
 function enforceAiGenerationPermissions(
 	generatedContent,
-	{ allowCharacters, allowNpcs, allowEncounters },
+	{ allowCharacters, allowNpcs, allowLocations, allowEncounters },
 ) {
 	if (!generatedContent || typeof generatedContent !== "object") {
 		return generatedContent;
@@ -655,6 +790,9 @@ function enforceAiGenerationPermissions(
 	}
 	if (!allowNpcs) {
 		delete generatedContent.npcs;
+	}
+	if (!allowLocations) {
+		delete generatedContent.locations;
 	}
 	if (!allowEncounters) {
 		delete generatedContent.encounters;
@@ -680,6 +818,7 @@ function buildAiOptionsSummary(options) {
 		`parse: ${options.responseParsing ? "on" : "off"}`,
 		`characters: ${options.characterGeneration ? "on" : "off"}`,
 		`npcs: ${options.npcGeneration ? "on" : "off"}`,
+		`locations: ${options.locationGeneration ? "on" : "off"}`,
 		`encounters: ${options.encounterGeneration ? "on" : "off"}`,
 		`context: ${options.contextEnabled ? "on" : "off"}`,
 	];
@@ -694,6 +833,7 @@ function buildAiContextSummary(contextConfig, contextData = {}) {
 			enabled: false,
 			campaignNotes: 0,
 			campaignCharacters: 0,
+			campaignLocations: 0,
 			sessions: 0,
 			scenes: 0,
 			summary: "context: off",
@@ -714,11 +854,19 @@ function buildAiContextSummary(contextConfig, contextData = {}) {
 	const campaignCharacters = Array.isArray(contextData.campaign?.characters)
 		? contextData.campaign.characters.length
 		: 0;
+	const campaignLocations = Array.isArray(contextData.campaign?.locations)
+		? contextData.campaign.locations.length
+		: 0;
 
 	const parts = [];
 	if (contextConfig.campaignNotes) parts.push(`notes: ${campaignNotes}`);
 	if (contextConfig.campaignCharacters)
 		parts.push(`chars/npcs: ${campaignCharacters}`);
+	if (
+		contextConfig.campaignLocations &&
+		contextConfig.campaignLocations.included !== false
+	)
+		parts.push(`locations: ${campaignLocations}`);
 	if (sessions.length) parts.push(`sessions: ${sessions.length}`);
 	if (scenes) parts.push(`scenes: ${scenes}`);
 
@@ -726,6 +874,7 @@ function buildAiContextSummary(contextConfig, contextData = {}) {
 		enabled: true,
 		campaignNotes,
 		campaignCharacters,
+		campaignLocations,
 		sessions: sessions.length,
 		scenes,
 		summary: parts.length ? `context: ${parts.join(", ")}` : "context: empty",
@@ -743,6 +892,7 @@ function buildAiRequestSnapshot({
 	generateEncounters,
 	generateCharacters,
 	generateNpcs,
+	generateLocations,
 	contextConfig,
 	contextData,
 	language,
@@ -755,6 +905,7 @@ function buildAiRequestSnapshot({
 		requestedResponseParsing: Boolean(parseAIResponse),
 		characterGeneration: Boolean(generateCharacters),
 		npcGeneration: Boolean(generateNpcs),
+		locationGeneration: Boolean(generateLocations),
 		encounterGeneration: Boolean(generateEncounters),
 		contextEnabled: Boolean(contextConfig),
 		sceneId: sceneId || null,
@@ -775,14 +926,16 @@ async function collectMentionCandidates(
 	sessionData,
 	generatedContent,
 ) {
-	const [characters, npcs] = await Promise.all([
+	const [characters, npcs, locations] = await Promise.all([
 		storage.listEntities(campaignSlug, "characters"),
 		storage.listEntities(campaignSlug, "npc"),
+		storage.listEntities(campaignSlug, "locations"),
 	]);
 
 	const names = [
 		...characters.map(getCharacterDisplayName),
 		...npcs.map(getCharacterDisplayName),
+		...locations.map(getLocationDisplayName),
 	];
 
 	if (sessionData?.data?.scenes) {
@@ -802,6 +955,12 @@ async function collectMentionCandidates(
 	if (Array.isArray(generatedContent?.npcs)) {
 		for (const npc of generatedContent.npcs) {
 			names.push(getCharacterDisplayName(npc));
+		}
+	}
+
+	if (Array.isArray(generatedContent?.locations)) {
+		for (const location of generatedContent.locations) {
+			names.push(getLocationDisplayName(location));
 		}
 	}
 
@@ -860,6 +1019,7 @@ router.post("/generate", async (req, res, next) => {
 			parseAIResponse,
 			generateCharacters,
 			generateNpcs,
+			generateLocations,
 			generateEncounters,
 			contextConfig,
 			language,
@@ -876,6 +1036,7 @@ router.post("/generate", async (req, res, next) => {
 		const encounterGenerationEnabled = Boolean(generateEncounters);
 		const characterGenerationEnabled = generateCharacters !== false;
 		const npcGenerationEnabled = generateNpcs !== false;
+		const locationGenerationEnabled = generateLocations !== false;
 		const shouldParseAIResponse =
 			Boolean(parseAIResponse || encounterGenerationEnabled) &&
 			(!path.encounter || encounterGenerationEnabled);
@@ -893,6 +1054,16 @@ router.post("/generate", async (req, res, next) => {
 				const chars = await storage.listEntities(path.campaign, "characters");
 				const npcs = await storage.listEntities(path.campaign, "npc");
 				contextData.campaign.characters = [...chars, ...npcs];
+			}
+			if (
+				contextConfig.campaignLocations &&
+				contextConfig.campaignLocations.included !== false
+			) {
+				const locations = await storage.listEntities(path.campaign, "locations");
+				contextData.campaign.locations = filterLocationsByContext(
+					locations,
+					contextConfig.campaignLocations,
+				);
 			}
 
 			if (contextConfig.sessions) {
@@ -920,6 +1091,7 @@ router.post("/generate", async (req, res, next) => {
 			contextData,
 			generateCharacters: characterGenerationEnabled,
 			generateNpcs: npcGenerationEnabled,
+			generateLocations: locationGenerationEnabled,
 			generateEncounters: encounterGenerationEnabled,
 			language: responseLanguage,
 		});
@@ -928,6 +1100,7 @@ router.post("/generate", async (req, res, next) => {
 		enforceAiGenerationPermissions(generatedContent, {
 			allowCharacters: characterGenerationEnabled,
 			allowNpcs: npcGenerationEnabled,
+			allowLocations: locationGenerationEnabled,
 			allowEncounters: encounterGenerationEnabled,
 		});
 
@@ -976,6 +1149,7 @@ router.post("/generate", async (req, res, next) => {
 				shouldParseAIResponse,
 				generateCharacters: characterGenerationEnabled,
 				generateNpcs: npcGenerationEnabled,
+				generateLocations: locationGenerationEnabled,
 				generateEncounters: encounterGenerationEnabled,
 				contextConfig,
 				contextData,
@@ -1043,6 +1217,10 @@ router.post("/generate", async (req, res, next) => {
 					generatedContent.characters,
 				);
 				await upsertGeneratedEntities(path.campaign, "npc", generatedContent.npcs);
+				await upsertGeneratedLocations(
+					path.campaign,
+					generatedContent.locations,
+				);
 
 				const encounterMap = new Map();
 				if (Array.isArray(generatedContent.encounters)) {
@@ -1131,6 +1309,11 @@ router.post("/generate", async (req, res, next) => {
 						"npc",
 						generatedContent.npcs,
 					);
+				} else if (type === "location") {
+					await upsertGeneratedLocations(
+						path.campaign,
+						generatedContent.locations,
+					);
 				} else {
 					if (asText(generatedContent.description)) {
 						meta.description = generatedContent.description;
@@ -1149,6 +1332,10 @@ router.post("/generate", async (req, res, next) => {
 						path.campaign,
 						"npc",
 						generatedContent.npcs,
+					);
+					await upsertGeneratedLocations(
+						path.campaign,
+						generatedContent.locations,
 					);
 				}
 

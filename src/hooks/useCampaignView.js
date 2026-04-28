@@ -31,6 +31,7 @@ export default function useCampaignView(props) {
 	const [notes, setNotes] = useState(campaign.notes || []);
 	const [characters, setCharacters] = useState(campaign.characters || []);
 	const [npcs, setNpcs] = useState([]);
+	const [locations, setLocations] = useState([]);
 	const [isDescriptionCollapsed, setIsDescriptionCollapsed] = useState(
 		campaign.isDescriptionCollapsed || false,
 	);
@@ -42,6 +43,9 @@ export default function useCampaignView(props) {
 	);
 	const [isNpcsCollapsed, setIsNpcsCollapsed] = useState(
 		campaign.isNpcsCollapsed || false,
+	);
+	const [isLocationsCollapsed, setIsLocationsCollapsed] = useState(
+		campaign.isLocationsCollapsed || false,
 	);
 	const saveTimeout = useRef(null);
 	const entitySaveTimeoutsRef = useRef({});
@@ -72,10 +76,20 @@ export default function useCampaignView(props) {
 		}
 	}, [campaign.slug]);
 
+	const loadLocations = useCallback(async () => {
+		try {
+			const data = await api.getEntities(campaign.slug, "locations");
+			setLocations((data || []).map(sanitizeLoadedEntity));
+		} catch (err) {
+			console.error("Failed to load locations", err);
+		}
+	}, [campaign.slug]);
+
 	useEffect(() => {
 		loadCharacters();
 		loadNpcs();
-	}, []);
+		loadLocations();
+	}, [loadCharacters, loadNpcs, loadLocations]);
 
 	useEffect(() => {
 		if (lastSlugRef.current !== campaign.slug) {
@@ -84,19 +98,29 @@ export default function useCampaignView(props) {
 			setIsDescriptionCollapsed(campaign.isDescriptionCollapsed || false);
 			setIsNotesCollapsed(campaign.isNotesCollapsed || false);
 			setIsCharactersCollapsed(campaign.isCharactersCollapsed || false);
+			setIsNpcsCollapsed(campaign.isNpcsCollapsed || false);
+			setIsLocationsCollapsed(campaign.isLocationsCollapsed || false);
 			setUndoStack([]);
 			setRedoStack([]);
 			lastSlugRef.current = campaign.slug;
-			loadCharacters();
-			loadNpcs();
 		}
-	}, [campaign.slug]);
+	}, [
+		campaign.description,
+		campaign.isCharactersCollapsed,
+		campaign.isDescriptionCollapsed,
+		campaign.isLocationsCollapsed,
+		campaign.isNotesCollapsed,
+		campaign.isNpcsCollapsed,
+		campaign.notes,
+		campaign.slug,
+	]);
 
 	useEffect(() => {
 		if (entityRefreshVersion === 0) return;
 		loadCharacters();
 		loadNpcs();
-	}, [entityRefreshVersion, loadCharacters, loadNpcs]);
+		loadLocations();
+	}, [entityRefreshVersion, loadCharacters, loadNpcs, loadLocations]);
 
 	const saveToServer = useCallback(
 		async (updates) => {
@@ -368,6 +392,34 @@ export default function useCampaignView(props) {
 		setNpcs((prev) => prev.filter((n) => n.id !== id));
 	};
 
+	const handleToggleLocationCollapse = (id) => {
+		const next = locations.map((location) =>
+			location.id === id
+				? { ...location, collapsed: !location.collapsed }
+				: location,
+		);
+		setLocations(next);
+		const updatedLocation = next.find((location) => location.id === id);
+		if (updatedLocation) scheduleEntityUpdate("locations", updatedLocation);
+	};
+
+	const handleLocationChange = async (id, updatedLocation) => {
+		setLocations((prev) =>
+			prev.map((location) =>
+				location.id === id ? updatedLocation : location,
+			),
+		);
+		if (updatedLocation._isPending) return;
+		scheduleEntityUpdate("locations", updatedLocation);
+	};
+
+	const handleLocationDelete = async (id) => {
+		const location = locations.find((item) => item.id === id);
+		if (!location) return;
+		await api.deleteEntity(campaign.slug, "locations", location.slug);
+		setLocations((prev) => prev.filter((item) => item.id !== id));
+	};
+
 	useEffect(() => {
 		const loadSessions = async () => {
 			try {
@@ -587,6 +639,11 @@ export default function useCampaignView(props) {
 			setCharacters(
 				(updatedCampaign.characters || []).map(sanitizeLoadedEntity),
 			);
+			if (Array.isArray(updatedCampaign.locations)) {
+				setLocations(
+					(updatedCampaign.locations || []).map(sanitizeLoadedEntity),
+				);
+			}
 		}
 		dispatch(requestCampaignsReloadAction());
 	};
@@ -601,6 +658,8 @@ export default function useCampaignView(props) {
 		setCharacters,
 		npcs,
 		setNpcs,
+		locations,
+		setLocations,
 		isDescriptionCollapsed,
 		setIsDescriptionCollapsed,
 		isNotesCollapsed,
@@ -609,6 +668,8 @@ export default function useCampaignView(props) {
 		setIsCharactersCollapsed,
 		isNpcsCollapsed,
 		setIsNpcsCollapsed,
+		isLocationsCollapsed,
+		setIsLocationsCollapsed,
 		undoStack,
 		redoStack,
 		handleUndo,
@@ -625,6 +686,9 @@ export default function useCampaignView(props) {
 		handleToggleNpcCollapse,
 		handleNpcChange,
 		handleNpcDelete,
+		handleToggleLocationCollapse,
+		handleLocationChange,
+		handleLocationDelete,
 		handleCreateSession,
 		handleDeleteCampaign,
 		handleRename,

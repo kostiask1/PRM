@@ -112,6 +112,15 @@ function getOnOffLabel(value) {
 	return value ? lang.t("On") : lang.t("Off");
 }
 
+function getLocationContextKey(location) {
+	return String(location?.slug || location?.id || location?.name || "")
+		.trim();
+}
+
+function getLocationDisplayName(location) {
+	return String(location?.name || location?.title || lang.t("Untitled")).trim();
+}
+
 function getHistoryOptionsSummary(entry) {
 	const options = entry?.request?.options;
 	if (!options || typeof options !== "object" || !options.mode) {
@@ -123,6 +132,7 @@ function getHistoryOptionsSummary(entry) {
 		`${lang.t("Response parsing")}: ${getOnOffLabel(options.responseParsing)}`,
 		`${lang.t("Create characters")}: ${getOnOffLabel(options.characterGeneration)}`,
 		`${lang.t("Create NPCs")}: ${getOnOffLabel(options.npcGeneration)}`,
+		`${lang.t("Create locations/factions")}: ${getOnOffLabel(options.locationGeneration)}`,
 		`${lang.t("Encounter generation")}: ${getOnOffLabel(options.encounterGeneration)}`,
 		`${lang.t("Context")}: ${getOnOffLabel(options.contextEnabled)}`,
 	].join("; ");
@@ -141,9 +151,27 @@ function getHistoryContextSummary(entry) {
 	if (context.campaignNotes) parts.push(`${lang.t("Notes")}: ${context.campaignNotes}`);
 	if (context.campaignCharacters)
 		parts.push(`${lang.t("Characters")}: ${context.campaignCharacters}`);
+	if (context.campaignLocations)
+		parts.push(`${lang.t("Locations/Factions")}: ${context.campaignLocations}`);
 	if (context.sessions) parts.push(`${lang.t("Sessions")}: ${context.sessions}`);
 	if (context.scenes) parts.push(`${lang.t("Scenes")}: ${context.scenes}`);
 	return `${lang.t("Context")}: ${parts.length ? parts.join(", ") : lang.t("Empty")}`;
+}
+
+function getHistoryDetailRows(entry, language) {
+	const rows = [];
+	const requestText = getHistoryRequestText(entry);
+	const optionsSummary = getHistoryOptionsSummary(entry);
+	const contextSummary = getHistoryContextSummary(entry);
+	const createdAt = formatResponseDate(entry?.createdAt, language);
+
+	if (requestText) rows.push({ label: lang.t("Request"), value: requestText });
+	if (optionsSummary)
+		rows.push({ label: lang.t("Settings"), value: optionsSummary });
+	if (contextSummary) rows.push({ label: lang.t("Context"), value: contextSummary });
+	if (createdAt) rows.push({ label: lang.t("Sent"), value: createdAt });
+
+	return rows;
 }
 
 export default function AiAssistantPanel({ sessionData, onInsertResult }) {
@@ -166,14 +194,20 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	const [parseAIResponse, setParseAIResponse] = useState(isEncounter);
 	const [generateCharacters, setGenerateCharacters] = useState(true);
 	const [generateNpcs, setGenerateNpcs] = useState(true);
+	const [generateLocations, setGenerateLocations] = useState(true);
 	const [generateEncounters, setGenerateEncounters] = useState(!isCampaign);
 	const [aiModels, setAiModels] = useState([]);
 	const [selectedModel, setSelectedModel] = useState("");
 	const [sessionsList, setSessionsList] = useState([]);
+	const [locationsList, setLocationsList] = useState([]);
 	const [expandedSessions, setExpandedSessions] = useState({});
 	const [contextConfig, setContextConfig] = useState(() => ({
 		campaignNotes: true,
 		campaignCharacters: true,
+		campaignLocations: {
+			included: true,
+			items: {},
+		},
 		sessions: initialRoute.session
 			? {
 					[initialRoute.session]: {
@@ -187,6 +221,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	}));
 	const [generatedPrompt, setGeneratedPrompt] = useState(null);
 	const [selectedResponseId, setSelectedResponseId] = useState(null);
+	const [selectedResponseEntry, setSelectedResponseEntry] = useState(null);
 	const [responseHistory, setResponseHistory] = useState([]);
 	const activeGenerateControllerRef = useRef(null);
 	const generatedPromptRef = useRef(null);
@@ -206,12 +241,14 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 				: { id: null, text: response };
 		setGeneratedPrompt(entry.text);
 		setSelectedResponseId(entry.id || null);
+		setSelectedResponseEntry(entry);
 		setIsGeneratedPromptCopied(false);
 	};
 
 	const closeGeneratedPrompt = () => {
 		setGeneratedPrompt(null);
 		setSelectedResponseId(null);
+		setSelectedResponseEntry(null);
 		setIsGeneratedPromptCopied(false);
 	};
 
@@ -257,6 +294,59 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 			api.listSessions(initialRoute.campaign).then(setSessionsList);
 		}
 	}, [isContextModalOpen, initialRoute.campaign, sessionsList.length]);
+
+	useEffect(() => {
+		if (!isContextModalOpen) return;
+
+		let cancelled = false;
+		api
+			.getEntities(initialRoute.campaign, "locations")
+			.then((locations) => {
+				if (!cancelled) {
+					setLocationsList(Array.isArray(locations) ? locations : []);
+				}
+			})
+			.catch((err) => {
+				console.error("Failed to load locations", err);
+				if (!cancelled) setLocationsList([]);
+			});
+
+		return () => {
+			cancelled = true;
+		};
+	}, [isContextModalOpen, initialRoute.campaign]);
+
+	useEffect(() => {
+		if (locationsList.length === 0) return;
+
+		setContextConfig((prev) => {
+			const current = prev.campaignLocations || {
+				included: true,
+				items: {},
+			};
+			const currentItems = current.items || {};
+			const nextItems = { ...currentItems };
+			let changed = !prev.campaignLocations || !current.items;
+
+			for (const location of locationsList) {
+				const key = getLocationContextKey(location);
+				if (!key || Object.prototype.hasOwnProperty.call(nextItems, key)) {
+					continue;
+				}
+				nextItems[key] = true;
+				changed = true;
+			}
+
+			if (!changed) return prev;
+			return {
+				...prev,
+				campaignLocations: {
+					included: current.included !== false,
+					items: nextItems,
+				},
+			};
+		});
+	}, [locationsList]);
 
 	useEffect(() => {
 		if (!isOpen || aiModels.length > 0) return;
@@ -384,6 +474,23 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 		});
 	};
 
+	const setAllLocationContextItems = (checked) => {
+		const items = Object.fromEntries(
+			locationsList
+				.map((location) => getLocationContextKey(location))
+				.filter(Boolean)
+				.map((key) => [key, checked]),
+		);
+
+		setContextConfig((prev) => ({
+			...prev,
+			campaignLocations: {
+				included: true,
+				items,
+			},
+		}));
+	};
+
 	const generate = async (
 		type = null,
 		targetSceneId = null,
@@ -422,6 +529,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 					parseAIResponse: shouldParseResponse,
 					generateCharacters: !isEncounter && generateCharacters,
 					generateNpcs: !isEncounter && generateNpcs,
+					generateLocations: !isEncounter && generateLocations,
 					generateEncounters: !isCampaign && generateEncounters,
 					contextConfig: useContext ? configToSend : null,
 					language: currentLanguage,
@@ -461,7 +569,8 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 				setNotification(lang.t("AI changes applied successfully!"));
 				if (
 					Array.isArray(data.generated?.characters) ||
-					Array.isArray(data.generated?.npcs)
+					Array.isArray(data.generated?.npcs) ||
+					Array.isArray(data.generated?.locations)
 				) {
 					dispatch(refreshEntitiesAction());
 				}
@@ -528,6 +637,15 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 		{ key: "encounter", label: "Encounter (monsters)" },
 	];
 
+	const locationContext = contextConfig.campaignLocations || {
+		included: true,
+		items: {},
+	};
+	const locationContextItems = locationContext.items || {};
+	const selectedResponseDetails = getHistoryDetailRows(
+		selectedResponseEntry,
+		currentLanguage,
+	);
 	const isResponseParsingLocked = generateEncounters;
 
 	useEffect(() => {
@@ -661,6 +779,16 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 									>
 										{lang.t("Create NPCs")}
 									</Button>
+									<Button
+										variant={generateLocations ? "primary" : "ghost"}
+										size={Button.SIZES.SMALL}
+										icon="map"
+										onClick={() => setGenerateLocations((prev) => !prev)}
+										disabled={loading}
+										title={lang.t("Create locations/factions with AI")}
+									>
+										{lang.t("Create locations/factions")}
+									</Button>
 								</>
 							)}
 							<Button
@@ -732,13 +860,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 								</div>
 								<div className="AiAssistant__response-history-list">
 									{responseHistory.map((entry) => {
-										const requestPreview = getResponsePreview(
-											getHistoryRequestText(entry),
-										);
-										const optionsSummary =
-											getHistoryOptionsSummary(entry);
-										const contextSummary =
-											getHistoryContextSummary(entry);
+										const responsePreview = getResponsePreview(entry.text);
 										return (
 											<ListCard
 												key={entry.id}
@@ -755,9 +877,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 												}
 											>
 												<div className="ListCard__title AiAssistant__history-title">
-													{requestPreview ||
-														getResponsePreview(entry.text) ||
-														lang.t("AI response")}
+													{responsePreview || lang.t("AI response")}
 												</div>
 												<div className="ListCard__meta AiAssistant__history-meta">
 													<span>
@@ -766,8 +886,6 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 															currentLanguage,
 														)}
 													</span>
-													{optionsSummary && <span>{optionsSummary}</span>}
-													{contextSummary && <span>{contextSummary}</span>}
 												</div>
 											</ListCard>
 										);
@@ -809,6 +927,77 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 												label={lang.t("Characters")}
 											/>
 										</div>
+										<div className="AiAssistant__context-row">
+											<Checkbox
+												checked={locationContext.included !== false}
+												onChange={(included) =>
+													setContextConfig((prev) => ({
+														...prev,
+														campaignLocations: {
+															...(prev.campaignLocations || { items: {} }),
+															included,
+														},
+													}))
+												}
+												label={lang.t("Locations/Factions")}
+											/>
+										</div>
+										{locationContext.included !== false && (
+											<div className="AiAssistant__location-context">
+												<div className="AiAssistant__location-actions">
+													<Button
+														variant="ghost"
+														size={Button.SIZES.SMALL}
+														onClick={() => setAllLocationContextItems(true)}
+														disabled={locationsList.length === 0}
+													>
+														{lang.t("All")}
+													</Button>
+													<Button
+														variant="ghost"
+														size={Button.SIZES.SMALL}
+														onClick={() => setAllLocationContextItems(false)}
+														disabled={locationsList.length === 0}
+													>
+														{lang.t("Clear")}
+													</Button>
+												</div>
+												{locationsList.length > 0 ? (
+													locationsList.map((location) => {
+														const locationKey =
+															getLocationContextKey(location);
+														if (!locationKey) return null;
+														return (
+															<div
+																key={locationKey}
+																className="AiAssistant__context-row AiAssistant__location-row"
+															>
+																<Checkbox
+																	checked={
+																		locationContextItems[locationKey] !== false
+																	}
+																	onChange={(val) =>
+																		updateContextConfig(
+																			[
+																				"campaignLocations",
+																				"items",
+																				locationKey,
+																			],
+																			val,
+																		)
+																	}
+																	label={getLocationDisplayName(location)}
+																/>
+															</div>
+														);
+													})
+												) : (
+													<div className="muted AiAssistant__empty-context">
+														{lang.t("No locations/factions yet.")}
+													</div>
+												)}
+											</div>
+										)}
 									</section>
 
 									<section>
@@ -1005,6 +1194,26 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 											{generatedPrompt}
 										</ReactMarkdown>
 									</div>
+									{selectedResponseDetails.length > 0 && (
+										<div className="AiAssistant__response-details">
+											<div className="AiAssistant__response-details-title">
+												{lang.t("Request details")}
+											</div>
+											{selectedResponseDetails.map((row) => (
+												<div
+													key={row.label}
+													className="AiAssistant__response-details-row"
+												>
+													<span className="AiAssistant__response-details-label">
+														{row.label}
+													</span>
+													<span className="AiAssistant__response-details-value">
+														{row.value}
+													</span>
+												</div>
+											))}
+										</div>
+									)}
 								</div>
 							</Modal>
 						)}
