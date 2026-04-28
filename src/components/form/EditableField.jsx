@@ -89,6 +89,13 @@ function buildPreviewMap(rawValue = "") {
 			continue;
 		}
 
+		// посилання [  ]
+		if (char === "[" || char === "]") {
+			i += 1;
+			lineStart = false;
+			continue;
+		}
+
 		pushPreviewChar(char, i);
 		lineStart = false;
 		i += 1;
@@ -284,7 +291,6 @@ export default function EditableField({
 	className,
 	type,
 	showCopyButton = false,
-	plainTextPreview = false,
 	...props
 }) {
 	const [isEditing, setIsEditing] = useState(false);
@@ -360,6 +366,11 @@ export default function EditableField({
 			e.preventDefault();
 			setIsEditing(false);
 		}
+	};
+
+	const handleBlur = (e) => {
+		setIsEditing(false);
+		props.onBlur?.(e);
 	};
 
 	const handlePaste = (e) => {
@@ -445,7 +456,7 @@ export default function EditableField({
 				onChange={onChange}
 				placeholder={placeholder}
 				title={type === "textarea" ? shortcutsHelp : props.title}
-				onBlur={() => setIsEditing(false)}
+				onBlur={handleBlur}
 				className={className}
 				initialSelection={initialSelection}
 				onPaste={handlePaste}
@@ -474,20 +485,14 @@ export default function EditableField({
 			<div className="MarkdownView" ref={viewRef}>
 				{value || value === 0 ? (
 					type === "textarea" ? (
-						plainTextPreview ? (
-							<span style={{ whiteSpace: "pre-wrap" }}>
-								{renderMentionText(String(value))}
-							</span>
-						) : (
-							<ReactMarkdown components={components}>
-								{String(value)
-									.replace(
-										/(?<!(?:^|\n)- {2}[^\n]*\n)\n(?!\n)|(?<!(?:^|\n)- {2}[^\n]*)\n(?=\n)/g,
-										"&nbsp;\n\n",
-									)
-									.replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")}
-							</ReactMarkdown>
-						)
+						<ReactMarkdown components={components}>
+							{String(value)
+								.replace(
+									/(?<!(?:^|\n)- {2}[^\n]*\n)\n(?!\n)|(?<!(?:^|\n)- {2}[^\n]*)\n(?=\n)/g,
+									"&nbsp;\n\n",
+								)
+								.replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")}
+						</ReactMarkdown>
 					) : (
 						<span>{value}</span>
 					)

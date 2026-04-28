@@ -61,12 +61,19 @@ export default function App() {
 	}, [dispatch]);
 
 	useEffect(() => {
+		const isEditableTarget = (target) =>
+			target?.tagName === "INPUT" ||
+			target?.tagName === "TEXTAREA" ||
+			target?.isContentEditable;
+
 		const handleKeyDown = (e) => {
+			if (isEditableTarget(e.target)) return;
 			if (e.ctrlKey || e.metaKey) {
 				setCTRLPressed(true);
 			}
 		};
 		const handleKeyUp = (e) => {
+			if (isEditableTarget(e.target)) return;
 			if (!e.ctrlKey && !e.metaKey) {
 				setCTRLPressed(false);
 			}

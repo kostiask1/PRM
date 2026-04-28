@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import Button from "./form/Button";
 import EditableField from "./form/EditableField";
 import NoteCard from "./common/NoteCard.jsx";
@@ -53,6 +53,7 @@ export default function CharacterCard({
 	isDragging,
 	onToggleCollapse,
 	onChange,
+	onNameBlur,
 	onDelete,
 	campaignSlug,
 	initialEditing = false,
@@ -62,6 +63,7 @@ export default function CharacterCard({
 	showHeader = true,
 }) {
 	const [isEditing, setIsEditing] = useState(initialEditing);
+	const editingStartNameRef = useRef(null);
 	const characterModel = new CharacterCardModel(character);
 	const isModalView = viewMode === "modal";
 	const hasCharacterNotesData = characterModel.notes.some(
@@ -99,6 +101,30 @@ export default function CharacterCard({
 
 	const updateField = (field, value) => {
 		onChange(character.id, characterModel.withField(field, value));
+	};
+
+	const getDisplayName = (entity) =>
+		`${entity?.firstName || ""} ${entity?.lastName || ""}`.trim() ||
+		String(entity?.name || entity?.title || "").trim();
+
+	const handleEditToggle = (e) => {
+		e.stopPropagation();
+		if (isEditing) {
+			setIsEditing(false);
+			return;
+		}
+		editingStartNameRef.current = getDisplayName(character);
+		setIsEditing(true);
+	};
+
+	const handleNameBlur = async () => {
+		const oldName = editingStartNameRef.current ?? getDisplayName(character);
+		const newName = getDisplayName(character);
+		const shouldAdvanceBaseline =
+			(await onNameBlur?.(character.id, character, oldName, newName)) ?? true;
+		if (shouldAdvanceBaseline) {
+			editingStartNameRef.current = newName;
+		}
 	};
 
 	const handleNoteTitleChange = (noteId, title) => {
@@ -156,10 +182,7 @@ export default function CharacterCard({
 							icon={isEditing ? "check" : "edit"}
 							size={Button.SIZES.SMALL}
 							iconSize={14}
-							onClick={(e) => {
-								e.stopPropagation();
-								setIsEditing(!isEditing);
-							}}
+							onClick={handleEditToggle}
 							title={isEditing ? lang.t("Finish editing") : lang.t("Edit")}
 						/>
 					)}
@@ -212,12 +235,14 @@ export default function CharacterCard({
 											type="text"
 											value={character.firstName}
 											onChange={(e) => updateField("firstName", e.target.value)}
+											onBlur={handleNameBlur}
 											placeholder={lang.t("First name")}
 										/>
 										<EditableField
 											type="text"
 											value={character.lastName}
 											onChange={(e) => updateField("lastName", e.target.value)}
+											onBlur={handleNameBlur}
 											placeholder={lang.t("Last name")}
 										/>
 										<div className="character-card__row-trio">

@@ -400,6 +400,47 @@ await run("storage moveEntity transfers characters and preserves data", async ()
 	});
 });
 
+await run("storage updates bracketed entity mentions after rename", async () => {
+	await withTestSlug("rename-mentions", async (slug) => {
+		await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
+		await storage.writeJson(storage.campaignMetaPath(slug), {
+			id: "campaign-id",
+			name: "Mentions",
+			description: "Meet [Old Name] in the city.",
+		});
+		await storage.writeEntity(slug, "characters", "hero", {
+			id: "hero-id",
+			firstName: "New",
+			lastName: "Name",
+			motivation: "Formerly [Old Name].",
+		});
+		await storage.writeEntity(slug, "locations", "city", {
+			id: "city-id",
+			name: "City",
+			description: "Rumors mention [ old   name ].",
+		});
+		await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+			id: "session-id",
+			name: "Session",
+			data: {
+				scenes: [{ summary: "[Old Name] arrives." }],
+			},
+		});
+
+		await storage.updateCampaignMentionReferences(slug, "Old Name", "New Name");
+
+		const meta = await storage.readCampaign(slug);
+		const characters = await storage.listEntities(slug, "characters");
+		const locations = await storage.listEntities(slug, "locations");
+		const session = await storage.readSession(slug, "session.json");
+
+		assert.equal(meta.description, "Meet [New Name] in the city.");
+		assert.equal(characters[0].motivation, "Formerly [New Name].");
+		assert.equal(locations[0].description, "Rumors mention [New Name].");
+		assert.equal(session.data.scenes[0].summary, "[New Name] arrives.");
+	});
+});
+
 await run("classNames merges strings arrays objects and falsy values", () => {
 	assert.equal(classNames("a", "b"), "a b");
 	assert.equal(

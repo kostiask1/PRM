@@ -22,6 +22,49 @@ const sanitizeEntityForSave = (entity) =>
 
 const sanitizeLoadedEntity = (entity) => sanitizeEntityForSave(entity);
 
+const normalizeMentionName = (value) =>
+	String(value || "")
+		.trim()
+		.replace(/\s+/g, " ")
+		.toLowerCase();
+
+const replaceBracketedMentionNames = (value, oldName, newName) => {
+	if (typeof value !== "string") return value;
+	const normalizedOldName = normalizeMentionName(oldName);
+	const nextName = String(newName || "").trim().replace(/\s+/g, " ");
+	if (!normalizedOldName || !nextName) return value;
+
+	return value.replace(/\[([^[\]]+)\]/g, (fullMatch, rawName) => {
+		if (normalizeMentionName(rawName) !== normalizedOldName) return fullMatch;
+		return `[${nextName}]`;
+	});
+};
+
+const replaceMentionsInValue = (value, oldName, newName) => {
+	if (typeof value === "string") {
+		return replaceBracketedMentionNames(value, oldName, newName);
+	}
+	if (Array.isArray(value)) {
+		return value.map((item) => replaceMentionsInValue(item, oldName, newName));
+	}
+	if (value && typeof value === "object") {
+		return Object.fromEntries(
+			Object.entries(value).map(([key, item]) => [
+				key,
+				replaceMentionsInValue(item, oldName, newName),
+			]),
+		);
+	}
+	return value;
+};
+
+const getCharacterDisplayName = (entity) =>
+	`${entity?.firstName || ""} ${entity?.lastName || ""}`.trim() ||
+	String(entity?.name || entity?.title || "").trim();
+
+const getLocationDisplayName = (entity) =>
+	String(entity?.name || entity?.title || "").trim();
+
 export default function useCampaignView(props) {
 	const { campaign } = props;
 	const dispatch = useAppDispatch();
@@ -320,6 +363,45 @@ export default function useCampaignView(props) {
 		[campaign.slug],
 	);
 
+	const applyMentionRenameToLocalState = useCallback((oldName, newName) => {
+		if (
+			!normalizeMentionName(oldName) ||
+			!String(newName || "").trim() ||
+			normalizeMentionName(oldName) === normalizeMentionName(newName)
+		) {
+			return;
+		}
+
+		setDescription((prev) => replaceMentionsInValue(prev, oldName, newName));
+		setNotes((prev) => replaceMentionsInValue(prev, oldName, newName));
+		setCharacters((prev) => replaceMentionsInValue(prev, oldName, newName));
+		setNpcs((prev) => replaceMentionsInValue(prev, oldName, newName));
+		setLocations((prev) => replaceMentionsInValue(prev, oldName, newName));
+	}, []);
+
+	const confirmMentionReferenceUpdate = useCallback(
+		async (oldName, newName) => {
+			if (
+				!normalizeMentionName(oldName) ||
+				!String(newName || "").trim() ||
+				normalizeMentionName(oldName) === normalizeMentionName(newName)
+			) {
+				return true;
+			}
+
+			return await dispatch(
+				confirm({
+					title: lang.t("Update links?"),
+					message: lang.t(
+						'Update links in the project from "{oldName}" to "{newName}"?',
+						{ oldName, newName },
+					),
+				}),
+			);
+		},
+		[dispatch],
+	);
+
 	const handleDescriptionChange = (e) => {
 		const val = e.target.value;
 		if (!saveTimeout.current) pushToUndo();
@@ -373,6 +455,39 @@ export default function useCampaignView(props) {
 		scheduleEntityUpdate("characters", updatedChar);
 	};
 
+	const handleCharacterNameBlur = async (id, updatedChar, oldName, newName) => {
+		const entity = characters.find((c) => c.id === id) || updatedChar;
+		if (!entity?.slug || entity._isPending) return true;
+		const shouldUpdateMentions = await confirmMentionReferenceUpdate(
+			oldName,
+			newName,
+		);
+		if (!shouldUpdateMentions) return false;
+		clearEntitySaveTimer("characters", id);
+		try {
+			const saved = sanitizeLoadedEntity(
+				await api.updateEntity(campaign.slug, "characters", entity.slug, {
+					...sanitizeEntityForSave(entity),
+					_updateMentionReferences: true,
+					_mentionOldName: oldName,
+				}),
+			);
+			setCharacters((prev) => prev.map((c) => (c.id === id ? saved : c)));
+			applyMentionRenameToLocalState(oldName, getCharacterDisplayName(saved));
+		} catch (err) {
+			console.error("Failed to finish character editing", err);
+			dispatch(
+				alert({
+					title: lang.t("Error"),
+					message: lang.t("Failed to update entity."),
+				}),
+			);
+			loadCharacters();
+			return false;
+		}
+		return true;
+	};
+
 	const handleDeleteCharacter = async (id) => {
 		const char = characters.find((c) => c.id === id);
 		if (!char) return;
@@ -391,6 +506,39 @@ export default function useCampaignView(props) {
 		setNpcs((prev) => prev.map((n) => (n.id === id ? updatedNpc : n)));
 		if (updatedNpc._isPending) return;
 		scheduleEntityUpdate("npc", updatedNpc);
+	};
+
+	const handleNpcNameBlur = async (id, updatedNpc, oldName, newName) => {
+		const entity = npcs.find((n) => n.id === id) || updatedNpc;
+		if (!entity?.slug || entity._isPending) return true;
+		const shouldUpdateMentions = await confirmMentionReferenceUpdate(
+			oldName,
+			newName,
+		);
+		if (!shouldUpdateMentions) return false;
+		clearEntitySaveTimer("npc", id);
+		try {
+			const saved = sanitizeLoadedEntity(
+				await api.updateEntity(campaign.slug, "npc", entity.slug, {
+					...sanitizeEntityForSave(entity),
+					_updateMentionReferences: true,
+					_mentionOldName: oldName,
+				}),
+			);
+			setNpcs((prev) => prev.map((n) => (n.id === id ? saved : n)));
+			applyMentionRenameToLocalState(oldName, getCharacterDisplayName(saved));
+		} catch (err) {
+			console.error("Failed to finish NPC editing", err);
+			dispatch(
+				alert({
+					title: lang.t("Error"),
+					message: lang.t("Failed to update entity."),
+				}),
+			);
+			loadNpcs();
+			return false;
+		}
+		return true;
 	};
 
 	const handleNpcDelete = async (id) => {
@@ -465,6 +613,42 @@ export default function useCampaignView(props) {
 		);
 		if (updatedLocation._isPending) return;
 		scheduleEntityUpdate("locations", updatedLocation);
+	};
+
+	const handleLocationNameBlur = async (id, updatedLocation, oldName, newName) => {
+		const entity =
+			locations.find((location) => location.id === id) || updatedLocation;
+		if (!entity?.slug || entity._isPending) return true;
+		const shouldUpdateMentions = await confirmMentionReferenceUpdate(
+			oldName,
+			newName,
+		);
+		if (!shouldUpdateMentions) return false;
+		clearEntitySaveTimer("locations", id);
+		try {
+			const saved = sanitizeLoadedEntity(
+				await api.updateEntity(campaign.slug, "locations", entity.slug, {
+					...sanitizeEntityForSave(entity),
+					_updateMentionReferences: true,
+					_mentionOldName: oldName,
+				}),
+			);
+			setLocations((prev) =>
+				prev.map((location) => (location.id === id ? saved : location)),
+			);
+			applyMentionRenameToLocalState(oldName, getLocationDisplayName(saved));
+		} catch (err) {
+			console.error("Failed to finish location editing", err);
+			dispatch(
+				alert({
+					title: lang.t("Error"),
+					message: lang.t("Failed to update entity."),
+				}),
+			);
+			loadLocations();
+			return false;
+		}
+		return true;
 	};
 
 	const handleLocationDelete = async (id) => {
@@ -736,13 +920,16 @@ export default function useCampaignView(props) {
 		handleDeleteNote,
 		handleToggleCharacterCollapse,
 		handleCharacterChange,
+		handleCharacterNameBlur,
 		handleDeleteCharacter,
 		handleToggleNpcCollapse,
 		handleNpcChange,
+		handleNpcNameBlur,
 		handleNpcDelete,
 		handleCharacterTypeDrop,
 		handleToggleLocationCollapse,
 		handleLocationChange,
+		handleLocationNameBlur,
 		handleLocationDelete,
 		handleCreateSession,
 		handleDeleteCampaign,

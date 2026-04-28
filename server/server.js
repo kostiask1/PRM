@@ -31,6 +31,30 @@ function normalizeImportStrategy(strategy) {
 	return "append";
 }
 
+function asciiFallbackFilename(filename) {
+	const cleaned = String(filename || "download")
+		.normalize("NFKD")
+		.replace(/[\u0300-\u036f]/g, "")
+		.replace(/[^\x20-\x7E]/g, "-")
+		.replace(/[\\"]/g, "-")
+		.replace(/\s+/g, " ")
+		.replace(/-+/g, "-")
+		.trim();
+	return cleaned || "download";
+}
+
+function encodeHeaderFilename(filename) {
+	return encodeURIComponent(String(filename || "download")).replace(
+		/['()*]/g,
+		(char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`,
+	);
+}
+
+function attachmentDisposition(filename) {
+	const fallback = asciiFallbackFilename(filename);
+	return `attachment; filename="${fallback}"; filename*=UTF-8''${encodeHeaderFilename(filename)}`;
+}
+
 app.get("/api/export-all", async (req, res, next) => {
 	try {
 		const slugs = await storage.listCampaignSlugs();
@@ -59,7 +83,7 @@ app.get("/api/export-all/archive", async (req, res, next) => {
 		res.setHeader("Content-Type", "application/gzip");
 		res.setHeader(
 			"Content-Disposition",
-			`attachment; filename="prm-full-backup-${date}.prma.gz"`,
+			attachmentDisposition(`prm-full-backup-${date}.prma.gz`),
 		);
 		res.send(buffer);
 	} catch (error) {
@@ -80,7 +104,7 @@ app.get("/api/campaigns/:slug/export/archive", async (req, res, next) => {
 		res.setHeader("Content-Type", "application/gzip");
 		res.setHeader(
 			"Content-Disposition",
-			`attachment; filename="campaign-${req.params.slug}-${date}.prma.gz"`,
+			attachmentDisposition(`campaign-${req.params.slug}-${date}.prma.gz`),
 		);
 		res.send(buffer);
 	} catch (error) {

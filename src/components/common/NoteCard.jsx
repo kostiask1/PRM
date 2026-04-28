@@ -117,7 +117,6 @@ export default function NoteCard({
 						value={note.text}
 						onChange={(event) => onTextChange(note.id, event.target.value)}
 						placeholder={lang.t("Note text...")}
-						plainTextPreview={simplifiedNotesEnabled}
 						campaignSlug={campaignSlug}
 					/>
 				</div>

@@ -467,6 +467,85 @@ async function deleteEntity(campaignSlug, type, entitySlug) {
 	await fs.rm(entityPath, { recursive: true, force: true });
 }
 
+function normalizeMentionName(value) {
+	return String(value || "")
+		.trim()
+		.replace(/\s+/g, " ")
+		.toLowerCase();
+}
+
+function replaceBracketedMentionNames(value, oldName, newName) {
+	if (typeof value !== "string") return value;
+	const normalizedOldName = normalizeMentionName(oldName);
+	const nextName = String(newName || "").trim().replace(/\s+/g, " ");
+	if (!normalizedOldName || !nextName) return value;
+
+	return value.replace(/\[([^[\]]+)\]/g, (fullMatch, rawName) => {
+		if (normalizeMentionName(rawName) !== normalizedOldName) return fullMatch;
+		return `[${nextName}]`;
+	});
+}
+
+function replaceMentionsInValue(value, oldName, newName) {
+	if (typeof value === "string") {
+		return replaceBracketedMentionNames(value, oldName, newName);
+	}
+	if (Array.isArray(value)) {
+		return value.map((item) => replaceMentionsInValue(item, oldName, newName));
+	}
+	if (value && typeof value === "object") {
+		return Object.fromEntries(
+			Object.entries(value).map(([key, item]) => [
+				key,
+				replaceMentionsInValue(item, oldName, newName),
+			]),
+		);
+	}
+	return value;
+}
+
+async function updateCampaignMentionReferences(campaignSlug, oldName, newName) {
+	if (
+		!normalizeMentionName(oldName) ||
+		!String(newName || "").trim() ||
+		normalizeMentionName(oldName) === normalizeMentionName(newName)
+	) {
+		return;
+	}
+
+	const metaPath = campaignMetaPath(campaignSlug);
+	if (await exists(metaPath)) {
+		const meta = await readJson(metaPath);
+		const nextMeta = replaceMentionsInValue(meta, oldName, newName);
+		if (JSON.stringify(nextMeta) !== JSON.stringify(meta)) {
+			await writeJson(metaPath, nextMeta);
+		}
+	}
+
+	for (const type of ENTITY_TYPES) {
+		const entities = await listEntities(campaignSlug, type);
+		for (const entity of entities) {
+			const nextEntity = replaceMentionsInValue(entity, oldName, newName);
+			if (JSON.stringify(nextEntity) !== JSON.stringify(entity)) {
+				await writeEntity(campaignSlug, type, entity.slug, nextEntity);
+			}
+		}
+	}
+
+	const sessions = await listSessions(campaignSlug);
+	for (const session of sessions) {
+		const filePath = sessionPath(campaignSlug, session.fileName);
+		const sessionData = await readJson(filePath);
+		const nextSessionData = replaceMentionsInValue(sessionData, oldName, newName);
+		if (JSON.stringify(nextSessionData) !== JSON.stringify(sessionData)) {
+			await writeJson(filePath, {
+				...nextSessionData,
+				updatedAt: new Date().toISOString(),
+			});
+		}
+	}
+}
+
 async function moveEntity(campaignSlug, sourceType, entitySlug, targetType) {
 	if (sourceType === targetType) {
 		return readEntity(campaignSlug, sourceType, entitySlug);
@@ -1076,6 +1155,7 @@ module.exports = {
 	readEntity,
 	writeEntity,
 	deleteEntity,
+	updateCampaignMentionReferences,
 	moveEntity,
 	readFavorites,
 	writeFavorites,

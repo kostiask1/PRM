@@ -407,6 +407,7 @@ function CampaignView(props) {
 											isDragging={isDragging}
 											onToggleCollapse={view.handleToggleCharacterCollapse}
 											onChange={view.handleCharacterChange}
+											onNameBlur={view.handleCharacterNameBlur}
 											onDelete={view.handleDeleteCharacter}
 											campaignSlug={campaign.slug}
 											type="characters"
@@ -469,6 +470,7 @@ function CampaignView(props) {
 											isDragging={isDragging}
 											onToggleCollapse={view.handleToggleNpcCollapse}
 											onChange={view.handleNpcChange}
+											onNameBlur={view.handleNpcNameBlur}
 											onDelete={view.handleNpcDelete}
 											campaignSlug={campaign.slug}
 											type="npc"
@@ -519,6 +521,7 @@ function CampaignView(props) {
 											isDragging={isDragging}
 											onToggleCollapse={view.handleToggleLocationCollapse}
 											onChange={view.handleLocationChange}
+											onNameBlur={view.handleLocationNameBlur}
 											onDelete={view.handleLocationDelete}
 											campaignSlug={campaign.slug}
 										/>

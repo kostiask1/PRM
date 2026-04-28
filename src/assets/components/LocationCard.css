@@ -42,7 +42,7 @@
 
 .location-card__main-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 550px) minmax(0, 1fr);
     gap: var(--space-6);
     align-items: start;
 }

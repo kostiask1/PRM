@@ -9,6 +9,14 @@ function validateEntityType(type, res) {
 	return false;
 }
 
+function getEntityDisplayName(entity, type) {
+	if (type === "locations") {
+		return String(entity?.name || entity?.title || "").trim();
+	}
+	const fullName = `${entity?.firstName || ""} ${entity?.lastName || ""}`.trim();
+	return fullName || String(entity?.name || entity?.title || "").trim();
+}
+
 router.get("/", async (req, res, next) => {
 	try {
 		const campaigns = await storage.listCampaignsDetailed();
@@ -184,14 +192,34 @@ router.patch("/:slug/entities/:type/:entitySlug", async (req, res, next) => {
 	try {
 		const { slug: campaignSlug, type, entitySlug } = req.params;
 		if (!validateEntityType(type, res)) return;
+		const {
+			_updateMentionReferences: updateMentionReferences,
+			_mentionOldName: mentionOldName,
+			...patch
+		} = req.body || {};
 		const current = await storage.readEntity(campaignSlug, type, entitySlug);
+		const oldDisplayName =
+			String(mentionOldName || "").trim() || getEntityDisplayName(current, type);
 		const updated = {
 			...current,
-			...req.body,
+			...patch,
 			updatedAt: new Date().toISOString(),
 		};
-		await storage.writeEntity(campaignSlug, type, entitySlug, updated);
-		res.json(updated);
+		const saved = await storage.writeEntity(
+			campaignSlug,
+			type,
+			entitySlug,
+			updated,
+		);
+		if (updateMentionReferences) {
+			const newDisplayName = getEntityDisplayName(saved, type);
+			await storage.updateCampaignMentionReferences(
+				campaignSlug,
+				oldDisplayName,
+				newDisplayName,
+			);
+		}
+		res.json(await storage.readEntity(campaignSlug, type, saved.slug));
 	} catch (error) {
 		next(error);
 	}

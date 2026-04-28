@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
 import Button from "./form/Button";
@@ -53,6 +53,7 @@ export default function LocationCard({
 	isDragging,
 	onToggleCollapse,
 	onChange,
+	onNameBlur,
 	onDelete,
 	campaignSlug,
 	initialEditing = false,
@@ -61,6 +62,7 @@ export default function LocationCard({
 	showHeader = true,
 }) {
 	const [isEditing, setIsEditing] = useState(initialEditing);
+	const editingStartNameRef = useRef(null);
 	const locationModel = new LocationCardModel(location);
 	const isModalView = viewMode === "modal";
 	const hasLocationNotesData = locationModel.notes.some(
@@ -94,6 +96,29 @@ export default function LocationCard({
 
 	const updateField = (field, value) => {
 		onChange(location.id, locationModel.withField(field, value));
+	};
+
+	const getDisplayName = (entity) =>
+		String(entity?.name || entity?.title || "").trim();
+
+	const handleEditToggle = (e) => {
+		e.stopPropagation();
+		if (isEditing) {
+			setIsEditing(false);
+			return;
+		}
+		editingStartNameRef.current = getDisplayName(location);
+		setIsEditing(true);
+	};
+
+	const handleNameBlur = async () => {
+		const oldName = editingStartNameRef.current ?? getDisplayName(location);
+		const newName = getDisplayName(location);
+		const shouldAdvanceBaseline =
+			(await onNameBlur?.(location.id, location, oldName, newName)) ?? true;
+		if (shouldAdvanceBaseline) {
+			editingStartNameRef.current = newName;
+		}
 	};
 
 	const handleNoteTitleChange = (noteId, title) => {
@@ -152,10 +177,7 @@ export default function LocationCard({
 							icon={isEditing ? "check" : "edit"}
 							size={Button.SIZES.SMALL}
 							iconSize={14}
-							onClick={(e) => {
-								e.stopPropagation();
-								setIsEditing(!isEditing);
-							}}
+							onClick={handleEditToggle}
 							title={isEditing ? lang.t("Finish editing") : lang.t("Edit")}
 						/>
 					)}
@@ -185,6 +207,7 @@ export default function LocationCard({
 											type="text"
 											value={location.name || ""}
 											onChange={(e) => updateField("name", e.target.value)}
+											onBlur={handleNameBlur}
 											placeholder={lang.t("Name")}
 										/>
 									</div>
