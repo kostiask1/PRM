@@ -286,7 +286,7 @@
 
 .DiceCalculator__formulaLabel {
 	display: flex;
-	max-width: 90%;
+	max-width: 300px;
 	font-size: 0.75rem;
 	color: var(--muted);
 	margin: 0;
