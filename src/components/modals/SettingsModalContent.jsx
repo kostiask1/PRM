@@ -19,7 +19,7 @@ export default function SettingsModalContent({ onCancel }) {
 	);
 	const currentTheme = useAppSelector((state) => state.ui.theme);
 	const encounterViewMode = useAppSelector(
-		(state) => state.ui.encounterViewMode || "single",
+		(state) => state.ui.encounterViewMode || "grid",
 	);
 	const simplifiedNotesEnabled = useAppSelector(
 		(state) => state.ui.simplifiedNotes,

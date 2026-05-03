@@ -5,7 +5,7 @@
   "order": 0,
   "completedAt": null,
   "createdAt": "2026-04-21T15:06:11.710Z",
-  "updatedAt": "2026-05-03T13:26:33.547Z",
+  "updatedAt": "2026-05-03T13:50:04.984Z",
   "data": {
     "encounters": [
       {
@@ -641,50 +641,32 @@
             "armor_class": 17
           },
           {
-            "name": "Giant Fly",
-            "source": "DMG",
-            "page": 169,
-            "reprintedAs": [
-              "Giant Fly|XDMG"
+            "id": "6b7c0c76-b85e-4cd6-969e-ba6d154bec4e",
+            "firstName": "Awebo",
+            "lastName": "",
+            "race": "",
+            "class": "",
+            "level": 1,
+            "motivation": "Кайфанути",
+            "trait": "Молодий і амбітний герой, який володіє унікальною здатністю відчувати енергію минулих епох. Його очі зрідка спалахують сріблястим світлом, коли він використовує свій артефакт.",
+            "notes": [
+              {
+                "id": 1776783682623,
+                "title": "",
+                "text": "",
+                "collapsed": false
+              }
             ],
-            "size": [
-              "L"
-            ],
-            "type": "beast",
-            "alignment": [
-              "U"
-            ],
-            "ac": [
-              11
-            ],
-            "hp": {
-              "average": 19,
-              "formula": "3d10 + 3"
-            },
-            "speed": {
-              "walk": 30,
-              "fly": 60
-            },
-            "str": 14,
-            "dex": 13,
-            "con": 13,
-            "int": 2,
-            "wis": 10,
-            "cha": 3,
-            "senses": [
-              "darkvision 60 ft."
-            ],
-            "passive": 10,
-            "senseTags": [
-              "D"
-            ],
-            "hasToken": true,
-            "hasFluffImages": true,
-            "instanceId": "inst-1777814793462-860",
-            "originalBestiaryName": "Giant Fly",
-            "currentHp": 19,
-            "hit_points": 19,
-            "armor_class": 11
+            "collapsed": false,
+            "slug": "campaign-1776781247833",
+            "updatedAt": "2026-04-21T15:58:47.678Z",
+            "imageUrl": "/api/images/example/characters/players/Right%20click%20to%20rename.png",
+            "isNotesCollapsed": false,
+            "participantType": "character",
+            "instanceId": "char-6b7c0c76-b85e-4cd6-969e-ba6d154bec4e-1777816204947-477",
+            "originalCharacterId": "6b7c0c76-b85e-4cd6-969e-ba6d154bec4e",
+            "originalCharacterSlug": "campaign-1776781247833",
+            "name": "Awebo"
           }
         ]
       }

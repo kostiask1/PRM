@@ -15,10 +15,10 @@
 
 .EncounterView__main {
 	display: flex;
-	gap: var(--space-2);
 	height: 100%;
 	min-height: 600px;
 	align-items: flex-start;
+	margin-top: calc(-1 * var(--space-2));
 }
 
 .EncounterView__metrics {
@@ -74,12 +74,18 @@
 	height: 100%;
 	overflow-y: scroll;
 	margin-right: calc(-1 * var(--space-1));
-	padding: var(--space-1);
+	padding-top: var(--space-2);
 }
 
 .EncounterView__addBtn {
 	width: 100%;
 	justify-content: center;
+}
+
+.EncounterView__addActions {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: var(--space-2);
 }
 
 .EncounterMonsterRow {
@@ -113,6 +119,11 @@
 	opacity: 0.4;
 	border: 1px dashed var(--accent);
 	background: color-mix(in srgb, var(--accent), transparent 95%);
+}
+
+.EncounterMonsterRow--character {
+	border-left-color: color-mix(in srgb, var(--accent), transparent 30%);
+	background: color-mix(in srgb, var(--accent), transparent 94%);
 }
 
 .EncounterMonsterRow__content {
@@ -200,6 +211,17 @@
 	letter-spacing: 0.5px;
 }
 
+.EncounterMonsterRow__playerBadge {
+	font-size: 0.72rem;
+	font-weight: 800;
+	color: var(--accent);
+	background: color-mix(in srgb, var(--accent), transparent 88%);
+	border: 1px solid color-mix(in srgb, var(--accent), transparent 55%);
+	border-radius: 12px;
+	padding: var(--space-1) var(--space-2);
+	text-transform: uppercase;
+}
+
 .EncounterMonsterRow__actions {
 	margin-left: auto;
 	display: flex;
@@ -257,7 +279,7 @@
 
 .EncounterView__detailView--grid {
 	overflow-y: auto;
-	padding-right: var(--space-1);
+	padding: var(--space-2);
 }
 
 .EncounterView__detailView--grid .MonsterStatBlock__header__details {
@@ -309,6 +331,15 @@
 	max-height: 72vh;
 }
 
+.EncounterView__gridItem .character-card {
+	border: 0;
+	background: transparent;
+}
+
+.EncounterView__gridItem .character-card__body {
+	padding: 0;
+}
+
 .EncounterView__gridItem .MonsterStatBlock__token-wrapper {
 	width: clamp(96px, 12vw, 120px);
 	height: clamp(96px, 12vw, 120px);
@@ -321,7 +352,43 @@
 }
 
 .EncounterView__gridItem .MonsterStatBlock__token-wrapper:hover .MonsterStatBlock__token {
-	transform: translate(-100%, 100%) scale(3);
+	transform: translate(-150%, 150%) scale(4);
+}
+
+.EncounterCharacterPicker {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+	min-width: min(460px, 80vw);
+}
+
+.EncounterCharacterPicker__item {
+	text-align: left;
+	border: 1px solid color-mix(in srgb, var(--border), transparent 45%);
+	border-radius: 8px;
+	background: color-mix(in srgb, var(--bg), transparent 30%);
+	color: var(--text);
+	padding: var(--space-3);
+	cursor: pointer;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+	transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.EncounterCharacterPicker__item:hover {
+	border-color: var(--accent);
+	background: color-mix(in srgb, var(--accent), transparent 92%);
+}
+
+.EncounterCharacterPicker__name {
+	color: var(--text-bright);
+	font-weight: 800;
+}
+
+.EncounterCharacterPicker__meta {
+	color: var(--muted);
+	font-size: 0.85rem;
 }
 
 @media (max-width: 900px) {

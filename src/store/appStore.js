@@ -40,8 +40,8 @@ function getInitialNavigation() {
 function getInitialUiSettings() {
 	return {
 		theme: "light",
-		encounterViewMode: "single",
-		encounterGridColumns: 2,
+		encounterViewMode: "grid",
+		encounterGridColumns: 3,
 		simplifiedNotes: false,
 	};
 }

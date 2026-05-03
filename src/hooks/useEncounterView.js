@@ -11,7 +11,9 @@ import { navigateTo, useAppDispatch, useAppSelector } from "../store/appStore";
 import { lang } from "../services/localization";
 import {
 	createEncounterMonsterInstance,
+	createEncounterCharacterParticipant,
 	getMonsterHpFormula,
+	isEncounterCharacterParticipant,
 } from "../utils/encounters";
 
 function cloneEncounterSnapshot(value) {
@@ -54,6 +56,8 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 	const [encounter, setEncounter] = useState(null);
 	const [selectedInstance, setSelectedInstance] = useState(null);
 	const [showBestiary, setShowBestiary] = useState(false);
+	const [showCharacterPicker, setShowCharacterPicker] = useState(false);
+	const [playerCharacters, setPlayerCharacters] = useState([]);
 	const [notification, setNotification] = useState(null);
 	const [entityImageMap, setEntityImageMap] = useState(new Map());
 	const [undoStack, setUndoStack] = useState([]);
@@ -186,6 +190,7 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 						}
 					});
 				});
+				setPlayerCharacters(characters || []);
 				setEntityImageMap(nextMap);
 			} catch (error) {
 				if (isMounted) {
@@ -399,6 +404,27 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 		[encounter, applyEncounterUpdate],
 	);
 
+	const handleAddCharacter = useCallback(
+		(character) => {
+			if (!encounter) return;
+
+			const participant = createEncounterCharacterParticipant(character);
+			const updated = {
+				...encounter,
+				monsters: [...(encounter.monsters || []), participant],
+			};
+
+			applyEncounterUpdate(updated, { preferredId: participant.instanceId });
+			setShowCharacterPicker(false);
+			setNotification(
+				lang.t("{name} added to encounter.", {
+					name: participant.name,
+				}),
+			);
+		},
+		[encounter, applyEncounterUpdate],
+	);
+
 	const removeMonster = useCallback(
 		(instanceId) => {
 			if (!encounter) return;
@@ -543,6 +569,7 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 	const duplicateMonster = useCallback(
 		(m) => {
 			if (!encounter) return;
+			if (isEncounterCharacterParticipant(m)) return;
 			const newMonster = {
 				...m,
 				instanceId: `inst-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -555,6 +582,28 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 
 			const updated = { ...encounter, monsters: updatedMonsters };
 			applyEncounterUpdate(updated);
+		},
+		[encounter, applyEncounterUpdate],
+	);
+
+	const updateEncounterCharacter = useCallback(
+		(instanceId, updatedCharacter) => {
+			if (!encounter) return;
+			const updatedMonsters = encounter.monsters.map((entry) =>
+				entry.instanceId === instanceId
+					? {
+							...entry,
+							...updatedCharacter,
+							participantType: "character",
+							instanceId,
+						}
+					: entry,
+			);
+			const updated = { ...encounter, monsters: updatedMonsters };
+			applyEncounterUpdate(updated, {
+				saveDebounceMs: 500,
+				preferredId: instanceId,
+			});
 		},
 		[encounter, applyEncounterUpdate],
 	);
@@ -714,6 +763,9 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 		setSelectedInstance,
 		showBestiary,
 		setShowBestiary,
+		showCharacterPicker,
+		setShowCharacterPicker,
+		playerCharacters,
 		notification,
 		setNotification,
 		fileInputRef,
@@ -723,6 +775,8 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 		handleExport,
 		handleRename,
 		handleAddMonster,
+		handleAddCharacter,
+		updateEncounterCharacter,
 		handleAiUpdate,
 		removeMonster,
 		updateMonsterHp,

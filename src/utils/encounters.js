@@ -45,3 +45,28 @@ export function createEncounterMonsterInstance(monster) {
 		armor_class: acVal,
 	};
 }
+
+export function isEncounterCharacterParticipant(entry = {}) {
+	return entry.participantType === "character";
+}
+
+export function getCharacterDisplayName(character = {}) {
+	return (
+		`${character.firstName || ""} ${character.lastName || ""}`.trim() ||
+		String(character.name || character.title || "").trim() ||
+		"Character"
+	);
+}
+
+export function createEncounterCharacterParticipant(character) {
+	const characterId = character.id || character.slug || getCharacterDisplayName(character);
+
+	return {
+		...character,
+		participantType: "character",
+		instanceId: `char-${characterId}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+		originalCharacterId: character.id || null,
+		originalCharacterSlug: character.slug || null,
+		name: getCharacterDisplayName(character),
+	};
+}

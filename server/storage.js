@@ -16,8 +16,8 @@ const ENTITY_TYPES = Object.freeze(["characters", "npc", "locations"]);
 const DEFAULT_APP_SETTINGS = Object.freeze({
 	language: "uk",
 	theme: "light",
-	encounterViewMode: "single",
-	encounterGridColumns: 2,
+	encounterViewMode: "grid",
+	encounterGridColumns: 3,
 	simplifiedNotes: false,
 });
 

@@ -5,6 +5,7 @@ import Modal from "./common/Modal";
 import Bestiary from "./Bestiary";
 import AiAssistantPanel from "./AiAssistantPanel";
 import MonsterStatBlock from "./MonsterStatBlock";
+import CharacterCard from "./CharacterCard";
 import Notification from "./common/Notification";
 import DraggableList from "./common/DraggableList";
 import useEncounterView from "../hooks/useEncounterView";
@@ -16,7 +17,11 @@ import { setUiSettingsAction } from "../actions/app";
 import { lang } from "../services/localization";
 import { useAppDispatch, useAppSelector } from "../store/appStore";
 import { renderMentionText } from "../utils/parser";
-import { hasMonsterHpFormula } from "../utils/encounters";
+import {
+	getCharacterDisplayName,
+	hasMonsterHpFormula,
+	isEncounterCharacterParticipant,
+} from "../utils/encounters";
 
 function getGridMonsterKey(monster) {
 	const baseName = String(monster?.originalBestiaryName || monster?.name || "")
@@ -35,12 +40,13 @@ function EncounterView(props) {
 	const encounterId = props.encounterId;
 	const dispatch = useAppDispatch();
 	const displayMode = useAppSelector(
-		(state) => state.ui.encounterViewMode || "single",
+		(state) => state.ui.encounterViewMode || "grid",
 	);
 	const gridColumns = useAppSelector(
 		(state) => state.ui.encounterGridColumns || 2,
 	);
 	const [focusedMonsterId, setFocusedMonsterId] = useState(null);
+	const [modalCharacter, setModalCharacter] = useState(null);
 	const gridItemRefs = useRef(new Map());
 	const focusTimeoutRef = useRef(null);
 	const view = useEncounterView({
@@ -54,7 +60,9 @@ function EncounterView(props) {
 		const representativeByKey = new Map();
 		const representativeByInstanceId = new Map();
 
-		(view.encounter?.monsters || []).forEach((monster) => {
+		(view.encounter?.monsters || [])
+			.filter((monster) => !isEncounterCharacterParticipant(monster))
+			.forEach((monster) => {
 			const key = getGridMonsterKey(monster);
 			let representativeId = representativeByKey.get(key);
 
@@ -65,7 +73,7 @@ function EncounterView(props) {
 			}
 
 			representativeByInstanceId.set(monster.instanceId, representativeId);
-		});
+			});
 
 		return {
 			gridMonsters: uniqueMonsters,
@@ -81,6 +89,18 @@ function EncounterView(props) {
 		1,
 		Math.min(gridColumns, gridMonsters.length || 1),
 	);
+	const availablePlayerCharacters = useMemo(() => {
+		const addedIds = new Set(
+			(view.encounter?.monsters || [])
+				.filter(isEncounterCharacterParticipant)
+				.map((entry) => String(entry.originalCharacterId || entry.id || "")),
+		);
+
+		return (view.playerCharacters || []).filter((character) => {
+			const id = String(character.id || "");
+			return !id || !addedIds.has(id);
+		});
+	}, [view.encounter?.monsters, view.playerCharacters]);
 
 	useEffect(() => {
 		return () => {
@@ -125,6 +145,11 @@ function EncounterView(props) {
 	};
 
 	const handleSelectMonster = (monster) => {
+		if (isEncounterCharacterParticipant(monster)) {
+			view.setSelectedInstance(monster);
+			setModalCharacter(monster);
+			return;
+		}
 		view.setSelectedInstance(monster);
 		if (displayMode === "grid") {
 			focusMonsterInGrid(monster.instanceId);
@@ -133,6 +158,20 @@ function EncounterView(props) {
 
 	const handleRenameMonster = (monster) => {
 		view.handleRenameMonster(monster.instanceId, monster.name);
+	};
+
+	const handleCharacterChange = (instanceId) => (_characterId, nextCharacter) => {
+		view.updateEncounterCharacter(instanceId, nextCharacter);
+		setModalCharacter((current) =>
+			current?.instanceId === instanceId
+				? {
+						...current,
+						...nextCharacter,
+						participantType: "character",
+						instanceId,
+					}
+				: current,
+		);
 	};
 
 	const updateEncounterViewMode = (mode) => {
@@ -170,7 +209,7 @@ function EncounterView(props) {
 					<div className="EncounterView__metrics">
 						<div className="EncounterViewMetric">
 							<span className="EncounterViewMetric__label">
-								{lang.t("Monsters")}
+								{lang.t("Participants")}
 							</span>
 							<span className="EncounterViewMetric__value">
 								{view.encounter.monsters.length}
@@ -283,115 +322,155 @@ function EncounterView(props) {
 			<div className="Panel__body EncounterView__body">
 				<div className="EncounterView__main">
 					<div className="EncounterView__list">
-						<Button
-							variant="create"
-							onClick={() => view.setShowBestiary(true)}
-							icon="plus"
-							className="EncounterView__addBtn"
-						>
-							{lang.t("Add monster")}
-						</Button>
+						<div className="EncounterView__addActions">
+							<Button
+								variant="create"
+								onClick={() => view.setShowBestiary(true)}
+								icon="plus"
+								className="EncounterView__addBtn"
+							>
+								{lang.t("Add monster")}
+							</Button>
+							<Button
+								variant="ghost"
+								onClick={() => view.setShowCharacterPicker(true)}
+								icon="user"
+								className="EncounterView__addBtn"
+							>
+								{lang.t("Add player")}
+							</Button>
+						</div>
 
 						<DraggableList
 							items={view.encounter.monsters}
 							onReorder={view.handleReorderMonsters}
 							onDrop={view.handleMonstersDrop}
 							keyExtractor={(m) => m.instanceId}
-							renderItem={(m, isDragging) => (
-								<div
-									className={classNames("EncounterMonsterRow", {
-										"is-active":
-											view.selectedInstance?.instanceId === m.instanceId,
-										"is-dragging": isDragging,
-									})}
-									onClick={() => handleSelectMonster(m)}
-								>
-									<div className="EncounterMonsterRow__content">
-										<Tooltip content={lang.t("Click to rename")}>
-											<div
-												className="EncounterMonsterRow__name editable-title"
-												onClick={(e) => {
-													e.stopPropagation();
-													view.handleRenameMonster(m.instanceId, m.name);
-												}}
-											>
-												{renderMentionText(String(m.name))}
-											</div>
-										</Tooltip>
-										<div className="EncounterMonsterRow__stats">
-											<div className="EncounterMonsterRow__hp">
-												<input
-													type="number"
-													value={m.currentHp}
-													onChange={(e) =>
-														view.updateMonsterHp(m.instanceId, e.target.value)
-													}
-													onClick={(e) => e.stopPropagation()}
-													className="EncounterMonsterRow__hpInput"
-													style={{
-														color: view.getHpColor(m.currentHp, m.hit_points),
-													}}
-												/>
-												<span className="muted">/</span>
-												<Tooltip content={lang.t("Max HP")}>
-													<input
-														type="number"
-														value={m.hit_points}
-														onChange={(e) =>
-															view.updateMonsterMaxHp(
-																m.instanceId,
-																e.target.value,
-															)
-														}
-														onClick={(e) => e.stopPropagation()}
-														className="EncounterMonsterRow__maxHpInput"
-													/>
+							renderItem={(m, isDragging) => {
+								const isCharacter = isEncounterCharacterParticipant(m);
+								const displayName = isCharacter
+									? getCharacterDisplayName(m)
+									: String(m.name);
+
+								return (
+									<div
+										className={classNames("EncounterMonsterRow", {
+											"EncounterMonsterRow--character": isCharacter,
+											"is-active":
+												view.selectedInstance?.instanceId === m.instanceId,
+											"is-dragging": isDragging,
+										})}
+										onClick={() => handleSelectMonster(m)}
+									>
+										<div className="EncounterMonsterRow__content">
+											{isCharacter ? (
+												<div className="EncounterMonsterRow__name">
+													{renderMentionText(displayName)}
+												</div>
+											) : (
+												<Tooltip content={lang.t("Click to rename")}>
+													<div
+														className="EncounterMonsterRow__name editable-title"
+														onClick={(e) => {
+															e.stopPropagation();
+															view.handleRenameMonster(m.instanceId, m.name);
+														}}
+													>
+														{renderMentionText(displayName)}
+													</div>
 												</Tooltip>
-											</div>
-											<div className="EncounterMonsterRow__ac">
-												{lang.t("AC")} {m.armor_class}
-											</div>
-											<div className="EncounterMonsterRow__actions">
-												{hasMonsterHpFormula(m) && (
+											)}
+											<div className="EncounterMonsterRow__stats">
+												{isCharacter ? (
+													<div className="EncounterMonsterRow__playerBadge">
+														{lang.t("Player")}
+													</div>
+												) : (
+													<>
+														<div className="EncounterMonsterRow__hp">
+															<input
+																type="number"
+																value={m.currentHp}
+																onChange={(e) =>
+																	view.updateMonsterHp(
+																		m.instanceId,
+																		e.target.value,
+																	)
+																}
+																onClick={(e) => e.stopPropagation()}
+																className="EncounterMonsterRow__hpInput"
+																style={{
+																	color: view.getHpColor(
+																		m.currentHp,
+																		m.hit_points,
+																	),
+																}}
+															/>
+															<span className="muted">/</span>
+															<Tooltip content={lang.t("Max HP")}>
+																<input
+																	type="number"
+																	value={m.hit_points}
+																	onChange={(e) =>
+																		view.updateMonsterMaxHp(
+																			m.instanceId,
+																			e.target.value,
+																		)
+																	}
+																	onClick={(e) => e.stopPropagation()}
+																	className="EncounterMonsterRow__maxHpInput"
+																/>
+															</Tooltip>
+														</div>
+														<div className="EncounterMonsterRow__ac">
+															{lang.t("AC")} {m.armor_class}
+														</div>
+													</>
+												)}
+												<div className="EncounterMonsterRow__actions">
+													{!isCharacter && hasMonsterHpFormula(m) && (
+														<Button
+															variant="ghost"
+															size={Button.SIZES.SMALL}
+															icon="dice"
+															className="EncounterMonsterRow__action"
+															onClick={(e) => {
+																e.stopPropagation();
+																view.rollMonsterHp(m.instanceId);
+															}}
+															title={lang.t("Roll HP by formula")}
+														/>
+													)}
+													{!isCharacter && (
+														<Button
+															variant="ghost"
+															size={Button.SIZES.SMALL}
+															icon="plus"
+															className="EncounterMonsterRow__action"
+															onClick={(e) => {
+																e.stopPropagation();
+																view.duplicateMonster(m);
+															}}
+															title={lang.t("Duplicate")}
+														/>
+													)}
 													<Button
-														variant="ghost"
+														variant="danger"
 														size={Button.SIZES.SMALL}
-														icon="dice"
+														icon="x"
 														className="EncounterMonsterRow__action"
 														onClick={(e) => {
 															e.stopPropagation();
-															view.rollMonsterHp(m.instanceId);
+															view.removeMonster(m.instanceId);
 														}}
-														title={lang.t("Roll HP by formula")}
+														title={lang.t("Delete")}
 													/>
-												)}
-												<Button
-													variant="ghost"
-													size={Button.SIZES.SMALL}
-													icon="plus"
-													className="EncounterMonsterRow__action"
-													onClick={(e) => {
-														e.stopPropagation();
-														view.duplicateMonster(m);
-													}}
-													title={lang.t("Duplicate")}
-												/>
-												<Button
-													variant="danger"
-													size={Button.SIZES.SMALL}
-													icon="x"
-													className="EncounterMonsterRow__action"
-													onClick={(e) => {
-														e.stopPropagation();
-														view.removeMonster(m.instanceId);
-													}}
-													title={lang.t("Delete")}
-												/>
+												</div>
 											</div>
 										</div>
 									</div>
-								</div>
-							)}
+								);
+							}}
 						/>
 					</div>
 
@@ -402,7 +481,7 @@ function EncounterView(props) {
 						})}
 					>
 						{displayMode === "grid" ? (
-							view.encounter.monsters.length > 0 ? (
+							gridMonsters.length > 0 ? (
 								<div
 									className="EncounterView__grid"
 									style={{ "--encounter-grid-columns": effectiveGridColumns }}
@@ -435,14 +514,15 @@ function EncounterView(props) {
 							)
 						) : (
 							<>
-								{view.selectedInstance ? (
-									<MonsterStatBlock
-										monster={view.selectedInstance}
-										onNameRename={handleRenameMonster}
-										tokenImageOverrideUrl={view.getMonsterImageOverride(
-											view.selectedInstance,
-										)}
-									/>
+								{view.selectedInstance &&
+								!isEncounterCharacterParticipant(view.selectedInstance) ? (
+										<MonsterStatBlock
+											monster={view.selectedInstance}
+											onNameRename={handleRenameMonster}
+											tokenImageOverrideUrl={view.getMonsterImageOverride(
+												view.selectedInstance,
+											)}
+										/>
 								) : (
 									<p className="muted">
 										{lang.t("Select a monster from the list to see its stats.")}
@@ -466,6 +546,66 @@ function EncounterView(props) {
 					type="custom"
 				>
 					<Bestiary onAddMonster={view.handleAddMonster} isEmbedded={true} />
+				</Modal>
+			)}
+
+			{view.showCharacterPicker && (
+				<Modal
+					title={lang.t("Choose player")}
+					onCancel={() => view.setShowCharacterPicker(false)}
+					showFooter={false}
+					type="custom"
+				>
+					<div className="EncounterCharacterPicker">
+						{availablePlayerCharacters.length > 0 ? (
+							availablePlayerCharacters.map((character) => (
+								<button
+									type="button"
+									key={character.id || character.slug}
+									className="EncounterCharacterPicker__item"
+									onClick={() => view.handleAddCharacter(character)}
+								>
+									<span className="EncounterCharacterPicker__name">
+										{getCharacterDisplayName(character)}
+									</span>
+									<span className="EncounterCharacterPicker__meta">
+										{[character.race, character.class]
+											.filter(Boolean)
+											.join(" • ")}
+										{character.level
+											? ` • ${lang.t("Lvl. {level}", {
+													level: character.level,
+												})}`
+											: ""}
+									</span>
+								</button>
+							))
+						) : (
+							<p className="muted">
+								{view.playerCharacters.length > 0
+									? lang.t("All player characters are already in encounter.")
+									: lang.t("No player characters found.")}
+							</p>
+						)}
+					</div>
+				</Modal>
+			)}
+
+			{modalCharacter && (
+				<Modal
+					title={getCharacterDisplayName(modalCharacter)}
+					onCancel={() => setModalCharacter(null)}
+					showFooter={false}
+					type="custom"
+				>
+					<CharacterCard
+						character={modalCharacter}
+						campaignSlug={campaign.slug}
+						type="characters"
+						viewMode="modal"
+						showDeleteButton={false}
+						onChange={handleCharacterChange(modalCharacter.instanceId)}
+					/>
 				</Modal>
 			)}
 
