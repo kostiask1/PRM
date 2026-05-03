@@ -362,6 +362,23 @@
 	min-width: min(460px, 80vw);
 }
 
+.EncounterCharacterPicker__createBtn {
+	width: 100%;
+	justify-content: center;
+}
+
+.EncounterCharacterPicker__create {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-4);
+}
+
+.EncounterCharacterPicker__createActions {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--space-2);
+}
+
 .EncounterCharacterPicker__item {
 	text-align: left;
 	border: 1px solid color-mix(in srgb, var(--border), transparent 45%);

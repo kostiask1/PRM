@@ -13,7 +13,11 @@ import Tooltip from "./common/Tooltip";
 import classNames from "../utils/classNames";
 import "../assets/components/EncounterView.css";
 import { api } from "../api";
-import { setUiSettingsAction } from "../actions/app";
+import {
+	alert,
+	refreshEntitiesAction,
+	setUiSettingsAction,
+} from "../actions/app";
 import { lang } from "../services/localization";
 import { useAppDispatch, useAppSelector } from "../store/appStore";
 import { renderMentionText } from "../utils/parser";
@@ -34,6 +38,23 @@ function getGridMonsterKey(monster) {
 	return `${baseName}|${source}`;
 }
 
+function createEmptyCharacterDraft() {
+	const now = Date.now();
+	return {
+		id: `new-character-${now}`,
+		firstName: "",
+		lastName: "",
+		race: "",
+		class: "",
+		level: 1,
+		motivation: "",
+		trait: "",
+		notes: [{ id: now + 1, title: "", text: "", collapsed: false }],
+		collapsed: false,
+		isNotesCollapsed: false,
+	};
+}
+
 function EncounterView(props) {
 	const campaign = props.campaign;
 	const sessionId = props.sessionId;
@@ -47,6 +68,11 @@ function EncounterView(props) {
 	);
 	const [focusedMonsterId, setFocusedMonsterId] = useState(null);
 	const [modalCharacter, setModalCharacter] = useState(null);
+	const [isCreatingPlayer, setIsCreatingPlayer] = useState(false);
+	const [playerDraft, setPlayerDraft] = useState(() =>
+		createEmptyCharacterDraft(),
+	);
+	const [isPlayerSubmitting, setIsPlayerSubmitting] = useState(false);
 	const gridItemRefs = useRef(new Map());
 	const focusTimeoutRef = useRef(null);
 	const view = useEncounterView({
@@ -188,6 +214,72 @@ function EncounterView(props) {
 		api.updateSettings({ encounterGridColumns: nextColumns }).catch((error) => {
 			console.error("Failed to save encounter grid columns setting", error);
 		});
+	};
+
+	const resetPlayerCreateForm = () => {
+		setIsCreatingPlayer(false);
+		setPlayerDraft(createEmptyCharacterDraft());
+	};
+
+	const closeCharacterPicker = () => {
+		if (isPlayerSubmitting) return;
+		resetPlayerCreateForm();
+		view.setShowCharacterPicker(false);
+	};
+
+	const startCreatePlayer = () => {
+		setPlayerDraft(createEmptyCharacterDraft());
+		setIsCreatingPlayer(true);
+	};
+
+	const handleCreatePlayer = async () => {
+		if (!playerDraft.firstName?.trim()) {
+			dispatch(
+				alert({
+					title: lang.t("Error"),
+					message: lang.t("Name is required to create an entry."),
+				}),
+			);
+			return;
+		}
+
+		const payload = {
+			firstName: "",
+			lastName: "",
+			race: "",
+			class: "",
+			level: 1,
+			motivation: "",
+			trait: "",
+			notes: [],
+			collapsed: false,
+			isNotesCollapsed: false,
+			...Object.fromEntries(
+				Object.entries(playerDraft || {}).filter(([key]) => !key.startsWith("_")),
+			),
+		};
+		delete payload.id;
+		delete payload.slug;
+		delete payload.createdAt;
+		delete payload.updatedAt;
+
+		setIsPlayerSubmitting(true);
+		try {
+			const created = await api.createEntity(campaign.slug, "characters", payload);
+			dispatch(refreshEntitiesAction());
+			view.handleAddCharacter(created);
+			resetPlayerCreateForm();
+		} catch (error) {
+			console.error("Failed to create player from encounter", error);
+			dispatch(
+				alert({
+					title: lang.t("Error"),
+					message: lang.t("Failed to create entity."),
+				}),
+			);
+		} finally {
+			setIsPlayerSubmitting(false);
+		}
 	};
 
 	return (
@@ -551,41 +643,90 @@ function EncounterView(props) {
 
 			{view.showCharacterPicker && (
 				<Modal
-					title={lang.t("Choose player")}
-					onCancel={() => view.setShowCharacterPicker(false)}
+					title={
+						isCreatingPlayer ? lang.t("New character") : lang.t("Choose player")
+					}
+					onCancel={closeCharacterPicker}
 					showFooter={false}
 					type="custom"
 				>
 					<div className="EncounterCharacterPicker">
-						{availablePlayerCharacters.length > 0 ? (
-							availablePlayerCharacters.map((character) => (
-								<button
-									type="button"
-									key={character.id || character.slug}
-									className="EncounterCharacterPicker__item"
-									onClick={() => view.handleAddCharacter(character)}
-								>
-									<span className="EncounterCharacterPicker__name">
-										{getCharacterDisplayName(character)}
-									</span>
-									<span className="EncounterCharacterPicker__meta">
-										{[character.race, character.class]
-											.filter(Boolean)
-											.join(" • ")}
-										{character.level
-											? ` • ${lang.t("Lvl. {level}", {
-													level: character.level,
-												})}`
-											: ""}
-									</span>
-								</button>
-							))
+						{isCreatingPlayer ? (
+							<div className="EncounterCharacterPicker__create">
+								<CharacterCard
+									character={playerDraft}
+									onChange={(_id, updated) => setPlayerDraft(updated)}
+									onDelete={() => {}}
+									onToggleCollapse={null}
+									campaignSlug={campaign.slug}
+									type="characters"
+									viewMode="modal"
+									initialEditing
+									showDeleteButton={false}
+									showHeader={false}
+								/>
+								<div className="EncounterCharacterPicker__createActions">
+									<Button
+										variant="primary"
+										onClick={handleCreatePlayer}
+										disabled={
+											isPlayerSubmitting || !playerDraft.firstName?.trim()
+										}
+									>
+										{lang.t("Create")}
+									</Button>
+									<Button
+										variant="ghost"
+										onClick={resetPlayerCreateForm}
+										disabled={isPlayerSubmitting}
+									>
+										{lang.t("Back")}
+									</Button>
+								</div>
+							</div>
 						) : (
-							<p className="muted">
-								{view.playerCharacters.length > 0
-									? lang.t("All player characters are already in encounter.")
-									: lang.t("No player characters found.")}
-							</p>
+							<>
+								<Button
+									variant="create"
+									icon="plus"
+									onClick={startCreatePlayer}
+									className="EncounterCharacterPicker__createBtn"
+								>
+									{lang.t("New character")}
+								</Button>
+								{availablePlayerCharacters.length > 0 ? (
+									availablePlayerCharacters.map((character) => (
+										<button
+											type="button"
+											key={character.id || character.slug}
+											className="EncounterCharacterPicker__item"
+											onClick={() => view.handleAddCharacter(character)}
+										>
+											<span className="EncounterCharacterPicker__name">
+												{getCharacterDisplayName(character)}
+											</span>
+											<span className="EncounterCharacterPicker__meta">
+												{[character.race, character.class]
+													.filter(Boolean)
+													.join(" • ")}
+												{character.level
+													? ` • ${lang.t("Lvl. {level}", {
+															level: character.level,
+														})}`
+													: ""}
+											</span>
+										</button>
+									))
+								) : (
+									<p className="muted">
+										{view.playerCharacters.length > 0
+											? lang.t(
+													"All player characters are already in encounter.",
+												)
+											: lang.t("No player characters found.")}
+									</p>
+								)}
+							</>
 						)}
 					</div>
 				</Modal>
