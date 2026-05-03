@@ -49,12 +49,6 @@ export default function SettingsModalContent({ onCancel }) {
 		patchSettings({ simplifiedNotes: enabled });
 	};
 
-	const handleEncounterViewModeChange = (mode) => {
-		const nextMode = mode === "grid" ? "grid" : "single";
-		dispatch(setUiSettingsAction({ encounterViewMode: nextMode }));
-		patchSettings({ encounterViewMode: nextMode });
-	};
-
 	return (
 		<div className="SettingsModal">
 			<div className="SettingsModal__group">
@@ -88,21 +82,6 @@ export default function SettingsModalContent({ onCancel }) {
 										: languageCode.toUpperCase()}
 							</option>
 						))}
-					</Select>
-				</div>
-
-				<div className="SettingsModal__lang">
-					<label className="SettingsModal__label">
-						{lang.t("Combat appearance")}
-					</label>
-					<Select
-						value={encounterViewMode}
-						onChange={(event) =>
-							handleEncounterViewModeChange(event.target.value)
-						}
-					>
-						<option value="single">{lang.t("Single monster preview")}</option>
-						<option value="grid">{lang.t("Grid of all monsters")}</option>
 					</Select>
 				</div>
 

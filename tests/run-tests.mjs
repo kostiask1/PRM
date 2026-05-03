@@ -22,6 +22,11 @@ import {
 } from "../src/utils/navigation.js";
 import { downloadBlob, downloadJsonFile } from "../src/utils/download.js";
 import {
+	createEncounterMonsterInstance,
+	getMonsterBaseHp,
+	hasMonsterHpFormula,
+} from "../src/utils/encounters.js";
+import {
 	getSpellByName,
 	getConditionByName,
 } from "../src/utils/referencePreview.js";
@@ -369,6 +374,25 @@ await run("storage core helpers sanitize and build identifiers", () => {
 	assert.equal(session.name, "My Session");
 	assert.equal(session.completed, false);
 	assert.equal(storage.campaignDir("../unsafe").includes(".."), false);
+});
+
+await run("encounter monster helpers use special HP and detect formulas", () => {
+	assert.equal(
+		getMonsterBaseHp({
+			hp: { special: "80" },
+		}),
+		80,
+	);
+	assert.equal(
+		createEncounterMonsterInstance({
+			name: "Special HP Monster",
+			hp: { special: "80" },
+		}).hit_points,
+		80,
+	);
+	assert.equal(hasMonsterHpFormula({ hp: { special: "80" } }), false);
+	assert.equal(hasMonsterHpFormula({ hp: { formula: "12d8+24" } }), true);
+	assert.equal(hasMonsterHpFormula({ hit_dice: "4d10+8" }), true);
 });
 
 await run("storage moveEntity transfers characters and preserves data", async () => {

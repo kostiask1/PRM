@@ -1,8 +1,34 @@
+export function getMonsterHpFormula(monster = {}) {
+	const formula =
+		(typeof monster.hp === "object" && monster.hp?.formula) ||
+		monster.hit_dice ||
+		"";
+	const normalized = String(formula || "").trim();
+	return /d/i.test(normalized) ? normalized : "";
+}
+
+export function hasMonsterHpFormula(monster = {}) {
+	return Boolean(getMonsterHpFormula(monster));
+}
+
+function parseHpValue(value) {
+	if (value === null || value === undefined) return null;
+	const parsed = Number.parseInt(value, 10);
+	return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function getMonsterBaseHp(monster = {}) {
+	const hpAverage =
+		typeof monster.hp === "object" ? parseHpValue(monster.hp?.average) : null;
+	const hpSpecial =
+		typeof monster.hp === "object" ? parseHpValue(monster.hp?.special) : null;
+	const hitPoints = parseHpValue(monster.hit_points);
+
+	return hpAverage ?? hpSpecial ?? hitPoints ?? 0;
+}
+
 export function createEncounterMonsterInstance(monster) {
-	const hpVal =
-		typeof monster.hp === "object" && monster.hp?.average !== undefined
-			? monster.hp.average
-			: monster.hit_points || 0;
+	const hpVal = getMonsterBaseHp(monster);
 
 	let acVal = monster.armor_class || 0;
 	if (Array.isArray(monster.ac) && monster.ac[0]) {

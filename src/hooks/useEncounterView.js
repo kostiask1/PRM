@@ -9,7 +9,10 @@ import {
 import { api } from "../api";
 import { navigateTo, useAppDispatch, useAppSelector } from "../store/appStore";
 import { lang } from "../services/localization";
-import { createEncounterMonsterInstance } from "../utils/encounters";
+import {
+	createEncounterMonsterInstance,
+	getMonsterHpFormula,
+} from "../utils/encounters";
 
 function cloneEncounterSnapshot(value) {
 	if (!value) return value;
@@ -541,15 +544,9 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 			);
 			if (!target) return;
 
-			const hpFormula =
-				(typeof target.hp === "object" && target.hp?.formula) ||
-				target.hit_dice ||
-				"";
+			const hpFormula = getMonsterHpFormula(target);
 
-			if (
-				!String(hpFormula || "").trim() ||
-				!/d/i.test(String(hpFormula || ""))
-			) {
+			if (!hpFormula) {
 				setNotification(
 					lang.t("No HP formula found for {name}.", { name: target.name }),
 				);

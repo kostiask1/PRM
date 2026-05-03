@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Panel from "./common/Panel";
 import Button from "./form/Button";
 import Modal from "./common/Modal";
@@ -16,6 +16,20 @@ import { setUiSettingsAction } from "../actions/app";
 import { lang } from "../services/localization";
 import { useAppDispatch, useAppSelector } from "../store/appStore";
 import { renderMentionText } from "../utils/parser";
+import { hasMonsterHpFormula } from "../utils/encounters";
+
+function getGridMonsterKey(monster) {
+	const baseName = String(
+		monster?.originalBestiaryName || monster?.name || "",
+	)
+		.trim()
+		.toLowerCase();
+	const source = String(monster?.source || "")
+		.trim()
+		.toLowerCase();
+	if (!baseName) return String(monster?.instanceId || "");
+	return `${baseName}|${source}`;
+}
 
 function EncounterView(props) {
 	const campaign = props.campaign;
@@ -25,6 +39,9 @@ function EncounterView(props) {
 	const displayMode = useAppSelector(
 		(state) => state.ui.encounterViewMode || "single",
 	);
+	const gridColumns = useAppSelector(
+		(state) => state.ui.encounterGridColumns || 2,
+	);
 	const [focusedMonsterId, setFocusedMonsterId] = useState(null);
 	const gridItemRefs = useRef(new Map());
 	const focusTimeoutRef = useRef(null);
@@ -33,6 +50,35 @@ function EncounterView(props) {
 		sessionId,
 		encounterId,
 	});
+
+	const { gridMonsters, gridRepresentativeByInstanceId } = useMemo(() => {
+		const uniqueMonsters = [];
+		const representativeByKey = new Map();
+		const representativeByInstanceId = new Map();
+
+		(view.encounter?.monsters || []).forEach((monster) => {
+			const key = getGridMonsterKey(monster);
+			let representativeId = representativeByKey.get(key);
+
+			if (!representativeId) {
+				representativeId = monster.instanceId;
+				representativeByKey.set(key, representativeId);
+				uniqueMonsters.push(monster);
+			}
+
+			representativeByInstanceId.set(monster.instanceId, representativeId);
+		});
+
+		return {
+			gridMonsters: uniqueMonsters,
+			gridRepresentativeByInstanceId: representativeByInstanceId,
+		};
+	}, [view.encounter?.monsters]);
+
+	const selectedGridInstanceId = view.selectedInstance
+		? gridRepresentativeByInstanceId.get(view.selectedInstance.instanceId) ||
+			view.selectedInstance.instanceId
+		: null;
 
 	useEffect(() => {
 		return () => {
@@ -59,17 +105,19 @@ function EncounterView(props) {
 	};
 
 	const focusMonsterInGrid = (instanceId) => {
-		const node = gridItemRefs.current.get(instanceId);
+		const representativeId =
+			gridRepresentativeByInstanceId.get(instanceId) || instanceId;
+		const node = gridItemRefs.current.get(representativeId);
 		if (node) {
 			node.scrollIntoView({ behavior: "auto", block: "center" });
 		}
-		setFocusedMonsterId(instanceId);
+		setFocusedMonsterId(representativeId);
 		if (focusTimeoutRef.current) {
 			clearTimeout(focusTimeoutRef.current);
 		}
 		focusTimeoutRef.current = setTimeout(() => {
 			setFocusedMonsterId((current) =>
-				current === instanceId ? null : current,
+				current === representativeId ? null : current,
 			);
 		}, 1800);
 	};
@@ -81,12 +129,26 @@ function EncounterView(props) {
 		}
 	};
 
+	const handleRenameMonster = (monster) => {
+		view.handleRenameMonster(monster.instanceId, monster.name);
+	};
+
 	const updateEncounterViewMode = (mode) => {
 		const nextMode = mode === "grid" ? "grid" : "single";
 		dispatch(setUiSettingsAction({ encounterViewMode: nextMode }));
 		api.updateSettings({ encounterViewMode: nextMode }).catch((error) => {
 			console.error("Failed to save encounter view mode setting", error);
 		});
+	};
+
+	const updateEncounterGridColumns = (columns) => {
+		const nextColumns = Math.min(4, Math.max(1, Number(columns) || 2));
+		dispatch(setUiSettingsAction({ encounterGridColumns: nextColumns }));
+		api
+			.updateSettings({ encounterGridColumns: nextColumns })
+			.catch((error) => {
+				console.error("Failed to save encounter grid columns setting", error);
+			});
 	};
 
 	return (
@@ -131,6 +193,24 @@ function EncounterView(props) {
 							title={lang.t("All")}
 						/>
 					</div>
+					{displayMode === "grid" && (
+						<div
+							className="EncounterView__gridColumnsSwitch"
+							aria-label={lang.t("Grid columns")}
+						>
+							{[1, 2, 3, 4].map((columns) => (
+								<Button
+									key={columns}
+									variant={gridColumns === columns ? "primary" : "ghost"}
+									size={Button.SIZES.SMALL}
+									onClick={() => updateEncounterGridColumns(columns)}
+									title={lang.t("{count} columns", { count: columns })}
+								>
+									{columns}
+								</Button>
+							))}
+						</div>
+					)}
 					<Button
 						variant="ghost"
 						size={Button.SIZES.SMALL}
@@ -244,17 +324,19 @@ function EncounterView(props) {
 										</div>
 									</div>
 									<div className="EncounterMonsterRow__actions">
-										<Button
-											variant="ghost"
-											size={Button.SIZES.SMALL}
-											icon="dice"
-											className="EncounterMonsterRow__action"
-											onClick={(e) => {
-												e.stopPropagation();
-												view.rollMonsterHp(m.instanceId);
-											}}
-											title={lang.t("Roll HP by formula")}
-										/>
+										{hasMonsterHpFormula(m) && (
+											<Button
+												variant="ghost"
+												size={Button.SIZES.SMALL}
+												icon="dice"
+												className="EncounterMonsterRow__action"
+												onClick={(e) => {
+													e.stopPropagation();
+													view.rollMonsterHp(m.instanceId);
+												}}
+												title={lang.t("Roll HP by formula")}
+											/>
+										)}
 										<Button
 											variant="ghost"
 											size={Button.SIZES.SMALL}
@@ -291,20 +373,23 @@ function EncounterView(props) {
 					>
 						{displayMode === "grid" ? (
 							view.encounter.monsters.length > 0 ? (
-								<div className="EncounterView__grid">
-									{view.encounter.monsters.map((monster) => (
+								<div
+									className="EncounterView__grid"
+									style={{ "--encounter-grid-columns": gridColumns }}
+								>
+									{gridMonsters.map((monster) => (
 										<div
 											key={monster.instanceId}
 											ref={(node) => setGridItemRef(monster.instanceId, node)}
 											className={classNames("EncounterView__gridItem", {
 												"is-selected":
-													view.selectedInstance?.instanceId ===
-													monster.instanceId,
+													selectedGridInstanceId === monster.instanceId,
 												"is-focused": focusedMonsterId === monster.instanceId,
 											})}
 										>
 											<MonsterStatBlock
 												monster={monster}
+												onNameRename={handleRenameMonster}
 												tokenImageOverrideUrl={view.getMonsterImageOverride(
 													monster,
 												)}
@@ -323,6 +408,7 @@ function EncounterView(props) {
 								{view.selectedInstance ? (
 									<MonsterStatBlock
 										monster={view.selectedInstance}
+										onNameRename={handleRenameMonster}
 										tokenImageOverrideUrl={view.getMonsterImageOverride(
 											view.selectedInstance,
 										)}

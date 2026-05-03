@@ -119,6 +119,7 @@ export default function App() {
 					setUiSettingsAction({
 						theme: settings.theme,
 						encounterViewMode: settings.encounterViewMode,
+						encounterGridColumns: settings.encounterGridColumns,
 						simplifiedNotes: settings.simplifiedNotes,
 					}),
 				);

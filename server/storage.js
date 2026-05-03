@@ -17,6 +17,7 @@ const DEFAULT_APP_SETTINGS = Object.freeze({
 	language: "uk",
 	theme: "light",
 	encounterViewMode: "single",
+	encounterGridColumns: 2,
 	simplifiedNotes: false,
 });
 
@@ -294,11 +295,20 @@ async function clearAiResponses() {
 }
 
 function normalizeSettings(settings = {}) {
+	const encounterGridColumns = Number.parseInt(settings.encounterGridColumns, 10);
+
 	return {
 		language: settings.language === "en" ? "en" : "uk",
 		theme: settings.theme === "dark" ? "dark" : "light",
 		encounterViewMode:
 			settings.encounterViewMode === "grid" ? "grid" : "single",
+		encounterGridColumns: Math.min(
+			4,
+			Math.max(
+				1,
+				Number.isFinite(encounterGridColumns) ? encounterGridColumns : 2,
+			),
+		),
 		simplifiedNotes: Boolean(settings.simplifiedNotes),
 	};
 }

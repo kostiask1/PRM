@@ -37,6 +37,7 @@ export default function MonsterStatBlock({
 	monster,
 	onNameClick,
 	nameTitle,
+	onNameRename,
 	onFavoriteChange,
 	tokenImageOverrideUrl = null,
 	layoutMode = "single",
@@ -110,6 +111,12 @@ export default function MonsterStatBlock({
 				/>
 			),
 		});
+	};
+
+	const handleNameRename = (event) => {
+		event?.preventDefault?.();
+		event?.stopPropagation?.();
+		onNameRename?.(monster);
 	};
 
 	const handleSpellClick = async (spellOrName) => {
@@ -420,8 +427,14 @@ export default function MonsterStatBlock({
 		);
 	}
 
+	const isGridLayout = layoutMode === "grid";
+
 	return (
-		<div className="MonsterStatBlock">
+		<div
+			className={classNames("MonsterStatBlock", {
+				"MonsterStatBlock--grid": isGridLayout,
+			})}
+		>
 			<div className="MonsterStatBlock__header">
 				<div className="MonsterStatBlock__header__details">
 					<div className="MonsterStatBlock__name__row">
@@ -430,6 +443,7 @@ export default function MonsterStatBlock({
 								<h3
 									className="MonsterStatBlock__name"
 									onClick={() => onNameClick?.(monster)}
+									onContextMenu={onNameRename ? handleNameRename : undefined}
 								>
 									{renderMentionText(String(monster.name))}
 								</h3>
@@ -439,9 +453,20 @@ export default function MonsterStatBlock({
 								className="MonsterStatBlock__name"
 								text={monster.name}
 								message={lang.t("Name copied!")}
+								onContextMenu={onNameRename ? handleNameRename : undefined}
 							>
 								{renderMentionText(String(monster.name))}
 							</ClickToCopy>
+						)}
+						{onNameRename && (
+							<Button
+								variant="ghost"
+								size={Button.SIZES.SMALL}
+								icon="edit"
+								className="MonsterStatBlock__rename-btn"
+								onClick={handleNameRename}
+								title={lang.t("Rename")}
+							/>
 						)}
 						<Button
 							variant="ghost"
@@ -521,7 +546,7 @@ export default function MonsterStatBlock({
 							</div>
 						)}
 					</div>
-					{layoutMode !== "grid" && (
+					{!isGridLayout && (
 						<div className="MonsterStatBlock__abilities">
 							{renderAbility("STR", model.abilityScores.str)}
 							{renderAbility("DEX", model.abilityScores.dex)}
@@ -555,7 +580,7 @@ export default function MonsterStatBlock({
 					)}
 				</div>
 			</div>
-			{layoutMode === "grid" && (
+			{isGridLayout && (
 				<div className="MonsterStatBlock__abilities">
 					{renderAbility("STR", model.abilityScores.str)}
 					{renderAbility("DEX", model.abilityScores.dex)}

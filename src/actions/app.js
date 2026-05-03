@@ -71,6 +71,16 @@ export function setUiSettingsAction(payload) {
 	}
 	if (
 		payload &&
+		Object.prototype.hasOwnProperty.call(payload, "encounterGridColumns")
+	) {
+		const columns = Number.parseInt(payload.encounterGridColumns, 10);
+		nextPayload.encounterGridColumns = Math.min(
+			4,
+			Math.max(1, Number.isFinite(columns) ? columns : 2),
+		);
+	}
+	if (
+		payload &&
 		Object.prototype.hasOwnProperty.call(payload, "simplifiedNotes")
 	) {
 		nextPayload.simplifiedNotes = Boolean(payload.simplifiedNotes);

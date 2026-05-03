@@ -14,6 +14,7 @@ export default function ClickToCopy({
 	children,
 	message,
 	className = "",
+	onContextMenu,
 }) {
 	const [notification, setNotification] = useState(null);
 
@@ -37,6 +38,7 @@ export default function ClickToCopy({
 				<div
 					className={classNames("ClickToCopy", className)}
 					onClick={handleCopy}
+					onContextMenu={onContextMenu}
 				>
 					{children}
 				</div>

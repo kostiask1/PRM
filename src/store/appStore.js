@@ -41,6 +41,7 @@ function getInitialUiSettings() {
 	return {
 		theme: "light",
 		encounterViewMode: "single",
+		encounterGridColumns: 2,
 		simplifiedNotes: false,
 	};
 }

@@ -311,7 +311,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 							<div className="ListCard__meta">
 								{Array.isArray(monster.size) ? monster.size[0] : monster.size}{" "}
 								{getMonsterTypeString(monster.type)}{" "}
-								{monster.type?.tags?.join(", ")}
+								{monster.type?.tags?.map((t) => t?.tag || t).join(", ")}
 								{monster.source && (
 									<span className="Bestiary__item-source">
 										{" "}
