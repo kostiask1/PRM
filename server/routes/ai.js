@@ -384,9 +384,7 @@ function buildMonsterInstance(monster, bestiaryIndex) {
 		}
 	}
 
-	const resolved = foundBase
-		? storage.resolveMonster(foundBase, bestiaryIndex)
-		: null;
+	const resolved = foundBase || null;
 	const instance = {
 		...(resolved || {}),
 		instanceId: `inst-${Date.now()}-${Math.floor(Math.random() * 10000)}`,

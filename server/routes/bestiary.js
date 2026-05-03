@@ -14,19 +14,17 @@ router.get("/search", async (req, res, next) => {
 		const results = [];
 
 		for (const monster of index.values()) {
-			const resolved = storage.resolveMonster(monster, index);
-
 			const matchesName = nameQuery
-				? resolved.name?.toLowerCase().includes(nameQuery)
+				? monster.name?.toLowerCase().includes(nameQuery)
 				: true;
 			const matchesType = typeQuery
-				? JSON.stringify(resolved.type || "")
+				? JSON.stringify(monster.type || "")
 						.toLowerCase()
 						.includes(typeQuery)
 				: true;
 
 			if (matchesName && matchesType) {
-				results.push(resolved);
+				results.push(monster);
 			}
 		}
 
@@ -149,18 +147,11 @@ router.get("/:source", async (req, res, next) => {
 			? data
 			: data.monster || data.monsters || data.results || [];
 
-		const index = await storage.getBestiaryIndex();
-		const resolvedList = monsters.map((m) =>
-			storage.resolveMonster(
-				{
-					...m,
-					source: (
-						m.source || path.parse(filePath).name.replace(/^bestiary-/i, "")
-					).toUpperCase(),
-				},
-				index,
-			),
-		);
+		const fileSource = path.parse(filePath).name.replace(/^bestiary-/i, "");
+		const resolvedList = monsters.map((m) => ({
+			...m,
+			source: (m.source || fileSource).toUpperCase(),
+		}));
 
 		res.json(resolvedList);
 	} catch (error) {

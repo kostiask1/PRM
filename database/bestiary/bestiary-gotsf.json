@@ -1,49 +1,179 @@
 {
-	"_meta": {
-		"dependencies": {
-			"monster": [
-				"MM"
-			]
-		},
-		"otherSources": {
-			"monster": {
-				"MM": "GotSF",
-				"BGG": "GotSF"
-			}
-		}
-	},
-	"monster": [
-		{
-			"name": "Acidic Mist Apparition",
-			"source": "GotSF",
-			"page": 6,
-			"_copy": {
-				"name": "Air Elemental",
-				"source": "MM",
-				"_mod": {
-					"*": {
-						"mode": "replaceTxt",
-						"replace": "elemental",
-						"with": "apparition"
-					},
-					"action": {
-						"mode": "replaceArr",
-						"replace": "Slam",
-						"items": {
-							"name": "Slam",
-							"entries": [
-								"{@atk mw} {@hit 8} to hit, reach 5 ft., one target. {@h}14 ({@damage 2d8 + 5}) acid damage."
-							]
-						}
-					}
-				}
-			},
-			"immune": [
-				"acid",
-				"poison"
-			],
-			"tokenCustom": true,
-			"hasToken": true
-		}
-	]
+  "_meta": {
+    "dependencies": {
+      "monster": [
+        "MM"
+      ]
+    },
+    "otherSources": {
+      "monster": {
+        "MM": "GotSF",
+        "BGG": "GotSF"
+      }
+    }
+  },
+  "monster": [
+    {
+      "name": "Acidic Mist Apparition",
+      "source": "GotSF",
+      "page": 6,
+      "srd": true,
+      "basicRules": true,
+      "referenceSources": [
+        "AitFR-FCD",
+        "BMT",
+        "CM",
+        "DIP",
+        "DSotDQ",
+        "ERLW",
+        "GoS",
+        "GotSF",
+        "HotDQ",
+        "IMR",
+        "JttRC",
+        "KftGV",
+        "MOT",
+        "PotA",
+        "QftIS",
+        "RoT",
+        "SCC-ARiR",
+        "SCC-TMM",
+        "SKT",
+        "SLW",
+        "TCE",
+        "TftYP",
+        "ToA",
+        "VEoR",
+        "WBtW",
+        "WDMM"
+      ],
+      "reprintedAs": [
+        "Air Elemental|XMM"
+      ],
+      "size": [
+        "L"
+      ],
+      "type": "apparition",
+      "alignment": [
+        "N"
+      ],
+      "ac": [
+        15
+      ],
+      "hp": {
+        "average": 90,
+        "formula": "12d10 + 24"
+      },
+      "speed": {
+        "fly": {
+          "number": 90,
+          "condition": "(hover)"
+        },
+        "canHover": true
+      },
+      "str": 14,
+      "dex": 20,
+      "con": 14,
+      "int": 6,
+      "wis": 10,
+      "cha": 6,
+      "senses": [
+        "darkvision 60 ft."
+      ],
+      "passive": 10,
+      "resist": [
+        "lightning",
+        "thunder",
+        {
+          "resist": [
+            "bludgeoning",
+            "piercing",
+            "slashing"
+          ],
+          "note": "from nonmagical attacks",
+          "cond": true
+        }
+      ],
+      "immune": [
+        "acid",
+        "poison"
+      ],
+      "conditionImmune": [
+        "exhaustion",
+        "grappled",
+        "paralyzed",
+        "petrified",
+        "poisoned",
+        "prone",
+        "restrained",
+        "unconscious"
+      ],
+      "languages": [
+        "Auran"
+      ],
+      "cr": "5",
+      "trait": [
+        {
+          "name": "Air Form",
+          "entries": [
+            "The apparition can enter a hostile creature's space and stop there. It can move through a space as narrow as 1 inch wide without squeezing."
+          ]
+        }
+      ],
+      "action": [
+        {
+          "name": "Multiattack",
+          "entries": [
+            "The apparition makes two slam attacks."
+          ]
+        },
+        {
+          "name": "Slam",
+          "entries": [
+            "{@atk mw} {@hit 8} to hit, reach 5 ft., one target. {@h}14 ({@damage 2d8 + 5}) acid damage."
+          ]
+        },
+        {
+          "name": "Whirlwind {@recharge 4}",
+          "entries": [
+            "Each creature in the apparition's space must make a {@dc 13} Strength saving throw. On a failure, a target takes 15 ({@damage 3d8 + 2}) bludgeoning damage and is flung up 20 feet away from the apparition in a random direction and knocked {@condition prone}. If a thrown target strikes an object, such as a wall or floor, the target takes 3 ({@damage 1d6}) bludgeoning damage for every 10 feet it was thrown. If the target is thrown at another creature, that creature must succeed on a {@dc 13} Dexterity saving throw or take the same damage and be knocked {@condition prone}.",
+            "If the saving throw is successful, the target takes half the bludgeoning damage and isn't flung away or knocked {@condition prone}."
+          ]
+        }
+      ],
+      "environment": [
+        "mountain",
+        "desert"
+      ],
+      "soundClip": {
+        "type": "internal",
+        "path": "bestiary/air-apparition.mp3"
+      },
+      "senseTags": [
+        "D"
+      ],
+      "actionTags": [
+        "Multiattack"
+      ],
+      "languageTags": [
+        "AU"
+      ],
+      "damageTags": [
+        "B"
+      ],
+      "miscTags": [
+        "MW"
+      ],
+      "conditionInflict": [
+        "prone"
+      ],
+      "savingThrowForced": [
+        "strength"
+      ],
+      "hasToken": true,
+      "hasFluff": true,
+      "hasFluffImages": true,
+      "tokenCustom": true
+    }
+  ]
 }

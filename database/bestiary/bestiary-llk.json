@@ -1,1000 +1,2120 @@
 {
-	"_meta": {
-		"dependencies": {
-			"monster": [
-				"MM",
-				"VGM"
-			]
-		},
-		"otherSources": {
-			"monster": {
-				"MM": "LLK"
-			}
-		}
-	},
-	"monster": [
-		{
-			"name": "Brain in a Jar",
-			"source": "LLK",
-			"page": 38,
-			"referenceSources": [
-				"IMR"
-			],
-			"size": [
-				"M"
-			],
-			"type": "undead",
-			"alignment": [
-				"A"
-			],
-			"ac": [
-				{
-					"ac": 11,
-					"from": [
-						"natural armor"
-					]
-				}
-			],
-			"hp": {
-				"average": 58,
-				"formula": "9d8 + 18"
-			},
-			"speed": {
-				"walk": 0
-			},
-			"str": 1,
-			"dex": 1,
-			"con": 15,
-			"int": 19,
-			"wis": 10,
-			"cha": 15,
-			"save": {
-				"int": "+7",
-				"cha": "+5"
-			},
-			"senses": [
-				"darkvision 60 ft."
-			],
-			"passive": 10,
-			"immune": [
-				"necrotic",
-				"poison",
-				"psychic"
-			],
-			"conditionImmune": [
-				"charmed",
-				"exhaustion",
-				"frightened"
-			],
-			"cr": "6",
-			"spellcasting": [
-				{
-					"name": "Innate Spellcasting (Psionics)",
-					"type": "spellcasting",
-					"headerEntries": [
-						"The brain in a jar's innate spellcasting ability is Intelligence (spell save {@dc 15}). It can innately cast the following spells, requiring no components:"
-					],
-					"will": [
-						"{@spell detect thoughts}",
-						"{@spell mage hand}",
-						"{@spell zone of truth}"
-					],
-					"daily": {
-						"3e": [
-							"{@spell charm person}",
-							"{@spell command}",
-							"{@spell hold person}"
-						],
-						"1e": [
-							"{@spell compulsion}",
-							"{@spell hold monster}",
-							"{@spell sleep} (cast at 3rd level)",
-							"{@spell Tasha's hideous laughter}"
-						]
-					},
-					"ability": "int"
-				}
-			],
-			"trait": [
-				{
-					"name": "Detect Sentience",
-					"entries": [
-						"The brain in a jar can sense the presence and location of any creature within 300 feet of it that has an Intelligence of 3 or higher, regardless of interposing barriers, unless the creature is protected by a {@spell mind blank} spell."
-					]
-				},
-				{
-					"name": "Magic Resistance",
-					"entries": [
-						"The brain in a jar has advantage on saving throws against spells and other magical effects."
-					]
-				}
-			],
-			"action": [
-				{
-					"name": "Mind Blast {@recharge 5}",
-					"entries": [
-						"The brain in a jar magically emits psychic energy in a 60-foot cone. Each creature in that area must succeed on a {@dc 15} Intelligence saving throw or take 13 ({@damage 2d8 + 4}) psychic damage and be {@condition stunned} for 1 minute. A creature can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success."
-					]
-				}
-			],
-			"traitTags": [
-				"Magic Resistance"
-			],
-			"senseTags": [
-				"D"
-			],
-			"damageTags": [
-				"Y"
-			],
-			"spellcastingTags": [
-				"I",
-				"P"
-			],
-			"miscTags": [
-				"AOE"
-			],
-			"conditionInflict": [
-				"stunned"
-			],
-			"conditionInflictSpell": [
-				"charmed",
-				"incapacitated",
-				"paralyzed",
-				"prone",
-				"unconscious"
-			],
-			"savingThrowForced": [
-				"intelligence"
-			],
-			"savingThrowForcedSpell": [
-				"charisma",
-				"wisdom"
-			],
-			"hasToken": true
-		},
-		{
-			"name": "Clockwork Kraken",
-			"source": "LLK",
-			"page": 38,
-			"size": [
-				"L"
-			],
-			"type": "construct",
-			"alignment": [
-				"U"
-			],
-			"ac": [
-				{
-					"ac": 17,
-					"from": [
-						"natural armor"
-					]
-				}
-			],
-			"hp": {
-				"average": 142,
-				"formula": "15d10 + 60"
-			},
-			"speed": {
-				"walk": 30
-			},
-			"str": 20,
-			"dex": 12,
-			"con": 18,
-			"int": 3,
-			"wis": 11,
-			"cha": 1,
-			"senses": [
-				"darkvision 120 ft."
-			],
-			"passive": 10,
-			"resist": [
-				"fire",
-				{
-					"resist": [
-						"bludgeoning",
-						"piercing",
-						"slashing"
-					],
-					"note": "from nonmagical attacks",
-					"cond": true
-				}
-			],
-			"immune": [
-				"poison",
-				"psychic"
-			],
-			"conditionImmune": [
-				"charmed",
-				"exhaustion",
-				"frightened",
-				"paralyzed",
-				"petrified",
-				"poisoned"
-			],
-			"languages": [
-				"understands the languages of its creator but can't speak"
-			],
-			"cr": "10",
-			"trait": [
-				{
-					"name": "Magic Resistance",
-					"entries": [
-						"The clockwork kraken has advantage on saving throws against spells and other magical effects."
-					]
-				},
-				{
-					"name": "Independent Tentacles",
-					"entries": [
-						"The clockwork kraken has eight tentacles, each of which is treated as a Medium creature, moves independently on the construct's turn, and has a flying speed of 40 feet. The clockwork kraken's senses operate through its tentacles as well as its main body. Each tentacle can be attacked independently, with damage dealt to tentacles applied to the clockwork kraken's hit point total. A tentacle is destroyed if it takes more than 20 damage.",
-						"Reducing the construct to three or fewer tentacles reduces its attacks accordingly. A clockwork kraken can regrow any destroyed tentacles at the end of a long rest."
-					]
-				}
-			],
-			"action": [
-				{
-					"name": "Multiattack",
-					"entries": [
-						"The clockwork kraken makes four tentacle slam attacks."
-					]
-				},
-				{
-					"name": "Tentacle Slam",
-					"entries": [
-						"{@atk mw} {@hit 9} to hit, reach 5 ft., one target. {@h}12 ({@damage 2d6 + 5}) bludgeoning damage."
-					]
-				}
-			],
-			"tokenCustom": true,
-			"traitTags": [
-				"Magic Resistance"
-			],
-			"senseTags": [
-				"SD"
-			],
-			"actionTags": [
-				"Multiattack"
-			],
-			"languageTags": [
-				"CS"
-			],
-			"damageTags": [
-				"B"
-			],
-			"miscTags": [
-				"MW"
-			],
-			"hasToken": true
-		},
-		{
-			"name": "Ctenmiir the Vampire",
-			"isNpc": true,
-			"isNamedCreature": true,
-			"source": "LLK",
-			"page": 4,
-			"_copy": {
-				"name": "Vampire",
-				"source": "MM",
-				"_mod": {
-					"*": {
-						"mode": "replaceTxt",
-						"replace": "the vampire",
-						"with": "Ctenmiir",
-						"flags": "i"
-					},
-					"trait": {
-						"mode": "prependArr",
-						"items": {
-							"name": "Coffin Imprisonment",
-							"entries": [
-								"Ctenmiir is imprisoned within a magical iron coffin mounted atop animated golem legs. Ctenmiir's coffin has a speed of 30 feet and a climbing speed of 10 feet, and protects the vampire from sunlight even as it prevents him from escaping his servitude."
-							]
-						}
-					}
-				}
-			},
-			"alignment": [
-				"L",
-				"E"
-			],
-			"speed": {
-				"walk": 30,
-				"climb": 10
-			},
-			"hasToken": true,
-			"hasFluffImages": true
-		},
-		{
-			"name": "East Wind",
-			"isNpc": true,
-			"isNamedCreature": true,
-			"source": "LLK",
-			"page": 14,
-			"_copy": {
-				"name": "Martial Arts Adept",
-				"source": "VGM",
-				"_mod": {
-					"*": {
-						"mode": "replaceTxt",
-						"replace": "the adept",
-						"with": "East Wind",
-						"flags": "i"
-					},
-					"trait": {
-						"mode": "prependArr",
-						"items": {
-							"name": "Special Equipment",
-							"entries": [
-								"East Wind is armed with a longsword that is a {@item polymorph blade|LLK}."
-							]
-						}
-					},
-					"action": {
-						"mode": "appendArr",
-						"items": {
-							"name": "Polymorph Blade",
-							"entries": [
-								"{@atk mw,rw} {@hit 5} to hit, reach 5 ft., one creature. {@h}7 ({@damage 1d8 + 3}) piercing damage. If East Wind rolls a 20 on the attack roll, the target must succeed on a {@dc 15} Wisdom saving throw or suffer the effects of a {@spell polymorph} spell."
-							]
-						}
-					}
-				}
-			},
-			"tokenCustom": true,
-			"hasToken": true
-		},
-		{
-			"name": "Elder Monastery of the Distressed Body Monk",
-			"source": "LLK",
-			"page": 12,
-			"_copy": {
-				"name": "Cult Fanatic",
-				"source": "MM",
-				"_mod": {
-					"*": {
-						"mode": "replaceTxt",
-						"replace": "fanatic",
-						"with": "monk"
-					},
-					"action": {
-						"mode": "replaceArr",
-						"replace": "Dagger",
-						"items": {
-							"name": "Force Pike",
-							"entries": [
-								"{@atk mw,rw} {@hit 4} to hit, reach 5 ft. or range 40/100 ft., one creature. {@h}7 ({@damage 1d10 + 2}) force damage. The attack has disadvantage against any target with polished metal armor or shield, and has its ranged halved when firing through smoke or fog."
-							]
-						}
-					}
-				}
-			},
-			"tokenCustom": true,
-			"hasToken": true
-		},
-		{
-			"name": "Garret Levistusson",
-			"isNpc": true,
-			"isNamedCreature": true,
-			"source": "LLK",
-			"page": 41,
-			"size": [
-				"M"
-			],
-			"type": {
-				"type": "humanoid"
-			},
-			"alignment": [
-				"C",
-				"N"
-			],
-			"ac": [
-				{
-					"ac": 14,
-					"from": [
-						"natural armor"
-					]
-				}
-			],
-			"hp": {
-				"average": 44,
-				"formula": "8d8 + 8"
-			},
-			"speed": {
-				"walk": 30
-			},
-			"str": 11,
-			"dex": 14,
-			"con": 12,
-			"int": 11,
-			"wis": 12,
-			"cha": 17,
-			"skill": {
-				"deception": "+7",
-				"investigation": "+4",
-				"performance": "+5",
-				"persuasion": "+5"
-			},
-			"passive": 11,
-			"languages": [
-				"Abyssal",
-				"Common",
-				"Infernal",
-				"Thieves' cant"
-			],
-			"cr": "2",
-			"spellcasting": [
-				{
-					"name": "Spellcasting",
-					"type": "spellcasting",
-					"headerEntries": [
-						"Garret is a 2nd-level spellcaster. His spellcasting ability is Charisma (spell save {@dc 13}, {@hit 5} to hit with spell attacks). He has the following bard spells prepared:"
-					],
-					"spells": {
-						"0": {
-							"spells": [
-								"{@spell blade ward}",
-								"{@spell vicious mockery}"
-							]
-						},
-						"1": {
-							"slots": 3,
-							"spells": [
-								"{@spell charm person}",
-								"{@spell detect magic}",
-								"{@spell disguise self}",
-								"{@spell identify}",
-								"{@spell Tasha's hideous laughter}"
-							]
-						}
-					},
-					"ability": "cha"
-				}
-			],
-			"trait": [
-				{
-					"name": "Special Equipment",
-					"entries": [
-						"Garret wears a {@item Ring of Warmth} (included in his statistics) and wields a {@item Gambler's Blade longsword|LLK}."
-					]
-				},
-				{
-					"name": "Bardic Inspiration (3/Day)",
-					"entries": [
-						"As a bonus action, Garret can give one chosen creature (other than him) a {@dice d6} inspiration die. The chosen creature must be within 60 feet of Garret and able to hear him. Once within the next 10 minutes, the creature can roll the die and add the number rolled to one ability check, attack roll, or saving throw it makes. The creature can use the inspiration die after the roll is made but before the DM says whether it succeeds or fails. Once the inspiration die is rolled, it is lost. A creature can have only one inspiration die at a time."
-					]
-				},
-				{
-					"name": "Cunning Action",
-					"entries": [
-						"On each of his turns, Garret can use a bonus action to take the {@action Dash}, {@action Disengage}, or {@action Hide} action."
-					]
-				},
-				{
-					"name": "Sneak Attack (1/Turn)",
-					"entries": [
-						"Garret deals an extra 7 ({@damage 2d6}) damage when he hits a target with a weapon attack and has advantage on the attack roll, or when the target is within 5 feet of an ally of Garret that isn't {@condition incapacitated} and Garret doesn't have disadvantage on the attack roll."
-					]
-				}
-			],
-			"action": [
-				{
-					"name": "Shortsword",
-					"entries": [
-						"{@atk mw} {@hit 4} to hit, reach 5 ft., one target. {@h}5 ({@damage 1d6 + 2}) piercing damage."
-					]
-				}
-			],
-			"attachedItems": [
-				"shortsword|phb"
-			],
-			"traitTags": [
-				"Sneak Attack"
-			],
-			"languageTags": [
-				"AB",
-				"C",
-				"I",
-				"TC"
-			],
-			"damageTags": [
-				"P"
-			],
-			"damageTagsSpell": [
-				"Y"
-			],
-			"spellcastingTags": [
-				"CB"
-			],
-			"miscTags": [
-				"MLW",
-				"MW"
-			],
-			"conditionInflict": [
-				"incapacitated"
-			],
-			"conditionInflictSpell": [
-				"charmed",
-				"incapacitated",
-				"prone"
-			],
-			"savingThrowForcedSpell": [
-				"wisdom"
-			],
-			"hasToken": true,
-			"hasFluffImages": true
-		},
-		{
-			"name": "Gearbox",
-			"isNpc": true,
-			"isNamedCreature": true,
-			"source": "LLK",
-			"page": 5,
-			"_copy": {
-				"name": "Monodrone",
-				"source": "MM",
-				"_mod": {
-					"*": {
-						"mode": "replaceTxt",
-						"replace": "the monodrone",
-						"with": "Gearbox",
-						"flags": "i"
-					},
-					"trait": {
-						"mode": "prependArr",
-						"items": {
-							"name": "Unique Programming",
-							"entries": [
-								"Gearbox's unique programming allows the modron to function as an {@item Orb of Direction|XGE} and an {@item Orb of Time|XGE}, to cast the {@spell light} cantrip at will, and to grant other characters advantage on Dexterity checks made with thieves' tools and on ability checks made to identify or operate mechanical or laboratory equipment."
-							]
-						}
-					}
-				}
-			},
-			"alignment": [
-				"L",
-				"N"
-			],
-			"spellcasting": [
-				{
-					"name": "Spellcasting",
-					"type": "spellcasting",
-					"headerEntries": [
-						"Gearbox can cast the {@spell light} cantrip at will."
-					],
-					"spells": {
-						"0": {
-							"spells": [
-								"{@spell light}"
-							]
-						}
-					},
-					"hidden": [
-						"spells"
-					]
-				}
-			],
-			"spellcastingTags": [
-				"O"
-			],
-			"savingThrowForcedSpell": [
-				"dexterity"
-			],
-			"hasToken": true,
-			"hasFluffImages": true
-		},
-		{
-			"name": "Gloine Nathair-Nathair",
-			"isNpc": true,
-			"isNamedCreature": true,
-			"source": "LLK",
-			"page": 23,
-			"referenceSources": [
-				"IMR"
-			],
-			"_copy": {
-				"name": "Medusa",
-				"source": "MM",
-				"_mod": {
-					"*": {
-						"mode": "replaceTxt",
-						"replace": "the medusa",
-						"with": "Gloine",
-						"flags": "i"
-					}
-				}
-			},
-			"type": "undead",
-			"immune": [
-				"poison",
-				"necrotic"
-			],
-			"conditionImmune": [
-				"exhaustion",
-				"poisoned"
-			],
-			"trait": [
-				{
-					"name": "Petrifying Gaze",
-					"entries": [
-						"When a creature that can see the medusa's eyes starts its turn within 30 feet of the medusa, the medusa can force it to make a {@dc 14} Constitution saving throw if the medusa isn't {@condition incapacitated} and can see the creature. If the saving throw fails by 5 or more, the creature is instantly {@condition petrified}. Otherwise, a creature that fails the save begins to turn to glass and is {@condition restrained}. The {@condition restrained} creature must repeat the saving throw at the end of its next turn, becoming {@condition petrified} on a failure or ending the effect on a success. The petrification lasts until the creature is freed by the  {@spell greater restoration} spell or other magic.",
-						"Unless {@status surprised}, a creature can avert its eyes to avoid the saving throw at the start of its turn. If the creature does so, it can't see the medusa until the start of its next turn, when it can avert its eyes again. If the creature looks at the medusa in the meantime, it must immediately make the save.",
-						"If the medusa sees itself reflected on a polished surface within 30 feet of it and in an area of bright light, the medusa is, due to its curse, affected by its own gaze."
-					]
-				}
-			],
-			"conditionInflict": [
-				"petrified",
-				"restrained"
-			],
-			"savingThrowForced": [
-				"constitution"
-			],
-			"hasToken": true,
-			"hasFluffImages": true
-		},
-		{
-			"name": "Mary Greymalkin",
-			"isNpc": true,
-			"isNamedCreature": true,
-			"source": "LLK",
-			"page": 41,
-			"size": [
-				"M"
-			],
-			"type": {
-				"type": "humanoid"
-			},
-			"alignment": [
-				"N"
-			],
-			"ac": [
-				{
-					"ac": 12,
-					"from": [
-						"{@item Bracers of Defense}",
-						"{@item Ring of Protection}"
-					]
-				}
-			],
-			"hp": {
-				"average": 45,
-				"formula": "7d8 + 14"
-			},
-			"speed": {
-				"walk": 30
-			},
-			"str": 10,
-			"dex": 12,
-			"con": 10,
-			"int": 14,
-			"wis": 14,
-			"cha": 15,
-			"save": {
-				"wis": "+4",
-				"cha": "+4"
-			},
-			"skill": {
-				"arcana": "+4",
-				"medicine": "+4",
-				"nature": "+4",
-				"religion": "+4"
-			},
-			"passive": 12,
-			"languages": [
-				"Abyssal",
-				"Celestial",
-				"Common",
-				"Elvish",
-				"Infernal",
-				"Sylvan"
-			],
-			"cr": "2",
-			"spellcasting": [
-				{
-					"name": "Spellcasting",
-					"type": "spellcasting",
-					"headerEntries": [
-						"Mary is a 5th-level spellcaster. Her spellcasting ability is Charisma (spell save {@dc 12}, {@hit 4} to hit with spell attacks). She regains her expended spell slots when she finishes a short or long rest. She knows the following warlock spells:"
-					],
-					"spells": {
-						"0": {
-							"spells": [
-								"{@spell chill touch}",
-								"{@spell eldritch blast}",
-								"{@spell mage hand}"
-							]
-						},
-						"3": {
-							"lower": 1,
-							"slots": 3,
-							"spells": [
-								"{@spell darkness}",
-								"{@spell hex}",
-								"{@spell hypnotic pattern}",
-								"{@spell misty step}",
-								"{@spell phantasmal force}",
-								"{@spell unseen servant}"
-							]
-						}
-					},
-					"ability": "cha"
-				}
-			],
-			"trait": [
-				{
-					"name": "Special Equipment",
-					"entries": [
-						"Mary wears {@item Bracers of Defense} and a {@item Ring of Protection}, and carries a {@item Deck of Several Things|LLK}"
-					]
-				},
-				{
-					"name": "Fey Presence (Recharges after a Short Rest)",
-					"entries": [
-						"Mary can cause each creature within 10 feet of her to succeed on a {@dc 12} Wisdom saving throw or become {@condition charmed} or {@condition frightened} by her (Mary's choice) until the end of her next turn."
-					]
-				},
-				{
-					"name": "Fey Ancestry",
-					"entries": [
-						"Mary has advantage on saving throws against being {@condition charmed}, and magic can't put her to sleep."
-					]
-				}
-			],
-			"action": [
-				{
-					"name": "Quarterstaff",
-					"entries": [
-						"{@atk mw} {@hit 2} to hit, reach 5 ft., one target. {@h}3 ({@damage 1d6}) bludgeoning damage."
-					]
-				}
-			],
-			"attachedItems": [
-				"quarterstaff|phb"
-			],
-			"traitTags": [
-				"Fey Ancestry"
-			],
-			"languageTags": [
-				"AB",
-				"C",
-				"CE",
-				"E",
-				"I",
-				"S"
-			],
-			"damageTags": [
-				"B"
-			],
-			"damageTagsSpell": [
-				"N",
-				"O",
-				"Y"
-			],
-			"spellcastingTags": [
-				"CL"
-			],
-			"miscTags": [
-				"AOE",
-				"MLW",
-				"MW"
-			],
-			"conditionInflict": [
-				"charmed",
-				"frightened"
-			],
-			"conditionInflictSpell": [
-				"charmed",
-				"incapacitated"
-			],
-			"savingThrowForced": [
-				"wisdom"
-			],
-			"savingThrowForcedSpell": [
-				"intelligence",
-				"wisdom"
-			],
-			"hasToken": true,
-			"hasFluffImages": true
-		},
-		{
-			"name": "Monastery of the Distressed Body Grand Master",
-			"isNpc": true,
-			"isNamedCreature": true,
-			"source": "LLK",
-			"page": 14,
-			"_copy": {
-				"name": "Bone Devil",
-				"source": "MM",
-				"_mod": {
-					"*": {
-						"mode": "replaceTxt",
-						"replace": "devil",
-						"with": "Grand Master"
-					},
-					"trait": {
-						"mode": "prependArr",
-						"items": [
-							{
-								"name": "Vorpal Claws",
-								"entries": [
-									"Shards of a {@item vorpal sword} once broken against the devil replace its claws. A successful {@dc 12} Intelligence ({@skill Arcana}) or Wisdom ({@skill Perception}) check identifies them as such. When the devil rolls a 20 on an attack roll with a claw, the target is decapitated. (At your option, the attack can instead deal an extra {@damage 6d8} slashing damage.) A target is immune to this effect if it is immune to slashing damage, has legendary actions, doesn't have or need a head, or if you decide that the target is too large for its head to be cut off by the devil's claws. If removed, the shards lose their magical powers."
-								]
-							},
-							{
-								"name": "Teleportation Bracelets",
-								"entries": [
-									"Local teleportation-field bracelets encircle the devil's arms and tail. These devices allow the Grand Master to make its claw and sting attacks remotely, though still on the devil's turn and using its actions."
-								]
-							}
-						]
-					}
-				}
-			},
-			"hasToken": true,
-			"hasFluffImages": true
-		},
-		{
-			"name": "Monastery of the Distressed Body Monk",
-			"source": "LLK",
-			"page": 12,
-			"_copy": {
-				"name": "Cultist",
-				"source": "MM",
-				"_mod": {
-					"*": {
-						"mode": "replaceTxt",
-						"replace": "cultist",
-						"with": "monk"
-					},
-					"action": {
-						"mode": "replaceArr",
-						"replace": "Scimitar",
-						"items": {
-							"name": "Hooked Polearm",
-							"entries": [
-								"{@atk mw} {@hit 3} to hit, reach 5 ft., one target. {@h}4 ({@damage 1d6 + 1}) piercing damage. If the target is a Medium or smaller creature, it is {@condition grappled} (escape {@dc 10}). Until this grapple ends, the monk cannot use its polearm on another target."
-							]
-						}
-					}
-				}
-			},
-			"tokenCustom": true,
-			"hasToken": true
-		},
-		{
-			"name": "Ooze-Folk",
-			"source": "LLK",
-			"page": 46,
-			"size": [
-				"M"
-			],
-			"type": "ooze",
-			"alignment": [
-				"U"
-			],
-			"ac": [
-				{
-					"ac": 10,
-					"from": [
-						"natural armor"
-					]
-				}
-			],
-			"hp": {
-				"average": 19,
-				"formula": "2d8 + 10"
-			},
-			"speed": {
-				"walk": 30
-			},
-			"str": 14,
-			"dex": 3,
-			"con": 20,
-			"int": 1,
-			"wis": 6,
-			"cha": 1,
-			"senses": [
-				"blindsight 60 ft."
-			],
-			"passive": 8,
-			"conditionImmune": [
-				"blinded",
-				"charmed",
-				"deafened",
-				"exhaustion",
-				"frightened",
-				"prone"
-			],
-			"cr": "1/2",
-			"trait": [
-				{
-					"name": "Transparent",
-					"entries": [
-						"Even when an ooze-folk is in plain sight, it takes a {@dc 12} Wisdom ({@skill Perception}) check to spot an ooze-folk that has neither moved nor attacked. A creature that tries to enter the ooze-folk's space while unaware of the ooze-folk is {@status surprised} by the ooze-folk."
-					]
-				},
-				{
-					"name": "Fragile Bones",
-					"entries": [
-						"For each 5 damage it takes, the ooze-folk's walking speed is reduced by 5 feet."
-					]
-				}
-			],
-			"action": [
-				{
-					"name": "Multiattack",
-					"entries": [
-						"The ooze folk makes one glass longsword attack and one pseudopod attack."
-					]
-				},
-				{
-					"name": "Glass Longsword",
-					"entries": [
-						"{@atk mw} {@hit 4} to hit, reach 5 ft., one creature. {@h}6 ({@damage 1d8 + 2}) slashing damage. If a 1 is rolled on an attack roll with a glass longsword, it shatters and can no longer be used."
-					]
-				},
-				{
-					"name": "Pseudopod",
-					"entries": [
-						"{@atk mw} {@hit 4} to hit, reach 5 ft., one creature. {@h}5 ({@damage 1d6 + 2}) acid damage. "
-					]
-				}
-			],
-			"tokenCustom": true,
-			"senseTags": [
-				"B"
-			],
-			"actionTags": [
-				"Multiattack"
-			],
-			"damageTags": [
-				"A",
-				"S"
-			],
-			"miscTags": [
-				"MLW",
-				"MW"
-			],
-			"hasToken": true
-		},
-		{
-			"name": "West Wind",
-			"isNpc": true,
-			"isNamedCreature": true,
-			"source": "LLK",
-			"page": 14,
-			"_copy": {
-				"name": "Martial Arts Adept",
-				"source": "VGM",
-				"_mod": {
-					"*": {
-						"mode": "replaceTxt",
-						"replace": "the adept",
-						"with": "West Wind",
-						"flags": "i"
-					},
-					"trait": {
-						"mode": "prependArr",
-						"items": {
-							"name": "Special Equipment",
-							"entries": [
-								"West Wind is armed with a longsword that is a {@item blade of the medusa|LLK}."
-							]
-						}
-					},
-					"action": {
-						"mode": "appendArr",
-						"items": {
-							"name": "Blade of the Medusa",
-							"entries": [
-								"{@atk mw,rw} {@hit 5} to hit, reach 5 ft., one creature. {@h}7 ({@damage 1d8 + 3}) piercing damage. If West Wind rolls a 20 on the attack roll, the target must succeed on a {@dc 15} Constitution saving throw or suffer the effects of a {@spell flesh to stone} spell."
-							]
-						}
-					}
-				}
-			},
-			"tokenCustom": true,
-			"hasToken": true
-		}
-	]
+  "_meta": {
+    "dependencies": {
+      "monster": [
+        "MM",
+        "VGM"
+      ]
+    },
+    "otherSources": {
+      "monster": {
+        "MM": "LLK"
+      }
+    }
+  },
+  "monster": [
+    {
+      "name": "Brain in a Jar",
+      "source": "LLK",
+      "page": 38,
+      "referenceSources": [
+        "IMR"
+      ],
+      "size": [
+        "M"
+      ],
+      "type": "undead",
+      "alignment": [
+        "A"
+      ],
+      "ac": [
+        {
+          "ac": 11,
+          "from": [
+            "natural armor"
+          ]
+        }
+      ],
+      "hp": {
+        "average": 58,
+        "formula": "9d8 + 18"
+      },
+      "speed": {
+        "walk": 0
+      },
+      "str": 1,
+      "dex": 1,
+      "con": 15,
+      "int": 19,
+      "wis": 10,
+      "cha": 15,
+      "save": {
+        "int": "+7",
+        "cha": "+5"
+      },
+      "senses": [
+        "darkvision 60 ft."
+      ],
+      "passive": 10,
+      "immune": [
+        "necrotic",
+        "poison",
+        "psychic"
+      ],
+      "conditionImmune": [
+        "charmed",
+        "exhaustion",
+        "frightened"
+      ],
+      "cr": "6",
+      "spellcasting": [
+        {
+          "name": "Innate Spellcasting (Psionics)",
+          "type": "spellcasting",
+          "headerEntries": [
+            "The brain in a jar's innate spellcasting ability is Intelligence (spell save {@dc 15}). It can innately cast the following spells, requiring no components:"
+          ],
+          "will": [
+            "{@spell detect thoughts}",
+            "{@spell mage hand}",
+            "{@spell zone of truth}"
+          ],
+          "daily": {
+            "3e": [
+              "{@spell charm person}",
+              "{@spell command}",
+              "{@spell hold person}"
+            ],
+            "1e": [
+              "{@spell compulsion}",
+              "{@spell hold monster}",
+              "{@spell sleep} (cast at 3rd level)",
+              "{@spell Tasha's hideous laughter}"
+            ]
+          },
+          "ability": "int"
+        }
+      ],
+      "trait": [
+        {
+          "name": "Detect Sentience",
+          "entries": [
+            "The brain in a jar can sense the presence and location of any creature within 300 feet of it that has an Intelligence of 3 or higher, regardless of interposing barriers, unless the creature is protected by a {@spell mind blank} spell."
+          ]
+        },
+        {
+          "name": "Magic Resistance",
+          "entries": [
+            "The brain in a jar has advantage on saving throws against spells and other magical effects."
+          ]
+        }
+      ],
+      "action": [
+        {
+          "name": "Mind Blast {@recharge 5}",
+          "entries": [
+            "The brain in a jar magically emits psychic energy in a 60-foot cone. Each creature in that area must succeed on a {@dc 15} Intelligence saving throw or take 13 ({@damage 2d8 + 4}) psychic damage and be {@condition stunned} for 1 minute. A creature can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success."
+          ]
+        }
+      ],
+      "traitTags": [
+        "Magic Resistance"
+      ],
+      "senseTags": [
+        "D"
+      ],
+      "damageTags": [
+        "Y"
+      ],
+      "spellcastingTags": [
+        "I",
+        "P"
+      ],
+      "miscTags": [
+        "AOE"
+      ],
+      "conditionInflict": [
+        "stunned"
+      ],
+      "conditionInflictSpell": [
+        "charmed",
+        "incapacitated",
+        "paralyzed",
+        "prone",
+        "unconscious"
+      ],
+      "savingThrowForced": [
+        "intelligence"
+      ],
+      "savingThrowForcedSpell": [
+        "charisma",
+        "wisdom"
+      ],
+      "hasToken": true
+    },
+    {
+      "name": "Clockwork Kraken",
+      "source": "LLK",
+      "page": 38,
+      "size": [
+        "L"
+      ],
+      "type": "construct",
+      "alignment": [
+        "U"
+      ],
+      "ac": [
+        {
+          "ac": 17,
+          "from": [
+            "natural armor"
+          ]
+        }
+      ],
+      "hp": {
+        "average": 142,
+        "formula": "15d10 + 60"
+      },
+      "speed": {
+        "walk": 30
+      },
+      "str": 20,
+      "dex": 12,
+      "con": 18,
+      "int": 3,
+      "wis": 11,
+      "cha": 1,
+      "senses": [
+        "darkvision 120 ft."
+      ],
+      "passive": 10,
+      "resist": [
+        "fire",
+        {
+          "resist": [
+            "bludgeoning",
+            "piercing",
+            "slashing"
+          ],
+          "note": "from nonmagical attacks",
+          "cond": true
+        }
+      ],
+      "immune": [
+        "poison",
+        "psychic"
+      ],
+      "conditionImmune": [
+        "charmed",
+        "exhaustion",
+        "frightened",
+        "paralyzed",
+        "petrified",
+        "poisoned"
+      ],
+      "languages": [
+        "understands the languages of its creator but can't speak"
+      ],
+      "cr": "10",
+      "trait": [
+        {
+          "name": "Magic Resistance",
+          "entries": [
+            "The clockwork kraken has advantage on saving throws against spells and other magical effects."
+          ]
+        },
+        {
+          "name": "Independent Tentacles",
+          "entries": [
+            "The clockwork kraken has eight tentacles, each of which is treated as a Medium creature, moves independently on the construct's turn, and has a flying speed of 40 feet. The clockwork kraken's senses operate through its tentacles as well as its main body. Each tentacle can be attacked independently, with damage dealt to tentacles applied to the clockwork kraken's hit point total. A tentacle is destroyed if it takes more than 20 damage.",
+            "Reducing the construct to three or fewer tentacles reduces its attacks accordingly. A clockwork kraken can regrow any destroyed tentacles at the end of a long rest."
+          ]
+        }
+      ],
+      "action": [
+        {
+          "name": "Multiattack",
+          "entries": [
+            "The clockwork kraken makes four tentacle slam attacks."
+          ]
+        },
+        {
+          "name": "Tentacle Slam",
+          "entries": [
+            "{@atk mw} {@hit 9} to hit, reach 5 ft., one target. {@h}12 ({@damage 2d6 + 5}) bludgeoning damage."
+          ]
+        }
+      ],
+      "tokenCustom": true,
+      "traitTags": [
+        "Magic Resistance"
+      ],
+      "senseTags": [
+        "SD"
+      ],
+      "actionTags": [
+        "Multiattack"
+      ],
+      "languageTags": [
+        "CS"
+      ],
+      "damageTags": [
+        "B"
+      ],
+      "miscTags": [
+        "MW"
+      ],
+      "hasToken": true
+    },
+    {
+      "name": "Ctenmiir Ctenmiir",
+      "source": "LLK",
+      "page": 4,
+      "srd": true,
+      "referenceSources": [
+        "AATM",
+        "BGDIA",
+        "BMT",
+        "CM",
+        "CoS",
+        "DSotDQ",
+        "EGW",
+        "GoS",
+        "HotDQ",
+        "LLK",
+        "RoT",
+        "SatO",
+        "SKT",
+        "TCE",
+        "TftYP",
+        "ToFW",
+        "VEoR",
+        "WDMM"
+      ],
+      "reprintedAs": [
+        "Vampire|XMM"
+      ],
+      "size": [
+        "M"
+      ],
+      "type": {
+        "type": "undead",
+        "tags": [
+          "shapechanger"
+        ]
+      },
+      "alignment": [
+        "L",
+        "E"
+      ],
+      "ac": [
+        {
+          "ac": 16,
+          "from": [
+            "natural armor"
+          ]
+        }
+      ],
+      "hp": {
+        "average": 144,
+        "formula": "17d8 + 68"
+      },
+      "speed": {
+        "walk": 30,
+        "climb": 10
+      },
+      "str": 18,
+      "dex": 18,
+      "con": 18,
+      "int": 17,
+      "wis": 15,
+      "cha": 18,
+      "save": {
+        "dex": "+9",
+        "wis": "+7",
+        "cha": "+9"
+      },
+      "skill": {
+        "perception": "+7",
+        "stealth": "+9"
+      },
+      "senses": [
+        "darkvision 120 ft."
+      ],
+      "passive": 17,
+      "resist": [
+        "necrotic",
+        {
+          "resist": [
+            "bludgeoning",
+            "piercing",
+            "slashing"
+          ],
+          "note": "from nonmagical attacks",
+          "cond": true
+        }
+      ],
+      "languages": [
+        "the languages it knew in life"
+      ],
+      "cr": "13",
+      "trait": [
+        {
+          "name": "Coffin Imprisonment",
+          "entries": [
+            "Ctenmiir is imprisoned within a magical iron coffin mounted atop animated golem legs. Ctenmiir's coffin has a speed of 30 feet and a climbing speed of 10 feet, and protects the vampire from sunlight even as it prevents him from escaping his servitude."
+          ]
+        },
+        {
+          "name": "Shapechanger",
+          "entries": [
+            "If the vampire isn't in sunlight or running water, it can use its action to polymorph into a Tiny bat or a Medium cloud of mist, or back into its true form.",
+            "While in bat form, the vampire can't speak, its walking speed is 5 feet, and it has a flying speed of 30 feet. Its statistics, other than its size and speed, are unchanged. Anything it is wearing transforms with it, but nothing it is carrying does. It reverts to its true form if it dies.",
+            "While in mist form, the vampire can't take any actions, speak, or manipulate objects. It is weightless, has a flying speed of 20 feet, can hover, and can enter a hostile creature's space and stop there. In addition, if air can pass through a space, the mist can do so without squeezing, and it can't pass through water. It has advantage on Strength, Dexterity, and Constitution saving throws, and it is immune to all nonmagical damage, except the damage it takes from sunlight."
+          ]
+        },
+        {
+          "name": "Legendary Resistance (3/Day)",
+          "entries": [
+            "If the vampire fails a saving throw, it can choose to succeed instead."
+          ]
+        },
+        {
+          "name": "Misty Escape",
+          "entries": [
+            "When it drops to 0 hit points outside its resting place, the vampire transforms into a cloud of mist (as in the Shapechanger trait) instead of falling {@condition unconscious}, provided that it isn't in sunlight or running water. If it can't transform, it is destroyed.",
+            "While it has 0 hit points in mist form, it can't revert to its vampire form, and it must reach its resting place within 2 hours or be destroyed. Once in its resting place, it reverts to its vampire form. It is then {@condition paralyzed} until it regains at least 1 hit point. After spending 1 hour in its resting place with 0 hit points, it regains 1 hit point."
+          ]
+        },
+        {
+          "name": "Regeneration",
+          "entries": [
+            "The vampire regains 20 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from holy water, this trait doesn't function at the start of the vampire's next turn."
+          ]
+        },
+        {
+          "name": "Spider Climb",
+          "entries": [
+            "The vampire can climb difficult surfaces, including upside down on ceilings, without needing to make an ability check."
+          ]
+        },
+        {
+          "name": "Vampire Weaknesses",
+          "entries": [
+            "The vampire has the following flaws:",
+            {
+              "type": "list",
+              "style": "list-hang-subtrait",
+              "items": [
+                {
+                  "type": "itemSub",
+                  "name": "Forbiddance",
+                  "entry": "The vampire can't enter a residence without an invitation from one of the occupants."
+                },
+                {
+                  "type": "itemSub",
+                  "name": "Harmed by Running Water",
+                  "entry": "The vampire takes 20 acid damage if it ends its turn in running water."
+                },
+                {
+                  "type": "itemSub",
+                  "name": "Stake to the Heart",
+                  "entry": "If a piercing weapon made of wood is driven into the vampire's heart while the vampire is {@condition incapacitated} in its resting place, the vampire is {@condition paralyzed} until the stake is removed."
+                },
+                {
+                  "type": "itemSub",
+                  "name": "Sunlight Hypersensitivity",
+                  "entry": "The vampire takes 20 radiant damage when it starts its turn in sunlight. While in sunlight, it has disadvantage on attack rolls and ability checks."
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "action": [
+        {
+          "name": "Multiattack (Vampire Form Only)",
+          "entries": [
+            "The vampire makes two attacks, only one of which can be a bite attack."
+          ]
+        },
+        {
+          "name": "Unarmed Strike (Vampire Form Only)",
+          "entries": [
+            "{@atk mw} {@hit 9} to hit, reach 5 ft., one creature. {@h}8 ({@damage 1d8 + 4}) bludgeoning damage. Instead of dealing damage, the vampire can grapple the target (escape {@dc 18})."
+          ]
+        },
+        {
+          "name": "Bite (Bat or Vampire Form Only)",
+          "entries": [
+            "{@atk mw} {@hit 9} to hit, reach 5 ft., one willing creature, or a creature that is {@condition grappled} by the vampire, {@condition incapacitated}, or {@condition restrained}. {@h}7 ({@damage 1d6 + 4}) piercing damage plus 10 ({@damage 3d6}) necrotic damage. The target's hit point maximum is reduced by an amount equal to the necrotic damage taken, and the vampire regains hit points equal to that amount. The reduction lasts until the target finishes a long rest. The target dies if this effect reduces its hit point maximum to 0. A humanoid slain in this way and then buried in the ground rises the following night as a {@creature vampire spawn} under the vampire's control."
+          ]
+        },
+        {
+          "name": "Charm",
+          "entries": [
+            "The vampire targets one humanoid it can see within 30 feet of it. If the target can see the vampire, the target must succeed on a {@dc 17} Wisdom saving throw against this magic or be {@condition charmed} by the vampire. The {@condition charmed} target regards the vampire as a trusted friend to be heeded and protected. Although the target isn't under the vampire's control, it takes the vampire's requests or actions in the most favorable way it can, and it is a willing target for the vampire's bite attack.",
+            "Each time the vampire or the vampire's companions do anything harmful to the target, it can repeat the saving throw, ending the effect on itself on a success. Otherwise, the effect lasts 24 hours or until the vampire is destroyed, is on a different plane of existence than the target, or takes a bonus action to end the effect."
+          ]
+        },
+        {
+          "name": "Children of the Night (1/Day)",
+          "entries": [
+            "The vampire magically calls {@dice 2d4} swarms of {@creature swarm of bats||bats} or {@creature swarm of rats||rats}, provided that the sun isn't up. While outdoors, the vampire can call {@dice 3d6} {@creature wolf||wolves} instead. The called creatures arrive in {@dice 1d4} rounds, acting as allies of the vampire and obeying its spoken commands. The beasts remain for 1 hour, until the vampire dies, or until the vampire dismisses them as a bonus action."
+          ]
+        }
+      ],
+      "legendary": [
+        {
+          "name": "Move",
+          "entries": [
+            "The vampire moves up to its speed without provoking opportunity attacks."
+          ]
+        },
+        {
+          "name": "Unarmed Strike",
+          "entries": [
+            "The vampire makes one unarmed strike."
+          ]
+        },
+        {
+          "name": "Bite (Costs 2 Actions)",
+          "entries": [
+            "The vampire makes one bite attack."
+          ]
+        }
+      ],
+      "legendaryGroup": {
+        "name": "Vampire",
+        "source": "MM"
+      },
+      "environment": [
+        "urban"
+      ],
+      "soundClip": {
+        "type": "internal",
+        "path": "bestiary/vampire.mp3"
+      },
+      "traitTags": [
+        "Legendary Resistances",
+        "Regeneration",
+        "Shapechanger",
+        "Spider Climb",
+        "Sunlight Sensitivity"
+      ],
+      "senseTags": [
+        "SD"
+      ],
+      "actionTags": [
+        "Multiattack"
+      ],
+      "languageTags": [
+        "LF"
+      ],
+      "damageTags": [
+        "B",
+        "N",
+        "P"
+      ],
+      "miscTags": [
+        "HPR",
+        "MW"
+      ],
+      "conditionInflict": [
+        "charmed"
+      ],
+      "savingThrowForced": [
+        "wisdom"
+      ],
+      "hasToken": true,
+      "hasFluff": true,
+      "hasFluffImages": true,
+      "isNpc": true,
+      "isNamedCreature": true
+    },
+    {
+      "name": "East Wind",
+      "source": "LLK",
+      "page": 14,
+      "referenceSources": [
+        "LLK",
+        "TftYP",
+        "WDH"
+      ],
+      "reprintedAs": [
+        "Martial Arts Adept|MPMM"
+      ],
+      "size": [
+        "M"
+      ],
+      "type": {
+        "type": "humanoid",
+        "tags": [
+          "any race"
+        ]
+      },
+      "alignment": [
+        "A"
+      ],
+      "ac": [
+        16
+      ],
+      "hp": {
+        "average": 60,
+        "formula": "11d8 + 11"
+      },
+      "speed": {
+        "walk": 40
+      },
+      "str": 11,
+      "dex": 17,
+      "con": 13,
+      "int": 11,
+      "wis": 16,
+      "cha": 10,
+      "skill": {
+        "acrobatics": "+5",
+        "insight": "+5",
+        "stealth": "+5"
+      },
+      "passive": 13,
+      "languages": [
+        "any one language (usually Common)"
+      ],
+      "cr": "3",
+      "trait": [
+        {
+          "name": "Special Equipment",
+          "entries": [
+            "East Wind is armed with a longsword that is a {@item polymorph blade|LLK}."
+          ]
+        },
+        {
+          "name": "Unarmored Defense",
+          "entries": [
+            "While East Wind is wearing no armor and wielding no shield, its AC includes its Wisdom modifier."
+          ]
+        }
+      ],
+      "action": [
+        {
+          "name": "Multiattack",
+          "entries": [
+            "The adept makes three unarmed strikes or three dart attacks."
+          ]
+        },
+        {
+          "name": "Unarmed Strike",
+          "entries": [
+            "{@atk mw} {@hit 5} to hit, reach 5 ft., one target. {@h}7 ({@damage 1d8 + 3}) bludgeoning damage. If the target is a creature, the adept can choose one of the following additional effects:",
+            {
+              "type": "list",
+              "items": [
+                "The target must succeed on a {@dc 13} Strength saving throw or drop one item it is holding (adept's choice).",
+                "The target must succeed on a {@dc 13} Dexterity saving throw or be knocked {@condition prone}.",
+                "The target must succeed on a {@dc 13} Constitution saving throw or be {@condition stunned} until the end of the adept's next turn."
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Dart",
+          "entries": [
+            "{@atk rw} {@hit 5} to hit, range 20/60 ft., one target. {@h}5 ({@damage 1d4 + 3}) piercing damage."
+          ]
+        },
+        {
+          "name": "Polymorph Blade",
+          "entries": [
+            "{@atk mw,rw} {@hit 5} to hit, reach 5 ft., one creature. {@h}7 ({@damage 1d8 + 3}) piercing damage. If East Wind rolls a 20 on the attack roll, the target must succeed on a {@dc 15} Wisdom saving throw or suffer the effects of a {@spell polymorph} spell."
+          ]
+        }
+      ],
+      "reaction": [
+        {
+          "name": "Deflect Missile",
+          "entries": [
+            "In response to being hit by a ranged weapon attack, the adept deflects the missile. The damage it takes from the attack is reduced by {@dice 1d10 + 3}. If the damage is reduced to 0, the adept catches the missile if it's small enough to hold in one hand and the adept has a hand free."
+          ]
+        }
+      ],
+      "environment": [
+        "urban"
+      ],
+      "soundClip": {
+        "type": "internal",
+        "path": "bestiary/martial-arts-adept.mp3"
+      },
+      "attachedItems": [
+        "dart|phb"
+      ],
+      "actionTags": [
+        "Multiattack"
+      ],
+      "languageTags": [
+        "C",
+        "X"
+      ],
+      "damageTags": [
+        "B",
+        "P"
+      ],
+      "miscTags": [
+        "MW",
+        "RW",
+        "THW"
+      ],
+      "conditionInflict": [
+        "prone",
+        "stunned"
+      ],
+      "savingThrowForced": [
+        "constitution",
+        "dexterity",
+        "strength"
+      ],
+      "hasToken": true,
+      "hasFluff": true,
+      "isNpc": true,
+      "isNamedCreature": true,
+      "tokenCustom": true
+    },
+    {
+      "name": "Elder Monastery of the Distressed Body Monk",
+      "source": "LLK",
+      "page": 12,
+      "srd": true,
+      "referenceSources": [
+        "BGDIA",
+        "BMT",
+        "CM",
+        "CoA",
+        "CoS",
+        "CRCotN",
+        "DC",
+        "DIP",
+        "EGW",
+        "GoS",
+        "HotDQ",
+        "IDRotF",
+        "IMR",
+        "JttRC",
+        "KftGV",
+        "LLK",
+        "LoX",
+        "MOT",
+        "OoW",
+        "PaBTSO",
+        "PotA",
+        "PSI",
+        "QftIS",
+        "RoT",
+        "SKT",
+        "SLW",
+        "TCE",
+        "TftYP",
+        "ToA",
+        "ToFW",
+        "VEoR",
+        "VNotEE",
+        "WDH",
+        "WDMM",
+        "XMtS"
+      ],
+      "reprintedAs": [
+        "Cultist Fanatic|XMM"
+      ],
+      "size": [
+        "M"
+      ],
+      "type": {
+        "type": "humanoid",
+        "tags": [
+          "any race"
+        ]
+      },
+      "alignment": [
+        "L",
+        "NX",
+        "C",
+        "NY",
+        "E"
+      ],
+      "ac": [
+        {
+          "ac": 13,
+          "from": [
+            "{@item leather armor|phb}"
+          ]
+        }
+      ],
+      "hp": {
+        "average": 33,
+        "formula": "6d8 + 6"
+      },
+      "speed": {
+        "walk": 30
+      },
+      "str": 11,
+      "dex": 14,
+      "con": 12,
+      "int": 10,
+      "wis": 13,
+      "cha": 14,
+      "skill": {
+        "deception": "+4",
+        "persuasion": "+4",
+        "religion": "+2"
+      },
+      "passive": 11,
+      "languages": [
+        "any one language (usually Common)"
+      ],
+      "cr": "2",
+      "spellcasting": [
+        {
+          "name": "Spellcasting",
+          "type": "spellcasting",
+          "headerEntries": [
+            "The monk is a 4th-level spellcaster. Its spellcasting ability is Wisdom (spell save {@dc 11}, {@hit 3} to hit with spell attacks). The monk has the following cleric spells prepared:"
+          ],
+          "spells": {
+            "0": {
+              "spells": [
+                "{@spell light}",
+                "{@spell sacred flame}",
+                "{@spell thaumaturgy}"
+              ]
+            },
+            "1": {
+              "slots": 4,
+              "spells": [
+                "{@spell command}",
+                "{@spell inflict wounds}",
+                "{@spell shield of faith}"
+              ]
+            },
+            "2": {
+              "slots": 3,
+              "spells": [
+                "{@spell hold person}",
+                "{@spell spiritual weapon}"
+              ]
+            }
+          },
+          "ability": "wis"
+        }
+      ],
+      "trait": [
+        {
+          "name": "Dark Devotion",
+          "entries": [
+            "The monk has advantage on saving throws against being {@condition charmed} or {@condition frightened}."
+          ]
+        }
+      ],
+      "action": [
+        {
+          "name": "Multiattack",
+          "entries": [
+            "The monk makes two melee attacks."
+          ]
+        },
+        {
+          "name": "Force Pike",
+          "entries": [
+            "{@atk mw,rw} {@hit 4} to hit, reach 5 ft. or range 40/100 ft., one creature. {@h}7 ({@damage 1d10 + 2}) force damage. The attack has disadvantage against any target with polished metal armor or shield, and has its ranged halved when firing through smoke or fog."
+          ]
+        }
+      ],
+      "environment": [
+        "urban"
+      ],
+      "soundClip": {
+        "type": "internal",
+        "path": "bestiary/cult-monk.mp3"
+      },
+      "altArt": [
+        {
+          "name": "Diabolical Cult Fanatic",
+          "source": "MTF",
+          "page": 18
+        }
+      ],
+      "attachedItems": [
+        "dagger|phb"
+      ],
+      "actionTags": [
+        "Multiattack"
+      ],
+      "languageTags": [
+        "C",
+        "X"
+      ],
+      "damageTags": [
+        "P"
+      ],
+      "damageTagsSpell": [
+        "N",
+        "O",
+        "R"
+      ],
+      "spellcastingTags": [
+        "CC"
+      ],
+      "miscTags": [
+        "MLW",
+        "MW",
+        "RW",
+        "THW"
+      ],
+      "conditionInflictSpell": [
+        "paralyzed",
+        "prone"
+      ],
+      "savingThrowForcedSpell": [
+        "dexterity",
+        "wisdom"
+      ],
+      "hasToken": true,
+      "hasFluff": true,
+      "hasFluffImages": true,
+      "tokenCustom": true
+    },
+    {
+      "name": "Garret Levistusson",
+      "isNpc": true,
+      "isNamedCreature": true,
+      "source": "LLK",
+      "page": 41,
+      "size": [
+        "M"
+      ],
+      "type": {
+        "type": "humanoid"
+      },
+      "alignment": [
+        "C",
+        "N"
+      ],
+      "ac": [
+        {
+          "ac": 14,
+          "from": [
+            "natural armor"
+          ]
+        }
+      ],
+      "hp": {
+        "average": 44,
+        "formula": "8d8 + 8"
+      },
+      "speed": {
+        "walk": 30
+      },
+      "str": 11,
+      "dex": 14,
+      "con": 12,
+      "int": 11,
+      "wis": 12,
+      "cha": 17,
+      "skill": {
+        "deception": "+7",
+        "investigation": "+4",
+        "performance": "+5",
+        "persuasion": "+5"
+      },
+      "passive": 11,
+      "languages": [
+        "Abyssal",
+        "Common",
+        "Infernal",
+        "Thieves' cant"
+      ],
+      "cr": "2",
+      "spellcasting": [
+        {
+          "name": "Spellcasting",
+          "type": "spellcasting",
+          "headerEntries": [
+            "Garret is a 2nd-level spellcaster. His spellcasting ability is Charisma (spell save {@dc 13}, {@hit 5} to hit with spell attacks). He has the following bard spells prepared:"
+          ],
+          "spells": {
+            "0": {
+              "spells": [
+                "{@spell blade ward}",
+                "{@spell vicious mockery}"
+              ]
+            },
+            "1": {
+              "slots": 3,
+              "spells": [
+                "{@spell charm person}",
+                "{@spell detect magic}",
+                "{@spell disguise self}",
+                "{@spell identify}",
+                "{@spell Tasha's hideous laughter}"
+              ]
+            }
+          },
+          "ability": "cha"
+        }
+      ],
+      "trait": [
+        {
+          "name": "Special Equipment",
+          "entries": [
+            "Garret wears a {@item Ring of Warmth} (included in his statistics) and wields a {@item Gambler's Blade longsword|LLK}."
+          ]
+        },
+        {
+          "name": "Bardic Inspiration (3/Day)",
+          "entries": [
+            "As a bonus action, Garret can give one chosen creature (other than him) a {@dice d6} inspiration die. The chosen creature must be within 60 feet of Garret and able to hear him. Once within the next 10 minutes, the creature can roll the die and add the number rolled to one ability check, attack roll, or saving throw it makes. The creature can use the inspiration die after the roll is made but before the DM says whether it succeeds or fails. Once the inspiration die is rolled, it is lost. A creature can have only one inspiration die at a time."
+          ]
+        },
+        {
+          "name": "Cunning Action",
+          "entries": [
+            "On each of his turns, Garret can use a bonus action to take the {@action Dash}, {@action Disengage}, or {@action Hide} action."
+          ]
+        },
+        {
+          "name": "Sneak Attack (1/Turn)",
+          "entries": [
+            "Garret deals an extra 7 ({@damage 2d6}) damage when he hits a target with a weapon attack and has advantage on the attack roll, or when the target is within 5 feet of an ally of Garret that isn't {@condition incapacitated} and Garret doesn't have disadvantage on the attack roll."
+          ]
+        }
+      ],
+      "action": [
+        {
+          "name": "Shortsword",
+          "entries": [
+            "{@atk mw} {@hit 4} to hit, reach 5 ft., one target. {@h}5 ({@damage 1d6 + 2}) piercing damage."
+          ]
+        }
+      ],
+      "attachedItems": [
+        "shortsword|phb"
+      ],
+      "traitTags": [
+        "Sneak Attack"
+      ],
+      "languageTags": [
+        "AB",
+        "C",
+        "I",
+        "TC"
+      ],
+      "damageTags": [
+        "P"
+      ],
+      "damageTagsSpell": [
+        "Y"
+      ],
+      "spellcastingTags": [
+        "CB"
+      ],
+      "miscTags": [
+        "MLW",
+        "MW"
+      ],
+      "conditionInflict": [
+        "incapacitated"
+      ],
+      "conditionInflictSpell": [
+        "charmed",
+        "incapacitated",
+        "prone"
+      ],
+      "savingThrowForcedSpell": [
+        "wisdom"
+      ],
+      "hasToken": true,
+      "hasFluffImages": true
+    },
+    {
+      "name": "Gearbox",
+      "group": [
+        "Modrons"
+      ],
+      "source": "LLK",
+      "page": 5,
+      "referenceSources": [
+        "BGDIA",
+        "CM",
+        "KftGV",
+        "LLK",
+        "OotA",
+        "OoW",
+        "SatO",
+        "ToA",
+        "ToFW"
+      ],
+      "reprintedAs": [
+        "Modron Monodrone|XMM"
+      ],
+      "size": [
+        "M"
+      ],
+      "type": "construct",
+      "alignment": [
+        "L",
+        "N"
+      ],
+      "ac": [
+        {
+          "ac": 15,
+          "from": [
+            "natural armor"
+          ]
+        }
+      ],
+      "hp": {
+        "average": 5,
+        "formula": "1d8 + 1"
+      },
+      "speed": {
+        "walk": 30,
+        "fly": 30
+      },
+      "str": 10,
+      "dex": 13,
+      "con": 12,
+      "int": 4,
+      "wis": 10,
+      "cha": 5,
+      "senses": [
+        "truesight 120 ft."
+      ],
+      "passive": 10,
+      "languages": [
+        "Modron"
+      ],
+      "cr": "1/8",
+      "trait": [
+        {
+          "name": "Unique Programming",
+          "entries": [
+            "Gearbox's unique programming allows the modron to function as an {@item Orb of Direction|XGE} and an {@item Orb of Time|XGE}, to cast the {@spell light} cantrip at will, and to grant other characters advantage on Dexterity checks made with thieves' tools and on ability checks made to identify or operate mechanical or laboratory equipment."
+          ]
+        },
+        {
+          "name": "Axiomatic Mind",
+          "entries": [
+            "Gearbox can't be compelled to act in a manner contrary to its nature or its instructions."
+          ]
+        },
+        {
+          "name": "Disintegration",
+          "entries": [
+            "If the monodrone dies, its body disintegrates into dust, leaving behind its weapons and anything else it was carrying."
+          ]
+        }
+      ],
+      "action": [
+        {
+          "name": "Dagger",
+          "entries": [
+            "{@atk mw} {@hit 3} to hit, reach 5 ft., one target. {@h}3 ({@damage 1d4 + 1}) piercing damage."
+          ]
+        },
+        {
+          "name": "Javelin",
+          "entries": [
+            "{@atk mw,rw} {@hit 2} to hit, reach 5 ft. or range 30/120 ft., one target. {@h}3 ({@damage 1d6}) piercing damage."
+          ]
+        }
+      ],
+      "variant": [
+        {
+          "type": "variant",
+          "name": "Rogue Modrons",
+          "entries": [
+            "A modron unit sometimes becomes defective, either through natural decay or exposure to chaotic forces. Rogue modrons don't act in accordance with Primus's wishes and directives, breaking laws, disobeying orders, and even engaging in violence. Other modrons hunt down such rogues.",
+            "A rogue modron loses the Axiomatic Mind trait and can have any alignment other than lawful neutral. Otherwise, it has the same statistics as a regular modron of its rank."
+          ]
+        }
+      ],
+      "soundClip": {
+        "type": "internal",
+        "path": "bestiary/monodrone.mp3"
+      },
+      "attachedItems": [
+        "dagger|phb",
+        "javelin|phb"
+      ],
+      "senseTags": [
+        "U"
+      ],
+      "languageTags": [
+        "OTH"
+      ],
+      "damageTags": [
+        "P"
+      ],
+      "miscTags": [
+        "MLW",
+        "MW",
+        "RW",
+        "THW"
+      ],
+      "hasToken": true,
+      "hasFluff": true,
+      "hasFluffImages": true,
+      "_versions": [
+        {
+          "name": "Monodrone (Rogue)",
+          "source": "MM",
+          "_mod": {
+            "trait": {
+              "mode": "removeArr",
+              "names": "Axiomatic Mind"
+            }
+          },
+          "alignment": [
+            "A"
+          ],
+          "variant": null
+        }
+      ],
+      "isNpc": true,
+      "isNamedCreature": true,
+      "spellcasting": [
+        {
+          "name": "Spellcasting",
+          "type": "spellcasting",
+          "headerEntries": [
+            "Gearbox can cast the {@spell light} cantrip at will."
+          ],
+          "spells": {
+            "0": {
+              "spells": [
+                "{@spell light}"
+              ]
+            }
+          },
+          "hidden": [
+            "spells"
+          ]
+        }
+      ],
+      "spellcastingTags": [
+        "O"
+      ],
+      "savingThrowForcedSpell": [
+        "dexterity"
+      ]
+    },
+    {
+      "name": "Gloine Nathair-Nathair",
+      "source": "LLK",
+      "page": 23,
+      "srd": true,
+      "basicRules": true,
+      "referenceSources": [
+        "IMR"
+      ],
+      "reprintedAs": [
+        "Medusa|XMM"
+      ],
+      "size": [
+        "M"
+      ],
+      "type": "undead",
+      "alignment": [
+        "L",
+        "E"
+      ],
+      "ac": [
+        {
+          "ac": 15,
+          "from": [
+            "natural armor"
+          ]
+        }
+      ],
+      "hp": {
+        "average": 127,
+        "formula": "17d8 + 51"
+      },
+      "speed": {
+        "walk": 30
+      },
+      "str": 10,
+      "dex": 15,
+      "con": 16,
+      "int": 12,
+      "wis": 13,
+      "cha": 15,
+      "skill": {
+        "deception": "+5",
+        "insight": "+4",
+        "perception": "+4",
+        "stealth": "+5"
+      },
+      "senses": [
+        "darkvision 60 ft."
+      ],
+      "passive": 14,
+      "languages": [
+        "Common"
+      ],
+      "cr": "6",
+      "trait": [
+        {
+          "name": "Petrifying Gaze",
+          "entries": [
+            "When a creature that can see Gloine's eyes starts its turn within 30 feet of the medusa, the medusa can force it to make a {@dc 14} Constitution saving throw if the medusa isn't {@condition incapacitated} and can see the creature. If the saving throw fails by 5 or more, the creature is instantly {@condition petrified}. Otherwise, a creature that fails the save begins to turn to glass and is {@condition restrained}. The {@condition restrained} creature must repeat the saving throw at the end of its next turn, becoming {@condition petrified} on a failure or ending the effect on a success. The petrification lasts until the creature is freed by the  {@spell greater restoration} spell or other magic.",
+            "Unless {@status surprised}, a creature can avert its eyes to avoid the saving throw at the start of its turn. If the creature does so, it can't see the medusa until the start of its next turn, when it can avert its eyes again. If the creature looks at the medusa in the meantime, it must immediately make the save.",
+            "If the medusa sees itself reflected on a polished surface within 30 feet of it and in an area of bright light, the medusa is, due to its curse, affected by its own gaze."
+          ]
+        }
+      ],
+      "action": [
+        {
+          "name": "Multiattack",
+          "entries": [
+            "The medusa makes either three melee attacks—one with its snake hair and two with its shortsword—or two ranged attacks with its longbow."
+          ]
+        },
+        {
+          "name": "Snake Hair",
+          "entries": [
+            "{@atk mw} {@hit 5} to hit, reach 5 ft., one creature. {@h}4 ({@damage 1d4 + 2}) piercing damage plus 14 ({@damage 4d6}) poison damage."
+          ]
+        },
+        {
+          "name": "Shortsword",
+          "entries": [
+            "{@atk mw} {@hit 5} to hit, reach 5 ft., one target. {@h}5 ({@damage 1d6 + 2}) piercing damage."
+          ]
+        },
+        {
+          "name": "Longbow",
+          "entries": [
+            "{@atk rw} {@hit 5} to hit, range 150/600 ft., one target. {@h}6 ({@damage 1d8 + 2}) piercing damage plus 7 ({@damage 2d6}) poison damage."
+          ]
+        }
+      ],
+      "environment": [
+        "desert"
+      ],
+      "soundClip": {
+        "type": "internal",
+        "path": "bestiary/medusa.mp3"
+      },
+      "attachedItems": [
+        "longbow|phb",
+        "shortsword|phb"
+      ],
+      "senseTags": [
+        "D"
+      ],
+      "actionTags": [
+        "Multiattack"
+      ],
+      "languageTags": [
+        "C"
+      ],
+      "damageTags": [
+        "I",
+        "P"
+      ],
+      "miscTags": [
+        "MLW",
+        "MW",
+        "RNG",
+        "RW"
+      ],
+      "conditionInflict": [
+        "petrified",
+        "restrained"
+      ],
+      "savingThrowForced": [
+        "constitution"
+      ],
+      "hasToken": true,
+      "hasFluff": true,
+      "hasFluffImages": true,
+      "isNpc": true,
+      "isNamedCreature": true,
+      "immune": [
+        "poison",
+        "necrotic"
+      ],
+      "conditionImmune": [
+        "exhaustion",
+        "poisoned"
+      ]
+    },
+    {
+      "name": "Mary Greymalkin",
+      "isNpc": true,
+      "isNamedCreature": true,
+      "source": "LLK",
+      "page": 41,
+      "size": [
+        "M"
+      ],
+      "type": {
+        "type": "humanoid"
+      },
+      "alignment": [
+        "N"
+      ],
+      "ac": [
+        {
+          "ac": 12,
+          "from": [
+            "{@item Bracers of Defense}",
+            "{@item Ring of Protection}"
+          ]
+        }
+      ],
+      "hp": {
+        "average": 45,
+        "formula": "7d8 + 14"
+      },
+      "speed": {
+        "walk": 30
+      },
+      "str": 10,
+      "dex": 12,
+      "con": 10,
+      "int": 14,
+      "wis": 14,
+      "cha": 15,
+      "save": {
+        "wis": "+4",
+        "cha": "+4"
+      },
+      "skill": {
+        "arcana": "+4",
+        "medicine": "+4",
+        "nature": "+4",
+        "religion": "+4"
+      },
+      "passive": 12,
+      "languages": [
+        "Abyssal",
+        "Celestial",
+        "Common",
+        "Elvish",
+        "Infernal",
+        "Sylvan"
+      ],
+      "cr": "2",
+      "spellcasting": [
+        {
+          "name": "Spellcasting",
+          "type": "spellcasting",
+          "headerEntries": [
+            "Mary is a 5th-level spellcaster. Her spellcasting ability is Charisma (spell save {@dc 12}, {@hit 4} to hit with spell attacks). She regains her expended spell slots when she finishes a short or long rest. She knows the following warlock spells:"
+          ],
+          "spells": {
+            "0": {
+              "spells": [
+                "{@spell chill touch}",
+                "{@spell eldritch blast}",
+                "{@spell mage hand}"
+              ]
+            },
+            "3": {
+              "lower": 1,
+              "slots": 3,
+              "spells": [
+                "{@spell darkness}",
+                "{@spell hex}",
+                "{@spell hypnotic pattern}",
+                "{@spell misty step}",
+                "{@spell phantasmal force}",
+                "{@spell unseen servant}"
+              ]
+            }
+          },
+          "ability": "cha"
+        }
+      ],
+      "trait": [
+        {
+          "name": "Special Equipment",
+          "entries": [
+            "Mary wears {@item Bracers of Defense} and a {@item Ring of Protection}, and carries a {@item Deck of Several Things|LLK}"
+          ]
+        },
+        {
+          "name": "Fey Presence (Recharges after a Short Rest)",
+          "entries": [
+            "Mary can cause each creature within 10 feet of her to succeed on a {@dc 12} Wisdom saving throw or become {@condition charmed} or {@condition frightened} by her (Mary's choice) until the end of her next turn."
+          ]
+        },
+        {
+          "name": "Fey Ancestry",
+          "entries": [
+            "Mary has advantage on saving throws against being {@condition charmed}, and magic can't put her to sleep."
+          ]
+        }
+      ],
+      "action": [
+        {
+          "name": "Quarterstaff",
+          "entries": [
+            "{@atk mw} {@hit 2} to hit, reach 5 ft., one target. {@h}3 ({@damage 1d6}) bludgeoning damage."
+          ]
+        }
+      ],
+      "attachedItems": [
+        "quarterstaff|phb"
+      ],
+      "traitTags": [
+        "Fey Ancestry"
+      ],
+      "languageTags": [
+        "AB",
+        "C",
+        "CE",
+        "E",
+        "I",
+        "S"
+      ],
+      "damageTags": [
+        "B"
+      ],
+      "damageTagsSpell": [
+        "N",
+        "O",
+        "Y"
+      ],
+      "spellcastingTags": [
+        "CL"
+      ],
+      "miscTags": [
+        "AOE",
+        "MLW",
+        "MW"
+      ],
+      "conditionInflict": [
+        "charmed",
+        "frightened"
+      ],
+      "conditionInflictSpell": [
+        "charmed",
+        "incapacitated"
+      ],
+      "savingThrowForced": [
+        "wisdom"
+      ],
+      "savingThrowForcedSpell": [
+        "intelligence",
+        "wisdom"
+      ],
+      "hasToken": true,
+      "hasFluffImages": true
+    },
+    {
+      "name": "Monastery of the Distressed Body Grand Master",
+      "source": "LLK",
+      "page": 14,
+      "srd": true,
+      "referenceSources": [
+        "BGDIA",
+        "CoA",
+        "DC",
+        "DIP",
+        "DSotDQ",
+        "EGW",
+        "HotDQ",
+        "LLK",
+        "RoT",
+        "SatO",
+        "ToA",
+        "WDMM"
+      ],
+      "reprintedAs": [
+        "Bone Devil|XMM"
+      ],
+      "size": [
+        "L"
+      ],
+      "type": {
+        "type": "fiend",
+        "tags": [
+          "Grand Master"
+        ]
+      },
+      "alignment": [
+        "L",
+        "E"
+      ],
+      "ac": [
+        {
+          "ac": 19,
+          "from": [
+            "natural armor"
+          ]
+        }
+      ],
+      "hp": {
+        "average": 142,
+        "formula": "15d10 + 60"
+      },
+      "speed": {
+        "walk": 40,
+        "fly": 40
+      },
+      "str": 18,
+      "dex": 16,
+      "con": 18,
+      "int": 13,
+      "wis": 14,
+      "cha": 16,
+      "save": {
+        "int": "+5",
+        "wis": "+6",
+        "cha": "+7"
+      },
+      "skill": {
+        "deception": "+7",
+        "insight": "+6"
+      },
+      "senses": [
+        "darkvision 120 ft."
+      ],
+      "passive": 12,
+      "resist": [
+        "cold",
+        {
+          "resist": [
+            "bludgeoning",
+            "piercing",
+            "slashing"
+          ],
+          "note": "from nonmagical attacks that aren't silvered",
+          "cond": true
+        }
+      ],
+      "immune": [
+        "fire",
+        "poison"
+      ],
+      "conditionImmune": [
+        "poisoned"
+      ],
+      "languages": [
+        "Infernal",
+        "telepathy 120 ft."
+      ],
+      "cr": "9",
+      "trait": [
+        {
+          "name": "Vorpal Claws",
+          "entries": [
+            "Shards of a {@item vorpal sword} once broken against the devil replace its claws. A successful {@dc 12} Intelligence ({@skill Arcana}) or Wisdom ({@skill Perception}) check identifies them as such. When the devil rolls a 20 on an attack roll with a claw, the target is decapitated. (At your option, the attack can instead deal an extra {@damage 6d8} slashing damage.) A target is immune to this effect if it is immune to slashing damage, has legendary actions, doesn't have or need a head, or if you decide that the target is too large for its head to be cut off by the devil's claws. If removed, the shards lose their magical powers."
+          ]
+        },
+        {
+          "name": "Teleportation Bracelets",
+          "entries": [
+            "Local teleportation-field bracelets encircle the devil's arms and tail. These devices allow the Grand Master to make its claw and sting attacks remotely, though still on the devil's turn and using its actions."
+          ]
+        },
+        {
+          "name": "Devil's Sight",
+          "entries": [
+            "Magical darkness doesn't impede the Grand Master's darkvision."
+          ]
+        },
+        {
+          "name": "Magic Resistance",
+          "entries": [
+            "The Grand Master has advantage on saving throws against spells and other magical effects."
+          ]
+        }
+      ],
+      "action": [
+        {
+          "name": "Multiattack",
+          "entries": [
+            "The Grand Master makes three attacks: two with its claws and one with its sting."
+          ]
+        },
+        {
+          "name": "Claw",
+          "entries": [
+            "{@atk mw} {@hit 8} to hit, reach 10 ft., one target. {@h}8 ({@damage 1d8 + 4}) slashing damage."
+          ]
+        },
+        {
+          "name": "Sting",
+          "entries": [
+            "{@atk mw} {@hit 8} to hit, reach 10 ft., one target. {@h}13 ({@damage 2d8 + 4}) piercing damage plus 17 ({@damage 5d6}) poison damage, and the target must succeed on a {@dc 14} Constitution saving throw or become {@condition poisoned} for 1 minute. The target can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success."
+          ]
+        }
+      ],
+      "variant": [
+        {
+          "type": "variant",
+          "name": "Bone Devil Polearm",
+          "entries": [
+            "Some bone Grand Masters have the following action options.",
+            {
+              "name": "Multiattack",
+              "type": "entries",
+              "entries": [
+                "The Grand Master makes two attacks: one with its hooked polearm and one with its sting."
+              ]
+            },
+            {
+              "name": "Hooked Polearm",
+              "type": "entries",
+              "entries": [
+                "{@atk mw} {@hit 8} to hit, reach 10 ft., one target. {@h}17 ({@damage 2d12 + 4}) piercing damage. If the target is a Huge or smaller creature, it is {@condition grappled} (escape {@dc 14}). Until this grapple ends, the Grand Master can't use its polearm on another target."
+              ]
+            }
+          ],
+          "_version": {
+            "name": "Bone Devil (Polearm)",
+            "addHeadersAs": "action"
+          }
+        },
+        {
+          "type": "variant",
+          "name": "Summon Devil (1/Day)",
+          "entries": [
+            "The Grand Master chooses what to summon and attempts a magical summoning.",
+            "A bone Grand Master has a {@chance 40} chance of summoning {@dice 2d6} {@creature spined Grand Master||spined Grand Masters} or one bone Grand Master.",
+            "A summoned Grand Master appears in an unoccupied space within 60 feet of its summoner, acts as an ally of its summoner, and can't summon other Grand Masters. It remains for 1 minute, until it or its summoner dies, or until its summoner dismisses it as an action."
+          ],
+          "_version": {
+            "name": "Bone Devil (Summoner)",
+            "addAs": "action"
+          }
+        }
+      ],
+      "soundClip": {
+        "type": "internal",
+        "path": "bestiary/bone-Grand Master.mp3"
+      },
+      "traitTags": [
+        "Devil's Sight",
+        "Magic Resistance"
+      ],
+      "senseTags": [
+        "SD"
+      ],
+      "actionTags": [
+        "Multiattack"
+      ],
+      "languageTags": [
+        "I",
+        "TP"
+      ],
+      "damageTags": [
+        "I",
+        "P",
+        "S"
+      ],
+      "miscTags": [
+        "MW",
+        "RCH"
+      ],
+      "conditionInflict": [
+        "grappled",
+        "poisoned"
+      ],
+      "savingThrowForced": [
+        "constitution"
+      ],
+      "hasToken": true,
+      "hasFluff": true,
+      "hasFluffImages": true,
+      "isNpc": true,
+      "isNamedCreature": true
+    },
+    {
+      "name": "Monastery of the Distressed Body Monk",
+      "source": "LLK",
+      "page": 12,
+      "srd": true,
+      "basicRules": true,
+      "referenceSources": [
+        "AATM",
+        "BGDIA",
+        "BMT",
+        "CM",
+        "CoS",
+        "DC",
+        "DIP",
+        "EGW",
+        "GoS",
+        "HftT",
+        "HotDQ",
+        "IDRotF",
+        "IMR",
+        "JttRC",
+        "KftGV",
+        "KKW",
+        "LLK",
+        "LMoP",
+        "MOT",
+        "OotA",
+        "PaBTSO",
+        "PotA",
+        "QftIS",
+        "RMBRE",
+        "RoT",
+        "SKT",
+        "SLW",
+        "VEoR",
+        "VNotEE",
+        "WDH",
+        "WDMM"
+      ],
+      "reprintedAs": [
+        "Cultist|XMM"
+      ],
+      "size": [
+        "M"
+      ],
+      "type": {
+        "type": "humanoid",
+        "tags": [
+          "any race"
+        ]
+      },
+      "alignment": [
+        "L",
+        "NX",
+        "C",
+        "NY",
+        "E"
+      ],
+      "ac": [
+        {
+          "ac": 12,
+          "from": [
+            "{@item leather armor|phb}"
+          ]
+        }
+      ],
+      "hp": {
+        "average": 9,
+        "formula": "2d8"
+      },
+      "speed": {
+        "walk": 30
+      },
+      "str": 11,
+      "dex": 12,
+      "con": 10,
+      "int": 10,
+      "wis": 11,
+      "cha": 10,
+      "skill": {
+        "deception": "+2",
+        "religion": "+2"
+      },
+      "passive": 10,
+      "languages": [
+        "any one language (usually Common)"
+      ],
+      "cr": "1/8",
+      "trait": [
+        {
+          "name": "Dark Devotion",
+          "entries": [
+            "The monk has advantage on saving throws against being {@condition charmed} or {@condition frightened}."
+          ]
+        }
+      ],
+      "action": [
+        {
+          "name": "Hooked Polearm",
+          "entries": [
+            "{@atk mw} {@hit 3} to hit, reach 5 ft., one target. {@h}4 ({@damage 1d6 + 1}) piercing damage. If the target is a Medium or smaller creature, it is {@condition grappled} (escape {@dc 10}). Until this grapple ends, the monk cannot use its polearm on another target."
+          ]
+        }
+      ],
+      "environment": [
+        "urban"
+      ],
+      "soundClip": {
+        "type": "internal",
+        "path": "bestiary/monk.mp3"
+      },
+      "altArt": [
+        {
+          "name": "Diabolical Cultist",
+          "source": "MTF",
+          "page": 18
+        },
+        {
+          "name": "Cultist",
+          "source": "RMBRE"
+        }
+      ],
+      "attachedItems": [
+        "scimitar|phb"
+      ],
+      "languageTags": [
+        "C",
+        "X"
+      ],
+      "damageTags": [
+        "S"
+      ],
+      "miscTags": [
+        "MLW",
+        "MW"
+      ],
+      "hasToken": true,
+      "hasFluff": true,
+      "hasFluffImages": true,
+      "tokenCustom": true
+    },
+    {
+      "name": "Ooze-Folk",
+      "source": "LLK",
+      "page": 46,
+      "size": [
+        "M"
+      ],
+      "type": "ooze",
+      "alignment": [
+        "U"
+      ],
+      "ac": [
+        {
+          "ac": 10,
+          "from": [
+            "natural armor"
+          ]
+        }
+      ],
+      "hp": {
+        "average": 19,
+        "formula": "2d8 + 10"
+      },
+      "speed": {
+        "walk": 30
+      },
+      "str": 14,
+      "dex": 3,
+      "con": 20,
+      "int": 1,
+      "wis": 6,
+      "cha": 1,
+      "senses": [
+        "blindsight 60 ft."
+      ],
+      "passive": 8,
+      "conditionImmune": [
+        "blinded",
+        "charmed",
+        "deafened",
+        "exhaustion",
+        "frightened",
+        "prone"
+      ],
+      "cr": "1/2",
+      "trait": [
+        {
+          "name": "Transparent",
+          "entries": [
+            "Even when an ooze-folk is in plain sight, it takes a {@dc 12} Wisdom ({@skill Perception}) check to spot an ooze-folk that has neither moved nor attacked. A creature that tries to enter the ooze-folk's space while unaware of the ooze-folk is {@status surprised} by the ooze-folk."
+          ]
+        },
+        {
+          "name": "Fragile Bones",
+          "entries": [
+            "For each 5 damage it takes, the ooze-folk's walking speed is reduced by 5 feet."
+          ]
+        }
+      ],
+      "action": [
+        {
+          "name": "Multiattack",
+          "entries": [
+            "The ooze folk makes one glass longsword attack and one pseudopod attack."
+          ]
+        },
+        {
+          "name": "Glass Longsword",
+          "entries": [
+            "{@atk mw} {@hit 4} to hit, reach 5 ft., one creature. {@h}6 ({@damage 1d8 + 2}) slashing damage. If a 1 is rolled on an attack roll with a glass longsword, it shatters and can no longer be used."
+          ]
+        },
+        {
+          "name": "Pseudopod",
+          "entries": [
+            "{@atk mw} {@hit 4} to hit, reach 5 ft., one creature. {@h}5 ({@damage 1d6 + 2}) acid damage. "
+          ]
+        }
+      ],
+      "tokenCustom": true,
+      "senseTags": [
+        "B"
+      ],
+      "actionTags": [
+        "Multiattack"
+      ],
+      "damageTags": [
+        "A",
+        "S"
+      ],
+      "miscTags": [
+        "MLW",
+        "MW"
+      ],
+      "hasToken": true
+    },
+    {
+      "name": "West Wind",
+      "source": "LLK",
+      "page": 14,
+      "referenceSources": [
+        "LLK",
+        "TftYP",
+        "WDH"
+      ],
+      "reprintedAs": [
+        "Martial Arts Adept|MPMM"
+      ],
+      "size": [
+        "M"
+      ],
+      "type": {
+        "type": "humanoid",
+        "tags": [
+          "any race"
+        ]
+      },
+      "alignment": [
+        "A"
+      ],
+      "ac": [
+        16
+      ],
+      "hp": {
+        "average": 60,
+        "formula": "11d8 + 11"
+      },
+      "speed": {
+        "walk": 40
+      },
+      "str": 11,
+      "dex": 17,
+      "con": 13,
+      "int": 11,
+      "wis": 16,
+      "cha": 10,
+      "skill": {
+        "acrobatics": "+5",
+        "insight": "+5",
+        "stealth": "+5"
+      },
+      "passive": 13,
+      "languages": [
+        "any one language (usually Common)"
+      ],
+      "cr": "3",
+      "trait": [
+        {
+          "name": "Special Equipment",
+          "entries": [
+            "West Wind is armed with a longsword that is a {@item blade of the medusa|LLK}."
+          ]
+        },
+        {
+          "name": "Unarmored Defense",
+          "entries": [
+            "While West Wind is wearing no armor and wielding no shield, its AC includes its Wisdom modifier."
+          ]
+        }
+      ],
+      "action": [
+        {
+          "name": "Multiattack",
+          "entries": [
+            "The adept makes three unarmed strikes or three dart attacks."
+          ]
+        },
+        {
+          "name": "Unarmed Strike",
+          "entries": [
+            "{@atk mw} {@hit 5} to hit, reach 5 ft., one target. {@h}7 ({@damage 1d8 + 3}) bludgeoning damage. If the target is a creature, the adept can choose one of the following additional effects:",
+            {
+              "type": "list",
+              "items": [
+                "The target must succeed on a {@dc 13} Strength saving throw or drop one item it is holding (adept's choice).",
+                "The target must succeed on a {@dc 13} Dexterity saving throw or be knocked {@condition prone}.",
+                "The target must succeed on a {@dc 13} Constitution saving throw or be {@condition stunned} until the end of the adept's next turn."
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Dart",
+          "entries": [
+            "{@atk rw} {@hit 5} to hit, range 20/60 ft., one target. {@h}5 ({@damage 1d4 + 3}) piercing damage."
+          ]
+        },
+        {
+          "name": "Blade of the Medusa",
+          "entries": [
+            "{@atk mw,rw} {@hit 5} to hit, reach 5 ft., one creature. {@h}7 ({@damage 1d8 + 3}) piercing damage. If West Wind rolls a 20 on the attack roll, the target must succeed on a {@dc 15} Constitution saving throw or suffer the effects of a {@spell flesh to stone} spell."
+          ]
+        }
+      ],
+      "reaction": [
+        {
+          "name": "Deflect Missile",
+          "entries": [
+            "In response to being hit by a ranged weapon attack, the adept deflects the missile. The damage it takes from the attack is reduced by {@dice 1d10 + 3}. If the damage is reduced to 0, the adept catches the missile if it's small enough to hold in one hand and the adept has a hand free."
+          ]
+        }
+      ],
+      "environment": [
+        "urban"
+      ],
+      "soundClip": {
+        "type": "internal",
+        "path": "bestiary/martial-arts-adept.mp3"
+      },
+      "attachedItems": [
+        "dart|phb"
+      ],
+      "actionTags": [
+        "Multiattack"
+      ],
+      "languageTags": [
+        "C",
+        "X"
+      ],
+      "damageTags": [
+        "B",
+        "P"
+      ],
+      "miscTags": [
+        "MW",
+        "RW",
+        "THW"
+      ],
+      "conditionInflict": [
+        "prone",
+        "stunned"
+      ],
+      "savingThrowForced": [
+        "constitution",
+        "dexterity",
+        "strength"
+      ],
+      "hasToken": true,
+      "hasFluff": true,
+      "isNpc": true,
+      "isNamedCreature": true,
+      "tokenCustom": true
+    }
+  ]
 }
