@@ -2,6 +2,10 @@
 	height: 100%;
 }
 
+.EncounterView .Panel__header {
+	padding: var(--space-2) var(--space-4);
+}
+
 .EncounterView__header {
 	display: flex;
 	gap: var(--space-2);
@@ -9,28 +13,68 @@
 	width: 100%;
 }
 
-.EncounterView__header p {
-	white-space: nowrap;
-	margin-left: auto;
-}
-
 .EncounterView__main {
 	display: flex;
-	gap: var(--space-3);
+	gap: var(--space-2);
 	height: 100%;
 	min-height: 600px;
 	align-items: flex-start;
 }
 
+.EncounterView__metrics {
+	display: flex;
+	align-items: stretch;
+	flex-wrap: wrap;
+	gap: var(--space-2);
+	margin-left: auto;
+}
+
+.EncounterViewMetric {
+	min-width: 86px;
+	border: 1px solid color-mix(in srgb, var(--border), transparent 45%);
+	border-radius: 8px;
+	background: color-mix(in srgb, var(--bg), transparent 20%);
+	padding: var(--space-2) var(--space-2);
+	display: flex;
+	align-items: center;
+	flex-direction: column;
+	gap: var(--space-1);
+}
+
+.EncounterViewMetric--accent {
+	border-color: color-mix(in srgb, var(--accent), transparent 45%);
+	background: color-mix(in srgb, var(--accent), transparent 92%);
+}
+
+.EncounterViewMetric__label {
+	color: var(--muted);
+	font-size: 0.66rem;
+	font-weight: 600;
+	line-height: 1.1;
+	text-transform: uppercase;
+}
+
+.EncounterViewMetric__value {
+	color: var(--text-bright);
+	font-size: 1rem;
+	font-weight: 700;
+	line-height: 1;
+}
+
+.EncounterViewMetric--accent .EncounterViewMetric__value {
+	color: var(--accent);
+}
+
 .EncounterView__list {
-	width: 280px;
-	min-width: 280px;
+	width: 290px;
+	min-width: 290px;
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-2);
 	height: 100%;
-	overflow-y: auto;
-	padding: var(--space-1) var(--space-2) var(--space-1) var(--space-1);
+	overflow-y: scroll;
+	margin-right: calc(-1 * var(--space-1));
+	padding: var(--space-1);
 }
 
 .EncounterView__addBtn {

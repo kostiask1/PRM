@@ -167,14 +167,44 @@ function EncounterView(props) {
 							{renderMentionText(view.encounter.name)}
 						</h2>
 					</Tooltip>
-					<p className="muted">
-						{lang.t("Combat encounter")} •{" "}
-						{lang.t("{count} monsters", {
-							count: view.encounter.monsters.length,
-						})}
-						{view.encounter.monsters.length > 0 &&
-							` • ${lang.t("Avg initiative")}: ${view.averageInitiative}`}
-					</p>
+					<div className="EncounterView__metrics">
+						<div className="EncounterViewMetric">
+							<span className="EncounterViewMetric__label">
+								{lang.t("Monsters")}
+							</span>
+							<span className="EncounterViewMetric__value">
+								{view.encounter.monsters.length}
+							</span>
+						</div>
+						{view.encounter.monsters.length > 0 && (
+							<>
+								<div className="EncounterViewMetric">
+									<span className="EncounterViewMetric__label">
+										{lang.t("Avg initiative")}
+									</span>
+									<span className="EncounterViewMetric__value">
+										{view.initiativeStats.average}
+									</span>
+								</div>
+								<div className="EncounterViewMetric">
+									<span className="EncounterViewMetric__label">
+										{lang.t("Max initiative")}
+									</span>
+									<span className="EncounterViewMetric__value">
+										{view.initiativeStats.max}
+									</span>
+								</div>
+								<div className="EncounterViewMetric EncounterViewMetric--accent">
+									<span className="EncounterViewMetric__label">
+										{lang.t("CR-weighted avg initiative")}
+									</span>
+									<span className="EncounterViewMetric__value">
+										{view.initiativeStats.weightedAverage}
+									</span>
+								</div>
+							</>
+						)}
+					</div>
 				</div>
 				<div className="EncounterView__headerActions">
 					<div className="EncounterView__viewModeSwitch">

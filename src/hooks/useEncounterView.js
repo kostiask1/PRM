@@ -20,6 +20,30 @@ function cloneEncounterSnapshot(value) {
 	return JSON.parse(JSON.stringify(value));
 }
 
+function parseChallengeRating(monster) {
+	const crValue = monster?.cr?.cr !== undefined ? monster.cr.cr : monster?.cr;
+	if (typeof crValue === "number") return crValue;
+
+	const crText = String(crValue || "0").trim();
+	if (crText.includes("/")) {
+		const [num, den] = crText.split("/").map(Number);
+		return den ? num / den : 0;
+	}
+
+	return Number.parseFloat(crText) || 0;
+}
+
+function getExpectedInitiative(monster) {
+	const dex = monster?.dex ?? monster?.dexterity ?? 10;
+	const mod = Math.floor((Number(dex) - 10) / 2);
+	return 10.5 + mod;
+}
+
+function formatInitiativeValue(value) {
+	if (!Number.isFinite(value)) return 0;
+	return value % 1 === 0 ? value : value.toFixed(1);
+}
+
 export default function useEncounterView({ campaign, sessionId, encounterId }) {
 	const dispatch = useAppDispatch();
 	const handleBack = useCallback(
@@ -614,15 +638,36 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 		return `hsl(${hue}, 80%, ${storeTheme === "dark" ? "60" : "43"}%)`;
 	}, []);
 
-	const averageInitiative = useMemo(() => {
-		if (!encounter || encounter.monsters.length === 0) return 0;
-		const total = encounter.monsters.reduce((sum, m) => {
-			const dex = m.dex ?? m.dexterity ?? 10;
-			const mod = Math.floor((dex - 10) / 2);
-			return sum + 10.5 + mod;
-		}, 0);
-		const avg = total / encounter.monsters.length;
-		return avg % 1 === 0 ? avg : avg.toFixed(1);
+	const initiativeStats = useMemo(() => {
+		const monsters = encounter?.monsters || [];
+		if (monsters.length === 0) {
+			return {
+				average: 0,
+				max: 0,
+				weightedAverage: 0,
+			};
+		}
+
+		let total = 0;
+		let max = -Infinity;
+		let weightedTotal = 0;
+		let totalWeight = 0;
+
+		monsters.forEach((monster) => {
+			const initiative = getExpectedInitiative(monster);
+			const weight = Math.max(0, parseChallengeRating(monster)) + 1;
+
+			total += initiative;
+			max = Math.max(max, initiative);
+			weightedTotal += initiative * weight;
+			totalWeight += weight;
+		});
+
+		return {
+			average: formatInitiativeValue(total / monsters.length),
+			max: formatInitiativeValue(max),
+			weightedAverage: formatInitiativeValue(weightedTotal / totalWeight),
+		};
 	}, [encounter]);
 
 	const handleReorderMonsters = useCallback(
@@ -672,7 +717,8 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 		notification,
 		setNotification,
 		fileInputRef,
-		averageInitiative,
+		averageInitiative: initiativeStats.average,
+		initiativeStats,
 		handleFileChange,
 		handleExport,
 		handleRename,
