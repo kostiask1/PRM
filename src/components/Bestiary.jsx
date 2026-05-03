@@ -402,20 +402,13 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 
 					{selectedMonster && (
 						<div className="Bestiary__detail-container">
-							{onAddMonster && (
-								<Button
-									variant="primary"
-									icon="plus"
-									onClick={() => onAddMonster(selectedMonster)}
-									className="Bestiary__add-to-encounter-btn"
-									title={lang.t("Add to encounter")}
-								/>
-							)}
 							<MonsterStatBlock
 								monster={selectedMonster}
 								onNameClick={onAddMonster ? (m) => onAddMonster(m) : undefined}
 								nameTitle={onAddMonster && lang.t("Add to encounter")}
 								onFavoriteChange={(newFavs) => setFavorites(newFavs)}
+								showAddToEncounterPicker
+								onAddToEncounter={onAddMonster}
 							/>
 						</div>
 					)}

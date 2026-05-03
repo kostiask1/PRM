@@ -9,6 +9,7 @@ import {
 import { api } from "../api";
 import { navigateTo, useAppDispatch, useAppSelector } from "../store/appStore";
 import { lang } from "../services/localization";
+import { createEncounterMonsterInstance } from "../utils/encounters";
 
 function cloneEncounterSnapshot(value) {
 	if (!value) return value;
@@ -353,29 +354,12 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 		async (m) => {
 			if (!encounter) return;
 
-			const hpVal =
-				typeof m.hp === "object" && m.hp?.average
-					? m.hp.average
-					: m.hit_points || 0;
-
-			let acVal = m.armor_class || 0;
-			if (Array.isArray(m.ac) && m.ac[0]) {
-				const entry = m.ac[0];
-				acVal = typeof entry === "object" ? entry.ac : entry;
-			}
-
-			const newMonster = {
-				...m,
-				instanceId: `inst-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-				originalBestiaryName: m.name,
-				currentHp: hpVal,
-				hit_points: hpVal,
-				armor_class: acVal,
-			};
-
 			const updated = {
 				...encounter,
-				monsters: [...encounter.monsters, newMonster],
+				monsters: [
+					...(encounter.monsters || []),
+					createEncounterMonsterInstance(m),
+				],
 			};
 
 			applyEncounterUpdate(updated);

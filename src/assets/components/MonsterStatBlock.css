@@ -172,6 +172,7 @@
 .MonsterStatBlock__name__row {
 	display: flex;
 	align-items: center;
+	flex-wrap: wrap;
 	gap: var(--space-4);
 }
 
@@ -229,6 +230,10 @@
 .MonsterStatBlock__favorite-btn.is-active svg {
 	fill: var(--accent);
 	stroke: var(--accent);
+}
+
+.MonsterStatBlock__add-to-encounter-btn {
+	flex-shrink: 0;
 }
 
 .MonsterStatBlock__original-name.muted {

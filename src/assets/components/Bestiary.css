@@ -101,13 +101,6 @@
 	min-height: 0;
 }
 
-.Bestiary__add-to-encounter-btn {
-	position: absolute;
-	top: 20px;
-	right: 24px;
-	z-index: 1;
-}
-
 .Bestiary__item-content {
 	display: flex;
 	justify-content: space-between;

@@ -23,8 +23,13 @@ import useConditionReference from "../hooks/useConditionReference.jsx";
 import Tooltip from "./common/Tooltip.jsx";
 import classNames from "../utils/classNames";
 import { requestDiceRollAction } from "../actions/app";
-import { openModalRequest, useAppDispatch } from "../store/appStore";
+import {
+	openModalRequest,
+	useAppDispatch,
+	useAppSelector,
+} from "../store/appStore";
 import { lang } from "../services/localization.js";
+import AddMonsterToEncounterModalContent from "./modals/AddMonsterToEncounterModalContent.jsx";
 
 const SPELL_CACHE = new Map();
 
@@ -35,8 +40,11 @@ export default function MonsterStatBlock({
 	onFavoriteChange,
 	tokenImageOverrideUrl = null,
 	layoutMode = "single",
+	showAddToEncounterPicker = false,
+	onAddToEncounter,
 }) {
 	const dispatch = useAppDispatch();
+	const campaigns = useAppSelector((store) => store.campaigns.items);
 	const [hasImageError, setHasImageError] = useState(false);
 	const [spells, setSpells] = useState([]);
 	const [loadingSpells, setLoadingSpells] = useState(false);
@@ -83,6 +91,25 @@ export default function MonsterStatBlock({
 		} catch (err) {
 			console.error("Failed to toggle favorite", err);
 		}
+	};
+
+	const handleAddToEncounter = () => {
+		if (onAddToEncounter) {
+			onAddToEncounter(monster);
+			return;
+		}
+
+		openModalRequest({
+			title: lang.t("Add to encounter"),
+			type: "confirm",
+			showFooter: false,
+			children: (
+				<AddMonsterToEncounterModalContent
+					monster={monster}
+					campaigns={campaigns}
+				/>
+			),
+		});
 	};
 
 	const handleSpellClick = async (spellOrName) => {
@@ -426,6 +453,17 @@ export default function MonsterStatBlock({
 							onClick={handleToggleFavorite}
 							title={isFavorite ? "Remove from favorites" : "Add to favorites"}
 						/>
+						{showAddToEncounterPicker && (
+							<Button
+								variant="primary"
+								size={Button.SIZES.SMALL}
+								icon="plus"
+								className="MonsterStatBlock__add-to-encounter-btn"
+								onClick={handleAddToEncounter}
+							>
+								{lang.t("Add to encounter")}
+							</Button>
+						)}
 					</div>
 
 					{monster.originalBestiaryName &&
