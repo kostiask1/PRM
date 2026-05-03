@@ -19,9 +19,7 @@ import { renderMentionText } from "../utils/parser";
 import { hasMonsterHpFormula } from "../utils/encounters";
 
 function getGridMonsterKey(monster) {
-	const baseName = String(
-		monster?.originalBestiaryName || monster?.name || "",
-	)
+	const baseName = String(monster?.originalBestiaryName || monster?.name || "")
 		.trim()
 		.toLowerCase();
 	const source = String(monster?.source || "")
@@ -79,6 +77,10 @@ function EncounterView(props) {
 		? gridRepresentativeByInstanceId.get(view.selectedInstance.instanceId) ||
 			view.selectedInstance.instanceId
 		: null;
+	const effectiveGridColumns = Math.max(
+		1,
+		Math.min(gridColumns, gridMonsters.length || 1),
+	);
 
 	useEffect(() => {
 		return () => {
@@ -144,11 +146,9 @@ function EncounterView(props) {
 	const updateEncounterGridColumns = (columns) => {
 		const nextColumns = Math.min(4, Math.max(1, Number(columns) || 2));
 		dispatch(setUiSettingsAction({ encounterGridColumns: nextColumns }));
-		api
-			.updateSettings({ encounterGridColumns: nextColumns })
-			.catch((error) => {
-				console.error("Failed to save encounter grid columns setting", error);
-			});
+		api.updateSettings({ encounterGridColumns: nextColumns }).catch((error) => {
+			console.error("Failed to save encounter grid columns setting", error);
+		});
 	};
 
 	return (
@@ -321,44 +321,44 @@ function EncounterView(props) {
 											<div className="EncounterMonsterRow__ac">
 												{lang.t("AC")} {m.armor_class}
 											</div>
+											<div className="EncounterMonsterRow__actions">
+												{hasMonsterHpFormula(m) && (
+													<Button
+														variant="ghost"
+														size={Button.SIZES.SMALL}
+														icon="dice"
+														className="EncounterMonsterRow__action"
+														onClick={(e) => {
+															e.stopPropagation();
+															view.rollMonsterHp(m.instanceId);
+														}}
+														title={lang.t("Roll HP by formula")}
+													/>
+												)}
+												<Button
+													variant="ghost"
+													size={Button.SIZES.SMALL}
+													icon="plus"
+													className="EncounterMonsterRow__action"
+													onClick={(e) => {
+														e.stopPropagation();
+														view.duplicateMonster(m);
+													}}
+													title={lang.t("Duplicate")}
+												/>
+												<Button
+													variant="danger"
+													size={Button.SIZES.SMALL}
+													icon="x"
+													className="EncounterMonsterRow__action"
+													onClick={(e) => {
+														e.stopPropagation();
+														view.removeMonster(m.instanceId);
+													}}
+													title={lang.t("Delete")}
+												/>
+											</div>
 										</div>
-									</div>
-									<div className="EncounterMonsterRow__actions">
-										{hasMonsterHpFormula(m) && (
-											<Button
-												variant="ghost"
-												size={Button.SIZES.SMALL}
-												icon="dice"
-												className="EncounterMonsterRow__action"
-												onClick={(e) => {
-													e.stopPropagation();
-													view.rollMonsterHp(m.instanceId);
-												}}
-												title={lang.t("Roll HP by formula")}
-											/>
-										)}
-										<Button
-											variant="ghost"
-											size={Button.SIZES.SMALL}
-											icon="plus"
-											className="EncounterMonsterRow__action"
-											onClick={(e) => {
-												e.stopPropagation();
-												view.duplicateMonster(m);
-											}}
-											title={lang.t("Duplicate")}
-										/>
-										<Button
-											variant="danger"
-											size={Button.SIZES.SMALL}
-											icon="x"
-											className="EncounterMonsterRow__action"
-											onClick={(e) => {
-												e.stopPropagation();
-												view.removeMonster(m.instanceId);
-											}}
-											title={lang.t("Delete")}
-										/>
 									</div>
 								</div>
 							)}
@@ -375,7 +375,7 @@ function EncounterView(props) {
 							view.encounter.monsters.length > 0 ? (
 								<div
 									className="EncounterView__grid"
-									style={{ "--encounter-grid-columns": gridColumns }}
+									style={{ "--encounter-grid-columns": effectiveGridColumns }}
 								>
 									{gridMonsters.map((monster) => (
 										<div
