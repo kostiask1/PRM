@@ -293,7 +293,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 					`1. ${lang.t("Get a free key in Google AI Studio (aistudio.google.com).")}\n` +
 					`2. ${lang.t("Create a .env file in the project root.")}\n` +
 					`3. ${lang.t("Add this line: GEMINI_API_KEY=your_key")}\n` +
-					`${lang.t("After that, AI features will be available.")}`,
+					`${lang.t("After that restart project, AI features will be available.")}`,
 			}),
 		);
 	};
