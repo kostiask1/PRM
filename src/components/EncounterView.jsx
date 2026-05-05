@@ -658,8 +658,19 @@ function EncounterView(props) {
 							)
 						) : (
 							<>
-								{view.selectedInstance &&
-								!isEncounterCharacterParticipant(view.selectedInstance) ? (
+								{view.selectedInstance ? (
+									isEncounterCharacterParticipant(view.selectedInstance) ? (
+										<CharacterCard
+											character={view.selectedInstance}
+											campaignSlug={campaign.slug}
+											type="characters"
+											viewMode="modal"
+											showDeleteButton={false}
+											onChange={handleCharacterChange(
+												view.selectedInstance.instanceId,
+											)}
+										/>
+									) : (
 										<MonsterStatBlock
 											monster={view.selectedInstance}
 											onNameRename={handleRenameMonster}
@@ -667,6 +678,7 @@ function EncounterView(props) {
 												view.selectedInstance,
 											)}
 										/>
+									)
 								) : (
 									<p className="muted">
 										{lang.t("Select a monster from the list to see its stats.")}
