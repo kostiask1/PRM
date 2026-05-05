@@ -82,6 +82,11 @@ export default function useCampaignView(props) {
 	const dispatch = useAppDispatch();
 
 	const [sessions, setSessions] = useState([]);
+	const [sessionDetails, setSessionDetails] = useState({});
+	const [isGraphDataLoading, setIsGraphDataLoading] = useState(false);
+	const [graphDataError, setGraphDataError] = useState("");
+	const isGraphDataLoadingRef = useRef(false);
+	const sessionDetailsRef = useRef({});
 	const [description, setDescription] = useState(campaign.description || "");
 	const [notes, setNotes] = useState(campaign.notes || []);
 	const [characters, setCharacters] = useState(campaign.characters || []);
@@ -154,6 +159,10 @@ export default function useCampaignView(props) {
 	}, [loadCharacters, loadNpcs, loadLocations]);
 
 	useEffect(() => {
+		sessionDetailsRef.current = sessionDetails;
+	}, [sessionDetails]);
+
+	useEffect(() => {
 		if (lastSlugRef.current !== campaign.slug) {
 			setDescription(campaign.description || "");
 			setNotes(campaign.notes || []);
@@ -162,6 +171,11 @@ export default function useCampaignView(props) {
 			setIsCharactersCollapsed(campaign.isCharactersCollapsed || false);
 			setIsNpcsCollapsed(campaign.isNpcsCollapsed || false);
 			setIsLocationsCollapsed(campaign.isLocationsCollapsed || false);
+			setSessionDetails({});
+			sessionDetailsRef.current = {};
+			setIsGraphDataLoading(false);
+			isGraphDataLoadingRef.current = false;
+			setGraphDataError("");
 			setUndoStack([]);
 			setRedoStack([]);
 			lastSlugRef.current = campaign.slug;
@@ -714,6 +728,39 @@ export default function useCampaignView(props) {
 		loadSessions();
 	}, [campaign.slug]);
 
+	const loadSessionDetailsForGraph = useCallback(async () => {
+		const missingSessions = sessions.filter(
+			(session) => session?.fileName && !sessionDetails[session.fileName],
+		);
+		if (missingSessions.length === 0 || isGraphDataLoadingRef.current) return;
+
+		isGraphDataLoadingRef.current = true;
+		setIsGraphDataLoading(true);
+		setGraphDataError("");
+		try {
+			const loadedEntries = await Promise.all(
+				missingSessions.map(async (session) => [
+					session.fileName,
+					await api.getSession(campaign.slug, session.fileName),
+				]),
+			);
+			setSessionDetails((prev) => ({
+				...prev,
+				...Object.fromEntries(loadedEntries),
+			}));
+			sessionDetailsRef.current = {
+				...sessionDetailsRef.current,
+				...Object.fromEntries(loadedEntries),
+			};
+		} catch (err) {
+			console.error("Failed to load campaign graph session details", err);
+			setGraphDataError(err.message || lang.t("Failed to load sessions"));
+		} finally {
+			isGraphDataLoadingRef.current = false;
+			setIsGraphDataLoading(false);
+		}
+	}, [campaign.slug, sessionDetails, sessions]);
+
 	const handleCreateSession = async () => {
 		const name = await dispatch(
 			prompt({
@@ -738,6 +785,76 @@ export default function useCampaignView(props) {
 			);
 		}
 	};
+
+	const saveGraphSessionDetail = useCallback(
+		(fileName, updater) => {
+			const current = sessionDetailsRef.current[fileName];
+			if (!current) return;
+
+			const next = JSON.parse(JSON.stringify(current));
+			updater(next);
+
+			sessionDetailsRef.current = {
+				...sessionDetailsRef.current,
+				[fileName]: next,
+			};
+			setSessionDetails(sessionDetailsRef.current);
+
+			api.updateSession(campaign.slug, fileName, { data: next.data }).catch(
+				(err) => {
+					console.error("Failed to save graph note edit", err);
+					setGraphDataError(err.message || lang.t("Failed to update entity."));
+				},
+			);
+		},
+		[campaign.slug],
+	);
+
+	const handleGraphNoteSave = useCallback(
+		({ nodeType, fileName, sceneId, noteId, updates }) => {
+			if (!noteId || !updates) return;
+
+			if (nodeType === "campaign-note") {
+				if (!saveTimeout.current) pushToUndo();
+				setNotes((prev) => {
+					const next = upsertNoteById(prev, noteId, updates);
+					triggerSave({ notes: sanitizeNotesForSave(next) });
+					return next;
+				});
+				return;
+			}
+
+			if (nodeType === "session-note" && fileName) {
+				saveGraphSessionDetail(fileName, (session) => {
+					session.data = session.data || {};
+					session.data.notes = (session.data.notes || []).map((note) =>
+						String(note.id) === String(noteId)
+							? { ...note, ...updates }
+							: note,
+					);
+				});
+				return;
+			}
+
+			if (nodeType === "scene-note" && fileName && sceneId) {
+				saveGraphSessionDetail(fileName, (session) => {
+					session.data = session.data || {};
+					session.data.scenes = (session.data.scenes || []).map((scene) => {
+						if (String(scene.id) !== String(sceneId)) return scene;
+						return {
+							...scene,
+							notes: (scene.notes || []).map((note) =>
+								String(note.id) === String(noteId)
+									? { ...note, ...updates }
+									: note,
+							),
+						};
+					});
+				});
+			}
+		},
+		[pushToUndo, saveGraphSessionDetail, triggerSave],
+	);
 
 	const handleDeleteCampaign = async () => {
 		if (
@@ -809,6 +926,11 @@ export default function useCampaignView(props) {
 			await api.deleteSession(campaign.slug, session.fileName);
 			const data = await api.listSessions(campaign.slug);
 			setSessions(data);
+			setSessionDetails((prev) => {
+				const next = { ...prev };
+				delete next[session.fileName];
+				return next;
+			});
 			dispatch(requestCampaignsReloadAction());
 		} catch (err) {
 			dispatch(
@@ -937,6 +1059,11 @@ export default function useCampaignView(props) {
 	return {
 		sessions,
 		setSessions,
+		sessionDetails,
+		isGraphDataLoading,
+		graphDataError,
+		loadSessionDetailsForGraph,
+		handleGraphNoteSave,
 		description,
 		notes,
 		setNotes,

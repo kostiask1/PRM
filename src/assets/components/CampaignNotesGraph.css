@@ -1,0 +1,411 @@
+.CampaignNotesGraph {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(250px, 310px);
+	gap: var(--space-3);
+	align-items: stretch;
+	min-width: 0;
+	overscroll-behavior: contain;
+}
+
+.CampaignNotesGraph__workspace,
+.CampaignNotesGraph__details {
+	border: 1px solid color-mix(in srgb, var(--border), transparent 22%);
+	border-radius: 8px;
+	background: color-mix(in srgb, var(--bg), var(--panel) 35%);
+	min-width: 0;
+}
+
+.CampaignNotesGraph__workspace {
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.CampaignNotesGraph__toolbar {
+	display: grid;
+	grid-template-columns: minmax(180px, 280px) 1fr;
+	gap: var(--space-2);
+	align-items: start;
+	padding: var(--space-3);
+	border-bottom: 1px solid color-mix(in srgb, var(--border), transparent 45%);
+}
+
+.CampaignNotesGraph__search {
+	height: 34px;
+	border: 1px solid var(--border);
+	background: var(--bg);
+	color: var(--text);
+	border-radius: 8px;
+	padding: 0 var(--space-2);
+	min-width: 0;
+}
+
+.CampaignNotesGraph__filters {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-1);
+	min-width: 0;
+}
+
+.CampaignNotesGraph__filter {
+	min-height: 32px;
+	border-color: color-mix(in srgb, var(--filter-color), transparent 40%);
+	color: color-mix(in srgb, var(--filter-color), var(--text) 18%);
+	background: color-mix(in srgb, var(--filter-color), transparent 88%);
+}
+
+.CampaignNotesGraph__filter.Button--primary {
+	background: color-mix(in srgb, var(--filter-color), #111 18%);
+	border-color: var(--filter-color);
+	color: #fff;
+}
+
+.CampaignNotesGraph__filter.Button--ghost {
+	background: color-mix(in srgb, var(--filter-color), transparent 93%);
+}
+
+.CampaignNotesGraph__filter:hover {
+	border-color: var(--filter-color);
+	background: color-mix(in srgb, var(--filter-color), transparent 82%);
+}
+
+.CampaignNotesGraph__canvasWrap {
+	position: relative;
+	min-height: 540px;
+	background:
+		linear-gradient(color-mix(in srgb, var(--border), transparent 88%) 1px,
+			transparent 1px),
+		linear-gradient(90deg,
+			color-mix(in srgb, var(--border), transparent 88%) 1px,
+			transparent 1px);
+	background-size: 32px 32px;
+	overflow: hidden;
+	overscroll-behavior: contain;
+}
+
+.CampaignNotesGraph__canvas {
+	display: block;
+	width: 100%;
+	height: 540px;
+	touch-action: none;
+	cursor: grab;
+}
+
+.CampaignNotesGraph__canvas:active {
+	cursor: grabbing;
+}
+
+.CampaignNotesGraph__message {
+	position: absolute;
+	top: var(--space-3);
+	left: var(--space-3);
+	z-index: 2;
+	max-width: min(460px, calc(100% - var(--space-6)));
+	padding: var(--space-2) var(--space-3);
+	border: 1px solid color-mix(in srgb, var(--border), transparent 15%);
+	border-radius: 8px;
+	background: color-mix(in srgb, var(--panel), var(--bg) 30%);
+	color: var(--text);
+	box-shadow: var(--shadow-sm);
+}
+
+.CampaignNotesGraph__message--error {
+	border-color: color-mix(in srgb, var(--danger), transparent 20%);
+	color: var(--danger);
+}
+
+.CampaignNotesGraph__edge {
+	fill: none;
+	stroke-linecap: round;
+	pointer-events: none;
+	transition:
+		all 320ms ease,
+		opacity 140ms ease,
+		stroke 140ms ease;
+}
+
+.CampaignNotesGraph.is-dragging-node .CampaignNotesGraph__edge,
+.CampaignNotesGraph.is-dragging-node .CampaignNotesGraph__node {
+	transition: none;
+}
+
+.CampaignNotesGraph__edge.is-mentions {
+	filter: drop-shadow(0 0 5px rgba(56, 189, 248, 0.36));
+}
+
+.CampaignNotesGraph__edge.is-related {
+	stroke-dasharray: 5 5;
+	filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.34));
+}
+
+.CampaignNotesGraph__edge.is-muted {
+	filter: none;
+}
+
+.CampaignNotesGraph__node {
+	cursor: pointer;
+	transition:
+		transform 340ms cubic-bezier(0.2, 0.9, 0.2, 1),
+		opacity 140ms ease;
+}
+
+.CampaignNotesGraph__node.is-dragging {
+	cursor: grabbing;
+	transition: none;
+}
+
+.CampaignNotesGraph__node circle {
+	fill: var(--graph-node-color, var(--primary));
+	stroke: color-mix(in srgb, var(--panel), white 30%);
+	stroke-width: 2.5px;
+	filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.22));
+}
+
+.CampaignNotesGraph__node text {
+	fill: var(--text-bright);
+	font-size: 12px;
+	font-weight: 650;
+	text-anchor: middle;
+	paint-order: stroke;
+	stroke: color-mix(in srgb, var(--panel), transparent 8%);
+	stroke-width: 4px;
+	stroke-linejoin: round;
+	pointer-events: none;
+}
+
+.CampaignNotesGraph__node.is-selected circle {
+	stroke: var(--text-bright);
+	stroke-width: 4px;
+}
+
+.CampaignNotesGraph__node.is-muted {
+	opacity: 0.24;
+}
+
+.CampaignNotesGraph__node.is-campaign,
+.CampaignNotesGraph__dot.is-campaign {
+	--graph-node-color: #f59e0b;
+}
+
+.CampaignNotesGraph__node.is-campaign-note,
+.CampaignNotesGraph__node.is-session-note,
+.CampaignNotesGraph__node.is-scene-note,
+.CampaignNotesGraph__dot.is-campaign-note,
+.CampaignNotesGraph__dot.is-session-note,
+.CampaignNotesGraph__dot.is-scene-note {
+	--graph-node-color: #38bdf8;
+}
+
+.CampaignNotesGraph__node.is-character,
+.CampaignNotesGraph__dot.is-character {
+	--graph-node-color: #22c55e;
+}
+
+.CampaignNotesGraph__node.is-npc,
+.CampaignNotesGraph__dot.is-npc {
+	--graph-node-color: #f97316;
+}
+
+.CampaignNotesGraph__node.is-location,
+.CampaignNotesGraph__dot.is-location {
+	--graph-node-color: #a3e635;
+}
+
+.CampaignNotesGraph__node.is-session,
+.CampaignNotesGraph__dot.is-session {
+	--graph-node-color: #818cf8;
+}
+
+.CampaignNotesGraph__node.is-scene,
+.CampaignNotesGraph__dot.is-scene {
+	--graph-node-color: #e879f9;
+}
+
+.CampaignNotesGraph__node.is-unresolved,
+.CampaignNotesGraph__dot.is-unresolved {
+	--graph-node-color: #94a3b8;
+}
+
+.CampaignNotesGraph__details {
+	padding: var(--space-3);
+	overflow: auto;
+	max-height: 620px;
+	overscroll-behavior: contain;
+}
+
+.CampaignNotesGraph__details h4,
+.CampaignNotesGraph__details h5 {
+	margin: 0 0 var(--space-2);
+	color: var(--text-bright);
+	font-family: var(--font-heading);
+}
+
+.CampaignNotesGraph__details p {
+	margin: 0 0 var(--space-3);
+	color: var(--text);
+	line-height: 1.45;
+}
+
+.CampaignNotesGraph__detailText {
+	margin-bottom: var(--space-3);
+	color: var(--text);
+	line-height: 1.45;
+	overflow-wrap: anywhere;
+}
+
+.CampaignNotesGraph__detailText.is-clickable {
+	cursor: pointer;
+	border-radius: 8px;
+	padding: var(--space-1);
+	margin-left: calc(var(--space-1) * -1);
+	margin-right: calc(var(--space-1) * -1);
+}
+
+.CampaignNotesGraph__detailText.is-clickable:hover {
+	background: color-mix(in srgb, var(--primary), transparent 90%);
+}
+
+.CampaignNotesGraph__detailText> :first-child {
+	margin-top: 0;
+}
+
+.CampaignNotesGraph__detailText> :last-child {
+	margin-bottom: 0;
+}
+
+.CampaignNotesGraph__type {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-1);
+	margin-bottom: var(--space-2);
+	color: var(--text-muted);
+	font-size: 0.86rem;
+}
+
+.CampaignNotesGraph__dot {
+	display: inline-block;
+	width: 10px;
+	height: 10px;
+	flex: 0 0 10px;
+	border-radius: 50%;
+	background: var(--graph-node-color, var(--primary));
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--graph-node-color), transparent 70%);
+}
+
+.CampaignNotesGraph__stats {
+	display: grid;
+	gap: var(--space-2);
+	margin: 0 0 var(--space-3);
+}
+
+.CampaignNotesGraph__stats div {
+	display: flex;
+	justify-content: space-between;
+	gap: var(--space-2);
+	padding-bottom: var(--space-1);
+	border-bottom: 1px solid color-mix(in srgb, var(--border), transparent 55%);
+}
+
+.CampaignNotesGraph__stats dt {
+	color: var(--text-muted);
+}
+
+.CampaignNotesGraph__stats dd {
+	margin: 0;
+	color: var(--text-bright);
+	text-align: right;
+	word-break: break-word;
+}
+
+.CampaignNotesGraph__legend {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.CampaignNotesGraph__legend>span,
+.CampaignNotesGraph__connection {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+}
+
+.CampaignNotesGraph__connections {
+	display: grid;
+	gap: var(--space-2);
+}
+
+.CampaignNotesGraph__connection {
+	width: 100%;
+	border: 1px solid color-mix(in srgb, var(--border), transparent 35%);
+	border-radius: 8px;
+	background: color-mix(in srgb, var(--panel), transparent 20%);
+	color: var(--text);
+	padding: var(--space-2);
+	text-align: left;
+	cursor: pointer;
+}
+
+.CampaignNotesGraph__connection:hover {
+	border-color: color-mix(in srgb, var(--primary), transparent 20%);
+	background: color-mix(in srgb, var(--primary), transparent 88%);
+}
+
+.CampaignNotesGraph__connectionText {
+	display: grid;
+	min-width: 0;
+}
+
+.CampaignNotesGraph__connectionText strong {
+	font-size: 0.8rem;
+}
+
+.CampaignNotesGraph__connectionText strong,
+.CampaignNotesGraph__connectionText span {
+	overflow-wrap: anywhere;
+}
+
+.CampaignNotesGraph__connectionText span {
+	color: var(--text-muted);
+	font-size: 0.82rem;
+}
+
+.CampaignNotesGraph__noteModal {
+	display: grid;
+	gap: var(--space-2);
+}
+
+.CampaignNotesGraph__noteTitle,
+.CampaignNotesGraph__noteText,
+.CampaignNotesGraph__noteText.Input,
+.CampaignNotesGraph__noteText .MarkdownView {
+	min-height: 44px;
+}
+
+.CampaignNotesGraph__noteText,
+.CampaignNotesGraph__noteText.Input,
+.CampaignNotesGraph__noteText .MarkdownView {
+	min-height: 260px;
+}
+
+@media (max-width: 1100px) {
+	.CampaignNotesGraph {
+		grid-template-columns: 1fr;
+	}
+
+	.CampaignNotesGraph__details {
+		max-height: none;
+	}
+}
+
+@media (max-width: 700px) {
+	.CampaignNotesGraph__toolbar {
+		grid-template-columns: 1fr;
+	}
+
+	.CampaignNotesGraph__canvasWrap,
+	.CampaignNotesGraph__canvas {
+		min-height: 440px;
+		height: 440px;
+	}
+}

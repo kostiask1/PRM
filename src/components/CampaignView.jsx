@@ -9,6 +9,7 @@ import DraggableList from "./common/DraggableList.jsx";
 import NoteCard from "./common/NoteCard.jsx";
 import CharacterCard from "./CharacterCard";
 import LocationCard from "./LocationCard";
+import CampaignNotesGraph from "./campaign/CampaignNotesGraph.jsx";
 import CollapseToggleButton from "./common/CollapseToggleButton.jsx";
 import Tooltip from "./common/Tooltip.jsx";
 import CreateCharacterButton from "./CreateCharacterButton";
@@ -46,6 +47,7 @@ function CampaignView(props) {
 	const viewModel = new CampaignViewModel(campaign);
 	const [sessionSearch, setSessionSearch] = useState("");
 	const [sessionStatusFilter, setSessionStatusFilter] = useState("all");
+	const [notesViewMode, setNotesViewMode] = useState("list");
 	const hasDescriptionData = String(view.description || "").trim().length > 0;
 	const hasNotesData = (view.notes || []).some(
 		(note) =>
@@ -88,6 +90,14 @@ function CampaignView(props) {
 
 	const canReorderSessions =
 		sessionStatusFilter === "all" && sessionSearch.trim().length === 0;
+
+	const handleNotesViewModeChange = (mode) => {
+		setNotesViewMode(mode);
+		if (isNotesCollapsed) {
+			view.setIsNotesCollapsed(false);
+			view.triggerSave({ isNotesCollapsed: false });
+		}
+	};
 
 	const handleCharacterTypeDragOver = (event) => {
 		if (!hasCharacterDragPayload(event)) return;
@@ -322,8 +332,30 @@ function CampaignView(props) {
 									)}
 									<h3>{lang.t("Notes")}</h3>
 								</div>
+								<div className="CampaignView__notesViewToggle">
+									<Button
+										variant={notesViewMode === "list" ? "primary" : "ghost"}
+										size={Button.SIZES.SMALL}
+										icon="list"
+										iconSize={16}
+										onClick={() => handleNotesViewModeChange("list")}
+										title={lang.t("List view")}
+									>
+										{lang.t("List")}
+									</Button>
+									<Button
+										variant={notesViewMode === "graph" ? "primary" : "ghost"}
+										size={Button.SIZES.SMALL}
+										icon="notes-graph"
+										iconSize={16}
+										onClick={() => handleNotesViewModeChange("graph")}
+										title={lang.t("Graph view")}
+									>
+										{lang.t("Graph")}
+									</Button>
+								</div>
 							</div>
-							{!isNotesCollapsed && (
+							{!isNotesCollapsed && notesViewMode === "list" && (
 								<DraggableList
 									items={notesForRender}
 									className="CampaignView__notes"
@@ -348,6 +380,25 @@ function CampaignView(props) {
 											onDelete={view.handleDeleteNote}
 										/>
 									)}
+								/>
+							)}
+							{!isNotesCollapsed && notesViewMode === "graph" && (
+								<CampaignNotesGraph
+									campaign={campaign}
+									description={view.description}
+									notes={view.notes}
+									characters={view.characters}
+									npcs={view.npcs}
+									locations={view.locations}
+									sessions={view.sessions}
+									sessionDetails={view.sessionDetails}
+									isLoading={view.isGraphDataLoading}
+									error={view.graphDataError}
+									onLoadSessionDetails={view.loadSessionDetailsForGraph}
+									onSaveNote={view.handleGraphNoteSave}
+									onOpenSession={(fileName) =>
+										navigateTo(campaign.slug, fileName)
+									}
 								/>
 							)}
 						</div>

@@ -34,6 +34,11 @@ import {
 	resolveSpellInput,
 	resolveConditionInput,
 } from "../src/utils/referenceResolvers.js";
+import {
+	buildCampaignGraph,
+	extractBracketMentions,
+	normalizeGraphName,
+} from "../src/utils/campaignGraph.js";
 import CampaignViewModel from "../src/models/CampaignViewModel.js";
 import SessionViewModel from "../src/models/SessionViewModel.js";
 import MonsterStatBlockModel from "../src/models/MonsterStatBlockModel.js";
@@ -204,6 +209,97 @@ await run("CampaignViewModel formats links and dates", () => {
 	);
 	assert.notEqual(model.createdAtLabel, "-");
 	assert.equal(model.formatSessionUpdatedAt(""), "-");
+});
+
+await run("campaign graph builds nodes and mention edges", () => {
+	assert.deepEqual(extractBracketMentions("Meet [Ім'я] and [ NPC  One ]."), [
+		"Ім'я",
+		"NPC One",
+	]);
+	assert.equal(normalizeGraphName("  NPC   One "), "npc one");
+
+	const graph = buildCampaignGraph({
+		campaign: { slug: "camp", name: "Кампанія" },
+		description: "Основний сюжет про [Герой Один].",
+		notes: [{ id: 1, title: "План", text: "Зустріч з [NPC Один]." }],
+		characters: [
+			{
+				id: "hero",
+				firstName: "Герой",
+				lastName: "Один",
+				motivation: "Шукає [Місто].",
+			},
+		],
+		npcs: [{ id: "npc", firstName: "NPC", lastName: "Один" }],
+		locations: [{ id: "city", name: "Місто" }],
+		sessions: [{ fileName: "s1.json", name: "Сесія 1" }],
+		sessionDetails: {
+			"s1.json": {
+				fileName: "s1.json",
+				name: "Сесія 1",
+				data: {
+					result_text: "Бачили [Невідомий союзник].",
+					scenes: [
+						{
+							id: "scene-1",
+							texts: { summary: "[Герой Один] говорить з [NPC Один]." },
+							notes: [{ id: "n1", text: "Поруч [Місто]." }],
+						},
+					],
+				},
+			},
+		},
+	});
+
+	const nodeTypes = new Set(graph.nodes.map((node) => node.type));
+	assert.equal(nodeTypes.has("campaign-note"), true);
+	assert.equal(nodeTypes.has("character"), true);
+	assert.equal(nodeTypes.has("npc"), true);
+	assert.equal(nodeTypes.has("location"), true);
+	assert.equal(nodeTypes.has("session"), true);
+	assert.equal(nodeTypes.has("scene"), true);
+	assert.equal(nodeTypes.has("scene-note"), true);
+	assert.equal(nodeTypes.has("unresolved"), true);
+	assert.equal(graph.edges.some((edge) => edge.relation === "mentions"), true);
+	assert.equal(graph.edges.some((edge) => edge.relation === "related"), true);
+	assert.equal(
+		graph.edges.some(
+			(edge) =>
+				edge.relation === "mentions" &&
+				edge.source === "campaign:camp" &&
+				edge.target === "npc:npc",
+		),
+		true,
+	);
+	assert.equal(
+		graph.edges.some(
+			(edge) =>
+				edge.relation === "mentions" &&
+				edge.source === "session:s1.json" &&
+				edge.target === "character:hero",
+		),
+		true,
+	);
+	assert.equal(
+		graph.edges.some(
+			(edge) =>
+				edge.relation === "mentions" &&
+				edge.source === "session:s1.json" &&
+				edge.target === "location:city",
+		),
+		true,
+	);
+	assert.equal(graph.stats.unresolved, 1);
+
+	const simplifiedGraph = buildCampaignGraph({
+		campaign: { slug: "camp", name: "Кампанія" },
+		notes: [{ id: 1, title: "Прихований заголовок", text: "Текст нотатки." }],
+		simplifiedNotes: true,
+	});
+	assert.equal(
+		simplifiedGraph.nodes.find((node) => node.type === "campaign-note")?.label,
+		"Текст нотатки.",
+	);
 });
 
 await run("SessionViewModel encounter lookup and labels", () => {

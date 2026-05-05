@@ -153,6 +153,79 @@ const icons = {
 			<polyline points="2 12 12 17 22 12" />
 		</>
 	),
+	"notes-graph": (
+		<>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="24px"
+				height="24px"
+				viewBox="0 0 48 48"
+			>
+				<circle
+					styles={{
+						fill: "none",
+						stroke: "#1d1d1b",
+						strokeLinecap: "round",
+						strokeLinejoin: "round",
+						strokeWidth: "2px",
+					}}
+					cx="4"
+					cy="27"
+					r="3"
+				/>
+				<circle
+					styles={{
+						fill: "none",
+						stroke: "#1d1d1b",
+						strokeLinecap: "round",
+						strokeLinejoin: "round",
+						strokeWidth: "2px",
+					}}
+					cx="25"
+					cy="18"
+					r="3"
+				/>
+				<circle
+					styles={{
+						fill: "none",
+						stroke: "#1d1d1b",
+						strokeLinecap: "round",
+						strokeLinejoin: "round",
+						strokeWidth: "2px",
+					}}
+					cx="44"
+					cy="31"
+					r="3"
+				/>
+				<line
+					styles={{
+						fill: "none",
+						stroke: "#1d1d1b",
+						strokeLinecap: "round",
+						strokeLinejoin: "round",
+						strokeWidth: "2px",
+					}}
+					x1="7"
+					x2="22"
+					y1="24.5"
+					y2="17.5"
+				/>
+				<line
+					styles={{
+						fill: "none",
+						stroke: "#1d1d1b",
+						strokeLinecap: "round",
+						strokeLinejoin: "round",
+						strokeWidth: "2px",
+					}}
+					x1="28"
+					x2="41"
+					y1="18.5"
+					y2="28.5"
+				/>
+			</svg>
+		</>
+	),
 	file: (
 		<>
 			<path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
