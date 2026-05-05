@@ -189,8 +189,11 @@ function EncounterView(props) {
 
 	const handleSelectMonster = (monster) => {
 		if (isEncounterCharacterParticipant(monster)) {
+			if (view.selectedInstance?.instanceId === monster.instanceId) {
+				setModalCharacter(monster);
+				return;
+			}
 			view.setSelectedInstance(monster);
-			setModalCharacter(monster);
 			return;
 		}
 		view.setSelectedInstance(monster);

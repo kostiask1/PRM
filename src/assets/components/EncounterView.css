@@ -122,8 +122,8 @@
 }
 
 .EncounterMonsterRow--character {
-	border-left-color: color-mix(in srgb, var(--accent), transparent 30%);
-	background: color-mix(in srgb, var(--accent), transparent 94%);
+	border-left-color: color-mix(in srgb, var(--warning), transparent 60%);
+	background: color-mix(in srgb, var(--warning), transparent 95%);
 }
 
 .EncounterMonsterRow__content {
@@ -274,7 +274,8 @@
 
 .EncounterView__detailView--single {
 	overflow-y: auto;
-	padding-right: var(--space-1);
+	padding: var(--space-2);
+	padding-right: 0;
 }
 
 .EncounterView__detailView--grid {
