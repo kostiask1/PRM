@@ -55,6 +55,22 @@ function createEmptyCharacterDraft() {
 	};
 }
 
+function resolveHpInputValue(inputValue, previousHp) {
+	const text = String(inputValue ?? "").trim();
+	const previousValue = parseInt(previousHp, 10) || 0;
+	const relativeMatch = text.match(/^([+-])\s*(\d+)$/);
+
+	if (relativeMatch) {
+		const delta = parseInt(relativeMatch[2], 10) || 0;
+		return Math.max(
+			0,
+			relativeMatch[1] === "-" ? previousValue - delta : previousValue + delta,
+		);
+	}
+
+	return Math.max(0, parseInt(text, 10) || 0);
+}
+
 function EncounterView(props) {
 	const campaign = props.campaign;
 	const sessionId = props.sessionId;
@@ -73,6 +89,7 @@ function EncounterView(props) {
 		createEmptyCharacterDraft(),
 	);
 	const [isPlayerSubmitting, setIsPlayerSubmitting] = useState(false);
+	const [hpDrafts, setHpDrafts] = useState({});
 	const gridItemRefs = useRef(new Map());
 	const focusTimeoutRef = useRef(null);
 	const view = useEncounterView({
@@ -184,6 +201,28 @@ function EncounterView(props) {
 
 	const handleRenameMonster = (monster) => {
 		view.handleRenameMonster(monster.instanceId, monster.name);
+	};
+
+	const handleHpInputChange = (instanceId, value) => {
+		setHpDrafts((current) => ({
+			...current,
+			[instanceId]: value,
+		}));
+	};
+
+	const handleHpInputBlur = (monster) => {
+		const draftValue = hpDrafts[monster.instanceId];
+		if (draftValue === undefined) return;
+
+		view.updateMonsterHp(
+			monster.instanceId,
+			resolveHpInputValue(draftValue, monster.currentHp),
+		);
+		setHpDrafts((current) => {
+			const next = { ...current };
+			delete next[monster.instanceId];
+			return next;
+		});
 	};
 
 	const handleCharacterChange = (instanceId) => (_characterId, nextCharacter) => {
@@ -481,15 +520,25 @@ function EncounterView(props) {
 													<>
 														<div className="EncounterMonsterRow__hp">
 															<input
-																type="number"
-																value={m.currentHp}
+																type="text"
+																value={hpDrafts[m.instanceId] ?? m.currentHp}
 																onChange={(e) =>
-																	view.updateMonsterHp(
+																	handleHpInputChange(
 																		m.instanceId,
 																		e.target.value,
 																	)
 																}
-																onClick={(e) => e.stopPropagation()}
+																onBlur={() => handleHpInputBlur(m)}
+																onKeyDown={(e) => {
+																	if (e.key === "Enter") {
+																		e.currentTarget.blur();
+																	}
+																}}
+																onFocus={(e) => e.currentTarget.select()}
+																onClick={(e) => {
+																	e.stopPropagation();
+																	e.currentTarget.select();
+																}}
 																className="EncounterMonsterRow__hpInput"
 																style={{
 																	color: view.getHpColor(
