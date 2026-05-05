@@ -19,6 +19,7 @@ export default function DiceCalculator() {
 	const [manualInput, setManualInput] = useState("");
 	const dispatch = useAppDispatch();
 	const diceRollRequest = useAppSelector((state) => state.dice.rollRequest);
+	const rootRef = useRef(null);
 	const processedRollRequestIdRef = useRef(null);
 	const rollingTimeoutRef = useRef(null);
 	const rollingAnimationFrameRef = useRef(null);
@@ -41,6 +42,21 @@ export default function DiceCalculator() {
 			window.removeEventListener("keydown", handleKeyDown);
 		};
 	}, []);
+
+	useEffect(() => {
+		if (!isOpen) return undefined;
+
+		const handlePointerDown = (e) => {
+			if (rootRef.current?.contains(e.target)) return;
+			if (e.target.closest?.(".RollDice")) return;
+			setIsOpen(false);
+		};
+
+		document.addEventListener("pointerdown", handlePointerDown);
+		return () => {
+			document.removeEventListener("pointerdown", handlePointerDown);
+		};
+	}, [isOpen]);
 
 	useEffect(
 		() => () => {
@@ -198,7 +214,10 @@ export default function DiceCalculator() {
 	}, []);
 
 	return (
-		<div className={classNames("DiceCalculator", { "is-open": isOpen })}>
+		<div
+			ref={rootRef}
+			className={classNames("DiceCalculator", { "is-open": isOpen })}
+		>
 			{isOpen && (
 				<div className="DiceCalculator__panel">
 					<div className="DiceCalculator__header">
