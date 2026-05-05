@@ -1,6 +1,6 @@
 .CampaignNotesGraph {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) minmax(250px, 310px);
+	grid-template-columns: minmax(0, 1fr) minmax(250px, 340px);
 	gap: var(--space-3);
 	align-items: stretch;
 	min-width: 0;
@@ -23,7 +23,7 @@
 
 .CampaignNotesGraph__toolbar {
 	display: grid;
-	grid-template-columns: minmax(180px, 280px) 1fr;
+	grid-template-columns: 180px 1fr;
 	gap: var(--space-2);
 	align-items: start;
 	padding: var(--space-3);
@@ -48,10 +48,12 @@
 }
 
 .CampaignNotesGraph__filter {
-	min-height: 32px;
+	min-height: auto;
 	border-color: color-mix(in srgb, var(--filter-color), transparent 40%);
 	color: color-mix(in srgb, var(--filter-color), var(--text) 18%);
 	background: color-mix(in srgb, var(--filter-color), transparent 88%);
+	font-size: 0.75rem;
+	padding: var(--space-2) var(--space-2);
 }
 
 .CampaignNotesGraph__filter.Button--primary {
