@@ -18,7 +18,6 @@ const markdownTagsWithMentions = [
 	"strong",
 	"em",
 	"del",
-	"code",
 	"blockquote",
 	"li",
 	"h1",
@@ -83,14 +82,21 @@ export default function LocationCard({
 		? !!location.isNotesCollapsed
 		: false;
 	const mentionComponents = useMemo(
-		() =>
-			Object.fromEntries(
+		() => ({
+			...Object.fromEntries(
 				markdownTagsWithMentions.map((tag) => [
 					tag,
 					({ children, ...tagProps }) =>
 						React.createElement(tag, tagProps, renderMentionChildren(children)),
 				]),
 			),
+			code: ({ children }) => (
+				<span>{renderMentionChildren(children)}</span>
+			),
+			pre: ({ children }) => (
+				<span>{renderMentionChildren(children)}</span>
+			),
+		}),
 		[],
 	);
 
