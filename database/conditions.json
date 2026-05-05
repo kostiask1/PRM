@@ -237,6 +237,7 @@
 			"basicRules2024": true,
 			"entries": [
 				"While you have the Exhaustion condition, you experience the following effects.",
+				"Exhaustion represents cumulative physical and mental wear. Each level makes a creature less effective until the exhaustion is reduced.",
 				{
 					"type": "entries",
 					"entries": [
@@ -251,14 +252,16 @@
 							"type": "entries",
 							"name": "D20 Tests Affected",
 							"entries": [
-								"When you make a D20 Test the roll is reduced by 2 times your Exhaustion level."
+								"When you make a D20 Test the roll is reduced by 2 times your Exhaustion level.",
+								"Formula: D20 - (EXH lvl * 2)"
 							]
 						},
 						{
 							"type": "entries",
 							"name": "Speed Reduced",
 							"entries": [
-								"Your {@variantrule Speed|XPHB} is reduced by a number of feet equal to 5 times your Exhaustion level."
+								"Your {@variantrule Speed|XPHB} is reduced by a number of feet equal to 5 times your Exhaustion level.",
+								"Formula: Speed - (EXH lvl * 5)"
 							]
 						},
 						{
