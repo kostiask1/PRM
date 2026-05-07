@@ -8,9 +8,77 @@ import { lang } from "../../services/localization";
 import { renderMentionText } from "../../utils/parser";
 
 const TAB_PREVIEW = "       "; // 7 пробілів, як у тебе зараз
+const TAB_MARKDOWN_ENTITY = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
+const EMPTY_LINE_MARKDOWN_ENTITY = "&nbsp;\n\n";
+const MARKDOWN_BLOCK_TAGS = new Set([
+	"p",
+	"li",
+	"h1",
+	"h2",
+	"h3",
+	"h4",
+	"h5",
+	"h6",
+	"td",
+	"th",
+]);
+const MARKDOWN_BLOCK_SELECTOR = Array.from(MARKDOWN_BLOCK_TAGS)
+	.map((tag) => `${tag}[data-source-start]`)
+	.join(", ");
 
 function normalizePreviewText(text = "") {
 	return text.replace(/&nbsp;/g, "\u00A0");
+}
+
+function applyMarkdownSourceReplacement(state, regex, replacement) {
+	const next = {
+		source: "",
+		sourceOffsetToRaw: [state.sourceOffsetToRaw[0] ?? 0],
+	};
+	let lastIndex = 0;
+
+	const appendSlice = (start, end) => {
+		for (let i = start; i < end; i++) {
+			next.source += state.source[i];
+			next.sourceOffsetToRaw.push(state.sourceOffsetToRaw[i + 1] ?? 0);
+		}
+	};
+
+	const appendReplacement = (text, start, end) => {
+		const startRaw = state.sourceOffsetToRaw[start] ?? 0;
+		const endRaw = state.sourceOffsetToRaw[end] ?? startRaw;
+
+		for (let i = 0; i < text.length; i++) {
+			next.source += text[i];
+			next.sourceOffsetToRaw.push(i === text.length - 1 ? endRaw : startRaw);
+		}
+	};
+
+	for (const match of state.source.matchAll(regex)) {
+		appendSlice(lastIndex, match.index);
+		appendReplacement(replacement, match.index, match.index + match[0].length);
+		lastIndex = match.index + match[0].length;
+	}
+
+	appendSlice(lastIndex, state.source.length);
+	return next;
+}
+
+function buildMarkdownSource(rawValue = "") {
+	const source = String(rawValue || "");
+	let state = {
+		source,
+		sourceOffsetToRaw: Array.from({ length: source.length + 1 }, (_, i) => i),
+	};
+
+	state = applyMarkdownSourceReplacement(
+		state,
+		/(?<!(?:^|\n)- {2}[^\n]*\n)\n(?!\n)|(?<!(?:^|\n)- {2}[^\n]*)\n(?=\n)/g,
+		EMPTY_LINE_MARKDOWN_ENTITY,
+	);
+	state = applyMarkdownSourceReplacement(state, /\t/g, TAB_MARKDOWN_ENTITY);
+
+	return state;
 }
 
 /**
@@ -147,6 +215,90 @@ function getAbsolutePreviewOffset(container, targetNode, targetOffset) {
 	}
 
 	return total;
+}
+
+function getRawOffsetInContent(rawContent, previewOffset) {
+	const { previewToRaw } = buildPreviewMap(rawContent || "");
+	if (previewToRaw.length === 0) return 0;
+	if (previewOffset <= 0) return Math.max(0, previewToRaw[0] ?? 0);
+	if (previewOffset >= previewToRaw.length) return rawContent.length;
+	return Math.min(
+		Math.max(0, previewToRaw[previewOffset] ?? rawContent.length),
+		rawContent.length,
+	);
+}
+
+function getMarkdownLineContent(line) {
+	const markerMatch = line.match(
+		/^([ \t]*)(#{1,6}[ \t]+|[-*+][ \t]+|\d+\.[ \t]+|> ?)/,
+	);
+	if (!markerMatch) {
+		return {
+			content: line,
+			contentOffset: 0,
+		};
+	}
+	return {
+		content: line.slice(markerMatch[0].length),
+		contentOffset: markerMatch[0].length,
+	};
+}
+
+function getMarkdownContentStart(rawValue, startOffset) {
+	const lineEnd = rawValue.indexOf("\n", startOffset);
+	const line = rawValue.slice(
+		startOffset,
+		lineEnd === -1 ? rawValue.length : lineEnd,
+	);
+	return startOffset + getMarkdownLineContent(line).contentOffset;
+}
+
+function getClosestSourceBlock(container, targetNode) {
+	const parentElement =
+		targetNode.nodeType === Node.ELEMENT_NODE
+			? targetNode
+			: targetNode.parentElement;
+	const block = parentElement?.closest?.(MARKDOWN_BLOCK_SELECTOR);
+	if (!block || !container.contains(block)) return null;
+	return block;
+}
+
+function getSourceBlockProps(tag, rawValue, sourceOffsetToRaw, node) {
+	if (!MARKDOWN_BLOCK_TAGS.has(tag)) return {};
+
+	const sourceStart = node?.position?.start?.offset;
+	const sourceEnd = node?.position?.end?.offset;
+	if (typeof sourceStart !== "number" || typeof sourceEnd !== "number") {
+		return {};
+	}
+
+	const rawStart = sourceOffsetToRaw[sourceStart] ?? rawValue.length;
+	const rawEnd = sourceOffsetToRaw[sourceEnd] ?? rawValue.length;
+	const contentStart = getMarkdownContentStart(rawValue, rawStart);
+
+	return {
+		"data-source-start": Math.max(0, Math.min(contentStart, rawValue.length)),
+		"data-source-end": Math.max(contentStart, Math.min(rawEnd, rawValue.length)),
+	};
+}
+
+function getSourceBlockRawOffset(container, targetNode, targetOffset, rawValue) {
+	const block = getClosestSourceBlock(container, targetNode);
+	if (!block) return null;
+
+	const contentStart = Number(block.dataset.sourceStart);
+	const contentEnd = Number(block.dataset.sourceEnd);
+	if (!Number.isFinite(contentStart) || !Number.isFinite(contentEnd)) return null;
+
+	const blockPreviewOffset = getAbsolutePreviewOffset(
+		block,
+		targetNode,
+		targetOffset,
+	);
+	const rawContent = rawValue.slice(contentStart, contentEnd);
+	return (
+		contentStart + getRawOffsetInContent(rawContent, blockPreviewOffset)
+	);
 }
 
 /**
@@ -299,6 +451,7 @@ export default function EditableField({
 	const viewRef = useRef(null);
 
 	const previewMap = useMemo(() => buildPreviewMap(value || ""), [value]);
+	const markdownSource = useMemo(() => buildMarkdownSource(value || ""), [value]);
 
 	const handleCopy = async (e) => {
 		e.stopPropagation();
@@ -341,16 +494,29 @@ export default function EditableField({
 				container.contains(caret.node) &&
 				caret.node.nodeType === Node.TEXT_NODE
 			) {
-				const previewOffset = getAbsolutePreviewOffset(
+				const blockRawOffset = getSourceBlockRawOffset(
 					container,
 					caret.node,
 					caret.offset,
+					value || "",
 				);
 
-				selectionData = {
-					previewOffset: Math.max(0, previewOffset),
-					previewToRaw: previewMap.previewToRaw,
-				};
+				if (typeof blockRawOffset === "number") {
+					selectionData = {
+						index: Math.max(0, Math.min(blockRawOffset, value?.length || 0)),
+					};
+				} else {
+					const previewOffset = getAbsolutePreviewOffset(
+						container,
+						caret.node,
+						caret.offset,
+					);
+
+					selectionData = {
+						previewOffset: Math.max(0, previewOffset),
+						previewToRaw: previewMap.previewToRaw,
+					};
+				}
 			}
 
 			setInitialSelection(selectionData);
@@ -431,8 +597,20 @@ export default function EditableField({
 	const components = Object.fromEntries(
 		markdownTagsWithMentions.map((tag) => [
 			tag,
-			({ children, ...tagProps }) =>
-				React.createElement(tag, tagProps, renderMentionChildren(children)),
+			({ node, children, ...tagProps }) =>
+				React.createElement(
+					tag,
+					{
+						...tagProps,
+						...getSourceBlockProps(
+							tag,
+							value || "",
+							markdownSource.sourceOffsetToRaw,
+							node,
+						),
+					},
+					renderMentionChildren(children),
+				),
 		]),
 	);
 
@@ -486,12 +664,7 @@ export default function EditableField({
 				{value || value === 0 ? (
 					type === "textarea" ? (
 						<ReactMarkdown components={components}>
-							{String(value)
-								.replace(
-									/(?<!(?:^|\n)- {2}[^\n]*\n)\n(?!\n)|(?<!(?:^|\n)- {2}[^\n]*)\n(?=\n)/g,
-									"&nbsp;\n\n",
-								)
-								.replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")}
+							{markdownSource.source}
 						</ReactMarkdown>
 					) : (
 						<span>{value}</span>

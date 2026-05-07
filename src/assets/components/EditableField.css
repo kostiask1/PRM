@@ -39,7 +39,25 @@
 
 .MarkdownView ul {
 	margin: 0;
-	padding-left: 1rem;
+	padding-left: 0;
+	list-style-type: none;
+}
+
+.MarkdownView ol {
+	margin: 0;
+	padding-left: var(--space-4);
+	list-style-type: decimal;
+}
+
+.MarkdownView ul li {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--space-1);
+}
+
+.MarkdownView ul li:before {
+	content: '-';
+	font-weight: 600;
 }
 
 .MarkdownView:hover {
