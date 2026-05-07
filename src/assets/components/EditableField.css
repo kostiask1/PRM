@@ -63,6 +63,10 @@
 	margin-bottom: var(--space-4);
 }
 
+.EditableField p {
+	margin: 0;
+}
+
 .MarkdownView ul {
 	margin: 0;
 	margin-bottom: var(--space-2);
@@ -146,6 +150,6 @@
 
 .EditableField__tab {
 	display: inline-block;
-	width: 5ch;
+	width: 4ch;
 	white-space: pre;
 }
