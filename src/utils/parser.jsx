@@ -415,7 +415,6 @@ export function renderMentionText(text) {
 				<EntityLink
 					key={index}
 					name={name}
-					className="mention-link"
 				>
 					{name}
 				</EntityLink>

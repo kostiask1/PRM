@@ -6,6 +6,7 @@ import { useAppDispatch } from "../../store/appStore";
 import { lang } from "../../services/localization";
 import CharacterCard from "../CharacterCard";
 import LocationCard from "../LocationCard";
+import { EntityLinkScope } from "../common/EntityLinkContext";
 
 const sanitizeEntityForSave = (entity) =>
 	Object.fromEntries(
@@ -74,9 +75,30 @@ export default function EntityModalContent({
 
 	if (type === "locations") {
 		return (
-			<LocationCard
-				key={entity?.id || entity?.slug || "entity-modal-location-card"}
-				location={{ ...entity, collapsed: false }}
+			<EntityLinkScope entity={entity} type={type}>
+				<LocationCard
+					key={entity?.id || entity?.slug || "entity-modal-location-card"}
+					location={{ ...entity, collapsed: false }}
+					onChange={handleUpdate}
+					onNameBlur={handleNameBlur}
+					onDelete={async () => {
+						await api.deleteEntity(campaignSlug, type, entity.slug);
+						dispatch(refreshEntitiesAction());
+						onClose();
+					}}
+					onToggleCollapse={null}
+					campaignSlug={campaignSlug}
+					viewMode="modal"
+				/>
+			</EntityLinkScope>
+		);
+	}
+
+	return (
+		<EntityLinkScope entity={entity} type={type}>
+			<CharacterCard
+				key={entity?.id || entity?.slug || "entity-modal-card"}
+				character={{ ...entity, collapsed: false }}
 				onChange={handleUpdate}
 				onNameBlur={handleNameBlur}
 				onDelete={async () => {
@@ -86,26 +108,9 @@ export default function EntityModalContent({
 				}}
 				onToggleCollapse={null}
 				campaignSlug={campaignSlug}
+				type={type}
 				viewMode="modal"
 			/>
-		);
-	}
-
-	return (
-		<CharacterCard
-			key={entity?.id || entity?.slug || "entity-modal-card"}
-			character={{ ...entity, collapsed: false }}
-			onChange={handleUpdate}
-			onNameBlur={handleNameBlur}
-			onDelete={async () => {
-				await api.deleteEntity(campaignSlug, type, entity.slug);
-				dispatch(refreshEntitiesAction());
-				onClose();
-			}}
-			onToggleCollapse={null}
-			campaignSlug={campaignSlug}
-			type={type}
-			viewMode="modal"
-		/>
+		</EntityLinkScope>
 	);
 }

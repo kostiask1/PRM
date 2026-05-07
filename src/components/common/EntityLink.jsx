@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useContext, useMemo, useState } from "react";
 
 import { api } from "../../api";
 import { parseUrl } from "../../utils/navigation";
@@ -6,6 +6,12 @@ import Modal from "./Modal";
 import EntityModalContent from "../modals/EntityModalContent";
 import classNames from "../../utils/classNames";
 import { lang } from "../../services/localization";
+import { EntityLinkScope } from "./EntityLinkContext";
+import {
+	EntityLinkContext,
+	getEntityIdentity,
+	isSameEntityIdentity,
+} from "./EntityLinkIdentity";
 
 function findEntityByName(entities, name) {
 	const searchName = String(name || "")
@@ -49,6 +55,7 @@ export default function EntityLink({
 	className = "",
 }) {
 	const [modalState, setModalState] = useState(null);
+	const currentEntityIdentity = useContext(EntityLinkContext);
 
 	const resolvedCampaignSlug = useMemo(
 		() => parseUrl().campaign,
@@ -78,6 +85,18 @@ export default function EntityLink({
 				];
 				const found = findEntityByName(allEntities, name);
 				if (!found) return;
+				const foundIdentity = getEntityIdentity(found.entity, found.type);
+				if (
+					isSameEntityIdentity(foundIdentity, currentEntityIdentity) ||
+					isSameEntityIdentity(
+						foundIdentity,
+						modalState
+							? getEntityIdentity(modalState.entity, modalState.type)
+							: null,
+					)
+				) {
+					return;
+				}
 
 				setModalState({
 					entity: found.entity,
@@ -87,7 +106,7 @@ export default function EntityLink({
 				console.error("Failed to open entity link modal", error);
 			}
 		},
-		[name, resolvedCampaignSlug],
+		[name, resolvedCampaignSlug, currentEntityIdentity, modalState],
 	);
 
 	return (
@@ -123,12 +142,14 @@ export default function EntityLink({
 					onConfirm={handleCloseModal}
 					onCancel={handleCloseModal}
 				>
-					<EntityModalContent
-						initialEntity={modalState.entity}
-						campaignSlug={resolvedCampaignSlug}
-						type={modalState.type}
-						onClose={handleCloseModal}
-					/>
+					<EntityLinkScope entity={modalState.entity} type={modalState.type}>
+						<EntityModalContent
+							initialEntity={modalState.entity}
+							campaignSlug={resolvedCampaignSlug}
+							type={modalState.type}
+							onClose={handleCloseModal}
+						/>
+					</EntityLinkScope>
 				</Modal>
 			)}
 		</>

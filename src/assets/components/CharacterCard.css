@@ -287,7 +287,14 @@
     overflow: visible;
 }
 
+.Modal__card--character {
+    position: relative;
+}
+
 .character-card--modal .character-card__header {
+    position: absolute;
+    top: var(--space-1);
+    right: 60px;
     padding: 0 0 var(--space-3) 0;
     gap: var(--space-2);
     cursor: default;
