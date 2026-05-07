@@ -76,16 +76,3 @@
 .ProjectTutorial__workflow li {
 	line-height: 1.45;
 }
-
-@media (max-width: 900px) {
-	.ProjectTutorial__layout {
-		grid-template-columns: 1fr;
-	}
-
-	.ProjectTutorial__workflow {
-		border-left: 0;
-		border-top: 1px solid color-mix(in srgb, var(--border), transparent 35%);
-		padding-left: 0;
-		padding-top: var(--space-4);
-	}
-}

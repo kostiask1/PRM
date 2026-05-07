@@ -71,13 +71,3 @@
 		width: 90%;
 	}
 }
-
-@media (max-width: 1024px) {
-	.App {
-		margin-left: 0;
-	}
-
-	.App__main {
-		padding: var(--space-4);
-	}
-}

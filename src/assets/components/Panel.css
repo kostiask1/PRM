@@ -31,21 +31,3 @@
 .Panel__body .Panel__body {
 	padding: 0;
 }
-
-@media (max-width: 768px) {
-	.Panel {
-		margin: var(--space-3);
-		max-height: calc(100vh - 20px);
-	}
-
-	.Panel__header {
-		padding: var(--space-3) var(--space-3);
-		gap: var(--space-3);
-		align-items: flex-start;
-		flex-direction: column;
-	}
-
-	.Panel__body {
-		padding: var(--space-3);
-	}
-}

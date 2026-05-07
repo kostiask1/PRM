@@ -389,25 +389,3 @@
 .CampaignNotesGraph__noteText .MarkdownView {
 	min-height: 260px;
 }
-
-@media (max-width: 1100px) {
-	.CampaignNotesGraph {
-		grid-template-columns: 1fr;
-	}
-
-	.CampaignNotesGraph__details {
-		max-height: none;
-	}
-}
-
-@media (max-width: 700px) {
-	.CampaignNotesGraph__toolbar {
-		grid-template-columns: 1fr;
-	}
-
-	.CampaignNotesGraph__canvasWrap,
-	.CampaignNotesGraph__canvas {
-		min-height: 440px;
-		height: 440px;
-	}
-}

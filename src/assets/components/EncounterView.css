@@ -408,14 +408,3 @@
 	color: var(--muted);
 	font-size: 0.85rem;
 }
-
-@media (max-width: 900px) {
-	.EncounterView__grid {
-		grid-template-columns: 1fr;
-	}
-
-	.EncounterView__headerActions {
-		flex-wrap: wrap;
-		justify-content: flex-end;
-	}
-}

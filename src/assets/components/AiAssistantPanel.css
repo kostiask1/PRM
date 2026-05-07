@@ -523,18 +523,3 @@
 	flex: 1;
 	font-weight: 600;
 }
-
-@media (max-width: 720px) {
-	.AiAssistant__modelPicker {
-		width: 100%;
-	}
-
-	.AiAssistant__modelSelect {
-		max-width: none;
-	}
-
-	.AiAssistant__response-details-row {
-		grid-template-columns: 1fr;
-		gap: 2px;
-	}
-}

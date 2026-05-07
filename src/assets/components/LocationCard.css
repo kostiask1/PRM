@@ -243,22 +243,3 @@
 .Modal__card--location {
     width: min(96vw, 1120px);
 }
-
-@media (max-width: 768px) {
-
-    .Modal__card.CreateLocationModal,
-    .Modal__card.EntityLinkModal--location,
-    .Modal__card--location {
-        width: 100%;
-    }
-
-    .location-card__main-layout {
-        grid-template-columns: 1fr;
-        gap: var(--space-4);
-    }
-
-    .location-card__image-side {
-        width: 100%;
-        max-width: none;
-    }
-}

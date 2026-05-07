@@ -191,31 +191,3 @@
 	padding: var(--space-2) 0;
 	z-index: 1;
 }
-
-@media (max-width: 900px) {
-	.CampaignView__layout {
-		grid-template-columns: 1fr;
-	}
-
-	.CampaignView__sessionsPane {
-		position: static;
-		max-height: none;
-		order: -1;
-	}
-
-	.CampaignView__characters>div {
-		flex: 1 1 100%;
-		max-width: none;
-	}
-
-	.section-row {
-		position: static;
-		flex-wrap: wrap;
-		gap: var(--space-2);
-	}
-
-	.CampaignView__headerActions {
-		width: 100%;
-		justify-content: flex-start;
-	}
-}
