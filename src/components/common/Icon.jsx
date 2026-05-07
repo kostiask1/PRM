@@ -47,21 +47,6 @@ const icons = {
 		<g strokeWidth="1">
 			<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
 			<circle cx="12" cy="14" r="2.2" />
-			<circle
-				cx="11.2"
-				cy="13.8"
-				r="0.2"
-				fill="currentColor"
-				strokeWidth="0.5"
-			/>
-			<circle
-				cx="12.8"
-				cy="13.8"
-				r="0.2"
-				fill="currentColor"
-				strokeWidth="0.5"
-			/>
-			<path d="M10.9 15.7h2.2" />
 		</g>
 	),
 	restore: (
@@ -162,7 +147,7 @@ const icons = {
 				viewBox="0 0 48 48"
 			>
 				<circle
-					styles={{
+					style={{
 						fill: "none",
 						stroke: "#1d1d1b",
 						strokeLinecap: "round",
@@ -174,7 +159,7 @@ const icons = {
 					r="3"
 				/>
 				<circle
-					styles={{
+					style={{
 						fill: "none",
 						stroke: "#1d1d1b",
 						strokeLinecap: "round",
@@ -186,7 +171,7 @@ const icons = {
 					r="3"
 				/>
 				<circle
-					styles={{
+					style={{
 						fill: "none",
 						stroke: "#1d1d1b",
 						strokeLinecap: "round",
@@ -198,7 +183,7 @@ const icons = {
 					r="3"
 				/>
 				<line
-					styles={{
+					style={{
 						fill: "none",
 						stroke: "#1d1d1b",
 						strokeLinecap: "round",
@@ -211,7 +196,7 @@ const icons = {
 					y2="17.5"
 				/>
 				<line
-					styles={{
+					style={{
 						fill: "none",
 						stroke: "#1d1d1b",
 						strokeLinecap: "round",

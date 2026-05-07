@@ -127,6 +127,63 @@ function getLocationDisplayName(location) {
 	return String(location?.name || location?.title || lang.t("Untitled")).trim();
 }
 
+function getCharacterDisplayName(character) {
+	const firstName = String(
+		character?.firstName || character?.first_name || "",
+	).trim();
+	const lastName = String(
+		character?.lastName || character?.last_name || "",
+	).trim();
+	const fullName = `${firstName} ${lastName}`.trim();
+	return String(
+		fullName || character?.name || character?.title || lang.t("Untitled"),
+	).trim();
+}
+
+function getCharacterContextKey(character) {
+	return String(
+		character?.slug || character?.id || getCharacterDisplayName(character) || "",
+	).trim();
+}
+
+function getContextListConfig(value) {
+	if (value && typeof value === "object" && !Array.isArray(value)) {
+		return {
+			included: value.included !== false,
+			items: value.items && typeof value.items === "object" ? value.items : {},
+		};
+	}
+	return {
+		included: value !== false,
+		items: {},
+	};
+}
+
+function ensureContextListItems(currentValue, list, getKey) {
+	const current = getContextListConfig(currentValue);
+	const nextItems = { ...current.items };
+	let changed =
+		!currentValue ||
+		typeof currentValue !== "object" ||
+		Array.isArray(currentValue) ||
+		!currentValue.items;
+
+	for (const item of list) {
+		const key = getKey(item);
+		if (!key || Object.prototype.hasOwnProperty.call(nextItems, key)) {
+			continue;
+		}
+		nextItems[key] = true;
+		changed = true;
+	}
+
+	if (!changed) return currentValue;
+	return {
+		included: current.included,
+		items: nextItems,
+	};
+}
+
 function getHistoryOptionsSummary(entry) {
 	const options = entry?.request?.options;
 	if (!options || typeof options !== "object" || !options.mode) {
@@ -158,6 +215,8 @@ function getHistoryContextSummary(entry) {
 		parts.push(`${lang.t("Notes")}: ${context.campaignNotes}`);
 	if (context.campaignCharacters)
 		parts.push(`${lang.t("Characters")}: ${context.campaignCharacters}`);
+	if (context.campaignNpcs)
+		parts.push(`${lang.t("NPCs")}: ${context.campaignNpcs}`);
 	if (context.campaignLocations)
 		parts.push(`${lang.t("Locations/Factions")}: ${context.campaignLocations}`);
 	if (context.sessions)
@@ -208,11 +267,20 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	const [aiModels, setAiModels] = useState([]);
 	const [selectedModel, setSelectedModel] = useState("");
 	const [sessionsList, setSessionsList] = useState([]);
+	const [charactersList, setCharactersList] = useState([]);
+	const [npcsList, setNpcsList] = useState([]);
 	const [locationsList, setLocationsList] = useState([]);
 	const [expandedSessions, setExpandedSessions] = useState({});
 	const [contextConfig, setContextConfig] = useState(() => ({
 		campaignNotes: true,
-		campaignCharacters: true,
+		campaignCharacters: {
+			included: true,
+			items: {},
+		},
+		campaignNpcs: {
+			included: true,
+			items: {},
+		},
 		campaignLocations: {
 			included: true,
 			items: {},
@@ -308,17 +376,28 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 		if (!isContextModalOpen) return;
 
 		let cancelled = false;
-		api
-			.getEntities(initialRoute.campaign, "locations")
-			.then((locations) => {
-				if (!cancelled) {
-					setLocationsList(Array.isArray(locations) ? locations : []);
-				}
+		const loadCampaignEntities = async (type, label) => {
+			try {
+				const entities = await api.getEntities(initialRoute.campaign, type);
+				return Array.isArray(entities) ? entities : [];
+			} catch (err) {
+				console.error(`Failed to load ${label}`, err);
+				return [];
+			}
+		};
+
+		Promise.all([
+			loadCampaignEntities("characters", "characters"),
+			loadCampaignEntities("npc", "NPCs"),
+			loadCampaignEntities("locations", "locations"),
+		])
+			.then(([characters, npcs, locations]) => {
+				if (cancelled) return;
+				setCharactersList(characters);
+				setNpcsList(npcs);
+				setLocationsList(locations);
 			})
-			.catch((err) => {
-				console.error("Failed to load locations", err);
-				if (!cancelled) setLocationsList([]);
-			});
+			.catch((err) => console.error("Failed to load campaign context", err));
 
 		return () => {
 			cancelled = true;
@@ -326,33 +405,52 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	}, [isContextModalOpen, initialRoute.campaign]);
 
 	useEffect(() => {
+		if (charactersList.length === 0) return;
+
+		setContextConfig((prev) => {
+			const nextCharacters = ensureContextListItems(
+				prev.campaignCharacters,
+				charactersList,
+				getCharacterContextKey,
+			);
+			if (nextCharacters === prev.campaignCharacters) return prev;
+			return {
+				...prev,
+				campaignCharacters: nextCharacters,
+			};
+		});
+	}, [charactersList]);
+
+	useEffect(() => {
+		if (npcsList.length === 0) return;
+
+		setContextConfig((prev) => {
+			const nextNpcs = ensureContextListItems(
+				prev.campaignNpcs,
+				npcsList,
+				getCharacterContextKey,
+			);
+			if (nextNpcs === prev.campaignNpcs) return prev;
+			return {
+				...prev,
+				campaignNpcs: nextNpcs,
+			};
+		});
+	}, [npcsList]);
+
+	useEffect(() => {
 		if (locationsList.length === 0) return;
 
 		setContextConfig((prev) => {
-			const current = prev.campaignLocations || {
-				included: true,
-				items: {},
-			};
-			const currentItems = current.items || {};
-			const nextItems = { ...currentItems };
-			let changed = !prev.campaignLocations || !current.items;
-
-			for (const location of locationsList) {
-				const key = getLocationContextKey(location);
-				if (!key || Object.prototype.hasOwnProperty.call(nextItems, key)) {
-					continue;
-				}
-				nextItems[key] = true;
-				changed = true;
-			}
-
-			if (!changed) return prev;
+			const nextLocations = ensureContextListItems(
+				prev.campaignLocations,
+				locationsList,
+				getLocationContextKey,
+			);
+			if (nextLocations === prev.campaignLocations) return prev;
 			return {
 				...prev,
-				campaignLocations: {
-					included: current.included !== false,
-					items: nextItems,
-				},
+				campaignLocations: nextLocations,
 			};
 		});
 	}, [locationsList]);
@@ -483,17 +581,47 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 		});
 	};
 
-	const setAllLocationContextItems = (checked) => {
+	const updateCampaignContextListIncluded = (contextKey, included) => {
+		setContextConfig((prev) => {
+			const current = getContextListConfig(prev[contextKey]);
+			return {
+				...prev,
+				[contextKey]: {
+					...current,
+					included,
+				},
+			};
+		});
+	};
+
+	const updateCampaignContextListItem = (contextKey, itemKey, value) => {
+		setContextConfig((prev) => {
+			const current = getContextListConfig(prev[contextKey]);
+			return {
+				...prev,
+				[contextKey]: {
+					...current,
+					items: {
+						...current.items,
+						[itemKey]: value,
+					},
+				},
+			};
+		});
+	};
+
+	const setAllCampaignContextItems = (contextKey, list, getKey, checked) => {
 		const items = Object.fromEntries(
-			locationsList
-				.map((location) => getLocationContextKey(location))
+			list
+				.map((item) => getKey(item))
 				.filter(Boolean)
 				.map((key) => [key, checked]),
 		);
 
 		setContextConfig((prev) => ({
 			...prev,
-			campaignLocations: {
+			[contextKey]: {
+				...getContextListConfig(prev[contextKey]),
 				included: true,
 				items,
 			},
@@ -646,16 +774,92 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 		{ key: "encounter", label: "Encounter (monsters)" },
 	];
 
-	const locationContext = contextConfig.campaignLocations || {
-		included: true,
-		items: {},
-	};
+	const characterContext = getContextListConfig(
+		contextConfig.campaignCharacters,
+	);
+	const npcContext = getContextListConfig(contextConfig.campaignNpcs);
+	const locationContext = getContextListConfig(contextConfig.campaignLocations);
+	const characterContextItems = characterContext.items || {};
+	const npcContextItems = npcContext.items || {};
 	const locationContextItems = locationContext.items || {};
 	const selectedResponseDetails = getHistoryDetailRows(
 		selectedResponseEntry,
 		currentLanguage,
 	);
 	const isResponseParsingLocked = generateEncounters;
+
+	const renderCampaignEntityContext = ({
+		contextKey,
+		context,
+		contextItems,
+		emptyLabel,
+		getDisplayName,
+		getKey,
+		label,
+		list,
+	}) => (
+		<>
+			<div className="AiAssistant__context-row">
+				<Checkbox
+					checked={context.included !== false}
+					onChange={(included) =>
+						updateCampaignContextListIncluded(contextKey, included)
+					}
+					label={lang.t(label)}
+				/>
+			</div>
+			{context.included !== false && (
+				<div className="AiAssistant__location-context">
+					<div className="AiAssistant__location-actions">
+						<Button
+							variant="ghost"
+							size={Button.SIZES.SMALL}
+							onClick={() =>
+								setAllCampaignContextItems(contextKey, list, getKey, true)
+							}
+							disabled={list.length === 0}
+						>
+							{lang.t("All")}
+						</Button>
+						<Button
+							variant="ghost"
+							size={Button.SIZES.SMALL}
+							onClick={() =>
+								setAllCampaignContextItems(contextKey, list, getKey, false)
+							}
+							disabled={list.length === 0}
+						>
+							{lang.t("Clear")}
+						</Button>
+					</div>
+					{list.length > 0 ? (
+						list.map((item) => {
+							const itemKey = getKey(item);
+							if (!itemKey) return null;
+							return (
+								<div
+									key={itemKey}
+									className="AiAssistant__context-row AiAssistant__location-row"
+								>
+									<Checkbox
+										checked={contextItems[itemKey] !== false}
+										onChange={(val) =>
+											updateCampaignContextListItem(contextKey, itemKey, val)
+										}
+										label={getDisplayName(item)}
+									/>
+								</div>
+							);
+						})
+					) : (
+						<div className="muted AiAssistant__empty-context">
+							{lang.t(emptyLabel)}
+						</div>
+					)}
+				</div>
+			)}
+		</>
+	);
 
 	useEffect(() => {
 		if (isResponseParsingLocked && !parseAIResponse) {
@@ -873,88 +1077,36 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 												label={lang.t("Campaign notes")}
 											/>
 										</div>
-										<div className="AiAssistant__context-row">
-											<Checkbox
-												checked={contextConfig.campaignCharacters}
-												onChange={(val) =>
-													setContextConfig((prev) => ({
-														...prev,
-														campaignCharacters: val,
-													}))
-												}
-												label={lang.t("Characters")}
-											/>
-										</div>
-										<div className="AiAssistant__context-row">
-											<Checkbox
-												checked={locationContext.included !== false}
-												onChange={(included) =>
-													setContextConfig((prev) => ({
-														...prev,
-														campaignLocations: {
-															...(prev.campaignLocations || { items: {} }),
-															included,
-														},
-													}))
-												}
-												label={lang.t("Locations/Factions")}
-											/>
-										</div>
-										{locationContext.included !== false && (
-											<div className="AiAssistant__location-context">
-												<div className="AiAssistant__location-actions">
-													<Button
-														variant="ghost"
-														size={Button.SIZES.SMALL}
-														onClick={() => setAllLocationContextItems(true)}
-														disabled={locationsList.length === 0}
-													>
-														{lang.t("All")}
-													</Button>
-													<Button
-														variant="ghost"
-														size={Button.SIZES.SMALL}
-														onClick={() => setAllLocationContextItems(false)}
-														disabled={locationsList.length === 0}
-													>
-														{lang.t("Clear")}
-													</Button>
-												</div>
-												{locationsList.length > 0 ? (
-													locationsList.map((location) => {
-														const locationKey = getLocationContextKey(location);
-														if (!locationKey) return null;
-														return (
-															<div
-																key={locationKey}
-																className="AiAssistant__context-row AiAssistant__location-row"
-															>
-																<Checkbox
-																	checked={
-																		locationContextItems[locationKey] !== false
-																	}
-																	onChange={(val) =>
-																		updateContextConfig(
-																			[
-																				"campaignLocations",
-																				"items",
-																				locationKey,
-																			],
-																			val,
-																		)
-																	}
-																	label={getLocationDisplayName(location)}
-																/>
-															</div>
-														);
-													})
-												) : (
-													<div className="muted AiAssistant__empty-context">
-														{lang.t("No locations/factions yet.")}
-													</div>
-												)}
-											</div>
-										)}
+										{renderCampaignEntityContext({
+											contextKey: "campaignCharacters",
+											context: characterContext,
+											contextItems: characterContextItems,
+											emptyLabel: "No characters yet.",
+											getDisplayName: getCharacterDisplayName,
+											getKey: getCharacterContextKey,
+											label: "Characters",
+											list: charactersList,
+										})}
+										{renderCampaignEntityContext({
+											contextKey: "campaignNpcs",
+											context: npcContext,
+											contextItems: npcContextItems,
+											emptyLabel: "No NPCs yet.",
+											getDisplayName: getCharacterDisplayName,
+											getKey: getCharacterContextKey,
+											label: "NPCs",
+											list: npcsList,
+										})}
+										{renderCampaignEntityContext({
+											contextKey: "campaignLocations",
+											context: locationContext,
+											contextItems: locationContextItems,
+											emptyLabel: "No locations/factions yet.",
+											getDisplayName: getLocationDisplayName,
+											getKey: getLocationContextKey,
+											label: "Locations/Factions",
+											list: locationsList,
+										})}
 									</section>
 
 									<section>

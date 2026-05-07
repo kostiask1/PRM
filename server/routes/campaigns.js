@@ -1,6 +1,5 @@
 const express = require("express");
 const router = express.Router();
-const fs = require("fs/promises");
 const storage = require("../storage");
 
 function validateEntityType(type, res) {
@@ -108,7 +107,9 @@ router.delete("/:slug", async (req, res, next) => {
 		const dir = storage.campaignDir(slug);
 		if (!(await storage.exists(dir)))
 			return res.status(404).json({ error: "Кампанію не знайдено." });
-		await fs.rm(dir, { recursive: true, force: true });
+		await storage.deleteCampaignData(slug, {
+			moveImagesToGeneral: Boolean(req.body?.moveImagesToGeneral),
+		});
 		res.status(204).send();
 	} catch (error) {
 		next(error);

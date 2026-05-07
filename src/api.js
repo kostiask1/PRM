@@ -53,9 +53,10 @@ export const api = {
 			method: "PATCH",
 			body: JSON.stringify(payload),
 		}),
-	deleteCampaign: (slug) =>
+	deleteCampaign: (slug, options = {}) =>
 		api.request(`/campaigns/${encodeURIComponent(slug)}`, {
 			method: "DELETE",
+			body: JSON.stringify(options),
 		}),
 	exportCampaign: (slug) =>
 		api.request(`/campaigns/${encodeURIComponent(slug)}/export`),

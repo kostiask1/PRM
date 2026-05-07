@@ -857,19 +857,25 @@ export default function useCampaignView(props) {
 	);
 
 	const handleDeleteCampaign = async () => {
-		if (
-			!(await dispatch(
-				confirm({
-					title: lang.t("Delete campaign"),
-					message: lang.t(
-						"All sessions in this campaign will be permanently lost. Continue?",
-					),
+		const result = await dispatch(
+			confirm({
+				title: lang.t("Delete campaign"),
+				message: lang.t(
+					"All sessions in this campaign will be permanently lost. Campaign images will be moved to General if this option is enabled; otherwise they will be deleted. Continue?",
+				),
+				checkboxLabel: lang.t("Move campaign images to General"),
+				checkboxDefaultChecked: true,
+				getConfirmValue: (_value, moveImagesToGeneral) => ({
+					confirmed: true,
+					moveImagesToGeneral: Boolean(moveImagesToGeneral),
 				}),
-			))
-		)
-			return;
+			}),
+		);
+		if (!result?.confirmed) return;
 		try {
-			await api.deleteCampaign(campaign.slug);
+			await api.deleteCampaign(campaign.slug, {
+				moveImagesToGeneral: result.moveImagesToGeneral,
+			});
 			navigateTo(null);
 			dispatch(requestCampaignsReloadAction());
 		} catch (err) {

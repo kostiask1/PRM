@@ -105,6 +105,10 @@
 	height: 100%;
 }
 
+.AiAssistant__context-toggle .Tooltip__trigger {
+	display: flex;
+}
+
 .AiAssistant__loading {
 	font-style: italic;
 	color: var(--muted);

@@ -48,12 +48,61 @@ function normalizeResponseLanguage(language) {
 	};
 }
 
-function noteToPromptText(note, { includeTitle = true } = {}) {
-	if (!note) return "";
-	if (typeof note === "string") return note.trim();
+function noteToPromptContext(note, { includeTitle = true } = {}) {
+	if (!note) return null;
+	if (typeof note === "string") {
+		return note.trim() ? { text: note } : null;
+	}
+	if (typeof note !== "object") return null;
+
 	const title = includeTitle ? String(note.title || "").trim() : "";
-	const text = String(note.text || "").trim();
-	return [title, text].filter(Boolean).join("\n");
+	const text = String(note.text || "");
+	if (!title && !text.trim()) return null;
+
+	return {
+		id: note.id,
+		...(includeTitle ? { title } : {}),
+		text,
+	};
+}
+
+function entityContextName(entity = {}) {
+	return (
+		`${entity.firstName || entity.first_name || ""} ${
+			entity.lastName || entity.last_name || ""
+		}`.trim() ||
+		entity.name ||
+		entity.title
+	);
+}
+
+function characterToPromptContext(entity = {}, noteToContextNote) {
+	return {
+		id: entity.id,
+		slug: entity.slug,
+		name: entityContextName(entity),
+		race: entity.race,
+		class: entity.class,
+		level: entity.level,
+		motivation: entity.motivation,
+		trait: entity.trait,
+		notes: (entity.notes || []).map(noteToContextNote).filter(Boolean),
+	};
+}
+
+function npcToPromptContext(entity = {}, noteToContextNote) {
+	return {
+		id: entity.id,
+		slug: entity.slug,
+		name: entityContextName(entity),
+		race: entity.race,
+		class: entity.class,
+		level: entity.level,
+		description: entity.description,
+		motivation: entity.motivation,
+		trait: entity.trait,
+		notes: (entity.notes || []).map(noteToContextNote).filter(Boolean),
+	};
 }
 
 function normalizeModelName(name) {
@@ -166,22 +215,22 @@ const systemInstructions = {
 Your goal is to help with campaign planning.
 Keep responses structured and practical for real gameplay.
 Always return JSON only, with no text before or after JSON.
-The JSON must contain generated data only, without extra commentary.
+The JSON must contain final-state campaign data only, without extra commentary.
 Use this shape:
-{ "description": "...", "notes": ["Title\\nDetailed note...", ...], "characters": [{ "name": "...", "race": "...", "class": "...", "level": 1, "motivation": "...", "trait": "...", "notes": ["Title\\nDetailed note...", "..."] }], "npcs": [{ "name": "...", "race": "...", "class": "...", "level": 1, "description": "...", "motivation": "...", "trait": "...", "notes": ["Title\\nDetailed note...", "..."] }], "locations": [{ "name": "...", "description": "...", "notes": ["Title\\nDetailed note...", "..."] }] }.
-Each note in "notes" must be a complete block where the first line is a short title and the following lines are details.
-When updating story description or notes, return the full updated picture, not only newly added material. Preserve useful existing description/notes from the input, revise them as needed, and add new material on top of them.
+{ "description": "...", "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown note text..." }], "characters": [{ "id": "existing-id-if-any", "slug": "existing-slug-if-any", "name": "...", "race": "...", "class": "...", "level": 1, "motivation": "...", "trait": "...", "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown note text..." }] }], "npcs": [{ "id": "existing-id-if-any", "slug": "existing-slug-if-any", "name": "...", "race": "...", "class": "...", "level": 1, "description": "...", "motivation": "...", "trait": "...", "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown note text..." }] }], "locations": [{ "id": "existing-id-if-any", "slug": "existing-slug-if-any", "name": "...", "description": "...", "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown note text..." }] }] }.
+Each item in "notes" must be an object. Use "title" for the note card title and "text" for the Markdown body. Preserve "id" for existing notes.
+When updating story description, notes, characters, NPCs, or locations, return the full final-state value for every field/category you output, not only newly added material. Preserve every included existing item from input unchanged unless the user explicitly asks to edit it or a minimal consistency edit is required.
 Do not generate a "scenes" field for campaign mode.
 Include "characters", "npcs", and "locations" only when the task instructions explicitly allow those categories.`,
 	scene: `You are an experienced Dungeon Master for Dungeons & Dragons.
 Your goal is to help with session planning.
 Keep responses structured and practical for real gameplay.
 Always return JSON only, with no text before or after JSON.
-The JSON must contain generated data only, without extra commentary.
+The JSON must contain final-state session data only, without extra commentary.
 When generating scenes, use this base shape:
-{ "notes": ["Title\\nDetailed session note...", ...], "scenes": [{ "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "..." }, "notes": ["Short note 1", "Short note 2"], "npcs": [{ "name": "...", "description": "..." }] }], "characters": [{ "name": "...", "race": "...", "class": "...", "level": 1, "motivation": "...", "trait": "...", "notes": ["Title\\nDetailed note...", "..."] }], "npcs": [{ "name": "...", "race": "...", "class": "...", "level": 1, "description": "...", "motivation": "...", "trait": "...", "notes": ["Title\\nDetailed note...", "..."] }], "locations": [{ "name": "...", "description": "...", "notes": ["Title\\nDetailed note...", "..."] }] }.
+{ "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown note text..." }], "scenes": [{ "id": "existing-scene-id-if-any", "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "..." }, "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown note text..." }], "npcs": [{ "name": "...", "description": "..." }] }], "characters": [{ "id": "existing-id-if-any", "slug": "existing-slug-if-any", "name": "...", "race": "...", "class": "...", "level": 1, "motivation": "...", "trait": "...", "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown note text..." }] }], "npcs": [{ "id": "existing-id-if-any", "slug": "existing-slug-if-any", "name": "...", "race": "...", "class": "...", "level": 1, "description": "...", "motivation": "...", "trait": "...", "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown note text..." }] }], "locations": [{ "id": "existing-id-if-any", "slug": "existing-slug-if-any", "name": "...", "description": "...", "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown note text..." }] }] }.
 Top-level "notes" are general notes for the whole session (not scene notes).
-When updating notes or scenes, return the full updated picture, not only newly added material. Preserve useful existing notes/scenes from the input, revise them as needed, and add new material on top of them.
+When updating notes, scenes, characters, NPCs, or locations, return the full final-state value for every field/category you output, not only newly added material. Preserve every included existing item from input unchanged unless the user explicitly asks to edit it or a minimal consistency edit is required.
 Include top-level "characters", top-level "npcs", top-level "locations", and scene "npcs" only when task instructions explicitly allow those categories.
 Do not include combat encounter fields unless task instructions explicitly say encounter generation is enabled.`,
 	encounter: `You are an experienced Dungeon Master for Dungeons & Dragons 5e.
@@ -205,7 +254,7 @@ Balance rules:
 Your goal is to create player characters for a campaign.
 Always return JSON only, with no text before or after JSON.
 The JSON must use this shape:
-{ "characters": [{ "name": "...", "race": "...", "class": "...", "level": 1, "motivation": "...", "trait": "...", "notes": ["Title\\nDetailed note...", "..."] }] }.
+{ "characters": [{ "id": "existing-id-if-any", "slug": "existing-slug-if-any", "name": "...", "race": "...", "class": "...", "level": 1, "motivation": "...", "trait": "...", "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown note text..." }] }] }.
 Return only the top-level "characters" field. Do not include "npcs", campaign notes, scenes, encounters, or story description.
 Create complete and playable character concepts.
 Use realistic D&D class/race combinations and sensible levels.`,
@@ -213,11 +262,18 @@ Use realistic D&D class/race combinations and sensible levels.`,
 Your goal is to create NPCs for a campaign.
 Always return JSON only, with no text before or after JSON.
 The JSON must use this shape:
-{ "npcs": [{ "name": "...", "race": "...", "class": "...", "level": 1, "description": "...", "motivation": "...", "trait": "...", "notes": ["Title\\nDetailed note...", "..."] }] }.
+{ "npcs": [{ "id": "existing-id-if-any", "slug": "existing-slug-if-any", "name": "...", "race": "...", "class": "...", "level": 1, "description": "...", "motivation": "...", "trait": "...", "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown note text..." }] }] }.
 Return only the top-level "npcs" field. Do not include "characters", campaign notes, scenes, encounters, or story description.
 Create distinct NPCs with clear story function and personality.
 For each NPC, include race, class, and level when they can reasonably be inferred from the request or story role.
 Use sensible D&D race/class/level values for the NPC's function. If a class is not appropriate, use a concise role or archetype instead of leaving the field empty.`,
+	location: `You are an experienced Dungeon Master for Dungeons & Dragons.
+Your goal is to create or update locations and factions for a campaign.
+Always return JSON only, with no text before or after JSON.
+The JSON must use this shape:
+{ "locations": [{ "id": "existing-id-if-any", "slug": "existing-slug-if-any", "name": "...", "description": "...", "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown note text..." }] }] }.
+Return only the top-level "locations" field. Do not include "characters", "npcs", campaign notes, scenes, encounters, or story description.
+Create practical locations/factions with clear gameable details, inhabitants, conflicts, hooks, and notes when useful.`,
 	prompt: `You are an experienced Dungeon Master for Dungeons & Dragons.
 Your goal is to help another DM with planning.
 You receive data and user instructions.
@@ -249,6 +305,39 @@ cinematic, photorealistic, ultra realistic, high detail, 8k, dramatic lighting, 
 Input JSON:`,
 };
 
+const structuredJsonResponseContract = `PARSED JSON RESPONSE CONTRACT:
+1. Treat INPUT DATA as the complete editable scope for this request, not as an example and not as the entire campaign.
+2. Return the desired final state for the fields/categories you output when the corresponding category exists in INPUT DATA. Do not return patches, deltas, append-only fragments, or summaries of changes.
+3. Output only fields/categories that USER INSTRUCTIONS asks you to create or edit, or that are necessary for those requested changes.
+4. For every output field/category, include all matching existing items from INPUT DATA in their original order, then add or revise only what the request requires. Do not drop unchanged included items.
+5. Copy unchanged included text exactly: preserve wording, spelling, markdown, line breaks, titles, spacing, bullet/number formatting, and existing bracketed mentions.
+6. Change existing text only when USER INSTRUCTIONS explicitly asks for that edit or when a minimal consistency edit is unavoidable because of the requested new context.
+7. Existing scenes and campaign entities in INPUT DATA include stable "id" and sometimes "slug". Preserve the same "id" and "slug" when editing or renaming an existing item. To rename an item, keep its "id"/"slug" and change only its display name fields.
+8. You may delete existing included items only when USER INSTRUCTIONS asks to delete/remove/keep only a subset. Prefer returning the final array without deleted items. You may also mark a specific included item with "delete": true while preserving its "id"/"slug".
+9. Never invent, reconstruct, summarize, or modify data that is not present in INPUT DATA. Data outside INPUT DATA is hidden and must remain untouched by being omitted from the response.
+10. If INPUT DATA does not contain a category, you cannot edit, rename, delete, or preserve hidden existing items from that category. In that case the category is append-only: return only new items needed for USER INSTRUCTIONS.
+Category final-state rules:
+- If you output "notes", include all notes from the corresponding INPUT DATA notes array plus requested new/edited notes. Notes must be objects, not strings. Preserve existing note "id", "title", "text", and "collapsed" unless editing that note requires a text/title change.
+- If you output "characters", include all player characters from INPUT DATA.campaign.characters plus requested new/edited player characters.
+- If you output "npcs", include all NPCs from INPUT DATA.campaign.npcs plus requested new/edited NPCs.
+- If you output "locations", include all locations/factions from INPUT DATA.campaign.locations plus requested new/edited locations/factions.
+- If you output "scenes", include all scenes from the relevant selected session context plus requested new/edited scenes.`;
+
+const markdownFormattingContract = `APP MARKDOWN FORMAT CONTRACT:
+The app stores rich text as Markdown strings and renders them through EditableField/ReactMarkdown.
+Supported formatting in editable textarea fields:
+- Headings: "# Heading" through "###### Heading" at the beginning of a line.
+- Bold: "**text**".
+- Italic: "*text*".
+- Lists: "- item" at the beginning of a line.
+- Quotes: "> text" at the beginning of a line.
+- Indentation: real tab characters "\\t"; preserve existing tabs and use "\\t" for intentional nested/indented text.
+- Paragraphs and line breaks: preserve meaningful blank lines and existing line breaks.
+- Entity mentions: "[Exact Entity Name]" only, following the separate mention rules.
+When returning parsed JSON, Markdown must be inside JSON string values only. Escape newlines/tabs as normal JSON string content; do not output HTML, rich-text objects, code fences, Markdown tables, markdown links, or raw React/HTML tags.
+Preserve existing Markdown markers exactly in unchanged text. When editing text, keep the user's existing formatting style and change only the requested content.
+For notes, Markdown belongs in the note object's "text" field. A line starting with "#" is a Markdown heading inside "text"; never convert it into the note "title" and never remove the "#" marker unless the user explicitly asks to change that heading.`;
+
 async function generateContent({
 	type,
 	session,
@@ -270,8 +359,8 @@ async function generateContent({
 	let userPrompt = "";
 	const responseLanguage = normalizeResponseLanguage(language);
 	const simplifiedNotesEnabled = Boolean(simplifiedNotes);
-	const noteToContextText = (note) =>
-		noteToPromptText(note, { includeTitle: !simplifiedNotesEnabled });
+	const noteToContextNote = (note) =>
+		noteToPromptContext(note, { includeTitle: !simplifiedNotesEnabled });
 	const encounterGenerationEnabled = Boolean(generateEncounters);
 	const characterGenerationEnabled = generateCharacters !== false;
 	const npcGenerationEnabled = generateNpcs !== false;
@@ -304,16 +393,23 @@ async function generateContent({
 		`NAME LANGUAGE RULE: Any new names you invent must be written in ${responseLanguage.label}. This includes new character names, NPC names, place names, scene names, encounter names, aliases, titles, and display names.
 EXISTING NAME PROTECTION: Names that already exist in the input data must keep their exact original spelling and alphabet. Do not translate, transliterate, decline, paraphrase, rename, or otherwise alter existing names unless the user explicitly asks you to do that.
 Exception: technical lookup fields that require official English names, such as "monsterName", must remain official English bestiary names.`,
+		markdownFormattingContract,
 	];
+	if (
+		effectiveParseAIResponse &&
+		["campaign", "scene", "character", "npc", "location"].includes(useKey)
+	) {
+		systemInstructionParts.push(structuredJsonResponseContract);
+	}
 	if (simplifiedNotesEnabled) {
 		systemInstructionParts.push(
-			`SIMPLIFIED NOTES MODE IS ENABLED. Notes are plain text only. In all note arrays, return each note as a plain string with no separate title, no first-line title convention, and no note objects with "title" fields. When using input notes as context, treat only their text as meaningful and ignore any title fields.`,
+			`SIMPLIFIED NOTES MODE IS ENABLED. In all note arrays, return note objects with "text" and optional existing "id"; do not use "title" or "name" for notes. When using input notes as context, treat only their text as meaningful and ignore any title fields.`,
 		);
 	}
 	if (useKey === "scene" && encounterGenerationEnabled) {
 		systemInstructionParts.push(
 			`Encounter generation is enabled. You may create combat encounters using this shape:
-{ "notes": ["Title\\nDetailed session note...", ...], "scenes": [{ "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "..." }, "notes": ["Short note 1", "Short note 2"], "npcs": [{ "name": "...", "description": "..." }], "encounterIndex": 0 }], "encounters": [{ "name": "Encounter name", "monsters": [{ "monsterName": "Official D&D Monster Name", "name": "Optional display name" }] }] }.
+{ "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown session note text..." }], "scenes": [{ "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "..." }, "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown scene note text..." }], "npcs": [{ "name": "...", "description": "..." }], "encounterIndex": 0 }], "encounters": [{ "name": "Encounter name", "monsters": [{ "monsterName": "Official D&D Monster Name", "name": "Optional display name" }] }] }.
 If a scene requires combat, "encounterIndex" must point to the encounter index in "encounters".
 If combat is not needed, omit "encounterIndex".
 Pick monsters according to party level and party size from context.
@@ -327,17 +423,17 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 	if (["campaign", "scene"].includes(useKey)) {
 		systemInstructionParts.push(
 			characterGenerationEnabled
-				? `Character generation is enabled. You may include a top-level "characters" array only when new player characters are useful for the user's request.`
+				? `Character generation is enabled. You may include a top-level "characters" array only when the user explicitly asks to create, edit, rename, or delete player characters.`
 				: `Character generation is disabled. Do not create or edit player characters. Do not include a top-level "characters" array.`,
 		);
 		systemInstructionParts.push(
 			npcGenerationEnabled
-				? `NPC generation is enabled. You may include NPC data only when new NPCs are useful for the user's request. Use a top-level "npcs" array for NPC cards; scene-local NPC references may be included in scene "npcs".`
+				? `NPC generation is enabled. You may include NPC data only when the user explicitly asks to create, edit, rename, or delete NPCs. Use a top-level "npcs" array for NPC cards; scene-local NPC references may be included in scene "npcs".`
 				: `NPC generation is disabled. Do not create or edit NPCs. Do not include top-level "npcs" or scene "npcs".`,
 		);
 		systemInstructionParts.push(
 			locationGenerationEnabled
-				? `Location/faction generation is enabled. You may include a top-level "locations" array only when new locations or factions are useful for the user's request. Each item should include name, description, and notes.`
+				? `Location/faction generation is enabled. You may include a top-level "locations" array only when the user explicitly asks to create, edit, rename, or delete locations or factions. Each item should include name, description, and notes.`
 				: `Location/faction generation is disabled. Do not create or edit locations/factions. Do not include a top-level "locations" array.`,
 		);
 	}
@@ -357,15 +453,13 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 	// 1. Гнучка фільтрація сесій згідно з налаштованим контекстом
 	const filteredSessions = (contextData?.sessions || [])
 		.map((s) => {
-			const sessionContext = { name: s.name };
+			const sessionContext = { id: s.slug, slug: s.slug, name: s.name };
 			const conf = s.conf || {};
 			const data = s.data || {};
 
 			// Додаємо нотатки, якщо обрано
 			if (conf.included && conf.notes && data.notes) {
-				sessionContext.notes = data.notes
-					.map(noteToContextText)
-					.filter((t) => t && t.trim() !== "");
+				sessionContext.notes = data.notes.map(noteToContextNote).filter(Boolean);
 			}
 
 			// Додаємо результат сесії, якщо обрано
@@ -427,7 +521,7 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 							if (field === "notes") {
 								if (sceneConf[field])
 									resultScene[field] = (scene.notes || [])
-										.map(noteToContextText)
+										.map(noteToContextNote)
 										.filter(Boolean);
 								return;
 							}
@@ -456,25 +550,22 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 			name: campaign.name,
 			description: campaign.description,
 			notes: contextData?.campaign?.notes
-				?.map(noteToContextText)
+				?.map(noteToContextNote)
 				.filter(Boolean),
 			characters: contextData?.campaign?.characters
-				?.map((c) => ({
-					name: `${c.firstName || ""} ${c.lastName || ""}`.trim() || c.name,
-					race: c.race,
-					class: c.class,
-					level: c.level,
-					motivation: c.motivation,
-					trait: c.trait,
-					notes: (c.notes || []).map(noteToContextText).filter(Boolean),
-				}))
+				?.map((c) => characterToPromptContext(c, noteToContextNote))
 				.filter((c) => c.name || c.motivation),
+			npcs: contextData?.campaign?.npcs
+				?.map((npc) => npcToPromptContext(npc, noteToContextNote))
+				.filter((npc) => npc.name || npc.description || npc.motivation),
 			locations: contextData?.campaign?.locations
 				?.map((location) => ({
+					id: location.id,
+					slug: location.slug,
 					name: location.name || location.title,
 					description: location.description,
 					notes: (location.notes || [])
-						.map(noteToContextText)
+						.map(noteToContextNote)
 						.filter(Boolean),
 				}))
 				.filter((location) => location.name || location.description),
@@ -505,7 +596,16 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 	userPrompt = `INPUT DATA (JSON):\n${JSON.stringify(contextJson, null, 2)}\n\n`;
 	userPrompt += `MANDATORY: Reply strictly in ${responseLanguage.label}.\n`;
 	userPrompt +=
-		"IMPORTANT: In all generated text fields, wrap every mention of character, NPC, location, or faction names in square brackets, for example [Iryna], [Borin Stonehelm], or [Iron Gate]. Do not wrap JSON keys.\n";
+		'IMPORTANT: Text fields in INPUT DATA may contain the app Markdown format: headings with "#", bold "**text**", italic "*text*", lists "- item", quotes "> text", tab indentation "\\t", blank lines, and entity mentions "[Name]". Treat these as real formatting, not noise. Preserve unchanged Markdown exactly. When adding formatted text, use only this supported Markdown subset inside JSON strings.\n';
+	if (
+		effectiveParseAIResponse &&
+		["campaign", "scene", "character", "npc", "location"].includes(useKey)
+	) {
+		userPrompt +=
+			"IMPORTANT: The JSON response must be the final state for every field or array you output, not a delta. Preserve unchanged INPUT DATA items exactly and include them together with requested new or edited items. Omit fields/categories that are outside the user's request.\n";
+	}
+	userPrompt +=
+		"IMPORTANT: In generated text fields, use square brackets only for actual entity names that are already present in INPUT DATA or for new entities that you create in this same JSON response in structured arrays such as \"characters\", \"npcs\", scene \"npcs\", or \"locations\". Do not wrap ordinary nouns, species, terrain, place types, groups, concepts, or generic descriptors just because they sound important. For example, do not output [Dwarves], [Swamps], [Market], or [Guard] unless that exact entity already exists in INPUT DATA or you are also creating it as a structured entity in this response. Do not wrap JSON keys.\n";
 	userPrompt +=
 		"IMPORTANT: Do NOT wrap structured name fields in brackets. Fields like name, firstName, lastName, and monsterName must contain plain names without [] symbols.\n";
 	userPrompt +=
@@ -515,7 +615,7 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 	userPrompt += `IMPORTANT: For new names you invent, use ${responseLanguage.label}. For existing names from input, keep the original spelling unless the user explicitly requests a rename, translation, or transliteration. Keep official lookup fields such as monsterName in English when the schema requires official D&D names.\n`;
 	if (simplifiedNotesEnabled) {
 		userPrompt +=
-			'IMPORTANT: Simplified notes mode is enabled. For every "notes" array in your JSON, output plain strings only. Do not output note titles, do not split a note into "title" and "text", and do not use the first line as a title.\n';
+			'IMPORTANT: Simplified notes mode is enabled. For every "notes" array in your JSON, output note objects with "text" and optional existing "id"; do not output note titles and do not use the first line as a title.\n';
 	}
 
 	// Додаємо специфічні інструкції залежно від типу задачі
@@ -523,28 +623,35 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 		userPrompt += `TASK: Generate an image prompt for scene ID: ${sceneId}\n`;
 	} else if (useKey === "character") {
 		userPrompt += `TASK: Create new player characters for this campaign based on user instructions.
-IMPORTANT: This request is strictly for player characters. Return only "characters". Do not create NPCs or any other content category.\n`;
+IMPORTANT: This request is strictly for player characters. Return only "characters". Do not create NPCs or any other content category.
+IMPORTANT: If editing, renaming, or deleting an existing character from INPUT DATA, preserve its "id" and "slug". If INPUT DATA.campaign.characters is absent, this request is append-only for characters.\n`;
 	} else if (useKey === "npc") {
 		userPrompt += `TASK: Create new NPCs for this campaign based on user instructions.
 IMPORTANT: This request is strictly for NPCs. Return only "npcs". Do not create player characters or any other content category.
-IMPORTANT: Include race, class, and level for every generated NPC when possible. If a formal class does not fit, put a role/archetype in "class".\n`;
+IMPORTANT: Include race, class, and level for every generated NPC when possible. If a formal class does not fit, put a role/archetype in "class".
+IMPORTANT: If editing, renaming, or deleting an existing NPC from INPUT DATA, preserve its "id" and "slug". If INPUT DATA.campaign.npcs is absent, this request is append-only for NPCs.\n`;
+	} else if (useKey === "location") {
+		userPrompt += `TASK: Create or update locations/factions for this campaign based on user instructions.
+IMPORTANT: This request is strictly for locations/factions. Return only "locations". Do not create characters, NPCs, campaign notes, scenes, encounters, or any other content category.
+IMPORTANT: If editing, renaming, or deleting an existing location/faction from INPUT DATA, preserve its "id" and "slug".
+IMPORTANT: If INPUT DATA.campaign.locations is present, the returned "locations" array must contain every included existing location/faction unchanged unless the user requested edits/deletions, plus requested new locations/factions. Do not return only the new item. If INPUT DATA.campaign.locations is absent, this request is append-only for locations/factions.\n`;
 	} else if (useKey === "encounter") {
 		userPrompt += `TASK: Update current combat encounter (ID: ${encounterId}). Consider character levels and requested difficulty (easy, medium, hard, deadly). Pick monsters that fit the scenario.\n`;
 	} else if (useKey === "scene") {
-		userPrompt += `TASK: Based on current session and context, propose ideas for new scenes or expand existing ones.\n`;
-		userPrompt += `IMPORTANT: Return the complete updated session content for the fields you output. For notes and scenes, include existing useful items from the input together with your revisions/additions. Do not return only a delta or only the newly added content.\n`;
+		userPrompt += `TASK: Based on current session and context, apply the user's requested session changes.\n`;
+		userPrompt += `IMPORTANT: Return the complete updated session content for the fields you output. For notes, scenes, characters, NPCs, and locations, include all corresponding included existing items from INPUT DATA together with your revisions/additions. Do not return only a delta or only the newly added content.\n`;
 		if (characterGenerationEnabled) {
-			userPrompt += `IMPORTANT: Character generation is enabled. If the user asks for new player characters or they are clearly useful, include them in a top-level "characters" array.\n`;
+			userPrompt += `IMPORTANT: Character generation is enabled. Include player characters only when the user explicitly asks to create, edit, rename, or delete them. If you output "characters", preserve "id"/"slug" for existing items and include all included existing player characters from INPUT DATA.campaign.characters plus requested additions/edits, unless the user requested deletion.\n`;
 		} else {
 			userPrompt += `IMPORTANT: Character generation is disabled. Do not create or edit player characters and do not output "characters".\n`;
 		}
 		if (npcGenerationEnabled) {
-			userPrompt += `IMPORTANT: NPC generation is enabled. If the user asks for new NPCs or they are clearly useful, include NPC cards in a top-level "npcs" array. Scene-local NPC references may also be included in scene "npcs".\n`;
+			userPrompt += `IMPORTANT: NPC generation is enabled. Include NPC cards only when the user explicitly asks to create, edit, rename, or delete NPCs. Scene-local NPC references may also be included in scene "npcs". If you output top-level "npcs", preserve "id"/"slug" for existing items and include all included existing NPCs from INPUT DATA.campaign.npcs plus requested additions/edits, unless the user requested deletion.\n`;
 		} else {
 			userPrompt += `IMPORTANT: NPC generation is disabled. Do not create or edit NPCs and do not output top-level "npcs" or scene "npcs".\n`;
 		}
 		if (locationGenerationEnabled) {
-			userPrompt += `IMPORTANT: Location/faction generation is enabled. If the user asks for new places, factions, organizations, landmarks, regions, or they are clearly useful, include them in a top-level "locations" array. Locations/factions should include name, description, and notes when possible.\n`;
+			userPrompt += `IMPORTANT: Location/faction generation is enabled. Include locations/factions only when the user explicitly asks to create, edit, rename, or delete places, factions, organizations, landmarks, or regions. If you output "locations", preserve "id"/"slug" for existing items and include all included existing locations/factions from INPUT DATA.campaign.locations plus requested additions/edits, unless the user requested deletion. Locations/factions should include name, description, and notes when possible.\n`;
 		} else {
 			userPrompt += `IMPORTANT: Location/faction generation is disabled. Do not create or edit locations/factions and do not output "locations".\n`;
 		}
@@ -555,20 +662,20 @@ Pick monsters (English names) while considering character levels and classes for
 			userPrompt += `IMPORTANT: Encounter generation is disabled. Do not create or edit combat encounters, do not pick monsters, and do not output "encounters", "encounterIndex", or "encounterId".\n`;
 		}
 	} else if (useKey === "campaign") {
-		userPrompt += `TASK: Update campaign story description and structure campaign notes.\n`;
-		userPrompt += `IMPORTANT: Return the complete updated campaign story content for the fields you output. For description and notes, include existing useful material from the input together with your revisions/additions. Do not return only a delta or only the newly added content.\n`;
+		userPrompt += `TASK: Apply the user's requested campaign changes.\n`;
+		userPrompt += `IMPORTANT: Return the complete updated campaign content for the fields you output. For description, notes, characters, NPCs, and locations, include all corresponding included existing items from INPUT DATA together with your revisions/additions. Do not return only a delta or only the newly added content.\n`;
 		if (characterGenerationEnabled) {
-			userPrompt += `IMPORTANT: Character generation is enabled. If the user asks for new player characters or they are clearly useful, include them in "characters".\n`;
+			userPrompt += `IMPORTANT: Character generation is enabled. Include player characters only when the user explicitly asks to create, edit, rename, or delete them. If you output "characters", preserve "id"/"slug" for existing items and include all included existing player characters from INPUT DATA.campaign.characters plus requested additions/edits, unless the user requested deletion.\n`;
 		} else {
 			userPrompt += `IMPORTANT: Character generation is disabled. Do not create or edit player characters and do not output "characters".\n`;
 		}
 		if (npcGenerationEnabled) {
-			userPrompt += `IMPORTANT: NPC generation is enabled. If the user asks for new NPCs or they are clearly useful, include them in "npcs". NPCs should include race, class, level, description, motivation, trait, and notes when possible.\n`;
+			userPrompt += `IMPORTANT: NPC generation is enabled. Include NPCs only when the user explicitly asks to create, edit, rename, or delete them. If you output "npcs", preserve "id"/"slug" for existing items and include all included existing NPCs from INPUT DATA.campaign.npcs plus requested additions/edits, unless the user requested deletion. NPCs should include race, class, level, description, motivation, trait, and notes when possible.\n`;
 		} else {
 			userPrompt += `IMPORTANT: NPC generation is disabled. Do not create or edit NPCs and do not output "npcs".\n`;
 		}
 		if (locationGenerationEnabled) {
-			userPrompt += `IMPORTANT: Location/faction generation is enabled. If the user asks for new places, factions, organizations, landmarks, regions, or they are clearly useful, include them in "locations". Locations/factions should include name, description, and notes when possible.\n`;
+			userPrompt += `IMPORTANT: Location/faction generation is enabled. Include locations/factions only when the user explicitly asks to create, edit, rename, or delete places, factions, organizations, landmarks, or regions. If you output "locations", preserve "id"/"slug" for existing items and include all included existing locations/factions from INPUT DATA.campaign.locations plus requested additions/edits, unless the user requested deletion. Locations/factions should include name, description, and notes when possible.\n`;
 		} else {
 			userPrompt += `IMPORTANT: Location/faction generation is disabled. Do not create or edit locations/factions and do not output "locations".\n`;
 		}

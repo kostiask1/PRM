@@ -636,13 +636,95 @@ async function findCampaignSlugById(campaignId) {
 	return null;
 }
 
-async function deleteCampaignData(slug) {
+function imageUrlFromParts(slug, relParts) {
+	const [category, ...rest] = relParts;
+	const fileName = rest.pop();
+	const subcategory = rest.join("/");
+	return `/api/images/${encodeURIComponent(slug)}/${encodeURIComponent(category)}${subcategory ? "/" + encodeURIComponent(subcategory) : ""}/${encodeURIComponent(fileName)}`;
+}
+
+async function ensureUniqueImagePath(filePath) {
+	if (!(await exists(filePath))) return filePath;
+
+	const parsed = path.parse(filePath);
+	let counter = 2;
+	while (true) {
+		const candidate = path.join(
+			parsed.dir,
+			`${parsed.name}-${counter}${parsed.ext}`,
+		);
+		if (!(await exists(candidate))) return candidate;
+		counter += 1;
+	}
+}
+
+async function moveCampaignImagesToGeneral(slug) {
+	const sourceSlug = path.basename(String(slug || ""));
+	if (!sourceSlug || sourceSlug === "general") return [];
+
+	const sourceRoot = path.join(IMAGES_DIR, sourceSlug);
+	if (!(await exists(sourceRoot))) return [];
+
+	const resolvedSourceRoot = path.resolve(sourceRoot);
+	const results = [];
+
+	async function walk(dir) {
+		const entries = await fs.readdir(dir, { withFileTypes: true });
+		for (const entry of entries) {
+			const oldPath = path.join(dir, entry.name);
+			if (entry.isDirectory()) {
+				await walk(oldPath);
+				continue;
+			}
+			if (!entry.isFile()) continue;
+
+			const relPath = path.relative(sourceRoot, oldPath);
+			if (!relPath || relPath.startsWith("..")) continue;
+
+			const relParts = relPath.split(path.sep);
+			if (relParts.length < 2) continue;
+			const destDir = path.join(IMAGES_DIR, "general", ...relParts.slice(0, -1));
+			await ensureDir(destDir);
+
+			const newPath = await ensureUniqueImagePath(
+				path.join(destDir, relParts.at(-1)),
+			);
+			await renameWithRetry(oldPath, newPath);
+
+			const oldParts = path
+				.relative(resolvedSourceRoot, oldPath)
+				.split(path.sep)
+				.filter(Boolean);
+			const newParts = path
+				.relative(path.join(IMAGES_DIR, "general"), newPath)
+				.split(path.sep)
+				.filter(Boolean);
+
+			results.push({
+				oldUrl: imageUrlFromParts(sourceSlug, oldParts),
+				newUrl: imageUrlFromParts("general", newParts),
+			});
+		}
+	}
+
+	await walk(sourceRoot);
+	await fs.rm(sourceRoot, { recursive: true, force: true });
+	await updateAllImageReferences(results);
+	return results;
+}
+
+async function deleteCampaignData(slug, options = {}) {
 	if (!slug) return;
+	if (options.moveImagesToGeneral) {
+		await moveCampaignImagesToGeneral(slug);
+	}
 	await fs.rm(campaignDir(slug), { recursive: true, force: true });
-	await fs.rm(path.join(IMAGES_DIR, path.basename(slug)), {
-		recursive: true,
-		force: true,
-	});
+	if (!options.moveImagesToGeneral) {
+		await fs.rm(path.join(IMAGES_DIR, path.basename(slug)), {
+			recursive: true,
+			force: true,
+		});
+	}
 }
 
 async function clearAllCampaignData() {
@@ -1097,6 +1179,7 @@ module.exports = {
 	importCampaignArchiveBundle,
 	importCampaignArchiveBundleWithStrategy,
 	findCampaignSlugById,
+	moveCampaignImagesToGeneral,
 	deleteCampaignData,
 	clearAllCampaignData,
 	ensureUniqueCampaignSlug,

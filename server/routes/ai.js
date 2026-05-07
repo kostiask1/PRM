@@ -11,6 +11,30 @@ function asText(value) {
 	return typeof value === "string" ? value.trim() : "";
 }
 
+function hasOwn(value, key) {
+	return Boolean(
+		value &&
+			typeof value === "object" &&
+			Object.prototype.hasOwnProperty.call(value, key),
+	);
+}
+
+function hasAnyOwn(value, keys) {
+	return keys.some((key) => hasOwn(value, key));
+}
+
+function firstOwnedValue(value, keys) {
+	for (const key of keys) {
+		if (hasOwn(value, key)) return value[key];
+	}
+	return undefined;
+}
+
+function isDeleteMarker(value) {
+	if (!value || typeof value !== "object") return false;
+	return Boolean(value.delete || value.deleted || value._delete);
+}
+
 function sanitizeEntityName(value) {
 	let name = asText(value);
 	if (!name) return "";
@@ -48,33 +72,13 @@ function normalizeLevel(rawLevel) {
 	return parsed;
 }
 
-function parseNoteParts(value, { simplifiedNotes = false } = {}) {
-	const text = asText(value);
-	if (!text) return { title: "", text: "" };
-	if (simplifiedNotes) return { title: "", text };
-
-	const lines = text
-		.split("\n")
-		.map((line) => line.trim())
-		.filter(Boolean);
-
-	if (lines.length <= 1) {
-		return { title: "", text };
-	}
-
-	return {
-		title: lines[0],
-		text: lines.slice(1).join("\n"),
-	};
-}
-
 function normalizeNote(note, { simplifiedNotes = false } = {}) {
 	if (typeof note === "string") {
-		const parsed = parseNoteParts(note, { simplifiedNotes });
+		const text = note.trim();
 		return {
 			id: makeId(),
-			title: parsed.title,
-			text: parsed.text,
+			title: "",
+			text,
 			collapsed: false,
 		};
 	}
@@ -84,16 +88,14 @@ function normalizeNote(note, { simplifiedNotes = false } = {}) {
 	}
 
 	const rawTitle = simplifiedNotes ? "" : asText(note.title || note.name);
-	const rawText = asText(note.text || note.description || note.content);
-	const parsed =
-		rawText && !rawTitle
-			? parseNoteParts(rawText, { simplifiedNotes })
-			: null;
+	const rawText = String(
+		note.text ?? note.description ?? note.content ?? "",
+	);
 
 	return {
 		id: note.id || makeId(),
-		title: rawTitle || parsed?.title || "",
-		text: rawText || parsed?.text || "",
+		title: rawTitle,
+		text: rawText,
 		collapsed: Boolean(note.collapsed),
 	};
 }
@@ -105,34 +107,92 @@ function normalizeNotes(
 	const list = Array.isArray(notes) ? notes : [];
 	const normalized = list
 		.map((note) => normalizeNote(note, { simplifiedNotes }))
-		.filter((note) => note && (note.title || note.text));
+		.filter(
+			(note) =>
+				note &&
+				(String(note.title || "").trim() || String(note.text || "").trim()),
+		);
 	if (keepAtLeastOne && normalized.length === 0) {
 		normalized.push({ id: makeId(), title: "", text: "", collapsed: false });
 	}
 	return normalized;
 }
 
+function normalizeNotesPreservingExisting(
+	notes,
+	existingNotes = [],
+	{ keepAtLeastOne = false, simplifiedNotes = false } = {},
+) {
+	const normalized = normalizeNotes(notes, { keepAtLeastOne, simplifiedNotes });
+	const existingById = new Map(
+		(existingNotes || [])
+			.map((note) => [asText(note?.id), note])
+			.filter(([id]) => Boolean(id)),
+	);
+	const existingByContent = new Map(
+		(existingNotes || [])
+			.map((note) => [noteSignature(note), note])
+			.filter(([signature]) => signature !== noteSignature()),
+	);
+
+	return normalized.map((note) => {
+		const existing =
+			existingById.get(asText(note.id)) ||
+			existingByContent.get(noteSignature(note));
+		if (!existing) return note;
+		return {
+			...note,
+			id: existing.id,
+			collapsed: Boolean(existing.collapsed),
+		};
+	});
+}
+
 function normalizeCharacter(raw, existing = null, { simplifiedNotes = false } = {}) {
 	const nameParts = parseNameParts(raw);
+	const rawHasName = hasAnyOwn(raw, [
+		"name",
+		"fullName",
+		"title",
+		"firstName",
+		"first_name",
+		"lastName",
+		"last_name",
+	]);
 	const fallbackDescription = asText(
 		raw.description || raw.bio || raw.backstory,
 	);
 	const notesSource = Array.isArray(raw.notes)
 		? raw.notes
-		: fallbackDescription
-			? [fallbackDescription]
-			: [];
+		: existing
+			? existing.notes || []
+			: fallbackDescription
+				? [fallbackDescription]
+				: [];
+	const rawRace = firstOwnedValue(raw, ["race", "species"]);
+	const rawClass = firstOwnedValue(raw, ["class", "role"]);
+	const rawMotivation = firstOwnedValue(raw, [
+		"motivation",
+		"goal",
+		"description",
+	]);
+	const rawTrait = firstOwnedValue(raw, ["trait", "personality", "quirk"]);
 
 	return {
-		id: existing?.id || storage.createId(),
-		firstName: nameParts.firstName,
-		lastName: nameParts.lastName,
-		race: asText(raw.race || raw.species),
-		class: asText(raw.class || raw.role),
-		level: normalizeLevel(raw.level),
-		motivation: asText(raw.motivation || raw.goal || raw.description),
-		trait: asText(raw.trait || raw.personality || raw.quirk),
-		notes: normalizeNotes(notesSource, {
+		id: existing?.id || raw.id || storage.createId(),
+		firstName: rawHasName ? nameParts.firstName : existing?.firstName || "",
+		lastName: rawHasName ? nameParts.lastName : existing?.lastName || "",
+		race: rawRace !== undefined ? asText(rawRace) : existing?.race || "",
+		class: rawClass !== undefined ? asText(rawClass) : existing?.class || "",
+		level: hasOwn(raw, "level")
+			? normalizeLevel(raw.level)
+			: normalizeLevel(existing?.level),
+		motivation:
+			rawMotivation !== undefined
+				? asText(rawMotivation)
+				: existing?.motivation || "",
+		trait: rawTrait !== undefined ? asText(rawTrait) : existing?.trait || "",
+		notes: normalizeNotesPreservingExisting(notesSource, existing?.notes || [], {
 			keepAtLeastOne: true,
 			simplifiedNotes,
 		}),
@@ -146,14 +206,30 @@ function normalizeCharacter(raw, existing = null, { simplifiedNotes = false } = 
 }
 
 function normalizeLocation(raw, existing = null, { simplifiedNotes = false } = {}) {
-	const fallbackDescription = asText(raw.description || raw.summary || raw.text);
-	const notesSource = Array.isArray(raw.notes) ? raw.notes : [];
+	const rawName = firstOwnedValue(raw, ["name", "title"]);
+	const rawDescription = firstOwnedValue(raw, [
+		"description",
+		"summary",
+		"text",
+	]);
+	const fallbackDescription =
+		rawDescription !== undefined
+			? asText(rawDescription)
+			: existing?.description || "";
+	const notesSource = Array.isArray(raw.notes)
+		? raw.notes
+		: existing
+			? existing.notes || []
+			: [];
 
 	return {
-		id: existing?.id || storage.createId(),
-		name: sanitizeEntityName(raw.name || raw.title),
+		id: existing?.id || raw.id || storage.createId(),
+		name:
+			rawName !== undefined
+				? sanitizeEntityName(rawName)
+				: existing?.name || "",
 		description: fallbackDescription,
-		notes: normalizeNotes(notesSource, {
+		notes: normalizeNotesPreservingExisting(notesSource, existing?.notes || [], {
 			keepAtLeastOne: true,
 			simplifiedNotes,
 		}),
@@ -176,41 +252,137 @@ function locationNameKey(raw = {}) {
 		.trim();
 }
 
+function entityScopeFromContext(items = [], nameKeyFn) {
+	if (!Array.isArray(items)) return null;
+	return {
+		ids: new Set(items.map((item) => asText(item?.id)).filter(Boolean)),
+		slugs: new Set(items.map((item) => asText(item?.slug)).filter(Boolean)),
+		names: new Set(items.map((item) => nameKeyFn(item)).filter(Boolean)),
+	};
+}
+
+function isEntityInScope(entity, scope, nameKeyFn) {
+	if (!scope) return false;
+	const id = asText(entity?.id);
+	const slug = asText(entity?.slug);
+	const nameKey = nameKeyFn(entity);
+	return (
+		(id && scope.ids.has(id)) ||
+		(slug && scope.slugs.has(slug)) ||
+		(nameKey && scope.names.has(nameKey))
+	);
+}
+
+function buildEntityIndexes(existing = [], nameKeyFn) {
+	return {
+		byId: new Map(
+			existing
+				.map((entity) => [asText(entity.id), entity])
+				.filter(([id]) => Boolean(id)),
+		),
+		bySlug: new Map(existing.map((entity) => [entity.slug, entity])),
+		byName: new Map(
+			existing
+				.map((entity) => ({ key: nameKeyFn(entity), entity }))
+				.filter(({ key }) => Boolean(key))
+				.map(({ key, entity }) => [key, entity]),
+		),
+	};
+}
+
+function findExistingEntity(rawEntity, indexes, nameKeyFn) {
+	const id = asText(rawEntity?.id);
+	const slug = asText(rawEntity?.slug);
+	const nameKey = nameKeyFn(rawEntity);
+	return (
+		(id ? indexes.byId.get(id) : null) ||
+		(slug ? indexes.bySlug.get(slug) : null) ||
+		(nameKey ? indexes.byName.get(nameKey) : null) ||
+		null
+	);
+}
+
+function shouldAllowFinalStateDelete(userInstructions) {
+	const text = asText(userInstructions).toLowerCase();
+	if (!text) return false;
+	return [
+		"видали",
+		"видалити",
+		"прибери",
+		"прибрати",
+		"вилучи",
+		"вилучити",
+		"залиш тільки",
+		"залишити тільки",
+		"delete",
+		"remove",
+		"drop",
+		"erase",
+		"only keep",
+	].some((hint) => text.includes(hint));
+}
+
 async function upsertGeneratedEntities(
 	campaignSlug,
 	type,
 	generatedEntities,
-	{ simplifiedNotes = false } = {},
+	{
+		contextEntities = null,
+		allowFinalStateDelete = false,
+		simplifiedNotes = false,
+	} = {},
 ) {
-	if (!Array.isArray(generatedEntities) || generatedEntities.length === 0)
-		return;
+	if (!Array.isArray(generatedEntities)) return;
 
 	const existing = await storage.listEntities(campaignSlug, type);
-	const bySlug = new Map(existing.map((entity) => [entity.slug, entity]));
-	const byName = new Map(
-		existing
-			.map((entity) => ({ key: entityNameKey(entity), entity }))
-			.filter(({ key }) => Boolean(key))
-			.map(({ key, entity }) => [key, entity]),
-	);
+	const indexes = buildEntityIndexes(existing, entityNameKey);
+	const scope = entityScopeFromContext(contextEntities, entityNameKey);
+	const appendOnly = !scope;
+	const returnedScopedSlugs = new Set();
+	const deletedSlugs = new Set();
 
 	for (const rawEntity of generatedEntities) {
+		if (!rawEntity || typeof rawEntity !== "object") continue;
 		const nameParts = parseNameParts(rawEntity);
 		const fullNameKey = entityNameKey(rawEntity);
 		const baseSlug = storage.campaignSlug(
 			nameParts.firstName || rawEntity.name || type,
 		);
 
-		const existingEntity =
-			bySlug.get(rawEntity.slug) ||
-			(fullNameKey ? byName.get(fullNameKey) : null) ||
-			null;
+		const existingEntity = findExistingEntity(
+			rawEntity,
+			indexes,
+			entityNameKey,
+		);
+		const existingIsScoped = existingEntity
+			? isEntityInScope(existingEntity, scope, entityNameKey)
+			: false;
+
+		if (existingEntity && appendOnly) {
+			continue;
+		}
+
+		if (existingEntity && !existingIsScoped) {
+			continue;
+		}
+
+		if (isDeleteMarker(rawEntity)) {
+			if (existingEntity && existingIsScoped) {
+				await storage.deleteEntity(campaignSlug, type, existingEntity.slug);
+				deletedSlugs.add(existingEntity.slug);
+			}
+			continue;
+		}
 
 		const normalized = normalizeCharacter(rawEntity, existingEntity, {
 			simplifiedNotes,
 		});
+		if (!existingEntity && !normalized.firstName && !normalized.lastName) {
+			continue;
+		}
 
 		if (existingEntity) {
+			const oldDisplayName = getCharacterDisplayName(existingEntity);
 			const payload = {
 				...existingEntity,
 				...normalized,
@@ -224,11 +396,20 @@ async function upsertGeneratedEntities(
 				existingEntity.slug,
 				payload,
 			);
-			bySlug.set(existingEntity.slug, payload);
-			if (fullNameKey) byName.set(fullNameKey, payload);
+			const newDisplayName = getCharacterDisplayName(payload);
+			await storage.updateCampaignMentionReferences(
+				campaignSlug,
+				oldDisplayName,
+				newDisplayName,
+			);
+			indexes.bySlug.set(existingEntity.slug, payload);
+			if (payload.id) indexes.byId.set(payload.id, payload);
+			if (fullNameKey) indexes.byName.set(fullNameKey, payload);
+			returnedScopedSlugs.add(existingEntity.slug);
 			continue;
 		}
 
+		if (!baseSlug) continue;
 		const uniqueSlug = await storage.ensureUniqueEntitySlug(
 			campaignSlug,
 			type,
@@ -239,44 +420,80 @@ async function upsertGeneratedEntities(
 			slug: uniqueSlug,
 		};
 		await storage.writeEntity(campaignSlug, type, uniqueSlug, payload);
-		bySlug.set(uniqueSlug, payload);
-		if (fullNameKey) byName.set(fullNameKey, payload);
+		indexes.bySlug.set(uniqueSlug, payload);
+		if (payload.id) indexes.byId.set(payload.id, payload);
+		if (fullNameKey) indexes.byName.set(fullNameKey, payload);
+	}
+
+	if (scope && allowFinalStateDelete) {
+		for (const entity of existing) {
+			if (deletedSlugs.has(entity.slug)) continue;
+			if (!isEntityInScope(entity, scope, entityNameKey)) continue;
+			if (returnedScopedSlugs.has(entity.slug)) continue;
+			await storage.deleteEntity(campaignSlug, type, entity.slug);
+		}
 	}
 }
 
 async function upsertGeneratedLocations(
 	campaignSlug,
 	generatedLocations,
-	{ simplifiedNotes = false } = {},
+	{
+		contextLocations = null,
+		allowFinalStateDelete = false,
+		simplifiedNotes = false,
+	} = {},
 ) {
-	if (!Array.isArray(generatedLocations) || generatedLocations.length === 0)
-		return;
+	if (!Array.isArray(generatedLocations)) return;
 
 	const existing = await storage.listEntities(campaignSlug, "locations");
-	const bySlug = new Map(existing.map((location) => [location.slug, location]));
-	const byName = new Map(
-		existing
-			.map((location) => ({ key: locationNameKey(location), location }))
-			.filter(({ key }) => Boolean(key))
-			.map(({ key, location }) => [key, location]),
-	);
+	const indexes = buildEntityIndexes(existing, locationNameKey);
+	const scope = entityScopeFromContext(contextLocations, locationNameKey);
+	const appendOnly = !scope;
+	const returnedScopedSlugs = new Set();
+	const deletedSlugs = new Set();
 
 	for (const rawLocation of generatedLocations) {
 		if (!rawLocation || typeof rawLocation !== "object") continue;
 
 		const fullNameKey = locationNameKey(rawLocation);
-		if (!fullNameKey) continue;
 
-		const existingLocation =
-			bySlug.get(rawLocation.slug) ||
-			(fullNameKey ? byName.get(fullNameKey) : null) ||
-			null;
+		const existingLocation = findExistingEntity(
+			rawLocation,
+			indexes,
+			locationNameKey,
+		);
+		const existingIsScoped = existingLocation
+			? isEntityInScope(existingLocation, scope, locationNameKey)
+			: false;
+
+		if (existingLocation && appendOnly) {
+			continue;
+		}
+
+		if (existingLocation && !existingIsScoped) {
+			continue;
+		}
+
+		if (isDeleteMarker(rawLocation)) {
+			if (existingLocation && existingIsScoped) {
+				await storage.deleteEntity(
+					campaignSlug,
+					"locations",
+					existingLocation.slug,
+				);
+				deletedSlugs.add(existingLocation.slug);
+			}
+			continue;
+		}
 
 		const normalized = normalizeLocation(rawLocation, existingLocation, {
 			simplifiedNotes,
 		});
+		if (!normalized.name) continue;
 
 		if (existingLocation) {
+			const oldDisplayName = getLocationDisplayName(existingLocation);
 			const payload = {
 				...existingLocation,
 				...normalized,
@@ -290,8 +507,16 @@ async function upsertGeneratedLocations(
 				existingLocation.slug,
 				payload,
 			);
-			bySlug.set(existingLocation.slug, payload);
-			if (fullNameKey) byName.set(fullNameKey, payload);
+			const newDisplayName = getLocationDisplayName(payload);
+			await storage.updateCampaignMentionReferences(
+				campaignSlug,
+				oldDisplayName,
+				newDisplayName,
+			);
+			indexes.bySlug.set(existingLocation.slug, payload);
+			if (payload.id) indexes.byId.set(payload.id, payload);
+			if (fullNameKey) indexes.byName.set(fullNameKey, payload);
+			returnedScopedSlugs.add(existingLocation.slug);
 			continue;
 		}
 
@@ -305,21 +530,37 @@ async function upsertGeneratedLocations(
 			slug: uniqueSlug,
 		};
 		await storage.writeEntity(campaignSlug, "locations", uniqueSlug, payload);
-		bySlug.set(uniqueSlug, payload);
-		if (fullNameKey) byName.set(fullNameKey, payload);
+		indexes.bySlug.set(uniqueSlug, payload);
+		if (payload.id) indexes.byId.set(payload.id, payload);
+		if (fullNameKey) indexes.byName.set(fullNameKey, payload);
+	}
+
+	if (scope && allowFinalStateDelete) {
+		for (const location of existing) {
+			if (deletedSlugs.has(location.slug)) continue;
+			if (!isEntityInScope(location, scope, locationNameKey)) continue;
+			if (returnedScopedSlugs.has(location.slug)) continue;
+			await storage.deleteEntity(campaignSlug, "locations", location.slug);
+		}
 	}
 }
 
-function normalizeSceneTexts(rawScene = {}) {
+function normalizeSceneTexts(rawScene = {}, existingTexts = {}) {
 	const source =
 		rawScene.texts && typeof rawScene.texts === "object"
 			? rawScene.texts
 			: rawScene;
 	return {
-		summary: asText(source.summary),
-		goal: asText(source.goal),
-		stakes: asText(source.stakes),
-		location: asText(source.location),
+		summary: hasOwn(source, "summary")
+			? asText(source.summary)
+			: existingTexts?.summary || "",
+		goal: hasOwn(source, "goal") ? asText(source.goal) : existingTexts?.goal || "",
+		stakes: hasOwn(source, "stakes")
+			? asText(source.stakes)
+			: existingTexts?.stakes || "",
+		location: hasOwn(source, "location")
+			? asText(source.location)
+			: existingTexts?.location || "",
 	};
 }
 
@@ -354,16 +595,28 @@ function normalizeScene(
 		encounterMap.has(scene.encounterIndex)
 	) {
 		encounterId = encounterMap.get(scene.encounterIndex);
+	} else if (hasOwn(scene, "encounterId")) {
+		encounterId = asText(scene.encounterId);
 	}
 
-	const notesFromAi = normalizeNotes(scene.notes || [], { simplifiedNotes });
+	const hasNotes = Array.isArray(scene.notes);
+	const notesFromAi = hasNotes
+		? normalizeNotesPreservingExisting(scene.notes || [], existing?.notes || [], {
+				simplifiedNotes,
+			})
+		: existing?.notes || [];
+	const hasNpcs = Array.isArray(scene.npcs);
 
 	return {
-		id: existing?.id || storage.createId(),
-		texts: normalizeSceneTexts(scene),
-		notes: notesFromAi.length > 0 ? notesFromAi : existing?.notes || [],
+		id: existing?.id || scene.id || storage.createId(),
+		texts: normalizeSceneTexts(scene, existing?.texts || {}),
+		notes: hasNotes
+			? notesFromAi.length > 0
+				? notesFromAi
+				: []
+			: notesFromAi,
 		isNotesCollapsed: Boolean(existing?.isNotesCollapsed),
-		npcs: normalizeSceneNpcs(scene.npcs),
+		npcs: hasNpcs ? normalizeSceneNpcs(scene.npcs) : existing?.npcs || [],
 		collapsed: Boolean(existing?.collapsed),
 		encounterId,
 		// Keep existing scene image reference unchanged unless scene is new.
@@ -441,6 +694,10 @@ function getCharacterDisplayName(entity = {}) {
 	return asText(entity.name || entity.title);
 }
 
+function getCharacterContextKey(entity = {}) {
+	return asText(entity.slug || entity.id || getCharacterDisplayName(entity));
+}
+
 function getLocationDisplayName(entity = {}) {
 	return asText(entity.name || entity.title);
 }
@@ -449,21 +706,34 @@ function getLocationContextKey(entity = {}) {
 	return asText(entity.slug || entity.id || getLocationDisplayName(entity));
 }
 
-function filterLocationsByContext(locations = [], locationConfig) {
-	if (!locationConfig) return [];
-	if (locationConfig === true) return locations;
-	if (locationConfig.included === false) return [];
+function isContextListIncluded(contextConfig) {
+	if (!contextConfig) return false;
+	if (contextConfig === true) return true;
+	if (typeof contextConfig !== "object") return Boolean(contextConfig);
+	return contextConfig.included !== false;
+}
 
-	const items = locationConfig.items || {};
+function filterEntitiesByContext(entities = [], entityConfig, getKey) {
+	if (!entityConfig) return [];
+	if (entityConfig === true) return entities;
+	if (entityConfig.included === false) return [];
+
+	const items = entityConfig.items || {};
 	const selectedKeys = Object.entries(items)
 		.filter(([, included]) => included !== false)
 		.map(([key]) => key);
 
-	if (Object.keys(items).length === 0) return locations;
+	if (Object.keys(items).length === 0) return entities;
 
 	const selected = new Set(selectedKeys);
-	return locations.filter((location) =>
-		selected.has(getLocationContextKey(location)),
+	return entities.filter((entity) => selected.has(getKey(entity)));
+}
+
+function filterLocationsByContext(locations = [], locationConfig) {
+	return filterEntitiesByContext(
+		locations,
+		locationConfig,
+		getLocationContextKey,
 	);
 }
 
@@ -480,7 +750,10 @@ function wrapMentionsInText(text, names) {
 	let output = String(text);
 
 	for (const name of names) {
-		const pattern = new RegExp(`(?<!\\[)${escapeRegExp(name)}(?!\\])`, "giu");
+		const pattern = new RegExp(
+			`(?<![\\p{L}\\p{N}_\\[])${escapeRegExp(name)}(?![\\p{L}\\p{N}_\\]])`,
+			"giu",
+		);
 		output = output.replace(pattern, (match, offset, source) => {
 			const before = source[offset - 1];
 			const after = source[offset + match.length];
@@ -515,61 +788,23 @@ function normalizeNameForMatch(value) {
 		.trim();
 }
 
-function levenshteinDistance(a, b) {
-	const left = String(a);
-	const right = String(b);
-	if (left === right) return 0;
-	if (!left.length) return right.length;
-	if (!right.length) return left.length;
-
-	const prev = Array.from({ length: right.length + 1 }, (_, i) => i);
-	for (let i = 1; i <= left.length; i += 1) {
-		let prevDiag = prev[0];
-		prev[0] = i;
-		for (let j = 1; j <= right.length; j += 1) {
-			const temp = prev[j];
-			const cost = left[i - 1] === right[j - 1] ? 0 : 1;
-			prev[j] = Math.min(prev[j] + 1, prev[j - 1] + 1, prevDiag + cost);
-			prevDiag = temp;
-		}
-	}
-	return prev[right.length];
-}
-
 function resolveCanonicalName(rawName, canonicalNames) {
 	const raw = asText(rawName);
-	if (!raw || !canonicalNames.length) return rawName;
+	if (!raw || !canonicalNames.length) return null;
 
 	const exact = canonicalNames.find(
 		(name) => normalizeNameForMatch(name) === normalizeNameForMatch(raw),
 	);
 	if (exact) return exact;
 
-	const normalizedRaw = normalizeNameForMatch(raw);
-	if (!normalizedRaw) return rawName;
-
-	let best = null;
-	let bestDistance = Number.MAX_SAFE_INTEGER;
-	for (const candidate of canonicalNames) {
-		const normalizedCandidate = normalizeNameForMatch(candidate);
-		if (!normalizedCandidate) continue;
-		const distance = levenshteinDistance(normalizedRaw, normalizedCandidate);
-		if (distance < bestDistance) {
-			bestDistance = distance;
-			best = candidate;
-		}
-	}
-
-	if (!best) return rawName;
-	const threshold = normalizedRaw.length >= 10 ? 3 : 2;
-	return bestDistance <= threshold ? best : rawName;
+	return null;
 }
 
 function canonicalizeBracketedMentions(text, names) {
 	if (!text || !names.length) return text;
 	return String(text).replace(/\[([^[\]]+)\]/g, (_full, rawName) => {
 		const canonical = resolveCanonicalName(rawName, names);
-		return `[${canonical}]`;
+		return canonical ? `[${canonical}]` : rawName;
 	});
 }
 
@@ -578,21 +813,6 @@ function processGeneratedTextMentions(text, names) {
 	const wrapped = wrapMentionsInText(text, names);
 	const canonicalized = canonicalizeBracketedMentions(wrapped, names);
 	return collapseNestedMentionBrackets(canonicalized);
-}
-
-function shouldAppendScenesRequest(userInstructions) {
-	const text = asText(userInstructions).toLowerCase();
-	if (!text) return false;
-	const appendHints = [
-		"нова сцена",
-		"нову сцену",
-		"додай сцен",
-		"додати сцен",
-		"create new scene",
-		"add scene",
-		"new scene",
-	];
-	return appendHints.some((hint) => text.includes(hint));
 }
 
 function sceneTextSignature(texts = {}) {
@@ -632,6 +852,159 @@ function sceneSignature(scene) {
 	return JSON.stringify(payload);
 }
 
+function noteSignature(note = {}) {
+	if (typeof note === "string") {
+		return JSON.stringify({ title: "", text: note });
+	}
+	return JSON.stringify({
+		title: asText(note.title),
+		text: asText(note.text),
+	});
+}
+
+function appendNormalizedNotes(existingNotes = [], generatedNotes = []) {
+	const signatures = new Set((existingNotes || []).map(noteSignature));
+	const appended = [];
+	for (const note of generatedNotes) {
+		const signature = noteSignature(note);
+		if (signatures.has(signature)) continue;
+		signatures.add(signature);
+		appended.push(note);
+	}
+	return [...(existingNotes || []), ...appended];
+}
+
+function processGeneratedNoteMentions(note, names) {
+	if (typeof note === "string") {
+		return processGeneratedTextMentions(note, names);
+	}
+	if (!note || typeof note !== "object") return note;
+	const next = { ...note };
+	for (const key of ["title", "text", "description", "content"]) {
+		if (typeof next[key] === "string") {
+			next[key] = processGeneratedTextMentions(next[key], names);
+		}
+	}
+	return next;
+}
+
+function buildAiApplyScope(contextData = {}, path = {}) {
+	const sessions = Array.isArray(contextData.sessions)
+		? contextData.sessions
+		: [];
+	const currentSessionContext = sessions.find(
+		(sessionContext) =>
+			asText(sessionContext?.slug || sessionContext?.fileName) ===
+			asText(path.session),
+	);
+	const currentSessionConf = currentSessionContext?.conf || {};
+	const currentSessionData = currentSessionContext?.data || {};
+	const sceneIds = new Set();
+	let hasSceneContext = false;
+
+	if (
+		currentSessionConf.included &&
+		Array.isArray(currentSessionData.scenes)
+	) {
+		const sceneConfig = currentSessionConf.scenes || {};
+		const hasSceneConfig =
+			sceneConfig &&
+			typeof sceneConfig === "object" &&
+			Object.keys(sceneConfig).length > 0;
+		for (const scene of currentSessionData.scenes) {
+			if (hasSceneConfig && !sceneConfig[scene.id]?.included) continue;
+			sceneIds.add(asText(scene.id));
+		}
+		hasSceneContext = sceneIds.size > 0;
+	}
+
+	return {
+		campaignNotes: Array.isArray(contextData.campaign?.notes),
+		characters: Array.isArray(contextData.campaign?.characters)
+			? contextData.campaign.characters
+			: null,
+		npcs: Array.isArray(contextData.campaign?.npcs)
+			? contextData.campaign.npcs
+			: null,
+		locations: Array.isArray(contextData.campaign?.locations)
+			? contextData.campaign.locations
+			: null,
+		sessionNotes: Boolean(currentSessionConf.included && currentSessionConf.notes),
+		sceneIds: hasSceneContext ? sceneIds : null,
+	};
+}
+
+function applyGeneratedScenes(
+	existingScenes,
+	generatedScenes,
+	sceneIdsInContext,
+	encounterMap,
+	{ allowFinalStateDelete = false, simplifiedNotes = false } = {},
+) {
+	const existing = Array.isArray(existingScenes) ? existingScenes : [];
+	const existingById = new Map(
+		existing
+			.map((scene) => [asText(scene.id), scene])
+			.filter(([id]) => Boolean(id)),
+	);
+	const existingSignatures = new Set(existing.map(sceneSignature));
+	const scopedIds = sceneIdsInContext instanceof Set ? sceneIdsInContext : null;
+	const appendOnly = !scopedIds;
+	const returnedScopedIds = new Set();
+	const deletedScopedIds = new Set();
+	const appendedScenes = [];
+	const updatesById = new Map();
+
+	for (const scene of generatedScenes) {
+		if (!scene || typeof scene !== "object") continue;
+		const sceneId = asText(scene.id);
+		const existingScene = sceneId ? existingById.get(sceneId) : null;
+		const isScoped = Boolean(existingScene && scopedIds?.has(sceneId));
+
+		if (existingScene && appendOnly) continue;
+		if (existingScene && !isScoped) continue;
+
+		if (isDeleteMarker(scene)) {
+			if (existingScene && isScoped) deletedScopedIds.add(sceneId);
+			continue;
+		}
+
+		if (existingScene) {
+			const normalized = normalizeScene(scene, existingScene, encounterMap, {
+				simplifiedNotes,
+			});
+			updatesById.set(sceneId, normalized);
+			returnedScopedIds.add(sceneId);
+			continue;
+		}
+
+		const normalized = normalizeScene(scene, null, encounterMap, {
+			simplifiedNotes,
+		});
+		const signature = sceneSignature(normalized);
+		if (existingSignatures.has(signature)) continue;
+		existingSignatures.add(signature);
+		appendedScenes.push(normalized);
+	}
+
+	const nextScenes = [];
+	for (const scene of existing) {
+		const sceneId = asText(scene.id);
+		const isScoped = Boolean(scopedIds?.has(sceneId));
+		if (deletedScopedIds.has(sceneId)) continue;
+		if (
+			allowFinalStateDelete &&
+			isScoped &&
+			!returnedScopedIds.has(sceneId) &&
+			!updatesById.has(sceneId)
+		) {
+			continue;
+		}
+		nextScenes.push(updatesById.get(sceneId) || scene);
+	}
+	return [...nextScenes, ...appendedScenes];
+}
+
 function applyMentionsToGeneratedContent(generatedContent, names) {
 	if (
 		!generatedContent ||
@@ -650,9 +1023,7 @@ function applyMentionsToGeneratedContent(generatedContent, names) {
 
 	if (Array.isArray(generatedContent.notes)) {
 		generatedContent.notes = generatedContent.notes.map((note) =>
-			typeof note === "string"
-				? processGeneratedTextMentions(note, names)
-				: note,
+			processGeneratedNoteMentions(note, names),
 		);
 	}
 
@@ -668,9 +1039,7 @@ function applyMentionsToGeneratedContent(generatedContent, names) {
 				}
 				if (Array.isArray(next.notes)) {
 					next.notes = next.notes.map((note) =>
-						typeof note === "string"
-							? processGeneratedTextMentions(note, names)
-							: note,
+						processGeneratedNoteMentions(note, names),
 					);
 				}
 				return next;
@@ -689,9 +1058,7 @@ function applyMentionsToGeneratedContent(generatedContent, names) {
 			}
 			if (Array.isArray(next.notes)) {
 				next.notes = next.notes.map((note) =>
-					typeof note === "string"
-						? processGeneratedTextMentions(note, names)
-						: note,
+					processGeneratedNoteMentions(note, names),
 				);
 			}
 			return next;
@@ -710,9 +1077,7 @@ function applyMentionsToGeneratedContent(generatedContent, names) {
 			}
 			if (Array.isArray(next.notes)) {
 				next.notes = next.notes.map((note) =>
-					typeof note === "string"
-						? processGeneratedTextMentions(note, names)
-						: note,
+					processGeneratedNoteMentions(note, names),
 				);
 			}
 			return next;
@@ -738,9 +1103,7 @@ function applyMentionsToGeneratedContent(generatedContent, names) {
 
 			if (Array.isArray(nextScene.notes)) {
 				nextScene.notes = nextScene.notes.map((note) =>
-					typeof note === "string"
-						? processGeneratedTextMentions(note, names)
-						: note,
+					processGeneratedNoteMentions(note, names),
 				);
 			}
 
@@ -862,6 +1225,7 @@ function buildAiContextSummary(contextConfig, contextData = {}) {
 			enabled: false,
 			campaignNotes: 0,
 			campaignCharacters: 0,
+			campaignNpcs: 0,
 			campaignLocations: 0,
 			sessions: 0,
 			scenes: 0,
@@ -883,18 +1247,25 @@ function buildAiContextSummary(contextConfig, contextData = {}) {
 	const campaignCharacters = Array.isArray(contextData.campaign?.characters)
 		? contextData.campaign.characters.length
 		: 0;
+	const campaignNpcs = Array.isArray(contextData.campaign?.npcs)
+		? contextData.campaign.npcs.length
+		: 0;
 	const campaignLocations = Array.isArray(contextData.campaign?.locations)
 		? contextData.campaign.locations.length
 		: 0;
 
 	const parts = [];
 	if (contextConfig.campaignNotes) parts.push(`notes: ${campaignNotes}`);
-	if (contextConfig.campaignCharacters)
-		parts.push(`chars/npcs: ${campaignCharacters}`);
+	if (isContextListIncluded(contextConfig.campaignCharacters))
+		parts.push(`characters: ${campaignCharacters}`);
 	if (
-		contextConfig.campaignLocations &&
-		contextConfig.campaignLocations.included !== false
-	)
+		isContextListIncluded(contextConfig.campaignNpcs) ||
+		(contextConfig.campaignNpcs === undefined &&
+			isContextListIncluded(contextConfig.campaignCharacters))
+	) {
+		parts.push(`npcs: ${campaignNpcs}`);
+	}
+	if (isContextListIncluded(contextConfig.campaignLocations))
 		parts.push(`locations: ${campaignLocations}`);
 	if (sessions.length) parts.push(`sessions: ${sessions.length}`);
 	if (scenes) parts.push(`scenes: ${scenes}`);
@@ -903,6 +1274,7 @@ function buildAiContextSummary(contextConfig, contextData = {}) {
 		enabled: true,
 		campaignNotes,
 		campaignCharacters,
+		campaignNpcs,
 		campaignLocations,
 		sessions: sessions.length,
 		scenes,
@@ -950,25 +1322,32 @@ function buildAiRequestSnapshot({
 	};
 }
 
-async function collectMentionCandidates(
-	campaignSlug,
-	sessionData,
-	generatedContent,
-) {
-	const [characters, npcs, locations] = await Promise.all([
-		storage.listEntities(campaignSlug, "characters"),
-		storage.listEntities(campaignSlug, "npc"),
-		storage.listEntities(campaignSlug, "locations"),
-	]);
+function collectMentionCandidates(generatedContent, contextData = {}) {
+	const names = [];
+	const campaignContext = contextData?.campaign || {};
 
-	const names = [
-		...characters.map(getCharacterDisplayName),
-		...npcs.map(getCharacterDisplayName),
-		...locations.map(getLocationDisplayName),
-	];
+	if (Array.isArray(campaignContext.characters)) {
+		names.push(...campaignContext.characters.map(getCharacterDisplayName));
+	}
+	if (Array.isArray(campaignContext.npcs)) {
+		names.push(...campaignContext.npcs.map(getCharacterDisplayName));
+	}
+	if (Array.isArray(campaignContext.locations)) {
+		names.push(...campaignContext.locations.map(getLocationDisplayName));
+	}
 
-	if (sessionData?.data?.scenes) {
-		for (const scene of sessionData.data.scenes) {
+	for (const sessionContext of contextData?.sessions || []) {
+		const conf = sessionContext?.conf || {};
+		const data = sessionContext?.data || {};
+		if (!conf.included || !Array.isArray(data.scenes)) continue;
+
+		const hasSceneConfig =
+			conf.scenes &&
+			typeof conf.scenes === "object" &&
+			Object.keys(conf.scenes).length > 0;
+
+		for (const scene of data.scenes) {
+			if (hasSceneConfig && !conf.scenes[scene.id]?.included) continue;
 			for (const npc of scene?.npcs || []) {
 				names.push(asText(npc?.name));
 			}
@@ -977,24 +1356,28 @@ async function collectMentionCandidates(
 
 	if (Array.isArray(generatedContent?.characters)) {
 		for (const character of generatedContent.characters) {
+			if (isDeleteMarker(character)) continue;
 			names.push(getCharacterDisplayName(character));
 		}
 	}
 
 	if (Array.isArray(generatedContent?.npcs)) {
 		for (const npc of generatedContent.npcs) {
+			if (isDeleteMarker(npc)) continue;
 			names.push(getCharacterDisplayName(npc));
 		}
 	}
 
 	if (Array.isArray(generatedContent?.locations)) {
 		for (const location of generatedContent.locations) {
+			if (isDeleteMarker(location)) continue;
 			names.push(getLocationDisplayName(location));
 		}
 	}
 
 	if (Array.isArray(generatedContent?.scenes)) {
 		for (const scene of generatedContent.scenes) {
+			if (isDeleteMarker(scene)) continue;
 			for (const npc of scene?.npcs || []) {
 				names.push(asText(npc?.name));
 			}
@@ -1081,15 +1464,29 @@ router.post("/generate", async (req, res, next) => {
 		if (contextConfig) {
 			if (contextConfig.campaignNotes)
 				contextData.campaign.notes = campaign.notes;
-			if (contextConfig.campaignCharacters) {
+			if (isContextListIncluded(contextConfig.campaignCharacters)) {
 				const chars = await storage.listEntities(path.campaign, "characters");
-				const npcs = await storage.listEntities(path.campaign, "npc");
-				contextData.campaign.characters = [...chars, ...npcs];
+				contextData.campaign.characters = filterEntitiesByContext(
+					chars,
+					contextConfig.campaignCharacters,
+					getCharacterContextKey,
+				);
 			}
 			if (
-				contextConfig.campaignLocations &&
-				contextConfig.campaignLocations.included !== false
+				isContextListIncluded(contextConfig.campaignNpcs) ||
+				(contextConfig.campaignNpcs === undefined &&
+					isContextListIncluded(contextConfig.campaignCharacters))
 			) {
+				const npcs = await storage.listEntities(path.campaign, "npc");
+				contextData.campaign.npcs = filterEntitiesByContext(
+					npcs,
+					contextConfig.campaignNpcs === undefined
+						? true
+						: contextConfig.campaignNpcs,
+					getCharacterContextKey,
+				);
+			}
+			if (isContextListIncluded(contextConfig.campaignLocations)) {
 				const locations = await storage.listEntities(path.campaign, "locations");
 				contextData.campaign.locations = filterLocationsByContext(
 					locations,
@@ -1102,6 +1499,8 @@ router.post("/generate", async (req, res, next) => {
 					if (!conf.included) continue;
 					const sData = await storage.readSession(path.campaign, slug);
 					contextData.sessions.push({
+						slug,
+						fileName: slug,
 						name: sData.name,
 						conf,
 						data: sData.data,
@@ -1109,6 +1508,10 @@ router.post("/generate", async (req, res, next) => {
 				}
 			}
 		}
+
+		const aiApplyScope = buildAiApplyScope(contextData, path);
+		const allowFinalStateDelete =
+			shouldAllowFinalStateDelete(userInstructions);
 
 		const generatedContent = await aiService.generateContent({
 			type,
@@ -1141,10 +1544,9 @@ router.post("/generate", async (req, res, next) => {
 			generatedContent &&
 			typeof generatedContent === "object"
 		) {
-			const mentionNames = await collectMentionCandidates(
-				path.campaign,
-				session,
+			const mentionNames = collectMentionCandidates(
 				generatedContent,
+				contextData,
 			);
 			applyMentionsToGeneratedContent(generatedContent, mentionNames);
 		}
@@ -1247,18 +1649,30 @@ router.post("/generate", async (req, res, next) => {
 					path.campaign,
 					"characters",
 					generatedContent.characters,
-					{ simplifiedNotes: simplifiedNotesEnabled },
+					{
+						contextEntities: aiApplyScope.characters,
+						allowFinalStateDelete,
+						simplifiedNotes: simplifiedNotesEnabled,
+					},
 				);
 				await upsertGeneratedEntities(
 					path.campaign,
 					"npc",
 					generatedContent.npcs,
-					{ simplifiedNotes: simplifiedNotesEnabled },
+					{
+						contextEntities: aiApplyScope.npcs,
+						allowFinalStateDelete,
+						simplifiedNotes: simplifiedNotesEnabled,
+					},
 				);
 				await upsertGeneratedLocations(
 					path.campaign,
 					generatedContent.locations,
-					{ simplifiedNotes: simplifiedNotesEnabled },
+					{
+						contextLocations: aiApplyScope.locations,
+						allowFinalStateDelete,
+						simplifiedNotes: simplifiedNotesEnabled,
+					},
 				);
 
 				const encounterMap = new Map();
@@ -1286,53 +1700,30 @@ router.post("/generate", async (req, res, next) => {
 					const existingScenes = Array.isArray(sessionData.data.scenes)
 						? sessionData.data.scenes
 						: [];
-					const appendScenes = shouldAppendScenesRequest(userInstructions);
-					const existingSignatures = new Set(
-						existingScenes.map(sceneSignature),
+					sessionData.data.scenes = applyGeneratedScenes(
+						existingScenes,
+						generatedContent.scenes,
+						aiApplyScope.sceneIds,
+						encounterMap,
+						{
+							allowFinalStateDelete,
+							simplifiedNotes: simplifiedNotesEnabled,
+						},
 					);
-
-					if (appendScenes) {
-						const appendedScenes = [];
-						for (const scene of generatedContent.scenes) {
-							const normalized = normalizeScene(scene, null, encounterMap, {
-								simplifiedNotes: simplifiedNotesEnabled,
-							});
-							const signature = sceneSignature(normalized);
-							if (existingSignatures.has(signature)) continue;
-							existingSignatures.add(signature);
-							appendedScenes.push(normalized);
-						}
-						sessionData.data.scenes = [...existingScenes, ...appendedScenes];
-					} else {
-						const mergedScenes = [...existingScenes];
-						generatedContent.scenes.forEach((scene, idx) => {
-							if (idx < mergedScenes.length) {
-								mergedScenes[idx] = normalizeScene(
-									scene,
-									mergedScenes[idx],
-									encounterMap,
-									{ simplifiedNotes: simplifiedNotesEnabled },
-								);
-							} else {
-								const normalized = normalizeScene(scene, null, encounterMap, {
-									simplifiedNotes: simplifiedNotesEnabled,
-								});
-								const signature = sceneSignature(normalized);
-								if (!existingSignatures.has(signature)) {
-									existingSignatures.add(signature);
-									mergedScenes.push(normalized);
-								}
-							}
-						});
-						sessionData.data.scenes = mergedScenes;
-					}
 				}
 
 				if (Array.isArray(generatedContent.notes)) {
-					sessionData.data.notes = normalizeNotes(generatedContent.notes, {
-						keepAtLeastOne: true,
-						simplifiedNotes: simplifiedNotesEnabled,
-					});
+					const normalizedNotes = normalizeNotesPreservingExisting(
+						generatedContent.notes,
+						sessionData.data.notes || [],
+						{
+							keepAtLeastOne: true,
+							simplifiedNotes: simplifiedNotesEnabled,
+						},
+					);
+					sessionData.data.notes = aiApplyScope.sessionNotes
+						? normalizedNotes
+						: appendNormalizedNotes(sessionData.data.notes || [], normalizedNotes);
 				}
 
 				sessionData.updatedAt = new Date().toISOString();
@@ -1347,48 +1738,77 @@ router.post("/generate", async (req, res, next) => {
 						path.campaign,
 						"characters",
 						generatedContent.characters,
-						{ simplifiedNotes: simplifiedNotesEnabled },
+						{
+							contextEntities: aiApplyScope.characters,
+							allowFinalStateDelete,
+							simplifiedNotes: simplifiedNotesEnabled,
+						},
 					);
 				} else if (type === "npc") {
 					await upsertGeneratedEntities(
 						path.campaign,
 						"npc",
 						generatedContent.npcs,
-						{ simplifiedNotes: simplifiedNotesEnabled },
+						{
+							contextEntities: aiApplyScope.npcs,
+							allowFinalStateDelete,
+							simplifiedNotes: simplifiedNotesEnabled,
+						},
 					);
 				} else if (type === "location") {
 					await upsertGeneratedLocations(
 						path.campaign,
 						generatedContent.locations,
-						{ simplifiedNotes: simplifiedNotesEnabled },
+						{
+							contextLocations: aiApplyScope.locations,
+							allowFinalStateDelete,
+							simplifiedNotes: simplifiedNotesEnabled,
+						},
 					);
 				} else {
-					if (asText(generatedContent.description)) {
+					if (contextConfig && asText(generatedContent.description)) {
 						meta.description = generatedContent.description;
 					}
 
 					if (Array.isArray(generatedContent.notes)) {
-						meta.notes = normalizeNotes(generatedContent.notes, {
-							simplifiedNotes: simplifiedNotesEnabled,
-						});
+						const normalizedNotes = normalizeNotesPreservingExisting(
+							generatedContent.notes,
+							meta.notes || [],
+							{ simplifiedNotes: simplifiedNotesEnabled },
+						);
+						meta.notes = aiApplyScope.campaignNotes
+							? normalizedNotes
+							: appendNormalizedNotes(meta.notes || [], normalizedNotes);
 					}
 
 					await upsertGeneratedEntities(
 						path.campaign,
 						"characters",
 						generatedContent.characters,
-						{ simplifiedNotes: simplifiedNotesEnabled },
+						{
+							contextEntities: aiApplyScope.characters,
+							allowFinalStateDelete,
+							simplifiedNotes: simplifiedNotesEnabled,
+						},
 					);
 					await upsertGeneratedEntities(
 						path.campaign,
 						"npc",
 						generatedContent.npcs,
-						{ simplifiedNotes: simplifiedNotesEnabled },
+						{
+							contextEntities: aiApplyScope.npcs,
+							allowFinalStateDelete,
+							simplifiedNotes: simplifiedNotesEnabled,
+						},
 					);
 					await upsertGeneratedLocations(
 						path.campaign,
 						generatedContent.locations,
-						{ simplifiedNotes: simplifiedNotesEnabled },
+						{
+							contextLocations: aiApplyScope.locations,
+							allowFinalStateDelete,
+							simplifiedNotes: simplifiedNotesEnabled,
+						},
 					);
 				}
 
