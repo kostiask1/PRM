@@ -21,7 +21,7 @@
 
 .ProgressBar {
 	height: 10px;
-	border-radius: 999px;
+	border-radius: var(--radius-pill);
 	overflow: hidden;
 	border: 1px solid color-mix(in srgb, var(--border), transparent 25%);
 	background: var(--bg-deep);
@@ -47,7 +47,7 @@
 
 .TodoSection {
 	border: 1px solid color-mix(in srgb, var(--border), transparent 20%);
-	border-radius: 16px;
+	border-radius: var(--radius-2xl);
 	background: color-mix(in srgb, var(--bg), transparent 55%);
 }
 
@@ -56,9 +56,9 @@
 	align-items: center;
 	justify-content: space-between;
 	background: var(--bg);
-	border-radius: 16px;
+	border-radius: var(--radius-2xl);
 	position: sticky;
-	top: -20px;
+	top: calc(-1 * var(--space-5));
 	padding: var(--space-3);
 	border-bottom: 1px solid color-mix(in srgb, var(--text-bright), transparent 95%);
 	z-index: 1;
@@ -148,12 +148,12 @@
 
 .SceneCard {
 	padding: var(--space-3);
-	margin-bottom: 8px;
+	margin-bottom: var(--space-2);
 	display: grid;
 	gap: var(--space-3);
 	background: color-mix(in srgb, var(--text-bright), transparent 98%);
 	border: 1px solid color-mix(in srgb, var(--text-bright), transparent 90%);
-	border-radius: 10px;
+	border-radius: var(--radius-lg);
 	overflow: hidden;
 }
 
@@ -214,7 +214,7 @@
 
 .SceneCard__portrait-container {
 	width: 100%;
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	overflow: hidden;
 	position: relative;
 }
@@ -245,8 +245,8 @@
 
 .SceneCard__image-delete {
 	position: absolute;
-	top: 8px;
-	right: 8px;
+	top: var(--space-2);
+	right: var(--space-2);
 	opacity: 0;
 	transition: opacity 0.2s;
 }
@@ -294,7 +294,7 @@
 .SessionView__checklistToggle {
 	position: fixed;
 	top: 135px;
-	right: 16px;
+	right: var(--space-4);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -303,8 +303,8 @@
 }
 
 .SessionView__checklistToggle button {
-	width: 52px;
-	height: 52px;
+	width: var(--size-10);
+	height: var(--size-10);
 	background: var(--bg-2);
 	border-radius: 50%;
 	border: 1px solid var(--border);

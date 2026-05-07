@@ -5,24 +5,24 @@
 }
 
 .CollapseToggleButton--sm {
-	width: 24px;
-	min-width: 24px;
-	height: 24px;
-	min-height: 24px;
+	width: var(--size-6);
+	min-width: var(--size-6);
+	height: var(--size-6);
+	min-height: var(--size-6);
 }
 
 .CollapseToggleButton--md {
-	width: 32px;
-	min-width: 32px;
-	height: 32px;
-	min-height: 32px;
+	width: var(--size-8);
+	min-width: var(--size-8);
+	height: var(--size-8);
+	min-height: var(--size-8);
 }
 
 .CollapseToggleButton--lg {
-	width: 40px;
-	min-width: 40px;
-	height: 40px;
-	min-height: 40px;
+	width: var(--size-9);
+	min-width: var(--size-9);
+	height: var(--size-9);
+	min-height: var(--size-9);
 }
 
 .CollapseToggleButton.is-rotated {

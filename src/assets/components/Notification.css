@@ -1,7 +1,7 @@
 .Notification {
 	position: fixed;
-	top: 16px;
-	right: 16px;
+	top: var(--space-4);
+	right: var(--space-4);
 	background: var(--accent);
 	color: var(--text-bright);
 	padding: var(--space-3) var(--space-6);

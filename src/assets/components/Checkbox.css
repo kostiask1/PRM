@@ -17,11 +17,11 @@
 }
 
 .Checkbox__indicator {
-    width: 20px;
-    height: 20px;
+    width: var(--size-5);
+    height: var(--size-5);
     background: var(--bg-deep);
     border: 1px solid var(--border);
-    border-radius: 6px;
+    border-radius: var(--radius-xs);
     display: flex;
     align-items: center;
     justify-content: center;

@@ -116,7 +116,7 @@
 	gap: var(--space-2);
 	max-height: min(50vh, 420px);
 	overflow-y: auto;
-	padding-right: 4px;
+	padding-right: var(--space-1);
 }
 
 .MentionPicker__item {
@@ -128,7 +128,7 @@
 	border: 1px solid var(--border);
 	background: var(--panel);
 	color: var(--text);
-	border-radius: 10px;
+	border-radius: var(--radius-lg);
 	cursor: pointer;
 	text-align: left;
 }

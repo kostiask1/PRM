@@ -3,7 +3,7 @@
 	justify-content: space-between;
 	align-items: center;
 	border: 1px solid color-mix(in srgb, var(--border), transparent 30%);
-	border-radius: 12px;
+	border-radius: var(--radius-sm);
 	background: color-mix(in srgb, var(--bg), transparent 45%);
 	transition:
 		border-color 0.2s ease,
@@ -69,6 +69,6 @@
 	gap: var(--space-2);
 	flex-shrink: 0;
 	/* Запобігає зменшенню розміру елементів дій */
-	padding-right: 8px;
+	padding-right: var(--space-2);
 	/* Відступ праворуч для елементів дій */
 }

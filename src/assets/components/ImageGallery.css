@@ -2,7 +2,7 @@
 	display: flex;
 	background: var(--bg);
 	height: 100%;
-	border-radius: 0 0 12px 12px;
+	border-radius: 0 0 var(--radius-sm) var(--radius-sm);
 	overflow: hidden;
 }
 
@@ -42,7 +42,7 @@
 	border: none;
 	background: transparent;
 	color: var(--text);
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	cursor: pointer;
 	text-align: left;
 	transition: all 0.2s;
@@ -88,10 +88,10 @@
 	justify-content: center;
 	width: 100%;
 	gap: var(--space-2);
-	height: 32px;
+	height: var(--size-8);
 	padding: 0 var(--space-3);
 	border: 1px solid var(--border);
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	background: var(--bg);
 	color: var(--muted);
 	cursor: pointer;
@@ -139,7 +139,7 @@
 	font-weight: 500;
 	cursor: pointer;
 	padding: var(--space-1) var(--space-2);
-	border-radius: 4px;
+	border-radius: var(--radius-xxs);
 	transition: all 0.2s;
 	white-space: nowrap;
 	display: flex;
@@ -174,7 +174,7 @@
 	background: var(--panel-2);
 	border: 1px solid var(--accent);
 	padding: var(--space-1) var(--space-2);
-	border-radius: 4px;
+	border-radius: var(--radius-xxs);
 	font-size: 0.75rem;
 	font-weight: 600;
 	color: var(--text);
@@ -184,7 +184,7 @@
 }
 
 .ImageGallery__sub-edit-btn {
-	margin-left: 4px;
+	margin-left: var(--space-1);
 }
 
 .ImageGallery__new-sub {
@@ -194,7 +194,7 @@
 	background: var(--panel-2);
 	padding: var(--space-1) var(--space-1);
 	margin-left: var(--space-2);
-	border-radius: 6px;
+	border-radius: var(--radius-xs);
 	border: 1px solid var(--border);
 }
 
@@ -229,7 +229,7 @@
 	height: 35px;
 	background: var(--accent);
 	color: white;
-	border-radius: 6px;
+	border-radius: var(--radius-xs);
 	font-size: 0.8rem;
 	font-weight: 600;
 	cursor: pointer;
@@ -244,7 +244,7 @@
 	background: var(--panel-2);
 	border: 1px solid var(--border);
 	padding: var(--space-1) var(--space-3);
-	border-radius: 4px;
+	border-radius: var(--radius-xxs);
 	font-size: 0.75rem;
 	font-weight: 600;
 	color: var(--muted);
@@ -297,7 +297,7 @@
 	color: var(--accent);
 	border: 2px dashed var(--accent);
 	margin: var(--space-3);
-	border-radius: 12px;
+	border-radius: var(--radius-sm);
 	pointer-events: none;
 }
 
@@ -308,7 +308,7 @@
 
 .ImageGallery__image-wrap {
 	aspect-ratio: 1;
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	overflow: hidden;
 	border: 2px solid transparent;
 	background: var(--bg-2);
@@ -357,7 +357,7 @@
 	background: rgba(0, 0, 0, 0.5);
 	backdrop-filter: blur(4px);
 	border: 1px solid rgba(255, 255, 255, 0.2);
-	border-radius: 4px;
+	border-radius: var(--radius-xxs);
 	width: 22px;
 	height: 22px;
 	display: flex;
@@ -426,6 +426,6 @@
 
 .BreadcrumbSeparator {
 	transform: rotate(270deg);
-	width: 12px;
-	height: 12px;
+	width: var(--size-3);
+	height: var(--size-3);
 }

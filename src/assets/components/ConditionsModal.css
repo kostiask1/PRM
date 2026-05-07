@@ -34,7 +34,7 @@
 .ConditionsModal__content {
 	min-width: 0;
 	border: 1px solid color-mix(in srgb, var(--border), transparent 30%);
-	border-radius: 16px;
+	border-radius: var(--radius-2xl);
 	background: color-mix(in srgb, var(--bg), transparent 10%);
 	padding: var(--space-3);
 	overflow-y: auto;

@@ -7,7 +7,7 @@
 .AiAssistant__toggle {
 	position: fixed;
 	bottom: 85px;
-	right: 16px;
+	right: var(--space-4);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -16,8 +16,8 @@
 }
 
 .AiAssistant__toggle button {
-	width: 56px;
-	height: 56px;
+	width: var(--size-10);
+	height: var(--size-10);
 	border-radius: 50%;
 	background: var(--bg-2);
 	border: 1px solid var(--border);
@@ -36,7 +36,7 @@
 	display: flex;
 	align-items: center;
 	gap: var(--space-3);
-	margin-bottom: 16px;
+	margin-bottom: var(--space-4);
 }
 
 .AiAssistant__header h3 {
@@ -51,7 +51,7 @@
 	align-items: center;
 	flex-wrap: wrap;
 	gap: var(--space-3);
-	margin-bottom: 16px;
+	margin-bottom: var(--space-4);
 }
 
 .AiAssistant__modelPicker {
@@ -69,7 +69,7 @@
 
 .AiAssistant__modelSelect .Select__trigger {
 	height: 38px;
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	border-color: var(--border);
 }
 
@@ -82,7 +82,7 @@
 	align-items: center;
 	gap: var(--space-1);
 	border: 1px solid var(--border);
-	border-radius: 12px;
+	border-radius: var(--radius-sm);
 	padding-left: 10px;
 	background: var(--panel-2);
 	transition: all 0.2s ease;
@@ -120,7 +120,7 @@
 	color: var(--danger);
 	background: color-mix(in srgb, var(--danger), transparent 90%);
 	padding: var(--space-3);
-	border-radius: 6px;
+	border-radius: var(--radius-xs);
 	margin: var(--space-3) 0;
 	font-size: 0.9rem;
 	overflow-x: auto;
@@ -129,9 +129,9 @@
 .AiAssistant__result {
 	background: var(--bg-2);
 	border: 1px solid var(--border);
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	padding: var(--space-4);
-	margin-top: 16px;
+	margin-top: var(--space-4);
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
@@ -140,7 +140,7 @@
 	overflow-y: auto;
 	font-size: 0.95rem;
 	line-height: 1.6;
-	margin-bottom: 16px;
+	margin-bottom: var(--space-4);
 }
 
 @keyframes pulse {
@@ -160,7 +160,7 @@
 .AiAssistant__generated-item {
 	background: color-mix(in srgb, var(--accent), transparent 97%);
 	border: 1px solid color-mix(in srgb, var(--accent), transparent 90%);
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	padding: var(--space-3);
 	margin-bottom: 10px;
 }
@@ -174,13 +174,13 @@
 
 .AiAssistant__generated-item h5 {
 	margin-top: 0;
-	margin-bottom: 8px;
+	margin-bottom: var(--space-2);
 	color: var(--accent);
 	font-size: 1rem;
 }
 
 .AiAssistant__generated-item p {
-	margin-bottom: 4px;
+	margin-bottom: var(--space-1);
 	font-size: 0.9rem;
 }
 
@@ -190,14 +190,14 @@
 
 .AiAssistant__text-preview ul {
 	list-style-type: disc;
-	padding-left: 20px;
+	padding-left: var(--space-5);
 }
 
 .AiAssistant__response-history {
 	margin-top: var(--space-4);
 	max-height: 400px;
 	overflow-y: scroll;
-	margin-right: -8px;
+	margin-right: calc(-1 * var(--space-2));
 }
 
 .AiAssistant__response-history-header {
@@ -253,7 +253,7 @@
 	padding: var(--space-3);
 	background: color-mix(in srgb, var(--text-bright), transparent 97%);
 	border: 1px solid var(--border);
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	cursor: pointer;
 	transition: all 0.2s;
 }
@@ -268,7 +268,7 @@
 	min-height: 180px;
 	background: var(--bg);
 	border: 1px solid var(--border);
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	color: var(--text-bright);
 	padding: var(--space-3);
 	font-family: inherit;
@@ -304,7 +304,7 @@
 	margin-top: var(--space-4);
 	padding: var(--space-3);
 	border: 1px solid color-mix(in srgb, var(--accent), transparent 65%);
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	background: color-mix(in srgb, var(--accent), transparent 92%);
 	color: var(--text-bright);
 	font-size: 0.85rem;
@@ -380,7 +380,7 @@
 .AiAssistant__prompt-result code {
 	background: var(--bg-2);
 	border: 1px solid var(--border);
-	border-radius: 4px;
+	border-radius: var(--radius-xxs);
 	padding: 0.1rem 0.25rem;
 }
 
@@ -388,7 +388,7 @@
 	padding: var(--space-3);
 	background: var(--bg-2);
 	border: 1px solid var(--border);
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	overflow-x: auto;
 }
 
@@ -413,12 +413,12 @@
 }
 
 .AiAssistant__prompt-area {
-	margin-top: 16px;
+	margin-top: var(--space-4);
 }
 
 .AiAssistant__prompt-input {
 	min-height: 80px;
-	margin-bottom: 12px;
+	margin-bottom: var(--space-3);
 }
 
 .AiAssistant__generate-btn {
@@ -427,7 +427,7 @@
 
 .AiAssistant__cancel-btn {
 	width: 100%;
-	margin-top: 8px;
+	margin-top: var(--space-2);
 }
 
 .AiAssistant__context-manager {
@@ -441,7 +441,7 @@
 .AiAssistant__context-manager h4 {
 	margin: 0 0 var(--space-3) 0;
 	border-bottom: 1px solid var(--border);
-	padding-bottom: 8px;
+	padding-bottom: var(--space-2);
 	color: var(--accent);
 	text-transform: uppercase;
 	font-size: 0.85rem;
@@ -483,16 +483,16 @@
 
 .AiAssistant__session-context {
 	border: 1px solid color-mix(in srgb, var(--border), transparent 60%);
-	border-radius: 12px;
+	border-radius: var(--radius-sm);
 	padding: var(--space-3);
-	margin-bottom: 12px;
+	margin-bottom: var(--space-3);
 	background: color-mix(in srgb, var(--bg-2), transparent 40%);
 }
 
 .AiAssistant__context-details {
 	margin-left: 28px;
-	margin-top: 12px;
-	padding-top: 12px;
+	margin-top: var(--space-3);
+	padding-top: var(--space-3);
 	border-top: 1px dashed var(--border);
 	display: flex;
 	flex-direction: column;
@@ -502,8 +502,8 @@
 .AiAssistant__scene-item {
 	background: color-mix(in srgb, var(--bg), transparent 30%);
 	padding: var(--space-3);
-	border-radius: 8px;
-	margin-bottom: 8px;
+	border-radius: var(--radius-md);
+	margin-bottom: var(--space-2);
 }
 
 .AiAssistant__scenes-context {
@@ -515,7 +515,7 @@
 	flex-direction: column;
 	gap: var(--space-3);
 	margin-left: 28px;
-	margin-top: 8px;
+	margin-top: var(--space-2);
 	font-size: 0.85rem;
 }
 

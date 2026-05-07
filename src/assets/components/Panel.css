@@ -4,7 +4,7 @@
 	border-radius: var(--radius);
 	box-shadow: var(--shadow);
 	margin: var(--space-3);
-	max-height: calc(100vh - 24px);
+	max-height: calc(100vh - var(--size-6));
 	height: 100%;
 	overflow: hidden;
 	display: flex;

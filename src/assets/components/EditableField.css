@@ -10,13 +10,13 @@
 	transition: opacity 0.2s ease;
 	background: var(--panel) !important;
 	border-color: var(--border) !important;
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	padding: 0;
-	height: 30px;
-	width: 30px;
+	height: var(--size-7);
+	width: var(--size-7);
 	position: absolute;
-	top: 8px;
-	right: 8px;
+	top: var(--space-2);
+	right: var(--space-2);
 	opacity: 0;
 }
 
@@ -31,7 +31,7 @@
 	border: 1px solid transparent;
 	border-radius: var(--radius-sm);
 	background: color-mix(in srgb, var(--accent), transparent 95%);
-	min-height: 40px;
+	min-height: var(--size-9);
 	transition: all 0.2s ease;
 	line-height: 1.5;
 	font-size: 0.95rem;

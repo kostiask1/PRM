@@ -144,51 +144,48 @@ const icons = {
 				xmlns="http://www.w3.org/2000/svg"
 				width="24px"
 				height="24px"
-				viewBox="0 0 48 48"
+				viewBox="0 0 52 52"
+				stroke="currentColor"
 			>
 				<circle
 					style={{
-						fill: "none",
-						stroke: "#1d1d1b",
+						fill: "currentColor",
 						strokeLinecap: "round",
 						strokeLinejoin: "round",
 						strokeWidth: "2px",
 					}}
-					cx="4"
-					cy="27"
-					r="3"
+					cx="5"
+					cy="25"
+					r="4"
 				/>
 				<circle
 					style={{
-						fill: "none",
-						stroke: "#1d1d1b",
+						fill: "currentColor",
 						strokeLinecap: "round",
 						strokeLinejoin: "round",
 						strokeWidth: "2px",
 					}}
 					cx="25"
 					cy="18"
-					r="3"
+					r="4"
 				/>
 				<circle
 					style={{
-						fill: "none",
-						stroke: "#1d1d1b",
+						fill: "currentColor",
 						strokeLinecap: "round",
 						strokeLinejoin: "round",
 						strokeWidth: "2px",
 					}}
 					cx="44"
 					cy="31"
-					r="3"
+					r="4"
 				/>
 				<line
 					style={{
-						fill: "none",
-						stroke: "#1d1d1b",
+						fill: "currentColor",
 						strokeLinecap: "round",
 						strokeLinejoin: "round",
-						strokeWidth: "2px",
+						strokeWidth: "3px",
 					}}
 					x1="7"
 					x2="22"
@@ -197,11 +194,10 @@ const icons = {
 				/>
 				<line
 					style={{
-						fill: "none",
-						stroke: "#1d1d1b",
+						fill: "currentColor",
 						strokeLinecap: "round",
 						strokeLinejoin: "round",
-						strokeWidth: "2px",
+						strokeWidth: "3px",
 					}}
 					x1="28"
 					x2="41"

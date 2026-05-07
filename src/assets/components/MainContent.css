@@ -41,7 +41,7 @@
 
 .ProjectTutorial__feature {
 	border: 1px solid color-mix(in srgb, var(--border), transparent 35%);
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	padding: var(--space-3);
 	background: color-mix(in srgb, var(--text-bright), transparent 97%);
 	min-height: 132px;

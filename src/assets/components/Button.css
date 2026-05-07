@@ -90,12 +90,12 @@
 
 .Button--create {
 	width: 100%;
-	min-height: 46px;
+	min-height: var(--size-9);
 	background: color-mix(in srgb, var(--accent), transparent 95%);
 	border: 2px dashed color-mix(in srgb, var(--accent), transparent 65%);
 	color: color-mix(in srgb, var(--accent), var(--text) 18%);
 	font-weight: 600;
-	border-radius: 12px;
+	border-radius: var(--radius-sm);
 	font-size: 0.92rem;
 }
 

@@ -53,9 +53,9 @@
 }
 
 .note-card-simple__actionBtn.Button {
-    height: 28px;
-    width: 28px;
-    min-height: 28px;
+    height: var(--size-7);
+    width: var(--size-7);
+    min-height: var(--size-7);
     border-radius: 7px;
 }
 
@@ -71,13 +71,13 @@
 
 .note-card-simple--simplified .note-card-simple__content .MarkdownView,
 .note-card-simple--simplified .note-card-simple__content .Input {
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
+    border-top-left-radius: var(--radius-md);
+    border-top-right-radius: var(--radius-md);
 }
 
 .note-card-simple__header .Button {
-    height: 30px;
-    width: 30px;
+    height: var(--size-7);
+    width: var(--size-7);
     padding: 0;
 }
 
