@@ -1,6 +1,5 @@
 import { useCallback, useContext, useMemo, useState } from "react";
 
-import { api } from "../../api";
 import { parseUrl } from "../../utils/navigation";
 import Modal from "./Modal";
 import EntityModalContent from "../modals/EntityModalContent";
@@ -8,46 +7,14 @@ import classNames from "../../utils/classNames";
 import { lang } from "../../services/localization";
 import { EntityLinkScope } from "./EntityLinkContext";
 import {
+	getEntityDisplayName,
+	resolveEntityByName,
+} from "./entityLinkUtils.js";
+import {
 	EntityLinkContext,
 	getEntityIdentity,
 	isSameEntityIdentity,
 } from "./EntityLinkIdentity";
-
-function findEntityByName(entities, name) {
-	const searchName = String(name || "")
-		.trim()
-		.toLowerCase();
-	if (!searchName) return null;
-
-	return entities.find(({ entity }) => {
-		const first = String(entity.firstName || "")
-			.trim()
-			.toLowerCase();
-		const last = String(entity.lastName || "")
-			.trim()
-			.toLowerCase();
-		const full = `${first} ${last}`.trim();
-		const fallback = String(entity.name || entity.title || "")
-			.trim()
-			.toLowerCase();
-		return (
-			first === searchName ||
-			last === searchName ||
-			full === searchName ||
-			fallback === searchName
-		);
-	});
-}
-
-function getEntityDisplayName(entity, type) {
-	if (type === "locations") {
-		return String(entity.name || entity.title || "").trim();
-	}
-	return (
-		`${entity.firstName || ""} ${entity.lastName || ""}`.trim() ||
-		String(entity.name || entity.title || "").trim()
-	);
-}
 
 export default function EntityLink({
 	name,
@@ -72,18 +39,7 @@ export default function EntityLink({
 			if (!resolvedCampaignSlug || !name) return;
 
 			try {
-				const [characters, npcs, locations] = await Promise.all([
-					api.getEntities(resolvedCampaignSlug, "characters"),
-					api.getEntities(resolvedCampaignSlug, "npc").catch(() => []),
-					api.getEntities(resolvedCampaignSlug, "locations").catch(() => []),
-				]);
-
-				const allEntities = [
-					...characters.map((entity) => ({ entity, type: "characters" })),
-					...npcs.map((entity) => ({ entity, type: "npc" })),
-					...locations.map((entity) => ({ entity, type: "locations" })),
-				];
-				const found = findEntityByName(allEntities, name);
+				const found = await resolveEntityByName(resolvedCampaignSlug, name);
 				if (!found) return;
 				const foundIdentity = getEntityIdentity(found.entity, found.type);
 				if (

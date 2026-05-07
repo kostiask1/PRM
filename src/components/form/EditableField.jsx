@@ -1,346 +1,261 @@
-import React, { useMemo, useState, useRef } from "react";
-import ReactMarkdown from "react-markdown";
-import Input from "./Input";
+import {
+	useCallback,
+	useContext,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import Button from "./Button";
 import "../../assets/components/EditableField.css";
 import classNames from "../../utils/classNames";
 import { lang } from "../../services/localization";
-import { renderMentionText } from "../../utils/parser";
+import { openMentionPickerAction } from "../../actions/app";
+import { useAppDispatch } from "../../store/appStore";
+import { parseUrl } from "../../utils/navigation";
+import Modal from "../common/Modal";
+import EntityModalContent from "../modals/EntityModalContent";
+import { EntityLinkScope } from "../common/EntityLinkContext";
+import {
+	getEntityDisplayName,
+	resolveEntityByName,
+} from "../common/entityLinkUtils.js";
+import {
+	EntityLinkContext,
+	getEntityIdentity,
+	isSameEntityIdentity,
+} from "../common/EntityLinkIdentity";
 
-const TAB_PREVIEW = "       "; // 7 пробілів, як у тебе зараз
-const TAB_MARKDOWN_ENTITY = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
-const EMPTY_LINE_MARKDOWN_ENTITY = "&nbsp;\n\n";
-const MARKDOWN_BLOCK_TAGS = new Set([
-	"p",
-	"li",
-	"h1",
-	"h2",
-	"h3",
-	"h4",
-	"h5",
-	"h6",
-	"td",
-	"th",
-]);
-const MARKDOWN_BLOCK_SELECTOR = Array.from(MARKDOWN_BLOCK_TAGS)
-	.map((tag) => `${tag}[data-source-start]`)
-	.join(", ");
+const MENTION_CLASS = "mention-link EditableField__mention";
+const MENTION_TOOLTIP_KEY = "Ctrl+click to open entity";
+const TAB_CLASS = "EditableField__tab";
 
-function normalizePreviewText(text = "") {
-	return text.replace(/&nbsp;/g, "\u00A0");
+function requestMentionSelection(dispatch) {
+	return new Promise((resolve) => {
+		dispatch(
+			openMentionPickerAction({
+				select: (name) => resolve({ status: "selected", name: name || "" }),
+				cancel: () => resolve({ status: "cancelled" }),
+			}),
+		);
+	});
 }
 
-function applyMarkdownSourceReplacement(state, regex, replacement) {
-	const next = {
-		source: "",
-		sourceOffsetToRaw: [state.sourceOffsetToRaw[0] ?? 0],
-	};
+function escapeHtml(value = "") {
+	return String(value)
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#39;");
+}
+
+function escapeAttribute(value = "") {
+	return escapeHtml(value).replace(/`/g, "&#96;");
+}
+
+function renderText(value = "") {
+	return escapeHtml(value)
+		.replace(
+			/\t/g,
+			`<span class="${TAB_CLASS}" data-tab="true" contenteditable="false">&nbsp;</span>`,
+		)
+		.replace(/\r?\n/g, "<br>");
+}
+
+function renderMention(name) {
+	const safeName = String(name || "").trim();
+	if (!safeName) return "";
+
+	return `<span class="${MENTION_CLASS}" data-mention="${escapeAttribute(
+		safeName,
+	)}" data-mention-tooltip="${escapeAttribute(
+		lang.t(MENTION_TOOLTIP_KEY),
+	)}" title="${escapeAttribute(
+		lang.t(MENTION_TOOLTIP_KEY),
+	)}" contenteditable="false">${escapeHtml(safeName)}</span>`;
+}
+
+function renderInlineMarkdown(markdown = "") {
+	const source = String(markdown || "");
+	const tokenRegex =
+		/(\[[^\]\n]+\])|(\*\*([^*\n]+)\*\*)|(__([^_\n]+)__)|(\*([^*\n]+)\*)|(_([^_\n]+)_)/g;
+	let html = "";
 	let lastIndex = 0;
+	let match;
 
-	const appendSlice = (start, end) => {
-		for (let i = start; i < end; i++) {
-			next.source += state.source[i];
-			next.sourceOffsetToRaw.push(state.sourceOffsetToRaw[i + 1] ?? 0);
+	while ((match = tokenRegex.exec(source)) !== null) {
+		html += renderText(source.slice(lastIndex, match.index));
+
+		if (match[1]) {
+			html += renderMention(match[1].slice(1, -1));
+		} else if (match[3] || match[5]) {
+			html += `<strong>${renderInlineMarkdown(match[3] || match[5])}</strong>`;
+		} else if (match[7] || match[9]) {
+			html += `<em>${renderInlineMarkdown(match[7] || match[9])}</em>`;
 		}
-	};
 
-	const appendReplacement = (text, start, end) => {
-		const startRaw = state.sourceOffsetToRaw[start] ?? 0;
-		const endRaw = state.sourceOffsetToRaw[end] ?? startRaw;
-
-		for (let i = 0; i < text.length; i++) {
-			next.source += text[i];
-			next.sourceOffsetToRaw.push(i === text.length - 1 ? endRaw : startRaw);
-		}
-	};
-
-	for (const match of state.source.matchAll(regex)) {
-		appendSlice(lastIndex, match.index);
-		appendReplacement(replacement, match.index, match.index + match[0].length);
 		lastIndex = match.index + match[0].length;
 	}
 
-	appendSlice(lastIndex, state.source.length);
-	return next;
+	html += renderText(source.slice(lastIndex));
+	return html;
 }
 
-function buildMarkdownSource(rawValue = "") {
-	const source = String(rawValue || "");
-	let state = {
-		source,
-		sourceOffsetToRaw: Array.from({ length: source.length + 1 }, (_, i) => i),
+function markdownToHtml(markdown = "", type = "text") {
+	const source = String(markdown ?? "").replace(/\r\n?/g, "\n");
+
+	if (type !== "textarea") {
+		return renderText(source.replace(/\n+/g, " "));
+	}
+
+	const lines = source.split("\n");
+	const html = [];
+	let paragraph = [];
+
+	const flushParagraph = () => {
+		if (paragraph.length === 0) return;
+		html.push(`<p>${renderInlineMarkdown(paragraph.join("\n"))}</p>`);
+		paragraph = [];
 	};
 
-	state = applyMarkdownSourceReplacement(
-		state,
-		/(?<!(?:^|\n)- {2}[^\n]*\n)\n(?!\n)|(?<!(?:^|\n)- {2}[^\n]*)\n(?=\n)/g,
-		EMPTY_LINE_MARKDOWN_ENTITY,
-	);
-	state = applyMarkdownSourceReplacement(state, /\t/g, TAB_MARKDOWN_ENTITY);
+	for (let i = 0; i < lines.length; i += 1) {
+		const line = lines[i];
+		const headingMatch = line.match(/^(#{1,6})[ \t]+(.+)$/);
+		const unorderedMatch = line.match(/^[ \t]*[-*+][ \t]+(.+)$/);
+		const orderedMatch = line.match(/^[ \t]*\d+\.[ \t]+(.+)$/);
+		const quoteMatch = line.match(/^[ \t]*>[ \t]?(.*)$/);
 
-	return state;
-}
-
-/**
- * Будує мапу previewOffset -> rawOffset
- * Зберігає твоє поточне preview-представлення:
- * \n => \u00A0 + \n
- * \t => 7 пробілів
- *
- * Також намагається пропускати markdown-маркери,
- * які не видно в preview:
- * **, *, заголовки #, blockquote >, список -
- */
-function buildPreviewMap(rawValue = "") {
-	const previewToRaw = [];
-	let previewText = "";
-
-	let i = 0;
-	let lineStart = true;
-
-	const pushPreviewChar = (char, rawIndex) => {
-		previewText += char;
-		previewToRaw.push(rawIndex);
-	};
-
-	while (i < rawValue.length) {
-		const char = rawValue[i];
-
-		// \n => NBSP + \n
-		if (char === "\n") {
-			pushPreviewChar("\u00A0", i);
-			pushPreviewChar("\n", i);
-			i += 1;
-			lineStart = true;
+		if (!line.trim() && !line.includes("\t")) {
+			flushParagraph();
 			continue;
 		}
 
-		// markdown на початку рядка: #, >, -, *, +, 1.
-		if (lineStart) {
-			// Детектуємо маркери блоків (заголовки, списки, цитати).
-			// Пропускаємо весь префікс (відступ + маркер + пробіли після нього),
-			// бо ReactMarkdown не включає їх у текстові вузли контенту.
-			const markerMatch = rawValue
-				.slice(i)
-				.match(/^([ \t]*)(#{1,6}[ \t]+|[-*+][ \t]+|\d+\.[ \t]+|> ?)/);
-			if (markerMatch) {
-				i += markerMatch[0].length;
-				lineStart = false;
-				continue;
+		if (headingMatch) {
+			flushParagraph();
+			const level = Math.min(headingMatch[1].length, 6);
+			html.push(`<h${level}>${renderInlineMarkdown(headingMatch[2])}</h${level}>`);
+			continue;
+		}
+
+		if (unorderedMatch || orderedMatch) {
+			flushParagraph();
+			const isOrdered = Boolean(orderedMatch);
+			const tag = isOrdered ? "ol" : "ul";
+			const items = [];
+
+			while (i < lines.length) {
+				const itemMatch = isOrdered
+					? lines[i].match(/^[ \t]*\d+\.[ \t]+(.+)$/)
+					: lines[i].match(/^[ \t]*[-*+][ \t]+(.+)$/);
+				if (!itemMatch) break;
+				items.push(`<li>${renderInlineMarkdown(itemMatch[1])}</li>`);
+				i += 1;
 			}
+
+			i -= 1;
+			html.push(`<${tag}>${items.join("")}</${tag}>`);
+			continue;
 		}
 
-		// \t => 7 пробілів
-		if (char === "\t") {
-			for (let k = 0; k < TAB_PREVIEW.length; k++) {
-				pushPreviewChar(" ", i);
+		if (quoteMatch) {
+			flushParagraph();
+			const quoteLines = [];
+
+			while (i < lines.length) {
+				const currentQuote = lines[i].match(/^[ \t]*>[ \t]?(.*)$/);
+				if (!currentQuote) break;
+				quoteLines.push(currentQuote[1]);
+				i += 1;
 			}
-			i += 1;
-			lineStart = false;
+
+			i -= 1;
+			html.push(`<blockquote>${renderInlineMarkdown(quoteLines.join("\n"))}</blockquote>`);
 			continue;
 		}
 
-		// жирний ** або __
-		if (
-			rawValue.slice(i, i + 2) === "**" ||
-			rawValue.slice(i, i + 2) === "__"
-		) {
-			i += 2;
-			lineStart = false;
-			continue;
-		}
-
-		// курсив * або _
-		if (char === "*" || char === "_") {
-			i += 1;
-			lineStart = false;
-			continue;
-		}
-
-		// посилання [  ]
-		if (char === "[" || char === "]") {
-			i += 1;
-			lineStart = false;
-			continue;
-		}
-
-		pushPreviewChar(char, i);
-		lineStart = false;
-		i += 1;
+		paragraph.push(line);
 	}
 
-	return { previewText, previewToRaw };
+	flushParagraph();
+	return html.join("");
 }
 
-function getCaretDataFromPoint(x, y) {
-	if (document.caretRangeFromPoint) {
-		const range = document.caretRangeFromPoint(x, y);
-		if (!range) return null;
-
-		return {
-			node: range.startContainer,
-			offset: range.startOffset,
-		};
-	}
-
-	if (document.caretPositionFromPoint) {
-		const pos = document.caretPositionFromPoint(x, y);
-		if (!pos) return null;
-
-		return {
-			node: pos.offsetNode,
-			offset: pos.offset,
-		};
-	}
-
-	return null;
+function normalizeTextContent(value = "") {
+	return String(value || "")
+		.replace(/\u200B/g, "")
+		.replace(/\uFEFF/g, "")
+		.replace(/\u00A0/g, " ");
 }
 
-function getAbsolutePreviewOffset(container, targetNode, targetOffset) {
-	const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-	let total = 0;
-	let current;
+function normalizeMarkdown(value = "", type = "textarea") {
+	const normalized = normalizeTextContent(value).replace(/\r\n?/g, "\n");
 
-	while ((current = walker.nextNode())) {
-		const text = normalizePreviewText(current.textContent || "");
-
-		if (current === targetNode) {
-			const localOffset = normalizePreviewText(
-				(current.textContent || "").slice(0, targetOffset),
-			).length;
-			return total + localOffset;
-		}
-
-		total += text.length;
+	if (type !== "textarea") {
+		return normalized.replace(/\n+/g, " ").trim();
 	}
 
-	return total;
+	return normalized
+		.split("\n")
+		.map((line) => line.replace(/ +$/g, ""))
+		.join("\n")
+		.replace(/\n{3,}/g, "\n\n")
+		.replace(/^\n+|\n+$/g, "");
 }
 
-function getRawOffsetInContent(rawContent, previewOffset) {
-	const { previewToRaw } = buildPreviewMap(rawContent || "");
-	if (previewToRaw.length === 0) return 0;
-	if (previewOffset <= 0) return Math.max(0, previewToRaw[0] ?? 0);
-	if (previewOffset >= previewToRaw.length) return rawContent.length;
-	return Math.min(
-		Math.max(0, previewToRaw[previewOffset] ?? rawContent.length),
-		rawContent.length,
+function childrenToMarkdown(node, options = {}) {
+	return Array.from(node.childNodes || [])
+		.map((child) => nodeToMarkdown(child, options))
+		.join("");
+}
+
+function blockMarkdown(content = "") {
+	const clean = normalizeTextContent(content).replace(/^\n+|\n+$/g, "");
+	return clean ? `${clean}\n\n` : "";
+}
+
+function inlineMarkdown(node) {
+	return childrenToMarkdown(node, { inline: true });
+}
+
+function serializeList(listNode, ordered = false) {
+	const items = Array.from(listNode.children || []).filter(
+		(child) => child.tagName?.toLowerCase() === "li",
 	);
-}
 
-function getMarkdownLineContent(line) {
-	const markerMatch = line.match(
-		/^([ \t]*)(#{1,6}[ \t]+|[-*+][ \t]+|\d+\.[ \t]+|> ?)/,
-	);
-	if (!markerMatch) {
-		return {
-			content: line,
-			contentOffset: 0,
-		};
-	}
-	return {
-		content: line.slice(markerMatch[0].length),
-		contentOffset: markerMatch[0].length,
-	};
-}
-
-function getMarkdownContentStart(rawValue, startOffset) {
-	const lineEnd = rawValue.indexOf("\n", startOffset);
-	const line = rawValue.slice(
-		startOffset,
-		lineEnd === -1 ? rawValue.length : lineEnd,
-	);
-	return startOffset + getMarkdownLineContent(line).contentOffset;
-}
-
-function getClosestSourceBlock(container, targetNode) {
-	const parentElement =
-		targetNode.nodeType === Node.ELEMENT_NODE
-			? targetNode
-			: targetNode.parentElement;
-	const block = parentElement?.closest?.(MARKDOWN_BLOCK_SELECTOR);
-	if (!block || !container.contains(block)) return null;
-	return block;
-}
-
-function getSourceBlockProps(tag, rawValue, sourceOffsetToRaw, node) {
-	if (!MARKDOWN_BLOCK_TAGS.has(tag)) return {};
-
-	const sourceStart = node?.position?.start?.offset;
-	const sourceEnd = node?.position?.end?.offset;
-	if (typeof sourceStart !== "number" || typeof sourceEnd !== "number") {
-		return {};
-	}
-
-	const rawStart = sourceOffsetToRaw[sourceStart] ?? rawValue.length;
-	const rawEnd = sourceOffsetToRaw[sourceEnd] ?? rawValue.length;
-	const contentStart = getMarkdownContentStart(rawValue, rawStart);
-
-	return {
-		"data-source-start": Math.max(0, Math.min(contentStart, rawValue.length)),
-		"data-source-end": Math.max(contentStart, Math.min(rawEnd, rawValue.length)),
-	};
-}
-
-function getSourceBlockRawOffset(container, targetNode, targetOffset, rawValue) {
-	const block = getClosestSourceBlock(container, targetNode);
-	if (!block) return null;
-
-	const contentStart = Number(block.dataset.sourceStart);
-	const contentEnd = Number(block.dataset.sourceEnd);
-	if (!Number.isFinite(contentStart) || !Number.isFinite(contentEnd)) return null;
-
-	const blockPreviewOffset = getAbsolutePreviewOffset(
-		block,
-		targetNode,
-		targetOffset,
-	);
-	const rawContent = rawValue.slice(contentStart, contentEnd);
 	return (
-		contentStart + getRawOffsetInContent(rawContent, blockPreviewOffset)
+		items
+			.map((item, index) => {
+				const marker = ordered ? `${index + 1}.` : "-";
+				const content = inlineMarkdown(item)
+					.trim()
+					.replace(/\n{2,}/g, "\n")
+					.split("\n")
+					.map((line, lineIndex) => (lineIndex === 0 ? line : `  ${line}`))
+					.join("\n");
+				return `${marker} ${content}`.trimEnd();
+			})
+			.join("\n") + "\n\n"
 	);
 }
 
-/**
- * Конвертує базовий HTML (з Word/LibreOffice) у Markdown.
- */
-function convertHtmlToMarkdown(html) {
-	const parser = new DOMParser();
-	const doc = parser.parseFromString(html, "text/html");
-	return nodesToMarkdown(doc.body)
-		.replace(/\u00A0\u00A0\u00A0\u00A0/g, "\t") // Пробуємо детектувати "таби" з пробілів Word
-		.replace(/\u00A0/g, " ")
-		.replace(/[ \t]+\n/g, "\n") // Видаляємо пробіли в кінці рядків
-		.replace(/ {2,}/g, " ") // Схлопуємо лише звичайні пробіли, не чіпаючи \t
-		.replace(/\n{3,}/g, "\n\n") // Схлопуємо 3+ переноси до двох
-		.replace(/\s+$/g, "") // Чистимо кінець
-		.trim();
-}
-
-/**
- * Визначає рівень заголовка на основі інлайнового стилю font-size або атрибуту size.
- * Корисно для тексту з Word/LibreOffice, де заголовки часто приходять як <p> або <span> зі стилями.
- */
 function getHeaderLevelFromStyle(node) {
-	// Підтримка атрибуту size (для <font size="...">)
 	const attrSize = node.getAttribute?.("size");
 	if (attrSize) {
-		const s = parseInt(attrSize);
-		if (s >= 6) return 1;
-		if (s === 5) return 2;
-		if (s === 4) return 3;
+		const size = parseInt(attrSize, 10);
+		if (size >= 6) return 1;
+		if (size === 5) return 2;
+		if (size === 4) return 3;
 	}
 
 	const fontSize = node.style?.fontSize;
 	if (!fontSize) return 0;
 
-	const val = parseFloat(fontSize);
-	if (isNaN(val)) return 0;
+	const value = parseFloat(fontSize);
+	if (isNaN(value)) return 0;
 
-	// Word зазвичай шле pt (поінти). 12pt — звичайний текст.
-	// Якщо браузер перерахував у px, 1pt ≈ 1.33px.
 	const isPt = fontSize.includes("pt");
-	const size = isPt ? val : val * 0.75; // Приводимо px до масштабу pt для порівняння
+	const size = isPt ? value : value * 0.75;
 
 	if (size >= 20) return 1;
 	if (size >= 16) return 2;
@@ -348,92 +263,236 @@ function getHeaderLevelFromStyle(node) {
 	return 0;
 }
 
-function nodesToMarkdown(node) {
-	let result = "";
-	node.childNodes.forEach((child) => {
-		if (child.nodeType === Node.TEXT_NODE) {
-			// Замінюємо переноси рядків на пробіли, щоб уникнути злипання слів при вставці з Word
-			result += child.textContent.replace(/\r?\n|\r/g, " ");
-		} else if (child.nodeType === Node.ELEMENT_NODE) {
-			const tagName = child.tagName.toLowerCase();
-			const styleHeaderLevel = getHeaderLevelFromStyle(child);
+function nodeToMarkdown(node, options = {}) {
+	if (node.nodeType === Node.TEXT_NODE) {
+		return normalizeTextContent(node.textContent || "");
+	}
 
-			// Визначаємо наявність табуляції через стилі (Word часто шле margin/padding)
-			const style = child.style || {};
-			const indent =
-				parseFloat(style.marginLeft || 0) +
-				parseFloat(style.paddingLeft || 0) +
-				parseFloat(style.textIndent || 0);
-			const hasIndent = indent > 15;
+	if (node.nodeType !== Node.ELEMENT_NODE) {
+		return "";
+	}
 
-			let rawContent = nodesToMarkdown(child);
+	const element = node;
+	const tagName = element.tagName.toLowerCase();
+	const mentionName = element.dataset?.mention;
 
-			// Видаляємо лише вертикальні переноси на початку/в кінці, щоб зберегти \t всередині контенту
-			const content = rawContent.replace(/^[\n\r]+|[\n\r]+$/g, "");
+	if (element.dataset?.tab === "true") {
+		return "\t";
+	}
 
-			// Відокремлюємо існуючу табуляцію або пробіли на початку тексту
-			const leadingWsMatch = content.match(/^([ \t]+)/);
-			const leadingWs = leadingWsMatch ? leadingWsMatch[1] : "";
-			const actualText = content.slice(leadingWs.length).trim();
+	if (mentionName) {
+		return `[${normalizeTextContent(mentionName).trim()}]`;
+	}
 
-			if (!actualText && tagName !== "br") return;
+	if (tagName === "br") {
+		return "\n";
+	}
 
-			// Фінальний префікс: комбінуємо відступ стилю та відступ з тексту
-			const prefix =
-				hasIndent && !leadingWs.includes("\t") ? "\t" + leadingWs : leadingWs;
+	if (tagName === "strong" || tagName === "b") {
+		return `**${inlineMarkdown(element)}**`;
+	}
 
-			if (styleHeaderLevel > 0 && !tagName.match(/^h[1-6]$/)) {
-				result += `\n\n${prefix}${"#".repeat(styleHeaderLevel)} ${actualText}\n\n`;
-				return;
-			}
+	if (tagName === "em" || tagName === "i") {
+		return `*${inlineMarkdown(element)}*`;
+	}
 
-			switch (tagName) {
-				// case "strong":
-				case "b":
-					result += `${prefix}**${actualText}**`;
-					break;
-				case "em":
-				case "i":
-					result += `${prefix}*${actualText}*`;
-					break;
-				case "h1":
-				case "h2":
-				case "h3":
-				case "h4":
-				case "h5":
-				case "h6": {
-					const level = parseInt(tagName[1]);
-					result += `\n\n${prefix}${"#".repeat(level)} ${actualText}\n\n`;
-					break;
-				}
-				case "p":
-				case "div":
-					result += `\n\n${prefix}${actualText}\n\n`;
-					break;
-				case "blockquote":
-					result += `\n\n${prefix}> ${actualText}\n\n`;
-					break;
-				case "br":
-					result += `\n`;
-					break;
-				case "ul":
-				case "ol":
-					result += `\n\n${rawContent}\n\n`;
-					break;
-				case "li":
-					result += `\n- ${prefix}${actualText}`;
-					break;
-				case "a":
-					result += `${prefix}${actualText}`;
-					break;
-				default:
-					result +=
-						(hasIndent && !rawContent.startsWith("\t") ? "\t" : "") +
-						rawContent;
-			}
-		}
+	if (tagName === "a" && element.classList.contains("mention-link")) {
+		return `[${normalizeTextContent(element.textContent || "").trim()}]`;
+	}
+
+	if (tagName === "span" || tagName === "a") {
+		return inlineMarkdown(element);
+	}
+
+	if (tagName === "ul" || tagName === "ol") {
+		return serializeList(element, tagName === "ol");
+	}
+
+	if (tagName === "li") {
+		return options.inline ? inlineMarkdown(element) : blockMarkdown(inlineMarkdown(element));
+	}
+
+	const styledHeaderLevel = getHeaderLevelFromStyle(element);
+	if (styledHeaderLevel > 0 && !/^h[1-6]$/.test(tagName)) {
+		return blockMarkdown(`${"#".repeat(styledHeaderLevel)} ${inlineMarkdown(element)}`);
+	}
+
+	if (/^h[1-6]$/.test(tagName)) {
+		const level = parseInt(tagName[1], 10);
+		return blockMarkdown(`${"#".repeat(level)} ${inlineMarkdown(element)}`);
+	}
+
+	if (tagName === "blockquote") {
+		const quote = normalizeMarkdown(childrenToMarkdown(element), "textarea");
+		return blockMarkdown(
+			quote
+				.split("\n")
+				.map((line) => `> ${line}`)
+				.join("\n"),
+		);
+	}
+
+	if (tagName === "p" || tagName === "div") {
+		const content = inlineMarkdown(element);
+		return options.inline ? content : blockMarkdown(content);
+	}
+
+	return childrenToMarkdown(element, options);
+}
+
+function editorToMarkdown(editor, type = "text") {
+	if (!editor) return "";
+
+	if (type !== "textarea") {
+		return normalizeMarkdown(editor.textContent || "", type);
+	}
+
+	return normalizeMarkdown(childrenToMarkdown(editor), type);
+}
+
+function convertHtmlToMarkdown(html) {
+	const parser = new DOMParser();
+	const doc = parser.parseFromString(html, "text/html");
+	return normalizeMarkdown(childrenToMarkdown(doc.body), "textarea");
+}
+
+function createChangeEvent(sourceEvent, value) {
+	return {
+		...sourceEvent,
+		target: {
+			...sourceEvent.target,
+			value,
+		},
+		currentTarget: {
+			...sourceEvent.currentTarget,
+			value,
+		},
+	};
+}
+
+function getSelectionRangeInside(editor) {
+	const selection = window.getSelection?.();
+	if (!selection || selection.rangeCount === 0) return null;
+
+	const range = selection.getRangeAt(0);
+	if (!editor.contains(range.commonAncestorContainer)) return null;
+
+	return range;
+}
+
+function setCaretAfter(node) {
+	const range = document.createRange();
+	const selection = window.getSelection?.();
+	if (!selection) return;
+
+	range.setStartAfter(node);
+	range.collapse(true);
+	selection.removeAllRanges();
+	selection.addRange(range);
+}
+
+function createEndRange(editor) {
+	const range = document.createRange();
+	range.selectNodeContents(editor);
+	range.collapse(false);
+	return range;
+}
+
+function insertNodeAtSelection(editor, node) {
+	editor.focus({ preventScroll: true });
+
+	const range = getSelectionRangeInside(editor) || createEndRange(editor);
+	range.deleteContents();
+	range.insertNode(node);
+	setCaretAfter(node);
+}
+
+function insertHtmlAtSelection(editor, html) {
+	if (!html) return;
+
+	editor.focus({ preventScroll: true });
+
+	const range = getSelectionRangeInside(editor) || createEndRange(editor);
+	const template = document.createElement("template");
+	template.innerHTML = html;
+	const fragment = template.content;
+	const lastNode = fragment.lastChild;
+
+	range.deleteContents();
+	range.insertNode(fragment);
+	if (lastNode) setCaretAfter(lastNode);
+}
+
+function insertTextAtSelection(editor, text) {
+	if (!text) return;
+
+	insertNodeAtSelection(editor, document.createTextNode(text));
+}
+
+function createTabNode() {
+	const tab = document.createElement("span");
+	tab.className = TAB_CLASS;
+	tab.dataset.tab = "true";
+	tab.contentEditable = "false";
+	tab.innerHTML = "&nbsp;";
+	return tab;
+}
+
+function insertTabAtSelection(editor) {
+	insertNodeAtSelection(editor, createTabNode());
+}
+
+function insertMentionAtSelection(editor, name) {
+	const safeName = String(name || "").trim();
+	if (!safeName) return;
+
+	const mention = document.createElement("span");
+	mention.className = MENTION_CLASS;
+	mention.dataset.mention = safeName;
+	mention.dataset.mentionTooltip = lang.t(MENTION_TOOLTIP_KEY);
+	mention.title = lang.t(MENTION_TOOLTIP_KEY);
+	mention.contentEditable = "false";
+	mention.textContent = safeName;
+
+	insertNodeAtSelection(editor, mention);
+	insertTextAtSelection(editor, " ");
+}
+
+function getSelectionElement(editor) {
+	const selection = window.getSelection?.();
+	if (!selection || selection.rangeCount === 0) return null;
+
+	const node = selection.anchorNode;
+	const element = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
+	if (!element || !editor.contains(element)) return null;
+
+	return element;
+}
+
+function isSelectionInsideTag(editor, tagName) {
+	const element = getSelectionElement(editor);
+	return Boolean(element?.closest?.(tagName));
+}
+
+function isSelectionInsideList(editor) {
+	const element = getSelectionElement(editor);
+	return element?.closest?.("ul, ol") || null;
+}
+
+function cloneEditorHtml(editor) {
+	const clone = editor.cloneNode(true);
+	clone.removeAttribute("contenteditable");
+	clone.querySelectorAll("[contenteditable]").forEach((node) => {
+		node.removeAttribute("contenteditable");
 	});
-	return result;
+	clone.querySelectorAll("[data-mention]").forEach((node) => {
+		node.removeAttribute("data-mention");
+	});
+	clone.querySelectorAll("[data-mention-tooltip]").forEach((node) => {
+		node.removeAttribute("data-mention-tooltip");
+		node.removeAttribute("title");
+	});
+	return clone.innerHTML;
 }
 
 export default function EditableField({
@@ -441,216 +500,330 @@ export default function EditableField({
 	onChange,
 	placeholder,
 	className,
-	type,
+	type = "text",
 	showCopyButton = false,
+	campaignSlug,
 	...props
 }) {
-	const [isEditing, setIsEditing] = useState(false);
-	const [initialSelection, setInitialSelection] = useState(null);
+	const {
+		onBlur,
+		onClick,
+		onFocus,
+		onInput,
+		onKeyDown,
+		onPaste,
+		title,
+		disabled,
+		readOnly,
+		...domProps
+	} = props;
+	const dispatch = useAppDispatch();
+	const currentEntityIdentity = useContext(EntityLinkContext);
+	const [isActive, setIsActive] = useState(false);
 	const [copied, setCopied] = useState(false);
-	const viewRef = useRef(null);
+	const [modalState, setModalState] = useState(null);
+	const editorRef = useRef(null);
+	const lastValueRef = useRef("");
+	const markdownValue = value || value === 0 ? String(value) : "";
+	const isDisabled = Boolean(disabled || readOnly);
 
-	const previewMap = useMemo(() => buildPreviewMap(value || ""), [value]);
-	const markdownSource = useMemo(() => buildMarkdownSource(value || ""), [value]);
+	const resolvedCampaignSlug = useMemo(
+		() => campaignSlug || parseUrl().campaign,
+		[campaignSlug],
+	);
 
-	const handleCopy = async (e) => {
-		e.stopPropagation();
-		if (!viewRef.current || !value) return;
+	const htmlValue = useMemo(
+		() => markdownToHtml(markdownValue, type),
+		[markdownValue, type],
+	);
+
+	const emitChange = useCallback(
+		(sourceEvent) => {
+			const editor = editorRef.current;
+			if (!editor) return;
+
+			const nextValue = editorToMarkdown(editor, type);
+			if (!nextValue) editor.innerHTML = "";
+			if (nextValue === lastValueRef.current) return;
+
+			lastValueRef.current = nextValue;
+			onChange?.(createChangeEvent(sourceEvent, nextValue));
+		},
+		[onChange, type],
+	);
+
+	useLayoutEffect(() => {
+		lastValueRef.current = markdownValue;
+	}, [markdownValue]);
+
+	useLayoutEffect(() => {
+		const editor = editorRef.current;
+		if (!editor) return;
+
+		const isFocused = document.activeElement === editor;
+		const currentValue = editorToMarkdown(editor, type);
+
+		if (isActive && isFocused && currentValue === markdownValue) return;
+		if (editor.innerHTML !== htmlValue) {
+			editor.innerHTML = htmlValue;
+		}
+	}, [htmlValue, isActive, markdownValue, type]);
+
+	const handleCopy = async (event) => {
+		event.preventDefault();
+		event.stopPropagation();
+
+		const editor = editorRef.current;
+		if (!editor || !markdownValue) return;
 
 		try {
-			// Отримуємо відрендерений HTML для Word
-			const html = viewRef.current.innerHTML;
-			// Markdown як звичайний текст для блокнотів
-			const text = value;
+			const html = cloneEditorHtml(editor);
+			const text = markdownValue;
 
-			const data = [
+			await navigator.clipboard.write([
 				new ClipboardItem({
 					"text/html": new Blob([html], { type: "text/html" }),
 					"text/plain": new Blob([text], { type: "text/plain" }),
 				}),
-			];
-
-			await navigator.clipboard.write(data);
+			]);
 			setCopied(true);
 			setTimeout(() => setCopied(false), 2000);
-		} catch (err) {
-			console.error("Failed to copy formatted text:", err);
+		} catch (error) {
+			console.error("Failed to copy formatted text:", error);
 		}
 	};
 
-	const handleClick = (e) => {
-		e.stopPropagation();
+	const handleFocus = (event) => {
+		event.stopPropagation();
+		setIsActive(true);
+		onFocus?.(event);
+	};
 
-		if (!isEditing) {
-			const container = e.currentTarget.querySelector(".MarkdownView");
-			const caret = getCaretDataFromPoint(e.clientX, e.clientY);
+	const handleBlur = (event) => {
+		emitChange(event);
+		setIsActive(false);
+		onBlur?.(event);
+	};
 
-			let selectionData = { index: value?.length || 0 };
+	const handleCloseMentionModal = useCallback(() => setModalState(null), []);
 
-			if (
-				container &&
-				caret &&
-				caret.node &&
-				container.contains(caret.node) &&
-				caret.node.nodeType === Node.TEXT_NODE
-			) {
-				const blockRawOffset = getSourceBlockRawOffset(
-					container,
-					caret.node,
-					caret.offset,
-					value || "",
+	const openMentionModal = useCallback(
+		async (mentionName) => {
+			if (!resolvedCampaignSlug || !mentionName) return;
+
+			try {
+				const found = await resolveEntityByName(
+					resolvedCampaignSlug,
+					mentionName,
 				);
+				if (!found) return;
 
-				if (typeof blockRawOffset === "number") {
-					selectionData = {
-						index: Math.max(0, Math.min(blockRawOffset, value?.length || 0)),
-					};
-				} else {
-					const previewOffset = getAbsolutePreviewOffset(
-						container,
-						caret.node,
-						caret.offset,
-					);
-
-					selectionData = {
-						previewOffset: Math.max(0, previewOffset),
-						previewToRaw: previewMap.previewToRaw,
-					};
+				const foundIdentity = getEntityIdentity(found.entity, found.type);
+				if (
+					isSameEntityIdentity(foundIdentity, currentEntityIdentity) ||
+					isSameEntityIdentity(
+						foundIdentity,
+						modalState
+							? getEntityIdentity(modalState.entity, modalState.type)
+							: null,
+					)
+				) {
+					return;
 				}
-			}
 
-			setInitialSelection(selectionData);
-			setIsEditing(true);
-		}
-
-		props.onClick?.(e);
-	};
-
-	const handleKeyDown = (e) => {
-		// Для звичайних полів (input) Enter завершує редагування
-		if (type !== "textarea" && e.key === "Enter") {
-			e.preventDefault();
-			setIsEditing(false);
-		}
-	};
-
-	const handleBlur = (e) => {
-		setIsEditing(false);
-		props.onBlur?.(e);
-	};
-
-	const handlePaste = (e) => {
-		const html = e.clipboardData.getData("text/html");
-
-		if (!html) return; // Якщо немає HTML, працює стандартна вставка тексту
-
-		e.preventDefault();
-		const markdown = convertHtmlToMarkdown(html);
-		const { selectionStart, selectionEnd, value } = e.target;
-		const newValue =
-			value.substring(0, selectionStart) +
-			markdown +
-			value.substring(selectionEnd);
-
-		if (onChange) {
-			onChange({
-				...e,
-				target: { ...e.target, value: newValue },
-			});
-		}
-	};
-
-	const renderMentionChildren = (children) =>
-		React.Children.map(children, (child) => {
-			if (typeof child === "string") {
-				return renderMentionText(child);
-			}
-			if (React.isValidElement(child) && child.props?.children) {
-				return React.cloneElement(child, {
-					...child.props,
-					children: renderMentionChildren(child.props.children),
+				setModalState({
+					entity: found.entity,
+					type: found.type,
 				});
+			} catch (error) {
+				console.error("Failed to open entity mention modal", error);
 			}
-			return child;
-		});
-
-	const markdownTagsWithMentions = [
-		"p",
-		"strong",
-		"em",
-		"del",
-		"code",
-		"blockquote",
-		"li",
-		"h1",
-		"h2",
-		"h3",
-		"h4",
-		"h5",
-		"h6",
-		"td",
-		"th",
-		"a",
-		"span",
-	];
-
-	const components = Object.fromEntries(
-		markdownTagsWithMentions.map((tag) => [
-			tag,
-			({ node, children, ...tagProps }) =>
-				React.createElement(
-					tag,
-					{
-						...tagProps,
-						...getSourceBlockProps(
-							tag,
-							value || "",
-							markdownSource.sourceOffsetToRaw,
-							node,
-						),
-					},
-					renderMentionChildren(children),
-				),
-		]),
+		},
+		[resolvedCampaignSlug, currentEntityIdentity, modalState],
 	);
 
-	const shortcutsHelp = [
-		lang.t("Hotkeys:"),
-		lang.t("Ctrl+B — Bold"),
-		lang.t("Ctrl+I — Italic"),
-		lang.t("Ctrl+1-6 — Headings"),
-		lang.t("Ctrl+] — List"),
-		lang.t("Ctrl+[ — Remove list"),
-		lang.t("Ctrl+Q — Quote"),
-		lang.t("Ctrl+K — Add character link"),
-	].map((info) => <div key={info}>{info}</div>);
+	const handleClick = (event) => {
+		const mention = event.target.closest?.("[data-mention]");
+		if (
+			mention &&
+			editorRef.current?.contains(mention) &&
+			(event.ctrlKey || event.metaKey)
+		) {
+			event.preventDefault();
+			event.stopPropagation();
+			openMentionModal(mention.dataset.mention);
+			return;
+		}
 
-	if (isEditing) {
-		return (
-			<Input
-				{...props}
-				type={type}
-				value={value}
-				onChange={onChange}
-				placeholder={placeholder}
-				title={type === "textarea" ? shortcutsHelp : props.title}
-				onBlur={handleBlur}
-				className={className}
-				initialSelection={initialSelection}
-				onPaste={handlePaste}
-				onClick={handleClick}
-				onKeyDown={handleKeyDown}
-			/>
-		);
-	}
+		if (event.target.closest?.("a")) {
+			event.preventDefault();
+		}
+		event.stopPropagation();
+		onClick?.(event);
+	};
+
+	const stopEditorEvent = (event) => {
+		event.stopPropagation();
+	};
+
+	const handleInput = (event) => {
+		event.stopPropagation();
+		emitChange(event);
+		onInput?.(event);
+	};
+
+	const runCommand = (event, command, commandValue = null) => {
+		event.preventDefault();
+		document.execCommand(command, false, commandValue);
+		emitChange(event);
+	};
+
+	const handleMentionShortcut = async (event) => {
+		const editor = editorRef.current;
+		if (!editor) return;
+
+		event.preventDefault();
+
+		const selection = window.getSelection?.();
+		const selectedText =
+			selection && editor.contains(selection.anchorNode)
+				? selection.toString().trim()
+				: "";
+
+		if (selectedText) {
+			insertMentionAtSelection(editor, selectedText);
+			emitChange(event);
+			return;
+		}
+
+		const result = await requestMentionSelection(dispatch);
+		if (result.status !== "selected") return;
+
+		insertMentionAtSelection(editor, result.name);
+		emitChange(event);
+	};
+
+	const handleKeyDown = (event) => {
+		event.stopPropagation();
+
+		if (isDisabled) {
+			onKeyDown?.(event);
+			return;
+		}
+
+		const key = event.key.toLowerCase();
+		const isMod = event.ctrlKey || event.metaKey;
+
+		if (type !== "textarea" && event.key === "Enter") {
+			event.preventDefault();
+			editorRef.current?.blur();
+			return;
+		}
+
+		if (type === "textarea" && key === "tab") {
+			event.preventDefault();
+			insertTabAtSelection(editorRef.current);
+			emitChange(event);
+			return;
+		}
+
+		if (type === "textarea" && isMod && (key === "b" || key === "и")) {
+			runCommand(event, "bold");
+			return;
+		}
+
+		if (type === "textarea" && isMod && (key === "i" || key === "ш")) {
+			runCommand(event, "italic");
+			return;
+		}
+
+		if (type === "textarea" && isMod && (key === "k" || key === "л")) {
+			handleMentionShortcut(event);
+			return;
+		}
+
+		if (type === "textarea" && isMod && (key === "]" || key === "ї")) {
+			runCommand(event, "insertUnorderedList");
+			return;
+		}
+
+		if (type === "textarea" && isMod && (key === "[" || key === "х")) {
+			event.preventDefault();
+			const list = isSelectionInsideList(editorRef.current);
+			if (list?.tagName?.toLowerCase() === "ol") {
+				document.execCommand("insertOrderedList", false);
+			} else if (list) {
+				document.execCommand("insertUnorderedList", false);
+			} else {
+				document.execCommand("outdent", false);
+			}
+			emitChange(event);
+			return;
+		}
+
+		if (type === "textarea" && isMod && key >= "1" && key <= "6") {
+			const tag = `h${key}`;
+			const nextTag = isSelectionInsideTag(editorRef.current, tag) ? "p" : tag;
+			runCommand(event, "formatBlock", nextTag);
+			return;
+		}
+
+		if (type === "textarea" && isMod && (key === "q" || key === "й")) {
+			const nextTag = isSelectionInsideTag(editorRef.current, "blockquote")
+				? "p"
+				: "blockquote";
+			runCommand(event, "formatBlock", nextTag);
+			return;
+		}
+
+		onKeyDown?.(event);
+	};
+
+	const handlePaste = (event) => {
+		event.stopPropagation();
+
+		if (isDisabled) {
+			onPaste?.(event);
+			return;
+		}
+
+		event.preventDefault();
+
+		const editor = editorRef.current;
+		const html = event.clipboardData.getData("text/html");
+		const plainText = event.clipboardData
+			.getData("text/plain")
+			.replace(/\r\n?/g, "\n");
+
+		if (type !== "textarea") {
+			insertTextAtSelection(editor, plainText.replace(/\n+/g, " "));
+			emitChange(event);
+			onPaste?.(event);
+			return;
+		}
+
+		const markdown = html ? convertHtmlToMarkdown(html) : plainText;
+		insertHtmlAtSelection(editor, markdownToHtml(markdown, type));
+		emitChange(event);
+		onPaste?.(event);
+	};
+
+	const stopContainerEvent = (event) => {
+		event.stopPropagation();
+	};
 
 	return (
 		<div
-			className={classNames("EditableField", className)}
-			onClick={handleClick}
-			style={{ position: "relative" }}
+			{...domProps}
+			className={classNames("EditableField", className, {
+				"EditableField--active": isActive,
+				"EditableField--disabled": isDisabled,
+			})}
+			onClick={stopContainerEvent}
+			onMouseDown={stopContainerEvent}
+			style={{ position: "relative", ...domProps.style }}
 		>
-			{!isEditing && value && showCopyButton && (
+			{markdownValue && showCopyButton && (
 				<Button
 					variant="ghost"
 					size={Button.SIZES.SMALL}
@@ -660,19 +833,61 @@ export default function EditableField({
 					title={lang.t("Copy formatted text for Word")}
 				/>
 			)}
-			<div className="MarkdownView" ref={viewRef}>
-				{value || value === 0 ? (
-					type === "textarea" ? (
-						<ReactMarkdown components={components}>
-							{markdownSource.source}
-						</ReactMarkdown>
-					) : (
-						<span>{value}</span>
-					)
-				) : (
-					<span className="muted">{placeholder}</span>
-				)}
-			</div>
+			<div
+				ref={editorRef}
+				className={classNames("MarkdownView", "MarkdownView--editable", {
+					"MarkdownView--active": isActive,
+					"MarkdownView--disabled": isDisabled,
+				})}
+				contentEditable={!isDisabled}
+				suppressContentEditableWarning
+				role="textbox"
+				aria-multiline={type === "textarea"}
+				data-placeholder={placeholder}
+				tabIndex={isDisabled ? -1 : 0}
+				title={typeof title === "string" ? title : undefined}
+				onBlur={handleBlur}
+				onClick={handleClick}
+				onFocus={handleFocus}
+				onInput={handleInput}
+				onKeyDown={handleKeyDown}
+				onMouseDown={stopEditorEvent}
+				onPaste={handlePaste}
+			/>
+			{modalState && (
+				<Modal
+					title={lang
+						.t("{type}: {name}", {
+							type:
+								modalState.type === "locations"
+									? lang.t("Location/Faction")
+									: modalState.type === "npc"
+										? "NPC"
+										: lang.t("Character"),
+							name: getEntityDisplayName(
+								modalState.entity,
+								modalState.type,
+							),
+						})
+						.trim()}
+					type={modalState.type === "locations" ? "location" : "character"}
+					className={
+						modalState.type === "locations" ? "EntityLinkModal--location" : ""
+					}
+					showFooter={false}
+					onConfirm={handleCloseMentionModal}
+					onCancel={handleCloseMentionModal}
+				>
+					<EntityLinkScope entity={modalState.entity} type={modalState.type}>
+						<EntityModalContent
+							initialEntity={modalState.entity}
+							campaignSlug={resolvedCampaignSlug}
+							type={modalState.type}
+							onClose={handleCloseMentionModal}
+						/>
+					</EntityLinkScope>
+				</Modal>
+			)}
 		</div>
 	);
 }

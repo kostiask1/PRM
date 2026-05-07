@@ -18,6 +18,7 @@ export default function useSessionView(props) {
 	const [isSaving, setIsSaving] = useState(false);
 	const [isChecklistOpen, setIsChecklistOpen] = useState(false);
 	const saveTimeout = useRef(null);
+	const pendingSessionSaveRef = useRef(null);
 
 	const campaignSlug = campaign.slug;
 	const handleBack = useCallback(() => {
@@ -38,46 +39,73 @@ export default function useSessionView(props) {
 	}, []);
 
 	const saveToServer = useCallback(
-		async (updatedSession) => {
+		async (updatedSession, options = {}) => {
+			if (!updatedSession) return;
+			const { updateUi = true } = options;
 			if (saveTimeout.current) clearTimeout(saveTimeout.current);
 			saveTimeout.current = null;
-			setIsSaving(true);
+			pendingSessionSaveRef.current = null;
+			if (updateUi) setIsSaving(true);
 			try {
 				const result = await api.updateSession(
 					campaignSlug,
 					sessionId,
 					updatedSession,
 				);
-				if (result && result.fileName !== sessionId) {
+				if (updateUi && result && result.fileName !== sessionId) {
 					navigateTo(campaignSlug, result.fileName, true);
 					dispatch(requestCampaignsReloadAction());
 				}
 			} catch (err) {
 				console.error("Save failed", err);
 			} finally {
-				setIsSaving(false);
+				if (updateUi) setIsSaving(false);
 			}
 		},
 		[campaignSlug, sessionId, dispatch],
 	);
 
-	const triggerSave = useCallback(
-		(updatedSession, instant = false) => {
-			if (saveTimeout.current) clearTimeout(saveTimeout.current);
-
-			if (instant) {
+	const flushPendingSave = useCallback(
+		(options = {}) => {
+			if (saveTimeout.current) {
+				clearTimeout(saveTimeout.current);
 				saveTimeout.current = null;
-				saveToServer(updatedSession);
-			} else {
-				setIsSaving(true);
-				saveTimeout.current = setTimeout(() => {
-					saveTimeout.current = null;
-					saveToServer(updatedSession);
-				}, 250);
+			}
+
+			const pendingSession = pendingSessionSaveRef.current;
+			pendingSessionSaveRef.current = null;
+			if (pendingSession) {
+				saveToServer(pendingSession, options);
 			}
 		},
 		[saveToServer],
 	);
+
+	const triggerSave = useCallback(
+		(updatedSession, instant = false) => {
+			pendingSessionSaveRef.current = updatedSession;
+			if (saveTimeout.current) clearTimeout(saveTimeout.current);
+
+			if (instant) {
+				flushPendingSave();
+			} else {
+				setIsSaving(true);
+				saveTimeout.current = setTimeout(() => {
+					saveTimeout.current = null;
+					const pendingSession = pendingSessionSaveRef.current;
+					pendingSessionSaveRef.current = null;
+					saveToServer(pendingSession);
+				}, 250);
+			}
+		},
+		[flushPendingSave, saveToServer],
+	);
+
+	useEffect(() => {
+		return () => {
+			flushPendingSave({ updateUi: false });
+		};
+	}, [flushPendingSave]);
 
 	const handleUndo = useCallback(() => {
 		if (!session || undoStack.length === 0) return;
@@ -184,6 +212,7 @@ export default function useSessionView(props) {
 				data.data.scenes = normalizeSceneNotes(data.data.scenes || []);
 
 				setSession(data);
+				setIsSaving(false);
 				setUndoStack([]);
 				setRedoStack([]);
 				lastLoadedSessionIdRef.current = sessionId;

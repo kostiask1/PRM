@@ -72,15 +72,6 @@
     gap: var(--space-4);
 }
 
-.location-card__meta-line {
-    font-size: 1.05rem;
-    color: var(--text-bright);
-}
-
-.location-card__meta-line h2 {
-    margin-bottom: var(--space-1);
-}
-
 .location-card__image-container {
     width: 100%;
     position: relative;
@@ -111,10 +102,6 @@
     object-position: top;
     border-radius: var(--radius-md);
     display: block;
-}
-
-.location-card__image-wrapper:not(.is-editable) img {
-    cursor: zoom-in;
 }
 
 .location-card__image-wrapper.is-editable img {

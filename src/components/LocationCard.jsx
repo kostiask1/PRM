@@ -1,5 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
+import { useRef } from "react";
 
 import Button from "./form/Button";
 import EditableField from "./form/EditableField";
@@ -9,43 +8,8 @@ import CollapseToggleButton from "./common/CollapseToggleButton.jsx";
 import LocationCardModel from "../models/LocationCardModel.js";
 import classNames from "../utils/classNames";
 import { lang } from "../services/localization";
-import { renderMentionText } from "../utils/parser.jsx";
 import { getNotesForRender } from "../utils/noteUtils";
 import "../assets/components/LocationCard.css";
-
-const markdownTagsWithMentions = [
-	"p",
-	"strong",
-	"em",
-	"del",
-	"blockquote",
-	"li",
-	"h1",
-	"h2",
-	"h3",
-	"h4",
-	"h5",
-	"h6",
-	"td",
-	"th",
-	"a",
-	"span",
-];
-
-function renderMentionChildren(children) {
-	return React.Children.map(children, (child) => {
-		if (typeof child === "string") {
-			return renderMentionText(child);
-		}
-		if (React.isValidElement(child) && child.props?.children) {
-			return React.cloneElement(child, {
-				...child.props,
-				children: renderMentionChildren(child.props.children),
-			});
-		}
-		return child;
-	});
-}
 
 export default function LocationCard({
 	location,
@@ -55,14 +19,14 @@ export default function LocationCard({
 	onNameBlur,
 	onDelete,
 	campaignSlug,
-	initialEditing = false,
 	viewMode = "card",
 	showDeleteButton = true,
 	showHeader = true,
 }) {
-	const [isEditing, setIsEditing] = useState(initialEditing);
-	const editingStartNameRef = useRef(null);
 	const locationModel = new LocationCardModel(location);
+	const editingStartNameRef = useRef(
+		String(locationModel.displayName || location.name || location.title || "").trim(),
+	);
 	const isModalView = viewMode === "modal";
 	const hasLocationNotesData = locationModel.notes.some(
 		(note) =>
@@ -81,24 +45,6 @@ export default function LocationCard({
 	const isNotesCollapsed = hasLocationNotesData
 		? !!location.isNotesCollapsed
 		: false;
-	const mentionComponents = useMemo(
-		() => ({
-			...Object.fromEntries(
-				markdownTagsWithMentions.map((tag) => [
-					tag,
-					({ children, ...tagProps }) =>
-						React.createElement(tag, tagProps, renderMentionChildren(children)),
-				]),
-			),
-			code: ({ children }) => (
-				<span>{renderMentionChildren(children)}</span>
-			),
-			pre: ({ children }) => (
-				<span>{renderMentionChildren(children)}</span>
-			),
-		}),
-		[],
-	);
 
 	const updateField = (field, value) => {
 		onChange(location.id, locationModel.withField(field, value));
@@ -106,16 +52,6 @@ export default function LocationCard({
 
 	const getDisplayName = (entity) =>
 		String(entity?.name || entity?.title || "").trim();
-
-	const handleEditToggle = (e) => {
-		e.stopPropagation();
-		if (isEditing) {
-			setIsEditing(false);
-			return;
-		}
-		editingStartNameRef.current = getDisplayName(location);
-		setIsEditing(true);
-	};
 
 	const handleNameBlur = async () => {
 		const oldName = editingStartNameRef.current ?? getDisplayName(location);
@@ -170,23 +106,15 @@ export default function LocationCard({
 						</div>
 					)}
 					<div className="location-card__title-group">
-						{viewMode !== "modal" &&<span className="location-card__name">{displayName}</span>}
+						{viewMode !== "modal" && (
+							<span className="location-card__name">{displayName}</span>
+						)}
 						{isCollapsed && locationModel.briefMeta && (
 							<span className="location-card__meta-brief">
 								{locationModel.briefMeta}
 							</span>
 						)}
 					</div>
-					{!isCollapsed && (
-						<Button
-							variant={isEditing ? "primary" : "ghost"}
-							icon={isEditing ? "check" : "edit"}
-							size={Button.SIZES.SMALL}
-							iconSize={14}
-							onClick={handleEditToggle}
-							title={isEditing ? lang.t("Finish editing") : lang.t("Edit")}
-						/>
-					)}
 					{showDeleteButton && (
 						<Button
 							variant="danger"
@@ -207,48 +135,29 @@ export default function LocationCard({
 					<div className="location-card__main-layout">
 						<div className="location-card__content-side">
 							<div className="location-card__info-side">
-								{isEditing ? (
-									<div className="location-card__grid">
-										<EditableField
-											type="text"
-											value={location.name || ""}
-											onChange={(e) => updateField("name", e.target.value)}
-											onBlur={handleNameBlur}
-											placeholder={lang.t("Name")}
-										/>
-									</div>
-								) : (
-									<div className="location-card__view-mode">
-										<div className="location-card__main-info">
-											<div className="location-card__meta-line">
-												<h2>{displayName}</h2>
-											</div>
-										</div>
-									</div>
-								)}
+								<div className="location-card__grid">
+									<EditableField
+										type="text"
+										value={location.name || ""}
+										onChange={(e) => updateField("name", e.target.value)}
+										onBlur={handleNameBlur}
+										placeholder={lang.t("Name")}
+									/>
+								</div>
 							</div>
 
 							<div className="location-card__details">
 								<div className="location-card__field">
-									{isEditing ? (
-										<EditableField
-											type="textarea"
-											value={location.description || ""}
-											onChange={(e) =>
-												updateField("description", e.target.value)
-											}
-											placeholder={lang.t(
-												"Briefly describe the location or faction...",
-											)}
-										/>
-									) : (
-										<div className="location-card__text-content">
-											<ReactMarkdown components={mentionComponents}>
-												{location.description ||
-													`*${lang.t("No description")}*`}
-											</ReactMarkdown>
-										</div>
-									)}
+									<EditableField
+										type="textarea"
+										value={location.description || ""}
+										onChange={(e) =>
+											updateField("description", e.target.value)
+										}
+										placeholder={lang.t(
+											"Briefly describe the location or faction...",
+										)}
+									/>
 								</div>
 							</div>
 
@@ -308,16 +217,14 @@ export default function LocationCard({
 								imageUrl={location.imageUrl}
 								campaignSlug={campaignSlug}
 								target="location"
-								isEditing={isEditing}
-								showClearButton={isEditing}
+								isEditing
+								showClearButton
 								onImageChange={(url) => updateField("imageUrl", url)}
 								imageAlt={lang.t("Image")}
 								containerClassName="location-card__image-container"
 								wrapperClassName={classNames(
 									"location-card__image-wrapper",
-									{
-										"is-editable": isEditing,
-									},
+									"is-editable",
 								)}
 								deleteButtonClassName="location-card__image-delete"
 								previewTitle={displayName || lang.t("Image")}

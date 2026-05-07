@@ -126,22 +126,9 @@
     display: block;
 }
 
-.character-card__portrait-wrapper:not(.is-editable) img {
-    cursor: zoom-in;
-}
-
 .character-card__portrait-wrapper.is-editable img {
     cursor: pointer;
     transition: border-color 0.2s;
-}
-
-.character-card__meta-line {
-    font-size: 1.05rem;
-    color: var(--text-bright);
-}
-
-.character-card__meta-line h2 {
-    margin-bottom: var(--space-1);
 }
 
 .character-card__portrait-wrapper.is-editable img:hover {

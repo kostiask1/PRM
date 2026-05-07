@@ -121,7 +121,6 @@ export default function CreateLocationButton({
 							onToggleCollapse={null}
 							campaignSlug={campaignSlug}
 							viewMode="modal"
-							initialEditing
 							showDeleteButton={false}
 							showHeader={false}
 						/>

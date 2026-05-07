@@ -108,7 +108,9 @@ export default function useCampaignView(props) {
 		campaign.isLocationsCollapsed || false,
 	);
 	const saveTimeout = useRef(null);
+	const pendingCampaignUpdatesRef = useRef(null);
 	const entitySaveTimeoutsRef = useRef({});
+	const pendingEntityUpdatesRef = useRef({});
 	const isSavingRef = useRef(false);
 	const [undoStack, setUndoStack] = useState([]);
 	const [redoStack, setRedoStack] = useState([]);
@@ -118,11 +120,20 @@ export default function useCampaignView(props) {
 		(store) => store.entityRefreshVersion,
 	);
 
-	const clearEntitySaveTimers = useCallback(() => {
+	const discardEntitySaveTimers = useCallback(() => {
 		Object.values(entitySaveTimeoutsRef.current).forEach((timer) =>
 			clearTimeout(timer),
 		);
 		entitySaveTimeoutsRef.current = {};
+		pendingEntityUpdatesRef.current = {};
+	}, []);
+
+	const discardCampaignSaveTimer = useCallback(() => {
+		if (saveTimeout.current) {
+			clearTimeout(saveTimeout.current);
+			saveTimeout.current = null;
+		}
+		pendingCampaignUpdatesRef.current = null;
 	}, []);
 
 	const loadCharacters = useCallback(async () => {
@@ -200,6 +211,7 @@ export default function useCampaignView(props) {
 
 	const saveToServer = useCallback(
 		async (updates) => {
+			if (!updates) return;
 			isSavingRef.current = true;
 			try {
 				await api.updateCampaign(campaign.slug, updates);
@@ -211,6 +223,42 @@ export default function useCampaignView(props) {
 		},
 		[campaign.slug],
 	);
+
+	const flushCampaignSave = useCallback(async () => {
+		if (saveTimeout.current) {
+			clearTimeout(saveTimeout.current);
+			saveTimeout.current = null;
+		}
+
+		const updates = pendingCampaignUpdatesRef.current;
+		pendingCampaignUpdatesRef.current = null;
+		if (updates) await saveToServer(updates);
+	}, [saveToServer]);
+
+	const flushEntitySaves = useCallback(async () => {
+		Object.values(entitySaveTimeoutsRef.current).forEach((timer) =>
+			clearTimeout(timer),
+		);
+		entitySaveTimeoutsRef.current = {};
+
+		const entries = Object.values(pendingEntityUpdatesRef.current);
+		pendingEntityUpdatesRef.current = {};
+		await Promise.all(
+			entries.map(async ({ type, entity }) => {
+				if (!entity?.slug) return;
+				try {
+					await api.updateEntity(
+						campaign.slug,
+						type,
+						entity.slug,
+						sanitizeEntityForSave(entity),
+					);
+				} catch (err) {
+					console.error(`Failed to update ${type} entity`, err);
+				}
+			}),
+		);
+	}, [campaign.slug]);
 
 	const createHistoryState = useCallback(
 		() => ({
@@ -235,11 +283,8 @@ export default function useCampaignView(props) {
 
 	const restoreHistoryState = useCallback(
 		async (state) => {
-			clearEntitySaveTimers();
-			if (saveTimeout.current) {
-				clearTimeout(saveTimeout.current);
-				saveTimeout.current = null;
-			}
+			discardEntitySaveTimers();
+			discardCampaignSaveTimer();
 
 			const nextNotes = cloneHistoryList(state.notes);
 			const nextCharacters = cloneHistoryList(state.characters);
@@ -259,7 +304,7 @@ export default function useCampaignView(props) {
 				api.replaceEntities(campaign.slug, "locations", nextLocations),
 			]);
 		},
-		[campaign.slug, clearEntitySaveTimers],
+		[campaign.slug, discardCampaignSaveTimer, discardEntitySaveTimers],
 	);
 
 	const handleUndo = useCallback(async () => {
@@ -365,11 +410,17 @@ export default function useCampaignView(props) {
 
 	const triggerSave = useCallback(
 		(updates) => {
+			pendingCampaignUpdatesRef.current = {
+				...(pendingCampaignUpdatesRef.current || {}),
+				...updates,
+			};
 			if (saveTimeout.current) clearTimeout(saveTimeout.current);
 
 			saveTimeout.current = setTimeout(async () => {
 				saveTimeout.current = null;
-				saveToServer(updates);
+				const pendingUpdates = pendingCampaignUpdatesRef.current;
+				pendingCampaignUpdatesRef.current = null;
+				saveToServer(pendingUpdates);
 			}, 500);
 		},
 		[saveToServer],
@@ -381,6 +432,7 @@ export default function useCampaignView(props) {
 			clearTimeout(entitySaveTimeoutsRef.current[key]);
 			delete entitySaveTimeoutsRef.current[key];
 		}
+		delete pendingEntityUpdatesRef.current[key];
 	}, []);
 
 	const scheduleEntityUpdate = useCallback(
@@ -389,17 +441,24 @@ export default function useCampaignView(props) {
 			const key = `${type}:${entity.id}`;
 			const currentTimer = entitySaveTimeoutsRef.current[key];
 			if (currentTimer) clearTimeout(currentTimer);
+			pendingEntityUpdatesRef.current[key] = {
+				type,
+				entity: sanitizeEntityForSave(entity),
+			};
 
 			entitySaveTimeoutsRef.current[key] = setTimeout(async () => {
+				const pending = pendingEntityUpdatesRef.current[key];
+				delete pendingEntityUpdatesRef.current[key];
 				try {
+					if (!pending?.entity?.slug) return;
 					await api.updateEntity(
 						campaign.slug,
-						type,
-						entity.slug,
-						sanitizeEntityForSave(entity),
+						pending.type,
+						pending.entity.slug,
+						sanitizeEntityForSave(pending.entity),
 					);
 				} catch (err) {
-					console.error(`Failed to update ${type} entity`, err);
+					console.error(`Failed to update ${pending?.type || type} entity`, err);
 				} finally {
 					delete entitySaveTimeoutsRef.current[key];
 				}
@@ -1033,13 +1092,10 @@ export default function useCampaignView(props) {
 
 	useEffect(() => {
 		return () => {
-			if (saveTimeout.current) {
-				clearTimeout(saveTimeout.current);
-				saveTimeout.current = null;
-			}
-			clearEntitySaveTimers();
+			flushCampaignSave();
+			flushEntitySaves();
 		};
-	}, [clearEntitySaveTimers]);
+	}, [flushCampaignSave, flushEntitySaves]);
 
 	const handleAiUpdate = async (updatedCampaign) => {
 		pushToUndo();

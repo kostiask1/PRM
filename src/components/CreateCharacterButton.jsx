@@ -141,7 +141,6 @@ export default function CreateCharacterButton({
 							campaignSlug={campaignSlug}
 							type={entityType}
 							viewMode="modal"
-							initialEditing
 							showDeleteButton={false}
 							showHeader={false}
 						/>

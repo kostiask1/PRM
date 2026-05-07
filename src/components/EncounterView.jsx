@@ -725,7 +725,6 @@ function EncounterView(props) {
 									campaignSlug={campaign.slug}
 									type="characters"
 									viewMode="modal"
-									initialEditing
 									showDeleteButton={false}
 									showHeader={false}
 								/>
