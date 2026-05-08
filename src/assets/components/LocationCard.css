@@ -91,6 +91,12 @@
     padding: var(--space-3);
 }
 
+.location-card__image-container .ImageDropzone__content {
+    align-items: center;
+    justify-content: center;
+    min-height: 250px;
+}
+
 .location-card__image-container .ImageDropzone .Icon--image {
     width: var(--size-6);
     height: var(--size-6);
