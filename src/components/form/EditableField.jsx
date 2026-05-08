@@ -25,7 +25,7 @@ import {
 const MENTION_CLASS = "mention-link EditableField__mention";
 const MENTION_TOOLTIP_KEY = "Ctrl+click to open entity";
 const HOTKEY_TOOLTIP_KEYS = [
-	"Ctrl+K — Add character link",
+	"Ctrl+K — Add character/NPC/location link",
 	"Ctrl+B — Bold",
 	"Ctrl+I — Italic",
 	"Ctrl+] — List",
