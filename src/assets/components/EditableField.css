@@ -82,6 +82,10 @@
 	list-style-type: decimal;
 }
 
+.MarkdownView ul li:not(:last-child) {
+	margin-bottom: var(--space-1);
+}
+
 .MarkdownView ol li:not(:last-child) {
 	margin-bottom: var(--space-1);
 }
