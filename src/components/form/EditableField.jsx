@@ -124,12 +124,18 @@ function markdownToHtml(markdown = "", type = "text") {
 		return renderText(source.replace(/\n+/g, " "));
 	}
 
+	if (!source) return "";
+
 	const lines = source.split("\n");
 	const html = [];
 	let paragraph = [];
 
 	const flushParagraph = () => {
 		if (paragraph.length === 0) return;
+		if (!paragraph.some((line) => line.trim() || line.includes("\t"))) {
+			paragraph = [];
+			return;
+		}
 		html.push(`<p>${renderInlineMarkdown(paragraph.join("\n"))}</p>`);
 		paragraph = [];
 	};
@@ -142,7 +148,7 @@ function markdownToHtml(markdown = "", type = "text") {
 		const quoteMatch = line.match(/^[ \t]*>[ \t]?(.*)$/);
 
 		if (!line.trim() && !line.includes("\t")) {
-			flushParagraph();
+			paragraph.push("");
 			continue;
 		}
 
@@ -214,7 +220,6 @@ function normalizeMarkdown(value = "", type = "textarea") {
 		.split("\n")
 		.map((line) => line.replace(/ +$/g, ""))
 		.join("\n")
-		.replace(/\n{3,}/g, "\n\n")
 		.replace(/^\n+|\n+$/g, "");
 }
 
@@ -225,8 +230,14 @@ function childrenToMarkdown(node, options = {}) {
 }
 
 function blockMarkdown(content = "") {
-	const clean = normalizeTextContent(content).replace(/^\n+|\n+$/g, "");
-	return clean ? `${clean}\n\n` : "";
+	const normalized = normalizeTextContent(content)
+		.split("\n")
+		.map((line) => line.replace(/ +$/g, ""))
+		.join("\n")
+		.replace(/^\n/, "");
+
+	if (!normalized.replace(/\n/g, "").trim()) return "";
+	return normalized.endsWith("\n") ? `${normalized}\n` : `${normalized}\n\n`;
 }
 
 function inlineMarkdown(node) {
@@ -353,6 +364,13 @@ function nodeToMarkdown(node, options = {}) {
 
 	if (tagName === "p" || tagName === "div") {
 		const content = inlineMarkdown(element);
+		if (
+			!options.inline &&
+			content.includes("\n") &&
+			!normalizeTextContent(content).replace(/\n/g, "").trim()
+		) {
+			return "\n";
+		}
 		return options.inline ? content : blockMarkdown(content);
 	}
 

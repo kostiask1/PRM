@@ -806,7 +806,7 @@ await run("EditableField and Tooltip source keep shared tooltip behavior", async
 	assert.match(editableFieldSource, /function HotkeysTooltipContent\(\)/);
 	for (const key of [
 		"Hotkeys:",
-		"Ctrl+K — Add character link",
+		"Ctrl+K — Add character/NPC/location link",
 		"Ctrl+B — Bold",
 		"Ctrl+I — Italic",
 		"Ctrl+] — List",
@@ -821,6 +821,9 @@ await run("EditableField and Tooltip source keep shared tooltip behavior", async
 	assert.match(editableFieldSource, /data-mention-tooltip/);
 	assert.match(editableFieldSource, /onMouseMove=\{handleMouseMove\}/);
 	assert.match(editableFieldSource, /anchorElement=\{tooltipAnchor\}/);
+	assert.equal(editableFieldSource.includes("replace(/\\n{3,}/g"), false);
+	assert.match(editableFieldSource, /paragraph\.push\(""\)/);
+	assert.match(editableFieldSource, /normalized\.endsWith\("\\n"\)/);
 	assert.equal(editableFieldSource.includes("mention.title ="), false);
 	assert.equal(editableFieldSource.includes("title={typeof title"), false);
 	assert.equal(editableFieldCss.includes(".EditableField__mention:hover::after"), false);
