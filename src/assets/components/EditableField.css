@@ -59,7 +59,10 @@
 	pointer-events: none;
 }
 
-.MarkdownView :is(h1, h2, h3, h4, h5, h6) {
+.MarkdownView :is(h1, h2, h3, h4, h5, h6):not(:has(+ :is(ol, ul))) {
+	margin-bottom: calc(-1 * var(--space-2));
+}
+.MarkdownView :is(h1, h2, h3, h4, h5, h6):has(+ :is(ol, ul)) {
 	margin-bottom: var(--space-3);
 }
 
@@ -116,12 +119,6 @@
 	display: block;
 	width: 100%;
 	height: 100%;
-}
-
-.EditableField__hotkeysTooltip {
-	display: grid;
-	gap: var(--space-1);
-	white-space: nowrap;
 }
 
 .EditableField__tab {

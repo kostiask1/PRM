@@ -24,15 +24,6 @@ import {
 
 const MENTION_CLASS = "mention-link EditableField__mention";
 const MENTION_TOOLTIP_KEY = "Ctrl+click to open entity";
-const HOTKEY_TOOLTIP_KEYS = [
-	"Ctrl+K — Add character/NPC/location link",
-	"Ctrl+B — Bold",
-	"Ctrl+I — Italic",
-	"Ctrl+] — List",
-	"Ctrl+[ — Remove list",
-	"Ctrl+1-6 — Headings",
-	"Ctrl+Q — Quote",
-];
 const TAB_CLASS = "EditableField__tab";
 const INSERTION_MARKER_CLASS = "EditableField__insertionMarker";
 
@@ -45,17 +36,6 @@ function requestMentionSelection(dispatch) {
 			}),
 		);
 	});
-}
-
-function HotkeysTooltipContent() {
-	return (
-		<div className="EditableField__hotkeysTooltip">
-			<div className="Tooltip__title">{lang.t("Hotkeys:")}</div>
-			{HOTKEY_TOOLTIP_KEYS.map((key) => (
-				<div key={key}>{lang.t(key)}</div>
-			))}
-		</div>
-	);
 }
 
 function escapeHtml(value = "") {
@@ -868,9 +848,8 @@ export default function EditableField({
 	const isDisabled = Boolean(disabled || readOnly);
 	const fieldTooltipContent = useMemo(() => {
 		if (typeof title === "string" && title.trim()) return title;
-		if (type === "textarea" && !isDisabled) return <HotkeysTooltipContent />;
 		return null;
-	}, [isDisabled, title, type]);
+	}, [title]);
 	const tooltipContent = mentionTooltip.content || fieldTooltipContent;
 	const tooltipAnchor = mentionTooltip.anchor || null;
 
@@ -1299,17 +1278,14 @@ export default function EditableField({
 					title={lang.t("Copy formatted text for Word")}
 				/>
 			)}
-			{tooltipContent ? (
-				<Tooltip
-					content={tooltipContent}
-					className="EditableField__tooltip"
-					anchorElement={tooltipAnchor}
-				>
-					{editorNode}
-				</Tooltip>
-			) : (
-				editorNode
-			)}
+			<Tooltip
+				content={tooltipContent}
+				disabled={!tooltipContent}
+				className="EditableField__tooltip"
+				anchorElement={tooltipAnchor}
+			>
+				{editorNode}
+			</Tooltip>
 			<EntityModal
 				modalState={modalState}
 				campaignSlug={resolvedCampaignSlug}

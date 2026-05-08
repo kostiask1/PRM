@@ -787,9 +787,17 @@ await run("entity service resolves campaign entities by display names", async ()
 	}
 });
 
-await run("EditableField and Tooltip source keep shared tooltip behavior", async () => {
+await run("EditableField, Tooltip, and ProjectGuide keep tooltip behavior", async () => {
 	const editableFieldSource = await fs.readFile(
 		"src/components/form/EditableField.jsx",
+		"utf8",
+	);
+	const projectGuideSource = await fs.readFile(
+		"src/components/ProjectGuide.jsx",
+		"utf8",
+	);
+	const mainContentSource = await fs.readFile(
+		"src/components/MainContent.jsx",
 		"utf8",
 	);
 	const tooltipSource = await fs.readFile(
@@ -800,10 +808,19 @@ await run("EditableField and Tooltip source keep shared tooltip behavior", async
 		"src/assets/components/EditableField.css",
 		"utf8",
 	);
+	const mainContentCss = await fs.readFile(
+		"src/assets/components/MainContent.css",
+		"utf8",
+	);
 	const uk = JSON.parse(await fs.readFile("src/langs/uk.json", "utf8"));
 
 	assert.match(editableFieldSource, /import Tooltip from "\.\.\/common\/Tooltip"/);
-	assert.match(editableFieldSource, /function HotkeysTooltipContent\(\)/);
+	assert.equal(editableFieldSource.includes("HotkeysTooltipContent"), false);
+	assert.equal(editableFieldSource.includes("Ctrl+B — Bold"), false);
+	assert.match(mainContentSource, /import ProjectGuide from "\.\/ProjectGuide"/);
+	assert.match(mainContentSource, /<ProjectGuide \/>/);
+	assert.match(projectGuideSource, /const HOTKEYS = \[/);
+	assert.match(projectGuideSource, /className="ProjectGuide__hotkeys"/);
 	for (const key of [
 		"Hotkeys:",
 		"Ctrl+K — Add character/NPC/location link",
@@ -827,11 +844,14 @@ await run("EditableField and Tooltip source keep shared tooltip behavior", async
 	assert.equal(editableFieldSource.includes("mention.title ="), false);
 	assert.equal(editableFieldSource.includes("title={typeof title"), false);
 	assert.equal(editableFieldCss.includes(".EditableField__mention:hover::after"), false);
-	assert.match(editableFieldCss, /\.EditableField__hotkeysTooltip/);
+	assert.equal(editableFieldCss.includes(".EditableField__hotkeysTooltip"), false);
+	assert.match(mainContentCss, /\.ProjectGuide__hotkeys/);
 
 	assert.match(tooltipSource, /anchorElement = null/);
 	assert.match(tooltipSource, /anchorElement \|\| triggerRef\.current/);
 	assert.match(tooltipSource, /const tooltipId = tooltipIdRef\.current/);
+	assert.match(tooltipSource, /triggerActiveRef/);
+	assert.match(tooltipSource, /!triggerActiveRef\.current \|\| isOpen \|\| disabled \|\| !hasContent/);
 });
 
 await run("bestiary search helpers match by name, type and tags", () => {

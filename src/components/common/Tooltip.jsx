@@ -90,6 +90,7 @@ export default function Tooltip({
 	const closeTimerRef = useRef(null);
 	const parentTooltipIdRef = useRef(null);
 	const triggerRef = useRef(null);
+	const triggerActiveRef = useRef(false);
 	const tooltipRef = useRef(null);
 	const timerRef = useRef(null);
 	const [isOpen, setIsOpen] = useState(false);
@@ -121,6 +122,7 @@ export default function Tooltip({
 	};
 
 	const scheduleCloseTooltip = () => {
+		triggerActiveRef.current = false;
 		if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
 		closeTimerRef.current = setTimeout(() => {
 			closeTooltip();
@@ -154,6 +156,7 @@ export default function Tooltip({
 	};
 
 	const handleTriggerEnter = () => {
+		triggerActiveRef.current = true;
 		cancelOtherTooltipTimeouts(tooltipIdRef.current);
 		openTooltip();
 	};
@@ -162,6 +165,31 @@ export default function Tooltip({
 		cancelOtherTooltipTimeouts(tooltipIdRef.current);
 		cancelCloseTooltip();
 	};
+
+	useEffect(() => {
+		if (!triggerActiveRef.current || isOpen || disabled || !hasContent) return;
+		if (timerRef.current) {
+			clearTimeout(timerRef.current);
+			timerRef.current = null;
+		}
+		if (closeTimerRef.current) {
+			clearTimeout(closeTimerRef.current);
+			closeTimerRef.current = null;
+		}
+		cancelOtherTooltipTimeouts(tooltipIdRef.current);
+		timerRef.current = setTimeout(() => {
+			const parentId = findParentTooltipId(
+				triggerRef.current,
+				tooltipIdRef.current,
+			);
+			parentTooltipIdRef.current = parentId;
+			tooltipParentById.set(tooltipIdRef.current, parentId);
+			setPosition((prev) => ({ ...prev, ready: false }));
+			setIsOpen(true);
+			setActiveTooltip(tooltipIdRef.current);
+			timerRef.current = null;
+		}, delay);
+	}, [content, delay, disabled, hasContent, isOpen]);
 
 	useEffect(() => {
 		if (!isOpen) return;

@@ -7,25 +7,25 @@
 	text-align: center;
 }
 
-.ProjectTutorial {
+.ProjectGuide {
 	text-align: left;
 	max-height: none;
 	height: auto;
 	margin-top: 100px;
 }
 
-.ProjectTutorial__heading {
+.ProjectGuide__heading {
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-1);
 }
 
-.ProjectTutorial__heading h2,
-.ProjectTutorial__heading p {
+.ProjectGuide__heading h2,
+.ProjectGuide__heading p {
 	margin: 0;
 }
 
-.ProjectTutorial__layout {
+.ProjectGuide__layout {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) minmax(260px, 0.36fr);
 	gap: var(--space-5);
@@ -33,13 +33,13 @@
 	margin-top: var(--space-4);
 }
 
-.ProjectTutorial__features {
+.ProjectGuide__features {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 	gap: var(--space-3);
 }
 
-.ProjectTutorial__feature {
+.ProjectGuide__feature {
 	border: 1px solid color-mix(in srgb, var(--border), transparent 35%);
 	border-radius: var(--radius-md);
 	padding: var(--space-3);
@@ -47,32 +47,42 @@
 	min-height: 132px;
 }
 
-.ProjectTutorial__feature h3,
-.ProjectTutorial__workflow h3 {
+.ProjectGuide__feature h3,
+.ProjectGuide__workflow h3,
+.ProjectGuide__hotkeys h3 {
 	margin: 0 0 var(--space-2);
 	color: var(--text-bright);
 	font-size: 1rem;
 	font-family: var(--font-heading);
 }
 
-.ProjectTutorial__feature p {
+.ProjectGuide__feature p {
 	margin: 0;
 	line-height: 1.5;
 	color: var(--text);
 }
 
-.ProjectTutorial__workflow {
+.ProjectGuide__side {
 	border-left: 1px solid color-mix(in srgb, var(--border), transparent 35%);
 	padding-left: var(--space-4);
+	display: grid;
+	gap: var(--space-4);
 }
 
-.ProjectTutorial__workflow ol {
+.ProjectGuide__workflow,
+.ProjectGuide__hotkeys {
+	min-width: 0;
+}
+
+.ProjectGuide__workflow ol,
+.ProjectGuide__hotkeys ul {
 	margin: 0;
 	padding-left: 1.3rem;
 	display: grid;
 	gap: var(--space-2);
 }
 
-.ProjectTutorial__workflow li {
+.ProjectGuide__workflow li,
+.ProjectGuide__hotkeys li {
 	line-height: 1.45;
 }
