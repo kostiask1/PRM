@@ -3,4 +3,4 @@ export {
 	getNotesForRender,
 	upsertNoteById,
 	sanitizeNotesForSave,
-} from "../utils/noteUtils";
+} from "../utils/noteUtils.js";

@@ -1,4 +1,4 @@
-import { api } from "../api";
+import { api } from "../api.js";
 
 export function findEntityByName(entities, name) {
 	const searchName = String(name || "")

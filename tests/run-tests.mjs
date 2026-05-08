@@ -16,6 +16,13 @@ import {
 	loadConditionsMap,
 } from "../src/utils/conditions.js";
 import {
+	createEmptyNote as createModelEmptyNote,
+	getNotesForRender,
+	isNoteEmpty,
+	sanitizeNotesForSave,
+	upsertNoteById,
+} from "../src/utils/noteUtils.js";
+import {
 	buildNavigationUrl,
 	parseUrl,
 	shouldOpenInNewTabFromEvent,
@@ -43,6 +50,25 @@ import CampaignViewModel from "../src/models/CampaignViewModel.js";
 import SessionViewModel from "../src/models/SessionViewModel.js";
 import MonsterStatBlockModel from "../src/models/MonsterStatBlockModel.js";
 import SpellCardModel from "../src/models/SpellCardModel.js";
+import LocationCardModel from "../src/models/LocationCardModel.js";
+import {
+	areHistoryStatesEqual,
+	campaignHistoryPayload,
+	cloneHistoryList,
+	getCharacterDisplayName as getCampaignCharacterDisplayName,
+	getLocationDisplayName as getCampaignLocationDisplayName,
+	normalizeMentionName,
+	replaceBracketedMentionNames,
+	replaceMentionsInValue,
+	sanitizeEntityForSave,
+	sanitizeLoadedEntity,
+} from "../src/features/campaign/campaignStateUtils.js";
+import { IMAGE_GALLERY_CATEGORIES } from "../src/features/images/imageGalleryConfig.js";
+import {
+	findEntityByName,
+	getEntityDisplayName,
+	resolveEntityByName,
+} from "../src/services/entities.js";
 import { api } from "../src/api.js";
 
 const require = createRequire(import.meta.url);
@@ -136,6 +162,36 @@ await run("note helpers maintain trailing empty note slot", () => {
 	assert.equal(appended[1].title, "");
 	assert.equal(appendTrailingEmptyNote([createEmptyNote()]).length, 1);
 	assert.equal(ensureAtLeastOneNote([]).length, 1);
+});
+
+await run("noteUtils renders virtual notes and sanitizes saved notes", () => {
+	const emptyNote = createModelEmptyNote();
+	assert.equal(isNoteEmpty(emptyNote), true);
+	assert.equal(isNoteEmpty({ title: "Title", text: "" }), false);
+	assert.equal(isNoteEmpty({ title: "Title", text: "" }, true), true);
+
+	const withTitleOnly = [{ id: "title", title: "Title", text: "" }];
+	const regularRender = getNotesForRender(withTitleOnly);
+	assert.equal(regularRender.length, 2);
+	assert.equal(regularRender[1]._isVirtual, true);
+
+	const simplifiedRender = getNotesForRender(withTitleOnly, {
+		simplifiedNotes: true,
+	});
+	assert.equal(simplifiedRender.length, 1);
+
+	const updated = upsertNoteById([], "new", { text: "Body" });
+	assert.deepEqual(updated, [
+		{ id: "new", title: "", text: "Body", collapsed: false },
+	]);
+
+	const sanitized = sanitizeNotesForSave([
+		{ id: "empty", title: "", text: "", collapsed: false, _isVirtual: true },
+		{ id: "filled", title: "T", text: "", collapsed: true, _isVirtual: true },
+	]);
+	assert.deepEqual(sanitized, [
+		{ id: "filled", title: "T", text: "", collapsed: true },
+	]);
 });
 
 await run(
@@ -302,6 +358,62 @@ await run("campaign graph builds nodes and mention edges", () => {
 	);
 });
 
+await run("campaign state helpers sanitize entities and update mentions", () => {
+	assert.deepEqual(
+		sanitizeEntityForSave({ id: 1, name: "Hero", _draft: true }),
+		{ id: 1, name: "Hero" },
+	);
+	assert.deepEqual(sanitizeLoadedEntity({ name: "Hero", _tmp: "x" }), {
+		name: "Hero",
+	});
+	assert.equal(normalizeMentionName("  Old   Name "), "old name");
+	assert.equal(
+		replaceBracketedMentionNames(
+			"Meet [ old   name ] and [Other].",
+			"Old Name",
+			"New Name",
+		),
+		"Meet [New Name] and [Other].",
+	);
+	assert.deepEqual(
+		replaceMentionsInValue(
+			{ text: "[Old Name]", list: ["No", "[ old name ]"] },
+			"old name",
+			"New Name",
+		),
+		{ text: "[New Name]", list: ["No", "[New Name]"] },
+	);
+	assert.equal(
+		getCampaignCharacterDisplayName({ firstName: "Ім'я", lastName: "Прізвище" }),
+		"Ім'я Прізвище",
+	);
+	assert.equal(getCampaignCharacterDisplayName({ name: "NPC" }), "NPC");
+	assert.equal(getCampaignLocationDisplayName({ title: "Фракція" }), "Фракція");
+
+	const history = cloneHistoryList([{ name: "A", _virtual: true }]);
+	assert.deepEqual(history, [{ name: "A" }]);
+	history[0].name = "Changed";
+	assert.deepEqual(cloneHistoryList([{ name: "A" }]), [{ name: "A" }]);
+	assert.equal(areHistoryStatesEqual([{ a: 1 }], [{ a: 1 }]), true);
+	assert.deepEqual(
+		campaignHistoryPayload({
+			description: "Story",
+			notes: [
+				{ id: 1, title: "", text: "", collapsed: false },
+				{ id: 2, title: "Plan", text: "", collapsed: false, _isVirtual: true },
+			],
+			completed: 1,
+			completedAt: "2026-05-08",
+		}),
+		{
+			description: "Story",
+			notes: [{ id: 2, title: "Plan", text: "", collapsed: false }],
+			completed: true,
+			completedAt: "2026-05-08",
+		},
+	);
+});
+
 await run("SessionViewModel encounter lookup and labels", () => {
 	const model = new SessionViewModel({
 		completed: false,
@@ -353,6 +465,32 @@ await run("CharacterCardModel derives fields and maintains notes", async () => {
 		model.withUpdatedNote(noteId, { title: "T" }).some((n) => n.title === "T"),
 	);
 	assert.equal(model.withDeletedNote(noteId).length, 1);
+});
+
+await run("LocationCardModel derives display data and preserves note slot", () => {
+	const model = new LocationCardModel({
+		id: "loc-1",
+		name: "Місто",
+		description:
+			"Дуже довгий опис локації, який має бути скорочений для компактного відображення в картці без втрати стабільності моделі та коректного вигляду в інтерфейсі.",
+		notes: [],
+		imageUrl: "/image.png",
+	});
+
+	assert.equal(model.displayName, "Місто");
+	assert.match(model.briefMeta, /\.\.\.$/);
+	assert.equal(model.notes.length, 1);
+	assert.equal(model.hasImage, true);
+	assert.equal(model.withField("name", "Новий").name, "Новий");
+
+	const notedModel = new LocationCardModel({
+		notes: [{ id: "n1", title: "", text: "", collapsed: false }],
+	});
+	assert.ok(
+		notedModel.withUpdatedNote("n1", { text: "Text" }).some((n) => n.text === "Text"),
+	);
+	assert.equal(notedModel.withDeletedNote("n1").length, 1);
+	assert.equal(notedModel.toggleNoteCollapse("n1")[0].collapsed, true);
 });
 
 await run("MonsterStatBlockModel formats combat data", () => {
@@ -568,6 +706,129 @@ await run("classNames merges strings arrays objects and falsy values", () => {
 		"a b c 1 d",
 	);
 	assert.equal(classNames(null, false, 0, "", { test: 1, hidden: 0 }), "test");
+});
+
+await run("image gallery categories expose stable ids and protected folders", () => {
+	const ids = IMAGE_GALLERY_CATEGORIES.map((category) => category.id);
+	assert.deepEqual(ids, [
+		"maps",
+		"scenes",
+		"tokens",
+		"characters",
+		"props",
+		"notes",
+		"attachments",
+	]);
+	assert.equal(new Set(ids).size, ids.length);
+	assert.deepEqual(
+		IMAGE_GALLERY_CATEGORIES.find((category) => category.id === "tokens")?.subs,
+		["npc", "players"],
+	);
+	assert.deepEqual(
+		IMAGE_GALLERY_CATEGORIES.find((category) => category.id === "characters")
+			?.subs,
+		["npc", "players"],
+	);
+});
+
+await run("entity service resolves campaign entities by display names", async () => {
+	const entities = [
+		{
+			type: "characters",
+			entity: { firstName: "Hero", lastName: "One" },
+		},
+		{
+			type: "locations",
+			entity: { name: "Old Town" },
+		},
+	];
+	assert.equal(findEntityByName(entities, "hero")?.type, "characters");
+	assert.equal(findEntityByName(entities, "One")?.type, "characters");
+	assert.equal(findEntityByName(entities, "hero one")?.type, "characters");
+	assert.equal(findEntityByName(entities, "old town")?.type, "locations");
+	assert.equal(findEntityByName(entities, "")?.type, undefined);
+	assert.equal(
+		getEntityDisplayName({ firstName: "Ім'я", lastName: "Прізвище" }, "npc"),
+		"Ім'я Прізвище",
+	);
+	assert.equal(
+		getEntityDisplayName({ name: "Локація" }, "locations"),
+		"Локація",
+	);
+	assert.equal(await resolveEntityByName("", "Hero"), null);
+
+	const originalGetEntities = api.getEntities;
+	const calls = [];
+	api.getEntities = async (slug, type) => {
+		calls.push([slug, type]);
+		if (type === "characters") {
+			return [{ firstName: "Hero", lastName: "One" }];
+		}
+		if (type === "npc") {
+			throw new Error("npc list unavailable");
+		}
+		return [{ name: "Old Town" }];
+	};
+
+	try {
+		const character = await resolveEntityByName("camp", "hero one");
+		assert.equal(character?.type, "characters");
+		assert.equal(character?.entity.firstName, "Hero");
+
+		const location = await resolveEntityByName("camp", "old town");
+		assert.equal(location?.type, "locations");
+		assert.deepEqual(calls.map(([, type]) => type).slice(0, 3), [
+			"characters",
+			"npc",
+			"locations",
+		]);
+	} finally {
+		api.getEntities = originalGetEntities;
+	}
+});
+
+await run("EditableField and Tooltip source keep shared tooltip behavior", async () => {
+	const editableFieldSource = await fs.readFile(
+		"src/components/form/EditableField.jsx",
+		"utf8",
+	);
+	const tooltipSource = await fs.readFile(
+		"src/components/common/Tooltip.jsx",
+		"utf8",
+	);
+	const editableFieldCss = await fs.readFile(
+		"src/assets/components/EditableField.css",
+		"utf8",
+	);
+	const uk = JSON.parse(await fs.readFile("src/langs/uk.json", "utf8"));
+
+	assert.match(editableFieldSource, /import Tooltip from "\.\.\/common\/Tooltip"/);
+	assert.match(editableFieldSource, /function HotkeysTooltipContent\(\)/);
+	for (const key of [
+		"Hotkeys:",
+		"Ctrl+K — Add character link",
+		"Ctrl+B — Bold",
+		"Ctrl+I — Italic",
+		"Ctrl+] — List",
+		"Ctrl+[ — Remove list",
+		"Ctrl+1-6 — Headings",
+		"Ctrl+Q — Quote",
+		"Ctrl+click to open entity",
+	]) {
+		assert.equal(typeof uk[key], "string", `${key} is translated`);
+	}
+
+	assert.match(editableFieldSource, /data-mention-tooltip/);
+	assert.match(editableFieldSource, /onMouseMove=\{handleMouseMove\}/);
+	assert.match(editableFieldSource, /anchorElement=\{tooltipAnchor\}/);
+	assert.equal(editableFieldSource.includes("mention.title ="), false);
+	assert.equal(editableFieldSource.includes("title={typeof title"), false);
+	assert.equal(editableFieldCss.includes(".EditableField__mention:hover::after"), false);
+	assert.match(editableFieldCss, /\.EditableField__hotkeysTooltip/);
+
+	assert.match(tooltipSource, /anchorElement = null/);
+	assert.match(tooltipSource, /anchorElement \|\| triggerRef\.current/);
+	assert.match(tooltipSource, /const tooltipId = tooltipIdRef\.current/);
 });
 
 await run("bestiary search helpers match by name, type and tags", () => {
