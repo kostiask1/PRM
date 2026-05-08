@@ -14,6 +14,7 @@ import { openMentionPickerAction } from "../../actions/app";
 import { useAppDispatch } from "../../store/appStore";
 import { parseUrl } from "../../utils/navigation";
 import EntityModal from "../common/EntityModal";
+import Tooltip from "../common/Tooltip";
 import { resolveEntityByName } from "../../services/entities.js";
 import {
 	EntityLinkContext,
@@ -23,6 +24,15 @@ import {
 
 const MENTION_CLASS = "mention-link EditableField__mention";
 const MENTION_TOOLTIP_KEY = "Ctrl+click to open entity";
+const HOTKEY_TOOLTIP_KEYS = [
+	"Ctrl+K — Add character link",
+	"Ctrl+B — Bold",
+	"Ctrl+I — Italic",
+	"Ctrl+] — List",
+	"Ctrl+[ — Remove list",
+	"Ctrl+1-6 — Headings",
+	"Ctrl+Q — Quote",
+];
 const TAB_CLASS = "EditableField__tab";
 const INSERTION_MARKER_CLASS = "EditableField__insertionMarker";
 
@@ -35,6 +45,17 @@ function requestMentionSelection(dispatch) {
 			}),
 		);
 	});
+}
+
+function HotkeysTooltipContent() {
+	return (
+		<div className="EditableField__hotkeysTooltip">
+			<div className="Tooltip__title">{lang.t("Hotkeys:")}</div>
+			{HOTKEY_TOOLTIP_KEYS.map((key) => (
+				<div key={key}>{lang.t(key)}</div>
+			))}
+		</div>
+	);
 }
 
 function escapeHtml(value = "") {
@@ -66,8 +87,6 @@ function renderMention(name) {
 	return `<span class="${MENTION_CLASS}" data-mention="${escapeAttribute(
 		safeName,
 	)}" data-mention-tooltip="${escapeAttribute(
-		lang.t(MENTION_TOOLTIP_KEY),
-	)}" title="${escapeAttribute(
 		lang.t(MENTION_TOOLTIP_KEY),
 	)}" contenteditable="false">${escapeHtml(safeName)}</span>`;
 }
@@ -698,7 +717,6 @@ function insertMentionAtSelection(
 	mention.className = MENTION_CLASS;
 	mention.dataset.mention = safeName;
 	mention.dataset.mentionTooltip = lang.t(MENTION_TOOLTIP_KEY);
-	mention.title = lang.t(MENTION_TOOLTIP_KEY);
 	mention.contentEditable = "false";
 	mention.textContent = safeName;
 
@@ -819,6 +837,10 @@ export default function EditableField({
 	const [isActive, setIsActive] = useState(false);
 	const [copied, setCopied] = useState(false);
 	const [modalState, setModalState] = useState(null);
+	const [mentionTooltip, setMentionTooltip] = useState({
+		content: null,
+		anchor: null,
+	});
 	const editorRef = useRef(null);
 	const lastValueRef = useRef("");
 	const mentionInsertionRangeRef = useRef(null);
@@ -826,6 +848,13 @@ export default function EditableField({
 	const mentionInsertionMarkerIdRef = useRef(null);
 	const markdownValue = value || value === 0 ? String(value) : "";
 	const isDisabled = Boolean(disabled || readOnly);
+	const fieldTooltipContent = useMemo(() => {
+		if (typeof title === "string" && title.trim()) return title;
+		if (type === "textarea" && !isDisabled) return <HotkeysTooltipContent />;
+		return null;
+	}, [isDisabled, title, type]);
+	const tooltipContent = mentionTooltip.content || fieldTooltipContent;
+	const tooltipAnchor = mentionTooltip.anchor || null;
 
 	const resolvedCampaignSlug = useMemo(
 		() => campaignSlug || parseUrl().campaign,
@@ -1172,6 +1201,27 @@ export default function EditableField({
 		event.stopPropagation();
 	};
 
+	const clearMentionTooltip = () => {
+		setMentionTooltip((current) =>
+			current.content || current.anchor ? { content: null, anchor: null } : current,
+		);
+	};
+
+	const handleMouseMove = (event) => {
+		const mention = event.target.closest?.("[data-mention]");
+		if (mention && editorRef.current?.contains(mention)) {
+			const content = mention.dataset.mentionTooltip || lang.t(MENTION_TOOLTIP_KEY);
+			setMentionTooltip((current) =>
+				current.content === content && current.anchor === mention
+					? current
+					: { content, anchor: mention },
+			);
+			return;
+		}
+
+		clearMentionTooltip();
+	};
+
 	const handleMouseDown = (event) => {
 		const tab = event.target.closest?.("[data-tab]");
 		if (tab && editorRef.current?.contains(tab)) {
@@ -1184,6 +1234,31 @@ export default function EditableField({
 
 		stopEditorEvent(event);
 	};
+
+	const editorNode = (
+		<div
+			ref={editorRef}
+			className={classNames("MarkdownView", "MarkdownView--editable", {
+				"MarkdownView--active": isActive,
+				"MarkdownView--disabled": isDisabled,
+			})}
+			contentEditable={!isDisabled}
+			suppressContentEditableWarning
+			role="textbox"
+			aria-multiline={type === "textarea"}
+			data-placeholder={placeholder}
+			tabIndex={isDisabled ? -1 : 0}
+			onBlur={handleBlur}
+			onClick={handleClick}
+			onFocus={handleFocus}
+			onInput={handleInput}
+			onKeyDown={handleKeyDown}
+			onMouseDown={handleMouseDown}
+			onMouseLeave={clearMentionTooltip}
+			onMouseMove={handleMouseMove}
+			onPaste={handlePaste}
+		/>
+	);
 
 	return (
 		<div
@@ -1206,27 +1281,17 @@ export default function EditableField({
 					title={lang.t("Copy formatted text for Word")}
 				/>
 			)}
-			<div
-				ref={editorRef}
-				className={classNames("MarkdownView", "MarkdownView--editable", {
-					"MarkdownView--active": isActive,
-					"MarkdownView--disabled": isDisabled,
-				})}
-				contentEditable={!isDisabled}
-				suppressContentEditableWarning
-				role="textbox"
-				aria-multiline={type === "textarea"}
-				data-placeholder={placeholder}
-				tabIndex={isDisabled ? -1 : 0}
-				title={typeof title === "string" ? title : undefined}
-				onBlur={handleBlur}
-				onClick={handleClick}
-				onFocus={handleFocus}
-				onInput={handleInput}
-				onKeyDown={handleKeyDown}
-				onMouseDown={handleMouseDown}
-				onPaste={handlePaste}
-			/>
+			{tooltipContent ? (
+				<Tooltip
+					content={tooltipContent}
+					className="EditableField__tooltip"
+					anchorElement={tooltipAnchor}
+				>
+					{editorNode}
+				</Tooltip>
+			) : (
+				editorNode
+			)}
 			<EntityModal
 				modalState={modalState}
 				campaignSlug={resolvedCampaignSlug}

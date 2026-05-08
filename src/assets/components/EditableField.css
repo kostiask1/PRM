@@ -112,40 +112,15 @@
 	user-select: all;
 }
 
-.EditableField__mention:hover::after {
-	content: attr(data-mention-tooltip);
-	position: absolute;
-	left: 50%;
-	bottom: calc(100% + var(--space-2));
-	transform: translateX(-50%);
-	z-index: 30;
-	padding: var(--space-1) var(--space-2);
-	border: 1px solid var(--border);
-	border-radius: var(--radius-xs);
-	background: var(--panel);
-	box-shadow: var(--shadow);
-	color: var(--text);
-	font-size: 0.75rem;
-	font-weight: 400;
-	line-height: 1.2;
-	white-space: nowrap;
-	pointer-events: none;
-	text-decoration: none;
+.EditableField__tooltip {
+	display: block;
+	width: 100%;
 }
 
-.EditableField__mention:hover::before {
-	content: "";
-	position: absolute;
-	left: 50%;
-	bottom: calc(100% + var(--space-1));
-	transform: translateX(-50%) rotate(45deg);
-	z-index: 31;
-	width: var(--space-2);
-	height: var(--space-2);
-	border-right: 1px solid var(--border);
-	border-bottom: 1px solid var(--border);
-	background: var(--panel);
-	pointer-events: none;
+.EditableField__hotkeysTooltip {
+	display: grid;
+	gap: var(--space-1);
+	white-space: nowrap;
 }
 
 .EditableField__tab {

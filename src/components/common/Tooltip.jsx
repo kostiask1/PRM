@@ -84,6 +84,7 @@ export default function Tooltip({
 	delay = 160,
 	disabled = false,
 	className,
+	anchorElement = null,
 }) {
 	const tooltipIdRef = useRef(`tooltip-${Math.random().toString(36).slice(2)}`);
 	const closeTimerRef = useRef(null);
@@ -163,18 +164,6 @@ export default function Tooltip({
 	};
 
 	useEffect(() => {
-		const unsubscribe = subscribeActiveTooltip(setActiveId);
-		tooltipTimeoutControllers.set(tooltipIdRef.current, {
-			cancelOpen: cancelOpenTooltip,
-			cancelClose: cancelCloseTooltip,
-		});
-		return () => {
-			unsubscribe();
-			tooltipTimeoutControllers.delete(tooltipIdRef.current);
-		};
-	}, []);
-
-	useEffect(() => {
 		if (!isOpen) return;
 		if (!activeId || activeId === tooltipIdRef.current) return;
 		if (isAncestorTooltip(tooltipIdRef.current, activeId)) return;
@@ -182,8 +171,9 @@ export default function Tooltip({
 	}, [activeId, isOpen]);
 
 	useLayoutEffect(() => {
-		if (!isOpen || !triggerRef.current || !tooltipRef.current) return;
-		const triggerRect = triggerRef.current.getBoundingClientRect();
+		const anchor = anchorElement || triggerRef.current;
+		if (!isOpen || !anchor || !tooltipRef.current) return;
+		const triggerRect = anchor.getBoundingClientRect();
 		const tooltipRect = tooltipRef.current.getBoundingClientRect();
 		setPosition(
 			calculatePosition(
@@ -193,13 +183,14 @@ export default function Tooltip({
 				window.innerHeight,
 			),
 		);
-	}, [isOpen, content]);
+	}, [isOpen, content, anchorElement]);
 
 	useEffect(() => {
 		if (!isOpen) return;
 		const handleReposition = () => {
-			if (!triggerRef.current || !tooltipRef.current) return;
-			const triggerRect = triggerRef.current.getBoundingClientRect();
+			const anchor = anchorElement || triggerRef.current;
+			if (!anchor || !tooltipRef.current) return;
+			const triggerRect = anchor.getBoundingClientRect();
 			const tooltipRect = tooltipRef.current.getBoundingClientRect();
 			setPosition(
 				calculatePosition(
@@ -217,19 +208,38 @@ export default function Tooltip({
 			window.removeEventListener("scroll", handleReposition, true);
 			window.removeEventListener("resize", handleReposition);
 		};
-	}, [isOpen]);
+	}, [isOpen, anchorElement]);
 
 	useEffect(
-		() => () => {
-			if (timerRef.current) clearTimeout(timerRef.current);
-			if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-			tooltipParentById.delete(tooltipIdRef.current);
-			if (activeTooltipId === tooltipIdRef.current) {
-				setActiveTooltip(parentTooltipIdRef.current || null);
-			}
+		() => {
+			const tooltipId = tooltipIdRef.current;
+			return () => {
+				if (timerRef.current) clearTimeout(timerRef.current);
+				if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+				tooltipParentById.delete(tooltipId);
+				if (activeTooltipId === tooltipId) {
+					setActiveTooltip(parentTooltipIdRef.current || null);
+				}
+			};
 		},
 		[],
 	);
+
+	useEffect(() => {
+		const tooltipId = tooltipIdRef.current;
+		const unsubscribe = subscribeActiveTooltip(setActiveId);
+		tooltipTimeoutControllers.set(tooltipId, {
+			cancelOpen: cancelOpenTooltip,
+			cancelClose: cancelCloseTooltip,
+		});
+		return () => {
+			unsubscribe();
+			tooltipTimeoutControllers.delete(tooltipId);
+			if (activeTooltipId === tooltipId) {
+				setActiveTooltip(parentTooltipIdRef.current || null);
+			}
+		};
+	}, []);
 
 	const hiddenByChild =
 		isOpen &&
