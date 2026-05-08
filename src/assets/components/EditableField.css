@@ -115,7 +115,7 @@
 
 .mention-link {
 	color: var(--accent);
-	text-decoration: underline;
+	border-bottom: 1.5px solid color-mix(in srgb, var(--accent), transparent 20%);;
 	cursor: pointer;
 }
 
