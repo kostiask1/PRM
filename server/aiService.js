@@ -1,6 +1,5 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const GEMINI_MODELS_ENDPOINT =
 	"https://generativelanguage.googleapis.com/v1beta/models";
 const MODEL_CACHE_TTL_MS = 10 * 60 * 1000;
@@ -25,6 +24,24 @@ let modelCache = {
 	expiresAt: 0,
 	data: null,
 };
+let genAI = null;
+let genAIKey = null;
+
+function getGeminiClient() {
+	const apiKey = process.env.GEMINI_API_KEY || "";
+	if (!genAI || genAIKey !== apiKey) {
+		genAI = new GoogleGenerativeAI(apiKey);
+		genAIKey = apiKey;
+	}
+	return genAI;
+}
+
+function clearModelCache() {
+	modelCache = {
+		expiresAt: 0,
+		data: null,
+	};
+}
 
 function normalizeResponseLanguage(language) {
 	const code = String(language || "")
@@ -438,7 +455,7 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 		);
 	}
 
-	model = genAI.getGenerativeModel({
+	model = getGeminiClient().getGenerativeModel({
 		model: selectedModel,
 		...(useKey === "prompt" || useKey === "image"
 			? {}
@@ -723,4 +740,4 @@ Pick monsters (English names) while considering character levels and classes for
 	}
 }
 
-module.exports = { generateContent, listAvailableModels };
+module.exports = { generateContent, listAvailableModels, clearModelCache };

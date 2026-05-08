@@ -1,7 +1,28 @@
 const express = require("express");
+const fs = require("fs/promises");
+const path = require("path");
 const router = express.Router();
 const storage = require("../storage");
 const aiService = require("../aiService");
+
+const ENV_PATH = path.join(__dirname, "..", "..", ".env");
+
+function normalizeApiKey(value) {
+	return String(value || "").trim();
+}
+
+function updateEnvValue(envText, key, value) {
+	const line = `${key}=${value}`;
+	const eol = envText.includes("\r\n") ? "\r\n" : "\n";
+	const matcher = new RegExp(`^${key}=.*$`, "m");
+
+	if (matcher.test(envText)) {
+		return envText.replace(matcher, line);
+	}
+
+	const suffix = envText && !envText.endsWith("\n") ? eol : "";
+	return `${envText}${suffix}${line}${eol}`;
+}
 
 function makeId() {
 	return `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
@@ -1415,6 +1436,38 @@ router.delete("/responses/:id", async (req, res, next) => {
 router.delete("/responses", async (_req, res, next) => {
 	try {
 		res.json(await storage.clearAiResponses());
+	} catch (error) {
+		next(error);
+	}
+});
+
+router.post("/api-key", async (req, res, next) => {
+	try {
+		const apiKey = normalizeApiKey(req.body?.apiKey);
+		if (!apiKey) {
+			return res.status(400).json({ error: "GEMINI_API_KEY не може бути порожнім." });
+		}
+		if (/[\r\n]/.test(apiKey)) {
+			return res.status(400).json({ error: "GEMINI_API_KEY має бути одним рядком." });
+		}
+
+		let envText = "";
+		try {
+			envText = await fs.readFile(ENV_PATH, "utf8");
+		} catch (error) {
+			if (error.code !== "ENOENT") {
+				throw error;
+			}
+		}
+
+		await fs.writeFile(
+			ENV_PATH,
+			updateEnvValue(envText, "GEMINI_API_KEY", apiKey),
+			"utf8",
+		);
+		process.env.GEMINI_API_KEY = apiKey;
+		aiService.clearModelCache();
+		res.json({ ok: true });
 	} catch (error) {
 		next(error);
 	}

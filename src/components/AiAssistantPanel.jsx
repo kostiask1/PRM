@@ -256,6 +256,9 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	const [loading, setLoading] = useState(false);
 	const [useContext, setUseContext] = useState(true);
 	const [error, setError] = useState("");
+	const [isApiKeyMissing, setIsApiKeyMissing] = useState(false);
+	const [apiKeyInput, setApiKeyInput] = useState("");
+	const [isSavingApiKey, setIsSavingApiKey] = useState(false);
 	const [userInstructions, setUserInstructions] = useState("");
 	const [notification, setNotification] = useState(null);
 	const [showSceneSelector, setShowSceneSelector] = useState(false);
@@ -350,20 +353,6 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 			setIsGeneratedPromptCopied(true);
 			setTimeout(() => setIsGeneratedPromptCopied(false), 2000);
 		}
-	};
-
-	const showApiKeyInstructions = () => {
-		dispatch(
-			alert({
-				title: lang.t("Gemini AI setup"),
-				message:
-					`${lang.t("To use AI features, configure an API key:")}\n\n` +
-					`1. ${lang.t("Get a free key in Google AI Studio (aistudio.google.com).")}\n` +
-					`2. ${lang.t("Create a .env file in the project root.")}\n` +
-					`3. ${lang.t("Add this line: GEMINI_API_KEY=your_key")}\n` +
-					`${lang.t("After that restart project, AI features will be available.")}`,
-			}),
-		);
 	};
 
 	useEffect(() => {
@@ -518,6 +507,45 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 			closeGeneratedPrompt();
 		} catch (err) {
 			dispatch(alert({ title: lang.t("Delete error"), message: err.message }));
+		}
+	};
+
+	const handleSaveApiKey = async () => {
+		const apiKey = apiKeyInput.trim();
+		if (!apiKey) {
+			setError(lang.t("Enter Gemini API key."));
+			return;
+		}
+
+		setIsSavingApiKey(true);
+		setError("");
+		try {
+			await api.saveGeminiApiKey(apiKey);
+			let result = null;
+			for (let attempt = 0; attempt < 5; attempt++) {
+				try {
+					result = await api.listAiModels();
+					break;
+				} catch (err) {
+					if (attempt === 4) {
+						console.error("Failed to refresh AI models after saving key", err);
+						break;
+					}
+					await new Promise((resolve) => setTimeout(resolve, 500));
+				}
+			}
+			if (result) {
+				const models = Array.isArray(result?.models) ? result.models : [];
+				setAiModels(models);
+				setSelectedModel(result?.defaultModel || models[0]?.name || "");
+			}
+			setApiKeyInput("");
+			setIsApiKeyMissing(false);
+			setNotification(lang.t("Gemini API key saved."));
+		} catch (err) {
+			setError(err.message || lang.t("Failed to save Gemini API key."));
+		} finally {
+			setIsSavingApiKey(false);
 		}
 	};
 
@@ -723,7 +751,8 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 			}
 
 			if (err.message?.includes("GEMINI_API_KEY")) {
-				showApiKeyInstructions();
+				setIsApiKeyMissing(true);
+				setError("");
 				return;
 			}
 
@@ -1056,6 +1085,40 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 								</Button>
 							)}
 						</div>
+						{isApiKeyMissing && (
+							<div className="AiAssistant__api-key-panel">
+								<div className="AiAssistant__api-key-title">
+									{lang.t("Gemini AI setup")}
+								</div>
+								<div className="AiAssistant__api-key-help">
+									{lang.t(
+										"Paste Gemini API key and it will be saved to the project .env file.",
+									)}
+								</div>
+								<div className="AiAssistant__api-key-row">
+									<Input
+										type="password"
+										value={apiKeyInput}
+										placeholder={lang.t("Gemini API key")}
+										onChange={(event) => setApiKeyInput(event.target.value)}
+										onKeyDown={(event) => {
+											if (event.key === "Enter") {
+												handleSaveApiKey();
+											}
+										}}
+										disabled={isSavingApiKey || loading}
+									/>
+									<Button
+										variant="primary"
+										icon="check"
+										onClick={handleSaveApiKey}
+										disabled={isSavingApiKey || loading || !apiKeyInput.trim()}
+									>
+										{isSavingApiKey ? lang.t("Saving...") : lang.t("Save")}
+									</Button>
+								</div>
+							</div>
+						)}
 						{isContextModalOpen && (
 							<Modal
 								title={lang.t("Context settings")}

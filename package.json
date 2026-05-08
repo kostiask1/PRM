@@ -4,10 +4,11 @@
   "description": "Local DnD campaign and session manager",
   "main": "server.js",
   "scripts": {
+    "ensure:env": "node scripts/ensure-env.mjs",
     "project": "node scripts/run-project.mjs",
     "start": "concurrently \"npm run server\" \"npm run client\"",
     "build": "vite build",
-    "server": "node --watch --watch-path=server server/server.js",
+    "server": "npm run ensure:env && node --watch --watch-path=server --watch-path=.env server/server.js",
     "client": "vite",
     "start:prod": "node server/server.js",
     "test": "node --experimental-specifier-resolution=node tests/run-tests.mjs",

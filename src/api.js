@@ -161,6 +161,11 @@ export const api = {
 
 	// AI methods
 	listAiModels: () => api.request("/ai/models"),
+	saveGeminiApiKey: (apiKey) =>
+		api.request("/ai/api-key", {
+			method: "POST",
+			body: JSON.stringify({ apiKey }),
+		}),
 	listAiResponses: () => api.request("/ai/responses"),
 	deleteAiResponse: (id) =>
 		api.request(`/ai/responses/${encodeURIComponent(id)}`, {
