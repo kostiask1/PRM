@@ -29,6 +29,7 @@ import {
 const MENTION_CLASS = "mention-link EditableField__mention";
 const MENTION_TOOLTIP_KEY = "Ctrl+click to open entity";
 const TAB_CLASS = "EditableField__tab";
+const INSERTION_MARKER_CLASS = "EditableField__insertionMarker";
 
 function requestMentionSelection(dispatch) {
 	return new Promise((resolve) => {
@@ -276,6 +277,10 @@ function nodeToMarkdown(node, options = {}) {
 	const tagName = element.tagName.toLowerCase();
 	const mentionName = element.dataset?.mention;
 
+	if (element.dataset?.insertionMarker === "true") {
+		return "";
+	}
+
 	if (element.dataset?.tab === "true") {
 		return "\t";
 	}
@@ -380,6 +385,177 @@ function getSelectionRangeInside(editor) {
 	return range;
 }
 
+function getElementFromNode(node) {
+	if (!node) return null;
+	return node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+}
+
+function getMentionFromSelection(editor, key = "") {
+	const selection = window.getSelection?.();
+	if (!selection || selection.rangeCount === 0 || !editor) return null;
+
+	const range = selection.getRangeAt(0);
+	if (!editor.contains(range.commonAncestorContainer)) return null;
+
+	const anchorMention = getElementFromNode(selection.anchorNode)?.closest?.(
+		"[data-mention]",
+	);
+	if (anchorMention && editor.contains(anchorMention)) return anchorMention;
+
+	const focusMention = getElementFromNode(selection.focusNode)?.closest?.(
+		"[data-mention]",
+	);
+	if (focusMention && editor.contains(focusMention)) return focusMention;
+
+	const mentions = Array.from(editor.querySelectorAll("[data-mention]"));
+	const intersectedMention = mentions.find((mention) => {
+		try {
+			return range.intersectsNode(mention);
+		} catch {
+			return false;
+		}
+	});
+	if (intersectedMention) return intersectedMention;
+
+	if (!range.collapsed) return null;
+
+	const container = range.startContainer;
+	const offset = range.startOffset;
+	if (container.nodeType === Node.ELEMENT_NODE) {
+		const child = container.childNodes[offset + (key === "backspace" ? -1 : 0)];
+		return child?.nodeType === Node.ELEMENT_NODE && child.dataset?.mention
+			? child
+			: null;
+	}
+
+	if (key === "backspace" && offset === 0) {
+		const prev = container.previousSibling;
+		return prev?.nodeType === Node.ELEMENT_NODE && prev.dataset?.mention
+			? prev
+			: null;
+	}
+
+	if (key === "delete" && offset === (container.textContent || "").length) {
+		const next = container.nextSibling;
+		return next?.nodeType === Node.ELEMENT_NODE && next.dataset?.mention
+			? next
+			: null;
+	}
+
+	return null;
+}
+
+function isRangeInsideEditor(editor, range) {
+	if (!editor || !range) return false;
+	return (
+		editor.contains(range.startContainer) &&
+		editor.contains(range.endContainer)
+	);
+}
+
+function selectRange(range) {
+	const selection = window.getSelection?.();
+	if (!selection || !range) return false;
+
+	selection.removeAllRanges();
+	selection.addRange(range);
+	return true;
+}
+
+function getRangeMarkdownOffset(editor, range) {
+	if (!isRangeInsideEditor(editor, range)) return null;
+
+	const beforeRange = range.cloneRange();
+	beforeRange.selectNodeContents(editor);
+	beforeRange.setEnd(range.startContainer, range.startOffset);
+
+	const container = document.createElement("div");
+	container.append(beforeRange.cloneContents());
+	return childrenToMarkdown(container).length;
+}
+
+function createRangeFromMarkdownOffset(editor, offset) {
+	if (!Number.isFinite(offset)) return null;
+
+	const range = document.createRange();
+	let remaining = Math.max(0, offset);
+	let fallbackNode = editor;
+
+	const placeBefore = (node) => {
+		range.setStartBefore(node);
+		range.collapse(true);
+		return range;
+	};
+
+	const placeAfter = (node) => {
+		range.setStartAfter(node);
+		range.collapse(true);
+		fallbackNode = node;
+		return range;
+	};
+
+	const walk = (node) => {
+		if (node.nodeType === Node.TEXT_NODE) {
+			const text = normalizeTextContent(node.textContent || "");
+			if (remaining <= text.length) {
+				range.setStart(node, Math.min(remaining, node.textContent.length));
+				range.collapse(true);
+				return range;
+			}
+			remaining -= text.length;
+			fallbackNode = node;
+			return null;
+		}
+
+		if (node.nodeType !== Node.ELEMENT_NODE) return null;
+
+		const element = node;
+		const atomicValue =
+			element.dataset?.tab === "true"
+				? "\t"
+				: element.dataset?.mention
+					? `[${normalizeTextContent(element.dataset.mention).trim()}]`
+					: element.tagName?.toLowerCase() === "br"
+						? "\n"
+						: null;
+
+		if (atomicValue !== null) {
+			if (remaining <= 0) return placeBefore(element);
+			if (remaining <= atomicValue.length) return placeAfter(element);
+			remaining -= atomicValue.length;
+			fallbackNode = element;
+			return null;
+		}
+
+		for (const child of Array.from(element.childNodes || [])) {
+			const found = walk(child);
+			if (found) return found;
+		}
+
+		return null;
+	};
+
+	const found = walk(editor);
+	if (found) return found;
+
+	if (fallbackNode && fallbackNode !== editor) return placeAfter(fallbackNode);
+	return createEndRange(editor);
+}
+
+function getInsertionRange(editor, preferredRange = null, preferredOffset = null) {
+	if (isRangeInsideEditor(editor, preferredRange)) {
+		return preferredRange.cloneRange();
+	}
+
+	const offsetRange = createRangeFromMarkdownOffset(editor, preferredOffset);
+	if (offsetRange) return offsetRange;
+
+	const selectionRange = getSelectionRangeInside(editor);
+	if (selectionRange) return selectionRange.cloneRange();
+
+	return createEndRange(editor);
+}
+
 function setCaretAfter(node) {
 	const range = document.createRange();
 	const selection = window.getSelection?.();
@@ -391,6 +567,19 @@ function setCaretAfter(node) {
 	selection.addRange(range);
 }
 
+function setCaretInsideTextNode(node, offset = 0) {
+	const range = document.createRange();
+	range.setStart(node, Math.min(offset, node.length));
+	range.collapse(true);
+	selectRange(range);
+}
+
+function selectTextNode(node) {
+	const range = document.createRange();
+	range.selectNodeContents(node);
+	selectRange(range);
+}
+
 function createEndRange(editor) {
 	const range = document.createRange();
 	range.selectNodeContents(editor);
@@ -398,13 +587,56 @@ function createEndRange(editor) {
 	return range;
 }
 
-function insertNodeAtSelection(editor, node) {
+function insertNodeAtSelection(
+	editor,
+	node,
+	preferredRange = null,
+	preferredOffset = null,
+) {
 	editor.focus({ preventScroll: true });
 
-	const range = getSelectionRangeInside(editor) || createEndRange(editor);
+	const range = getInsertionRange(editor, preferredRange, preferredOffset);
 	range.deleteContents();
 	range.insertNode(node);
 	setCaretAfter(node);
+}
+
+function createInsertionMarker(id) {
+	const marker = document.createElement("span");
+	marker.className = INSERTION_MARKER_CLASS;
+	marker.dataset.insertionMarker = "true";
+	marker.dataset.insertionMarkerId = id;
+	marker.contentEditable = "false";
+	marker.textContent = "\u200B";
+	return marker;
+}
+
+function getInsertionMarker(editor, id) {
+	if (!editor || !id) return null;
+	return (
+		Array.from(editor.querySelectorAll("[data-insertion-marker='true']")).find(
+			(marker) => marker.dataset.insertionMarkerId === id,
+		) || null
+	);
+}
+
+function getInsertionMarkerRange(editor, id) {
+	const marker = getInsertionMarker(editor, id);
+	if (!marker) return null;
+
+	const range = document.createRange();
+	range.selectNode(marker);
+	return range;
+}
+
+function removeInsertionMarker(editor, id) {
+	const marker = getInsertionMarker(editor, id);
+	marker?.remove();
+}
+
+function insertInsertionMarker(editor, id, preferredRange = null) {
+	if (!editor || !id) return;
+	insertNodeAtSelection(editor, createInsertionMarker(id), preferredRange);
 }
 
 function insertHtmlAtSelection(editor, html) {
@@ -438,13 +670,34 @@ function createTabNode() {
 	return tab;
 }
 
-function insertTabAtSelection(editor) {
-	insertNodeAtSelection(editor, createTabNode());
+function insertTabAtSelection(
+	editor,
+	preferredRange = null,
+	preferredOffset = null,
+) {
+	if (!editor) return;
+
+	editor.focus({ preventScroll: true });
+
+	const tab = createTabNode();
+	const caretNode = document.createTextNode("\u200B");
+	const range = getInsertionRange(editor, preferredRange, preferredOffset);
+	const fragment = document.createDocumentFragment();
+	fragment.append(tab, caretNode);
+
+	range.deleteContents();
+	range.insertNode(fragment);
+	setCaretInsideTextNode(caretNode, caretNode.length);
 }
 
-function insertMentionAtSelection(editor, name) {
+function insertMentionAtSelection(
+	editor,
+	name,
+	preferredRange = null,
+	preferredOffset = null,
+) {
 	const safeName = String(name || "").trim();
-	if (!safeName) return;
+	if (!editor || !safeName) return;
 
 	const mention = document.createElement("span");
 	mention.className = MENTION_CLASS;
@@ -454,8 +707,54 @@ function insertMentionAtSelection(editor, name) {
 	mention.contentEditable = "false";
 	mention.textContent = safeName;
 
-	insertNodeAtSelection(editor, mention);
-	insertTextAtSelection(editor, " ");
+	const trailingSpace = document.createTextNode(" ");
+	const range = getInsertionRange(editor, preferredRange, preferredOffset);
+	const fragment = document.createDocumentFragment();
+	fragment.append(mention, trailingSpace);
+
+	editor.focus({ preventScroll: true });
+	range.deleteContents();
+	range.insertNode(fragment);
+	setCaretAfter(trailingSpace);
+}
+
+function unwrapMention(editor, mention, { selectText = false } = {}) {
+	if (!editor || !mention?.dataset?.mention) return false;
+
+	const text = normalizeTextContent(
+		mention.dataset.mention || mention.textContent || "",
+	);
+	const textNode = document.createTextNode(text);
+	mention.replaceWith(textNode);
+	editor.focus({ preventScroll: true });
+	if (selectText) {
+		selectTextNode(textNode);
+	} else {
+		setCaretInsideTextNode(textNode, textNode.length);
+	}
+	return true;
+}
+
+function setCaretFromTabClick(tab, event) {
+	if (!tab) return;
+
+	const rect = tab.getBoundingClientRect();
+	const range = document.createRange();
+	const setBefore = event.clientX < rect.left + rect.width / 2;
+
+	if (setBefore) {
+		range.setStartBefore(tab);
+	} else {
+		const next = tab.nextSibling;
+		if (next?.nodeType === Node.TEXT_NODE && next.textContent === "\u200B") {
+			range.setStart(next, next.length);
+		} else {
+			range.setStartAfter(tab);
+		}
+	}
+
+	range.collapse(true);
+	selectRange(range);
 }
 
 function getSelectionElement(editor) {
@@ -484,6 +783,9 @@ function cloneEditorHtml(editor) {
 	clone.removeAttribute("contenteditable");
 	clone.querySelectorAll("[contenteditable]").forEach((node) => {
 		node.removeAttribute("contenteditable");
+	});
+	clone.querySelectorAll("[data-insertion-marker]").forEach((node) => {
+		node.remove();
 	});
 	clone.querySelectorAll("[data-mention]").forEach((node) => {
 		node.removeAttribute("data-mention");
@@ -524,6 +826,9 @@ export default function EditableField({
 	const [modalState, setModalState] = useState(null);
 	const editorRef = useRef(null);
 	const lastValueRef = useRef("");
+	const mentionInsertionRangeRef = useRef(null);
+	const mentionInsertionOffsetRef = useRef(null);
+	const mentionInsertionMarkerIdRef = useRef(null);
 	const markdownValue = value || value === 0 ? String(value) : "";
 	const isDisabled = Boolean(disabled || readOnly);
 
@@ -559,6 +864,13 @@ export default function EditableField({
 	useLayoutEffect(() => {
 		const editor = editorRef.current;
 		if (!editor) return;
+
+		if (
+			mentionInsertionMarkerIdRef.current &&
+			getInsertionMarker(editor, mentionInsertionMarkerIdRef.current)
+		) {
+			return;
+		}
 
 		const isFocused = document.activeElement === editor;
 		const currentValue = editorToMarkdown(editor, type);
@@ -684,6 +996,16 @@ export default function EditableField({
 
 		event.preventDefault();
 
+		const selectedMention = getMentionFromSelection(editor);
+		if (selectedMention) {
+			unwrapMention(editor, selectedMention, { selectText: true });
+			emitChange(event);
+			return;
+		}
+
+		const currentRange = getSelectionRangeInside(editor);
+		const insertionRange = currentRange?.cloneRange() || null;
+		const insertionOffset = getRangeMarkdownOffset(editor, insertionRange);
 		const selection = window.getSelection?.();
 		const selectedText =
 			selection && editor.contains(selection.anchorNode)
@@ -691,28 +1013,61 @@ export default function EditableField({
 				: "";
 
 		if (selectedText) {
-			insertMentionAtSelection(editor, selectedText);
+			insertMentionAtSelection(
+				editor,
+				selectedText,
+				insertionRange,
+				insertionOffset,
+			);
 			emitChange(event);
 			return;
 		}
 
+		const markerId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+		insertInsertionMarker(editor, markerId, insertionRange);
+		mentionInsertionRangeRef.current = insertionRange;
+		mentionInsertionOffsetRef.current = insertionOffset;
+		mentionInsertionMarkerIdRef.current = markerId;
 		const result = await requestMentionSelection(dispatch);
-		if (result.status !== "selected") return;
+		const savedMarkerId = mentionInsertionMarkerIdRef.current;
+		const savedRange = mentionInsertionRangeRef.current;
+		const savedOffset = mentionInsertionOffsetRef.current;
+		mentionInsertionRangeRef.current = null;
+		mentionInsertionOffsetRef.current = null;
+		mentionInsertionMarkerIdRef.current = null;
 
-		insertMentionAtSelection(editor, result.name);
+		if (result.status !== "selected") {
+			removeInsertionMarker(editor, savedMarkerId);
+			return;
+		}
+
+		const markerRange = getInsertionMarkerRange(editor, savedMarkerId);
+		insertMentionAtSelection(
+			editor,
+			result.name,
+			markerRange || savedRange,
+			savedOffset,
+		);
 		emitChange(event);
 	};
 
 	const handleKeyDown = (event) => {
+		const key = event.key.toLowerCase();
+		const isMod = event.ctrlKey || event.metaKey;
+		const isHistoryShortcut =
+			isMod && (key === "z" || key === "я" || key === "y" || key === "н");
+
+		if (isHistoryShortcut) {
+			onKeyDown?.(event);
+			return;
+		}
+
 		event.stopPropagation();
 
 		if (isDisabled) {
 			onKeyDown?.(event);
 			return;
 		}
-
-		const key = event.key.toLowerCase();
-		const isMod = event.ctrlKey || event.metaKey;
 
 		if (type !== "textarea" && event.key === "Enter") {
 			event.preventDefault();
@@ -725,6 +1080,16 @@ export default function EditableField({
 			insertTabAtSelection(editorRef.current);
 			emitChange(event);
 			return;
+		}
+
+		if (type === "textarea" && (key === "backspace" || key === "delete")) {
+			const mention = getMentionFromSelection(editorRef.current, key);
+			if (mention) {
+				event.preventDefault();
+				unwrapMention(editorRef.current, mention, { selectText: true });
+				emitChange(event);
+				return;
+			}
 		}
 
 		if (type === "textarea" && isMod && (key === "b" || key === "и")) {
@@ -812,6 +1177,19 @@ export default function EditableField({
 		event.stopPropagation();
 	};
 
+	const handleMouseDown = (event) => {
+		const tab = event.target.closest?.("[data-tab]");
+		if (tab && editorRef.current?.contains(tab)) {
+			event.preventDefault();
+			event.stopPropagation();
+			editorRef.current.focus({ preventScroll: true });
+			setCaretFromTabClick(tab, event);
+			return;
+		}
+
+		stopEditorEvent(event);
+	};
+
 	return (
 		<div
 			{...domProps}
@@ -851,7 +1229,7 @@ export default function EditableField({
 				onFocus={handleFocus}
 				onInput={handleInput}
 				onKeyDown={handleKeyDown}
-				onMouseDown={stopEditorEvent}
+				onMouseDown={handleMouseDown}
 				onPaste={handlePaste}
 			/>
 			{modalState && (

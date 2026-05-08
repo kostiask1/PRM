@@ -153,3 +153,10 @@
 	width: 4ch;
 	white-space: pre;
 }
+
+.EditableField__insertionMarker {
+	display: inline-block;
+	width: 0;
+	overflow: hidden;
+	pointer-events: none;
+}
