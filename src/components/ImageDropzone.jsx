@@ -6,7 +6,7 @@ import Icon from "./common/Icon";
 import Modal from "./common/Modal";
 import ImageGallery from "./ImageGallery";
 import ImageTargetSettings from "./ImageTargetSettings";
-import { IMAGE_GALLERY_CATEGORIES } from "../hooks/useImageGallery";
+import { IMAGE_GALLERY_CATEGORIES } from "../features/images/imageGalleryConfig";
 import "../assets/components/ImageDropzone.css";
 import classNames from "../utils/classNames";
 import { useAppDispatch } from "../store/appStore";

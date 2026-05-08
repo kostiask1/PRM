@@ -11,71 +11,17 @@ import { navigateTo, useAppDispatch, useAppSelector } from "../store/appStore";
 import { sanitizeNotesForSave, upsertNoteById } from "../utils/noteUtils";
 import { downloadBlob } from "../utils/download";
 import { lang } from "../services/localization";
-
-const sanitizeEntityForSave = (entity) =>
-	Object.fromEntries(
-		Object.entries(entity || {}).filter(([key]) => !key.startsWith("_")),
-	);
-
-const sanitizeLoadedEntity = (entity) => sanitizeEntityForSave(entity);
-
-const normalizeMentionName = (value) =>
-	String(value || "")
-		.trim()
-		.replace(/\s+/g, " ")
-		.toLowerCase();
-
-const replaceBracketedMentionNames = (value, oldName, newName) => {
-	if (typeof value !== "string") return value;
-	const normalizedOldName = normalizeMentionName(oldName);
-	const nextName = String(newName || "")
-		.trim()
-		.replace(/\s+/g, " ");
-	if (!normalizedOldName || !nextName) return value;
-
-	return value.replace(/\[([^[\]]+)\]/g, (fullMatch, rawName) => {
-		if (normalizeMentionName(rawName) !== normalizedOldName) return fullMatch;
-		return `[${nextName}]`;
-	});
-};
-
-const replaceMentionsInValue = (value, oldName, newName) => {
-	if (typeof value === "string") {
-		return replaceBracketedMentionNames(value, oldName, newName);
-	}
-	if (Array.isArray(value)) {
-		return value.map((item) => replaceMentionsInValue(item, oldName, newName));
-	}
-	if (value && typeof value === "object") {
-		return Object.fromEntries(
-			Object.entries(value).map(([key, item]) => [
-				key,
-				replaceMentionsInValue(item, oldName, newName),
-			]),
-		);
-	}
-	return value;
-};
-
-const getCharacterDisplayName = (entity) =>
-	`${entity?.firstName || ""} ${entity?.lastName || ""}`.trim() ||
-	String(entity?.name || entity?.title || "").trim();
-
-const getLocationDisplayName = (entity) =>
-	String(entity?.name || entity?.title || "").trim();
-
-const cloneHistoryList = (items) =>
-	JSON.parse(JSON.stringify((items || []).map(sanitizeLoadedEntity)));
-
-const areHistoryStatesEqual = (left, right) =>
-	JSON.stringify(left) === JSON.stringify(right);
-
-const campaignHistoryPayload = (state) => ({
-	description: state.description || "",
-	notes: sanitizeNotesForSave(state.notes || []),
-	completed: Boolean(state.completed),
-	completedAt: state.completedAt || null,
-});
+import {
+	areHistoryStatesEqual,
+	campaignHistoryPayload,
+	cloneHistoryList,
+	getCharacterDisplayName,
+	getLocationDisplayName,
+	normalizeMentionName,
+	replaceMentionsInValue,
+	sanitizeEntityForSave,
+	sanitizeLoadedEntity,
+} from "../features/campaign/campaignStateUtils";
 
 export default function useCampaignView(props) {
 	const { campaign } = props;

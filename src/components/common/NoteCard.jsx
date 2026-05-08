@@ -5,7 +5,7 @@ import "../../assets/components/NoteCard.css";
 import Button from "../form/Button";
 import EditableField from "../form/EditableField";
 import CollapseToggleButton from "./CollapseToggleButton";
-import { renderMentionText } from "../../utils/parser";
+import { renderMentionText } from "../../renderers/contentRenderer";
 
 const SHORT_TEXT_LENGTH = 50;
 

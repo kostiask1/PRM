@@ -9,6 +9,7 @@ import LocationCardModel from "../models/LocationCardModel.js";
 import classNames from "../utils/classNames";
 import { lang } from "../services/localization";
 import { getNotesForRender } from "../utils/noteUtils";
+import { useAppSelector } from "../store/appStore";
 import "../assets/components/LocationCard.css";
 
 export default function LocationCard({
@@ -27,13 +28,18 @@ export default function LocationCard({
 	const editingStartNameRef = useRef(
 		String(locationModel.displayName || location.name || location.title || "").trim(),
 	);
+	const simplifiedNotesEnabled = useAppSelector(
+		(state) => state.ui.simplifiedNotes,
+	);
 	const isModalView = viewMode === "modal";
 	const hasLocationNotesData = locationModel.notes.some(
 		(note) =>
 			String(note?.title || "").trim().length > 0 ||
 			String(note?.text || "").trim().length > 0,
 	);
-	const notesForRender = getNotesForRender(locationModel.notes);
+	const notesForRender = getNotesForRender(locationModel.notes, {
+		simplifiedNotes: simplifiedNotesEnabled,
+	});
 	const hasCardData =
 		String(location.name || "").trim().length > 0 ||
 		String(location.description || "").trim().length > 0 ||

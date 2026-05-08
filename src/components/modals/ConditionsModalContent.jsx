@@ -1,19 +1,20 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 
 import { alert } from "../../actions/app";
 import { api } from "../../api";
 import "../../assets/components/ConditionsModal.css";
-import SpellCard from "../SpellCard";
 import Input from "../form/Input";
 import { lang } from "../../services/localization";
 import { openModalRequest, useAppDispatch } from "../../store/appStore";
-import { renderRecursiveContent } from "../../utils/parser.jsx";
-import { getSpellByName } from "../../utils/referencePreview.js";
+import { renderRecursiveContent } from "../../renderers/contentRenderer.jsx";
+import { getSpellByName } from "../../services/referencePreview.js";
 import {
 	resolveConditionInput,
 	resolveSpellInput,
-} from "../../utils/referenceResolvers.js";
+} from "../../services/referenceResolvers.js";
 import ListCard from "../common/ListCard.jsx";
+
+const SpellCard = lazy(() => import("../SpellCard"));
 
 export default function ConditionsModalContent({ initialConditionName = "" }) {
 	const dispatch = useAppDispatch();
@@ -112,11 +113,13 @@ export default function ConditionsModalContent({ initialConditionName = "" }) {
 			type: "confirm",
 			showFooter: false,
 			children: (
-				<SpellCard
-					spell={spell}
-					onSpellClick={handleSpellClick}
-					onConditionClick={handleConditionClick}
-				/>
+				<Suspense fallback={null}>
+					<SpellCard
+						spell={spell}
+						onSpellClick={handleSpellClick}
+						onConditionClick={handleConditionClick}
+					/>
+				</Suspense>
 			),
 		});
 	}
@@ -127,11 +130,13 @@ export default function ConditionsModalContent({ initialConditionName = "" }) {
 
 		return (
 			<div className="Tooltip__spell-card">
-				<SpellCard
-					spell={spell}
-					onSpellClick={handleSpellClick}
-					onConditionClick={handleConditionClick}
-				/>
+				<Suspense fallback={null}>
+					<SpellCard
+						spell={spell}
+						onSpellClick={handleSpellClick}
+						onConditionClick={handleConditionClick}
+					/>
+				</Suspense>
 			</div>
 		);
 	}

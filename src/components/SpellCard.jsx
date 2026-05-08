@@ -1,7 +1,8 @@
 import "../assets/components/SpellCard.css";
-import { capitalizeWords, renderRecursiveContent } from "../utils/parser.jsx";
+import { renderRecursiveContent } from "../renderers/contentRenderer.jsx";
+import { capitalizeWords } from "../utils/parser.jsx";
 import SpellCardModel from "../models/SpellCardModel.js";
-import { getSpellByName } from "../utils/referencePreview.js";
+import { getSpellByName } from "../services/referencePreview.js";
 import useConditionReference from "../hooks/useConditionReference.jsx";
 import { lang } from "../services/localization";
 

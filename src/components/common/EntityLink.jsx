@@ -1,15 +1,9 @@
 import { useCallback, useContext, useMemo, useState } from "react";
 
 import { parseUrl } from "../../utils/navigation";
-import Modal from "./Modal";
-import EntityModalContent from "../modals/EntityModalContent";
+import EntityModal from "./EntityModal";
 import classNames from "../../utils/classNames";
-import { lang } from "../../services/localization";
-import { EntityLinkScope } from "./EntityLinkContext";
-import {
-	getEntityDisplayName,
-	resolveEntityByName,
-} from "./entityLinkUtils.js";
+import { resolveEntityByName } from "../../services/entities.js";
 import {
 	EntityLinkContext,
 	getEntityIdentity,
@@ -74,40 +68,11 @@ export default function EntityLink({
 			>
 				{children || name}
 			</a>
-			{modalState && (
-				<Modal
-					title={lang
-						.t("{type}: {name}", {
-							type:
-								modalState.type === "locations"
-									? lang.t("Location/Faction")
-									: modalState.type === "npc"
-										? "NPC"
-										: lang.t("Character"),
-							name: getEntityDisplayName(
-								modalState.entity,
-								modalState.type,
-							),
-						})
-						.trim()}
-					type={modalState.type === "locations" ? "location" : "character"}
-					className={
-						modalState.type === "locations" ? "EntityLinkModal--location" : ""
-					}
-					showFooter={false}
-					onConfirm={handleCloseModal}
-					onCancel={handleCloseModal}
-				>
-					<EntityLinkScope entity={modalState.entity} type={modalState.type}>
-						<EntityModalContent
-							initialEntity={modalState.entity}
-							campaignSlug={resolvedCampaignSlug}
-							type={modalState.type}
-							onClose={handleCloseModal}
-						/>
-					</EntityLinkScope>
-				</Modal>
-			)}
+			<EntityModal
+				modalState={modalState}
+				campaignSlug={resolvedCampaignSlug}
+				onClose={handleCloseModal}
+			/>
 		</>
 	);
 }

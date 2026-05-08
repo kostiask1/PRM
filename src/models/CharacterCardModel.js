@@ -94,7 +94,10 @@ export default class CharacterCardModel {
 	}
 
 	get notes() {
-		return Array.isArray(this.character.notes) ? [...this.character.notes] : [];
+		const notes = Array.isArray(this.character.notes)
+			? [...this.character.notes]
+			: [];
+		return notes.length > 0 ? notes : [createEmptyNote()];
 	}
 
 	get hasImage() {
@@ -121,7 +124,8 @@ export default class CharacterCardModel {
 	}
 
 	withDeletedNote(noteId) {
-		return this.notes.filter((note) => note.id !== noteId);
+		const nextNotes = this.notes.filter((note) => note.id !== noteId);
+		return nextNotes.length > 0 ? nextNotes : [createEmptyNote()];
 	}
 
 	toggleNoteCollapse(noteId) {

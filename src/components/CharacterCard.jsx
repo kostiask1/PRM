@@ -10,6 +10,7 @@ import CollapseToggleButton from "./common/CollapseToggleButton.jsx";
 import classNames from "../utils/classNames";
 import { lang } from "../services/localization";
 import { getNotesForRender } from "../utils/noteUtils";
+import { useAppSelector } from "../store/appStore";
 
 export default function CharacterCard({
 	character,
@@ -26,13 +27,18 @@ export default function CharacterCard({
 }) {
 	const characterModel = new CharacterCardModel(character);
 	const editingStartNameRef = useRef(characterModel.fullName);
+	const simplifiedNotesEnabled = useAppSelector(
+		(state) => state.ui.simplifiedNotes,
+	);
 	const isModalView = viewMode === "modal";
 	const hasCharacterNotesData = characterModel.notes.some(
 		(note) =>
 			String(note?.title || "").trim().length > 0 ||
 			String(note?.text || "").trim().length > 0,
 	);
-	const notesForRender = getNotesForRender(characterModel.notes);
+	const notesForRender = getNotesForRender(characterModel.notes, {
+		simplifiedNotes: simplifiedNotesEnabled,
+	});
 	const hasCardData =
 		String(character.firstName || "").trim().length > 0 ||
 		String(character.lastName || "").trim().length > 0 ||

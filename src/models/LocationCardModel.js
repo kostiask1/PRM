@@ -66,7 +66,10 @@ export default class LocationCardModel {
 	}
 
 	get notes() {
-		return Array.isArray(this.location.notes) ? [...this.location.notes] : [];
+		const notes = Array.isArray(this.location.notes)
+			? [...this.location.notes]
+			: [];
+		return notes.length > 0 ? notes : [createEmptyNote()];
 	}
 
 	get hasImage() {
@@ -85,7 +88,8 @@ export default class LocationCardModel {
 	}
 
 	withDeletedNote(noteId) {
-		return this.notes.filter((note) => note.id !== noteId);
+		const nextNotes = this.notes.filter((note) => note.id !== noteId);
+		return nextNotes.length > 0 ? nextNotes : [createEmptyNote()];
 	}
 
 	toggleNoteCollapse(noteId) {

@@ -29,7 +29,7 @@ import Tooltip from "./common/Tooltip";
 import classNames from "../utils/classNames";
 import { useAppDispatch, useAppSelector } from "../store/appStore";
 import { lang } from "../services/localization";
-import { renderMentionText } from "../utils/parser.jsx";
+import { renderMentionText } from "../renderers/contentRenderer.jsx";
 import "../assets/components/AiAssistantPanel.css";
 
 const markdownTagsWithMentions = [

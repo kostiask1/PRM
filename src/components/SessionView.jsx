@@ -18,16 +18,19 @@ import useSessionView from "../hooks/useSessionView";
 import SessionViewModel from "../models/SessionViewModel.js";
 import { lang } from "../services/localization";
 import { getNotesForRender, sanitizeNotesForSave } from "../utils/noteUtils";
-import { navigateTo } from "../store/appStore";
+import { navigateTo, useAppSelector } from "../store/appStore";
 import { shouldOpenInNewTabFromEvent } from "../utils/navigation.js";
 import CreateCharacterButton from "./CreateCharacterButton.jsx";
-import { renderMentionText } from "../utils/parser.jsx";
+import { renderMentionText } from "../renderers/contentRenderer.jsx";
 
 function SessionView(props) {
 	const campaign = props.campaign;
 	const sessionId = props.sessionId;
 	const view = useSessionView(props);
 	const session = view.session;
+	const simplifiedNotesEnabled = useAppSelector(
+		(state) => state.ui.simplifiedNotes,
+	);
 
 	if (!session) return null;
 	const viewModel = new SessionViewModel({
@@ -39,7 +42,9 @@ function SessionView(props) {
 			String(note?.title || "").trim().length > 0 ||
 			String(note?.text || "").trim().length > 0,
 	);
-	const sessionNotesForRender = getNotesForRender(viewModel.notes || []);
+	const sessionNotesForRender = getNotesForRender(viewModel.notes || [], {
+		simplifiedNotes: simplifiedNotesEnabled,
+	});
 	const isSessionNotesCollapsed = hasSessionNotesData
 		? !!session.data.isNotesCollapsed
 		: false;
@@ -255,6 +260,7 @@ function SessionView(props) {
 											onSceneNoteDelete={(noteId) =>
 												view.handleSceneDeleteNote(scene.id, noteId)
 											}
+											simplifiedNotesEnabled={simplifiedNotesEnabled}
 										/>
 									);
 								}}
@@ -331,7 +337,9 @@ function SceneCard(props) {
 		? props.encounterName
 		: lang.t("New encounter");
 	const sceneNotes = props.scene.notes || [];
-	const sceneNotesForRender = getNotesForRender(sceneNotes);
+	const sceneNotesForRender = getNotesForRender(sceneNotes, {
+		simplifiedNotes: props.simplifiedNotesEnabled,
+	});
 	const hasSceneNotesData = sceneNotes.some(
 		(note) =>
 			String(note?.title || "").trim().length > 0 ||

@@ -21,7 +21,7 @@ import {
 	openModalRequest,
 	useAppSelector,
 } from "../../store/appStore";
-import { renderMentionText } from "../../utils/parser.jsx";
+import { renderMentionText } from "../../renderers/contentRenderer.jsx";
 import "../../assets/components/CampaignNotesGraph.css";
 
 const GRAPH_WIDTH = 1000;

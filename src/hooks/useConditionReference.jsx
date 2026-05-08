@@ -1,5 +1,5 @@
-import { renderRecursiveContent } from "../utils/parser.jsx";
-import { resolveConditionInput } from "../utils/referenceResolvers.js";
+import { renderRecursiveContent } from "../renderers/contentRenderer.jsx";
+import { resolveConditionInput } from "../services/referenceResolvers.js";
 import { openConditionsModal } from "../components/modals/openConditionsModal.jsx";
 
 export default function useConditionReference({

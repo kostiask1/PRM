@@ -20,7 +20,7 @@ import {
 } from "../actions/app";
 import { lang } from "../services/localization";
 import { useAppDispatch, useAppSelector } from "../store/appStore";
-import { renderMentionText } from "../utils/parser";
+import { renderMentionText } from "../renderers/contentRenderer";
 import {
 	getCharacterDisplayName,
 	hasMonsterHpFormula,

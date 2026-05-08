@@ -1,5 +1,3 @@
-import { appStore } from "../store/appStore";
-
 export function createEmptyNote() {
 	return {
 		id: Date.now(),
@@ -7,10 +5,6 @@ export function createEmptyNote() {
 		text: "",
 		collapsed: false,
 	};
-}
-
-function isSimplifiedNotesEnabled() {
-	return Boolean(appStore.getState()?.ui?.simplifiedNotes);
 }
 
 export function isNoteEmpty(note = {}, simplifiedMode = false) {
@@ -22,12 +16,14 @@ export function isNoteEmpty(note = {}, simplifiedMode = false) {
 	return title.length === 0 && text.length === 0;
 }
 
-export function getNotesForRender(notes = []) {
+export function getNotesForRender(
+	notes = [],
+	{ simplifiedNotes = false } = {},
+) {
 	const next = [...(notes || [])];
 	const last = next[next.length - 1];
-	const isSimplifiedMode = isSimplifiedNotesEnabled();
 
-	if (next.length === 0 || !isNoteEmpty(last, isSimplifiedMode)) {
+	if (next.length === 0 || !isNoteEmpty(last, simplifiedNotes)) {
 		next.push({
 			...createEmptyNote(),
 			_isVirtual: true,

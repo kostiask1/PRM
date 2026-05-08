@@ -7,18 +7,20 @@ import {
 	getAbilityModifier,
 	formatModifier,
 	getDamageBonus,
-	parseRollsAndSpells,
 	capitalizeWords,
 	preprocessTags,
-	renderRecursiveContent,
-	renderMentionText,
 } from "../utils/parser.jsx";
+import {
+	parseRollsAndSpells,
+	renderMentionText,
+	renderRecursiveContent,
+} from "../renderers/contentRenderer.jsx";
 import "../assets/components/MonsterStatBlock.css";
 import ClickToCopy from "./common/ClickToCopy.jsx";
 import Button from "./form/Button.jsx";
 import MonsterStatBlockModel from "../models/MonsterStatBlockModel.js";
-import { getSpellByName } from "../utils/referencePreview.js";
-import { resolveSpellInput } from "../utils/referenceResolvers.js";
+import { getSpellByName } from "../services/referencePreview.js";
+import { resolveSpellInput } from "../services/referenceResolvers.js";
 import useConditionReference from "../hooks/useConditionReference.jsx";
 import Tooltip from "./common/Tooltip.jsx";
 import classNames from "../utils/classNames";

@@ -17,7 +17,7 @@ import CreateLocationButton from "./CreateLocationButton";
 import "../assets/components/CampaignView.css";
 import useCampaignView from "../hooks/useCampaignView";
 import CampaignViewModel from "../models/CampaignViewModel.js";
-import { navigateTo } from "../store/appStore";
+import { navigateTo, useAppSelector } from "../store/appStore";
 import { lang } from "../services/localization";
 import { getNotesForRender, sanitizeNotesForSave } from "../utils/noteUtils";
 
@@ -48,13 +48,18 @@ function CampaignView(props) {
 	const [sessionSearch, setSessionSearch] = useState("");
 	const [sessionStatusFilter, setSessionStatusFilter] = useState("all");
 	const [notesViewMode, setNotesViewMode] = useState("list");
+	const simplifiedNotesEnabled = useAppSelector(
+		(state) => state.ui.simplifiedNotes,
+	);
 	const hasDescriptionData = String(view.description || "").trim().length > 0;
 	const hasNotesData = (view.notes || []).some(
 		(note) =>
 			String(note?.title || "").trim().length > 0 ||
 			String(note?.text || "").trim().length > 0,
 	);
-	const notesForRender = getNotesForRender(view.notes || []);
+	const notesForRender = getNotesForRender(view.notes || [], {
+		simplifiedNotes: simplifiedNotesEnabled,
+	});
 	const hasCharactersData = (view.characters || []).length > 0;
 	const hasNpcsData = (view.npcs || []).length > 0;
 	const hasLocationsData = (view.locations || []).length > 0;

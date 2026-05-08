@@ -13,13 +13,8 @@ import { lang } from "../../services/localization";
 import { openMentionPickerAction } from "../../actions/app";
 import { useAppDispatch } from "../../store/appStore";
 import { parseUrl } from "../../utils/navigation";
-import Modal from "../common/Modal";
-import EntityModalContent from "../modals/EntityModalContent";
-import { EntityLinkScope } from "../common/EntityLinkContext";
-import {
-	getEntityDisplayName,
-	resolveEntityByName,
-} from "../common/entityLinkUtils.js";
+import EntityModal from "../common/EntityModal";
+import { resolveEntityByName } from "../../services/entities.js";
 import {
 	EntityLinkContext,
 	getEntityIdentity,
@@ -1232,40 +1227,11 @@ export default function EditableField({
 				onMouseDown={handleMouseDown}
 				onPaste={handlePaste}
 			/>
-			{modalState && (
-				<Modal
-					title={lang
-						.t("{type}: {name}", {
-							type:
-								modalState.type === "locations"
-									? lang.t("Location/Faction")
-									: modalState.type === "npc"
-										? "NPC"
-										: lang.t("Character"),
-							name: getEntityDisplayName(
-								modalState.entity,
-								modalState.type,
-							),
-						})
-						.trim()}
-					type={modalState.type === "locations" ? "location" : "character"}
-					className={
-						modalState.type === "locations" ? "EntityLinkModal--location" : ""
-					}
-					showFooter={false}
-					onConfirm={handleCloseMentionModal}
-					onCancel={handleCloseMentionModal}
-				>
-					<EntityLinkScope entity={modalState.entity} type={modalState.type}>
-						<EntityModalContent
-							initialEntity={modalState.entity}
-							campaignSlug={resolvedCampaignSlug}
-							type={modalState.type}
-							onClose={handleCloseMentionModal}
-						/>
-					</EntityLinkScope>
-				</Modal>
-			)}
+			<EntityModal
+				modalState={modalState}
+				campaignSlug={resolvedCampaignSlug}
+				onClose={handleCloseMentionModal}
+			/>
 		</div>
 	);
 }
