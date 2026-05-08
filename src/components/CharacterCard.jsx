@@ -147,7 +147,6 @@ export default function CharacterCard({
 								imageUrl={character.imageUrl}
 								campaignSlug={campaignSlug}
 								target={type === "npc" ? "npc" : "character"}
-								isEditing
 								showClearButton
 								onImageChange={(url) => updateField("imageUrl", url)}
 								imageAlt={lang.t("Portrait")}
