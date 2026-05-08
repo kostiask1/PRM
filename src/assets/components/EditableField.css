@@ -82,6 +82,10 @@
 	list-style-type: decimal;
 }
 
+.MarkdownView ol li:not(:last-child) {
+	margin-bottom: var(--space-1);
+}
+
 .MarkdownView :is(ul, ol):has(~ *) {
 	margin-bottom: calc(-1 * var(--space-3));
 }
