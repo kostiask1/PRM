@@ -71,7 +71,6 @@ export default function ImageAssetField({
 	imageUrl,
 	campaignSlug,
 	target = "character",
-	isEditing = false,
 	showClearButton = false,
 	enableContextReplace = true,
 	onImageChange,
@@ -116,10 +115,6 @@ export default function ImageAssetField({
 								onError={() => setHasImageError(true)}
 								onClick={(event) => {
 									event.stopPropagation();
-									if (isEditing) {
-										openGallery();
-										return;
-									}
 									setIsImagePreviewOpen(true);
 								}}
 								onContextMenu={(event) => {
@@ -154,7 +149,7 @@ export default function ImageAssetField({
 				)}
 			</div>
 
-			{isImagePreviewOpen && hasValidImage && !isEditing && (
+			{isImagePreviewOpen && hasValidImage && (
 				<Modal
 					title={previewTitle}
 					type="custom"

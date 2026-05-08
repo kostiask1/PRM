@@ -223,7 +223,6 @@ export default function LocationCard({
 								imageUrl={location.imageUrl}
 								campaignSlug={campaignSlug}
 								target="location"
-								isEditing
 								showClearButton
 								onImageChange={(url) => updateField("imageUrl", url)}
 								imageAlt={lang.t("Image")}
