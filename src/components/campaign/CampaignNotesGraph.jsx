@@ -802,167 +802,71 @@ function getOffsetPosition(basePosition, offset = { x: 0, y: 0 }) {
 	};
 }
 
-function constrainOffsetsToGroupSpace({
-	basePositions,
-	offsets,
-	movedNodeIds,
-	nodeById,
-	groupId,
-	groups,
-}) {
-	const nextOffsets = { ...offsets };
-	const ownGroup = groups.find((group) => group.id === groupId);
-	if (!ownGroup) return nextOffsets;
-
-	movedNodeIds.forEach((nodeId) => {
-		const basePosition = basePositions[nodeId];
-		if (!basePosition) return;
-
-		const nodeRadius = getNodeRadius(nodeById.get(nodeId) || {});
-		const offset = nextOffsets[nodeId] || { x: 0, y: 0 };
-		let position = getOffsetPosition(basePosition, offset);
-
-		groups.forEach((group) => {
-			if (group.id === groupId) return;
-
-			const dx = position.x - group.x;
-			const dy = position.y - group.y;
-			let distance = Math.sqrt(dx * dx + dy * dy);
-			const distanceFromOwnCenter = Math.sqrt(
-				(position.x - ownGroup.x) ** 2 + (position.y - ownGroup.y) ** 2,
-			);
-			const ownProjectedRadius = distanceFromOwnCenter + nodeRadius + 38;
-			const centerDistance = Math.sqrt(
-				(group.x - ownGroup.x) ** 2 + (group.y - ownGroup.y) ** 2,
-			);
-			const groupGap = 20;
-			const minDistanceFromOther = Math.max(
-				group.radius + nodeRadius + groupGap,
-				ownProjectedRadius + group.radius + groupGap - centerDistance + distance,
-			);
-
-			if (distance >= minDistanceFromOther) return;
-
-			let directionX = dx;
-			let directionY = dy;
-			if (distance < 0.01) {
-				const angle = Math.atan2(ownGroup.y - group.y, ownGroup.x - group.x);
-				directionX = Math.cos(angle);
-				directionY = Math.sin(angle);
-				distance = 1;
-			}
-
-			position = {
-				x: group.x + (directionX / distance) * minDistanceFromOther,
-				y: group.y + (directionY / distance) * minDistanceFromOther,
-			};
-		});
-
-		position = clampGraphPosition(position);
-		nextOffsets[nodeId] = {
-			x: position.x - basePosition.x,
-			y: position.y - basePosition.y,
-		};
-	});
-
-	return nextOffsets;
-}
-
-function resolveGroupDragCollisions({
+function constrainMovedNodesToGroupCollisions({
 	basePositions,
 	offsets,
 	groupNodeIds,
 	nodeById,
-	lockedNodeIds,
+	movedNodeIds,
 }) {
 	const nextOffsets = { ...offsets };
-	const positionById = new Map();
-	const visibleGroupNodeIds = groupNodeIds.filter((nodeId) => {
-		const basePosition = basePositions[nodeId];
-		if (!basePosition) return false;
-		positionById.set(
-			nodeId,
-			getOffsetPosition(basePosition, nextOffsets[nodeId]),
-		);
-		return true;
-	});
+	const movedNodeIdSet = new Set(movedNodeIds);
+	const staticNodeIds = groupNodeIds.filter((nodeId) => !movedNodeIdSet.has(nodeId));
 
-	for (let iteration = 0; iteration < 14; iteration += 1) {
+	for (let iteration = 0; iteration < 8; iteration += 1) {
 		let moved = false;
 
-		for (
-			let leftIndex = 0;
-			leftIndex < visibleGroupNodeIds.length;
-			leftIndex += 1
-		) {
-			for (
-				let rightIndex = leftIndex + 1;
-				rightIndex < visibleGroupNodeIds.length;
-				rightIndex += 1
-			) {
-				const leftId = visibleGroupNodeIds[leftIndex];
-				const rightId = visibleGroupNodeIds[rightIndex];
-				const leftPosition = positionById.get(leftId);
-				const rightPosition = positionById.get(rightId);
-				if (!leftPosition || !rightPosition) continue;
+		movedNodeIds.forEach((movedNodeId, movedIndex) => {
+			const movedBasePosition = basePositions[movedNodeId];
+			if (!movedBasePosition) return;
 
-				let dx = rightPosition.x - leftPosition.x;
-				let dy = rightPosition.y - leftPosition.y;
+			let movedPosition = getOffsetPosition(
+				movedBasePosition,
+				nextOffsets[movedNodeId],
+			);
+			const movedRadius = getNodeRadius(nodeById.get(movedNodeId) || {});
+
+			staticNodeIds.forEach((staticNodeId, staticIndex) => {
+				const staticBasePosition = basePositions[staticNodeId];
+				if (!staticBasePosition) return;
+
+				const staticPosition = getOffsetPosition(
+					staticBasePosition,
+					nextOffsets[staticNodeId],
+				);
+				const staticRadius = getNodeRadius(nodeById.get(staticNodeId) || {});
+				let dx = movedPosition.x - staticPosition.x;
+				let dy = movedPosition.y - staticPosition.y;
 				let distance = Math.sqrt(dx * dx + dy * dy);
 				if (distance < 0.01) {
 					const angle =
-						((leftIndex + rightIndex + iteration + 1) * 2.399963) %
+						((movedIndex + staticIndex + iteration + 1) * 2.399963) %
 						(Math.PI * 2);
 					dx = Math.cos(angle);
 					dy = Math.sin(angle);
 					distance = 1;
 				}
 
-				const leftRadius = getNodeRadius(nodeById.get(leftId) || {});
-				const rightRadius = getNodeRadius(nodeById.get(rightId) || {});
-				const minDistance = leftRadius + rightRadius + 56;
-				if (distance >= minDistance) continue;
+				const minDistance = movedRadius + staticRadius + 56;
+				if (distance >= minDistance) return;
 
 				const overlap = minDistance - distance;
 				const pushX = (dx / distance) * overlap;
 				const pushY = (dy / distance) * overlap;
-				const leftLocked = lockedNodeIds.has(leftId);
-				const rightLocked = lockedNodeIds.has(rightId);
-				if (leftLocked && rightLocked) continue;
-				const leftShare = leftLocked && !rightLocked ? 0 : rightLocked ? 1 : 0.5;
-				const rightShare = rightLocked && !leftLocked ? 0 : leftLocked ? 1 : 0.5;
-
-				leftPosition.x = Math.min(
-					GRAPH_WIDTH - 45,
-					Math.max(45, leftPosition.x - pushX * leftShare),
-				);
-				leftPosition.y = Math.min(
-					GRAPH_HEIGHT - 40,
-					Math.max(40, leftPosition.y - pushY * leftShare),
-				);
-				rightPosition.x = Math.min(
-					GRAPH_WIDTH - 45,
-					Math.max(45, rightPosition.x + pushX * rightShare),
-				);
-				rightPosition.y = Math.min(
-					GRAPH_HEIGHT - 40,
-					Math.max(40, rightPosition.y + pushY * rightShare),
-				);
+				movedPosition = clampGraphPosition({
+					x: movedPosition.x + pushX,
+					y: movedPosition.y + pushY,
+				});
+				nextOffsets[movedNodeId] = {
+					x: movedPosition.x - movedBasePosition.x,
+					y: movedPosition.y - movedBasePosition.y,
+				};
 				moved = true;
-			}
-		}
+			});
+		});
 
 		if (!moved) break;
 	}
-
-	positionById.forEach((position, nodeId) => {
-		const basePosition = basePositions[nodeId];
-		if (!basePosition) return;
-		nextOffsets[nodeId] = {
-			x: position.x - basePosition.x,
-			y: position.y - basePosition.y,
-		};
-	});
 
 	return nextOffsets;
 }
@@ -1348,32 +1252,15 @@ export default function CampaignNotesGraph({
 				});
 
 				const movedNodeIds = [start.nodeId, ...start.childIds];
-				const constrainedNext = constrainOffsetsToGroupSpace({
+				const groupNodeIds = groupNodeIdsById.get(start.groupId) || [];
+				if (groupNodeIds.length <= 1) return next;
+
+				return constrainMovedNodesToGroupCollisions({
 					basePositions: layout.nodePositions,
 					offsets: next,
-					movedNodeIds,
-					nodeById: visibleGraph.nodeById,
-					groupId: start.groupId,
-					groups: displayGroups,
-				});
-				const groupNodeIds = groupNodeIdsById.get(start.groupId) || [];
-				if (groupNodeIds.length <= 1) return constrainedNext;
-
-				const collisionResolvedNext = resolveGroupDragCollisions({
-					basePositions: layout.nodePositions,
-					offsets: constrainedNext,
 					groupNodeIds,
 					nodeById: visibleGraph.nodeById,
-					lockedNodeIds: new Set(movedNodeIds),
-				});
-
-				return constrainOffsetsToGroupSpace({
-					basePositions: layout.nodePositions,
-					offsets: collisionResolvedNext,
-					movedNodeIds: groupNodeIds,
-					nodeById: visibleGraph.nodeById,
-					groupId: start.groupId,
-					groups: displayGroups,
+					movedNodeIds,
 				});
 			});
 			return;
