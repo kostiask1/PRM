@@ -24,11 +24,13 @@
 
 .character-card__name {
     font-weight: 600;
+    line-height: var(--size-7);
     color: var(--text-bright);
 }
 
 .character-card__meta-brief {
     font-size: 0.85rem;
+    line-height: var(--size-7);
     color: var(--muted);
 }
 

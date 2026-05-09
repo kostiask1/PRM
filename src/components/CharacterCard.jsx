@@ -142,26 +142,6 @@ export default function CharacterCard({
 			{!isCollapsed && (
 				<div className="character-card__body">
 					<div className="character-card__main-layout">
-						<div className="character-card__image-side">
-							<ImageAssetField
-								imageUrl={character.imageUrl}
-								campaignSlug={campaignSlug}
-								target={type === "npc" ? "npc" : "character"}
-								showClearButton
-								onImageChange={(url) => updateField("imageUrl", url)}
-								imageAlt={lang.t("Portrait")}
-								containerClassName="character-card__portrait-container"
-								wrapperClassName={classNames(
-									"character-card__portrait-wrapper",
-									"is-editable",
-								)}
-								deleteButtonClassName="character-card__image-delete"
-								previewTitle={characterModel.fullName || lang.t("Portrait")}
-								previewModalClassName="CharacterImageModal"
-								previewContentClassName="CharacterImageModal__content"
-							/>
-						</div>
-
 						<div className="character-card__content-side">
 							<div className="character-card__info-side">
 								<div className="character-card__grid">
@@ -212,9 +192,7 @@ export default function CharacterCard({
 									<EditableField
 										type="textarea"
 										value={character.motivation}
-										onChange={(e) =>
-											updateField("motivation", e.target.value)
-										}
+										onChange={(e) => updateField("motivation", e.target.value)}
 										placeholder={lang.t("What does the character want...")}
 									/>
 								</div>
@@ -228,6 +206,25 @@ export default function CharacterCard({
 									/>
 								</div>
 							</div>
+						</div>
+						<div className="character-card__image-side">
+							<ImageAssetField
+								imageUrl={character.imageUrl}
+								campaignSlug={campaignSlug}
+								target={type === "npc" ? "npc" : "character"}
+								showClearButton
+								onImageChange={(url) => updateField("imageUrl", url)}
+								imageAlt={lang.t("Portrait")}
+								containerClassName="character-card__portrait-container"
+								wrapperClassName={classNames(
+									"character-card__portrait-wrapper",
+									"is-editable",
+								)}
+								deleteButtonClassName="character-card__image-delete"
+								previewTitle={characterModel.fullName || lang.t("Portrait")}
+								previewModalClassName="CharacterImageModal"
+								previewContentClassName="CharacterImageModal__content"
+							/>
 						</div>
 					</div>
 

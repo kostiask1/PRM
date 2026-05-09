@@ -1,8 +1,7 @@
 .CampaignView__layout {
 	display: grid;
-	grid-template-columns: minmax(280px, 360px) 1fr;
+	grid-template-columns: 340px 1fr;
 	gap: var(--space-4);
-	/* height: 100%; */
 	align-items: start;
 }
 
@@ -62,6 +61,10 @@
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-2);
+}
+
+.CampaignView__sessionsPaneList .ListCard__meta {
+	white-space: nowrap;
 }
 
 .CampaignView__emptySessions {
@@ -163,7 +166,7 @@
 }
 
 .CampaignView__characters>div {
-	flex: 1 1 550px;
+	flex: 1 1 650px;
 	max-width: 100%;
 	user-select: auto;
 }
