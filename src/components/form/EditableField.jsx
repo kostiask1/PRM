@@ -800,6 +800,18 @@ function unwrapMention(editor, mention, { selectText = false } = {}) {
 	return true;
 }
 
+function removeMention(editor, mention) {
+	if (!editor || !mention?.dataset?.mention) return false;
+
+	const range = document.createRange();
+	range.setStartBefore(mention);
+	range.collapse(true);
+	mention.remove();
+	editor.focus({ preventScroll: true });
+	selectRange(range);
+	return true;
+}
+
 function setCaretFromTabClick(tab, event) {
 	if (!tab) return;
 
@@ -1210,7 +1222,7 @@ export default function EditableField({
 			const mention = getMentionFromSelection(editorRef.current, key);
 			if (mention) {
 				event.preventDefault();
-				unwrapMention(editorRef.current, mention, { selectText: true });
+				removeMention(editorRef.current, mention);
 				emitChange(event);
 				return;
 			}

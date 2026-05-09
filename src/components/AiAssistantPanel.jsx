@@ -11,6 +11,7 @@ import ReactMarkdown from "react-markdown";
 import { api } from "../api";
 import { parseUrl } from "../utils/navigation";
 import Button from "./form/Button";
+import EditableField from "./form/EditableField";
 import Icon from "./common/Icon";
 import Input from "./form/Input";
 import Modal from "./common/Modal";
@@ -1391,7 +1392,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 						)}
 
 						<div className="AiAssistant__prompt-area">
-							<Input
+							<EditableField
 								type="textarea"
 								className="AiAssistant__prompt-input"
 								placeholder={getPlaceholder()}

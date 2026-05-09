@@ -450,8 +450,11 @@
 }
 
 .AiAssistant__prompt-input {
-	min-height: 80px;
 	margin-bottom: var(--space-3);
+}
+
+.AiAssistant__prompt-input .MarkdownView {
+	min-height: 80px;
 }
 
 .AiAssistant__generate-btn {
