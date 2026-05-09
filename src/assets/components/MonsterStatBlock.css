@@ -51,14 +51,6 @@
 	cursor: zoom-in;
 }
 
-:root[data-theme="light"] .MonsterStatBlock__token {
-    mix-blend-mode: darken;
-}
-
-:root[data-theme="dark"] .MonsterStatBlock__token {
-    mix-blend-mode: lighten;
-}
-
 .MonsterStatBlock__stats {
 	flex: 1;
 	display: flex;

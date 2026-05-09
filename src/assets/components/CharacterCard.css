@@ -140,14 +140,6 @@
     transition: border-color 0.2s;
 }
 
-:root[data-theme="light"] .character-card__portrait-wrapper.is-editable img {
-    mix-blend-mode: darken;
-}
-
-:root[data-theme="dark"] .character-card__portrait-wrapper.is-editable img {
-    mix-blend-mode: lighten;
-}
-
 .character-card__portrait-wrapper.is-editable img:hover {
     border-color: var(--accent);
 }
