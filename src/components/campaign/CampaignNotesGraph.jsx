@@ -1448,6 +1448,9 @@ export default function CampaignNotesGraph({
 		const otherNode = visibleGraph.nodeById.get(otherId);
 		if (!otherNode) return null;
 		const sourceLabels = formatGraphSourceList(edge.sources);
+		const connectionMetaText = `${lang.t(getRelationLabel(edge.relation))}${
+			edge.count > 1 ? ` (${edge.count})` : ""
+		}${sourceLabels ? ` · ${sourceLabels}` : ""}`;
 
 		return (
 			<button
@@ -1464,12 +1467,8 @@ export default function CampaignNotesGraph({
 			>
 				<span className={`CampaignNotesGraph__dot is-${otherNode.type}`} />
 				<span className="CampaignNotesGraph__connectionText">
-					<strong>{otherNode.label}</strong>
-					<span>
-						{lang.t(getRelationLabel(edge.relation))}
-						{edge.count > 1 ? ` (${edge.count})` : ""}
-						{sourceLabels ? ` · ${sourceLabels}` : ""}
-					</span>
+					<strong>{renderMentionText(otherNode.label)}</strong>
+					<span>{renderMentionText(connectionMetaText)}</span>
 				</span>
 			</button>
 		);
