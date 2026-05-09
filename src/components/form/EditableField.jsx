@@ -26,6 +26,7 @@ const MENTION_CLASS = "mention-link EditableField__mention";
 const MENTION_TOOLTIP_KEY = "Ctrl+click to open entity";
 const TAB_CLASS = "EditableField__tab";
 const INSERTION_MARKER_CLASS = "EditableField__insertionMarker";
+const CARET_ANCHOR_CLASS = "EditableField__caretAnchor";
 
 function requestMentionSelection(dispatch) {
 	return new Promise((resolve) => {
@@ -69,6 +70,12 @@ function renderMention(name) {
 	)}" data-mention-tooltip="${escapeAttribute(
 		lang.t(MENTION_TOOLTIP_KEY),
 	)}" contenteditable="false">${escapeHtml(safeName)}</span>`;
+}
+
+function withLeadingCaretAnchor(html = "") {
+	if (!html.startsWith(`<span class="${MENTION_CLASS}"`)) return html;
+
+	return `<span class="${CARET_ANCHOR_CLASS}" data-caret-anchor="true">\u200B</span>${html}`;
 }
 
 function renderInlineMarkdown(markdown = "") {
@@ -179,7 +186,7 @@ function markdownToHtml(markdown = "", type = "text") {
 	}
 
 	flushParagraph();
-	return html.join("");
+	return withLeadingCaretAnchor(html.join(""));
 }
 
 function normalizeTextContent(value = "") {
@@ -230,8 +237,8 @@ function headingMarkdown(content = "") {
 	return normalized ? `${normalized}\n` : "";
 }
 
-function inlineMarkdown(node) {
-	return childrenToMarkdown(node, { inline: true });
+function inlineMarkdown(node, options = {}) {
+	return childrenToMarkdown(node, { ...options, inline: true });
 }
 
 function serializeList(listNode, ordered = false) {
@@ -279,6 +286,24 @@ function getHeaderLevelFromStyle(node) {
 	return 0;
 }
 
+function hasNormalFontWeight(element) {
+	const fontWeight = element.style?.fontWeight;
+	if (!fontWeight) return false;
+
+	const normalized = fontWeight.trim().toLowerCase();
+	if (normalized === "normal" || normalized === "lighter") return true;
+
+	const value = parseInt(normalized, 10);
+	return Number.isFinite(value) && value < 600;
+}
+
+function hasNormalFontStyle(element) {
+	const fontStyle = element.style?.fontStyle;
+	if (!fontStyle) return false;
+
+	return fontStyle.trim().toLowerCase() === "normal";
+}
+
 function nodeToMarkdown(node, options = {}) {
 	if (node.nodeType === Node.TEXT_NODE) {
 		return normalizeTextContent(node.textContent || "");
@@ -291,8 +316,17 @@ function nodeToMarkdown(node, options = {}) {
 	const element = node;
 	const tagName = element.tagName.toLowerCase();
 	const mentionName = element.dataset?.mention;
+	const childOptions = {
+		...options,
+		suppressBold: options.suppressBold || hasNormalFontWeight(element),
+		suppressItalic: options.suppressItalic || hasNormalFontStyle(element),
+	};
 
 	if (element.dataset?.insertionMarker === "true") {
+		return "";
+	}
+
+	if (element.dataset?.caretAnchor === "true") {
 		return "";
 	}
 
@@ -309,11 +343,13 @@ function nodeToMarkdown(node, options = {}) {
 	}
 
 	if (tagName === "strong" || tagName === "b") {
-		return `**${inlineMarkdown(element)}**`;
+		const content = inlineMarkdown(element, childOptions);
+		return childOptions.suppressBold ? content : `**${content}**`;
 	}
 
 	if (tagName === "em" || tagName === "i") {
-		return `*${inlineMarkdown(element)}*`;
+		const content = inlineMarkdown(element, childOptions);
+		return childOptions.suppressItalic ? content : `*${content}*`;
 	}
 
 	if (tagName === "a" && element.classList.contains("mention-link")) {
@@ -321,7 +357,7 @@ function nodeToMarkdown(node, options = {}) {
 	}
 
 	if (tagName === "span" || tagName === "a") {
-		return inlineMarkdown(element);
+		return inlineMarkdown(element, childOptions);
 	}
 
 	if (tagName === "ul" || tagName === "ol") {
@@ -329,25 +365,29 @@ function nodeToMarkdown(node, options = {}) {
 	}
 
 	if (tagName === "li") {
-		return options.inline ? inlineMarkdown(element) : blockMarkdown(inlineMarkdown(element));
+		const content = inlineMarkdown(element, childOptions);
+		return options.inline ? content : blockMarkdown(content);
 	}
 
 	const styledHeaderLevel = getHeaderLevelFromStyle(element);
 	if (styledHeaderLevel > 0 && !/^h[1-6]$/.test(tagName)) {
-		const content = inlineMarkdown(element).trim();
+		const content = inlineMarkdown(element, childOptions).trim();
 		if (!content) return "";
 		return headingMarkdown(`${"#".repeat(styledHeaderLevel)} ${content}`);
 	}
 
 	if (/^h[1-6]$/.test(tagName)) {
 		const level = parseInt(tagName[1], 10);
-		const content = inlineMarkdown(element).trim();
+		const content = inlineMarkdown(element, childOptions).trim();
 		if (!content) return "";
 		return headingMarkdown(`${"#".repeat(level)} ${content}`);
 	}
 
 	if (tagName === "blockquote") {
-		const quote = normalizeMarkdown(childrenToMarkdown(element), "textarea");
+		const quote = normalizeMarkdown(
+			childrenToMarkdown(element, childOptions),
+			"textarea",
+		);
 		return blockMarkdown(
 			quote
 				.split("\n")
@@ -357,7 +397,7 @@ function nodeToMarkdown(node, options = {}) {
 	}
 
 	if (tagName === "p" || tagName === "div") {
-		const content = inlineMarkdown(element);
+		const content = inlineMarkdown(element, childOptions);
 		if (
 			!options.inline &&
 			content.includes("\n") &&
@@ -368,7 +408,7 @@ function nodeToMarkdown(node, options = {}) {
 		return options.inline ? content : blockMarkdown(content);
 	}
 
-	return childrenToMarkdown(element, options);
+	return childrenToMarkdown(element, childOptions);
 }
 
 function editorToMarkdown(editor, type = "text") {
@@ -793,6 +833,16 @@ function getSelectionElement(editor) {
 	return element;
 }
 
+function getCurrentBlockElement(editor) {
+	const element = getSelectionElement(editor);
+	if (!element) return null;
+
+	const block = element.closest?.("p, h1, h2, h3, h4, h5, h6, blockquote");
+	if (block && editor.contains(block)) return block;
+
+	return element === editor ? null : element;
+}
+
 function isSelectionInsideTag(editor, tagName) {
 	const element = getSelectionElement(editor);
 	return Boolean(element?.closest?.(tagName));
@@ -820,6 +870,17 @@ function cloneEditorHtml(editor) {
 		node.removeAttribute("title");
 	});
 	return clone.innerHTML;
+}
+
+function replaceElementTag(element, tagName) {
+	if (!element || element.tagName?.toLowerCase() === tagName) return element;
+
+	const replacement = document.createElement(tagName);
+	while (element.firstChild) {
+		replacement.appendChild(element.firstChild);
+	}
+	element.replaceWith(replacement);
+	return replacement;
 }
 
 export default function EditableField({
@@ -1025,6 +1086,34 @@ export default function EditableField({
 		emitChange(event);
 	};
 
+	const runFormatBlockCommand = (event, tagName) => {
+		runCommand(event, "formatBlock", `<${tagName}>`);
+	};
+
+	const replaceCurrentBlock = (event, tagName) => {
+		event.preventDefault();
+
+		const editor = editorRef.current;
+		const block = getCurrentBlockElement(editor);
+		if (!block || block === editor) {
+			document.execCommand("formatBlock", false, `<${tagName}>`);
+			emitChange(event);
+			return;
+		}
+
+		const range = getSelectionRangeInside(editor)?.cloneRange();
+		const nextBlock = replaceElementTag(block, tagName);
+		if (range) {
+			selectRange(range);
+		} else {
+			const nextRange = document.createRange();
+			nextRange.selectNodeContents(nextBlock);
+			nextRange.collapse(false);
+			selectRange(nextRange);
+		}
+		emitChange(event);
+	};
+
 	const handleMentionShortcut = async (event) => {
 		const editor = editorRef.current;
 		if (!editor) return;
@@ -1164,7 +1253,7 @@ export default function EditableField({
 		if (type === "textarea" && isMod && key >= "1" && key <= "6") {
 			const tag = `h${key}`;
 			const nextTag = isSelectionInsideTag(editorRef.current, tag) ? "p" : tag;
-			runCommand(event, "formatBlock", nextTag);
+			replaceCurrentBlock(event, nextTag);
 			return;
 		}
 
@@ -1172,7 +1261,7 @@ export default function EditableField({
 			const nextTag = isSelectionInsideTag(editorRef.current, "blockquote")
 				? "p"
 				: "blockquote";
-			runCommand(event, "formatBlock", nextTag);
+			runFormatBlockCommand(event, nextTag);
 			return;
 		}
 
