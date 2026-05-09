@@ -58,12 +58,37 @@ function isEmptyNote(note = {}) {
 	);
 }
 
-function excerpt(value, maxLength = 160) {
+function stripMarkdownForGraphText(value) {
+	return String(value || "")
+		.replace(/```[\s\S]*?```/g, " ")
+		.replace(/`([^`]+)`/g, "$1")
+		.replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+		.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+		.split(/\r?\n/)
+		.map((line) =>
+			line
+				.replace(/^\s{0,3}#{1,6}\s+/g, "")
+				.replace(/^\s{0,3}>\s?/g, "")
+				.replace(/^\s*[-*+]\s+\[[ xX]\]\s+/g, "")
+				.replace(/^\s*[-*+]\s+/g, "")
+				.replace(/^\s*\d+[.)]\s+/g, "")
+				.replace(/^\s*[-*_]{3,}\s*$/g, "")
+				.replace(/[*_~]+/g, "")
+				.trim(),
+		)
+		.filter(Boolean)
+		.join(" ");
+}
+
+function excerpt(value, maxLength = 160, { stripMarkdown = false } = {}) {
 	const text = String(value || "")
 		.replace(/\s+/g, " ")
 		.trim();
-	if (text.length <= maxLength) return text;
-	return `${text.slice(0, maxLength - 1).trim()}...`;
+	const normalizedText = (stripMarkdown ? stripMarkdownForGraphText(text) : text)
+		.replace(/\s+/g, " ")
+		.trim();
+	if (normalizedText.length <= maxLength) return normalizedText;
+	return `${normalizedText.slice(0, maxLength - 1).trim()}...`;
 }
 
 function collectStrings(value, path = "", output = []) {
@@ -338,13 +363,13 @@ export function buildCampaignGraph({
 		const noteId = `campaign-note:${encodedPart(note.id ?? index)}`;
 		const noteLabel =
 			(!simplifiedNotes && String(note.title || "").trim()) ||
-			excerpt(note.text, 48) ||
+			excerpt(note.text, 48, { stripMarkdown: true }) ||
 			`Note ${index + 1}`;
 		addNode({
 			id: noteId,
 			type: "campaign-note",
 			label: noteLabel,
-			summary: excerpt(note.text || note.title),
+			summary: excerpt(note.text || note.title, 160, { stripMarkdown: true }),
 			detailText: note.text || "",
 			aliases: simplifiedNotes ? [] : [note.title].filter(Boolean),
 			sourceId: note.id,
@@ -498,13 +523,15 @@ export function buildCampaignGraph({
 			const sessionNoteId = `session-note:${encodedPart(fileName)}:${encodedPart(note.id ?? noteIndex)}`;
 			const sessionNoteLabel =
 				(!simplifiedNotes && String(note.title || "").trim()) ||
-				excerpt(note.text, 48) ||
+				excerpt(note.text, 48, { stripMarkdown: true }) ||
 				`${label} note ${noteIndex + 1}`;
 			addNode({
 				id: sessionNoteId,
 				type: "session-note",
 				label: sessionNoteLabel,
-				summary: excerpt(note.text || note.title),
+				summary: excerpt(note.text || note.title, 160, {
+					stripMarkdown: true,
+				}),
 				detailText: note.text || "",
 				aliases: simplifiedNotes ? [] : [note.title].filter(Boolean),
 				sourceId: note.id,
@@ -581,13 +608,15 @@ export function buildCampaignGraph({
 				const sceneNoteId = `scene-note:${encodedPart(fileName)}:${encodedPart(scene.id ?? sceneIndex)}:${encodedPart(note.id ?? noteIndex)}`;
 				const sceneNoteLabel =
 					(!simplifiedNotes && String(note.title || "").trim()) ||
-					excerpt(note.text, 48) ||
+					excerpt(note.text, 48, { stripMarkdown: true }) ||
 					`${sceneName} note ${noteIndex + 1}`;
 				addNode({
 					id: sceneNoteId,
 					type: "scene-note",
 					label: sceneNoteLabel,
-					summary: excerpt(note.text || note.title),
+					summary: excerpt(note.text || note.title, 160, {
+						stripMarkdown: true,
+					}),
 					detailText: note.text || "",
 					aliases: simplifiedNotes ? [] : [note.title].filter(Boolean),
 					sourceId: note.id,

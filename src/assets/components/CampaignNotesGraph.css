@@ -73,7 +73,7 @@
 
 .CampaignNotesGraph__canvasWrap {
 	position: relative;
-	min-height: 540px;
+	min-height: 680px;
 	background:
 		linear-gradient(color-mix(in srgb, var(--border), transparent 88%) 1px,
 			transparent 1px),
@@ -88,7 +88,7 @@
 .CampaignNotesGraph__canvas {
 	display: block;
 	width: 100%;
-	height: 540px;
+	height: 680px;
 	touch-action: none;
 	cursor: grab;
 }
@@ -116,6 +116,20 @@
 	color: var(--danger);
 }
 
+.CampaignNotesGraph__groupEdge {
+	stroke: var(--graph-group-color, var(--border));
+	stroke-width: 1.35px;
+	stroke-dasharray: 2 8;
+	stroke-linecap: round;
+	stroke-opacity: 0.24;
+	pointer-events: none;
+	transition: opacity 140ms ease;
+}
+
+.CampaignNotesGraph__groupEdge.is-muted {
+	opacity: 0.18;
+}
+
 .CampaignNotesGraph__edge {
 	fill: none;
 	stroke-linecap: round;
@@ -126,7 +140,9 @@
 		stroke 140ms ease;
 }
 
+.CampaignNotesGraph.is-dragging-node .CampaignNotesGraph__groupEdge,
 .CampaignNotesGraph.is-dragging-node .CampaignNotesGraph__edge,
+.CampaignNotesGraph.is-dragging-node .CampaignNotesGraph__group,
 .CampaignNotesGraph.is-dragging-node .CampaignNotesGraph__node {
 	transition: none;
 }
@@ -144,6 +160,23 @@
 	filter: none;
 }
 
+.CampaignNotesGraph__group {
+	pointer-events: none;
+	opacity: 0.82;
+	transition: opacity 140ms ease;
+}
+
+.CampaignNotesGraph__group.is-muted {
+	opacity: 0.18;
+}
+
+.CampaignNotesGraph__groupOrbit {
+	fill: color-mix(in srgb, var(--graph-group-color), transparent 96%);
+	stroke: color-mix(in srgb, var(--graph-group-color), transparent 52%);
+	stroke-width: 1.4px;
+	stroke-dasharray: 7 9;
+}
+
 .CampaignNotesGraph__node {
 	cursor: pointer;
 	transition:
@@ -154,6 +187,10 @@
 .CampaignNotesGraph__node.is-dragging {
 	cursor: grabbing;
 	transition: none;
+}
+
+.CampaignNotesGraph__node.is-campaign {
+	cursor: pointer;
 }
 
 .CampaignNotesGraph__node circle {
@@ -231,7 +268,7 @@
 .CampaignNotesGraph__details {
 	padding: var(--space-3);
 	overflow: auto;
-	max-height: 620px;
+	max-height: 760px;
 	overscroll-behavior: contain;
 }
 
@@ -261,6 +298,14 @@
 	padding: var(--space-1);
 	margin-left: calc(var(--space-1) * -1);
 	margin-right: calc(var(--space-1) * -1);
+}
+
+.CampaignNotesGraph__detailText :is(h1, h2, h3, h4, h5, h6) {
+	margin-bottom: var(--space-2);
+}
+
+.CampaignNotesGraph__detailText :is(ol,ul) {
+	padding-left: var(--space-4);
 }
 
 .CampaignNotesGraph__detailText.is-clickable:hover {
