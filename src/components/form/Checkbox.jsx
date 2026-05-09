@@ -1,4 +1,5 @@
 import "../../assets/components/Checkbox.css";
+import Icon from "../common/Icon";
 import Tooltip from "../common/Tooltip";
 import classNames from "../../utils/classNames";
 
@@ -22,7 +23,14 @@ export default function Checkbox({
 			onClick={handleChange}
 		>
 			<input type="checkbox" checked={checked} readOnly {...props} />
-			<div className="Checkbox__indicator" />
+			<div className="Checkbox__indicator">
+				<Icon
+					name="check"
+					size={14}
+					strokeWidth={3}
+					className="Checkbox__icon"
+				/>
+			</div>
 			{label && <span className="Checkbox__label">{label}</span>}
 		</label>
 	);

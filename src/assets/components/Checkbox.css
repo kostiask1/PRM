@@ -38,17 +38,17 @@
     border-color: var(--success);
 }
 
-.Checkbox__indicator::after {
-    content: "";
-    width: 5px;
-    height: 10px;
-    border: solid white;
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
-    display: none;
-    margin-bottom: 2px;
+.Checkbox__icon {
+    color: white;
+    opacity: 0;
+    transform: scale(0.72);
+    transition:
+        opacity 0.16s ease,
+        transform 0.16s ease;
+    pointer-events: none;
 }
 
-.Checkbox.is-checked .Checkbox__indicator::after {
-    display: block;
+.Checkbox.is-checked .Checkbox__icon {
+    opacity: 1;
+    transform: scale(1);
 }
