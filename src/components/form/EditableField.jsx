@@ -220,6 +220,16 @@ function blockMarkdown(content = "") {
 	return normalized.endsWith("\n") ? `${normalized}\n` : `${normalized}\n\n`;
 }
 
+function headingMarkdown(content = "") {
+	const normalized = normalizeTextContent(content)
+		.split("\n")
+		.map((line) => line.replace(/ +$/g, ""))
+		.join("\n")
+		.trim();
+
+	return normalized ? `${normalized}\n` : "";
+}
+
 function inlineMarkdown(node) {
 	return childrenToMarkdown(node, { inline: true });
 }
@@ -324,12 +334,16 @@ function nodeToMarkdown(node, options = {}) {
 
 	const styledHeaderLevel = getHeaderLevelFromStyle(element);
 	if (styledHeaderLevel > 0 && !/^h[1-6]$/.test(tagName)) {
-		return blockMarkdown(`${"#".repeat(styledHeaderLevel)} ${inlineMarkdown(element)}`);
+		const content = inlineMarkdown(element).trim();
+		if (!content) return "";
+		return headingMarkdown(`${"#".repeat(styledHeaderLevel)} ${content}`);
 	}
 
 	if (/^h[1-6]$/.test(tagName)) {
 		const level = parseInt(tagName[1], 10);
-		return blockMarkdown(`${"#".repeat(level)} ${inlineMarkdown(element)}`);
+		const content = inlineMarkdown(element).trim();
+		if (!content) return "";
+		return headingMarkdown(`${"#".repeat(level)} ${content}`);
 	}
 
 	if (tagName === "blockquote") {
