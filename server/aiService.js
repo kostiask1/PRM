@@ -303,12 +303,14 @@ Return plain natural text for humans only.
 Do not return JSON.
 Do not output keys, braces {}, or arrays [].
 Do not expose raw data structure.
+If the user asks to generate a prompt for creating an image, your entire response must be a detailed image-generation prompt in English, regardless of the requested response language.
 Use markdown formatting in your final response.`,
 	image: `You generate detailed scene-image prompts.
 Input is JSON with keys:
 Scene fields (higher priority): summary, goal, stakes, location, npcs.
 General fields (lower priority): notes, description.
 Generate one final image-generation prompt from this data.
+Always write the final image-generation prompt in English.
 Output only the final prompt, with no explanations, no JSON, and no lists.
 Describe in this order:
 1) Scene overview
@@ -354,6 +356,10 @@ Supported formatting in editable textarea fields:
 When returning parsed JSON, Markdown must be inside JSON string values only. Escape newlines/tabs as normal JSON string content; do not output HTML, rich-text objects, code fences, Markdown tables, markdown links, or raw React/HTML tags.
 Preserve existing Markdown markers exactly in unchanged text. When editing text, keep the user's existing formatting style and change only the requested content.
 For notes, Markdown belongs in the note object's "text" field. A line starting with "#" is a Markdown heading inside "text"; never convert it into the note "title" and never remove the "#" marker unless the user explicitly asks to change that heading.`;
+
+const imagePromptLanguageContract = `IMAGE PROMPT LANGUAGE EXCEPTION:
+If the user asks to generate a prompt for creating an image, ignore the normal response-language rule for that answer and write the complete prompt in English.
+The image prompt must be detailed and ready to paste into an image generator.`;
 
 async function generateContent({
 	type,
@@ -407,6 +413,7 @@ async function generateContent({
 	const systemInstructionParts = [
 		systemInstructions[useKey],
 		`MANDATORY LANGUAGE RULE: You must write all user-visible output strictly in ${responseLanguage.label}.`,
+		imagePromptLanguageContract,
 		`NAME LANGUAGE RULE: Any new names you invent must be written in ${responseLanguage.label}. This includes new character names, NPC names, place names, scene names, encounter names, aliases, titles, and display names.
 EXISTING NAME PROTECTION: Names that already exist in the input data must keep their exact original spelling and alphabet. Do not translate, transliterate, decline, paraphrase, rename, or otherwise alter existing names unless the user explicitly asks you to do that.
 Exception: technical lookup fields that require official English names, such as "monsterName", must remain official English bestiary names.`,
@@ -612,6 +619,8 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 
 	userPrompt = `INPUT DATA (JSON):\n${JSON.stringify(contextJson, null, 2)}\n\n`;
 	userPrompt += `MANDATORY: Reply strictly in ${responseLanguage.label}.\n`;
+	userPrompt +=
+		"EXCEPTION: If the user asks for a prompt to create an image, reply with a detailed image-generation prompt in English, regardless of the mandatory response language.\n";
 	userPrompt +=
 		'IMPORTANT: Text fields in INPUT DATA may contain the app Markdown format: headings with "#", bold "**text**", italic "*text*", lists "- item", quotes "> text", tab indentation "\\t", blank lines, and entity mentions "[Name]". Treat these as real formatting, not noise. Preserve unchanged Markdown exactly. When adding formatted text, use only this supported Markdown subset inside JSON strings.\n';
 	if (
