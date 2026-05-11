@@ -6,14 +6,12 @@ export default function StatusBadge({
 	completed,
 	onClick,
 	className = "",
-	type = "campaign",
-	title,
 }) {
 	let label = "";
 	if (completed) {
 		label = lang.t("Completed");
 	} else {
-		label = type === "campaign" ? lang.t("Active") : lang.t("In preparation");
+		label = lang.t("Active");
 	}
 
 	return (
@@ -21,8 +19,6 @@ export default function StatusBadge({
 			className={classNames("StatusBadge", className, {
 				"StatusBadge--done": completed,
 			})}
-			title={title || label}
-			aria-label={title || label}
 			onClick={onClick}
 		>
 			{label}

@@ -501,7 +501,6 @@ export function buildCampaignGraph({
 			sourceId: detail?.id || session.id,
 			meta: {
 				fileName,
-				completed: Boolean(session.completed || detail?.completed),
 			},
 		});
 		addEdge(campaignId, sessionId, "contains", {

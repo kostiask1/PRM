@@ -112,8 +112,6 @@ export default function useSessionView(props) {
 
 		const currentState = {
 			data: session.data,
-			completed: session.completed,
-			completedAt: session.completedAt,
 		};
 
 		let tempStack = [...undoStack];
@@ -122,8 +120,7 @@ export default function useSessionView(props) {
 		while (tempStack.length > 0) {
 			const candidate = tempStack.pop();
 			const isDifferent =
-				JSON.stringify(candidate.data) !== JSON.stringify(currentState.data) ||
-				candidate.completed !== currentState.completed;
+				JSON.stringify(candidate.data) !== JSON.stringify(currentState.data);
 
 			if (isDifferent) {
 				stateToRestore = candidate;
@@ -140,8 +137,6 @@ export default function useSessionView(props) {
 				const updated = {
 					...prev,
 					data: stateToRestore.data,
-					completed: stateToRestore.completed,
-					completedAt: stateToRestore.completedAt,
 				};
 				triggerSave(updated, true);
 				return updated;
@@ -158,8 +153,6 @@ export default function useSessionView(props) {
 
 		const currentState = {
 			data: session.data,
-			completed: session.completed,
-			completedAt: session.completedAt,
 		};
 
 		let tempStack = [...redoStack];
@@ -168,8 +161,7 @@ export default function useSessionView(props) {
 		while (tempStack.length > 0) {
 			const candidate = tempStack.shift();
 			const isDifferent =
-				JSON.stringify(candidate.data) !== JSON.stringify(currentState.data) ||
-				candidate.completed !== currentState.completed;
+				JSON.stringify(candidate.data) !== JSON.stringify(currentState.data);
 
 			if (isDifferent) {
 				stateToRestore = candidate;
@@ -186,8 +178,6 @@ export default function useSessionView(props) {
 				const updated = {
 					...prev,
 					data: stateToRestore.data,
-					completed: stateToRestore.completed,
-					completedAt: stateToRestore.completedAt,
 				};
 				triggerSave(updated, true);
 				return updated;
@@ -263,21 +253,13 @@ export default function useSessionView(props) {
 			if (!isUpdatingHistory.current && prev) {
 				const currentState = {
 					data: prev.data,
-					completed: prev.completed,
-					completedAt: prev.completedAt,
 				};
 
 				const isDataChanged =
 					updates.data &&
 					JSON.stringify(updates.data) !== JSON.stringify(prev.data);
-				const isStatusChanged =
-					updates.completed !== undefined &&
-					updates.completed !== prev.completed;
 
-				if (
-					(isDataChanged || isStatusChanged) &&
-					(!saveTimeout.current || instant)
-				) {
+				if (isDataChanged && (!saveTimeout.current || instant)) {
 					setUndoStack((currentStack) => [...currentStack, currentState]);
 					setRedoStack([]);
 				}
@@ -515,8 +497,6 @@ export default function useSessionView(props) {
 			...prev,
 			{
 				data: session.data,
-				completed: session.completed,
-				completedAt: session.completedAt,
 			},
 		]);
 		setRedoStack([]);

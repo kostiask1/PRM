@@ -46,18 +46,6 @@
 	min-width: 0;
 }
 
-.CampaignView__sessionFilterRow {
-	display: grid;
-	grid-template-columns: repeat(3, minmax(0, 1fr));
-	gap: var(--space-1);
-}
-
-.CampaignView__sessionFilterRow .Button {
-	min-width: 0;
-	padding: 0 var(--space-1);
-	font-size: 0.78rem;
-}
-
 .CampaignView__sessionsPaneList {
 	overflow-y: auto;
 	padding: var(--space-2);

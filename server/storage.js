@@ -622,9 +622,7 @@ async function listSessions(slug) {
 			fileName: file,
 			createdAt: data.createdAt,
 			updatedAt: data.updatedAt,
-			completed: Boolean(data.completed),
 			order: data.order || 0,
-			completedAt: data.completedAt || null,
 		};
 	});
 
@@ -1060,9 +1058,7 @@ function makeDefaultSessionData(name) {
 	return {
 		id: createId(),
 		name: sanitizeName(name) || todayString(),
-		completed: false,
 		order: 0,
-		completedAt: null,
 		createdAt: new Date().toISOString(),
 		updatedAt: new Date().toISOString(),
 		data: {},

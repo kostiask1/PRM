@@ -955,45 +955,6 @@ export default function useCampaignView(props) {
 		}
 	};
 
-	const handleToggleSessionStatus = async (session) => {
-		const isCompleting = !session.completed;
-		let completedAt = session.completedAt;
-
-		if (isCompleting) {
-			const now = new Date().toISOString();
-			const todayLabel = new Date().toLocaleDateString();
-			const prevLabel = completedAt
-				? new Date(completedAt).toLocaleDateString()
-				: null;
-
-			if (completedAt && todayLabel !== prevLabel) {
-				const confirmUpdate = await dispatch(
-					confirm({
-						title: lang.t("Update date"),
-						message: lang.t(
-							"Session was already completed on {date}. Update completion date to today?",
-							{ date: prevLabel },
-						),
-					}),
-				);
-				if (confirmUpdate) completedAt = now;
-			} else {
-				completedAt = now;
-			}
-		}
-
-		try {
-			await api.updateSession(campaign.slug, session.fileName, {
-				completed: isCompleting,
-				completedAt,
-			});
-			const data = await api.listSessions(campaign.slug);
-			setSessions(data);
-		} catch (err) {
-			console.error("Failed to toggle session status", err);
-		}
-	};
-
 	const handleExport = async () => {
 		try {
 			const blob = await api.exportCampaignArchive(campaign.slug);
@@ -1118,7 +1079,6 @@ export default function useCampaignView(props) {
 		handleDeleteCampaign,
 		handleRename,
 		handleDeleteSession,
-		handleToggleSessionStatus,
 		handleExport,
 		handleAiUpdate,
 		handleSessionReorderDrop,

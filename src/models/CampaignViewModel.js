@@ -13,8 +13,6 @@
  * @property {string} fileName
  * @property {string} name
  * @property {string} [updatedAt]
- * @property {boolean} [completed]
- * @property {string|null} [completedAt]
  */
 
 /**

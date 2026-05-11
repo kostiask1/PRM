@@ -4,7 +4,6 @@ import Button from "./form/Button";
 import EditableField from "./form/EditableField";
 import ListCard from "./common/ListCard.jsx";
 import Panel from "./common/Panel.jsx";
-import StatusBadge from "./common/StatusBadge.jsx";
 import DraggableList from "./common/DraggableList.jsx";
 import NoteCard from "./common/NoteCard.jsx";
 import CharacterCard from "./CharacterCard";
@@ -46,7 +45,6 @@ function CampaignView(props) {
 	const view = useCampaignView(props);
 	const viewModel = new CampaignViewModel(campaign);
 	const [sessionSearch, setSessionSearch] = useState("");
-	const [sessionStatusFilter, setSessionStatusFilter] = useState("all");
 	const [notesViewMode, setNotesViewMode] = useState("list");
 	const simplifiedNotesEnabled = useAppSelector(
 		(state) => state.ui.simplifiedNotes,
@@ -78,23 +76,16 @@ function CampaignView(props) {
 	const filteredSessions = useMemo(() => {
 		const query = sessionSearch.trim().toLowerCase();
 		return view.sessions.filter((session) => {
-			const matchesQuery =
+			return (
 				!query ||
 				String(session.name || "")
 					.toLowerCase()
-					.includes(query);
-			const matchesStatus =
-				sessionStatusFilter === "all"
-					? true
-					: sessionStatusFilter === "completed"
-						? !!session.completed
-						: !session.completed;
-			return matchesQuery && matchesStatus;
+					.includes(query)
+			);
 		});
-	}, [view.sessions, sessionSearch, sessionStatusFilter]);
+	}, [view.sessions, sessionSearch]);
 
-	const canReorderSessions =
-		sessionStatusFilter === "all" && sessionSearch.trim().length === 0;
+	const canReorderSessions = sessionSearch.trim().length === 0;
 
 	const handleNotesViewModeChange = (mode) => {
 		setNotesViewMode(mode);
@@ -130,31 +121,18 @@ function CampaignView(props) {
 			dragging={isDragging}
 			onClick={() => navigateTo(campaign.slug, session.fileName)}
 			actions={
-				<>
-					<StatusBadge
-						className="CampaignView__sessionStatus"
-						completed={session.completed}
-						onClick={() => view.handleToggleSessionStatus(session)}
-						title={
-							session.completed
-								? lang.t("Completed")
-								: lang.t("In preparation")
-						}
-						type="session"
-					/>
-					<Button
-						className="CampaignView__sessionDelete"
-						variant="danger"
-						icon="trash"
-						size={Button.SIZES.SMALL}
-						iconSize={16}
-						onClick={(e) => {
-							e.stopPropagation();
-							view.handleDeleteSession(session);
-						}}
-						title={lang.t("Delete session")}
-					/>
-				</>
+				<Button
+					className="CampaignView__sessionDelete"
+					variant="danger"
+					icon="trash"
+					size={Button.SIZES.SMALL}
+					iconSize={16}
+					onClick={(e) => {
+						e.stopPropagation();
+						view.handleDeleteSession(session);
+					}}
+					title={lang.t("Delete session")}
+				/>
 			}
 		>
 			<div className="ListCard__title">{session.name}</div>
@@ -232,33 +210,6 @@ function CampaignView(props) {
 								value={sessionSearch}
 								onChange={(e) => setSessionSearch(e.target.value)}
 							/>
-							<div className="CampaignView__sessionFilterRow">
-								<Button
-									variant={sessionStatusFilter === "all" ? "primary" : "ghost"}
-									size={Button.SIZES.SMALL}
-									onClick={() => setSessionStatusFilter("all")}
-								>
-									{lang.t("All")}
-								</Button>
-								<Button
-									variant={
-										sessionStatusFilter === "active" ? "primary" : "ghost"
-									}
-									size={Button.SIZES.SMALL}
-									onClick={() => setSessionStatusFilter("active")}
-								>
-									{lang.t("Active")}
-								</Button>
-								<Button
-									variant={
-										sessionStatusFilter === "completed" ? "primary" : "ghost"
-									}
-									size={Button.SIZES.SMALL}
-									onClick={() => setSessionStatusFilter("completed")}
-								>
-									{lang.t("Completed")}
-								</Button>
-							</div>
 						</div>
 						<div className="CampaignView__sessionsPaneList">
 							{canReorderSessions ? (

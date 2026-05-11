@@ -73,8 +73,6 @@ const SCENE_SCHEMA = [
  * @typedef {Object} SessionData
  * @property {string} fileName
  * @property {string} name
- * @property {boolean} [completed]
- * @property {string|null} [completedAt]
  * @property {SessionDataPayload} data
  * @property {boolean} [isSaving]
  */
@@ -86,8 +84,6 @@ export const SESSION_FIELD_SCHEMA = {
 		values: "Ідентифікатор файлу сесії",
 	},
 	name: { type: "string", required: true, values: "Назва сесії" },
-	completed: { type: "boolean", values: "Статус завершення" },
-	completedAt: { type: "string|null", values: "ISO date-time завершення" },
 	data: {
 		type: "SessionDataPayload",
 		values: "Контент сесії: notes, scenes, encounters, result_text, *_check",
@@ -111,14 +107,6 @@ export default class SessionViewModel {
 
 	get data() {
 		return this.session;
-	}
-
-	get isCompleted() {
-		return Boolean(this.session.completed);
-	}
-
-	get completeButtonLabel() {
-		return this.isCompleted ? "Reopen" : "Complete";
 	}
 
 	get notes() {

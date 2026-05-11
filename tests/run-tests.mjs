@@ -414,9 +414,8 @@ await run("campaign state helpers sanitize entities and update mentions", () => 
 	);
 });
 
-await run("SessionViewModel encounter lookup and labels", () => {
+await run("SessionViewModel encounter lookup", () => {
 	const model = new SessionViewModel({
-		completed: false,
 		isSaving: true,
 		data: {
 			notes: [{ id: 1 }],
@@ -424,7 +423,6 @@ await run("SessionViewModel encounter lookup and labels", () => {
 			encounters: [{ id: "enc-1", name: "Fight" }],
 		},
 	});
-	assert.equal(model.completeButtonLabel, "Complete");
 	assert.equal(model.findEncounterName(model.scenes[0]), "Fight");
 	assert.equal(model.findEncounterName({ encounterId: "missing" }), "Untitled");
 });
@@ -606,7 +604,7 @@ await run("storage core helpers sanitize and build identifiers", () => {
 	assert.notEqual(id1, id2);
 	const session = storage.makeDefaultSessionData("My Session");
 	assert.equal(session.name, "My Session");
-	assert.equal(session.completed, false);
+	assert.equal("completed" in session, false);
 	assert.equal(storage.campaignDir("../unsafe").includes(".."), false);
 });
 
@@ -1310,7 +1308,6 @@ await run(
 				name: "Session 1",
 				createdAt: new Date().toISOString(),
 				updatedAt: new Date().toISOString(),
-				completed: false,
 				order: 0,
 				data: {
 					notes: [

@@ -41,9 +41,7 @@ export default function AddMonsterToEncounterModalContent({
 
 				const campaignGroups = await Promise.all(
 					campaignsSource.map(async (campaign) => {
-						const sessions = (await api.listSessions(campaign.slug)).filter(
-							(session) => !session.completed,
-						);
+						const sessions = await api.listSessions(campaign.slug);
 						const sessionDetails = await Promise.all(
 							sessions.map((session) =>
 								api

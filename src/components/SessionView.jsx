@@ -139,14 +139,6 @@ function SessionView(props) {
 						title={lang.t("Redo (Ctrl+Y)")}
 					/>
 					<Button
-						variant={viewModel.isCompleted ? "primary" : ""}
-						onClick={() =>
-							view.updateSession({ completed: !session.completed }, true)
-						}
-					>
-						{lang.t(viewModel.completeButtonLabel)}
-					</Button>
-					<Button
 						variant="danger"
 						icon="trash"
 						onClick={view.handleDeleteSessionAndBack}
