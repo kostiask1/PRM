@@ -10,7 +10,6 @@ const SPELLS_DIR = path.join(ROOT_DIR, "database", "spells");
 const FAVORITES_PATH = path.join(DATA_DIR, "favorites.json");
 const IMAGES_DIR = path.join(DATA_DIR, "images");
 const SETTINGS_PATH = path.join(DATA_DIR, "settings.json");
-const AI_RESPONSES_PATH = path.join(DATA_DIR, "aiResponses.json");
 const ENTITY_TYPES = Object.freeze(["characters", "npc", "locations"]);
 
 const DEFAULT_APP_SETTINGS = Object.freeze({
@@ -27,6 +26,14 @@ function todayString() {
 
 function createId() {
 	return crypto.randomUUID();
+}
+
+function hasOwn(value, key) {
+	return Boolean(
+		value &&
+			typeof value === "object" &&
+			Object.prototype.hasOwnProperty.call(value, key),
+	);
 }
 
 function sanitizeName(name) {
@@ -62,6 +69,10 @@ function campaignDir(slug) {
 
 function campaignMetaPath(slug) {
 	return path.join(campaignDir(slug), "_campaign.json");
+}
+
+function campaignAiResponsesPath(slug) {
+	return path.join(campaignDir(slug), "_aiResponses.json");
 }
 
 function campaignImagesDir(slug, category, subcategory = "") {
@@ -194,6 +205,50 @@ async function writeFavorites(favorites) {
 	await writeJson(FAVORITES_PATH, favorites);
 }
 
+function normalizeAiChangeResource(raw = {}) {
+	if (!raw || typeof raw !== "object") return null;
+	const kind = ["campaign", "session", "entity"].includes(raw.kind)
+		? raw.kind
+		: null;
+	if (!kind) return null;
+
+	const before = hasOwn(raw, "before") ? raw.before : null;
+	const after = hasOwn(raw, "after") ? raw.after : null;
+	if (before === null && after === null) return null;
+
+	const resource = {
+		id: String(raw.id || createId()),
+		kind,
+		campaign: raw.campaign || null,
+		label: String(raw.label || raw.id || kind),
+		before,
+		after,
+	};
+
+	if (kind === "session") {
+		resource.fileName = raw.fileName || null;
+	} else if (kind === "entity") {
+		resource.type = raw.type || null;
+		resource.slug = raw.slug || null;
+	}
+
+	return resource;
+}
+
+function normalizeAiChanges(raw = {}) {
+	if (!raw || typeof raw !== "object") {
+		return { resources: [], summary: {} };
+	}
+	const resources = Array.isArray(raw.resources)
+		? raw.resources.map(normalizeAiChangeResource).filter(Boolean)
+		: [];
+	return {
+		resources,
+		summary:
+			raw.summary && typeof raw.summary === "object" ? raw.summary : {},
+	};
+}
+
 function normalizeAiResponse(raw = {}) {
 	const text = typeof raw.text === "string" ? raw.text : "";
 	if (!text.trim()) return null;
@@ -224,6 +279,10 @@ function normalizeAiResponse(raw = {}) {
 				? rawRequest.contextSummary
 				: "",
 	};
+	const changes = normalizeAiChanges(raw.changes);
+	const applyState = ["applied", "undone"].includes(raw.applyState)
+		? raw.applyState
+		: null;
 
 	return {
 		id: String(raw.id || createId()),
@@ -241,14 +300,25 @@ function normalizeAiResponse(raw = {}) {
 		language: raw.language || null,
 		userInstructions,
 		request,
+		changes,
+		applyState,
+		appliedAt: raw.appliedAt || null,
 		createdAt: raw.createdAt || new Date().toISOString(),
 	};
 }
 
-async function readAiResponses() {
-	if (!(await exists(AI_RESPONSES_PATH))) return [];
+function normalizeCampaignSlug(slug) {
+	const normalized = path.basename(String(slug || "").trim());
+	return normalized || null;
+}
+
+async function readAiResponses(campaignSlugValue) {
+	const slug = normalizeCampaignSlug(campaignSlugValue);
+	if (!slug) return [];
+	const responsesPath = campaignAiResponsesPath(slug);
+	if (!(await exists(responsesPath))) return [];
 	try {
-		const saved = await readJson(AI_RESPONSES_PATH);
+		const saved = await readJson(responsesPath);
 		const list = Array.isArray(saved) ? saved : saved?.responses || [];
 		return list
 			.map(normalizeAiResponse)
@@ -259,17 +329,20 @@ async function readAiResponses() {
 	}
 }
 
-async function writeAiResponses(responses) {
+async function writeAiResponses(campaignSlugValue, responses) {
+	const slug = normalizeCampaignSlug(campaignSlugValue);
+	if (!slug) return [];
 	const normalized = (Array.isArray(responses) ? responses : [])
 		.map(normalizeAiResponse)
 		.filter(Boolean)
 		.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-	await writeJson(AI_RESPONSES_PATH, normalized);
+	await writeJson(campaignAiResponsesPath(slug), normalized);
 	return normalized;
 }
 
 async function addAiResponse(payload) {
-	const responses = await readAiResponses();
+	const campaignSlugValue = payload?.path?.campaign;
+	const responses = await readAiResponses(campaignSlugValue);
 	const entry = normalizeAiResponse({
 		...payload,
 		id: createId(),
@@ -278,19 +351,41 @@ async function addAiResponse(payload) {
 	if (!entry) {
 		throw new Error("AI response text is required.");
 	}
-	await writeAiResponses([entry, ...responses]);
+	await writeAiResponses(campaignSlugValue, [entry, ...responses]);
 	return entry;
 }
 
-async function deleteAiResponse(id) {
-	const responses = await readAiResponses();
+async function getAiResponse(campaignSlugValue, id) {
+	const responses = await readAiResponses(campaignSlugValue);
+	return responses.find((entry) => entry.id === String(id)) || null;
+}
+
+async function updateAiResponse(campaignSlugValue, id, patch = {}) {
+	const responses = await readAiResponses(campaignSlugValue);
+	let updatedEntry = null;
+	const next = responses.map((entry) => {
+		if (entry.id !== String(id)) return entry;
+		updatedEntry = normalizeAiResponse({
+			...entry,
+			...patch,
+			id: entry.id,
+			createdAt: entry.createdAt,
+		});
+		return updatedEntry || entry;
+	});
+	await writeAiResponses(campaignSlugValue, next);
+	return updatedEntry;
+}
+
+async function deleteAiResponse(campaignSlugValue, id) {
+	const responses = await readAiResponses(campaignSlugValue);
 	const next = responses.filter((entry) => entry.id !== String(id));
-	await writeAiResponses(next);
+	await writeAiResponses(campaignSlugValue, next);
 	return next;
 }
 
-async function clearAiResponses() {
-	await writeAiResponses([]);
+async function clearAiResponses(campaignSlugValue) {
+	await writeAiResponses(campaignSlugValue, []);
 	return [];
 }
 
@@ -572,7 +667,8 @@ async function exportCampaignBundle(slug) {
 			ENTITY_TYPES.map(async (type) => [type, await listEntities(slug, type)]),
 		),
 	);
-	return { meta, sessions, entities };
+	const aiResponses = await readAiResponses(slug);
+	return { meta, sessions, entities, aiResponses };
 }
 
 async function ensureUniqueCampaignSlug(baseSlug, ignoreSlug = null) {
@@ -743,8 +839,58 @@ function replaceImageSlugReferences(value, oldSlug, newSlug) {
 	return JSON.parse(serialized.split(oldSegment).join(newSegment));
 }
 
+function replaceCampaignSlugFields(value, oldSlug, newSlug) {
+	if (!value || !oldSlug || !newSlug || oldSlug === newSlug) return value;
+	if (Array.isArray(value)) {
+		return value.map((item) => replaceCampaignSlugFields(item, oldSlug, newSlug));
+	}
+	if (typeof value !== "object") return value;
+
+	return Object.fromEntries(
+		Object.entries(value).map(([key, item]) => {
+			const shouldReplace =
+				["slug", "campaign"].includes(key) && item === oldSlug;
+			return [
+				key,
+				shouldReplace
+					? newSlug
+					: replaceCampaignSlugFields(item, oldSlug, newSlug),
+			];
+		}),
+	);
+}
+
+function normalizeImportedAiResponse(entry, sourceSlug, slug) {
+	const withImageRefs = replaceImageSlugReferences(entry, sourceSlug, slug);
+	const withCampaignRefs = replaceCampaignSlugFields(
+		withImageRefs,
+		sourceSlug,
+		slug,
+	);
+	return {
+		...withCampaignRefs,
+		path:
+			withCampaignRefs?.path && typeof withCampaignRefs.path === "object"
+				? { ...withCampaignRefs.path, campaign: slug }
+				: { campaign: slug, session: null, encounter: null },
+		changes: {
+			...(withCampaignRefs?.changes || {}),
+			resources: Array.isArray(withCampaignRefs?.changes?.resources)
+				? withCampaignRefs.changes.resources.map((resource) => ({
+						...resource,
+						campaign: slug,
+						label:
+							typeof resource.label === "string"
+								? resource.label.replace(sourceSlug, slug)
+								: resource.label,
+					}))
+				: [],
+		},
+	};
+}
+
 async function importCampaignBundle(bundle, options = {}) {
-	const { meta, sessions = [], entities = {} } = bundle;
+	const { meta, sessions = [], entities = {}, aiResponses = [] } = bundle;
 	if (!meta || !meta.name) throw new Error("Невірний формат бандла");
 	const sourceSlug = meta.slug || campaignSlug(meta.name);
 	const forcedSlug = options.forcedSlug
@@ -803,6 +949,15 @@ async function importCampaignBundle(bundle, options = {}) {
 				slug: entitySlug,
 			});
 		}
+	}
+
+	if (Array.isArray(aiResponses) && aiResponses.length > 0) {
+		await writeAiResponses(
+			slug,
+			aiResponses.map((entry) =>
+				normalizeImportedAiResponse(entry, sourceSlug, slug),
+			),
+		);
 	}
 
 	return newMeta;
@@ -1136,7 +1291,6 @@ module.exports = {
 	SPELLS_DIR,
 	IMAGES_DIR,
 	SETTINGS_PATH,
-	AI_RESPONSES_PATH,
 	ENTITY_TYPES,
 	DEFAULT_APP_SETTINGS,
 	createId,
@@ -1144,6 +1298,7 @@ module.exports = {
 	campaignSlug,
 	sessionFileName,
 	campaignDir,
+	campaignAiResponsesPath,
 	campaignImagesDir,
 	characterDir,
 	npcDir,
@@ -1164,6 +1319,8 @@ module.exports = {
 	writeFavorites,
 	readAiResponses,
 	addAiResponse,
+	getAiResponse,
+	updateAiResponse,
 	deleteAiResponse,
 	clearAiResponses,
 	readSettings,

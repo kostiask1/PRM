@@ -243,6 +243,141 @@ function getHistoryDetailRows(entry, language) {
 	return rows;
 }
 
+function getHistoryChangeResources(entry) {
+	return Array.isArray(entry?.changes?.resources)
+		? entry.changes.resources
+		: [];
+}
+
+function hasHistoryChanges(entry) {
+	return getHistoryChangeResources(entry).length > 0;
+}
+
+function getHistoryTitle(entry) {
+	const requestText = getHistoryRequestText(entry);
+	if (requestText) return requestText;
+	if (hasHistoryChanges(entry)) return lang.t("AI changes");
+	return getResponsePreview(entry?.text) || lang.t("AI response");
+}
+
+function getHistoryChangeSummary(entry) {
+	const summary = entry?.changes?.summary || {};
+	const total =
+		Number(summary.total) || getHistoryChangeResources(entry).length || 0;
+	if (!total) return "";
+	const parts = [];
+	if (summary.added) parts.push(`+${summary.added}`);
+	if (summary.deleted) parts.push(`-${summary.deleted}`);
+	if (summary.modified) parts.push(`~${summary.modified}`);
+	return `${lang.t("Changes")}: ${parts.length ? parts.join(" ") : total}`;
+}
+
+function getAiResponseStateLabel(entry) {
+	if (entry?.applyState === "applied") return lang.t("Applied");
+	if (entry?.applyState === "undone") return lang.t("Undone");
+	return "";
+}
+
+function snapshotToDiffText(value) {
+	if (value === null || value === undefined) return "";
+	return JSON.stringify(value, null, 2);
+}
+
+function splitDiffText(value) {
+	const text = snapshotToDiffText(value);
+	return text ? text.split(/\r?\n/) : [];
+}
+
+function createLineDiff(before, after) {
+	const oldLines = splitDiffText(before);
+	const newLines = splitDiffText(after);
+	if (oldLines.length === 0 && newLines.length === 0) return [];
+
+	if (oldLines.length * newLines.length > 200000) {
+		return [
+			...oldLines.map((text, index) => ({
+				type: "removed",
+				oldNumber: index + 1,
+				newNumber: null,
+				text,
+			})),
+			...newLines.map((text, index) => ({
+				type: "added",
+				oldNumber: null,
+				newNumber: index + 1,
+				text,
+			})),
+		];
+	}
+
+	const dp = Array.from({ length: oldLines.length + 1 }, () =>
+		Array(newLines.length + 1).fill(0),
+	);
+	for (let i = oldLines.length - 1; i >= 0; i -= 1) {
+		for (let j = newLines.length - 1; j >= 0; j -= 1) {
+			dp[i][j] =
+				oldLines[i] === newLines[j]
+					? dp[i + 1][j + 1] + 1
+					: Math.max(dp[i + 1][j], dp[i][j + 1]);
+		}
+	}
+
+	const lines = [];
+	let i = 0;
+	let j = 0;
+	let oldNumber = 1;
+	let newNumber = 1;
+	while (i < oldLines.length || j < newLines.length) {
+		if (i < oldLines.length && j < newLines.length && oldLines[i] === newLines[j]) {
+			lines.push({
+				type: "context",
+				oldNumber,
+				newNumber,
+				text: oldLines[i],
+			});
+			i += 1;
+			j += 1;
+			oldNumber += 1;
+			newNumber += 1;
+		} else if (
+			j >= newLines.length ||
+			(i < oldLines.length && dp[i + 1][j] >= dp[i][j + 1])
+		) {
+			lines.push({
+				type: "removed",
+				oldNumber,
+				newNumber: null,
+				text: oldLines[i],
+			});
+			i += 1;
+			oldNumber += 1;
+		} else {
+			lines.push({
+				type: "added",
+				oldNumber: null,
+				newNumber,
+				text: newLines[j],
+			});
+			j += 1;
+			newNumber += 1;
+		}
+	}
+	return lines;
+}
+
+function getDiffResourceState(resource) {
+	if (resource.before === null && resource.after !== null) return lang.t("Added");
+	if (resource.before !== null && resource.after === null) return lang.t("Deleted");
+	return lang.t("Modified");
+}
+
+function buildDiffResources(entry) {
+	return getHistoryChangeResources(entry).map((resource) => ({
+		...resource,
+		lines: createLineDiff(resource.before, resource.after),
+	}));
+}
+
 export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	const dispatch = useAppDispatch();
 	const currentLanguage = useAppSelector(
@@ -304,6 +439,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	const [selectedResponseId, setSelectedResponseId] = useState(null);
 	const [selectedResponseEntry, setSelectedResponseEntry] = useState(null);
 	const [responseHistory, setResponseHistory] = useState([]);
+	const [isRestoringResponse, setIsRestoringResponse] = useState(false);
 	const activeGenerateControllerRef = useRef(null);
 	const generatedPromptRef = useRef(null);
 	const [canCancelGenerate, setCanCancelGenerate] = useState(false);
@@ -462,16 +598,16 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	}, [isOpen, aiModels.length, selectedModel]);
 
 	useEffect(() => {
-		if (!isOpen) return;
+		if (!isOpen || !initialRoute.campaign) return;
 		api
-			.listAiResponses()
+			.listAiResponses(initialRoute.campaign)
 			.then((responses) => {
 				setResponseHistory(Array.isArray(responses) ? responses : []);
 			})
 			.catch((err) => {
 				console.error("Failed to load AI response history", err);
 			});
-	}, [isOpen]);
+	}, [isOpen, initialRoute.campaign]);
 
 	const deleteResponseHistoryEntry = async (entry) => {
 		const confirmed = await dispatch(
@@ -483,7 +619,10 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 		if (!confirmed) return;
 
 		try {
-			const responses = await api.deleteAiResponse(entry.id);
+			const responses = await api.deleteAiResponse(
+				initialRoute.campaign,
+				entry.id,
+			);
 			setResponseHistory(Array.isArray(responses) ? responses : []);
 			if (selectedResponseId === entry.id) {
 				closeGeneratedPrompt();
@@ -503,11 +642,103 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 		if (!confirmed) return;
 
 		try {
-			const responses = await api.clearAiResponses();
+			const responses = await api.clearAiResponses(initialRoute.campaign);
 			setResponseHistory(Array.isArray(responses) ? responses : []);
 			closeGeneratedPrompt();
 		} catch (err) {
 			dispatch(alert({ title: lang.t("Delete error"), message: err.message }));
+		}
+	};
+
+	const upsertResponseHistoryEntry = (entry) => {
+		if (!entry?.id) return;
+		setResponseHistory((prev) => [
+			entry,
+			...prev.filter((item) => item.id !== entry.id),
+		]);
+		if (selectedResponseId === entry.id) {
+			setSelectedResponseEntry(entry);
+			setGeneratedPrompt(entry.text);
+		}
+	};
+
+	const refreshAfterAiHistoryRestore = (result, entry) => {
+		if (Array.isArray(result?.responses)) {
+			setResponseHistory(result.responses);
+		} else if (result?.response) {
+			upsertResponseHistoryEntry(result.response);
+		}
+
+		const nextEntry = result?.response || entry;
+		if (nextEntry?.id === selectedResponseId) {
+			setSelectedResponseEntry(nextEntry);
+			setGeneratedPrompt(nextEntry.text);
+		}
+
+		const updated = result?.updated;
+		if (updated && typeof updated === "object" && onInsertResult) {
+			const entryPath = nextEntry?.path || {};
+			const updatedIsSessionLike =
+				updated.data && typeof updated.data === "object";
+			const isSameCampaign = entryPath.campaign === initialRoute.campaign;
+			const canApplyDirectly =
+				(isCampaign &&
+					isSameCampaign &&
+					!entryPath.session &&
+					!updatedIsSessionLike) ||
+				(!isCampaign &&
+					isSameCampaign &&
+					entryPath.session === initialRoute.session &&
+					updatedIsSessionLike);
+
+			if (canApplyDirectly) {
+				onInsertResult(updated);
+			}
+		}
+
+		dispatch(requestCampaignsReloadAction());
+		dispatch(refreshEntitiesAction());
+	};
+
+	const restoreAiHistoryEntry = async (entry, mode) => {
+		if (!entry?.id || isRestoringResponse) return;
+		const isUndo = mode === "undo";
+		const confirmed = await dispatch(
+			confirm({
+				title: isUndo
+					? lang.t("Undo AI changes")
+					: lang.t("Apply AI changes"),
+				message: isUndo
+					? lang.t(
+							"Restore data to the state before this AI response? Newer edits in these resources may be overwritten.",
+						)
+					: lang.t(
+							"Restore data to the state after this AI response? Newer edits in these resources may be overwritten.",
+						),
+			}),
+		);
+		if (!confirmed) return;
+
+		setIsRestoringResponse(true);
+		try {
+			const result = isUndo
+				? await api.undoAiResponse(initialRoute.campaign, entry.id)
+				: await api.applyAiResponse(initialRoute.campaign, entry.id);
+			refreshAfterAiHistoryRestore(result, entry);
+			setNotification(
+				isUndo
+					? lang.t("AI changes undone.")
+					: lang.t("AI changes applied successfully!"),
+			);
+		} catch (err) {
+			dispatch(
+				alert({
+					title: lang.t("AI history error"),
+					message: err.message || lang.t("Unknown error"),
+				}),
+			);
+		} finally {
+			setIsRestoringResponse(false);
 		}
 	};
 
@@ -710,12 +941,12 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 					text: data.prompt,
 					createdAt: new Date().toISOString(),
 				};
-				setResponseHistory((prev) => [
-					historyEntry,
-					...prev.filter((entry) => entry.id !== historyEntry.id),
-				]);
+				upsertResponseHistoryEntry(historyEntry);
 				showGeneratedPrompt(historyEntry);
 			} else if (data.updated) {
+				if (data.aiResponse) {
+					upsertResponseHistoryEntry(data.aiResponse);
+				}
 				const updatedIsSessionLike =
 					data.updated &&
 					typeof data.updated === "object" &&
@@ -816,6 +1047,8 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 		selectedResponseEntry,
 		currentLanguage,
 	);
+	const selectedResponseDiffResources = buildDiffResources(selectedResponseEntry);
+	const selectedResponseHasChanges = selectedResponseDiffResources.length > 0;
 	const isResponseParsingLocked = generateEncounters;
 
 	const renderCampaignEntityContext = ({
@@ -1351,22 +1584,60 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 							>
 								<div className="AiAssistant__prompt-result-wrap">
 									<div className="AiAssistant__prompt-result-actions">
-										<Button
-											variant="ghost"
-											size={Button.SIZES.SMALL}
-											icon={isGeneratedPromptCopied ? "check" : "copy"}
-											onClick={copyGeneratedPrompt}
-											title={lang.t("Copy formatted text for Word")}
-										/>
+										{selectedResponseHasChanges && (
+											<>
+												<Button
+													variant="ghost"
+													size={Button.SIZES.SMALL}
+													icon="undo"
+													onClick={() =>
+														restoreAiHistoryEntry(
+															selectedResponseEntry,
+															"undo",
+														)
+													}
+													disabled={isRestoringResponse}
+													title={lang.t("Undo AI changes")}
+												>
+													{lang.t("Undo")}
+												</Button>
+												<Button
+													variant="primary"
+													size={Button.SIZES.SMALL}
+													icon="check"
+													onClick={() =>
+														restoreAiHistoryEntry(
+															selectedResponseEntry,
+															"apply",
+														)
+													}
+													disabled={isRestoringResponse}
+													title={lang.t("Apply AI changes")}
+												>
+													{lang.t("Apply")}
+												</Button>
+											</>
+										)}
+										{!selectedResponseHasChanges && (
+											<Button
+												variant="ghost"
+												size={Button.SIZES.SMALL}
+												icon={isGeneratedPromptCopied ? "check" : "copy"}
+												onClick={copyGeneratedPrompt}
+												title={lang.t("Copy formatted text for Word")}
+											/>
+										)}
 									</div>
-									<div
-										className="AiAssistant__prompt-result"
-										ref={generatedPromptRef}
-									>
-										<ReactMarkdown components={markdownMentionComponents}>
-											{generatedPrompt}
-										</ReactMarkdown>
-									</div>
+									{!selectedResponseHasChanges && (
+										<div
+											className="AiAssistant__prompt-result"
+											ref={generatedPromptRef}
+										>
+											<ReactMarkdown components={markdownMentionComponents}>
+												{generatedPrompt}
+											</ReactMarkdown>
+										</div>
+									)}
 									{selectedResponseDetails.length > 0 && (
 										<div className="AiAssistant__response-details">
 											<div className="AiAssistant__response-details-title">
@@ -1383,6 +1654,51 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 													<span className="AiAssistant__response-details-value">
 														{row.value}
 													</span>
+												</div>
+											))}
+										</div>
+									)}
+									{selectedResponseHasChanges && (
+										<div className="AiAssistant__diff">
+											<div className="AiAssistant__diff-title">
+												<span>{lang.t("Changes")}</span>
+												<span>{getHistoryChangeSummary(selectedResponseEntry)}</span>
+											</div>
+											{selectedResponseDiffResources.map((resource) => (
+												<div
+													key={resource.id}
+													className="AiAssistant__diff-file"
+												>
+													<div className="AiAssistant__diff-file-header">
+														<span>{resource.label}</span>
+														<span>{getDiffResourceState(resource)}</span>
+													</div>
+													<div className="AiAssistant__diff-lines">
+														{resource.lines.map((line, index) => (
+															<div
+																key={`${resource.id}-${index}`}
+																className={classNames(
+																	"AiAssistant__diff-line",
+																	`is-${line.type}`,
+																)}
+															>
+																<span className="AiAssistant__diff-line-number">
+																	{line.oldNumber || ""}
+																</span>
+																<span className="AiAssistant__diff-line-number">
+																	{line.newNumber || ""}
+																</span>
+																<span className="AiAssistant__diff-line-marker">
+																	{line.type === "added"
+																		? "+"
+																		: line.type === "removed"
+																			? "-"
+																			: " "}
+																</span>
+																<code>{line.text || " "}</code>
+															</div>
+														))}
+													</div>
 												</div>
 											))}
 										</div>
@@ -1439,7 +1755,9 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 								</div>
 								<div className="AiAssistant__response-history-list">
 									{responseHistory.map((entry) => {
-										const responsePreview = getResponsePreview(entry.text);
+										const responsePreview = getHistoryTitle(entry);
+										const changeSummary = getHistoryChangeSummary(entry);
+										const stateLabel = getAiResponseStateLabel(entry);
 										return (
 											<ListCard
 												key={entry.id}
@@ -1465,6 +1783,8 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 															currentLanguage,
 														)}
 													</span>
+													{changeSummary && <span>{changeSummary}</span>}
+													{stateLabel && <span>{stateLabel}</span>}
 												</div>
 											</ListCard>
 										);

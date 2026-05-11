@@ -699,6 +699,31 @@ await run("storage updates bracketed entity mentions after rename", async () => 
 	});
 });
 
+await run("storage keeps AI response history per campaign", async () => {
+	await withTestSlug("ai-history-a", async (firstSlug) => {
+		await withTestSlug("ai-history-b", async (secondSlug) => {
+			await storage.addAiResponse({
+				text: "Відповідь для першої кампанії",
+				path: { campaign: firstSlug, session: null, encounter: null },
+			});
+			await storage.addAiResponse({
+				text: "Відповідь для другої кампанії",
+				path: { campaign: secondSlug, session: null, encounter: null },
+			});
+
+			const firstHistory = await storage.readAiResponses(firstSlug);
+			const secondHistory = await storage.readAiResponses(secondSlug);
+
+			assert.equal(firstHistory.length, 1);
+			assert.equal(secondHistory.length, 1);
+			assert.equal(firstHistory[0].path.campaign, firstSlug);
+			assert.equal(secondHistory[0].path.campaign, secondSlug);
+			assert.equal(firstHistory[0].text.includes("першої"), true);
+			assert.equal(secondHistory[0].text.includes("другої"), true);
+		});
+	});
+});
+
 await run("classNames merges strings arrays objects and falsy values", () => {
 	assert.equal(classNames("a", "b"), "a b");
 	assert.equal(

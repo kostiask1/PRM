@@ -321,7 +321,9 @@
 
 .AiAssistant__prompt-result-actions {
 	display: flex;
+	flex-wrap: wrap;
 	justify-content: flex-end;
+	gap: var(--space-2);
 }
 
 .AiAssistant__prompt-result {
@@ -369,6 +371,126 @@
 .AiAssistant__response-details-value {
 	white-space: pre-wrap;
 	word-break: break-word;
+}
+
+.AiAssistant__diff {
+	margin-top: var(--space-4);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--bg-2);
+	overflow: hidden;
+	font-size: 0.82rem;
+}
+
+.AiAssistant__diff-title {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-3);
+	padding: var(--space-2) var(--space-3);
+	border-bottom: 1px solid var(--border);
+	background: color-mix(in srgb, var(--panel-2), transparent 25%);
+	color: var(--text-bright);
+	font-weight: 700;
+	text-transform: uppercase;
+	font-size: 0.72rem;
+	letter-spacing: 0.04em;
+}
+
+.AiAssistant__diff-title span:last-child {
+	color: var(--muted);
+	font-weight: 600;
+	text-transform: none;
+}
+
+.AiAssistant__diff-file + .AiAssistant__diff-file {
+	border-top: 1px solid var(--border);
+}
+
+.AiAssistant__diff-file-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-3);
+	padding: var(--space-2) var(--space-3);
+	background: var(--panel-2);
+	color: var(--text-bright);
+	font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+	font-size: 0.78rem;
+}
+
+.AiAssistant__diff-file-header span:first-child {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.AiAssistant__diff-file-header span:last-child {
+	flex: 0 0 auto;
+	color: var(--muted);
+	font-family: inherit;
+}
+
+.AiAssistant__diff-lines {
+	max-height: 440px;
+	overflow: auto;
+	background: var(--bg);
+}
+
+.AiAssistant__diff-line {
+	display: grid;
+	width: max-content;
+	grid-template-columns: 48px 48px 24px minmax(0, 1fr);
+	font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+	line-height: 1.45;
+	color: var(--text);
+}
+
+.AiAssistant__diff-line-number,
+.AiAssistant__diff-line-marker {
+	user-select: none;
+	color: var(--muted);
+	text-align: right;
+	padding: 1px 8px;
+	border-right: 1px solid color-mix(in srgb, var(--border), transparent 35%);
+}
+
+.AiAssistant__diff-line-marker {
+	text-align: center;
+	padding-left: 0;
+	padding-right: 0;
+}
+
+.AiAssistant__diff-line code {
+	display: block;
+	min-width: 0;
+	white-space: pre;
+	padding: 1px 10px;
+	background: transparent;
+	border: 0;
+	border-radius: 0;
+	color: inherit;
+}
+
+.AiAssistant__diff-line.is-added {
+	background: color-mix(in srgb, #2da44e, transparent 84%);
+	color: var(--text-bright);
+}
+
+.AiAssistant__diff-line.is-added .AiAssistant__diff-line-marker {
+	color: #2da44e;
+	font-weight: 700;
+}
+
+.AiAssistant__diff-line.is-removed {
+	background: color-mix(in srgb, #d1242f, transparent 84%);
+	color: var(--text-bright);
+}
+
+.AiAssistant__diff-line.is-removed .AiAssistant__diff-line-marker {
+	color: #d1242f;
+	font-weight: 700;
 }
 
 .AiAssistant__prompt-result > :first-child,

@@ -166,13 +166,31 @@ export const api = {
 			method: "POST",
 			body: JSON.stringify({ apiKey }),
 		}),
-	listAiResponses: () => api.request("/ai/responses"),
-	deleteAiResponse: (id) =>
-		api.request(`/ai/responses/${encodeURIComponent(id)}`, {
-			method: "DELETE",
-		}),
-	clearAiResponses: () =>
-		api.request("/ai/responses", {
+	listAiResponses: (campaign) =>
+		api.request(`/ai/responses?campaign=${encodeURIComponent(campaign)}`),
+	deleteAiResponse: (campaign, id) =>
+		api.request(
+			`/ai/responses/${encodeURIComponent(id)}?campaign=${encodeURIComponent(campaign)}`,
+			{
+				method: "DELETE",
+			},
+		),
+	applyAiResponse: (campaign, id) =>
+		api.request(
+			`/ai/responses/${encodeURIComponent(id)}/apply?campaign=${encodeURIComponent(campaign)}`,
+			{
+				method: "POST",
+			},
+		),
+	undoAiResponse: (campaign, id) =>
+		api.request(
+			`/ai/responses/${encodeURIComponent(id)}/undo?campaign=${encodeURIComponent(campaign)}`,
+			{
+				method: "POST",
+			},
+		),
+	clearAiResponses: (campaign) =>
+		api.request(`/ai/responses?campaign=${encodeURIComponent(campaign)}`, {
 			method: "DELETE",
 		}),
 	generateAi: (payload, options = {}) =>
