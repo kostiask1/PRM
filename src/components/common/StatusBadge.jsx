@@ -7,6 +7,7 @@ export default function StatusBadge({
 	onClick,
 	className = "",
 	type = "campaign",
+	title,
 }) {
 	let label = "";
 	if (completed) {
@@ -20,6 +21,8 @@ export default function StatusBadge({
 			className={classNames("StatusBadge", className, {
 				"StatusBadge--done": completed,
 			})}
+			title={title || label}
+			aria-label={title || label}
 			onClick={onClick}
 		>
 			{label}

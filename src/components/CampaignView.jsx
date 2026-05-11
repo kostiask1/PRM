@@ -125,17 +125,25 @@ function CampaignView(props) {
 	const renderSessionCard = (session, isDragging = false) => (
 		<ListCard
 			key={session.fileName}
+			className="CampaignView__sessionCard"
 			href={viewModel.buildSessionHref(session.fileName)}
 			dragging={isDragging}
 			onClick={() => navigateTo(campaign.slug, session.fileName)}
 			actions={
 				<>
 					<StatusBadge
+						className="CampaignView__sessionStatus"
 						completed={session.completed}
 						onClick={() => view.handleToggleSessionStatus(session)}
+						title={
+							session.completed
+								? lang.t("Completed")
+								: lang.t("In preparation")
+						}
 						type="session"
 					/>
 					<Button
+						className="CampaignView__sessionDelete"
 						variant="danger"
 						icon="trash"
 						size={Button.SIZES.SMALL}
@@ -150,8 +158,12 @@ function CampaignView(props) {
 			}
 		>
 			<div className="ListCard__title">{session.name}</div>
-			<div className="ListCard__meta">
-				{lang.t("Updated")}:{" "}
+			<div
+				className="ListCard__meta"
+				title={`${lang.t("Updated")}: ${viewModel.formatSessionUpdatedAt(
+					session.updatedAt,
+				)}`}
+			>
 				{viewModel.formatSessionUpdatedAt(session.updatedAt)}
 			</div>
 		</ListCard>
