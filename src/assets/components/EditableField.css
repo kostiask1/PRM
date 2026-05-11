@@ -55,7 +55,7 @@
 
 .MarkdownView--editable:empty::before {
 	content: attr(data-placeholder);
-	color: var(--text-muted);
+	color: var(--muted);
 	pointer-events: none;
 }
 
