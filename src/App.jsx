@@ -195,6 +195,7 @@ export default function App() {
 				openModalRequest({
 					title: lang.t("Choose mention"),
 					type: "confirm",
+					className: "MentionPickerModal",
 					showFooter: false,
 					onCancelAction: () => {
 						cancel();

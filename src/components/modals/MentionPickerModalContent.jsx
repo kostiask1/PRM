@@ -25,6 +25,23 @@ export default function MentionPickerModalContent({
 			fullName.includes(normalizedQuery)
 		);
 	});
+	const groups = [
+		{
+			key: "characters",
+			title: lang.t("Characters"),
+			items: filteredEntities.filter((entity) => entity.type === "characters"),
+		},
+		{
+			key: "npc",
+			title: lang.t("NPCs"),
+			items: filteredEntities.filter((entity) => entity.type === "npc"),
+		},
+		{
+			key: "locations",
+			title: lang.t("Locations/Factions"),
+			items: filteredEntities.filter((entity) => entity.type === "locations"),
+		},
+	];
 
 	return (
 		<div className="MentionPicker">
@@ -35,28 +52,30 @@ export default function MentionPickerModalContent({
 				autoFocus
 			/>
 
-			<div className="MentionPicker__list">
-				{filteredEntities.length > 0 ? (
-					filteredEntities.map((entity) => (
-						<button
-							key={`${entity.type}-${entity.id}-${entity.name}`}
-							type="button"
-							className="MentionPicker__item"
-							onClick={() => onSelect(entity.name)}
-						>
-							<span>{entity.name}</span>
-							<span className="muted">
-								{entity.type === "locations"
-									? lang.t("Location/Faction")
-									: entity.type === "npc"
-										? "NPC"
-										: lang.t("Character")}
-							</span>
-						</button>
-					))
-				) : (
-					<p className="muted">{lang.t("Nothing found.")}</p>
-				)}
+			<div className="MentionPicker__columns">
+				{groups.map((group) => (
+					<section key={group.key} className="MentionPicker__column">
+						<h4 className="MentionPicker__column-title">{group.title}</h4>
+						<div className="MentionPicker__list">
+							{group.items.length > 0 ? (
+								group.items.map((entity) => (
+									<button
+										key={`${entity.type}-${entity.id}-${entity.name}`}
+										type="button"
+										className="MentionPicker__item"
+										onClick={() => onSelect(entity.name)}
+									>
+										<span>{entity.name}</span>
+									</button>
+								))
+							) : (
+								<p className="muted MentionPicker__empty">
+									{lang.t("Nothing found.")}
+								</p>
+							)}
+						</div>
+					</section>
+				))}
 			</div>
 
 			<div className="MentionPicker__actions">
