@@ -8,6 +8,11 @@
 	margin-bottom: 0;
 }
 
+.DraggableList.is-list-dragging,
+.DraggableList.is-list-dragging>div {
+	overflow-anchor: none;
+}
+
 .DraggableList>div.is-dragging {
 	opacity: 0.5;
 	cursor: grabbing;
