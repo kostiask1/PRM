@@ -56,7 +56,7 @@
 }
 
 .character-card__row-trio>* {
-    flex: 1;
+    flex: 1 1 auto;
     min-width: 0;
 }
 
