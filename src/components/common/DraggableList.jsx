@@ -14,6 +14,7 @@ export default function DraggableList({
 	className = "",
 	itemClassName = "",
 	dragData,
+	isolateDragEvents = false,
 }) {
 	const [draggingIndex, setDraggingIndex] = useState(null);
 	const isListDragRef = useRef(false);
@@ -26,6 +27,7 @@ export default function DraggableList({
 	};
 
 	const handleDragStart = (e, index) => {
+		if (isolateDragEvents) e.stopPropagation();
 		if (isNativeMediaDrag(e)) {
 			isListDragRef.current = false;
 			setDraggingIndex(null);
@@ -47,6 +49,7 @@ export default function DraggableList({
 	};
 
 	const handleDragOver = (e, targetIndex) => {
+		if (isolateDragEvents) e.stopPropagation();
 		e.preventDefault();
 		if (!isListDragRef.current) return;
 		const sourceIndex = draggingIndexRef.current;
@@ -69,7 +72,8 @@ export default function DraggableList({
 		onReorder(newList);
 	};
 
-	const handleDragEnd = () => {
+	const handleDragEnd = (e) => {
+		if (isolateDragEvents) e.stopPropagation();
 		const wasListDrag = isListDragRef.current;
 		isListDragRef.current = false;
 		draggingIndexRef.current = null;
@@ -84,8 +88,11 @@ export default function DraggableList({
 					key={keyExtractor(item)}
 					draggable
 					onDragStart={(e) => handleDragStart(e, index)}
-					onDragEnd={handleDragEnd}
+					onDragEnd={(e) => handleDragEnd(e)}
 					onDragOver={(e) => handleDragOver(e, index)}
+					onDrop={(e) => {
+						if (isolateDragEvents) e.stopPropagation();
+					}}
 					className={classNames(itemClassName, {
 						"is-dragging": draggingIndex === index,
 					})}

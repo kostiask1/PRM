@@ -2,13 +2,14 @@ import { useRef } from "react";
 
 import Button from "./form/Button";
 import EditableField from "./form/EditableField";
+import DraggableList from "./common/DraggableList.jsx";
 import ImageAssetField from "./ImageAssetField";
 import NoteCard from "./common/NoteCard.jsx";
 import CollapseToggleButton from "./common/CollapseToggleButton.jsx";
 import LocationCardModel from "../models/LocationCardModel.js";
 import classNames from "../utils/classNames";
 import { lang } from "../services/localization";
-import { getNotesForRender } from "../utils/noteUtils";
+import { getNotesForRender, sanitizeNotesForSave } from "../utils/noteUtils";
 import { useAppSelector } from "../store/appStore";
 import "../assets/components/LocationCard.css";
 
@@ -79,6 +80,10 @@ export default function LocationCard({
 
 	const handleNoteDelete = (noteId) => {
 		updateField("notes", locationModel.withDeletedNote(noteId));
+	};
+
+	const handleNotesReorder = (newNotes) => {
+		updateField("notes", sanitizeNotesForSave(newNotes));
 	};
 
 	const displayName =
@@ -195,12 +200,17 @@ export default function LocationCard({
 									<label>{lang.t("Notes")}</label>
 								</div>
 								{!isNotesCollapsed && (
-									<div className="location-card__notes-list">
-										{notesForRender.map((note, index) => (
+									<DraggableList
+										items={notesForRender}
+										className="location-card__notes-list"
+										onReorder={handleNotesReorder}
+										keyExtractor={(note) => note.id}
+										isolateDragEvents
+										renderItem={(note, isDragging, index) => (
 											<NoteCard
-												key={note.id}
 												note={note}
 												isLast={index === notesForRender.length - 1}
+												isDragging={isDragging}
 												campaignSlug={campaignSlug}
 												onToggleCollapse={(id) => {
 													updateField(
@@ -212,8 +222,8 @@ export default function LocationCard({
 												onTextChange={handleNoteTextChange}
 												onDelete={handleNoteDelete}
 											/>
-										))}
-									</div>
+										)}
+									/>
 								)}
 							</div>
 						</div>
