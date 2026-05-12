@@ -1003,9 +1003,9 @@ export default function useCampaignView(props) {
 		}
 	};
 
-	const handleSessionReorderDrop = useCallback(() => {
+	const handleSessionReorderDrop = useCallback((nextSessions = sessions) => {
 		const orders = {};
-		sessions.forEach((item, idx) => {
+		nextSessions.forEach((item, idx) => {
 			orders[item.fileName] = idx;
 		});
 		api.reorderSessions(campaign.slug, orders);

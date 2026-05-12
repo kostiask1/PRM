@@ -736,8 +736,10 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 		[syncSelectedInstance],
 	);
 
-	const handleMonstersDrop = useCallback(() => {
-		const current = encounterRef.current;
+	const handleMonstersDrop = useCallback((nextMonsters = null) => {
+		const current = nextMonsters
+			? { ...encounterRef.current, monsters: nextMonsters }
+			: encounterRef.current;
 		if (!current) return;
 		const start = reorderStartRef.current;
 		reorderStartRef.current = null;

@@ -235,7 +235,7 @@ export default function Sidebar({
 						items={localCampaigns}
 						className="Sidebar__list"
 						onReorder={setLocalCampaigns}
-						onDrop={() => handleDragEnd(localCampaigns)}
+						onDrop={handleDragEnd}
 						keyExtractor={(c) => c.slug}
 						renderItem={(campaign, isDragging) => (
 							<ListCard

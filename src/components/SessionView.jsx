@@ -164,7 +164,6 @@ function SessionView(props) {
 								onReorder={(notes) =>
 									view.updateData("notes", sanitizeNotesForSave(notes))
 								}
-								onDrop={() => view.flushPendingSave()}
 								keyExtractor={(note) => note.id}
 								isItemDraggable={(note) => !note._isVirtual}
 								renderItem={(note, isDragging, index) => (
@@ -211,7 +210,6 @@ function SessionView(props) {
 							<DraggableList
 								items={viewModel.scenes}
 								onReorder={(newScenes) => view.updateData("scenes", newScenes)}
-								onDrop={() => view.flushPendingSave()}
 								keyExtractor={(scene) => scene.id}
 								renderItem={(scene) => {
 									const idx = viewModel.scenes.findIndex(
@@ -250,7 +248,6 @@ function SessionView(props) {
 											onSceneNotesReorder={(notes) =>
 												view.handleSceneNotesReorder(scene.id, notes)
 											}
-											onSceneNotesDrop={() => view.flushPendingSave()}
 											onSceneNoteToggleCollapse={(noteId) =>
 												view.handleSceneToggleNoteCollapse(scene.id, noteId)
 											}
@@ -386,7 +383,6 @@ function SceneCard(props) {
 									items={sceneNotesForRender}
 									className="SceneCard__notes-list"
 									onReorder={props.onSceneNotesReorder}
-									onDrop={props.onSceneNotesDrop}
 									keyExtractor={(note) => note.id}
 									isItemDraggable={(note) => !note._isVirtual}
 									isolateDragEvents
