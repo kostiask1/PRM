@@ -54,6 +54,19 @@
 	cursor: grabbing;
 }
 
+.DraggableList__preview {
+	position: fixed;
+	z-index: 10000;
+	pointer-events: none;
+	opacity: 0.82;
+	transform: rotate(0.5deg);
+	box-shadow: var(--shadow-lg, 0 18px 40px rgb(0 0 0 / 24%));
+}
+
+.DraggableList__preview .DraggableList__handle {
+	display: none;
+}
+
 body.prm-draggable-list-pressing,
 body.prm-draggable-list-pressing *,
 body.prm-draggable-list-dragging,

@@ -24,6 +24,7 @@ export default function DraggableList({
 	isolateDragEvents = false,
 }) {
 	const [draggingIndex, setDraggingIndex] = useState(null);
+	const [dragPreview, setDragPreview] = useState(null);
 	const listIdRef = useRef(`DraggableList-${nextListId++}`);
 	const listRef = useRef(null);
 	const itemsRef = useRef(items);
@@ -198,22 +199,45 @@ export default function DraggableList({
 			typeof dragData === "function"
 				? dragData(currentItems[pending.index], pending.index)
 				: null;
+		const draggedElement = getListItemFromPoint(event.clientX, event.clientY);
+		const draggedRect = draggedElement?.getBoundingClientRect();
 
 		dragStateRef.current = {
 			currentIndex: pending.index,
 			items: currentItems,
 			blockedTargetKey: null,
+			previewOffsetX: draggedRect ? event.clientX - draggedRect.left : 0,
+			previewOffsetY: draggedRect ? event.clientY - draggedRect.top : 0,
 			payload,
 		};
 		setDocumentDragMode(listRef.current?.ownerDocument || document, true);
 		draggingIndexRef.current = pending.index;
 		setDraggingIndex(pending.index);
+		if (draggedRect) {
+			setDragPreview({
+				item: currentItems[pending.index],
+				index: pending.index,
+				left: draggedRect.left,
+				top: draggedRect.top,
+				width: draggedRect.width,
+				height: draggedRect.height,
+			});
+		}
 		updatePointerDrag(event);
 	};
 
 	const updatePointerDrag = (event) => {
 		const dragState = dragStateRef.current;
 		if (!dragState) return;
+		setDragPreview((current) =>
+			current
+				? {
+						...current,
+						left: event.clientX - dragState.previewOffsetX,
+						top: event.clientY - dragState.previewOffsetY,
+					}
+				: current,
+		);
 
 		const sourceIndex = dragState.currentIndex;
 		const targetElement = getListItemFromPoint(event.clientX, event.clientY);
@@ -262,6 +286,7 @@ export default function DraggableList({
 		setDocumentPressMode(listRef.current?.ownerDocument || document, false);
 		setDocumentDragMode(listRef.current?.ownerDocument || document, false);
 		setDraggingIndex(null);
+		setDragPreview(null);
 
 		if (!dragState) return;
 
@@ -365,37 +390,52 @@ export default function DraggableList({
 	};
 
 	return (
-		<div
-			ref={listRef}
-			data-draggable-list-id={listIdRef.current}
-			className={classNames("DraggableList", className, {
-				"is-list-dragging": draggingIndex !== null,
-			})}
-			onClickCapture={handleClickCapture}
-		>
-			{items.map((item, index) => (
+		<>
+			<div
+				ref={listRef}
+				data-draggable-list-id={listIdRef.current}
+				className={classNames("DraggableList", className, {
+					"is-list-dragging": draggingIndex !== null,
+				})}
+				onClickCapture={handleClickCapture}
+			>
+				{items.map((item, index) => (
+					<div
+						key={keyExtractor(item)}
+						data-draggable-list-item="true"
+						data-draggable-list-item-index={index}
+						data-draggable-list-item-draggable={canDragItem(item, index)}
+						onPointerDown={(event) => handlePointerDown(event, index)}
+						className={classNames(itemClassName, {
+							"is-dragging": draggingIndex === index,
+						})}
+					>
+						{canDragItem(item, index) && (
+							<span
+								className="DraggableList__handle"
+								data-list-drag-handle="true"
+								aria-hidden="true"
+							>
+								<Icon name="drag-handle" size={18} strokeWidth={2} />
+							</span>
+						)}
+						{renderItem(item, draggingIndex === index, index)}
+					</div>
+				))}
+			</div>
+			{dragPreview && (
 				<div
-					key={keyExtractor(item)}
-					data-draggable-list-item="true"
-					data-draggable-list-item-index={index}
-					data-draggable-list-item-draggable={canDragItem(item, index)}
-					onPointerDown={(event) => handlePointerDown(event, index)}
-					className={classNames(itemClassName, {
-						"is-dragging": draggingIndex === index,
-					})}
+					className="DraggableList__preview"
+					style={{
+						left: `${dragPreview.left}px`,
+						top: `${dragPreview.top}px`,
+						width: `${dragPreview.width}px`,
+						minHeight: `${dragPreview.height}px`,
+					}}
 				>
-					{canDragItem(item, index) && (
-						<span
-							className="DraggableList__handle"
-							data-list-drag-handle="true"
-							aria-hidden="true"
-						>
-							<Icon name="drag-handle" size={18} strokeWidth={2} />
-						</span>
-					)}
-					{renderItem(item, draggingIndex === index, index)}
+					{renderItem(dragPreview.item, true, dragPreview.index)}
 				</div>
-			))}
-		</div>
+			)}
+		</>
 	);
 }
