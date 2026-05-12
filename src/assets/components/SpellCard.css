@@ -60,10 +60,6 @@
 	color: var(--text-bright);
 }
 
-.SpellCard .RollDice {
-	margin: 0 var(--space-1);
-}
-
 .SpellCard__list {
 	display: flex;
 	flex-direction: column;
