@@ -161,11 +161,29 @@ async function listCampaignSlugs() {
 async function getBestiaryIndex() {
 	if (!(await exists(BESTIARY_DIR))) return new Map();
 
+	const allPath = path.join(BESTIARY_DIR, "all.json");
+	if (await exists(allPath)) {
+		const data = await readJson(allPath);
+		const monsters = Array.isArray(data)
+			? data
+			: data.monster || data.monsters || data.results || [];
+		const index = new Map();
+		for (const m of monsters) {
+			if (!m.name) continue;
+			const monsterSource = String(m.source || "").toUpperCase();
+			const key = `${m.name.trim().toLowerCase()}|${monsterSource}`;
+			index.set(key, { ...m, source: monsterSource });
+		}
+		return index;
+	}
+
 	const entries = await fs.readdir(BESTIARY_DIR, { withFileTypes: true });
 	const files = entries.filter(
 		(e) =>
 			e.isFile() &&
 			e.name.endsWith(".json") &&
+			e.name !== "all.json" &&
+			e.name !== "index.json" &&
 			e.name !== "legendarygroups.json",
 	);
 

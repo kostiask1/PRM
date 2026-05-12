@@ -54,30 +54,14 @@ export default function Spells() {
 		loadSources();
 	}, []);
 
-	// Завантаження даних заклинань
+	// Завантаження всіх заклинань один раз; джерела далі фільтруються локально
 	useEffect(() => {
-		const isAll = selectedSource === "all";
-		if (isAll && sources.length === 0) return;
-
-		const params = new URLSearchParams(window.location.search);
-		params.set("s_source", selectedSource);
-		window.history.replaceState({}, "", `?${params.toString()}`);
+		if (sources.length === 0) return;
 
 		const loadData = async () => {
 			setLoading(true);
 			try {
-				let combinedList = [];
-				if (isAll) {
-					const results = await Promise.all(
-						sources.map((s) => api.getSpellData(s)),
-					);
-					results.forEach((data) => {
-						combinedList.push(...data);
-					});
-				} else {
-					const data = await api.getSpellData(selectedSource);
-					combinedList = data;
-				}
+				const combinedList = await api.getSpellData("all");
 				setAllSpells(combinedList);
 			} catch (error) {
 				console.error("Failed to load local spells", error);
@@ -86,18 +70,27 @@ export default function Spells() {
 			}
 		};
 		loadData();
-	}, [selectedSource, sources]);
+	}, [sources]);
+
+	useEffect(() => {
+		const params = new URLSearchParams(window.location.search);
+		params.set("s_source", selectedSource);
+		window.history.replaceState({}, "", `?${params.toString()}`);
+	}, [selectedSource]);
 
 	// Фільтрація
 	useEffect(() => {
 		const filtered = allSpells.filter((s) => {
+			const matchesSource =
+				selectedSource === "all" ||
+				s.source?.toUpperCase() === selectedSource.toUpperCase();
 			const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase());
 			const matchesLevel =
 				selectedLevel === "all" || String(s.level) === selectedLevel;
-			return matchesSearch && matchesLevel;
+			return matchesSource && matchesSearch && matchesLevel;
 		});
 		setSpells(filtered);
-	}, [search, allSpells, selectedLevel]);
+	}, [search, allSpells, selectedLevel, selectedSource]);
 
 	// початковий вибір
 	useEffect(() => {

@@ -353,6 +353,7 @@ async function loadBestiaryFiles() {
 		if (
 			!entry.isFile() ||
 			!name.endsWith(".json") ||
+			name === "all.json" ||
 			name === "legendarygroups.json" ||
 			name === "index.json"
 		) {

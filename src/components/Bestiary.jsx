@@ -33,8 +33,9 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 
 	const displayedMonsters = useMemo(() => {
 		let list = [...monsters];
-		if (sortOrder === "none")
-			list = list.sort((a, b) => a.name.localeCompare(b.name));
+		if (sortOrder === "none") {
+			return list.sort((a, b) => a.name.localeCompare(b.name));
+		}
 
 		return list.sort((a, b) => {
 			const crA = parseCR(a);
@@ -74,40 +75,20 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 		loadInitialData();
 	}, []); // Залежності порожні, щоб завантажувати один раз
 
-	// Завантаження повного списку монстрів з обраного джерела
+	// Завантаження повного списку монстрів один раз; джерела далі фільтруються локально
 	useEffect(() => {
-		const isAll = selectedSource === "all";
-		if (isAll && sources.length === 0) return;
-
-		const params = new URLSearchParams(window.location.search);
-		params.set("source", selectedSource);
-		window.history.replaceState({}, "", `?${params.toString()}`);
+		if (sources.length === 0) return;
 
 		const loadData = async () => {
 			setLoading(true);
 			try {
-				let combinedList = [];
-
-				if (isAll) {
-					const results = await Promise.all(
-						sources.map((s) => api.getBestiaryData(s)),
-					);
-					results.forEach((data) => {
-						const list = Array.isArray(data)
-							? data
-							: data.monster || data.monsters || data.results || [];
-						combinedList.push(...list);
-					});
-				} else {
-					const data = await api.getBestiaryData(selectedSource);
-					combinedList = Array.isArray(data)
-						? data
-						: data.monster || data.monsters || data.results || [];
-				}
+				const data = await api.getBestiaryData("all");
+				const combinedList = Array.isArray(data)
+					? data
+					: data.monster || data.monsters || data.results || [];
 
 				// Об'єднуємо дані монстрів з легендарними діями/регіональними ефектами
 
-				// TODO: Реалізувати resolution для _copy монстрів на сервері
 				const enrichedMonsters = combinedList.map((monster) => {
 					// Шукаємо групу: або за спеціальним посиланням legendaryGroup, або за ім'ям самого монстра
 					const groupRef = monster.legendaryGroup;
@@ -115,7 +96,9 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 					const targetSource = groupRef?.source || monster.source;
 
 					const legendaryEntry = legendaryGroups.find(
-						(lg) => lg.name === targetName && lg.source === targetSource,
+						(lg) =>
+							lg.name === targetName &&
+							lg.source?.toUpperCase() === targetSource?.toUpperCase(),
 					);
 					if (legendaryEntry) {
 						return {
@@ -134,11 +117,22 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			}
 		};
 		loadData();
-	}, [selectedSource, sources, legendaryGroups]); // Додаємо legendaryGroups до залежностей
+	}, [sources, legendaryGroups]);
+
+	useEffect(() => {
+		const params = new URLSearchParams(window.location.search);
+		params.set("source", selectedSource);
+		window.history.replaceState({}, "", `?${params.toString()}`);
+	}, [selectedSource]);
 
 	// Локальна фільтрація списку за пошуковим запитом
 	useEffect(() => {
 		const filtered = allMonsters.filter((m) => {
+			const matchesSource =
+				selectedSource === "all" ||
+				m.source?.toUpperCase() === selectedSource.toUpperCase();
+			if (!matchesSource) return false;
+
 			const isFav = favorites.some(
 				(f) =>
 					f.name === m.name &&
@@ -147,11 +141,9 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			if (onlyFavorites && !isFav) return false;
 
 			return matchesMonsterSearch(m, search);
-
-			// Покращений пошук по типу: об'єднуємо базовий тип (включаючи choose) та теги
 		});
 		setMonsters(filtered);
-	}, [search, allMonsters, onlyFavorites, favorites]);
+	}, [search, allMonsters, onlyFavorites, favorites, selectedSource]);
 
 	const handleToggleFavorite = async (monster) => {
 		try {
