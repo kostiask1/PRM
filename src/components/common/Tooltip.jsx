@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import "../../assets/components/Tooltip.css";
 import classNames from "../../utils/classNames";
@@ -11,6 +11,11 @@ let activeTooltipId = null;
 const activeSubscribers = new Set();
 const tooltipParentById = new Map();
 const tooltipTimeoutControllers = new Map();
+
+function containsNode(parent, child) {
+	if (!parent || !child) return false;
+	return parent === child || parent.contains(child);
+}
 
 function isDraggableListDragging() {
 	return Boolean(
@@ -115,7 +120,7 @@ export default function Tooltip({
 
 	const hasContent = Boolean(content);
 
-	const closeTooltip = () => {
+	const closeTooltip = useCallback(() => {
 		if (timerRef.current) {
 			clearTimeout(timerRef.current);
 			timerRef.current = null;
@@ -128,29 +133,29 @@ export default function Tooltip({
 		if (activeTooltipId === tooltipIdRef.current) {
 			setActiveTooltip(parentTooltipIdRef.current || null);
 		}
-	};
+	}, []);
 
-	const cancelOpenTooltip = () => {
+	const cancelOpenTooltip = useCallback(() => {
 		if (timerRef.current) {
 			clearTimeout(timerRef.current);
 			timerRef.current = null;
 		}
-	};
+	}, []);
 
-	const scheduleCloseTooltip = () => {
+	const scheduleCloseTooltip = useCallback(() => {
 		triggerActiveRef.current = false;
 		if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
 		closeTimerRef.current = setTimeout(() => {
 			closeTooltip();
 		}, CLOSE_DELAY);
-	};
+	}, [closeTooltip]);
 
-	const cancelCloseTooltip = () => {
+	const cancelCloseTooltip = useCallback(() => {
 		if (closeTimerRef.current) {
 			clearTimeout(closeTimerRef.current);
 			closeTimerRef.current = null;
 		}
-	};
+	}, []);
 
 	const openTooltip = () => {
 		if (disabled || !hasContent || isDraggableListDragging()) return;
@@ -187,6 +192,10 @@ export default function Tooltip({
 	};
 
 	useEffect(() => {
+		if (disabled || !hasContent) closeTooltip();
+	}, [closeTooltip, disabled, hasContent]);
+
+	useEffect(() => {
 		if (
 			!triggerActiveRef.current || isOpen || disabled || !hasContent ||
 			isDraggableListDragging()
@@ -220,7 +229,7 @@ export default function Tooltip({
 		if (!activeId || activeId === tooltipIdRef.current) return;
 		if (isAncestorTooltip(tooltipIdRef.current, activeId)) return;
 		closeTooltip();
-	}, [activeId, isOpen]);
+	}, [activeId, closeTooltip, isOpen]);
 
 	useLayoutEffect(() => {
 		const anchor = anchorElement || triggerRef.current;
@@ -261,6 +270,34 @@ export default function Tooltip({
 			window.removeEventListener("resize", handleReposition);
 		};
 	}, [isOpen, anchorElement]);
+
+	useEffect(() => {
+		if (!isOpen) return;
+		const handlePointerMove = (event) => {
+			if (isDraggableListDragging()) {
+				closeTooltip();
+				return;
+			}
+
+			const trigger = triggerRef.current;
+			const anchor = anchorElement;
+			const hoveredElement = document.elementFromPoint(
+				event.clientX,
+				event.clientY,
+			);
+			const isOverTrigger = containsNode(trigger, hoveredElement);
+			const isOverAnchor = anchor && containsNode(anchor, hoveredElement);
+
+			if (!isOverTrigger && !isOverAnchor) {
+				scheduleCloseTooltip();
+			}
+		};
+
+		document.addEventListener("pointermove", handlePointerMove, true);
+		return () => {
+			document.removeEventListener("pointermove", handlePointerMove, true);
+		};
+	}, [anchorElement, closeTooltip, isOpen, scheduleCloseTooltip]);
 
 	useEffect(
 		() => {
@@ -303,7 +340,7 @@ export default function Tooltip({
 				setActiveTooltip(parentTooltipIdRef.current || null);
 			}
 		};
-	}, []);
+	}, [cancelCloseTooltip, cancelOpenTooltip, closeTooltip]);
 
 	const hiddenByChild =
 		isOpen &&
