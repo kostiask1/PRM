@@ -331,3 +331,16 @@
 	margin-top: auto;
 	flex: unset;
 }
+
+.Sidebar .DraggableList__handle {
+	transform: translate(0, 0);
+	border-radius: var(--radius-xxs) var(--radius-md) 0 var(--radius-xxs);
+	top: 0;
+	left: unset;
+	right: 0;
+	transition: border-radius .125s ease-in-out;
+}
+
+.Sidebar .DraggableList>div:hover>.DraggableList__handle:hover {
+	border-radius: var(--radius-xxs);
+}

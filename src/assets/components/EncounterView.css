@@ -84,7 +84,6 @@
 	border-color: color-mix(in srgb, var(--accent), transparent 60%);
 }
 
-
 .EncounterView__list .DraggableList__handle {
 	transform: translate(0, 0);
 	border-radius: var(--radius-xxs) var(--radius-md) 0 var(--radius-xxs);
