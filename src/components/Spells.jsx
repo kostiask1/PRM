@@ -13,12 +13,26 @@ import "../assets/components/Spells.css";
 import classNames from "../utils/classNames";
 import { lang } from "../services/localization";
 
+const SCHOOL_MAP = {
+	A: "Abjuration",
+	C: "Conjuration",
+	D: "Divination",
+	E: "Enchantment",
+	I: "Illusion",
+	N: "Necromancy",
+	P: "Transmutation",
+	T: "Thaumaturgy",
+	V: "Evocation",
+};
+
 export default function Spells() {
 	const [sources, setSources] = useState([]);
 	const [selectedSource, setSelectedSource] = useState("all");
 	const [allSpells, setAllSpells] = useState([]);
 	const [spells, setSpells] = useState([]);
 	const [selectedLevel, setSelectedLevel] = useState("all");
+	const [selectedClass, setSelectedClass] = useState("all");
+	const [selectedSchool, setSelectedSchool] = useState("all");
 	const [search, setSearch] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [selectedSpell, setSelectedSpell] = useState(null);
@@ -37,6 +51,26 @@ export default function Spells() {
 		}
 		return result;
 	}, [spells, sortOrder]);
+
+	const classOptions = useMemo(
+		() =>
+			[
+				...new Set(
+					allSpells.flatMap((spell) =>
+						Array.isArray(spell.classes) ? spell.classes : [],
+					),
+				),
+			].sort((a, b) => a.localeCompare(b)),
+		[allSpells],
+	);
+
+	const schoolOptions = useMemo(
+		() =>
+			[...new Set(allSpells.map((spell) => spell.school).filter(Boolean))]
+				.filter((school) => SCHOOL_MAP[school])
+				.sort((a, b) => SCHOOL_MAP[a].localeCompare(SCHOOL_MAP[b])),
+		[allSpells],
+	);
 
 	// Завантаження списку доступних джерел
 	useEffect(() => {
@@ -87,10 +121,27 @@ export default function Spells() {
 			const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase());
 			const matchesLevel =
 				selectedLevel === "all" || String(s.level) === selectedLevel;
-			return matchesSource && matchesSearch && matchesLevel;
+			const matchesClass =
+				selectedClass === "all" || s.classes?.includes(selectedClass);
+			const matchesSchool =
+				selectedSchool === "all" || s.school === selectedSchool;
+			return (
+				matchesSource &&
+				matchesSearch &&
+				matchesLevel &&
+				matchesClass &&
+				matchesSchool
+			);
 		});
 		setSpells(filtered);
-	}, [search, allSpells, selectedLevel, selectedSource]);
+	}, [
+		search,
+		allSpells,
+		selectedLevel,
+		selectedSource,
+		selectedClass,
+		selectedSchool,
+	]);
 
 	// початковий вибір
 	useEffect(() => {
@@ -155,17 +206,7 @@ export default function Spells() {
 
 	const renderSpellItem = (index, key) => {
 		const spell = displayedSpells[index];
-		const schoolMap = {
-			E: "Enchantment",
-			N: "Necromancy",
-			C: "Conjuration",
-			A: "Abjuration",
-			I: "Illusion",
-			D: "Divination",
-			P: "Transmutation",
-			T: "Thaumaturgy",
-		};
-		const schoolName = schoolMap[spell.school] || spell.school;
+		const schoolName = SCHOOL_MAP[spell.school];
 		const isSelected =
 			selectedSpell?.name === spell.name &&
 			selectedSpell?.source === spell.source;
@@ -182,11 +223,9 @@ export default function Spells() {
 					<div className="ListCard__meta">
 						{spell.level === 0
 							? lang.t("Cantrip")
-							: lang.t("{level}-level", { level: spell.level })}{" "}
-						• {schoolName}
-						{spell.source && (
-							<span className="Bestiary__item-source"> • {spell.source}</span>
-						)}
+							: lang.t("{level}-level", { level: spell.level })}
+						{schoolName && <> • {schoolName}</>}
+						{spell.classes?.length > 0 && <> • {spell.classes.join(", ")}</>}
 					</div>
 				</ListCard>
 			</div>
@@ -226,11 +265,30 @@ export default function Spells() {
 							</option>
 						))}
 					</Select>
-					<Input
-						placeholder={lang.t("Search spell...")}
-						value={search}
-						onChange={(e) => setSearch(e.target.value)}
-					/>
+					<Select
+						value={selectedClass}
+						onChange={(e) => setSelectedClass(e.target.value)}
+						className="Spells__class-select"
+					>
+						<option value="all">{lang.t("All classes")}</option>
+						{classOptions.map((className) => (
+							<option key={className} value={className}>
+								{className}
+							</option>
+						))}
+					</Select>
+					<Select
+						value={selectedSchool}
+						onChange={(e) => setSelectedSchool(e.target.value)}
+						className="Spells__school-select"
+					>
+						<option value="all">{lang.t("All schools")}</option>
+						{schoolOptions.map((school) => (
+							<option key={school} value={school}>
+								{SCHOOL_MAP[school]}
+							</option>
+						))}
+					</Select>
 					<Tooltip content={lang.t("Sort by level")}>
 						<button
 							className={classNames("Spells__sort-btn", {
@@ -241,6 +299,11 @@ export default function Spells() {
 							LVL <Icon name={`sort-${sortOrder}`} />
 						</button>
 					</Tooltip>
+					<Input
+						placeholder={lang.t("Search spell...")}
+						value={search}
+						onChange={(e) => setSearch(e.target.value)}
+					/>
 				</div>
 				<div className="Spells__content">
 					<div className="Spells__list">
@@ -252,9 +315,7 @@ export default function Spells() {
 						/>
 					</div>
 					{loading && (
-						<div className="Bestiary__loader muted">
-							{lang.t("Updating spells...")}
-						</div>
+						<div className="muted">{lang.t("Updating spells...")}</div>
 					)}
 
 					<div className="Spells__detail">

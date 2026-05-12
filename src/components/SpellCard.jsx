@@ -50,6 +50,11 @@ export default function SpellCard({ spell, onSpellClick, onConditionClick }) {
 				<div>
 					<strong>{lang.t("Duration")}:</strong> {model.durationLabel}
 				</div>
+				{model.classesLabel && (
+					<div>
+						<strong>{lang.t("Classes")}:</strong> {model.classesLabel}
+					</div>
+				)}
 			</div>
 			<div className="SpellCard__desc">
 				{renderRecursiveContent(

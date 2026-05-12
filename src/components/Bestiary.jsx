@@ -387,7 +387,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 						/>
 					</div>
 					{loading && (
-						<div className="Bestiary__loader muted">
+						<div className="muted">
 							{lang.t("Indexing database...")}
 						</div>
 					)}

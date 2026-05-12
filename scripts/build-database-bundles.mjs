@@ -56,6 +56,7 @@ const SPELL_FIELDS = new Set([
 	"name",
 	"source",
 	"page",
+	"classes",
 	"level",
 	"school",
 	"time",
@@ -106,6 +107,33 @@ function sortByNameAndSource(a, b) {
 function pickFields(value, fields) {
 	return Object.fromEntries(
 		Object.entries(value || {}).filter(([key]) => fields.has(key)),
+	);
+}
+
+function getSpellClassInfo(spellSources, spell) {
+	const spellName = String(spell.name || "").split("|")[0];
+	const sourceKey = Object.keys(spellSources).find(
+		(key) => key.toUpperCase() === String(spell.source || "").toUpperCase(),
+	);
+	const sourceSpells = sourceKey ? spellSources[sourceKey] : null;
+	const info = sourceSpells?.[spellName];
+	if (!info) return [];
+
+	const classes = new Set();
+	for (const entry of [...(info.class || []), ...(info.classVariant || [])]) {
+		if (entry?.name) classes.add(entry.name);
+	}
+	return [...classes].sort((a, b) => a.localeCompare(b));
+}
+
+function enrichSpell(spell, spellSources) {
+	const classes = getSpellClassInfo(spellSources, spell);
+	return pickFields(
+		{
+			...spell,
+			classes,
+		},
+		SPELL_FIELDS,
 	);
 }
 
@@ -171,7 +199,12 @@ async function buildBestiaryBundle() {
 }
 
 async function buildSpellsBundle() {
-	const index = await readJson(path.join(SPELLS_DIR, "index.json"));
+	const indexPath = path.join(SPELLS_DIR, "index.json");
+	const index = (await exists(indexPath)) ? await readJson(indexPath) : {};
+	const spellSourcesPath = path.join(SPELLS_DIR, "sources.json");
+	const spellSources = (await exists(spellSourcesPath))
+		? await readJson(spellSourcesPath)
+		: {};
 	const spells = [];
 	const sourceFiles = [];
 
@@ -183,19 +216,23 @@ async function buildSpellsBundle() {
 		const data = await readJson(filePath);
 		spells.push(
 			...getList(data, ["spell", "spells", "results"]).map((spell) =>
-				pickFields(
+				enrichSpell(
 					{
 						...spell,
 						source,
 					},
-					SPELL_FIELDS,
+					spellSources,
 				),
 			),
 		);
 	}
 
 	if (spells.length === 0 && (await exists(SPELLS_BUNDLE_PATH))) {
-		spells.push(...(await readJson(SPELLS_BUNDLE_PATH)));
+		spells.push(
+			...(await readJson(SPELLS_BUNDLE_PATH)).map((spell) =>
+				enrichSpell(spell, spellSources),
+			),
+		);
 	}
 
 	spells.sort(sortByNameAndSource);

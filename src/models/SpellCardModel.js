@@ -43,6 +43,7 @@
  * @property {string} name
  * @property {string} source
  * @property {number} [page]
+ * @property {string[]} [classes]
  * @property {0|1|2|3|4|5|6|7|8|9|number} level
  * @property {"A"|"C"|"D"|"E"|"I"|"N"|"T"|"P"|"V"|string} school
  * @property {SpellTime[]} [time]
@@ -61,6 +62,7 @@
 export const SPELL_FIELD_SCHEMA = {
 	name: { type: "string", required: true, values: "Назва або назва|джерело" },
 	source: { type: "string", required: true, values: "PHB, XPHB, ..." },
+	classes: { type: "string[]", values: "Класи, які мають доступ до закляття" },
 	level: { type: "number", required: true, values: "0..9" },
 	school: { type: "string", required: true, values: "A/C/D/E/I/N/T/P/V" },
 	time: { type: "array", values: "[{ number, unit, condition? }]" },
@@ -150,6 +152,13 @@ export default class SpellCardModel {
 				return value;
 			})
 			.join(", ");
+	}
+
+	get classesLabel() {
+		if (!Array.isArray(this.spell.classes) || this.spell.classes.length === 0) {
+			return "";
+		}
+		return this.spell.classes.join(", ");
 	}
 
 	get sourceLabel() {
