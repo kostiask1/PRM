@@ -15,12 +15,13 @@
 
 .DraggableList__handle {
 	position: absolute;
-	top: 0;
-	left: 0;
+	top: var(--space-2);
+	left: 1px;
+	transform: translateX(-100%);
 	z-index: 5;
 	width: 16px;
 	height: 24px;
-	border-radius: var(--radius-xxs);
+	border-radius: var(--radius-xxs) 0 0 var(--radius-xxs);
 	border: 1px solid transparent;
 	color: var(--muted);
 	cursor: grab;
@@ -39,6 +40,7 @@
 .DraggableList>div:hover>.DraggableList__handle:hover {
 	opacity: 1;
 	background-color: var(--panel-2);
+	border: 1px solid color-mix(in srgb, var(--accent), transparent 40%);
 }
 
 .DraggableList.is-list-dragging,
