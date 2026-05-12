@@ -57,6 +57,7 @@ export default function useCampaignView(props) {
 	const pendingCampaignUpdatesRef = useRef(null);
 	const entitySaveTimeoutsRef = useRef({});
 	const pendingEntityUpdatesRef = useRef({});
+	const reorderUndoPushedRef = useRef(false);
 	const isSavingRef = useRef(false);
 	const [undoStack, setUndoStack] = useState([]);
 	const [redoStack, setRedoStack] = useState([]);
@@ -491,6 +492,38 @@ export default function useCampaignView(props) {
 		triggerSave({ notes: sanitizeNotesForSave(newNotes) });
 	};
 
+	const pushReorderUndoOnce = () => {
+		if (reorderUndoPushedRef.current) return;
+		pushToUndo();
+		reorderUndoPushedRef.current = true;
+	};
+
+	const finishTrackedReorder = () => {
+		reorderUndoPushedRef.current = false;
+	};
+
+	const handleNotesReorder = (newNotes) => {
+		pushReorderUndoOnce();
+		const sanitizedNotes = sanitizeNotesForSave(newNotes);
+		setNotes(sanitizedNotes);
+		triggerSave({ notes: sanitizedNotes });
+	};
+
+	const handleCharactersReorder = (newCharacters) => {
+		pushReorderUndoOnce();
+		setCharacters(newCharacters);
+	};
+
+	const handleNpcsReorder = (newNpcs) => {
+		pushReorderUndoOnce();
+		setNpcs(newNpcs);
+	};
+
+	const handleLocationsReorder = (newLocations) => {
+		pushReorderUndoOnce();
+		setLocations(newLocations);
+	};
+
 	const handleToggleCharacterCollapse = (id) => {
 		const newCharacters = characters.map((c) =>
 			c.id === id ? { ...c, collapsed: !c.collapsed } : c,
@@ -502,7 +535,8 @@ export default function useCampaignView(props) {
 		if (updatedCharacter) scheduleEntityUpdate("characters", updatedCharacter);
 	};
 
-	const handleCharacterChange = async (id, updatedChar) => {
+	const handleCharacterChange = async (id, updatedChar, options = {}) => {
+		if (options.trackUndo) pushReorderUndoOnce();
 		setCharacters((prev) => prev.map((c) => (c.id === id ? updatedChar : c)));
 		if (updatedChar._isPending) return;
 		scheduleEntityUpdate("characters", updatedChar);
@@ -557,7 +591,8 @@ export default function useCampaignView(props) {
 		if (updatedNpc) scheduleEntityUpdate("npc", updatedNpc);
 	};
 
-	const handleNpcChange = async (id, updatedNpc) => {
+	const handleNpcChange = async (id, updatedNpc, options = {}) => {
+		if (options.trackUndo) pushReorderUndoOnce();
 		setNpcs((prev) => prev.map((n) => (n.id === id ? updatedNpc : n)));
 		if (updatedNpc._isPending) return;
 		scheduleEntityUpdate("npc", updatedNpc);
@@ -665,7 +700,8 @@ export default function useCampaignView(props) {
 		if (updatedLocation) scheduleEntityUpdate("locations", updatedLocation);
 	};
 
-	const handleLocationChange = async (id, updatedLocation) => {
+	const handleLocationChange = async (id, updatedLocation, options = {}) => {
+		if (options.trackUndo) pushReorderUndoOnce();
 		setLocations((prev) =>
 			prev.map((location) => (location.id === id ? updatedLocation : location)),
 		);
@@ -1062,6 +1098,11 @@ export default function useCampaignView(props) {
 		handleNoteTitleChange,
 		handleNoteChange,
 		handleDeleteNote,
+		handleNotesReorder,
+		handleCharactersReorder,
+		handleNpcsReorder,
+		handleLocationsReorder,
+		finishTrackedReorder,
 		handleToggleCharacterCollapse,
 		handleCharacterChange,
 		handleCharacterNameBlur,

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { confirm, prompt, requestCampaignsReloadAction } from "../actions/app";
 import { api } from "../api";
 import {
+	sanitizeNotesForSave,
 	upsertNoteById,
 } from "../utils/noteUtils";
 import { idsEqual } from "../utils/id";
@@ -460,6 +461,13 @@ export default function useSessionView(props) {
 		});
 	};
 
+	const handleSceneNotesReorder = (sceneId, notes) => {
+		updateSceneById(sceneId, (scene) => ({
+			...scene,
+			notes: sanitizeNotesForSave(notes),
+		}));
+	};
+
 	const handleSceneToggleNoteCollapse = (sceneId, noteId) => {
 		updateSceneById(
 			sceneId,
@@ -579,6 +587,7 @@ export default function useSessionView(props) {
 		redoStack,
 		campaignSlug,
 		triggerSave,
+		flushPendingSave,
 		handleUndo,
 		handleRedo,
 		updateSession,
@@ -595,6 +604,7 @@ export default function useSessionView(props) {
 		handleToggleSceneNotesCollapse,
 		handleSceneNoteTitleChange,
 		handleSceneNoteChange,
+		handleSceneNotesReorder,
 		handleSceneToggleNoteCollapse,
 		handleSceneDeleteNote,
 		handleToggleSectionCollapse,

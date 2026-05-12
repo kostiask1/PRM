@@ -18,7 +18,7 @@ import useCampaignView from "../hooks/useCampaignView";
 import CampaignViewModel from "../models/CampaignViewModel.js";
 import { navigateTo, useAppSelector } from "../store/appStore";
 import { lang } from "../services/localization";
-import { getNotesForRender, sanitizeNotesForSave } from "../utils/noteUtils";
+import { getNotesForRender } from "../utils/noteUtils";
 
 function CampaignView(props) {
 	const campaign = props.campaign;
@@ -318,14 +318,8 @@ function CampaignView(props) {
 								<DraggableList
 									items={notesForRender}
 									className="CampaignView__notes"
-									onReorder={(newNotes) =>
-										view.setNotes(sanitizeNotesForSave(newNotes))
-									}
-									onDrop={() =>
-										view.triggerSave({
-											notes: sanitizeNotesForSave(view.notes),
-										})
-									}
+									onReorder={view.handleNotesReorder}
+									onDrop={view.finishTrackedReorder}
 									keyExtractor={(note) => note.id}
 									isItemDraggable={(note) => !note._isVirtual}
 									renderItem={(note, isDragging, index) => (
@@ -401,10 +395,8 @@ function CampaignView(props) {
 								<DraggableList
 									items={view.characters}
 									className="CampaignView__characters"
-									onReorder={view.setCharacters}
-									onDrop={() =>
-										view.triggerSave({ characters: view.characters })
-									}
+									onReorder={view.handleCharactersReorder}
+									onDrop={view.finishTrackedReorder}
 									dragData={(character) => ({
 										kind: "campaign-character",
 										sourceType: "characters",
@@ -419,6 +411,7 @@ function CampaignView(props) {
 											onChange={view.handleCharacterChange}
 											onNameBlur={view.handleCharacterNameBlur}
 											onDelete={view.handleDeleteCharacter}
+											onReorderDrop={view.finishTrackedReorder}
 											campaignSlug={campaign.slug}
 											type="characters"
 										/>
@@ -465,8 +458,8 @@ function CampaignView(props) {
 								<DraggableList
 									items={view.npcs}
 									className="CampaignView__characters"
-									onReorder={view.setNpcs}
-									onDrop={() => {}}
+									onReorder={view.handleNpcsReorder}
+									onDrop={view.finishTrackedReorder}
 									dragData={(npc) => ({
 										kind: "campaign-character",
 										sourceType: "npc",
@@ -481,6 +474,7 @@ function CampaignView(props) {
 											onChange={view.handleNpcChange}
 											onNameBlur={view.handleNpcNameBlur}
 											onDelete={view.handleNpcDelete}
+											onReorderDrop={view.finishTrackedReorder}
 											campaignSlug={campaign.slug}
 											type="npc"
 										/>
@@ -521,8 +515,8 @@ function CampaignView(props) {
 								<DraggableList
 									items={view.locations}
 									className="CampaignView__locations"
-									onReorder={view.setLocations}
-									onDrop={() => {}}
+									onReorder={view.handleLocationsReorder}
+									onDrop={view.finishTrackedReorder}
 									keyExtractor={(location) => location.id}
 									renderItem={(location, isDragging) => (
 										<LocationCard
@@ -532,6 +526,7 @@ function CampaignView(props) {
 											onChange={view.handleLocationChange}
 											onNameBlur={view.handleLocationNameBlur}
 											onDelete={view.handleLocationDelete}
+											onReorderDrop={view.finishTrackedReorder}
 											campaignSlug={campaign.slug}
 										/>
 									)}

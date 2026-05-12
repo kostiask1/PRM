@@ -20,6 +20,7 @@ export default function CharacterCard({
 	onChange,
 	onNameBlur,
 	onDelete,
+	onReorderDrop,
 	campaignSlug,
 	type = "characters",
 	viewMode = "card",
@@ -87,7 +88,10 @@ export default function CharacterCard({
 	};
 
 	const handleNotesReorder = (newNotes) => {
-		updateField("notes", sanitizeNotesForSave(newNotes));
+		onChange(character.id, characterModel.withField(
+			"notes",
+			sanitizeNotesForSave(newNotes),
+		), { trackUndo: true });
 	};
 
 	return (
@@ -262,6 +266,7 @@ export default function CharacterCard({
 								items={notesForRender}
 								className="character-card__notes-list"
 								onReorder={handleNotesReorder}
+								onDrop={onReorderDrop}
 								keyExtractor={(note) => note.id}
 								isItemDraggable={(note) => !note._isVirtual}
 								isolateDragEvents

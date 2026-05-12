@@ -20,6 +20,7 @@ export default function LocationCard({
 	onChange,
 	onNameBlur,
 	onDelete,
+	onReorderDrop,
 	campaignSlug,
 	viewMode = "card",
 	showDeleteButton = true,
@@ -83,7 +84,11 @@ export default function LocationCard({
 	};
 
 	const handleNotesReorder = (newNotes) => {
-		updateField("notes", sanitizeNotesForSave(newNotes));
+		onChange(
+			location.id,
+			locationModel.withField("notes", sanitizeNotesForSave(newNotes)),
+			{ trackUndo: true },
+		);
 	};
 
 	const displayName =
@@ -204,6 +209,7 @@ export default function LocationCard({
 										items={notesForRender}
 										className="location-card__notes-list"
 										onReorder={handleNotesReorder}
+										onDrop={onReorderDrop}
 										keyExtractor={(note) => note.id}
 										isItemDraggable={(note) => !note._isVirtual}
 										isolateDragEvents

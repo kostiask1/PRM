@@ -164,7 +164,7 @@ function SessionView(props) {
 								onReorder={(notes) =>
 									view.updateData("notes", sanitizeNotesForSave(notes))
 								}
-								onDrop={() => view.triggerSave(session, true)}
+								onDrop={() => view.flushPendingSave()}
 								keyExtractor={(note) => note.id}
 								isItemDraggable={(note) => !note._isVirtual}
 								renderItem={(note, isDragging, index) => (
@@ -211,7 +211,7 @@ function SessionView(props) {
 							<DraggableList
 								items={viewModel.scenes}
 								onReorder={(newScenes) => view.updateData("scenes", newScenes)}
-								onDrop={() => view.triggerSave(session, true)}
+								onDrop={() => view.flushPendingSave()}
 								keyExtractor={(scene) => scene.id}
 								renderItem={(scene) => {
 									const idx = viewModel.scenes.findIndex(
@@ -247,6 +247,10 @@ function SessionView(props) {
 											onSceneNoteChange={(noteId, text) =>
 												view.handleSceneNoteChange(scene.id, noteId, text)
 											}
+											onSceneNotesReorder={(notes) =>
+												view.handleSceneNotesReorder(scene.id, notes)
+											}
+											onSceneNotesDrop={() => view.flushPendingSave()}
 											onSceneNoteToggleCollapse={(noteId) =>
 												view.handleSceneToggleNoteCollapse(scene.id, noteId)
 											}
@@ -378,20 +382,27 @@ function SceneCard(props) {
 								<label>{lang.t("Scene notes")}</label>
 							</div>
 							{!isSceneNotesCollapsed && (
-								<div className="SceneCard__notes-list">
-									{sceneNotesForRender.map((note, index) => (
+								<DraggableList
+									items={sceneNotesForRender}
+									className="SceneCard__notes-list"
+									onReorder={props.onSceneNotesReorder}
+									onDrop={props.onSceneNotesDrop}
+									keyExtractor={(note) => note.id}
+									isItemDraggable={(note) => !note._isVirtual}
+									isolateDragEvents
+									renderItem={(note, isDragging, index) => (
 										<NoteCard
-											key={note.id}
 											note={note}
 											isLast={index === sceneNotesForRender.length - 1}
+											isDragging={isDragging}
 											campaignSlug={props.campaignSlug}
 											onToggleCollapse={props.onSceneNoteToggleCollapse}
 											onTitleChange={props.onSceneNoteTitleChange}
 											onTextChange={props.onSceneNoteChange}
 											onDelete={props.onSceneNoteDelete}
 										/>
-									))}
-								</div>
+									)}
+								/>
 							)}
 						</div>
 					</div>
