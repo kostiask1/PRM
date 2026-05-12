@@ -50,7 +50,7 @@
 }
 
 .DraggableList>div.is-dragging {
-	opacity: 0.5;
+	opacity: 0.3;
 	cursor: grabbing;
 }
 
@@ -58,9 +58,27 @@
 	position: fixed;
 	z-index: 10000;
 	pointer-events: none;
-	opacity: 0.82;
-	transform: rotate(0.5deg);
+	opacity: 1;
 	box-shadow: var(--shadow-lg, 0 18px 40px rgb(0 0 0 / 24%));
+	border-radius: var(--radius-lg);
+	animation: skew .3s ease-in infinite;
+}
+
+@keyframes skew {
+
+	0%,
+	100% {
+		transform: rotate(0deg);
+	}
+
+	25% {
+		transform: rotate(-0.15deg);
+	}
+
+	75% {
+		transform: rotate(0.15deg);
+	}
+
 }
 
 .DraggableList__preview .DraggableList__handle {
