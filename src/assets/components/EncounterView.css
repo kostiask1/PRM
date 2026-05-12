@@ -77,6 +77,14 @@
 	padding-top: var(--space-2);
 }
 
+.EncounterView__list .DraggableList__handle {
+	transform: translate(0, 0);
+    border-radius: var(--radius-xxs) var(--radius-md) 0 var(--radius-xxs);
+	top: 0;
+	left: unset;
+	right: 0;
+}
+
 .EncounterView__addBtn {
 	width: 100%;
 	justify-content: center;
