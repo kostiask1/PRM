@@ -25,6 +25,19 @@ export default function DiceCalculator() {
 	const rollingAnimationFrameRef = useRef(null);
 
 	const diceTypes = [4, 6, 8, 10, 12, 20, 100];
+	const formulaHelp = (
+		<div className="DiceCalculator__formulaHelp">
+			<div className="DiceCalculator__formulaHelpTitle">
+				{lang.t("Formula syntax")}
+			</div>
+			<ul>
+				<li>{lang.t("NdM — roll N dice with M sides, e.g. 2d20")}</li>
+				<li>{lang.t("+/- number — add or subtract modifiers, e.g. 1d20+5")}</li>
+				<li>{lang.t("hN — keep N highest dice, e.g. 5d6h3")}</li>
+				<li>{lang.t("lN — keep N lowest dice, e.g. 4d6l2")}</li>
+			</ul>
+		</div>
+	);
 
 	useEffect(() => {
 		const handleKeyDown = (e) => {
@@ -286,6 +299,15 @@ export default function DiceCalculator() {
 								}
 							}}
 						/>
+						<Tooltip content={formulaHelp} delay={200}>
+							<span
+								className="DiceCalculator__helpIcon"
+								tabIndex={0}
+								aria-label={lang.t("Formula syntax")}
+							>
+								<Icon name="help" size={18} />
+							</span>
+						</Tooltip>
 					</div>
 
 					<div className="DiceCalculator__controls">
