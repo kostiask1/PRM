@@ -71,8 +71,8 @@
 
 .note-card-simple--simplified .note-card-simple__content .MarkdownView,
 .note-card-simple--simplified .note-card-simple__content .Input {
-    border-top-left-radius: var(--radius-md);
-    border-top-right-radius: var(--radius-md);
+    border-top-left-radius: var(--radius-sm);
+    border-top-right-radius: var(--radius-sm);
 }
 
 .note-card-simple__header .Button {
@@ -102,7 +102,6 @@
 .note-card-simple__content {
     flex-grow: 1;
     padding: 0;
-    border-top: 1px solid color-mix(in srgb, var(--text-bright), transparent 95%);
 }
 
 .note-card-simple__content .EditableField {

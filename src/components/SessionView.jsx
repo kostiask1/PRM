@@ -166,6 +166,7 @@ function SessionView(props) {
 								}
 								onDrop={() => view.triggerSave(session, true)}
 								keyExtractor={(note) => note.id}
+								isItemDraggable={(note) => !note._isVirtual}
 								renderItem={(note, isDragging, index) => (
 									<NoteCard
 										note={note}

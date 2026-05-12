@@ -271,6 +271,16 @@ const icons = {
 			<line x1="3" y1="18" x2="3.01" y2="18" />
 		</>
 	),
+	"drag-handle": (
+		<>
+			<circle cx="8" cy="5" r="1.5" fill="currentColor" stroke="none" />
+			<circle cx="16" cy="5" r="1.5" fill="currentColor" stroke="none" />
+			<circle cx="8" cy="12" r="1.5" fill="currentColor" stroke="none" />
+			<circle cx="16" cy="12" r="1.5" fill="currentColor" stroke="none" />
+			<circle cx="8" cy="19" r="1.5" fill="currentColor" stroke="none" />
+			<circle cx="16" cy="19" r="1.5" fill="currentColor" stroke="none" />
+		</>
+	),
 	history: (
 		<>
 			<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />

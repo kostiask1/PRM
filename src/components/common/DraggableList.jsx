@@ -1,6 +1,12 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import "../../assets/components/DraggableList.css";
 import classNames from "../../utils/classNames";
+import Icon from "./Icon.jsx";
+
+const DRAG_START_THRESHOLD = 5;
+const PRESSING_BODY_CLASS = "prm-draggable-list-pressing";
+const DRAGGING_BODY_CLASS = "prm-draggable-list-dragging";
+let nextListId = 1;
 
 /**
  * Універсальний компонент для сортування списків перетягуванням.
@@ -14,13 +20,26 @@ export default function DraggableList({
 	className = "",
 	itemClassName = "",
 	dragData,
+	isItemDraggable,
 	isolateDragEvents = false,
 }) {
 	const [draggingIndex, setDraggingIndex] = useState(null);
+	const listIdRef = useRef(`DraggableList-${nextListId++}`);
 	const listRef = useRef(null);
-	const isListDragRef = useRef(false);
+	const itemsRef = useRef(items);
+	const pendingPointerRef = useRef(null);
+	const dragStateRef = useRef(null);
 	const draggingIndexRef = useRef(null);
 	const scrollSnapshotRef = useRef(null);
+	const removePointerListenersRef = useRef(null);
+	const suppressClickRef = useRef(false);
+	const draggableItemsCount = items.filter((item, index) =>
+		isItemAllowedToDrag(item, index),
+	).length;
+
+	useLayoutEffect(() => {
+		itemsRef.current = items;
+	});
 
 	useLayoutEffect(() => {
 		if (!scrollSnapshotRef.current) return;
@@ -28,11 +47,57 @@ export default function DraggableList({
 		scrollSnapshotRef.current = null;
 	});
 
+	useEffect(() => {
+		const ownerDocument = listRef.current?.ownerDocument || document;
+		return () => {
+			removePointerListenersRef.current?.();
+			setDocumentPressMode(ownerDocument, false);
+			setDocumentDragMode(ownerDocument, false);
+		};
+	}, []);
+
+	const setDocumentPressMode = (ownerDocument, enabled) => {
+		ownerDocument.body?.classList.toggle(PRESSING_BODY_CLASS, enabled);
+	};
+
+	const setDocumentDragMode = (ownerDocument, enabled) => {
+		ownerDocument.body?.classList.toggle(DRAGGING_BODY_CLASS, enabled);
+		ownerDocument.defaultView?.dispatchEvent(
+			new CustomEvent("prm-draggable-list-drag-mode", {
+				detail: { enabled },
+			}),
+		);
+	};
+
+	const getDocumentScrollElement = (ownerDocument) =>
+		ownerDocument.scrollingElement || ownerDocument.documentElement;
+
+	const getScrollableAncestors = (root) => {
+		if (!root) return [];
+		const ownerDocument = root.ownerDocument || document;
+		const ownerWindow = ownerDocument.defaultView || window;
+		const scrollables = [];
+
+		for (let element = root; element; element = element.parentElement) {
+			const style = ownerWindow.getComputedStyle(element);
+			const canScrollY =
+				/(auto|scroll|overlay)/.test(style.overflowY) &&
+				element.scrollHeight > element.clientHeight;
+			const canScrollX =
+				/(auto|scroll|overlay)/.test(style.overflowX) &&
+				element.scrollWidth > element.clientWidth;
+
+			if (canScrollY || canScrollX) scrollables.push(element);
+		}
+
+		scrollables.push(getDocumentScrollElement(ownerDocument));
+		return scrollables;
+	};
+
 	const captureScrollSnapshot = () => {
 		const root = listRef.current;
 		if (!root) return [];
 
-		const ownerDocument = root.ownerDocument || document;
 		const targets = [];
 		const seen = new Set();
 		const addTarget = (target) => {
@@ -45,20 +110,7 @@ export default function DraggableList({
 			});
 		};
 
-		addTarget(ownerDocument.scrollingElement || ownerDocument.documentElement);
-
-		for (let element = root.parentElement; element; element = element.parentElement) {
-			const style = ownerDocument.defaultView.getComputedStyle(element);
-			const canScrollY =
-				/(auto|scroll|overlay)/.test(style.overflowY) &&
-				element.scrollHeight > element.clientHeight;
-			const canScrollX =
-				/(auto|scroll|overlay)/.test(style.overflowX) &&
-				element.scrollWidth > element.clientWidth;
-
-			if (canScrollY || canScrollX) addTarget(element);
-		}
-
+		getScrollableAncestors(root.parentElement).forEach(addTarget);
 		return targets;
 	};
 
@@ -70,89 +122,277 @@ export default function DraggableList({
 		}
 	};
 
-	const isNativeMediaDrag = (e) => {
-		const target = e.target;
+	const isNoListDragTarget = (event) => {
+		const target = event.target;
 		if (!(target instanceof Element)) return false;
-		return Boolean(target.closest("img, [data-no-list-drag='true']"));
+		if (!target.closest("[data-list-drag-handle='true']")) return true;
+		if (target.isContentEditable) return true;
+		return Boolean(
+			target.closest(
+				[
+					"input",
+					"textarea",
+					"select",
+					"button",
+					"img",
+					"[contenteditable='true']",
+					"[contenteditable='plaintext-only']",
+					"[data-no-list-drag='true']",
+					".MarkdownView",
+				].join(", "),
+			),
+		);
 	};
 
-	const handleDragStart = (e, index) => {
-		if (isolateDragEvents) e.stopPropagation();
-		if (isNativeMediaDrag(e)) {
-			isListDragRef.current = false;
-			setDraggingIndex(null);
+	function isItemAllowedToDrag(item, index) {
+		return (
+			typeof isItemDraggable !== "function" || isItemDraggable(item, index)
+		);
+	}
+
+	const canDragItem = (item, index) =>
+		draggableItemsCount > 1 && isItemAllowedToDrag(item, index);
+
+	const getListItemFromPoint = (clientX, clientY) => {
+		const root = listRef.current;
+		const ownerDocument = root?.ownerDocument || document;
+		const elements = ownerDocument.elementsFromPoint(clientX, clientY);
+
+		for (const element of elements) {
+			let current = element instanceof Element ? element : null;
+			while (current && current !== root) {
+				if (
+					current.parentElement === root &&
+					current.dataset.draggableListItem === "true"
+				) {
+					return current;
+				}
+				current = current.parentElement;
+			}
+		}
+
+		return null;
+	};
+
+	const dispatchCustomDragDrop = (event, payload) => {
+		if (!payload) return;
+		const ownerWindow = listRef.current?.ownerDocument?.defaultView || window;
+		ownerWindow.dispatchEvent(
+			new CustomEvent("prm-draggable-list-drop", {
+				detail: {
+					payload,
+					clientX: event.clientX,
+					clientY: event.clientY,
+					sourceListId: listIdRef.current,
+				},
+			}),
+		);
+	};
+
+	const startPointerDrag = (event) => {
+		const pending = pendingPointerRef.current;
+		if (!pending || dragStateRef.current) return;
+
+		const currentItems = [...itemsRef.current];
+		const payload =
+			typeof dragData === "function"
+				? dragData(currentItems[pending.index], pending.index)
+				: null;
+
+		dragStateRef.current = {
+			currentIndex: pending.index,
+			items: currentItems,
+			blockedTargetKey: null,
+			payload,
+		};
+		setDocumentDragMode(listRef.current?.ownerDocument || document, true);
+		draggingIndexRef.current = pending.index;
+		setDraggingIndex(pending.index);
+		updatePointerDrag(event);
+	};
+
+	const updatePointerDrag = (event) => {
+		const dragState = dragStateRef.current;
+		if (!dragState) return;
+
+		const sourceIndex = dragState.currentIndex;
+		const targetElement = getListItemFromPoint(event.clientX, event.clientY);
+		if (!targetElement) {
+			dragState.blockedTargetKey = null;
 			return;
 		}
 
-		isListDragRef.current = true;
-		draggingIndexRef.current = index;
-		setDraggingIndex(index);
-		e.dataTransfer.effectAllowed = "move";
-		if (typeof dragData === "function") {
-			const payload = dragData(items[index], index);
-			if (payload) {
-				const serialized = JSON.stringify(payload);
-				e.dataTransfer.setData("application/x-prm-entity-drag", serialized);
-				e.dataTransfer.setData("text/plain", serialized);
-			}
+		const targetIndex = Number(targetElement.dataset.draggableListItemIndex);
+		const targetItem = dragState.items[targetIndex];
+		const targetKey = targetItem == null ? null : keyExtractor(targetItem);
+		if (
+			!Number.isInteger(targetIndex) ||
+			targetElement.dataset.draggableListItemDraggable !== "true" ||
+			sourceIndex === null ||
+			sourceIndex === targetIndex
+		) {
+			if (sourceIndex === targetIndex) dragState.blockedTargetKey = null;
+			return;
 		}
-	};
+		if (targetKey != null && targetKey === dragState.blockedTargetKey) {
+			return;
+		}
 
-	const handleDragOver = (e, targetIndex) => {
-		if (isolateDragEvents) e.stopPropagation();
-		e.preventDefault();
-		if (!isListDragRef.current) return;
-		const sourceIndex = draggingIndexRef.current;
-		if (sourceIndex === null || sourceIndex === targetIndex) return;
-
-		const rect = e.currentTarget.getBoundingClientRect();
-		const midpoint = rect.top + rect.height / 2;
-		const isMovingDown = sourceIndex < targetIndex;
-		const isMovingUp = sourceIndex > targetIndex;
-
-		if (isMovingDown && e.clientY < midpoint) return;
-		if (isMovingUp && e.clientY > midpoint) return;
-
-		const newList = [...items];
+		const newList = [...dragState.items];
 		const draggedItem = newList.splice(sourceIndex, 1)[0];
 		newList.splice(targetIndex, 0, draggedItem);
 
 		scrollSnapshotRef.current = captureScrollSnapshot();
+		dragState.items = newList;
+		dragState.currentIndex = targetIndex;
+		dragState.blockedTargetKey = targetKey;
 		draggingIndexRef.current = targetIndex;
 		setDraggingIndex(targetIndex);
 		onReorder(newList);
 	};
 
-	const handleDragEnd = (e) => {
-		if (isolateDragEvents) e.stopPropagation();
-		const wasListDrag = isListDragRef.current;
-		isListDragRef.current = false;
+	const finishPointerDrag = (event) => {
+		removePointerListenersRef.current?.();
+		removePointerListenersRef.current = null;
+		pendingPointerRef.current = null;
+
+		const dragState = dragStateRef.current;
+		dragStateRef.current = null;
 		draggingIndexRef.current = null;
+		setDocumentPressMode(listRef.current?.ownerDocument || document, false);
+		setDocumentDragMode(listRef.current?.ownerDocument || document, false);
 		setDraggingIndex(null);
-		if (wasListDrag && onDrop) onDrop();
+
+		if (!dragState) return;
+
+		suppressClickRef.current = true;
+		window.setTimeout(() => {
+			suppressClickRef.current = false;
+		}, 0);
+
+		dispatchCustomDragDrop(event, dragState.payload);
+		if (onDrop) onDrop();
+	};
+
+	const handlePointerDown = (event, index) => {
+		if (isolateDragEvents) event.stopPropagation();
+		if (
+			event.button !== 0 ||
+			!canDragItem(itemsRef.current[index], index) ||
+			isNoListDragTarget(event)
+		) {
+			return;
+		}
+
+		const ownerDocument = listRef.current?.ownerDocument || document;
+		const ownerWindow = ownerDocument.defaultView || window;
+		event.preventDefault();
+		setDocumentPressMode(ownerDocument, true);
+		pendingPointerRef.current = {
+			pointerId: event.pointerId,
+			startX: event.clientX,
+			startY: event.clientY,
+			index,
+		};
+
+		const handlePointerMove = (moveEvent) => {
+			const pending = pendingPointerRef.current;
+			if (!pending || moveEvent.pointerId !== pending.pointerId) return;
+
+			const distance = Math.hypot(
+				moveEvent.clientX - pending.startX,
+				moveEvent.clientY - pending.startY,
+			);
+			if (!dragStateRef.current && distance < DRAG_START_THRESHOLD) return;
+
+			moveEvent.preventDefault();
+			startPointerDrag(moveEvent);
+			updatePointerDrag(moveEvent);
+		};
+
+		const handlePointerUp = (upEvent) => {
+			const pending = pendingPointerRef.current;
+			if (!pending || upEvent.pointerId !== pending.pointerId) return;
+			finishPointerDrag(upEvent);
+		};
+
+		const handlePointerCancel = (cancelEvent) => {
+			const pending = pendingPointerRef.current;
+			if (!pending || cancelEvent.pointerId !== pending.pointerId) return;
+			finishPointerDrag(cancelEvent);
+		};
+
+		const handleSelectStart = (selectEvent) => {
+			if (!pendingPointerRef.current && !dragStateRef.current) return;
+			selectEvent.preventDefault();
+		};
+
+		removePointerListenersRef.current?.();
+		ownerWindow.addEventListener("pointermove", handlePointerMove, {
+			capture: true,
+		});
+		ownerWindow.addEventListener("pointerup", handlePointerUp, {
+			capture: true,
+		});
+		ownerWindow.addEventListener("pointercancel", handlePointerCancel, {
+			capture: true,
+		});
+		ownerDocument.addEventListener("selectstart", handleSelectStart, {
+			capture: true,
+		});
+		removePointerListenersRef.current = () => {
+			setDocumentPressMode(ownerDocument, false);
+			ownerWindow.removeEventListener("pointermove", handlePointerMove, {
+				capture: true,
+			});
+			ownerWindow.removeEventListener("pointerup", handlePointerUp, {
+				capture: true,
+			});
+			ownerWindow.removeEventListener("pointercancel", handlePointerCancel, {
+				capture: true,
+			});
+			ownerDocument.removeEventListener("selectstart", handleSelectStart, {
+				capture: true,
+			});
+		};
+	};
+
+	const handleClickCapture = (event) => {
+		if (!suppressClickRef.current) return;
+		event.preventDefault();
+		event.stopPropagation();
+		suppressClickRef.current = false;
 	};
 
 	return (
 		<div
 			ref={listRef}
+			data-draggable-list-id={listIdRef.current}
 			className={classNames("DraggableList", className, {
 				"is-list-dragging": draggingIndex !== null,
 			})}
+			onClickCapture={handleClickCapture}
 		>
 			{items.map((item, index) => (
 				<div
 					key={keyExtractor(item)}
-					draggable
-					onDragStart={(e) => handleDragStart(e, index)}
-					onDragEnd={(e) => handleDragEnd(e)}
-					onDragOver={(e) => handleDragOver(e, index)}
-					onDrop={(e) => {
-						if (isolateDragEvents) e.stopPropagation();
-					}}
+					data-draggable-list-item="true"
+					data-draggable-list-item-index={index}
+					data-draggable-list-item-draggable={canDragItem(item, index)}
+					onPointerDown={(event) => handlePointerDown(event, index)}
 					className={classNames(itemClassName, {
 						"is-dragging": draggingIndex === index,
 					})}
 				>
+					{canDragItem(item, index) && (
+						<span
+							className="DraggableList__handle"
+							data-list-drag-handle="true"
+							aria-hidden="true"
+						>
+							<Icon name="drag-handle" size={18} strokeWidth={2} />
+						</span>
+					)}
 					{renderItem(item, draggingIndex === index, index)}
 				</div>
 			))}

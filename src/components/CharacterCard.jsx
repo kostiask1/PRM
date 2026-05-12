@@ -263,6 +263,7 @@ export default function CharacterCard({
 								className="character-card__notes-list"
 								onReorder={handleNotesReorder}
 								keyExtractor={(note) => note.id}
+								isItemDraggable={(note) => !note._isVirtual}
 								isolateDragEvents
 								renderItem={(note, isDragging, index) => (
 									<NoteCard

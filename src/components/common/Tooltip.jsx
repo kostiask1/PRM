@@ -12,6 +12,13 @@ const activeSubscribers = new Set();
 const tooltipParentById = new Map();
 const tooltipTimeoutControllers = new Map();
 
+function isDraggableListDragging() {
+	return Boolean(
+		document.body?.classList.contains("prm-draggable-list-dragging") ||
+			document.body?.classList.contains("prm-draggable-list-pressing"),
+	);
+}
+
 function subscribeActiveTooltip(listener) {
 	activeSubscribers.add(listener);
 	return () => activeSubscribers.delete(listener);
@@ -28,6 +35,15 @@ function cancelOtherTooltipTimeouts(exceptId) {
 		controllers.cancelOpen?.();
 		controllers.cancelClose?.();
 	});
+}
+
+function closeAllTooltips() {
+	tooltipTimeoutControllers.forEach((controllers) => {
+		controllers.cancelOpen?.();
+		controllers.cancelClose?.();
+		controllers.close?.();
+	});
+	setActiveTooltip(null);
 }
 
 function findParentTooltipId(element, selfId) {
@@ -137,7 +153,7 @@ export default function Tooltip({
 	};
 
 	const openTooltip = () => {
-		if (disabled || !hasContent) return;
+		if (disabled || !hasContent || isDraggableListDragging()) return;
 		cancelOpenTooltip();
 		cancelCloseTooltip();
 		cancelOtherTooltipTimeouts(tooltipIdRef.current);
@@ -156,6 +172,10 @@ export default function Tooltip({
 	};
 
 	const handleTriggerEnter = () => {
+		if (isDraggableListDragging()) {
+			closeTooltip();
+			return;
+		}
 		triggerActiveRef.current = true;
 		cancelOtherTooltipTimeouts(tooltipIdRef.current);
 		openTooltip();
@@ -167,7 +187,11 @@ export default function Tooltip({
 	};
 
 	useEffect(() => {
-		if (!triggerActiveRef.current || isOpen || disabled || !hasContent) return;
+		if (
+			!triggerActiveRef.current || isOpen || disabled || !hasContent ||
+			isDraggableListDragging()
+		)
+			return;
 		if (timerRef.current) {
 			clearTimeout(timerRef.current);
 			timerRef.current = null;
@@ -241,7 +265,18 @@ export default function Tooltip({
 	useEffect(
 		() => {
 			const tooltipId = tooltipIdRef.current;
+			const handleDragModeChange = (event) => {
+				if (event.detail?.enabled) closeAllTooltips();
+			};
+			window.addEventListener(
+				"prm-draggable-list-drag-mode",
+				handleDragModeChange,
+			);
 			return () => {
+				window.removeEventListener(
+					"prm-draggable-list-drag-mode",
+					handleDragModeChange,
+				);
 				if (timerRef.current) clearTimeout(timerRef.current);
 				if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
 				tooltipParentById.delete(tooltipId);
@@ -259,6 +294,7 @@ export default function Tooltip({
 		tooltipTimeoutControllers.set(tooltipId, {
 			cancelOpen: cancelOpenTooltip,
 			cancelClose: cancelCloseTooltip,
+			close: closeTooltip,
 		});
 		return () => {
 			unsubscribe();

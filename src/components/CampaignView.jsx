@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AiAssistantPanel from "./AiAssistantPanel";
 import Button from "./form/Button";
 import EditableField from "./form/EditableField";
@@ -19,26 +19,6 @@ import CampaignViewModel from "../models/CampaignViewModel.js";
 import { navigateTo, useAppSelector } from "../store/appStore";
 import { lang } from "../services/localization";
 import { getNotesForRender, sanitizeNotesForSave } from "../utils/noteUtils";
-
-function readCharacterDragPayload(event) {
-	const raw =
-		event.dataTransfer.getData("application/x-prm-entity-drag") ||
-		event.dataTransfer.getData("text/plain");
-	if (!raw) return null;
-	try {
-		const payload = JSON.parse(raw);
-		if (payload?.kind !== "campaign-character") return null;
-		return payload;
-	} catch {
-		return null;
-	}
-}
-
-function hasCharacterDragPayload(event) {
-	return Array.from(event.dataTransfer.types || []).includes(
-		"application/x-prm-entity-drag",
-	);
-}
 
 function CampaignView(props) {
 	const campaign = props.campaign;
@@ -87,30 +67,41 @@ function CampaignView(props) {
 
 	const canReorderSessions = sessionSearch.trim().length === 0;
 
+	useEffect(() => {
+		const handleCharacterDragDrop = (event) => {
+			const payload = event.detail?.payload;
+			if (payload?.kind !== "campaign-character") return;
+
+			const target = document.elementFromPoint(
+				event.detail.clientX,
+				event.detail.clientY,
+			);
+			const dropZone = target?.closest?.("[data-character-drop-type]");
+			const targetType = dropZone?.dataset.characterDropType;
+			if (!targetType) return;
+
+			view.handleCharacterTypeDrop({
+				sourceType: payload.sourceType,
+				targetType,
+				id: payload.id,
+			});
+		};
+
+		window.addEventListener("prm-draggable-list-drop", handleCharacterDragDrop);
+		return () => {
+			window.removeEventListener(
+				"prm-draggable-list-drop",
+				handleCharacterDragDrop,
+			);
+		};
+	}, [view]);
+
 	const handleNotesViewModeChange = (mode) => {
 		setNotesViewMode(mode);
 		if (isNotesCollapsed) {
 			view.setIsNotesCollapsed(false);
 			view.triggerSave({ isNotesCollapsed: false });
 		}
-	};
-
-	const handleCharacterTypeDragOver = (event) => {
-		if (!hasCharacterDragPayload(event)) return;
-		event.preventDefault();
-		event.dataTransfer.dropEffect = "move";
-	};
-
-	const handleCharacterTypeDrop = (targetType) => (event) => {
-		const payload = readCharacterDragPayload(event);
-		if (!payload) return;
-		event.preventDefault();
-		event.stopPropagation();
-		view.handleCharacterTypeDrop({
-			sourceType: payload.sourceType,
-			targetType,
-			id: payload.id,
-		});
 	};
 
 	const renderSessionCard = (session, isDragging = false) => (
@@ -336,6 +327,7 @@ function CampaignView(props) {
 										})
 									}
 									keyExtractor={(note) => note.id}
+									isItemDraggable={(note) => !note._isVirtual}
 									renderItem={(note, isDragging, index) => (
 										<NoteCard
 											note={note}
@@ -373,8 +365,7 @@ function CampaignView(props) {
 
 						<div
 							className="CampaignView__section"
-							onDragOver={handleCharacterTypeDragOver}
-							onDrop={handleCharacterTypeDrop("characters")}
+							data-character-drop-type="characters"
 						>
 							<div className="section-row">
 								<div
@@ -438,8 +429,7 @@ function CampaignView(props) {
 
 						<div
 							className="CampaignView__section"
-							onDragOver={handleCharacterTypeDragOver}
-							onDrop={handleCharacterTypeDrop("npc")}
+							data-character-drop-type="npc"
 						>
 							<div className="section-row">
 								<div

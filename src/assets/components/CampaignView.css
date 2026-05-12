@@ -98,6 +98,7 @@
 }
 
 .CampaignView__emptySessions {
+	font-size: 0.9rem;
 	padding: var(--space-2);
 	text-align: center;
 }
