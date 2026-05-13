@@ -1,5 +1,120 @@
 [
   {
+    "name": "\"The Demogorgon\"",
+    "source": "IMR",
+    "size": [
+      "L"
+    ],
+    "type": "giant",
+    "alignment": [
+      "C",
+      "N"
+    ],
+    "ac": [
+      {
+        "ac": 15,
+        "from": [
+          "natural armor"
+        ]
+      }
+    ],
+    "hp": {
+      "average": 123,
+      "formula": "13d12 + 39"
+    },
+    "speed": {
+      "walk": 40
+    },
+    "str": 21,
+    "dex": 8,
+    "con": 17,
+    "int": 6,
+    "wis": 10,
+    "cha": 8,
+    "skill": {
+      "perception": "+3"
+    },
+    "senses": [
+      "darkvision 60 ft."
+    ],
+    "languages": [
+      "Giant",
+      "Orc"
+    ],
+    "cr": "8",
+    "trait": [
+      {
+        "name": "Two Heads",
+        "entries": [
+          "The ettin has advantage on Wisdom ({@skill Perception}) checks and on saving throws against being {@condition blinded}, {@condition charmed}, {@condition deafened}, {@condition frightened}, {@condition stunned}, and knocked {@condition unconscious}."
+        ]
+      },
+      {
+        "name": "Wakeful",
+        "entries": [
+          "When one of the ettin's heads is asleep, its other head is awake."
+        ]
+      }
+    ],
+    "action": [
+      {
+        "name": "Multiattack",
+        "entries": [
+          "The ettin makes two attacks: one with its battleaxe and one with its morningstar."
+        ]
+      },
+      {
+        "name": "Battleaxe",
+        "entries": [
+          "{@atk mw} {@hit 8} to hit, reach 5 ft., one target. {@h}14 ({@damage 2d8 + 5}) slashing damage."
+        ]
+      },
+      {
+        "name": "Morningstar",
+        "entries": [
+          "{@atk mw} {@hit 8} to hit, reach 5 ft., one target. {@h}14 ({@damage 2d8 + 5}) piercing damage."
+        ]
+      },
+      {
+        "name": "Fire Breath {@recharge 5}",
+        "entries": [
+          "The ettin's right head exhales fire in a 30-foot cone. Each creature in that area must make a {@dc 14} Dexterity saving throw, taking 45 ({@damage 10d8}) fire damage on a failed save, or half as much damage on a successful one."
+        ]
+      },
+      {
+        "name": "Cold Breath {@recharge 5}",
+        "entries": [
+          "The ettin's left head exhales an icy blast in a 30-foot cone. Each creature in that area must make a {@dc 14} Constitution saving throw, taking 45 ({@damage 10d8}) cold damage on a failed save, or half as much damage on a successful one."
+        ]
+      },
+      {
+        "name": "Gaze",
+        "entries": [
+          "The ettin turns its magical gaze toward one creature that it can see within 120 feet of it. That target must make a {@dc 14} Wisdom saving throw. Unless the target is {@condition incapacitated}, it can avert its eyes to avoid the gaze and to automatically succeed on the save. If the target does so, it can't see the ettin until the start of the ettin's next turn. If the target looks at the ettin in the meantime, it must immediately make the save.",
+          "If the target fails the save, it suffers one of the following effects of the ettin's choice or at random:"
+        ]
+      },
+      {
+        "name": "Beguiling Gaze",
+        "entries": [
+          "The target is {@condition stunned} until the start of the ettin's next turn or until the ettin is no longer within line of sight."
+        ]
+      },
+      {
+        "name": "Hypnotic Gaze",
+        "entries": [
+          "The target is {@condition charmed} by the ettin until the start of the ettin's next turn. The ettin chooses how the {@condition charmed} target uses its actions, reactions, and movement."
+        ]
+      },
+      {
+        "name": "Insanity Gaze",
+        "entries": [
+          "The target suffers the effect of the {@spell confusion} spell without making a saving throw. The effect lasts until the start of the ettin's next turn. The ettin doesn't need to concentrate on the spell."
+        ]
+      }
+    ]
+  },
+  {
     "name": "Aarakocra",
     "source": "MM",
     "size": [
@@ -1668,7 +1783,7 @@
       {
         "name": "Arcane Burst",
         "entries": [
-          "{@atk ms,rs} {@hit 6} to hit, reach 5 ft. or range 120 ft., one target. {@h}20 ({@damage 3d10 + 4}) force damage."
+          "{@atk ms,rs} {@hit 8} to hit, reach 5 ft. or range 120 ft., one target. {@h}20 ({@damage 3d10 + 4}) force damage."
         ]
       },
       {
@@ -16482,7 +16597,7 @@
       {
         "name": "Regeneration",
         "entries": [
-          "Anastrasya regains 10 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from holy water, this trait doesn't function at the start of the vampire's next turn."
+          "Anastrasya regains 10 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from {@item Holy Water (Flask)|PHB|holy water}, this trait doesn't function at the start of the vampire's next turn."
         ]
       },
       {
@@ -68991,15 +69106,6 @@
           "{@atk mw} {@hit 4} to hit, reach 5 ft., one target. {@h}7 ({@damage 2d4 + 2}) piercing damage."
         ]
       }
-    ],
-    "trait": [
-      {
-        "type": "entries",
-        "name": "Tied Down",
-        "entries": [
-          "While lashed to the floor, the creature is {@condition prone} and {@condition restrained}. It also suffers from two levels of {@condition exhaustion}."
-        ]
-      }
     ]
   },
   {
@@ -72267,7 +72373,7 @@
       {
         "name": "Drone",
         "entries": [
-          "The chasme produces a horrid droning sound to which demons are immune. Any other creature that starts its turn with in 30 feet of the chasme must succeed on a {@dc 12} Constitution saving throw or fall {@condition unconscious} for 10 minutes. A creature that can't hear the drone automatically succeeds on the save. The effect on the creature ends if it takes damage or if another creature takes an action to splash it with holy water. If a creature's saving throw is successful or the effect ends for it, it is immune to the drone for the next 24 hours."
+          "The chasme produces a horrid droning sound to which demons are immune. Any other creature that starts its turn with in 30 feet of the chasme must succeed on a {@dc 12} Constitution saving throw or fall {@condition unconscious} for 10 minutes. A creature that can't hear the drone automatically succeeds on the save. The effect on the creature ends if it takes damage or if another creature takes an action to splash it with {@item Holy Water (Flask)|PHB|holy water}. If a creature's saving throw is successful or the effect ends for it, it is immune to the drone for the next 24 hours."
         ]
       },
       {
@@ -72383,7 +72489,7 @@
       {
         "name": "Drone",
         "entries": [
-          "{@actSave con} {@dc 12}, each creature in a 30-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} originating from the chasme (demons automatically succeed on this save). {@actSaveFail} The target has the {@condition Unconscious|XPHB} condition and repeats the save at the end of each of its turns. The target succeeds automatically after 10 minutes or if it takes damage or a creature within 5 feet of it takes an action to empty a flask of Holy Water on it. {@actSaveSuccess} The target is immune to this chasme's Drone for 24 hours."
+          "{@actSave con} {@dc 12}, each creature in a 30-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} originating from the chasme (demons automatically succeed on this save). {@actSaveFail} The target has the {@condition Unconscious|XPHB} condition and repeats the save at the end of each of its turns. The target succeeds automatically after 10 minutes or if it takes damage or a creature within 5 feet of it takes an action to empty a flask of {@item Holy Water|XPHB} on it. {@actSaveSuccess} The target is immune to this chasme's Drone for 24 hours."
         ]
       }
     ]
@@ -78931,19 +79037,27 @@
       {
         "name": "Grenade Launcher {@recharge 5}",
         "entries": [
-          "The robot fires a grenade at a point it can see within 120 feet of itself. The grenade explodes in a 20-foot-radius sphere centered on that point, creating one of the following effects (robot's choice):"
-        ]
-      },
-      {
-        "name": "Concussion Grenade",
-        "entries": [
-          "Each creature in the sphere must make a {@dc 15} Dexterity saving throw, taking 21 ({@damage 6d6}) force damage on a failed save or half as much damage on a successful one."
-        ]
-      },
-      {
-        "name": "Sleep Grenade",
-        "entries": [
-          "Each creature in the sphere must succeed on a {@dc 15} Constitution saving throw or have the {@condition unconscious} condition for 1 hour. The condition ends on a creature early if the creature takes damage or if another creature uses an action to shake it awake."
+          "The robot fires a grenade at a point it can see within 120 feet of itself. The grenade explodes in a 20-foot-radius sphere centered on that point, creating one of the following effects (robot's choice):",
+          {
+            "type": "list",
+            "style": "list-hang-notitle",
+            "items": [
+              {
+                "type": "item",
+                "name": "Concussion Grenade",
+                "entries": [
+                  "Each creature in the sphere must make a {@dc 15} Dexterity saving throw, taking 21 ({@damage 6d6}) force damage on a failed save or half as much damage on a successful one."
+                ]
+              },
+              {
+                "type": "item",
+                "name": "Sleep Grenade",
+                "entries": [
+                  "Each creature in the sphere must succeed on a {@dc 15} Constitution saving throw or have the {@condition unconscious} condition for 1 hour. The condition ends on a creature early if the creature takes damage or if another creature uses an action to shake it awake."
+                ]
+              }
+            ]
+          }
         ]
       }
     ],
@@ -86236,7 +86350,7 @@
       {
         "name": "Regeneration",
         "entries": [
-          "The vampire regains 20 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from holy water, this trait doesn't function at the start of the vampire's next turn."
+          "The vampire regains 20 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from {@item Holy Water (Flask)|PHB|holy water}, this trait doesn't function at the start of the vampire's next turn."
         ]
       },
       {
@@ -96150,6 +96264,7 @@
     "wis": 17,
     "cha": 20,
     "save": {
+      "dex": "+11",
       "con": "+6",
       "int": "+11",
       "wis": "+9"
@@ -97212,7 +97327,7 @@
       {
         "name": "Spores {@recharge}",
         "entries": [
-          "A 15-foot-radius cloud of toxic spores extends out from the demon. The spores spread around corners. Each creature in that area must succeed on a {@dc 14} Constitution saving throw or become {@condition poisoned}. While {@condition poisoned} in this way, a target takes 5 ({@damage 1d10}) poison damage at the start of each of its turns. A target can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success. Emptying a vial of holy water on the target also ends the effect on it."
+          "A 15-foot-radius cloud of toxic spores extends out from the demon. The spores spread around corners. Each creature in that area must succeed on a {@dc 14} Constitution saving throw or become {@condition poisoned}. While {@condition poisoned} in this way, a target takes 5 ({@damage 1d10}) poison damage at the start of each of its turns. A target can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success. Emptying a {@item Holy Water (Flask)|PHB|vial of holy water} on the target also ends the effect on it."
         ]
       },
       {
@@ -103897,7 +104012,7 @@
       {
         "name": "Regeneration",
         "entries": [
-          "Doru regains 10 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from holy water, this trait doesn't function at the start of the vampire's next turn."
+          "Doru regains 10 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from {@item Holy Water (Flask)|PHB|holy water}, this trait doesn't function at the start of the vampire's next turn."
         ]
       },
       {
@@ -130347,7 +130462,7 @@
       {
         "name": "Regeneration",
         "entries": [
-          "Escher regains 10 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from holy water, this trait doesn't function at the start of the vampire's next turn."
+          "Escher regains 10 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from {@item Holy Water (Flask)|PHB|holy water}, this trait doesn't function at the start of the vampire's next turn."
         ]
       },
       {
@@ -143134,7 +143249,7 @@
       {
         "name": "Rejuvenation",
         "entries": [
-          "If the flameskull is destroyed, it regains all its hit points in 1 hour unless holy water is sprinkled on its remains or a {@spell dispel magic} or {@spell remove curse} spell is cast on them."
+          "If the flameskull is destroyed, it regains all its hit points in 1 hour unless {@item Holy Water (Flask)|PHB|holy water} is sprinkled on its remains or a {@spell dispel magic} or {@spell remove curse} spell is cast on them."
         ]
       }
     ],
@@ -143247,7 +143362,7 @@
       {
         "name": "Undead Restoration",
         "entries": [
-          "If the flameskull is destroyed, it regains all its {@variantrule Hit Points|XPHB} in 1 hour unless Holy Water is sprinkled on its remains or the {@spell Dispel Evil and Good|XPHB} spell is cast on them."
+          "If the flameskull is destroyed, it regains all its {@variantrule Hit Points|XPHB} in 1 hour unless {@item Holy Water|XPHB} is sprinkled on its remains or the {@spell Dispel Evil and Good|XPHB} spell is cast on them."
         ]
       }
     ],
@@ -169021,7 +169136,7 @@
       {
         "name": "Regeneration",
         "entries": [
-          "The vampire regains 10 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from holy water, this trait doesn't function at the start of the vampire's next turn."
+          "The vampire regains 10 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from {@item Holy Water (Flask)|PHB|holy water}, this trait doesn't function at the start of the vampire's next turn."
         ]
       },
       {
@@ -186054,7 +186169,7 @@
       {
         "name": "Regeneration",
         "entries": [
-          "Helga regains 10 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from holy water, this trait doesn't function at the start of the vampire's next turn."
+          "Helga regains 10 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from {@item Holy Water (Flask)|PHB|holy water}, this trait doesn't function at the start of the vampire's next turn."
         ]
       },
       {
@@ -214080,7 +214195,7 @@
       {
         "name": "Regeneration",
         "entries": [
-          "The vampire regains 20 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from holy water, this trait doesn't function at the start of the vampire's next turn."
+          "The vampire regains 20 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from {@item Holy Water (Flask)|PHB|holy water}, this trait doesn't function at the start of the vampire's next turn."
         ]
       },
       {
@@ -215662,7 +215777,7 @@
       {
         "name": "Regeneration",
         "entries": [
-          "The vampire regains 20 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from holy water, this trait doesn't function at the start of the vampire's next turn."
+          "The vampire regains 20 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from {@item Holy Water (Flask)|PHB|holy water}, this trait doesn't function at the start of the vampire's next turn."
         ]
       },
       {
@@ -220138,7 +220253,7 @@
       {
         "name": "Regeneration",
         "entries": [
-          "The vampire regains 10 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from holy water, this trait doesn't function at the start of its next turn."
+          "The vampire regains 10 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from {@item Holy Water (Flask)|PHB|holy water}, this trait doesn't function at the start of its next turn."
         ]
       },
       {
@@ -227925,7 +228040,7 @@
       {
         "name": "Hellish Rejuvenation",
         "entries": [
-          "A lemure that dies in the Nine Hells comes back to life with all its hit points in {@dice 1d10} days unless it is killed by a good-aligned creature with a {@spell bless} spell cast on that creature or its remains are sprinkled with holy water."
+          "A lemure that dies in the Nine Hells comes back to life with all its hit points in {@dice 1d10} days unless it is killed by a good-aligned creature with a {@spell bless} spell cast on that creature or its remains are sprinkled with {@item Holy Water (Flask)|PHB|holy water}."
         ]
       }
     ],
@@ -227993,7 +228108,7 @@
       {
         "name": "Hellish Restoration",
         "entries": [
-          "If the lemure dies in the Nine Hells, it revives with all its {@variantrule Hit Points|XPHB} in {@dice 1d10} days unless it is killed by a creature under the effects of a {@spell Bless|XPHB} spell or its remains are sprinkled with Holy Water."
+          "If the lemure dies in the Nine Hells, it revives with all its {@variantrule Hit Points|XPHB} in {@dice 1d10} days unless it is killed by a creature under the effects of a {@spell Bless|XPHB} spell or its remains are sprinkled with {@item Holy Water|XPHB}."
         ]
       }
     ],
@@ -234580,7 +234695,7 @@
       {
         "name": "Regeneration",
         "entries": [
-          "The vampire regains 20 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from holy water, this trait doesn't function at the start of the vampire's next turn."
+          "The vampire regains 20 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from {@item Holy Water (Flask)|PHB|holy water}, this trait doesn't function at the start of the vampire's next turn."
         ]
       },
       {
@@ -235611,7 +235726,7 @@
       {
         "name": "Regeneration",
         "entries": [
-          "Ludmilla regains 10 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from holy water, this trait doesn't function at the start of the vampire's next turn."
+          "Ludmilla regains 10 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from {@item Holy Water (Flask)|PHB|holy water}, this trait doesn't function at the start of the vampire's next turn."
         ]
       },
       {
@@ -264071,7 +264186,7 @@
       {
         "name": "Rejuvenation",
         "entries": [
-          "Unless its lifeless remains are splashed with holy water or placed in a vessel under the effects of the {@spell hallow} spell, the destroyed necrichor re-forms in {@dice 1d10} days, regaining all its hits points and appearing in the place it died or in the nearest unoccupied space."
+          "Unless its lifeless remains are splashed with {@item Holy Water (Flask)|PHB|holy water} or placed in a vessel under the effects of the {@spell hallow} spell, the destroyed necrichor re-forms in {@dice 1d10} days, regaining all its hits points and appearing in the place it died or in the nearest unoccupied space."
         ]
       },
       {
@@ -266618,7 +266733,7 @@
       {
         "name": "Rejuvenation",
         "entries": [
-          "If the flameskull is destroyed, it regains all its hit points in 1 hour unless holy water is sprinkled on its remains or a {@spell dispel magic} or {@spell remove curse} spell is cast on them."
+          "If the flameskull is destroyed, it regains all its hit points in 1 hour unless {@item Holy Water (Flask)|PHB|holy water} is sprinkled on its remains or a {@spell dispel magic} or {@spell remove curse} spell is cast on them."
         ]
       }
     ],
@@ -286253,7 +286368,7 @@
       {
         "name": "Spores {@recharge}",
         "entries": [
-          "A 15-foot-radius cloud of toxic spores extends out from the demon. The spores spread around corners. Each creature in that area must succeed on a {@dc 14} Constitution saving throw or become {@condition poisoned}. While {@condition poisoned} in this way, a target takes 5 ({@damage 1d10}) poison damage at the start of each of its turns. A target can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success. Emptying a vial of holy water on the target also ends the effect on it."
+          "A 15-foot-radius cloud of toxic spores extends out from the demon. The spores spread around corners. Each creature in that area must succeed on a {@dc 14} Constitution saving throw or become {@condition poisoned}. While {@condition poisoned} in this way, a target takes 5 ({@damage 1d10}) poison damage at the start of each of its turns. A target can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success. Emptying a {@item Holy Water (Flask)|PHB|vial of holy water} on the target also ends the effect on it."
         ]
       },
       {
@@ -304568,7 +304683,7 @@
       {
         "name": "Spores {@recharge}",
         "entries": [
-          "A 15-foot-radius cloud of toxic spores extends out from the vrock. The spores spread around corners. Each creature in that area must succeed on a {@dc 14} Constitution saving throw or become {@condition poisoned}. While {@condition poisoned} in this way, a target takes 5 ({@damage 1d10}) poison damage at the start of each of its turns. A target can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success. Emptying a vial of holy water on the target also ends the effect on it."
+          "A 15-foot-radius cloud of toxic spores extends out from the vrock. The spores spread around corners. Each creature in that area must succeed on a {@dc 14} Constitution saving throw or become {@condition poisoned}. While {@condition poisoned} in this way, a target takes 5 ({@damage 1d10}) poison damage at the start of each of its turns. A target can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success. Emptying a {@item Holy Water (Flask)|PHB|vial of holy water} on the target also ends the effect on it."
         ]
       },
       {
@@ -316888,7 +317003,7 @@
       {
         "name": "Regeneration",
         "entries": [
-          "The vampire regains 20 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from holy water, this trait doesn't function at the start of the vampire's next turn."
+          "The vampire regains 20 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from {@item Holy Water (Flask)|PHB|holy water}, this trait doesn't function at the start of the vampire's next turn."
         ]
       },
       {
@@ -317149,7 +317264,7 @@
       {
         "name": "Regeneration",
         "entries": [
-          "The vampire regains 20 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from holy water, this trait doesn't function at the start of the vampire's next turn."
+          "The vampire regains 20 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from {@item Holy Water (Flask)|PHB|holy water}, this trait doesn't function at the start of the vampire's next turn."
         ]
       },
       {
@@ -353545,7 +353660,7 @@
       {
         "name": "Regeneration",
         "entries": [
-          "Strahd regains 20 hit points at the start of his turn if he has at least 1 hit point and isn't in running water or sunlight. If he takes radiant damage or damage from holy water, this trait doesn't function at the start of his next turn."
+          "Strahd regains 20 hit points at the start of his turn if he has at least 1 hit point and isn't in running water or sunlight. If he takes radiant damage or damage from {@item Holy Water (Flask)|PHB|holy water}, this trait doesn't function at the start of his next turn."
         ]
       },
       {
@@ -354199,7 +354314,7 @@
       {
         "name": "Regeneration",
         "entries": [
-          "Strahd regains 20 hit points at the start of his turn if he has at least 1 hit point and isn't in running water or sunlight. If he takes radiant damage or damage from holy water, this trait doesn't function at the start of his next turn."
+          "Strahd regains 20 hit points at the start of his turn if he has at least 1 hit point and isn't in running water or sunlight. If he takes radiant damage or damage from {@item Holy Water (Flask)|PHB|holy water}, this trait doesn't function at the start of his next turn."
         ]
       },
       {
@@ -357665,7 +357780,7 @@
       {
         "name": "Hellish Restoration",
         "entries": [
-          "If the swarm dies in the Nine Hells, it revives with all its {@variantrule Hit Points|XPHB} in {@dice 1d10} days unless it is killed by a creature under the effects of a {@spell Bless|XPHB} spell or its remains are sprinkled with Holy Water."
+          "If the swarm dies in the Nine Hells, it revives with all its {@variantrule Hit Points|XPHB} in {@dice 1d10} days unless it is killed by a creature under the effects of a {@spell Bless|XPHB} spell or its remains are sprinkled with {@item Holy Water|XPHB}."
         ]
       },
       {
@@ -365031,121 +365146,6 @@
     ]
   },
   {
-    "name": "The Demogorgon",
-    "source": "IMR",
-    "size": [
-      "L"
-    ],
-    "type": "giant",
-    "alignment": [
-      "C",
-      "N"
-    ],
-    "ac": [
-      {
-        "ac": 15,
-        "from": [
-          "natural armor"
-        ]
-      }
-    ],
-    "hp": {
-      "average": 123,
-      "formula": "13d12 + 39"
-    },
-    "speed": {
-      "walk": 40
-    },
-    "str": 21,
-    "dex": 8,
-    "con": 17,
-    "int": 6,
-    "wis": 10,
-    "cha": 8,
-    "skill": {
-      "perception": "+3"
-    },
-    "senses": [
-      "darkvision 60 ft."
-    ],
-    "languages": [
-      "Giant",
-      "Orc"
-    ],
-    "cr": "8",
-    "trait": [
-      {
-        "name": "Two Heads",
-        "entries": [
-          "The ettin has advantage on Wisdom ({@skill Perception}) checks and on saving throws against being {@condition blinded}, {@condition charmed}, {@condition deafened}, {@condition frightened}, {@condition stunned}, and knocked {@condition unconscious}."
-        ]
-      },
-      {
-        "name": "Wakeful",
-        "entries": [
-          "When one of the ettin's heads is asleep, its other head is awake."
-        ]
-      }
-    ],
-    "action": [
-      {
-        "name": "Multiattack",
-        "entries": [
-          "The ettin makes two attacks: one with its battleaxe and one with its morningstar."
-        ]
-      },
-      {
-        "name": "Battleaxe",
-        "entries": [
-          "{@atk mw} {@hit 8} to hit, reach 5 ft., one target. {@h}14 ({@damage 2d8 + 5}) slashing damage."
-        ]
-      },
-      {
-        "name": "Morningstar",
-        "entries": [
-          "{@atk mw} {@hit 8} to hit, reach 5 ft., one target. {@h}14 ({@damage 2d8 + 5}) piercing damage."
-        ]
-      },
-      {
-        "name": "Fire Breath {@recharge 5}",
-        "entries": [
-          "The ettin's right head exhales fire in a 30-foot cone. Each creature in that area must make a {@dc 14} Dexterity saving throw, taking 45 ({@damage 10d8}) fire damage on a failed save, or half as much damage on a successful one."
-        ]
-      },
-      {
-        "name": "Cold Breath {@recharge 5}",
-        "entries": [
-          "The ettin's left head exhales an icy blast in a 30-foot cone. Each creature in that area must make a {@dc 14} Constitution saving throw, taking 45 ({@damage 10d8}) cold damage on a failed save, or half as much damage on a successful one."
-        ]
-      },
-      {
-        "name": "Gaze",
-        "entries": [
-          "The ettin turns its magical gaze toward one creature that it can see within 120 feet of it. That target must make a {@dc 14} Wisdom saving throw. Unless the target is {@condition incapacitated}, it can avert its eyes to avoid the gaze and to automatically succeed on the save. If the target does so, it can't see the ettin until the start of the ettin's next turn. If the target looks at the ettin in the meantime, it must immediately make the save.",
-          "If the target fails the save, it suffers one of the following effects of the ettin's choice or at random:"
-        ]
-      },
-      {
-        "name": "Beguiling Gaze",
-        "entries": [
-          "The target is {@condition stunned} until the start of the ettin's next turn or until the ettin is no longer within line of sight."
-        ]
-      },
-      {
-        "name": "Hypnotic Gaze",
-        "entries": [
-          "The target is {@condition charmed} by the ettin until the start of the ettin's next turn. The ettin chooses how the {@condition charmed} target uses its actions, reactions, and movement."
-        ]
-      },
-      {
-        "name": "Insanity Gaze",
-        "entries": [
-          "The target suffers the effect of the {@spell confusion} spell without making a saving throw. The effect lasts until the start of the ettin's next turn. The ettin doesn't need to concentrate on the spell."
-        ]
-      }
-    ]
-  },
-  {
     "name": "The Gardener",
     "source": "QFTIS",
     "size": [
@@ -371849,7 +371849,7 @@
       {
         "name": "Regeneration",
         "entries": [
-          "The vampire regains 10 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from holy water, this trait doesn't function at the start of the vampire's next turn."
+          "The vampire regains 10 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from {@item Holy Water (Flask)|PHB|holy water}, this trait doesn't function at the start of the vampire's next turn."
         ]
       },
       {
@@ -376148,7 +376148,7 @@
       {
         "name": "Rejuvenation",
         "entries": [
-          "If the flameskull is destroyed, it regains all its hit points in 1 hour unless holy water is sprinkled on its remains or a {@spell dispel magic} or {@spell remove curse} spell is cast on them."
+          "If the flameskull is destroyed, it regains all its hit points in 1 hour unless {@item Holy Water (Flask)|PHB|holy water} is sprinkled on its remains or a {@spell dispel magic} or {@spell remove curse} spell is cast on them."
         ]
       }
     ],
@@ -386055,7 +386055,7 @@
       {
         "name": "Regeneration",
         "entries": [
-          "The vampire regains 20 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from holy water, this trait doesn't function at the start of the vampire's next turn."
+          "The vampire regains 20 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from {@item Holy Water (Flask)|PHB|holy water}, this trait doesn't function at the start of the vampire's next turn."
         ]
       },
       {
@@ -386698,7 +386698,7 @@
       {
         "name": "Regeneration",
         "entries": [
-          "The vampire regains 10 hit points at the start of its turn if it has at least 1 hit point. If the vampire takes radiant damage or damage from holy water, this trait doesn't function at the start of the vampire's next turn."
+          "The vampire regains 10 hit points at the start of its turn if it has at least 1 hit point. If the vampire takes radiant damage or damage from {@item Holy Water (Flask)|PHB|holy water}, this trait doesn't function at the start of the vampire's next turn."
         ]
       }
     ],
@@ -386952,7 +386952,7 @@
       {
         "name": "Regeneration",
         "entries": [
-          "The vampire regains 10 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from holy water, this trait doesn't function at the start of the vampire's next turn."
+          "The vampire regains 10 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from {@item Holy Water (Flask)|PHB|holy water}, this trait doesn't function at the start of the vampire's next turn."
         ]
       },
       {
@@ -387284,7 +387284,7 @@
       {
         "name": "Regeneration",
         "entries": [
-          "The vampire regains 20 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from holy water, this trait doesn't function at the start of the vampire's next turn."
+          "The vampire regains 20 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from {@item Holy Water (Flask)|PHB|holy water}, this trait doesn't function at the start of the vampire's next turn."
         ]
       },
       {
@@ -387818,7 +387818,7 @@
       {
         "name": "Regeneration",
         "entries": [
-          "The vampire regains 20 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from holy water, this trait doesn't function at the start of the vampire's next turn."
+          "The vampire regains 20 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from {@item Holy Water (Flask)|PHB|holy water}, this trait doesn't function at the start of the vampire's next turn."
         ]
       },
       {
@@ -395314,7 +395314,7 @@
       {
         "name": "Regeneration",
         "entries": [
-          "Volenta regains 10 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from holy water, this trait doesn't function at the start of the vampire's next turn."
+          "Volenta regains 10 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from {@item Holy Water (Flask)|PHB|holy water}, this trait doesn't function at the start of the vampire's next turn."
         ]
       },
       {
@@ -395847,7 +395847,7 @@
       {
         "name": "Spores {@recharge}",
         "entries": [
-          "A 15-foot-radius cloud of toxic spores extends out from the vrock. The spores spread around corners. Each creature in that area must succeed on a {@dc 14} Constitution saving throw or become {@condition poisoned}. While {@condition poisoned} in this way, a target takes 5 ({@damage 1d10}) poison damage at the start of each of its turns. A target can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success. Emptying a vial of holy water on the target also ends the effect on it."
+          "A 15-foot-radius cloud of toxic spores extends out from the vrock. The spores spread around corners. Each creature in that area must succeed on a {@dc 14} Constitution saving throw or become {@condition poisoned}. While {@condition poisoned} in this way, a target takes 5 ({@damage 1d10}) poison damage at the start of each of its turns. A target can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success. Emptying a {@item Holy Water (Flask)|PHB|vial of holy water} on the target also ends the effect on it."
         ]
       },
       {
@@ -395944,7 +395944,7 @@
       {
         "name": "Spores {@recharge}",
         "entries": [
-          "{@actSave con} {@dc 15}, each creature in a 20-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} originating from the vrock. {@actSaveFail} The target has the {@condition Poisoned|XPHB} condition and repeats the save at the end of each of its turns, ending the effect on itself on a success. While {@condition Poisoned|XPHB}, the target takes 5 ({@damage 1d10}) Poison damage at the start of each of its turns. Emptying a flask of Holy Water on the target ends the effect early."
+          "{@actSave con} {@dc 15}, each creature in a 20-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} originating from the vrock. {@actSaveFail} The target has the {@condition Poisoned|XPHB} condition and repeats the save at the end of each of its turns, ending the effect on itself on a success. While {@condition Poisoned|XPHB}, the target takes 5 ({@damage 1d10}) Poison damage at the start of each of its turns. Emptying a flask of {@item Holy Water|XPHB} on the target ends the effect early."
         ]
       },
       {
@@ -428462,7 +428462,7 @@
       {
         "name": "Regeneration",
         "entries": [
-          "Zorak regains 20 hit points at the start of his turn if he has at least 1 hit point and isn't in sunlight or running water. If Zorak takes radiant damage or damage from holy water, this trait doesn't function at the start of Zorak's next turn."
+          "Zorak regains 20 hit points at the start of his turn if he has at least 1 hit point and isn't in sunlight or running water. If Zorak takes radiant damage or damage from {@item Holy Water (Flask)|PHB|holy water}, this trait doesn't function at the start of Zorak's next turn."
         ]
       },
       {
