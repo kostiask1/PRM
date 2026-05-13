@@ -16,7 +16,8 @@
     "check:uk": "node scripts/check-ukrainian-encoding.mjs",
     "bestiary:materialize-copies": "node scripts/materialize-bestiary-copies.mjs",
     "database:bundle": "node scripts/build-database-bundles.mjs",
-    "database:bundle:compact": "node scripts/build-database-bundles.mjs --delete-sources"
+    "database:bundle:compact": "node scripts/build-database-bundles.mjs --delete-sources",
+    "database:update": "node scripts/update-5etools-data.mjs"
   },
   "keywords": [
     "dnd",
