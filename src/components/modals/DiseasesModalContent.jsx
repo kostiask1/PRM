@@ -1,27 +1,13 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { alert } from "../../actions/app";
 import { api } from "../../api";
 import "../../assets/components/ConditionsModal.css";
 import Input from "../form/Input";
 import { lang } from "../../services/localization";
-import { openModalRequest, useAppDispatch } from "../../store/appStore";
+import { useAppDispatch } from "../../store/appStore";
 import { renderRecursiveContent } from "../../renderers/contentRenderer.jsx";
-import { getSpellByName } from "../../services/referencePreview.js";
-import {
-	resolveConditionInput,
-	resolveSpellInput,
-} from "../../services/referenceResolvers.js";
 import ListCard from "../common/ListCard.jsx";
-import { openConditionsModal } from "./openConditionsModal.jsx";
-
-const SpellCard = lazy(() => import("../SpellCard"));
-
-function normalizeName(name) {
-	return String(name || "")
-		.trim()
-		.toLowerCase();
-}
 
 export default function DiseasesModalContent({ initialDiseaseName = "" }) {
 	const dispatch = useAppDispatch();
@@ -111,93 +97,6 @@ export default function DiseasesModalContent({ initialDiseaseName = "" }) {
 		diseases.find((item) => item.name === selectedDiseaseName) ||
 		null;
 
-	const findDisease = (nameOrDisease) => {
-		if (nameOrDisease && typeof nameOrDisease === "object") {
-			return nameOrDisease.name ? nameOrDisease : null;
-		}
-
-		const key = normalizeName(nameOrDisease);
-		if (!key) return null;
-		return diseases.find((item) => normalizeName(item.name) === key) || null;
-	};
-
-	async function handleSpellClick(spellOrName) {
-		const spell = await resolveSpellInput(spellOrName);
-		if (!spell) return;
-
-		openModalRequest({
-			title: spell.name.split("|")[0],
-			type: "confirm",
-			showFooter: false,
-			children: (
-				<Suspense fallback={null}>
-					<SpellCard
-						spell={spell}
-						onSpellClick={handleSpellClick}
-						onConditionClick={handleConditionClick}
-					/>
-				</Suspense>
-			),
-		});
-	}
-
-	async function handleSpellHover(spellName) {
-		const spell = await getSpellByName(spellName);
-		if (!spell) return null;
-
-		return (
-			<div className="Tooltip__spell-card">
-				<Suspense fallback={null}>
-					<SpellCard
-						spell={spell}
-						onSpellClick={handleSpellClick}
-						onConditionClick={handleConditionClick}
-					/>
-				</Suspense>
-			</div>
-		);
-	}
-
-	async function handleConditionClick(nameOrCondition) {
-		const condition = await resolveConditionInput(nameOrCondition);
-		if (!condition) return;
-		openConditionsModal(condition.name);
-	}
-
-	async function handleConditionHover(nameOrCondition) {
-		const condition = await resolveConditionInput(nameOrCondition);
-		if (!condition) return null;
-
-		return (
-			<div>
-				<div className="Tooltip__title">{condition.name}</div>
-				<div className="Tooltip__text">
-					{renderRecursiveContent(condition.entries, null, null, null, null)}
-				</div>
-			</div>
-		);
-	}
-
-	function handleDiseaseClick(nameOrDisease) {
-		const disease = findDisease(nameOrDisease);
-		if (!disease) return;
-		setSelectedDiseaseName(disease.name);
-	}
-
-	function handleDiseaseHover(nameOrDisease) {
-		const disease = findDisease(nameOrDisease);
-		if (!disease) return null;
-
-		return (
-			<div>
-				<div className="Tooltip__title">{disease.name}</div>
-				<div className="Tooltip__text">
-					{renderRecursiveContent(disease.entries, null, null, null, null)}
-				</div>
-			</div>
-		);
-	}
-
 	return (
 		<div className="ConditionsModal">
 			<div className="ConditionsModal__sidebar">
@@ -239,15 +138,7 @@ export default function DiseasesModalContent({ initialDiseaseName = "" }) {
 						</div>
 
 						<div className="ConditionsModal__entryContent">
-							{renderRecursiveContent(
-								selectedDisease.entries,
-								handleSpellClick,
-								handleConditionClick,
-								handleSpellHover,
-								handleConditionHover,
-								handleDiseaseClick,
-								handleDiseaseHover,
-							)}
+							{renderRecursiveContent(selectedDisease.entries)}
 						</div>
 					</>
 				)}

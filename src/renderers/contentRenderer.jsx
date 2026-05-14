@@ -10,35 +10,11 @@ import {
 	preprocessTags,
 } from "../utils/parser.jsx";
 
-export const renderRecursiveContent = (
-	content,
-	onSpellClick,
-	onConditionClick,
-	onSpellHover,
-	onConditionHover,
-	onDiseaseClick,
-	onDiseaseHover,
-	onVariantRuleClick,
-	onVariantRuleHover,
-	onSkillClick,
-	onSkillHover,
-) => {
+export const renderRecursiveContent = (content) => {
 	if (content === undefined || content === null) return null;
 
 	if (typeof content === "string") {
-		return parseRollsAndSpells(
-			preprocessTags(content),
-			onSpellClick,
-			onConditionClick,
-			onSpellHover,
-			onConditionHover,
-			onDiseaseClick,
-			onDiseaseHover,
-			onVariantRuleClick,
-			onVariantRuleHover,
-			onSkillClick,
-			onSkillHover,
-		);
+		return parseRollsAndSpells(preprocessTags(content));
 	}
 
 	if (typeof content === "number") {
@@ -48,38 +24,14 @@ export const renderRecursiveContent = (
 	if (Array.isArray(content)) {
 		return content.map((item, idx) => (
 			<React.Fragment key={idx}>
-				{renderRecursiveContent(
-					item,
-					onSpellClick,
-					onConditionClick,
-					onSpellHover,
-					onConditionHover,
-					onDiseaseClick,
-					onDiseaseHover,
-					onVariantRuleClick,
-					onVariantRuleHover,
-					onSkillClick,
-					onSkillHover,
-				)}
+				{renderRecursiveContent(item)}
 			</React.Fragment>
 		));
 	}
 
 	if (typeof content === "object") {
 		if (content.entry) {
-			return renderRecursiveContent(
-				content.entry,
-				onSpellClick,
-				onConditionClick,
-				onSpellHover,
-				onConditionHover,
-				onDiseaseClick,
-				onDiseaseHover,
-				onVariantRuleClick,
-				onVariantRuleHover,
-				onSkillClick,
-				onSkillHover,
-			);
+			return renderRecursiveContent(content.entry);
 		}
 
 		if (content.type === "list" && content.items) {
@@ -97,16 +49,6 @@ export const renderRecursiveContent = (
 								{isObject && item.name && <strong>{item.name}. </strong>}
 								{renderRecursiveContent(
 									isObject ? item.entries || item.entry : item,
-									onSpellClick,
-									onConditionClick,
-									onSpellHover,
-									onConditionHover,
-									onDiseaseClick,
-									onDiseaseHover,
-									onVariantRuleClick,
-									onVariantRuleHover,
-									onSkillClick,
-									onSkillHover,
 								)}
 							</li>
 						);
@@ -122,19 +64,7 @@ export const renderRecursiveContent = (
 			return (
 				<div key={content.name || Math.random()} className="parser-section">
 					{content.name && <strong>{content.name}. </strong>}
-					{renderRecursiveContent(
-						content.entries,
-						onSpellClick,
-						onConditionClick,
-						onSpellHover,
-						onConditionHover,
-						onDiseaseClick,
-						onDiseaseHover,
-						onVariantRuleClick,
-						onVariantRuleHover,
-						onSkillClick,
-						onSkillHover,
-					)}
+					{renderRecursiveContent(content.entries)}
 				</div>
 			);
 		}
@@ -154,19 +84,7 @@ export const renderRecursiveContent = (
 								<tr>
 									{content.colLabels.map((lbl, i) => (
 										<th key={i} className={content.colStyles?.[i]}>
-											{renderRecursiveContent(
-												lbl,
-												onSpellClick,
-												onConditionClick,
-												onSpellHover,
-												onConditionHover,
-												onDiseaseClick,
-												onDiseaseHover,
-												onVariantRuleClick,
-												onVariantRuleHover,
-												onSkillClick,
-												onSkillHover,
-											)}
+											{renderRecursiveContent(lbl)}
 										</th>
 									))}
 								</tr>
@@ -177,19 +95,7 @@ export const renderRecursiveContent = (
 								<tr key={i}>
 									{row.map((cell, j) => (
 										<td key={j} className={content.colStyles?.[j]}>
-											{renderRecursiveContent(
-												cell,
-												onSpellClick,
-												onConditionClick,
-												onSpellHover,
-												onConditionHover,
-												onDiseaseClick,
-												onDiseaseHover,
-												onVariantRuleClick,
-												onVariantRuleHover,
-												onSkillClick,
-												onSkillHover,
-											)}
+											{renderRecursiveContent(cell)}
 										</td>
 									))}
 								</tr>
@@ -200,19 +106,7 @@ export const renderRecursiveContent = (
 			);
 		}
 
-		return parseRollsAndSpells(
-			preprocessTags(JSON.stringify(content)),
-			onSpellClick,
-			onConditionClick,
-			onSpellHover,
-			onConditionHover,
-			onDiseaseClick,
-			onDiseaseHover,
-			onVariantRuleClick,
-			onVariantRuleHover,
-			onSkillClick,
-			onSkillHover,
-		);
+		return parseRollsAndSpells(preprocessTags(JSON.stringify(content)));
 	}
 
 	return null;
@@ -249,19 +143,7 @@ function stripNotesReferenceText(text) {
 	);
 }
 
-export const parseRollsAndSpells = (
-	text,
-	onSpellClick,
-	onConditionClick,
-	onSpellHover,
-	onConditionHover,
-	onDiseaseClick,
-	onDiseaseHover,
-	onVariantRuleClick,
-	onVariantRuleHover,
-	onSkillClick,
-	onSkillHover,
-) => {
+export const parseRollsAndSpells = (text) => {
 	if (!text) return text;
 
 	const cleanText = stripNotesReferenceText(text);
@@ -310,115 +192,50 @@ export const parseRollsAndSpells = (
 			);
 		} else if (spellTag) {
 			const { name: rawSpellName, displayText } = parseTaggedName(spellValue);
-			if (onSpellClick) {
-				elements.push(
-					<RulesLink
-						key={`s-${matchIndex}`}
-						type="spell"
-						onClick={() => onSpellClick(displayText)}
-						onHoverResolve={
-							onSpellHover
-								? () => onSpellHover(rawSpellName, displayText)
-								: null
-						}
-					>
-						{displayText}
-					</RulesLink>,
-				);
-			} else {
-				pushSafeMarkdownText(elements, displayText, `t-${matchIndex}-spell`);
-			}
+			elements.push(
+				<RulesLink key={`s-${matchIndex}`} type="spell" name={rawSpellName}>
+					{displayText}
+				</RulesLink>,
+			);
 		} else if (conditionTag || conditionPlain) {
 			const rawCondition = conditionTag
 				? parseTaggedName(conditionValue).name
 				: conditionPlain.replace(/^@condition\s+/i, "").trim();
 			const displayText = capitalizeWords(rawCondition);
-			if (onConditionClick) {
-				elements.push(
-					<RulesLink
-						key={`c-${matchIndex}`}
-						type={conditionTag?.toLowerCase().startsWith("{@status") ? "status" : "condition"}
-						onClick={() => onConditionClick(rawCondition)}
-						onHoverResolve={
-							onConditionHover
-								? () => onConditionHover(rawCondition, displayText)
-								: null
-						}
-					>
-						{displayText}
-					</RulesLink>,
-				);
-			} else {
-				pushSafeMarkdownText(
-					elements,
-					displayText,
-					`t-${matchIndex}-condition`,
-				);
-			}
+			elements.push(
+				<RulesLink
+					key={`c-${matchIndex}`}
+					type={
+						conditionTag?.toLowerCase().startsWith("{@status")
+							? "status"
+							: "condition"
+					}
+					name={rawCondition}
+				>
+					{displayText}
+				</RulesLink>,
+			);
 		} else if (diseaseValue) {
 			const { name: rawDiseaseName, displayText } = parseTaggedName(diseaseValue);
-			if (onDiseaseClick) {
-				elements.push(
-					<RulesLink
-						key={`d-${matchIndex}`}
-						type="disease"
-						onClick={() => onDiseaseClick(rawDiseaseName)}
-						onHoverResolve={
-							onDiseaseHover
-								? () => onDiseaseHover(rawDiseaseName, displayText)
-								: null
-						}
-					>
-						{displayText}
-					</RulesLink>,
-				);
-			} else {
-				pushSafeMarkdownText(elements, displayText, `t-${matchIndex}-disease`);
-			}
+			elements.push(
+				<RulesLink key={`d-${matchIndex}`} type="disease" name={rawDiseaseName}>
+					{displayText}
+				</RulesLink>,
+			);
 		} else if (variantRuleValue) {
 			const { name: rawRuleName, displayText } = parseTaggedName(variantRuleValue);
-			if (onVariantRuleClick) {
-				elements.push(
-					<RulesLink
-						key={`v-${matchIndex}`}
-						type="variantrule"
-						onClick={() => onVariantRuleClick(rawRuleName)}
-						onHoverResolve={
-							onVariantRuleHover
-								? () => onVariantRuleHover(rawRuleName, displayText)
-								: null
-						}
-					>
-						{displayText}
-					</RulesLink>,
-				);
-			} else {
-				pushSafeMarkdownText(
-					elements,
-					displayText,
-					`t-${matchIndex}-variantrule`,
-				);
-			}
+			elements.push(
+				<RulesLink key={`v-${matchIndex}`} type="variantrule" name={rawRuleName}>
+					{displayText}
+				</RulesLink>,
+			);
 		} else if (skillValue) {
 			const { name: rawSkillName, displayText } = parseTaggedName(skillValue);
-			if (onSkillClick) {
-				elements.push(
-					<RulesLink
-						key={`sk-${matchIndex}`}
-						type="skill"
-						onClick={() => onSkillClick(rawSkillName)}
-						onHoverResolve={
-							onSkillHover
-								? () => onSkillHover(rawSkillName, displayText)
-								: null
-						}
-					>
-						{displayText}
-					</RulesLink>,
-				);
-			} else {
-				pushSafeMarkdownText(elements, displayText, `t-${matchIndex}-skill`);
-			}
+			elements.push(
+				<RulesLink key={`sk-${matchIndex}`} type="skill" name={rawSkillName}>
+					{displayText}
+				</RulesLink>,
+			);
 		} else {
 			pushSafeMarkdownText(elements, fullMatch, `t-${matchIndex}-raw`);
 		}

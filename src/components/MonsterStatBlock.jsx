@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { api } from "../api.js";
 import RollDice from "./RollDice";
 import Icon from "./common/Icon.jsx";
-import SpellCard from "./SpellCard";
 import {
 	getAbilityModifier,
 	formatModifier,
@@ -19,14 +18,6 @@ import "../assets/components/MonsterStatBlock.css";
 import ClickToCopy from "./common/ClickToCopy.jsx";
 import Button from "./form/Button.jsx";
 import MonsterStatBlockModel from "../models/MonsterStatBlockModel.js";
-import { getSpellByName } from "../services/referencePreview.js";
-import {
-	resolveDiseaseInput,
-	resolveSkillInput,
-	resolveSpellInput,
-	resolveVariantRuleInput,
-} from "../services/referenceResolvers.js";
-import useConditionReference from "../hooks/useConditionReference.jsx";
 import Tooltip from "./common/Tooltip.jsx";
 import classNames from "../utils/classNames";
 import { requestDiceRollAction } from "../actions/app";
@@ -37,7 +28,7 @@ import {
 } from "../store/appStore";
 import { lang } from "../services/localization.js";
 import AddMonsterToEncounterModalContent from "./modals/AddMonsterToEncounterModalContent.jsx";
-import { openDiseasesModal } from "./modals/openDiseasesModal.jsx";
+import RulesLink from "./RulesLink.jsx";
 
 const SPELL_CACHE = new Map();
 
@@ -127,143 +118,6 @@ export default function MonsterStatBlock({
 		onNameRename?.(monster);
 	};
 
-	const handleSpellClick = async (spellOrName) => {
-		const spell = await resolveSpellInput(spellOrName);
-		if (!spell) return;
-
-		openModalRequest({
-			title: capitalizeWords(spell.name.split("|")[0]),
-			type: "confirm",
-			showFooter: false,
-			children: (
-				<SpellCard
-					spell={spell}
-					onSpellClick={handleSpellClick}
-					onConditionClick={handleConditionClick}
-				/>
-			),
-		});
-	};
-
-	const { handleConditionClick, handleConditionHover } = useConditionReference({
-		onSpellClick: handleSpellClick,
-		getSpellHoverHandler: () => handleSpellHover,
-	});
-
-	const handleSpellHover = async (spellName) => {
-		const spell = await getSpellByName(spellName);
-		if (!spell) return null;
-		return (
-			<div className="Tooltip__spell-card">
-				<SpellCard
-					spell={spell}
-					onSpellClick={handleSpellClick}
-					onConditionClick={handleConditionClick}
-				/>
-			</div>
-		);
-	};
-
-	const handleDiseaseClick = async (nameOrDisease) => {
-		const disease = await resolveDiseaseInput(nameOrDisease);
-		if (!disease) return;
-		openDiseasesModal(disease.name);
-	};
-
-	const handleDiseaseHover = async (nameOrDisease) => {
-		const disease = await resolveDiseaseInput(nameOrDisease);
-		if (!disease) return null;
-
-		return (
-			<div>
-				<div className="Tooltip__title">{disease.name}</div>
-				{disease.type && <div className="Tooltip__meta">{disease.type}</div>}
-				<div className="Tooltip__text">
-					{renderRecursiveContent(
-						disease.entries,
-						...referenceHandlers,
-					)}
-				</div>
-			</div>
-		);
-	};
-
-	const handleVariantRuleClick = async (nameOrRule) => {
-		const rule = await resolveVariantRuleInput(nameOrRule);
-		if (!rule) return;
-
-		openModalRequest({
-			title: rule.name,
-			type: "confirm",
-			showFooter: false,
-			children: (
-				<div className="ConditionsModal__entryContent">
-					{renderRecursiveContent(rule.entries, ...referenceHandlers)}
-				</div>
-			),
-		});
-	};
-
-	const handleVariantRuleHover = async (nameOrRule) => {
-		const rule = await resolveVariantRuleInput(nameOrRule);
-		if (!rule) return null;
-
-		return (
-			<div>
-				<div className="Tooltip__title">{rule.name}</div>
-				<div className="Tooltip__text">
-					{renderRecursiveContent(rule.entries, ...referenceHandlers)}
-				</div>
-			</div>
-		);
-	};
-
-	const handleSkillClick = async (nameOrSkill) => {
-		const skill = await resolveSkillInput(nameOrSkill);
-		if (!skill) return;
-
-		openModalRequest({
-			title: skill.name,
-			type: "confirm",
-			showFooter: false,
-			children: (
-				<div className="ConditionsModal__entryContent">
-					{renderRecursiveContent(skill.entries, ...referenceHandlers)}
-				</div>
-			),
-		});
-	};
-
-	const handleSkillHover = async (nameOrSkill) => {
-		const skill = await resolveSkillInput(nameOrSkill);
-		if (!skill) return null;
-
-		return (
-			<div>
-				<div className="Tooltip__title">{skill.name}</div>
-				{skill.ability && (
-					<div className="Tooltip__meta">{skill.ability.toUpperCase()}</div>
-				)}
-				<div className="Tooltip__text">
-					{renderRecursiveContent(skill.entries, ...referenceHandlers)}
-				</div>
-			</div>
-		);
-	};
-
-	const referenceHandlers = [
-		handleSpellClick,
-		handleConditionClick,
-		handleSpellHover,
-		handleConditionHover,
-		handleDiseaseClick,
-		handleDiseaseHover,
-		handleVariantRuleClick,
-		handleVariantRuleHover,
-		handleSkillClick,
-		handleSkillHover,
-	];
-
 	useEffect(() => {
 		setSpells([]);
 
@@ -305,16 +159,10 @@ export default function MonsterStatBlock({
 				{actions.map((action, index) => (
 					<div key={index} className="MonsterStatBlock__action">
 						<strong>
-							{renderRecursiveContent(
-								action.name,
-								...referenceHandlers,
-								)}
+							{renderRecursiveContent(action.name)}
 							.
 						</strong>{" "}
-						{renderRecursiveContent(
-							action.entries || action.desc,
-							...referenceHandlers,
-							)}
+						{renderRecursiveContent(action.entries || action.desc)}
 						<div className="MonsterStatBlock__action-rolls">
 							{action.attack_bonus && (
 								<div className="stat-item">
@@ -406,12 +254,9 @@ export default function MonsterStatBlock({
 						<strong>{lvl === "0" ? "Cantrip" : `${lvl}-level`}:</strong>{" "}
 						{levels[lvl].map((s, i) => (
 							<React.Fragment key={s.slug || s.name}>
-								<span
-									className="MonsterStatBlock__spell"
-									onClick={() => handleSpellClick(s)}
-								>
+								<RulesLink type="spell" name={s.name}>
 									{capitalizeWords(s.name.split("|")[0])}
-								</span>
+								</RulesLink>
 								{i < levels[lvl].length - 1 ? ", " : ""}
 							</React.Fragment>
 						))}
@@ -430,10 +275,7 @@ export default function MonsterStatBlock({
 						<h4>{sc.name}:</h4>
 						{sc.headerEntries && (
 							<p>
-								{renderRecursiveContent(
-									sc.headerEntries,
-									...referenceHandlers,
-									)}
+								{renderRecursiveContent(sc.headerEntries)}
 							</p>
 						)}
 						{sc.will && (
@@ -441,10 +283,7 @@ export default function MonsterStatBlock({
 								<strong>At will:</strong>{" "}
 								{sc.will.map((s, i) => (
 									<React.Fragment key={i}>
-										{renderRecursiveContent(
-											s,
-											...referenceHandlers,
-											)}
+										{renderRecursiveContent(s)}
 										{i < sc.will.length - 1 ? ", " : ""}
 									</React.Fragment>
 								))}
@@ -456,10 +295,7 @@ export default function MonsterStatBlock({
 									<strong>{freq} each:</strong>{" "}
 									{list.map((s, i) => (
 										<React.Fragment key={i}>
-											{renderRecursiveContent(
-												s,
-												...referenceHandlers,
-												)}
+											{renderRecursiveContent(s)}
 											{i < list.length - 1 ? ", " : ""}
 										</React.Fragment>
 									))}
@@ -478,10 +314,7 @@ export default function MonsterStatBlock({
 									</strong>
 									{info.spells.map((s, i) => (
 										<React.Fragment key={i}>
-											{renderRecursiveContent(
-												s,
-												...referenceHandlers,
-												)}
+											{renderRecursiveContent(s)}
 											{i < info.spells.length - 1 ? ", " : ""}
 										</React.Fragment>
 									))}
@@ -594,10 +427,7 @@ export default function MonsterStatBlock({
 					<div className="MonsterStatBlock__stats">
 						<div className="stat-item">
 							<strong>HP:</strong>{" "}
-							{renderRecursiveContent(
-								model.hp.val,
-								...referenceHandlers,
-								)}{" "}
+							{renderRecursiveContent(model.hp.val)}{" "}
 							{model.hp.formula && (
 								<>
 									(<RollDice formula={model.hp.formula} />)
@@ -606,14 +436,8 @@ export default function MonsterStatBlock({
 						</div>
 						<div className="stat-item ac">
 							<strong>AC:</strong>{" "}
-							{renderRecursiveContent(
-								model.ac.val,
-								...referenceHandlers,
-								)}{" "}
-							{renderRecursiveContent(
-								model.ac.desc,
-								...referenceHandlers,
-								)}
+							{renderRecursiveContent(model.ac.val)}{" "}
+							{renderRecursiveContent(model.ac.desc)}
 						</div>
 						<div className="stat-item">
 							<strong>Speed:</strong> {model.speed}
@@ -714,10 +538,7 @@ export default function MonsterStatBlock({
 				<div className="MonsterStatBlock__description">
 					<p>
 						<strong>Senses:</strong>{" "}
-						{renderRecursiveContent(
-							monster.senses,
-							...referenceHandlers,
-							)}
+						{renderRecursiveContent(monster.senses)}
 					</p>
 					<p>
 						<strong>Languages:</strong> {model.languages}
@@ -728,10 +549,7 @@ export default function MonsterStatBlock({
 				</div>
 				{monster.desc && (
 					<div className="MonsterStatBlock__lore">
-						{parseRollsAndSpells(
-							preprocessTags(monster.desc),
-							...referenceHandlers,
-							)}
+						{parseRollsAndSpells(preprocessTags(monster.desc))}
 					</div>
 				)}
 			</div>
@@ -745,19 +563,13 @@ export default function MonsterStatBlock({
 			{monster.lairActions && monster.lairActions.length > 0 && (
 				<div className="MonsterStatBlock__section">
 					<h4>Lair Actions:</h4>
-					{renderRecursiveContent(
-						monster.lairActions,
-						...referenceHandlers,
-						)}
+					{renderRecursiveContent(monster.lairActions)}
 				</div>
 			)}
 			{monster.regionalEffects && monster.regionalEffects.length > 0 && (
 				<div className="MonsterStatBlock__section">
 					<h4>Regional Effects:</h4>
-					{renderRecursiveContent(
-						monster.regionalEffects,
-						...referenceHandlers,
-						)}
+					{renderRecursiveContent(monster.regionalEffects)}
 				</div>
 			)}
 		</div>

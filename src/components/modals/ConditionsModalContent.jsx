@@ -1,20 +1,13 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { alert } from "../../actions/app";
 import { api } from "../../api";
 import "../../assets/components/ConditionsModal.css";
 import Input from "../form/Input";
 import { lang } from "../../services/localization";
-import { openModalRequest, useAppDispatch } from "../../store/appStore";
+import { useAppDispatch } from "../../store/appStore";
 import { renderRecursiveContent } from "../../renderers/contentRenderer.jsx";
-import { getSpellByName } from "../../services/referencePreview.js";
-import {
-	resolveConditionInput,
-	resolveSpellInput,
-} from "../../services/referenceResolvers.js";
 import ListCard from "../common/ListCard.jsx";
-
-const SpellCard = lazy(() => import("../SpellCard"));
 
 export default function ConditionsModalContent({ initialConditionName = "" }) {
 	const dispatch = useAppDispatch();
@@ -104,63 +97,6 @@ export default function ConditionsModalContent({ initialConditionName = "" }) {
 		conditions.find((item) => item.name === selectedConditionName) ||
 		null;
 
-	async function handleSpellClick(spellOrName) {
-		const spell = await resolveSpellInput(spellOrName);
-		if (!spell) return;
-
-		openModalRequest({
-			title: spell.name.split("|")[0],
-			type: "confirm",
-			showFooter: false,
-			children: (
-				<Suspense fallback={null}>
-					<SpellCard
-						spell={spell}
-						onSpellClick={handleSpellClick}
-						onConditionClick={handleConditionClick}
-					/>
-				</Suspense>
-			),
-		});
-	}
-
-	async function handleSpellHover(spellName) {
-		const spell = await getSpellByName(spellName);
-		if (!spell) return null;
-
-		return (
-			<div className="Tooltip__spell-card">
-				<Suspense fallback={null}>
-					<SpellCard
-						spell={spell}
-						onSpellClick={handleSpellClick}
-						onConditionClick={handleConditionClick}
-					/>
-				</Suspense>
-			</div>
-		);
-	}
-
-	async function handleConditionClick(nameOrCondition) {
-		const condition = await resolveConditionInput(nameOrCondition);
-		if (!condition) return;
-		setSelectedConditionName(condition.name);
-	}
-
-	async function handleConditionHover(nameOrCondition) {
-		const condition = await resolveConditionInput(nameOrCondition);
-		if (!condition) return null;
-
-		return (
-			<div>
-				<div className="Tooltip__title">{condition.name}</div>
-				<div className="Tooltip__text">
-					{renderRecursiveContent(condition.entries, null, null, null, null)}
-				</div>
-			</div>
-		);
-	}
-
 	return (
 		<div className="ConditionsModal">
 			<div className="ConditionsModal__sidebar">
@@ -202,13 +138,7 @@ export default function ConditionsModalContent({ initialConditionName = "" }) {
 						</div>
 
 						<div className="ConditionsModal__entryContent">
-							{renderRecursiveContent(
-								selectedCondition.entries,
-								handleSpellClick,
-								handleConditionClick,
-								handleSpellHover,
-								handleConditionHover,
-							)}
+							{renderRecursiveContent(selectedCondition.entries)}
 						</div>
 					</>
 				)}

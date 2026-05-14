@@ -320,36 +320,7 @@ export default function Spells() {
 
 					<div className="Spells__detail">
 						{selectedSpell ? (
-							<SpellCard
-								spell={selectedSpell}
-								onSpellClick={async (name) => {
-									const cleanName = name.split("|")[0].toLowerCase();
-									// 1. Шукаємо в поточному завантаженому списку (найшвидше)
-									let found = allSpells.find(
-										(item) =>
-											item.name.split("|")[0].toLowerCase() === cleanName,
-									);
-
-									if (!found) {
-										// 2. Якщо не знайшли локально, шукаємо по всіх джерелах через API
-										try {
-											const results = await api.searchSpells({
-												name: cleanName,
-											});
-											// Шукаємо точний збіг назви серед результатів пошуку
-											found =
-												results.find(
-													(s) =>
-														s.name.split("|")[0].toLowerCase() === cleanName,
-												) || results[0];
-										} catch (err) {
-											console.error("Global spell search failed", err);
-										}
-									}
-
-									if (found) setSelectedSpell(found);
-								}}
-							/>
+							<SpellCard spell={selectedSpell} />
 						) : (
 							<p className="muted">
 								{lang.t("Select a spell from the list to view details.")}

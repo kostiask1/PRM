@@ -2,34 +2,12 @@ import "../assets/components/SpellCard.css";
 import { renderRecursiveContent } from "../renderers/contentRenderer.jsx";
 import { capitalizeWords } from "../utils/parser.jsx";
 import SpellCardModel from "../models/SpellCardModel.js";
-import { getSpellByName } from "../services/referencePreview.js";
-import useConditionReference from "../hooks/useConditionReference.jsx";
 import { lang } from "../services/localization";
 
-export default function SpellCard({ spell, onSpellClick, onConditionClick }) {
-	const { handleConditionClick, handleConditionHover } = useConditionReference({
-		externalOnConditionClick: onConditionClick,
-		onSpellClick,
-		getSpellHoverHandler: () => handleSpellHover,
-		modalContentClassName: "SpellCard__desc",
-	});
+export default function SpellCard({ spell }) {
 	if (!spell) return null;
 
 	const model = new SpellCardModel(spell);
-
-	const handleSpellHover = async (spellName) => {
-		const spell = await getSpellByName(spellName);
-		if (!spell) return null;
-		return (
-			<div className="Tooltip__spell-card">
-				<SpellCard
-					spell={spell}
-					onSpellClick={onSpellClick}
-					onConditionClick={handleConditionClick}
-				/>
-			</div>
-		);
-	};
 
 	return (
 		<div className="SpellCard">
@@ -57,23 +35,11 @@ export default function SpellCard({ spell, onSpellClick, onConditionClick }) {
 				)}
 			</div>
 			<div className="SpellCard__desc">
-				{renderRecursiveContent(
-					spell.entries,
-					onSpellClick,
-					handleConditionClick,
-					handleSpellHover,
-					handleConditionHover,
-				)}
+				{renderRecursiveContent(spell.entries)}
 
 				{spell.entriesHigherLevel && (
 					<div className="SpellCard__higher">
-						{renderRecursiveContent(
-							spell.entriesHigherLevel,
-							onSpellClick,
-							handleConditionClick,
-							handleSpellHover,
-							handleConditionHover,
-						)}
+						{renderRecursiveContent(spell.entriesHigherLevel)}
 					</div>
 				)}
 			</div>
