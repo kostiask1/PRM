@@ -22,26 +22,25 @@
 }
 
 .RulesLink--spell {
-	--rules-link-color: #3b82f6;
+	--rules-link-color: #4f7bd5;
 }
 
 .RulesLink--condition {
-	--rules-link-color: #dc2626;
+	--rules-link-color: #b94f4f;
 }
 
 .RulesLink--status {
-	--rules-link-color: #9333ea;
+	--rules-link-color: #8462c7;
 }
 
 .RulesLink--disease {
-	--rules-link-color: #16a34a;
+	--rules-link-color: #3f9a62;
 }
 
 .RulesLink--variantrule {
-	--rules-link-color: #d97706;
+	--rules-link-color: #b6782d;
 }
 
 .RulesLink--skill {
-	--rules-link-color: #0891b2;
+	--rules-link-color: #2d91a5;
 }
-
