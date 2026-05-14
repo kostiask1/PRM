@@ -2,7 +2,7 @@ import React from "react";
 import ReactMarkdown from "react-markdown";
 
 import RollDice from "../components/RollDice";
-import SpellLink from "../components/SpellLink";
+import RulesLink from "../components/RulesLink";
 import EntityLink from "../components/common/EntityLink";
 import {
 	capitalizeWords,
@@ -312,7 +312,7 @@ export const parseRollsAndSpells = (
 			const { name: rawSpellName, displayText } = parseTaggedName(spellValue);
 			if (onSpellClick) {
 				elements.push(
-					<SpellLink
+					<RulesLink
 						key={`s-${matchIndex}`}
 						type="spell"
 						onClick={() => onSpellClick(displayText)}
@@ -323,7 +323,7 @@ export const parseRollsAndSpells = (
 						}
 					>
 						{displayText}
-					</SpellLink>,
+					</RulesLink>,
 				);
 			} else {
 				pushSafeMarkdownText(elements, displayText, `t-${matchIndex}-spell`);
@@ -335,7 +335,7 @@ export const parseRollsAndSpells = (
 			const displayText = capitalizeWords(rawCondition);
 			if (onConditionClick) {
 				elements.push(
-					<SpellLink
+					<RulesLink
 						key={`c-${matchIndex}`}
 						type={conditionTag?.toLowerCase().startsWith("{@status") ? "status" : "condition"}
 						onClick={() => onConditionClick(rawCondition)}
@@ -346,7 +346,7 @@ export const parseRollsAndSpells = (
 						}
 					>
 						{displayText}
-					</SpellLink>,
+					</RulesLink>,
 				);
 			} else {
 				pushSafeMarkdownText(
@@ -359,7 +359,7 @@ export const parseRollsAndSpells = (
 			const { name: rawDiseaseName, displayText } = parseTaggedName(diseaseValue);
 			if (onDiseaseClick) {
 				elements.push(
-					<SpellLink
+					<RulesLink
 						key={`d-${matchIndex}`}
 						type="disease"
 						onClick={() => onDiseaseClick(rawDiseaseName)}
@@ -370,7 +370,7 @@ export const parseRollsAndSpells = (
 						}
 					>
 						{displayText}
-					</SpellLink>,
+					</RulesLink>,
 				);
 			} else {
 				pushSafeMarkdownText(elements, displayText, `t-${matchIndex}-disease`);
@@ -379,7 +379,7 @@ export const parseRollsAndSpells = (
 			const { name: rawRuleName, displayText } = parseTaggedName(variantRuleValue);
 			if (onVariantRuleClick) {
 				elements.push(
-					<SpellLink
+					<RulesLink
 						key={`v-${matchIndex}`}
 						type="variantrule"
 						onClick={() => onVariantRuleClick(rawRuleName)}
@@ -390,7 +390,7 @@ export const parseRollsAndSpells = (
 						}
 					>
 						{displayText}
-					</SpellLink>,
+					</RulesLink>,
 				);
 			} else {
 				pushSafeMarkdownText(
@@ -403,7 +403,7 @@ export const parseRollsAndSpells = (
 			const { name: rawSkillName, displayText } = parseTaggedName(skillValue);
 			if (onSkillClick) {
 				elements.push(
-					<SpellLink
+					<RulesLink
 						key={`sk-${matchIndex}`}
 						type="skill"
 						onClick={() => onSkillClick(rawSkillName)}
@@ -414,7 +414,7 @@ export const parseRollsAndSpells = (
 						}
 					>
 						{displayText}
-					</SpellLink>,
+					</RulesLink>,
 				);
 			} else {
 				pushSafeMarkdownText(elements, displayText, `t-${matchIndex}-skill`);

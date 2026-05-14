@@ -1,0 +1,47 @@
+﻿.RulesLink {
+	--rules-link-color: var(--accent);
+
+	color: color-mix(in srgb, var(--rules-link-color), var(--text) 14%);
+	cursor: pointer;
+	text-decoration: underline;
+	text-decoration-color: color-mix(in srgb, var(--rules-link-color), transparent 38%);
+	text-decoration-thickness: 1.5px;
+	text-underline-offset: 0.16em;
+	font-weight: 500;
+	border-radius: 4px;
+	transition:
+		background 0.2s,
+		color 0.2s,
+		text-decoration-color 0.2s;
+}
+
+.RulesLink:hover {
+	color: var(--rules-link-color);
+	background: color-mix(in srgb, var(--rules-link-color), transparent 86%);
+	text-decoration-color: var(--rules-link-color);
+}
+
+.RulesLink--spell {
+	--rules-link-color: #3b82f6;
+}
+
+.RulesLink--condition {
+	--rules-link-color: #dc2626;
+}
+
+.RulesLink--status {
+	--rules-link-color: #9333ea;
+}
+
+.RulesLink--disease {
+	--rules-link-color: #16a34a;
+}
+
+.RulesLink--variantrule {
+	--rules-link-color: #d97706;
+}
+
+.RulesLink--skill {
+	--rules-link-color: #0891b2;
+}
+

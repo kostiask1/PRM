@@ -1,10 +1,10 @@
 import { useState } from "react";
 import Tooltip from "./common/Tooltip.jsx";
-import "../assets/components/SpellLink.css";
+import "../assets/components/RulesLink.css";
 import { lang } from "../services/localization";
 import classNames from "../utils/classNames";
 
-export default function SpellLink({
+export default function RulesLink({
 	children,
 	onClick,
 	onHoverResolve,
@@ -37,7 +37,7 @@ export default function SpellLink({
 	return (
 		<Tooltip content={resolvedContent}>
 			<span
-				className={classNames("SpellLink", type && `SpellLink--${type}`)}
+				className={classNames("RulesLink", type && `RulesLink--${type}`)}
 				onClick={onClick}
 				onMouseEnter={handleMouseEnter}
 			>
