@@ -38,7 +38,15 @@
 	display: flex;
 	align-items: center;
 	flex-direction: column;
+	justify-content: center;
+}
+
+.EncounterViewMetric__tooltip {
+	display: flex;
+	align-items: center;
+	flex-direction: column;
 	gap: var(--space-1);
+	height: 100%;
 }
 
 .EncounterViewMetric--accent {

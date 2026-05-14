@@ -324,6 +324,39 @@ function EncounterView(props) {
 		}
 	};
 
+	const averageInitiativeTooltip = (
+		<div>
+			<div className="Tooltip__title">{lang.t("Avg initiative")}</div>
+			<div className="Tooltip__text">
+				{lang.t(
+					"Expected initiative for each participant is 10.5 + Dexterity modifier. Arithmetic average across all participants. Best for regular encounters with roughly equal threats.",
+				)}
+			</div>
+		</div>
+	);
+	const maxInitiativeTooltip = (
+		<div>
+			<div className="Tooltip__title">{lang.t("Max initiative")}</div>
+			<div className="Tooltip__text">
+				{lang.t(
+					"Expected initiative is calculated as 10.5 + Dexterity modifier for each participant, then the highest value is shown. Best for deadly encounters with a BBEG.",
+				)}
+			</div>
+		</div>
+	);
+	const weightedInitiativeTooltip = (
+		<div>
+			<div className="Tooltip__title">
+				{lang.t("CR-weighted avg initiative")}
+			</div>
+			<div className="Tooltip__text">
+				{lang.t(
+					"Each participant's expected initiative is multiplied by CR + 1, then divided by the sum of those weights. Best for balanced battles with a boss.",
+				)}
+			</div>
+		</div>
+	);
+
 	return (
 		<Panel className="EncounterView">
 			<div className="Panel__header">
@@ -352,28 +385,43 @@ function EncounterView(props) {
 						{view.encounter.monsters.length > 0 && (
 							<>
 								<div className="EncounterViewMetric">
-									<span className="EncounterViewMetric__label">
-										{lang.t("Avg initiative")}
-									</span>
-									<span className="EncounterViewMetric__value">
-										{view.initiativeStats.average}
-									</span>
+									<Tooltip
+										content={averageInitiativeTooltip}
+										className="EncounterViewMetric__tooltip"
+									>
+										<span className="EncounterViewMetric__label">
+											{lang.t("Avg initiative")}
+										</span>
+										<span className="EncounterViewMetric__value">
+											{view.initiativeStats.average}
+										</span>
+									</Tooltip>
 								</div>
 								<div className="EncounterViewMetric">
-									<span className="EncounterViewMetric__label">
-										{lang.t("Max initiative")}
-									</span>
-									<span className="EncounterViewMetric__value">
-										{view.initiativeStats.max}
-									</span>
+									<Tooltip
+										content={maxInitiativeTooltip}
+										className="EncounterViewMetric__tooltip"
+									>
+										<span className="EncounterViewMetric__label">
+											{lang.t("Max initiative")}
+										</span>
+										<span className="EncounterViewMetric__value">
+											{view.initiativeStats.max}
+										</span>
+									</Tooltip>
 								</div>
 								<div className="EncounterViewMetric EncounterViewMetric--accent">
-									<span className="EncounterViewMetric__label">
-										{lang.t("CR-weighted avg initiative")}
-									</span>
-									<span className="EncounterViewMetric__value">
-										{view.initiativeStats.weightedAverage}
-									</span>
+									<Tooltip
+										content={weightedInitiativeTooltip}
+										className="EncounterViewMetric__tooltip"
+									>
+										<span className="EncounterViewMetric__label">
+											{lang.t("CR-weighted avg initiative")}
+										</span>
+										<span className="EncounterViewMetric__value">
+											{view.initiativeStats.weightedAverage}
+										</span>
+									</Tooltip>
 								</div>
 							</>
 						)}
