@@ -1,0 +1,130 @@
+{
+  "skill": [
+    {
+      "name": "Acrobatics",
+      "ability": "dex",
+      "entries": [
+        "Stay on your feet in a tricky situation, or perform an acrobatic stunt."
+      ]
+    },
+    {
+      "name": "Animal Handling",
+      "ability": "wis",
+      "entries": [
+        "Calm or train an animal, or get an animal to behave in a certain way."
+      ]
+    },
+    {
+      "name": "Arcana",
+      "ability": "int",
+      "entries": [
+        "Recall lore about spells, magic items, and the planes of existence."
+      ]
+    },
+    {
+      "name": "Athletics",
+      "ability": "str",
+      "entries": [
+        "Jump farther than normal, stay afloat in rough water, or break something."
+      ]
+    },
+    {
+      "name": "Deception",
+      "ability": "cha",
+      "entries": [
+        "Tell a convincing lie, or wear a disguise convincingly."
+      ]
+    },
+    {
+      "name": "History",
+      "ability": "int",
+      "entries": [
+        "Recall lore about historical events, people, nations, and cultures."
+      ]
+    },
+    {
+      "name": "Insight",
+      "ability": "wis",
+      "entries": [
+        "Discern a person's mood and intentions."
+      ]
+    },
+    {
+      "name": "Intimidation",
+      "ability": "cha",
+      "entries": [
+        "Awe or threaten someone into doing what you want."
+      ]
+    },
+    {
+      "name": "Investigation",
+      "ability": "int",
+      "entries": [
+        "Find obscure information in books, or deduce how something works."
+      ]
+    },
+    {
+      "name": "Medicine",
+      "ability": "wis",
+      "entries": [
+        "Diagnose an illness, or determine what killed the recently slain."
+      ]
+    },
+    {
+      "name": "Nature",
+      "ability": "int",
+      "entries": [
+        "Recall lore about terrain, plants, animals, and weather."
+      ]
+    },
+    {
+      "name": "Perception",
+      "ability": "wis",
+      "entries": [
+        "Using a combination of senses, notice something that's easy to miss."
+      ]
+    },
+    {
+      "name": "Performance",
+      "ability": "cha",
+      "entries": [
+        "Act, tell a story, perform music, or dance."
+      ]
+    },
+    {
+      "name": "Persuasion",
+      "ability": "cha",
+      "entries": [
+        "Honestly and graciously convince someone of something."
+      ]
+    },
+    {
+      "name": "Religion",
+      "ability": "int",
+      "entries": [
+        "Recall lore about gods, religious rituals, and holy symbols."
+      ]
+    },
+    {
+      "name": "Sleight of Hand",
+      "ability": "dex",
+      "entries": [
+        "Pick a pocket, conceal a handheld object, or perform legerdemain."
+      ]
+    },
+    {
+      "name": "Stealth",
+      "ability": "dex",
+      "entries": [
+        "Escape notice by moving quietly and hiding behind things."
+      ]
+    },
+    {
+      "name": "Survival",
+      "ability": "wis",
+      "entries": [
+        "Follow tracks, forage, find a trail, or avoid natural hazards."
+      ]
+    }
+  ]
+}

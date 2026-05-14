@@ -1,7 +1,9 @@
 import {
 	getConditionByName,
 	getDiseaseByName,
+	getSkillByName,
 	getSpellByName,
+	getVariantRuleByName,
 } from "./referencePreview.js";
 
 export async function resolveSpellInput(spellOrName) {
@@ -42,4 +44,28 @@ export async function resolveDiseaseInput(nameOrDisease) {
 			: nameOrDisease?.name || "";
 	if (!name) return null;
 	return getDiseaseByName(name);
+}
+
+export async function resolveVariantRuleInput(nameOrRule) {
+	if (nameOrRule && typeof nameOrRule === "object") {
+		if (typeof nameOrRule.name === "string" && nameOrRule.entries) {
+			return nameOrRule;
+		}
+	}
+	const name =
+		typeof nameOrRule === "string" ? nameOrRule : nameOrRule?.name || "";
+	if (!name) return null;
+	return getVariantRuleByName(name);
+}
+
+export async function resolveSkillInput(nameOrSkill) {
+	if (nameOrSkill && typeof nameOrSkill === "object") {
+		if (typeof nameOrSkill.name === "string" && nameOrSkill.entries) {
+			return nameOrSkill;
+		}
+	}
+	const name =
+		typeof nameOrSkill === "string" ? nameOrSkill : nameOrSkill?.name || "";
+	if (!name) return null;
+	return getSkillByName(name);
 }

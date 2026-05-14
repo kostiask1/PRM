@@ -18,6 +18,10 @@ export const renderRecursiveContent = (
 	onConditionHover,
 	onDiseaseClick,
 	onDiseaseHover,
+	onVariantRuleClick,
+	onVariantRuleHover,
+	onSkillClick,
+	onSkillHover,
 ) => {
 	if (content === undefined || content === null) return null;
 
@@ -30,6 +34,10 @@ export const renderRecursiveContent = (
 			onConditionHover,
 			onDiseaseClick,
 			onDiseaseHover,
+			onVariantRuleClick,
+			onVariantRuleHover,
+			onSkillClick,
+			onSkillHover,
 		);
 	}
 
@@ -48,6 +56,10 @@ export const renderRecursiveContent = (
 					onConditionHover,
 					onDiseaseClick,
 					onDiseaseHover,
+					onVariantRuleClick,
+					onVariantRuleHover,
+					onSkillClick,
+					onSkillHover,
 				)}
 			</React.Fragment>
 		));
@@ -63,6 +75,10 @@ export const renderRecursiveContent = (
 				onConditionHover,
 				onDiseaseClick,
 				onDiseaseHover,
+				onVariantRuleClick,
+				onVariantRuleHover,
+				onSkillClick,
+				onSkillHover,
 			);
 		}
 
@@ -87,6 +103,10 @@ export const renderRecursiveContent = (
 									onConditionHover,
 									onDiseaseClick,
 									onDiseaseHover,
+									onVariantRuleClick,
+									onVariantRuleHover,
+									onSkillClick,
+									onSkillHover,
 								)}
 							</li>
 						);
@@ -110,6 +130,10 @@ export const renderRecursiveContent = (
 						onConditionHover,
 						onDiseaseClick,
 						onDiseaseHover,
+						onVariantRuleClick,
+						onVariantRuleHover,
+						onSkillClick,
+						onSkillHover,
 					)}
 				</div>
 			);
@@ -138,6 +162,10 @@ export const renderRecursiveContent = (
 												onConditionHover,
 												onDiseaseClick,
 												onDiseaseHover,
+												onVariantRuleClick,
+												onVariantRuleHover,
+												onSkillClick,
+												onSkillHover,
 											)}
 										</th>
 									))}
@@ -157,6 +185,10 @@ export const renderRecursiveContent = (
 												onConditionHover,
 												onDiseaseClick,
 												onDiseaseHover,
+												onVariantRuleClick,
+												onVariantRuleHover,
+												onSkillClick,
+												onSkillHover,
 											)}
 										</td>
 									))}
@@ -176,6 +208,10 @@ export const renderRecursiveContent = (
 			onConditionHover,
 			onDiseaseClick,
 			onDiseaseHover,
+			onVariantRuleClick,
+			onVariantRuleHover,
+			onSkillClick,
+			onSkillHover,
 		);
 	}
 
@@ -221,13 +257,17 @@ export const parseRollsAndSpells = (
 	onConditionHover,
 	onDiseaseClick,
 	onDiseaseHover,
+	onVariantRuleClick,
+	onVariantRuleHover,
+	onSkillClick,
+	onSkillHover,
 ) => {
 	if (!text) return text;
 
 	const cleanText = stripNotesReferenceText(text);
 	const elements = [];
 	const regex =
-		/(\d+d\d+(?:\s*[+-]\s*\d+)?)|([+-]\d+(?:\s+to\s+hit))|(\{@spell\s+([^}]+)\})|(\{@(?:condition|status)\s+([^}]+)\})|(@condition\s+([A-Za-z][A-Za-z' -]*))|(\{@disease\s+([^}]+)\})/gi;
+		/(\d+d\d+(?:\s*[+-]\s*\d+)?)|([+-]\d+(?:\s+to\s+hit))|(\{@spell\s+([^}]+)\})|(\{@(?:condition|status)\s+([^}]+)\})|(@condition\s+([A-Za-z][A-Za-z' -]*))|(\{@disease\s+([^}]+)\})|(\{@variantrule\s+([^}]+)\})|(\{@skill\s+([^}]+)\})/gi;
 	let lastIndex = 0;
 	let matchIndex = 0;
 	let match;
@@ -249,6 +289,8 @@ export const parseRollsAndSpells = (
 		const conditionValue = match[6];
 		const conditionPlain = match[7];
 		const diseaseValue = match[10];
+		const variantRuleValue = match[12];
+		const skillValue = match[14];
 
 		if (roll) {
 			elements.push(
@@ -272,6 +314,7 @@ export const parseRollsAndSpells = (
 				elements.push(
 					<SpellLink
 						key={`s-${matchIndex}`}
+						type="spell"
 						onClick={() => onSpellClick(displayText)}
 						onHoverResolve={
 							onSpellHover
@@ -294,6 +337,7 @@ export const parseRollsAndSpells = (
 				elements.push(
 					<SpellLink
 						key={`c-${matchIndex}`}
+						type={conditionTag?.toLowerCase().startsWith("{@status") ? "status" : "condition"}
 						onClick={() => onConditionClick(rawCondition)}
 						onHoverResolve={
 							onConditionHover
@@ -317,6 +361,7 @@ export const parseRollsAndSpells = (
 				elements.push(
 					<SpellLink
 						key={`d-${matchIndex}`}
+						type="disease"
 						onClick={() => onDiseaseClick(rawDiseaseName)}
 						onHoverResolve={
 							onDiseaseHover
@@ -329,6 +374,50 @@ export const parseRollsAndSpells = (
 				);
 			} else {
 				pushSafeMarkdownText(elements, displayText, `t-${matchIndex}-disease`);
+			}
+		} else if (variantRuleValue) {
+			const { name: rawRuleName, displayText } = parseTaggedName(variantRuleValue);
+			if (onVariantRuleClick) {
+				elements.push(
+					<SpellLink
+						key={`v-${matchIndex}`}
+						type="variantrule"
+						onClick={() => onVariantRuleClick(rawRuleName)}
+						onHoverResolve={
+							onVariantRuleHover
+								? () => onVariantRuleHover(rawRuleName, displayText)
+								: null
+						}
+					>
+						{displayText}
+					</SpellLink>,
+				);
+			} else {
+				pushSafeMarkdownText(
+					elements,
+					displayText,
+					`t-${matchIndex}-variantrule`,
+				);
+			}
+		} else if (skillValue) {
+			const { name: rawSkillName, displayText } = parseTaggedName(skillValue);
+			if (onSkillClick) {
+				elements.push(
+					<SpellLink
+						key={`sk-${matchIndex}`}
+						type="skill"
+						onClick={() => onSkillClick(rawSkillName)}
+						onHoverResolve={
+							onSkillHover
+								? () => onSkillHover(rawSkillName, displayText)
+								: null
+						}
+					>
+						{displayText}
+					</SpellLink>,
+				);
+			} else {
+				pushSafeMarkdownText(elements, displayText, `t-${matchIndex}-skill`);
 			}
 		} else {
 			pushSafeMarkdownText(elements, fullMatch, `t-${matchIndex}-raw`);

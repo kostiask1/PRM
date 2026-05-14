@@ -11,8 +11,28 @@ const BESTIARY_DIR = path.join(DATABASE_DIR, "bestiary");
 const SPELLS_DIR = path.join(DATABASE_DIR, "spells");
 const CONDITIONS_PATH = path.join(DATABASE_DIR, "conditions.json");
 const DISEASES_PATH = path.join(DATABASE_DIR, "diseases.json");
+const VARIANT_RULES_PATH = path.join(DATABASE_DIR, "variantrules.json");
+const SKILLS_PATH = path.join(DATABASE_DIR, "skills.json");
 const TMP_DIR = path.join(ROOT_DIR, ".tmp-5etools-update");
 const CONDITION_PRUNE_KEYS = new Set([
+	"page",
+	"srd",
+	"srd52",
+	"basicRules2024",
+	"basicRules",
+	"source",
+	"reprintedAs",
+]);
+const VARIANT_RULE_PRUNE_KEYS = new Set([
+	"page",
+	"srd",
+	"srd52",
+	"basicRules2024",
+	"basicRules",
+	"source",
+	"reprintedAs",
+]);
+const SKILL_PRUNE_KEYS = new Set([
 	"page",
 	"srd",
 	"srd52",
@@ -39,6 +59,8 @@ Downloads spell and bestiary JSON from:
   https://github.com/${OWNER}/${REPO}/tree/${ref}/data/spells
   https://github.com/${OWNER}/${REPO}/tree/${ref}/data/bestiary
   https://github.com/${OWNER}/${REPO}/blob/${ref}/data/conditionsdiseases.json
+  https://github.com/${OWNER}/${REPO}/blob/${ref}/data/variantrules.json
+  https://github.com/${OWNER}/${REPO}/blob/${ref}/data/skills.json
 
 Excluded files: fluff, foundry/foundy, template.
 After download, materializes bestiary _copy entries and rebuilds all.json files.`);
@@ -203,6 +225,20 @@ function pruneConditionMeta(item) {
 	);
 }
 
+function pruneVariantRuleMeta(item) {
+	if (!item || typeof item !== "object") return item;
+	return Object.fromEntries(
+		Object.entries(item).filter(([key]) => !VARIANT_RULE_PRUNE_KEYS.has(key)),
+	);
+}
+
+function pruneSkillMeta(item) {
+	if (!item || typeof item !== "object") return item;
+	return Object.fromEntries(
+		Object.entries(item).filter(([key]) => !SKILL_PRUNE_KEYS.has(key)),
+	);
+}
+
 function normalizeConditionsData(data) {
 	return {
 		condition: dedupeConditionsByName(data.condition || []).map(pruneConditionMeta),
@@ -240,6 +276,26 @@ async function writeConditionsWithLocalExhaustion(downloadedPath) {
 	await fs.writeFile(CONDITIONS_PATH, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
 	await fs.writeFile(DISEASES_PATH, `${JSON.stringify(normalizedDiseases, null, 2)}\n`, "utf8");
 	return localExhaustion.length;
+}
+
+async function writeVariantRules(downloadedPath) {
+	const downloaded = await readJson(downloadedPath);
+	const normalized = {
+		variantrule: dedupeConditionsByName(downloaded.variantrule || []).map(
+			pruneVariantRuleMeta,
+		),
+	};
+	await fs.writeFile(VARIANT_RULES_PATH, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
+	return normalized.variantrule.length;
+}
+
+async function writeSkills(downloadedPath) {
+	const downloaded = await readJson(downloadedPath);
+	const normalized = {
+		skill: dedupeConditionsByName(downloaded.skill || []).map(pruneSkillMeta),
+	};
+	await fs.writeFile(SKILLS_PATH, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
+	return normalized.skill.length;
 }
 
 async function removeJsonFiles(dir) {
@@ -289,16 +345,20 @@ async function main() {
 	const tmpBestiaryDir = path.join(TMP_DIR, "bestiary");
 	const tmpSpellsDir = path.join(TMP_DIR, "spells");
 	const tmpConditionsPath = path.join(TMP_DIR, "conditionsdiseases.json");
+	const tmpVariantRulesPath = path.join(TMP_DIR, "variantrules.json");
+	const tmpSkillsPath = path.join(TMP_DIR, "skills.json");
 
 	await fs.rm(TMP_DIR, { recursive: true, force: true });
 	const [bestiaryCount, spellCount] = await Promise.all([
 		downloadFiles("data/bestiary", tmpBestiaryDir),
 		downloadFiles("data/spells", tmpSpellsDir),
 		downloadFile("data/conditionsdiseases.json", tmpConditionsPath),
+		downloadFile("data/variantrules.json", tmpVariantRulesPath),
+		downloadFile("data/skills.json", tmpSkillsPath),
 	]);
 
 	console.log(
-		`${isDryRun ? "Dry run" : "Downloaded"}: ${bestiaryCount} bestiary JSON files, ${spellCount} spell JSON files, and conditionsdiseases.json from ${OWNER}/${REPO}@${ref}.`,
+		`${isDryRun ? "Dry run" : "Downloaded"}: ${bestiaryCount} bestiary JSON files, ${spellCount} spell JSON files, conditionsdiseases.json, variantrules.json, and skills.json from ${OWNER}/${REPO}@${ref}.`,
 	);
 
 	if (isDryRun) {
@@ -312,6 +372,8 @@ async function main() {
 		copyJsonFiles(tmpSpellsDir, SPELLS_DIR),
 	]);
 	await writeConditionsWithLocalExhaustion(tmpConditionsPath);
+	await writeVariantRules(tmpVariantRulesPath);
+	await writeSkills(tmpSkillsPath);
 	await fs.rm(TMP_DIR, { recursive: true, force: true });
 
 	runNodeScript(path.join("scripts", "materialize-bestiary-copies.mjs"));

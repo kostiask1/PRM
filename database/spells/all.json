@@ -10343,8 +10343,7 @@
       "This spell creates a sphere centered on a point you choose within range. The sphere can have a radius of up to 40 feet. The area within this sphere is filled with magical darkness and crushing gravitational force.",
       "For the duration, the spell's area is {@quickref difficult terrain||3}. A creature with {@sense darkvision} can't see through the magical darkness, and nonmagical light can't illuminate it. No sound can be created within or pass through the area. Any creature or object entirely inside the sphere is immune to thunder damage, and creatures are {@condition deafened} while entirely inside it. Casting a spell that includes a verbal component is impossible there.",
       "Any creature that enters the spell's area for the first time on a turn or starts its turn there must make a Constitution saving throw. The creature takes {@damage 8d10} force damage on a failed save, or half as much damage on a successful one. A creature reduced to 0 hit points by this damage is disintegrated. A disintegrated creature and everything it is wearing and carrying, except magic items, are reduced to a pile of fine gray dust."
-    ],
-    "classes": []
+    ]
   },
   {
     "name": "Darkness",
@@ -14027,8 +14026,7 @@
       "Putting a finger to your head, you pull a memory, an idea, or a message from your mind and transform it into a tangible string of glowing energy called a thought strand, which persists for the duration or until you cast this spell again. The thought strand appears in an unoccupied space within 5 feet of you as a Tiny, weightless, semisolid object that can be held and carried like a ribbon. It is otherwise stationary.",
       "If you cast this spell while {@status concentration||concentrating} on a spell or an ability that allows you to read or manipulate the thoughts of others (such as {@spell detect thoughts} or {@spell modify memory}), you can transform the thoughts or memories you read, rather than your own, into a thought strand.",
       "Casting this spell while holding a thought strand allows you to instantly receive whatever memory, idea, or message the thought strand contains. (Casting {@spell detect thoughts} on the strand has the same effect.)"
-    ],
-    "classes": []
+    ]
   },
   {
     "name": "Enemies Abound",
@@ -17639,8 +17637,7 @@
           "When you cast this spell using a spell slot of 3rd level or higher, you can target one additional creature for each slot level above 2nd."
         ]
       }
-    ],
-    "classes": []
+    ]
   },
   {
     "name": "Fount of Moonlight",
@@ -18621,8 +18618,7 @@
     ],
     "entries": [
       "You touch a willing creature. For the duration, the target can add {@dice 1d8} to its initiative rolls."
-    ],
-    "classes": []
+    ]
   },
   {
     "name": "Gift of Gab",
@@ -19206,8 +19202,7 @@
           "When you cast this spell using a spell slot of 7th level or higher, the damage increases by {@scaledamage 8d8|6-9|1d8} for each slot level above 6th."
         ]
       }
-    ],
-    "classes": []
+    ]
   },
   {
     "name": "Gravity Sinkhole",
@@ -19248,8 +19243,7 @@
           "When you cast this spell using a spell slot of 5th level or higher, the damage increases by {@scaledamage 5d10|4-9|1d10} for each slot level above 4th."
         ]
       }
-    ],
-    "classes": []
+    ]
   },
   {
     "name": "Grease",
@@ -22640,8 +22634,7 @@
           "If you cast this spell using a spell slot of 4th or 5th level, the DC to move the object increases by 5, it can carry up to 8,000 pounds of weight, and the duration increases to 24 hours. If you cast this spell using a spell slot of 6th level or higher, the DC to move the object increases by 10, it can carry up to 20,000 pounds of weight, and the effect is permanent until dispelled."
         ]
       }
-    ],
-    "classes": []
+    ]
   },
   {
     "name": "Imprisonment",
@@ -26075,8 +26068,7 @@
           "When you cast this spell using a spell slot of 2nd level or higher, the damage increases by {@scaledamage 2d8|1-9|1d8} for each slot level above 1st."
         ]
       }
-    ],
-    "classes": []
+    ]
   },
   {
     "name": "Major Image",
@@ -31807,8 +31799,7 @@
           "When you cast this spell using a spell slot of 4th level or higher, the damage increases by {@scaledamage 6d6|3-9|1d6} and the distance pulled or pushed increases by 5 feet for each slot level above 3rd."
         ]
       }
-    ],
-    "classes": []
+    ]
   },
   {
     "name": "Purify Food and Drink",
@@ -32186,8 +32177,7 @@
       "You create a 20-foot-radius sphere of destructive gravitational force centered on a point you can see within range. For the spell's duration, the sphere and any space within 100 feet of it are {@quickref difficult terrain||3}, and nonmagical objects fully inside the sphere are destroyed if they aren't being worn or carried.",
       "When the sphere appears and at the start of each of your turns until the spell ends, unsecured objects within 100 feet of the sphere are pulled toward the sphere's center, ending in an unoccupied space as close to the center as possible.",
       "A creature that starts its turn within 100 feet of the sphere must succeed on a Strength saving throw or be pulled straight toward the sphere's center, ending in an unoccupied space as close to the center as possible. A creature that enters the sphere for the first time on a turn or starts its turn there takes {@damage 5d10} force damage and is {@condition restrained} until it is no longer in the sphere. If the sphere is in the air, the {@condition restrained} creature hovers inside the sphere. A creature can use its action to make a Strength check against your spell save DC, ending this {@condition restrained} condition on itself or another creature in the sphere that it can reach. A creature reduced to 0 hit points by this spell is annihilated, along with any nonmagical items it is wearing or carrying."
-    ],
-    "classes": []
+    ]
   },
   {
     "name": "Ray of Enfeeblement",
@@ -32507,8 +32497,7 @@
           ]
         ]
       }
-    ],
-    "classes": []
+    ]
   },
   {
     "name": "Regenerate",
@@ -33605,8 +33594,7 @@
     "entries": [
       "You sap the vitality of one creature you can see in range. The target must succeed on a Constitution saving throw or take {@damage 1d4} necrotic damage and fall {@condition prone}.",
       "This spell's damage increases by {@damage 1d4} when you reach 5th level ({@damage 2d4}), 11th level ({@damage 3d4}), and 17th level ({@damage 4d4})."
-    ],
-    "classes": []
+    ]
   },
   {
     "name": "Scatter",
@@ -40581,8 +40569,7 @@
           "When you cast this spell using a spell slot of 6th level or higher, you can target one additional creature for each slot level above 5th. All targets must be within 30 feet of each other."
         ]
       }
-    ],
-    "classes": []
+    ]
   },
   {
     "name": "Tenser's Floating Disk",
@@ -40756,8 +40743,7 @@
     ],
     "entries": [
       "Two creatures you can see within range must make a Constitution saving throw, with disadvantage if they are within 30 feet of each other. Either creature can willingly fail the save. If either save succeeds, the spell has no effect. If both saves fail, the creatures are magically linked for the duration, regardless of the distance between them. When damage is dealt to one of them, the same damage is dealt to the other one. If hit points are restored to one of them, the same number of hit points are restored to the other one. If either of the tethered creatures is reduced to 0 hit points, the spell ends on both. If the spell ends on one creature, it ends on both."
-    ],
-    "classes": []
+    ]
   },
   {
     "name": "Thaumaturgy",
@@ -41345,8 +41331,7 @@
     ],
     "entries": [
       "You target a creature you can see within range, putting its physical form through the devastation of rapid aging. The target must make a Constitution saving throw, taking {@damage 10d12} necrotic damage on a failed save, or half as much damage on a successful one. If the save fails, the target also ages to the point where it has only 30 days left before it dies of old age. In this aged state, the target has disadvantage on attack rolls, ability checks, and saving throws, and its walking speed is halved. Only the {@spell wish} spell or the {@spell greater restoration} cast with a 9th-level spell slot can end these effects and restore the target to its previous age."
-    ],
-    "classes": []
+    ]
   },
   {
     "name": "Time Stop",
@@ -44794,8 +44779,7 @@
     "entries": [
       "You flick your wrist, causing one object in your hand to vanish. The object, which only you can be holding and can weigh no more than 5 pounds, is transported to an extradimensional space, where it remains for the duration.",
       "Until the spell ends, you can use your action to summon the object to your free hand, and you can use your action to return the object to the extradimensional space. An object still in the pocket plane when the spell ends appears in your space, at your feet."
-    ],
-    "classes": []
+    ]
   },
   {
     "name": "Yolande's Regal Presence",

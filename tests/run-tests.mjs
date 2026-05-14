@@ -37,11 +37,15 @@ import {
 	getSpellByName,
 	getConditionByName,
 	getDiseaseByName,
+	getSkillByName,
+	getVariantRuleByName,
 } from "../src/utils/referencePreview.js";
 import {
 	resolveSpellInput,
 	resolveConditionInput,
 	resolveDiseaseInput,
+	resolveSkillInput,
+	resolveVariantRuleInput,
 } from "../src/utils/referenceResolvers.js";
 import {
 	buildCampaignGraph,
@@ -960,9 +964,13 @@ await run(
 		const originalSearchSpells = api.searchSpells;
 		const originalGetConditions = api.getConditions;
 		const originalGetDiseases = api.getDiseases;
+		const originalGetVariantRules = api.getVariantRules;
+		const originalGetSkills = api.getSkills;
 		let spellCalls = 0;
 		let conditionCalls = 0;
 		let diseaseCalls = 0;
+		let variantRuleCalls = 0;
+		let skillCalls = 0;
 
 		api.searchSpells = async (params = {}) => {
 			spellCalls += 1;
@@ -991,6 +999,22 @@ await run(
 			return [
 				{ name: "Bluerot", entries: ["..."] },
 				{ name: "Sight Rot", entries: ["..."] },
+			];
+		};
+
+		api.getVariantRules = async () => {
+			variantRuleCalls += 1;
+			return [
+				{ name: "Advantage", entries: ["..."] },
+				{ name: "Cone [Area of Effect]", entries: ["..."] },
+			];
+		};
+
+		api.getSkills = async () => {
+			skillCalls += 1;
+			return [
+				{ name: "Medicine", ability: "wis", entries: ["..."] },
+				{ name: "Perception", ability: "wis", entries: ["..."] },
 			];
 		};
 
@@ -1038,10 +1062,38 @@ await run(
 				"Manual Disease",
 			);
 			assert.equal(await resolveDiseaseInput({ foo: "bar" }), null);
+
+			assert.equal(
+				(await getVariantRuleByName(" cone [area of effect]|XPHB ")).name,
+				"Cone [Area of Effect]",
+			);
+			assert.equal(variantRuleCalls, 1);
+			assert.equal(
+				(await resolveVariantRuleInput("Advantage")).name,
+				"Advantage",
+			);
+			assert.equal(
+				(await resolveVariantRuleInput({ name: "Manual Rule", entries: ["text"] }))
+					.name,
+				"Manual Rule",
+			);
+			assert.equal(await resolveVariantRuleInput({ foo: "bar" }), null);
+
+			assert.equal((await getSkillByName(" medicine|XPHB ")).name, "Medicine");
+			assert.equal(skillCalls, 1);
+			assert.equal((await resolveSkillInput("Perception")).name, "Perception");
+			assert.equal(
+				(await resolveSkillInput({ name: "Manual Skill", entries: ["text"] }))
+					.name,
+				"Manual Skill",
+			);
+			assert.equal(await resolveSkillInput({ foo: "bar" }), null);
 		} finally {
 			api.searchSpells = originalSearchSpells;
 			api.getConditions = originalGetConditions;
 			api.getDiseases = originalGetDiseases;
+			api.getVariantRules = originalGetVariantRules;
+			api.getSkills = originalGetSkills;
 		}
 	},
 );
@@ -1147,6 +1199,95 @@ await run("spells diseases route returns deduped disease list", async () => {
 		assert.equal(sightRot.kind, "disease");
 		assert.equal(sightRot.source, "XDMG");
 		assert.deepEqual(sightRot.entries, ["new"]);
+	} finally {
+		storage.exists = originalExists;
+		storage.readJson = originalReadJson;
+	}
+});
+
+await run("spells variant rules route returns rule list", async () => {
+	const originalExists = storage.exists;
+	const originalReadJson = storage.readJson;
+	const layer = spellsRouter.stack.find(
+		(item) => item.route?.path === "/variantrules",
+	);
+	assert.ok(layer);
+	const handler = layer.route.stack[0].handle;
+
+	storage.exists = async () => true;
+	storage.readJson = async () => ({
+		variantrule: [
+			{ name: "Advantage", entries: ["adv"] },
+			{ name: "Cone [Area of Effect]", entries: ["cone"] },
+		],
+	});
+
+	try {
+		let jsonPayload = null;
+		await handler(
+			{},
+			{
+				json(value) {
+					jsonPayload = value;
+					return value;
+				},
+			},
+			(error) => {
+				throw error;
+			},
+		);
+
+		assert.ok(Array.isArray(jsonPayload));
+		assert.deepEqual(
+			jsonPayload.map((item) => item.name),
+			["Advantage", "Cone [Area of Effect]"],
+		);
+		assert.equal(jsonPayload[0].kind, "variantrule");
+		assert.deepEqual(jsonPayload[0].entries, ["adv"]);
+	} finally {
+		storage.exists = originalExists;
+		storage.readJson = originalReadJson;
+	}
+});
+
+await run("spells skills route returns skill list", async () => {
+	const originalExists = storage.exists;
+	const originalReadJson = storage.readJson;
+	const layer = spellsRouter.stack.find((item) => item.route?.path === "/skills");
+	assert.ok(layer);
+	const handler = layer.route.stack[0].handle;
+
+	storage.exists = async () => true;
+	storage.readJson = async () => ({
+		skill: [
+			{ name: "Medicine", ability: "wis", entries: ["med"] },
+			{ name: "Arcana", ability: "int", entries: ["arc"] },
+		],
+	});
+
+	try {
+		let jsonPayload = null;
+		await handler(
+			{},
+			{
+				json(value) {
+					jsonPayload = value;
+					return value;
+				},
+			},
+			(error) => {
+				throw error;
+			},
+		);
+
+		assert.ok(Array.isArray(jsonPayload));
+		assert.deepEqual(
+			jsonPayload.map((item) => item.name),
+			["Arcana", "Medicine"],
+		);
+		assert.equal(jsonPayload[0].kind, "skill");
+		assert.equal(jsonPayload[0].ability, "int");
+		assert.deepEqual(jsonPayload[0].entries, ["arc"]);
 	} finally {
 		storage.exists = originalExists;
 		storage.readJson = originalReadJson;

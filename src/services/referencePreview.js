@@ -1,6 +1,11 @@
 import { api } from "../api.js";
 import { loadConditionsMap, normalizeConditionName } from "./conditions.js";
 import { loadDiseasesMap, normalizeDiseaseName } from "./diseases.js";
+import {
+	loadVariantRulesMap,
+	normalizeVariantRuleName,
+} from "./variantRules.js";
+import { loadSkillsMap, normalizeSkillName } from "./skills.js";
 
 const spellCache = new Map();
 
@@ -34,4 +39,14 @@ export async function getConditionByName(name) {
 export async function getDiseaseByName(name) {
 	const map = await loadDiseasesMap();
 	return map.get(normalizeDiseaseName(name)) || null;
+}
+
+export async function getVariantRuleByName(name) {
+	const map = await loadVariantRulesMap();
+	return map.get(normalizeVariantRuleName(name)) || null;
+}
+
+export async function getSkillByName(name) {
+	const map = await loadSkillsMap();
+	return map.get(normalizeSkillName(name)) || null;
 }

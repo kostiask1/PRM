@@ -216,6 +216,84 @@ router.get("/diseases", async (_req, res, next) => {
 	}
 });
 
+router.get("/variantrules", async (_req, res, next) => {
+	try {
+		const variantRulesPath = path.join(
+			__dirname,
+			"..",
+			"..",
+			"database",
+			"variantrules.json",
+		);
+		if (!(await storage.exists(variantRulesPath))) return res.json([]);
+
+		const data = await storage.readJson(variantRulesPath);
+		const list = Array.isArray(data?.variantrule) ? data.variantrule : [];
+		const byName = new Map();
+
+		for (const item of list) {
+			const name = String(item?.name || "").trim();
+			if (!name) continue;
+			const key = name.toLowerCase();
+			const normalized = {
+				name,
+				kind: "variantrule",
+				source: item?.source || null,
+				page: item?.page || null,
+				ruleType: item?.ruleType || null,
+				entries: item?.entries || [],
+			};
+			byName.set(key, pickPreferredRecord(byName.get(key), normalized));
+		}
+
+		const rules = Array.from(byName.values()).sort((a, b) =>
+			a.name.localeCompare(b.name),
+		);
+		res.json(rules);
+	} catch (error) {
+		next(error);
+	}
+});
+
+router.get("/skills", async (_req, res, next) => {
+	try {
+		const skillsPath = path.join(
+			__dirname,
+			"..",
+			"..",
+			"database",
+			"skills.json",
+		);
+		if (!(await storage.exists(skillsPath))) return res.json([]);
+
+		const data = await storage.readJson(skillsPath);
+		const list = Array.isArray(data?.skill) ? data.skill : [];
+		const byName = new Map();
+
+		for (const item of list) {
+			const name = String(item?.name || "").trim();
+			if (!name) continue;
+			const key = name.toLowerCase();
+			const normalized = {
+				name,
+				kind: "skill",
+				source: item?.source || null,
+				page: item?.page || null,
+				ability: item?.ability || null,
+				entries: item?.entries || [],
+			};
+			byName.set(key, pickPreferredRecord(byName.get(key), normalized));
+		}
+
+		const skills = Array.from(byName.values()).sort((a, b) =>
+			a.name.localeCompare(b.name),
+		);
+		res.json(skills);
+	} catch (error) {
+		next(error);
+	}
+});
+
 router.get("/:source", async (req, res, next) => {
 	try {
 		const sourceParam = String(req.params.source);

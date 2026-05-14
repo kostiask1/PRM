@@ -22,7 +22,9 @@ import MonsterStatBlockModel from "../models/MonsterStatBlockModel.js";
 import { getSpellByName } from "../services/referencePreview.js";
 import {
 	resolveDiseaseInput,
+	resolveSkillInput,
 	resolveSpellInput,
+	resolveVariantRuleInput,
 } from "../services/referenceResolvers.js";
 import useConditionReference from "../hooks/useConditionReference.jsx";
 import Tooltip from "./common/Tooltip.jsx";
@@ -186,6 +188,69 @@ export default function MonsterStatBlock({
 		);
 	};
 
+	const handleVariantRuleClick = async (nameOrRule) => {
+		const rule = await resolveVariantRuleInput(nameOrRule);
+		if (!rule) return;
+
+		openModalRequest({
+			title: rule.name,
+			type: "confirm",
+			showFooter: false,
+			children: (
+				<div className="ConditionsModal__entryContent">
+					{renderRecursiveContent(rule.entries, ...referenceHandlers)}
+				</div>
+			),
+		});
+	};
+
+	const handleVariantRuleHover = async (nameOrRule) => {
+		const rule = await resolveVariantRuleInput(nameOrRule);
+		if (!rule) return null;
+
+		return (
+			<div>
+				<div className="Tooltip__title">{rule.name}</div>
+				<div className="Tooltip__text">
+					{renderRecursiveContent(rule.entries, ...referenceHandlers)}
+				</div>
+			</div>
+		);
+	};
+
+	const handleSkillClick = async (nameOrSkill) => {
+		const skill = await resolveSkillInput(nameOrSkill);
+		if (!skill) return;
+
+		openModalRequest({
+			title: skill.name,
+			type: "confirm",
+			showFooter: false,
+			children: (
+				<div className="ConditionsModal__entryContent">
+					{renderRecursiveContent(skill.entries, ...referenceHandlers)}
+				</div>
+			),
+		});
+	};
+
+	const handleSkillHover = async (nameOrSkill) => {
+		const skill = await resolveSkillInput(nameOrSkill);
+		if (!skill) return null;
+
+		return (
+			<div>
+				<div className="Tooltip__title">{skill.name}</div>
+				{skill.ability && (
+					<div className="Tooltip__meta">{skill.ability.toUpperCase()}</div>
+				)}
+				<div className="Tooltip__text">
+					{renderRecursiveContent(skill.entries, ...referenceHandlers)}
+				</div>
+			</div>
+		);
+	};
+
 	const referenceHandlers = [
 		handleSpellClick,
 		handleConditionClick,
@@ -193,6 +258,10 @@ export default function MonsterStatBlock({
 		handleConditionHover,
 		handleDiseaseClick,
 		handleDiseaseHover,
+		handleVariantRuleClick,
+		handleVariantRuleHover,
+		handleSkillClick,
+		handleSkillHover,
 	];
 
 	useEffect(() => {
