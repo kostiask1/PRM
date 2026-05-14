@@ -1323,6 +1323,21 @@ await run("storage image listing and subcategory discovery", async () => {
 	});
 });
 
+await run("storage detects campaign images recursively", async () => {
+	await withTestSlug("campaign-has-images", async (slug) => {
+		const category = "attachments";
+		const nestedDir = storage.campaignImagesDir(slug, category, "notes/nested");
+
+		assert.equal(await storage.campaignHasImages(slug), false);
+
+		await storage.ensureDir(nestedDir);
+		assert.equal(await storage.campaignHasImages(slug), false);
+
+		await fs.writeFile(path.join(nestedDir, "map.png"), "x", "utf8");
+		assert.equal(await storage.campaignHasImages(slug), true);
+	});
+});
+
 await run("storage renameImage handles success and collisions", async () => {
 	await withTestSlug("rename-image", async (slug) => {
 		const category = "attachments";

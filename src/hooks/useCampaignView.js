@@ -898,24 +898,46 @@ export default function useCampaignView(props) {
 	);
 
 	const handleDeleteCampaign = async () => {
+		let hasCampaignImages = true;
+		try {
+			const imageState = await api.campaignHasImages(campaign.slug);
+			hasCampaignImages = Boolean(imageState?.hasImages);
+		} catch (err) {
+			console.error("Failed to check campaign images", err);
+		}
+
+		const confirmationConfig = hasCampaignImages
+			? {
+					title: lang.t("Delete campaign"),
+					message: lang.t(
+						"All sessions in this campaign will be permanently lost. Campaign images will be moved to General if this option is enabled; otherwise they will be deleted. Continue?",
+					),
+					checkboxLabel: lang.t("Move campaign images to General"),
+					checkboxDefaultChecked: true,
+					getConfirmValue: (_value, moveImagesToGeneral) => ({
+						confirmed: true,
+						moveImagesToGeneral: Boolean(moveImagesToGeneral),
+					}),
+				}
+			: {
+					title: lang.t("Delete campaign"),
+					message: lang.t(
+						"All sessions in this campaign will be permanently lost. Continue?",
+					),
+					getConfirmValue: () => ({
+						confirmed: true,
+						moveImagesToGeneral: false,
+					}),
+				};
+
 		const result = await dispatch(
-			confirm({
-				title: lang.t("Delete campaign"),
-				message: lang.t(
-					"All sessions in this campaign will be permanently lost. Campaign images will be moved to General if this option is enabled; otherwise they will be deleted. Continue?",
-				),
-				checkboxLabel: lang.t("Move campaign images to General"),
-				checkboxDefaultChecked: true,
-				getConfirmValue: (_value, moveImagesToGeneral) => ({
-					confirmed: true,
-					moveImagesToGeneral: Boolean(moveImagesToGeneral),
-				}),
-			}),
+			confirm(confirmationConfig),
 		);
 		if (!result?.confirmed) return;
 		try {
 			await api.deleteCampaign(campaign.slug, {
-				moveImagesToGeneral: result.moveImagesToGeneral,
+				moveImagesToGeneral:
+					hasCampaignImages && Boolean(result.moveImagesToGeneral),
 			});
 			navigateTo(null);
 			dispatch(requestCampaignsReloadAction());

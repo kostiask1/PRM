@@ -825,6 +825,26 @@ async function moveCampaignImagesToGeneral(slug) {
 	return results;
 }
 
+async function campaignHasImages(slug) {
+	const safeSlug = path.basename(String(slug || ""));
+	if (!safeSlug) return false;
+
+	const root = path.join(IMAGES_DIR, safeSlug);
+	if (!(await exists(root))) return false;
+
+	async function walk(dir) {
+		const entries = await fs.readdir(dir, { withFileTypes: true });
+		for (const entry of entries) {
+			const fullPath = path.join(dir, entry.name);
+			if (entry.isFile()) return true;
+			if (entry.isDirectory() && (await walk(fullPath))) return true;
+		}
+		return false;
+	}
+
+	return walk(root);
+}
+
 async function deleteCampaignData(slug, options = {}) {
 	if (!slug) return;
 	if (options.moveImagesToGeneral) {
@@ -1351,6 +1371,7 @@ module.exports = {
 	importCampaignArchiveBundleWithStrategy,
 	findCampaignSlugById,
 	moveCampaignImagesToGeneral,
+	campaignHasImages,
 	deleteCampaignData,
 	clearAllCampaignData,
 	ensureUniqueCampaignSlug,

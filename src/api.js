@@ -58,6 +58,8 @@ export const api = {
 			method: "DELETE",
 			body: JSON.stringify(options),
 		}),
+	campaignHasImages: (slug) =>
+		api.request(`/campaigns/${encodeURIComponent(slug)}/has-images`),
 	exportCampaign: (slug) =>
 		api.request(`/campaigns/${encodeURIComponent(slug)}/export`),
 	exportCampaignArchive: (slug) =>

@@ -116,6 +116,14 @@ router.delete("/:slug", async (req, res, next) => {
 	}
 });
 
+router.get("/:slug/has-images", async (req, res, next) => {
+	try {
+		res.json({ hasImages: await storage.campaignHasImages(req.params.slug) });
+	} catch (error) {
+		next(error);
+	}
+});
+
 router.get("/:slug/export", async (req, res, next) => {
 	try {
 		res.json(await storage.exportCampaignBundle(req.params.slug));
