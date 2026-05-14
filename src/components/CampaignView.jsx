@@ -104,12 +104,11 @@ function CampaignView(props) {
 		}
 	};
 
-	const renderSessionCard = (session, isDragging = false) => (
+	const renderSessionCard = (session) => (
 		<ListCard
 			key={session.fileName}
 			className="CampaignView__sessionCard"
 			href={viewModel.buildSessionHref(session.fileName)}
-			dragging={isDragging}
 			onClick={() => navigateTo(campaign.slug, session.fileName)}
 			actions={
 				<Button
@@ -209,8 +208,8 @@ function CampaignView(props) {
 									onReorder={view.setSessions}
 									onDrop={view.handleSessionReorderDrop}
 									keyExtractor={(session) => session.fileName}
-									renderItem={(session, isDragging) =>
-										renderSessionCard(session, isDragging)
+									renderItem={(session) =>
+										renderSessionCard(session)
 									}
 								/>
 							) : (
@@ -326,7 +325,6 @@ function CampaignView(props) {
 										<NoteCard
 											note={note}
 											isLast={index === notesForRender.length - 1}
-											isDragging={isDragging}
 											campaignSlug={campaign.slug}
 											onToggleCollapse={view.handleToggleNoteCollapse}
 											onTitleChange={view.handleNoteTitleChange}
@@ -406,7 +404,6 @@ function CampaignView(props) {
 									renderItem={(character, isDragging) => (
 										<CharacterCard
 											character={character}
-											isDragging={isDragging}
 											onToggleCollapse={view.handleToggleCharacterCollapse}
 											onChange={view.handleCharacterChange}
 											onNameBlur={view.handleCharacterNameBlur}
@@ -469,7 +466,6 @@ function CampaignView(props) {
 									renderItem={(npc, isDragging) => (
 										<CharacterCard
 											character={npc}
-											isDragging={isDragging}
 											onToggleCollapse={view.handleToggleNpcCollapse}
 											onChange={view.handleNpcChange}
 											onNameBlur={view.handleNpcNameBlur}
@@ -521,7 +517,6 @@ function CampaignView(props) {
 									renderItem={(location, isDragging) => (
 										<LocationCard
 											location={location}
-											isDragging={isDragging}
 											onToggleCollapse={view.handleToggleLocationCollapse}
 											onChange={view.handleLocationChange}
 											onNameBlur={view.handleLocationNameBlur}

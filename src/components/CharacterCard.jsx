@@ -15,7 +15,6 @@ import { useAppSelector } from "../store/appStore";
 
 export default function CharacterCard({
 	character,
-	isDragging,
 	onToggleCollapse,
 	onChange,
 	onNameBlur,
@@ -98,7 +97,6 @@ export default function CharacterCard({
 		<div
 			className={classNames("character-card", {
 				"is-collapsed": isCollapsed,
-				"is-dragging": isDragging,
 				"character-card--modal": isModalView,
 			})}
 		>
@@ -274,7 +272,6 @@ export default function CharacterCard({
 									<NoteCard
 										note={note}
 										isLast={index === notesForRender.length - 1}
-										isDragging={isDragging}
 										campaignSlug={campaignSlug}
 										onToggleCollapse={(id) => {
 											updateField(

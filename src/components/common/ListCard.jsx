@@ -5,7 +5,6 @@ export default function ListCard({
 	children, // Основний контент картки (назва, мета)
 	actions, // Елементи дій праворуч (бейдж статусу, кнопки)
 	active = false,
-	dragging = false,
 	onClick,
 	href,
 	className = "",
@@ -13,7 +12,6 @@ export default function ListCard({
 }) {
 	const combinedClassName = classNames("ListCard", className, {
 		"ListCard--active": active,
-		"ListCard--dragging": dragging,
 	});
 
 	const handleClick = (e) => {

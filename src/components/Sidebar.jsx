@@ -240,7 +240,6 @@ export default function Sidebar({
 						renderItem={(campaign, isDragging) => (
 							<ListCard
 								active={activeCampaignId === campaign.slug}
-								dragging={isDragging}
 								href={`/campaign/${encodeURIComponent(campaign.slug)}`}
 								onClick={() => handleCampaignClick(campaign.slug)}
 								actions={

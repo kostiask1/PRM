@@ -12,7 +12,6 @@ const SHORT_TEXT_LENGTH = 50;
 export default function NoteCard({
 	note,
 	isLast,
-	isDragging,
 	campaignSlug,
 	onToggleCollapse,
 	onTitleChange,
@@ -34,7 +33,6 @@ export default function NoteCard({
 		<div
 			className={classNames("note-card-simple", {
 				"is-collapsed": isCollapsed,
-				"note-card-simple--dragging": isDragging,
 				"note-card-simple--simplified": simplifiedNotesEnabled,
 			})}
 			onClick={() =>

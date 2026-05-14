@@ -217,7 +217,6 @@ export default function LocationCard({
 											<NoteCard
 												note={note}
 												isLast={index === notesForRender.length - 1}
-												isDragging={isDragging}
 												campaignSlug={campaignSlug}
 												onToggleCollapse={(id) => {
 													updateField(

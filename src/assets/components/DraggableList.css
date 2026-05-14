@@ -65,6 +65,11 @@
 	animation: skew .3s ease-in infinite;
 }
 
+.DraggableList__preview > * {
+	margin: 0;
+	width: 100%;
+}
+
 @keyframes skew {
 
 	0%,
