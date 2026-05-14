@@ -55,7 +55,6 @@ const BESTIARY_FIELDS = new Set([
 const SPELL_FIELDS = new Set([
 	"name",
 	"source",
-	"page",
 	"classes",
 	"level",
 	"school",
@@ -77,6 +76,8 @@ Combines monster and spell source files into:
 Use --delete-sources to remove merged source JSON files after all.json files are written.`);
 	process.exit(0);
 }
+
+const SPELL_SOURCES_PATH = path.join(SPELLS_DIR, "sources.json");
 
 function normalizeSource(source) {
 	return String(source || "").trim().toUpperCase();
@@ -131,7 +132,7 @@ function enrichSpell(spell, spellSources) {
 	return pickFields(
 		{
 			...spell,
-			classes,
+			classes: classes.length > 0 ? classes : spell.classes,
 		},
 		SPELL_FIELDS,
 	);
@@ -201,9 +202,8 @@ async function buildBestiaryBundle() {
 async function buildSpellsBundle() {
 	const indexPath = path.join(SPELLS_DIR, "index.json");
 	const index = (await exists(indexPath)) ? await readJson(indexPath) : {};
-	const spellSourcesPath = path.join(SPELLS_DIR, "sources.json");
-	const spellSources = (await exists(spellSourcesPath))
-		? await readJson(spellSourcesPath)
+	const spellSources = (await exists(SPELL_SOURCES_PATH))
+		? await readJson(SPELL_SOURCES_PATH)
 		: {};
 	const spells = [];
 	const sourceFiles = [];
@@ -240,6 +240,13 @@ async function buildSpellsBundle() {
 	return { count: spells.length, sourceFiles };
 }
 
+async function deleteSpellSourcesFile() {
+	if (!shouldDeleteSources || !(await exists(SPELL_SOURCES_PATH))) return 0;
+	if (isDryRun) return 1;
+	await fs.rm(SPELL_SOURCES_PATH);
+	return 1;
+}
+
 async function deleteSourceFiles(files) {
 	if (!shouldDeleteSources) return 0;
 
@@ -274,6 +281,7 @@ async function main() {
 			...bestiaryResult.sourceFiles,
 			...spellsResult.sourceFiles,
 		]);
+		deletedCount += await deleteSpellSourcesFile();
 	}
 
 	console.log(

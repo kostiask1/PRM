@@ -8,6 +8,7 @@ import ListCard from "./common/ListCard";
 import DraggableList from "./common/DraggableList";
 import ImageGallery from "./ImageGallery";
 import { openConditionsModal } from "./modals/openConditionsModal";
+import { openDiseasesModal } from "./modals/openDiseasesModal";
 import SettingsModalContent from "./modals/SettingsModalContent";
 import { downloadBlob } from "../utils/download";
 import {
@@ -124,6 +125,10 @@ export default function Sidebar({
 		openConditionsModal();
 	};
 
+	const handleOpenDiseases = () => {
+		openDiseasesModal();
+	};
+
 	const handleOpenSettings = () => {
 		dispatch(() => {
 			openModalRequest({
@@ -218,6 +223,17 @@ export default function Sidebar({
 					>
 						<Icon name="list" />
 						<span>{lang.t("Conditions")}</span>
+					</a>
+					<a
+						href="#"
+						className="Sidebar__link"
+						onClick={(e) => {
+							e.preventDefault();
+							handleOpenDiseases();
+						}}
+					>
+						<Icon name="disease" />
+						<span>{lang.t("Diseases")}</span>
 					</a>
 				</div>
 

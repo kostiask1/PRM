@@ -9,7 +9,18 @@ const ROOT_DIR = path.join(__dirname, "..");
 const DATABASE_DIR = path.join(ROOT_DIR, "database");
 const BESTIARY_DIR = path.join(DATABASE_DIR, "bestiary");
 const SPELLS_DIR = path.join(DATABASE_DIR, "spells");
+const CONDITIONS_PATH = path.join(DATABASE_DIR, "conditions.json");
+const DISEASES_PATH = path.join(DATABASE_DIR, "diseases.json");
 const TMP_DIR = path.join(ROOT_DIR, ".tmp-5etools-update");
+const CONDITION_PRUNE_KEYS = new Set([
+	"page",
+	"srd",
+	"srd52",
+	"basicRules2024",
+	"basicRules",
+	"source",
+	"reprintedAs",
+]);
 
 const OWNER = "5etools-mirror-3";
 const REPO = "5etools-src";
@@ -27,6 +38,7 @@ if (args.has("--help") || args.has("-h")) {
 Downloads spell and bestiary JSON from:
   https://github.com/${OWNER}/${REPO}/tree/${ref}/data/spells
   https://github.com/${OWNER}/${REPO}/tree/${ref}/data/bestiary
+  https://github.com/${OWNER}/${REPO}/blob/${ref}/data/conditionsdiseases.json
 
 Excluded files: fluff, foundry/foundy, template.
 After download, materializes bestiary _copy entries and rebuilds all.json files.`);
@@ -121,6 +133,115 @@ async function downloadFiles(remotePath, targetDir) {
 	return files.length;
 }
 
+async function downloadFile(remotePath, targetPath) {
+	const url = `https://raw.githubusercontent.com/${OWNER}/${REPO}/${ref}/${remotePath}`;
+	if (isVerbose) console.log(`download ${remotePath}`);
+	const content = await fetchText(url);
+	JSON.parse(content);
+	await fs.mkdir(path.dirname(targetPath), { recursive: true });
+	await fs.writeFile(targetPath, content.endsWith("\n") ? content : `${content}\n`, "utf8");
+	return 1;
+}
+
+async function readJson(filePath) {
+	return JSON.parse(await fs.readFile(filePath, "utf8"));
+}
+
+function getLocalExhaustionEntries(currentConditions) {
+	const conditions = Array.isArray(currentConditions?.condition)
+		? currentConditions.condition
+		: [];
+	return conditions.filter(
+		(entry) => String(entry?.name || "").toLowerCase() === "exhaustion",
+	);
+}
+
+function conditionKey(entry) {
+	return `${String(entry?.name || "").trim().toLowerCase()}|${String(entry?.source || "").trim().toUpperCase()}`;
+}
+
+function conditionNameKey(entry) {
+	return String(entry?.name || "").trim().toLowerCase();
+}
+
+function getSourcePriority(source) {
+	const normalized = String(source || "").toUpperCase();
+	if (normalized === "XPHB" || normalized === "XDMG") return 3;
+	if (normalized === "PHB" || normalized === "DMG") return 2;
+	return 1;
+}
+
+function pickPreferredCondition(current, candidate) {
+	if (!current) return candidate;
+	if (candidate?.basicRules2024 && !current?.basicRules2024) return candidate;
+	if (!candidate?.basicRules2024 && current?.basicRules2024) return current;
+
+	const currentPriority = getSourcePriority(current?.source);
+	const candidatePriority = getSourcePriority(candidate?.source);
+	if (candidatePriority !== currentPriority) {
+		return candidatePriority > currentPriority ? candidate : current;
+	}
+	return current;
+}
+
+function dedupeConditionsByName(items = []) {
+	const byName = new Map();
+	for (const item of items) {
+		const key = conditionNameKey(item);
+		if (!key) continue;
+		byName.set(key, pickPreferredCondition(byName.get(key), item));
+	}
+	return [...byName.values()].sort((a, b) =>
+		String(a.name || "").localeCompare(String(b.name || "")),
+	);
+}
+
+function pruneConditionMeta(item) {
+	if (!item || typeof item !== "object") return item;
+	return Object.fromEntries(
+		Object.entries(item).filter(([key]) => !CONDITION_PRUNE_KEYS.has(key)),
+	);
+}
+
+function normalizeConditionsData(data) {
+	return {
+		condition: dedupeConditionsByName(data.condition || []).map(pruneConditionMeta),
+		status: dedupeConditionsByName(data.status || []).map(pruneConditionMeta),
+	};
+}
+
+function normalizeDiseasesData(data) {
+	return {
+		disease: dedupeConditionsByName(data.disease || []).map(pruneConditionMeta),
+	};
+}
+
+async function writeConditionsWithLocalExhaustion(downloadedPath) {
+	const downloaded = await readJson(downloadedPath);
+	const current = (await exists(CONDITIONS_PATH))
+		? await readJson(CONDITIONS_PATH)
+		: null;
+	const localExhaustion = getLocalExhaustionEntries(current);
+
+	if (localExhaustion.length > 0) {
+		if (!Array.isArray(downloaded.condition)) downloaded.condition = [];
+		const existing = new Set(downloaded.condition.map(conditionKey));
+
+		for (const entry of localExhaustion) {
+			const key = conditionKey(entry);
+			if (existing.has(key)) continue;
+			downloaded.condition.push(entry);
+			existing.add(key);
+		}
+	}
+
+	const normalized = normalizeConditionsData(downloaded);
+	const normalizedDiseases = normalizeDiseasesData(downloaded);
+	await fs.writeFile(CONDITIONS_PATH, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
+	await fs.writeFile(DISEASES_PATH, `${JSON.stringify(normalizedDiseases, null, 2)}\n`, "utf8");
+	return localExhaustion.length;
+}
+
 async function removeJsonFiles(dir) {
 	if (!(await exists(dir))) return;
 	const entries = await fs.readdir(dir, { withFileTypes: true });
@@ -167,15 +288,17 @@ async function cleanupUnneededSupportFiles() {
 async function main() {
 	const tmpBestiaryDir = path.join(TMP_DIR, "bestiary");
 	const tmpSpellsDir = path.join(TMP_DIR, "spells");
+	const tmpConditionsPath = path.join(TMP_DIR, "conditionsdiseases.json");
 
 	await fs.rm(TMP_DIR, { recursive: true, force: true });
 	const [bestiaryCount, spellCount] = await Promise.all([
 		downloadFiles("data/bestiary", tmpBestiaryDir),
 		downloadFiles("data/spells", tmpSpellsDir),
+		downloadFile("data/conditionsdiseases.json", tmpConditionsPath),
 	]);
 
 	console.log(
-		`${isDryRun ? "Dry run" : "Downloaded"}: ${bestiaryCount} bestiary JSON files and ${spellCount} spell JSON files from ${OWNER}/${REPO}@${ref}.`,
+		`${isDryRun ? "Dry run" : "Downloaded"}: ${bestiaryCount} bestiary JSON files, ${spellCount} spell JSON files, and conditionsdiseases.json from ${OWNER}/${REPO}@${ref}.`,
 	);
 
 	if (isDryRun) {
@@ -188,6 +311,7 @@ async function main() {
 		copyJsonFiles(tmpBestiaryDir, BESTIARY_DIR),
 		copyJsonFiles(tmpSpellsDir, SPELLS_DIR),
 	]);
+	await writeConditionsWithLocalExhaustion(tmpConditionsPath);
 	await fs.rm(TMP_DIR, { recursive: true, force: true });
 
 	runNodeScript(path.join("scripts", "materialize-bestiary-copies.mjs"));

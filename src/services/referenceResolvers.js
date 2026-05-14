@@ -1,4 +1,8 @@
-import { getConditionByName, getSpellByName } from "./referencePreview.js";
+import {
+	getConditionByName,
+	getDiseaseByName,
+	getSpellByName,
+} from "./referencePreview.js";
 
 export async function resolveSpellInput(spellOrName) {
 	if (spellOrName && typeof spellOrName === "object") {
@@ -24,4 +28,18 @@ export async function resolveConditionInput(nameOrCondition) {
 			: nameOrCondition?.name || "";
 	if (!name) return null;
 	return getConditionByName(name);
+}
+
+export async function resolveDiseaseInput(nameOrDisease) {
+	if (nameOrDisease && typeof nameOrDisease === "object") {
+		if (typeof nameOrDisease.name === "string" && nameOrDisease.entries) {
+			return nameOrDisease;
+		}
+	}
+	const name =
+		typeof nameOrDisease === "string"
+			? nameOrDisease
+			: nameOrDisease?.name || "";
+	if (!name) return null;
+	return getDiseaseByName(name);
 }

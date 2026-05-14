@@ -20,7 +20,10 @@ import ClickToCopy from "./common/ClickToCopy.jsx";
 import Button from "./form/Button.jsx";
 import MonsterStatBlockModel from "../models/MonsterStatBlockModel.js";
 import { getSpellByName } from "../services/referencePreview.js";
-import { resolveSpellInput } from "../services/referenceResolvers.js";
+import {
+	resolveDiseaseInput,
+	resolveSpellInput,
+} from "../services/referenceResolvers.js";
 import useConditionReference from "../hooks/useConditionReference.jsx";
 import Tooltip from "./common/Tooltip.jsx";
 import classNames from "../utils/classNames";
@@ -32,6 +35,7 @@ import {
 } from "../store/appStore";
 import { lang } from "../services/localization.js";
 import AddMonsterToEncounterModalContent from "./modals/AddMonsterToEncounterModalContent.jsx";
+import { openDiseasesModal } from "./modals/openDiseasesModal.jsx";
 
 const SPELL_CACHE = new Map();
 
@@ -158,6 +162,39 @@ export default function MonsterStatBlock({
 		);
 	};
 
+	const handleDiseaseClick = async (nameOrDisease) => {
+		const disease = await resolveDiseaseInput(nameOrDisease);
+		if (!disease) return;
+		openDiseasesModal(disease.name);
+	};
+
+	const handleDiseaseHover = async (nameOrDisease) => {
+		const disease = await resolveDiseaseInput(nameOrDisease);
+		if (!disease) return null;
+
+		return (
+			<div>
+				<div className="Tooltip__title">{disease.name}</div>
+				{disease.type && <div className="Tooltip__meta">{disease.type}</div>}
+				<div className="Tooltip__text">
+					{renderRecursiveContent(
+						disease.entries,
+						...referenceHandlers,
+					)}
+				</div>
+			</div>
+		);
+	};
+
+	const referenceHandlers = [
+		handleSpellClick,
+		handleConditionClick,
+		handleSpellHover,
+		handleConditionHover,
+		handleDiseaseClick,
+		handleDiseaseHover,
+	];
+
 	useEffect(() => {
 		setSpells([]);
 
@@ -201,20 +238,14 @@ export default function MonsterStatBlock({
 						<strong>
 							{renderRecursiveContent(
 								action.name,
-								handleSpellClick,
-								handleConditionClick,
-								handleSpellHover,
-								handleConditionHover,
-							)}
+								...referenceHandlers,
+								)}
 							.
 						</strong>{" "}
 						{renderRecursiveContent(
 							action.entries || action.desc,
-							handleSpellClick,
-							handleConditionClick,
-							handleSpellHover,
-							handleConditionHover,
-						)}
+							...referenceHandlers,
+							)}
 						<div className="MonsterStatBlock__action-rolls">
 							{action.attack_bonus && (
 								<div className="stat-item">
@@ -332,11 +363,8 @@ export default function MonsterStatBlock({
 							<p>
 								{renderRecursiveContent(
 									sc.headerEntries,
-									handleSpellClick,
-									handleConditionClick,
-									handleSpellHover,
-									handleConditionHover,
-								)}
+									...referenceHandlers,
+									)}
 							</p>
 						)}
 						{sc.will && (
@@ -346,11 +374,8 @@ export default function MonsterStatBlock({
 									<React.Fragment key={i}>
 										{renderRecursiveContent(
 											s,
-											handleSpellClick,
-											handleConditionClick,
-											handleSpellHover,
-											handleConditionHover,
-										)}
+											...referenceHandlers,
+											)}
 										{i < sc.will.length - 1 ? ", " : ""}
 									</React.Fragment>
 								))}
@@ -364,11 +389,8 @@ export default function MonsterStatBlock({
 										<React.Fragment key={i}>
 											{renderRecursiveContent(
 												s,
-												handleSpellClick,
-												handleConditionClick,
-												handleSpellHover,
-												handleConditionHover,
-											)}
+												...referenceHandlers,
+												)}
 											{i < list.length - 1 ? ", " : ""}
 										</React.Fragment>
 									))}
@@ -389,11 +411,8 @@ export default function MonsterStatBlock({
 										<React.Fragment key={i}>
 											{renderRecursiveContent(
 												s,
-												handleSpellClick,
-												handleConditionClick,
-												handleSpellHover,
-												handleConditionHover,
-											)}
+												...referenceHandlers,
+												)}
 											{i < info.spells.length - 1 ? ", " : ""}
 										</React.Fragment>
 									))}
@@ -508,11 +527,8 @@ export default function MonsterStatBlock({
 							<strong>HP:</strong>{" "}
 							{renderRecursiveContent(
 								model.hp.val,
-								handleSpellClick,
-								handleConditionClick,
-								handleSpellHover,
-								handleConditionHover,
-							)}{" "}
+								...referenceHandlers,
+								)}{" "}
 							{model.hp.formula && (
 								<>
 									(<RollDice formula={model.hp.formula} />)
@@ -523,30 +539,16 @@ export default function MonsterStatBlock({
 							<strong>AC:</strong>{" "}
 							{renderRecursiveContent(
 								model.ac.val,
-								handleSpellClick,
-								handleConditionClick,
-								handleSpellHover,
-								handleConditionHover,
-							)}{" "}
+								...referenceHandlers,
+								)}{" "}
 							{renderRecursiveContent(
 								model.ac.desc,
-								handleSpellClick,
-								handleConditionClick,
-								handleSpellHover,
-								handleConditionHover,
-							)}
+								...referenceHandlers,
+								)}
 						</div>
 						<div className="stat-item">
 							<strong>Speed:</strong> {model.speed}
 						</div>
-						{monster.source && (
-							<div className="stat-item">
-								<strong>Source:</strong>{" "}
-								<span className="Bestiary__item-source">
-									{model.sourceLabel}
-								</span>
-							</div>
-						)}
 					</div>
 					{!isGridLayout && (
 						<div className="MonsterStatBlock__abilities">
@@ -645,11 +647,8 @@ export default function MonsterStatBlock({
 						<strong>Senses:</strong>{" "}
 						{renderRecursiveContent(
 							monster.senses,
-							handleSpellClick,
-							handleConditionClick,
-							handleSpellHover,
-							handleConditionHover,
-						)}
+							...referenceHandlers,
+							)}
 					</p>
 					<p>
 						<strong>Languages:</strong> {model.languages}
@@ -662,11 +661,8 @@ export default function MonsterStatBlock({
 					<div className="MonsterStatBlock__lore">
 						{parseRollsAndSpells(
 							preprocessTags(monster.desc),
-							handleSpellClick,
-							handleConditionClick,
-							handleSpellHover,
-							handleConditionHover,
-						)}
+							...referenceHandlers,
+							)}
 					</div>
 				)}
 			</div>
@@ -682,11 +678,8 @@ export default function MonsterStatBlock({
 					<h4>Lair Actions:</h4>
 					{renderRecursiveContent(
 						monster.lairActions,
-						handleSpellClick,
-						handleConditionClick,
-						handleSpellHover,
-						handleConditionHover,
-					)}
+						...referenceHandlers,
+						)}
 				</div>
 			)}
 			{monster.regionalEffects && monster.regionalEffects.length > 0 && (
@@ -694,11 +687,8 @@ export default function MonsterStatBlock({
 					<h4>Regional Effects:</h4>
 					{renderRecursiveContent(
 						monster.regionalEffects,
-						handleSpellClick,
-						handleConditionClick,
-						handleSpellHover,
-						handleConditionHover,
-					)}
+						...referenceHandlers,
+						)}
 				</div>
 			)}
 		</div>

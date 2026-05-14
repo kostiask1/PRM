@@ -2,7 +2,6 @@
   {
     "name": "Abi-Dalzim's Horrid Wilting",
     "source": "XGE",
-    "page": 150,
     "level": 8,
     "school": "N",
     "time": [
@@ -40,7 +39,6 @@
   {
     "name": "Absorb Elements",
     "source": "XGE",
-    "page": 150,
     "level": 1,
     "school": "A",
     "time": [
@@ -91,7 +89,6 @@
   {
     "name": "Acid Splash",
     "source": "PHB",
-    "page": 211,
     "level": 0,
     "school": "C",
     "time": [
@@ -129,7 +126,6 @@
   {
     "name": "Acid Splash",
     "source": "XPHB",
-    "page": 239,
     "level": 0,
     "school": "V",
     "time": [
@@ -175,7 +171,6 @@
   {
     "name": "Aganazzar's Scorcher",
     "source": "XGE",
-    "page": 150,
     "level": 2,
     "school": "V",
     "time": [
@@ -221,7 +216,6 @@
   {
     "name": "Aid",
     "source": "PHB",
-    "page": 211,
     "level": 2,
     "school": "A",
     "time": [
@@ -274,7 +268,6 @@
   {
     "name": "Aid",
     "source": "XPHB",
-    "page": 239,
     "level": 2,
     "school": "A",
     "time": [
@@ -328,7 +321,6 @@
   {
     "name": "Air Bubble",
     "source": "AAG",
-    "page": 22,
     "level": 2,
     "school": "C",
     "time": [
@@ -379,7 +371,6 @@
   {
     "name": "Alarm",
     "source": "PHB",
-    "page": 211,
     "level": 1,
     "school": "A",
     "time": [
@@ -423,7 +414,6 @@
   {
     "name": "Alarm",
     "source": "XPHB",
-    "page": 239,
     "level": 1,
     "school": "A",
     "time": [
@@ -485,7 +475,6 @@
   {
     "name": "Alter Self",
     "source": "PHB",
-    "page": 211,
     "level": 2,
     "school": "T",
     "time": [
@@ -547,7 +536,6 @@
   {
     "name": "Alter Self",
     "source": "XPHB",
-    "page": 239,
     "level": 2,
     "school": "T",
     "time": [
@@ -609,7 +597,6 @@
   {
     "name": "Alustriel's Mooncloak",
     "source": "FRHoF",
-    "page": 142,
     "level": 5,
     "school": "A",
     "time": [
@@ -677,7 +664,6 @@
   {
     "name": "Animal Friendship",
     "source": "PHB",
-    "page": 212,
     "level": 1,
     "school": "E",
     "time": [
@@ -728,7 +714,6 @@
   {
     "name": "Animal Friendship",
     "source": "XPHB",
-    "page": 239,
     "level": 1,
     "school": "E",
     "time": [
@@ -779,7 +764,6 @@
   {
     "name": "Animal Messenger",
     "source": "PHB",
-    "page": 212,
     "level": 2,
     "school": "E",
     "time": [
@@ -831,7 +815,6 @@
   {
     "name": "Animal Messenger",
     "source": "XPHB",
-    "page": 240,
     "level": 2,
     "school": "E",
     "time": [
@@ -883,7 +866,6 @@
   {
     "name": "Animal Shapes",
     "source": "PHB",
-    "page": 212,
     "level": 8,
     "school": "T",
     "time": [
@@ -925,7 +907,6 @@
   {
     "name": "Animal Shapes",
     "source": "XPHB",
-    "page": 240,
     "level": 8,
     "school": "T",
     "time": [
@@ -966,7 +947,6 @@
   {
     "name": "Animate Dead",
     "source": "PHB",
-    "page": 212,
     "level": 3,
     "school": "N",
     "time": [
@@ -1014,7 +994,6 @@
   {
     "name": "Animate Dead",
     "source": "XPHB",
-    "page": 240,
     "level": 3,
     "school": "N",
     "time": [
@@ -1062,7 +1041,6 @@
   {
     "name": "Animate Objects",
     "source": "PHB",
-    "page": 213,
     "level": 5,
     "school": "T",
     "time": [
@@ -1179,7 +1157,6 @@
   {
     "name": "Animate Objects",
     "source": "XPHB",
-    "page": 240,
     "level": 5,
     "school": "T",
     "time": [
@@ -1233,7 +1210,6 @@
   {
     "name": "Antagonize",
     "source": "BMT",
-    "page": 50,
     "level": 3,
     "school": "E",
     "time": [
@@ -1281,7 +1257,6 @@
   {
     "name": "Antilife Shell",
     "source": "PHB",
-    "page": 213,
     "level": 5,
     "school": "A",
     "time": [
@@ -1323,7 +1298,6 @@
   {
     "name": "Antilife Shell",
     "source": "XPHB",
-    "page": 241,
     "level": 5,
     "school": "A",
     "time": [
@@ -1364,7 +1338,6 @@
   {
     "name": "Antimagic Field",
     "source": "PHB",
-    "page": 213,
     "level": 8,
     "school": "A",
     "time": [
@@ -1457,7 +1430,6 @@
   {
     "name": "Antimagic Field",
     "source": "XPHB",
-    "page": 241,
     "level": 8,
     "school": "A",
     "time": [
@@ -1502,7 +1474,6 @@
   {
     "name": "Antipathy/Sympathy",
     "source": "PHB",
-    "page": 214,
     "level": 8,
     "school": "E",
     "time": [
@@ -1567,7 +1538,6 @@
   {
     "name": "Antipathy/Sympathy",
     "source": "XPHB",
-    "page": 242,
     "level": 8,
     "school": "E",
     "time": [
@@ -1636,7 +1606,6 @@
   {
     "name": "Arcane Eye",
     "source": "PHB",
-    "page": 214,
     "level": 4,
     "school": "D",
     "time": [
@@ -1680,7 +1649,6 @@
   {
     "name": "Arcane Eye",
     "source": "XPHB",
-    "page": 242,
     "level": 4,
     "school": "D",
     "time": [
@@ -1723,7 +1691,6 @@
   {
     "name": "Arcane Gate",
     "source": "PHB",
-    "page": 214,
     "level": 6,
     "school": "C",
     "time": [
@@ -1767,7 +1734,6 @@
   {
     "name": "Arcane Gate",
     "source": "XPHB",
-    "page": 242,
     "level": 6,
     "school": "C",
     "time": [
@@ -1811,7 +1777,6 @@
   {
     "name": "Arcane Lock",
     "source": "PHB",
-    "page": 215,
     "level": 2,
     "school": "A",
     "time": [
@@ -1855,7 +1820,6 @@
   {
     "name": "Arcane Lock",
     "source": "XPHB",
-    "page": 242,
     "level": 2,
     "school": "A",
     "time": [
@@ -1898,7 +1862,6 @@
   {
     "name": "Arcane Vigor",
     "source": "XPHB",
-    "page": 242,
     "level": 2,
     "school": "A",
     "time": [
@@ -1943,7 +1906,6 @@
   {
     "name": "Armor of Agathys",
     "source": "PHB",
-    "page": 215,
     "level": 1,
     "school": "A",
     "time": [
@@ -1991,7 +1953,6 @@
   {
     "name": "Armor of Agathys",
     "source": "XPHB",
-    "page": 243,
     "level": 1,
     "school": "A",
     "time": [
@@ -2039,7 +2000,6 @@
   {
     "name": "Arms of Hadar",
     "source": "PHB",
-    "page": 215,
     "level": 1,
     "school": "C",
     "time": [
@@ -2083,7 +2043,6 @@
   {
     "name": "Arms of Hadar",
     "source": "XPHB",
-    "page": 243,
     "level": 1,
     "school": "C",
     "time": [
@@ -2127,7 +2086,6 @@
   {
     "name": "Ashardalon's Stride",
     "source": "FTD",
-    "page": 19,
     "level": 3,
     "school": "T",
     "time": [
@@ -2179,7 +2137,6 @@
   {
     "name": "Astral Projection",
     "source": "PHB",
-    "page": 215,
     "level": 9,
     "school": "N",
     "time": [
@@ -2227,7 +2184,6 @@
   {
     "name": "Astral Projection",
     "source": "XPHB",
-    "page": 243,
     "level": 9,
     "school": "N",
     "time": [
@@ -2276,7 +2232,6 @@
   {
     "name": "Augury",
     "source": "PHB",
-    "page": 215,
     "level": 2,
     "school": "D",
     "time": [
@@ -2327,7 +2282,6 @@
   {
     "name": "Augury",
     "source": "XPHB",
-    "page": 244,
     "level": 2,
     "school": "D",
     "time": [
@@ -2399,7 +2353,6 @@
   {
     "name": "Aura of Life",
     "source": "PHB",
-    "page": 216,
     "level": 4,
     "school": "A",
     "time": [
@@ -2439,7 +2392,6 @@
   {
     "name": "Aura of Life",
     "source": "XPHB",
-    "page": 244,
     "level": 4,
     "school": "A",
     "time": [
@@ -2479,7 +2431,6 @@
   {
     "name": "Aura of Purity",
     "source": "PHB",
-    "page": 216,
     "level": 4,
     "school": "A",
     "time": [
@@ -2519,7 +2470,6 @@
   {
     "name": "Aura of Purity",
     "source": "XPHB",
-    "page": 244,
     "level": 4,
     "school": "A",
     "time": [
@@ -2559,7 +2509,6 @@
   {
     "name": "Aura of Vitality",
     "source": "PHB",
-    "page": 216,
     "level": 3,
     "school": "V",
     "time": [
@@ -2600,7 +2549,6 @@
   {
     "name": "Aura of Vitality",
     "source": "XPHB",
-    "page": 244,
     "level": 3,
     "school": "A",
     "time": [
@@ -2641,7 +2589,6 @@
   {
     "name": "Awaken",
     "source": "PHB",
-    "page": 216,
     "level": 5,
     "school": "T",
     "time": [
@@ -2682,7 +2629,6 @@
   {
     "name": "Awaken",
     "source": "XPHB",
-    "page": 244,
     "level": 5,
     "school": "T",
     "time": [
@@ -2723,7 +2669,6 @@
   {
     "name": "Backlash",
     "source": "FRHoF",
-    "page": 142,
     "level": 4,
     "school": "A",
     "time": [
@@ -2771,7 +2716,6 @@
   {
     "name": "Bane",
     "source": "PHB",
-    "page": 216,
     "level": 1,
     "school": "E",
     "time": [
@@ -2822,7 +2766,6 @@
   {
     "name": "Bane",
     "source": "XPHB",
-    "page": 245,
     "level": 1,
     "school": "E",
     "time": [
@@ -2874,7 +2817,6 @@
   {
     "name": "Banishing Smite",
     "source": "PHB",
-    "page": 216,
     "level": 5,
     "school": "A",
     "time": [
@@ -2912,7 +2854,6 @@
   {
     "name": "Banishing Smite",
     "source": "XPHB",
-    "page": 245,
     "level": 5,
     "school": "C",
     "time": [
@@ -2951,7 +2892,6 @@
   {
     "name": "Banishment",
     "source": "PHB",
-    "page": 217,
     "level": 4,
     "school": "A",
     "time": [
@@ -3007,7 +2947,6 @@
   {
     "name": "Banishment",
     "source": "XPHB",
-    "page": 245,
     "level": 4,
     "school": "A",
     "time": [
@@ -3062,7 +3001,6 @@
   {
     "name": "Barkskin",
     "source": "PHB",
-    "page": 217,
     "level": 2,
     "school": "T",
     "time": [
@@ -3103,7 +3041,6 @@
   {
     "name": "Barkskin",
     "source": "XPHB",
-    "page": 245,
     "level": 2,
     "school": "T",
     "time": [
@@ -3143,7 +3080,6 @@
   {
     "name": "Beacon of Hope",
     "source": "PHB",
-    "page": 217,
     "level": 3,
     "school": "A",
     "time": [
@@ -3183,7 +3119,6 @@
   {
     "name": "Beacon of Hope",
     "source": "XPHB",
-    "page": 245,
     "level": 3,
     "school": "A",
     "time": [
@@ -3223,7 +3158,6 @@
   {
     "name": "Beast Bond",
     "source": "XGE",
-    "page": 150,
     "level": 1,
     "school": "D",
     "time": [
@@ -3264,7 +3198,6 @@
   {
     "name": "Beast Sense",
     "source": "PHB",
-    "page": 217,
     "level": 2,
     "school": "D",
     "time": [
@@ -3303,7 +3236,6 @@
   {
     "name": "Beast Sense",
     "source": "XPHB",
-    "page": 245,
     "level": 2,
     "school": "D",
     "time": [
@@ -3342,7 +3274,6 @@
   {
     "name": "Befuddlement",
     "source": "XPHB",
-    "page": 245,
     "level": 8,
     "school": "E",
     "time": [
@@ -3383,7 +3314,6 @@
   {
     "name": "Bestow Curse",
     "source": "PHB",
-    "page": 218,
     "level": 3,
     "school": "N",
     "time": [
@@ -3443,7 +3373,6 @@
   {
     "name": "Bestow Curse",
     "source": "XPHB",
-    "page": 246,
     "level": 3,
     "school": "N",
     "time": [
@@ -3502,7 +3431,6 @@
   {
     "name": "Bigby's Hand",
     "source": "PHB",
-    "page": 218,
     "level": 5,
     "school": "V",
     "time": [
@@ -3584,7 +3512,6 @@
   {
     "name": "Bigby's Hand",
     "source": "XPHB",
-    "page": 246,
     "level": 5,
     "school": "V",
     "time": [
@@ -3672,7 +3599,6 @@
   {
     "name": "Blade Barrier",
     "source": "PHB",
-    "page": 218,
     "level": 6,
     "school": "V",
     "time": [
@@ -3713,7 +3639,6 @@
   {
     "name": "Blade Barrier",
     "source": "XPHB",
-    "page": 247,
     "level": 6,
     "school": "V",
     "time": [
@@ -3754,7 +3679,6 @@
   {
     "name": "Blade of Disaster",
     "source": "FRHoF",
-    "page": 143,
     "level": 9,
     "school": "C",
     "time": [
@@ -3798,7 +3722,6 @@
   {
     "name": "Blade of Disaster",
     "source": "TCE",
-    "page": 106,
     "level": 9,
     "school": "C",
     "time": [
@@ -3842,7 +3765,6 @@
   {
     "name": "Blade Ward",
     "source": "PHB",
-    "page": 218,
     "level": 0,
     "school": "A",
     "time": [
@@ -3883,7 +3805,6 @@
   {
     "name": "Blade Ward",
     "source": "XPHB",
-    "page": 247,
     "level": 0,
     "school": "A",
     "time": [
@@ -3925,7 +3846,6 @@
   {
     "name": "Bless",
     "source": "PHB",
-    "page": 219,
     "level": 1,
     "school": "E",
     "time": [
@@ -3976,7 +3896,6 @@
   {
     "name": "Bless",
     "source": "XPHB",
-    "page": 247,
     "level": 1,
     "school": "E",
     "time": [
@@ -4030,7 +3949,6 @@
   {
     "name": "Blight",
     "source": "PHB",
-    "page": 219,
     "level": 4,
     "school": "N",
     "time": [
@@ -4079,7 +3997,6 @@
   {
     "name": "Blight",
     "source": "XPHB",
-    "page": 247,
     "level": 4,
     "school": "N",
     "time": [
@@ -4127,7 +4044,6 @@
   {
     "name": "Blinding Smite",
     "source": "PHB",
-    "page": 219,
     "level": 3,
     "school": "V",
     "time": [
@@ -4166,7 +4082,6 @@
   {
     "name": "Blinding Smite",
     "source": "XPHB",
-    "page": 247,
     "level": 3,
     "school": "V",
     "time": [
@@ -4213,7 +4128,6 @@
   {
     "name": "Blindness/Deafness",
     "source": "PHB",
-    "page": 219,
     "level": 2,
     "school": "N",
     "time": [
@@ -4263,7 +4177,6 @@
   {
     "name": "Blindness/Deafness",
     "source": "XPHB",
-    "page": 248,
     "level": 2,
     "school": "T",
     "time": [
@@ -4313,7 +4226,6 @@
   {
     "name": "Blink",
     "source": "PHB",
-    "page": 219,
     "level": 3,
     "school": "T",
     "time": [
@@ -4354,7 +4266,6 @@
   {
     "name": "Blink",
     "source": "XPHB",
-    "page": 248,
     "level": 3,
     "school": "T",
     "time": [
@@ -4395,7 +4306,6 @@
   {
     "name": "Blur",
     "source": "PHB",
-    "page": 219,
     "level": 2,
     "school": "I",
     "time": [
@@ -4435,7 +4345,6 @@
   {
     "name": "Blur",
     "source": "XPHB",
-    "page": 248,
     "level": 2,
     "school": "I",
     "time": [
@@ -4475,7 +4384,6 @@
   {
     "name": "Bones of the Earth",
     "source": "XGE",
-    "page": 150,
     "level": 6,
     "school": "T",
     "time": [
@@ -4521,7 +4429,6 @@
   {
     "name": "Booming Blade",
     "source": "TCE",
-    "page": 106,
     "level": 0,
     "school": "V",
     "time": [
@@ -4567,7 +4474,6 @@
   {
     "name": "Borrowed Knowledge",
     "source": "SCC",
-    "page": 37,
     "level": 2,
     "school": "D",
     "time": [
@@ -4612,7 +4518,6 @@
   {
     "name": "Branding Smite",
     "source": "PHB",
-    "page": 219,
     "level": 2,
     "school": "V",
     "time": [
@@ -4659,7 +4564,6 @@
   {
     "name": "Burning Hands",
     "source": "PHB",
-    "page": 220,
     "level": 1,
     "school": "V",
     "time": [
@@ -4705,7 +4609,6 @@
   {
     "name": "Burning Hands",
     "source": "XPHB",
-    "page": 248,
     "level": 1,
     "school": "V",
     "time": [
@@ -4751,7 +4654,6 @@
   {
     "name": "Cacophonic Shield",
     "source": "FRHoF",
-    "page": 143,
     "level": 3,
     "school": "V",
     "time": [
@@ -4803,7 +4705,6 @@
   {
     "name": "Call Lightning",
     "source": "PHB",
-    "page": 220,
     "level": 3,
     "school": "C",
     "time": [
@@ -4854,7 +4755,6 @@
   {
     "name": "Call Lightning",
     "source": "XPHB",
-    "page": 248,
     "level": 3,
     "school": "C",
     "time": [
@@ -4906,7 +4806,6 @@
   {
     "name": "Calm Emotions",
     "source": "PHB",
-    "page": 221,
     "level": 2,
     "school": "E",
     "time": [
@@ -4949,7 +4848,6 @@
   {
     "name": "Calm Emotions",
     "source": "XPHB",
-    "page": 249,
     "level": 2,
     "school": "E",
     "time": [
@@ -4997,7 +4895,6 @@
   {
     "name": "Catapult",
     "source": "XGE",
-    "page": 150,
     "level": 1,
     "school": "T",
     "time": [
@@ -5042,7 +4939,6 @@
   {
     "name": "Catnap",
     "source": "XGE",
-    "page": 151,
     "level": 3,
     "school": "E",
     "time": [
@@ -5093,7 +4989,6 @@
   {
     "name": "Cause Fear",
     "source": "XGE",
-    "page": 151,
     "level": 1,
     "school": "N",
     "time": [
@@ -5142,7 +5037,6 @@
   {
     "name": "Ceremony",
     "source": "XGE",
-    "page": 151,
     "level": 1,
     "school": "A",
     "time": [
@@ -5224,7 +5118,6 @@
   {
     "name": "Chain Lightning",
     "source": "PHB",
-    "page": 221,
     "level": 6,
     "school": "V",
     "time": [
@@ -5271,7 +5164,6 @@
   {
     "name": "Chain Lightning",
     "source": "XPHB",
-    "page": 249,
     "level": 6,
     "school": "V",
     "time": [
@@ -5318,7 +5210,6 @@
   {
     "name": "Chaos Bolt",
     "source": "XGE",
-    "page": 151,
     "level": 1,
     "school": "V",
     "time": [
@@ -5450,7 +5341,6 @@
   {
     "name": "Charm Monster",
     "source": "XGE",
-    "page": 151,
     "level": 4,
     "school": "E",
     "time": [
@@ -5502,7 +5392,6 @@
   {
     "name": "Charm Monster",
     "source": "XPHB",
-    "page": 249,
     "level": 4,
     "school": "E",
     "time": [
@@ -5554,7 +5443,6 @@
   {
     "name": "Charm Person",
     "source": "PHB",
-    "page": 221,
     "level": 1,
     "school": "E",
     "time": [
@@ -5606,7 +5494,6 @@
   {
     "name": "Charm Person",
     "source": "XPHB",
-    "page": 249,
     "level": 1,
     "school": "E",
     "time": [
@@ -5658,7 +5545,6 @@
   {
     "name": "Chill Touch",
     "source": "PHB",
-    "page": 221,
     "level": 0,
     "school": "N",
     "time": [
@@ -5701,7 +5587,6 @@
   {
     "name": "Chill Touch",
     "source": "XPHB",
-    "page": 249,
     "level": 0,
     "school": "N",
     "time": [
@@ -5746,7 +5631,6 @@
   {
     "name": "Chromatic Orb",
     "source": "PHB",
-    "page": 221,
     "level": 1,
     "school": "V",
     "time": [
@@ -5795,7 +5679,6 @@
   {
     "name": "Chromatic Orb",
     "source": "XPHB",
-    "page": 249,
     "level": 1,
     "school": "V",
     "time": [
@@ -5845,7 +5728,6 @@
   {
     "name": "Circle of Death",
     "source": "PHB",
-    "page": 221,
     "level": 6,
     "school": "N",
     "time": [
@@ -5895,7 +5777,6 @@
   {
     "name": "Circle of Death",
     "source": "XPHB",
-    "page": 250,
     "level": 6,
     "school": "N",
     "time": [
@@ -5945,7 +5826,6 @@
   {
     "name": "Circle of Power",
     "source": "PHB",
-    "page": 221,
     "level": 5,
     "school": "A",
     "time": [
@@ -5984,7 +5864,6 @@
   {
     "name": "Circle of Power",
     "source": "XPHB",
-    "page": 250,
     "level": 5,
     "school": "A",
     "time": [
@@ -6026,7 +5905,6 @@
   {
     "name": "Clairvoyance",
     "source": "PHB",
-    "page": 222,
     "level": 3,
     "school": "D",
     "time": [
@@ -6075,7 +5953,6 @@
   {
     "name": "Clairvoyance",
     "source": "XPHB",
-    "page": 250,
     "level": 3,
     "school": "D",
     "time": [
@@ -6124,7 +6001,6 @@
   {
     "name": "Clone",
     "source": "PHB",
-    "page": 222,
     "level": 8,
     "school": "N",
     "time": [
@@ -6164,7 +6040,6 @@
   {
     "name": "Clone",
     "source": "XPHB",
-    "page": 251,
     "level": 8,
     "school": "N",
     "time": [
@@ -6204,7 +6079,6 @@
   {
     "name": "Cloud of Daggers",
     "source": "PHB",
-    "page": 222,
     "level": 2,
     "school": "C",
     "time": [
@@ -6257,7 +6131,6 @@
   {
     "name": "Cloud of Daggers",
     "source": "XPHB",
-    "page": 251,
     "level": 2,
     "school": "C",
     "time": [
@@ -6311,7 +6184,6 @@
   {
     "name": "Cloudkill",
     "source": "PHB",
-    "page": 222,
     "level": 5,
     "school": "C",
     "time": [
@@ -6363,7 +6235,6 @@
   {
     "name": "Cloudkill",
     "source": "XPHB",
-    "page": 251,
     "level": 5,
     "school": "C",
     "time": [
@@ -6415,7 +6286,6 @@
   {
     "name": "Color Spray",
     "source": "PHB",
-    "page": 222,
     "level": 1,
     "school": "I",
     "time": [
@@ -6467,7 +6337,6 @@
   {
     "name": "Color Spray",
     "source": "XPHB",
-    "page": 251,
     "level": 1,
     "school": "I",
     "time": [
@@ -6505,7 +6374,6 @@
   {
     "name": "Command",
     "source": "PHB",
-    "page": 223,
     "level": 1,
     "school": "E",
     "time": [
@@ -6590,7 +6458,6 @@
   {
     "name": "Command",
     "source": "XPHB",
-    "page": 251,
     "level": 1,
     "school": "E",
     "time": [
@@ -6676,7 +6543,6 @@
   {
     "name": "Commune",
     "source": "PHB",
-    "page": 223,
     "level": 5,
     "school": "D",
     "time": [
@@ -6717,7 +6583,6 @@
   {
     "name": "Commune",
     "source": "XPHB",
-    "page": 251,
     "level": 5,
     "school": "D",
     "time": [
@@ -6758,7 +6623,6 @@
   {
     "name": "Commune with Nature",
     "source": "PHB",
-    "page": 224,
     "level": 5,
     "school": "D",
     "time": [
@@ -6805,7 +6669,6 @@
   {
     "name": "Commune with Nature",
     "source": "XPHB",
-    "page": 252,
     "level": 5,
     "school": "D",
     "time": [
@@ -6856,7 +6719,6 @@
   {
     "name": "Compelled Duel",
     "source": "PHB",
-    "page": 224,
     "level": 1,
     "school": "E",
     "time": [
@@ -6896,7 +6758,6 @@
   {
     "name": "Compelled Duel",
     "source": "XPHB",
-    "page": 252,
     "level": 1,
     "school": "E",
     "time": [
@@ -6936,7 +6797,6 @@
   {
     "name": "Comprehend Languages",
     "source": "PHB",
-    "page": 224,
     "level": 1,
     "school": "D",
     "time": [
@@ -6979,7 +6839,6 @@
   {
     "name": "Comprehend Languages",
     "source": "XPHB",
-    "page": 252,
     "level": 1,
     "school": "D",
     "time": [
@@ -7021,7 +6880,6 @@
   {
     "name": "Compulsion",
     "source": "PHB",
-    "page": 224,
     "level": 4,
     "school": "E",
     "time": [
@@ -7062,7 +6920,6 @@
   {
     "name": "Compulsion",
     "source": "XPHB",
-    "page": 252,
     "level": 4,
     "school": "E",
     "time": [
@@ -7103,7 +6960,6 @@
   {
     "name": "Cone of Cold",
     "source": "PHB",
-    "page": 224,
     "level": 5,
     "school": "V",
     "time": [
@@ -7151,7 +7007,6 @@
   {
     "name": "Cone of Cold",
     "source": "XPHB",
-    "page": 253,
     "level": 5,
     "school": "V",
     "time": [
@@ -7198,7 +7053,6 @@
   {
     "name": "Confusion",
     "source": "PHB",
-    "page": 224,
     "level": 4,
     "school": "E",
     "time": [
@@ -7306,7 +7160,6 @@
   {
     "name": "Confusion",
     "source": "XPHB",
-    "page": 253,
     "level": 4,
     "school": "E",
     "time": [
@@ -7389,7 +7242,6 @@
   {
     "name": "Conjure Animals",
     "source": "PHB",
-    "page": 225,
     "level": 3,
     "school": "C",
     "time": [
@@ -7451,7 +7303,6 @@
   {
     "name": "Conjure Animals",
     "source": "XPHB",
-    "page": 254,
     "level": 3,
     "school": "C",
     "time": [
@@ -7503,7 +7354,6 @@
   {
     "name": "Conjure Barrage",
     "source": "PHB",
-    "page": 225,
     "level": 3,
     "school": "C",
     "time": [
@@ -7539,7 +7389,6 @@
   {
     "name": "Conjure Barrage",
     "source": "XPHB",
-    "page": 254,
     "level": 3,
     "school": "C",
     "time": [
@@ -7587,7 +7436,6 @@
   {
     "name": "Conjure Celestial",
     "source": "PHB",
-    "page": 225,
     "level": 7,
     "school": "C",
     "time": [
@@ -7638,7 +7486,6 @@
   {
     "name": "Conjure Celestial",
     "source": "XPHB",
-    "page": 254,
     "level": 7,
     "school": "C",
     "time": [
@@ -7709,7 +7556,6 @@
   {
     "name": "Conjure Constructs",
     "source": "FRHoF",
-    "page": 143,
     "level": 3,
     "school": "C",
     "time": [
@@ -7780,7 +7626,6 @@
   {
     "name": "Conjure Elemental",
     "source": "PHB",
-    "page": 225,
     "level": 5,
     "school": "C",
     "time": [
@@ -7834,7 +7679,6 @@
   {
     "name": "Conjure Elemental",
     "source": "XPHB",
-    "page": 254,
     "level": 5,
     "school": "C",
     "time": [
@@ -7885,7 +7729,6 @@
   {
     "name": "Conjure Fey",
     "source": "PHB",
-    "page": 226,
     "level": 6,
     "school": "C",
     "time": [
@@ -7938,7 +7781,6 @@
   {
     "name": "Conjure Fey",
     "source": "XPHB",
-    "page": 255,
     "level": 6,
     "school": "C",
     "time": [
@@ -7988,7 +7830,6 @@
   {
     "name": "Conjure Minor Elementals",
     "source": "PHB",
-    "page": 226,
     "level": 4,
     "school": "C",
     "time": [
@@ -8050,7 +7891,6 @@
   {
     "name": "Conjure Minor Elementals",
     "source": "XPHB",
-    "page": 255,
     "level": 4,
     "school": "C",
     "time": [
@@ -8101,7 +7941,6 @@
   {
     "name": "Conjure Volley",
     "source": "PHB",
-    "page": 226,
     "level": 5,
     "school": "C",
     "time": [
@@ -8137,7 +7976,6 @@
   {
     "name": "Conjure Volley",
     "source": "XPHB",
-    "page": 255,
     "level": 5,
     "school": "C",
     "time": [
@@ -8176,7 +8014,6 @@
   {
     "name": "Conjure Woodland Beings",
     "source": "PHB",
-    "page": 226,
     "level": 4,
     "school": "C",
     "time": [
@@ -8239,7 +8076,6 @@
   {
     "name": "Conjure Woodland Beings",
     "source": "XPHB",
-    "page": 255,
     "level": 4,
     "school": "C",
     "time": [
@@ -8290,7 +8126,6 @@
   {
     "name": "Contact Other Plane",
     "source": "PHB",
-    "page": 226,
     "level": 5,
     "school": "D",
     "time": [
@@ -8329,7 +8164,6 @@
   {
     "name": "Contact Other Plane",
     "source": "XPHB",
-    "page": 255,
     "level": 5,
     "school": "D",
     "time": [
@@ -8368,7 +8202,6 @@
   {
     "name": "Contagion",
     "source": "PHB",
-    "page": 227,
     "level": 5,
     "school": "N",
     "time": [
@@ -8451,7 +8284,6 @@
   {
     "name": "Contagion",
     "source": "XPHB",
-    "page": 256,
     "level": 5,
     "school": "N",
     "time": [
@@ -8492,7 +8324,6 @@
   {
     "name": "Contingency",
     "source": "PHB",
-    "page": 227,
     "level": 6,
     "school": "V",
     "time": [
@@ -8536,7 +8367,6 @@
   {
     "name": "Contingency",
     "source": "XPHB",
-    "page": 256,
     "level": 6,
     "school": "A",
     "time": [
@@ -8580,7 +8410,6 @@
   {
     "name": "Continual Flame",
     "source": "PHB",
-    "page": 227,
     "level": 2,
     "school": "V",
     "time": [
@@ -8625,7 +8454,6 @@
   {
     "name": "Continual Flame",
     "source": "XPHB",
-    "page": 256,
     "level": 2,
     "school": "V",
     "time": [
@@ -8670,7 +8498,6 @@
   {
     "name": "Control Flames",
     "source": "XGE",
-    "page": 152,
     "level": 0,
     "school": "T",
     "time": [
@@ -8723,7 +8550,6 @@
   {
     "name": "Control Water",
     "source": "PHB",
-    "page": 227,
     "level": 4,
     "school": "T",
     "time": [
@@ -8798,7 +8624,6 @@
   {
     "name": "Control Water",
     "source": "XPHB",
-    "page": 256,
     "level": 4,
     "school": "T",
     "time": [
@@ -8870,7 +8695,6 @@
   {
     "name": "Control Weather",
     "source": "PHB",
-    "page": 228,
     "level": 8,
     "school": "T",
     "time": [
@@ -9021,7 +8845,6 @@
   {
     "name": "Control Weather",
     "source": "XPHB",
-    "page": 257,
     "level": 8,
     "school": "T",
     "time": [
@@ -9172,7 +8995,6 @@
   {
     "name": "Control Winds",
     "source": "XGE",
-    "page": 152,
     "level": 5,
     "school": "T",
     "time": [
@@ -9235,7 +9057,6 @@
   {
     "name": "Cordon of Arrows",
     "source": "PHB",
-    "page": 228,
     "level": 2,
     "school": "T",
     "time": [
@@ -9285,7 +9106,6 @@
   {
     "name": "Cordon of Arrows",
     "source": "XPHB",
-    "page": 258,
     "level": 2,
     "school": "T",
     "time": [
@@ -9334,7 +9154,6 @@
   {
     "name": "Counterspell",
     "source": "PHB",
-    "page": 228,
     "level": 3,
     "school": "A",
     "time": [
@@ -9380,7 +9199,6 @@
   {
     "name": "Counterspell",
     "source": "XPHB",
-    "page": 258,
     "level": 3,
     "school": "A",
     "time": [
@@ -9417,7 +9235,6 @@
   {
     "name": "Create Bonfire",
     "source": "XGE",
-    "page": 152,
     "level": 0,
     "school": "C",
     "time": [
@@ -9463,7 +9280,6 @@
   {
     "name": "Create Food and Water",
     "source": "PHB",
-    "page": 229,
     "level": 3,
     "school": "C",
     "time": [
@@ -9500,7 +9316,6 @@
   {
     "name": "Create Food and Water",
     "source": "XPHB",
-    "page": 258,
     "level": 3,
     "school": "C",
     "time": [
@@ -9537,7 +9352,6 @@
   {
     "name": "Create Homunculus",
     "source": "XGE",
-    "page": 152,
     "level": 6,
     "school": "T",
     "time": [
@@ -9578,7 +9392,6 @@
   {
     "name": "Create Magen",
     "source": "IDRotF",
-    "page": 318,
     "level": 7,
     "school": "T",
     "time": [
@@ -9619,7 +9432,6 @@
   {
     "name": "Create or Destroy Water",
     "source": "PHB",
-    "page": 229,
     "level": 1,
     "school": "T",
     "time": [
@@ -9679,7 +9491,6 @@
   {
     "name": "Create or Destroy Water",
     "source": "XPHB",
-    "page": 258,
     "level": 1,
     "school": "T",
     "time": [
@@ -9745,7 +9556,6 @@
   {
     "name": "Create Spelljamming Helm",
     "source": "AAG",
-    "page": 22,
     "level": 5,
     "school": "T",
     "time": [
@@ -9785,7 +9595,6 @@
   {
     "name": "Create Undead",
     "source": "PHB",
-    "page": 229,
     "level": 6,
     "school": "N",
     "time": [
@@ -9837,7 +9646,6 @@
   {
     "name": "Create Undead",
     "source": "XPHB",
-    "page": 258,
     "level": 6,
     "school": "N",
     "time": [
@@ -9889,7 +9697,6 @@
   {
     "name": "Creation",
     "source": "PHB",
-    "page": 229,
     "level": 5,
     "school": "I",
     "time": [
@@ -9972,7 +9779,6 @@
   {
     "name": "Creation",
     "source": "XPHB",
-    "page": 259,
     "level": 5,
     "school": "I",
     "time": [
@@ -10054,7 +9860,6 @@
   {
     "name": "Crown of Madness",
     "source": "PHB",
-    "page": 229,
     "level": 2,
     "school": "E",
     "time": [
@@ -10099,7 +9904,6 @@
   {
     "name": "Crown of Madness",
     "source": "XPHB",
-    "page": 259,
     "level": 2,
     "school": "E",
     "time": [
@@ -10144,7 +9948,6 @@
   {
     "name": "Crown of Stars",
     "source": "XGE",
-    "page": 152,
     "level": 7,
     "school": "V",
     "time": [
@@ -10194,7 +9997,6 @@
   {
     "name": "Crusader's Mantle",
     "source": "PHB",
-    "page": 230,
     "level": 3,
     "school": "V",
     "time": [
@@ -10233,7 +10035,6 @@
   {
     "name": "Crusader's Mantle",
     "source": "XPHB",
-    "page": 259,
     "level": 3,
     "school": "V",
     "time": [
@@ -10272,7 +10073,6 @@
   {
     "name": "Cure Wounds",
     "source": "PHB",
-    "page": 230,
     "level": 1,
     "school": "V",
     "time": [
@@ -10320,7 +10120,6 @@
   {
     "name": "Cure Wounds",
     "source": "XPHB",
-    "page": 259,
     "level": 1,
     "school": "A",
     "time": [
@@ -10368,7 +10167,6 @@
   {
     "name": "Dancing Lights",
     "source": "PHB",
-    "page": 230,
     "level": 0,
     "school": "V",
     "time": [
@@ -10413,7 +10211,6 @@
   {
     "name": "Dancing Lights",
     "source": "XPHB",
-    "page": 259,
     "level": 0,
     "school": "I",
     "time": [
@@ -10458,7 +10255,6 @@
   {
     "name": "Danse Macabre",
     "source": "XGE",
-    "page": 153,
     "level": 5,
     "school": "N",
     "time": [
@@ -10510,7 +10306,6 @@
   {
     "name": "Dark Star",
     "source": "EGW",
-    "page": 186,
     "level": 8,
     "school": "V",
     "time": [
@@ -10554,7 +10349,6 @@
   {
     "name": "Darkness",
     "source": "PHB",
-    "page": 230,
     "level": 2,
     "school": "V",
     "time": [
@@ -10598,7 +10392,6 @@
   {
     "name": "Darkness",
     "source": "XPHB",
-    "page": 260,
     "level": 2,
     "school": "V",
     "time": [
@@ -10642,7 +10435,6 @@
   {
     "name": "Darkvision",
     "source": "PHB",
-    "page": 230,
     "level": 2,
     "school": "T",
     "time": [
@@ -10685,7 +10477,6 @@
   {
     "name": "Darkvision",
     "source": "XPHB",
-    "page": 260,
     "level": 2,
     "school": "T",
     "time": [
@@ -10728,7 +10519,6 @@
   {
     "name": "Dawn",
     "source": "XGE",
-    "page": 153,
     "level": 5,
     "school": "V",
     "time": [
@@ -10775,7 +10565,6 @@
   {
     "name": "Daylight",
     "source": "PHB",
-    "page": 230,
     "level": 3,
     "school": "V",
     "time": [
@@ -10820,7 +10609,6 @@
   {
     "name": "Daylight",
     "source": "XPHB",
-    "page": 260,
     "level": 3,
     "school": "V",
     "time": [
@@ -10865,7 +10653,6 @@
   {
     "name": "Death Armor",
     "source": "FRHoF",
-    "page": 143,
     "level": 2,
     "school": "N",
     "time": [
@@ -10909,7 +10696,6 @@
   {
     "name": "Death Ward",
     "source": "PHB",
-    "page": 230,
     "level": 4,
     "school": "A",
     "time": [
@@ -10950,7 +10736,6 @@
   {
     "name": "Death Ward",
     "source": "XPHB",
-    "page": 261,
     "level": 4,
     "school": "A",
     "time": [
@@ -10990,7 +10775,6 @@
   {
     "name": "Delayed Blast Fireball",
     "source": "PHB",
-    "page": 230,
     "level": 7,
     "school": "V",
     "time": [
@@ -11044,7 +10828,6 @@
   {
     "name": "Delayed Blast Fireball",
     "source": "XPHB",
-    "page": 261,
     "level": 7,
     "school": "V",
     "time": [
@@ -11098,7 +10881,6 @@
   {
     "name": "Demiplane",
     "source": "PHB",
-    "page": 231,
     "level": 8,
     "school": "C",
     "time": [
@@ -11139,7 +10921,6 @@
   {
     "name": "Demiplane",
     "source": "XPHB",
-    "page": 261,
     "level": 8,
     "school": "C",
     "time": [
@@ -11181,7 +10962,6 @@
   {
     "name": "Deryan's Helpful Homunculi",
     "source": "FRHoF",
-    "page": 143,
     "level": 2,
     "school": "C",
     "time": [
@@ -11226,7 +11006,6 @@
   {
     "name": "Destructive Wave",
     "source": "PHB",
-    "page": 231,
     "level": 5,
     "school": "V",
     "time": [
@@ -11260,7 +11039,6 @@
   {
     "name": "Destructive Wave",
     "source": "XPHB",
-    "page": 261,
     "level": 5,
     "school": "V",
     "time": [
@@ -11294,7 +11072,6 @@
   {
     "name": "Detect Evil and Good",
     "source": "PHB",
-    "page": 231,
     "level": 1,
     "school": "D",
     "time": [
@@ -11335,7 +11112,6 @@
   {
     "name": "Detect Evil and Good",
     "source": "XPHB",
-    "page": 261,
     "level": 1,
     "school": "D",
     "time": [
@@ -11377,7 +11153,6 @@
   {
     "name": "Detect Magic",
     "source": "PHB",
-    "page": 231,
     "level": 1,
     "school": "D",
     "time": [
@@ -11424,7 +11199,6 @@
   {
     "name": "Detect Magic",
     "source": "XPHB",
-    "page": 262,
     "level": 1,
     "school": "D",
     "time": [
@@ -11473,7 +11247,6 @@
   {
     "name": "Detect Poison and Disease",
     "source": "PHB",
-    "page": 231,
     "level": 1,
     "school": "D",
     "time": [
@@ -11517,7 +11290,6 @@
   {
     "name": "Detect Poison and Disease",
     "source": "XPHB",
-    "page": 262,
     "level": 1,
     "school": "D",
     "time": [
@@ -11562,7 +11334,6 @@
   {
     "name": "Detect Thoughts",
     "source": "PHB",
-    "page": 231,
     "level": 2,
     "school": "D",
     "time": [
@@ -11608,7 +11379,6 @@
   {
     "name": "Detect Thoughts",
     "source": "XPHB",
-    "page": 262,
     "level": 2,
     "school": "D",
     "time": [
@@ -11666,7 +11436,6 @@
   {
     "name": "Dimension Door",
     "source": "PHB",
-    "page": 233,
     "level": 4,
     "school": "C",
     "time": [
@@ -11705,7 +11474,6 @@
   {
     "name": "Dimension Door",
     "source": "XPHB",
-    "page": 262,
     "level": 4,
     "school": "C",
     "time": [
@@ -11744,7 +11512,6 @@
   {
     "name": "Dirge",
     "source": "FRHoF",
-    "page": 144,
     "level": 6,
     "school": "E",
     "time": [
@@ -11794,7 +11561,6 @@
   {
     "name": "Disguise Self",
     "source": "PHB",
-    "page": 233,
     "level": 1,
     "school": "I",
     "time": [
@@ -11837,7 +11603,6 @@
   {
     "name": "Disguise Self",
     "source": "XPHB",
-    "page": 262,
     "level": 1,
     "school": "I",
     "time": [
@@ -11880,7 +11645,6 @@
   {
     "name": "Disintegrate",
     "source": "PHB",
-    "page": 233,
     "level": 6,
     "school": "T",
     "time": [
@@ -11929,7 +11693,6 @@
   {
     "name": "Disintegrate",
     "source": "XPHB",
-    "page": 263,
     "level": 6,
     "school": "T",
     "time": [
@@ -11977,7 +11740,6 @@
   {
     "name": "Dispel Evil and Good",
     "source": "PHB",
-    "page": 233,
     "level": 5,
     "school": "A",
     "time": [
@@ -12033,7 +11795,6 @@
   {
     "name": "Dispel Evil and Good",
     "source": "XPHB",
-    "page": 263,
     "level": 5,
     "school": "A",
     "time": [
@@ -12088,7 +11849,6 @@
   {
     "name": "Dispel Magic",
     "source": "PHB",
-    "page": 234,
     "level": 3,
     "school": "A",
     "time": [
@@ -12139,7 +11899,6 @@
   {
     "name": "Dispel Magic",
     "source": "XPHB",
-    "page": 264,
     "level": 3,
     "school": "A",
     "time": [
@@ -12191,7 +11950,6 @@
   {
     "name": "Dissonant Whispers",
     "source": "PHB",
-    "page": 234,
     "level": 1,
     "school": "E",
     "time": [
@@ -12234,7 +11992,6 @@
   {
     "name": "Dissonant Whispers",
     "source": "XPHB",
-    "page": 264,
     "level": 1,
     "school": "E",
     "time": [
@@ -12277,7 +12034,6 @@
   {
     "name": "Distort Value",
     "source": "AI",
-    "page": 75,
     "level": 1,
     "school": "I",
     "time": [
@@ -12327,7 +12083,6 @@
   {
     "name": "Divination",
     "source": "PHB",
-    "page": 234,
     "level": 4,
     "school": "D",
     "time": [
@@ -12370,7 +12125,6 @@
   {
     "name": "Divination",
     "source": "XPHB",
-    "page": 264,
     "level": 4,
     "school": "D",
     "time": [
@@ -12412,7 +12166,6 @@
   {
     "name": "Divine Favor",
     "source": "PHB",
-    "page": 234,
     "level": 1,
     "school": "V",
     "time": [
@@ -12451,7 +12204,6 @@
   {
     "name": "Divine Favor",
     "source": "XPHB",
-    "page": 265,
     "level": 1,
     "school": "T",
     "time": [
@@ -12489,7 +12241,6 @@
   {
     "name": "Divine Smite",
     "source": "XPHB",
-    "page": 265,
     "level": 1,
     "school": "V",
     "time": [
@@ -12532,7 +12283,6 @@
   {
     "name": "Divine Word",
     "source": "PHB",
-    "page": 234,
     "level": 7,
     "school": "V",
     "time": [
@@ -12576,7 +12326,6 @@
   {
     "name": "Divine Word",
     "source": "XPHB",
-    "page": 265,
     "level": 7,
     "school": "V",
     "time": [
@@ -12640,7 +12389,6 @@
   {
     "name": "Dominate Beast",
     "source": "PHB",
-    "page": 234,
     "level": 4,
     "school": "E",
     "time": [
@@ -12694,7 +12442,6 @@
   {
     "name": "Dominate Beast",
     "source": "XPHB",
-    "page": 265,
     "level": 4,
     "school": "E",
     "time": [
@@ -12747,7 +12494,6 @@
   {
     "name": "Dominate Monster",
     "source": "PHB",
-    "page": 235,
     "level": 8,
     "school": "E",
     "time": [
@@ -12802,7 +12548,6 @@
   {
     "name": "Dominate Monster",
     "source": "XPHB",
-    "page": 265,
     "level": 8,
     "school": "E",
     "time": [
@@ -12856,7 +12601,6 @@
   {
     "name": "Dominate Person",
     "source": "PHB",
-    "page": 235,
     "level": 5,
     "school": "E",
     "time": [
@@ -12910,7 +12654,6 @@
   {
     "name": "Dominate Person",
     "source": "XPHB",
-    "page": 266,
     "level": 5,
     "school": "E",
     "time": [
@@ -12963,7 +12706,6 @@
   {
     "name": "Doomtide",
     "source": "FRHoF",
-    "page": 144,
     "level": 4,
     "school": "C",
     "time": [
@@ -13016,7 +12758,6 @@
   {
     "name": "Draconic Transformation",
     "source": "FTD",
-    "page": 19,
     "level": 7,
     "school": "T",
     "time": [
@@ -13088,7 +12829,6 @@
   {
     "name": "Dragon's Breath",
     "source": "XGE",
-    "page": 154,
     "level": 2,
     "school": "T",
     "time": [
@@ -13138,7 +12878,6 @@
   {
     "name": "Dragon's Breath",
     "source": "XPHB",
-    "page": 266,
     "level": 2,
     "school": "T",
     "time": [
@@ -13189,7 +12928,6 @@
   {
     "name": "Drawmij's Instant Summons",
     "source": "PHB",
-    "page": 235,
     "level": 6,
     "school": "C",
     "time": [
@@ -13233,7 +12971,6 @@
   {
     "name": "Drawmij's Instant Summons",
     "source": "XPHB",
-    "page": 266,
     "level": 6,
     "school": "C",
     "time": [
@@ -13276,7 +13013,6 @@
   {
     "name": "Dream",
     "source": "PHB",
-    "page": 236,
     "level": 5,
     "school": "I",
     "time": [
@@ -13317,7 +13053,6 @@
   {
     "name": "Dream",
     "source": "XPHB",
-    "page": 266,
     "level": 5,
     "school": "I",
     "time": [
@@ -13361,7 +13096,6 @@
   {
     "name": "Dream of the Blue Veil",
     "source": "TCE",
-    "page": 106,
     "level": 7,
     "school": "C",
     "time": [
@@ -13406,7 +13140,6 @@
   {
     "name": "Druid Grove",
     "source": "XGE",
-    "page": 154,
     "level": 6,
     "school": "A",
     "time": [
@@ -13487,7 +13220,6 @@
   {
     "name": "Druidcraft",
     "source": "PHB",
-    "page": 236,
     "level": 0,
     "school": "T",
     "time": [
@@ -13531,7 +13263,6 @@
   {
     "name": "Druidcraft",
     "source": "XPHB",
-    "page": 266,
     "level": 0,
     "school": "T",
     "time": [
@@ -13594,7 +13325,6 @@
   {
     "name": "Dust Devil",
     "source": "XGE",
-    "page": 154,
     "level": 2,
     "school": "C",
     "time": [
@@ -13648,7 +13378,6 @@
   {
     "name": "Earth Tremor",
     "source": "XGE",
-    "page": 155,
     "level": 1,
     "school": "V",
     "time": [
@@ -13695,7 +13424,6 @@
   {
     "name": "Earthbind",
     "source": "XGE",
-    "page": 154,
     "level": 2,
     "school": "T",
     "time": [
@@ -13737,7 +13465,6 @@
   {
     "name": "Earthquake",
     "source": "PHB",
-    "page": 236,
     "level": 8,
     "school": "V",
     "time": [
@@ -13798,7 +13525,6 @@
   {
     "name": "Earthquake",
     "source": "XPHB",
-    "page": 267,
     "level": 8,
     "school": "T",
     "time": [
@@ -13858,7 +13584,6 @@
   {
     "name": "Eldritch Blast",
     "source": "PHB",
-    "page": 237,
     "level": 0,
     "school": "V",
     "time": [
@@ -13894,7 +13619,6 @@
   {
     "name": "Eldritch Blast",
     "source": "XPHB",
-    "page": 267,
     "level": 0,
     "school": "V",
     "time": [
@@ -13938,7 +13662,6 @@
   {
     "name": "Elemental Bane",
     "source": "XGE",
-    "page": 155,
     "level": 4,
     "school": "T",
     "time": [
@@ -13990,7 +13713,6 @@
   {
     "name": "Elemental Weapon",
     "source": "PHB",
-    "page": 237,
     "level": 3,
     "school": "T",
     "time": [
@@ -14041,7 +13763,6 @@
   {
     "name": "Elemental Weapon",
     "source": "XPHB",
-    "page": 267,
     "level": 3,
     "school": "T",
     "time": [
@@ -14092,7 +13813,6 @@
   {
     "name": "Elementalism",
     "source": "XPHB",
-    "page": 267,
     "level": 0,
     "school": "T",
     "time": [
@@ -14165,7 +13885,6 @@
   {
     "name": "Elminster's Effulgent Spheres",
     "source": "FRHoF",
-    "page": 144,
     "level": 6,
     "school": "V",
     "time": [
@@ -14240,7 +13959,6 @@
   {
     "name": "Elminster's Elusion",
     "source": "FRHoF",
-    "page": 144,
     "level": 2,
     "school": "A",
     "time": [
@@ -14279,7 +13997,6 @@
   {
     "name": "Encode Thoughts",
     "source": "GGR",
-    "page": 47,
     "level": 0,
     "school": "E",
     "time": [
@@ -14316,7 +14033,6 @@
   {
     "name": "Enemies Abound",
     "source": "XGE",
-    "page": 155,
     "level": 3,
     "school": "E",
     "time": [
@@ -14360,7 +14076,6 @@
   {
     "name": "Enervation",
     "source": "XGE",
-    "page": 155,
     "level": 5,
     "school": "N",
     "time": [
@@ -14412,7 +14127,6 @@
   {
     "name": "Enhance Ability",
     "source": "PHB",
-    "page": 237,
     "level": 2,
     "school": "T",
     "time": [
@@ -14509,7 +14223,6 @@
   {
     "name": "Enhance Ability",
     "source": "XPHB",
-    "page": 268,
     "level": 2,
     "school": "T",
     "time": [
@@ -14564,7 +14277,6 @@
   {
     "name": "Enlarge/Reduce",
     "source": "PHB",
-    "page": 237,
     "level": 2,
     "school": "T",
     "time": [
@@ -14624,7 +14336,6 @@
   {
     "name": "Enlarge/Reduce",
     "source": "XPHB",
-    "page": 268,
     "level": 2,
     "school": "T",
     "time": [
@@ -14684,7 +14395,6 @@
   {
     "name": "Ensnaring Strike",
     "source": "PHB",
-    "page": 237,
     "level": 1,
     "school": "C",
     "time": [
@@ -14732,7 +14442,6 @@
   {
     "name": "Ensnaring Strike",
     "source": "XPHB",
-    "page": 268,
     "level": 1,
     "school": "C",
     "time": [
@@ -14781,7 +14490,6 @@
   {
     "name": "Entangle",
     "source": "PHB",
-    "page": 238,
     "level": 1,
     "school": "C",
     "time": [
@@ -14824,7 +14532,6 @@
   {
     "name": "Entangle",
     "source": "XPHB",
-    "page": 268,
     "level": 1,
     "school": "C",
     "time": [
@@ -14866,7 +14573,6 @@
   {
     "name": "Enthrall",
     "source": "PHB",
-    "page": 238,
     "level": 2,
     "school": "E",
     "time": [
@@ -14906,7 +14612,6 @@
   {
     "name": "Enthrall",
     "source": "XPHB",
-    "page": 269,
     "level": 2,
     "school": "E",
     "time": [
@@ -14946,7 +14651,6 @@
   {
     "name": "Erupting Earth",
     "source": "XGE",
-    "page": 155,
     "level": 3,
     "school": "T",
     "time": [
@@ -14993,7 +14697,6 @@
   {
     "name": "Etherealness",
     "source": "PHB",
-    "page": 238,
     "level": 7,
     "school": "T",
     "time": [
@@ -15049,7 +14752,6 @@
   {
     "name": "Etherealness",
     "source": "XPHB",
-    "page": 269,
     "level": 7,
     "school": "C",
     "time": [
@@ -15103,7 +14805,6 @@
   {
     "name": "Evard's Black Tentacles",
     "source": "PHB",
-    "page": 238,
     "level": 4,
     "school": "C",
     "time": [
@@ -15146,7 +14847,6 @@
   {
     "name": "Evard's Black Tentacles",
     "source": "XPHB",
-    "page": 270,
     "level": 4,
     "school": "C",
     "time": [
@@ -15189,7 +14889,6 @@
   {
     "name": "Expeditious Retreat",
     "source": "PHB",
-    "page": 238,
     "level": 1,
     "school": "T",
     "time": [
@@ -15231,7 +14930,6 @@
   {
     "name": "Expeditious Retreat",
     "source": "XPHB",
-    "page": 270,
     "level": 1,
     "school": "T",
     "time": [
@@ -15273,7 +14971,6 @@
   {
     "name": "Eyebite",
     "source": "PHB",
-    "page": 238,
     "level": 6,
     "school": "N",
     "time": [
@@ -15336,7 +15033,6 @@
   {
     "name": "Eyebite",
     "source": "XPHB",
-    "page": 270,
     "level": 6,
     "school": "N",
     "time": [
@@ -15400,7 +15096,6 @@
   {
     "name": "Fabricate",
     "source": "PHB",
-    "page": 239,
     "level": 4,
     "school": "T",
     "time": [
@@ -15438,7 +15133,6 @@
   {
     "name": "Fabricate",
     "source": "XPHB",
-    "page": 271,
     "level": 4,
     "school": "T",
     "time": [
@@ -15476,7 +15170,6 @@
   {
     "name": "Faerie Fire",
     "source": "PHB",
-    "page": 239,
     "level": 1,
     "school": "V",
     "time": [
@@ -15518,7 +15211,6 @@
   {
     "name": "Faerie Fire",
     "source": "XPHB",
-    "page": 271,
     "level": 1,
     "school": "V",
     "time": [
@@ -15560,7 +15252,6 @@
   {
     "name": "False Life",
     "source": "PHB",
-    "page": 239,
     "level": 1,
     "school": "N",
     "time": [
@@ -15610,7 +15301,6 @@
   {
     "name": "False Life",
     "source": "XPHB",
-    "page": 271,
     "level": 1,
     "school": "N",
     "time": [
@@ -15656,7 +15346,6 @@
   {
     "name": "Far Step",
     "source": "XGE",
-    "page": 155,
     "level": 5,
     "school": "C",
     "time": [
@@ -15696,7 +15385,6 @@
   {
     "name": "Fast Friends",
     "source": "AI",
-    "page": 75,
     "level": 3,
     "school": "E",
     "time": [
@@ -15748,7 +15436,6 @@
   {
     "name": "Fear",
     "source": "PHB",
-    "page": 239,
     "level": 3,
     "school": "I",
     "time": [
@@ -15793,7 +15480,6 @@
   {
     "name": "Fear",
     "source": "XPHB",
-    "page": 271,
     "level": 3,
     "school": "I",
     "time": [
@@ -15838,7 +15524,6 @@
   {
     "name": "Feather Fall",
     "source": "PHB",
-    "page": 239,
     "level": 1,
     "school": "T",
     "time": [
@@ -15881,7 +15566,6 @@
   {
     "name": "Feather Fall",
     "source": "XPHB",
-    "page": 271,
     "level": 1,
     "school": "T",
     "time": [
@@ -15924,7 +15608,6 @@
   {
     "name": "Feeblemind",
     "source": "PHB",
-    "page": 239,
     "level": 8,
     "school": "E",
     "time": [
@@ -15966,7 +15649,6 @@
   {
     "name": "Feign Death",
     "source": "PHB",
-    "page": 240,
     "level": 3,
     "school": "N",
     "time": [
@@ -16009,7 +15691,6 @@
   {
     "name": "Feign Death",
     "source": "XPHB",
-    "page": 271,
     "level": 3,
     "school": "N",
     "time": [
@@ -16053,7 +15734,6 @@
   {
     "name": "Find Familiar",
     "source": "PHB",
-    "page": 240,
     "level": 1,
     "school": "C",
     "time": [
@@ -16099,7 +15779,6 @@
   {
     "name": "Find Familiar",
     "source": "XPHB",
-    "page": 272,
     "level": 1,
     "school": "C",
     "time": [
@@ -16168,7 +15847,6 @@
   {
     "name": "Find Greater Steed",
     "source": "XGE",
-    "page": 156,
     "level": 4,
     "school": "C",
     "time": [
@@ -16216,7 +15894,6 @@
   {
     "name": "Find Steed",
     "source": "PHB",
-    "page": 240,
     "level": 2,
     "school": "C",
     "time": [
@@ -16255,7 +15932,6 @@
   {
     "name": "Find Steed",
     "source": "XPHB",
-    "page": 272,
     "level": 2,
     "school": "C",
     "time": [
@@ -16314,7 +15990,6 @@
   {
     "name": "Find the Path",
     "source": "PHB",
-    "page": 240,
     "level": 6,
     "school": "D",
     "time": [
@@ -16360,7 +16035,6 @@
   {
     "name": "Find the Path",
     "source": "XPHB",
-    "page": 273,
     "level": 6,
     "school": "D",
     "time": [
@@ -16406,7 +16080,6 @@
   {
     "name": "Find Traps",
     "source": "PHB",
-    "page": 241,
     "level": 2,
     "school": "D",
     "time": [
@@ -16444,7 +16117,6 @@
   {
     "name": "Find Traps",
     "source": "XPHB",
-    "page": 273,
     "level": 2,
     "school": "D",
     "time": [
@@ -16482,7 +16154,6 @@
   {
     "name": "Finger of Death",
     "source": "PHB",
-    "page": 241,
     "level": 7,
     "school": "N",
     "time": [
@@ -16520,7 +16191,6 @@
   {
     "name": "Finger of Death",
     "source": "XPHB",
-    "page": 273,
     "level": 7,
     "school": "N",
     "time": [
@@ -16558,7 +16228,6 @@
   {
     "name": "Fire Bolt",
     "source": "PHB",
-    "page": 242,
     "level": 0,
     "school": "V",
     "time": [
@@ -16596,7 +16265,6 @@
   {
     "name": "Fire Bolt",
     "source": "XPHB",
-    "page": 274,
     "level": 0,
     "school": "V",
     "time": [
@@ -16642,7 +16310,6 @@
   {
     "name": "Fire Shield",
     "source": "PHB",
-    "page": 242,
     "level": 4,
     "school": "V",
     "time": [
@@ -16685,7 +16352,6 @@
   {
     "name": "Fire Shield",
     "source": "XPHB",
-    "page": 274,
     "level": 4,
     "school": "V",
     "time": [
@@ -16728,7 +16394,6 @@
   {
     "name": "Fire Storm",
     "source": "PHB",
-    "page": 242,
     "level": 7,
     "school": "V",
     "time": [
@@ -16766,7 +16431,6 @@
   {
     "name": "Fire Storm",
     "source": "XPHB",
-    "page": 275,
     "level": 7,
     "school": "V",
     "time": [
@@ -16804,7 +16468,6 @@
   {
     "name": "Fireball",
     "source": "PHB",
-    "page": 241,
     "level": 3,
     "school": "V",
     "time": [
@@ -16851,7 +16514,6 @@
   {
     "name": "Fireball",
     "source": "XPHB",
-    "page": 274,
     "level": 3,
     "school": "V",
     "time": [
@@ -16898,7 +16560,6 @@
   {
     "name": "Fizban's Platinum Shield",
     "source": "FTD",
-    "page": 20,
     "level": 6,
     "school": "A",
     "time": [
@@ -16971,7 +16632,6 @@
   {
     "name": "Flame Arrows",
     "source": "XGE",
-    "page": 156,
     "level": 3,
     "school": "T",
     "time": [
@@ -17023,7 +16683,6 @@
   {
     "name": "Flame Blade",
     "source": "PHB",
-    "page": 242,
     "level": 2,
     "school": "V",
     "time": [
@@ -17075,7 +16734,6 @@
   {
     "name": "Flame Blade",
     "source": "XPHB",
-    "page": 275,
     "level": 2,
     "school": "V",
     "time": [
@@ -17127,7 +16785,6 @@
   {
     "name": "Flame Strike",
     "source": "PHB",
-    "page": 242,
     "level": 5,
     "school": "V",
     "time": [
@@ -17172,7 +16829,6 @@
   {
     "name": "Flame Strike",
     "source": "XPHB",
-    "page": 275,
     "level": 5,
     "school": "V",
     "time": [
@@ -17217,7 +16873,6 @@
   {
     "name": "Flaming Sphere",
     "source": "PHB",
-    "page": 242,
     "level": 2,
     "school": "C",
     "time": [
@@ -17271,7 +16926,6 @@
   {
     "name": "Flaming Sphere",
     "source": "XPHB",
-    "page": 275,
     "level": 2,
     "school": "C",
     "time": [
@@ -17325,7 +16979,6 @@
   {
     "name": "Flesh to Stone",
     "source": "PHB",
-    "page": 243,
     "level": 6,
     "school": "T",
     "time": [
@@ -17372,7 +17025,6 @@
   {
     "name": "Flesh to Stone",
     "source": "XPHB",
-    "page": 275,
     "level": 6,
     "school": "T",
     "time": [
@@ -17417,7 +17069,6 @@
   {
     "name": "Flock of Familiars",
     "source": "LLK",
-    "page": 57,
     "level": 2,
     "school": "C",
     "time": [
@@ -17468,7 +17119,6 @@
   {
     "name": "Fly",
     "source": "PHB",
-    "page": 243,
     "level": 3,
     "school": "T",
     "time": [
@@ -17520,7 +17170,6 @@
   {
     "name": "Fly",
     "source": "XPHB",
-    "page": 276,
     "level": 3,
     "school": "T",
     "time": [
@@ -17572,7 +17221,6 @@
   {
     "name": "Fog Cloud",
     "source": "PHB",
-    "page": 243,
     "level": 1,
     "school": "C",
     "time": [
@@ -17624,7 +17272,6 @@
   {
     "name": "Fog Cloud",
     "source": "XPHB",
-    "page": 276,
     "level": 1,
     "school": "C",
     "time": [
@@ -17676,7 +17323,6 @@
   {
     "name": "Forbiddance",
     "source": "PHB",
-    "page": 243,
     "level": 6,
     "school": "A",
     "time": [
@@ -17722,7 +17368,6 @@
   {
     "name": "Forbiddance",
     "source": "XPHB",
-    "page": 276,
     "level": 6,
     "school": "A",
     "time": [
@@ -17767,7 +17412,6 @@
   {
     "name": "Forcecage",
     "source": "PHB",
-    "page": 243,
     "level": 7,
     "school": "V",
     "time": [
@@ -17817,7 +17461,6 @@
   {
     "name": "Forcecage",
     "source": "XPHB",
-    "page": 276,
     "level": 7,
     "school": "V",
     "time": [
@@ -17868,7 +17511,6 @@
   {
     "name": "Foresight",
     "source": "PHB",
-    "page": 244,
     "level": 9,
     "school": "D",
     "time": [
@@ -17911,7 +17553,6 @@
   {
     "name": "Foresight",
     "source": "XPHB",
-    "page": 276,
     "level": 9,
     "school": "D",
     "time": [
@@ -17953,7 +17594,6 @@
   {
     "name": "Fortune's Favor",
     "source": "EGW",
-    "page": 186,
     "level": 2,
     "school": "D",
     "time": [
@@ -18005,7 +17645,6 @@
   {
     "name": "Fount of Moonlight",
     "source": "XPHB",
-    "page": 277,
     "level": 4,
     "school": "V",
     "time": [
@@ -18047,7 +17686,6 @@
   {
     "name": "Freedom of Movement",
     "source": "PHB",
-    "page": 244,
     "level": 4,
     "school": "A",
     "time": [
@@ -18091,7 +17729,6 @@
   {
     "name": "Freedom of Movement",
     "source": "XPHB",
-    "page": 277,
     "level": 4,
     "school": "A",
     "time": [
@@ -18144,7 +17781,6 @@
   {
     "name": "Friends",
     "source": "PHB",
-    "page": 244,
     "level": 0,
     "school": "E",
     "time": [
@@ -18186,7 +17822,6 @@
   {
     "name": "Friends",
     "source": "XPHB",
-    "page": 277,
     "level": 0,
     "school": "E",
     "time": [
@@ -18230,7 +17865,6 @@
   {
     "name": "Frost Fingers",
     "source": "IDRotF",
-    "page": 318,
     "level": 1,
     "school": "V",
     "time": [
@@ -18275,7 +17909,6 @@
   {
     "name": "Frostbite",
     "source": "XGE",
-    "page": 156,
     "level": 0,
     "school": "V",
     "time": [
@@ -18315,7 +17948,6 @@
   {
     "name": "Galder's Speedy Courier",
     "source": "LLK",
-    "page": 57,
     "level": 4,
     "school": "C",
     "time": [
@@ -18371,7 +18003,6 @@
   {
     "name": "Galder's Tower",
     "source": "LLK",
-    "page": 57,
     "level": 3,
     "school": "C",
     "time": [
@@ -18434,7 +18065,6 @@
   {
     "name": "Gaseous Form",
     "source": "PHB",
-    "page": 244,
     "level": 3,
     "school": "T",
     "time": [
@@ -18478,7 +18108,6 @@
   {
     "name": "Gaseous Form",
     "source": "XPHB",
-    "page": 277,
     "level": 3,
     "school": "T",
     "time": [
@@ -18531,7 +18160,6 @@
   {
     "name": "Gate",
     "source": "PHB",
-    "page": 244,
     "level": 9,
     "school": "C",
     "time": [
@@ -18581,7 +18209,6 @@
   {
     "name": "Gate",
     "source": "XPHB",
-    "page": 277,
     "level": 9,
     "school": "C",
     "time": [
@@ -18631,7 +18258,6 @@
   {
     "name": "Gate Seal",
     "source": "SatO",
-    "page": 12,
     "level": 4,
     "school": "A",
     "time": [
@@ -18685,7 +18311,6 @@
   {
     "name": "Geas",
     "source": "PHB",
-    "page": 244,
     "level": 5,
     "school": "E",
     "time": [
@@ -18738,7 +18363,6 @@
   {
     "name": "Geas",
     "source": "XPHB",
-    "page": 278,
     "level": 5,
     "school": "E",
     "time": [
@@ -18792,7 +18416,6 @@
   {
     "name": "Gentle Repose",
     "source": "PHB",
-    "page": 245,
     "level": 2,
     "school": "N",
     "time": [
@@ -18834,7 +18457,6 @@
   {
     "name": "Gentle Repose",
     "source": "XPHB",
-    "page": 278,
     "level": 2,
     "school": "N",
     "time": [
@@ -18879,7 +18501,6 @@
   {
     "name": "Giant Insect",
     "source": "PHB",
-    "page": 245,
     "level": 4,
     "school": "T",
     "time": [
@@ -18922,7 +18543,6 @@
   {
     "name": "Giant Insect",
     "source": "XPHB",
-    "page": 279,
     "level": 4,
     "school": "C",
     "time": [
@@ -18972,7 +18592,6 @@
   {
     "name": "Gift of Alacrity",
     "source": "EGW",
-    "page": 186,
     "level": 1,
     "school": "D",
     "time": [
@@ -19008,7 +18627,6 @@
   {
     "name": "Gift of Gab",
     "source": "AI",
-    "page": 76,
     "level": 2,
     "school": "E",
     "time": [
@@ -19053,7 +18671,6 @@
   {
     "name": "Glibness",
     "source": "PHB",
-    "page": 245,
     "level": 8,
     "school": "T",
     "time": [
@@ -19091,7 +18708,6 @@
   {
     "name": "Glibness",
     "source": "XPHB",
-    "page": 279,
     "level": 8,
     "school": "E",
     "time": [
@@ -19129,7 +18745,6 @@
   {
     "name": "Globe of Invulnerability",
     "source": "PHB",
-    "page": 245,
     "level": 6,
     "school": "A",
     "time": [
@@ -19184,7 +18799,6 @@
   {
     "name": "Globe of Invulnerability",
     "source": "XPHB",
-    "page": 279,
     "level": 6,
     "school": "A",
     "time": [
@@ -19236,7 +18850,6 @@
   {
     "name": "Glyph of Warding",
     "source": "PHB",
-    "page": 245,
     "level": 3,
     "school": "A",
     "time": [
@@ -19309,7 +18922,6 @@
   {
     "name": "Glyph of Warding",
     "source": "XPHB",
-    "page": 279,
     "level": 3,
     "school": "A",
     "time": [
@@ -19389,7 +19001,6 @@
   {
     "name": "Goodberry",
     "source": "PHB",
-    "page": 246,
     "level": 1,
     "school": "T",
     "time": [
@@ -19426,7 +19037,6 @@
   {
     "name": "Goodberry",
     "source": "XPHB",
-    "page": 280,
     "level": 1,
     "school": "C",
     "time": [
@@ -19467,7 +19077,6 @@
   {
     "name": "Grasping Vine",
     "source": "PHB",
-    "page": 246,
     "level": 4,
     "school": "C",
     "time": [
@@ -19509,7 +19118,6 @@
   {
     "name": "Grasping Vine",
     "source": "XPHB",
-    "page": 280,
     "level": 4,
     "school": "C",
     "time": [
@@ -19561,7 +19169,6 @@
   {
     "name": "Gravity Fissure",
     "source": "EGW",
-    "page": 187,
     "level": 6,
     "school": "V",
     "time": [
@@ -19605,7 +19212,6 @@
   {
     "name": "Gravity Sinkhole",
     "source": "EGW",
-    "page": 187,
     "level": 4,
     "school": "V",
     "time": [
@@ -19648,7 +19254,6 @@
   {
     "name": "Grease",
     "source": "PHB",
-    "page": 246,
     "level": 1,
     "school": "C",
     "time": [
@@ -19691,7 +19296,6 @@
   {
     "name": "Grease",
     "source": "XPHB",
-    "page": 280,
     "level": 1,
     "school": "C",
     "time": [
@@ -19734,7 +19338,6 @@
   {
     "name": "Greater Invisibility",
     "source": "PHB",
-    "page": 246,
     "level": 4,
     "school": "I",
     "time": [
@@ -19775,7 +19378,6 @@
   {
     "name": "Greater Invisibility",
     "source": "XPHB",
-    "page": 281,
     "level": 4,
     "school": "I",
     "time": [
@@ -19816,7 +19418,6 @@
   {
     "name": "Greater Restoration",
     "source": "PHB",
-    "page": 246,
     "level": 5,
     "school": "A",
     "time": [
@@ -19868,7 +19469,6 @@
   {
     "name": "Greater Restoration",
     "source": "XPHB",
-    "page": 281,
     "level": 5,
     "school": "A",
     "time": [
@@ -19922,7 +19522,6 @@
   {
     "name": "Green-Flame Blade",
     "source": "TCE",
-    "page": 107,
     "level": 0,
     "school": "V",
     "time": [
@@ -19964,7 +19563,6 @@
   {
     "name": "Guardian of Faith",
     "source": "PHB",
-    "page": 246,
     "level": 4,
     "school": "C",
     "time": [
@@ -20003,7 +19601,6 @@
   {
     "name": "Guardian of Faith",
     "source": "XPHB",
-    "page": 281,
     "level": 4,
     "school": "C",
     "time": [
@@ -20042,7 +19639,6 @@
   {
     "name": "Guardian of Nature",
     "source": "XGE",
-    "page": 157,
     "level": 4,
     "school": "T",
     "time": [
@@ -20113,7 +19709,6 @@
   {
     "name": "Guards and Wards",
     "source": "PHB",
-    "page": 248,
     "level": 6,
     "school": "A",
     "time": [
@@ -20198,7 +19793,6 @@
   {
     "name": "Guards and Wards",
     "source": "XPHB",
-    "page": 282,
     "level": 6,
     "school": "A",
     "time": [
@@ -20281,7 +19875,6 @@
   {
     "name": "Guidance",
     "source": "PHB",
-    "page": 248,
     "level": 0,
     "school": "D",
     "time": [
@@ -20322,7 +19915,6 @@
   {
     "name": "Guidance",
     "source": "XPHB",
-    "page": 282,
     "level": 0,
     "school": "D",
     "time": [
@@ -20363,7 +19955,6 @@
   {
     "name": "Guiding Bolt",
     "source": "PHB",
-    "page": 248,
     "level": 1,
     "school": "V",
     "time": [
@@ -20411,7 +20002,6 @@
   {
     "name": "Guiding Bolt",
     "source": "XPHB",
-    "page": 282,
     "level": 1,
     "school": "V",
     "time": [
@@ -20459,7 +20049,6 @@
   {
     "name": "Gust",
     "source": "XGE",
-    "page": 157,
     "level": 0,
     "school": "T",
     "time": [
@@ -20504,7 +20093,6 @@
   {
     "name": "Gust of Wind",
     "source": "PHB",
-    "page": 248,
     "level": 2,
     "school": "V",
     "time": [
@@ -20551,7 +20139,6 @@
   {
     "name": "Gust of Wind",
     "source": "XPHB",
-    "page": 282,
     "level": 2,
     "school": "V",
     "time": [
@@ -20597,7 +20184,6 @@
   {
     "name": "Hail of Thorns",
     "source": "PHB",
-    "page": 249,
     "level": 1,
     "school": "C",
     "time": [
@@ -20644,7 +20230,6 @@
   {
     "name": "Hail of Thorns",
     "source": "XPHB",
-    "page": 283,
     "level": 1,
     "school": "C",
     "time": [
@@ -20687,7 +20272,6 @@
   {
     "name": "Hallow",
     "source": "PHB",
-    "page": 249,
     "level": 5,
     "school": "V",
     "time": [
@@ -20801,7 +20385,6 @@
   {
     "name": "Hallow",
     "source": "XPHB",
-    "page": 283,
     "level": 5,
     "school": "A",
     "time": [
@@ -20933,7 +20516,6 @@
   {
     "name": "Hallucinatory Terrain",
     "source": "PHB",
-    "page": 249,
     "level": 4,
     "school": "I",
     "time": [
@@ -20977,7 +20559,6 @@
   {
     "name": "Hallucinatory Terrain",
     "source": "XPHB",
-    "page": 283,
     "level": 4,
     "school": "I",
     "time": [
@@ -21021,7 +20602,6 @@
   {
     "name": "Harm",
     "source": "PHB",
-    "page": 249,
     "level": 6,
     "school": "N",
     "time": [
@@ -21056,7 +20636,6 @@
   {
     "name": "Harm",
     "source": "XPHB",
-    "page": 283,
     "level": 6,
     "school": "N",
     "time": [
@@ -21091,7 +20670,6 @@
   {
     "name": "Haste",
     "source": "PHB",
-    "page": 250,
     "level": 3,
     "school": "T",
     "time": [
@@ -21135,7 +20713,6 @@
   {
     "name": "Haste",
     "source": "XPHB",
-    "page": 284,
     "level": 3,
     "school": "T",
     "time": [
@@ -21179,7 +20756,6 @@
   {
     "name": "Heal",
     "source": "PHB",
-    "page": 250,
     "level": 6,
     "school": "V",
     "time": [
@@ -21224,7 +20800,6 @@
   {
     "name": "Heal",
     "source": "XPHB",
-    "page": 284,
     "level": 6,
     "school": "A",
     "time": [
@@ -21269,7 +20844,6 @@
   {
     "name": "Healing Spirit",
     "source": "XGE",
-    "page": 157,
     "level": 2,
     "school": "C",
     "time": [
@@ -21321,7 +20895,6 @@
   {
     "name": "Healing Word",
     "source": "PHB",
-    "page": 250,
     "level": 1,
     "school": "V",
     "time": [
@@ -21366,7 +20939,6 @@
   {
     "name": "Healing Word",
     "source": "XPHB",
-    "page": 284,
     "level": 1,
     "school": "A",
     "time": [
@@ -21411,7 +20983,6 @@
   {
     "name": "Heat Metal",
     "source": "PHB",
-    "page": 250,
     "level": 2,
     "school": "T",
     "time": [
@@ -21464,7 +21035,6 @@
   {
     "name": "Heat Metal",
     "source": "XPHB",
-    "page": 284,
     "level": 2,
     "school": "T",
     "time": [
@@ -21517,7 +21087,6 @@
   {
     "name": "Hellish Rebuke",
     "source": "PHB",
-    "page": 250,
     "level": 1,
     "school": "V",
     "time": [
@@ -21562,7 +21131,6 @@
   {
     "name": "Hellish Rebuke",
     "source": "XPHB",
-    "page": 284,
     "level": 1,
     "school": "V",
     "time": [
@@ -21607,7 +21175,6 @@
   {
     "name": "Heroes' Feast",
     "source": "PHB",
-    "page": 250,
     "level": 6,
     "school": "C",
     "time": [
@@ -21650,7 +21217,6 @@
   {
     "name": "Heroes' Feast",
     "source": "XPHB",
-    "page": 284,
     "level": 6,
     "school": "C",
     "time": [
@@ -21693,7 +21259,6 @@
   {
     "name": "Heroism",
     "source": "PHB",
-    "page": 250,
     "level": 1,
     "school": "E",
     "time": [
@@ -21742,7 +21307,6 @@
   {
     "name": "Heroism",
     "source": "XPHB",
-    "page": 285,
     "level": 1,
     "school": "E",
     "time": [
@@ -21791,7 +21355,6 @@
   {
     "name": "Hex",
     "source": "PHB",
-    "page": 251,
     "level": 1,
     "school": "E",
     "time": [
@@ -21843,7 +21406,6 @@
   {
     "name": "Hex",
     "source": "XPHB",
-    "page": 285,
     "level": 1,
     "school": "E",
     "time": [
@@ -21894,7 +21456,6 @@
   {
     "name": "Hold Monster",
     "source": "PHB",
-    "page": 251,
     "level": 5,
     "school": "E",
     "time": [
@@ -21947,7 +21508,6 @@
   {
     "name": "Hold Monster",
     "source": "XPHB",
-    "page": 285,
     "level": 5,
     "school": "E",
     "time": [
@@ -22000,7 +21560,6 @@
   {
     "name": "Hold Person",
     "source": "PHB",
-    "page": 251,
     "level": 2,
     "school": "E",
     "time": [
@@ -22055,7 +21614,6 @@
   {
     "name": "Hold Person",
     "source": "XPHB",
-    "page": 286,
     "level": 2,
     "school": "E",
     "time": [
@@ -22110,7 +21668,6 @@
   {
     "name": "Holy Aura",
     "source": "PHB",
-    "page": 251,
     "level": 8,
     "school": "A",
     "time": [
@@ -22153,7 +21710,6 @@
   {
     "name": "Holy Aura",
     "source": "XPHB",
-    "page": 286,
     "level": 8,
     "school": "A",
     "time": [
@@ -22197,7 +21753,6 @@
   {
     "name": "Holy Star of Mystra",
     "source": "FRHoF",
-    "page": 145,
     "level": 8,
     "school": "V",
     "time": [
@@ -22239,7 +21794,6 @@
   {
     "name": "Holy Weapon",
     "source": "XGE",
-    "page": 157,
     "level": 5,
     "school": "V",
     "time": [
@@ -22280,7 +21834,6 @@
   {
     "name": "Homunculus Servant",
     "source": "EFA",
-    "page": 21,
     "level": 2,
     "school": "C",
     "time": [
@@ -22335,7 +21888,6 @@
   {
     "name": "Hunger of Hadar",
     "source": "PHB",
-    "page": 251,
     "level": 3,
     "school": "C",
     "time": [
@@ -22377,7 +21929,6 @@
   {
     "name": "Hunger of Hadar",
     "source": "XPHB",
-    "page": 286,
     "level": 3,
     "school": "C",
     "time": [
@@ -22428,7 +21979,6 @@
   {
     "name": "Hunter's Mark",
     "source": "PHB",
-    "page": 251,
     "level": 1,
     "school": "D",
     "time": [
@@ -22476,7 +22026,6 @@
   {
     "name": "Hunter's Mark",
     "source": "XPHB",
-    "page": 287,
     "level": 1,
     "school": "D",
     "time": [
@@ -22525,7 +22074,6 @@
   {
     "name": "Hypnotic Pattern",
     "source": "PHB",
-    "page": 252,
     "level": 3,
     "school": "I",
     "time": [
@@ -22569,7 +22117,6 @@
   {
     "name": "Hypnotic Pattern",
     "source": "XPHB",
-    "page": 287,
     "level": 3,
     "school": "I",
     "time": [
@@ -22613,7 +22160,6 @@
   {
     "name": "Ice Knife",
     "source": "XGE",
-    "page": 157,
     "level": 1,
     "school": "C",
     "time": [
@@ -22659,7 +22205,6 @@
   {
     "name": "Ice Knife",
     "source": "XPHB",
-    "page": 287,
     "level": 1,
     "school": "C",
     "time": [
@@ -22705,7 +22250,6 @@
   {
     "name": "Ice Storm",
     "source": "PHB",
-    "page": 252,
     "level": 4,
     "school": "V",
     "time": [
@@ -22753,7 +22297,6 @@
   {
     "name": "Ice Storm",
     "source": "XPHB",
-    "page": 287,
     "level": 4,
     "school": "V",
     "time": [
@@ -22801,7 +22344,6 @@
   {
     "name": "Identify",
     "source": "PHB",
-    "page": 252,
     "level": 1,
     "school": "D",
     "time": [
@@ -22842,7 +22384,6 @@
   {
     "name": "Identify",
     "source": "XPHB",
-    "page": 287,
     "level": 1,
     "school": "D",
     "time": [
@@ -22883,7 +22424,6 @@
   {
     "name": "Illusory Dragon",
     "source": "XGE",
-    "page": 157,
     "level": 8,
     "school": "I",
     "time": [
@@ -22925,7 +22465,6 @@
   {
     "name": "Illusory Script",
     "source": "PHB",
-    "page": 252,
     "level": 1,
     "school": "I",
     "time": [
@@ -22972,7 +22511,6 @@
   {
     "name": "Illusory Script",
     "source": "XPHB",
-    "page": 288,
     "level": 1,
     "school": "I",
     "time": [
@@ -23018,7 +22556,6 @@
   {
     "name": "Immolation",
     "source": "XGE",
-    "page": 158,
     "level": 5,
     "school": "V",
     "time": [
@@ -23059,7 +22596,6 @@
   {
     "name": "Immovable Object",
     "source": "EGW",
-    "page": 187,
     "level": 2,
     "school": "T",
     "time": [
@@ -23110,7 +22646,6 @@
   {
     "name": "Imprisonment",
     "source": "PHB",
-    "page": 252,
     "level": 9,
     "school": "A",
     "time": [
@@ -23203,7 +22738,6 @@
   {
     "name": "Imprisonment",
     "source": "XPHB",
-    "page": 288,
     "level": 9,
     "school": "A",
     "time": [
@@ -23296,7 +22830,6 @@
   {
     "name": "Incendiary Cloud",
     "source": "PHB",
-    "page": 253,
     "level": 8,
     "school": "C",
     "time": [
@@ -23340,7 +22873,6 @@
   {
     "name": "Incendiary Cloud",
     "source": "XPHB",
-    "page": 288,
     "level": 8,
     "school": "C",
     "time": [
@@ -23384,7 +22916,6 @@
   {
     "name": "Incite Greed",
     "source": "AI",
-    "page": 76,
     "level": 3,
     "school": "E",
     "time": [
@@ -23431,7 +22962,6 @@
   {
     "name": "Infernal Calling",
     "source": "XGE",
-    "page": 158,
     "level": 5,
     "school": "C",
     "time": [
@@ -23489,7 +23019,6 @@
   {
     "name": "Infestation",
     "source": "XGE",
-    "page": 158,
     "level": 0,
     "school": "C",
     "time": [
@@ -23529,7 +23058,6 @@
   {
     "name": "Inflict Wounds",
     "source": "PHB",
-    "page": 253,
     "level": 1,
     "school": "N",
     "time": [
@@ -23572,7 +23100,6 @@
   {
     "name": "Inflict Wounds",
     "source": "XPHB",
-    "page": 288,
     "level": 1,
     "school": "N",
     "time": [
@@ -23615,7 +23142,6 @@
   {
     "name": "Insect Plague",
     "source": "PHB",
-    "page": 254,
     "level": 5,
     "school": "C",
     "time": [
@@ -23668,7 +23194,6 @@
   {
     "name": "Insect Plague",
     "source": "XPHB",
-    "page": 289,
     "level": 5,
     "school": "C",
     "time": [
@@ -23721,7 +23246,6 @@
   {
     "name": "Intellect Fortress",
     "source": "TCE",
-    "page": 107,
     "level": 3,
     "school": "A",
     "time": [
@@ -23773,7 +23297,6 @@
   {
     "name": "Investiture of Flame",
     "source": "XGE",
-    "page": 159,
     "level": 6,
     "school": "T",
     "time": [
@@ -23823,7 +23346,6 @@
   {
     "name": "Investiture of Ice",
     "source": "XGE",
-    "page": 159,
     "level": 6,
     "school": "T",
     "time": [
@@ -23874,7 +23396,6 @@
   {
     "name": "Investiture of Stone",
     "source": "XGE",
-    "page": 159,
     "level": 6,
     "school": "T",
     "time": [
@@ -23924,7 +23445,6 @@
   {
     "name": "Investiture of Wind",
     "source": "XGE",
-    "page": 160,
     "level": 6,
     "school": "T",
     "time": [
@@ -23974,7 +23494,6 @@
   {
     "name": "Invisibility",
     "source": "PHB",
-    "page": 254,
     "level": 2,
     "school": "I",
     "time": [
@@ -24027,7 +23546,6 @@
   {
     "name": "Invisibility",
     "source": "XPHB",
-    "page": 289,
     "level": 2,
     "school": "I",
     "time": [
@@ -24080,7 +23598,6 @@
   {
     "name": "Invulnerability",
     "source": "XGE",
-    "page": 160,
     "level": 9,
     "school": "A",
     "time": [
@@ -24124,7 +23641,6 @@
   {
     "name": "Jallarzi's Storm of Radiance",
     "source": "XPHB",
-    "page": 289,
     "level": 5,
     "school": "V",
     "time": [
@@ -24176,7 +23692,6 @@
   {
     "name": "Jim's Glowing Coin",
     "source": "AI",
-    "page": 76,
     "level": 2,
     "school": "E",
     "time": [
@@ -24216,7 +23731,6 @@
   {
     "name": "Jim's Magic Missile",
     "source": "AI",
-    "page": 76,
     "level": 1,
     "school": "V",
     "time": [
@@ -24270,7 +23784,6 @@
   {
     "name": "Jump",
     "source": "PHB",
-    "page": 254,
     "level": 1,
     "school": "T",
     "time": [
@@ -24313,7 +23826,6 @@
   {
     "name": "Jump",
     "source": "XPHB",
-    "page": 290,
     "level": 1,
     "school": "T",
     "time": [
@@ -24365,7 +23877,6 @@
   {
     "name": "Kinetic Jaunt",
     "source": "SCC",
-    "page": 37,
     "level": 2,
     "school": "T",
     "time": [
@@ -24414,7 +23925,6 @@
   {
     "name": "Knock",
     "source": "PHB",
-    "page": 254,
     "level": 2,
     "school": "T",
     "time": [
@@ -24453,7 +23963,6 @@
   {
     "name": "Knock",
     "source": "XPHB",
-    "page": 290,
     "level": 2,
     "school": "T",
     "time": [
@@ -24492,7 +24001,6 @@
   {
     "name": "Laeral's Silver Lance",
     "source": "FRHoF",
-    "page": 145,
     "level": 3,
     "school": "V",
     "time": [
@@ -24542,7 +24050,6 @@
   {
     "name": "Legend Lore",
     "source": "PHB",
-    "page": 254,
     "level": 5,
     "school": "D",
     "time": [
@@ -24584,7 +24091,6 @@
   {
     "name": "Legend Lore",
     "source": "XPHB",
-    "page": 290,
     "level": 5,
     "school": "D",
     "time": [
@@ -24627,7 +24133,6 @@
   {
     "name": "Leomund's Secret Chest",
     "source": "PHB",
-    "page": 254,
     "level": 4,
     "school": "C",
     "time": [
@@ -24668,7 +24173,6 @@
   {
     "name": "Leomund's Secret Chest",
     "source": "XPHB",
-    "page": 290,
     "level": 4,
     "school": "C",
     "time": [
@@ -24712,7 +24216,6 @@
   {
     "name": "Leomund's Tiny Hut",
     "source": "PHB",
-    "page": 255,
     "level": 3,
     "school": "V",
     "time": [
@@ -24755,7 +24258,6 @@
   {
     "name": "Leomund's Tiny Hut",
     "source": "XPHB",
-    "page": 291,
     "level": 3,
     "school": "V",
     "time": [
@@ -24799,7 +24301,6 @@
   {
     "name": "Lesser Restoration",
     "source": "PHB",
-    "page": 255,
     "level": 2,
     "school": "A",
     "time": [
@@ -24838,7 +24339,6 @@
   {
     "name": "Lesser Restoration",
     "source": "XPHB",
-    "page": 291,
     "level": 2,
     "school": "A",
     "time": [
@@ -24877,7 +24377,6 @@
   {
     "name": "Levitate",
     "source": "PHB",
-    "page": 255,
     "level": 2,
     "school": "T",
     "time": [
@@ -24922,7 +24421,6 @@
   {
     "name": "Levitate",
     "source": "XPHB",
-    "page": 291,
     "level": 2,
     "school": "T",
     "time": [
@@ -24967,7 +24465,6 @@
   {
     "name": "Life Transference",
     "source": "XGE",
-    "page": 160,
     "level": 3,
     "school": "N",
     "time": [
@@ -25012,7 +24509,6 @@
   {
     "name": "Light",
     "source": "PHB",
-    "page": 255,
     "level": 0,
     "school": "V",
     "time": [
@@ -25055,7 +24551,6 @@
   {
     "name": "Light",
     "source": "XPHB",
-    "page": 292,
     "level": 0,
     "school": "V",
     "time": [
@@ -25098,7 +24593,6 @@
   {
     "name": "Lightning Arrow",
     "source": "PHB",
-    "page": 255,
     "level": 3,
     "school": "T",
     "time": [
@@ -25148,7 +24642,6 @@
   {
     "name": "Lightning Arrow",
     "source": "XPHB",
-    "page": 292,
     "level": 3,
     "school": "T",
     "time": [
@@ -25193,7 +24686,6 @@
   {
     "name": "Lightning Bolt",
     "source": "PHB",
-    "page": 255,
     "level": 3,
     "school": "V",
     "time": [
@@ -25240,7 +24732,6 @@
   {
     "name": "Lightning Bolt",
     "source": "XPHB",
-    "page": 292,
     "level": 3,
     "school": "V",
     "time": [
@@ -25286,7 +24777,6 @@
   {
     "name": "Lightning Lure",
     "source": "TCE",
-    "page": 107,
     "level": 0,
     "school": "V",
     "time": [
@@ -25324,7 +24814,6 @@
   {
     "name": "Linked Glyphs",
     "source": "AitFR-AVT",
-    "page": 9,
     "level": 3,
     "school": "A",
     "time": [
@@ -25397,7 +24886,6 @@
   {
     "name": "Locate Animals or Plants",
     "source": "PHB",
-    "page": 256,
     "level": 2,
     "school": "D",
     "time": [
@@ -25434,7 +24922,6 @@
   {
     "name": "Locate Animals or Plants",
     "source": "XPHB",
-    "page": 292,
     "level": 2,
     "school": "D",
     "time": [
@@ -25471,7 +24958,6 @@
   {
     "name": "Locate Creature",
     "source": "PHB",
-    "page": 256,
     "level": 4,
     "school": "D",
     "time": [
@@ -25518,7 +25004,6 @@
   {
     "name": "Locate Creature",
     "source": "XPHB",
-    "page": 292,
     "level": 4,
     "school": "D",
     "time": [
@@ -25565,7 +25050,6 @@
   {
     "name": "Locate Object",
     "source": "PHB",
-    "page": 256,
     "level": 2,
     "school": "D",
     "time": [
@@ -25612,7 +25096,6 @@
   {
     "name": "Locate Object",
     "source": "XPHB",
-    "page": 293,
     "level": 2,
     "school": "D",
     "time": [
@@ -25659,7 +25142,6 @@
   {
     "name": "Longstrider",
     "source": "PHB",
-    "page": 256,
     "level": 1,
     "school": "T",
     "time": [
@@ -25711,7 +25193,6 @@
   {
     "name": "Longstrider",
     "source": "XPHB",
-    "page": 293,
     "level": 1,
     "school": "T",
     "time": [
@@ -25763,7 +25244,6 @@
   {
     "name": "Maddening Darkness",
     "source": "XGE",
-    "page": 160,
     "level": 8,
     "school": "V",
     "time": [
@@ -25805,7 +25285,6 @@
   {
     "name": "Maelstrom",
     "source": "XGE",
-    "page": 160,
     "level": 5,
     "school": "V",
     "time": [
@@ -25846,7 +25325,6 @@
   {
     "name": "Mage Armor",
     "source": "PHB",
-    "page": 256,
     "level": 1,
     "school": "A",
     "time": [
@@ -25886,7 +25364,6 @@
   {
     "name": "Mage Armor",
     "source": "XPHB",
-    "page": 293,
     "level": 1,
     "school": "A",
     "time": [
@@ -25926,7 +25403,6 @@
   {
     "name": "Mage Hand",
     "source": "PHB",
-    "page": 256,
     "level": 0,
     "school": "C",
     "time": [
@@ -25971,7 +25447,6 @@
   {
     "name": "Mage Hand",
     "source": "XPHB",
-    "page": 293,
     "level": 0,
     "school": "C",
     "time": [
@@ -26017,7 +25492,6 @@
   {
     "name": "Magic Circle",
     "source": "PHB",
-    "page": 256,
     "level": 3,
     "school": "A",
     "time": [
@@ -26083,7 +25557,6 @@
   {
     "name": "Magic Circle",
     "source": "XPHB",
-    "page": 293,
     "level": 3,
     "school": "A",
     "time": [
@@ -26149,7 +25622,6 @@
   {
     "name": "Magic Jar",
     "source": "PHB",
-    "page": 257,
     "level": 6,
     "school": "N",
     "time": [
@@ -26196,7 +25668,6 @@
   {
     "name": "Magic Jar",
     "source": "XPHB",
-    "page": 294,
     "level": 6,
     "school": "N",
     "time": [
@@ -26243,7 +25714,6 @@
   {
     "name": "Magic Missile",
     "source": "PHB",
-    "page": 257,
     "level": 1,
     "school": "V",
     "time": [
@@ -26288,7 +25758,6 @@
   {
     "name": "Magic Missile",
     "source": "XPHB",
-    "page": 295,
     "level": 1,
     "school": "V",
     "time": [
@@ -26333,7 +25802,6 @@
   {
     "name": "Magic Mouth",
     "source": "PHB",
-    "page": 257,
     "level": 2,
     "school": "I",
     "time": [
@@ -26380,7 +25848,6 @@
   {
     "name": "Magic Mouth",
     "source": "XPHB",
-    "page": 295,
     "level": 2,
     "school": "I",
     "time": [
@@ -26427,7 +25894,6 @@
   {
     "name": "Magic Stone",
     "source": "XGE",
-    "page": 160,
     "level": 0,
     "school": "T",
     "time": [
@@ -26468,7 +25934,6 @@
   {
     "name": "Magic Weapon",
     "source": "PHB",
-    "page": 257,
     "level": 2,
     "school": "T",
     "time": [
@@ -26520,7 +25985,6 @@
   {
     "name": "Magic Weapon",
     "source": "XPHB",
-    "page": 295,
     "level": 2,
     "school": "T",
     "time": [
@@ -26571,7 +26035,6 @@
   {
     "name": "Magnify Gravity",
     "source": "EGW",
-    "page": 188,
     "level": 1,
     "school": "T",
     "time": [
@@ -26618,7 +26081,6 @@
   {
     "name": "Major Image",
     "source": "PHB",
-    "page": 258,
     "level": 3,
     "school": "I",
     "time": [
@@ -26673,7 +26135,6 @@
   {
     "name": "Major Image",
     "source": "XPHB",
-    "page": 295,
     "level": 3,
     "school": "I",
     "time": [
@@ -26728,7 +26189,6 @@
   {
     "name": "Mass Cure Wounds",
     "source": "PHB",
-    "page": 258,
     "level": 5,
     "school": "V",
     "time": [
@@ -26774,7 +26234,6 @@
   {
     "name": "Mass Cure Wounds",
     "source": "XPHB",
-    "page": 296,
     "level": 5,
     "school": "A",
     "time": [
@@ -26820,7 +26279,6 @@
   {
     "name": "Mass Heal",
     "source": "PHB",
-    "page": 258,
     "level": 9,
     "school": "V",
     "time": [
@@ -26855,7 +26313,6 @@
   {
     "name": "Mass Heal",
     "source": "XPHB",
-    "page": 296,
     "level": 9,
     "school": "A",
     "time": [
@@ -26890,7 +26347,6 @@
   {
     "name": "Mass Healing Word",
     "source": "PHB",
-    "page": 258,
     "level": 3,
     "school": "V",
     "time": [
@@ -26934,7 +26390,6 @@
   {
     "name": "Mass Healing Word",
     "source": "XPHB",
-    "page": 296,
     "level": 3,
     "school": "A",
     "time": [
@@ -26978,7 +26433,6 @@
   {
     "name": "Mass Polymorph",
     "source": "XGE",
-    "page": 160,
     "level": 9,
     "school": "T",
     "time": [
@@ -27025,7 +26479,6 @@
   {
     "name": "Mass Suggestion",
     "source": "PHB",
-    "page": 258,
     "level": 6,
     "school": "E",
     "time": [
@@ -27079,7 +26532,6 @@
   {
     "name": "Mass Suggestion",
     "source": "XPHB",
-    "page": 296,
     "level": 6,
     "school": "E",
     "time": [
@@ -27130,7 +26582,6 @@
   {
     "name": "Maximilian's Earthen Grasp",
     "source": "XGE",
-    "page": 161,
     "level": 2,
     "school": "T",
     "time": [
@@ -27175,7 +26626,6 @@
   {
     "name": "Maze",
     "source": "PHB",
-    "page": 258,
     "level": 8,
     "school": "C",
     "time": [
@@ -27217,7 +26667,6 @@
   {
     "name": "Maze",
     "source": "XPHB",
-    "page": 296,
     "level": 8,
     "school": "C",
     "time": [
@@ -27259,7 +26708,6 @@
   {
     "name": "Meld into Stone",
     "source": "PHB",
-    "page": 259,
     "level": 3,
     "school": "T",
     "time": [
@@ -27301,7 +26749,6 @@
   {
     "name": "Meld into Stone",
     "source": "XPHB",
-    "page": 296,
     "level": 3,
     "school": "T",
     "time": [
@@ -27343,7 +26790,6 @@
   {
     "name": "Melf's Acid Arrow",
     "source": "PHB",
-    "page": 259,
     "level": 2,
     "school": "V",
     "time": [
@@ -27388,7 +26834,6 @@
   {
     "name": "Melf's Acid Arrow",
     "source": "XPHB",
-    "page": 297,
     "level": 2,
     "school": "V",
     "time": [
@@ -27433,7 +26878,6 @@
   {
     "name": "Melf's Minute Meteors",
     "source": "XGE",
-    "page": 161,
     "level": 3,
     "school": "V",
     "time": [
@@ -27483,7 +26927,6 @@
   {
     "name": "Mending",
     "source": "PHB",
-    "page": 259,
     "level": 0,
     "school": "T",
     "time": [
@@ -27524,7 +26967,6 @@
   {
     "name": "Mending",
     "source": "XPHB",
-    "page": 297,
     "level": 0,
     "school": "T",
     "time": [
@@ -27564,7 +27006,6 @@
   {
     "name": "Mental Prison",
     "source": "XGE",
-    "page": 161,
     "level": 6,
     "school": "I",
     "time": [
@@ -27605,7 +27046,6 @@
   {
     "name": "Message",
     "source": "PHB",
-    "page": 259,
     "level": 0,
     "school": "T",
     "time": [
@@ -27649,7 +27089,6 @@
   {
     "name": "Message",
     "source": "XPHB",
-    "page": 298,
     "level": 0,
     "school": "T",
     "time": [
@@ -27693,7 +27132,6 @@
   {
     "name": "Meteor Swarm",
     "source": "PHB",
-    "page": 259,
     "level": 9,
     "school": "V",
     "time": [
@@ -27730,7 +27168,6 @@
   {
     "name": "Meteor Swarm",
     "source": "XPHB",
-    "page": 298,
     "level": 9,
     "school": "V",
     "time": [
@@ -27767,7 +27204,6 @@
   {
     "name": "Mighty Fortress",
     "source": "XGE",
-    "page": 161,
     "level": 8,
     "school": "C",
     "time": [
@@ -27813,7 +27249,6 @@
   {
     "name": "Mind Blank",
     "source": "PHB",
-    "page": 259,
     "level": 8,
     "school": "A",
     "time": [
@@ -27852,7 +27287,6 @@
   {
     "name": "Mind Blank",
     "source": "XPHB",
-    "page": 298,
     "level": 8,
     "school": "A",
     "time": [
@@ -27891,7 +27325,6 @@
   {
     "name": "Mind Sliver",
     "source": "TCE",
-    "page": 108,
     "level": 0,
     "school": "E",
     "time": [
@@ -27932,7 +27365,6 @@
   {
     "name": "Mind Sliver",
     "source": "XPHB",
-    "page": 298,
     "level": 0,
     "school": "E",
     "time": [
@@ -27977,7 +27409,6 @@
   {
     "name": "Mind Spike",
     "source": "XGE",
-    "page": 162,
     "level": 2,
     "school": "D",
     "time": [
@@ -28027,7 +27458,6 @@
   {
     "name": "Mind Spike",
     "source": "XPHB",
-    "page": 298,
     "level": 2,
     "school": "D",
     "time": [
@@ -28077,7 +27507,6 @@
   {
     "name": "Minor Illusion",
     "source": "PHB",
-    "page": 260,
     "level": 0,
     "school": "I",
     "time": [
@@ -28122,7 +27551,6 @@
   {
     "name": "Minor Illusion",
     "source": "XPHB",
-    "page": 298,
     "level": 0,
     "school": "I",
     "time": [
@@ -28179,7 +27607,6 @@
   {
     "name": "Mirage Arcane",
     "source": "PHB",
-    "page": 260,
     "level": 7,
     "school": "I",
     "time": [
@@ -28222,7 +27649,6 @@
   {
     "name": "Mirage Arcane",
     "source": "XPHB",
-    "page": 299,
     "level": 7,
     "school": "I",
     "time": [
@@ -28265,7 +27691,6 @@
   {
     "name": "Mirror Image",
     "source": "PHB",
-    "page": 260,
     "level": 2,
     "school": "I",
     "time": [
@@ -28310,7 +27735,6 @@
   {
     "name": "Mirror Image",
     "source": "XPHB",
-    "page": 299,
     "level": 2,
     "school": "I",
     "time": [
@@ -28353,7 +27777,6 @@
   {
     "name": "Mislead",
     "source": "PHB",
-    "page": 260,
     "level": 5,
     "school": "I",
     "time": [
@@ -28395,7 +27818,6 @@
   {
     "name": "Mislead",
     "source": "XPHB",
-    "page": 299,
     "level": 5,
     "school": "I",
     "time": [
@@ -28437,7 +27859,6 @@
   {
     "name": "Misty Step",
     "source": "PHB",
-    "page": 260,
     "level": 2,
     "school": "C",
     "time": [
@@ -28472,7 +27893,6 @@
   {
     "name": "Misty Step",
     "source": "XPHB",
-    "page": 299,
     "level": 2,
     "school": "C",
     "time": [
@@ -28507,7 +27927,6 @@
   {
     "name": "Modify Memory",
     "source": "PHB",
-    "page": 261,
     "level": 5,
     "school": "E",
     "time": [
@@ -28561,7 +27980,6 @@
   {
     "name": "Modify Memory",
     "source": "XPHB",
-    "page": 299,
     "level": 5,
     "school": "E",
     "time": [
@@ -28615,7 +28033,6 @@
   {
     "name": "Mold Earth",
     "source": "XGE",
-    "page": 162,
     "level": 0,
     "school": "T",
     "time": [
@@ -28667,7 +28084,6 @@
   {
     "name": "Moonbeam",
     "source": "PHB",
-    "page": 261,
     "level": 2,
     "school": "V",
     "time": [
@@ -28720,7 +28136,6 @@
   {
     "name": "Moonbeam",
     "source": "XPHB",
-    "page": 300,
     "level": 2,
     "school": "V",
     "time": [
@@ -28771,7 +28186,6 @@
   {
     "name": "Mordenkainen's Faithful Hound",
     "source": "PHB",
-    "page": 261,
     "level": 4,
     "school": "C",
     "time": [
@@ -28814,7 +28228,6 @@
   {
     "name": "Mordenkainen's Faithful Hound",
     "source": "XPHB",
-    "page": 300,
     "level": 4,
     "school": "C",
     "time": [
@@ -28858,7 +28271,6 @@
   {
     "name": "Mordenkainen's Magnificent Mansion",
     "source": "PHB",
-    "page": 261,
     "level": 7,
     "school": "C",
     "time": [
@@ -28904,7 +28316,6 @@
   {
     "name": "Mordenkainen's Magnificent Mansion",
     "source": "XPHB",
-    "page": 300,
     "level": 7,
     "school": "C",
     "time": [
@@ -28952,7 +28363,6 @@
   {
     "name": "Mordenkainen's Private Sanctum",
     "source": "PHB",
-    "page": 262,
     "level": 4,
     "school": "A",
     "time": [
@@ -29015,7 +28425,6 @@
   {
     "name": "Mordenkainen's Private Sanctum",
     "source": "XPHB",
-    "page": 301,
     "level": 4,
     "school": "A",
     "time": [
@@ -29078,7 +28487,6 @@
   {
     "name": "Mordenkainen's Sword",
     "source": "PHB",
-    "page": 262,
     "level": 7,
     "school": "V",
     "time": [
@@ -29124,7 +28532,6 @@
   {
     "name": "Mordenkainen's Sword",
     "source": "XPHB",
-    "page": 302,
     "level": 7,
     "school": "V",
     "time": [
@@ -29171,7 +28578,6 @@
   {
     "name": "Motivational Speech",
     "source": "AI",
-    "page": 77,
     "level": 3,
     "school": "E",
     "time": [
@@ -29226,7 +28632,6 @@
   {
     "name": "Move Earth",
     "source": "PHB",
-    "page": 263,
     "level": 6,
     "school": "T",
     "time": [
@@ -29273,7 +28678,6 @@
   {
     "name": "Move Earth",
     "source": "XPHB",
-    "page": 302,
     "level": 6,
     "school": "T",
     "time": [
@@ -29319,7 +28723,6 @@
   {
     "name": "Nathair's Mischief",
     "source": "FTD",
-    "page": 20,
     "level": 2,
     "school": "I",
     "time": [
@@ -29391,7 +28794,6 @@
   {
     "name": "Negative Energy Flood",
     "source": "XGE",
-    "page": 163,
     "level": 5,
     "school": "N",
     "time": [
@@ -29428,7 +28830,6 @@
   {
     "name": "Nondetection",
     "source": "PHB",
-    "page": 263,
     "level": 3,
     "school": "A",
     "time": [
@@ -29473,7 +28874,6 @@
   {
     "name": "Nondetection",
     "source": "XPHB",
-    "page": 302,
     "level": 3,
     "school": "A",
     "time": [
@@ -29518,7 +28918,6 @@
   {
     "name": "Nystul's Magic Aura",
     "source": "PHB",
-    "page": 263,
     "level": 2,
     "school": "I",
     "time": [
@@ -29572,7 +28971,6 @@
   {
     "name": "Nystul's Magic Aura",
     "source": "XPHB",
-    "page": 302,
     "level": 2,
     "school": "I",
     "time": [
@@ -29625,7 +29023,6 @@
   {
     "name": "Otiluke's Freezing Sphere",
     "source": "PHB",
-    "page": 263,
     "level": 6,
     "school": "V",
     "time": [
@@ -29673,7 +29070,6 @@
   {
     "name": "Otiluke's Freezing Sphere",
     "source": "XPHB",
-    "page": 302,
     "level": 6,
     "school": "V",
     "time": [
@@ -29721,7 +29117,6 @@
   {
     "name": "Otiluke's Resilient Sphere",
     "source": "PHB",
-    "page": 264,
     "level": 4,
     "school": "V",
     "time": [
@@ -29766,7 +29161,6 @@
   {
     "name": "Otiluke's Resilient Sphere",
     "source": "XPHB",
-    "page": 303,
     "level": 4,
     "school": "A",
     "time": [
@@ -29811,7 +29205,6 @@
   {
     "name": "Otto's Irresistible Dance",
     "source": "PHB",
-    "page": 264,
     "level": 6,
     "school": "E",
     "time": [
@@ -29852,7 +29245,6 @@
   {
     "name": "Otto's Irresistible Dance",
     "source": "XPHB",
-    "page": 303,
     "level": 6,
     "school": "E",
     "time": [
@@ -29893,7 +29285,6 @@
   {
     "name": "Pass without Trace",
     "source": "PHB",
-    "page": 264,
     "level": 2,
     "school": "A",
     "time": [
@@ -29934,7 +29325,6 @@
   {
     "name": "Pass without Trace",
     "source": "XPHB",
-    "page": 303,
     "level": 2,
     "school": "A",
     "time": [
@@ -29976,7 +29366,6 @@
   {
     "name": "Passwall",
     "source": "PHB",
-    "page": 264,
     "level": 5,
     "school": "T",
     "time": [
@@ -30017,7 +29406,6 @@
   {
     "name": "Passwall",
     "source": "XPHB",
-    "page": 304,
     "level": 5,
     "school": "T",
     "time": [
@@ -30058,7 +29446,6 @@
   {
     "name": "Phantasmal Force",
     "source": "PHB",
-    "page": 264,
     "level": 2,
     "school": "I",
     "time": [
@@ -30105,7 +29492,6 @@
   {
     "name": "Phantasmal Force",
     "source": "XPHB",
-    "page": 304,
     "level": 2,
     "school": "I",
     "time": [
@@ -30151,7 +29537,6 @@
   {
     "name": "Phantasmal Killer",
     "source": "PHB",
-    "page": 265,
     "level": 4,
     "school": "I",
     "time": [
@@ -30201,7 +29586,6 @@
   {
     "name": "Phantasmal Killer",
     "source": "XPHB",
-    "page": 304,
     "level": 4,
     "school": "I",
     "time": [
@@ -30252,7 +29636,6 @@
   {
     "name": "Phantom Steed",
     "source": "PHB",
-    "page": 265,
     "level": 3,
     "school": "I",
     "time": [
@@ -30292,7 +29675,6 @@
   {
     "name": "Phantom Steed",
     "source": "XPHB",
-    "page": 304,
     "level": 3,
     "school": "I",
     "time": [
@@ -30332,7 +29714,6 @@
   {
     "name": "Planar Ally",
     "source": "PHB",
-    "page": 265,
     "level": 6,
     "school": "C",
     "time": [
@@ -30372,7 +29753,6 @@
   {
     "name": "Planar Ally",
     "source": "XPHB",
-    "page": 304,
     "level": 6,
     "school": "C",
     "time": [
@@ -30411,7 +29791,6 @@
   {
     "name": "Planar Binding",
     "source": "PHB",
-    "page": 265,
     "level": 5,
     "school": "A",
     "time": [
@@ -30469,7 +29848,6 @@
   {
     "name": "Planar Binding",
     "source": "XPHB",
-    "page": 305,
     "level": 5,
     "school": "A",
     "time": [
@@ -30527,7 +29905,6 @@
   {
     "name": "Plane Shift",
     "source": "PHB",
-    "page": 266,
     "level": 7,
     "school": "C",
     "time": [
@@ -30571,7 +29948,6 @@
   {
     "name": "Plane Shift",
     "source": "XPHB",
-    "page": 305,
     "level": 7,
     "school": "C",
     "time": [
@@ -30614,7 +29990,6 @@
   {
     "name": "Plant Growth",
     "source": "PHB",
-    "page": 266,
     "level": 3,
     "school": "T",
     "time": [
@@ -30658,7 +30033,6 @@
   {
     "name": "Plant Growth",
     "source": "XPHB",
-    "page": 305,
     "level": 3,
     "school": "T",
     "time": [
@@ -30715,7 +30089,6 @@
   {
     "name": "Poison Spray",
     "source": "PHB",
-    "page": 266,
     "level": 0,
     "school": "C",
     "time": [
@@ -30755,7 +30128,6 @@
   {
     "name": "Poison Spray",
     "source": "XPHB",
-    "page": 306,
     "level": 0,
     "school": "N",
     "time": [
@@ -30803,7 +30175,6 @@
   {
     "name": "Polymorph",
     "source": "PHB",
-    "page": 266,
     "level": 4,
     "school": "T",
     "time": [
@@ -30851,7 +30222,6 @@
   {
     "name": "Polymorph",
     "source": "XPHB",
-    "page": 306,
     "level": 4,
     "school": "T",
     "time": [
@@ -30898,7 +30268,6 @@
   {
     "name": "Power Word Fortify",
     "source": "XPHB",
-    "page": 306,
     "level": 7,
     "school": "E",
     "time": [
@@ -30933,7 +30302,6 @@
   {
     "name": "Power Word Heal",
     "source": "PHB",
-    "page": 266,
     "level": 9,
     "school": "V",
     "time": [
@@ -30968,7 +30336,6 @@
   {
     "name": "Power Word Heal",
     "source": "XPHB",
-    "page": 306,
     "level": 9,
     "school": "E",
     "time": [
@@ -31004,7 +30371,6 @@
   {
     "name": "Power Word Kill",
     "source": "PHB",
-    "page": 266,
     "level": 9,
     "school": "E",
     "time": [
@@ -31041,7 +30407,6 @@
   {
     "name": "Power Word Kill",
     "source": "XPHB",
-    "page": 306,
     "level": 9,
     "school": "E",
     "time": [
@@ -31078,7 +30443,6 @@
   {
     "name": "Power Word Pain",
     "source": "XGE",
-    "page": 163,
     "level": 7,
     "school": "E",
     "time": [
@@ -31116,7 +30480,6 @@
   {
     "name": "Power Word Stun",
     "source": "PHB",
-    "page": 267,
     "level": 8,
     "school": "E",
     "time": [
@@ -31154,7 +30517,6 @@
   {
     "name": "Power Word Stun",
     "source": "XPHB",
-    "page": 306,
     "level": 8,
     "school": "E",
     "time": [
@@ -31192,7 +30554,6 @@
   {
     "name": "Prayer of Healing",
     "source": "PHB",
-    "page": 267,
     "level": 2,
     "school": "V",
     "time": [
@@ -31236,7 +30597,6 @@
   {
     "name": "Prayer of Healing",
     "source": "XPHB",
-    "page": 307,
     "level": 2,
     "school": "A",
     "time": [
@@ -31280,7 +30640,6 @@
   {
     "name": "Prestidigitation",
     "source": "PHB",
-    "page": 267,
     "level": 0,
     "school": "T",
     "time": [
@@ -31336,7 +30695,6 @@
   {
     "name": "Prestidigitation",
     "source": "XPHB",
-    "page": 307,
     "level": 0,
     "school": "T",
     "time": [
@@ -31421,7 +30779,6 @@
   {
     "name": "Primal Savagery",
     "source": "XGE",
-    "page": 163,
     "level": 0,
     "school": "T",
     "time": [
@@ -31455,7 +30812,6 @@
   {
     "name": "Primordial Ward",
     "source": "XGE",
-    "page": 163,
     "level": 6,
     "school": "A",
     "time": [
@@ -31495,7 +30851,6 @@
   {
     "name": "Prismatic Spray",
     "source": "PHB",
-    "page": 267,
     "level": 7,
     "school": "V",
     "time": [
@@ -31588,7 +30943,6 @@
   {
     "name": "Prismatic Spray",
     "source": "XPHB",
-    "page": 307,
     "level": 7,
     "school": "V",
     "time": [
@@ -31671,7 +31025,6 @@
   {
     "name": "Prismatic Wall",
     "source": "PHB",
-    "page": 267,
     "level": 9,
     "school": "A",
     "time": [
@@ -31764,7 +31117,6 @@
   {
     "name": "Prismatic Wall",
     "source": "XPHB",
-    "page": 308,
     "level": 9,
     "school": "A",
     "time": [
@@ -31849,7 +31201,6 @@
   {
     "name": "Produce Flame",
     "source": "PHB",
-    "page": 269,
     "level": 0,
     "school": "C",
     "time": [
@@ -31889,7 +31240,6 @@
   {
     "name": "Produce Flame",
     "source": "XPHB",
-    "page": 308,
     "level": 0,
     "school": "C",
     "time": [
@@ -31937,7 +31287,6 @@
   {
     "name": "Programmed Illusion",
     "source": "PHB",
-    "page": 269,
     "level": 6,
     "school": "I",
     "time": [
@@ -31983,7 +31332,6 @@
   {
     "name": "Programmed Illusion",
     "source": "XPHB",
-    "page": 309,
     "level": 6,
     "school": "I",
     "time": [
@@ -32029,7 +31377,6 @@
   {
     "name": "Project Image",
     "source": "PHB",
-    "page": 270,
     "level": 7,
     "school": "I",
     "time": [
@@ -32077,7 +31424,6 @@
   {
     "name": "Project Image",
     "source": "XPHB",
-    "page": 309,
     "level": 7,
     "school": "I",
     "time": [
@@ -32124,7 +31470,6 @@
   {
     "name": "Protection from Energy",
     "source": "PHB",
-    "page": 270,
     "level": 3,
     "school": "A",
     "time": [
@@ -32168,7 +31513,6 @@
   {
     "name": "Protection from Energy",
     "source": "XPHB",
-    "page": 309,
     "level": 3,
     "school": "A",
     "time": [
@@ -32212,7 +31556,6 @@
   {
     "name": "Protection from Evil and Good",
     "source": "PHB",
-    "page": 270,
     "level": 1,
     "school": "A",
     "time": [
@@ -32260,7 +31603,6 @@
   {
     "name": "Protection from Evil and Good",
     "source": "XPHB",
-    "page": 309,
     "level": 1,
     "school": "A",
     "time": [
@@ -32308,7 +31650,6 @@
   {
     "name": "Protection from Poison",
     "source": "PHB",
-    "page": 270,
     "level": 2,
     "school": "A",
     "time": [
@@ -32351,7 +31692,6 @@
   {
     "name": "Protection from Poison",
     "source": "XPHB",
-    "page": 310,
     "level": 2,
     "school": "A",
     "time": [
@@ -32393,7 +31733,6 @@
   {
     "name": "Psychic Scream",
     "source": "XGE",
-    "page": 163,
     "level": 9,
     "school": "E",
     "time": [
@@ -32432,7 +31771,6 @@
   {
     "name": "Pulse Wave",
     "source": "EGW",
-    "page": 188,
     "level": 3,
     "school": "V",
     "time": [
@@ -32475,7 +31813,6 @@
   {
     "name": "Purify Food and Drink",
     "source": "PHB",
-    "page": 270,
     "level": 1,
     "school": "T",
     "time": [
@@ -32513,7 +31850,6 @@
   {
     "name": "Purify Food and Drink",
     "source": "XPHB",
-    "page": 310,
     "level": 1,
     "school": "T",
     "time": [
@@ -32551,7 +31887,6 @@
   {
     "name": "Pyrotechnics",
     "source": "XGE",
-    "page": 163,
     "level": 2,
     "school": "T",
     "time": [
@@ -32603,7 +31938,6 @@
   {
     "name": "Raise Dead",
     "source": "PHB",
-    "page": 270,
     "level": 5,
     "school": "N",
     "time": [
@@ -32647,7 +31981,6 @@
   {
     "name": "Raise Dead",
     "source": "XPHB",
-    "page": 310,
     "level": 5,
     "school": "N",
     "time": [
@@ -32691,7 +32024,6 @@
   {
     "name": "Rary's Telepathic Bond",
     "source": "PHB",
-    "page": 270,
     "level": 5,
     "school": "D",
     "time": [
@@ -32733,7 +32065,6 @@
   {
     "name": "Rary's Telepathic Bond",
     "source": "XPHB",
-    "page": 311,
     "level": 5,
     "school": "D",
     "time": [
@@ -32775,7 +32106,6 @@
   {
     "name": "Raulothim's Psychic Lance",
     "source": "FTD",
-    "page": 21,
     "level": 4,
     "school": "E",
     "time": [
@@ -32822,7 +32152,6 @@
   {
     "name": "Ravenous Void",
     "source": "EGW",
-    "page": 188,
     "level": 9,
     "school": "V",
     "time": [
@@ -32863,7 +32192,6 @@
   {
     "name": "Ray of Enfeeblement",
     "source": "PHB",
-    "page": 271,
     "level": 2,
     "school": "N",
     "time": [
@@ -32905,7 +32233,6 @@
   {
     "name": "Ray of Enfeeblement",
     "source": "XPHB",
-    "page": 311,
     "level": 2,
     "school": "N",
     "time": [
@@ -32947,7 +32274,6 @@
   {
     "name": "Ray of Frost",
     "source": "PHB",
-    "page": 271,
     "level": 0,
     "school": "V",
     "time": [
@@ -32985,7 +32311,6 @@
   {
     "name": "Ray of Frost",
     "source": "XPHB",
-    "page": 311,
     "level": 0,
     "school": "V",
     "time": [
@@ -33031,7 +32356,6 @@
   {
     "name": "Ray of Sickness",
     "source": "PHB",
-    "page": 271,
     "level": 1,
     "school": "N",
     "time": [
@@ -33076,7 +32400,6 @@
   {
     "name": "Ray of Sickness",
     "source": "XPHB",
-    "page": 311,
     "level": 1,
     "school": "N",
     "time": [
@@ -33121,7 +32444,6 @@
   {
     "name": "Reality Break",
     "source": "EGW",
-    "page": 189,
     "level": 8,
     "school": "C",
     "time": [
@@ -33191,7 +32513,6 @@
   {
     "name": "Regenerate",
     "source": "PHB",
-    "page": 271,
     "level": 7,
     "school": "T",
     "time": [
@@ -33233,7 +32554,6 @@
   {
     "name": "Regenerate",
     "source": "XPHB",
-    "page": 311,
     "level": 7,
     "school": "T",
     "time": [
@@ -33274,7 +32594,6 @@
   {
     "name": "Reincarnate",
     "source": "PHB",
-    "page": 271,
     "level": 5,
     "school": "T",
     "time": [
@@ -33472,7 +32791,6 @@
   {
     "name": "Reincarnate",
     "source": "XPHB",
-    "page": 311,
     "level": 5,
     "school": "N",
     "time": [
@@ -33565,7 +32883,6 @@
   {
     "name": "Remove Curse",
     "source": "PHB",
-    "page": 271,
     "level": 3,
     "school": "A",
     "time": [
@@ -33602,7 +32919,6 @@
   {
     "name": "Remove Curse",
     "source": "XPHB",
-    "page": 312,
     "level": 3,
     "school": "A",
     "time": [
@@ -33639,7 +32955,6 @@
   {
     "name": "Resistance",
     "source": "PHB",
-    "page": 272,
     "level": 0,
     "school": "A",
     "time": [
@@ -33681,7 +32996,6 @@
   {
     "name": "Resistance",
     "source": "XPHB",
-    "page": 312,
     "level": 0,
     "school": "A",
     "time": [
@@ -33722,7 +33036,6 @@
   {
     "name": "Resurrection",
     "source": "PHB",
-    "page": 272,
     "level": 7,
     "school": "N",
     "time": [
@@ -33766,7 +33079,6 @@
   {
     "name": "Resurrection",
     "source": "XPHB",
-    "page": 312,
     "level": 7,
     "school": "N",
     "time": [
@@ -33809,7 +33121,6 @@
   {
     "name": "Reverse Gravity",
     "source": "PHB",
-    "page": 272,
     "level": 7,
     "school": "T",
     "time": [
@@ -33854,7 +33165,6 @@
   {
     "name": "Reverse Gravity",
     "source": "XPHB",
-    "page": 312,
     "level": 7,
     "school": "T",
     "time": [
@@ -33898,7 +33208,6 @@
   {
     "name": "Revivify",
     "source": "PHB",
-    "page": 272,
     "level": 3,
     "school": "N",
     "time": [
@@ -33941,7 +33250,6 @@
   {
     "name": "Revivify",
     "source": "XPHB",
-    "page": 312,
     "level": 3,
     "school": "N",
     "time": [
@@ -33984,7 +33292,6 @@
   {
     "name": "Rime's Binding Ice",
     "source": "FTD",
-    "page": 21,
     "level": 2,
     "school": "V",
     "time": [
@@ -34029,7 +33336,6 @@
   {
     "name": "Rope Trick",
     "source": "PHB",
-    "page": 272,
     "level": 2,
     "school": "T",
     "time": [
@@ -34072,7 +33378,6 @@
   {
     "name": "Rope Trick",
     "source": "XPHB",
-    "page": 312,
     "level": 2,
     "school": "T",
     "time": [
@@ -34113,7 +33418,6 @@
   {
     "name": "Sacred Flame",
     "source": "PHB",
-    "page": 272,
     "level": 0,
     "school": "V",
     "time": [
@@ -34149,7 +33453,6 @@
   {
     "name": "Sacred Flame",
     "source": "XPHB",
-    "page": 313,
     "level": 0,
     "school": "V",
     "time": [
@@ -34193,7 +33496,6 @@
   {
     "name": "Sanctuary",
     "source": "PHB",
-    "page": 272,
     "level": 1,
     "school": "A",
     "time": [
@@ -34235,7 +33537,6 @@
   {
     "name": "Sanctuary",
     "source": "XPHB",
-    "page": 313,
     "level": 1,
     "school": "A",
     "time": [
@@ -34277,7 +33578,6 @@
   {
     "name": "Sapping Sting",
     "source": "EGW",
-    "page": 189,
     "level": 0,
     "school": "N",
     "time": [
@@ -34311,7 +33611,6 @@
   {
     "name": "Scatter",
     "source": "XGE",
-    "page": 164,
     "level": 6,
     "school": "C",
     "time": [
@@ -34347,7 +33646,6 @@
   {
     "name": "Scorching Ray",
     "source": "PHB",
-    "page": 273,
     "level": 2,
     "school": "V",
     "time": [
@@ -34393,7 +33691,6 @@
   {
     "name": "Scorching Ray",
     "source": "XPHB",
-    "page": 313,
     "level": 2,
     "school": "V",
     "time": [
@@ -34438,7 +33735,6 @@
   {
     "name": "Scrying",
     "source": "PHB",
-    "page": 273,
     "level": 5,
     "school": "D",
     "time": [
@@ -34540,7 +33836,6 @@
   {
     "name": "Scrying",
     "source": "XPHB",
-    "page": 313,
     "level": 5,
     "school": "D",
     "time": [
@@ -34640,7 +33935,6 @@
   {
     "name": "Searing Smite",
     "source": "PHB",
-    "page": 274,
     "level": 1,
     "school": "V",
     "time": [
@@ -34688,7 +33982,6 @@
   {
     "name": "Searing Smite",
     "source": "XPHB",
-    "page": 314,
     "level": 1,
     "school": "V",
     "time": [
@@ -34735,7 +34028,6 @@
   {
     "name": "See Invisibility",
     "source": "PHB",
-    "page": 274,
     "level": 2,
     "school": "D",
     "time": [
@@ -34777,7 +34069,6 @@
   {
     "name": "See Invisibility",
     "source": "XPHB",
-    "page": 314,
     "level": 2,
     "school": "D",
     "time": [
@@ -34819,7 +34110,6 @@
   {
     "name": "Seeming",
     "source": "PHB",
-    "page": 274,
     "level": 5,
     "school": "I",
     "time": [
@@ -34863,7 +34153,6 @@
   {
     "name": "Seeming",
     "source": "XPHB",
-    "page": 314,
     "level": 5,
     "school": "I",
     "time": [
@@ -34907,7 +34196,6 @@
   {
     "name": "Sending",
     "source": "PHB",
-    "page": 274,
     "level": 3,
     "school": "V",
     "time": [
@@ -34949,7 +34237,6 @@
   {
     "name": "Sending",
     "source": "XPHB",
-    "page": 314,
     "level": 3,
     "school": "D",
     "time": [
@@ -34988,7 +34275,6 @@
   {
     "name": "Sequester",
     "source": "PHB",
-    "page": 274,
     "level": 7,
     "school": "T",
     "time": [
@@ -35032,7 +34318,6 @@
   {
     "name": "Sequester",
     "source": "XPHB",
-    "page": 315,
     "level": 7,
     "school": "T",
     "time": [
@@ -35076,7 +34361,6 @@
   {
     "name": "Shadow Blade",
     "source": "XGE",
-    "page": 164,
     "level": 2,
     "school": "I",
     "time": [
@@ -35127,7 +34411,6 @@
   {
     "name": "Shadow of Moil",
     "source": "XGE",
-    "page": 164,
     "level": 4,
     "school": "N",
     "time": [
@@ -35171,7 +34454,6 @@
   {
     "name": "Shape Water",
     "source": "XGE",
-    "page": 164,
     "level": 0,
     "school": "T",
     "time": [
@@ -35224,7 +34506,6 @@
   {
     "name": "Shapechange",
     "source": "PHB",
-    "page": 274,
     "level": 9,
     "school": "T",
     "time": [
@@ -35273,7 +34554,6 @@
   {
     "name": "Shapechange",
     "source": "XPHB",
-    "page": 315,
     "level": 9,
     "school": "T",
     "time": [
@@ -35320,7 +34600,6 @@
   {
     "name": "Shatter",
     "source": "PHB",
-    "page": 275,
     "level": 2,
     "school": "V",
     "time": [
@@ -35369,7 +34648,6 @@
   {
     "name": "Shatter",
     "source": "XPHB",
-    "page": 316,
     "level": 2,
     "school": "V",
     "time": [
@@ -35417,7 +34695,6 @@
   {
     "name": "Shield",
     "source": "PHB",
-    "page": 275,
     "level": 1,
     "school": "A",
     "time": [
@@ -35457,7 +34734,6 @@
   {
     "name": "Shield",
     "source": "XPHB",
-    "page": 316,
     "level": 1,
     "school": "A",
     "time": [
@@ -35497,7 +34773,6 @@
   {
     "name": "Shield of Faith",
     "source": "PHB",
-    "page": 275,
     "level": 1,
     "school": "A",
     "time": [
@@ -35539,7 +34814,6 @@
   {
     "name": "Shield of Faith",
     "source": "XPHB",
-    "page": 316,
     "level": 1,
     "school": "A",
     "time": [
@@ -35581,7 +34855,6 @@
   {
     "name": "Shillelagh",
     "source": "PHB",
-    "page": 275,
     "level": 0,
     "school": "T",
     "time": [
@@ -35620,7 +34893,6 @@
   {
     "name": "Shillelagh",
     "source": "XPHB",
-    "page": 316,
     "level": 0,
     "school": "T",
     "time": [
@@ -35669,7 +34941,6 @@
   {
     "name": "Shining Smite",
     "source": "XPHB",
-    "page": 316,
     "level": 2,
     "school": "T",
     "time": [
@@ -35717,7 +34988,6 @@
   {
     "name": "Shocking Grasp",
     "source": "PHB",
-    "page": 275,
     "level": 0,
     "school": "V",
     "time": [
@@ -35754,7 +35024,6 @@
   {
     "name": "Shocking Grasp",
     "source": "XPHB",
-    "page": 316,
     "level": 0,
     "school": "V",
     "time": [
@@ -35799,7 +35068,6 @@
   {
     "name": "Sickening Radiance",
     "source": "XGE",
-    "page": 164,
     "level": 4,
     "school": "V",
     "time": [
@@ -35842,7 +35110,6 @@
   {
     "name": "Silence",
     "source": "PHB",
-    "page": 275,
     "level": 2,
     "school": "I",
     "time": [
@@ -35884,7 +35151,6 @@
   {
     "name": "Silence",
     "source": "XPHB",
-    "page": 316,
     "level": 2,
     "school": "I",
     "time": [
@@ -35926,7 +35192,6 @@
   {
     "name": "Silent Image",
     "source": "PHB",
-    "page": 276,
     "level": 1,
     "school": "I",
     "time": [
@@ -35971,7 +35236,6 @@
   {
     "name": "Silent Image",
     "source": "XPHB",
-    "page": 317,
     "level": 1,
     "school": "I",
     "time": [
@@ -36016,7 +35280,6 @@
   {
     "name": "Silvery Barbs",
     "source": "SCC",
-    "page": 38,
     "level": 1,
     "school": "E",
     "time": [
@@ -36054,7 +35317,6 @@
   {
     "name": "Simbul's Synostodweomer",
     "source": "FRHoF",
-    "page": 145,
     "level": 7,
     "school": "T",
     "time": [
@@ -36093,7 +35355,6 @@
   {
     "name": "Simulacrum",
     "source": "PHB",
-    "page": 276,
     "level": 7,
     "school": "I",
     "time": [
@@ -36138,7 +35399,6 @@
   {
     "name": "Simulacrum",
     "source": "XPHB",
-    "page": 317,
     "level": 7,
     "school": "I",
     "time": [
@@ -36183,7 +35443,6 @@
   {
     "name": "Skill Empowerment",
     "source": "XGE",
-    "page": 165,
     "level": 5,
     "school": "T",
     "time": [
@@ -36226,7 +35485,6 @@
   {
     "name": "Skywrite",
     "source": "XGE",
-    "page": 165,
     "level": 2,
     "school": "T",
     "time": [
@@ -36268,7 +35526,6 @@
   {
     "name": "Sleep",
     "source": "PHB",
-    "page": 276,
     "level": 1,
     "school": "E",
     "time": [
@@ -36321,7 +35578,6 @@
   {
     "name": "Sleep",
     "source": "XPHB",
-    "page": 317,
     "level": 1,
     "school": "E",
     "time": [
@@ -36365,7 +35621,6 @@
   {
     "name": "Sleet Storm",
     "source": "PHB",
-    "page": 276,
     "level": 3,
     "school": "C",
     "time": [
@@ -36410,7 +35665,6 @@
   {
     "name": "Sleet Storm",
     "source": "XPHB",
-    "page": 317,
     "level": 3,
     "school": "C",
     "time": [
@@ -36454,7 +35708,6 @@
   {
     "name": "Slow",
     "source": "PHB",
-    "page": 277,
     "level": 3,
     "school": "T",
     "time": [
@@ -36500,7 +35753,6 @@
   {
     "name": "Slow",
     "source": "XPHB",
-    "page": 318,
     "level": 3,
     "school": "T",
     "time": [
@@ -36545,7 +35797,6 @@
   {
     "name": "Snare",
     "source": "XGE",
-    "page": 165,
     "level": 1,
     "school": "A",
     "time": [
@@ -36593,7 +35844,6 @@
   {
     "name": "Snilloc's Snowball Swarm",
     "source": "XGE",
-    "page": 165,
     "level": 2,
     "school": "V",
     "time": [
@@ -36639,7 +35889,6 @@
   {
     "name": "Songal's Elemental Suffusion",
     "source": "FRHoF",
-    "page": 145,
     "level": 5,
     "school": "T",
     "time": [
@@ -36719,7 +35968,6 @@
   {
     "name": "Sorcerous Burst",
     "source": "XPHB",
-    "page": 318,
     "level": 0,
     "school": "V",
     "time": [
@@ -36764,7 +36012,6 @@
   {
     "name": "Soul Cage",
     "source": "XGE",
-    "page": 165,
     "level": 6,
     "school": "N",
     "time": [
@@ -36838,7 +36085,6 @@
   {
     "name": "Spare the Dying",
     "source": "PHB",
-    "page": 277,
     "level": 0,
     "school": "N",
     "time": [
@@ -36873,7 +36119,6 @@
   {
     "name": "Spare the Dying",
     "source": "XPHB",
-    "page": 318,
     "level": 0,
     "school": "N",
     "time": [
@@ -36919,7 +36164,6 @@
   {
     "name": "Speak with Animals",
     "source": "PHB",
-    "page": 277,
     "level": 1,
     "school": "D",
     "time": [
@@ -36959,7 +36203,6 @@
   {
     "name": "Speak with Animals",
     "source": "XPHB",
-    "page": 318,
     "level": 1,
     "school": "D",
     "time": [
@@ -37001,7 +36244,6 @@
   {
     "name": "Speak with Dead",
     "source": "PHB",
-    "page": 277,
     "level": 3,
     "school": "N",
     "time": [
@@ -37044,7 +36286,6 @@
   {
     "name": "Speak with Dead",
     "source": "XPHB",
-    "page": 318,
     "level": 3,
     "school": "N",
     "time": [
@@ -37087,7 +36328,6 @@
   {
     "name": "Speak with Plants",
     "source": "PHB",
-    "page": 277,
     "level": 3,
     "school": "T",
     "time": [
@@ -37132,7 +36372,6 @@
   {
     "name": "Speak with Plants",
     "source": "XPHB",
-    "page": 319,
     "level": 3,
     "school": "T",
     "time": [
@@ -37176,7 +36415,6 @@
   {
     "name": "Spellfire Flare",
     "source": "FRHoF",
-    "page": 146,
     "level": 1,
     "school": "V",
     "time": [
@@ -37221,7 +36459,6 @@
   {
     "name": "Spellfire Storm",
     "source": "FRHoF",
-    "page": 146,
     "level": 4,
     "school": "V",
     "time": [
@@ -37311,7 +36548,6 @@
   {
     "name": "Spider Climb",
     "source": "PHB",
-    "page": 277,
     "level": 2,
     "school": "T",
     "time": [
@@ -37354,7 +36590,6 @@
   {
     "name": "Spider Climb",
     "source": "XPHB",
-    "page": 319,
     "level": 2,
     "school": "T",
     "time": [
@@ -37406,7 +36641,6 @@
   {
     "name": "Spike Growth",
     "source": "PHB",
-    "page": 277,
     "level": 2,
     "school": "T",
     "time": [
@@ -37449,7 +36683,6 @@
   {
     "name": "Spike Growth",
     "source": "XPHB",
-    "page": 319,
     "level": 2,
     "school": "T",
     "time": [
@@ -37492,7 +36725,6 @@
   {
     "name": "Spirit Guardians",
     "source": "PHB",
-    "page": 278,
     "level": 3,
     "school": "C",
     "time": [
@@ -37543,7 +36775,6 @@
   {
     "name": "Spirit Guardians",
     "source": "XPHB",
-    "page": 319,
     "level": 3,
     "school": "C",
     "time": [
@@ -37594,7 +36825,6 @@
   {
     "name": "Spirit of Death",
     "source": "BMT",
-    "page": 50,
     "level": 4,
     "school": "N",
     "time": [
@@ -37650,7 +36880,6 @@
   {
     "name": "Spirit Shroud",
     "source": "TCE",
-    "page": 108,
     "level": 3,
     "school": "N",
     "time": [
@@ -37703,7 +36932,6 @@
   {
     "name": "Spiritual Weapon",
     "source": "PHB",
-    "page": 278,
     "level": 2,
     "school": "V",
     "time": [
@@ -37753,7 +36981,6 @@
   {
     "name": "Spiritual Weapon",
     "source": "XPHB",
-    "page": 319,
     "level": 2,
     "school": "V",
     "time": [
@@ -37803,7 +37030,6 @@
   {
     "name": "Spray of Cards",
     "source": "BMT",
-    "page": 50,
     "level": 2,
     "school": "C",
     "time": [
@@ -37851,7 +37077,6 @@
   {
     "name": "Staggering Smite",
     "source": "PHB",
-    "page": 278,
     "level": 4,
     "school": "V",
     "time": [
@@ -37889,7 +37114,6 @@
   {
     "name": "Staggering Smite",
     "source": "XPHB",
-    "page": 320,
     "level": 4,
     "school": "E",
     "time": [
@@ -37932,7 +37156,6 @@
   {
     "name": "Starry Wisp",
     "source": "XPHB",
-    "page": 320,
     "level": 0,
     "school": "V",
     "time": [
@@ -37977,7 +37200,6 @@
   {
     "name": "Steel Wind Strike",
     "source": "XGE",
-    "page": 166,
     "level": 5,
     "school": "C",
     "time": [
@@ -38017,7 +37239,6 @@
   {
     "name": "Steel Wind Strike",
     "source": "XPHB",
-    "page": 320,
     "level": 5,
     "school": "C",
     "time": [
@@ -38057,7 +37278,6 @@
   {
     "name": "Stinking Cloud",
     "source": "PHB",
-    "page": 278,
     "level": 3,
     "school": "C",
     "time": [
@@ -38102,7 +37322,6 @@
   {
     "name": "Stinking Cloud",
     "source": "XPHB",
-    "page": 321,
     "level": 3,
     "school": "C",
     "time": [
@@ -38146,7 +37365,6 @@
   {
     "name": "Stone Shape",
     "source": "PHB",
-    "page": 278,
     "level": 4,
     "school": "T",
     "time": [
@@ -38184,7 +37402,6 @@
   {
     "name": "Stone Shape",
     "source": "XPHB",
-    "page": 321,
     "level": 4,
     "school": "T",
     "time": [
@@ -38222,7 +37439,6 @@
   {
     "name": "Stoneskin",
     "source": "PHB",
-    "page": 278,
     "level": 4,
     "school": "A",
     "time": [
@@ -38270,7 +37486,6 @@
   {
     "name": "Stoneskin",
     "source": "XPHB",
-    "page": 321,
     "level": 4,
     "school": "T",
     "time": [
@@ -38318,7 +37533,6 @@
   {
     "name": "Storm of Vengeance",
     "source": "PHB",
-    "page": 279,
     "level": 9,
     "school": "C",
     "time": [
@@ -38386,7 +37600,6 @@
   {
     "name": "Storm of Vengeance",
     "source": "XPHB",
-    "page": 321,
     "level": 9,
     "school": "C",
     "time": [
@@ -38455,7 +37668,6 @@
   {
     "name": "Storm Sphere",
     "source": "XGE",
-    "page": 166,
     "level": 4,
     "school": "V",
     "time": [
@@ -38507,7 +37719,6 @@
   {
     "name": "Suggestion",
     "source": "PHB",
-    "page": 279,
     "level": 2,
     "school": "E",
     "time": [
@@ -38553,7 +37764,6 @@
   {
     "name": "Suggestion",
     "source": "XPHB",
-    "page": 321,
     "level": 2,
     "school": "E",
     "time": [
@@ -38597,7 +37807,6 @@
   {
     "name": "Summon Aberration",
     "source": "TCE",
-    "page": 109,
     "level": 4,
     "school": "C",
     "time": [
@@ -38652,7 +37861,6 @@
   {
     "name": "Summon Aberration",
     "source": "XPHB",
-    "page": 322,
     "level": 4,
     "school": "C",
     "time": [
@@ -38707,7 +37915,6 @@
   {
     "name": "Summon Beast",
     "source": "TCE",
-    "page": 109,
     "level": 2,
     "school": "C",
     "time": [
@@ -38762,7 +37969,6 @@
   {
     "name": "Summon Beast",
     "source": "XPHB",
-    "page": 322,
     "level": 2,
     "school": "C",
     "time": [
@@ -38817,7 +38023,6 @@
   {
     "name": "Summon Celestial",
     "source": "TCE",
-    "page": 110,
     "level": 5,
     "school": "C",
     "time": [
@@ -38872,7 +38077,6 @@
   {
     "name": "Summon Celestial",
     "source": "XPHB",
-    "page": 323,
     "level": 5,
     "school": "C",
     "time": [
@@ -38927,7 +38131,6 @@
   {
     "name": "Summon Construct",
     "source": "TCE",
-    "page": 111,
     "level": 4,
     "school": "C",
     "time": [
@@ -38982,7 +38185,6 @@
   {
     "name": "Summon Construct",
     "source": "XPHB",
-    "page": 324,
     "level": 4,
     "school": "C",
     "time": [
@@ -39037,7 +38239,6 @@
   {
     "name": "Summon Draconic Spirit",
     "source": "FTD",
-    "page": 21,
     "level": 5,
     "school": "C",
     "time": [
@@ -39093,7 +38294,6 @@
   {
     "name": "Summon Dragon",
     "source": "XPHB",
-    "page": 324,
     "level": 5,
     "school": "C",
     "time": [
@@ -39147,7 +38347,6 @@
   {
     "name": "Summon Elemental",
     "source": "TCE",
-    "page": 111,
     "level": 4,
     "school": "C",
     "time": [
@@ -39203,7 +38402,6 @@
   {
     "name": "Summon Elemental",
     "source": "XPHB",
-    "page": 325,
     "level": 4,
     "school": "C",
     "time": [
@@ -39259,7 +38457,6 @@
   {
     "name": "Summon Fey",
     "source": "TCE",
-    "page": 112,
     "level": 3,
     "school": "C",
     "time": [
@@ -39316,7 +38513,6 @@
   {
     "name": "Summon Fey",
     "source": "XPHB",
-    "page": 326,
     "level": 3,
     "school": "C",
     "time": [
@@ -39373,7 +38569,6 @@
   {
     "name": "Summon Fiend",
     "source": "TCE",
-    "page": 112,
     "level": 6,
     "school": "C",
     "time": [
@@ -39428,7 +38623,6 @@
   {
     "name": "Summon Fiend",
     "source": "XPHB",
-    "page": 326,
     "level": 6,
     "school": "C",
     "time": [
@@ -39483,7 +38677,6 @@
   {
     "name": "Summon Greater Demon",
     "source": "XGE",
-    "page": 166,
     "level": 4,
     "school": "C",
     "time": [
@@ -39540,7 +38733,6 @@
   {
     "name": "Summon Lesser Demons",
     "source": "XGE",
-    "page": 167,
     "level": 3,
     "school": "C",
     "time": [
@@ -39640,7 +38832,6 @@
   {
     "name": "Summon Shadowspawn",
     "source": "TCE",
-    "page": 113,
     "level": 3,
     "school": "C",
     "time": [
@@ -39695,7 +38886,6 @@
   {
     "name": "Summon Undead",
     "source": "TCE",
-    "page": 114,
     "level": 3,
     "school": "N",
     "time": [
@@ -39750,7 +38940,6 @@
   {
     "name": "Summon Undead",
     "source": "XPHB",
-    "page": 328,
     "level": 3,
     "school": "N",
     "time": [
@@ -39805,7 +38994,6 @@
   {
     "name": "Sunbeam",
     "source": "PHB",
-    "page": 279,
     "level": 6,
     "school": "V",
     "time": [
@@ -39851,7 +39039,6 @@
   {
     "name": "Sunbeam",
     "source": "XPHB",
-    "page": 329,
     "level": 6,
     "school": "V",
     "time": [
@@ -39897,7 +39084,6 @@
   {
     "name": "Sunburst",
     "source": "PHB",
-    "page": 279,
     "level": 8,
     "school": "V",
     "time": [
@@ -39938,7 +39124,6 @@
   {
     "name": "Sunburst",
     "source": "XPHB",
-    "page": 329,
     "level": 8,
     "school": "V",
     "time": [
@@ -39979,7 +39164,6 @@
   {
     "name": "Swift Quiver",
     "source": "PHB",
-    "page": 279,
     "level": 5,
     "school": "T",
     "time": [
@@ -40020,7 +39204,6 @@
   {
     "name": "Swift Quiver",
     "source": "XPHB",
-    "page": 329,
     "level": 5,
     "school": "T",
     "time": [
@@ -40063,7 +39246,6 @@
   {
     "name": "Sword Burst",
     "source": "TCE",
-    "page": 115,
     "level": 0,
     "school": "C",
     "time": [
@@ -40101,7 +39283,6 @@
   {
     "name": "Syluné's Viper",
     "source": "FRHoF",
-    "page": 147,
     "level": 3,
     "school": "C",
     "time": [
@@ -40171,7 +39352,6 @@
   {
     "name": "Symbol",
     "source": "PHB",
-    "page": 280,
     "level": 7,
     "school": "A",
     "time": [
@@ -40277,7 +39457,6 @@
   {
     "name": "Symbol",
     "source": "XPHB",
-    "page": 329,
     "level": 7,
     "school": "A",
     "time": [
@@ -40376,7 +39555,6 @@
   {
     "name": "Synaptic Static",
     "source": "XGE",
-    "page": 167,
     "level": 5,
     "school": "E",
     "time": [
@@ -40415,7 +39593,6 @@
   {
     "name": "Synaptic Static",
     "source": "XPHB",
-    "page": 330,
     "level": 5,
     "school": "E",
     "time": [
@@ -40454,7 +39631,6 @@
   {
     "name": "Tasha's Bubbling Cauldron",
     "source": "XPHB",
-    "page": 330,
     "level": 6,
     "school": "C",
     "time": [
@@ -40497,7 +39673,6 @@
   {
     "name": "Tasha's Caustic Brew",
     "source": "TCE",
-    "page": 115,
     "level": 1,
     "school": "V",
     "time": [
@@ -40549,7 +39724,6 @@
   {
     "name": "Tasha's Hideous Laughter",
     "source": "PHB",
-    "page": 280,
     "level": 1,
     "school": "E",
     "time": [
@@ -40592,7 +39766,6 @@
   {
     "name": "Tasha's Hideous Laughter",
     "source": "XPHB",
-    "page": 331,
     "level": 1,
     "school": "E",
     "time": [
@@ -40645,7 +39818,6 @@
   {
     "name": "Tasha's Mind Whip",
     "source": "TCE",
-    "page": 115,
     "level": 2,
     "school": "E",
     "time": [
@@ -40693,7 +39865,6 @@
   {
     "name": "Tasha's Otherworldly Guise",
     "source": "TCE",
-    "page": 116,
     "level": 6,
     "school": "T",
     "time": [
@@ -40749,7 +39920,6 @@
   {
     "name": "Telekinesis",
     "source": "PHB",
-    "page": 280,
     "level": 5,
     "school": "T",
     "time": [
@@ -40807,7 +39977,6 @@
   {
     "name": "Telekinesis",
     "source": "XPHB",
-    "page": 331,
     "level": 5,
     "school": "T",
     "time": [
@@ -40864,7 +40033,6 @@
   {
     "name": "Telepathy",
     "source": "PHB",
-    "page": 281,
     "level": 8,
     "school": "V",
     "time": [
@@ -40904,7 +40072,6 @@
   {
     "name": "Telepathy",
     "source": "XPHB",
-    "page": 331,
     "level": 8,
     "school": "D",
     "time": [
@@ -40944,7 +40111,6 @@
   {
     "name": "Teleport",
     "source": "PHB",
-    "page": 281,
     "level": 7,
     "school": "C",
     "time": [
@@ -41087,7 +40253,6 @@
   {
     "name": "Teleport",
     "source": "XPHB",
-    "page": 331,
     "level": 7,
     "school": "C",
     "time": [
@@ -41232,7 +40397,6 @@
   {
     "name": "Teleportation Circle",
     "source": "PHB",
-    "page": 282,
     "level": 5,
     "school": "C",
     "time": [
@@ -41280,7 +40444,6 @@
   {
     "name": "Teleportation Circle",
     "source": "XPHB",
-    "page": 332,
     "level": 5,
     "school": "C",
     "time": [
@@ -41329,7 +40492,6 @@
   {
     "name": "Temple of the Gods",
     "source": "XGE",
-    "page": 167,
     "level": 7,
     "school": "C",
     "time": [
@@ -41379,7 +40541,6 @@
   {
     "name": "Temporal Shunt",
     "source": "EGW",
-    "page": 189,
     "level": 5,
     "school": "T",
     "time": [
@@ -41426,7 +40587,6 @@
   {
     "name": "Tenser's Floating Disk",
     "source": "PHB",
-    "page": 282,
     "level": 1,
     "school": "C",
     "time": [
@@ -41468,7 +40628,6 @@
   {
     "name": "Tenser's Floating Disk",
     "source": "XPHB",
-    "page": 332,
     "level": 1,
     "school": "C",
     "time": [
@@ -41510,7 +40669,6 @@
   {
     "name": "Tenser's Transformation",
     "source": "XGE",
-    "page": 168,
     "level": 6,
     "school": "T",
     "time": [
@@ -41562,7 +40720,6 @@
   {
     "name": "Tether Essence",
     "source": "EGW",
-    "page": 189,
     "level": 7,
     "school": "N",
     "time": [
@@ -41605,7 +40762,6 @@
   {
     "name": "Thaumaturgy",
     "source": "PHB",
-    "page": 282,
     "level": 0,
     "school": "T",
     "time": [
@@ -41656,7 +40812,6 @@
   {
     "name": "Thaumaturgy",
     "source": "XPHB",
-    "page": 333,
     "level": 0,
     "school": "T",
     "time": [
@@ -41736,7 +40891,6 @@
   {
     "name": "Thorn Whip",
     "source": "PHB",
-    "page": 282,
     "level": 0,
     "school": "T",
     "time": [
@@ -41774,7 +40928,6 @@
   {
     "name": "Thorn Whip",
     "source": "XPHB",
-    "page": 333,
     "level": 0,
     "school": "T",
     "time": [
@@ -41820,7 +40973,6 @@
   {
     "name": "Thunder Step",
     "source": "XGE",
-    "page": 168,
     "level": 3,
     "school": "C",
     "time": [
@@ -41866,7 +41018,6 @@
   {
     "name": "Thunderclap",
     "source": "XGE",
-    "page": 168,
     "level": 0,
     "school": "V",
     "time": [
@@ -41906,7 +41057,6 @@
   {
     "name": "Thunderclap",
     "source": "XPHB",
-    "page": 333,
     "level": 0,
     "school": "V",
     "time": [
@@ -41954,7 +41104,6 @@
   {
     "name": "Thunderous Smite",
     "source": "PHB",
-    "page": 282,
     "level": 1,
     "school": "V",
     "time": [
@@ -41992,7 +41141,6 @@
   {
     "name": "Thunderous Smite",
     "source": "XPHB",
-    "page": 334,
     "level": 1,
     "school": "V",
     "time": [
@@ -42035,7 +41183,6 @@
   {
     "name": "Thunderwave",
     "source": "PHB",
-    "page": 282,
     "level": 1,
     "school": "V",
     "time": [
@@ -42083,7 +41230,6 @@
   {
     "name": "Thunderwave",
     "source": "XPHB",
-    "page": 334,
     "level": 1,
     "school": "V",
     "time": [
@@ -42131,7 +41277,6 @@
   {
     "name": "Tidal Wave",
     "source": "XGE",
-    "page": 168,
     "level": 3,
     "school": "C",
     "time": [
@@ -42169,7 +41314,6 @@
   {
     "name": "Time Ravage",
     "source": "EGW",
-    "page": 189,
     "level": 9,
     "school": "N",
     "time": [
@@ -42207,7 +41351,6 @@
   {
     "name": "Time Stop",
     "source": "PHB",
-    "page": 283,
     "level": 9,
     "school": "T",
     "time": [
@@ -42242,7 +41385,6 @@
   {
     "name": "Time Stop",
     "source": "XPHB",
-    "page": 334,
     "level": 9,
     "school": "T",
     "time": [
@@ -42277,7 +41419,6 @@
   {
     "name": "Tiny Servant",
     "source": "XGE",
-    "page": 168,
     "level": 3,
     "school": "T",
     "time": [
@@ -42327,7 +41468,6 @@
   {
     "name": "Toll the Dead",
     "source": "XGE",
-    "page": 169,
     "level": 0,
     "school": "N",
     "time": [
@@ -42365,7 +41505,6 @@
   {
     "name": "Toll the Dead",
     "source": "XPHB",
-    "page": 334,
     "level": 0,
     "school": "N",
     "time": [
@@ -42411,7 +41550,6 @@
   {
     "name": "Tongues",
     "source": "PHB",
-    "page": 283,
     "level": 3,
     "school": "D",
     "time": [
@@ -42453,7 +41591,6 @@
   {
     "name": "Tongues",
     "source": "XPHB",
-    "page": 334,
     "level": 3,
     "school": "D",
     "time": [
@@ -42495,7 +41632,6 @@
   {
     "name": "Transmute Rock",
     "source": "XGE",
-    "page": 169,
     "level": 5,
     "school": "T",
     "time": [
@@ -42552,7 +41688,6 @@
   {
     "name": "Transport via Plants",
     "source": "PHB",
-    "page": 283,
     "level": 6,
     "school": "C",
     "time": [
@@ -42591,7 +41726,6 @@
   {
     "name": "Transport via Plants",
     "source": "XPHB",
-    "page": 334,
     "level": 6,
     "school": "C",
     "time": [
@@ -42630,7 +41764,6 @@
   {
     "name": "Tree Stride",
     "source": "PHB",
-    "page": 283,
     "level": 5,
     "school": "C",
     "time": [
@@ -42671,7 +41804,6 @@
   {
     "name": "Tree Stride",
     "source": "XPHB",
-    "page": 335,
     "level": 5,
     "school": "C",
     "time": [
@@ -42712,7 +41844,6 @@
   {
     "name": "True Polymorph",
     "source": "PHB",
-    "page": 283,
     "level": 9,
     "school": "T",
     "time": [
@@ -42781,7 +41912,6 @@
   {
     "name": "True Polymorph",
     "source": "XPHB",
-    "page": 335,
     "level": 9,
     "school": "T",
     "time": [
@@ -42850,7 +41980,6 @@
   {
     "name": "True Resurrection",
     "source": "PHB",
-    "page": 284,
     "level": 9,
     "school": "N",
     "time": [
@@ -42892,7 +42021,6 @@
   {
     "name": "True Resurrection",
     "source": "XPHB",
-    "page": 336,
     "level": 9,
     "school": "N",
     "time": [
@@ -42934,7 +42062,6 @@
   {
     "name": "True Seeing",
     "source": "PHB",
-    "page": 284,
     "level": 6,
     "school": "D",
     "time": [
@@ -42981,7 +42108,6 @@
   {
     "name": "True Seeing",
     "source": "XPHB",
-    "page": 336,
     "level": 6,
     "school": "D",
     "time": [
@@ -43028,7 +42154,6 @@
   {
     "name": "True Strike",
     "source": "PHB",
-    "page": 284,
     "level": 0,
     "school": "D",
     "time": [
@@ -43070,7 +42195,6 @@
   {
     "name": "True Strike",
     "source": "XPHB",
-    "page": 336,
     "level": 0,
     "school": "D",
     "time": [
@@ -43120,7 +42244,6 @@
   {
     "name": "Tsunami",
     "source": "PHB",
-    "page": 284,
     "level": 8,
     "school": "C",
     "time": [
@@ -43162,7 +42285,6 @@
   {
     "name": "Tsunami",
     "source": "XPHB",
-    "page": 336,
     "level": 8,
     "school": "C",
     "time": [
@@ -43205,7 +42327,6 @@
   {
     "name": "Unseen Servant",
     "source": "PHB",
-    "page": 284,
     "level": 1,
     "school": "C",
     "time": [
@@ -43249,7 +42370,6 @@
   {
     "name": "Unseen Servant",
     "source": "XPHB",
-    "page": 336,
     "level": 1,
     "school": "C",
     "time": [
@@ -43293,7 +42413,6 @@
   {
     "name": "Vampiric Touch",
     "source": "PHB",
-    "page": 285,
     "level": 3,
     "school": "N",
     "time": [
@@ -43343,7 +42462,6 @@
   {
     "name": "Vampiric Touch",
     "source": "XPHB",
-    "page": 337,
     "level": 3,
     "school": "N",
     "time": [
@@ -43394,7 +42512,6 @@
   {
     "name": "Vicious Mockery",
     "source": "PHB",
-    "page": 285,
     "level": 0,
     "school": "E",
     "time": [
@@ -43429,7 +42546,6 @@
   {
     "name": "Vicious Mockery",
     "source": "XPHB",
-    "page": 337,
     "level": 0,
     "school": "E",
     "time": [
@@ -43472,7 +42588,6 @@
   {
     "name": "Vitriolic Sphere",
     "source": "XGE",
-    "page": 170,
     "level": 4,
     "school": "V",
     "time": [
@@ -43518,7 +42633,6 @@
   {
     "name": "Vitriolic Sphere",
     "source": "XPHB",
-    "page": 337,
     "level": 4,
     "school": "V",
     "time": [
@@ -43564,7 +42678,6 @@
   {
     "name": "Vortex Warp",
     "source": "SCC",
-    "page": 38,
     "level": 2,
     "school": "C",
     "time": [
@@ -43610,7 +42723,6 @@
   {
     "name": "Wall of Fire",
     "source": "PHB",
-    "page": 285,
     "level": 4,
     "school": "V",
     "time": [
@@ -43664,7 +42776,6 @@
   {
     "name": "Wall of Fire",
     "source": "XPHB",
-    "page": 338,
     "level": 4,
     "school": "V",
     "time": [
@@ -43718,7 +42829,6 @@
   {
     "name": "Wall of Force",
     "source": "PHB",
-    "page": 285,
     "level": 5,
     "school": "V",
     "time": [
@@ -43760,7 +42870,6 @@
   {
     "name": "Wall of Force",
     "source": "XPHB",
-    "page": 338,
     "level": 5,
     "school": "V",
     "time": [
@@ -43802,7 +42911,6 @@
   {
     "name": "Wall of Ice",
     "source": "PHB",
-    "page": 285,
     "level": 6,
     "school": "V",
     "time": [
@@ -43854,7 +42962,6 @@
   {
     "name": "Wall of Ice",
     "source": "XPHB",
-    "page": 339,
     "level": 6,
     "school": "V",
     "time": [
@@ -43907,7 +43014,6 @@
   {
     "name": "Wall of Light",
     "source": "XGE",
-    "page": 170,
     "level": 5,
     "school": "V",
     "time": [
@@ -43962,7 +43068,6 @@
   {
     "name": "Wall of Sand",
     "source": "XGE",
-    "page": 170,
     "level": 3,
     "school": "V",
     "time": [
@@ -44003,7 +43108,6 @@
   {
     "name": "Wall of Stone",
     "source": "PHB",
-    "page": 287,
     "level": 5,
     "school": "V",
     "time": [
@@ -44052,7 +43156,6 @@
   {
     "name": "Wall of Stone",
     "source": "XPHB",
-    "page": 339,
     "level": 5,
     "school": "V",
     "time": [
@@ -44101,7 +43204,6 @@
   {
     "name": "Wall of Thorns",
     "source": "PHB",
-    "page": 287,
     "level": 6,
     "school": "C",
     "time": [
@@ -44153,7 +43255,6 @@
   {
     "name": "Wall of Thorns",
     "source": "XPHB",
-    "page": 339,
     "level": 6,
     "school": "C",
     "time": [
@@ -44205,7 +43306,6 @@
   {
     "name": "Wall of Water",
     "source": "XGE",
-    "page": 170,
     "level": 3,
     "school": "V",
     "time": [
@@ -44249,7 +43349,6 @@
   {
     "name": "Wardaway",
     "source": "FRHoF",
-    "page": 147,
     "level": 1,
     "school": "A",
     "time": [
@@ -44298,7 +43397,6 @@
   {
     "name": "Warding Bond",
     "source": "PHB",
-    "page": 287,
     "level": 2,
     "school": "A",
     "time": [
@@ -44342,7 +43440,6 @@
   {
     "name": "Warding Bond",
     "source": "XPHB",
-    "page": 340,
     "level": 2,
     "school": "A",
     "time": [
@@ -44386,7 +43483,6 @@
   {
     "name": "Warding Wind",
     "source": "XGE",
-    "page": 170,
     "level": 2,
     "school": "V",
     "time": [
@@ -44438,7 +43534,6 @@
   {
     "name": "Warp Sense",
     "source": "SatO",
-    "page": 12,
     "level": 2,
     "school": "D",
     "time": [
@@ -44482,7 +43577,6 @@
   {
     "name": "Water Breathing",
     "source": "PHB",
-    "page": 287,
     "level": 3,
     "school": "T",
     "time": [
@@ -44526,7 +43620,6 @@
   {
     "name": "Water Breathing",
     "source": "XPHB",
-    "page": 340,
     "level": 3,
     "school": "T",
     "time": [
@@ -44570,7 +43663,6 @@
   {
     "name": "Water Walk",
     "source": "PHB",
-    "page": 287,
     "level": 3,
     "school": "T",
     "time": [
@@ -44615,7 +43707,6 @@
   {
     "name": "Water Walk",
     "source": "XPHB",
-    "page": 340,
     "level": 3,
     "school": "T",
     "time": [
@@ -44660,7 +43751,6 @@
   {
     "name": "Watery Sphere",
     "source": "XGE",
-    "page": 170,
     "level": 4,
     "school": "C",
     "time": [
@@ -44707,7 +43797,6 @@
   {
     "name": "Web",
     "source": "PHB",
-    "page": 287,
     "level": 2,
     "school": "C",
     "time": [
@@ -44754,7 +43843,6 @@
   {
     "name": "Web",
     "source": "XPHB",
-    "page": 340,
     "level": 2,
     "school": "C",
     "time": [
@@ -44801,7 +43889,6 @@
   {
     "name": "Weird",
     "source": "PHB",
-    "page": 288,
     "level": 9,
     "school": "I",
     "time": [
@@ -44842,7 +43929,6 @@
   {
     "name": "Weird",
     "source": "XPHB",
-    "page": 341,
     "level": 9,
     "school": "I",
     "time": [
@@ -44884,7 +43970,6 @@
   {
     "name": "Whirlwind",
     "source": "XGE",
-    "page": 171,
     "level": 7,
     "school": "V",
     "time": [
@@ -44928,7 +44013,6 @@
   {
     "name": "Wind Walk",
     "source": "PHB",
-    "page": 288,
     "level": 6,
     "school": "T",
     "time": [
@@ -44969,7 +44053,6 @@
   {
     "name": "Wind Walk",
     "source": "XPHB",
-    "page": 341,
     "level": 6,
     "school": "T",
     "time": [
@@ -45010,7 +44093,6 @@
   {
     "name": "Wind Wall",
     "source": "PHB",
-    "page": 288,
     "level": 3,
     "school": "V",
     "time": [
@@ -45054,7 +44136,6 @@
   {
     "name": "Wind Wall",
     "source": "XPHB",
-    "page": 341,
     "level": 3,
     "school": "V",
     "time": [
@@ -45098,7 +44179,6 @@
   {
     "name": "Wish",
     "source": "PHB",
-    "page": 288,
     "level": 9,
     "school": "C",
     "time": [
@@ -45145,7 +44225,6 @@
   {
     "name": "Wish",
     "source": "XPHB",
-    "page": 341,
     "level": 9,
     "school": "C",
     "time": [
@@ -45237,7 +44316,6 @@
   {
     "name": "Witch Bolt",
     "source": "PHB",
-    "page": 289,
     "level": 1,
     "school": "V",
     "time": [
@@ -45289,7 +44367,6 @@
   {
     "name": "Witch Bolt",
     "source": "XPHB",
-    "page": 343,
     "level": 1,
     "school": "V",
     "time": [
@@ -45343,7 +44420,6 @@
   {
     "name": "Wither and Bloom",
     "source": "SCC",
-    "page": 38,
     "level": 2,
     "school": "N",
     "time": [
@@ -45391,7 +44467,6 @@
   {
     "name": "Word of Radiance",
     "source": "XGE",
-    "page": 171,
     "level": 0,
     "school": "V",
     "time": [
@@ -45427,7 +44502,6 @@
   {
     "name": "Word of Radiance",
     "source": "XPHB",
-    "page": 343,
     "level": 0,
     "school": "V",
     "time": [
@@ -45471,7 +44545,6 @@
   {
     "name": "Word of Recall",
     "source": "PHB",
-    "page": 289,
     "level": 6,
     "school": "C",
     "time": [
@@ -45506,7 +44579,6 @@
   {
     "name": "Word of Recall",
     "source": "XPHB",
-    "page": 343,
     "level": 6,
     "school": "C",
     "time": [
@@ -45541,7 +44613,6 @@
   {
     "name": "Wrath of Nature",
     "source": "XGE",
-    "page": 171,
     "level": 5,
     "school": "V",
     "time": [
@@ -45610,7 +44681,6 @@
   {
     "name": "Wrathful Smite",
     "source": "PHB",
-    "page": 289,
     "level": 1,
     "school": "V",
     "time": [
@@ -45648,7 +44718,6 @@
   {
     "name": "Wrathful Smite",
     "source": "XPHB",
-    "page": 343,
     "level": 1,
     "school": "N",
     "time": [
@@ -45695,7 +44764,6 @@
   {
     "name": "Wristpocket",
     "source": "EGW",
-    "page": 190,
     "level": 2,
     "school": "C",
     "time": [
@@ -45732,7 +44800,6 @@
   {
     "name": "Yolande's Regal Presence",
     "source": "XPHB",
-    "page": 343,
     "level": 5,
     "school": "E",
     "time": [
@@ -45774,7 +44841,6 @@
   {
     "name": "Zephyr Strike",
     "source": "XGE",
-    "page": 171,
     "level": 1,
     "school": "T",
     "time": [
@@ -45813,7 +44879,6 @@
   {
     "name": "Zone of Truth",
     "source": "PHB",
-    "page": 289,
     "level": 2,
     "school": "E",
     "time": [
@@ -45855,7 +44920,6 @@
   {
     "name": "Zone of Truth",
     "source": "XPHB",
-    "page": 343,
     "level": 2,
     "school": "E",
     "time": [

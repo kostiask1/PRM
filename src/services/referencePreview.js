@@ -1,5 +1,6 @@
 import { api } from "../api.js";
 import { loadConditionsMap, normalizeConditionName } from "./conditions.js";
+import { loadDiseasesMap, normalizeDiseaseName } from "./diseases.js";
 
 const spellCache = new Map();
 
@@ -28,4 +29,9 @@ export async function getSpellByName(name) {
 export async function getConditionByName(name) {
 	const map = await loadConditionsMap();
 	return map.get(normalizeConditionName(name)) || null;
+}
+
+export async function getDiseaseByName(name) {
+	const map = await loadDiseasesMap();
+	return map.get(normalizeDiseaseName(name)) || null;
 }

@@ -36,10 +36,12 @@ import {
 import {
 	getSpellByName,
 	getConditionByName,
+	getDiseaseByName,
 } from "../src/utils/referencePreview.js";
 import {
 	resolveSpellInput,
 	resolveConditionInput,
+	resolveDiseaseInput,
 } from "../src/utils/referenceResolvers.js";
 import {
 	buildCampaignGraph,
@@ -522,7 +524,7 @@ await run("SpellCardModel formats spell labels", () => {
 	const model = new SpellCardModel({
 		name: "Magic Missile|PHB",
 		source: "PHB",
-		page: 257,
+		classes: ["Sorcerer", "Wizard"],
 		level: 1,
 		school: "V",
 		time: [{ number: 1, unit: "action" }],
@@ -534,7 +536,7 @@ await run("SpellCardModel formats spell labels", () => {
 	assert.equal(model.levelLabel, "1-й рівень");
 	assert.match(model.rangeLabel, /120 фт/);
 	assert.equal(model.durationLabel, "Миттєво");
-	assert.equal(model.sourceLabel, "PHB (стор. 257)");
+	assert.equal(model.classesLabel, "Sorcerer, Wizard");
 });
 
 await run("download helpers create and revoke blob URL", () => {
@@ -957,8 +959,10 @@ await run(
 	async () => {
 		const originalSearchSpells = api.searchSpells;
 		const originalGetConditions = api.getConditions;
+		const originalGetDiseases = api.getDiseases;
 		let spellCalls = 0;
 		let conditionCalls = 0;
+		let diseaseCalls = 0;
 
 		api.searchSpells = async (params = {}) => {
 			spellCalls += 1;
@@ -979,6 +983,14 @@ await run(
 			return [
 				{ name: "Prone", entries: ["..."] },
 				{ name: "Blinded", entries: ["..."] },
+			];
+		};
+
+		api.getDiseases = async () => {
+			diseaseCalls += 1;
+			return [
+				{ name: "Bluerot", entries: ["..."] },
+				{ name: "Sight Rot", entries: ["..."] },
 			];
 		};
 
@@ -1015,9 +1027,21 @@ await run(
 			);
 			assert.equal((await resolveConditionInput("Prone")).name, "Prone");
 			assert.equal(await resolveConditionInput({ foo: "bar" }), null);
+
+			assert.equal((await getDiseaseByName(" bluerot|GoS ")).name, "Bluerot");
+			assert.equal(conditionCalls, 2);
+			assert.equal(diseaseCalls, 1);
+			assert.equal((await resolveDiseaseInput("Sight Rot")).name, "Sight Rot");
+			assert.equal(
+				(await resolveDiseaseInput({ name: "Manual Disease", entries: ["text"] }))
+					.name,
+				"Manual Disease",
+			);
+			assert.equal(await resolveDiseaseInput({ foo: "bar" }), null);
 		} finally {
 			api.searchSpells = originalSearchSpells;
 			api.getConditions = originalGetConditions;
+			api.getDiseases = originalGetDiseases;
 		}
 	},
 );
@@ -1081,6 +1105,53 @@ await run(
 		}
 	},
 );
+
+await run("spells diseases route returns deduped disease list", async () => {
+	const originalExists = storage.exists;
+	const originalReadJson = storage.readJson;
+	const layer = spellsRouter.stack.find((item) => item.route?.path === "/diseases");
+	assert.ok(layer);
+	const handler = layer.route.stack[0].handle;
+
+	storage.exists = async () => true;
+	storage.readJson = async () => ({
+		disease: [
+			{ name: "Sight Rot", source: "DMG", page: 257, entries: ["old"] },
+			{ name: "Sight Rot", source: "XDMG", page: 61, entries: ["new"] },
+			{ name: "Bluerot", source: "GoS", page: 234, entries: ["blue"] },
+		],
+	});
+
+	try {
+		let jsonPayload = null;
+		await handler(
+			{},
+			{
+				json(value) {
+					jsonPayload = value;
+					return value;
+				},
+			},
+			(error) => {
+				throw error;
+			},
+		);
+
+		assert.ok(Array.isArray(jsonPayload));
+		assert.deepEqual(
+			jsonPayload.map((item) => item.name),
+			["Bluerot", "Sight Rot"],
+		);
+
+		const sightRot = jsonPayload.find((item) => item.name === "Sight Rot");
+		assert.equal(sightRot.kind, "disease");
+		assert.equal(sightRot.source, "XDMG");
+		assert.deepEqual(sightRot.entries, ["new"]);
+	} finally {
+		storage.exists = originalExists;
+		storage.readJson = originalReadJson;
+	}
+});
 
 await run("storage image listing and subcategory discovery", async () => {
 	await withTestSlug("images-list", async (slug) => {

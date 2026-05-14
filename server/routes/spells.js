@@ -5,8 +5,8 @@ const storage = require("../storage");
 
 function getSourcePriority(source) {
 	const normalized = String(source || "").toUpperCase();
-	if (normalized === "XPHB") return 3;
-	if (normalized === "PHB") return 2;
+	if (normalized === "XPHB" || normalized === "XDMG") return 3;
+	if (normalized === "PHB" || normalized === "DMG") return 2;
 	return 1;
 }
 
@@ -150,6 +150,58 @@ router.get("/conditions", async (_req, res, next) => {
 				kind: item?.kind || "condition",
 				source: item?.source || null,
 				page: item?.page || null,
+				entries: item?.entries || [],
+			};
+			byName.set(key, pickPreferredRecord(byName.get(key), normalized));
+		}
+
+		const list = Array.from(byName.values()).sort((a, b) =>
+			a.name.localeCompare(b.name),
+		);
+		res.json(list);
+	} catch (error) {
+		next(error);
+	}
+});
+
+router.get("/diseases", async (_req, res, next) => {
+	try {
+		const diseasesPath = path.join(
+			__dirname,
+			"..",
+			"..",
+			"database",
+			"diseases.json",
+		);
+		const conditionsPath = path.join(
+			__dirname,
+			"..",
+			"..",
+			"database",
+			"conditions.json",
+		);
+		if (
+			!(await storage.exists(diseasesPath)) &&
+			!(await storage.exists(conditionsPath))
+		)
+			return res.json([]);
+
+		const data = (await storage.exists(diseasesPath))
+			? await storage.readJson(diseasesPath)
+			: await storage.readJson(conditionsPath);
+		const diseaseList = Array.isArray(data?.disease) ? data.disease : [];
+		const byName = new Map();
+
+		for (const item of diseaseList) {
+			const name = String(item?.name || "").trim();
+			if (!name) continue;
+			const key = name.toLowerCase();
+			const normalized = {
+				name,
+				kind: "disease",
+				source: item?.source || null,
+				page: item?.page || null,
+				type: item?.type || null,
 				entries: item?.entries || [],
 			};
 			byName.set(key, pickPreferredRecord(byName.get(key), normalized));

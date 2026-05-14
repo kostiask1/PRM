@@ -271,6 +271,16 @@ const icons = {
 			<line x1="3" y1="18" x2="3.01" y2="18" />
 		</>
 	),
+	disease: (
+		<>
+			<circle cx="12" cy="12" r="8" />
+			<path d="M12 4v16" />
+			<path d="M4 12h16" />
+			<path d="M6.35 6.35 17.65 17.65" />
+			<path d="M17.65 6.35 6.35 17.65" />
+			<circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
+		</>
+	),
 	"drag-handle": (
 		<>
 			<circle cx="8" cy="5" r="1.5" fill="currentColor" stroke="none" />

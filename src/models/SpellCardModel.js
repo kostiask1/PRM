@@ -42,7 +42,6 @@
  * @typedef {Object} SpellData
  * @property {string} name
  * @property {string} source
- * @property {number} [page]
  * @property {string[]} [classes]
  * @property {0|1|2|3|4|5|6|7|8|9|number} level
  * @property {"A"|"C"|"D"|"E"|"I"|"N"|"T"|"P"|"V"|string} school
@@ -159,10 +158,5 @@ export default class SpellCardModel {
 			return "";
 		}
 		return this.spell.classes.join(", ");
-	}
-
-	get sourceLabel() {
-		if (!this.spell.source) return "";
-		return `${this.spell.source} (стор. ${this.spell.page})`;
 	}
 }

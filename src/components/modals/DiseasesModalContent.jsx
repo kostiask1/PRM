@@ -13,33 +13,40 @@ import {
 	resolveSpellInput,
 } from "../../services/referenceResolvers.js";
 import ListCard from "../common/ListCard.jsx";
+import { openConditionsModal } from "./openConditionsModal.jsx";
 
 const SpellCard = lazy(() => import("../SpellCard"));
 
-export default function ConditionsModalContent({ initialConditionName = "" }) {
+function normalizeName(name) {
+	return String(name || "")
+		.trim()
+		.toLowerCase();
+}
+
+export default function DiseasesModalContent({ initialDiseaseName = "" }) {
 	const dispatch = useAppDispatch();
 	const [query, setQuery] = useState("");
-	const [conditions, setConditions] = useState([]);
-	const [selectedConditionName, setSelectedConditionName] = useState("");
+	const [diseases, setDiseases] = useState([]);
+	const [selectedDiseaseName, setSelectedDiseaseName] = useState("");
 	const [isLoading, setIsLoading] = useState(true);
 
 	useEffect(() => {
 		let isMounted = true;
 
-		const loadConditions = async () => {
+		const loadDiseases = async () => {
 			setIsLoading(true);
 			try {
-				const list = await api.getConditions();
+				const list = await api.getDiseases();
 				if (!isMounted) return;
 
 				const normalizedList = Array.isArray(list) ? list : [];
-				setConditions(normalizedList);
+				setDiseases(normalizedList);
 
-				const preferredCondition = normalizedList.find(
-					(item) => item.name === initialConditionName,
+				const preferredDisease = normalizedList.find(
+					(item) => item.name === initialDiseaseName,
 				);
-				setSelectedConditionName(
-					preferredCondition?.name || normalizedList?.[0]?.name || "",
+				setSelectedDiseaseName(
+					preferredDisease?.name || normalizedList?.[0]?.name || "",
 				);
 			} catch (error) {
 				if (!isMounted) return;
@@ -55,54 +62,64 @@ export default function ConditionsModalContent({ initialConditionName = "" }) {
 			}
 		};
 
-		loadConditions();
+		loadDiseases();
 
 		return () => {
 			isMounted = false;
 		};
-	}, [dispatch, initialConditionName]);
+	}, [dispatch, initialDiseaseName]);
 
 	useEffect(() => {
-		if (!initialConditionName || !conditions.length) return;
+		if (!initialDiseaseName || !diseases.length) return;
 
-		const preferredCondition = conditions.find(
-			(item) => item.name === initialConditionName,
+		const preferredDisease = diseases.find(
+			(item) => item.name === initialDiseaseName,
 		);
-		if (preferredCondition) {
-			setSelectedConditionName(preferredCondition.name);
+		if (preferredDisease) {
+			setSelectedDiseaseName(preferredDisease.name);
 		}
-	}, [conditions, initialConditionName]);
+	}, [diseases, initialDiseaseName]);
 
-	const filteredConditions = useMemo(() => {
+	const filteredDiseases = useMemo(() => {
 		const normalizedQuery = query.trim().toLowerCase();
 
-		return conditions.filter((item) => {
+		return diseases.filter((item) => {
 			if (!normalizedQuery) return true;
 
-			return [item.name]
+			return [item.name, item.type]
 				.filter(Boolean)
 				.some((value) => String(value).toLowerCase().includes(normalizedQuery));
 		});
-	}, [conditions, query]);
+	}, [diseases, query]);
 
 	useEffect(() => {
-		if (!filteredConditions.length) {
-			setSelectedConditionName("");
+		if (!filteredDiseases.length) {
+			setSelectedDiseaseName("");
 			return;
 		}
 
-		const hasSelection = filteredConditions.some(
-			(item) => item.name === selectedConditionName,
+		const hasSelection = filteredDiseases.some(
+			(item) => item.name === selectedDiseaseName,
 		);
 		if (!hasSelection) {
-			setSelectedConditionName(filteredConditions[0].name);
+			setSelectedDiseaseName(filteredDiseases[0].name);
 		}
-	}, [filteredConditions, selectedConditionName]);
+	}, [filteredDiseases, selectedDiseaseName]);
 
-	const selectedCondition =
-		filteredConditions.find((item) => item.name === selectedConditionName) ||
-		conditions.find((item) => item.name === selectedConditionName) ||
+	const selectedDisease =
+		filteredDiseases.find((item) => item.name === selectedDiseaseName) ||
+		diseases.find((item) => item.name === selectedDiseaseName) ||
 		null;
+
+	const findDisease = (nameOrDisease) => {
+		if (nameOrDisease && typeof nameOrDisease === "object") {
+			return nameOrDisease.name ? nameOrDisease : null;
+		}
+
+		const key = normalizeName(nameOrDisease);
+		if (!key) return null;
+		return diseases.find((item) => normalizeName(item.name) === key) || null;
+	};
 
 	async function handleSpellClick(spellOrName) {
 		const spell = await resolveSpellInput(spellOrName);
@@ -144,7 +161,7 @@ export default function ConditionsModalContent({ initialConditionName = "" }) {
 	async function handleConditionClick(nameOrCondition) {
 		const condition = await resolveConditionInput(nameOrCondition);
 		if (!condition) return;
-		setSelectedConditionName(condition.name);
+		openConditionsModal(condition.name);
 	}
 
 	async function handleConditionHover(nameOrCondition) {
@@ -156,6 +173,26 @@ export default function ConditionsModalContent({ initialConditionName = "" }) {
 				<div className="Tooltip__title">{condition.name}</div>
 				<div className="Tooltip__text">
 					{renderRecursiveContent(condition.entries, null, null, null, null)}
+				</div>
+			</div>
+		);
+	}
+
+	function handleDiseaseClick(nameOrDisease) {
+		const disease = findDisease(nameOrDisease);
+		if (!disease) return;
+		setSelectedDiseaseName(disease.name);
+	}
+
+	function handleDiseaseHover(nameOrDisease) {
+		const disease = findDisease(nameOrDisease);
+		if (!disease) return null;
+
+		return (
+			<div>
+				<div className="Tooltip__title">{disease.name}</div>
+				<div className="Tooltip__text">
+					{renderRecursiveContent(disease.entries, null, null, null, null)}
 				</div>
 			</div>
 		);
@@ -174,40 +211,42 @@ export default function ConditionsModalContent({ initialConditionName = "" }) {
 				<div className="ConditionsModal__list">
 					{isLoading ? (
 						<p className="muted">{lang.t("Loading...")}</p>
-					) : filteredConditions.length ? (
-						filteredConditions.map((item) => (
+					) : filteredDiseases.length ? (
+						filteredDiseases.map((item) => (
 							<ListCard
 								key={item.name}
-								onClick={() => setSelectedConditionName(item.name)}
-								active={selectedConditionName === item.name}
+								onClick={() => setSelectedDiseaseName(item.name)}
+								active={selectedDiseaseName === item.name}
 							>
 								<div className="ListCard__title">{item.name}</div>
+								{item.type && <div className="ListCard__meta">{item.type}</div>}
 							</ListCard>
 						))
 					) : (
-						<p className="muted">
-							{lang.t("No conditions or statuses found.")}
-						</p>
+						<p className="muted">{lang.t("No diseases found.")}</p>
 					)}
 				</div>
 			</div>
 
 			<div className="ConditionsModal__content">
-				{selectedCondition && (
+				{selectedDisease && (
 					<>
 						<div className="ConditionsModal__contentHeader">
-							<h3 className="ConditionsModal__title">
-								{selectedCondition.name}
-							</h3>
+							<h3 className="ConditionsModal__title">{selectedDisease.name}</h3>
+							{selectedDisease.type && (
+								<div className="muted">{selectedDisease.type}</div>
+							)}
 						</div>
 
 						<div className="ConditionsModal__entryContent">
 							{renderRecursiveContent(
-								selectedCondition.entries,
+								selectedDisease.entries,
 								handleSpellClick,
 								handleConditionClick,
 								handleSpellHover,
 								handleConditionHover,
+								handleDiseaseClick,
+								handleDiseaseHover,
 							)}
 						</div>
 					</>

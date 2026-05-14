@@ -77,13 +77,6 @@ export default function SpellCard({ spell, onSpellClick, onConditionClick }) {
 					</div>
 				)}
 			</div>
-			<div className="SpellCard__footer">
-				{spell.source && (
-					<div>
-						<strong>{lang.t("Source")}:</strong> {model.sourceLabel}
-					</div>
-				)}
-			</div>
 		</div>
 	);
 }

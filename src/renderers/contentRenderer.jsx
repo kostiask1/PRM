@@ -16,6 +16,8 @@ export const renderRecursiveContent = (
 	onConditionClick,
 	onSpellHover,
 	onConditionHover,
+	onDiseaseClick,
+	onDiseaseHover,
 ) => {
 	if (content === undefined || content === null) return null;
 
@@ -26,6 +28,8 @@ export const renderRecursiveContent = (
 			onConditionClick,
 			onSpellHover,
 			onConditionHover,
+			onDiseaseClick,
+			onDiseaseHover,
 		);
 	}
 
@@ -42,6 +46,8 @@ export const renderRecursiveContent = (
 					onConditionClick,
 					onSpellHover,
 					onConditionHover,
+					onDiseaseClick,
+					onDiseaseHover,
 				)}
 			</React.Fragment>
 		));
@@ -55,6 +61,8 @@ export const renderRecursiveContent = (
 				onConditionClick,
 				onSpellHover,
 				onConditionHover,
+				onDiseaseClick,
+				onDiseaseHover,
 			);
 		}
 
@@ -77,6 +85,8 @@ export const renderRecursiveContent = (
 									onConditionClick,
 									onSpellHover,
 									onConditionHover,
+									onDiseaseClick,
+									onDiseaseHover,
 								)}
 							</li>
 						);
@@ -98,6 +108,8 @@ export const renderRecursiveContent = (
 						onConditionClick,
 						onSpellHover,
 						onConditionHover,
+						onDiseaseClick,
+						onDiseaseHover,
 					)}
 				</div>
 			);
@@ -124,6 +136,8 @@ export const renderRecursiveContent = (
 												onConditionClick,
 												onSpellHover,
 												onConditionHover,
+												onDiseaseClick,
+												onDiseaseHover,
 											)}
 										</th>
 									))}
@@ -141,6 +155,8 @@ export const renderRecursiveContent = (
 												onConditionClick,
 												onSpellHover,
 												onConditionHover,
+												onDiseaseClick,
+												onDiseaseHover,
 											)}
 										</td>
 									))}
@@ -158,6 +174,8 @@ export const renderRecursiveContent = (
 			onConditionClick,
 			onSpellHover,
 			onConditionHover,
+			onDiseaseClick,
+			onDiseaseHover,
 		);
 	}
 
@@ -188,28 +206,38 @@ function parseTaggedName(raw) {
 	};
 }
 
+function stripNotesReferenceText(text) {
+	return String(text || "").replace(
+		/\s*\(see\s+(?:the\s+)?["“][^"”]+["”]\s+in notes\)\.?/gi,
+		"",
+	);
+}
+
 export const parseRollsAndSpells = (
 	text,
 	onSpellClick,
 	onConditionClick,
 	onSpellHover,
 	onConditionHover,
+	onDiseaseClick,
+	onDiseaseHover,
 ) => {
 	if (!text) return text;
 
+	const cleanText = stripNotesReferenceText(text);
 	const elements = [];
 	const regex =
-		/(\d+d\d+(?:\s*[+-]\s*\d+)?)|([+-]\d+(?:\s+to\s+hit))|(\{@spell\s+([^}]+)\})|(\{@(?:condition|status)\s+([^}]+)\})|(@condition\s+([A-Za-z][A-Za-z' -]*))/gi;
+		/(\d+d\d+(?:\s*[+-]\s*\d+)?)|([+-]\d+(?:\s+to\s+hit))|(\{@spell\s+([^}]+)\})|(\{@(?:condition|status)\s+([^}]+)\})|(@condition\s+([A-Za-z][A-Za-z' -]*))|(\{@disease\s+([^}]+)\})/gi;
 	let lastIndex = 0;
 	let matchIndex = 0;
 	let match;
 
-	while ((match = regex.exec(text)) !== null) {
+	while ((match = regex.exec(cleanText)) !== null) {
 		const fullMatch = match[0];
 		const start = match.index;
 		pushSafeMarkdownText(
 			elements,
-			text.slice(lastIndex, start),
+			cleanText.slice(lastIndex, start),
 			`t-${matchIndex}-before`,
 		);
 
@@ -220,6 +248,7 @@ export const parseRollsAndSpells = (
 		const conditionTag = match[5];
 		const conditionValue = match[6];
 		const conditionPlain = match[7];
+		const diseaseValue = match[10];
 
 		if (roll) {
 			elements.push(
@@ -282,6 +311,25 @@ export const parseRollsAndSpells = (
 					`t-${matchIndex}-condition`,
 				);
 			}
+		} else if (diseaseValue) {
+			const { name: rawDiseaseName, displayText } = parseTaggedName(diseaseValue);
+			if (onDiseaseClick) {
+				elements.push(
+					<SpellLink
+						key={`d-${matchIndex}`}
+						onClick={() => onDiseaseClick(rawDiseaseName)}
+						onHoverResolve={
+							onDiseaseHover
+								? () => onDiseaseHover(rawDiseaseName, displayText)
+								: null
+						}
+					>
+						{displayText}
+					</SpellLink>,
+				);
+			} else {
+				pushSafeMarkdownText(elements, displayText, `t-${matchIndex}-disease`);
+			}
 		} else {
 			pushSafeMarkdownText(elements, fullMatch, `t-${matchIndex}-raw`);
 		}
@@ -290,7 +338,11 @@ export const parseRollsAndSpells = (
 		matchIndex += 1;
 	}
 
-	pushSafeMarkdownText(elements, text.slice(lastIndex), `t-${matchIndex}-tail`);
+	pushSafeMarkdownText(
+		elements,
+		cleanText.slice(lastIndex),
+		`t-${matchIndex}-tail`,
+	);
 	return elements;
 };
 
