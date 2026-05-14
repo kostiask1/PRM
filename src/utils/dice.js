@@ -14,6 +14,8 @@ export function rollDiceFormula(input) {
 	let diceTotal = 0;
 	let modifierSum = 0;
 	let averageTotal = 0;
+	let minTotal = 0;
+	let maxTotal = 0;
 	const details = [];
 	const diceMap = {};
 
@@ -44,6 +46,8 @@ export function rollDiceFormula(input) {
 			if (keepSuffix) {
 				const type = keepSuffix[0].toLowerCase();
 				const keepCount = Math.min(parseInt(keepSuffix.slice(1), 10), count);
+				minTotal += keepCount;
+				maxTotal += keepCount * sides;
 				const indexed = currentRolls.map((r, idx) => ({ val: r.val, idx }));
 				indexed.sort((a, b) => (type === "h" ? b.val - a.val : a.val - b.val));
 				const keptIndices = new Set(
@@ -60,6 +64,8 @@ export function rollDiceFormula(input) {
 					details.push(r);
 				});
 			} else {
+				minTotal += count;
+				maxTotal += count * sides;
 				currentRolls.forEach((r) => {
 					diceTotal += r.val;
 					averageTotal += (sides + 1) / 2;
@@ -73,6 +79,8 @@ export function rollDiceFormula(input) {
 		if (!Number.isNaN(num)) {
 			modifierSum += num;
 			averageTotal += num;
+			minTotal += num;
+			maxTotal += num;
 			details.push({ val: num, max: null });
 		}
 	}
@@ -98,6 +106,8 @@ export function rollDiceFormula(input) {
 		breakdown: details,
 		total: finalTotal,
 		average: Math.floor(averageTotal),
+		min: minTotal,
+		max: maxTotal,
 		isCritical,
 	};
 }

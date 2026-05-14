@@ -314,6 +314,9 @@
 }
 
 .DiceCalculator__averageValue {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 2px;
 	font-size: 1.1rem;
 	line-height: 1;
 	color: var(--muted);

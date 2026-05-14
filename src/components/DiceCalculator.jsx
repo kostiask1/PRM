@@ -226,6 +226,13 @@ export default function DiceCalculator() {
 			.join("");
 	}, []);
 
+	const getPotentialRangeLabel = useCallback((result) => {
+		if (result?.min === undefined || result?.max === undefined) return "";
+		return `${lang.t("Min")} ${result.min} / ${lang.t("Avg")} ${
+			result.average
+		} / ${lang.t("Max")} ${result.max}`;
+	}, []);
+
 	return (
 		<div
 			ref={rootRef}
@@ -272,9 +279,16 @@ export default function DiceCalculator() {
 									>
 										={lastResult.total}
 										{lastResult.average !== undefined && (
-											<Tooltip delay={500} content={lang.t("Average value")}>
+											<Tooltip
+												delay={500}
+												content={getPotentialRangeLabel(lastResult)}
+											>
 												<span className="DiceCalculator__averageValue">
-													({lastResult.average})
+													<span className="dice-min">{lastResult.min}</span>
+													<span>/</span>
+													<span>{lastResult.average}</span>
+													<span>/</span>
+													<span className="dice-max">{lastResult.max}</span>
 												</span>
 											</Tooltip>
 										)}
