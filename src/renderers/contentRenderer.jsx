@@ -149,7 +149,7 @@ export const parseRollsAndSpells = (text) => {
 	const cleanText = stripNotesReferenceText(text);
 	const elements = [];
 	const regex =
-		/(\d+d\d+(?:\s*[+-]\s*\d+)?)|([+-]\d+(?:\s+to\s+hit))|(\{@spell\s+([^}]+)\})|(\{@(?:condition|status)\s+([^}]+)\})|(@condition\s+([A-Za-z][A-Za-z' -]*))|(\{@disease\s+([^}]+)\})|(\{@variantrule\s+([^}]+)\})|(\{@skill\s+([^}]+)\})/gi;
+		/(\d+d\d+(?:\s*[+-]\s*\d+)?)|([+-]\d+(?:\s+to\s+hit))|(\{@spell\s+([^}]+)\})|(\{@(?:condition|status)\s+([^}]+)\})|(@condition\s+([A-Za-z][A-Za-z' -]*))|(\{@disease\s+([^}]+)\})|(\{@variantrule\s+([^}]+)\})|(\{@skill\s+([^}]+)\})|(\{@sense\s+([^}]+)\})/gi;
 	let lastIndex = 0;
 	let matchIndex = 0;
 	let match;
@@ -173,6 +173,7 @@ export const parseRollsAndSpells = (text) => {
 		const diseaseValue = match[10];
 		const variantRuleValue = match[12];
 		const skillValue = match[14];
+		const senseValue = match[16];
 
 		if (roll) {
 			elements.push(
@@ -233,6 +234,13 @@ export const parseRollsAndSpells = (text) => {
 			const { name: rawSkillName, displayText } = parseTaggedName(skillValue);
 			elements.push(
 				<RulesLink key={`sk-${matchIndex}`} type="skill" name={rawSkillName}>
+					{displayText}
+				</RulesLink>,
+			);
+		} else if (senseValue) {
+			const { name: rawSenseName, displayText } = parseTaggedName(senseValue);
+			elements.push(
+				<RulesLink key={`se-${matchIndex}`} type="sense" name={rawSenseName}>
 					{displayText}
 				</RulesLink>,
 			);

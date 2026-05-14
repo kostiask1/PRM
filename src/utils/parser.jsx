@@ -101,7 +101,7 @@ export const preprocessTags = (text) => {
 		.replace(/{@hom}/gi, "")
 		.replace(/{@loader\s+[^}]+}/gi, "")
 		.replace(
-			/{@(creature|action|link|item|filter|quickref|book|sense|area|hazard|trap|deck|optfeature|reward|feat|charoption|background|race)\s+([^|}]+)(?:\|([^|}]*))?(?:\|([^|}]*))?[^}]*}/gi,
+			/{@(creature|action|link|item|filter|quickref|book|area|hazard|trap|deck|optfeature|reward|feat|charoption|background|race)\s+([^|}]+)(?:\|([^|}]*))?(?:\|([^|}]*))?[^}]*}/gi,
 			(m, tag, name, source, label) => {
 				if (tag === "filter") return name;
 				return label || name;

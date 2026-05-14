@@ -1,6 +1,7 @@
 export {
 	resolveConditionInput,
 	resolveDiseaseInput,
+	resolveSenseInput,
 	resolveSkillInput,
 	resolveVariantRuleInput,
 	resolveSpellInput,

@@ -294,6 +294,44 @@ router.get("/skills", async (_req, res, next) => {
 	}
 });
 
+router.get("/senses", async (_req, res, next) => {
+	try {
+		const sensesPath = path.join(
+			__dirname,
+			"..",
+			"..",
+			"database",
+			"senses.json",
+		);
+		if (!(await storage.exists(sensesPath))) return res.json([]);
+
+		const data = await storage.readJson(sensesPath);
+		const list = Array.isArray(data?.sense) ? data.sense : [];
+		const byName = new Map();
+
+		for (const item of list) {
+			const name = String(item?.name || "").trim();
+			if (!name) continue;
+			const key = name.toLowerCase();
+			const normalized = {
+				name,
+				kind: "sense",
+				source: item?.source || null,
+				page: item?.page || null,
+				entries: item?.entries || [],
+			};
+			byName.set(key, pickPreferredRecord(byName.get(key), normalized));
+		}
+
+		const senses = Array.from(byName.values()).sort((a, b) =>
+			a.name.localeCompare(b.name),
+		);
+		res.json(senses);
+	} catch (error) {
+		next(error);
+	}
+});
+
 router.get("/:source", async (req, res, next) => {
 	try {
 		const sourceParam = String(req.params.source);

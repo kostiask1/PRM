@@ -228,6 +228,7 @@ export const api = {
 	getDiseases: () => api.request("/spells/diseases"),
 	getVariantRules: () => api.request("/spells/variantrules"),
 	getSkills: () => api.request("/spells/skills"),
+	getSenses: () => api.request("/spells/senses"),
 	searchSpells: (params = {}) => {
 		const query = new URLSearchParams();
 		if (params.name) query.append("name", params.name);

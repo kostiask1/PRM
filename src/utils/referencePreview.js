@@ -1,6 +1,7 @@
 export {
 	getConditionByName,
 	getDiseaseByName,
+	getSenseByName,
 	getSkillByName,
 	getVariantRuleByName,
 	getSpellByName,

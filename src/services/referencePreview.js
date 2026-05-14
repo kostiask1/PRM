@@ -6,6 +6,7 @@ import {
 	normalizeVariantRuleName,
 } from "./variantRules.js";
 import { loadSkillsMap, normalizeSkillName } from "./skills.js";
+import { loadSensesMap, normalizeSenseName } from "./senses.js";
 
 const spellCache = new Map();
 
@@ -49,4 +50,9 @@ export async function getVariantRuleByName(name) {
 export async function getSkillByName(name) {
 	const map = await loadSkillsMap();
 	return map.get(normalizeSkillName(name)) || null;
+}
+
+export async function getSenseByName(name) {
+	const map = await loadSensesMap();
+	return map.get(normalizeSenseName(name)) || null;
 }

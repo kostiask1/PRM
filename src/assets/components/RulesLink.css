@@ -43,3 +43,7 @@
 .RulesLink--skill {
 	--rules-link-color: #2d91a5;
 }
+
+.RulesLink--sense {
+	--rules-link-color: #5f8f3a;
+}

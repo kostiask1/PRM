@@ -1,6 +1,7 @@
 import {
 	getConditionByName,
 	getDiseaseByName,
+	getSenseByName,
 	getSkillByName,
 	getSpellByName,
 	getVariantRuleByName,
@@ -68,4 +69,16 @@ export async function resolveSkillInput(nameOrSkill) {
 		typeof nameOrSkill === "string" ? nameOrSkill : nameOrSkill?.name || "";
 	if (!name) return null;
 	return getSkillByName(name);
+}
+
+export async function resolveSenseInput(nameOrSense) {
+	if (nameOrSense && typeof nameOrSense === "object") {
+		if (typeof nameOrSense.name === "string" && nameOrSense.entries) {
+			return nameOrSense;
+		}
+	}
+	const name =
+		typeof nameOrSense === "string" ? nameOrSense : nameOrSense?.name || "";
+	if (!name) return null;
+	return getSenseByName(name);
 }

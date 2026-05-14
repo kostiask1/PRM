@@ -37,6 +37,7 @@ import {
 	getSpellByName,
 	getConditionByName,
 	getDiseaseByName,
+	getSenseByName,
 	getSkillByName,
 	getVariantRuleByName,
 } from "../src/utils/referencePreview.js";
@@ -44,6 +45,7 @@ import {
 	resolveSpellInput,
 	resolveConditionInput,
 	resolveDiseaseInput,
+	resolveSenseInput,
 	resolveSkillInput,
 	resolveVariantRuleInput,
 } from "../src/utils/referenceResolvers.js";
@@ -966,11 +968,13 @@ await run(
 		const originalGetDiseases = api.getDiseases;
 		const originalGetVariantRules = api.getVariantRules;
 		const originalGetSkills = api.getSkills;
+		const originalGetSenses = api.getSenses;
 		let spellCalls = 0;
 		let conditionCalls = 0;
 		let diseaseCalls = 0;
 		let variantRuleCalls = 0;
 		let skillCalls = 0;
+		let senseCalls = 0;
 
 		api.searchSpells = async (params = {}) => {
 			spellCalls += 1;
@@ -1015,6 +1019,14 @@ await run(
 			return [
 				{ name: "Medicine", ability: "wis", entries: ["..."] },
 				{ name: "Perception", ability: "wis", entries: ["..."] },
+			];
+		};
+
+		api.getSenses = async () => {
+			senseCalls += 1;
+			return [
+				{ name: "Darkvision", entries: ["..."] },
+				{ name: "Truesight", entries: ["..."] },
 			];
 		};
 
@@ -1088,12 +1100,23 @@ await run(
 				"Manual Skill",
 			);
 			assert.equal(await resolveSkillInput({ foo: "bar" }), null);
+
+			assert.equal((await getSenseByName(" darkvision|XPHB ")).name, "Darkvision");
+			assert.equal(senseCalls, 1);
+			assert.equal((await resolveSenseInput("Truesight")).name, "Truesight");
+			assert.equal(
+				(await resolveSenseInput({ name: "Manual Sense", entries: ["text"] }))
+					.name,
+				"Manual Sense",
+			);
+			assert.equal(await resolveSenseInput({ foo: "bar" }), null);
 		} finally {
 			api.searchSpells = originalSearchSpells;
 			api.getConditions = originalGetConditions;
 			api.getDiseases = originalGetDiseases;
 			api.getVariantRules = originalGetVariantRules;
 			api.getSkills = originalGetSkills;
+			api.getSenses = originalGetSenses;
 		}
 	},
 );
@@ -1288,6 +1311,53 @@ await run("spells skills route returns skill list", async () => {
 		assert.equal(jsonPayload[0].kind, "skill");
 		assert.equal(jsonPayload[0].ability, "int");
 		assert.deepEqual(jsonPayload[0].entries, ["arc"]);
+	} finally {
+		storage.exists = originalExists;
+		storage.readJson = originalReadJson;
+	}
+});
+
+await run("spells senses route returns sense list", async () => {
+	const originalExists = storage.exists;
+	const originalReadJson = storage.readJson;
+	const layer = spellsRouter.stack.find((item) => item.route?.path === "/senses");
+	assert.ok(layer);
+	const handler = layer.route.stack[0].handle;
+
+	storage.exists = async () => true;
+	storage.readJson = async () => ({
+		sense: [
+			{ name: "Darkvision", source: "PHB", entries: ["old"] },
+			{ name: "Darkvision", source: "XPHB", entries: ["new"] },
+			{ name: "Blindsight", source: "PHB", entries: ["blind"] },
+		],
+	});
+
+	try {
+		let jsonPayload = null;
+		await handler(
+			{},
+			{
+				json(value) {
+					jsonPayload = value;
+					return value;
+				},
+			},
+			(error) => {
+				throw error;
+			},
+		);
+
+		assert.ok(Array.isArray(jsonPayload));
+		assert.deepEqual(
+			jsonPayload.map((item) => item.name),
+			["Blindsight", "Darkvision"],
+		);
+
+		const darkvision = jsonPayload.find((item) => item.name === "Darkvision");
+		assert.equal(darkvision.kind, "sense");
+		assert.equal(darkvision.source, "XPHB");
+		assert.deepEqual(darkvision.entries, ["new"]);
 	} finally {
 		storage.exists = originalExists;
 		storage.readJson = originalReadJson;

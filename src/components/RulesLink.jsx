@@ -8,6 +8,7 @@ import { alert } from "../actions/app";
 import {
 	getConditionByName,
 	getDiseaseByName,
+	getSenseByName,
 	getSkillByName,
 	getSpellByName,
 	getVariantRuleByName,
@@ -15,6 +16,7 @@ import {
 import {
 	resolveConditionInput,
 	resolveDiseaseInput,
+	resolveSenseInput,
 	resolveSkillInput,
 	resolveSpellInput,
 	resolveVariantRuleInput,
@@ -95,6 +97,22 @@ export default function RulesLink({
 		});
 	};
 
+	const openSense = async () => {
+		const sense = await resolveSenseInput(referenceName);
+		if (!sense) return;
+
+		openModalRequest({
+			title: sense.name,
+			type: "confirm",
+			showFooter: false,
+			children: (
+				<div className="ConditionsModal__entryContent">
+					{renderRecursiveContent(sense.entries)}
+				</div>
+			),
+		});
+	};
+
 	const handleClick = async () => {
 		try {
 			if (type === "spell") {
@@ -109,6 +127,8 @@ export default function RulesLink({
 				await openVariantRule();
 			} else if (type === "skill") {
 				await openSkill();
+			} else if (type === "sense") {
+				await openSense();
 			}
 		} catch (error) {
 			showLoadError(error);
@@ -179,6 +199,19 @@ export default function RulesLink({
 					)}
 					<div className="Tooltip__text">
 						{renderRecursiveContent(skill.entries)}
+					</div>
+				</div>
+			);
+		}
+
+		if (type === "sense") {
+			const sense = await getSenseByName(referenceName);
+			if (!sense) return null;
+			return (
+				<div>
+					<div className="Tooltip__title">{sense.name}</div>
+					<div className="Tooltip__text">
+						{renderRecursiveContent(sense.entries)}
 					</div>
 				</div>
 			);

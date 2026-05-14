@@ -31,6 +31,7 @@ import AddMonsterToEncounterModalContent from "./modals/AddMonsterToEncounterMod
 import RulesLink from "./RulesLink.jsx";
 
 const SPELL_CACHE = new Map();
+const SENSE_NAME_REGEX = /\b(blindsight|darkvision|tremorsense|truesight)\b/gi;
 
 export default function MonsterStatBlock({
 	monster,
@@ -223,6 +224,62 @@ export default function MonsterStatBlock({
 				))}
 			</div>
 		);
+	};
+
+	const renderSenses = () => {
+		const senses = monster.senses;
+		if (!Array.isArray(senses)) return renderSenseText(senses);
+
+		return senses.map((sense, index) => (
+			<React.Fragment key={index}>
+				{renderSenseText(sense)}
+				{index < senses.length - 1 ? ", " : ""}
+			</React.Fragment>
+		));
+	};
+
+	const renderSenseText = (text) => {
+		if (typeof text !== "string") return renderRecursiveContent(text);
+		if (/\{@sense\s/i.test(text)) return renderRecursiveContent(text);
+
+		const elements = [];
+		let lastIndex = 0;
+		let matchIndex = 0;
+		let match;
+
+		SENSE_NAME_REGEX.lastIndex = 0;
+		while ((match = SENSE_NAME_REGEX.exec(text)) !== null) {
+			const start = match.index;
+			const senseName = match[1];
+			if (start > lastIndex) {
+				elements.push(
+					<React.Fragment key={`sense-text-${matchIndex}`}>
+						{parseRollsAndSpells(preprocessTags(text.slice(lastIndex, start)))}
+					</React.Fragment>,
+				);
+			}
+			elements.push(
+				<RulesLink
+					key={`sense-link-${matchIndex}`}
+					type="sense"
+					name={senseName}
+				>
+					{senseName}
+				</RulesLink>,
+			);
+			lastIndex = start + senseName.length;
+			matchIndex += 1;
+		}
+
+		if (lastIndex < text.length) {
+			elements.push(
+				<React.Fragment key="sense-text-tail">
+					{parseRollsAndSpells(preprocessTags(text.slice(lastIndex)))}
+				</React.Fragment>,
+			);
+		}
+
+		return elements.length > 0 ? elements : renderRecursiveContent(text);
 	};
 
 	const renderSpellcasting = () => {
@@ -538,7 +595,7 @@ export default function MonsterStatBlock({
 				<div className="MonsterStatBlock__description">
 					<p>
 						<strong>Senses:</strong>{" "}
-						{renderRecursiveContent(monster.senses)}
+						{renderSenses()}
 					</p>
 					<p>
 						<strong>Languages:</strong> {model.languages}
