@@ -31,7 +31,6 @@ export default function DraggableList({
 	const itemsRef = useRef(items);
 	const pendingPointerRef = useRef(null);
 	const dragStateRef = useRef(null);
-	const draggingIndexRef = useRef(null);
 	const scrollSnapshotRef = useRef(null);
 	const removePointerListenersRef = useRef(null);
 	const suppressClickRef = useRef(false);
@@ -208,8 +207,12 @@ export default function DraggableList({
 			typeof dragData === "function"
 				? dragData(currentItems[pending.index], pending.index)
 				: null;
-		const draggedElement = getListItemFromPoint(event.clientX, event.clientY);
+		const draggedElement = pending.element?.isConnected
+			? pending.element
+			: getListItemFromPoint(event.clientX, event.clientY);
 		const draggedRect = draggedElement?.getBoundingClientRect();
+
+		if (!draggedRect) return;
 
 		dragStateRef.current = {
 			currentIndex: pending.index,
@@ -217,23 +220,20 @@ export default function DraggableList({
 			originalItems: currentItems,
 			blockedTargetKey: null,
 			hasReordered: false,
-			previewOffsetX: draggedRect ? event.clientX - draggedRect.left : 0,
-			previewOffsetY: draggedRect ? event.clientY - draggedRect.top : 0,
+			previewOffsetX: event.clientX - draggedRect.left,
+			previewOffsetY: event.clientY - draggedRect.top,
 			payload,
 		};
 		setDocumentDragMode(listRef.current?.ownerDocument || document, true);
-		draggingIndexRef.current = pending.index;
 		setDraggingIndex(pending.index);
-		if (draggedRect) {
-			setDragPreview({
-				item: currentItems[pending.index],
-				index: pending.index,
-				left: draggedRect.left,
-				top: draggedRect.top,
-				width: draggedRect.width,
-				height: draggedRect.height,
-			});
-		}
+		setDragPreview({
+			item: currentItems[pending.index],
+			index: pending.index,
+			left: draggedRect.left,
+			top: draggedRect.top,
+			width: draggedRect.width,
+			height: draggedRect.height,
+		});
 		updatePointerDrag(event);
 	};
 
@@ -282,7 +282,6 @@ export default function DraggableList({
 		dragState.currentIndex = targetIndex;
 		dragState.blockedTargetKey = targetKey;
 		dragState.hasReordered = true;
-		draggingIndexRef.current = targetIndex;
 		setDraggingIndex(targetIndex);
 		setPreviewItems(newList);
 	};
@@ -294,7 +293,6 @@ export default function DraggableList({
 
 		const dragState = dragStateRef.current;
 		dragStateRef.current = null;
-		draggingIndexRef.current = null;
 		const finalItems = dragState?.items || null;
 		const hasReordered =
 			!!dragState?.hasReordered &&
@@ -338,6 +336,7 @@ export default function DraggableList({
 			startX: event.clientX,
 			startY: event.clientY,
 			index,
+			element: event.currentTarget,
 		};
 
 		const handlePointerMove = (moveEvent) => {
