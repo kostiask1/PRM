@@ -40,7 +40,7 @@ export default function Spells() {
 	const listRef = useRef(null);
 
 	const displayedSpells = useMemo(() => {
-		let result = [...spells].sort((a, b) => a.name.localeCompare(b.name));
+		let result = [...spells];
 		if (sortOrder !== "none") {
 			result.sort((a, b) => {
 				const lvlA = a.level ?? 0;

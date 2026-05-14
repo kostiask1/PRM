@@ -34,7 +34,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	const displayedMonsters = useMemo(() => {
 		let list = [...monsters];
 		if (sortOrder === "none") {
-			return list.sort((a, b) => a.name.localeCompare(b.name));
+			return list;
 		}
 
 		return list.sort((a, b) => {
