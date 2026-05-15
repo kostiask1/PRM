@@ -98,6 +98,10 @@ function getInitialTabId(initialTab = "") {
 	return TAB_BY_ID.has(initialTab) ? initialTab : REFERENCE_TABS[0].id;
 }
 
+function getReferenceItemKey(tabId, item) {
+	return `${tabId}:${item.name}`;
+}
+
 export default function RulesReferenceModalContent({
 	initialTab = "conditions",
 	initialName = "",
@@ -287,13 +291,13 @@ export default function RulesReferenceModalContent({
 		setSelectedByTab((current) => ({ ...current, [activeTab.id]: name }));
 	};
 
-	const renderReferenceItem = (index, key) => {
+	const renderReferenceItem = (index) => {
 		const item = filteredItems[index];
 		const meta = activeTab.meta?.(item);
 		const isActive = activeSelectedName === item.name;
 
 		return (
-			<div key={key}>
+			<div key={getReferenceItemKey(activeTab.id, item)}>
 				<ListCard onClick={() => selectItem(item.name)} active={isActive}>
 					<div className="ListCard__title">{highlightText(item.name, query)}</div>
 					{meta && (

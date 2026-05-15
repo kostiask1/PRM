@@ -35,6 +35,10 @@ function spellMatchesUrl(spell, name, source) {
 	);
 }
 
+function getSpellItemKey(spell) {
+	return `${spell.source || ""}:${spell.name}`;
+}
+
 export default function Spells() {
 	const [sources, setSources] = useState([]);
 	const [selectedSource, setSelectedSource] = useState("all");
@@ -49,7 +53,11 @@ export default function Spells() {
 	const [selectedSpell, setSelectedSpell] = useState(null);
 	const [sortOrder, setSortOrder] = useState("none"); // 'none', 'asc', 'desc'
 	const listRef = useRef(null);
-	const selectedSpellName = selectedSpell?.name;
+	const selectedSpellRef = useRef(null);
+
+	useEffect(() => {
+		selectedSpellRef.current = selectedSpell;
+	}, [selectedSpell]);
 
 	const displayedSpells = useMemo(() => {
 		let result = [...spells];
@@ -163,22 +171,24 @@ export default function Spells() {
 
 	// початковий вибір
 	useEffect(() => {
-		// Початковий вибір заклинання, якщо ще нічого не вибрано
-		// Ця логіка повинна виконуватися лише при зміні displayedSpells або search,
-		// але не при зміні selectedSpell, щоб уникнути рекурсії.
-		// Перевіряємо, чи selectedSpell вже встановлено, щоб не перезаписувати вибір користувача.
-		const params = new URLSearchParams(window.location.search);
-		const urlSpellName = params.get("spell");
-		const urlSpellSource = params.get("s_source");
-		let spellToSelect = null;
+		const syncSelectionFromUrl = () => {
+			const params = new URLSearchParams(window.location.search);
+			const urlSpellName = params.get("spell");
+			const urlSpellSource = params.get("s_source");
+			const currentSpell = selectedSpellRef.current;
 
-		if (!urlSpellName && displayedSpells.length > 0 && !selectedSpellName) {
-			setSelectedSpell(displayedSpells[0]);
-			return;
-		}
+			if (!urlSpellName) {
+				if (displayedSpells.length > 0 && !currentSpell?.name) {
+					setSelectedSpell(displayedSpells[0]);
+				}
+				return;
+			}
 
-		if (urlSpellName && selectedSpellName !== urlSpellName) {
-			spellToSelect = displayedSpells.findIndex((s) =>
+			if (spellMatchesUrl(currentSpell, urlSpellName, urlSpellSource)) {
+				return;
+			}
+
+			const spellToSelect = displayedSpells.findIndex((s) =>
 				spellMatchesUrl(s, urlSpellName, urlSpellSource),
 			);
 			const spell =
@@ -191,8 +201,15 @@ export default function Spells() {
 					setTimeout(() => listRef?.current?.scrollTo(spellToSelect), 0);
 				}
 			}
+		};
+
+		if (displayedSpells.length > 0 || allSpells.length > 0) {
+			syncSelectionFromUrl();
 		}
-	}, [allSpells, displayedSpells, search, selectedLevel, selectedSpellName]);
+
+		window.addEventListener("popstate", syncSelectionFromUrl);
+		return () => window.removeEventListener("popstate", syncSelectionFromUrl);
+	}, [allSpells, displayedSpells]);
 
 	useEffect(() => {
 		if (selectedSpell?.name) {
@@ -219,7 +236,7 @@ export default function Spells() {
 		);
 	};
 
-	const renderSpellItem = (index, key) => {
+	const renderSpellItem = (index) => {
 		const spell = displayedSpells[index];
 		const schoolName = SCHOOL_MAP[spell.school];
 		const isSelected =
@@ -227,7 +244,7 @@ export default function Spells() {
 			selectedSpell?.source === spell.source;
 
 		return (
-			<div key={key}>
+			<div key={getSpellItemKey(spell)}>
 				<ListCard
 					active={isSelected}
 					onClick={() => setSelectedSpell(isSelected ? "" : spell)}

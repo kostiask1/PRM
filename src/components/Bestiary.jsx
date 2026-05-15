@@ -23,6 +23,10 @@ function monsterMatchesUrl(monster, name, source) {
 	return monster?.name === name && (!source || monster.source === source);
 }
 
+function getMonsterItemKey(monster) {
+	return `${monster.source || ""}:${monster.name}`;
+}
+
 export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	const [sources, setSources] = useState([]);
 	const [selectedSource, setSelectedSource] = useState("all");
@@ -37,8 +41,11 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	const [onlyFavorites, setOnlyFavorites] = useState(false);
 	const [sortOrder, setSortOrder] = useState("none"); // 'none', 'desc', 'asc'
 	const listRef = useRef(null);
-	const selectedMonsterName = selectedMonster?.name;
-	const selectedMonsterSource = selectedMonster?.source;
+	const selectedMonsterRef = useRef(null);
+
+	useEffect(() => {
+		selectedMonsterRef.current = selectedMonster;
+	}, [selectedMonster]);
 
 	const displayedMonsters = useMemo(() => {
 		let list = [...monsters];
@@ -176,25 +183,24 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	};
 
 	useEffect(() => {
-		const initSelection = async () => {
+		const syncSelectionFromUrl = () => {
 			const params = new URLSearchParams(window.location.search);
 			const urlMonsterName = params.get("monster");
 			const urlMonsterSource = params.get("m_source");
+			const currentMonster = selectedMonsterRef.current;
 
 			if (!urlMonsterName) {
 				// Якщо нічого не вибрано в URL, але монстри завантажені — вибираємо першого
-				if (displayedMonsters.length > 0 && !selectedMonsterName) {
+				if (displayedMonsters.length > 0 && !currentMonster?.name) {
 					setSelectedMonster(displayedMonsters[0]);
 				}
 				return;
 			}
 
 			// Якщо в URL той самий монстр, що вже вибраний - нічого не робимо
-			if (
-				selectedMonsterName === urlMonsterName &&
-				selectedMonsterSource === urlMonsterSource
-			)
+			if (monsterMatchesUrl(currentMonster, urlMonsterName, urlMonsterSource)) {
 				return;
+			}
 
 			// Шукаємо в поточному видимому списку для прокрутки; деталі можна
 			// показати й для монстра, який не підпадає під активний пошук.
@@ -217,16 +223,13 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 		};
 
 		// Ініціалізація при зміні списку всіх монстрів
-		if (displayedMonsters.length > 0) initSelection();
+		if (displayedMonsters.length > 0 || allMonsters.length > 0) {
+			syncSelectionFromUrl();
+		}
 
-		window.addEventListener("popstate", initSelection);
-		return () => window.removeEventListener("popstate", initSelection);
-	}, [
-		allMonsters,
-		displayedMonsters,
-		selectedMonsterName,
-		selectedMonsterSource,
-	]);
+		window.addEventListener("popstate", syncSelectionFromUrl);
+		return () => window.removeEventListener("popstate", syncSelectionFromUrl);
+	}, [allMonsters, displayedMonsters]);
 
 	useEffect(() => {
 		if (selectedMonster?.name) {
@@ -272,7 +275,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 		return parseFloat(crStr) || 0;
 	}
 
-	const renderMonsterItem = (index, key) => {
+	const renderMonsterItem = (index) => {
 		const monster = displayedMonsters[index];
 		const crValue = monster.cr?.cr !== undefined ? monster.cr.cr : monster.cr;
 		const isSelected =
@@ -285,7 +288,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 		);
 
 		return (
-			<div key={key}>
+			<div key={getMonsterItemKey(monster)}>
 				<ListCard
 					active={isSelected}
 					onClick={() => setSelectedMonster(isSelected ? "" : monster)}
