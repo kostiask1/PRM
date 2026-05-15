@@ -1,8 +1,64 @@
 .ConditionsModal {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+	height: 100%;
+	min-height: 0;
+}
+
+.ConditionsModal__tabs {
+	display: flex;
+	align-items: flex-end;
+	gap: var(--space-1);
+	min-width: 0;
+	overflow-x: auto;
+	border-bottom: 1px solid color-mix(in srgb, var(--border), transparent 35%);
+}
+
+.ConditionsModal__search {
+	max-width: 420px;
+}
+
+.ConditionsModal__search .Input {
+	margin: 0;
+}
+
+.ConditionsModal__tab {
+	flex: 0 0 auto;
+	border: 1px solid color-mix(in srgb, var(--border), transparent 35%);
+	border-bottom: 0;
+	border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+	background: color-mix(in srgb, var(--bg), transparent 25%);
+	color: var(--muted);
+	padding: var(--space-2) var(--space-3);
+	font: inherit;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.ConditionsModal__tab:hover {
+	color: var(--text);
+	background: color-mix(in srgb, var(--accent), var(--panel) 90%);
+}
+
+.ConditionsModal__tab--active {
+	background: var(--panel);
+	color: var(--text);
+	border-color: var(--accent);
+}
+
+.ConditionsModal__tab--hasMatches {
+	color: var(--text);
+	border-color: var(--accent);
+	box-shadow: inset 0 3px 0 var(--accent);
+}
+
+.ConditionsModal__main {
 	display: grid;
 	grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
 	gap: var(--space-3);
-	height: 100%;
+	min-height: 0;
+	flex: 1;
 }
 
 .ConditionsModal__sidebar {
@@ -76,4 +132,14 @@
 	justify-content: center;
 	min-height: 100%;
 	text-align: center;
+}
+
+@media (max-width: 760px) {
+	.ConditionsModal__main {
+		grid-template-columns: 1fr;
+	}
+
+	.ConditionsModal__sidebar {
+		max-height: 34vh;
+	}
 }

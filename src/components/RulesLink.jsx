@@ -23,8 +23,7 @@ import {
 } from "../services/referenceResolvers.js";
 import { capitalizeWords } from "../utils/parser.jsx";
 import { renderRecursiveContent } from "../renderers/contentRenderer.jsx";
-import { openConditionsModal } from "./modals/openConditionsModal.jsx";
-import { openDiseasesModal } from "./modals/openDiseasesModal.jsx";
+import { openRulesReferenceModal } from "./modals/openRulesReferenceModal.jsx";
 
 const SpellCard = lazy(() => import("./SpellCard"));
 
@@ -65,70 +64,25 @@ export default function RulesLink({
 		});
 	};
 
-	const openVariantRule = async () => {
-		const rule = await resolveVariantRuleInput(referenceName);
-		if (!rule) return;
-
-		openModalRequest({
-			title: rule.name,
-			type: "confirm",
-			showFooter: false,
-			children: (
-				<div className="ConditionsModal__entryContent">
-					{renderRecursiveContent(rule.entries)}
-				</div>
-			),
-		});
-	};
-
-	const openSkill = async () => {
-		const skill = await resolveSkillInput(referenceName);
-		if (!skill) return;
-
-		openModalRequest({
-			title: skill.name,
-			type: "confirm",
-			showFooter: false,
-			children: (
-				<div className="ConditionsModal__entryContent">
-					{renderRecursiveContent(skill.entries)}
-				</div>
-			),
-		});
-	};
-
-	const openSense = async () => {
-		const sense = await resolveSenseInput(referenceName);
-		if (!sense) return;
-
-		openModalRequest({
-			title: sense.name,
-			type: "confirm",
-			showFooter: false,
-			children: (
-				<div className="ConditionsModal__entryContent">
-					{renderRecursiveContent(sense.entries)}
-				</div>
-			),
-		});
-	};
-
 	const handleClick = async () => {
 		try {
 			if (type === "spell") {
 				await openSpell();
 			} else if (type === "condition" || type === "status") {
 				const condition = await resolveConditionInput(referenceName);
-				if (condition) openConditionsModal(condition.name);
+				if (condition) openRulesReferenceModal("conditions", condition.name);
 			} else if (type === "disease") {
 				const disease = await resolveDiseaseInput(referenceName);
-				if (disease) openDiseasesModal(disease.name);
+				if (disease) openRulesReferenceModal("diseases", disease.name);
 			} else if (type === "variantrule") {
-				await openVariantRule();
+				const rule = await resolveVariantRuleInput(referenceName);
+				if (rule) openRulesReferenceModal("variantrules", rule.name);
 			} else if (type === "skill") {
-				await openSkill();
+				const skill = await resolveSkillInput(referenceName);
+				if (skill) openRulesReferenceModal("skills", skill.name);
 			} else if (type === "sense") {
-				await openSense();
+				const sense = await resolveSenseInput(referenceName);
+				if (sense) openRulesReferenceModal("senses", sense.name);
 			}
 		} catch (error) {
 			showLoadError(error);

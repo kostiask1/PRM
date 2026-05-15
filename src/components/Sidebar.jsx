@@ -7,8 +7,7 @@ import StatusBadge from "./common/StatusBadge";
 import ListCard from "./common/ListCard";
 import DraggableList from "./common/DraggableList";
 import ImageGallery from "./ImageGallery";
-import { openConditionsModal } from "./modals/openConditionsModal";
-import { openDiseasesModal } from "./modals/openDiseasesModal";
+import { openRulesReferenceModal } from "./modals/openRulesReferenceModal";
 import SettingsModalContent from "./modals/SettingsModalContent";
 import { downloadBlob } from "../utils/download";
 import {
@@ -121,12 +120,8 @@ export default function Sidebar({
 		});
 	};
 
-	const handleOpenConditions = () => {
-		openConditionsModal();
-	};
-
-	const handleOpenDiseases = () => {
-		openDiseasesModal();
+	const handleOpenRulesReference = () => {
+		openRulesReferenceModal();
 	};
 
 	const handleOpenSettings = () => {
@@ -218,22 +213,11 @@ export default function Sidebar({
 						className="Sidebar__link"
 						onClick={(e) => {
 							e.preventDefault();
-							handleOpenConditions();
+							handleOpenRulesReference();
 						}}
 					>
 						<Icon name="list" />
-						<span>{lang.t("Conditions")}</span>
-					</a>
-					<a
-						href="#"
-						className="Sidebar__link"
-						onClick={(e) => {
-							e.preventDefault();
-							handleOpenDiseases();
-						}}
-					>
-						<Icon name="disease" />
-						<span>{lang.t("Diseases")}</span>
+						<span>{lang.t("Rules Reference")}</span>
 					</a>
 				</div>
 
