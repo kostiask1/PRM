@@ -162,8 +162,7 @@ export default function MonsterStatBlock({
 				{actions.map((action, index) => (
 					<div key={index} className="MonsterStatBlock__action">
 						<strong>
-							{renderRecursiveContent(action.name, searchHighlight)}
-							.
+							{renderRecursiveContent(action.name, searchHighlight)}.
 						</strong>{" "}
 						{renderRecursiveContent(
 							action.entries || action.desc,
@@ -348,9 +347,7 @@ export default function MonsterStatBlock({
 					<div key={idx} className="MonsterStatBlock__action">
 						<h4>{sc.name}:</h4>
 						{sc.headerEntries && (
-							<p>
-								{renderRecursiveContent(sc.headerEntries, searchHighlight)}
-							</p>
+							<p>{renderRecursiveContent(sc.headerEntries, searchHighlight)}</p>
 						)}
 						{sc.will && (
 							<p>
@@ -499,27 +496,101 @@ export default function MonsterStatBlock({
 						{highlight(model.size)} {highlight(model.typeLabel)},{" "}
 						{highlight(model.alignment)}
 					</div>
-					<div className="MonsterStatBlock__stats">
-						<div className="stat-item">
-							<strong>HP:</strong>{" "}
-							{renderRecursiveContent(model.hp.val, searchHighlight)}{" "}
-							{model.hp.formula && (
-								<>
-									(
-									<RollDice formula={model.hp.formula}>
-										{highlight(model.hp.formula)}
-									</RollDice>
-									)
-								</>
+					<div className="MonsterStatBlock__stats__wrap">
+						<div className="MonsterStatBlock__stats">
+							<div className="stat-item">
+								<strong>HP:</strong>{" "}
+								{renderRecursiveContent(model.hp.val, searchHighlight)}{" "}
+								{model.hp.formula && (
+									<>
+										(
+										<RollDice formula={model.hp.formula}>
+											{highlight(model.hp.formula)}
+										</RollDice>
+										)
+									</>
+								)}
+							</div>
+							<div className="stat-item ac">
+								<strong>AC:</strong>{" "}
+								{renderRecursiveContent(model.ac.val, searchHighlight)}{" "}
+								{renderRecursiveContent(model.ac.desc, searchHighlight)}
+							</div>
+							<div className="stat-item">
+								<strong>Speed:</strong> {highlight(model.speed)}
+							</div>
+						</div>
+						<div className="MonsterStatBlock__properties">
+							{renderSaves()}
+
+							{model.skills.length > 0 && (
+								<div className="MonsterStatBlock__property-item MonsterStatBlock__property-item--skills">
+									<strong>Skills:</strong>{" "}
+									{model.skills.map(([name, value], idx, arr) => (
+										<React.Fragment key={name}>
+											<span
+												className="skill-name"
+												style={{ textTransform: "capitalize" }}
+											>
+												{highlight(name)}
+											</span>{" "}
+											<RollDice
+												formula={`1d20${formatModifier(parseInt(value))}`}
+											>
+												{formatModifier(parseInt(value))}
+											</RollDice>
+											{idx < arr.length - 1 ? ", " : ""}
+										</React.Fragment>
+									))}
+								</div>
 							)}
-						</div>
-						<div className="stat-item ac">
-							<strong>AC:</strong>{" "}
-							{renderRecursiveContent(model.ac.val, searchHighlight)}{" "}
-							{renderRecursiveContent(model.ac.desc, searchHighlight)}
-						</div>
-						<div className="stat-item">
-							<strong>Speed:</strong> {highlight(model.speed)}
+
+							{monster.vulnerable && (
+								<div className="MonsterStatBlock__property-item">
+									<strong>Damage Vulnerabilities:</strong>{" "}
+									{highlight(model.formatDamageProperty(monster.vulnerable))}
+								</div>
+							)}
+							{monster.resist && (
+								<div className="MonsterStatBlock__property-item">
+									<strong>Damage Resistances:</strong>{" "}
+									{highlight(model.formatDamageProperty(monster.resist))}
+								</div>
+							)}
+							{monster.immune && (
+								<div className="MonsterStatBlock__property-item">
+									<strong>Damage Immunities:</strong>{" "}
+									{highlight(model.formatDamageProperty(monster.immune))}
+								</div>
+							)}
+							{monster.conditionImmune && (
+								<div className="MonsterStatBlock__property-item">
+									<strong>Condition Immunities:</strong>{" "}
+									{highlight(
+										model.formatDamageProperty(monster.conditionImmune),
+									)}
+								</div>
+							)}
+
+							<div className="MonsterStatBlock__description">
+								<p>
+									<strong>Senses:</strong> {renderSenses()}
+								</p>
+								<p>
+									<strong>Languages:</strong> {highlight(model.languages)}
+								</p>
+								<p>
+									<strong>CR:</strong> {highlight(model.challenge)}
+								</p>
+							</div>
+							{monster.desc && (
+								<div className="MonsterStatBlock__lore">
+									{parseRollsAndSpells(
+										preprocessTags(monster.desc),
+										searchHighlight,
+									)}
+								</div>
+							)}
 						</div>
 					</div>
 					{!isGridLayout && (
@@ -566,75 +637,6 @@ export default function MonsterStatBlock({
 					{renderAbility("CHA", model.abilityScores.cha)}
 				</div>
 			)}
-			<div className="MonsterStatBlock__properties">
-				{renderSaves()}
-
-				{model.skills.length > 0 && (
-					<div className="MonsterStatBlock__property-item MonsterStatBlock__property-item--skills">
-						<strong>Skills:</strong>{" "}
-						{model.skills.map(([name, value], idx, arr) => (
-							<React.Fragment key={name}>
-								<span
-									className="skill-name"
-									style={{ textTransform: "capitalize" }}
-								>
-									{highlight(name)}
-								</span>{" "}
-								<RollDice formula={`1d20${formatModifier(parseInt(value))}`}>
-									{formatModifier(parseInt(value))}
-								</RollDice>
-								{idx < arr.length - 1 ? ", " : ""}
-							</React.Fragment>
-						))}
-					</div>
-				)}
-
-				{monster.vulnerable && (
-					<div className="MonsterStatBlock__property-item">
-						<strong>Damage Vulnerabilities:</strong>{" "}
-						{highlight(model.formatDamageProperty(monster.vulnerable))}
-					</div>
-				)}
-				{monster.resist && (
-					<div className="MonsterStatBlock__property-item">
-						<strong>Damage Resistances:</strong>{" "}
-						{highlight(model.formatDamageProperty(monster.resist))}
-					</div>
-				)}
-				{monster.immune && (
-					<div className="MonsterStatBlock__property-item">
-						<strong>Damage Immunities:</strong>{" "}
-						{highlight(model.formatDamageProperty(monster.immune))}
-					</div>
-				)}
-				{monster.conditionImmune && (
-					<div className="MonsterStatBlock__property-item">
-						<strong>Condition Immunities:</strong>{" "}
-						{highlight(model.formatDamageProperty(monster.conditionImmune))}
-					</div>
-				)}
-
-				<div className="MonsterStatBlock__description">
-					<p>
-						<strong>Senses:</strong>{" "}
-						{renderSenses()}
-					</p>
-					<p>
-						<strong>Languages:</strong> {highlight(model.languages)}
-					</p>
-					<p>
-						<strong>CR:</strong> {highlight(model.challenge)}
-					</p>
-				</div>
-				{monster.desc && (
-					<div className="MonsterStatBlock__lore">
-						{parseRollsAndSpells(
-							preprocessTags(monster.desc),
-							searchHighlight,
-						)}
-					</div>
-				)}
-			</div>
 			{renderSpellcasting()}
 			{renderNewSpellcasting()}
 			{renderActionList(monster.trait, "Traits")}
