@@ -26,7 +26,6 @@
 	flex: 1;
 	min-width: 0;
 	margin: 0;
-	height: var(--size-9);
 }
 
 .RulesReferenceModalContent__detailed-search-btn {

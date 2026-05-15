@@ -24,10 +24,6 @@
 	padding: var(--space-1) 0;
 }
 
-.Bestiary__search .Input {
-	height: var(--size-9);
-}
-
 .Bestiary__searchInput {
 	display: flex;
 	align-items: center;

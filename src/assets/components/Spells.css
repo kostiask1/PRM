@@ -34,7 +34,6 @@
 .Spells__searchInput .Input {
 	flex: 1;
 	min-width: 0;
-	height: var(--size-9);
 }
 
 .Spells__detailed-search-btn {
