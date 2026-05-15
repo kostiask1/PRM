@@ -67,7 +67,7 @@
 
 .RulesReferenceModalContent__main {
 	display: grid;
-	grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+	grid-template-columns: 360px minmax(0, 1fr);
 	gap: var(--space-3);
 	min-height: 0;
 	flex: 1;
@@ -92,11 +92,14 @@
 }
 
 .RulesReferenceModalContent__list {
-	display: flex;
-	flex-direction: column;
 	min-height: 0;
-	overflow-y: auto;
+	overflow-y: scroll;
 	padding: 0 var(--space-1);
+	height: 100%;
+}
+
+.RulesReferenceModalContent__list .ListCard {
+	height: 61px;
 }
 
 .RulesReferenceModalContent__content {

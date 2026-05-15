@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import ReactList from "react-list";
 
 import { alert } from "../../actions/app";
 import { api } from "../../api";
@@ -102,7 +103,7 @@ export default function RulesReferenceModalContent({
 	initialName = "",
 }) {
 	const dispatch = useAppDispatch();
-	const activeItemRef = useRef(null);
+	const listRef = useRef(null);
 	const isMountedRef = useRef(false);
 	const requestedTabsRef = useRef(new Set());
 	const [activeTabId, setActiveTabId] = useState(getInitialTabId(initialTab));
@@ -252,11 +253,19 @@ export default function RulesReferenceModalContent({
 	useEffect(() => {
 		if (!hasLoadedActiveTab || isLoading || !activeSelectedName) return;
 
-		activeItemRef.current?.scrollIntoView({
-			block: "nearest",
-			inline: "nearest",
-		});
-	}, [activeSelectedName, activeTab.id, hasLoadedActiveTab, isLoading]);
+		const activeIndex = filteredItems.findIndex(
+			(item) => item.name === activeSelectedName,
+		);
+		if (activeIndex >= 0) {
+			setTimeout(() => listRef.current?.scrollTo(activeIndex), 0);
+		}
+	}, [
+		activeSelectedName,
+		activeTab.id,
+		filteredItems,
+		hasLoadedActiveTab,
+		isLoading,
+	]);
 
 	const selectedItem =
 		filteredItems.find((item) => item.name === activeSelectedName) ||
@@ -272,6 +281,23 @@ export default function RulesReferenceModalContent({
 		setSelectedByTab((current) => ({ ...current, [activeTab.id]: name }));
 	};
 
+	const renderReferenceItem = (index, key) => {
+		const item = filteredItems[index];
+		const meta = activeTab.meta?.(item);
+		const isActive = activeSelectedName === item.name;
+
+		return (
+			<div key={key}>
+				<ListCard onClick={() => selectItem(item.name)} active={isActive}>
+					<div className="ListCard__title">{highlightText(item.name, query)}</div>
+					{meta && (
+						<div className="ListCard__meta">{highlightText(meta, query)}</div>
+					)}
+				</ListCard>
+			</div>
+		);
+	};
+console.log('filteredItems:', filteredItems)
 	return (
 		<div className="RulesReferenceModalContent RulesReferenceModalContent--withTabs">
 			<div className="RulesReferenceModalContent__search">
@@ -321,30 +347,12 @@ export default function RulesReferenceModalContent({
 						{isLoading ? (
 							<p className="muted">{lang.t("Loading...")}</p>
 						) : filteredItems.length ? (
-							filteredItems.map((item) => {
-								const meta = activeTab.meta?.(item);
-								const isActive = activeSelectedName === item.name;
-								return (
-									<div
-										key={item.name}
-										ref={isActive ? activeItemRef : null}
-									>
-										<ListCard
-											onClick={() => selectItem(item.name)}
-											active={isActive}
-										>
-											<div className="ListCard__title">
-												{highlightText(item.name, query)}
-											</div>
-											{meta && (
-												<div className="ListCard__meta">
-													{highlightText(meta, query)}
-												</div>
-											)}
-										</ListCard>
-									</div>
-								);
-							})
+							<ReactList
+								ref={listRef}
+								itemRenderer={renderReferenceItem}
+								length={filteredItems.length}
+								type="uniform"
+							/>
 						) : (
 							<p className="muted">{lang.t(activeTab.emptyLabel)}</p>
 						)}
