@@ -54,6 +54,8 @@ const SENSE_PRUNE_KEYS = new Set([
 const VARIANT_RULE_NAMES_WITH_INLINE_OBJECTS_TO_REMOVE = new Set([
 	"Customizing Ability Scores",
 ]);
+const CUSTOMIZING_ABILITY_SCORES_POINT_BUY_LINK =
+	"[Point Buy Calculator](https://redcap.press/character-creation?method=Point+Buy)";
 
 const OWNER = "5etools-mirror-3";
 const REPO = "5etools-src";
@@ -263,6 +265,19 @@ function removeInlineObjects(value) {
 	);
 }
 
+function addCustomizingAbilityScoresLink(rule) {
+	if (!Array.isArray(rule?.entries)) return rule;
+	const hasPointBuyLink = rule.entries.some((entry) =>
+		String(entry || "").includes("https://redcap.press/character-creation"),
+	);
+	if (hasPointBuyLink) return rule;
+
+	return {
+		...rule,
+		entries: [...rule.entries, CUSTOMIZING_ABILITY_SCORES_POINT_BUY_LINK],
+	};
+}
+
 function normalizeVariantRule(item) {
 	const pruned = pruneVariantRuleMeta(item);
 	if (
@@ -270,7 +285,7 @@ function normalizeVariantRule(item) {
 			String(pruned?.name || ""),
 		)
 	) {
-		return removeInlineObjects(pruned);
+		return addCustomizingAbilityScoresLink(removeInlineObjects(pruned));
 	}
 	return pruned;
 }
