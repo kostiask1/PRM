@@ -106,6 +106,7 @@ export default function RulesReferenceModalContent({
 	const listRef = useRef(null);
 	const isMountedRef = useRef(false);
 	const requestedTabsRef = useRef(new Set());
+	const shouldScrollToActiveRef = useRef(false);
 	const [activeTabId, setActiveTabId] = useState(getInitialTabId(initialTab));
 	const [query, setQuery] = useState("");
 	const [isDetailedSearch, setIsDetailedSearch] = useState(false);
@@ -135,6 +136,7 @@ export default function RulesReferenceModalContent({
 		const nextTabId = getInitialTabId(initialTab);
 		setActiveTabId(nextTabId);
 		if (initialName) {
+			shouldScrollToActiveRef.current = true;
 			setSelectedByTab((current) => ({
 				...current,
 				[nextTabId]: initialName,
@@ -252,10 +254,12 @@ export default function RulesReferenceModalContent({
 
 	useEffect(() => {
 		if (!hasLoadedActiveTab || isLoading || !activeSelectedName) return;
+		if (!shouldScrollToActiveRef.current) return;
 
 		const activeIndex = filteredItems.findIndex(
 			(item) => item.name === activeSelectedName,
 		);
+		shouldScrollToActiveRef.current = false;
 		if (activeIndex >= 0) {
 			setTimeout(() => listRef.current?.scrollTo(activeIndex), 0);
 		}
@@ -274,10 +278,12 @@ export default function RulesReferenceModalContent({
 	const selectedMeta = selectedItem ? activeTab.meta?.(selectedItem) : "";
 
 	const selectTab = (tabId) => {
+		shouldScrollToActiveRef.current = false;
 		setActiveTabId(tabId);
 	};
 
 	const selectItem = (name) => {
+		shouldScrollToActiveRef.current = false;
 		setSelectedByTab((current) => ({ ...current, [activeTab.id]: name }));
 	};
 
@@ -297,7 +303,7 @@ export default function RulesReferenceModalContent({
 			</div>
 		);
 	};
-console.log('filteredItems:', filteredItems)
+
 	return (
 		<div className="RulesReferenceModalContent RulesReferenceModalContent--withTabs">
 			<div className="RulesReferenceModalContent__search">

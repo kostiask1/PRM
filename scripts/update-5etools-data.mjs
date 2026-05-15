@@ -51,6 +51,9 @@ const SENSE_PRUNE_KEYS = new Set([
 	"source",
 	"reprintedAs",
 ]);
+const VARIANT_RULE_NAMES_WITH_INLINE_OBJECTS_TO_REMOVE = new Set([
+	"Customizing Ability Scores",
+]);
 
 const OWNER = "5etools-mirror-3";
 const REPO = "5etools-src";
@@ -243,6 +246,35 @@ function pruneVariantRuleMeta(item) {
 	);
 }
 
+function removeInlineObjects(value) {
+	if (Array.isArray(value)) {
+		return value
+			.filter((item) => item?.type !== "inline")
+			.map((item) => removeInlineObjects(item));
+	}
+
+	if (!value || typeof value !== "object") return value;
+
+	return Object.fromEntries(
+		Object.entries(value).map(([key, itemValue]) => [
+			key,
+			removeInlineObjects(itemValue),
+		]),
+	);
+}
+
+function normalizeVariantRule(item) {
+	const pruned = pruneVariantRuleMeta(item);
+	if (
+		VARIANT_RULE_NAMES_WITH_INLINE_OBJECTS_TO_REMOVE.has(
+			String(pruned?.name || ""),
+		)
+	) {
+		return removeInlineObjects(pruned);
+	}
+	return pruned;
+}
+
 function pruneSkillMeta(item) {
 	if (!item || typeof item !== "object") return item;
 	return Object.fromEntries(
@@ -300,7 +332,7 @@ async function writeVariantRules(downloadedPath) {
 	const downloaded = await readJson(downloadedPath);
 	const normalized = {
 		variantrule: dedupeConditionsByName(downloaded.variantrule || []).map(
-			pruneVariantRuleMeta,
+			normalizeVariantRule,
 		),
 	};
 	await fs.writeFile(VARIANT_RULES_PATH, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");

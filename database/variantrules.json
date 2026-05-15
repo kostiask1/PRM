@@ -723,21 +723,6 @@
               9
             ]
           ]
-        },
-        {
-          "type": "inline",
-          "entries": [
-            "Alternatively, see the ",
-            {
-              "type": "link",
-              "href": {
-                "type": "internal",
-                "path": "statgen.html",
-                "hash": "pointbuy"
-              },
-              "text": "Point Buy Calculator."
-            }
-          ]
         }
       ]
     },
