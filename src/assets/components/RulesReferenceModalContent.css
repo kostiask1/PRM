@@ -1,4 +1,4 @@
-.ConditionsModal {
+﻿.RulesReferenceModalContent {
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-3);
@@ -6,7 +6,7 @@
 	min-height: 0;
 }
 
-.ConditionsModal__tabs {
+.RulesReferenceModalContent__tabs {
 	display: flex;
 	align-items: flex-end;
 	gap: var(--space-1);
@@ -15,27 +15,28 @@
 	border-bottom: 1px solid color-mix(in srgb, var(--border), transparent 35%);
 }
 
-.ConditionsModal__search {
+.RulesReferenceModalContent__search {
 	display: flex;
 	align-items: center;
-	gap: var(--space-1);
+	gap: var(--space-2);
 	max-width: 420px;
 }
 
-.ConditionsModal__search .Input {
+.RulesReferenceModalContent__search .Input {
 	flex: 1;
 	min-width: 0;
 	margin: 0;
+	height: var(--size-9);
 }
 
-.ConditionsModal__detailed-search-btn {
+.RulesReferenceModalContent__detailed-search-btn {
 	width: var(--size-9);
 	height: var(--size-9);
 	padding: 0 !important;
 	flex: 0 0 auto;
 }
 
-.ConditionsModal__tab {
+.RulesReferenceModalContent__tab {
 	flex: 0 0 auto;
 	border: 1px solid color-mix(in srgb, var(--border), transparent 35%);
 	border-bottom: 0;
@@ -48,24 +49,24 @@
 	cursor: pointer;
 }
 
-.ConditionsModal__tab:hover {
+.RulesReferenceModalContent__tab:hover {
 	color: var(--text);
 	background: color-mix(in srgb, var(--accent), var(--panel) 90%);
 }
 
-.ConditionsModal__tab--active {
+.RulesReferenceModalContent__tab--active {
 	background: var(--panel);
 	color: var(--text);
 	border-color: var(--accent);
 }
 
-.ConditionsModal__tab--hasMatches {
+.RulesReferenceModalContent__tab--hasMatches {
 	color: var(--text);
 	border-color: var(--accent);
 	box-shadow: inset 0 3px 0 var(--accent);
 }
 
-.ConditionsModal__main {
+.RulesReferenceModalContent__main {
 	display: grid;
 	grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
 	gap: var(--space-3);
@@ -73,7 +74,7 @@
 	flex: 1;
 }
 
-.ConditionsModal__sidebar {
+.RulesReferenceModalContent__sidebar {
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-2);
@@ -81,17 +82,17 @@
 	min-width: 0;
 }
 
-.ConditionsModal__sidebar .Input {
+.RulesReferenceModalContent__sidebar .Input {
 	margin: var(--space-1);
 }
 
-.ConditionsModal__filters {
+.RulesReferenceModalContent__filters {
 	display: flex;
 	flex-wrap: wrap;
 	gap: var(--space-1);
 }
 
-.ConditionsModal__list {
+.RulesReferenceModalContent__list {
 	display: flex;
 	flex-direction: column;
 	min-height: 0;
@@ -99,7 +100,7 @@
 	padding: 0 var(--space-1);
 }
 
-.ConditionsModal__content {
+.RulesReferenceModalContent__content {
 	min-width: 0;
 	border: 1px solid color-mix(in srgb, var(--border), transparent 30%);
 	border-radius: var(--radius-2xl);
@@ -108,26 +109,26 @@
 	overflow-y: auto;
 }
 
-.ConditionsModal__contentHeader {
+.RulesReferenceModalContent__contentHeader {
 	padding-bottom: var(--space-3);
 	margin-bottom: var(--space-3);
 	border-bottom: 1px solid color-mix(in srgb, var(--border), transparent 45%);
 }
 
-.ConditionsModal__title {
+.RulesReferenceModalContent__title {
 	font-size: 1.35rem;
 }
 
-.ConditionsModal__entryContent {
+.RulesReferenceModalContent__entryContent {
 	line-height: 1.5;
 	color: var(--text);
 }
 
-.ConditionsModal__entryContent>* {
+.RulesReferenceModalContent__entryContent>* {
 	margin: var(--space-3) 0;
 }
 
-.ConditionsModal__entryContent ul {
+.RulesReferenceModalContent__entryContent ul {
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-2);
@@ -138,7 +139,7 @@
 	margin-bottom: var(--space-2);
 }
 
-.ConditionsModal__empty {
+.RulesReferenceModalContent__empty {
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -147,11 +148,12 @@
 }
 
 @media (max-width: 760px) {
-	.ConditionsModal__main {
+	.RulesReferenceModalContent__main {
 		grid-template-columns: 1fr;
 	}
 
-	.ConditionsModal__sidebar {
+	.RulesReferenceModalContent__sidebar {
 		max-height: 34vh;
 	}
 }
+

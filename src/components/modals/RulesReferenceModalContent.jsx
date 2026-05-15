@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { alert } from "../../actions/app";
 import { api } from "../../api";
-import "../../assets/components/ConditionsModal.css";
+import "../../assets/components/RulesReferenceModalContent.css";
 import ListCard from "../common/ListCard.jsx";
 import Button from "../form/Button.jsx";
 import Input from "../form/Input";
@@ -218,6 +218,11 @@ export default function RulesReferenceModalContent({
 	useEffect(() => {
 		if (!hasLoadedActiveTab || isLoading) return;
 
+		const selectedItemExists = activeItems.some(
+			(item) => item.name === activeSelectedName,
+		);
+		if (selectedItemExists) return;
+
 		if (!filteredItems.length) {
 			setSelectedByTab((current) => {
 				if (!current[activeTab.id]) return current;
@@ -238,6 +243,7 @@ export default function RulesReferenceModalContent({
 	}, [
 		activeSelectedName,
 		activeTab.id,
+		activeItems,
 		filteredItems,
 		hasLoadedActiveTab,
 		isLoading,
@@ -267,8 +273,8 @@ export default function RulesReferenceModalContent({
 	};
 
 	return (
-		<div className="ConditionsModal ConditionsModal--withTabs">
-			<div className="ConditionsModal__search">
+		<div className="RulesReferenceModalContent RulesReferenceModalContent--withTabs">
+			<div className="RulesReferenceModalContent__search">
 				<Input
 					value={query}
 					onChange={(event) => setQuery(event.target.value)}
@@ -280,11 +286,11 @@ export default function RulesReferenceModalContent({
 					icon="search-detailed"
 					onClick={() => setIsDetailedSearch((value) => !value)}
 					title={lang.t("Detailed search")}
-					className="DetailedSearchButton ConditionsModal__detailed-search-btn"
+					className="DetailedSearchButton RulesReferenceModalContent__detailed-search-btn"
 				/>
 			</div>
 
-			<div className="ConditionsModal__tabs" role="tablist">
+			<div className="RulesReferenceModalContent__tabs" role="tablist">
 				{REFERENCE_TABS.map((tab) => (
 					<button
 						key={tab.id}
@@ -292,10 +298,12 @@ export default function RulesReferenceModalContent({
 						role="tab"
 						aria-selected={activeTab.id === tab.id}
 						className={[
-							"ConditionsModal__tab",
-							activeTab.id === tab.id ? "ConditionsModal__tab--active" : "",
+							"RulesReferenceModalContent__tab",
+							activeTab.id === tab.id
+								? "RulesReferenceModalContent__tab--active"
+								: "",
 							tabsWithSearchMatches.has(tab.id)
-								? "ConditionsModal__tab--hasMatches"
+								? "RulesReferenceModalContent__tab--hasMatches"
 								: "",
 						]
 							.filter(Boolean)
@@ -307,9 +315,9 @@ export default function RulesReferenceModalContent({
 				))}
 			</div>
 
-			<div className="ConditionsModal__main">
-				<div className="ConditionsModal__sidebar">
-					<div className="ConditionsModal__list">
+			<div className="RulesReferenceModalContent__main">
+				<div className="RulesReferenceModalContent__sidebar">
+					<div className="RulesReferenceModalContent__list">
 						{isLoading ? (
 							<p className="muted">{lang.t("Loading...")}</p>
 						) : filteredItems.length ? (
@@ -343,11 +351,11 @@ export default function RulesReferenceModalContent({
 					</div>
 				</div>
 
-				<div className="ConditionsModal__content">
+				<div className="RulesReferenceModalContent__content">
 					{selectedItem && (
 						<>
-							<div className="ConditionsModal__contentHeader">
-								<h3 className="ConditionsModal__title">
+							<div className="RulesReferenceModalContent__contentHeader">
+								<h3 className="RulesReferenceModalContent__title">
 									{highlightText(selectedItem.name, query)}
 								</h3>
 								{selectedMeta && (
@@ -357,7 +365,7 @@ export default function RulesReferenceModalContent({
 								)}
 							</div>
 
-							<div className="ConditionsModal__entryContent">
+							<div className="RulesReferenceModalContent__entryContent">
 								{renderRecursiveContent(selectedItem.entries, query)}
 							</div>
 						</>

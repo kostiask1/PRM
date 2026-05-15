@@ -28,6 +28,13 @@ const SCHOOL_MAP = {
 	V: "Evocation",
 };
 
+function spellMatchesUrl(spell, name, source) {
+	return (
+		spell?.name === name &&
+		(!source || source === "all" || spell.source === source)
+	);
+}
+
 export default function Spells() {
 	const [sources, setSources] = useState([]);
 	const [selectedSource, setSelectedSource] = useState("all");
@@ -42,6 +49,7 @@ export default function Spells() {
 	const [selectedSpell, setSelectedSpell] = useState(null);
 	const [sortOrder, setSortOrder] = useState("none"); // 'none', 'asc', 'desc'
 	const listRef = useRef(null);
+	const selectedSpellName = selectedSpell?.name;
 
 	const displayedSpells = useMemo(() => {
 		let result = [...spells];
@@ -164,30 +172,27 @@ export default function Spells() {
 		const urlSpellSource = params.get("s_source");
 		let spellToSelect = null;
 
-		if (!urlSpellName && displayedSpells.length > 0 && !selectedSpell) {
+		if (!urlSpellName && displayedSpells.length > 0 && !selectedSpellName) {
 			setSelectedSpell(displayedSpells[0]);
 			return;
 		}
 
-		if (
-			urlSpellName &&
-			(!selectedSpell || selectedSpell.name !== urlSpellName)
-		) {
-			spellToSelect = displayedSpells.findIndex(
-				(s) =>
-					s.name === urlSpellName &&
-					(!urlSpellSource ||
-						urlSpellSource === "all" ||
-						s.source === urlSpellSource),
+		if (urlSpellName && selectedSpellName !== urlSpellName) {
+			spellToSelect = displayedSpells.findIndex((s) =>
+				spellMatchesUrl(s, urlSpellName, urlSpellSource),
 			);
-			const spell = displayedSpells[spellToSelect];
+			const spell =
+				displayedSpells[spellToSelect] ||
+				allSpells.find((s) => spellMatchesUrl(s, urlSpellName, urlSpellSource));
 
 			if (spell) {
 				setSelectedSpell(spell);
-				setTimeout(() => listRef?.current?.scrollTo(spellToSelect), 0);
+				if (spellToSelect >= 0) {
+					setTimeout(() => listRef?.current?.scrollTo(spellToSelect), 0);
+				}
 			}
 		}
-	}, [search, displayedSpells, selectedLevel]);
+	}, [allSpells, displayedSpells, search, selectedLevel, selectedSpellName]);
 
 	useEffect(() => {
 		if (selectedSpell?.name) {

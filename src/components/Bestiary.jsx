@@ -19,6 +19,10 @@ import { highlightText } from "../utils/searchHighlight.jsx";
 import "../assets/components/Bestiary.css";
 import { lang } from "../services/localization";
 
+function monsterMatchesUrl(monster, name, source) {
+	return monster?.name === name && (!source || monster.source === source);
+}
+
 export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	const [sources, setSources] = useState([]);
 	const [selectedSource, setSelectedSource] = useState("all");
@@ -33,6 +37,8 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	const [onlyFavorites, setOnlyFavorites] = useState(false);
 	const [sortOrder, setSortOrder] = useState("none"); // 'none', 'desc', 'asc'
 	const listRef = useRef(null);
+	const selectedMonsterName = selectedMonster?.name;
+	const selectedMonsterSource = selectedMonster?.source;
 
 	const displayedMonsters = useMemo(() => {
 		let list = [...monsters];
@@ -177,7 +183,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 
 			if (!urlMonsterName) {
 				// Якщо нічого не вибрано в URL, але монстри завантажені — вибираємо першого
-				if (displayedMonsters.length > 0 && !selectedMonster?.name) {
+				if (displayedMonsters.length > 0 && !selectedMonsterName) {
 					setSelectedMonster(displayedMonsters[0]);
 				}
 				return;
@@ -185,23 +191,28 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 
 			// Якщо в URL той самий монстр, що вже вибраний - нічого не робимо
 			if (
-				selectedMonster?.name === urlMonsterName &&
-				selectedMonster?.source === urlMonsterSource
+				selectedMonsterName === urlMonsterName &&
+				selectedMonsterSource === urlMonsterSource
 			)
 				return;
 
-			// Шукаємо в поточному завантаженому списку
+			// Шукаємо в поточному видимому списку для прокрутки; деталі можна
+			// показати й для монстра, який не підпадає під активний пошук.
 			const foundInList = displayedMonsters.findIndex(
-				(m) =>
-					m.name === urlMonsterName &&
-					(!urlMonsterSource || m.source === urlMonsterSource),
+				(m) => monsterMatchesUrl(m, urlMonsterName, urlMonsterSource),
 			);
 
-			const monster = displayedMonsters[foundInList];
+			const monster =
+				displayedMonsters[foundInList] ||
+				allMonsters.find((m) =>
+					monsterMatchesUrl(m, urlMonsterName, urlMonsterSource),
+				);
 
 			if (monster) {
 				setSelectedMonster(monster);
-				setTimeout(() => listRef?.current?.scrollTo(foundInList), 0);
+				if (foundInList >= 0) {
+					setTimeout(() => listRef?.current?.scrollTo(foundInList), 0);
+				}
 			}
 		};
 
@@ -210,8 +221,12 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 
 		window.addEventListener("popstate", initSelection);
 		return () => window.removeEventListener("popstate", initSelection);
-		// Видалили selectedMonster?.name із залежностей, щоб уникнути циклу
-	}, [displayedMonsters]);
+	}, [
+		allMonsters,
+		displayedMonsters,
+		selectedMonsterName,
+		selectedMonsterSource,
+	]);
 
 	useEffect(() => {
 		if (selectedMonster?.name) {
