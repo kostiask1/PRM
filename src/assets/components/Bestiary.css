@@ -28,6 +28,26 @@
 	height: var(--size-9);
 }
 
+.Bestiary__searchInput {
+	display: flex;
+	align-items: center;
+	gap: var(--space-1);
+	flex: 1 1 260px;
+	min-width: 260px;
+}
+
+.Bestiary__searchInput .Input {
+	flex: 1;
+	min-width: 0;
+}
+
+.Bestiary__detailed-search-btn {
+	width: var(--size-9);
+	height: var(--size-9);
+	padding: 0 !important;
+	flex: 0 0 auto;
+}
+
 .Bestiary__sort-btn {
 	display: flex !important;
 	align-items: center;

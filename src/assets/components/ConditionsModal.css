@@ -16,11 +16,23 @@
 }
 
 .ConditionsModal__search {
+	display: flex;
+	align-items: center;
+	gap: var(--space-1);
 	max-width: 420px;
 }
 
 .ConditionsModal__search .Input {
+	flex: 1;
+	min-width: 0;
 	margin: 0;
+}
+
+.ConditionsModal__detailed-search-btn {
+	width: var(--size-9);
+	height: var(--size-9);
+	padding: 0 !important;
+	flex: 0 0 auto;
 }
 
 .ConditionsModal__tab {

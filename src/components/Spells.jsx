@@ -3,6 +3,7 @@ import { api } from "../api.js";
 import ReactList from "react-list";
 import Panel from "./common/Panel.jsx";
 import Input from "./form/Input";
+import Button from "./form/Button";
 import Select from "./form/Select";
 import ListCard from "./common/ListCard.jsx";
 import SpellCard from "./SpellCard";
@@ -12,6 +13,7 @@ import { capitalizeWords } from "../utils/parser.jsx";
 import "../assets/components/Spells.css";
 import classNames from "../utils/classNames";
 import { lang } from "../services/localization";
+import { objectMatchesSearch } from "../utils/deepSearch.js";
 
 const SCHOOL_MAP = {
 	A: "Abjuration",
@@ -34,6 +36,7 @@ export default function Spells() {
 	const [selectedClass, setSelectedClass] = useState("all");
 	const [selectedSchool, setSelectedSchool] = useState("all");
 	const [search, setSearch] = useState("");
+	const [isDetailedSearch, setIsDetailedSearch] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [selectedSpell, setSelectedSpell] = useState(null);
 	const [sortOrder, setSortOrder] = useState("none"); // 'none', 'asc', 'desc'
@@ -118,7 +121,12 @@ export default function Spells() {
 			const matchesSource =
 				selectedSource === "all" ||
 				s.source?.toUpperCase() === selectedSource.toUpperCase();
-			const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase());
+			const normalizedSearch = search.trim().toLowerCase();
+			const matchesSearch =
+				!normalizedSearch ||
+				(isDetailedSearch
+					? objectMatchesSearch(s, normalizedSearch)
+					: s.name.toLowerCase().includes(normalizedSearch));
 			const matchesLevel =
 				selectedLevel === "all" || String(s.level) === selectedLevel;
 			const matchesClass =
@@ -141,6 +149,7 @@ export default function Spells() {
 		selectedSource,
 		selectedClass,
 		selectedSchool,
+		isDetailedSearch,
 	]);
 
 	// початковий вибір
@@ -299,11 +308,20 @@ export default function Spells() {
 							LVL <Icon name={`sort-${sortOrder}`} />
 						</button>
 					</Tooltip>
-					<Input
-						placeholder={lang.t("Search spell...")}
-						value={search}
-						onChange={(e) => setSearch(e.target.value)}
-					/>
+					<div className="Spells__searchInput">
+						<Input
+							placeholder={lang.t("Search spell...")}
+							value={search}
+							onChange={(e) => setSearch(e.target.value)}
+						/>
+						<Button
+							variant={isDetailedSearch ? "primary" : "ghost"}
+							icon="search"
+							onClick={() => setIsDetailedSearch((value) => !value)}
+							title={lang.t("Detailed search")}
+							className="Spells__detailed-search-btn"
+						/>
+					</div>
 				</div>
 				<div className="Spells__content">
 					<div className="Spells__list">

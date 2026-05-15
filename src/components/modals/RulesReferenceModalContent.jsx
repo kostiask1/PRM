@@ -4,10 +4,12 @@ import { alert } from "../../actions/app";
 import { api } from "../../api";
 import "../../assets/components/ConditionsModal.css";
 import ListCard from "../common/ListCard.jsx";
+import Button from "../form/Button.jsx";
 import Input from "../form/Input";
 import { renderRecursiveContent } from "../../renderers/contentRenderer.jsx";
 import { lang } from "../../services/localization";
 import { useAppDispatch } from "../../store/appStore";
+import { objectMatchesSearch } from "../../utils/deepSearch.js";
 
 const VARIANT_RULE_TYPE_LABELS = {
 	C: "Core Rule",
@@ -26,8 +28,16 @@ function getSearchValues(tab, item) {
 	return [...fieldValues, metaValue].filter(Boolean);
 }
 
-function itemMatchesQuery(tab, item, normalizedQuery) {
+function itemMatchesQuery(tab, item, normalizedQuery, isDetailedSearch) {
 	if (!normalizedQuery) return true;
+	if (isDetailedSearch) {
+		return (
+			objectMatchesSearch(item, normalizedQuery) ||
+			getSearchValues(tab, item).some((value) =>
+				String(value).toLowerCase().includes(normalizedQuery),
+			)
+		);
+	}
 
 	return getSearchValues(tab, item).some((value) =>
 		String(value).toLowerCase().includes(normalizedQuery),
@@ -96,6 +106,7 @@ export default function RulesReferenceModalContent({
 	const requestedTabsRef = useRef(new Set());
 	const [activeTabId, setActiveTabId] = useState(getInitialTabId(initialTab));
 	const [query, setQuery] = useState("");
+	const [isDetailedSearch, setIsDetailedSearch] = useState(false);
 	const [itemsByTab, setItemsByTab] = useState({});
 	const [selectedByTab, setSelectedByTab] = useState({});
 	const [loadingByTab, setLoadingByTab] = useState({});
@@ -186,11 +197,11 @@ export default function RulesReferenceModalContent({
 		return REFERENCE_TABS.reduce((result, tab) => {
 			const items = itemsByTab[tab.id] || EMPTY_ITEMS;
 			result[tab.id] = items.filter((item) =>
-				itemMatchesQuery(tab, item, normalizedQuery),
+				itemMatchesQuery(tab, item, normalizedQuery, isDetailedSearch),
 			);
 			return result;
 		}, {});
-	}, [itemsByTab, normalizedQuery]);
+	}, [itemsByTab, normalizedQuery, isDetailedSearch]);
 
 	const filteredItems = filteredItemsByTab[activeTab.id] || EMPTY_ITEMS;
 	const tabsWithSearchMatches = useMemo(() => {
@@ -262,6 +273,13 @@ export default function RulesReferenceModalContent({
 					onChange={(event) => setQuery(event.target.value)}
 					placeholder={lang.t("Search")}
 					autoFocus
+				/>
+				<Button
+					variant={isDetailedSearch ? "primary" : "ghost"}
+					icon="search"
+					onClick={() => setIsDetailedSearch((value) => !value)}
+					title={lang.t("Detailed search")}
+					className="ConditionsModal__detailed-search-btn"
 				/>
 			</div>
 

@@ -14,6 +14,7 @@ import {
 	getMonsterTypeString,
 	matchesMonsterSearch,
 } from "../utils/bestiary.js";
+import { objectMatchesSearch } from "../utils/deepSearch.js";
 import "../assets/components/Bestiary.css";
 import { lang } from "../services/localization";
 
@@ -23,6 +24,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	const [allMonsters, setAllMonsters] = useState([]);
 	const [monsters, setMonsters] = useState([]);
 	const [search, setSearch] = useState("");
+	const [isDetailedSearch, setIsDetailedSearch] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [selectedMonster, setSelectedMonster] = useState(null);
 	const [legendaryGroups, setLegendaryGroups] = useState([]);
@@ -140,10 +142,19 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			);
 			if (onlyFavorites && !isFav) return false;
 
-			return matchesMonsterSearch(m, search);
+			return isDetailedSearch
+				? objectMatchesSearch(m, search)
+				: matchesMonsterSearch(m, search);
 		});
 		setMonsters(filtered);
-	}, [search, allMonsters, onlyFavorites, favorites, selectedSource]);
+	}, [
+		search,
+		allMonsters,
+		onlyFavorites,
+		favorites,
+		selectedSource,
+		isDetailedSearch,
+	]);
 
 	const handleToggleFavorite = async (monster) => {
 		try {
@@ -341,12 +352,21 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 							))}
 						</Select>
 					)}
-					<Input
-						icon="search"
-						placeholder={lang.t("Search by name or type...")}
-						value={search}
-						onChange={(e) => setSearch(e.target.value)}
-					/>
+					<div className="Bestiary__searchInput">
+						<Input
+							icon="search"
+							placeholder={lang.t("Search by name or type...")}
+							value={search}
+							onChange={(e) => setSearch(e.target.value)}
+						/>
+						<Button
+							variant={isDetailedSearch ? "primary" : "ghost"}
+							icon="search"
+							onClick={() => setIsDetailedSearch((value) => !value)}
+							title={lang.t("Detailed search")}
+							className="Bestiary__detailed-search-btn"
+						/>
+					</div>
 					<Button
 						variant={onlyFavorites ? "primary" : "ghost"}
 						icon="star"
