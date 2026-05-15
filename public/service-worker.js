@@ -15,12 +15,20 @@ function getCleanHeaders(originalHeaders) {
 	return cleanHeaders;
 }
 
-self.addEventListener("install", () => {
-	self.skipWaiting();
-});
-
 self.addEventListener("activate", (event) => {
 	event.waitUntil(self.clients.claim());
+});
+
+function clearAllCaches() {
+	return caches.keys().then((cacheNames) => {
+		return Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
+	});
+}
+
+self.addEventListener("message", (event) => {
+	if (event.data?.type === "CLEAR_CACHES_AND_SKIP_WAITING") {
+		event.waitUntil(clearAllCaches().then(() => self.skipWaiting()));
+	}
 });
 
 self.addEventListener("fetch", (event) => {
