@@ -16,3 +16,14 @@
 	color: var(--muted);
 	margin-left: var(--space-1);
 }
+
+.SearchHighlight {
+	background: color-mix(in srgb, var(--accent), transparent 68%);
+	color: inherit;
+	border-radius: var(--radius-xxs);
+	padding: 0 0.12em;
+}
+
+.DetailedSearchButton {
+	position: relative;
+}

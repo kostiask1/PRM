@@ -9,29 +9,30 @@ import {
 	formatModifier,
 	preprocessTags,
 } from "../utils/parser.jsx";
+import { highlightText } from "../utils/searchHighlight.jsx";
 
-export const renderRecursiveContent = (content) => {
+export const renderRecursiveContent = (content, highlightQuery = "") => {
 	if (content === undefined || content === null) return null;
 
 	if (typeof content === "string") {
-		return parseRollsAndSpells(preprocessTags(content));
+		return parseRollsAndSpells(preprocessTags(content), highlightQuery);
 	}
 
 	if (typeof content === "number") {
-		return content;
+		return highlightText(content, highlightQuery);
 	}
 
 	if (Array.isArray(content)) {
 		return content.map((item, idx) => (
 			<React.Fragment key={idx}>
-				{renderRecursiveContent(item)}
+				{renderRecursiveContent(item, highlightQuery)}
 			</React.Fragment>
 		));
 	}
 
 	if (typeof content === "object") {
 		if (content.entry) {
-			return renderRecursiveContent(content.entry);
+			return renderRecursiveContent(content.entry, highlightQuery);
 		}
 
 		if (content.type === "list" && content.items) {
@@ -46,9 +47,12 @@ export const renderRecursiveContent = (content) => {
 						const isObject = typeof item === "object" && item !== null;
 						return (
 							<li key={idx}>
-								{isObject && item.name && <strong>{item.name}. </strong>}
+								{isObject && item.name && (
+									<strong>{highlightText(item.name, highlightQuery)}. </strong>
+								)}
 								{renderRecursiveContent(
 									isObject ? item.entries || item.entry : item,
+									highlightQuery,
 								)}
 							</li>
 						);
@@ -63,8 +67,10 @@ export const renderRecursiveContent = (content) => {
 		) {
 			return (
 				<div key={content.name || Math.random()} className="parser-section">
-					{content.name && <strong>{content.name}. </strong>}
-					{renderRecursiveContent(content.entries)}
+					{content.name && (
+						<strong>{highlightText(content.name, highlightQuery)}. </strong>
+					)}
+					{renderRecursiveContent(content.entries, highlightQuery)}
 				</div>
 			);
 		}
@@ -76,7 +82,9 @@ export const renderRecursiveContent = (content) => {
 					key={content.caption || Math.random()}
 				>
 					{content.caption && (
-						<div className="ParserTable__caption">{content.caption}</div>
+						<div className="ParserTable__caption">
+							{highlightText(content.caption, highlightQuery)}
+						</div>
 					)}
 					<table className="ParserTable">
 						{content.colLabels && (
@@ -84,7 +92,7 @@ export const renderRecursiveContent = (content) => {
 								<tr>
 									{content.colLabels.map((lbl, i) => (
 										<th key={i} className={content.colStyles?.[i]}>
-											{renderRecursiveContent(lbl)}
+											{renderRecursiveContent(lbl, highlightQuery)}
 										</th>
 									))}
 								</tr>
@@ -95,7 +103,7 @@ export const renderRecursiveContent = (content) => {
 								<tr key={i}>
 									{row.map((cell, j) => (
 										<td key={j} className={content.colStyles?.[j]}>
-											{renderRecursiveContent(cell)}
+											{renderRecursiveContent(cell, highlightQuery)}
 										</td>
 									))}
 								</tr>
@@ -106,14 +114,40 @@ export const renderRecursiveContent = (content) => {
 			);
 		}
 
-		return parseRollsAndSpells(preprocessTags(JSON.stringify(content)));
+		return parseRollsAndSpells(
+			preprocessTags(JSON.stringify(content)),
+			highlightQuery,
+		);
 	}
 
 	return null;
 };
 
-function pushSafeMarkdownText(elements, text, key) {
+function pushSafeMarkdownText(elements, text, key, highlightQuery = "") {
 	if (!text) return;
+	const query = String(highlightQuery || "").trim();
+	if (query) {
+		const regex = new RegExp(
+			`(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
+			"gi",
+		);
+		const parts = String(text).split(regex);
+		const normalizedQuery = query.toLowerCase();
+		parts.forEach((part, index) => {
+			if (!part) return;
+			if (part.toLowerCase() === normalizedQuery) {
+				elements.push(
+					<mark key={`${key}-mark-${index}`} className="SearchHighlight">
+						{part}
+					</mark>,
+				);
+			} else {
+				pushSafeMarkdownText(elements, part, `${key}-text-${index}`);
+			}
+		});
+		return;
+	}
+
 	const safeText = text
 		.replace(/^(\s*)([+\-*]|\d+\.)(\s)/gm, "$1\\$2$3")
 		.replace(/\n/gi, "&nbsp; \n")
@@ -143,7 +177,7 @@ function stripNotesReferenceText(text) {
 	);
 }
 
-export const parseRollsAndSpells = (text) => {
+export const parseRollsAndSpells = (text, highlightQuery = "") => {
 	if (!text) return text;
 
 	const cleanText = stripNotesReferenceText(text);
@@ -161,6 +195,7 @@ export const parseRollsAndSpells = (text) => {
 			elements,
 			cleanText.slice(lastIndex, start),
 			`t-${matchIndex}-before`,
+			highlightQuery,
 		);
 
 		const roll = match[1];
@@ -178,7 +213,7 @@ export const parseRollsAndSpells = (text) => {
 		if (roll) {
 			elements.push(
 				<RollDice key={`r-${matchIndex}`} formula={roll.replace(/\s+/g, "")}>
-					{roll}
+					{highlightText(roll, highlightQuery)}
 				</RollDice>,
 			);
 		} else if (hit) {
@@ -188,14 +223,14 @@ export const parseRollsAndSpells = (text) => {
 					key={`h-${matchIndex}`}
 					formula={`1d20${formatModifier(parseInt(bonus, 10))}`}
 				>
-					{hit}
+					{highlightText(hit, highlightQuery)}
 				</RollDice>,
 			);
 		} else if (spellTag) {
 			const { name: rawSpellName, displayText } = parseTaggedName(spellValue);
 			elements.push(
 				<RulesLink key={`s-${matchIndex}`} type="spell" name={rawSpellName}>
-					{displayText}
+					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,
 			);
 		} else if (conditionTag || conditionPlain) {
@@ -213,39 +248,44 @@ export const parseRollsAndSpells = (text) => {
 					}
 					name={rawCondition}
 				>
-					{displayText}
+					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,
 			);
 		} else if (diseaseValue) {
 			const { name: rawDiseaseName, displayText } = parseTaggedName(diseaseValue);
 			elements.push(
 				<RulesLink key={`d-${matchIndex}`} type="disease" name={rawDiseaseName}>
-					{displayText}
+					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,
 			);
 		} else if (variantRuleValue) {
 			const { name: rawRuleName, displayText } = parseTaggedName(variantRuleValue);
 			elements.push(
 				<RulesLink key={`v-${matchIndex}`} type="variantrule" name={rawRuleName}>
-					{displayText}
+					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,
 			);
 		} else if (skillValue) {
 			const { name: rawSkillName, displayText } = parseTaggedName(skillValue);
 			elements.push(
 				<RulesLink key={`sk-${matchIndex}`} type="skill" name={rawSkillName}>
-					{displayText}
+					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,
 			);
 		} else if (senseValue) {
 			const { name: rawSenseName, displayText } = parseTaggedName(senseValue);
 			elements.push(
 				<RulesLink key={`se-${matchIndex}`} type="sense" name={rawSenseName}>
-					{displayText}
+					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,
 			);
 		} else {
-			pushSafeMarkdownText(elements, fullMatch, `t-${matchIndex}-raw`);
+			pushSafeMarkdownText(
+				elements,
+				fullMatch,
+				`t-${matchIndex}-raw`,
+				highlightQuery,
+			);
 		}
 
 		lastIndex = start + fullMatch.length;
@@ -256,6 +296,7 @@ export const parseRollsAndSpells = (text) => {
 		elements,
 		cleanText.slice(lastIndex),
 		`t-${matchIndex}-tail`,
+		highlightQuery,
 	);
 	return elements;
 };

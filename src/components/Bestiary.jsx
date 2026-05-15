@@ -15,6 +15,7 @@ import {
 	matchesMonsterSearch,
 } from "../utils/bestiary.js";
 import { objectMatchesSearch } from "../utils/deepSearch.js";
+import { highlightText } from "../utils/searchHighlight.jsx";
 import "../assets/components/Bestiary.css";
 import { lang } from "../services/localization";
 
@@ -310,15 +311,22 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 				>
 					<div className="Bestiary__item-content">
 						<div className="Bestiary__item-info">
-							<div className="ListCard__title">{monster.name}</div>
+							<div className="ListCard__title">
+								{highlightText(monster.name, search)}
+							</div>
 							<div className="ListCard__meta">
-								{Array.isArray(monster.size) ? monster.size[0] : monster.size}{" "}
-								{getMonsterTypeString(monster.type)}{" "}
-								{monster.type?.tags?.map((t) => t?.tag || t).join(", ")}
+								{highlightText(
+									Array.isArray(monster.size) ? monster.size[0] : monster.size,
+									search,
+								)}{" "}
+								{highlightText(getMonsterTypeString(monster.type), search)}{" "}
+								{highlightText(
+									monster.type?.tags?.map((t) => t?.tag || t).join(", "),
+									search,
+								)}
 								{monster.source && (
 									<span className="Bestiary__item-source">
-										{" "}
-										• {monster.source}
+										{" "}• {highlightText(monster.source, search)}
 									</span>
 								)}
 							</div>
@@ -354,7 +362,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 					)}
 					<div className="Bestiary__searchInput">
 						<Input
-							icon="search"
+							icon="search-detailed"
 							placeholder={lang.t("Search by name or type...")}
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
@@ -364,7 +372,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 							icon="search"
 							onClick={() => setIsDetailedSearch((value) => !value)}
 							title={lang.t("Detailed search")}
-							className="Bestiary__detailed-search-btn"
+							className="DetailedSearchButton Bestiary__detailed-search-btn"
 						/>
 					</div>
 					<Button
@@ -421,6 +429,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 								onFavoriteChange={(newFavs) => setFavorites(newFavs)}
 								showAddToEncounterPicker
 								onAddToEncounter={onAddMonster}
+								searchHighlight={search}
 							/>
 						</div>
 					)}

@@ -10,6 +10,7 @@ import { renderRecursiveContent } from "../../renderers/contentRenderer.jsx";
 import { lang } from "../../services/localization";
 import { useAppDispatch } from "../../store/appStore";
 import { objectMatchesSearch } from "../../utils/deepSearch.js";
+import { highlightText } from "../../utils/searchHighlight.jsx";
 
 const VARIANT_RULE_TYPE_LABELS = {
 	C: "Core Rule",
@@ -276,10 +277,10 @@ export default function RulesReferenceModalContent({
 				/>
 				<Button
 					variant={isDetailedSearch ? "primary" : "ghost"}
-					icon="search"
+					icon="search-detailed"
 					onClick={() => setIsDetailedSearch((value) => !value)}
 					title={lang.t("Detailed search")}
-					className="ConditionsModal__detailed-search-btn"
+					className="DetailedSearchButton ConditionsModal__detailed-search-btn"
 				/>
 			</div>
 
@@ -324,8 +325,14 @@ export default function RulesReferenceModalContent({
 											onClick={() => selectItem(item.name)}
 											active={isActive}
 										>
-											<div className="ListCard__title">{item.name}</div>
-											{meta && <div className="ListCard__meta">{meta}</div>}
+											<div className="ListCard__title">
+												{highlightText(item.name, query)}
+											</div>
+											{meta && (
+												<div className="ListCard__meta">
+													{highlightText(meta, query)}
+												</div>
+											)}
 										</ListCard>
 									</div>
 								);
@@ -340,12 +347,18 @@ export default function RulesReferenceModalContent({
 					{selectedItem && (
 						<>
 							<div className="ConditionsModal__contentHeader">
-								<h3 className="ConditionsModal__title">{selectedItem.name}</h3>
-								{selectedMeta && <div className="muted">{selectedMeta}</div>}
+								<h3 className="ConditionsModal__title">
+									{highlightText(selectedItem.name, query)}
+								</h3>
+								{selectedMeta && (
+									<div className="muted">
+										{highlightText(selectedMeta, query)}
+									</div>
+								)}
 							</div>
 
 							<div className="ConditionsModal__entryContent">
-								{renderRecursiveContent(selectedItem.entries)}
+								{renderRecursiveContent(selectedItem.entries, query)}
 							</div>
 						</>
 					)}

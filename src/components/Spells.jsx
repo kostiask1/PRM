@@ -14,6 +14,7 @@ import "../assets/components/Spells.css";
 import classNames from "../utils/classNames";
 import { lang } from "../services/localization";
 import { objectMatchesSearch } from "../utils/deepSearch.js";
+import { highlightText } from "../utils/searchHighlight.jsx";
 
 const SCHOOL_MAP = {
 	A: "Abjuration",
@@ -227,14 +228,19 @@ export default function Spells() {
 					onClick={() => setSelectedSpell(isSelected ? "" : spell)}
 				>
 					<div className="ListCard__title">
-						{capitalizeWords(spell.name.split("|")[0])}
+						{highlightText(capitalizeWords(spell.name.split("|")[0]), search)}
 					</div>
 					<div className="ListCard__meta">
-						{spell.level === 0
-							? lang.t("Cantrip")
-							: lang.t("{level}-level", { level: spell.level })}
-						{schoolName && <> • {schoolName}</>}
-						{spell.classes?.length > 0 && <> • {spell.classes.join(", ")}</>}
+						{highlightText(
+							spell.level === 0
+								? lang.t("Cantrip")
+								: lang.t("{level}-level", { level: spell.level }),
+							search,
+						)}
+						{schoolName && <> • {highlightText(schoolName, search)}</>}
+						{spell.classes?.length > 0 && (
+							<> • {highlightText(spell.classes.join(", "), search)}</>
+						)}
 					</div>
 				</ListCard>
 			</div>
@@ -316,10 +322,10 @@ export default function Spells() {
 						/>
 						<Button
 							variant={isDetailedSearch ? "primary" : "ghost"}
-							icon="search"
+							icon="search-detailed"
 							onClick={() => setIsDetailedSearch((value) => !value)}
 							title={lang.t("Detailed search")}
-							className="Spells__detailed-search-btn"
+							className="DetailedSearchButton Spells__detailed-search-btn"
 						/>
 					</div>
 				</div>
@@ -338,7 +344,7 @@ export default function Spells() {
 
 					<div className="Spells__detail">
 						{selectedSpell ? (
-							<SpellCard spell={selectedSpell} />
+							<SpellCard spell={selectedSpell} searchHighlight={search} />
 						) : (
 							<p className="muted">
 								{lang.t("Select a spell from the list to view details.")}

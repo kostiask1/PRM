@@ -11,7 +11,6 @@ import {
 } from "../utils/parser.jsx";
 import {
 	parseRollsAndSpells,
-	renderMentionText,
 	renderRecursiveContent,
 } from "../renderers/contentRenderer.jsx";
 import "../assets/components/MonsterStatBlock.css";
@@ -29,6 +28,7 @@ import {
 import { lang } from "../services/localization.js";
 import AddMonsterToEncounterModalContent from "./modals/AddMonsterToEncounterModalContent.jsx";
 import RulesLink from "./RulesLink.jsx";
+import { highlightText } from "../utils/searchHighlight.jsx";
 
 const SPELL_CACHE = new Map();
 const SENSE_NAME_REGEX = /\b(blindsight|darkvision|tremorsense|truesight)\b/gi;
@@ -43,6 +43,7 @@ export default function MonsterStatBlock({
 	layoutMode = "single",
 	showAddToEncounterPicker = false,
 	onAddToEncounter,
+	searchHighlight = "",
 }) {
 	const dispatch = useAppDispatch();
 	const campaigns = useAppSelector((store) => store.campaigns.items);
@@ -53,6 +54,7 @@ export default function MonsterStatBlock({
 
 	const model = useMemo(() => new MonsterStatBlockModel(monster), [monster]);
 	const effectiveName = model.effectiveName;
+	const highlight = (value) => highlightText(value, searchHighlight);
 
 	useEffect(() => {
 		const checkFavoriteStatus = async () => {
@@ -160,10 +162,13 @@ export default function MonsterStatBlock({
 				{actions.map((action, index) => (
 					<div key={index} className="MonsterStatBlock__action">
 						<strong>
-							{renderRecursiveContent(action.name)}
+							{renderRecursiveContent(action.name, searchHighlight)}
 							.
 						</strong>{" "}
-						{renderRecursiveContent(action.entries || action.desc)}
+						{renderRecursiveContent(
+							action.entries || action.desc,
+							searchHighlight,
+						)}
 						<div className="MonsterStatBlock__action-rolls">
 							{action.attack_bonus && (
 								<div className="stat-item">
@@ -239,8 +244,12 @@ export default function MonsterStatBlock({
 	};
 
 	const renderSenseText = (text) => {
-		if (typeof text !== "string") return renderRecursiveContent(text);
-		if (/\{@sense\s/i.test(text)) return renderRecursiveContent(text);
+		if (typeof text !== "string") {
+			return renderRecursiveContent(text, searchHighlight);
+		}
+		if (/\{@sense\s/i.test(text)) {
+			return renderRecursiveContent(text, searchHighlight);
+		}
 
 		const elements = [];
 		let lastIndex = 0;
@@ -254,7 +263,10 @@ export default function MonsterStatBlock({
 			if (start > lastIndex) {
 				elements.push(
 					<React.Fragment key={`sense-text-${matchIndex}`}>
-						{parseRollsAndSpells(preprocessTags(text.slice(lastIndex, start)))}
+						{parseRollsAndSpells(
+							preprocessTags(text.slice(lastIndex, start)),
+							searchHighlight,
+						)}
 					</React.Fragment>,
 				);
 			}
@@ -264,7 +276,7 @@ export default function MonsterStatBlock({
 					type="sense"
 					name={senseName}
 				>
-					{senseName}
+					{highlight(senseName)}
 				</RulesLink>,
 			);
 			lastIndex = start + senseName.length;
@@ -274,12 +286,17 @@ export default function MonsterStatBlock({
 		if (lastIndex < text.length) {
 			elements.push(
 				<React.Fragment key="sense-text-tail">
-					{parseRollsAndSpells(preprocessTags(text.slice(lastIndex)))}
+					{parseRollsAndSpells(
+						preprocessTags(text.slice(lastIndex)),
+						searchHighlight,
+					)}
 				</React.Fragment>,
 			);
 		}
 
-		return elements.length > 0 ? elements : renderRecursiveContent(text);
+		return elements.length > 0
+			? elements
+			: renderRecursiveContent(text, searchHighlight);
 	};
 
 	const renderSpellcasting = () => {
@@ -312,7 +329,7 @@ export default function MonsterStatBlock({
 						{levels[lvl].map((s, i) => (
 							<React.Fragment key={s.slug || s.name}>
 								<RulesLink type="spell" name={s.name}>
-									{capitalizeWords(s.name.split("|")[0])}
+									{highlight(capitalizeWords(s.name.split("|")[0]))}
 								</RulesLink>
 								{i < levels[lvl].length - 1 ? ", " : ""}
 							</React.Fragment>
@@ -332,7 +349,7 @@ export default function MonsterStatBlock({
 						<h4>{sc.name}:</h4>
 						{sc.headerEntries && (
 							<p>
-								{renderRecursiveContent(sc.headerEntries)}
+								{renderRecursiveContent(sc.headerEntries, searchHighlight)}
 							</p>
 						)}
 						{sc.will && (
@@ -340,7 +357,7 @@ export default function MonsterStatBlock({
 								<strong>At will:</strong>{" "}
 								{sc.will.map((s, i) => (
 									<React.Fragment key={i}>
-										{renderRecursiveContent(s)}
+										{renderRecursiveContent(s, searchHighlight)}
 										{i < sc.will.length - 1 ? ", " : ""}
 									</React.Fragment>
 								))}
@@ -352,7 +369,7 @@ export default function MonsterStatBlock({
 									<strong>{freq} each:</strong>{" "}
 									{list.map((s, i) => (
 										<React.Fragment key={i}>
-											{renderRecursiveContent(s)}
+											{renderRecursiveContent(s, searchHighlight)}
 											{i < list.length - 1 ? ", " : ""}
 										</React.Fragment>
 									))}
@@ -371,7 +388,7 @@ export default function MonsterStatBlock({
 									</strong>
 									{info.spells.map((s, i) => (
 										<React.Fragment key={i}>
-											{renderRecursiveContent(s)}
+											{renderRecursiveContent(s, searchHighlight)}
 											{i < info.spells.length - 1 ? ", " : ""}
 										</React.Fragment>
 									))}
@@ -425,7 +442,7 @@ export default function MonsterStatBlock({
 									onClick={() => onNameClick?.(monster)}
 									onContextMenu={onNameRename ? handleNameRename : undefined}
 								>
-									{renderMentionText(String(monster.name))}
+									{highlight(monster.name)}
 								</h3>
 							</Tooltip>
 						) : (
@@ -435,7 +452,7 @@ export default function MonsterStatBlock({
 								message={lang.t("Name copied!")}
 								onContextMenu={onNameRename ? handleNameRename : undefined}
 							>
-								{renderMentionText(String(monster.name))}
+								{highlight(monster.name)}
 							</ClickToCopy>
 						)}
 						{onNameRename && (
@@ -474,30 +491,35 @@ export default function MonsterStatBlock({
 					{monster.originalBestiaryName &&
 						monster.originalBestiaryName !== monster.name && (
 							<div className="MonsterStatBlock__original-name muted">
-								({monster.originalBestiaryName})
+								({highlight(monster.originalBestiaryName)})
 							</div>
 						)}
 
 					<div className="MonsterStatBlock__meta-line">
-						{model.size} {model.typeLabel}, {model.alignment}
+						{highlight(model.size)} {highlight(model.typeLabel)},{" "}
+						{highlight(model.alignment)}
 					</div>
 					<div className="MonsterStatBlock__stats">
 						<div className="stat-item">
 							<strong>HP:</strong>{" "}
-							{renderRecursiveContent(model.hp.val)}{" "}
+							{renderRecursiveContent(model.hp.val, searchHighlight)}{" "}
 							{model.hp.formula && (
 								<>
-									(<RollDice formula={model.hp.formula} />)
+									(
+									<RollDice formula={model.hp.formula}>
+										{highlight(model.hp.formula)}
+									</RollDice>
+									)
 								</>
 							)}
 						</div>
 						<div className="stat-item ac">
 							<strong>AC:</strong>{" "}
-							{renderRecursiveContent(model.ac.val)}{" "}
-							{renderRecursiveContent(model.ac.desc)}
+							{renderRecursiveContent(model.ac.val, searchHighlight)}{" "}
+							{renderRecursiveContent(model.ac.desc, searchHighlight)}
 						</div>
 						<div className="stat-item">
-							<strong>Speed:</strong> {model.speed}
+							<strong>Speed:</strong> {highlight(model.speed)}
 						</div>
 					</div>
 					{!isGridLayout && (
@@ -556,7 +578,7 @@ export default function MonsterStatBlock({
 									className="skill-name"
 									style={{ textTransform: "capitalize" }}
 								>
-									{name}
+									{highlight(name)}
 								</span>{" "}
 								<RollDice formula={`1d20${formatModifier(parseInt(value))}`}>
 									{formatModifier(parseInt(value))}
@@ -570,25 +592,25 @@ export default function MonsterStatBlock({
 				{monster.vulnerable && (
 					<div className="MonsterStatBlock__property-item">
 						<strong>Damage Vulnerabilities:</strong>{" "}
-						{model.formatDamageProperty(monster.vulnerable)}
+						{highlight(model.formatDamageProperty(monster.vulnerable))}
 					</div>
 				)}
 				{monster.resist && (
 					<div className="MonsterStatBlock__property-item">
 						<strong>Damage Resistances:</strong>{" "}
-						{model.formatDamageProperty(monster.resist)}
+						{highlight(model.formatDamageProperty(monster.resist))}
 					</div>
 				)}
 				{monster.immune && (
 					<div className="MonsterStatBlock__property-item">
 						<strong>Damage Immunities:</strong>{" "}
-						{model.formatDamageProperty(monster.immune)}
+						{highlight(model.formatDamageProperty(monster.immune))}
 					</div>
 				)}
 				{monster.conditionImmune && (
 					<div className="MonsterStatBlock__property-item">
 						<strong>Condition Immunities:</strong>{" "}
-						{model.formatDamageProperty(monster.conditionImmune)}
+						{highlight(model.formatDamageProperty(monster.conditionImmune))}
 					</div>
 				)}
 
@@ -598,15 +620,18 @@ export default function MonsterStatBlock({
 						{renderSenses()}
 					</p>
 					<p>
-						<strong>Languages:</strong> {model.languages}
+						<strong>Languages:</strong> {highlight(model.languages)}
 					</p>
 					<p>
-						<strong>CR:</strong> {model.challenge}
+						<strong>CR:</strong> {highlight(model.challenge)}
 					</p>
 				</div>
 				{monster.desc && (
 					<div className="MonsterStatBlock__lore">
-						{parseRollsAndSpells(preprocessTags(monster.desc))}
+						{parseRollsAndSpells(
+							preprocessTags(monster.desc),
+							searchHighlight,
+						)}
 					</div>
 				)}
 			</div>
@@ -620,13 +645,13 @@ export default function MonsterStatBlock({
 			{monster.lairActions && monster.lairActions.length > 0 && (
 				<div className="MonsterStatBlock__section">
 					<h4>Lair Actions:</h4>
-					{renderRecursiveContent(monster.lairActions)}
+					{renderRecursiveContent(monster.lairActions, searchHighlight)}
 				</div>
 			)}
 			{monster.regionalEffects && monster.regionalEffects.length > 0 && (
 				<div className="MonsterStatBlock__section">
 					<h4>Regional Effects:</h4>
-					{renderRecursiveContent(monster.regionalEffects)}
+					{renderRecursiveContent(monster.regionalEffects, searchHighlight)}
 				</div>
 			)}
 		</div>
