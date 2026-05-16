@@ -68,7 +68,7 @@
 .RulesReferenceModalContent__main {
 	display: grid;
 	grid-template-columns: 360px minmax(0, 1fr);
-	gap: var(--space-3);
+	gap: var(--space-1);
 	min-height: 0;
 	flex: 1;
 }
@@ -147,14 +147,4 @@
 	justify-content: center;
 	min-height: 100%;
 	text-align: center;
-}
-
-@media (max-width: 760px) {
-	.RulesReferenceModalContent__main {
-		grid-template-columns: 1fr;
-	}
-
-	.RulesReferenceModalContent__sidebar {
-		max-height: 34vh;
-	}
 }

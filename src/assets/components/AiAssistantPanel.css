@@ -153,12 +153,6 @@
 	align-items: center;
 }
 
-@media (max-width: 640px) {
-	.AiAssistant__api-key-row {
-		grid-template-columns: 1fr;
-	}
-}
-
 .AiAssistant__result {
 	background: var(--bg-2);
 	border: 1px solid var(--border);

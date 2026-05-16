@@ -180,12 +180,6 @@
 	justify-content: flex-end;
 }
 
-@media (max-width: 720px) {
-	.MentionPicker__columns {
-		grid-template-columns: 1fr;
-	}
-}
-
 .CreateCampaignModal {
 	display: grid;
 	gap: var(--space-3);
