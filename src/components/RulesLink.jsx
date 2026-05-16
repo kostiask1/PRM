@@ -31,6 +31,7 @@ export default function RulesLink({
 	children,
 	name,
 	type = "spell",
+	onNavigate,
 }) {
 	const dispatch = useAppDispatch();
 	const [tooltipContent, setTooltipContent] = useState(null);
@@ -78,19 +79,34 @@ export default function RulesLink({
 				await openSpell();
 			} else if (type === "condition" || type === "status") {
 				const condition = await resolveConditionInput(referenceName);
-				if (condition) openRulesReferenceModal("conditions", condition.name);
+				if (condition) {
+					if (onNavigate) onNavigate("conditions", condition.name);
+					else openRulesReferenceModal("conditions", condition.name);
+				}
 			} else if (type === "disease") {
 				const disease = await resolveDiseaseInput(referenceName);
-				if (disease) openRulesReferenceModal("diseases", disease.name);
+				if (disease) {
+					if (onNavigate) onNavigate("diseases", disease.name);
+					else openRulesReferenceModal("diseases", disease.name);
+				}
 			} else if (type === "variantrule") {
 				const rule = await resolveVariantRuleInput(referenceName);
-				if (rule) openRulesReferenceModal("variantrules", rule.name);
+				if (rule) {
+					if (onNavigate) onNavigate("variantrules", rule.name);
+					else openRulesReferenceModal("variantrules", rule.name);
+				}
 			} else if (type === "skill") {
 				const skill = await resolveSkillInput(referenceName);
-				if (skill) openRulesReferenceModal("skills", skill.name);
+				if (skill) {
+					if (onNavigate) onNavigate("skills", skill.name);
+					else openRulesReferenceModal("skills", skill.name);
+				}
 			} else if (type === "sense") {
 				const sense = await resolveSenseInput(referenceName);
-				if (sense) openRulesReferenceModal("senses", sense.name);
+				if (sense) {
+					if (onNavigate) onNavigate("senses", sense.name);
+					else openRulesReferenceModal("senses", sense.name);
+				}
 			}
 		} catch (error) {
 			showLoadError(error);

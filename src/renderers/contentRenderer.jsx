@@ -11,11 +11,15 @@ import {
 } from "../utils/parser.jsx";
 import { highlightText } from "../utils/searchHighlight.jsx";
 
-export const renderRecursiveContent = (content, highlightQuery = "") => {
+export const renderRecursiveContent = (
+	content,
+	highlightQuery = "",
+	options = {},
+) => {
 	if (content === undefined || content === null) return null;
 
 	if (typeof content === "string") {
-		return parseRollsAndSpells(preprocessTags(content), highlightQuery);
+		return parseRollsAndSpells(preprocessTags(content), highlightQuery, options);
 	}
 
 	if (typeof content === "number") {
@@ -25,14 +29,14 @@ export const renderRecursiveContent = (content, highlightQuery = "") => {
 	if (Array.isArray(content)) {
 		return content.map((item, idx) => (
 			<React.Fragment key={idx}>
-				{renderRecursiveContent(item, highlightQuery)}
+				{renderRecursiveContent(item, highlightQuery, options)}
 			</React.Fragment>
 		));
 	}
 
 	if (typeof content === "object") {
 		if (content.entry) {
-			return renderRecursiveContent(content.entry, highlightQuery);
+			return renderRecursiveContent(content.entry, highlightQuery, options);
 		}
 
 		if (content.type === "list" && content.items) {
@@ -53,6 +57,7 @@ export const renderRecursiveContent = (content, highlightQuery = "") => {
 								{renderRecursiveContent(
 									isObject ? item.entries || item.entry : item,
 									highlightQuery,
+									options,
 								)}
 							</li>
 						);
@@ -70,7 +75,7 @@ export const renderRecursiveContent = (content, highlightQuery = "") => {
 					{content.name && (
 						<strong>{highlightText(content.name, highlightQuery)}. </strong>
 					)}
-					{renderRecursiveContent(content.entries, highlightQuery)}
+					{renderRecursiveContent(content.entries, highlightQuery, options)}
 				</div>
 			);
 		}
@@ -92,7 +97,7 @@ export const renderRecursiveContent = (content, highlightQuery = "") => {
 								<tr>
 									{content.colLabels.map((lbl, i) => (
 										<th key={i} className={content.colStyles?.[i]}>
-											{renderRecursiveContent(lbl, highlightQuery)}
+											{renderRecursiveContent(lbl, highlightQuery, options)}
 										</th>
 									))}
 								</tr>
@@ -103,7 +108,7 @@ export const renderRecursiveContent = (content, highlightQuery = "") => {
 								<tr key={i}>
 									{row.map((cell, j) => (
 										<td key={j} className={content.colStyles?.[j]}>
-											{renderRecursiveContent(cell, highlightQuery)}
+											{renderRecursiveContent(cell, highlightQuery, options)}
 										</td>
 									))}
 								</tr>
@@ -117,6 +122,7 @@ export const renderRecursiveContent = (content, highlightQuery = "") => {
 		return parseRollsAndSpells(
 			preprocessTags(JSON.stringify(content)),
 			highlightQuery,
+			options,
 		);
 	}
 
@@ -181,7 +187,11 @@ function getReferenceKey(prefix, matchIndex, name) {
 	return `${prefix}-${matchIndex}-${String(name || "").toLowerCase()}`;
 }
 
-export const parseRollsAndSpells = (text, highlightQuery = "") => {
+export const parseRollsAndSpells = (
+	text,
+	highlightQuery = "",
+	options = {},
+) => {
 	if (!text) return text;
 
 	const cleanText = stripNotesReferenceText(text);
@@ -237,6 +247,7 @@ export const parseRollsAndSpells = (text, highlightQuery = "") => {
 					key={getReferenceKey("s", matchIndex, rawSpellName)}
 					type="spell"
 					name={rawSpellName}
+					onNavigate={options.onRuleNavigate}
 				>
 					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,
@@ -254,6 +265,7 @@ export const parseRollsAndSpells = (text, highlightQuery = "") => {
 					key={getReferenceKey(conditionType, matchIndex, rawCondition)}
 					type={conditionType}
 					name={rawCondition}
+					onNavigate={options.onRuleNavigate}
 				>
 					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,
@@ -265,6 +277,7 @@ export const parseRollsAndSpells = (text, highlightQuery = "") => {
 					key={getReferenceKey("d", matchIndex, rawDiseaseName)}
 					type="disease"
 					name={rawDiseaseName}
+					onNavigate={options.onRuleNavigate}
 				>
 					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,
@@ -276,6 +289,7 @@ export const parseRollsAndSpells = (text, highlightQuery = "") => {
 					key={getReferenceKey("v", matchIndex, rawRuleName)}
 					type="variantrule"
 					name={rawRuleName}
+					onNavigate={options.onRuleNavigate}
 				>
 					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,
@@ -287,6 +301,7 @@ export const parseRollsAndSpells = (text, highlightQuery = "") => {
 					key={getReferenceKey("sk", matchIndex, rawSkillName)}
 					type="skill"
 					name={rawSkillName}
+					onNavigate={options.onRuleNavigate}
 				>
 					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,
@@ -298,6 +313,7 @@ export const parseRollsAndSpells = (text, highlightQuery = "") => {
 					key={getReferenceKey("se", matchIndex, rawSenseName)}
 					type="sense"
 					name={rawSenseName}
+					onNavigate={options.onRuleNavigate}
 				>
 					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,

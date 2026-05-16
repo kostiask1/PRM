@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactList from "react-list";
 
 import { alert } from "../../actions/app";
@@ -102,6 +102,13 @@ function getReferenceItemKey(tabId, item) {
 	return `${tabId}:${item.name}`;
 }
 
+function isEditableTarget(target) {
+	if (!(target instanceof HTMLElement)) return false;
+	return Boolean(
+		target.closest("input, textarea, select, [contenteditable='true']"),
+	);
+}
+
 export default function RulesReferenceModalContent({
 	initialTab = "conditions",
 	initialName = "",
@@ -111,12 +118,17 @@ export default function RulesReferenceModalContent({
 	const isMountedRef = useRef(false);
 	const requestedTabsRef = useRef(new Set());
 	const shouldScrollToActiveRef = useRef(false);
+	const pendingNavigationTabRef = useRef(null);
 	const [activeTabId, setActiveTabId] = useState(getInitialTabId(initialTab));
 	const [query, setQuery] = useState("");
 	const [isDetailedSearch, setIsDetailedSearch] = useState(false);
 	const [itemsByTab, setItemsByTab] = useState({});
 	const [selectedByTab, setSelectedByTab] = useState({});
 	const [loadingByTab, setLoadingByTab] = useState({});
+	const [navigationHistory, setNavigationHistory] = useState({
+		entries: [],
+		index: -1,
+	});
 
 	const activeTab = TAB_BY_ID.get(activeTabId) || REFERENCE_TABS[0];
 	const hasLoadedActiveTab = Object.prototype.hasOwnProperty.call(
@@ -128,6 +140,72 @@ export default function RulesReferenceModalContent({
 	const isLoading = Boolean(loadingByTab[activeTab.id]);
 	const normalizedQuery = query.trim().toLowerCase();
 	const isGlobalSearch = Boolean(normalizedQuery);
+	const canNavigateBack = navigationHistory.index > 0;
+	const canNavigateForward =
+		navigationHistory.index >= 0 &&
+		navigationHistory.index < navigationHistory.entries.length - 1;
+
+	const recordNavigation = useCallback((tabId, name) => {
+		if (!tabId || !name) return;
+
+		setNavigationHistory((current) => {
+			const nextEntry = { tabId, name };
+			const currentEntry = current.entries[current.index];
+			if (
+				currentEntry?.tabId === nextEntry.tabId &&
+				currentEntry?.name === nextEntry.name
+			) {
+				return current;
+			}
+
+			const entries = current.entries
+				.slice(0, current.index + 1)
+				.concat(nextEntry);
+			return {
+				entries,
+				index: entries.length - 1,
+			};
+		});
+	}, []);
+
+	const applyNavigationEntry = useCallback((entry) => {
+		if (!entry) return;
+		shouldScrollToActiveRef.current = true;
+		pendingNavigationTabRef.current = null;
+		setActiveTabId(entry.tabId);
+		setSelectedByTab((current) => ({
+			...current,
+			[entry.tabId]: entry.name,
+		}));
+	}, []);
+
+	const navigateHistory = useCallback(
+		(direction) => {
+			const nextIndex = navigationHistory.index + direction;
+			const nextEntry = navigationHistory.entries[nextIndex];
+			if (!nextEntry) return;
+
+			setNavigationHistory((current) => ({ ...current, index: nextIndex }));
+			applyNavigationEntry(nextEntry);
+		},
+		[applyNavigationEntry, navigationHistory],
+	);
+
+	const navigateToReference = useCallback(
+		(tabId, name) => {
+			if (!TAB_BY_ID.has(tabId) || !name) return;
+
+			shouldScrollToActiveRef.current = true;
+			pendingNavigationTabRef.current = null;
+			recordNavigation(tabId, name);
+			setActiveTabId(tabId);
+			setSelectedByTab((current) => ({
+				...current,
+				[tabId]: name,
+			}));
+		},
+		[recordNavigation],
+	);
 
 	useEffect(() => {
 		isMountedRef.current = true;
@@ -147,6 +225,18 @@ export default function RulesReferenceModalContent({
 			}));
 		}
 	}, [initialName, initialTab]);
+
+	useEffect(() => {
+		if (!activeSelectedName) return;
+
+		setNavigationHistory((current) => {
+			if (current.entries.length) return current;
+			return {
+				entries: [{ tabId: activeTab.id, name: activeSelectedName }],
+				index: 0,
+			};
+		});
+	}, [activeSelectedName, activeTab.id]);
 
 	useEffect(() => {
 		const tabsToLoad = isGlobalSearch
@@ -275,6 +365,30 @@ export default function RulesReferenceModalContent({
 		isLoading,
 	]);
 
+	useEffect(() => {
+		if (pendingNavigationTabRef.current !== activeTab.id || !activeSelectedName) {
+			return;
+		}
+
+		pendingNavigationTabRef.current = null;
+		recordNavigation(activeTab.id, activeSelectedName);
+	}, [activeSelectedName, activeTab.id, recordNavigation]);
+
+	useEffect(() => {
+		const handleKeyDown = (event) => {
+			if (event.key !== "Backspace") return;
+			if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+			if (isEditableTarget(event.target)) return;
+			if (!canNavigateBack) return;
+
+			event.preventDefault();
+			navigateHistory(-1);
+		};
+
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [canNavigateBack, navigateHistory]);
+
 	const selectedItem =
 		filteredItems.find((item) => item.name === activeSelectedName) ||
 		activeItems.find((item) => item.name === activeSelectedName) ||
@@ -283,11 +397,21 @@ export default function RulesReferenceModalContent({
 
 	const selectTab = (tabId) => {
 		shouldScrollToActiveRef.current = false;
+		const nextName =
+			selectedByTab[tabId] || (itemsByTab[tabId] || EMPTY_ITEMS)[0]?.name || "";
+		if (nextName) {
+			pendingNavigationTabRef.current = null;
+			recordNavigation(tabId, nextName);
+		} else {
+			pendingNavigationTabRef.current = tabId;
+		}
 		setActiveTabId(tabId);
 	};
 
 	const selectItem = (name) => {
 		shouldScrollToActiveRef.current = false;
+		pendingNavigationTabRef.current = null;
+		recordNavigation(activeTab.id, name);
 		setSelectedByTab((current) => ({ ...current, [activeTab.id]: name }));
 	};
 
@@ -311,6 +435,26 @@ export default function RulesReferenceModalContent({
 	return (
 		<div className="RulesReferenceModalContent RulesReferenceModalContent--withTabs">
 			<div className="RulesReferenceModalContent__search">
+				<div className="RulesReferenceModalContent__nav">
+					<Button
+						variant="ghost"
+						size={Button.SIZES.SMALL}
+						icon="back"
+						onClick={() => navigateHistory(-1)}
+						disabled={!canNavigateBack}
+						title={lang.t("Back")}
+						className="RulesReferenceModalContent__nav-btn"
+					/>
+					<Button
+						variant="ghost"
+						size={Button.SIZES.SMALL}
+						icon="forward"
+						onClick={() => navigateHistory(1)}
+						disabled={!canNavigateForward}
+						title={lang.t("Forward")}
+						className="RulesReferenceModalContent__nav-btn"
+					/>
+				</div>
 				<Input
 					value={query}
 					onChange={(event) => setQuery(event.target.value)}
@@ -387,7 +531,9 @@ export default function RulesReferenceModalContent({
 								key={getReferenceItemKey(activeTab.id, selectedItem)}
 								className="RulesReferenceModalContent__entryContent"
 							>
-								{renderRecursiveContent(selectedItem.entries, query)}
+								{renderRecursiveContent(selectedItem.entries, query, {
+									onRuleNavigate: navigateToReference,
+								})}
 							</div>
 						</>
 					)}
