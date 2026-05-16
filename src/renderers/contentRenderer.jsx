@@ -177,6 +177,10 @@ function stripNotesReferenceText(text) {
 	);
 }
 
+function getReferenceKey(prefix, matchIndex, name) {
+	return `${prefix}-${matchIndex}-${String(name || "").toLowerCase()}`;
+}
+
 export const parseRollsAndSpells = (text, highlightQuery = "") => {
 	if (!text) return text;
 
@@ -229,7 +233,11 @@ export const parseRollsAndSpells = (text, highlightQuery = "") => {
 		} else if (spellTag) {
 			const { name: rawSpellName, displayText } = parseTaggedName(spellValue);
 			elements.push(
-				<RulesLink key={`s-${matchIndex}`} type="spell" name={rawSpellName}>
+				<RulesLink
+					key={getReferenceKey("s", matchIndex, rawSpellName)}
+					type="spell"
+					name={rawSpellName}
+				>
 					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,
 			);
@@ -238,14 +246,13 @@ export const parseRollsAndSpells = (text, highlightQuery = "") => {
 				? parseTaggedName(conditionValue).name
 				: conditionPlain.replace(/^@condition\s+/i, "").trim();
 			const displayText = capitalizeWords(rawCondition);
+			const conditionType = conditionTag?.toLowerCase().startsWith("{@status")
+				? "status"
+				: "condition";
 			elements.push(
 				<RulesLink
-					key={`c-${matchIndex}`}
-					type={
-						conditionTag?.toLowerCase().startsWith("{@status")
-							? "status"
-							: "condition"
-					}
+					key={getReferenceKey(conditionType, matchIndex, rawCondition)}
+					type={conditionType}
 					name={rawCondition}
 				>
 					{highlightText(displayText, highlightQuery)}
@@ -254,28 +261,44 @@ export const parseRollsAndSpells = (text, highlightQuery = "") => {
 		} else if (diseaseValue) {
 			const { name: rawDiseaseName, displayText } = parseTaggedName(diseaseValue);
 			elements.push(
-				<RulesLink key={`d-${matchIndex}`} type="disease" name={rawDiseaseName}>
+				<RulesLink
+					key={getReferenceKey("d", matchIndex, rawDiseaseName)}
+					type="disease"
+					name={rawDiseaseName}
+				>
 					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,
 			);
 		} else if (variantRuleValue) {
 			const { name: rawRuleName, displayText } = parseTaggedName(variantRuleValue);
 			elements.push(
-				<RulesLink key={`v-${matchIndex}`} type="variantrule" name={rawRuleName}>
+				<RulesLink
+					key={getReferenceKey("v", matchIndex, rawRuleName)}
+					type="variantrule"
+					name={rawRuleName}
+				>
 					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,
 			);
 		} else if (skillValue) {
 			const { name: rawSkillName, displayText } = parseTaggedName(skillValue);
 			elements.push(
-				<RulesLink key={`sk-${matchIndex}`} type="skill" name={rawSkillName}>
+				<RulesLink
+					key={getReferenceKey("sk", matchIndex, rawSkillName)}
+					type="skill"
+					name={rawSkillName}
+				>
 					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,
 			);
 		} else if (senseValue) {
 			const { name: rawSenseName, displayText } = parseTaggedName(senseValue);
 			elements.push(
-				<RulesLink key={`se-${matchIndex}`} type="sense" name={rawSenseName}>
+				<RulesLink
+					key={getReferenceKey("se", matchIndex, rawSenseName)}
+					type="sense"
+					name={rawSenseName}
+				>
 					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,
 			);

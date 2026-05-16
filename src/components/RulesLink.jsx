@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import Tooltip from "./common/Tooltip.jsx";
 import "../assets/components/RulesLink.css";
 import { lang } from "../services/localization";
@@ -37,6 +37,14 @@ export default function RulesLink({
 	const [isLoading, setIsLoading] = useState(false);
 
 	const referenceName = name || String(children || "").trim();
+	const referenceKey = `${type}:${referenceName}`;
+	const activeTooltipLoadRef = useRef(0);
+
+	useEffect(() => {
+		activeTooltipLoadRef.current += 1;
+		setTooltipContent(null);
+		setIsLoading(false);
+	}, [referenceKey]);
 
 	const showLoadError = (error) => {
 		console.error("Failed to load rule reference", error);
@@ -175,16 +183,24 @@ export default function RulesLink({
 	};
 
 	const handleMouseEnter = async () => {
-		if (tooltipContent) return;
+		if (tooltipContent || isLoading) return;
+		const loadId = activeTooltipLoadRef.current + 1;
+		activeTooltipLoadRef.current = loadId;
 		setIsLoading(true);
 		try {
 			const content = await loadTooltipContent();
-			setTooltipContent(content || null);
+			if (activeTooltipLoadRef.current === loadId) {
+				setTooltipContent(content || null);
+			}
 		} catch (error) {
 			console.error("Failed to load tooltip content", error);
-			setTooltipContent(null);
+			if (activeTooltipLoadRef.current === loadId) {
+				setTooltipContent(null);
+			}
 		} finally {
-			setIsLoading(false);
+			if (activeTooltipLoadRef.current === loadId) {
+				setIsLoading(false);
+			}
 		}
 	};
 

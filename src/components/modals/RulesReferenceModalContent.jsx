@@ -383,7 +383,10 @@ export default function RulesReferenceModalContent({
 								)}
 							</div>
 
-							<div className="RulesReferenceModalContent__entryContent">
+							<div
+								key={getReferenceItemKey(activeTab.id, selectedItem)}
+								className="RulesReferenceModalContent__entryContent"
+							>
 								{renderRecursiveContent(selectedItem.entries, query)}
 							</div>
 						</>
