@@ -62,6 +62,7 @@ export default function DiceCalculator() {
 		const handlePointerDown = (e) => {
 			if (rootRef.current?.contains(e.target)) return;
 			if (e.target.closest?.(".RollDice")) return;
+			if (e.target.closest?.(".MonsterStatBlock__ability-box")) return;
 			setIsOpen(false);
 		};
 
