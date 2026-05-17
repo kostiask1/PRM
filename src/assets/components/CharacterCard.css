@@ -1,9 +1,12 @@
 .character-card {
+    display: flex;
+    flex-direction: column;
     background: color-mix(in srgb, var(--text-bright), transparent 97%);
     border: 1px solid color-mix(in srgb, var(--text-bright), transparent 90%);
     border-radius: var(--radius-sm);
     overflow: hidden;
     transition: all 0.2s ease;
+    height: 100%;
 }
 
 .character-card__header {
@@ -35,6 +38,7 @@
 }
 
 .character-card__body {
+    flex-grow: 1;
     padding: var(--space-4);
     border-top: 1px solid color-mix(in srgb, var(--text-bright), transparent 95%);
     display: flex;
@@ -186,7 +190,10 @@
 }
 
 .character-card__notes {
+    display: flex;
+    flex-direction: column;
     margin-top: var(--space-4);
+    flex-grow: 1;
 }
 
 .character-card__notes-header {
@@ -250,7 +257,16 @@
 .character-card__notes-list {
     display: flex;
     flex-direction: column;
+    flex-grow: 1;
     gap: var(--space-2);
+}
+
+.character-card__notes-list>div:last-child {
+    flex-grow: 1;
+}
+
+.character-card__notes-list .note-card-simple {
+    height: 100%;
 }
 
 .character-card--modal {

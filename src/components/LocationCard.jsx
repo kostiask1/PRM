@@ -29,7 +29,9 @@ export default function LocationCard({
 }) {
 	const locationModel = new LocationCardModel(location);
 	const editingStartNameRef = useRef(
-		String(locationModel.displayName || location.name || location.title || "").trim(),
+		String(
+			locationModel.displayName || location.name || location.title || "",
+		).trim(),
 	);
 	const simplifiedNotesEnabled = useAppSelector(
 		(state) => state.ui.simplifiedNotes,
@@ -149,111 +151,107 @@ export default function LocationCard({
 
 			{!isCollapsed && (
 				<div className="location-card__body">
-					<div className="location-card__main-layout">
-						<div className="location-card__content-side">
-							<div className="location-card__info-side">
-								<div className="location-card__grid">
-									<EditableField
-										type="text"
-										value={location.name || ""}
-										onChange={(e) => updateField("name", e.target.value)}
-										onBlur={handleNameBlur}
-										placeholder={lang.t("Name")}
-									/>
-								</div>
+					<div className="location-card__content-side">
+						<div className="location-card__info-side">
+							<div className="location-card__grid">
+								<EditableField
+									type="text"
+									value={location.name || ""}
+									onChange={(e) => updateField("name", e.target.value)}
+									onBlur={handleNameBlur}
+									placeholder={lang.t("Name")}
+								/>
 							</div>
+						</div>
 
-							<div className="location-card__details">
-								<div className="location-card__field">
-									<EditableField
-										type="textarea"
-										value={location.description || ""}
-										onChange={(e) =>
-											updateField("description", e.target.value)
-										}
-										placeholder={lang.t(
-											"Briefly describe the location or faction...",
-										)}
-									/>
-								</div>
+						<div className="location-card__details">
+							<div className="location-card__field">
+								<EditableField
+									type="textarea"
+									value={location.description || ""}
+									onChange={(e) => updateField("description", e.target.value)}
+									placeholder={lang.t(
+										"Briefly describe the location or faction...",
+									)}
+								/>
 							</div>
+						</div>
 
-							<div className="location-card__notes">
-								<div
-									className="location-card__notes-header"
-									onClick={
-										hasLocationNotesData
-											? () =>
-													updateField(
-														"isNotesCollapsed",
-														!location.isNotesCollapsed,
-													)
-											: undefined
-									}
-								>
-									{hasLocationNotesData && (
-										<CollapseToggleButton
-											size={Button.SIZES.SMALL}
-											collapsed={isNotesCollapsed}
-											onClick={() =>
+						<div className="location-card__notes">
+							<div
+								className="location-card__notes-header"
+								onClick={
+									hasLocationNotesData
+										? () =>
 												updateField(
 													"isNotesCollapsed",
 													!location.isNotesCollapsed,
 												)
-											}
-										/>
-									)}
-									<label>{lang.t("Notes")}</label>
-								</div>
-								{!isNotesCollapsed && (
-									<DraggableList
-										items={notesForRender}
-										className="location-card__notes-list"
-										onReorder={handleNotesReorder}
-										onDrop={onReorderDrop}
-										keyExtractor={(note) => note.id}
-										isItemDraggable={(note) => !note._isVirtual}
-										isolateDragEvents
-										renderItem={(note, isDragging, index) => (
-											<NoteCard
-												note={note}
-												isLast={index === notesForRender.length - 1}
-												campaignSlug={campaignSlug}
-												onToggleCollapse={(id) => {
-													updateField(
-														"notes",
-														locationModel.toggleNoteCollapse(id),
-													);
-												}}
-												onTitleChange={handleNoteTitleChange}
-												onTextChange={handleNoteTextChange}
-												onDelete={handleNoteDelete}
-											/>
-										)}
+										: undefined
+								}
+							>
+								{hasLocationNotesData && (
+									<CollapseToggleButton
+										size={Button.SIZES.SMALL}
+										collapsed={isNotesCollapsed}
+										onClick={() =>
+											updateField(
+												"isNotesCollapsed",
+												!location.isNotesCollapsed,
+											)
+										}
 									/>
 								)}
+								<label>{lang.t("Notes")}</label>
 							</div>
+							{!isNotesCollapsed && (
+								<DraggableList
+									items={notesForRender}
+									className="location-card__notes-list"
+									onReorder={handleNotesReorder}
+									onDrop={onReorderDrop}
+									keyExtractor={(note) => note.id}
+									isItemDraggable={(note) => !note._isVirtual}
+									isolateDragEvents
+									renderItem={(note, isDragging, index) => (
+										<NoteCard
+											note={note}
+											isLast={index === notesForRender.length - 1}
+											campaignSlug={campaignSlug}
+											onToggleCollapse={(id) => {
+												updateField(
+													"notes",
+													locationModel.toggleNoteCollapse(id),
+												);
+											}}
+											onTitleChange={handleNoteTitleChange}
+											onTextChange={handleNoteTextChange}
+											onDelete={handleNoteDelete}
+										/>
+									)}
+								/>
+							)}
 						</div>
+					</div>
 
-						<div className="location-card__image-side">
-							<ImageAssetField
-								imageUrl={location.imageUrl}
-								campaignSlug={campaignSlug}
-								target="location"
-								showClearButton
-								onImageChange={(url) => updateField("imageUrl", url)}
-								imageAlt={lang.t("Image")}
-								containerClassName="location-card__image-container"
-								wrapperClassName={classNames(
-									"location-card__image-wrapper",
-									"is-editable",
-								)}
-								deleteButtonClassName="location-card__image-delete"
-								previewTitle={displayName || lang.t("Image")}
-								previewModalClassName="LocationImageModal"
-								previewContentClassName="LocationImageModal__content"
-							/>
-						</div>
+					<div className="location-card__image-side">
+						<ImageAssetField
+							imageUrl={location.imageUrl}
+							campaignSlug={campaignSlug}
+							target="location"
+							showClearButton
+							onImageChange={(url) => updateField("imageUrl", url)}
+							imageAlt={lang.t("Image")}
+							containerClassName="location-card__image-container"
+							wrapperClassName={classNames(
+								"location-card__image-wrapper",
+								"is-editable",
+							)}
+							deleteButtonClassName="location-card__image-delete"
+							previewTitle={displayName || lang.t("Image")}
+							previewModalClassName="LocationImageModal"
+							previewContentClassName="LocationImageModal__content"
+						/>
 					</div>
 				</div>
 			)}
