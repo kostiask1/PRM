@@ -342,6 +342,10 @@ Category final-state rules:
 - If you output "locations", include all locations/factions from INPUT DATA.campaign.locations plus requested new/edited locations/factions.
 - If you output "scenes", include all scenes from the relevant selected session context plus requested new/edited scenes.`;
 
+const characterLevelContract = `CHARACTER LEVEL CONTRACT:
+For character and NPC "level" fields, use a number from 1 to 20 when the level is known, or an empty string "" when the level is unknown, intentionally unset, or already empty in INPUT DATA. Preserve existing empty level values as "" unless the user explicitly asks to set a level.
+When balancing encounters, ignore characters or NPCs whose level is "" instead of treating them as level 1.`;
+
 const markdownFormattingContract = `APP MARKDOWN FORMAT CONTRACT:
 The app stores rich text as Markdown strings and renders them through EditableField/ReactMarkdown.
 Supported formatting in editable textarea fields:
@@ -417,6 +421,7 @@ async function generateContent({
 		`NAME LANGUAGE RULE: Any new names you invent must be written in ${responseLanguage.label}. This includes new character names, NPC names, place names, scene names, encounter names, aliases, titles, and display names.
 EXISTING NAME PROTECTION: Names that already exist in the input data must keep their exact original spelling and alphabet. Do not translate, transliterate, decline, paraphrase, rename, or otherwise alter existing names unless the user explicitly asks you to do that.
 Exception: technical lookup fields that require official English names, such as "monsterName", must remain official English bestiary names.`,
+		characterLevelContract,
 		markdownFormattingContract,
 	];
 	if (

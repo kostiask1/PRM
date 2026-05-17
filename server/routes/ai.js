@@ -86,6 +86,7 @@ function parseNameParts(raw = {}) {
 }
 
 function normalizeLevel(rawLevel) {
+	if (typeof rawLevel === "string" && rawLevel.trim() === "") return "";
 	const parsed = Number.parseInt(String(rawLevel ?? "1"), 10);
 	if (!Number.isFinite(parsed)) return 1;
 	if (parsed < 1) return 1;

@@ -183,6 +183,7 @@ export default function CharacterCard({
 											value={characterModel.level}
 											onChange={(e) => updateField("level", e.target.value)}
 										>
+											<option value="">--</option>
 											{CharacterCardModel.getLevelOptions().map((level) => (
 												<option key={level} value={level}>
 													{lang.t("Level {level}", { level })}

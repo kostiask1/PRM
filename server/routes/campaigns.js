@@ -178,7 +178,7 @@ router.post("/:slug/entities/:type", async (req, res, next) => {
 					lastName: req.body.lastName || "",
 					race: req.body.race || "",
 					class: req.body.class || "",
-					level: req.body.level || 1,
+					level: req.body.level === "" ? "" : req.body.level || 1,
 					motivation: req.body.motivation || "",
 					trait: req.body.trait || "",
 					notes: [],

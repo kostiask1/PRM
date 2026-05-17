@@ -81,7 +81,7 @@ export default class CharacterCardModel {
 	}
 
 	get level() {
-		return Number(this.character.level || 1);
+		return this.character.level === "" ? "" : Number(this.character.level || 1);
 	}
 
 	get briefMeta() {
@@ -90,7 +90,10 @@ export default class CharacterCardModel {
 		const levelPart = this.character.level
 			? `• Lvl. ${this.character.level}`
 			: "";
-		return `${race} ${className} ${levelPart}`.trim();
+		return [race ? `${race} |` : "", className, levelPart]
+			.filter(Boolean)
+			.join(" ")
+			.trim();
 	}
 
 	get notes() {
