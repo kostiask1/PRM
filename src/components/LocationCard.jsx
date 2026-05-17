@@ -11,6 +11,7 @@ import classNames from "../utils/classNames";
 import { lang } from "../services/localization";
 import { getNotesForRender, sanitizeNotesForSave } from "../utils/noteUtils";
 import { useAppSelector } from "../store/appStore";
+import { renderMentionText } from "../renderers/contentRenderer.jsx";
 import "../assets/components/LocationCard.css";
 
 export default function LocationCard({
@@ -127,7 +128,7 @@ export default function LocationCard({
 						)}
 						{isCollapsed && locationModel.briefMeta && (
 							<span className="location-card__meta-brief">
-								{locationModel.briefMeta}
+								{renderMentionText(locationModel.briefMeta)}
 							</span>
 						)}
 					</div>

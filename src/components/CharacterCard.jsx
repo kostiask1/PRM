@@ -12,6 +12,7 @@ import classNames from "../utils/classNames";
 import { lang } from "../services/localization";
 import { getNotesForRender, sanitizeNotesForSave } from "../utils/noteUtils";
 import { useAppSelector } from "../store/appStore";
+import { renderMentionText } from "../renderers/contentRenderer.jsx";
 
 export default function CharacterCard({
 	character,
@@ -127,7 +128,7 @@ export default function CharacterCard({
 						)}
 						{isCollapsed && (
 							<span className="character-card__meta-brief">
-								{characterModel.briefMeta}
+								{renderMentionText(characterModel.briefMeta)}
 							</span>
 						)}
 					</div>
