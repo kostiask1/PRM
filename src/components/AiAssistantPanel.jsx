@@ -249,6 +249,25 @@ function getHistoryChangeResources(entry) {
 		: [];
 }
 
+function getHistoryChangedEntityTypes(entry) {
+	return [
+		...new Set(
+			getHistoryChangeResources(entry)
+				.filter((resource) => resource?.kind === "entity" && resource.type)
+				.map((resource) => resource.type),
+		),
+	];
+}
+
+function getGeneratedEntityTypes(generated, historyEntry = null) {
+	const types = [];
+	if (Array.isArray(generated?.characters)) types.push("characters");
+	if (Array.isArray(generated?.npcs)) types.push("npc");
+	if (Array.isArray(generated?.locations)) types.push("locations");
+	if (types.length > 0) return types;
+	return historyEntry ? getHistoryChangedEntityTypes(historyEntry) : [];
+}
+
 function hasHistoryChanges(entry) {
 	return getHistoryChangeResources(entry).length > 0;
 }
@@ -676,6 +695,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 		}
 
 		const updated = result?.updated;
+		let appliedDirectly = false;
 		if (updated && typeof updated === "object" && onInsertResult) {
 			const entryPath = nextEntry?.path || {};
 			const updatedIsSessionLike =
@@ -692,12 +712,19 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 					updatedIsSessionLike);
 
 			if (canApplyDirectly) {
-				onInsertResult(updated);
+				onInsertResult(updated, {
+					entityTypes: getHistoryChangedEntityTypes(nextEntry),
+				});
+				appliedDirectly = true;
 			}
 		}
 
-		dispatch(requestCampaignsReloadAction());
-		dispatch(refreshEntitiesAction());
+		if (!appliedDirectly) {
+			dispatch(requestCampaignsReloadAction());
+			if (getHistoryChangedEntityTypes(nextEntry).length > 0) {
+				dispatch(refreshEntitiesAction());
+			}
+		}
 	};
 
 	const restoreAiHistoryEntry = async (entry, mode) => {
@@ -956,8 +983,15 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 					(isCampaign && !updatedIsSessionLike) ||
 					(!isCampaign && updatedIsSessionLike);
 
+				const generatedEntityTypes = getGeneratedEntityTypes(
+					data.generated,
+					data.aiResponse,
+				);
+
 				if (canApplyDirectly && onInsertResult) {
-					onInsertResult(data.updated);
+					onInsertResult(data.updated, {
+						entityTypes: generatedEntityTypes,
+					});
 				} else {
 					dispatch(requestCampaignsReloadAction());
 				}
@@ -965,9 +999,8 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 				setUserInstructions(""); // Очищаємо поле після успіху
 				setNotification(lang.t("AI changes applied successfully!"));
 				if (
-					Array.isArray(data.generated?.characters) ||
-					Array.isArray(data.generated?.npcs) ||
-					Array.isArray(data.generated?.locations)
+					!canApplyDirectly &&
+					generatedEntityTypes.length > 0
 				) {
 					dispatch(refreshEntitiesAction());
 				}

@@ -1062,23 +1062,29 @@ export default function useCampaignView(props) {
 		};
 	}, [flushCampaignSave, flushEntitySaves]);
 
-	const handleAiUpdate = async (updatedCampaign) => {
+	const handleAiUpdate = async (updatedCampaign, options = {}) => {
 		pushToUndo();
 		if (updatedCampaign) {
 			setDescription(updatedCampaign.description || "");
 			setNotes(updatedCampaign.notes || []);
 		}
-		try {
-			const [nextCharacters, nextNpcs, nextLocations] = await Promise.all([
-				api.getEntities(campaign.slug, "characters"),
-				api.getEntities(campaign.slug, "npc"),
-				api.getEntities(campaign.slug, "locations"),
-			]);
-			setCharacters((nextCharacters || []).map(sanitizeLoadedEntity));
-			setNpcs((nextNpcs || []).map(sanitizeLoadedEntity));
-			setLocations((nextLocations || []).map(sanitizeLoadedEntity));
-		} catch (err) {
-			console.error("Failed to reload AI-updated entities", err);
+		const entityTypes = Array.isArray(options.entityTypes)
+			? options.entityTypes
+			: ["characters", "npc", "locations"];
+		if (entityTypes.length > 0) {
+			try {
+				await Promise.all(
+					entityTypes.map(async (type) => {
+						const entities = await api.getEntities(campaign.slug, type);
+						const normalized = (entities || []).map(sanitizeLoadedEntity);
+						if (type === "characters") setCharacters(normalized);
+						if (type === "npc") setNpcs(normalized);
+						if (type === "locations") setLocations(normalized);
+					}),
+				);
+			} catch (err) {
+				console.error("Failed to reload AI-updated entities", err);
+			}
 		}
 		dispatch(requestCampaignsReloadAction());
 	};
