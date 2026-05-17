@@ -59,8 +59,31 @@
 	border-radius: var(--radius-xxs);
 }
 
-.ImageDropzone__preview span {
+.ImageDropzone__filename {
+	display: flex;
+	flex: 1;
+	min-width: 0;
+	flex-direction: column;
+	align-items: stretch;
+	gap: var(--space-2);
 	font-size: 0.9rem;
 	color: var(--text-bright);
+	text-align: left;
+}
+
+.ImageDropzone__filename span {
+	color: var(--muted);
+	font-size: 0.8rem;
+}
+
+.ImageDropzone__filename input {
+	width: 100%;
+	min-width: 0;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-xxs);
+	background: var(--bg-2);
+	color: var(--text-bright);
+	padding: var(--space-2) var(--space-3);
+	font: inherit;
 	word-break: break-all;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { alert } from "../actions/app";
 import { api } from "../api";
 import Button from "./form/Button";
@@ -22,6 +22,7 @@ export default function ImageDropzone({
 	const dispatch = useAppDispatch();
 	const [isDragging, setIsDragging] = useState(false);
 	const [pendingFile, setPendingFile] = useState(null);
+	const [pendingFileName, setPendingFileName] = useState("");
 	const [campaigns, setCampaigns] = useState([]);
 	const [uploadConfig, setUploadConfig] = useState({
 		source: initialSource || campaignSlug || "general",
@@ -54,6 +55,21 @@ export default function ImageDropzone({
 		}));
 	}, [campaignSlug, initialSource]);
 
+	useEffect(() => {
+		setPendingFileName(pendingFile?.name || "");
+	}, [pendingFile]);
+
+	const pendingFilePreviewUrl = useMemo(() => {
+		if (!pendingFile) return "";
+		return URL.createObjectURL(pendingFile);
+	}, [pendingFile]);
+
+	useEffect(() => {
+		return () => {
+			if (pendingFilePreviewUrl) URL.revokeObjectURL(pendingFilePreviewUrl);
+		};
+	}, [pendingFilePreviewUrl]);
+
 	const sourceOptions = [
 		{ id: "general", label: lang.t("General"), icon: "database" },
 		...campaigns.map((campaign) => ({
@@ -85,13 +101,23 @@ export default function ImageDropzone({
 	};
 
 	const executeUpload = async () => {
+		if (!pendingFile) return;
+
 		setIsUploading(true);
 		try {
+			const uploadFileName = pendingFileName.trim() || pendingFile.name;
+			const uploadFile =
+				uploadFileName === pendingFile.name
+					? pendingFile
+					: new File([pendingFile], uploadFileName, {
+							type: pendingFile.type,
+							lastModified: pendingFile.lastModified,
+						});
 			const result = await api.uploadImage(
 				uploadConfig.source,
 				uploadConfig.category,
 				uploadConfig.subcategory,
-				pendingFile,
+				uploadFile,
 			);
 			onUploadSuccess?.(result);
 			setPendingFile(null);
@@ -143,10 +169,18 @@ export default function ImageDropzone({
 					<div className="ImageDropzone__upload-settings">
 						<div className="ImageDropzone__preview">
 							<img
-								src={URL.createObjectURL(pendingFile)}
+								src={pendingFilePreviewUrl}
 								alt={lang.t("Preview")}
 							/>
-							<span>{pendingFile.name}</span>
+							<label className="ImageDropzone__filename">
+								<span>{lang.t("Image name")}</span>
+								<input
+									type="text"
+									value={pendingFileName}
+									onChange={(e) => setPendingFileName(e.target.value)}
+									disabled={isUploading}
+								/>
+							</label>
 						</div>
 						<ImageTargetSettings
 							sources={sourceOptions}
