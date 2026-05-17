@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import Tooltip from "./common/Tooltip.jsx";
 import "../assets/components/RulesLink.css";
+import Modal from "./common/Modal.jsx";
 import { lang } from "../services/localization";
 import classNames from "../utils/classNames";
 import { openModalRequest, useAppDispatch } from "../store/appStore";
@@ -32,10 +33,12 @@ export default function RulesLink({
 	name,
 	type = "spell",
 	onNavigate,
+	openInNestedModal = false,
 }) {
 	const dispatch = useAppDispatch();
 	const [tooltipContent, setTooltipContent] = useState(null);
 	const [isLoading, setIsLoading] = useState(false);
+	const [nestedSpell, setNestedSpell] = useState(null);
 
 	const referenceName = name || String(children || "").trim();
 	const referenceKey = `${type}:${referenceName}`;
@@ -60,6 +63,11 @@ export default function RulesLink({
 	const openSpell = async () => {
 		const spell = await resolveSpellInput(referenceName);
 		if (!spell) return;
+
+		if (openInNestedModal) {
+			setNestedSpell(spell);
+			return;
+		}
 
 		openModalRequest({
 			title: capitalizeWords(spell.name.split("|")[0]),
@@ -227,14 +235,29 @@ export default function RulesLink({
 		) : null);
 
 	return (
-		<Tooltip content={resolvedContent}>
-			<span
-				className={classNames("RulesLink", type && `RulesLink--${type}`)}
-				onClick={handleClick}
-				onMouseEnter={handleMouseEnter}
-			>
-				{children}
-			</span>
-		</Tooltip>
+		<>
+			<Tooltip content={resolvedContent}>
+				<span
+					className={classNames("RulesLink", type && `RulesLink--${type}`)}
+					onClick={handleClick}
+					onMouseEnter={handleMouseEnter}
+				>
+					{children}
+				</span>
+			</Tooltip>
+			{nestedSpell && (
+				<Modal
+					title={capitalizeWords(nestedSpell.name.split("|")[0])}
+					type="confirm"
+					showFooter={false}
+					onConfirm={() => setNestedSpell(null)}
+					onCancel={() => setNestedSpell(null)}
+				>
+					<Suspense fallback={null}>
+						<SpellCard spell={nestedSpell} />
+					</Suspense>
+				</Modal>
+			)}
+		</>
 	);
 }

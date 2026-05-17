@@ -248,6 +248,7 @@ export const parseRollsAndSpells = (
 					type="spell"
 					name={rawSpellName}
 					onNavigate={options.onRuleNavigate}
+					openInNestedModal={options.openSpellInNestedModal}
 				>
 					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,

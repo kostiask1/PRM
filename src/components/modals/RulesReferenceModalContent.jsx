@@ -533,6 +533,7 @@ export default function RulesReferenceModalContent({
 							>
 								{renderRecursiveContent(selectedItem.entries, query, {
 									onRuleNavigate: navigateToReference,
+									openSpellInNestedModal: true,
 								})}
 							</div>
 						</>
