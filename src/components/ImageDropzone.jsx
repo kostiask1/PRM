@@ -12,6 +12,18 @@ import classNames from "../utils/classNames";
 import { useAppDispatch } from "../store/appStore";
 import { lang } from "../services/localization";
 
+function splitFileName(fileName) {
+	const lastDotIndex = fileName.lastIndexOf(".");
+	if (lastDotIndex <= 0) {
+		return { baseName: fileName, extension: "" };
+	}
+
+	return {
+		baseName: fileName.slice(0, lastDotIndex),
+		extension: fileName.slice(lastDotIndex),
+	};
+}
+
 export default function ImageDropzone({
 	campaignSlug,
 	onUploadSuccess,
@@ -22,7 +34,7 @@ export default function ImageDropzone({
 	const dispatch = useAppDispatch();
 	const [isDragging, setIsDragging] = useState(false);
 	const [pendingFile, setPendingFile] = useState(null);
-	const [pendingFileName, setPendingFileName] = useState("");
+	const [pendingFileBaseName, setPendingFileBaseName] = useState("");
 	const [campaigns, setCampaigns] = useState([]);
 	const [uploadConfig, setUploadConfig] = useState({
 		source: initialSource || campaignSlug || "general",
@@ -56,7 +68,9 @@ export default function ImageDropzone({
 	}, [campaignSlug, initialSource]);
 
 	useEffect(() => {
-		setPendingFileName(pendingFile?.name || "");
+		setPendingFileBaseName(
+			pendingFile ? splitFileName(pendingFile.name).baseName : "",
+		);
 	}, [pendingFile]);
 
 	const pendingFilePreviewUrl = useMemo(() => {
@@ -105,7 +119,9 @@ export default function ImageDropzone({
 
 		setIsUploading(true);
 		try {
-			const uploadFileName = pendingFileName.trim() || pendingFile.name;
+			const { baseName, extension } = splitFileName(pendingFile.name);
+			const uploadBaseName = pendingFileBaseName.trim() || baseName;
+			const uploadFileName = `${uploadBaseName}${extension}`;
 			const uploadFile =
 				uploadFileName === pendingFile.name
 					? pendingFile
@@ -176,8 +192,8 @@ export default function ImageDropzone({
 								<span>{lang.t("Image name")}</span>
 								<input
 									type="text"
-									value={pendingFileName}
-									onChange={(e) => setPendingFileName(e.target.value)}
+									value={pendingFileBaseName}
+									onChange={(e) => setPendingFileBaseName(e.target.value)}
 									disabled={isUploading}
 								/>
 							</label>
