@@ -440,8 +440,8 @@
 }
 
 .DiceCalculator__historyList {
-	height: 120px;
-	overflow-y: auto;
+	height: 140px;
+	overflow-y: scroll;
 }
 
 .DiceCalculator__historyItem {
