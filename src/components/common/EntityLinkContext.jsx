@@ -2,10 +2,10 @@ import { useMemo } from "react";
 
 import { EntityLinkContext, getEntityIdentity } from "./EntityLinkIdentity";
 
-function EntityLinkScope({ entity, type, children }) {
+function EntityLinkScope({ entity, type, scope = "", children }) {
 	const value = useMemo(
-		() => (entity ? getEntityIdentity(entity, type) : null),
-		[entity, type],
+		() => (entity ? getEntityIdentity(entity, type, scope) : null),
+		[entity, scope, type],
 	);
 
 	return (

@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+
 import Icon from "./common/Icon.jsx";
 import Button from "./form/Button";
 import EditableField from "./form/EditableField";
@@ -25,6 +27,8 @@ import { shouldOpenInNewTabFromEvent } from "../utils/navigation.js";
 import CreateCharacterButton from "./CreateCharacterButton.jsx";
 import CreateLocationButton from "./CreateLocationButton.jsx";
 import { renderMentionText } from "../renderers/contentRenderer.jsx";
+import { EntityLinkResolverContext } from "./common/EntityLinkIdentity.js";
+import { findEntityByName } from "../services/entities.js";
 
 function SessionView(props) {
 	const campaign = props.campaign;
@@ -34,6 +38,88 @@ function SessionView(props) {
 	const simplifiedNotesEnabled = useAppSelector(
 		(state) => state.ui.simplifiedNotes,
 	);
+	const {
+		campaignSlug: scopedCampaignSlug,
+		handleSessionLocationChange,
+		handleSessionLocationDelete,
+		handleSessionNpcChange,
+		handleSessionNpcDelete,
+		sessionLocations,
+		sessionNpcs,
+	} = view;
+	const sessionScopedEntityLinks = useMemo(() => {
+		const scopedEntities = [
+			...sessionNpcs.map((entity) => ({
+				entity: { ...entity, _scope: "session" },
+				type: "npc",
+				scope: "session",
+			})),
+			...sessionLocations.map((entity) => ({
+				entity: { ...entity, _scope: "session" },
+				type: "locations",
+				scope: "session",
+			})),
+		];
+		const findCurrentSessionEntity = (modalState) => {
+			const items =
+				modalState.type === "locations"
+					? sessionLocations
+					: sessionNpcs;
+			return (
+				items.find((entity) => String(entity.id) === String(modalState.entity?.id)) ||
+				modalState.entity
+			);
+		};
+
+		return {
+			resolveEntityByName(name) {
+				return findEntityByName(scopedEntities, name) || null;
+			},
+			renderModalContent(modalState, onClose) {
+				const entity = findCurrentSessionEntity(modalState);
+				if (modalState.type === "locations") {
+					return (
+						<LocationCard
+							key={entity?.id || "session-scoped-location-modal"}
+							location={{ ...entity, collapsed: false }}
+							onChange={handleSessionLocationChange}
+							onDelete={(id) => {
+								handleSessionLocationDelete(id);
+								onClose?.();
+							}}
+							onToggleCollapse={null}
+							campaignSlug={scopedCampaignSlug}
+							viewMode="modal"
+						/>
+					);
+				}
+
+				return (
+					<CharacterCard
+						key={entity?.id || "session-scoped-npc-modal"}
+						character={{ ...entity, collapsed: false }}
+						onChange={handleSessionNpcChange}
+						onDelete={(id) => {
+							handleSessionNpcDelete(id);
+							onClose?.();
+						}}
+						onToggleCollapse={null}
+						campaignSlug={scopedCampaignSlug}
+						type="npc"
+						viewMode="modal"
+					/>
+				);
+			},
+		};
+	}, [
+		handleSessionLocationChange,
+		handleSessionLocationDelete,
+		handleSessionNpcChange,
+		handleSessionNpcDelete,
+		scopedCampaignSlug,
+		sessionLocations,
+		sessionNpcs,
+	]);
 
 	if (!session) return null;
 	const viewModel = new SessionViewModel({
@@ -102,7 +188,8 @@ function SessionView(props) {
 	};
 
 	return (
-		<Panel className="SessionView">
+		<EntityLinkResolverContext.Provider value={sessionScopedEntityLinks}>
+			<Panel className="SessionView">
 			<div className="Panel__header">
 				<div className="SessionView__header">
 					<div className="SessionView__titleGroup">
@@ -504,7 +591,8 @@ function SessionView(props) {
 					)}
 				</button>
 			</Tooltip>
-		</Panel>
+			</Panel>
+		</EntityLinkResolverContext.Provider>
 	);
 }
 

@@ -1,14 +1,19 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useContext } from "react";
 
 import Modal from "./Modal";
 import { EntityLinkScope } from "./EntityLinkContext";
+import { EntityLinkResolverContext } from "./EntityLinkIdentity";
 import { getEntityDisplayName } from "../../services/entities.js";
 import { lang } from "../../services/localization";
 
 const EntityModalContent = lazy(() => import("../modals/EntityModalContent"));
 
 export default function EntityModal({ modalState, campaignSlug, onClose }) {
+	const scopedEntityLinks = useContext(EntityLinkResolverContext);
 	if (!modalState) return null;
+	const scopedContent =
+		modalState.scope &&
+		scopedEntityLinks?.renderModalContent?.(modalState, onClose);
 
 	return (
 		<Modal
@@ -32,13 +37,19 @@ export default function EntityModal({ modalState, campaignSlug, onClose }) {
 			onCancel={onClose}
 		>
 			<Suspense fallback={null}>
-				<EntityLinkScope entity={modalState.entity} type={modalState.type}>
-					<EntityModalContent
-						initialEntity={modalState.entity}
-						campaignSlug={campaignSlug}
-						type={modalState.type}
-						onClose={onClose}
-					/>
+				<EntityLinkScope
+					entity={modalState.entity}
+					type={modalState.type}
+					scope={modalState.scope}
+				>
+					{scopedContent || (
+						<EntityModalContent
+							initialEntity={modalState.entity}
+							campaignSlug={campaignSlug}
+							type={modalState.type}
+							onClose={onClose}
+						/>
+					)}
 				</EntityLinkScope>
 			</Suspense>
 		</Modal>

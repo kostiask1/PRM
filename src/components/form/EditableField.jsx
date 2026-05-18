@@ -18,6 +18,7 @@ import Tooltip from "../common/Tooltip";
 import { resolveEntityByName } from "../../services/entities.js";
 import {
 	EntityLinkContext,
+	EntityLinkResolverContext,
 	getEntityIdentity,
 	isSameEntityIdentity,
 } from "../common/EntityLinkIdentity";
@@ -919,6 +920,7 @@ export default function EditableField({
 	} = props;
 	const dispatch = useAppDispatch();
 	const currentEntityIdentity = useContext(EntityLinkContext);
+	const scopedEntityLinks = useContext(EntityLinkResolverContext);
 	const [isActive, setIsActive] = useState(false);
 	const [copied, setCopied] = useState(false);
 	const [modalState, setModalState] = useState(null);
@@ -1032,19 +1034,26 @@ export default function EditableField({
 			if (!resolvedCampaignSlug || !mentionName) return;
 
 			try {
-				const found = await resolveEntityByName(
-					resolvedCampaignSlug,
-					mentionName,
-				);
+				const found =
+					scopedEntityLinks?.resolveEntityByName?.(mentionName) ||
+					(await resolveEntityByName(resolvedCampaignSlug, mentionName));
 				if (!found) return;
 
-				const foundIdentity = getEntityIdentity(found.entity, found.type);
+				const foundIdentity = getEntityIdentity(
+					found.entity,
+					found.type,
+					found.scope,
+				);
 				if (
 					isSameEntityIdentity(foundIdentity, currentEntityIdentity) ||
 					isSameEntityIdentity(
 						foundIdentity,
 						modalState
-							? getEntityIdentity(modalState.entity, modalState.type)
+							? getEntityIdentity(
+									modalState.entity,
+									modalState.type,
+									modalState.scope,
+								)
 							: null,
 					)
 				) {
@@ -1059,7 +1068,12 @@ export default function EditableField({
 				console.error("Failed to open entity mention modal", error);
 			}
 		},
-		[resolvedCampaignSlug, currentEntityIdentity, modalState],
+		[
+			resolvedCampaignSlug,
+			currentEntityIdentity,
+			modalState,
+			scopedEntityLinks,
+		],
 	);
 
 	const handleClick = (event) => {

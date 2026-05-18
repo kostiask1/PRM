@@ -14,8 +14,9 @@ function getEntityDisplayName(entity, type) {
 	);
 }
 
-function getEntityIdentity(entity, type) {
+function getEntityIdentity(entity, type, scope = "") {
 	return {
+		scope: normalizeIdentityPart(scope || entity?._scope || entity?.scope),
 		type: normalizeIdentityPart(type),
 		id: normalizeIdentityPart(entity?.id),
 		slug: normalizeIdentityPart(entity?.slug),
@@ -25,11 +26,18 @@ function getEntityIdentity(entity, type) {
 
 function isSameEntityIdentity(left, right) {
 	if (!left || !right || left.type !== right.type) return false;
+	if ((left.scope || right.scope) && left.scope !== right.scope) return false;
 	if (left.id && right.id && left.id === right.id) return true;
 	if (left.slug && right.slug && left.slug === right.slug) return true;
 	return Boolean(left.name && right.name && left.name === right.name);
 }
 
 const EntityLinkContext = createContext(null);
+const EntityLinkResolverContext = createContext(null);
 
-export { EntityLinkContext, getEntityIdentity, isSameEntityIdentity };
+export {
+	EntityLinkContext,
+	EntityLinkResolverContext,
+	getEntityIdentity,
+	isSameEntityIdentity,
+};

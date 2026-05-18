@@ -6,6 +6,7 @@ import classNames from "../../utils/classNames";
 import { resolveEntityByName } from "../../services/entities.js";
 import {
 	EntityLinkContext,
+	EntityLinkResolverContext,
 	getEntityIdentity,
 	isSameEntityIdentity,
 } from "./EntityLinkIdentity";
@@ -17,6 +18,7 @@ export default function EntityLink({
 }) {
 	const [modalState, setModalState] = useState(null);
 	const currentEntityIdentity = useContext(EntityLinkContext);
+	const scopedEntityLinks = useContext(EntityLinkResolverContext);
 
 	const resolvedCampaignSlug = useMemo(
 		() => parseUrl().campaign,
@@ -33,15 +35,25 @@ export default function EntityLink({
 			if (!resolvedCampaignSlug || !name) return;
 
 			try {
-				const found = await resolveEntityByName(resolvedCampaignSlug, name);
+				const found =
+					scopedEntityLinks?.resolveEntityByName?.(name) ||
+					(await resolveEntityByName(resolvedCampaignSlug, name));
 				if (!found) return;
-				const foundIdentity = getEntityIdentity(found.entity, found.type);
+				const foundIdentity = getEntityIdentity(
+					found.entity,
+					found.type,
+					found.scope,
+				);
 				if (
 					isSameEntityIdentity(foundIdentity, currentEntityIdentity) ||
 					isSameEntityIdentity(
 						foundIdentity,
 						modalState
-							? getEntityIdentity(modalState.entity, modalState.type)
+							? getEntityIdentity(
+									modalState.entity,
+									modalState.type,
+									modalState.scope,
+								)
 							: null,
 					)
 				) {
@@ -56,7 +68,13 @@ export default function EntityLink({
 				console.error("Failed to open entity link modal", error);
 			}
 		},
-		[name, resolvedCampaignSlug, currentEntityIdentity, modalState],
+		[
+			name,
+			resolvedCampaignSlug,
+			currentEntityIdentity,
+			modalState,
+			scopedEntityLinks,
+		],
 	);
 
 	return (
