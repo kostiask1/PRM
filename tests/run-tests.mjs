@@ -303,11 +303,23 @@ await run("campaign graph builds nodes and mention edges", () => {
 				name: "Сесія 1",
 				data: {
 					result_text: "Бачили [Невідомий союзник].",
+					npcs: [{ id: "session-npc", firstName: "Місцевий", lastName: "NPC" }],
+					locations: [{ id: "session-location", name: "Підвал" }],
+					notes: [
+						{
+							id: "session-note",
+							text: "Перевірили [Підвал] з [Місцевий NPC].",
+						},
+					],
 					scenes: [
 						{
 							id: "scene-1",
 							texts: { summary: "[Герой Один] говорить з [NPC Один]." },
 							notes: [{ id: "n1", text: "Поруч [Місто]." }],
+						},
+						{
+							id: "scene-2",
+							texts: { summary: "Далі йдуть до [Підвал]." },
 						},
 					],
 				},
@@ -350,6 +362,48 @@ await run("campaign graph builds nodes and mention edges", () => {
 				edge.relation === "mentions" &&
 				edge.source === "session:s1.json" &&
 				edge.target === "location:city",
+		),
+		true,
+	);
+	assert.equal(
+		graph.nodes.some(
+			(node) =>
+				node.id === "session-npc:s1.json:session-npc" && node.type === "npc",
+		),
+		true,
+	);
+	assert.equal(
+		graph.nodes.some(
+			(node) =>
+				node.id === "session-location:s1.json:session-location" &&
+				node.type === "location",
+		),
+		true,
+	);
+	assert.equal(
+		graph.edges.some(
+			(edge) =>
+				edge.relation === "mentions" &&
+				edge.source === "session-note:s1.json:session-note" &&
+				edge.target === "session-npc:s1.json:session-npc",
+		),
+		true,
+	);
+	assert.equal(
+		graph.edges.some(
+			(edge) =>
+				edge.relation === "mentions" &&
+				edge.source === "session-note:s1.json:session-note" &&
+				edge.target === "session-location:s1.json:session-location",
+		),
+		true,
+	);
+	assert.equal(
+		graph.edges.some(
+			(edge) =>
+				edge.relation === "sequence" &&
+				edge.source === "scene:s1.json:scene-1" &&
+				edge.target === "scene:s1.json:scene-2",
 		),
 		true,
 	);

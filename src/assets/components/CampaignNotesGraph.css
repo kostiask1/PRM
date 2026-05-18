@@ -116,20 +116,6 @@
 	color: var(--danger);
 }
 
-.CampaignNotesGraph__groupEdge {
-	stroke: var(--graph-group-color, var(--border));
-	stroke-width: 1.35px;
-	stroke-dasharray: 2 8;
-	stroke-linecap: round;
-	stroke-opacity: 0.24;
-	pointer-events: none;
-	transition: opacity 140ms ease;
-}
-
-.CampaignNotesGraph__groupEdge.is_muted {
-	opacity: 0.18;
-}
-
 .CampaignNotesGraph__edge {
 	fill: none;
 	stroke-linecap: round;
@@ -140,7 +126,6 @@
 		stroke 140ms ease;
 }
 
-.CampaignNotesGraph.is_dragging_node .CampaignNotesGraph__groupEdge,
 .CampaignNotesGraph.is_dragging_node .CampaignNotesGraph__edge,
 .CampaignNotesGraph.is_dragging_node .CampaignNotesGraph__group,
 .CampaignNotesGraph.is_dragging_node .CampaignNotesGraph__node {
@@ -154,6 +139,11 @@
 .CampaignNotesGraph__edge.is_related {
 	stroke-dasharray: 5 5;
 	filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.34));
+}
+
+.CampaignNotesGraph__edge.is_sequence {
+	stroke-dasharray: 8 6;
+	filter: drop-shadow(0 0 5px rgba(232, 121, 249, 0.32));
 }
 
 .CampaignNotesGraph__edge.is_muted {

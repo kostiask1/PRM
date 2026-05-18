@@ -517,6 +517,72 @@ export function buildCampaignGraph({
 		);
 		queueMentionEdges(sessionId, label, resultMentions, "session");
 
+		(sessionData.npcs || []).forEach((npc, npcIndex) => {
+			const npcLabel = getCharacterLabel(npc, `NPC ${npcIndex + 1}`);
+			const npcId = `session-npc:${encodedPart(fileName)}:${encodedPart(npc.id ?? npc.slug ?? npcIndex)}`;
+			addNode({
+				id: npcId,
+				type: "npc",
+				label: npcLabel,
+				summary: excerpt(
+					[npc.race, npc.class, npc.motivation, npc.trait]
+						.filter(Boolean)
+						.join(" "),
+				),
+				detailText: [npc.motivation, npc.trait].filter(Boolean).join("\n\n"),
+				aliases: [npcLabel, npc.firstName, npc.name, npc.title].filter(Boolean),
+				sourceId: npc.id,
+				sourceSlug: npc.slug,
+				meta: {
+					fileName,
+					parentId: sessionId,
+					scope: "session",
+					sourceSlug: npc.slug,
+				},
+			});
+			addEdge(sessionId, npcId, "contains", {
+				type: "session",
+				label,
+				field: "npcs",
+			});
+			queueMentionEdges(npcId, npcLabel, getMentionsFromValue(npc, "npc"), "npc");
+		});
+
+		(sessionData.locations || []).forEach((location, locationIndex) => {
+			const locationLabel = getLocationLabel(
+				location,
+				`Location ${locationIndex + 1}`,
+			);
+			const locationId = `session-location:${encodedPart(fileName)}:${encodedPart(location.id ?? location.slug ?? locationIndex)}`;
+			addNode({
+				id: locationId,
+				type: "location",
+				label: locationLabel,
+				summary: excerpt(location.description),
+				detailText: location.description || "",
+				aliases: [locationLabel, location.name, location.title].filter(Boolean),
+				sourceId: location.id,
+				sourceSlug: location.slug,
+				meta: {
+					fileName,
+					parentId: sessionId,
+					scope: "session",
+					sourceSlug: location.slug,
+				},
+			});
+			addEdge(sessionId, locationId, "contains", {
+				type: "session",
+				label,
+				field: "locations",
+			});
+			queueMentionEdges(
+				locationId,
+				locationLabel,
+				getMentionsFromValue(location, "location"),
+				"location",
+			);
+		});
+
 		(sessionData.notes || []).forEach((note, noteIndex) => {
 			if (!note || note._isVirtual || isEmptyNote(note)) return;
 			const sessionNoteId = `session-note:${encodedPart(fileName)}:${encodedPart(note.id ?? noteIndex)}`;
@@ -555,9 +621,11 @@ export function buildCampaignGraph({
 			);
 		});
 
+		const sceneNodeIds = [];
 		(sessionData.scenes || []).forEach((scene, sceneIndex) => {
 			const sceneId = `scene:${encodedPart(fileName)}:${encodedPart(scene.id ?? sceneIndex)}`;
 			const sceneName = `Scene ${sceneIndex + 1}`;
+			sceneNodeIds.push(sceneId);
 			const sceneSummary = excerpt(
 				[
 					scene?.texts?.summary,
@@ -643,6 +711,16 @@ export function buildCampaignGraph({
 						{ sourceId: sessionId, sourceLabel: label },
 					],
 				);
+			});
+		});
+
+		sceneNodeIds.forEach((sceneId, sceneIndex) => {
+			const nextSceneId = sceneNodeIds[sceneIndex + 1];
+			if (!nextSceneId) return;
+			addEdge(sceneId, nextSceneId, "sequence", {
+				type: "session",
+				label,
+				field: "scenes",
 			});
 		});
 	});

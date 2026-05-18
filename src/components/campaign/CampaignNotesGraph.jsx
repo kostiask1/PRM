@@ -28,6 +28,7 @@ const GRAPH_WIDTH = 1400;
 const GRAPH_HEIGHT = 840;
 const GRAPH_CENTER_X = GRAPH_WIDTH / 2;
 const GRAPH_CENTER_Y = GRAPH_HEIGHT / 2;
+const NODE_ZONE_PADDING = 36;
 
 const NODE_TYPE_ORDER = [
 	"campaign",
@@ -145,6 +146,10 @@ function getFilterIdForType(type) {
 	return filter?.id || "notes";
 }
 
+function getNodeTypeClass(type) {
+	return `is_${String(type || "").replace(/-/g, "_")}`;
+}
+
 function truncateLabel(value, maxLength = 18) {
 	const text = String(value || "").trim();
 	if (text.length <= maxLength) return text;
@@ -166,6 +171,14 @@ function getNodeRadius(node) {
 	return Math.min(16, 9 + Math.sqrt(Math.max(1, node.degree || 1)) * 2);
 }
 
+function getNodeZoneRadius(node) {
+	return getNodeRadius(node) + NODE_ZONE_PADDING;
+}
+
+function getNodeZoneDistance(leftNode, rightNode) {
+	return getNodeZoneRadius(leftNode || {}) + getNodeZoneRadius(rightNode || {});
+}
+
 function clampGraphPosition(position) {
 	return {
 		x: Math.min(GRAPH_WIDTH - 45, Math.max(45, position.x)),
@@ -175,6 +188,7 @@ function clampGraphPosition(position) {
 
 function getRelationLabel(relation) {
 	if (relation === "contains") return "Contains";
+	if (relation === "sequence") return "Sequence";
 	if (relation === "related") return "Related";
 	return "Mentions";
 }
@@ -267,6 +281,7 @@ function getEdgeStrokeWidth(edge) {
 
 function getEdgeColor(edge) {
 	if (edge.relation === "mentions") return "#38bdf8";
+	if (edge.relation === "sequence") return "#e879f9";
 	if (edge.relation === "related") return "#f59e0b";
 	return "#94a3b8";
 }
@@ -486,33 +501,33 @@ function placeOrbitItems(items, center, positions, options = {}) {
 }
 
 function getChildOrbitOptions(parentNode, childCount, angleOffset) {
-	const countBoost = Math.min(38, Math.sqrt(Math.max(1, childCount)) * 8);
+	const countBoost = Math.min(70, Math.sqrt(Math.max(1, childCount)) * 12);
 	if (parentNode.type === "session") {
 		return {
-			radiusX: 120 + countBoost,
-			radiusY: 88 + countBoost,
-			ringGapX: 86,
-			ringGapY: 66,
-			minSpacing: 90,
+			radiusX: 184 + countBoost,
+			radiusY: 138 + countBoost,
+			ringGapX: 132,
+			ringGapY: 102,
+			minSpacing: 144,
 			angleOffset,
 		};
 	}
 	if (parentNode.type === "scene") {
 		return {
-			radiusX: 88 + countBoost,
-			radiusY: 66 + countBoost,
-			ringGapX: 66,
-			ringGapY: 52,
-			minSpacing: 76,
+			radiusX: 118 + countBoost,
+			radiusY: 88 + countBoost,
+			ringGapX: 82,
+			ringGapY: 64,
+			minSpacing: 104,
 			angleOffset: angleOffset + 0.24,
 		};
 	}
 	return {
-		radiusX: 104 + countBoost,
-		radiusY: 78 + countBoost,
-		ringGapX: 76,
-		ringGapY: 58,
-		minSpacing: 82,
+		radiusX: 168 + countBoost,
+		radiusY: 126 + countBoost,
+		ringGapX: 122,
+		ringGapY: 94,
+		minSpacing: 142,
 		angleOffset,
 	};
 }
@@ -521,6 +536,60 @@ function placeChildOrbits(parentNode, childrenByParent, positions, depth = 0) {
 	const children = childrenByParent.get(parentNode.id) || [];
 	const parentPosition = positions.get(parentNode.id);
 	if (children.length === 0 || !parentPosition) return;
+
+	if (parentNode.type === "session") {
+		const sceneChildren = children
+			.filter((childNode) => childNode.type === "scene")
+			.sort(sortLayoutNodes);
+		const otherChildren = children.filter((childNode) => childNode.type !== "scene");
+
+		if (sceneChildren.length > 0) {
+			const spacing = 300;
+			const y = parentPosition.y + 230 + depth * 30;
+			const startX = parentPosition.x - ((sceneChildren.length - 1) * spacing) / 2;
+
+			sceneChildren.forEach((sceneNode, index) => {
+				positions.set(sceneNode.id, {
+					x: startX + index * spacing,
+					y,
+				});
+			});
+		}
+
+		if (otherChildren.length > 0) {
+			placeOrbitItems(otherChildren, parentPosition, positions, {
+				radiusX: 224,
+				radiusY: 164,
+				ringGapX: 144,
+				ringGapY: 108,
+				minSpacing: 152,
+				angleOffset: -Math.PI / 2,
+			});
+		}
+
+		children.forEach((childNode) => {
+			placeChildOrbits(childNode, childrenByParent, positions, depth + 1);
+		});
+		return;
+	}
+
+	if (parentNode.type === "scene") {
+		const sortedChildren = [...children].sort(sortLayoutNodes);
+		const spacingY = 106;
+		const startY = parentPosition.y + 118;
+
+		sortedChildren.forEach((childNode, index) => {
+			positions.set(childNode.id, {
+				x: parentPosition.x,
+				y: startY + index * spacingY,
+			});
+		});
+
+		sortedChildren.forEach((childNode) => {
+			placeChildOrbits(childNode, childrenByParent, positions, depth + 1);
+		});
+		return;
+	}
 
 	const outwardAngle =
 		Math.atan2(
@@ -611,6 +680,61 @@ function fitStructuredLayout(positions, groupGuides) {
 	};
 }
 
+function estimateGroupRadius(groupId, nodeCount, rootCount) {
+	const densityRadius = 178 + Math.sqrt(Math.max(1, nodeCount)) * 58;
+	const rootRadius = Math.max(0, rootCount - 1) * 28;
+	const sessionBoost = groupId === "sessions" ? 150 : 0;
+	const notesBoost = groupId === "notes" ? 80 : 0;
+	return Math.min(560, densityRadius + rootRadius + sessionBoost + notesBoost);
+}
+
+function resolveGroupGuideOverlaps(groupGuides) {
+	const nextGroups = groupGuides.map((group) => ({ ...group }));
+
+	for (let iteration = 0; iteration < 18; iteration += 1) {
+		let moved = false;
+
+		for (let leftIndex = 0; leftIndex < nextGroups.length; leftIndex += 1) {
+			for (
+				let rightIndex = leftIndex + 1;
+				rightIndex < nextGroups.length;
+				rightIndex += 1
+			) {
+				const left = nextGroups[leftIndex];
+				const right = nextGroups[rightIndex];
+				let dx = right.x - left.x;
+				let dy = right.y - left.y;
+				let distance = Math.sqrt(dx * dx + dy * dy);
+
+				if (distance < 0.01) {
+					const angle = ((leftIndex + rightIndex + iteration + 1) * 2.399963) %
+						(Math.PI * 2);
+					dx = Math.cos(angle);
+					dy = Math.sin(angle);
+					distance = 1;
+				}
+
+				const minDistance =
+					(left.estimatedRadius || 190) + (right.estimatedRadius || 190) + 150;
+				if (distance >= minDistance) continue;
+
+				const push = (minDistance - distance) / 2;
+				const pushX = (dx / distance) * push;
+				const pushY = (dy / distance) * push;
+				left.x -= pushX;
+				left.y -= pushY;
+				right.x += pushX;
+				right.y += pushY;
+				moved = true;
+			}
+		}
+
+		if (!moved) break;
+	}
+
+	return nextGroups;
+}
+
 function computeLayout(nodes) {
 	if (nodes.length === 0) {
 		return { nodePositions: {}, groupGuides: [] };
@@ -621,14 +745,6 @@ function computeLayout(nodes) {
 	const childrenByParent = new Map();
 	const rootNodesByGroup = new Map();
 	const nodeIdsByGroup = new Map();
-	const campaignNode = nodes.find((node) => node.type === "campaign") || nodes[0];
-
-	if (campaignNode) {
-		positions.set(campaignNode.id, {
-			x: GRAPH_CENTER_X,
-			y: GRAPH_CENTER_Y,
-		});
-	}
 
 	nodes.forEach((node) => {
 		if (node.type === "campaign") return;
@@ -649,28 +765,49 @@ function computeLayout(nodes) {
 	const activeGroups = LAYOUT_GROUPS.filter(
 		(group) => (nodeIdsByGroup.get(group.id) || []).length > 0,
 	);
-	const groupGuides = activeGroups.map((group, index) => {
+	const groupEstimates = activeGroups.map((group) => {
+		const nodeIds = nodeIdsByGroup.get(group.id) || [];
+		const rootNodes = rootNodesByGroup.get(group.id) || [];
+		return {
+			...group,
+			nodeIds,
+			estimatedRadius: estimateGroupRadius(
+				group.id,
+				nodeIds.length,
+				rootNodes.length,
+			),
+		};
+	});
+	const requiredOrbit =
+		groupEstimates.reduce(
+			(total, group) => total + group.estimatedRadius * 2 + 150,
+			0,
+		) /
+		(Math.PI * 2);
+	const orbitX = Math.max(activeGroups.length <= 3 ? 720 : 900, requiredOrbit);
+	const orbitY = Math.max(
+		activeGroups.length <= 3 ? 520 : 660,
+		requiredOrbit * 0.8,
+	);
+	const groupGuides = resolveGroupGuideOverlaps(groupEstimates.map((group, index) => {
 		const angle = -Math.PI / 2 + (index / activeGroups.length) * Math.PI * 2;
-		const orbitX = activeGroups.length <= 3 ? 430 : 520;
-		const orbitY = activeGroups.length <= 3 ? 270 : 320;
 
 		return {
 			...group,
 			angle,
-			nodeIds: nodeIdsByGroup.get(group.id) || [],
 			x: GRAPH_CENTER_X + Math.cos(angle) * orbitX,
 			y: GRAPH_CENTER_Y + Math.sin(angle) * orbitY,
 		};
-	});
+	}));
 
 	groupGuides.forEach((group) => {
 		const rootNodes = rootNodesByGroup.get(group.id) || [];
 		placeOrbitItems(rootNodes, group, positions, {
-			radiusX: 124,
-			radiusY: 94,
-			ringGapX: 94,
-			ringGapY: 72,
-			minSpacing: 96,
+			radiusX: 230,
+			radiusY: 170,
+			ringGapX: 156,
+			ringGapY: 120,
+			minSpacing: 176,
 			angleOffset: group.angle,
 		});
 		rootNodes.forEach((node) => {
@@ -703,7 +840,7 @@ function getDisplayGroupGuides(groupGuides, displayLayout) {
 function getVisibleGraph(graph, enabledFilters, query) {
 	const normalizedQuery = normalizeGraphName(query);
 	const enabledNodes = graph.nodes.filter((node) => {
-		if (node.type === "campaign") return true;
+		if (node.type === "campaign") return false;
 		if (
 			node.type === "scene-note" &&
 			enabledFilters[getFilterIdForType("scene")] === false
@@ -777,19 +914,12 @@ function getConnectedEdges(edges, nodeId) {
 	);
 }
 
-function isCampaignContainEdge(edge, nodeById) {
-	if (edge.relation !== "contains") return false;
-	const sourceNode = nodeById.get(edge.source);
-	const targetNode = nodeById.get(edge.target);
-	return sourceNode?.type === "campaign" || targetNode?.type === "campaign";
-}
-
-function getDescendantIds(nodeId, childIdsByParent) {
+function getDescendantIds(nodeId, childIdsByParent, shouldInclude = () => true) {
 	const result = [];
 	const queue = [...(childIdsByParent.get(nodeId) || [])];
 	while (queue.length > 0) {
 		const childId = queue.shift();
-		result.push(childId);
+		if (shouldInclude(childId)) result.push(childId);
 		queue.push(...(childIdsByParent.get(childId) || []));
 	}
 	return result;
@@ -813,7 +943,7 @@ function constrainMovedNodesToGroupCollisions({
 	const movedNodeIdSet = new Set(movedNodeIds);
 	const staticNodeIds = groupNodeIds.filter((nodeId) => !movedNodeIdSet.has(nodeId));
 
-	for (let iteration = 0; iteration < 8; iteration += 1) {
+	for (let iteration = 0; iteration < 7; iteration += 1) {
 		let moved = false;
 
 		movedNodeIds.forEach((movedNodeId, movedIndex) => {
@@ -824,7 +954,7 @@ function constrainMovedNodesToGroupCollisions({
 				movedBasePosition,
 				nextOffsets[movedNodeId],
 			);
-			const movedRadius = getNodeRadius(nodeById.get(movedNodeId) || {});
+			const movedNode = nodeById.get(movedNodeId) || {};
 
 			staticNodeIds.forEach((staticNodeId, staticIndex) => {
 				const staticBasePosition = basePositions[staticNodeId];
@@ -834,7 +964,7 @@ function constrainMovedNodesToGroupCollisions({
 					staticBasePosition,
 					nextOffsets[staticNodeId],
 				);
-				const staticRadius = getNodeRadius(nodeById.get(staticNodeId) || {});
+				const staticNode = nodeById.get(staticNodeId) || {};
 				let dx = movedPosition.x - staticPosition.x;
 				let dy = movedPosition.y - staticPosition.y;
 				let distance = Math.sqrt(dx * dx + dy * dy);
@@ -847,19 +977,19 @@ function constrainMovedNodesToGroupCollisions({
 					distance = 1;
 				}
 
-				const minDistance = movedRadius + staticRadius + 56;
+				const minDistance = getNodeZoneDistance(movedNode, staticNode);
 				if (distance >= minDistance) return;
 
 				const overlap = minDistance - distance;
-				const pushX = (dx / distance) * overlap;
-				const pushY = (dy / distance) * overlap;
-				movedPosition = clampGraphPosition({
-					x: movedPosition.x + pushX,
-					y: movedPosition.y + pushY,
+				const staticPushX = (dx / distance) * overlap * -1;
+				const staticPushY = (dy / distance) * overlap * -1;
+				const nextStaticPosition = clampGraphPosition({
+					x: staticPosition.x + staticPushX,
+					y: staticPosition.y + staticPushY,
 				});
-				nextOffsets[movedNodeId] = {
-					x: movedPosition.x - movedBasePosition.x,
-					y: movedPosition.y - movedBasePosition.y,
+				nextOffsets[staticNodeId] = {
+					x: nextStaticPosition.x - staticBasePosition.x,
+					y: nextStaticPosition.y - staticBasePosition.y,
 				};
 				moved = true;
 			});
@@ -890,7 +1020,21 @@ function findByIdOrSlug(items, sourceId, sourceSlug) {
 }
 
 function findSessionDetail(sessionDetails, fileName) {
+	if (sessionDetails instanceof Map) return sessionDetails.get(fileName) || null;
 	return sessionDetails?.[fileName] || null;
+}
+
+function findGraphEntity(node, campaignEntities, sessionDetails, sessionKey) {
+	if (node?.meta?.scope === "session") {
+		const session = findSessionDetail(sessionDetails, node.meta?.fileName);
+		return findByIdOrSlug(
+			session?.data?.[sessionKey],
+			node.sourceId,
+			node.sourceSlug,
+		);
+	}
+
+	return findByIdOrSlug(campaignEntities, node.sourceId, node.sourceSlug);
 }
 
 function findEditableNote(node, notes, sessionDetails) {
@@ -1040,9 +1184,6 @@ export default function CampaignNotesGraph({
 		() => getConnectedIds(visibleGraph.edges, focusedNodeId),
 		[focusedNodeId, visibleGraph.edges],
 	);
-	const isCampaignFocused =
-		focusedNodeId &&
-		visibleGraph.nodeById.get(focusedNodeId)?.type === "campaign";
 	const selectedNode = selectedNodeId
 		? visibleGraph.nodeById.get(selectedNodeId)
 		: null;
@@ -1107,15 +1248,21 @@ export default function CampaignNotesGraph({
 				: node.type === "npc"
 					? {
 							type: "npc",
-							entity: findByIdOrSlug(npcs, node.sourceId, node.sourceSlug),
+							entity: findGraphEntity(
+								node,
+								npcs,
+								sessionDetails,
+								"npcs",
+							),
 						}
 					: node.type === "location"
 						? {
 								type: "locations",
-								entity: findByIdOrSlug(
+								entity: findGraphEntity(
+									node,
 									locations,
-									node.sourceId,
-									node.sourceSlug,
+									sessionDetails,
+									"locations",
 								),
 							}
 						: null;
@@ -1188,14 +1335,19 @@ export default function CampaignNotesGraph({
 
 		event.stopPropagation();
 		event.currentTarget.setPointerCapture?.(event.pointerId);
+		const groupId = groupIdsByNodeId.get(node.id);
 		nodeDragStartRef.current = {
 			pointerId: event.pointerId,
 			nodeId: node.id,
 			x: event.clientX,
 			y: event.clientY,
 			startOffsets: nodePositionOffsets,
-			childIds: getDescendantIds(node.id, childIdsByParent),
-			groupId: groupIdsByNodeId.get(node.id),
+			childIds: getDescendantIds(
+				node.id,
+				childIdsByParent,
+				(childId) => groupIdsByNodeId.get(childId) === groupId,
+			),
+			groupId,
 			didMove: false,
 		};
 		setDraggingNodeId(node.id);
@@ -1352,7 +1504,9 @@ export default function CampaignNotesGraph({
 					setSelectedNodeId(otherNode.id);
 				}}
 			>
-				<span className={`CampaignNotesGraph__dot is_${otherNode.type}`} />
+				<span
+					className={`CampaignNotesGraph__dot ${getNodeTypeClass(otherNode.type)}`}
+				/>
 				<span className="CampaignNotesGraph__connectionText">
 					<strong>{renderMentionText(otherNode.label)}</strong>
 					<span>{renderMentionText(connectionMetaText)}</span>
@@ -1363,28 +1517,7 @@ export default function CampaignNotesGraph({
 
 	const isGroupFocused = (group) =>
 		!focusedNodeId ||
-		isCampaignFocused ||
 		group.nodeIds.some((nodeId) => connectedIds.has(nodeId));
-
-	const renderGroupEdge = (group) => {
-		const isFocused = isGroupFocused(group);
-
-		return (
-			<line
-				key={`group-edge:${group.id}`}
-				className={classNames(
-					"CampaignNotesGraph__groupEdge",
-					!isFocused && "is_muted",
-				)}
-				x1={GRAPH_CENTER_X}
-				y1={GRAPH_CENTER_Y}
-				x2={group.x}
-				y2={group.y}
-				style={{ "--graph-group-color": group.color }}
-				vectorEffect="non-scaling-stroke"
-			/>
-		);
-	};
 
 	const renderGroupGuide = (group) => {
 		const label = `${lang.t(group.label)} ${group.count}`;
@@ -1436,9 +1569,7 @@ export default function CampaignNotesGraph({
 	};
 
 	const structuralEdges = visibleGraph.edges.filter(
-		(edge) =>
-			edge.relation === "contains" &&
-			!isCampaignContainEdge(edge, visibleGraph.nodeById),
+		(edge) => edge.relation === "contains",
 	);
 	const relationEdges = visibleGraph.edges.filter(
 		(edge) => edge.relation !== "contains",
@@ -1491,7 +1622,7 @@ export default function CampaignNotesGraph({
 							{lang.t("Loading graph...")}
 						</div>
 					)}
-					{visibleGraph.nodes.length <= 1 && !isLoading && (
+					{visibleGraph.nodes.length === 0 && !isLoading && (
 						<div className="CampaignNotesGraph__message">
 							{query ? lang.t("Nothing found.") : lang.t("No graph links yet.")}
 						</div>
@@ -1512,7 +1643,6 @@ export default function CampaignNotesGraph({
 							transform={`translate(${transform.x} ${transform.y}) scale(${transform.scale})`}
 						>
 							<g className="CampaignNotesGraph__edges">
-								{displayGroups.map(renderGroupEdge)}
 								{structuralEdges.map(renderEdge)}
 								{relationEdges.map(renderEdge)}
 							</g>
@@ -1532,7 +1662,7 @@ export default function CampaignNotesGraph({
 											key={node.id}
 											className={classNames(
 												"CampaignNotesGraph__node",
-												`is_${node.type}`,
+												getNodeTypeClass(node.type),
 												isSelected && "is_selected",
 												draggingNodeId === node.id && "is_dragging",
 												!isFocused && "is_muted",
@@ -1565,7 +1695,7 @@ export default function CampaignNotesGraph({
 					<>
 						<div className="CampaignNotesGraph__type">
 							<span
-								className={`CampaignNotesGraph__dot is_${selectedNode.type}`}
+								className={`CampaignNotesGraph__dot ${getNodeTypeClass(selectedNode.type)}`}
 							/>
 							{lang.t(TYPE_LABELS[selectedNode.type] || selectedNode.type)}
 						</div>
@@ -1611,10 +1741,12 @@ export default function CampaignNotesGraph({
 						</dl>
 						<div className="CampaignNotesGraph__legend">
 							{NODE_TYPE_ORDER.filter((type) =>
-								graph.nodes.some((node) => node.type === type),
+								visibleGraph.nodes.some((node) => node.type === type),
 							).map((type) => (
 								<span key={type}>
-									<span className={`CampaignNotesGraph__dot is_${type}`} />
+									<span
+										className={`CampaignNotesGraph__dot ${getNodeTypeClass(type)}`}
+									/>
 									{lang.t(TYPE_LABELS[type] || type)}
 								</span>
 							))}
