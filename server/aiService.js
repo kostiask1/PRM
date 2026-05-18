@@ -308,7 +308,7 @@ Always return JSON only, with no text before or after JSON.
 The JSON must use this shape:
 { "locations": [{ "id": "existing-id-if-any", "slug": "existing-slug-if-any", "name": "...", "description": "...", "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown note text..." }] }] }.
 Return only the top-level "locations" field. Do not include "characters", "npcs", campaign notes, scenes, encounters, or story description.
-Create practical locations/factions with clear gameable details, inhabitants, conflicts, hooks, and notes when useful.`,
+Create practical locations/factions with detailed, gameable descriptions: visible landmarks, sensory details, layout, atmosphere, inhabitants, conflicts, secrets, hazards, resources, hooks, and what makes the place distinct at the table.`,
 	prompt: `You are an experienced Dungeon Master for Dungeons & Dragons.
 Your goal is to help another DM with planning.
 You receive data and user instructions.
@@ -385,8 +385,11 @@ If the user asks to generate a prompt for creating an image, ignore the normal r
 The image prompt must be detailed and ready to paste into an image generator.`;
 
 const generatedNpcDetailContract = `GENERATED NPC DETAIL RULE:
-For every newly created top-level NPC, fill "trait" with a detailed character portrayal, not a short quirk. Include visual appearance, clothing/equipment, posture, voice or manner of speaking, behavior, habits, flaws, tells, and distinctive roleplay cues.
+For every newly created top-level NPC, fill "trait" with a detailed character portrayal, not a short quirk. Start with a concrete visual description: apparent age, build, face, hair, eyes, skin or notable ancestry features, clothing, armor, equipment, colors, scars, jewelry, posture, and memorable silhouette. Then include voice or manner of speaking, behavior, habits, flaws, tells, and distinctive roleplay cues.
 Use this field to make the NPC easy to portray at the table.`;
+
+const generatedLocationDetailContract = `GENERATED LOCATION DETAIL RULE:
+For every newly created top-level location or faction, make "description" detailed and gameable, not just a summary. Include visual landmarks, sensory details, spatial layout, atmosphere, inhabitants or members, current tensions, secrets, hazards, useful resources, adventure hooks, and at least one distinctive feature players can interact with.`;
 
 const sceneCombatMechanicsContract = `SCENE COMBAT MECHANICS RULE:
 When a generated or updated scene includes combat, an encounter, monsters, or an "encounterIndex", include a scene note with interesting combat mechanics or tactical ideas. The note should describe concrete gameplay hooks such as terrain features, hazards, objectives beyond killing enemies, lair actions, reinforcements, countdowns, interactive objects, monster behavior, or ways players can exploit the environment. Write this note in the mandatory response language.`;
@@ -479,6 +482,13 @@ Exception: technical lookup fields that require official English names, such as 
 		["campaign", "scene", "npc"].includes(useKey)
 	) {
 		systemInstructionParts.push(generatedNpcDetailContract);
+	}
+	if (
+		effectiveParseAIResponse &&
+		locationGenerationEnabled &&
+		["campaign", "scene", "location"].includes(useKey)
+	) {
+		systemInstructionParts.push(generatedLocationDetailContract);
 	}
 	if (effectiveParseAIResponse && useKey === "scene" && encounterGenerationEnabled) {
 		systemInstructionParts.push(sceneCombatMechanicsContract);
@@ -759,7 +769,7 @@ IMPORTANT: If editing, renaming, or deleting an existing character from INPUT DA
 		userPrompt += `TASK: Create new NPCs for this ${entityTargetScope === "session" ? "current session" : "campaign"} based on user instructions.
 IMPORTANT: This request is strictly for NPCs. Return only "npcs". Do not create player characters or any other content category.
 IMPORTANT: Include race, class, and level for every generated NPC when possible. If a formal class does not fit, put a role/archetype in "class".
-IMPORTANT: For every newly created NPC, "trait" must be a detailed portrayal with appearance, behavior, habits, flaws, and roleplay cues.
+IMPORTANT: For every newly created NPC, "trait" must include a detailed visual description first, then behavior, habits, flaws, and roleplay cues.
 IMPORTANT: If editing, renaming, or deleting an existing NPC from INPUT DATA, preserve its "id" and "slug". If ${entityTargetScope === "session" ? "INPUT DATA.currentSession.npcs" : "INPUT DATA.campaign.npcs"} is absent, this request is append-only for NPCs.\n`;
 		if (entityTargetScope === "session") {
 			userPrompt += `IMPORTANT: Do not include campaign-scoped NPCs in this session-scoped response. Return all existing INPUT DATA.currentSession.npcs unchanged plus requested new or edited session NPCs.\n`;
@@ -768,6 +778,7 @@ IMPORTANT: If editing, renaming, or deleting an existing NPC from INPUT DATA, pr
 		userPrompt += `TASK: Create or update locations/factions for this ${entityTargetScope === "session" ? "current session" : "campaign"} based on user instructions.
 IMPORTANT: This request is strictly for locations/factions. Return only "locations". Do not create characters, NPCs, campaign notes, scenes, encounters, or any other content category.
 IMPORTANT: If editing, renaming, or deleting an existing location/faction from INPUT DATA, preserve its "id" and "slug".
+IMPORTANT: For every newly created location/faction, "description" must be detailed and gameable: landmarks, sensory details, layout, atmosphere, inhabitants, tensions, secrets, hazards, resources, hooks, and interactive features.
 IMPORTANT: If ${entityTargetScope === "session" ? "INPUT DATA.currentSession.locations" : "INPUT DATA.campaign.locations"} is present, the returned "locations" array must contain every included existing location/faction unchanged unless the user requested edits/deletions, plus requested new locations/factions. Do not return only the new item. If ${entityTargetScope === "session" ? "INPUT DATA.currentSession.locations" : "INPUT DATA.campaign.locations"} is absent, this request is append-only for locations/factions.\n`;
 		if (entityTargetScope === "session") {
 			userPrompt += `IMPORTANT: Do not include campaign-scoped locations/factions in this session-scoped response. Return all existing INPUT DATA.currentSession.locations unchanged plus requested new or edited session locations/factions.\n`;
@@ -785,16 +796,16 @@ IMPORTANT: If ${entityTargetScope === "session" ? "INPUT DATA.currentSession.loc
 		if (npcGenerationEnabled) {
 			userPrompt +=
 				entityTargetScope === "session"
-					? `IMPORTANT: NPC generation is enabled. Include NPC cards only when the user explicitly asks to create, edit, rename, or delete NPCs. Top-level "npcs" are session-scoped and belong only to the current session. Scene-local NPC references may also be included in scene "npcs". If you output top-level "npcs", preserve "id"/"slug" for existing items and include all included existing NPCs from INPUT DATA.currentSession.npcs plus requested additions/edits, unless the user requested deletion. Do not include NPCs from INPUT DATA.campaign.npcs or any other campaign-scoped NPC list in this session-scoped response. Newly created top-level NPCs must have detailed portrayal in "trait".\n`
-					: `IMPORTANT: NPC generation is enabled. Include NPC cards only when the user explicitly asks to create, edit, rename, or delete NPCs. Scene-local NPC references may also be included in scene "npcs". If you output top-level "npcs", preserve "id"/"slug" for existing items and include all included existing NPCs from INPUT DATA.campaign.npcs plus requested additions/edits, unless the user requested deletion. Newly created top-level NPCs must have detailed portrayal in "trait".\n`;
+					? `IMPORTANT: NPC generation is enabled. Include NPC cards only when the user explicitly asks to create, edit, rename, or delete NPCs. Top-level "npcs" are session-scoped and belong only to the current session. Scene-local NPC references may also be included in scene "npcs". If you output top-level "npcs", preserve "id"/"slug" for existing items and include all included existing NPCs from INPUT DATA.currentSession.npcs plus requested additions/edits, unless the user requested deletion. Do not include NPCs from INPUT DATA.campaign.npcs or any other campaign-scoped NPC list in this session-scoped response. Newly created top-level NPCs must have detailed visual appearance and portrayal in "trait".\n`
+					: `IMPORTANT: NPC generation is enabled. Include NPC cards only when the user explicitly asks to create, edit, rename, or delete NPCs. Scene-local NPC references may also be included in scene "npcs". If you output top-level "npcs", preserve "id"/"slug" for existing items and include all included existing NPCs from INPUT DATA.campaign.npcs plus requested additions/edits, unless the user requested deletion. Newly created top-level NPCs must have detailed visual appearance and portrayal in "trait".\n`;
 		} else {
 			userPrompt += `IMPORTANT: NPC generation is disabled. Do not create or edit NPCs and do not output top-level "npcs" or scene "npcs".\n`;
 		}
 		if (locationGenerationEnabled) {
 			userPrompt +=
 				entityTargetScope === "session"
-					? `IMPORTANT: Location/faction generation is enabled. Include locations/factions only when the user explicitly asks to create, edit, rename, or delete places, factions, organizations, landmarks, or regions. Top-level "locations" are session-scoped and belong only to the current session. If you output "locations", preserve "id"/"slug" for existing items and include all included existing locations/factions from INPUT DATA.currentSession.locations plus requested additions/edits, unless the user requested deletion. Do not include locations/factions from INPUT DATA.campaign.locations or any other campaign-scoped location list in this session-scoped response.\n`
-					: `IMPORTANT: Location/faction generation is enabled. Include locations/factions only when the user explicitly asks to create, edit, rename, or delete places, factions, organizations, landmarks, or regions. If you output "locations", preserve "id"/"slug" for existing items and include all included existing locations/factions from INPUT DATA.campaign.locations plus requested additions/edits, unless the user requested deletion.\n`;
+					? `IMPORTANT: Location/faction generation is enabled. Include locations/factions only when the user explicitly asks to create, edit, rename, or delete places, factions, organizations, landmarks, or regions. Top-level "locations" are session-scoped and belong only to the current session. If you output "locations", preserve "id"/"slug" for existing items and include all included existing locations/factions from INPUT DATA.currentSession.locations plus requested additions/edits, unless the user requested deletion. Do not include locations/factions from INPUT DATA.campaign.locations or any other campaign-scoped location list in this session-scoped response. Newly created locations/factions must have detailed, gameable "description".\n`
+					: `IMPORTANT: Location/faction generation is enabled. Include locations/factions only when the user explicitly asks to create, edit, rename, or delete places, factions, organizations, landmarks, or regions. If you output "locations", preserve "id"/"slug" for existing items and include all included existing locations/factions from INPUT DATA.campaign.locations plus requested additions/edits, unless the user requested deletion. Newly created locations/factions must have detailed, gameable "description".\n`;
 		} else {
 			userPrompt += `IMPORTANT: Location/faction generation is disabled. Do not create or edit locations/factions and do not output "locations".\n`;
 		}
@@ -814,12 +825,12 @@ IMPORTANT: For each scene with combat or an encounterIndex, include a scene note
 			userPrompt += `IMPORTANT: Character generation is disabled. Do not create or edit player characters and do not output "characters".\n`;
 		}
 		if (npcGenerationEnabled) {
-			userPrompt += `IMPORTANT: NPC generation is enabled. Include NPCs only when the user explicitly asks to create, edit, rename, or delete them. If you output "npcs", preserve "id"/"slug" for existing items and include all included existing NPCs from INPUT DATA.campaign.npcs plus requested additions/edits, unless the user requested deletion. Newly created NPCs must include race, class, level, description, motivation, and detailed trait portrayal.\n`;
+			userPrompt += `IMPORTANT: NPC generation is enabled. Include NPCs only when the user explicitly asks to create, edit, rename, or delete them. If you output "npcs", preserve "id"/"slug" for existing items and include all included existing NPCs from INPUT DATA.campaign.npcs plus requested additions/edits, unless the user requested deletion. Newly created NPCs must include race, class, level, description, motivation, and a detailed "trait" with visual appearance plus behavior.\n`;
 		} else {
 			userPrompt += `IMPORTANT: NPC generation is disabled. Do not create or edit NPCs and do not output "npcs".\n`;
 		}
 		if (locationGenerationEnabled) {
-			userPrompt += `IMPORTANT: Location/faction generation is enabled. Include locations/factions only when the user explicitly asks to create, edit, rename, or delete places, factions, organizations, landmarks, or regions. If you output "locations", preserve "id"/"slug" for existing items and include all included existing locations/factions from INPUT DATA.campaign.locations plus requested additions/edits, unless the user requested deletion. Newly created locations/factions must include name and description.\n`;
+			userPrompt += `IMPORTANT: Location/faction generation is enabled. Include locations/factions only when the user explicitly asks to create, edit, rename, or delete places, factions, organizations, landmarks, or regions. If you output "locations", preserve "id"/"slug" for existing items and include all included existing locations/factions from INPUT DATA.campaign.locations plus requested additions/edits, unless the user requested deletion. Newly created locations/factions must include name and a detailed, gameable description.\n`;
 		} else {
 			userPrompt += `IMPORTANT: Location/faction generation is disabled. Do not create or edit locations/factions and do not output "locations".\n`;
 		}
