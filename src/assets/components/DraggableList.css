@@ -60,9 +60,11 @@
 .DraggableList>div:hover>.DraggableList__handle,
 .DraggableList>div.is_dragging>.DraggableList__handle,
 .DraggableList>div:hover>.DraggableList__itemControl,
-.DraggableList>div.is_dragging>.DraggableList__itemControl,
-.DraggableList>div>.DraggableList__itemControl.is_active {
+.DraggableList>div.is_dragging>.DraggableList__itemControl {
 	opacity: 0.75;
+}
+.DraggableList>div>.DraggableList__itemControl.is_active {
+	opacity: 0.35;
 }
 
 .DraggableList>div:hover>.DraggableList__handle,
