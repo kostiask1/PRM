@@ -97,6 +97,7 @@ export default function ImageAssetField({
 	}, [imageUrl]);
 
 	const hasValidImage = Boolean(imageUrl) && !hasImageError;
+	const hasMissingImage = Boolean(imageUrl) && hasImageError;
 
 	const openGallery = () => setIsGalleryOpen(true);
 
@@ -137,6 +138,39 @@ export default function ImageAssetField({
 								}}
 							/>
 						)}
+					</div>
+				) : hasMissingImage ? (
+					<div className="ImageAssetField__missing">
+						<div className="ImageAssetField__missing_title">
+							{lang.t("Image not found")}
+						</div>
+						<div className="ImageAssetField__missing_url" title={imageUrl}>
+							{imageUrl}
+						</div>
+						<div className="ImageAssetField__missing_actions">
+							<Button
+								variant="danger"
+								size={Button.SIZES.SMALL}
+								icon="x"
+								onClick={(event) => {
+									event.stopPropagation();
+									onImageChange?.(null);
+								}}
+							>
+								{lang.t("Clear image")}
+							</Button>
+							<Button
+								variant="ghost"
+								size={Button.SIZES.SMALL}
+								icon="image"
+								onClick={(event) => {
+									event.stopPropagation();
+									openGallery();
+								}}
+							>
+								{lang.t("Choose image")}
+							</Button>
+						</div>
 					</div>
 				) : (
 					<ImageDropzone
