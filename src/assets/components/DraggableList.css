@@ -34,10 +34,14 @@
 .DraggableList__itemControl {
 	position: absolute;
 	top: var(--space-2);
-	left: -17px;
+	left: 1px;
 	transform: translateX(-100%);
 	z-index: 5;
 	opacity: 0;
+}
+
+.DraggableList__handle~.DraggableList__itemControl {
+	top: calc(var(--space-2) + 30px);
 }
 
 .DraggableList__itemControl .Button {
@@ -49,6 +53,10 @@
 	border-radius: var(--radius-xxs) 0 0 var(--radius-xxs);
 }
 
+.DraggableList__itemControl .Button__ghost {
+	background: var(--panel-2);
+}
+
 .DraggableList>div:hover>.DraggableList__handle,
 .DraggableList>div.is_dragging>.DraggableList__handle,
 .DraggableList>div:hover>.DraggableList__itemControl,
@@ -58,6 +66,7 @@
 }
 
 .DraggableList>div:hover>.DraggableList__handle,
+.DraggableList>div:hover>.DraggableList__itemControl .Button,
 .DraggableList>div.is_dragging>.DraggableList__handle {
 	border: 1px solid color-mix(in srgb, var(--accent), transparent 70%);
 }
@@ -66,6 +75,10 @@
 	opacity: 1;
 	background-color: var(--panel-2);
 	border: 1px solid color-mix(in srgb, var(--accent), transparent 40%);
+}
+
+.DraggableList>div:hover>.DraggableList__itemControl:hover {
+	opacity: 1;
 }
 
 .DraggableList.is_list_dragging,
@@ -90,7 +103,7 @@
 	animation: skew .3s ease-in infinite;
 }
 
-.DraggableList__preview > * {
+.DraggableList__preview>* {
 	margin: 0;
 	width: 100%;
 }
