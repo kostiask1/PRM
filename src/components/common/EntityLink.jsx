@@ -63,7 +63,7 @@ export default function EntityLink({
 		<>
 			<a
 				href="#"
-				className={classNames("mention-link", className)}
+				className={classNames("mention_link", className)}
 				onClick={handleOpenModal}
 			>
 				{children || name}

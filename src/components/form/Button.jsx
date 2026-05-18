@@ -43,9 +43,9 @@ const Button = forwardRef(function Button(
 	const normalizedSize = normalizeButtonSize(size);
 	const classes = classNames(
 		"Button",
-		variant && `Button--${variant}`,
-		normalizedSize && `Button--${normalizedSize}`,
-		props.disabled && "is-disabled",
+		variant && `Button__${variant}`,
+		normalizedSize && `Button__${normalizedSize}`,
+		props.disabled && "is_disabled",
 		className,
 	);
 

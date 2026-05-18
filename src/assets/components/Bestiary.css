@@ -37,14 +37,14 @@
 	min-width: 0;
 }
 
-.Bestiary__detailed-search-btn {
+.Bestiary__detailed_search_btn {
 	width: var(--size-9);
 	height: var(--size-9);
 	padding: 0 !important;
 	flex: 0 0 auto;
 }
 
-.Bestiary__sort-btn {
+.Bestiary__sort_btn {
 	display: flex !important;
 	align-items: center;
 	gap: var(--space-2);
@@ -55,25 +55,25 @@
 	transition: all 0.2s ease;
 }
 
-.Bestiary__sort-btn.is-active {
+.Bestiary__sort_btn.is_active {
 	background: rgba(56, 189, 248, 0.15) !important;
 	border-color: var(--accent) !important;
 	color: var(--text-bright) !important;
 }
 
-.Bestiary__sort-label {
+.Bestiary__sort_label {
 	font-weight: 800;
 	font-size: 0.8rem;
 	letter-spacing: 0.5px;
 }
 
-.Bestiary__sort-icon {
+.Bestiary__sort_icon {
 	width: var(--size-4);
 	height: var(--size-4);
 }
 
-.Bestiary__sort-icon.state-desc,
-.Bestiary__sort-icon.state-asc {
+.Bestiary__sort_icon.state_desc,
+.Bestiary__sort_icon.state_asc {
 	color: var(--accent);
 }
 
@@ -103,21 +103,21 @@
 	-webkit-overflow-scrolling: touch;
 }
 
-.Bestiary__token-skeleton {
+.Bestiary__token_skeleton {
 	color: rgba(255, 255, 255, 0.1);
 	display: flex;
 	align-items: center;
 	justify-content: center;
 }
 
-.Bestiary__detail-container {
+.Bestiary__detail_container {
 	position: relative;
 	flex: 1;
 	overflow-y: auto;
 	min-height: 0;
 }
 
-.Bestiary__item-content {
+.Bestiary__item_content {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
@@ -125,19 +125,19 @@
 	gap: var(--space-3);
 }
 
-.Bestiary__item-info {
+.Bestiary__item_info {
 	flex: 1;
 	min-width: 0;
 }
 
-.Bestiary__item-source {
+.Bestiary__item_source {
 	text-transform: uppercase;
 	font-size: 0.7rem;
 	opacity: 0.5;
 	font-weight: 700;
 }
 
-.Bestiary__item-cr {
+.Bestiary__item_cr {
 	display: flex;
 	flex-direction: row;
 	gap: var(--space-1);
@@ -149,37 +149,37 @@
 	padding: var(--space-1);
 }
 
-.Bestiary__cr-label {
+.Bestiary__cr_label {
 	font-size: 0.6rem;
 	font-weight: 700;
 	color: var(--text-muted);
 	line-height: 1.2;
 }
 
-.Bestiary__cr-value {
+.Bestiary__cr_value {
 	font-size: 0.75rem;
 	font-weight: 800;
 	color: var(--accent);
 	line-height: 1.2;
 }
 
-.Bestiary__item-fav-btn {
+.Bestiary__item_fav_btn {
 	width: var(--size-6);
 	height: var(--size-6);
 	padding: 0;
 	border: unset;
 }
 
-.Bestiary__item-fav-btn .Icon {
+.Bestiary__item_fav_btn .Icon {
 	width: 14px;
 	height: 14px;
 }
 
-.Bestiary__item-fav-btn.is-active .Icon {
+.Bestiary__item_fav_btn.is_active .Icon {
 	fill: var(--accent);
 	color: var(--accent);
 }
 
-.Bestiary__item-fav-btn:hover .Icon {
+.Bestiary__item_fav_btn:hover .Icon {
 	color: var(--accent);
 }

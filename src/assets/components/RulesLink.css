@@ -20,30 +20,30 @@
 	border-radius: 4px;
 }
 
-.RulesLink--spell {
+.RulesLink__spell {
 	--rules-link-color: #4f7bd5;
 }
 
-.RulesLink--condition {
+.RulesLink__condition {
 	--rules-link-color: #b94f4f;
 }
 
-.RulesLink--status {
+.RulesLink__status {
 	--rules-link-color: #8462c7;
 }
 
-.RulesLink--disease {
+.RulesLink__disease {
 	--rules-link-color: #3f9a62;
 }
 
-.RulesLink--variantrule {
+.RulesLink__variantrule {
 	--rules-link-color: #b6782d;
 }
 
-.RulesLink--skill {
+.RulesLink__skill {
 	--rules-link-color: #2d91a5;
 }
 
-.RulesLink--sense {
+.RulesLink__sense {
 	--rules-link-color: #5f8f3a;
 }

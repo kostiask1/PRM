@@ -31,7 +31,7 @@
 	color: color-mix(in srgb, var(--muted), transparent 10%);
 }
 
-.Input--textarea {
+.Input__textarea {
 	line-height: 1.55;
 	flex-grow: 1;
 	resize: none;
@@ -40,7 +40,7 @@
 	overflow: hidden;
 }
 
-.Input--result {
+.Input__result {
 	background: color-mix(in srgb, var(--bg-2), transparent 20%);
 }
 
@@ -50,6 +50,6 @@
 	width: 100%;
 }
 
-.Input__tooltip .Input--textarea {
+.Input__tooltip .Input__textarea {
 	min-height: 100%;
 }

@@ -583,7 +583,7 @@ const Input = forwardRef(
 			}, 0);
 		};
 
-		const baseClass = type === "textarea" ? "Input Input--textarea" : "Input";
+		const baseClass = type === "textarea" ? "Input Input__textarea" : "Input";
 		// Додаємо клас для підсвітки спеціального синтаксису, якщо потрібно
 		const combinedClassName = classNames(
 			baseClass,

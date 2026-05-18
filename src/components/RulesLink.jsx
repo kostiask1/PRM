@@ -126,7 +126,7 @@ export default function RulesLink({
 			const spell = await getSpellByName(referenceName);
 			if (!spell) return null;
 			return (
-				<div className="Tooltip__spell-card">
+				<div className="Tooltip__spell_card">
 					<Suspense fallback={null}>
 						<SpellCard spell={spell} />
 					</Suspense>
@@ -238,7 +238,7 @@ export default function RulesLink({
 		<>
 			<Tooltip content={resolvedContent}>
 				<span
-					className={classNames("RulesLink", type && `RulesLink--${type}`)}
+					className={classNames("RulesLink", type && `RulesLink__${type}`)}
 					onClick={handleClick}
 					onMouseEnter={handleMouseEnter}
 				>

@@ -99,15 +99,15 @@ export default function LocationCard({
 
 	return (
 		<div
-			className={classNames("location-card", {
-				"is-collapsed": isCollapsed,
-				"is-dragging": isDragging,
-				"location-card--modal": isModalView,
+			className={classNames("location_card", {
+				"is_collapsed": isCollapsed,
+				"is_dragging": isDragging,
+				"location_card__modal": isModalView,
 			})}
 		>
 			{showHeader && (
 				<div
-					className="location-card__header"
+					className="location_card__header"
 					onClick={
 						!canCollapseCard ? undefined : () => onToggleCollapse(location.id)
 					}
@@ -120,16 +120,16 @@ export default function LocationCard({
 						/>
 					)}
 					{location.imageUrl && isCollapsed && (
-						<div className="location-card__mini-image">
+						<div className="location_card__mini_image">
 							<img src={location.imageUrl} alt="" />
 						</div>
 					)}
-					<div className="location-card__title-group">
+					<div className="location_card__title_group">
 						{viewMode !== "modal" && (
-							<span className="location-card__name">{displayName}</span>
+							<span className="location_card__name">{displayName}</span>
 						)}
 						{isCollapsed && locationModel.briefMeta && (
-							<span className="location-card__meta-brief">
+							<span className="location_card__meta_brief">
 								{renderMentionText(locationModel.briefMeta)}
 							</span>
 						)}
@@ -150,10 +150,10 @@ export default function LocationCard({
 			)}
 
 			{!isCollapsed && (
-				<div className="location-card__body">
-					<div className="location-card__content-side">
-						<div className="location-card__info-side">
-							<div className="location-card__grid">
+				<div className="location_card__body">
+					<div className="location_card__content_side">
+						<div className="location_card__info_side">
+							<div className="location_card__grid">
 								<EditableField
 									type="text"
 									value={location.name || ""}
@@ -164,8 +164,8 @@ export default function LocationCard({
 							</div>
 						</div>
 
-						<div className="location-card__details">
-							<div className="location-card__field">
+						<div className="location_card__details">
+							<div className="location_card__field">
 								<EditableField
 									type="textarea"
 									value={location.description || ""}
@@ -177,9 +177,9 @@ export default function LocationCard({
 							</div>
 						</div>
 
-						<div className="location-card__notes">
+						<div className="location_card__notes">
 							<div
-								className="location-card__notes-header"
+								className="location_card__notes_header"
 								onClick={
 									hasLocationNotesData
 										? () =>
@@ -207,7 +207,7 @@ export default function LocationCard({
 							{!isNotesCollapsed && (
 								<DraggableList
 									items={notesForRender}
-									className="location-card__notes-list"
+									className="location_card__notes_list"
 									onReorder={handleNotesReorder}
 									onDrop={onReorderDrop}
 									keyExtractor={(note) => note.id}
@@ -234,7 +234,7 @@ export default function LocationCard({
 						</div>
 					</div>
 
-					<div className="location-card__image-side">
+					<div className="location_card__image_side">
 						<ImageAssetField
 							imageUrl={location.imageUrl}
 							campaignSlug={campaignSlug}
@@ -242,12 +242,12 @@ export default function LocationCard({
 							showClearButton
 							onImageChange={(url) => updateField("imageUrl", url)}
 							imageAlt={lang.t("Image")}
-							containerClassName="location-card__image-container"
+							containerClassName="location_card__image_container"
 							wrapperClassName={classNames(
-								"location-card__image-wrapper",
-								"is-editable",
+								"location_card__image_wrapper",
+								"is_editable",
 							)}
-							deleteButtonClassName="location-card__image-delete"
+							deleteButtonClassName="location_card__image_delete"
 							previewTitle={displayName || lang.t("Image")}
 							previewModalClassName="LocationImageModal"
 							previewContentClassName="LocationImageModal__content"

@@ -30,65 +30,65 @@
 	box-shadow: var(--focus-ring);
 }
 
-.Button--primary {
+.Button__primary {
 	background: var(--accent);
 	border-color: color-mix(in srgb, var(--accent), #000 12%);
 	color: var(--text-on-accent);
 }
 
-.Button--primary .mention-link {
+.Button__primary .mention_link {
 	color: var(--text-on-accent);
 }
 
-.Button--primary:hover {
+.Button__primary:hover {
 	background: color-mix(in srgb, var(--accent), #000 8%);
 }
 
-.Button--danger {
+.Button__danger {
 	background: transparent;
 	border-width: 2px;
 	border-color: color-mix(in srgb, var(--danger), transparent 50%);
 	color: var(--text-danger-icon);
 }
 
-.Button--danger:hover {
+.Button__danger:hover {
 	background: color-mix(in srgb, var(--danger), #000 10%);
 	border-color: color-mix(in srgb, var(--danger), #000 8%);
 }
 
-.Button--ghost {
+.Button__ghost {
 	background: transparent;
 }
 
-.Button--ghost:hover {
+.Button__ghost:hover {
 	background: color-mix(in srgb, var(--accent), transparent 92%);
 }
 
-.Button--sm {
+.Button__sm {
 	min-height: var(--control-h-sm);
 	padding: 0 var(--space-3);
 	font-size: 0.85rem;
 }
 
-.Button--md {
+.Button__md {
 	min-height: var(--control-h);
 	padding: 0 var(--space-3);
 	font-size: 0.92rem;
 }
 
-.Button--lg {
+.Button__lg {
 	min-height: calc(var(--control-h) + 6px);
 	padding: 0 var(--space-4);
 	font-size: 0.98rem;
 }
 
-.Button--footer {
+.Button__footer {
 	width: 100%;
 	background: color-mix(in srgb, var(--border), transparent 60%);
 	font-size: 0.85rem;
 }
 
-.Button--create {
+.Button__create {
 	width: 100%;
 	min-height: var(--size-9);
 	background: color-mix(in srgb, var(--accent), transparent 95%);
@@ -99,7 +99,7 @@
 	font-size: 0.92rem;
 }
 
-.Button--create:hover {
+.Button__create:hover {
 	background: color-mix(in srgb, var(--accent), transparent 90%);
 	border-color: var(--accent);
 	transform: translateY(-2px);
@@ -112,7 +112,7 @@
 }
 
 .Button:disabled,
-.Button.is-disabled {
+.Button.is_disabled {
 	opacity: 0.45;
 	cursor: not-allowed;
 	filter: grayscale(0.75) saturate(0.55);
@@ -120,12 +120,12 @@
 }
 
 .Button:disabled:hover,
-.Button.is-disabled:hover {
+.Button.is_disabled:hover {
 	transform: none !important;
 	box-shadow: none !important;
 	border-color: var(--border) !important;
 }
 
-.Button.is-disabled svg {
+.Button.is_disabled svg {
 	opacity: 0.6;
 }

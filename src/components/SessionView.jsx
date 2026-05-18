@@ -85,7 +85,7 @@ function SessionView(props) {
 								icon="back"
 								className="SessionView__backBtn"
 							/>
-							<h2 className="editable-title" onClick={view.handleRename}>
+							<h2 className="editable_title" onClick={view.handleRename}>
 								{session.name}
 							</h2>
 						</div>
@@ -264,7 +264,7 @@ function SessionView(props) {
 					<TodoSection title={lang.t("Session result")}>
 						<EditableField
 							type="textarea"
-							className="field--result"
+							className="field__result"
 							placeholder={lang.t("Summary of what actually happened...")}
 							value={session.data.result_text || ""}
 							onChange={(e) => view.updateData("result_text", e.target.value)}
@@ -355,7 +355,7 @@ function SceneCard(props) {
 			/>
 			{!props.collapsed && (
 				<div className="SceneCard__content">
-					<div className="SceneCard__text-side">
+					<div className="SceneCard__text_side">
 						<SceneCardFields
 							fields={props.fields}
 							scene={props.scene}
@@ -363,7 +363,7 @@ function SceneCard(props) {
 						/>
 						<div className="SceneCard__notes">
 							<div
-								className="SceneCard__notes-header"
+								className="SceneCard__notes_header"
 								onClick={
 									hasSceneNotesData ? props.onToggleNotesCollapse : undefined
 								}
@@ -380,7 +380,7 @@ function SceneCard(props) {
 							{!isSceneNotesCollapsed && (
 								<DraggableList
 									items={sceneNotesForRender}
-									className="SceneCard__notes-list"
+									className="SceneCard__notes_list"
 									onReorder={props.onSceneNotesReorder}
 									keyExtractor={(note) => note.id}
 									isItemDraggable={(note) => !note._isVirtual}

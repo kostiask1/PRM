@@ -11,7 +11,7 @@
 }
 
 .ImageDropzone:hover,
-.ImageDropzone.is-dragging {
+.ImageDropzone.is_dragging {
 	border-color: var(--accent);
 	background: color-mix(in srgb, var(--accent), transparent 95%);
 }
@@ -36,7 +36,7 @@
 	cursor: pointer;
 }
 
-.ImageDropzone__upload-settings {
+.ImageDropzone__upload_settings {
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-6);

@@ -15,7 +15,7 @@ export default function TodoSection({
 		<section className="TodoSection">
 			<div
 				className={classNames("TodoSection__header", {
-					"is-collapsible": isCollapsible,
+					"is_collapsible": isCollapsible,
 				})}
 				onClick={() => {
 					if (isCollapsible) onToggle();

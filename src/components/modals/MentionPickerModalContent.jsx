@@ -55,7 +55,7 @@ export default function MentionPickerModalContent({
 			<div className="MentionPicker__columns">
 				{groups.map((group) => (
 					<section key={group.key} className="MentionPicker__column">
-						<h4 className="MentionPicker__column-title">{group.title}</h4>
+						<h4 className="MentionPicker__column_title">{group.title}</h4>
 						<div className="MentionPicker__list">
 							{group.items.length > 0 ? (
 								group.items.map((entity) => (

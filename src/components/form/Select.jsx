@@ -114,14 +114,14 @@ export default function Select({
 		createPortal(
 			<div
 				ref={dropdownRef}
-				className="Select__dropdown Select__dropdown--portal"
+				className="Select__dropdown Select__dropdown__portal"
 				style={dropdownStyle}
 			>
 				{options.map((opt) => (
 					<div
 						key={opt.value}
 						className={classNames("Select__option", {
-							"is-selected": opt.value === value,
+							"is_selected": opt.value === value,
 						})}
 						onClick={() => handleSelect(opt.value)}
 					>
@@ -136,8 +136,8 @@ export default function Select({
 		<>
 			<div
 				className={classNames("Select", className, {
-					"is-open": isOpen,
-					"is-disabled": disabled,
+					"is_open": isOpen,
+					"is_disabled": disabled,
 				})}
 				ref={containerRef}
 				{...props}

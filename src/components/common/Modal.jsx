@@ -157,7 +157,7 @@ function Modal({
 			}}
 		>
 			<div
-				className={classNames("Modal__card", `Modal__card--${type}`, className)}
+				className={classNames("Modal__card", `Modal__card__${type}`, className)}
 				onClick={(e) => e.stopPropagation()}
 			>
 				<div className="Modal__header">

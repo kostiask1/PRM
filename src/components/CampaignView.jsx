@@ -142,7 +142,7 @@ function CampaignView(props) {
 			<div className="Panel__header">
 				<div className="CampaignView__header">
 					<Tooltip content={lang.t("Click to rename")}>
-						<h2 className="editable-title" onClick={view.handleRename}>
+						<h2 className="editable_title" onClick={view.handleRename}>
 							{viewModel.name}
 						</h2>
 					</Tooltip>
@@ -229,9 +229,9 @@ function CampaignView(props) {
 
 					<div className="CampaignView__contentPanel">
 						<div className="CampaignView__section">
-							<div className="section-row">
+							<div className="section_row">
 								<div
-									className="section-title-group"
+									className="section_title_group"
 									onClick={() => {
 										if (!hasDescriptionData) return;
 										const next = !isDescriptionCollapsed;
@@ -267,9 +267,9 @@ function CampaignView(props) {
 						</div>
 
 						<div className="CampaignView__section">
-							<div className="section-row">
+							<div className="section_row">
 								<div
-									className="section-title-group"
+									className="section_title_group"
 									onClick={() => {
 										if (!hasNotesData) return;
 										const next = !isNotesCollapsed;
@@ -359,9 +359,9 @@ function CampaignView(props) {
 							className="CampaignView__section"
 							data-character-drop-type="characters"
 						>
-							<div className="section-row">
+							<div className="section_row">
 								<div
-									className="section-title-group"
+									className="section_title_group"
 									onClick={() => {
 										if (!hasCharactersData) return;
 										const next = !isCharactersCollapsed;
@@ -421,9 +421,9 @@ function CampaignView(props) {
 							className="CampaignView__section"
 							data-character-drop-type="npc"
 						>
-							<div className="section-row">
+							<div className="section_row">
 								<div
-									className="section-title-group"
+									className="section_title_group"
 									onClick={() => {
 										if (!hasNpcsData) return;
 										const next = !isNpcsCollapsed;
@@ -480,9 +480,9 @@ function CampaignView(props) {
 						</div>
 
 						<div className="CampaignView__section">
-							<div className="section-row">
+							<div className="section_row">
 								<div
-									className="section-title-group"
+									className="section_title_group"
 									onClick={() => {
 										if (!hasLocationsData) return;
 										const next = !isLocationsCollapsed;

@@ -1,4 +1,4 @@
-.editable-title {
+.editable_title {
 	cursor: pointer;
 	display: inline-flex;
 	align-items: center;
@@ -6,11 +6,11 @@
 	margin-top: 0;
 }
 
-.editable-title:hover {
+.editable_title:hover {
 	opacity: 0.9;
 }
 
-.editable-title::after {
+.editable_title::after {
 	content: "✎";
 	font-size: 0.85rem;
 	color: var(--muted);

@@ -292,7 +292,7 @@ export default function Spells() {
 					<Select
 						value={selectedLevel}
 						onChange={(e) => setSelectedLevel(e.target.value)}
-						className="Spells__level-select"
+						className="Spells__level_select"
 					>
 						<option value="all">{lang.t("All levels")}</option>
 						<option value="0">{lang.t("Cantrip (0)")}</option>
@@ -305,7 +305,7 @@ export default function Spells() {
 					<Select
 						value={selectedClass}
 						onChange={(e) => setSelectedClass(e.target.value)}
-						className="Spells__class-select"
+						className="Spells__class_select"
 					>
 						<option value="all">{lang.t("All classes")}</option>
 						{classOptions.map((className) => (
@@ -317,7 +317,7 @@ export default function Spells() {
 					<Select
 						value={selectedSchool}
 						onChange={(e) => setSelectedSchool(e.target.value)}
-						className="Spells__school-select"
+						className="Spells__school_select"
 					>
 						<option value="all">{lang.t("All schools")}</option>
 						{schoolOptions.map((school) => (
@@ -328,8 +328,8 @@ export default function Spells() {
 					</Select>
 					<Tooltip content={lang.t("Sort by level")}>
 						<button
-							className={classNames("Spells__sort-btn", {
-								"is-active": sortOrder !== "none",
+							className={classNames("Spells__sort_btn", {
+								"is_active": sortOrder !== "none",
 							})}
 							onClick={toggleSort}
 						>
@@ -347,7 +347,7 @@ export default function Spells() {
 							icon="search-detailed"
 							onClick={() => setIsDetailedSearch((value) => !value)}
 							title={lang.t("Detailed search")}
-							className="DetailedSearchButton Spells__detailed-search-btn"
+							className="DetailedSearchButton Spells__detailed_search_btn"
 						/>
 					</div>
 				</div>

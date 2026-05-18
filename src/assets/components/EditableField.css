@@ -2,11 +2,11 @@
 	position: relative;
 }
 
-.EditableField:hover .EditableField__copy-btn {
+.EditableField:hover .EditableField__copy_btn {
 	opacity: 1 !important;
 }
 
-.EditableField__copy-btn {
+.EditableField__copy_btn {
 	transition: opacity 0.2s ease;
 	background: var(--panel) !important;
 	border-color: var(--border) !important;
@@ -20,7 +20,7 @@
 	opacity: 0;
 }
 
-.EditableField__copy-btn svg {
+.EditableField__copy_btn svg {
 	width: 14px;
 	height: 14px;
 }
@@ -44,16 +44,16 @@
 	outline: none;
 }
 
-.MarkdownView--active {
+.MarkdownView__active {
 	background: color-mix(in srgb, var(--accent), transparent 90%);
 	border-color: var(--border);
 }
 
-.MarkdownView--disabled {
+.MarkdownView__disabled {
 	cursor: default;
 }
 
-.MarkdownView--editable:empty::before {
+.MarkdownView__editable:empty::before {
 	content: attr(data-placeholder);
 	color: var(--muted);
 	pointer-events: none;
@@ -118,7 +118,7 @@
 	margin-bottom: 0;
 }
 
-.mention-link {
+.mention_link {
 	color: var(--accent);
 	text-decoration: none;
 	border-bottom: 1.5px solid color-mix(in srgb, var(--accent), transparent 20%);;

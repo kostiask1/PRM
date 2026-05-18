@@ -9,11 +9,11 @@
 	cursor: pointer;
 }
 
-.TodoItem--done {
+.TodoItem__done {
 	border-color: color-mix(in srgb, var(--success), transparent 74%);
 }
 
-.TodoItem--done .TodoItem__title {
+.TodoItem__done .TodoItem__title {
 	text-decoration: line-through;
 	opacity: 0.72;
 }

@@ -19,8 +19,8 @@ function containsNode(parent, child) {
 
 function isDraggableListDragging() {
 	return Boolean(
-		document.body?.classList.contains("prm-draggable-list-dragging") ||
-			document.body?.classList.contains("prm-draggable-list-pressing"),
+		document.body?.classList.contains("prm_draggable_list_dragging") ||
+			document.body?.classList.contains("prm_draggable_list_pressing"),
 	);
 }
 

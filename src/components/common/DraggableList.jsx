@@ -4,8 +4,8 @@ import classNames from "../../utils/classNames";
 import Icon from "./Icon.jsx";
 
 const DRAG_START_THRESHOLD = 5;
-const PRESSING_BODY_CLASS = "prm-draggable-list-pressing";
-const DRAGGING_BODY_CLASS = "prm-draggable-list-dragging";
+const PRESSING_BODY_CLASS = "prm_draggable_list_pressing";
+const DRAGGING_BODY_CLASS = "prm_draggable_list_dragging";
 let nextListId = 1;
 
 /**
@@ -414,7 +414,7 @@ export default function DraggableList({
 				ref={listRef}
 				data-draggable-list-id={listIdRef.current}
 				className={classNames("DraggableList", className, {
-					"is-list-dragging": draggingIndex !== null,
+					"is_list_dragging": draggingIndex !== null,
 				})}
 				onClickCapture={handleClickCapture}
 			>
@@ -426,7 +426,7 @@ export default function DraggableList({
 						data-draggable-list-item-draggable={canDragItem(item, index)}
 						onPointerDown={(event) => handlePointerDown(event, index)}
 						className={classNames(itemClassName, {
-							"is-dragging": draggingIndex === index,
+							"is_dragging": draggingIndex === index,
 						})}
 					>
 						{canDragItem(item, index) && (

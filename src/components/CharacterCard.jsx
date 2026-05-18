@@ -96,14 +96,14 @@ export default function CharacterCard({
 
 	return (
 		<div
-			className={classNames("character-card", {
-				"is-collapsed": isCollapsed,
-				"character-card--modal": isModalView,
+			className={classNames("character_card", {
+				"is_collapsed": isCollapsed,
+				"character_card__modal": isModalView,
 			})}
 		>
 			{showHeader && (
 				<div
-					className="character-card__header"
+					className="character_card__header"
 					onClick={
 						!canCollapseCard ? undefined : () => onToggleCollapse(character.id)
 					}
@@ -116,18 +116,18 @@ export default function CharacterCard({
 						/>
 					)}
 					{character.imageUrl && isCollapsed && (
-						<div className="character-card__mini-portrait">
+						<div className="character_card__mini_portrait">
 							<img src={character.imageUrl} alt="" />
 						</div>
 					)}
-					<div className="character-card__title-group">
+					<div className="character_card__title_group">
 						{viewMode !== "modal" && (
-							<span className="character-card__name">
+							<span className="character_card__name">
 								{characterModel.displayName} {character.lastName}
 							</span>
 						)}
 						{isCollapsed && (
-							<span className="character-card__meta-brief">
+							<span className="character_card__meta_brief">
 								{renderMentionText(characterModel.briefMeta)}
 							</span>
 						)}
@@ -148,11 +148,11 @@ export default function CharacterCard({
 			)}
 
 			{!isCollapsed && (
-				<div className="character-card__body">
-					<div className="character-card__main-layout">
-						<div className="character-card__content-side">
-							<div className="character-card__info-side">
-								<div className="character-card__grid">
+				<div className="character_card__body">
+					<div className="character_card__main_layout">
+						<div className="character_card__content_side">
+							<div className="character_card__info_side">
+								<div className="character_card__grid">
 									<EditableField
 										type="text"
 										value={character.firstName}
@@ -167,7 +167,7 @@ export default function CharacterCard({
 										onBlur={handleNameBlur}
 										placeholder={lang.t("Last name")}
 									/>
-									<div className="character-card__row-trio">
+									<div className="character_card__row_trio">
 										<EditableField
 											type="text"
 											value={character.race}
@@ -195,8 +195,8 @@ export default function CharacterCard({
 								</div>
 							</div>
 
-							<div className="character-card__details">
-								<div className="character-card__field">
+							<div className="character_card__details">
+								<div className="character_card__field">
 									<label>{lang.t("Motivation")}</label>
 									<EditableField
 										type="textarea"
@@ -205,7 +205,7 @@ export default function CharacterCard({
 										placeholder={lang.t("What does the character want...")}
 									/>
 								</div>
-								<div className="character-card__field">
+								<div className="character_card__field">
 									<label>{lang.t("Trait")}</label>
 									<EditableField
 										type="textarea"
@@ -216,7 +216,7 @@ export default function CharacterCard({
 								</div>
 							</div>
 						</div>
-						<div className="character-card__image-side">
+						<div className="character_card__image_side">
 							<ImageAssetField
 								imageUrl={character.imageUrl}
 								campaignSlug={campaignSlug}
@@ -224,12 +224,12 @@ export default function CharacterCard({
 								showClearButton
 								onImageChange={(url) => updateField("imageUrl", url)}
 								imageAlt={lang.t("Portrait")}
-								containerClassName="character-card__portrait-container"
+								containerClassName="character_card__portrait_container"
 								wrapperClassName={classNames(
-									"character-card__portrait-wrapper",
-									"is-editable",
+									"character_card__portrait_wrapper",
+									"is_editable",
 								)}
-								deleteButtonClassName="character-card__image-delete"
+								deleteButtonClassName="character_card__image_delete"
 								previewTitle={characterModel.fullName || lang.t("Portrait")}
 								previewModalClassName="CharacterImageModal"
 								previewContentClassName="CharacterImageModal__content"
@@ -237,9 +237,9 @@ export default function CharacterCard({
 						</div>
 					</div>
 
-					<div className="character-card__notes">
+					<div className="character_card__notes">
 						<div
-							className="character-card__notes-header"
+							className="character_card__notes_header"
 							onClick={
 								hasCharacterNotesData
 									? () =>
@@ -264,7 +264,7 @@ export default function CharacterCard({
 						{!isNotesCollapsed && (
 							<DraggableList
 								items={notesForRender}
-								className="character-card__notes-list"
+								className="character_card__notes_list"
 								onReorder={handleNotesReorder}
 								onDrop={onReorderDrop}
 								keyExtractor={(note) => note.id}

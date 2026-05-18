@@ -62,7 +62,7 @@ export default function DiceCalculator() {
 		const handlePointerDown = (e) => {
 			if (rootRef.current?.contains(e.target)) return;
 			if (e.target.closest?.(".RollDice")) return;
-			if (e.target.closest?.(".MonsterStatBlock__ability-box")) return;
+			if (e.target.closest?.(".MonsterStatBlock__ability_box")) return;
 			setIsOpen(false);
 		};
 
@@ -189,8 +189,8 @@ export default function DiceCalculator() {
 		const content = itemsToShow.map((item, idx) => {
 			const isMin = item.max && item.val === 1;
 			const isMax = item.max && item.val === item.max;
-			let dynamicClassName = isMin ? "dice-min" : isMax ? "dice-max" : "";
-			if (item.dropped) dynamicClassName += " dice-dropped";
+			let dynamicClassName = isMin ? "dice_min" : isMax ? "dice_max" : "";
+			if (item.dropped) dynamicClassName += " dice_dropped";
 
 			const sign = idx > 0 && item.val >= 0 ? " + " : "";
 			return (
@@ -237,7 +237,7 @@ export default function DiceCalculator() {
 	return (
 		<div
 			ref={rootRef}
-			className={classNames("DiceCalculator", { "is-open": isOpen })}
+			className={classNames("DiceCalculator", { "is_open": isOpen })}
 		>
 			{isOpen && (
 				<div className="DiceCalculator__panel">
@@ -253,7 +253,7 @@ export default function DiceCalculator() {
 
 					<div
 						className={classNames("DiceCalculator__display", {
-							"is-rolling": isRolling,
+							"is_rolling": isRolling,
 						})}
 					>
 						{lastResult ? (
@@ -269,12 +269,12 @@ export default function DiceCalculator() {
 										</Tooltip>
 									</div>
 								</Tooltip>
-								<div className="DiceCalculator__totalValue-container">
+								<div className="DiceCalculator__totalValue_container">
 									<span
 										className={classNames("DiceCalculator__totalValue", {
-											"dice-max":
+											"dice_max":
 												lastResult.isCritical && lastResult.total === 20,
-											"dice-min":
+											"dice_min":
 												lastResult.isCritical && lastResult.total !== 20,
 										})}
 									>
@@ -285,11 +285,11 @@ export default function DiceCalculator() {
 												content={getPotentialRangeLabel(lastResult)}
 											>
 												<span className="DiceCalculator__averageValue">
-													<span className="dice-min">{lastResult.min}</span>
+													<span className="dice_min">{lastResult.min}</span>
 													<span>/</span>
 													<span>{lastResult.average}</span>
 													<span>/</span>
-													<span className="dice-max">{lastResult.max}</span>
+													<span className="dice_max">{lastResult.max}</span>
 												</span>
 											</Tooltip>
 										)}
@@ -386,8 +386,8 @@ export default function DiceCalculator() {
 														className={
 															roll.isCritical
 																? roll.total === 20
-																	? "dice-max"
-																	: "dice-min"
+																	? "dice_max"
+																	: "dice_min"
 																: ""
 														}
 													>
@@ -410,7 +410,7 @@ export default function DiceCalculator() {
 			<Tooltip content="CTRL+D">
 				<button
 					className={classNames("DiceCalculator__toggle", {
-						"is-rolling": isRolling,
+						"is_rolling": isRolling,
 					})}
 					onClick={() => setIsOpen(!isOpen)}
 				>
@@ -418,7 +418,7 @@ export default function DiceCalculator() {
 						name="dice"
 						size={28}
 						className={classNames("DiceCalculator__toggleIcon", {
-							"is-rolling": isRolling,
+							"is_rolling": isRolling,
 						})}
 					/>
 				</button>

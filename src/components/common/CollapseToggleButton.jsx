@@ -16,7 +16,7 @@ function CollapseToggleButton({
 	disabled = false,
 }) {
 	const isRotated = typeof rotated === "boolean" ? rotated : collapsed;
-	const sizeClass = `CollapseToggleButton--${size}`;
+	const sizeClass = `CollapseToggleButton__${size}`;
 	const iconSize = size === Button.SIZES.SMALL ? 14 : 16;
 
 	return (
@@ -28,7 +28,7 @@ function CollapseToggleButton({
 			className={classNames(
 				"CollapseToggleButton",
 				sizeClass,
-				{ "is-rotated": isRotated },
+				{ "is_rotated": isRotated },
 				className,
 			)}
 			onClick={(event) => {

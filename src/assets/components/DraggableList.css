@@ -32,7 +32,7 @@
 }
 
 .DraggableList>div:hover>.DraggableList__handle,
-.DraggableList>div.is-dragging>.DraggableList__handle {
+.DraggableList>div.is_dragging>.DraggableList__handle {
 	opacity: 0.75;
 	border: 1px solid color-mix(in srgb, var(--accent), transparent 70%);
 }
@@ -43,13 +43,13 @@
 	border: 1px solid color-mix(in srgb, var(--accent), transparent 40%);
 }
 
-.DraggableList.is-list-dragging,
-.DraggableList.is-list-dragging>div {
+.DraggableList.is_list_dragging,
+.DraggableList.is_list_dragging>div {
 	overflow-anchor: none;
 	user-select: none;
 }
 
-.DraggableList>div.is-dragging {
+.DraggableList>div.is_dragging {
 	opacity: 0.15;
 	cursor: grabbing;
 }
@@ -91,15 +91,15 @@
 	display: none;
 }
 
-body.prm-draggable-list-pressing,
-body.prm-draggable-list-pressing *,
-body.prm-draggable-list-dragging,
-body.prm-draggable-list-dragging * {
+body.prm_draggable_list_pressing,
+body.prm_draggable_list_pressing *,
+body.prm_draggable_list_dragging,
+body.prm_draggable_list_dragging * {
 	-webkit-user-select: none !important;
 	user-select: none !important;
 }
 
-body.prm-draggable-list-pressing .Tooltip,
-body.prm-draggable-list-dragging .Tooltip {
+body.prm_draggable_list_pressing .Tooltip,
+body.prm_draggable_list_dragging .Tooltip {
 	display: none !important;
 }

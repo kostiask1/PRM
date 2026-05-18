@@ -146,7 +146,7 @@ export default function Sidebar({
 	return (
 		<>
 			<aside
-				className={`Sidebar App__sidebar${isSidebarHovered ? " Sidebar--hovered" : ""}`}
+				className={`Sidebar App__sidebar${isSidebarHovered ? " Sidebar__hovered" : ""}`}
 				onMouseEnter={() => setIsSidebarHovered(true)}
 				onMouseLeave={() => setIsSidebarHovered(false)}
 			>
@@ -184,7 +184,7 @@ export default function Sidebar({
 					</a>
 					<a
 						href="/bestiary"
-						className={`Sidebar__link${isBestiaryActive ? " Sidebar__link--active" : ""}`}
+						className={`Sidebar__link${isBestiaryActive ? " Sidebar__link__active" : ""}`}
 						onClick={(e) => {
 							if (!e.ctrlKey && !e.metaKey) {
 								e.preventDefault();
@@ -197,7 +197,7 @@ export default function Sidebar({
 					</a>
 					<a
 						href="/spells"
-						className={`Sidebar__link${isSpellsActive ? " Sidebar__link--active" : ""}`}
+						className={`Sidebar__link${isSpellsActive ? " Sidebar__link__active" : ""}`}
 						onClick={(e) => {
 							if (!e.ctrlKey && !e.metaKey) {
 								e.preventDefault();
@@ -252,9 +252,9 @@ export default function Sidebar({
 									/>
 								}
 							>
-								<div className="ListCard__sidebar-content">
-									<Icon name="map" className="ListCard__sidebar-icon" />
-									<div className="ListCard__sidebar-info">
+								<div className="ListCard__sidebar_content">
+									<Icon name="map" className="ListCard__sidebar_icon" />
+									<div className="ListCard__sidebar_info">
 										<div className="ListCard__title">{campaign.name}</div>
 										<div className="ListCard__meta">
 											{lang.t("{count} sessions", {
@@ -268,13 +268,13 @@ export default function Sidebar({
 					/>
 				</div>
 
-				<div className="Sidebar__section Sidebar__section--resources">
-					<div className="Sidebar__resource-list">
+				<div className="Sidebar__section Sidebar__section__resources">
+					<div className="Sidebar__resource_list">
 						<a
 							href="https://homebrewery.naturalcrit.com/"
 							target="_blank"
 							rel="noopener noreferrer"
-							className="Sidebar__resource-item"
+							className="Sidebar__resource_item"
 						>
 							<Icon name="book" size={16} /> <span>Homebrewery</span>
 						</a>
@@ -282,7 +282,7 @@ export default function Sidebar({
 							href="https://crowsnest.me/tokenizer/"
 							target="_blank"
 							rel="noopener noreferrer"
-							className="Sidebar__resource-item"
+							className="Sidebar__resource_item"
 						>
 							<Icon name="user" size={16} /> <span>Tokenizer</span>
 						</a>
@@ -290,7 +290,7 @@ export default function Sidebar({
 							href="https://forgottenadventures.piwigo.com"
 							target="_blank"
 							rel="noopener noreferrer"
-							className="Sidebar__resource-item"
+							className="Sidebar__resource_item"
 						>
 							<Icon name="layers" size={16} /> <span>Assets</span>
 						</a>
@@ -298,7 +298,7 @@ export default function Sidebar({
 							href="https://www.owlbear.rodeo/"
 							target="_blank"
 							rel="noopener noreferrer"
-							className="Sidebar__resource-item"
+							className="Sidebar__resource_item"
 						>
 							<Icon name="monitor" size={16} /> <span>Owlbear Rodeo</span>
 						</a>
@@ -306,7 +306,7 @@ export default function Sidebar({
 							href="https://kemono.cr/patreon/user/16010661"
 							target="_blank"
 							rel="noopener noreferrer"
-							className="Sidebar__resource-item"
+							className="Sidebar__resource_item"
 						>
 							<Icon name="map" size={16} />{" "}
 							<span>{lang.t("Szepeku maps")}</span>
@@ -315,7 +315,7 @@ export default function Sidebar({
 							href="https://chatgpt.com/g/g-69c24d157a348191b640bf111b486080-ttrpg-map-architect"
 							target="_blank"
 							rel="noopener noreferrer"
-							className="Sidebar__resource-item"
+							className="Sidebar__resource_item"
 						>
 							<Icon name="wand" size={16} /> <span>Map Architect (AI)</span>
 						</a>

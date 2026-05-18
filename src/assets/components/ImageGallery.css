@@ -26,7 +26,7 @@
 	overflow-y: auto;
 }
 
-.ImageGallery__sidebar-divider {
+.ImageGallery__sidebar_divider {
 	font-size: 0.75rem;
 	color: var(--muted);
 	text-transform: uppercase;
@@ -50,19 +50,19 @@
 }
 
 .SourceBtn:hover,
-.SourceBtn.is-active {
+.SourceBtn.is_active {
 	background: var(--panel-2);
 	color: var(--accent);
 }
 
-.ImageGallery__upload-actions {
+.ImageGallery__upload_actions {
 	display: flex;
 	align-items: center;
 	margin-left: auto;
 	gap: var(--space-4);
 }
 
-.SourceBtn.is-drag-over {
+.SourceBtn.is_drag_over {
 	background: color-mix(in srgb, var(--accent), transparent 80%);
 }
 
@@ -103,13 +103,13 @@
 	color: var(--text);
 }
 
-.ImageGallery__tabs .TabBtn.is-active {
+.ImageGallery__tabs .TabBtn.is_active {
 	background: color-mix(in srgb, var(--accent), transparent 90%);
 	border-color: var(--accent);
 	color: var(--accent);
 }
 
-.TabBtn.is-drag-over {
+.TabBtn.is_drag_over {
 	background: var(--accent) !important;
 	color: white !important;
 }
@@ -151,7 +151,7 @@
 	color: var(--accent);
 }
 
-.BreadcrumbItem.is-active {
+.BreadcrumbItem.is_active {
 	color: var(--accent);
 	font-weight: 700;
 }
@@ -164,13 +164,13 @@
 	align-items: center;
 }
 
-.ImageGallery__subtab-wrapper {
+.ImageGallery__subtab_wrapper {
 	position: relative;
 	display: flex;
 	align-items: center;
 }
 
-.ImageGallery__sub-rename-input {
+.ImageGallery__sub_rename_input {
 	background: var(--panel-2);
 	border: 1px solid var(--accent);
 	padding: var(--space-1) var(--space-2);
@@ -183,11 +183,11 @@
 	/* Adjust as needed */
 }
 
-.ImageGallery__sub-edit-btn {
+.ImageGallery__sub_edit_btn {
 	margin-left: var(--space-1);
 }
 
-.ImageGallery__new-sub {
+.ImageGallery__new_sub {
 	display: flex;
 	align-items: center;
 	gap: var(--space-1);
@@ -198,13 +198,13 @@
 	border: 1px solid var(--border);
 }
 
-.ImageGallery__new-sub .Tooltip__trigger {
+.ImageGallery__new_sub .Tooltip__trigger {
 	display: flex;
 	align-items: center;
 	justify-content: center;
 }
 
-.ImageGallery__new-sub input {
+.ImageGallery__new_sub input {
 	background: transparent;
 	border: none;
 	color: var(--text);
@@ -213,7 +213,7 @@
 	outline: none;
 }
 
-.ImageGallery__new-sub .Button {
+.ImageGallery__new_sub .Button {
 	border: unset;
 	background: unset;
 	padding: 0;
@@ -255,17 +255,17 @@
 	border-color: var(--accent);
 }
 
-.SubTabBtn.is-active {
+.SubTabBtn.is_active {
 	border-color: var(--accent);
 	color: var(--accent);
 }
 
-.SubTabBtn.is-selected {
+.SubTabBtn.is_selected {
 	background: var(--accent);
 	color: white;
 }
 
-.SubTabBtn.is-drag-over {
+.SubTabBtn.is_drag_over {
 	box-shadow: 0 0 0 2px var(--accent);
 }
 
@@ -280,11 +280,11 @@
 	overflow-y: auto;
 }
 
-.ImageGallery__grid.is-dragging {
+.ImageGallery__grid.is_dragging {
 	background: color-mix(in srgb, var(--accent), transparent 95%);
 }
 
-.ImageGallery__drop-overlay {
+.ImageGallery__drop_overlay {
 	position: absolute;
 	inset: 0;
 	background: color-mix(in srgb, var(--bg), transparent 20%);
@@ -306,7 +306,7 @@
 	transition: transform 0.2s;
 }
 
-.ImageGallery__image-wrap {
+.ImageGallery__image_wrap {
 	aspect-ratio: 1;
 	border-radius: var(--radius-md);
 	overflow: hidden;
@@ -317,16 +317,16 @@
 	transition: all 0.2s;
 }
 
-.ImageGallery__item:not(.is-selected) .ImageGallery__image-wrap {
+.ImageGallery__item:not(.is_selected) .ImageGallery__image_wrap {
 	border-color: var(--border);
 }
 
-.ImageGallery__item.is-selected .ImageGallery__image-wrap {
+.ImageGallery__item.is_selected .ImageGallery__image_wrap {
 	border-color: var(--accent);
 	box-shadow: 0 0 10px color-mix(in srgb, var(--accent), transparent 50%);
 }
 
-.ImageGallery__item--folder .ImageGallery__image-wrap {
+.ImageGallery__item__folder .ImageGallery__image_wrap {
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -334,17 +334,17 @@
 	background: color-mix(in srgb, var(--accent), transparent 92%);
 }
 
-.ImageGallery__item--folder.is-selected .ImageGallery__image-wrap {
+.ImageGallery__item__folder.is_selected .ImageGallery__image_wrap {
 	background: var(--accent);
 	color: white;
 }
 
-.ImageGallery__item--folder.is-protected .ImageGallery__image-wrap {
+.ImageGallery__item__folder.is_protected .ImageGallery__image_wrap {
 	background: color-mix(in srgb, var(--accent), transparent 90%);
 	border-color: color-mix(in srgb, var(--accent), transparent 60%);
 }
 
-.ImageGallery__image-wrap img {
+.ImageGallery__image_wrap img {
 	width: 100%;
 	height: 100%;
 	object-fit: contain;
@@ -370,7 +370,7 @@
 }
 
 .ImageGallery__item:hover .ImageGallery__checkbox,
-.ImageGallery__item.is-selected .ImageGallery__checkbox {
+.ImageGallery__item.is_selected .ImageGallery__checkbox {
 	opacity: 1;
 }
 

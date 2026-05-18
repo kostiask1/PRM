@@ -1095,7 +1095,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 		list,
 	}) => (
 		<>
-			<div className="AiAssistant__context-row">
+			<div className="AiAssistant__context_row">
 				<Checkbox
 					checked={context.included !== false}
 					onChange={(included) =>
@@ -1105,8 +1105,8 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 				/>
 			</div>
 			{context.included !== false && (
-				<div className="AiAssistant__location-context">
-					<div className="AiAssistant__location-actions">
+				<div className="AiAssistant__location_context">
+					<div className="AiAssistant__location_actions">
 						<Button
 							variant="ghost"
 							size={Button.SIZES.SMALL}
@@ -1135,7 +1135,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 							return (
 								<div
 									key={itemKey}
-									className="AiAssistant__context-row AiAssistant__location-row"
+									className="AiAssistant__context_row AiAssistant__location_row"
 								>
 									<Checkbox
 										checked={contextItems[itemKey] !== false}
@@ -1148,7 +1148,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 							);
 						})
 					) : (
-						<div className="muted AiAssistant__empty-context">
+						<div className="muted AiAssistant__empty_context">
 							{lang.t(emptyLabel)}
 						</div>
 					)}
@@ -1207,7 +1207,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 							<label className="AiAssistant__modelPicker">
 								<Select
 									className={classNames("AiAssistant__modelSelect", {
-										"is-disabled": loading || aiModels.length === 0,
+										"is_disabled": loading || aiModels.length === 0,
 									})}
 									disabled={loading || aiModels.length === 0}
 									value={selectedModel}
@@ -1230,8 +1230,8 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 								</Select>
 							</label>
 							<div
-								className={classNames("AiAssistant__context-toggle", {
-									"is-active": useContext,
+								className={classNames("AiAssistant__context_toggle", {
+									"is_active": useContext,
 								})}
 							>
 								<Checkbox
@@ -1353,16 +1353,16 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 							)}
 						</div>
 						{isApiKeyMissing && (
-							<div className="AiAssistant__api-key-panel">
-								<div className="AiAssistant__api-key-title">
+							<div className="AiAssistant__api_key_panel">
+								<div className="AiAssistant__api_key_title">
 									{lang.t("Gemini AI setup")}
 								</div>
-								<div className="AiAssistant__api-key-help">
+								<div className="AiAssistant__api_key_help">
 									{lang.t(
 										"Paste Gemini API key and it will be saved to the project .env file.",
 									)}
 								</div>
-								<div className="AiAssistant__api-key-row">
+								<div className="AiAssistant__api_key_row">
 									<Input
 										type="password"
 										value={apiKeyInput}
@@ -1392,10 +1392,10 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 								onCancel={() => setIsContextModalOpen(false)}
 								showFooter={false}
 							>
-								<div className="AiAssistant__context-manager">
+								<div className="AiAssistant__context_manager">
 									<section>
 										<h4>{lang.t("Campaign")}</h4>
-										<div className="AiAssistant__context-row">
+										<div className="AiAssistant__context_row">
 											<Checkbox
 												checked={contextConfig.campaignNotes}
 												onChange={(val) =>
@@ -1454,9 +1454,9 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 											return (
 												<div
 													key={slug}
-													className="AiAssistant__session-context"
+													className="AiAssistant__session_context"
 												>
-													<div className="AiAssistant__context-row">
+													<div className="AiAssistant__context_row">
 														<Checkbox
 															checked={config.included}
 															onChange={(included) => {
@@ -1469,7 +1469,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 																}));
 															}}
 															label={session.name}
-															className="AiAssistant__session-name"
+															className="AiAssistant__session_name"
 														/>
 														<CollapseToggleButton
 															size={Button.SIZES.SMALL}
@@ -1478,8 +1478,8 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 														/>
 													</div>
 													{isExpanded && config.data && (
-														<div className="AiAssistant__context-details">
-															<div className="AiAssistant__context-row">
+														<div className="AiAssistant__context_details">
+															<div className="AiAssistant__context_row">
 																<Checkbox
 																	checked={config.notes}
 																	onChange={(val) =>
@@ -1491,7 +1491,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 																	label={lang.t("Notes")}
 																/>
 															</div>
-															<div className="AiAssistant__context-row">
+															<div className="AiAssistant__context_row">
 																<Checkbox
 																	checked={config.result_text}
 																	onChange={(val) =>
@@ -1503,7 +1503,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 																	label={lang.t("Summary")}
 																/>
 															</div>
-															<div className="AiAssistant__scenes-context">
+															<div className="AiAssistant__scenes_context">
 																{(config.data.scenes || []).map(
 																	(scene, idx) => {
 																		const sceneConf = config.scenes[
@@ -1520,9 +1520,9 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 																		return (
 																			<div
 																				key={scene.id}
-																				className="AiAssistant__scene-item"
+																				className="AiAssistant__scene_item"
 																			>
-																				<div className="AiAssistant__context-row">
+																				<div className="AiAssistant__context_row">
 																					<Checkbox
 																						checked={sceneConf.included}
 																						onChange={(val) =>
@@ -1543,7 +1543,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 																					/>
 																				</div>
 																				{sceneConf.included && (
-																					<div className="AiAssistant__scene-fields">
+																					<div className="AiAssistant__scene_fields">
 																						{SCENE_FIELDS.map((f) => (
 																							<Checkbox
 																								key={f.key}
@@ -1586,11 +1586,11 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 								onCancel={() => setShowSceneSelector(false)}
 								showFooter={false}
 							>
-								<div className="AiAssistant__scene-list">
+								<div className="AiAssistant__scene_list">
 									{(sessionData.scenes || []).map((scene, idx) => (
 										<div
 											key={scene.id}
-											className="AiAssistant__scene-option"
+											className="AiAssistant__scene_option"
 											onClick={() => {
 												setShowSceneSelector(false);
 												generate("image", scene.id);
@@ -1615,8 +1615,8 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 								onCancel={closeGeneratedPrompt}
 								showFooter={false}
 							>
-								<div className="AiAssistant__prompt-result-wrap">
-									<div className="AiAssistant__prompt-result-actions">
+								<div className="AiAssistant__prompt_result_wrap">
+									<div className="AiAssistant__prompt_result_actions">
 										{selectedResponseHasChanges && (
 											<>
 												<Button
@@ -1663,7 +1663,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 									</div>
 									{!selectedResponseHasChanges && (
 										<div
-											className="AiAssistant__prompt-result"
+											className="AiAssistant__prompt_result"
 											ref={generatedPromptRef}
 										>
 											<ReactMarkdown components={markdownMentionComponents}>
@@ -1672,19 +1672,19 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 										</div>
 									)}
 									{selectedResponseDetails.length > 0 && (
-										<div className="AiAssistant__response-details">
-											<div className="AiAssistant__response-details-title">
+										<div className="AiAssistant__response_details">
+											<div className="AiAssistant__response_details_title">
 												{lang.t("Request details")}
 											</div>
 											{selectedResponseDetails.map((row) => (
 												<div
 													key={row.label}
-													className="AiAssistant__response-details-row"
+													className="AiAssistant__response_details_row"
 												>
-													<span className="AiAssistant__response-details-label">
+													<span className="AiAssistant__response_details_label">
 														{row.label}
 													</span>
-													<span className="AiAssistant__response-details-value">
+													<span className="AiAssistant__response_details_value">
 														{row.value}
 													</span>
 												</div>
@@ -1693,35 +1693,35 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 									)}
 									{selectedResponseHasChanges && (
 										<div className="AiAssistant__diff">
-											<div className="AiAssistant__diff-title">
+											<div className="AiAssistant__diff_title">
 												<span>{lang.t("Changes")}</span>
 												<span>{getHistoryChangeSummary(selectedResponseEntry)}</span>
 											</div>
 											{selectedResponseDiffResources.map((resource) => (
 												<div
 													key={resource.id}
-													className="AiAssistant__diff-file"
+													className="AiAssistant__diff_file"
 												>
-													<div className="AiAssistant__diff-file-header">
+													<div className="AiAssistant__diff_file_header">
 														<span>{resource.label}</span>
 														<span>{getDiffResourceState(resource)}</span>
 													</div>
-													<div className="AiAssistant__diff-lines">
+													<div className="AiAssistant__diff_lines">
 														{resource.lines.map((line, index) => (
 															<div
 																key={`${resource.id}-${index}`}
 																className={classNames(
-																	"AiAssistant__diff-line",
-																	`is-${line.type}`,
+																	"AiAssistant__diff_line",
+																	`is_${line.type}`,
 																)}
 															>
-																<span className="AiAssistant__diff-line-number">
+																<span className="AiAssistant__diff_line_number">
 																	{line.oldNumber || ""}
 																</span>
-																<span className="AiAssistant__diff-line-number">
+																<span className="AiAssistant__diff_line_number">
 																	{line.newNumber || ""}
 																</span>
-																<span className="AiAssistant__diff-line-marker">
+																<span className="AiAssistant__diff_line_marker">
 																	{line.type === "added"
 																		? "+"
 																		: line.type === "removed"
@@ -1740,10 +1740,10 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 							</Modal>
 						)}
 
-						<div className="AiAssistant__prompt-area">
+						<div className="AiAssistant__prompt_area">
 							<EditableField
 								type="textarea"
-								className="AiAssistant__prompt-input"
+								className="AiAssistant__prompt_input"
 								placeholder={getPlaceholder()}
 								value={userInstructions}
 								onChange={(e) => setUserInstructions(e.target.value)}
@@ -1751,7 +1751,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 							/>
 							<Button
 								variant="create"
-								className="AiAssistant__generate-btn"
+								className="AiAssistant__generate_btn"
 								disabled={loading}
 								onClick={() => generate()}
 							>
@@ -1762,7 +1762,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 							{canCancelGenerate && (
 								<Button
 									variant="danger"
-									className="AiAssistant__cancel-btn"
+									className="AiAssistant__cancel_btn"
 									onClick={cancelGenerateRequest}
 								>
 									{lang.t("Cancel")}
@@ -1773,8 +1773,8 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 						{error && <div className="AiAssistant__error">{error}</div>}
 
 						{responseHistory.length > 0 && (
-							<section className="AiAssistant__response-history">
-								<div className="AiAssistant__response-history-header">
+							<section className="AiAssistant__response_history">
+								<div className="AiAssistant__response_history_header">
 									<h4>{lang.t("Response history")}</h4>
 									<Button
 										variant="ghost"
@@ -1786,7 +1786,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 										{lang.t("Clear")}
 									</Button>
 								</div>
-								<div className="AiAssistant__response-history-list">
+								<div className="AiAssistant__response_history_list">
 									{responseHistory.map((entry) => {
 										const responsePreview = getHistoryTitle(entry);
 										const changeSummary = getHistoryChangeSummary(entry);
@@ -1795,7 +1795,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 											<ListCard
 												key={entry.id}
 												onClick={() => showGeneratedPrompt(entry)}
-												className="AiAssistant__history-card"
+												className="AiAssistant__history_card"
 												actions={
 													<Button
 														variant="ghost"
@@ -1806,10 +1806,10 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 													/>
 												}
 											>
-												<div className="ListCard__title AiAssistant__history-title">
+												<div className="ListCard__title AiAssistant__history_title">
 													{responsePreview || lang.t("AI response")}
 												</div>
-												<div className="ListCard__meta AiAssistant__history-meta">
+												<div className="ListCard__meta AiAssistant__history_meta">
 													<span>
 														{formatResponseDate(
 															entry.createdAt,

@@ -296,7 +296,7 @@ function ParsedGraphText({ text, onOpen }) {
 		<div
 			className={classNames(
 				"CampaignNotesGraph__detailText",
-				onOpen && "is-clickable",
+				onOpen && "is_clickable",
 			)}
 			role={onOpen ? "button" : undefined}
 			tabIndex={onOpen ? 0 : undefined}
@@ -1135,7 +1135,7 @@ export default function CampaignNotesGraph({
 					.trim(),
 				type: entityConfig.type === "locations" ? "location" : "character",
 				className:
-					entityConfig.type === "locations" ? "EntityLinkModal--location" : "",
+					entityConfig.type === "locations" ? "EntityLinkModal__location" : "",
 				showFooter: false,
 				children: (
 					<EntityModalContent
@@ -1352,7 +1352,7 @@ export default function CampaignNotesGraph({
 					setSelectedNodeId(otherNode.id);
 				}}
 			>
-				<span className={`CampaignNotesGraph__dot is-${otherNode.type}`} />
+				<span className={`CampaignNotesGraph__dot is_${otherNode.type}`} />
 				<span className="CampaignNotesGraph__connectionText">
 					<strong>{renderMentionText(otherNode.label)}</strong>
 					<span>{renderMentionText(connectionMetaText)}</span>
@@ -1374,7 +1374,7 @@ export default function CampaignNotesGraph({
 				key={`group-edge:${group.id}`}
 				className={classNames(
 					"CampaignNotesGraph__groupEdge",
-					!isFocused && "is-muted",
+					!isFocused && "is_muted",
 				)}
 				x1={GRAPH_CENTER_X}
 				y1={GRAPH_CENTER_Y}
@@ -1394,8 +1394,8 @@ export default function CampaignNotesGraph({
 				key={`group:${group.id}`}
 				className={classNames(
 					"CampaignNotesGraph__group",
-					`is-${group.id}`,
-					!isGroupFocused(group) && "is-muted",
+					`is_${group.id}`,
+					!isGroupFocused(group) && "is_muted",
 				)}
 				transform={`translate(${group.x} ${group.y})`}
 				style={{ "--graph-group-color": group.color }}
@@ -1420,8 +1420,8 @@ export default function CampaignNotesGraph({
 				key={edge.id}
 				className={classNames(
 					"CampaignNotesGraph__edge",
-					`is-${edge.relation}`,
-					!isFocused && "is-muted",
+					`is_${edge.relation}`,
+					!isFocused && "is_muted",
 				)}
 				x1={source.x}
 				y1={source.y}
@@ -1452,7 +1452,7 @@ export default function CampaignNotesGraph({
 		<div
 			className={classNames(
 				"CampaignNotesGraph",
-				draggingNodeId && "is-dragging-node",
+				draggingNodeId && "is_dragging_node",
 			)}
 		>
 			<div className="CampaignNotesGraph__workspace">
@@ -1482,7 +1482,7 @@ export default function CampaignNotesGraph({
 
 				<div ref={canvasWrapRef} className="CampaignNotesGraph__canvasWrap">
 					{error && (
-						<div className="CampaignNotesGraph__message CampaignNotesGraph__message--error">
+						<div className="CampaignNotesGraph__message CampaignNotesGraph__message__error">
 							{error}
 						</div>
 					)}
@@ -1532,10 +1532,10 @@ export default function CampaignNotesGraph({
 											key={node.id}
 											className={classNames(
 												"CampaignNotesGraph__node",
-												`is-${node.type}`,
-												isSelected && "is-selected",
-												draggingNodeId === node.id && "is-dragging",
-												!isFocused && "is-muted",
+												`is_${node.type}`,
+												isSelected && "is_selected",
+												draggingNodeId === node.id && "is_dragging",
+												!isFocused && "is_muted",
 											)}
 											transform={`translate(${position.x} ${position.y})`}
 											onPointerDown={(event) =>
@@ -1565,7 +1565,7 @@ export default function CampaignNotesGraph({
 					<>
 						<div className="CampaignNotesGraph__type">
 							<span
-								className={`CampaignNotesGraph__dot is-${selectedNode.type}`}
+								className={`CampaignNotesGraph__dot is_${selectedNode.type}`}
 							/>
 							{lang.t(TYPE_LABELS[selectedNode.type] || selectedNode.type)}
 						</div>
@@ -1614,7 +1614,7 @@ export default function CampaignNotesGraph({
 								graph.nodes.some((node) => node.type === type),
 							).map((type) => (
 								<span key={type}>
-									<span className={`CampaignNotesGraph__dot is-${type}`} />
+									<span className={`CampaignNotesGraph__dot is_${type}`} />
 									{lang.t(TYPE_LABELS[type] || type)}
 								</span>
 							))}

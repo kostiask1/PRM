@@ -33,7 +33,7 @@
     border-color: var(--accent);
 }
 
-.Checkbox.is-checked .Checkbox__indicator {
+.Checkbox.is_checked .Checkbox__indicator {
     background: var(--success);
     border-color: var(--success);
 }
@@ -48,7 +48,7 @@
     pointer-events: none;
 }
 
-.Checkbox.is-checked .Checkbox__icon {
+.Checkbox.is_checked .Checkbox__icon {
     opacity: 1;
     transform: scale(1);
 }

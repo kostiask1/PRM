@@ -49,7 +49,7 @@
 	height: 100%;
 }
 
-.EncounterViewMetric--accent {
+.EncounterViewMetric__accent {
 	border-color: color-mix(in srgb, var(--accent), transparent 45%);
 	background: color-mix(in srgb, var(--accent), transparent 92%);
 }
@@ -69,7 +69,7 @@
 	line-height: 1;
 }
 
-.EncounterViewMetric--accent .EncounterViewMetric__value {
+.EncounterViewMetric__accent .EncounterViewMetric__value {
 	color: var(--accent);
 }
 
@@ -86,7 +86,7 @@
 }
 
 .DraggableList>div:hover>.DraggableList__handle,
-.DraggableList>div.is-dragging>.DraggableList__handle {
+.DraggableList>div.is_dragging>.DraggableList__handle {
 	opacity: 1;
 	background-color: var(--panel-2);
 	border-color: color-mix(in srgb, var(--accent), transparent 60%);
@@ -136,20 +136,20 @@
 	background: color-mix(in srgb, var(--accent), transparent 95%);
 }
 
-.EncounterMonsterRow.is-active {
+.EncounterMonsterRow.is_active {
 	border-color: color-mix(in srgb, var(--accent), transparent 60%);
 	border-left-color: var(--accent);
 	background: color-mix(in srgb, var(--accent), transparent 92%);
 	box-shadow: 0 0 20px color-mix(in srgb, var(--accent), transparent 92%) !important;
 }
 
-.EncounterMonsterRow.is-dragging {
+.EncounterMonsterRow.is_dragging {
 	opacity: 0.4;
 	border: 1px dashed var(--accent);
 	background: color-mix(in srgb, var(--accent), transparent 95%);
 }
 
-.EncounterMonsterRow--character {
+.EncounterMonsterRow__character {
 	border-left-color: color-mix(in srgb, var(--warning), transparent 60%);
 	background: color-mix(in srgb, var(--warning), transparent 95%);
 }
@@ -300,41 +300,41 @@
 	padding-inline: var(--space-2);
 }
 
-.EncounterView__detailView--single {
+.EncounterView__detailView__single {
 	overflow-y: auto;
 	padding: var(--space-2);
 	padding-right: 0;
 }
 
-.EncounterView__detailView--grid {
+.EncounterView__detailView__grid {
 	overflow-y: auto;
 	padding: var(--space-2);
 }
 
-.EncounterView__detailView--grid .MonsterStatBlock__header__details {
+.EncounterView__detailView__grid .MonsterStatBlock__header__details {
 	gap: var(--space-2);
 }
 
-.EncounterView__detailView--grid .MonsterStatBlock__stats__wrap {
+.EncounterView__detailView__grid .MonsterStatBlock__stats__wrap {
 	margin-bottom: var(--space-1);
 }
 
-.EncounterView__detailView--grid .MonsterStatBlock__properties {
+.EncounterView__detailView__grid .MonsterStatBlock__properties {
 	margin-bottom: var(--space-2);
 	background: color-mix(in srgb, var(--panel-2), transparent 10%);
 }
 
-.EncounterView__detailView--grid .MonsterStatBlock__stats {
+.EncounterView__detailView__grid .MonsterStatBlock__stats {
 	padding: var(--space-2);
 	gap: var(--space-1) var(--space-3);
 	background: color-mix(in srgb, var(--panel-2), transparent 10%);
 }
 
-.EncounterView__detailView--grid .MonsterStatBlock__ability-box {
+.EncounterView__detailView__grid .MonsterStatBlock__ability_box {
 	background: color-mix(in srgb, var(--panel-2), transparent 10%);
 }
 
-.EncounterView__detailView--grid .MonsterStatBlock__abilities {
+.EncounterView__detailView__grid .MonsterStatBlock__abilities {
 	margin-bottom: var(--space-2);
 }
 
@@ -353,11 +353,11 @@
 	transition: box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
-.EncounterView__gridItem.is-selected {
+.EncounterView__gridItem.is_selected {
 	border-color: color-mix(in srgb, var(--accent), transparent 45%);
 }
 
-.EncounterView__gridItem.is-focused {
+.EncounterView__gridItem.is_focused {
 	border-color: var(--accent);
 	background: color-mix(in srgb, var(--accent), transparent 90%);
 	box-shadow:
@@ -370,16 +370,16 @@
 	max-height: 72vh;
 }
 
-.EncounterView__gridItem .character-card {
+.EncounterView__gridItem .character_card {
 	border: 0;
 	background: transparent;
 }
 
-.EncounterView__gridItem .character-card__body {
+.EncounterView__gridItem .character_card__body {
 	padding: 0;
 }
 
-.EncounterView__gridItem .MonsterStatBlock__token-wrapper {
+.EncounterView__gridItem .MonsterStatBlock__token_wrapper {
 	width: clamp(96px, 12vw, 120px);
 	height: clamp(96px, 12vw, 120px);
 	z-index: 1;
@@ -390,7 +390,7 @@
 	height: 100%;
 }
 
-.EncounterView__gridItem .MonsterStatBlock__token-wrapper:hover .MonsterStatBlock__token {
+.EncounterView__gridItem .MonsterStatBlock__token_wrapper:hover .MonsterStatBlock__token {
 	transform: translate(-150%, 150%) scale(4);
 }
 

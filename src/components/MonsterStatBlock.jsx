@@ -168,9 +168,9 @@ export default function MonsterStatBlock({
 							action.entries || action.desc,
 							searchHighlight,
 						)}
-						<div className="MonsterStatBlock__action-rolls">
+						<div className="MonsterStatBlock__action_rolls">
 							{action.attack_bonus && (
-								<div className="stat-item">
+								<div className="stat_item">
 									Atk:{" "}
 									<RollDice
 										formula={`1d20${formatModifier(parseInt(action.attack_bonus))}`}
@@ -180,7 +180,7 @@ export default function MonsterStatBlock({
 								</div>
 							)}
 							{action.damage_dice && (
-								<div className="stat-item">
+								<div className="stat_item">
 									Dmg:{" "}
 									<RollDice
 										formula={`${action.damage_dice}${getDamageBonus(action)}`}
@@ -199,14 +199,14 @@ export default function MonsterStatBlock({
 		return (
 			<Tooltip content={lang.t("Roll {label} check", { label })}>
 				<div
-					className="MonsterStatBlock__ability-box"
+					className="MonsterStatBlock__ability_box"
 					onClick={() =>
 						dispatch(requestDiceRollAction(`1d20${formatModifier(mod)}`))
 					}
 				>
-					<span className="ability-label">{label}</span>
-					<span className="ability-mod">{formatModifier(mod)}</span>
-					<span className="ability-score">{value}</span>
+					<span className="ability_label">{label}</span>
+					<span className="ability_mod">{formatModifier(mod)}</span>
+					<span className="ability_score">{value}</span>
 				</div>
 			</Tooltip>
 		);
@@ -215,7 +215,7 @@ export default function MonsterStatBlock({
 	const renderSaves = () => {
 		if (model.saves.length === 0) return null;
 		return (
-			<div className="MonsterStatBlock__property-item">
+			<div className="MonsterStatBlock__property_item">
 				<strong>Saving Throws:</strong>{" "}
 				{model.saves.map((s, idx) => (
 					<React.Fragment key={s.label}>
@@ -426,7 +426,7 @@ export default function MonsterStatBlock({
 	return (
 		<div
 			className={classNames("MonsterStatBlock", {
-				"MonsterStatBlock--grid": isGridLayout,
+				"MonsterStatBlock__grid": isGridLayout,
 			})}
 		>
 			<div className="MonsterStatBlock__header">
@@ -457,7 +457,7 @@ export default function MonsterStatBlock({
 								variant="ghost"
 								size={Button.SIZES.SMALL}
 								icon="edit"
-								className="MonsterStatBlock__rename-btn"
+								className="MonsterStatBlock__rename_btn"
 								onClick={handleNameRename}
 								title={lang.t("Rename")}
 							/>
@@ -466,8 +466,8 @@ export default function MonsterStatBlock({
 							variant="ghost"
 							size={Button.SIZES.SMALL}
 							icon="star"
-							className={classNames("MonsterStatBlock__favorite-btn", {
-								"is-active": isFavorite,
+							className={classNames("MonsterStatBlock__favorite_btn", {
+								"is_active": isFavorite,
 							})}
 							onClick={handleToggleFavorite}
 							title={isFavorite ? "Remove from favorites" : "Add to favorites"}
@@ -477,7 +477,7 @@ export default function MonsterStatBlock({
 								variant="primary"
 								size={Button.SIZES.SMALL}
 								icon="plus"
-								className="MonsterStatBlock__add-to-encounter-btn"
+								className="MonsterStatBlock__add_to_encounter_btn"
 								onClick={handleAddToEncounter}
 							>
 								{lang.t("Add to encounter")}
@@ -487,18 +487,18 @@ export default function MonsterStatBlock({
 
 					{monster.originalBestiaryName &&
 						monster.originalBestiaryName !== monster.name && (
-							<div className="MonsterStatBlock__original-name muted">
+							<div className="MonsterStatBlock__original_name muted">
 								({highlight(monster.originalBestiaryName)})
 							</div>
 						)}
 
-					<div className="MonsterStatBlock__meta-line">
+					<div className="MonsterStatBlock__meta_line">
 						{highlight(model.size)} {highlight(model.typeLabel)},{" "}
 						{highlight(model.alignment)}
 					</div>
 					<div className="MonsterStatBlock__stats__wrap">
 						<div className="MonsterStatBlock__stats">
-							<div className="stat-item">
+							<div className="stat_item">
 								<strong>HP:</strong>{" "}
 								{renderRecursiveContent(model.hp.val, searchHighlight)}{" "}
 								{model.hp.formula && (
@@ -511,12 +511,12 @@ export default function MonsterStatBlock({
 									</>
 								)}
 							</div>
-							<div className="stat-item ac">
+							<div className="stat_item ac">
 								<strong>AC:</strong>{" "}
 								{renderRecursiveContent(model.ac.val, searchHighlight)}{" "}
 								{renderRecursiveContent(model.ac.desc, searchHighlight)}
 							</div>
-							<div className="stat-item">
+							<div className="stat_item">
 								<strong>Speed:</strong> {highlight(model.speed)}
 							</div>
 						</div>
@@ -524,12 +524,12 @@ export default function MonsterStatBlock({
 							{renderSaves()}
 
 							{model.skills.length > 0 && (
-								<div className="MonsterStatBlock__property-item MonsterStatBlock__property-item--skills">
+								<div className="MonsterStatBlock__property_item MonsterStatBlock__property_item__skills">
 									<strong>Skills:</strong>{" "}
 									{model.skills.map(([name, value], idx, arr) => (
 										<React.Fragment key={name}>
 											<span
-												className="skill-name"
+												className="skill_name"
 												style={{ textTransform: "capitalize" }}
 											>
 												{highlight(name)}
@@ -546,25 +546,25 @@ export default function MonsterStatBlock({
 							)}
 
 							{monster.vulnerable && (
-								<div className="MonsterStatBlock__property-item">
+								<div className="MonsterStatBlock__property_item">
 									<strong>Damage Vulnerabilities:</strong>{" "}
 									{highlight(model.formatDamageProperty(monster.vulnerable))}
 								</div>
 							)}
 							{monster.resist && (
-								<div className="MonsterStatBlock__property-item">
+								<div className="MonsterStatBlock__property_item">
 									<strong>Damage Resistances:</strong>{" "}
 									{highlight(model.formatDamageProperty(monster.resist))}
 								</div>
 							)}
 							{monster.immune && (
-								<div className="MonsterStatBlock__property-item">
+								<div className="MonsterStatBlock__property_item">
 									<strong>Damage Immunities:</strong>{" "}
 									{highlight(model.formatDamageProperty(monster.immune))}
 								</div>
 							)}
 							{monster.conditionImmune && (
-								<div className="MonsterStatBlock__property-item">
+								<div className="MonsterStatBlock__property_item">
 									<strong>Condition Immunities:</strong>{" "}
 									{highlight(
 										model.formatDamageProperty(monster.conditionImmune),
@@ -604,7 +604,7 @@ export default function MonsterStatBlock({
 						</div>
 					)}
 				</div>
-				<div className="MonsterStatBlock__token-wrapper">
+				<div className="MonsterStatBlock__token_wrapper">
 					{!hasImageError && (
 						<div
 							className="MonsterStatBlock__tokenDragProxy"
@@ -621,7 +621,7 @@ export default function MonsterStatBlock({
 						</div>
 					)}
 					{hasImageError && (
-						<div className="MonsterStatBlock__token-skeleton">
+						<div className="MonsterStatBlock__token_skeleton">
 							<Icon name="dice" />
 						</div>
 					)}

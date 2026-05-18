@@ -31,9 +31,9 @@ export default function NoteCard({
 
 	return (
 		<div
-			className={classNames("note-card-simple", {
-				"is-collapsed": isCollapsed,
-				"note-card-simple--simplified": simplifiedNotesEnabled,
+			className={classNames("note_card_simple", {
+				"is_collapsed": isCollapsed,
+				"note_card_simple__simplified": simplifiedNotesEnabled,
 			})}
 			onClick={() =>
 				isCollapsed &&
@@ -44,7 +44,7 @@ export default function NoteCard({
 		>
 			{showClassicHeader && (
 				<div
-					className="note-card-simple__header"
+					className="note_card_simple__header"
 					onClick={() => canCollapse && onToggleCollapse(note.id)}
 				>
 					{canCollapse && (
@@ -58,7 +58,7 @@ export default function NoteCard({
 						value={note.title || ""}
 						onChange={(event) => onTitleChange(note.id, event.target.value)}
 						placeholder={lang.t("New note")}
-						className="note-card-simple__title"
+						className="note_card_simple__title"
 					/>
 					{!isLast && (
 						<Button
@@ -82,7 +82,7 @@ export default function NoteCard({
 				</span>
 			)}
 			{showSimplifiedActions && (
-				<div className="note-card-simple__simpleActions">
+				<div className="note_card_simple__simpleActions">
 					{canCollapse && (
 						<CollapseToggleButton
 							size={Button.SIZES.SMALL}
@@ -91,7 +91,7 @@ export default function NoteCard({
 							title={
 								isCollapsed ? lang.t("Expand note") : lang.t("Collapse note")
 							}
-							className="note-card-simple__actionBtn"
+							className="note_card_simple__actionBtn"
 						/>
 					)}
 					<Button
@@ -104,12 +104,12 @@ export default function NoteCard({
 							onDelete(note.id);
 						}}
 						title={lang.t("Delete note")}
-						className="note-card-simple__actionBtn note-card-simple__actionBtn--danger"
+						className="note_card_simple__actionBtn note_card_simple__actionBtn__danger"
 					/>
 				</div>
 			)}
 			{!isCollapsed && (
-				<div className="note-card-simple__content">
+				<div className="note_card_simple__content">
 					<EditableField
 						type="textarea"
 						value={note.text}

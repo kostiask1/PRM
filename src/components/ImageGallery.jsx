@@ -138,8 +138,8 @@ function ImageGallery({
 				<aside className="ImageGallery__sidebar">
 					<button
 						className={classNames("SourceBtn", {
-							"is-active": selectedSource === "general",
-							"is-drag-over": dragOverTarget?.id === "general",
+							"is_active": selectedSource === "general",
+							"is_drag_over": dragOverTarget?.id === "general",
 						})}
 						onClick={() => setSelectedSource("general")}
 						onDragOver={(e) => {
@@ -160,15 +160,15 @@ function ImageGallery({
 						<Icon name="database" size={16} />
 						<span>{lang.t("General")}</span>
 					</button>
-					<div className="ImageGallery__sidebar-divider">
+					<div className="ImageGallery__sidebar_divider">
 						{lang.t("Campaigns")}
 					</div>
 					{campaigns.map((c) => (
 						<button
 							key={c.slug}
 							className={classNames("SourceBtn", {
-								"is-active": selectedSource === c.slug,
-								"is-drag-over": dragOverTarget?.id === c.slug,
+								"is_active": selectedSource === c.slug,
+								"is_drag_over": dragOverTarget?.id === c.slug,
 							})}
 							onClick={() => setSelectedSource(c.slug)}
 							onDragOver={(e) => {
@@ -198,8 +198,8 @@ function ImageGallery({
 							<button
 								key={cat.id}
 								className={classNames("TabBtn", {
-									"is-active": selectedCat.id === cat.id,
-									"is-drag-over": dragOverTarget?.id === cat.id,
+									"is_active": selectedCat.id === cat.id,
+									"is_drag_over": dragOverTarget?.id === cat.id,
 								})}
 								onClick={() => {
 									setSelectedCat(cat);
@@ -230,8 +230,8 @@ function ImageGallery({
 						<div className="ImageGallery__breadcrumbs">
 							<button
 								className={classNames("BreadcrumbItem", {
-									"is-active": selectedSub === "",
-									"is-drag-over":
+									"is_active": selectedSub === "",
+									"is_drag_over":
 										dragOverTarget?.type === "breadcrumb" &&
 										dragOverTarget?.id === "__root__",
 								})}
@@ -266,8 +266,8 @@ function ImageGallery({
 											return (
 												<button
 													className={classNames("BreadcrumbItem", {
-														"is-active": idx === arr.length - 1,
-														"is-drag-over":
+														"is_active": idx === arr.length - 1,
+														"is_drag_over":
 															dragOverTarget?.type === "breadcrumb" &&
 															dragOverTarget?.id === breadcrumbPath,
 													})}
@@ -297,7 +297,7 @@ function ImageGallery({
 									</React.Fragment>
 								))}
 							<Icon name="chevron" size={10} className="BreadcrumbSeparator" />
-							<div className="ImageGallery__new-sub">
+							<div className="ImageGallery__new_sub">
 								{isCreatingSub ? (
 									<>
 										<input
@@ -329,7 +329,7 @@ function ImageGallery({
 								)}
 							</div>
 						</div>
-						<div className="ImageGallery__upload-actions">
+						<div className="ImageGallery__upload_actions">
 							{hasSelection && (
 								<>
 									<Button
@@ -369,7 +369,7 @@ function ImageGallery({
 
 					<div
 						className={classNames("ImageGallery__grid", {
-							"is-dragging": isDraggingOver,
+							"is_dragging": isDraggingOver,
 						})}
 						onDragOver={(e) => {
 							e.preventDefault();
@@ -391,7 +391,7 @@ function ImageGallery({
 						}
 					>
 						{isDraggingOver && (
-							<div className="ImageGallery__drop-overlay">
+							<div className="ImageGallery__drop_overlay">
 								<Icon name="import" size={48} />
 								<p>{lang.t("Release to upload here")}</p>
 							</div>
@@ -406,11 +406,11 @@ function ImageGallery({
 										key={sub}
 										className={classNames(
 											"ImageGallery__item",
-											"ImageGallery__item--folder",
+											"ImageGallery__item__folder",
 											{
-												"is-selected": selectedSubs.has(sub),
-												"is-drag-over": dragOverTarget?.id === sub,
-												"is-protected": isProtected,
+												"is_selected": selectedSubs.has(sub),
+												"is_drag_over": dragOverTarget?.id === sub,
+												"is_protected": isProtected,
 											},
 										)}
 										onClick={(e) => {
@@ -444,7 +444,7 @@ function ImageGallery({
 											});
 										}}
 									>
-										<div className="ImageGallery__image-wrap">
+										<div className="ImageGallery__image_wrap">
 											<Icon name={folderIcon} size={48} />
 											{!isProtected && (
 												<div
@@ -491,7 +491,7 @@ function ImageGallery({
 								>
 									<div
 										className={classNames("ImageGallery__item", {
-											"is-selected": selectedFilenames.has(img.name),
+											"is_selected": selectedFilenames.has(img.name),
 										})}
 										onClick={(e) =>
 											handleItemClick(
@@ -510,7 +510,7 @@ function ImageGallery({
 										onDragStart={(e) => handleDragStart(e, img, "image")}
 										onDragEnd={handleDragEnd}
 									>
-										<div className="ImageGallery__image-wrap">
+										<div className="ImageGallery__image_wrap">
 											<img src={img.url} alt="" />
 											<div
 												className="ImageGallery__checkbox"

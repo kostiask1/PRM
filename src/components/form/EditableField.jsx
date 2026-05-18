@@ -22,7 +22,7 @@ import {
 	isSameEntityIdentity,
 } from "../common/EntityLinkIdentity";
 
-const MENTION_CLASS = "mention-link EditableField__mention";
+const MENTION_CLASS = "mention_link EditableField__mention";
 const MENTION_TOOLTIP_KEY = "Ctrl+click to open entity";
 const TAB_CLASS = "EditableField__tab";
 const INSERTION_MARKER_CLASS = "EditableField__insertionMarker";
@@ -352,7 +352,7 @@ function nodeToMarkdown(node, options = {}) {
 		return childOptions.suppressItalic ? content : `*${content}*`;
 	}
 
-	if (tagName === "a" && element.classList.contains("mention-link")) {
+	if (tagName === "a" && element.classList.contains("mention_link")) {
 		return `[${normalizeTextContent(element.textContent || "").trim()}]`;
 	}
 
@@ -1350,9 +1350,9 @@ export default function EditableField({
 	const editorNode = (
 		<div
 			ref={editorRef}
-			className={classNames("MarkdownView", "MarkdownView--editable", {
-				"MarkdownView--active": isActive,
-				"MarkdownView--disabled": isDisabled,
+			className={classNames("MarkdownView", "MarkdownView__editable", {
+				"MarkdownView__active": isActive,
+				"MarkdownView__disabled": isDisabled,
 			})}
 			contentEditable={!isDisabled}
 			suppressContentEditableWarning
@@ -1376,8 +1376,8 @@ export default function EditableField({
 		<div
 			{...domProps}
 			className={classNames("EditableField", className, {
-				"EditableField--active": isActive,
-				"EditableField--disabled": isDisabled,
+				"EditableField__active": isActive,
+				"EditableField__disabled": isDisabled,
 			})}
 			onClick={stopContainerEvent}
 			onMouseDown={stopContainerEvent}
@@ -1388,7 +1388,7 @@ export default function EditableField({
 					variant="ghost"
 					size={Button.SIZES.SMALL}
 					icon={copied ? "check" : "copy"}
-					className="EditableField__copy-btn"
+					className="EditableField__copy_btn"
 					onClick={handleCopy}
 					title={lang.t("Copy formatted text for Word")}
 				/>

@@ -8,7 +8,7 @@ export default function SceneCardMedia({
 	onImageChange,
 }) {
 	return (
-		<div className="SceneCard__image-side">
+		<div className="SceneCard__image_side">
 			<ImageAssetField
 				imageUrl={imageUrl}
 				campaignSlug={campaignSlug}
@@ -17,9 +17,9 @@ export default function SceneCardMedia({
 				imageAlt={lang.t("Scene {number}", { number })}
 				enableContextReplace={true}
 				showClearButton={true}
-				containerClassName="SceneCard__portrait-container"
-				wrapperClassName="SceneCard__portrait-wrapper"
-				deleteButtonClassName="SceneCard__image-delete"
+				containerClassName="SceneCard__portrait_container"
+				wrapperClassName="SceneCard__portrait_wrapper"
+				deleteButtonClassName="SceneCard__image_delete"
 				previewTitle={lang.t("Scene {number}", { number })}
 				previewModalClassName="SceneImageModal"
 				previewContentClassName="SceneImageModal__content"

@@ -400,7 +400,7 @@ export default function Icon({
 			strokeWidth={strokeWidth}
 			strokeLinecap="round"
 			strokeLinejoin="round"
-			className={classNames("Icon", `Icon--${name}`, className)}
+			className={classNames("Icon", `Icon__${name}`, className)}
 		>
 			{content}
 		</svg>

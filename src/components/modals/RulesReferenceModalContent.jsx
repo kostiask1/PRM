@@ -433,7 +433,7 @@ export default function RulesReferenceModalContent({
 	};
 
 	return (
-		<div className="RulesReferenceModalContent RulesReferenceModalContent--withTabs">
+		<div className="RulesReferenceModalContent RulesReferenceModalContent__withTabs">
 			<div className="RulesReferenceModalContent__search">
 				<div className="RulesReferenceModalContent__nav">
 					<Button
@@ -443,7 +443,7 @@ export default function RulesReferenceModalContent({
 						onClick={() => navigateHistory(-1)}
 						disabled={!canNavigateBack}
 						title={lang.t("Back")}
-						className="RulesReferenceModalContent__nav-btn"
+						className="RulesReferenceModalContent__nav_btn"
 					/>
 					<Button
 						variant="ghost"
@@ -452,7 +452,7 @@ export default function RulesReferenceModalContent({
 						onClick={() => navigateHistory(1)}
 						disabled={!canNavigateForward}
 						title={lang.t("Forward")}
-						className="RulesReferenceModalContent__nav-btn"
+						className="RulesReferenceModalContent__nav_btn"
 					/>
 				</div>
 				<Input
@@ -466,7 +466,7 @@ export default function RulesReferenceModalContent({
 					icon="search-detailed"
 					onClick={() => setIsDetailedSearch((value) => !value)}
 					title={lang.t("Detailed search")}
-					className="DetailedSearchButton RulesReferenceModalContent__detailed-search-btn"
+					className="DetailedSearchButton RulesReferenceModalContent__detailed_search_btn"
 				/>
 			</div>
 
@@ -480,10 +480,10 @@ export default function RulesReferenceModalContent({
 						className={[
 							"RulesReferenceModalContent__tab",
 							activeTab.id === tab.id
-								? "RulesReferenceModalContent__tab--active"
+								? "RulesReferenceModalContent__tab__active"
 								: "",
 							tabsWithSearchMatches.has(tab.id)
-								? "RulesReferenceModalContent__tab--hasMatches"
+								? "RulesReferenceModalContent__tab__hasMatches"
 								: "",
 						]
 							.filter(Boolean)

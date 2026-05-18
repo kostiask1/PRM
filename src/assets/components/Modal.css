@@ -27,19 +27,19 @@
 	max-height: 90vh;
 }
 
-.Modal__card--error {
+.Modal__card__error {
 	border-color: var(--danger);
 }
 
-.Modal__card--confirm {
+.Modal__card__confirm {
 	border-color: var(--accent);
 }
 
-.Modal__card--success {
+.Modal__card__success {
 	border-color: var(--success);
 }
 
-.Modal__card--custom {
+.Modal__card__custom {
 	max-width: min(1500px, 96vw);
 	width: 100%;
 	height: 90vh;
@@ -100,7 +100,7 @@
 	gap: var(--space-3);
 }
 
-.Modal__card--character {
+.Modal__card__character {
 	min-width: min(800px, 92vw);
 }
 
@@ -130,7 +130,7 @@
 	gap: var(--space-2);
 }
 
-.MentionPicker__column-title {
+.MentionPicker__column_title {
 	margin: 0;
 	font-size: 0.9rem;
 	font-weight: 700;

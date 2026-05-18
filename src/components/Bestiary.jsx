@@ -299,8 +299,8 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 								variant="ghost"
 								size={Button.SIZES.SMALL}
 								icon="star"
-								className={classNames("Bestiary__item-fav-btn", {
-									"is-active": isFavorite,
+								className={classNames("Bestiary__item_fav_btn", {
+									"is_active": isFavorite,
 								})}
 								onClick={(e) => {
 									e.stopPropagation();
@@ -327,8 +327,8 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 						</>
 					}
 				>
-					<div className="Bestiary__item-content">
-						<div className="Bestiary__item-info">
+					<div className="Bestiary__item_content">
+						<div className="Bestiary__item_info">
 							<div className="ListCard__title">
 								{highlightText(monster.name, search)}
 							</div>
@@ -343,16 +343,16 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 									search,
 								)}
 								{monster.source && (
-									<span className="Bestiary__item-source">
+									<span className="Bestiary__item_source">
 										{" "}• {highlightText(monster.source, search)}
 									</span>
 								)}
 							</div>
 						</div>
 						<Tooltip content={lang.t("Challenge Rating")}>
-							<div className="Bestiary__item-cr">
-								<div className="Bestiary__cr-label">CR</div>
-								<div className="Bestiary__cr-value">{crValue || "--"}</div>
+							<div className="Bestiary__item_cr">
+								<div className="Bestiary__cr_label">CR</div>
+								<div className="Bestiary__cr_value">{crValue || "--"}</div>
 							</div>
 						</Tooltip>
 					</div>
@@ -390,7 +390,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 							icon="search"
 							onClick={() => setIsDetailedSearch((value) => !value)}
 							title={lang.t("Detailed search")}
-							className="DetailedSearchButton Bestiary__detailed-search-btn"
+							className="DetailedSearchButton Bestiary__detailed_search_btn"
 						/>
 					</div>
 					<Button
@@ -398,21 +398,21 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 						icon="star"
 						onClick={() => setOnlyFavorites(!onlyFavorites)}
 						title={lang.t("Only favorites")}
-						className="Bestiary__filter-fav-btn"
+						className="Bestiary__filter_fav_btn"
 					/>
 					<Button
-						className={classNames("Bestiary__sort-btn", {
-							"is-active": sortOrder !== "none",
+						className={classNames("Bestiary__sort_btn", {
+							"is_active": sortOrder !== "none",
 						})}
 						variant="ghost"
 						onClick={toggleSort}
 						title={lang.t("Sort by CR (Challenge Rating)")}
 					>
-						<span className="Bestiary__sort-label">CR</span>
+						<span className="Bestiary__sort_label">CR</span>
 						<Icon
 							name={`sort-${sortOrder}`}
 							className={classNames(
-								"Bestiary__sort-icon",
+								"Bestiary__sort_icon",
 								`state-${sortOrder}`,
 							)}
 						/>
@@ -421,7 +421,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 
 				<div
 					className={classNames("Bestiary__content", {
-						"Bestiary__content--stacked": isEmbedded,
+						"Bestiary__content__stacked": isEmbedded,
 					})}
 				>
 					<div className="Bestiary__list">
@@ -439,7 +439,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 					)}
 
 					{selectedMonster && (
-						<div className="Bestiary__detail-container">
+						<div className="Bestiary__detail_container">
 							<MonsterStatBlock
 								monster={selectedMonster}
 								onNameClick={onAddMonster ? (m) => onAddMonster(m) : undefined}

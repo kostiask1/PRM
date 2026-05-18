@@ -19,8 +19,8 @@ export default function Switch({
 	return (
 		<label
 			className={classNames("Switch", className, {
-				"is-checked": checked,
-				"is-disabled": disabled,
+				"is_checked": checked,
+				"is_disabled": disabled,
 			})}
 		>
 			<input

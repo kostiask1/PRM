@@ -39,7 +39,7 @@
 	border-color: var(--accent);
 }
 
-.ImageTargetSettings__categoryBtn.is-active {
+.ImageTargetSettings__categoryBtn.is_active {
 	background: color-mix(in srgb, var(--accent), transparent 90%);
 	border-color: var(--accent);
 	color: var(--accent);
@@ -102,7 +102,7 @@
 	color: var(--accent);
 }
 
-.ImageTargetSettings__tabBtn--back {
+.ImageTargetSettings__tabBtn__back {
 	padding: 5px 10px;
 	font-weight: 600;
 	background: var(--panel-2);
@@ -134,7 +134,7 @@
 	font-size: 0.8rem;
 }
 
-.ImageTargetSettings__pathBtn.is-active {
+.ImageTargetSettings__pathBtn.is_active {
 	border-color: var(--accent);
 	color: var(--accent);
 	background: color-mix(in srgb, var(--accent), transparent 92%);

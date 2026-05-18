@@ -17,7 +17,7 @@ export default function StatusBadge({
 	return (
 		<span
 			className={classNames("StatusBadge", className, {
-				"StatusBadge--done": completed,
+				"StatusBadge__done": completed,
 			})}
 			onClick={onClick}
 		>

@@ -64,24 +64,24 @@
 	transform: scale(1.1);
 }
 
-.DiceCalculator.is-open .DiceCalculator__toggle {
+.DiceCalculator.is_open .DiceCalculator__toggle {
 	transform: rotate(45deg);
 	background: var(--panel-2);
 	box-shadow: var(--shadow-sm);
 }
 
-.DiceCalculator__toggle.is-rolling {
+.DiceCalculator__toggle.is_rolling {
 	animation: DiceCalculatorToggleRoll 0.42s cubic-bezier(0.22, 1, 0.36, 1);
 	box-shadow:
 		0 8px 24px color-mix(in srgb, var(--accent), transparent 48%),
 		0 0 18px color-mix(in srgb, white, transparent 88%);
 }
 
-.DiceCalculator__toggle.is-rolling::before {
+.DiceCalculator__toggle.is_rolling::before {
 	animation: DiceCalculatorToggleFlash 0.42s ease-out;
 }
 
-.DiceCalculator__toggle.is-rolling::after {
+.DiceCalculator__toggle.is_rolling::after {
 	animation: DiceCalculatorToggleRing 0.42s ease-out;
 }
 
@@ -90,7 +90,7 @@
 	will-change: transform;
 }
 
-.DiceCalculator__toggleIcon.is-rolling {
+.DiceCalculator__toggleIcon.is_rolling {
 	animation: DiceCalculatorToggleIconRoll 0.42s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -208,7 +208,7 @@
 	overflow: hidden;
 }
 
-.DiceCalculator__display.is-rolling {
+.DiceCalculator__display.is_rolling {
 	animation: DiceCalculatorDisplayFlash 0.42s ease-out;
 }
 
@@ -296,7 +296,7 @@
 	cursor: default;
 }
 
-.DiceCalculator__totalValue-container {
+.DiceCalculator__totalValue_container {
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -475,19 +475,19 @@
 	text-decoration: underline;
 }
 
-.dice-min {
+.dice_min {
 	color: var(--danger);
 	/* Червоний для одиниці */
 	font-weight: bold;
 }
 
-.dice-max {
+.dice_max {
 	color: var(--success);
 	/* Зелений для максимального значення */
 	font-weight: bold;
 }
 
-.dice-dropped {
+.dice_dropped {
 	opacity: 0.4;
 	text-decoration: line-through;
 }

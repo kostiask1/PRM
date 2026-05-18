@@ -34,8 +34,8 @@ export default function SceneCardHeader({
 					}}
 					title={encounterName}
 				>
-					<Icon name="swords" size={18} className="SceneCard__encounter-icon" />
-					<span className="SceneCard__encounter-name">{renderMentionText(encounterName)}</span>
+					<Icon name="swords" size={18} className="SceneCard__encounter_icon" />
+					<span className="SceneCard__encounter_name">{renderMentionText(encounterName)}</span>
 				</Button>
 				<Button
 					variant="danger"

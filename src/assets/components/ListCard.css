@@ -21,7 +21,7 @@
 	background: color-mix(in srgb, var(--bg), transparent 30%);
 }
 
-.ListCard--active {
+.ListCard__active {
 	border-color: var(--accent) !important;
 	background: color-mix(in srgb, var(--accent), transparent 90%) !important;
 	box-shadow: 0 0 20px color-mix(in srgb, var(--accent), transparent 92%) !important;

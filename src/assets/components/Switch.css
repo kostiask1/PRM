@@ -56,17 +56,17 @@
 	border-color: color-mix(in srgb, var(--accent), transparent 45%);
 }
 
-.Switch.is-checked .Switch__track {
+.Switch.is_checked .Switch__track {
 	background: color-mix(in srgb, var(--accent), var(--bg) 30%);
 	border-color: color-mix(in srgb, var(--accent), transparent 20%);
 }
 
-.Switch.is-checked .Switch__thumb {
+.Switch.is_checked .Switch__thumb {
 	transform: translateX(18px);
 	background: #fff;
 }
 
-.Switch.is-disabled {
+.Switch.is_disabled {
 	opacity: 0.55;
 	cursor: not-allowed;
 }

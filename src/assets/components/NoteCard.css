@@ -1,4 +1,4 @@
-.note-card-simple {
+.note_card_simple {
     display: flex;
     flex-direction: column;
     background: color-mix(in srgb, var(--text-bright), transparent 97%);
@@ -8,11 +8,11 @@
     cursor: grab;
 }
 
-.note-card-simple:hover {
+.note_card_simple:hover {
     border-color: color-mix(in srgb, var(--text-bright), transparent 80%);
 }
 
-.note-card-simple__header {
+.note_card_simple__header {
     display: flex;
     align-items: center;
     gap: var(--space-2);
@@ -21,7 +21,7 @@
     background: color-mix(in srgb, var(--text-bright), transparent 98%);
 }
 
-.note-card-simple__simpleActions {
+.note_card_simple__simpleActions {
     position: absolute;
     top: 0;
     right: 0;
@@ -33,83 +33,83 @@
     z-index: 3;
 }
 
-.note-card-simple--simplified .note-card-simple__simpleActions {
+.note_card_simple__simplified .note_card_simple__simpleActions {
     opacity: 0;
     transition: opacity 0.2s ease;
 }
 
-.note-card-simple--simplified:hover .note-card-simple__simpleActions {
+.note_card_simple__simplified:hover .note_card_simple__simpleActions {
     opacity: 1;
 }
 
-.note-card-simple.is-collapsed .note-card-simple__simpleActions {
+.note_card_simple.is_collapsed .note_card_simple__simpleActions {
     position: static;
 }
 
-.note-card-simple__actionBtn.Button {
+.note_card_simple__actionBtn.Button {
     height: var(--size-7);
     width: var(--size-7);
     min-height: var(--size-7);
     border-radius: 7px;
 }
 
-.note-card-simple__actionBtn--danger.Button {
+.note_card_simple__actionBtn__danger.Button {
     color: var(--danger);
     border-color: color-mix(in srgb, var(--danger), transparent 70%);
     padding: 0;
 }
 
-.note-card-simple--simplified {
+.note_card_simple__simplified {
     position: relative;
 }
 
-.note-card-simple--simplified .note-card-simple__content .MarkdownView,
-.note-card-simple--simplified .note-card-simple__content .Input {
+.note_card_simple__simplified .note_card_simple__content .MarkdownView,
+.note_card_simple__simplified .note_card_simple__content .Input {
     border-top-left-radius: var(--radius-sm);
     border-top-right-radius: var(--radius-sm);
 }
 
-.note-card-simple__header .Button {
+.note_card_simple__header .Button {
     height: var(--size-7);
     width: var(--size-7);
     padding: 0;
 }
 
-.note-card-simple__title {
+.note_card_simple__title {
     flex: 1;
     font-weight: 600;
     font-size: 0.95rem;
 }
 
-.note-card-simple__title .MarkdownView,
-.note-card-simple__title .Input {
+.note_card_simple__title .MarkdownView,
+.note_card_simple__title .Input {
     padding-right: 46px;
 }
 
-.note-card-simple__title .Input {
+.note_card_simple__title .Input {
     background: transparent;
     border: none;
     padding: 0;
     font-weight: inherit;
 }
 
-.note-card-simple__content {
+.note_card_simple__content {
     flex-grow: 1;
     padding: 0;
 }
 
-.note-card-simple__content .EditableField {
+.note_card_simple__content .EditableField {
     height: 100%;
 }
 
-.note-card-simple__content .MarkdownView,
-.note-card-simple__content .Input {
+.note_card_simple__content .MarkdownView,
+.note_card_simple__content .Input {
     border-top-left-radius: 0;
     border-top-right-radius: 0;
     height: 100%;
 }
 
-.note-card-simple.is-collapsed {
+.note_card_simple.is_collapsed {
     opacity: 0.8;
     display: flex;
     flex-direction: row;

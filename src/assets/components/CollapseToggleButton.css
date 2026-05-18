@@ -4,27 +4,27 @@
 	transition: transform 0.2s ease !important;
 }
 
-.CollapseToggleButton--sm {
+.CollapseToggleButton__sm {
 	width: var(--size-6);
 	min-width: var(--size-6);
 	height: var(--size-6);
 	min-height: var(--size-6);
 }
 
-.CollapseToggleButton--md {
+.CollapseToggleButton__md {
 	width: var(--size-8);
 	min-width: var(--size-8);
 	height: var(--size-8);
 	min-height: var(--size-8);
 }
 
-.CollapseToggleButton--lg {
+.CollapseToggleButton__lg {
 	width: var(--size-9);
 	min-width: var(--size-9);
 	height: var(--size-9);
 	min-height: var(--size-9);
 }
 
-.CollapseToggleButton.is-rotated {
+.CollapseToggleButton.is_rotated {
 	transform: rotate(-90deg);
 }

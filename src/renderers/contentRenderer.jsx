@@ -44,7 +44,7 @@ export const renderRecursiveContent = (
 				<ul
 					key={content.name || Math.random()}
 					className={
-						content.style === "list-hang-notitle" ? "list-hang-notitle" : ""
+						content.style === "list_hang_notitle" ? "list_hang_notitle" : ""
 					}
 				>
 					{content.items.map((item, idx) => {
@@ -71,7 +71,7 @@ export const renderRecursiveContent = (
 			content.entries
 		) {
 			return (
-				<div key={content.name || Math.random()} className="parser-section">
+				<div key={content.name || Math.random()} className="parser_section">
 					{content.name && (
 						<strong>{highlightText(content.name, highlightQuery)}. </strong>
 					)}

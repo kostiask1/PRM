@@ -116,7 +116,7 @@
 	gap: var(--space-1);
 }
 
-.CampaignView__sessions .session-card__actions {
+.CampaignView__sessions .session_card__actions {
 	padding: var(--space-3) var(--space-4) var(--space-3) 0;
 	display: flex;
 	align-items: center;
@@ -148,7 +148,7 @@
 	gap: var(--space-6);
 }
 
-.section-title-group {
+.section_title_group {
 	display: flex;
 	align-items: center;
 	gap: var(--space-2);
@@ -156,7 +156,7 @@
 	cursor: pointer;
 }
 
-.section-row .Button {
+.section_row .Button {
 	white-space: nowrap;
 }
 
@@ -174,7 +174,7 @@
 	gap: var(--space-3);
 }
 
-.CampaignView__notes .note-card-simple {
+.CampaignView__notes .note_card_simple {
 	height: 100%;
 }
 
@@ -215,7 +215,7 @@
 	user-select: auto;
 }
 
-.section-row {
+.section_row {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;

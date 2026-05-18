@@ -25,7 +25,7 @@ export default function EntityModal({ modalState, campaignSlug, onClose }) {
 				.trim()}
 			type={modalState.type === "locations" ? "location" : "character"}
 			className={
-				modalState.type === "locations" ? "EntityLinkModal--location" : ""
+				modalState.type === "locations" ? "EntityLinkModal__location" : ""
 			}
 			showFooter={false}
 			onConfirm={onClose}

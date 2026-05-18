@@ -36,14 +36,14 @@
 	min-width: 0;
 }
 
-.Spells__detailed-search-btn {
+.Spells__detailed_search_btn {
 	width: var(--size-9);
 	height: var(--size-9);
 	padding: 0 !important;
 	flex: 0 0 auto;
 }
 
-.Spells__sort-btn {
+.Spells__sort_btn {
 	background: color-mix(in srgb, var(--text-bright), transparent 95%);
 	border: 1px solid color-mix(in srgb, var(--text-bright), transparent 90%);
 	color: var(--muted);
@@ -58,7 +58,7 @@
 	transition: all 0.2s;
 }
 
-.Spells__sort-btn.is-active {
+.Spells__sort_btn.is_active {
 	color: var(--accent);
 	border-color: var(--accent);
 }

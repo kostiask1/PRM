@@ -369,7 +369,7 @@ function EncounterView(props) {
 						className="SessionView__backBtn"
 					/>
 					<Tooltip content={lang.t("Click to rename")}>
-						<h2 className="editable-title" onClick={view.handleRename}>
+						<h2 className="editable_title" onClick={view.handleRename}>
 							{renderMentionText(view.encounter.name)}
 						</h2>
 					</Tooltip>
@@ -410,7 +410,7 @@ function EncounterView(props) {
 										</span>
 									</Tooltip>
 								</div>
-								<div className="EncounterViewMetric EncounterViewMetric--accent">
+								<div className="EncounterViewMetric EncounterViewMetric__accent">
 									<Tooltip
 										content={weightedInitiativeTooltip}
 										className="EncounterViewMetric__tooltip"
@@ -537,10 +537,10 @@ function EncounterView(props) {
 								return (
 									<div
 										className={classNames("EncounterMonsterRow", {
-											"EncounterMonsterRow--character": isCharacter,
-											"is-active":
+											"EncounterMonsterRow__character": isCharacter,
+											"is_active":
 												view.selectedInstance?.instanceId === m.instanceId,
-											"is-dragging": isDragging,
+											"is_dragging": isDragging,
 										})}
 										onClick={() => handleSelectMonster(m)}
 									>
@@ -552,7 +552,7 @@ function EncounterView(props) {
 											) : (
 												<Tooltip content={lang.t("Click to rename")}>
 													<div
-														className="EncounterMonsterRow__name editable-title"
+														className="EncounterMonsterRow__name editable_title"
 														onClick={(e) => {
 															e.stopPropagation();
 															view.handleRenameMonster(m.instanceId, m.name);
@@ -668,8 +668,8 @@ function EncounterView(props) {
 
 					<div
 						className={classNames("EncounterView__detailView", {
-							"EncounterView__detailView--grid": displayMode === "grid",
-							"EncounterView__detailView--single": displayMode !== "grid",
+							"EncounterView__detailView__grid": displayMode === "grid",
+							"EncounterView__detailView__single": displayMode !== "grid",
 						})}
 					>
 						{displayMode === "grid" ? (
@@ -683,9 +683,9 @@ function EncounterView(props) {
 											key={monster.instanceId}
 											ref={(node) => setGridItemRef(monster.instanceId, node)}
 											className={classNames("EncounterView__gridItem", {
-												"is-selected":
+												"is_selected":
 													selectedGridInstanceId === monster.instanceId,
-												"is-focused": focusedMonsterId === monster.instanceId,
+												"is_focused": focusedMonsterId === monster.instanceId,
 											})}
 										>
 											<MonsterStatBlock
