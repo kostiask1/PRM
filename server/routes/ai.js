@@ -1570,6 +1570,13 @@ function buildAiOptionsSummary(options) {
 	];
 	if (options.modelName) parts.push(`model: ${options.modelName}`);
 	if (options.sceneId) parts.push(`scene: ${options.sceneId}`);
+	if (options.imageTarget) {
+		parts.push(
+			`image-target: ${[options.imageTarget.type, options.imageTarget.name]
+				.filter(Boolean)
+				.join(": ")}`,
+		);
+	}
 	return parts.join("; ");
 }
 
@@ -1642,6 +1649,7 @@ function buildAiRequestSnapshot({
 	userInstructions,
 	path,
 	sceneId,
+	imageTarget,
 	parseAIResponse,
 	shouldParseAIResponse,
 	generateEncounters,
@@ -1666,6 +1674,13 @@ function buildAiRequestSnapshot({
 		encounterGeneration: Boolean(generateEncounters),
 		contextEnabled: Boolean(contextConfig),
 		sceneId: sceneId || null,
+		imageTarget:
+			imageTarget && typeof imageTarget === "object"
+				? {
+						type: asText(imageTarget.type),
+						name: asText(imageTarget.name),
+					}
+				: null,
 	};
 	const context = buildAiContextSummary(contextConfig, contextData);
 
@@ -2149,6 +2164,7 @@ router.post("/generate", async (req, res, next) => {
 			userInstructions,
 			path,
 			sceneId,
+			imageTarget,
 			parseAIResponse,
 			generateCharacters,
 			generateNpcs,
@@ -2278,6 +2294,7 @@ router.post("/generate", async (req, res, next) => {
 			modelName,
 			encounterId: path.encounter,
 			sceneId,
+			imageTarget,
 			parseAIResponse: shouldParseAIResponse,
 			contextData,
 			generateCharacters: characterGenerationEnabled,
@@ -2357,6 +2374,7 @@ router.post("/generate", async (req, res, next) => {
 			userInstructions,
 			path,
 			sceneId,
+			imageTarget,
 			parseAIResponse,
 			shouldParseAIResponse,
 			generateCharacters: characterGenerationEnabled,

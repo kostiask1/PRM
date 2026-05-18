@@ -147,6 +147,37 @@ function getCharacterContextKey(character) {
 	).trim();
 }
 
+function getNoteTextForImagePrompt(note) {
+	if (!note) return "";
+	if (typeof note === "string") return note;
+	if (typeof note !== "object" || note._aiIgnored) return "";
+	return [note.title, note.text].filter(Boolean).join("\n").trim();
+}
+
+function getEntityNotesForImagePrompt(entity) {
+	return (entity?.notes || [])
+		.map(getNoteTextForImagePrompt)
+		.filter(Boolean)
+		.slice(0, 8);
+}
+
+function getSceneImagePromptTitle(scene, index) {
+	const summary = String(scene?.texts?.summary || scene?.summary || "").trim();
+	return summary || lang.t("Scene {number}", { number: index + 1 });
+}
+
+function getSceneImagePromptDescription(scene) {
+	const texts = scene?.texts || {};
+	return [texts.summary, texts.goal, texts.stakes, texts.location]
+		.filter(Boolean)
+		.join(" ");
+}
+
+function getImagePromptPreview(text) {
+	const value = String(text || "").replace(/\s+/g, " ").trim();
+	return value.length > 120 ? `${value.slice(0, 117)}...` : value;
+}
+
 function getContextListConfig(value) {
 	if (value && typeof value === "object" && !Array.isArray(value)) {
 		return {
@@ -406,7 +437,11 @@ function buildDiffResources(entry) {
 	}));
 }
 
-export default function AiAssistantPanel({ sessionData, onInsertResult }) {
+export default function AiAssistantPanel({
+	sessionName,
+	sessionData,
+	onInsertResult,
+}) {
 	const dispatch = useAppDispatch();
 	const currentLanguage = useAppSelector(
 		(state) => state.localization.language,
@@ -425,7 +460,9 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	const [isSavingApiKey, setIsSavingApiKey] = useState(false);
 	const [userInstructions, setUserInstructions] = useState("");
 	const [notification, setNotification] = useState(null);
-	const [showSceneSelector, setShowSceneSelector] = useState(false);
+	const [isImagePromptPickerOpen, setIsImagePromptPickerOpen] = useState(false);
+	const [imagePromptSessions, setImagePromptSessions] = useState([]);
+	const [isImagePromptDataLoading, setIsImagePromptDataLoading] = useState(false);
 	const [parseAIResponse, setParseAIResponse] = useState(isEncounter);
 	const [generateCharacters, setGenerateCharacters] = useState(true);
 	const [generateNpcs, setGenerateNpcs] = useState(true);
@@ -524,13 +561,18 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	};
 
 	useEffect(() => {
-		if (isContextModalOpen && sessionsList.length === 0) {
+		if ((isContextModalOpen || isImagePromptPickerOpen) && sessionsList.length === 0) {
 			api.listSessions(initialRoute.campaign).then(setSessionsList);
 		}
-	}, [isContextModalOpen, initialRoute.campaign, sessionsList.length]);
+	}, [
+		isContextModalOpen,
+		isImagePromptPickerOpen,
+		initialRoute.campaign,
+		sessionsList.length,
+	]);
 
 	useEffect(() => {
-		if (!isContextModalOpen) return;
+		if (!isContextModalOpen && !isImagePromptPickerOpen) return;
 
 		let cancelled = false;
 		const loadCampaignEntities = async (type, label) => {
@@ -559,7 +601,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 		return () => {
 			cancelled = true;
 		};
-	}, [isContextModalOpen, initialRoute.campaign]);
+	}, [isContextModalOpen, isImagePromptPickerOpen, initialRoute.campaign]);
 
 	useEffect(() => {
 		if (charactersList.length === 0) return;
@@ -639,6 +681,51 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 				console.error("Failed to load AI response history", err);
 			});
 	}, [isOpen, initialRoute.campaign]);
+
+	useEffect(() => {
+		if (!isImagePromptPickerOpen || !isCampaign || !initialRoute.campaign) {
+			return;
+		}
+
+		let cancelled = false;
+		setIsImagePromptDataLoading(true);
+		(async () => {
+			try {
+				const sessions =
+					sessionsList.length > 0
+						? sessionsList
+						: await api.listSessions(initialRoute.campaign);
+				if (cancelled) return;
+				if (sessionsList.length === 0) {
+					setSessionsList(sessions);
+				}
+				const fullSessions = await Promise.all(
+					sessions.map((session) =>
+						api
+							.getSession(initialRoute.campaign, session.fileName)
+							.catch((err) => {
+								console.error("Failed to load session for image prompt", err);
+								return null;
+							}),
+					),
+				);
+				if (!cancelled) {
+					setImagePromptSessions(fullSessions.filter(Boolean));
+				}
+			} finally {
+				if (!cancelled) setIsImagePromptDataLoading(false);
+			}
+		})();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [
+		isImagePromptPickerOpen,
+		isCampaign,
+		initialRoute.campaign,
+		sessionsList,
+	]);
 
 	const deleteResponseHistoryEntry = async (entry) => {
 		const confirmed = await dispatch(
@@ -930,7 +1017,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	const generate = async (
 		type = null,
 		targetSceneId = null,
-		{ forceParseAIResponse = null } = {},
+		{ forceParseAIResponse = null, imageTarget = null } = {},
 	) => {
 		cancelGenerateRequest();
 		const controller = new AbortController();
@@ -962,6 +1049,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 					userInstructions,
 					path: initialRoute,
 					sceneId: targetSceneId,
+					imageTarget,
 					parseAIResponse: shouldParseResponse,
 					generateCharacters: !isEncounter && generateCharacters,
 					generateNpcs: !isEncounter && generateNpcs,
@@ -1020,7 +1108,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 				if (shouldParseResponse || isEncounter) {
 					setIsOpen(false);
 					setIsContextModalOpen(false);
-					setShowSceneSelector(false);
+					setIsImagePromptPickerOpen(false);
 				}
 			}
 		} catch (err) {
@@ -1098,6 +1186,143 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	const isResponseParsingLocked = generateEncounters;
 	const isEntityScopeVisible = !isCampaign && !isEncounter;
 	const entityScopeIsSession = entityScope !== "campaign";
+	const imagePromptNpcs = isCampaign
+		? sessionData?.npcs?.length
+			? sessionData.npcs
+			: npcsList
+		: sessionData?.npcs || [];
+	const imagePromptLocations = isCampaign
+		? sessionData?.locations?.length
+			? sessionData.locations
+			: locationsList
+		: sessionData?.locations || [];
+	const imagePromptScenes = isCampaign
+		? imagePromptSessions.flatMap((session) =>
+				(session.data?.scenes || []).map((scene, index) => ({
+					...scene,
+					_imagePromptSessionName: session.name,
+					_imagePromptSessionFileName: session.fileName,
+					_imagePromptIndex: index,
+					_imagePromptEncounters: session.data?.encounters || [],
+				})),
+			)
+		: (sessionData?.scenes || []).map((scene, index) => ({
+				...scene,
+				_imagePromptSessionName: sessionName || sessionData?.name,
+				_imagePromptSessionFileName: initialRoute.session,
+				_imagePromptIndex: index,
+				_imagePromptEncounters: sessionData?.encounters || [],
+			}));
+
+	const getSceneEncounterForImagePrompt = (scene) => {
+		const encounters = Array.isArray(scene?._imagePromptEncounters)
+			? scene._imagePromptEncounters
+			: [];
+		if (scene?.encounterId) {
+			return encounters.find(
+				(encounter) => String(encounter.id) === String(scene.encounterId),
+			);
+		}
+		if (Number.isInteger(scene?.encounterIndex)) {
+			return encounters[scene.encounterIndex];
+		}
+		return null;
+	};
+
+	const generateImagePromptForTarget = (target) => {
+		setIsImagePromptPickerOpen(false);
+		generate("image", target.type === "scene" ? target.id || null : null, {
+			imageTarget: target,
+		});
+	};
+
+	const buildNpcImageTarget = (npc) => ({
+		type: "npc",
+		id: npc?.id || npc?.slug || "",
+		name: getCharacterDisplayName(npc),
+		race: npc?.race || "",
+		class: npc?.class || "",
+		level: npc?.level ?? "",
+		description: npc?.description || "",
+		motivation: npc?.motivation || "",
+		trait: npc?.trait || "",
+		notes: getEntityNotesForImagePrompt(npc),
+		scope: isCampaign ? "campaign" : "session",
+	});
+
+	const buildLocationImageTarget = (location) => ({
+		type: "location",
+		id: location?.id || location?.slug || "",
+		name: getLocationDisplayName(location),
+		description: location?.description || "",
+		notes: getEntityNotesForImagePrompt(location),
+		scope: isCampaign ? "campaign" : "session",
+	});
+
+	const buildSceneImageTarget = (scene) => {
+		const encounter = getSceneEncounterForImagePrompt(scene);
+		return {
+			type: "scene",
+			id: scene?.id || "",
+			name: getSceneImagePromptTitle(scene, scene?._imagePromptIndex || 0),
+			sessionName: scene?._imagePromptSessionName || "",
+			sessionFileName: scene?._imagePromptSessionFileName || "",
+			texts: scene?.texts || {},
+			notes: getEntityNotesForImagePrompt(scene),
+			npcs: scene?.npcs || [],
+			encounter: encounter
+				? {
+						name: encounter.name || "",
+						monsters: (encounter.monsters || []).map(
+							(monster) => monster.name || monster.monsterName,
+						),
+					}
+				: null,
+		};
+	};
+
+	const renderImagePromptColumn = ({
+		title,
+		items,
+		emptyLabel,
+		getName,
+		getDescription,
+		getKey = null,
+		onSelect,
+	}) => (
+		<section className="AiAssistant__image_prompt_column">
+			<h4>{lang.t(title)}</h4>
+			<div className="AiAssistant__image_prompt_list">
+				{items.length > 0 ? (
+					items.map((item, index) => {
+						const key =
+							getKey?.(item, index) ||
+							item?.id ||
+							item?.slug ||
+							`${title}-${index}`;
+						const description = getImagePromptPreview(getDescription(item, index));
+						return (
+							<button
+								key={key}
+								type="button"
+								className="AiAssistant__image_prompt_item"
+								onClick={() => onSelect(item, index)}
+								disabled={loading}
+								title={lang.t("Generate visual prompt for this item")}
+							>
+								<strong>{getName(item, index)}</strong>
+								{description && <span>{description}</span>}
+							</button>
+						);
+					})
+				) : (
+					<div className="muted AiAssistant__empty_context">
+						{lang.t(emptyLabel)}
+					</div>
+				)}
+			</div>
+		</section>
+	);
 
 	const renderCampaignEntityContext = ({
 		contextKey,
@@ -1269,14 +1494,14 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 									{lang.t("Context")}
 								</Button>
 							</div>
-							{!isCampaign && (
+							{!isEncounter && (
 								<Button
 									variant="ghost"
 									size={Button.SIZES.SMALL}
 									icon="image"
-									onClick={() => setShowSceneSelector(true)}
-									disabled={loading || !sessionData.scenes?.length}
-									title={lang.t("Generate visual prompt for a scene")}
+									onClick={() => setIsImagePromptPickerOpen(true)}
+									disabled={loading}
+									title={lang.t("Choose an element to generate a prompt")}
 								>
 									{lang.t("Image prompt")}
 								</Button>
@@ -1621,31 +1846,71 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 							</Modal>
 						)}
 
-						{showSceneSelector && (
+						{isImagePromptPickerOpen && (
 							<Modal
-								title={lang.t("Choose a scene to generate a prompt")}
-								onCancel={() => setShowSceneSelector(false)}
+								title={lang.t("Choose an element to generate a prompt")}
+								onCancel={() => setIsImagePromptPickerOpen(false)}
 								showFooter={false}
+								className="AiAssistant__image_prompt_modal"
 							>
-								<div className="AiAssistant__scene_list">
-									{(sessionData.scenes || []).map((scene, idx) => (
-										<div
-											key={scene.id}
-											className="AiAssistant__scene_option"
-											onClick={() => {
-												setShowSceneSelector(false);
-												generate("image", scene.id);
-											}}
-										>
-											<strong>
-												{lang.t("Scene {number}", { number: idx + 1 })}
-											</strong>
-											:{" "}
-											{scene.texts?.summary?.slice(0, 60) ||
-												lang.t("No description")}
-											...
+								<div className="AiAssistant__image_prompt_picker">
+									{isImagePromptDataLoading && (
+										<div className="AiAssistant__loading">
+											{lang.t("Loading...")}
 										</div>
-									))}
+									)}
+									{renderImagePromptColumn({
+										title: "NPCs",
+										items: imagePromptNpcs,
+										emptyLabel: "No NPCs yet.",
+										getName: getCharacterDisplayName,
+										getDescription: (npc) =>
+											npc?.description || npc?.trait || npc?.motivation || "",
+										onSelect: (npc) =>
+											generateImagePromptForTarget(buildNpcImageTarget(npc)),
+									})}
+									{renderImagePromptColumn({
+										title: "Locations/Factions",
+										items: imagePromptLocations,
+										emptyLabel: "No locations/factions yet.",
+										getName: getLocationDisplayName,
+										getDescription: (location) => location?.description || "",
+										onSelect: (location) =>
+											generateImagePromptForTarget(
+												buildLocationImageTarget(location),
+											),
+									})}
+									{!isCampaign &&
+										renderImagePromptColumn({
+											title: "Scenes",
+											items: imagePromptScenes,
+											emptyLabel: "No scenes found.",
+											getKey: (scene, index) =>
+												[
+													scene?._imagePromptSessionFileName,
+													scene?.id,
+													index,
+												]
+													.filter(Boolean)
+													.join(":"),
+											getName: (scene, index) =>
+												getSceneImagePromptTitle(
+													scene,
+													scene?._imagePromptIndex ?? index,
+												),
+											getDescription: (scene) => {
+												const sessionName = scene?._imagePromptSessionName;
+												const description =
+													getSceneImagePromptDescription(scene);
+												return [sessionName, description]
+													.filter(Boolean)
+													.join(" - ");
+											},
+											onSelect: (scene) =>
+												generateImagePromptForTarget(
+													buildSceneImageTarget(scene),
+												),
+										})}
 								</div>
 							</Modal>
 						)}
