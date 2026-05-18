@@ -4,6 +4,10 @@
 	width: 95%;
 }
 
+.AiAssistant__response_overlay {
+	z-index: 1010;
+}
+
 .AiAssistant__toggle {
 	position: fixed;
 	bottom: 85px;

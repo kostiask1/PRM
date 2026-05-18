@@ -75,6 +75,7 @@ function Modal({
 	showFooter = true,
 	confirmLabel,
 	className = "",
+	overlayClassName = "",
 	checkboxLabel,
 	checkboxDefaultChecked = false,
 	getConfirmValue,
@@ -146,7 +147,7 @@ function Modal({
 
 	return createPortal(
 		<div
-			className="Modal__overlay"
+			className={classNames("Modal__overlay", overlayClassName)}
 			onClick={(event) => {
 				if (event.target !== event.currentTarget) return;
 				handleCloseWithEvent(event);

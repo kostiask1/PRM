@@ -1920,6 +1920,7 @@ export default function AiAssistantPanel({
 								title={lang.t("Response")}
 								onCancel={closeGeneratedPrompt}
 								showFooter={false}
+								overlayClassName="AiAssistant__response_overlay"
 							>
 								<div className="AiAssistant__prompt_result_wrap">
 									<div className="AiAssistant__prompt_result_actions">
