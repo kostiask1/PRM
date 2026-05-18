@@ -1438,7 +1438,6 @@ export default function AiAssistantPanel({
 								: lang.t("AI Session Assistant")
 					}
 					onCancel={() => {
-						cancelGenerateRequest();
 						setIsOpen(false);
 					}}
 					showFooter={false}
