@@ -387,7 +387,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 						/>
 						<Button
 							variant={isDetailedSearch ? "primary" : "ghost"}
-							icon="search"
+							icon="search-detailed"
 							onClick={() => setIsDetailedSearch((value) => !value)}
 							title={lang.t("Detailed search")}
 							className="DetailedSearchButton Bestiary__detailed_search_btn"
