@@ -248,6 +248,8 @@
 .character_card__mini_portrait {
     width: var(--size-10);
     height: var(--size-10);
+    border-radius: var(--radius-xxs);
+    overflow: hidden;
 }
 
 .character_card__mini_portrait img {
