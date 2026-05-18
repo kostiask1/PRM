@@ -2195,6 +2195,7 @@ router.post("/generate", async (req, res, next) => {
 				? "session"
 				: "campaign";
 		const shouldParseAIResponse =
+			type !== "image" &&
 			Boolean(parseAIResponse || encounterGenerationEnabled) &&
 			(!path.encounter || encounterGenerationEnabled);
 		const settings = await storage.readSettings();

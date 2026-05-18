@@ -1054,7 +1054,8 @@ export default function AiAssistantPanel({
 					generateCharacters: !isEncounter && generateCharacters,
 					generateNpcs: !isEncounter && generateNpcs,
 					generateLocations: !isEncounter && generateLocations,
-					generateEncounters: !isCampaign && generateEncounters,
+					generateEncounters:
+						type === "image" ? false : !isCampaign && generateEncounters,
 					entityScope: isCampaign ? "campaign" : entityScope,
 					contextConfig: useContext ? configToSend : null,
 					language: currentLanguage,
