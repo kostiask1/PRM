@@ -170,7 +170,7 @@ router.post("/:slug/entities/:type", async (req, res, next) => {
 					collapsed: false,
 					isNotesCollapsed: false,
 					...req.body,
-					id: storage.createId(),
+					id: req.body.id || storage.createId(),
 					name: req.body.name || name,
 				}
 			: {
@@ -183,7 +183,7 @@ router.post("/:slug/entities/:type", async (req, res, next) => {
 					trait: req.body.trait || "",
 					notes: [],
 					...req.body,
-					id: storage.createId(),
+					id: req.body.id || storage.createId(),
 				};
 		const saved = await storage.writeEntity(
 			campaignSlug,

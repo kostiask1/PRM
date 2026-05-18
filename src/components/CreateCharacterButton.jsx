@@ -35,6 +35,7 @@ export default function CreateCharacterButton({
 	buttonClassName,
 	icon = "plus",
 	strokeWidth = 2.5,
+	onCreate = null,
 }) {
 	const dispatch = useAppDispatch();
 	const [isOpen, setIsOpen] = useState(false);
@@ -88,15 +89,19 @@ export default function CreateCharacterButton({
 				Object.entries(draft || {}).filter(([key]) => !key.startsWith("_")),
 			),
 		};
-		delete payload.id;
-		delete payload.slug;
-		delete payload.createdAt;
-		delete payload.updatedAt;
 
 		setIsSubmitting(true);
 		try {
-			await api.createEntity(campaignSlug, entityType, payload);
-			dispatch(refreshEntitiesAction());
+			if (typeof onCreate === "function") {
+				await onCreate(payload);
+			} else {
+				delete payload.id;
+				delete payload.slug;
+				delete payload.createdAt;
+				delete payload.updatedAt;
+				await api.createEntity(campaignSlug, entityType, payload);
+				dispatch(refreshEntitiesAction());
+			}
 			setIsOpen(false);
 		} catch (error) {
 			console.error("Failed to create entity from modal", error);

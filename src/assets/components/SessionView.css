@@ -102,6 +102,60 @@
 	max-width: 100%;
 }
 
+.SessionView__sectionActions {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	flex-wrap: wrap;
+	justify-content: flex-end;
+}
+
+.SessionView__characters,
+.SessionView__locations {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: var(--space-3);
+}
+
+.SessionView__characters>div {
+	flex: 1 1 650px;
+	max-width: 100%;
+	user-select: auto;
+}
+
+.SessionView__locations>div {
+	flex: 1 1 800px;
+	max-width: 100%;
+	user-select: auto;
+}
+
+.SessionView__emptySection {
+	padding: var(--space-2);
+}
+
+.SessionView__scopeImportList {
+	display: grid;
+	gap: var(--space-2);
+	min-width: min(520px, 80vw);
+}
+
+.SessionView__scopeImportItem {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-3);
+	padding: var(--space-2);
+	border: 1px solid color-mix(in srgb, var(--border), transparent 40%);
+	border-radius: var(--radius-sm);
+	background: color-mix(in srgb, var(--text-bright), transparent 98%);
+}
+
+.SessionView__scopeImportItem>span {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
 
 .SessionView__titleRow {
 	display: flex;

@@ -197,9 +197,18 @@ function getHistoryOptionsSummary(entry) {
 		`${lang.t("Create characters")}: ${getOnOffLabel(options.characterGeneration)}`,
 		`${lang.t("Create NPCs")}: ${getOnOffLabel(options.npcGeneration)}`,
 		`${lang.t("Create locations/factions")}: ${getOnOffLabel(options.locationGeneration)}`,
+		options.entityScope
+			? `${lang.t("AI entity scope")}: ${lang.t(
+					options.entityScope === "campaign"
+						? "Campaign scope"
+						: "Session scope",
+				)}`
+			: null,
 		`${lang.t("Encounter generation")}: ${getOnOffLabel(options.encounterGeneration)}`,
 		`${lang.t("Context")}: ${getOnOffLabel(options.contextEnabled)}`,
-	].join("; ");
+	]
+		.filter(Boolean)
+		.join("; ");
 }
 
 function getHistoryContextSummary(entry) {
@@ -422,6 +431,9 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	const [generateNpcs, setGenerateNpcs] = useState(true);
 	const [generateLocations, setGenerateLocations] = useState(true);
 	const [generateEncounters, setGenerateEncounters] = useState(!isCampaign);
+	const [entityScope, setEntityScope] = useState(
+		isCampaign ? "campaign" : "session",
+	);
 	const [aiModels, setAiModels] = useState([]);
 	const [selectedModel, setSelectedModel] = useState("");
 	const [sessionsList, setSessionsList] = useState([]);
@@ -955,6 +967,7 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 					generateNpcs: !isEncounter && generateNpcs,
 					generateLocations: !isEncounter && generateLocations,
 					generateEncounters: !isCampaign && generateEncounters,
+					entityScope: isCampaign ? "campaign" : entityScope,
 					contextConfig: useContext ? configToSend : null,
 					language: currentLanguage,
 				},
@@ -1083,6 +1096,8 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 	const selectedResponseDiffResources = buildDiffResources(selectedResponseEntry);
 	const selectedResponseHasChanges = selectedResponseDiffResources.length > 0;
 	const isResponseParsingLocked = generateEncounters;
+	const isEntityScopeVisible = !isCampaign && !isEncounter;
+	const entityScopeIsSession = entityScope !== "campaign";
 
 	const renderCampaignEntityContext = ({
 		contextKey,
@@ -1298,6 +1313,32 @@ export default function AiAssistantPanel({ sessionData, onInsertResult }) {
 									>
 										{lang.t("Create locations/factions")}
 									</Button>
+									{isEntityScopeVisible && (
+										<Button
+											variant={entityScopeIsSession ? "primary" : "ghost"}
+											size={Button.SIZES.SMALL}
+											icon={entityScopeIsSession ? "file" : "database"}
+											onClick={() =>
+												setEntityScope((prev) =>
+													prev === "campaign" ? "session" : "campaign",
+												)
+											}
+											disabled={loading}
+											title={
+												entityScopeIsSession
+													? lang.t(
+															"AI will create NPCs and locations inside this session",
+														)
+													: lang.t(
+															"AI will create NPCs and locations in the campaign",
+														)
+											}
+										>
+											{entityScopeIsSession
+												? lang.t("Session scope")
+												: lang.t("Campaign scope")}
+										</Button>
+									)}
 								</>
 							)}
 							<Button

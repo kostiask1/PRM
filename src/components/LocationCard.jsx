@@ -26,6 +26,7 @@ export default function LocationCard({
 	viewMode = "card",
 	showDeleteButton = true,
 	showHeader = true,
+	headerActions = null,
 }) {
 	const locationModel = new LocationCardModel(location);
 	const editingStartNameRef = useRef(
@@ -134,6 +135,14 @@ export default function LocationCard({
 							</span>
 						)}
 					</div>
+					{headerActions && (
+						<div
+							className="location_card__actions"
+							onClick={(event) => event.stopPropagation()}
+						>
+							{headerActions}
+						</div>
+					)}
 					{showDeleteButton && (
 						<Button
 							variant="danger"

@@ -344,6 +344,35 @@ function shouldAllowFinalStateDelete(userInstructions) {
 	].some((hint) => text.includes(hint));
 }
 
+function shouldUseCampaignEntityScope(userInstructions) {
+	const text = asText(userInstructions).toLowerCase();
+	if (!text) return false;
+	if (
+		[
+			"не в кампан",
+			"не у кампан",
+			"не до кампан",
+			"not campaign",
+			"session only",
+			"only session",
+		].some((hint) => text.includes(hint))
+	) {
+		return false;
+	}
+	return [
+		"в кампан",
+		"у кампан",
+		"до кампан",
+		"для кампан",
+		"глобальн",
+		"campaign scope",
+		"campaign-wide",
+		"to campaign",
+		"in campaign",
+		"global",
+	].some((hint) => text.includes(hint));
+}
+
 async function upsertGeneratedEntities(
 	campaignSlug,
 	type,
@@ -565,6 +594,117 @@ async function upsertGeneratedLocations(
 			await storage.deleteEntity(campaignSlug, "locations", location.slug);
 		}
 	}
+}
+
+function applyGeneratedSessionEntities(
+	existingEntities,
+	type,
+	generatedEntities,
+	{
+		contextEntities = null,
+		allowFinalStateDelete = false,
+		simplifiedNotes = false,
+	} = {},
+) {
+	if (!Array.isArray(generatedEntities)) {
+		return Array.isArray(existingEntities) ? existingEntities : [];
+	}
+
+	const existing = Array.isArray(existingEntities) ? existingEntities : [];
+	const nameKeyFn = type === "locations" ? locationNameKey : entityNameKey;
+	const normalizeFn = type === "locations" ? normalizeLocation : normalizeCharacter;
+	const indexes = buildEntityIndexes(existing, nameKeyFn);
+	const scope = entityScopeFromContext(contextEntities, nameKeyFn);
+	const appendOnly = !scope;
+	const returnedScopedIds = new Set();
+	const returnedScopedSlugs = new Set();
+	const deletedIds = new Set();
+	const deletedSlugs = new Set();
+	const updatesByIdentity = new Map();
+	const existingSignatures = new Set(existing.map(nameKeyFn).filter(Boolean));
+	const appended = [];
+
+	for (const rawEntity of generatedEntities) {
+		if (!rawEntity || typeof rawEntity !== "object") continue;
+		const existingEntity = findExistingEntity(rawEntity, indexes, nameKeyFn);
+		const existingIsScoped = existingEntity
+			? isEntityInScope(existingEntity, scope, nameKeyFn)
+			: false;
+
+		if (existingEntity && appendOnly) continue;
+		if (existingEntity && !existingIsScoped) continue;
+
+		if (isDeleteMarker(rawEntity)) {
+			if (existingEntity && existingIsScoped) {
+				if (existingEntity.id) deletedIds.add(asText(existingEntity.id));
+				if (existingEntity.slug) deletedSlugs.add(asText(existingEntity.slug));
+			}
+			continue;
+		}
+
+		const normalized = normalizeFn(rawEntity, existingEntity, {
+			simplifiedNotes,
+		});
+		const normalizedKey = nameKeyFn(normalized);
+		if (type === "locations" && !normalized.name) continue;
+		if (type !== "locations" && !normalized.firstName && !normalized.lastName) {
+			continue;
+		}
+
+		if (existingEntity) {
+			const payload = {
+				...existingEntity,
+				...normalized,
+				id: existingEntity.id,
+				slug: existingEntity.slug,
+				imageUrl: existingEntity.imageUrl ?? normalized.imageUrl ?? null,
+			};
+			const identity = asText(existingEntity.id || existingEntity.slug);
+			if (identity) updatesByIdentity.set(identity, payload);
+			if (existingEntity.id) returnedScopedIds.add(asText(existingEntity.id));
+			if (existingEntity.slug) returnedScopedSlugs.add(asText(existingEntity.slug));
+			indexes.byId.set(asText(payload.id), payload);
+			if (payload.slug) indexes.bySlug.set(payload.slug, payload);
+			if (normalizedKey) indexes.byName.set(normalizedKey, payload);
+			continue;
+		}
+
+		if (normalizedKey && existingSignatures.has(normalizedKey)) continue;
+		if (normalizedKey) existingSignatures.add(normalizedKey);
+		const payload = {
+			...normalized,
+			id: normalized.id || storage.createId(),
+			slug: normalized.slug || storage.campaignSlug(normalizedKey || type),
+		};
+		appended.push(payload);
+		indexes.byId.set(asText(payload.id), payload);
+		if (payload.slug) indexes.bySlug.set(payload.slug, payload);
+		if (normalizedKey) indexes.byName.set(normalizedKey, payload);
+	}
+
+	const next = [];
+	for (const entity of existing) {
+		const id = asText(entity?.id);
+		const slug = asText(entity?.slug);
+		if ((id && deletedIds.has(id)) || (slug && deletedSlugs.has(slug))) {
+			continue;
+		}
+
+		const isScoped = isEntityInScope(entity, scope, nameKeyFn);
+		const identity = asText(entity?.id || entity?.slug);
+		if (
+			allowFinalStateDelete &&
+			isScoped &&
+			!(id && returnedScopedIds.has(id)) &&
+			!(slug && returnedScopedSlugs.has(slug)) &&
+			!updatesByIdentity.has(identity)
+		) {
+			continue;
+		}
+		next.push(updatesByIdentity.get(identity) || entity);
+	}
+
+	return [...next, ...appended];
 }
 
 function normalizeSceneTexts(rawScene = {}, existingTexts = {}) {
@@ -951,6 +1091,12 @@ function buildAiApplyScope(contextData = {}, path = {}) {
 		locations: Array.isArray(contextData.campaign?.locations)
 			? contextData.campaign.locations
 			: null,
+		sessionNpcs: Array.isArray(currentSessionData.npcs)
+			? currentSessionData.npcs
+			: null,
+		sessionLocations: Array.isArray(currentSessionData.locations)
+			? currentSessionData.locations
+			: null,
 		sessionNotes: Boolean(currentSessionConf.included && currentSessionConf.notes),
 		sceneIds: hasSceneContext ? sceneIds : null,
 	};
@@ -1233,6 +1379,7 @@ function buildAiOptionsSummary(options) {
 		`characters: ${options.characterGeneration ? "on" : "off"}`,
 		`npcs: ${options.npcGeneration ? "on" : "off"}`,
 		`locations: ${options.locationGeneration ? "on" : "off"}`,
+		`entity-scope: ${options.entityScope || "campaign"}`,
 		`encounters: ${options.encounterGeneration ? "on" : "off"}`,
 		`context: ${options.contextEnabled ? "on" : "off"}`,
 	];
@@ -1316,6 +1463,7 @@ function buildAiRequestSnapshot({
 	generateCharacters,
 	generateNpcs,
 	generateLocations,
+	entityScope,
 	contextConfig,
 	contextData,
 	language,
@@ -1329,6 +1477,7 @@ function buildAiRequestSnapshot({
 		characterGeneration: Boolean(generateCharacters),
 		npcGeneration: Boolean(generateNpcs),
 		locationGeneration: Boolean(generateLocations),
+		entityScope: entityScope || "campaign",
 		encounterGeneration: Boolean(generateEncounters),
 		contextEnabled: Boolean(contextConfig),
 		sceneId: sceneId || null,
@@ -1622,7 +1771,15 @@ function collectMentionCandidates(generatedContent, contextData = {}) {
 	for (const sessionContext of contextData?.sessions || []) {
 		const conf = sessionContext?.conf || {};
 		const data = sessionContext?.data || {};
-		if (!conf.included || !Array.isArray(data.scenes)) continue;
+		if (!conf.included) continue;
+
+		if (Array.isArray(data.npcs)) {
+			names.push(...data.npcs.map(getCharacterDisplayName));
+		}
+		if (Array.isArray(data.locations)) {
+			names.push(...data.locations.map(getLocationDisplayName));
+		}
+		if (!Array.isArray(data.scenes)) continue;
 
 		const hasSceneConfig =
 			conf.scenes &&
@@ -1798,6 +1955,7 @@ router.post("/generate", async (req, res, next) => {
 			generateNpcs,
 			generateLocations,
 			generateEncounters,
+			entityScope,
 			contextConfig,
 			language,
 		} = req.body;
@@ -1814,6 +1972,13 @@ router.post("/generate", async (req, res, next) => {
 		const characterGenerationEnabled = generateCharacters !== false;
 		const npcGenerationEnabled = generateNpcs !== false;
 		const locationGenerationEnabled = generateLocations !== false;
+		const entityTargetScope =
+			path?.session &&
+			!path?.encounter &&
+			entityScope !== "campaign" &&
+			!shouldUseCampaignEntityScope(userInstructions)
+				? "session"
+				: "campaign";
 		const shouldParseAIResponse =
 			Boolean(parseAIResponse || encounterGenerationEnabled) &&
 			(!path.encounter || encounterGenerationEnabled);
@@ -1875,6 +2040,14 @@ router.post("/generate", async (req, res, next) => {
 		}
 
 		const aiApplyScope = buildAiApplyScope(contextData, path);
+		if (entityTargetScope === "session") {
+			aiApplyScope.sessionNpcs = Array.isArray(session?.data?.npcs)
+				? session.data.npcs
+				: null;
+			aiApplyScope.sessionLocations = Array.isArray(session?.data?.locations)
+				? session.data.locations
+				: null;
+		}
 		const allowFinalStateDelete =
 			shouldAllowFinalStateDelete(userInstructions);
 
@@ -1892,6 +2065,7 @@ router.post("/generate", async (req, res, next) => {
 			generateNpcs: npcGenerationEnabled,
 			generateLocations: locationGenerationEnabled,
 			generateEncounters: encounterGenerationEnabled,
+			entityScope: entityTargetScope,
 			language: responseLanguage,
 			simplifiedNotes: simplifiedNotesEnabled,
 		});
@@ -1950,6 +2124,7 @@ router.post("/generate", async (req, res, next) => {
 			generateNpcs: npcGenerationEnabled,
 			generateLocations: locationGenerationEnabled,
 			generateEncounters: encounterGenerationEnabled,
+			entityScope: entityTargetScope,
 			contextConfig,
 			contextData,
 			language: responseLanguage,
@@ -2035,25 +2210,52 @@ router.post("/generate", async (req, res, next) => {
 						simplifiedNotes: simplifiedNotesEnabled,
 					},
 				);
-				await upsertGeneratedEntities(
-					path.campaign,
-					"npc",
-					generatedContent.npcs,
-					{
-						contextEntities: aiApplyScope.npcs,
-						allowFinalStateDelete,
-						simplifiedNotes: simplifiedNotesEnabled,
-					},
-				);
-				await upsertGeneratedLocations(
-					path.campaign,
-					generatedContent.locations,
-					{
-						contextLocations: aiApplyScope.locations,
-						allowFinalStateDelete,
-						simplifiedNotes: simplifiedNotesEnabled,
-					},
-				);
+				if (entityTargetScope === "campaign") {
+					await upsertGeneratedEntities(
+						path.campaign,
+						"npc",
+						generatedContent.npcs,
+						{
+							contextEntities: aiApplyScope.npcs,
+							allowFinalStateDelete,
+							simplifiedNotes: simplifiedNotesEnabled,
+						},
+					);
+					await upsertGeneratedLocations(
+						path.campaign,
+						generatedContent.locations,
+						{
+							contextLocations: aiApplyScope.locations,
+							allowFinalStateDelete,
+							simplifiedNotes: simplifiedNotesEnabled,
+						},
+					);
+				} else {
+					if (Array.isArray(generatedContent.npcs)) {
+						sessionData.data.npcs = applyGeneratedSessionEntities(
+							sessionData.data.npcs,
+							"npc",
+							generatedContent.npcs,
+							{
+								contextEntities: aiApplyScope.sessionNpcs,
+								allowFinalStateDelete,
+								simplifiedNotes: simplifiedNotesEnabled,
+							},
+						);
+					}
+					if (Array.isArray(generatedContent.locations)) {
+						sessionData.data.locations = applyGeneratedSessionEntities(
+							sessionData.data.locations,
+							"locations",
+							generatedContent.locations,
+							{
+								contextEntities: aiApplyScope.sessionLocations,
+								allowFinalStateDelete,
+								simplifiedNotes: simplifiedNotesEnabled,
+							},
+						);
+					}
+				}
 
 				const encounterMap = new Map();
 				if (Array.isArray(generatedContent.encounters)) {

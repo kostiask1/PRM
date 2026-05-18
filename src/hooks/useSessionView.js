@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { confirm, prompt, requestCampaignsReloadAction } from "../actions/app";
+import {
+	alert,
+	confirm,
+	prompt,
+	refreshEntitiesAction,
+	requestCampaignsReloadAction,
+} from "../actions/app";
 import { api } from "../api";
 import {
 	sanitizeNotesForSave,
@@ -11,6 +17,78 @@ import { shouldOpenInNewTabFromEvent } from "../utils/navigation.js";
 import { navigateTo, useAppDispatch } from "../store/appStore";
 import { lang } from "../services/localization";
 
+function stripInternalFields(entity = {}) {
+	return Object.fromEntries(
+		Object.entries(entity || {}).filter(([key]) => !key.startsWith("_")),
+	);
+}
+
+function sessionEntityKey(type) {
+	return type === "locations" ? "locations" : "npcs";
+}
+
+function normalizeSessionEntity(type, entity = {}) {
+	const now = Date.now();
+	const source = stripInternalFields(entity);
+	if (type === "locations") {
+		return {
+			id: source.id || `session-locations-${now}`,
+			name: source.name || source.title || "",
+			description: source.description || "",
+			notes: Array.isArray(source.notes) ? source.notes : [],
+			imageUrl: source.imageUrl ?? null,
+			collapsed: Boolean(source.collapsed),
+			isNotesCollapsed: Boolean(source.isNotesCollapsed),
+			...source,
+		};
+	}
+	return {
+		id: source.id || `session-npc-${now}`,
+		firstName: source.firstName || source.name || "",
+		lastName: source.lastName || "",
+		race: source.race || "",
+		class: source.class || "",
+		level: source.level === "" ? "" : source.level || 1,
+		motivation: source.motivation || source.description || "",
+		trait: source.trait || "",
+		notes: Array.isArray(source.notes) ? source.notes : [],
+		imageUrl: source.imageUrl ?? null,
+		collapsed: Boolean(source.collapsed),
+		isNotesCollapsed: Boolean(source.isNotesCollapsed),
+		...source,
+	};
+}
+
+function normalizeSessionEntities(type, entities) {
+	return (Array.isArray(entities) ? entities : []).map((entity) =>
+		normalizeSessionEntity(type, entity),
+	);
+}
+
+function getEntityDisplayName(type, entity = {}) {
+	if (type === "locations") {
+		return String(entity.name || entity.title || lang.t("Untitled")).trim();
+	}
+	const fullName = `${entity.firstName || ""} ${entity.lastName || ""}`.trim();
+	return String(
+		fullName || entity.name || entity.title || lang.t("Untitled"),
+	).trim();
+}
+
+function prepareCampaignEntityPayload(type, entity = {}) {
+	const payload = stripInternalFields(entity);
+	delete payload.createdAt;
+	delete payload.updatedAt;
+	if (type === "locations") {
+		payload.name = payload.name || payload.title || "";
+	} else {
+		payload.firstName = payload.firstName || payload.name || "";
+		payload.lastName = payload.lastName || "";
+		payload.level = payload.level === "" ? "" : payload.level || 1;
+	}
+	return payload;
+}
+
 export default function useSessionView(props) {
 	const { campaign, sessionId } = props;
 	const dispatch = useAppDispatch();
@@ -18,6 +96,7 @@ export default function useSessionView(props) {
 	const [session, setSession] = useState(null);
 	const [isSaving, setIsSaving] = useState(false);
 	const [isChecklistOpen, setIsChecklistOpen] = useState(false);
+	const [scopeImportModal, setScopeImportModal] = useState(null);
 	const saveTimeout = useRef(null);
 	const pendingSessionSaveRef = useRef(null);
 
@@ -76,8 +155,9 @@ export default function useSessionView(props) {
 			const pendingSession = pendingSessionSaveRef.current;
 			pendingSessionSaveRef.current = null;
 			if (pendingSession) {
-				saveToServer(pendingSession, options);
+				return saveToServer(pendingSession, options);
 			}
+			return Promise.resolve(null);
 		},
 		[saveToServer],
 	);
@@ -201,6 +281,11 @@ export default function useSessionView(props) {
 
 				data.data.notes = data.data.notes || [];
 				data.data.scenes = normalizeSceneNotes(data.data.scenes || []);
+				data.data.npcs = normalizeSessionEntities("npc", data.data.npcs);
+				data.data.locations = normalizeSessionEntities(
+					"locations",
+					data.data.locations,
+				);
 
 				setSession(data);
 				setIsSaving(false);
@@ -276,6 +361,201 @@ export default function useSessionView(props) {
 		if (!session) return;
 		const nextData = { ...session.data, [key]: value };
 		updateSession({ data: nextData }, instant);
+	};
+
+	const saveSessionImmediately = useCallback(
+		async (updatedSession) => {
+			if (!updatedSession) return null;
+			if (saveTimeout.current) {
+				clearTimeout(saveTimeout.current);
+				saveTimeout.current = null;
+			}
+			pendingSessionSaveRef.current = null;
+			setIsSaving(true);
+			try {
+				const result = await api.updateSession(
+					campaignSlug,
+					sessionId,
+					updatedSession,
+				);
+				if (result && result.fileName !== sessionId) {
+					navigateTo(campaignSlug, result.fileName, true);
+					dispatch(requestCampaignsReloadAction());
+				}
+				setSession(result || updatedSession);
+				return result || updatedSession;
+			} finally {
+				setIsSaving(false);
+			}
+		},
+		[campaignSlug, sessionId, dispatch],
+	);
+
+	const updateSessionEntityList = (type, updater, instant = false) => {
+		if (!session) return;
+		const key = sessionEntityKey(type);
+		const current = normalizeSessionEntities(type, session.data[key]);
+		const next = updater(current);
+		updateData(key, normalizeSessionEntities(type, next), instant);
+	};
+
+	const handleCreateSessionEntity = async (type, payload) => {
+		updateSessionEntityList(
+			type,
+			(current) => [...current, normalizeSessionEntity(type, payload)],
+			true,
+		);
+	};
+
+	const handleSessionEntityChange = (type, id, updatedEntity) => {
+		updateSessionEntityList(type, (current) =>
+			current.map((entity) =>
+				idsEqual(entity.id, id)
+					? normalizeSessionEntity(type, updatedEntity)
+					: entity,
+			),
+		);
+	};
+
+	const handleSessionEntityDelete = (type, id) => {
+		updateSessionEntityList(
+			type,
+			(current) => current.filter((entity) => !idsEqual(entity.id, id)),
+			true,
+		);
+	};
+
+	const handleSessionEntityToggleCollapse = (type, id) => {
+		updateSessionEntityList(
+			type,
+			(current) =>
+				current.map((entity) =>
+					idsEqual(entity.id, id)
+						? { ...entity, collapsed: !entity.collapsed }
+						: entity,
+				),
+			true,
+		);
+	};
+
+	const handleSessionEntitiesReorder = (type, nextEntities) => {
+		updateData(sessionEntityKey(type), normalizeSessionEntities(type, nextEntities));
+	};
+
+	const openCampaignScopeImport = async (type) => {
+		setScopeImportModal({ type, items: [], isLoading: true });
+		try {
+			const items = await api.getEntities(campaignSlug, type);
+			setScopeImportModal({
+				type,
+				items: Array.isArray(items) ? items : [],
+				isLoading: false,
+			});
+		} catch (err) {
+			console.error("Failed to load campaign entities", err);
+			setScopeImportModal(null);
+		}
+	};
+
+	const closeScopeImportModal = () => setScopeImportModal(null);
+
+	const moveCampaignEntityToSession = async (type, entity) => {
+		if (!session || !entity?.slug) return;
+		const displayName = getEntityDisplayName(type, entity);
+		const confirmed = await dispatch(
+			confirm({
+				title: lang.t("Move to session"),
+				message: lang.t('Move "{name}" to this session?', {
+					name: displayName,
+				}),
+			}),
+		);
+		if (!confirmed) return;
+
+		const key = sessionEntityKey(type);
+		const nextEntity = normalizeSessionEntity(type, entity);
+		const current = normalizeSessionEntities(type, session.data[key]);
+		const nextList = [
+			...current.filter(
+				(item) =>
+					!idsEqual(item.id, nextEntity.id) &&
+					String(item.slug || "") !== String(nextEntity.slug || ""),
+			),
+			nextEntity,
+		];
+		const nextData = { ...session.data, [key]: nextList };
+
+		try {
+			const updated = await saveSessionImmediately({
+				...session,
+				data: nextData,
+			});
+			await api.deleteEntity(campaignSlug, type, entity.slug);
+			setSession(updated);
+			setScopeImportModal((prev) =>
+				prev
+					? {
+							...prev,
+							items: prev.items.filter((item) => item.slug !== entity.slug),
+						}
+					: prev,
+			);
+			dispatch(refreshEntitiesAction());
+			dispatch(requestCampaignsReloadAction());
+		} catch (err) {
+			console.error("Failed to move campaign entity to session", err);
+			dispatch(
+				alert({
+					title: lang.t("Error"),
+					message: lang.t("Failed to move entity."),
+				}),
+			);
+		}
+	};
+
+	const moveSessionEntityToCampaign = async (type, id) => {
+		if (!session) return;
+		const key = sessionEntityKey(type);
+		const current = normalizeSessionEntities(type, session.data[key]);
+		const entity = current.find((item) => idsEqual(item.id, id));
+		if (!entity) return;
+		const displayName = getEntityDisplayName(type, entity);
+		const confirmed = await dispatch(
+			confirm({
+				title: lang.t("Move to campaign"),
+				message: lang.t('Move "{name}" to campaign scope?', {
+					name: displayName,
+				}),
+			}),
+		);
+		if (!confirmed) return;
+
+		try {
+			await api.createEntity(
+				campaignSlug,
+				type,
+				prepareCampaignEntityPayload(type, entity),
+			);
+			const nextData = {
+				...session.data,
+				[key]: current.filter((item) => !idsEqual(item.id, id)),
+			};
+			const updated = await saveSessionImmediately({
+				...session,
+				data: nextData,
+			});
+			setSession(updated);
+			dispatch(refreshEntitiesAction());
+			dispatch(requestCampaignsReloadAction());
+		} catch (err) {
+			console.error("Failed to move session entity to campaign", err);
+			dispatch(
+				alert({
+					title: lang.t("Error"),
+					message: lang.t("Failed to move entity."),
+				}),
+			);
+		}
 	};
 
 	const addScene = () => {
@@ -515,6 +795,14 @@ export default function useSessionView(props) {
 		updatedSession.data.scenes = normalizeSceneNotes(
 			updatedSession.data.scenes || [],
 		);
+		updatedSession.data.npcs = normalizeSessionEntities(
+			"npc",
+			updatedSession.data.npcs,
+		);
+		updatedSession.data.locations = normalizeSessionEntities(
+			"locations",
+			updatedSession.data.locations,
+		);
 
 		setSession(updatedSession);
 		setTimeout(() => {
@@ -580,6 +868,12 @@ export default function useSessionView(props) {
 
 	return {
 		session,
+		sessionNpcs: normalizeSessionEntities("npc", session?.data?.npcs),
+		sessionLocations: normalizeSessionEntities(
+			"locations",
+			session?.data?.locations,
+		),
+		scopeImportModal,
 		isSaving,
 		isChecklistOpen,
 		setIsChecklistOpen,
@@ -592,6 +886,29 @@ export default function useSessionView(props) {
 		handleRedo,
 		updateSession,
 		updateData,
+		handleCreateSessionNpc: (payload) =>
+			handleCreateSessionEntity("npc", payload),
+		handleCreateSessionLocation: (payload) =>
+			handleCreateSessionEntity("locations", payload),
+		handleSessionNpcChange: (id, updatedEntity) =>
+			handleSessionEntityChange("npc", id, updatedEntity),
+		handleSessionLocationChange: (id, updatedEntity) =>
+			handleSessionEntityChange("locations", id, updatedEntity),
+		handleSessionNpcDelete: (id) => handleSessionEntityDelete("npc", id),
+		handleSessionLocationDelete: (id) =>
+			handleSessionEntityDelete("locations", id),
+		handleSessionNpcToggleCollapse: (id) =>
+			handleSessionEntityToggleCollapse("npc", id),
+		handleSessionLocationToggleCollapse: (id) =>
+			handleSessionEntityToggleCollapse("locations", id),
+		handleSessionNpcsReorder: (nextEntities) =>
+			handleSessionEntitiesReorder("npc", nextEntities),
+		handleSessionLocationsReorder: (nextEntities) =>
+			handleSessionEntitiesReorder("locations", nextEntities),
+		openCampaignScopeImport,
+		closeScopeImportModal,
+		moveCampaignEntityToSession,
+		moveSessionEntityToCampaign,
 		addScene,
 		updateScene,
 		toggleSceneCollapse,

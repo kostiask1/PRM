@@ -26,6 +26,7 @@ export default function CharacterCard({
 	viewMode = "card",
 	showDeleteButton = true,
 	showHeader = true,
+	headerActions = null,
 }) {
 	const characterModel = new CharacterCardModel(character);
 	const editingStartNameRef = useRef(characterModel.fullName);
@@ -132,6 +133,14 @@ export default function CharacterCard({
 							</span>
 						)}
 					</div>
+					{headerActions && (
+						<div
+							className="character_card__actions"
+							onClick={(event) => event.stopPropagation()}
+						>
+							{headerActions}
+						</div>
+					)}
 					{showDeleteButton && (
 						<Button
 							variant="danger"

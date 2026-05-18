@@ -378,6 +378,7 @@ async function generateContent({
 	generateNpcs,
 	generateLocations,
 	generateEncounters,
+	entityScope,
 	modelName,
 	language,
 	simplifiedNotes,
@@ -392,6 +393,10 @@ async function generateContent({
 	const characterGenerationEnabled = generateCharacters !== false;
 	const npcGenerationEnabled = generateNpcs !== false;
 	const locationGenerationEnabled = generateLocations !== false;
+	const entityTargetScope =
+		session && !encounterId && entityScope !== "campaign"
+			? "session"
+			: "campaign";
 	const effectiveParseAIResponse =
 		Boolean(parseAIResponse) && (!encounterId || encounterGenerationEnabled);
 	const requestedType =
@@ -465,6 +470,13 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 				? `Location/faction generation is enabled. You may include a top-level "locations" array only when the user explicitly asks to create, edit, rename, or delete locations or factions. Each item should include name, description, and notes.`
 				: `Location/faction generation is disabled. Do not create or edit locations/factions. Do not include a top-level "locations" array.`,
 		);
+		if (useKey === "scene") {
+			systemInstructionParts.push(
+				entityTargetScope === "session"
+					? `ENTITY SCOPE: Top-level "npcs" and "locations" in this response are session-scoped by default. They belong only to the current session and must not be treated as campaign-wide entities unless the user explicitly asks for campaign scope.`
+					: `ENTITY SCOPE: Top-level "npcs" and "locations" in this response are campaign-scoped. They belong to the whole campaign.`,
+			);
+		}
 	}
 
 	model = getGeminiClient().getGenerativeModel({
@@ -569,9 +581,33 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 				}
 			}
 
+			if (conf.included && Array.isArray(data.npcs) && data.npcs.length > 0) {
+				sessionContext.npcs = data.npcs
+					.map((npc) => npcToPromptContext(npc, noteToContextNote))
+					.filter((npc) => npc.name || npc.description || npc.motivation);
+			}
+
+			if (
+				conf.included &&
+				Array.isArray(data.locations) &&
+				data.locations.length > 0
+			) {
+				sessionContext.locations = data.locations
+					.map((location) => ({
+						id: location.id,
+						slug: location.slug,
+						name: location.name || location.title,
+						description: location.description,
+						notes: (location.notes || [])
+							.map(noteToContextNote)
+							.filter(Boolean),
+					}))
+					.filter((location) => location.name || location.description);
+			}
+
 			return sessionContext;
 		})
-		.filter((s) => s.notes || s.result || s.scenes); // Прибираємо сесії без контенту
+		.filter((s) => s.notes || s.result || s.scenes || s.npcs || s.locations); // Прибираємо сесії без контенту
 
 	// 2. Формуємо фінальний JSON контексту для Gemini
 	const contextJson = {
@@ -600,6 +636,34 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 				.filter((location) => location.name || location.description),
 		},
 	};
+
+	if (session && entityTargetScope === "session") {
+		const currentSession = {
+			name: session.name,
+		};
+		if (Array.isArray(session.data?.npcs) && session.data.npcs.length > 0) {
+			currentSession.npcs = session.data.npcs
+				.map((npc) => npcToPromptContext(npc, noteToContextNote))
+				.filter((npc) => npc.name || npc.description || npc.motivation);
+		}
+		if (
+			Array.isArray(session.data?.locations) &&
+			session.data.locations.length > 0
+		) {
+			currentSession.locations = session.data.locations
+				.map((location) => ({
+					id: location.id,
+					slug: location.slug,
+					name: location.name || location.title,
+					description: location.description,
+					notes: (location.notes || [])
+						.map(noteToContextNote)
+						.filter(Boolean),
+				}))
+				.filter((location) => location.name || location.description);
+		}
+		contextJson.currentSession = currentSession;
+	}
 
 	if (filteredSessions.length > 0) {
 		contextJson.selectedSessions = filteredSessions;
@@ -657,15 +721,15 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 IMPORTANT: This request is strictly for player characters. Return only "characters". Do not create NPCs or any other content category.
 IMPORTANT: If editing, renaming, or deleting an existing character from INPUT DATA, preserve its "id" and "slug". If INPUT DATA.campaign.characters is absent, this request is append-only for characters.\n`;
 	} else if (useKey === "npc") {
-		userPrompt += `TASK: Create new NPCs for this campaign based on user instructions.
+		userPrompt += `TASK: Create new NPCs for this ${entityTargetScope === "session" ? "current session" : "campaign"} based on user instructions.
 IMPORTANT: This request is strictly for NPCs. Return only "npcs". Do not create player characters or any other content category.
 IMPORTANT: Include race, class, and level for every generated NPC when possible. If a formal class does not fit, put a role/archetype in "class".
-IMPORTANT: If editing, renaming, or deleting an existing NPC from INPUT DATA, preserve its "id" and "slug". If INPUT DATA.campaign.npcs is absent, this request is append-only for NPCs.\n`;
+IMPORTANT: If editing, renaming, or deleting an existing NPC from INPUT DATA, preserve its "id" and "slug". If ${entityTargetScope === "session" ? "INPUT DATA.currentSession.npcs" : "INPUT DATA.campaign.npcs"} is absent, this request is append-only for NPCs.\n`;
 	} else if (useKey === "location") {
-		userPrompt += `TASK: Create or update locations/factions for this campaign based on user instructions.
+		userPrompt += `TASK: Create or update locations/factions for this ${entityTargetScope === "session" ? "current session" : "campaign"} based on user instructions.
 IMPORTANT: This request is strictly for locations/factions. Return only "locations". Do not create characters, NPCs, campaign notes, scenes, encounters, or any other content category.
 IMPORTANT: If editing, renaming, or deleting an existing location/faction from INPUT DATA, preserve its "id" and "slug".
-IMPORTANT: If INPUT DATA.campaign.locations is present, the returned "locations" array must contain every included existing location/faction unchanged unless the user requested edits/deletions, plus requested new locations/factions. Do not return only the new item. If INPUT DATA.campaign.locations is absent, this request is append-only for locations/factions.\n`;
+IMPORTANT: If ${entityTargetScope === "session" ? "INPUT DATA.currentSession.locations" : "INPUT DATA.campaign.locations"} is present, the returned "locations" array must contain every included existing location/faction unchanged unless the user requested edits/deletions, plus requested new locations/factions. Do not return only the new item. If ${entityTargetScope === "session" ? "INPUT DATA.currentSession.locations" : "INPUT DATA.campaign.locations"} is absent, this request is append-only for locations/factions.\n`;
 	} else if (useKey === "encounter") {
 		userPrompt += `TASK: Update current combat encounter (ID: ${encounterId}). Consider character levels and requested difficulty (easy, medium, hard, deadly). Pick monsters that fit the scenario.\n`;
 	} else if (useKey === "scene") {
@@ -677,12 +741,18 @@ IMPORTANT: If INPUT DATA.campaign.locations is present, the returned "locations"
 			userPrompt += `IMPORTANT: Character generation is disabled. Do not create or edit player characters and do not output "characters".\n`;
 		}
 		if (npcGenerationEnabled) {
-			userPrompt += `IMPORTANT: NPC generation is enabled. Include NPC cards only when the user explicitly asks to create, edit, rename, or delete NPCs. Scene-local NPC references may also be included in scene "npcs". If you output top-level "npcs", preserve "id"/"slug" for existing items and include all included existing NPCs from INPUT DATA.campaign.npcs plus requested additions/edits, unless the user requested deletion.\n`;
+			userPrompt +=
+				entityTargetScope === "session"
+					? `IMPORTANT: NPC generation is enabled. Include NPC cards only when the user explicitly asks to create, edit, rename, or delete NPCs. Top-level "npcs" are session-scoped and belong only to the current session. Scene-local NPC references may also be included in scene "npcs". If you output top-level "npcs", preserve "id"/"slug" for existing items and include all included existing NPCs from INPUT DATA.currentSession.npcs plus requested additions/edits, unless the user requested deletion.\n`
+					: `IMPORTANT: NPC generation is enabled. Include NPC cards only when the user explicitly asks to create, edit, rename, or delete NPCs. Scene-local NPC references may also be included in scene "npcs". If you output top-level "npcs", preserve "id"/"slug" for existing items and include all included existing NPCs from INPUT DATA.campaign.npcs plus requested additions/edits, unless the user requested deletion.\n`;
 		} else {
 			userPrompt += `IMPORTANT: NPC generation is disabled. Do not create or edit NPCs and do not output top-level "npcs" or scene "npcs".\n`;
 		}
 		if (locationGenerationEnabled) {
-			userPrompt += `IMPORTANT: Location/faction generation is enabled. Include locations/factions only when the user explicitly asks to create, edit, rename, or delete places, factions, organizations, landmarks, or regions. If you output "locations", preserve "id"/"slug" for existing items and include all included existing locations/factions from INPUT DATA.campaign.locations plus requested additions/edits, unless the user requested deletion. Locations/factions should include name, description, and notes when possible.\n`;
+			userPrompt +=
+				entityTargetScope === "session"
+					? `IMPORTANT: Location/faction generation is enabled. Include locations/factions only when the user explicitly asks to create, edit, rename, or delete places, factions, organizations, landmarks, or regions. Top-level "locations" are session-scoped and belong only to the current session. If you output "locations", preserve "id"/"slug" for existing items and include all included existing locations/factions from INPUT DATA.currentSession.locations plus requested additions/edits, unless the user requested deletion. Locations/factions should include name, description, and notes when possible.\n`
+					: `IMPORTANT: Location/faction generation is enabled. Include locations/factions only when the user explicitly asks to create, edit, rename, or delete places, factions, organizations, landmarks, or regions. If you output "locations", preserve "id"/"slug" for existing items and include all included existing locations/factions from INPUT DATA.campaign.locations plus requested additions/edits, unless the user requested deletion. Locations/factions should include name, description, and notes when possible.\n`;
 		} else {
 			userPrompt += `IMPORTANT: Location/faction generation is disabled. Do not create or edit locations/factions and do not output "locations".\n`;
 		}

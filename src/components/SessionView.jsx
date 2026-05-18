@@ -13,6 +13,8 @@ import SceneCardHeader from "./session/SceneCardHeader";
 import SceneCardMedia from "./session/SceneCardMedia";
 import SceneCardFields from "./session/SceneCardFields";
 import Tooltip from "./common/Tooltip.jsx";
+import CharacterCard from "./CharacterCard.jsx";
+import LocationCard from "./LocationCard.jsx";
 import "../assets/components/SessionView.css";
 import useSessionView from "../hooks/useSessionView";
 import SessionViewModel from "../models/SessionViewModel.js";
@@ -21,6 +23,7 @@ import { getNotesForRender, sanitizeNotesForSave } from "../utils/noteUtils";
 import { navigateTo, useAppSelector } from "../store/appStore";
 import { shouldOpenInNewTabFromEvent } from "../utils/navigation.js";
 import CreateCharacterButton from "./CreateCharacterButton.jsx";
+import CreateLocationButton from "./CreateLocationButton.jsx";
 import { renderMentionText } from "../renderers/contentRenderer.jsx";
 
 function SessionView(props) {
@@ -45,6 +48,8 @@ function SessionView(props) {
 	const sessionNotesForRender = getNotesForRender(viewModel.notes || [], {
 		simplifiedNotes: simplifiedNotesEnabled,
 	});
+	const hasSessionNpcsData = view.sessionNpcs.length > 0;
+	const hasSessionLocationsData = view.sessionLocations.length > 0;
 	const isSessionNotesCollapsed = hasSessionNotesData
 		? !!session.data.isNotesCollapsed
 		: false;
@@ -70,6 +75,30 @@ function SessionView(props) {
 			encounterId,
 			shouldOpenInNewTabFromEvent(event),
 		);
+	};
+
+	const getScopeImportTitle = () => {
+		if (view.scopeImportModal?.type === "locations") {
+			return lang.t("Choose location/faction to move into this session");
+		}
+		return lang.t("Choose NPC to move into this session");
+	};
+
+	const getScopeImportEmptyText = () => {
+		if (view.scopeImportModal?.type === "locations") {
+			return lang.t("No campaign locations/factions available.");
+		}
+		return lang.t("No campaign NPCs available.");
+	};
+
+	const getScopeEntityName = (type, entity) => {
+		if (type === "locations") {
+			return String(entity?.name || entity?.title || lang.t("Untitled")).trim();
+		}
+		const fullName = `${entity?.firstName || ""} ${entity?.lastName || ""}`.trim();
+		return String(
+			fullName || entity?.name || entity?.title || lang.t("Untitled"),
+		).trim();
 	};
 
 	return (
@@ -117,11 +146,6 @@ function SessionView(props) {
 					</div>
 				</div>
 				<div className="SessionView__headerActions">
-					<CreateCharacterButton
-						buttonVariant="ghost"
-						campaignSlug={view.campaignSlug}
-						entityType="npc"
-					/>
 					<Button
 						variant="ghost"
 						size={Button.SIZES.SMALL}
@@ -178,6 +202,122 @@ function SessionView(props) {
 									/>
 								)}
 							/>
+						)}
+					</TodoSection>
+					<TodoSection
+						title={lang.t("Session NPCs")}
+						action={
+							<div className="SessionView__sectionActions">
+								<CreateCharacterButton
+									buttonVariant="primary"
+									campaignSlug={view.campaignSlug}
+									entityType="npc"
+									buttonLabel={lang.t("New session NPC")}
+									onCreate={view.handleCreateSessionNpc}
+								/>
+								<Button
+									variant="ghost"
+									size={Button.SIZES.SMALL}
+									icon="import"
+									onClick={() => view.openCampaignScopeImport("npc")}
+								>
+									{lang.t("Move from campaign")}
+								</Button>
+							</div>
+						}
+					>
+						{hasSessionNpcsData ? (
+							<DraggableList
+								items={view.sessionNpcs}
+								className="SessionView__characters"
+								onReorder={view.handleSessionNpcsReorder}
+								keyExtractor={(npc) => npc.id}
+								renderItem={(npc) => (
+									<CharacterCard
+										character={npc}
+										onToggleCollapse={view.handleSessionNpcToggleCollapse}
+										onChange={view.handleSessionNpcChange}
+										onDelete={view.handleSessionNpcDelete}
+										campaignSlug={view.campaignSlug}
+										type="npc"
+										headerActions={
+											<Button
+												variant="ghost"
+												size={Button.SIZES.SMALL}
+												icon="export"
+												iconSize={14}
+												onClick={() =>
+													view.moveSessionEntityToCampaign("npc", npc.id)
+												}
+												title={lang.t("Move to campaign")}
+											/>
+										}
+									/>
+								)}
+							/>
+						) : (
+							<div className="muted SessionView__emptySection">
+								{lang.t("No session NPCs yet.")}
+							</div>
+						)}
+					</TodoSection>
+
+					<TodoSection
+						title={lang.t("Session locations/factions")}
+						action={
+							<div className="SessionView__sectionActions">
+								<CreateLocationButton
+									buttonVariant="primary"
+									campaignSlug={view.campaignSlug}
+									buttonLabel={lang.t("New session location/faction")}
+									onCreate={view.handleCreateSessionLocation}
+								/>
+								<Button
+									variant="ghost"
+									size={Button.SIZES.SMALL}
+									icon="import"
+									onClick={() => view.openCampaignScopeImport("locations")}
+								>
+									{lang.t("Move from campaign")}
+								</Button>
+							</div>
+						}
+					>
+						{hasSessionLocationsData ? (
+							<DraggableList
+								items={view.sessionLocations}
+								className="SessionView__locations"
+								onReorder={view.handleSessionLocationsReorder}
+								keyExtractor={(location) => location.id}
+								renderItem={(location) => (
+									<LocationCard
+										location={location}
+										onToggleCollapse={view.handleSessionLocationToggleCollapse}
+										onChange={view.handleSessionLocationChange}
+										onDelete={view.handleSessionLocationDelete}
+										campaignSlug={view.campaignSlug}
+										headerActions={
+											<Button
+												variant="ghost"
+												size={Button.SIZES.SMALL}
+												icon="export"
+												iconSize={14}
+												onClick={() =>
+													view.moveSessionEntityToCampaign(
+														"locations",
+														location.id,
+													)
+												}
+												title={lang.t("Move to campaign")}
+											/>
+										}
+									/>
+								)}
+							/>
+						) : (
+							<div className="muted SessionView__emptySection">
+								{lang.t("No session locations/factions yet.")}
+							</div>
 						)}
 					</TodoSection>
 					<TodoSection
@@ -303,6 +443,52 @@ function SessionView(props) {
 								note={item.note}
 							/>
 						))}
+					</div>
+				</Modal>
+			)}
+
+			{view.scopeImportModal && (
+				<Modal
+					title={getScopeImportTitle()}
+					onCancel={view.closeScopeImportModal}
+					showFooter={false}
+				>
+					<div className="SessionView__scopeImportList">
+						{view.scopeImportModal.isLoading && (
+							<div className="muted">{lang.t("Loading...")}</div>
+						)}
+						{!view.scopeImportModal.isLoading &&
+							view.scopeImportModal.items.length === 0 && (
+								<div className="muted">{getScopeImportEmptyText()}</div>
+							)}
+						{!view.scopeImportModal.isLoading &&
+							view.scopeImportModal.items.map((entity) => {
+								const name = getScopeEntityName(
+									view.scopeImportModal.type,
+									entity,
+								);
+								return (
+									<div
+										key={entity.slug || entity.id || name}
+										className="SessionView__scopeImportItem"
+									>
+										<span>{renderMentionText(name)}</span>
+										<Button
+											variant="primary"
+											size={Button.SIZES.SMALL}
+											icon="import"
+											onClick={() =>
+												view.moveCampaignEntityToSession(
+													view.scopeImportModal.type,
+													entity,
+												)
+											}
+										>
+											{lang.t("Move to session")}
+										</Button>
+									</div>
+								);
+							})}
 					</div>
 				</Modal>
 			)}

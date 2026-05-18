@@ -59,6 +59,8 @@ const SCENE_SCHEMA = [
  * @property {SessionNote[]} [notes]
  * @property {SessionScene[]} [scenes]
  * @property {SessionEncounter[]} [encounters]
+ * @property {Object[]} [npcs]
+ * @property {Object[]} [locations]
  * @property {string} [result_text]
  * @property {boolean} [isNotesCollapsed]
  * @property {boolean} [goal_check]
@@ -86,7 +88,7 @@ export const SESSION_FIELD_SCHEMA = {
 	name: { type: "string", required: true, values: "Назва сесії" },
 	data: {
 		type: "SessionDataPayload",
-		values: "Контент сесії: notes, scenes, encounters, result_text, *_check",
+		values: "Контент сесії: notes, scenes, encounters, npcs, locations, result_text, *_check",
 	},
 	isSaving: { type: "boolean", values: "Локальний стан автозбереження" },
 };
@@ -119,6 +121,14 @@ export default class SessionViewModel {
 
 	get encounters() {
 		return this.session?.data?.encounters || [];
+	}
+
+	get npcs() {
+		return this.session?.data?.npcs || [];
+	}
+
+	get locations() {
+		return this.session?.data?.locations || [];
 	}
 
 	/** @param {SessionScene} scene */
