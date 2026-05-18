@@ -950,6 +950,43 @@ function filterLocationsByContext(locations = [], locationConfig) {
 	);
 }
 
+function filterGeneratedEntitiesOutsideScope(
+	generatedEntities,
+	excludedEntities,
+	allowedEntities = [],
+) {
+	if (!Array.isArray(generatedEntities)) return generatedEntities;
+	const excludedIds = new Set(
+		(Array.isArray(excludedEntities) ? excludedEntities : [])
+			.map((entity) => asText(entity?.id))
+			.filter(Boolean),
+	);
+	const excludedSlugs = new Set(
+		(Array.isArray(excludedEntities) ? excludedEntities : [])
+			.map((entity) => asText(entity?.slug))
+			.filter(Boolean),
+	);
+	const allowedIds = new Set(
+		(Array.isArray(allowedEntities) ? allowedEntities : [])
+			.map((entity) => asText(entity?.id))
+			.filter(Boolean),
+	);
+	const allowedSlugs = new Set(
+		(Array.isArray(allowedEntities) ? allowedEntities : [])
+			.map((entity) => asText(entity?.slug))
+			.filter(Boolean),
+	);
+
+	return generatedEntities.filter((entity) => {
+		const id = asText(entity?.id);
+		const slug = asText(entity?.slug);
+		const isAllowedSessionEntity =
+			(id && allowedIds.has(id)) || (slug && allowedSlugs.has(slug));
+		if (isAllowedSessionEntity) return true;
+		return !((id && excludedIds.has(id)) || (slug && excludedSlugs.has(slug)));
+	});
+}
+
 function normalizeMentionCandidates(names = []) {
 	return Array.from(
 		new Set(
@@ -2042,6 +2079,7 @@ router.post("/generate", async (req, res, next) => {
 			.catch(() => null);
 
 		const contextData = { campaign: {}, sessions: [] };
+		const includeCampaignScopedEntities = entityTargetScope !== "session";
 		if (contextConfig) {
 			if (contextConfig.campaignNotes)
 				contextData.campaign.notes = filterNotesForAiContext(campaign.notes);
@@ -2054,9 +2092,10 @@ router.post("/generate", async (req, res, next) => {
 				);
 			}
 			if (
-				isContextListIncluded(contextConfig.campaignNpcs) ||
-				(contextConfig.campaignNpcs === undefined &&
-					isContextListIncluded(contextConfig.campaignCharacters))
+				includeCampaignScopedEntities &&
+				(isContextListIncluded(contextConfig.campaignNpcs) ||
+					(contextConfig.campaignNpcs === undefined &&
+						isContextListIncluded(contextConfig.campaignCharacters)))
 			) {
 				const npcs = await storage.listEntities(path.campaign, "npc");
 				contextData.campaign.npcs = filterEntitiesByContext(
@@ -2067,7 +2106,10 @@ router.post("/generate", async (req, res, next) => {
 					getCharacterContextKey,
 				);
 			}
-			if (isContextListIncluded(contextConfig.campaignLocations)) {
+			if (
+				includeCampaignScopedEntities &&
+				isContextListIncluded(contextConfig.campaignLocations)
+			) {
 				const locations = await storage.listEntities(path.campaign, "locations");
 				contextData.campaign.locations = filterLocationsByContext(
 					locations,
@@ -2090,6 +2132,13 @@ router.post("/generate", async (req, res, next) => {
 			}
 		}
 
+		const campaignScopeEntities =
+			entityTargetScope === "session"
+				? {
+						npcs: await storage.listEntities(path.campaign, "npc"),
+						locations: await storage.listEntities(path.campaign, "locations"),
+					}
+				: { npcs: [], locations: [] };
 		const aiApplyScope = buildAiApplyScope(contextData, path);
 		if (entityTargetScope === "session") {
 			aiApplyScope.sessionNpcs = Array.isArray(session?.data?.npcs)
@@ -2128,6 +2177,18 @@ router.post("/generate", async (req, res, next) => {
 			allowLocations: locationGenerationEnabled,
 			allowEncounters: encounterGenerationEnabled,
 		});
+		if (entityTargetScope === "session") {
+			generatedContent.npcs = filterGeneratedEntitiesOutsideScope(
+				generatedContent.npcs,
+				campaignScopeEntities.npcs,
+				aiApplyScope.sessionNpcs,
+			);
+			generatedContent.locations = filterGeneratedEntitiesOutsideScope(
+				generatedContent.locations,
+				campaignScopeEntities.locations,
+				aiApplyScope.sessionLocations,
+			);
+		}
 
 		if (
 			shouldParseAIResponse &&

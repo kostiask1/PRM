@@ -494,6 +494,11 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 					? `ENTITY SCOPE: Top-level "npcs" and "locations" in this response are session-scoped by default. They belong only to the current session and must not be treated as campaign-wide entities unless the user explicitly asks for campaign scope.`
 					: `ENTITY SCOPE: Top-level "npcs" and "locations" in this response are campaign-scoped. They belong to the whole campaign.`,
 			);
+			if (entityTargetScope === "session") {
+				systemInstructionParts.push(
+					`SESSION SCOPE OUTPUT RULE: Do not return campaign-scoped NPCs or campaign-scoped locations/factions in top-level "npcs" or "locations". In session scope, top-level entity arrays may contain only existing INPUT DATA.currentSession entities and genuinely new session-scoped entities requested by the user.`,
+				);
+			}
 		}
 	}
 
@@ -737,7 +742,7 @@ IMPORTANT: If ${entityTargetScope === "session" ? "INPUT DATA.currentSession.loc
 		if (npcGenerationEnabled) {
 			userPrompt +=
 				entityTargetScope === "session"
-					? `IMPORTANT: NPC generation is enabled. Include NPC cards only when the user explicitly asks to create, edit, rename, or delete NPCs. Top-level "npcs" are session-scoped and belong only to the current session. Scene-local NPC references may also be included in scene "npcs". If you output top-level "npcs", preserve "id"/"slug" for existing items and include all included existing NPCs from INPUT DATA.currentSession.npcs plus requested additions/edits, unless the user requested deletion.\n`
+					? `IMPORTANT: NPC generation is enabled. Include NPC cards only when the user explicitly asks to create, edit, rename, or delete NPCs. Top-level "npcs" are session-scoped and belong only to the current session. Scene-local NPC references may also be included in scene "npcs". If you output top-level "npcs", preserve "id"/"slug" for existing items and include all included existing NPCs from INPUT DATA.currentSession.npcs plus requested additions/edits, unless the user requested deletion. Do not include NPCs from INPUT DATA.campaign.npcs or any other campaign-scoped NPC list in this session-scoped response.\n`
 					: `IMPORTANT: NPC generation is enabled. Include NPC cards only when the user explicitly asks to create, edit, rename, or delete NPCs. Scene-local NPC references may also be included in scene "npcs". If you output top-level "npcs", preserve "id"/"slug" for existing items and include all included existing NPCs from INPUT DATA.campaign.npcs plus requested additions/edits, unless the user requested deletion.\n`;
 		} else {
 			userPrompt += `IMPORTANT: NPC generation is disabled. Do not create or edit NPCs and do not output top-level "npcs" or scene "npcs".\n`;
@@ -745,7 +750,7 @@ IMPORTANT: If ${entityTargetScope === "session" ? "INPUT DATA.currentSession.loc
 		if (locationGenerationEnabled) {
 			userPrompt +=
 				entityTargetScope === "session"
-					? `IMPORTANT: Location/faction generation is enabled. Include locations/factions only when the user explicitly asks to create, edit, rename, or delete places, factions, organizations, landmarks, or regions. Top-level "locations" are session-scoped and belong only to the current session. If you output "locations", preserve "id"/"slug" for existing items and include all included existing locations/factions from INPUT DATA.currentSession.locations plus requested additions/edits, unless the user requested deletion. Locations/factions should include name, description, and notes when possible.\n`
+					? `IMPORTANT: Location/faction generation is enabled. Include locations/factions only when the user explicitly asks to create, edit, rename, or delete places, factions, organizations, landmarks, or regions. Top-level "locations" are session-scoped and belong only to the current session. If you output "locations", preserve "id"/"slug" for existing items and include all included existing locations/factions from INPUT DATA.currentSession.locations plus requested additions/edits, unless the user requested deletion. Do not include locations/factions from INPUT DATA.campaign.locations or any other campaign-scoped location list in this session-scoped response. Locations/factions should include name, description, and notes when possible.\n`
 					: `IMPORTANT: Location/faction generation is enabled. Include locations/factions only when the user explicitly asks to create, edit, rename, or delete places, factions, organizations, landmarks, or regions. If you output "locations", preserve "id"/"slug" for existing items and include all included existing locations/factions from INPUT DATA.campaign.locations plus requested additions/edits, unless the user requested deletion. Locations/factions should include name, description, and notes when possible.\n`;
 		} else {
 			userPrompt += `IMPORTANT: Location/faction generation is disabled. Do not create or edit locations/factions and do not output "locations".\n`;
