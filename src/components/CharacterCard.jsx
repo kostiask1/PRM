@@ -3,6 +3,7 @@ import Button from "./form/Button";
 import EditableField from "./form/EditableField";
 import DraggableList from "./common/DraggableList.jsx";
 import NoteCard from "./common/NoteCard.jsx";
+import AiContextIgnoreButton from "./common/AiContextIgnoreButton.jsx";
 import ImageAssetField from "./ImageAssetField";
 import "../assets/components/CharacterCard.css";
 import Select from "./form/Select";
@@ -93,6 +94,14 @@ export default function CharacterCard({
 			"notes",
 			sanitizeNotesForSave(newNotes),
 		), { trackUndo: true });
+	};
+	const handleNoteAiIgnoredChange = (noteId, ignored) => {
+		updateField(
+			"notes",
+			characterModel.notes.map((note) =>
+				note.id === noteId ? { ...note, _aiIgnored: ignored } : note,
+			),
+		);
 	};
 
 	return (
@@ -279,6 +288,17 @@ export default function CharacterCard({
 								keyExtractor={(note) => note.id}
 								isItemDraggable={(note) => !note._isVirtual}
 								isolateDragEvents
+								isItemControlActive={(note) => Boolean(note._aiIgnored)}
+								renderItemControl={(note) =>
+									!note._isVirtual && (
+										<AiContextIgnoreButton
+											ignored={Boolean(note._aiIgnored)}
+											onToggle={(ignored) =>
+												handleNoteAiIgnoredChange(note.id, ignored)
+											}
+										/>
+									)
+								}
 								renderItem={(note, isDragging, index) => (
 									<NoteCard
 										note={note}

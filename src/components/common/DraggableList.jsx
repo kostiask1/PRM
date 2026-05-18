@@ -22,6 +22,8 @@ export default function DraggableList({
 	dragData,
 	isItemDraggable,
 	isolateDragEvents = false,
+	renderItemControl,
+	isItemControlActive,
 }) {
 	const [draggingIndex, setDraggingIndex] = useState(null);
 	const [dragPreview, setDragPreview] = useState(null);
@@ -437,6 +439,16 @@ export default function DraggableList({
 							>
 								<Icon name="drag-handle" size={18} strokeWidth={2} />
 							</span>
+						)}
+						{renderItemControl && (
+							<div
+								className={classNames(
+									"DraggableList__itemControl",
+									isItemControlActive?.(item, index) && "is_active",
+								)}
+							>
+								{renderItemControl(item, index)}
+							</div>
 						)}
 						{renderItem(item, draggingIndex === index, index)}
 					</div>

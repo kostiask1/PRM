@@ -31,9 +31,34 @@
 	justify-content: center;
 }
 
+.DraggableList__itemControl {
+	position: absolute;
+	top: var(--space-2);
+	left: -17px;
+	transform: translateX(-100%);
+	z-index: 5;
+	opacity: 0;
+}
+
+.DraggableList__itemControl .Button {
+	min-width: 16px;
+	width: 16px;
+	height: 22px;
+	min-height: 22px;
+	padding: 0;
+	border-radius: var(--radius-xxs) 0 0 var(--radius-xxs);
+}
+
+.DraggableList>div:hover>.DraggableList__handle,
+.DraggableList>div.is_dragging>.DraggableList__handle,
+.DraggableList>div:hover>.DraggableList__itemControl,
+.DraggableList>div.is_dragging>.DraggableList__itemControl,
+.DraggableList>div>.DraggableList__itemControl.is_active {
+	opacity: 0.75;
+}
+
 .DraggableList>div:hover>.DraggableList__handle,
 .DraggableList>div.is_dragging>.DraggableList__handle {
-	opacity: 0.75;
 	border: 1px solid color-mix(in srgb, var(--accent), transparent 70%);
 }
 

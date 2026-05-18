@@ -6,6 +6,7 @@ import ListCard from "./common/ListCard.jsx";
 import Panel from "./common/Panel.jsx";
 import DraggableList from "./common/DraggableList.jsx";
 import NoteCard from "./common/NoteCard.jsx";
+import AiContextIgnoreButton from "./common/AiContextIgnoreButton.jsx";
 import CharacterCard from "./CharacterCard";
 import LocationCard from "./LocationCard";
 import CampaignNotesGraph from "./campaign/CampaignNotesGraph.jsx";
@@ -38,6 +39,23 @@ function CampaignView(props) {
 	const notesForRender = getNotesForRender(view.notes || [], {
 		simplifiedNotes: simplifiedNotesEnabled,
 	});
+	const toggleCampaignNoteAiIgnored = (noteId, ignored) => {
+		view.handleNotesReorder(
+			view.notes.map((note) =>
+				note.id === noteId ? { ...note, _aiIgnored: ignored } : note,
+			),
+		);
+	};
+	const toggleCampaignEntityAiIgnored = (type, entityId, ignored) => {
+		const list = type === "locations" ? view.locations : view.npcs;
+		const entity = list.find((item) => item.id === entityId);
+		if (!entity) return;
+		if (type === "locations") {
+			view.handleLocationChange(entityId, { ...entity, _aiIgnored: ignored });
+			return;
+		}
+		view.handleNpcChange(entityId, { ...entity, _aiIgnored: ignored });
+	};
 	const hasCharactersData = (view.characters || []).length > 0;
 	const hasNpcsData = (view.npcs || []).length > 0;
 	const hasLocationsData = (view.locations || []).length > 0;
@@ -321,6 +339,17 @@ function CampaignView(props) {
 									onDrop={view.finishTrackedReorder}
 									keyExtractor={(note) => note.id}
 									isItemDraggable={(note) => !note._isVirtual}
+									isItemControlActive={(note) => Boolean(note._aiIgnored)}
+									renderItemControl={(note) =>
+										!note._isVirtual && (
+											<AiContextIgnoreButton
+												ignored={Boolean(note._aiIgnored)}
+												onToggle={(ignored) =>
+													toggleCampaignNoteAiIgnored(note.id, ignored)
+												}
+											/>
+										)
+									}
 									renderItem={(note, isDragging, index) => (
 										<NoteCard
 											note={note}
@@ -401,7 +430,7 @@ function CampaignView(props) {
 										id: character.id,
 									})}
 									keyExtractor={(char) => char.id}
-									renderItem={(character, isDragging) => (
+									renderItem={(character) => (
 										<CharacterCard
 											character={character}
 											onToggleCollapse={view.handleToggleCharacterCollapse}
@@ -463,7 +492,20 @@ function CampaignView(props) {
 										id: npc.id,
 									})}
 									keyExtractor={(npc) => npc.id}
-									renderItem={(npc, isDragging) => (
+									isItemControlActive={(npc) => Boolean(npc._aiIgnored)}
+									renderItemControl={(npc) => (
+										<AiContextIgnoreButton
+											ignored={Boolean(npc._aiIgnored)}
+											onToggle={(ignored) =>
+												toggleCampaignEntityAiIgnored(
+													"npc",
+													npc.id,
+													ignored,
+												)
+											}
+										/>
+									)}
+									renderItem={(npc) => (
 										<CharacterCard
 											character={npc}
 											onToggleCollapse={view.handleToggleNpcCollapse}
@@ -514,7 +556,22 @@ function CampaignView(props) {
 									onReorder={view.handleLocationsReorder}
 									onDrop={view.finishTrackedReorder}
 									keyExtractor={(location) => location.id}
-									renderItem={(location, isDragging) => (
+									isItemControlActive={(location) =>
+										Boolean(location._aiIgnored)
+									}
+									renderItemControl={(location) => (
+										<AiContextIgnoreButton
+											ignored={Boolean(location._aiIgnored)}
+											onToggle={(ignored) =>
+												toggleCampaignEntityAiIgnored(
+													"locations",
+													location.id,
+													ignored,
+												)
+											}
+										/>
+									)}
+									renderItem={(location) => (
 										<LocationCard
 											location={location}
 											onToggleCollapse={view.handleToggleLocationCollapse}

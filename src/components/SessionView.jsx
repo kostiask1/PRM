@@ -8,6 +8,7 @@ import Panel from "./common/Panel.jsx";
 import DraggableList from "./common/DraggableList.jsx";
 import Modal from "./common/Modal.jsx";
 import NoteCard from "./common/NoteCard.jsx";
+import AiContextIgnoreButton from "./common/AiContextIgnoreButton.jsx";
 import CollapseToggleButton from "./common/CollapseToggleButton.jsx";
 import TodoSection from "./session/TodoSection";
 import TodoItem from "./session/TodoItem";
@@ -186,6 +187,37 @@ function SessionView(props) {
 			fullName || entity?.name || entity?.title || lang.t("Untitled"),
 		).trim();
 	};
+	const toggleSessionNoteAiIgnored = (noteId, ignored) => {
+		view.updateData(
+			"notes",
+			(viewModel.notes || []).map((note) =>
+				note.id === noteId ? { ...note, _aiIgnored: ignored } : note,
+			),
+		);
+	};
+	const toggleSessionEntityAiIgnored = (type, entityId, ignored) => {
+		const list = type === "locations" ? view.sessionLocations : view.sessionNpcs;
+		const entity = list.find((item) => item.id === entityId);
+		if (!entity) return;
+		if (type === "locations") {
+			view.handleSessionLocationChange(entityId, {
+				...entity,
+				_aiIgnored: ignored,
+			});
+			return;
+		}
+		view.handleSessionNpcChange(entityId, { ...entity, _aiIgnored: ignored });
+	};
+	const toggleSceneNoteAiIgnored = (sceneId, noteId, ignored) => {
+		const scene = (viewModel.scenes || []).find((item) => item.id === sceneId);
+		if (!scene) return;
+		view.handleSceneNotesReorder(
+			sceneId,
+			(scene.notes || []).map((note) =>
+				note.id === noteId ? { ...note, _aiIgnored: ignored } : note,
+			),
+		);
+	};
 
 	return (
 		<EntityLinkResolverContext.Provider value={sessionScopedEntityLinks}>
@@ -277,6 +309,17 @@ function SessionView(props) {
 								}
 								keyExtractor={(note) => note.id}
 								isItemDraggable={(note) => !note._isVirtual}
+								isItemControlActive={(note) => Boolean(note._aiIgnored)}
+								renderItemControl={(note) =>
+									!note._isVirtual && (
+										<AiContextIgnoreButton
+											ignored={Boolean(note._aiIgnored)}
+											onToggle={(ignored) =>
+												toggleSessionNoteAiIgnored(note.id, ignored)
+											}
+										/>
+									)
+								}
 								renderItem={(note, isDragging, index) => (
 									<NoteCard
 										note={note}
@@ -319,6 +362,15 @@ function SessionView(props) {
 								className="SessionView__characters"
 								onReorder={view.handleSessionNpcsReorder}
 								keyExtractor={(npc) => npc.id}
+								isItemControlActive={(npc) => Boolean(npc._aiIgnored)}
+								renderItemControl={(npc) => (
+									<AiContextIgnoreButton
+										ignored={Boolean(npc._aiIgnored)}
+										onToggle={(ignored) =>
+											toggleSessionEntityAiIgnored("npc", npc.id, ignored)
+										}
+									/>
+								)}
 								renderItem={(npc) => (
 									<CharacterCard
 										character={npc}
@@ -376,6 +428,21 @@ function SessionView(props) {
 								className="SessionView__locations"
 								onReorder={view.handleSessionLocationsReorder}
 								keyExtractor={(location) => location.id}
+								isItemControlActive={(location) =>
+									Boolean(location._aiIgnored)
+								}
+								renderItemControl={(location) => (
+									<AiContextIgnoreButton
+										ignored={Boolean(location._aiIgnored)}
+										onToggle={(ignored) =>
+											toggleSessionEntityAiIgnored(
+												"locations",
+												location.id,
+												ignored,
+											)
+										}
+									/>
+								)}
 								renderItem={(location) => (
 									<LocationCard
 										location={location}
@@ -473,6 +540,9 @@ function SessionView(props) {
 											}
 											onSceneNotesReorder={(notes) =>
 												view.handleSceneNotesReorder(scene.id, notes)
+											}
+											onSceneNoteAiIgnoredChange={(noteId, ignored) =>
+												toggleSceneNoteAiIgnored(scene.id, noteId, ignored)
 											}
 											onSceneNoteToggleCollapse={(noteId) =>
 												view.handleSceneToggleNoteCollapse(scene.id, noteId)
@@ -659,6 +729,20 @@ function SceneCard(props) {
 									keyExtractor={(note) => note.id}
 									isItemDraggable={(note) => !note._isVirtual}
 									isolateDragEvents
+									isItemControlActive={(note) => Boolean(note._aiIgnored)}
+									renderItemControl={(note) =>
+										!note._isVirtual && (
+											<AiContextIgnoreButton
+												ignored={Boolean(note._aiIgnored)}
+												onToggle={(ignored) =>
+													props.onSceneNoteAiIgnoredChange?.(
+														note.id,
+														ignored,
+													)
+												}
+											/>
+										)
+									}
 									renderItem={(note, isDragging, index) => (
 										<NoteCard
 											note={note}

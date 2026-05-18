@@ -457,5 +457,7 @@
 	"Mentions": "Згадує",
 	"Related": "Пов'язано",
 	"Graph overview": "Огляд графа",
+	"Ignore in AI context": "Ігнорувати в контексті ШІ",
+	"Include in AI context": "Додавати в контекст ШІ",
 	"Nodes": "Вузли"
 }

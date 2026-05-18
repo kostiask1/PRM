@@ -425,6 +425,10 @@ await run("campaign state helpers sanitize entities and update mentions", () => 
 		sanitizeEntityForSave({ id: 1, name: "Hero", _draft: true }),
 		{ id: 1, name: "Hero" },
 	);
+	assert.deepEqual(
+		sanitizeEntityForSave({ id: 1, name: "Hero", _aiIgnored: true }),
+		{ id: 1, name: "Hero", _aiIgnored: true },
+	);
 	assert.deepEqual(sanitizeLoadedEntity({ name: "Hero", _tmp: "x" }), {
 		name: "Hero",
 	});

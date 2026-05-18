@@ -40,6 +40,7 @@ function normalizeSessionEntity(type, entity = {}) {
 			collapsed: Boolean(source.collapsed),
 			isNotesCollapsed: Boolean(source.isNotesCollapsed),
 			...source,
+			_aiIgnored: Boolean(entity._aiIgnored),
 		};
 	}
 	return {
@@ -56,6 +57,7 @@ function normalizeSessionEntity(type, entity = {}) {
 		collapsed: Boolean(source.collapsed),
 		isNotesCollapsed: Boolean(source.isNotesCollapsed),
 		...source,
+		_aiIgnored: Boolean(entity._aiIgnored),
 	};
 }
 

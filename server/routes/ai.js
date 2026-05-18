@@ -170,6 +170,24 @@ function normalizeNotesPreservingExisting(
 	});
 }
 
+function mergeAiIgnoredNotes(existingNotes = [], visibleNotes = []) {
+	const existing = Array.isArray(existingNotes) ? existingNotes : [];
+	if (!existing.some(isAiIgnored)) return visibleNotes;
+	const visibleQueue = [...visibleNotes];
+	const merged = [];
+
+	for (const note of existing) {
+		if (isAiIgnored(note)) {
+			merged.push(note);
+			continue;
+		}
+		const nextVisible = visibleQueue.shift();
+		if (nextVisible) merged.push(nextVisible);
+	}
+
+	return [...merged, ...visibleQueue];
+}
+
 function normalizeCharacter(raw, existing = null, { simplifiedNotes = false } = {}) {
 	const nameParts = parseNameParts(raw);
 	const rawHasName = hasAnyOwn(raw, [
@@ -200,6 +218,11 @@ function normalizeCharacter(raw, existing = null, { simplifiedNotes = false } = 
 	]);
 	const rawTrait = firstOwnedValue(raw, ["trait", "personality", "quirk"]);
 
+	const notes = normalizeNotesPreservingExisting(notesSource, existing?.notes || [], {
+		keepAtLeastOne: true,
+		simplifiedNotes,
+	});
+
 	return {
 		id: existing?.id || raw.id || storage.createId(),
 		firstName: rawHasName ? nameParts.firstName : existing?.firstName || "",
@@ -214,10 +237,7 @@ function normalizeCharacter(raw, existing = null, { simplifiedNotes = false } = 
 				? asText(rawMotivation)
 				: existing?.motivation || "",
 		trait: rawTrait !== undefined ? asText(rawTrait) : existing?.trait || "",
-		notes: normalizeNotesPreservingExisting(notesSource, existing?.notes || [], {
-			keepAtLeastOne: true,
-			simplifiedNotes,
-		}),
+		notes: mergeAiIgnoredNotes(existing?.notes || [], notes),
 		collapsed: Boolean(existing?.collapsed ?? raw.collapsed ?? false),
 		isNotesCollapsed: Boolean(
 			existing?.isNotesCollapsed ?? raw.isNotesCollapsed ?? false,
@@ -244,6 +264,11 @@ function normalizeLocation(raw, existing = null, { simplifiedNotes = false } = {
 			? existing.notes || []
 			: [];
 
+	const notes = normalizeNotesPreservingExisting(notesSource, existing?.notes || [], {
+		keepAtLeastOne: true,
+		simplifiedNotes,
+	});
+
 	return {
 		id: existing?.id || raw.id || storage.createId(),
 		name:
@@ -251,10 +276,7 @@ function normalizeLocation(raw, existing = null, { simplifiedNotes = false } = {
 				? sanitizeEntityName(rawName)
 				: existing?.name || "",
 		description: fallbackDescription,
-		notes: normalizeNotesPreservingExisting(notesSource, existing?.notes || [], {
-			keepAtLeastOne: true,
-			simplifiedNotes,
-		}),
+		notes: mergeAiIgnoredNotes(existing?.notes || [], notes),
 		collapsed: Boolean(existing?.collapsed ?? raw.collapsed ?? false),
 		isNotesCollapsed: Boolean(
 			existing?.isNotesCollapsed ?? raw.isNotesCollapsed ?? false,
@@ -763,9 +785,12 @@ function normalizeScene(
 
 	const hasNotes = Array.isArray(scene.notes);
 	const notesFromAi = hasNotes
-		? normalizeNotesPreservingExisting(scene.notes || [], existing?.notes || [], {
-				simplifiedNotes,
-			})
+		? mergeAiIgnoredNotes(
+				existing?.notes || [],
+				normalizeNotesPreservingExisting(scene.notes || [], existing?.notes || [], {
+					simplifiedNotes,
+				}),
+			)
 		: existing?.notes || [];
 	const hasNpcs = Array.isArray(scene.npcs);
 
@@ -875,9 +900,14 @@ function isContextListIncluded(contextConfig) {
 	return contextConfig.included !== false;
 }
 
+function isAiIgnored(value = {}) {
+	return Boolean(value?._aiIgnored);
+}
+
 function filterEntitiesByContext(entities = [], entityConfig, getKey) {
+	const visibleEntities = entities.filter((entity) => !isAiIgnored(entity));
 	if (!entityConfig) return [];
-	if (entityConfig === true) return entities;
+	if (entityConfig === true) return visibleEntities;
 	if (entityConfig.included === false) return [];
 
 	const items = entityConfig.items || {};
@@ -885,10 +915,31 @@ function filterEntitiesByContext(entities = [], entityConfig, getKey) {
 		.filter(([, included]) => included !== false)
 		.map(([key]) => key);
 
-	if (Object.keys(items).length === 0) return entities;
+	if (Object.keys(items).length === 0) return visibleEntities;
 
 	const selected = new Set(selectedKeys);
-	return entities.filter((entity) => selected.has(getKey(entity)));
+	return visibleEntities.filter((entity) => selected.has(getKey(entity)));
+}
+
+function filterNotesForAiContext(notes = []) {
+	return (Array.isArray(notes) ? notes : []).filter((note) => !isAiIgnored(note));
+}
+
+function filterSessionDataForAiContext(data = {}) {
+	return {
+		...data,
+		notes: filterNotesForAiContext(data.notes),
+		npcs: (Array.isArray(data.npcs) ? data.npcs : []).filter(
+			(entity) => !isAiIgnored(entity),
+		),
+		locations: (Array.isArray(data.locations) ? data.locations : []).filter(
+			(entity) => !isAiIgnored(entity),
+		),
+		scenes: (Array.isArray(data.scenes) ? data.scenes : []).map((scene) => ({
+			...scene,
+			notes: filterNotesForAiContext(scene.notes),
+		})),
+	};
 }
 
 function filterLocationsByContext(locations = [], locationConfig) {
@@ -1993,7 +2044,7 @@ router.post("/generate", async (req, res, next) => {
 		const contextData = { campaign: {}, sessions: [] };
 		if (contextConfig) {
 			if (contextConfig.campaignNotes)
-				contextData.campaign.notes = campaign.notes;
+				contextData.campaign.notes = filterNotesForAiContext(campaign.notes);
 			if (isContextListIncluded(contextConfig.campaignCharacters)) {
 				const chars = await storage.listEntities(path.campaign, "characters");
 				contextData.campaign.characters = filterEntitiesByContext(
@@ -2033,7 +2084,7 @@ router.post("/generate", async (req, res, next) => {
 						fileName: slug,
 						name: sData.name,
 						conf,
-						data: sData.data,
+						data: filterSessionDataForAiContext(sData.data),
 					});
 				}
 			}
@@ -2042,10 +2093,10 @@ router.post("/generate", async (req, res, next) => {
 		const aiApplyScope = buildAiApplyScope(contextData, path);
 		if (entityTargetScope === "session") {
 			aiApplyScope.sessionNpcs = Array.isArray(session?.data?.npcs)
-				? session.data.npcs
+				? session.data.npcs.filter((entity) => !isAiIgnored(entity))
 				: null;
 			aiApplyScope.sessionLocations = Array.isArray(session?.data?.locations)
-				? session.data.locations
+				? session.data.locations.filter((entity) => !isAiIgnored(entity))
 				: null;
 		}
 		const allowFinalStateDelete =
@@ -2304,7 +2355,7 @@ router.post("/generate", async (req, res, next) => {
 						},
 					);
 					sessionData.data.notes = aiApplyScope.sessionNotes
-						? normalizedNotes
+						? mergeAiIgnoredNotes(sessionData.data.notes || [], normalizedNotes)
 						: appendNormalizedNotes(sessionData.data.notes || [], normalizedNotes);
 				}
 
@@ -2359,7 +2410,7 @@ router.post("/generate", async (req, res, next) => {
 							{ simplifiedNotes: simplifiedNotesEnabled },
 						);
 						meta.notes = aiApplyScope.campaignNotes
-							? normalizedNotes
+							? mergeAiIgnoredNotes(meta.notes || [], normalizedNotes)
 							: appendNormalizedNotes(meta.notes || [], normalizedNotes);
 					}
 

@@ -71,6 +71,7 @@ function noteToPromptContext(note, { includeTitle = true } = {}) {
 		return note.trim() ? { text: note } : null;
 	}
 	if (typeof note !== "object") return null;
+	if (note._aiIgnored) return null;
 
 	const title = includeTitle ? String(note.title || "").trim() : "";
 	const text = String(note.text || "");
@@ -81,6 +82,10 @@ function noteToPromptContext(note, { includeTitle = true } = {}) {
 		...(includeTitle ? { title } : {}),
 		text,
 	};
+}
+
+function isAiIgnored(value = {}) {
+	return Boolean(value?._aiIgnored);
 }
 
 function entityContextName(entity = {}) {
@@ -94,6 +99,7 @@ function entityContextName(entity = {}) {
 }
 
 function characterToPromptContext(entity = {}, noteToContextNote) {
+	if (isAiIgnored(entity)) return null;
 	return {
 		id: entity.id,
 		slug: entity.slug,
@@ -108,6 +114,7 @@ function characterToPromptContext(entity = {}, noteToContextNote) {
 }
 
 function npcToPromptContext(entity = {}, noteToContextNote) {
+	if (isAiIgnored(entity)) return null;
 	return {
 		id: entity.id,
 		slug: entity.slug,
@@ -119,6 +126,17 @@ function npcToPromptContext(entity = {}, noteToContextNote) {
 		motivation: entity.motivation,
 		trait: entity.trait,
 		notes: (entity.notes || []).map(noteToContextNote).filter(Boolean),
+	};
+}
+
+function locationToPromptContext(location = {}, noteToContextNote) {
+	if (isAiIgnored(location)) return null;
+	return {
+		id: location.id,
+		slug: location.slug,
+		name: location.name || location.title,
+		description: location.description,
+		notes: (location.notes || []).map(noteToContextNote).filter(Boolean),
 	};
 }
 
@@ -584,7 +602,7 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 			if (conf.included && Array.isArray(data.npcs) && data.npcs.length > 0) {
 				sessionContext.npcs = data.npcs
 					.map((npc) => npcToPromptContext(npc, noteToContextNote))
-					.filter((npc) => npc.name || npc.description || npc.motivation);
+					.filter((npc) => npc && (npc.name || npc.description || npc.motivation));
 			}
 
 			if (
@@ -593,16 +611,8 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 				data.locations.length > 0
 			) {
 				sessionContext.locations = data.locations
-					.map((location) => ({
-						id: location.id,
-						slug: location.slug,
-						name: location.name || location.title,
-						description: location.description,
-						notes: (location.notes || [])
-							.map(noteToContextNote)
-							.filter(Boolean),
-					}))
-					.filter((location) => location.name || location.description);
+					.map((location) => locationToPromptContext(location, noteToContextNote))
+					.filter((location) => location && (location.name || location.description));
 			}
 
 			return sessionContext;
@@ -619,21 +629,13 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 				.filter(Boolean),
 			characters: contextData?.campaign?.characters
 				?.map((c) => characterToPromptContext(c, noteToContextNote))
-				.filter((c) => c.name || c.motivation),
+				.filter((c) => c && (c.name || c.motivation)),
 			npcs: contextData?.campaign?.npcs
 				?.map((npc) => npcToPromptContext(npc, noteToContextNote))
-				.filter((npc) => npc.name || npc.description || npc.motivation),
+				.filter((npc) => npc && (npc.name || npc.description || npc.motivation)),
 			locations: contextData?.campaign?.locations
-				?.map((location) => ({
-					id: location.id,
-					slug: location.slug,
-					name: location.name || location.title,
-					description: location.description,
-					notes: (location.notes || [])
-						.map(noteToContextNote)
-						.filter(Boolean),
-				}))
-				.filter((location) => location.name || location.description),
+				?.map((location) => locationToPromptContext(location, noteToContextNote))
+				.filter((location) => location && (location.name || location.description)),
 		},
 	};
 
@@ -644,23 +646,15 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 		if (Array.isArray(session.data?.npcs) && session.data.npcs.length > 0) {
 			currentSession.npcs = session.data.npcs
 				.map((npc) => npcToPromptContext(npc, noteToContextNote))
-				.filter((npc) => npc.name || npc.description || npc.motivation);
+				.filter((npc) => npc && (npc.name || npc.description || npc.motivation));
 		}
 		if (
 			Array.isArray(session.data?.locations) &&
 			session.data.locations.length > 0
 		) {
 			currentSession.locations = session.data.locations
-				.map((location) => ({
-					id: location.id,
-					slug: location.slug,
-					name: location.name || location.title,
-					description: location.description,
-					notes: (location.notes || [])
-						.map(noteToContextNote)
-						.filter(Boolean),
-				}))
-				.filter((location) => location.name || location.description);
+				.map((location) => locationToPromptContext(location, noteToContextNote))
+				.filter((location) => location && (location.name || location.description));
 		}
 		contextJson.currentSession = currentSession;
 	}
