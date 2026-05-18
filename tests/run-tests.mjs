@@ -82,6 +82,8 @@ import { api } from "../src/api.js";
 const require = createRequire(import.meta.url);
 const storage = require("../server/storage.js");
 const spellsRouter = require("../server/routes/spells.js");
+const aiRouter = require("../server/routes/ai.js");
+const aiService = require("../server/aiService.js");
 
 const results = [];
 const TEST_PREFIX = `autotest-${Date.now()}`;
@@ -478,6 +480,115 @@ await run("campaign state helpers sanitize entities and update mentions", () => 
 			completedAt: "2026-05-08",
 		},
 	);
+});
+
+await run("AI helpers preserve numeric ids and ignored notes", () => {
+	const { applyGeneratedScenes, mergeAiIgnoredNotes } = aiRouter.__test;
+	const scenes = applyGeneratedScenes(
+		[
+			{
+				id: 100,
+				texts: { summary: "Old", goal: "", stakes: "", location: "" },
+				notes: [],
+				npcs: [],
+			},
+		],
+		[
+			{
+				id: 100,
+				texts: { summary: "New", goal: "", stakes: "", location: "" },
+				notes: [],
+				npcs: [],
+			},
+		],
+		new Set(["100"]),
+		new Map(),
+	);
+	assert.equal(scenes.length, 1);
+	assert.equal(scenes[0].texts.summary, "New");
+
+	const mergedNotes = mergeAiIgnoredNotes(
+		[
+			{ id: 1, title: "A", text: "A", collapsed: false },
+			{
+				id: 2,
+				title: "Hidden",
+				text: "Hidden",
+				collapsed: false,
+				_aiIgnored: true,
+			},
+			{ id: 3, title: "B", text: "B", collapsed: false },
+		],
+		[
+			{ id: 1, title: "A2", text: "A2", collapsed: false },
+			{ id: 3, title: "B2", text: "B2", collapsed: false },
+		],
+	);
+	assert.deepEqual(
+		mergedNotes.map((note) => note.id),
+		[1, 2, 3],
+	);
+	assert.equal(mergedNotes[1]._aiIgnored, true);
+});
+
+await run(
+	"AI session-scope filters exact campaign copies without dropping new namesakes",
+	() => {
+		const { filterGeneratedEntitiesOutsideScope } = aiRouter.__test;
+		const campaignLocations = [
+			{
+				id: "campaign-city",
+				slug: "city",
+				name: "City",
+				description: "Old city",
+				notes: [{ id: "n1", title: "Hook", text: "Old hook", collapsed: false }],
+			},
+		];
+		const getName = (entity) => String(entity.name || "").toLowerCase();
+
+		assert.deepEqual(
+			filterGeneratedEntitiesOutsideScope(
+				[
+					{
+						name: "City",
+						description: "Old city",
+						notes: [{ title: "Hook", text: "Old hook" }],
+					},
+				],
+				campaignLocations,
+				[],
+				getName,
+				"locations",
+			),
+			[],
+		);
+
+		const newNamesake = filterGeneratedEntitiesOutsideScope(
+			[{ name: "City", description: "New session district", notes: [] }],
+			campaignLocations,
+			[],
+			getName,
+			"locations",
+		);
+		assert.equal(newNamesake.length, 1);
+		assert.equal(newNamesake[0].description, "New session district");
+	},
+);
+
+await run("AI JSON fence cleanup preserves inner markdown fences", () => {
+	const raw = [
+		"```json",
+		'{"notes":[{"text":"```js\\nconst x = 1;\\n```"}]}',
+		"```",
+	].join("\n");
+	const cleaned = aiService.__test.stripOuterJsonFence(raw);
+	assert.equal(
+		cleaned,
+		'{"notes":[{"text":"```js\\nconst x = 1;\\n```"}]}',
+	);
+	assert.deepEqual(JSON.parse(cleaned), {
+		notes: [{ text: "```js\nconst x = 1;\n```" }],
+	});
 });
 
 await run("SessionViewModel encounter lookup", () => {

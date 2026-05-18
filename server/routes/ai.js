@@ -29,7 +29,16 @@ function makeId() {
 }
 
 function asText(value) {
-	return typeof value === "string" ? value.trim() : "";
+	if (value === null || value === undefined) return "";
+	if (typeof value === "string") return value.trim();
+	if (
+		typeof value === "number" ||
+		typeof value === "bigint" ||
+		typeof value === "boolean"
+	) {
+		return String(value).trim();
+	}
+	return "";
 }
 
 function hasOwn(value, key) {
@@ -173,19 +182,45 @@ function normalizeNotesPreservingExisting(
 function mergeAiIgnoredNotes(existingNotes = [], visibleNotes = []) {
 	const existing = Array.isArray(existingNotes) ? existingNotes : [];
 	if (!existing.some(isAiIgnored)) return visibleNotes;
-	const visibleQueue = [...visibleNotes];
-	const merged = [];
+	const ignoredNotes = existing.filter(isAiIgnored);
+	const ignoredIds = new Set(
+		ignoredNotes.map((note) => asText(note?.id)).filter(Boolean),
+	);
+	const result = (Array.isArray(visibleNotes) ? visibleNotes : []).filter(
+		(note) => {
+			const id = asText(note?.id);
+			return !id || !ignoredIds.has(id);
+		},
+	);
+	const visibleIndexById = () =>
+		new Map(
+			result
+				.map((note, index) => [asText(note?.id), index])
+				.filter(([id]) => Boolean(id)),
+		);
 
-	for (const note of existing) {
-		if (isAiIgnored(note)) {
-			merged.push(note);
-			continue;
+	for (const ignoredNote of ignoredNotes) {
+		const originalIndex = existing.indexOf(ignoredNote);
+		const previousVisible = [...existing.slice(0, originalIndex)]
+			.reverse()
+			.find((note) => !isAiIgnored(note) && asText(note?.id));
+		const nextVisible = existing
+			.slice(originalIndex + 1)
+			.find((note) => !isAiIgnored(note) && asText(note?.id));
+		const indexes = visibleIndexById();
+		const previousIndex = indexes.get(asText(previousVisible?.id));
+		const nextIndex = indexes.get(asText(nextVisible?.id));
+
+		if (previousIndex !== undefined) {
+			result.splice(previousIndex + 1, 0, ignoredNote);
+		} else if (nextIndex !== undefined) {
+			result.splice(nextIndex, 0, ignoredNote);
+		} else {
+			result.splice(Math.min(originalIndex, result.length), 0, ignoredNote);
 		}
-		const nextVisible = visibleQueue.shift();
-		if (nextVisible) merged.push(nextVisible);
 	}
 
-	return [...merged, ...visibleQueue];
+	return result;
 }
 
 function normalizeCharacter(raw, existing = null, { simplifiedNotes = false } = {}) {
@@ -950,40 +985,101 @@ function filterLocationsByContext(locations = [], locationConfig) {
 	);
 }
 
+function normalizeComparableText(value) {
+	return asText(value).replace(/\s+/g, " ").toLowerCase();
+}
+
+function noteSignatures(notes = []) {
+	return (Array.isArray(notes) ? notes : [])
+		.map(noteSignature)
+		.filter((signature) => signature !== noteSignature());
+}
+
+function notesMatchExactly(leftNotes = [], rightNotes = []) {
+	const left = noteSignatures(leftNotes);
+	const right = noteSignatures(rightNotes);
+	return (
+		left.length === right.length &&
+		left.every((signature, index) => signature === right[index])
+	);
+}
+
+function generatedEntityLooksLikeExcludedCopy(entity = {}, excluded = {}, type) {
+	if (type === "locations") {
+		return (
+			normalizeComparableText(entity.description) ===
+				normalizeComparableText(excluded.description) &&
+			notesMatchExactly(entity.notes, excluded.notes)
+		);
+	}
+
+	return (
+		normalizeComparableText(entity.race) === normalizeComparableText(excluded.race) &&
+		normalizeComparableText(entity.class) === normalizeComparableText(excluded.class) &&
+		normalizeComparableText(entity.level) === normalizeComparableText(excluded.level) &&
+		normalizeComparableText(entity.description) ===
+			normalizeComparableText(excluded.description) &&
+		normalizeComparableText(entity.motivation) ===
+			normalizeComparableText(excluded.motivation) &&
+		normalizeComparableText(entity.trait) === normalizeComparableText(excluded.trait) &&
+		notesMatchExactly(entity.notes, excluded.notes)
+	);
+}
+
 function filterGeneratedEntitiesOutsideScope(
 	generatedEntities,
 	excludedEntities,
 	allowedEntities = [],
+	nameKeyFn = entityNameKey,
+	type = "npc",
 ) {
 	if (!Array.isArray(generatedEntities)) return generatedEntities;
+	const excludedList = Array.isArray(excludedEntities) ? excludedEntities : [];
+	const allowedList = Array.isArray(allowedEntities) ? allowedEntities : [];
 	const excludedIds = new Set(
-		(Array.isArray(excludedEntities) ? excludedEntities : [])
+		excludedList
 			.map((entity) => asText(entity?.id))
 			.filter(Boolean),
 	);
 	const excludedSlugs = new Set(
-		(Array.isArray(excludedEntities) ? excludedEntities : [])
+		excludedList
 			.map((entity) => asText(entity?.slug))
 			.filter(Boolean),
 	);
 	const allowedIds = new Set(
-		(Array.isArray(allowedEntities) ? allowedEntities : [])
+		allowedList
 			.map((entity) => asText(entity?.id))
 			.filter(Boolean),
 	);
 	const allowedSlugs = new Set(
-		(Array.isArray(allowedEntities) ? allowedEntities : [])
+		allowedList
 			.map((entity) => asText(entity?.slug))
 			.filter(Boolean),
+	);
+	const allowedNames = new Set(allowedList.map(nameKeyFn).filter(Boolean));
+	const excludedByName = new Map(
+		excludedList
+			.map((entity) => [nameKeyFn(entity), entity])
+			.filter(([key]) => Boolean(key)),
 	);
 
 	return generatedEntities.filter((entity) => {
 		const id = asText(entity?.id);
 		const slug = asText(entity?.slug);
+		const nameKey = nameKeyFn(entity);
 		const isAllowedSessionEntity =
-			(id && allowedIds.has(id)) || (slug && allowedSlugs.has(slug));
+			(id && allowedIds.has(id)) ||
+			(slug && allowedSlugs.has(slug)) ||
+			(nameKey && allowedNames.has(nameKey));
 		if (isAllowedSessionEntity) return true;
-		return !((id && excludedIds.has(id)) || (slug && excludedSlugs.has(slug)));
+		if ((id && excludedIds.has(id)) || (slug && excludedSlugs.has(slug))) {
+			return false;
+		}
+		const excludedBySameName = nameKey ? excludedByName.get(nameKey) : null;
+		return !(
+			excludedBySameName &&
+			generatedEntityLooksLikeExcludedCopy(entity, excludedBySameName, type)
+		);
 	});
 }
 
@@ -1148,7 +1244,8 @@ function buildAiApplyScope(contextData = {}, path = {}) {
 			asText(path.session),
 	);
 	const currentSessionConf = currentSessionContext?.conf || {};
-	const currentSessionData = currentSessionContext?.data || {};
+	const currentSessionData =
+		currentSessionContext?.data || contextData.currentSession?.data || {};
 	const sceneIds = new Set();
 	let hasSceneContext = false;
 
@@ -1845,6 +1942,7 @@ function getAiHistoryCampaignSlug(req) {
 function collectMentionCandidates(generatedContent, contextData = {}) {
 	const names = [];
 	const campaignContext = contextData?.campaign || {};
+	const currentSessionData = contextData?.currentSession?.data || {};
 
 	if (Array.isArray(campaignContext.characters)) {
 		names.push(...campaignContext.characters.map(getCharacterDisplayName));
@@ -1854,6 +1952,19 @@ function collectMentionCandidates(generatedContent, contextData = {}) {
 	}
 	if (Array.isArray(campaignContext.locations)) {
 		names.push(...campaignContext.locations.map(getLocationDisplayName));
+	}
+	if (Array.isArray(currentSessionData.npcs)) {
+		names.push(...currentSessionData.npcs.map(getCharacterDisplayName));
+	}
+	if (Array.isArray(currentSessionData.locations)) {
+		names.push(...currentSessionData.locations.map(getLocationDisplayName));
+	}
+	if (Array.isArray(currentSessionData.scenes)) {
+		for (const scene of currentSessionData.scenes) {
+			for (const npc of scene?.npcs || []) {
+				names.push(asText(npc?.name));
+			}
+		}
 	}
 
 	for (const sessionContext of contextData?.sessions || []) {
@@ -2131,6 +2242,14 @@ router.post("/generate", async (req, res, next) => {
 				}
 			}
 		}
+		if (entityTargetScope === "session" && session) {
+			contextData.currentSession = {
+				slug: path.session,
+				fileName: path.session,
+				name: session.name,
+				data: filterSessionDataForAiContext(session.data),
+			};
+		}
 
 		const campaignScopeEntities =
 			entityTargetScope === "session"
@@ -2177,16 +2296,24 @@ router.post("/generate", async (req, res, next) => {
 			allowLocations: locationGenerationEnabled,
 			allowEncounters: encounterGenerationEnabled,
 		});
-		if (entityTargetScope === "session") {
+		if (
+			entityTargetScope === "session" &&
+			generatedContent &&
+			typeof generatedContent === "object"
+		) {
 			generatedContent.npcs = filterGeneratedEntitiesOutsideScope(
 				generatedContent.npcs,
 				campaignScopeEntities.npcs,
 				aiApplyScope.sessionNpcs,
+				entityNameKey,
+				"npc",
 			);
 			generatedContent.locations = filterGeneratedEntitiesOutsideScope(
 				generatedContent.locations,
 				campaignScopeEntities.locations,
 				aiApplyScope.sessionLocations,
+				locationNameKey,
+				"locations",
 			);
 		}
 
@@ -2527,6 +2654,16 @@ router.post("/generate", async (req, res, next) => {
 	} catch (error) {
 		next(error);
 	}
+});
+
+Object.defineProperty(router, "__test", {
+	value: {
+		applyGeneratedScenes,
+		applyGeneratedSessionEntities,
+		asText,
+		filterGeneratedEntitiesOutsideScope,
+		mergeAiIgnoredNotes,
+	},
 });
 
 module.exports = router;

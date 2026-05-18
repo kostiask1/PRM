@@ -383,6 +383,12 @@ const imagePromptLanguageContract = `IMAGE PROMPT LANGUAGE EXCEPTION:
 If the user asks to generate a prompt for creating an image, ignore the normal response-language rule for that answer and write the complete prompt in English.
 The image prompt must be detailed and ready to paste into an image generator.`;
 
+function stripOuterJsonFence(text) {
+	const trimmed = String(text || "").trim();
+	const match = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+	return match ? match[1].trim() : trimmed;
+}
+
 async function generateContent({
 	type,
 	session,
@@ -494,12 +500,16 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 					? `ENTITY SCOPE: Top-level "npcs" and "locations" in this response are session-scoped by default. They belong only to the current session and must not be treated as campaign-wide entities unless the user explicitly asks for campaign scope.`
 					: `ENTITY SCOPE: Top-level "npcs" and "locations" in this response are campaign-scoped. They belong to the whole campaign.`,
 			);
-			if (entityTargetScope === "session") {
-				systemInstructionParts.push(
-					`SESSION SCOPE OUTPUT RULE: Do not return campaign-scoped NPCs or campaign-scoped locations/factions in top-level "npcs" or "locations". In session scope, top-level entity arrays may contain only existing INPUT DATA.currentSession entities and genuinely new session-scoped entities requested by the user.`,
-				);
-			}
 		}
+	}
+	if (
+		effectiveParseAIResponse &&
+		entityTargetScope === "session" &&
+		["scene", "npc", "location"].includes(useKey)
+	) {
+		systemInstructionParts.push(
+			`SESSION SCOPE OUTPUT RULE: Do not return campaign-scoped NPCs or campaign-scoped locations/factions in top-level "npcs" or "locations". In session scope, top-level entity arrays may contain only existing INPUT DATA.currentSession entities and genuinely new session-scoped entities requested by the user.`,
+		);
 	}
 
 	model = getGeminiClient().getGenerativeModel({
@@ -724,11 +734,17 @@ IMPORTANT: If editing, renaming, or deleting an existing character from INPUT DA
 IMPORTANT: This request is strictly for NPCs. Return only "npcs". Do not create player characters or any other content category.
 IMPORTANT: Include race, class, and level for every generated NPC when possible. If a formal class does not fit, put a role/archetype in "class".
 IMPORTANT: If editing, renaming, or deleting an existing NPC from INPUT DATA, preserve its "id" and "slug". If ${entityTargetScope === "session" ? "INPUT DATA.currentSession.npcs" : "INPUT DATA.campaign.npcs"} is absent, this request is append-only for NPCs.\n`;
+		if (entityTargetScope === "session") {
+			userPrompt += `IMPORTANT: Do not include campaign-scoped NPCs in this session-scoped response. Return all existing INPUT DATA.currentSession.npcs unchanged plus requested new or edited session NPCs.\n`;
+		}
 	} else if (useKey === "location") {
 		userPrompt += `TASK: Create or update locations/factions for this ${entityTargetScope === "session" ? "current session" : "campaign"} based on user instructions.
 IMPORTANT: This request is strictly for locations/factions. Return only "locations". Do not create characters, NPCs, campaign notes, scenes, encounters, or any other content category.
 IMPORTANT: If editing, renaming, or deleting an existing location/faction from INPUT DATA, preserve its "id" and "slug".
 IMPORTANT: If ${entityTargetScope === "session" ? "INPUT DATA.currentSession.locations" : "INPUT DATA.campaign.locations"} is present, the returned "locations" array must contain every included existing location/faction unchanged unless the user requested edits/deletions, plus requested new locations/factions. Do not return only the new item. If ${entityTargetScope === "session" ? "INPUT DATA.currentSession.locations" : "INPUT DATA.campaign.locations"} is absent, this request is append-only for locations/factions.\n`;
+		if (entityTargetScope === "session") {
+			userPrompt += `IMPORTANT: Do not include campaign-scoped locations/factions in this session-scoped response. Return all existing INPUT DATA.currentSession.locations unchanged plus requested new or edited session locations/factions.\n`;
+		}
 	} else if (useKey === "encounter") {
 		userPrompt += `TASK: Update current combat encounter (ID: ${encounterId}). Consider character levels and requested difficulty (easy, medium, hard, deadly). Pick monsters that fit the scenario.\n`;
 	} else if (useKey === "scene") {
@@ -806,11 +822,8 @@ Pick monsters (English names) while considering character levels and classes for
 	}
 
 	try {
-		// Очищення від можливих markdown-тегів, якщо вони проскочили
-		const cleanJson = text
-			.replace(/```json/g, "")
-			.replace(/```/g, "")
-			.trim();
+		// Очищення тільки зовнішнього markdown fence, якщо він проскочив.
+		const cleanJson = stripOuterJsonFence(text);
 
 		return fixNewLines(JSON.parse(cleanJson));
 	} catch (e) {
@@ -823,4 +836,11 @@ Pick monsters (English names) while considering character levels and classes for
 	}
 }
 
-module.exports = { generateContent, listAvailableModels, clearModelCache };
+module.exports = {
+	generateContent,
+	listAvailableModels,
+	clearModelCache,
+	__test: {
+		stripOuterJsonFence,
+	},
+};
