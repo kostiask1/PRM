@@ -20,6 +20,12 @@ import {
 } from "../utils/bestiary.js";
 import { objectMatchesSearch } from "../utils/deepSearch.js";
 import { highlightText } from "../utils/searchHighlight.jsx";
+import {
+	addUndoSnapshot,
+	clearRedoStack,
+	createRedoTransition,
+	createUndoTransition,
+} from "../utils/undoRedo.js";
 import "../assets/components/Bestiary.css";
 import { lang } from "../services/localization";
 
@@ -116,11 +122,10 @@ export default function Bestiary({
 	);
 
 	const pushCustomUndoSnapshot = (snapshot) => {
-		setUndoStack((current) => [
-			...current,
-			cloneCustomMonsters(snapshot),
-		]);
-		setRedoStack([]);
+		setUndoStack((current) =>
+			addUndoSnapshot(current, snapshot, cloneCustomMonsters),
+		);
+		setRedoStack(clearRedoStack());
 	};
 
 	const pushCustomUndo = () => {
@@ -157,12 +162,17 @@ export default function Bestiary({
 
 	const handleUndo = async () => {
 		if (undoStack.length === 0) return;
-		const previous = undoStack[undoStack.length - 1];
-		const current = cloneCustomMonsters(customMonsters);
+		const transition = createUndoTransition({
+			undoStack,
+			redoStack,
+			current: customMonsters,
+			clone: cloneCustomMonsters,
+		});
+		if (!transition.target) return;
 		try {
-			await restoreCustomMonsters(previous, { clearSelection: true });
-			setUndoStack((stack) => stack.slice(0, -1));
-			setRedoStack((stack) => [...stack, current]);
+			await restoreCustomMonsters(transition.target, { clearSelection: true });
+			setUndoStack(transition.undoStack);
+			setRedoStack(transition.redoStack);
 		} catch (err) {
 			dispatch(alert({ title: lang.t("Undo error"), message: err.message }));
 		}
@@ -170,12 +180,17 @@ export default function Bestiary({
 
 	const handleRedo = async () => {
 		if (redoStack.length === 0) return;
-		const next = redoStack[redoStack.length - 1];
-		const current = cloneCustomMonsters(customMonsters);
+		const transition = createRedoTransition({
+			undoStack,
+			redoStack,
+			current: customMonsters,
+			clone: cloneCustomMonsters,
+		});
+		if (!transition.target) return;
 		try {
-			await restoreCustomMonsters(next, { clearSelection: true });
-			setRedoStack((stack) => stack.slice(0, -1));
-			setUndoStack((stack) => [...stack, current]);
+			await restoreCustomMonsters(transition.target, { clearSelection: true });
+			setRedoStack(transition.redoStack);
+			setUndoStack(transition.undoStack);
 		} catch (err) {
 			dispatch(alert({ title: lang.t("Redo error"), message: err.message }));
 		}

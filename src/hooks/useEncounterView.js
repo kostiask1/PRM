@@ -15,6 +15,12 @@ import {
 	getMonsterHpFormula,
 	isEncounterCharacterParticipant,
 } from "../utils/encounters";
+import {
+	addUndoSnapshot,
+	clearRedoStack,
+	createRedoTransition,
+	createUndoTransition,
+} from "../utils/undoRedo.js";
 
 function cloneEncounterSnapshot(value) {
 	if (!value) return value;
@@ -280,8 +286,10 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 			const current = encounterRef.current;
 
 			if (pushUndo && current && !isUpdatingHistoryRef.current) {
-				setUndoStack((prev) => [...prev, cloneEncounterSnapshot(current)]);
-				setRedoStack([]);
+				setUndoStack((prev) =>
+					addUndoSnapshot(prev, current, cloneEncounterSnapshot),
+				);
+				setRedoStack(clearRedoStack());
 			}
 
 			setEncounter(nextEncounter);
@@ -298,41 +306,47 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 		if (undoStack.length === 0) return;
 
 		const current = encounterRef.current;
-		const previous = undoStack[undoStack.length - 1];
-		if (!previous) return;
+		const transition = createUndoTransition({
+			undoStack,
+			redoStack,
+			current,
+			clone: cloneEncounterSnapshot,
+		});
+		if (!transition.target) return;
 
 		isUpdatingHistoryRef.current = true;
-		setUndoStack((prev) => prev.slice(0, -1));
-		if (current) {
-			setRedoStack((prev) => [...prev, cloneEncounterSnapshot(current)]);
-		}
-		setEncounter(previous);
-		syncSelectedInstance(previous);
-		saveEncounterState(previous);
+		setUndoStack(transition.undoStack);
+		setRedoStack(transition.redoStack);
+		setEncounter(transition.target);
+		syncSelectedInstance(transition.target);
+		saveEncounterState(transition.target);
 		setTimeout(() => {
 			isUpdatingHistoryRef.current = false;
 		}, 0);
-	}, [undoStack, saveEncounterState, syncSelectedInstance]);
+	}, [undoStack, redoStack, saveEncounterState, syncSelectedInstance]);
 
 	const handleRedo = useCallback(() => {
 		if (redoStack.length === 0) return;
 
 		const current = encounterRef.current;
-		const next = redoStack[redoStack.length - 1];
-		if (!next) return;
+		const transition = createRedoTransition({
+			undoStack,
+			redoStack,
+			current,
+			clone: cloneEncounterSnapshot,
+		});
+		if (!transition.target) return;
 
 		isUpdatingHistoryRef.current = true;
-		setRedoStack((prev) => prev.slice(0, -1));
-		if (current) {
-			setUndoStack((prev) => [...prev, cloneEncounterSnapshot(current)]);
-		}
-		setEncounter(next);
-		syncSelectedInstance(next);
-		saveEncounterState(next);
+		setRedoStack(transition.redoStack);
+		setUndoStack(transition.undoStack);
+		setEncounter(transition.target);
+		syncSelectedInstance(transition.target);
+		saveEncounterState(transition.target);
 		setTimeout(() => {
 			isUpdatingHistoryRef.current = false;
 		}, 0);
-	}, [redoStack, saveEncounterState, syncSelectedInstance]);
+	}, [undoStack, redoStack, saveEncounterState, syncSelectedInstance]);
 
 	useEffect(() => {
 		const handleHistoryShortcuts = (e) => {

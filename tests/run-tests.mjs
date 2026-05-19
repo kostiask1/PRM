@@ -13,6 +13,13 @@ import classNames from "../src/utils/classNames.js";
 import { rollDiceFormula } from "../src/utils/dice.js";
 import { extractContentTokens } from "../src/utils/contentTokens.js";
 import {
+	addUndoSnapshot,
+	createDistinctRedoTransition,
+	createDistinctUndoTransition,
+	createRedoTransition,
+	createUndoTransition,
+} from "../src/utils/undoRedo.js";
+import {
 	normalizeConditionName,
 	loadConditionsMap,
 } from "../src/utils/conditions.js";
@@ -791,6 +798,54 @@ await run("content tokens parse hit and recharge tags safely", () => {
 	assert.equal(recharge.length, 1);
 	assert.equal(recharge[0].recharge, "(Recharge 5-6)");
 	assert.equal(recharge.some((token) => token.hit === "-6"), false);
+});
+
+await run("undo redo helpers move snapshots between stacks", () => {
+	const original = { value: 1, nested: { label: "one" } };
+	const undoStack = addUndoSnapshot([], original);
+	original.nested.label = "mutated";
+	assert.equal(undoStack[0].nested.label, "one");
+
+	const undo = createUndoTransition({
+		undoStack,
+		redoStack: [],
+		current: { value: 2 },
+	});
+	assert.deepEqual(undo.target, { value: 1, nested: { label: "one" } });
+	assert.equal(undo.undoStack.length, 0);
+	assert.deepEqual(undo.redoStack, [{ value: 2 }]);
+
+	const redo = createRedoTransition({
+		undoStack: undo.undoStack,
+		redoStack: undo.redoStack,
+		current: undo.target,
+	});
+	assert.deepEqual(redo.target, { value: 2 });
+	assert.deepEqual(redo.undoStack, [{ value: 1, nested: { label: "one" } }]);
+	assert.equal(redo.redoStack.length, 0);
+});
+
+await run("undo redo helpers skip duplicate current snapshots", () => {
+	const isEqual = (left, right) => left?.value === right?.value;
+	const undo = createDistinctUndoTransition({
+		undoStack: [{ value: 1 }, { value: 2 }, { value: 2 }],
+		redoStack: [],
+		current: { value: 2 },
+		isEqual,
+	});
+	assert.deepEqual(undo.target, { value: 1 });
+	assert.deepEqual(undo.undoStack, []);
+	assert.deepEqual(undo.redoStack, [{ value: 2 }]);
+
+	const redo = createDistinctRedoTransition({
+		undoStack: [],
+		redoStack: [{ value: 1 }, { value: 1 }, { value: 3 }],
+		current: { value: 1 },
+		isEqual,
+	});
+	assert.deepEqual(redo.target, { value: 3 });
+	assert.deepEqual(redo.undoStack, [{ value: 1 }]);
+	assert.deepEqual(redo.redoStack, []);
 });
 
 await run("download helpers create and revoke blob URL", () => {

@@ -10,6 +10,12 @@ import { api } from "../api";
 import { navigateTo, useAppDispatch, useAppSelector } from "../store/appStore";
 import { sanitizeNotesForSave, upsertNoteById } from "../utils/noteUtils";
 import { downloadBlob } from "../utils/download";
+import {
+	addUndoSnapshot,
+	clearRedoStack,
+	createDistinctRedoTransition,
+	createDistinctUndoTransition,
+} from "../utils/undoRedo.js";
 import { lang } from "../services/localization";
 import {
 	areHistoryStatesEqual,
@@ -258,24 +264,20 @@ export default function useCampaignView(props) {
 		if (undoStack.length === 0) return;
 
 		const currentState = createHistoryState();
-		let tempStack = [...undoStack];
-		let stateToRestore = null;
+		const transition = createDistinctUndoTransition({
+			undoStack,
+			redoStack,
+			current: currentState,
+			isEqual: areHistoryStatesEqual,
+		});
 
-		while (tempStack.length > 0) {
-			const candidate = tempStack.pop();
-			if (!areHistoryStatesEqual(candidate, currentState)) {
-				stateToRestore = candidate;
-				break;
-			}
-		}
-
-		if (stateToRestore) {
+		if (transition.target) {
 			isUpdatingHistory.current = true;
-			setRedoStack((prev) => [currentState, ...prev]);
-			setUndoStack(tempStack);
+			setRedoStack(transition.redoStack);
+			setUndoStack(transition.undoStack);
 
 			try {
-				await restoreHistoryState(stateToRestore);
+				await restoreHistoryState(transition.target);
 			} catch (err) {
 				console.error("Failed to restore campaign undo state", err);
 				dispatch(
@@ -293,6 +295,7 @@ export default function useCampaignView(props) {
 		}
 	}, [
 		undoStack,
+		redoStack,
 		createHistoryState,
 		restoreHistoryState,
 		dispatch,
@@ -305,24 +308,20 @@ export default function useCampaignView(props) {
 		if (redoStack.length === 0) return;
 
 		const currentState = createHistoryState();
-		let tempStack = [...redoStack];
-		let stateToRestore = null;
+		const transition = createDistinctRedoTransition({
+			undoStack,
+			redoStack,
+			current: currentState,
+			isEqual: areHistoryStatesEqual,
+		});
 
-		while (tempStack.length > 0) {
-			const candidate = tempStack.shift();
-			if (!areHistoryStatesEqual(candidate, currentState)) {
-				stateToRestore = candidate;
-				break;
-			}
-		}
-
-		if (stateToRestore) {
+		if (transition.target) {
 			isUpdatingHistory.current = true;
-			setUndoStack((prev) => [...prev, currentState]);
-			setRedoStack(tempStack);
+			setUndoStack(transition.undoStack);
+			setRedoStack(transition.redoStack);
 
 			try {
-				await restoreHistoryState(stateToRestore);
+				await restoreHistoryState(transition.target);
 			} catch (err) {
 				console.error("Failed to restore campaign redo state", err);
 				dispatch(
@@ -339,6 +338,7 @@ export default function useCampaignView(props) {
 			}
 		}
 	}, [
+		undoStack,
 		redoStack,
 		createHistoryState,
 		restoreHistoryState,
@@ -350,8 +350,8 @@ export default function useCampaignView(props) {
 
 	const pushToUndo = useCallback(() => {
 		if (!isUpdatingHistory.current) {
-			setUndoStack((prev) => [...prev, createHistoryState()]);
-			setRedoStack([]);
+			setUndoStack((prev) => addUndoSnapshot(prev, createHistoryState()));
+			setRedoStack(clearRedoStack());
 		}
 	}, [createHistoryState]);
 

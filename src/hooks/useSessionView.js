@@ -14,6 +14,12 @@ import {
 } from "../utils/noteUtils";
 import { idsEqual } from "../utils/id";
 import { shouldOpenInNewTabFromEvent } from "../utils/navigation.js";
+import {
+	addUndoSnapshot,
+	clearRedoStack,
+	createDistinctRedoTransition,
+	createDistinctUndoTransition,
+} from "../utils/undoRedo.js";
 import { navigateTo, useAppDispatch } from "../store/appStore";
 import { lang } from "../services/localization";
 
@@ -196,30 +202,23 @@ export default function useSessionView(props) {
 		const currentState = {
 			data: session.data,
 		};
+		const transition = createDistinctUndoTransition({
+			undoStack,
+			redoStack,
+			current: currentState,
+			isEqual: (left, right) =>
+				JSON.stringify(left?.data) === JSON.stringify(right?.data),
+		});
 
-		let tempStack = [...undoStack];
-		let stateToRestore = null;
-
-		while (tempStack.length > 0) {
-			const candidate = tempStack.pop();
-			const isDifferent =
-				JSON.stringify(candidate.data) !== JSON.stringify(currentState.data);
-
-			if (isDifferent) {
-				stateToRestore = candidate;
-				break;
-			}
-		}
-
-		if (stateToRestore) {
+		if (transition.target) {
 			isUpdatingHistory.current = true;
-			setRedoStack((prev) => [currentState, ...prev]);
-			setUndoStack(tempStack);
+			setRedoStack(transition.redoStack);
+			setUndoStack(transition.undoStack);
 
 			setSession((prev) => {
 				const updated = {
 					...prev,
-					data: stateToRestore.data,
+					data: transition.target.data,
 				};
 				triggerSave(updated, true);
 				return updated;
@@ -229,7 +228,7 @@ export default function useSessionView(props) {
 				isUpdatingHistory.current = false;
 			}, 0);
 		}
-	}, [undoStack, session, triggerSave]);
+	}, [undoStack, redoStack, session, triggerSave]);
 
 	const handleRedo = useCallback(() => {
 		if (!session || redoStack.length === 0) return;
@@ -237,30 +236,23 @@ export default function useSessionView(props) {
 		const currentState = {
 			data: session.data,
 		};
+		const transition = createDistinctRedoTransition({
+			undoStack,
+			redoStack,
+			current: currentState,
+			isEqual: (left, right) =>
+				JSON.stringify(left?.data) === JSON.stringify(right?.data),
+		});
 
-		let tempStack = [...redoStack];
-		let stateToRestore = null;
-
-		while (tempStack.length > 0) {
-			const candidate = tempStack.shift();
-			const isDifferent =
-				JSON.stringify(candidate.data) !== JSON.stringify(currentState.data);
-
-			if (isDifferent) {
-				stateToRestore = candidate;
-				break;
-			}
-		}
-
-		if (stateToRestore) {
+		if (transition.target) {
 			isUpdatingHistory.current = true;
-			setUndoStack((prev) => [...prev, currentState]);
-			setRedoStack(tempStack);
+			setUndoStack(transition.undoStack);
+			setRedoStack(transition.redoStack);
 
 			setSession((prev) => {
 				const updated = {
 					...prev,
-					data: stateToRestore.data,
+					data: transition.target.data,
 				};
 				triggerSave(updated, true);
 				return updated;
@@ -270,7 +262,7 @@ export default function useSessionView(props) {
 				isUpdatingHistory.current = false;
 			}, 0);
 		}
-	}, [redoStack, session, triggerSave]);
+	}, [undoStack, redoStack, session, triggerSave]);
 
 	const lastLoadedSessionIdRef = useRef(null);
 
@@ -348,8 +340,10 @@ export default function useSessionView(props) {
 					JSON.stringify(updates.data) !== JSON.stringify(prev.data);
 
 				if (isDataChanged && (!saveTimeout.current || instant)) {
-					setUndoStack((currentStack) => [...currentStack, currentState]);
-					setRedoStack([]);
+					setUndoStack((currentStack) =>
+						addUndoSnapshot(currentStack, currentState),
+					);
+					setRedoStack(clearRedoStack());
 				}
 			}
 
@@ -783,13 +777,12 @@ export default function useSessionView(props) {
 	const handleAiUpdate = (updatedSession) => {
 		if (!session) return;
 
-		setUndoStack((prev) => [
-			...prev,
-			{
+		setUndoStack((prev) =>
+			addUndoSnapshot(prev, {
 				data: session.data,
-			},
-		]);
-		setRedoStack([]);
+			}),
+		);
+		setRedoStack(clearRedoStack());
 
 		isUpdatingHistory.current = true;
 
