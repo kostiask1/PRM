@@ -47,6 +47,10 @@ function clearMonsterUrlSelection() {
 	window.history.replaceState({}, "", `?${params.toString()}`);
 }
 
+function cloneCustomMonsters(monsters) {
+	return JSON.parse(JSON.stringify(monsters || []));
+}
+
 export default function Bestiary({
 	onAddMonster,
 	isEmbedded = false,
@@ -74,6 +78,8 @@ export default function Bestiary({
 	const [aiEditInstructions, setAiEditInstructions] = useState("");
 	const [aiEditError, setAiEditError] = useState("");
 	const [isAiEditingMonster, setIsAiEditingMonster] = useState(false);
+	const [undoStack, setUndoStack] = useState([]);
+	const [redoStack, setRedoStack] = useState([]);
 	const listRef = useRef(null);
 	const selectedMonsterRef = useRef(null);
 	const hasInitializedSourceRef = useRef(false);
@@ -103,6 +109,77 @@ export default function Bestiary({
 			return sortOrder === "desc" ? crB - crA : crA - crB;
 		});
 	}, [monsters, sortOrder]);
+
+	const customMonsters = useMemo(
+		() => allMonsters.filter((monster) => isCustomSource(monster.source)),
+		[allMonsters],
+	);
+
+	const pushCustomUndoSnapshot = (snapshot) => {
+		setUndoStack((current) => [
+			...current,
+			cloneCustomMonsters(snapshot),
+		]);
+		setRedoStack([]);
+	};
+
+	const pushCustomUndo = () => {
+		pushCustomUndoSnapshot(customMonsters);
+	};
+
+	const applyCustomMonsterList = (nextCustomMonsters, options = {}) => {
+		const selectedName = options.selectedName;
+		const nextSelected = selectedName
+			? nextCustomMonsters.find((monster) => monster.name === selectedName)
+			: null;
+		setAllMonsters((current) => [
+			...current.filter((item) => !isCustomSource(item.source)),
+			...nextCustomMonsters,
+		]);
+		if (nextSelected) {
+			setSelectedSource("CUSTOM");
+			shouldAutoSelectMonsterRef.current = true;
+			selectedMonsterRef.current = nextSelected;
+			setSelectedMonster(nextSelected);
+		} else if (options.clearSelection) {
+			shouldAutoSelectMonsterRef.current = false;
+			selectedMonsterRef.current = "";
+			setSelectedMonster("");
+			clearMonsterUrlSelection();
+		}
+	};
+
+	const restoreCustomMonsters = async (nextCustomMonsters, options = {}) => {
+		const updated = await api.replaceCustomBestiaryMonsters(nextCustomMonsters);
+		applyCustomMonsterList(Array.isArray(updated) ? updated : [], options);
+		return Array.isArray(updated) ? updated : [];
+	};
+
+	const handleUndo = async () => {
+		if (undoStack.length === 0) return;
+		const previous = undoStack[undoStack.length - 1];
+		const current = cloneCustomMonsters(customMonsters);
+		try {
+			await restoreCustomMonsters(previous, { clearSelection: true });
+			setUndoStack((stack) => stack.slice(0, -1));
+			setRedoStack((stack) => [...stack, current]);
+		} catch (err) {
+			dispatch(alert({ title: lang.t("Undo error"), message: err.message }));
+		}
+	};
+
+	const handleRedo = async () => {
+		if (redoStack.length === 0) return;
+		const next = redoStack[redoStack.length - 1];
+		const current = cloneCustomMonsters(customMonsters);
+		try {
+			await restoreCustomMonsters(next, { clearSelection: true });
+			setRedoStack((stack) => stack.slice(0, -1));
+			setUndoStack((stack) => [...stack, current]);
+		} catch (err) {
+			dispatch(alert({ title: lang.t("Redo error"), message: err.message }));
+		}
+	};
 
 	// Допоміжна функція для отримання текстового представлення типу монстра
 	// Завантаження списку доступних джерел (файлів)
@@ -234,9 +311,11 @@ export default function Bestiary({
 	};
 
 	const handleCustomBestiaryUpdate = (updated, options = {}) => {
-		const updatedCustomMonsters = Array.isArray(updated?.monsters)
-			? updated.monsters
-			: [];
+		const hasUpdatedCustomMonsters = Array.isArray(updated?.monsters);
+		const updatedCustomMonsters = hasUpdatedCustomMonsters ? updated.monsters : [];
+		if (hasUpdatedCustomMonsters && options.trackUndo !== false) {
+			pushCustomUndo();
+		}
 		const generatedMonsters = Array.isArray(options?.generated?.monsters)
 			? options.generated.monsters
 			: [];
@@ -251,7 +330,7 @@ export default function Bestiary({
 
 		setSelectedSource("CUSTOM");
 		shouldAutoSelectMonsterRef.current = true;
-		if (updatedCustomMonsters.length > 0) {
+		if (hasUpdatedCustomMonsters) {
 			setAllMonsters((current) => [
 				...current.filter((item) => !isCustomSource(item.source)),
 				...updatedCustomMonsters,
@@ -314,11 +393,13 @@ export default function Bestiary({
 		}
 
 		setIsSavingMonsterEdit(true);
+		const undoSnapshot = cloneCustomMonsters(customMonsters);
 		try {
 			const updatedMonster = await api.updateCustomBestiaryMonster(
 				editingMonster.name,
 				{ monster: { ...parsed, source: "CUSTOM" } },
 			);
+			pushCustomUndoSnapshot(undoSnapshot);
 			shouldAutoSelectMonsterRef.current = true;
 			setAllMonsters((current) => [
 				...current.filter(
@@ -364,6 +445,7 @@ export default function Bestiary({
 
 		setIsAiEditingMonster(true);
 		setAiEditError("");
+		const undoSnapshot = cloneCustomMonsters(customMonsters);
 		try {
 			const data = await api.generateAi({
 				type: "custom-monster",
@@ -379,7 +461,11 @@ export default function Bestiary({
 				contextConfig: null,
 				language: currentLanguage,
 			});
-			handleCustomBestiaryUpdate(data.updated, { generated: data.generated });
+			pushCustomUndoSnapshot(undoSnapshot);
+			handleCustomBestiaryUpdate(data.updated, {
+				generated: data.generated,
+				trackUndo: false,
+			});
 			setAiEditingMonster(null);
 			setAiEditInstructions("");
 		} catch (err) {
@@ -401,10 +487,12 @@ export default function Bestiary({
 		);
 		if (!confirmed) return;
 
+		const undoSnapshot = cloneCustomMonsters(customMonsters);
 		try {
 			const updatedCustomMonsters = await api.deleteCustomBestiaryMonster(
 				monster.name,
 			);
+			pushCustomUndoSnapshot(undoSnapshot);
 			shouldAutoSelectMonsterRef.current = false;
 			selectedMonsterRef.current = "";
 			setSelectedMonster("");
@@ -857,6 +945,24 @@ export default function Bestiary({
 		<Panel className="Bestiary">
 			<div className="Panel__header">
 				<h2>{lang.t("Bestiary")}</h2>
+				<div className="Bestiary__header_actions">
+					<Button
+						variant="ghost"
+						size={Button.SIZES.SMALL}
+						icon="undo"
+						onClick={handleUndo}
+						disabled={undoStack.length === 0}
+						title={lang.t("Undo (Ctrl+Z)")}
+					/>
+					<Button
+						variant="ghost"
+						size={Button.SIZES.SMALL}
+						icon="redo"
+						onClick={handleRedo}
+						disabled={redoStack.length === 0}
+						title={lang.t("Redo (Ctrl+Y)")}
+					/>
+				</div>
 			</div>
 			<div className="Panel__body">{renderBestiaryInner()}</div>
 			<AiAssistantPanel

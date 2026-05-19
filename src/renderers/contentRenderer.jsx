@@ -197,7 +197,7 @@ export const parseRollsAndSpells = (
 	const cleanText = stripNotesReferenceText(text);
 	const elements = [];
 	const regex =
-		/(\d+d\d+(?:\s*[+-]\s*\d+)?)|([+-]\d+(?:\s+to\s+hit))|(\{@spell\s+([^}]+)\})|(\{@(?:condition|status)\s+([^}]+)\})|(@condition\s+([A-Za-z][A-Za-z' -]*))|(\{@disease\s+([^}]+)\})|(\{@variantrule\s+([^}]+)\})|(\{@skill\s+([^}]+)\})|(\{@sense\s+([^}]+)\})/gi;
+		/(\(Recharge\s+\d+(?:-\d+)?\))|(\d+d\d+(?:\s*[+-]\s*\d+)?)|(?<!\d)([+-]\d+)(\s+to\s+hit)?|(\{@spell\s+([^}]+)\})|(\{@(?:condition|status)\s+([^}]+)\})|(@condition\s+([A-Za-z][A-Za-z' -]*))|(\{@disease\s+([^}]+)\})|(\{@variantrule\s+([^}]+)\})|(\{@skill\s+([^}]+)\})|(\{@sense\s+([^}]+)\})/gi;
 	let lastIndex = 0;
 	let matchIndex = 0;
 	let match;
@@ -212,19 +212,27 @@ export const parseRollsAndSpells = (
 			highlightQuery,
 		);
 
-		const roll = match[1];
-		const hit = match[2];
-		const spellTag = match[3];
-		const spellValue = match[4];
-		const conditionTag = match[5];
-		const conditionValue = match[6];
-		const conditionPlain = match[7];
-		const diseaseValue = match[10];
-		const variantRuleValue = match[12];
-		const skillValue = match[14];
-		const senseValue = match[16];
+		const recharge = match[1];
+		const roll = match[2];
+		const hit = match[3];
+		const hitSuffix = match[4] || "";
+		const spellTag = match[5];
+		const spellValue = match[6];
+		const conditionTag = match[7];
+		const conditionValue = match[8];
+		const conditionPlain = match[9];
+		const diseaseValue = match[12];
+		const variantRuleValue = match[14];
+		const skillValue = match[16];
+		const senseValue = match[18];
 
-		if (roll) {
+		if (recharge) {
+			elements.push(
+				<RollDice key={`re-${matchIndex}`} formula="1d6">
+					{highlightText(recharge, highlightQuery)}
+				</RollDice>,
+			);
+		} else if (roll) {
 			elements.push(
 				<RollDice key={`r-${matchIndex}`} formula={roll.replace(/\s+/g, "")}>
 					{highlightText(roll, highlightQuery)}
@@ -237,7 +245,7 @@ export const parseRollsAndSpells = (
 					key={`h-${matchIndex}`}
 					formula={`1d20${formatModifier(parseInt(bonus, 10))}`}
 				>
-					{highlightText(hit, highlightQuery)}
+					{highlightText(`${hit}${hitSuffix}`, highlightQuery)}
 				</RollDice>,
 			);
 		} else if (spellTag) {

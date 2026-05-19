@@ -218,6 +218,11 @@ export const api = {
 			method: "PATCH",
 			body: JSON.stringify(payload),
 		}),
+	replaceCustomBestiaryMonsters: (monsters) =>
+		api.request("/bestiary/custom", {
+			method: "PUT",
+			body: JSON.stringify({ monsters }),
+		}),
 	deleteCustomBestiaryMonster: (name) =>
 		api.request(`/bestiary/custom/${encodeURIComponent(name)}`, {
 			method: "DELETE",

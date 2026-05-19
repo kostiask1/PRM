@@ -397,6 +397,25 @@ router.patch("/custom/:name", async (req, res, next) => {
 	}
 });
 
+router.put("/custom", async (req, res, next) => {
+	try {
+		disableResponseCache(res);
+		const monsters = Array.isArray(req.body?.monsters) ? req.body.monsters : [];
+		const normalized = monsters
+			.filter((monster) => monster && typeof monster === "object")
+			.map((monster) => ({
+				...monster,
+				name: String(monster.name || "").trim(),
+				source: CUSTOM_SOURCE,
+			}))
+			.filter((monster) => monster.name);
+		const updated = await storage.writeCustomBestiaryMonsters(normalized);
+		res.json(updated);
+	} catch (error) {
+		next(error);
+	}
+});
+
 router.delete("/custom/:name", async (req, res, next) => {
 	try {
 		disableResponseCache(res);

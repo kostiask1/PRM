@@ -567,9 +567,30 @@ function expandSessionDiffResource(resource) {
 	return expanded.length > 0 ? expanded : [resource];
 }
 
+function expandCustomBestiaryDiffResource(resource) {
+	if (
+		resource?.kind !== "custom-bestiary" ||
+		(!Array.isArray(resource.before) && !Array.isArray(resource.after))
+	) {
+		return [resource];
+	}
+
+	const expanded = [];
+	pushGranularArrayDiff(
+		expanded,
+		resource,
+		"monsters",
+		resource.before,
+		resource.after,
+		(monster) => monster?.name || lang.t("Creature"),
+	);
+	return expanded.length > 0 ? expanded : [resource];
+}
+
 function buildDiffResources(entry) {
 	return getHistoryChangeResources(entry)
 		.flatMap(expandSessionDiffResource)
+		.flatMap(expandCustomBestiaryDiffResource)
 		.map((resource) => ({
 			...resource,
 			lines: createLineDiff(resource.before, resource.after),
@@ -825,7 +846,7 @@ export default function AiAssistantPanel({
 	}, [isOpen, aiModels.length, selectedModel]);
 
 	useEffect(() => {
-		if (!isOpen || !initialRoute.campaign || isBestiary) return;
+		if (!isOpen || !initialRoute.campaign) return;
 		api
 			.listAiResponses(initialRoute.campaign)
 			.then((responses) => {
@@ -834,7 +855,7 @@ export default function AiAssistantPanel({
 			.catch((err) => {
 				console.error("Failed to load AI response history", err);
 			});
-	}, [isOpen, initialRoute.campaign, isBestiary]);
+	}, [isOpen, initialRoute.campaign]);
 
 	useEffect(() => {
 		if (!isImagePromptPickerOpen || !isCampaign || !initialRoute.campaign) {
@@ -986,6 +1007,7 @@ export default function AiAssistantPanel({
 				updated.data && typeof updated.data === "object";
 			const isSameCampaign = entryPath.campaign === initialRoute.campaign;
 			const canApplyDirectly =
+				(isBestiary && Array.isArray(updated.monsters)) ||
 				(isCampaign &&
 					isSameCampaign &&
 					!entryPath.session &&
@@ -998,6 +1020,7 @@ export default function AiAssistantPanel({
 			if (canApplyDirectly) {
 				onInsertResult(updated, {
 					entityTypes: getHistoryChangedEntityTypes(nextEntry),
+					trackUndo: false,
 				});
 				appliedDirectly = true;
 			}
@@ -2497,7 +2520,7 @@ export default function AiAssistantPanel({
 
 						{error && <div className="AiAssistant__error">{error}</div>}
 
-						{!isBestiary && responseHistory.length > 0 && (
+						{responseHistory.length > 0 && (
 							<section className="AiAssistant__response_history">
 								<div className="AiAssistant__response_history_header">
 									<h4>{lang.t("Response history")}</h4>

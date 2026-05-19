@@ -2098,12 +2098,23 @@ async function writeAiResourceSnapshot(resource, snapshotValue) {
 		return;
 	}
 
+	if (resource.kind === "custom-bestiary") {
+		await storage.writeCustomBestiaryMonsters(
+			Array.isArray(snapshotValue) ? snapshotValue : [],
+		);
+		return;
+	}
+
 	throw new Error("AI response change has unknown target type.");
 }
 
 async function readUpdatedObjectForAiResponse(entry) {
 	const targetPath = entry?.path || {};
 	if (!targetPath.campaign) return null;
+
+	if (targetPath.campaign === "bestiary") {
+		return { monsters: await storage.readCustomBestiaryMonsters() };
+	}
 
 	if (targetPath.session) {
 		const sessionFile = storage.sessionPath(
@@ -2409,6 +2420,9 @@ router.post("/generate", async (req, res, next) => {
 
 		if (type === "custom-monster") {
 			const customBestiary = await storage.readCustomBestiary();
+			const beforeCustomMonsters = Array.isArray(customBestiary.monster)
+				? customBestiary.monster
+				: [];
 			const customContextData = {
 				campaign: {},
 				sessions: [],
@@ -2542,9 +2556,48 @@ router.post("/generate", async (req, res, next) => {
 			const monsters = await storage.upsertCustomBestiaryMonsters(
 				normalizedMonsters,
 			);
+			const aiResponse = await storage.addAiResponse({
+				text: formatGeneratedContentForHistory({
+					monsters: normalizedMonsters,
+				}),
+				path: { campaign: "bestiary" },
+				type: "custom-monster",
+				modelName,
+				language: responseLanguage,
+				userInstructions,
+				request: buildAiRequestSnapshot({
+					type,
+					modelName,
+					userInstructions,
+					path: { campaign: "bestiary" },
+					parseAIResponse: true,
+					shouldParseAIResponse: true,
+					generateCharacters: false,
+					generateNpcs: false,
+					generateLocations: false,
+					generateEncounters: false,
+					generateCustomMonsters: false,
+					entityScope: "custom-bestiary",
+					contextConfig: null,
+					contextData: customContextData,
+					language: responseLanguage,
+				}),
+				changes: {
+					resources: [
+						{
+							kind: "custom-bestiary",
+							before: beforeCustomMonsters,
+							after: monsters,
+						},
+					],
+				},
+				applyState: "applied",
+				appliedAt: new Date().toISOString(),
+			});
 			return res.json({
 				generated: { monsters: normalizedMonsters },
 				updated: { monsters },
+				aiResponse,
 			});
 		}
 
@@ -2572,7 +2625,34 @@ router.post("/generate", async (req, res, next) => {
 				return res.status(500).json(generatedContent);
 			}
 
-			return res.json({ prompt: generatedContent });
+			const aiResponse = await storage.addAiResponse({
+				text: generatedContent,
+				path: { campaign: "bestiary" },
+				type: "image",
+				modelName,
+				language: responseLanguage,
+				userInstructions,
+				request: buildAiRequestSnapshot({
+					type,
+					modelName,
+					userInstructions,
+					path: { campaign: "bestiary" },
+					sceneId,
+					imageTarget,
+					parseAIResponse: false,
+					shouldParseAIResponse: false,
+					generateCharacters: false,
+					generateNpcs: false,
+					generateLocations: false,
+					generateEncounters: false,
+					generateCustomMonsters: false,
+					entityScope: "custom-bestiary",
+					contextConfig: null,
+					contextData: {},
+					language: responseLanguage,
+				}),
+			});
+			return res.json({ prompt: generatedContent, aiResponse });
 		}
 
 		const campaign = await storage.readCampaign(path.campaign);
