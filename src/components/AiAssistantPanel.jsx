@@ -19,7 +19,7 @@ import Select from "./form/Select";
 import Checkbox from "./form/Checkbox";
 import Notification from "./common/Notification";
 import CollapseToggleButton from "./common/CollapseToggleButton";
-import ListCard from "./common/ListCard";
+import AiResponseHistory from "./ai/AiResponseHistory";
 import {
 	alert,
 	confirm,
@@ -2520,59 +2520,17 @@ export default function AiAssistantPanel({
 
 						{error && <div className="AiAssistant__error">{error}</div>}
 
-						{responseHistory.length > 0 && (
-							<section className="AiAssistant__response_history">
-								<div className="AiAssistant__response_history_header">
-									<h4>{lang.t("Response history")}</h4>
-									<Button
-										variant="ghost"
-										size={Button.SIZES.SMALL}
-										icon="trash"
-										onClick={clearResponseHistory}
-										title={lang.t("Clear response history")}
-									>
-										{lang.t("Clear")}
-									</Button>
-								</div>
-								<div className="AiAssistant__response_history_list">
-									{responseHistory.map((entry) => {
-										const responsePreview = getHistoryTitle(entry);
-										const changeSummary = getHistoryChangeSummary(entry);
-										const stateLabel = getAiResponseStateLabel(entry);
-										return (
-											<ListCard
-												key={entry.id}
-												onClick={() => showGeneratedPrompt(entry)}
-												className="AiAssistant__history_card"
-												actions={
-													<Button
-														variant="ghost"
-														size={Button.SIZES.SMALL}
-														icon="trash"
-														onClick={() => deleteResponseHistoryEntry(entry)}
-														title={lang.t("Delete response")}
-													/>
-												}
-											>
-												<div className="ListCard__title AiAssistant__history_title">
-													{responsePreview || lang.t("AI response")}
-												</div>
-												<div className="ListCard__meta AiAssistant__history_meta">
-													<span>
-														{formatResponseDate(
-															entry.createdAt,
-															currentLanguage,
-														)}
-													</span>
-													{changeSummary && <span>{changeSummary}</span>}
-													{stateLabel && <span>{stateLabel}</span>}
-												</div>
-											</ListCard>
-										);
-									})}
-								</div>
-							</section>
-						)}
+						<AiResponseHistory
+							entries={responseHistory}
+							currentLanguage={currentLanguage}
+							onClear={clearResponseHistory}
+							onDelete={deleteResponseHistoryEntry}
+							onSelect={showGeneratedPrompt}
+							formatResponseDate={formatResponseDate}
+							getTitle={getHistoryTitle}
+							getSummary={getHistoryChangeSummary}
+							getStateLabel={getAiResponseStateLabel}
+						/>
 					</div>
 				</Modal>
 			)}

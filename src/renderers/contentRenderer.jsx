@@ -9,6 +9,10 @@ import {
 	formatModifier,
 	preprocessTags,
 } from "../utils/parser.jsx";
+import {
+	CONTENT_TOKEN_REGEX,
+	tokenFromContentMatch,
+} from "../utils/contentTokens.js";
 import { highlightText } from "../utils/searchHighlight.jsx";
 
 export const renderRecursiveContent = (
@@ -196,14 +200,17 @@ export const parseRollsAndSpells = (
 
 	const cleanText = stripNotesReferenceText(text);
 	const elements = [];
-	const regex =
-		/(\(Recharge\s+\d+(?:-\d+)?\))|(\d+d\d+(?:\s*[+-]\s*\d+)?)|(?<!\d)([+-]\d+)(\s+to\s+hit)?|(\{@spell\s+([^}]+)\})|(\{@(?:condition|status)\s+([^}]+)\})|(@condition\s+([A-Za-z][A-Za-z' -]*))|(\{@disease\s+([^}]+)\})|(\{@variantrule\s+([^}]+)\})|(\{@skill\s+([^}]+)\})|(\{@sense\s+([^}]+)\})/gi;
+	const regex = new RegExp(
+		CONTENT_TOKEN_REGEX.source,
+		CONTENT_TOKEN_REGEX.flags,
+	);
 	let lastIndex = 0;
 	let matchIndex = 0;
 	let match;
 
 	while ((match = regex.exec(cleanText)) !== null) {
-		const fullMatch = match[0];
+		const token = tokenFromContentMatch(match);
+		const fullMatch = token.fullMatch;
 		const start = match.index;
 		pushSafeMarkdownText(
 			elements,
@@ -212,19 +219,21 @@ export const parseRollsAndSpells = (
 			highlightQuery,
 		);
 
-		const recharge = match[1];
-		const roll = match[2];
-		const hit = match[3];
-		const hitSuffix = match[4] || "";
-		const spellTag = match[5];
-		const spellValue = match[6];
-		const conditionTag = match[7];
-		const conditionValue = match[8];
-		const conditionPlain = match[9];
-		const diseaseValue = match[12];
-		const variantRuleValue = match[14];
-		const skillValue = match[16];
-		const senseValue = match[18];
+		const {
+			recharge,
+			roll,
+			hit,
+			hitSuffix,
+			spellTag,
+			spellValue,
+			conditionTag,
+			conditionValue,
+			conditionPlain,
+			diseaseValue,
+			variantRuleValue,
+			skillValue,
+			senseValue,
+		} = token;
 
 		if (recharge) {
 			elements.push(

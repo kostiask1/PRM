@@ -4,6 +4,13 @@ const path = require("path");
 const router = express.Router();
 const storage = require("../storage");
 const aiService = require("../aiService");
+const {
+	buildAiRequestSnapshot,
+	formatGeneratedContentForHistory,
+} = require("../aiHistoryService");
+const {
+	assertAiGeneratedContentContract,
+} = require("../aiPayloadSchemas");
 
 const ENV_PATH = path.join(__dirname, "..", "..", ".env");
 
@@ -1749,152 +1756,6 @@ function enforceAiGenerationPermissions(
 	return generatedContent;
 }
 
-function getAiRequestMode(type, path = {}) {
-	if (type) return type;
-	if (path.encounter) return "encounter";
-	if (path.session) return "session";
-	return "campaign";
-}
-
-function buildAiOptionsSummary(options) {
-	const parts = [
-		`mode: ${options.mode}`,
-		`parse: ${options.responseParsing ? "on" : "off"}`,
-		`characters: ${options.characterGeneration ? "on" : "off"}`,
-		`npcs: ${options.npcGeneration ? "on" : "off"}`,
-		`locations: ${options.locationGeneration ? "on" : "off"}`,
-		`entity-scope: ${options.entityScope || "campaign"}`,
-		`encounters: ${options.encounterGeneration ? "on" : "off"}`,
-		`custom-monsters: ${options.customMonsterGeneration ? "on" : "off"}`,
-		`context: ${options.contextEnabled ? "on" : "off"}`,
-	];
-	if (options.modelName) parts.push(`model: ${options.modelName}`);
-	if (options.sceneId) parts.push(`scene: ${options.sceneId}`);
-	if (options.imageTarget) {
-		parts.push(
-			`image-target: ${[options.imageTarget.type, options.imageTarget.name]
-				.filter(Boolean)
-				.join(": ")}`,
-		);
-	}
-	return parts.join("; ");
-}
-
-function buildAiContextSummary(contextConfig, contextData = {}) {
-	if (!contextConfig) {
-		return {
-			enabled: false,
-			campaignNotes: 0,
-			campaignCharacters: 0,
-			campaignNpcs: 0,
-			campaignLocations: 0,
-			sessions: 0,
-			scenes: 0,
-			summary: "context: off",
-		};
-	}
-
-	const sessions = Array.isArray(contextData.sessions)
-		? contextData.sessions
-		: [];
-	const scenes = sessions.reduce(
-		(total, session) =>
-			total + (Array.isArray(session?.data?.scenes) ? session.data.scenes.length : 0),
-		0,
-	);
-	const campaignNotes = Array.isArray(contextData.campaign?.notes)
-		? contextData.campaign.notes.length
-		: 0;
-	const campaignCharacters = Array.isArray(contextData.campaign?.characters)
-		? contextData.campaign.characters.length
-		: 0;
-	const campaignNpcs = Array.isArray(contextData.campaign?.npcs)
-		? contextData.campaign.npcs.length
-		: 0;
-	const campaignLocations = Array.isArray(contextData.campaign?.locations)
-		? contextData.campaign.locations.length
-		: 0;
-
-	const parts = [];
-	if (contextConfig.campaignNotes) parts.push(`notes: ${campaignNotes}`);
-	if (isContextListIncluded(contextConfig.campaignCharacters))
-		parts.push(`characters: ${campaignCharacters}`);
-	if (
-		isContextListIncluded(contextConfig.campaignNpcs) ||
-		(contextConfig.campaignNpcs === undefined &&
-			isContextListIncluded(contextConfig.campaignCharacters))
-	) {
-		parts.push(`npcs: ${campaignNpcs}`);
-	}
-	if (isContextListIncluded(contextConfig.campaignLocations))
-		parts.push(`locations: ${campaignLocations}`);
-	if (sessions.length) parts.push(`sessions: ${sessions.length}`);
-	if (scenes) parts.push(`scenes: ${scenes}`);
-
-	return {
-		enabled: true,
-		campaignNotes,
-		campaignCharacters,
-		campaignNpcs,
-		campaignLocations,
-		sessions: sessions.length,
-		scenes,
-		summary: parts.length ? `context: ${parts.join(", ")}` : "context: empty",
-	};
-}
-
-function buildAiRequestSnapshot({
-	type,
-	modelName,
-	userInstructions,
-	path,
-	sceneId,
-	imageTarget,
-	parseAIResponse,
-	shouldParseAIResponse,
-	generateEncounters,
-	generateCustomMonsters,
-	generateCharacters,
-	generateNpcs,
-	generateLocations,
-	entityScope,
-	contextConfig,
-	contextData,
-	language,
-}) {
-	const options = {
-		mode: getAiRequestMode(type, path),
-		modelName: modelName || null,
-		language,
-		responseParsing: Boolean(shouldParseAIResponse),
-		requestedResponseParsing: Boolean(parseAIResponse),
-		characterGeneration: Boolean(generateCharacters),
-		npcGeneration: Boolean(generateNpcs),
-		locationGeneration: Boolean(generateLocations),
-		entityScope: entityScope || "campaign",
-		encounterGeneration: Boolean(generateEncounters),
-		customMonsterGeneration: Boolean(generateCustomMonsters),
-		contextEnabled: Boolean(contextConfig),
-		sceneId: sceneId || null,
-		imageTarget:
-			imageTarget && typeof imageTarget === "object"
-				? {
-						type: asText(imageTarget.type),
-						name: asText(imageTarget.name),
-					}
-				: null,
-	};
-	const context = buildAiContextSummary(contextConfig, contextData);
-
-	return {
-		userInstructions: asText(userInstructions),
-		options,
-		optionsSummary: buildAiOptionsSummary(options),
-		context,
-		contextSummary: context.summary,
-	};
-}
-
 function cloneSnapshotValue(value) {
 	if (value === undefined) return null;
 	return JSON.parse(JSON.stringify(value));
@@ -2011,17 +1872,6 @@ function buildAiChangeSet(beforeBundle, afterBundle, campaignSlug) {
 		resources,
 		summary: buildAiChangeSummary(resources),
 	};
-}
-
-function formatGeneratedContentForHistory(generatedContent) {
-	if (typeof generatedContent === "string") return generatedContent;
-	return [
-		"Parsed AI response",
-		"",
-		"```json",
-		JSON.stringify(generatedContent ?? null, null, 2),
-		"```",
-	].join("\n");
 }
 
 async function saveParsedAiResponse({
@@ -2538,6 +2388,10 @@ router.post("/generate", async (req, res, next) => {
 				return res.status(500).json(generatedContent);
 			}
 
+			assertAiGeneratedContentContract(generatedContent, {
+				type: "custom-monster",
+			});
+
 			const normalizedMonsters = (
 				Array.isArray(generatedContent?.monsters)
 					? generatedContent.monsters
@@ -2834,6 +2688,10 @@ router.post("/generate", async (req, res, next) => {
 		}
 
 		if (generatedContent.error) return res.status(500).json(generatedContent);
+
+		if (shouldParseAIResponse) {
+			assertAiGeneratedContentContract(generatedContent, { type });
+		}
 
 		if (
 			customMonsterGenerationEnabled &&

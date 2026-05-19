@@ -11,6 +11,7 @@ import {
 } from "../src/utils/bestiary.js";
 import classNames from "../src/utils/classNames.js";
 import { rollDiceFormula } from "../src/utils/dice.js";
+import { extractContentTokens } from "../src/utils/contentTokens.js";
 import {
 	normalizeConditionName,
 	loadConditionsMap,
@@ -84,6 +85,8 @@ const storage = require("../server/storage.js");
 const spellsRouter = require("../server/routes/spells.js");
 const aiRouter = require("../server/routes/ai.js");
 const aiService = require("../server/aiService.js");
+const aiHistoryService = require("../server/aiHistoryService.js");
+const aiPayloadSchemas = require("../server/aiPayloadSchemas.js");
 
 const results = [];
 const TEST_PREFIX = `autotest-${Date.now()}`;
@@ -591,6 +594,51 @@ await run("AI JSON fence cleanup preserves inner markdown fences", () => {
 	});
 });
 
+await run("AI payload schema validates generated entity contracts", () => {
+	assert.equal(
+		aiPayloadSchemas.validateAiGeneratedContent({
+			npcs: [{ firstName: "Mira", trait: "Careful scout" }],
+			locations: [{ name: "Old Gate", description: "A locked arch." }],
+			scenes: [{ texts: { summary: "Ambush" }, notes: [] }],
+			encounters: [{ name: "Gate Fight", monsters: [] }],
+		}).valid,
+		true,
+	);
+
+	const invalid = aiPayloadSchemas.validateAiGeneratedContent({
+		npcs: "Mira",
+		monsters: [{ spellcasting: {} }],
+	});
+	assert.equal(invalid.valid, false);
+	assert.ok(invalid.errors.some((entry) => entry.path === "npcs"));
+	assert.ok(
+		invalid.errors.some((entry) => entry.path === "monsters[0].spellcasting"),
+	);
+});
+
+await run("AI history service builds stable request snapshots", () => {
+	const snapshot = aiHistoryService.buildAiRequestSnapshot({
+		type: "custom-monster",
+		modelName: "test-model",
+		userInstructions: "Create a guardian",
+		path: { campaign: "bestiary" },
+		parseAIResponse: true,
+		shouldParseAIResponse: true,
+		generateEncounters: false,
+		generateCustomMonsters: false,
+		generateCharacters: false,
+		generateNpcs: false,
+		generateLocations: false,
+		entityScope: "custom-bestiary",
+		contextConfig: null,
+		contextData: {},
+		language: "uk",
+	});
+	assert.equal(snapshot.options.mode, "custom-monster");
+	assert.match(snapshot.optionsSummary, /custom-monsters: off/);
+	assert.equal(snapshot.contextSummary, "context: off");
+});
+
 await run("AI mention processing preserves existing entity links", () => {
 	const { processGeneratedTextMentions } = aiRouter.__test;
 	assert.equal(
@@ -726,6 +774,23 @@ await run("SpellCardModel formats spell labels", () => {
 	assert.match(model.rangeLabel, /120 фт/);
 	assert.equal(model.durationLabel, "Миттєво");
 	assert.equal(model.classesLabel, "Sorcerer, Wizard");
+});
+
+await run("content tokens parse hit and recharge tags safely", () => {
+	const hitOnly = extractContentTokens("Claw. +6 до влучання.");
+	assert.equal(hitOnly.length, 1);
+	assert.equal(hitOnly[0].hit, "+6");
+	assert.equal(hitOnly[0].hitSuffix, "");
+
+	const hitWithEnglishSuffix = extractContentTokens("Claw. +6 to hit.");
+	assert.equal(hitWithEnglishSuffix.length, 1);
+	assert.equal(hitWithEnglishSuffix[0].hit, "+6");
+	assert.equal(hitWithEnglishSuffix[0].hitSuffix.trim(), "to hit");
+
+	const recharge = extractContentTokens("(Recharge 5-6) Breath.");
+	assert.equal(recharge.length, 1);
+	assert.equal(recharge[0].recharge, "(Recharge 5-6)");
+	assert.equal(recharge.some((token) => token.hit === "-6"), false);
 });
 
 await run("download helpers create and revoke blob URL", () => {
