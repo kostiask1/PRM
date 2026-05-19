@@ -302,8 +302,6 @@
 }
 
 .AiAssistant__prompt_result {
-	max-height: 65vh;
-	overflow: auto;
 	word-break: break-word;
 	color: var(--text-bright);
 	font-size: 0.95rem;
