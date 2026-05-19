@@ -94,7 +94,6 @@ const aiRouter = require("../server/routes/ai.js");
 const aiService = require("../server/aiService.js");
 const aiHistoryService = require("../server/aiHistoryService.js");
 const aiPayloadSchemas = require("../server/aiPayloadSchemas.js");
-const dataMigrations = require("../server/dataMigrations.js");
 
 const results = [];
 const TEST_PREFIX = `autotest-${Date.now()}`;
@@ -949,61 +948,6 @@ await run("storage writes JSON atomically and normalizes custom monsters", async
 		});
 	} finally {
 		await fs.rm(atomicPath, { force: true });
-	}
-});
-
-await run("data migrations version and back up normalized data", async () => {
-	const root = path.join(storage.DATA_DIR, `${TEST_PREFIX}-migration`);
-	const fakeStorage = {
-		...storage,
-		DATA_DIR: root,
-		CAMPAIGNS_DIR: path.join(root, "campaigns"),
-		SETTINGS_PATH: path.join(root, "settings.json"),
-		CUSTOM_BESTIARY_PATH: path.join(root, "custom-bestiary.json"),
-	};
-	fakeStorage.readCustomBestiaryMonsters = async () => {
-		const data = await fakeStorage.readJson(fakeStorage.CUSTOM_BESTIARY_PATH);
-		return Array.isArray(data.monster) ? data.monster : [];
-	};
-	fakeStorage.writeCustomBestiaryMonsters = async (monsters) => {
-		const normalized = monsters
-			.map(fakeStorage.normalizeCustomBestiaryMonster)
-			.filter((monster) => monster.name);
-		await fakeStorage.writeJson(fakeStorage.CUSTOM_BESTIARY_PATH, {
-			monster: normalized,
-		});
-		return normalized;
-	};
-
-	try {
-		await fakeStorage.ensureDir(root);
-		await fakeStorage.writeJson(fakeStorage.SETTINGS_PATH, { language: "uk" });
-		await fakeStorage.writeJson(fakeStorage.CUSTOM_BESTIARY_PATH, {
-			monster: [
-				{
-					name: "[Mirror Beast]",
-					hp: { formula: "2d6 + 2", average: 1 },
-					action: ["{@hit 4} to hit."],
-				},
-			],
-		});
-
-		const result = await dataMigrations.runDataMigrations(fakeStorage);
-		assert.equal(result.version, dataMigrations.CURRENT_SCHEMA_VERSION);
-		assert.equal(result.applied.length, 1);
-
-		const schema = await fakeStorage.readJson(path.join(root, "_schema.json"));
-		assert.equal(schema.version, dataMigrations.CURRENT_SCHEMA_VERSION);
-
-		const migrated = await fakeStorage.readJson(fakeStorage.CUSTOM_BESTIARY_PATH);
-		assert.equal(migrated.monster[0].name, "Mirror Beast");
-		assert.equal(migrated.monster[0].hp.average, 9);
-		assert.equal(migrated.monster[0].source, "CUSTOM");
-
-		const backups = await fs.readdir(path.join(root, "_migration-backups"));
-		assert.equal(backups.length, 1);
-	} finally {
-		await fs.rm(root, { recursive: true, force: true });
 	}
 });
 

@@ -6,7 +6,6 @@ const express = require("express");
 const path = require("path");
 const fs = require("fs/promises");
 const storage = require("./storage");
-const { runDataMigrations } = require("./dataMigrations");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -68,7 +67,6 @@ app.use((err, _req, res, _next) => {
 
 storage
 	.ensureDir(storage.CAMPAIGNS_DIR)
-	.then(() => runDataMigrations(storage))
 	.then(() =>
 		app.listen(PORT, () =>
 			console.log(`Server running on http://localhost:${PORT}`),
