@@ -111,7 +111,6 @@ const MARKDOWN_TAGS_WITH_MENTIONS = [
 	"strong",
 	"em",
 	"del",
-	"code",
 	"blockquote",
 	"li",
 	"h1",
@@ -132,6 +131,9 @@ function renderMentionChildren(children) {
 			return renderMentionText(child);
 		}
 		if (React.isValidElement(child) && child.props?.children) {
+			if (child.type === "code" || child.type === "pre") {
+				return child;
+			}
 			return React.cloneElement(child, {
 				...child.props,
 				children: renderMentionChildren(child.props.children),

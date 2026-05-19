@@ -43,7 +43,6 @@ const markdownTagsWithMentions = [
 	"strong",
 	"em",
 	"del",
-	"code",
 	"blockquote",
 	"li",
 	"h1",
@@ -64,6 +63,9 @@ function renderMentionChildren(children) {
 			return renderMentionText(child);
 		}
 		if (isValidElement(child) && child.props?.children) {
+			if (child.type === "code" || child.type === "pre") {
+				return child;
+			}
 			return cloneElement(child, {
 				...child.props,
 				children: renderMentionChildren(child.props.children),
