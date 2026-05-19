@@ -430,11 +430,149 @@ function getDiffResourceState(resource) {
 	return lang.t("Modified");
 }
 
-function buildDiffResources(entry) {
-	return getHistoryChangeResources(entry).map((resource) => ({
+function snapshotsEqual(before, after) {
+	return JSON.stringify(before ?? null) === JSON.stringify(after ?? null);
+}
+
+function getSessionSnapshotData(snapshot) {
+	return snapshot && typeof snapshot === "object" && snapshot.data
+		? snapshot.data
+		: {};
+}
+
+function getDiffItemKey(item, index, getName) {
+	if (item && typeof item === "object") {
+		const identity = String(item.id || item.slug || "").trim();
+		if (identity) return identity;
+		const name = String(getName?.(item) || item.name || item.title || "").trim();
+		if (name) return `name:${name.toLowerCase()}`;
+	}
+	return `index:${index}`;
+}
+
+function pushGranularDiff(resources, resource, suffix, before, after) {
+	if (snapshotsEqual(before, after)) return;
+	resources.push({
 		...resource,
-		lines: createLineDiff(resource.before, resource.after),
-	}));
+		id: `${resource.id}:${suffix}`,
+		label: `${resource.label}#${suffix}`,
+		before: before === undefined ? null : before,
+		after: after === undefined ? null : after,
+	});
+}
+
+function pushGranularArrayDiff(resources, resource, pathLabel, before, after, getName) {
+	const beforeList = Array.isArray(before) ? before : [];
+	const afterList = Array.isArray(after) ? after : [];
+	const beforeByKey = new Map(
+		beforeList.map((item, index) => [getDiffItemKey(item, index, getName), item]),
+	);
+	const afterByKey = new Map(
+		afterList.map((item, index) => [getDiffItemKey(item, index, getName), item]),
+	);
+
+	for (const key of new Set([...beforeByKey.keys(), ...afterByKey.keys()])) {
+		const beforeItem = beforeByKey.get(key);
+		const afterItem = afterByKey.get(key);
+		const labelSource = afterItem || beforeItem;
+		const name = String(getName?.(labelSource) || "").trim();
+		const suffix = name ? `${pathLabel}/${name}` : `${pathLabel}/${key}`;
+		pushGranularDiff(resources, resource, suffix, beforeItem, afterItem);
+	}
+}
+
+function expandSessionDiffResource(resource) {
+	if (resource?.kind !== "session" || (!resource.before && !resource.after)) {
+		return [resource];
+	}
+
+	const expanded = [];
+	const before = resource.before || {};
+	const after = resource.after || {};
+	const beforeData = getSessionSnapshotData(before);
+	const afterData = getSessionSnapshotData(after);
+
+	pushGranularDiff(expanded, resource, "name", before.name, after.name);
+	pushGranularDiff(
+		expanded,
+		resource,
+		"summary",
+		beforeData.result_text,
+		afterData.result_text,
+	);
+	pushGranularArrayDiff(
+		expanded,
+		resource,
+		"notes",
+		beforeData.notes,
+		afterData.notes,
+		(note) => note?.title || note?.text || lang.t("Note"),
+	);
+	pushGranularArrayDiff(
+		expanded,
+		resource,
+		"npcs",
+		beforeData.npcs,
+		afterData.npcs,
+		getCharacterDisplayName,
+	);
+	pushGranularArrayDiff(
+		expanded,
+		resource,
+		"locations",
+		beforeData.locations,
+		afterData.locations,
+		getLocationDisplayName,
+	);
+	pushGranularArrayDiff(
+		expanded,
+		resource,
+		"scenes",
+		beforeData.scenes,
+		afterData.scenes,
+		(scene) => scene?.texts?.summary || scene?.name || lang.t("Scene"),
+	);
+	pushGranularArrayDiff(
+		expanded,
+		resource,
+		"encounters",
+		beforeData.encounters,
+		afterData.encounters,
+		(encounter) => encounter?.name || lang.t("Encounter"),
+	);
+
+	const coveredDataKeys = new Set([
+		"result_text",
+		"notes",
+		"npcs",
+		"locations",
+		"scenes",
+		"encounters",
+	]);
+	for (const key of new Set([
+		...Object.keys(beforeData || {}),
+		...Object.keys(afterData || {}),
+	])) {
+		if (coveredDataKeys.has(key)) continue;
+		pushGranularDiff(expanded, resource, `data.${key}`, beforeData[key], afterData[key]);
+	}
+
+	const coveredTopLevelKeys = new Set(["data", "name"]);
+	for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
+		if (coveredTopLevelKeys.has(key)) continue;
+		pushGranularDiff(expanded, resource, key, before[key], after[key]);
+	}
+
+	return expanded.length > 0 ? expanded : [resource];
+}
+
+function buildDiffResources(entry) {
+	return getHistoryChangeResources(entry)
+		.flatMap(expandSessionDiffResource)
+		.map((resource) => ({
+			...resource,
+			lines: createLineDiff(resource.before, resource.after),
+		}));
 }
 
 export default function AiAssistantPanel({
