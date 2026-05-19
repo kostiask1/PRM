@@ -601,6 +601,9 @@ export default function AiAssistantPanel({
 	const [userInstructions, setUserInstructions] = useState("");
 	const [notification, setNotification] = useState(null);
 	const [isImagePromptPickerOpen, setIsImagePromptPickerOpen] = useState(false);
+	const [selectedImagePromptTarget, setSelectedImagePromptTarget] =
+		useState(null);
+	const [imagePromptInstructions, setImagePromptInstructions] = useState("");
 	const [imagePromptSessions, setImagePromptSessions] = useState([]);
 	const [imagePromptCustomMonsters, setImagePromptCustomMonsters] = useState([]);
 	const [isImagePromptDataLoading, setIsImagePromptDataLoading] = useState(false);
@@ -1197,7 +1200,11 @@ export default function AiAssistantPanel({
 	const generate = async (
 		type = null,
 		targetSceneId = null,
-		{ forceParseAIResponse = null, imageTarget = null } = {},
+		{
+			forceParseAIResponse = null,
+			imageTarget = null,
+			userInstructionsOverride = null,
+		} = {},
 	) => {
 		const requestType = isBestiary && type !== "image" ? "custom-monster" : type;
 		cancelGenerateRequest();
@@ -1229,7 +1236,10 @@ export default function AiAssistantPanel({
 				{
 					type: requestType,
 					modelName: selectedModel || undefined,
-					userInstructions,
+					userInstructions:
+						userInstructionsOverride === null
+							? userInstructions
+							: userInstructionsOverride,
 					path: initialRoute,
 					sceneId: targetSceneId,
 					imageTarget,
@@ -1448,7 +1458,29 @@ export default function AiAssistantPanel({
 		setIsImagePromptPickerOpen(false);
 		generate("image", target.type === "scene" ? target.id || null : null, {
 			imageTarget: target,
+			userInstructionsOverride: imagePromptInstructions.trim(),
 		});
+		setSelectedImagePromptTarget(null);
+		setImagePromptInstructions("");
+	};
+
+	const selectImagePromptTarget = (target) => {
+		setSelectedImagePromptTarget(target);
+		setImagePromptInstructions("");
+	};
+
+	const closeImagePromptPicker = () => {
+		setIsImagePromptPickerOpen(false);
+		setSelectedImagePromptTarget(null);
+		setImagePromptInstructions("");
+	};
+
+	const getImagePromptTargetTitle = (target) => {
+		if (!target) return "";
+		if (target.type === "scene" && target.sessionName) {
+			return `${target.name} - ${target.sessionName}`;
+		}
+		return target.name || target.id || target.type || "";
 	};
 
 	const buildNpcImageTarget = (npc) => ({
@@ -1727,7 +1759,11 @@ export default function AiAssistantPanel({
 									variant="ghost"
 									size={Button.SIZES.SMALL}
 									icon="image"
-									onClick={() => setIsImagePromptPickerOpen(true)}
+									onClick={() => {
+										setSelectedImagePromptTarget(null);
+										setImagePromptInstructions("");
+										setIsImagePromptPickerOpen(true);
+									}}
 									disabled={loading}
 									title={lang.t("Choose an element to generate a prompt")}
 								>
@@ -2094,120 +2130,177 @@ export default function AiAssistantPanel({
 
 						{isImagePromptPickerOpen && (
 							<Modal
-								title={lang.t("Choose an element to generate a prompt")}
-								onCancel={() => setIsImagePromptPickerOpen(false)}
+								title={
+									selectedImagePromptTarget
+										? lang.t("Image prompt")
+										: lang.t("Choose an element to generate a prompt")
+								}
+								onCancel={closeImagePromptPicker}
 								showFooter={false}
 								className="AiAssistant__image_prompt_modal"
 							>
-								<div className="AiAssistant__image_prompt_picker">
-									{isImagePromptDataLoading && (
-										<div className="AiAssistant__loading">
-											{lang.t("Loading...")}
+								{selectedImagePromptTarget ? (
+									<div className="AiAssistant__image_prompt_details">
+										<div className="AiAssistant__image_prompt_target">
+											<span>{lang.t("Selected element")}</span>
+											<strong>
+												{getImagePromptTargetTitle(
+													selectedImagePromptTarget,
+												)}
+											</strong>
 										</div>
-									)}
-									{isBestiary ? (
-										<>
-											{renderImagePromptColumn({
-												title: "Custom creatures without images",
-												items: imagePromptCustomMonstersWithoutImages,
-												emptyLabel: "No custom creatures without images.",
-												getKey: (monster) => `custom-empty-${monster?.name}`,
-												getName: (monster) => monster?.name || "",
-												getDescription: (monster) =>
-													[
-														monster?.type,
-														monster?.cr ? `CR ${monster.cr}` : "",
-													]
-														.filter(Boolean)
-														.join(" - "),
-												onSelect: (monster) =>
+										<Input
+											type="textarea"
+											value={imagePromptInstructions}
+											onChange={(event) =>
+												setImagePromptInstructions(event.target.value)
+											}
+											placeholder={lang.t(
+												"Optional image prompt instructions...",
+											)}
+											disabled={loading}
+											className="AiAssistant__image_prompt_instructions"
+										/>
+										<div className="AiAssistant__image_prompt_actions">
+											<Button
+												variant="ghost"
+												icon="back"
+												onClick={() => {
+													setSelectedImagePromptTarget(null);
+													setImagePromptInstructions("");
+												}}
+												disabled={loading}
+											>
+												{lang.t("Back to selection")}
+											</Button>
+											<Button
+												variant="primary"
+												icon="image"
+												onClick={() =>
 													generateImagePromptForTarget(
-														buildCustomMonsterImageTarget(monster),
-													),
-											})}
-											{renderImagePromptColumn({
-												title: "Custom creatures with images",
-												items: imagePromptCustomMonstersWithImages,
-												emptyLabel: "No custom creatures with images.",
-												getKey: (monster) => `custom-image-${monster?.name}`,
-												getName: (monster) => monster?.name || "",
-												getDescription: (monster) =>
-													[
-														monster?.type,
-														monster?.cr ? `CR ${monster.cr}` : "",
-													]
-														.filter(Boolean)
-														.join(" - "),
-												onSelect: (monster) =>
-													generateImagePromptForTarget(
-														buildCustomMonsterImageTarget(monster),
-													),
-											})}
-										</>
-									) : (
-										<>
-											{renderImagePromptColumn({
-												title: "NPCs",
-												items: imagePromptNpcs,
-												emptyLabel: "No NPCs yet.",
-												getName: getCharacterDisplayName,
-												getDescription: (npc) =>
-													npc?.description ||
-													npc?.trait ||
-													npc?.motivation ||
-													"",
-												onSelect: (npc) =>
-													generateImagePromptForTarget(
-														buildNpcImageTarget(npc),
-													),
-											})}
-											{renderImagePromptColumn({
-												title: "Locations/Factions",
-												items: imagePromptLocations,
-												emptyLabel: "No locations/factions yet.",
-												getName: getLocationDisplayName,
-												getDescription: (location) =>
-													location?.description || "",
-												onSelect: (location) =>
-													generateImagePromptForTarget(
-														buildLocationImageTarget(location),
-													),
-											})}
-											{!isCampaign &&
-												renderImagePromptColumn({
-													title: "Scenes",
-													items: imagePromptScenes,
-													emptyLabel: "No scenes found.",
-													getKey: (scene, index) =>
+														selectedImagePromptTarget,
+													)
+												}
+												disabled={loading}
+											>
+												{lang.t("Generate image prompt")}
+											</Button>
+										</div>
+									</div>
+								) : (
+									<div className="AiAssistant__image_prompt_picker">
+										{isImagePromptDataLoading && (
+											<div className="AiAssistant__loading">
+												{lang.t("Loading...")}
+											</div>
+										)}
+										{isBestiary ? (
+											<>
+												{renderImagePromptColumn({
+													title: "Custom creatures without images",
+													items: imagePromptCustomMonstersWithoutImages,
+													emptyLabel:
+														"No custom creatures without images.",
+													getKey: (monster) =>
+														`custom-empty-${monster?.name}`,
+													getName: (monster) => monster?.name || "",
+													getDescription: (monster) =>
 														[
-															scene?._imagePromptSessionFileName,
-															scene?.id,
-															index,
+															monster?.type,
+															monster?.cr ? `CR ${monster.cr}` : "",
 														]
 															.filter(Boolean)
-															.join(":"),
-													getName: (scene, index) =>
-														getSceneImagePromptTitle(
-															scene,
-															scene?._imagePromptIndex ?? index,
-														),
-													getDescription: (scene) => {
-														const sessionName =
-															scene?._imagePromptSessionName;
-														const description =
-															getSceneImagePromptDescription(scene);
-														return [sessionName, description]
-															.filter(Boolean)
-															.join(" - ");
-													},
-													onSelect: (scene) =>
-														generateImagePromptForTarget(
-															buildSceneImageTarget(scene),
+															.join(" - "),
+													onSelect: (monster) =>
+														selectImagePromptTarget(
+															buildCustomMonsterImageTarget(monster),
 														),
 												})}
-										</>
-									)}
-								</div>
+												{renderImagePromptColumn({
+													title: "Custom creatures with images",
+													items: imagePromptCustomMonstersWithImages,
+													emptyLabel: "No custom creatures with images.",
+													getKey: (monster) =>
+														`custom-image-${monster?.name}`,
+													getName: (monster) => monster?.name || "",
+													getDescription: (monster) =>
+														[
+															monster?.type,
+															monster?.cr ? `CR ${monster.cr}` : "",
+														]
+															.filter(Boolean)
+															.join(" - "),
+													onSelect: (monster) =>
+														selectImagePromptTarget(
+															buildCustomMonsterImageTarget(monster),
+														),
+												})}
+											</>
+										) : (
+											<>
+												{renderImagePromptColumn({
+													title: "NPCs",
+													items: imagePromptNpcs,
+													emptyLabel: "No NPCs yet.",
+													getName: getCharacterDisplayName,
+													getDescription: (npc) =>
+														npc?.description ||
+														npc?.trait ||
+														npc?.motivation ||
+														"",
+													onSelect: (npc) =>
+														selectImagePromptTarget(
+															buildNpcImageTarget(npc),
+														),
+												})}
+												{renderImagePromptColumn({
+													title: "Locations/Factions",
+													items: imagePromptLocations,
+													emptyLabel: "No locations/factions yet.",
+													getName: getLocationDisplayName,
+													getDescription: (location) =>
+														location?.description || "",
+													onSelect: (location) =>
+														selectImagePromptTarget(
+															buildLocationImageTarget(location),
+														),
+												})}
+												{!isCampaign &&
+													renderImagePromptColumn({
+														title: "Scenes",
+														items: imagePromptScenes,
+														emptyLabel: "No scenes found.",
+														getKey: (scene, index) =>
+															[
+																scene?._imagePromptSessionFileName,
+																scene?.id,
+																index,
+															]
+																.filter(Boolean)
+																.join(":"),
+														getName: (scene, index) =>
+															getSceneImagePromptTitle(
+																scene,
+																scene?._imagePromptIndex ?? index,
+															),
+														getDescription: (scene) => {
+															const sessionName =
+																scene?._imagePromptSessionName;
+															const description =
+																getSceneImagePromptDescription(scene);
+															return [sessionName, description]
+																.filter(Boolean)
+																.join(" - ");
+														},
+														onSelect: (scene) =>
+															selectImagePromptTarget(
+																buildSceneImageTarget(scene),
+															),
+													})}
+											</>
+										)}
+									</div>
+								)}
 							</Modal>
 						)}
 
