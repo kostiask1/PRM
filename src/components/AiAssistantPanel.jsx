@@ -7,7 +7,6 @@ import {
 	useRef,
 	useState,
 } from "react";
-import ReactMarkdown from "react-markdown";
 import { api } from "../api";
 import { parseUrl } from "../utils/navigation";
 import Button from "./form/Button";
@@ -19,7 +18,9 @@ import Select from "./form/Select";
 import Checkbox from "./form/Checkbox";
 import Notification from "./common/Notification";
 import CollapseToggleButton from "./common/CollapseToggleButton";
+import AiImagePromptPickerModal from "./ai/AiImagePromptPickerModal";
 import AiResponseHistory from "./ai/AiResponseHistory";
+import AiResponseModal from "./ai/AiResponseModal";
 import {
 	alert,
 	confirm,
@@ -31,6 +32,10 @@ import classNames from "../utils/classNames";
 import { useAppDispatch, useAppSelector } from "../store/appStore";
 import { lang } from "../services/localization";
 import { renderMentionText } from "../renderers/contentRenderer.jsx";
+import {
+	buildDiffResources,
+	getDiffResourceState as getAiDiffResourceState,
+} from "../utils/aiDiff.js";
 import "../assets/components/AiAssistantPanel.css";
 
 const markdownTagsWithMentions = [
@@ -338,279 +343,12 @@ function getAiResponseStateLabel(entry) {
 	return "";
 }
 
-function snapshotToDiffText(value) {
-	if (value === null || value === undefined) return "";
-	return JSON.stringify(value, null, 2);
-}
-
-function splitDiffText(value) {
-	const text = snapshotToDiffText(value);
-	return text ? text.split(/\r?\n/) : [];
-}
-
-function createLineDiff(before, after) {
-	const oldLines = splitDiffText(before);
-	const newLines = splitDiffText(after);
-	if (oldLines.length === 0 && newLines.length === 0) return [];
-
-	if (oldLines.length * newLines.length > 200000) {
-		return [
-			...oldLines.map((text, index) => ({
-				type: "removed",
-				oldNumber: index + 1,
-				newNumber: null,
-				text,
-			})),
-			...newLines.map((text, index) => ({
-				type: "added",
-				oldNumber: null,
-				newNumber: index + 1,
-				text,
-			})),
-		];
-	}
-
-	const dp = Array.from({ length: oldLines.length + 1 }, () =>
-		Array(newLines.length + 1).fill(0),
-	);
-	for (let i = oldLines.length - 1; i >= 0; i -= 1) {
-		for (let j = newLines.length - 1; j >= 0; j -= 1) {
-			dp[i][j] =
-				oldLines[i] === newLines[j]
-					? dp[i + 1][j + 1] + 1
-					: Math.max(dp[i + 1][j], dp[i][j + 1]);
-		}
-	}
-
-	const lines = [];
-	let i = 0;
-	let j = 0;
-	let oldNumber = 1;
-	let newNumber = 1;
-	while (i < oldLines.length || j < newLines.length) {
-		if (i < oldLines.length && j < newLines.length && oldLines[i] === newLines[j]) {
-			lines.push({
-				type: "context",
-				oldNumber,
-				newNumber,
-				text: oldLines[i],
-			});
-			i += 1;
-			j += 1;
-			oldNumber += 1;
-			newNumber += 1;
-		} else if (
-			j >= newLines.length ||
-			(i < oldLines.length && dp[i + 1][j] >= dp[i][j + 1])
-		) {
-			lines.push({
-				type: "removed",
-				oldNumber,
-				newNumber: null,
-				text: oldLines[i],
-			});
-			i += 1;
-			oldNumber += 1;
-		} else {
-			lines.push({
-				type: "added",
-				oldNumber: null,
-				newNumber,
-				text: newLines[j],
-			});
-			j += 1;
-			newNumber += 1;
-		}
-	}
-	return lines;
-}
-
 function getDiffResourceState(resource) {
-	if (resource.before === null && resource.after !== null) return lang.t("Added");
-	if (resource.before !== null && resource.after === null) return lang.t("Deleted");
-	return lang.t("Modified");
-}
-
-function getDiffResourceFieldSummary(resource) {
-	const before = resource.before;
-	const after = resource.after;
-	if (!before || !after || typeof before !== "object" || typeof after !== "object") {
-		return [];
-	}
-	if (Array.isArray(before) || Array.isArray(after)) return [];
-
-	const ignoredKeys = new Set(["id", "slug", "source", "updatedAt"]);
-	return [...new Set([...Object.keys(before), ...Object.keys(after)])]
-		.filter((key) => !ignoredKeys.has(key))
-		.filter((key) => !snapshotsEqual(before[key], after[key]))
-		.slice(0, 8);
-}
-
-function snapshotsEqual(before, after) {
-	return JSON.stringify(before ?? null) === JSON.stringify(after ?? null);
-}
-
-function getSessionSnapshotData(snapshot) {
-	return snapshot && typeof snapshot === "object" && snapshot.data
-		? snapshot.data
-		: {};
-}
-
-function getDiffItemKey(item, index, getName) {
-	if (item && typeof item === "object") {
-		const identity = String(item.id || item.slug || "").trim();
-		if (identity) return identity;
-		const name = String(getName?.(item) || item.name || item.title || "").trim();
-		if (name) return `name:${name.toLowerCase()}`;
-	}
-	return `index:${index}`;
-}
-
-function pushGranularDiff(resources, resource, suffix, before, after) {
-	if (snapshotsEqual(before, after)) return;
-	resources.push({
-		...resource,
-		id: `${resource.id}:${suffix}`,
-		label: `${resource.label}#${suffix}`,
-		before: before === undefined ? null : before,
-		after: after === undefined ? null : after,
+	return getAiDiffResourceState(resource, {
+		added: lang.t("Added"),
+		deleted: lang.t("Deleted"),
+		modified: lang.t("Modified"),
 	});
-}
-
-function pushGranularArrayDiff(resources, resource, pathLabel, before, after, getName) {
-	const beforeList = Array.isArray(before) ? before : [];
-	const afterList = Array.isArray(after) ? after : [];
-	const beforeByKey = new Map(
-		beforeList.map((item, index) => [getDiffItemKey(item, index, getName), item]),
-	);
-	const afterByKey = new Map(
-		afterList.map((item, index) => [getDiffItemKey(item, index, getName), item]),
-	);
-
-	for (const key of new Set([...beforeByKey.keys(), ...afterByKey.keys()])) {
-		const beforeItem = beforeByKey.get(key);
-		const afterItem = afterByKey.get(key);
-		const labelSource = afterItem || beforeItem;
-		const name = String(getName?.(labelSource) || "").trim();
-		const suffix = name ? `${pathLabel}/${name}` : `${pathLabel}/${key}`;
-		pushGranularDiff(resources, resource, suffix, beforeItem, afterItem);
-	}
-}
-
-function expandSessionDiffResource(resource) {
-	if (resource?.kind !== "session" || (!resource.before && !resource.after)) {
-		return [resource];
-	}
-
-	const expanded = [];
-	const before = resource.before || {};
-	const after = resource.after || {};
-	const beforeData = getSessionSnapshotData(before);
-	const afterData = getSessionSnapshotData(after);
-
-	pushGranularDiff(expanded, resource, "name", before.name, after.name);
-	pushGranularDiff(
-		expanded,
-		resource,
-		"summary",
-		beforeData.result_text,
-		afterData.result_text,
-	);
-	pushGranularArrayDiff(
-		expanded,
-		resource,
-		"notes",
-		beforeData.notes,
-		afterData.notes,
-		(note) => note?.title || note?.text || lang.t("Note"),
-	);
-	pushGranularArrayDiff(
-		expanded,
-		resource,
-		"npcs",
-		beforeData.npcs,
-		afterData.npcs,
-		getCharacterDisplayName,
-	);
-	pushGranularArrayDiff(
-		expanded,
-		resource,
-		"locations",
-		beforeData.locations,
-		afterData.locations,
-		getLocationDisplayName,
-	);
-	pushGranularArrayDiff(
-		expanded,
-		resource,
-		"scenes",
-		beforeData.scenes,
-		afterData.scenes,
-		(scene) => scene?.texts?.summary || scene?.name || lang.t("Scene"),
-	);
-	pushGranularArrayDiff(
-		expanded,
-		resource,
-		"encounters",
-		beforeData.encounters,
-		afterData.encounters,
-		(encounter) => encounter?.name || lang.t("Encounter"),
-	);
-
-	const coveredDataKeys = new Set([
-		"result_text",
-		"notes",
-		"npcs",
-		"locations",
-		"scenes",
-		"encounters",
-	]);
-	for (const key of new Set([
-		...Object.keys(beforeData || {}),
-		...Object.keys(afterData || {}),
-	])) {
-		if (coveredDataKeys.has(key)) continue;
-		pushGranularDiff(expanded, resource, `data.${key}`, beforeData[key], afterData[key]);
-	}
-
-	const coveredTopLevelKeys = new Set(["data", "name"]);
-	for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
-		if (coveredTopLevelKeys.has(key)) continue;
-		pushGranularDiff(expanded, resource, key, before[key], after[key]);
-	}
-
-	return expanded.length > 0 ? expanded : [resource];
-}
-
-function expandCustomBestiaryDiffResource(resource) {
-	if (
-		resource?.kind !== "custom-bestiary" ||
-		(!Array.isArray(resource.before) && !Array.isArray(resource.after))
-	) {
-		return [resource];
-	}
-
-	const expanded = [];
-	pushGranularArrayDiff(
-		expanded,
-		resource,
-		"monsters",
-		resource.before,
-		resource.after,
-		(monster) => monster?.name || lang.t("Creature"),
-	);
-	return expanded.length > 0 ? expanded : [resource];
-}
-
-function buildDiffResources(entry) {
-	return getHistoryChangeResources(entry)
-		.flatMap(expandSessionDiffResource)
-		.flatMap(expandCustomBestiaryDiffResource)
-		.map((resource) => ({
-			...resource,
-			fieldSummary: getDiffResourceFieldSummary(resource),
-			lines: createLineDiff(resource.before, resource.after),
-		}));
 }
 
 export default function AiAssistantPanel({
@@ -1439,7 +1177,12 @@ export default function AiAssistantPanel({
 		selectedResponseEntry,
 		currentLanguage,
 	);
-	const selectedResponseDiffResources = buildDiffResources(selectedResponseEntry);
+	const selectedResponseDiffResources = buildDiffResources(selectedResponseEntry, {
+		note: lang.t("Note"),
+		scene: lang.t("Scene"),
+		encounter: lang.t("Encounter"),
+		creature: lang.t("Creature"),
+	});
 	const selectedResponseHasChanges = selectedResponseDiffResources.length > 0;
 	const isResponseParsingLocked = isBestiary || generateEncounters;
 	const isEntityScopeVisible = !isBestiary && !isCampaign && !isEncounter;
@@ -1604,49 +1347,6 @@ export default function AiAssistantPanel({
 			cha: monster?.cha ?? "",
 		},
 	});
-
-	const renderImagePromptColumn = ({
-		title,
-		items,
-		emptyLabel,
-		getName,
-		getDescription,
-		getKey = null,
-		onSelect,
-	}) => (
-		<section className="AiAssistant__image_prompt_column">
-			<h4>{lang.t(title)}</h4>
-			<div className="AiAssistant__image_prompt_list">
-				{items.length > 0 ? (
-					items.map((item, index) => {
-						const key =
-							getKey?.(item, index) ||
-							item?.id ||
-							item?.slug ||
-							`${title}-${index}`;
-						const description = getImagePromptPreview(getDescription(item, index));
-						return (
-							<button
-								key={key}
-								type="button"
-								className="AiAssistant__image_prompt_item"
-								onClick={() => onSelect(item, index)}
-								disabled={loading}
-								title={lang.t("Generate visual prompt for this item")}
-							>
-								<strong>{getName(item, index)}</strong>
-								{description && <span>{description}</span>}
-							</button>
-						);
-					})
-				) : (
-					<div className="muted AiAssistant__empty_context">
-						{lang.t(emptyLabel)}
-					</div>
-				)}
-			</div>
-		</section>
-	);
 
 	const renderCampaignEntityContext = ({
 		contextKey,
@@ -2196,323 +1896,64 @@ export default function AiAssistantPanel({
 							</Modal>
 						)}
 
-						{isImagePromptPickerOpen && (
-							<Modal
-								title={
-									selectedImagePromptTarget
-										? lang.t("Image prompt")
-										: lang.t("Choose an element to generate a prompt")
-								}
-								onCancel={closeImagePromptPicker}
-								showFooter={false}
-								className="AiAssistant__image_prompt_modal"
-							>
-								{selectedImagePromptTarget ? (
-									<div className="AiAssistant__image_prompt_details">
-										<div className="AiAssistant__image_prompt_target">
-											<span>{lang.t("Selected element")}</span>
-											<strong>
-												{getImagePromptTargetTitle(
-													selectedImagePromptTarget,
-												)}
-											</strong>
-										</div>
-										<Input
-											type="textarea"
-											value={imagePromptInstructions}
-											onChange={(event) =>
-												setImagePromptInstructions(event.target.value)
-											}
-											placeholder={lang.t(
-												"Optional image prompt instructions...",
-											)}
-											disabled={loading}
-											className="AiAssistant__image_prompt_instructions"
-										/>
-										<div className="AiAssistant__image_prompt_actions">
-											<Button
-												variant="ghost"
-												icon="back"
-												onClick={() => {
-													setSelectedImagePromptTarget(null);
-													setImagePromptInstructions("");
-												}}
-												disabled={loading}
-											>
-												{lang.t("Back to selection")}
-											</Button>
-											<Button
-												variant="primary"
-												icon="image"
-												onClick={() =>
-													generateImagePromptForTarget(
-														selectedImagePromptTarget,
-													)
-												}
-												disabled={loading}
-											>
-												{lang.t("Generate image prompt")}
-											</Button>
-										</div>
-									</div>
-								) : (
-									<div className="AiAssistant__image_prompt_picker">
-										{isImagePromptDataLoading && (
-											<div className="AiAssistant__loading">
-												{lang.t("Loading...")}
-											</div>
-										)}
-										{isBestiary ? (
-											<>
-												{renderImagePromptColumn({
-													title: "Custom creatures without images",
-													items: imagePromptCustomMonstersWithoutImages,
-													emptyLabel:
-														"No custom creatures without images.",
-													getKey: (monster) =>
-														`custom-empty-${monster?.name}`,
-													getName: (monster) => monster?.name || "",
-													getDescription: (monster) =>
-														[
-															monster?.type,
-															monster?.cr ? `CR ${monster.cr}` : "",
-														]
-															.filter(Boolean)
-															.join(" - "),
-													onSelect: (monster) =>
-														selectImagePromptTarget(
-															buildCustomMonsterImageTarget(monster),
-														),
-												})}
-												{renderImagePromptColumn({
-													title: "Custom creatures with images",
-													items: imagePromptCustomMonstersWithImages,
-													emptyLabel: "No custom creatures with images.",
-													getKey: (monster) =>
-														`custom-image-${monster?.name}`,
-													getName: (monster) => monster?.name || "",
-													getDescription: (monster) =>
-														[
-															monster?.type,
-															monster?.cr ? `CR ${monster.cr}` : "",
-														]
-															.filter(Boolean)
-															.join(" - "),
-													onSelect: (monster) =>
-														selectImagePromptTarget(
-															buildCustomMonsterImageTarget(monster),
-														),
-												})}
-											</>
-										) : (
-											<>
-												{renderImagePromptColumn({
-													title: "NPCs",
-													items: imagePromptNpcs,
-													emptyLabel: "No NPCs yet.",
-													getName: getCharacterDisplayName,
-													getDescription: (npc) =>
-														npc?.description ||
-														npc?.trait ||
-														npc?.motivation ||
-														"",
-													onSelect: (npc) =>
-														selectImagePromptTarget(
-															buildNpcImageTarget(npc),
-														),
-												})}
-												{renderImagePromptColumn({
-													title: "Locations/Factions",
-													items: imagePromptLocations,
-													emptyLabel: "No locations/factions yet.",
-													getName: getLocationDisplayName,
-													getDescription: (location) =>
-														location?.description || "",
-													onSelect: (location) =>
-														selectImagePromptTarget(
-															buildLocationImageTarget(location),
-														),
-												})}
-												{!isCampaign &&
-													renderImagePromptColumn({
-														title: "Scenes",
-														items: imagePromptScenes,
-														emptyLabel: "No scenes found.",
-														getKey: (scene, index) =>
-															[
-																scene?._imagePromptSessionFileName,
-																scene?.id,
-																index,
-															]
-																.filter(Boolean)
-																.join(":"),
-														getName: (scene, index) =>
-															getSceneImagePromptTitle(
-																scene,
-																scene?._imagePromptIndex ?? index,
-															),
-														getDescription: (scene) => {
-															const sessionName =
-																scene?._imagePromptSessionName;
-															const description =
-																getSceneImagePromptDescription(scene);
-															return [sessionName, description]
-																.filter(Boolean)
-																.join(" - ");
-														},
-														onSelect: (scene) =>
-															selectImagePromptTarget(
-																buildSceneImageTarget(scene),
-															),
-													})}
-											</>
-										)}
-									</div>
-								)}
-							</Modal>
-						)}
+						<AiImagePromptPickerModal
+							buildCustomMonsterImageTarget={buildCustomMonsterImageTarget}
+							buildLocationImageTarget={buildLocationImageTarget}
+							buildNpcImageTarget={buildNpcImageTarget}
+							buildSceneImageTarget={buildSceneImageTarget}
+							customMonstersWithImages={imagePromptCustomMonstersWithImages}
+							customMonstersWithoutImages={
+								imagePromptCustomMonstersWithoutImages
+							}
+							getCharacterDisplayName={getCharacterDisplayName}
+							getImagePromptPreview={getImagePromptPreview}
+							getImagePromptTargetTitle={getImagePromptTargetTitle}
+							getLocationDisplayName={getLocationDisplayName}
+							getSceneImagePromptDescription={
+								getSceneImagePromptDescription
+							}
+							getSceneImagePromptTitle={getSceneImagePromptTitle}
+							imagePromptInstructions={imagePromptInstructions}
+							imagePromptLocations={imagePromptLocations}
+							imagePromptNpcs={imagePromptNpcs}
+							imagePromptScenes={imagePromptScenes}
+							isBestiary={isBestiary}
+							isCampaign={isCampaign}
+							isDataLoading={isImagePromptDataLoading}
+							isOpen={isImagePromptPickerOpen}
+							loading={loading}
+							onBackToSelection={() => {
+								setSelectedImagePromptTarget(null);
+								setImagePromptInstructions("");
+							}}
+							onCancel={closeImagePromptPicker}
+							onGenerate={generateImagePromptForTarget}
+							onInstructionsChange={setImagePromptInstructions}
+							onSelectTarget={selectImagePromptTarget}
+							selectedTarget={selectedImagePromptTarget}
+						/>
 
-						{generatedPrompt && (
-							<Modal
-								title={lang.t("Response")}
-								onCancel={closeGeneratedPrompt}
-								showFooter={false}
-								overlayClassName="AiAssistant__response_overlay"
-							>
-								<div className="AiAssistant__prompt_result_wrap">
-									<div className="AiAssistant__prompt_result_actions">
-										{selectedResponseHasChanges && (
-											<>
-												<Button
-													variant="ghost"
-													size={Button.SIZES.SMALL}
-													icon="undo"
-													onClick={() =>
-														restoreAiHistoryEntry(
-															selectedResponseEntry,
-															"undo",
-														)
-													}
-													disabled={isRestoringResponse}
-													title={lang.t("Undo AI changes")}
-												>
-													{lang.t("Undo")}
-												</Button>
-												<Button
-													variant="primary"
-													size={Button.SIZES.SMALL}
-													icon="check"
-													onClick={() =>
-														restoreAiHistoryEntry(
-															selectedResponseEntry,
-															"apply",
-														)
-													}
-													disabled={isRestoringResponse}
-													title={lang.t("Apply AI changes")}
-												>
-													{lang.t("Apply")}
-												</Button>
-											</>
-										)}
-										{!selectedResponseHasChanges && (
-											<Button
-												variant="ghost"
-												size={Button.SIZES.SMALL}
-												icon={isGeneratedPromptCopied ? "check" : "copy"}
-												onClick={copyGeneratedPrompt}
-												title={lang.t("Copy formatted text for Word")}
-											/>
-										)}
-									</div>
-									{!selectedResponseHasChanges && (
-										<div
-											className="AiAssistant__prompt_result"
-											ref={generatedPromptRef}
-										>
-											<ReactMarkdown components={markdownMentionComponents}>
-												{generatedPrompt}
-											</ReactMarkdown>
-										</div>
-									)}
-									{selectedResponseDetails.length > 0 && (
-										<div className="AiAssistant__response_details">
-											<div className="AiAssistant__response_details_title">
-												{lang.t("Request details")}
-											</div>
-											{selectedResponseDetails.map((row) => (
-												<div
-													key={row.label}
-													className="AiAssistant__response_details_row"
-												>
-													<span className="AiAssistant__response_details_label">
-														{row.label}
-													</span>
-													<span className="AiAssistant__response_details_value">
-														{row.value}
-													</span>
-												</div>
-											))}
-										</div>
-									)}
-									{selectedResponseHasChanges && (
-										<div className="AiAssistant__diff">
-											<div className="AiAssistant__diff_title">
-												<span>{lang.t("Changes")}</span>
-												<span>{getHistoryChangeSummary(selectedResponseEntry)}</span>
-											</div>
-											{selectedResponseDiffResources.map((resource) => (
-												<div
-													key={resource.id}
-													className="AiAssistant__diff_file"
-												>
-													<div className="AiAssistant__diff_file_header">
-														<span>{resource.label}</span>
-														<span>{getDiffResourceState(resource)}</span>
-													</div>
-													{resource.fieldSummary.length > 0 && (
-														<div className="AiAssistant__diff_field_summary">
-															<span>{lang.t("Changed fields")}:</span>
-															{resource.fieldSummary.map((field) => (
-																<code key={`${resource.id}-${field}`}>
-																	{field}
-																</code>
-															))}
-														</div>
-													)}
-													<div className="AiAssistant__diff_lines">
-														{resource.lines.map((line, index) => (
-															<div
-																key={`${resource.id}-${index}`}
-																className={classNames(
-																	"AiAssistant__diff_line",
-																	`is_${line.type}`,
-																)}
-															>
-																<span className="AiAssistant__diff_line_number">
-																	{line.oldNumber || ""}
-																</span>
-																<span className="AiAssistant__diff_line_number">
-																	{line.newNumber || ""}
-																</span>
-																<span className="AiAssistant__diff_line_marker">
-																	{line.type === "added"
-																		? "+"
-																		: line.type === "removed"
-																			? "-"
-																			: " "}
-																</span>
-																<code>{line.text || " "}</code>
-															</div>
-														))}
-													</div>
-												</div>
-											))}
-										</div>
-									)}
-								</div>
-							</Modal>
-						)}
+						<AiResponseModal
+							generatedPrompt={generatedPrompt}
+							generatedPromptRef={generatedPromptRef}
+							isGeneratedPromptCopied={isGeneratedPromptCopied}
+							isRestoringResponse={isRestoringResponse}
+							markdownComponents={markdownMentionComponents}
+							onApply={() =>
+								restoreAiHistoryEntry(selectedResponseEntry, "apply")
+							}
+							onCancel={closeGeneratedPrompt}
+							onCopy={copyGeneratedPrompt}
+							onUndo={() =>
+								restoreAiHistoryEntry(selectedResponseEntry, "undo")
+							}
+							selectedResponseDetails={selectedResponseDetails}
+							selectedResponseDiffResources={selectedResponseDiffResources}
+							selectedResponseEntry={selectedResponseEntry}
+							selectedResponseHasChanges={selectedResponseHasChanges}
+							getDiffResourceState={getDiffResourceState}
+							getHistoryChangeSummary={getHistoryChangeSummary}
+						/>
 
 						<div className="AiAssistant__prompt_area">
 							<EditableField
