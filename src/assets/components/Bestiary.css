@@ -268,3 +268,7 @@
 	padding: 0;
 	min-height: auto;
 }
+
+.Bestiary__list .ListCard__actions .Button:hover {
+	background: color-mix(in srgb, var(--accent), transparent 80%);
+}
