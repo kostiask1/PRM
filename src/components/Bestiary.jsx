@@ -225,7 +225,7 @@ export default function Bestiary({
 			}
 		};
 		loadInitialData();
-	}, [reloadToken]);
+	}, []);
 
 	// Завантаження повного списку монстрів один раз; джерела далі фільтруються локально
 	useEffect(() => {
@@ -234,21 +234,14 @@ export default function Bestiary({
 		const loadData = async () => {
 			setLoading(true);
 			try {
-				const [data, customData] = await Promise.all([
-					api.getBestiaryData("all"),
-					api.getCustomBestiaryData(),
-				]);
+				const data = await api.getBestiaryData("all");
 				const combinedList = Array.isArray(data)
 					? data
 					: data.monster || data.monsters || data.results || [];
-				const customList = Array.isArray(customData)
-					? customData
-					: customData.monster || customData.monsters || customData.results || [];
-				const sourceList = [...combinedList, ...customList];
 
 				// Об'єднуємо дані монстрів з легендарними діями/регіональними ефектами
 
-				const enrichedMonsters = sourceList.map((monster) => {
+				const enrichedMonsters = combinedList.map((monster) => {
 					// Шукаємо групу: або за спеціальним посиланням legendaryGroup, або за ім'ям самого монстра
 					const groupRef = monster.legendaryGroup;
 					const targetName = groupRef?.name || monster.name;
@@ -268,7 +261,10 @@ export default function Bestiary({
 					}
 					return monster;
 				});
-				setAllMonsters(enrichedMonsters);
+				setAllMonsters((current) => [
+					...enrichedMonsters,
+					...current.filter((monster) => isCustomSource(monster.source)),
+				]);
 			} catch (error) {
 				console.error("Failed to load local monsters", error);
 			} finally {
@@ -276,6 +272,42 @@ export default function Bestiary({
 			}
 		};
 		loadData();
+	}, [sources, legendaryGroups]);
+
+	useEffect(() => {
+		if (sources.length === 0) return;
+
+		const loadCustomData = async () => {
+			try {
+				const customData = await api.getCustomBestiaryData();
+				const customList = Array.isArray(customData)
+					? customData
+					: customData.monster || customData.monsters || customData.results || [];
+				const enrichedCustomMonsters = customList.map((monster) => {
+					const groupRef = monster.legendaryGroup;
+					const targetName = groupRef?.name || monster.name;
+					const targetSource = groupRef?.source || monster.source;
+					const legendaryEntry = legendaryGroups.find(
+						(lg) =>
+							lg.name === targetName &&
+							lg.source?.toUpperCase() === targetSource?.toUpperCase(),
+					);
+					if (!legendaryEntry) return monster;
+					return {
+						...monster,
+						lairActions: legendaryEntry.lairActions,
+						regionalEffects: legendaryEntry.regionalEffects,
+					};
+				});
+				setAllMonsters((current) => [
+					...current.filter((monster) => !isCustomSource(monster.source)),
+					...enrichedCustomMonsters,
+				]);
+			} catch (error) {
+				console.error("Failed to load custom monsters", error);
+			}
+		};
+		loadCustomData();
 	}, [sources, legendaryGroups, reloadToken]);
 
 	useEffect(() => {

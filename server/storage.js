@@ -121,7 +121,19 @@ async function readJson(filePath) {
 async function writeJson(filePath, value) {
 	await ensureDir(path.dirname(filePath));
 	const content = JSON.stringify(value, null, 2);
-	await fs.writeFile(filePath, content, "utf8");
+	const tempPath = path.join(
+		path.dirname(filePath),
+		`.${path.basename(filePath)}.${process.pid}.${Date.now()}.${crypto
+			.randomBytes(6)
+			.toString("hex")}.tmp`,
+	);
+	try {
+		await fs.writeFile(tempPath, content, "utf8");
+		await fs.rename(tempPath, filePath);
+	} catch (error) {
+		await fs.rm(tempPath, { force: true }).catch(() => {});
+		throw error;
+	}
 }
 
 async function renameWithRetry(oldPath, newPath, retries = 3, delay = 50) {
@@ -255,13 +267,122 @@ async function readCustomBestiaryMonsters() {
 	return (await readCustomBestiary()).monster;
 }
 
+function calculateDiceFormulaAverage(input) {
+	const clean = String(input || "")
+		.toLowerCase()
+		.replace(/\s+/g, "");
+	if (!clean) return null;
+
+	const parts = clean.replace(/-/g, "+-").split("+").filter(Boolean);
+	if (parts.length === 0) return null;
+
+	let average = 0;
+	for (const part of parts) {
+		const dieMatch = part.match(/^(\d+)?d(\d+)([hl]\d+)?$/i);
+		if (dieMatch) {
+			const count = Number.parseInt(dieMatch[1], 10) || 1;
+			const sides = Number.parseInt(dieMatch[2], 10);
+			const keepSuffix = dieMatch[3];
+			if (!Number.isFinite(count) || !Number.isFinite(sides) || sides < 1) {
+				return null;
+			}
+			const keepCount = keepSuffix
+				? Math.min(Number.parseInt(keepSuffix.slice(1), 10), count)
+				: count;
+			if (!Number.isFinite(keepCount) || keepCount < 0) return null;
+			average += keepCount * ((sides + 1) / 2);
+			continue;
+		}
+
+		if (/^[+-]?\d+$/.test(part)) {
+			average += Number.parseInt(part, 10);
+			continue;
+		}
+
+		return null;
+	}
+
+	return Math.max(1, Math.floor(average));
+}
+
+function stripMentionBrackets(value) {
+	if (typeof value === "string") {
+		return value.replace(/\[([^[\]]+)\]/g, "$1");
+	}
+	if (Array.isArray(value)) {
+		return value.map(stripMentionBrackets);
+	}
+	if (value && typeof value === "object") {
+		return Object.fromEntries(
+			Object.entries(value).map(([key, entryValue]) => [
+				key,
+				stripMentionBrackets(entryValue),
+			]),
+		);
+	}
+	return value;
+}
+
+function normalizeCustomBestiaryEntryList(value) {
+	return (Array.isArray(value) ? value : [])
+		.map((entry) => {
+			if (typeof entry === "string") {
+				const text = entry.trim();
+				return text ? { name: "", entries: [text] } : null;
+			}
+			if (!entry || typeof entry !== "object") return null;
+			const entries = Array.isArray(entry.entries)
+				? entry.entries
+				: entry.text || entry.description || entry.content
+					? [String(entry.text || entry.description || entry.content)]
+					: [];
+			return {
+				...entry,
+				name: String(entry.name || entry.title || "").trim(),
+				entries,
+			};
+		})
+		.filter((entry) => entry && entry.entries.length > 0);
+}
+
+function normalizeCustomBestiaryMonster(monster) {
+	const next = stripMentionBrackets({
+		...monster,
+		name: String(monster.name || monster.title || "").trim(),
+		source: CUSTOM_BESTIARY_SOURCE,
+	});
+
+	if (next.hp && typeof next.hp === "object" && !Array.isArray(next.hp)) {
+		next.hp = { ...next.hp };
+		const average = calculateDiceFormulaAverage(next.hp.formula);
+		if (average !== null) {
+			next.hp.average = average;
+		} else if (hasOwn(next.hp, "average")) {
+			const parsed = Number.parseInt(String(next.hp.average), 10);
+			next.hp.average = Number.isFinite(parsed) ? Math.max(1, parsed) : 1;
+		}
+	}
+
+	if (next.spellcasting && !Array.isArray(next.spellcasting)) {
+		next.spellcasting = [next.spellcasting];
+	}
+
+	for (const key of ["trait", "action", "bonus", "reaction", "legendary"]) {
+		if (next[key] !== undefined) {
+			const entries = normalizeCustomBestiaryEntryList(next[key]);
+			if (entries.length > 0) next[key] = entries;
+			else delete next[key];
+		}
+	}
+
+	return next;
+}
+
 async function writeCustomBestiaryMonsters(monsters) {
 	const normalized = (Array.isArray(monsters) ? monsters : [])
-		.filter((monster) => monster && typeof monster === "object" && monster.name)
-		.map((monster) => ({
-			...monster,
-			source: CUSTOM_BESTIARY_SOURCE,
-		}))
+		.filter((monster) => monster && typeof monster === "object")
+		.map(normalizeCustomBestiaryMonster)
+		.filter((monster) => monster.name)
 		.sort((a, b) => String(a.name).localeCompare(String(b.name), "uk"));
 	await writeJson(CUSTOM_BESTIARY_PATH, {
 		_meta: {
@@ -1469,6 +1590,7 @@ module.exports = {
 	getBestiaryIndex,
 	readCustomBestiary,
 	readCustomBestiaryMonsters,
+	normalizeCustomBestiaryMonster,
 	writeCustomBestiaryMonsters,
 	upsertCustomBestiaryMonsters,
 	listImages,

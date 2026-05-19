@@ -919,6 +919,38 @@ await run("storage core helpers sanitize and build identifiers", () => {
 	assert.equal(storage.campaignDir("../unsafe").includes(".."), false);
 });
 
+await run("storage writes JSON atomically and normalizes custom monsters", async () => {
+	const atomicPath = path.join(storage.CAMPAIGNS_DIR, `${TEST_PREFIX}-atomic.json`);
+	try {
+		await storage.writeJson(atomicPath, { title: "Проба", count: 1 });
+		assert.deepEqual(await storage.readJson(atomicPath), {
+			title: "Проба",
+			count: 1,
+		});
+
+		const normalized = storage.normalizeCustomBestiaryMonster({
+			name: "[Glass Knight]",
+			source: "OTHER",
+			hp: { formula: "3d8 + 6", average: 1 },
+			spellcasting: {
+				name: "Spellcasting",
+				spells: { "1": ["{@spell Shield|XPHB}"] },
+			},
+			action: ["{@atk mw} {@hit 6} to hit."],
+		});
+		assert.equal(normalized.name, "Glass Knight");
+		assert.equal(normalized.source, "CUSTOM");
+		assert.equal(normalized.hp.average, 19);
+		assert.equal(Array.isArray(normalized.spellcasting), true);
+		assert.deepEqual(normalized.action[0], {
+			name: "",
+			entries: ["{@atk mw} {@hit 6} to hit."],
+		});
+	} finally {
+		await fs.rm(atomicPath, { force: true });
+	}
+});
+
 await run("encounter monster helpers use special HP and detect formulas", () => {
 	assert.equal(
 		getMonsterBaseHp({

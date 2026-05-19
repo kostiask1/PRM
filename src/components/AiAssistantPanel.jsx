@@ -431,6 +431,21 @@ function getDiffResourceState(resource) {
 	return lang.t("Modified");
 }
 
+function getDiffResourceFieldSummary(resource) {
+	const before = resource.before;
+	const after = resource.after;
+	if (!before || !after || typeof before !== "object" || typeof after !== "object") {
+		return [];
+	}
+	if (Array.isArray(before) || Array.isArray(after)) return [];
+
+	const ignoredKeys = new Set(["id", "slug", "source", "updatedAt"]);
+	return [...new Set([...Object.keys(before), ...Object.keys(after)])]
+		.filter((key) => !ignoredKeys.has(key))
+		.filter((key) => !snapshotsEqual(before[key], after[key]))
+		.slice(0, 8);
+}
+
 function snapshotsEqual(before, after) {
 	return JSON.stringify(before ?? null) === JSON.stringify(after ?? null);
 }
@@ -593,6 +608,7 @@ function buildDiffResources(entry) {
 		.flatMap(expandCustomBestiaryDiffResource)
 		.map((resource) => ({
 			...resource,
+			fieldSummary: getDiffResourceFieldSummary(resource),
 			lines: createLineDiff(resource.before, resource.after),
 		}));
 }
@@ -2454,6 +2470,16 @@ export default function AiAssistantPanel({
 														<span>{resource.label}</span>
 														<span>{getDiffResourceState(resource)}</span>
 													</div>
+													{resource.fieldSummary.length > 0 && (
+														<div className="AiAssistant__diff_field_summary">
+															<span>{lang.t("Changed fields")}:</span>
+															{resource.fieldSummary.map((field) => (
+																<code key={`${resource.id}-${field}`}>
+																	{field}
+																</code>
+															))}
+														</div>
+													)}
 													<div className="AiAssistant__diff_lines">
 														{resource.lines.map((line, index) => (
 															<div
