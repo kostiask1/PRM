@@ -76,6 +76,60 @@ function appendUnique(targetList, items) {
 	}
 }
 
+function calculateDiceFormulaAverage(input) {
+	const clean = String(input || "")
+		.toLowerCase()
+		.replace(/\s+/g, "");
+	if (!clean) return null;
+
+	const parts = clean.replace(/-/g, "+-").split("+").filter(Boolean);
+	if (parts.length === 0) return null;
+
+	let average = 0;
+	for (const part of parts) {
+		const dieMatch = part.match(/^(\d+)?d(\d+)([hl]\d+)?$/i);
+		if (dieMatch) {
+			const count = Number.parseInt(dieMatch[1], 10) || 1;
+			const sides = Number.parseInt(dieMatch[2], 10);
+			const keepSuffix = dieMatch[3];
+			if (!Number.isFinite(count) || !Number.isFinite(sides) || sides < 1) {
+				return null;
+			}
+			const keepCount = keepSuffix
+				? Math.min(Number.parseInt(keepSuffix.slice(1), 10), count)
+				: count;
+			if (!Number.isFinite(keepCount) || keepCount < 0) return null;
+			average += keepCount * ((sides + 1) / 2);
+			continue;
+		}
+
+		if (/^[+-]?\d+$/.test(part)) {
+			average += Number.parseInt(part, 10);
+			continue;
+		}
+
+		return null;
+	}
+
+	return Math.max(1, Math.floor(average));
+}
+
+function normalizeCustomMonsterHpAverage(monster) {
+	if (!monster || typeof monster !== "object") return monster;
+	if (!monster.hp || typeof monster.hp !== "object" || Array.isArray(monster.hp)) {
+		return monster;
+	}
+	const average = calculateDiceFormulaAverage(monster.hp.formula);
+	if (average === null) return monster;
+	return {
+		...monster,
+		hp: {
+			...monster.hp,
+			average,
+		},
+	};
+}
+
 function applyArrayMod(target, prop, mod) {
 	const list = ensureArray(target, prop);
 	const items = clone(toArray(mod.items));
@@ -281,6 +335,48 @@ router.patch("/custom/:name", async (req, res, next) => {
 		);
 		if (index < 0) {
 			return res.status(404).json({ error: "Кастомну істоту не знайдено." });
+		}
+
+		if (req.body?.monster && typeof req.body.monster === "object") {
+			const nextMonster = clone(req.body.monster);
+			const nextName = String(nextMonster.name || "").trim();
+			if (!nextName) {
+				return res.status(400).json({ error: "Назва істоти обов'язкова." });
+			}
+			const nextNameKey = nextName.toLowerCase();
+			const duplicate = monsters.some(
+				(monster, monsterIndex) =>
+					monsterIndex !== index &&
+					String(monster.name || "").trim().toLowerCase() === nextNameKey,
+			);
+			if (duplicate) {
+				return res.status(409).json({
+					error: "Кастомна істота з такою назвою вже існує.",
+				});
+			}
+
+			nextMonster.name = nextName;
+			nextMonster.source = CUSTOM_SOURCE;
+			monsters[index] = normalizeCustomMonsterHpAverage(nextMonster);
+			const updated = await storage.writeCustomBestiaryMonsters(monsters);
+
+			if (nextNameKey !== targetName) {
+				const favorites = await storage.readFavorites();
+				const nextFavorites = favorites.map((favorite) =>
+					String(favorite.name || "").trim().toLowerCase() === targetName &&
+					normalizeSource(favorite.source) === CUSTOM_SOURCE
+						? { ...favorite, name: nextName, source: CUSTOM_SOURCE }
+						: favorite,
+				);
+				await storage.writeFavorites(nextFavorites);
+			}
+
+			return res.json(
+				updated.find(
+					(monster) =>
+						String(monster.name || "").trim().toLowerCase() === nextNameKey,
+				) || nextMonster,
+			);
 		}
 
 		const imageUrl =

@@ -184,12 +184,66 @@
 	color: var(--accent);
 }
 
+.Bestiary__item_edit_btn,
 .Bestiary__item_delete_btn {
 	padding: 0 var(--size-1);
 	border: unset;
 }
 
+.Bestiary__item_edit_btn .Icon,
 .Bestiary__item_delete_btn .Icon {
 	width: var(--size-3);
 	height: var(--size-3);
+}
+
+.Bestiary__edit_modal {
+	width: min(980px, calc(100vw - 32px));
+}
+
+.Bestiary__edit_form {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-4);
+	min-height: 0;
+}
+
+.Bestiary__edit_json {
+	min-height: min(62vh, 680px);
+	font-family: var(--font-mono);
+	font-size: 0.86rem;
+	line-height: 1.45;
+	resize: vertical;
+	white-space: pre;
+	tab-size: 2;
+}
+
+.Bestiary__edit_error {
+	color: var(--danger);
+	font-weight: 700;
+}
+
+.Bestiary__edit_actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--space-2);
+}
+
+.Bestiary .ListCard {
+	height: 65px;
+}
+
+.Bestiary__list .ListCard__actions .Tooltip__trigger {
+	display: flex;
+}
+
+.Bestiary__list .ListCard__actions {
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.Bestiary__list .ListCard__actions .Button {
+	height: var(--size-3);
+	width: var(--size-3);
+	padding: 0;
+	min-height: auto;
 }

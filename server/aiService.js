@@ -268,7 +268,7 @@ Top-level "notes" are general notes for the whole session (not scene notes).
 When updating notes, scenes, characters, NPCs, or locations, return the full final-state value for every field/category you output, not only newly added material. Preserve every included existing item from input unchanged unless the user explicitly asks to edit it or a minimal consistency edit is required.
 Include top-level "characters", top-level "npcs", top-level "locations", and scene "npcs" only when task instructions explicitly allow those categories.
 Do not include combat encounter fields unless task instructions explicitly say encounter generation is enabled.`,
-	encounter: `You are an experienced Dungeon Master for Dungeons & Dragons 5e.
+	encounter: `You are an experienced Dungeon Master for Dungeons & Dragons 5.5e (2024).
 Your goal is to help build a specific combat encounter.
 Keep responses structured and practical for real gameplay.
 Always return JSON only, with no text before or after JSON.
@@ -342,13 +342,13 @@ Describe in this order:
 Default style suffix:
 cinematic, photorealistic, ultra realistic, high detail, 8k, dramatic lighting, volumetric light, sharp focus, depth of field, film still, concept art
 Input JSON:`,
-	"custom-monster": `You are an experienced Dungeons & Dragons 5e monster designer.
+	"custom-monster": `You are an experienced Dungeons & Dragons 5.5e (2024) monster designer.
 Create custom bestiary creatures in the same general JSON style as 5eTools monster data.
 Always return JSON only, with no text before or after JSON.
 The JSON must use:
 { "monsters": [{ "name": "...", "source": "CUSTOM", "size": ["M"], "type": "monstrosity", "alignment": ["N"], "ac": [{ "ac": 13, "from": ["natural armor"] }], "hp": { "average": 45, "formula": "6d8 + 18" }, "speed": { "walk": 30 }, "str": 16, "dex": 12, "con": 16, "int": 8, "wis": 12, "cha": 10, "save": { "con": "+5" }, "skill": { "perception": "+3" }, "senses": ["darkvision 60 ft."], "languages": ["Common"], "cr": "3", "trait": [{ "name": "...", "entries": ["..."] }], "action": [{ "name": "...", "entries": ["..."] }], "bonus": [{ "name": "...", "entries": ["..."] }], "reaction": [{ "name": "...", "entries": ["..."] }], "legendary": [{ "name": "...", "entries": ["..."] }] }] }.
 Use only fields that belong directly on the monster object. If the creature has legendary actions, put them in the monster's own "legendary" array. Do not create or reference "legendaryGroup".
-Use compact but complete 5e mechanics: ability scores, AC, HP formula, speed, CR, traits, actions, and relevant saves/skills/senses/languages/resistances/immunities/condition immunities.
+Use compact but complete 5.5e (2024) mechanics: ability scores, AC, HP formula, speed, CR, traits, actions, and relevant saves/skills/senses/languages/resistances/immunities/condition immunities.
 Balance the statistics and damage for the requested CR or the implied threat level.
 Entries arrays must contain strings or standard nested entry objects only.`,
 };
@@ -787,7 +787,7 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 IMPORTANT: This request is strictly for player characters. Return only "characters". Do not create NPCs or any other content category.
 IMPORTANT: If editing, renaming, or deleting an existing character from INPUT DATA, preserve its "id" and "slug". If INPUT DATA.campaign.characters is absent, this request is append-only for characters.\n`;
 	} else if (useKey === "custom-monster") {
-		userPrompt += `TASK: Create custom D&D 5e bestiary creatures based on user instructions.
+		userPrompt += `TASK: Create custom D&D 5.5e (2024) bestiary creatures based on user instructions.
 IMPORTANT: Return only the top-level "monsters" array.
 IMPORTANT: Every monster must have "source": "CUSTOM".
 IMPORTANT: Match the app's bestiary data shape: size array, type, alignment array, ac array, hp object, speed object, ability scores, cr, trait/action arrays, and optional bonus/reaction/legendary arrays.

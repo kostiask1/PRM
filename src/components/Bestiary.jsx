@@ -12,6 +12,7 @@ import ListCard from "./common/ListCard";
 import MonsterStatBlock from "./MonsterStatBlock";
 import AiAssistantPanel from "./AiAssistantPanel";
 import Tooltip from "./common/Tooltip";
+import Modal from "./common/Modal";
 import classNames from "../utils/classNames";
 import {
 	getMonsterTypeString,
@@ -64,6 +65,10 @@ export default function Bestiary({
 	const [onlyFavorites, setOnlyFavorites] = useState(false);
 	const [sortOrder, setSortOrder] = useState("none"); // 'none', 'desc', 'asc'
 	const [reloadToken, setReloadToken] = useState(0);
+	const [editingMonster, setEditingMonster] = useState(null);
+	const [editingMonsterJson, setEditingMonsterJson] = useState("");
+	const [editingMonsterError, setEditingMonsterError] = useState("");
+	const [isSavingMonsterEdit, setIsSavingMonsterEdit] = useState(false);
 	const listRef = useRef(null);
 	const selectedMonsterRef = useRef(null);
 	const hasInitializedSourceRef = useRef(false);
@@ -252,6 +257,82 @@ export default function Bestiary({
 			setSelectedMonster(selectedGeneratedMonster);
 		}
 		setReloadToken((value) => value + 1);
+	};
+
+	const openEditCustomMonster = (monster) => {
+		if (!isCustomSource(monster?.source)) return;
+		setEditingMonster(monster);
+		setEditingMonsterJson(JSON.stringify(monster, null, 2));
+		setEditingMonsterError("");
+	};
+
+	const closeEditCustomMonster = () => {
+		if (isSavingMonsterEdit) return;
+		setEditingMonster(null);
+		setEditingMonsterJson("");
+		setEditingMonsterError("");
+	};
+
+	const saveEditedCustomMonster = async () => {
+		if (!editingMonster?.name) return;
+		setEditingMonsterError("");
+
+		let parsed;
+		try {
+			parsed = JSON.parse(editingMonsterJson);
+		} catch (err) {
+			setEditingMonsterError(err.message || lang.t("Invalid JSON."));
+			return;
+		}
+
+		if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+			setEditingMonsterError(lang.t("Monster data must be a JSON object."));
+			return;
+		}
+		if (!String(parsed.name || "").trim()) {
+			setEditingMonsterError(lang.t("Name is required to create an entry."));
+			return;
+		}
+
+		setIsSavingMonsterEdit(true);
+		try {
+			const updatedMonster = await api.updateCustomBestiaryMonster(
+				editingMonster.name,
+				{ monster: { ...parsed, source: "CUSTOM" } },
+			);
+			shouldAutoSelectMonsterRef.current = true;
+			setAllMonsters((current) => [
+				...current.filter(
+					(item) =>
+						!isCustomSource(item.source) ||
+						!(
+							item.name === editingMonster.name ||
+							item.name === updatedMonster.name
+						),
+				),
+				updatedMonster,
+			]);
+			setSelectedSource("CUSTOM");
+			setSelectedMonster(updatedMonster);
+			selectedMonsterRef.current = updatedMonster;
+			setEditingMonster(null);
+			setEditingMonsterJson("");
+			setEditingMonsterError("");
+			if (editingMonster.name !== updatedMonster.name) {
+				setFavorites((current) =>
+					current.map((favorite) =>
+						favorite.name === editingMonster.name &&
+						isCustomSource(favorite.source)
+							? { ...favorite, name: updatedMonster.name, source: "CUSTOM" }
+							: favorite,
+					),
+				);
+			}
+		} catch (err) {
+			setEditingMonsterError(err.message || lang.t("Unknown error"));
+		} finally {
+			setIsSavingMonsterEdit(false);
+		}
 	};
 
 	const handleDeleteCustomMonster = async (monster) => {
@@ -447,17 +528,30 @@ export default function Bestiary({
 								/>
 							)}
 							{isCustomSource(monster.source) && (
-								<Button
-									variant="danger"
-									className="Bestiary__item_delete_btn"
-									size={Button.SIZES.SMALL}
-									icon="trash"
-									onClick={(e) => {
-										e.stopPropagation();
-										handleDeleteCustomMonster(monster);
-									}}
-									title={lang.t("Delete custom creature")}
-								/>
+								<>
+									<Button
+										variant="ghost"
+										className="Bestiary__item_edit_btn"
+										size={Button.SIZES.SMALL}
+										icon="edit"
+										onClick={(e) => {
+											e.stopPropagation();
+											openEditCustomMonster(monster);
+										}}
+										title={lang.t("Edit custom creature")}
+									/>
+									<Button
+										variant="danger"
+										className="Bestiary__item_delete_btn"
+										size={Button.SIZES.SMALL}
+										icon="trash"
+										onClick={(e) => {
+											e.stopPropagation();
+											handleDeleteCustomMonster(monster);
+										}}
+										title={lang.t("Delete custom creature")}
+									/>
+								</>
 							)}
 						</>
 					}
@@ -594,8 +688,55 @@ export default function Bestiary({
 		</div>
 	);
 
+	const renderEditCustomMonsterModal = () =>
+		editingMonster ? (
+			<Modal
+				title={lang.t("Edit custom creature")}
+				onCancel={closeEditCustomMonster}
+				showFooter={false}
+				className="Bestiary__edit_modal"
+			>
+				<div className="Bestiary__edit_form">
+					<Input
+						type="textarea"
+						value={editingMonsterJson}
+						onChange={(event) => setEditingMonsterJson(event.target.value)}
+						disabled={isSavingMonsterEdit}
+						className="Bestiary__edit_json"
+					/>
+					{editingMonsterError && (
+						<div className="Bestiary__edit_error">
+							{editingMonsterError}
+						</div>
+					)}
+					<div className="Bestiary__edit_actions">
+						<Button
+							variant="ghost"
+							onClick={closeEditCustomMonster}
+							disabled={isSavingMonsterEdit}
+						>
+							{lang.t("Cancel")}
+						</Button>
+						<Button
+							variant="primary"
+							icon="check"
+							onClick={saveEditedCustomMonster}
+							disabled={isSavingMonsterEdit}
+						>
+							{isSavingMonsterEdit ? lang.t("Saving...") : lang.t("Save")}
+						</Button>
+					</div>
+				</div>
+			</Modal>
+		) : null;
+
 	if (isEmbedded) {
-		return <>{renderBestiaryInner()}</>;
+		return (
+			<>
+				{renderBestiaryInner()}
+				{renderEditCustomMonsterModal()}
+			</>
+		);
 	}
 
 	return (
@@ -609,6 +750,7 @@ export default function Bestiary({
 				sessionData={{}}
 				onInsertResult={handleCustomBestiaryUpdate}
 			/>
+			{renderEditCustomMonsterModal()}
 		</Panel>
 	);
 }
