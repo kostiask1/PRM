@@ -236,6 +236,7 @@ function getHistoryOptionsSummary(entry) {
 				)}`
 			: null,
 		`${lang.t("Encounter generation")}: ${getOnOffLabel(options.encounterGeneration)}`,
+		`${lang.t("Custom monster generation")}: ${getOnOffLabel(options.customMonsterGeneration)}`,
 		`${lang.t("Context")}: ${getOnOffLabel(options.contextEnabled)}`,
 	]
 		.filter(Boolean)
@@ -614,6 +615,7 @@ export default function AiAssistantPanel({
 	const [generateEncounters, setGenerateEncounters] = useState(
 		!isCampaign && !isBestiary,
 	);
+	const [generateCustomMonsters, setGenerateCustomMonsters] = useState(false);
 	const [entityScope, setEntityScope] = useState(
 		isBestiary ? "custom-bestiary" : isCampaign ? "campaign" : "session",
 	);
@@ -1251,6 +1253,12 @@ export default function AiAssistantPanel({
 						requestType === "image"
 							? false
 							: !isCampaign && !isBestiary && generateEncounters,
+					generateCustomMonsters:
+						requestType !== "image" &&
+						!isCampaign &&
+						!isBestiary &&
+						generateEncounters &&
+						generateCustomMonsters,
 					entityScope: isBestiary
 						? "custom-bestiary"
 						: isCampaign
@@ -1396,6 +1404,8 @@ export default function AiAssistantPanel({
 	const selectedResponseHasChanges = selectedResponseDiffResources.length > 0;
 	const isResponseParsingLocked = isBestiary || generateEncounters;
 	const isEntityScopeVisible = !isBestiary && !isCampaign && !isEncounter;
+	const isCustomMonsterGenerationVisible =
+		!isBestiary && !isCampaign && !isEncounter && generateEncounters;
 	const entityScopeIsSession = entityScope !== "campaign";
 	const imagePromptNpcs = isCampaign
 		? sessionData?.npcs?.length
@@ -1868,6 +1878,9 @@ export default function AiAssistantPanel({
 										} else if (isEncounter) {
 											setParseAIResponse(false);
 										}
+										if (!enabled) {
+											setGenerateCustomMonsters(false);
+										}
 									}}
 									disabled={loading}
 									title={
@@ -1881,6 +1894,22 @@ export default function AiAssistantPanel({
 									}
 								>
 									{lang.t("Encounter generation")}
+								</Button>
+							)}
+							{isCustomMonsterGenerationVisible && (
+								<Button
+									variant={generateCustomMonsters ? "primary" : "ghost"}
+									size={Button.SIZES.SMALL}
+									icon="wand"
+									onClick={() =>
+										setGenerateCustomMonsters((enabled) => !enabled)
+									}
+									disabled={loading}
+									title={lang.t(
+										"AI may create custom creatures only when official monsters do not fit the scene",
+									)}
+								>
+									{lang.t("Generate monsters")}
 								</Button>
 							)}
 							{isEncounter && (

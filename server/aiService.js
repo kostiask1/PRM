@@ -424,6 +424,7 @@ async function generateContent({
 	generateNpcs,
 	generateLocations,
 	generateEncounters,
+	generateCustomMonsters,
 	entityScope,
 	modelName,
 	language,
@@ -436,6 +437,8 @@ async function generateContent({
 	const noteToContextNote = (note) =>
 		noteToPromptContext(note, { includeTitle: !simplifiedNotesEnabled });
 	const encounterGenerationEnabled = Boolean(generateEncounters);
+	const customMonsterGenerationEnabled =
+		encounterGenerationEnabled && Boolean(generateCustomMonsters);
 	const characterGenerationEnabled = generateCharacters !== false;
 	const npcGenerationEnabled = generateNpcs !== false;
 	const locationGenerationEnabled = generateLocations !== false;
@@ -513,6 +516,16 @@ If combat is not needed, omit "encounterIndex".
 Pick monsters according to party level and party size from context. You may use custom creatures from INPUT DATA.customBestiary.monsterNames when they fit the scenario; use their names exactly in "monsterName".
 If user instructions specify encounter difficulty, follow that strictly.`,
 		);
+		if (customMonsterGenerationEnabled) {
+			systemInstructionParts.push(
+				`Custom monster generation is enabled, but official D&D monsters are preferred. Use official bestiary monsters when they fit the scene, theme, difficulty, and role. Create new custom monsters only when the scene needs a sufficiently unique creature that official D&D monsters do not represent well.
+If you create custom monsters, include them in a top-level "monsters" array using the custom bestiary monster JSON shape, and reference each new creature from encounters by its exact "name" in "monsterName".`,
+			);
+		} else {
+			systemInstructionParts.push(
+				`Custom monster generation is disabled. Do not output a top-level "monsters" array for new custom creatures. Use official bestiary monsters or existing INPUT DATA.customBestiary.monsterNames only.`,
+			);
+		}
 	} else if (useKey === "scene") {
 		systemInstructionParts.push(
 			`Encounter generation is disabled. Do not create or edit combat encounters.`,
@@ -843,6 +856,11 @@ IMPORTANT: "monsterName" must be an exact lookup name. Use official English best
 			userPrompt += `IMPORTANT: For each scene where conflict is possible, generate an encounter object in the encounters array.
 Pick monsters while considering character levels and classes for balance. Use official English bestiary names for official creatures, or exact names from INPUT DATA.customBestiary.monsterNames for custom creatures.
 IMPORTANT: For each scene with combat or an encounterIndex, include a scene note with interesting combat mechanics and tactical ideas.\n`;
+			if (customMonsterGenerationEnabled) {
+				userPrompt += `IMPORTANT: Custom monster generation is enabled. Prefer official D&D monsters whenever they fit the scene well. Create custom monsters only for sufficiently unique threats that official monsters do not cover. If you create custom monsters, output them in a top-level "monsters" array using the same CUSTOM bestiary shape as custom-monster requests, then reference them from encounters with exact "monsterName" values.\n`;
+			} else {
+				userPrompt += `IMPORTANT: Custom monster generation is disabled. Do not output a top-level "monsters" array and do not invent new bestiary creatures.\n`;
+			}
 		} else {
 			userPrompt += `IMPORTANT: Encounter generation is disabled. Do not create or edit combat encounters, do not pick monsters, and do not output "encounters", "encounterIndex", or "encounterId".\n`;
 		}

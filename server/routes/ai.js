@@ -1765,6 +1765,7 @@ function buildAiOptionsSummary(options) {
 		`locations: ${options.locationGeneration ? "on" : "off"}`,
 		`entity-scope: ${options.entityScope || "campaign"}`,
 		`encounters: ${options.encounterGeneration ? "on" : "off"}`,
+		`custom-monsters: ${options.customMonsterGeneration ? "on" : "off"}`,
 		`context: ${options.contextEnabled ? "on" : "off"}`,
 	];
 	if (options.modelName) parts.push(`model: ${options.modelName}`);
@@ -1852,6 +1853,7 @@ function buildAiRequestSnapshot({
 	parseAIResponse,
 	shouldParseAIResponse,
 	generateEncounters,
+	generateCustomMonsters,
 	generateCharacters,
 	generateNpcs,
 	generateLocations,
@@ -1871,6 +1873,7 @@ function buildAiRequestSnapshot({
 		locationGeneration: Boolean(generateLocations),
 		entityScope: entityScope || "campaign",
 		encounterGeneration: Boolean(generateEncounters),
+		customMonsterGeneration: Boolean(generateCustomMonsters),
 		contextEnabled: Boolean(contextConfig),
 		sceneId: sceneId || null,
 		imageTarget:
@@ -2370,6 +2373,7 @@ router.post("/generate", async (req, res, next) => {
 			generateNpcs,
 			generateLocations,
 			generateEncounters,
+			generateCustomMonsters,
 			entityScope,
 			contextConfig,
 			language,
@@ -2384,6 +2388,8 @@ router.post("/generate", async (req, res, next) => {
 			return res.status(500).json({ error: "GEMINI_API_KEY не налаштовано." });
 		}
 		const encounterGenerationEnabled = Boolean(generateEncounters);
+		const customMonsterGenerationEnabled =
+			encounterGenerationEnabled && Boolean(generateCustomMonsters);
 		const characterGenerationEnabled = generateCharacters !== false;
 		const npcGenerationEnabled = generateNpcs !== false;
 		const locationGenerationEnabled = generateLocations !== false;
@@ -2681,6 +2687,7 @@ router.post("/generate", async (req, res, next) => {
 			generateNpcs: npcGenerationEnabled,
 			generateLocations: locationGenerationEnabled,
 			generateEncounters: encounterGenerationEnabled,
+			generateCustomMonsters: customMonsterGenerationEnabled,
 			entityScope: entityTargetScope,
 			language: responseLanguage,
 			simplifiedNotes: simplifiedNotesEnabled,
@@ -2748,6 +2755,24 @@ router.post("/generate", async (req, res, next) => {
 
 		if (generatedContent.error) return res.status(500).json(generatedContent);
 
+		if (
+			customMonsterGenerationEnabled &&
+			!path.encounter &&
+			generatedContent &&
+			typeof generatedContent === "object" &&
+			Array.isArray(generatedContent.monsters)
+		) {
+			const normalizedCustomMonsters = generatedContent.monsters
+				.map(normalizeCustomMonster)
+				.filter(Boolean);
+			if (normalizedCustomMonsters.length > 0) {
+				await storage.upsertCustomBestiaryMonsters(normalizedCustomMonsters);
+				generatedContent.monsters = normalizedCustomMonsters;
+			} else {
+				delete generatedContent.monsters;
+			}
+		}
+
 		const requestSnapshot = buildAiRequestSnapshot({
 			type,
 			modelName,
@@ -2761,6 +2786,7 @@ router.post("/generate", async (req, res, next) => {
 			generateNpcs: npcGenerationEnabled,
 			generateLocations: locationGenerationEnabled,
 			generateEncounters: encounterGenerationEnabled,
+			generateCustomMonsters: customMonsterGenerationEnabled,
 			entityScope: entityTargetScope,
 			contextConfig,
 			contextData,
