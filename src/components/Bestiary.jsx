@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { api } from "../api";
 import { alert, confirm } from "../actions/app";
-import { useAppDispatch } from "../store/appStore";
+import { useAppDispatch, useAppSelector } from "../store/appStore";
 import ReactList from "react-list";
 import Panel from "./common/Panel";
 import Input from "./form/Input";
@@ -52,6 +52,7 @@ export default function Bestiary({
 	isEmbedded = false,
 }) {
 	const dispatch = useAppDispatch();
+	const currentLanguage = useAppSelector((state) => state.localization.language);
 	const [sources, setSources] = useState([]);
 	const [selectedSource, setSelectedSource] = useState("all");
 	const [allMonsters, setAllMonsters] = useState([]);
@@ -69,6 +70,10 @@ export default function Bestiary({
 	const [editingMonsterJson, setEditingMonsterJson] = useState("");
 	const [editingMonsterError, setEditingMonsterError] = useState("");
 	const [isSavingMonsterEdit, setIsSavingMonsterEdit] = useState(false);
+	const [aiEditingMonster, setAiEditingMonster] = useState(null);
+	const [aiEditInstructions, setAiEditInstructions] = useState("");
+	const [aiEditError, setAiEditError] = useState("");
+	const [isAiEditingMonster, setIsAiEditingMonster] = useState(false);
 	const listRef = useRef(null);
 	const selectedMonsterRef = useRef(null);
 	const hasInitializedSourceRef = useRef(false);
@@ -273,6 +278,20 @@ export default function Bestiary({
 		setEditingMonsterError("");
 	};
 
+	const openAiEditCustomMonster = (monster) => {
+		if (!isCustomSource(monster?.source)) return;
+		setAiEditingMonster(monster);
+		setAiEditInstructions("");
+		setAiEditError("");
+	};
+
+	const closeAiEditCustomMonster = () => {
+		if (isAiEditingMonster) return;
+		setAiEditingMonster(null);
+		setAiEditInstructions("");
+		setAiEditError("");
+	};
+
 	const saveEditedCustomMonster = async () => {
 		if (!editingMonster?.name) return;
 		setEditingMonsterError("");
@@ -332,6 +351,41 @@ export default function Bestiary({
 			setEditingMonsterError(err.message || lang.t("Unknown error"));
 		} finally {
 			setIsSavingMonsterEdit(false);
+		}
+	};
+
+	const saveAiEditedCustomMonster = async () => {
+		if (!aiEditingMonster?.name) return;
+		const instructions = aiEditInstructions.trim();
+		if (!instructions) {
+			setAiEditError(lang.t("Describe what to change."));
+			return;
+		}
+
+		setIsAiEditingMonster(true);
+		setAiEditError("");
+		try {
+			const data = await api.generateAi({
+				type: "custom-monster",
+				userInstructions: instructions,
+				path: { campaign: "bestiary" },
+				customMonsterTarget: aiEditingMonster,
+				parseAIResponse: true,
+				generateCharacters: false,
+				generateNpcs: false,
+				generateLocations: false,
+				generateEncounters: false,
+				entityScope: "custom-bestiary",
+				contextConfig: null,
+				language: currentLanguage,
+			});
+			handleCustomBestiaryUpdate(data.updated, { generated: data.generated });
+			setAiEditingMonster(null);
+			setAiEditInstructions("");
+		} catch (err) {
+			setAiEditError(err.message || lang.t("Unknown error"));
+		} finally {
+			setIsAiEditingMonster(false);
 		}
 	};
 
@@ -529,6 +583,17 @@ export default function Bestiary({
 							)}
 							{isCustomSource(monster.source) && (
 								<>
+									<Button
+										variant="ghost"
+										className="Bestiary__item_ai_edit_btn"
+										size={Button.SIZES.SMALL}
+										icon="wand"
+										onClick={(e) => {
+											e.stopPropagation();
+											openAiEditCustomMonster(monster);
+										}}
+										title={lang.t("AI edit custom creature")}
+									/>
 									<Button
 										variant="ghost"
 										className="Bestiary__item_edit_btn"
@@ -730,11 +795,60 @@ export default function Bestiary({
 			</Modal>
 		) : null;
 
+	const renderAiEditCustomMonsterModal = () =>
+		aiEditingMonster ? (
+			<Modal
+				title={lang.t("AI edit custom creature")}
+				onCancel={closeAiEditCustomMonster}
+				showFooter={false}
+				className="Bestiary__ai_edit_modal"
+			>
+				<div className="Bestiary__edit_form">
+					<div className="Bestiary__ai_edit_target">
+						{aiEditingMonster.name}
+					</div>
+					<Input
+						type="textarea"
+						value={aiEditInstructions}
+						onChange={(event) => setAiEditInstructions(event.target.value)}
+						disabled={isAiEditingMonster}
+						placeholder={lang.t("Describe what to change.")}
+						className="Bestiary__ai_edit_prompt"
+					/>
+					{aiEditError && (
+						<div className="Bestiary__edit_error">
+							{aiEditError}
+						</div>
+					)}
+					<div className="Bestiary__edit_actions">
+						<Button
+							variant="ghost"
+							onClick={closeAiEditCustomMonster}
+							disabled={isAiEditingMonster}
+						>
+							{lang.t("Cancel")}
+						</Button>
+						<Button
+							variant="primary"
+							icon="wand"
+							onClick={saveAiEditedCustomMonster}
+							disabled={isAiEditingMonster}
+						>
+							{isAiEditingMonster
+								? lang.t("AI is working, please wait...")
+								: lang.t("Apply AI edit")}
+						</Button>
+					</div>
+				</div>
+			</Modal>
+		) : null;
+
 	if (isEmbedded) {
 		return (
 			<>
 				{renderBestiaryInner()}
 				{renderEditCustomMonsterModal()}
+				{renderAiEditCustomMonsterModal()}
 			</>
 		);
 	}
@@ -751,6 +865,7 @@ export default function Bestiary({
 				onInsertResult={handleCustomBestiaryUpdate}
 			/>
 			{renderEditCustomMonsterModal()}
+			{renderAiEditCustomMonsterModal()}
 		</Panel>
 	);
 }

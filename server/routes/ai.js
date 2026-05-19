@@ -2364,6 +2364,7 @@ router.post("/generate", async (req, res, next) => {
 			path,
 			sceneId,
 			imageTarget,
+			customMonsterTarget,
 			parseAIResponse,
 			generateCharacters,
 			generateNpcs,
@@ -2416,6 +2417,17 @@ router.post("/generate", async (req, res, next) => {
 						: [],
 				},
 			};
+			if (customMonsterTarget && typeof customMonsterTarget === "object") {
+				const targetName = asText(customMonsterTarget.name).toLowerCase();
+				const fullTarget = Array.isArray(customBestiary.monster)
+					? customBestiary.monster.find(
+							(monster) =>
+								asText(monster?.name).toLowerCase() === targetName,
+						)
+					: null;
+				customContextData.customBestiary.selectedMonster =
+					fullTarget || customMonsterTarget;
+			}
 			let customCampaign = null;
 			let customSession = null;
 			if (path?.campaign && path.campaign !== "bestiary") {

@@ -184,12 +184,14 @@
 	color: var(--accent);
 }
 
+.Bestiary__item_ai_edit_btn,
 .Bestiary__item_edit_btn,
 .Bestiary__item_delete_btn {
 	padding: 0 var(--size-1);
 	border: unset;
 }
 
+.Bestiary__item_ai_edit_btn .Icon,
 .Bestiary__item_edit_btn .Icon,
 .Bestiary__item_delete_btn .Icon {
 	width: var(--size-3);
@@ -198,6 +200,10 @@
 
 .Bestiary__edit_modal {
 	width: min(980px, calc(100vw - 32px));
+}
+
+.Bestiary__ai_edit_modal {
+	width: min(720px, calc(100vw - 32px));
 }
 
 .Bestiary__edit_form {
@@ -215,6 +221,16 @@
 	resize: vertical;
 	white-space: pre;
 	tab-size: 2;
+}
+
+.Bestiary__ai_edit_target {
+	font-weight: 800;
+	color: var(--text-bright);
+}
+
+.Bestiary__ai_edit_prompt {
+	min-height: 180px;
+	resize: vertical;
 }
 
 .Bestiary__edit_error {
@@ -236,8 +252,13 @@
 	display: flex;
 }
 
+.Bestiary__list .ListCard__actions:has(> span:only-child) {
+	display: flex;
+}
+
 .Bestiary__list .ListCard__actions {
-	flex-direction: column;
+	display: grid;
+	grid-template-columns: 1fr 1fr;
 	gap: var(--space-2);
 }
 

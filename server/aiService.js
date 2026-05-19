@@ -792,7 +792,8 @@ IMPORTANT: Return only the top-level "monsters" array.
 IMPORTANT: Every monster must have "source": "CUSTOM".
 IMPORTANT: Match the app's bestiary data shape: size array, type, alignment array, ac array, hp object, speed object, ability scores, cr, trait/action arrays, and optional bonus/reaction/legendary arrays.
 IMPORTANT: If a monster has legendary actions, store them directly in that monster's "legendary" array. Never output "legendaryGroup".
-IMPORTANT: Existing custom monsters are provided in INPUT DATA.customBestiary. Reuse or revise an existing monster only when the user clearly asks to update it; otherwise create new monsters with distinct names.\n`;
+IMPORTANT: Existing custom monsters are provided in INPUT DATA.customBestiary. Reuse or revise an existing monster only when the user clearly asks to update it; otherwise create new monsters with distinct names.
+IMPORTANT: If INPUT DATA.customBestiary.selectedMonster exists, edit that exact monster according to user instructions. Return the complete updated monster object in the "monsters" array. Preserve all fields that were not requested to change. Keep the same name unless the user explicitly asks to rename it.\n`;
 	} else if (useKey === "npc") {
 		userPrompt += `TASK: Create new NPCs for this ${entityTargetScope === "session" ? "current session" : "campaign"} based on user instructions.
 IMPORTANT: This request is strictly for NPCs. Return only "npcs". Do not create player characters or any other content category.
