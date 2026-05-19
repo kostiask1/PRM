@@ -250,29 +250,25 @@ const systemInstructions = {
 Your goal is to help with campaign planning.
 Keep responses structured and practical for real gameplay.
 Always return JSON only, with no text before or after JSON.
-The JSON must contain final-state campaign data only, without extra commentary.
-Use this shape:
-{ "description": "...", "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown note text..." }], "characters": [{ "id": "existing-id-if-any", "slug": "existing-slug-if-any", "name": "...", "race": "...", "class": "...", "level": 1, "motivation": "...", "trait": "...", "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown note text..." }] }], "npcs": [{ "id": "existing-id-if-any", "slug": "existing-slug-if-any", "name": "...", "race": "...", "class": "...", "level": 1, "description": "...", "motivation": "...", "trait": "...", "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown note text..." }] }], "locations": [{ "id": "existing-id-if-any", "slug": "existing-slug-if-any", "name": "...", "description": "...", "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown note text..." }] }] }.
-Each item in "notes" must be an object. Use "title" for the note card title and "text" for the Markdown body. Preserve "id" for existing notes.
-When updating story description, notes, characters, NPCs, or locations, return the full final-state value for every field/category you output, not only newly added material. Preserve every included existing item from input unchanged unless the user explicitly asks to edit it or a minimal consistency edit is required.
-Do not generate a "scenes" field for campaign mode.
-Include "characters", "npcs", and "locations" only when the task instructions explicitly allow those categories.`,
+The JSON must contain operation-based changes only, without extra commentary.
+Never return complete campaign arrays or unchanged entities.
+Use stable ids from INPUT DATA for existing targets. Use "create" only for new items.
+Do not generate scene operations for campaign mode unless the user explicitly asks to change a session.`,
 	scene: `You are an experienced Dungeon Master for Dungeons & Dragons.
 Your goal is to help with session planning.
 Keep responses structured and practical for real gameplay.
 Always return JSON only, with no text before or after JSON.
-The JSON must contain final-state session data only, without extra commentary.
-When generating scenes, use this base shape:
-{ "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown note text..." }], "scenes": [{ "id": "existing-scene-id-if-any", "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "..." }, "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown note text..." }], "npcs": [{ "name": "...", "description": "..." }] }], "characters": [{ "id": "existing-id-if-any", "slug": "existing-slug-if-any", "name": "...", "race": "...", "class": "...", "level": 1, "motivation": "...", "trait": "...", "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown note text..." }] }], "npcs": [{ "id": "existing-id-if-any", "slug": "existing-slug-if-any", "name": "...", "race": "...", "class": "...", "level": 1, "description": "...", "motivation": "...", "trait": "...", "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown note text..." }] }], "locations": [{ "id": "existing-id-if-any", "slug": "existing-slug-if-any", "name": "...", "description": "...", "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown note text..." }] }] }.
-Top-level "notes" are general notes for the whole session (not scene notes).
-When updating notes, scenes, characters, NPCs, or locations, return the full final-state value for every field/category you output, not only newly added material. Preserve every included existing item from input unchanged unless the user explicitly asks to edit it or a minimal consistency edit is required.
-Include top-level "characters", top-level "npcs", top-level "locations", and scene "npcs" only when task instructions explicitly allow those categories.
-Do not include combat encounter fields unless task instructions explicitly say encounter generation is enabled.`,
+The JSON must contain operation-based changes only, without extra commentary.
+Never return complete session arrays or unchanged entities.
+Use stable ids from INPUT DATA for existing targets. Use "create" only for new items.
+"npc" and "location" operations are session-scoped by default unless campaign scope is explicitly requested.
+Do not include combat encounter operations unless task instructions explicitly say encounter generation is enabled.`,
 	encounter: `You are an experienced Dungeon Master for Dungeons & Dragons 5.5e (2024).
 Your goal is to help build a specific combat encounter.
 Keep responses structured and practical for real gameplay.
 Always return JSON only, with no text before or after JSON.
-The JSON must use:
+The JSON must contain operation-based changes only. Update the current encounter with an "update" operation for entity "encounter".
+The encounter patch shape is:
 { "name": "Encounter name", "monsters": [{ "monsterName": "Official D&D Monster Name or exact custom creature name", "name": "Optional display name" }] }.
 Balance rules:
 1. Analyze characters array: count and levels.
@@ -288,26 +284,23 @@ Balance rules:
 	character: `You are an experienced Dungeon Master for Dungeons & Dragons.
 Your goal is to create player characters for a campaign.
 Always return JSON only, with no text before or after JSON.
-The JSON must use this shape:
-{ "characters": [{ "id": "existing-id-if-any", "slug": "existing-slug-if-any", "name": "...", "race": "...", "class": "...", "level": 1, "motivation": "...", "trait": "...", "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown note text..." }] }] }.
-Return only the top-level "characters" field. Do not include "npcs", campaign notes, scenes, encounters, or story description.
+Return operation-based changes only. Create or update entity "character"; do not return unchanged characters.
+Do not create NPCs or any other content category.
 Create complete and playable character concepts.
 Use realistic D&D class/race combinations and sensible levels.`,
 	npc: `You are an experienced Dungeon Master for Dungeons & Dragons.
 Your goal is to create NPCs for a campaign.
 Always return JSON only, with no text before or after JSON.
-The JSON must use this shape:
-{ "npcs": [{ "id": "existing-id-if-any", "slug": "existing-slug-if-any", "name": "...", "race": "...", "class": "...", "level": 1, "description": "...", "motivation": "...", "trait": "...", "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown note text..." }] }] }.
-Return only the top-level "npcs" field. Do not include "characters", campaign notes, scenes, encounters, or story description.
+Return operation-based changes only. Create or update entity "npc"; do not return unchanged NPCs.
+Do not create player characters or any other content category.
 Create distinct NPCs with clear story function and personality.
 For each NPC, include race, class, and level when they can reasonably be inferred from the request or story role.
 Use sensible D&D race/class/level values for the NPC's function. If a class is not appropriate, use a concise role or archetype instead of leaving the field empty.`,
 	location: `You are an experienced Dungeon Master for Dungeons & Dragons.
 Your goal is to create or update locations and factions for a campaign.
 Always return JSON only, with no text before or after JSON.
-The JSON must use this shape:
-{ "locations": [{ "id": "existing-id-if-any", "slug": "existing-slug-if-any", "name": "...", "description": "...", "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown note text..." }] }] }.
-Return only the top-level "locations" field. Do not include "characters", "npcs", campaign notes, scenes, encounters, or story description.
+Return operation-based changes only. Create or update entity "location"; do not return unchanged locations.
+Do not create characters, NPCs, campaign notes, scenes, encounters, or any other content category.
 Create practical locations/factions with detailed, gameable descriptions: visible landmarks, sensory details, layout, atmosphere, inhabitants, conflicts, secrets, hazards, resources, hooks, and what makes the place distinct at the table.`,
 	prompt: `You are an experienced Dungeon Master for Dungeons & Dragons.
 Your goal is to help another DM with planning.
@@ -345,8 +338,9 @@ Input JSON:`,
 	"custom-monster": `You are an experienced Dungeons & Dragons 5.5e (2024) monster designer.
 Create custom bestiary creatures in the same general JSON style as 5eTools monster data.
 Always return JSON only, with no text before or after JSON.
-The JSON must use:
-{ "monsters": [{ "name": "...", "source": "CUSTOM", "size": ["M"], "type": "monstrosity", "alignment": ["N"], "ac": [{ "ac": 13, "from": ["natural armor"] }], "hp": { "average": 45, "formula": "6d8 + 18" }, "speed": { "walk": 30 }, "str": 16, "dex": 12, "con": 16, "int": 8, "wis": 12, "cha": 10, "save": { "con": "+5" }, "skill": { "perception": "+3" }, "senses": ["darkvision 60 ft."], "languages": ["Common"], "cr": "3", "spellcasting": [{ "name": "Spellcasting", "type": "spellcasting", "headerEntries": ["The creature casts one of the following spells, using Wisdom as the spellcasting ability (spell save {@dc 13}, {@hit 5} to hit with spell attacks):"], "will": ["{@spell Gust of Wind|XPHB}"], "daily": { "1": ["{@spell Lightning Bolt|XPHB}"] }, "ability": "wis", "displayAs": "action" }], "trait": [{ "name": "...", "entries": ["..."] }], "action": [{ "name": "...", "entries": ["..."] }], "bonus": [{ "name": "...", "entries": ["..."] }], "reaction": [{ "name": "...", "entries": ["..."] }], "legendary": [{ "name": "...", "entries": ["..."] }] }] }.
+Return operation-based changes only. Use "create" or "update" operations for entity "monster".
+The monster data inside an operation must use:
+{ "name": "...", "source": "CUSTOM", "size": ["M"], "type": "monstrosity", "alignment": ["N"], "ac": [{ "ac": 13, "from": ["natural armor"] }], "hp": { "average": 45, "formula": "6d8 + 18" }, "speed": { "walk": 30 }, "str": 16, "dex": 12, "con": 16, "int": 8, "wis": 12, "cha": 10, "save": { "con": "+5" }, "skill": { "perception": "+3" }, "senses": ["darkvision 60 ft."], "languages": ["Common"], "cr": "3", "spellcasting": [{ "name": "Spellcasting", "type": "spellcasting", "headerEntries": ["The creature casts one of the following spells, using Wisdom as the spellcasting ability (spell save {@dc 13}, {@hit 5} to hit with spell attacks):"], "will": ["{@spell Gust of Wind|XPHB}"], "daily": { "1": ["{@spell Lightning Bolt|XPHB}"] }, "ability": "wis", "displayAs": "action" }], "trait": [{ "name": "...", "entries": ["..."] }], "action": [{ "name": "...", "entries": ["..."] }], "bonus": [{ "name": "...", "entries": ["..."] }], "reaction": [{ "name": "...", "entries": ["..."] }], "legendary": [{ "name": "...", "entries": ["..."] }] }.
 Use only fields that belong directly on the monster object. If the creature has legendary actions, put them in the monster's own "legendary" array. Do not create or reference "legendaryGroup".
 Use compact but complete 5.5e (2024) mechanics: ability scores, AC, HP formula, speed, CR, traits, actions, and relevant saves/skills/senses/languages/resistances/immunities/condition immunities.
 Balance the statistics and damage for the requested CR or the implied threat level.
@@ -373,22 +367,25 @@ Keep calculated average damage before tagged damage when matching official style
 };
 
 const structuredJsonResponseContract = `PARSED JSON RESPONSE CONTRACT:
-1. Treat INPUT DATA as the complete editable scope for this request, not as an example and not as the entire campaign.
-2. Return the desired final state for the fields/categories you output when the corresponding category exists in INPUT DATA. Do not return patches, deltas, append-only fragments, or summaries of changes.
-3. Output only fields/categories that USER INSTRUCTIONS asks you to create or edit, or that are necessary for those requested changes.
-4. For every output field/category, include all matching existing items from INPUT DATA in their original order, then add or revise only what the request requires. Do not drop unchanged included items.
-5. Copy unchanged included text exactly: preserve wording, spelling, markdown, line breaks, titles, spacing, bullet/number formatting, and existing bracketed mentions.
-6. Change existing text only when USER INSTRUCTIONS explicitly asks for that edit or when a minimal consistency edit is unavoidable because of the requested new context.
-7. Existing scenes and campaign entities in INPUT DATA include stable "id" and sometimes "slug". Preserve the same "id" and "slug" when editing or renaming an existing item. To rename an item, keep its "id"/"slug" and change only its display name fields.
-8. You may delete existing included items only when USER INSTRUCTIONS asks to delete/remove/keep only a subset. Prefer returning the final array without deleted items. You may also mark a specific included item with "delete": true while preserving its "id"/"slug".
-9. Never invent, reconstruct, summarize, or modify data that is not present in INPUT DATA. Data outside INPUT DATA is hidden and must remain untouched by being omitted from the response.
-10. If INPUT DATA does not contain a category, you cannot edit, rename, delete, or preserve hidden existing items from that category. In that case the category is append-only: return only new items needed for USER INSTRUCTIONS.
-Category final-state rules:
-- If you output "notes", include all notes from the corresponding INPUT DATA notes array plus requested new/edited notes. Notes must be objects, not strings. Preserve existing note "id", "title", "text", and "collapsed" unless editing that note requires a text/title change.
-- If you output "characters", include all player characters from INPUT DATA.campaign.characters plus requested new/edited player characters.
-- If you output "npcs", include all NPCs from INPUT DATA.campaign.npcs plus requested new/edited NPCs.
-- If you output "locations", include all locations/factions from INPUT DATA.campaign.locations plus requested new/edited locations/factions.
-- If you output "scenes", include all scenes from the relevant selected session context plus requested new/edited scenes.`;
+1. Always return exactly one JSON object with this top-level shape:
+{ "version": 2, "operations": [ ... ] }
+2. The response is a domain patch, not final state. Never return full arrays of unchanged characters, NPCs, locations, scenes, notes, encounters, or monsters.
+3. Every operation must describe one precise change requested by USER INSTRUCTIONS. Omit all unchanged data.
+4. Supported operation shapes:
+- Create: { "op": "create", "entity": "npc|location|character|scene|encounter|monster", "scope": "campaign|session", "clientId": "optional-temp-id", "data": { ...new object fields... } }
+- Update: { "op": "update", "entity": "npc|location|character|scene|encounter|campaign|monster", "scope": "campaign|session", "id": "existing-id", "patch": { ...changed fields only... } }
+- Delete: { "op": "delete", "entity": "npc|location|character|scene|encounter|monster", "scope": "campaign|session", "id": "existing-id" }
+- Append note: { "op": "appendNote", "entity": "campaign|session|scene|npc|location|character", "scope": "campaign|session", "id": "existing-owner-id-if-needed", "targetClientId": "new-owner-clientId-if-needed", "note": { "title": "...", "text": "Markdown note text..." } }
+- Update note: { "op": "updateNote", "entity": "campaign|session|scene|npc|location|character", "scope": "campaign|session", "id": "existing-owner-id-if-needed", "noteId": "existing-note-id", "patch": { "title": "...", "text": "..." } }
+- Delete note: { "op": "deleteNote", "entity": "campaign|session|scene|npc|location|character", "scope": "campaign|session", "id": "existing-owner-id-if-needed", "noteId": "existing-note-id" }
+- Move scope: { "op": "moveScope", "entity": "npc|location", "id": "existing-id", "from": "session|campaign", "to": "campaign|session" }
+5. For existing targets, use the exact "id" from INPUT DATA whenever available. Use "slug" or exact "name" only if no id exists.
+6. For new targets, never invent a final id. Use "clientId" on the create operation only when another operation in the same response needs to reference the new item. Later operations must reference it with "targetClientId".
+7. Patch objects must contain only changed fields. Do not copy unchanged fields into "patch".
+8. To add a note, prefer appendNote. To change a note, use updateNote with noteId. Do not replace whole note arrays unless explicitly necessary.
+9. To create an encounter and connect it to a scene, create the encounter with "clientId", then create/update the scene with "encounterClientId" in data/patch.
+10. Never invent, reconstruct, summarize, or modify hidden data that is not present in INPUT DATA. Hidden data remains untouched because you omit it from operations.
+11. If USER INSTRUCTIONS cannot be satisfied with the available targets, return { "version": 2, "operations": [] } instead of guessing destructive edits.`;
 
 const characterLevelContract = `CHARACTER LEVEL CONTRACT:
 For character and NPC "level" fields, use a number from 1 to 20 when the level is known, or an empty string "" when the level is unknown, intentionally unset, or already empty in INPUT DATA. Preserve existing empty level values as "" unless the user explicitly asks to set a level.
@@ -500,7 +497,15 @@ Exception: technical lookup fields such as "monsterName" must remain exact looku
 	];
 	if (
 		effectiveParseAIResponse &&
-		["campaign", "scene", "character", "npc", "location"].includes(useKey)
+		[
+			"campaign",
+			"scene",
+			"encounter",
+			"character",
+			"npc",
+			"location",
+			"custom-monster",
+		].includes(useKey)
 	) {
 		systemInstructionParts.push(structuredJsonResponseContract);
 	}
@@ -528,21 +533,22 @@ Exception: technical lookup fields such as "monsterName" must remain exact looku
 	}
 	if (useKey === "scene" && encounterGenerationEnabled) {
 		systemInstructionParts.push(
-			`Encounter generation is enabled. You may create combat encounters using this shape:
-{ "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown session note text..." }], "scenes": [{ "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "..." }, "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown scene note text..." }], "npcs": [{ "name": "...", "description": "..." }], "encounterIndex": 0 }], "encounters": [{ "name": "Encounter name", "monsters": [{ "monsterName": "Official D&D Monster Name or exact custom creature name", "name": "Optional display name" }] }] }.
-If a scene requires combat, "encounterIndex" must point to the encounter index in "encounters".
-If combat is not needed, omit "encounterIndex".
+			`Encounter generation is enabled. Create combat encounters with operation pairs:
+1) { "op": "create", "entity": "encounter", "clientId": "encounter-1", "data": { "name": "...", "monsters": [{ "monsterName": "Official D&D Monster Name or exact custom creature name", "name": "Optional display name" }] } }
+2) { "op": "create" or "update", "entity": "scene", "id": "existing-scene-id-if-updating", "data" or "patch": { "encounterClientId": "encounter-1" } }
+If a scene requires combat, create or update the scene with "encounterClientId" pointing to the encounter clientId.
+If combat is not needed, omit encounter operations.
 Pick monsters according to party level and party size from context. You may use custom creatures from INPUT DATA.customBestiary.monsterNames when they fit the scenario; use their names exactly in "monsterName".
 If user instructions specify encounter difficulty, follow that strictly.`,
 		);
 		if (customMonsterGenerationEnabled) {
 			systemInstructionParts.push(
 				`Custom monster generation is enabled, but official D&D monsters are preferred. Use official bestiary monsters when they fit the scene, theme, difficulty, and role. Create new custom monsters only when the scene needs a sufficiently unique creature that official D&D monsters do not represent well.
-If you create custom monsters, include them in a top-level "monsters" array using the custom bestiary monster JSON shape, and reference each new creature from encounters by its exact "name" in "monsterName".`,
+If you create custom monsters, use "create" operations for entity "monster" and reference each new creature from encounters by its exact "name" in "monsterName".`,
 			);
 		} else {
 			systemInstructionParts.push(
-				`Custom monster generation is disabled. Do not output a top-level "monsters" array for new custom creatures. Use official bestiary monsters or existing INPUT DATA.customBestiary.monsterNames only.`,
+				`Custom monster generation is disabled. Do not output operations for entity "monster". Use official bestiary monsters or existing INPUT DATA.customBestiary.monsterNames only.`,
 			);
 		}
 	} else if (useKey === "scene") {
@@ -550,27 +556,38 @@ If you create custom monsters, include them in a top-level "monsters" array usin
 			`Encounter generation is disabled. Do not create or edit combat encounters.`,
 		);
 	}
+	if (useKey === "encounter") {
+		if (customMonsterGenerationEnabled) {
+			systemInstructionParts.push(
+				`Custom monster generation is enabled for this encounter, but official D&D monsters are preferred. Use official bestiary monsters when they fit. Create new custom monsters only for sufficiently unique threats. If you create custom monsters, output "create" operations for entity "monster" before the encounter update operation, then reference each new creature by its exact "name" in encounter "monsterName".`,
+			);
+		} else {
+			systemInstructionParts.push(
+				`Custom monster generation is disabled. Do not output operations for entity "monster". Use official bestiary monsters or existing INPUT DATA.customBestiary.monsterNames only.`,
+			);
+		}
+	}
 	if (["campaign", "scene"].includes(useKey)) {
 		systemInstructionParts.push(
 			characterGenerationEnabled
-				? `Character generation is enabled. You may include a top-level "characters" array only when the user explicitly asks to create, edit, rename, or delete player characters.`
-				: `Character generation is disabled. Do not create or edit player characters. Do not include a top-level "characters" array.`,
+				? `Character generation is enabled. You may create, update, delete, or add notes to entity "character" only when the user explicitly asks for player characters.`
+				: `Character generation is disabled. Do not create, update, delete, move, or add notes to entity "character".`,
 		);
 		systemInstructionParts.push(
 			npcGenerationEnabled
-				? `NPC generation is enabled. You may include NPC data only when the user explicitly asks to create, edit, rename, or delete NPCs. Use a top-level "npcs" array for NPC cards; scene-local NPC references may be included in scene "npcs".`
-				: `NPC generation is disabled. Do not create or edit NPCs. Do not include top-level "npcs" or scene "npcs".`,
+				? `NPC generation is enabled. You may create, update, delete, move, or add notes to entity "npc" only when the user explicitly asks for NPCs. Scene-local NPC references belong inside scene data or scene patch.`
+				: `NPC generation is disabled. Do not create, update, delete, move, or add notes to entity "npc" and do not add scene-local NPC references.`,
 		);
 		systemInstructionParts.push(
 			locationGenerationEnabled
-				? `Location/faction generation is enabled. You may include a top-level "locations" array only when the user explicitly asks to create, edit, rename, or delete locations or factions. Each item should include name, description, and notes.`
-				: `Location/faction generation is disabled. Do not create or edit locations/factions. Do not include a top-level "locations" array.`,
+				? `Location/faction generation is enabled. You may create, update, delete, move, or add notes to entity "location" only when the user explicitly asks for locations, factions, organizations, landmarks, or regions.`
+				: `Location/faction generation is disabled. Do not create, update, delete, move, or add notes to entity "location".`,
 		);
 		if (useKey === "scene") {
 			systemInstructionParts.push(
 				entityTargetScope === "session"
-					? `ENTITY SCOPE: Top-level "npcs" and "locations" in this response are session-scoped by default. They belong only to the current session and must not be treated as campaign-wide entities unless the user explicitly asks for campaign scope.`
-					: `ENTITY SCOPE: Top-level "npcs" and "locations" in this response are campaign-scoped. They belong to the whole campaign.`,
+					? `ENTITY SCOPE: "npc" and "location" operations are session-scoped by default. Set "scope": "campaign" only if the user explicitly asks for campaign scope.`
+					: `ENTITY SCOPE: "npc" and "location" operations are campaign-scoped by default.`,
 			);
 		}
 	}
@@ -580,7 +597,7 @@ If you create custom monsters, include them in a top-level "monsters" array usin
 		["scene", "npc", "location"].includes(useKey)
 	) {
 		systemInstructionParts.push(
-			`SESSION SCOPE OUTPUT RULE: Do not return campaign-scoped NPCs or campaign-scoped locations/factions in top-level "npcs" or "locations". In session scope, top-level entity arrays may contain only existing INPUT DATA.currentSession entities and genuinely new session-scoped entities requested by the user.`,
+			`SESSION SCOPE OUTPUT RULE: Do not create session copies of campaign-scoped NPCs or campaign-scoped locations/factions. In session scope, update only INPUT DATA.currentSession entities by id, or create genuinely new session-scoped entities requested by the user.`,
 		);
 	}
 
@@ -783,17 +800,25 @@ If you create custom monsters, include them in a top-level "monsters" array usin
 		'IMPORTANT: Text fields in INPUT DATA may contain the app Markdown format: headings with "#", bold "**text**", italic "*text*", lists "- item", quotes "> text", tab indentation "\\t", blank lines, and entity mentions "[Name]". Treat these as real formatting, not noise. Preserve unchanged Markdown exactly. When adding formatted text, use only this supported Markdown subset inside JSON strings.\n';
 	if (
 		effectiveParseAIResponse &&
-		["campaign", "scene", "character", "npc", "location"].includes(useKey)
+		[
+			"campaign",
+			"scene",
+			"encounter",
+			"character",
+			"npc",
+			"location",
+			"custom-monster",
+		].includes(useKey)
 	) {
 		userPrompt +=
-			"IMPORTANT: The JSON response must be the final state for every field or array you output, not a delta. Preserve unchanged INPUT DATA items exactly and include them together with requested new or edited items. Omit fields/categories that are outside the user's request.\n";
+			'IMPORTANT: The JSON response must use { "version": 2, "operations": [...] }. Return only precise operations for requested changes. Never return unchanged items or complete arrays.\n';
 	}
 	if (useKey === "custom-monster") {
 		userPrompt +=
 			"IMPORTANT: Custom bestiary creatures must not contain app entity links. Never wrap entity names, creature names, places, factions, concepts, or any other text in square brackets. Do not output [Name] syntax anywhere in monster fields.\n";
 	} else {
 		userPrompt +=
-			"IMPORTANT: In generated text fields, use square brackets only for actual entity names that are already present in INPUT DATA or for new entities that you create in this same JSON response in structured arrays such as \"characters\", \"npcs\", scene \"npcs\", or \"locations\". Do not wrap ordinary nouns, species, terrain, place types, groups, concepts, or generic descriptors just because they sound important. For example, do not output [Dwarves], [Swamps], [Market], or [Guard] unless that exact entity already exists in INPUT DATA or you are also creating it as a structured entity in this response. Do not wrap JSON keys.\n";
+			"IMPORTANT: In generated text fields, use square brackets only for actual entity names that are already present in INPUT DATA or for new entities that you create in this same JSON response with create operations. Do not wrap ordinary nouns, species, terrain, place types, groups, concepts, or generic descriptors just because they sound important. For example, do not output [Dwarves], [Swamps], [Market], or [Guard] unless that exact entity already exists in INPUT DATA or you are also creating it as a structured entity in this response. Do not wrap JSON keys.\n";
 		userPrompt +=
 			"IMPORTANT: Do NOT wrap structured name fields in brackets. Fields like name, firstName, lastName, and monsterName must contain plain names without [] symbols.\n";
 		userPrompt +=
@@ -816,96 +841,100 @@ If you create custom monsters, include them in a top-level "monsters" array usin
 		}
 	} else if (useKey === "character") {
 		userPrompt += `TASK: Create new player characters for this campaign based on user instructions.
-IMPORTANT: This request is strictly for player characters. Return only "characters". Do not create NPCs or any other content category.
-IMPORTANT: If editing, renaming, or deleting an existing character from INPUT DATA, preserve its "id" and "slug". If INPUT DATA.campaign.characters is absent, this request is append-only for characters.\n`;
+IMPORTANT: This request is strictly for player characters. Use operations for entity "character" only. Do not create NPCs or any other content category.
+IMPORTANT: If editing, renaming, or deleting an existing character from INPUT DATA, identify it by "id". If INPUT DATA.campaign.characters is absent, this request can only create new characters.\n`;
 	} else if (useKey === "custom-monster") {
 		userPrompt += `TASK: Create custom D&D 5.5e (2024) bestiary creatures based on user instructions.
-IMPORTANT: Return only the top-level "monsters" array.
+IMPORTANT: Return only operations for entity "monster".
 IMPORTANT: Every monster must have "source": "CUSTOM".
 IMPORTANT: Match the app's bestiary data shape: size array, type, alignment array, ac array, hp object, speed object, ability scores, cr, trait/action arrays, and optional bonus/reaction/legendary arrays.
 IMPORTANT: If a monster has legendary actions, store them directly in that monster's "legendary" array. Never output "legendaryGroup".
 IMPORTANT: If the monster casts spells, add a top-level "spellcasting" array in the same style as database/bestiary/all.json. Use objects with "name", "type": "spellcasting", "headerEntries", optional "will", optional "daily", optional "spells", "ability", and "displayAs". Put spell tags inside those arrays, e.g. "{@spell Gust of Wind|XPHB}". Do not represent a spell list only as plain action text.
 IMPORTANT: Monster action, bonus action, reaction, trait, and legendary entries must use 5eTools inline tags for all rolls and rules references. Attacks must look like "{@atk mw} {@hit 8} to hit, reach 5 ft., one target. {@h}14 ({@damage 2d8 + 5}) slashing damage." Use "{@hit N}", "{@damage FORMULA}", "{@dc N}", "{@actSave dex}", "{@dice FORMULA}", "{@condition Name}", "{@spell Gust of Wind|XPHB}", and "{@recharge N}" where appropriate. If a spell source is unknown, use "{@spell Spell Name}". Do not use legacy "attack_bonus", "damage_dice", or "damage_bonus" fields.
 IMPORTANT: Lookup values inside 5eTools tags must stay in English and use canonical rule names. Use "{@condition stunned}", not translated forms such as "{@condition приголомшеним}". Use English names for {@condition ...}, {@sense ...}, {@skill ...}, {@spell ...}  and similar rule/reference tags.
-IMPORTANT: Existing custom monsters are provided in INPUT DATA.customBestiary for duplicate avoidance and context only. Do not return, rewrite, rename, rebalance, summarize, or otherwise modify existing monsters unless the user explicitly asks to edit that exact monster. When creating new monsters, return only the newly created monsters. When editing a selected monster, return only that edited monster.
-IMPORTANT: If INPUT DATA.customBestiary.selectedMonster exists, edit that exact monster according to user instructions. Return the complete updated monster object in the "monsters" array. Preserve all fields that were not requested to change. Keep the same name unless the user explicitly asks to rename it.\n`;
+IMPORTANT: Existing custom monsters are provided in INPUT DATA.customBestiary for duplicate avoidance and context only. Do not return, rewrite, rename, rebalance, summarize, or otherwise modify existing monsters unless the user explicitly asks to edit that exact monster.
+IMPORTANT: If INPUT DATA.customBestiary.selectedMonster exists, edit that exact monster with an "update" operation. Put only changed fields in "patch". Keep the same name unless the user explicitly asks to rename it.\n`;
 	} else if (useKey === "npc") {
 		userPrompt += `TASK: Create new NPCs for this ${entityTargetScope === "session" ? "current session" : "campaign"} based on user instructions.
-IMPORTANT: This request is strictly for NPCs. Return only "npcs". Do not create player characters or any other content category.
+IMPORTANT: This request is strictly for NPCs. Use operations for entity "npc" only. Do not create player characters or any other content category.
 IMPORTANT: Include race, class, and level for every generated NPC when possible. If a formal class does not fit, put a role/archetype in "class".
 IMPORTANT: For every newly created NPC, "trait" must include a detailed visual description first, then behavior, habits, flaws, and roleplay cues.
-IMPORTANT: If editing, renaming, or deleting an existing NPC from INPUT DATA, preserve its "id" and "slug". If ${entityTargetScope === "session" ? "INPUT DATA.currentSession.npcs" : "INPUT DATA.campaign.npcs"} is absent, this request is append-only for NPCs.\n`;
+IMPORTANT: If editing, renaming, or deleting an existing NPC from INPUT DATA, identify it by "id". If ${entityTargetScope === "session" ? "INPUT DATA.currentSession.npcs" : "INPUT DATA.campaign.npcs"} is absent, this request can only create new NPCs.\n`;
 		if (entityTargetScope === "session") {
-			userPrompt += `IMPORTANT: Do not include campaign-scoped NPCs in this session-scoped response. Return all existing INPUT DATA.currentSession.npcs unchanged plus requested new or edited session NPCs.\n`;
+			userPrompt += `IMPORTANT: Do not create session copies of campaign-scoped NPCs. Use "scope": "session" for genuinely new session NPCs unless campaign scope was explicitly requested.\n`;
 		}
 	} else if (useKey === "location") {
 		userPrompt += `TASK: Create or update locations/factions for this ${entityTargetScope === "session" ? "current session" : "campaign"} based on user instructions.
-IMPORTANT: This request is strictly for locations/factions. Return only "locations". Do not create characters, NPCs, campaign notes, scenes, encounters, or any other content category.
-IMPORTANT: If editing, renaming, or deleting an existing location/faction from INPUT DATA, preserve its "id" and "slug".
+IMPORTANT: This request is strictly for locations/factions. Use operations for entity "location" only. Do not create characters, NPCs, campaign notes, scenes, encounters, or any other content category.
+IMPORTANT: If editing, renaming, or deleting an existing location/faction from INPUT DATA, identify it by "id".
 IMPORTANT: For every newly created location/faction, "description" must be detailed and gameable: landmarks, sensory details, layout, atmosphere, inhabitants, tensions, secrets, hazards, resources, hooks, and interactive features.
-IMPORTANT: If ${entityTargetScope === "session" ? "INPUT DATA.currentSession.locations" : "INPUT DATA.campaign.locations"} is present, the returned "locations" array must contain every included existing location/faction unchanged unless the user requested edits/deletions, plus requested new locations/factions. Do not return only the new item. If ${entityTargetScope === "session" ? "INPUT DATA.currentSession.locations" : "INPUT DATA.campaign.locations"} is absent, this request is append-only for locations/factions.\n`;
+IMPORTANT: If ${entityTargetScope === "session" ? "INPUT DATA.currentSession.locations" : "INPUT DATA.campaign.locations"} is absent, this request can only create new locations/factions.\n`;
 		if (entityTargetScope === "session") {
-			userPrompt += `IMPORTANT: Do not include campaign-scoped locations/factions in this session-scoped response. Return all existing INPUT DATA.currentSession.locations unchanged plus requested new or edited session locations/factions.\n`;
+			userPrompt += `IMPORTANT: Do not create session copies of campaign-scoped locations/factions. Use "scope": "session" for genuinely new session locations/factions unless campaign scope was explicitly requested.\n`;
 		}
 	} else if (useKey === "encounter") {
 		userPrompt += `TASK: Update current combat encounter (ID: ${encounterId}). Consider character levels and requested difficulty (easy, medium, hard, deadly). Pick monsters that fit the scenario.
+IMPORTANT: Return one "update" operation for entity "encounter" with "id": "${encounterId}" and patch containing name and monsters.
 IMPORTANT: "monsterName" must be an exact lookup name. Use official English bestiary names for official creatures, or exact names from INPUT DATA.customBestiary.monsterNames for custom creatures.\n`;
+		if (customMonsterGenerationEnabled) {
+			userPrompt += `IMPORTANT: If existing official or custom monsters do not fit the encounter concept, you may create new custom monsters with "create" operations for entity "monster", then use their exact names in the encounter patch. Prefer official monsters when they fit well.\n`;
+		}
 	} else if (useKey === "scene") {
 		userPrompt += `TASK: Based on current session and context, apply the user's requested session changes.\n`;
-		userPrompt += `IMPORTANT: Return the complete updated session content for the fields you output. For notes, scenes, characters, NPCs, and locations, include all corresponding included existing items from INPUT DATA together with your revisions/additions. Do not return only a delta or only the newly added content.\n`;
+		userPrompt += `IMPORTANT: Return only precise operations for the requested session changes. Do not return unchanged session content.\n`;
 		if (characterGenerationEnabled) {
-			userPrompt += `IMPORTANT: Character generation is enabled. Include player characters only when the user explicitly asks to create, edit, rename, or delete them. If you output "characters", preserve "id"/"slug" for existing items and include all included existing player characters from INPUT DATA.campaign.characters plus requested additions/edits, unless the user requested deletion.\n`;
+			userPrompt += `IMPORTANT: Character generation is enabled. Use entity "character" operations only when the user explicitly asks to create, edit, rename, or delete player characters. Existing targets must use their id.\n`;
 		} else {
-			userPrompt += `IMPORTANT: Character generation is disabled. Do not create or edit player characters and do not output "characters".\n`;
+			userPrompt += `IMPORTANT: Character generation is disabled. Do not output operations for entity "character".\n`;
 		}
 		if (npcGenerationEnabled) {
 			userPrompt +=
 				entityTargetScope === "session"
-					? `IMPORTANT: NPC generation is enabled. Include NPC cards only when the user explicitly asks to create, edit, rename, or delete NPCs. Top-level "npcs" are session-scoped and belong only to the current session. Scene-local NPC references may also be included in scene "npcs". If you output top-level "npcs", preserve "id"/"slug" for existing items and include all included existing NPCs from INPUT DATA.currentSession.npcs plus requested additions/edits, unless the user requested deletion. Do not include NPCs from INPUT DATA.campaign.npcs or any other campaign-scoped NPC list in this session-scoped response. Newly created top-level NPCs must have detailed visual appearance and portrayal in "trait".\n`
-					: `IMPORTANT: NPC generation is enabled. Include NPC cards only when the user explicitly asks to create, edit, rename, or delete NPCs. Scene-local NPC references may also be included in scene "npcs". If you output top-level "npcs", preserve "id"/"slug" for existing items and include all included existing NPCs from INPUT DATA.campaign.npcs plus requested additions/edits, unless the user requested deletion. Newly created top-level NPCs must have detailed visual appearance and portrayal in "trait".\n`;
+					? `IMPORTANT: NPC generation is enabled. Use entity "npc" operations only when the user explicitly asks to create, edit, rename, delete, move, or add notes to NPCs. Default scope is "session". Do not copy campaign NPCs into session. Newly created NPCs must have detailed visual appearance and portrayal in "trait".\n`
+					: `IMPORTANT: NPC generation is enabled. Use entity "npc" operations only when the user explicitly asks to create, edit, rename, delete, move, or add notes to NPCs. Default scope is "campaign". Newly created NPCs must have detailed visual appearance and portrayal in "trait".\n`;
 		} else {
-			userPrompt += `IMPORTANT: NPC generation is disabled. Do not create or edit NPCs and do not output top-level "npcs" or scene "npcs".\n`;
+			userPrompt += `IMPORTANT: NPC generation is disabled. Do not output operations for entity "npc" or add scene-local NPC references.\n`;
 		}
 		if (locationGenerationEnabled) {
 			userPrompt +=
 				entityTargetScope === "session"
-					? `IMPORTANT: Location/faction generation is enabled. Include locations/factions only when the user explicitly asks to create, edit, rename, or delete places, factions, organizations, landmarks, or regions. Top-level "locations" are session-scoped and belong only to the current session. If you output "locations", preserve "id"/"slug" for existing items and include all included existing locations/factions from INPUT DATA.currentSession.locations plus requested additions/edits, unless the user requested deletion. Do not include locations/factions from INPUT DATA.campaign.locations or any other campaign-scoped location list in this session-scoped response. Newly created locations/factions must have detailed, gameable "description".\n`
-					: `IMPORTANT: Location/faction generation is enabled. Include locations/factions only when the user explicitly asks to create, edit, rename, or delete places, factions, organizations, landmarks, or regions. If you output "locations", preserve "id"/"slug" for existing items and include all included existing locations/factions from INPUT DATA.campaign.locations plus requested additions/edits, unless the user requested deletion. Newly created locations/factions must have detailed, gameable "description".\n`;
+					? `IMPORTANT: Location/faction generation is enabled. Use entity "location" operations only when the user explicitly asks to create, edit, rename, delete, move, or add notes to places, factions, organizations, landmarks, or regions. Default scope is "session". Do not copy campaign locations/factions into session. Newly created locations/factions must have detailed, gameable "description".\n`
+					: `IMPORTANT: Location/faction generation is enabled. Use entity "location" operations only when the user explicitly asks to create, edit, rename, delete, move, or add notes to places, factions, organizations, landmarks, or regions. Default scope is "campaign". Newly created locations/factions must have detailed, gameable "description".\n`;
 		} else {
-			userPrompt += `IMPORTANT: Location/faction generation is disabled. Do not create or edit locations/factions and do not output "locations".\n`;
+			userPrompt += `IMPORTANT: Location/faction generation is disabled. Do not output operations for entity "location".\n`;
 		}
 		if (encounterGenerationEnabled) {
-			userPrompt += `IMPORTANT: For each scene where conflict is possible, generate an encounter object in the encounters array.
+			userPrompt += `IMPORTANT: For each scene where conflict is possible, create an "encounter" operation and connect it to the scene with "encounterClientId".
 Pick monsters while considering character levels and classes for balance. Use official English bestiary names for official creatures, or exact names from INPUT DATA.customBestiary.monsterNames for custom creatures.
-IMPORTANT: For each scene with combat or an encounterIndex, include a scene note with interesting combat mechanics and tactical ideas.\n`;
+IMPORTANT: For each scene with combat or an encounterClientId, include an appendNote operation for that scene with interesting combat mechanics and tactical ideas.\n`;
 			if (customMonsterGenerationEnabled) {
-				userPrompt += `IMPORTANT: Custom monster generation is enabled. Prefer official D&D monsters whenever they fit the scene well. Create custom monsters only for sufficiently unique threats that official monsters do not cover. If you create custom monsters, output them in a top-level "monsters" array using the same CUSTOM bestiary shape as custom-monster requests, then reference them from encounters with exact "monsterName" values.\n`;
+				userPrompt += `IMPORTANT: Custom monster generation is enabled. Prefer official D&D monsters whenever they fit the scene well. Create custom monsters only for sufficiently unique threats that official monsters do not cover. If you create custom monsters, output "create" operations for entity "monster", then reference them from encounter operations with exact "monsterName" values.\n`;
 				userPrompt += `IMPORTANT: For every custom monster you create here, action entries must use 5eTools inline tags, e.g. "{@atk mw} {@hit 8} to hit, reach 5 ft., one target. {@h}14 ({@damage 2d8 + 5}) slashing damage." Use "{@hit N}" and "{@damage FORMULA}" instead of plain attack bonus text or separate legacy fields. For spell links, use "{@spell Spell Name|SOURCE}", e.g. "{@spell Gust of Wind|XPHB}".\n`;
 				userPrompt += `IMPORTANT: If a generated custom monster casts spells, use a top-level "spellcasting" array like official bestiary data, with "headerEntries", "will", "daily", or "spells" fields containing spell tags such as "{@spell Gust of Wind|XPHB}". Do not put the spell list only in action prose.\n`;
-				userPrompt += `IMPORTANT: Return only newly created custom monsters in the top-level "monsters" array. Do not return or change existing custom monsters from INPUT DATA.customBestiary unless the user explicitly asks to edit them. Lookup values inside inline tags must be English canonical names, e.g. "{@condition stunned}", "{@sense darkvision}", "{@spell Gust of Wind|XPHB}".\n`;
+				userPrompt += `IMPORTANT: Return only monster operations that create requested new custom monsters. Do not return or change existing custom monsters from INPUT DATA.customBestiary unless the user explicitly asks to edit them. Lookup values inside inline tags must be English canonical names, e.g. "{@condition stunned}", "{@sense darkvision}", "{@spell Gust of Wind|XPHB}".\n`;
 			} else {
-				userPrompt += `IMPORTANT: Custom monster generation is disabled. Do not output a top-level "monsters" array and do not invent new bestiary creatures.\n`;
+				userPrompt += `IMPORTANT: Custom monster generation is disabled. Do not output operations for entity "monster" and do not invent new bestiary creatures.\n`;
 			}
 		} else {
-			userPrompt += `IMPORTANT: Encounter generation is disabled. Do not create or edit combat encounters, do not pick monsters, and do not output "encounters", "encounterIndex", or "encounterId".\n`;
+			userPrompt += `IMPORTANT: Encounter generation is disabled. Do not output operations for entity "encounter" and do not add "encounterId" or "encounterClientId" to scene patches.\n`;
 		}
 	} else if (useKey === "campaign") {
 		userPrompt += `TASK: Apply the user's requested campaign changes.\n`;
-		userPrompt += `IMPORTANT: Return the complete updated campaign content for the fields you output. For description, notes, characters, NPCs, and locations, include all corresponding included existing items from INPUT DATA together with your revisions/additions. Do not return only a delta or only the newly added content.\n`;
+		userPrompt += `IMPORTANT: Return only precise operations for the requested campaign changes. Do not return unchanged campaign content.\n`;
 		if (characterGenerationEnabled) {
-			userPrompt += `IMPORTANT: Character generation is enabled. Include player characters only when the user explicitly asks to create, edit, rename, or delete them. If you output "characters", preserve "id"/"slug" for existing items and include all included existing player characters from INPUT DATA.campaign.characters plus requested additions/edits, unless the user requested deletion.\n`;
+			userPrompt += `IMPORTANT: Character generation is enabled. Use entity "character" operations only when the user explicitly asks to create, edit, rename, delete, or add notes to player characters. Existing targets must use their id.\n`;
 		} else {
-			userPrompt += `IMPORTANT: Character generation is disabled. Do not create or edit player characters and do not output "characters".\n`;
+			userPrompt += `IMPORTANT: Character generation is disabled. Do not output operations for entity "character".\n`;
 		}
 		if (npcGenerationEnabled) {
-			userPrompt += `IMPORTANT: NPC generation is enabled. Include NPCs only when the user explicitly asks to create, edit, rename, or delete them. If you output "npcs", preserve "id"/"slug" for existing items and include all included existing NPCs from INPUT DATA.campaign.npcs plus requested additions/edits, unless the user requested deletion. Newly created NPCs must include race, class, level, description, motivation, and a detailed "trait" with visual appearance plus behavior.\n`;
+			userPrompt += `IMPORTANT: NPC generation is enabled. Use entity "npc" operations only when the user explicitly asks to create, edit, rename, delete, move, or add notes to NPCs. Newly created NPCs must include race, class, level, description, motivation, and a detailed "trait" with visual appearance plus behavior.\n`;
 		} else {
-			userPrompt += `IMPORTANT: NPC generation is disabled. Do not create or edit NPCs and do not output "npcs".\n`;
+			userPrompt += `IMPORTANT: NPC generation is disabled. Do not output operations for entity "npc".\n`;
 		}
 		if (locationGenerationEnabled) {
-			userPrompt += `IMPORTANT: Location/faction generation is enabled. Include locations/factions only when the user explicitly asks to create, edit, rename, or delete places, factions, organizations, landmarks, or regions. If you output "locations", preserve "id"/"slug" for existing items and include all included existing locations/factions from INPUT DATA.campaign.locations plus requested additions/edits, unless the user requested deletion. Newly created locations/factions must include name and a detailed, gameable description.\n`;
+			userPrompt += `IMPORTANT: Location/faction generation is enabled. Use entity "location" operations only when the user explicitly asks to create, edit, rename, delete, move, or add notes to places, factions, organizations, landmarks, or regions. Newly created locations/factions must include name and a detailed, gameable description.\n`;
 		} else {
-			userPrompt += `IMPORTANT: Location/faction generation is disabled. Do not create or edit locations/factions and do not output "locations".\n`;
+			userPrompt += `IMPORTANT: Location/faction generation is disabled. Do not output operations for entity "location".\n`;
 		}
 	}
 

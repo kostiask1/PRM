@@ -131,6 +131,7 @@ async function saveParsedAiResponse({
 	language,
 	userInstructions,
 	requestSnapshot,
+	extraChangeResources = [],
 }) {
 	const afterApplyBundle = await storage.exportCampaignBundle(responsePath.campaign);
 	const changes = buildAiChangeSet(
@@ -138,6 +139,16 @@ async function saveParsedAiResponse({
 		afterApplyBundle,
 		responsePath.campaign,
 	);
+	if (Array.isArray(extraChangeResources) && extraChangeResources.length > 0) {
+		changes.resources.push(...extraChangeResources);
+		changes.resources.sort((a, b) =>
+			String(a.label || a.id || "").localeCompare(
+				String(b.label || b.id || ""),
+				"uk",
+			),
+		);
+		changes.summary = buildAiChangeSummary(changes.resources);
+	}
 	const appliedAt = new Date().toISOString();
 	return storage.addAiResponse({
 		text: formatGeneratedContentForHistory(generatedContent),
@@ -154,6 +165,13 @@ async function saveParsedAiResponse({
 }
 
 async function writeAiResourceSnapshot(resource, snapshotValue) {
+	if (resource.kind === "custom-bestiary") {
+		await storage.writeCustomBestiaryMonsters(
+			Array.isArray(snapshotValue) ? snapshotValue : [],
+		);
+		return;
+	}
+
 	const campaignSlug = resource.campaign;
 	if (!campaignSlug) {
 		throw new Error("AI response change has no campaign target.");
@@ -193,13 +211,6 @@ async function writeAiResourceSnapshot(resource, snapshotValue) {
 				{ ...snapshotValue, slug },
 			);
 		}
-		return;
-	}
-
-	if (resource.kind === "custom-bestiary") {
-		await storage.writeCustomBestiaryMonsters(
-			Array.isArray(snapshotValue) ? snapshotValue : [],
-		);
 		return;
 	}
 

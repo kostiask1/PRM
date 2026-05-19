@@ -1,12 +1,32 @@
-const GENERATED_ARRAY_KEYS = [
+const ALLOWED_OPS = new Set([
+	"create",
+	"update",
+	"delete",
+	"appendNote",
+	"updateNote",
+	"deleteNote",
+	"moveScope",
+]);
+
+const ALLOWED_ENTITIES = new Set([
+	"campaign",
+	"session",
+	"character",
 	"characters",
+	"npc",
 	"npcs",
+	"location",
 	"locations",
+	"faction",
+	"factions",
+	"scene",
 	"scenes",
+	"encounter",
 	"encounters",
-	"notes",
-	"monsters",
-];
+	"monster",
+	"custom-monster",
+	"customMonster",
+]);
 
 function isObject(value) {
 	return Boolean(value && typeof value === "object" && !Array.isArray(value));
@@ -20,111 +40,56 @@ function addError(errors, path, message) {
 	errors.push({ path, message });
 }
 
-function validateNamedObjectList(payload, key, errors, nameKeys = ["name", "title"]) {
-	if (payload[key] === undefined) return;
-	if (!Array.isArray(payload[key])) {
-		addError(errors, key, "must be an array");
+function validateOperation(operation, index, errors) {
+	const path = `operations[${index}]`;
+	if (!isObject(operation)) {
+		addError(errors, path, "must be an object");
 		return;
 	}
 
-	payload[key].forEach((item, index) => {
-		if (!isObject(item)) {
-			addError(errors, `${key}[${index}]`, "must be an object");
-			return;
-		}
-		if (item.delete || item.deleted || item._delete) return;
-		if (!nameKeys.some((nameKey) => hasText(item[nameKey]))) {
-			addError(errors, `${key}[${index}]`, "must have a name");
-		}
-	});
-}
-
-function validateNotes(payload, errors) {
-	if (payload.notes === undefined) return;
-	if (!Array.isArray(payload.notes)) {
-		addError(errors, "notes", "must be an array");
-		return;
+	if (!ALLOWED_OPS.has(operation.op)) {
+		addError(errors, `${path}.op`, `must be one of: ${[...ALLOWED_OPS].join(", ")}`);
+	}
+	if (!ALLOWED_ENTITIES.has(operation.entity)) {
+		addError(
+			errors,
+			`${path}.entity`,
+			`must be one of: ${[...ALLOWED_ENTITIES].join(", ")}`,
+		);
 	}
 
-	payload.notes.forEach((note, index) => {
-		if (typeof note === "string") return;
-		if (!isObject(note)) {
-			addError(errors, `notes[${index}]`, "must be a string or object");
-			return;
-		}
-		if (!hasText(note.title || note.name) && !hasText(note.text || note.content || note.description)) {
-			addError(errors, `notes[${index}]`, "must have text");
-		}
-	});
-}
-
-function validateScenes(payload, errors) {
-	if (payload.scenes === undefined) return;
-	if (!Array.isArray(payload.scenes)) {
-		addError(errors, "scenes", "must be an array");
-		return;
+	if (
+		["update", "delete"].includes(operation.op) &&
+		!hasText(operation.id) &&
+		!hasText(operation.slug) &&
+		!hasText(operation.name) &&
+		!hasText(operation.targetClientId)
+	) {
+		addError(errors, path, "must identify an existing target by id, slug, or name");
 	}
-
-	payload.scenes.forEach((scene, index) => {
-		if (!isObject(scene)) {
-			addError(errors, `scenes[${index}]`, "must be an object");
-			return;
-		}
-		if (!isObject(scene.texts) && !hasText(scene.summary || scene.name || scene.title)) {
-			addError(errors, `scenes[${index}]`, "must have texts or summary");
-		}
-		if (scene.npcs !== undefined && !Array.isArray(scene.npcs)) {
-			addError(errors, `scenes[${index}].npcs`, "must be an array");
-		}
-		if (scene.notes !== undefined && !Array.isArray(scene.notes)) {
-			addError(errors, `scenes[${index}].notes`, "must be an array");
-		}
-	});
-}
-
-function validateEncounters(payload, errors) {
-	if (payload.encounters === undefined) return;
-	if (!Array.isArray(payload.encounters)) {
-		addError(errors, "encounters", "must be an array");
-		return;
+	if (operation.op === "create" && !isObject(operation.data) && !isObject(operation.value)) {
+		addError(errors, `${path}.data`, "must be an object for create operations");
 	}
-
-	payload.encounters.forEach((encounter, index) => {
-		if (!isObject(encounter)) {
-			addError(errors, `encounters[${index}]`, "must be an object");
-			return;
-		}
-		if (encounter.monsters !== undefined && !Array.isArray(encounter.monsters)) {
-			addError(errors, `encounters[${index}].monsters`, "must be an array");
-		}
-	});
-}
-
-function validateCustomMonsters(payload, errors, { requireMonsters = false } = {}) {
-	if (payload.monsters === undefined) {
-		if (requireMonsters) addError(errors, "monsters", "must be an array");
-		return;
+	if (operation.op === "update" && !isObject(operation.patch) && !isObject(operation.data)) {
+		addError(errors, `${path}.patch`, "must be an object for update operations");
 	}
-	if (!Array.isArray(payload.monsters)) {
-		addError(errors, "monsters", "must be an array");
-		return;
+	if (operation.op === "appendNote" && !isObject(operation.note) && !isObject(operation.data) && typeof operation.note !== "string") {
+		addError(errors, `${path}.note`, "must be a note object or string");
 	}
-	if (requireMonsters && payload.monsters.length === 0) {
-		addError(errors, "monsters", "must not be empty");
+	if (["updateNote", "deleteNote"].includes(operation.op) && !hasText(operation.noteId)) {
+		addError(errors, `${path}.noteId`, "is required for note updates/deletes");
 	}
-
-	payload.monsters.forEach((monster, index) => {
-		if (!isObject(monster)) {
-			addError(errors, `monsters[${index}]`, "must be an object");
-			return;
+	if (operation.op === "moveScope") {
+		if (!["campaign", "session"].includes(operation.from)) {
+			addError(errors, `${path}.from`, "must be campaign or session");
 		}
-		if (!hasText(monster.name || monster.title)) {
-			addError(errors, `monsters[${index}]`, "must have a name");
+		if (!["campaign", "session"].includes(operation.to)) {
+			addError(errors, `${path}.to`, "must be campaign or session");
 		}
-		if (monster.spellcasting !== undefined && !Array.isArray(monster.spellcasting)) {
-			addError(errors, `monsters[${index}].spellcasting`, "must be an array");
-		}
-	});
+	}
+	if (operation.scope !== undefined && !["campaign", "session"].includes(operation.scope)) {
+		addError(errors, `${path}.scope`, "must be campaign or session");
+	}
 }
 
 function validateAiGeneratedContent(payload, options = {}) {
@@ -136,33 +101,18 @@ function validateAiGeneratedContent(payload, options = {}) {
 		};
 	}
 
-	for (const key of GENERATED_ARRAY_KEYS) {
-		if (payload[key] !== undefined && !Array.isArray(payload[key])) {
-			addError(errors, key, "must be an array");
-		}
+	if (payload.version !== 2) {
+		addError(errors, "version", "must be 2");
 	}
-
-	validateNamedObjectList(payload, "characters", errors, [
-		"name",
-		"fullName",
-		"firstName",
-		"first_name",
-		"title",
-	]);
-	validateNamedObjectList(payload, "npcs", errors, [
-		"name",
-		"fullName",
-		"firstName",
-		"first_name",
-		"title",
-	]);
-	validateNamedObjectList(payload, "locations", errors);
-	validateNotes(payload, errors);
-	validateScenes(payload, errors);
-	validateEncounters(payload, errors);
-	validateCustomMonsters(payload, errors, {
-		requireMonsters: options.type === "custom-monster",
-	});
+	if (!Array.isArray(payload.operations)) {
+		addError(errors, "operations", "must be an array");
+	} else if (options.requireOperations === true && payload.operations.length === 0) {
+		addError(errors, "operations", "must not be empty");
+	} else {
+		payload.operations.forEach((operation, index) =>
+			validateOperation(operation, index, errors),
+		);
+	}
 
 	return {
 		valid: errors.length === 0,
@@ -175,7 +125,7 @@ function assertAiGeneratedContentContract(payload, options = {}) {
 	if (result.valid) return result;
 
 	const error = new Error(
-		`AI response does not match expected schema: ${result.errors
+		`AI response does not match expected operations schema: ${result.errors
 			.map((entry) => `${entry.path} ${entry.message}`)
 			.join("; ")}`,
 	);

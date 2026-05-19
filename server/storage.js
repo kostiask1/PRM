@@ -432,7 +432,7 @@ async function writeFavorites(favorites) {
 
 function normalizeAiChangeResource(raw = {}) {
 	if (!raw || typeof raw !== "object") return null;
-	const kind = ["campaign", "session", "entity"].includes(raw.kind)
+	const kind = ["campaign", "session", "entity", "custom-bestiary"].includes(raw.kind)
 		? raw.kind
 		: null;
 	if (!kind) return null;

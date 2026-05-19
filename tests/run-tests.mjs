@@ -93,6 +93,7 @@ const spellsRouter = require("../server/routes/spells.js");
 const aiRouter = require("../server/routes/ai.js");
 const aiService = require("../server/aiService.js");
 const aiHistoryService = require("../server/aiHistoryService.js");
+const aiPatchService = require("../server/aiPatchService.js");
 const aiPayloadSchemas = require("../server/aiPayloadSchemas.js");
 
 const results = [];
@@ -492,32 +493,8 @@ await run("campaign state helpers sanitize entities and update mentions", () => 
 	);
 });
 
-await run("AI helpers preserve numeric ids and ignored notes", () => {
-	const { applyGeneratedScenes, mergeAiIgnoredNotes } = aiRouter.__test;
-	const scenes = applyGeneratedScenes(
-		[
-			{
-				id: 100,
-				texts: { summary: "Old", goal: "", stakes: "", location: "" },
-				notes: [],
-				npcs: [],
-			},
-		],
-		[
-			{
-				id: 100,
-				texts: { summary: "New", goal: "", stakes: "", location: "" },
-				notes: [],
-				npcs: [],
-			},
-		],
-		new Set(["100"]),
-		new Map(),
-	);
-	assert.equal(scenes.length, 1);
-	assert.equal(scenes[0].texts.summary, "New");
-
-	const mergedNotes = mergeAiIgnoredNotes(
+await run("AI patch helpers preserve numeric ids and ignored notes", () => {
+	const mergedNotes = aiPatchService.mergeAiIgnoredNotes(
 		[
 			{ id: 1, title: "A", text: "A", collapsed: false },
 			{
@@ -541,49 +518,34 @@ await run("AI helpers preserve numeric ids and ignored notes", () => {
 	assert.equal(mergedNotes[1]._aiIgnored, true);
 });
 
-await run(
-	"AI session-scope filters exact campaign copies without dropping new namesakes",
-	() => {
-		const { filterGeneratedEntitiesOutsideScope } = aiRouter.__test;
-		const campaignLocations = [
+await run("AI operations schema validates patch contracts", () => {
+	const valid = aiPayloadSchemas.validateAiGeneratedContent({
+		version: 2,
+		operations: [
 			{
-				id: "campaign-city",
-				slug: "city",
-				name: "City",
-				description: "Old city",
-				notes: [{ id: "n1", title: "Hook", text: "Old hook", collapsed: false }],
+				op: "create",
+				entity: "npc",
+				scope: "session",
+				clientId: "npc-1",
+				data: { name: "Mira", trait: "Careful scout" },
 			},
-		];
-		const getName = (entity) => String(entity.name || "").toLowerCase();
+			{
+				op: "update",
+				entity: "scene",
+				id: "scene-1",
+				patch: { texts: { summary: "Ambush" } },
+			},
+		],
+	});
+	assert.equal(valid.valid, true);
 
-		assert.deepEqual(
-			filterGeneratedEntitiesOutsideScope(
-				[
-					{
-						name: "City",
-						description: "Old city",
-						notes: [{ title: "Hook", text: "Old hook" }],
-					},
-				],
-				campaignLocations,
-				[],
-				getName,
-				"locations",
-			),
-			[],
-		);
-
-		const newNamesake = filterGeneratedEntitiesOutsideScope(
-			[{ name: "City", description: "New session district", notes: [] }],
-			campaignLocations,
-			[],
-			getName,
-			"locations",
-		);
-		assert.equal(newNamesake.length, 1);
-		assert.equal(newNamesake[0].description, "New session district");
-	},
-);
+	const invalid = aiPayloadSchemas.validateAiGeneratedContent({
+		version: 2,
+		operations: [{ op: "update", entity: "npc", patch: { trait: "x" } }],
+	});
+	assert.equal(invalid.valid, false);
+	assert.ok(invalid.errors.some((entry) => entry.path === "operations[0]"));
+});
 
 await run("AI JSON fence cleanup preserves inner markdown fences", () => {
 	const raw = [
@@ -601,13 +563,18 @@ await run("AI JSON fence cleanup preserves inner markdown fences", () => {
 	});
 });
 
-await run("AI payload schema validates generated entity contracts", () => {
+await run("AI payload schema rejects legacy final-state payloads", () => {
 	assert.equal(
 		aiPayloadSchemas.validateAiGeneratedContent({
-			npcs: [{ firstName: "Mira", trait: "Careful scout" }],
-			locations: [{ name: "Old Gate", description: "A locked arch." }],
-			scenes: [{ texts: { summary: "Ambush" }, notes: [] }],
-			encounters: [{ name: "Gate Fight", monsters: [] }],
+			version: 2,
+			operations: [
+				{
+					op: "create",
+					entity: "location",
+					scope: "campaign",
+					data: { name: "Old Gate", description: "A locked arch." },
+				},
+			],
 		}).valid,
 		true,
 	);
@@ -617,10 +584,8 @@ await run("AI payload schema validates generated entity contracts", () => {
 		monsters: [{ spellcasting: {} }],
 	});
 	assert.equal(invalid.valid, false);
-	assert.ok(invalid.errors.some((entry) => entry.path === "npcs"));
-	assert.ok(
-		invalid.errors.some((entry) => entry.path === "monsters[0].spellcasting"),
-	);
+	assert.ok(invalid.errors.some((entry) => entry.path === "version"));
+	assert.ok(invalid.errors.some((entry) => entry.path === "operations"));
 });
 
 await run("AI history service builds stable request snapshots", () => {
@@ -1037,6 +1002,103 @@ await run("storage updates bracketed entity mentions after rename", async () => 
 		assert.equal(characters[0].motivation, "Formerly [New Name].");
 		assert.equal(locations[0].description, "Rumors mention [New Name].");
 		assert.equal(session.data.scenes[0].summary, "[New Name] arrives.");
+	});
+});
+
+await run("AI patch service applies targeted session operations", async () => {
+	await withTestSlug("ai-patch-session", async (slug) => {
+		await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
+		await storage.writeJson(storage.campaignMetaPath(slug), {
+			id: "campaign-id",
+			name: "Patch Campaign",
+			description: "",
+			notes: [],
+		});
+		await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+			id: "session-id",
+			name: "Session",
+			data: {
+				npcs: [
+					{
+						id: "npc-1",
+						firstName: "Old",
+						lastName: "Scout",
+						trait: "Quiet.",
+						notes: [],
+					},
+				],
+				locations: [],
+				scenes: [
+					{
+						id: "scene-1",
+						texts: { summary: "Old scene", goal: "", stakes: "", location: "" },
+						notes: [],
+						npcs: [],
+					},
+				],
+				encounters: [],
+				notes: [],
+			},
+		});
+
+		const result = await aiPatchService.applyAiOperations({
+			payload: {
+				version: 2,
+				operations: [
+					{
+						op: "update",
+						entity: "npc",
+						scope: "session",
+						id: "npc-1",
+						patch: { trait: "Alert and impatient." },
+					},
+					{
+						op: "create",
+						entity: "location",
+						scope: "session",
+						clientId: "loc-1",
+						data: { name: "Hidden Cellar", description: "Cold stone room." },
+					},
+					{
+						op: "appendNote",
+						entity: "scene",
+						id: "scene-1",
+						note: { title: "Combat", text: "Use falling shelves." },
+					},
+					{
+						op: "create",
+						entity: "scene",
+						clientId: "scene-new",
+						data: { texts: { summary: "New scene" } },
+					},
+					{
+						op: "appendNote",
+						entity: "scene",
+						targetClientId: "scene-new",
+						note: { title: "Hook", text: "Fresh clue." },
+					},
+				],
+			},
+			campaignSlug: slug,
+			sessionFile: "session.json",
+			entityScope: "session",
+			permissions: {
+				allowCharacters: true,
+				allowNpcs: true,
+				allowLocations: true,
+				allowEncounters: false,
+			},
+		});
+
+		assert.equal(result.updated.fileName, "session.json");
+		const session = await storage.readSession(slug, "session.json");
+		assert.equal(session.data.npcs.length, 1);
+		assert.equal(session.data.npcs[0].trait, "Alert and impatient.");
+		assert.equal(session.data.locations.length, 1);
+		assert.equal(session.data.locations[0].name, "Hidden Cellar");
+		assert.equal(session.data.scenes[0].notes[0].text, "Use falling shelves.");
+		assert.equal(session.data.scenes[1].texts.summary, "New scene");
+		assert.equal(session.data.scenes[1].notes[0].text, "Fresh clue.");
 	});
 });
 
