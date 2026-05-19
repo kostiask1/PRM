@@ -202,6 +202,11 @@
 	width: min(980px, calc(100vw - 32px));
 }
 
+.Bestiary__edit_modal .Modal__body {
+	overflow: hidden;
+	display: flex;
+}
+
 .Bestiary__ai_edit_modal {
 	width: min(720px, calc(100vw - 32px));
 }
@@ -209,6 +214,7 @@
 .Bestiary__edit_form {
 	display: flex;
 	flex-direction: column;
+	width: 100%;
 	gap: var(--space-4);
 	min-height: 0;
 }
@@ -220,6 +226,7 @@
 	line-height: 1.45;
 	resize: vertical;
 	white-space: pre;
+	overflow: auto;
 	tab-size: 2;
 }
 
