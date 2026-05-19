@@ -346,11 +346,30 @@ Input JSON:`,
 Create custom bestiary creatures in the same general JSON style as 5eTools monster data.
 Always return JSON only, with no text before or after JSON.
 The JSON must use:
-{ "monsters": [{ "name": "...", "source": "CUSTOM", "size": ["M"], "type": "monstrosity", "alignment": ["N"], "ac": [{ "ac": 13, "from": ["natural armor"] }], "hp": { "average": 45, "formula": "6d8 + 18" }, "speed": { "walk": 30 }, "str": 16, "dex": 12, "con": 16, "int": 8, "wis": 12, "cha": 10, "save": { "con": "+5" }, "skill": { "perception": "+3" }, "senses": ["darkvision 60 ft."], "languages": ["Common"], "cr": "3", "trait": [{ "name": "...", "entries": ["..."] }], "action": [{ "name": "...", "entries": ["..."] }], "bonus": [{ "name": "...", "entries": ["..."] }], "reaction": [{ "name": "...", "entries": ["..."] }], "legendary": [{ "name": "...", "entries": ["..."] }] }] }.
+{ "monsters": [{ "name": "...", "source": "CUSTOM", "size": ["M"], "type": "monstrosity", "alignment": ["N"], "ac": [{ "ac": 13, "from": ["natural armor"] }], "hp": { "average": 45, "formula": "6d8 + 18" }, "speed": { "walk": 30 }, "str": 16, "dex": 12, "con": 16, "int": 8, "wis": 12, "cha": 10, "save": { "con": "+5" }, "skill": { "perception": "+3" }, "senses": ["darkvision 60 ft."], "languages": ["Common"], "cr": "3", "spellcasting": [{ "name": "Spellcasting", "type": "spellcasting", "headerEntries": ["The creature casts one of the following spells, using Wisdom as the spellcasting ability (spell save {@dc 13}, {@hit 5} to hit with spell attacks):"], "will": ["{@spell Gust of Wind|XPHB}"], "daily": { "1": ["{@spell Lightning Bolt|XPHB}"] }, "ability": "wis", "displayAs": "action" }], "trait": [{ "name": "...", "entries": ["..."] }], "action": [{ "name": "...", "entries": ["..."] }], "bonus": [{ "name": "...", "entries": ["..."] }], "reaction": [{ "name": "...", "entries": ["..."] }], "legendary": [{ "name": "...", "entries": ["..."] }] }] }.
 Use only fields that belong directly on the monster object. If the creature has legendary actions, put them in the monster's own "legendary" array. Do not create or reference "legendaryGroup".
 Use compact but complete 5.5e (2024) mechanics: ability scores, AC, HP formula, speed, CR, traits, actions, and relevant saves/skills/senses/languages/resistances/immunities/condition immunities.
 Balance the statistics and damage for the requested CR or the implied threat level.
-Entries arrays must contain strings or standard nested entry objects only.`,
+Entries arrays must contain strings or standard nested entry objects only.
+If a monster casts spells, use the official-style top-level "spellcasting" array. Do not put spell lists only in action text. Spellcasting blocks may use:
+- "name": usually "Spellcasting" or a reaction name like "Counterspell (2/Day)".
+- "type": "spellcasting".
+- "headerEntries": array of strings explaining ability, components, spell save DC, and spell attack bonus.
+- "will": array of spell tags for at-will spells.
+- "daily": object where keys like "1", "2", "3e" map to arrays of spell tags.
+- "spells": object where level keys like "0", "1", "2" map to { "slots": number, "spells": ["{@spell ...}"] }; cantrips omit slots.
+- "ability": one of "str", "dex", "con", "int", "wis", "cha".
+- "displayAs": "action", "bonus", or "reaction" when relevant.
+Spell list items must be spell tags such as "{@spell Gust of Wind|XPHB}" or "{@spell fire bolt}".
+Use 5eTools inline tags in entries so the app can parse rolls and rules links:
+- Attack entries must use tags like "{@atk mw} {@hit 8} to hit, reach 5 ft., one target. {@h}12 ({@damage 2d6 + 5}) slashing damage."
+- Use "{@hit N}" for attack bonuses. Do not write attack bonuses as plain "+N" and do not use separate "attack_bonus" fields.
+- Use "{@damage FORMULA}" for damage dice. Do not use separate "damage_dice" or "damage_bonus" fields.
+- Use "{@dc N}" and "{@actSave str|dex|con|int|wis|cha}" for saving throws when appropriate.
+- Use spell links as "{@spell Spell Name|SOURCE}", e.g. "{@spell Gust of Wind|XPHB}". If the source is unknown, use "{@spell Spell Name}".
+- Use other supported tags where useful: "{@dice FORMULA}", "{@condition Name}", "{@recharge 5}", "{@h}", "{@actSaveFail}", "{@actSaveSuccess}", "{@actSaveSuccessOrFail}".
+- Lookup values inside 5eTools tags must stay in English and use canonical rule names, e.g. "{@condition stunned}", "{@condition poisoned}", "{@sense darkvision}", "{@skill Perception}", "{@spell Gust of Wind|XPHB}". Do not translate tag lookup values.
+Keep calculated average damage before tagged damage when matching official style, e.g. "14 ({@damage 2d8 + 5})".`,
 };
 
 const structuredJsonResponseContract = `PARSED JSON RESPONSE CONTRACT:
@@ -805,7 +824,10 @@ IMPORTANT: Return only the top-level "monsters" array.
 IMPORTANT: Every monster must have "source": "CUSTOM".
 IMPORTANT: Match the app's bestiary data shape: size array, type, alignment array, ac array, hp object, speed object, ability scores, cr, trait/action arrays, and optional bonus/reaction/legendary arrays.
 IMPORTANT: If a monster has legendary actions, store them directly in that monster's "legendary" array. Never output "legendaryGroup".
-IMPORTANT: Existing custom monsters are provided in INPUT DATA.customBestiary. Reuse or revise an existing monster only when the user clearly asks to update it; otherwise create new monsters with distinct names.
+IMPORTANT: If the monster casts spells, add a top-level "spellcasting" array in the same style as database/bestiary/all.json. Use objects with "name", "type": "spellcasting", "headerEntries", optional "will", optional "daily", optional "spells", "ability", and "displayAs". Put spell tags inside those arrays, e.g. "{@spell Gust of Wind|XPHB}". Do not represent a spell list only as plain action text.
+IMPORTANT: Monster action, bonus action, reaction, trait, and legendary entries must use 5eTools inline tags for all rolls and rules references. Attacks must look like "{@atk mw} {@hit 8} to hit, reach 5 ft., one target. {@h}14 ({@damage 2d8 + 5}) slashing damage." Use "{@hit N}", "{@damage FORMULA}", "{@dc N}", "{@actSave dex}", "{@dice FORMULA}", "{@condition Name}", "{@spell Gust of Wind|XPHB}", and "{@recharge N}" where appropriate. If a spell source is unknown, use "{@spell Spell Name}". Do not use legacy "attack_bonus", "damage_dice", or "damage_bonus" fields.
+IMPORTANT: Lookup values inside 5eTools tags must stay in English and use canonical rule names. Use "{@condition stunned}", not translated forms such as "{@condition приголомшеним}". Use English names for {@condition ...}, {@sense ...}, {@skill ...}, {@spell ...}  and similar rule/reference tags.
+IMPORTANT: Existing custom monsters are provided in INPUT DATA.customBestiary for duplicate avoidance and context only. Do not return, rewrite, rename, rebalance, summarize, or otherwise modify existing monsters unless the user explicitly asks to edit that exact monster. When creating new monsters, return only the newly created monsters. When editing a selected monster, return only that edited monster.
 IMPORTANT: If INPUT DATA.customBestiary.selectedMonster exists, edit that exact monster according to user instructions. Return the complete updated monster object in the "monsters" array. Preserve all fields that were not requested to change. Keep the same name unless the user explicitly asks to rename it.\n`;
 	} else if (useKey === "npc") {
 		userPrompt += `TASK: Create new NPCs for this ${entityTargetScope === "session" ? "current session" : "campaign"} based on user instructions.
@@ -858,6 +880,9 @@ Pick monsters while considering character levels and classes for balance. Use of
 IMPORTANT: For each scene with combat or an encounterIndex, include a scene note with interesting combat mechanics and tactical ideas.\n`;
 			if (customMonsterGenerationEnabled) {
 				userPrompt += `IMPORTANT: Custom monster generation is enabled. Prefer official D&D monsters whenever they fit the scene well. Create custom monsters only for sufficiently unique threats that official monsters do not cover. If you create custom monsters, output them in a top-level "monsters" array using the same CUSTOM bestiary shape as custom-monster requests, then reference them from encounters with exact "monsterName" values.\n`;
+				userPrompt += `IMPORTANT: For every custom monster you create here, action entries must use 5eTools inline tags, e.g. "{@atk mw} {@hit 8} to hit, reach 5 ft., one target. {@h}14 ({@damage 2d8 + 5}) slashing damage." Use "{@hit N}" and "{@damage FORMULA}" instead of plain attack bonus text or separate legacy fields. For spell links, use "{@spell Spell Name|SOURCE}", e.g. "{@spell Gust of Wind|XPHB}".\n`;
+				userPrompt += `IMPORTANT: If a generated custom monster casts spells, use a top-level "spellcasting" array like official bestiary data, with "headerEntries", "will", "daily", or "spells" fields containing spell tags such as "{@spell Gust of Wind|XPHB}". Do not put the spell list only in action prose.\n`;
+				userPrompt += `IMPORTANT: Return only newly created custom monsters in the top-level "monsters" array. Do not return or change existing custom monsters from INPUT DATA.customBestiary unless the user explicitly asks to edit them. Lookup values inside inline tags must be English canonical names, e.g. "{@condition stunned}", "{@sense darkvision}", "{@spell Gust of Wind|XPHB}".\n`;
 			} else {
 				userPrompt += `IMPORTANT: Custom monster generation is disabled. Do not output a top-level "monsters" array and do not invent new bestiary creatures.\n`;
 			}
