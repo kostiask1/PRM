@@ -1527,6 +1527,7 @@ async function renameSubcategory(slug, category, oldName, newName) {
 }
 
 module.exports = {
+	DATA_DIR,
 	CAMPAIGNS_DIR,
 	BESTIARY_DIR,
 	CUSTOM_BESTIARY_SOURCE,
