@@ -11,6 +11,36 @@ function normalizeSource(source) {
 	return String(source || "").trim().toUpperCase();
 }
 
+const CUSTOM_SOURCE = storage.CUSTOM_BESTIARY_SOURCE || "CUSTOM";
+
+async function readAllDatabaseMonsters() {
+	const allPath = path.join(storage.BESTIARY_DIR, "all.json");
+	if (!(await storage.exists(allPath))) return [];
+	const data = await storage.readJson(allPath);
+	const monsters = Array.isArray(data)
+		? data
+		: data.monster || data.monsters || data.results || [];
+	return monsters.map((monster) => ({
+		...monster,
+		source: normalizeSource(monster.source),
+	}));
+}
+
+async function readCustomMonsters() {
+	const data = await storage.readCustomBestiary();
+	return (Array.isArray(data.monster) ? data.monster : []).map((monster) => ({
+		...monster,
+		source: CUSTOM_SOURCE,
+	}));
+}
+
+function disableResponseCache(res) {
+	res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+	res.set("Pragma", "no-cache");
+	res.set("Expires", "0");
+	res.set("Surrogate-Control", "no-store");
+}
+
 function groupKey(name, source) {
 	return `${String(name || "").trim().toLowerCase()}|${normalizeSource(source)}`;
 }
@@ -162,7 +192,6 @@ router.get("/search", async (req, res, next) => {
 		const { name, type } = req.query;
 		const nameQuery = name?.toLowerCase() || "";
 		const typeQuery = type?.toLowerCase() || "";
-		if (!(await storage.exists(storage.BESTIARY_DIR))) return res.json([]);
 
 		const index = await storage.getBestiaryIndex();
 		const results = [];
@@ -238,37 +267,115 @@ router.post("/favorites/toggle", async (req, res, next) => {
 	}
 });
 
+router.patch("/custom/:name", async (req, res, next) => {
+	try {
+		disableResponseCache(res);
+		const targetName = String(req.params.name || "").trim().toLowerCase();
+		if (!targetName) {
+			return res.status(400).json({ error: "Назва істоти обов'язкова." });
+		}
+
+		const monsters = await storage.readCustomBestiaryMonsters();
+		const index = monsters.findIndex(
+			(monster) => String(monster.name || "").trim().toLowerCase() === targetName,
+		);
+		if (index < 0) {
+			return res.status(404).json({ error: "Кастомну істоту не знайдено." });
+		}
+
+		const imageUrl =
+			req.body?.imageUrl === null ? null : String(req.body?.imageUrl || "").trim();
+		monsters[index] = {
+			...monsters[index],
+			imageUrl: imageUrl || null,
+		};
+		const updated = await storage.writeCustomBestiaryMonsters(monsters);
+		res.json(
+			updated.find(
+				(monster) =>
+					String(monster.name || "").trim().toLowerCase() === targetName,
+			) || monsters[index],
+		);
+	} catch (error) {
+		next(error);
+	}
+});
+
+router.delete("/custom/:name", async (req, res, next) => {
+	try {
+		disableResponseCache(res);
+		const targetName = String(req.params.name || "").trim().toLowerCase();
+		if (!targetName) {
+			return res.status(400).json({ error: "Назва істоти обов'язкова." });
+		}
+
+		const monsters = await storage.readCustomBestiaryMonsters();
+		const nextMonsters = monsters.filter(
+			(monster) => String(monster.name || "").trim().toLowerCase() !== targetName,
+		);
+		if (nextMonsters.length === monsters.length) {
+			return res.status(404).json({ error: "Кастомну істоту не знайдено." });
+		}
+
+		const updated = await storage.writeCustomBestiaryMonsters(nextMonsters);
+		const favorites = await storage.readFavorites();
+		const nextFavorites = favorites.filter(
+			(favorite) =>
+				!(
+					String(favorite.name || "").trim().toLowerCase() === targetName &&
+					normalizeSource(favorite.source) === CUSTOM_SOURCE
+				),
+		);
+		if (nextFavorites.length !== favorites.length) {
+			await storage.writeFavorites(nextFavorites);
+		}
+
+		res.json(updated);
+	} catch (error) {
+		next(error);
+	}
+});
+
 router.get("/sources", async (req, res, next) => {
 	try {
-		if (!(await storage.exists(storage.BESTIARY_DIR))) return res.json([]);
 		const allPath = path.join(storage.BESTIARY_DIR, "all.json");
+		const customSources = [CUSTOM_SOURCE];
 		if (await storage.exists(allPath)) {
 			const data = await storage.readJson(allPath);
 			const monsters = Array.isArray(data)
 				? data
 				: data.monster || data.monsters || data.results || [];
 			const sources = [
-				...new Set(monsters.map((m) => m.source).filter(Boolean)),
+				...new Set([
+					...monsters.map((m) => m.source).filter(Boolean),
+					...customSources,
+				]),
 			].sort((a, b) => a.localeCompare(b));
 			return res.json(sources);
 		}
+		if (!(await storage.exists(storage.BESTIARY_DIR))) return res.json(customSources);
 
 		const entries = await require("fs/promises").readdir(storage.BESTIARY_DIR, {
 			withFileTypes: true,
 		});
 		res.json(
-			entries
-				.filter((e) => {
-					const name = e.name.toLowerCase();
-					return (
-						e.isFile() &&
-						name.endsWith(".json") &&
-						name !== "all.json" &&
-						name !== "legendarygroups.json" &&
-						name !== "index.json"
-					);
-				})
-				.map((e) => path.parse(e.name).name.replace(/^bestiary-/i, "")),
+			[
+				...new Set([
+					...entries
+						.filter((e) => {
+							const name = e.name.toLowerCase();
+							return (
+								e.isFile() &&
+								name.endsWith(".json") &&
+								name !== "all.json" &&
+								name !== "legendarygroups.json" &&
+								name !== "index.json"
+							);
+						})
+						.map((e) => path.parse(e.name).name.replace(/^bestiary-/i, "")),
+					...customSources,
+				]),
+			],
 		);
 	} catch (error) {
 		next(error);
@@ -290,10 +397,20 @@ router.get("/legendarygroups", async (req, res, next) => {
 router.get("/:source", async (req, res, next) => {
 	try {
 		const sourceParam = req.params.source;
+		const normalizedSource = normalizeSource(sourceParam);
+		const customMonsters = await readCustomMonsters();
+
+		if (String(sourceParam).toLowerCase() === "all") {
+			return res.json(await readAllDatabaseMonsters());
+		}
+
+		if (normalizedSource === CUSTOM_SOURCE) {
+			disableResponseCache(res);
+			return res.json(customMonsters);
+		}
+
 		let filePath =
-			String(sourceParam).toLowerCase() === "all"
-				? path.join(storage.BESTIARY_DIR, "all.json")
-				: path.join(storage.BESTIARY_DIR, `${path.basename(sourceParam)}.json`);
+			path.join(storage.BESTIARY_DIR, `${path.basename(sourceParam)}.json`);
 
 		if (!(await storage.exists(filePath))) {
 			// Спробуємо знайти файл з префіксом bestiary-, якщо прямий шлях не знайдено
@@ -312,12 +429,16 @@ router.get("/:source", async (req, res, next) => {
 				return res.status(404).json({ error: "Джерело не знайдено." });
 
 			const allData = await storage.readJson(allPath);
-			const source = String(sourceParam).toUpperCase();
 			const allMonsters = Array.isArray(allData)
 				? allData
 				: allData.monster || allData.monsters || allData.results || [];
 			return res.json(
-				allMonsters.filter((m) => m.source?.toUpperCase() === source),
+				allMonsters
+					.filter((m) => m.source?.toUpperCase() === normalizedSource)
+					.map((monster) => ({
+						...monster,
+						source: normalizeSource(monster.source),
+					})),
 			);
 		}
 

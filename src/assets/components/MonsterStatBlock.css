@@ -31,6 +31,35 @@
 	justify-content: center;
 }
 
+.MonsterStatBlock__token_wrapper .ImageDropzone {
+	padding: var(--space-1) var(--space-2);
+	border-radius: var(--radius-md);
+	height: auto;
+}
+
+.MonsterStatBlock__token_wrapper .ImageDropzone__content {
+	min-height: 100%;
+	padding: var(--space-3);
+	gap: var(--space-2);
+}
+
+.MonsterStatBlock__token_wrapper .ImageDropzone__content svg {
+	width: var(--size-8);
+	height: var(--size-8);
+}
+
+.MonsterStatBlock__token_wrapper .ImageDropzone__content .Icon__database {
+	width: var(--size-4);
+	height: var(--size-4);
+}
+
+.MonsterStatBlock__token_wrapper .ImageDropzone__content p,
+.MonsterStatBlock__token_wrapper .ImageDropzone__divider {
+	font-size: 0.78rem;
+	margin: 0;
+	text-align: center;
+}
+
 .stat_item.ac {
 	text-transform: capitalize;
 }
@@ -87,6 +116,10 @@
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-2);
+}
+
+.MonsterStatBlock__description p {
+	margin-bottom: 0;
 }
 
 .MonsterStatBlock__property_item {

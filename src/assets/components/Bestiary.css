@@ -183,3 +183,13 @@
 .Bestiary__item_fav_btn:hover .Icon {
 	color: var(--accent);
 }
+
+.Bestiary__item_delete_btn {
+	padding: 0 var(--size-1);
+	border: unset;
+}
+
+.Bestiary__item_delete_btn .Icon {
+	width: var(--size-3);
+	height: var(--size-3);
+}

@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { api } from "../api";
+import { alert, confirm } from "../actions/app";
+import { useAppDispatch } from "../store/appStore";
 import ReactList from "react-list";
 import Panel from "./common/Panel";
 import Input from "./form/Input";
@@ -8,6 +10,7 @@ import Select from "./form/Select";
 import Icon from "./common/Icon";
 import ListCard from "./common/ListCard";
 import MonsterStatBlock from "./MonsterStatBlock";
+import AiAssistantPanel from "./AiAssistantPanel";
 import Tooltip from "./common/Tooltip";
 import classNames from "../utils/classNames";
 import {
@@ -27,7 +30,27 @@ function getMonsterItemKey(monster) {
 	return `${monster.source || ""}:${monster.name}`;
 }
 
-export default function Bestiary({ onAddMonster, isEmbedded = false }) {
+function isCustomSource(source) {
+	return String(source || "").toUpperCase() === "CUSTOM";
+}
+
+function normalizeSourceSelection(source) {
+	if (isCustomSource(source)) return "CUSTOM";
+	return source || "all";
+}
+
+function clearMonsterUrlSelection() {
+	const params = new URLSearchParams(window.location.search);
+	params.delete("monster");
+	params.delete("m_source");
+	window.history.replaceState({}, "", `?${params.toString()}`);
+}
+
+export default function Bestiary({
+	onAddMonster,
+	isEmbedded = false,
+}) {
+	const dispatch = useAppDispatch();
 	const [sources, setSources] = useState([]);
 	const [selectedSource, setSelectedSource] = useState("all");
 	const [allMonsters, setAllMonsters] = useState([]);
@@ -40,8 +63,16 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	const [favorites, setFavorites] = useState([]);
 	const [onlyFavorites, setOnlyFavorites] = useState(false);
 	const [sortOrder, setSortOrder] = useState("none"); // 'none', 'desc', 'asc'
+	const [reloadToken, setReloadToken] = useState(0);
 	const listRef = useRef(null);
 	const selectedMonsterRef = useRef(null);
+	const hasInitializedSourceRef = useRef(false);
+	const shouldAutoSelectMonsterRef = useRef(true);
+
+	const sourceOptions = useMemo(
+		() => sources.filter((source) => !isCustomSource(source)),
+		[sources],
+	);
 
 	useEffect(() => {
 		selectedMonsterRef.current = selectedMonster;
@@ -79,7 +110,10 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 				if (sourcesData.length > 0) {
 					const params = new URLSearchParams(window.location.search);
 					const sourceFromUrl = params.get("source");
-					setSelectedSource(sourceFromUrl || "all");
+					if (!hasInitializedSourceRef.current) {
+						setSelectedSource(normalizeSourceSelection(sourceFromUrl));
+						hasInitializedSourceRef.current = true;
+					}
 				}
 			} catch (err) {
 				console.error(
@@ -89,7 +123,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			}
 		};
 		loadInitialData();
-	}, []); // Залежності порожні, щоб завантажувати один раз
+	}, [reloadToken]);
 
 	// Завантаження повного списку монстрів один раз; джерела далі фільтруються локально
 	useEffect(() => {
@@ -98,14 +132,21 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 		const loadData = async () => {
 			setLoading(true);
 			try {
-				const data = await api.getBestiaryData("all");
+				const [data, customData] = await Promise.all([
+					api.getBestiaryData("all"),
+					api.getCustomBestiaryData(),
+				]);
 				const combinedList = Array.isArray(data)
 					? data
 					: data.monster || data.monsters || data.results || [];
+				const customList = Array.isArray(customData)
+					? customData
+					: customData.monster || customData.monsters || customData.results || [];
+				const sourceList = [...combinedList, ...customList];
 
 				// Об'єднуємо дані монстрів з легендарними діями/регіональними ефектами
 
-				const enrichedMonsters = combinedList.map((monster) => {
+				const enrichedMonsters = sourceList.map((monster) => {
 					// Шукаємо групу: або за спеціальним посиланням legendaryGroup, або за ім'ям самого монстра
 					const groupRef = monster.legendaryGroup;
 					const targetName = groupRef?.name || monster.name;
@@ -133,7 +174,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			}
 		};
 		loadData();
-	}, [sources, legendaryGroups]);
+	}, [sources, legendaryGroups, reloadToken]);
 
 	useEffect(() => {
 		const params = new URLSearchParams(window.location.search);
@@ -182,6 +223,80 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 		}
 	};
 
+	const handleCustomBestiaryUpdate = (updated, options = {}) => {
+		const updatedCustomMonsters = Array.isArray(updated?.monsters)
+			? updated.monsters
+			: [];
+		const generatedMonsters = Array.isArray(options?.generated?.monsters)
+			? options.generated.monsters
+			: [];
+		const firstGeneratedMonster = generatedMonsters[0];
+		const selectedGeneratedMonster = firstGeneratedMonster
+			? updatedCustomMonsters.find(
+					(monster) =>
+						monster.name === firstGeneratedMonster.name &&
+						isCustomSource(monster.source),
+				) || firstGeneratedMonster
+			: null;
+
+		setSelectedSource("CUSTOM");
+		shouldAutoSelectMonsterRef.current = true;
+		if (updatedCustomMonsters.length > 0) {
+			setAllMonsters((current) => [
+				...current.filter((item) => !isCustomSource(item.source)),
+				...updatedCustomMonsters,
+			]);
+		}
+		if (selectedGeneratedMonster) {
+			selectedMonsterRef.current = selectedGeneratedMonster;
+			setSelectedMonster(selectedGeneratedMonster);
+		}
+		setReloadToken((value) => value + 1);
+	};
+
+	const handleDeleteCustomMonster = async (monster) => {
+		if (!isCustomSource(monster?.source) || !monster?.name) return;
+		const confirmed = await dispatch(
+			confirm({
+				title: lang.t("Delete custom creature"),
+				message: lang.t("Delete custom creature \"{name}\"?", {
+					name: monster.name,
+				}),
+			}),
+		);
+		if (!confirmed) return;
+
+		try {
+			const updatedCustomMonsters = await api.deleteCustomBestiaryMonster(
+				monster.name,
+			);
+			shouldAutoSelectMonsterRef.current = false;
+			selectedMonsterRef.current = "";
+			setSelectedMonster("");
+			clearMonsterUrlSelection();
+			setAllMonsters((current) => [
+				...current.filter((item) => !isCustomSource(item.source)),
+				...(Array.isArray(updatedCustomMonsters) ? updatedCustomMonsters : []),
+			]);
+			setFavorites((current) =>
+				current.filter(
+					(favorite) =>
+						!(
+							favorite.name === monster.name &&
+							isCustomSource(favorite.source)
+					),
+				),
+			);
+		} catch (err) {
+			dispatch(
+				alert({
+					title: lang.t("Delete error"),
+					message: err.message || lang.t("Unknown error"),
+				}),
+			);
+		}
+	};
+
 	useEffect(() => {
 		const syncSelectionFromUrl = () => {
 			const params = new URLSearchParams(window.location.search);
@@ -191,7 +306,11 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 
 			if (!urlMonsterName) {
 				// Якщо нічого не вибрано в URL, але монстри завантажені — вибираємо першого
-				if (displayedMonsters.length > 0 && !currentMonster?.name) {
+				if (
+					shouldAutoSelectMonsterRef.current &&
+					displayedMonsters.length > 0 &&
+					!currentMonster?.name
+				) {
 					setSelectedMonster(displayedMonsters[0]);
 				}
 				return;
@@ -219,6 +338,9 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 				if (foundInList >= 0) {
 					setTimeout(() => listRef?.current?.scrollTo(foundInList), 0);
 				}
+			} else if (monsterMatchesUrl(currentMonster, urlMonsterName, urlMonsterSource)) {
+				shouldAutoSelectMonsterRef.current = false;
+				setSelectedMonster("");
 			}
 		};
 
@@ -248,9 +370,9 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			}
 		} else if (selectedMonster === "") {
 			const params = new URLSearchParams(window.location.search);
-			params.delete("monster");
-
-			window.history.pushState({}, "", `?${params.toString()}`);
+			if (params.has("monster") || params.has("m_source")) {
+				clearMonsterUrlSelection();
+			}
 		}
 	}, [selectedMonster]);
 
@@ -324,6 +446,19 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 									title={lang.t("Add to encounter")}
 								/>
 							)}
+							{isCustomSource(monster.source) && (
+								<Button
+									variant="danger"
+									className="Bestiary__item_delete_btn"
+									size={Button.SIZES.SMALL}
+									icon="trash"
+									onClick={(e) => {
+										e.stopPropagation();
+										handleDeleteCustomMonster(monster);
+									}}
+									title={lang.t("Delete custom creature")}
+								/>
+							)}
 						</>
 					}
 				>
@@ -368,10 +503,13 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 					{sources.length > 0 && (
 						<Select
 							value={selectedSource}
-							onChange={(e) => setSelectedSource(e.target.value)}
+							onChange={(e) =>
+								setSelectedSource(normalizeSourceSelection(e.target.value))
+							}
 						>
 							<option value="all">{lang.t("All sources")}</option>
-							{sources.map((s) => (
+							<option value="CUSTOM">{lang.t("Custom creatures")}</option>
+							{sourceOptions.map((s) => (
 								<option key={s} value={s}>
 									{s.replace(/^bestiary-/i, "").toUpperCase()}
 								</option>
@@ -466,6 +604,11 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 				<h2>{lang.t("Bestiary")}</h2>
 			</div>
 			<div className="Panel__body">{renderBestiaryInner()}</div>
+			<AiAssistantPanel
+				bestiaryMode
+				sessionData={{}}
+				onInsertResult={handleCustomBestiaryUpdate}
+			/>
 		</Panel>
 	);
 }

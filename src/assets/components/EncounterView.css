@@ -385,6 +385,11 @@
 	z-index: 1;
 }
 
+.EncounterView__gridItem .MonsterStatBlock__token_wrapper:has(.ImageDropzone) {
+	height: auto;
+	width: 160px;
+}
+
 .MonsterStatBlock__tokenDragProxy {
 	width: 100%;
 	height: 100%;

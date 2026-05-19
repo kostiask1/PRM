@@ -29,6 +29,7 @@ import { lang } from "../services/localization.js";
 import AddMonsterToEncounterModalContent from "./modals/AddMonsterToEncounterModalContent.jsx";
 import RulesLink from "./RulesLink.jsx";
 import { highlightText } from "../utils/searchHighlight.jsx";
+import ImageDropzone from "./ImageDropzone.jsx";
 
 const SPELL_CACHE = new Map();
 const SENSE_NAME_REGEX = /\b(blindsight|darkvision|tremorsense|truesight)\b/gi;
@@ -51,6 +52,7 @@ export default function MonsterStatBlock({
 	const [spells, setSpells] = useState([]);
 	const [loadingSpells, setLoadingSpells] = useState(false);
 	const [isFavorite, setIsFavorite] = useState(false);
+	const [customTokenUrl, setCustomTokenUrl] = useState(monster.imageUrl || "");
 
 	const model = useMemo(() => new MonsterStatBlockModel(monster), [monster]);
 	const effectiveName = model.effectiveName;
@@ -152,6 +154,7 @@ export default function MonsterStatBlock({
 
 	useEffect(() => {
 		setHasImageError(false);
+		setCustomTokenUrl(monster.imageUrl || "");
 	}, [monster, tokenImageOverrideUrl]);
 
 	const renderActionList = (actions, title) => {
@@ -399,10 +402,33 @@ export default function MonsterStatBlock({
 
 	// Допоміжні функції для парсингу нових структур даних
 
-	const localSrc = tokenImageOverrideUrl || model.localTokenSrc;
-	const externalSrc = tokenImageOverrideUrl || model.externalTokenSrc;
+	const isCustomMonster = String(monster.source || "").toUpperCase() === "CUSTOM";
+	const customTokenSrc = customTokenUrl || monster.imageUrl || "";
+	const localSrc =
+		tokenImageOverrideUrl ||
+		(isCustomMonster && customTokenSrc ? customTokenSrc : model.localTokenSrc);
+	const externalSrc =
+		tokenImageOverrideUrl ||
+		(isCustomMonster && customTokenSrc ? customTokenSrc : model.externalTokenSrc);
+	const shouldShowTokenDropzone =
+		isCustomMonster && !tokenImageOverrideUrl && (!customTokenSrc || hasImageError);
+
+	const handleCustomTokenUpload = async (result) => {
+		const nextUrl = result?.url || "";
+		if (!nextUrl) return;
+		setCustomTokenUrl(nextUrl);
+		setHasImageError(false);
+		try {
+			await api.updateCustomBestiaryMonster(effectiveName || monster.name, {
+				imageUrl: nextUrl,
+			});
+		} catch (err) {
+			console.error("Failed to save custom monster token", err);
+		}
+	};
 
 	function handleDragStart(e) {
+		if (!externalSrc) return;
 		e.dataTransfer.effectAllowed = "copy";
 
 		// Найчастіше корисні типи для веб-дропзон
@@ -605,7 +631,15 @@ export default function MonsterStatBlock({
 					)}
 				</div>
 				<div className="MonsterStatBlock__token_wrapper">
-					{!hasImageError && (
+					{shouldShowTokenDropzone ? (
+						<ImageDropzone
+							campaignSlug="general"
+							initialSource="general"
+							initialCategory="tokens"
+							initialSubcategory=""
+							onUploadSuccess={handleCustomTokenUpload}
+						/>
+					) : !hasImageError ? (
 						<div
 							className="MonsterStatBlock__tokenDragProxy"
 							draggable
@@ -619,8 +653,7 @@ export default function MonsterStatBlock({
 								onError={() => setHasImageError(true)}
 							/>
 						</div>
-					)}
-					{hasImageError && (
+					) : (
 						<div className="MonsterStatBlock__token_skeleton">
 							<Icon name="dice" />
 						</div>

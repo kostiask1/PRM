@@ -6,6 +6,8 @@ const ROOT_DIR = path.join(__dirname, "..");
 const DATA_DIR = path.join(ROOT_DIR, "data");
 const CAMPAIGNS_DIR = path.join(DATA_DIR, "campaigns");
 const BESTIARY_DIR = path.join(ROOT_DIR, "database", "bestiary");
+const CUSTOM_BESTIARY_SOURCE = "CUSTOM";
+const CUSTOM_BESTIARY_PATH = path.join(DATA_DIR, "custom-bestiary.json");
 const SPELLS_DIR = path.join(ROOT_DIR, "database", "spells");
 const FAVORITES_PATH = path.join(DATA_DIR, "favorites.json");
 const IMAGES_DIR = path.join(DATA_DIR, "images");
@@ -159,7 +161,17 @@ async function listCampaignSlugs() {
 }
 
 async function getBestiaryIndex() {
-	if (!(await exists(BESTIARY_DIR))) return new Map();
+	const customMonsters = await readCustomBestiaryMonsters();
+	if (!(await exists(BESTIARY_DIR))) {
+		const customIndex = new Map();
+		for (const m of customMonsters) {
+			if (!m.name) continue;
+			const monsterSource = String(m.source || "CUSTOM").toUpperCase();
+			const key = `${m.name.trim().toLowerCase()}|${monsterSource}`;
+			customIndex.set(key, { ...m, source: monsterSource });
+		}
+		return customIndex;
+	}
 
 	const allPath = path.join(BESTIARY_DIR, "all.json");
 	if (await exists(allPath)) {
@@ -171,6 +183,12 @@ async function getBestiaryIndex() {
 		for (const m of monsters) {
 			if (!m.name) continue;
 			const monsterSource = String(m.source || "").toUpperCase();
+			const key = `${m.name.trim().toLowerCase()}|${monsterSource}`;
+			index.set(key, { ...m, source: monsterSource });
+		}
+		for (const m of customMonsters) {
+			if (!m.name) continue;
+			const monsterSource = String(m.source || "CUSTOM").toUpperCase();
 			const key = `${m.name.trim().toLowerCase()}|${monsterSource}`;
 			index.set(key, { ...m, source: monsterSource });
 		}
@@ -207,7 +225,75 @@ async function getBestiaryIndex() {
 			index.set(key, { ...m, source: monsterSource });
 		}
 	}
+	for (const m of customMonsters) {
+		if (!m.name) continue;
+		const monsterSource = String(m.source || "CUSTOM").toUpperCase();
+		const key = `${m.name.trim().toLowerCase()}|${monsterSource}`;
+		index.set(key, { ...m, source: monsterSource });
+	}
 	return index;
+}
+
+async function readCustomBestiary() {
+	if (!(await exists(CUSTOM_BESTIARY_PATH))) return { monster: [] };
+	const data = await readJson(CUSTOM_BESTIARY_PATH);
+	const monsters = Array.isArray(data)
+		? data
+		: data.monster || data.monsters || data.results || [];
+	return {
+		...(data && !Array.isArray(data) ? data : {}),
+		monster: Array.isArray(monsters)
+			? monsters.map((monster) => ({
+					...monster,
+					source: CUSTOM_BESTIARY_SOURCE,
+				}))
+			: [],
+	};
+}
+
+async function readCustomBestiaryMonsters() {
+	return (await readCustomBestiary()).monster;
+}
+
+async function writeCustomBestiaryMonsters(monsters) {
+	const normalized = (Array.isArray(monsters) ? monsters : [])
+		.filter((monster) => monster && typeof monster === "object" && monster.name)
+		.map((monster) => ({
+			...monster,
+			source: CUSTOM_BESTIARY_SOURCE,
+		}))
+		.sort((a, b) => String(a.name).localeCompare(String(b.name), "uk"));
+	await writeJson(CUSTOM_BESTIARY_PATH, {
+		_meta: {
+			sources: [
+				{
+					json: CUSTOM_BESTIARY_SOURCE,
+					abbreviation: CUSTOM_BESTIARY_SOURCE,
+					full: "Custom",
+				},
+			],
+		},
+		monster: normalized,
+	});
+	return normalized;
+}
+
+async function upsertCustomBestiaryMonsters(monsters) {
+	const existing = await readCustomBestiaryMonsters();
+	const byName = new Map(
+		existing.map((monster) => [
+			String(monster.name || "").trim().toLowerCase(),
+			{ ...monster, source: CUSTOM_BESTIARY_SOURCE },
+		]),
+	);
+	for (const monster of Array.isArray(monsters) ? monsters : []) {
+		if (!monster?.name) continue;
+		byName.set(String(monster.name).trim().toLowerCase(), {
+			...monster,
+			source: CUSTOM_BESTIARY_SOURCE,
+		});
+	}
+	return writeCustomBestiaryMonsters([...byName.values()]);
 }
 
 async function readCampaign(slug) {
@@ -1322,6 +1408,8 @@ async function renameSubcategory(slug, category, oldName, newName) {
 module.exports = {
 	CAMPAIGNS_DIR,
 	BESTIARY_DIR,
+	CUSTOM_BESTIARY_SOURCE,
+	CUSTOM_BESTIARY_PATH,
 	SPELLS_DIR,
 	IMAGES_DIR,
 	SETTINGS_PATH,
@@ -1379,6 +1467,10 @@ module.exports = {
 	ensureUniqueEntitySlug,
 	makeDefaultSessionData,
 	getBestiaryIndex,
+	readCustomBestiary,
+	readCustomBestiaryMonsters,
+	writeCustomBestiaryMonsters,
+	upsertCustomBestiaryMonsters,
 	listImages,
 	listSubcategories,
 	moveImages,

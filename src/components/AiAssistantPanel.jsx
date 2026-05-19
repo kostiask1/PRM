@@ -579,13 +579,15 @@ export default function AiAssistantPanel({
 	sessionName,
 	sessionData,
 	onInsertResult,
+	bestiaryMode = false,
 }) {
 	const dispatch = useAppDispatch();
 	const currentLanguage = useAppSelector(
 		(state) => state.localization.language,
 	);
 	const initialRoute = parseUrl();
-	const isCampaign = !initialRoute.session;
+	const isBestiary = bestiaryMode || initialRoute.campaign === "bestiary";
+	const isCampaign = !initialRoute.session && !isBestiary;
 	const isEncounter = !!initialRoute.encounter;
 
 	const [isOpen, setIsOpen] = useState(false);
@@ -600,14 +602,17 @@ export default function AiAssistantPanel({
 	const [notification, setNotification] = useState(null);
 	const [isImagePromptPickerOpen, setIsImagePromptPickerOpen] = useState(false);
 	const [imagePromptSessions, setImagePromptSessions] = useState([]);
+	const [imagePromptCustomMonsters, setImagePromptCustomMonsters] = useState([]);
 	const [isImagePromptDataLoading, setIsImagePromptDataLoading] = useState(false);
 	const [parseAIResponse, setParseAIResponse] = useState(isEncounter);
 	const [generateCharacters, setGenerateCharacters] = useState(true);
 	const [generateNpcs, setGenerateNpcs] = useState(true);
 	const [generateLocations, setGenerateLocations] = useState(true);
-	const [generateEncounters, setGenerateEncounters] = useState(!isCampaign);
+	const [generateEncounters, setGenerateEncounters] = useState(
+		!isCampaign && !isBestiary,
+	);
 	const [entityScope, setEntityScope] = useState(
-		isCampaign ? "campaign" : "session",
+		isBestiary ? "custom-bestiary" : isCampaign ? "campaign" : "session",
 	);
 	const [aiModels, setAiModels] = useState([]);
 	const [selectedModel, setSelectedModel] = useState("");
@@ -699,10 +704,15 @@ export default function AiAssistantPanel({
 	};
 
 	useEffect(() => {
-		if ((isContextModalOpen || isImagePromptPickerOpen) && sessionsList.length === 0) {
+		if (
+			!isBestiary &&
+			(isContextModalOpen || isImagePromptPickerOpen) &&
+			sessionsList.length === 0
+		) {
 			api.listSessions(initialRoute.campaign).then(setSessionsList);
 		}
 	}, [
+		isBestiary,
 		isContextModalOpen,
 		isImagePromptPickerOpen,
 		initialRoute.campaign,
@@ -710,6 +720,7 @@ export default function AiAssistantPanel({
 	]);
 
 	useEffect(() => {
+		if (isBestiary) return;
 		if (!isContextModalOpen && !isImagePromptPickerOpen) return;
 
 		let cancelled = false;
@@ -739,7 +750,7 @@ export default function AiAssistantPanel({
 		return () => {
 			cancelled = true;
 		};
-	}, [isContextModalOpen, isImagePromptPickerOpen, initialRoute.campaign]);
+	}, [isBestiary, isContextModalOpen, isImagePromptPickerOpen, initialRoute.campaign]);
 
 	useEffect(() => {
 		if (charactersList.length === 0) return;
@@ -809,7 +820,7 @@ export default function AiAssistantPanel({
 	}, [isOpen, aiModels.length, selectedModel]);
 
 	useEffect(() => {
-		if (!isOpen || !initialRoute.campaign) return;
+		if (!isOpen || !initialRoute.campaign || isBestiary) return;
 		api
 			.listAiResponses(initialRoute.campaign)
 			.then((responses) => {
@@ -818,7 +829,7 @@ export default function AiAssistantPanel({
 			.catch((err) => {
 				console.error("Failed to load AI response history", err);
 			});
-	}, [isOpen, initialRoute.campaign]);
+	}, [isOpen, initialRoute.campaign, isBestiary]);
 
 	useEffect(() => {
 		if (!isImagePromptPickerOpen || !isCampaign || !initialRoute.campaign) {
@@ -864,6 +875,37 @@ export default function AiAssistantPanel({
 		initialRoute.campaign,
 		sessionsList,
 	]);
+
+	useEffect(() => {
+		if (!isImagePromptPickerOpen || !isBestiary) return;
+
+		let cancelled = false;
+		setIsImagePromptDataLoading(true);
+		api
+			.getCustomBestiaryData()
+			.then((data) => {
+				if (cancelled) return;
+				const monsters = Array.isArray(data?.monster)
+					? data.monster
+					: Array.isArray(data?.monsters)
+						? data.monsters
+						: Array.isArray(data)
+							? data
+							: [];
+				setImagePromptCustomMonsters(monsters);
+			})
+			.catch((err) => {
+				console.error("Failed to load custom monsters for image prompt", err);
+				if (!cancelled) setImagePromptCustomMonsters([]);
+			})
+			.finally(() => {
+				if (!cancelled) setIsImagePromptDataLoading(false);
+			});
+
+		return () => {
+			cancelled = true;
+		};
+	}, [isImagePromptPickerOpen, isBestiary]);
 
 	const deleteResponseHistoryEntry = async (entry) => {
 		const confirmed = await dispatch(
@@ -1157,6 +1199,7 @@ export default function AiAssistantPanel({
 		targetSceneId = null,
 		{ forceParseAIResponse = null, imageTarget = null } = {},
 	) => {
+		const requestType = isBestiary && type !== "image" ? "custom-monster" : type;
 		cancelGenerateRequest();
 		const controller = new AbortController();
 		activeGenerateControllerRef.current = controller;
@@ -1174,28 +1217,36 @@ export default function AiAssistantPanel({
 		}
 
 		const shouldParseResponse =
-			type === "image"
+			requestType === "image"
 				? false
-				: forceParseAIResponse === null
-					? parseAIResponse
-					: forceParseAIResponse;
+				: isBestiary
+					? true
+					: forceParseAIResponse === null
+						? parseAIResponse
+						: forceParseAIResponse;
 		try {
 			const data = await api.generateAi(
 				{
-					type,
+					type: requestType,
 					modelName: selectedModel || undefined,
 					userInstructions,
 					path: initialRoute,
 					sceneId: targetSceneId,
 					imageTarget,
 					parseAIResponse: shouldParseResponse,
-					generateCharacters: !isEncounter && generateCharacters,
-					generateNpcs: !isEncounter && generateNpcs,
-					generateLocations: !isEncounter && generateLocations,
+					generateCharacters: !isEncounter && !isBestiary && generateCharacters,
+					generateNpcs: !isEncounter && !isBestiary && generateNpcs,
+					generateLocations: !isEncounter && !isBestiary && generateLocations,
 					generateEncounters:
-						type === "image" ? false : !isCampaign && generateEncounters,
-					entityScope: isCampaign ? "campaign" : entityScope,
-					contextConfig: useContext ? configToSend : null,
+						requestType === "image"
+							? false
+							: !isCampaign && !isBestiary && generateEncounters,
+					entityScope: isBestiary
+						? "custom-bestiary"
+						: isCampaign
+							? "campaign"
+							: entityScope,
+					contextConfig: !isBestiary && useContext ? configToSend : null,
 					language: currentLanguage,
 				},
 				{ signal: controller.signal },
@@ -1220,6 +1271,7 @@ export default function AiAssistantPanel({
 					data.updated.data &&
 					typeof data.updated.data === "object";
 				const canApplyDirectly =
+					isBestiary ||
 					(isCampaign && !updatedIsSessionLike) ||
 					(!isCampaign && updatedIsSessionLike);
 
@@ -1231,20 +1283,25 @@ export default function AiAssistantPanel({
 				if (canApplyDirectly && onInsertResult) {
 					onInsertResult(data.updated, {
 						entityTypes: generatedEntityTypes,
+						generated: data.generated,
 					});
 				} else {
 					dispatch(requestCampaignsReloadAction());
 				}
 
 				setUserInstructions(""); // Очищаємо поле після успіху
-				setNotification(lang.t("AI changes applied successfully!"));
+				setNotification(
+					requestType === "custom-monster"
+						? lang.t("Custom creatures saved.")
+						: lang.t("AI changes applied successfully!"),
+				);
 				if (
 					!canApplyDirectly &&
 					generatedEntityTypes.length > 0
 				) {
 					dispatch(refreshEntitiesAction());
 				}
-				if (shouldParseResponse || isEncounter) {
+				if (shouldParseResponse || isEncounter || isBestiary) {
 					setIsOpen(false);
 					setIsContextModalOpen(false);
 					setIsImagePromptPickerOpen(false);
@@ -1280,6 +1337,11 @@ export default function AiAssistantPanel({
 	};
 
 	const getPlaceholder = () => {
+		if (isBestiary) {
+			return lang.t(
+				"Describe the custom creature to create...",
+			);
+		}
 		if (!parseAIResponse) {
 			return lang.t(
 				"Send your request. The response will appear in a dialog and will not change your data.",
@@ -1322,8 +1384,8 @@ export default function AiAssistantPanel({
 	);
 	const selectedResponseDiffResources = buildDiffResources(selectedResponseEntry);
 	const selectedResponseHasChanges = selectedResponseDiffResources.length > 0;
-	const isResponseParsingLocked = generateEncounters;
-	const isEntityScopeVisible = !isCampaign && !isEncounter;
+	const isResponseParsingLocked = isBestiary || generateEncounters;
+	const isEntityScopeVisible = !isBestiary && !isCampaign && !isEncounter;
 	const entityScopeIsSession = entityScope !== "campaign";
 	const imagePromptNpcs = isCampaign
 		? sessionData?.npcs?.length
@@ -1352,6 +1414,20 @@ export default function AiAssistantPanel({
 				_imagePromptIndex: index,
 				_imagePromptEncounters: sessionData?.encounters || [],
 			}));
+	const sortedImagePromptCustomMonsters = [...imagePromptCustomMonsters].sort(
+		(a, b) => String(a?.name || "").localeCompare(String(b?.name || ""), "uk"),
+	);
+	const imagePromptCustomMonstersWithoutImages =
+		sortedImagePromptCustomMonsters.filter((monster) => !monster?.imageUrl);
+	const imagePromptCustomMonstersWithImages =
+		sortedImagePromptCustomMonsters.filter((monster) => monster?.imageUrl);
+	const assistantTitle = isBestiary
+		? lang.t("AI Bestiary Assistant")
+		: isCampaign
+			? lang.t("AI Story Assistant")
+			: isEncounter
+				? lang.t("AI Encounter Assistant")
+				: lang.t("AI Session Assistant");
 
 	const getSceneEncounterForImagePrompt = (scene) => {
 		const encounters = Array.isArray(scene?._imagePromptEncounters)
@@ -1419,6 +1495,34 @@ export default function AiAssistantPanel({
 				: null,
 		};
 	};
+
+	const buildCustomMonsterImageTarget = (monster) => ({
+		type: "custom-monster",
+		id: monster?.name || "",
+		name: monster?.name || "",
+		source: monster?.source || "CUSTOM",
+		size: monster?.size || "",
+		creatureType: monster?.type || "",
+		alignment: monster?.alignment || "",
+		description: monster?.description || monster?.desc || "",
+		trait: monster?.trait || [],
+		actions: monster?.action || [],
+		bonusActions: monster?.bonus || [],
+		reactions: monster?.reaction || [],
+		legendaryActions: monster?.legendary || [],
+		cr: monster?.cr || "",
+		ac: monster?.ac || "",
+		hp: monster?.hp || "",
+		speed: monster?.speed || "",
+		abilities: {
+			str: monster?.str ?? "",
+			dex: monster?.dex ?? "",
+			con: monster?.con ?? "",
+			int: monster?.int ?? "",
+			wis: monster?.wis ?? "",
+			cha: monster?.cha ?? "",
+		},
+	});
 
 	const renderImagePromptColumn = ({
 		title,
@@ -1550,17 +1654,7 @@ export default function AiAssistantPanel({
 
 	return (
 		<div className="AiAssistant">
-			{/* Кнопка виклику AI, аналогічно до DiceCalculator */}
-			<Tooltip
-				className="AiAssistant__toggle"
-				content={
-					isCampaign
-						? lang.t("AI Story Assistant")
-						: isEncounter
-							? lang.t("AI Encounter Assistant")
-							: lang.t("AI Session Assistant")
-				}
-			>
+			<Tooltip className="AiAssistant__toggle" content={assistantTitle}>
 				<button onClick={() => setIsOpen(true)}>
 					<Icon name="wand" size={28} />
 				</button>
@@ -1568,13 +1662,7 @@ export default function AiAssistantPanel({
 
 			{isOpen && (
 				<Modal
-					title={
-						isCampaign
-							? lang.t("AI Story Assistant")
-							: isEncounter
-								? lang.t("AI Encounter Assistant")
-								: lang.t("AI Session Assistant")
-					}
+					title={assistantTitle}
 					onCancel={() => {
 						setIsOpen(false);
 					}}
@@ -1607,31 +1695,33 @@ export default function AiAssistantPanel({
 									)}
 								</Select>
 							</label>
-							<div
-								className={classNames("AiAssistant__context_toggle", {
-									"is_active": useContext,
-								})}
-							>
-								<Checkbox
-									checked={useContext}
-									onChange={(val) => setUseContext(val)}
-									title={
-										useContext
-											? lang.t("Disable context usage")
-											: lang.t("Enable context usage")
-									}
-								/>
-								<Button
-									variant={useContext ? "primary" : "ghost"}
-									size={Button.SIZES.SMALL}
-									icon="database"
-									onClick={() => setIsContextModalOpen(true)}
-									disabled={loading}
-									title={lang.t("Configure context details for AI")}
+							{!isBestiary && (
+								<div
+									className={classNames("AiAssistant__context_toggle", {
+										"is_active": useContext,
+									})}
 								>
-									{lang.t("Context")}
-								</Button>
-							</div>
+									<Checkbox
+										checked={useContext}
+										onChange={(val) => setUseContext(val)}
+										title={
+											useContext
+												? lang.t("Disable context usage")
+												: lang.t("Enable context usage")
+										}
+									/>
+									<Button
+										variant={useContext ? "primary" : "ghost"}
+										size={Button.SIZES.SMALL}
+										icon="database"
+										onClick={() => setIsContextModalOpen(true)}
+										disabled={loading}
+										title={lang.t("Configure context details for AI")}
+									>
+										{lang.t("Context")}
+									</Button>
+								</div>
+							)}
 							{!isEncounter && (
 								<Button
 									variant="ghost"
@@ -1644,7 +1734,7 @@ export default function AiAssistantPanel({
 									{lang.t("Image prompt")}
 								</Button>
 							)}
-							{!isEncounter && (
+							{!isBestiary && !isEncounter && (
 								<>
 									<Button
 										variant={generateCharacters ? "primary" : "ghost"}
@@ -1704,30 +1794,32 @@ export default function AiAssistantPanel({
 									)}
 								</>
 							)}
-							<Button
-								variant={
-									parseAIResponse || isResponseParsingLocked
-										? "primary"
-										: "ghost"
-								}
-								size={Button.SIZES.SMALL}
-								icon="list"
-								onClick={() => {
-									if (isResponseParsingLocked) return;
-									setParseAIResponse(!parseAIResponse);
-								}}
-								disabled={loading || isResponseParsingLocked}
-								title={
-									generateEncounters
-										? lang.t("Parsing is required when generating encounters")
-										: parseAIResponse
-											? lang.t("Parse AI response into form fields")
-											: lang.t("Show response as text in a modal")
-								}
-							>
-								{lang.t("Response parsing")}
-							</Button>
-							{!isCampaign && (
+							{!isBestiary && (
+								<Button
+									variant={
+										parseAIResponse || isResponseParsingLocked
+											? "primary"
+											: "ghost"
+									}
+									size={Button.SIZES.SMALL}
+									icon="list"
+									onClick={() => {
+										if (isResponseParsingLocked) return;
+										setParseAIResponse(!parseAIResponse);
+									}}
+									disabled={loading || isResponseParsingLocked}
+									title={
+										generateEncounters
+											? lang.t("Parsing is required when generating encounters")
+											: parseAIResponse
+												? lang.t("Parse AI response into form fields")
+												: lang.t("Show response as text in a modal")
+									}
+								>
+									{lang.t("Response parsing")}
+								</Button>
+							)}
+							{!isBestiary && !isCampaign && (
 								<Button
 									variant={generateEncounters ? "primary" : "ghost"}
 									size={Button.SIZES.SMALL}
@@ -1753,6 +1845,22 @@ export default function AiAssistantPanel({
 									}
 								>
 									{lang.t("Encounter generation")}
+								</Button>
+							)}
+							{isEncounter && (
+								<Button
+									variant="ghost"
+									size={Button.SIZES.SMALL}
+									icon="wand"
+									onClick={() =>
+										generate("custom-monster", null, {
+											forceParseAIResponse: true,
+										})
+									}
+									disabled={loading}
+									title={lang.t("Create custom creature")}
+								>
+									{lang.t("Create custom creature")}
 								</Button>
 							)}
 						</div>
@@ -1997,58 +2105,108 @@ export default function AiAssistantPanel({
 											{lang.t("Loading...")}
 										</div>
 									)}
-									{renderImagePromptColumn({
-										title: "NPCs",
-										items: imagePromptNpcs,
-										emptyLabel: "No NPCs yet.",
-										getName: getCharacterDisplayName,
-										getDescription: (npc) =>
-											npc?.description || npc?.trait || npc?.motivation || "",
-										onSelect: (npc) =>
-											generateImagePromptForTarget(buildNpcImageTarget(npc)),
-									})}
-									{renderImagePromptColumn({
-										title: "Locations/Factions",
-										items: imagePromptLocations,
-										emptyLabel: "No locations/factions yet.",
-										getName: getLocationDisplayName,
-										getDescription: (location) => location?.description || "",
-										onSelect: (location) =>
-											generateImagePromptForTarget(
-												buildLocationImageTarget(location),
-											),
-									})}
-									{!isCampaign &&
-										renderImagePromptColumn({
-											title: "Scenes",
-											items: imagePromptScenes,
-											emptyLabel: "No scenes found.",
-											getKey: (scene, index) =>
-												[
-													scene?._imagePromptSessionFileName,
-													scene?.id,
-													index,
-												]
-													.filter(Boolean)
-													.join(":"),
-											getName: (scene, index) =>
-												getSceneImagePromptTitle(
-													scene,
-													scene?._imagePromptIndex ?? index,
-												),
-											getDescription: (scene) => {
-												const sessionName = scene?._imagePromptSessionName;
-												const description =
-													getSceneImagePromptDescription(scene);
-												return [sessionName, description]
-													.filter(Boolean)
-													.join(" - ");
-											},
-											onSelect: (scene) =>
-												generateImagePromptForTarget(
-													buildSceneImageTarget(scene),
-												),
-										})}
+									{isBestiary ? (
+										<>
+											{renderImagePromptColumn({
+												title: "Custom creatures without images",
+												items: imagePromptCustomMonstersWithoutImages,
+												emptyLabel: "No custom creatures without images.",
+												getKey: (monster) => `custom-empty-${monster?.name}`,
+												getName: (monster) => monster?.name || "",
+												getDescription: (monster) =>
+													[
+														monster?.type,
+														monster?.cr ? `CR ${monster.cr}` : "",
+													]
+														.filter(Boolean)
+														.join(" - "),
+												onSelect: (monster) =>
+													generateImagePromptForTarget(
+														buildCustomMonsterImageTarget(monster),
+													),
+											})}
+											{renderImagePromptColumn({
+												title: "Custom creatures with images",
+												items: imagePromptCustomMonstersWithImages,
+												emptyLabel: "No custom creatures with images.",
+												getKey: (monster) => `custom-image-${monster?.name}`,
+												getName: (monster) => monster?.name || "",
+												getDescription: (monster) =>
+													[
+														monster?.type,
+														monster?.cr ? `CR ${monster.cr}` : "",
+													]
+														.filter(Boolean)
+														.join(" - "),
+												onSelect: (monster) =>
+													generateImagePromptForTarget(
+														buildCustomMonsterImageTarget(monster),
+													),
+											})}
+										</>
+									) : (
+										<>
+											{renderImagePromptColumn({
+												title: "NPCs",
+												items: imagePromptNpcs,
+												emptyLabel: "No NPCs yet.",
+												getName: getCharacterDisplayName,
+												getDescription: (npc) =>
+													npc?.description ||
+													npc?.trait ||
+													npc?.motivation ||
+													"",
+												onSelect: (npc) =>
+													generateImagePromptForTarget(
+														buildNpcImageTarget(npc),
+													),
+											})}
+											{renderImagePromptColumn({
+												title: "Locations/Factions",
+												items: imagePromptLocations,
+												emptyLabel: "No locations/factions yet.",
+												getName: getLocationDisplayName,
+												getDescription: (location) =>
+													location?.description || "",
+												onSelect: (location) =>
+													generateImagePromptForTarget(
+														buildLocationImageTarget(location),
+													),
+											})}
+											{!isCampaign &&
+												renderImagePromptColumn({
+													title: "Scenes",
+													items: imagePromptScenes,
+													emptyLabel: "No scenes found.",
+													getKey: (scene, index) =>
+														[
+															scene?._imagePromptSessionFileName,
+															scene?.id,
+															index,
+														]
+															.filter(Boolean)
+															.join(":"),
+													getName: (scene, index) =>
+														getSceneImagePromptTitle(
+															scene,
+															scene?._imagePromptIndex ?? index,
+														),
+													getDescription: (scene) => {
+														const sessionName =
+															scene?._imagePromptSessionName;
+														const description =
+															getSceneImagePromptDescription(scene);
+														return [sessionName, description]
+															.filter(Boolean)
+															.join(" - ");
+													},
+													onSelect: (scene) =>
+														generateImagePromptForTarget(
+															buildSceneImageTarget(scene),
+														),
+												})}
+										</>
+									)}
 								</div>
 							</Modal>
 						)}
@@ -2217,7 +2375,7 @@ export default function AiAssistantPanel({
 
 						{error && <div className="AiAssistant__error">{error}</div>}
 
-						{responseHistory.length > 0 && (
+						{!isBestiary && responseHistory.length > 0 && (
 							<section className="AiAssistant__response_history">
 								<div className="AiAssistant__response_history_header">
 									<h4>{lang.t("Response history")}</h4>

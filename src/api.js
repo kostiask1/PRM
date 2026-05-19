@@ -206,6 +206,22 @@ export const api = {
 	getBestiarySources: () => api.request("/bestiary/sources"),
 	getBestiaryData: (source) =>
 		api.request(`/bestiary/${encodeURIComponent(source.toLowerCase())}`),
+	getCustomBestiaryData: () =>
+		api.request(`/bestiary/custom?ts=${Date.now()}`, {
+			cache: "no-store",
+			headers: {
+				"Cache-Control": "no-cache",
+			},
+		}),
+	updateCustomBestiaryMonster: (name, payload) =>
+		api.request(`/bestiary/custom/${encodeURIComponent(name)}`, {
+			method: "PATCH",
+			body: JSON.stringify(payload),
+		}),
+	deleteCustomBestiaryMonster: (name) =>
+		api.request(`/bestiary/custom/${encodeURIComponent(name)}`, {
+			method: "DELETE",
+		}),
 	getLegendaryGroups: () => api.request("/bestiary/legendarygroups"),
 	getBestiaryFavorites: () => api.request("/bestiary/favorites"),
 	toggleBestiaryFavorite: (name, source) =>

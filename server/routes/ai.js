@@ -904,6 +904,205 @@ function normalizeEncounterFromAi(rawEncounter, bestiaryIndex, fallbackName) {
 	};
 }
 
+function normalizeMonsterSize(value) {
+	const sizeMap = {
+		tiny: "T",
+		small: "S",
+		medium: "M",
+		large: "L",
+		huge: "H",
+		gargantuan: "G",
+	};
+	const values = Array.isArray(value) ? value : [value || "M"];
+	const normalized = values
+		.map((item) => {
+			const text = asText(item);
+			if (!text) return "";
+			const upper = text.toUpperCase();
+			return ["T", "S", "M", "L", "H", "G"].includes(upper)
+				? upper
+				: sizeMap[text.toLowerCase()] || "M";
+		})
+		.filter(Boolean);
+	return normalized.length > 0 ? normalized : ["M"];
+}
+
+function normalizeMonsterNumber(value, fallback) {
+	const parsed = Number.parseInt(String(value ?? fallback), 10);
+	return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function normalizeMonsterStringArray(value) {
+	if (value === undefined || value === null || value === "") return [];
+	return (Array.isArray(value) ? value : [value])
+		.map((item) => asText(item))
+		.filter(Boolean);
+}
+
+function normalizeMonsterCr(value) {
+	if (value && typeof value === "object" && !Array.isArray(value)) {
+		return value;
+	}
+	return asText(value) || "1";
+}
+
+function normalizeMonsterTypedObject(value) {
+	if (value && typeof value === "object" && !Array.isArray(value)) {
+		return value;
+	}
+	const text = asText(value).toLowerCase();
+	return text || "monstrosity";
+}
+
+function normalizeMonsterAc(value) {
+	if (Array.isArray(value) && value.length > 0) {
+		return value
+			.map((entry) => {
+				if (entry && typeof entry === "object") {
+					return {
+						...entry,
+						ac: normalizeMonsterNumber(entry.ac, 10),
+					};
+				}
+				return { ac: normalizeMonsterNumber(entry, 10) };
+			})
+			.filter((entry) => Number.isFinite(entry.ac));
+	}
+	if (value && typeof value === "object") {
+		return [{ ...value, ac: normalizeMonsterNumber(value.ac, 10) }];
+	}
+	return [{ ac: normalizeMonsterNumber(value, 10) }];
+}
+
+function normalizeMonsterHp(value) {
+	if (value && typeof value === "object" && !Array.isArray(value)) {
+		const next = { ...value };
+		if (hasOwn(next, "average")) {
+			next.average = normalizeMonsterNumber(next.average, 1);
+		}
+		return next;
+	}
+	return {
+		average: normalizeMonsterNumber(value, 1),
+		formula: "",
+	};
+}
+
+function normalizeMonsterSpeed(value) {
+	if (value && typeof value === "object" && !Array.isArray(value)) {
+		return value;
+	}
+	const walk = normalizeMonsterNumber(value, 30);
+	return { walk };
+}
+
+function normalizeMonsterEntry(entry) {
+	if (typeof entry === "string") {
+		const text = entry.trim();
+		return text ? { name: "", entries: [text] } : null;
+	}
+	if (!entry || typeof entry !== "object") return null;
+	const name = asText(entry.name || entry.title);
+	const entries = Array.isArray(entry.entries)
+		? entry.entries
+		: entry.text || entry.description || entry.content
+			? [String(entry.text || entry.description || entry.content)]
+			: [];
+	return {
+		...entry,
+		name,
+		entries,
+	};
+}
+
+function normalizeMonsterEntries(value) {
+	return (Array.isArray(value) ? value : [])
+		.map(normalizeMonsterEntry)
+		.filter((entry) => entry && entry.entries.length > 0);
+}
+
+function stripMentionBrackets(value) {
+	if (typeof value === "string") {
+		return value.replace(/\[([^[\]]+)\]/g, "$1");
+	}
+	if (Array.isArray(value)) {
+		return value.map(stripMentionBrackets);
+	}
+	if (value && typeof value === "object") {
+		return Object.fromEntries(
+			Object.entries(value).map(([key, entryValue]) => [
+				key,
+				stripMentionBrackets(entryValue),
+			]),
+		);
+	}
+	return value;
+}
+
+function copyMonsterObjectField(target, raw, key) {
+	if (raw[key] && typeof raw[key] === "object") {
+		target[key] = raw[key];
+	}
+}
+
+function normalizeCustomMonster(raw) {
+	if (!raw || typeof raw !== "object") return null;
+	const name = sanitizeEntityName(raw.name || raw.title);
+	if (!name) return null;
+
+	const monster = {
+		name,
+		source: storage.CUSTOM_BESTIARY_SOURCE || "CUSTOM",
+		size: normalizeMonsterSize(raw.size),
+		type: normalizeMonsterTypedObject(raw.type),
+		alignment: normalizeMonsterStringArray(raw.alignment).length
+			? normalizeMonsterStringArray(raw.alignment)
+			: ["N"],
+		ac: normalizeMonsterAc(raw.ac ?? raw.armor_class),
+		hp: normalizeMonsterHp(raw.hp ?? raw.hit_points),
+		speed: normalizeMonsterSpeed(raw.speed),
+		str: normalizeMonsterNumber(raw.str ?? raw.strength, 10),
+		dex: normalizeMonsterNumber(raw.dex ?? raw.dexterity, 10),
+		con: normalizeMonsterNumber(raw.con ?? raw.constitution, 10),
+		int: normalizeMonsterNumber(raw.int ?? raw.intelligence, 10),
+		wis: normalizeMonsterNumber(raw.wis ?? raw.wisdom, 10),
+		cha: normalizeMonsterNumber(raw.cha ?? raw.charisma, 10),
+		cr: normalizeMonsterCr(raw.cr ?? raw.challenge_rating),
+	};
+
+	for (const key of [
+		"save",
+		"skill",
+		"spellcasting",
+		"traitTags",
+		"actionTags",
+		"languageTags",
+		"senseTags",
+		"miscTags",
+	]) {
+		copyMonsterObjectField(monster, raw, key);
+	}
+
+	for (const key of [
+		"senses",
+		"languages",
+		"resist",
+		"immune",
+		"vulnerable",
+		"conditionImmune",
+	]) {
+		const values = normalizeMonsterStringArray(raw[key]);
+		if (values.length > 0) monster[key] = values;
+	}
+
+	for (const key of ["trait", "action", "bonus", "reaction", "legendary"]) {
+		const entries = normalizeMonsterEntries(raw[key]);
+		if (entries.length > 0) monster[key] = entries;
+	}
+
+	return stripMentionBrackets(monster);
+}
+
 function escapeRegExp(value) {
 	return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -2197,9 +2396,166 @@ router.post("/generate", async (req, res, next) => {
 		const shouldParseAIResponse =
 			type !== "image" &&
 			Boolean(parseAIResponse || encounterGenerationEnabled) &&
-			(!path.encounter || encounterGenerationEnabled);
+			(!path?.encounter || encounterGenerationEnabled);
 		const settings = await storage.readSettings();
 		const simplifiedNotesEnabled = Boolean(settings.simplifiedNotes);
+
+		if (type === "custom-monster") {
+			const customBestiary = await storage.readCustomBestiary();
+			const customContextData = {
+				campaign: {},
+				sessions: [],
+				customBestiary: {
+					monsters: Array.isArray(customBestiary.monster)
+						? customBestiary.monster.map((monster) => ({
+								name: monster.name,
+								source: monster.source,
+								type: monster.type,
+								cr: monster.cr,
+							}))
+						: [],
+				},
+			};
+			let customCampaign = null;
+			let customSession = null;
+			if (path?.campaign && path.campaign !== "bestiary") {
+				customCampaign = await storage
+					.readCampaign(path.campaign)
+					.catch(() => null);
+				customSession = await storage
+					.readSession(path.campaign, path.session)
+					.catch(() => null);
+
+				if (customCampaign && contextConfig) {
+					if (contextConfig.campaignNotes) {
+						customContextData.campaign.notes = filterNotesForAiContext(
+							customCampaign.notes,
+						);
+					}
+					if (isContextListIncluded(contextConfig.campaignCharacters)) {
+						const chars = await storage.listEntities(
+							path.campaign,
+							"characters",
+						);
+						customContextData.campaign.characters = filterEntitiesByContext(
+							chars,
+							contextConfig.campaignCharacters,
+							getCharacterContextKey,
+						);
+					}
+					if (
+						isContextListIncluded(contextConfig.campaignNpcs) ||
+						(contextConfig.campaignNpcs === undefined &&
+							isContextListIncluded(contextConfig.campaignCharacters))
+					) {
+						const npcs = await storage.listEntities(path.campaign, "npc");
+						customContextData.campaign.npcs = filterEntitiesByContext(
+							npcs,
+							contextConfig.campaignNpcs === undefined
+								? true
+								: contextConfig.campaignNpcs,
+							getCharacterContextKey,
+						);
+					}
+					if (isContextListIncluded(contextConfig.campaignLocations)) {
+						const locations = await storage.listEntities(
+							path.campaign,
+							"locations",
+						);
+						customContextData.campaign.locations = filterLocationsByContext(
+							locations,
+							contextConfig.campaignLocations,
+						);
+					}
+
+					if (contextConfig.sessions) {
+						for (const [slug, conf] of Object.entries(contextConfig.sessions)) {
+							if (!conf.included) continue;
+							const sData = await storage.readSession(path.campaign, slug);
+							customContextData.sessions.push({
+								slug,
+								fileName: slug,
+								name: sData.name,
+								conf,
+								data: filterSessionDataForAiContext(sData.data),
+							});
+						}
+					}
+				}
+			}
+
+			const generatedContent = await aiService.generateContent({
+				type: "custom-monster",
+				session: customSession,
+				campaign: customCampaign,
+				userInstructions,
+				modelName,
+				encounterId: path?.encounter,
+				parseAIResponse: true,
+				contextData: customContextData,
+				generateCharacters: false,
+				generateNpcs: false,
+				generateLocations: false,
+				generateEncounters: false,
+				entityScope: "custom-bestiary",
+				language: responseLanguage,
+				simplifiedNotes: simplifiedNotesEnabled,
+			});
+
+			if (generatedContent.error) {
+				return res.status(500).json(generatedContent);
+			}
+
+			const normalizedMonsters = (
+				Array.isArray(generatedContent?.monsters)
+					? generatedContent.monsters
+					: []
+			)
+				.map(normalizeCustomMonster)
+				.filter(Boolean);
+
+			if (normalizedMonsters.length === 0) {
+				return res.status(400).json({
+					error: "AI не повернув жодної коректної істоти.",
+					generated: generatedContent,
+				});
+			}
+
+			const monsters = await storage.upsertCustomBestiaryMonsters(
+				normalizedMonsters,
+			);
+			return res.json({
+				generated: { monsters: normalizedMonsters },
+				updated: { monsters },
+			});
+		}
+
+		if (type === "image" && path?.campaign === "bestiary") {
+			const generatedContent = await aiService.generateContent({
+				type: "image",
+				session: null,
+				campaign: null,
+				userInstructions,
+				modelName,
+				sceneId,
+				imageTarget,
+				parseAIResponse: false,
+				contextData: {},
+				generateCharacters: false,
+				generateNpcs: false,
+				generateLocations: false,
+				generateEncounters: false,
+				entityScope: "custom-bestiary",
+				language: responseLanguage,
+				simplifiedNotes: simplifiedNotesEnabled,
+			});
+
+			if (generatedContent.error) {
+				return res.status(500).json(generatedContent);
+			}
+
+			return res.json({ prompt: generatedContent });
+		}
 
 		const campaign = await storage.readCampaign(path.campaign);
 		const session = await storage
@@ -2266,6 +2622,17 @@ router.post("/generate", async (req, res, next) => {
 				name: session.name,
 				data: filterSessionDataForAiContext(session.data),
 			};
+		}
+		if (path?.encounter || encounterGenerationEnabled) {
+			const customBestiary = await storage.readCustomBestiary();
+			const monsterNames = (Array.isArray(customBestiary.monster)
+				? customBestiary.monster
+				: [])
+				.map((monster) => asText(monster?.name))
+				.filter(Boolean);
+			if (monsterNames.length > 0) {
+				contextData.customBestiary = { monsterNames };
+			}
 		}
 
 		const campaignScopeEntities =

@@ -273,7 +273,7 @@ Your goal is to help build a specific combat encounter.
 Keep responses structured and practical for real gameplay.
 Always return JSON only, with no text before or after JSON.
 The JSON must use:
-{ "name": "Encounter name", "monsters": [{ "monsterName": "Official D&D Monster Name", "name": "Optional display name" }] }.
+{ "name": "Encounter name", "monsters": [{ "monsterName": "Official D&D Monster Name or exact custom creature name", "name": "Optional display name" }] }.
 Balance rules:
 1. Analyze characters array: count and levels.
 2. Determine difficulty from user instructions. If not specified, build a medium encounter.
@@ -284,7 +284,7 @@ Balance rules:
 - Deadly: high risk of character death.
 4. Consider action economy: one boss vs 4-5 PCs is often weaker than multiple enemies.
 5. If "currentEncounter" exists, you may add monsters or fully replace composition according to instructions.
-6. "monsterName" must always be in English using official bestiary names.`,
+6. "monsterName" must match a bestiary lookup name exactly. Use an official English bestiary name, or use an exact custom creature name from INPUT DATA.customBestiary.monsterNames when it fits the encounter.`,
 	character: `You are an experienced Dungeon Master for Dungeons & Dragons.
 Your goal is to create player characters for a campaign.
 Always return JSON only, with no text before or after JSON.
@@ -327,6 +327,7 @@ Use markdown formatting in your final response.`,
 Input is JSON with keys:
 Selected target fields (highest priority): type, name, description, trait, motivation, texts, notes, npcs, location, sessionName.
 Scene fields: summary, goal, stakes, location, npcs.
+Custom monster fields: size, creatureType, alignment, actions, bonusActions, reactions, legendaryActions, cr, ac, hp, speed, abilities.
 General context fields (lower priority): campaign, currentSession, selectedSessions.
 Generate one final image-generation prompt from this data.
 Always write the final image-generation prompt in English.
@@ -341,6 +342,15 @@ Describe in this order:
 Default style suffix:
 cinematic, photorealistic, ultra realistic, high detail, 8k, dramatic lighting, volumetric light, sharp focus, depth of field, film still, concept art
 Input JSON:`,
+	"custom-monster": `You are an experienced Dungeons & Dragons 5e monster designer.
+Create custom bestiary creatures in the same general JSON style as 5eTools monster data.
+Always return JSON only, with no text before or after JSON.
+The JSON must use:
+{ "monsters": [{ "name": "...", "source": "CUSTOM", "size": ["M"], "type": "monstrosity", "alignment": ["N"], "ac": [{ "ac": 13, "from": ["natural armor"] }], "hp": { "average": 45, "formula": "6d8 + 18" }, "speed": { "walk": 30 }, "str": 16, "dex": 12, "con": 16, "int": 8, "wis": 12, "cha": 10, "save": { "con": "+5" }, "skill": { "perception": "+3" }, "senses": ["darkvision 60 ft."], "languages": ["Common"], "cr": "3", "trait": [{ "name": "...", "entries": ["..."] }], "action": [{ "name": "...", "entries": ["..."] }], "bonus": [{ "name": "...", "entries": ["..."] }], "reaction": [{ "name": "...", "entries": ["..."] }], "legendary": [{ "name": "...", "entries": ["..."] }] }] }.
+Use only fields that belong directly on the monster object. If the creature has legendary actions, put them in the monster's own "legendary" array. Do not create or reference "legendaryGroup".
+Use compact but complete 5e mechanics: ability scores, AC, HP formula, speed, CR, traits, actions, and relevant saves/skills/senses/languages/resistances/immunities/condition immunities.
+Balance the statistics and damage for the requested CR or the implied threat level.
+Entries arrays must contain strings or standard nested entry objects only.`,
 };
 
 const structuredJsonResponseContract = `PARSED JSON RESPONSE CONTRACT:
@@ -434,7 +444,8 @@ async function generateContent({
 			? "session"
 			: "campaign";
 	const effectiveParseAIResponse =
-		Boolean(parseAIResponse) && (!encounterId || encounterGenerationEnabled);
+		type === "custom-monster" ||
+		(Boolean(parseAIResponse) && (!encounterId || encounterGenerationEnabled));
 	const requestedType =
 		type === "encounter" && !encounterGenerationEnabled ? null : type;
 
@@ -461,7 +472,7 @@ async function generateContent({
 		imagePromptLanguageContract,
 		`NAME LANGUAGE RULE: Any new names you invent must be written in ${responseLanguage.label}. This includes new character names, NPC names, place names, scene names, encounter names, aliases, titles, and display names.
 EXISTING NAME PROTECTION: Names that already exist in the input data must keep their exact original spelling and alphabet. Do not translate, transliterate, decline, paraphrase, rename, or otherwise alter existing names unless the user explicitly asks you to do that.
-Exception: technical lookup fields that require official English names, such as "monsterName", must remain official English bestiary names.`,
+Exception: technical lookup fields such as "monsterName" must remain exact lookup names. Use official English bestiary names for official creatures, or exact custom creature names from INPUT DATA.customBestiary.monsterNames for custom creatures.`,
 		characterLevelContract,
 		markdownFormattingContract,
 	];
@@ -496,10 +507,10 @@ Exception: technical lookup fields that require official English names, such as 
 	if (useKey === "scene" && encounterGenerationEnabled) {
 		systemInstructionParts.push(
 			`Encounter generation is enabled. You may create combat encounters using this shape:
-{ "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown session note text..." }], "scenes": [{ "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "..." }, "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown scene note text..." }], "npcs": [{ "name": "...", "description": "..." }], "encounterIndex": 0 }], "encounters": [{ "name": "Encounter name", "monsters": [{ "monsterName": "Official D&D Monster Name", "name": "Optional display name" }] }] }.
+{ "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown session note text..." }], "scenes": [{ "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "..." }, "notes": [{ "id": "existing-note-id-if-any", "title": "...", "text": "Markdown scene note text..." }], "npcs": [{ "name": "...", "description": "..." }], "encounterIndex": 0 }], "encounters": [{ "name": "Encounter name", "monsters": [{ "monsterName": "Official D&D Monster Name or exact custom creature name", "name": "Optional display name" }] }] }.
 If a scene requires combat, "encounterIndex" must point to the encounter index in "encounters".
 If combat is not needed, omit "encounterIndex".
-Pick monsters according to party level and party size from context.
+Pick monsters according to party level and party size from context. You may use custom creatures from INPUT DATA.customBestiary.monsterNames when they fit the scenario; use their names exactly in "monsterName".
 If user instructions specify encounter difficulty, follow that strictly.`,
 		);
 	} else if (useKey === "scene") {
@@ -664,8 +675,9 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 		.filter((s) => s.notes || s.result || s.scenes || s.npcs || s.locations); // Прибираємо сесії без контенту
 
 	// 2. Формуємо фінальний JSON контексту для Gemini
-	const contextJson = {
-		campaign: {
+	const contextJson = {};
+	if (campaign) {
+		contextJson.campaign = {
 			name: campaign.name,
 			description: campaign.description,
 			notes: contextData?.campaign?.notes
@@ -680,8 +692,12 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 			locations: contextData?.campaign?.locations
 				?.map((location) => locationToPromptContext(location, noteToContextNote))
 				.filter((location) => location && (location.name || location.description)),
-		},
-	};
+		};
+	}
+
+	if (contextData?.customBestiary) {
+		contextJson.customBestiary = contextData.customBestiary;
+	}
 
 	if (session && entityTargetScope === "session") {
 		const currentSession = {
@@ -740,15 +756,20 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 		userPrompt +=
 			"IMPORTANT: The JSON response must be the final state for every field or array you output, not a delta. Preserve unchanged INPUT DATA items exactly and include them together with requested new or edited items. Omit fields/categories that are outside the user's request.\n";
 	}
-	userPrompt +=
-		"IMPORTANT: In generated text fields, use square brackets only for actual entity names that are already present in INPUT DATA or for new entities that you create in this same JSON response in structured arrays such as \"characters\", \"npcs\", scene \"npcs\", or \"locations\". Do not wrap ordinary nouns, species, terrain, place types, groups, concepts, or generic descriptors just because they sound important. For example, do not output [Dwarves], [Swamps], [Market], or [Guard] unless that exact entity already exists in INPUT DATA or you are also creating it as a structured entity in this response. Do not wrap JSON keys.\n";
-	userPrompt +=
-		"IMPORTANT: Do NOT wrap structured name fields in brackets. Fields like name, firstName, lastName, and monsterName must contain plain names without [] symbols.\n";
-	userPrompt +=
-		"IMPORTANT: Never alter, translate, decline, or paraphrase existing character/NPC/location/faction names unless the user explicitly asks you to rename or translate them. Always use existing names exactly as provided in the input JSON, preserving original spelling, and only wrap them in square brackets.\n";
-	userPrompt +=
-		"IMPORTANT: Never transliterate existing names between alphabets (for example, Latin <-> Cyrillic) unless the user explicitly asks you to transliterate them. Keep the exact original characters from input. Mention format must be a single pair of brackets only: [Name]. Never output [[Name]] or nested brackets.\n";
-	userPrompt += `IMPORTANT: For new names you invent, use ${responseLanguage.label}. For existing names from input, keep the original spelling unless the user explicitly requests a rename, translation, or transliteration. Keep official lookup fields such as monsterName in English when the schema requires official D&D names.\n`;
+	if (useKey === "custom-monster") {
+		userPrompt +=
+			"IMPORTANT: Custom bestiary creatures must not contain app entity links. Never wrap entity names, creature names, places, factions, concepts, or any other text in square brackets. Do not output [Name] syntax anywhere in monster fields.\n";
+	} else {
+		userPrompt +=
+			"IMPORTANT: In generated text fields, use square brackets only for actual entity names that are already present in INPUT DATA or for new entities that you create in this same JSON response in structured arrays such as \"characters\", \"npcs\", scene \"npcs\", or \"locations\". Do not wrap ordinary nouns, species, terrain, place types, groups, concepts, or generic descriptors just because they sound important. For example, do not output [Dwarves], [Swamps], [Market], or [Guard] unless that exact entity already exists in INPUT DATA or you are also creating it as a structured entity in this response. Do not wrap JSON keys.\n";
+		userPrompt +=
+			"IMPORTANT: Do NOT wrap structured name fields in brackets. Fields like name, firstName, lastName, and monsterName must contain plain names without [] symbols.\n";
+		userPrompt +=
+			"IMPORTANT: Never alter, translate, decline, or paraphrase existing character/NPC/location/faction names unless the user explicitly asks you to rename or translate them. Always use existing names exactly as provided in the input JSON, preserving original spelling, and only wrap them in square brackets.\n";
+		userPrompt +=
+			"IMPORTANT: Never transliterate existing names between alphabets (for example, Latin <-> Cyrillic) unless the user explicitly asks you to transliterate them. Keep the exact original characters from input. Mention format must be a single pair of brackets only: [Name]. Never output [[Name]] or nested brackets.\n";
+	}
+	userPrompt += `IMPORTANT: For new names you invent, use ${responseLanguage.label}. For existing names from input, keep the original spelling unless the user explicitly requests a rename, translation, or transliteration. For "monsterName", use exact lookup names: official English names for official creatures, or exact custom creature names from INPUT DATA.customBestiary.monsterNames.\n`;
 	if (simplifiedNotesEnabled) {
 		userPrompt +=
 			'IMPORTANT: Simplified notes mode is enabled. For every "notes" array in your JSON, output note objects with "text" and optional existing "id"; do not output note titles and do not use the first line as a title.\n';
@@ -765,6 +786,13 @@ If user instructions specify encounter difficulty, follow that strictly.`,
 		userPrompt += `TASK: Create new player characters for this campaign based on user instructions.
 IMPORTANT: This request is strictly for player characters. Return only "characters". Do not create NPCs or any other content category.
 IMPORTANT: If editing, renaming, or deleting an existing character from INPUT DATA, preserve its "id" and "slug". If INPUT DATA.campaign.characters is absent, this request is append-only for characters.\n`;
+	} else if (useKey === "custom-monster") {
+		userPrompt += `TASK: Create custom D&D 5e bestiary creatures based on user instructions.
+IMPORTANT: Return only the top-level "monsters" array.
+IMPORTANT: Every monster must have "source": "CUSTOM".
+IMPORTANT: Match the app's bestiary data shape: size array, type, alignment array, ac array, hp object, speed object, ability scores, cr, trait/action arrays, and optional bonus/reaction/legendary arrays.
+IMPORTANT: If a monster has legendary actions, store them directly in that monster's "legendary" array. Never output "legendaryGroup".
+IMPORTANT: Existing custom monsters are provided in INPUT DATA.customBestiary. Reuse or revise an existing monster only when the user clearly asks to update it; otherwise create new monsters with distinct names.\n`;
 	} else if (useKey === "npc") {
 		userPrompt += `TASK: Create new NPCs for this ${entityTargetScope === "session" ? "current session" : "campaign"} based on user instructions.
 IMPORTANT: This request is strictly for NPCs. Return only "npcs". Do not create player characters or any other content category.
@@ -784,7 +812,8 @@ IMPORTANT: If ${entityTargetScope === "session" ? "INPUT DATA.currentSession.loc
 			userPrompt += `IMPORTANT: Do not include campaign-scoped locations/factions in this session-scoped response. Return all existing INPUT DATA.currentSession.locations unchanged plus requested new or edited session locations/factions.\n`;
 		}
 	} else if (useKey === "encounter") {
-		userPrompt += `TASK: Update current combat encounter (ID: ${encounterId}). Consider character levels and requested difficulty (easy, medium, hard, deadly). Pick monsters that fit the scenario.\n`;
+		userPrompt += `TASK: Update current combat encounter (ID: ${encounterId}). Consider character levels and requested difficulty (easy, medium, hard, deadly). Pick monsters that fit the scenario.
+IMPORTANT: "monsterName" must be an exact lookup name. Use official English bestiary names for official creatures, or exact names from INPUT DATA.customBestiary.monsterNames for custom creatures.\n`;
 	} else if (useKey === "scene") {
 		userPrompt += `TASK: Based on current session and context, apply the user's requested session changes.\n`;
 		userPrompt += `IMPORTANT: Return the complete updated session content for the fields you output. For notes, scenes, characters, NPCs, and locations, include all corresponding included existing items from INPUT DATA together with your revisions/additions. Do not return only a delta or only the newly added content.\n`;
@@ -811,7 +840,7 @@ IMPORTANT: If ${entityTargetScope === "session" ? "INPUT DATA.currentSession.loc
 		}
 		if (encounterGenerationEnabled) {
 			userPrompt += `IMPORTANT: For each scene where conflict is possible, generate an encounter object in the encounters array.
-Pick monsters (English names) while considering character levels and classes for balance.
+Pick monsters while considering character levels and classes for balance. Use official English bestiary names for official creatures, or exact names from INPUT DATA.customBestiary.monsterNames for custom creatures.
 IMPORTANT: For each scene with combat or an encounterIndex, include a scene note with interesting combat mechanics and tactical ideas.\n`;
 		} else {
 			userPrompt += `IMPORTANT: Encounter generation is disabled. Do not create or edit combat encounters, do not pick monsters, and do not output "encounters", "encounterIndex", or "encounterId".\n`;
