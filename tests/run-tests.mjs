@@ -591,6 +591,20 @@ await run("AI JSON fence cleanup preserves inner markdown fences", () => {
 	});
 });
 
+await run("AI mention processing preserves existing entity links", () => {
+	const { processGeneratedTextMentions } = aiRouter.__test;
+	assert.equal(
+		processGeneratedTextMentions("Meet [Session NPC] near Old Gate.", [
+			"Old Gate",
+		]),
+		"Meet [Session NPC] near [Old Gate].",
+	);
+	assert.equal(
+		processGeneratedTextMentions("Meet [ old gate ] again.", ["Old Gate"]),
+		"Meet [Old Gate] again.",
+	);
+});
+
 await run("SessionViewModel encounter lookup", () => {
 	const model = new SessionViewModel({
 		isSaving: true,

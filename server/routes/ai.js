@@ -1148,9 +1148,9 @@ function resolveCanonicalName(rawName, canonicalNames) {
 
 function canonicalizeBracketedMentions(text, names) {
 	if (!text || !names.length) return text;
-	return String(text).replace(/\[([^[\]]+)\]/g, (_full, rawName) => {
+	return String(text).replace(/\[([^[\]]+)\]/g, (full, rawName) => {
 		const canonical = resolveCanonicalName(rawName, names);
-		return canonical ? `[${canonical}]` : rawName;
+		return canonical ? `[${canonical}]` : full;
 	});
 }
 
@@ -2682,6 +2682,7 @@ Object.defineProperty(router, "__test", {
 		asText,
 		filterGeneratedEntitiesOutsideScope,
 		mergeAiIgnoredNotes,
+		processGeneratedTextMentions,
 	},
 });
 
