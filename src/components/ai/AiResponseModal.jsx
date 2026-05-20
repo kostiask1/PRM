@@ -108,6 +108,10 @@ function getNoteDiffKey(note, index) {
 	return `index:${index}`;
 }
 
+function isResourceApplied(resource) {
+	return resource?.applyState === "applied";
+}
+
 export default function AiResponseModal({
 	generatedPrompt,
 	generatedPromptRef,
@@ -115,6 +119,7 @@ export default function AiResponseModal({
 	isRestoringResponse,
 	markdownComponents,
 	onApply,
+	onApplyResource,
 	onCancel,
 	onCopy,
 	onSaveDraftChanges,
@@ -135,6 +140,7 @@ export default function AiResponseModal({
 		[selectedResponseEntry],
 	);
 	const [draftEdits, setDraftEdits] = useState({});
+	const [draftResourceEdits, setDraftResourceEdits] = useState([]);
 	const [draftError, setDraftError] = useState("");
 	const [diffViewMode, setDiffViewMode] = useState("preview");
 
@@ -147,6 +153,7 @@ export default function AiResponseModal({
 				]),
 			),
 		);
+		setDraftResourceEdits(JSON.parse(JSON.stringify(draftResources)));
 		setDraftError("");
 	}, [draftResources]);
 
@@ -158,7 +165,78 @@ export default function AiResponseModal({
 
 	const isDraft = selectedResponseEntry?.applyState === "draft";
 	const noop = () => {};
-	const renderNoteCard = (resource, note) => {
+	const getDraftResourceForPreview = (resource) => {
+		if (!isDraft) return null;
+		return (
+			draftResourceEdits.find((item) => item.id === resource.id) ||
+			draftResourceEdits.find((item) =>
+				String(resource.id || "").startsWith(`${item.id}:`),
+			) ||
+			null
+		);
+	};
+	const getEditedPreviewResource = (resource) => {
+		const draftResource = getDraftResourceForPreview(resource);
+		if (!draftResource || draftResource.id !== resource.id) return resource;
+		return draftResource;
+	};
+	const replaceItemInList = (list, beforeItem, nextItem) =>
+		(Array.isArray(list) ? list : []).map((item) => {
+			const itemId = String(item?.id || "");
+			const beforeId = String(beforeItem?.id || "");
+			if (itemId && beforeId && itemId === beforeId) return nextItem;
+			if (JSON.stringify(item) === JSON.stringify(beforeItem)) return nextItem;
+			return item;
+		});
+	const updateDraftResourceAfter = (resource, nextSnapshot) => {
+		if (!isDraft) return;
+		setDraftResourceEdits((current) =>
+			current.map((item) => {
+				if (item.id === resource.id) return { ...item, after: nextSnapshot };
+				if (!String(resource.id || "").startsWith(`${item.id}:`)) return item;
+				const suffix = String(resource.id).slice(item.id.length + 1);
+				const nextAfter = JSON.parse(JSON.stringify(item.after ?? {}));
+				if (item.kind === "session" && nextAfter.data) {
+					const [section] = suffix.split("/");
+					if (["notes", "npcs", "locations", "scenes", "encounters"].includes(section)) {
+						nextAfter.data[section] = replaceItemInList(
+							nextAfter.data[section],
+							resource.after,
+							nextSnapshot,
+						);
+					}
+				} else if (item.kind === "entity" && suffix.startsWith("notes/")) {
+					nextAfter.notes = replaceItemInList(
+						nextAfter.notes,
+						resource.after,
+						nextSnapshot,
+					);
+				}
+				return { ...item, after: nextAfter };
+			}),
+		);
+	};
+	const getApplyResourceId = (resource) =>
+		getDraftResourceForPreview(resource)?.id || resource.id;
+	const renderResourceApplyButton = (resource) =>
+		isResourceApplied(resource) ? (
+			<span className="AiAssistant__preview_resource_applied">
+				{lang.t("Applied")}
+			</span>
+		) : isDraft &&
+		onApplyResource ? (
+			<Button
+				variant="ghost"
+				size={Button.SIZES.SMALL}
+				icon="check"
+				onClick={() => handleApplyResource(resource)}
+				disabled={isRestoringResponse}
+				title={lang.t("Apply selected AI change")}
+			>
+				{lang.t("Apply")}
+			</Button>
+		) : null;
+	const renderNoteCard = (resource, note, editable = false) => {
 		if (!isObjectSnapshot(note)) return null;
 		const campaignSlug = resource.campaign || selectedResponseEntry?.path?.campaign;
 		const normalizedNote = {
@@ -173,14 +251,22 @@ export default function AiResponseModal({
 				isLast={false}
 				campaignSlug={campaignSlug}
 				onToggleCollapse={noop}
-				onTitleChange={noop}
-				onTextChange={noop}
+				onTitleChange={
+					editable
+						? (_id, title) => updateDraftResourceAfter(resource, { ...note, title })
+						: noop
+				}
+				onTextChange={
+					editable
+						? (_id, text) => updateDraftResourceAfter(resource, { ...note, text })
+						: noop
+				}
 				onDelete={noop}
 			/>
 		);
 	};
 
-	const renderEntityCard = (resource, snapshot) => {
+	const renderEntityCard = (resource, snapshot, editable = false) => {
 		const cardType = getPreviewCardType(resource);
 		if (!cardType || !isObjectSnapshot(snapshot)) return null;
 		const campaignSlug = resource.campaign || selectedResponseEntry?.path?.campaign;
@@ -189,7 +275,11 @@ export default function AiResponseModal({
 				<LocationCard
 					location={snapshot}
 					campaignSlug={campaignSlug}
-					onChange={noop}
+					onChange={
+						editable
+							? (_id, next) => updateDraftResourceAfter(resource, next)
+							: noop
+					}
 					onNameBlur={noop}
 					onDelete={noop}
 					onReorderDrop={noop}
@@ -202,7 +292,11 @@ export default function AiResponseModal({
 				character={snapshot}
 				campaignSlug={campaignSlug}
 				type={getCardEntityType(resource)}
-				onChange={noop}
+				onChange={
+					editable
+						? (_id, next) => updateDraftResourceAfter(resource, next)
+						: noop
+				}
 				onNameBlur={noop}
 				onDelete={noop}
 				onReorderDrop={noop}
@@ -212,6 +306,7 @@ export default function AiResponseModal({
 	};
 
 	const renderNoteCardDiff = (resource) => {
+		resource = getEditedPreviewResource(resource);
 		const isNew = resource.before === null;
 		const isDeleted = resource.after === null;
 		return (
@@ -222,11 +317,15 @@ export default function AiResponseModal({
 					"AiAssistant__preview_resource_notes",
 					isNew && "is_added",
 					isDeleted && "is_removed",
+					isResourceApplied(resource) && "is_applied",
 				)}
 			>
 				<div className="AiAssistant__preview_resource_header">
 					<span>{resource.label}</span>
-					<span>{getDiffResourceState(resource)}</span>
+					<div className="AiAssistant__preview_resource_actions">
+						<span>{getDiffResourceState(resource)}</span>
+						{renderResourceApplyButton(resource)}
+					</div>
 				</div>
 				{isNew || isDeleted ? (
 					<div className="AiAssistant__preview_card_stack">
@@ -234,8 +333,8 @@ export default function AiResponseModal({
 							<div className="AiAssistant__preview_column_title">
 								{isNew ? lang.t("New") : lang.t("Deleted")}
 							</div>
-							<div className="AiAssistant__preview_note_surface">
-								{renderNoteCard(resource, isNew ? resource.after : resource.before)}
+							<div className={classNames("AiAssistant__preview_note_surface", isDraft && isNew && "is_editable")}>
+								{renderNoteCard(resource, isNew ? resource.after : resource.before, isDraft && isNew && !isResourceApplied(resource))}
 							</div>
 						</div>
 					</div>
@@ -253,8 +352,8 @@ export default function AiResponseModal({
 							<div className="AiAssistant__preview_column_title">
 								{lang.t("After")}
 							</div>
-							<div className="AiAssistant__preview_note_surface is_added">
-								{renderNoteCard(resource, resource.after)}
+							<div className={classNames("AiAssistant__preview_note_surface is_added", isDraft && "is_editable")}>
+								{renderNoteCard(resource, resource.after, isDraft && !isResourceApplied(resource))}
 							</div>
 						</div>
 					</div>
@@ -293,6 +392,7 @@ export default function AiResponseModal({
 	};
 
 	const renderPreviewResource = (resource) => {
+		resource = getEditedPreviewResource(resource);
 		const isNew = resource.before === null;
 		const isDeleted = resource.after === null;
 		const cardType = getPreviewCardType(resource);
@@ -315,11 +415,15 @@ export default function AiResponseModal({
 						"AiAssistant__preview_resource_cards",
 						isNew && "is_added",
 						isDeleted && "is_removed",
+						isResourceApplied(resource) && "is_applied",
 					)}
 				>
 					<div className="AiAssistant__preview_resource_header">
 						<span>{resource.label}</span>
-						<span>{getDiffResourceState(resource)}</span>
+						<div className="AiAssistant__preview_resource_actions">
+							<span>{getDiffResourceState(resource)}</span>
+							{renderResourceApplyButton(resource)}
+						</div>
 					</div>
 					{isNew || isDeleted ? (
 						<div className="AiAssistant__preview_card_stack">
@@ -327,8 +431,8 @@ export default function AiResponseModal({
 								<div className="AiAssistant__preview_column_title">
 									{isNew ? lang.t("New") : lang.t("Deleted")}
 								</div>
-								<div className="AiAssistant__preview_card_surface">
-									{renderEntityCard(resource, isNew ? resource.after : resource.before)}
+								<div className={classNames("AiAssistant__preview_card_surface", isDraft && isNew && "is_editable")}>
+									{renderEntityCard(resource, isNew ? resource.after : resource.before, isDraft && isNew && !isResourceApplied(resource))}
 								</div>
 							</div>
 						</div>
@@ -346,8 +450,8 @@ export default function AiResponseModal({
 								<div className="AiAssistant__preview_column_title">
 									{lang.t("After")}
 								</div>
-								<div className="AiAssistant__preview_card_surface is_added">
-									{renderEntityCard(resource, resource.after)}
+								<div className={classNames("AiAssistant__preview_card_surface is_added", isDraft && "is_editable")}>
+									{renderEntityCard(resource, resource.after, isDraft && !isResourceApplied(resource))}
 								</div>
 							</div>
 						</div>
@@ -372,11 +476,15 @@ export default function AiResponseModal({
 					className={classNames(
 						"AiAssistant__preview_resource",
 						isNew ? "is_added" : "is_removed",
+						isResourceApplied(resource) && "is_applied",
 					)}
 				>
 					<div className="AiAssistant__preview_resource_header">
 						<span>{resource.label}</span>
-						<span>{getDiffResourceState(resource)}</span>
+						<div className="AiAssistant__preview_resource_actions">
+							<span>{getDiffResourceState(resource)}</span>
+							{renderResourceApplyButton(resource)}
+						</div>
 					</div>
 					<div className="AiAssistant__preview_stack">
 						{keys.map((key) => (
@@ -391,10 +499,19 @@ export default function AiResponseModal({
 		}
 
 		return (
-			<div key={resource.id} className="AiAssistant__preview_resource">
+			<div
+				key={resource.id}
+				className={classNames(
+					"AiAssistant__preview_resource",
+					isResourceApplied(resource) && "is_applied",
+				)}
+			>
 				<div className="AiAssistant__preview_resource_header">
 					<span>{resource.label}</span>
-					<span>{getDiffResourceState(resource)}</span>
+					<div className="AiAssistant__preview_resource_actions">
+						<span>{getDiffResourceState(resource)}</span>
+						{renderResourceApplyButton(resource)}
+					</div>
 				</div>
 				{fieldKeys.map((key) => (
 					<div key={`${resource.id}-${key}`} className="AiAssistant__preview_field">
@@ -483,16 +600,30 @@ export default function AiResponseModal({
 			return;
 		}
 		try {
-			const resources = draftResources.map((resource) => ({
+			const resources = draftResourceEdits.map((resource) => ({
 				id: resource.id,
-				after: parseSnapshotText(
-					draftEdits[resource.id],
-					resource.after === null,
-				),
+				after: resource.after,
 			}));
 			setDraftError("");
 			const updatedEntry = await onSaveDraftChanges(resources);
 			onApply(updatedEntry || selectedResponseEntry);
+		} catch (error) {
+			setDraftError(error.message || lang.t("Invalid draft changes"));
+		}
+	};
+
+	const handleApplyResource = async (resource) => {
+		if (!isDraft || !onSaveDraftChanges || !onApplyResource) return;
+		try {
+			const resources = draftResourceEdits.map((entry) => ({
+				id: entry.id,
+				after: entry.after,
+			}));
+			setDraftError("");
+			const updatedEntry = await onSaveDraftChanges(resources);
+			onApplyResource(updatedEntry || selectedResponseEntry, [
+				getApplyResourceId(resource),
+			]);
 		} catch (error) {
 			setDraftError(error.message || lang.t("Invalid draft changes"));
 		}
@@ -602,16 +733,16 @@ export default function AiResponseModal({
 						) : (
 							renderJsonDiff()
 						)}
-						{isDraft && draftResources.length > 0 && (
+						{isDraft && draftResources.length > 0 && draftError && (
+							<div className="AiAssistant__draft_error">
+								{draftError}
+							</div>
+						)}
+						{isDraft && draftResources.length > 0 && diffViewMode === "json" && (
 							<div className="AiAssistant__draft_editor">
 								<div className="AiAssistant__draft_editor_title">
 									{lang.t("Draft values before applying")}
 								</div>
-								{draftError && (
-									<div className="AiAssistant__draft_error">
-										{draftError}
-									</div>
-								)}
 								{draftResources.map((resource) => {
 									const isNew = resource.before === null;
 									return (
@@ -643,12 +774,29 @@ export default function AiResponseModal({
 														type="textarea"
 														className="AiAssistant__draft_textarea"
 														value={draftEdits[resource.id] || ""}
-														onChange={(event) =>
+														onChange={(event) => {
+															const text = event.target.value;
 															setDraftEdits((current) => ({
 																...current,
-																[resource.id]: event.target.value,
-															}))
-														}
+																[resource.id]: text,
+															}));
+															try {
+																const after = parseSnapshotText(
+																	text,
+																	resource.after === null,
+																);
+																setDraftResourceEdits((current) =>
+																	current.map((item) =>
+																		item.id === resource.id
+																			? { ...item, after }
+																			: item,
+																	),
+																);
+																setDraftError("");
+															} catch {
+																setDraftError(lang.t("Invalid draft changes"));
+															}
+														}}
 													/>
 												</div>
 											</div>

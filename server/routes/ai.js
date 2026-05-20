@@ -641,7 +641,11 @@ router.post("/responses/:id/apply", async (req, res, next) => {
 		if (!entry) {
 			return res.status(404).json({ error: "AI response not found." });
 		}
-		res.json(await restoreAiResponseSnapshot(entry, "after"));
+		res.json(
+			await restoreAiResponseSnapshot(entry, "after", {
+				resourceIds: req.body?.resourceIds,
+			}),
+		);
 	} catch (error) {
 		if (error.status) {
 			return res.status(error.status).json({ error: error.message });

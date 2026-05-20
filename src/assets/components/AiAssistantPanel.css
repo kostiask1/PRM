@@ -398,6 +398,10 @@
 	border-top: 1px solid var(--border);
 }
 
+.AiAssistant__preview_resource.is_applied {
+	background: color-mix(in srgb, var(--success), transparent 92%);
+}
+
 .AiAssistant__preview_resource_header {
 	display: flex;
 	align-items: center;
@@ -421,6 +425,24 @@
 	flex: 0 0 auto;
 	color: var(--muted);
 	font-weight: 600;
+}
+
+.AiAssistant__preview_resource_actions {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2);
+	flex: 0 0 auto;
+	color: var(--muted);
+}
+
+.AiAssistant__preview_resource_applied {
+	padding: 3px 8px;
+	border: 1px solid color-mix(in srgb, var(--success), transparent 45%);
+	border-radius: var(--radius-sm);
+	background: color-mix(in srgb, var(--success), transparent 86%);
+	color: var(--success);
+	font-size: 0.75rem;
+	font-weight: 700;
 }
 
 .AiAssistant__preview_stack,
@@ -513,6 +535,12 @@
 	pointer-events: none;
 	margin: 0;
 	box-shadow: none;
+}
+
+.AiAssistant__preview_card_surface.is_editable .character_card,
+.AiAssistant__preview_card_surface.is_editable .location_card,
+.AiAssistant__preview_note_surface.is_editable .note_card_simple {
+	pointer-events: auto;
 }
 
 .AiAssistant__preview_column {

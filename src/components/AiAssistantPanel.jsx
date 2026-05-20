@@ -838,18 +838,28 @@ export default function AiAssistantPanel({
 		}
 	};
 
-	const restoreAiHistoryEntry = async (entry, mode) => {
+	const restoreAiHistoryEntry = async (entry, mode, options = {}) => {
 		if (!entry?.id || isRestoringResponse) return;
 		const isUndo = mode === "undo";
+		const isPartialApply =
+			!isUndo &&
+			Array.isArray(options.resourceIds) &&
+			options.resourceIds.length > 0;
 		const confirmed = await dispatch(
 			confirm({
 				title: isUndo
 					? lang.t("Undo AI changes")
-					: lang.t("Apply AI changes"),
+					: isPartialApply
+						? lang.t("Apply selected AI change")
+						: lang.t("Apply AI changes"),
 				message: isUndo
 					? lang.t(
 							"Restore data to the state before this AI response? Newer edits in these resources may be overwritten.",
 						)
+					: isPartialApply
+						? lang.t(
+								"Apply only this AI change? Newer edits in this resource may be overwritten.",
+							)
 					: lang.t(
 							"Restore data to the state after this AI response? Newer edits in these resources may be overwritten.",
 						),
@@ -861,7 +871,9 @@ export default function AiAssistantPanel({
 		try {
 			const result = isUndo
 				? await api.undoAiResponse(initialRoute.campaign, entry.id)
-				: await api.applyAiResponse(initialRoute.campaign, entry.id);
+				: await api.applyAiResponse(initialRoute.campaign, entry.id, {
+						resourceIds: options.resourceIds,
+					});
 			refreshAfterAiHistoryRestore(result, entry);
 			setNotification(
 				isUndo
@@ -2094,6 +2106,9 @@ export default function AiAssistantPanel({
 							markdownComponents={markdownMentionComponents}
 							onApply={(entry = selectedResponseEntry) =>
 								restoreAiHistoryEntry(entry, "apply")
+							}
+							onApplyResource={(entry = selectedResponseEntry, resourceIds) =>
+								restoreAiHistoryEntry(entry, "apply", { resourceIds })
 							}
 							onCancel={closeGeneratedPrompt}
 							onCopy={copyGeneratedPrompt}

@@ -14,6 +14,10 @@
 	padding: 0;
 }
 
+.MessageBox__overlay {
+	z-index: 1200;
+}
+
 .Modal__card {
 	background: var(--panel);
 	border: 1px solid var(--border);

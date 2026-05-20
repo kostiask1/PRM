@@ -23,6 +23,7 @@ export default function MessageBox() {
 	return (
 		<Modal
 			{...messageBox}
+			overlayClassName="MessageBox__overlay"
 			onConfirm={(value) => handleResolve(value)}
 			onCancel={handleCancel}
 		/>

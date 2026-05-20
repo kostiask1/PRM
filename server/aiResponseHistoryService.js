@@ -295,7 +295,7 @@ async function readUpdatedObjectForAiResponse(entry) {
 	return null;
 }
 
-async function restoreAiResponseSnapshot(entry, snapshotKey) {
+async function restoreAiResponseSnapshot(entry, snapshotKey, options = {}) {
 	const resources = entry?.changes?.resources || [];
 	if (!resources.length) {
 		const error = new Error("This AI response has no saved changes.");
@@ -303,18 +303,63 @@ async function restoreAiResponseSnapshot(entry, snapshotKey) {
 		throw error;
 	}
 
-	for (const resource of resources) {
+	const resourceIds = Array.isArray(options.resourceIds)
+		? new Set(options.resourceIds.map((id) => String(id || "")).filter(Boolean))
+		: null;
+	const selectedResources = resourceIds
+		? resources.filter((resource) => resourceIds.has(resource.id))
+		: resources;
+	if (!selectedResources.length) {
+		const error = new Error("Selected AI response changes were not found.");
+		error.status = 400;
+		throw error;
+	}
+
+	for (const resource of selectedResources) {
 		await writeAiResourceSnapshot(resource, resource[snapshotKey] ?? null);
 	}
 
 	const campaignSlug = entry?.path?.campaign;
+	const appliedAt = new Date().toISOString();
+	const patch = resourceIds && snapshotKey === "after"
+		? (() => {
+				const nextResources = resources.map((resource) =>
+					resourceIds.has(resource.id)
+						? { ...resource, applyState: "applied", appliedAt }
+						: resource,
+				);
+				const allApplied = nextResources.every(
+					(resource) => resource.applyState === "applied",
+				);
+				return {
+					changes: {
+						...(entry.changes || {}),
+						resources: nextResources,
+						summary: buildAiChangeSummary(nextResources),
+					},
+					applyState: allApplied ? "applied" : "draft",
+					appliedAt: allApplied ? appliedAt : null,
+				};
+			})()
+		: {
+				changes: snapshotKey === "after"
+					? {
+							...(entry.changes || {}),
+							resources: resources.map((resource) => ({
+								...resource,
+								applyState: "applied",
+								appliedAt,
+							})),
+							summary: buildAiChangeSummary(resources),
+						}
+					: entry.changes,
+				applyState: snapshotKey === "after" ? "applied" : "undone",
+				appliedAt,
+			};
 	const response = await storage.updateAiResponse(
 		campaignSlug,
 		entry.id,
-		{
-			applyState: snapshotKey === "after" ? "applied" : "undone",
-			appliedAt: new Date().toISOString(),
-		},
+		patch,
 	);
 	return {
 		response,

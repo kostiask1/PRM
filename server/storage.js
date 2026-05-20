@@ -463,6 +463,8 @@ function normalizeAiChangeResource(raw = {}) {
 		label: String(raw.label || raw.id || kind),
 		before,
 		after,
+		applyState: raw.applyState === "applied" ? "applied" : null,
+		appliedAt: raw.appliedAt || null,
 	};
 
 	if (kind === "session") {
