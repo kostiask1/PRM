@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import ReactMarkdown from "react-markdown";
 
 import { api } from "../../api";
 import { navigateTo } from "../../store/appStore";
 import { lang } from "../../services/localization";
 import { buildNavigationUrl } from "../../utils/navigation";
 import { makeDomId, scrollToHashTarget } from "../../utils/domNavigation";
+import { renderMentionText } from "../../renderers/contentRenderer.jsx";
 import Button from "../form/Button";
 import Modal from "../common/Modal";
 import classNames from "../../utils/classNames";
@@ -19,6 +21,64 @@ const FILTERS = [
 	"monsters",
 	"mentions",
 ];
+
+const MARKDOWN_TAGS_WITH_MENTIONS = [
+	"p",
+	"strong",
+	"em",
+	"del",
+	"blockquote",
+	"li",
+	"h1",
+	"h2",
+	"h3",
+	"h4",
+	"h5",
+	"h6",
+	"td",
+	"th",
+	"a",
+	"span",
+];
+
+function renderMentionChildren(children) {
+	return React.Children.map(children, (child) => {
+		if (typeof child === "string") {
+			return renderMentionText(child);
+		}
+		if (React.isValidElement(child) && child.props?.children) {
+			if (child.type === "code" || child.type === "pre") {
+				return child;
+			}
+			return React.cloneElement(child, {
+				...child.props,
+				children: renderMentionChildren(child.props.children),
+			});
+		}
+		return child;
+	});
+}
+
+function ParsedSearchText({ text, inline = false }) {
+	const components = useMemo(
+		() =>
+			Object.fromEntries(
+				MARKDOWN_TAGS_WITH_MENTIONS.map((tag) => [
+					tag,
+					({ children, ...tagProps }) =>
+						React.createElement(
+							inline && tag === "p" ? "span" : tag,
+							tagProps,
+							renderMentionChildren(children),
+						),
+				]),
+			),
+		[inline],
+	);
+	const value = String(text || "");
+	if (!value.trim()) return null;
+	return <ReactMarkdown components={components}>{value}</ReactMarkdown>;
+}
 
 function asText(value) {
 	if (value === null || value === undefined) return "";
@@ -434,11 +494,24 @@ export default function GlobalSearchModal({ campaign, currentData, onCancel }) {
 							<div className="GlobalSearch__state">{lang.t("No results")}</div>
 						) : (
 							results.map((result) => (
-								<button
+								<div
 									key={result.id}
-									type="button"
+									role="button"
+									tabIndex={0}
 									className={classNames("GlobalSearch__result", `is_${result.filter}`)}
-									onClick={() => {
+									onClick={(event) => {
+										if (event.target?.closest?.("a, button, input, textarea, select")) {
+											return;
+										}
+										onCancel?.();
+										openTarget(result.target);
+									}}
+									onKeyDown={(event) => {
+										if (event.key !== "Enter" && event.key !== " ") return;
+										if (event.target?.closest?.("a, button, input, textarea, select")) {
+											return;
+										}
+										event.preventDefault();
 										onCancel?.();
 										openTarget(result.target);
 									}}
@@ -446,12 +519,21 @@ export default function GlobalSearchModal({ campaign, currentData, onCancel }) {
 									<span className="GlobalSearch__resultType">
 										{lang.t(`Search filter: ${result.filter}`)}
 									</span>
-									<strong>{result.title}</strong>
-									<span>{result.subtitle}</span>
+									<strong>
+										<ParsedSearchText text={result.title} inline />
+									</strong>
+									<span>
+										<ParsedSearchText text={result.subtitle} inline />
+									</span>
 									{buildSnippet(result.text, query) && (
-										<p>{buildSnippet(result.text, query)}</p>
+										<p>
+											<ParsedSearchText
+												text={buildSnippet(result.text, query)}
+												inline
+											/>
+										</p>
 									)}
-								</button>
+								</div>
 							))
 						)}
 					</div>

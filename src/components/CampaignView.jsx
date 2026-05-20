@@ -11,6 +11,7 @@ import CharacterCard from "./CharacterCard";
 import LocationCard from "./LocationCard";
 import CampaignNotesGraph from "./campaign/CampaignNotesGraph.jsx";
 import GlobalSearchModal from "./campaign/GlobalSearchModal.jsx";
+import PartialArchiveModal from "./campaign/PartialArchiveModal.jsx";
 import CollapseToggleButton from "./common/CollapseToggleButton.jsx";
 import Tooltip from "./common/Tooltip.jsx";
 import CreateCharacterButton from "./CreateCharacterButton";
@@ -30,6 +31,8 @@ function CampaignView(props) {
 	const [sessionSearch, setSessionSearch] = useState("");
 	const [notesViewMode, setNotesViewMode] = useState("list");
 	const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
+	const [isPartialArchiveOpen, setIsPartialArchiveOpen] = useState(false);
+	const [isPartialArchiveBusy, setIsPartialArchiveBusy] = useState(false);
 	const simplifiedNotesEnabled = useAppSelector(
 		(state) => state.ui.simplifiedNotes,
 	);
@@ -224,6 +227,13 @@ function CampaignView(props) {
 					/>
 					<Button onClick={view.handleExport} icon="export">
 						{lang.t("Export")}
+					</Button>
+					<Button
+						variant="ghost"
+						icon="database"
+						onClick={() => setIsPartialArchiveOpen(true)}
+					>
+						{lang.t("Import/export parts")}
 					</Button>
 					<Button
 						variant="danger"
@@ -670,6 +680,29 @@ function CampaignView(props) {
 						locations: view.locations,
 					}}
 					onCancel={() => setIsGlobalSearchOpen(false)}
+				/>
+			)}
+			{isPartialArchiveOpen && (
+				<PartialArchiveModal
+					isBusy={isPartialArchiveBusy}
+					onCancel={() => setIsPartialArchiveOpen(false)}
+					onExport={async (sections) => {
+						setIsPartialArchiveBusy(true);
+						try {
+							await view.handleExportPartial(sections);
+						} finally {
+							setIsPartialArchiveBusy(false);
+						}
+					}}
+					onImport={async (file, sections) => {
+						setIsPartialArchiveBusy(true);
+						try {
+							await view.handleImportPartial(file, sections);
+							setIsPartialArchiveOpen(false);
+						} finally {
+							setIsPartialArchiveBusy(false);
+						}
+					}}
 				/>
 			)}
 		</Panel>

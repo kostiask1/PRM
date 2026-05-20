@@ -1,7 +1,6 @@
 .GlobalSearch {
 	display: grid;
 	gap: var(--space-3);
-	width: min(980px, 92vw);
 }
 
 .GlobalSearch__bar input {
@@ -51,6 +50,11 @@
 	font-size: 0.98rem;
 }
 
+.GlobalSearch__result strong span {
+	color: inherit;
+	font-size: inherit;
+}
+
 .GlobalSearch__result span {
 	color: var(--muted);
 	font-size: 0.82rem;
@@ -61,6 +65,11 @@
 	color: var(--text);
 	font-size: 0.88rem;
 	line-height: 1.45;
+}
+
+.GlobalSearch__result p span {
+	color: inherit;
+	font-size: inherit;
 }
 
 .GlobalSearch__resultType {
