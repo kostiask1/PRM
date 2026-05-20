@@ -515,17 +515,17 @@ export default function useCampaignView(props) {
 
 	const handleCharactersReorder = (newCharacters) => {
 		pushReorderUndoOnce();
-		setCharacters(withEntityOrder(newCharacters));
+		setCharacters(newCharacters);
 	};
 
 	const handleNpcsReorder = (newNpcs) => {
 		pushReorderUndoOnce();
-		setNpcs(withEntityOrder(newNpcs));
+		setNpcs(newNpcs);
 	};
 
 	const handleLocationsReorder = (newLocations) => {
 		pushReorderUndoOnce();
-		setLocations(withEntityOrder(newLocations));
+		setLocations(newLocations);
 	};
 
 	const persistEntitiesReorder = useCallback(
