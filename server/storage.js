@@ -22,7 +22,7 @@ const DEFAULT_APP_SETTINGS = Object.freeze({
 	simplifiedNotes: false,
 	aiBasePrompt: "",
 	campaignAiBasePrompts: {},
-	autoApplyAiChanges: true,
+	autoApplyAiChanges: false,
 });
 
 function todayString() {
@@ -463,7 +463,9 @@ function normalizeAiChangeResource(raw = {}) {
 		label: String(raw.label || raw.id || kind),
 		before,
 		after,
-		applyState: raw.applyState === "applied" ? "applied" : null,
+		applyState: ["applied", "undone"].includes(raw.applyState)
+			? raw.applyState
+			: null,
 		appliedAt: raw.appliedAt || null,
 	};
 

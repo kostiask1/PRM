@@ -664,7 +664,11 @@ router.post("/responses/:id/undo", async (req, res, next) => {
 		if (!entry) {
 			return res.status(404).json({ error: "AI response not found." });
 		}
-		res.json(await restoreAiResponseSnapshot(entry, "before"));
+		res.json(
+			await restoreAiResponseSnapshot(entry, "before", {
+				resourceIds: req.body?.resourceIds,
+			}),
+		);
 	} catch (error) {
 		if (error.status) {
 			return res.status(error.status).json({ error: error.message });

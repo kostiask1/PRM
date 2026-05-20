@@ -845,17 +845,27 @@ export default function AiAssistantPanel({
 			!isUndo &&
 			Array.isArray(options.resourceIds) &&
 			options.resourceIds.length > 0;
+		const isPartialUndo =
+			isUndo &&
+			Array.isArray(options.resourceIds) &&
+			options.resourceIds.length > 0;
 		const confirmed = await dispatch(
 			confirm({
 				title: isUndo
-					? lang.t("Undo AI changes")
+					? isPartialUndo
+						? lang.t("Undo selected AI change")
+						: lang.t("Undo AI changes")
 					: isPartialApply
 						? lang.t("Apply selected AI change")
 						: lang.t("Apply AI changes"),
 				message: isUndo
-					? lang.t(
-							"Restore data to the state before this AI response? Newer edits in these resources may be overwritten.",
-						)
+					? isPartialUndo
+						? lang.t(
+								"Undo only this AI change? Newer edits in this resource may be overwritten.",
+							)
+						: lang.t(
+								"Restore data to the state before this AI response? Newer edits in these resources may be overwritten.",
+							)
 					: isPartialApply
 						? lang.t(
 								"Apply only this AI change? Newer edits in this resource may be overwritten.",
@@ -870,7 +880,9 @@ export default function AiAssistantPanel({
 		setIsRestoringResponse(true);
 		try {
 			const result = isUndo
-				? await api.undoAiResponse(initialRoute.campaign, entry.id)
+				? await api.undoAiResponse(initialRoute.campaign, entry.id, {
+						resourceIds: options.resourceIds,
+					})
 				: await api.applyAiResponse(initialRoute.campaign, entry.id, {
 						resourceIds: options.resourceIds,
 					});
@@ -2120,6 +2132,9 @@ export default function AiAssistantPanel({
 							}
 							onUndo={() =>
 								restoreAiHistoryEntry(selectedResponseEntry, "undo")
+							}
+							onUndoResource={(entry = selectedResponseEntry, resourceIds) =>
+								restoreAiHistoryEntry(entry, "undo", { resourceIds })
 							}
 							selectedResponseDetails={selectedResponseDetails}
 							selectedResponseDiffResources={selectedResponseDiffResources}

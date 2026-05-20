@@ -194,11 +194,12 @@ export const api = {
 				body: JSON.stringify(payload),
 			},
 		),
-	undoAiResponse: (campaign, id) =>
+	undoAiResponse: (campaign, id, payload = {}) =>
 		api.request(
 			`/ai/responses/${encodeURIComponent(id)}/undo?campaign=${encodeURIComponent(campaign)}`,
 			{
 				method: "POST",
+				body: JSON.stringify(payload),
 			},
 		),
 	clearAiResponses: (campaign) =>

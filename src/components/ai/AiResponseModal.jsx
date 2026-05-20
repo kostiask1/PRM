@@ -112,6 +112,10 @@ function isResourceApplied(resource) {
 	return resource?.applyState === "applied";
 }
 
+function isResourceUndone(resource) {
+	return resource?.applyState === "undone";
+}
+
 export default function AiResponseModal({
 	generatedPrompt,
 	generatedPromptRef,
@@ -124,6 +128,7 @@ export default function AiResponseModal({
 	onCopy,
 	onSaveDraftChanges,
 	onUndo,
+	onUndoResource,
 	selectedResponseDetails,
 	selectedResponseDiffResources,
 	selectedResponseEntry,
@@ -216,26 +221,62 @@ export default function AiResponseModal({
 			}),
 		);
 	};
-	const getApplyResourceId = (resource) =>
-		getDraftResourceForPreview(resource)?.id || resource.id;
-	const renderResourceApplyButton = (resource) =>
-		isResourceApplied(resource) ? (
-			<span className="AiAssistant__preview_resource_applied">
-				{lang.t("Applied")}
-			</span>
-		) : isDraft &&
-		onApplyResource ? (
-			<Button
-				variant="ghost"
-				size={Button.SIZES.SMALL}
-				icon="check"
-				onClick={() => handleApplyResource(resource)}
-				disabled={isRestoringResponse}
-				title={lang.t("Apply selected AI change")}
-			>
-				{lang.t("Apply")}
-			</Button>
-		) : null;
+	const getHistoryResourceId = (resource) => {
+		const resources = Array.isArray(selectedResponseEntry?.changes?.resources)
+			? selectedResponseEntry.changes.resources
+			: [];
+		return (
+			resources.find((item) => item.id === resource.id)?.id ||
+			resources.find((item) =>
+				String(resource.id || "").startsWith(`${item.id}:`),
+			)?.id ||
+			resource.id
+		);
+	};
+	const renderResourceActions = (resource) => {
+		const applied = isResourceApplied(resource);
+		const undone = isResourceUndone(resource);
+		const canApply = isDraft && onApplyResource && !applied;
+		const canUndo = onUndoResource && (applied || (isDraft && !undone));
+		return (
+			<>
+				{applied && (
+					<span className="AiAssistant__preview_resource_state is_applied">
+						{lang.t("Applied")}
+					</span>
+				)}
+				{undone && (
+					<span className="AiAssistant__preview_resource_state is_undone">
+						{lang.t("Undone")}
+					</span>
+				)}
+				{canApply && (
+					<Button
+						variant="ghost"
+						size={Button.SIZES.SMALL}
+						icon="check"
+						onClick={() => handleApplyResource(resource)}
+						disabled={isRestoringResponse}
+						title={lang.t("Apply selected AI change")}
+					>
+						{lang.t("Apply")}
+					</Button>
+				)}
+				{canUndo && (
+					<Button
+						variant="ghost"
+						size={Button.SIZES.SMALL}
+						icon="undo"
+						onClick={() => handleUndoResource(resource)}
+						disabled={isRestoringResponse}
+						title={lang.t("Undo selected AI change")}
+					>
+						{lang.t("Undo")}
+					</Button>
+				)}
+			</>
+		);
+	};
 	const renderNoteCard = (resource, note, editable = false) => {
 		if (!isObjectSnapshot(note)) return null;
 		const campaignSlug = resource.campaign || selectedResponseEntry?.path?.campaign;
@@ -318,13 +359,14 @@ export default function AiResponseModal({
 					isNew && "is_added",
 					isDeleted && "is_removed",
 					isResourceApplied(resource) && "is_applied",
+					isResourceUndone(resource) && "is_undone",
 				)}
 			>
 				<div className="AiAssistant__preview_resource_header">
 					<span>{resource.label}</span>
 					<div className="AiAssistant__preview_resource_actions">
 						<span>{getDiffResourceState(resource)}</span>
-						{renderResourceApplyButton(resource)}
+						{renderResourceActions(resource)}
 					</div>
 				</div>
 				{isNew || isDeleted ? (
@@ -416,13 +458,14 @@ export default function AiResponseModal({
 						isNew && "is_added",
 						isDeleted && "is_removed",
 						isResourceApplied(resource) && "is_applied",
+						isResourceUndone(resource) && "is_undone",
 					)}
 				>
 					<div className="AiAssistant__preview_resource_header">
 						<span>{resource.label}</span>
 						<div className="AiAssistant__preview_resource_actions">
 							<span>{getDiffResourceState(resource)}</span>
-							{renderResourceApplyButton(resource)}
+							{renderResourceActions(resource)}
 						</div>
 					</div>
 					{isNew || isDeleted ? (
@@ -477,13 +520,14 @@ export default function AiResponseModal({
 						"AiAssistant__preview_resource",
 						isNew ? "is_added" : "is_removed",
 						isResourceApplied(resource) && "is_applied",
+						isResourceUndone(resource) && "is_undone",
 					)}
 				>
 					<div className="AiAssistant__preview_resource_header">
 						<span>{resource.label}</span>
 						<div className="AiAssistant__preview_resource_actions">
 							<span>{getDiffResourceState(resource)}</span>
-							{renderResourceApplyButton(resource)}
+							{renderResourceActions(resource)}
 						</div>
 					</div>
 					<div className="AiAssistant__preview_stack">
@@ -504,13 +548,14 @@ export default function AiResponseModal({
 				className={classNames(
 					"AiAssistant__preview_resource",
 					isResourceApplied(resource) && "is_applied",
+					isResourceUndone(resource) && "is_undone",
 				)}
 			>
 				<div className="AiAssistant__preview_resource_header">
 					<span>{resource.label}</span>
 					<div className="AiAssistant__preview_resource_actions">
 						<span>{getDiffResourceState(resource)}</span>
-						{renderResourceApplyButton(resource)}
+						{renderResourceActions(resource)}
 					</div>
 				</div>
 				{fieldKeys.map((key) => (
@@ -622,11 +667,16 @@ export default function AiResponseModal({
 			setDraftError("");
 			const updatedEntry = await onSaveDraftChanges(resources);
 			onApplyResource(updatedEntry || selectedResponseEntry, [
-				getApplyResourceId(resource),
+				getHistoryResourceId(resource),
 			]);
 		} catch (error) {
 			setDraftError(error.message || lang.t("Invalid draft changes"));
 		}
+	};
+
+	const handleUndoResource = (resource) => {
+		if (!onUndoResource) return;
+		onUndoResource(selectedResponseEntry, [getHistoryResourceId(resource)]);
 	};
 
 	return (

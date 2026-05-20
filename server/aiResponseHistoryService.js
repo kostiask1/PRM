@@ -321,15 +321,22 @@ async function restoreAiResponseSnapshot(entry, snapshotKey, options = {}) {
 
 	const campaignSlug = entry?.path?.campaign;
 	const appliedAt = new Date().toISOString();
-	const patch = resourceIds && snapshotKey === "after"
+	const patch = resourceIds
 		? (() => {
 				const nextResources = resources.map((resource) =>
 					resourceIds.has(resource.id)
-						? { ...resource, applyState: "applied", appliedAt }
+						? {
+								...resource,
+								applyState: snapshotKey === "after" ? "applied" : "undone",
+								appliedAt,
+							}
 						: resource,
 				);
 				const allApplied = nextResources.every(
 					(resource) => resource.applyState === "applied",
+				);
+				const allUndone = nextResources.every(
+					(resource) => resource.applyState === "undone",
 				);
 				return {
 					changes: {
@@ -337,8 +344,8 @@ async function restoreAiResponseSnapshot(entry, snapshotKey, options = {}) {
 						resources: nextResources,
 						summary: buildAiChangeSummary(nextResources),
 					},
-					applyState: allApplied ? "applied" : "draft",
-					appliedAt: allApplied ? appliedAt : null,
+					applyState: allApplied ? "applied" : allUndone ? "undone" : "draft",
+					appliedAt: allApplied || allUndone ? appliedAt : null,
 				};
 			})()
 		: {

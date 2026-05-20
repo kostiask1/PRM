@@ -410,6 +410,8 @@
 	"Ukrainian": "Українська",
 	"Undo": "Скасувати",
 	"Undo AI changes": "Скасувати зміни від ШІ",
+	"Undo only this AI change? Newer edits in this resource may be overwritten.": "Скасувати лише цю зміну від ШІ? Новіші правки в цьому ресурсі можуть бути перезаписані.",
+	"Undo selected AI change": "Скасувати вибрану зміну ШІ",
 	"Undo (Ctrl+Z)": "Скасувати (Ctrl+Z)",
 	"Undone": "Скасовано",
 	"Unknown error": "Невідома помилка",
