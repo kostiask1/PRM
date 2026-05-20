@@ -49,6 +49,15 @@ function asText(value) {
 	return "";
 }
 
+function getCampaignBasePrompt(settings, campaignSlug) {
+	const prompts =
+		settings?.campaignAiBasePrompts &&
+		typeof settings.campaignAiBasePrompts === "object"
+			? settings.campaignAiBasePrompts
+			: {};
+	return asText(prompts[campaignSlug]);
+}
+
 function shouldUseCampaignEntityScope(userInstructions) {
 	const text = asText(userInstructions).toLowerCase();
 	if (!text) return false;
@@ -582,6 +591,8 @@ router.post("/generate", async (req, res, next) => {
 			(!path?.encounter || encounterGenerationEnabled);
 		const settings = await storage.readSettings();
 		const simplifiedNotesEnabled = Boolean(settings.simplifiedNotes);
+		const globalBasePrompt = asText(settings.aiBasePrompt);
+		const campaignBasePrompt = getCampaignBasePrompt(settings, path?.campaign);
 
 		if (type === "custom-monster") {
 			const customBestiary = await storage.readCustomBestiary();
@@ -697,6 +708,8 @@ router.post("/generate", async (req, res, next) => {
 				entityScope: "custom-bestiary",
 				language: responseLanguage,
 				simplifiedNotes: simplifiedNotesEnabled,
+				globalBasePrompt,
+				campaignBasePrompt,
 			});
 
 			if (generatedContent.error) {
@@ -753,6 +766,8 @@ router.post("/generate", async (req, res, next) => {
 					contextConfig: null,
 					contextData: customContextData,
 					language: responseLanguage,
+					globalBasePrompt,
+					campaignBasePrompt,
 				}),
 				changes: {
 					resources: [
@@ -797,6 +812,8 @@ router.post("/generate", async (req, res, next) => {
 				entityScope: "custom-bestiary",
 				language: responseLanguage,
 				simplifiedNotes: simplifiedNotesEnabled,
+				globalBasePrompt,
+				campaignBasePrompt,
 			});
 
 			if (generatedContent.error) {
@@ -828,6 +845,8 @@ router.post("/generate", async (req, res, next) => {
 					contextConfig: null,
 					contextData: {},
 					language: responseLanguage,
+					globalBasePrompt,
+					campaignBasePrompt,
 				}),
 			});
 			return res.json({ prompt: generatedContent, aiResponse });
@@ -930,6 +949,8 @@ router.post("/generate", async (req, res, next) => {
 			entityScope: entityTargetScope,
 			language: responseLanguage,
 			simplifiedNotes: simplifiedNotesEnabled,
+			globalBasePrompt,
+			campaignBasePrompt,
 		});
 
 		if (
@@ -968,6 +989,8 @@ router.post("/generate", async (req, res, next) => {
 			contextConfig,
 			contextData,
 			language: responseLanguage,
+			globalBasePrompt,
+			campaignBasePrompt,
 		});
 
 		if (!shouldParseAIResponse) {

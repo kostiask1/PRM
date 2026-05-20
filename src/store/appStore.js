@@ -43,6 +43,8 @@ function getInitialUiSettings() {
 		encounterViewMode: "grid",
 		encounterGridColumns: 3,
 		simplifiedNotes: false,
+		aiBasePrompt: "",
+		campaignAiBasePrompts: {},
 	};
 }
 

@@ -121,6 +121,8 @@ export default function App() {
 						encounterViewMode: settings.encounterViewMode,
 						encounterGridColumns: settings.encounterGridColumns,
 						simplifiedNotes: settings.simplifiedNotes,
+						aiBasePrompt: settings.aiBasePrompt,
+						campaignAiBasePrompts: settings.campaignAiBasePrompts,
 					}),
 				);
 			} catch (error) {

@@ -20,6 +20,8 @@ const DEFAULT_APP_SETTINGS = Object.freeze({
 	encounterViewMode: "grid",
 	encounterGridColumns: 3,
 	simplifiedNotes: false,
+	aiBasePrompt: "",
+	campaignAiBasePrompts: {},
 });
 
 function todayString() {
@@ -616,6 +618,19 @@ async function clearAiResponses(campaignSlugValue) {
 
 function normalizeSettings(settings = {}) {
 	const encounterGridColumns = Number.parseInt(settings.encounterGridColumns, 10);
+	const campaignAiBasePrompts =
+		settings.campaignAiBasePrompts &&
+		typeof settings.campaignAiBasePrompts === "object" &&
+		!Array.isArray(settings.campaignAiBasePrompts)
+			? Object.fromEntries(
+					Object.entries(settings.campaignAiBasePrompts)
+						.map(([slug, prompt]) => [
+							String(slug || "").trim(),
+							String(prompt || ""),
+						])
+						.filter(([slug]) => slug),
+				)
+			: {};
 
 	return {
 		language: settings.language === "en" ? "en" : "uk",
@@ -630,6 +645,8 @@ function normalizeSettings(settings = {}) {
 			),
 		),
 		simplifiedNotes: Boolean(settings.simplifiedNotes),
+		aiBasePrompt: String(settings.aiBasePrompt || ""),
+		campaignAiBasePrompts,
 	};
 }
 

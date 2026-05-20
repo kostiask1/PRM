@@ -445,6 +445,8 @@ async function generateContent({
 	modelName,
 	language,
 	simplifiedNotes,
+	globalBasePrompt,
+	campaignBasePrompt,
 }) {
 	let model;
 	let userPrompt = "";
@@ -598,6 +600,18 @@ If you create custom monsters, use "create" operations for entity "monster" and 
 	) {
 		systemInstructionParts.push(
 			`SESSION SCOPE OUTPUT RULE: Do not create session copies of campaign-scoped NPCs or campaign-scoped locations/factions. In session scope, update only INPUT DATA.currentSession entities by id, or create genuinely new session-scoped entities requested by the user.`,
+		);
+	}
+	const normalizedGlobalBasePrompt = String(globalBasePrompt || "").trim();
+	const normalizedCampaignBasePrompt = String(campaignBasePrompt || "").trim();
+	if (normalizedGlobalBasePrompt || normalizedCampaignBasePrompt) {
+		systemInstructionParts.push(
+			`USER BASE PROMPTS:
+These are standing user preferences for all current and future requests. Follow them for style, tone, world assumptions, constraints, and recurring DM preferences unless they conflict with higher-priority system rules, JSON contracts, entity scope rules, or the user's current request.
+GLOBAL BASE PROMPT:
+${normalizedGlobalBasePrompt || "(none)"}
+CAMPAIGN BASE PROMPT:
+${normalizedCampaignBasePrompt || "(none)"}`,
 		);
 	}
 

@@ -46,6 +46,8 @@ function buildAiOptionsSummary(options) {
 				.join(": ")}`,
 		);
 	}
+	if (options.globalBasePrompt) parts.push("global-base-prompt: on");
+	if (options.campaignBasePrompt) parts.push("campaign-base-prompt: on");
 	return parts.join("; ");
 }
 
@@ -132,6 +134,8 @@ function buildAiRequestSnapshot({
 	contextConfig,
 	contextData,
 	language,
+	globalBasePrompt,
+	campaignBasePrompt,
 }) {
 	const options = {
 		mode: getAiRequestMode(type, path),
@@ -146,6 +150,8 @@ function buildAiRequestSnapshot({
 		encounterGeneration: Boolean(generateEncounters),
 		customMonsterGeneration: Boolean(generateCustomMonsters),
 		contextEnabled: Boolean(contextConfig),
+		globalBasePrompt: Boolean(asText(globalBasePrompt)),
+		campaignBasePrompt: Boolean(asText(campaignBasePrompt)),
 		sceneId: sceneId || null,
 		imageTarget:
 			imageTarget && typeof imageTarget === "object"

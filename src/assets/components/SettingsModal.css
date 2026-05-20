@@ -40,6 +40,32 @@
 	gap: var(--space-1);
 }
 
+.SettingsModal__field {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+}
+
+.SettingsModal__field .Input__textarea {
+	min-height: 120px;
+}
+
+.SettingsModal__promptHeader {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: var(--space-3);
+}
+
+.SettingsModal__status {
+	font-size: 0.8rem;
+	color: var(--success);
+}
+
+.SettingsModal__status_error {
+	color: var(--danger);
+}
+
 .SettingsModal__actions {
 	display: flex;
 	justify-content: flex-end;
