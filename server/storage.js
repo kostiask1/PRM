@@ -694,7 +694,19 @@ async function listEntities(campaignSlug, type) {
 			}
 		}
 	}
-	return result;
+	return result.sort((a, b) => {
+		const aOrder = Number.isFinite(Number(a.order)) ? Number(a.order) : 0;
+		const bOrder = Number.isFinite(Number(b.order)) ? Number(b.order) : 0;
+		if (aOrder !== bOrder) return aOrder - bOrder;
+
+		const aName = String(
+			a.name || `${a.firstName || ""} ${a.lastName || ""}`.trim() || a.slug || "",
+		);
+		const bName = String(
+			b.name || `${b.firstName || ""} ${b.lastName || ""}`.trim() || b.slug || "",
+		);
+		return aName.localeCompare(bName, "uk");
+	});
 }
 
 async function readEntity(campaignSlug, type, entitySlug) {

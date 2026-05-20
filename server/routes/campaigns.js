@@ -215,12 +215,15 @@ router.put("/:slug/entities/:type", async (req, res, next) => {
 			}
 		}
 
-		for (const entity of entities) {
+		for (const [index, entity] of entities.entries()) {
 			const slug = storage.campaignSlug(
 				entity?.slug || entity?.name || entity?.firstName,
 			);
 			if (!slug) continue;
-			await storage.writeEntity(campaignSlug, type, slug, entity);
+			await storage.writeEntity(campaignSlug, type, slug, {
+				...entity,
+				order: index,
+			});
 		}
 
 		res.json(await storage.listEntities(campaignSlug, type));

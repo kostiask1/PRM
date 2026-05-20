@@ -423,7 +423,9 @@ function CampaignView(props) {
 									items={view.characters}
 									className="CampaignView__characters"
 									onReorder={view.handleCharactersReorder}
-									onDrop={view.finishTrackedReorder}
+									onDrop={(items) =>
+										view.persistEntitiesReorder("characters", items)
+									}
 									dragData={(character) => ({
 										kind: "campaign-character",
 										sourceType: "characters",
@@ -485,7 +487,9 @@ function CampaignView(props) {
 									items={view.npcs}
 									className="CampaignView__characters"
 									onReorder={view.handleNpcsReorder}
-									onDrop={view.finishTrackedReorder}
+									onDrop={(items) =>
+										view.persistEntitiesReorder("npc", items)
+									}
 									dragData={(npc) => ({
 										kind: "campaign-character",
 										sourceType: "npc",
@@ -554,7 +558,9 @@ function CampaignView(props) {
 									items={view.locations}
 									className="CampaignView__locations"
 									onReorder={view.handleLocationsReorder}
-									onDrop={view.finishTrackedReorder}
+									onDrop={(items) =>
+										view.persistEntitiesReorder("locations", items)
+									}
 									keyExtractor={(location) => location.id}
 									isItemControlActive={(location) =>
 										Boolean(location._aiIgnored)

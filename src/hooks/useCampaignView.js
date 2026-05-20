@@ -29,6 +29,10 @@ import {
 	sanitizeLoadedEntity,
 } from "../features/campaign/campaignStateUtils";
 
+function withEntityOrder(items = []) {
+	return items.map((item, index) => ({ ...item, order: index }));
+}
+
 export default function useCampaignView(props) {
 	const { campaign } = props;
 	const dispatch = useAppDispatch();
@@ -511,18 +515,46 @@ export default function useCampaignView(props) {
 
 	const handleCharactersReorder = (newCharacters) => {
 		pushReorderUndoOnce();
-		setCharacters(newCharacters);
+		setCharacters(withEntityOrder(newCharacters));
 	};
 
 	const handleNpcsReorder = (newNpcs) => {
 		pushReorderUndoOnce();
-		setNpcs(newNpcs);
+		setNpcs(withEntityOrder(newNpcs));
 	};
 
 	const handleLocationsReorder = (newLocations) => {
 		pushReorderUndoOnce();
-		setLocations(newLocations);
+		setLocations(withEntityOrder(newLocations));
 	};
+
+	const persistEntitiesReorder = useCallback(
+		async (type, nextEntities = []) => {
+			const orderedEntities = withEntityOrder(nextEntities).map((entity) =>
+				sanitizeEntityForSave(entity),
+			);
+			finishTrackedReorder();
+			if (type === "characters") setCharacters(orderedEntities);
+			if (type === "npc") setNpcs(orderedEntities);
+			if (type === "locations") setLocations(orderedEntities);
+
+			try {
+				await api.replaceEntities(campaign.slug, type, orderedEntities);
+			} catch (err) {
+				console.error(`Failed to reorder ${type}`, err);
+				dispatch(
+					alert({
+						title: lang.t("Error"),
+						message: lang.t("Failed to update entity."),
+					}),
+				);
+				if (type === "characters") loadCharacters();
+				if (type === "npc") loadNpcs();
+				if (type === "locations") loadLocations();
+			}
+		},
+		[campaign.slug, dispatch, loadCharacters, loadLocations, loadNpcs],
+	);
 
 	const handleToggleCharacterCollapse = (id) => {
 		const newCharacters = characters.map((c) =>
@@ -1130,6 +1162,7 @@ export default function useCampaignView(props) {
 		handleCharactersReorder,
 		handleNpcsReorder,
 		handleLocationsReorder,
+		persistEntitiesReorder,
 		finishTrackedReorder,
 		handleToggleCharacterCollapse,
 		handleCharacterChange,
