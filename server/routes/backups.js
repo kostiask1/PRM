@@ -106,6 +106,66 @@ router.get("/campaigns/:slug/export/archive", async (req, res, next) => {
 	}
 });
 
+router.get("/campaigns/:slug/export/partial-archive", async (req, res, next) => {
+	try {
+		const sections = String(req.query.sections || "")
+			.split(",")
+			.map((section) => section.trim())
+			.filter(Boolean);
+		const payload = await storage.exportCampaignPartialArchiveBundle(
+			req.params.slug,
+			sections,
+		);
+		const buffer = zlib.gzipSync(Buffer.from(JSON.stringify(payload), "utf8"));
+		const date = new Date().toISOString().slice(0, 10);
+		res.setHeader("Content-Type", "application/gzip");
+		res.setHeader(
+			"Content-Disposition",
+			attachmentDisposition(
+				`campaign-${req.params.slug}-partial-${date}.prma.gz`,
+			),
+		);
+		res.send(buffer);
+	} catch (error) {
+		next(error);
+	}
+});
+
+router.post(
+	"/campaigns/:slug/import/partial-archive",
+	archiveUpload.single("archive"),
+	async (req, res, next) => {
+		try {
+			if (!req.file?.buffer) {
+				return res
+					.status(400)
+					.json({ error: "Файл архіву не передано." });
+			}
+
+			const parsed = parseArchivePayload(req.file.buffer);
+			const archiveBundle = Array.isArray(parsed?.campaigns)
+				? parsed.campaigns[0]
+				: parsed;
+			const selectedSections = String(req.body?.sections || "")
+				.split(",")
+				.map((section) => section.trim())
+				.filter(Boolean);
+			res
+				.status(201)
+				.json(
+					await storage.importCampaignPartialArchiveBundle(
+						req.params.slug,
+						selectedSections.length > 0
+							? { ...archiveBundle, sections: selectedSections }
+							: archiveBundle,
+					),
+				);
+		} catch (error) {
+			next(error);
+		}
+	},
+);
+
 router.post("/import-all", async (req, res, next) => {
 	try {
 		const strategy = normalizeImportStrategy(req.query.strategy);

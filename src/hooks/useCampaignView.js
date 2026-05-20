@@ -1057,6 +1057,37 @@ export default function useCampaignView(props) {
 		}
 	};
 
+	const handleExportPartial = async (sections = []) => {
+		try {
+			const blob = await api.exportCampaignPartialArchive(campaign.slug, sections);
+			downloadBlob(
+				blob,
+				`campaign-${campaign.slug}-partial-${new Date().toISOString().slice(0, 10)}.prma.gz`,
+			);
+		} catch (err) {
+			dispatch(alert({ title: lang.t("Export error"), message: err.message }));
+		}
+	};
+
+	const handleImportPartial = async (file, sections = []) => {
+		try {
+			await api.importCampaignPartialArchive(campaign.slug, file, sections);
+			await Promise.all([loadCharacters(), loadNpcs(), loadLocations()]);
+			const sessionsData = await api.listSessions(campaign.slug);
+			setSessions(sessionsData);
+			setSessionDetails({});
+			sessionDetailsRef.current = {};
+			dispatch(requestCampaignsReloadAction());
+		} catch (err) {
+			dispatch(
+				alert({
+					title: lang.t("Import error"),
+					message: err.message || lang.t("Failed to import campaign"),
+				}),
+			);
+		}
+	};
+
 	const handleSessionReorderDrop = useCallback((nextSessions = sessions) => {
 		const orders = {};
 		nextSessions.forEach((item, idx) => {
@@ -1182,6 +1213,8 @@ export default function useCampaignView(props) {
 		handleRename,
 		handleDeleteSession,
 		handleExport,
+		handleExportPartial,
+		handleImportPartial,
 		handleAiUpdate,
 		handleSessionReorderDrop,
 	};

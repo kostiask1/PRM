@@ -65,11 +65,30 @@ export const api = {
 		api.request(`/campaigns/${encodeURIComponent(slug)}/export`),
 	exportCampaignArchive: (slug) =>
 		api.requestBlob(`/campaigns/${encodeURIComponent(slug)}/export/archive`),
+	exportCampaignPartialArchive: (slug, sections = []) => {
+		const query = new URLSearchParams();
+		if (sections.length > 0) query.set("sections", sections.join(","));
+		return api.requestBlob(
+			`/campaigns/${encodeURIComponent(slug)}/export/partial-archive?${query.toString()}`,
+		);
+	},
 	importCampaign: (bundle) =>
 		api.request("/import-all", {
 			method: "POST",
 			body: JSON.stringify(bundle),
 		}),
+	importCampaignPartialArchive: (slug, file, sections = []) => {
+		const formData = new FormData();
+		formData.append("archive", file);
+		if (sections.length > 0) formData.append("sections", sections.join(","));
+		return api.request(
+			`/campaigns/${encodeURIComponent(slug)}/import/partial-archive`,
+			{
+				method: "POST",
+				body: formData,
+			},
+		);
+	},
 	reorderCampaigns: (orders) =>
 		api.request("/campaigns/reorder", {
 			method: "POST",

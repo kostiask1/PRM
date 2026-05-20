@@ -1315,6 +1315,152 @@ async function exportCampaignArchiveBundle(slug) {
 	};
 }
 
+function normalizePartialArchiveSections(sections = []) {
+	const allowed = new Set([
+		"sessions",
+		"npc",
+		"locations",
+		"customMonsters",
+		"images",
+		"aiHistory",
+	]);
+	const selected = (Array.isArray(sections) ? sections : String(sections).split(","))
+		.map((section) => String(section || "").trim())
+		.filter((section) => allowed.has(section));
+	return [...new Set(selected)];
+}
+
+async function exportCampaignPartialArchiveBundle(slug, sections = []) {
+	const selected = normalizePartialArchiveSections(sections);
+	const meta = await readCampaign(slug);
+	const bundle = { meta, sessions: [], entities: {}, aiResponses: [] };
+
+	if (selected.includes("sessions")) {
+		const sessionFiles = await listSessions(slug);
+		bundle.sessions = await Promise.all(
+			sessionFiles.map(async (session) => ({
+				fileName: session.fileName,
+				content: await readSession(slug, session.fileName),
+			})),
+		);
+	}
+
+	if (selected.includes("npc")) {
+		bundle.entities.npc = await listEntities(slug, "npc");
+	}
+	if (selected.includes("locations")) {
+		bundle.entities.locations = await listEntities(slug, "locations");
+	}
+	if (selected.includes("aiHistory")) {
+		bundle.aiResponses = await readAiResponses(slug);
+	}
+
+	return {
+		version: 2,
+		scope: "campaign-partial",
+		sourceSlug: slug,
+		sourceName: meta.name,
+		sections: selected,
+		bundle,
+		customMonsters: selected.includes("customMonsters")
+			? await readCustomBestiaryMonsters()
+			: [],
+		images: selected.includes("images")
+			? await listCampaignImagesForArchive(slug)
+			: [],
+	};
+}
+
+async function importCampaignPartialArchiveBundle(targetSlug, archiveBundle) {
+	const target = path.basename(String(targetSlug || ""));
+	if (!target || !(await exists(campaignMetaPath(target)))) {
+		throw new Error("Кампанію для імпорту не знайдено.");
+	}
+
+	const sections = normalizePartialArchiveSections(archiveBundle?.sections || []);
+	const bundle = archiveBundle?.bundle || {};
+	const sourceMeta = bundle.meta || {};
+	const sourceSlug = sourceMeta.slug || archiveBundle?.sourceSlug || target;
+	const imported = {
+		sessions: 0,
+		npc: 0,
+		locations: 0,
+		customMonsters: 0,
+		images: 0,
+		aiHistory: 0,
+	};
+
+	if (sections.includes("sessions")) {
+		await ensureDir(path.join(campaignDir(target), "sessions"));
+		for (const session of Array.isArray(bundle.sessions) ? bundle.sessions : []) {
+			const desiredName =
+				session.fileName ||
+				`${sanitizeName(session.content?.name) || todayString()}.json`;
+			const fileName = await ensureUniqueSessionFile(target, desiredName);
+			const normalizedContent = replaceImageSlugReferences(
+				session.content || {},
+				sourceSlug,
+				target,
+			);
+			await writeJson(sessionPath(target, fileName), normalizedContent);
+			imported.sessions += 1;
+		}
+	}
+
+	for (const type of ["npc", "locations"]) {
+		if (!sections.includes(type)) continue;
+		const list = Array.isArray(bundle.entities?.[type])
+			? bundle.entities[type]
+			: [];
+		for (const entity of list) {
+			const desiredSlug =
+				entity.slug || campaignSlug(entity.firstName || entity.name || type);
+			const entitySlug = await ensureUniqueEntitySlug(target, type, desiredSlug);
+			const normalizedEntity = replaceImageSlugReferences(
+				entity,
+				sourceSlug,
+				target,
+			);
+			await writeEntity(target, type, entitySlug, {
+				...normalizedEntity,
+				slug: entitySlug,
+			});
+			imported[type] += 1;
+		}
+	}
+
+	if (sections.includes("aiHistory")) {
+		const existing = await readAiResponses(target);
+		const incoming = (Array.isArray(bundle.aiResponses) ? bundle.aiResponses : [])
+			.map((entry) => ({
+				...normalizeImportedAiResponse(entry, sourceSlug, target),
+				id: createId(),
+			}));
+		if (incoming.length > 0) {
+			await writeAiResponses(target, [...existing, ...incoming]);
+			imported.aiHistory = incoming.length;
+		}
+	}
+
+	if (sections.includes("customMonsters")) {
+		const monsters = Array.isArray(archiveBundle?.customMonsters)
+			? archiveBundle.customMonsters
+			: [];
+		if (monsters.length > 0) {
+			await upsertCustomBestiaryMonsters(monsters);
+			imported.customMonsters = monsters.length;
+		}
+	}
+
+	if (sections.includes("images")) {
+		const images = Array.isArray(archiveBundle?.images) ? archiveBundle.images : [];
+		await restoreCampaignImagesFromArchive(target, images);
+		imported.images = images.length;
+	}
+
+	return { ok: true, imported, sections };
+}
+
 async function importCampaignArchiveBundle(archiveBundle) {
 	const importedMeta = await importCampaignBundle(
 		archiveBundle.bundle || archiveBundle,
@@ -1624,9 +1770,11 @@ module.exports = {
 	listCampaignsDetailed,
 	exportCampaignBundle,
 	exportCampaignArchiveBundle,
+	exportCampaignPartialArchiveBundle,
 	importCampaignBundle,
 	importCampaignArchiveBundle,
 	importCampaignArchiveBundleWithStrategy,
+	importCampaignPartialArchiveBundle,
 	findCampaignSlugById,
 	moveCampaignImagesToGeneral,
 	campaignHasImages,
