@@ -10,6 +10,25 @@
 	gap: var(--space-3);
 }
 
+.SettingsModal__section {
+	padding-top: var(--space-3);
+	border-top: 1px solid color-mix(in srgb, var(--border), transparent 35%);
+}
+
+.SettingsModal__sectionHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-3);
+}
+
+.SettingsModal__sectionHeader h3 {
+	margin: 0;
+	font-size: 1rem;
+	color: var(--text-bright);
+	font-family: var(--font-heading);
+}
+
 .SettingsModal__label {
 	font-size: 0.82rem;
 	color: var(--muted);
@@ -46,7 +65,8 @@
 	gap: var(--space-1);
 }
 
-.SettingsModal__field .Input__textarea {
+.SettingsModal__promptField,
+.SettingsModal__promptField .MarkdownView {
 	min-height: 120px;
 }
 
@@ -55,15 +75,6 @@
 	align-items: flex-start;
 	justify-content: space-between;
 	gap: var(--space-3);
-}
-
-.SettingsModal__status {
-	font-size: 0.8rem;
-	color: var(--success);
-}
-
-.SettingsModal__status_error {
-	color: var(--danger);
 }
 
 .SettingsModal__actions {

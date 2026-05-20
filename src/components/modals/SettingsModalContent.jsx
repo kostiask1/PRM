@@ -6,10 +6,11 @@ import { THEMES } from "../../services/uiSettings";
 import { useAppDispatch, useAppSelector } from "../../store/appStore";
 import "../../assets/components/SettingsModal.css";
 import Button from "../form/Button";
-import Input from "../form/Input";
+import EditableField from "../form/EditableField";
 import Select from "../form/Select";
 import Switch from "../form/Switch";
 import ColorThemeSwitcher from "../ColorThemeSwitcher";
+import Notification from "../common/Notification";
 
 export default function SettingsModalContent({ onCancel }) {
 	const dispatch = useAppDispatch();
@@ -41,6 +42,7 @@ export default function SettingsModalContent({ onCancel }) {
 		activeCampaignSlug || campaigns[0]?.slug || "",
 	);
 	const [promptStatus, setPromptStatus] = useState("idle");
+	const [notification, setNotification] = useState(null);
 
 	useEffect(() => {
 		setAiBasePrompt(storedAiBasePrompt);
@@ -118,15 +120,23 @@ export default function SettingsModalContent({ onCancel }) {
 			dispatch(setUiSettingsAction(nextUiSettings));
 			setAiBasePrompt(nextUiSettings.aiBasePrompt || "");
 			setCampaignAiBasePrompts(nextUiSettings.campaignAiBasePrompts || {});
-			setPromptStatus("saved");
+			setPromptStatus("idle");
+			setNotification(lang.t("Prompts saved"));
 		} catch (error) {
 			console.error("Failed to save AI base prompts", error);
-			setPromptStatus("error");
+			setPromptStatus("idle");
+			setNotification(lang.t("Failed to save prompts"));
 		}
 	};
 
 	return (
 		<div className="SettingsModal">
+			{notification && (
+				<Notification
+					message={notification}
+					onClose={() => setNotification(null)}
+				/>
+			)}
 			<div className="SettingsModal__group">
 				<div className="SettingsModal__themeRow">
 					<div className="SettingsModal__themeInfo">
@@ -171,7 +181,10 @@ export default function SettingsModalContent({ onCancel }) {
 				/>
 			</div>
 
-			<div className="SettingsModal__group">
+			<div className="SettingsModal__group SettingsModal__section SettingsModal__section_ai">
+				<div className="SettingsModal__sectionHeader">
+					<h3>{lang.t("AI settings")}</h3>
+				</div>
 				<div className="SettingsModal__promptHeader">
 					<div>
 						<div className="SettingsModal__label">
@@ -198,8 +211,9 @@ export default function SettingsModalContent({ onCancel }) {
 					<span className="SettingsModal__label">
 						{lang.t("Global base prompt")}
 					</span>
-					<Input
+					<EditableField
 						type="textarea"
+						className="SettingsModal__promptField"
 						value={aiBasePrompt}
 						onChange={(event) => {
 							setAiBasePrompt(event.target.value);
@@ -228,8 +242,9 @@ export default function SettingsModalContent({ onCancel }) {
 							</option>
 						))}
 					</Select>
-					<Input
+					<EditableField
 						type="textarea"
+						className="SettingsModal__promptField"
 						value={selectedCampaignPrompt}
 						onChange={(event) => handleCampaignPromptChange(event.target.value)}
 						placeholder={lang.t(
@@ -238,16 +253,6 @@ export default function SettingsModalContent({ onCancel }) {
 						disabled={!selectedCampaignSlug}
 					/>
 				</label>
-				{promptStatus === "saved" && (
-					<div className="SettingsModal__status">
-						{lang.t("Prompts saved")}
-					</div>
-				)}
-				{promptStatus === "error" && (
-					<div className="SettingsModal__status SettingsModal__status_error">
-						{lang.t("Failed to save prompts")}
-					</div>
-				)}
 			</div>
 
 			<div className="SettingsModal__actions">
