@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import Icon from "./common/Icon.jsx";
 import Button from "./form/Button";
@@ -16,6 +16,7 @@ import SceneCardHeader from "./session/SceneCardHeader";
 import SceneCardMedia from "./session/SceneCardMedia";
 import SceneCardFields from "./session/SceneCardFields";
 import Tooltip from "./common/Tooltip.jsx";
+import GlobalSearchModal from "./campaign/GlobalSearchModal.jsx";
 import CharacterCard from "./CharacterCard.jsx";
 import LocationCard from "./LocationCard.jsx";
 import "../assets/components/SessionView.css";
@@ -25,6 +26,7 @@ import { lang } from "../services/localization";
 import { getNotesForRender, sanitizeNotesForSave } from "../utils/noteUtils";
 import { navigateTo, useAppSelector } from "../store/appStore";
 import { shouldOpenInNewTabFromEvent } from "../utils/navigation.js";
+import { makeDomId, scrollToHashTarget } from "../utils/domNavigation";
 import CreateCharacterButton from "./CreateCharacterButton.jsx";
 import CreateLocationButton from "./CreateLocationButton.jsx";
 import { renderMentionText } from "../renderers/contentRenderer.jsx";
@@ -35,6 +37,7 @@ function SessionView(props) {
 	const campaign = props.campaign;
 	const sessionId = props.sessionId;
 	const view = useSessionView(props);
+	const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
 	const session = view.session;
 	const simplifiedNotesEnabled = useAppSelector(
 		(state) => state.ui.simplifiedNotes,
@@ -122,11 +125,14 @@ function SessionView(props) {
 		sessionNpcs,
 	]);
 
-	if (!session) return null;
-	const viewModel = new SessionViewModel({
-		...session,
-		isSaving: view.isSaving,
-	});
+	const viewModel = useMemo(
+		() =>
+			new SessionViewModel({
+				...(session || { data: {} }),
+				isSaving: view.isSaving,
+			}),
+		[session, view.isSaving],
+	);
 	const hasSessionNotesData = (viewModel.notes || []).some(
 		(note) =>
 			String(note?.title || "").trim().length > 0 ||
@@ -135,13 +141,14 @@ function SessionView(props) {
 	const sessionNotesForRender = getNotesForRender(viewModel.notes || [], {
 		simplifiedNotes: simplifiedNotesEnabled,
 	});
+	const scenes = useMemo(() => viewModel.scenes || [], [viewModel]);
 	const hasSessionNpcsData = view.sessionNpcs.length > 0;
 	const hasSessionLocationsData = view.sessionLocations.length > 0;
 	const isSessionNotesCollapsed = hasSessionNotesData
 		? !!session.data.isNotesCollapsed
 		: false;
 	const encounterSceneNumbers = new Map();
-	(viewModel.scenes || []).forEach((scene, index) => {
+	scenes.forEach((scene, index) => {
 		if (scene?.encounterId == null) return;
 		const key = String(scene.encounterId);
 		if (!encounterSceneNumbers.has(key)) {
@@ -153,6 +160,26 @@ function SessionView(props) {
 		name: encounter.name || lang.t("Untitled"),
 		sceneNumber: encounterSceneNumbers.get(String(encounter.id)) || null,
 	}));
+	const { handleToggleSectionCollapse } = view;
+
+	useEffect(() => {
+		const hash = decodeURIComponent(window.location.hash || "");
+		if (hash.includes("session-note") && isSessionNotesCollapsed) {
+			handleToggleSectionCollapse("Notes");
+		}
+		const timer = window.setTimeout(() => scrollToHashTarget(), 140);
+		return () => window.clearTimeout(timer);
+	}, [
+		isSessionNotesCollapsed,
+		sessionId,
+		sessionNotesForRender,
+		handleToggleSectionCollapse,
+		sessionLocations,
+		sessionNpcs,
+		scenes,
+	]);
+
+	if (!session) return null;
 
 	const openEncounterFromQuickAccess = (encounterId, event) => {
 		navigateTo(
@@ -268,6 +295,15 @@ function SessionView(props) {
 					<Button
 						variant="ghost"
 						size={Button.SIZES.SMALL}
+						icon="search"
+						onClick={() => setIsGlobalSearchOpen(true)}
+						title={lang.t("Global search")}
+					>
+						{lang.t("Search")}
+					</Button>
+					<Button
+						variant="ghost"
+						size={Button.SIZES.SMALL}
 						icon="undo"
 						onClick={view.handleUndo}
 						disabled={view.undoStack.length === 0 || view.isSaving}
@@ -321,15 +357,17 @@ function SessionView(props) {
 									)
 								}
 								renderItem={(note, isDragging, index) => (
-									<NoteCard
-										note={note}
-										isLast={index === sessionNotesForRender.length - 1}
-										campaignSlug={view.campaignSlug}
-										onToggleCollapse={view.handleToggleNoteCollapse}
-										onTitleChange={view.handleNoteTitleChange}
-										onTextChange={view.handleNoteChange}
-										onDelete={view.handleDeleteNote}
-									/>
+									<div id={makeDomId("session", "note", note.id)}>
+										<NoteCard
+											note={note}
+											isLast={index === sessionNotesForRender.length - 1}
+											campaignSlug={view.campaignSlug}
+											onToggleCollapse={view.handleToggleNoteCollapse}
+											onTitleChange={view.handleNoteTitleChange}
+											onTextChange={view.handleNoteChange}
+											onDelete={view.handleDeleteNote}
+										/>
+									</div>
 								)}
 							/>
 						)}
@@ -372,26 +410,28 @@ function SessionView(props) {
 									/>
 								)}
 								renderItem={(npc) => (
-									<CharacterCard
-										character={npc}
-										onToggleCollapse={view.handleSessionNpcToggleCollapse}
-										onChange={view.handleSessionNpcChange}
-										onDelete={view.handleSessionNpcDelete}
-										campaignSlug={view.campaignSlug}
-										type="npc"
-										headerActions={
-											<Button
-												variant="ghost"
-												size={Button.SIZES.SMALL}
-												icon="export"
-												iconSize={14}
-												onClick={() =>
-													view.moveSessionEntityToCampaign("npc", npc.id)
-												}
-												title={lang.t("Move to campaign")}
-											/>
-										}
-									/>
+									<div id={makeDomId("session", "npc", npc.id)}>
+										<CharacterCard
+											character={npc}
+											onToggleCollapse={view.handleSessionNpcToggleCollapse}
+											onChange={view.handleSessionNpcChange}
+											onDelete={view.handleSessionNpcDelete}
+											campaignSlug={view.campaignSlug}
+											type="npc"
+											headerActions={
+												<Button
+													variant="ghost"
+													size={Button.SIZES.SMALL}
+													icon="export"
+													iconSize={14}
+													onClick={() =>
+														view.moveSessionEntityToCampaign("npc", npc.id)
+													}
+													title={lang.t("Move to campaign")}
+												/>
+											}
+										/>
+									</div>
 								)}
 							/>
 						) : (
@@ -444,28 +484,30 @@ function SessionView(props) {
 									/>
 								)}
 								renderItem={(location) => (
-									<LocationCard
-										location={location}
-										onToggleCollapse={view.handleSessionLocationToggleCollapse}
-										onChange={view.handleSessionLocationChange}
-										onDelete={view.handleSessionLocationDelete}
-										campaignSlug={view.campaignSlug}
-										headerActions={
-											<Button
-												variant="ghost"
-												size={Button.SIZES.SMALL}
-												icon="export"
-												iconSize={14}
-												onClick={() =>
-													view.moveSessionEntityToCampaign(
-														"locations",
-														location.id,
-													)
-												}
-												title={lang.t("Move to campaign")}
-											/>
-										}
-									/>
+									<div id={makeDomId("session", "location", location.id)}>
+										<LocationCard
+											location={location}
+											onToggleCollapse={view.handleSessionLocationToggleCollapse}
+											onChange={view.handleSessionLocationChange}
+											onDelete={view.handleSessionLocationDelete}
+											campaignSlug={view.campaignSlug}
+											headerActions={
+												<Button
+													variant="ghost"
+													size={Button.SIZES.SMALL}
+													icon="export"
+													iconSize={14}
+													onClick={() =>
+														view.moveSessionEntityToCampaign(
+															"locations",
+															location.id,
+														)
+													}
+													title={lang.t("Move to campaign")}
+												/>
+											}
+										/>
+									</div>
 								)}
 							/>
 						) : (
@@ -499,59 +541,61 @@ function SessionView(props) {
 							sessionId={sessionId}
 							onInsertResult={view.handleAiUpdate}
 						/>
-						{viewModel.scenes.length > 0 && (
+						{scenes.length > 0 && (
 							<DraggableList
-								items={viewModel.scenes}
+								items={scenes}
 								onReorder={(newScenes) => view.updateData("scenes", newScenes)}
 								keyExtractor={(scene) => scene.id}
 								renderItem={(scene) => {
-									const idx = viewModel.scenes.findIndex(
+									const idx = scenes.findIndex(
 										(s) => s.id === scene.id,
 									);
 									return (
-										<SceneCard
-											number={idx + 1}
-											scene={scene}
-											fields={SessionViewModel.sceneSchema}
-											collapsed={scene.collapsed}
-											onToggle={() => view.toggleSceneCollapse(scene.id)}
-											onRemove={() => view.removeScene(scene.id)}
-											onOpenEncounter={(event) =>
-												view.handleOpenEncounter(scene, event)
-											}
-											imageUrl={scene.imageUrl}
-											onImageChange={(url) =>
-												view.updateScene(scene.id, "imageUrl", url, true)
-											}
-											campaignSlug={view.campaignSlug}
-											hasEncounter={!!scene.encounterId}
-											encounterName={lang.t(viewModel.findEncounterName(scene))}
-											onUpdateField={(field, value) =>
-												view.updateScene(scene.id, field, value)
-											}
-											onToggleNotesCollapse={() =>
-												view.handleToggleSceneNotesCollapse(scene.id)
-											}
-											onSceneNoteTitleChange={(noteId, title) =>
-												view.handleSceneNoteTitleChange(scene.id, noteId, title)
-											}
-											onSceneNoteChange={(noteId, text) =>
-												view.handleSceneNoteChange(scene.id, noteId, text)
-											}
-											onSceneNotesReorder={(notes) =>
-												view.handleSceneNotesReorder(scene.id, notes)
-											}
-											onSceneNoteAiIgnoredChange={(noteId, ignored) =>
-												toggleSceneNoteAiIgnored(scene.id, noteId, ignored)
-											}
-											onSceneNoteToggleCollapse={(noteId) =>
-												view.handleSceneToggleNoteCollapse(scene.id, noteId)
-											}
-											onSceneNoteDelete={(noteId) =>
-												view.handleSceneDeleteNote(scene.id, noteId)
-											}
-											simplifiedNotesEnabled={simplifiedNotesEnabled}
-										/>
+										<div id={makeDomId("session", "scene", scene.id)}>
+											<SceneCard
+												number={idx + 1}
+												scene={scene}
+												fields={SessionViewModel.sceneSchema}
+												collapsed={scene.collapsed}
+												onToggle={() => view.toggleSceneCollapse(scene.id)}
+												onRemove={() => view.removeScene(scene.id)}
+												onOpenEncounter={(event) =>
+													view.handleOpenEncounter(scene, event)
+												}
+												imageUrl={scene.imageUrl}
+												onImageChange={(url) =>
+													view.updateScene(scene.id, "imageUrl", url, true)
+												}
+												campaignSlug={view.campaignSlug}
+												hasEncounter={!!scene.encounterId}
+												encounterName={lang.t(viewModel.findEncounterName(scene))}
+												onUpdateField={(field, value) =>
+													view.updateScene(scene.id, field, value)
+												}
+												onToggleNotesCollapse={() =>
+													view.handleToggleSceneNotesCollapse(scene.id)
+												}
+												onSceneNoteTitleChange={(noteId, title) =>
+													view.handleSceneNoteTitleChange(scene.id, noteId, title)
+												}
+												onSceneNoteChange={(noteId, text) =>
+													view.handleSceneNoteChange(scene.id, noteId, text)
+												}
+												onSceneNotesReorder={(notes) =>
+													view.handleSceneNotesReorder(scene.id, notes)
+												}
+												onSceneNoteAiIgnoredChange={(noteId, ignored) =>
+													toggleSceneNoteAiIgnored(scene.id, noteId, ignored)
+												}
+												onSceneNoteToggleCollapse={(noteId) =>
+													view.handleSceneToggleNoteCollapse(scene.id, noteId)
+												}
+												onSceneNoteDelete={(noteId) =>
+													view.handleSceneDeleteNote(scene.id, noteId)
+												}
+												simplifiedNotesEnabled={simplifiedNotesEnabled}
+											/>
+										</div>
 									);
 								}}
 							/>
@@ -661,6 +705,13 @@ function SessionView(props) {
 					)}
 				</button>
 			</Tooltip>
+			{isGlobalSearchOpen && (
+				<GlobalSearchModal
+					campaign={campaign}
+					currentData={campaign}
+					onCancel={() => setIsGlobalSearchOpen(false)}
+				/>
+			)}
 			</Panel>
 		</EntityLinkResolverContext.Provider>
 	);

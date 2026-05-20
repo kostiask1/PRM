@@ -10,6 +10,7 @@ import AiContextIgnoreButton from "./common/AiContextIgnoreButton.jsx";
 import CharacterCard from "./CharacterCard";
 import LocationCard from "./LocationCard";
 import CampaignNotesGraph from "./campaign/CampaignNotesGraph.jsx";
+import GlobalSearchModal from "./campaign/GlobalSearchModal.jsx";
 import CollapseToggleButton from "./common/CollapseToggleButton.jsx";
 import Tooltip from "./common/Tooltip.jsx";
 import CreateCharacterButton from "./CreateCharacterButton";
@@ -20,6 +21,7 @@ import CampaignViewModel from "../models/CampaignViewModel.js";
 import { navigateTo, useAppSelector } from "../store/appStore";
 import { lang } from "../services/localization";
 import { getNotesForRender } from "../utils/noteUtils";
+import { makeDomId, scrollToHashTarget } from "../utils/domNavigation";
 
 function CampaignView(props) {
 	const campaign = props.campaign;
@@ -27,6 +29,7 @@ function CampaignView(props) {
 	const viewModel = new CampaignViewModel(campaign);
 	const [sessionSearch, setSessionSearch] = useState("");
 	const [notesViewMode, setNotesViewMode] = useState("list");
+	const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
 	const simplifiedNotesEnabled = useAppSelector(
 		(state) => state.ui.simplifiedNotes,
 	);
@@ -84,6 +87,39 @@ function CampaignView(props) {
 	}, [view.sessions, sessionSearch]);
 
 	const canReorderSessions = sessionSearch.trim().length === 0;
+	const {
+		setIsCharactersCollapsed,
+		setIsLocationsCollapsed,
+		setIsNotesCollapsed,
+		setIsNpcsCollapsed,
+	} = view;
+
+	useEffect(() => {
+		const hash = decodeURIComponent(window.location.hash || "");
+		if (hash.includes("campaign-note")) {
+			setNotesViewMode("list");
+			if (isNotesCollapsed) setIsNotesCollapsed(false);
+		} else if (hash.includes("campaign-character")) {
+			if (isCharactersCollapsed) setIsCharactersCollapsed(false);
+		} else if (hash.includes("campaign-npc")) {
+			if (isNpcsCollapsed) setIsNpcsCollapsed(false);
+		} else if (hash.includes("campaign-location")) {
+			if (isLocationsCollapsed) setIsLocationsCollapsed(false);
+		}
+		const timer = window.setTimeout(() => scrollToHashTarget(), 120);
+		return () => window.clearTimeout(timer);
+	}, [
+		campaign.slug,
+		isCharactersCollapsed,
+		isLocationsCollapsed,
+		isNotesCollapsed,
+		isNpcsCollapsed,
+		notesForRender,
+		setIsCharactersCollapsed,
+		setIsLocationsCollapsed,
+		setIsNotesCollapsed,
+		setIsNpcsCollapsed,
+	]);
 
 	useEffect(() => {
 		const handleCharacterDragDrop = (event) => {
@@ -164,6 +200,15 @@ function CampaignView(props) {
 					<Button
 						variant="ghost"
 						size={Button.SIZES.SMALL}
+						icon="search"
+						onClick={() => setIsGlobalSearchOpen(true)}
+						title={lang.t("Global search")}
+					>
+						{lang.t("Search")}
+					</Button>
+					<Button
+						variant="ghost"
+						size={Button.SIZES.SMALL}
 						icon="undo"
 						onClick={view.handleUndo}
 						disabled={view.undoStack.length === 0}
@@ -238,7 +283,10 @@ function CampaignView(props) {
 					</aside>
 
 					<div className="CampaignView__contentPanel">
-						<div className="CampaignView__section">
+						<div
+							className="CampaignView__section"
+							id={makeDomId("campaign", "description")}
+						>
 							<div className="section_row">
 								<div
 									className="section_title_group"
@@ -343,15 +391,17 @@ function CampaignView(props) {
 										)
 									}
 									renderItem={(note, isDragging, index) => (
-										<NoteCard
-											note={note}
-											isLast={index === notesForRender.length - 1}
-											campaignSlug={campaign.slug}
-											onToggleCollapse={view.handleToggleNoteCollapse}
-											onTitleChange={view.handleNoteTitleChange}
-											onTextChange={view.handleNoteChange}
-											onDelete={view.handleDeleteNote}
-										/>
+										<div id={makeDomId("campaign", "note", note.id)}>
+											<NoteCard
+												note={note}
+												isLast={index === notesForRender.length - 1}
+												campaignSlug={campaign.slug}
+												onToggleCollapse={view.handleToggleNoteCollapse}
+												onTitleChange={view.handleNoteTitleChange}
+												onTextChange={view.handleNoteChange}
+												onDelete={view.handleDeleteNote}
+											/>
+										</div>
 									)}
 								/>
 							)}
@@ -425,16 +475,18 @@ function CampaignView(props) {
 									})}
 									keyExtractor={(char) => char.id}
 									renderItem={(character) => (
-										<CharacterCard
-											character={character}
-											onToggleCollapse={view.handleToggleCharacterCollapse}
-											onChange={view.handleCharacterChange}
-											onNameBlur={view.handleCharacterNameBlur}
-											onDelete={view.handleDeleteCharacter}
-											onReorderDrop={view.finishTrackedReorder}
-											campaignSlug={campaign.slug}
-											type="characters"
-										/>
+										<div id={makeDomId("campaign", "character", character.id)}>
+											<CharacterCard
+												character={character}
+												onToggleCollapse={view.handleToggleCharacterCollapse}
+												onChange={view.handleCharacterChange}
+												onNameBlur={view.handleCharacterNameBlur}
+												onDelete={view.handleDeleteCharacter}
+												onReorderDrop={view.finishTrackedReorder}
+												campaignSlug={campaign.slug}
+												type="characters"
+											/>
+										</div>
 									)}
 								/>
 							)}
@@ -502,16 +554,18 @@ function CampaignView(props) {
 										/>
 									)}
 									renderItem={(npc) => (
-										<CharacterCard
-											character={npc}
-											onToggleCollapse={view.handleToggleNpcCollapse}
-											onChange={view.handleNpcChange}
-											onNameBlur={view.handleNpcNameBlur}
-											onDelete={view.handleNpcDelete}
-											onReorderDrop={view.finishTrackedReorder}
-											campaignSlug={campaign.slug}
-											type="npc"
-										/>
+										<div id={makeDomId("campaign", "npc", npc.id)}>
+											<CharacterCard
+												character={npc}
+												onToggleCollapse={view.handleToggleNpcCollapse}
+												onChange={view.handleNpcChange}
+												onNameBlur={view.handleNpcNameBlur}
+												onDelete={view.handleNpcDelete}
+												onReorderDrop={view.finishTrackedReorder}
+												campaignSlug={campaign.slug}
+												type="npc"
+											/>
+										</div>
 									)}
 								/>
 							)}
@@ -570,15 +624,17 @@ function CampaignView(props) {
 										/>
 									)}
 									renderItem={(location) => (
-										<LocationCard
-											location={location}
-											onToggleCollapse={view.handleToggleLocationCollapse}
-											onChange={view.handleLocationChange}
-											onNameBlur={view.handleLocationNameBlur}
-											onDelete={view.handleLocationDelete}
-											onReorderDrop={view.finishTrackedReorder}
-											campaignSlug={campaign.slug}
-										/>
+										<div id={makeDomId("campaign", "location", location.id)}>
+											<LocationCard
+												location={location}
+												onToggleCollapse={view.handleToggleLocationCollapse}
+												onChange={view.handleLocationChange}
+												onNameBlur={view.handleLocationNameBlur}
+												onDelete={view.handleLocationDelete}
+												onReorderDrop={view.finishTrackedReorder}
+												campaignSlug={campaign.slug}
+											/>
+										</div>
 									)}
 								/>
 							)}
@@ -603,6 +659,19 @@ function CampaignView(props) {
 					</div>
 				</div>
 			</div>
+			{isGlobalSearchOpen && (
+				<GlobalSearchModal
+					campaign={campaign}
+					currentData={{
+						description: view.description,
+						notes: view.notes,
+						characters: view.characters,
+						npcs: view.npcs,
+						locations: view.locations,
+					}}
+					onCancel={() => setIsGlobalSearchOpen(false)}
+				/>
+			)}
 		</Panel>
 	);
 }
