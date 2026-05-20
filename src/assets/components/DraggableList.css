@@ -98,34 +98,19 @@
 .DraggableList__preview {
 	display: flex;
 	position: fixed;
+	left: 0;
+	top: 0;
 	z-index: 10000;
 	pointer-events: none;
 	opacity: 1;
 	box-shadow: var(--shadow-lg, 0 18px 40px rgb(0 0 0 / 24%));
 	border-radius: var(--radius-lg);
-	animation: skew .3s ease-in infinite;
+	will-change: transform;
 }
 
 .DraggableList__preview>* {
 	margin: 0;
 	width: 100%;
-}
-
-@keyframes skew {
-
-	0%,
-	100% {
-		transform: rotate(0deg);
-	}
-
-	25% {
-		transform: rotate(-0.15deg);
-	}
-
-	75% {
-		transform: rotate(0.15deg);
-	}
-
 }
 
 .DraggableList__preview .DraggableList__handle {

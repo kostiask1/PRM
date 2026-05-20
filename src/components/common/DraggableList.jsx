@@ -36,6 +36,9 @@ export default function DraggableList({
 	const scrollSnapshotRef = useRef(null);
 	const removePointerListenersRef = useRef(null);
 	const suppressClickRef = useRef(false);
+	const dragPreviewRef = useRef(null);
+	const dragPreviewFrameRef = useRef(null);
+	const dragPreviewPositionRef = useRef(null);
 	const displayItems = previewItems || items;
 	const draggableItemsCount = displayItems.filter((item, index) =>
 		isItemAllowedToDrag(item, index),
@@ -51,14 +54,39 @@ export default function DraggableList({
 		scrollSnapshotRef.current = null;
 	});
 
+	useLayoutEffect(() => {
+		if (dragPreview) flushDragPreviewPosition();
+	}, [dragPreview]);
+
 	useEffect(() => {
 		const ownerDocument = listRef.current?.ownerDocument || document;
 		return () => {
 			removePointerListenersRef.current?.();
+			if (dragPreviewFrameRef.current) {
+				cancelAnimationFrame(dragPreviewFrameRef.current);
+				dragPreviewFrameRef.current = null;
+			}
 			setDocumentPressMode(ownerDocument, false);
 			setDocumentDragMode(ownerDocument, false);
 		};
 	}, []);
+
+	const flushDragPreviewPosition = () => {
+		dragPreviewFrameRef.current = null;
+		const node = dragPreviewRef.current;
+		const position = dragPreviewPositionRef.current;
+		if (!node || !position) return;
+		node.style.transform = `translate3d(${position.left}px, ${position.top}px, 0)`;
+	};
+
+	const scheduleDragPreviewPosition = (left, top) => {
+		dragPreviewPositionRef.current = { left, top };
+		if (dragPreviewFrameRef.current) return;
+		const ownerWindow = listRef.current?.ownerDocument?.defaultView || window;
+		dragPreviewFrameRef.current = ownerWindow.requestAnimationFrame(
+			flushDragPreviewPosition,
+		);
+	};
 
 	const setDocumentPressMode = (ownerDocument, enabled) => {
 		ownerDocument.body?.classList.toggle(PRESSING_BODY_CLASS, enabled);
@@ -231,25 +259,19 @@ export default function DraggableList({
 		setDragPreview({
 			item: currentItems[pending.index],
 			index: pending.index,
-			left: draggedRect.left,
-			top: draggedRect.top,
 			width: draggedRect.width,
 			height: draggedRect.height,
 		});
+		scheduleDragPreviewPosition(draggedRect.left, draggedRect.top);
 		updatePointerDrag(event);
 	};
 
 	const updatePointerDrag = (event) => {
 		const dragState = dragStateRef.current;
 		if (!dragState) return;
-		setDragPreview((current) =>
-			current
-				? {
-						...current,
-						left: event.clientX - dragState.previewOffsetX,
-						top: event.clientY - dragState.previewOffsetY,
-					}
-				: current,
+		scheduleDragPreviewPosition(
+			event.clientX - dragState.previewOffsetX,
+			event.clientY - dragState.previewOffsetY,
 		);
 
 		const sourceIndex = dragState.currentIndex;
@@ -304,6 +326,11 @@ export default function DraggableList({
 		setDraggingIndex(null);
 		setDragPreview(null);
 		setPreviewItems(null);
+		dragPreviewPositionRef.current = null;
+		if (dragPreviewFrameRef.current) {
+			cancelAnimationFrame(dragPreviewFrameRef.current);
+			dragPreviewFrameRef.current = null;
+		}
 
 		if (!dragState) return;
 
@@ -456,10 +483,9 @@ export default function DraggableList({
 			</div>
 			{dragPreview && (
 				<div
+					ref={dragPreviewRef}
 					className="DraggableList__preview"
 					style={{
-						left: `${dragPreview.left}px`,
-						top: `${dragPreview.top}px`,
 						width: `${dragPreview.width}px`,
 						minHeight: `${dragPreview.height}px`,
 					}}
