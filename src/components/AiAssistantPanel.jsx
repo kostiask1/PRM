@@ -320,9 +320,55 @@ function hasHistoryChanges(entry) {
 	return getHistoryChangeResources(entry).length > 0;
 }
 
+function isFailedHistoryEntry(entry) {
+	return entry?.status === "failed";
+}
+
+function isNonParsedHistoryEntry(entry) {
+	return entry?.request?.options?.responseParsing === false;
+}
+
+function buildRetryPayloadFromHistoryEntry(entry) {
+	if (entry?.retryPayload && typeof entry.retryPayload === "object") {
+		return entry.retryPayload;
+	}
+	if (!isNonParsedHistoryEntry(entry)) return null;
+
+	const options = entry?.request?.options || {};
+	const path = entry?.path || {};
+	if (!path.campaign) return null;
+
+	return {
+		type: entry.type || options.mode || null,
+		modelName: entry.modelName || options.modelName || undefined,
+		userInstructions: getHistoryRequestText(entry),
+		path,
+		sceneId: options.sceneId || undefined,
+		imageTarget: options.imageTarget || undefined,
+		parseAIResponse: false,
+		generateCharacters: Boolean(options.characterGeneration),
+		generateNpcs: Boolean(options.npcGeneration),
+		generateLocations: Boolean(options.locationGeneration),
+		generateEncounters: false,
+		generateCustomMonsters: false,
+		entityScope: options.entityScope || "campaign",
+		contextConfig: null,
+		language: entry.language || undefined,
+	};
+}
+
+function canRetryHistoryEntry(entry) {
+	if (isFailedHistoryEntry(entry)) return Boolean(entry?.retryPayload);
+	if (isNonParsedHistoryEntry(entry)) {
+		return Boolean(buildRetryPayloadFromHistoryEntry(entry));
+	}
+	return false;
+}
+
 function getHistoryTitle(entry) {
 	const requestText = getHistoryRequestText(entry);
 	if (requestText) return requestText;
+	if (isFailedHistoryEntry(entry)) return lang.t("Failed AI request");
 	if (hasHistoryChanges(entry)) return lang.t("AI changes");
 	return getResponsePreview(entry?.text) || lang.t("AI response");
 }
@@ -340,6 +386,7 @@ function getHistoryChangeSummary(entry) {
 }
 
 function getAiResponseStateLabel(entry) {
+	if (isFailedHistoryEntry(entry)) return lang.t("Failed");
 	if (entry?.applyState === "applied") return lang.t("Applied");
 	if (entry?.applyState === "undone") return lang.t("Undone");
 	return "";
@@ -978,6 +1025,70 @@ export default function AiAssistantPanel({
 		}));
 	};
 
+	const handleGeneratedAiData = ({
+		data,
+		requestType,
+		shouldParseResponse,
+		clearPromptOnApplied = true,
+	}) => {
+		if (data.prompt) {
+			const historyEntry = data.aiResponse || {
+				id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+				text: data.prompt,
+				createdAt: new Date().toISOString(),
+			};
+			upsertResponseHistoryEntry(historyEntry);
+			showGeneratedPrompt(historyEntry);
+			return;
+		}
+
+		if (!data.updated) return;
+
+		if (data.aiResponse) {
+			upsertResponseHistoryEntry(data.aiResponse);
+		}
+		const updatedIsSessionLike =
+			data.updated &&
+			typeof data.updated === "object" &&
+			data.updated.data &&
+			typeof data.updated.data === "object";
+		const canApplyDirectly =
+			isBestiary ||
+			(isCampaign && !updatedIsSessionLike) ||
+			(!isCampaign && updatedIsSessionLike);
+
+		const generatedEntityTypes = getGeneratedEntityTypes(
+			data.generated,
+			data.aiResponse,
+		);
+
+		if (canApplyDirectly && onInsertResult) {
+			onInsertResult(data.updated, {
+				entityTypes: generatedEntityTypes,
+				generated: data.generated,
+			});
+		} else {
+			dispatch(requestCampaignsReloadAction());
+		}
+
+		if (clearPromptOnApplied) {
+			setUserInstructions("");
+		}
+		setNotification(
+			requestType === "custom-monster"
+				? lang.t("Custom creatures saved.")
+				: lang.t("AI changes applied successfully!"),
+		);
+		if (!canApplyDirectly && generatedEntityTypes.length > 0) {
+			dispatch(refreshEntitiesAction());
+		}
+		if (shouldParseResponse || isEncounter || isBestiary) {
+			setIsOpen(false);
+			setIsContextModalOpen(false);
+			setIsImagePromptPickerOpen(false);
+		}
+	};
+
 	const generate = async (
 		type = null,
 		targetSceneId = null,
@@ -1048,7 +1159,6 @@ export default function AiAssistantPanel({
 				},
 				{ signal: controller.signal },
 			);
-
 			// Одразу оновлюємо стан в батьківському компоненті, бо в БД вже записано
 			if (data.prompt) {
 				const historyEntry = data.aiResponse || {
@@ -1108,6 +1218,9 @@ export default function AiAssistantPanel({
 			if (err?.name === "AbortError") {
 				return;
 			}
+			if (err.data?.aiResponse) {
+				upsertResponseHistoryEntry(err.data.aiResponse);
+			}
 
 			if (err.message?.includes("GEMINI_API_KEY")) {
 				setIsApiKeyMissing(true);
@@ -1115,6 +1228,69 @@ export default function AiAssistantPanel({
 				return;
 			}
 
+			setError(err.message || lang.t("Failed to connect to AI."));
+			dispatch(
+				alert({
+					title: lang.t("AI error"),
+					message: err.status
+						? `[Статус: ${err.status}] ${err.message}`
+						: err.message,
+				}),
+			);
+		} finally {
+			if (activeGenerateControllerRef.current === controller) {
+				activeGenerateControllerRef.current = null;
+				setCanCancelGenerate(false);
+			}
+			setLoading(false);
+		}
+	};
+
+	const retryResponseHistoryEntry = async (entry) => {
+		if (!canRetryHistoryEntry(entry) || loading) return;
+		const retryPayload = buildRetryPayloadFromHistoryEntry(entry);
+		if (!retryPayload) return;
+		const requestType =
+			retryPayload.type ||
+			(isBestiary && retryPayload.type !== "image" ? "custom-monster" : null);
+		const shouldParseResponse =
+			retryPayload.type === "image"
+				? false
+				: Boolean(retryPayload.parseAIResponse || retryPayload.generateEncounters);
+
+		cancelGenerateRequest();
+		const controller = new AbortController();
+		activeGenerateControllerRef.current = controller;
+		setCanCancelGenerate(true);
+		setLoading(true);
+		setError("");
+
+		try {
+			if (isFailedHistoryEntry(entry)) {
+				const responses = await api.deleteAiResponse(
+					initialRoute.campaign,
+					entry.id,
+				);
+				setResponseHistory(Array.isArray(responses) ? responses : []);
+				if (selectedResponseId === entry.id) {
+					closeGeneratedPrompt();
+				}
+			}
+
+			const data = await api.generateAi(retryPayload, {
+				signal: controller.signal,
+			});
+			handleGeneratedAiData({
+				data,
+				requestType,
+				shouldParseResponse,
+				clearPromptOnApplied: false,
+			});
+		} catch (err) {
+			if (err?.name === "AbortError") return;
+			if (err.data?.aiResponse) {
+				upsertResponseHistoryEntry(err.data.aiResponse);
+			}
 			setError(err.message || lang.t("Failed to connect to AI."));
 			dispatch(
 				alert({
@@ -1994,7 +2170,9 @@ export default function AiAssistantPanel({
 							currentLanguage={currentLanguage}
 							onClear={clearResponseHistory}
 							onDelete={deleteResponseHistoryEntry}
+							onRetry={retryResponseHistoryEntry}
 							onSelect={showGeneratedPrompt}
+							canRetry={canRetryHistoryEntry}
 							formatResponseDate={formatResponseDate}
 							getTitle={getHistoryTitle}
 							getSummary={getHistoryChangeSummary}

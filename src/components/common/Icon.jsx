@@ -109,6 +109,12 @@ const icons = {
 			<path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13" />
 		</>
 	),
+	retry: (
+		<>
+			<path d="M20 12a8 8 0 1 1-2.34-5.66L20 8.68" />
+			<path d="M20 4v4.68h-4.68" />
+		</>
+	),
 	"sort-none": <path d="M7 15l5 5 5-5M7 9l5-5 5 5" strokeOpacity="0.5" />,
 	"sort-asc": (
 		<>

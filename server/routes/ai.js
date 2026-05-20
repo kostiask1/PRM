@@ -58,6 +58,66 @@ function getCampaignBasePrompt(settings, campaignSlug) {
 	return asText(prompts[campaignSlug]);
 }
 
+function cloneRetryPayload(payload = {}) {
+	return JSON.parse(JSON.stringify(payload || {}));
+}
+
+function getFailedAiResponseText(error, status = null) {
+	const message = asText(error?.message || error?.error) || "AI request failed.";
+	return [
+		"AI request failed",
+		"",
+		status ? `Status: ${status}` : null,
+		message,
+	].filter(Boolean).join("\n");
+}
+
+async function saveFailedAiRequest(payload = {}, error, status = null) {
+	const path = payload?.path && typeof payload.path === "object" ? payload.path : {};
+	const campaignSlug = asText(path.campaign);
+	if (!campaignSlug) return null;
+
+	const shouldParseAIResponse =
+		payload.type !== "image" &&
+		Boolean(payload.parseAIResponse || payload.generateEncounters) &&
+		(!path.encounter || payload.generateEncounters);
+	const requestSnapshot = buildAiRequestSnapshot({
+		type: payload.type,
+		modelName: payload.modelName,
+		userInstructions: payload.userInstructions,
+		path,
+		sceneId: payload.sceneId,
+		imageTarget: payload.imageTarget,
+		parseAIResponse: payload.parseAIResponse,
+		shouldParseAIResponse,
+		generateCharacters: payload.generateCharacters !== false,
+		generateNpcs: payload.generateNpcs !== false,
+		generateLocations: payload.generateLocations !== false,
+		generateEncounters: Boolean(payload.generateEncounters),
+		generateCustomMonsters: Boolean(payload.generateCustomMonsters),
+		entityScope: payload.entityScope,
+		contextConfig: payload.contextConfig,
+		contextData: {},
+		language: payload.language,
+	});
+
+	return storage.addAiResponse({
+		text: getFailedAiResponseText(error, status),
+		path,
+		type: payload.type || null,
+		modelName: payload.modelName || null,
+		language: payload.language || null,
+		userInstructions: payload.userInstructions || "",
+		request: requestSnapshot,
+		status: "failed",
+		error: {
+			message: asText(error?.message || error?.error) || "AI request failed.",
+			status,
+		},
+		retryPayload: cloneRetryPayload(payload),
+	});
+}
+
 function shouldUseCampaignEntityScope(userInstructions) {
 	const text = asText(userInstructions).toLowerCase();
 	if (!text) return false;
@@ -713,7 +773,8 @@ router.post("/generate", async (req, res, next) => {
 			});
 
 			if (generatedContent.error) {
-				return res.status(500).json(generatedContent);
+				const aiResponse = await saveFailedAiRequest(req.body, generatedContent, 500);
+				return res.status(500).json({ ...generatedContent, aiResponse });
 			}
 
 			assertAiGeneratedContentContract(generatedContent, {
@@ -736,9 +797,15 @@ router.post("/generate", async (req, res, next) => {
 			});
 
 			if (!applied.customBestiaryChange?.hasChanges) {
+				const aiResponse = await saveFailedAiRequest(
+					req.body,
+					{ message: "AI did not return any valid creature." },
+					400,
+				);
 				return res.status(400).json({
 					error: "AI не повернув жодної коректної істоти.",
 					generated: generatedContent,
+					aiResponse,
 				});
 			}
 
@@ -769,6 +836,7 @@ router.post("/generate", async (req, res, next) => {
 					globalBasePrompt,
 					campaignBasePrompt,
 				}),
+				retryPayload: cloneRetryPayload(req.body),
 				changes: {
 					resources: [
 						{
@@ -817,7 +885,8 @@ router.post("/generate", async (req, res, next) => {
 			});
 
 			if (generatedContent.error) {
-				return res.status(500).json(generatedContent);
+				const aiResponse = await saveFailedAiRequest(req.body, generatedContent, 500);
+				return res.status(500).json({ ...generatedContent, aiResponse });
 			}
 
 			const aiResponse = await storage.addAiResponse({
@@ -848,6 +917,7 @@ router.post("/generate", async (req, res, next) => {
 					globalBasePrompt,
 					campaignBasePrompt,
 				}),
+				retryPayload: cloneRetryPayload(req.body),
 			});
 			return res.json({ prompt: generatedContent, aiResponse });
 		}
@@ -965,7 +1035,10 @@ router.post("/generate", async (req, res, next) => {
 			applyMentionsToGeneratedContent(generatedContent, mentionNames);
 		}
 
-		if (generatedContent.error) return res.status(500).json(generatedContent);
+		if (generatedContent.error) {
+			const aiResponse = await saveFailedAiRequest(req.body, generatedContent, 500);
+			return res.status(500).json({ ...generatedContent, aiResponse });
+		}
 
 		if (shouldParseAIResponse) {
 			assertAiGeneratedContentContract(generatedContent, { type });
@@ -1002,6 +1075,7 @@ router.post("/generate", async (req, res, next) => {
 				language: responseLanguage,
 				userInstructions,
 				request: requestSnapshot,
+				retryPayload: cloneRetryPayload(req.body),
 			});
 			return res.json({ prompt: generatedContent, aiResponse });
 		}
@@ -1043,11 +1117,29 @@ router.post("/generate", async (req, res, next) => {
 			language: responseLanguage,
 			userInstructions,
 			requestSnapshot,
+			retryPayload: cloneRetryPayload(req.body),
 			extraChangeResources,
 		});
 
 		res.json({ generated: generatedContent, updated: applied.updated, aiResponse });
 	} catch (error) {
+		if (req.path === "/generate") {
+			try {
+				const aiResponse = await saveFailedAiRequest(
+					req.body,
+					error,
+					error.status || 500,
+				);
+				if (aiResponse) {
+					return res.status(error.status || 500).json({
+						error: error.message || "AI request failed.",
+						aiResponse,
+					});
+				}
+			} catch (historyError) {
+				console.error("Failed to save failed AI request", historyError);
+			}
+		}
 		next(error);
 	}
 });

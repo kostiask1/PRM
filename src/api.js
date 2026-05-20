@@ -17,6 +17,7 @@ export const api = {
 		if (!response.ok) {
 			const error = new Error(data?.error || "Помилка запиту");
 			error.status = response.status;
+			error.data = data;
 			throw error;
 		}
 		return data;

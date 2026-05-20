@@ -7,7 +7,9 @@ export default function AiResponseHistory({
 	currentLanguage,
 	onClear,
 	onDelete,
+	onRetry,
 	onSelect,
+	canRetry,
 	formatResponseDate,
 	getTitle,
 	getSummary,
@@ -40,13 +42,24 @@ export default function AiResponseHistory({
 							onClick={() => onSelect(entry)}
 							className="AiAssistant__history_card"
 							actions={
-								<Button
-									variant="ghost"
-									size={Button.SIZES.SMALL}
-									icon="trash"
-									onClick={() => onDelete(entry)}
-									title={lang.t("Delete response")}
-								/>
+								<>
+									{canRetry?.(entry) && (
+										<Button
+											variant="ghost"
+											size={Button.SIZES.SMALL}
+											icon="retry"
+											onClick={() => onRetry(entry)}
+											title={lang.t("Retry request")}
+										/>
+									)}
+									<Button
+										variant="ghost"
+										size={Button.SIZES.SMALL}
+										icon="trash"
+										onClick={() => onDelete(entry)}
+										title={lang.t("Delete response")}
+									/>
+								</>
 							}
 						>
 							<div className="ListCard__title AiAssistant__history_title">

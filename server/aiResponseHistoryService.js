@@ -131,6 +131,7 @@ async function saveParsedAiResponse({
 	language,
 	userInstructions,
 	requestSnapshot,
+	retryPayload = null,
 	extraChangeResources = [],
 }) {
 	const afterApplyBundle = await storage.exportCampaignBundle(responsePath.campaign);
@@ -158,6 +159,7 @@ async function saveParsedAiResponse({
 		language,
 		userInstructions,
 		request: requestSnapshot,
+		retryPayload,
 		changes,
 		applyState: "applied",
 		appliedAt,

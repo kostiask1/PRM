@@ -510,10 +510,12 @@ function normalizeAiResponse(raw = {}) {
 	const applyState = ["applied", "undone"].includes(raw.applyState)
 		? raw.applyState
 		: null;
+	const status = raw.status === "failed" ? "failed" : "completed";
 
 	return {
 		id: String(raw.id || createId()),
 		text,
+		status,
 		path:
 			raw.path && typeof raw.path === "object"
 				? {
@@ -530,6 +532,17 @@ function normalizeAiResponse(raw = {}) {
 		changes,
 		applyState,
 		appliedAt: raw.appliedAt || null,
+		error:
+			raw.error && typeof raw.error === "object"
+				? {
+						message: String(raw.error.message || ""),
+						status: raw.error.status || null,
+					}
+				: null,
+		retryPayload:
+			raw.retryPayload && typeof raw.retryPayload === "object"
+				? raw.retryPayload
+				: null,
 		createdAt: raw.createdAt || new Date().toISOString(),
 	};
 }
