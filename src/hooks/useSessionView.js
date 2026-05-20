@@ -86,7 +86,6 @@ function getEntityDisplayName(type, entity = {}) {
 function prepareCampaignEntityPayload(type, entity = {}) {
 	const payload = stripInternalFields(entity);
 	delete payload.createdAt;
-	delete payload.updatedAt;
 	if (type === "locations") {
 		payload.name = payload.name || payload.title || "";
 	} else {

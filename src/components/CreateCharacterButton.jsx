@@ -98,7 +98,6 @@ export default function CreateCharacterButton({
 				delete payload.id;
 				delete payload.slug;
 				delete payload.createdAt;
-				delete payload.updatedAt;
 				await api.createEntity(campaignSlug, entityType, payload);
 				dispatch(refreshEntitiesAction());
 			}

@@ -273,7 +273,7 @@ await run(
 	},
 );
 
-await run("CampaignViewModel formats links and dates", () => {
+await run("CampaignViewModel formats links and creation date", () => {
 	const model = new CampaignViewModel({
 		slug: "my-campaign",
 		name: "My Campaign",
@@ -285,7 +285,6 @@ await run("CampaignViewModel formats links and dates", () => {
 		"/campaign/my-campaign/session/session%201.json",
 	);
 	assert.notEqual(model.createdAtLabel, "-");
-	assert.equal(model.formatSessionUpdatedAt(""), "-");
 });
 
 await run("campaign graph builds nodes and mention edges", () => {
@@ -2001,7 +2000,6 @@ await run(
 				id: "s1",
 				name: "Session 1",
 				createdAt: new Date().toISOString(),
-				updatedAt: new Date().toISOString(),
 				order: 0,
 				data: {
 					notes: [

@@ -42,7 +42,6 @@ router.post("/", async (req, res, next) => {
 			completedAt: null,
 			order: 0,
 			createdAt: now,
-			updatedAt: now,
 			notes: [
 				{
 					id: Date.now(),
@@ -92,7 +91,6 @@ router.patch("/:slug", async (req, res, next) => {
 			...req.body,
 			slug: nextSlug,
 			name: nextName,
-			updatedAt: new Date().toISOString(),
 		};
 		await storage.writeJson(storage.campaignMetaPath(nextSlug), updated);
 		res.json(updated);
@@ -170,7 +168,7 @@ router.post("/:slug/entities/:type", async (req, res, next) => {
 					collapsed: false,
 					isNotesCollapsed: false,
 					...req.body,
-					id: req.body.id || storage.createId(),
+					id: storage.createId(),
 					name: req.body.name || name,
 				}
 			: {
@@ -183,7 +181,7 @@ router.post("/:slug/entities/:type", async (req, res, next) => {
 					trait: req.body.trait || "",
 					notes: [],
 					...req.body,
-					id: req.body.id || storage.createId(),
+					id: storage.createId(),
 				};
 		const saved = await storage.writeEntity(
 			campaignSlug,
@@ -247,7 +245,8 @@ router.patch("/:slug/entities/:type/:entitySlug", async (req, res, next) => {
 		const updated = {
 			...current,
 			...patch,
-			updatedAt: new Date().toISOString(),
+			id: current.id,
+			slug: current.slug,
 		};
 		const saved = await storage.writeEntity(
 			campaignSlug,

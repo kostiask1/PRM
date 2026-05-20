@@ -178,6 +178,14 @@ export const api = {
 				method: "DELETE",
 			},
 		),
+	updateAiResponse: (campaign, id, payload) =>
+		api.request(
+			`/ai/responses/${encodeURIComponent(id)}?campaign=${encodeURIComponent(campaign)}`,
+			{
+				method: "PATCH",
+				body: JSON.stringify(payload),
+			},
+		),
 	applyAiResponse: (campaign, id) =>
 		api.request(
 			`/ai/responses/${encodeURIComponent(id)}/apply?campaign=${encodeURIComponent(campaign)}`,

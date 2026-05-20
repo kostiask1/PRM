@@ -166,6 +166,56 @@ async function saveParsedAiResponse({
 	});
 }
 
+async function saveDraftParsedAiResponse({
+	beforeApplyBundle,
+	generatedContent,
+	path: responsePath,
+	type,
+	modelName,
+	language,
+	userInstructions,
+	requestSnapshot,
+	retryPayload = null,
+	extraChangeResources = [],
+}) {
+	const afterApplyBundle = await storage.exportCampaignBundle(responsePath.campaign);
+	const changes = buildAiChangeSet(
+		beforeApplyBundle,
+		afterApplyBundle,
+		responsePath.campaign,
+	);
+	if (Array.isArray(extraChangeResources) && extraChangeResources.length > 0) {
+		changes.resources.push(...extraChangeResources);
+		changes.resources.sort((a, b) =>
+			String(a.label || a.id || "").localeCompare(
+				String(b.label || b.id || ""),
+				"uk",
+			),
+		);
+		changes.summary = buildAiChangeSummary(changes.resources);
+	}
+
+	const response = await storage.addAiResponse({
+		text: formatGeneratedContentForHistory(generatedContent),
+		path: responsePath,
+		type,
+		modelName,
+		language,
+		userInstructions,
+		request: requestSnapshot,
+		retryPayload,
+		changes,
+		applyState: "draft",
+		appliedAt: null,
+	});
+
+	for (const resource of changes.resources) {
+		await writeAiResourceSnapshot(resource, resource.before ?? null);
+	}
+
+	return response;
+}
+
 async function writeAiResourceSnapshot(resource, snapshotValue) {
 	if (resource.kind === "custom-bestiary") {
 		await storage.writeCustomBestiaryMonsters(
@@ -277,4 +327,5 @@ module.exports = {
 	buildAiChangeSet,
 	restoreAiResponseSnapshot,
 	saveParsedAiResponse,
+	saveDraftParsedAiResponse,
 };

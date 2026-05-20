@@ -13,6 +13,7 @@ const {
 } = require("../aiPayloadSchemas");
 const {
 	restoreAiResponseSnapshot,
+	saveDraftParsedAiResponse,
 	saveParsedAiResponse,
 } = require("../aiResponseHistoryService");
 const { applyAiOperations } = require("../aiPatchService");
@@ -47,6 +48,79 @@ function asText(value) {
 		return String(value).trim();
 	}
 	return "";
+}
+
+function buildAiChangeSummary(resources = []) {
+	return resources.reduce(
+		(summary, resource) => {
+			if (resource.before === null && resource.after !== null) {
+				summary.added += 1;
+			} else if (resource.before !== null && resource.after === null) {
+				summary.deleted += 1;
+			} else {
+				summary.modified += 1;
+			}
+			summary.total += 1;
+			return summary;
+		},
+		{ added: 0, deleted: 0, modified: 0, total: 0 },
+	);
+}
+
+function preserveExistingIds(before, after) {
+	if (Array.isArray(before) && Array.isArray(after)) {
+		return after.map((item, index) => preserveExistingIds(before[index], item));
+	}
+	if (
+		before &&
+		after &&
+		typeof before === "object" &&
+		typeof after === "object" &&
+		!Array.isArray(before) &&
+		!Array.isArray(after)
+	) {
+		const next = { ...after };
+		if (Object.prototype.hasOwnProperty.call(before, "id")) {
+			next.id = before.id;
+		}
+		for (const key of Object.keys(next)) {
+			next[key] = preserveExistingIds(before[key], next[key]);
+		}
+		return next;
+	}
+	return after;
+}
+
+function patchDraftAiChanges(entry, rawResources) {
+	if (entry?.applyState !== "draft") {
+		const error = new Error("Only draft AI responses can be edited.");
+		error.status = 400;
+		throw error;
+	}
+	if (!Array.isArray(rawResources)) {
+		const error = new Error("resources must be an array.");
+		error.status = 400;
+		throw error;
+	}
+
+	const afterById = new Map(
+		rawResources
+			.filter((resource) => resource && typeof resource === "object")
+			.map((resource) => [String(resource.id || ""), resource.after ?? null]),
+	);
+	const resources = (entry.changes?.resources || []).map((resource) =>
+		afterById.has(resource.id)
+			? {
+					...resource,
+					after: preserveExistingIds(resource.before, afterById.get(resource.id)),
+				}
+			: resource,
+	);
+	return {
+		...(entry.changes || {}),
+		resources,
+		summary: buildAiChangeSummary(resources),
+	};
 }
 
 function getCampaignBasePrompt(settings, campaignSlug) {
@@ -533,6 +607,30 @@ router.delete("/responses", async (req, res, next) => {
 	}
 });
 
+router.patch("/responses/:id", async (req, res, next) => {
+	try {
+		const campaignSlug = getAiHistoryCampaignSlug(req);
+		if (!campaignSlug) {
+			return res.status(400).json({ error: "campaign is required." });
+		}
+		const entry = await storage.getAiResponse(campaignSlug, req.params.id);
+		if (!entry) {
+			return res.status(404).json({ error: "AI response not found." });
+		}
+		const changes = patchDraftAiChanges(entry, req.body?.resources);
+		res.json(
+			await storage.updateAiResponse(campaignSlug, entry.id, {
+				changes,
+			}),
+		);
+	} catch (error) {
+		if (error.status) {
+			return res.status(error.status).json({ error: error.message });
+		}
+		next(error);
+	}
+});
+
 router.post("/responses/:id/apply", async (req, res, next) => {
 	try {
 		const campaignSlug = getAiHistoryCampaignSlug(req);
@@ -651,6 +749,7 @@ router.post("/generate", async (req, res, next) => {
 			(!path?.encounter || encounterGenerationEnabled);
 		const settings = await storage.readSettings();
 		const simplifiedNotesEnabled = Boolean(settings.simplifiedNotes);
+		const autoApplyAiChanges = settings.autoApplyAiChanges !== false;
 		const globalBasePrompt = asText(settings.aiBasePrompt);
 		const campaignBasePrompt = getCampaignBasePrompt(settings, path?.campaign);
 
@@ -810,7 +909,15 @@ router.post("/generate", async (req, res, next) => {
 			}
 
 			const monsters = applied.customBestiaryChange?.after || [];
-			const aiResponse = await storage.addAiResponse({
+			const customBestiaryChangeResource = {
+				id: "custom-bestiary",
+				kind: "custom-bestiary",
+				campaign: "bestiary",
+				label: "data/custom-bestiary.json",
+				before: beforeCustomMonsters,
+				after: monsters,
+			};
+			const aiResponsePayload = {
 				text: formatGeneratedContentForHistory(generatedContent),
 				path: { campaign: "bestiary" },
 				type: "custom-monster",
@@ -838,17 +945,27 @@ router.post("/generate", async (req, res, next) => {
 				}),
 				retryPayload: cloneRetryPayload(req.body),
 				changes: {
-					resources: [
-						{
-							id: "custom-bestiary",
-							kind: "custom-bestiary",
-							campaign: "bestiary",
-							label: "data/custom-bestiary.json",
-							before: beforeCustomMonsters,
-							after: monsters,
-						},
-					],
+					resources: [customBestiaryChangeResource],
+					summary: buildAiChangeSummary([customBestiaryChangeResource]),
 				},
+			};
+			if (!autoApplyAiChanges) {
+				const aiResponse = await storage.addAiResponse({
+					...aiResponsePayload,
+					applyState: "draft",
+				});
+				await storage.writeCustomBestiaryMonsters(beforeCustomMonsters);
+				return res.json({
+					generated: {
+						...generatedContent,
+						monsters: applied.changedMonsters,
+					},
+					draft: true,
+					aiResponse,
+				});
+			}
+			const aiResponse = await storage.addAiResponse({
+				...aiResponsePayload,
 				applyState: "applied",
 				appliedAt: new Date().toISOString(),
 			});
@@ -1107,6 +1224,26 @@ router.post("/generate", async (req, res, next) => {
 					},
 				]
 			: [];
+
+		if (!autoApplyAiChanges) {
+			const aiResponse = await saveDraftParsedAiResponse({
+				beforeApplyBundle,
+				generatedContent,
+				path,
+				type,
+				modelName,
+				language: responseLanguage,
+				userInstructions,
+				requestSnapshot,
+				retryPayload: cloneRetryPayload(req.body),
+				extraChangeResources,
+			});
+			return res.json({
+				generated: generatedContent,
+				draft: true,
+				aiResponse,
+			});
+		}
 
 		const aiResponse = await saveParsedAiResponse({
 			beforeApplyBundle,

@@ -12,7 +12,6 @@
  * @typedef {Object} CampaignSessionItem
  * @property {string} fileName
  * @property {string} name
- * @property {string} [updatedAt]
  */
 
 /**
@@ -86,9 +85,4 @@ export default class CampaignViewModel {
 		return `/campaign/${encodeURIComponent(this.campaign.slug)}/session/${encodeURIComponent(fileName)}`;
 	}
 
-	/** @param {string} updatedAt */
-	formatSessionUpdatedAt(updatedAt) {
-		if (!updatedAt) return "-";
-		return new Date(updatedAt).toLocaleDateString();
-	}
 }

@@ -34,6 +34,9 @@ export default function SettingsModalContent({ onCancel }) {
 	const storedCampaignAiBasePrompts = useAppSelector(
 		(state) => state.ui.campaignAiBasePrompts || {},
 	);
+	const autoApplyAiChanges = useAppSelector(
+		(state) => state.ui.autoApplyAiChanges !== false,
+	);
 	const [aiBasePrompt, setAiBasePrompt] = useState(storedAiBasePrompt);
 	const [campaignAiBasePrompts, setCampaignAiBasePrompts] = useState(
 		storedCampaignAiBasePrompts,
@@ -89,6 +92,11 @@ export default function SettingsModalContent({ onCancel }) {
 	const handleSimplifiedNotesChange = (enabled) => {
 		dispatch(setUiSettingsAction({ simplifiedNotes: enabled }));
 		patchSettings({ simplifiedNotes: enabled });
+	};
+
+	const handleAutoApplyAiChangesChange = (enabled) => {
+		dispatch(setUiSettingsAction({ autoApplyAiChanges: enabled }));
+		patchSettings({ autoApplyAiChanges: enabled });
 	};
 
 	const handleCampaignPromptChange = (value) => {
@@ -185,6 +193,14 @@ export default function SettingsModalContent({ onCancel }) {
 				<div className="SettingsModal__sectionHeader">
 					<h3>{lang.t("AI settings")}</h3>
 				</div>
+				<Switch
+					checked={autoApplyAiChanges}
+					onChange={handleAutoApplyAiChangesChange}
+					label={lang.t("Apply parsed AI changes automatically")}
+					description={lang.t(
+						"When disabled, parsed AI responses are saved as drafts for review before applying.",
+					)}
+				/>
 				<div className="SettingsModal__promptHeader">
 					<div>
 						<div className="SettingsModal__label">

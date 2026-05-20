@@ -107,7 +107,7 @@ function getDiffResourceFieldSummary(resource) {
 	}
 	if (Array.isArray(before) || Array.isArray(after)) return [];
 
-	const ignoredKeys = new Set(["id", "slug", "source", "updatedAt"]);
+	const ignoredKeys = new Set(["id", "slug", "source"]);
 	return [...new Set([...Object.keys(before), ...Object.keys(after)])]
 		.filter((key) => !ignoredKeys.has(key))
 		.filter((key) => !snapshotsEqual(before[key], after[key]))

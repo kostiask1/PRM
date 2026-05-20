@@ -303,7 +303,6 @@ function EncounterView(props) {
 		delete payload.id;
 		delete payload.slug;
 		delete payload.createdAt;
-		delete payload.updatedAt;
 
 		setIsPlayerSubmitting(true);
 		try {

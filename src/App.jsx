@@ -123,6 +123,7 @@ export default function App() {
 						simplifiedNotes: settings.simplifiedNotes,
 						aiBasePrompt: settings.aiBasePrompt,
 						campaignAiBasePrompts: settings.campaignAiBasePrompts,
+						autoApplyAiChanges: settings.autoApplyAiChanges,
 					}),
 				);
 			} catch (error) {

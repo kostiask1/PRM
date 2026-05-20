@@ -78,7 +78,6 @@ export default function CreateLocationButton({
 				delete payload.id;
 				delete payload.slug;
 				delete payload.createdAt;
-				delete payload.updatedAt;
 				await api.createEntity(campaignSlug, "locations", payload);
 				dispatch(refreshEntitiesAction());
 			}

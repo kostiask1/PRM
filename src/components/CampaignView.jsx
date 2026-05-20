@@ -144,14 +144,6 @@ function CampaignView(props) {
 			}
 		>
 			<div className="ListCard__title">{session.name}</div>
-			<div
-				className="ListCard__meta"
-				title={`${lang.t("Updated")}: ${viewModel.formatSessionUpdatedAt(
-					session.updatedAt,
-				)}`}
-			>
-				{viewModel.formatSessionUpdatedAt(session.updatedAt)}
-			</div>
 		</ListCard>
 	);
 

@@ -103,6 +103,12 @@ export function setUiSettingsAction(payload) {
 					)
 				: {};
 	}
+	if (
+		payload &&
+		Object.prototype.hasOwnProperty.call(payload, "autoApplyAiChanges")
+	) {
+		nextPayload.autoApplyAiChanges = payload.autoApplyAiChanges !== false;
+	}
 
 	return {
 		type: SET_UI_SETTINGS,

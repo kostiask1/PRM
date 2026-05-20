@@ -387,6 +387,7 @@ function getHistoryChangeSummary(entry) {
 
 function getAiResponseStateLabel(entry) {
 	if (isFailedHistoryEntry(entry)) return lang.t("Failed");
+	if (entry?.applyState === "draft") return lang.t("Draft");
 	if (entry?.applyState === "applied") return lang.t("Applied");
 	if (entry?.applyState === "undone") return lang.t("Undone");
 	return "";
@@ -879,6 +880,19 @@ export default function AiAssistantPanel({
 		}
 	};
 
+	const saveDraftHistoryEntryChanges = async (entry, resources) => {
+		if (!entry?.id) return null;
+		const updatedEntry = await api.updateAiResponse(initialRoute.campaign, entry.id, {
+			resources,
+		});
+		if (updatedEntry) {
+			upsertResponseHistoryEntry(updatedEntry);
+			setSelectedResponseEntry(updatedEntry);
+			setGeneratedPrompt(updatedEntry.text);
+		}
+		return updatedEntry;
+	};
+
 	const handleSaveApiKey = async () => {
 		const apiKey = apiKeyInput.trim();
 		if (!apiKey) {
@@ -1042,6 +1056,17 @@ export default function AiAssistantPanel({
 			return;
 		}
 
+		if (data.draft && data.aiResponse) {
+			upsertResponseHistoryEntry(data.aiResponse);
+			showGeneratedPrompt(data.aiResponse);
+			setNotification(lang.t("AI draft created."));
+			if (shouldParseResponse || isEncounter || isBestiary) {
+				setIsContextModalOpen(false);
+				setIsImagePromptPickerOpen(false);
+			}
+			return;
+		}
+
 		if (!data.updated) return;
 
 		if (data.aiResponse) {
@@ -1159,61 +1184,11 @@ export default function AiAssistantPanel({
 				},
 				{ signal: controller.signal },
 			);
-			// Одразу оновлюємо стан в батьківському компоненті, бо в БД вже записано
-			if (data.prompt) {
-				const historyEntry = data.aiResponse || {
-					id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-					text: data.prompt,
-					createdAt: new Date().toISOString(),
-				};
-				upsertResponseHistoryEntry(historyEntry);
-				showGeneratedPrompt(historyEntry);
-			} else if (data.updated) {
-				if (data.aiResponse) {
-					upsertResponseHistoryEntry(data.aiResponse);
-				}
-				const updatedIsSessionLike =
-					data.updated &&
-					typeof data.updated === "object" &&
-					data.updated.data &&
-					typeof data.updated.data === "object";
-				const canApplyDirectly =
-					isBestiary ||
-					(isCampaign && !updatedIsSessionLike) ||
-					(!isCampaign && updatedIsSessionLike);
-
-				const generatedEntityTypes = getGeneratedEntityTypes(
-					data.generated,
-					data.aiResponse,
-				);
-
-				if (canApplyDirectly && onInsertResult) {
-					onInsertResult(data.updated, {
-						entityTypes: generatedEntityTypes,
-						generated: data.generated,
-					});
-				} else {
-					dispatch(requestCampaignsReloadAction());
-				}
-
-				setUserInstructions(""); // Очищаємо поле після успіху
-				setNotification(
-					requestType === "custom-monster"
-						? lang.t("Custom creatures saved.")
-						: lang.t("AI changes applied successfully!"),
-				);
-				if (
-					!canApplyDirectly &&
-					generatedEntityTypes.length > 0
-				) {
-					dispatch(refreshEntitiesAction());
-				}
-				if (shouldParseResponse || isEncounter || isBestiary) {
-					setIsOpen(false);
-					setIsContextModalOpen(false);
-					setIsImagePromptPickerOpen(false);
-				}
-			}
+			handleGeneratedAiData({
+				data,
+				requestType,
+				shouldParseResponse,
+			});
 		} catch (err) {
 			if (err?.name === "AbortError") {
 				return;
@@ -2117,11 +2092,17 @@ export default function AiAssistantPanel({
 							isGeneratedPromptCopied={isGeneratedPromptCopied}
 							isRestoringResponse={isRestoringResponse}
 							markdownComponents={markdownMentionComponents}
-							onApply={() =>
-								restoreAiHistoryEntry(selectedResponseEntry, "apply")
+							onApply={(entry = selectedResponseEntry) =>
+								restoreAiHistoryEntry(entry, "apply")
 							}
 							onCancel={closeGeneratedPrompt}
 							onCopy={copyGeneratedPrompt}
+							onSaveDraftChanges={(resources) =>
+								saveDraftHistoryEntryChanges(
+									selectedResponseEntry,
+									resources,
+								)
+							}
 							onUndo={() =>
 								restoreAiHistoryEntry(selectedResponseEntry, "undo")
 							}

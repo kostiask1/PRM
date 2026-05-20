@@ -45,6 +45,7 @@ function getInitialUiSettings() {
 		simplifiedNotes: false,
 		aiBasePrompt: "",
 		campaignAiBasePrompts: {},
+		autoApplyAiChanges: true,
 	};
 }
 

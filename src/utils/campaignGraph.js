@@ -5,7 +5,6 @@ const IGNORED_TEXT_KEYS = new Set([
 	"imageUrl",
 	"imageAlt",
 	"createdAt",
-	"updatedAt",
 	"completedAt",
 	"order",
 	"collapsed",

@@ -73,7 +73,7 @@ router.patch("/:fileName", async (req, res, next) => {
 			...current,
 			...req.body,
 			name: nextName,
-			updatedAt: new Date().toISOString(),
+			id: current.id,
 		};
 
 		if (nextFileName !== fileName) {

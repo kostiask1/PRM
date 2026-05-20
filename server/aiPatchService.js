@@ -240,7 +240,7 @@ function normalizeCharacter(raw, existing = null, { simplifiedNotes = false } = 
 	});
 
 	return {
-		id: existing?.id || raw.id || makeId(),
+		id: existing?.id || makeId(),
 		firstName: rawHasName ? nameParts.firstName : existing?.firstName || "",
 		lastName: rawHasName ? nameParts.lastName : existing?.lastName || "",
 		race: rawRace !== undefined ? asText(rawRace) : existing?.race || "",
@@ -285,7 +285,7 @@ function normalizeLocation(raw, existing = null, { simplifiedNotes = false } = {
 	});
 
 	return {
-		id: existing?.id || raw.id || makeId(),
+		id: existing?.id || makeId(),
 		name:
 			rawName !== undefined
 				? sanitizeEntityName(rawName)
@@ -367,7 +367,7 @@ function normalizeScene(
 	const hasNpcs = Array.isArray(scene.npcs);
 
 	return {
-		id: existing?.id || scene.id || makeId(),
+		id: existing?.id || makeId(),
 		texts: normalizeSceneTexts(scene, existing?.texts || {}),
 		notes: hasNotes ? notesFromAi : existing?.notes || [],
 		isNotesCollapsed: Boolean(existing?.isNotesCollapsed),
@@ -664,7 +664,11 @@ async function applyCampaignEntityOperation(
 	}
 
 	if (normalizedOp === "create") {
-		const normalized = normalizeEntityPayload(type, operationData(operation), null, options);
+		const rawData = {
+			...operationData(operation),
+			id: makeId(),
+		};
+		const normalized = normalizeEntityPayload(type, rawData, null, options);
 		if (type === "locations" && !normalized.name) return null;
 		if (type !== "locations" && !normalized.firstName && !normalized.lastName) {
 			return null;
@@ -739,14 +743,18 @@ function applySessionEntityOperation(state, operation, type, options) {
 	}
 
 	if (normalizedOp === "create") {
-		const normalized = normalizeEntityPayload(type, operationData(operation), null, options);
+		const rawData = {
+			...operationData(operation),
+			id: makeId(),
+		};
+		const normalized = normalizeEntityPayload(type, rawData, null, options);
 		if (type === "locations" && !normalized.name) return null;
 		if (type !== "locations" && !normalized.firstName && !normalized.lastName) {
 			return null;
 		}
 		const saved = {
 			...normalized,
-			id: normalized.id || makeId(),
+			id: normalized.id,
 			slug: normalized.slug || storage.campaignSlug(
 				type === "locations"
 					? normalized.name || "locations"
@@ -807,7 +815,7 @@ async function applyMoveScopeOperation(state, operation, type, options) {
 			type,
 		);
 		if (!existing) return null;
-		const normalized = normalizeEntityPayload(type, existing, null, options);
+		const normalized = normalizeEntityPayload(type, existing, existing, options);
 		const saved = await writeCampaignEntity(campaignSlug, type, normalized);
 		setSessionEntityList(
 			sessionData,
@@ -825,10 +833,10 @@ async function applyMoveScopeOperation(state, operation, type, options) {
 	);
 	if (!existing) return null;
 	const list = getSessionEntityList(sessionData, type);
-	const normalized = normalizeEntityPayload(type, existing, null, options);
+	const normalized = normalizeEntityPayload(type, existing, existing, options);
 	const saved = {
 		...normalized,
-		id: normalized.id || makeId(),
+		id: normalized.id,
 		slug: normalized.slug || existing.slug || storage.campaignSlug(
 			type === "locations"
 				? normalized.name || "locations"
@@ -1219,12 +1227,10 @@ async function applyAiOperations({
 
 	let updated = null;
 	if (campaignDataChanged && campaignMeta && !sessionData) {
-		campaignMeta.updatedAt = new Date().toISOString();
 		await storage.writeJson(storage.campaignMetaPath(campaignSlug), campaignMeta);
 		updated = campaignMeta;
 	}
 	if (campaignDataChanged && sessionData) {
-		sessionData.updatedAt = new Date().toISOString();
 		await storage.writeJson(storage.sessionPath(campaignSlug, sessionFile), sessionData);
 		updated = { ...sessionData, fileName: sessionFile };
 	} else if (customBestiaryChange?.hasChanges && !campaignMeta) {

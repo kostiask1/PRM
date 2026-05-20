@@ -22,6 +22,7 @@ const DEFAULT_APP_SETTINGS = Object.freeze({
 	simplifiedNotes: false,
 	aiBasePrompt: "",
 	campaignAiBasePrompts: {},
+	autoApplyAiChanges: true,
 });
 
 function todayString() {
@@ -115,14 +116,26 @@ async function exists(filePath) {
 	}
 }
 
+function stripUpdatedAtFields(value) {
+	if (Array.isArray(value)) {
+		return value.map(stripUpdatedAtFields);
+	}
+	if (!value || typeof value !== "object") return value;
+	return Object.fromEntries(
+		Object.entries(value)
+			.filter(([key]) => key !== "updatedAt")
+			.map(([key, entryValue]) => [key, stripUpdatedAtFields(entryValue)]),
+	);
+}
+
 async function readJson(filePath) {
 	const raw = await fs.readFile(filePath, "utf8");
-	return JSON.parse(raw);
+	return stripUpdatedAtFields(JSON.parse(raw));
 }
 
 async function writeJson(filePath, value) {
 	await ensureDir(path.dirname(filePath));
-	const content = JSON.stringify(value, null, 2);
+	const content = JSON.stringify(stripUpdatedAtFields(value), null, 2);
 	const tempPath = path.join(
 		path.dirname(filePath),
 		`.${path.basename(filePath)}.${process.pid}.${Date.now()}.${crypto
@@ -507,7 +520,7 @@ function normalizeAiResponse(raw = {}) {
 				: "",
 	};
 	const changes = normalizeAiChanges(raw.changes);
-	const applyState = ["applied", "undone"].includes(raw.applyState)
+	const applyState = ["applied", "undone", "draft"].includes(raw.applyState)
 		? raw.applyState
 		: null;
 	const status = raw.status === "failed" ? "failed" : "completed";
@@ -660,6 +673,7 @@ function normalizeSettings(settings = {}) {
 		simplifiedNotes: Boolean(settings.simplifiedNotes),
 		aiBasePrompt: String(settings.aiBasePrompt || ""),
 		campaignAiBasePrompts,
+		autoApplyAiChanges: settings.autoApplyAiChanges !== false,
 	};
 }
 
@@ -739,7 +753,6 @@ async function writeEntity(campaignSlug, type, entitySlug, data) {
 	const payload = {
 		...data,
 		slug: entitySlug,
-		updatedAt: new Date().toISOString(),
 	};
 	await writeJson(infoPath, payload);
 	return payload;
@@ -821,10 +834,7 @@ async function updateCampaignMentionReferences(campaignSlug, oldName, newName) {
 		const sessionData = await readJson(filePath);
 		const nextSessionData = replaceMentionsInValue(sessionData, oldName, newName);
 		if (JSON.stringify(nextSessionData) !== JSON.stringify(sessionData)) {
-			await writeJson(filePath, {
-				...nextSessionData,
-				updatedAt: new Date().toISOString(),
-			});
+			await writeJson(filePath, nextSessionData);
 		}
 	}
 }
@@ -852,7 +862,6 @@ async function moveEntity(campaignSlug, sourceType, entitySlug, targetType) {
 	return writeEntity(campaignSlug, targetType, targetSlug, {
 		...current,
 		slug: targetSlug,
-		updatedAt: new Date().toISOString(),
 	});
 }
 
@@ -888,7 +897,6 @@ async function listSessions(slug) {
 			name: data.name,
 			fileName: file,
 			createdAt: data.createdAt,
-			updatedAt: data.updatedAt,
 			order: data.order || 0,
 		};
 	});
@@ -1197,7 +1205,6 @@ async function importCampaignBundle(bundle, options = {}) {
 		...replaceImageSlugReferences(meta, sourceSlug, slug),
 		slug,
 		createdAt: meta.createdAt || now,
-		updatedAt: now,
 	};
 	await ensureDir(path.join(campaignDir(slug), "sessions"));
 	await writeJson(campaignMetaPath(slug), newMeta);
@@ -1212,10 +1219,7 @@ async function importCampaignBundle(bundle, options = {}) {
 			sourceSlug,
 			slug,
 		);
-		await writeJson(sessionPath(slug, fileName), {
-			...normalizedContent,
-			updatedAt: now,
-		});
+		await writeJson(sessionPath(slug, fileName), normalizedContent);
 	}
 
 	for (const type of ENTITY_TYPES) {
@@ -1347,7 +1351,6 @@ function makeDefaultSessionData(name) {
 		name: sanitizeName(name) || todayString(),
 		order: 0,
 		createdAt: new Date().toISOString(),
-		updatedAt: new Date().toISOString(),
 		data: {},
 	};
 }
