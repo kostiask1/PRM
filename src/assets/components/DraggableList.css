@@ -11,7 +11,13 @@
 .DraggableList>div {
 	position: relative;
 	touch-action: pan-y;
-	height: fit-content;
+	display: flex;
+	min-width: 0;
+}
+
+.DraggableList>div>*:not(.DraggableList__handle):not(.DraggableList__itemControl) {
+	flex: 1 1 auto;
+	min-width: 0;
 }
 
 .DraggableList__handle {
@@ -93,6 +99,17 @@
 .DraggableList>div.is_dragging {
 	opacity: 0.15;
 	cursor: grabbing;
+}
+
+.DraggableList>div.is_drag_over::after {
+	content: "";
+	position: absolute;
+	inset: -2px;
+	border-radius: var(--radius-sm);
+	border: 2px solid color-mix(in srgb, var(--accent), transparent 20%);
+	background: color-mix(in srgb, var(--accent), transparent 88%);
+	pointer-events: none;
+	z-index: 4;
 }
 
 .DraggableList__preview {

@@ -26,32 +26,25 @@ export default function DraggableList({
 	isItemControlActive,
 }) {
 	const [draggingIndex, setDraggingIndex] = useState(null);
+	const [dragOverIndex, setDragOverIndex] = useState(null);
 	const [dragPreview, setDragPreview] = useState(null);
-	const [previewItems, setPreviewItems] = useState(null);
 	const listIdRef = useRef(`DraggableList-${nextListId++}`);
 	const listRef = useRef(null);
 	const itemsRef = useRef(items);
 	const pendingPointerRef = useRef(null);
 	const dragStateRef = useRef(null);
-	const scrollSnapshotRef = useRef(null);
 	const removePointerListenersRef = useRef(null);
 	const suppressClickRef = useRef(false);
 	const dragPreviewRef = useRef(null);
 	const dragPreviewFrameRef = useRef(null);
 	const dragPreviewPositionRef = useRef(null);
-	const displayItems = previewItems || items;
+	const displayItems = items;
 	const draggableItemsCount = displayItems.filter((item, index) =>
 		isItemAllowedToDrag(item, index),
 	).length;
 
 	useLayoutEffect(() => {
 		itemsRef.current = items;
-	});
-
-	useLayoutEffect(() => {
-		if (!scrollSnapshotRef.current) return;
-		restoreScrollSnapshot(scrollSnapshotRef.current);
-		scrollSnapshotRef.current = null;
 	});
 
 	useLayoutEffect(() => {
@@ -99,59 +92,6 @@ export default function DraggableList({
 				detail: { enabled },
 			}),
 		);
-	};
-
-	const getDocumentScrollElement = (ownerDocument) =>
-		ownerDocument.scrollingElement || ownerDocument.documentElement;
-
-	const getScrollableAncestors = (root) => {
-		if (!root) return [];
-		const ownerDocument = root.ownerDocument || document;
-		const ownerWindow = ownerDocument.defaultView || window;
-		const scrollables = [];
-
-		for (let element = root; element; element = element.parentElement) {
-			const style = ownerWindow.getComputedStyle(element);
-			const canScrollY =
-				/(auto|scroll|overlay)/.test(style.overflowY) &&
-				element.scrollHeight > element.clientHeight;
-			const canScrollX =
-				/(auto|scroll|overlay)/.test(style.overflowX) &&
-				element.scrollWidth > element.clientWidth;
-
-			if (canScrollY || canScrollX) scrollables.push(element);
-		}
-
-		scrollables.push(getDocumentScrollElement(ownerDocument));
-		return scrollables;
-	};
-
-	const captureScrollSnapshot = () => {
-		const root = listRef.current;
-		if (!root) return [];
-
-		const targets = [];
-		const seen = new Set();
-		const addTarget = (target) => {
-			if (!target || seen.has(target)) return;
-			seen.add(target);
-			targets.push({
-				target,
-				scrollLeft: target.scrollLeft,
-				scrollTop: target.scrollTop,
-			});
-		};
-
-		getScrollableAncestors(root.parentElement).forEach(addTarget);
-		return targets;
-	};
-
-	const restoreScrollSnapshot = (snapshot) => {
-		for (const item of snapshot) {
-			if (!item.target.isConnected) continue;
-			item.target.scrollLeft = item.scrollLeft;
-			item.target.scrollTop = item.scrollTop;
-		}
 	};
 
 	const isNoListDragTarget = (event) => {
@@ -228,6 +168,33 @@ export default function DraggableList({
 		);
 	};
 
+	const reorderItems = (sourceItems = [], sourceIndex, targetIndex) => {
+		if (
+			!Number.isInteger(sourceIndex) ||
+			!Number.isInteger(targetIndex) ||
+			sourceIndex === targetIndex ||
+			sourceIndex < 0 ||
+			targetIndex < 0 ||
+			sourceIndex >= sourceItems.length ||
+			targetIndex >= sourceItems.length
+		) {
+			return sourceItems;
+		}
+
+		const nextItems = [...sourceItems];
+		const draggedItem = nextItems.splice(sourceIndex, 1)[0];
+		nextItems.splice(targetIndex, 0, draggedItem);
+		return nextItems;
+	};
+
+	const getItemContentElement = (itemElement) =>
+		Array.from(itemElement?.children || []).find(
+			(child) =>
+				child instanceof Element &&
+				!child.classList.contains("DraggableList__handle") &&
+				!child.classList.contains("DraggableList__itemControl"),
+		) || itemElement;
+
 	const startPointerDrag = (event) => {
 		const pending = pendingPointerRef.current;
 		if (!pending || dragStateRef.current) return;
@@ -240,15 +207,15 @@ export default function DraggableList({
 		const draggedElement = pending.element?.isConnected
 			? pending.element
 			: getListItemFromPoint(event.clientX, event.clientY);
-		const draggedRect = draggedElement?.getBoundingClientRect();
+		const draggedContentElement = getItemContentElement(draggedElement);
+		const draggedRect = draggedContentElement?.getBoundingClientRect();
 
 		if (!draggedRect) return;
 
 		dragStateRef.current = {
-			currentIndex: pending.index,
-			items: currentItems,
+			sourceIndex: pending.index,
+			targetIndex: pending.index,
 			originalItems: currentItems,
-			blockedTargetKey: null,
 			hasReordered: false,
 			previewOffsetX: event.clientX - draggedRect.left,
 			previewOffsetY: event.clientY - draggedRect.top,
@@ -256,6 +223,7 @@ export default function DraggableList({
 		};
 		setDocumentDragMode(listRef.current?.ownerDocument || document, true);
 		setDraggingIndex(pending.index);
+		setDragOverIndex(null);
 		setDragPreview({
 			item: currentItems[pending.index],
 			index: pending.index,
@@ -274,40 +242,31 @@ export default function DraggableList({
 			event.clientY - dragState.previewOffsetY,
 		);
 
-		const sourceIndex = dragState.currentIndex;
+		const sourceIndex = dragState.sourceIndex;
 		const targetElement = getListItemFromPoint(event.clientX, event.clientY);
 		if (!targetElement) {
-			dragState.blockedTargetKey = null;
+			setDragOverIndex(null);
 			return;
 		}
 
 		const targetIndex = Number(targetElement.dataset.draggableListItemIndex);
-		const targetItem = dragState.items[targetIndex];
-		const targetKey = targetItem == null ? null : keyExtractor(targetItem);
 		if (
 			!Number.isInteger(targetIndex) ||
 			targetElement.dataset.draggableListItemDraggable !== "true" ||
-			sourceIndex === null ||
-			sourceIndex === targetIndex
+			sourceIndex === null
 		) {
-			if (sourceIndex === targetIndex) dragState.blockedTargetKey = null;
+			setDragOverIndex(null);
 			return;
 		}
-		if (targetKey != null && targetKey === dragState.blockedTargetKey) {
+		if (sourceIndex === targetIndex) {
+			dragState.targetIndex = sourceIndex;
+			setDragOverIndex(null);
 			return;
 		}
 
-		const newList = [...dragState.items];
-		const draggedItem = newList.splice(sourceIndex, 1)[0];
-		newList.splice(targetIndex, 0, draggedItem);
-
-		scrollSnapshotRef.current = captureScrollSnapshot();
-		dragState.items = newList;
-		dragState.currentIndex = targetIndex;
-		dragState.blockedTargetKey = targetKey;
+		dragState.targetIndex = targetIndex;
 		dragState.hasReordered = true;
-		setDraggingIndex(targetIndex);
-		setPreviewItems(newList);
+		setDragOverIndex(targetIndex);
 	};
 
 	const finishPointerDrag = (event) => {
@@ -317,15 +276,21 @@ export default function DraggableList({
 
 		const dragState = dragStateRef.current;
 		dragStateRef.current = null;
-		const finalItems = dragState?.items || null;
+		const finalItems = dragState
+			? reorderItems(
+					dragState.originalItems,
+					dragState.sourceIndex,
+					dragState.targetIndex,
+				)
+			: null;
 		const hasReordered =
 			!!dragState?.hasReordered &&
 			!haveSameItemOrder(dragState.originalItems, finalItems);
 		setDocumentPressMode(listRef.current?.ownerDocument || document, false);
 		setDocumentDragMode(listRef.current?.ownerDocument || document, false);
 		setDraggingIndex(null);
+		setDragOverIndex(null);
 		setDragPreview(null);
-		setPreviewItems(null);
 		dragPreviewPositionRef.current = null;
 		if (dragPreviewFrameRef.current) {
 			cancelAnimationFrame(dragPreviewFrameRef.current);
@@ -456,6 +421,7 @@ export default function DraggableList({
 						onPointerDown={(event) => handlePointerDown(event, index)}
 						className={classNames(itemClassName, {
 							"is_dragging": draggingIndex === index,
+							"is_drag_over": dragOverIndex === index,
 						})}
 					>
 						{canDragItem(item, index) && (
