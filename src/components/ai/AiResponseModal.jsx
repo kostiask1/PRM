@@ -57,6 +57,14 @@ function getFieldValue(snapshot, key) {
 	return isObjectSnapshot(snapshot) ? snapshot[key] : undefined;
 }
 
+function getChangedObjectKeys(before, after) {
+	if (!isObjectSnapshot(before) || !isObjectSnapshot(after)) return [];
+	const ignoredKeys = new Set(["id", "slug", "source", "createdAt", "collapsed", "isNotesCollapsed"]);
+	return [...new Set([...Object.keys(before), ...Object.keys(after)])].filter(
+		(key) => !ignoredKeys.has(key) && !snapshotsEqual(before[key], after[key]),
+	);
+}
+
 function getPreviewCardType(resource) {
 	if (resource?.kind === "entity") {
 		if (resource.type === "characters" || resource.type === "npc") {
@@ -106,6 +114,42 @@ function getNoteDiffKey(note, index) {
 		if (signature.trim()) return `content:${signature}`;
 	}
 	return `index:${index}`;
+}
+
+function buildNoteHighlightMap(beforeNotes, afterNotes) {
+	const beforeList = Array.isArray(beforeNotes) ? beforeNotes : [];
+	const afterList = Array.isArray(afterNotes) ? afterNotes : [];
+	const beforeByKey = new Map(
+		beforeList.map((note, index) => [getNoteDiffKey(note, index), note]),
+	);
+	const highlights = {};
+	afterList.forEach((note, index) => {
+		const before = beforeByKey.get(getNoteDiffKey(note, index));
+		const changedFields = ["title", "text"].filter(
+			(field) => !snapshotsEqual(before?.[field], note?.[field]),
+		);
+		if (changedFields.length === 0) return;
+		const id = String(note?.id || "").trim();
+		if (id) highlights[id] = changedFields;
+		const title = String(note?.title || "").trim();
+		if (title) highlights[title] = changedFields;
+	});
+	return highlights;
+}
+
+function buildCardHighlightFields(resource) {
+	return {
+		fields: getChangedObjectKeys(resource.before, resource.after).filter(
+			(key) => key !== "notes",
+		),
+		notes: buildNoteHighlightMap(resource.before?.notes, resource.after?.notes),
+	};
+}
+
+function buildNoteHighlightFields(resource) {
+	return ["title", "text"].filter(
+		(field) => !snapshotsEqual(resource.before?.[field], resource.after?.[field]),
+	);
 }
 
 function isResourceApplied(resource) {
@@ -277,7 +321,7 @@ export default function AiResponseModal({
 			</>
 		);
 	};
-	const renderNoteCard = (resource, note, editable = false) => {
+	const renderNoteCard = (resource, note, editable = false, highlightFields = null) => {
 		if (!isObjectSnapshot(note)) return null;
 		const campaignSlug = resource.campaign || selectedResponseEntry?.path?.campaign;
 		const normalizedNote = {
@@ -303,11 +347,12 @@ export default function AiResponseModal({
 						: noop
 				}
 				onDelete={noop}
+				highlightFields={highlightFields}
 			/>
 		);
 	};
 
-	const renderEntityCard = (resource, snapshot, editable = false) => {
+	const renderEntityCard = (resource, snapshot, editable = false, highlightFields = null) => {
 		const cardType = getPreviewCardType(resource);
 		if (!cardType || !isObjectSnapshot(snapshot)) return null;
 		const campaignSlug = resource.campaign || selectedResponseEntry?.path?.campaign;
@@ -325,6 +370,7 @@ export default function AiResponseModal({
 					onDelete={noop}
 					onReorderDrop={noop}
 					showDeleteButton={false}
+					highlightFields={highlightFields}
 				/>
 			);
 		}
@@ -341,9 +387,10 @@ export default function AiResponseModal({
 				onNameBlur={noop}
 				onDelete={noop}
 				onReorderDrop={noop}
-				showDeleteButton={false}
-			/>
-		);
+			showDeleteButton={false}
+			highlightFields={highlightFields}
+		/>
+	);
 	};
 
 	const renderNoteCardDiff = (resource) => {
@@ -376,7 +423,7 @@ export default function AiResponseModal({
 								{isNew ? lang.t("New") : lang.t("Deleted")}
 							</div>
 							<div className={classNames("AiAssistant__preview_note_surface", isDraft && isNew && "is_editable")}>
-								{renderNoteCard(resource, isNew ? resource.after : resource.before, isDraft && isNew && !isResourceApplied(resource))}
+								{renderNoteCard(resource, isNew ? resource.after : resource.before, isDraft && isNew && !isResourceApplied(resource), isNew ? ["title", "text"] : null)}
 							</div>
 						</div>
 					</div>
@@ -386,16 +433,16 @@ export default function AiResponseModal({
 							<div className="AiAssistant__preview_column_title">
 								{lang.t("Before")}
 							</div>
-							<div className="AiAssistant__preview_note_surface is_removed">
-								{renderNoteCard(resource, resource.before)}
+							<div className="AiAssistant__preview_note_surface is_before">
+								{renderNoteCard(resource, resource.before, false, buildNoteHighlightFields(resource))}
 							</div>
 						</div>
 						<div className="AiAssistant__preview_card_frame">
 							<div className="AiAssistant__preview_column_title">
 								{lang.t("After")}
 							</div>
-							<div className={classNames("AiAssistant__preview_note_surface is_added", isDraft && "is_editable")}>
-								{renderNoteCard(resource, resource.after, isDraft && !isResourceApplied(resource))}
+							<div className={classNames("AiAssistant__preview_note_surface is_after", isDraft && "is_editable")}>
+								{renderNoteCard(resource, resource.after, isDraft && !isResourceApplied(resource), buildNoteHighlightFields(resource))}
 							</div>
 						</div>
 					</div>
@@ -475,7 +522,7 @@ export default function AiResponseModal({
 									{isNew ? lang.t("New") : lang.t("Deleted")}
 								</div>
 								<div className={classNames("AiAssistant__preview_card_surface", isDraft && isNew && "is_editable")}>
-									{renderEntityCard(resource, isNew ? resource.after : resource.before, isDraft && isNew && !isResourceApplied(resource))}
+									{renderEntityCard(resource, isNew ? resource.after : resource.before, isDraft && isNew && !isResourceApplied(resource), isNew ? buildCardHighlightFields({ before: {}, after: resource.after }) : null)}
 								</div>
 							</div>
 						</div>
@@ -485,16 +532,16 @@ export default function AiResponseModal({
 								<div className="AiAssistant__preview_column_title">
 									{lang.t("Before")}
 								</div>
-								<div className="AiAssistant__preview_card_surface is_removed">
-									{renderEntityCard(resource, resource.before)}
+								<div className="AiAssistant__preview_card_surface is_before">
+									{renderEntityCard(resource, resource.before, false, buildCardHighlightFields(resource))}
 								</div>
 							</div>
 							<div className="AiAssistant__preview_card_frame">
 								<div className="AiAssistant__preview_column_title">
 									{lang.t("After")}
 								</div>
-								<div className={classNames("AiAssistant__preview_card_surface is_added", isDraft && "is_editable")}>
-									{renderEntityCard(resource, resource.after, isDraft && !isResourceApplied(resource))}
+								<div className={classNames("AiAssistant__preview_card_surface is_after", isDraft && "is_editable")}>
+									{renderEntityCard(resource, resource.after, isDraft && !isResourceApplied(resource), buildCardHighlightFields(resource))}
 								</div>
 							</div>
 						</div>
@@ -760,6 +807,13 @@ export default function AiResponseModal({
 							<span>{lang.t("Changes")}</span>
 							<span>{getHistoryChangeSummary(selectedResponseEntry)}</span>
 						</div>
+						{isDraft && (
+							<div className="AiAssistant__diff_hint">
+								{lang.t(
+									"You can enable automatic applying of parsed AI changes in settings.",
+								)}
+							</div>
+						)}
 						<div className="AiAssistant__diff_view_switch">
 							<Button
 								variant={diffViewMode === "preview" ? "primary" : "ghost"}
@@ -805,7 +859,10 @@ export default function AiResponseModal({
 										>
 											<div className="AiAssistant__draft_resource_header">
 												<span>{resource.label}</span>
-												<span>{getDiffResourceState(resource)}</span>
+												<div className="AiAssistant__preview_resource_actions">
+													<span>{getDiffResourceState(resource)}</span>
+													{renderResourceActions(resource)}
+												</div>
 											</div>
 											<div className="AiAssistant__draft_columns">
 												{!isNew && (

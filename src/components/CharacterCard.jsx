@@ -28,6 +28,7 @@ export default function CharacterCard({
 	showDeleteButton = true,
 	showHeader = true,
 	headerActions = null,
+	highlightFields = null,
 }) {
 	const characterModel = new CharacterCardModel(character);
 	const editingStartNameRef = useRef(characterModel.fullName);
@@ -62,6 +63,12 @@ export default function CharacterCard({
 	const updateField = (field, value) => {
 		onChange(character.id, characterModel.withField(field, value));
 	};
+	const isFieldHighlighted = (field) =>
+		highlightFields?.fields?.includes?.(field);
+	const getNoteHighlightFields = (note) =>
+		highlightFields?.notes?.[String(note?.id)] ||
+		highlightFields?.notes?.[String(note?.title || "").trim()] ||
+		null;
 
 	const getDisplayName = (entity) =>
 		`${entity?.firstName || ""} ${entity?.lastName || ""}`.trim() ||
@@ -177,6 +184,11 @@ export default function CharacterCard({
 										onChange={(e) => updateField("firstName", e.target.value)}
 										onBlur={handleNameBlur}
 										placeholder={lang.t("First name")}
+										className={
+											isFieldHighlighted("firstName")
+												? "is_ai_changed_field"
+												: ""
+										}
 									/>
 									<EditableField
 										type="text"
@@ -184,6 +196,11 @@ export default function CharacterCard({
 										onChange={(e) => updateField("lastName", e.target.value)}
 										onBlur={handleNameBlur}
 										placeholder={lang.t("Last name")}
+										className={
+											isFieldHighlighted("lastName")
+												? "is_ai_changed_field"
+												: ""
+										}
 									/>
 									<div className="character_card__row_trio">
 										<EditableField
@@ -191,12 +208,22 @@ export default function CharacterCard({
 											value={character.race}
 											onChange={(e) => updateField("race", e.target.value)}
 											placeholder={lang.t("Race")}
+											className={
+												isFieldHighlighted("race")
+													? "is_ai_changed_field"
+													: ""
+											}
 										/>
 										<EditableField
 											type="text"
 											value={character.class}
 											onChange={(e) => updateField("class", e.target.value)}
 											placeholder={lang.t("Class")}
+											className={
+												isFieldHighlighted("class")
+													? "is_ai_changed_field"
+													: ""
+											}
 										/>
 										<Select
 											value={characterModel.level}
@@ -221,6 +248,11 @@ export default function CharacterCard({
 										value={character.motivation}
 										onChange={(e) => updateField("motivation", e.target.value)}
 										placeholder={lang.t("What does the character want...")}
+										className={
+											isFieldHighlighted("motivation")
+												? "is_ai_changed_field"
+												: ""
+										}
 									/>
 								</div>
 								<div className="character_card__field">
@@ -230,6 +262,11 @@ export default function CharacterCard({
 										value={character.trait}
 										onChange={(e) => updateField("trait", e.target.value)}
 										placeholder={lang.t("Distinctive trait or habit...")}
+										className={
+											isFieldHighlighted("trait")
+												? "is_ai_changed_field"
+												: ""
+										}
 									/>
 								</div>
 							</div>
@@ -313,6 +350,7 @@ export default function CharacterCard({
 										onTitleChange={handleNoteTitleChange}
 										onTextChange={handleNoteTextChange}
 										onDelete={handleNoteDelete}
+										highlightFields={getNoteHighlightFields(note)}
 									/>
 								)}
 							/>

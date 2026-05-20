@@ -17,6 +17,7 @@ export default function NoteCard({
 	onTitleChange,
 	onTextChange,
 	onDelete,
+	highlightFields = null,
 }) {
 	const simplifiedNotesEnabled = useAppSelector(
 		(state) => state.ui.simplifiedNotes,
@@ -58,7 +59,10 @@ export default function NoteCard({
 						value={note.title || ""}
 						onChange={(event) => onTitleChange(note.id, event.target.value)}
 						placeholder={lang.t("New note")}
-						className="note_card_simple__title"
+						className={classNames(
+							"note_card_simple__title",
+							highlightFields?.includes?.("title") && "is_ai_changed_field",
+						)}
 					/>
 					{!isLast && (
 						<Button
@@ -116,6 +120,11 @@ export default function NoteCard({
 						onChange={(event) => onTextChange(note.id, event.target.value)}
 						placeholder={lang.t("Note text...")}
 						campaignSlug={campaignSlug}
+						className={
+							highlightFields?.includes?.("text")
+								? "is_ai_changed_field"
+								: ""
+						}
 					/>
 				</div>
 			)}

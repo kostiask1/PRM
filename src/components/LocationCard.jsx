@@ -28,6 +28,7 @@ export default function LocationCard({
 	showDeleteButton = true,
 	showHeader = true,
 	headerActions = null,
+	highlightFields = null,
 }) {
 	const locationModel = new LocationCardModel(location);
 	const editingStartNameRef = useRef(
@@ -62,6 +63,12 @@ export default function LocationCard({
 	const updateField = (field, value) => {
 		onChange(location.id, locationModel.withField(field, value));
 	};
+	const isFieldHighlighted = (field) =>
+		highlightFields?.fields?.includes?.(field);
+	const getNoteHighlightFields = (note) =>
+		highlightFields?.notes?.[String(note?.id)] ||
+		highlightFields?.notes?.[String(note?.title || "").trim()] ||
+		null;
 
 	const getDisplayName = (entity) =>
 		String(entity?.name || entity?.title || "").trim();
@@ -179,6 +186,11 @@ export default function LocationCard({
 										onChange={(e) => updateField("name", e.target.value)}
 										onBlur={handleNameBlur}
 										placeholder={lang.t("Name")}
+										className={
+											isFieldHighlighted("name")
+												? "is_ai_changed_field"
+												: ""
+										}
 									/>
 								</div>
 							</div>
@@ -192,6 +204,11 @@ export default function LocationCard({
 										placeholder={lang.t(
 											"Briefly describe the location or faction...",
 										)}
+										className={
+											isFieldHighlighted("description")
+												? "is_ai_changed_field"
+												: ""
+										}
 									/>
 								</div>
 							</div>
@@ -275,6 +292,7 @@ export default function LocationCard({
 										onTitleChange={handleNoteTitleChange}
 										onTextChange={handleNoteTextChange}
 										onDelete={handleNoteDelete}
+										highlightFields={getNoteHighlightFields(note)}
 									/>
 								)}
 							/>
