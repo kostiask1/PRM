@@ -4,10 +4,6 @@
 	width: 95%;
 }
 
-.AiAssistant__response_overlay {
-	z-index: 1010;
-}
-
 .AiAssistant__response_overlay_wide .Modal__card {
 	width: min(1600px, 96vw);
 }
