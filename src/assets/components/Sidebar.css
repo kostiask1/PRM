@@ -230,12 +230,22 @@
 .ListCard__sidebar_info {
 	opacity: 0;
 	transition: opacity 0.1s;
+	min-width: 0;
 }
 
 .Sidebar.Sidebar__hovered .ListCard__sidebar_info,
 .Sidebar.Sidebar__select_open .ListCard__sidebar_info {
 	opacity: 1;
-	width: auto;
+	width: 100%;
+	min-width: 0;
+	overflow: hidden;
+}
+
+.Sidebar__campaignTitle {
+	max-width: 110px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .Sidebar:not(.Sidebar__hovered):not(.Sidebar__select_open) .Button,

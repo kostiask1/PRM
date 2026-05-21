@@ -237,7 +237,7 @@ export default function Sidebar({
 						onReorder={setLocalCampaigns}
 						onDrop={handleDragEnd}
 						keyExtractor={(c) => c.slug}
-						renderItem={(campaign, isDragging) => (
+						renderItem={(campaign) => (
 							<ListCard
 								active={activeCampaignId === campaign.slug}
 								href={`/campaign/${encodeURIComponent(campaign.slug)}`}
@@ -255,7 +255,12 @@ export default function Sidebar({
 								<div className="ListCard__sidebar_content">
 									<Icon name="map" className="ListCard__sidebar_icon" />
 									<div className="ListCard__sidebar_info">
-										<div className="ListCard__title">{campaign.name}</div>
+										<div
+											className="ListCard__title Sidebar__campaignTitle"
+											title={campaign.name}
+										>
+											{campaign.name}
+										</div>
 										<div className="ListCard__meta">
 											{lang.t("{count} sessions", {
 												count: campaign.sessionCount || 0,
