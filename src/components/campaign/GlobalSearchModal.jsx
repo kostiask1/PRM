@@ -82,7 +82,8 @@ function ParsedSearchText({ text, inline = false }) {
 
 function asText(value) {
 	if (value === null || value === undefined) return "";
-	if (typeof value === "string" || typeof value === "number") return String(value);
+	if (typeof value === "string" || typeof value === "number")
+		return String(value);
 	if (Array.isArray(value)) return value.map(asText).join("\n");
 	if (typeof value === "object") {
 		return Object.entries(value)
@@ -94,12 +95,18 @@ function asText(value) {
 }
 
 function normalize(value) {
-	return String(value || "").toLowerCase().replace(/\s+/g, " ").trim();
+	return String(value || "")
+		.toLowerCase()
+		.replace(/\s+/g, " ")
+		.trim();
 }
 
 function getEntityName(entity, fallback = "") {
-	const fullName = `${entity?.firstName || ""} ${entity?.lastName || ""}`.trim();
-	return fullName || entity?.name || entity?.title || fallback || lang.t("Untitled");
+	const fullName =
+		`${entity?.firstName || ""} ${entity?.lastName || ""}`.trim();
+	return (
+		fullName || entity?.name || entity?.title || fallback || lang.t("Untitled")
+	);
 }
 
 function getLocationName(location) {
@@ -120,18 +127,24 @@ function extractMentions(text) {
 }
 
 function buildSnippet(text, query) {
-	const source = String(text || "").replace(/\s+/g, " ").trim();
+	const source = String(text || "")
+		.replace(/\s+/g, " ")
+		.trim();
 	if (!source) return "";
 	const normalizedSource = normalize(source);
 	const normalizedQuery = normalize(query);
-	const index = normalizedQuery ? normalizedSource.indexOf(normalizedQuery) : -1;
+	const index = normalizedQuery
+		? normalizedSource.indexOf(normalizedQuery)
+		: -1;
 	const start = index >= 0 ? Math.max(0, index - 70) : 0;
 	const snippet = source.slice(start, start + 180);
 	return `${start > 0 ? "..." : ""}${snippet}${start + 180 < source.length ? "..." : ""}`;
 }
 
 function pushResult(results, item) {
-	const searchText = normalize([item.title, item.subtitle, item.text].join("\n"));
+	const searchText = normalize(
+		[item.title, item.subtitle, item.text].join("\n"),
+	);
 	results.push({ ...item, searchText });
 }
 
@@ -231,7 +244,11 @@ function buildSearchIndex({ campaign, entities, sessions, customMonsters }) {
 			getTitle: getEntityName,
 			target: {
 				...campaignTarget,
-				hash: makeDomId("campaign", "character", character?.id || character?.slug),
+				hash: makeDomId(
+					"campaign",
+					"character",
+					character?.id || character?.slug,
+				),
 			},
 		});
 	});
@@ -310,7 +327,10 @@ function buildSearchIndex({ campaign, entities, sessions, customMonsters }) {
 			});
 		});
 		(data.scenes || []).forEach((scene, index) => {
-			const sceneTitle = scene.title || scene.name || lang.t("Scene {number}", { number: index + 1 });
+			const sceneTitle =
+				scene.title ||
+				scene.name ||
+				lang.t("Scene {number}", { number: index + 1 });
 			const sceneTarget = {
 				...sessionTarget,
 				hash: makeDomId("session", "scene", scene?.id || index),
@@ -450,7 +470,9 @@ export default function GlobalSearchModal({ campaign, currentData, onCancel }) {
 		const normalizedQuery = normalize(query);
 		return index
 			.filter((item) => activeFilters.has(item.filter))
-			.filter((item) => !normalizedQuery || item.searchText.includes(normalizedQuery))
+			.filter(
+				(item) => !normalizedQuery || item.searchText.includes(normalizedQuery),
+			)
 			.slice(0, 80);
 	}, [activeFilters, index, query]);
 
@@ -464,7 +486,11 @@ export default function GlobalSearchModal({ campaign, currentData, onCancel }) {
 	};
 
 	return (
-		<Modal title={lang.t("Global search")} onCancel={onCancel} showFooter={false}>
+		<Modal
+			title={lang.t("Global search")}
+			onCancel={onCancel}
+			showFooter={false}
+		>
 			<div className="GlobalSearch">
 				<div className="GlobalSearch__bar">
 					<input
@@ -486,7 +512,9 @@ export default function GlobalSearchModal({ campaign, currentData, onCancel }) {
 						</Button>
 					))}
 				</div>
-				{isLoading && <div className="GlobalSearch__state">{lang.t("Loading...")}</div>}
+				{isLoading && (
+					<div className="GlobalSearch__state">{lang.t("Loading...")}</div>
+				)}
 				{error && <div className="GlobalSearch__state is_error">{error}</div>}
 				{!isLoading && !error && (
 					<div className="GlobalSearch__results">
@@ -498,9 +526,16 @@ export default function GlobalSearchModal({ campaign, currentData, onCancel }) {
 									key={result.id}
 									role="button"
 									tabIndex={0}
-									className={classNames("GlobalSearch__result", `is_${result.filter}`)}
+									className={classNames(
+										"GlobalSearch__result",
+										`is_${result.filter}`,
+									)}
 									onClick={(event) => {
-										if (event.target?.closest?.("a, button, input, textarea, select")) {
+										if (
+											event.target?.closest?.(
+												"a, button, input, textarea, select",
+											)
+										) {
 											return;
 										}
 										onCancel?.();
@@ -508,7 +543,11 @@ export default function GlobalSearchModal({ campaign, currentData, onCancel }) {
 									}}
 									onKeyDown={(event) => {
 										if (event.key !== "Enter" && event.key !== " ") return;
-										if (event.target?.closest?.("a, button, input, textarea, select")) {
+										if (
+											event.target?.closest?.(
+												"a, button, input, textarea, select",
+											)
+										) {
 											return;
 										}
 										event.preventDefault();

@@ -243,8 +243,7 @@ export default function RulesReferenceModalContent({
 			? REFERENCE_TABS.filter(
 					(tab) => !itemsByTab[tab.id] && !requestedTabsRef.current.has(tab.id),
 				)
-			: !itemsByTab[activeTab.id] &&
-				  !requestedTabsRef.current.has(activeTab.id)
+			: !itemsByTab[activeTab.id] && !requestedTabsRef.current.has(activeTab.id)
 				? [activeTab]
 				: [];
 
@@ -366,7 +365,10 @@ export default function RulesReferenceModalContent({
 	]);
 
 	useEffect(() => {
-		if (pendingNavigationTabRef.current !== activeTab.id || !activeSelectedName) {
+		if (
+			pendingNavigationTabRef.current !== activeTab.id ||
+			!activeSelectedName
+		) {
 			return;
 		}
 
@@ -377,7 +379,8 @@ export default function RulesReferenceModalContent({
 	useEffect(() => {
 		const handleKeyDown = (event) => {
 			if (event.key !== "Backspace") return;
-			if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+			if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey)
+				return;
 			if (isEditableTarget(event.target)) return;
 			if (!canNavigateBack) return;
 
@@ -423,7 +426,9 @@ export default function RulesReferenceModalContent({
 		return (
 			<div key={getReferenceItemKey(activeTab.id, item)}>
 				<ListCard onClick={() => selectItem(item.name)} active={isActive}>
-					<div className="ListCard__title">{highlightText(item.name, query)}</div>
+					<div className="ListCard__title">
+						{highlightText(item.name, query)}
+					</div>
 					{meta && (
 						<div className="ListCard__meta">{highlightText(meta, query)}</div>
 					)}

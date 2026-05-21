@@ -28,7 +28,7 @@ function CollapseToggleButton({
 			className={classNames(
 				"CollapseToggleButton",
 				sizeClass,
-				{ "is_rotated": isRotated },
+				{ is_rotated: isRotated },
 				className,
 			)}
 			onClick={(event) => {

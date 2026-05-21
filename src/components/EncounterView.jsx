@@ -106,16 +106,16 @@ function EncounterView(props) {
 		(view.encounter?.monsters || [])
 			.filter((monster) => !isEncounterCharacterParticipant(monster))
 			.forEach((monster) => {
-			const key = getGridMonsterKey(monster);
-			let representativeId = representativeByKey.get(key);
+				const key = getGridMonsterKey(monster);
+				let representativeId = representativeByKey.get(key);
 
-			if (!representativeId) {
-				representativeId = monster.instanceId;
-				representativeByKey.set(key, representativeId);
-				uniqueMonsters.push(monster);
-			}
+				if (!representativeId) {
+					representativeId = monster.instanceId;
+					representativeByKey.set(key, representativeId);
+					uniqueMonsters.push(monster);
+				}
 
-			representativeByInstanceId.set(monster.instanceId, representativeId);
+				representativeByInstanceId.set(monster.instanceId, representativeId);
 			});
 
 		return {
@@ -231,19 +231,20 @@ function EncounterView(props) {
 		});
 	};
 
-	const handleCharacterChange = (instanceId) => (_characterId, nextCharacter) => {
-		view.updateEncounterCharacter(instanceId, nextCharacter);
-		setModalCharacter((current) =>
-			current?.instanceId === instanceId
-				? {
-						...current,
-						...nextCharacter,
-						participantType: "character",
-						instanceId,
-					}
-				: current,
-		);
-	};
+	const handleCharacterChange =
+		(instanceId) => (_characterId, nextCharacter) => {
+			view.updateEncounterCharacter(instanceId, nextCharacter);
+			setModalCharacter((current) =>
+				current?.instanceId === instanceId
+					? {
+							...current,
+							...nextCharacter,
+							participantType: "character",
+							instanceId,
+						}
+					: current,
+			);
+		};
 
 	const updateEncounterViewMode = (mode) => {
 		const nextMode = mode === "grid" ? "grid" : "single";
@@ -300,7 +301,9 @@ function EncounterView(props) {
 			collapsed: false,
 			isNotesCollapsed: false,
 			...Object.fromEntries(
-				Object.entries(playerDraft || {}).filter(([key]) => !key.startsWith("_")),
+				Object.entries(playerDraft || {}).filter(
+					([key]) => !key.startsWith("_"),
+				),
 			),
 		};
 		delete payload.id;
@@ -309,7 +312,11 @@ function EncounterView(props) {
 
 		setIsPlayerSubmitting(true);
 		try {
-			const created = await api.createEntity(campaign.slug, "characters", payload);
+			const created = await api.createEntity(
+				campaign.slug,
+				"characters",
+				payload,
+			);
 			dispatch(refreshEntitiesAction());
 			view.handleAddCharacter(created);
 			resetPlayerCreateForm();
@@ -540,10 +547,10 @@ function EncounterView(props) {
 								return (
 									<div
 										className={classNames("EncounterMonsterRow", {
-											"EncounterMonsterRow__character": isCharacter,
-											"is_active":
+											EncounterMonsterRow__character: isCharacter,
+											is_active:
 												view.selectedInstance?.instanceId === m.instanceId,
-											"is_dragging": isDragging,
+											is_dragging: isDragging,
 										})}
 										onClick={() => handleSelectMonster(m)}
 									>
@@ -671,9 +678,8 @@ function EncounterView(props) {
 
 					<div
 						className={classNames("EncounterView__detailView", {
-							"EncounterView__detailView__grid":
-								effectiveDisplayMode === "grid",
-							"EncounterView__detailView__single":
+							EncounterView__detailView__grid: effectiveDisplayMode === "grid",
+							EncounterView__detailView__single:
 								effectiveDisplayMode !== "grid",
 						})}
 					>
@@ -688,9 +694,9 @@ function EncounterView(props) {
 											key={monster.instanceId}
 											ref={(node) => setGridItemRef(monster.instanceId, node)}
 											className={classNames("EncounterView__gridItem", {
-												"is_selected":
+												is_selected:
 													selectedGridInstanceId === monster.instanceId,
-												"is_focused": focusedMonsterId === monster.instanceId,
+												is_focused: focusedMonsterId === monster.instanceId,
 											})}
 										>
 											<MonsterStatBlock

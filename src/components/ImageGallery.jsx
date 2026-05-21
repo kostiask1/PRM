@@ -138,8 +138,8 @@ function ImageGallery({
 				<aside className="ImageGallery__sidebar">
 					<button
 						className={classNames("SourceBtn", {
-							"is_active": selectedSource === "general",
-							"is_drag_over": dragOverTarget?.id === "general",
+							is_active: selectedSource === "general",
+							is_drag_over: dragOverTarget?.id === "general",
 						})}
 						onClick={() => setSelectedSource("general")}
 						onDragOver={(e) => {
@@ -167,8 +167,8 @@ function ImageGallery({
 						<button
 							key={c.slug}
 							className={classNames("SourceBtn", {
-								"is_active": selectedSource === c.slug,
-								"is_drag_over": dragOverTarget?.id === c.slug,
+								is_active: selectedSource === c.slug,
+								is_drag_over: dragOverTarget?.id === c.slug,
 							})}
 							onClick={() => setSelectedSource(c.slug)}
 							onDragOver={(e) => {
@@ -198,8 +198,8 @@ function ImageGallery({
 							<button
 								key={cat.id}
 								className={classNames("TabBtn", {
-									"is_active": selectedCat.id === cat.id,
-									"is_drag_over": dragOverTarget?.id === cat.id,
+									is_active: selectedCat.id === cat.id,
+									is_drag_over: dragOverTarget?.id === cat.id,
 								})}
 								onClick={() => {
 									setSelectedCat(cat);
@@ -230,8 +230,8 @@ function ImageGallery({
 						<div className="ImageGallery__breadcrumbs">
 							<button
 								className={classNames("BreadcrumbItem", {
-									"is_active": selectedSub === "",
-									"is_drag_over":
+									is_active: selectedSub === "",
+									is_drag_over:
 										dragOverTarget?.type === "breadcrumb" &&
 										dragOverTarget?.id === "__root__",
 								})}
@@ -266,8 +266,8 @@ function ImageGallery({
 											return (
 												<button
 													className={classNames("BreadcrumbItem", {
-														"is_active": idx === arr.length - 1,
-														"is_drag_over":
+														is_active: idx === arr.length - 1,
+														is_drag_over:
 															dragOverTarget?.type === "breadcrumb" &&
 															dragOverTarget?.id === breadcrumbPath,
 													})}
@@ -369,7 +369,7 @@ function ImageGallery({
 
 					<div
 						className={classNames("ImageGallery__grid", {
-							"is_dragging": isDraggingOver,
+							is_dragging: isDraggingOver,
 						})}
 						onDragOver={(e) => {
 							e.preventDefault();
@@ -408,9 +408,9 @@ function ImageGallery({
 											"ImageGallery__item",
 											"ImageGallery__item__folder",
 											{
-												"is_selected": selectedSubs.has(sub),
-												"is_drag_over": dragOverTarget?.id === sub,
-												"is_protected": isProtected,
+												is_selected: selectedSubs.has(sub),
+												is_drag_over: dragOverTarget?.id === sub,
+												is_protected: isProtected,
 											},
 										)}
 										onClick={(e) => {
@@ -491,7 +491,7 @@ function ImageGallery({
 								>
 									<div
 										className={classNames("ImageGallery__item", {
-											"is_selected": selectedFilenames.has(img.name),
+											is_selected: selectedFilenames.has(img.name),
 										})}
 										onClick={(e) =>
 											handleItemClick(

@@ -59,7 +59,8 @@ export function getCharacterDisplayName(character = {}) {
 }
 
 export function createEncounterCharacterParticipant(character) {
-	const characterId = character.id || character.slug || getCharacterDisplayName(character);
+	const characterId =
+		character.id || character.slug || getCharacterDisplayName(character);
 
 	return {
 		...character,

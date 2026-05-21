@@ -65,9 +65,7 @@ router.get("/search", async (req, res, next) => {
 								(level !== undefined
 									? String(s.level) === String(level)
 									: true) &&
-								(schoolQuery
-									? s.school?.toLowerCase() === schoolQuery
-									: true),
+								(schoolQuery ? s.school?.toLowerCase() === schoolQuery : true),
 						)
 						.map((s) => ({ ...s, source: sourceKey })),
 				);

@@ -121,7 +121,7 @@ export default function Select({
 					<div
 						key={opt.value}
 						className={classNames("Select__option", {
-							"is_selected": opt.value === value,
+							is_selected: opt.value === value,
 						})}
 						onClick={() => handleSelect(opt.value)}
 					>
@@ -136,8 +136,8 @@ export default function Select({
 		<>
 			<div
 				className={classNames("Select", className, {
-					"is_open": isOpen,
-					"is_disabled": disabled,
+					is_open: isOpen,
+					is_disabled: disabled,
 				})}
 				ref={containerRef}
 				{...props}

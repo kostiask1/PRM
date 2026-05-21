@@ -33,8 +33,8 @@ export default function NoteCard({
 	return (
 		<div
 			className={classNames("note_card_simple", {
-				"is_collapsed": isCollapsed,
-				"note_card_simple__simplified": simplifiedNotesEnabled,
+				is_collapsed: isCollapsed,
+				note_card_simple__simplified: simplifiedNotesEnabled,
 			})}
 			onClick={() =>
 				isCollapsed &&
@@ -121,9 +121,7 @@ export default function NoteCard({
 						placeholder={lang.t("Note text...")}
 						campaignSlug={campaignSlug}
 						className={
-							highlightFields?.includes?.("text")
-								? "is_ai_changed_field"
-								: ""
+							highlightFields?.includes?.("text") ? "is_ai_changed_field" : ""
 						}
 					/>
 				</div>

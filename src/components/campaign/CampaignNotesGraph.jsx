@@ -430,7 +430,10 @@ function sortLayoutNodes(left, right) {
 		return leftSceneNumber - rightSceneNumber;
 	}
 
-	return String(left.label || "").localeCompare(String(right.label || ""), "uk");
+	return String(left.label || "").localeCompare(
+		String(right.label || ""),
+		"uk",
+	);
 }
 
 function getLayoutGroupId(node, visibleNodeIds) {
@@ -543,12 +546,15 @@ function placeChildOrbits(parentNode, childrenByParent, positions, depth = 0) {
 		const sceneChildren = children
 			.filter((childNode) => childNode.type === "scene")
 			.sort(sortLayoutNodes);
-		const otherChildren = children.filter((childNode) => childNode.type !== "scene");
+		const otherChildren = children.filter(
+			(childNode) => childNode.type !== "scene",
+		);
 
 		if (sceneChildren.length > 0) {
 			const spacing = 300;
 			const y = parentPosition.y + 230 + depth * 30;
-			const startX = parentPosition.x - ((sceneChildren.length - 1) * spacing) / 2;
+			const startX =
+				parentPosition.x - ((sceneChildren.length - 1) * spacing) / 2;
 
 			sceneChildren.forEach((sceneNode, index) => {
 				positions.set(sceneNode.id, {
@@ -709,7 +715,8 @@ function resolveGroupGuideOverlaps(groupGuides) {
 				let distance = Math.sqrt(dx * dx + dy * dy);
 
 				if (distance < 0.01) {
-					const angle = ((leftIndex + rightIndex + iteration + 1) * 2.399963) %
+					const angle =
+						((leftIndex + rightIndex + iteration + 1) * 2.399963) %
 						(Math.PI * 2);
 					dx = Math.cos(angle);
 					dy = Math.sin(angle);
@@ -791,16 +798,18 @@ function computeLayout(nodes) {
 		activeGroups.length <= 3 ? 520 : 660,
 		requiredOrbit * 0.8,
 	);
-	const groupGuides = resolveGroupGuideOverlaps(groupEstimates.map((group, index) => {
-		const angle = -Math.PI / 2 + (index / activeGroups.length) * Math.PI * 2;
+	const groupGuides = resolveGroupGuideOverlaps(
+		groupEstimates.map((group, index) => {
+			const angle = -Math.PI / 2 + (index / activeGroups.length) * Math.PI * 2;
 
-		return {
-			...group,
-			angle,
-			x: GRAPH_CENTER_X + Math.cos(angle) * orbitX,
-			y: GRAPH_CENTER_Y + Math.sin(angle) * orbitY,
-		};
-	}));
+			return {
+				...group,
+				angle,
+				x: GRAPH_CENTER_X + Math.cos(angle) * orbitX,
+				y: GRAPH_CENTER_Y + Math.sin(angle) * orbitY,
+			};
+		}),
+	);
 
 	groupGuides.forEach((group) => {
 		const rootNodes = rootNodesByGroup.get(group.id) || [];
@@ -916,7 +925,11 @@ function getConnectedEdges(edges, nodeId) {
 	);
 }
 
-function getDescendantIds(nodeId, childIdsByParent, shouldInclude = () => true) {
+function getDescendantIds(
+	nodeId,
+	childIdsByParent,
+	shouldInclude = () => true,
+) {
 	const result = [];
 	const queue = [...(childIdsByParent.get(nodeId) || [])];
 	while (queue.length > 0) {
@@ -943,7 +956,9 @@ function constrainMovedNodesToGroupCollisions({
 }) {
 	const nextOffsets = { ...offsets };
 	const movedNodeIdSet = new Set(movedNodeIds);
-	const staticNodeIds = groupNodeIds.filter((nodeId) => !movedNodeIdSet.has(nodeId));
+	const staticNodeIds = groupNodeIds.filter(
+		(nodeId) => !movedNodeIdSet.has(nodeId),
+	);
 
 	for (let iteration = 0; iteration < 7; iteration += 1) {
 		let moved = false;
@@ -1022,7 +1037,8 @@ function findByIdOrSlug(items, sourceId, sourceSlug) {
 }
 
 function findSessionDetail(sessionDetails, fileName) {
-	if (sessionDetails instanceof Map) return sessionDetails.get(fileName) || null;
+	if (sessionDetails instanceof Map)
+		return sessionDetails.get(fileName) || null;
 	return sessionDetails?.[fileName] || null;
 }
 
@@ -1250,12 +1266,7 @@ export default function CampaignNotesGraph({
 				: node.type === "npc"
 					? {
 							type: "npc",
-							entity: findGraphEntity(
-								node,
-								npcs,
-								sessionDetails,
-								"npcs",
-							),
+							entity: findGraphEntity(node, npcs, sessionDetails, "npcs"),
 						}
 					: node.type === "location"
 						? {
@@ -1518,8 +1529,7 @@ export default function CampaignNotesGraph({
 	};
 
 	const isGroupFocused = (group) =>
-		!focusedNodeId ||
-		group.nodeIds.some((nodeId) => connectedIds.has(nodeId));
+		!focusedNodeId || group.nodeIds.some((nodeId) => connectedIds.has(nodeId));
 
 	const renderGroupGuide = (group) => {
 		const label = `${lang.t(group.label)} ${group.count}`;

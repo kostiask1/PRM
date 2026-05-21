@@ -97,10 +97,11 @@ export default function CharacterCard({
 	};
 
 	const handleNotesReorder = (newNotes) => {
-		onChange(character.id, characterModel.withField(
-			"notes",
-			sanitizeNotesForSave(newNotes),
-		), { trackUndo: true });
+		onChange(
+			character.id,
+			characterModel.withField("notes", sanitizeNotesForSave(newNotes)),
+			{ trackUndo: true },
+		);
 	};
 	const handleNoteAiIgnoredChange = (noteId, ignored) => {
 		updateField(
@@ -114,8 +115,8 @@ export default function CharacterCard({
 	return (
 		<div
 			className={classNames("character_card", {
-				"is_collapsed": isCollapsed,
-				"character_card__modal": isModalView,
+				is_collapsed: isCollapsed,
+				character_card__modal: isModalView,
 			})}
 		>
 			{showHeader && (
@@ -209,9 +210,7 @@ export default function CharacterCard({
 											onChange={(e) => updateField("race", e.target.value)}
 											placeholder={lang.t("Race")}
 											className={
-												isFieldHighlighted("race")
-													? "is_ai_changed_field"
-													: ""
+												isFieldHighlighted("race") ? "is_ai_changed_field" : ""
 											}
 										/>
 										<EditableField
@@ -220,9 +219,7 @@ export default function CharacterCard({
 											onChange={(e) => updateField("class", e.target.value)}
 											placeholder={lang.t("Class")}
 											className={
-												isFieldHighlighted("class")
-													? "is_ai_changed_field"
-													: ""
+												isFieldHighlighted("class") ? "is_ai_changed_field" : ""
 											}
 										/>
 										<Select
@@ -263,9 +260,7 @@ export default function CharacterCard({
 										onChange={(e) => updateField("trait", e.target.value)}
 										placeholder={lang.t("Distinctive trait or habit...")}
 										className={
-											isFieldHighlighted("trait")
-												? "is_ai_changed_field"
-												: ""
+											isFieldHighlighted("trait") ? "is_ai_changed_field" : ""
 										}
 									/>
 								</div>

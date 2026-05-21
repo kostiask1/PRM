@@ -83,7 +83,9 @@ function excerpt(value, maxLength = 160, { stripMarkdown = false } = {}) {
 	const text = String(value || "")
 		.replace(/\s+/g, " ")
 		.trim();
-	const normalizedText = (stripMarkdown ? stripMarkdownForGraphText(text) : text)
+	const normalizedText = (
+		stripMarkdown ? stripMarkdownForGraphText(text) : text
+	)
 		.replace(/\s+/g, " ")
 		.trim();
 	if (normalizedText.length <= maxLength) return normalizedText;
@@ -134,7 +136,8 @@ function getLocationLabel(entity = {}, fallback) {
 
 function getSessionDetail(sessionDetails, fileName) {
 	if (!sessionDetails || !fileName) return null;
-	if (sessionDetails instanceof Map) return sessionDetails.get(fileName) || null;
+	if (sessionDetails instanceof Map)
+		return sessionDetails.get(fileName) || null;
 	if (Array.isArray(sessionDetails)) {
 		return (
 			sessionDetails.find((session) => session?.fileName === fileName) || null
@@ -162,7 +165,8 @@ function buildNodeSearchText(node) {
 function sortNodesByPriority(left, right) {
 	const leftPriority = TYPE_PRIORITY.indexOf(left.type);
 	const rightPriority = TYPE_PRIORITY.indexOf(right.type);
-	const safeLeftPriority = leftPriority === -1 ? TYPE_PRIORITY.length : leftPriority;
+	const safeLeftPriority =
+		leftPriority === -1 ? TYPE_PRIORITY.length : leftPriority;
 	const safeRightPriority =
 		rightPriority === -1 ? TYPE_PRIORITY.length : rightPriority;
 	if (safeLeftPriority !== safeRightPriority) {
@@ -301,7 +305,11 @@ export function buildCampaignGraph({
 				});
 			});
 
-			for (let leftIndex = 0; leftIndex < relatedTargets.length; leftIndex += 1) {
+			for (
+				let leftIndex = 0;
+				leftIndex < relatedTargets.length;
+				leftIndex += 1
+			) {
 				for (
 					let rightIndex = leftIndex + 1;
 					rightIndex < relatedTargets.length;
@@ -406,9 +414,12 @@ export function buildCampaignGraph({
 			detailText: [character.motivation, character.trait]
 				.filter(Boolean)
 				.join("\n\n"),
-			aliases: [label, character.firstName, character.name, character.title].filter(
-				Boolean,
-			),
+			aliases: [
+				label,
+				character.firstName,
+				character.name,
+				character.title,
+			].filter(Boolean),
 			sourceId: character.id,
 			sourceSlug: character.slug,
 			meta: {
@@ -436,7 +447,9 @@ export function buildCampaignGraph({
 			type: "npc",
 			label,
 			summary: excerpt(
-				[npc.race, npc.class, npc.motivation, npc.trait].filter(Boolean).join(" "),
+				[npc.race, npc.class, npc.motivation, npc.trait]
+					.filter(Boolean)
+					.join(" "),
 			),
 			detailText: [npc.motivation, npc.trait].filter(Boolean).join("\n\n"),
 			aliases: [label, npc.firstName, npc.name, npc.title].filter(Boolean),
@@ -544,7 +557,12 @@ export function buildCampaignGraph({
 				label,
 				field: "npcs",
 			});
-			queueMentionEdges(npcId, npcLabel, getMentionsFromValue(npc, "npc"), "npc");
+			queueMentionEdges(
+				npcId,
+				npcLabel,
+				getMentionsFromValue(npc, "npc"),
+				"npc",
+			);
 		});
 
 		(sessionData.locations || []).forEach((location, locationIndex) => {
@@ -657,10 +675,7 @@ export function buildCampaignGraph({
 				label,
 				field: "scenes",
 			});
-			const sceneMentions = getMentionsFromValue(
-				scene.texts || scene,
-				"scene",
-			);
+			const sceneMentions = getMentionsFromValue(scene.texts || scene, "scene");
 			queueMentionEdges(
 				sceneId,
 				`${label}: ${sceneName}`,

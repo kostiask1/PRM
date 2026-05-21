@@ -273,9 +273,7 @@ function CampaignView(props) {
 									onReorder={view.setSessions}
 									onDrop={view.handleSessionReorderDrop}
 									keyExtractor={(session) => session.fileName}
-									renderItem={(session) =>
-										renderSessionCard(session)
-									}
+									renderItem={(session) => renderSessionCard(session)}
 								/>
 							) : (
 								<div className="CampaignView__sessions">
@@ -541,9 +539,7 @@ function CampaignView(props) {
 									items={view.npcs}
 									className="CampaignView__characters"
 									onReorder={view.handleNpcsReorder}
-									onDrop={(items) =>
-										view.persistEntitiesReorder("npc", items)
-									}
+									onDrop={(items) => view.persistEntitiesReorder("npc", items)}
 									dragData={(npc) => ({
 										kind: "campaign-character",
 										sourceType: "npc",
@@ -555,11 +551,7 @@ function CampaignView(props) {
 										<AiContextIgnoreButton
 											ignored={Boolean(npc._aiIgnored)}
 											onToggle={(ignored) =>
-												toggleCampaignEntityAiIgnored(
-													"npc",
-													npc.id,
-													ignored,
-												)
+												toggleCampaignEntityAiIgnored("npc", npc.id, ignored)
 											}
 										/>
 									)}

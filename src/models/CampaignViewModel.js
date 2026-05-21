@@ -84,5 +84,4 @@ export default class CampaignViewModel {
 	buildSessionHref(fileName) {
 		return `/campaign/${encodeURIComponent(this.campaign.slug)}/session/${encodeURIComponent(fileName)}`;
 	}
-
 }

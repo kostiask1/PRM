@@ -7,14 +7,16 @@ import "../assets/components/ColorThemeSwitcher.css";
 import Icon from "./common/Icon";
 import Tooltip from "./common/Tooltip";
 
-export default function ColorThemeSwitcher({ theme: controlledTheme, onToggle }) {
+export default function ColorThemeSwitcher({
+	theme: controlledTheme,
+	onToggle,
+}) {
 	const dispatch = useAppDispatch();
 	const storeTheme = useAppSelector((state) => state.ui.theme);
 	const currentTheme = controlledTheme || storeTheme;
 
 	const handleToggle = () => {
-		const nextTheme =
-			currentTheme === THEMES.DARK ? THEMES.LIGHT : THEMES.DARK;
+		const nextTheme = currentTheme === THEMES.DARK ? THEMES.LIGHT : THEMES.DARK;
 
 		if (typeof onToggle === "function") {
 			onToggle(nextTheme);
@@ -22,9 +24,9 @@ export default function ColorThemeSwitcher({ theme: controlledTheme, onToggle })
 		}
 
 		dispatch(setUiSettingsAction({ theme: nextTheme }));
-		api.updateSettings({ theme: nextTheme }).catch((error) =>
-			console.error("Failed to save theme setting", error),
-		);
+		api
+			.updateSettings({ theme: nextTheme })
+			.catch((error) => console.error("Failed to save theme setting", error));
 	};
 
 	return (

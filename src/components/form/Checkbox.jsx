@@ -19,7 +19,7 @@ export default function Checkbox({
 	};
 	const checkboxNode = (
 		<label
-			className={classNames("Checkbox", className, { "is_checked": checked })}
+			className={classNames("Checkbox", className, { is_checked: checked })}
 			onClick={handleChange}
 		>
 			<input type="checkbox" checked={checked} readOnly {...props} />

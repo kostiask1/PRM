@@ -21,7 +21,10 @@ export function tokenFromContentMatch(match) {
 }
 
 export function extractContentTokens(text) {
-	const regex = new RegExp(CONTENT_TOKEN_REGEX.source, CONTENT_TOKEN_REGEX.flags);
+	const regex = new RegExp(
+		CONTENT_TOKEN_REGEX.source,
+		CONTENT_TOKEN_REGEX.flags,
+	);
 	const tokens = [];
 	let match;
 	while ((match = regex.exec(String(text || ""))) !== null) {

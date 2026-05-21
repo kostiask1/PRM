@@ -2,7 +2,11 @@ function collectSearchText(value, parts, seen) {
 	if (value == null) return;
 
 	const valueType = typeof value;
-	if (valueType === "string" || valueType === "number" || valueType === "boolean") {
+	if (
+		valueType === "string" ||
+		valueType === "number" ||
+		valueType === "boolean"
+	) {
 		parts.push(String(value));
 		return;
 	}

@@ -60,7 +60,14 @@ function getFieldValue(snapshot, key) {
 
 function getChangedObjectKeys(before, after) {
 	if (!isObjectSnapshot(before) || !isObjectSnapshot(after)) return [];
-	const ignoredKeys = new Set(["id", "slug", "source", "createdAt", "collapsed", "isNotesCollapsed"]);
+	const ignoredKeys = new Set([
+		"id",
+		"slug",
+		"source",
+		"createdAt",
+		"collapsed",
+		"isNotesCollapsed",
+	]);
 	return [...new Set([...Object.keys(before), ...Object.keys(after)])].filter(
 		(key) => !ignoredKeys.has(key) && !snapshotsEqual(before[key], after[key]),
 	);
@@ -150,7 +157,8 @@ function buildCardHighlightFields(resource) {
 
 function buildNoteHighlightFields(resource) {
 	return ["title", "text"].filter(
-		(field) => !snapshotsEqual(resource.before?.[field], resource.after?.[field]),
+		(field) =>
+			!snapshotsEqual(resource.before?.[field], resource.after?.[field]),
 	);
 }
 
@@ -249,7 +257,11 @@ export default function AiResponseModal({
 				const nextAfter = JSON.parse(JSON.stringify(item.after ?? {}));
 				if (item.kind === "session" && nextAfter.data) {
 					const [section] = suffix.split("/");
-					if (["notes", "npcs", "locations", "scenes", "encounters"].includes(section)) {
+					if (
+						["notes", "npcs", "locations", "scenes", "encounters"].includes(
+							section,
+						)
+					) {
 						nextAfter.data[section] = replaceItemInList(
 							nextAfter.data[section],
 							resource.after,
@@ -323,9 +335,15 @@ export default function AiResponseModal({
 			</>
 		);
 	};
-	const renderNoteCard = (resource, note, editable = false, highlightFields = null) => {
+	const renderNoteCard = (
+		resource,
+		note,
+		editable = false,
+		highlightFields = null,
+	) => {
 		if (!isObjectSnapshot(note)) return null;
-		const campaignSlug = resource.campaign || selectedResponseEntry?.path?.campaign;
+		const campaignSlug =
+			resource.campaign || selectedResponseEntry?.path?.campaign;
 		const normalizedNote = {
 			id: note.id || "preview-note",
 			title: note.title || "",
@@ -340,12 +358,14 @@ export default function AiResponseModal({
 				onToggleCollapse={noop}
 				onTitleChange={
 					editable
-						? (_id, title) => updateDraftResourceAfter(resource, { ...note, title })
+						? (_id, title) =>
+								updateDraftResourceAfter(resource, { ...note, title })
 						: noop
 				}
 				onTextChange={
 					editable
-						? (_id, text) => updateDraftResourceAfter(resource, { ...note, text })
+						? (_id, text) =>
+								updateDraftResourceAfter(resource, { ...note, text })
 						: noop
 				}
 				onDelete={noop}
@@ -354,10 +374,16 @@ export default function AiResponseModal({
 		);
 	};
 
-	const renderEntityCard = (resource, snapshot, editable = false, highlightFields = null) => {
+	const renderEntityCard = (
+		resource,
+		snapshot,
+		editable = false,
+		highlightFields = null,
+	) => {
 		const cardType = getPreviewCardType(resource);
 		if (!cardType || !isObjectSnapshot(snapshot)) return null;
-		const campaignSlug = resource.campaign || selectedResponseEntry?.path?.campaign;
+		const campaignSlug =
+			resource.campaign || selectedResponseEntry?.path?.campaign;
 		if (cardType === "monster") {
 			return (
 				<MonsterStatBlock
@@ -399,10 +425,10 @@ export default function AiResponseModal({
 				onNameBlur={noop}
 				onDelete={noop}
 				onReorderDrop={noop}
-			showDeleteButton={false}
-			highlightFields={highlightFields}
-		/>
-	);
+				showDeleteButton={false}
+				highlightFields={highlightFields}
+			/>
+		);
 	};
 
 	const renderNoteCardDiff = (resource) => {
@@ -434,8 +460,18 @@ export default function AiResponseModal({
 							<div className="AiAssistant__preview_column_title">
 								{isNew ? lang.t("New") : lang.t("Deleted")}
 							</div>
-							<div className={classNames("AiAssistant__preview_note_surface", isDraft && isNew && "is_editable")}>
-								{renderNoteCard(resource, isNew ? resource.after : resource.before, isDraft && isNew && !isResourceApplied(resource), isNew ? ["title", "text"] : null)}
+							<div
+								className={classNames(
+									"AiAssistant__preview_note_surface",
+									isDraft && isNew && "is_editable",
+								)}
+							>
+								{renderNoteCard(
+									resource,
+									isNew ? resource.after : resource.before,
+									isDraft && isNew && !isResourceApplied(resource),
+									isNew ? ["title", "text"] : null,
+								)}
 							</div>
 						</div>
 					</div>
@@ -446,15 +482,30 @@ export default function AiResponseModal({
 								{lang.t("Before")}
 							</div>
 							<div className="AiAssistant__preview_note_surface is_before">
-								{renderNoteCard(resource, resource.before, false, buildNoteHighlightFields(resource))}
+								{renderNoteCard(
+									resource,
+									resource.before,
+									false,
+									buildNoteHighlightFields(resource),
+								)}
 							</div>
 						</div>
 						<div className="AiAssistant__preview_card_frame">
 							<div className="AiAssistant__preview_column_title">
 								{lang.t("After")}
 							</div>
-							<div className={classNames("AiAssistant__preview_note_surface is_after", isDraft && "is_editable")}>
-								{renderNoteCard(resource, resource.after, isDraft && !isResourceApplied(resource), buildNoteHighlightFields(resource))}
+							<div
+								className={classNames(
+									"AiAssistant__preview_note_surface is_after",
+									isDraft && "is_editable",
+								)}
+							>
+								{renderNoteCard(
+									resource,
+									resource.after,
+									isDraft && !isResourceApplied(resource),
+									buildNoteHighlightFields(resource),
+								)}
 							</div>
 						</div>
 					</div>
@@ -472,7 +523,9 @@ export default function AiResponseModal({
 		const afterByKey = new Map(
 			afterList.map((note, index) => [getNoteDiffKey(note, index), note]),
 		);
-		const keys = [...new Set([...beforeByKey.keys(), ...afterByKey.keys()])].filter(
+		const keys = [
+			...new Set([...beforeByKey.keys(), ...afterByKey.keys()]),
+		].filter(
 			(key) => !snapshotsEqual(beforeByKey.get(key), afterByKey.get(key)),
 		);
 		return (
@@ -533,8 +586,23 @@ export default function AiResponseModal({
 								<div className="AiAssistant__preview_column_title">
 									{isNew ? lang.t("New") : lang.t("Deleted")}
 								</div>
-								<div className={classNames("AiAssistant__preview_card_surface", isDraft && isNew && "is_editable")}>
-									{renderEntityCard(resource, isNew ? resource.after : resource.before, isDraft && isNew && !isResourceApplied(resource), isNew ? buildCardHighlightFields({ before: {}, after: resource.after }) : null)}
+								<div
+									className={classNames(
+										"AiAssistant__preview_card_surface",
+										isDraft && isNew && "is_editable",
+									)}
+								>
+									{renderEntityCard(
+										resource,
+										isNew ? resource.after : resource.before,
+										isDraft && isNew && !isResourceApplied(resource),
+										isNew
+											? buildCardHighlightFields({
+													before: {},
+													after: resource.after,
+												})
+											: null,
+									)}
 								</div>
 							</div>
 						</div>
@@ -545,15 +613,30 @@ export default function AiResponseModal({
 									{lang.t("Before")}
 								</div>
 								<div className="AiAssistant__preview_card_surface is_before">
-									{renderEntityCard(resource, resource.before, false, buildCardHighlightFields(resource))}
+									{renderEntityCard(
+										resource,
+										resource.before,
+										false,
+										buildCardHighlightFields(resource),
+									)}
 								</div>
 							</div>
 							<div className="AiAssistant__preview_card_frame">
 								<div className="AiAssistant__preview_column_title">
 									{lang.t("After")}
 								</div>
-								<div className={classNames("AiAssistant__preview_card_surface is_after", isDraft && "is_editable")}>
-									{renderEntityCard(resource, resource.after, isDraft && !isResourceApplied(resource), buildCardHighlightFields(resource))}
+								<div
+									className={classNames(
+										"AiAssistant__preview_card_surface is_after",
+										isDraft && "is_editable",
+									)}
+								>
+									{renderEntityCard(
+										resource,
+										resource.after,
+										isDraft && !isResourceApplied(resource),
+										buildCardHighlightFields(resource),
+									)}
 								</div>
 							</div>
 						</div>
@@ -566,10 +649,7 @@ export default function AiResponseModal({
 			const snapshot = isNew ? resource.after : resource.before;
 			const keys = isObjectSnapshot(snapshot)
 				? Object.keys(snapshot).filter(
-						(key) =>
-							!["id", "slug", "source", "createdAt"].includes(
-								key,
-							),
+						(key) => !["id", "slug", "source", "createdAt"].includes(key),
 					)
 				: ["value"];
 			return (
@@ -591,7 +671,10 @@ export default function AiResponseModal({
 					</div>
 					<div className="AiAssistant__preview_stack">
 						{keys.map((key) => (
-							<div key={`${resource.id}-${key}`} className="AiAssistant__preview_field">
+							<div
+								key={`${resource.id}-${key}`}
+								className="AiAssistant__preview_field"
+							>
 								<div className="AiAssistant__preview_field_label">{key}</div>
 								<pre>{formatFieldValue(getFieldValue(snapshot, key))}</pre>
 							</div>
@@ -618,7 +701,10 @@ export default function AiResponseModal({
 					</div>
 				</div>
 				{fieldKeys.map((key) => (
-					<div key={`${resource.id}-${key}`} className="AiAssistant__preview_field">
+					<div
+						key={`${resource.id}-${key}`}
+						className="AiAssistant__preview_field"
+					>
 						<div className="AiAssistant__preview_field_label">{key}</div>
 						{key === "notes" &&
 						(Array.isArray(getFieldValue(resource.before, key)) ||
@@ -850,80 +936,82 @@ export default function AiResponseModal({
 							renderJsonDiff()
 						)}
 						{isDraft && draftResources.length > 0 && draftError && (
-							<div className="AiAssistant__draft_error">
-								{draftError}
-							</div>
+							<div className="AiAssistant__draft_error">{draftError}</div>
 						)}
-						{isDraft && draftResources.length > 0 && diffViewMode === "json" && (
-							<div className="AiAssistant__draft_editor">
-								<div className="AiAssistant__draft_editor_title">
-									{lang.t("Draft values before applying")}
-								</div>
-								{draftResources.map((resource) => {
-									const isNew = resource.before === null;
-									return (
-										<div
-											key={resource.id}
-											className={classNames(
-												"AiAssistant__draft_resource",
-												isNew && "is_new",
-											)}
-										>
-											<div className="AiAssistant__draft_resource_header">
-												<span>{resource.label}</span>
-												<div className="AiAssistant__preview_resource_actions">
-													<span>{getDiffResourceState(resource)}</span>
-													{renderResourceActions(resource)}
+						{isDraft &&
+							draftResources.length > 0 &&
+							diffViewMode === "json" && (
+								<div className="AiAssistant__draft_editor">
+									<div className="AiAssistant__draft_editor_title">
+										{lang.t("Draft values before applying")}
+									</div>
+									{draftResources.map((resource) => {
+										const isNew = resource.before === null;
+										return (
+											<div
+												key={resource.id}
+												className={classNames(
+													"AiAssistant__draft_resource",
+													isNew && "is_new",
+												)}
+											>
+												<div className="AiAssistant__draft_resource_header">
+													<span>{resource.label}</span>
+													<div className="AiAssistant__preview_resource_actions">
+														<span>{getDiffResourceState(resource)}</span>
+														{renderResourceActions(resource)}
+													</div>
 												</div>
-											</div>
-											<div className="AiAssistant__draft_columns">
-												{!isNew && (
+												<div className="AiAssistant__draft_columns">
+													{!isNew && (
+														<div className="AiAssistant__draft_column">
+															<div className="AiAssistant__draft_column_title">
+																{lang.t("Before")}
+															</div>
+															<pre>{snapshotToText(resource.before)}</pre>
+														</div>
+													)}
 													<div className="AiAssistant__draft_column">
 														<div className="AiAssistant__draft_column_title">
-															{lang.t("Before")}
+															{isNew ? lang.t("New") : lang.t("After")}
 														</div>
-														<pre>{snapshotToText(resource.before)}</pre>
+														<EditableField
+															type="textarea"
+															className="AiAssistant__draft_textarea"
+															value={draftEdits[resource.id] || ""}
+															onChange={(event) => {
+																const text = event.target.value;
+																setDraftEdits((current) => ({
+																	...current,
+																	[resource.id]: text,
+																}));
+																try {
+																	const after = parseSnapshotText(
+																		text,
+																		resource.after === null,
+																	);
+																	setDraftResourceEdits((current) =>
+																		current.map((item) =>
+																			item.id === resource.id
+																				? { ...item, after }
+																				: item,
+																		),
+																	);
+																	setDraftError("");
+																} catch {
+																	setDraftError(
+																		lang.t("Invalid draft changes"),
+																	);
+																}
+															}}
+														/>
 													</div>
-												)}
-												<div className="AiAssistant__draft_column">
-													<div className="AiAssistant__draft_column_title">
-														{isNew ? lang.t("New") : lang.t("After")}
-													</div>
-													<EditableField
-														type="textarea"
-														className="AiAssistant__draft_textarea"
-														value={draftEdits[resource.id] || ""}
-														onChange={(event) => {
-															const text = event.target.value;
-															setDraftEdits((current) => ({
-																...current,
-																[resource.id]: text,
-															}));
-															try {
-																const after = parseSnapshotText(
-																	text,
-																	resource.after === null,
-																);
-																setDraftResourceEdits((current) =>
-																	current.map((item) =>
-																		item.id === resource.id
-																			? { ...item, after }
-																			: item,
-																	),
-																);
-																setDraftError("");
-															} catch {
-																setDraftError(lang.t("Invalid draft changes"));
-															}
-														}}
-													/>
 												</div>
 											</div>
-										</div>
-									);
-								})}
-							</div>
-						)}
+										);
+									})}
+								</div>
+							)}
 					</div>
 				)}
 			</div>

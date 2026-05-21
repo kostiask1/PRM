@@ -237,7 +237,7 @@ export default function DiceCalculator() {
 	return (
 		<div
 			ref={rootRef}
-			className={classNames("DiceCalculator", { "is_open": isOpen })}
+			className={classNames("DiceCalculator", { is_open: isOpen })}
 		>
 			{isOpen && (
 				<div className="DiceCalculator__panel">
@@ -253,7 +253,7 @@ export default function DiceCalculator() {
 
 					<div
 						className={classNames("DiceCalculator__display", {
-							"is_rolling": isRolling,
+							is_rolling: isRolling,
 						})}
 					>
 						{lastResult ? (
@@ -272,9 +272,9 @@ export default function DiceCalculator() {
 								<div className="DiceCalculator__totalValue_container">
 									<span
 										className={classNames("DiceCalculator__totalValue", {
-											"dice_max":
+											dice_max:
 												lastResult.isCritical && lastResult.total === 20,
-											"dice_min":
+											dice_min:
 												lastResult.isCritical && lastResult.total !== 20,
 										})}
 									>
@@ -410,7 +410,7 @@ export default function DiceCalculator() {
 			<Tooltip content="CTRL+D">
 				<button
 					className={classNames("DiceCalculator__toggle", {
-						"is_rolling": isRolling,
+						is_rolling: isRolling,
 					})}
 					onClick={() => setIsOpen(!isOpen)}
 				>
@@ -418,7 +418,7 @@ export default function DiceCalculator() {
 						name="dice"
 						size={28}
 						className={classNames("DiceCalculator__toggleIcon", {
-							"is_rolling": isRolling,
+							is_rolling: isRolling,
 						})}
 					/>
 				</button>

@@ -23,7 +23,11 @@ export const renderRecursiveContent = (
 	if (content === undefined || content === null) return null;
 
 	if (typeof content === "string") {
-		return parseRollsAndSpells(preprocessTags(content), highlightQuery, options);
+		return parseRollsAndSpells(
+			preprocessTags(content),
+			highlightQuery,
+			options,
+		);
 	}
 
 	if (typeof content === "number") {
@@ -289,7 +293,8 @@ export const parseRollsAndSpells = (
 				</RulesLink>,
 			);
 		} else if (diseaseValue) {
-			const { name: rawDiseaseName, displayText } = parseTaggedName(diseaseValue);
+			const { name: rawDiseaseName, displayText } =
+				parseTaggedName(diseaseValue);
 			elements.push(
 				<RulesLink
 					key={getReferenceKey("d", matchIndex, rawDiseaseName)}
@@ -301,7 +306,8 @@ export const parseRollsAndSpells = (
 				</RulesLink>,
 			);
 		} else if (variantRuleValue) {
-			const { name: rawRuleName, displayText } = parseTaggedName(variantRuleValue);
+			const { name: rawRuleName, displayText } =
+				parseTaggedName(variantRuleValue);
 			elements.push(
 				<RulesLink
 					key={getReferenceKey("v", matchIndex, rawRuleName)}

@@ -329,7 +329,7 @@ export default function Spells() {
 					<Tooltip content={lang.t("Sort by level")}>
 						<button
 							className={classNames("Spells__sort_btn", {
-								"is_active": sortOrder !== "none",
+								is_active: sortOrder !== "none",
 							})}
 							onClick={toggleSort}
 						>

@@ -2,11 +2,7 @@ import "../../assets/components/StatusBadge.css";
 import classNames from "../../utils/classNames";
 import { lang } from "../../services/localization";
 
-export default function StatusBadge({
-	completed,
-	onClick,
-	className = "",
-}) {
+export default function StatusBadge({ completed, onClick, className = "" }) {
 	let label = "";
 	if (completed) {
 		label = lang.t("Completed");
@@ -17,7 +13,7 @@ export default function StatusBadge({
 	return (
 		<span
 			className={classNames("StatusBadge", className, {
-				"StatusBadge__done": completed,
+				StatusBadge__done: completed,
 			})}
 			onClick={onClick}
 		>

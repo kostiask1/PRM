@@ -146,7 +146,7 @@ export default function ImageDropzone({
 
 	return (
 		<div
-			className={classNames("ImageDropzone", { "is_dragging": isDragging })}
+			className={classNames("ImageDropzone", { is_dragging: isDragging })}
 			onDragOver={handleDragOver}
 			onDragLeave={handleDragLeave}
 			onDrop={handleDrop}
@@ -184,10 +184,7 @@ export default function ImageDropzone({
 				>
 					<div className="ImageDropzone__upload_settings">
 						<div className="ImageDropzone__preview">
-							<img
-								src={pendingFilePreviewUrl}
-								alt={lang.t("Preview")}
-							/>
+							<img src={pendingFilePreviewUrl} alt={lang.t("Preview")} />
 							<label className="ImageDropzone__filename">
 								<span>{lang.t("Image name")}</span>
 								<input

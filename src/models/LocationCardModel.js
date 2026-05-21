@@ -1,7 +1,4 @@
-import {
-	createEmptyNote,
-	upsertNoteById,
-} from "../utils/noteUtils.js";
+import { createEmptyNote, upsertNoteById } from "../utils/noteUtils.js";
 
 /**
  * @typedef {Object} LocationNote

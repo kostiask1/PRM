@@ -106,7 +106,9 @@ export default function AiImagePromptPickerModal({
 						className="AiAssistant__image_prompt_model"
 						value={selectedModel}
 						onChange={(event) => onModelChange(event.target.value)}
-						disabled={loading || !Array.isArray(aiModels) || aiModels.length === 0}
+						disabled={
+							loading || !Array.isArray(aiModels) || aiModels.length === 0
+						}
 					>
 						{Array.isArray(aiModels) && aiModels.length > 0 ? (
 							aiModels.map((model) => (
@@ -219,11 +221,7 @@ export default function AiImagePromptPickerModal({
 									items={imagePromptScenes}
 									emptyLabel="No scenes found."
 									getKey={(scene, index) =>
-										[
-											scene?._imagePromptSessionFileName,
-											scene?.id,
-											index,
-										]
+										[scene?._imagePromptSessionFileName, scene?.id, index]
 											.filter(Boolean)
 											.join(":")
 									}

@@ -148,7 +148,10 @@ function getCharacterDisplayName(character) {
 
 function getCharacterContextKey(character) {
 	return String(
-		character?.slug || character?.id || getCharacterDisplayName(character) || "",
+		character?.slug ||
+			character?.id ||
+			getCharacterDisplayName(character) ||
+			"",
 	).trim();
 }
 
@@ -179,7 +182,9 @@ function getSceneImagePromptDescription(scene) {
 }
 
 function getImagePromptPreview(text) {
-	const value = String(text || "").replace(/\s+/g, " ").trim();
+	const value = String(text || "")
+		.replace(/\s+/g, " ")
+		.trim();
 	return value.length > 120 ? `${value.slice(0, 117)}...` : value;
 }
 
@@ -429,8 +434,11 @@ export default function AiAssistantPanel({
 		useState(null);
 	const [imagePromptInstructions, setImagePromptInstructions] = useState("");
 	const [imagePromptSessions, setImagePromptSessions] = useState([]);
-	const [imagePromptCustomMonsters, setImagePromptCustomMonsters] = useState([]);
-	const [isImagePromptDataLoading, setIsImagePromptDataLoading] = useState(false);
+	const [imagePromptCustomMonsters, setImagePromptCustomMonsters] = useState(
+		[],
+	);
+	const [isImagePromptDataLoading, setIsImagePromptDataLoading] =
+		useState(false);
 	const [parseAIResponse, setParseAIResponse] = useState(isEncounter);
 	const [generateCharacters, setGenerateCharacters] = useState(true);
 	const [generateNpcs, setGenerateNpcs] = useState(true);
@@ -578,7 +586,12 @@ export default function AiAssistantPanel({
 		return () => {
 			cancelled = true;
 		};
-	}, [isBestiary, isContextModalOpen, isImagePromptPickerOpen, initialRoute.campaign]);
+	}, [
+		isBestiary,
+		isContextModalOpen,
+		isImagePromptPickerOpen,
+		initialRoute.campaign,
+	]);
 
 	useEffect(() => {
 		if (charactersList.length === 0) return;
@@ -868,9 +881,9 @@ export default function AiAssistantPanel({
 						? lang.t(
 								"Apply only this AI change? Newer edits in this resource may be overwritten.",
 							)
-					: lang.t(
-							"Restore data to the state after this AI response? Newer edits in these resources may be overwritten.",
-						),
+						: lang.t(
+								"Restore data to the state after this AI response? Newer edits in these resources may be overwritten.",
+							),
 			}),
 		);
 		if (!confirmed) return;
@@ -904,9 +917,13 @@ export default function AiAssistantPanel({
 
 	const saveDraftHistoryEntryChanges = async (entry, resources) => {
 		if (!entry?.id) return null;
-		const updatedEntry = await api.updateAiResponse(initialRoute.campaign, entry.id, {
-			resources,
-		});
+		const updatedEntry = await api.updateAiResponse(
+			initialRoute.campaign,
+			entry.id,
+			{
+				resources,
+			},
+		);
 		if (updatedEntry) {
 			upsertResponseHistoryEntry(updatedEntry);
 			setSelectedResponseEntry(updatedEntry);
@@ -1145,7 +1162,8 @@ export default function AiAssistantPanel({
 			userInstructionsOverride = null,
 		} = {},
 	) => {
-		const requestType = isBestiary && type !== "image" ? "custom-monster" : type;
+		const requestType =
+			isBestiary && type !== "image" ? "custom-monster" : type;
 		cancelGenerateRequest();
 		const controller = new AbortController();
 		activeGenerateControllerRef.current = controller;
@@ -1253,7 +1271,9 @@ export default function AiAssistantPanel({
 		const shouldParseResponse =
 			retryPayload.type === "image"
 				? false
-				: Boolean(retryPayload.parseAIResponse || retryPayload.generateEncounters);
+				: Boolean(
+						retryPayload.parseAIResponse || retryPayload.generateEncounters,
+					);
 
 		cancelGenerateRequest();
 		const controller = new AbortController();
@@ -1308,9 +1328,7 @@ export default function AiAssistantPanel({
 
 	const getPlaceholder = () => {
 		if (isBestiary) {
-			return lang.t(
-				"Describe the custom creature to create...",
-			);
+			return lang.t("Describe the custom creature to create...");
 		}
 		if (!parseAIResponse) {
 			return lang.t(
@@ -1343,12 +1361,15 @@ export default function AiAssistantPanel({
 		selectedResponseEntry,
 		currentLanguage,
 	);
-	const selectedResponseDiffResources = buildDiffResources(selectedResponseEntry, {
-		note: lang.t("Note"),
-		scene: lang.t("Scene"),
-		encounter: lang.t("Encounter"),
-		creature: lang.t("Creature"),
-	});
+	const selectedResponseDiffResources = buildDiffResources(
+		selectedResponseEntry,
+		{
+			note: lang.t("Note"),
+			scene: lang.t("Scene"),
+			encounter: lang.t("Encounter"),
+			creature: lang.t("Creature"),
+		},
+	);
 	const selectedResponseHasChanges = selectedResponseDiffResources.length > 0;
 	const isResponseParsingLocked = isBestiary || generateEncounters;
 	const isEntityScopeVisible = !isBestiary && !isCampaign && !isEncounter;
@@ -1553,7 +1574,9 @@ export default function AiAssistantPanel({
 							generateNpcs={generateNpcs}
 							isBestiary={isBestiary}
 							isCampaign={isCampaign}
-							isCustomMonsterGenerationVisible={isCustomMonsterGenerationVisible}
+							isCustomMonsterGenerationVisible={
+								isCustomMonsterGenerationVisible
+							}
 							isEncounter={isEncounter}
 							isEntityScopeVisible={isEntityScopeVisible}
 							isResponseParsingLocked={isResponseParsingLocked}
@@ -1633,9 +1656,7 @@ export default function AiAssistantPanel({
 							getImagePromptPreview={getImagePromptPreview}
 							getImagePromptTargetTitle={getImagePromptTargetTitle}
 							getLocationDisplayName={getLocationDisplayName}
-							getSceneImagePromptDescription={
-								getSceneImagePromptDescription
-							}
+							getSceneImagePromptDescription={getSceneImagePromptDescription}
 							getSceneImagePromptTitle={getSceneImagePromptTitle}
 							imagePromptInstructions={imagePromptInstructions}
 							imagePromptLocations={imagePromptLocations}
@@ -1675,10 +1696,7 @@ export default function AiAssistantPanel({
 							onCancel={closeGeneratedPrompt}
 							onCopy={copyGeneratedPrompt}
 							onSaveDraftChanges={(resources) =>
-								saveDraftHistoryEntryChanges(
-									selectedResponseEntry,
-									resources,
-								)
+								saveDraftHistoryEntryChanges(selectedResponseEntry, resources)
 							}
 							onUndo={() =>
 								restoreAiHistoryEntry(selectedResponseEntry, "undo")

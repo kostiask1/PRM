@@ -39,17 +39,22 @@ function getCustomMonsterId(monster) {
 }
 
 function getCustomMonsterNameKey(monster) {
-	return String(monster?.name || "").trim().toLowerCase();
+	return String(monster?.name || "")
+		.trim()
+		.toLowerCase();
 }
 
 function getCustomMonsterLabel(monster, fallbackName = "") {
 	return String(monster?.name || fallbackName || "custom-monster").trim();
 }
 
-function buildCustomMonsterChangeResources(beforeMonsters = [], afterMonsters = []) {
-	const beforeList = (Array.isArray(beforeMonsters) ? beforeMonsters : []).filter(
-		(monster) => monster && typeof monster === "object",
-	);
+function buildCustomMonsterChangeResources(
+	beforeMonsters = [],
+	afterMonsters = [],
+) {
+	const beforeList = (
+		Array.isArray(beforeMonsters) ? beforeMonsters : []
+	).filter((monster) => monster && typeof monster === "object");
 	const afterList = (Array.isArray(afterMonsters) ? afterMonsters : []).filter(
 		(monster) => monster && typeof monster === "object",
 	);
@@ -112,10 +117,17 @@ function buildCustomMonsterChangeResources(beforeMonsters = [], afterMonsters = 
 	);
 
 	for (const key of new Set([...beforeByName.keys(), ...afterByName.keys()])) {
-		pushResource(beforeByName.get(key) || null, afterByName.get(key) || null, key);
+		pushResource(
+			beforeByName.get(key) || null,
+			afterByName.get(key) || null,
+			key,
+		);
 	}
 	resources.sort((a, b) =>
-		String(a.label || a.id || "").localeCompare(String(b.label || b.id || ""), "uk"),
+		String(a.label || a.id || "").localeCompare(
+			String(b.label || b.id || ""),
+			"uk",
+		),
 	);
 	return resources;
 }
@@ -166,7 +178,9 @@ function buildAiChangeSet(beforeBundle, afterBundle, campaignSlug) {
 			campaign: campaignSlug,
 			fileName,
 			label: `${campaignSlug}/sessions/${fileName}`,
-			before: beforeSessions.has(fileName) ? beforeSessions.get(fileName) : null,
+			before: beforeSessions.has(fileName)
+				? beforeSessions.get(fileName)
+				: null,
 			after: afterSessions.has(fileName) ? afterSessions.get(fileName) : null,
 		});
 	}
@@ -220,7 +234,9 @@ async function saveParsedAiResponse({
 	retryPayload = null,
 	extraChangeResources = [],
 }) {
-	const afterApplyBundle = await storage.exportCampaignBundle(responsePath.campaign);
+	const afterApplyBundle = await storage.exportCampaignBundle(
+		responsePath.campaign,
+	);
 	const changes = buildAiChangeSet(
 		beforeApplyBundle,
 		afterApplyBundle,
@@ -264,7 +280,9 @@ async function saveDraftParsedAiResponse({
 	retryPayload = null,
 	extraChangeResources = [],
 }) {
-	const afterApplyBundle = await storage.exportCampaignBundle(responsePath.campaign);
+	const afterApplyBundle = await storage.exportCampaignBundle(
+		responsePath.campaign,
+	);
 	const changes = buildAiChangeSet(
 		beforeApplyBundle,
 		afterApplyBundle,
@@ -328,12 +346,20 @@ async function writeAiResourceSnapshot(resource, snapshotValue) {
 			resource.after?.name,
 			snapshotValue?.name,
 		]
-			.map((name) => String(name || "").trim().toLowerCase())
+			.map((name) =>
+				String(name || "")
+					.trim()
+					.toLowerCase(),
+			)
 			.filter(Boolean);
 		const next = current.filter(
 			(monster) =>
 				!targetIds.includes(String(monster?.id || "").trim()) &&
-				!targetNames.includes(String(monster?.name || "").trim().toLowerCase()),
+				!targetNames.includes(
+					String(monster?.name || "")
+						.trim()
+						.toLowerCase(),
+				),
 		);
 		if (snapshotValue !== null) {
 			next.push(snapshotValue);
@@ -351,7 +377,10 @@ async function writeAiResourceSnapshot(resource, snapshotValue) {
 		if (snapshotValue === null) {
 			throw new Error("Campaign deletion cannot be restored from AI history.");
 		}
-		await storage.writeJson(storage.campaignMetaPath(campaignSlug), snapshotValue);
+		await storage.writeJson(
+			storage.campaignMetaPath(campaignSlug),
+			snapshotValue,
+		);
 		return;
 	}
 
@@ -467,17 +496,18 @@ async function restoreAiResponseSnapshot(entry, snapshotKey, options = {}) {
 				};
 			})()
 		: {
-				changes: snapshotKey === "after"
-					? {
-							...(entry.changes || {}),
-							resources: resources.map((resource) => ({
-								...resource,
-								applyState: "applied",
-								appliedAt,
-							})),
-							summary: buildAiChangeSummary(resources),
-						}
-					: entry.changes,
+				changes:
+					snapshotKey === "after"
+						? {
+								...(entry.changes || {}),
+								resources: resources.map((resource) => ({
+									...resource,
+									applyState: "applied",
+									appliedAt,
+								})),
+								summary: buildAiChangeSummary(resources),
+							}
+						: entry.changes,
 				applyState: snapshotKey === "after" ? "applied" : "undone",
 				appliedAt,
 			};

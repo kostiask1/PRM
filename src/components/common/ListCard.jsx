@@ -11,7 +11,7 @@ export default function ListCard({
 	...dragProps // Пропси для drag-and-drop (draggable, onDragStart, etc.)
 }) {
 	const combinedClassName = classNames("ListCard", className, {
-		"ListCard__active": active,
+		ListCard__active: active,
 	});
 
 	const handleClick = (e) => {

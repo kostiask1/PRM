@@ -21,8 +21,8 @@ function asText(value) {
 function hasOwn(value, key) {
 	return Boolean(
 		value &&
-			typeof value === "object" &&
-			Object.prototype.hasOwnProperty.call(value, key),
+		typeof value === "object" &&
+		Object.prototype.hasOwnProperty.call(value, key),
 	);
 }
 
@@ -86,9 +86,7 @@ function normalizeNote(note, { simplifiedNotes = false } = {}) {
 	}
 
 	const rawTitle = simplifiedNotes ? "" : asText(note.title || note.name);
-	const rawText = String(
-		note.text ?? note.description ?? note.content ?? "",
-	);
+	const rawText = String(note.text ?? note.description ?? note.content ?? "");
 
 	return {
 		id: note.id || makeId(),
@@ -204,7 +202,11 @@ function mergeAiIgnoredNotes(existingNotes = [], visibleNotes = []) {
 	return result;
 }
 
-function normalizeCharacter(raw, existing = null, { simplifiedNotes = false } = {}) {
+function normalizeCharacter(
+	raw,
+	existing = null,
+	{ simplifiedNotes = false } = {},
+) {
 	const nameParts = parseNameParts(raw);
 	const rawHasName = [
 		"name",
@@ -234,10 +236,14 @@ function normalizeCharacter(raw, existing = null, { simplifiedNotes = false } = 
 	]);
 	const rawTrait = firstOwnedValue(raw, ["trait", "personality", "quirk"]);
 
-	const notes = normalizeNotesPreservingExisting(notesSource, existing?.notes || [], {
-		keepAtLeastOne: true,
-		simplifiedNotes,
-	});
+	const notes = normalizeNotesPreservingExisting(
+		notesSource,
+		existing?.notes || [],
+		{
+			keepAtLeastOne: true,
+			simplifiedNotes,
+		},
+	);
 
 	return {
 		id: existing?.id || makeId(),
@@ -262,7 +268,11 @@ function normalizeCharacter(raw, existing = null, { simplifiedNotes = false } = 
 	};
 }
 
-function normalizeLocation(raw, existing = null, { simplifiedNotes = false } = {}) {
+function normalizeLocation(
+	raw,
+	existing = null,
+	{ simplifiedNotes = false } = {},
+) {
 	const rawName = firstOwnedValue(raw, ["name", "title"]);
 	const rawDescription = firstOwnedValue(raw, [
 		"description",
@@ -279,10 +289,14 @@ function normalizeLocation(raw, existing = null, { simplifiedNotes = false } = {
 			? existing.notes || []
 			: [];
 
-	const notes = normalizeNotesPreservingExisting(notesSource, existing?.notes || [], {
-		keepAtLeastOne: true,
-		simplifiedNotes,
-	});
+	const notes = normalizeNotesPreservingExisting(
+		notesSource,
+		existing?.notes || [],
+		{
+			keepAtLeastOne: true,
+			simplifiedNotes,
+		},
+	);
 
 	return {
 		id: existing?.id || makeId(),
@@ -309,7 +323,9 @@ function normalizeSceneTexts(rawScene = {}, existingTexts = {}) {
 		summary: hasOwn(source, "summary")
 			? asText(source.summary)
 			: existingTexts?.summary || "",
-		goal: hasOwn(source, "goal") ? asText(source.goal) : existingTexts?.goal || "",
+		goal: hasOwn(source, "goal")
+			? asText(source.goal)
+			: existingTexts?.goal || "",
 		stakes: hasOwn(source, "stakes")
 			? asText(source.stakes)
 			: existingTexts?.stakes || "",
@@ -359,9 +375,13 @@ function normalizeScene(
 	const notesFromAi = hasNotes
 		? mergeAiIgnoredNotes(
 				existing?.notes || [],
-				normalizeNotesPreservingExisting(scene.notes || [], existing?.notes || [], {
-					simplifiedNotes,
-				}),
+				normalizeNotesPreservingExisting(
+					scene.notes || [],
+					existing?.notes || [],
+					{
+						simplifiedNotes,
+					},
+				),
 			)
 		: existing?.notes || [];
 	const hasNpcs = Array.isArray(scene.npcs);
@@ -493,21 +513,26 @@ function findByIdentity(items = [], identity, type) {
 	const slug = asText(identity?.slug);
 	const name = asText(identity?.name || identity?.targetName);
 	const key = name ? getEntityNameKey(type, { name, fullName: name }) : "";
-	return (items || []).find((item) => {
-		const itemId = asText(item?.id);
-		const itemSlug = asText(item?.slug);
-		const itemName = getEntityNameKey(type, item);
-		return (
-			(id && itemId === id) ||
-			(slug && itemSlug === slug) ||
-			(key && itemName === key)
-		);
-	}) || null;
+	return (
+		(items || []).find((item) => {
+			const itemId = asText(item?.id);
+			const itemSlug = asText(item?.slug);
+			const itemName = getEntityNameKey(type, item);
+			return (
+				(id && itemId === id) ||
+				(slug && itemSlug === slug) ||
+				(key && itemName === key)
+			);
+		}) || null
+	);
 }
 
 function getOperationTargetIdentity(operation = {}, clientIdMap = null) {
-	const ownerClientId = asText(operation.targetClientId || operation.ownerClientId);
-	const mapped = ownerClientId && clientIdMap ? clientIdMap.get(ownerClientId) : null;
+	const ownerClientId = asText(
+		operation.targetClientId || operation.ownerClientId,
+	);
+	const mapped =
+		ownerClientId && clientIdMap ? clientIdMap.get(ownerClientId) : null;
 	return {
 		id: mapped?.id || operation.id || operation.targetId,
 		slug: operation.slug,
@@ -535,7 +560,12 @@ async function readCampaignEntityList(campaignSlug, type) {
 	return storage.listEntities(campaignSlug, type);
 }
 
-async function writeCampaignEntity(campaignSlug, type, payload, existing = null) {
+async function writeCampaignEntity(
+	campaignSlug,
+	type,
+	payload,
+	existing = null,
+) {
 	const baseName =
 		type === "locations"
 			? payload.name || "locations"
@@ -598,7 +628,10 @@ function updateNote(target, noteId, patch = {}, options) {
 	const notes = getNoteList(target);
 	const index = notes.findIndex((note) => asText(note?.id) === asText(noteId));
 	if (index < 0) return null;
-	const normalized = normalizeNote({ ...notes[index], ...patch, id: notes[index].id }, options);
+	const normalized = normalizeNote(
+		{ ...notes[index], ...patch, id: notes[index].id },
+		options,
+	);
 	if (!normalized) return null;
 	notes[index] = { ...notes[index], ...normalized, id: notes[index].id };
 	return notes[index];
@@ -626,24 +659,24 @@ function isOperationAllowed(type, permissions) {
 }
 
 function operationData(operation) {
-	if (operation.data && typeof operation.data === "object") return operation.data;
-	if (operation.value && typeof operation.value === "object") return operation.value;
-	if (operation.patch && typeof operation.patch === "object") return operation.patch;
+	if (operation.data && typeof operation.data === "object")
+		return operation.data;
+	if (operation.value && typeof operation.value === "object")
+		return operation.value;
+	if (operation.patch && typeof operation.patch === "object")
+		return operation.patch;
 	return {};
 }
 
 function operationPatch(operation) {
-	if (operation.patch && typeof operation.patch === "object") return operation.patch;
-	if (operation.data && typeof operation.data === "object") return operation.data;
+	if (operation.patch && typeof operation.patch === "object")
+		return operation.patch;
+	if (operation.data && typeof operation.data === "object")
+		return operation.data;
 	return {};
 }
 
-async function applyCampaignEntityOperation(
-	state,
-	operation,
-	type,
-	options,
-) {
+async function applyCampaignEntityOperation(state, operation, type, options) {
 	const { campaignSlug, clientIdMap, permissions, warnings } = state;
 	if (!isOperationAllowed(type, permissions)) {
 		warnings.push(`Skipped ${operation.op} for disabled ${type}.`);
@@ -698,7 +731,12 @@ async function applyCampaignEntityOperation(
 			slug: existing.slug,
 			imageUrl: existing.imageUrl ?? normalized.imageUrl ?? null,
 		};
-		const saved = await writeCampaignEntity(campaignSlug, type, payload, existing);
+		const saved = await writeCampaignEntity(
+			campaignSlug,
+			type,
+			payload,
+			existing,
+		);
 		const newDisplayName = getEntityDisplayName(type, saved);
 		if (oldDisplayName && newDisplayName && oldDisplayName !== newDisplayName) {
 			await storage.updateCampaignMentionReferences(
@@ -755,11 +793,13 @@ function applySessionEntityOperation(state, operation, type, options) {
 		const saved = {
 			...normalized,
 			id: normalized.id,
-			slug: normalized.slug || storage.campaignSlug(
-				type === "locations"
-					? normalized.name || "locations"
-					: getCharacterDisplayName(normalized) || type,
-			),
+			slug:
+				normalized.slug ||
+				storage.campaignSlug(
+					type === "locations"
+						? normalized.name || "locations"
+						: getCharacterDisplayName(normalized) || type,
+				),
 		};
 		list.push(saved);
 		if (operation.clientId) {
@@ -801,7 +841,10 @@ async function applyMoveScopeOperation(state, operation, type, options) {
 	}
 	const from = asText(operation.from || operation.scope).toLowerCase();
 	const to = asText(operation.to || operation.targetScope).toLowerCase();
-	if (!["campaign", "session"].includes(from) || !["campaign", "session"].includes(to)) {
+	if (
+		!["campaign", "session"].includes(from) ||
+		!["campaign", "session"].includes(to)
+	) {
 		warnings.push("Skipped moveScope with invalid scope.");
 		return null;
 	}
@@ -815,7 +858,12 @@ async function applyMoveScopeOperation(state, operation, type, options) {
 			type,
 		);
 		if (!existing) return null;
-		const normalized = normalizeEntityPayload(type, existing, existing, options);
+		const normalized = normalizeEntityPayload(
+			type,
+			existing,
+			existing,
+			options,
+		);
 		const saved = await writeCampaignEntity(campaignSlug, type, normalized);
 		setSessionEntityList(
 			sessionData,
@@ -837,11 +885,14 @@ async function applyMoveScopeOperation(state, operation, type, options) {
 	const saved = {
 		...normalized,
 		id: normalized.id,
-		slug: normalized.slug || existing.slug || storage.campaignSlug(
-			type === "locations"
-				? normalized.name || "locations"
-				: getCharacterDisplayName(normalized) || type,
-		),
+		slug:
+			normalized.slug ||
+			existing.slug ||
+			storage.campaignSlug(
+				type === "locations"
+					? normalized.name || "locations"
+					: getCharacterDisplayName(normalized) || type,
+			),
 	};
 	list.push(saved);
 	await storage.deleteEntity(campaignSlug, type, existing.slug);
@@ -888,9 +939,10 @@ function applySceneOperation(state, operation, options) {
 
 	if (normalizedOp === "create") {
 		const data = operationData(operation);
-		const safeData = permissions.allowEncounters === false
-			? { ...data, encounterId: "", encounterClientId: "" }
-			: data;
+		const safeData =
+			permissions.allowEncounters === false
+				? { ...data, encounterId: "", encounterClientId: "" }
+				: data;
 		const saved = normalizeScene(safeData, null, clientIdMap, options);
 		scenes.push(saved);
 		if (operation.clientId) {
@@ -917,9 +969,10 @@ function applySceneOperation(state, operation, options) {
 			id: existing.id,
 			imageUrl: existing.imageUrl ?? patch.imageUrl ?? null,
 		};
-		const safeRaw = permissions.allowEncounters === false
-			? { ...raw, encounterId: existing.encounterId || "" }
-			: raw;
+		const safeRaw =
+			permissions.allowEncounters === false
+				? { ...raw, encounterId: existing.encounterId || "" }
+				: raw;
 		const saved = normalizeScene(safeRaw, existing, clientIdMap, options);
 		const index = scenes.indexOf(existing);
 		scenes[index] = saved;
@@ -936,7 +989,9 @@ async function applyEncounterOperation(state, operation) {
 		return null;
 	}
 	if (permissions.allowEncounters === false) {
-		warnings.push(`Skipped encounter ${operation.op}; encounter generation disabled.`);
+		warnings.push(
+			`Skipped encounter ${operation.op}; encounter generation disabled.`,
+		);
 		return null;
 	}
 	const encounters = getSessionEncounters(sessionData);
@@ -949,7 +1004,9 @@ async function applyEncounterOperation(state, operation) {
 
 	if (normalizedOp === "delete") {
 		if (!existing) return null;
-		sessionData.data.encounters = encounters.filter((encounter) => encounter !== existing);
+		sessionData.data.encounters = encounters.filter(
+			(encounter) => encounter !== existing,
+		);
 		return { type: "encounter", deleted: existing };
 	}
 
@@ -1020,14 +1077,16 @@ function getNotesTarget(state, operation) {
 			type,
 		);
 	}
-	return state.campaignEntityCache.get(type)?.find((item) => {
-		const target = findByIdentity(
-			[item],
-			getOperationTargetIdentity(operation, state.clientIdMap),
-			type,
-		);
-		return Boolean(target);
-	}) || null;
+	return (
+		state.campaignEntityCache.get(type)?.find((item) => {
+			const target = findByIdentity(
+				[item],
+				getOperationTargetIdentity(operation, state.clientIdMap),
+				type,
+			);
+			return Boolean(target);
+		}) || null
+	);
 }
 
 async function ensureCampaignEntityCache(state, type) {
@@ -1055,7 +1114,11 @@ async function applyNoteOperation(state, operation, options) {
 		: "";
 	let result = null;
 	if (normalizedOp === "appendnote") {
-		result = appendNote(target, operation.note || operationData(operation), options);
+		result = appendNote(
+			target,
+			operation.note || operationData(operation),
+			options,
+		);
 	} else if (normalizedOp === "updatenote") {
 		result = updateNote(
 			target,
@@ -1067,7 +1130,12 @@ async function applyNoteOperation(state, operation, options) {
 		result = deleteNote(target, operation.noteId || operation.id);
 	}
 	if (result && type && scope !== "session") {
-		const saved = await writeCampaignEntity(state.campaignSlug, type, target, target);
+		const saved = await writeCampaignEntity(
+			state.campaignSlug,
+			type,
+			target,
+			target,
+		);
 		const cached = state.campaignEntityCache.get(type) || [];
 		const index = cached.findIndex((item) => item === target);
 		if (index >= 0) cached[index] = saved;
@@ -1160,7 +1228,9 @@ async function applyAiOperations({
 	simplifiedNotes = false,
 	permissions = {},
 }) {
-	const operations = Array.isArray(payload?.operations) ? payload.operations : [];
+	const operations = Array.isArray(payload?.operations)
+		? payload.operations
+		: [];
 	const defaultEntityScope =
 		sessionFile && entityScope !== "campaign" ? "session" : "campaign";
 	const campaignMeta =
@@ -1206,7 +1276,11 @@ async function applyAiOperations({
 		}
 
 		if (["appendnote", "updatenote", "deletenote"].includes(op)) {
-			const result = await applyNoteOperation(state, operation, normalizerOptions);
+			const result = await applyNoteOperation(
+				state,
+				operation,
+				normalizerOptions,
+			);
 			campaignDataChanged = Boolean(result) || campaignDataChanged;
 			continue;
 		}
@@ -1227,18 +1301,28 @@ async function applyAiOperations({
 			continue;
 		}
 		if (entityTypeFromOperation(entity)) {
-			const result = await applyEntityOperation(state, operation, normalizerOptions);
+			const result = await applyEntityOperation(
+				state,
+				operation,
+				normalizerOptions,
+			);
 			campaignDataChanged = Boolean(result) || campaignDataChanged;
 		}
 	}
 
 	let updated = null;
 	if (campaignDataChanged && campaignMeta && !sessionData) {
-		await storage.writeJson(storage.campaignMetaPath(campaignSlug), campaignMeta);
+		await storage.writeJson(
+			storage.campaignMetaPath(campaignSlug),
+			campaignMeta,
+		);
 		updated = campaignMeta;
 	}
 	if (campaignDataChanged && sessionData) {
-		await storage.writeJson(storage.sessionPath(campaignSlug, sessionFile), sessionData);
+		await storage.writeJson(
+			storage.sessionPath(campaignSlug, sessionFile),
+			sessionData,
+		);
 		updated = { ...sessionData, fileName: sessionFile };
 	} else if (customBestiaryChange?.hasChanges && !campaignMeta) {
 		updated = { monsters: customBestiaryChange.after };

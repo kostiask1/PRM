@@ -48,7 +48,11 @@ function validateOperation(operation, index, errors) {
 	}
 
 	if (!ALLOWED_OPS.has(operation.op)) {
-		addError(errors, `${path}.op`, `must be one of: ${[...ALLOWED_OPS].join(", ")}`);
+		addError(
+			errors,
+			`${path}.op`,
+			`must be one of: ${[...ALLOWED_OPS].join(", ")}`,
+		);
 	}
 	if (!ALLOWED_ENTITIES.has(operation.entity)) {
 		addError(
@@ -65,18 +69,42 @@ function validateOperation(operation, index, errors) {
 		!hasText(operation.name) &&
 		!hasText(operation.targetClientId)
 	) {
-		addError(errors, path, "must identify an existing target by id, slug, or name");
+		addError(
+			errors,
+			path,
+			"must identify an existing target by id, slug, or name",
+		);
 	}
-	if (operation.op === "create" && !isObject(operation.data) && !isObject(operation.value)) {
+	if (
+		operation.op === "create" &&
+		!isObject(operation.data) &&
+		!isObject(operation.value)
+	) {
 		addError(errors, `${path}.data`, "must be an object for create operations");
 	}
-	if (operation.op === "update" && !isObject(operation.patch) && !isObject(operation.data)) {
-		addError(errors, `${path}.patch`, "must be an object for update operations");
+	if (
+		operation.op === "update" &&
+		!isObject(operation.patch) &&
+		!isObject(operation.data)
+	) {
+		addError(
+			errors,
+			`${path}.patch`,
+			"must be an object for update operations",
+		);
 	}
-	if (operation.op === "appendNote" && !isObject(operation.note) && !isObject(operation.data) && typeof operation.note !== "string") {
+	if (
+		operation.op === "appendNote" &&
+		!isObject(operation.note) &&
+		!isObject(operation.data) &&
+		typeof operation.note !== "string"
+	) {
 		addError(errors, `${path}.note`, "must be a note object or string");
 	}
-	if (["updateNote", "deleteNote"].includes(operation.op) && !hasText(operation.noteId)) {
+	if (
+		["updateNote", "deleteNote"].includes(operation.op) &&
+		!hasText(operation.noteId)
+	) {
 		addError(errors, `${path}.noteId`, "is required for note updates/deletes");
 	}
 	if (operation.op === "moveScope") {
@@ -87,7 +115,10 @@ function validateOperation(operation, index, errors) {
 			addError(errors, `${path}.to`, "must be campaign or session");
 		}
 	}
-	if (operation.scope !== undefined && !["campaign", "session"].includes(operation.scope)) {
+	if (
+		operation.scope !== undefined &&
+		!["campaign", "session"].includes(operation.scope)
+	) {
 		addError(errors, `${path}.scope`, "must be campaign or session");
 	}
 }
@@ -106,7 +137,10 @@ function validateAiGeneratedContent(payload, options = {}) {
 	}
 	if (!Array.isArray(payload.operations)) {
 		addError(errors, "operations", "must be an array");
-	} else if (options.requireOperations === true && payload.operations.length === 0) {
+	} else if (
+		options.requireOperations === true &&
+		payload.operations.length === 0
+	) {
 		addError(errors, "operations", "must not be empty");
 	} else {
 		payload.operations.forEach((operation, index) =>

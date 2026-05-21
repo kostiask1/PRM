@@ -59,7 +59,7 @@ function MonsterListItem({
 							size={Button.SIZES.SMALL}
 							icon="star"
 							className={classNames("Bestiary__item_fav_btn", {
-								"is_active": isFavorite,
+								is_active: isFavorite,
 							})}
 							onClick={(event) => {
 								event.stopPropagation();
@@ -245,7 +245,7 @@ export default function BestiaryContent({
 					/>
 					<Button
 						className={classNames("Bestiary__sort_btn", {
-							"is_active": sortOrder !== "none",
+							is_active: sortOrder !== "none",
 						})}
 						variant="ghost"
 						onClick={toggleSort}
@@ -264,7 +264,7 @@ export default function BestiaryContent({
 
 				<div
 					className={classNames("Bestiary__content", {
-						"Bestiary__content__stacked": isEmbedded,
+						Bestiary__content__stacked: isEmbedded,
 					})}
 				>
 					<div className="Bestiary__list">
@@ -283,7 +283,9 @@ export default function BestiaryContent({
 						<div className="Bestiary__detail_container">
 							<MonsterStatBlock
 								monster={selectedMonster}
-								onNameClick={onAddMonster ? (monster) => onAddMonster(monster) : undefined}
+								onNameClick={
+									onAddMonster ? (monster) => onAddMonster(monster) : undefined
+								}
 								nameTitle={onAddMonster && lang.t("Add to encounter")}
 								onFavoriteChange={onFavoriteListChange}
 								showAddToEncounterPicker

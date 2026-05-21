@@ -8,7 +8,10 @@ const CAMPAIGNS_DIR = path.join(DATA_DIR, "campaigns");
 const BESTIARY_DIR = path.join(ROOT_DIR, "database", "bestiary");
 const CUSTOM_BESTIARY_SOURCE = "CUSTOM";
 const CUSTOM_BESTIARY_PATH = path.join(DATA_DIR, "custom-bestiary.json");
-const BESTIARY_AI_RESPONSES_PATH = path.join(DATA_DIR, "_aiResponses-bestiary.json");
+const BESTIARY_AI_RESPONSES_PATH = path.join(
+	DATA_DIR,
+	"_aiResponses-bestiary.json",
+);
 const SPELLS_DIR = path.join(ROOT_DIR, "database", "spells");
 const FAVORITES_PATH = path.join(DATA_DIR, "favorites.json");
 const IMAGES_DIR = path.join(DATA_DIR, "images");
@@ -37,8 +40,8 @@ function createId() {
 function hasOwn(value, key) {
 	return Boolean(
 		value &&
-			typeof value === "object" &&
-			Object.prototype.hasOwnProperty.call(value, key),
+		typeof value === "object" &&
+		Object.prototype.hasOwnProperty.call(value, key),
 	);
 }
 
@@ -434,7 +437,9 @@ async function upsertCustomBestiaryMonsters(monsters) {
 	const existing = await readCustomBestiaryMonsters();
 	const byName = new Map(
 		existing.map((monster) => [
-			String(monster.name || "").trim().toLowerCase(),
+			String(monster.name || "")
+				.trim()
+				.toLowerCase(),
 			{ ...monster, source: CUSTOM_BESTIARY_SOURCE },
 		]),
 	);
@@ -512,8 +517,7 @@ function normalizeAiChanges(raw = {}) {
 		: [];
 	return {
 		resources,
-		summary:
-			raw.summary && typeof raw.summary === "object" ? raw.summary : {},
+		summary: raw.summary && typeof raw.summary === "object" ? raw.summary : {},
 	};
 }
 
@@ -679,7 +683,10 @@ async function clearAiResponses(campaignSlugValue) {
 }
 
 function normalizeSettings(settings = {}) {
-	const encounterGridColumns = Number.parseInt(settings.encounterGridColumns, 10);
+	const encounterGridColumns = Number.parseInt(
+		settings.encounterGridColumns,
+		10,
+	);
 	const campaignAiBasePrompts =
 		settings.campaignAiBasePrompts &&
 		typeof settings.campaignAiBasePrompts === "object" &&
@@ -763,10 +770,16 @@ async function listEntities(campaignSlug, type) {
 		if (aOrder !== bOrder) return aOrder - bOrder;
 
 		const aName = String(
-			a.name || `${a.firstName || ""} ${a.lastName || ""}`.trim() || a.slug || "",
+			a.name ||
+				`${a.firstName || ""} ${a.lastName || ""}`.trim() ||
+				a.slug ||
+				"",
 		);
 		const bName = String(
-			b.name || `${b.firstName || ""} ${b.lastName || ""}`.trim() || b.slug || "",
+			b.name ||
+				`${b.firstName || ""} ${b.lastName || ""}`.trim() ||
+				b.slug ||
+				"",
 		);
 		return aName.localeCompare(bName, "uk");
 	});
@@ -809,7 +822,9 @@ function normalizeMentionName(value) {
 function replaceBracketedMentionNames(value, oldName, newName) {
 	if (typeof value !== "string") return value;
 	const normalizedOldName = normalizeMentionName(oldName);
-	const nextName = String(newName || "").trim().replace(/\s+/g, " ");
+	const nextName = String(newName || "")
+		.trim()
+		.replace(/\s+/g, " ");
 	if (!normalizedOldName || !nextName) return value;
 
 	return value.replace(/\[([^[\]]+)\]/g, (fullMatch, rawName) => {
@@ -868,7 +883,11 @@ async function updateCampaignMentionReferences(campaignSlug, oldName, newName) {
 	for (const session of sessions) {
 		const filePath = sessionPath(campaignSlug, session.fileName);
 		const sessionData = await readJson(filePath);
-		const nextSessionData = replaceMentionsInValue(sessionData, oldName, newName);
+		const nextSessionData = replaceMentionsInValue(
+			sessionData,
+			oldName,
+			newName,
+		);
 		if (JSON.stringify(nextSessionData) !== JSON.stringify(sessionData)) {
 			await writeJson(filePath, nextSessionData);
 		}
@@ -879,7 +898,10 @@ async function moveEntity(campaignSlug, sourceType, entitySlug, targetType) {
 	if (sourceType === targetType) {
 		return readEntity(campaignSlug, sourceType, entitySlug);
 	}
-	if (!ENTITY_TYPES.includes(sourceType) || !ENTITY_TYPES.includes(targetType)) {
+	if (
+		!ENTITY_TYPES.includes(sourceType) ||
+		!ENTITY_TYPES.includes(targetType)
+	) {
 		throw new Error("Invalid entity type");
 	}
 
@@ -891,7 +913,11 @@ async function moveEntity(campaignSlug, sourceType, entitySlug, targetType) {
 		targetType,
 		safeSlug,
 	);
-	const targetPath = path.join(campaignDir(campaignSlug), targetType, targetSlug);
+	const targetPath = path.join(
+		campaignDir(campaignSlug),
+		targetType,
+		targetSlug,
+	);
 
 	await ensureDir(path.dirname(targetPath));
 	await fs.rename(sourcePath, targetPath);
@@ -1088,7 +1114,11 @@ async function moveCampaignImagesToGeneral(slug) {
 
 			const relParts = relPath.split(path.sep);
 			if (relParts.length < 2) continue;
-			const destDir = path.join(IMAGES_DIR, "general", ...relParts.slice(0, -1));
+			const destDir = path.join(
+				IMAGES_DIR,
+				"general",
+				...relParts.slice(0, -1),
+			);
 			await ensureDir(destDir);
 
 			const newPath = await ensureUniqueImagePath(
@@ -1171,7 +1201,9 @@ function replaceImageSlugReferences(value, oldSlug, newSlug) {
 function replaceCampaignSlugFields(value, oldSlug, newSlug) {
 	if (!value || !oldSlug || !newSlug || oldSlug === newSlug) return value;
 	if (Array.isArray(value)) {
-		return value.map((item) => replaceCampaignSlugFields(item, oldSlug, newSlug));
+		return value.map((item) =>
+			replaceCampaignSlugFields(item, oldSlug, newSlug),
+		);
 	}
 	if (typeof value !== "object") return value;
 
@@ -1355,7 +1387,9 @@ function normalizePartialArchiveSections(sections = []) {
 		"images",
 		"aiHistory",
 	]);
-	const selected = (Array.isArray(sections) ? sections : String(sections).split(","))
+	const selected = (
+		Array.isArray(sections) ? sections : String(sections).split(",")
+	)
 		.map((section) => String(section || "").trim())
 		.filter((section) => allowed.has(section));
 	return [...new Set(selected)];
@@ -1405,7 +1439,9 @@ async function importCampaignPartialArchiveBundle(targetSlug, archiveBundle) {
 		throw new Error("Кампанію для імпорту не знайдено.");
 	}
 
-	const sections = normalizePartialArchiveSections(archiveBundle?.sections || []);
+	const sections = normalizePartialArchiveSections(
+		archiveBundle?.sections || [],
+	);
 	const bundle = archiveBundle?.bundle || {};
 	const sourceMeta = bundle.meta || {};
 	const sourceSlug = sourceMeta.slug || archiveBundle?.sourceSlug || target;
@@ -1419,7 +1455,9 @@ async function importCampaignPartialArchiveBundle(targetSlug, archiveBundle) {
 
 	if (sections.includes("sessions")) {
 		await ensureDir(path.join(campaignDir(target), "sessions"));
-		for (const session of Array.isArray(bundle.sessions) ? bundle.sessions : []) {
+		for (const session of Array.isArray(bundle.sessions)
+			? bundle.sessions
+			: []) {
 			const desiredName =
 				session.fileName ||
 				`${sanitizeName(session.content?.name) || todayString()}.json`;
@@ -1442,7 +1480,11 @@ async function importCampaignPartialArchiveBundle(targetSlug, archiveBundle) {
 		for (const entity of list) {
 			const desiredSlug =
 				entity.slug || campaignSlug(entity.firstName || entity.name || type);
-			const entitySlug = await ensureUniqueEntitySlug(target, type, desiredSlug);
+			const entitySlug = await ensureUniqueEntitySlug(
+				target,
+				type,
+				desiredSlug,
+			);
 			const normalizedEntity = replaceImageSlugReferences(
 				entity,
 				sourceSlug,
@@ -1458,11 +1500,12 @@ async function importCampaignPartialArchiveBundle(targetSlug, archiveBundle) {
 
 	if (sections.includes("aiHistory")) {
 		const existing = await readAiResponses(target);
-		const incoming = (Array.isArray(bundle.aiResponses) ? bundle.aiResponses : [])
-			.map((entry) => ({
-				...normalizeImportedAiResponse(entry, sourceSlug, target),
-				id: createId(),
-			}));
+		const incoming = (
+			Array.isArray(bundle.aiResponses) ? bundle.aiResponses : []
+		).map((entry) => ({
+			...normalizeImportedAiResponse(entry, sourceSlug, target),
+			id: createId(),
+		}));
 		if (incoming.length > 0) {
 			await writeAiResponses(target, [...existing, ...incoming]);
 			imported.aiHistory = incoming.length;
@@ -1470,7 +1513,9 @@ async function importCampaignPartialArchiveBundle(targetSlug, archiveBundle) {
 	}
 
 	if (sections.includes("images")) {
-		const images = Array.isArray(archiveBundle?.images) ? archiveBundle.images : [];
+		const images = Array.isArray(archiveBundle?.images)
+			? archiveBundle.images
+			: [];
 		await restoreCampaignImagesFromArchive(target, images);
 		imported.images = images.length;
 	}

@@ -8,9 +8,7 @@ const {
 	buildAiRequestSnapshot,
 	formatGeneratedContentForHistory,
 } = require("../aiHistoryService");
-const {
-	assertAiGeneratedContentContract,
-} = require("../aiPayloadSchemas");
+const { assertAiGeneratedContentContract } = require("../aiPayloadSchemas");
 const {
 	buildCustomMonsterChangeResources,
 	restoreAiResponseSnapshot,
@@ -113,7 +111,10 @@ function patchDraftAiChanges(entry, rawResources) {
 		afterById.has(resource.id)
 			? {
 					...resource,
-					after: preserveExistingIds(resource.before, afterById.get(resource.id)),
+					after: preserveExistingIds(
+						resource.before,
+						afterById.get(resource.id),
+					),
 				}
 			: resource,
 	);
@@ -138,17 +139,16 @@ function cloneRetryPayload(payload = {}) {
 }
 
 function getFailedAiResponseText(error, status = null) {
-	const message = asText(error?.message || error?.error) || "AI request failed.";
-	return [
-		"AI request failed",
-		"",
-		status ? `Status: ${status}` : null,
-		message,
-	].filter(Boolean).join("\n");
+	const message =
+		asText(error?.message || error?.error) || "AI request failed.";
+	return ["AI request failed", "", status ? `Status: ${status}` : null, message]
+		.filter(Boolean)
+		.join("\n");
 }
 
 async function saveFailedAiRequest(payload = {}, error, status = null) {
-	const path = payload?.path && typeof payload.path === "object" ? payload.path : {};
+	const path =
+		payload?.path && typeof payload.path === "object" ? payload.path : {};
 	const campaignSlug = asText(path.campaign);
 	if (!campaignSlug) return null;
 
@@ -275,7 +275,9 @@ function filterEntitiesByContext(entities = [], entityConfig, getKey) {
 }
 
 function filterNotesForAiContext(notes = []) {
-	return (Array.isArray(notes) ? notes : []).filter((note) => !isAiIgnored(note));
+	return (Array.isArray(notes) ? notes : []).filter(
+		(note) => !isAiIgnored(note),
+	);
 }
 
 function filterSessionDataForAiContext(data = {}) {
@@ -454,8 +456,7 @@ function applyMentionsToGeneratedContent(generatedContent, names) {
 }
 
 function getAiHistoryCampaignSlug(req) {
-	return String(req.query?.campaign || req.body?.campaign || "")
-		.trim();
+	return String(req.query?.campaign || req.body?.campaign || "").trim();
 }
 
 function collectMentionCandidates(generatedContent, contextData = {}) {
@@ -682,10 +683,14 @@ router.post("/api-key", async (req, res, next) => {
 	try {
 		const apiKey = normalizeApiKey(req.body?.apiKey);
 		if (!apiKey) {
-			return res.status(400).json({ error: "GEMINI_API_KEY не може бути порожнім." });
+			return res
+				.status(400)
+				.json({ error: "GEMINI_API_KEY не може бути порожнім." });
 		}
 		if (/[\r\n]/.test(apiKey)) {
-			return res.status(400).json({ error: "GEMINI_API_KEY має бути одним рядком." });
+			return res
+				.status(400)
+				.json({ error: "GEMINI_API_KEY має бути одним рядком." });
 		}
 
 		let envText = "";
@@ -896,7 +901,11 @@ router.post("/generate", async (req, res, next) => {
 			});
 
 			if (generatedContent.error) {
-				const aiResponse = await saveFailedAiRequest(req.body, generatedContent, 500);
+				const aiResponse = await saveFailedAiRequest(
+					req.body,
+					generatedContent,
+					500,
+				);
 				return res.status(500).json({ ...generatedContent, aiResponse });
 			}
 
@@ -1008,7 +1017,11 @@ router.post("/generate", async (req, res, next) => {
 			});
 
 			if (generatedContent.error) {
-				const aiResponse = await saveFailedAiRequest(req.body, generatedContent, 500);
+				const aiResponse = await saveFailedAiRequest(
+					req.body,
+					generatedContent,
+					500,
+				);
 				return res.status(500).json({ ...generatedContent, aiResponse });
 			}
 
@@ -1082,7 +1095,10 @@ router.post("/generate", async (req, res, next) => {
 				includeCampaignScopedEntities &&
 				isContextListIncluded(contextConfig.campaignLocations)
 			) {
-				const locations = await storage.listEntities(path.campaign, "locations");
+				const locations = await storage.listEntities(
+					path.campaign,
+					"locations",
+				);
 				contextData.campaign.locations = filterLocationsByContext(
 					locations,
 					contextConfig.campaignLocations,
@@ -1113,9 +1129,9 @@ router.post("/generate", async (req, res, next) => {
 		}
 		if (path?.encounter || encounterGenerationEnabled) {
 			const customBestiary = await storage.readCustomBestiary();
-			const monsterNames = (Array.isArray(customBestiary.monster)
-				? customBestiary.monster
-				: [])
+			const monsterNames = (
+				Array.isArray(customBestiary.monster) ? customBestiary.monster : []
+			)
 				.map((monster) => asText(monster?.name))
 				.filter(Boolean);
 			if (monsterNames.length > 0) {
@@ -1159,7 +1175,11 @@ router.post("/generate", async (req, res, next) => {
 		}
 
 		if (generatedContent.error) {
-			const aiResponse = await saveFailedAiRequest(req.body, generatedContent, 500);
+			const aiResponse = await saveFailedAiRequest(
+				req.body,
+				generatedContent,
+				500,
+			);
 			return res.status(500).json({ ...generatedContent, aiResponse });
 		}
 
@@ -1258,7 +1278,11 @@ router.post("/generate", async (req, res, next) => {
 			extraChangeResources,
 		});
 
-		res.json({ generated: generatedContent, updated: applied.updated, aiResponse });
+		res.json({
+			generated: generatedContent,
+			updated: applied.updated,
+			aiResponse,
+		});
 	} catch (error) {
 		if (req.path === "/generate") {
 			try {

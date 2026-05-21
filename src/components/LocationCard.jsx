@@ -187,9 +187,7 @@ export default function LocationCard({
 										onBlur={handleNameBlur}
 										placeholder={lang.t("Name")}
 										className={
-											isFieldHighlighted("name")
-												? "is_ai_changed_field"
-												: ""
+											isFieldHighlighted("name") ? "is_ai_changed_field" : ""
 										}
 									/>
 								</div>

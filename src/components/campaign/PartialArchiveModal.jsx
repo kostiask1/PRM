@@ -20,8 +20,8 @@ export default function PartialArchiveModal({
 	onExport,
 	onImport,
 }) {
-	const [selected, setSelected] = useState(() =>
-		new Set(SECTION_OPTIONS.map((option) => option.id)),
+	const [selected, setSelected] = useState(
+		() => new Set(SECTION_OPTIONS.map((option) => option.id)),
 	);
 	const fileInputRef = useRef(null);
 	const selectedSections = useMemo(() => [...selected], [selected]);

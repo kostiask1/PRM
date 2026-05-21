@@ -143,7 +143,9 @@ function markdownToHtml(markdown = "", type = "text") {
 		if (headingMatch) {
 			flushParagraph();
 			const level = Math.min(headingMatch[1].length, 6);
-			html.push(`<h${level}>${renderInlineMarkdown(headingMatch[2])}</h${level}>`);
+			html.push(
+				`<h${level}>${renderInlineMarkdown(headingMatch[2])}</h${level}>`,
+			);
 			continue;
 		}
 
@@ -179,7 +181,9 @@ function markdownToHtml(markdown = "", type = "text") {
 			}
 
 			i -= 1;
-			html.push(`<blockquote>${renderInlineMarkdown(quoteLines.join("\n"))}</blockquote>`);
+			html.push(
+				`<blockquote>${renderInlineMarkdown(quoteLines.join("\n"))}</blockquote>`,
+			);
 			continue;
 		}
 
@@ -515,8 +519,7 @@ function getMentionFromSelection(editor, key = "") {
 function isRangeInsideEditor(editor, range) {
 	if (!editor || !range) return false;
 	return (
-		editor.contains(range.startContainer) &&
-		editor.contains(range.endContainer)
+		editor.contains(range.startContainer) && editor.contains(range.endContainer)
 	);
 }
 
@@ -609,7 +612,11 @@ function createRangeFromMarkdownOffset(editor, offset) {
 	return createEndRange(editor);
 }
 
-function getInsertionRange(editor, preferredRange = null, preferredOffset = null) {
+function getInsertionRange(
+	editor,
+	preferredRange = null,
+	preferredOffset = null,
+) {
 	if (isRangeInsideEditor(editor, preferredRange)) {
 		return preferredRange.cloneRange();
 	}
@@ -840,7 +847,8 @@ function getSelectionElement(editor) {
 	if (!selection || selection.rangeCount === 0) return null;
 
 	const node = selection.anchorNode;
-	const element = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
+	const element =
+		node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
 	if (!element || !editor.contains(element)) return null;
 
 	return element;
@@ -1329,14 +1337,17 @@ export default function EditableField({
 
 	const clearMentionTooltip = () => {
 		setMentionTooltip((current) =>
-			current.content || current.anchor ? { content: null, anchor: null } : current,
+			current.content || current.anchor
+				? { content: null, anchor: null }
+				: current,
 		);
 	};
 
 	const handleMouseMove = (event) => {
 		const mention = event.target.closest?.("[data-mention]");
 		if (mention && editorRef.current?.contains(mention)) {
-			const content = mention.dataset.mentionTooltip || lang.t(MENTION_TOOLTIP_KEY);
+			const content =
+				mention.dataset.mentionTooltip || lang.t(MENTION_TOOLTIP_KEY);
 			setMentionTooltip((current) =>
 				current.content === content && current.anchor === mention
 					? current
@@ -1365,8 +1376,8 @@ export default function EditableField({
 		<div
 			ref={editorRef}
 			className={classNames("MarkdownView", "MarkdownView__editable", {
-				"MarkdownView__active": isActive,
-				"MarkdownView__disabled": isDisabled,
+				MarkdownView__active: isActive,
+				MarkdownView__disabled: isDisabled,
 			})}
 			contentEditable={!isDisabled}
 			suppressContentEditableWarning
@@ -1390,8 +1401,8 @@ export default function EditableField({
 		<div
 			{...domProps}
 			className={classNames("EditableField", className, {
-				"EditableField__active": isActive,
-				"EditableField__disabled": isDisabled,
+				EditableField__active: isActive,
+				EditableField__disabled: isDisabled,
 			})}
 			onClick={stopContainerEvent}
 			onMouseDown={stopContainerEvent}

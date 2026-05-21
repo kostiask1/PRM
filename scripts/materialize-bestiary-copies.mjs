@@ -24,11 +24,15 @@ function clone(value) {
 }
 
 function normalizeSource(source) {
-	return String(source || "").trim().toUpperCase();
+	return String(source || "")
+		.trim()
+		.toUpperCase();
 }
 
 function monsterKey(name, source) {
-	return `${String(name || "").trim().toLowerCase()}|${normalizeSource(source)}`;
+	return `${String(name || "")
+		.trim()
+		.toLowerCase()}|${normalizeSource(source)}`;
 }
 
 function getFileSource(fileName, data) {
@@ -70,7 +74,9 @@ function entryName(value) {
 }
 
 function matchesEntry(value, expected) {
-	return String(entryName(value)).toLowerCase() === String(expected).toLowerCase();
+	return (
+		String(entryName(value)).toLowerCase() === String(expected).toLowerCase()
+	);
 }
 
 function ensureArray(target, prop) {
@@ -90,7 +96,8 @@ function appendUnique(targetList, items) {
 
 function getPrimarySpellcasting(target) {
 	if (!Array.isArray(target.spellcasting)) target.spellcasting = [];
-	if (!target.spellcasting[0]) target.spellcasting[0] = { name: "Spellcasting" };
+	if (!target.spellcasting[0])
+		target.spellcasting[0] = { name: "Spellcasting" };
 	return target.spellcasting[0];
 }
 
@@ -119,7 +126,11 @@ function addSpells(target, mod) {
 			if (!Array.isArray(block.spells[level].spells)) {
 				block.spells[level].spells = [];
 			}
-			if (spellInfo && typeof spellInfo === "object" && !Array.isArray(spellInfo)) {
+			if (
+				spellInfo &&
+				typeof spellInfo === "object" &&
+				!Array.isArray(spellInfo)
+			) {
 				for (const [key, value] of Object.entries(spellInfo)) {
 					if (key === "spells") continue;
 					block.spells[level][key] = clone(value);
@@ -229,7 +240,9 @@ function applyMod(target, prop, mod, warnings, context) {
 		return;
 	}
 	if (!mod || typeof mod !== "object") {
-		warnings.push(`${context}: unsupported mod ${JSON.stringify(mod)} on ${prop}`);
+		warnings.push(
+			`${context}: unsupported mod ${JSON.stringify(mod)} on ${prop}`,
+		);
 		return;
 	}
 
@@ -290,7 +303,9 @@ function findBaseMonster(copy, fallbackSource, index) {
 	const exact = index.get(monsterKey(copy.name, baseSource));
 	if (exact) return exact;
 
-	const prefix = `${String(copy.name || "").trim().toLowerCase()}|`;
+	const prefix = `${String(copy.name || "")
+		.trim()
+		.toLowerCase()}|`;
 	for (const [key, entry] of index.entries()) {
 		if (key.startsWith(prefix)) return entry;
 	}
@@ -302,7 +317,9 @@ function resolveMonster(monster, fileSource, index, warnings, stack = []) {
 	const currentKey = monsterKey(monster.name, monsterSource);
 
 	if (stack.includes(currentKey)) {
-		throw new Error(`Circular _copy chain: ${[...stack, currentKey].join(" -> ")}`);
+		throw new Error(
+			`Circular _copy chain: ${[...stack, currentKey].join(" -> ")}`,
+		);
 	}
 
 	if (!monster._copy) {
@@ -424,7 +441,11 @@ async function main() {
 		if (changed) {
 			changedFiles += 1;
 			if (!isDryRun) {
-				await fs.writeFile(file.path, `${JSON.stringify(file.data, null, 2)}\n`, "utf8");
+				await fs.writeFile(
+					file.path,
+					`${JSON.stringify(file.data, null, 2)}\n`,
+					"utf8",
+				);
 			}
 		}
 	}

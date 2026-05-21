@@ -70,6 +70,7 @@
 .DraggableList>div.is_dragging>.DraggableList__itemControl {
 	opacity: 0.75;
 }
+
 .DraggableList>div>.DraggableList__itemControl.is_active {
 	opacity: 0.35;
 }

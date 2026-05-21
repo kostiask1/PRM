@@ -530,7 +530,11 @@ Exception: technical lookup fields such as "monsterName" must remain exact looku
 	) {
 		systemInstructionParts.push(generatedLocationDetailContract);
 	}
-	if (effectiveParseAIResponse && useKey === "scene" && encounterGenerationEnabled) {
+	if (
+		effectiveParseAIResponse &&
+		useKey === "scene" &&
+		encounterGenerationEnabled
+	) {
 		systemInstructionParts.push(sceneCombatMechanicsContract);
 	}
 	if (useKey === "scene" && encounterGenerationEnabled) {
@@ -636,7 +640,9 @@ ${normalizedCampaignBasePrompt || "(none)"}`,
 
 			// Додаємо нотатки, якщо обрано
 			if (conf.included && conf.notes && data.notes) {
-				sessionContext.notes = data.notes.map(noteToContextNote).filter(Boolean);
+				sessionContext.notes = data.notes
+					.map(noteToContextNote)
+					.filter(Boolean);
 			}
 
 			// Додаємо результат сесії, якщо обрано
@@ -720,7 +726,9 @@ ${normalizedCampaignBasePrompt || "(none)"}`,
 			if (conf.included && Array.isArray(data.npcs) && data.npcs.length > 0) {
 				sessionContext.npcs = data.npcs
 					.map((npc) => npcToPromptContext(npc, noteToContextNote))
-					.filter((npc) => npc && (npc.name || npc.description || npc.motivation));
+					.filter(
+						(npc) => npc && (npc.name || npc.description || npc.motivation),
+					);
 			}
 
 			if (
@@ -729,8 +737,12 @@ ${normalizedCampaignBasePrompt || "(none)"}`,
 				data.locations.length > 0
 			) {
 				sessionContext.locations = data.locations
-					.map((location) => locationToPromptContext(location, noteToContextNote))
-					.filter((location) => location && (location.name || location.description));
+					.map((location) =>
+						locationToPromptContext(location, noteToContextNote),
+					)
+					.filter(
+						(location) => location && (location.name || location.description),
+					);
 			}
 
 			return sessionContext;
@@ -751,10 +763,16 @@ ${normalizedCampaignBasePrompt || "(none)"}`,
 				.filter((c) => c && (c.name || c.motivation)),
 			npcs: contextData?.campaign?.npcs
 				?.map((npc) => npcToPromptContext(npc, noteToContextNote))
-				.filter((npc) => npc && (npc.name || npc.description || npc.motivation)),
+				.filter(
+					(npc) => npc && (npc.name || npc.description || npc.motivation),
+				),
 			locations: contextData?.campaign?.locations
-				?.map((location) => locationToPromptContext(location, noteToContextNote))
-				.filter((location) => location && (location.name || location.description)),
+				?.map((location) =>
+					locationToPromptContext(location, noteToContextNote),
+				)
+				.filter(
+					(location) => location && (location.name || location.description),
+				),
 		};
 	}
 
@@ -769,7 +787,9 @@ ${normalizedCampaignBasePrompt || "(none)"}`,
 		if (Array.isArray(session.data?.npcs) && session.data.npcs.length > 0) {
 			currentSession.npcs = session.data.npcs
 				.map((npc) => npcToPromptContext(npc, noteToContextNote))
-				.filter((npc) => npc && (npc.name || npc.description || npc.motivation));
+				.filter(
+					(npc) => npc && (npc.name || npc.description || npc.motivation),
+				);
 		}
 		if (
 			Array.isArray(session.data?.locations) &&
@@ -777,7 +797,9 @@ ${normalizedCampaignBasePrompt || "(none)"}`,
 		) {
 			currentSession.locations = session.data.locations
 				.map((location) => locationToPromptContext(location, noteToContextNote))
-				.filter((location) => location && (location.name || location.description));
+				.filter(
+					(location) => location && (location.name || location.description),
+				);
 		}
 		contextJson.currentSession = currentSession;
 	}

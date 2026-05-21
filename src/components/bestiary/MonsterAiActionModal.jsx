@@ -24,7 +24,11 @@ export default function MonsterAiActionModal({
 					{aiActionMonster.name}
 				</div>
 				<div className="Bestiary__ai_action_buttons">
-					<Button variant="primary" icon="wand" onClick={() => onChoose("edit")}>
+					<Button
+						variant="primary"
+						icon="wand"
+						onClick={() => onChoose("edit")}
+					>
 						{lang.t("Edit this creature")}
 					</Button>
 					<Button

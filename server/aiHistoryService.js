@@ -70,7 +70,8 @@ function buildAiContextSummary(contextConfig, contextData = {}) {
 		: [];
 	const scenes = sessions.reduce(
 		(total, session) =>
-			total + (Array.isArray(session?.data?.scenes) ? session.data.scenes.length : 0),
+			total +
+			(Array.isArray(session?.data?.scenes) ? session.data.scenes.length : 0),
 		0,
 	);
 	const campaignNotes = Array.isArray(contextData.campaign?.notes)

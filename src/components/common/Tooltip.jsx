@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useLayoutEffect,
+	useRef,
+	useState,
+} from "react";
 import { createPortal } from "react-dom";
 import "../../assets/components/Tooltip.css";
 import classNames from "../../utils/classNames";
@@ -20,7 +26,7 @@ function containsNode(parent, child) {
 function isDraggableListDragging() {
 	return Boolean(
 		document.body?.classList.contains("prm_draggable_list_dragging") ||
-			document.body?.classList.contains("prm_draggable_list_pressing"),
+		document.body?.classList.contains("prm_draggable_list_pressing"),
 	);
 }
 
@@ -197,7 +203,10 @@ export default function Tooltip({
 
 	useEffect(() => {
 		if (
-			!triggerActiveRef.current || isOpen || disabled || !hasContent ||
+			!triggerActiveRef.current ||
+			isOpen ||
+			disabled ||
+			!hasContent ||
 			isDraggableListDragging()
 		)
 			return;
@@ -299,31 +308,28 @@ export default function Tooltip({
 		};
 	}, [anchorElement, closeTooltip, isOpen, scheduleCloseTooltip]);
 
-	useEffect(
-		() => {
-			const tooltipId = tooltipIdRef.current;
-			const handleDragModeChange = (event) => {
-				if (event.detail?.enabled) closeAllTooltips();
-			};
-			window.addEventListener(
+	useEffect(() => {
+		const tooltipId = tooltipIdRef.current;
+		const handleDragModeChange = (event) => {
+			if (event.detail?.enabled) closeAllTooltips();
+		};
+		window.addEventListener(
+			"prm-draggable-list-drag-mode",
+			handleDragModeChange,
+		);
+		return () => {
+			window.removeEventListener(
 				"prm-draggable-list-drag-mode",
 				handleDragModeChange,
 			);
-			return () => {
-				window.removeEventListener(
-					"prm-draggable-list-drag-mode",
-					handleDragModeChange,
-				);
-				if (timerRef.current) clearTimeout(timerRef.current);
-				if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-				tooltipParentById.delete(tooltipId);
-				if (activeTooltipId === tooltipId) {
-					setActiveTooltip(parentTooltipIdRef.current || null);
-				}
-			};
-		},
-		[],
-	);
+			if (timerRef.current) clearTimeout(timerRef.current);
+			if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+			tooltipParentById.delete(tooltipId);
+			if (activeTooltipId === tooltipId) {
+				setActiveTooltip(parentTooltipIdRef.current || null);
+			}
+		};
+	}, []);
 
 	useEffect(() => {
 		const tooltipId = tooltipIdRef.current;

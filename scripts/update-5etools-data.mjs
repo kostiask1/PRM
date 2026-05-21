@@ -113,12 +113,14 @@ async function exists(filePath) {
 async function fetchJson(url) {
 	const response = await fetch(url, {
 		headers: {
-			"Accept": "application/vnd.github+json",
+			Accept: "application/vnd.github+json",
 			"User-Agent": "dnd-session-manager-data-updater",
 		},
 	});
 	if (!response.ok) {
-		throw new Error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
+		throw new Error(
+			`Failed to fetch ${url}: ${response.status} ${response.statusText}`,
+		);
 	}
 	return response.json();
 }
@@ -130,7 +132,9 @@ async function fetchText(url) {
 		},
 	});
 	if (!response.ok) {
-		throw new Error(`Failed to download ${url}: ${response.status} ${response.statusText}`);
+		throw new Error(
+			`Failed to download ${url}: ${response.status} ${response.statusText}`,
+		);
 	}
 	return response.text();
 }
@@ -146,7 +150,9 @@ async function listRemoteFiles(remotePath) {
 	}
 
 	return entries
-		.filter((entry) => entry.type === "file" && shouldKeepRemoteFile(entry.name))
+		.filter(
+			(entry) => entry.type === "file" && shouldKeepRemoteFile(entry.name),
+		)
 		.map((entry) => ({
 			name: entry.name,
 			downloadUrl: entry.download_url,
@@ -165,7 +171,11 @@ async function downloadFiles(remotePath, targetDir) {
 		if (isVerbose) console.log(`download ${remotePath}/${file.name}`);
 		const content = await fetchText(file.downloadUrl);
 		JSON.parse(content);
-		await fs.writeFile(path.join(targetDir, file.name), content.endsWith("\n") ? content : `${content}\n`, "utf8");
+		await fs.writeFile(
+			path.join(targetDir, file.name),
+			content.endsWith("\n") ? content : `${content}\n`,
+			"utf8",
+		);
 	}
 
 	return files.length;
@@ -177,7 +187,11 @@ async function downloadFile(remotePath, targetPath) {
 	const content = await fetchText(url);
 	JSON.parse(content);
 	await fs.mkdir(path.dirname(targetPath), { recursive: true });
-	await fs.writeFile(targetPath, content.endsWith("\n") ? content : `${content}\n`, "utf8");
+	await fs.writeFile(
+		targetPath,
+		content.endsWith("\n") ? content : `${content}\n`,
+		"utf8",
+	);
 	return 1;
 }
 
@@ -195,11 +209,17 @@ function getLocalExhaustionEntries(currentConditions) {
 }
 
 function conditionKey(entry) {
-	return `${String(entry?.name || "").trim().toLowerCase()}|${String(entry?.source || "").trim().toUpperCase()}`;
+	return `${String(entry?.name || "")
+		.trim()
+		.toLowerCase()}|${String(entry?.source || "")
+		.trim()
+		.toUpperCase()}`;
 }
 
 function conditionNameKey(entry) {
-	return String(entry?.name || "").trim().toLowerCase();
+	return String(entry?.name || "")
+		.trim()
+		.toLowerCase();
 }
 
 function getSourcePriority(source) {
@@ -306,7 +326,9 @@ function pruneSenseMeta(item) {
 
 function normalizeConditionsData(data) {
 	return {
-		condition: dedupeConditionsByName(data.condition || []).map(pruneConditionMeta),
+		condition: dedupeConditionsByName(data.condition || []).map(
+			pruneConditionMeta,
+		),
 		status: dedupeConditionsByName(data.status || []).map(pruneConditionMeta),
 	};
 }
@@ -338,8 +360,16 @@ async function writeConditionsWithLocalExhaustion(downloadedPath) {
 
 	const normalized = normalizeConditionsData(downloaded);
 	const normalizedDiseases = normalizeDiseasesData(downloaded);
-	await fs.writeFile(CONDITIONS_PATH, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
-	await fs.writeFile(DISEASES_PATH, `${JSON.stringify(normalizedDiseases, null, 2)}\n`, "utf8");
+	await fs.writeFile(
+		CONDITIONS_PATH,
+		`${JSON.stringify(normalized, null, 2)}\n`,
+		"utf8",
+	);
+	await fs.writeFile(
+		DISEASES_PATH,
+		`${JSON.stringify(normalizedDiseases, null, 2)}\n`,
+		"utf8",
+	);
 	return localExhaustion.length;
 }
 
@@ -350,7 +380,11 @@ async function writeVariantRules(downloadedPath) {
 			normalizeVariantRule,
 		),
 	};
-	await fs.writeFile(VARIANT_RULES_PATH, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
+	await fs.writeFile(
+		VARIANT_RULES_PATH,
+		`${JSON.stringify(normalized, null, 2)}\n`,
+		"utf8",
+	);
 	return normalized.variantrule.length;
 }
 
@@ -359,7 +393,11 @@ async function writeSkills(downloadedPath) {
 	const normalized = {
 		skill: dedupeConditionsByName(downloaded.skill || []).map(pruneSkillMeta),
 	};
-	await fs.writeFile(SKILLS_PATH, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
+	await fs.writeFile(
+		SKILLS_PATH,
+		`${JSON.stringify(normalized, null, 2)}\n`,
+		"utf8",
+	);
 	return normalized.skill.length;
 }
 
@@ -368,7 +406,11 @@ async function writeSenses(downloadedPath) {
 	const normalized = {
 		sense: dedupeConditionsByName(downloaded.sense || []).map(pruneSenseMeta),
 	};
-	await fs.writeFile(SENSES_PATH, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
+	await fs.writeFile(
+		SENSES_PATH,
+		`${JSON.stringify(normalized, null, 2)}\n`,
+		"utf8",
+	);
 	return normalized.sense.length;
 }
 
@@ -386,23 +428,25 @@ async function copyJsonFiles(fromDir, toDir) {
 	await fs.mkdir(toDir, { recursive: true });
 	const entries = await fs.readdir(fromDir, { withFileTypes: true });
 	for (const entry of entries) {
-		if (!entry.isFile() || !entry.name.toLowerCase().endsWith(".json")) continue;
-		await fs.copyFile(path.join(fromDir, entry.name), path.join(toDir, entry.name));
+		if (!entry.isFile() || !entry.name.toLowerCase().endsWith(".json"))
+			continue;
+		await fs.copyFile(
+			path.join(fromDir, entry.name),
+			path.join(toDir, entry.name),
+		);
 	}
 }
 
 function runNodeScript(scriptPath, scriptArgs = []) {
-	const result = spawnSync(
-		process.execPath,
-		[scriptPath, ...scriptArgs],
-		{
-			cwd: ROOT_DIR,
-			stdio: "inherit",
-			env: process.env,
-		},
-	);
+	const result = spawnSync(process.execPath, [scriptPath, ...scriptArgs], {
+		cwd: ROOT_DIR,
+		stdio: "inherit",
+		env: process.env,
+	});
 	if (result.status !== 0) {
-		throw new Error(`${path.basename(scriptPath)} failed with exit code ${result.status}`);
+		throw new Error(
+			`${path.basename(scriptPath)} failed with exit code ${result.status}`,
+		);
 	}
 }
 
@@ -442,7 +486,10 @@ async function main() {
 		return;
 	}
 
-	await Promise.all([removeJsonFiles(BESTIARY_DIR), removeJsonFiles(SPELLS_DIR)]);
+	await Promise.all([
+		removeJsonFiles(BESTIARY_DIR),
+		removeJsonFiles(SPELLS_DIR),
+	]);
 	await Promise.all([
 		copyJsonFiles(tmpBestiaryDir, BESTIARY_DIR),
 		copyJsonFiles(tmpSpellsDir, SPELLS_DIR),
@@ -454,9 +501,10 @@ async function main() {
 	await fs.rm(TMP_DIR, { recursive: true, force: true });
 
 	runNodeScript(path.join("scripts", "materialize-bestiary-copies.mjs"));
-	runNodeScript(path.join("scripts", "build-database-bundles.mjs"), [
-		keepSources ? "" : "--delete-sources",
-	].filter(Boolean));
+	runNodeScript(
+		path.join("scripts", "build-database-bundles.mjs"),
+		[keepSources ? "" : "--delete-sources"].filter(Boolean),
+	);
 	await cleanupUnneededSupportFiles();
 
 	console.log("Done: 5etools data updated.");

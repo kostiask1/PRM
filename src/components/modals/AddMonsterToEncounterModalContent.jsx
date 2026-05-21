@@ -37,7 +37,9 @@ export default function AddMonsterToEncounterModalContent({
 				const campaignsSource =
 					activeCampaigns.length > 0
 						? activeCampaigns
-						: (await api.listCampaigns()).filter((campaign) => !campaign.completed);
+						: (await api.listCampaigns()).filter(
+								(campaign) => !campaign.completed,
+							);
 
 				const campaignGroups = await Promise.all(
 					campaignsSource.map(async (campaign) => {
@@ -64,9 +66,7 @@ export default function AddMonsterToEncounterModalContent({
 				);
 
 				if (!isMounted) return;
-				setGroups(
-					campaignGroups.filter((group) => group.sessions.length > 0),
-				);
+				setGroups(campaignGroups.filter((group) => group.sessions.length > 0));
 			} catch (error) {
 				console.error("Failed to load encounters", error);
 				if (isMounted) {
@@ -94,7 +94,10 @@ export default function AddMonsterToEncounterModalContent({
 		setAddingId(targetId);
 
 		try {
-			const currentSession = await api.getSession(campaign.slug, session.fileName);
+			const currentSession = await api.getSession(
+				campaign.slug,
+				session.fileName,
+			);
 			let isTargetFound = false;
 			const updatedEncounters = (currentSession.data?.encounters || []).map(
 				(currentEncounter) => {
@@ -149,9 +152,7 @@ export default function AddMonsterToEncounterModalContent({
 	return (
 		<div className="AddMonsterToEncounterModal">
 			{groups.length === 0 ? (
-				<div className="muted">
-					{lang.t("No active encounters found.")}
-				</div>
+				<div className="muted">{lang.t("No active encounters found.")}</div>
 			) : (
 				groups.map((group) => (
 					<section

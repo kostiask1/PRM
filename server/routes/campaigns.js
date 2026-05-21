@@ -12,7 +12,8 @@ function getEntityDisplayName(entity, type) {
 	if (type === "locations") {
 		return String(entity?.name || entity?.title || "").trim();
 	}
-	const fullName = `${entity?.firstName || ""} ${entity?.lastName || ""}`.trim();
+	const fullName =
+		`${entity?.firstName || ""} ${entity?.lastName || ""}`.trim();
 	return fullName || String(entity?.name || entity?.title || "").trim();
 }
 
@@ -203,7 +204,11 @@ router.put("/:slug/entities/:type", async (req, res, next) => {
 		const current = await storage.listEntities(campaignSlug, type);
 		const targetSlugs = new Set(
 			entities
-				.map((entity) => storage.campaignSlug(entity?.slug || entity?.name || entity?.firstName))
+				.map((entity) =>
+					storage.campaignSlug(
+						entity?.slug || entity?.name || entity?.firstName,
+					),
+				)
 				.filter(Boolean),
 		);
 
@@ -241,7 +246,8 @@ router.patch("/:slug/entities/:type/:entitySlug", async (req, res, next) => {
 		} = req.body || {};
 		const current = await storage.readEntity(campaignSlug, type, entitySlug);
 		const oldDisplayName =
-			String(mentionOldName || "").trim() || getEntityDisplayName(current, type);
+			String(mentionOldName || "").trim() ||
+			getEntityDisplayName(current, type);
 		const updated = {
 			...current,
 			...patch,
@@ -279,34 +285,37 @@ router.delete("/:slug/entities/:type/:entitySlug", async (req, res, next) => {
 	}
 });
 
-router.post("/:slug/entities/:type/:entitySlug/move", async (req, res, next) => {
-	try {
-		const { slug: campaignSlug, type, entitySlug } = req.params;
-		const { targetType } = req.body || {};
-		if (!validateEntityType(type, res)) return;
-		if (!validateEntityType(targetType, res)) return;
-		if (
-			!(
-				(type === "characters" && targetType === "npc") ||
-				(type === "npc" && targetType === "characters")
-			)
-		) {
-			res.status(400).json({
-				error: "Entity can only be moved between characters and NPC.",
-			});
-			return;
+router.post(
+	"/:slug/entities/:type/:entitySlug/move",
+	async (req, res, next) => {
+		try {
+			const { slug: campaignSlug, type, entitySlug } = req.params;
+			const { targetType } = req.body || {};
+			if (!validateEntityType(type, res)) return;
+			if (!validateEntityType(targetType, res)) return;
+			if (
+				!(
+					(type === "characters" && targetType === "npc") ||
+					(type === "npc" && targetType === "characters")
+				)
+			) {
+				res.status(400).json({
+					error: "Entity can only be moved between characters and NPC.",
+				});
+				return;
+			}
+			const moved = await storage.moveEntity(
+				campaignSlug,
+				type,
+				entitySlug,
+				targetType,
+			);
+			res.json(moved);
+		} catch (error) {
+			next(error);
 		}
-		const moved = await storage.moveEntity(
-			campaignSlug,
-			type,
-			entitySlug,
-			targetType,
-		);
-		res.json(moved);
-	} catch (error) {
-		next(error);
-	}
-});
+	},
+);
 
 router.post("/reorder", async (req, res, next) => {
 	try {

@@ -383,7 +383,7 @@
 	padding-left: var(--space-4);
 }
 
-.DiceCalculator__formulaHelp li + li {
+.DiceCalculator__formulaHelp li+li {
 	margin-top: var(--space-1);
 }
 

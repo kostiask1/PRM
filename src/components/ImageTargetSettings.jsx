@@ -139,7 +139,7 @@ export default function ImageTargetSettings({
 								key={source.id}
 								type="button"
 								className={classNames("ImageTargetSettings__categoryBtn", {
-									"is_active": value.source === source.id,
+									is_active: value.source === source.id,
 								})}
 								onClick={() => setPatch({ source: source.id, subcategory: "" })}
 							>
@@ -159,7 +159,7 @@ export default function ImageTargetSettings({
 							key={cat.id}
 							type="button"
 							className={classNames("ImageTargetSettings__categoryBtn", {
-								"is_active": value.category === cat.id,
+								is_active: value.category === cat.id,
 							})}
 							onClick={() => handleSelectCategory(cat)}
 						>
@@ -177,7 +177,7 @@ export default function ImageTargetSettings({
 					<button
 						type="button"
 						className={classNames("ImageTargetSettings__pathBtn", {
-							"is_active": atRoot,
+							is_active: atRoot,
 						})}
 						onClick={() => handleNavigateToPart(-1)}
 					>
@@ -188,7 +188,7 @@ export default function ImageTargetSettings({
 							key={`${part}-${index}`}
 							type="button"
 							className={classNames("ImageTargetSettings__pathBtn", {
-								"is_active": index === pathParts.length - 1,
+								is_active: index === pathParts.length - 1,
 							})}
 							onClick={() => handleNavigateToPart(index)}
 						>

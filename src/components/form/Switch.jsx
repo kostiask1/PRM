@@ -19,8 +19,8 @@ export default function Switch({
 	return (
 		<label
 			className={classNames("Switch", className, {
-				"is_checked": checked,
-				"is_disabled": disabled,
+				is_checked: checked,
+				is_disabled: disabled,
 			})}
 		>
 			<input
@@ -35,7 +35,9 @@ export default function Switch({
 			</span>
 			<span className="Switch__content">
 				{label && <span className="Switch__label">{label}</span>}
-				{description && <span className="Switch__description">{description}</span>}
+				{description && (
+					<span className="Switch__description">{description}</span>
+				)}
 			</span>
 		</label>
 	);

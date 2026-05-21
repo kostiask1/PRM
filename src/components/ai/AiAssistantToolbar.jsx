@@ -40,7 +40,7 @@ export default function AiAssistantToolbar({
 			<label className="AiAssistant__modelPicker">
 				<Select
 					className={classNames("AiAssistant__modelSelect", {
-						"is_disabled": loading || aiModels.length === 0,
+						is_disabled: loading || aiModels.length === 0,
 					})}
 					disabled={loading || aiModels.length === 0}
 					value={selectedModel}
@@ -65,7 +65,7 @@ export default function AiAssistantToolbar({
 			{!isBestiary && (
 				<div
 					className={classNames("AiAssistant__context_toggle", {
-						"is_active": useContext,
+						is_active: useContext,
 					})}
 				>
 					<Checkbox

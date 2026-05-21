@@ -58,14 +58,18 @@ function getFirstChangedMonsterName(entry, resourceIds = null) {
 	const resource = resources.find(
 		(item) => item?.kind === "custom-monster" && (!ids || ids.has(item.id)),
 	);
-	return resource?.after?.name || resource?.before?.name || resource?.name || null;
+	return (
+		resource?.after?.name || resource?.before?.name || resource?.name || null
+	);
 }
 
 function getMonsterTokenImageUrl(monster) {
 	if (!monster) return "";
 	if (monster.imageUrl) return monster.imageUrl;
 	const source = String(monster.source || "").trim();
-	const name = String(monster.originalBestiaryName || monster.name || "").trim();
+	const name = String(
+		monster.originalBestiaryName || monster.name || "",
+	).trim();
 	if (!source || !name) return "";
 	return `/api/bestiary/tokens/${encodeURIComponent(source)}/${encodeURIComponent(name)}.webp`;
 }
@@ -136,12 +140,11 @@ function customMonsterListsEqual(left, right) {
 	return JSON.stringify(left || []) === JSON.stringify(right || []);
 }
 
-export default function Bestiary({
-	onAddMonster,
-	isEmbedded = false,
-}) {
+export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	const dispatch = useAppDispatch();
-	const currentLanguage = useAppSelector((state) => state.localization.language);
+	const currentLanguage = useAppSelector(
+		(state) => state.localization.language,
+	);
 	const [sources, setSources] = useState([]);
 	const [selectedSource, setSelectedSource] = useState("all");
 	const [allMonsters, setAllMonsters] = useState([]);
@@ -376,7 +379,10 @@ export default function Bestiary({
 				const customData = await api.getCustomBestiaryData();
 				const customList = Array.isArray(customData)
 					? customData
-					: customData.monster || customData.monsters || customData.results || [];
+					: customData.monster ||
+						customData.monsters ||
+						customData.results ||
+						[];
 				const enrichedCustomMonsters = customList.map((monster) => {
 					const groupRef = monster.legendaryGroup;
 					const targetName = groupRef?.name || monster.name;
@@ -469,7 +475,9 @@ export default function Bestiary({
 
 	const handleCustomBestiaryUpdate = (updated, options = {}) => {
 		const hasUpdatedCustomMonsters = Array.isArray(updated?.monsters);
-		const updatedCustomMonsters = hasUpdatedCustomMonsters ? updated.monsters : [];
+		const updatedCustomMonsters = hasUpdatedCustomMonsters
+			? updated.monsters
+			: [];
 		if (hasUpdatedCustomMonsters && options.trackUndo !== false) {
 			pushCustomUndo();
 		}
@@ -687,31 +695,32 @@ export default function Bestiary({
 
 	const saveAiDraftResponseChanges = async (resources) => {
 		if (!aiDraftResponseEntry?.id) return null;
-		const updatedEntry = await api.updateAiResponse("bestiary", aiDraftResponseEntry.id, {
-			resources: resources.map((resource) => {
-				const sourceResource = aiDraftResponseEntry.changes?.resources?.find(
-					(item) => item.id === resource.id,
-				);
-				const after = {
-					...(resource.after || {}),
-				};
-				if (
-					after &&
-					sourceResource?.after?.imageUrl &&
-					!after.imageUrl
-				) {
-					after.imageUrl = sourceResource.after.imageUrl;
-				}
-				if (
-					after &&
-					sourceResource?.after?.originalBestiaryName &&
-					!after.originalBestiaryName
-				) {
-					after.originalBestiaryName = sourceResource.after.originalBestiaryName;
-				}
-				return { ...resource, after };
-			}),
-		});
+		const updatedEntry = await api.updateAiResponse(
+			"bestiary",
+			aiDraftResponseEntry.id,
+			{
+				resources: resources.map((resource) => {
+					const sourceResource = aiDraftResponseEntry.changes?.resources?.find(
+						(item) => item.id === resource.id,
+					);
+					const after = {
+						...(resource.after || {}),
+					};
+					if (after && sourceResource?.after?.imageUrl && !after.imageUrl) {
+						after.imageUrl = sourceResource.after.imageUrl;
+					}
+					if (
+						after &&
+						sourceResource?.after?.originalBestiaryName &&
+						!after.originalBestiaryName
+					) {
+						after.originalBestiaryName =
+							sourceResource.after.originalBestiaryName;
+					}
+					return { ...resource, after };
+				}),
+			},
+		);
 		if (updatedEntry) {
 			setAiDraftResponseEntry(updatedEntry);
 		}
@@ -746,7 +755,10 @@ export default function Bestiary({
 					pushCustomUndoSnapshot(undoSnapshot);
 				}
 				handleCustomBestiaryUpdate(result.updated, {
-					selectedName: getFirstChangedMonsterName(nextEntry, options.resourceIds),
+					selectedName: getFirstChangedMonsterName(
+						nextEntry,
+						options.resourceIds,
+					),
 					trackUndo: false,
 				});
 			}
@@ -778,7 +790,7 @@ export default function Bestiary({
 		const confirmed = await dispatch(
 			confirm({
 				title: lang.t("Delete custom creature"),
-				message: lang.t("Delete custom creature \"{name}\"?", {
+				message: lang.t('Delete custom creature "{name}"?', {
 					name: monster.name,
 				}),
 			}),
@@ -803,9 +815,8 @@ export default function Bestiary({
 				current.filter(
 					(favorite) =>
 						!(
-							favorite.name === monster.name &&
-							isCustomSource(favorite.source)
-					),
+							favorite.name === monster.name && isCustomSource(favorite.source)
+						),
 				),
 			);
 		} catch (err) {
@@ -852,7 +863,9 @@ export default function Bestiary({
 			const undoSnapshot = cloneCustomMonsters(customMonsters);
 			const byName = new Map(
 				customMonsters.map((monster) => [
-					String(monster.name || "").trim().toLowerCase(),
+					String(monster.name || "")
+						.trim()
+						.toLowerCase(),
 					monster,
 				]),
 			);
@@ -909,8 +922,8 @@ export default function Bestiary({
 
 			// Шукаємо в поточному видимому списку для прокрутки; деталі можна
 			// показати й для монстра, який не підпадає під активний пошук.
-			const foundInList = displayedMonsters.findIndex(
-				(m) => monsterMatchesUrl(m, urlMonsterName, urlMonsterSource),
+			const foundInList = displayedMonsters.findIndex((m) =>
+				monsterMatchesUrl(m, urlMonsterName, urlMonsterSource),
 			);
 
 			const monster =
@@ -924,7 +937,9 @@ export default function Bestiary({
 				if (foundInList >= 0) {
 					setTimeout(() => listRef?.current?.scrollTo(foundInList), 0);
 				}
-			} else if (monsterMatchesUrl(currentMonster, urlMonsterName, urlMonsterSource)) {
+			} else if (
+				monsterMatchesUrl(currentMonster, urlMonsterName, urlMonsterSource)
+			) {
 				shouldAutoSelectMonsterRef.current = false;
 				setSelectedMonster("");
 			}

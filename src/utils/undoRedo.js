@@ -5,7 +5,11 @@ export function cloneHistorySnapshot(value) {
 	return JSON.parse(JSON.stringify(value));
 }
 
-export function addUndoSnapshot(undoStack, snapshot, clone = cloneHistorySnapshot) {
+export function addUndoSnapshot(
+	undoStack,
+	snapshot,
+	clone = cloneHistorySnapshot,
+) {
 	return [...(Array.isArray(undoStack) ? undoStack : []), clone(snapshot)];
 }
 

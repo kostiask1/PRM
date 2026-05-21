@@ -80,7 +80,9 @@ Use --delete-sources to remove merged source JSON files after all.json files are
 const SPELL_SOURCES_PATH = path.join(SPELLS_DIR, "sources.json");
 
 function normalizeSource(source) {
-	return String(source || "").trim().toUpperCase();
+	return String(source || "")
+		.trim()
+		.toUpperCase();
 }
 
 function getList(data, keys) {
@@ -274,7 +276,9 @@ async function main() {
 	let deletedCount = 0;
 	if (shouldDeleteSources) {
 		if (monsterCount === 0 || spellCount === 0) {
-			throw new Error("Refusing to delete source files because a bundle is empty.");
+			throw new Error(
+				"Refusing to delete source files because a bundle is empty.",
+			);
 		}
 
 		deletedCount += await deleteSourceFiles([

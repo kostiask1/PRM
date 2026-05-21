@@ -112,7 +112,10 @@ function createEmptyNote() {
 function appendTrailingEmptyNote(notes = []) {
 	const next = [...notes];
 	const last = next[next.length - 1];
-	if (next.length === 0 || (last && (last.text?.trim() || last.title?.trim()))) {
+	if (
+		next.length === 0 ||
+		(last && (last.text?.trim() || last.title?.trim()))
+	) {
 		next.push(createEmptyNote());
 	}
 	return next;
@@ -349,8 +352,14 @@ await run("campaign graph builds nodes and mention edges", () => {
 	assert.equal(nodeTypes.has("scene"), true);
 	assert.equal(nodeTypes.has("scene-note"), true);
 	assert.equal(nodeTypes.has("unresolved"), true);
-	assert.equal(graph.edges.some((edge) => edge.relation === "mentions"), true);
-	assert.equal(graph.edges.some((edge) => edge.relation === "related"), true);
+	assert.equal(
+		graph.edges.some((edge) => edge.relation === "mentions"),
+		true,
+	);
+	assert.equal(
+		graph.edges.some((edge) => edge.relation === "related"),
+		true,
+	);
 	assert.equal(
 		graph.edges.some(
 			(edge) =>
@@ -433,65 +442,80 @@ await run("campaign graph builds nodes and mention edges", () => {
 	);
 });
 
-await run("campaign state helpers sanitize entities and update mentions", () => {
-	assert.deepEqual(
-		sanitizeEntityForSave({ id: 1, name: "Hero", _draft: true }),
-		{ id: 1, name: "Hero" },
-	);
-	assert.deepEqual(
-		sanitizeEntityForSave({ id: 1, name: "Hero", _aiIgnored: true }),
-		{ id: 1, name: "Hero", _aiIgnored: true },
-	);
-	assert.deepEqual(sanitizeLoadedEntity({ name: "Hero", _tmp: "x" }), {
-		name: "Hero",
-	});
-	assert.equal(normalizeMentionName("  Old   Name "), "old name");
-	assert.equal(
-		replaceBracketedMentionNames(
-			"Meet [ old   name ] and [Other].",
-			"Old Name",
-			"New Name",
-		),
-		"Meet [New Name] and [Other].",
-	);
-	assert.deepEqual(
-		replaceMentionsInValue(
-			{ text: "[Old Name]", list: ["No", "[ old name ]"] },
-			"old name",
-			"New Name",
-		),
-		{ text: "[New Name]", list: ["No", "[New Name]"] },
-	);
-	assert.equal(
-		getCampaignCharacterDisplayName({ firstName: "Ім'я", lastName: "Прізвище" }),
-		"Ім'я Прізвище",
-	);
-	assert.equal(getCampaignCharacterDisplayName({ name: "NPC" }), "NPC");
-	assert.equal(getCampaignLocationDisplayName({ title: "Фракція" }), "Фракція");
+await run(
+	"campaign state helpers sanitize entities and update mentions",
+	() => {
+		assert.deepEqual(
+			sanitizeEntityForSave({ id: 1, name: "Hero", _draft: true }),
+			{ id: 1, name: "Hero" },
+		);
+		assert.deepEqual(
+			sanitizeEntityForSave({ id: 1, name: "Hero", _aiIgnored: true }),
+			{ id: 1, name: "Hero", _aiIgnored: true },
+		);
+		assert.deepEqual(sanitizeLoadedEntity({ name: "Hero", _tmp: "x" }), {
+			name: "Hero",
+		});
+		assert.equal(normalizeMentionName("  Old   Name "), "old name");
+		assert.equal(
+			replaceBracketedMentionNames(
+				"Meet [ old   name ] and [Other].",
+				"Old Name",
+				"New Name",
+			),
+			"Meet [New Name] and [Other].",
+		);
+		assert.deepEqual(
+			replaceMentionsInValue(
+				{ text: "[Old Name]", list: ["No", "[ old name ]"] },
+				"old name",
+				"New Name",
+			),
+			{ text: "[New Name]", list: ["No", "[New Name]"] },
+		);
+		assert.equal(
+			getCampaignCharacterDisplayName({
+				firstName: "Ім'я",
+				lastName: "Прізвище",
+			}),
+			"Ім'я Прізвище",
+		);
+		assert.equal(getCampaignCharacterDisplayName({ name: "NPC" }), "NPC");
+		assert.equal(
+			getCampaignLocationDisplayName({ title: "Фракція" }),
+			"Фракція",
+		);
 
-	const history = cloneHistoryList([{ name: "A", _virtual: true }]);
-	assert.deepEqual(history, [{ name: "A" }]);
-	history[0].name = "Changed";
-	assert.deepEqual(cloneHistoryList([{ name: "A" }]), [{ name: "A" }]);
-	assert.equal(areHistoryStatesEqual([{ a: 1 }], [{ a: 1 }]), true);
-	assert.deepEqual(
-		campaignHistoryPayload({
-			description: "Story",
-			notes: [
-				{ id: 1, title: "", text: "", collapsed: false },
-				{ id: 2, title: "Plan", text: "", collapsed: false, _isVirtual: true },
-			],
-			completed: 1,
-			completedAt: "2026-05-08",
-		}),
-		{
-			description: "Story",
-			notes: [{ id: 2, title: "Plan", text: "", collapsed: false }],
-			completed: true,
-			completedAt: "2026-05-08",
-		},
-	);
-});
+		const history = cloneHistoryList([{ name: "A", _virtual: true }]);
+		assert.deepEqual(history, [{ name: "A" }]);
+		history[0].name = "Changed";
+		assert.deepEqual(cloneHistoryList([{ name: "A" }]), [{ name: "A" }]);
+		assert.equal(areHistoryStatesEqual([{ a: 1 }], [{ a: 1 }]), true);
+		assert.deepEqual(
+			campaignHistoryPayload({
+				description: "Story",
+				notes: [
+					{ id: 1, title: "", text: "", collapsed: false },
+					{
+						id: 2,
+						title: "Plan",
+						text: "",
+						collapsed: false,
+						_isVirtual: true,
+					},
+				],
+				completed: 1,
+				completedAt: "2026-05-08",
+			}),
+			{
+				description: "Story",
+				notes: [{ id: 2, title: "Plan", text: "", collapsed: false }],
+				completed: true,
+				completedAt: "2026-05-08",
+			},
+		);
+	},
+);
 
 await run("AI patch helpers preserve numeric ids and ignored notes", () => {
 	const mergedNotes = aiPatchService.mergeAiIgnoredNotes(
@@ -554,10 +578,7 @@ await run("AI JSON fence cleanup preserves inner markdown fences", () => {
 		"```",
 	].join("\n");
 	const cleaned = aiService.__test.stripOuterJsonFence(raw);
-	assert.equal(
-		cleaned,
-		'{"notes":[{"text":"```js\\nconst x = 1;\\n```"}]}',
-	);
+	assert.equal(cleaned, '{"notes":[{"text":"```js\\nconst x = 1;\\n```"}]}');
 	assert.deepEqual(JSON.parse(cleaned), {
 		notes: [{ text: "```js\nconst x = 1;\n```" }],
 	});
@@ -611,46 +632,60 @@ await run("AI history service builds stable request snapshots", () => {
 	assert.equal(snapshot.contextSummary, "context: off");
 });
 
-await run("AI history service builds per-monster custom bestiary changes", () => {
-	const resources = aiResponseHistoryService.buildCustomMonsterChangeResources(
-		[
-			{ id: "old-id", name: "Old Beast", source: "CUSTOM", cr: "1" },
-			{ id: "changed-id", name: "Changed Beast", source: "CUSTOM", cr: "2" },
-		],
-		[
-			{ id: "changed-id", name: "Renamed Beast", source: "CUSTOM", cr: "3" },
-			{ id: "new-id", name: "New Beast", source: "CUSTOM", cr: "4" },
-		],
-	);
-	assert.deepEqual(
-		resources.map((resource) => ({
-			id: resource.id,
-			kind: resource.kind,
-			before: resource.before?.name || null,
-			after: resource.after?.name || null,
-		})),
-		[
-			{
-				id: "custom-monster:new-id",
-				kind: "custom-monster",
-				before: null,
-				after: "New Beast",
-			},
-			{
-				id: "custom-monster:old-id",
-				kind: "custom-monster",
-				before: "Old Beast",
-				after: null,
-			},
-			{
-				id: "custom-monster:changed-id",
-				kind: "custom-monster",
-				before: "Changed Beast",
-				after: "Renamed Beast",
-			},
-		],
-	);
-});
+await run(
+	"AI history service builds per-monster custom bestiary changes",
+	() => {
+		const resources =
+			aiResponseHistoryService.buildCustomMonsterChangeResources(
+				[
+					{ id: "old-id", name: "Old Beast", source: "CUSTOM", cr: "1" },
+					{
+						id: "changed-id",
+						name: "Changed Beast",
+						source: "CUSTOM",
+						cr: "2",
+					},
+				],
+				[
+					{
+						id: "changed-id",
+						name: "Renamed Beast",
+						source: "CUSTOM",
+						cr: "3",
+					},
+					{ id: "new-id", name: "New Beast", source: "CUSTOM", cr: "4" },
+				],
+			);
+		assert.deepEqual(
+			resources.map((resource) => ({
+				id: resource.id,
+				kind: resource.kind,
+				before: resource.before?.name || null,
+				after: resource.after?.name || null,
+			})),
+			[
+				{
+					id: "custom-monster:new-id",
+					kind: "custom-monster",
+					before: null,
+					after: "New Beast",
+				},
+				{
+					id: "custom-monster:old-id",
+					kind: "custom-monster",
+					before: "Old Beast",
+					after: null,
+				},
+				{
+					id: "custom-monster:changed-id",
+					kind: "custom-monster",
+					before: "Changed Beast",
+					after: "Renamed Beast",
+				},
+			],
+		);
+	},
+);
 
 await run("AI mention processing preserves existing entity links", () => {
 	const { processGeneratedTextMentions } = aiRouter.__test;
@@ -682,9 +717,8 @@ await run("SessionViewModel encounter lookup", () => {
 await run("CharacterCardModel derives fields and maintains notes", async () => {
 	let CharacterCardModel;
 	try {
-		({ default: CharacterCardModel } = await import(
-			"../src/models/CharacterCardModel.js"
-		));
+		({ default: CharacterCardModel } =
+			await import("../src/models/CharacterCardModel.js"));
 	} catch (error) {
 		if (
 			error?.code === "ERR_MODULE_NOT_FOUND" ||
@@ -717,31 +751,36 @@ await run("CharacterCardModel derives fields and maintains notes", async () => {
 	assert.equal(model.withDeletedNote(noteId).length, 1);
 });
 
-await run("LocationCardModel derives display data and preserves note slot", () => {
-	const model = new LocationCardModel({
-		id: "loc-1",
-		name: "Місто",
-		description:
-			"Дуже довгий опис локації, який має бути скорочений для компактного відображення в картці без втрати стабільності моделі та коректного вигляду в інтерфейсі.",
-		notes: [],
-		imageUrl: "/image.png",
-	});
+await run(
+	"LocationCardModel derives display data and preserves note slot",
+	() => {
+		const model = new LocationCardModel({
+			id: "loc-1",
+			name: "Місто",
+			description:
+				"Дуже довгий опис локації, який має бути скорочений для компактного відображення в картці без втрати стабільності моделі та коректного вигляду в інтерфейсі.",
+			notes: [],
+			imageUrl: "/image.png",
+		});
 
-	assert.equal(model.displayName, "Місто");
-	assert.match(model.briefMeta, /\.\.\.$/);
-	assert.equal(model.notes.length, 1);
-	assert.equal(model.hasImage, true);
-	assert.equal(model.withField("name", "Новий").name, "Новий");
+		assert.equal(model.displayName, "Місто");
+		assert.match(model.briefMeta, /\.\.\.$/);
+		assert.equal(model.notes.length, 1);
+		assert.equal(model.hasImage, true);
+		assert.equal(model.withField("name", "Новий").name, "Новий");
 
-	const notedModel = new LocationCardModel({
-		notes: [{ id: "n1", title: "", text: "", collapsed: false }],
-	});
-	assert.ok(
-		notedModel.withUpdatedNote("n1", { text: "Text" }).some((n) => n.text === "Text"),
-	);
-	assert.equal(notedModel.withDeletedNote("n1").length, 1);
-	assert.equal(notedModel.toggleNoteCollapse("n1")[0].collapsed, true);
-});
+		const notedModel = new LocationCardModel({
+			notes: [{ id: "n1", title: "", text: "", collapsed: false }],
+		});
+		assert.ok(
+			notedModel
+				.withUpdatedNote("n1", { text: "Text" })
+				.some((n) => n.text === "Text"),
+		);
+		assert.equal(notedModel.withDeletedNote("n1").length, 1);
+		assert.equal(notedModel.toggleNoteCollapse("n1")[0].collapsed, true);
+	},
+);
 
 await run("MonsterStatBlockModel formats combat data", () => {
 	const model = new MonsterStatBlockModel({
@@ -803,7 +842,10 @@ await run("content tokens parse hit and recharge tags safely", () => {
 	const recharge = extractContentTokens("(Recharge 5-6) Breath.");
 	assert.equal(recharge.length, 1);
 	assert.equal(recharge[0].recharge, "(Recharge 5-6)");
-	assert.equal(recharge.some((token) => token.hit === "-6"), false);
+	assert.equal(
+		recharge.some((token) => token.hit === "-6"),
+		false,
+	);
 });
 
 await run("undo redo helpers move snapshots between stacks", () => {
@@ -933,128 +975,151 @@ await run("storage core helpers sanitize and build identifiers", () => {
 	);
 });
 
-await run("storage writes JSON atomically and normalizes custom monsters", async () => {
-	const atomicPath = path.join(storage.CAMPAIGNS_DIR, `${TEST_PREFIX}-atomic.json`);
-	try {
-		await storage.writeJson(atomicPath, { title: "Проба", count: 1 });
-		assert.deepEqual(await storage.readJson(atomicPath), {
-			title: "Проба",
-			count: 1,
-		});
+await run(
+	"storage writes JSON atomically and normalizes custom monsters",
+	async () => {
+		const atomicPath = path.join(
+			storage.CAMPAIGNS_DIR,
+			`${TEST_PREFIX}-atomic.json`,
+		);
+		try {
+			await storage.writeJson(atomicPath, { title: "Проба", count: 1 });
+			assert.deepEqual(await storage.readJson(atomicPath), {
+				title: "Проба",
+				count: 1,
+			});
 
-		const normalized = storage.normalizeCustomBestiaryMonster({
-			name: "[Glass Knight]",
-			source: "OTHER",
-			hp: { formula: "3d8 + 6", average: 1 },
-			spellcasting: {
-				name: "Spellcasting",
-				spells: { "1": ["{@spell Shield|XPHB}"] },
-			},
-			action: ["{@atk mw} {@hit 6} to hit."],
-		});
-		assert.equal(normalized.name, "Glass Knight");
-		assert.equal(typeof normalized.id, "string");
-		assert.ok(normalized.id.length > 0);
-		assert.equal(normalized.source, "CUSTOM");
-		assert.equal(normalized.hp.average, 19);
-		assert.equal(Array.isArray(normalized.spellcasting), true);
-		assert.deepEqual(normalized.action[0], {
-			name: "",
-			entries: ["{@atk mw} {@hit 6} to hit."],
-		});
-	} finally {
-		await fs.rm(atomicPath, { force: true });
-	}
-});
+			const normalized = storage.normalizeCustomBestiaryMonster({
+				name: "[Glass Knight]",
+				source: "OTHER",
+				hp: { formula: "3d8 + 6", average: 1 },
+				spellcasting: {
+					name: "Spellcasting",
+					spells: { 1: ["{@spell Shield|XPHB}"] },
+				},
+				action: ["{@atk mw} {@hit 6} to hit."],
+			});
+			assert.equal(normalized.name, "Glass Knight");
+			assert.equal(typeof normalized.id, "string");
+			assert.ok(normalized.id.length > 0);
+			assert.equal(normalized.source, "CUSTOM");
+			assert.equal(normalized.hp.average, 19);
+			assert.equal(Array.isArray(normalized.spellcasting), true);
+			assert.deepEqual(normalized.action[0], {
+				name: "",
+				entries: ["{@atk mw} {@hit 6} to hit."],
+			});
+		} finally {
+			await fs.rm(atomicPath, { force: true });
+		}
+	},
+);
 
-await run("encounter monster helpers use special HP and detect formulas", () => {
-	assert.equal(
-		getMonsterBaseHp({
-			hp: { special: "80" },
-		}),
-		80,
-	);
-	assert.equal(
-		createEncounterMonsterInstance({
-			name: "Special HP Monster",
-			hp: { special: "80" },
-		}).hit_points,
-		80,
-	);
-	assert.equal(hasMonsterHpFormula({ hp: { special: "80" } }), false);
-	assert.equal(hasMonsterHpFormula({ hp: { formula: "12d8+24" } }), true);
-	assert.equal(hasMonsterHpFormula({ hit_dice: "4d10+8" }), true);
-});
-
-await run("storage moveEntity transfers characters and preserves data", async () => {
-	await withTestSlug("move-entity", async (slug) => {
-		await storage.writeEntity(slug, "characters", "hero", {
-			id: "hero-id",
-			firstName: "Hero",
-			lastName: "One",
-			notes: [{ id: 1, title: "N", text: "T" }],
-		});
-
-		const moved = await storage.moveEntity(slug, "characters", "hero", "npc");
-
-		assert.equal(moved.slug, "hero");
-		assert.equal(moved.id, "hero-id");
-		assert.equal(moved.firstName, "Hero");
+await run(
+	"encounter monster helpers use special HP and detect formulas",
+	() => {
 		assert.equal(
-			await storage.exists(path.join(storage.campaignDir(slug), "characters", "hero")),
-			false,
+			getMonsterBaseHp({
+				hp: { special: "80" },
+			}),
+			80,
 		);
 		assert.equal(
-			await storage.exists(path.join(storage.campaignDir(slug), "npc", "hero")),
-			true,
+			createEncounterMonsterInstance({
+				name: "Special HP Monster",
+				hp: { special: "80" },
+			}).hit_points,
+			80,
 		);
+		assert.equal(hasMonsterHpFormula({ hp: { special: "80" } }), false);
+		assert.equal(hasMonsterHpFormula({ hp: { formula: "12d8+24" } }), true);
+		assert.equal(hasMonsterHpFormula({ hit_dice: "4d10+8" }), true);
+	},
+);
 
-		const npcs = await storage.listEntities(slug, "npc");
-		assert.equal(npcs.length, 1);
-		assert.equal(npcs[0].notes[0].text, "T");
-	});
-});
+await run(
+	"storage moveEntity transfers characters and preserves data",
+	async () => {
+		await withTestSlug("move-entity", async (slug) => {
+			await storage.writeEntity(slug, "characters", "hero", {
+				id: "hero-id",
+				firstName: "Hero",
+				lastName: "One",
+				notes: [{ id: 1, title: "N", text: "T" }],
+			});
 
-await run("storage updates bracketed entity mentions after rename", async () => {
-	await withTestSlug("rename-mentions", async (slug) => {
-		await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
-		await storage.writeJson(storage.campaignMetaPath(slug), {
-			id: "campaign-id",
-			name: "Mentions",
-			description: "Meet [Old Name] in the city.",
+			const moved = await storage.moveEntity(slug, "characters", "hero", "npc");
+
+			assert.equal(moved.slug, "hero");
+			assert.equal(moved.id, "hero-id");
+			assert.equal(moved.firstName, "Hero");
+			assert.equal(
+				await storage.exists(
+					path.join(storage.campaignDir(slug), "characters", "hero"),
+				),
+				false,
+			);
+			assert.equal(
+				await storage.exists(
+					path.join(storage.campaignDir(slug), "npc", "hero"),
+				),
+				true,
+			);
+
+			const npcs = await storage.listEntities(slug, "npc");
+			assert.equal(npcs.length, 1);
+			assert.equal(npcs[0].notes[0].text, "T");
 		});
-		await storage.writeEntity(slug, "characters", "hero", {
-			id: "hero-id",
-			firstName: "New",
-			lastName: "Name",
-			motivation: "Formerly [Old Name].",
-		});
-		await storage.writeEntity(slug, "locations", "city", {
-			id: "city-id",
-			name: "City",
-			description: "Rumors mention [ old   name ].",
-		});
-		await storage.writeJson(storage.sessionPath(slug, "session.json"), {
-			id: "session-id",
-			name: "Session",
-			data: {
-				scenes: [{ summary: "[Old Name] arrives." }],
-			},
-		});
+	},
+);
 
-		await storage.updateCampaignMentionReferences(slug, "Old Name", "New Name");
+await run(
+	"storage updates bracketed entity mentions after rename",
+	async () => {
+		await withTestSlug("rename-mentions", async (slug) => {
+			await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
+			await storage.writeJson(storage.campaignMetaPath(slug), {
+				id: "campaign-id",
+				name: "Mentions",
+				description: "Meet [Old Name] in the city.",
+			});
+			await storage.writeEntity(slug, "characters", "hero", {
+				id: "hero-id",
+				firstName: "New",
+				lastName: "Name",
+				motivation: "Formerly [Old Name].",
+			});
+			await storage.writeEntity(slug, "locations", "city", {
+				id: "city-id",
+				name: "City",
+				description: "Rumors mention [ old   name ].",
+			});
+			await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+				id: "session-id",
+				name: "Session",
+				data: {
+					scenes: [{ summary: "[Old Name] arrives." }],
+				},
+			});
 
-		const meta = await storage.readCampaign(slug);
-		const characters = await storage.listEntities(slug, "characters");
-		const locations = await storage.listEntities(slug, "locations");
-		const session = await storage.readSession(slug, "session.json");
+			await storage.updateCampaignMentionReferences(
+				slug,
+				"Old Name",
+				"New Name",
+			);
 
-		assert.equal(meta.description, "Meet [New Name] in the city.");
-		assert.equal(characters[0].motivation, "Formerly [New Name].");
-		assert.equal(locations[0].description, "Rumors mention [New Name].");
-		assert.equal(session.data.scenes[0].summary, "[New Name] arrives.");
-	});
-});
+			const meta = await storage.readCampaign(slug);
+			const characters = await storage.listEntities(slug, "characters");
+			const locations = await storage.listEntities(slug, "locations");
+			const session = await storage.readSession(slug, "session.json");
+
+			assert.equal(meta.description, "Meet [New Name] in the city.");
+			assert.equal(characters[0].motivation, "Formerly [New Name].");
+			assert.equal(locations[0].description, "Rumors mention [New Name].");
+			assert.equal(session.data.scenes[0].summary, "[New Name] arrives.");
+		});
+	},
+);
 
 await run("AI patch service applies targeted session operations", async () => {
 	await withTestSlug("ai-patch-session", async (slug) => {
@@ -1187,151 +1252,176 @@ await run("classNames merges strings arrays objects and falsy values", () => {
 	assert.equal(classNames(null, false, 0, "", { test: 1, hidden: 0 }), "test");
 });
 
-await run("image gallery categories expose stable ids and protected folders", () => {
-	const ids = IMAGE_GALLERY_CATEGORIES.map((category) => category.id);
-	assert.deepEqual(ids, [
-		"maps",
-		"scenes",
-		"tokens",
-		"characters",
-		"props",
-		"notes",
-		"attachments",
-	]);
-	assert.equal(new Set(ids).size, ids.length);
-	assert.deepEqual(
-		IMAGE_GALLERY_CATEGORIES.find((category) => category.id === "tokens")?.subs,
-		["npc", "players"],
-	);
-	assert.deepEqual(
-		IMAGE_GALLERY_CATEGORIES.find((category) => category.id === "characters")
-			?.subs,
-		["npc", "players"],
-	);
-});
-
-await run("entity service resolves campaign entities by display names", async () => {
-	const entities = [
-		{
-			type: "characters",
-			entity: { firstName: "Hero", lastName: "One" },
-		},
-		{
-			type: "locations",
-			entity: { name: "Old Town" },
-		},
-	];
-	assert.equal(findEntityByName(entities, "hero")?.type, "characters");
-	assert.equal(findEntityByName(entities, "One")?.type, "characters");
-	assert.equal(findEntityByName(entities, "hero one")?.type, "characters");
-	assert.equal(findEntityByName(entities, "old town")?.type, "locations");
-	assert.equal(findEntityByName(entities, "")?.type, undefined);
-	assert.equal(
-		getEntityDisplayName({ firstName: "Ім'я", lastName: "Прізвище" }, "npc"),
-		"Ім'я Прізвище",
-	);
-	assert.equal(
-		getEntityDisplayName({ name: "Локація" }, "locations"),
-		"Локація",
-	);
-	assert.equal(await resolveEntityByName("", "Hero"), null);
-
-	const originalGetEntities = api.getEntities;
-	const calls = [];
-	api.getEntities = async (slug, type) => {
-		calls.push([slug, type]);
-		if (type === "characters") {
-			return [{ firstName: "Hero", lastName: "One" }];
-		}
-		if (type === "npc") {
-			throw new Error("npc list unavailable");
-		}
-		return [{ name: "Old Town" }];
-	};
-
-	try {
-		const character = await resolveEntityByName("camp", "hero one");
-		assert.equal(character?.type, "characters");
-		assert.equal(character?.entity.firstName, "Hero");
-
-		const location = await resolveEntityByName("camp", "old town");
-		assert.equal(location?.type, "locations");
-		assert.deepEqual(calls.map(([, type]) => type).slice(0, 3), [
+await run(
+	"image gallery categories expose stable ids and protected folders",
+	() => {
+		const ids = IMAGE_GALLERY_CATEGORIES.map((category) => category.id);
+		assert.deepEqual(ids, [
+			"maps",
+			"scenes",
+			"tokens",
 			"characters",
-			"npc",
-			"locations",
+			"props",
+			"notes",
+			"attachments",
 		]);
-	} finally {
-		api.getEntities = originalGetEntities;
-	}
-});
+		assert.equal(new Set(ids).size, ids.length);
+		assert.deepEqual(
+			IMAGE_GALLERY_CATEGORIES.find((category) => category.id === "tokens")
+				?.subs,
+			["npc", "players"],
+		);
+		assert.deepEqual(
+			IMAGE_GALLERY_CATEGORIES.find((category) => category.id === "characters")
+				?.subs,
+			["npc", "players"],
+		);
+	},
+);
 
-await run("EditableField, Tooltip, and ProjectGuide keep tooltip behavior", async () => {
-	const editableFieldSource = await fs.readFile(
-		"src/components/form/EditableField.jsx",
-		"utf8",
-	);
-	const projectGuideSource = await fs.readFile(
-		"src/components/ProjectGuide.jsx",
-		"utf8",
-	);
-	const mainContentSource = await fs.readFile(
-		"src/components/MainContent.jsx",
-		"utf8",
-	);
-	const tooltipSource = await fs.readFile(
-		"src/components/common/Tooltip.jsx",
-		"utf8",
-	);
-	const editableFieldCss = await fs.readFile(
-		"src/assets/components/EditableField.css",
-		"utf8",
-	);
-	const mainContentCss = await fs.readFile(
-		"src/assets/components/MainContent.css",
-		"utf8",
-	);
-	const uk = JSON.parse(await fs.readFile("src/langs/uk.json", "utf8"));
+await run(
+	"entity service resolves campaign entities by display names",
+	async () => {
+		const entities = [
+			{
+				type: "characters",
+				entity: { firstName: "Hero", lastName: "One" },
+			},
+			{
+				type: "locations",
+				entity: { name: "Old Town" },
+			},
+		];
+		assert.equal(findEntityByName(entities, "hero")?.type, "characters");
+		assert.equal(findEntityByName(entities, "One")?.type, "characters");
+		assert.equal(findEntityByName(entities, "hero one")?.type, "characters");
+		assert.equal(findEntityByName(entities, "old town")?.type, "locations");
+		assert.equal(findEntityByName(entities, "")?.type, undefined);
+		assert.equal(
+			getEntityDisplayName({ firstName: "Ім'я", lastName: "Прізвище" }, "npc"),
+			"Ім'я Прізвище",
+		);
+		assert.equal(
+			getEntityDisplayName({ name: "Локація" }, "locations"),
+			"Локація",
+		);
+		assert.equal(await resolveEntityByName("", "Hero"), null);
 
-	assert.match(editableFieldSource, /import Tooltip from "\.\.\/common\/Tooltip"/);
-	assert.equal(editableFieldSource.includes("HotkeysTooltipContent"), false);
-	assert.equal(editableFieldSource.includes("Ctrl+B — Bold"), false);
-	assert.match(mainContentSource, /import ProjectGuide from "\.\/ProjectGuide"/);
-	assert.match(mainContentSource, /<ProjectGuide \/>/);
-	assert.match(projectGuideSource, /const HOTKEYS = \[/);
-	assert.match(projectGuideSource, /className="ProjectGuide__hotkeys"/);
-	for (const key of [
-		"Hotkeys:",
-		"Ctrl+K — Add character/NPC/location link",
-		"Ctrl+B — Bold",
-		"Ctrl+I — Italic",
-		"Ctrl+] — List",
-		"Ctrl+[ — Remove list",
-		"Ctrl+1-6 — Headings",
-		"Ctrl+Q — Quote",
-		"Ctrl+click to open entity",
-	]) {
-		assert.equal(typeof uk[key], "string", `${key} is translated`);
-	}
+		const originalGetEntities = api.getEntities;
+		const calls = [];
+		api.getEntities = async (slug, type) => {
+			calls.push([slug, type]);
+			if (type === "characters") {
+				return [{ firstName: "Hero", lastName: "One" }];
+			}
+			if (type === "npc") {
+				throw new Error("npc list unavailable");
+			}
+			return [{ name: "Old Town" }];
+		};
 
-	assert.match(editableFieldSource, /data-mention-tooltip/);
-	assert.match(editableFieldSource, /onMouseMove=\{handleMouseMove\}/);
-	assert.match(editableFieldSource, /anchorElement=\{tooltipAnchor\}/);
-	assert.equal(editableFieldSource.includes("replace(/\\n{3,}/g"), false);
-	assert.match(editableFieldSource, /paragraph\.push\(""\)/);
-	assert.match(editableFieldSource, /normalized\.endsWith\("\\n"\)/);
-	assert.equal(editableFieldSource.includes("mention.title ="), false);
-	assert.equal(editableFieldSource.includes("title={typeof title"), false);
-	assert.equal(editableFieldCss.includes(".EditableField__mention:hover::after"), false);
-	assert.equal(editableFieldCss.includes(".EditableField__hotkeysTooltip"), false);
-	assert.match(mainContentCss, /\.ProjectGuide__hotkeys/);
+		try {
+			const character = await resolveEntityByName("camp", "hero one");
+			assert.equal(character?.type, "characters");
+			assert.equal(character?.entity.firstName, "Hero");
 
-	assert.match(tooltipSource, /anchorElement = null/);
-	assert.match(tooltipSource, /anchorElement \|\| triggerRef\.current/);
-	assert.match(tooltipSource, /const tooltipId = tooltipIdRef\.current/);
-	assert.match(tooltipSource, /triggerActiveRef/);
-	assert.match(tooltipSource, /!triggerActiveRef\.current \|\| isOpen \|\| disabled \|\| !hasContent/);
-});
+			const location = await resolveEntityByName("camp", "old town");
+			assert.equal(location?.type, "locations");
+			assert.deepEqual(calls.map(([, type]) => type).slice(0, 3), [
+				"characters",
+				"npc",
+				"locations",
+			]);
+		} finally {
+			api.getEntities = originalGetEntities;
+		}
+	},
+);
+
+await run(
+	"EditableField, Tooltip, and ProjectGuide keep tooltip behavior",
+	async () => {
+		const editableFieldSource = await fs.readFile(
+			"src/components/form/EditableField.jsx",
+			"utf8",
+		);
+		const projectGuideSource = await fs.readFile(
+			"src/components/ProjectGuide.jsx",
+			"utf8",
+		);
+		const mainContentSource = await fs.readFile(
+			"src/components/MainContent.jsx",
+			"utf8",
+		);
+		const tooltipSource = await fs.readFile(
+			"src/components/common/Tooltip.jsx",
+			"utf8",
+		);
+		const editableFieldCss = await fs.readFile(
+			"src/assets/components/EditableField.css",
+			"utf8",
+		);
+		const mainContentCss = await fs.readFile(
+			"src/assets/components/MainContent.css",
+			"utf8",
+		);
+		const uk = JSON.parse(await fs.readFile("src/langs/uk.json", "utf8"));
+
+		assert.match(
+			editableFieldSource,
+			/import Tooltip from "\.\.\/common\/Tooltip"/,
+		);
+		assert.equal(editableFieldSource.includes("HotkeysTooltipContent"), false);
+		assert.equal(editableFieldSource.includes("Ctrl+B — Bold"), false);
+		assert.match(
+			mainContentSource,
+			/import ProjectGuide from "\.\/ProjectGuide"/,
+		);
+		assert.match(mainContentSource, /<ProjectGuide \/>/);
+		assert.match(projectGuideSource, /const HOTKEYS = \[/);
+		assert.match(projectGuideSource, /className="ProjectGuide__hotkeys"/);
+		for (const key of [
+			"Hotkeys:",
+			"Ctrl+K — Add character/NPC/location link",
+			"Ctrl+B — Bold",
+			"Ctrl+I — Italic",
+			"Ctrl+] — List",
+			"Ctrl+[ — Remove list",
+			"Ctrl+1-6 — Headings",
+			"Ctrl+Q — Quote",
+			"Ctrl+click to open entity",
+		]) {
+			assert.equal(typeof uk[key], "string", `${key} is translated`);
+		}
+
+		assert.match(editableFieldSource, /data-mention-tooltip/);
+		assert.match(editableFieldSource, /onMouseMove=\{handleMouseMove\}/);
+		assert.match(editableFieldSource, /anchorElement=\{tooltipAnchor\}/);
+		assert.equal(editableFieldSource.includes("replace(/\\n{3,}/g"), false);
+		assert.match(editableFieldSource, /paragraph\.push\(""\)/);
+		assert.match(editableFieldSource, /normalized\.endsWith\("\\n"\)/);
+		assert.equal(editableFieldSource.includes("mention.title ="), false);
+		assert.equal(editableFieldSource.includes("title={typeof title"), false);
+		assert.equal(
+			editableFieldCss.includes(".EditableField__mention:hover::after"),
+			false,
+		);
+		assert.equal(
+			editableFieldCss.includes(".EditableField__hotkeysTooltip"),
+			false,
+		);
+		assert.match(mainContentCss, /\.ProjectGuide__hotkeys/);
+
+		assert.match(tooltipSource, /anchorElement = null/);
+		assert.match(tooltipSource, /anchorElement \|\| triggerRef\.current/);
+		assert.match(tooltipSource, /const tooltipId = tooltipIdRef\.current/);
+		assert.match(tooltipSource, /triggerActiveRef/);
+		assert.match(
+			tooltipSource,
+			/!triggerActiveRef\.current \|\| isOpen \|\| disabled \|\| !hasContent/,
+		);
+	},
+);
 
 await run("bestiary search helpers match by name, type and tags", () => {
 	const dragon = {
@@ -1517,8 +1607,12 @@ await run(
 			assert.equal(diseaseCalls, 1);
 			assert.equal((await resolveDiseaseInput("Sight Rot")).name, "Sight Rot");
 			assert.equal(
-				(await resolveDiseaseInput({ name: "Manual Disease", entries: ["text"] }))
-					.name,
+				(
+					await resolveDiseaseInput({
+						name: "Manual Disease",
+						entries: ["text"],
+					})
+				).name,
 				"Manual Disease",
 			);
 			assert.equal(await resolveDiseaseInput({ foo: "bar" }), null);
@@ -1533,8 +1627,12 @@ await run(
 				"Advantage",
 			);
 			assert.equal(
-				(await resolveVariantRuleInput({ name: "Manual Rule", entries: ["text"] }))
-					.name,
+				(
+					await resolveVariantRuleInput({
+						name: "Manual Rule",
+						entries: ["text"],
+					})
+				).name,
 				"Manual Rule",
 			);
 			assert.equal(await resolveVariantRuleInput({ foo: "bar" }), null);
@@ -1549,7 +1647,10 @@ await run(
 			);
 			assert.equal(await resolveSkillInput({ foo: "bar" }), null);
 
-			assert.equal((await getSenseByName(" darkvision|XPHB ")).name, "Darkvision");
+			assert.equal(
+				(await getSenseByName(" darkvision|XPHB ")).name,
+				"Darkvision",
+			);
 			assert.equal(senseCalls, 1);
 			assert.equal((await resolveSenseInput("Truesight")).name, "Truesight");
 			assert.equal(
@@ -1632,7 +1733,9 @@ await run(
 await run("spells diseases route returns deduped disease list", async () => {
 	const originalExists = storage.exists;
 	const originalReadJson = storage.readJson;
-	const layer = spellsRouter.stack.find((item) => item.route?.path === "/diseases");
+	const layer = spellsRouter.stack.find(
+		(item) => item.route?.path === "/diseases",
+	);
 	assert.ok(layer);
 	const handler = layer.route.stack[0].handle;
 
@@ -1724,7 +1827,9 @@ await run("spells variant rules route returns rule list", async () => {
 await run("spells skills route returns skill list", async () => {
 	const originalExists = storage.exists;
 	const originalReadJson = storage.readJson;
-	const layer = spellsRouter.stack.find((item) => item.route?.path === "/skills");
+	const layer = spellsRouter.stack.find(
+		(item) => item.route?.path === "/skills",
+	);
 	assert.ok(layer);
 	const handler = layer.route.stack[0].handle;
 
@@ -1768,7 +1873,9 @@ await run("spells skills route returns skill list", async () => {
 await run("spells senses route returns sense list", async () => {
 	const originalExists = storage.exists;
 	const originalReadJson = storage.readJson;
-	const layer = spellsRouter.stack.find((item) => item.route?.path === "/senses");
+	const layer = spellsRouter.stack.find(
+		(item) => item.route?.path === "/senses",
+	);
 	assert.ok(layer);
 	const handler = layer.route.stack[0].handle;
 

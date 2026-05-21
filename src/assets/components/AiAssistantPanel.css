@@ -406,7 +406,7 @@
 	background: var(--panel);
 }
 
-.AiAssistant__preview_resource + .AiAssistant__preview_resource {
+.AiAssistant__preview_resource+.AiAssistant__preview_resource {
 	border-top: 1px solid var(--border);
 }
 
@@ -481,7 +481,7 @@
 	padding: 0;
 }
 
-.AiAssistant__preview_field + .AiAssistant__preview_field {
+.AiAssistant__preview_field+.AiAssistant__preview_field {
 	border-top: 1px solid color-mix(in srgb, var(--border), transparent 30%);
 }
 
@@ -640,7 +640,7 @@
 	color: var(--text-bright);
 }
 
-.AiAssistant__diff_file + .AiAssistant__diff_file {
+.AiAssistant__diff_file+.AiAssistant__diff_file {
 	border-top: 1px solid var(--border);
 }
 
@@ -787,15 +787,15 @@
 	font-weight: 700;
 }
 
-.AiAssistant__draft_resource_header > span:first-child {
+.AiAssistant__draft_resource_header>span:first-child {
 	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
 
-.AiAssistant__draft_resource_header > span:last-child,
-.AiAssistant__draft_resource_header > .AiAssistant__preview_resource_actions {
+.AiAssistant__draft_resource_header>span:last-child,
+.AiAssistant__draft_resource_header>.AiAssistant__preview_resource_actions {
 	flex: 0 0 auto;
 	color: var(--muted);
 	font-weight: 600;
@@ -862,13 +862,13 @@
 	}
 }
 
-.AiAssistant__prompt_result > :first-child,
-.AiAssistant__prompt_result > div > :first-child {
+.AiAssistant__prompt_result> :first-child,
+.AiAssistant__prompt_result>div> :first-child {
 	margin-top: 0;
 }
 
-.AiAssistant__prompt_result > :last-child,
-.AiAssistant__prompt_result > div > :last-child {
+.AiAssistant__prompt_result> :last-child,
+.AiAssistant__prompt_result>div> :last-child {
 	margin-bottom: 0;
 }
 

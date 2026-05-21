@@ -2,7 +2,7 @@
 	height: 100%;
 }
 
-.Bestiary > .Panel__header {
+.Bestiary>.Panel__header {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;

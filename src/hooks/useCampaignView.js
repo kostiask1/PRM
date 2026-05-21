@@ -409,7 +409,10 @@ export default function useCampaignView(props) {
 						sanitizeEntityForSave(pending.entity),
 					);
 				} catch (err) {
-					console.error(`Failed to update ${pending?.type || type} entity`, err);
+					console.error(
+						`Failed to update ${pending?.type || type} entity`,
+						err,
+					);
 				} finally {
 					delete entitySaveTimeoutsRef.current[key];
 				}
@@ -873,12 +876,12 @@ export default function useCampaignView(props) {
 			};
 			setSessionDetails(sessionDetailsRef.current);
 
-			api.updateSession(campaign.slug, fileName, { data: next.data }).catch(
-				(err) => {
+			api
+				.updateSession(campaign.slug, fileName, { data: next.data })
+				.catch((err) => {
 					console.error("Failed to save graph note edit", err);
 					setGraphDataError(err.message || lang.t("Failed to update entity."));
-				},
-			);
+				});
 		},
 		[campaign.slug],
 	);
@@ -901,9 +904,7 @@ export default function useCampaignView(props) {
 				saveGraphSessionDetail(fileName, (session) => {
 					session.data = session.data || {};
 					session.data.notes = (session.data.notes || []).map((note) =>
-						String(note.id) === String(noteId)
-							? { ...note, ...updates }
-							: note,
+						String(note.id) === String(noteId) ? { ...note, ...updates } : note,
 					);
 				});
 				return;
@@ -962,9 +963,7 @@ export default function useCampaignView(props) {
 					}),
 				};
 
-		const result = await dispatch(
-			confirm(confirmationConfig),
-		);
+		const result = await dispatch(confirm(confirmationConfig));
 		if (!result?.confirmed) return;
 		try {
 			await api.deleteCampaign(campaign.slug, {
@@ -1059,7 +1058,10 @@ export default function useCampaignView(props) {
 
 	const handleExportPartial = async (sections = []) => {
 		try {
-			const blob = await api.exportCampaignPartialArchive(campaign.slug, sections);
+			const blob = await api.exportCampaignPartialArchive(
+				campaign.slug,
+				sections,
+			);
 			downloadBlob(
 				blob,
 				`campaign-${campaign.slug}-partial-${new Date().toISOString().slice(0, 10)}.prma.gz`,
@@ -1088,13 +1090,16 @@ export default function useCampaignView(props) {
 		}
 	};
 
-	const handleSessionReorderDrop = useCallback((nextSessions = sessions) => {
-		const orders = {};
-		nextSessions.forEach((item, idx) => {
-			orders[item.fileName] = idx;
-		});
-		api.reorderSessions(campaign.slug, orders);
-	}, [sessions, campaign.slug]);
+	const handleSessionReorderDrop = useCallback(
+		(nextSessions = sessions) => {
+			const orders = {};
+			nextSessions.forEach((item, idx) => {
+				orders[item.fileName] = idx;
+			});
+			api.reorderSessions(campaign.slug, orders);
+		},
+		[sessions, campaign.slug],
+	);
 
 	useEffect(() => {
 		const handleKeyDown = (e) => {

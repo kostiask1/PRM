@@ -16,8 +16,8 @@ function asText(value) {
 function hasOwn(value, key) {
 	return Boolean(
 		value &&
-			typeof value === "object" &&
-			Object.prototype.hasOwnProperty.call(value, key),
+		typeof value === "object" &&
+		Object.prototype.hasOwnProperty.call(value, key),
 	);
 }
 

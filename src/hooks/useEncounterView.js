@@ -750,25 +750,28 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 		[syncSelectedInstance],
 	);
 
-	const handleMonstersDrop = useCallback((nextMonsters = null) => {
-		const current = nextMonsters
-			? { ...encounterRef.current, monsters: nextMonsters }
-			: encounterRef.current;
-		if (!current) return;
-		const start = reorderStartRef.current;
-		reorderStartRef.current = null;
+	const handleMonstersDrop = useCallback(
+		(nextMonsters = null) => {
+			const current = nextMonsters
+				? { ...encounterRef.current, monsters: nextMonsters }
+				: encounterRef.current;
+			if (!current) return;
+			const start = reorderStartRef.current;
+			reorderStartRef.current = null;
 
-		if (
-			start &&
-			!isUpdatingHistoryRef.current &&
-			JSON.stringify(start.monsters || []) !==
-				JSON.stringify(current.monsters || [])
-		) {
-			setUndoStack((prev) => [...prev, start]);
-			setRedoStack([]);
-		}
-		saveEncounterState(current);
-	}, [saveEncounterState]);
+			if (
+				start &&
+				!isUpdatingHistoryRef.current &&
+				JSON.stringify(start.monsters || []) !==
+					JSON.stringify(current.monsters || [])
+			) {
+				setUndoStack((prev) => [...prev, start]);
+				setRedoStack([]);
+			}
+			saveEncounterState(current);
+		},
+		[saveEncounterState],
+	);
 
 	return {
 		encounter,

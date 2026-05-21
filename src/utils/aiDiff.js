@@ -48,7 +48,11 @@ export function createLineDiff(before, after) {
 	let oldNumber = 1;
 	let newNumber = 1;
 	while (i < oldLines.length || j < newLines.length) {
-		if (i < oldLines.length && j < newLines.length && oldLines[i] === newLines[j]) {
+		if (
+			i < oldLines.length &&
+			j < newLines.length &&
+			oldLines[i] === newLines[j]
+		) {
 			lines.push({
 				type: "context",
 				oldNumber,
@@ -102,7 +106,12 @@ function snapshotsEqual(before, after) {
 function getDiffResourceFieldSummary(resource) {
 	const before = resource.before;
 	const after = resource.after;
-	if (!before || !after || typeof before !== "object" || typeof after !== "object") {
+	if (
+		!before ||
+		!after ||
+		typeof before !== "object" ||
+		typeof after !== "object"
+	) {
 		return [];
 	}
 	if (Array.isArray(before) || Array.isArray(after)) return [];
@@ -124,7 +133,9 @@ function getDiffItemKey(item, index, getName) {
 	if (item && typeof item === "object") {
 		const identity = String(item.id || item.slug || "").trim();
 		if (identity) return identity;
-		const name = String(getName?.(item) || item.name || item.title || "").trim();
+		const name = String(
+			getName?.(item) || item.name || item.title || "",
+		).trim();
 		if (name) return `name:${name.toLowerCase()}`;
 	}
 	return `index:${index}`;
@@ -141,14 +152,27 @@ function pushGranularDiff(resources, resource, suffix, before, after) {
 	});
 }
 
-function pushGranularArrayDiff(resources, resource, pathLabel, before, after, getName) {
+function pushGranularArrayDiff(
+	resources,
+	resource,
+	pathLabel,
+	before,
+	after,
+	getName,
+) {
 	const beforeList = Array.isArray(before) ? before : [];
 	const afterList = Array.isArray(after) ? after : [];
 	const beforeByKey = new Map(
-		beforeList.map((item, index) => [getDiffItemKey(item, index, getName), item]),
+		beforeList.map((item, index) => [
+			getDiffItemKey(item, index, getName),
+			item,
+		]),
 	);
 	const afterByKey = new Map(
-		afterList.map((item, index) => [getDiffItemKey(item, index, getName), item]),
+		afterList.map((item, index) => [
+			getDiffItemKey(item, index, getName),
+			item,
+		]),
 	);
 
 	for (const key of new Set([...beforeByKey.keys(), ...afterByKey.keys()])) {
@@ -246,7 +270,13 @@ function expandSessionDiffResource(resource, labels = {}) {
 		...Object.keys(afterData || {}),
 	])) {
 		if (coveredDataKeys.has(key)) continue;
-		pushGranularDiff(expanded, resource, `data.${key}`, beforeData[key], afterData[key]);
+		pushGranularDiff(
+			expanded,
+			resource,
+			`data.${key}`,
+			beforeData[key],
+			afterData[key],
+		);
 	}
 
 	const coveredTopLevelKeys = new Set(["data", "name"]);

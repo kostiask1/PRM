@@ -11,19 +11,12 @@ import {
 	isSameEntityIdentity,
 } from "./EntityLinkIdentity";
 
-export default function EntityLink({
-	name,
-	children,
-	className = "",
-}) {
+export default function EntityLink({ name, children, className = "" }) {
 	const [modalState, setModalState] = useState(null);
 	const currentEntityIdentity = useContext(EntityLinkContext);
 	const scopedEntityLinks = useContext(EntityLinkResolverContext);
 
-	const resolvedCampaignSlug = useMemo(
-		() => parseUrl().campaign,
-		[],
-	);
+	const resolvedCampaignSlug = useMemo(() => parseUrl().campaign, []);
 
 	const handleCloseModal = useCallback(() => setModalState(null), []);
 

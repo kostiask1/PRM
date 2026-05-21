@@ -8,10 +8,7 @@ import {
 	requestCampaignsReloadAction,
 } from "../actions/app";
 import { api } from "../api";
-import {
-	sanitizeNotesForSave,
-	upsertNoteById,
-} from "../utils/noteUtils";
+import { sanitizeNotesForSave, upsertNoteById } from "../utils/noteUtils";
 import { idsEqual } from "../utils/id";
 import { shouldOpenInNewTabFromEvent } from "../utils/navigation.js";
 import {
@@ -434,7 +431,10 @@ export default function useSessionView(props) {
 	};
 
 	const handleSessionEntitiesReorder = (type, nextEntities) => {
-		updateData(sessionEntityKey(type), normalizeSessionEntities(type, nextEntities));
+		updateData(
+			sessionEntityKey(type),
+			normalizeSessionEntities(type, nextEntities),
+		);
 	};
 
 	const openCampaignScopeImport = async (type) => {

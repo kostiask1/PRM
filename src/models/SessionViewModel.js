@@ -88,7 +88,8 @@ export const SESSION_FIELD_SCHEMA = {
 	name: { type: "string", required: true, values: "Назва сесії" },
 	data: {
 		type: "SessionDataPayload",
-		values: "Контент сесії: notes, scenes, encounters, npcs, locations, result_text, *_check",
+		values:
+			"Контент сесії: notes, scenes, encounters, npcs, locations, result_text, *_check",
 	},
 	isSaving: { type: "boolean", values: "Локальний стан автозбереження" },
 };
