@@ -28,7 +28,7 @@ const GRAPH_WIDTH = 1400;
 const GRAPH_HEIGHT = 840;
 const GRAPH_CENTER_X = GRAPH_WIDTH / 2;
 const GRAPH_CENTER_Y = GRAPH_HEIGHT / 2;
-const NODE_ZONE_PADDING = 36;
+const NODE_ZONE_PADDING = 26;
 
 const NODE_TYPE_ORDER = [
 	"campaign",
@@ -166,11 +166,11 @@ function getSessionDisplayName(fileName) {
 }
 
 function getNodeRadius(node) {
-	if (node.type === "campaign") return 20;
-	if (node.type === "session") return 15;
-	if (node.type === "scene") return 12;
-	if (node.type === "unresolved") return 10;
-	return Math.min(16, 9 + Math.sqrt(Math.max(1, node.degree || 1)) * 2);
+	if (node.type === "campaign") return 24;
+	if (node.type === "session") return 18;
+	if (node.type === "scene") return 15;
+	if (node.type === "unresolved") return 12;
+	return Math.min(19, 11 + Math.sqrt(Math.max(1, node.degree || 1)) * 2);
 }
 
 function getNodeZoneRadius(node) {
@@ -179,13 +179,6 @@ function getNodeZoneRadius(node) {
 
 function getNodeZoneDistance(leftNode, rightNode) {
 	return getNodeZoneRadius(leftNode || {}) + getNodeZoneRadius(rightNode || {});
-}
-
-function clampGraphPosition(position) {
-	return {
-		x: Math.min(GRAPH_WIDTH - 45, Math.max(45, position.x)),
-		y: Math.min(GRAPH_HEIGHT - 40, Math.max(40, position.y)),
-	};
 }
 
 function getRelationLabel(relation) {
@@ -275,10 +268,10 @@ function formatGraphSourceList(sources = []) {
 
 function getEdgeStrokeWidth(edge) {
 	if (edge.relation === "mentions")
-		return Math.min(3.4, 1.35 + edge.count * 0.22);
+		return Math.min(2.1, 0.9 + edge.count * 0.12);
 	if (edge.relation === "related")
-		return Math.min(2.8, 1.2 + edge.count * 0.18);
-	return 1.35;
+		return Math.min(1.8, 0.85 + edge.count * 0.1);
+	return 0.95;
 }
 
 function getEdgeColor(edge) {
@@ -290,8 +283,9 @@ function getEdgeColor(edge) {
 
 function getEdgeOpacity(edge, isFocused) {
 	if (!isFocused) return 0.16;
-	if (edge.relation === "contains") return 0.34;
-	return 0.92;
+	if (edge.relation === "contains") return 0.24;
+	if (edge.relation === "sequence") return 0.46;
+	return 0.54;
 }
 
 function ParsedGraphText({ text, onOpen }) {
@@ -506,33 +500,33 @@ function placeOrbitItems(items, center, positions, options = {}) {
 }
 
 function getChildOrbitOptions(parentNode, childCount, angleOffset) {
-	const countBoost = Math.min(70, Math.sqrt(Math.max(1, childCount)) * 12);
+	const countBoost = Math.min(42, Math.sqrt(Math.max(1, childCount)) * 8);
 	if (parentNode.type === "session") {
 		return {
-			radiusX: 184 + countBoost,
-			radiusY: 138 + countBoost,
-			ringGapX: 132,
-			ringGapY: 102,
-			minSpacing: 144,
+			radiusX: 118 + countBoost,
+			radiusY: 92 + countBoost,
+			ringGapX: 86,
+			ringGapY: 70,
+			minSpacing: 96,
 			angleOffset,
 		};
 	}
 	if (parentNode.type === "scene") {
 		return {
-			radiusX: 118 + countBoost,
-			radiusY: 88 + countBoost,
-			ringGapX: 82,
-			ringGapY: 64,
-			minSpacing: 104,
+			radiusX: 84 + countBoost,
+			radiusY: 70 + countBoost,
+			ringGapX: 60,
+			ringGapY: 50,
+			minSpacing: 82,
 			angleOffset: angleOffset + 0.24,
 		};
 	}
 	return {
-		radiusX: 168 + countBoost,
-		radiusY: 126 + countBoost,
-		ringGapX: 122,
-		ringGapY: 94,
-		minSpacing: 142,
+		radiusX: 110 + countBoost,
+		radiusY: 86 + countBoost,
+		ringGapX: 78,
+		ringGapY: 64,
+		minSpacing: 94,
 		angleOffset,
 	};
 }
@@ -551,8 +545,8 @@ function placeChildOrbits(parentNode, childrenByParent, positions, depth = 0) {
 		);
 
 		if (sceneChildren.length > 0) {
-			const spacing = 300;
-			const y = parentPosition.y + 230 + depth * 30;
+			const spacing = 190;
+			const y = parentPosition.y + 152 + depth * 20;
 			const startX =
 				parentPosition.x - ((sceneChildren.length - 1) * spacing) / 2;
 
@@ -566,11 +560,11 @@ function placeChildOrbits(parentNode, childrenByParent, positions, depth = 0) {
 
 		if (otherChildren.length > 0) {
 			placeOrbitItems(otherChildren, parentPosition, positions, {
-				radiusX: 224,
-				radiusY: 164,
-				ringGapX: 144,
-				ringGapY: 108,
-				minSpacing: 152,
+				radiusX: 146,
+				radiusY: 110,
+				ringGapX: 92,
+				ringGapY: 74,
+				minSpacing: 102,
 				angleOffset: -Math.PI / 2,
 			});
 		}
@@ -583,8 +577,8 @@ function placeChildOrbits(parentNode, childrenByParent, positions, depth = 0) {
 
 	if (parentNode.type === "scene") {
 		const sortedChildren = [...children].sort(sortLayoutNodes);
-		const spacingY = 106;
-		const startY = parentPosition.y + 118;
+		const spacingY = 104;
+		const startY = parentPosition.y + 122;
 
 		sortedChildren.forEach((childNode, index) => {
 			positions.set(childNode.id, {
@@ -618,82 +612,19 @@ function placeChildOrbits(parentNode, childrenByParent, positions, depth = 0) {
 	});
 }
 
-function getFitScale(points) {
-	const paddingX = 54;
-	const paddingY = 44;
-	let scale = 1;
-
-	points.forEach((position) => {
-		if (position.x < GRAPH_CENTER_X) {
-			const distance = GRAPH_CENTER_X - position.x;
-			if (distance > 0) {
-				scale = Math.min(scale, (GRAPH_CENTER_X - paddingX) / distance);
-			}
-		} else if (position.x > GRAPH_CENTER_X) {
-			const distance = position.x - GRAPH_CENTER_X;
-			if (distance > 0) {
-				scale = Math.min(
-					scale,
-					(GRAPH_WIDTH - paddingX - GRAPH_CENTER_X) / distance,
-				);
-			}
-		}
-
-		if (position.y < GRAPH_CENTER_Y) {
-			const distance = GRAPH_CENTER_Y - position.y;
-			if (distance > 0) {
-				scale = Math.min(scale, (GRAPH_CENTER_Y - paddingY) / distance);
-			}
-		} else if (position.y > GRAPH_CENTER_Y) {
-			const distance = position.y - GRAPH_CENTER_Y;
-			if (distance > 0) {
-				scale = Math.min(
-					scale,
-					(GRAPH_HEIGHT - paddingY - GRAPH_CENTER_Y) / distance,
-				);
-			}
-		}
-	});
-
-	return Number.isFinite(scale) ? Math.max(0.42, Math.min(1, scale)) : 1;
-}
-
-function fitStructuredLayout(positions, groupGuides) {
-	const points = [
-		...positions.values(),
-		...groupGuides.map((group) => ({ x: group.x, y: group.y })),
-	];
-	const scale = getFitScale(points);
-	const scalePosition = (position) =>
-		clampGraphPosition({
-			x: GRAPH_CENTER_X + (position.x - GRAPH_CENTER_X) * scale,
-			y: GRAPH_CENTER_Y + (position.y - GRAPH_CENTER_Y) * scale,
-		});
-
+function buildStructuredLayout(positions, groupGuides) {
 	return {
-		nodePositions: Object.fromEntries(
-			[...positions.entries()].map(([nodeId, position]) => [
-				nodeId,
-				scalePosition(position),
-			]),
-		),
-		groupGuides: groupGuides.map((group) => {
-			const position = scalePosition(group);
-			return {
-				...group,
-				x: position.x,
-				y: position.y,
-			};
-		}),
+		nodePositions: Object.fromEntries(positions.entries()),
+		groupGuides,
 	};
 }
 
 function estimateGroupRadius(groupId, nodeCount, rootCount) {
-	const densityRadius = 178 + Math.sqrt(Math.max(1, nodeCount)) * 58;
-	const rootRadius = Math.max(0, rootCount - 1) * 28;
-	const sessionBoost = groupId === "sessions" ? 150 : 0;
-	const notesBoost = groupId === "notes" ? 80 : 0;
-	return Math.min(560, densityRadius + rootRadius + sessionBoost + notesBoost);
+	const densityRadius = 104 + Math.sqrt(Math.max(1, nodeCount)) * 34;
+	const rootRadius = Math.max(0, rootCount - 1) * 16;
+	const sessionBoost = groupId === "sessions" ? 76 : 0;
+	const notesBoost = groupId === "notes" ? 34 : 0;
+	return Math.min(320, densityRadius + rootRadius + sessionBoost + notesBoost);
 }
 
 function resolveGroupGuideOverlaps(groupGuides) {
@@ -724,7 +655,7 @@ function resolveGroupGuideOverlaps(groupGuides) {
 				}
 
 				const minDistance =
-					(left.estimatedRadius || 190) + (right.estimatedRadius || 190) + 150;
+					(left.estimatedRadius || 126) + (right.estimatedRadius || 126) + 62;
 				if (distance >= minDistance) continue;
 
 				const push = (minDistance - distance) / 2;
@@ -789,14 +720,14 @@ function computeLayout(nodes) {
 	});
 	const requiredOrbit =
 		groupEstimates.reduce(
-			(total, group) => total + group.estimatedRadius * 2 + 150,
+			(total, group) => total + group.estimatedRadius * 2 + 62,
 			0,
 		) /
 		(Math.PI * 2);
-	const orbitX = Math.max(activeGroups.length <= 3 ? 720 : 900, requiredOrbit);
+	const orbitX = Math.max(activeGroups.length <= 3 ? 400 : 510, requiredOrbit);
 	const orbitY = Math.max(
-		activeGroups.length <= 3 ? 520 : 660,
-		requiredOrbit * 0.8,
+		activeGroups.length <= 3 ? 285 : 365,
+		requiredOrbit * 0.64,
 	);
 	const groupGuides = resolveGroupGuideOverlaps(
 		groupEstimates.map((group, index) => {
@@ -814,11 +745,11 @@ function computeLayout(nodes) {
 	groupGuides.forEach((group) => {
 		const rootNodes = rootNodesByGroup.get(group.id) || [];
 		placeOrbitItems(rootNodes, group, positions, {
-			radiusX: 230,
-			radiusY: 170,
-			ringGapX: 156,
-			ringGapY: 120,
-			minSpacing: 176,
+			radiusX: 142,
+			radiusY: 108,
+			ringGapX: 96,
+			ringGapY: 76,
+			minSpacing: 112,
 			angleOffset: group.angle,
 		});
 		rootNodes.forEach((node) => {
@@ -826,7 +757,7 @@ function computeLayout(nodes) {
 		});
 	});
 
-	return fitStructuredLayout(positions, groupGuides);
+	return buildStructuredLayout(positions, groupGuides);
 }
 
 function getDisplayGroupGuides(groupGuides, displayLayout) {
@@ -1000,10 +931,10 @@ function constrainMovedNodesToGroupCollisions({
 				const overlap = minDistance - distance;
 				const staticPushX = (dx / distance) * overlap * -1;
 				const staticPushY = (dy / distance) * overlap * -1;
-				const nextStaticPosition = clampGraphPosition({
+				const nextStaticPosition = {
 					x: staticPosition.x + staticPushX,
 					y: staticPosition.y + staticPushY,
-				});
+				};
 				nextOffsets[staticNodeId] = {
 					x: nextStaticPosition.x - staticBasePosition.x,
 					y: nextStaticPosition.y - staticBasePosition.y,
@@ -1162,10 +1093,10 @@ export default function CampaignNotesGraph({
 					if (!offset) return [nodeId, position];
 					return [
 						nodeId,
-						clampGraphPosition({
+						{
 							x: position.x + offset.x,
 							y: position.y + offset.y,
-						}),
+						},
 					];
 				}),
 			),

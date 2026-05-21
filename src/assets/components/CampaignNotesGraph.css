@@ -73,7 +73,7 @@
 
 .CampaignNotesGraph__canvasWrap {
 	position: relative;
-	min-height: 680px;
+	min-height: 760px;
 	background:
 		linear-gradient(color-mix(in srgb, var(--border), transparent 88%) 1px,
 			transparent 1px),
@@ -88,7 +88,7 @@
 .CampaignNotesGraph__canvas {
 	display: block;
 	width: 100%;
-	height: 680px;
+	height: 760px;
 	touch-action: none;
 	cursor: grab;
 }
@@ -133,17 +133,17 @@
 }
 
 .CampaignNotesGraph__edge.is_mentions {
-	filter: drop-shadow(0 0 5px rgba(56, 189, 248, 0.36));
+	filter: none;
 }
 
 .CampaignNotesGraph__edge.is_related {
 	stroke-dasharray: 5 5;
-	filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.34));
+	filter: none;
 }
 
 .CampaignNotesGraph__edge.is_sequence {
 	stroke-dasharray: 8 6;
-	filter: drop-shadow(0 0 5px rgba(232, 121, 249, 0.32));
+	filter: none;
 }
 
 .CampaignNotesGraph__edge.is_muted {
@@ -192,7 +192,7 @@
 
 .CampaignNotesGraph__node text {
 	fill: var(--text-bright);
-	font-size: 12px;
+	font-size: 13px;
 	font-weight: 650;
 	text-anchor: middle;
 	paint-order: stroke;
