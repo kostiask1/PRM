@@ -9,8 +9,11 @@
 }
 
 .AiAssistant__response_overlay_wide .Modal__card {
-	max-width: min(1600px, 96vw);
-	width: 100%;
+	width: min(1600px, 96vw);
+}
+
+.AiAssistant__response_overlay_wide .Modal__card:has(.MonsterStatBlock) {
+	width: min(2200px, 96vw);
 }
 
 .AiAssistant__toggle {
