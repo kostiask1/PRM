@@ -154,7 +154,7 @@ async function saveFailedAiRequest(payload = {}, error, status = null) {
 
 	const shouldParseAIResponse =
 		payload.type !== "image" &&
-		Boolean(payload.parseAIResponse || payload.generateEncounters) &&
+		Boolean(payload.parseAIResponse) &&
 		(!path.encounter || payload.generateEncounters);
 	const requestSnapshot = buildAiRequestSnapshot({
 		type: payload.type,
@@ -749,7 +749,7 @@ router.post("/generate", async (req, res, next) => {
 		const requestedEncounterGeneration = Boolean(generateEncounters);
 		const shouldParseAIResponse =
 			type !== "image" &&
-			Boolean(parseAIResponse || requestedEncounterGeneration) &&
+			Boolean(parseAIResponse) &&
 			(!path?.encounter || requestedEncounterGeneration);
 		const encounterGenerationEnabled =
 			shouldParseAIResponse && requestedEncounterGeneration;

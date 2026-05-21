@@ -335,6 +335,19 @@ function normalizeSceneTexts(rawScene = {}, existingTexts = {}) {
 	};
 }
 
+function hasSceneContent(scene = {}) {
+	const texts = scene.texts || {};
+	const hasTextContent = ["summary", "goal", "stakes", "location"].some((key) =>
+		asText(texts?.[key]),
+	);
+	return (
+		hasTextContent ||
+		(scene.notes || []).some((note) => asText(note?.title || note?.text)) ||
+		(scene.npcs || []).some((npc) => asText(npc?.name || npc?.description)) ||
+		Boolean(asText(scene.encounterId) || asText(scene.imageUrl))
+	);
+}
+
 function normalizeSceneNpcs(npcs) {
 	if (!Array.isArray(npcs)) return [];
 	return npcs
@@ -944,6 +957,10 @@ function applySceneOperation(state, operation, options) {
 				? { ...data, encounterId: "", encounterClientId: "" }
 				: data;
 		const saved = normalizeScene(safeData, null, clientIdMap, options);
+		if (!hasSceneContent(saved)) {
+			warnings.push("Skipped empty scene create.");
+			return null;
+		}
 		scenes.push(saved);
 		if (operation.clientId) {
 			clientIdMap.set(asText(operation.clientId), {

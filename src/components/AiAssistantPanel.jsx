@@ -1314,9 +1314,7 @@ export default function AiAssistantPanel({
 		const shouldParseResponse =
 			retryPayload.type === "image"
 				? false
-				: Boolean(
-						retryPayload.parseAIResponse || retryPayload.generateEncounters,
-					);
+				: Boolean(retryPayload.parseAIResponse);
 
 		cancelGenerateRequest();
 		const controller = new AbortController();
@@ -1414,10 +1412,14 @@ export default function AiAssistantPanel({
 		},
 	);
 	const selectedResponseHasChanges = selectedResponseDiffResources.length > 0;
-	const isResponseParsingLocked = isBestiary || generateEncounters;
+	const isResponseParsingLocked = isBestiary;
 	const isEntityScopeVisible = !isBestiary && !isCampaign && !isEncounter;
 	const isCustomMonsterGenerationVisible =
-		!isBestiary && !isCampaign && !isEncounter && generateEncounters;
+		parseAIResponse &&
+		!isBestiary &&
+		!isCampaign &&
+		!isEncounter &&
+		generateEncounters;
 	const entityScopeIsSession = entityScope !== "campaign";
 	const imagePromptNpcs = isCampaign
 		? sessionData?.npcs?.length
@@ -1660,12 +1662,6 @@ export default function AiAssistantPanel({
 			cha: monster?.cha ?? "",
 		},
 	});
-
-	useEffect(() => {
-		if (isResponseParsingLocked && !parseAIResponse) {
-			setParseAIResponse(true);
-		}
-	}, [isResponseParsingLocked, parseAIResponse]);
 
 	useEffect(() => {
 		return () => {

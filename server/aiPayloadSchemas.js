@@ -46,6 +46,9 @@ function validateOperation(operation, index, errors) {
 		addError(errors, path, "must be an object");
 		return;
 	}
+	const entity = String(operation.entity || "");
+	const isImplicitCampaignUpdate =
+		operation.op === "update" && entity === "campaign";
 
 	if (!ALLOWED_OPS.has(operation.op)) {
 		addError(
@@ -64,6 +67,7 @@ function validateOperation(operation, index, errors) {
 
 	if (
 		["update", "delete"].includes(operation.op) &&
+		!isImplicitCampaignUpdate &&
 		!hasText(operation.id) &&
 		!hasText(operation.slug) &&
 		!hasText(operation.name) &&

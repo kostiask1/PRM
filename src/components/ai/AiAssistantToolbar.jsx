@@ -36,7 +36,8 @@ export default function AiAssistantToolbar({
 	useContext,
 }) {
 	const showParsedGenerationOptions =
-		!isBestiary && (parseAIResponse || isResponseParsingLocked);
+		!isBestiary && parseAIResponse;
+	const showCharacterGeneration = showParsedGenerationOptions && isCampaign;
 
 	return (
 		<div className="AiAssistant__actions">
@@ -106,16 +107,18 @@ export default function AiAssistantToolbar({
 			)}
 			{showParsedGenerationOptions && !isEncounter && (
 				<>
-					<Button
-						variant={generateCharacters ? "primary" : "ghost"}
-						size={Button.SIZES.SMALL}
-						icon="users"
-						onClick={() => setGenerateCharacters((prev) => !prev)}
-						disabled={loading}
-						title={lang.t("Create characters with AI")}
-					>
-						{lang.t("Create characters")}
-					</Button>
+					{showCharacterGeneration && (
+						<Button
+							variant={generateCharacters ? "primary" : "ghost"}
+							size={Button.SIZES.SMALL}
+							icon="users"
+							onClick={() => setGenerateCharacters((prev) => !prev)}
+							disabled={loading}
+							title={lang.t("Create characters with AI")}
+						>
+							{lang.t("Create characters")}
+						</Button>
+					)}
 					<Button
 						variant={generateNpcs ? "primary" : "ghost"}
 						size={Button.SIZES.SMALL}
@@ -175,11 +178,9 @@ export default function AiAssistantToolbar({
 					}}
 					disabled={loading || isResponseParsingLocked}
 					title={
-						generateEncounters
-							? lang.t("Parsing is required when generating encounters")
-							: parseAIResponse
-								? lang.t("Parse AI response into form fields")
-								: lang.t("Show response as text in a modal")
+						parseAIResponse
+							? lang.t("Parse AI response into form fields")
+							: lang.t("Show response as text in a modal")
 					}
 				>
 					{lang.t("Response parsing")}
@@ -193,11 +194,6 @@ export default function AiAssistantToolbar({
 					onClick={() => {
 						const enabled = !generateEncounters;
 						setGenerateEncounters(enabled);
-						if (enabled) {
-							setParseAIResponse(true);
-						} else if (isEncounter) {
-							setParseAIResponse(false);
-						}
 						if (!enabled) {
 							setGenerateCustomMonsters(false);
 						}

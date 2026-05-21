@@ -559,6 +559,11 @@ await run("AI operations schema validates patch contracts", () => {
 				id: "scene-1",
 				patch: { texts: { summary: "Ambush" } },
 			},
+			{
+				op: "update",
+				entity: "campaign",
+				patch: { description: "Sharper premise" },
+			},
 		],
 	});
 	assert.equal(valid.valid, true);
@@ -1185,7 +1190,14 @@ await run("AI patch service applies targeted session operations", async () => {
 						op: "create",
 						entity: "scene",
 						clientId: "scene-new",
-						data: { texts: { summary: "New scene" } },
+						data: {
+							texts: {
+								summary: "New scene",
+								goal: "Find the hidden ledger.",
+								stakes: "The cult escapes if the party hesitates.",
+								location: "Hidden Cellar",
+							},
+						},
 					},
 					{
 						op: "appendNote",
@@ -1214,7 +1226,69 @@ await run("AI patch service applies targeted session operations", async () => {
 		assert.equal(session.data.locations[0].name, "Hidden Cellar");
 		assert.equal(session.data.scenes[0].notes[0].text, "Use falling shelves.");
 		assert.equal(session.data.scenes[1].texts.summary, "New scene");
+		assert.equal(session.data.scenes[1].texts.goal, "Find the hidden ledger.");
+		assert.equal(
+			session.data.scenes[1].texts.stakes,
+			"The cult escapes if the party hesitates.",
+		);
+		assert.equal(session.data.scenes[1].texts.location, "Hidden Cellar");
 		assert.equal(session.data.scenes[1].notes[0].text, "Fresh clue.");
+	});
+});
+
+await run("AI patch service skips only fully empty scene creates", async () => {
+	await withTestSlug("ai-empty-scene", async (slug) => {
+		await storage.writeJson(storage.campaignMetaPath(slug), {
+			name: "AI Empty Scene",
+			description: "",
+			notes: [],
+		});
+		await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+			id: "session-id",
+			name: "Session",
+			data: { scenes: [], encounters: [], notes: [], npcs: [], locations: [] },
+		});
+
+		const result = await aiPatchService.applyAiOperations({
+			payload: {
+				version: 2,
+				operations: [
+					{
+						op: "create",
+						entity: "scene",
+						clientId: "partial-scene",
+						data: { texts: { summary: "Only a summary" } },
+					},
+					{
+						op: "create",
+						entity: "scene",
+						clientId: "empty-scene",
+						data: {},
+					},
+				],
+			},
+			campaignSlug: slug,
+			sessionFile: "session.json",
+			entityScope: "session",
+			permissions: {
+				allowCharacters: true,
+				allowNpcs: true,
+				allowLocations: true,
+				allowEncounters: false,
+			},
+		});
+
+		const session = await storage.readSession(slug, "session.json");
+		assert.equal(session.data.scenes.length, 1);
+		assert.equal(session.data.scenes[0].texts.summary, "Only a summary");
+		assert.equal(session.data.scenes[0].texts.goal, "");
+		assert.equal(session.data.scenes[0].texts.stakes, "");
+		assert.equal(session.data.scenes[0].texts.location, "");
+		assert.ok(
+			result.warnings.some((warning) =>
+				warning.includes("Skipped empty scene create"),
+			),
+		);
 	});
 });
 
