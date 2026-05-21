@@ -29,14 +29,18 @@ function buildAiOptionsSummary(options) {
 	const parts = [
 		`mode: ${options.mode}`,
 		`parse: ${options.responseParsing ? "on" : "off"}`,
-		`characters: ${options.characterGeneration ? "on" : "off"}`,
-		`npcs: ${options.npcGeneration ? "on" : "off"}`,
-		`locations: ${options.locationGeneration ? "on" : "off"}`,
-		`entity-scope: ${options.entityScope || "campaign"}`,
-		`encounters: ${options.encounterGeneration ? "on" : "off"}`,
-		`custom-monsters: ${options.customMonsterGeneration ? "on" : "off"}`,
 		`context: ${options.contextEnabled ? "on" : "off"}`,
 	];
+	if (options.responseParsing) {
+		parts.push(
+			`characters: ${options.characterGeneration ? "on" : "off"}`,
+			`npcs: ${options.npcGeneration ? "on" : "off"}`,
+			`locations: ${options.locationGeneration ? "on" : "off"}`,
+			`entity-scope: ${options.entityScope || "campaign"}`,
+			`encounters: ${options.encounterGeneration ? "on" : "off"}`,
+			`custom-monsters: ${options.customMonsterGeneration ? "on" : "off"}`,
+		);
+	}
 	if (options.modelName) parts.push(`model: ${options.modelName}`);
 	if (options.sceneId) parts.push(`scene: ${options.sceneId}`);
 	if (options.imageTarget) {

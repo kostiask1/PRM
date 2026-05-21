@@ -235,18 +235,28 @@ function getHistoryOptionsSummary(entry) {
 	return [
 		`${lang.t("Mode")}: ${getHistoryModeName(options.mode)}`,
 		`${lang.t("Response parsing")}: ${getOnOffLabel(options.responseParsing)}`,
-		`${lang.t("Create characters")}: ${getOnOffLabel(options.characterGeneration)}`,
-		`${lang.t("Create NPCs")}: ${getOnOffLabel(options.npcGeneration)}`,
-		`${lang.t("Create locations/factions")}: ${getOnOffLabel(options.locationGeneration)}`,
-		options.entityScope
+		options.responseParsing
+			? `${lang.t("Create characters")}: ${getOnOffLabel(options.characterGeneration)}`
+			: null,
+		options.responseParsing
+			? `${lang.t("Create NPCs")}: ${getOnOffLabel(options.npcGeneration)}`
+			: null,
+		options.responseParsing
+			? `${lang.t("Create locations/factions")}: ${getOnOffLabel(options.locationGeneration)}`
+			: null,
+		options.responseParsing && options.entityScope
 			? `${lang.t("AI entity scope")}: ${lang.t(
 					options.entityScope === "campaign"
 						? "Campaign scope"
 						: "Session scope",
 				)}`
 			: null,
-		`${lang.t("Encounter generation")}: ${getOnOffLabel(options.encounterGeneration)}`,
-		`${lang.t("Custom monster generation")}: ${getOnOffLabel(options.customMonsterGeneration)}`,
+		options.responseParsing
+			? `${lang.t("Encounter generation")}: ${getOnOffLabel(options.encounterGeneration)}`
+			: null,
+		options.responseParsing
+			? `${lang.t("Custom monster generation")}: ${getOnOffLabel(options.customMonsterGeneration)}`
+			: null,
 		`${lang.t("Context")}: ${getOnOffLabel(options.contextEnabled)}`,
 	]
 		.filter(Boolean)
@@ -443,7 +453,7 @@ export default function AiAssistantPanel({
 	const [isImagePromptDataLoading, setIsImagePromptDataLoading] =
 		useState(false);
 	const [parseAIResponse, setParseAIResponse] = useState(isEncounter);
-	const [generateCharacters, setGenerateCharacters] = useState(true);
+	const [generateCharacters, setGenerateCharacters] = useState(false);
 	const [generateNpcs, setGenerateNpcs] = useState(true);
 	const [generateLocations, setGenerateLocations] = useState(true);
 	const [generateEncounters, setGenerateEncounters] = useState(
@@ -1208,6 +1218,8 @@ export default function AiAssistantPanel({
 					: forceParseAIResponse === null
 						? parseAIResponse
 						: forceParseAIResponse;
+		const structuredEntityOptionsEnabled =
+			shouldParseResponse && !isEncounter && !isBestiary;
 		try {
 			const data = await api.generateAi(
 				{
@@ -1222,15 +1234,25 @@ export default function AiAssistantPanel({
 					imageTarget,
 					imagePromptBasePromptOverride,
 					parseAIResponse: shouldParseResponse,
-					generateCharacters: !isEncounter && !isBestiary && generateCharacters,
-					generateNpcs: !isEncounter && !isBestiary && generateNpcs,
-					generateLocations: !isEncounter && !isBestiary && generateLocations,
+					generateCharacters: structuredEntityOptionsEnabled
+						? generateCharacters
+						: true,
+					generateNpcs: structuredEntityOptionsEnabled
+						? generateNpcs
+						: true,
+					generateLocations: structuredEntityOptionsEnabled
+						? generateLocations
+						: true,
 					generateEncounters:
 						requestType === "image"
 							? false
-							: !isCampaign && !isBestiary && generateEncounters,
+							: shouldParseResponse &&
+								!isCampaign &&
+								!isBestiary &&
+								generateEncounters,
 					generateCustomMonsters:
 						requestType !== "image" &&
+						shouldParseResponse &&
 						!isCampaign &&
 						!isBestiary &&
 						generateEncounters &&

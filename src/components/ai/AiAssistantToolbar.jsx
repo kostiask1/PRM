@@ -35,6 +35,9 @@ export default function AiAssistantToolbar({
 	setUseContext,
 	useContext,
 }) {
+	const showParsedGenerationOptions =
+		!isBestiary && (parseAIResponse || isResponseParsingLocked);
+
 	return (
 		<div className="AiAssistant__actions">
 			<label className="AiAssistant__modelPicker">
@@ -101,7 +104,7 @@ export default function AiAssistantToolbar({
 					{lang.t("Image prompt")}
 				</Button>
 			)}
-			{!isBestiary && !isEncounter && (
+			{showParsedGenerationOptions && !isEncounter && (
 				<>
 					<Button
 						variant={generateCharacters ? "primary" : "ghost"}
@@ -182,7 +185,7 @@ export default function AiAssistantToolbar({
 					{lang.t("Response parsing")}
 				</Button>
 			)}
-			{!isBestiary && !isCampaign && (
+			{showParsedGenerationOptions && !isCampaign && (
 				<Button
 					variant={generateEncounters ? "primary" : "ghost"}
 					size={Button.SIZES.SMALL}
@@ -213,7 +216,7 @@ export default function AiAssistantToolbar({
 					{lang.t("Encounter generation")}
 				</Button>
 			)}
-			{isCustomMonsterGenerationVisible && (
+			{showParsedGenerationOptions && isCustomMonsterGenerationVisible && (
 				<Button
 					variant={generateCustomMonsters ? "primary" : "ghost"}
 					size={Button.SIZES.SMALL}
@@ -227,7 +230,7 @@ export default function AiAssistantToolbar({
 					{lang.t("Generate monsters")}
 				</Button>
 			)}
-			{isEncounter && (
+			{showParsedGenerationOptions && isEncounter && (
 				<Button
 					variant="ghost"
 					size={Button.SIZES.SMALL}

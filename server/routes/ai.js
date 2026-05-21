@@ -746,23 +746,32 @@ router.post("/generate", async (req, res, next) => {
 		if (!process.env.GEMINI_API_KEY) {
 			return res.status(500).json({ error: "GEMINI_API_KEY не налаштовано." });
 		}
-		const encounterGenerationEnabled = Boolean(generateEncounters);
+		const requestedEncounterGeneration = Boolean(generateEncounters);
+		const shouldParseAIResponse =
+			type !== "image" &&
+			Boolean(parseAIResponse || requestedEncounterGeneration) &&
+			(!path?.encounter || requestedEncounterGeneration);
+		const encounterGenerationEnabled =
+			shouldParseAIResponse && requestedEncounterGeneration;
 		const customMonsterGenerationEnabled =
 			encounterGenerationEnabled && Boolean(generateCustomMonsters);
-		const characterGenerationEnabled = generateCharacters !== false;
-		const npcGenerationEnabled = generateNpcs !== false;
-		const locationGenerationEnabled = generateLocations !== false;
+		const characterGenerationEnabled = shouldParseAIResponse
+			? generateCharacters !== false
+			: true;
+		const npcGenerationEnabled = shouldParseAIResponse
+			? generateNpcs !== false
+			: true;
+		const locationGenerationEnabled = shouldParseAIResponse
+			? generateLocations !== false
+			: true;
 		const entityTargetScope =
+			shouldParseAIResponse &&
 			path?.session &&
 			!path?.encounter &&
 			entityScope !== "campaign" &&
 			!shouldUseCampaignEntityScope(userInstructions)
 				? "session"
 				: "campaign";
-		const shouldParseAIResponse =
-			type !== "image" &&
-			Boolean(parseAIResponse || encounterGenerationEnabled) &&
-			(!path?.encounter || encounterGenerationEnabled);
 		const settings = await storage.readSettings();
 		const simplifiedNotesEnabled = Boolean(settings.simplifiedNotes);
 		const autoApplyAiChanges = settings.autoApplyAiChanges !== false;
