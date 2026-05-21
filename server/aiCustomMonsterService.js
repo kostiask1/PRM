@@ -197,6 +197,10 @@ function normalizeCustomMonster(raw) {
 		cha: normalizeMonsterNumber(raw.cha ?? raw.charisma, 10),
 		cr: normalizeMonsterCr(raw.cr ?? raw.challenge_rating),
 	};
+	const imageUrl = asText(raw.imageUrl);
+	if (imageUrl) monster.imageUrl = imageUrl;
+	const originalBestiaryName = sanitizeMonsterName(raw.originalBestiaryName);
+	if (originalBestiaryName) monster.originalBestiaryName = originalBestiaryName;
 
 	for (const key of [
 		"save",

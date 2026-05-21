@@ -1,5 +1,6 @@
 import Button from "../form/Button";
 import Input from "../form/Input";
+import Select from "../form/Select";
 import Modal from "../common/Modal";
 import { lang } from "../../services/localization";
 
@@ -67,6 +68,7 @@ export default function AiImagePromptPickerModal({
 	imagePromptLocations,
 	imagePromptNpcs,
 	imagePromptScenes,
+	aiModels,
 	isBestiary,
 	isCampaign,
 	isDataLoading,
@@ -76,7 +78,9 @@ export default function AiImagePromptPickerModal({
 	onCancel,
 	onGenerate,
 	onInstructionsChange,
+	onModelChange,
 	onSelectTarget,
+	selectedModel,
 	selectedTarget,
 }) {
 	if (!isOpen) return null;
@@ -98,6 +102,22 @@ export default function AiImagePromptPickerModal({
 						<span>{lang.t("Selected element")}</span>
 						<strong>{getImagePromptTargetTitle(selectedTarget)}</strong>
 					</div>
+					<Select
+						className="AiAssistant__image_prompt_model"
+						value={selectedModel}
+						onChange={(event) => onModelChange(event.target.value)}
+						disabled={loading || !Array.isArray(aiModels) || aiModels.length === 0}
+					>
+						{Array.isArray(aiModels) && aiModels.length > 0 ? (
+							aiModels.map((model) => (
+								<option key={model.name} value={model.name}>
+									{model.displayName || model.name}
+								</option>
+							))
+						) : (
+							<option value="">{lang.t("Loading models...")}</option>
+						)}
+					</Select>
 					<Input
 						type="textarea"
 						value={imagePromptInstructions}

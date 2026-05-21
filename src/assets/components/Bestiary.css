@@ -257,6 +257,10 @@
 	font-weight: 700;
 }
 
+.Bestiary__ai_edit_model {
+	width: 100%;
+}
+
 .Bestiary__ai_action_body {
 	display: flex;
 	flex-direction: column;

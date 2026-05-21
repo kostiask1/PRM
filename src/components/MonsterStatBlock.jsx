@@ -42,7 +42,9 @@ export default function MonsterStatBlock({
 	onFavoriteChange,
 	tokenImageOverrideUrl = null,
 	layoutMode = "single",
+	showFavoriteAction = true,
 	showAddToEncounterPicker = false,
+	allowTokenUpload = true,
 	onAddToEncounter,
 	onAiAction,
 	searchHighlight = "",
@@ -54,6 +56,7 @@ export default function MonsterStatBlock({
 	const [loadingSpells, setLoadingSpells] = useState(false);
 	const [isFavorite, setIsFavorite] = useState(false);
 	const [customTokenUrl, setCustomTokenUrl] = useState(monster.imageUrl || "");
+	const [isReplacingToken, setIsReplacingToken] = useState(false);
 
 	const model = useMemo(() => new MonsterStatBlockModel(monster), [monster]);
 	const effectiveName = model.effectiveName;
@@ -74,12 +77,12 @@ export default function MonsterStatBlock({
 			}
 		};
 
-		if (monster.name && monster.source) {
+		if (showFavoriteAction && monster.name && monster.source) {
 			checkFavoriteStatus();
 		} else {
 			setIsFavorite(false);
 		}
-	}, [effectiveName, monster.name, monster.source]);
+	}, [effectiveName, monster.name, monster.source, showFavoriteAction]);
 
 	const handleToggleFavorite = async () => {
 		try {
@@ -156,6 +159,7 @@ export default function MonsterStatBlock({
 	useEffect(() => {
 		setHasImageError(false);
 		setCustomTokenUrl(monster.imageUrl || "");
+		setIsReplacingToken(false);
 	}, [monster, tokenImageOverrideUrl]);
 
 	const renderActionList = (actions, title) => {
@@ -412,7 +416,10 @@ export default function MonsterStatBlock({
 		tokenImageOverrideUrl ||
 		(isCustomMonster && customTokenSrc ? customTokenSrc : model.externalTokenSrc);
 	const shouldShowTokenDropzone =
-		isCustomMonster && !tokenImageOverrideUrl && (!customTokenSrc || hasImageError);
+		allowTokenUpload &&
+		isCustomMonster &&
+		!tokenImageOverrideUrl &&
+		(isReplacingToken || !customTokenSrc || hasImageError);
 
 	const handleCustomTokenUpload = async (result) => {
 		const nextUrl = result?.url || "";
@@ -420,9 +427,14 @@ export default function MonsterStatBlock({
 		setCustomTokenUrl(nextUrl);
 		setHasImageError(false);
 		try {
-			await api.updateCustomBestiaryMonster(effectiveName || monster.name, {
+			const updatedMonster = await api.updateCustomBestiaryMonster(
+				effectiveName || monster.name,
+				{
 				imageUrl: nextUrl,
-			});
+				},
+			);
+			setCustomTokenUrl(updatedMonster?.imageUrl || nextUrl);
+			setIsReplacingToken(false);
 		} catch (err) {
 			console.error("Failed to save custom monster token", err);
 		}
@@ -489,16 +501,18 @@ export default function MonsterStatBlock({
 								title={lang.t("Rename")}
 							/>
 						)}
-						<Button
-							variant="ghost"
-							size={Button.SIZES.SMALL}
-							icon="star"
-							className={classNames("MonsterStatBlock__favorite_btn", {
-								"is_active": isFavorite,
-							})}
-							onClick={handleToggleFavorite}
-							title={isFavorite ? "Remove from favorites" : "Add to favorites"}
-						/>
+						{showFavoriteAction && (
+							<Button
+								variant="ghost"
+								size={Button.SIZES.SMALL}
+								icon="star"
+								className={classNames("MonsterStatBlock__favorite_btn", {
+									"is_active": isFavorite,
+								})}
+								onClick={handleToggleFavorite}
+								title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+							/>
+						)}
 						{onAiAction && (
 							<Button
 								variant="ghost"
@@ -643,13 +657,24 @@ export default function MonsterStatBlock({
 				</div>
 				<div className="MonsterStatBlock__token_wrapper">
 					{shouldShowTokenDropzone ? (
-						<ImageDropzone
-							campaignSlug="general"
-							initialSource="general"
-							initialCategory="tokens"
-							initialSubcategory=""
-							onUploadSuccess={handleCustomTokenUpload}
-						/>
+						<div className="MonsterStatBlock__token_dropzone">
+							<ImageDropzone
+								campaignSlug="general"
+								initialSource="general"
+								initialCategory="tokens"
+								initialSubcategory=""
+								onUploadSuccess={handleCustomTokenUpload}
+							/>
+							{customTokenSrc && !hasImageError && (
+								<Button
+									variant="ghost"
+									size={Button.SIZES.SMALL}
+									onClick={() => setIsReplacingToken(false)}
+								>
+									{lang.t("Cancel")}
+								</Button>
+							)}
+						</div>
 					) : !hasImageError ? (
 						<div
 							className="MonsterStatBlock__tokenDragProxy"
@@ -663,6 +688,18 @@ export default function MonsterStatBlock({
 								draggable={false}
 								onError={() => setHasImageError(true)}
 							/>
+							{allowTokenUpload && isCustomMonster && !tokenImageOverrideUrl && (
+								<Button
+									variant="ghost"
+									size={Button.SIZES.SMALL}
+									icon="image"
+									className="MonsterStatBlock__replace_token_btn"
+									onClick={() => setIsReplacingToken(true)}
+									title={lang.t("Replace image")}
+								>
+									{lang.t("Replace")}
+								</Button>
+							)}
 						</div>
 					) : (
 						<div className="MonsterStatBlock__token_skeleton">

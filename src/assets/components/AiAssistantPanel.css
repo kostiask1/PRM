@@ -553,6 +553,7 @@
 
 .AiAssistant__preview_card_surface .character_card,
 .AiAssistant__preview_card_surface .location_card,
+.AiAssistant__preview_card_surface .MonsterStatBlock,
 .AiAssistant__preview_note_surface .note_card_simple {
 	pointer-events: none;
 	margin: 0;
@@ -1088,6 +1089,10 @@
 .AiAssistant__image_prompt_target strong {
 	color: var(--text-bright);
 	font-size: 1rem;
+}
+
+.AiAssistant__image_prompt_model {
+	width: 100%;
 }
 
 .AiAssistant__image_prompt_instructions {

@@ -8,6 +8,7 @@ const CAMPAIGNS_DIR = path.join(DATA_DIR, "campaigns");
 const BESTIARY_DIR = path.join(ROOT_DIR, "database", "bestiary");
 const CUSTOM_BESTIARY_SOURCE = "CUSTOM";
 const CUSTOM_BESTIARY_PATH = path.join(DATA_DIR, "custom-bestiary.json");
+const BESTIARY_AI_RESPONSES_PATH = path.join(DATA_DIR, "_aiResponses-bestiary.json");
 const SPELLS_DIR = path.join(ROOT_DIR, "database", "spells");
 const FAVORITES_PATH = path.join(DATA_DIR, "favorites.json");
 const IMAGES_DIR = path.join(DATA_DIR, "images");
@@ -78,6 +79,12 @@ function campaignMetaPath(slug) {
 
 function campaignAiResponsesPath(slug) {
 	return path.join(campaignDir(slug), "_aiResponses.json");
+}
+
+function aiResponsesPath(slug) {
+	return slug === "bestiary"
+		? BESTIARY_AI_RESPONSES_PATH
+		: campaignAiResponsesPath(slug);
 }
 
 function campaignImagesDir(slug, category, subcategory = "") {
@@ -447,7 +454,13 @@ async function writeFavorites(favorites) {
 
 function normalizeAiChangeResource(raw = {}) {
 	if (!raw || typeof raw !== "object") return null;
-	const kind = ["campaign", "session", "entity", "custom-bestiary"].includes(raw.kind)
+	const kind = [
+		"campaign",
+		"session",
+		"entity",
+		"custom-bestiary",
+		"custom-monster",
+	].includes(raw.kind)
 		? raw.kind
 		: null;
 	if (!kind) return null;
@@ -474,6 +487,8 @@ function normalizeAiChangeResource(raw = {}) {
 	} else if (kind === "entity") {
 		resource.type = raw.type || null;
 		resource.slug = raw.slug || null;
+	} else if (kind === "custom-monster") {
+		resource.name = raw.name || raw.after?.name || raw.before?.name || null;
 	}
 
 	return resource;
@@ -572,10 +587,18 @@ function normalizeCampaignSlug(slug) {
 async function readAiResponses(campaignSlugValue) {
 	const slug = normalizeCampaignSlug(campaignSlugValue);
 	if (!slug) return [];
-	const responsesPath = campaignAiResponsesPath(slug);
-	if (!(await exists(responsesPath))) return [];
+	const responsesPath = aiResponsesPath(slug);
+	const legacyResponsesPath =
+		slug === "bestiary" ? campaignAiResponsesPath(slug) : null;
+	const readablePath =
+		(await exists(responsesPath)) ||
+		!legacyResponsesPath ||
+		!(await exists(legacyResponsesPath))
+			? responsesPath
+			: legacyResponsesPath;
+	if (!(await exists(readablePath))) return [];
 	try {
-		const saved = await readJson(responsesPath);
+		const saved = await readJson(readablePath);
 		const list = Array.isArray(saved) ? saved : saved?.responses || [];
 		return list
 			.map(normalizeAiResponse)
@@ -593,7 +616,7 @@ async function writeAiResponses(campaignSlugValue, responses) {
 		.map(normalizeAiResponse)
 		.filter(Boolean)
 		.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-	await writeJson(campaignAiResponsesPath(slug), normalized);
+	await writeJson(aiResponsesPath(slug), normalized);
 	return normalized;
 }
 
@@ -1707,10 +1730,12 @@ async function renameSubcategory(slug, category, oldName, newName) {
 }
 
 module.exports = {
+	DATA_DIR,
 	CAMPAIGNS_DIR,
 	BESTIARY_DIR,
 	CUSTOM_BESTIARY_SOURCE,
 	CUSTOM_BESTIARY_PATH,
+	BESTIARY_AI_RESPONSES_PATH,
 	SPELLS_DIR,
 	IMAGES_DIR,
 	SETTINGS_PATH,
@@ -1722,6 +1747,7 @@ module.exports = {
 	sessionFileName,
 	campaignDir,
 	campaignAiResponsesPath,
+	aiResponsesPath,
 	campaignImagesDir,
 	characterDir,
 	npcDir,

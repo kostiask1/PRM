@@ -11,9 +11,14 @@ import Icon from "./common/Icon";
 import ListCard from "./common/ListCard";
 import MonsterStatBlock from "./MonsterStatBlock";
 import AiAssistantPanel from "./AiAssistantPanel";
+import AiResponseModal from "./ai/AiResponseModal";
 import Tooltip from "./common/Tooltip";
 import Modal from "./common/Modal";
 import classNames from "../utils/classNames";
+import {
+	buildDiffResources,
+	getDiffResourceState as getAiDiffResourceState,
+} from "../utils/aiDiff.js";
 import {
 	getMonsterTypeString,
 	matchesMonsterSearch,
@@ -29,6 +34,88 @@ import {
 import { downloadJsonFile } from "../utils/download.js";
 import "../assets/components/Bestiary.css";
 import { lang } from "../services/localization";
+
+function getHistoryChangeSummary(entry) {
+	const resources = Array.isArray(entry?.changes?.resources)
+		? entry.changes.resources
+		: [];
+	const summary = entry?.changes?.summary || {};
+	const total = Number(summary.total) || resources.length || 0;
+	if (!total) return "";
+	const parts = [];
+	if (summary.added) parts.push(`+${summary.added}`);
+	if (summary.deleted) parts.push(`-${summary.deleted}`);
+	if (summary.modified) parts.push(`~${summary.modified}`);
+	return `${lang.t("Changes")}: ${parts.length ? parts.join(" ") : total}`;
+}
+
+function getDiffResourceState(resource) {
+	return getAiDiffResourceState(resource, {
+		added: lang.t("Added"),
+		deleted: lang.t("Deleted"),
+		modified: lang.t("Modified"),
+	});
+}
+
+function getFirstChangedMonsterName(entry, resourceIds = null) {
+	const ids = Array.isArray(resourceIds)
+		? new Set(resourceIds.map((id) => String(id || "")).filter(Boolean))
+		: null;
+	const resources = Array.isArray(entry?.changes?.resources)
+		? entry.changes.resources
+		: [];
+	const resource = resources.find(
+		(item) => item?.kind === "custom-monster" && (!ids || ids.has(item.id)),
+	);
+	return resource?.after?.name || resource?.before?.name || resource?.name || null;
+}
+
+function getMonsterTokenImageUrl(monster) {
+	if (!monster) return "";
+	if (monster.imageUrl) return monster.imageUrl;
+	const source = String(monster.source || "").trim();
+	const name = String(monster.originalBestiaryName || monster.name || "").trim();
+	if (!source || !name) return "";
+	return `/api/bestiary/tokens/${encodeURIComponent(source)}/${encodeURIComponent(name)}.webp`;
+}
+
+function addSourceMonsterImageToDraft(entry, sourceMonster) {
+	if (!entry || !sourceMonster) return entry;
+	const imageUrl = getMonsterTokenImageUrl(sourceMonster);
+	if (!imageUrl) return entry;
+	const resources = Array.isArray(entry?.changes?.resources)
+		? entry.changes.resources
+		: [];
+	let changed = false;
+	const nextResources = resources.map((resource) => {
+		if (
+			resource?.kind !== "custom-monster" ||
+			resource.before !== null ||
+			!resource.after ||
+			resource.after.imageUrl
+		) {
+			return resource;
+		}
+		changed = true;
+		return {
+			...resource,
+			after: {
+				...resource.after,
+				imageUrl,
+				originalBestiaryName:
+					resource.after.originalBestiaryName || sourceMonster.name,
+			},
+		};
+	});
+	if (!changed) return entry;
+	return {
+		...entry,
+		changes: {
+			...(entry.changes || {}),
+			resources: nextResources,
+		},
+	};
+}
 
 function monsterMatchesUrl(monster, name, source) {
 	return monster?.name === name && (!source || monster.source === source);
@@ -87,11 +174,16 @@ export default function Bestiary({
 	const [aiEditInstructions, setAiEditInstructions] = useState("");
 	const [aiEditError, setAiEditError] = useState("");
 	const [isAiEditingMonster, setIsAiEditingMonster] = useState(false);
+	const [aiModels, setAiModels] = useState([]);
+	const [selectedAiModel, setSelectedAiModel] = useState("");
+	const [aiDraftResponseEntry, setAiDraftResponseEntry] = useState(null);
+	const [isRestoringAiResponse, setIsRestoringAiResponse] = useState(false);
 	const [undoStack, setUndoStack] = useState([]);
 	const [redoStack, setRedoStack] = useState([]);
 	const listRef = useRef(null);
 	const customImportInputRef = useRef(null);
 	const selectedMonsterRef = useRef(null);
+	const aiDraftResponseRef = useRef(null);
 	const hasInitializedSourceRef = useRef(false);
 	const shouldAutoSelectMonsterRef = useRef(true);
 
@@ -123,6 +215,13 @@ export default function Bestiary({
 	const customMonsters = useMemo(
 		() => allMonsters.filter((monster) => isCustomSource(monster.source)),
 		[allMonsters],
+	);
+	const aiDraftDiffResources = useMemo(
+		() =>
+			buildDiffResources(aiDraftResponseEntry, {
+				creature: lang.t("Creature"),
+			}),
+		[aiDraftResponseEntry],
 	);
 
 	const pushCustomUndoSnapshot = (snapshot) => {
@@ -315,6 +414,23 @@ export default function Bestiary({
 	}, [sources, legendaryGroups, reloadToken]);
 
 	useEffect(() => {
+		if (!aiEditingMonster || aiModels.length > 0) return;
+		api
+			.listAiModels()
+			.then((result) => {
+				const models = Array.isArray(result?.models) ? result.models : [];
+				setAiModels(models);
+				setSelectedAiModel(
+					(current) => current || result?.defaultModel || models[0]?.name || "",
+				);
+			})
+			.catch((err) => {
+				console.error("Failed to load AI models", err);
+				setAiEditError(err.message || lang.t("Failed to connect to AI."));
+			});
+	}, [aiEditingMonster, aiModels.length]);
+
+	useEffect(() => {
 		const params = new URLSearchParams(window.location.search);
 		params.set("source", selectedSource);
 		window.history.replaceState({}, "", `?${params.toString()}`);
@@ -323,17 +439,16 @@ export default function Bestiary({
 	// Локальна фільтрація списку за пошуковим запитом
 	useEffect(() => {
 		const filtered = allMonsters.filter((m) => {
-			const matchesSource =
-				selectedSource === "all" ||
-				m.source?.toUpperCase() === selectedSource.toUpperCase();
-			if (!matchesSource) return false;
-
 			const isFav = favorites.some(
 				(f) =>
 					f.name === m.name &&
 					f.source?.toUpperCase() === m.source?.toUpperCase(),
 			);
 			if (onlyFavorites && !isFav) return false;
+			const matchesSource =
+				selectedSource === "all" ||
+				m.source?.toUpperCase() === selectedSource.toUpperCase();
+			if (!onlyFavorites && !matchesSource) return false;
 
 			return isDetailedSearch
 				? objectMatchesSearch(m, search)
@@ -540,10 +655,10 @@ export default function Bestiary({
 
 		setIsAiEditingMonster(true);
 		setAiEditError("");
-		const undoSnapshot = cloneCustomMonsters(customMonsters);
 		try {
 			const data = await api.generateAi({
 				type: "custom-monster",
+				modelName: selectedAiModel || undefined,
 				userInstructions: finalInstructions,
 				path: { campaign: "bestiary" },
 				customMonsterTarget: aiEditingMonster,
@@ -557,13 +672,18 @@ export default function Bestiary({
 				contextConfig: null,
 				language: currentLanguage,
 			});
-			pushCustomUndoSnapshot(undoSnapshot);
-			handleCustomBestiaryUpdate(data.updated, {
-				generated: data.generated,
-				selectedName:
-					aiEditMode === "edit" ? aiEditingMonster.name : undefined,
-				trackUndo: false,
-			});
+			if (data.draft && data.aiResponse) {
+				setAiDraftResponseEntry(
+					addSourceMonsterImageToDraft(data.aiResponse, aiEditingMonster),
+				);
+			} else if (data.updated) {
+				handleCustomBestiaryUpdate(data.updated, {
+					generated: data.generated,
+					selectedName:
+						aiEditMode === "edit" ? aiEditingMonster.name : undefined,
+					trackUndo: false,
+				});
+			}
 			setAiEditingMonster(null);
 			setAiEditMode("edit");
 			setAiEditInstructions("");
@@ -572,6 +692,86 @@ export default function Bestiary({
 		} finally {
 			setIsAiEditingMonster(false);
 		}
+	};
+
+	const saveAiDraftResponseChanges = async (resources) => {
+		if (!aiDraftResponseEntry?.id) return null;
+		const updatedEntry = await api.updateAiResponse("bestiary", aiDraftResponseEntry.id, {
+			resources: resources.map((resource) => {
+				const sourceResource = aiDraftResponseEntry.changes?.resources?.find(
+					(item) => item.id === resource.id,
+				);
+				const after = {
+					...(resource.after || {}),
+				};
+				if (
+					after &&
+					sourceResource?.after?.imageUrl &&
+					!after.imageUrl
+				) {
+					after.imageUrl = sourceResource.after.imageUrl;
+				}
+				if (
+					after &&
+					sourceResource?.after?.originalBestiaryName &&
+					!after.originalBestiaryName
+				) {
+					after.originalBestiaryName = sourceResource.after.originalBestiaryName;
+				}
+				return { ...resource, after };
+			}),
+		});
+		if (updatedEntry) {
+			setAiDraftResponseEntry(updatedEntry);
+		}
+		return updatedEntry;
+	};
+
+	const restoreAiDraftResponse = async (
+		entry = aiDraftResponseEntry,
+		mode = "apply",
+		options = {},
+	) => {
+		if (!entry?.id || isRestoringAiResponse) return;
+		setIsRestoringAiResponse(true);
+		try {
+			const result =
+				mode === "undo"
+					? await api.undoAiResponse("bestiary", entry.id, {
+							resourceIds: options.resourceIds,
+						})
+					: await api.applyAiResponse("bestiary", entry.id, {
+							resourceIds: options.resourceIds,
+						});
+			const nextEntry = result?.response || entry;
+			setAiDraftResponseEntry(nextEntry);
+			if (mode !== "undo" && result?.updated) {
+				handleCustomBestiaryUpdate(result.updated, {
+					selectedName: getFirstChangedMonsterName(nextEntry, options.resourceIds),
+					trackUndo: false,
+				});
+			}
+			if (mode === "undo" && result?.updated) {
+				handleCustomBestiaryUpdate(result.updated, {
+					clearSelection: true,
+					trackUndo: false,
+				});
+			}
+		} catch (err) {
+			dispatch(
+				alert({
+					title: lang.t("AI history error"),
+					message: err.message || lang.t("Unknown error"),
+				}),
+			);
+		} finally {
+			setIsRestoringAiResponse(false);
+		}
+	};
+
+	const closeAiDraftResponse = () => {
+		if (isRestoringAiResponse) return;
+		setAiDraftResponseEntry(null);
 	};
 
 	const handleDeleteCustomMonster = async (monster) => {
@@ -1070,6 +1270,22 @@ export default function Bestiary({
 						</span>{" "}
 						{aiEditingMonster.name}
 					</div>
+					<Select
+						className="Bestiary__ai_edit_model"
+						value={selectedAiModel}
+						onChange={(event) => setSelectedAiModel(event.target.value)}
+						disabled={isAiEditingMonster || aiModels.length === 0}
+					>
+						{aiModels.length > 0 ? (
+							aiModels.map((model) => (
+								<option key={model.name} value={model.name}>
+									{model.displayName || model.name}
+								</option>
+							))
+						) : (
+							<option value="">{lang.t("Loading models...")}</option>
+						)}
+					</Select>
 					<Input
 						type="textarea"
 						value={aiEditInstructions}
@@ -1149,6 +1365,38 @@ export default function Bestiary({
 			</Modal>
 		) : null;
 
+	const renderAiDraftResponseModal = () =>
+		aiDraftResponseEntry ? (
+			<AiResponseModal
+				generatedPrompt={aiDraftResponseEntry.text}
+				generatedPromptRef={aiDraftResponseRef}
+				isGeneratedPromptCopied={false}
+				isRestoringResponse={isRestoringAiResponse}
+				markdownComponents={{}}
+				onApply={(entry = aiDraftResponseEntry) =>
+					restoreAiDraftResponse(entry, "apply")
+				}
+				onApplyResource={(entry = aiDraftResponseEntry, resourceIds) =>
+					restoreAiDraftResponse(entry, "apply", { resourceIds })
+				}
+				onCancel={closeAiDraftResponse}
+				onCopy={() => {}}
+				onSaveDraftChanges={saveAiDraftResponseChanges}
+				onUndo={(entry = aiDraftResponseEntry) =>
+					restoreAiDraftResponse(entry, "undo")
+				}
+				onUndoResource={(entry = aiDraftResponseEntry, resourceIds) =>
+					restoreAiDraftResponse(entry, "undo", { resourceIds })
+				}
+				selectedResponseDetails={[]}
+				selectedResponseDiffResources={aiDraftDiffResources}
+				selectedResponseEntry={aiDraftResponseEntry}
+				selectedResponseHasChanges={aiDraftDiffResources.length > 0}
+				getDiffResourceState={getDiffResourceState}
+				getHistoryChangeSummary={getHistoryChangeSummary}
+			/>
+		) : null;
+
 	if (isEmbedded) {
 		return (
 			<>
@@ -1156,6 +1404,7 @@ export default function Bestiary({
 				{renderEditCustomMonsterModal()}
 				{renderMonsterAiActionModal()}
 				{renderAiEditCustomMonsterModal()}
+				{renderAiDraftResponseModal()}
 			</>
 		);
 	}
@@ -1218,6 +1467,7 @@ export default function Bestiary({
 			{renderEditCustomMonsterModal()}
 			{renderMonsterAiActionModal()}
 			{renderAiEditCustomMonsterModal()}
+			{renderAiDraftResponseModal()}
 		</Panel>
 	);
 }

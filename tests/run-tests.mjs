@@ -93,6 +93,7 @@ const spellsRouter = require("../server/routes/spells.js");
 const aiRouter = require("../server/routes/ai.js");
 const aiService = require("../server/aiService.js");
 const aiHistoryService = require("../server/aiHistoryService.js");
+const aiResponseHistoryService = require("../server/aiResponseHistoryService.js");
 const aiPatchService = require("../server/aiPatchService.js");
 const aiPayloadSchemas = require("../server/aiPayloadSchemas.js");
 
@@ -610,6 +611,47 @@ await run("AI history service builds stable request snapshots", () => {
 	assert.equal(snapshot.contextSummary, "context: off");
 });
 
+await run("AI history service builds per-monster custom bestiary changes", () => {
+	const resources = aiResponseHistoryService.buildCustomMonsterChangeResources(
+		[
+			{ name: "Old Beast", source: "CUSTOM", cr: "1" },
+			{ name: "Changed Beast", source: "CUSTOM", cr: "2" },
+		],
+		[
+			{ name: "Changed Beast", source: "CUSTOM", cr: "3" },
+			{ name: "New Beast", source: "CUSTOM", cr: "4" },
+		],
+	);
+	assert.deepEqual(
+		resources.map((resource) => ({
+			id: resource.id,
+			kind: resource.kind,
+			before: resource.before?.name || null,
+			after: resource.after?.name || null,
+		})),
+		[
+			{
+				id: "custom-monster:Changed Beast",
+				kind: "custom-monster",
+				before: "Changed Beast",
+				after: "Changed Beast",
+			},
+			{
+				id: "custom-monster:New Beast",
+				kind: "custom-monster",
+				before: null,
+				after: "New Beast",
+			},
+			{
+				id: "custom-monster:Old Beast",
+				kind: "custom-monster",
+				before: "Old Beast",
+				after: null,
+			},
+		],
+	);
+});
+
 await run("AI mention processing preserves existing entity links", () => {
 	const { processGeneratedTextMentions } = aiRouter.__test;
 	assert.equal(
@@ -881,6 +923,14 @@ await run("storage core helpers sanitize and build identifiers", () => {
 	assert.equal(session.name, "My Session");
 	assert.equal("completed" in session, false);
 	assert.equal(storage.campaignDir("../unsafe").includes(".."), false);
+	assert.equal(
+		storage.aiResponsesPath("bestiary"),
+		path.join(storage.DATA_DIR, "_aiResponses-bestiary.json"),
+	);
+	assert.equal(
+		storage.aiResponsesPath("regular"),
+		storage.campaignAiResponsesPath("regular"),
+	);
 });
 
 await run("storage writes JSON atomically and normalizes custom monsters", async () => {

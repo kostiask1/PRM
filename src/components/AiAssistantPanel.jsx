@@ -634,7 +634,7 @@ export default function AiAssistantPanel({
 	}, [locationsList]);
 
 	useEffect(() => {
-		if (!isOpen || aiModels.length > 0) return;
+		if ((!isOpen && !isImagePromptPickerOpen) || aiModels.length > 0) return;
 		api
 			.listAiModels()
 			.then((result) => {
@@ -647,7 +647,7 @@ export default function AiAssistantPanel({
 			.catch((err) => {
 				console.error("Failed to load AI models", err);
 			});
-	}, [isOpen, aiModels.length, selectedModel]);
+	}, [isOpen, isImagePromptPickerOpen, aiModels.length, selectedModel]);
 
 	useEffect(() => {
 		if (!isOpen || !initialRoute.campaign) return;
@@ -2094,6 +2094,7 @@ export default function AiAssistantPanel({
 							imagePromptLocations={imagePromptLocations}
 							imagePromptNpcs={imagePromptNpcs}
 							imagePromptScenes={imagePromptScenes}
+							aiModels={aiModels}
 							isBestiary={isBestiary}
 							isCampaign={isCampaign}
 							isDataLoading={isImagePromptDataLoading}
@@ -2106,7 +2107,9 @@ export default function AiAssistantPanel({
 							onCancel={closeImagePromptPicker}
 							onGenerate={generateImagePromptForTarget}
 							onInstructionsChange={setImagePromptInstructions}
+							onModelChange={setSelectedModel}
 							onSelectTarget={selectImagePromptTarget}
+							selectedModel={selectedModel}
 							selectedTarget={selectedImagePromptTarget}
 						/>
 

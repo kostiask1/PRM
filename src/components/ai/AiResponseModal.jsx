@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 
 import CharacterCard from "../CharacterCard";
 import LocationCard from "../LocationCard";
+import MonsterStatBlock from "../MonsterStatBlock";
 import NoteCard from "../common/NoteCard";
 import Button from "../form/Button";
 import EditableField from "../form/EditableField";
@@ -66,6 +67,7 @@ function getChangedObjectKeys(before, after) {
 }
 
 function getPreviewCardType(resource) {
+	if (resource?.kind === "custom-monster") return "monster";
 	if (resource?.kind === "entity") {
 		if (resource.type === "characters" || resource.type === "npc") {
 			return "character";
@@ -356,6 +358,16 @@ export default function AiResponseModal({
 		const cardType = getPreviewCardType(resource);
 		if (!cardType || !isObjectSnapshot(snapshot)) return null;
 		const campaignSlug = resource.campaign || selectedResponseEntry?.path?.campaign;
+		if (cardType === "monster") {
+			return (
+				<MonsterStatBlock
+					monster={snapshot}
+					showFavoriteAction={false}
+					allowTokenUpload={false}
+					searchHighlight=""
+				/>
+			);
+		}
 		if (cardType === "location") {
 			return (
 				<LocationCard

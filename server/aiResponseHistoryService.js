@@ -34,6 +34,47 @@ function buildAiChangeSummary(resources) {
 	);
 }
 
+function getCustomMonsterKey(monster) {
+	return String(monster?.name || "").trim().toLowerCase();
+}
+
+function getCustomMonsterLabel(monster, fallbackName = "") {
+	return String(monster?.name || fallbackName || "custom-monster").trim();
+}
+
+function buildCustomMonsterChangeResources(beforeMonsters = [], afterMonsters = []) {
+	const beforeByName = new Map(
+		(Array.isArray(beforeMonsters) ? beforeMonsters : [])
+			.filter((monster) => getCustomMonsterKey(monster))
+			.map((monster) => [getCustomMonsterKey(monster), monster]),
+	);
+	const afterByName = new Map(
+		(Array.isArray(afterMonsters) ? afterMonsters : [])
+			.filter((monster) => getCustomMonsterKey(monster))
+			.map((monster) => [getCustomMonsterKey(monster), monster]),
+	);
+	const resources = [];
+	for (const key of new Set([...beforeByName.keys(), ...afterByName.keys()])) {
+		const before = beforeByName.get(key) || null;
+		const after = afterByName.get(key) || null;
+		if (!snapshotValueChanged(before, after)) continue;
+		const name = getCustomMonsterLabel(after || before, key);
+		resources.push({
+			id: `custom-monster:${name}`,
+			kind: "custom-monster",
+			campaign: "bestiary",
+			name,
+			label: `data/custom-bestiary.json / ${name}`,
+			before: cloneSnapshotValue(before),
+			after: cloneSnapshotValue(after),
+		});
+	}
+	resources.sort((a, b) =>
+		String(a.label || a.id || "").localeCompare(String(b.label || b.id || ""), "uk"),
+	);
+	return resources;
+}
+
 function pushAiChange(resources, resource) {
 	if (!snapshotValueChanged(resource.before, resource.after)) return;
 	resources.push({
@@ -224,6 +265,27 @@ async function writeAiResourceSnapshot(resource, snapshotValue) {
 		return;
 	}
 
+	if (resource.kind === "custom-monster") {
+		const current = await storage.readCustomBestiaryMonsters();
+		const targetNames = [
+			resource.name,
+			resource.before?.name,
+			resource.after?.name,
+			snapshotValue?.name,
+		]
+			.map((name) => String(name || "").trim().toLowerCase())
+			.filter(Boolean);
+		const next = current.filter(
+			(monster) =>
+				!targetNames.includes(String(monster?.name || "").trim().toLowerCase()),
+		);
+		if (snapshotValue !== null) {
+			next.push(snapshotValue);
+		}
+		await storage.writeCustomBestiaryMonsters(next);
+		return;
+	}
+
 	const campaignSlug = resource.campaign;
 	if (!campaignSlug) {
 		throw new Error("AI response change has no campaign target.");
@@ -377,6 +439,7 @@ async function restoreAiResponseSnapshot(entry, snapshotKey, options = {}) {
 
 module.exports = {
 	buildAiChangeSet,
+	buildCustomMonsterChangeResources,
 	restoreAiResponseSnapshot,
 	saveParsedAiResponse,
 	saveDraftParsedAiResponse,

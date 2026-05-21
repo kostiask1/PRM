@@ -12,6 +12,7 @@ const {
 	assertAiGeneratedContentContract,
 } = require("../aiPayloadSchemas");
 const {
+	buildCustomMonsterChangeResources,
 	restoreAiResponseSnapshot,
 	saveDraftParsedAiResponse,
 	saveParsedAiResponse,
@@ -920,14 +921,10 @@ router.post("/generate", async (req, res, next) => {
 			}
 
 			const monsters = applied.customBestiaryChange?.after || [];
-			const customBestiaryChangeResource = {
-				id: "custom-bestiary",
-				kind: "custom-bestiary",
-				campaign: "bestiary",
-				label: "data/custom-bestiary.json",
-				before: beforeCustomMonsters,
-				after: monsters,
-			};
+			const customBestiaryChangeResources = buildCustomMonsterChangeResources(
+				beforeCustomMonsters,
+				monsters,
+			);
 			const aiResponsePayload = {
 				text: formatGeneratedContentForHistory(generatedContent),
 				path: { campaign: "bestiary" },
@@ -956,36 +953,22 @@ router.post("/generate", async (req, res, next) => {
 				}),
 				retryPayload: cloneRetryPayload(req.body),
 				changes: {
-					resources: [customBestiaryChangeResource],
-					summary: buildAiChangeSummary([customBestiaryChangeResource]),
+					resources: customBestiaryChangeResources,
+					summary: buildAiChangeSummary(customBestiaryChangeResources),
 				},
 			};
-			if (!autoApplyAiChanges) {
-				const aiResponse = await storage.addAiResponse({
-					...aiResponsePayload,
-					applyState: "draft",
-				});
-				await storage.writeCustomBestiaryMonsters(beforeCustomMonsters);
-				return res.json({
-					generated: {
-						...generatedContent,
-						monsters: applied.changedMonsters,
-					},
-					draft: true,
-					aiResponse,
-				});
-			}
 			const aiResponse = await storage.addAiResponse({
 				...aiResponsePayload,
-				applyState: "applied",
-				appliedAt: new Date().toISOString(),
+				applyState: "draft",
+				appliedAt: null,
 			});
+			await storage.writeCustomBestiaryMonsters(beforeCustomMonsters);
 			return res.json({
 				generated: {
 					...generatedContent,
 					monsters: applied.changedMonsters,
 				},
-				updated: { monsters },
+				draft: true,
 				aiResponse,
 			});
 		}
@@ -1224,16 +1207,10 @@ router.post("/generate", async (req, res, next) => {
 			},
 		});
 		const extraChangeResources = applied.customBestiaryChange?.hasChanges
-			? [
-					{
-						id: "custom-bestiary",
-						kind: "custom-bestiary",
-						campaign: "bestiary",
-						label: "data/custom-bestiary.json",
-						before: applied.customBestiaryChange.before,
-						after: applied.customBestiaryChange.after,
-					},
-				]
+			? buildCustomMonsterChangeResources(
+					applied.customBestiaryChange.before,
+					applied.customBestiaryChange.after,
+				)
 			: [];
 
 		if (!autoApplyAiChanges) {

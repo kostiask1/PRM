@@ -60,6 +60,14 @@
 	text-align: center;
 }
 
+.MonsterStatBlock__token_dropzone {
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: var(--space-2);
+}
+
 .stat_item.ac {
 	text-transform: capitalize;
 }
@@ -72,12 +80,32 @@
 	transform: translate(-30%, 30%) scale(1.7);
 }
 
+.MonsterStatBlock__tokenDragProxy {
+	position: relative;
+	width: 100%;
+	height: 100%;
+}
+
 .MonsterStatBlock__token {
 	width: 100%;
 	height: 100%;
 	object-fit: contain;
 	transition: transform 0.2s ease;
 	cursor: zoom-in;
+}
+
+.MonsterStatBlock__replace_token_btn {
+	position: absolute;
+	right: 50%;
+	bottom: var(--space-2);
+	transform: translateX(50%);
+	opacity: 0;
+	pointer-events: none;
+}
+
+.MonsterStatBlock__tokenDragProxy:hover .MonsterStatBlock__replace_token_btn {
+	opacity: 1;
+	pointer-events: auto;
 }
 
 .MonsterStatBlock__stats__wrap {
