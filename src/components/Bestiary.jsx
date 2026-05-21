@@ -26,6 +26,7 @@ import {
 	createRedoTransition,
 	createUndoTransition,
 } from "../utils/undoRedo.js";
+import { downloadJsonFile } from "../utils/download.js";
 import "../assets/components/Bestiary.css";
 import { lang } from "../services/localization";
 
@@ -87,6 +88,7 @@ export default function Bestiary({
 	const [undoStack, setUndoStack] = useState([]);
 	const [redoStack, setRedoStack] = useState([]);
 	const listRef = useRef(null);
+	const customImportInputRef = useRef(null);
 	const selectedMonsterRef = useRef(null);
 	const hasInitializedSourceRef = useRef(false);
 	const shouldAutoSelectMonsterRef = useRef(true);
@@ -567,6 +569,71 @@ export default function Bestiary({
 		}
 	};
 
+	const handleExportCustomMonsters = () => {
+		downloadJsonFile(
+			{
+				version: 1,
+				type: "custom-bestiary",
+				exportedAt: new Date().toISOString(),
+				monster: customMonsters,
+			},
+			`custom-bestiary-${new Date().toISOString().slice(0, 10)}.json`,
+		);
+	};
+
+	const handleImportCustomMonsters = async (event) => {
+		const file = event.target.files?.[0];
+		event.target.value = "";
+		if (!file) return;
+		try {
+			const raw = await file.text();
+			const parsed = JSON.parse(raw);
+			const imported = Array.isArray(parsed)
+				? parsed
+				: parsed.monster || parsed.monsters || parsed.results || [];
+			if (!Array.isArray(imported) || imported.length === 0) {
+				throw new Error(lang.t("No custom creatures found in file."));
+			}
+			const validImported = imported.filter((monster) =>
+				String(monster?.name || "").trim(),
+			);
+			if (validImported.length === 0) {
+				throw new Error(lang.t("No custom creatures found in file."));
+			}
+			const undoSnapshot = cloneCustomMonsters(customMonsters);
+			const byName = new Map(
+				customMonsters.map((monster) => [
+					String(monster.name || "").trim().toLowerCase(),
+					monster,
+				]),
+			);
+			validImported.forEach((monster) => {
+				const name = String(monster?.name || "").trim();
+				byName.set(name.toLowerCase(), { ...monster, name, source: "CUSTOM" });
+			});
+			await restoreCustomMonsters([...byName.values()], {
+				selectedName: validImported[0].name,
+			});
+			pushCustomUndoSnapshot(undoSnapshot);
+			setSelectedSource("CUSTOM");
+			dispatch(
+				alert({
+					title: lang.t("Import custom creatures"),
+					message: lang.t("Imported custom creatures: {count}", {
+						count: validImported.length,
+					}),
+				}),
+			);
+		} catch (err) {
+			dispatch(
+				alert({
+					title: lang.t("Import error"),
+					message: err.message || lang.t("Unknown error"),
+				}),
+			);
+		}
+	};
+
 	useEffect(() => {
 		const syncSelectionFromUrl = () => {
 			const params = new URLSearchParams(window.location.search);
@@ -993,6 +1060,32 @@ export default function Bestiary({
 			<div className="Panel__header">
 				<h2>{lang.t("Bestiary")}</h2>
 				<div className="Bestiary__header_actions">
+					<input
+						ref={customImportInputRef}
+						type="file"
+						accept=".json"
+						style={{ display: "none" }}
+						onChange={handleImportCustomMonsters}
+					/>
+					<Button
+						variant="ghost"
+						size={Button.SIZES.SMALL}
+						icon="import"
+						onClick={() => customImportInputRef.current?.click()}
+						title={lang.t("Import custom creatures")}
+					>
+						{lang.t("Import")}
+					</Button>
+					<Button
+						variant="ghost"
+						size={Button.SIZES.SMALL}
+						icon="export"
+						onClick={handleExportCustomMonsters}
+						disabled={customMonsters.length === 0}
+						title={lang.t("Export custom creatures")}
+					>
+						{lang.t("Export")}
+					</Button>
 					<Button
 						variant="ghost"
 						size={Button.SIZES.SMALL}

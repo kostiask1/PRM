@@ -10,7 +10,6 @@ const SECTION_OPTIONS = [
 	{ id: "sessions", label: "Sessions" },
 	{ id: "npc", label: "NPC" },
 	{ id: "locations", label: "Locations/Factions" },
-	{ id: "customMonsters", label: "Custom creatures" },
 	{ id: "images", label: "Images" },
 	{ id: "aiHistory", label: "AI history" },
 ];

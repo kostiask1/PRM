@@ -1320,7 +1320,6 @@ function normalizePartialArchiveSections(sections = []) {
 		"sessions",
 		"npc",
 		"locations",
-		"customMonsters",
 		"images",
 		"aiHistory",
 	]);
@@ -1362,9 +1361,6 @@ async function exportCampaignPartialArchiveBundle(slug, sections = []) {
 		sourceName: meta.name,
 		sections: selected,
 		bundle,
-		customMonsters: selected.includes("customMonsters")
-			? await readCustomBestiaryMonsters()
-			: [],
 		images: selected.includes("images")
 			? await listCampaignImagesForArchive(slug)
 			: [],
@@ -1385,7 +1381,6 @@ async function importCampaignPartialArchiveBundle(targetSlug, archiveBundle) {
 		sessions: 0,
 		npc: 0,
 		locations: 0,
-		customMonsters: 0,
 		images: 0,
 		aiHistory: 0,
 	};
@@ -1439,16 +1434,6 @@ async function importCampaignPartialArchiveBundle(targetSlug, archiveBundle) {
 		if (incoming.length > 0) {
 			await writeAiResponses(target, [...existing, ...incoming]);
 			imported.aiHistory = incoming.length;
-		}
-	}
-
-	if (sections.includes("customMonsters")) {
-		const monsters = Array.isArray(archiveBundle?.customMonsters)
-			? archiveBundle.customMonsters
-			: [];
-		if (monsters.length > 0) {
-			await upsertCustomBestiaryMonsters(monsters);
-			imported.customMonsters = monsters.length;
 		}
 	}
 
