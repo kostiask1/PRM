@@ -2,29 +2,20 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { api } from "../api";
 import { alert, confirm } from "../actions/app";
 import { useAppDispatch, useAppSelector } from "../store/appStore";
-import ReactList from "react-list";
 import Panel from "./common/Panel";
-import Input from "./form/Input";
 import Button from "./form/Button";
-import Select from "./form/Select";
-import Icon from "./common/Icon";
-import ListCard from "./common/ListCard";
-import MonsterStatBlock from "./MonsterStatBlock";
 import AiAssistantPanel from "./AiAssistantPanel";
-import AiResponseModal from "./ai/AiResponseModal";
-import Tooltip from "./common/Tooltip";
-import Modal from "./common/Modal";
-import classNames from "../utils/classNames";
+import BestiaryAiDraftModal from "./bestiary/BestiaryAiDraftModal";
+import BestiaryContent from "./bestiary/BestiaryContent";
+import CustomMonsterEditModal from "./bestiary/CustomMonsterEditModal";
+import MonsterAiActionModal from "./bestiary/MonsterAiActionModal";
+import MonsterAiEditModal from "./bestiary/MonsterAiEditModal";
 import {
 	buildDiffResources,
 	getDiffResourceState as getAiDiffResourceState,
 } from "../utils/aiDiff.js";
-import {
-	getMonsterTypeString,
-	matchesMonsterSearch,
-} from "../utils/bestiary.js";
+import { matchesMonsterSearch } from "../utils/bestiary.js";
 import { objectMatchesSearch } from "../utils/deepSearch.js";
-import { highlightText } from "../utils/searchHighlight.jsx";
 import {
 	addUndoSnapshot,
 	clearRedoStack,
@@ -119,10 +110,6 @@ function addSourceMonsterImageToDraft(entry, sourceMonster) {
 
 function monsterMatchesUrl(monster, name, source) {
 	return monster?.name === name && (!source || monster.source === source);
-}
-
-function getMonsterItemKey(monster) {
-	return `${monster.source || ""}:${monster.name}`;
 }
 
 function isCustomSource(source) {
@@ -996,427 +983,92 @@ export default function Bestiary({
 		return parseFloat(crStr) || 0;
 	}
 
-	const renderMonsterItem = (index) => {
-		const monster = displayedMonsters[index];
-		const crValue = monster.cr?.cr !== undefined ? monster.cr.cr : monster.cr;
-		const isSelected =
-			selectedMonster?.name === monster.name &&
-			selectedMonster?.source === monster.source;
-		const isFavorite = favorites.some(
-			(f) =>
-				f.name === monster.name &&
-				f.source?.toUpperCase() === monster.source?.toUpperCase(),
-		);
-
-		return (
-			<div key={getMonsterItemKey(monster)}>
-				<ListCard
-					active={isSelected}
-					onClick={() => setSelectedMonster(isSelected ? "" : monster)}
-					onDoubleClick={() => onAddMonster && onAddMonster(monster)}
-					actions={
-						<>
-							<Button
-								variant="ghost"
-								size={Button.SIZES.SMALL}
-								icon="star"
-								className={classNames("Bestiary__item_fav_btn", {
-									"is_active": isFavorite,
-								})}
-								onClick={(e) => {
-									e.stopPropagation();
-									handleToggleFavorite(monster);
-								}}
-								title={
-									isFavorite
-										? lang.t("Remove from favorites")
-										: lang.t("Add to favorites")
-								}
-							/>
-							{onAddMonster && (
-								<Button
-									variant="ghost"
-									size={Button.SIZES.SMALL}
-									icon="plus"
-									onClick={(e) => {
-										e.stopPropagation();
-										onAddMonster(monster);
-									}}
-									title={lang.t("Add to encounter")}
-								/>
-							)}
-							{isCustomSource(monster.source) && (
-								<>
-									<Button
-										variant="ghost"
-										className="Bestiary__item_ai_edit_btn"
-										size={Button.SIZES.SMALL}
-										icon="wand"
-										onClick={(e) => {
-											e.stopPropagation();
-											openAiEditCustomMonster(monster);
-										}}
-										title={lang.t("AI edit custom creature")}
-									/>
-									<Button
-										variant="ghost"
-										className="Bestiary__item_edit_btn"
-										size={Button.SIZES.SMALL}
-										icon="edit"
-										onClick={(e) => {
-											e.stopPropagation();
-											openEditCustomMonster(monster);
-										}}
-										title={lang.t("Edit custom creature")}
-									/>
-									<Button
-										variant="danger"
-										className="Bestiary__item_delete_btn"
-										size={Button.SIZES.SMALL}
-										icon="trash"
-										onClick={(e) => {
-											e.stopPropagation();
-											handleDeleteCustomMonster(monster);
-										}}
-										title={lang.t("Delete custom creature")}
-									/>
-								</>
-							)}
-						</>
-					}
-				>
-					<div className="Bestiary__item_content">
-						<div className="Bestiary__item_info">
-							<div className="ListCard__title">
-								{highlightText(monster.name, search)}
-							</div>
-							<div className="ListCard__meta">
-								{highlightText(
-									Array.isArray(monster.size) ? monster.size[0] : monster.size,
-									search,
-								)}{" "}
-								{highlightText(getMonsterTypeString(monster.type), search)}{" "}
-								{highlightText(
-									monster.type?.tags?.map((t) => t?.tag || t).join(", "),
-									search,
-								)}
-								{monster.source && (
-									<span className="Bestiary__item_source">
-										{" "}• {highlightText(monster.source, search)}
-									</span>
-								)}
-							</div>
-						</div>
-						<Tooltip content={lang.t("Challenge Rating")}>
-							<div className="Bestiary__item_cr">
-								<div className="Bestiary__cr_label">CR</div>
-								<div className="Bestiary__cr_value">{crValue || "--"}</div>
-							</div>
-						</Tooltip>
-					</div>
-				</ListCard>
-			</div>
-		);
-	};
-
-	const renderBestiaryInner = () => (
-		<div className="Bestiary Bestiary__inner">
-			<div className="Panel__body">
-				<div className="Bestiary__search">
-					{sources.length > 0 && (
-						<Select
-							value={selectedSource}
-							onChange={(e) =>
-								setSelectedSource(normalizeSourceSelection(e.target.value))
-							}
-						>
-							<option value="all">{lang.t("All sources")}</option>
-							<option value="CUSTOM">{lang.t("Custom creatures")}</option>
-							{sourceOptions.map((s) => (
-								<option key={s} value={s}>
-									{s.replace(/^bestiary-/i, "").toUpperCase()}
-								</option>
-							))}
-						</Select>
-					)}
-					<div className="Bestiary__searchInput">
-						<Input
-							icon="search-detailed"
-							placeholder={lang.t("Search by name or type...")}
-							value={search}
-							onChange={(e) => setSearch(e.target.value)}
-						/>
-						<Button
-							variant={isDetailedSearch ? "primary" : "ghost"}
-							icon="search-detailed"
-							onClick={() => setIsDetailedSearch((value) => !value)}
-							title={lang.t("Detailed search")}
-							className="DetailedSearchButton Bestiary__detailed_search_btn"
-						/>
-					</div>
-					<Button
-						variant={onlyFavorites ? "primary" : "ghost"}
-						icon="star"
-						onClick={() => setOnlyFavorites(!onlyFavorites)}
-						title={lang.t("Only favorites")}
-						className="Bestiary__filter_fav_btn"
-					/>
-					<Button
-						className={classNames("Bestiary__sort_btn", {
-							"is_active": sortOrder !== "none",
-						})}
-						variant="ghost"
-						onClick={toggleSort}
-						title={lang.t("Sort by CR (Challenge Rating)")}
-					>
-						<span className="Bestiary__sort_label">CR</span>
-						<Icon
-							name={`sort-${sortOrder}`}
-							className={classNames(
-								"Bestiary__sort_icon",
-								`state-${sortOrder}`,
-							)}
-						/>
-					</Button>
-				</div>
-
-				<div
-					className={classNames("Bestiary__content", {
-						"Bestiary__content__stacked": isEmbedded,
-					})}
-				>
-					<div className="Bestiary__list">
-						<ReactList
-							ref={listRef}
-							itemRenderer={renderMonsterItem}
-							length={displayedMonsters.length}
-							type="uniform"
-						/>
-					</div>
-					{loading && (
-						<div className="muted">
-							{lang.t("Indexing database...")}
-						</div>
-					)}
-
-					{selectedMonster && (
-						<div className="Bestiary__detail_container">
-							<MonsterStatBlock
-								monster={selectedMonster}
-								onNameClick={onAddMonster ? (m) => onAddMonster(m) : undefined}
-								nameTitle={onAddMonster && lang.t("Add to encounter")}
-								onFavoriteChange={(newFavs) => setFavorites(newFavs)}
-								showAddToEncounterPicker
-								onAddToEncounter={onAddMonster}
-								onAiAction={openMonsterAiAction}
-								searchHighlight={search}
-							/>
-						</div>
-					)}
-				</div>
-			</div>
-		</div>
+	const bestiaryContent = (
+		<BestiaryContent
+			displayedMonsters={displayedMonsters}
+			favorites={favorites}
+			isDetailedSearch={isDetailedSearch}
+			isEmbedded={isEmbedded}
+			listRef={listRef}
+			loading={loading}
+			onAddMonster={onAddMonster}
+			onAiEditCustomMonster={openAiEditCustomMonster}
+			onDeleteCustomMonster={handleDeleteCustomMonster}
+			onEditCustomMonster={openEditCustomMonster}
+			onFavoriteListChange={setFavorites}
+			onMonsterAiAction={openMonsterAiAction}
+			onToggleFavorite={handleToggleFavorite}
+			onlyFavorites={onlyFavorites}
+			search={search}
+			selectedMonster={selectedMonster}
+			selectedSource={selectedSource}
+			setIsDetailedSearch={setIsDetailedSearch}
+			setOnlyFavorites={setOnlyFavorites}
+			setSearch={setSearch}
+			setSelectedMonster={setSelectedMonster}
+			setSelectedSource={setSelectedSource}
+			sortOrder={sortOrder}
+			sourceOptions={sourceOptions}
+			sources={sources}
+			toggleSort={toggleSort}
+		/>
 	);
 
-	const renderEditCustomMonsterModal = () =>
-		editingMonster ? (
-			<Modal
-				title={lang.t("Edit custom creature")}
+	const bestiaryModals = (
+		<>
+			<CustomMonsterEditModal
+				editingMonster={editingMonster}
+				editingMonsterError={editingMonsterError}
+				editingMonsterJson={editingMonsterJson}
+				isSavingMonsterEdit={isSavingMonsterEdit}
 				onCancel={closeEditCustomMonster}
-				showFooter={false}
-				className="Bestiary__edit_modal"
-			>
-				<div className="Bestiary__edit_form">
-					<Input
-						type="textarea"
-						value={editingMonsterJson}
-						onChange={(event) => setEditingMonsterJson(event.target.value)}
-						disabled={isSavingMonsterEdit}
-						className="Bestiary__edit_json"
-					/>
-					{editingMonsterError && (
-						<div className="Bestiary__edit_error">
-							{editingMonsterError}
-						</div>
-					)}
-					<div className="Bestiary__edit_actions">
-						<Button
-							variant="ghost"
-							onClick={closeEditCustomMonster}
-							disabled={isSavingMonsterEdit}
-						>
-							{lang.t("Cancel")}
-						</Button>
-						<Button
-							variant="primary"
-							icon="check"
-							onClick={saveEditedCustomMonster}
-							disabled={isSavingMonsterEdit}
-						>
-							{isSavingMonsterEdit ? lang.t("Saving...") : lang.t("Save")}
-						</Button>
-					</div>
-				</div>
-			</Modal>
-		) : null;
-
-	const renderAiEditCustomMonsterModal = () =>
-		aiEditingMonster ? (
-			<Modal
-				title={
-					aiEditMode === "create-based"
-						? lang.t("Create custom creature based on this")
-						: lang.t("AI edit custom creature")
-				}
-				onCancel={closeAiEditCustomMonster}
-				showFooter={false}
-				className="Bestiary__ai_edit_modal"
-			>
-				<div className="Bestiary__edit_form">
-					<div className="Bestiary__ai_edit_target">
-						<span className="Bestiary__ai_edit_target_label">
-							{aiEditMode === "create-based"
-								? lang.t("Source creature")
-								: lang.t("Custom creature")}
-							:
-						</span>{" "}
-						{aiEditingMonster.name}
-					</div>
-					<Select
-						className="Bestiary__ai_edit_model"
-						value={selectedAiModel}
-						onChange={(event) => setSelectedAiModel(event.target.value)}
-						disabled={isAiEditingMonster || aiModels.length === 0}
-					>
-						{aiModels.length > 0 ? (
-							aiModels.map((model) => (
-								<option key={model.name} value={model.name}>
-									{model.displayName || model.name}
-								</option>
-							))
-						) : (
-							<option value="">{lang.t("Loading models...")}</option>
-						)}
-					</Select>
-					<Input
-						type="textarea"
-						value={aiEditInstructions}
-						onChange={(event) => setAiEditInstructions(event.target.value)}
-						disabled={isAiEditingMonster}
-						placeholder={
-							aiEditMode === "create-based"
-								? lang.t(
-										"Describe what to create, or leave empty to let AI decide.",
-									)
-								: lang.t("Describe what to change.")
-						}
-						className="Bestiary__ai_edit_prompt"
-					/>
-					{aiEditError && (
-						<div className="Bestiary__edit_error">
-							{aiEditError}
-						</div>
-					)}
-					<div className="Bestiary__edit_actions">
-						<Button
-							variant="ghost"
-							onClick={closeAiEditCustomMonster}
-							disabled={isAiEditingMonster}
-						>
-							{lang.t("Cancel")}
-						</Button>
-						<Button
-							variant="primary"
-							icon="wand"
-							onClick={saveAiEditedCustomMonster}
-							disabled={isAiEditingMonster}
-						>
-							{isAiEditingMonster
-								? lang.t("AI is working, please wait...")
-								: aiEditMode === "create-based"
-									? lang.t("Create custom creature")
-									: lang.t("Apply AI edit")}
-						</Button>
-					</div>
-				</div>
-			</Modal>
-		) : null;
-
-	const renderMonsterAiActionModal = () =>
-		aiActionMonster ? (
-			<Modal
-				title={lang.t("AI creature action")}
+				onJsonChange={setEditingMonsterJson}
+				onSave={saveEditedCustomMonster}
+			/>
+			<MonsterAiActionModal
+				aiActionMonster={aiActionMonster}
 				onCancel={closeMonsterAiAction}
-				showFooter={false}
-				className="Bestiary__ai_action_modal"
-			>
-				<div className="Bestiary__ai_action_body">
-					<div className="Bestiary__ai_edit_target">
-						<span className="Bestiary__ai_edit_target_label">
-							{lang.t("Custom creature")}:
-						</span>{" "}
-						{aiActionMonster.name}
-					</div>
-					<div className="Bestiary__ai_action_buttons">
-						<Button
-							variant="primary"
-							icon="wand"
-							onClick={() => chooseMonsterAiAction("edit")}
-						>
-							{lang.t("Edit this creature")}
-						</Button>
-						<Button
-							variant="ghost"
-							icon="plus"
-							onClick={() => chooseMonsterAiAction("create-based")}
-						>
-							{lang.t("Create new custom creature based on this")}
-						</Button>
-					</div>
-				</div>
-			</Modal>
-		) : null;
-
-	const renderAiDraftResponseModal = () =>
-		aiDraftResponseEntry ? (
-			<AiResponseModal
-				generatedPrompt={aiDraftResponseEntry.text}
-				generatedPromptRef={aiDraftResponseRef}
-				isGeneratedPromptCopied={false}
-				isRestoringResponse={isRestoringAiResponse}
-				markdownComponents={{}}
-				onApply={(entry = aiDraftResponseEntry) =>
-					restoreAiDraftResponse(entry, "apply")
-				}
-				onApplyResource={(entry = aiDraftResponseEntry, resourceIds) =>
+				onChoose={chooseMonsterAiAction}
+			/>
+			<MonsterAiEditModal
+				aiEditingMonster={aiEditingMonster}
+				aiEditError={aiEditError}
+				aiEditInstructions={aiEditInstructions}
+				aiEditMode={aiEditMode}
+				aiModels={aiModels}
+				isAiEditingMonster={isAiEditingMonster}
+				onCancel={closeAiEditCustomMonster}
+				onInstructionsChange={setAiEditInstructions}
+				onModelChange={setSelectedAiModel}
+				onSave={saveAiEditedCustomMonster}
+				selectedAiModel={selectedAiModel}
+			/>
+			<BestiaryAiDraftModal
+				aiDraftDiffResources={aiDraftDiffResources}
+				aiDraftResponseEntry={aiDraftResponseEntry}
+				aiDraftResponseRef={aiDraftResponseRef}
+				getDiffResourceState={getDiffResourceState}
+				getHistoryChangeSummary={getHistoryChangeSummary}
+				isRestoringAiResponse={isRestoringAiResponse}
+				onApply={(entry) => restoreAiDraftResponse(entry, "apply")}
+				onApplyResource={(entry, resourceIds) =>
 					restoreAiDraftResponse(entry, "apply", { resourceIds })
 				}
 				onCancel={closeAiDraftResponse}
-				onCopy={() => {}}
 				onSaveDraftChanges={saveAiDraftResponseChanges}
-				onUndo={(entry = aiDraftResponseEntry) =>
-					restoreAiDraftResponse(entry, "undo")
-				}
-				onUndoResource={(entry = aiDraftResponseEntry, resourceIds) =>
+				onUndo={(entry) => restoreAiDraftResponse(entry, "undo")}
+				onUndoResource={(entry, resourceIds) =>
 					restoreAiDraftResponse(entry, "undo", { resourceIds })
 				}
-				selectedResponseDetails={[]}
-				selectedResponseDiffResources={aiDraftDiffResources}
-				selectedResponseEntry={aiDraftResponseEntry}
-				selectedResponseHasChanges={aiDraftDiffResources.length > 0}
-				getDiffResourceState={getDiffResourceState}
-				getHistoryChangeSummary={getHistoryChangeSummary}
 			/>
-		) : null;
+		</>
+	);
 
 	if (isEmbedded) {
 		return (
 			<>
-				{renderBestiaryInner()}
-				{renderEditCustomMonsterModal()}
-				{renderMonsterAiActionModal()}
-				{renderAiEditCustomMonsterModal()}
-				{renderAiDraftResponseModal()}
+				{bestiaryContent}
+				{bestiaryModals}
 			</>
 		);
 	}
@@ -1470,16 +1122,13 @@ export default function Bestiary({
 					/>
 				</div>
 			</div>
-			<div className="Panel__body">{renderBestiaryInner()}</div>
+			<div className="Panel__body">{bestiaryContent}</div>
 			<AiAssistantPanel
 				bestiaryMode
 				sessionData={{}}
 				onInsertResult={handleCustomBestiaryUpdate}
 			/>
-			{renderEditCustomMonsterModal()}
-			{renderMonsterAiActionModal()}
-			{renderAiEditCustomMonsterModal()}
-			{renderAiDraftResponseModal()}
+			{bestiaryModals}
 		</Panel>
 	);
 }
