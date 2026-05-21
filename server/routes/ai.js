@@ -764,7 +764,16 @@ router.post("/generate", async (req, res, next) => {
 		const campaignBasePrompt = getCampaignBasePrompt(settings, path?.campaign);
 
 		if (type === "custom-monster") {
-			const customBestiary = await storage.readCustomBestiary();
+			let customBestiary = await storage.readCustomBestiary();
+			if (
+				Array.isArray(customBestiary.monster) &&
+				customBestiary.monster.some((monster) => !asText(monster?.id))
+			) {
+				const normalizedMonsters = await storage.writeCustomBestiaryMonsters(
+					customBestiary.monster,
+				);
+				customBestiary = { ...customBestiary, monster: normalizedMonsters };
+			}
 			const beforeCustomMonsters = Array.isArray(customBestiary.monster)
 				? customBestiary.monster
 				: [];
@@ -774,6 +783,7 @@ router.post("/generate", async (req, res, next) => {
 				customBestiary: {
 					monsters: Array.isArray(customBestiary.monster)
 						? customBestiary.monster.map((monster) => ({
+								id: monster.id,
 								name: monster.name,
 								source: monster.source,
 								type: monster.type,
@@ -783,10 +793,12 @@ router.post("/generate", async (req, res, next) => {
 				},
 			};
 			if (customMonsterTarget && typeof customMonsterTarget === "object") {
+				const targetId = asText(customMonsterTarget.id);
 				const targetName = asText(customMonsterTarget.name).toLowerCase();
 				const fullTarget = Array.isArray(customBestiary.monster)
 					? customBestiary.monster.find(
 							(monster) =>
+								(targetId && asText(monster?.id) === targetId) ||
 								asText(monster?.name).toLowerCase() === targetName,
 						)
 					: null;

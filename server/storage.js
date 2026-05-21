@@ -370,6 +370,7 @@ function normalizeCustomBestiaryEntryList(value) {
 function normalizeCustomBestiaryMonster(monster) {
 	const next = stripMentionBrackets({
 		...monster,
+		id: String(monster.id || createId()),
 		name: String(monster.name || monster.title || "").trim(),
 		source: CUSTOM_BESTIARY_SOURCE,
 	});
@@ -401,9 +402,17 @@ function normalizeCustomBestiaryMonster(monster) {
 }
 
 async function writeCustomBestiaryMonsters(monsters) {
+	const seenIds = new Set();
 	const normalized = (Array.isArray(monsters) ? monsters : [])
 		.filter((monster) => monster && typeof monster === "object")
-		.map(normalizeCustomBestiaryMonster)
+		.map((monster) => {
+			const normalizedMonster = normalizeCustomBestiaryMonster(monster);
+			if (seenIds.has(normalizedMonster.id)) {
+				normalizedMonster.id = createId();
+			}
+			seenIds.add(normalizedMonster.id);
+			return normalizedMonster;
+		})
 		.filter((monster) => monster.name)
 		.sort((a, b) => String(a.name).localeCompare(String(b.name), "uk"));
 	await writeJson(CUSTOM_BESTIARY_PATH, {

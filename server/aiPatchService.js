@@ -1087,7 +1087,10 @@ function applyCampaignOperation(state, operation) {
 }
 
 async function applyMonsterOperations(operations) {
-	const existing = await storage.readCustomBestiaryMonsters();
+	let existing = await storage.readCustomBestiaryMonsters();
+	if (existing.some((monster) => !asText(monster?.id))) {
+		existing = await storage.writeCustomBestiaryMonsters(existing);
+	}
 	let next = [...existing];
 	const changedMonsters = [];
 	let hasChanges = false;
@@ -1098,11 +1101,12 @@ async function applyMonsterOperations(operations) {
 			continue;
 		}
 		const op = asText(operation.op).toLowerCase();
-		const name = asText(operation.name || operation.id || operation.targetName);
-		const index = next.findIndex(
-			(monster) =>
-				asText(monster.name).toLowerCase() === name.toLowerCase(),
-		);
+		const targetId = asText(operation.id || operation.targetId);
+		const name = asText(operation.name || operation.targetName || operation.id);
+		const index = next.findIndex((monster) => {
+			if (targetId && asText(monster.id) === targetId) return true;
+			return name && asText(monster.name).toLowerCase() === name.toLowerCase();
+		});
 
 		if (op === "delete") {
 			if (index >= 0) {
@@ -1113,7 +1117,9 @@ async function applyMonsterOperations(operations) {
 		}
 
 		if (op === "create") {
-			const normalized = normalizeCustomMonster(operationData(operation));
+			const data = { ...operationData(operation) };
+			delete data.id;
+			const normalized = normalizeCustomMonster(data);
 			if (!normalized) continue;
 			next = next.filter(
 				(monster) =>
@@ -1131,6 +1137,7 @@ async function applyMonsterOperations(operations) {
 			const normalized = normalizeCustomMonster({
 				...next[index],
 				...operationPatch(operation),
+				id: next[index].id,
 				name: operationPatch(operation).name || next[index].name,
 			});
 			if (!normalized) continue;

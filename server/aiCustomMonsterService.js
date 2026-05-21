@@ -179,6 +179,7 @@ function normalizeCustomMonster(raw) {
 	if (!name) return null;
 
 	const monster = {
+		id: asText(raw.id) || storage.createId(),
 		name,
 		source: storage.CUSTOM_BESTIARY_SOURCE || "CUSTOM",
 		size: normalizeMonsterSize(raw.size),

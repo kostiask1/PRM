@@ -34,7 +34,11 @@ function buildAiChangeSummary(resources) {
 	);
 }
 
-function getCustomMonsterKey(monster) {
+function getCustomMonsterId(monster) {
+	return String(monster?.id || "").trim();
+}
+
+function getCustomMonsterNameKey(monster) {
 	return String(monster?.name || "").trim().toLowerCase();
 }
 
@@ -43,24 +47,36 @@ function getCustomMonsterLabel(monster, fallbackName = "") {
 }
 
 function buildCustomMonsterChangeResources(beforeMonsters = [], afterMonsters = []) {
-	const beforeByName = new Map(
-		(Array.isArray(beforeMonsters) ? beforeMonsters : [])
-			.filter((monster) => getCustomMonsterKey(monster))
-			.map((monster) => [getCustomMonsterKey(monster), monster]),
+	const beforeList = (Array.isArray(beforeMonsters) ? beforeMonsters : []).filter(
+		(monster) => monster && typeof monster === "object",
 	);
-	const afterByName = new Map(
-		(Array.isArray(afterMonsters) ? afterMonsters : [])
-			.filter((monster) => getCustomMonsterKey(monster))
-			.map((monster) => [getCustomMonsterKey(monster), monster]),
+	const afterList = (Array.isArray(afterMonsters) ? afterMonsters : []).filter(
+		(monster) => monster && typeof monster === "object",
 	);
+	const beforeById = new Map(
+		beforeList
+			.filter((monster) => getCustomMonsterId(monster))
+			.map((monster) => [getCustomMonsterId(monster), monster]),
+	);
+	const afterById = new Map(
+		afterList
+			.filter((monster) => getCustomMonsterId(monster))
+			.map((monster) => [getCustomMonsterId(monster), monster]),
+	);
+	const matchedBefore = new Set();
+	const matchedAfter = new Set();
 	const resources = [];
-	for (const key of new Set([...beforeByName.keys(), ...afterByName.keys()])) {
-		const before = beforeByName.get(key) || null;
-		const after = afterByName.get(key) || null;
-		if (!snapshotValueChanged(before, after)) continue;
-		const name = getCustomMonsterLabel(after || before, key);
+
+	const pushResource = (before, after, fallbackKey = "") => {
+		if (!snapshotValueChanged(before, after)) return;
+		const monsterId =
+			getCustomMonsterId(after) ||
+			getCustomMonsterId(before) ||
+			getCustomMonsterNameKey(after || before) ||
+			fallbackKey;
+		const name = getCustomMonsterLabel(after || before, fallbackKey);
 		resources.push({
-			id: `custom-monster:${name}`,
+			id: `custom-monster:${monsterId}`,
 			kind: "custom-monster",
 			campaign: "bestiary",
 			name,
@@ -68,6 +84,35 @@ function buildCustomMonsterChangeResources(beforeMonsters = [], afterMonsters = 
 			before: cloneSnapshotValue(before),
 			after: cloneSnapshotValue(after),
 		});
+	};
+
+	for (const key of new Set([...beforeById.keys(), ...afterById.keys()])) {
+		const before = beforeById.get(key) || null;
+		const after = afterById.get(key) || null;
+		if (before) matchedBefore.add(before);
+		if (after) matchedAfter.add(after);
+		pushResource(before, after, key);
+	}
+
+	const beforeByName = new Map(
+		beforeList
+			.filter(
+				(monster) =>
+					!matchedBefore.has(monster) && getCustomMonsterNameKey(monster),
+			)
+			.map((monster) => [getCustomMonsterNameKey(monster), monster]),
+	);
+	const afterByName = new Map(
+		afterList
+			.filter(
+				(monster) =>
+					!matchedAfter.has(monster) && getCustomMonsterNameKey(monster),
+			)
+			.map((monster) => [getCustomMonsterNameKey(monster), monster]),
+	);
+
+	for (const key of new Set([...beforeByName.keys(), ...afterByName.keys()])) {
+		pushResource(beforeByName.get(key) || null, afterByName.get(key) || null, key);
 	}
 	resources.sort((a, b) =>
 		String(a.label || a.id || "").localeCompare(String(b.label || b.id || ""), "uk"),
@@ -267,6 +312,16 @@ async function writeAiResourceSnapshot(resource, snapshotValue) {
 
 	if (resource.kind === "custom-monster") {
 		const current = await storage.readCustomBestiaryMonsters();
+		const targetIds = [
+			resource.before?.id,
+			resource.after?.id,
+			snapshotValue?.id,
+			String(resource.id || "").startsWith("custom-monster:")
+				? String(resource.id).slice("custom-monster:".length)
+				: "",
+		]
+			.map((id) => String(id || "").trim())
+			.filter(Boolean);
 		const targetNames = [
 			resource.name,
 			resource.before?.name,
@@ -277,6 +332,7 @@ async function writeAiResourceSnapshot(resource, snapshotValue) {
 			.filter(Boolean);
 		const next = current.filter(
 			(monster) =>
+				!targetIds.includes(String(monster?.id || "").trim()) &&
 				!targetNames.includes(String(monster?.name || "").trim().toLowerCase()),
 		);
 		if (snapshotValue !== null) {

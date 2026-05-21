@@ -614,12 +614,12 @@ await run("AI history service builds stable request snapshots", () => {
 await run("AI history service builds per-monster custom bestiary changes", () => {
 	const resources = aiResponseHistoryService.buildCustomMonsterChangeResources(
 		[
-			{ name: "Old Beast", source: "CUSTOM", cr: "1" },
-			{ name: "Changed Beast", source: "CUSTOM", cr: "2" },
+			{ id: "old-id", name: "Old Beast", source: "CUSTOM", cr: "1" },
+			{ id: "changed-id", name: "Changed Beast", source: "CUSTOM", cr: "2" },
 		],
 		[
-			{ name: "Changed Beast", source: "CUSTOM", cr: "3" },
-			{ name: "New Beast", source: "CUSTOM", cr: "4" },
+			{ id: "changed-id", name: "Renamed Beast", source: "CUSTOM", cr: "3" },
+			{ id: "new-id", name: "New Beast", source: "CUSTOM", cr: "4" },
 		],
 	);
 	assert.deepEqual(
@@ -631,22 +631,22 @@ await run("AI history service builds per-monster custom bestiary changes", () =>
 		})),
 		[
 			{
-				id: "custom-monster:Changed Beast",
-				kind: "custom-monster",
-				before: "Changed Beast",
-				after: "Changed Beast",
-			},
-			{
-				id: "custom-monster:New Beast",
+				id: "custom-monster:new-id",
 				kind: "custom-monster",
 				before: null,
 				after: "New Beast",
 			},
 			{
-				id: "custom-monster:Old Beast",
+				id: "custom-monster:old-id",
 				kind: "custom-monster",
 				before: "Old Beast",
 				after: null,
+			},
+			{
+				id: "custom-monster:changed-id",
+				kind: "custom-monster",
+				before: "Changed Beast",
+				after: "Renamed Beast",
 			},
 		],
 	);
@@ -953,6 +953,8 @@ await run("storage writes JSON atomically and normalizes custom monsters", async
 			action: ["{@atk mw} {@hit 6} to hit."],
 		});
 		assert.equal(normalized.name, "Glass Knight");
+		assert.equal(typeof normalized.id, "string");
+		assert.ok(normalized.id.length > 0);
 		assert.equal(normalized.source, "CUSTOM");
 		assert.equal(normalized.hp.average, 19);
 		assert.equal(Array.isArray(normalized.spellcasting), true);
