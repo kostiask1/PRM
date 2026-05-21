@@ -47,6 +47,7 @@ function buildAiOptionsSummary(options) {
 		);
 	}
 	if (options.globalBasePrompt) parts.push("global-base-prompt: on");
+	if (options.imagePromptBasePrompt) parts.push("image-base-prompt: on");
 	if (options.campaignBasePrompt) parts.push("campaign-base-prompt: on");
 	return parts.join("; ");
 }
@@ -136,6 +137,7 @@ function buildAiRequestSnapshot({
 	contextData,
 	language,
 	globalBasePrompt,
+	imagePromptBasePrompt,
 	campaignBasePrompt,
 }) {
 	const options = {
@@ -152,6 +154,7 @@ function buildAiRequestSnapshot({
 		customMonsterGeneration: Boolean(generateCustomMonsters),
 		contextEnabled: Boolean(contextConfig),
 		globalBasePrompt: Boolean(asText(globalBasePrompt)),
+		imagePromptBasePrompt: Boolean(asText(imagePromptBasePrompt)),
 		campaignBasePrompt: Boolean(asText(campaignBasePrompt)),
 		sceneId: sceneId || null,
 		imageTarget:

@@ -1418,8 +1418,9 @@ await run(
 		assert.match(tooltipSource, /triggerActiveRef/);
 		assert.match(
 			tooltipSource,
-			/!triggerActiveRef\.current \|\| isOpen \|\| disabled \|\| !hasContent/,
+			/!triggerActiveRef\.current[\s\S]*isOpen[\s\S]*disabled[\s\S]*!hasContent/,
 		);
+		assert.match(tooltipSource, /isDraggableListDragging\(\)/);
 	},
 );
 

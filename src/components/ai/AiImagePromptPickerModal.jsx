@@ -126,7 +126,7 @@ export default function AiImagePromptPickerModal({
 						onChange={(event) => onInstructionsChange(event.target.value)}
 						placeholder={lang.t("Optional image prompt instructions...")}
 						disabled={loading}
-						className="AiAssistant__image_prompt_instructions"
+						className="AiAssistant__image_prompt_model AiAssistant__image_prompt_instructions"
 					/>
 					<div className="AiAssistant__image_prompt_actions">
 						<Button

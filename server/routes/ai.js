@@ -724,6 +724,7 @@ router.post("/generate", async (req, res, next) => {
 			path,
 			sceneId,
 			imageTarget,
+			imagePromptBasePromptOverride,
 			customMonsterTarget,
 			customMonsterMode,
 			parseAIResponse,
@@ -766,6 +767,14 @@ router.post("/generate", async (req, res, next) => {
 		const simplifiedNotesEnabled = Boolean(settings.simplifiedNotes);
 		const autoApplyAiChanges = settings.autoApplyAiChanges !== false;
 		const globalBasePrompt = asText(settings.aiBasePrompt);
+		const imagePromptBasePrompt =
+			type === "image" &&
+			Object.prototype.hasOwnProperty.call(
+				req.body || {},
+				"imagePromptBasePromptOverride",
+			)
+				? asText(imagePromptBasePromptOverride)
+				: asText(settings.imagePromptBasePrompt);
 		const campaignBasePrompt = getCampaignBasePrompt(settings, path?.campaign);
 
 		if (type === "custom-monster") {
@@ -897,6 +906,7 @@ router.post("/generate", async (req, res, next) => {
 				language: responseLanguage,
 				simplifiedNotes: simplifiedNotesEnabled,
 				globalBasePrompt,
+				imagePromptBasePrompt,
 				campaignBasePrompt,
 			});
 
@@ -970,6 +980,7 @@ router.post("/generate", async (req, res, next) => {
 					contextData: customContextData,
 					language: responseLanguage,
 					globalBasePrompt,
+					imagePromptBasePrompt,
 					campaignBasePrompt,
 				}),
 				retryPayload: cloneRetryPayload(req.body),
@@ -1013,6 +1024,7 @@ router.post("/generate", async (req, res, next) => {
 				language: responseLanguage,
 				simplifiedNotes: simplifiedNotesEnabled,
 				globalBasePrompt,
+				imagePromptBasePrompt,
 				campaignBasePrompt,
 			});
 
@@ -1051,6 +1063,7 @@ router.post("/generate", async (req, res, next) => {
 					contextData: {},
 					language: responseLanguage,
 					globalBasePrompt,
+					imagePromptBasePrompt,
 					campaignBasePrompt,
 				}),
 				retryPayload: cloneRetryPayload(req.body),
@@ -1159,6 +1172,7 @@ router.post("/generate", async (req, res, next) => {
 			language: responseLanguage,
 			simplifiedNotes: simplifiedNotesEnabled,
 			globalBasePrompt,
+			imagePromptBasePrompt,
 			campaignBasePrompt,
 		});
 
@@ -1206,6 +1220,7 @@ router.post("/generate", async (req, res, next) => {
 			contextData,
 			language: responseLanguage,
 			globalBasePrompt,
+			imagePromptBasePrompt,
 			campaignBasePrompt,
 		});
 

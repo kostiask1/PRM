@@ -414,6 +414,9 @@ export default function AiAssistantPanel({
 	const currentLanguage = useAppSelector(
 		(state) => state.localization.language,
 	);
+	const imagePromptBasePrompt = useAppSelector(
+		(state) => state.ui.imagePromptBasePrompt || "",
+	);
 	const initialRoute = parseUrl();
 	const isBestiary = bestiaryMode || initialRoute.campaign === "bestiary";
 	const isCampaign = !initialRoute.session && !isBestiary;
@@ -489,6 +492,9 @@ export default function AiAssistantPanel({
 	const [isRestoringResponse, setIsRestoringResponse] = useState(false);
 	const activeGenerateControllerRef = useRef(null);
 	const generatedPromptRef = useRef(null);
+	const imagePromptCampaignDataLoadedRef = useRef(false);
+	const imagePromptCampaignEntitiesLoadedRef = useRef(false);
+	const imagePromptBestiaryDataLoadedRef = useRef(false);
 	const [canCancelGenerate, setCanCancelGenerate] = useState(false);
 	const [isGeneratedPromptCopied, setIsGeneratedPromptCopied] = useState(false);
 
@@ -557,6 +563,12 @@ export default function AiAssistantPanel({
 
 	useEffect(() => {
 		if (isBestiary) return;
+		if (
+			isImagePromptPickerOpen &&
+			imagePromptCampaignEntitiesLoadedRef.current
+		) {
+			return;
+		}
 		if (!isContextModalOpen && !isImagePromptPickerOpen) return;
 
 		let cancelled = false;
@@ -580,6 +592,9 @@ export default function AiAssistantPanel({
 				setCharactersList(characters);
 				setNpcsList(npcs);
 				setLocationsList(locations);
+				if (isImagePromptPickerOpen) {
+					imagePromptCampaignEntitiesLoadedRef.current = true;
+				}
 			})
 			.catch((err) => console.error("Failed to load campaign context", err));
 
@@ -676,6 +691,7 @@ export default function AiAssistantPanel({
 		if (!isImagePromptPickerOpen || !isCampaign || !initialRoute.campaign) {
 			return;
 		}
+		if (imagePromptCampaignDataLoadedRef.current) return;
 
 		let cancelled = false;
 		setIsImagePromptDataLoading(true);
@@ -701,6 +717,7 @@ export default function AiAssistantPanel({
 				);
 				if (!cancelled) {
 					setImagePromptSessions(fullSessions.filter(Boolean));
+					imagePromptCampaignDataLoadedRef.current = true;
 				}
 			} finally {
 				if (!cancelled) setIsImagePromptDataLoading(false);
@@ -719,6 +736,7 @@ export default function AiAssistantPanel({
 
 	useEffect(() => {
 		if (!isImagePromptPickerOpen || !isBestiary) return;
+		if (imagePromptBestiaryDataLoadedRef.current) return;
 
 		let cancelled = false;
 		setIsImagePromptDataLoading(true);
@@ -730,10 +748,11 @@ export default function AiAssistantPanel({
 					? data.monster
 					: Array.isArray(data?.monsters)
 						? data.monsters
-						: Array.isArray(data)
-							? data
-							: [];
+				: Array.isArray(data)
+					? data
+					: [];
 				setImagePromptCustomMonsters(monsters);
+				imagePromptBestiaryDataLoadedRef.current = true;
 			})
 			.catch((err) => {
 				console.error("Failed to load custom monsters for image prompt", err);
@@ -1159,6 +1178,7 @@ export default function AiAssistantPanel({
 		{
 			forceParseAIResponse = null,
 			imageTarget = null,
+			imagePromptBasePromptOverride = undefined,
 			userInstructionsOverride = null,
 		} = {},
 	) => {
@@ -1200,6 +1220,7 @@ export default function AiAssistantPanel({
 					path: initialRoute,
 					sceneId: targetSceneId,
 					imageTarget,
+					imagePromptBasePromptOverride,
 					parseAIResponse: shouldParseResponse,
 					generateCharacters: !isEncounter && !isBestiary && generateCharacters,
 					generateNpcs: !isEncounter && !isBestiary && generateNpcs,
@@ -1437,7 +1458,8 @@ export default function AiAssistantPanel({
 		setIsImagePromptPickerOpen(false);
 		generate("image", target.type === "scene" ? target.id || null : null, {
 			imageTarget: target,
-			userInstructionsOverride: imagePromptInstructions.trim(),
+			imagePromptBasePromptOverride: imagePromptInstructions.trim(),
+			userInstructionsOverride: "",
 		});
 		setSelectedImagePromptTarget(null);
 		setImagePromptInstructions("");
@@ -1445,13 +1467,95 @@ export default function AiAssistantPanel({
 
 	const selectImagePromptTarget = (target) => {
 		setSelectedImagePromptTarget(target);
-		setImagePromptInstructions("");
+		setImagePromptInstructions(imagePromptBasePrompt);
 	};
 
 	const closeImagePromptPicker = () => {
 		setIsImagePromptPickerOpen(false);
 		setSelectedImagePromptTarget(null);
 		setImagePromptInstructions("");
+	};
+
+	const loadCampaignImagePromptData = async () => {
+		if (!initialRoute.campaign) return;
+
+		const loadCampaignEntities = async (type, label) => {
+			try {
+				const entities = await api.getEntities(initialRoute.campaign, type);
+				return Array.isArray(entities) ? entities : [];
+			} catch (err) {
+				console.error(`Failed to load ${label}`, err);
+				return [];
+			}
+		};
+
+		if (!imagePromptCampaignEntitiesLoadedRef.current) {
+			const [characters, npcs, locations] = await Promise.all([
+				loadCampaignEntities("characters", "characters"),
+				loadCampaignEntities("npc", "NPCs"),
+				loadCampaignEntities("locations", "locations"),
+			]);
+			setCharactersList(characters);
+			setNpcsList(npcs);
+			setLocationsList(locations);
+			imagePromptCampaignEntitiesLoadedRef.current = true;
+		}
+
+		if (!isCampaign || imagePromptCampaignDataLoadedRef.current) return;
+		const sessions =
+			sessionsList.length > 0
+				? sessionsList
+				: await api.listSessions(initialRoute.campaign);
+		if (sessionsList.length === 0) {
+			setSessionsList(sessions);
+		}
+		const fullSessions = await Promise.all(
+			sessions.map((session) =>
+				api
+					.getSession(initialRoute.campaign, session.fileName)
+					.catch((err) => {
+						console.error("Failed to load session for image prompt", err);
+						return null;
+					}),
+			),
+		);
+		setImagePromptSessions(fullSessions.filter(Boolean));
+		imagePromptCampaignDataLoadedRef.current = true;
+	};
+
+	const loadBestiaryImagePromptData = async () => {
+		if (imagePromptBestiaryDataLoadedRef.current) return;
+		try {
+			const data = await api.getCustomBestiaryData();
+			const monsters = Array.isArray(data?.monster)
+				? data.monster
+				: Array.isArray(data?.monsters)
+					? data.monsters
+					: Array.isArray(data)
+						? data
+						: [];
+			setImagePromptCustomMonsters(monsters);
+		} catch (err) {
+			console.error("Failed to load custom monsters for image prompt", err);
+			setImagePromptCustomMonsters([]);
+		}
+		imagePromptBestiaryDataLoadedRef.current = true;
+	};
+
+	const openImagePromptPicker = async () => {
+		setSelectedImagePromptTarget(null);
+		setImagePromptInstructions(imagePromptBasePrompt);
+		setIsImagePromptDataLoading(true);
+		try {
+			if (isBestiary) {
+				await loadBestiaryImagePromptData();
+			} else if (initialRoute.campaign) {
+				await loadCampaignImagePromptData();
+			}
+		} finally {
+			setIsImagePromptDataLoading(false);
+			setIsImagePromptPickerOpen(true);
+		}
 	};
 
 	const getImagePromptTargetTitle = (target) => {
@@ -1587,11 +1691,7 @@ export default function AiAssistantPanel({
 								})
 							}
 							onOpenContext={() => setIsContextModalOpen(true)}
-							onOpenImagePrompt={() => {
-								setSelectedImagePromptTarget(null);
-								setImagePromptInstructions("");
-								setIsImagePromptPickerOpen(true);
-							}}
+							onOpenImagePrompt={openImagePromptPicker}
 							parseAIResponse={parseAIResponse}
 							selectedModel={selectedModel}
 							setEntityScope={setEntityScope}
@@ -1670,7 +1770,7 @@ export default function AiAssistantPanel({
 							loading={loading}
 							onBackToSelection={() => {
 								setSelectedImagePromptTarget(null);
-								setImagePromptInstructions("");
+								setImagePromptInstructions(imagePromptBasePrompt);
 							}}
 							onCancel={closeImagePromptPicker}
 							onGenerate={generateImagePromptForTarget}

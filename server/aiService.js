@@ -332,8 +332,7 @@ Describe in this order:
 4) Lighting
 5) Atmosphere
 6) Style (cinematic, photorealistic, concept art, etc.)
-Default style suffix:
-cinematic, photorealistic, ultra realistic, high detail, 8k, dramatic lighting, volumetric light, sharp focus, depth of field, film still, concept art
+Use the configured image prompt base style from system instructions when provided.
 Input JSON:`,
 	"custom-monster": `You are an experienced Dungeons & Dragons 5.5e (2024) monster designer.
 Create custom bestiary creatures in the same general JSON style as 5eTools monster data.
@@ -446,6 +445,7 @@ async function generateContent({
 	language,
 	simplifiedNotes,
 	globalBasePrompt,
+	imagePromptBasePrompt,
 	campaignBasePrompt,
 }) {
 	let model;
@@ -608,6 +608,9 @@ If you create custom monsters, use "create" operations for entity "monster" and 
 	}
 	const normalizedGlobalBasePrompt = String(globalBasePrompt || "").trim();
 	const normalizedCampaignBasePrompt = String(campaignBasePrompt || "").trim();
+	const normalizedImagePromptBasePrompt = String(
+		imagePromptBasePrompt || "",
+	).trim();
 	if (normalizedGlobalBasePrompt || normalizedCampaignBasePrompt) {
 		systemInstructionParts.push(
 			`USER BASE PROMPTS:
@@ -616,6 +619,13 @@ GLOBAL BASE PROMPT:
 ${normalizedGlobalBasePrompt || "(none)"}
 CAMPAIGN BASE PROMPT:
 ${normalizedCampaignBasePrompt || "(none)"}`,
+		);
+	}
+	if (useKey === "image" && normalizedImagePromptBasePrompt) {
+		systemInstructionParts.push(
+			`IMAGE PROMPT BASE STYLE:
+Append or incorporate this user-configured image style guidance into every generated image prompt unless the current user instructions explicitly override it:
+${normalizedImagePromptBasePrompt}`,
 		);
 	}
 

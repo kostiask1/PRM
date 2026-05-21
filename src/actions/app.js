@@ -90,6 +90,14 @@ export function setUiSettingsAction(payload) {
 	}
 	if (
 		payload &&
+		Object.prototype.hasOwnProperty.call(payload, "imagePromptBasePrompt")
+	) {
+		nextPayload.imagePromptBasePrompt = String(
+			payload.imagePromptBasePrompt || "",
+		);
+	}
+	if (
+		payload &&
 		Object.prototype.hasOwnProperty.call(payload, "campaignAiBasePrompts")
 	) {
 		nextPayload.campaignAiBasePrompts =

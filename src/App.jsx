@@ -122,6 +122,7 @@ export default function App() {
 						encounterGridColumns: settings.encounterGridColumns,
 						simplifiedNotes: settings.simplifiedNotes,
 						aiBasePrompt: settings.aiBasePrompt,
+						imagePromptBasePrompt: settings.imagePromptBasePrompt,
 						campaignAiBasePrompts: settings.campaignAiBasePrompts,
 						autoApplyAiChanges: settings.autoApplyAiChanges,
 					}),

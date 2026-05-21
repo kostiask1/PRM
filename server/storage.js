@@ -17,6 +17,8 @@ const FAVORITES_PATH = path.join(DATA_DIR, "favorites.json");
 const IMAGES_DIR = path.join(DATA_DIR, "images");
 const SETTINGS_PATH = path.join(DATA_DIR, "settings.json");
 const ENTITY_TYPES = Object.freeze(["characters", "npc", "locations"]);
+const DEFAULT_IMAGE_PROMPT_BASE_PROMPT =
+	"cinematic, photorealistic, ultra realistic, high detail, 8k, dramatic lighting, volumetric light, sharp focus, depth of field, film still, concept art";
 
 const DEFAULT_APP_SETTINGS = Object.freeze({
 	language: "uk",
@@ -25,6 +27,7 @@ const DEFAULT_APP_SETTINGS = Object.freeze({
 	encounterGridColumns: 3,
 	simplifiedNotes: false,
 	aiBasePrompt: "",
+	imagePromptBasePrompt: DEFAULT_IMAGE_PROMPT_BASE_PROMPT,
 	campaignAiBasePrompts: {},
 	autoApplyAiChanges: false,
 });
@@ -715,6 +718,10 @@ function normalizeSettings(settings = {}) {
 		),
 		simplifiedNotes: Boolean(settings.simplifiedNotes),
 		aiBasePrompt: String(settings.aiBasePrompt || ""),
+		imagePromptBasePrompt:
+			settings.imagePromptBasePrompt === undefined
+				? DEFAULT_IMAGE_PROMPT_BASE_PROMPT
+				: String(settings.imagePromptBasePrompt || ""),
 		campaignAiBasePrompts,
 		autoApplyAiChanges: settings.autoApplyAiChanges !== false,
 	};
@@ -1795,6 +1802,7 @@ module.exports = {
 	SETTINGS_PATH,
 	ENTITY_TYPES,
 	DEFAULT_APP_SETTINGS,
+	DEFAULT_IMAGE_PROMPT_BASE_PROMPT,
 	createId,
 	sanitizeName,
 	campaignSlug,

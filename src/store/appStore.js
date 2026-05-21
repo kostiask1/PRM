@@ -21,6 +21,9 @@ import {
 import { buildNavigationUrl, parseUrl } from "../utils/navigation";
 import { lang } from "../services/localization";
 
+const DEFAULT_IMAGE_PROMPT_BASE_PROMPT =
+	"cinematic, photorealistic, ultra realistic, high detail, 8k, dramatic lighting, volumetric light, sharp focus, depth of field, film still, concept art";
+
 function getInitialNavigation() {
 	if (typeof window === "undefined") {
 		return {
@@ -44,6 +47,7 @@ function getInitialUiSettings() {
 		encounterGridColumns: 3,
 		simplifiedNotes: false,
 		aiBasePrompt: "",
+		imagePromptBasePrompt: DEFAULT_IMAGE_PROMPT_BASE_PROMPT,
 		campaignAiBasePrompts: {},
 		autoApplyAiChanges: false,
 	};

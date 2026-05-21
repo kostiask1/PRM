@@ -12,6 +12,9 @@ import Switch from "../form/Switch";
 import ColorThemeSwitcher from "../ColorThemeSwitcher";
 import Notification from "../common/Notification";
 
+const DEFAULT_IMAGE_PROMPT_BASE_PROMPT =
+	"cinematic, photorealistic, ultra realistic, high detail, 8k, dramatic lighting, volumetric light, sharp focus, depth of field, film still, concept art";
+
 export default function SettingsModalContent({ onCancel }) {
 	const dispatch = useAppDispatch();
 	const currentLanguage = useAppSelector(
@@ -31,6 +34,12 @@ export default function SettingsModalContent({ onCancel }) {
 	const storedAiBasePrompt = useAppSelector(
 		(state) => state.ui.aiBasePrompt || "",
 	);
+	const storedImagePromptBasePrompt = useAppSelector(
+		(state) =>
+			state.ui.imagePromptBasePrompt === undefined
+				? DEFAULT_IMAGE_PROMPT_BASE_PROMPT
+				: state.ui.imagePromptBasePrompt,
+	);
 	const storedCampaignAiBasePrompts = useAppSelector(
 		(state) => state.ui.campaignAiBasePrompts || {},
 	);
@@ -38,6 +47,9 @@ export default function SettingsModalContent({ onCancel }) {
 		(state) => state.ui.autoApplyAiChanges !== false,
 	);
 	const [aiBasePrompt, setAiBasePrompt] = useState(storedAiBasePrompt);
+	const [imagePromptBasePrompt, setImagePromptBasePrompt] = useState(
+		storedImagePromptBasePrompt,
+	);
 	const [campaignAiBasePrompts, setCampaignAiBasePrompts] = useState(
 		storedCampaignAiBasePrompts,
 	);
@@ -50,6 +62,10 @@ export default function SettingsModalContent({ onCancel }) {
 	useEffect(() => {
 		setAiBasePrompt(storedAiBasePrompt);
 	}, [storedAiBasePrompt]);
+
+	useEffect(() => {
+		setImagePromptBasePrompt(storedImagePromptBasePrompt);
+	}, [storedImagePromptBasePrompt]);
 
 	useEffect(() => {
 		setCampaignAiBasePrompts(storedCampaignAiBasePrompts);
@@ -115,6 +131,7 @@ export default function SettingsModalContent({ onCancel }) {
 		);
 		const payload = {
 			aiBasePrompt,
+			imagePromptBasePrompt,
 			campaignAiBasePrompts: nextCampaignPrompts,
 		};
 
@@ -123,10 +140,16 @@ export default function SettingsModalContent({ onCancel }) {
 			const saved = await api.updateSettings(payload);
 			const nextUiSettings = {
 				aiBasePrompt: saved.aiBasePrompt,
+				imagePromptBasePrompt: saved.imagePromptBasePrompt,
 				campaignAiBasePrompts: saved.campaignAiBasePrompts,
 			};
 			dispatch(setUiSettingsAction(nextUiSettings));
 			setAiBasePrompt(nextUiSettings.aiBasePrompt || "");
+			setImagePromptBasePrompt(
+				nextUiSettings.imagePromptBasePrompt === undefined
+					? DEFAULT_IMAGE_PROMPT_BASE_PROMPT
+					: nextUiSettings.imagePromptBasePrompt,
+			);
 			setCampaignAiBasePrompts(nextUiSettings.campaignAiBasePrompts || {});
 			setPromptStatus("idle");
 			setNotification(lang.t("Prompts saved"));
@@ -238,6 +261,27 @@ export default function SettingsModalContent({ onCancel }) {
 						placeholder={lang.t(
 							"Example: Keep answers concise, prefer dark fantasy tone, avoid comic relief...",
 						)}
+					/>
+				</label>
+
+				<label className="SettingsModal__field">
+					<span className="SettingsModal__label">
+						{lang.t("Image prompt base style")}
+					</span>
+					<div className="SettingsModal__hint">
+						{lang.t(
+							"These style instructions are added to every image prompt generation request.",
+						)}
+					</div>
+					<EditableField
+						type="textarea"
+						className="SettingsModal__promptField"
+						value={imagePromptBasePrompt}
+						onChange={(event) => {
+							setImagePromptBasePrompt(event.target.value);
+							setPromptStatus("idle");
+						}}
+						placeholder={DEFAULT_IMAGE_PROMPT_BASE_PROMPT}
 					/>
 				</label>
 
