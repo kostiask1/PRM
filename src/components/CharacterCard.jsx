@@ -252,18 +252,6 @@ export default function CharacterCard({
 										}
 									/>
 								</div>
-								<div className="character_card__field">
-									<label>{lang.t("Trait")}</label>
-									<EditableField
-										type="textarea"
-										value={character.trait}
-										onChange={(e) => updateField("trait", e.target.value)}
-										placeholder={lang.t("Distinctive trait or habit...")}
-										className={
-											isFieldHighlighted("trait") ? "is_ai_changed_field" : ""
-										}
-									/>
-								</div>
 							</div>
 						</div>
 						<div className="character_card__image_side">
@@ -285,6 +273,18 @@ export default function CharacterCard({
 								previewContentClassName="CharacterImageModal__content"
 							/>
 						</div>
+					</div>
+					<div className="character_card__field">
+						<label>{lang.t("Trait")}</label>
+						<EditableField
+							type="textarea"
+							value={character.trait}
+							onChange={(e) => updateField("trait", e.target.value)}
+							placeholder={lang.t("Distinctive trait or habit...")}
+							className={
+								isFieldHighlighted("trait") ? "is_ai_changed_field" : ""
+							}
+						/>
 					</div>
 
 					<div className="character_card__notes">
