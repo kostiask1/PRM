@@ -128,6 +128,9 @@ function EncounterView(props) {
 		? gridRepresentativeByInstanceId.get(view.selectedInstance.instanceId) ||
 			view.selectedInstance.instanceId
 		: null;
+	const displayedMonsterCount = gridMonsters.length;
+	const effectiveDisplayMode =
+		displayedMonsterCount === 1 ? "single" : displayMode;
 	const effectiveGridColumns = Math.max(
 		1,
 		Math.min(gridColumns, gridMonsters.length || 1),
@@ -197,7 +200,7 @@ function EncounterView(props) {
 			return;
 		}
 		view.setSelectedInstance(monster);
-		if (displayMode === "grid") {
+		if (effectiveDisplayMode === "grid") {
 			focusMonsterInGrid(monster.instanceId);
 		}
 	};
@@ -429,21 +432,22 @@ function EncounterView(props) {
 				<div className="EncounterView__headerActions">
 					<div className="EncounterView__viewModeSwitch">
 						<Button
-							variant={displayMode === "single" ? "primary" : "ghost"}
+							variant={effectiveDisplayMode === "single" ? "primary" : "ghost"}
 							size={Button.SIZES.SMALL}
 							icon="list"
 							onClick={() => updateEncounterViewMode("single")}
 							title={lang.t("Preview")}
 						/>
 						<Button
-							variant={displayMode === "grid" ? "primary" : "ghost"}
+							variant={effectiveDisplayMode === "grid" ? "primary" : "ghost"}
 							size={Button.SIZES.SMALL}
 							icon="layers"
 							onClick={() => updateEncounterViewMode("grid")}
+							disabled={displayedMonsterCount === 1}
 							title={lang.t("All")}
 						/>
 					</div>
-					{displayMode === "grid" && (
+					{effectiveDisplayMode === "grid" && (
 						<div
 							className="EncounterView__gridColumnsSwitch"
 							aria-label={lang.t("Grid columns")}
@@ -667,11 +671,13 @@ function EncounterView(props) {
 
 					<div
 						className={classNames("EncounterView__detailView", {
-							"EncounterView__detailView__grid": displayMode === "grid",
-							"EncounterView__detailView__single": displayMode !== "grid",
+							"EncounterView__detailView__grid":
+								effectiveDisplayMode === "grid",
+							"EncounterView__detailView__single":
+								effectiveDisplayMode !== "grid",
 						})}
 					>
-						{displayMode === "grid" ? (
+						{effectiveDisplayMode === "grid" ? (
 							gridMonsters.length > 0 ? (
 								<div
 									className="EncounterView__grid"
