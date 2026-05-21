@@ -145,6 +145,10 @@ function cloneCustomMonsters(monsters) {
 	return JSON.parse(JSON.stringify(monsters || []));
 }
 
+function customMonsterListsEqual(left, right) {
+	return JSON.stringify(left || []) === JSON.stringify(right || []);
+}
+
 export default function Bestiary({
 	onAddMonster,
 	isEmbedded = false,
@@ -733,6 +737,8 @@ export default function Bestiary({
 		options = {},
 	) => {
 		if (!entry?.id || isRestoringAiResponse) return;
+		const undoSnapshot =
+			mode === "apply" ? cloneCustomMonsters(customMonsters) : null;
 		setIsRestoringAiResponse(true);
 		try {
 			const result =
@@ -746,6 +752,12 @@ export default function Bestiary({
 			const nextEntry = result?.response || entry;
 			setAiDraftResponseEntry(nextEntry);
 			if (mode !== "undo" && result?.updated) {
+				if (
+					undoSnapshot &&
+					!customMonsterListsEqual(undoSnapshot, result.updated.monsters)
+				) {
+					pushCustomUndoSnapshot(undoSnapshot);
+				}
 				handleCustomBestiaryUpdate(result.updated, {
 					selectedName: getFirstChangedMonsterName(nextEntry, options.resourceIds),
 					trackUndo: false,
