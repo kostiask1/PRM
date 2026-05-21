@@ -19,6 +19,27 @@
 	gap: var(--space-2);
 }
 
+.GlobalSearch__filter {
+	border-color: color-mix(in srgb, var(--search-result-color), transparent 40%);
+	color: color-mix(in srgb, var(--search-result-color), var(--text) 18%);
+	background: color-mix(in srgb, var(--search-result-color), transparent 88%);
+}
+
+.GlobalSearch__filter.Button__primary {
+	background: color-mix(in srgb, var(--search-result-color), #111 18%);
+	border-color: var(--search-result-color);
+	color: #fff;
+}
+
+.GlobalSearch__filter.Button__ghost {
+	background: color-mix(in srgb, var(--search-result-color), transparent 93%);
+}
+
+.GlobalSearch__filter:hover {
+	border-color: var(--search-result-color);
+	background: color-mix(in srgb, var(--search-result-color), transparent 82%);
+}
+
 .GlobalSearch__results {
 	display: grid;
 	gap: var(--space-2);
@@ -32,7 +53,7 @@
 	gap: 4px;
 	padding: var(--space-3);
 	border: 1px solid var(--border);
-	border-left: 4px solid var(--accent);
+	border-left: 4px solid var(--search-result-color, var(--accent));
 	border-radius: var(--radius-sm);
 	background: var(--panel-2);
 	color: var(--text);
@@ -41,8 +62,12 @@
 }
 
 .GlobalSearch__result:hover {
-	border-color: var(--accent);
-	background: color-mix(in srgb, var(--accent), transparent 92%);
+	border-color: var(--search-result-color, var(--accent));
+	background: color-mix(
+		in srgb,
+		var(--search-result-color, var(--accent)),
+		transparent 92%
+	);
 }
 
 .GlobalSearch__result strong {
@@ -72,12 +97,23 @@
 	font-size: inherit;
 }
 
+.GlobalSearch__highlight {
+	border-radius: 3px;
+	background: color-mix(in srgb, var(--warning, #f59e0b), transparent 62%);
+	color: var(--text-bright);
+	padding: 0 2px;
+}
+
 .GlobalSearch__resultType {
 	justify-self: start;
 	padding: 2px 7px;
 	border-radius: var(--radius-sm);
-	background: color-mix(in srgb, var(--accent), transparent 88%);
-	color: var(--accent) !important;
+	background: color-mix(
+		in srgb,
+		var(--search-result-color, var(--accent)),
+		transparent 88%
+	);
+	color: var(--search-result-color, var(--accent)) !important;
 	font-weight: 700;
 }
 

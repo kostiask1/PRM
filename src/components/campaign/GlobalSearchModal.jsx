@@ -17,10 +17,14 @@ const FILTERS = [
 	"scenes",
 	"npc",
 	"locations",
-	"sessions",
-	"monsters",
-	"mentions",
 ];
+
+const FILTER_COLOR_BY_ID = {
+	notes: "#38bdf8",
+	npc: "#f97316",
+	locations: "#a3e635",
+	scenes: "#e879f9",
+};
 
 const MARKDOWN_TAGS_WITH_MENTIONS = [
 	"p",
@@ -41,10 +45,67 @@ const MARKDOWN_TAGS_WITH_MENTIONS = [
 	"span",
 ];
 
-function renderMentionChildren(children) {
+const INLINE_MARKDOWN_BLOCK_TAGS = new Set([
+	"p",
+	"blockquote",
+	"li",
+	"h1",
+	"h2",
+	"h3",
+	"h4",
+	"h5",
+	"h6",
+	"td",
+	"th",
+]);
+
+function escapeRegExp(value) {
+	return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getHighlightTerms(query) {
+	return [
+		...new Set(
+			String(query || "")
+				.trim()
+				.split(/\s+/)
+				.map((term) => term.trim())
+				.filter((term) => term.length >= 2),
+		),
+	];
+}
+
+function renderHighlightedText(text, highlightTerms) {
+	const source = String(text || "");
+	if (!source) return source;
+	if (!highlightTerms?.length) return renderMentionText(source);
+
+	const pattern = new RegExp(
+		`(${highlightTerms.map(escapeRegExp).join("|")})`,
+		"gi",
+	);
+	return source
+		.split(pattern)
+		.filter((part) => part !== "")
+		.map((part, index) => {
+			const isMatch = highlightTerms.some(
+				(term) => part.toLowerCase() === term.toLowerCase(),
+			);
+			const content = renderMentionText(part);
+			return isMatch ? (
+				<mark key={`${part}:${index}`} className="GlobalSearch__highlight">
+					{content}
+				</mark>
+			) : (
+				<React.Fragment key={`${part}:${index}`}>{content}</React.Fragment>
+			);
+		});
+}
+
+function renderMentionChildren(children, highlightTerms = []) {
 	return React.Children.map(children, (child) => {
 		if (typeof child === "string") {
-			return renderMentionText(child);
+			return renderHighlightedText(child, highlightTerms);
 		}
 		if (React.isValidElement(child) && child.props?.children) {
 			if (child.type === "code" || child.type === "pre") {
@@ -52,14 +113,15 @@ function renderMentionChildren(children) {
 			}
 			return React.cloneElement(child, {
 				...child.props,
-				children: renderMentionChildren(child.props.children),
+				children: renderMentionChildren(child.props.children, highlightTerms),
 			});
 		}
 		return child;
 	});
 }
 
-function ParsedSearchText({ text, inline = false }) {
+function ParsedSearchText({ text, inline = false, highlight = "" }) {
+	const highlightTerms = useMemo(() => getHighlightTerms(highlight), [highlight]);
 	const components = useMemo(
 		() =>
 			Object.fromEntries(
@@ -67,13 +129,13 @@ function ParsedSearchText({ text, inline = false }) {
 					tag,
 					({ children, ...tagProps }) =>
 						React.createElement(
-							inline && tag === "p" ? "span" : tag,
+							inline && INLINE_MARKDOWN_BLOCK_TAGS.has(tag) ? "span" : tag,
 							tagProps,
-							renderMentionChildren(children),
+							renderMentionChildren(children, highlightTerms),
 						),
 				]),
 			),
-		[inline],
+		[highlightTerms, inline],
 	);
 	const value = String(text || "");
 	if (!value.trim()) return null;
@@ -113,17 +175,16 @@ function getLocationName(location) {
 	return location?.name || location?.title || lang.t("Untitled");
 }
 
-function getNoteTitle(note, fallback) {
-	return note?.title || fallback || lang.t("Untitled note");
+function getNoteTitle(note) {
+	return String(note?.title || "").trim();
 }
 
-function extractMentions(text) {
-	const matches = [];
-	const source = String(text || "");
-	for (const match of source.matchAll(/\[([^\]\n]{2,120})\]/g)) {
-		matches.push(match[1].trim());
-	}
-	return [...new Set(matches.filter(Boolean))];
+function getSearchResultTitle(value) {
+	const firstLine = String(value || "")
+		.split(/\r?\n/)
+		.map((line) => line.trim())
+		.find(Boolean);
+	return firstLine || "";
 }
 
 function buildSnippet(text, query) {
@@ -149,25 +210,15 @@ function pushResult(results, item) {
 }
 
 function pushNote(results, note, options) {
-	const title = getNoteTitle(note, options.title);
+	const title = getNoteTitle(note);
 	const text = [note?.title, note?.text].filter(Boolean).join("\n");
 	pushResult(results, {
-		id: `${options.idPrefix}:${note?.id || title}`,
+		id: `${options.idPrefix}:${note?.id || title || "note"}`,
 		filter: "notes",
 		title,
 		subtitle: options.subtitle,
 		text,
 		target: options.target,
-	});
-	extractMentions(text).forEach((mention) => {
-		pushResult(results, {
-			id: `${options.idPrefix}:mention:${mention}`,
-			filter: "mentions",
-			title: mention,
-			subtitle: `${lang.t("Mention")} · ${options.subtitle}`,
-			text,
-			target: options.target,
-		});
 	});
 }
 
@@ -199,19 +250,9 @@ function pushEntity(results, entity, options) {
 			target: options.target,
 		});
 	});
-	extractMentions(text).forEach((mention) => {
-		pushResult(results, {
-			id: `${options.idPrefix}:${entity?.id || title}:mention:${mention}`,
-			filter: "mentions",
-			title: mention,
-			subtitle: `${lang.t("Mention")} · ${options.subtitle} · ${title}`,
-			text,
-			target: options.target,
-		});
-	});
 }
 
-function buildSearchIndex({ campaign, entities, sessions, customMonsters }) {
+function buildSearchIndex({ campaign, entities, sessions }) {
 	const results = [];
 	const campaignSlug = campaign.slug;
 	const campaignTarget = { campaignSlug };
@@ -284,14 +325,6 @@ function buildSearchIndex({ campaign, entities, sessions, customMonsters }) {
 		const fileName = sessionEntry.fileName || session.fileName;
 		const data = session.data || {};
 		const sessionTarget = { campaignSlug, sessionFileName: fileName };
-		pushResult(results, {
-			id: `session-${fileName}`,
-			filter: "sessions",
-			title: session.name || sessionEntry.name || fileName,
-			subtitle: lang.t("Session"),
-			text: asText(data),
-			target: sessionTarget,
-		});
 		(data.notes || []).forEach((note, index) => {
 			pushNote(results, note, {
 				idPrefix: `session-${fileName}-note-${note?.id || index}`,
@@ -351,47 +384,12 @@ function buildSearchIndex({ campaign, entities, sessions, customMonsters }) {
 				});
 			});
 		});
-		(data.encounters || []).forEach((encounter) => {
-			(encounter.monsters || []).forEach((monster) => {
-				pushResult(results, {
-					id: `session-${fileName}-encounter-${encounter.id}-monster-${monster.instanceId || monster.name}`,
-					filter: "monsters",
-					title: monster.name || lang.t("Creature"),
-					subtitle: `${lang.t("Combat encounter")} · ${encounter.name || lang.t("Untitled")}`,
-					text: asText(monster),
-					target: { ...sessionTarget, encounterId: encounter.id },
-				});
-			});
-		});
-	});
-
-	customMonsters.forEach((monster) => {
-		pushResult(results, {
-			id: `custom-monster-${monster.name}`,
-			filter: "monsters",
-			title: monster.name || lang.t("Creature"),
-			subtitle: lang.t("Custom creature"),
-			text: asText(monster),
-			target: {
-				customMonster: monster.name,
-				customMonsterSource: monster.source || "CUSTOM",
-			},
-		});
 	});
 
 	return results;
 }
 
 function openTarget(target) {
-	if (target?.customMonster) {
-		const params = new URLSearchParams({
-			source: "CUSTOM",
-			monster: target.customMonster,
-			m_source: target.customMonsterSource || "CUSTOM",
-		});
-		window.location.href = `/bestiary?${params.toString()}`;
-		return;
-	}
 	navigateTo(
 		target.campaignSlug,
 		target.sessionFileName || null,
@@ -421,14 +419,12 @@ export default function GlobalSearchModal({ campaign, currentData, onCancel }) {
 			setIsLoading(true);
 			setError("");
 			try {
-				const [characters, npc, locations, sessionList, customData] =
-					await Promise.all([
-						api.getEntities(campaign.slug, "characters"),
-						api.getEntities(campaign.slug, "npc"),
-						api.getEntities(campaign.slug, "locations"),
-						api.listSessions(campaign.slug),
-						api.getCustomBestiaryData().catch(() => []),
-					]);
+				const [characters, npc, locations, sessionList] = await Promise.all([
+					api.getEntities(campaign.slug, "characters"),
+					api.getEntities(campaign.slug, "npc"),
+					api.getEntities(campaign.slug, "locations"),
+					api.listSessions(campaign.slug),
+				]);
 				const sessionDetails = await Promise.all(
 					(sessionList || []).map(async (session) => ({
 						...session,
@@ -437,11 +433,6 @@ export default function GlobalSearchModal({ campaign, currentData, onCancel }) {
 				);
 				if (cancelled) return;
 				const campaignSnapshot = { ...campaign, ...(currentData || {}) };
-				const customMonsters =
-					customData?.monster ||
-					customData?.monsters ||
-					customData?.results ||
-					(Array.isArray(customData) ? customData : []);
 				setIndex(
 					buildSearchIndex({
 						campaign: campaignSnapshot,
@@ -451,7 +442,6 @@ export default function GlobalSearchModal({ campaign, currentData, onCancel }) {
 							locations: currentData?.locations || locations,
 						},
 						sessions: sessionDetails,
-						customMonsters,
 					}),
 				);
 			} catch (err) {
@@ -485,6 +475,61 @@ export default function GlobalSearchModal({ campaign, currentData, onCancel }) {
 		});
 	};
 
+	const renderResult = (result) => {
+		const snippet = buildSnippet(result.text, query);
+		const title = getSearchResultTitle(result.title);
+
+		return (
+			<div
+				key={result.id}
+				role="button"
+				tabIndex={0}
+				className={classNames(
+					"GlobalSearch__result",
+					`is_${result.filter}`,
+				)}
+				style={{ "--search-result-color": FILTER_COLOR_BY_ID[result.filter] }}
+				onClick={(event) => {
+					if (
+						event.target?.closest?.("a, button, input, textarea, select")
+					) {
+						return;
+					}
+					onCancel?.();
+					openTarget(result.target);
+				}}
+				onKeyDown={(event) => {
+					if (event.key !== "Enter" && event.key !== " ") return;
+					if (
+						event.target?.closest?.("a, button, input, textarea, select")
+					) {
+						return;
+					}
+					event.preventDefault();
+					onCancel?.();
+					openTarget(result.target);
+				}}
+			>
+				<span className="GlobalSearch__resultType">
+					{lang.t(`Search filter: ${result.filter}`)}
+				</span>
+				{title && (
+					<strong>
+						<ParsedSearchText text={title} inline highlight={query} />
+					</strong>
+				)}
+				<span>
+					<ParsedSearchText text={result.subtitle} inline highlight={query} />
+				</span>
+				{snippet && (
+					<p>
+						<ParsedSearchText text={snippet} inline highlight={query} />
+					</p>
+				)}
+			</div>
+		);
+	};
+
 	return (
 		<Modal
 			title={lang.t("Global search")}
@@ -506,7 +551,9 @@ export default function GlobalSearchModal({ campaign, currentData, onCancel }) {
 							key={filter}
 							variant={activeFilters.has(filter) ? "primary" : "ghost"}
 							size={Button.SIZES.SMALL}
+							className="GlobalSearch__filter"
 							onClick={() => toggleFilter(filter)}
+							style={{ "--search-result-color": FILTER_COLOR_BY_ID[filter] }}
 						>
 							{lang.t(`Search filter: ${filter}`)}
 						</Button>
@@ -521,59 +568,7 @@ export default function GlobalSearchModal({ campaign, currentData, onCancel }) {
 						{results.length === 0 ? (
 							<div className="GlobalSearch__state">{lang.t("No results")}</div>
 						) : (
-							results.map((result) => (
-								<div
-									key={result.id}
-									role="button"
-									tabIndex={0}
-									className={classNames(
-										"GlobalSearch__result",
-										`is_${result.filter}`,
-									)}
-									onClick={(event) => {
-										if (
-											event.target?.closest?.(
-												"a, button, input, textarea, select",
-											)
-										) {
-											return;
-										}
-										onCancel?.();
-										openTarget(result.target);
-									}}
-									onKeyDown={(event) => {
-										if (event.key !== "Enter" && event.key !== " ") return;
-										if (
-											event.target?.closest?.(
-												"a, button, input, textarea, select",
-											)
-										) {
-											return;
-										}
-										event.preventDefault();
-										onCancel?.();
-										openTarget(result.target);
-									}}
-								>
-									<span className="GlobalSearch__resultType">
-										{lang.t(`Search filter: ${result.filter}`)}
-									</span>
-									<strong>
-										<ParsedSearchText text={result.title} inline />
-									</strong>
-									<span>
-										<ParsedSearchText text={result.subtitle} inline />
-									</span>
-									{buildSnippet(result.text, query) && (
-										<p>
-											<ParsedSearchText
-												text={buildSnippet(result.text, query)}
-												inline
-											/>
-										</p>
-									)}
-								</div>
-							))
+							results.map(renderResult)
 						)}
 					</div>
 				)}
