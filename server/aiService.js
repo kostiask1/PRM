@@ -489,9 +489,9 @@ async function generateContent({
 		: availableModels.defaultModel;
 	const systemInstructionParts = [
 		systemInstructions[useKey],
-		`MANDATORY LANGUAGE RULE: You must write all user-visible output strictly in ${responseLanguage.label}.`,
+		`MANDATORY LANGUAGE RULE: Determine the response language from the text that appears after "USER INSTRUCTIONS (PRIORITY):". Write all user-visible output in that same language. If that text is empty or its language is ambiguous, use ${responseLanguage.label}.`,
 		imagePromptLanguageContract,
-		`NAME LANGUAGE RULE: Any new names you invent must be written in ${responseLanguage.label}. This includes new character names, NPC names, place names, scene names, encounter names, aliases, titles, and display names.
+		`NAME LANGUAGE RULE: Any new names you invent must use the language detected from "USER INSTRUCTIONS (PRIORITY):". If that text is empty or ambiguous, use ${responseLanguage.label}. This includes new character names, NPC names, place names, scene names, encounter names, aliases, titles, and display names.
 EXISTING NAME PROTECTION: Names that already exist in the input data must keep their exact original spelling and alphabet. Do not translate, transliterate, decline, paraphrase, rename, or otherwise alter existing names unless the user explicitly asks you to do that.
 Exception: technical lookup fields such as "monsterName" must remain exact lookup names. Use official English bestiary names for official creatures, or exact custom creature names from INPUT DATA.customBestiary.monsterNames for custom creatures.`,
 		characterLevelContract,
@@ -807,7 +807,7 @@ ${normalizedCampaignBasePrompt || "(none)"}`,
 	if (useKey === "image" && imageTarget && typeof imageTarget === "object") {
 		userPrompt += `IMAGE TARGET (JSON):\n${JSON.stringify(imageTarget, null, 2)}\n\n`;
 	}
-	userPrompt += `MANDATORY: Reply strictly in ${responseLanguage.label}.\n`;
+	userPrompt += `MANDATORY: Determine the response language from the text after "USER INSTRUCTIONS (PRIORITY):" below. Reply strictly in that same language. If that text is empty or its language is ambiguous, reply in ${responseLanguage.label}.\n`;
 	userPrompt +=
 		"EXCEPTION: If the user asks for a prompt to create an image, reply with a detailed image-generation prompt in English, regardless of the mandatory response language.\n";
 	userPrompt +=
@@ -840,7 +840,7 @@ ${normalizedCampaignBasePrompt || "(none)"}`,
 		userPrompt +=
 			"IMPORTANT: Never transliterate existing names between alphabets (for example, Latin <-> Cyrillic) unless the user explicitly asks you to transliterate them. Keep the exact original characters from input. Mention format must be a single pair of brackets only: [Name]. Never output [[Name]] or nested brackets.\n";
 	}
-	userPrompt += `IMPORTANT: For new names you invent, use ${responseLanguage.label}. For existing names from input, keep the original spelling unless the user explicitly requests a rename, translation, or transliteration. For "monsterName", use exact lookup names: official English names for official creatures, or exact custom creature names from INPUT DATA.customBestiary.monsterNames.\n`;
+	userPrompt += `IMPORTANT: For new names you invent, use the language detected from "USER INSTRUCTIONS (PRIORITY):"; if it is empty or ambiguous, use ${responseLanguage.label}. For existing names from input, keep the original spelling unless the user explicitly requests a rename, translation, or transliteration. For "monsterName", use exact lookup names: official English names for official creatures, or exact custom creature names from INPUT DATA.customBestiary.monsterNames.\n`;
 	if (simplifiedNotesEnabled) {
 		userPrompt +=
 			'IMPORTANT: Simplified notes mode is enabled. For every "notes" array in your JSON, output note objects with "text" and optional existing "id"; do not output note titles and do not use the first line as a title.\n';
