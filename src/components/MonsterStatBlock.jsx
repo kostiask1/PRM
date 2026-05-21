@@ -44,6 +44,7 @@ export default function MonsterStatBlock({
 	layoutMode = "single",
 	showAddToEncounterPicker = false,
 	onAddToEncounter,
+	onAiAction,
 	searchHighlight = "",
 }) {
 	const dispatch = useAppDispatch();
@@ -78,7 +79,7 @@ export default function MonsterStatBlock({
 		} else {
 			setIsFavorite(false);
 		}
-	}, [effectiveName, monster.source]);
+	}, [effectiveName, monster.name, monster.source]);
 
 	const handleToggleFavorite = async () => {
 		try {
@@ -498,6 +499,16 @@ export default function MonsterStatBlock({
 							onClick={handleToggleFavorite}
 							title={isFavorite ? "Remove from favorites" : "Add to favorites"}
 						/>
+						{onAiAction && (
+							<Button
+								variant="ghost"
+								size={Button.SIZES.SMALL}
+								icon="wand"
+								className="MonsterStatBlock__ai_btn"
+								onClick={() => onAiAction(monster)}
+								title={lang.t("AI creature action")}
+							/>
+						)}
 						{showAddToEncounterPicker && (
 							<Button
 								variant="primary"

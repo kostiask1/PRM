@@ -719,6 +719,7 @@ router.post("/generate", async (req, res, next) => {
 			sceneId,
 			imageTarget,
 			customMonsterTarget,
+			customMonsterMode,
 			parseAIResponse,
 			generateCharacters,
 			generateNpcs,
@@ -790,6 +791,8 @@ router.post("/generate", async (req, res, next) => {
 					: null;
 				customContextData.customBestiary.selectedMonster =
 					fullTarget || customMonsterTarget;
+				customContextData.customBestiary.selectedMonsterMode =
+					customMonsterMode === "create-based" ? "create-based" : "edit";
 			}
 			let customCampaign = null;
 			let customSession = null;

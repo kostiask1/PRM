@@ -224,6 +224,10 @@
 	width: min(720px, calc(100vw - 32px));
 }
 
+.Bestiary__ai_action_modal {
+	width: min(520px, calc(100vw - 32px));
+}
+
 .Bestiary__edit_form {
 	display: flex;
 	flex-direction: column;
@@ -246,6 +250,23 @@
 .Bestiary__ai_edit_target {
 	font-weight: 800;
 	color: var(--text-bright);
+}
+
+.Bestiary__ai_edit_target_label {
+	color: var(--text-muted);
+	font-weight: 700;
+}
+
+.Bestiary__ai_action_body {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-4);
+}
+
+.Bestiary__ai_action_buttons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-3);
 }
 
 .Bestiary__ai_edit_prompt {

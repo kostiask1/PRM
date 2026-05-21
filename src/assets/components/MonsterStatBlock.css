@@ -261,7 +261,8 @@
 	padding-left: 1.5em;
 }
 
-.MonsterStatBlock__favorite_btn {
+.MonsterStatBlock__favorite_btn,
+.MonsterStatBlock__ai_btn {
 	border-radius: 100%;
 	border: unset;
 	width: var(--size-8);
