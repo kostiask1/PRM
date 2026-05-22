@@ -49,6 +49,7 @@ function getInitialUiSettings() {
 		aiBasePrompt: "",
 		imagePromptBasePrompt: DEFAULT_IMAGE_PROMPT_BASE_PROMPT,
 		campaignAiBasePrompts: {},
+		campaignImagePromptBasePrompts: {},
 		autoApplyAiChanges: false,
 	};
 }

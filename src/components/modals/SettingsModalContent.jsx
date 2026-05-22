@@ -43,6 +43,9 @@ export default function SettingsModalContent({ onCancel }) {
 	const storedCampaignAiBasePrompts = useAppSelector(
 		(state) => state.ui.campaignAiBasePrompts || {},
 	);
+	const storedCampaignImagePromptBasePrompts = useAppSelector(
+		(state) => state.ui.campaignImagePromptBasePrompts || {},
+	);
 	const autoApplyAiChanges = useAppSelector(
 		(state) => state.ui.autoApplyAiChanges !== false,
 	);
@@ -53,6 +56,10 @@ export default function SettingsModalContent({ onCancel }) {
 	const [campaignAiBasePrompts, setCampaignAiBasePrompts] = useState(
 		storedCampaignAiBasePrompts,
 	);
+	const [
+		campaignImagePromptBasePrompts,
+		setCampaignImagePromptBasePrompts,
+	] = useState(storedCampaignImagePromptBasePrompts);
 	const [selectedCampaignSlug, setSelectedCampaignSlug] = useState(
 		activeCampaignSlug || campaigns[0]?.slug || "",
 	);
@@ -72,6 +79,10 @@ export default function SettingsModalContent({ onCancel }) {
 	}, [storedCampaignAiBasePrompts]);
 
 	useEffect(() => {
+		setCampaignImagePromptBasePrompts(storedCampaignImagePromptBasePrompts);
+	}, [storedCampaignImagePromptBasePrompts]);
+
+	useEffect(() => {
 		if (
 			selectedCampaignSlug &&
 			campaigns.some((campaign) => campaign.slug === selectedCampaignSlug)
@@ -84,6 +95,10 @@ export default function SettingsModalContent({ onCancel }) {
 	const selectedCampaignPrompt = useMemo(
 		() => campaignAiBasePrompts[selectedCampaignSlug] || "",
 		[campaignAiBasePrompts, selectedCampaignSlug],
+	);
+	const selectedCampaignImagePrompt = useMemo(
+		() => campaignImagePromptBasePrompts[selectedCampaignSlug] || "",
+		[campaignImagePromptBasePrompts, selectedCampaignSlug],
 	);
 
 	const patchSettings = async (payload) => {
@@ -123,9 +138,22 @@ export default function SettingsModalContent({ onCancel }) {
 		setPromptStatus("idle");
 	};
 
+	const handleCampaignImagePromptChange = (value) => {
+		setCampaignImagePromptBasePrompts((current) => ({
+			...current,
+			[selectedCampaignSlug]: value,
+		}));
+		setPromptStatus("idle");
+	};
+
 	const handleSavePrompts = async () => {
 		const nextCampaignPrompts = Object.fromEntries(
 			Object.entries(campaignAiBasePrompts)
+				.map(([slug, prompt]) => [slug, String(prompt || "")])
+				.filter(([slug, prompt]) => slug && prompt.trim()),
+		);
+		const nextCampaignImagePrompts = Object.fromEntries(
+			Object.entries(campaignImagePromptBasePrompts)
 				.map(([slug, prompt]) => [slug, String(prompt || "")])
 				.filter(([slug, prompt]) => slug && prompt.trim()),
 		);
@@ -133,6 +161,7 @@ export default function SettingsModalContent({ onCancel }) {
 			aiBasePrompt,
 			imagePromptBasePrompt,
 			campaignAiBasePrompts: nextCampaignPrompts,
+			campaignImagePromptBasePrompts: nextCampaignImagePrompts,
 		};
 
 		setPromptStatus("saving");
@@ -142,6 +171,8 @@ export default function SettingsModalContent({ onCancel }) {
 				aiBasePrompt: saved.aiBasePrompt,
 				imagePromptBasePrompt: saved.imagePromptBasePrompt,
 				campaignAiBasePrompts: saved.campaignAiBasePrompts,
+				campaignImagePromptBasePrompts:
+					saved.campaignImagePromptBasePrompts,
 			};
 			dispatch(setUiSettingsAction(nextUiSettings));
 			setAiBasePrompt(nextUiSettings.aiBasePrompt || "");
@@ -151,6 +182,9 @@ export default function SettingsModalContent({ onCancel }) {
 					: nextUiSettings.imagePromptBasePrompt,
 			);
 			setCampaignAiBasePrompts(nextUiSettings.campaignAiBasePrompts || {});
+			setCampaignImagePromptBasePrompts(
+				nextUiSettings.campaignImagePromptBasePrompts || {},
+			);
 			setPromptStatus("idle");
 			setNotification(lang.t("Prompts saved"));
 		} catch (error) {
@@ -309,6 +343,29 @@ export default function SettingsModalContent({ onCancel }) {
 						onChange={(event) => handleCampaignPromptChange(event.target.value)}
 						placeholder={lang.t(
 							"Example: This campaign is grounded, political, and low magic...",
+						)}
+						disabled={!selectedCampaignSlug}
+					/>
+				</label>
+
+				<label className="SettingsModal__field">
+					<span className="SettingsModal__label">
+						{lang.t("Campaign image prompt style")}
+					</span>
+					<div className="SettingsModal__hint">
+						{lang.t(
+							"Used instead of the global image style for this campaign.",
+						)}
+					</div>
+					<EditableField
+						type="textarea"
+						className="SettingsModal__promptField"
+						value={selectedCampaignImagePrompt}
+						onChange={(event) =>
+							handleCampaignImagePromptChange(event.target.value)
+						}
+						placeholder={lang.t(
+							"Example: gothic oil painting, muted colors, candlelight, worn parchment textures...",
 						)}
 						disabled={!selectedCampaignSlug}
 					/>

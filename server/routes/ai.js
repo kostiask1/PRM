@@ -134,6 +134,15 @@ function getCampaignBasePrompt(settings, campaignSlug) {
 	return asText(prompts[campaignSlug]);
 }
 
+function getCampaignImagePromptBasePrompt(settings, campaignSlug) {
+	const prompts =
+		settings?.campaignImagePromptBasePrompts &&
+		typeof settings.campaignImagePromptBasePrompts === "object"
+			? settings.campaignImagePromptBasePrompts
+			: {};
+	return asText(prompts[campaignSlug]);
+}
+
 function cloneRetryPayload(payload = {}) {
 	return JSON.parse(JSON.stringify(payload || {}));
 }
@@ -795,7 +804,8 @@ router.post("/generate", async (req, res, next) => {
 				"imagePromptBasePromptOverride",
 			)
 				? asText(imagePromptBasePromptOverride)
-				: asText(settings.imagePromptBasePrompt);
+				: getCampaignImagePromptBasePrompt(settings, path?.campaign) ||
+					asText(settings.imagePromptBasePrompt);
 		const campaignBasePrompt = getCampaignBasePrompt(settings, path?.campaign);
 
 		if (type === "custom-monster") {

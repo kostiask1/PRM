@@ -113,6 +113,24 @@ export function setUiSettingsAction(payload) {
 	}
 	if (
 		payload &&
+		Object.prototype.hasOwnProperty.call(
+			payload,
+			"campaignImagePromptBasePrompts",
+		)
+	) {
+		nextPayload.campaignImagePromptBasePrompts =
+			payload.campaignImagePromptBasePrompts &&
+			typeof payload.campaignImagePromptBasePrompts === "object" &&
+			!Array.isArray(payload.campaignImagePromptBasePrompts)
+				? Object.fromEntries(
+						Object.entries(payload.campaignImagePromptBasePrompts).map(
+							([slug, prompt]) => [String(slug), String(prompt || "")],
+						),
+					)
+				: {};
+	}
+	if (
+		payload &&
 		Object.prototype.hasOwnProperty.call(payload, "autoApplyAiChanges")
 	) {
 		nextPayload.autoApplyAiChanges = payload.autoApplyAiChanges !== false;

@@ -29,6 +29,7 @@ const DEFAULT_APP_SETTINGS = Object.freeze({
 	aiBasePrompt: "",
 	imagePromptBasePrompt: DEFAULT_IMAGE_PROMPT_BASE_PROMPT,
 	campaignAiBasePrompts: {},
+	campaignImagePromptBasePrompts: {},
 	autoApplyAiChanges: false,
 });
 
@@ -742,6 +743,19 @@ function normalizeSettings(settings = {}) {
 						.filter(([slug]) => slug),
 				)
 			: {};
+	const campaignImagePromptBasePrompts =
+		settings.campaignImagePromptBasePrompts &&
+		typeof settings.campaignImagePromptBasePrompts === "object" &&
+		!Array.isArray(settings.campaignImagePromptBasePrompts)
+			? Object.fromEntries(
+					Object.entries(settings.campaignImagePromptBasePrompts)
+						.map(([slug, prompt]) => [
+							String(slug || "").trim(),
+							String(prompt || ""),
+						])
+						.filter(([slug]) => slug),
+				)
+			: {};
 
 	return {
 		language: settings.language === "en" ? "en" : "uk",
@@ -762,6 +776,7 @@ function normalizeSettings(settings = {}) {
 				? DEFAULT_IMAGE_PROMPT_BASE_PROMPT
 				: String(settings.imagePromptBasePrompt || ""),
 		campaignAiBasePrompts,
+		campaignImagePromptBasePrompts,
 		autoApplyAiChanges: settings.autoApplyAiChanges !== false,
 	};
 }

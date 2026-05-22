@@ -124,6 +124,8 @@ export default function App() {
 						aiBasePrompt: settings.aiBasePrompt,
 						imagePromptBasePrompt: settings.imagePromptBasePrompt,
 						campaignAiBasePrompts: settings.campaignAiBasePrompts,
+						campaignImagePromptBasePrompts:
+							settings.campaignImagePromptBasePrompts,
 						autoApplyAiChanges: settings.autoApplyAiChanges,
 					}),
 				);

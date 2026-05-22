@@ -429,7 +429,13 @@ export default function AiAssistantPanel({
 	const imagePromptBasePrompt = useAppSelector(
 		(state) => state.ui.imagePromptBasePrompt || "",
 	);
+	const campaignImagePromptBasePrompts = useAppSelector(
+		(state) => state.ui.campaignImagePromptBasePrompts || {},
+	);
 	const initialRoute = parseUrl();
+	const activeImagePromptBasePrompt =
+		campaignImagePromptBasePrompts[initialRoute.campaign] ||
+		imagePromptBasePrompt;
 	const isBestiary = bestiaryMode || initialRoute.campaign === "bestiary";
 	const isCampaign = !initialRoute.session && !isBestiary;
 	const isEncounter = !!initialRoute.encounter;
@@ -1516,7 +1522,7 @@ export default function AiAssistantPanel({
 
 	const selectImagePromptTarget = (target) => {
 		setSelectedImagePromptTarget(target);
-		setImagePromptInstructions(imagePromptBasePrompt);
+		setImagePromptInstructions(activeImagePromptBasePrompt);
 	};
 
 	const closeImagePromptPicker = () => {
@@ -1593,7 +1599,7 @@ export default function AiAssistantPanel({
 
 	const openImagePromptPicker = async () => {
 		setSelectedImagePromptTarget(null);
-		setImagePromptInstructions(imagePromptBasePrompt);
+		setImagePromptInstructions(activeImagePromptBasePrompt);
 		setIsImagePromptDataLoading(true);
 		try {
 			if (isBestiary) {
@@ -1813,7 +1819,7 @@ export default function AiAssistantPanel({
 							loading={loading}
 							onBackToSelection={() => {
 								setSelectedImagePromptTarget(null);
-								setImagePromptInstructions(imagePromptBasePrompt);
+								setImagePromptInstructions(activeImagePromptBasePrompt);
 							}}
 							onCancel={closeImagePromptPicker}
 							onGenerate={generateImagePromptForTarget}

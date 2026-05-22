@@ -129,7 +129,6 @@ function ImageGallery({
 			? lang.t("Choose an image")
 			: lang.t("Image gallery");
 	const sourceSizes = storageStats?.sourceSizes || {};
-	const categorySizes = storageStats?.categorySizes || {};
 
 	return (
 		<Modal
