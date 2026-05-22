@@ -8,34 +8,34 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { api } from "../api";
-import { parseUrl } from "../utils/navigation";
-import Button from "./form/Button";
-import EditableField from "./form/EditableField";
-import Icon from "./common/Icon";
-import Modal from "./common/Modal";
-import Notification from "./common/Notification";
-import AiApiKeyPanel from "./ai/AiApiKeyPanel";
-import AiAssistantToolbar from "./ai/AiAssistantToolbar";
-import AiContextSettingsModal from "./ai/AiContextSettingsModal";
-import AiImagePromptPickerModal from "./ai/AiImagePromptPickerModal";
-import AiResponseHistory from "./ai/AiResponseHistory";
-import AiResponseModal from "./ai/AiResponseModal";
+import { api } from "../../api.js";
+import { parseUrl } from "../../utils/navigation.js";
+import Button from "../form/Button.jsx";
+import EditableField from "../form/EditableField.jsx";
+import Icon from "../common/Icon.jsx";
+import Modal from "../common/Modal.jsx";
+import Notification from "../common/Notification.jsx";
+import AiApiKeyPanel from "./AiApiKeyPanel.jsx";
+import AiAssistantToolbar from "./AiAssistantToolbar.jsx";
+import AiContextSettingsModal from "./AiContextSettingsModal.jsx";
+import AiImagePromptPickerModal from "./AiImagePromptPickerModal.jsx";
+import AiResponseHistory from "./AiResponseHistory.jsx";
+import AiResponseModal from "./AiResponseModal.jsx";
 import {
 	alert,
 	confirm,
 	refreshEntitiesAction,
 	requestCampaignsReloadAction,
-} from "../actions/app";
-import Tooltip from "./common/Tooltip";
-import { useAppDispatch, useAppSelector } from "../store/appStore";
-import { lang } from "../services/localization";
-import { renderMentionText } from "../renderers/contentRenderer.jsx";
-import { formatBytes } from "../utils/formatBytes";
+} from "../../actions/app.js";
+import Tooltip from "../common/Tooltip.jsx";
+import { useAppDispatch, useAppSelector } from "../../store/appStore.js";
+import { lang } from "../../services/localization.js";
+import { renderMentionText } from "../../renderers/contentRenderer.jsx";
+import { formatBytes } from "../../utils/formatBytes.js";
 import {
 	buildDiffResources,
 	getDiffResourceState as getAiDiffResourceState,
-} from "../utils/aiDiff.js";
+} from "../../utils/aiDiff.js";
 import "../assets/components/AiAssistantPanel.css";
 
 const markdownTagsWithMentions = [

@@ -3,7 +3,7 @@ import Panel from "./common/Panel";
 import Button from "./form/Button";
 import Modal from "./common/Modal";
 import Bestiary from "./Bestiary";
-import AiAssistantPanel from "./AiAssistantPanel";
+import AiAssistantPanel from "./ai/AiAssistantPanel";
 import MonsterStatBlock from "./MonsterStatBlock";
 import CharacterCard from "./CharacterCard";
 import Notification from "./common/Notification";

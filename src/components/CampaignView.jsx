@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import AiAssistantPanel from "./AiAssistantPanel";
+import AiAssistantPanel from "./ai/AiAssistantPanel";
 import Button from "./form/Button";
 import EditableField from "./form/EditableField";
 import ListCard from "./common/ListCard.jsx";

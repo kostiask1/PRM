@@ -4,7 +4,7 @@ import { alert, confirm } from "../actions/app";
 import { useAppDispatch, useAppSelector } from "../store/appStore";
 import Panel from "./common/Panel";
 import Button from "./form/Button";
-import AiAssistantPanel from "./AiAssistantPanel";
+import AiAssistantPanel from "./ai/AiAssistantPanel";
 import BestiaryAiDraftModal from "./bestiary/BestiaryAiDraftModal";
 import BestiaryContent from "./bestiary/BestiaryContent";
 import CustomMonsterEditModal from "./bestiary/CustomMonsterEditModal";

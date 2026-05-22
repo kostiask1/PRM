@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import Icon from "./common/Icon.jsx";
 import Button from "./form/Button";
 import EditableField from "./form/EditableField";
-import AiAssistantPanel from "./AiAssistantPanel";
+import AiAssistantPanel from "./ai/AiAssistantPanel";
 import Panel from "./common/Panel.jsx";
 import DraggableList from "./common/DraggableList.jsx";
 import Modal from "./common/Modal.jsx";
