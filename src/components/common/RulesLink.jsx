@@ -1,11 +1,8 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import Tooltip from "./common/Tooltip.jsx";
-import "../assets/components/RulesLink.css";
-import Modal from "./common/Modal.jsx";
-import { lang } from "../services/localization";
-import classNames from "../utils/classNames";
-import { openModalRequest, useAppDispatch } from "../store/appStore";
-import { alert } from "../actions/app";
+import { alert } from "../../actions/app.js";
+import "../../assets/components/RulesLink.css";
+import { renderRecursiveContent } from "../../renderers/contentRenderer.jsx";
+import { lang } from "../../services/localization.js";
 import {
 	getConditionByName,
 	getDiseaseByName,
@@ -13,7 +10,7 @@ import {
 	getSkillByName,
 	getSpellByName,
 	getVariantRuleByName,
-} from "../services/referencePreview.js";
+} from "../../services/referencePreview.js";
 import {
 	resolveConditionInput,
 	resolveDiseaseInput,
@@ -21,12 +18,15 @@ import {
 	resolveSkillInput,
 	resolveSpellInput,
 	resolveVariantRuleInput,
-} from "../services/referenceResolvers.js";
-import { capitalizeWords } from "../utils/parser.jsx";
-import { renderRecursiveContent } from "../renderers/contentRenderer.jsx";
-import { openRulesReferenceModal } from "./modals/openRulesReferenceModal.jsx";
+} from "../../services/referenceResolvers.js";
+import { openModalRequest, useAppDispatch } from "../../store/appStore.js";
+import classNames from "../../utils/classNames.js";
+import { capitalizeWords } from "../../utils/parser.jsx";
+import { openRulesReferenceModal } from "../modals/openRulesReferenceModal.jsx";
+import Modal from "./Modal.jsx";
+import Tooltip from "./Tooltip.jsx";
 
-const SpellCard = lazy(() => import("./SpellCard"));
+const SpellCard = lazy(() => import("../SpellCard.jsx"));
 
 export default function RulesLink({
 	children,

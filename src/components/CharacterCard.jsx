@@ -4,7 +4,7 @@ import EditableField from "./form/EditableField";
 import DraggableList from "./common/DraggableList.jsx";
 import NoteCard from "./common/NoteCard.jsx";
 import AiContextIgnoreButton from "./common/AiContextIgnoreButton.jsx";
-import ImageAssetField from "./ImageAssetField";
+import ImageAssetField from "./form/ImageAssetField.jsx";
 import "../assets/components/CharacterCard.css";
 import Select from "./form/Select";
 import CharacterCardModel from "../models/CharacterCardModel.js";

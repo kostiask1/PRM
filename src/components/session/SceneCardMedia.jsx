@@ -1,4 +1,4 @@
-﻿import ImageAssetField from "../ImageAssetField";
+﻿import ImageAssetField from "../form/ImageAssetField";
 import { lang } from "../../services/localization";
 
 export default function SceneCardMedia({

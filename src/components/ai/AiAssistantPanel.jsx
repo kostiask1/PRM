@@ -36,7 +36,7 @@ import {
 	buildDiffResources,
 	getDiffResourceState as getAiDiffResourceState,
 } from "../../utils/aiDiff.js";
-import "../assets/components/AiAssistantPanel.css";
+import "../../assets/components/AiAssistantPanel.css";
 
 const markdownTagsWithMentions = [
 	"p",

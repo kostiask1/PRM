@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { api } from "../api.js";
-import RollDice from "./RollDice";
+import RollDice from "./common/RollDice.jsx";
 import Icon from "./common/Icon.jsx";
 import {
 	getAbilityModifier,
@@ -27,9 +27,9 @@ import {
 } from "../store/appStore";
 import { lang } from "../services/localization.js";
 import AddMonsterToEncounterModalContent from "./modals/AddMonsterToEncounterModalContent.jsx";
-import RulesLink from "./RulesLink.jsx";
+import RulesLink from "./common/RulesLink.jsx";
 import { highlightText } from "../utils/searchHighlight.jsx";
-import ImageDropzone from "./ImageDropzone.jsx";
+import ImageDropzone from "./form/ImageDropzone.jsx";
 
 const SPELL_CACHE = new Map();
 const SENSE_NAME_REGEX = /\b(blindsight|darkvision|tremorsense|truesight)\b/gi;

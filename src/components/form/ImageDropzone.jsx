@@ -1,16 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { alert } from "../actions/app";
-import { api } from "../api";
-import Button from "./form/Button";
-import Icon from "./common/Icon";
-import Modal from "./common/Modal";
-import ImageGallery from "./ImageGallery";
-import ImageTargetSettings from "./ImageTargetSettings";
-import { IMAGE_GALLERY_CATEGORIES } from "../features/images/imageGalleryConfig";
-import "../assets/components/ImageDropzone.css";
-import classNames from "../utils/classNames";
-import { useAppDispatch } from "../store/appStore";
-import { lang } from "../services/localization";
+import { alert } from "../../actions/app";
+import { api } from "../../api";
+import "../../assets/components/ImageDropzone.css";
+import { IMAGE_GALLERY_CATEGORIES } from "../../features/images/imageGalleryConfig";
+import { lang } from "../../services/localization";
+import { useAppDispatch } from "../../store/appStore";
+import classNames from "../../utils/classNames";
+import Icon from "../common/Icon";
+import Modal from "../common/Modal";
+import ImageGallery from "../ImageGallery";
+import ImageTargetSettings from "../ImageTargetSettings";
+import Button from "./Button";
 
 function splitFileName(fileName) {
 	const lastDotIndex = fileName.lastIndexOf(".");

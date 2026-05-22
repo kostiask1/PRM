@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import Button from "./form/Button";
+import Button from "./Button";
 import ImageDropzone from "./ImageDropzone";
-import ImageGallery from "./ImageGallery";
-import Modal from "./common/Modal";
-import Tooltip from "./common/Tooltip";
-import { lang } from "../services/localization";
+import ImageGallery from "../ImageGallery";
+import Modal from "../common/Modal";
+import Tooltip from "../common/Tooltip";
+import { lang } from "../../services/localization";
 
 const TARGET_PRESETS = {
 	character: { category: "characters", subcategory: "players" },

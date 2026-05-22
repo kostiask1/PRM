@@ -1,8 +1,8 @@
-import "../assets/components/RollDice.css";
-import Tooltip from "./common/Tooltip";
-import { requestDiceRollAction } from "../actions/app";
-import { useAppDispatch } from "../store/appStore";
-import { lang } from "../services/localization";
+import { requestDiceRollAction } from "../../actions/app";
+import "../../assets/components/RollDice.css";
+import { lang } from "../../services/localization";
+import { useAppDispatch } from "../../store/appStore";
+import Tooltip from "./Tooltip";
 
 export default function RollDice({ formula, children }) {
 	const dispatch = useAppDispatch();

@@ -3,7 +3,7 @@ import { useRef } from "react";
 import Button from "./form/Button";
 import EditableField from "./form/EditableField";
 import DraggableList from "./common/DraggableList.jsx";
-import ImageAssetField from "./ImageAssetField";
+import ImageAssetField from "./form/ImageAssetField.jsx";
 import NoteCard from "./common/NoteCard.jsx";
 import AiContextIgnoreButton from "./common/AiContextIgnoreButton.jsx";
 import CollapseToggleButton from "./common/CollapseToggleButton.jsx";

@@ -1,8 +1,8 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";
 
-import RollDice from "../components/RollDice";
-import RulesLink from "../components/RulesLink";
+import RollDice from "../components/common/RollDice.jsx";
+import RulesLink from "../components/common/RulesLink.jsx";
 import EntityLink from "../components/common/EntityLink";
 import {
 	capitalizeWords,
