@@ -79,6 +79,10 @@ function withLeadingCaretAnchor(html = "") {
 	return `<span class="${CARET_ANCHOR_CLASS}" data-caret-anchor="true">\u200B</span>${html}`;
 }
 
+function renderBlankLine() {
+	return "<p><br></p>";
+}
+
 function renderInlineMarkdown(markdown = "") {
 	const source = String(markdown || "");
 	const tokenRegex =
@@ -136,7 +140,8 @@ function markdownToHtml(markdown = "", type = "text") {
 		const quoteMatch = line.match(/^[ \t]*>[ \t]?(.*)$/);
 
 		if (!line.trim() && !line.includes("\t")) {
-			paragraph.push("");
+			flushParagraph();
+			html.push(renderBlankLine());
 			continue;
 		}
 
@@ -144,7 +149,9 @@ function markdownToHtml(markdown = "", type = "text") {
 			flushParagraph();
 			const level = Math.min(headingMatch[1].length, 6);
 			html.push(
-				`<h${level}>${renderInlineMarkdown(headingMatch[2])}</h${level}>`,
+				`<h${level}>${renderInlineMarkdown(
+					headingMatch[2],
+				)}</h${level}>`,
 			);
 			continue;
 		}
@@ -215,10 +222,37 @@ function normalizeMarkdown(value = "", type = "textarea") {
 		.replace(/^\n+|\n+$/g, "");
 }
 
+function isBlockElement(node) {
+	if (node?.nodeType !== Node.ELEMENT_NODE) return false;
+	return /^(blockquote|div|h[1-6]|li|ol|p|ul)$/.test(
+		node.tagName.toLowerCase(),
+	);
+}
+
 function childrenToMarkdown(node, options = {}) {
-	return Array.from(node.childNodes || [])
-		.map((child) => nodeToMarkdown(child, options))
-		.join("");
+	if (options.inline) {
+		return Array.from(node.childNodes || [])
+			.map((child) => nodeToMarkdown(child, options))
+			.join("");
+	}
+
+	let markdown = "";
+	let previousWasInline = false;
+
+	for (const child of Array.from(node.childNodes || [])) {
+		const childMarkdown = nodeToMarkdown(child, options);
+		if (!childMarkdown) continue;
+
+		const isBlock = isBlockElement(child);
+		if (isBlock && previousWasInline && markdown && !markdown.endsWith("\n")) {
+			markdown += "\n";
+		}
+
+		markdown += childMarkdown;
+		previousWasInline = !isBlock;
+	}
+
+	return markdown;
 }
 
 function blockMarkdown(content = "") {
@@ -229,7 +263,7 @@ function blockMarkdown(content = "") {
 		.replace(/^\n/, "");
 
 	if (!normalized.replace(/\n/g, "").trim()) return "";
-	return normalized.endsWith("\n") ? `${normalized}\n` : `${normalized}\n\n`;
+	return normalized.endsWith("\n") ? normalized : `${normalized}\n`;
 }
 
 function headingMarkdown(content = "") {
@@ -263,7 +297,7 @@ function serializeList(listNode, ordered = false) {
 					.join("\n");
 				return `${marker} ${content}`.trimEnd();
 			})
-			.join("\n") + "\n\n"
+			.join("\n") + "\n"
 	);
 }
 
@@ -349,11 +383,17 @@ function nodeToMarkdown(node, options = {}) {
 
 	if (tagName === "strong" || tagName === "b") {
 		const content = inlineMarkdown(element, childOptions);
+		if (!normalizeTextContent(content).replace(/\n/g, "").trim()) {
+			return content;
+		}
 		return childOptions.suppressBold ? content : `**${content}**`;
 	}
 
 	if (tagName === "em" || tagName === "i") {
 		const content = inlineMarkdown(element, childOptions);
+		if (!normalizeTextContent(content).replace(/\n/g, "").trim()) {
+			return content;
+		}
 		return childOptions.suppressItalic ? content : `*${content}*`;
 	}
 
@@ -654,6 +694,12 @@ function selectTextNode(node) {
 	selectRange(range);
 }
 
+function getMarkdownLength(node) {
+	const container = document.createElement("div");
+	container.append(node.cloneNode(true));
+	return childrenToMarkdown(container).length;
+}
+
 function createEndRange(editor) {
 	const range = document.createRange();
 	range.selectNodeContents(editor);
@@ -858,7 +904,7 @@ function getCurrentBlockElement(editor) {
 	const element = getSelectionElement(editor);
 	if (!element) return null;
 
-	const block = element.closest?.("p, h1, h2, h3, h4, h5, h6, blockquote");
+	const block = element.closest?.("p, div, li, h1, h2, h3, h4, h5, h6, blockquote");
 	if (block && editor.contains(block)) return block;
 
 	return element === editor ? null : element;
@@ -991,13 +1037,12 @@ export default function EditableField({
 		}
 
 		const isFocused = document.activeElement === editor;
-		const currentValue = editorToMarkdown(editor, type);
 
-		if (isActive && isFocused && currentValue === markdownValue) return;
+		if (isActive && isFocused) return;
 		if (editor.innerHTML !== htmlValue) {
 			editor.innerHTML = htmlValue;
 		}
-	}, [htmlValue, isActive, markdownValue, type]);
+	}, [htmlValue, isActive]);
 
 	const handleCopy = async (event) => {
 		event.preventDefault();
@@ -1118,6 +1163,45 @@ export default function EditableField({
 		event.preventDefault();
 		document.execCommand(command, false, commandValue);
 		emitChange(event);
+	};
+
+	const runInlineCommand = (event, command) => {
+		event.preventDefault();
+
+		const editor = editorRef.current;
+		const range = getSelectionRangeInside(editor)?.cloneRange();
+		if (!editor || !range) {
+			document.execCommand(command, false);
+			emitChange(event);
+			return;
+		}
+
+		if (!range.collapsed) {
+			document.execCommand(command, false);
+			emitChange(event);
+			return;
+		}
+
+		const block = getCurrentBlockElement(editor);
+		if (!block || block === editor) {
+			document.execCommand(command, false);
+			emitChange(event);
+			return;
+		}
+
+		const beforeRange = range.cloneRange();
+		beforeRange.selectNodeContents(block);
+		beforeRange.setEnd(range.startContainer, range.startOffset);
+		const caretOffset = getMarkdownLength(beforeRange.cloneContents());
+
+		const blockRange = document.createRange();
+		blockRange.selectNodeContents(block);
+		selectRange(blockRange);
+		document.execCommand(command, false);
+		emitChange(event);
+
+		const nextRange = createRangeFromMarkdownOffset(block, caretOffset);
+		if (nextRange) selectRange(nextRange);
 	};
 
 	const runFormatBlockCommand = (event, tagName) => {
@@ -1251,12 +1335,12 @@ export default function EditableField({
 		}
 
 		if (type === "textarea" && isMod && (key === "b" || key === "и")) {
-			runCommand(event, "bold");
+			runInlineCommand(event, "bold");
 			return;
 		}
 
 		if (type === "textarea" && isMod && (key === "i" || key === "ш")) {
-			runCommand(event, "italic");
+			runInlineCommand(event, "italic");
 			return;
 		}
 

@@ -1479,8 +1479,10 @@ await run(
 		assert.match(editableFieldSource, /onMouseMove=\{handleMouseMove\}/);
 		assert.match(editableFieldSource, /anchorElement=\{tooltipAnchor\}/);
 		assert.equal(editableFieldSource.includes("replace(/\\n{3,}/g"), false);
-		assert.match(editableFieldSource, /paragraph\.push\(""\)/);
-		assert.match(editableFieldSource, /normalized\.endsWith\("\\n"\)/);
+		assert.equal(editableFieldSource.includes('paragraph.push("")'), false);
+		assert.match(editableFieldSource, /return "<p><br><\/p>";/);
+		assert.match(editableFieldSource, /contentEditable=\{!isDisabled\}/);
+		assert.match(editableFieldSource, /editorToMarkdown/);
 		assert.equal(editableFieldSource.includes("mention.title ="), false);
 		assert.equal(editableFieldSource.includes("title={typeof title"), false);
 		assert.equal(
