@@ -3,6 +3,7 @@ import {
 	cloneElement,
 	createElement,
 	isValidElement,
+	useCallback,
 	useEffect,
 	useRef,
 	useState,
@@ -30,6 +31,7 @@ import Tooltip from "./common/Tooltip";
 import { useAppDispatch, useAppSelector } from "../store/appStore";
 import { lang } from "../services/localization";
 import { renderMentionText } from "../renderers/contentRenderer.jsx";
+import { formatBytes } from "../utils/formatBytes";
 import {
 	buildDiffResources,
 	getDiffResourceState as getAiDiffResourceState,
@@ -499,6 +501,7 @@ export default function AiAssistantPanel({
 	const [selectedResponseId, setSelectedResponseId] = useState(null);
 	const [selectedResponseEntry, setSelectedResponseEntry] = useState(null);
 	const [responseHistory, setResponseHistory] = useState([]);
+	const [responseHistorySizeBytes, setResponseHistorySizeBytes] = useState(0);
 	const [isRestoringResponse, setIsRestoringResponse] = useState(false);
 	const activeGenerateControllerRef = useRef(null);
 	const generatedPromptRef = useRef(null);
@@ -513,6 +516,17 @@ export default function AiAssistantPanel({
 		activeGenerateControllerRef.current = null;
 		setCanCancelGenerate(false);
 	};
+
+	const refreshResponseHistoryStats = useCallback(async () => {
+		if (!initialRoute.campaign) return;
+		try {
+			const stats = await api.getAiResponsesStats(initialRoute.campaign);
+			setResponseHistorySizeBytes(Number(stats?.bytes) || 0);
+		} catch (err) {
+			console.error("Failed to load AI response history stats", err);
+			setResponseHistorySizeBytes(0);
+		}
+	}, [initialRoute.campaign]);
 
 	const showGeneratedPrompt = (response) => {
 		const entry =
@@ -687,10 +701,16 @@ export default function AiAssistantPanel({
 
 	useEffect(() => {
 		if (!isOpen || !initialRoute.campaign) return;
-		api
-			.listAiResponses(initialRoute.campaign)
-			.then((responses) => {
+		Promise.all([
+			api.listAiResponses(initialRoute.campaign),
+			api.getAiResponsesStats(initialRoute.campaign).catch((err) => {
+				console.error("Failed to load AI response history stats", err);
+				return null;
+			}),
+		])
+			.then(([responses, stats]) => {
 				setResponseHistory(Array.isArray(responses) ? responses : []);
+				setResponseHistorySizeBytes(Number(stats?.bytes) || 0);
 			})
 			.catch((err) => {
 				console.error("Failed to load AI response history", err);
@@ -792,6 +812,7 @@ export default function AiAssistantPanel({
 				entry.id,
 			);
 			setResponseHistory(Array.isArray(responses) ? responses : []);
+			refreshResponseHistoryStats();
 			if (selectedResponseId === entry.id) {
 				closeGeneratedPrompt();
 			}
@@ -812,6 +833,7 @@ export default function AiAssistantPanel({
 		try {
 			const responses = await api.clearAiResponses(initialRoute.campaign);
 			setResponseHistory(Array.isArray(responses) ? responses : []);
+			refreshResponseHistoryStats();
 			closeGeneratedPrompt();
 		} catch (err) {
 			dispatch(alert({ title: lang.t("Delete error"), message: err.message }));
@@ -824,6 +846,7 @@ export default function AiAssistantPanel({
 			entry,
 			...prev.filter((item) => item.id !== entry.id),
 		]);
+		refreshResponseHistoryStats();
 		if (selectedResponseId === entry.id) {
 			setSelectedResponseEntry(entry);
 			setGeneratedPrompt(entry.text);
@@ -833,6 +856,7 @@ export default function AiAssistantPanel({
 	const refreshAfterAiHistoryRestore = (result, entry) => {
 		if (Array.isArray(result?.responses)) {
 			setResponseHistory(result.responses);
+			refreshResponseHistoryStats();
 		} else if (result?.response) {
 			upsertResponseHistoryEntry(result.response);
 		}
@@ -1330,6 +1354,7 @@ export default function AiAssistantPanel({
 					entry.id,
 				);
 				setResponseHistory(Array.isArray(responses) ? responses : []);
+				refreshResponseHistoryStats();
 				if (selectedResponseId === entry.id) {
 					closeGeneratedPrompt();
 				}
@@ -1865,6 +1890,7 @@ export default function AiAssistantPanel({
 						<AiResponseHistory
 							entries={responseHistory}
 							currentLanguage={currentLanguage}
+							storageSizeLabel={formatBytes(responseHistorySizeBytes)}
 							onClear={clearResponseHistory}
 							onDelete={deleteResponseHistoryEntry}
 							onRetry={retryResponseHistoryEntry}

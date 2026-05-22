@@ -9,6 +9,7 @@ import ImageTargetSettings from "./ImageTargetSettings";
 import { api } from "../api";
 import Tooltip from "./common/Tooltip";
 import classNames from "../utils/classNames";
+import { formatBytes } from "../utils/formatBytes";
 import { useAppDispatch } from "../store/appStore";
 import { lang } from "../services/localization";
 
@@ -48,6 +49,7 @@ function ImageGallery({
 		selectedSub,
 		setSelectedSub,
 		images,
+		storageStats,
 		selectedFilenames,
 		selectedSubs,
 		loading,
@@ -126,6 +128,8 @@ function ImageGallery({
 		typeof onSelect === "function"
 			? lang.t("Choose an image")
 			: lang.t("Image gallery");
+	const sourceSizes = storageStats?.sourceSizes || {};
+	const categorySizes = storageStats?.categorySizes || {};
 
 	return (
 		<Modal
@@ -159,6 +163,9 @@ function ImageGallery({
 					>
 						<Icon name="database" size={16} />
 						<span>{lang.t("General")}</span>
+						<span className="SourceBtn__size">
+							{formatBytes(sourceSizes.general)}
+						</span>
 					</button>
 					<div className="ImageGallery__sidebar_divider">
 						{lang.t("Campaigns")}
@@ -188,6 +195,9 @@ function ImageGallery({
 						>
 							<Icon name="map" size={16} />
 							<span>{c.name}</span>
+							<span className="SourceBtn__size">
+								{formatBytes(sourceSizes[c.slug])}
+							</span>
 						</button>
 					))}
 				</aside>
@@ -328,6 +338,16 @@ function ImageGallery({
 									/>
 								)}
 							</div>
+						</div>
+						<div className="ImageGallery__storage_stats">
+							<span>
+								{lang.t("Total gallery size")}:{" "}
+								<strong>{formatBytes(storageStats?.totalBytes)}</strong>
+							</span>
+							<span>
+								{lang.t("Tab size")}:{" "}
+								<strong>{formatBytes(storageStats?.categoryBytes)}</strong>
+							</span>
 						</div>
 						<div className="ImageGallery__upload_actions">
 							{hasSelection && (

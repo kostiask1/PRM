@@ -129,6 +129,30 @@ async function exists(filePath) {
 	}
 }
 
+async function getFileSize(filePath) {
+	try {
+		const stats = await fs.stat(filePath);
+		return stats.isFile() ? stats.size : 0;
+	} catch {
+		return 0;
+	}
+}
+
+async function getDirectorySize(dirPath) {
+	if (!(await exists(dirPath))) return 0;
+	let total = 0;
+	const entries = await fs.readdir(dirPath, { withFileTypes: true });
+	for (const entry of entries) {
+		const fullPath = path.join(dirPath, entry.name);
+		if (entry.isDirectory()) {
+			total += await getDirectorySize(fullPath);
+		} else if (entry.isFile()) {
+			total += await getFileSize(fullPath);
+		}
+	}
+	return total;
+}
+
 function stripUpdatedAtFields(value) {
 	if (Array.isArray(value)) {
 		return value.map(stripUpdatedAtFields);
@@ -623,6 +647,21 @@ async function readAiResponses(campaignSlugValue) {
 	} catch {
 		return [];
 	}
+}
+
+async function getAiResponsesStorageStats(campaignSlugValue) {
+	const slug = normalizeCampaignSlug(campaignSlugValue);
+	if (!slug) return { bytes: 0 };
+	const responsesPath = aiResponsesPath(slug);
+	const legacyResponsesPath =
+		slug === "bestiary" ? campaignAiResponsesPath(slug) : null;
+	const readablePath =
+		(await exists(responsesPath)) ||
+		!legacyResponsesPath ||
+		!(await exists(legacyResponsesPath))
+			? responsesPath
+			: legacyResponsesPath;
+	return { bytes: await getFileSize(readablePath) };
 }
 
 async function writeAiResponses(campaignSlugValue, responses) {
@@ -1579,13 +1618,70 @@ async function listImages(slug, category, subcategory = "") {
 	const dir = campaignImagesDir(slug, category, sub);
 	if (!(await exists(dir))) return [];
 	const entries = await fs.readdir(dir, { withFileTypes: true });
-	return entries
+	const files = entries
 		.filter((e) => e.isFile() && /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(e.name))
-		.map((e) => ({
+		.map(async (e) => ({
 			name: e.name,
 			url: `/api/images/${encodeURIComponent(slug)}/${encodeURIComponent(category)}${sub ? "/" + encodeURIComponent(sub) : ""}/${encodeURIComponent(e.name)}`,
 			path: path.join(category, sub, e.name),
+			sizeBytes: await getFileSize(path.join(dir, e.name)),
 		}));
+	return Promise.all(files);
+}
+
+async function getImageGalleryStorageStats({
+	source = "general",
+	category = "",
+	subcategory = "",
+	categories = [],
+} = {}) {
+	const sourceSlug = path.basename(String(source || "general"));
+	const rootDir = IMAGES_DIR;
+	const sourceDir = path.join(rootDir, sourceSlug);
+	const selectedCategory = String(category || "");
+	const selectedSubcategory = String(subcategory || "");
+	const categoryIds = Array.isArray(categories)
+		? categories.map((item) => String(item || "")).filter(Boolean)
+		: [];
+
+	const sourceEntries = (await exists(rootDir))
+		? await fs.readdir(rootDir, { withFileTypes: true })
+		: [];
+	const sourceSizes = {};
+	for (const entry of sourceEntries) {
+		if (!entry.isDirectory()) continue;
+		sourceSizes[entry.name] = await getDirectorySize(path.join(rootDir, entry.name));
+	}
+
+	const categoryNames =
+		categoryIds.length > 0
+			? categoryIds
+			: (await exists(sourceDir))
+				? (await fs.readdir(sourceDir, { withFileTypes: true }))
+						.filter((entry) => entry.isDirectory())
+						.map((entry) => entry.name)
+				: [];
+	const categorySizes = {};
+	for (const categoryName of categoryNames) {
+		categorySizes[categoryName] = await getDirectorySize(
+			path.join(sourceDir, categoryName),
+		);
+	}
+
+	return {
+		totalBytes: await getDirectorySize(rootDir),
+		sourceBytes: await getDirectorySize(sourceDir),
+		categoryBytes: selectedCategory
+			? await getDirectorySize(path.join(sourceDir, selectedCategory))
+			: 0,
+		subcategoryBytes: selectedCategory
+			? await getDirectorySize(
+					path.join(sourceDir, selectedCategory, selectedSubcategory),
+				)
+			: 0,
+		sourceSizes,
+		categorySizes,
+	};
 }
 
 async function listSubcategories(slug, category, subcategory = "") {
@@ -1829,6 +1925,7 @@ module.exports = {
 	readFavorites,
 	writeFavorites,
 	readAiResponses,
+	getAiResponsesStorageStats,
 	addAiResponse,
 	getAiResponse,
 	updateAiResponse,
@@ -1864,6 +1961,7 @@ module.exports = {
 	writeCustomBestiaryMonsters,
 	upsertCustomBestiaryMonsters,
 	listImages,
+	getImageGalleryStorageStats,
 	listSubcategories,
 	moveImages,
 	renameSubcategory,

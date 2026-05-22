@@ -190,6 +190,10 @@ export const api = {
 		}),
 	listAiResponses: (campaign) =>
 		api.request(`/ai/responses?campaign=${encodeURIComponent(campaign)}`),
+	getAiResponsesStats: (campaign) =>
+		api.request(
+			`/ai/responses/stats?campaign=${encodeURIComponent(campaign)}`,
+		),
 	deleteAiResponse: (campaign, id) =>
 		api.request(
 			`/ai/responses/${encodeURIComponent(id)}?campaign=${encodeURIComponent(campaign)}`,
@@ -306,6 +310,14 @@ export const api = {
 		api.request(
 			`/campaigns/${encodeURIComponent(slug)}/images/${category}${subcategory ? `?subcategory=${encodeURIComponent(subcategory)}` : ""}`,
 		),
+	getImageGalleryStats: (slug, category, subcategory, categories = []) => {
+		const query = new URLSearchParams();
+		query.set("source", slug);
+		if (category) query.set("category", category);
+		if (subcategory) query.set("subcategory", subcategory);
+		if (categories.length > 0) query.set("categories", categories.join(","));
+		return api.request(`/images/stats?${query.toString()}`);
+	},
 
 	moveImages: (payload) =>
 		api.request("/images/move", {

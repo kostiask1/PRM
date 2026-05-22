@@ -22,6 +22,7 @@ export default function useImageGallery({
 	const [selectedSub, setSelectedSub] = useState("");
 	const [dynamicSubs, setDynamicSubs] = useState([]);
 	const [images, setImages] = useState([]);
+	const [storageStats, setStorageStats] = useState(null);
 	const [selectedFilenames, setSelectedFilenames] = useState(new Set());
 	const [selectedSubs, setSelectedSubs] = useState(new Set());
 	const [lastSelectedIndex, setLastSelectedIndex] = useState(null);
@@ -80,6 +81,21 @@ export default function useImageGallery({
 		}
 	}, [selectedSource, selectedCat.id, selectedSub]);
 
+	const loadStorageStats = useCallback(async () => {
+		try {
+			const stats = await api.getImageGalleryStats(
+				selectedSource,
+				selectedCat.id,
+				selectedSub,
+				IMAGE_GALLERY_CATEGORIES.map((category) => category.id),
+			);
+			setStorageStats(stats || null);
+		} catch (err) {
+			console.error("Failed to load image gallery storage stats:", err);
+			setStorageStats(null);
+		}
+	}, [selectedSource, selectedCat.id, selectedSub]);
+
 	useEffect(() => {
 		if (isOpen) {
 			api.listCampaigns().then(setCampaigns);
@@ -101,6 +117,7 @@ export default function useImageGallery({
 		if (isOpen) {
 			loadImages();
 			loadSubcategories();
+			loadStorageStats();
 		}
 		setSelectedFilenames(new Set());
 		setSelectedSubs(new Set());
@@ -112,6 +129,7 @@ export default function useImageGallery({
 		isOpen,
 		loadImages,
 		loadSubcategories,
+		loadStorageStats,
 	]);
 
 	const handleFileUpload = useCallback(
@@ -128,13 +146,14 @@ export default function useImageGallery({
 					);
 				}
 				loadImages();
+				loadStorageStats();
 			} catch (err) {
 				console.error("Upload failed:", err);
 			} finally {
 				setLoading(false);
 			}
 		},
-		[selectedSource, selectedCat.id, selectedSub, loadImages],
+		[selectedSource, selectedCat.id, selectedSub, loadImages, loadStorageStats],
 	);
 
 	const handleDrop = useCallback(
@@ -173,6 +192,7 @@ export default function useImageGallery({
 					setSelectedSubs(new Set());
 					loadImages();
 					loadSubcategories();
+					loadStorageStats();
 				} else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
 					await handleFileUpload(e.dataTransfer.files);
 					return;
@@ -183,7 +203,7 @@ export default function useImageGallery({
 				setLoading(false);
 			}
 		},
-		[handleFileUpload, loadImages, loadSubcategories],
+		[handleFileUpload, loadImages, loadSubcategories, loadStorageStats],
 	);
 
 	const handleMoveSelection = useCallback(
@@ -217,6 +237,7 @@ export default function useImageGallery({
 				setLastSelectedIndex(null);
 				loadImages();
 				loadSubcategories();
+				loadStorageStats();
 				return true;
 			} catch (err) {
 				console.error("Move failed", err);
@@ -235,6 +256,7 @@ export default function useImageGallery({
 			selectedSub,
 			loadImages,
 			loadSubcategories,
+			loadStorageStats,
 			dispatch,
 		],
 	);
@@ -308,11 +330,19 @@ export default function useImageGallery({
 					newName,
 				);
 				loadImages();
+				loadStorageStats();
 			} catch (err) {
 				dispatch(alert({ title: lang.t("Error"), message: err.message }));
 			}
 		},
-		[selectedSource, selectedCat.id, selectedSub, loadImages, dispatch],
+		[
+			selectedSource,
+			selectedCat.id,
+			selectedSub,
+			loadImages,
+			loadStorageStats,
+			dispatch,
+		],
 	);
 
 	const toggleSelect = useCallback(
@@ -397,6 +427,7 @@ export default function useImageGallery({
 			setSelectedSubs(new Set());
 			loadImages();
 			loadSubcategories();
+			loadStorageStats();
 		} catch (err) {
 			dispatch(alert({ title: lang.t("Delete error"), message: err.message }));
 		} finally {
@@ -411,6 +442,7 @@ export default function useImageGallery({
 		selectedSub,
 		loadImages,
 		loadSubcategories,
+		loadStorageStats,
 		dispatch,
 	]);
 
@@ -560,6 +592,7 @@ export default function useImageGallery({
 		selectedSub,
 		setSelectedSub,
 		images,
+		storageStats,
 		selectedFilenames,
 		selectedSubs,
 		loading,

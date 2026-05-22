@@ -251,6 +251,16 @@
 	letter-spacing: 0.05em;
 }
 
+.AiAssistant__response_history_title {
+	display: grid;
+	gap: 2px;
+}
+
+.AiAssistant__response_history_title span {
+	color: var(--muted);
+	font-size: 0.78rem;
+}
+
 .AiAssistant__response_history_list {
 	max-height: 340px;
 	overflow-y: auto;

@@ -7,6 +7,7 @@ import { lang } from "../../services/localization";
 export default function AiResponseHistory({
 	entries,
 	currentLanguage,
+	storageSizeLabel,
 	onClear,
 	onDelete,
 	onRetry,
@@ -66,7 +67,14 @@ export default function AiResponseHistory({
 	return (
 		<section className="AiAssistant__response_history">
 			<div className="AiAssistant__response_history_header">
-				<h4>{lang.t("Response history")}</h4>
+				<div className="AiAssistant__response_history_title">
+					<h4>{lang.t("Response history")}</h4>
+					{storageSizeLabel && (
+						<span>
+							{lang.t("AI request history size")}: {storageSizeLabel}
+						</span>
+					)}
+				</div>
 				<Button
 					variant="ghost"
 					size={Button.SIZES.SMALL}

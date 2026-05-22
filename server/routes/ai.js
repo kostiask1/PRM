@@ -585,6 +585,18 @@ router.get("/responses", async (req, res, next) => {
 	}
 });
 
+router.get("/responses/stats", async (req, res, next) => {
+	try {
+		const campaignSlug = getAiHistoryCampaignSlug(req);
+		if (!campaignSlug) {
+			return res.status(400).json({ error: "campaign is required." });
+		}
+		res.json(await storage.getAiResponsesStorageStats(campaignSlug));
+	} catch (error) {
+		next(error);
+	}
+});
+
 router.delete("/responses/:id", async (req, res, next) => {
 	try {
 		const campaignSlug = getAiHistoryCampaignSlug(req);

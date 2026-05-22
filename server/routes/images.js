@@ -63,6 +63,24 @@ router.get("/campaigns/:slug/images/:category", async (req, res, next) => {
 	}
 });
 
+router.get("/images/stats", async (req, res, next) => {
+	try {
+		res.json(
+			await storage.getImageGalleryStorageStats({
+				source: req.query.source || "general",
+				category: req.query.category || "",
+				subcategory: req.query.subcategory || "",
+				categories: String(req.query.categories || "")
+					.split(",")
+					.map((category) => category.trim())
+					.filter(Boolean),
+			}),
+		);
+	} catch (error) {
+		next(error);
+	}
+});
+
 router.post(
 	"/campaigns/:slug/images/:category",
 	upload.single("image"),
