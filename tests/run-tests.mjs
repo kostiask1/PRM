@@ -1187,6 +1187,11 @@ await run("AI patch service applies targeted session operations", async () => {
 						note: { title: "Combat", text: "Use falling shelves." },
 					},
 					{
+						op: "appendNote",
+						entity: "session",
+						note: { title: "Prep", text: "Keep pressure on the party." },
+					},
+					{
 						op: "create",
 						entity: "scene",
 						clientId: "scene-new",
@@ -1224,6 +1229,8 @@ await run("AI patch service applies targeted session operations", async () => {
 		assert.equal(session.data.npcs[0].trait, "Alert and impatient.");
 		assert.equal(session.data.locations.length, 1);
 		assert.equal(session.data.locations[0].name, "Hidden Cellar");
+		assert.equal(session.data.notes[0].title, "Prep");
+		assert.equal(session.data.notes[0].text, "Keep pressure on the party.");
 		assert.equal(session.data.scenes[0].notes[0].text, "Use falling shelves.");
 		assert.equal(session.data.scenes[1].texts.summary, "New scene");
 		assert.equal(session.data.scenes[1].texts.goal, "Find the hidden ledger.");

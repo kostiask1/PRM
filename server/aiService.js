@@ -442,6 +442,12 @@ All four scene text fields are required and must be non-empty:
 Do not create placeholder or empty scenes. If there is not enough information to make a useful scene, omit the scene operation.
 When updating an existing scene, use "patch": { "texts": { ...changed fields only... } } and never blank an existing field unless USER INSTRUCTIONS explicitly ask to clear it.`;
 
+const sessionNotesContract = `SESSION NOTES CONTRACT:
+The current session has general notes stored on entity "session".
+Use { "op": "appendNote", "entity": "session", "note": { "title": "...", "text": "..." } } for notes that describe the whole session, preparation, pacing, recap, reminders, secrets, open questions, DM checklist, or information not tied to one exact scene.
+Use entity "scene" notes only when the note belongs to one specific scene and you can identify that scene by id or targetClientId.
+Do not force general session-level information into a scene note.`;
+
 const additiveEntityGenerationContract = `ENTITY GENERATION TOGGLES ARE ADDITIVE:
 The character, NPC, location/faction, and encounter generation settings are permissions for what entity types may appear in one parsed response. They do not replace each other and do not change the user's task by themselves.
 If multiple generation settings are enabled, you may include operations for any enabled entity type when USER INSTRUCTIONS explicitly request or clearly imply that entity type.
@@ -585,7 +591,7 @@ Exception: technical lookup fields such as "monsterName" must remain exact looku
 		systemInstructionParts.push(sceneCombatMechanicsContract);
 	}
 	if (effectiveParseAIResponse && useKey === "scene") {
-		systemInstructionParts.push(sceneDataContract);
+		systemInstructionParts.push(sceneDataContract, sessionNotesContract);
 	}
 	if (effectiveParseAIResponse && ["campaign", "scene"].includes(useKey)) {
 		systemInstructionParts.push(additiveEntityGenerationContract);
