@@ -24806,7 +24806,7 @@
     ],
     "trait": [
       {
-        "name": "Wielder Domination",
+        "name": "Charm",
         "entries": [
           "A creature can grab the staff out of the air with a successful grapple check against the staff, and grappling the staff does not reduce the creature's speed. Any creature that successfully grapples the staff must succeed on a {@dc 12} Charisma saving throw or be {@condition charmed} by the staff until the staff is no longer in its grasp. While the creature is {@condition charmed}, the staff can issue commands to it, which the creature does its best to obey. The creature can repeat the saving throw each time it takes damage, ending the effect on itself on a success. A creature that successfully resists the staff's control can't be {@condition charmed} by it for 24 hours.",
           "A creature holding the staff that isn't {@condition charmed} by it can use an action to attempt to break the staff over a knee or against a solid surface, doing so with a successful {@dc 17} Strength ({@skill Athletics}) check. Breaking the staff in this manner destroys it."
@@ -24821,9 +24821,180 @@
         ]
       },
       {
-        "name": "Staff",
+        "name": "Melee Attack",
         "entries": [
           "{@atk mw} {@hit 5} to hit, reach 5 ft., one target. {@h}7 ({@damage 2d6}) bludgeoning damage plus 1 cold damage."
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Animated Statue",
+    "source": "WDMM",
+    "size": [
+      "M"
+    ],
+    "type": "construct",
+    "alignment": [
+      "U"
+    ],
+    "ac": [
+      12,
+      {
+        "ac": 15,
+        "condition": "with {@spell mage armor}",
+        "braces": true
+      }
+    ],
+    "hp": {
+      "average": 99,
+      "formula": "18d8 + 18"
+    },
+    "speed": {
+      "walk": 30
+    },
+    "str": 10,
+    "dex": 14,
+    "con": 12,
+    "int": 20,
+    "wis": 15,
+    "cha": 16,
+    "save": {
+      "int": "+9",
+      "wis": "+6"
+    },
+    "skill": {
+      "arcana": "+13",
+      "history": "+13"
+    },
+    "resist": [
+      {
+        "special": "damage from spells"
+      },
+      {
+        "resist": [
+          "bludgeoning",
+          "piercing",
+          "slashing"
+        ],
+        "note": "(from stoneskin)",
+        "cond": true,
+        "preNote": "nonmagical"
+      }
+    ],
+    "languages": [
+      "any six languages"
+    ],
+    "cr": "12",
+    "spellcasting": [
+      {
+        "name": "Spellcasting",
+        "type": "spellcasting",
+        "headerEntries": [
+          "The archmage is an 18th-level spellcaster. Its spellcasting ability is Intelligence (spell save {@dc 17}, {@hit 9} to hit with spell attacks). The archmage can cast {@spell disguise self} and {@spell invisibility} at will and has the following wizard spells prepared:"
+        ],
+        "will": [
+          "{@spell disguise self}",
+          "{@spell invisibility}"
+        ],
+        "spells": {
+          "0": {
+            "spells": [
+              "{@spell fire bolt}",
+              "{@spell light}",
+              "{@spell mage hand}",
+              "{@spell prestidigitation}",
+              "{@spell shocking grasp}"
+            ]
+          },
+          "1": {
+            "slots": 4,
+            "spells": [
+              "{@spell detect magic}",
+              "{@spell identify}",
+              "{@spell mage armor}*",
+              "{@spell magic missile}"
+            ]
+          },
+          "2": {
+            "slots": 3,
+            "spells": [
+              "{@spell detect thoughts}",
+              "{@spell mirror image}",
+              "{@spell misty step}"
+            ]
+          },
+          "3": {
+            "slots": 3,
+            "spells": [
+              "{@spell counterspell}",
+              "{@spell fly}",
+              "{@spell lightning bolt}"
+            ]
+          },
+          "4": {
+            "slots": 3,
+            "spells": [
+              "{@spell ice storm}",
+              "{@spell fire shield}",
+              "{@spell stoneskin}*"
+            ]
+          },
+          "5": {
+            "slots": 3,
+            "spells": [
+              "{@spell cone of cold}",
+              "{@spell scrying}",
+              "{@spell wall of force}"
+            ]
+          },
+          "6": {
+            "slots": 1,
+            "spells": [
+              "{@spell globe of invulnerability}"
+            ]
+          },
+          "7": {
+            "slots": 1,
+            "spells": [
+              "{@spell finger of death}"
+            ]
+          },
+          "8": {
+            "slots": 1,
+            "spells": [
+              "{@spell mind blank}*"
+            ]
+          },
+          "9": {
+            "slots": 1,
+            "spells": [
+              "{@spell time stop}"
+            ]
+          }
+        },
+        "footerEntries": [
+          "*The archmage casts these spells on itself before combat."
+        ],
+        "ability": "int",
+        "hidden": [
+          "will"
+        ]
+      }
+    ],
+    "trait": [
+      {
+        "name": "Magic Resistance",
+        "entries": [
+          "The archmage has advantage on saving throws against spells and other magical effects."
+        ]
+      }
+    ],
+    "action": [
+      {
+        "name": "Dagger",
+        "entries": [
+          "{@atk mw,rw} {@hit 6} to hit, reach 5 ft. or range 20/60 ft., one target. {@h}4 ({@damage 1d4 + 2}) piercing damage."
         ]
       }
     ]
@@ -30775,6 +30946,94 @@
         "name": "Claw",
         "entries": [
           "{@atk mw} {@hit 6} to hit, reach 5 ft., one target. {@h}12 ({@damage 2d6 + 5}) slashing damage."
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Armored Troglodyte",
+    "source": "WDMM",
+    "size": [
+      "M"
+    ],
+    "type": {
+      "type": "humanoid",
+      "tags": [
+        "troglodyte"
+      ]
+    },
+    "alignment": [
+      "C",
+      "E"
+    ],
+    "ac": [
+      {
+        "ac": 14,
+        "from": [
+          "{@item breastplate|phb}"
+        ]
+      }
+    ],
+    "hp": {
+      "average": 13,
+      "formula": "2d8 + 4"
+    },
+    "speed": {
+      "walk": 30
+    },
+    "str": 14,
+    "dex": 10,
+    "con": 14,
+    "int": 6,
+    "wis": 10,
+    "cha": 6,
+    "skill": {
+      "stealth": "+2"
+    },
+    "senses": [
+      "darkvision 60 ft."
+    ],
+    "languages": [
+      "understands Undercommon but can't speak"
+    ],
+    "cr": "1/4",
+    "trait": [
+      {
+        "name": "Chameleon Skin",
+        "entries": [
+          "The troglodyte has advantage on Dexterity ({@skill Stealth}) checks made to hide."
+        ]
+      },
+      {
+        "name": "Stench",
+        "entries": [
+          "Any creature other than a troglodyte that starts its turn within 5 feet of the troglodyte must succeed on a {@dc 12} Constitution saving throw or be {@condition poisoned} until the start of the creature's next turn. On a successful saving throw, the creature is immune to the stench of all troglodytes for 1 hour."
+        ]
+      },
+      {
+        "name": "Sunlight Sensitivity",
+        "entries": [
+          "While in sunlight, the troglodyte has disadvantage on attack rolls, as well as on Wisdom ({@skill Perception}) checks that rely on sight."
+        ]
+      }
+    ],
+    "action": [
+      {
+        "name": "Multiattack",
+        "entries": [
+          "The troglodyte either makes two attacks with its longsword, or it makes three attacks: one with its bite and two with its claws."
+        ]
+      },
+      {
+        "name": "Bite",
+        "entries": [
+          "{@atk mw} {@hit 4} to hit, reach 5 ft., one target. {@h}4 ({@damage 1d4 + 2}) piercing damage."
+        ]
+      },
+      {
+        "name": "Longsword",
+        "entries": [
+          "{@atk mw} {@hit 4} to hit, reach 5 ft., one target. {@h}6 ({@damage 1d8 + 2}) slashing damage, or 7 ({@damage 1d10 + 2}) slashing damage if used with two hands."
         ]
       }
     ]
@@ -158424,6 +158683,91 @@
     ]
   },
   {
+    "name": "Giant Gelatinous Cube",
+    "source": "WDMM",
+    "size": [
+      "L"
+    ],
+    "type": "ooze",
+    "alignment": [
+      "U"
+    ],
+    "ac": [
+      6
+    ],
+    "hp": {
+      "average": 84,
+      "formula": "8d10 + 40"
+    },
+    "speed": {
+      "walk": 15
+    },
+    "str": 14,
+    "dex": 3,
+    "con": 20,
+    "int": 1,
+    "wis": 6,
+    "cha": 1,
+    "senses": [
+      "blindsight 60 ft. (blind beyond this radius)"
+    ],
+    "conditionImmune": [
+      "blinded",
+      "charmed",
+      "deafened",
+      "exhaustion",
+      "frightened",
+      "prone"
+    ],
+    "cr": "2",
+    "trait": [
+      {
+        "name": "Ooze Cube",
+        "entries": [
+          "The cube takes up its entire space. Other creatures can enter the space, but a creature that does so is subjected to the cube's Engulf and has disadvantage on the saving throw.",
+          "Creatures inside the cube can be seen but have {@quickref Cover||3||total cover}.",
+          "A creature within 5 feet of the cube can take an action to pull a creature or object out of the cube. Doing so requires a successful {@dc 12} Strength check, and the creature making the attempt takes 10 ({@damage 3d6}) acid damage.",
+          "The cube can hold up to nine Large creatures or up to thirty-six Medium or smaller creatures inside it at a time."
+        ]
+      },
+      {
+        "name": "Transparent",
+        "entries": [
+          "Even when the cube is in plain sight, it takes a successful {@dc 15} Wisdom ({@skill Perception}) check to spot a cube that has neither moved nor attacked. A creature that tries to enter the cube's space while unaware of the cube is {@status surprised} by the cube."
+        ]
+      },
+      {
+        "name": "Enlarged",
+        "entries": [
+          "The cube makes Strength checks and Strength saving throws with advantage. When the cube shrinks back to normal size, any creatures that it can no longer contain are expelled into unoccupied spaces around it."
+        ]
+      }
+    ],
+    "action": [
+      {
+        "name": "Multiattack",
+        "entries": [
+          "The cube makes four pseudopod attacks."
+        ]
+      },
+      {
+        "name": "Pseudopod",
+        "entries": [
+          "{@atk mw} {@hit 4} to hit, reach 5 ft., one creature. {@h}10 ({@damage 3d6}) acid damage."
+        ]
+      },
+      {
+        "name": "Engulf",
+        "entries": [
+          "The cube moves up to its speed. While doing so, it can enter Large or smaller creatures' spaces. Whenever the cube enters a creature's space, the creature must make a {@dc 12} Dexterity saving throw.",
+          "On a successful save, the creature can choose to be pushed 5 feet back or to the side of the cube. A creature that chooses not to be pushed suffers the consequences of a failed saving throw.",
+          "On a failed save, the cube enters the creature's space, and the creature takes 10 ({@damage 3d6}) acid damage and is engulfed. The engulfed creature can't breathe, is {@condition restrained}, and takes 21 ({@damage 6d6}) acid damage at the start of each of the cube's turns. When the cube moves, the engulfed creature moves with it.",
+          "An engulfed creature can try to escape by taking an action to make a {@dc 12} Strength check. On a success, the creature escapes and enters a space of its choice within 5 feet of the cube."
+        ]
+      }
+    ]
+  },
+  {
     "name": "Giant Goat",
     "source": "MM",
     "size": [
@@ -172835,94 +173179,6 @@
     ]
   },
   {
-    "name": "Gorzil's Gang Troglodyte",
-    "source": "WDMM",
-    "size": [
-      "M"
-    ],
-    "type": {
-      "type": "humanoid",
-      "tags": [
-        "troglodyte"
-      ]
-    },
-    "alignment": [
-      "C",
-      "E"
-    ],
-    "ac": [
-      {
-        "ac": 14,
-        "from": [
-          "{@item breastplate|phb}"
-        ]
-      }
-    ],
-    "hp": {
-      "average": 13,
-      "formula": "2d8 + 4"
-    },
-    "speed": {
-      "walk": 30
-    },
-    "str": 14,
-    "dex": 10,
-    "con": 14,
-    "int": 6,
-    "wis": 10,
-    "cha": 6,
-    "skill": {
-      "stealth": "+2"
-    },
-    "senses": [
-      "darkvision 60 ft."
-    ],
-    "languages": [
-      "understands Undercommon but can't speak"
-    ],
-    "cr": "1/4",
-    "trait": [
-      {
-        "name": "Chameleon Skin",
-        "entries": [
-          "The troglodyte has advantage on Dexterity ({@skill Stealth}) checks made to hide."
-        ]
-      },
-      {
-        "name": "Stench",
-        "entries": [
-          "Any creature other than a troglodyte that starts its turn within 5 feet of the troglodyte must succeed on a {@dc 12} Constitution saving throw or be {@condition poisoned} until the start of the creature's next turn. On a successful saving throw, the creature is immune to the stench of all troglodytes for 1 hour."
-        ]
-      },
-      {
-        "name": "Sunlight Sensitivity",
-        "entries": [
-          "While in sunlight, the troglodyte has disadvantage on attack rolls, as well as on Wisdom ({@skill Perception}) checks that rely on sight."
-        ]
-      }
-    ],
-    "action": [
-      {
-        "name": "Multiattack",
-        "entries": [
-          "The troglodyte makes three attacks: one with its bite and two with its longsword."
-        ]
-      },
-      {
-        "name": "Bite",
-        "entries": [
-          "{@atk mw} {@hit 4} to hit, reach 5 ft., one target. {@h}4 ({@damage 1d4 + 2}) piercing damage."
-        ]
-      },
-      {
-        "name": "Longsword",
-        "entries": [
-          "{@atk mw} {@hit 4} to hit, reach 5 ft., one target. {@h}6 ({@damage 1d8 + 2}) slashing damage, or 7 ({@damage 1d10 + 2}) slashing damage if used with two hands."
-        ]
-      }
-    ]
-  },
-  {
     "name": "Grabstab",
     "source": "TOA",
     "size": [
@@ -183732,6 +183988,106 @@
         "name": "Parry",
         "entries": [
           "Hamish adds 2 to his AC against one melee attack that would hit him. To do so, he must see the attacker and be wielding a melee weapon or a shield."
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Hammer-Handed Golem",
+    "source": "WDMM",
+    "size": [
+      "L"
+    ],
+    "type": "construct",
+    "alignment": [
+      "U"
+    ],
+    "ac": [
+      {
+        "ac": 17,
+        "from": [
+          "natural armor"
+        ]
+      }
+    ],
+    "hp": {
+      "average": 178,
+      "formula": "17d10 + 85"
+    },
+    "speed": {
+      "walk": 30
+    },
+    "str": 22,
+    "dex": 9,
+    "con": 20,
+    "int": 3,
+    "wis": 11,
+    "cha": 1,
+    "senses": [
+      "darkvision 120 ft."
+    ],
+    "immune": [
+      "poison",
+      "psychic",
+      {
+        "immune": [
+          "bludgeoning",
+          "piercing",
+          "slashing"
+        ],
+        "note": "from nonmagical attacks that aren't adamantine",
+        "cond": true
+      }
+    ],
+    "conditionImmune": [
+      "charmed",
+      "exhaustion",
+      "frightened",
+      "paralyzed",
+      "petrified",
+      "poisoned"
+    ],
+    "languages": [
+      "understands the languages of its creator but can't speak"
+    ],
+    "cr": "10",
+    "trait": [
+      {
+        "name": "Immutable Form",
+        "entries": [
+          "The golem is immune to any spell or effect that would alter its form."
+        ]
+      },
+      {
+        "name": "Magic Resistance",
+        "entries": [
+          "The golem has advantage on saving throws against spells and other magical effects."
+        ]
+      },
+      {
+        "name": "Magic Weapons",
+        "entries": [
+          "The golem's weapon attacks are magical."
+        ]
+      }
+    ],
+    "action": [
+      {
+        "name": "Multiattack",
+        "entries": [
+          "The golem makes two mallet attacks."
+        ]
+      },
+      {
+        "name": "Mallet",
+        "entries": [
+          "{@atk mw} {@hit 10} to hit, reach 5 ft., one target. {@h}19 ({@damage 3d8 + 6}) bludgeoning damage, and the target must succeed on a {@dc 17} Constitution saving throw or be {@condition stunned} until the end of its next turn."
+        ]
+      },
+      {
+        "name": "Slow {@recharge 5}",
+        "entries": [
+          "The golem targets one or more creatures it can see within 10 feet of it. Each target must make a {@dc 17} Wisdom saving throw against this magic. On a failed save, a target can't use reactions, its speed is halved, and it can't make more than one attack on its turn. In addition, the target can take either an action or a bonus action on its turn, not both. These effects last for 1 minute. A target can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success."
         ]
       }
     ]
@@ -195063,6 +195419,86 @@
         "name": "Deflect Attack",
         "entries": [
           "The giant adds 5 to its AC against one weapon attack that would hit it. To do so, the giant must see the attacker and be wielding a melee weapon."
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Hungry Ghast",
+    "source": "COS",
+    "size": [
+      "S"
+    ],
+    "type": "undead",
+    "alignment": [
+      "L",
+      "G"
+    ],
+    "ac": [
+      13
+    ],
+    "hp": {
+      "average": 7,
+      "formula": "2d6"
+    },
+    "speed": {
+      "walk": 30
+    },
+    "str": 16,
+    "dex": 17,
+    "con": 10,
+    "int": 11,
+    "wis": 10,
+    "cha": 8,
+    "senses": [
+      "darkvision 60 ft."
+    ],
+    "resist": [
+      "necrotic"
+    ],
+    "immune": [
+      "poison"
+    ],
+    "conditionImmune": [
+      "charmed",
+      "exhaustion",
+      "poisoned"
+    ],
+    "languages": [
+      "Common"
+    ],
+    "cr": "2",
+    "trait": [
+      {
+        "name": "Stench",
+        "entries": [
+          "Any creature that starts its turn within 5 feet of the ghast must succeed on a {@dc 10} Constitution saving throw or be {@condition poisoned} until the start of its next turn. On a successful saving throw, the creature is immune to the ghast's Stench for 24 hours."
+        ]
+      },
+      {
+        "name": "Turn Defiance",
+        "entries": [
+          "The ghast and any ghouls within 30 feet of it have advantage on saving throws against effects that turn undead."
+        ]
+      },
+      {
+        "name": "Spider Climb",
+        "entries": [
+          "The ghast can climb difficult surfaces, including upside down on ceilings, without having to make an ability check."
+        ]
+      }
+    ],
+    "action": [
+      {
+        "name": "Bite",
+        "entries": [
+          "{@atk mw} {@hit 3} to hit, reach 5 ft., one creature. {@h}12 ({@damage 2d8 + 3}) piercing damage."
+        ]
+      },
+      {
+        "name": "Claws",
+        "entries": [
+          "{@atk mw} {@hit 5} to hit, reach 5 ft., one target. {@h}10 ({@damage 2d6 + 3}) slashing damage. If the target is a creature other than an undead, it must succeed on a {@dc 10} Constitution saving throw or be {@condition paralyzed} for 1 minute. The target can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success."
         ]
       }
     ]
@@ -210062,7 +210498,7 @@
       {
         "name": "Shapechanger",
         "entries": [
-          "Jot can use its action to polymorph into a beast form that resembles a bat (speed 10 feet fly 40 ft.), a centipede (40 ft., climb 40 ft.), or a toad (40 ft., swim 40 ft.), or back into its true form. Its statistics are the same in each form, except for the speed changes noted. Any equipment it is wearing or carrying isn't transformed. It reverts to its true form if it dies."
+          "Jot can use its action to polymorph into a beast form that resembles a bat (speed 10 ft. fly 40 ft.), a centipede (40 ft., climb 40 ft.), or a toad (40 ft., swim 40 ft.), or back into its true form. Its statistics are the same in each form, except for the speed changes noted. Any equipment it is wearing or carrying isn't transformed. It reverts to its true form if it dies."
         ]
       },
       {
@@ -226815,8 +227251,8 @@
       }
     ],
     "hp": {
-      "average": 67,
-      "formula": "9d10 + 18"
+      "average": 75,
+      "formula": "10d10 + 20"
     },
     "speed": {
       "walk": 15
@@ -237335,8 +237771,20 @@
         "name": "Night Hag Items",
         "entries": [
           "A night hag carries two very rare magic items that she must craft for herself. If either object is lost, the night hag will go to great lengths to retrieve it, as creating a new tool takes time and effort.",
-          "Heartstone: This lustrous black gem allows a night hag to become ethereal while it is in her possession. The touch of a heartstone also cures any disease. Crafting a heartstone takes 30 days.",
-          "Soul Bag: When an evil humanoid dies as a result of a night hag's Nightmare Haunting, the hag catches the soul in this black sack made of stitched flesh. A soul bag can hold only one evil soul at a time, and only the night hag who crafted the bag can catch a soul with it. Crafting a soul bag takes 7 days and a humanoid sacrifice (whose flesh is used to make the bag)."
+          {
+            "type": "entries",
+            "name": "Heartstone",
+            "entries": [
+              "This lustrous black gem allows a night hag to become ethereal while it is in her possession. The touch of a {@item heartstone|MM} also cures any disease. Crafting a heartstone takes 30 days."
+            ]
+          },
+          {
+            "type": "entries",
+            "name": "Soul Bag",
+            "entries": [
+              "When an evil humanoid dies as a result of a night hag's Nightmare Haunting, the hag catches the soul in this black sack made of stitched flesh. A {@item soul bag|MM} can hold only one evil soul at a time, and only the night hag who crafted the bag can catch a soul with it. Crafting a soul bag takes 7 days and a humanoid sacrifice (whose flesh is used to make the bag)."
+            ]
+          }
         ]
       }
     ],
@@ -237705,7 +238153,7 @@
     "type": "elemental",
     "alignment": [
       "C",
-      "E"
+      "N"
     ],
     "ac": [
       16
@@ -237762,7 +238210,7 @@
     "cr": "23",
     "spellcasting": [
       {
-        "name": "Spellcasting",
+        "name": "Innate Spellcasting",
         "type": "spellcasting",
         "headerEntries": [
           "Maegera casts {@spell fireball} (spell save {@dc 19}), requiring no material components and using Charisma as the spellcasting ability."
@@ -257190,8 +257638,20 @@
         "name": "Night Hag Items",
         "entries": [
           "A night hag carries two very rare magic items that she must craft for herself. If either object is lost, the night hag will go to great lengths to retrieve it, as creating a new tool takes time and effort.",
-          "Heartstone: This lustrous black gem allows a night hag to become ethereal while it is in her possession. The touch of a heartstone also cures any disease. Crafting a heartstone takes 30 days.",
-          "Soul Bag: When an evil humanoid dies as a result of a night hag's Nightmare Haunting, the hag catches the soul in this black sack made of stitched flesh. A soul bag can hold only one evil soul at a time, and only the night hag who crafted the bag can catch a soul with it. Crafting a soul bag takes 7 days and a humanoid sacrifice (whose flesh is used to make the bag)."
+          {
+            "type": "entries",
+            "name": "Heartstone",
+            "entries": [
+              "This lustrous black gem allows a night hag to become ethereal while it is in her possession. The touch of a {@item heartstone|MM} also cures any disease. Crafting a heartstone takes 30 days."
+            ]
+          },
+          {
+            "type": "entries",
+            "name": "Soul Bag",
+            "entries": [
+              "When an evil humanoid dies as a result of a night hag's Nightmare Haunting, the hag catches the soul in this black sack made of stitched flesh. A {@item soul bag|MM} can hold only one evil soul at a time, and only the night hag who crafted the bag can catch a soul with it. Crafting a soul bag takes 7 days and a humanoid sacrifice (whose flesh is used to make the bag)."
+            ]
+          }
         ]
       }
     ],
@@ -267936,8 +268396,20 @@
         "name": "Night Hag Items",
         "entries": [
           "A night hag carries two very rare magic items that she must craft for herself. If either object is lost, the night hag will go to great lengths to retrieve it, as creating a new tool takes time and effort.",
-          "Heartstone: This lustrous black gem allows a night hag to become ethereal while it is in her possession. The touch of a heartstone also cures any disease. Crafting a heartstone takes 30 days.",
-          "Soul Bag: When an evil humanoid dies as a result of a night hag's Nightmare Haunting, the hag catches the soul in this black sack made of stitched flesh. A soul bag can hold only one evil soul at a time, and only the night hag who crafted the bag can catch a soul with it. Crafting a soul bag takes 7 days and a humanoid sacrifice (whose flesh is used to make the bag)."
+          {
+            "type": "entries",
+            "name": "Heartstone",
+            "entries": [
+              "This lustrous black gem allows a night hag to become ethereal while it is in her possession. The touch of a {@item heartstone|MM} also cures any disease. Crafting a heartstone takes 30 days."
+            ]
+          },
+          {
+            "type": "entries",
+            "name": "Soul Bag",
+            "entries": [
+              "When an evil humanoid dies as a result of a night hag's Nightmare Haunting, the hag catches the soul in this black sack made of stitched flesh. A {@item soul bag|MM} can hold only one evil soul at a time, and only the night hag who crafted the bag can catch a soul with it. Crafting a soul bag takes 7 days and a humanoid sacrifice (whose flesh is used to make the bag)."
+            ]
+          }
         ]
       }
     ],
@@ -282218,7 +282690,8 @@
       ]
     },
     "alignment": [
-      "A"
+      "L",
+      "E"
     ],
     "ac": [
       {
@@ -288534,7 +289007,10 @@
     "int": 2,
     "wis": 9,
     "cha": 5,
-    "cr": "0",
+    "cr": {
+      "cr": "0",
+      "xp": 0
+    },
     "trait": null,
     "action": null
   },
@@ -296665,7 +297141,7 @@
       {
         "name": "Shapechanger",
         "entries": [
-          "The quasit can use its action to polymorph into a beast form that resembles a bat (speed 10 feet fly 40 ft.), a centipede (40 ft., climb 40 ft.), or a toad (40 ft., swim 40 ft.), or back into its true form. Its statistics are the same in each form, except for the speed changes noted. Any equipment it is wearing or carrying isn't transformed. It reverts to its true form if it dies."
+          "The quasit can use its action to polymorph into a beast form that resembles a bat (speed 10 ft. fly 40 ft.), a centipede (40 ft., climb 40 ft.), or a toad (40 ft., swim 40 ft.), or back into its true form. Its statistics are the same in each form, except for the speed changes noted. Any equipment it is wearing or carrying isn't transformed. It reverts to its true form if it dies."
         ]
       },
       {
@@ -314095,7 +314571,8 @@
       ]
     },
     "alignment": [
-      "A"
+      "L",
+      "G"
     ],
     "ac": [
       {
@@ -324708,7 +325185,7 @@
       {
         "name": "Shadow Blade",
         "entries": [
-          "{@atk mw} {@hit 8} to hit, reach 5 ft., one target. {@h}7 ({@damage 1d6 + 4}) piercing damage plus 10 ({@damage 3d6}) necrotic damage. Unless the target is immune to necrotic damage, the target's Strength score is reduced by {@dice 1d4} each time it is hit by this attack. The target dies if its Strength is reduced to 0. The reduction lasts until the target finishes a short or long rest. If a non-evil humanoid dies from this attack, a shadow (see the Monster Manual) rises from the corpse {@dice 1d4} hours later."
+          "{@atk mw} {@hit 8} to hit, reach 5 ft., one target. {@h}7 ({@damage 1d6 + 4}) piercing damage plus 10 ({@damage 3d6}) necrotic damage. Unless the target is immune to necrotic damage, the target's Strength score is reduced by {@dice 1d4} each time it is hit by this attack. The target dies if its Strength is reduced to 0. The reduction lasts until the target finishes a short or long rest. If a non-evil humanoid dies from this attack, a {@creature shadow} (see the Monster Manual) rises from the corpse {@dice 1d4} hours later."
         ]
       }
     ]
@@ -341025,7 +341502,10 @@
     "senses": [
       "darkvision 30 ft."
     ],
-    "cr": "0",
+    "cr": {
+      "cr": "0",
+      "xp": 0
+    },
     "trait": [
       {
         "name": "Keen Smell",
@@ -381540,7 +382020,7 @@
       }
     ],
     "legendaryGroup": {
-      "name": "Bronze Dragon",
+      "name": "Shadow Dragon (Bronze Dragon)",
       "source": "MM"
     }
   },
@@ -412606,7 +413086,8 @@
       ]
     },
     "alignment": [
-      "A"
+      "N",
+      "E"
     ],
     "ac": [
       {
@@ -426100,7 +426581,7 @@
       {
         "name": "Shapechanger",
         "entries": [
-          "Zeond can use its action to polymorph into a beast form that resembles a bat (speed 10 feet fly 40 ft.), a centipede (40 ft., climb 40 ft.), or a toad (40 ft., swim 40 ft.), or back into its true form. Its statistics are the same in each form, except for the speed changes noted. Any equipment it is wearing or carrying isn't transformed. It reverts to its true form if it dies."
+          "Zeond can use its action to polymorph into a beast form that resembles a bat (speed 10 ft. fly 40 ft.), a centipede (40 ft., climb 40 ft.), or a toad (40 ft., swim 40 ft.), or back into its true form. Its statistics are the same in each form, except for the speed changes noted. Any equipment it is wearing or carrying isn't transformed. It reverts to its true form if it dies."
         ]
       },
       {
@@ -429777,7 +430258,8 @@
       ]
     },
     "alignment": [
-      "A"
+      "L",
+      "E"
     ],
     "ac": [
       {
