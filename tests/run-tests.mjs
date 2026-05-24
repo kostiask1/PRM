@@ -564,6 +564,13 @@ await run("AI operations schema validates patch contracts", () => {
 				entity: "campaign",
 				patch: { description: "Sharper premise" },
 			},
+			{
+				op: "moveScope",
+				entity: "npc",
+				targetClientId: "npc-1",
+				from: "campaign",
+				to: "session",
+			},
 		],
 	});
 	assert.equal(valid.valid, true);
@@ -574,6 +581,37 @@ await run("AI operations schema validates patch contracts", () => {
 	});
 	assert.equal(invalid.valid, false);
 	assert.ok(invalid.errors.some((entry) => entry.path === "operations[0]"));
+
+	const invalidMove = aiPayloadSchemas.validateAiGeneratedContent({
+		version: 2,
+		operations: [
+			{ op: "moveScope", entity: "npc", from: "campaign", to: "session" },
+		],
+	});
+	assert.equal(invalidMove.valid, false);
+	assert.ok(
+		invalidMove.errors.some((entry) => entry.path === "operations[0]"),
+	);
+
+	const invalidMixedScope = aiPayloadSchemas.validateAiGeneratedContent(
+		{
+			version: 2,
+			operations: [
+				{
+					op: "create",
+					entity: "npc",
+					data: { name: "No Scope", trait: "Ambiguous target." },
+				},
+			],
+		},
+		{ requireExplicitEntityScope: true },
+	);
+	assert.equal(invalidMixedScope.valid, false);
+	assert.ok(
+		invalidMixedScope.errors.some(
+			(entry) => entry.path === "operations[0].scope",
+		),
+	);
 });
 
 await run("AI JSON fence cleanup preserves inner markdown fences", () => {
@@ -1242,6 +1280,534 @@ await run("AI patch service applies targeted session operations", async () => {
 		assert.equal(session.data.scenes[1].notes[0].text, "Fresh clue.");
 	});
 });
+
+await run("AI patch service skips orphan encounter creates", async () => {
+	await withTestSlug("ai-orphan-encounter", async (slug) => {
+		await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
+		await storage.writeJson(storage.campaignMetaPath(slug), {
+			id: "campaign-id",
+			name: "Encounter Campaign",
+			description: "",
+			notes: [],
+		});
+		await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+			id: "session-id",
+			name: "Session",
+			data: { scenes: [], encounters: [], notes: [], npcs: [], locations: [] },
+		});
+
+		const result = await aiPatchService.applyAiOperations({
+			payload: {
+				version: 2,
+				operations: [
+					{
+						op: "create",
+						entity: "encounter",
+						clientId: "enc-1",
+						data: {
+							name: "Unlinked Fight",
+							monsters: [{ monsterName: "Goblin" }],
+						},
+					},
+				],
+			},
+			campaignSlug: slug,
+			sessionFile: "session.json",
+			entityScope: "session",
+			permissions: { allowEncounters: true },
+		});
+
+		const session = await storage.readSession(slug, "session.json");
+		assert.equal(session.data.encounters.length, 0);
+		assert.equal(result.updated, null);
+		assert.ok(
+			result.warnings.some((warning) =>
+				warning.includes('without matching scene encounterClientId "enc-1"'),
+			),
+		);
+	});
+});
+
+await run("AI patch service links created encounters to scenes", async () => {
+	await withTestSlug("ai-linked-encounter", async (slug) => {
+		await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
+		await storage.writeJson(storage.campaignMetaPath(slug), {
+			id: "campaign-id",
+			name: "Encounter Campaign",
+			description: "",
+			notes: [],
+		});
+		await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+			id: "session-id",
+			name: "Session",
+			data: { scenes: [], encounters: [], notes: [], npcs: [], locations: [] },
+		});
+
+		await aiPatchService.applyAiOperations({
+			payload: {
+				version: 2,
+				operations: [
+					{
+						op: "create",
+						entity: "scene",
+						clientId: "scene-1",
+						data: {
+							texts: {
+								summary: "The ambush begins.",
+								goal: "Break through the attackers.",
+								stakes: "The prisoner is carried away.",
+								location: "Forest road",
+							},
+							encounterClientId: "enc-1",
+						},
+					},
+					{
+						op: "create",
+						entity: "encounter",
+						clientId: "enc-1",
+						data: {
+							name: "Road Ambush",
+							monsters: [{ monsterName: "Goblin" }],
+						},
+					},
+				],
+			},
+			campaignSlug: slug,
+			sessionFile: "session.json",
+			entityScope: "session",
+			permissions: { allowEncounters: true },
+		});
+
+		const session = await storage.readSession(slug, "session.json");
+		assert.equal(session.data.encounters.length, 1);
+		assert.equal(session.data.scenes.length, 1);
+		assert.equal(
+			session.data.scenes[0].encounterId,
+			session.data.encounters[0].id,
+		);
+	});
+});
+
+await run(
+	"AI patch service removes created encounters when scene link is not applied",
+	async () => {
+		await withTestSlug("ai-unapplied-encounter-link", async (slug) => {
+			await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
+			await storage.writeJson(storage.campaignMetaPath(slug), {
+				id: "campaign-id",
+				name: "Encounter Campaign",
+				description: "",
+				notes: [],
+			});
+			await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+				id: "session-id",
+				name: "Session",
+				data: { scenes: [], encounters: [], notes: [], npcs: [], locations: [] },
+			});
+
+			const result = await aiPatchService.applyAiOperations({
+				payload: {
+					version: 2,
+					operations: [
+						{
+							op: "update",
+							entity: "scene",
+							id: "missing-scene",
+							patch: { encounterClientId: "enc-1" },
+						},
+						{
+							op: "create",
+							entity: "encounter",
+							clientId: "enc-1",
+							data: {
+								name: "Lost Fight",
+								monsters: [{ monsterName: "Goblin" }],
+							},
+						},
+					],
+				},
+				campaignSlug: slug,
+				sessionFile: "session.json",
+				entityScope: "session",
+				permissions: { allowEncounters: true },
+			});
+
+			const session = await storage.readSession(slug, "session.json");
+			assert.equal(session.data.encounters.length, 0);
+			assert.ok(
+				result.warnings.some((warning) =>
+					warning.includes("without a final scene link"),
+				),
+			);
+		});
+	},
+);
+
+await run(
+	"AI patch service keeps new session versions when creates duplicate campaign entities",
+	async () => {
+		await withTestSlug("ai-dedupe-session-entities", async (slug) => {
+			await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
+			await storage.writeJson(storage.campaignMetaPath(slug), {
+				id: "campaign-id",
+				name: "Dedupe Campaign",
+				description: "",
+				notes: [],
+			});
+			await storage.writeEntity(slug, "npc", "mira", {
+				id: "campaign-npc-1",
+				slug: "mira",
+				firstName: "Mira",
+				lastName: "",
+				trait: "Campaign original.",
+				notes: [],
+			});
+			await storage.writeEntity(slug, "locations", "old-mill", {
+				id: "campaign-location-1",
+				slug: "old-mill",
+				name: "Old Mill",
+				description: "Campaign location.",
+				notes: [],
+			});
+			await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+				id: "session-id",
+				name: "Session",
+				data: { scenes: [], encounters: [], notes: [], npcs: [], locations: [] },
+			});
+
+			const result = await aiPatchService.applyAiOperations({
+				payload: {
+					version: 2,
+					operations: [
+						{
+							op: "create",
+							entity: "npc",
+							scope: "session",
+							clientId: "npc-copy",
+							data: { name: "Mira", trait: "Copied text." },
+						},
+						{
+							op: "create",
+							entity: "location",
+							scope: "session",
+							clientId: "location-copy",
+							data: { name: "Old Mill", description: "Copied text." },
+						},
+						{
+							op: "create",
+							entity: "scene",
+							data: {
+								texts: {
+									summary: "Meet [Mira] near [Old Mill].",
+									goal: "Get the warning.",
+									stakes: "[Mira] leaves if delayed.",
+									location: "[Old Mill]",
+								},
+							},
+						},
+					],
+				},
+				campaignSlug: slug,
+				sessionFile: "session.json",
+				entityScope: "session",
+				permissions: {
+					allowCharacters: true,
+					allowNpcs: true,
+					allowLocations: true,
+					allowEncounters: false,
+				},
+			});
+
+			const session = await storage.readSession(slug, "session.json");
+			assert.equal(session.data.npcs.length, 1);
+			assert.equal(session.data.npcs[0].id, "campaign-npc-1");
+			assert.equal(session.data.npcs[0].trait, "Copied text.");
+			assert.equal(session.data.locations.length, 1);
+			assert.equal(session.data.locations[0].id, "campaign-location-1");
+			assert.equal(session.data.locations[0].description, "Copied text.");
+			assert.equal(session.data.scenes.length, 1);
+			assert.equal(
+				session.data.scenes[0].texts.summary,
+				"Meet [Mira] near [Old Mill].",
+			);
+			assert.equal((await storage.listEntities(slug, "npc")).length, 0);
+			assert.equal((await storage.listEntities(slug, "locations")).length, 0);
+			assert.ok(
+				result.warnings.some((warning) =>
+					warning.includes("Moved duplicate campaign npc to session"),
+				),
+			);
+			assert.ok(
+				result.warnings.some((warning) =>
+					warning.includes("Moved duplicate campaign locations to session"),
+				),
+			);
+		});
+	},
+);
+
+await run(
+	"AI patch service applies mixed campaign and session entity scopes",
+	async () => {
+		await withTestSlug("ai-mixed-entity-scopes", async (slug) => {
+			await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
+			await storage.writeJson(storage.campaignMetaPath(slug), {
+				id: "campaign-id",
+				name: "Mixed Scope Campaign",
+				description: "",
+				notes: [],
+			});
+			await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+				id: "session-id",
+				name: "Session",
+				data: { scenes: [], encounters: [], notes: [], npcs: [], locations: [] },
+			});
+
+			await aiPatchService.applyAiOperations({
+				payload: {
+					version: 2,
+					operations: [
+						{
+							op: "create",
+							entity: "npc",
+							scope: "campaign",
+							data: {
+								name: "Recurring Patron",
+								trait: "Returns across the campaign.",
+							},
+						},
+						{
+							op: "create",
+							entity: "location",
+							scope: "session",
+							data: {
+								name: "Collapsed Shrine",
+								description: "A temporary stop for this session.",
+							},
+						},
+					],
+				},
+				campaignSlug: slug,
+				sessionFile: "session.json",
+				entityScope: "mixed",
+				permissions: {
+					allowCharacters: true,
+					allowNpcs: true,
+					allowLocations: true,
+					allowEncounters: false,
+				},
+			});
+
+			const campaignNpcs = await storage.listEntities(slug, "npc");
+			const session = await storage.readSession(slug, "session.json");
+			assert.equal(campaignNpcs.length, 1);
+			assert.equal(campaignNpcs[0].firstName, "Recurring");
+			assert.equal(campaignNpcs[0].lastName, "Patron");
+			assert.equal(session.data.locations.length, 1);
+			assert.equal(session.data.locations[0].name, "Collapsed Shrine");
+			assert.equal(session.data.npcs.length, 0);
+		});
+	},
+);
+
+await run(
+	"AI patch service saves campaign changes from session AI operations",
+	async () => {
+		await withTestSlug("ai-session-campaign-change", async (slug) => {
+			await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
+			await storage.writeJson(storage.campaignMetaPath(slug), {
+				id: "campaign-id",
+				name: "Session Campaign Change",
+				description: "Old premise.",
+				notes: [],
+			});
+			await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+				id: "session-id",
+				name: "Session",
+				data: { scenes: [], encounters: [], notes: [], npcs: [], locations: [] },
+			});
+
+			await aiPatchService.applyAiOperations({
+				payload: {
+					version: 2,
+					operations: [
+						{
+							op: "update",
+							entity: "campaign",
+							patch: { description: "New premise from session planning." },
+						},
+						{
+							op: "create",
+							entity: "scene",
+							data: {
+								texts: {
+									summary: "A focused opening scene.",
+									goal: "Find the witness.",
+									stakes: "The trail goes cold.",
+									location: "Market Gate",
+								},
+							},
+						},
+					],
+				},
+				campaignSlug: slug,
+				sessionFile: "session.json",
+				entityScope: "mixed",
+				permissions: {
+					allowCharacters: true,
+					allowNpcs: true,
+					allowLocations: true,
+					allowEncounters: false,
+				},
+			});
+
+			const campaign = await storage.readCampaign(slug);
+			const session = await storage.readSession(slug, "session.json");
+			assert.equal(campaign.description, "New premise from session planning.");
+			assert.equal(session.data.scenes.length, 1);
+		});
+	},
+);
+
+await run(
+	"AI patch service keeps new campaign versions when creates duplicate session entities",
+	async () => {
+		await withTestSlug("ai-dedupe-campaign-entities", async (slug) => {
+			await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
+			await storage.writeJson(storage.campaignMetaPath(slug), {
+				id: "campaign-id",
+				name: "Dedupe To Campaign",
+				description: "",
+				notes: [],
+			});
+			await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+				id: "session-id",
+				name: "Session",
+				data: {
+					scenes: [],
+					encounters: [],
+					notes: [],
+					npcs: [
+						{
+							id: "session-npc-1",
+							slug: "mira",
+							firstName: "Mira",
+							lastName: "",
+							trait: "Session version.",
+							notes: [],
+						},
+					],
+					locations: [],
+				},
+			});
+
+			await aiPatchService.applyAiOperations({
+				payload: {
+					version: 2,
+					operations: [
+						{
+							op: "create",
+							entity: "npc",
+							scope: "campaign",
+							data: { name: "Mira", trait: "Campaign replacement." },
+						},
+					],
+				},
+				campaignSlug: slug,
+				sessionFile: "session.json",
+				entityScope: "mixed",
+				permissions: {
+					allowCharacters: true,
+					allowNpcs: true,
+					allowLocations: true,
+					allowEncounters: false,
+				},
+			});
+
+			const session = await storage.readSession(slug, "session.json");
+			const campaignNpcs = await storage.listEntities(slug, "npc");
+			assert.equal(session.data.npcs.length, 0);
+			assert.equal(campaignNpcs.length, 1);
+			assert.equal(campaignNpcs[0].id, "session-npc-1");
+			assert.equal(campaignNpcs[0].trait, "Campaign replacement.");
+		});
+	},
+);
+
+await run(
+	"AI patch service moves campaign-created session entities by targetClientId",
+	async () => {
+		await withTestSlug("ai-move-created-session-entity", async (slug) => {
+			await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
+			await storage.writeJson(storage.campaignMetaPath(slug), {
+				id: "campaign-id",
+				name: "Move Created Campaign",
+				description: "",
+				notes: [],
+			});
+			await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+				id: "session-id",
+				name: "Session",
+				data: {
+					scenes: [],
+					encounters: [],
+					notes: [],
+					npcs: [
+						{
+							id: "old-session-npc",
+							slug: "gate-informant",
+							firstName: "Gate",
+							lastName: "Informant",
+							trait: "Old session duplicate.",
+							notes: [],
+						},
+					],
+					locations: [],
+				},
+			});
+
+			await aiPatchService.applyAiOperations({
+				payload: {
+					version: 2,
+					operations: [
+						{
+							op: "create",
+							entity: "npc",
+							scope: "campaign",
+							clientId: "session-only-npc",
+							data: { name: "Gate Informant", trait: "Nervous." },
+						},
+						{
+							op: "moveScope",
+							entity: "npc",
+							targetClientId: "session-only-npc",
+							from: "campaign",
+							to: "session",
+						},
+					],
+				},
+				campaignSlug: slug,
+				sessionFile: "session.json",
+				entityScope: "session",
+				permissions: {
+					allowCharacters: true,
+					allowNpcs: true,
+					allowLocations: true,
+					allowEncounters: false,
+				},
+			});
+
+			const session = await storage.readSession(slug, "session.json");
+			const campaignNpcs = await storage.listEntities(slug, "npc");
+			assert.equal(campaignNpcs.length, 0);
+			assert.equal(session.data.npcs.length, 1);
+			assert.equal(session.data.npcs[0].id, "old-session-npc");
+			assert.equal(session.data.npcs[0].firstName, "Gate");
+			assert.equal(session.data.npcs[0].lastName, "Informant");
+			assert.equal(session.data.npcs[0].trait, "Nervous.");
+		});
+	},
+);
 
 await run("AI patch service skips only fully empty scene creates", async () => {
 	await withTestSlug("ai-empty-scene", async (slug) => {

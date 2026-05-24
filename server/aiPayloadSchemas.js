@@ -40,7 +40,22 @@ function addError(errors, path, message) {
 	errors.push({ path, message });
 }
 
-function validateOperation(operation, index, errors) {
+function normalizedEntityName(entity) {
+	const value = String(entity || "");
+	if (["npc", "npcs"].includes(value)) return "npc";
+	if (["location", "locations", "faction", "factions"].includes(value)) {
+		return "location";
+	}
+	return value;
+}
+
+function requiresExplicitEntityScope(operation, options = {}) {
+	if (!options.requireExplicitEntityScope) return false;
+	if (operation.op === "moveScope") return false;
+	return ["npc", "location"].includes(normalizedEntityName(operation.entity));
+}
+
+function validateOperation(operation, index, errors, options = {}) {
 	const path = `operations[${index}]`;
 	if (!isObject(operation)) {
 		addError(errors, path, "must be an object");
@@ -112,12 +127,30 @@ function validateOperation(operation, index, errors) {
 		addError(errors, `${path}.noteId`, "is required for note updates/deletes");
 	}
 	if (operation.op === "moveScope") {
+		if (
+			!hasText(operation.id) &&
+			!hasText(operation.slug) &&
+			!hasText(operation.name) &&
+			!hasText(operation.targetClientId)
+		) {
+			addError(
+				errors,
+				path,
+				"must identify an existing target by id, slug, name, or targetClientId",
+			);
+		}
 		if (!["campaign", "session"].includes(operation.from)) {
 			addError(errors, `${path}.from`, "must be campaign or session");
 		}
 		if (!["campaign", "session"].includes(operation.to)) {
 			addError(errors, `${path}.to`, "must be campaign or session");
 		}
+	}
+	if (
+		requiresExplicitEntityScope(operation, options) &&
+		operation.scope === undefined
+	) {
+		addError(errors, `${path}.scope`, "is required in mixed entity scope mode");
 	}
 	if (
 		operation.scope !== undefined &&
@@ -148,7 +181,7 @@ function validateAiGeneratedContent(payload, options = {}) {
 		addError(errors, "operations", "must not be empty");
 	} else {
 		payload.operations.forEach((operation, index) =>
-			validateOperation(operation, index, errors),
+			validateOperation(operation, index, errors, options),
 		);
 	}
 

@@ -33,6 +33,8 @@ const DEFAULT_APP_SETTINGS = Object.freeze({
 	autoApplyAiChanges: false,
 });
 
+const jsonWriteQueues = new Map();
+
 function todayString() {
 	return new Date().toISOString().slice(0, 10);
 }
@@ -172,6 +174,23 @@ async function readJson(filePath) {
 }
 
 async function writeJson(filePath, value) {
+	const resolvedPath = path.resolve(filePath);
+	const previousWrite = jsonWriteQueues.get(resolvedPath) || Promise.resolve();
+	const queuedWrite = previousWrite
+		.catch(() => {})
+		.then(() => writeJsonNow(resolvedPath, value));
+	const storedWrite = queuedWrite
+		.catch(() => {})
+		.finally(() => {
+			if (jsonWriteQueues.get(resolvedPath) === storedWrite) {
+				jsonWriteQueues.delete(resolvedPath);
+			}
+		});
+	jsonWriteQueues.set(resolvedPath, storedWrite);
+	return queuedWrite;
+}
+
+async function writeJsonNow(filePath, value) {
 	await ensureDir(path.dirname(filePath));
 	const content = JSON.stringify(stripUpdatedAtFields(value), null, 2);
 	const tempPath = path.join(
@@ -182,22 +201,26 @@ async function writeJson(filePath, value) {
 	);
 	try {
 		await fs.writeFile(tempPath, content, "utf8");
-		await fs.rename(tempPath, filePath);
+		await renameWithRetry(tempPath, filePath);
 	} catch (error) {
 		await fs.rm(tempPath, { force: true }).catch(() => {});
 		throw error;
 	}
 }
 
-async function renameWithRetry(oldPath, newPath, retries = 3, delay = 50) {
+function wait(ms) {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function renameWithRetry(oldPath, newPath, retries = 12, delay = 50) {
 	for (let i = 0; i < retries; i++) {
 		try {
 			await fs.rename(oldPath, newPath);
 			return;
 		} catch (err) {
-			const isLocked = ["EPERM", "EBUSY"].includes(err.code);
+			const isLocked = ["EPERM", "EBUSY", "EACCES"].includes(err.code);
 			if (isLocked && i < retries - 1) {
-				await new Promise((resolve) => setTimeout(resolve, delay));
+				await wait(delay * (i + 1));
 				continue;
 			}
 			throw err;

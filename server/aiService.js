@@ -261,7 +261,7 @@ Always return JSON only, with no text before or after JSON.
 The JSON must contain operation-based changes only, without extra commentary.
 Never return complete session arrays or unchanged entities.
 Use stable ids from INPUT DATA for existing targets. Use "create" only for new items.
-"npc" and "location" operations are session-scoped by default unless campaign scope is explicitly requested.
+For "npc" and "location" operations in session planning, set "scope" explicitly. Default new NPCs and locations/factions to "session" unless they clearly belong to the wider campaign.
 Do not include combat encounter operations unless task instructions explicitly say encounter generation is enabled.`,
 	encounter: `You are an experienced Dungeon Master for Dungeons & Dragons 5.5e (2024).
 Your goal is to help build a specific combat encounter.
@@ -382,10 +382,10 @@ const structuredJsonResponseContract = `PARSED JSON RESPONSE CONTRACT:
 - Append note: { "op": "appendNote", "entity": "campaign|session|scene|npc|location|character", "scope": "campaign|session", "id": "existing-owner-id-if-needed", "targetClientId": "new-owner-clientId-if-needed", "note": { "title": "...", "text": "Markdown note text..." } }
 - Update note: { "op": "updateNote", "entity": "campaign|session|scene|npc|location|character", "scope": "campaign|session", "id": "existing-owner-id-if-needed", "noteId": "existing-note-id", "patch": { "title": "...", "text": "..." } }
 - Delete note: { "op": "deleteNote", "entity": "campaign|session|scene|npc|location|character", "scope": "campaign|session", "id": "existing-owner-id-if-needed", "noteId": "existing-note-id" }
-- Move scope: { "op": "moveScope", "entity": "npc|location", "id": "existing-id", "from": "session|campaign", "to": "campaign|session" }
+- Move scope: { "op": "moveScope", "entity": "npc|location", "id": "existing-id-or-use-targetClientId", "targetClientId": "new-entity-clientId-if-needed", "from": "session|campaign", "to": "campaign|session" }
 8. For existing targets, use the exact "id" from INPUT DATA whenever available. Use "slug" or exact "name" only if no id exists. Campaign updates are the only update operations that do not need an id.
 9. Omit "scope" for "monster" operations. Monsters belong to the custom bestiary, not campaign/session scope.
-10. For new targets, never invent a final id. Use "clientId" on the create operation only when another operation in the same response needs to reference the new item. Later operations must reference it with "targetClientId".
+10. For new targets, never invent a final id. Use "clientId" on the create operation only when another operation in the same response needs to reference the new item. Later operations must reference it with "targetClientId", including moveScope operations for an entity created earlier in the same response.
 11. Patch objects must contain only changed fields. Do not copy unchanged fields into "patch".
 12. To add a note, prefer appendNote. To change a note, use updateNote with noteId. Do not replace whole note arrays unless explicitly necessary.
 13. To create an encounter and connect it to a scene, create the encounter with "clientId", then create/update the scene with "encounterClientId" in data/patch. Existing encounter updates must include the encounter "id".
@@ -417,7 +417,18 @@ The image prompt must be detailed and ready to paste into an image generator.`;
 
 const entityMentionContract = `APP ENTITY MENTION RULE:
 Use [Exact Entity Name] only for actual existing entities from INPUT DATA or for new entities created in this same JSON response. Do not bracket ordinary nouns, species, terrain, concepts, JSON keys, or structured name fields.
-Existing character/NPC/location/faction names must keep their exact spelling and alphabet. Do not translate, transliterate, decline, or rename them unless USER INSTRUCTIONS explicitly ask for it.`;
+Existing character/NPC/location/faction names must keep their exact spelling and alphabet. Do not translate, transliterate, decline, or rename them unless USER INSTRUCTIONS explicitly ask for it.
+When session content needs an existing campaign NPC/location/faction, mention it as [Exact Entity Name] in scene texts or note text. Do not create a copied session entity just to use it in session content.`;
+
+const sessionEntityScopeDecisionContract = `SESSION ENTITY SCOPE DECISION RULE:
+In session planning, new NPCs and locations/factions are session-scoped by default.
+Use "scope": "session" for one-shot, scene-specific, temporary, incidental, or currently unnamed/low-consequence content. This includes witnesses, guards, merchants, messengers, victims, tavern staff, ambushers, small hideouts, rooms, alleys, caves, shrines, camps, clue sites, encounter locations, temporary safehouses, and any place or NPC created mainly to make the current session playable.
+Use "scope": "campaign" only when the entity is explicitly requested for the campaign/global scope, is expected to recur across multiple sessions, is a major campaign hub/region/faction/organization, is a long-term antagonist/patron/ally, is tied to a player character or campaign premise, or must be reusable outside the current session.
+If uncertain, choose "scope": "session".
+A single response may mix scopes, but decide per entity. Every "npc" and "location" create/update/delete/appendNote operation in a session request must use "scope": "campaign" or "scope": "session".
+Do not promote a new session entity to campaign scope just because it has a proper name or a detailed description.
+If an existing entity is in the wrong scope for its logical use, output moveScope. Move campaign to session when it is no longer a reusable campaign entity and should belong only to the current session. Move session to campaign when it becomes recurring or campaign-important.
+When creating a new entity and then realizing it belongs in the other scope, create it with clientId and immediately output moveScope using targetClientId.`;
 
 const customMonsterNoEntityLinksContract = `CUSTOM MONSTER TEXT RULE:
 Custom bestiary creatures must not contain app entity links. Do not output [Name] syntax anywhere in monster fields.`;
@@ -431,6 +442,15 @@ For every newly created top-level location or faction, make "description" detail
 
 const sceneCombatMechanicsContract = `SCENE COMBAT MECHANICS RULE:
 When a generated or updated scene includes combat, an encounter, monsters, or an "encounterIndex", include a scene note with interesting combat mechanics or tactical ideas. The note should describe concrete gameplay hooks such as terrain features, hazards, objectives beyond killing enemies, lair actions, reinforcements, countdowns, interactive objects, monster behavior, or ways players can exploit the environment. Write this note in the mandatory response language.`;
+
+const encounterSceneLinkContract = `ENCOUNTER-SCENE LINK RULE:
+Every created encounter must be linked to exactly one scene in the same JSON response.
+When you create an encounter, always set a unique "clientId" on the encounter create operation.
+In the paired scene create/update operation, set "encounterClientId" to that same clientId inside "data" or "patch".
+Never create a standalone encounter during session generation. If you cannot identify the existing scene, create the scene too and link it.
+For an existing scene, update it by exact scene "id" with "patch": { "encounterClientId": "encounter-1" }.
+For a new scene, create it with "data": { "texts": { ... }, "encounterClientId": "encounter-1" }.
+Do not put encounterClientId only in scene text or notes; it must be a JSON field.`;
 
 const sceneDataContract = `SCENE DATA CONTRACT:
 When creating a scene, always use "data": { "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "..." } }.
@@ -497,7 +517,9 @@ async function generateContent({
 	const locationGenerationEnabled = generateLocations !== false;
 	const entityTargetScope =
 		session && !encounterId && entityScope !== "campaign"
-			? "session"
+			? entityScope === "session"
+				? "session"
+				: "mixed"
 			: "campaign";
 	const effectiveParseAIResponse =
 		type === "custom-monster" ||
@@ -588,7 +610,10 @@ Exception: technical lookup fields such as "monsterName" must remain exact looku
 		useKey === "scene" &&
 		encounterGenerationEnabled
 	) {
-		systemInstructionParts.push(sceneCombatMechanicsContract);
+		systemInstructionParts.push(
+			sceneCombatMechanicsContract,
+			encounterSceneLinkContract,
+		);
 	}
 	if (effectiveParseAIResponse && useKey === "scene") {
 		systemInstructionParts.push(sceneDataContract, sessionNotesContract);
@@ -598,10 +623,13 @@ Exception: technical lookup fields such as "monsterName" must remain exact looku
 	}
 	if (useKey === "scene" && encounterGenerationEnabled) {
 		systemInstructionParts.push(
-			`Encounter generation is enabled. Create combat encounters with operation pairs:
+			`Encounter generation is enabled. Every created encounter MUST be paired with a scene create/update operation in the same response:
 1) { "op": "create", "entity": "encounter", "clientId": "encounter-1", "data": { "name": "...", "monsters": [{ "monsterName": "Official D&D Monster Name or exact custom creature name", "name": "Optional display name" }] } }
-2) { "op": "create" or "update", "entity": "scene", "id": "existing-scene-id-if-updating", "data" or "patch": { "encounterClientId": "encounter-1" } }
-If a scene requires combat, create or update the scene with "encounterClientId" pointing to the encounter clientId.
+2) { "op": "update", "entity": "scene", "id": "existing-scene-id", "patch": { "encounterClientId": "encounter-1" } }
+or
+2) { "op": "create", "entity": "scene", "clientId": "scene-1", "data": { "texts": { "summary": "...", "goal": "...", "stakes": "...", "location": "..." }, "encounterClientId": "encounter-1" } }
+Do not output encounter create operations without "clientId".
+Do not invent a final encounter "id" for a new encounter. Link new encounters only through encounter create "clientId" and scene "encounterClientId".
 If combat is not needed, omit encounter operations.
 Pick monsters according to party level and party size from context. You may use custom creatures from INPUT DATA.customBestiary.monsterNames when they fit the scenario; use their names exactly in "monsterName".
 If user instructions specify encounter difficulty, follow that strictly.`,
@@ -650,19 +678,30 @@ If you create custom monsters, use "create" operations for entity "monster" and 
 		);
 		if (useKey === "scene") {
 			systemInstructionParts.push(
-				entityTargetScope === "session"
-					? `ENTITY SCOPE: "npc" and "location" operations are session-scoped by default. Set "scope": "campaign" only if the user explicitly asks for campaign scope.`
-					: `ENTITY SCOPE: "npc" and "location" operations are campaign-scoped by default.`,
+				entityTargetScope === "mixed"
+					? `ENTITY SCOPE: This session request may create both campaign-scoped and session-scoped NPC/location operations in one response. New NPCs and locations/factions are session-scoped by default. Set "scope": "session" unless the entity is clearly reusable campaign content. Set "scope": "campaign" only for wider-campaign entities. Never output "scope": "mixed". If you create a campaign-scoped NPC/location and it should belong only to the current session, immediately follow that create operation with moveScope from "campaign" to "session" using targetClientId.`
+					: entityTargetScope === "session"
+						? `ENTITY SCOPE: "npc" and "location" operations are session-scoped by default. Set "scope": "campaign" only for clearly reusable campaign content. If you create a campaign-scoped NPC/location during a session request and it should belong only to the current session, immediately follow that create operation with moveScope from "campaign" to "session" using targetClientId.`
+						: `ENTITY SCOPE: "npc" and "location" operations are campaign-scoped by default.`,
 			);
 		}
 	}
 	if (
 		effectiveParseAIResponse &&
-		entityTargetScope === "session" &&
+		entityTargetScope !== "campaign" &&
 		["scene", "npc", "location"].includes(useKey)
 	) {
+		systemInstructionParts.push(sessionEntityScopeDecisionContract);
 		systemInstructionParts.push(
-			`SESSION SCOPE OUTPUT RULE: Do not create session copies of campaign-scoped NPCs or campaign-scoped locations/factions. In session scope, update only INPUT DATA.currentSession entities by id, or create genuinely new session-scoped entities requested by the user.`,
+			`SESSION/CAMPAIGN ENTITY OUTPUT RULE:
+Do not create session copies of campaign-scoped NPCs or campaign-scoped locations/factions.
+If existing INPUT DATA.campaign.npcs or INPUT DATA.campaign.locations are needed in scenes, notes, goals, stakes, or location text, refer to them with [Exact Entity Name] mentions inside text fields instead of creating "npc" or "location" operations.
+Set "scope" explicitly on every "npc" and "location" operation. Use only "campaign" or "session"; never use "mixed" as an operation scope.
+Use "scope": "session" for genuinely new NPCs/locations/factions that are only needed in the current session.
+Use "scope": "campaign" only for reusable NPCs/locations/factions that should remain available across the campaign.
+Update INPUT DATA.currentSession entities by id when changing session-only entities. Update INPUT DATA.campaign entities by id only when the user asks to change the campaign entity itself.
+If the user request or the content's logical use means an existing campaign NPC/location/faction should become session-only, output moveScope with "from": "campaign" and "to": "session" for that existing id.
+If you create an NPC/location with "scope": "campaign" during a session request but it should belong only to this session, output a follow-up moveScope operation using the create operation's targetClientId.`,
 		);
 	}
 	const normalizedGlobalBasePrompt = String(globalBasePrompt || "").trim();
@@ -849,22 +888,30 @@ ${normalizedImagePromptBasePrompt}`,
 		contextJson.customBestiary = contextData.customBestiary;
 	}
 
-	if (session && entityTargetScope === "session") {
+	if (session && entityTargetScope !== "campaign") {
+		const currentSessionData =
+			contextData?.currentSession?.data &&
+			typeof contextData.currentSession.data === "object"
+				? contextData.currentSession.data
+				: session.data || {};
 		const currentSession = {
-			name: session.name,
+			name: contextData?.currentSession?.name || session.name,
 		};
-		if (Array.isArray(session.data?.npcs) && session.data.npcs.length > 0) {
-			currentSession.npcs = session.data.npcs
+		if (
+			Array.isArray(currentSessionData.npcs) &&
+			currentSessionData.npcs.length > 0
+		) {
+			currentSession.npcs = currentSessionData.npcs
 				.map((npc) => npcToPromptContext(npc, noteToContextNote))
 				.filter(
 					(npc) => npc && (npc.name || npc.description || npc.motivation),
 				);
 		}
 		if (
-			Array.isArray(session.data?.locations) &&
-			session.data.locations.length > 0
+			Array.isArray(currentSessionData.locations) &&
+			currentSessionData.locations.length > 0
 		) {
-			currentSession.locations = session.data.locations
+			currentSession.locations = currentSessionData.locations
 				.map((location) => locationToPromptContext(location, noteToContextNote))
 				.filter(
 					(location) => location && (location.name || location.description),
@@ -914,14 +961,24 @@ If INPUT DATA.customBestiary.selectedMonster exists and selectedMonsterMode is "
 When creating a monster based on an existing one, give the new monster a distinct "name" unless USER INSTRUCTIONS explicitly ask to replace or keep the same name.
 If selectedMonster exists and selectedMonsterMode is not "create-based", update that monster by id and return only changed fields in patch.\n`;
 	} else if (useKey === "npc") {
-		userPrompt += `TASK: Create or update NPC operations for this ${entityTargetScope === "session" ? "current session" : "campaign"} as requested. Use entity "npc" only, identify existing targets by id, and use "${entityTargetScope}" scope by default.\n`;
-		if (entityTargetScope === "session") {
-			userPrompt += `Do not create session copies of campaign-scoped NPCs unless USER INSTRUCTIONS explicitly request that.\n`;
+		if (entityTargetScope === "mixed") {
+			userPrompt += `TASK: Create or update NPC operations for the current session and campaign as requested. Use entity "npc" only, identify existing targets by id, and choose "scope": "campaign" or "scope": "session" separately for each NPC operation. Default new NPCs to "scope": "session"; use "scope": "campaign" only for clearly recurring or campaign-important NPCs.\n`;
+			userPrompt += `Do not create session copies of campaign-scoped NPCs. If an existing campaign NPC is only referenced in session content, use [Exact Entity Name] in text fields. If the user request or the NPC's logical use means that campaign NPC should become session-only, use moveScope from campaign to session.\n`;
+		} else {
+			userPrompt += `TASK: Create or update NPC operations for this ${entityTargetScope === "session" ? "current session" : "campaign"} as requested. Use entity "npc" only, identify existing targets by id, and use "${entityTargetScope}" scope by default.\n`;
+			if (entityTargetScope === "session") {
+				userPrompt += `Do not create session copies of campaign-scoped NPCs. If an existing campaign NPC is only referenced in session content, use [Exact Entity Name] in text fields. If the user request or the NPC's logical use means that campaign NPC should become session-only, use moveScope from campaign to session.\n`;
+			}
 		}
 	} else if (useKey === "location") {
-		userPrompt += `TASK: Create or update location/faction operations for this ${entityTargetScope === "session" ? "current session" : "campaign"} as requested. Use entity "location" only, identify existing targets by id, and use "${entityTargetScope}" scope by default.\n`;
-		if (entityTargetScope === "session") {
-			userPrompt += `Do not create session copies of campaign-scoped locations/factions unless USER INSTRUCTIONS explicitly request that.\n`;
+		if (entityTargetScope === "mixed") {
+			userPrompt += `TASK: Create or update location/faction operations for the current session and campaign as requested. Use entity "location" only, identify existing targets by id, and choose "scope": "campaign" or "scope": "session" separately for each location/faction operation. Default new locations/factions to "scope": "session"; use "scope": "campaign" only for major reusable places, factions, regions, organizations, or campaign hubs.\n`;
+			userPrompt += `Do not create session copies of campaign-scoped locations/factions. If an existing campaign location/faction is only referenced in session content, use [Exact Entity Name] in text fields. If the user request or the location/faction's logical use means that campaign entity should become session-only, use moveScope from campaign to session.\n`;
+		} else {
+			userPrompt += `TASK: Create or update location/faction operations for this ${entityTargetScope === "session" ? "current session" : "campaign"} as requested. Use entity "location" only, identify existing targets by id, and use "${entityTargetScope}" scope by default.\n`;
+			if (entityTargetScope === "session") {
+				userPrompt += `Do not create session copies of campaign-scoped locations/factions. If an existing campaign location/faction is only referenced in session content, use [Exact Entity Name] in text fields. If the user request or the location/faction's logical use means that campaign entity should become session-only, use moveScope from campaign to session.\n`;
+			}
 		}
 	} else if (useKey === "encounter") {
 		userPrompt += `TASK: Update current combat encounter (id: ${encounterId}) according to USER INSTRUCTIONS. Use exact official monster names or exact INPUT DATA.customBestiary.monsterNames values in monsterName.\n`;
@@ -930,6 +987,12 @@ If selectedMonster exists and selectedMonsterMode is not "create-based", update 
 		}
 	} else if (useKey === "scene") {
 		userPrompt += `TASK: Based on current session and context, apply the user's requested session changes.\n`;
+		if (entityTargetScope !== "campaign") {
+			userPrompt += `When existing campaign NPCs, locations, or factions are used in this session, write them as [Exact Entity Name] mentions in scene text or notes instead of creating copied session entities. For new NPCs/locations/factions, choose "scope": "session" by default; use "scope": "campaign" only for reusable campaign entities. Use moveScope whenever the entity's logical role shows it belongs in the other scope.\n`;
+		}
+		if (encounterGenerationEnabled) {
+			userPrompt += `Encounter generation is enabled: any combat encounter you create must be connected to exactly one scene with encounterClientId in the same JSON response. Never create orphan encounters.\n`;
+		}
 	} else if (useKey === "campaign") {
 		userPrompt += `TASK: Apply the user's requested campaign changes.\n`;
 		userPrompt += `If USER INSTRUCTIONS ask to create, rewrite, expand, summarize, or otherwise change the campaign premise, overview, story, concept, or main description, return an update operation for entity "campaign" with patch.description. Do not create a note for this unless USER INSTRUCTIONS explicitly ask for a note.\n`;

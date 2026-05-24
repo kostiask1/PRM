@@ -202,35 +202,6 @@ async function saveFailedAiRequest(payload = {}, error, status = null) {
 	});
 }
 
-function shouldUseCampaignEntityScope(userInstructions) {
-	const text = asText(userInstructions).toLowerCase();
-	if (!text) return false;
-	if (
-		[
-			"не в кампан",
-			"не у кампан",
-			"не до кампан",
-			"not campaign",
-			"session only",
-			"only session",
-		].some((hint) => text.includes(hint))
-	) {
-		return false;
-	}
-	return [
-		"в кампан",
-		"у кампан",
-		"до кампан",
-		"для кампан",
-		"глобальн",
-		"campaign scope",
-		"campaign-wide",
-		"to campaign",
-		"in campaign",
-		"global",
-	].some((hint) => text.includes(hint));
-}
-
 function escapeRegExp(value) {
 	return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -754,7 +725,6 @@ router.post("/generate", async (req, res, next) => {
 			generateLocations,
 			generateEncounters,
 			generateCustomMonsters,
-			entityScope,
 			contextConfig,
 			language,
 		} = req.body;
@@ -786,12 +756,8 @@ router.post("/generate", async (req, res, next) => {
 			? generateLocations !== false
 			: true;
 		const entityTargetScope =
-			shouldParseAIResponse &&
-			path?.session &&
-			!path?.encounter &&
-			entityScope !== "campaign" &&
-			!shouldUseCampaignEntityScope(userInstructions)
-				? "session"
+			shouldParseAIResponse && path?.session && !path?.encounter
+				? "mixed"
 				: "campaign";
 		const settings = await storage.readSettings();
 		const simplifiedNotesEnabled = Boolean(settings.simplifiedNotes);
@@ -1108,7 +1074,6 @@ router.post("/generate", async (req, res, next) => {
 			.catch(() => null);
 
 		const contextData = { campaign: {}, sessions: [] };
-		const includeCampaignScopedEntities = entityTargetScope !== "session";
 		if (contextConfig) {
 			if (contextConfig.campaignNotes)
 				contextData.campaign.notes = filterNotesForAiContext(campaign.notes);
@@ -1121,10 +1086,9 @@ router.post("/generate", async (req, res, next) => {
 				);
 			}
 			if (
-				includeCampaignScopedEntities &&
-				(isContextListIncluded(contextConfig.campaignNpcs) ||
+				isContextListIncluded(contextConfig.campaignNpcs) ||
 					(contextConfig.campaignNpcs === undefined &&
-						isContextListIncluded(contextConfig.campaignCharacters)))
+						isContextListIncluded(contextConfig.campaignCharacters))
 			) {
 				const npcs = await storage.listEntities(path.campaign, "npc");
 				contextData.campaign.npcs = filterEntitiesByContext(
@@ -1135,10 +1099,7 @@ router.post("/generate", async (req, res, next) => {
 					getCharacterContextKey,
 				);
 			}
-			if (
-				includeCampaignScopedEntities &&
-				isContextListIncluded(contextConfig.campaignLocations)
-			) {
+			if (isContextListIncluded(contextConfig.campaignLocations)) {
 				const locations = await storage.listEntities(
 					path.campaign,
 					"locations",
@@ -1163,7 +1124,7 @@ router.post("/generate", async (req, res, next) => {
 				}
 			}
 		}
-		if (entityTargetScope === "session" && session) {
+		if (entityTargetScope === "mixed" && session) {
 			contextData.currentSession = {
 				slug: path.session,
 				fileName: path.session,
@@ -1229,7 +1190,10 @@ router.post("/generate", async (req, res, next) => {
 		}
 
 		if (shouldParseAIResponse) {
-			assertAiGeneratedContentContract(generatedContent, { type });
+			assertAiGeneratedContentContract(generatedContent, {
+				type,
+				requireExplicitEntityScope: entityTargetScope === "mixed",
+			});
 		}
 
 		const requestSnapshot = buildAiRequestSnapshot({

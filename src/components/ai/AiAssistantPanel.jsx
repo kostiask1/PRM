@@ -246,13 +246,6 @@ function getHistoryOptionsSummary(entry) {
 		options.responseParsing
 			? `${lang.t("Create locations/factions")}: ${getOnOffLabel(options.locationGeneration)}`
 			: null,
-		options.responseParsing && options.entityScope
-			? `${lang.t("AI entity scope")}: ${lang.t(
-					options.entityScope === "campaign"
-						? "Campaign scope"
-						: "Session scope",
-				)}`
-			: null,
 		options.responseParsing
 			? `${lang.t("Encounter generation")}: ${getOnOffLabel(options.encounterGeneration)}`
 			: null,
@@ -331,6 +324,26 @@ function getGeneratedEntityTypes(generated, historyEntry = null) {
 	return historyEntry ? getHistoryChangedEntityTypes(historyEntry) : [];
 }
 
+function hasGeneratedCampaignChanges(generated, historyEntry = null) {
+	const operations = Array.isArray(generated?.operations)
+		? generated.operations
+		: [];
+	if (
+		operations.some(
+			(operation) =>
+				operation?.entity === "campaign" ||
+				operation?.scope === "campaign" ||
+				operation?.to === "campaign" ||
+				operation?.from === "campaign",
+		)
+	) {
+		return true;
+	}
+	return getHistoryChangeResources(historyEntry).some(
+		(resource) => resource?.kind === "campaign",
+	);
+}
+
 function hasHistoryChanges(entry) {
 	return getHistoryChangeResources(entry).length > 0;
 }
@@ -366,7 +379,6 @@ function buildRetryPayloadFromHistoryEntry(entry) {
 		generateLocations: Boolean(options.locationGeneration),
 		generateEncounters: false,
 		generateCustomMonsters: false,
-		entityScope: options.entityScope || "campaign",
 		contextConfig: null,
 		language: entry.language || undefined,
 	};
@@ -468,9 +480,6 @@ export default function AiAssistantPanel({
 		!isCampaign && !isBestiary,
 	);
 	const [generateCustomMonsters, setGenerateCustomMonsters] = useState(false);
-	const [entityScope, setEntityScope] = useState(
-		isBestiary ? "custom-bestiary" : isCampaign ? "campaign" : "session",
-	);
 	const [aiModels, setAiModels] = useState([]);
 	const [selectedModel, setSelectedModel] = useState("");
 	const [sessionsList, setSessionsList] = useState([]);
@@ -1184,12 +1193,19 @@ export default function AiAssistantPanel({
 			data.generated,
 			data.aiResponse,
 		);
+		const hasCampaignChanges = hasGeneratedCampaignChanges(
+			data.generated,
+			data.aiResponse,
+		);
 
 		if (canApplyDirectly && onInsertResult) {
 			onInsertResult(data.updated, {
 				entityTypes: generatedEntityTypes,
 				generated: data.generated,
 			});
+			if (updatedIsSessionLike && hasCampaignChanges) {
+				dispatch(requestCampaignsReloadAction());
+			}
 		} else {
 			dispatch(requestCampaignsReloadAction());
 		}
@@ -1202,7 +1218,7 @@ export default function AiAssistantPanel({
 				? lang.t("Custom creatures saved.")
 				: lang.t("AI changes applied successfully!"),
 		);
-		if (!canApplyDirectly && generatedEntityTypes.length > 0) {
+		if (generatedEntityTypes.length > 0) {
 			dispatch(refreshEntitiesAction());
 		}
 		if (shouldParseResponse || isEncounter || isBestiary) {
@@ -1287,11 +1303,6 @@ export default function AiAssistantPanel({
 						!isBestiary &&
 						generateEncounters &&
 						generateCustomMonsters,
-					entityScope: isBestiary
-						? "custom-bestiary"
-						: isCampaign
-							? "campaign"
-							: entityScope,
 					contextConfig: !isBestiary && useContext ? configToSend : null,
 					language: currentLanguage,
 				},
@@ -1444,14 +1455,12 @@ export default function AiAssistantPanel({
 	);
 	const selectedResponseHasChanges = selectedResponseDiffResources.length > 0;
 	const isResponseParsingLocked = isBestiary;
-	const isEntityScopeVisible = !isBestiary && !isCampaign && !isEncounter;
 	const isCustomMonsterGenerationVisible =
 		parseAIResponse &&
 		!isBestiary &&
 		!isCampaign &&
 		!isEncounter &&
 		generateEncounters;
-	const entityScopeIsSession = entityScope !== "campaign";
 	const imagePromptNpcs = isCampaign
 		? sessionData?.npcs?.length
 			? sessionData.npcs
@@ -1719,7 +1728,6 @@ export default function AiAssistantPanel({
 					<div className="AiAssistant__content">
 						<AiAssistantToolbar
 							aiModels={aiModels}
-							entityScopeIsSession={entityScopeIsSession}
 							generateCharacters={generateCharacters}
 							generateCustomMonsters={generateCustomMonsters}
 							generateEncounters={generateEncounters}
@@ -1731,7 +1739,6 @@ export default function AiAssistantPanel({
 								isCustomMonsterGenerationVisible
 							}
 							isEncounter={isEncounter}
-							isEntityScopeVisible={isEntityScopeVisible}
 							isResponseParsingLocked={isResponseParsingLocked}
 							loading={loading}
 							onCreateCustomCreature={() =>
@@ -1743,7 +1750,6 @@ export default function AiAssistantPanel({
 							onOpenImagePrompt={openImagePromptPicker}
 							parseAIResponse={parseAIResponse}
 							selectedModel={selectedModel}
-							setEntityScope={setEntityScope}
 							setGenerateCharacters={setGenerateCharacters}
 							setGenerateCustomMonsters={setGenerateCustomMonsters}
 							setGenerateEncounters={setGenerateEncounters}

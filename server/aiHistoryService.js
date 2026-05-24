@@ -36,7 +36,6 @@ function buildAiOptionsSummary(options) {
 			`characters: ${options.characterGeneration ? "on" : "off"}`,
 			`npcs: ${options.npcGeneration ? "on" : "off"}`,
 			`locations: ${options.locationGeneration ? "on" : "off"}`,
-			`entity-scope: ${options.entityScope || "campaign"}`,
 			`encounters: ${options.encounterGeneration ? "on" : "off"}`,
 			`custom-monsters: ${options.customMonsterGeneration ? "on" : "off"}`,
 		);
@@ -136,7 +135,6 @@ function buildAiRequestSnapshot({
 	generateCharacters,
 	generateNpcs,
 	generateLocations,
-	entityScope,
 	contextConfig,
 	contextData,
 	language,
@@ -153,7 +151,6 @@ function buildAiRequestSnapshot({
 		characterGeneration: Boolean(generateCharacters),
 		npcGeneration: Boolean(generateNpcs),
 		locationGeneration: Boolean(generateLocations),
-		entityScope: entityScope || "campaign",
 		encounterGeneration: Boolean(generateEncounters),
 		customMonsterGeneration: Boolean(generateCustomMonsters),
 		contextEnabled: Boolean(contextConfig),

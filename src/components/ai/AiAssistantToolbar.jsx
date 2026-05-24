@@ -6,7 +6,6 @@ import { lang } from "../../services/localization";
 
 export default function AiAssistantToolbar({
 	aiModels,
-	entityScopeIsSession,
 	generateCharacters,
 	generateCustomMonsters,
 	generateEncounters,
@@ -16,7 +15,6 @@ export default function AiAssistantToolbar({
 	isCampaign,
 	isCustomMonsterGenerationVisible,
 	isEncounter,
-	isEntityScopeVisible,
 	isResponseParsingLocked,
 	loading,
 	onCreateCustomCreature,
@@ -24,7 +22,6 @@ export default function AiAssistantToolbar({
 	onOpenImagePrompt,
 	parseAIResponse,
 	selectedModel,
-	setEntityScope,
 	setGenerateCharacters,
 	setGenerateCustomMonsters,
 	setGenerateEncounters,
@@ -139,30 +136,6 @@ export default function AiAssistantToolbar({
 					>
 						{lang.t("Create locations/factions")}
 					</Button>
-					{isEntityScopeVisible && (
-						<Button
-							variant={entityScopeIsSession ? "primary" : "ghost"}
-							size={Button.SIZES.SMALL}
-							icon={entityScopeIsSession ? "file" : "database"}
-							onClick={() =>
-								setEntityScope((prev) =>
-									prev === "campaign" ? "session" : "campaign",
-								)
-							}
-							disabled={loading}
-							title={
-								entityScopeIsSession
-									? lang.t(
-											"AI will create NPCs and locations inside this session",
-										)
-									: lang.t("AI will create NPCs and locations in the campaign")
-							}
-						>
-							{entityScopeIsSession
-								? lang.t("Session scope")
-								: lang.t("Campaign scope")}
-						</Button>
-					)}
 				</>
 			)}
 			{!isBestiary && (
