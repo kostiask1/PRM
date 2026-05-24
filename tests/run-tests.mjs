@@ -627,6 +627,32 @@ await run("AI JSON fence cleanup preserves inner markdown fences", () => {
 	});
 });
 
+await run("AI JSON extraction tolerates surrounding prose", () => {
+	const raw = [
+		"Ось JSON:",
+		'{"version":2,"operations":[{"op":"create","entity":"scene","data":{"texts":{"summary":"A {brace} in text","goal":"Go","stakes":"Risk","location":"Road"}}}]}',
+		"Готово.",
+	].join("\n");
+	const cleaned = aiService.__test.extractFirstJsonObject(raw);
+	assert.deepEqual(JSON.parse(cleaned), {
+		version: 2,
+		operations: [
+			{
+				op: "create",
+				entity: "scene",
+				data: {
+					texts: {
+						summary: "A {brace} in text",
+						goal: "Go",
+						stakes: "Risk",
+						location: "Road",
+					},
+				},
+			},
+		],
+	});
+});
+
 await run("AI payload schema rejects legacy final-state payloads", () => {
 	assert.equal(
 		aiPayloadSchemas.validateAiGeneratedContent({
@@ -742,6 +768,25 @@ await run("AI mention processing preserves existing entity links", () => {
 		processGeneratedTextMentions("Meet [ old gate ] again.", ["Old Gate"]),
 		"Meet [Old Gate] again.",
 	);
+});
+
+await run("AI route fills ids for current selected targets", () => {
+	const { fillCurrentTargetIds } = aiRouter.__test;
+	const payload = {
+		version: 2,
+		operations: [
+			{ op: "update", entity: "encounter", patch: { name: "Hard Fight" } },
+			{ op: "updateNote", entity: "scene", noteId: "note-1", patch: { text: "x" } },
+			{ op: "delete", entity: "npc" },
+		],
+	};
+	fillCurrentTargetIds(payload, {
+		path: { encounter: "enc-1" },
+		sceneId: "scene-1",
+	});
+	assert.equal(payload.operations[0].id, "enc-1");
+	assert.equal(payload.operations[1].id, "scene-1");
+	assert.equal(payload.operations[2].id, undefined);
 });
 
 await run("SessionViewModel encounter lookup", () => {

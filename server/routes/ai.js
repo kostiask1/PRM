@@ -147,6 +147,50 @@ function cloneRetryPayload(payload = {}) {
 	return JSON.parse(JSON.stringify(payload || {}));
 }
 
+function isObject(value) {
+	return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function fillCurrentTargetIds(generatedContent, { path, sceneId, customMonsterTarget }) {
+	if (!Array.isArray(generatedContent?.operations)) return generatedContent;
+	for (const operation of generatedContent.operations) {
+		if (!isObject(operation)) continue;
+		const op = asText(operation.op);
+		const entity = asText(operation.entity).toLowerCase();
+		const needsExistingTarget = [
+			"update",
+			"delete",
+			"updateNote",
+			"deleteNote",
+		].includes(op);
+		if (!needsExistingTarget) continue;
+		if (
+			asText(operation.id) ||
+			asText(operation.slug) ||
+			asText(operation.name) ||
+			asText(operation.targetClientId)
+		) {
+			continue;
+		}
+
+		if (["encounter", "encounters"].includes(entity) && path?.encounter) {
+			operation.id = path.encounter;
+		} else if (["scene", "scenes"].includes(entity) && sceneId) {
+			operation.id = sceneId;
+		} else if (
+			["monster", "custom-monster", "custommonster"].includes(entity) &&
+			customMonsterTarget
+		) {
+			if (asText(customMonsterTarget.id)) {
+				operation.id = asText(customMonsterTarget.id);
+			} else if (asText(customMonsterTarget.name)) {
+				operation.name = asText(customMonsterTarget.name);
+			}
+		}
+	}
+	return generatedContent;
+}
+
 function getFailedAiResponseText(error, status = null) {
 	const message =
 		asText(error?.message || error?.error) || "AI request failed.";
@@ -916,6 +960,12 @@ router.post("/generate", async (req, res, next) => {
 				return res.status(500).json({ ...generatedContent, aiResponse });
 			}
 
+			fillCurrentTargetIds(generatedContent, {
+				path: { campaign: "bestiary" },
+				sceneId: null,
+				customMonsterTarget,
+			});
+
 			assertAiGeneratedContentContract(generatedContent, {
 				type: "custom-monster",
 				requireOperations: true,
@@ -1168,6 +1218,14 @@ router.post("/generate", async (req, res, next) => {
 			campaignBasePrompt,
 		});
 
+		if (shouldParseAIResponse) {
+			fillCurrentTargetIds(generatedContent, {
+				path,
+				sceneId,
+				customMonsterTarget: null,
+			});
+		}
+
 		if (
 			shouldParseAIResponse &&
 			generatedContent &&
@@ -1318,6 +1376,7 @@ router.post("/generate", async (req, res, next) => {
 Object.defineProperty(router, "__test", {
 	value: {
 		asText,
+		fillCurrentTargetIds,
 		processGeneratedTextMentions,
 	},
 });

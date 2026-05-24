@@ -392,6 +392,13 @@ const structuredJsonResponseContract = `PARSED JSON RESPONSE CONTRACT:
 14. Never invent, reconstruct, summarize, or modify hidden data that is not present in INPUT DATA. Hidden data remains untouched because you omit it from operations.
 15. If USER INSTRUCTIONS cannot be satisfied with the available targets, return { "version": 2, "operations": [] } instead of guessing destructive edits.`;
 
+const operationTargetIdentityContract = `OPERATION TARGET IDENTITY RULE:
+Use "create" for new entities and "update" only for entities that already exist in INPUT DATA.
+Every "update" and "delete" operation must include one of: exact existing "id", exact existing "slug", exact existing "name", or "targetClientId" for an item created earlier in the same response.
+If you are editing the current selected encounter, include its exact INPUT DATA.currentEncounter.id in the encounter update operation.
+If you are editing an existing scene, include its exact scene id from INPUT DATA.currentSession.scenes or INPUT DATA.selectedSessions.
+If you cannot identify an existing target id/slug/name, do not output update/delete. Output create for new content, appendNote for new notes, or no operation.`;
+
 const characterLevelContract = `CHARACTER LEVEL CONTRACT:
 For character and NPC "level" fields, use a number from 1 to 20 when the level is known, or an empty string "" when the level is unknown, intentionally unset, or already empty in INPUT DATA. Preserve existing empty level values as "" unless the user explicitly asks to set a level.
 When balancing encounters, ignore characters or NPCs whose level is "" instead of treating them as level 1.`;
@@ -478,6 +485,39 @@ function stripOuterJsonFence(text) {
 	const trimmed = String(text || "").trim();
 	const match = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
 	return match ? match[1].trim() : trimmed;
+}
+
+function extractFirstJsonObject(text) {
+	const source = stripOuterJsonFence(text);
+	const firstBrace = source.indexOf("{");
+	if (firstBrace === -1) return source.trim();
+
+	let depth = 0;
+	let inString = false;
+	let escaped = false;
+	for (let index = firstBrace; index < source.length; index += 1) {
+		const char = source[index];
+		if (inString) {
+			if (escaped) {
+				escaped = false;
+			} else if (char === "\\") {
+				escaped = true;
+			} else if (char === '"') {
+				inString = false;
+			}
+			continue;
+		}
+		if (char === '"') {
+			inString = true;
+		} else if (char === "{") {
+			depth += 1;
+		} else if (char === "}") {
+			depth -= 1;
+			if (depth === 0) return source.slice(firstBrace, index + 1).trim();
+		}
+	}
+
+	return source.trim();
 }
 
 async function generateContent({
@@ -577,7 +617,10 @@ Exception: technical lookup fields such as "monsterName" must remain exact looku
 			characterLevelContract,
 			markdownFormattingContract,
 		);
-		systemInstructionParts.push(structuredJsonResponseContract);
+		systemInstructionParts.push(
+			structuredJsonResponseContract,
+			operationTargetIdentityContract,
+		);
 	}
 	if (usesStructuredJsonContract && simplifiedNotesEnabled) {
 		systemInstructionParts.push(
@@ -895,8 +938,39 @@ ${normalizedImagePromptBasePrompt}`,
 				? contextData.currentSession.data
 				: session.data || {};
 		const currentSession = {
+			id: session.id,
+			slug: contextData?.currentSession?.slug,
+			fileName: contextData?.currentSession?.fileName,
 			name: contextData?.currentSession?.name || session.name,
 		};
+		if (
+			Array.isArray(currentSessionData.scenes) &&
+			currentSessionData.scenes.length > 0
+		) {
+			currentSession.scenes = currentSessionData.scenes.map((scene) => ({
+				id: scene.id,
+				texts: scene.texts,
+				encounterId: scene.encounterId || "",
+				notes: (scene.notes || []).map(noteToContextNote).filter(Boolean),
+				npcs: scene.npcs || [],
+			}));
+		}
+		if (
+			Array.isArray(currentSessionData.encounters) &&
+			currentSessionData.encounters.length > 0
+		) {
+			currentSession.encounters = currentSessionData.encounters.map(
+				(encounter) => ({
+					id: encounter.id,
+					name: encounter.name,
+					monsters: (encounter.monsters || []).map((monster) => ({
+						name: monster.name,
+						monsterName: monster.originalBestiaryName || monster.name,
+						cr: monster.cr || monster.challenge_rating,
+					})),
+				}),
+			);
+		}
 		if (
 			Array.isArray(currentSessionData.npcs) &&
 			currentSessionData.npcs.length > 0
@@ -931,6 +1005,7 @@ ${normalizedImagePromptBasePrompt}`,
 		);
 		if (currentEnc) {
 			contextJson.currentEncounter = {
+				id: currentEnc.id,
 				name: currentEnc.name,
 				monsters: (currentEnc.monsters || []).map((m) => ({
 					name: m.name,
@@ -1022,7 +1097,7 @@ If selectedMonster exists and selectedMonsterMode is not "create-based", update 
 
 	try {
 		// Очищення тільки зовнішнього markdown fence, якщо він проскочив.
-		const cleanJson = stripOuterJsonFence(text);
+		const cleanJson = extractFirstJsonObject(text);
 
 		return fixNewLines(JSON.parse(cleanJson));
 	} catch (e) {
@@ -1041,5 +1116,6 @@ module.exports = {
 	clearModelCache,
 	__test: {
 		stripOuterJsonFence,
+		extractFirstJsonObject,
 	},
 };

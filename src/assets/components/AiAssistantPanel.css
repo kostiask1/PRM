@@ -531,8 +531,10 @@
 }
 
 .AiAssistant__preview_note_list {
-	display: grid;
+	display: flex;
 	gap: var(--space-3);
+	width: 100%;
+	overflow: hidden;
 }
 
 .AiAssistant__preview_note_surface {
@@ -542,6 +544,10 @@
 	border-radius: var(--radius-sm);
 	background: var(--bg);
 	overflow: hidden;
+}
+
+.AiAssistant__preview_resource_notes {
+	width: 100%;
 }
 
 .AiAssistant__preview_card_surface.is_added,
