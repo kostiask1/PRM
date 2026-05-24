@@ -1137,6 +1137,37 @@ async function ensureUniqueEntitySlug(campaignSlugValue, type, baseSlug) {
 	}
 }
 
+function importedSessionFileName(session) {
+	const rawFileName = String(session?.fileName || "").trim();
+	if (rawFileName) {
+		const parsed = path.parse(path.basename(rawFileName));
+		const name = sanitizeName(parsed.name);
+		if (name) return `${name}.json`;
+	}
+	return sessionFileName(session?.content?.name || todayString());
+}
+
+async function resolvePartialImportSessionFileName(targetSlug, session) {
+	const incomingId = session?.content?.id;
+	if (incomingId != null) {
+		const existingSessions = await listSessions(targetSlug);
+		const existing = existingSessions.find(
+			(item) => item.id != null && String(item.id) === String(incomingId),
+		);
+		if (existing?.fileName) return existing.fileName;
+	}
+	return importedSessionFileName(session);
+}
+
+function importedEntitySlug(type, entity) {
+	const rawSlug = String(entity?.slug || "").trim();
+	if (rawSlug) {
+		const slug = path.basename(rawSlug);
+		if (slug && slug !== "." && slug !== "..") return slug;
+	}
+	return campaignSlug(entity?.firstName || entity?.name || type);
+}
+
 async function findCampaignSlugById(campaignId) {
 	if (!campaignId) return null;
 	const slugs = await listCampaignSlugs();
@@ -1542,10 +1573,10 @@ async function importCampaignPartialArchiveBundle(targetSlug, archiveBundle) {
 		for (const session of Array.isArray(bundle.sessions)
 			? bundle.sessions
 			: []) {
-			const desiredName =
-				session.fileName ||
-				`${sanitizeName(session.content?.name) || todayString()}.json`;
-			const fileName = await ensureUniqueSessionFile(target, desiredName);
+			const fileName = await resolvePartialImportSessionFileName(
+				target,
+				session,
+			);
 			const normalizedContent = replaceImageSlugReferences(
 				session.content || {},
 				sourceSlug,
@@ -1562,13 +1593,7 @@ async function importCampaignPartialArchiveBundle(targetSlug, archiveBundle) {
 			? bundle.entities[type]
 			: [];
 		for (const entity of list) {
-			const desiredSlug =
-				entity.slug || campaignSlug(entity.firstName || entity.name || type);
-			const entitySlug = await ensureUniqueEntitySlug(
-				target,
-				type,
-				desiredSlug,
-			);
+			const entitySlug = importedEntitySlug(type, entity);
 			const normalizedEntity = replaceImageSlugReferences(
 				entity,
 				sourceSlug,

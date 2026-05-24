@@ -1104,6 +1104,123 @@ await run(
 );
 
 await run(
+	"partial campaign import replaces existing sessions and entities",
+	async () => {
+		const sourceSlug = makeTestSlug("partial-source");
+		const targetSlug = makeTestSlug("partial-target");
+		try {
+			for (const slug of [sourceSlug, targetSlug]) {
+				await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
+				await storage.writeJson(storage.campaignMetaPath(slug), {
+					id: `${slug}-id`,
+					name: `Campaign ${slug}`,
+					slug,
+				});
+			}
+
+			await storage.writeJson(storage.sessionPath(targetSlug, "renamed.json"), {
+				id: "session-1",
+				name: "Old session",
+				data: {
+					npcs: [{ id: "npc-1", firstName: "Old", slug: "mira" }],
+					locations: [{ id: "loc-1", name: "Old place", slug: "mill" }],
+				},
+			});
+			await storage.writeEntity(targetSlug, "npc", "mira", {
+				id: "npc-1",
+				firstName: "Old",
+				slug: "mira",
+			});
+			await storage.writeEntity(targetSlug, "locations", "mill", {
+				id: "loc-1",
+				name: "Old place",
+				slug: "mill",
+			});
+
+			await storage.importCampaignPartialArchiveBundle(targetSlug, {
+				sections: ["sessions", "npc", "locations"],
+				bundle: {
+					meta: { slug: sourceSlug, name: "Source" },
+					sessions: [
+						{
+							fileName: "session.json",
+							content: {
+								id: "session-1",
+								name: "Imported session",
+								data: {
+									npcs: [
+										{ id: "npc-1", firstName: "Imported", slug: "mira" },
+									],
+									locations: [
+										{ id: "loc-1", name: "Imported place", slug: "mill" },
+									],
+								},
+							},
+						},
+					],
+					entities: {
+						npc: [
+							{
+								id: "npc-1",
+								firstName: "Imported",
+								slug: "mira",
+							},
+						],
+						locations: [
+							{
+								id: "loc-1",
+								name: "Imported place",
+								slug: "mill",
+							},
+						],
+					},
+				},
+			});
+
+			const sessions = await storage.listSessions(targetSlug);
+			assert.equal(sessions.length, 1);
+			assert.equal(sessions[0].fileName, "renamed.json");
+			assert.equal(sessions[0].name, "Imported session");
+			assert.equal(
+				await storage.exists(storage.sessionPath(targetSlug, "session.json")),
+				false,
+			);
+
+			const session = await storage.readSession(targetSlug, "renamed.json");
+			assert.equal(session.data.npcs.length, 1);
+			assert.equal(session.data.npcs[0].firstName, "Imported");
+			assert.equal(session.data.locations.length, 1);
+			assert.equal(session.data.locations[0].name, "Imported place");
+
+			const npcs = await storage.listEntities(targetSlug, "npc");
+			assert.equal(npcs.length, 1);
+			assert.equal(npcs[0].slug, "mira");
+			assert.equal(npcs[0].firstName, "Imported");
+			assert.equal(
+				await storage.exists(
+					path.join(storage.campaignDir(targetSlug), "npc", "mira-2"),
+				),
+				false,
+			);
+
+			const locations = await storage.listEntities(targetSlug, "locations");
+			assert.equal(locations.length, 1);
+			assert.equal(locations[0].slug, "mill");
+			assert.equal(locations[0].name, "Imported place");
+			assert.equal(
+				await storage.exists(
+					path.join(storage.campaignDir(targetSlug), "locations", "mill-2"),
+				),
+				false,
+			);
+		} finally {
+			await cleanupTestData(sourceSlug);
+			await cleanupTestData(targetSlug);
+		}
+	},
+);
+
+await run(
 	"encounter monster helpers use special HP and detect formulas",
 	() => {
 		assert.equal(
