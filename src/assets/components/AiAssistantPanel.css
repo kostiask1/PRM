@@ -1,7 +1,7 @@
 /* Збільшуємо ширину модального вікна саме для AI Assistant */
-.AiAssistant .Modal__card {
-	max-width: 900px;
-	width: 95%;
+.Modal__card.AiAssistant__main_modal {
+	max-width: 1180px;
+	width: 96vw;
 }
 
 .AiAssistant__response_overlay_wide .Modal__card {
@@ -861,6 +861,10 @@
 }
 
 @media (max-width: 860px) {
+	.AiAssistant__prompt_row {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
 	.AiAssistant__preview_columns {
 		grid-template-columns: minmax(0, 1fr);
 	}
@@ -952,12 +956,71 @@
 	margin-top: var(--space-4);
 }
 
+.AiAssistant__prompt_row {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+	gap: var(--space-4);
+	align-items: start;
+}
+
+.AiAssistant__prompt_column {
+	min-width: 0;
+}
+
+.AiAssistant__attachments {
+	display: grid;
+	gap: var(--space-2);
+	min-width: 0;
+}
+
+.AiAssistant__attachment_list {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: var(--space-2);
+	max-height: 220px;
+	overflow-y: auto;
+}
+
+.AiAssistant__attachment_picker .ImageDropzone {
+	min-height: 180px;
+	margin: 0;
+}
+
+.AiAssistant__attachment_item {
+	display: grid;
+	grid-template-columns: 44px minmax(0, 1fr) auto;
+	align-items: center;
+	gap: var(--space-2);
+	min-width: 0;
+	padding: var(--space-2);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--bg-2);
+}
+
+.AiAssistant__attachment_item img {
+	width: 44px;
+	height: 44px;
+	object-fit: cover;
+	border-radius: var(--radius-xs);
+	background: var(--panel);
+}
+
+.AiAssistant__attachment_item span {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--text);
+	font-size: 0.85rem;
+}
+
 .AiAssistant__prompt_input {
 	margin-bottom: var(--space-3);
 }
 
 .AiAssistant__prompt_input .MarkdownView {
-	min-height: 80px;
+	min-height: 180px;
 }
 
 .AiAssistant__generate_btn {

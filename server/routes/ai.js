@@ -144,7 +144,22 @@ function getCampaignImagePromptBasePrompt(settings, campaignSlug) {
 }
 
 function cloneRetryPayload(payload = {}) {
-	return JSON.parse(JSON.stringify(payload || {}));
+	const cloned = JSON.parse(JSON.stringify(payload || {}));
+	if (Array.isArray(cloned.attachedImages)) {
+		cloned.attachedImages = cloned.attachedImages
+			.map((image) => {
+				if (!image || typeof image !== "object") return null;
+				return {
+					name: asText(image.name),
+					url: asText(image.url) || undefined,
+					mimeType: asText(image.mimeType) || undefined,
+					sizeBytes: Number(image.sizeBytes) || undefined,
+					omittedData: image.data ? true : undefined,
+				};
+			})
+			.filter(Boolean);
+	}
+	return cloned;
 }
 
 function isObject(value) {
@@ -760,6 +775,7 @@ router.post("/generate", async (req, res, next) => {
 			path,
 			sceneId,
 			imageTarget,
+			attachedImages,
 			imagePromptBasePromptOverride,
 			customMonsterTarget,
 			customMonsterMode,
@@ -937,6 +953,7 @@ router.post("/generate", async (req, res, next) => {
 				userInstructions,
 				modelName,
 				encounterId: path?.encounter,
+				attachedImages,
 				parseAIResponse: true,
 				contextData: customContextData,
 				generateCharacters: false,
@@ -1061,6 +1078,7 @@ router.post("/generate", async (req, res, next) => {
 				modelName,
 				sceneId,
 				imageTarget,
+				attachedImages,
 				parseAIResponse: false,
 				contextData: {},
 				generateCharacters: false,
@@ -1203,6 +1221,7 @@ router.post("/generate", async (req, res, next) => {
 			encounterId: path.encounter,
 			sceneId,
 			imageTarget,
+			attachedImages,
 			parseAIResponse: shouldParseAIResponse,
 			contextData,
 			generateCharacters: characterGenerationEnabled,

@@ -653,6 +653,45 @@ await run("AI JSON extraction tolerates surrounding prose", () => {
 	});
 });
 
+await run("AI service resolves attached images for Gemini inline data", () => {
+	const imageUrl = "/api/images/campaign-one/characters/portraits/hero.png";
+	const resolved = aiService.__test.resolveLocalImageUrl(imageUrl);
+	assert.equal(resolved.mimeType, "image/png");
+	assert.equal(
+		resolved.filePath,
+		path.resolve(
+			storage.IMAGES_DIR,
+			"campaign-one",
+			"characters",
+			"portraits",
+			"hero.png",
+		),
+	);
+
+	assert.equal(
+		aiService.__test.resolveLocalImageUrl("/api/images/../bad/a.png"),
+		null,
+	);
+	assert.equal(
+		aiService.__test.resolveLocalImageUrl(
+			"/api/images/campaign-one/%2e%2e/other/hero.png",
+		),
+		null,
+	);
+	assert.equal(
+		aiService.__test.resolveLocalImageUrl("https://example.com/image.png"),
+		null,
+	);
+
+	assert.deepEqual(
+		aiService.__test.collectImageUrls([
+			{ url: imageUrl },
+			{ url: "/api/images/campaign-one/tokens/token.webp" },
+		]),
+		[imageUrl, "/api/images/campaign-one/tokens/token.webp"],
+	);
+});
+
 await run("AI payload schema rejects legacy final-state payloads", () => {
 	assert.equal(
 		aiPayloadSchemas.validateAiGeneratedContent({

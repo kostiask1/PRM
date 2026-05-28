@@ -1,8 +1,20 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const fs = require("fs/promises");
+const path = require("path");
+const storage = require("./storage");
 
 const GEMINI_MODELS_ENDPOINT =
 	"https://generativelanguage.googleapis.com/v1beta/models";
 const MODEL_CACHE_TTL_MS = 10 * 60 * 1000;
+const MAX_AI_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_AI_IMAGES = 4;
+const AI_IMAGE_MIME_TYPES = Object.freeze({
+	".jpg": "image/jpeg",
+	".jpeg": "image/jpeg",
+	".png": "image/png",
+	".webp": "image/webp",
+	".gif": "image/gif",
+});
 const CORE_TEXT_MODELS = [
 	"gemini-3-flash-preview",
 	"gemini-3.1-flash-lite-preview",
@@ -520,6 +532,95 @@ function extractFirstJsonObject(text) {
 	return source.trim();
 }
 
+function collectImageUrls(value, output = []) {
+	if (!Array.isArray(value)) return output;
+	if (Array.isArray(value)) {
+		for (const item of value) {
+			if (item?.url) output.push(String(item.url).trim());
+			if (output.length >= MAX_AI_IMAGES) break;
+		}
+	}
+	return output;
+}
+
+function isSafeImagePathPart(value) {
+	const part = String(value || "");
+	return (
+		part &&
+		part !== "." &&
+		part !== ".." &&
+		!part.includes("/") &&
+		!part.includes("\\")
+	);
+}
+
+function resolveLocalImageUrl(imageUrl) {
+	let pathname = "";
+	try {
+		pathname = new URL(String(imageUrl || ""), "http://local").pathname;
+	} catch {
+		pathname = String(imageUrl || "");
+	}
+
+	const parts = pathname
+		.split("/")
+		.filter(Boolean)
+		.map((part) => decodeURIComponent(part));
+	if (parts.length < 5 || parts[0] !== "api" || parts[1] !== "images") {
+		return null;
+	}
+
+	const [, , slug, category, ...relativeParts] = parts;
+	if (!slug || !category || relativeParts.length === 0) return null;
+	if (![slug, category, ...relativeParts].every(isSafeImagePathPart)) {
+		return null;
+	}
+
+	const filePath = path.resolve(
+		storage.IMAGES_DIR,
+		slug,
+		category,
+		...relativeParts,
+	);
+	const rootPath = path.resolve(storage.IMAGES_DIR);
+	if (filePath !== rootPath && !filePath.startsWith(`${rootPath}${path.sep}`)) {
+		return null;
+	}
+
+	const mimeType = AI_IMAGE_MIME_TYPES[path.extname(filePath).toLowerCase()];
+	if (!mimeType) return null;
+	return { filePath, mimeType };
+}
+
+async function imageUrlToInlinePart(imageUrl) {
+	const resolved = resolveLocalImageUrl(imageUrl);
+	if (!resolved) return null;
+
+	const stats = await fs.stat(resolved.filePath).catch(() => null);
+	if (!stats?.isFile() || stats.size > MAX_AI_IMAGE_BYTES) return null;
+
+	const data = await fs.readFile(resolved.filePath);
+	return {
+		inlineData: {
+			data: data.toString("base64"),
+			mimeType: resolved.mimeType,
+		},
+	};
+}
+
+async function buildImageParts(attachedImages = []) {
+	const images = Array.isArray(attachedImages)
+		? attachedImages.slice(0, MAX_AI_IMAGES)
+		: [];
+	const urls = [...new Set(collectImageUrls(images))];
+	const parts = [];
+	for (const url of urls) {
+		const part = await imageUrlToInlinePart(url);
+		if (part) parts.push(part);
+	}
+	return parts;
+}
+
 async function generateContent({
 	type,
 	session,
@@ -528,6 +629,7 @@ async function generateContent({
 	encounterId,
 	sceneId,
 	imageTarget,
+	attachedImages,
 	parseAIResponse,
 	contextData,
 	generateCharacters,
@@ -1075,7 +1177,10 @@ If selectedMonster exists and selectedMonsterMode is not "create-based", update 
 
 	userPrompt += `USER INSTRUCTIONS (PRIORITY): ${userInstructions || ""}\n`;
 
-	const result = await model.generateContent(userPrompt);
+	const imageParts = await buildImageParts(attachedImages);
+	const requestParts =
+		imageParts.length > 0 ? [{ text: userPrompt }, ...imageParts] : userPrompt;
+	const result = await model.generateContent(requestParts);
 	const response = await result.response;
 	let text = response.text();
 
@@ -1117,5 +1222,7 @@ module.exports = {
 	__test: {
 		stripOuterJsonFence,
 		extractFirstJsonObject,
+		collectImageUrls,
+		resolveLocalImageUrl,
 	},
 };

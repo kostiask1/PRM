@@ -12,6 +12,7 @@ import { api } from "../../api.js";
 import { parseUrl } from "../../utils/navigation.js";
 import Button from "../form/Button.jsx";
 import EditableField from "../form/EditableField.jsx";
+import ImageAssetField from "../form/ImageAssetField.jsx";
 import Icon from "../common/Icon.jsx";
 import Modal from "../common/Modal.jsx";
 import Notification from "../common/Notification.jsx";
@@ -465,6 +466,8 @@ export default function AiAssistantPanel({
 	const [isImagePromptPickerOpen, setIsImagePromptPickerOpen] = useState(false);
 	const [selectedImagePromptTarget, setSelectedImagePromptTarget] =
 		useState(null);
+	const [attachedImages, setAttachedImages] = useState([]);
+	const [attachmentPickerKey, setAttachmentPickerKey] = useState(0);
 	const [imagePromptInstructions, setImagePromptInstructions] = useState("");
 	const [imagePromptSessions, setImagePromptSessions] = useState([]);
 	const [imagePromptCustomMonsters, setImagePromptCustomMonsters] = useState(
@@ -559,6 +562,24 @@ export default function AiAssistantPanel({
 		setSelectedResponseId(null);
 		setSelectedResponseEntry(null);
 		setIsGeneratedPromptCopied(false);
+	};
+
+	const getAttachedImageKey = (image) =>
+		image?.url || `${image?.name || ""}:${image?.sizeBytes || ""}`;
+
+	const addAttachedImage = (image) => {
+		if (!image) return;
+		setAttachedImages((prev) => {
+			const key = getAttachedImageKey(image);
+			if (prev.some((item) => getAttachedImageKey(item) === key)) return prev;
+			return [...prev, image].slice(0, 4);
+		});
+	};
+
+	const removeAttachedImage = (indexToRemove) => {
+		setAttachedImages((prev) =>
+			prev.filter((_, index) => index !== indexToRemove),
+		);
 	};
 
 	const copyGeneratedPrompt = async () => {
@@ -1278,6 +1299,7 @@ export default function AiAssistantPanel({
 					path: initialRoute,
 					sceneId: targetSceneId,
 					imageTarget,
+					attachedImages,
 					imagePromptBasePromptOverride,
 					parseAIResponse: shouldParseResponse,
 					generateCharacters: structuredEntityOptionsEnabled
@@ -1720,6 +1742,7 @@ export default function AiAssistantPanel({
 			{isOpen && (
 				<Modal
 					title={assistantTitle}
+					className="AiAssistant__main_modal"
 					onCancel={() => {
 						setIsOpen(false);
 					}}
@@ -1868,33 +1891,87 @@ export default function AiAssistantPanel({
 						/>
 
 						<div className="AiAssistant__prompt_area">
-							<EditableField
-								type="textarea"
-								className="AiAssistant__prompt_input"
-								placeholder={getPlaceholder()}
-								value={userInstructions}
-								onChange={(e) => setUserInstructions(e.target.value)}
-								disabled={loading}
-							/>
-							<Button
-								variant="create"
-								className="AiAssistant__generate_btn"
-								disabled={loading}
-								onClick={() => generate()}
-							>
-								{loading
-									? lang.t("AI is working, please wait...")
-									: lang.t("Generate")}
-							</Button>
-							{canCancelGenerate && (
-								<Button
-									variant="danger"
-									className="AiAssistant__cancel_btn"
-									onClick={cancelGenerateRequest}
-								>
-									{lang.t("Cancel")}
-								</Button>
-							)}
+							<div className="AiAssistant__prompt_row">
+								<div className="AiAssistant__prompt_column">
+									<EditableField
+										type="textarea"
+										className="AiAssistant__prompt_input"
+										placeholder={getPlaceholder()}
+										value={userInstructions}
+										onChange={(e) => setUserInstructions(e.target.value)}
+										disabled={loading}
+									/>
+									<Button
+										variant="create"
+										className="AiAssistant__generate_btn"
+										disabled={loading}
+										onClick={() => generate()}
+									>
+										{loading
+											? lang.t("AI is working, please wait...")
+											: lang.t("Generate")}
+									</Button>
+									{canCancelGenerate && (
+										<Button
+											variant="danger"
+											className="AiAssistant__cancel_btn"
+											onClick={cancelGenerateRequest}
+										>
+											{lang.t("Cancel")}
+										</Button>
+									)}
+								</div>
+								<div className="AiAssistant__attachments">
+									{attachedImages.length < 4 && (
+										<ImageAssetField
+											key={attachmentPickerKey}
+											imageUrl=""
+											campaignSlug={
+												isBestiary ? "general" : initialRoute.campaign
+											}
+											target="attachment"
+											imageAlt={lang.t("Attached image")}
+											containerClassName="AiAssistant__attachment_picker"
+											onImageChange={(url) => {
+												if (!url) return;
+												const name = String(url).split("/").pop() || url;
+												addAttachedImage({
+													name,
+													url,
+													previewUrl: url,
+												});
+												setAttachmentPickerKey((key) => key + 1);
+											}}
+										/>
+									)}
+									{attachedImages.length > 0 && (
+										<div className="AiAssistant__attachment_list">
+											{attachedImages.map((image, index) => (
+												<div
+													key={`${image.url || image.name}-${index}`}
+													className="AiAssistant__attachment_item"
+												>
+													<img
+														src={image.previewUrl || image.url}
+														alt={image.name || lang.t("Attached image")}
+													/>
+													<span title={image.name || image.url}>
+														{image.name || image.url}
+													</span>
+													<Button
+														variant="danger"
+														size={Button.SIZES.SMALL}
+														icon="x"
+														onClick={() => removeAttachedImage(index)}
+														disabled={loading}
+														title={lang.t("Remove image")}
+													/>
+												</div>
+											))}
+										</div>
+									)}
+								</div>
+							</div>
 						</div>
 
 						{error && <div className="AiAssistant__error">{error}</div>}

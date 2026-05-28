@@ -11,6 +11,7 @@ const TARGET_PRESETS = {
 	npc: { category: "characters", subcategory: "npc" },
 	location: { category: "scenes", subcategory: "" },
 	scene: { category: "scenes", subcategory: "" },
+	attachment: { category: "attachments", subcategory: "" },
 };
 
 function decodeSegment(value) {
