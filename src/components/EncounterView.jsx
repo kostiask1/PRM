@@ -749,6 +749,10 @@ function EncounterView(props) {
 				</div>
 				<AiAssistantPanel
 					sessionData={view.encounter}
+					campaignContext={{
+						description: campaign.description,
+						notes: campaign.notes,
+					}}
 					onInsertResult={view.handleAiUpdate}
 				/>
 			</div>

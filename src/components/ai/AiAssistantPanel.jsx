@@ -5,6 +5,7 @@ import {
 	isValidElement,
 	useCallback,
 	useEffect,
+	useMemo,
 	useRef,
 	useState,
 } from "react";
@@ -83,6 +84,91 @@ const markdownMentionComponents = Object.fromEntries(
 			createElement(tag, tagProps, renderMentionChildren(children)),
 	]),
 );
+
+const ESTIMATED_IMAGE_TOKENS = 260;
+const SYSTEM_TOKEN_ESTIMATES = {
+	prompt: 650,
+	campaign: 1500,
+	scene: 1900,
+	encounter: 1200,
+	"custom-monster": 2200,
+	image: 550,
+};
+
+function estimateTextTokens(text) {
+	const value = String(text || "");
+	if (!value.trim()) return 0;
+
+	const cyrillic = (value.match(/[\u0400-\u04ff]/g) || []).length;
+	const latinDigits = (value.match(/[A-Za-z0-9]/g) || []).length;
+	const whitespace = (value.match(/\s/g) || []).length;
+	const other = Math.max(0, value.length - cyrillic - latinDigits - whitespace);
+	return Math.ceil(cyrillic / 2.7 + latinDigits / 4 + other / 3.5);
+}
+
+function estimateValueTokens(value) {
+	if (value === null || value === undefined) return 0;
+	if (typeof value === "string") return estimateTextTokens(value);
+	return estimateTextTokens(JSON.stringify(value));
+}
+
+function compactNoteForEstimate(note) {
+	if (!note || note._aiIgnored) return null;
+	return {
+		title: note.title || "",
+		text: note.text || "",
+	};
+}
+
+function compactEntityForEstimate(entity) {
+	if (!entity || entity._aiIgnored) return null;
+	return {
+		name:
+			[
+				entity.firstName || entity.first_name || "",
+				entity.lastName || entity.last_name || "",
+			]
+				.filter(Boolean)
+				.join(" ") ||
+			entity.name ||
+			entity.title ||
+			"",
+		description: entity.description || "",
+		motivation: entity.motivation || "",
+		trait: entity.trait || "",
+		notes: (entity.notes || []).map(compactNoteForEstimate).filter(Boolean),
+	};
+}
+
+function compactSessionForEstimate(data = {}) {
+	return {
+		notes: (data.notes || []).map(compactNoteForEstimate).filter(Boolean),
+		result: data.result_text || "",
+		scenes: (data.scenes || []).map((scene) => ({
+			texts: scene.texts || {},
+			notes: (scene.notes || []).map(compactNoteForEstimate).filter(Boolean),
+			npcs: scene.npcs || [],
+			encounterId: scene.encounterId || "",
+		})),
+		npcs: (data.npcs || []).map(compactEntityForEstimate).filter(Boolean),
+		locations: (data.locations || [])
+			.map(compactEntityForEstimate)
+			.filter(Boolean),
+	};
+}
+
+function getEstimatedAiMode({
+	isBestiary,
+	isEncounter,
+	isCampaign,
+	parseAIResponse,
+}) {
+	if (isBestiary) return "custom-monster";
+	if (!parseAIResponse) return "prompt";
+	if (isEncounter) return "encounter";
+	if (isCampaign) return "campaign";
+	return "scene";
+}
 
 function getResponsePreview(text) {
 	const plainText = [
@@ -432,6 +518,7 @@ function getDiffResourceState(resource) {
 export default function AiAssistantPanel({
 	sessionName,
 	sessionData,
+	campaignContext = null,
 	onInsertResult,
 	bestiaryMode = false,
 }) {
@@ -442,6 +529,12 @@ export default function AiAssistantPanel({
 	const imagePromptBasePrompt = useAppSelector(
 		(state) => state.ui.imagePromptBasePrompt || "",
 	);
+	const globalAiBasePrompt = useAppSelector(
+		(state) => state.ui.aiBasePrompt || "",
+	);
+	const campaignAiBasePrompts = useAppSelector(
+		(state) => state.ui.campaignAiBasePrompts || {},
+	);
 	const campaignImagePromptBasePrompts = useAppSelector(
 		(state) => state.ui.campaignImagePromptBasePrompts || {},
 	);
@@ -449,6 +542,8 @@ export default function AiAssistantPanel({
 	const activeImagePromptBasePrompt =
 		campaignImagePromptBasePrompts[initialRoute.campaign] ||
 		imagePromptBasePrompt;
+	const activeCampaignBasePrompt =
+		campaignAiBasePrompts[initialRoute.campaign] || "";
 	const isBestiary = bestiaryMode || initialRoute.campaign === "bestiary";
 	const isCampaign = !initialRoute.session && !isBestiary;
 	const isEncounter = !!initialRoute.encounter;
@@ -608,17 +703,20 @@ export default function AiAssistantPanel({
 	useEffect(() => {
 		if (
 			!isBestiary &&
-			(isContextModalOpen || isImagePromptPickerOpen) &&
+			(isOpen || isContextModalOpen || isImagePromptPickerOpen) &&
+			useContext &&
 			sessionsList.length === 0
 		) {
 			api.listSessions(initialRoute.campaign).then(setSessionsList);
 		}
 	}, [
 		isBestiary,
+		isOpen,
 		isContextModalOpen,
 		isImagePromptPickerOpen,
 		initialRoute.campaign,
 		sessionsList.length,
+		useContext,
 	]);
 
 	useEffect(() => {
@@ -629,7 +727,8 @@ export default function AiAssistantPanel({
 		) {
 			return;
 		}
-		if (!isContextModalOpen && !isImagePromptPickerOpen) return;
+		if (!isOpen && !isContextModalOpen && !isImagePromptPickerOpen) return;
+		if (!useContext && !isContextModalOpen && !isImagePromptPickerOpen) return;
 
 		let cancelled = false;
 		const loadCampaignEntities = async (type, label) => {
@@ -663,9 +762,61 @@ export default function AiAssistantPanel({
 		};
 	}, [
 		isBestiary,
+		isOpen,
 		isContextModalOpen,
 		isImagePromptPickerOpen,
 		initialRoute.campaign,
+		useContext,
+	]);
+
+	useEffect(() => {
+		if (isBestiary || !isOpen || !useContext) return;
+		if (!initialRoute.campaign || !contextConfig.sessions) return;
+
+		const entriesToLoad = Object.entries(contextConfig.sessions).filter(
+			([, conf]) => conf?.included && !conf?.data,
+		);
+		if (entriesToLoad.length === 0) return;
+
+		let cancelled = false;
+		Promise.all(
+			entriesToLoad.map(async ([slug, conf]) => {
+				try {
+					const session = await api.getSession(initialRoute.campaign, slug);
+					return [slug, conf, session?.data || {}];
+				} catch (err) {
+					console.error("Failed to load session for token estimate", err);
+					return null;
+				}
+			}),
+		).then((loadedSessions) => {
+			if (cancelled) return;
+			const validSessions = loadedSessions.filter(Boolean);
+			if (validSessions.length === 0) return;
+			setContextConfig((prev) => {
+				const nextSessions = { ...(prev.sessions || {}) };
+				let changed = false;
+				for (const [slug, conf, data] of validSessions) {
+					if (nextSessions[slug]?.data) continue;
+					nextSessions[slug] = {
+						...(nextSessions[slug] || conf),
+						data,
+					};
+					changed = true;
+				}
+				return changed ? { ...prev, sessions: nextSessions } : prev;
+			});
+		});
+
+		return () => {
+			cancelled = true;
+		};
+	}, [
+		contextConfig.sessions,
+		initialRoute.campaign,
+		isBestiary,
+		isOpen,
+		useContext,
 	]);
 
 	useEffect(() => {
@@ -1524,6 +1675,180 @@ export default function AiAssistantPanel({
 			: isEncounter
 				? lang.t("AI Encounter Assistant")
 				: lang.t("AI Session Assistant");
+	const tokenEstimate = useMemo(() => {
+		const mode = getEstimatedAiMode({
+			isBestiary,
+			isEncounter,
+			isCampaign,
+			parseAIResponse,
+		});
+		const filterByListConfig = (list, config, getKey) => {
+			const items = config.items || {};
+			const hasExplicitItems = Object.keys(items).length > 0;
+			if (config.included === false) return [];
+			return (Array.isArray(list) ? list : []).filter((item) => {
+				if (!hasExplicitItems) return true;
+				return items[getKey(item)] !== false;
+			});
+		};
+
+		const context = {};
+		if (!isBestiary) {
+			if (isCampaign) {
+				context.campaign = {
+					name: sessionData?.name || sessionName || "",
+					description: sessionData?.description || "",
+				};
+				if (useContext) {
+					if (contextConfig.campaignNotes) {
+						context.campaign.notes = (sessionData?.notes || [])
+							.map(compactNoteForEstimate)
+							.filter(Boolean);
+					}
+					context.campaign.characters = filterByListConfig(
+						sessionData?.characters || charactersList,
+						characterContext,
+						getCharacterContextKey,
+					)
+						.map(compactEntityForEstimate)
+						.filter(Boolean);
+					context.campaign.npcs = filterByListConfig(
+						sessionData?.npcs || npcsList,
+						npcContext,
+						getCharacterContextKey,
+					)
+						.map(compactEntityForEstimate)
+						.filter(Boolean);
+					context.campaign.locations = filterByListConfig(
+						sessionData?.locations || locationsList,
+						locationContext,
+						getLocationContextKey,
+					)
+						.map(compactEntityForEstimate)
+						.filter(Boolean);
+				}
+			} else {
+				context.campaign = {
+					description: campaignContext?.description || "",
+				};
+				if (isEncounter) {
+					context.currentEncounter = sessionData || {};
+				} else if (parseAIResponse) {
+					context.currentSession = compactSessionForEstimate(sessionData || {});
+				}
+				if (useContext) {
+					context.campaign = {
+						...context.campaign,
+						description: campaignContext?.description || "",
+						notes: contextConfig.campaignNotes
+							? (campaignContext?.notes || [])
+									.map(compactNoteForEstimate)
+									.filter(Boolean)
+							: [],
+						characters: filterByListConfig(
+							charactersList,
+							characterContext,
+							getCharacterContextKey,
+						)
+							.map(compactEntityForEstimate)
+							.filter(Boolean),
+						npcs: filterByListConfig(
+							npcsList,
+							npcContext,
+							getCharacterContextKey,
+						)
+							.map(compactEntityForEstimate)
+							.filter(Boolean),
+						locations: filterByListConfig(
+							locationsList,
+							locationContext,
+							getLocationContextKey,
+						)
+							.map(compactEntityForEstimate)
+							.filter(Boolean),
+					};
+					context.selectedSessions = Object.entries(
+						contextConfig.sessions || {},
+					)
+						.filter(([, conf]) => conf?.included && conf?.data)
+						.map(([slug, conf]) => ({
+							slug,
+							data: compactSessionForEstimate(conf.data),
+						}));
+				}
+			}
+		}
+
+		const requestShape = {
+			mode,
+			language: currentLanguage,
+			modelName: selectedModel,
+			userInstructions,
+			options: {
+				responseParsing: mode !== "prompt",
+				characterGeneration: generateCharacters,
+				npcGeneration: generateNpcs,
+				locationGeneration: generateLocations,
+				encounterGeneration: generateEncounters,
+				customMonsterGeneration: generateCustomMonsters,
+				contextEnabled: useContext && !isBestiary,
+			},
+			basePrompts: {
+				global: globalAiBasePrompt,
+				campaign: activeCampaignBasePrompt,
+			},
+			context,
+			attachedImages: attachedImages.map((image) => ({
+				name: image.name,
+				url: image.url,
+			})),
+		};
+		const textTokens =
+			(SYSTEM_TOKEN_ESTIMATES[mode] || SYSTEM_TOKEN_ESTIMATES.prompt) +
+			estimateValueTokens(requestShape);
+		const imageTokens = attachedImages.length * ESTIMATED_IMAGE_TOKENS;
+		return {
+			textTokens,
+			imageTokens,
+			total: textTokens + imageTokens,
+		};
+	}, [
+		activeCampaignBasePrompt,
+		attachedImages,
+		campaignContext,
+		characterContext,
+		charactersList,
+		contextConfig,
+		currentLanguage,
+		generateCharacters,
+		generateCustomMonsters,
+		generateEncounters,
+		generateLocations,
+		generateNpcs,
+		globalAiBasePrompt,
+		isBestiary,
+		isCampaign,
+		isEncounter,
+		locationContext,
+		locationsList,
+		npcContext,
+		npcsList,
+		parseAIResponse,
+		selectedModel,
+		sessionData,
+		sessionName,
+		useContext,
+		userInstructions,
+	]);
+	const formattedTokenEstimate = new Intl.NumberFormat(
+		currentLanguage || "uk",
+	).format(tokenEstimate.total);
+	const formattedTextTokenEstimate = new Intl.NumberFormat(
+		currentLanguage || "uk",
+	).format(tokenEstimate.textTokens);
+	const formattedImageTokenEstimate = new Intl.NumberFormat(
+		currentLanguage || "uk",
+	).format(tokenEstimate.imageTokens);
 
 	const getSceneEncounterForImagePrompt = (scene) => {
 		const encounters = Array.isArray(scene?._imagePromptEncounters)
@@ -1901,6 +2226,24 @@ export default function AiAssistantPanel({
 										onChange={(e) => setUserInstructions(e.target.value)}
 										disabled={loading}
 									/>
+									<div
+										className="AiAssistant__token_estimate"
+										title={lang.t(
+											"Approximate estimate. Actual token usage may differ.",
+										)}
+									>
+										<span>
+											{lang.t("Estimated request")}:{" "}
+											<strong>{formattedTokenEstimate}</strong>{" "}
+											{lang.t("tokens")}
+										</span>
+										<span>
+											{lang.t("Text")}: {formattedTextTokenEstimate}
+											{tokenEstimate.imageTokens > 0
+												? `; ${lang.t("Images")}: ${formattedImageTokenEstimate}`
+												: ""}
+										</span>
+									</div>
 									<Button
 										variant="create"
 										className="AiAssistant__generate_btn"
