@@ -1,14 +1,17 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import ReactList from "react-list";
 
 import { requestDiceRollAction } from "../../actions/app";
 import questions from "../../../database/questions.json";
 import "../../assets/components/PlayerQuestionsModalContent.css";
 import Button from "../form/Button";
+import Input from "../form/Input";
+import { lang } from "../../services/localization";
 import { useAppDispatch, useAppSelector } from "../../store/appStore";
 
 const QUESTION_ROLL_CONTEXT = "playerQuestions";
 const SCROLL_DURATION_MS = 260;
+const QUESTIONS_COUNT = questions.length;
 
 function easeOutCubic(value) {
 	return 1 - Math.pow(1 - value, 3);
@@ -48,10 +51,21 @@ export default function PlayerQuestionsModalContent() {
 	const rootRef = useRef(null);
 	const questionRefs = useRef({});
 	const [activeQuestionId, setActiveQuestionId] = useState(null);
+	const [questionSearch, setQuestionSearch] = useState("");
 	const [isListReady, setIsListReady] = useState(false);
 
 	useLayoutEffect(() => {
 		setIsListReady(Boolean(rootRef.current));
+	}, []);
+
+	const scrollToQuestionId = useCallback((questionId) => {
+		setActiveQuestionId(questionId);
+		listRef.current?.scrollTo(questionId - 1);
+		requestAnimationFrame(() => {
+			requestAnimationFrame(() => {
+				scrollToQuestion(rootRef.current, questionRefs.current[questionId]);
+			});
+		});
 	}, []);
 
 	useEffect(() => {
@@ -62,26 +76,37 @@ export default function PlayerQuestionsModalContent() {
 		if (rolledResult.context?.type !== QUESTION_ROLL_CONTEXT) return;
 
 		const questionId = Number(rolledResult.result?.total);
-		if (!Number.isInteger(questionId) || questionId < 1 || questionId > 500) {
+		if (
+			!Number.isInteger(questionId) ||
+			questionId < 1 ||
+			questionId > QUESTIONS_COUNT
+		) {
 			return;
 		}
 
-		setActiveQuestionId(questionId);
-		listRef.current?.scrollTo(questionId - 1);
-		requestAnimationFrame(() => {
-			requestAnimationFrame(() => {
-				scrollToQuestion(rootRef.current, questionRefs.current[questionId]);
-			});
-		});
-	}, [rolledResult]);
+		setQuestionSearch(String(questionId));
+		scrollToQuestionId(questionId);
+	}, [rolledResult, scrollToQuestionId]);
 
 	const rollQuestion = () => {
 		dispatch(
 			requestDiceRollAction({
-				formula: "1d500",
+				formula: `1d${QUESTIONS_COUNT}`,
 				context: { type: QUESTION_ROLL_CONTEXT },
 			}),
 		);
+	};
+
+	const handleQuestionSearchChange = (event) => {
+		const digits = event.target.value.replace(/\D+/g, "");
+		if (!digits) {
+			setQuestionSearch("");
+			return;
+		}
+
+		const questionId = Math.max(1, Math.min(Number(digits), QUESTIONS_COUNT));
+		setQuestionSearch(String(questionId));
+		scrollToQuestionId(questionId);
 	};
 
 	const renderQuestion = (index, key) => {
@@ -114,13 +139,16 @@ export default function PlayerQuestionsModalContent() {
 		<div ref={rootRef} className="PlayerQuestionsModalContent">
 			<div className="PlayerQuestionsModalContent__toolbar">
 				<Button variant="primary" icon="dice" onClick={rollQuestion}>
-					Кинути 1d500
+					{lang.t("Roll 1d{count}", { count: QUESTIONS_COUNT })}
 				</Button>
-				{activeQuestionId && (
-					<span className="PlayerQuestionsModalContent__rollResult">
-						Питання #{activeQuestionId}
-					</span>
-				)}
+				<div className="PlayerQuestionsModalContent__search">
+					<Input
+						value={questionSearch}
+						onChange={handleQuestionSearchChange}
+						inputMode="numeric"
+						placeholder={lang.t("Question number")}
+					/>
+				</div>
 			</div>
 
 			<div className="PlayerQuestionsModalContent__list" role="list">
@@ -128,7 +156,7 @@ export default function PlayerQuestionsModalContent() {
 					<ReactList
 						ref={listRef}
 						itemRenderer={renderQuestion}
-						length={questions.length}
+						length={QUESTIONS_COUNT}
 						scrollParentGetter={() => rootRef.current}
 						type="uniform"
 					/>

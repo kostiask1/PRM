@@ -127,7 +127,7 @@ export default function Sidebar({
 
 	const handleOpenPlayerQuestions = () => {
 		openModalRequest({
-			title: "Питання до гравців",
+			title: lang.t("Player questions"),
 			type: "confirm",
 			className: "PlayerQuestionsModal",
 			showFooter: false,
@@ -343,7 +343,8 @@ export default function Sidebar({
 								handleOpenPlayerQuestions();
 							}}
 						>
-							<Icon name="help" size={16} /> <span>Питання до гравців</span>
+							<Icon name="help" size={16} />{" "}
+							<span>{lang.t("Player questions")}</span>
 						</a>
 					</div>
 				</div>
