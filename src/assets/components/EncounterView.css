@@ -346,6 +346,7 @@
 }
 
 .EncounterView__gridItem {
+	height: 100%;
 	border: 1px solid color-mix(in srgb, var(--border), transparent 45%);
 	border-radius: var(--radius-lg);
 	padding: var(--space-3);
@@ -366,7 +367,7 @@
 }
 
 .EncounterView__gridItem .MonsterStatBlock {
-	height: auto;
+	height: 100%;
 	max-height: 72vh;
 }
 
