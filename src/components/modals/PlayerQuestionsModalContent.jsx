@@ -130,13 +130,13 @@ export default function PlayerQuestionsModalContent() {
 		selection.addRange(range);
 	};
 
-	const renderQuestion = (index, key) => {
+	const renderQuestion = (index) => {
 		const questionId = index + 1;
 		const question = questions[index];
 
 		return (
 			<div
-				key={key}
+				key={questionId}
 				ref={(node) => {
 					if (node) questionRefs.current[questionId] = node;
 					else delete questionRefs.current[questionId];
