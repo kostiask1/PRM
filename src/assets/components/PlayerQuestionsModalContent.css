@@ -29,6 +29,12 @@
 	width: min(180px, 100%);
 }
 
+.PlayerQuestionsModalContent__hint {
+	color: var(--muted);
+	font-size: 0.82rem;
+	line-height: 1.3;
+}
+
 .PlayerQuestionsModalContent__list {
 	padding: var(--space-1);
 	margin: 0;

@@ -171,6 +171,12 @@ export default function PlayerQuestionsModalContent() {
 						placeholder={lang.t("Question number")}
 					/>
 				</div>
+				<div className="PlayerQuestionsModalContent__hint">
+					{lang.t(
+						"Instead of rolling 1d{count}, you can roll 1d6 + 1d100 + 1d10.",
+						{ count: QUESTIONS_COUNT },
+					)}
+				</div>
 			</div>
 
 			<div className="PlayerQuestionsModalContent__list" role="list">
