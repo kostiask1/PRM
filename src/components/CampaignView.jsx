@@ -161,6 +161,42 @@ function CampaignView(props) {
 		}
 	};
 
+	const getBulkCollapseState = (items) =>
+		items.some((item) => !item._isVirtual && !item.collapsed);
+
+	const renderBulkCollapseButton = (items, onChange) => {
+		const realItems = items.filter((item) => !item._isVirtual);
+		if (realItems.length === 0) return null;
+		const shouldCollapse = getBulkCollapseState(realItems);
+		return (
+			<Button
+				variant="ghost"
+				size={Button.SIZES.SMALL}
+				icon="chevron"
+				iconSize={16}
+				onClick={() => onChange(shouldCollapse)}
+				title={lang.t(
+					shouldCollapse ? "Collapse all items" : "Expand all items",
+				)}
+			>
+				{lang.t(shouldCollapse ? "Collapse all" : "Expand all")}
+			</Button>
+		);
+	};
+
+	const handleBulkNotesCollapse = (collapsed) => {
+		view.handleNotesReorder(
+			view.notes.map((note) => ({ ...note, collapsed })),
+		);
+		view.finishTrackedReorder();
+	};
+
+	const handleBulkEntitiesCollapse = (type, items, onReorder, collapsed) => {
+		const nextItems = items.map((item) => ({ ...item, collapsed }));
+		onReorder(nextItems);
+		view.persistEntitiesReorder(type, nextItems);
+	};
+
 	const renderSessionCard = (session) => (
 		<ListCard
 			key={session.fileName}
@@ -357,6 +393,9 @@ function CampaignView(props) {
 									<h3>{lang.t("Notes")}</h3>
 								</div>
 								<div className="CampaignView__notesViewToggle">
+									{!isNotesCollapsed &&
+										notesViewMode === "list" &&
+										renderBulkCollapseButton(view.notes, handleBulkNotesCollapse)}
 									<Button
 										variant={notesViewMode === "list" ? "primary" : "ghost"}
 										size={Button.SIZES.SMALL}
@@ -462,10 +501,22 @@ function CampaignView(props) {
 									<h3>{lang.t("Characters")}</h3>
 								</div>
 								{!isCharactersCollapsed && (
-									<CreateCharacterButton
-										campaignSlug={campaign.slug}
-										entityType="characters"
-									/>
+									<div className="CampaignView__sectionActions">
+										{renderBulkCollapseButton(
+											view.characters,
+											(collapsed) =>
+												handleBulkEntitiesCollapse(
+													"characters",
+													view.characters,
+													view.handleCharactersReorder,
+													collapsed,
+												),
+										)}
+										<CreateCharacterButton
+											campaignSlug={campaign.slug}
+											entityType="characters"
+										/>
+									</div>
 								)}
 							</div>
 							{!isCharactersCollapsed && (
@@ -528,10 +579,20 @@ function CampaignView(props) {
 									<h3>{lang.t("NPC")}</h3>
 								</div>
 								{!isNpcsCollapsed && (
-									<CreateCharacterButton
-										campaignSlug={campaign.slug}
-										entityType="npc"
-									/>
+									<div className="CampaignView__sectionActions">
+										{renderBulkCollapseButton(view.npcs, (collapsed) =>
+											handleBulkEntitiesCollapse(
+												"npc",
+												view.npcs,
+												view.handleNpcsReorder,
+												collapsed,
+											),
+										)}
+										<CreateCharacterButton
+											campaignSlug={campaign.slug}
+											entityType="npc"
+										/>
+									</div>
 								)}
 							</div>
 							{!isNpcsCollapsed && (
@@ -598,7 +659,17 @@ function CampaignView(props) {
 									<h3>{lang.t("Locations/Factions")}</h3>
 								</div>
 								{!isLocationsCollapsed && (
-									<CreateLocationButton campaignSlug={campaign.slug} />
+									<div className="CampaignView__sectionActions">
+										{renderBulkCollapseButton(view.locations, (collapsed) =>
+											handleBulkEntitiesCollapse(
+												"locations",
+												view.locations,
+												view.handleLocationsReorder,
+												collapsed,
+											),
+										)}
+										<CreateLocationButton campaignSlug={campaign.slug} />
+									</div>
 								)}
 							</div>
 							{!isLocationsCollapsed && (

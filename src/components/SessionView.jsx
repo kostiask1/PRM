@@ -246,6 +246,52 @@ function SessionView(props) {
 			),
 		);
 	};
+	const getBulkCollapseState = (items) =>
+		items.some((item) => !item._isVirtual && !item.collapsed);
+
+	const renderBulkCollapseButton = (items, onChange) => {
+		const realItems = items.filter((item) => !item._isVirtual);
+		if (realItems.length === 0) return null;
+		const shouldCollapse = getBulkCollapseState(realItems);
+		return (
+			<Button
+				variant="ghost"
+				size={Button.SIZES.SMALL}
+				icon="chevron"
+				iconSize={16}
+				onClick={() => onChange(shouldCollapse)}
+				title={lang.t(
+					shouldCollapse ? "Collapse all items" : "Expand all items",
+				)}
+			>
+				{lang.t(shouldCollapse ? "Collapse all" : "Expand all")}
+			</Button>
+		);
+	};
+
+	const handleBulkSessionNotesCollapse = (collapsed) => {
+		view.updateData(
+			"notes",
+			(viewModel.notes || []).map((note) => ({ ...note, collapsed })),
+			true,
+		);
+	};
+
+	const handleBulkSessionEntitiesCollapse = (type, items, collapsed) => {
+		view.updateData(
+			type === "locations" ? "locations" : "npcs",
+			items.map((item) => ({ ...item, collapsed })),
+			true,
+		);
+	};
+
+	const handleBulkScenesCollapse = (collapsed) => {
+		view.updateData(
+			"scenes",
+			scenes.map((scene) => ({ ...scene, collapsed })),
+			true,
+		);
+	};
 
 	return (
 		<EntityLinkResolverContext.Provider value={sessionScopedEntityLinks}>
@@ -338,6 +384,13 @@ function SessionView(props) {
 									? () => view.handleToggleSectionCollapse("Notes")
 									: undefined
 							}
+							action={
+								!isSessionNotesCollapsed &&
+								renderBulkCollapseButton(
+									viewModel.notes || [],
+									handleBulkSessionNotesCollapse,
+								)
+							}
 						>
 							{!isSessionNotesCollapsed && (
 								<DraggableList
@@ -379,6 +432,13 @@ function SessionView(props) {
 							title={lang.t("Session NPCs")}
 							action={
 								<div className="SessionView__sectionActions">
+									{renderBulkCollapseButton(view.sessionNpcs, (collapsed) =>
+										handleBulkSessionEntitiesCollapse(
+											"npc",
+											view.sessionNpcs,
+											collapsed,
+										),
+									)}
 									<CreateCharacterButton
 										buttonVariant="primary"
 										campaignSlug={view.campaignSlug}
@@ -448,6 +508,15 @@ function SessionView(props) {
 							title={lang.t("Session locations/factions")}
 							action={
 								<div className="SessionView__sectionActions">
+									{renderBulkCollapseButton(
+										view.sessionLocations,
+										(collapsed) =>
+											handleBulkSessionEntitiesCollapse(
+												"locations",
+												view.sessionLocations,
+												collapsed,
+											),
+									)}
 									<CreateLocationButton
 										buttonVariant="primary"
 										campaignSlug={view.campaignSlug}
@@ -524,15 +593,18 @@ function SessionView(props) {
 						<TodoSection
 							title={lang.t("Scenes")}
 							action={
-								<Button
-									variant="primary"
-									size={Button.SIZES.SMALL}
-									onClick={view.addScene}
-									icon="plus"
-									iconSize={16}
-								>
-									{lang.t("Add")}
-								</Button>
+								<div className="SessionView__sectionActions">
+									{renderBulkCollapseButton(scenes, handleBulkScenesCollapse)}
+									<Button
+										variant="primary"
+										size={Button.SIZES.SMALL}
+										onClick={view.addScene}
+										icon="plus"
+										iconSize={16}
+									>
+										{lang.t("Add")}
+									</Button>
+								</div>
 							}
 						>
 							<AiAssistantPanel
@@ -747,6 +819,17 @@ function SceneCard(props) {
 	const isSceneNotesCollapsed = hasSceneNotesData
 		? !!props.scene.isNotesCollapsed
 		: false;
+	const sceneNotesActionShouldCollapse = sceneNotesForRender.some(
+		(note) => !note._isVirtual && !note.collapsed,
+	);
+	const handleBulkSceneNotesCollapse = () => {
+		props.onSceneNotesReorder(
+			sceneNotes.map((note) => ({
+				...note,
+				collapsed: sceneNotesActionShouldCollapse,
+			})),
+		);
+	};
 
 	return (
 		<div className="SceneCard">
@@ -768,20 +851,42 @@ function SceneCard(props) {
 							onUpdateField={props.onUpdateField}
 						/>
 						<div className="SceneCard__notes">
-							<div
-								className="SceneCard__notes_header"
-								onClick={
-									hasSceneNotesData ? props.onToggleNotesCollapse : undefined
-								}
-							>
-								{hasSceneNotesData && (
-									<CollapseToggleButton
+							<div className="SceneCard__notes_headerRow">
+								<div
+									className="SceneCard__notes_header"
+									onClick={
+										hasSceneNotesData ? props.onToggleNotesCollapse : undefined
+									}
+								>
+									{hasSceneNotesData && (
+										<CollapseToggleButton
+											size={Button.SIZES.SMALL}
+											collapsed={isSceneNotesCollapsed}
+											onClick={props.onToggleNotesCollapse}
+										/>
+									)}
+									<label>{lang.t("Scene notes")}</label>
+								</div>
+								{!isSceneNotesCollapsed && sceneNotes.length > 0 && (
+									<Button
+										variant="ghost"
 										size={Button.SIZES.SMALL}
-										collapsed={isSceneNotesCollapsed}
-										onClick={props.onToggleNotesCollapse}
-									/>
+										icon="chevron"
+										iconSize={16}
+										onClick={handleBulkSceneNotesCollapse}
+										title={lang.t(
+											sceneNotesActionShouldCollapse
+												? "Collapse all items"
+												: "Expand all items",
+										)}
+									>
+										{lang.t(
+											sceneNotesActionShouldCollapse
+												? "Collapse all"
+												: "Expand all",
+										)}
+									</Button>
 								)}
-								<label>{lang.t("Scene notes")}</label>
 							</div>
 							{!isSceneNotesCollapsed && (
 								<DraggableList

@@ -327,13 +327,20 @@
 	margin-top: var(--space-3);
 }
 
+.SceneCard__notes_headerRow {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-2);
+	margin-top: var(--space-6);
+	margin-bottom: var(--space-2);
+}
+
 .SceneCard__notes_header {
 	display: inline-flex;
 	align-items: center;
 	gap: var(--space-3);
 	cursor: pointer;
-	margin-top: var(--space-6);
-	margin-bottom: var(--space-2);
 }
 
 .SceneCard__notes_header label {
