@@ -46,6 +46,9 @@ function scrollToQuestion(container, target) {
 export default function PlayerQuestionsModalContent() {
 	const dispatch = useAppDispatch();
 	const rolledResult = useAppSelector((state) => state.dice.rolledResult);
+	const currentLanguage = useAppSelector(
+		(state) => state.localization.language || "en",
+	);
 	const processedResultIdRef = useRef(rolledResult?.resultId ?? null);
 	const listRef = useRef(null);
 	const rootRef = useRef(null);
@@ -109,6 +112,24 @@ export default function PlayerQuestionsModalContent() {
 		scrollToQuestionId(questionId);
 	};
 
+	const handleQuestionClick = (event, questionId) => {
+		setActiveQuestionId(questionId);
+		if (currentLanguage === "en") return;
+
+		const questionNode = event.currentTarget.querySelector(
+			".PlayerQuestionsModalContent__question",
+		);
+		if (!questionNode) return;
+
+		const selection = window.getSelection?.();
+		if (!selection) return;
+
+		const range = document.createRange();
+		range.selectNodeContents(questionNode);
+		selection.removeAllRanges();
+		selection.addRange(range);
+	};
+
 	const renderQuestion = (index, key) => {
 		const questionId = index + 1;
 		const question = questions[index];
@@ -125,6 +146,7 @@ export default function PlayerQuestionsModalContent() {
 						? "PlayerQuestionsModalContent__item PlayerQuestionsModalContent__item__active"
 						: "PlayerQuestionsModalContent__item"
 				}
+				onClick={(event) => handleQuestionClick(event, questionId)}
 				role="listitem"
 			>
 				<span className="PlayerQuestionsModalContent__number">{questionId}</span>
