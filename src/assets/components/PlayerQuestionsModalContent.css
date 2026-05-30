@@ -30,12 +30,8 @@
 }
 
 .PlayerQuestionsModalContent__list {
-	display: flex;
-	flex-direction: column;
-	gap: var(--space-2);
 	padding: var(--space-1);
 	margin: 0;
-	list-style: none;
 }
 
 .PlayerQuestionsModalContent__item {
@@ -46,6 +42,7 @@
 	border: 1px solid var(--border);
 	border-radius: var(--radius-md);
 	background: color-mix(in srgb, var(--panel-2), transparent 35%);
+	margin-bottom: var(--space-2);
 	scroll-margin-top: 5rem;
 	transition:
 		border-color 0.15s ease,
