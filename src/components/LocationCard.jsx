@@ -121,6 +121,7 @@ export default function LocationCard({
 				is_dragging: isDragging,
 				location_card__modal: isModalView,
 			})}
+			onClick={() => isCollapsed && onToggleCollapse(location.id)}
 		>
 			{showHeader && (
 				<div

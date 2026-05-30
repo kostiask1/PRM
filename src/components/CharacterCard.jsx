@@ -118,14 +118,15 @@ export default function CharacterCard({
 				is_collapsed: isCollapsed,
 				character_card__modal: isModalView,
 			})}
+			onClick={
+				!canCollapseCard ? undefined : () => isCollapsed && onToggleCollapse(character.id)
+			}
 		>
 			{showHeader && (
-				<div
-					className="character_card__header"
-					onClick={
-						!canCollapseCard ? undefined : () => onToggleCollapse(character.id)
-					}
-				>
+				<div className="character_card__header"
+			onClick={
+				!canCollapseCard ? undefined : () => onToggleCollapse(character.id)
+			}>
 					{canCollapseCard && (
 						<CollapseToggleButton
 							size={Button.SIZES.SMALL}
