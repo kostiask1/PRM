@@ -7,7 +7,6 @@ import {
 	formatModifier,
 	getDamageBonus,
 	capitalizeWords,
-	preprocessTags,
 } from "../utils/parser.jsx";
 import {
 	parseRollsAndSpells,
@@ -271,7 +270,7 @@ export default function MonsterStatBlock({
 				elements.push(
 					<React.Fragment key={`sense-text-${matchIndex}`}>
 						{parseRollsAndSpells(
-							preprocessTags(text.slice(lastIndex, start)),
+							text.slice(lastIndex, start),
 							searchHighlight,
 						)}
 					</React.Fragment>,
@@ -293,10 +292,7 @@ export default function MonsterStatBlock({
 		if (lastIndex < text.length) {
 			elements.push(
 				<React.Fragment key="sense-text-tail">
-					{parseRollsAndSpells(
-						preprocessTags(text.slice(lastIndex)),
-						searchHighlight,
-					)}
+					{parseRollsAndSpells(text.slice(lastIndex), searchHighlight)}
 				</React.Fragment>,
 			);
 		}
@@ -641,10 +637,7 @@ export default function MonsterStatBlock({
 							</div>
 							{monster.desc && (
 								<div className="MonsterStatBlock__lore">
-									{parseRollsAndSpells(
-										preprocessTags(monster.desc),
-										searchHighlight,
-									)}
+									{parseRollsAndSpells(monster.desc, searchHighlight)}
 								</div>
 							)}
 						</div>

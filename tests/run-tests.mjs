@@ -12,6 +12,7 @@ import {
 import classNames from "../src/utils/classNames.js";
 import { rollDiceFormula } from "../src/utils/dice.js";
 import { extractContentTokens } from "../src/utils/contentTokens.js";
+import { preprocessTags } from "../src/utils/parserTags.js";
 import {
 	addUndoSnapshot,
 	createDistinctRedoTransition,
@@ -972,6 +973,32 @@ await run("content tokens parse hit and recharge tags safely", () => {
 	assert.equal(
 		recharge.some((token) => token.hit === "-6"),
 		false,
+	);
+
+	const damage = extractContentTokens("take 10 ({@damage 3d6}) fire damage.");
+	assert.equal(damage.length, 1);
+	assert.equal(damage[0].fullMatch, "{@damage 3d6}");
+	assert.equal(damage[0].damageRoll, "3d6");
+
+	const quickref = extractContentTokens(
+		"{@quickref Vision and Light||2||heavily obscured}",
+	);
+	assert.equal(quickref.length, 1);
+	assert.equal(quickref[0].quickrefValue, "Vision and Light||2||heavily obscured");
+});
+
+await run("parser renders quickref display labels", () => {
+	assert.equal(
+		preprocessTags("{@quickref Vision and Light||2||heavily obscured}"),
+		"heavily obscured",
+	);
+	assert.equal(
+		preprocessTags("{@quickref difficult terrain||3}"),
+		"difficult terrain",
+	);
+	assert.equal(
+		preprocessTags("{@quickref Cover||3||Total cover} blocks the sphere."),
+		"Total cover blocks the sphere.",
 	);
 });
 

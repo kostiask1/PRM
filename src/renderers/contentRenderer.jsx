@@ -23,11 +23,7 @@ export const renderRecursiveContent = (
 	if (content === undefined || content === null) return null;
 
 	if (typeof content === "string") {
-		return parseRollsAndSpells(
-			preprocessTags(content),
-			highlightQuery,
-			options,
-		);
+		return parseRollsAndSpells(content, highlightQuery, options);
 	}
 
 	if (typeof content === "number") {
@@ -127,11 +123,7 @@ export const renderRecursiveContent = (
 			);
 		}
 
-		return parseRollsAndSpells(
-			preprocessTags(JSON.stringify(content)),
-			highlightQuery,
-			options,
-		);
+		return parseRollsAndSpells(JSON.stringify(content), highlightQuery, options);
 	}
 
 	return null;
@@ -162,7 +154,7 @@ function pushSafeMarkdownText(elements, text, key, highlightQuery = "") {
 		return;
 	}
 
-	const safeText = text
+	const safeText = preprocessTags(text)
 		.replace(/^(\s*)([+\-*]|\d+\.)(\s)/gm, "$1\\$2$3")
 		.replace(/\n/gi, "&nbsp; \n")
 		.replace(/^ /g, "\u00A0")
@@ -181,6 +173,20 @@ function parseTaggedName(raw) {
 	return {
 		name,
 		displayText: capitalizeWords(label || name),
+	};
+}
+
+function parseQuickrefName(raw) {
+	const parts = String(raw || "").split("|");
+	const label = parts
+		.slice(1)
+		.filter(Boolean)
+		.at(-1);
+	const name = label && !/^\d+$/.test(label) ? label : parts[0];
+	const displayText = capitalizeWords(name);
+	return {
+		name: displayText,
+		displayText,
 	};
 }
 
@@ -225,6 +231,8 @@ export const parseRollsAndSpells = (
 
 		const {
 			recharge,
+			damageRoll,
+			damageLabel,
 			roll,
 			hit,
 			hitSuffix,
@@ -237,12 +245,23 @@ export const parseRollsAndSpells = (
 			variantRuleValue,
 			skillValue,
 			senseValue,
+			quickrefValue,
 		} = token;
 
 		if (recharge) {
 			elements.push(
 				<RollDice key={`re-${matchIndex}`} formula="1d6">
 					{highlightText(recharge, highlightQuery)}
+				</RollDice>,
+			);
+		} else if (damageRoll) {
+			const displayText = damageLabel || damageRoll;
+			elements.push(
+				<RollDice
+					key={`d-${matchIndex}`}
+					formula={damageRoll.replace(/\s+/g, "")}
+				>
+					{highlightText(displayText, highlightQuery)}
 				</RollDice>,
 			);
 		} else if (roll) {
@@ -337,6 +356,19 @@ export const parseRollsAndSpells = (
 					key={getReferenceKey("se", matchIndex, rawSenseName)}
 					type="sense"
 					name={rawSenseName}
+					onNavigate={options.onRuleNavigate}
+				>
+					{highlightText(displayText, highlightQuery)}
+				</RulesLink>,
+			);
+		} else if (quickrefValue) {
+			const { name: rawRuleName, displayText } =
+				parseQuickrefName(quickrefValue);
+			elements.push(
+				<RulesLink
+					key={getReferenceKey("q", matchIndex, rawRuleName)}
+					type="variantrule"
+					name={rawRuleName}
 					onNavigate={options.onRuleNavigate}
 				>
 					{highlightText(displayText, highlightQuery)}
