@@ -169,21 +169,35 @@
 	border-radius: var(--radius-2xl);
 	padding: var(--space-4);
 	box-shadow: var(--shadow);
-	animation: slideIn 0.2s ease-out;
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-4);
+	opacity: 1;
+	transform: translateY(0) scale(1);
+	transform-origin: bottom right;
+	transition:
+		opacity 0.22s ease,
+		transform 0.22s ease,
+		filter 0.22s ease;
+	animation: DiceCalculatorPanelIn 0.2s ease-out;
 }
 
-@keyframes slideIn {
+.DiceCalculator__panel.is_closing {
+	opacity: 0;
+	transform: translateY(8px) scale(0.98);
+	filter: blur(1px);
+	pointer-events: none;
+}
+
+@keyframes DiceCalculatorPanelIn {
 	from {
 		opacity: 0;
-		transform: translateY(10px);
+		transform: translateY(10px) scale(0.98);
 	}
 
 	to {
 		opacity: 1;
-		transform: translateY(0);
+		transform: translateY(0) scale(1);
 	}
 }
 

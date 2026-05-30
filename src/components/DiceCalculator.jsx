@@ -13,9 +13,11 @@ import "../assets/components/DiceCalculator.css";
 
 const PLAYER_QUESTIONS_ROLL_CONTEXT = "playerQuestions";
 const PLAYER_QUESTIONS_HIDE_DELAY_MS = 2200;
+const PANEL_HIDE_ANIMATION_MS = 220;
 
 export default function DiceCalculator() {
 	const [isOpen, setIsOpen] = useState(false);
+	const [isPanelMounted, setIsPanelMounted] = useState(false);
 	const [isRolling, setIsRolling] = useState(false);
 	const [history, setHistory] = useState([]);
 	const [lastResult, setLastResult] = useState(null);
@@ -27,6 +29,7 @@ export default function DiceCalculator() {
 	const rollingTimeoutRef = useRef(null);
 	const rollingAnimationFrameRef = useRef(null);
 	const autoCloseTimeoutRef = useRef(null);
+	const panelUnmountTimeoutRef = useRef(null);
 
 	const diceTypes = [4, 6, 8, 10, 12, 20, 100];
 	const formulaHelp = (
@@ -61,6 +64,30 @@ export default function DiceCalculator() {
 	}, []);
 
 	useEffect(() => {
+		if (panelUnmountTimeoutRef.current) {
+			clearTimeout(panelUnmountTimeoutRef.current);
+			panelUnmountTimeoutRef.current = null;
+		}
+
+		if (isOpen) {
+			setIsPanelMounted(true);
+			return undefined;
+		}
+
+		panelUnmountTimeoutRef.current = setTimeout(() => {
+			setIsPanelMounted(false);
+			panelUnmountTimeoutRef.current = null;
+		}, PANEL_HIDE_ANIMATION_MS);
+
+		return () => {
+			if (panelUnmountTimeoutRef.current) {
+				clearTimeout(panelUnmountTimeoutRef.current);
+				panelUnmountTimeoutRef.current = null;
+			}
+		};
+	}, [isOpen]);
+
+	useEffect(() => {
 		if (!isOpen) return undefined;
 
 		const handlePointerDown = (e) => {
@@ -83,6 +110,9 @@ export default function DiceCalculator() {
 			}
 			if (autoCloseTimeoutRef.current) {
 				clearTimeout(autoCloseTimeoutRef.current);
+			}
+			if (panelUnmountTimeoutRef.current) {
+				clearTimeout(panelUnmountTimeoutRef.current);
 			}
 			if (rollingAnimationFrameRef.current) {
 				cancelAnimationFrame(rollingAnimationFrameRef.current);
@@ -257,8 +287,12 @@ export default function DiceCalculator() {
 			ref={rootRef}
 			className={classNames("DiceCalculator", { is_open: isOpen })}
 		>
-			{isOpen && (
-				<div className="DiceCalculator__panel">
+			{isPanelMounted && (
+				<div
+					className={classNames("DiceCalculator__panel", {
+						is_closing: !isOpen,
+					})}
+				>
 					<div className="DiceCalculator__header">
 						<span>{lang.t("Dice Roller")}</span>
 						<Button
