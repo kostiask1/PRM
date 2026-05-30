@@ -8,6 +8,7 @@ import ListCard from "./common/ListCard";
 import DraggableList from "./common/DraggableList";
 import ImageGallery from "./ImageGallery";
 import { openRulesReferenceModal } from "./modals/openRulesReferenceModal";
+import PlayerQuestionsModalContent from "./modals/PlayerQuestionsModalContent";
 import SettingsModalContent from "./modals/SettingsModalContent";
 import { downloadBlob } from "../utils/download";
 import {
@@ -122,6 +123,16 @@ export default function Sidebar({
 
 	const handleOpenRulesReference = () => {
 		openRulesReferenceModal();
+	};
+
+	const handleOpenPlayerQuestions = () => {
+		openModalRequest({
+			title: "Питання до гравців",
+			type: "confirm",
+			className: "PlayerQuestionsModal",
+			showFooter: false,
+			children: <PlayerQuestionsModalContent />,
+		});
 	};
 
 	const handleOpenSettings = () => {
@@ -323,6 +334,16 @@ export default function Sidebar({
 							className="Sidebar__resource_item"
 						>
 							<Icon name="wand" size={16} /> <span>Map Architect (AI)</span>
+						</a>
+						<a
+							href="#"
+							className="Sidebar__resource_item"
+							onClick={(e) => {
+								e.preventDefault();
+								handleOpenPlayerQuestions();
+							}}
+						>
+							<Icon name="help" size={16} /> <span>Питання до гравців</span>
 						</a>
 					</div>
 				</div>

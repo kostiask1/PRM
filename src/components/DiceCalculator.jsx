@@ -11,6 +11,9 @@ import { lang } from "../services/localization";
 
 import "../assets/components/DiceCalculator.css";
 
+const PLAYER_QUESTIONS_ROLL_CONTEXT = "playerQuestions";
+const PLAYER_QUESTIONS_HIDE_DELAY_MS = 2200;
+
 export default function DiceCalculator() {
 	const [isOpen, setIsOpen] = useState(false);
 	const [isRolling, setIsRolling] = useState(false);
@@ -23,6 +26,7 @@ export default function DiceCalculator() {
 	const processedRollRequestIdRef = useRef(null);
 	const rollingTimeoutRef = useRef(null);
 	const rollingAnimationFrameRef = useRef(null);
+	const autoCloseTimeoutRef = useRef(null);
 
 	const diceTypes = [4, 6, 8, 10, 12, 20, 100];
 	const formulaHelp = (
@@ -77,6 +81,9 @@ export default function DiceCalculator() {
 			if (rollingTimeoutRef.current) {
 				clearTimeout(rollingTimeoutRef.current);
 			}
+			if (autoCloseTimeoutRef.current) {
+				clearTimeout(autoCloseTimeoutRef.current);
+			}
 			if (rollingAnimationFrameRef.current) {
 				cancelAnimationFrame(rollingAnimationFrameRef.current);
 			}
@@ -114,6 +121,17 @@ export default function DiceCalculator() {
 			setHistory((prev) => [entry, ...prev].slice(0, 10));
 			setIsOpen(true);
 			dispatch(publishDiceResultAction(entry, context));
+
+			if (autoCloseTimeoutRef.current) {
+				clearTimeout(autoCloseTimeoutRef.current);
+				autoCloseTimeoutRef.current = null;
+			}
+			if (context?.type === PLAYER_QUESTIONS_ROLL_CONTEXT) {
+				autoCloseTimeoutRef.current = setTimeout(() => {
+					setIsOpen(false);
+					autoCloseTimeoutRef.current = null;
+				}, PLAYER_QUESTIONS_HIDE_DELAY_MS);
+			}
 		},
 		[dispatch],
 	);

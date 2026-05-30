@@ -1,0 +1,71 @@
+.PlayerQuestionsModal {
+	width: min(96vw, 980px);
+	height: min(90vh, 820px);
+}
+
+.PlayerQuestionsModalContent {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-4);
+	height: 100%;
+	overflow-y: auto;
+}
+
+.PlayerQuestionsModalContent__toolbar {
+	position: sticky;
+	top: 0;
+	z-index: 2;
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+	padding: var(--space-2) var(--space-2);
+	border-radius: var(--radius-md);
+	background: var(--panel);
+	border-bottom: 1px solid color-mix(in srgb, var(--border), transparent 45%);
+}
+
+.PlayerQuestionsModalContent__rollResult {
+	color: var(--muted);
+	font-size: 0.9rem;
+}
+
+.PlayerQuestionsModalContent__list {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+	padding: var(--space-1);
+	margin: 0;
+	list-style: none;
+}
+
+.PlayerQuestionsModalContent__item {
+	display: flex;
+	gap: var(--space-3);
+	align-items: start;
+	padding: var(--space-3);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: color-mix(in srgb, var(--panel-2), transparent 35%);
+	scroll-margin-top: 5rem;
+	transition:
+		border-color 0.15s ease,
+		background 0.15s ease,
+		box-shadow 0.15s ease;
+}
+
+.PlayerQuestionsModalContent__item__active {
+	border-color: var(--accent);
+	background: color-mix(in srgb, var(--accent), var(--panel) 86%);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent), transparent 70%);
+}
+
+.PlayerQuestionsModalContent__number {
+	color: var(--muted);
+	font-weight: 700;
+	text-align: right;
+}
+
+.PlayerQuestionsModalContent__question {
+	line-height: 1.45;
+	white-space: normal;
+}
