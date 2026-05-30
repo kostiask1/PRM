@@ -11,6 +11,7 @@ import { useAppDispatch, useAppSelector } from "../../store/appStore";
 
 const QUESTION_ROLL_CONTEXT = "playerQuestions";
 const SCROLL_DURATION_MS = 260;
+const SEARCH_DEBOUNCE_MS = 250;
 const QUESTIONS_COUNT = questions.length;
 const STANDARD_DICE = [100, 20, 12, 10, 8, 6, 4];
 
@@ -97,6 +98,7 @@ export default function PlayerQuestionsModalContent() {
 	const listRef = useRef(null);
 	const rootRef = useRef(null);
 	const questionRefs = useRef({});
+	const searchDebounceTimeoutRef = useRef(null);
 	const [activeQuestionId, setActiveQuestionId] = useState(null);
 	const [questionSearch, setQuestionSearch] = useState("");
 	const [isListReady, setIsListReady] = useState(false);
@@ -105,6 +107,15 @@ export default function PlayerQuestionsModalContent() {
 	useLayoutEffect(() => {
 		setIsListReady(Boolean(rootRef.current));
 	}, []);
+
+	useEffect(
+		() => () => {
+			if (searchDebounceTimeoutRef.current) {
+				clearTimeout(searchDebounceTimeoutRef.current);
+			}
+		},
+		[],
+	);
 
 	const scrollToQuestionId = useCallback((questionId) => {
 		setActiveQuestionId(questionId);
@@ -133,6 +144,10 @@ export default function PlayerQuestionsModalContent() {
 		}
 
 		setQuestionSearch(String(questionId));
+		if (searchDebounceTimeoutRef.current) {
+			clearTimeout(searchDebounceTimeoutRef.current);
+			searchDebounceTimeoutRef.current = null;
+		}
 		scrollToQuestionId(questionId);
 	}, [rolledResult, scrollToQuestionId]);
 
@@ -147,6 +162,11 @@ export default function PlayerQuestionsModalContent() {
 
 	const handleQuestionSearchChange = (event) => {
 		const digits = event.target.value.replace(/\D+/g, "");
+		if (searchDebounceTimeoutRef.current) {
+			clearTimeout(searchDebounceTimeoutRef.current);
+			searchDebounceTimeoutRef.current = null;
+		}
+
 		if (!digits) {
 			setQuestionSearch("");
 			return;
@@ -154,7 +174,10 @@ export default function PlayerQuestionsModalContent() {
 
 		const questionId = Math.max(1, Math.min(Number(digits), QUESTIONS_COUNT));
 		setQuestionSearch(String(questionId));
-		scrollToQuestionId(questionId);
+		searchDebounceTimeoutRef.current = setTimeout(() => {
+			scrollToQuestionId(questionId);
+			searchDebounceTimeoutRef.current = null;
+		}, SEARCH_DEBOUNCE_MS);
 	};
 
 	const handleQuestionClick = (event, questionId) => {
