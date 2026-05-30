@@ -15,6 +15,15 @@ const PLAYER_QUESTIONS_ROLL_CONTEXT = "playerQuestions";
 const PLAYER_QUESTIONS_HIDE_DELAY_MS = 2200;
 const PANEL_HIDE_ANIMATION_MS = 220;
 
+function isSingleDieRoll(result) {
+	return (
+		/^1d\d+$/i.test(String(result?.formula || "").replace(/\s+/g, "")) &&
+		Array.isArray(result?.breakdown) &&
+		result.breakdown.length === 1 &&
+		result.breakdown[0]?.max
+	);
+}
+
 export default function DiceCalculator() {
 	const [isOpen, setIsOpen] = useState(false);
 	const [isPanelMounted, setIsPanelMounted] = useState(false);
@@ -282,6 +291,14 @@ export default function DiceCalculator() {
 		} / ${lang.t("Max")} ${result.max}`;
 	}, []);
 
+	const renderHistoryBreakdown = useCallback(
+		(roll) => {
+			if (isSingleDieRoll(roll)) return null;
+			return <span className="muted">({renderBreakdown(roll.breakdown)})</span>;
+		},
+		[renderBreakdown],
+	);
+
 	return (
 		<div
 			ref={rootRef}
@@ -448,9 +465,7 @@ export default function DiceCalculator() {
 													</span>
 												</strong>
 											</span>
-											<span className="muted">
-												({renderBreakdown(roll.breakdown)})
-											</span>
+											{renderHistoryBreakdown(roll)}
 										</div>
 									</Tooltip>
 								</div>
