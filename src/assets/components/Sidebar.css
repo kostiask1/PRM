@@ -354,3 +354,133 @@
 .Sidebar .DraggableList>div:hover>.DraggableList__handle:hover {
 	border-radius: var(--radius-xxs);
 }
+
+@media (max-height: 899px) {
+	.Sidebar {
+		padding: var(--space-2) 0;
+		gap: var(--space-1);
+	}
+
+	.Sidebar.Sidebar__hovered,
+	.Sidebar.Sidebar__select_open {
+		padding: var(--space-2);
+	}
+
+	.Sidebar__header,
+	.Sidebar__section,
+	.Sidebar__footer,
+	.Sidebar__footerGrid {
+		gap: var(--space-1);
+	}
+
+	.Sidebar__link {
+		gap: var(--space-1);
+		padding: var(--space-1) var(--space-2);
+		font-size: 0.88rem;
+		min-height: var(--size-8);
+	}
+
+	.Sidebar:not(.Sidebar__hovered):not(.Sidebar__select_open) .Sidebar__link,
+	.Sidebar:not(.Sidebar__hovered):not(.Sidebar__select_open) .Button,
+	.Sidebar:not(.Sidebar__hovered):not(.Sidebar__select_open) .Sidebar__card {
+		width: var(--size-8);
+		height: var(--size-8);
+	}
+
+	.Sidebar__title,
+	.Sidebar__sectionTitle {
+		font-size: 0.9rem;
+		line-height: 1.2;
+		margin: 0;
+	}
+
+	.Sidebar__title {
+		min-height: 1.2em;
+	}
+
+	.Sidebar:not(.Sidebar__hovered):not(.Sidebar__select_open) .Sidebar__title {
+		min-height: 1.2em;
+		width: 100%;
+	}
+
+	.Sidebar__headerSection {
+		min-height: 1.2em;
+	}
+
+	.Sidebar__description {
+		display: none;
+	}
+
+	.Sidebar .Button__create {
+		min-height: var(--size-8);
+		padding: 0 var(--space-2);
+		font-size: 0.8rem;
+	}
+
+	.Sidebar .Button__footer {
+		min-height: var(--size-7);
+		font-size: 0.74rem;
+	}
+
+	.Sidebar__list .ListCard {
+		align-items: stretch;
+		height: var(--size-8);
+		margin-bottom: 4px;
+		overflow: hidden;
+	}
+
+	.ListCard__sidebar_content {
+		height: var(--size-8);
+		gap: var(--space-1);
+		padding: 0 var(--space-2);
+	}
+
+	.Sidebar .ListCard__main {
+		display: flex;
+		align-items: center;
+		padding-top: 0;
+		padding-bottom: 0;
+		min-height: 0;
+	}
+
+	.Sidebar .ListCard__actions {
+		align-items: center;
+		padding-right: var(--space-1);
+	}
+
+	.Sidebar .StatusBadge {
+		padding: 2px var(--space-1);
+		font-size: 0.68rem;
+		line-height: 1;
+	}
+
+	.Sidebar .ListCard__title {
+		font-size: 0.84rem;
+		margin-bottom: 0;
+	}
+
+	.Sidebar .ListCard__meta {
+		display: none;
+	}
+
+	.Sidebar:not(.Sidebar__hovered):not(.Sidebar__select_open) .ListCard__sidebar_content {
+		width: var(--size-8);
+	}
+
+	.Sidebar__resource_item {
+		box-sizing: border-box;
+		height: var(--size-6);
+		gap: var(--space-1);
+		font-size: 0.76rem;
+		padding: 2px 0;
+	}
+
+	.Sidebar:not(.Sidebar__hovered):not(.Sidebar__select_open) .Sidebar__resource_item {
+		width: var(--size-8);
+		height: var(--size-6);
+	}
+
+	.Sidebar__footer {
+		padding-top: var(--space-1);
+	}
+}
