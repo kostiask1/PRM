@@ -12,6 +12,7 @@ import { useAppDispatch, useAppSelector } from "../../store/appStore";
 const QUESTION_ROLL_CONTEXT = "playerQuestions";
 const SCROLL_DURATION_MS = 260;
 const QUESTIONS_COUNT = questions.length;
+const STANDARD_DICE = [100, 20, 12, 10, 8, 6, 4];
 
 function easeOutCubic(value) {
 	return 1 - Math.pow(1 - value, 3);
@@ -43,6 +44,52 @@ function scrollToQuestion(container, target) {
 	requestAnimationFrame(step);
 }
 
+function getStandardDiceFactors(target) {
+	const cache = new Map();
+
+	function findFactors(value) {
+		if (value === 1) return [];
+		if (cache.has(value)) return cache.get(value);
+
+		let best = null;
+		STANDARD_DICE.forEach((sides) => {
+			if (value % sides !== 0) return;
+
+			const rest = findFactors(value / sides);
+			if (!rest) return;
+
+			const candidate = [sides, ...rest];
+			if (
+				!best ||
+				candidate.length < best.length ||
+				(candidate.length === best.length &&
+					candidate.join(",") > best.join(","))
+			) {
+				best = candidate;
+			}
+		});
+
+		cache.set(value, best);
+		return best;
+	}
+
+	return findFactors(target);
+}
+
+function getQuestionRollFormula(count) {
+	const factors = getStandardDiceFactors(count);
+	if (!factors?.length) return `1d${count}`;
+	if (factors.length === 1) return `1d${factors[0]}`;
+
+	return factors.reduce((formula, sides, index) => {
+		if (index === 0) return `(1d${sides} - 1)`;
+		if (index === factors.length - 1) {
+			return `(${formula} * ${sides}) + 1d${sides}`;
+		}
+		return `(${formula} * ${sides}) + (1d${sides} - 1)`;
+	}, "");
+}
+
 export default function PlayerQuestionsModalContent() {
 	const dispatch = useAppDispatch();
 	const rolledResult = useAppSelector((state) => state.dice.rolledResult);
@@ -56,6 +103,7 @@ export default function PlayerQuestionsModalContent() {
 	const [activeQuestionId, setActiveQuestionId] = useState(null);
 	const [questionSearch, setQuestionSearch] = useState("");
 	const [isListReady, setIsListReady] = useState(false);
+	const questionRollFormula = getQuestionRollFormula(QUESTIONS_COUNT);
 
 	useLayoutEffect(() => {
 		setIsListReady(Boolean(rootRef.current));
@@ -94,7 +142,7 @@ export default function PlayerQuestionsModalContent() {
 	const rollQuestion = () => {
 		dispatch(
 			requestDiceRollAction({
-				formula: `1d${QUESTIONS_COUNT}`,
+				formula: questionRollFormula,
 				context: { type: QUESTION_ROLL_CONTEXT },
 			}),
 		);
@@ -173,8 +221,8 @@ export default function PlayerQuestionsModalContent() {
 				</div>
 				<div className="PlayerQuestionsModalContent__hint">
 					{lang.t(
-						"Alternative: 1d6 - 1 gives the hundreds (0-5), then 1d100 gives the number in that hundred.",
-						{ count: QUESTIONS_COUNT },
+						"Standard dice formula for {count} questions: {formula}",
+						{ count: QUESTIONS_COUNT, formula: questionRollFormula },
 					)}
 				</div>
 			</div>
