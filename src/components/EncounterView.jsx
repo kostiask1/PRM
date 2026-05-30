@@ -92,6 +92,8 @@ function EncounterView(props) {
 	const [hpDrafts, setHpDrafts] = useState({});
 	const gridItemRefs = useRef(new Map());
 	const focusTimeoutRef = useRef(null);
+	const headerActionsRef = useRef(null);
+	const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);
 	const view = useEncounterView({
 		campaign,
 		sessionId,
@@ -155,6 +157,20 @@ function EncounterView(props) {
 			}
 		};
 	}, []);
+
+	useEffect(() => {
+		if (!isHeaderActionsOpen) return undefined;
+
+		const handlePointerDown = (event) => {
+			if (headerActionsRef.current?.contains(event.target)) return;
+			setIsHeaderActionsOpen(false);
+		};
+
+		document.addEventListener("pointerdown", handlePointerDown);
+		return () => {
+			document.removeEventListener("pointerdown", handlePointerDown);
+		};
+	}, [isHeaderActionsOpen]);
 
 	if (!view.encounter) {
 		return (
@@ -436,79 +452,96 @@ function EncounterView(props) {
 						)}
 					</div>
 				</div>
-				<div className="EncounterView__headerActions">
-					<div className="EncounterView__viewModeSwitch">
+				<div
+					ref={headerActionsRef}
+					className={classNames("EncounterView__headerActions", {
+						is_open: isHeaderActionsOpen,
+					})}
+				>
+					<Button
+						variant="ghost"
+						size={Button.SIZES.SMALL}
+						icon="menu"
+						className="EncounterView__headerActionsToggle"
+						onClick={() => setIsHeaderActionsOpen((value) => !value)}
+						title={lang.t("Encounter actions")}
+					/>
+					<div className="EncounterView__headerActionsMenu">
+						<div className="EncounterView__viewModeSwitch">
+							<Button
+								variant={
+									effectiveDisplayMode === "single" ? "primary" : "ghost"
+								}
+								size={Button.SIZES.SMALL}
+								icon="list"
+								onClick={() => updateEncounterViewMode("single")}
+								title={lang.t("Preview")}
+							/>
+							<Button
+								variant={effectiveDisplayMode === "grid" ? "primary" : "ghost"}
+								size={Button.SIZES.SMALL}
+								icon="layers"
+								onClick={() => updateEncounterViewMode("grid")}
+								disabled={displayedMonsterCount === 1}
+								title={lang.t("All")}
+							/>
+						</div>
+						{effectiveDisplayMode === "grid" && (
+							<div
+								className="EncounterView__gridColumnsSwitch"
+								aria-label={lang.t("Grid columns")}
+							>
+								{[1, 2, 3, 4].map((columns) => (
+									<Button
+										key={columns}
+										variant={gridColumns === columns ? "primary" : "ghost"}
+										size={Button.SIZES.SMALL}
+										onClick={() => updateEncounterGridColumns(columns)}
+										title={lang.t("{count} columns", { count: columns })}
+									>
+										{columns}
+									</Button>
+								))}
+							</div>
+						)}
 						<Button
-							variant={effectiveDisplayMode === "single" ? "primary" : "ghost"}
+							variant="ghost"
 							size={Button.SIZES.SMALL}
-							icon="list"
-							onClick={() => updateEncounterViewMode("single")}
-							title={lang.t("Preview")}
+							icon="undo"
+							onClick={view.handleUndo}
+							disabled={view.undoStack.length === 0 || view.isSaving}
+							title={lang.t("Undo (Ctrl+Z)")}
 						/>
 						<Button
-							variant={effectiveDisplayMode === "grid" ? "primary" : "ghost"}
+							variant="ghost"
 							size={Button.SIZES.SMALL}
-							icon="layers"
-							onClick={() => updateEncounterViewMode("grid")}
-							disabled={displayedMonsterCount === 1}
-							title={lang.t("All")}
+							icon="redo"
+							onClick={view.handleRedo}
+							disabled={view.redoStack.length === 0 || view.isSaving}
+							title={lang.t("Redo (Ctrl+Y)")}
+						/>
+						<input
+							type="file"
+							ref={view.fileInputRef}
+							style={{ display: "none" }}
+							accept=".json"
+							onChange={view.handleFileChange}
+						/>
+						<Button
+							variant="ghost"
+							size={Button.SIZES.SMALL}
+							icon="import"
+							onClick={() => view.fileInputRef.current?.click()}
+							title={lang.t("Import encounter")}
+						/>
+						<Button
+							variant="ghost"
+							size={Button.SIZES.SMALL}
+							icon="export"
+							onClick={view.handleExport}
+							title={lang.t("Export encounter")}
 						/>
 					</div>
-					{effectiveDisplayMode === "grid" && (
-						<div
-							className="EncounterView__gridColumnsSwitch"
-							aria-label={lang.t("Grid columns")}
-						>
-							{[1, 2, 3, 4].map((columns) => (
-								<Button
-									key={columns}
-									variant={gridColumns === columns ? "primary" : "ghost"}
-									size={Button.SIZES.SMALL}
-									onClick={() => updateEncounterGridColumns(columns)}
-									title={lang.t("{count} columns", { count: columns })}
-								>
-									{columns}
-								</Button>
-							))}
-						</div>
-					)}
-					<Button
-						variant="ghost"
-						size={Button.SIZES.SMALL}
-						icon="undo"
-						onClick={view.handleUndo}
-						disabled={view.undoStack.length === 0 || view.isSaving}
-						title={lang.t("Undo (Ctrl+Z)")}
-					/>
-					<Button
-						variant="ghost"
-						size={Button.SIZES.SMALL}
-						icon="redo"
-						onClick={view.handleRedo}
-						disabled={view.redoStack.length === 0 || view.isSaving}
-						title={lang.t("Redo (Ctrl+Y)")}
-					/>
-					<input
-						type="file"
-						ref={view.fileInputRef}
-						style={{ display: "none" }}
-						accept=".json"
-						onChange={view.handleFileChange}
-					/>
-					<Button
-						variant="ghost"
-						size={Button.SIZES.SMALL}
-						icon="import"
-						onClick={() => view.fileInputRef.current?.click()}
-						title={lang.t("Import encounter")}
-					/>
-					<Button
-						variant="ghost"
-						size={Button.SIZES.SMALL}
-						icon="export"
-						onClick={view.handleExport}
-						title={lang.t("Export encounter")}
-					/>
 				</div>
 			</div>
 			<div className="Panel__body EncounterView__body">
@@ -560,17 +593,24 @@ function EncounterView(props) {
 													{renderMentionText(displayName)}
 												</div>
 											) : (
-												<Tooltip content={lang.t("Click to rename")}>
-													<div
-														className="EncounterMonsterRow__name editable_title"
-														onClick={(e) => {
-															e.stopPropagation();
-															view.handleRenameMonster(m.instanceId, m.name);
-														}}
-													>
+												<div className="EncounterMonsterRow__nameWrap">
+													<div className="EncounterMonsterRow__name">
 														{renderMentionText(displayName)}
 													</div>
-												</Tooltip>
+													<Tooltip content={lang.t("Click to rename")}>
+														<Button
+															variant="ghost"
+															size={Button.SIZES.SMALL}
+															icon="edit"
+															className="EncounterMonsterRow__renameBtn"
+															onClick={(e) => {
+																e.stopPropagation();
+																view.handleRenameMonster(m.instanceId, m.name);
+															}}
+															title={lang.t("Click to rename")}
+														/>
+													</Tooltip>
+												</div>
 											)}
 											<div className="EncounterMonsterRow__stats">
 												{isCharacter ? (

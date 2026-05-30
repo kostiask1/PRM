@@ -159,16 +159,42 @@
 	min-width: 0;
 }
 
+.EncounterMonsterRow__nameWrap {
+	display: flex;
+	align-items: center;
+	gap: var(--space-1);
+	max-width: 250px;
+	margin-bottom: var(--space-1);
+}
+
 .EncounterMonsterRow__content .EncounterMonsterRow__name {
 	display: inline-block;
 	font-weight: 700;
 	font-size: 0.95rem;
-	max-width: 250px;
+	min-width: 0;
 	color: var(--text-bright);
-	margin-bottom: var(--space-1);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+}
+
+.EncounterMonsterRow__renameBtn {
+	flex: 0 0 auto;
+	padding: 0 !important;
+	min-width: 22px !important;
+	width: 22px !important;
+	height: 22px !important;
+	min-height: 22px !important;
+	opacity: 0.65;
+}
+
+.EncounterMonsterRow__renameBtn:hover {
+	opacity: 1;
+}
+
+.EncounterMonsterRow__renameBtn svg {
+	width: 13px;
+	height: 13px;
 }
 
 .EncounterMonsterRow__stats {
@@ -275,6 +301,16 @@
 }
 
 .EncounterView__headerActions {
+	display: flex;
+	gap: var(--space-2);
+	position: relative;
+}
+
+.EncounterView__headerActionsToggle {
+	display: none !important;
+}
+
+.EncounterView__headerActionsMenu {
 	display: flex;
 	gap: var(--space-2);
 }
@@ -451,4 +487,60 @@
 .EncounterCharacterPicker__meta {
 	color: var(--muted);
 	font-size: 0.85rem;
+}
+
+@media (max-width: 1599px) {
+	.EncounterView .Panel__header {
+		padding: var(--space-2) var(--space-3);
+	}
+
+	.EncounterView__metrics {
+		gap: var(--space-1);
+	}
+
+	.EncounterViewMetric {
+		min-width: 68px;
+		padding: var(--space-1) var(--space-2);
+	}
+
+	.EncounterViewMetric__label {
+		font-size: 0.58rem;
+	}
+
+	.EncounterViewMetric__value {
+		font-size: 0.88rem;
+	}
+
+	.EncounterView__headerActions {
+		margin-left: var(--space-1);
+	}
+
+	.EncounterView__headerActionsToggle {
+		display: inline-flex !important;
+	}
+
+	.EncounterView__headerActionsMenu {
+		position: absolute;
+		top: calc(100% + var(--space-1));
+		right: 0;
+		z-index: 20;
+		display: none;
+		align-items: center;
+		gap: var(--space-2);
+		padding: var(--space-2);
+		border: 1px solid color-mix(in srgb, var(--border), transparent 35%);
+		border-radius: var(--radius-md);
+		background: var(--panel);
+		box-shadow: var(--shadow);
+	}
+
+	.EncounterView__headerActions.is_open .EncounterView__headerActionsMenu {
+		display: flex;
+	}
+
+	.EncounterView__viewModeSwitch,
+	.EncounterView__gridColumnsSwitch {
+		padding-right: var(--space-2);
+		margin-right: 0;
+	}
 }
