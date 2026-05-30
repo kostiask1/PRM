@@ -699,7 +699,7 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 		const ratio = max > 0 ? Math.min(Math.max(0, current / max), 1) : 0;
 		const hue = ratio * 110;
 		return `hsl(${hue}, 80%, ${storeTheme === "dark" ? "60" : "43"}%)`;
-	}, []);
+	}, [storeTheme]);
 
 	const initiativeStats = useMemo(() => {
 		const monsters = encounter?.monsters || [];
