@@ -305,7 +305,7 @@
 	"Imported custom creatures: {count}": "Імпортовано кастомних істот: {count}",
 	"Include in AI context": "Додавати в контекст ШІ",
 	"Indexing database...": "Індексація бази даних...",
-	"Instead of rolling 1d{count}, you can roll (1d6 - 1) + 1d100 + 1d10.": "Замість кидка 1d{count} можна кинути (1d6 - 1) + 1d100 + 1d10.",
+	"Alternative: 1d6 - 1 gives the hundreds (0-5), then 1d100 gives the number in that hundred.": "Альтернатива: 1d6 - 1 дає сотні (0-5), а 1d100 - номер у цій сотні.",
 	"Invalid draft changes": "Некоректні зміни чернетки",
 	"Invalid file format (monster list is missing)": "Невірний формат файлу (відсутній список монстрів)",
 	"Invalid JSON.": "Некоректний JSON.",
