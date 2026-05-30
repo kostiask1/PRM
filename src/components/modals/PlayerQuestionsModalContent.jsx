@@ -173,7 +173,7 @@ export default function PlayerQuestionsModalContent() {
 				</div>
 				<div className="PlayerQuestionsModalContent__hint">
 					{lang.t(
-						"Instead of rolling 1d{count}, you can roll 1d6 + 1d100 + 1d10.",
+						"Instead of rolling 1d{count}, you can roll (1d6 - 1) + 1d100 + 1d10.",
 						{ count: QUESTIONS_COUNT },
 					)}
 				</div>
