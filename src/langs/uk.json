@@ -6,6 +6,7 @@
 	"{level}-level": "{level} рівень",
 	"{name} added to encounter.": "{name} додано до бою.",
 	"{type}: {name}": "{type}: {name}",
+	"* and () — multiply and group, e.g. (1d6-1)*100": "* і () — множення та групування, наприклад (1d6-1)*100",
 	"+/- number — add or subtract modifiers, e.g. 1d20+5": "+/- число — додати або відняти модифікатор, наприклад 1d20+5",
 	"A new version is available. Update the page now?": "Доступна нова версія. Оновити сторінку зараз?",
 	"A quick overview of what this campaign manager can do.": "Короткий огляд можливостей цього менеджера кампаній.",

@@ -2349,6 +2349,32 @@ await run(
 	},
 );
 
+await run("rollDiceFormula supports multiplication and parentheses", () => {
+	const originalRandom = Math.random;
+	const originalNow = Date.now;
+	let idx = 0;
+	const randomValues = [0.5, 0.99];
+
+	Math.random = () => randomValues[idx++];
+	Date.now = () => 67890;
+
+	try {
+		const result = rollDiceFormula("((1d6 - 1) * 100) + 1d100");
+		assert.equal(result.id, 67890);
+		assert.equal(result.formula, "((1d6 - 1) * 100) + 1d100");
+		assert.equal(result.total, 400);
+		assert.equal(result.expressionBreakdown, "(4 - 1) * 100 + 100");
+		assert.equal(result.min, 1);
+		assert.equal(result.max, 600);
+		assert.equal(result.average, 300);
+		assert.equal(result.isCritical, false);
+		assert.equal(result.breakdown.filter((entry) => entry.max).length, 2);
+	} finally {
+		Math.random = originalRandom;
+		Date.now = originalNow;
+	}
+});
+
 await run(
 	"conditions and reference resolvers use normalized keys and cache",
 	async () => {

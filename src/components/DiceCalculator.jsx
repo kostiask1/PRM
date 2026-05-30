@@ -49,6 +49,7 @@ export default function DiceCalculator() {
 			<ul>
 				<li>{lang.t("NdM — roll N dice with M sides, e.g. 2d20")}</li>
 				<li>{lang.t("+/- number — add or subtract modifiers, e.g. 1d20+5")}</li>
+				<li>{lang.t("* and () — multiply and group, e.g. (1d6-1)*100")}</li>
 				<li>{lang.t("hN — keep N highest dice, e.g. 5d6h3")}</li>
 				<li>{lang.t("lN — keep N lowest dice, e.g. 4d6l2")}</li>
 			</ul>
@@ -284,6 +285,13 @@ export default function DiceCalculator() {
 			.join("");
 	}, []);
 
+	const getRollBreakdownLabel = useCallback(
+		(result) => {
+			return result?.expressionBreakdown || getFullBreakdownString(result?.breakdown);
+		},
+		[getFullBreakdownString],
+	);
+
 	const getPotentialRangeLabel = useCallback((result) => {
 		if (result?.min === undefined || result?.max === undefined) return "";
 		return `${lang.t("Min")} ${result.min} / ${lang.t("Avg")} ${
@@ -294,6 +302,9 @@ export default function DiceCalculator() {
 	const renderHistoryBreakdown = useCallback(
 		(roll) => {
 			if (isSingleDieRoll(roll)) return null;
+			if (roll.expressionBreakdown) {
+				return <span className="muted">({roll.expressionBreakdown})</span>;
+			}
 			return <span className="muted">({renderBreakdown(roll.breakdown)})</span>;
 		},
 		[renderBreakdown],
@@ -329,12 +340,14 @@ export default function DiceCalculator() {
 							<div className="DiceCalculator__lastResult">
 								<Tooltip
 									delay={500}
-									content={`${lastResult.formula} (${getFullBreakdownString(lastResult.breakdown)})`}
+									content={`${lastResult.formula} (${getRollBreakdownLabel(lastResult)})`}
 								>
 									<div className="DiceCalculator__formulaLabel">
 										{lastResult.formula} (
 										<Tooltip delay={500} content={lang.t("Rolled values")}>
-											{renderBreakdown(lastResult.breakdown)})
+											{lastResult.expressionBreakdown ||
+												renderBreakdown(lastResult.breakdown)}
+											)
 										</Tooltip>
 									</div>
 								</Tooltip>
@@ -445,7 +458,7 @@ export default function DiceCalculator() {
 								>
 									<Tooltip
 										delay={750}
-										content={`${roll.formula} = ${roll.total} (${getFullBreakdownString(roll.breakdown)})`}
+										content={`${roll.formula} = ${roll.total} (${getRollBreakdownLabel(roll)})`}
 									>
 										<div className="DiceCalculator__historyInfo">
 											<span>
