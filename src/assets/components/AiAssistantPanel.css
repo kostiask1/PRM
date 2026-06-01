@@ -623,6 +623,11 @@
 	box-shadow: 0 0 0 1px color-mix(in srgb, #2da44e, transparent 62%);
 }
 
+.MonsterStatBlock .is_ai_changed_field {
+    padding: 8px!important;
+    margin:  0px -8px!important;
+}
+
 .AiAssistant__preview_card_surface .EditableField.is_ai_changed_field textarea,
 .AiAssistant__preview_card_surface .EditableField.is_ai_changed_field input,
 .AiAssistant__preview_note_surface .EditableField.is_ai_changed_field textarea,
