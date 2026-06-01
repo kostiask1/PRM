@@ -508,6 +508,28 @@ export default function useEncounterView() {
 		[encounter, applyEncounterUpdate],
 	);
 
+	const updateMonsterFromAi = useCallback(
+		(instanceId, nextMonster) => {
+			if (!encounter || !nextMonster) return;
+			const updatedMonsters = encounter.monsters.map((monster) => {
+				if (monster.instanceId !== instanceId) return monster;
+				const nextMaxHp =
+					parseInt(nextMonster.hit_points ?? nextMonster.hp?.average, 10) ||
+					parseInt(monster.hit_points, 10) ||
+					0;
+				return {
+					...nextMonster,
+					instanceId,
+					currentHp: Math.min(monster.currentHp ?? nextMaxHp, nextMaxHp),
+					hit_points: nextMaxHp,
+				};
+			});
+			const updated = { ...encounter, monsters: updatedMonsters };
+			applyEncounterUpdate(updated, { preferredId: instanceId });
+		},
+		[encounter, applyEncounterUpdate],
+	);
+
 	const handleRename = useCallback(async () => {
 		if (!encounter) return;
 		const name = await dispatch(
@@ -823,6 +845,7 @@ export default function useEncounterView() {
 		removeMonster,
 		updateMonsterHp,
 		updateMonsterMaxHp,
+		updateMonsterFromAi,
 		handleRenameMonster,
 		duplicateMonster,
 		rollMonsterHp,

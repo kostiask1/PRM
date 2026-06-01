@@ -4,6 +4,9 @@ import Button from "./form/Button";
 import Modal from "./common/Modal";
 import Bestiary from "./Bestiary";
 import AiAssistantPanel from "./ai/AiAssistantPanel";
+import BestiaryAiDraftModal from "./bestiary/BestiaryAiDraftModal";
+import MonsterAiActionModal from "./bestiary/MonsterAiActionModal";
+import MonsterAiEditModal from "./bestiary/MonsterAiEditModal";
 import MonsterStatBlock from "./MonsterStatBlock";
 import CharacterCard from "./CharacterCard";
 import Notification from "./common/Notification";
@@ -26,6 +29,49 @@ import {
 	hasMonsterHpFormula,
 	isEncounterCharacterParticipant,
 } from "../utils/encounters";
+import {
+	buildDiffResources,
+	getDiffResourceState as getAiDiffResourceState,
+} from "../utils/aiDiff";
+
+function isCustomSource(source) {
+	return String(source || "").toUpperCase() === "CUSTOM";
+}
+
+function getHistoryChangeSummary(entry) {
+	const resources = Array.isArray(entry?.changes?.resources)
+		? entry.changes.resources
+		: [];
+	const summary = entry?.changes?.summary || {};
+	const total = Number(summary.total) || resources.length || 0;
+	if (!total) return "";
+	const parts = [];
+	if (summary.added) parts.push(`+${summary.added}`);
+	if (summary.deleted) parts.push(`-${summary.deleted}`);
+	if (summary.modified) parts.push(`~${summary.modified}`);
+	return `${lang.t("Changes")}: ${parts.length ? parts.join(" ") : total}`;
+}
+
+function getDiffResourceState(resource) {
+	return getAiDiffResourceState(resource, {
+		added: lang.t("Added"),
+		deleted: lang.t("Deleted"),
+		modified: lang.t("Modified"),
+	});
+}
+
+function getFirstChangedMonster(entry, resourceIds = null) {
+	const ids = Array.isArray(resourceIds)
+		? new Set(resourceIds.map((id) => String(id || "")).filter(Boolean))
+		: null;
+	const resources = Array.isArray(entry?.changes?.resources)
+		? entry.changes.resources
+		: [];
+	const resource = resources.find(
+		(item) => item?.kind === "custom-monster" && (!ids || ids.has(item.id)),
+	);
+	return resource?.after || null;
+}
 
 function getGridMonsterKey(monster) {
 	const baseName = String(monster?.originalBestiaryName || monster?.name || "")
@@ -73,6 +119,12 @@ function resolveHpInputValue(inputValue, previousHp) {
 
 function EncounterView() {
 	const campaign = useAppSelector((state) => state.active.campaign);
+	const sessionId = useAppSelector(
+		(state) => state.navigation.activeSessionFileName,
+	);
+	const currentLanguage = useAppSelector(
+		(state) => state.localization.language,
+	);
 	const dispatch = useAppDispatch();
 	const displayMode = useAppSelector(
 		(state) => state.ui.encounterViewMode || "grid",
@@ -88,6 +140,18 @@ function EncounterView() {
 	);
 	const [isPlayerSubmitting, setIsPlayerSubmitting] = useState(false);
 	const [hpDrafts, setHpDrafts] = useState({});
+	const [aiActionMonster, setAiActionMonster] = useState(null);
+	const [aiEditingMonster, setAiEditingMonster] = useState(null);
+	const [aiEditMode, setAiEditMode] = useState("edit");
+	const [aiEditInstructions, setAiEditInstructions] = useState("");
+	const [aiEditError, setAiEditError] = useState("");
+	const [isAiEditingMonster, setIsAiEditingMonster] = useState(false);
+	const [aiModels, setAiModels] = useState([]);
+	const [selectedAiModel, setSelectedAiModel] = useState("");
+	const [aiDraftResponseEntry, setAiDraftResponseEntry] = useState(null);
+	const [isRestoringAiResponse, setIsRestoringAiResponse] = useState(false);
+	const [aiTargetInstanceId, setAiTargetInstanceId] = useState(null);
+	const aiDraftResponseRef = useRef(null);
 	const gridItemRefs = useRef(new Map());
 	const focusTimeoutRef = useRef(null);
 	const headerActionsRef = useRef(null);
@@ -124,6 +188,17 @@ function EncounterView() {
 		? gridRepresentativeByInstanceId.get(view.selectedInstance.instanceId) ||
 			view.selectedInstance.instanceId
 		: null;
+	const aiDraftDiffResources = useMemo(
+		() =>
+			buildDiffResources(aiDraftResponseEntry, {
+				labels: {
+					added: lang.t("Added"),
+					deleted: lang.t("Deleted"),
+					modified: lang.t("Modified"),
+				},
+			}),
+		[aiDraftResponseEntry],
+	);
 	const displayedMonsterCount = gridMonsters.length;
 	const effectiveDisplayMode =
 		displayedMonsterCount === 1 ? "single" : displayMode;
@@ -165,6 +240,23 @@ function EncounterView() {
 			document.removeEventListener("pointerdown", handlePointerDown);
 		};
 	}, [isHeaderActionsOpen]);
+
+	useEffect(() => {
+		if (!aiEditingMonster || aiModels.length > 0) return;
+		api
+			.listAiModels()
+			.then((result) => {
+				const models = Array.isArray(result?.models) ? result.models : [];
+				setAiModels(models);
+				setSelectedAiModel(
+					(current) => current || result?.defaultModel || models[0]?.name || "",
+				);
+			})
+			.catch((error) => {
+				console.error("Failed to load AI models", error);
+				setAiEditError(error.message || lang.t("Failed to connect to AI."));
+			});
+	}, [aiEditingMonster, aiModels.length]);
 
 	if (!view.encounter) {
 		return (
@@ -217,6 +309,149 @@ function EncounterView() {
 
 	const handleRenameMonster = (monster) => {
 		view.handleRenameMonster(monster.instanceId, monster.name);
+	};
+
+	const handleMonsterAiAction = (monster) => {
+		if (!monster?.name) return;
+		setAiTargetInstanceId(monster.instanceId || null);
+		if (isCustomSource(monster.source)) {
+			setAiActionMonster(monster);
+			return;
+		}
+		setAiEditMode("create-based");
+		setAiEditingMonster(monster);
+		setAiEditInstructions("");
+		setAiEditError("");
+	};
+
+	const closeMonsterAiAction = () => {
+		if (isAiEditingMonster) return;
+		setAiActionMonster(null);
+	};
+
+	const chooseMonsterAiAction = (mode) => {
+		if (!aiActionMonster) return;
+		const target = aiActionMonster;
+		setAiActionMonster(null);
+		setAiEditMode(mode);
+		setAiEditingMonster(target);
+		setAiEditInstructions("");
+		setAiEditError("");
+	};
+
+	const closeAiEditCustomMonster = () => {
+		if (isAiEditingMonster) return;
+		setAiEditingMonster(null);
+		setAiEditMode("edit");
+		setAiEditInstructions("");
+		setAiEditError("");
+	};
+
+	const saveAiEditedCustomMonster = async () => {
+		if (!aiEditingMonster?.name) return;
+		const instructions = aiEditInstructions.trim();
+		const isCreateBasedMode = aiEditMode === "create-based";
+		if (!instructions && !isCreateBasedMode) {
+			setAiEditError(lang.t("Describe what to change."));
+			return;
+		}
+		const finalInstructions = isCreateBasedMode
+			? [
+					lang.t(
+						"Create a new custom creature based on the selected creature. Do not change the selected creature.",
+					),
+					instructions,
+				]
+					.filter(Boolean)
+					.join("\n\n")
+			: instructions;
+
+		setIsAiEditingMonster(true);
+		setAiEditError("");
+		try {
+			const data = await api.generateAi({
+				type: "custom-monster",
+				modelName: selectedAiModel || undefined,
+				userInstructions: finalInstructions,
+				path: {
+					campaign: campaign.slug,
+					session: sessionId,
+					encounter: view.encounter?.id,
+				},
+				customMonsterTarget: aiEditingMonster,
+				customMonsterMode: aiEditMode,
+				parseAIResponse: true,
+				generateCharacters: false,
+				generateNpcs: false,
+				generateLocations: false,
+				generateEncounters: false,
+				entityScope: "custom-bestiary",
+				contextConfig: null,
+				language: currentLanguage,
+			});
+			if (data.draft && data.aiResponse) {
+				setAiDraftResponseEntry(data.aiResponse);
+			} else if (data.updated?.monsters?.length && aiTargetInstanceId) {
+				view.updateMonsterFromAi(aiTargetInstanceId, data.updated.monsters[0]);
+			}
+			setAiEditingMonster(null);
+			setAiEditMode("edit");
+			setAiEditInstructions("");
+		} catch (error) {
+			setAiEditError(error.message || lang.t("Unknown error"));
+		} finally {
+			setIsAiEditingMonster(false);
+		}
+	};
+
+	const saveAiDraftResponseChanges = async (resources) => {
+		if (!aiDraftResponseEntry?.id) return null;
+		const updatedEntry = await api.updateAiResponse("bestiary", aiDraftResponseEntry.id, {
+			resources,
+		});
+		if (updatedEntry) {
+			setAiDraftResponseEntry(updatedEntry);
+		}
+		return updatedEntry;
+	};
+
+	const restoreAiDraftResponse = async (
+		entry = aiDraftResponseEntry,
+		mode = "apply",
+		options = {},
+	) => {
+		if (!entry?.id || isRestoringAiResponse) return;
+		setIsRestoringAiResponse(true);
+		try {
+			const result =
+				mode === "undo"
+					? await api.undoAiResponse("bestiary", entry.id, {
+							resourceIds: options.resourceIds,
+						})
+					: await api.applyAiResponse("bestiary", entry.id, {
+							resourceIds: options.resourceIds,
+						});
+			const nextEntry = result?.response || entry;
+			setAiDraftResponseEntry(nextEntry);
+			const nextMonster = getFirstChangedMonster(nextEntry, options.resourceIds);
+			if (mode !== "undo" && nextMonster && aiTargetInstanceId) {
+				view.updateMonsterFromAi(aiTargetInstanceId, nextMonster);
+			}
+		} catch (error) {
+			dispatch(
+				alert({
+					title: lang.t("AI history error"),
+					message: error.message || lang.t("Unknown error"),
+				}),
+			);
+		} finally {
+			setIsRestoringAiResponse(false);
+		}
+	};
+
+	const closeAiDraftResponse = () => {
+		if (isRestoringAiResponse) return;
+		setAiDraftResponseEntry(null);
 	};
 
 	const handleHpInputChange = (instanceId, value) => {
@@ -587,23 +822,8 @@ function EncounterView() {
 													{renderMentionText(displayName)}
 												</div>
 											) : (
-												<div className="EncounterMonsterRow__nameWrap">
-													<div className="EncounterMonsterRow__name">
-														{renderMentionText(displayName)}
-													</div>
-													<Tooltip content={lang.t("Click to rename")}>
-														<Button
-															variant="ghost"
-															size={Button.SIZES.SMALL}
-															icon="edit"
-															className="EncounterMonsterRow__renameBtn"
-															onClick={(e) => {
-																e.stopPropagation();
-																view.handleRenameMonster(m.instanceId, m.name);
-															}}
-															title={lang.t("Click to rename")}
-														/>
-													</Tooltip>
+												<div className="EncounterMonsterRow__name">
+													{renderMentionText(displayName)}
 												</div>
 											)}
 											<div className="EncounterMonsterRow__stats">
@@ -736,6 +956,7 @@ function EncounterView() {
 											<MonsterStatBlock
 												monster={monster}
 												onNameRename={handleRenameMonster}
+												onAiAction={handleMonsterAiAction}
 												tokenImageOverrideUrl={view.getMonsterImageOverride(
 													monster,
 												)}
@@ -767,6 +988,7 @@ function EncounterView() {
 										<MonsterStatBlock
 											monster={view.selectedInstance}
 											onNameRename={handleRenameMonster}
+											onAiAction={handleMonsterAiAction}
 											tokenImageOverrideUrl={view.getMonsterImageOverride(
 												view.selectedInstance,
 											)}
@@ -909,6 +1131,43 @@ function EncounterView() {
 					/>
 				</Modal>
 			)}
+
+			<MonsterAiActionModal
+				aiActionMonster={aiActionMonster}
+				onCancel={closeMonsterAiAction}
+				onChoose={chooseMonsterAiAction}
+			/>
+			<MonsterAiEditModal
+				aiEditingMonster={aiEditingMonster}
+				aiEditError={aiEditError}
+				aiEditInstructions={aiEditInstructions}
+				aiEditMode={aiEditMode}
+				aiModels={aiModels}
+				isAiEditingMonster={isAiEditingMonster}
+				onCancel={closeAiEditCustomMonster}
+				onInstructionsChange={setAiEditInstructions}
+				onModelChange={setSelectedAiModel}
+				onSave={saveAiEditedCustomMonster}
+				selectedAiModel={selectedAiModel}
+			/>
+			<BestiaryAiDraftModal
+				aiDraftDiffResources={aiDraftDiffResources}
+				aiDraftResponseEntry={aiDraftResponseEntry}
+				aiDraftResponseRef={aiDraftResponseRef}
+				getDiffResourceState={getDiffResourceState}
+				getHistoryChangeSummary={getHistoryChangeSummary}
+				isRestoringAiResponse={isRestoringAiResponse}
+				onApply={(entry) => restoreAiDraftResponse(entry, "apply")}
+				onApplyResource={(entry, resourceIds) =>
+					restoreAiDraftResponse(entry, "apply", { resourceIds })
+				}
+				onCancel={closeAiDraftResponse}
+				onSaveDraftChanges={saveAiDraftResponseChanges}
+				onUndo={(entry) => restoreAiDraftResponse(entry, "undo")}
+				onUndoResource={(entry, resourceIds) =>
+					restoreAiDraftResponse(entry, "undo", { resourceIds })
+				}
+			/>
 
 			{view.notification && (
 				<Notification
