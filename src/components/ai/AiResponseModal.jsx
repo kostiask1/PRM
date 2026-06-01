@@ -391,6 +391,7 @@ export default function AiResponseModal({
 					showFavoriteAction={false}
 					allowTokenUpload={false}
 					searchHighlight=""
+					highlightFields={highlightFields}
 				/>
 			);
 		}

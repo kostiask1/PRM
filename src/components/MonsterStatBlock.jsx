@@ -48,6 +48,7 @@ export default function MonsterStatBlock({
 	onAddToEncounter,
 	onAiAction,
 	searchHighlight = "",
+	highlightFields = null,
 }) {
 	const dispatch = useAppDispatch();
 	const campaigns = useAppSelector((store) => store.campaigns.items);
@@ -61,6 +62,10 @@ export default function MonsterStatBlock({
 	const model = useMemo(() => new MonsterStatBlockModel(monster), [monster]);
 	const effectiveName = model.effectiveName;
 	const highlight = (value) => highlightText(value, searchHighlight);
+	const isFieldHighlighted = (...fields) =>
+		fields.some((field) => highlightFields?.fields?.includes?.(field));
+	const changedClass = (...fields) =>
+		isFieldHighlighted(...fields) ? "is_ai_changed_field" : "";
 
 	useEffect(() => {
 		if (favoriteActive !== null) {
@@ -173,10 +178,15 @@ export default function MonsterStatBlock({
 		setIsReplacingToken(false);
 	}, [monster, tokenImageOverrideUrl]);
 
-	const renderActionList = (actions, title) => {
+	const renderActionList = (actions, title, field) => {
 		if (!actions || actions.length === 0) return null;
 		return (
-			<div className="MonsterStatBlock__section">
+			<div
+				className={classNames(
+					"MonsterStatBlock__section",
+					changedClass(field),
+				)}
+			>
 				<h4>{title}:</h4>
 				{actions.map((action, index) => (
 					<div key={index} className="MonsterStatBlock__action">
@@ -218,7 +228,10 @@ export default function MonsterStatBlock({
 		return (
 			<Tooltip content={lang.t("Roll {label} check", { label })}>
 				<div
-					className="MonsterStatBlock__ability_box"
+					className={classNames(
+						"MonsterStatBlock__ability_box",
+						changedClass(abilityFieldByLabel[label]),
+					)}
 					onClick={() =>
 						dispatch(requestDiceRollAction(`1d20${formatModifier(mod)}`))
 					}
@@ -234,7 +247,12 @@ export default function MonsterStatBlock({
 	const renderSaves = () => {
 		if (model.saves.length === 0) return null;
 		return (
-			<div className="MonsterStatBlock__property_item">
+			<div
+				className={classNames(
+					"MonsterStatBlock__property_item",
+					changedClass("save"),
+				)}
+			>
 				<strong>Saving Throws:</strong>{" "}
 				{model.saves.map((s, idx) => (
 					<React.Fragment key={s.label}>
@@ -336,7 +354,12 @@ export default function MonsterStatBlock({
 		);
 
 		return (
-			<div className="MonsterStatBlock__section MonsterStatBlock__spells">
+			<div
+				className={classNames(
+					"MonsterStatBlock__section MonsterStatBlock__spells",
+					changedClass("spell_list"),
+				)}
+			>
 				<h4>Spells:</h4>
 				{sortedLevels.map((lvl) => (
 					<div key={lvl}>
@@ -358,7 +381,12 @@ export default function MonsterStatBlock({
 	const renderNewSpellcasting = () => {
 		if (!monster.spellcasting || monster.spellcasting.length === 0) return null;
 		return (
-			<div className="MonsterStatBlock__section MonsterStatBlock__spells">
+			<div
+				className={classNames(
+					"MonsterStatBlock__section MonsterStatBlock__spells",
+					changedClass("spellcasting"),
+				)}
+			>
 				{monster.spellcasting.map((sc, idx) => (
 					<div key={idx} className="MonsterStatBlock__action">
 						<h4>{sc.name}:</h4>
@@ -472,6 +500,14 @@ export default function MonsterStatBlock({
 	}
 
 	const isGridLayout = layoutMode === "grid";
+	const abilityFieldByLabel = {
+		STR: "str",
+		DEX: "dex",
+		CON: "con",
+		INT: "int",
+		WIS: "wis",
+		CHA: "cha",
+	};
 
 	return (
 		<div
@@ -485,7 +521,10 @@ export default function MonsterStatBlock({
 						{onNameClick ? (
 							<Tooltip content={nameTitle} disabled={!nameTitle}>
 								<h3
-									className="MonsterStatBlock__name"
+									className={classNames(
+										"MonsterStatBlock__name",
+										changedClass("name"),
+									)}
 									onClick={() => onNameClick?.(monster)}
 									onContextMenu={onNameRename ? handleNameRename : undefined}
 								>
@@ -494,7 +533,10 @@ export default function MonsterStatBlock({
 							</Tooltip>
 						) : (
 							<ClickToCopy
-								className="MonsterStatBlock__name"
+								className={classNames(
+									"MonsterStatBlock__name",
+									changedClass("name"),
+								)}
 								text={monster.name}
 								message={lang.t("Name copied!")}
 								onContextMenu={onNameRename ? handleNameRename : undefined}
@@ -551,18 +593,33 @@ export default function MonsterStatBlock({
 
 					{monster.originalBestiaryName &&
 						monster.originalBestiaryName !== monster.name && (
-							<div className="MonsterStatBlock__original_name muted">
+							<div
+								className={classNames(
+									"MonsterStatBlock__original_name muted",
+									changedClass("originalBestiaryName"),
+								)}
+							>
 								({highlight(monster.originalBestiaryName)})
 							</div>
 						)}
 
-					<div className="MonsterStatBlock__meta_line">
+					<div
+						className={classNames(
+							"MonsterStatBlock__meta_line",
+							changedClass("size", "type", "alignment"),
+						)}
+					>
 						{highlight(model.size)} {highlight(model.typeLabel)},{" "}
 						{highlight(model.alignment)}
 					</div>
 					<div className="MonsterStatBlock__stats__wrap">
 						<div className="MonsterStatBlock__stats">
-							<div className="stat_item">
+							<div
+								className={classNames(
+									"stat_item",
+									changedClass("hp", "hit_points"),
+								)}
+							>
 								<strong>HP:</strong>{" "}
 								{renderRecursiveContent(model.hp.val, searchHighlight)}{" "}
 								{model.hp.formula && (
@@ -575,12 +632,22 @@ export default function MonsterStatBlock({
 									</>
 								)}
 							</div>
-							<div className="stat_item ac">
+							<div
+								className={classNames(
+									"stat_item ac",
+									changedClass("ac", "armor_class"),
+								)}
+							>
 								<strong>AC:</strong>{" "}
 								{renderRecursiveContent(model.ac.val, searchHighlight)}{" "}
 								{renderRecursiveContent(model.ac.desc, searchHighlight)}
 							</div>
-							<div className="stat_item">
+							<div
+								className={classNames(
+									"stat_item",
+									changedClass("speed"),
+								)}
+							>
 								<strong>Speed:</strong> {highlight(model.speed)}
 							</div>
 						</div>
@@ -588,7 +655,12 @@ export default function MonsterStatBlock({
 							{renderSaves()}
 
 							{model.skills.length > 0 && (
-								<div className="MonsterStatBlock__property_item MonsterStatBlock__property_item__skills">
+								<div
+									className={classNames(
+										"MonsterStatBlock__property_item MonsterStatBlock__property_item__skills",
+										changedClass("skill"),
+									)}
+								>
 									<strong>Skills:</strong>{" "}
 									{model.skills.map(([name, value], idx, arr) => (
 										<React.Fragment key={name}>
@@ -610,25 +682,45 @@ export default function MonsterStatBlock({
 							)}
 
 							{monster.vulnerable && (
-								<div className="MonsterStatBlock__property_item">
+								<div
+									className={classNames(
+										"MonsterStatBlock__property_item",
+										changedClass("vulnerable"),
+									)}
+								>
 									<strong>Damage Vulnerabilities:</strong>{" "}
 									{highlight(model.formatDamageProperty(monster.vulnerable))}
 								</div>
 							)}
 							{monster.resist && (
-								<div className="MonsterStatBlock__property_item">
+								<div
+									className={classNames(
+										"MonsterStatBlock__property_item",
+										changedClass("resist"),
+									)}
+								>
 									<strong>Damage Resistances:</strong>{" "}
 									{highlight(model.formatDamageProperty(monster.resist))}
 								</div>
 							)}
 							{monster.immune && (
-								<div className="MonsterStatBlock__property_item">
+								<div
+									className={classNames(
+										"MonsterStatBlock__property_item",
+										changedClass("immune"),
+									)}
+								>
 									<strong>Damage Immunities:</strong>{" "}
 									{highlight(model.formatDamageProperty(monster.immune))}
 								</div>
 							)}
 							{monster.conditionImmune && (
-								<div className="MonsterStatBlock__property_item">
+								<div
+									className={classNames(
+										"MonsterStatBlock__property_item",
+										changedClass("conditionImmune"),
+									)}
+								>
 									<strong>Condition Immunities:</strong>{" "}
 									{highlight(
 										model.formatDamageProperty(monster.conditionImmune),
@@ -637,18 +729,23 @@ export default function MonsterStatBlock({
 							)}
 
 							<div className="MonsterStatBlock__description">
-								<p>
+								<p className={changedClass("senses")}>
 									<strong>Senses:</strong> {renderSenses()}
 								</p>
-								<p>
+								<p className={changedClass("languages")}>
 									<strong>Languages:</strong> {highlight(model.languages)}
 								</p>
-								<p>
+								<p className={changedClass("cr")}>
 									<strong>CR:</strong> {highlight(model.challenge)}
 								</p>
 							</div>
 							{monster.desc && (
-								<div className="MonsterStatBlock__lore">
+								<div
+									className={classNames(
+										"MonsterStatBlock__lore",
+										changedClass("desc"),
+									)}
+								>
 									{parseRollsAndSpells(monster.desc, searchHighlight)}
 								</div>
 							)}
@@ -732,19 +829,29 @@ export default function MonsterStatBlock({
 			)}
 			{renderSpellcasting()}
 			{renderNewSpellcasting()}
-			{renderActionList(monster.trait, "Traits")}
-			{renderActionList(monster.bonus, "Bonus Actions")}
-			{renderActionList(monster.action, "Actions")}
-			{renderActionList(monster.reaction, "Reactions")}
-			{renderActionList(monster.legendary, "Legendary Actions")}
+			{renderActionList(monster.trait, "Traits", "trait")}
+			{renderActionList(monster.bonus, "Bonus Actions", "bonus")}
+			{renderActionList(monster.action, "Actions", "action")}
+			{renderActionList(monster.reaction, "Reactions", "reaction")}
+			{renderActionList(monster.legendary, "Legendary Actions", "legendary")}
 			{monster.lairActions && monster.lairActions.length > 0 && (
-				<div className="MonsterStatBlock__section">
+				<div
+					className={classNames(
+						"MonsterStatBlock__section",
+						changedClass("lairActions"),
+					)}
+				>
 					<h4>Lair Actions:</h4>
 					{renderRecursiveContent(monster.lairActions, searchHighlight)}
 				</div>
 			)}
 			{monster.regionalEffects && monster.regionalEffects.length > 0 && (
-				<div className="MonsterStatBlock__section">
+				<div
+					className={classNames(
+						"MonsterStatBlock__section",
+						changedClass("regionalEffects"),
+					)}
+				>
 					<h4>Regional Effects:</h4>
 					{renderRecursiveContent(monster.regionalEffects, searchHighlight)}
 				</div>
