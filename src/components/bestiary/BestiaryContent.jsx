@@ -24,6 +24,14 @@ function normalizeSourceSelection(source) {
 	return source || "all";
 }
 
+function isFavoriteMonster(favorites, monster) {
+	return favorites.some(
+		(f) =>
+			f.name === monster?.name &&
+			f.source?.toUpperCase() === monster?.source?.toUpperCase(),
+	);
+}
+
 function MonsterListItem({
 	favorites,
 	monster,
@@ -40,11 +48,7 @@ function MonsterListItem({
 	const isSelected =
 		selectedMonster?.name === monster.name &&
 		selectedMonster?.source === monster.source;
-	const isFavorite = favorites.some(
-		(f) =>
-			f.name === monster.name &&
-			f.source?.toUpperCase() === monster.source?.toUpperCase(),
-	);
+	const isFavorite = isFavoriteMonster(favorites, monster);
 
 	return (
 		<div key={getMonsterItemKey(monster)}>
@@ -284,6 +288,10 @@ export default function BestiaryContent({
 						<div className="Bestiary__detail_container">
 							<MonsterStatBlock
 								monster={selectedMonster}
+								favoriteActive={isFavoriteMonster(
+									favorites,
+									selectedMonster,
+								)}
 								onNameClick={
 									onAddMonster ? (monster) => onAddMonster(monster) : undefined
 								}

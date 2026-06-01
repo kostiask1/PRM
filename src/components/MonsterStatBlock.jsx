@@ -39,6 +39,7 @@ export default function MonsterStatBlock({
 	nameTitle,
 	onNameRename,
 	onFavoriteChange,
+	favoriteActive = null,
 	tokenImageOverrideUrl = null,
 	layoutMode = "single",
 	showFavoriteAction = true,
@@ -62,6 +63,11 @@ export default function MonsterStatBlock({
 	const highlight = (value) => highlightText(value, searchHighlight);
 
 	useEffect(() => {
+		if (favoriteActive !== null) {
+			setIsFavorite(Boolean(favoriteActive));
+			return;
+		}
+
 		const checkFavoriteStatus = async () => {
 			try {
 				const favs = await api.getBestiaryFavorites();
@@ -81,7 +87,13 @@ export default function MonsterStatBlock({
 		} else {
 			setIsFavorite(false);
 		}
-	}, [effectiveName, monster.name, monster.source, showFavoriteAction]);
+	}, [
+		effectiveName,
+		favoriteActive,
+		monster.name,
+		monster.source,
+		showFavoriteAction,
+	]);
 
 	const handleToggleFavorite = async () => {
 		try {
