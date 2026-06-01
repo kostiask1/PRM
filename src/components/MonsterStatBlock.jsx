@@ -805,9 +805,7 @@ export default function MonsterStatBlock({
 										className="MonsterStatBlock__replace_token_btn"
 										onClick={() => setIsReplacingToken(true)}
 										title={lang.t("Replace image")}
-									>
-										{lang.t("Replace")}
-									</Button>
+									/>
 								)}
 						</div>
 					) : (

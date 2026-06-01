@@ -96,16 +96,32 @@
 
 .MonsterStatBlock__replace_token_btn {
 	position: absolute;
-	right: 50%;
+	right: var(--space-2);
 	bottom: var(--space-2);
-	transform: translateX(50%);
+	z-index: 3;
+	width: var(--size-8);
+	height: var(--size-8);
+	min-width: var(--size-8);
+	padding: 0;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--panel), transparent 8%);
+	border: 1px solid color-mix(in srgb, var(--border), transparent 25%);
+	box-shadow: var(--shadow-md);
 	opacity: 0;
 	pointer-events: none;
+	transform: translateY(4px);
+	transition: opacity 0.15s ease, transform 0.15s ease, background 0.15s ease;
 }
 
-.MonsterStatBlock__tokenDragProxy:hover .MonsterStatBlock__replace_token_btn {
+.MonsterStatBlock__replace_token_btn:hover {
+	background: color-mix(in srgb, var(--accent), transparent 82%);
+}
+
+.MonsterStatBlock__tokenDragProxy:hover .MonsterStatBlock__replace_token_btn,
+.MonsterStatBlock__tokenDragProxy:focus-within .MonsterStatBlock__replace_token_btn {
 	opacity: 1;
 	pointer-events: auto;
+	transform: translateY(0);
 }
 
 .MonsterStatBlock__stats__wrap {
