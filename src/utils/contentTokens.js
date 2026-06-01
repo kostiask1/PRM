@@ -1,5 +1,5 @@
 export const CONTENT_TOKEN_REGEX =
-	/(\(Recharge\s+\d+(?:-\d+)?\))|(\{@(?:damage|scaledamage|scaledice)\s+([^|}]+)(?:\|([^|}]*))?(?:\|([^|}]*))?[^}]*\})|(\d+d\d+(?:\s*[+-]\s*\d+)?)|(?<!\d)([+-]\d+)(\s+to\s+hit)?|(\{@spell\s+([^}]+)\})|(\{@(?:condition|status)\s+([^}]+)\})|(@condition\s+([A-Za-z][A-Za-z' -]*))|(\{@disease\s+([^}]+)\})|(\{@variantrule\s+([^}]+)\})|(\{@skill\s+([^}]+)\})|(\{@sense\s+([^}]+)\})|(\{@quickref\s+([^}]+)\})/gi;
+	/(\(Recharge\s+\d+(?:-\d+)?\))|(\{@(?:damage|scaledamage|scaledice)\s+([^|}]+)(?:\|([^|}]*))?(?:\|([^|}]*))?[^}]*\})|(\d+d\d+(?:\s*[+-]\s*\d+)?)|(\{@hit\s+([+-]?\d+)\})(\s+to\s+hit)?|(?<!\d)([+-]\d+)(\s+to\s+hit)?|(\{@spell\s+([^}]+)\})|(\{@(?:condition|status)\s+([^}]+)\})|(@condition\s+([A-Za-z][A-Za-z' -]*))|(\{@disease\s+([^}]+)\})|(\{@variantrule\s+([^}]+)\})|(\{@skill\s+([^}]+)\})|(\{@sense\s+([^}]+)\})|(\{@quickref\s+([^}]+)\})/gi;
 
 export function tokenFromContentMatch(match) {
 	return {
@@ -8,18 +8,18 @@ export function tokenFromContentMatch(match) {
 		damageRoll: match[3],
 		damageLabel: match[5],
 		roll: match[6],
-		hit: match[7],
-		hitSuffix: match[8] || "",
-		spellTag: match[9],
-		spellValue: match[10],
-		conditionTag: match[11],
-		conditionValue: match[12],
-		conditionPlain: match[13],
-		diseaseValue: match[16],
-		variantRuleValue: match[18],
-		skillValue: match[20],
-		senseValue: match[22],
-		quickrefValue: match[24],
+		hit: match[8] || match[10],
+		hitSuffix: match[9] || match[11] || "",
+		spellTag: match[12],
+		spellValue: match[13],
+		conditionTag: match[14],
+		conditionValue: match[15],
+		conditionPlain: match[16],
+		diseaseValue: match[19],
+		variantRuleValue: match[21],
+		skillValue: match[23],
+		senseValue: match[25],
+		quickrefValue: match[27],
 	};
 }
 

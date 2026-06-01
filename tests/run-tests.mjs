@@ -967,6 +967,12 @@ await run("content tokens parse hit and recharge tags safely", () => {
 	assert.equal(hitWithEnglishSuffix[0].hit, "+6");
 	assert.equal(hitWithEnglishSuffix[0].hitSuffix.trim(), "to hit");
 
+	const taggedHit = extractContentTokens("{@atk mw} {@hit 9} to hit.");
+	assert.equal(taggedHit.length, 1);
+	assert.equal(taggedHit[0].fullMatch, "{@hit 9} to hit");
+	assert.equal(taggedHit[0].hit, "9");
+	assert.equal(taggedHit[0].hitSuffix.trim(), "to hit");
+
 	const recharge = extractContentTokens("(Recharge 5-6) Breath.");
 	assert.equal(recharge.length, 1);
 	assert.equal(recharge[0].recharge, "(Recharge 5-6)");
