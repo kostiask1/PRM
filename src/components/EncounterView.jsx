@@ -152,6 +152,7 @@ function EncounterView() {
 	const [isRestoringAiResponse, setIsRestoringAiResponse] = useState(false);
 	const [aiTargetInstanceId, setAiTargetInstanceId] = useState(null);
 	const aiDraftResponseRef = useRef(null);
+	const aiEditControllerRef = useRef(null);
 	const gridItemRefs = useRef(new Map());
 	const focusTimeoutRef = useRef(null);
 	const headerActionsRef = useRef(null);
@@ -224,6 +225,7 @@ function EncounterView() {
 			if (focusTimeoutRef.current) {
 				clearTimeout(focusTimeoutRef.current);
 			}
+			aiEditControllerRef.current?.abort();
 		};
 	}, []);
 
@@ -347,6 +349,10 @@ function EncounterView() {
 		setAiEditError("");
 	};
 
+	const cancelAiEditCustomMonsterRequest = () => {
+		aiEditControllerRef.current?.abort();
+	};
+
 	const saveAiEditedCustomMonster = async () => {
 		if (!aiEditingMonster?.name) return;
 		const instructions = aiEditInstructions.trim();
@@ -368,6 +374,8 @@ function EncounterView() {
 
 		setIsAiEditingMonster(true);
 		setAiEditError("");
+		const controller = new AbortController();
+		aiEditControllerRef.current = controller;
 		try {
 			const data = await api.generateAi({
 				type: "custom-monster",
@@ -388,7 +396,7 @@ function EncounterView() {
 				entityScope: "custom-bestiary",
 				contextConfig: null,
 				language: currentLanguage,
-			});
+			}, { signal: controller.signal });
 			if (data.draft && data.aiResponse) {
 				setAiDraftResponseEntry(data.aiResponse);
 			} else if (data.updated?.monsters?.length && aiTargetInstanceId) {
@@ -398,8 +406,13 @@ function EncounterView() {
 			setAiEditMode("edit");
 			setAiEditInstructions("");
 		} catch (error) {
-			setAiEditError(error.message || lang.t("Unknown error"));
+			if (error.name !== "AbortError") {
+				setAiEditError(error.message || lang.t("Unknown error"));
+			}
 		} finally {
+			if (aiEditControllerRef.current === controller) {
+				aiEditControllerRef.current = null;
+			}
 			setIsAiEditingMonster(false);
 		}
 	};
@@ -1145,6 +1158,7 @@ function EncounterView() {
 				aiModels={aiModels}
 				isAiEditingMonster={isAiEditingMonster}
 				onCancel={closeAiEditCustomMonster}
+				onCancelRequest={cancelAiEditCustomMonsterRequest}
 				onInstructionsChange={setAiEditInstructions}
 				onModelChange={setSelectedAiModel}
 				onSave={saveAiEditedCustomMonster}

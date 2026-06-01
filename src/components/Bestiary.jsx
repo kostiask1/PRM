@@ -183,6 +183,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	const customImportInputRef = useRef(null);
 	const selectedMonsterRef = useRef(null);
 	const aiDraftResponseRef = useRef(null);
+	const aiEditControllerRef = useRef(null);
 	const hasInitializedSourceRef = useRef(false);
 	const shouldAutoSelectMonsterRef = useRef(true);
 
@@ -194,6 +195,12 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	useEffect(() => {
 		selectedMonsterRef.current = selectedMonster;
 	}, [selectedMonster]);
+
+	useEffect(() => {
+		return () => {
+			aiEditControllerRef.current?.abort();
+		};
+	}, []);
 
 	const displayedMonsters = useMemo(() => {
 		let list = [...monsters];
@@ -553,6 +560,10 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 		setAiEditError("");
 	};
 
+	const cancelAiEditCustomMonsterRequest = () => {
+		aiEditControllerRef.current?.abort();
+	};
+
 	const openMonsterAiAction = (monster) => {
 		if (!monster?.name) return;
 		if (isCustomSource(monster.source)) {
@@ -659,6 +670,8 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 
 		setIsAiEditingMonster(true);
 		setAiEditError("");
+		const controller = new AbortController();
+		aiEditControllerRef.current = controller;
 		try {
 			const data = await api.generateAi({
 				type: "custom-monster",
@@ -675,7 +688,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 				entityScope: "custom-bestiary",
 				contextConfig: null,
 				language: currentLanguage,
-			});
+			}, { signal: controller.signal });
 			if (data.draft && data.aiResponse) {
 				setAiDraftResponseEntry(
 					addSourceMonsterImageToDraft(data.aiResponse, aiEditingMonster),
@@ -692,8 +705,13 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			setAiEditMode("edit");
 			setAiEditInstructions("");
 		} catch (err) {
-			setAiEditError(err.message || lang.t("Unknown error"));
+			if (err.name !== "AbortError") {
+				setAiEditError(err.message || lang.t("Unknown error"));
+			}
 		} finally {
+			if (aiEditControllerRef.current === controller) {
+				aiEditControllerRef.current = null;
+			}
 			setIsAiEditingMonster(false);
 		}
 	};
@@ -1059,6 +1077,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 				aiModels={aiModels}
 				isAiEditingMonster={isAiEditingMonster}
 				onCancel={closeAiEditCustomMonster}
+				onCancelRequest={cancelAiEditCustomMonsterRequest}
 				onInstructionsChange={setAiEditInstructions}
 				onModelChange={setSelectedAiModel}
 				onSave={saveAiEditedCustomMonster}

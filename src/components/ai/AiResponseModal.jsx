@@ -833,6 +833,7 @@ export default function AiResponseModal({
 				"AiAssistant__response_overlay",
 				selectedResponseHasChanges && "AiAssistant__response_overlay_wide",
 			)}
+			cancelDisabled={isRestoringResponse}
 		>
 			<div className="AiAssistant__prompt_result_wrap">
 				<div className="AiAssistant__prompt_result_actions">

@@ -12,6 +12,7 @@ export default function MonsterAiEditModal({
 	aiModels,
 	isAiEditingMonster,
 	onCancel,
+	onCancelRequest,
 	onInstructionsChange,
 	onModelChange,
 	onSave,
@@ -31,6 +32,7 @@ export default function MonsterAiEditModal({
 			onCancel={onCancel}
 			showFooter={false}
 			className="Bestiary__ai_edit_modal"
+			cancelDisabled={isAiEditingMonster}
 		>
 			<div className="Bestiary__edit_form">
 				<div className="Bestiary__ai_edit_target">
@@ -78,8 +80,7 @@ export default function MonsterAiEditModal({
 				<div className="Bestiary__edit_actions">
 					<Button
 						variant="ghost"
-						onClick={onCancel}
-						disabled={isAiEditingMonster}
+						onClick={isAiEditingMonster ? onCancelRequest : onCancel}
 					>
 						{lang.t("Cancel")}
 					</Button>

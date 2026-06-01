@@ -2108,9 +2108,11 @@ export default function AiAssistantPanel({
 					title={assistantTitle}
 					className="AiAssistant__main_modal"
 					onCancel={() => {
+						if (loading) return;
 						setIsOpen(false);
 					}}
 					showFooter={false}
+					cancelDisabled={loading}
 				>
 					<div className="AiAssistant__content">
 						<AiAssistantToolbar

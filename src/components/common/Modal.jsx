@@ -79,6 +79,7 @@ function Modal({
 	checkboxLabel,
 	checkboxDefaultChecked = false,
 	getConfirmValue,
+	cancelDisabled = false,
 }) {
 	const [inputValue, setInputValue] = useState(defaultValue || "");
 	const [checkboxValue, setCheckboxValue] = useState(
@@ -125,6 +126,8 @@ function Modal({
 	}, [onCancel, onConfirm, showInput, inputValue]);
 
 	function handleClose() {
+		if (cancelDisabled) return;
+
 		const activeElement = document.activeElement;
 		if (activeElement && typeof activeElement.blur === "function") {
 			activeElement.blur();
@@ -165,6 +168,7 @@ function Modal({
 					<h3>{title}</h3>
 					<button
 						className="Modal__close"
+						disabled={cancelDisabled}
 						onMouseDown={(event) => {
 							event.preventDefault();
 							event.stopPropagation();
@@ -212,6 +216,7 @@ function Modal({
 									event.preventDefault();
 									event.stopPropagation();
 								}}
+								disabled={cancelDisabled}
 								onClick={(event) => handleCloseWithEvent(event)}
 							>
 								{lang.t("Cancel")}
