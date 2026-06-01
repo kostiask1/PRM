@@ -135,6 +135,12 @@ export function setUiSettingsAction(payload) {
 	) {
 		nextPayload.autoApplyAiChanges = payload.autoApplyAiChanges !== false;
 	}
+	if (
+		payload &&
+		Object.prototype.hasOwnProperty.call(payload, "useSearchDebounce")
+	) {
+		nextPayload.useSearchDebounce = payload.useSearchDebounce !== false;
+	}
 
 	return {
 		type: SET_UI_SETTINGS,

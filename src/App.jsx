@@ -127,6 +127,7 @@ export default function App() {
 						campaignImagePromptBasePrompts:
 							settings.campaignImagePromptBasePrompts,
 						autoApplyAiChanges: settings.autoApplyAiChanges,
+						useSearchDebounce: settings.useSearchDebounce,
 					}),
 				);
 			} catch (error) {

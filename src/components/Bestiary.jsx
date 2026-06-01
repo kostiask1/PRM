@@ -146,12 +146,15 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	const currentLanguage = useAppSelector(
 		(state) => state.localization.language,
 	);
+	const useSearchDebounce = useAppSelector(
+		(state) => state.ui.useSearchDebounce !== false,
+	);
 	const [sources, setSources] = useState([]);
 	const [selectedSource, setSelectedSource] = useState("all");
 	const [allMonsters, setAllMonsters] = useState([]);
 	const [monsters, setMonsters] = useState([]);
 	const [search, setSearch] = useState("");
-	const debouncedSearch = useDebounce(search, 250);
+	const debouncedSearch = useDebounce(search, useSearchDebounce ? 250 : 0);
 	const [isDetailedSearch, setIsDetailedSearch] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [selectedMonster, setSelectedMonster] = useState(null);

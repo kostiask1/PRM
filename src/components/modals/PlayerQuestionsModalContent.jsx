@@ -95,6 +95,9 @@ function getQuestionRollFormula(count) {
 export default function PlayerQuestionsModalContent() {
 	const dispatch = useAppDispatch();
 	const rolledResult = useAppSelector((state) => state.dice.rolledResult);
+	const useSearchDebounce = useAppSelector(
+		(state) => state.ui.useSearchDebounce !== false,
+	);
 	const processedResultIdRef = useRef(rolledResult?.resultId ?? null);
 	const listRef = useRef(null);
 	const rootRef = useRef(null);
@@ -102,7 +105,10 @@ export default function PlayerQuestionsModalContent() {
 	const [activeQuestionId, setActiveQuestionId] = useState(null);
 	const [questionSearch, setQuestionSearch] = useState("");
 	const [isListReady, setIsListReady] = useState(false);
-	const debouncedQuestionSearch = useDebounce(questionSearch, SEARCH_DEBOUNCE_MS);
+	const debouncedQuestionSearch = useDebounce(
+		questionSearch,
+		useSearchDebounce ? SEARCH_DEBOUNCE_MS : 0,
+	);
 	const questionRollFormula = getQuestionRollFormula(QUESTIONS_COUNT);
 
 	useLayoutEffect(() => {

@@ -16,6 +16,7 @@ import { lang } from "../services/localization";
 import { objectMatchesSearch } from "../utils/deepSearch.js";
 import { highlightText } from "../utils/searchHighlight.jsx";
 import useDebounce from "../hooks/useDebounce.js";
+import { useAppSelector } from "../store/appStore.js";
 
 const SCHOOL_MAP = {
 	A: "Abjuration",
@@ -41,6 +42,9 @@ function getSpellItemKey(spell) {
 }
 
 export default function Spells() {
+	const useSearchDebounce = useAppSelector(
+		(state) => state.ui.useSearchDebounce !== false,
+	);
 	const [sources, setSources] = useState([]);
 	const [selectedSource, setSelectedSource] = useState("all");
 	const [allSpells, setAllSpells] = useState([]);
@@ -49,7 +53,7 @@ export default function Spells() {
 	const [selectedClass, setSelectedClass] = useState("all");
 	const [selectedSchool, setSelectedSchool] = useState("all");
 	const [search, setSearch] = useState("");
-	const debouncedSearch = useDebounce(search, 250);
+	const debouncedSearch = useDebounce(search, useSearchDebounce ? 250 : 0);
 	const [isDetailedSearch, setIsDetailedSearch] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [selectedSpell, setSelectedSpell] = useState(null);

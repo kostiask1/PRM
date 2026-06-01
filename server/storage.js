@@ -31,6 +31,7 @@ const DEFAULT_APP_SETTINGS = Object.freeze({
 	campaignAiBasePrompts: {},
 	campaignImagePromptBasePrompts: {},
 	autoApplyAiChanges: false,
+	useSearchDebounce: true,
 });
 
 const jsonWriteQueues = new Map();
@@ -801,6 +802,7 @@ function normalizeSettings(settings = {}) {
 		campaignAiBasePrompts,
 		campaignImagePromptBasePrompts,
 		autoApplyAiChanges: settings.autoApplyAiChanges !== false,
+		useSearchDebounce: settings.useSearchDebounce !== false,
 	};
 }
 

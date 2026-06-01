@@ -51,6 +51,7 @@ function getInitialUiSettings() {
 		campaignAiBasePrompts: {},
 		campaignImagePromptBasePrompts: {},
 		autoApplyAiChanges: false,
+		useSearchDebounce: true,
 	};
 }
 

@@ -556,6 +556,7 @@
 	"Uploading...": "Завантаження...",
 	"Use mentions to connect notes, scenes, and entity cards.": "Використовуйте згадки, щоб пов'язувати нотатки, сцени та картки сутностей.",
 	"Use plain text notes without title and markdown preview": "Використовувати прості текстові нотатки без заголовка і markdown-перегляду",
+	"Use search debounce": "Використовувати затримку пошуку",
 	"Use the bestiary, spell list, conditions, dice tools, and encounter view during play.": "Використовуйте бестіарій, список заклять, стани, кубики та перегляд зіткнень під час гри.",
 	"Used instead of the global image style for this campaign.": "Використовується замість глобального стилю зображень для цієї кампанії.",
 	"Variant Optional Rule": "Варіантне опціональне правило",
@@ -566,6 +567,7 @@
 	"What does the character want...": "Чого прагне персонаж...",
 	"What happens on success or failure...": "Що станеться у разі успіху або провалу...",
 	"When disabled, parsed AI responses are saved as drafts for review before applying.": "Якщо вимкнено, розібрані відповіді ШІ зберігатимуться як чернетки для перегляду перед застосуванням.",
+	"When disabled, search results update immediately while typing.": "Якщо вимкнено, результати пошуку оновлюються одразу під час введення.",
 	"Where does this happen...": "Де це відбувається...",
 	"You can enable automatic applying of parsed AI changes in settings.": "У налаштуваннях можна увімкнути автоматичне застосування розібраних змін ШІ."
 }

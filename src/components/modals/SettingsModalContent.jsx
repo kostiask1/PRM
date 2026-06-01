@@ -49,6 +49,9 @@ export default function SettingsModalContent({ onCancel }) {
 	const autoApplyAiChanges = useAppSelector(
 		(state) => state.ui.autoApplyAiChanges !== false,
 	);
+	const useSearchDebounce = useAppSelector(
+		(state) => state.ui.useSearchDebounce !== false,
+	);
 	const [aiBasePrompt, setAiBasePrompt] = useState(storedAiBasePrompt);
 	const [imagePromptBasePrompt, setImagePromptBasePrompt] = useState(
 		storedImagePromptBasePrompt,
@@ -128,6 +131,11 @@ export default function SettingsModalContent({ onCancel }) {
 	const handleAutoApplyAiChangesChange = (enabled) => {
 		dispatch(setUiSettingsAction({ autoApplyAiChanges: enabled }));
 		patchSettings({ autoApplyAiChanges: enabled });
+	};
+
+	const handleUseSearchDebounceChange = (enabled) => {
+		dispatch(setUiSettingsAction({ useSearchDebounce: enabled }));
+		patchSettings({ useSearchDebounce: enabled });
 	};
 
 	const handleCampaignPromptChange = (value) => {
@@ -242,6 +250,14 @@ export default function SettingsModalContent({ onCancel }) {
 					label={lang.t("Simplified notes mode")}
 					description={lang.t(
 						"Use plain text notes without title and markdown preview",
+					)}
+				/>
+				<Switch
+					checked={useSearchDebounce}
+					onChange={handleUseSearchDebounceChange}
+					label={lang.t("Use search debounce")}
+					description={lang.t(
+						"When disabled, search results update immediately while typing.",
 					)}
 				/>
 			</div>
