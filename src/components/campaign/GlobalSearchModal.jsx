@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
 import { api } from "../../api";
-import { navigateTo } from "../../store/appStore";
+import { navigateTo, useAppSelector } from "../../store/appStore";
 import { lang } from "../../services/localization";
 import { buildNavigationUrl } from "../../utils/navigation";
 import { makeDomId, scrollToHashTarget } from "../../utils/domNavigation";
@@ -406,7 +406,9 @@ function openTarget(target) {
 	}
 }
 
-export default function GlobalSearchModal({ campaign, currentData, onCancel }) {
+export default function GlobalSearchModal({ onCancel }) {
+	const campaign = useAppSelector((state) => state.active.campaign);
+	const currentData = campaign;
 	const [query, setQuery] = useState("");
 	const [activeFilters, setActiveFilters] = useState(() => new Set(FILTERS));
 	const [index, setIndex] = useState([]);
@@ -414,6 +416,7 @@ export default function GlobalSearchModal({ campaign, currentData, onCancel }) {
 	const [error, setError] = useState("");
 
 	useEffect(() => {
+		if (!campaign) return undefined;
 		let cancelled = false;
 		async function load() {
 			setIsLoading(true);

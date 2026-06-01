@@ -5,6 +5,8 @@ import {
 	prompt,
 	requestCampaignsReloadAction,
 	requestDiceRollAction,
+	setActiveEncounterAction,
+	setActiveSessionAction,
 } from "../actions/app";
 import { api } from "../api";
 import { navigateTo, useAppDispatch, useAppSelector } from "../store/appStore";
@@ -52,8 +54,15 @@ function formatInitiativeValue(value) {
 	return value % 1 === 0 ? value : value.toFixed(1);
 }
 
-export default function useEncounterView({ campaign, sessionId, encounterId }) {
+export default function useEncounterView() {
 	const dispatch = useAppDispatch();
+	const campaign = useAppSelector((state) => state.active.campaign);
+	const {
+		activeSessionFileName,
+		activeEncounterId,
+	} = useAppSelector((state) => state.navigation);
+	const sessionId = activeSessionFileName;
+	const encounterId = activeEncounterId;
 	const handleBack = useCallback(
 		() => navigateTo(campaign.slug, sessionId),
 		[campaign.slug, sessionId],
@@ -82,6 +91,10 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 	useEffect(() => {
 		encounterRef.current = encounter;
 	}, [encounter]);
+
+	useEffect(() => {
+		dispatch(setActiveEncounterAction(encounter));
+	}, [dispatch, encounter]);
 
 	useEffect(() => {
 		return () => {
@@ -120,6 +133,7 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 			try {
 				const session = await api.getSession(campaign.slug, sessionId);
 				if (!isMounted) return;
+				dispatch(setActiveSessionAction(session));
 
 				const found = (session.data.encounters || []).find(
 					(e) => e.id.toString() === encounterId.toString(),
@@ -240,6 +254,15 @@ export default function useEncounterView({ campaign, sessionId, encounterId }) {
 						...currentSession,
 						data: { ...currentSession.data, encounters: updatedEncounters },
 					});
+					dispatch(
+						setActiveSessionAction({
+							...currentSession,
+							data: {
+								...currentSession.data,
+								encounters: updatedEncounters,
+							},
+						}),
+					);
 					dispatch(requestCampaignsReloadAction());
 				} catch (err) {
 					console.error("Failed to save encounter updates", err);

@@ -33,10 +33,12 @@ import { renderMentionText } from "../renderers/contentRenderer.jsx";
 import { EntityLinkResolverContext } from "./common/EntityLinkIdentity.js";
 import { findEntityByName } from "../services/entities.js";
 
-function SessionView(props) {
-	const campaign = props.campaign;
-	const sessionId = props.sessionId;
-	const view = useSessionView(props);
+function SessionView() {
+	const resolvedCampaign = useAppSelector((state) => state.active.campaign);
+	const sessionId = useAppSelector(
+		(state) => state.navigation.activeSessionFileName,
+	);
+	const view = useSessionView();
 	const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
 	const session = view.session;
 	const simplifiedNotesEnabled = useAppSelector(
@@ -611,11 +613,9 @@ function SessionView(props) {
 								sessionName={session.name}
 								sessionData={session.data}
 								campaignContext={{
-									description: campaign.description,
-									notes: campaign.notes,
+									description: resolvedCampaign.description,
+									notes: resolvedCampaign.notes,
 								}}
-								campaignSlug={view.campaignSlug}
-								sessionId={sessionId}
 								onInsertResult={view.handleAiUpdate}
 							/>
 							{scenes.length > 0 && (
@@ -790,8 +790,6 @@ function SessionView(props) {
 				</Tooltip>
 				{isGlobalSearchOpen && (
 					<GlobalSearchModal
-						campaign={campaign}
-						currentData={campaign}
 						onCancel={() => setIsGlobalSearchOpen(false)}
 					/>
 				)}

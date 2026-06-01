@@ -10,7 +10,6 @@ import {
 	useState,
 } from "react";
 import { api } from "../../api.js";
-import { parseUrl } from "../../utils/navigation.js";
 import Button from "../form/Button.jsx";
 import EditableField from "../form/EditableField.jsx";
 import ImageAssetField from "../form/ImageAssetField.jsx";
@@ -538,7 +537,19 @@ export default function AiAssistantPanel({
 	const campaignImagePromptBasePrompts = useAppSelector(
 		(state) => state.ui.campaignImagePromptBasePrompts || {},
 	);
-	const initialRoute = parseUrl();
+	const navigation = useAppSelector((state) => state.navigation);
+	const initialRoute = useMemo(
+		() => ({
+			campaign: navigation.activeCampaignSlug,
+			session: navigation.activeSessionFileName,
+			encounter: navigation.activeEncounterId,
+		}),
+		[
+			navigation.activeCampaignSlug,
+			navigation.activeEncounterId,
+			navigation.activeSessionFileName,
+		],
+	);
 	const activeImagePromptBasePrompt =
 		campaignImagePromptBasePrompts[initialRoute.campaign] ||
 		imagePromptBasePrompt;

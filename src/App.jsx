@@ -278,8 +278,6 @@ export default function App() {
 		}
 	};
 
-	const activeCampaign = campaigns.find((c) => c.slug === activeCampaignSlug);
-
 	const openCreateCampaignModal = () => {
 		const handleClose = () => closeActiveModal();
 		openModalRequest({
@@ -336,7 +334,7 @@ export default function App() {
 				onCreateCampaign={openCreateCampaignModal}
 				onToggleCampaignStatus={handleToggleCampaignStatus}
 			/>
-			<MainContent className="App__main" campaign={activeCampaign} />
+			<MainContent className="App__main" />
 
 			{modalState.config && (
 				<Modal

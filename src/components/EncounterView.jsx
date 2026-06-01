@@ -71,10 +71,8 @@ function resolveHpInputValue(inputValue, previousHp) {
 	return Math.max(0, parseInt(text, 10) || 0);
 }
 
-function EncounterView(props) {
-	const campaign = props.campaign;
-	const sessionId = props.sessionId;
-	const encounterId = props.encounterId;
+function EncounterView() {
+	const campaign = useAppSelector((state) => state.active.campaign);
 	const dispatch = useAppDispatch();
 	const displayMode = useAppSelector(
 		(state) => state.ui.encounterViewMode || "grid",
@@ -94,11 +92,7 @@ function EncounterView(props) {
 	const focusTimeoutRef = useRef(null);
 	const headerActionsRef = useRef(null);
 	const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);
-	const view = useEncounterView({
-		campaign,
-		sessionId,
-		encounterId,
-	});
+	const view = useEncounterView();
 
 	const { gridMonsters, gridRepresentativeByInstanceId } = useMemo(() => {
 		const uniqueMonsters = [];

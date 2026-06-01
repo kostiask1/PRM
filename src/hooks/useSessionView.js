@@ -6,6 +6,7 @@ import {
 	prompt,
 	refreshEntitiesAction,
 	requestCampaignsReloadAction,
+	setActiveSessionAction,
 } from "../actions/app";
 import { api } from "../api";
 import { sanitizeNotesForSave, upsertNoteById } from "../utils/noteUtils";
@@ -17,7 +18,7 @@ import {
 	createDistinctRedoTransition,
 	createDistinctUndoTransition,
 } from "../utils/undoRedo.js";
-import { navigateTo, useAppDispatch } from "../store/appStore";
+import { navigateTo, useAppDispatch, useAppSelector } from "../store/appStore";
 import { lang } from "../services/localization";
 
 function stripInternalFields(entity = {}) {
@@ -93,9 +94,12 @@ function prepareCampaignEntityPayload(type, entity = {}) {
 	return payload;
 }
 
-export default function useSessionView(props) {
-	const { campaign, sessionId } = props;
+export default function useSessionView() {
 	const dispatch = useAppDispatch();
+	const campaign = useAppSelector((state) => state.active.campaign);
+	const sessionId = useAppSelector(
+		(state) => state.navigation.activeSessionFileName,
+	);
 
 	const [session, setSession] = useState(null);
 	const [isSaving, setIsSaving] = useState(false);
@@ -264,7 +268,8 @@ export default function useSessionView(props) {
 
 	useEffect(() => {
 		const loadSession = async () => {
-			if (lastLoadedSessionIdRef.current === sessionId) return;
+			const routeKey = `${campaignSlug}:${sessionId}`;
+			if (lastLoadedSessionIdRef.current === routeKey) return;
 
 			try {
 				const data = await api.getSession(campaignSlug, sessionId);
@@ -281,13 +286,17 @@ export default function useSessionView(props) {
 				setIsSaving(false);
 				setUndoStack([]);
 				setRedoStack([]);
-				lastLoadedSessionIdRef.current = sessionId;
+				lastLoadedSessionIdRef.current = routeKey;
 			} catch (err) {
 				console.error("Failed to load session", err);
 			}
 		};
 		loadSession();
 	}, [campaignSlug, sessionId, normalizeSceneNotes]);
+
+	useEffect(() => {
+		dispatch(setActiveSessionAction(session));
+	}, [dispatch, session]);
 
 	useEffect(() => {
 		const handleKeyDown = (e) => {

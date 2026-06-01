@@ -9,6 +9,9 @@ export const SHOW_MESSAGE_BOX = "messageBox/show";
 export const HIDE_MESSAGE_BOX = "messageBox/hide";
 export const SET_NAVIGATION = "navigation/set";
 export const SET_CAMPAIGNS = "campaigns/set";
+export const SET_ACTIVE_CAMPAIGN = "active/setCampaign";
+export const SET_ACTIVE_SESSION = "active/setSession";
+export const SET_ACTIVE_ENCOUNTER = "active/setEncounter";
 export const REQUEST_CAMPAIGNS_RELOAD = "campaigns/requestReload";
 export const SET_LANGUAGE = "language/set";
 export const SET_UI_SETTINGS = "ui/setSettings";
@@ -43,6 +46,27 @@ export function setCampaignsAction(payload) {
 	return {
 		type: SET_CAMPAIGNS,
 		payload: Array.isArray(payload) ? payload : [],
+	};
+}
+
+export function setActiveCampaignAction(payload) {
+	return {
+		type: SET_ACTIVE_CAMPAIGN,
+		payload: payload || null,
+	};
+}
+
+export function setActiveSessionAction(payload) {
+	return {
+		type: SET_ACTIVE_SESSION,
+		payload: payload || null,
+	};
+}
+
+export function setActiveEncounterAction(payload) {
+	return {
+		type: SET_ACTIVE_ENCOUNTER,
+		payload: payload || null,
 	};
 }
 

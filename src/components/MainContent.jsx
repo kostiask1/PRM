@@ -8,7 +8,8 @@ import { useAppSelector } from "../store/appStore";
 import { lang } from "../services/localization";
 import "../assets/components/MainContent.css";
 
-export default function MainContent({ campaign }) {
+export default function MainContent() {
+	const campaign = useAppSelector((state) => state.active.campaign);
 	const { activeSessionFileName, activeEncounterId } = useAppSelector(
 		(state) => state.navigation,
 	);
@@ -43,15 +44,11 @@ export default function MainContent({ campaign }) {
 	return (
 		<main className="MainContent">
 			{activeEncounterId ? (
-				<EncounterView
-					campaign={campaign}
-					sessionId={activeSessionFileName}
-					encounterId={activeEncounterId}
-				/>
+				<EncounterView />
 			) : activeSessionFileName ? (
-				<SessionView campaign={campaign} sessionId={activeSessionFileName} />
+				<SessionView />
 			) : (
-				<CampaignView campaign={campaign} />
+				<CampaignView />
 			)}
 		</main>
 	);

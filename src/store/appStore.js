@@ -10,6 +10,9 @@ import {
 	REQUEST_CAMPAIGNS_RELOAD,
 	SET_LANGUAGE,
 	SET_UI_SETTINGS,
+	SET_ACTIVE_CAMPAIGN,
+	SET_ACTIVE_ENCOUNTER,
+	SET_ACTIVE_SESSION,
 	REQUEST_DICE_ROLL,
 	SET_CAMPAIGNS,
 	SET_NAVIGATION,
@@ -55,6 +58,21 @@ function getInitialUiSettings() {
 	};
 }
 
+function findCampaignBySlug(campaigns, slug) {
+	if (!slug) return null;
+	return (campaigns || []).find((campaign) => campaign?.slug === slug) || null;
+}
+
+function isSessionForRoute(session, fileName) {
+	if (!session || !fileName) return false;
+	return String(session.fileName || "") === String(fileName);
+}
+
+function isEncounterForRoute(encounter, encounterId) {
+	if (!encounter || encounterId == null) return false;
+	return String(encounter.id) === String(encounterId);
+}
+
 const initialState = {
 	modal: {
 		requestId: null,
@@ -68,6 +86,11 @@ const initialState = {
 	},
 	messageBox: null,
 	navigation: getInitialNavigation(),
+	active: {
+		campaign: null,
+		session: null,
+		encounter: null,
+	},
 	campaigns: {
 		items: [],
 		reloadVersion: 0,
@@ -147,20 +170,88 @@ function reducer(currentState, action) {
 				...currentState,
 				messageBox: null,
 			};
-		case SET_NAVIGATION:
+		case SET_NAVIGATION: {
+			const nextNavigation = {
+				...currentState.navigation,
+				...action.payload,
+			};
+			const nextActiveCampaign =
+				currentState.active.campaign?.slug ===
+				nextNavigation.activeCampaignSlug
+					? currentState.active.campaign
+					: findCampaignBySlug(
+							currentState.campaigns.items,
+							nextNavigation.activeCampaignSlug,
+						);
+			const isSameCampaign =
+				currentState.active.campaign?.slug === nextNavigation.activeCampaignSlug;
 			return {
 				...currentState,
-				navigation: {
-					...currentState.navigation,
-					...action.payload,
+				navigation: nextNavigation,
+				active: {
+					campaign: nextActiveCampaign,
+					session: isSameCampaign &&
+						isSessionForRoute(
+							currentState.active.session,
+							nextNavigation.activeSessionFileName,
+						)
+						? currentState.active.session
+						: null,
+					encounter: isSameCampaign &&
+						isEncounterForRoute(
+							currentState.active.encounter,
+							nextNavigation.activeEncounterId,
+						)
+						? currentState.active.encounter
+						: null,
 				},
 			};
-		case SET_CAMPAIGNS:
+		}
+		case SET_CAMPAIGNS: {
+			const campaigns = action.payload;
+			const activeCampaign = findCampaignBySlug(
+				campaigns,
+				currentState.navigation.activeCampaignSlug,
+			);
 			return {
 				...currentState,
 				campaigns: {
 					...currentState.campaigns,
-					items: action.payload,
+					items: campaigns,
+				},
+				active: {
+					...currentState.active,
+					campaign: activeCampaign,
+					session: activeCampaign ? currentState.active.session : null,
+					encounter: activeCampaign ? currentState.active.encounter : null,
+				},
+			};
+		}
+		case SET_ACTIVE_CAMPAIGN:
+			return {
+				...currentState,
+				active: {
+					...currentState.active,
+					campaign: action.payload,
+					session: action.payload ? currentState.active.session : null,
+					encounter: action.payload ? currentState.active.encounter : null,
+				},
+			};
+		case SET_ACTIVE_SESSION:
+			return {
+				...currentState,
+				active: {
+					...currentState.active,
+					session: action.payload,
+					encounter: action.payload ? currentState.active.encounter : null,
+				},
+			};
+		case SET_ACTIVE_ENCOUNTER:
+			return {
+				...currentState,
+				active: {
+					...currentState.active,
+					encounter: action.payload,
 				},
 			};
 		case REQUEST_CAMPAIGNS_RELOAD:
