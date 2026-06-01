@@ -11,7 +11,7 @@
 
 .character_card.is_collapsed {
     cursor: pointer;
-    background: color-mix(in srgb, var(--text-bright), transparent 94%);
+    background: color-mix(in srgb, var(--text-bright), transparent 96%);
 }
 
 .character_card__header {

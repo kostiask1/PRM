@@ -48,7 +48,7 @@
 }
 
 .DraggableList__handle~.DraggableList__itemControl {
-	top: calc(var(--space-2) + 30px);
+	top: calc(var(--space-2) + 26px);
 }
 
 .DraggableList__itemControl .Button {

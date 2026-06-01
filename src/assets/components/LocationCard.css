@@ -11,7 +11,7 @@
 
 .location_card.is_collapsed {
     cursor: pointer;
-    background: color-mix(in srgb, var(--text-bright), transparent 94%);
+    background: color-mix(in srgb, var(--text-bright), transparent 96%);
 }
 
 .location_card.is_collapsed .location_card__header {
@@ -23,7 +23,7 @@
     align-items: center;
     padding: 0 var(--space-4);
     gap: var(--space-3);
-    height: 50px;
+    height: 60px;
     cursor: pointer;
     background: color-mix(in srgb, var(--text-bright), transparent 98%);
 }
