@@ -6,6 +6,7 @@ import questions from "../../../database/questions.json";
 import "../../assets/components/PlayerQuestionsModalContent.css";
 import Button from "../form/Button";
 import Input from "../form/Input";
+import useDebounce from "../../hooks/useDebounce";
 import { lang } from "../../services/localization";
 import { useAppDispatch, useAppSelector } from "../../store/appStore";
 
@@ -98,24 +99,15 @@ export default function PlayerQuestionsModalContent() {
 	const listRef = useRef(null);
 	const rootRef = useRef(null);
 	const questionRefs = useRef({});
-	const searchDebounceTimeoutRef = useRef(null);
 	const [activeQuestionId, setActiveQuestionId] = useState(null);
 	const [questionSearch, setQuestionSearch] = useState("");
 	const [isListReady, setIsListReady] = useState(false);
+	const debouncedQuestionSearch = useDebounce(questionSearch, SEARCH_DEBOUNCE_MS);
 	const questionRollFormula = getQuestionRollFormula(QUESTIONS_COUNT);
 
 	useLayoutEffect(() => {
 		setIsListReady(Boolean(rootRef.current));
 	}, []);
-
-	useEffect(
-		() => () => {
-			if (searchDebounceTimeoutRef.current) {
-				clearTimeout(searchDebounceTimeoutRef.current);
-			}
-		},
-		[],
-	);
 
 	const scrollToQuestionId = useCallback((questionId) => {
 		setActiveQuestionId(questionId);
@@ -144,12 +136,19 @@ export default function PlayerQuestionsModalContent() {
 		}
 
 		setQuestionSearch(String(questionId));
-		if (searchDebounceTimeoutRef.current) {
-			clearTimeout(searchDebounceTimeoutRef.current);
-			searchDebounceTimeoutRef.current = null;
-		}
 		scrollToQuestionId(questionId);
 	}, [rolledResult, scrollToQuestionId]);
+
+	useEffect(() => {
+		if (!debouncedQuestionSearch) return;
+
+		const questionId = Math.max(
+			1,
+			Math.min(Number(debouncedQuestionSearch), QUESTIONS_COUNT),
+		);
+		if (!Number.isFinite(questionId)) return;
+		scrollToQuestionId(questionId);
+	}, [debouncedQuestionSearch, scrollToQuestionId]);
 
 	const rollQuestion = () => {
 		dispatch(
@@ -162,10 +161,6 @@ export default function PlayerQuestionsModalContent() {
 
 	const handleQuestionSearchChange = (event) => {
 		const digits = event.target.value.replace(/\D+/g, "");
-		if (searchDebounceTimeoutRef.current) {
-			clearTimeout(searchDebounceTimeoutRef.current);
-			searchDebounceTimeoutRef.current = null;
-		}
 
 		if (!digits) {
 			setQuestionSearch("");
@@ -174,10 +169,6 @@ export default function PlayerQuestionsModalContent() {
 
 		const questionId = Math.max(1, Math.min(Number(digits), QUESTIONS_COUNT));
 		setQuestionSearch(String(questionId));
-		searchDebounceTimeoutRef.current = setTimeout(() => {
-			scrollToQuestionId(questionId);
-			searchDebounceTimeoutRef.current = null;
-		}, SEARCH_DEBOUNCE_MS);
 	};
 
 	const handleQuestionClick = (event, questionId) => {

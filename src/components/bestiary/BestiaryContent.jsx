@@ -174,6 +174,7 @@ export default function BestiaryContent({
 	onToggleFavorite,
 	onlyFavorites,
 	search,
+	searchHighlight = search,
 	selectedMonster,
 	selectedSource,
 	setIsDetailedSearch,
@@ -196,7 +197,7 @@ export default function BestiaryContent({
 			onEdit={onEditCustomMonster}
 			onSelect={setSelectedMonster}
 			onToggleFavorite={onToggleFavorite}
-			search={search}
+			search={searchHighlight}
 			selectedMonster={selectedMonster}
 		/>
 	);
@@ -291,7 +292,7 @@ export default function BestiaryContent({
 								showAddToEncounterPicker
 								onAddToEncounter={onAddMonster}
 								onAiAction={onMonsterAiAction}
-								searchHighlight={search}
+								searchHighlight={searchHighlight}
 							/>
 						</div>
 					)}

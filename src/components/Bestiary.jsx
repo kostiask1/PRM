@@ -10,6 +10,7 @@ import BestiaryContent from "./bestiary/BestiaryContent";
 import CustomMonsterEditModal from "./bestiary/CustomMonsterEditModal";
 import MonsterAiActionModal from "./bestiary/MonsterAiActionModal";
 import MonsterAiEditModal from "./bestiary/MonsterAiEditModal";
+import useDebounce from "../hooks/useDebounce.js";
 import {
 	buildDiffResources,
 	getDiffResourceState as getAiDiffResourceState,
@@ -150,6 +151,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	const [allMonsters, setAllMonsters] = useState([]);
 	const [monsters, setMonsters] = useState([]);
 	const [search, setSearch] = useState("");
+	const debouncedSearch = useDebounce(search, 250);
 	const [isDetailedSearch, setIsDetailedSearch] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [selectedMonster, setSelectedMonster] = useState(null);
@@ -448,12 +450,12 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			if (!onlyFavorites && !matchesSource) return false;
 
 			return isDetailedSearch
-				? objectMatchesSearch(m, search)
-				: matchesMonsterSearch(m, search);
+				? objectMatchesSearch(m, debouncedSearch)
+				: matchesMonsterSearch(m, debouncedSearch);
 		});
 		setMonsters(filtered);
 	}, [
-		search,
+		debouncedSearch,
 		allMonsters,
 		onlyFavorites,
 		favorites,
@@ -1015,6 +1017,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			onToggleFavorite={handleToggleFavorite}
 			onlyFavorites={onlyFavorites}
 			search={search}
+			searchHighlight={debouncedSearch}
 			selectedMonster={selectedMonster}
 			selectedSource={selectedSource}
 			setIsDetailedSearch={setIsDetailedSearch}

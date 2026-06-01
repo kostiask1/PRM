@@ -15,6 +15,7 @@ import classNames from "../utils/classNames";
 import { lang } from "../services/localization";
 import { objectMatchesSearch } from "../utils/deepSearch.js";
 import { highlightText } from "../utils/searchHighlight.jsx";
+import useDebounce from "../hooks/useDebounce.js";
 
 const SCHOOL_MAP = {
 	A: "Abjuration",
@@ -48,6 +49,7 @@ export default function Spells() {
 	const [selectedClass, setSelectedClass] = useState("all");
 	const [selectedSchool, setSelectedSchool] = useState("all");
 	const [search, setSearch] = useState("");
+	const debouncedSearch = useDebounce(search, 250);
 	const [isDetailedSearch, setIsDetailedSearch] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [selectedSpell, setSelectedSpell] = useState(null);
@@ -138,7 +140,7 @@ export default function Spells() {
 			const matchesSource =
 				selectedSource === "all" ||
 				s.source?.toUpperCase() === selectedSource.toUpperCase();
-			const normalizedSearch = search.trim().toLowerCase();
+			const normalizedSearch = debouncedSearch.trim().toLowerCase();
 			const matchesSearch =
 				!normalizedSearch ||
 				(isDetailedSearch
@@ -160,7 +162,7 @@ export default function Spells() {
 		});
 		setSpells(filtered);
 	}, [
-		search,
+		debouncedSearch,
 		allSpells,
 		selectedLevel,
 		selectedSource,
@@ -250,18 +252,26 @@ export default function Spells() {
 					onClick={() => setSelectedSpell(isSelected ? "" : spell)}
 				>
 					<div className="ListCard__title">
-						{highlightText(capitalizeWords(spell.name.split("|")[0]), search)}
+						{highlightText(
+							capitalizeWords(spell.name.split("|")[0]),
+							debouncedSearch,
+						)}
 					</div>
 					<div className="ListCard__meta">
 						{highlightText(
 							spell.level === 0
 								? lang.t("Cantrip")
 								: lang.t("{level}-level", { level: spell.level }),
-							search,
+							debouncedSearch,
 						)}
-						{schoolName && <> • {highlightText(schoolName, search)}</>}
+						{schoolName && (
+							<> • {highlightText(schoolName, debouncedSearch)}</>
+						)}
 						{spell.classes?.length > 0 && (
-							<> • {highlightText(spell.classes.join(", "), search)}</>
+							<>
+								{" "}
+								• {highlightText(spell.classes.join(", "), debouncedSearch)}
+							</>
 						)}
 					</div>
 				</ListCard>
@@ -366,7 +376,10 @@ export default function Spells() {
 
 					<div className="Spells__detail">
 						{selectedSpell ? (
-							<SpellCard spell={selectedSpell} searchHighlight={search} />
+							<SpellCard
+								spell={selectedSpell}
+								searchHighlight={debouncedSearch}
+							/>
 						) : (
 							<p className="muted">
 								{lang.t("Select a spell from the list to view details.")}
