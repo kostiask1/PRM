@@ -390,6 +390,11 @@ function buildSearchIndex({ campaign, entities, sessions }) {
 }
 
 function openTarget(target) {
+	const url = buildNavigationUrl(
+		target.campaignSlug,
+		target.sessionFileName || null,
+		target.encounterId || null,
+	);
 	navigateTo(
 		target.campaignSlug,
 		target.sessionFileName || null,
@@ -397,12 +402,18 @@ function openTarget(target) {
 		target.encounterId || null,
 	);
 	if (target.hash) {
+		const hash = `#${encodeURIComponent(target.hash)}`;
 		window.history.replaceState(
 			{},
 			"",
-			`${buildNavigationUrl(target.campaignSlug, target.sessionFileName || null, target.encounterId || null)}#${encodeURIComponent(target.hash)}`,
+			`${url}${hash}`,
 		);
 		window.setTimeout(() => scrollToHashTarget(`#${target.hash}`), 80);
+		window.setTimeout(() => {
+			if (window.location.pathname !== url) return;
+			if (window.location.hash !== hash) return;
+			window.history.replaceState({}, "", url);
+		}, 2400);
 	}
 }
 
