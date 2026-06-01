@@ -149,6 +149,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	const useSearchDebounce = useAppSelector(
 		(state) => state.ui.useSearchDebounce !== false,
 	);
+	const syncEvent = useAppSelector((state) => state.sync.event);
 	const [sources, setSources] = useState([]);
 	const [selectedSource, setSelectedSource] = useState("all");
 	const [allMonsters, setAllMonsters] = useState([]);
@@ -335,6 +336,21 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 		};
 		loadInitialData();
 	}, []);
+
+	useEffect(() => {
+		if (!syncEvent?.version) return;
+		if (!["bestiary", "custom-bestiary"].includes(syncEvent.resource)) return;
+
+		api
+			.getBestiaryFavorites()
+			.then(setFavorites)
+			.catch((error) =>
+				console.error("Failed to reload bestiary favorites", error),
+			);
+		if (syncEvent.resource === "custom-bestiary") {
+			setReloadToken((current) => current + 1);
+		}
+	}, [syncEvent]);
 
 	// Завантаження повного списку монстрів один раз; джерела далі фільтруються локально
 	useEffect(() => {

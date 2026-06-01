@@ -15,6 +15,7 @@ export const SET_ACTIVE_ENCOUNTER = "active/setEncounter";
 export const REQUEST_CAMPAIGNS_RELOAD = "campaigns/requestReload";
 export const SET_LANGUAGE = "language/set";
 export const SET_UI_SETTINGS = "ui/setSettings";
+export const DATA_SYNC_RECEIVED = "sync/dataReceived";
 
 let mentionRequestSeq = 1;
 let diceRollRequestSeq = 1;
@@ -169,6 +170,13 @@ export function setUiSettingsAction(payload) {
 	return {
 		type: SET_UI_SETTINGS,
 		payload: nextPayload,
+	};
+}
+
+export function dataSyncReceivedAction(payload) {
+	return {
+		type: DATA_SYNC_RECEIVED,
+		payload: payload && typeof payload === "object" ? payload : null,
 	};
 }
 

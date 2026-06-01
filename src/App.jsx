@@ -18,6 +18,7 @@ import {
 	setUiSettingsAction,
 } from "./actions/app";
 import { applyTheme } from "./services/uiSettings";
+import { initRealtimeSync } from "./services/realtimeSync";
 import {
 	closeActiveModal,
 	navigateTo,
@@ -44,6 +45,7 @@ export default function App() {
 		(store) => store.localization.language,
 	);
 	const currentTheme = useAppSelector((store) => store.ui.theme);
+	const syncEvent = useAppSelector((store) => store.sync.event);
 
 	const loadCampaigns = useCallback(async () => {
 		try {
@@ -93,6 +95,7 @@ export default function App() {
 
 	useEffect(() => {
 		syncNavigationFromUrl();
+		initRealtimeSync();
 		const handlePopState = () => syncNavigationFromUrl();
 		window.addEventListener("popstate", handlePopState);
 		return () => window.removeEventListener("popstate", handlePopState);
@@ -141,6 +144,41 @@ export default function App() {
 			isMounted = false;
 		};
 	}, [dispatch]);
+
+	useEffect(() => {
+		if (syncEvent?.resource !== "settings") return;
+
+		let isMounted = true;
+		const loadSettings = async () => {
+			try {
+				const settings = await api.getSettings();
+				if (!isMounted || !settings) return;
+				dispatch(setLanguageAction(settings.language));
+				dispatch(
+					setUiSettingsAction({
+						theme: settings.theme,
+						encounterViewMode: settings.encounterViewMode,
+						encounterGridColumns: settings.encounterGridColumns,
+						simplifiedNotes: settings.simplifiedNotes,
+						aiBasePrompt: settings.aiBasePrompt,
+						imagePromptBasePrompt: settings.imagePromptBasePrompt,
+						campaignAiBasePrompts: settings.campaignAiBasePrompts,
+						campaignImagePromptBasePrompts:
+							settings.campaignImagePromptBasePrompts,
+						autoApplyAiChanges: settings.autoApplyAiChanges,
+						useSearchDebounce: settings.useSearchDebounce,
+					}),
+				);
+			} catch (error) {
+				console.error("Failed to reload settings after sync event", error);
+			}
+		};
+
+		loadSettings();
+		return () => {
+			isMounted = false;
+		};
+	}, [dispatch, syncEvent]);
 
 	useEffect(() => {
 		const handleMentionPicker = async () => {

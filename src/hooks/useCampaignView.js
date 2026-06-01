@@ -76,6 +76,7 @@ export default function useCampaignView(props) {
 	const entityRefreshVersion = useAppSelector(
 		(store) => store.entityRefreshVersion,
 	);
+	const syncEvent = useAppSelector((store) => store.sync.event);
 
 	const discardEntitySaveTimers = useCallback(() => {
 		Object.values(entitySaveTimeoutsRef.current).forEach((timer) =>
@@ -148,6 +149,28 @@ export default function useCampaignView(props) {
 			setRedoStack([]);
 			lastSlugRef.current = campaign.slug;
 		}
+	}, [
+		campaign.description,
+		campaign.isCharactersCollapsed,
+		campaign.isDescriptionCollapsed,
+		campaign.isLocationsCollapsed,
+		campaign.isNotesCollapsed,
+		campaign.isNpcsCollapsed,
+		campaign.notes,
+		campaign.slug,
+	]);
+
+	useEffect(() => {
+		if (lastSlugRef.current !== campaign.slug) return;
+		if (isSavingRef.current || pendingCampaignUpdatesRef.current) return;
+
+		setDescription(campaign.description || "");
+		setNotes(campaign.notes || []);
+		setIsDescriptionCollapsed(campaign.isDescriptionCollapsed || false);
+		setIsNotesCollapsed(campaign.isNotesCollapsed || false);
+		setIsCharactersCollapsed(campaign.isCharactersCollapsed || false);
+		setIsNpcsCollapsed(campaign.isNpcsCollapsed || false);
+		setIsLocationsCollapsed(campaign.isLocationsCollapsed || false);
 	}, [
 		campaign.description,
 		campaign.isCharactersCollapsed,
@@ -792,17 +815,43 @@ export default function useCampaignView(props) {
 		setLocations((prev) => prev.filter((item) => item.id !== id));
 	};
 
-	useEffect(() => {
-		const loadSessions = async () => {
-			try {
-				const data = await api.listSessions(campaign.slug);
-				setSessions(data);
-			} catch (err) {
-				console.error("Failed to load sessions", err);
-			}
-		};
-		loadSessions();
+	const loadSessions = useCallback(async () => {
+		try {
+			const data = await api.listSessions(campaign.slug);
+			setSessions(data);
+		} catch (err) {
+			console.error("Failed to load sessions", err);
+		}
 	}, [campaign.slug]);
+
+	useEffect(() => {
+		loadSessions();
+	}, [loadSessions]);
+
+	useEffect(() => {
+		if (!syncEvent?.version) return;
+		const isRelevantCampaign =
+			!syncEvent.campaignSlug || syncEvent.campaignSlug === campaign.slug;
+		if (!isRelevantCampaign) return;
+
+		if (["entities", "ai", "import", "images"].includes(syncEvent.resource)) {
+			loadCharacters();
+			loadNpcs();
+			loadLocations();
+		}
+		if (["sessions", "ai", "import"].includes(syncEvent.resource)) {
+			loadSessions();
+			setSessionDetails({});
+			sessionDetailsRef.current = {};
+		}
+	}, [
+		campaign.slug,
+		loadCharacters,
+		loadLocations,
+		loadNpcs,
+		loadSessions,
+		syncEvent,
+	]);
 
 	const loadSessionDetailsForGraph = useCallback(async () => {
 		const missingSessions = sessions.filter(

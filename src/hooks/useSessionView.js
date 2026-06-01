@@ -100,6 +100,7 @@ export default function useSessionView() {
 	const sessionId = useAppSelector(
 		(state) => state.navigation.activeSessionFileName,
 	);
+	const syncEvent = useAppSelector((state) => state.sync.event);
 
 	const [session, setSession] = useState(null);
 	const [isSaving, setIsSaving] = useState(false);
@@ -266,10 +267,10 @@ export default function useSessionView() {
 
 	const lastLoadedSessionIdRef = useRef(null);
 
-	useEffect(() => {
-		const loadSession = async () => {
+	const loadSession = useCallback(
+		async ({ force = false } = {}) => {
 			const routeKey = `${campaignSlug}:${sessionId}`;
-			if (lastLoadedSessionIdRef.current === routeKey) return;
+			if (!force && lastLoadedSessionIdRef.current === routeKey) return;
 
 			try {
 				const data = await api.getSession(campaignSlug, sessionId);
@@ -290,9 +291,32 @@ export default function useSessionView() {
 			} catch (err) {
 				console.error("Failed to load session", err);
 			}
-		};
+		},
+		[campaignSlug, sessionId, normalizeSceneNotes],
+	);
+
+	useEffect(() => {
 		loadSession();
-	}, [campaignSlug, sessionId, normalizeSceneNotes]);
+	}, [loadSession]);
+
+	useEffect(() => {
+		if (!syncEvent?.version) return;
+		if (syncEvent.campaignSlug && syncEvent.campaignSlug !== campaignSlug) {
+			return;
+		}
+		if (
+			syncEvent.sessionFileName &&
+			String(syncEvent.sessionFileName) !== String(sessionId)
+		) {
+			return;
+		}
+		if (!["sessions", "ai", "import", "entities", "images"].includes(syncEvent.resource)) {
+			return;
+		}
+		if (saveTimeout.current || pendingSessionSaveRef.current) return;
+
+		loadSession({ force: true });
+	}, [campaignSlug, loadSession, sessionId, syncEvent]);
 
 	useEffect(() => {
 		dispatch(setActiveSessionAction(session));

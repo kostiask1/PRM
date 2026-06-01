@@ -1,13 +1,33 @@
 const API_BASE = "/api";
 
+function getSyncClientHeader() {
+	if (typeof window === "undefined") return {};
+	try {
+		if (!window.__PRM_SYNC_CLIENT_ID__) {
+			window.__PRM_SYNC_CLIENT_ID__ =
+				typeof globalThis.crypto?.randomUUID === "function"
+					? globalThis.crypto.randomUUID()
+					: `client-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+		}
+		const value = window.__PRM_SYNC_CLIENT_ID__;
+		return value ? { "X-Sync-Client-Id": value } : {};
+	} catch {
+		return {};
+	}
+}
+
 export const api = {
 	async request(path, options = {}) {
 		const isFormData = options.body instanceof FormData;
 		const response = await fetch(`${API_BASE}${path}`, {
 			headers: isFormData
-				? { ...(options.headers || {}) }
+				? {
+						...getSyncClientHeader(),
+						...(options.headers || {}),
+					}
 				: {
 						"Content-Type": "application/json",
+						...getSyncClientHeader(),
 						...(options.headers || {}),
 					},
 			...options,
@@ -26,6 +46,10 @@ export const api = {
 	async requestBlob(path, options = {}) {
 		const response = await fetch(`${API_BASE}${path}`, {
 			...options,
+			headers: {
+				...getSyncClientHeader(),
+				...(options.headers || {}),
+			},
 		});
 		if (!response.ok) {
 			let message = "Помилка запиту";

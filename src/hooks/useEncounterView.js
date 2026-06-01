@@ -61,6 +61,7 @@ export default function useEncounterView() {
 		activeSessionFileName,
 		activeEncounterId,
 	} = useAppSelector((state) => state.navigation);
+	const syncEvent = useAppSelector((state) => state.sync.event);
 	const sessionId = activeSessionFileName;
 	const encounterId = activeEncounterId;
 	const handleBack = useCallback(
@@ -127,12 +128,10 @@ export default function useEncounterView() {
 		return () => window.removeEventListener("keydown", handleKeyDown);
 	}, [showBestiary, handleBack]);
 
-	useEffect(() => {
-		let isMounted = true;
-		const loadEncounter = async (retries = 3) => {
+	const loadEncounter = useCallback(
+		async ({ retries = 3, resetHistory = true } = {}) => {
 			try {
 				const session = await api.getSession(campaign.slug, sessionId);
-				if (!isMounted) return;
 				dispatch(setActiveSessionAction(session));
 
 				const found = (session.data.encounters || []).find(
@@ -140,7 +139,10 @@ export default function useEncounterView() {
 				);
 
 				if (!found && retries > 0) {
-					setTimeout(() => loadEncounter(retries - 1), 300);
+					setTimeout(
+						() => loadEncounter({ retries: retries - 1, resetHistory }),
+						300,
+					);
 					return;
 				}
 
@@ -157,17 +159,37 @@ export default function useEncounterView() {
 
 				setEncounter(found);
 				setSelectedInstance(found.monsters?.[0] || null);
-				setUndoStack([]);
-				setRedoStack([]);
+				if (resetHistory) {
+					setUndoStack([]);
+					setRedoStack([]);
+				}
 			} catch (err) {
-				if (isMounted) console.error("Failed to load encounter", err);
+				console.error("Failed to load encounter", err);
 			}
-		};
+		},
+		[campaign.slug, dispatch, encounterId, handleBack, sessionId],
+	);
+
+	useEffect(() => {
 		loadEncounter();
-		return () => {
-			isMounted = false;
-		};
-	}, [campaign.slug, sessionId, encounterId, dispatch, handleBack]);
+	}, [loadEncounter]);
+
+	useEffect(() => {
+		if (!syncEvent?.version) return;
+		if (syncEvent.campaignSlug && syncEvent.campaignSlug !== campaign.slug) {
+			return;
+		}
+		if (
+			syncEvent.sessionFileName &&
+			String(syncEvent.sessionFileName) !== String(sessionId)
+		) {
+			return;
+		}
+		if (!["sessions", "ai", "import"].includes(syncEvent.resource)) return;
+		if (saveTimeoutRef.current) return;
+
+		loadEncounter({ resetHistory: false });
+	}, [campaign.slug, loadEncounter, sessionId, syncEvent]);
 
 	useEffect(() => {
 		let isMounted = true;

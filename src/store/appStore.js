@@ -10,6 +10,7 @@ import {
 	REQUEST_CAMPAIGNS_RELOAD,
 	SET_LANGUAGE,
 	SET_UI_SETTINGS,
+	DATA_SYNC_RECEIVED,
 	SET_ACTIVE_CAMPAIGN,
 	SET_ACTIVE_ENCOUNTER,
 	SET_ACTIVE_SESSION,
@@ -100,6 +101,10 @@ const initialState = {
 		availableLanguages: lang.getAvailableLanguages(),
 	},
 	ui: getInitialUiSettings(),
+	sync: {
+		version: 0,
+		event: null,
+	},
 };
 
 let state = initialState;
@@ -276,6 +281,14 @@ function reducer(currentState, action) {
 				ui: {
 					...currentState.ui,
 					...action.payload,
+				},
+			};
+		case DATA_SYNC_RECEIVED:
+			return {
+				...currentState,
+				sync: {
+					version: currentState.sync.version + 1,
+					event: action.payload,
 				},
 			};
 		default:
