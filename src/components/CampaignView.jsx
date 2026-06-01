@@ -19,14 +19,12 @@ import CreateLocationButton from "./CreateLocationButton";
 import "../assets/components/CampaignView.css";
 import useCampaignView from "../hooks/useCampaignView";
 import CampaignViewModel from "../models/CampaignViewModel.js";
-import { navigateTo, useAppDispatch, useAppSelector } from "../store/appStore";
-import { setActiveCampaignAction } from "../actions/app";
+import { navigateTo, useAppSelector } from "../store/appStore";
 import { lang } from "../services/localization";
 import { getNotesForRender } from "../utils/noteUtils";
 import { makeDomId, scrollToHashTarget } from "../utils/domNavigation";
 
 function CampaignView() {
-	const dispatch = useAppDispatch();
 	const campaign = useAppSelector((state) => state.active.campaign);
 	const view = useCampaignView({ campaign });
 	const viewModel = new CampaignViewModel(campaign);
@@ -98,45 +96,6 @@ function CampaignView() {
 		setIsNotesCollapsed,
 		setIsNpcsCollapsed,
 	} = view;
-
-	useEffect(() => {
-		dispatch(
-			setActiveCampaignAction({
-				slug: campaign.slug,
-				name: campaign.name,
-				createdAt: campaign.createdAt,
-				completed: campaign.completed,
-				completedAt: campaign.completedAt,
-				description: view.description,
-				notes: view.notes,
-				characters: view.characters,
-				npcs: view.npcs,
-				locations: view.locations,
-				isDescriptionCollapsed: view.isDescriptionCollapsed,
-				isNotesCollapsed: view.isNotesCollapsed,
-				isCharactersCollapsed: view.isCharactersCollapsed,
-				isNpcsCollapsed: view.isNpcsCollapsed,
-				isLocationsCollapsed: view.isLocationsCollapsed,
-			}),
-		);
-	}, [
-		campaign.completed,
-		campaign.completedAt,
-		campaign.createdAt,
-		campaign.name,
-		campaign.slug,
-		dispatch,
-		view.characters,
-		view.description,
-		view.isCharactersCollapsed,
-		view.isDescriptionCollapsed,
-		view.isLocationsCollapsed,
-		view.isNotesCollapsed,
-		view.isNpcsCollapsed,
-		view.locations,
-		view.notes,
-		view.npcs,
-	]);
 
 	useEffect(() => {
 		const hash = decodeURIComponent(window.location.hash || "");
