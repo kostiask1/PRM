@@ -48,7 +48,7 @@ export default function MainContent() {
 			) : activeSessionFileName ? (
 				<SessionView />
 			) : (
-				<CampaignView />
+				<CampaignView key={campaign.slug} />
 			)}
 		</main>
 	);
