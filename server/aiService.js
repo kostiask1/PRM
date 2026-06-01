@@ -1127,8 +1127,10 @@ ${normalizedImagePromptBasePrompt}`,
 	if (useKey === "image") {
 		if (imageTarget?.type) {
 			userPrompt += `TASK: Generate a detailed image prompt for the selected ${imageTarget.type} from IMAGE TARGET.\n`;
+		} else if (sceneId) {
+			userPrompt += `TASK: Generate an image prompt for scene ID: ${sceneId}.\n`;
 		} else {
-			userPrompt += `TASK: Generate an image prompt for scene ID: ${sceneId}\n`;
+			userPrompt += `TASK: Generate a detailed image prompt based on INPUT DATA and USER INSTRUCTIONS. Use the current context to infer the subject, composition, mood, and relevant details.\n`;
 		}
 	} else if (useKey === "character") {
 		userPrompt += `TASK: Create or update player character operations requested by USER INSTRUCTIONS. Use entity "character" only and identify existing targets by id when available.\n`;

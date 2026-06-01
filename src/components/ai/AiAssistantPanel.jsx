@@ -575,6 +575,9 @@ export default function AiAssistantPanel({
 	const [attachedImages, setAttachedImages] = useState([]);
 	const [attachmentPickerKey, setAttachmentPickerKey] = useState(0);
 	const [imagePromptInstructions, setImagePromptInstructions] = useState("");
+	const [imagePromptRequest, setImagePromptRequest] = useState("");
+	const [isImagePromptContextMode, setIsImagePromptContextMode] =
+		useState(false);
 	const [imagePromptSessions, setImagePromptSessions] = useState([]);
 	const [imagePromptCustomMonsters, setImagePromptCustomMonsters] = useState(
 		[],
@@ -1876,26 +1879,49 @@ export default function AiAssistantPanel({
 		return null;
 	};
 
-	const generateImagePromptForTarget = (target) => {
+	const generateImagePromptForTarget = (target = null) => {
+		const basePrompt = imagePromptInstructions.trim();
+		const request = imagePromptRequest.trim();
+		if (!target && !request) {
+			setError(
+				lang.t(
+					"Image prompt instructions are required when no element is selected.",
+				),
+			);
+			return;
+		}
+
 		setIsImagePromptPickerOpen(false);
-		generate("image", target.type === "scene" ? target.id || null : null, {
-			imageTarget: target,
-			imagePromptBasePromptOverride: imagePromptInstructions.trim(),
-			userInstructionsOverride: "",
+		generate("image", target?.type === "scene" ? target.id || null : null, {
+			imageTarget: target || null,
+			imagePromptBasePromptOverride: basePrompt,
+			userInstructionsOverride: target ? "" : request,
 		});
 		setSelectedImagePromptTarget(null);
 		setImagePromptInstructions("");
+		setImagePromptRequest("");
+		setIsImagePromptContextMode(false);
 	};
 
 	const selectImagePromptTarget = (target) => {
 		setSelectedImagePromptTarget(target);
+		setIsImagePromptContextMode(false);
 		setImagePromptInstructions(activeImagePromptBasePrompt);
+	};
+
+	const continueImagePromptWithoutTarget = () => {
+		setSelectedImagePromptTarget(null);
+		setIsImagePromptContextMode(true);
+		setImagePromptInstructions(activeImagePromptBasePrompt);
+		setImagePromptRequest("");
 	};
 
 	const closeImagePromptPicker = () => {
 		setIsImagePromptPickerOpen(false);
 		setSelectedImagePromptTarget(null);
 		setImagePromptInstructions("");
+		setImagePromptRequest("");
+		setIsImagePromptContextMode(false);
 	};
 
 	const loadCampaignImagePromptData = async () => {
@@ -1966,7 +1992,9 @@ export default function AiAssistantPanel({
 
 	const openImagePromptPicker = async () => {
 		setSelectedImagePromptTarget(null);
+		setIsImagePromptContextMode(false);
 		setImagePromptInstructions(activeImagePromptBasePrompt);
+		setImagePromptRequest("");
 		setIsImagePromptDataLoading(true);
 		try {
 			if (isBestiary) {
@@ -2184,13 +2212,21 @@ export default function AiAssistantPanel({
 							loading={loading}
 							onBackToSelection={() => {
 								setSelectedImagePromptTarget(null);
+								setIsImagePromptContextMode(false);
 								setImagePromptInstructions(activeImagePromptBasePrompt);
+								setImagePromptRequest("");
 							}}
 							onCancel={closeImagePromptPicker}
+							onContinueWithoutSelection={
+								continueImagePromptWithoutTarget
+							}
 							onGenerate={generateImagePromptForTarget}
 							onInstructionsChange={setImagePromptInstructions}
+							onRequestChange={setImagePromptRequest}
 							onModelChange={setSelectedModel}
 							onSelectTarget={selectImagePromptTarget}
+							isContextMode={isImagePromptContextMode}
+							imagePromptRequest={imagePromptRequest}
 							selectedModel={selectedModel}
 							selectedTarget={selectedImagePromptTarget}
 						/>

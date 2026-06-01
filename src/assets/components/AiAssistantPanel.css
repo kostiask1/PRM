@@ -532,6 +532,7 @@
 
 .AiAssistant__preview_note_list {
 	display: flex;
+	flex-direction: column;
 	gap: var(--space-3);
 	width: 100%;
 	overflow: hidden;
@@ -1171,16 +1172,48 @@
 }
 
 .AiAssistant__image_prompt_picker {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	display: flex;
+	flex-direction: column;
 	gap: var(--space-4);
 	max-height: 65vh;
 	overflow: auto;
 }
 
 .AiAssistant__image_prompt_picker .AiAssistant__loading {
-	grid-column: 1 / -1;
 	padding: 0;
+}
+
+.AiAssistant__image_prompt_columns {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: var(--space-4);
+}
+
+.AiAssistant__image_prompt_context_choice {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-3);
+	padding: var(--space-3);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface-2);
+}
+
+.AiAssistant__image_prompt_context_choice div {
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+}
+
+.AiAssistant__image_prompt_context_choice strong {
+	color: var(--text-bright);
+}
+
+.AiAssistant__image_prompt_context_choice div span {
+	color: var(--muted);
+	font-size: 0.9rem;
 }
 
 .AiAssistant__image_prompt_details {
@@ -1211,6 +1244,20 @@
 
 .AiAssistant__image_prompt_model {
 	width: 100%;
+}
+
+.AiAssistant__image_prompt_field {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.AiAssistant__image_prompt_field > span {
+	color: var(--muted);
+	font-size: 0.8rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
 }
 
 .AiAssistant__image_prompt_instructions {
