@@ -1009,7 +1009,7 @@ export default function AiAssistantPanel({
 
 		try {
 			const responses = await api.deleteAiResponse(
-				initialRoute.campaign,
+				getAiResponseHistoryCampaign(entry),
 				entry.id,
 			);
 			setResponseHistory(Array.isArray(responses) ? responses : []);
@@ -1053,6 +1053,9 @@ export default function AiAssistantPanel({
 			setGeneratedPrompt(entry.text);
 		}
 	};
+
+	const getAiResponseHistoryCampaign = (entry) =>
+		entry?.path?.campaign || initialRoute.campaign;
 
 	const refreshAfterAiHistoryRestore = (result, entry) => {
 		if (Array.isArray(result?.responses)) {
@@ -1144,11 +1147,12 @@ export default function AiAssistantPanel({
 
 		setIsRestoringResponse(true);
 		try {
+			const historyCampaign = getAiResponseHistoryCampaign(entry);
 			const result = isUndo
-				? await api.undoAiResponse(initialRoute.campaign, entry.id, {
+				? await api.undoAiResponse(historyCampaign, entry.id, {
 						resourceIds: options.resourceIds,
 					})
-				: await api.applyAiResponse(initialRoute.campaign, entry.id, {
+				: await api.applyAiResponse(historyCampaign, entry.id, {
 						resourceIds: options.resourceIds,
 					});
 			refreshAfterAiHistoryRestore(result, entry);
@@ -1172,7 +1176,7 @@ export default function AiAssistantPanel({
 	const saveDraftHistoryEntryChanges = async (entry, resources) => {
 		if (!entry?.id) return null;
 		const updatedEntry = await api.updateAiResponse(
-			initialRoute.campaign,
+			getAiResponseHistoryCampaign(entry),
 			entry.id,
 			{
 				resources,
@@ -1554,7 +1558,7 @@ export default function AiAssistantPanel({
 		try {
 			if (isFailedHistoryEntry(entry)) {
 				const responses = await api.deleteAiResponse(
-					initialRoute.campaign,
+					getAiResponseHistoryCampaign(entry),
 					entry.id,
 				);
 				setResponseHistory(Array.isArray(responses) ? responses : []);
