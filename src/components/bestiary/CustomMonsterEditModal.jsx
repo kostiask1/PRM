@@ -11,12 +11,13 @@ export default function CustomMonsterEditModal({
 	onCancel,
 	onJsonChange,
 	onSave,
+	title = lang.t("Edit custom creature"),
 }) {
 	if (!editingMonster) return null;
 
 	return (
 		<Modal
-			title={lang.t("Edit custom creature")}
+			title={title}
 			onCancel={onCancel}
 			showFooter={false}
 			className="Bestiary__edit_modal"

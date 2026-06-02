@@ -5,6 +5,7 @@ import Modal from "./common/Modal";
 import Bestiary from "./Bestiary";
 import AiAssistantPanel from "./ai/AiAssistantPanel";
 import BestiaryAiDraftModal from "./bestiary/BestiaryAiDraftModal";
+import CustomMonsterEditModal from "./bestiary/CustomMonsterEditModal";
 import MonsterAiActionModal from "./bestiary/MonsterAiActionModal";
 import MonsterAiEditModal from "./bestiary/MonsterAiEditModal";
 import MonsterStatBlock from "./MonsterStatBlock";
@@ -133,6 +134,10 @@ function EncounterView() {
 	const [aiDraftMode, setAiDraftMode] = useState("global");
 	const [isRestoringAiResponse, setIsRestoringAiResponse] = useState(false);
 	const [aiTargetInstanceId, setAiTargetInstanceId] = useState(null);
+	const [editingMonster, setEditingMonster] = useState(null);
+	const [editingMonsterJson, setEditingMonsterJson] = useState("");
+	const [editingMonsterError, setEditingMonsterError] = useState("");
+	const [isSavingMonsterEdit, setIsSavingMonsterEdit] = useState(false);
 	const aiDraftResponseRef = useRef(null);
 	const aiEditControllerRef = useRef(null);
 	const gridItemRefs = useRef(new Map());
@@ -299,6 +304,57 @@ function EncounterView() {
 		if (!monster?.name) return;
 		setAiTargetInstanceId(monster.instanceId || null);
 		setAiActionMonster(monster);
+	};
+
+	const openEditMonsterJson = (monster) => {
+		if (!monster?.instanceId || isEncounterCharacterParticipant(monster)) return;
+		setEditingMonster(monster);
+		setEditingMonsterJson(JSON.stringify(monster, null, 2));
+		setEditingMonsterError("");
+	};
+
+	const closeEditMonsterJson = () => {
+		if (isSavingMonsterEdit) return;
+		setEditingMonster(null);
+		setEditingMonsterJson("");
+		setEditingMonsterError("");
+	};
+
+	const saveEditedMonsterJson = () => {
+		if (!editingMonster?.instanceId) return;
+		setEditingMonsterError("");
+
+		let parsed;
+		try {
+			parsed = JSON.parse(editingMonsterJson);
+		} catch (error) {
+			setEditingMonsterError(error.message || lang.t("Invalid JSON."));
+			return;
+		}
+
+		if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+			setEditingMonsterError(lang.t("Monster data must be a JSON object."));
+			return;
+		}
+		if (!String(parsed.name || "").trim()) {
+			setEditingMonsterError(lang.t("Name is required to create an entry."));
+			return;
+		}
+
+		setIsSavingMonsterEdit(true);
+		try {
+			view.updateMonsterFromAi(editingMonster.instanceId, parsed, {
+				localOverride: true,
+				preserveCurrentHp: false,
+			});
+			setEditingMonster(null);
+			setEditingMonsterJson("");
+			setEditingMonsterError("");
+		} catch (error) {
+			setEditingMonsterError(error.message || lang.t("Unknown error"));
+		} finally {
+			setIsSavingMonsterEdit(false);
+		}
 	};
 
 	const closeMonsterAiAction = () => {
@@ -996,6 +1052,7 @@ function EncounterView() {
 												monster={monster}
 												onNameRename={handleRenameMonster}
 												onAiAction={handleMonsterAiAction}
+												onJsonEdit={openEditMonsterJson}
 												tokenImageOverrideUrl={view.getMonsterImageOverride(
 													monster,
 												)}
@@ -1028,6 +1085,7 @@ function EncounterView() {
 											monster={view.selectedInstance}
 											onNameRename={handleRenameMonster}
 											onAiAction={handleMonsterAiAction}
+											onJsonEdit={openEditMonsterJson}
 											tokenImageOverrideUrl={view.getMonsterImageOverride(
 												view.selectedInstance,
 											)}
@@ -1192,6 +1250,16 @@ function EncounterView() {
 				onModelChange={setSelectedAiModel}
 				onSave={saveAiEditedCustomMonster}
 				selectedAiModel={selectedAiModel}
+			/>
+			<CustomMonsterEditModal
+				editingMonster={editingMonster}
+				editingMonsterError={editingMonsterError}
+				editingMonsterJson={editingMonsterJson}
+				isSavingMonsterEdit={isSavingMonsterEdit}
+				onCancel={closeEditMonsterJson}
+				onJsonChange={setEditingMonsterJson}
+				onSave={saveEditedMonsterJson}
+				title={lang.t("Edit encounter creature")}
 			/>
 			<BestiaryAiDraftModal
 				aiDraftDiffResources={aiDraftDiffResources}

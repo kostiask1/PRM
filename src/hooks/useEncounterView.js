@@ -642,11 +642,19 @@ export default function useEncounterView() {
 					parseInt(nextMonster.hit_points ?? nextMonster.hp?.average, 10) ||
 					parseInt(monster.hit_points, 10) ||
 					0;
+				const parsedCurrentHp =
+					options.preserveCurrentHp === false &&
+					nextMonster.currentHp !== undefined
+						? parseInt(nextMonster.currentHp, 10)
+						: monster.currentHp;
+				const nextCurrentHp = Number.isFinite(parsedCurrentHp)
+					? parsedCurrentHp
+					: nextMaxHp;
 				return {
 					...nextMonster,
 					instanceId,
 					...(options.localOverride ? { _localOverride: true } : {}),
-					currentHp: Math.min(monster.currentHp ?? nextMaxHp, nextMaxHp),
+					currentHp: Math.min(nextCurrentHp, nextMaxHp),
 					hit_points: nextMaxHp,
 				};
 			});

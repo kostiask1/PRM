@@ -218,6 +218,8 @@
 	"Each participant's expected initiative is multiplied by CR + 1, then divided by the sum of those weights. Best for balanced battles with a boss.": "Очікувана ініціатива кожного учасника множиться на CR + 1, а потім ділиться на суму цих ваг. Підходить для збалансованих битв, де є бос.",
 	"Edit": "Редагувати",
 	"Edit custom creature": "Редагувати кастомну істоту",
+	"Edit encounter creature": "Редагувати істоту в бою",
+	"Edit JSON": "Редагувати JSON",
 	"Edit the selected creature for this encounter only. Return a complete custom creature stat block and do not change the global bestiary creature.": "Відредагуй вибрану істоту лише для цього бою. Поверни повний stat block кастомної істоти й не змінюй глобальну істоту в бестіарії.",
 	"Edit only in this encounter": "Редагувати лише в цьому бою",
 	"Edit this creature": "Редагувати цю істоту",

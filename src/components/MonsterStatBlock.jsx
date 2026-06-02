@@ -47,6 +47,7 @@ export default function MonsterStatBlock({
 	allowTokenUpload = true,
 	onAddToEncounter,
 	onAiAction,
+	onJsonEdit,
 	searchHighlight = "",
 	highlightFields = null,
 }) {
@@ -576,6 +577,16 @@ export default function MonsterStatBlock({
 								className="MonsterStatBlock__ai_btn"
 								onClick={() => onAiAction(monster)}
 								title={lang.t("AI creature action")}
+							/>
+						)}
+						{onJsonEdit && (
+							<Button
+								variant="ghost"
+								size={Button.SIZES.SMALL}
+								icon="json-edit"
+								className="MonsterStatBlock__json_btn"
+								onClick={() => onJsonEdit(monster)}
+								title={lang.t("Edit JSON")}
 							/>
 						)}
 						{showAddToEncounterPicker && (
