@@ -50,7 +50,8 @@ export default function CharacterCard({
 		String(character.race || "").trim().length > 0 ||
 		String(character.class || "").trim().length > 0 ||
 		String(character.motivation || "").trim().length > 0 ||
-		String(character.trait || "").trim().length > 0 ||
+		String(characterModel.description || "").trim().length > 0 ||
+		String(characterModel.trait || "").trim().length > 0 ||
 		String(character.imageUrl || "").trim().length > 0 ||
 		hasCharacterNotesData;
 	const canCollapseCard =
@@ -119,14 +120,18 @@ export default function CharacterCard({
 				character_card__modal: isModalView,
 			})}
 			onClick={
-				!canCollapseCard ? undefined : () => isCollapsed && onToggleCollapse(character.id)
+				!canCollapseCard
+					? undefined
+					: () => isCollapsed && onToggleCollapse(character.id)
 			}
 		>
 			{showHeader && (
-				<div className="character_card__header"
-			onClick={
-				!canCollapseCard ? undefined : () => onToggleCollapse(character.id)
-			}>
+				<div
+					className="character_card__header"
+					onClick={
+						!canCollapseCard ? undefined : () => onToggleCollapse(character.id)
+					}
+				>
 					{canCollapseCard && (
 						<CollapseToggleButton
 							size={Button.SIZES.SMALL}
@@ -253,6 +258,18 @@ export default function CharacterCard({
 										}
 									/>
 								</div>
+								<div className="character_card__field">
+									<label>{lang.t("Trait")}</label>
+									<EditableField
+										type="textarea"
+										value={characterModel.trait}
+										onChange={(e) => updateField("trait", e.target.value)}
+										placeholder={lang.t("Distinctive trait or habit...")}
+										className={
+											isFieldHighlighted("trait") ? "is_ai_changed_field" : ""
+										}
+									/>
+								</div>
 							</div>
 						</div>
 						<div className="character_card__image_side">
@@ -276,14 +293,14 @@ export default function CharacterCard({
 						</div>
 					</div>
 					<div className="character_card__field">
-						<label>{lang.t("Trait")}</label>
+						<label>{lang.t("Description")}</label>
 						<EditableField
 							type="textarea"
-							value={character.trait}
-							onChange={(e) => updateField("trait", e.target.value)}
-							placeholder={lang.t("Distinctive trait or habit...")}
+							value={characterModel.description}
+							onChange={(e) => updateField("description", e.target.value)}
+							placeholder={lang.t("Character description...")}
 							className={
-								isFieldHighlighted("trait") ? "is_ai_changed_field" : ""
+								isFieldHighlighted("description") ? "is_ai_changed_field" : ""
 							}
 						/>
 					</div>

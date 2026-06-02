@@ -407,11 +407,17 @@ export function buildCampaignGraph({
 			type: "character",
 			label,
 			summary: excerpt(
-				[character.race, character.class, character.motivation, character.trait]
+				[
+					character.race,
+					character.class,
+					character.motivation,
+					character.description,
+					character.trait,
+				]
 					.filter(Boolean)
 					.join(" "),
 			),
-			detailText: [character.motivation, character.trait]
+			detailText: [character.description, character.motivation, character.trait]
 				.filter(Boolean)
 				.join("\n\n"),
 			aliases: [
@@ -447,11 +453,13 @@ export function buildCampaignGraph({
 			type: "npc",
 			label,
 			summary: excerpt(
-				[npc.race, npc.class, npc.motivation, npc.trait]
+				[npc.race, npc.class, npc.description, npc.motivation, npc.trait]
 					.filter(Boolean)
 					.join(" "),
 			),
-			detailText: [npc.motivation, npc.trait].filter(Boolean).join("\n\n"),
+			detailText: [npc.description, npc.motivation, npc.trait]
+				.filter(Boolean)
+				.join("\n\n"),
 			aliases: [label, npc.firstName, npc.name, npc.title].filter(Boolean),
 			sourceId: npc.id,
 			sourceSlug: npc.slug,
@@ -537,11 +545,13 @@ export function buildCampaignGraph({
 				type: "npc",
 				label: npcLabel,
 				summary: excerpt(
-					[npc.race, npc.class, npc.motivation, npc.trait]
+					[npc.race, npc.class, npc.description, npc.motivation, npc.trait]
 						.filter(Boolean)
 						.join(" "),
 				),
-				detailText: [npc.motivation, npc.trait].filter(Boolean).join("\n\n"),
+				detailText: [npc.description, npc.motivation, npc.trait]
+					.filter(Boolean)
+					.join("\n\n"),
 				aliases: [npcLabel, npc.firstName, npc.name, npc.title].filter(Boolean),
 				sourceId: npc.id,
 				sourceSlug: npc.slug,

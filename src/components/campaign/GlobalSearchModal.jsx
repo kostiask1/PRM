@@ -230,8 +230,8 @@ function pushEntity(results, entity, options) {
 		entity?.race,
 		entity?.class,
 		entity?.motivation,
-		entity?.trait,
 		entity?.description,
+		entity?.trait,
 		asText(notes),
 	].join("\n");
 	pushResult(results, {

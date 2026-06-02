@@ -54,7 +54,8 @@ function normalizeSessionEntity(type, entity = {}) {
 		race: source.race || "",
 		class: source.class || "",
 		level: source.level === "" ? "" : source.level || 1,
-		motivation: source.motivation || source.description || "",
+		motivation: source.motivation || "",
+		description: source.description || "",
 		trait: source.trait || "",
 		notes: Array.isArray(source.notes) ? source.notes : [],
 		imageUrl: source.imageUrl ?? null,
@@ -90,6 +91,8 @@ function prepareCampaignEntityPayload(type, entity = {}) {
 		payload.firstName = payload.firstName || payload.name || "";
 		payload.lastName = payload.lastName || "";
 		payload.level = payload.level === "" ? "" : payload.level || 1;
+		payload.description = payload.description || "";
+		payload.trait = payload.trait || "";
 	}
 	return payload;
 }

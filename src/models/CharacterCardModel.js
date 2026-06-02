@@ -20,6 +20,7 @@ import { createEmptyNote, upsertNoteById } from "../utils/noteUtils.js";
  * @property {string} class
  * @property {number|string} level
  * @property {string} motivation
+ * @property {string} description
  * @property {string} trait
  * @property {CharacterNote[]} notes
  * @property {boolean} collapsed
@@ -41,6 +42,7 @@ export const CHARACTER_FIELD_SCHEMA = {
 	class: { type: "string", values: "Клас DnD" },
 	level: { type: "number|string", values: "1..20" },
 	motivation: { type: "string", values: "Мотивація персонажа" },
+	description: { type: "string", values: "Опис персонажа" },
 	trait: { type: "string", values: "Особливість/звичка" },
 	notes: {
 		type: "CharacterNote[]",
@@ -98,6 +100,14 @@ export default class CharacterCardModel {
 			? [...this.character.notes]
 			: [];
 		return notes.length > 0 ? notes : [createEmptyNote()];
+	}
+
+	get description() {
+		return this.character.description || "";
+	}
+
+	get trait() {
+		return this.character.trait || "";
 	}
 
 	get hasImage() {

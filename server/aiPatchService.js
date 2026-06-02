@@ -217,22 +217,21 @@ function normalizeCharacter(
 		"lastName",
 		"last_name",
 	].some((key) => hasOwn(raw, key));
-	const fallbackDescription = asText(
-		raw.description || raw.bio || raw.backstory,
-	);
 	const notesSource = Array.isArray(raw.notes)
 		? raw.notes
 		: existing
 			? existing.notes || []
-			: fallbackDescription
-				? [fallbackDescription]
-				: [];
+			: [];
 	const rawRace = firstOwnedValue(raw, ["race", "species"]);
 	const rawClass = firstOwnedValue(raw, ["class", "role"]);
 	const rawMotivation = firstOwnedValue(raw, [
 		"motivation",
 		"goal",
+	]);
+	const rawDescription = firstOwnedValue(raw, [
 		"description",
+		"bio",
+		"backstory",
 	]);
 	const rawTrait = firstOwnedValue(raw, ["trait", "personality", "quirk"]);
 
@@ -258,6 +257,10 @@ function normalizeCharacter(
 			rawMotivation !== undefined
 				? asText(rawMotivation)
 				: existing?.motivation || "",
+		description:
+			rawDescription !== undefined
+				? asText(rawDescription)
+				: existing?.description || "",
 		trait: rawTrait !== undefined ? asText(rawTrait) : existing?.trait || "",
 		notes: mergeAiIgnoredNotes(existing?.notes || [], notes),
 		collapsed: Boolean(existing?.collapsed ?? raw.collapsed ?? false),

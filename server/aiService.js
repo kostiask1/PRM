@@ -120,6 +120,7 @@ function characterToPromptContext(entity = {}, noteToContextNote) {
 		class: entity.class,
 		level: entity.level,
 		motivation: entity.motivation,
+		description: entity.description,
 		trait: entity.trait,
 		notes: (entity.notes || []).map(noteToContextNote).filter(Boolean),
 	};
@@ -453,7 +454,7 @@ const customMonsterNoEntityLinksContract = `CUSTOM MONSTER TEXT RULE:
 Custom bestiary creatures must not contain app entity links. Do not output [Name] syntax anywhere in monster fields.`;
 
 const generatedNpcDetailContract = `GENERATED NPC DETAIL RULE:
-For every newly created top-level NPC, fill "trait" with a detailed character portrayal, not a short quirk. Start with a concrete visual description: apparent age, build, face, hair, eyes, skin or notable ancestry features, clothing, armor, equipment, colors, scars, jewelry, posture, and memorable silhouette. Then include voice or manner of speaking, behavior, habits, flaws, tells, and distinctive roleplay cues.
+For every newly created top-level NPC, fill "description" with a detailed character portrayal, not a short quirk. Start with a concrete visual description: apparent age, build, face, hair, eyes, skin or notable ancestry features, clothing, armor, equipment, colors, scars, jewelry, posture, and memorable silhouette. Then include voice or manner of speaking, behavior, habits, flaws, tells, and distinctive roleplay cues.
 Use this field to make the NPC easy to portray at the table.`;
 
 const generatedLocationDetailContract = `GENERATED LOCATION DETAIL RULE:
@@ -1013,11 +1014,14 @@ ${normalizedImagePromptBasePrompt}`,
 				.filter(Boolean),
 			characters: contextData?.campaign?.characters
 				?.map((c) => characterToPromptContext(c, noteToContextNote))
-				.filter((c) => c && (c.name || c.motivation)),
+				.filter(
+					(c) => c && (c.name || c.description || c.motivation || c.trait),
+				),
 			npcs: contextData?.campaign?.npcs
 				?.map((npc) => npcToPromptContext(npc, noteToContextNote))
 				.filter(
-					(npc) => npc && (npc.name || npc.description || npc.motivation),
+					(npc) =>
+						npc && (npc.name || npc.description || npc.motivation || npc.trait),
 				),
 			locations: contextData?.campaign?.locations
 				?.map((location) =>
@@ -1080,7 +1084,8 @@ ${normalizedImagePromptBasePrompt}`,
 			currentSession.npcs = currentSessionData.npcs
 				.map((npc) => npcToPromptContext(npc, noteToContextNote))
 				.filter(
-					(npc) => npc && (npc.name || npc.description || npc.motivation),
+					(npc) =>
+						npc && (npc.name || npc.description || npc.motivation || npc.trait),
 				);
 		}
 		if (
