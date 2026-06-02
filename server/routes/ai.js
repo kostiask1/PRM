@@ -5,20 +5,30 @@ const router = express.Router();
 const storage = require("../storage");
 const aiService = require("../aiService");
 const {
-	buildAiRequestSnapshot,
-	formatGeneratedContentForHistory,
-} = require("../aiHistoryService");
-const { assertAiGeneratedContentContract } = require("../aiPayloadSchemas");
+	AiHistoryWriter,
+	asText,
+} = require("../ai/AiHistoryWriter");
 const {
-	buildCustomMonsterChangeResources,
-	restoreAiResponseSnapshot,
-	saveDraftParsedAiResponse,
-	saveParsedAiResponse,
-} = require("../aiResponseHistoryService");
-const { applyAiOperations } = require("../aiPatchService");
-const { normalizeCustomMonster } = require("../aiCustomMonsterService");
+	EncounterLocalMonsterAiFlow,
+} = require("../ai/EncounterLocalMonsterAiFlow");
+const { CustomMonsterAiFlow } = require("../ai/CustomMonsterAiFlow");
+const { CampaignAiFlow } = require("../ai/CampaignAiFlow");
+const { assertAiGeneratedContentContract } = require("../aiPayloadSchemas");
+const { restoreAiResponseSnapshot } = require("../aiResponseHistoryService");
 
 const ENV_PATH = path.join(__dirname, "..", "..", ".env");
+const aiHistoryWriter = new AiHistoryWriter();
+const encounterLocalMonsterAiFlow = new EncounterLocalMonsterAiFlow({
+	historyWriter: aiHistoryWriter,
+	buildAiChangeSummary,
+});
+const customMonsterAiFlow = new CustomMonsterAiFlow({
+	historyWriter: aiHistoryWriter,
+	buildAiChangeSummary,
+});
+const campaignAiFlow = new CampaignAiFlow({
+	historyWriter: aiHistoryWriter,
+});
 
 function normalizeApiKey(value) {
 	return String(value || "").trim();
@@ -35,19 +45,6 @@ function updateEnvValue(envText, key, value) {
 
 	const suffix = envText && !envText.endsWith("\n") ? eol : "";
 	return `${envText}${suffix}${line}${eol}`;
-}
-
-function asText(value) {
-	if (value === null || value === undefined) return "";
-	if (typeof value === "string") return value.trim();
-	if (
-		typeof value === "number" ||
-		typeof value === "bigint" ||
-		typeof value === "boolean"
-	) {
-		return String(value).trim();
-	}
-	return "";
 }
 
 function buildAiChangeSummary(resources = []) {
@@ -144,174 +141,6 @@ function getCampaignImagePromptBasePrompt(settings, campaignSlug) {
 	return asText(prompts[campaignSlug]);
 }
 
-function cloneRetryPayload(payload = {}) {
-	const cloned = JSON.parse(JSON.stringify(payload || {}));
-	if (Array.isArray(cloned.attachedImages)) {
-		cloned.attachedImages = cloned.attachedImages
-			.map((image) => {
-				if (!image || typeof image !== "object") return null;
-				return {
-					name: asText(image.name),
-					url: asText(image.url) || undefined,
-					mimeType: asText(image.mimeType) || undefined,
-					sizeBytes: Number(image.sizeBytes) || undefined,
-					omittedData: image.data ? true : undefined,
-				};
-			})
-			.filter(Boolean);
-	}
-	return cloned;
-}
-
-function shouldSaveAiResponseHistory(payload = {}) {
-	return payload?.historyMode !== "ephemeral" && payload?.saveToHistory !== false;
-}
-
-function createEphemeralAiResponse(payload = {}) {
-	return {
-		...payload,
-		id: `ephemeral-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-		status: payload.status || "completed",
-		createdAt: new Date().toISOString(),
-	};
-}
-
-function cloneJson(value) {
-	return JSON.parse(JSON.stringify(value ?? null));
-}
-
-function hasOwn(object, key) {
-	return Object.prototype.hasOwnProperty.call(object || {}, key);
-}
-
-function operationData(operation = {}) {
-	return operation.data && typeof operation.data === "object"
-		? operation.data
-		: operation.monster && typeof operation.monster === "object"
-			? operation.monster
-			: operation.payload && typeof operation.payload === "object"
-				? operation.payload
-				: operation;
-}
-
-function operationPatch(operation = {}) {
-	return operation.patch && typeof operation.patch === "object"
-		? operation.patch
-		: operation.changes && typeof operation.changes === "object"
-			? operation.changes
-			: operationData(operation);
-}
-
-function findMonsterOperation(generatedContent = {}) {
-	return (Array.isArray(generatedContent.operations)
-		? generatedContent.operations
-		: []
-	).find((operation) => {
-		const entity = asText(operation?.entity).toLowerCase();
-		const op = asText(operation?.op).toLowerCase();
-		return (
-			["monster", "custom-monster", "custommonster"].includes(entity) &&
-			["create", "update"].includes(op)
-		);
-	});
-}
-
-function buildLocalEncounterMonsterFromOperation(
-	generatedContent,
-	targetMonster,
-) {
-	const operation = findMonsterOperation(generatedContent);
-	if (!operation || !targetMonster) return null;
-	const op = asText(operation.op).toLowerCase();
-	const raw =
-		op === "update"
-			? {
-					...targetMonster,
-					...operationPatch(operation),
-					id: targetMonster.id || operation.id || operation.targetId,
-					name:
-						operationPatch(operation).name ||
-						targetMonster.name ||
-						operation.name ||
-						operation.targetName,
-				}
-			: {
-					...targetMonster,
-					...operationData(operation),
-					id: operationData(operation).id || targetMonster.id,
-					name: operationData(operation).name || targetMonster.name,
-				};
-	if (!hasOwn(raw, "originalBestiaryName")) {
-		raw.originalBestiaryName =
-			targetMonster.originalBestiaryName || targetMonster.name;
-	}
-	if (!hasOwn(raw, "imageUrl") && targetMonster.imageUrl) {
-		raw.imageUrl = targetMonster.imageUrl;
-	}
-	return normalizeCustomMonster(raw);
-}
-
-function getMonsterMaxHp(monster = {}, fallback = 0) {
-	const hpAverage =
-		monster.hp && typeof monster.hp === "object"
-			? Number.parseInt(monster.hp.average, 10)
-			: NaN;
-	const hitPoints = Number.parseInt(monster.hit_points, 10);
-	const fallbackHp = Number.parseInt(fallback, 10);
-	if (Number.isFinite(hpAverage)) return hpAverage;
-	if (Number.isFinite(hitPoints)) return hitPoints;
-	return Number.isFinite(fallbackHp) ? fallbackHp : 0;
-}
-
-function buildLocalEncounterMonsterSessionChange({
-	campaignSlug,
-	sessionFile,
-	encounterId,
-	targetInstanceId,
-	beforeSession,
-	nextMonster,
-}) {
-	if (!campaignSlug || !sessionFile || !encounterId || !targetInstanceId) {
-		return null;
-	}
-	if (!beforeSession || !nextMonster) return null;
-
-	const afterSession = cloneJson(beforeSession);
-	const encounter = (afterSession.data?.encounters || []).find(
-		(item) => asText(item?.id) === asText(encounterId),
-	);
-	if (!encounter || !Array.isArray(encounter.monsters)) return null;
-
-	let changed = false;
-	encounter.monsters = encounter.monsters.map((monster) => {
-		if (asText(monster?.instanceId) !== asText(targetInstanceId)) return monster;
-		const nextMaxHp = getMonsterMaxHp(nextMonster, monster.hit_points);
-		const currentHp = Number.parseInt(monster.currentHp, 10);
-		const safeCurrentHp = Number.isFinite(currentHp)
-			? Math.min(currentHp, nextMaxHp || currentHp)
-			: nextMaxHp;
-		changed = true;
-		return {
-			...nextMonster,
-			instanceId: targetInstanceId,
-			_localOverride: true,
-			currentHp: safeCurrentHp,
-			hit_points: nextMaxHp,
-		};
-	});
-	if (!changed) return null;
-
-	return {
-		id: `session:${sessionFile}`,
-		kind: "session",
-		campaign: campaignSlug,
-		fileName: sessionFile,
-		label: `${campaignSlug}/sessions/${sessionFile}`,
-		before: cloneJson(beforeSession),
-		after: afterSession,
-	};
-}
-
 function isObject(value) {
 	return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
@@ -354,71 +183,6 @@ function fillCurrentTargetIds(generatedContent, { path, sceneId, customMonsterTa
 		}
 	}
 	return generatedContent;
-}
-
-function getFailedAiResponseText(error, status = null) {
-	const message =
-		asText(error?.message || error?.error) || "AI request failed.";
-	return ["AI request failed", "", status ? `Status: ${status}` : null, message]
-		.filter(Boolean)
-		.join("\n");
-}
-
-function getHistoryUserInstructions(payload = {}) {
-	return asText(
-		Object.prototype.hasOwnProperty.call(payload, "historyUserInstructions")
-			? payload.historyUserInstructions
-			: payload.userInstructions,
-	);
-}
-
-async function saveFailedAiRequest(payload = {}, error, status = null) {
-	if (!shouldSaveAiResponseHistory(payload)) return null;
-	const path =
-		payload?.path && typeof payload.path === "object" ? payload.path : {};
-	const campaignSlug = asText(path.campaign);
-	if (!campaignSlug) return null;
-	const historyUserInstructions = getHistoryUserInstructions(payload);
-
-	const shouldParseAIResponse =
-		payload.type !== "image" &&
-		Boolean(payload.parseAIResponse) &&
-		(!path.encounter || payload.generateEncounters);
-	const requestSnapshot = buildAiRequestSnapshot({
-		type: payload.type,
-		modelName: payload.modelName,
-		userInstructions: historyUserInstructions,
-		path,
-		sceneId: payload.sceneId,
-		imageTarget: payload.imageTarget,
-		parseAIResponse: payload.parseAIResponse,
-		shouldParseAIResponse,
-		generateCharacters: payload.generateCharacters !== false,
-		generateNpcs: payload.generateNpcs !== false,
-		generateLocations: payload.generateLocations !== false,
-		generateEncounters: Boolean(payload.generateEncounters),
-		generateCustomMonsters: Boolean(payload.generateCustomMonsters),
-		entityScope: payload.entityScope,
-		contextConfig: payload.contextConfig,
-		contextData: {},
-		language: payload.language,
-	});
-
-	return storage.addAiResponse({
-		text: getFailedAiResponseText(error, status),
-		path,
-		type: payload.type || null,
-		modelName: payload.modelName || null,
-		language: payload.language || null,
-		userInstructions: historyUserInstructions,
-		request: requestSnapshot,
-		status: "failed",
-		error: {
-			message: asText(error?.message || error?.error) || "AI request failed.",
-			status,
-		},
-		retryPayload: cloneRetryPayload(payload),
-	});
 }
 
 function escapeRegExp(value) {
@@ -951,7 +715,7 @@ router.post("/generate", async (req, res, next) => {
 		const responseLanguage = String(language || "")
 			.trim()
 			.toLowerCase();
-		const historyUserInstructions = getHistoryUserInstructions(req.body);
+		const historyUserInstructions = aiHistoryWriter.getUserInstructions(req.body);
 		if (!responseLanguage) {
 			return res.status(400).json({ error: "language is required." });
 		}
@@ -1130,7 +894,7 @@ router.post("/generate", async (req, res, next) => {
 			});
 
 			if (generatedContent.error) {
-				const aiResponse = await saveFailedAiRequest(
+				const aiResponse = await aiHistoryWriter.saveFailed(
 					req.body,
 					generatedContent,
 					500,
@@ -1149,177 +913,37 @@ router.post("/generate", async (req, res, next) => {
 				requireOperations: true,
 			});
 
-			const isEncounterHistoryMode =
-				req.body?.historyMode === "encounter" &&
-				asText(path?.campaign) &&
-				asText(path?.session) &&
-				asText(path?.encounter);
-			if (isEncounterHistoryMode) {
-				const targetInstanceId = asText(
-					req.body?.targetInstanceId || customMonsterTarget?.instanceId,
-				);
-				const changedMonster = buildLocalEncounterMonsterFromOperation(
+			if (encounterLocalMonsterAiFlow.isEnabled(req.body)) {
+				const result = await encounterLocalMonsterAiFlow.createDraft({
+					payload: req.body,
 					generatedContent,
 					customMonsterTarget,
-				);
-				const localEncounterResource = buildLocalEncounterMonsterSessionChange({
-					campaignSlug: asText(path.campaign),
-					sessionFile: asText(path.session),
-					encounterId: asText(path.encounter),
-					targetInstanceId,
-					beforeSession: customSession,
-					nextMonster: changedMonster,
-				});
-
-				if (!changedMonster || !localEncounterResource) {
-					const aiResponse = await saveFailedAiRequest(
-						req.body,
-						{ message: "AI did not return any valid creature." },
-						400,
-					);
-					return res.status(400).json({
-						error: "AI не повернув жодної коректної істоти.",
-						generated: generatedContent,
-						aiResponse,
-					});
-				}
-
-				const responsePath = {
-					campaign: asText(path.campaign),
-					session: asText(path.session),
-					encounter: asText(path.encounter),
-				};
-				const responseResources = [localEncounterResource];
-				const aiResponsePayload = {
-					text: formatGeneratedContentForHistory(generatedContent),
-					path: responsePath,
-					type: "custom-monster",
+					customSession,
 					modelName,
-					language: responseLanguage,
-					userInstructions: historyUserInstructions,
-					request: buildAiRequestSnapshot({
-						type,
-						modelName,
-						userInstructions: historyUserInstructions,
-						path: responsePath,
-						parseAIResponse: true,
-						shouldParseAIResponse: true,
-						generateCharacters: false,
-						generateNpcs: false,
-						generateLocations: false,
-						generateEncounters: false,
-						generateCustomMonsters: false,
-						entityScope: "custom-bestiary",
-						contextConfig: null,
-						contextData: customContextData,
-						language: responseLanguage,
-						globalBasePrompt,
-						imagePromptBasePrompt,
-						campaignBasePrompt,
-					}),
-					retryPayload: cloneRetryPayload(req.body),
-					changes: {
-						resources: responseResources,
-						summary: buildAiChangeSummary(responseResources),
-					},
-				};
-				const aiResponse = await storage.addAiResponse({
-					...aiResponsePayload,
-					applyState: "draft",
-					appliedAt: null,
-				});
-				return res.json({
-					generated: {
-						...generatedContent,
-						monsters: [changedMonster],
-					},
-					draft: true,
-					aiResponse,
-				});
-			}
-
-			const applied = await applyAiOperations({
-				payload: generatedContent,
-				campaignSlug: "bestiary",
-				sessionFile: null,
-				entityScope: "custom-bestiary",
-				simplifiedNotes: simplifiedNotesEnabled,
-				permissions: {
-					allowCharacters: false,
-					allowNpcs: false,
-					allowLocations: false,
-					allowEncounters: false,
-				},
-			});
-
-			if (!applied.customBestiaryChange?.hasChanges) {
-				const aiResponse = await saveFailedAiRequest(
-					req.body,
-					{ message: "AI did not return any valid creature." },
-					400,
-				);
-				return res.status(400).json({
-					error: "AI не повернув жодної коректної істоти.",
-					generated: generatedContent,
-					aiResponse,
-				});
-			}
-
-			const monsters = applied.customBestiaryChange?.after || [];
-			const customBestiaryChangeResources = buildCustomMonsterChangeResources(
-				beforeCustomMonsters,
-				monsters,
-			);
-			const aiResponsePayload = {
-				text: formatGeneratedContentForHistory(generatedContent),
-				path: { campaign: "bestiary" },
-				type: "custom-monster",
-				modelName,
-				language: responseLanguage,
-				userInstructions: historyUserInstructions,
-				request: buildAiRequestSnapshot({
-					type,
-					modelName,
-					userInstructions: historyUserInstructions,
-					path: { campaign: "bestiary" },
-					parseAIResponse: true,
-					shouldParseAIResponse: true,
-					generateCharacters: false,
-					generateNpcs: false,
-					generateLocations: false,
-					generateEncounters: false,
-					generateCustomMonsters: false,
-					entityScope: "custom-bestiary",
-					contextConfig: null,
-					contextData: customContextData,
-					language: responseLanguage,
+					responseLanguage,
+					historyUserInstructions,
+					customContextData,
 					globalBasePrompt,
 					imagePromptBasePrompt,
 					campaignBasePrompt,
-				}),
-				retryPayload: cloneRetryPayload(req.body),
-				changes: {
-					resources: customBestiaryChangeResources,
-					summary: buildAiChangeSummary(customBestiaryChangeResources),
-				},
-			};
-			const draftResponsePayload = {
-				...aiResponsePayload,
-				applyState: "draft",
-				appliedAt: null,
-			};
-			const aiResponse = shouldSaveAiResponseHistory(req.body)
-				? await storage.addAiResponse(draftResponsePayload)
-				: createEphemeralAiResponse(draftResponsePayload);
-			await storage.writeCustomBestiaryMonsters(beforeCustomMonsters);
-			return res.json({
-				generated: {
-					...generatedContent,
-					monsters: applied.changedMonsters,
-				},
-				draft: true,
-				aiResponse,
+				});
+				return res.status(result.status).json(result.body);
+			}
+
+			const result = await customMonsterAiFlow.createDraft({
+				payload: req.body,
+				generatedContent,
+				beforeCustomMonsters,
+				modelName,
+				responseLanguage,
+				historyUserInstructions,
+				customContextData,
+				simplifiedNotesEnabled,
+				globalBasePrompt,
+				imagePromptBasePrompt,
+				campaignBasePrompt,
 			});
+			return res.status(result.status).json(result.body);
 		}
 
 		if (type === "image" && path?.campaign === "bestiary") {
@@ -1347,7 +971,7 @@ router.post("/generate", async (req, res, next) => {
 			});
 
 			if (generatedContent.error) {
-				const aiResponse = await saveFailedAiRequest(
+				const aiResponse = await aiHistoryWriter.saveFailed(
 					req.body,
 					generatedContent,
 					500,
@@ -1362,7 +986,7 @@ router.post("/generate", async (req, res, next) => {
 				modelName,
 				language: responseLanguage,
 				userInstructions: historyUserInstructions,
-				request: buildAiRequestSnapshot({
+				request: aiHistoryWriter.buildRequestSnapshot({
 					type,
 					modelName,
 					userInstructions: historyUserInstructions,
@@ -1384,7 +1008,7 @@ router.post("/generate", async (req, res, next) => {
 					imagePromptBasePrompt,
 					campaignBasePrompt,
 				}),
-				retryPayload: cloneRetryPayload(req.body),
+				retryPayload: aiHistoryWriter.cloneRetryPayload(req.body),
 			});
 			return res.json({ prompt: generatedContent, aiResponse });
 		}
@@ -1511,7 +1135,7 @@ router.post("/generate", async (req, res, next) => {
 		}
 
 		if (generatedContent.error) {
-			const aiResponse = await saveFailedAiRequest(
+			const aiResponse = await aiHistoryWriter.saveFailed(
 				req.body,
 				generatedContent,
 				500,
@@ -1526,107 +1150,38 @@ router.post("/generate", async (req, res, next) => {
 			});
 		}
 
-		const requestSnapshot = buildAiRequestSnapshot({
+		const result = await campaignAiFlow.persistGeneratedContent({
+			payload: req.body,
+			generatedContent,
+			session,
+			path,
 			type,
 			modelName,
-			userInstructions: historyUserInstructions,
-			path,
+			responseLanguage,
+			historyUserInstructions,
 			sceneId,
 			imageTarget,
 			parseAIResponse,
 			shouldParseAIResponse,
-			generateCharacters: characterGenerationEnabled,
-			generateNpcs: npcGenerationEnabled,
-			generateLocations: locationGenerationEnabled,
-			generateEncounters: encounterGenerationEnabled,
-			generateCustomMonsters: customMonsterGenerationEnabled,
-			entityScope: entityTargetScope,
+			characterGenerationEnabled,
+			npcGenerationEnabled,
+			locationGenerationEnabled,
+			encounterGenerationEnabled,
+			customMonsterGenerationEnabled,
+			entityTargetScope,
 			contextConfig,
 			contextData,
-			language: responseLanguage,
+			simplifiedNotesEnabled,
+			autoApplyAiChanges,
 			globalBasePrompt,
 			imagePromptBasePrompt,
 			campaignBasePrompt,
 		});
-
-		if (!shouldParseAIResponse) {
-			const aiResponse = await storage.addAiResponse({
-				text: generatedContent,
-				path,
-				type,
-				modelName,
-				language: responseLanguage,
-				userInstructions: historyUserInstructions,
-				request: requestSnapshot,
-				retryPayload: cloneRetryPayload(req.body),
-			});
-			return res.json({ prompt: generatedContent, aiResponse });
-		}
-
-		const beforeApplyBundle = await storage.exportCampaignBundle(path.campaign);
-		const applied = await applyAiOperations({
-			payload: generatedContent,
-			campaignSlug: path.campaign,
-			sessionFile: session ? path.session : null,
-			encounterId: path.encounter,
-			entityScope: entityTargetScope,
-			simplifiedNotes: simplifiedNotesEnabled,
-			permissions: {
-				allowCharacters: characterGenerationEnabled,
-				allowNpcs: npcGenerationEnabled,
-				allowLocations: locationGenerationEnabled,
-				allowEncounters: encounterGenerationEnabled || Boolean(path.encounter),
-			},
-		});
-		const extraChangeResources = applied.customBestiaryChange?.hasChanges
-			? buildCustomMonsterChangeResources(
-					applied.customBestiaryChange.before,
-					applied.customBestiaryChange.after,
-				)
-			: [];
-
-		if (!autoApplyAiChanges) {
-			const aiResponse = await saveDraftParsedAiResponse({
-				beforeApplyBundle,
-				generatedContent,
-				path,
-				type,
-				modelName,
-				language: responseLanguage,
-				userInstructions: historyUserInstructions,
-				requestSnapshot,
-				retryPayload: cloneRetryPayload(req.body),
-				extraChangeResources,
-			});
-			return res.json({
-				generated: generatedContent,
-				draft: true,
-				aiResponse,
-			});
-		}
-
-		const aiResponse = await saveParsedAiResponse({
-			beforeApplyBundle,
-			generatedContent,
-			path,
-			type,
-			modelName,
-			language: responseLanguage,
-			userInstructions: historyUserInstructions,
-			requestSnapshot,
-			retryPayload: cloneRetryPayload(req.body),
-			extraChangeResources,
-		});
-
-		res.json({
-			generated: generatedContent,
-			updated: applied.updated,
-			aiResponse,
-		});
+		res.status(result.status).json(result.body);
 	} catch (error) {
 		if (req.path === "/generate") {
 			try {
-				const aiResponse = await saveFailedAiRequest(
+				const aiResponse = await aiHistoryWriter.saveFailed(
 					req.body,
 					error,
 					error.status || 500,
