@@ -2167,11 +2167,11 @@ await run("AI patch service skips only fully empty scene creates", async () => {
 await run("storage keeps AI response history per campaign", async () => {
 	await withTestSlug("ai-history-a", async (firstSlug) => {
 		await withTestSlug("ai-history-b", async (secondSlug) => {
-			await storage.addAiResponse({
+			const firstEntry = await storage.addAiResponse({
 				text: "Відповідь для першої кампанії",
 				path: { campaign: firstSlug, session: null, encounter: null },
 			});
-			await storage.addAiResponse({
+			const secondEntry = await storage.addAiResponse({
 				text: "Відповідь для другої кампанії",
 				path: { campaign: secondSlug, session: null, encounter: null },
 			});
@@ -2185,6 +2185,39 @@ await run("storage keeps AI response history per campaign", async () => {
 			assert.equal(secondHistory[0].path.campaign, secondSlug);
 			assert.equal(firstHistory[0].text.includes("першої"), true);
 			assert.equal(secondHistory[0].text.includes("другої"), true);
+
+			const updatedFirst = await storage.updateAiResponse(firstSlug, firstEntry.id, {
+				applyState: "applied",
+				changes: {
+					resources: [
+						{
+							id: "campaign:test",
+							kind: "campaign",
+							label: "test",
+							before: { name: "Before" },
+							after: { name: "After" },
+						},
+					],
+					summary: { modified: 1, total: 1 },
+				},
+			});
+			assert.equal(updatedFirst.applyState, "applied");
+			const afterUpdate = await storage.readAiResponses(firstSlug);
+			assert.equal(afterUpdate[0].changes.resources.length, 1);
+			assert.equal(afterUpdate[0].changes.summary.modified, 1);
+			assert.equal(
+				await storage.updateAiResponse(firstSlug, "missing-response-id", {
+					applyState: "undone",
+				}),
+				null,
+			);
+			assert.equal((await storage.readAiResponses(firstSlug)).length, 1);
+
+			await storage.deleteAiResponse(secondSlug, secondEntry.id);
+			assert.equal((await storage.readAiResponses(secondSlug)).length, 0);
+
+			await storage.clearAiResponses(firstSlug);
+			assert.equal((await storage.readAiResponses(firstSlug)).length, 0);
 		});
 	});
 });

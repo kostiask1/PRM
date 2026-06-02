@@ -162,6 +162,19 @@ function cloneRetryPayload(payload = {}) {
 	return cloned;
 }
 
+function shouldSaveAiResponseHistory(payload = {}) {
+	return payload?.historyMode !== "ephemeral" && payload?.saveToHistory !== false;
+}
+
+function createEphemeralAiResponse(payload = {}) {
+	return {
+		...payload,
+		id: `ephemeral-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+		status: payload.status || "completed",
+		createdAt: new Date().toISOString(),
+	};
+}
+
 function isObject(value) {
 	return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
@@ -215,6 +228,7 @@ function getFailedAiResponseText(error, status = null) {
 }
 
 async function saveFailedAiRequest(payload = {}, error, status = null) {
+	if (!shouldSaveAiResponseHistory(payload)) return null;
 	const path =
 		payload?.path && typeof payload.path === "object" ? payload.path : {};
 	const campaignSlug = asText(path.campaign);
@@ -1053,11 +1067,14 @@ router.post("/generate", async (req, res, next) => {
 					summary: buildAiChangeSummary(customBestiaryChangeResources),
 				},
 			};
-			const aiResponse = await storage.addAiResponse({
+			const draftResponsePayload = {
 				...aiResponsePayload,
 				applyState: "draft",
 				appliedAt: null,
-			});
+			};
+			const aiResponse = shouldSaveAiResponseHistory(req.body)
+				? await storage.addAiResponse(draftResponsePayload)
+				: createEphemeralAiResponse(draftResponsePayload);
 			await storage.writeCustomBestiaryMonsters(beforeCustomMonsters);
 			return res.json({
 				generated: {

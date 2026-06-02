@@ -385,6 +385,7 @@ function EncounterView() {
 				generateEncounters: false,
 				entityScope: "custom-bestiary",
 				contextConfig: null,
+				historyMode: isLocalEditMode ? "ephemeral" : undefined,
 				language: currentLanguage,
 			}, { signal: controller.signal });
 			if (data.draft && data.aiResponse) {
@@ -394,11 +395,6 @@ function EncounterView() {
 				);
 				setAiDraftMode(isLocalEditMode ? "local" : "global");
 				setAiDraftResponseEntry(draftEntry);
-				if (isLocalEditMode) {
-					api.deleteAiResponse("bestiary", data.aiResponse.id).catch((error) => {
-						console.error("Failed to remove local AI draft from history", error);
-					});
-				}
 			} else if (data.updated?.monsters?.length && aiTargetInstanceId) {
 				view.updateMonsterFromAi(aiTargetInstanceId, data.updated.monsters[0]);
 			}

@@ -733,6 +733,7 @@ async function updateAiResponse(campaignSlugValue, id, patch = {}) {
 		});
 		return updatedEntry || entry;
 	});
+	if (!updatedEntry) return null;
 	await writeAiResponses(campaignSlugValue, next);
 	return updatedEntry;
 }
