@@ -4,6 +4,9 @@ import { lang } from "../../services/localization";
 
 export default function MonsterAiActionModal({
 	aiActionMonster,
+	showLocalEdit = false,
+	showGlobalEdit = true,
+	targetLabel = null,
 	onCancel,
 	onChoose,
 }) {
@@ -19,18 +22,29 @@ export default function MonsterAiActionModal({
 			<div className="Bestiary__ai_action_body">
 				<div className="Bestiary__ai_edit_target">
 					<span className="Bestiary__ai_edit_target_label">
-						{lang.t("Custom creature")}:
+						{targetLabel || lang.t("Custom creature")}:
 					</span>{" "}
 					{aiActionMonster.name}
 				</div>
 				<div className="Bestiary__ai_action_buttons">
-					<Button
-						variant="primary"
-						icon="wand"
-						onClick={() => onChoose("edit")}
-					>
-						{lang.t("Edit this creature")}
-					</Button>
+					{showLocalEdit && (
+						<Button
+							variant="primary"
+							icon="wand"
+							onClick={() => onChoose("local-edit")}
+						>
+							{lang.t("Edit only in this encounter")}
+						</Button>
+					)}
+					{showGlobalEdit && (
+						<Button
+							variant={showLocalEdit ? "ghost" : "primary"}
+							icon="wand"
+							onClick={() => onChoose("edit")}
+						>
+							{lang.t("Edit this creature")}
+						</Button>
+					)}
 					<Button
 						variant="ghost"
 						icon="plus"

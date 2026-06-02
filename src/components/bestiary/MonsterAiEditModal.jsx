@@ -21,11 +21,14 @@ export default function MonsterAiEditModal({
 	if (!aiEditingMonster) return null;
 
 	const isCreateBased = aiEditMode === "create-based";
+	const isLocalEdit = aiEditMode === "local-edit";
 
 	return (
 		<Modal
 			title={
-				isCreateBased
+				isLocalEdit
+					? lang.t("AI edit encounter creature")
+					: isCreateBased
 					? lang.t("Create custom creature based on this")
 					: lang.t("AI edit custom creature")
 			}
@@ -37,7 +40,9 @@ export default function MonsterAiEditModal({
 			<div className="Bestiary__edit_form">
 				<div className="Bestiary__ai_edit_target">
 					<span className="Bestiary__ai_edit_target_label">
-						{isCreateBased
+						{isLocalEdit
+							? lang.t("Encounter creature")
+							: isCreateBased
 							? lang.t("Source creature")
 							: lang.t("Custom creature")}
 						:
@@ -70,6 +75,10 @@ export default function MonsterAiEditModal({
 							? lang.t(
 									"Describe what to create, or leave empty to let AI decide.",
 								)
+							: isLocalEdit
+								? lang.t(
+										"Describe what to change for this encounter only.",
+									)
 							: lang.t("Describe what to change.")
 					}
 					className="Bestiary__ai_edit_prompt"
@@ -94,6 +103,8 @@ export default function MonsterAiEditModal({
 							? lang.t("AI is working, please wait...")
 							: isCreateBased
 								? lang.t("Create custom creature")
+								: isLocalEdit
+									? lang.t("Apply local AI edit")
 								: lang.t("Apply AI edit")}
 					</Button>
 				</div>

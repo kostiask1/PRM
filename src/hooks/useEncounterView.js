@@ -634,7 +634,7 @@ export default function useEncounterView() {
 	);
 
 	const updateMonsterFromAi = useCallback(
-		(instanceId, nextMonster) => {
+		(instanceId, nextMonster, options = {}) => {
 			if (!encounter || !nextMonster) return;
 			const updatedMonsters = encounter.monsters.map((monster) => {
 				if (monster.instanceId !== instanceId) return monster;
@@ -645,6 +645,7 @@ export default function useEncounterView() {
 				return {
 					...nextMonster,
 					instanceId,
+					...(options.localOverride ? { _localOverride: true } : {}),
 					currentHp: Math.min(monster.currentHp ?? nextMaxHp, nextMaxHp),
 					hit_points: nextMaxHp,
 				};

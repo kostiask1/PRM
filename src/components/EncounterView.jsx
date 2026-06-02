@@ -73,6 +73,72 @@ function getFirstChangedMonster(entry, resourceIds = null) {
 	return resource?.after || null;
 }
 
+function getMonsterTokenImageUrl(monster) {
+	if (!monster) return "";
+	if (monster.imageUrl) return monster.imageUrl;
+	const source = String(monster.source || "").trim();
+	const name = String(
+		monster.originalBestiaryName || monster.name || "",
+	).trim();
+	if (!source || !name) return "";
+	return `/api/bestiary/tokens/${encodeURIComponent(source)}/${encodeURIComponent(name)}.webp`;
+}
+
+function addSourceMonsterImageToDraft(entry, sourceMonster) {
+	if (!entry || !sourceMonster) return entry;
+	const imageUrl = getMonsterTokenImageUrl(sourceMonster);
+	if (!imageUrl) return entry;
+	const resources = Array.isArray(entry?.changes?.resources)
+		? entry.changes.resources
+		: [];
+	let changed = false;
+	const nextResources = resources.map((resource) => {
+		if (
+			resource?.kind !== "custom-monster" ||
+			resource.before !== null ||
+			!resource.after ||
+			resource.after.imageUrl
+		) {
+			return resource;
+		}
+		changed = true;
+		return {
+			...resource,
+			after: {
+				...resource.after,
+				imageUrl,
+				originalBestiaryName:
+					resource.after.originalBestiaryName || sourceMonster.name,
+			},
+		};
+	});
+	if (!changed) return entry;
+	return {
+		...entry,
+		changes: {
+			...(entry.changes || {}),
+			resources: nextResources,
+		},
+	};
+}
+
+function buildAiChangeSummary(resources = []) {
+	return resources.reduce(
+		(summary, resource) => {
+			if (resource.before === null && resource.after !== null) {
+				summary.added += 1;
+			} else if (resource.before !== null && resource.after === null) {
+				summary.deleted += 1;
+			} else {
+				summary.modified += 1;
+			}
+			summary.total += 1;
+			return summary;
+		},
+		{ added: 0, deleted: 0, modified: 0, total: 0 },
+	);
+}
+
 function getGridMonsterKey(monster) {
 	const baseName = String(monster?.originalBestiaryName || monster?.name || "")
 		.trim()
@@ -150,6 +216,7 @@ function EncounterView() {
 	const [aiModels, setAiModels] = useState([]);
 	const [selectedAiModel, setSelectedAiModel] = useState("");
 	const [aiDraftResponseEntry, setAiDraftResponseEntry] = useState(null);
+	const [aiDraftMode, setAiDraftMode] = useState("global");
 	const [isRestoringAiResponse, setIsRestoringAiResponse] = useState(false);
 	const [aiTargetInstanceId, setAiTargetInstanceId] = useState(null);
 	const aiDraftResponseRef = useRef(null);
@@ -317,14 +384,7 @@ function EncounterView() {
 	const handleMonsterAiAction = (monster) => {
 		if (!monster?.name) return;
 		setAiTargetInstanceId(monster.instanceId || null);
-		if (isCustomSource(monster.source)) {
-			setAiActionMonster(monster);
-			return;
-		}
-		setAiEditMode("create-based");
-		setAiEditingMonster(monster);
-		setAiEditInstructions("");
-		setAiEditError("");
+		setAiActionMonster(monster);
 	};
 
 	const closeMonsterAiAction = () => {
@@ -358,20 +418,35 @@ function EncounterView() {
 		if (!aiEditingMonster?.name) return;
 		const instructions = aiEditInstructions.trim();
 		const isCreateBasedMode = aiEditMode === "create-based";
+		const isLocalEditMode = aiEditMode === "local-edit";
 		if (!instructions && !isCreateBasedMode) {
 			setAiEditError(lang.t("Describe what to change."));
 			return;
 		}
-		const finalInstructions = isCreateBasedMode
+		const finalInstructions = isLocalEditMode
 			? [
 					lang.t(
-						"Create a new custom creature based on the selected creature. Do not change the selected creature.",
+						"Edit the selected creature for this encounter only. Return a complete custom creature stat block and do not change the global bestiary creature.",
 					),
+					`${lang.t("Current encounter creature")}:\n${JSON.stringify(
+						aiEditingMonster,
+						null,
+						2,
+					)}`,
 					instructions,
 				]
 					.filter(Boolean)
 					.join("\n\n")
-			: instructions;
+			: isCreateBasedMode
+				? [
+						lang.t(
+							"Create a new custom creature based on the selected creature. Do not change the selected creature.",
+						),
+						instructions,
+					]
+						.filter(Boolean)
+						.join("\n\n")
+				: instructions;
 
 		setIsAiEditingMonster(true);
 		setAiEditError("");
@@ -388,7 +463,10 @@ function EncounterView() {
 					encounter: view.encounter?.id,
 				},
 				customMonsterTarget: aiEditingMonster,
-				customMonsterMode: aiEditMode,
+				customMonsterMode:
+					isCreateBasedMode || isLocalEditMode
+						? "create-based"
+						: "edit",
 				parseAIResponse: true,
 				generateCharacters: false,
 				generateNpcs: false,
@@ -399,7 +477,17 @@ function EncounterView() {
 				language: currentLanguage,
 			}, { signal: controller.signal });
 			if (data.draft && data.aiResponse) {
-				setAiDraftResponseEntry(data.aiResponse);
+				const draftEntry = addSourceMonsterImageToDraft(
+					data.aiResponse,
+					aiEditingMonster,
+				);
+				setAiDraftMode(isLocalEditMode ? "local" : "global");
+				setAiDraftResponseEntry(draftEntry);
+				if (isLocalEditMode) {
+					api.deleteAiResponse("bestiary", data.aiResponse.id).catch((error) => {
+						console.error("Failed to remove local AI draft from history", error);
+					});
+				}
 			} else if (data.updated?.monsters?.length && aiTargetInstanceId) {
 				view.updateMonsterFromAi(aiTargetInstanceId, data.updated.monsters[0]);
 			}
@@ -420,6 +508,30 @@ function EncounterView() {
 
 	const saveAiDraftResponseChanges = async (resources) => {
 		if (!aiDraftResponseEntry?.id) return null;
+		if (aiDraftMode === "local") {
+			const afterById = new Map(
+				(Array.isArray(resources) ? resources : []).map((resource) => [
+					String(resource.id || ""),
+					resource.after ?? null,
+				]),
+			);
+			const nextResources = (aiDraftResponseEntry.changes?.resources || []).map(
+				(resource) =>
+					afterById.has(resource.id)
+						? { ...resource, after: afterById.get(resource.id) }
+						: resource,
+			);
+			const updatedEntry = {
+				...aiDraftResponseEntry,
+				changes: {
+					...(aiDraftResponseEntry.changes || {}),
+					resources: nextResources,
+					summary: buildAiChangeSummary(nextResources),
+				},
+			};
+			setAiDraftResponseEntry(updatedEntry);
+			return updatedEntry;
+		}
 		const updatedEntry = await api.updateAiResponse("bestiary", aiDraftResponseEntry.id, {
 			resources,
 		});
@@ -437,6 +549,19 @@ function EncounterView() {
 		if (!entry?.id || isRestoringAiResponse) return;
 		setIsRestoringAiResponse(true);
 		try {
+			if (aiDraftMode === "local") {
+				if (mode !== "undo") {
+					const nextMonster = getFirstChangedMonster(entry, options.resourceIds);
+					if (nextMonster && aiTargetInstanceId) {
+						view.updateMonsterFromAi(aiTargetInstanceId, nextMonster, {
+							localOverride: true,
+						});
+					}
+				}
+				setAiDraftResponseEntry(null);
+				setAiDraftMode("global");
+				return;
+			}
 			const result =
 				mode === "undo"
 					? await api.undoAiResponse("bestiary", entry.id, {
@@ -466,6 +591,7 @@ function EncounterView() {
 	const closeAiDraftResponse = () => {
 		if (isRestoringAiResponse) return;
 		setAiDraftResponseEntry(null);
+		setAiDraftMode("global");
 	};
 
 	const handleHpInputChange = (instanceId, value) => {
@@ -1149,6 +1275,9 @@ function EncounterView() {
 
 			<MonsterAiActionModal
 				aiActionMonster={aiActionMonster}
+				showLocalEdit={true}
+				showGlobalEdit={isCustomSource(aiActionMonster?.source)}
+				targetLabel={lang.t("Encounter creature")}
 				onCancel={closeMonsterAiAction}
 				onChoose={chooseMonsterAiAction}
 			/>
