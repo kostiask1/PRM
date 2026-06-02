@@ -137,3 +137,20 @@ export function updateDraftResourceAfterValues(entry, resources) {
 		},
 	};
 }
+
+export function isAiResponseVisibleForRoute(
+	entry,
+	route = {},
+	{ isBestiary = false } = {},
+) {
+	const entryPath = entry?.path || {};
+	if (entryPath.campaign === "bestiary") return isBestiary;
+	if (entryPath.encounter) {
+		return (
+			entryPath.campaign === route.campaign &&
+			entryPath.session === route.session &&
+			entryPath.encounter === route.encounter
+		);
+	}
+	return true;
+}

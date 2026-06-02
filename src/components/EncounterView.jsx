@@ -35,7 +35,6 @@ import {
 	getFirstChangedMonster,
 	getHistoryChangeSummary as getAiHistoryChangeSummary,
 	getLocalizedDiffResourceState,
-	updateDraftResourceAfterValues,
 } from "../utils/aiResponseHelpers.js";
 
 function isCustomSource(source) {
@@ -385,7 +384,8 @@ function EncounterView() {
 				generateEncounters: false,
 				entityScope: "custom-bestiary",
 				contextConfig: null,
-				historyMode: isLocalEditMode ? "ephemeral" : undefined,
+				historyMode: isLocalEditMode ? "encounter" : undefined,
+				targetInstanceId: aiTargetInstanceId || aiEditingMonster.instanceId,
 				language: currentLanguage,
 			}, { signal: controller.signal });
 			if (data.draft && data.aiResponse) {
@@ -416,10 +416,9 @@ function EncounterView() {
 	const saveAiDraftResponseChanges = async (resources) => {
 		if (!aiDraftResponseEntry?.id) return null;
 		if (aiDraftMode === "local") {
-			const updatedEntry = updateDraftResourceAfterValues(
-				aiDraftResponseEntry,
+			const updatedEntry = await api.updateAiResponse(campaign.slug, aiDraftResponseEntry.id, {
 				resources,
-			);
+			});
 			setAiDraftResponseEntry(updatedEntry);
 			return updatedEntry;
 		}
@@ -441,16 +440,19 @@ function EncounterView() {
 		setIsRestoringAiResponse(true);
 		try {
 			if (aiDraftMode === "local") {
-				if (mode !== "undo") {
-					const nextMonster = getFirstChangedMonster(entry, options.resourceIds);
-					if (nextMonster && aiTargetInstanceId) {
-						view.updateMonsterFromAi(aiTargetInstanceId, nextMonster, {
-							localOverride: true,
-						});
-					}
+				const result =
+					mode === "undo"
+						? await api.undoAiResponse(campaign.slug, entry.id, {
+								resourceIds: options.resourceIds,
+							})
+						: await api.applyAiResponse(campaign.slug, entry.id, {
+								resourceIds: options.resourceIds,
+							});
+				const nextEntry = result?.response || entry;
+				setAiDraftResponseEntry(nextEntry);
+				if (result?.updated) {
+					view.handleAiUpdate(result.updated);
 				}
-				setAiDraftResponseEntry(null);
-				setAiDraftMode("global");
 				return;
 			}
 			const result =

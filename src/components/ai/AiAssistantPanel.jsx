@@ -37,6 +37,7 @@ import { buildDiffResources } from "../../utils/aiDiff.js";
 import {
 	getHistoryChangeSummary as getAiHistoryChangeSummary,
 	getLocalizedDiffResourceState,
+	isAiResponseVisibleForRoute,
 } from "../../utils/aiResponseHelpers.js";
 import "../../assets/components/AiAssistantPanel.css";
 
@@ -1634,6 +1635,17 @@ export default function AiAssistantPanel({
 		},
 	);
 	const selectedResponseHasChanges = selectedResponseDiffResources.length > 0;
+	const visibleResponseHistory = useMemo(
+		() =>
+			responseHistory.filter((entry) =>
+				isAiResponseVisibleForRoute(entry, initialRoute, { isBestiary }),
+			),
+		[
+			initialRoute,
+			isBestiary,
+			responseHistory,
+		],
+	);
 	const isResponseParsingLocked = isBestiary;
 	const isCustomMonsterGenerationVisible =
 		parseAIResponse &&
@@ -2362,7 +2374,7 @@ export default function AiAssistantPanel({
 						{error && <div className="AiAssistant__error">{error}</div>}
 
 						<AiResponseHistory
-							entries={responseHistory}
+							entries={visibleResponseHistory}
 							currentLanguage={currentLanguage}
 							storageSizeLabel={formatBytes(responseHistorySizeBytes)}
 							onClear={clearResponseHistory}

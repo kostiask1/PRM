@@ -47,6 +47,7 @@ import {
 	buildAiChangeSummary,
 	getFirstChangedMonster,
 	getFirstChangedMonsterName,
+	isAiResponseVisibleForRoute,
 	updateDraftResourceAfterValues,
 } from "../src/utils/aiResponseHelpers.js";
 import {
@@ -859,6 +860,54 @@ await run("AI response helpers manage custom monster draft resources", () => {
 		modified: 1,
 		total: 2,
 	});
+
+	const encounterEntry = {
+		path: {
+			campaign: "camp",
+			session: "session.json",
+			encounter: "enc-1",
+		},
+	};
+	assert.equal(
+		isAiResponseVisibleForRoute(encounterEntry, {
+			campaign: "camp",
+			session: "session.json",
+			encounter: "enc-1",
+		}),
+		true,
+	);
+	assert.equal(
+		isAiResponseVisibleForRoute(encounterEntry, {
+			campaign: "camp",
+			session: "session.json",
+			encounter: "enc-2",
+		}),
+		false,
+	);
+	assert.equal(
+		isAiResponseVisibleForRoute(encounterEntry, {
+			campaign: "camp",
+			session: "session.json",
+			encounter: null,
+		}),
+		false,
+	);
+	assert.equal(
+		isAiResponseVisibleForRoute(
+			{ path: { campaign: "bestiary" } },
+			{ campaign: "camp" },
+			{ isBestiary: false },
+		),
+		false,
+	);
+	assert.equal(
+		isAiResponseVisibleForRoute(
+			{ path: { campaign: "bestiary" } },
+			{ campaign: "bestiary" },
+			{ isBestiary: true },
+		),
+		true,
+	);
 });
 
 await run("AI mention processing preserves existing entity links", () => {

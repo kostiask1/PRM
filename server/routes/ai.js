@@ -175,6 +175,71 @@ function createEphemeralAiResponse(payload = {}) {
 	};
 }
 
+function cloneJson(value) {
+	return JSON.parse(JSON.stringify(value ?? null));
+}
+
+function getMonsterMaxHp(monster = {}, fallback = 0) {
+	const hpAverage =
+		monster.hp && typeof monster.hp === "object"
+			? Number.parseInt(monster.hp.average, 10)
+			: NaN;
+	const hitPoints = Number.parseInt(monster.hit_points, 10);
+	const fallbackHp = Number.parseInt(fallback, 10);
+	if (Number.isFinite(hpAverage)) return hpAverage;
+	if (Number.isFinite(hitPoints)) return hitPoints;
+	return Number.isFinite(fallbackHp) ? fallbackHp : 0;
+}
+
+function buildLocalEncounterMonsterSessionChange({
+	campaignSlug,
+	sessionFile,
+	encounterId,
+	targetInstanceId,
+	beforeSession,
+	nextMonster,
+}) {
+	if (!campaignSlug || !sessionFile || !encounterId || !targetInstanceId) {
+		return null;
+	}
+	if (!beforeSession || !nextMonster) return null;
+
+	const afterSession = cloneJson(beforeSession);
+	const encounter = (afterSession.data?.encounters || []).find(
+		(item) => asText(item?.id) === asText(encounterId),
+	);
+	if (!encounter || !Array.isArray(encounter.monsters)) return null;
+
+	let changed = false;
+	encounter.monsters = encounter.monsters.map((monster) => {
+		if (asText(monster?.instanceId) !== asText(targetInstanceId)) return monster;
+		const nextMaxHp = getMonsterMaxHp(nextMonster, monster.hit_points);
+		const currentHp = Number.parseInt(monster.currentHp, 10);
+		const safeCurrentHp = Number.isFinite(currentHp)
+			? Math.min(currentHp, nextMaxHp || currentHp)
+			: nextMaxHp;
+		changed = true;
+		return {
+			...nextMonster,
+			instanceId: targetInstanceId,
+			_localOverride: true,
+			currentHp: safeCurrentHp,
+			hit_points: nextMaxHp,
+		};
+	});
+	if (!changed) return null;
+
+	return {
+		id: `session:${sessionFile}`,
+		kind: "session",
+		campaign: campaignSlug,
+		fileName: sessionFile,
+		label: `${campaignSlug}/sessions/${sessionFile}`,
+		before: cloneJson(beforeSession),
+		after: afterSession,
+	};
+}
+
 function isObject(value) {
 	return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
@@ -1034,9 +1099,41 @@ router.post("/generate", async (req, res, next) => {
 				beforeCustomMonsters,
 				monsters,
 			);
+			const isEncounterHistoryMode =
+				req.body?.historyMode === "encounter" &&
+				asText(path?.campaign) &&
+				asText(path?.session) &&
+				asText(path?.encounter);
+			const targetInstanceId = asText(
+				req.body?.targetInstanceId || customMonsterTarget?.instanceId,
+			);
+			const changedMonster =
+				applied.changedMonsters?.[0] ||
+				customBestiaryChangeResources.find((resource) => resource?.after)?.after ||
+				null;
+			const localEncounterResource = isEncounterHistoryMode
+				? buildLocalEncounterMonsterSessionChange({
+						campaignSlug: asText(path.campaign),
+						sessionFile: asText(path.session),
+						encounterId: asText(path.encounter),
+						targetInstanceId,
+						beforeSession: customSession,
+						nextMonster: changedMonster,
+					})
+				: null;
+			const responsePath = localEncounterResource
+				? {
+						campaign: asText(path.campaign),
+						session: asText(path.session),
+						encounter: asText(path.encounter),
+					}
+				: { campaign: "bestiary" };
+			const responseResources = localEncounterResource
+				? [localEncounterResource]
+				: customBestiaryChangeResources;
 			const aiResponsePayload = {
 				text: formatGeneratedContentForHistory(generatedContent),
-				path: { campaign: "bestiary" },
+				path: responsePath,
 				type: "custom-monster",
 				modelName,
 				language: responseLanguage,
@@ -1045,7 +1142,7 @@ router.post("/generate", async (req, res, next) => {
 					type,
 					modelName,
 					userInstructions,
-					path: { campaign: "bestiary" },
+					path: responsePath,
 					parseAIResponse: true,
 					shouldParseAIResponse: true,
 					generateCharacters: false,
@@ -1063,8 +1160,8 @@ router.post("/generate", async (req, res, next) => {
 				}),
 				retryPayload: cloneRetryPayload(req.body),
 				changes: {
-					resources: customBestiaryChangeResources,
-					summary: buildAiChangeSummary(customBestiaryChangeResources),
+					resources: responseResources,
+					summary: buildAiChangeSummary(responseResources),
 				},
 			};
 			const draftResponsePayload = {
