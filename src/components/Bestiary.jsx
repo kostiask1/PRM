@@ -121,6 +121,14 @@ function isCustomSource(source) {
 	return String(source || "").toUpperCase() === "CUSTOM";
 }
 
+function isSameMonsterIdentity(left, right) {
+	return (
+		String(left?.name || "").trim() === String(right?.name || "").trim() &&
+		String(left?.source || "").toUpperCase() ===
+			String(right?.source || "").toUpperCase()
+	);
+}
+
 function normalizeSourceSelection(source) {
 	if (isCustomSource(source)) return "CUSTOM";
 	return source || "all";
@@ -339,7 +347,9 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 
 	useEffect(() => {
 		if (!syncEvent?.version) return;
-		if (!["bestiary", "custom-bestiary"].includes(syncEvent.resource)) return;
+		if (!["bestiary", "custom-bestiary", "ai"].includes(syncEvent.resource)) {
+			return;
+		}
 
 		api
 			.getBestiaryFavorites()
@@ -347,7 +357,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			.catch((error) =>
 				console.error("Failed to reload bestiary favorites", error),
 			);
-		if (syncEvent.resource === "custom-bestiary") {
+		if (syncEvent.resource === "custom-bestiary" || syncEvent.resource === "ai") {
 			setReloadToken((current) => current + 1);
 		}
 	}, [syncEvent]);
@@ -431,6 +441,15 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 					...current.filter((monster) => !isCustomSource(monster.source)),
 					...enrichedCustomMonsters,
 				]);
+				const currentSelected = selectedMonsterRef.current;
+				if (currentSelected && isCustomSource(currentSelected.source)) {
+					const nextSelected =
+						enrichedCustomMonsters.find((monster) =>
+							isSameMonsterIdentity(monster, currentSelected),
+						) || null;
+					selectedMonsterRef.current = nextSelected || "";
+					setSelectedMonster(nextSelected || "");
+				}
 			} catch (error) {
 				console.error("Failed to load custom monsters", error);
 			}

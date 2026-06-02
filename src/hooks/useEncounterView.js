@@ -14,6 +14,7 @@ import { lang } from "../services/localization";
 import {
 	createEncounterMonsterInstance,
 	createEncounterCharacterParticipant,
+	getMonsterBaseHp,
 	getMonsterHpFormula,
 	isEncounterCharacterParticipant,
 } from "../utils/encounters";
@@ -41,6 +42,41 @@ function parseChallengeRating(monster) {
 	}
 
 	return Number.parseFloat(crText) || 0;
+}
+
+function normalizeMonsterSource(source) {
+	return String(source || "").trim().toUpperCase();
+}
+
+function getMonsterBestiaryName(monster = {}) {
+	return String(monster.originalBestiaryName || monster.name || "").trim();
+}
+
+function getMonsterArmorClass(monster = {}) {
+	if (Array.isArray(monster.ac) && monster.ac[0]) {
+		const entry = monster.ac[0];
+		return typeof entry === "object" ? entry.ac : entry;
+	}
+	return monster.armor_class || 0;
+}
+
+function mergeEncounterMonsterWithBestiaryMonster(current, bestiaryMonster) {
+	const nextMaxHp = getMonsterBaseHp(bestiaryMonster) || current.hit_points || 0;
+	const currentHp = Number.parseInt(current.currentHp, 10);
+	const safeCurrentHp = Number.isFinite(currentHp)
+		? Math.min(currentHp, nextMaxHp || currentHp)
+		: nextMaxHp;
+	const displayName = current.name || bestiaryMonster.name;
+
+	return {
+		...bestiaryMonster,
+		name: displayName,
+		instanceId: current.instanceId,
+		originalBestiaryName: bestiaryMonster.name,
+		currentHp: safeCurrentHp,
+		hit_points: nextMaxHp,
+		armor_class: getMonsterArmorClass(bestiaryMonster),
+	};
 }
 
 function getExpectedInitiative(monster) {
@@ -346,6 +382,73 @@ export default function useEncounterView() {
 		},
 		[saveEncounterState, syncSelectedInstance],
 	);
+
+	const syncCustomBestiaryMonsters = useCallback(async () => {
+		const currentEncounter = encounterRef.current;
+		if (!currentEncounter?.monsters?.length) return;
+
+		try {
+			const customData = await api.getCustomBestiaryData();
+			const customMonsters = Array.isArray(customData)
+				? customData
+				: customData?.monster ||
+					customData?.monsters ||
+					customData?.results ||
+					[];
+			const customByName = new Map(
+				customMonsters
+					.filter((monster) => monster?.name)
+					.map((monster) => [
+						String(monster.name || "").trim().toLowerCase(),
+						{
+							...monster,
+							source: normalizeMonsterSource(monster.source) || "CUSTOM",
+						},
+					]),
+			);
+			let changed = false;
+			const nextMonsters = currentEncounter.monsters.map((monster) => {
+				if (
+					isEncounterCharacterParticipant(monster) ||
+					normalizeMonsterSource(monster.source) !== "CUSTOM"
+				) {
+					return monster;
+				}
+				const key = getMonsterBestiaryName(monster).toLowerCase();
+				const updatedBestiaryMonster = customByName.get(key);
+				if (!updatedBestiaryMonster) return monster;
+
+				const nextMonster = mergeEncounterMonsterWithBestiaryMonster(
+					monster,
+					updatedBestiaryMonster,
+				);
+				if (JSON.stringify(nextMonster) !== JSON.stringify(monster)) {
+					changed = true;
+				}
+				return nextMonster;
+			});
+
+			if (!changed) return;
+			applyEncounterUpdate(
+				{
+					...currentEncounter,
+					monsters: nextMonsters,
+				},
+				{
+					pushUndo: false,
+					preferredId: selectedInstance?.instanceId || null,
+				},
+			);
+		} catch (error) {
+			console.error("Failed to sync custom bestiary monsters", error);
+		}
+	}, [applyEncounterUpdate, selectedInstance?.instanceId]);
+
+	useEffect(() => {
+		if (!["custom-bestiary", "ai"].includes(syncEvent?.resource)) return;
+		if (saveTimeoutRef.current) return;
+		syncCustomBestiaryMonsters();
+	}, [syncCustomBestiaryMonsters, syncEvent]);
 
 	const handleUndo = useCallback(() => {
 		if (undoStack.length === 0) return;
