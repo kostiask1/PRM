@@ -56,6 +56,9 @@ function getDiffResourceState(resource) {
 }
 
 function getGridMonsterKey(monster) {
+	if (monster?._localOverride) {
+		return `local:${monster.instanceId || monster.id || monster.name || ""}`;
+	}
 	const baseName = String(monster?.originalBestiaryName || monster?.name || "")
 		.trim()
 		.toLowerCase();

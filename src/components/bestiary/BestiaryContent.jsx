@@ -104,7 +104,7 @@ function MonsterListItem({
 									variant="ghost"
 									className="Bestiary__item_edit_btn"
 									size={Button.SIZES.SMALL}
-									icon="edit"
+									icon="json-edit"
 									onClick={(event) => {
 										event.stopPropagation();
 										onEdit(monster);
