@@ -115,6 +115,112 @@ function isNoteResource(resource) {
 	);
 }
 
+function isEncounterResource(resource) {
+	return (
+		resource?.kind === "session" &&
+		String(resource?.id || "").toLowerCase().includes(":encounters/")
+	);
+}
+
+function getEncounterParticipants(snapshot) {
+	return Array.isArray(snapshot?.monsters) ? snapshot.monsters : [];
+}
+
+function getEncounterParticipantName(participant = {}) {
+	return String(
+		participant.name ||
+			participant.originalBestiaryName ||
+			participant.title ||
+			lang.t("Creature"),
+	).trim();
+}
+
+function getEncounterParticipantBaseKey(participant = {}) {
+	const name = getEncounterParticipantName(participant).toLowerCase();
+	const source = String(participant.source || "").trim().toLowerCase();
+	const type = String(participant.participantType || "monster").trim().toLowerCase();
+	return `${type}:${name}:${source}`;
+}
+
+function getEncounterParticipantEntries(list) {
+	const counts = new Map();
+	return (Array.isArray(list) ? list : []).map((participant, index) => {
+		const baseKey = getEncounterParticipantBaseKey(participant);
+		const nextCount = (counts.get(baseKey) || 0) + 1;
+		counts.set(baseKey, nextCount);
+		return {
+			key: `${baseKey}:${nextCount}`,
+			index,
+			participant,
+		};
+	});
+}
+
+function getEncounterParticipantHp(participant = {}) {
+	if (participant.currentHp !== undefined && participant.currentHp !== null) {
+		return participant.currentHp;
+	}
+	if (participant.hit_points !== undefined && participant.hit_points !== null) {
+		return participant.hit_points;
+	}
+	if (participant.hp && typeof participant.hp === "object") {
+		return participant.hp.average ?? participant.hp.special ?? "";
+	}
+	return "";
+}
+
+function getEncounterParticipantAc(participant = {}) {
+	if (participant.armor_class !== undefined && participant.armor_class !== null) {
+		return participant.armor_class;
+	}
+	if (Array.isArray(participant.ac) && participant.ac.length > 0) {
+		const first = participant.ac[0];
+		return typeof first === "object" ? first.ac : first;
+	}
+	return "";
+}
+
+function getEncounterParticipantMeta(participant = {}) {
+	return [
+		participant.source ? String(participant.source).toUpperCase() : "",
+		getEncounterParticipantAc(participant)
+			? `AC ${getEncounterParticipantAc(participant)}`
+			: "",
+		getEncounterParticipantHp(participant)
+			? `HP ${getEncounterParticipantHp(participant)}`
+			: "",
+		participant.cr || participant.challenge ? `CR ${participant.cr || participant.challenge}` : "",
+	]
+		.filter(Boolean)
+		.join(" / ");
+}
+
+const ENCOUNTER_PARTICIPANT_STAT_IGNORED_KEYS = new Set([
+	"instanceId",
+	"currentHp",
+	"originalBestiaryName",
+	"originalCharacterId",
+	"originalCharacterSlug",
+	"participantType",
+]);
+
+function getEncounterMonsterStatSnapshot(participant) {
+	if (!isObjectSnapshot(participant)) return null;
+	return Object.fromEntries(
+		Object.entries(participant).filter(
+			([key]) => !ENCOUNTER_PARTICIPANT_STAT_IGNORED_KEYS.has(key),
+		),
+	);
+}
+
+function encounterMonsterStatsChanged(before, after) {
+	if (!before || !after) return false;
+	return !snapshotsEqual(
+		getEncounterMonsterStatSnapshot(before),
+		getEncounterMonsterStatSnapshot(after),
+	);
+}
+
 function getNoteDiffKey(note, index) {
 	if (isObjectSnapshot(note)) {
 		const id = String(note.id || "").trim();
@@ -432,6 +538,227 @@ export default function AiResponseModal({
 		);
 	};
 
+	const renderEncounterParticipantList = (snapshot, counterpartSnapshot, side) => {
+		const entries = getEncounterParticipantEntries(getEncounterParticipants(snapshot));
+		const counterpartEntries = getEncounterParticipantEntries(
+			getEncounterParticipants(counterpartSnapshot),
+		);
+		const counterpartByKey = new Map(
+			counterpartEntries.map((entry) => [entry.key, entry.participant]),
+		);
+
+		if (entries.length === 0) {
+			return (
+				<div className="AiAssistant__encounter_empty">
+					{lang.t("No creatures in encounter.")}
+				</div>
+			);
+		}
+
+		return (
+			<ol className="AiAssistant__encounter_list">
+				{entries.map(({ key, participant, index }) => {
+					const counterpart = counterpartByKey.get(key);
+					const isMissing = !counterpart;
+					const isChanged =
+						counterpart && !snapshotsEqual(participant, counterpart);
+					return (
+						<li
+							key={`${side}-${key}-${index}`}
+							className={classNames(
+								"AiAssistant__encounter_item",
+								side === "before" && isMissing && "is_removed",
+								side === "after" && isMissing && "is_added",
+								isChanged && "is_modified",
+							)}
+						>
+							<span className="AiAssistant__encounter_item_name">
+								{getEncounterParticipantName(participant)}
+							</span>
+							{getEncounterParticipantMeta(participant) && (
+								<span className="AiAssistant__encounter_item_meta">
+									{getEncounterParticipantMeta(participant)}
+								</span>
+							)}
+						</li>
+					);
+				})}
+			</ol>
+		);
+	};
+
+	const renderEncounterMonsterCard = (
+		participant,
+		className,
+		highlightFields = null,
+	) => {
+		if (!isObjectSnapshot(participant)) return null;
+		return (
+			<div
+				className={classNames(
+					"AiAssistant__preview_card_surface",
+					"AiAssistant__encounter_monster_surface",
+					className,
+				)}
+			>
+				<MonsterStatBlock
+					monster={participant}
+					showFavoriteAction={false}
+					allowTokenUpload={false}
+					searchHighlight=""
+					highlightFields={highlightFields}
+				/>
+			</div>
+		);
+	};
+
+	const renderEncounterMonsterChanges = (resource) => {
+		const beforeEntries = getEncounterParticipantEntries(
+			getEncounterParticipants(resource.before),
+		);
+		const afterEntries = getEncounterParticipantEntries(
+			getEncounterParticipants(resource.after),
+		);
+		const beforeByKey = new Map(
+			beforeEntries.map((entry) => [entry.key, entry.participant]),
+		);
+		const afterByKey = new Map(
+			afterEntries.map((entry) => [entry.key, entry.participant]),
+		);
+		const changedKeys = [...new Set([...beforeByKey.keys(), ...afterByKey.keys()])]
+			.filter((key) => {
+				const before = beforeByKey.get(key) || null;
+				const after = afterByKey.get(key) || null;
+				if (before?.participantType === "character") return false;
+				if (after?.participantType === "character") return false;
+				if (!before || !after) return true;
+				return encounterMonsterStatsChanged(before, after);
+			});
+
+		if (changedKeys.length === 0) return null;
+
+		return (
+			<div className="AiAssistant__encounter_monsters">
+				<div className="AiAssistant__preview_column_title">
+					{lang.t("Creature changes")}
+				</div>
+				{changedKeys.map((key) => {
+					const before = beforeByKey.get(key) || null;
+					const after = afterByKey.get(key) || null;
+					const label = getEncounterParticipantName(after || before);
+					const highlightFields =
+						before && after
+							? buildCardHighlightFields({ before, after })
+							: before
+								? null
+								: buildCardHighlightFields({ before: {}, after });
+
+					if (!before || !after) {
+						return (
+							<div
+								key={`${resource.id}-${key}`}
+								className="AiAssistant__preview_card_stack"
+							>
+								<div className="AiAssistant__preview_card_frame">
+									<div className="AiAssistant__preview_column_title">
+										{label} / {before ? lang.t("Deleted") : lang.t("New")}
+									</div>
+									{renderEncounterMonsterCard(
+										before || after,
+										before ? "is_removed" : "is_added",
+										highlightFields,
+									)}
+								</div>
+							</div>
+						);
+					}
+
+					return (
+						<div
+							key={`${resource.id}-${key}`}
+							className="AiAssistant__preview_card_columns"
+						>
+							<div className="AiAssistant__preview_card_frame">
+								<div className="AiAssistant__preview_column_title">
+									{label} / {lang.t("Before")}
+								</div>
+								{renderEncounterMonsterCard(
+									before,
+									"is_before",
+									highlightFields,
+								)}
+							</div>
+							<div className="AiAssistant__preview_card_frame">
+								<div className="AiAssistant__preview_column_title">
+									{label} / {lang.t("After")}
+								</div>
+								{renderEncounterMonsterCard(
+									after,
+									"is_after",
+									highlightFields,
+								)}
+							</div>
+						</div>
+					);
+				})}
+			</div>
+		);
+	};
+
+	const renderEncounterDiff = (resource) => {
+		resource = getEditedPreviewResource(resource);
+		const isNew = resource.before === null;
+		const isDeleted = resource.after === null;
+		const before = resource.before || null;
+		const after = resource.after || null;
+		const title = String(after?.name || before?.name || resource.label || "").trim();
+
+		return (
+			<div
+				key={resource.id}
+				className={classNames(
+					"AiAssistant__preview_resource",
+					"AiAssistant__preview_resource_encounter",
+					isNew && "is_added",
+					isDeleted && "is_removed",
+					isResourceApplied(resource) && "is_applied",
+					isResourceUndone(resource) && "is_undone",
+				)}
+			>
+				<div className="AiAssistant__preview_resource_header">
+					<span>{title || resource.label}</span>
+					<div className="AiAssistant__preview_resource_actions">
+						<span>{getDiffResourceState(resource)}</span>
+						{renderResourceActions(resource)}
+					</div>
+				</div>
+				<div className="AiAssistant__preview_card_columns AiAssistant__encounter_columns">
+					{!isNew && (
+						<div className="AiAssistant__preview_card_frame">
+							<div className="AiAssistant__preview_column_title">
+								{lang.t("Before")}
+							</div>
+							<div className="AiAssistant__encounter_panel is_before">
+								{renderEncounterParticipantList(before, after, "before")}
+							</div>
+						</div>
+					)}
+					{!isDeleted && (
+						<div className="AiAssistant__preview_card_frame">
+							<div className="AiAssistant__preview_column_title">
+								{isNew ? lang.t("New") : lang.t("After")}
+							</div>
+							<div className="AiAssistant__encounter_panel is_after">
+								{renderEncounterParticipantList(after, before, "after")}
+							</div>
+						</div>
+					)}
+				</div>
+				{renderEncounterMonsterChanges(resource)}
+			</div>
+		);
+	};
+
 	const renderNoteCardDiff = (resource) => {
 		resource = getEditedPreviewResource(resource);
 		const isNew = resource.before === null;
@@ -556,6 +883,10 @@ export default function AiResponseModal({
 			resource.after,
 			resource.fieldSummary,
 		);
+
+		if (isEncounterResource(resource)) {
+			return renderEncounterDiff(resource);
+		}
 
 		if (isNoteResource(resource)) {
 			return renderNoteCardDiff(resource);
