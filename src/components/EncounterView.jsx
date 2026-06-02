@@ -30,6 +30,7 @@ import {
 	hasMonsterHpFormula,
 	isEncounterCharacterParticipant,
 } from "../utils/encounters";
+import MonsterStatBlockModel from "../models/MonsterStatBlockModel.js";
 import { buildDiffResources } from "../utils/aiDiff";
 import {
 	addSourceMonsterImageToDraft,
@@ -97,6 +98,14 @@ function resolveHpInputValue(inputValue, previousHp) {
 	}
 
 	return Math.max(0, parseInt(text, 10) || 0);
+}
+
+function getEncounterMonsterRowStats(monster) {
+	const model = new MonsterStatBlockModel(monster);
+	return {
+		ac: model.ac.val ?? monster.armor_class ?? "-",
+		maxHp: monster.hit_points ?? model.hp.val ?? 0,
+	};
 }
 
 function EncounterView() {
@@ -900,6 +909,9 @@ function EncounterView() {
 								const displayName = isCharacter
 									? getCharacterDisplayName(m)
 									: String(m.name);
+								const rowStats = isCharacter
+									? null
+									: getEncounterMonsterRowStats(m);
 
 								return (
 									<div
@@ -953,7 +965,7 @@ function EncounterView() {
 																style={{
 																	color: view.getHpColor(
 																		m.currentHp,
-																		m.hit_points,
+																		rowStats.maxHp,
 																	),
 																}}
 															/>
@@ -961,7 +973,7 @@ function EncounterView() {
 															<Tooltip content={lang.t("Max HP")}>
 																<input
 																	type="number"
-																	value={m.hit_points}
+																	value={rowStats.maxHp}
 																	onChange={(e) =>
 																		view.updateMonsterMaxHp(
 																			m.instanceId,
@@ -974,7 +986,7 @@ function EncounterView() {
 															</Tooltip>
 														</div>
 														<div className="EncounterMonsterRow__ac">
-															{lang.t("AC")} {m.armor_class}
+															{lang.t("AC")} {rowStats.ac}
 														</div>
 													</>
 												)}
