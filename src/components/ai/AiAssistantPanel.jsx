@@ -33,10 +33,11 @@ import { useAppDispatch, useAppSelector } from "../../store/appStore.js";
 import { lang } from "../../services/localization.js";
 import { renderMentionText } from "../../renderers/contentRenderer.jsx";
 import { formatBytes } from "../../utils/formatBytes.js";
+import { buildDiffResources } from "../../utils/aiDiff.js";
 import {
-	buildDiffResources,
-	getDiffResourceState as getAiDiffResourceState,
-} from "../../utils/aiDiff.js";
+	getHistoryChangeSummary as getAiHistoryChangeSummary,
+	getLocalizedDiffResourceState,
+} from "../../utils/aiResponseHelpers.js";
 import "../../assets/components/AiAssistantPanel.css";
 
 const markdownTagsWithMentions = [
@@ -487,15 +488,7 @@ function getHistoryTitle(entry) {
 }
 
 function getHistoryChangeSummary(entry) {
-	const summary = entry?.changes?.summary || {};
-	const total =
-		Number(summary.total) || getHistoryChangeResources(entry).length || 0;
-	if (!total) return "";
-	const parts = [];
-	if (summary.added) parts.push(`+${summary.added}`);
-	if (summary.deleted) parts.push(`-${summary.deleted}`);
-	if (summary.modified) parts.push(`~${summary.modified}`);
-	return `${lang.t("Changes")}: ${parts.length ? parts.join(" ") : total}`;
+	return getAiHistoryChangeSummary(entry, lang.t);
 }
 
 function getAiResponseStateLabel(entry) {
@@ -507,11 +500,7 @@ function getAiResponseStateLabel(entry) {
 }
 
 function getDiffResourceState(resource) {
-	return getAiDiffResourceState(resource, {
-		added: lang.t("Added"),
-		deleted: lang.t("Deleted"),
-		modified: lang.t("Modified"),
-	});
+	return getLocalizedDiffResourceState(resource, lang.t);
 }
 
 export default function AiAssistantPanel({

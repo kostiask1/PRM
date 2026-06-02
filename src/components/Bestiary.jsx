@@ -11,10 +11,13 @@ import CustomMonsterEditModal from "./bestiary/CustomMonsterEditModal";
 import MonsterAiActionModal from "./bestiary/MonsterAiActionModal";
 import MonsterAiEditModal from "./bestiary/MonsterAiEditModal";
 import useDebounce from "../hooks/useDebounce.js";
+import { buildDiffResources } from "../utils/aiDiff.js";
 import {
-	buildDiffResources,
-	getDiffResourceState as getAiDiffResourceState,
-} from "../utils/aiDiff.js";
+	addSourceMonsterImageToDraft,
+	getFirstChangedMonsterName,
+	getHistoryChangeSummary as getAiHistoryChangeSummary,
+	getLocalizedDiffResourceState,
+} from "../utils/aiResponseHelpers.js";
 import { matchesMonsterSearch } from "../utils/bestiary.js";
 import { objectMatchesSearch } from "../utils/deepSearch.js";
 import {
@@ -28,89 +31,11 @@ import "../assets/components/Bestiary.css";
 import { lang } from "../services/localization";
 
 function getHistoryChangeSummary(entry) {
-	const resources = Array.isArray(entry?.changes?.resources)
-		? entry.changes.resources
-		: [];
-	const summary = entry?.changes?.summary || {};
-	const total = Number(summary.total) || resources.length || 0;
-	if (!total) return "";
-	const parts = [];
-	if (summary.added) parts.push(`+${summary.added}`);
-	if (summary.deleted) parts.push(`-${summary.deleted}`);
-	if (summary.modified) parts.push(`~${summary.modified}`);
-	return `${lang.t("Changes")}: ${parts.length ? parts.join(" ") : total}`;
+	return getAiHistoryChangeSummary(entry, lang.t);
 }
 
 function getDiffResourceState(resource) {
-	return getAiDiffResourceState(resource, {
-		added: lang.t("Added"),
-		deleted: lang.t("Deleted"),
-		modified: lang.t("Modified"),
-	});
-}
-
-function getFirstChangedMonsterName(entry, resourceIds = null) {
-	const ids = Array.isArray(resourceIds)
-		? new Set(resourceIds.map((id) => String(id || "")).filter(Boolean))
-		: null;
-	const resources = Array.isArray(entry?.changes?.resources)
-		? entry.changes.resources
-		: [];
-	const resource = resources.find(
-		(item) => item?.kind === "custom-monster" && (!ids || ids.has(item.id)),
-	);
-	return (
-		resource?.after?.name || resource?.before?.name || resource?.name || null
-	);
-}
-
-function getMonsterTokenImageUrl(monster) {
-	if (!monster) return "";
-	if (monster.imageUrl) return monster.imageUrl;
-	const source = String(monster.source || "").trim();
-	const name = String(
-		monster.originalBestiaryName || monster.name || "",
-	).trim();
-	if (!source || !name) return "";
-	return `/api/bestiary/tokens/${encodeURIComponent(source)}/${encodeURIComponent(name)}.webp`;
-}
-
-function addSourceMonsterImageToDraft(entry, sourceMonster) {
-	if (!entry || !sourceMonster) return entry;
-	const imageUrl = getMonsterTokenImageUrl(sourceMonster);
-	if (!imageUrl) return entry;
-	const resources = Array.isArray(entry?.changes?.resources)
-		? entry.changes.resources
-		: [];
-	let changed = false;
-	const nextResources = resources.map((resource) => {
-		if (
-			resource?.kind !== "custom-monster" ||
-			resource.before !== null ||
-			!resource.after ||
-			resource.after.imageUrl
-		) {
-			return resource;
-		}
-		changed = true;
-		return {
-			...resource,
-			after: {
-				...resource.after,
-				imageUrl,
-				originalBestiaryName:
-					resource.after.originalBestiaryName || sourceMonster.name,
-			},
-		};
-	});
-	if (!changed) return entry;
-	return {
-		...entry,
-		changes: {
-			...(entry.changes || {}),
-			resources: nextResources,
-		},
-	};
+	return getLocalizedDiffResourceState(resource, lang.t);
 }
 
 function monsterMatchesUrl(monster, name, source) {

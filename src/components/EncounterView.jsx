@@ -29,114 +29,25 @@ import {
 	hasMonsterHpFormula,
 	isEncounterCharacterParticipant,
 } from "../utils/encounters";
+import { buildDiffResources } from "../utils/aiDiff";
 import {
-	buildDiffResources,
-	getDiffResourceState as getAiDiffResourceState,
-} from "../utils/aiDiff";
+	addSourceMonsterImageToDraft,
+	getFirstChangedMonster,
+	getHistoryChangeSummary as getAiHistoryChangeSummary,
+	getLocalizedDiffResourceState,
+	updateDraftResourceAfterValues,
+} from "../utils/aiResponseHelpers.js";
 
 function isCustomSource(source) {
 	return String(source || "").toUpperCase() === "CUSTOM";
 }
 
 function getHistoryChangeSummary(entry) {
-	const resources = Array.isArray(entry?.changes?.resources)
-		? entry.changes.resources
-		: [];
-	const summary = entry?.changes?.summary || {};
-	const total = Number(summary.total) || resources.length || 0;
-	if (!total) return "";
-	const parts = [];
-	if (summary.added) parts.push(`+${summary.added}`);
-	if (summary.deleted) parts.push(`-${summary.deleted}`);
-	if (summary.modified) parts.push(`~${summary.modified}`);
-	return `${lang.t("Changes")}: ${parts.length ? parts.join(" ") : total}`;
+	return getAiHistoryChangeSummary(entry, lang.t);
 }
 
 function getDiffResourceState(resource) {
-	return getAiDiffResourceState(resource, {
-		added: lang.t("Added"),
-		deleted: lang.t("Deleted"),
-		modified: lang.t("Modified"),
-	});
-}
-
-function getFirstChangedMonster(entry, resourceIds = null) {
-	const ids = Array.isArray(resourceIds)
-		? new Set(resourceIds.map((id) => String(id || "")).filter(Boolean))
-		: null;
-	const resources = Array.isArray(entry?.changes?.resources)
-		? entry.changes.resources
-		: [];
-	const resource = resources.find(
-		(item) => item?.kind === "custom-monster" && (!ids || ids.has(item.id)),
-	);
-	return resource?.after || null;
-}
-
-function getMonsterTokenImageUrl(monster) {
-	if (!monster) return "";
-	if (monster.imageUrl) return monster.imageUrl;
-	const source = String(monster.source || "").trim();
-	const name = String(
-		monster.originalBestiaryName || monster.name || "",
-	).trim();
-	if (!source || !name) return "";
-	return `/api/bestiary/tokens/${encodeURIComponent(source)}/${encodeURIComponent(name)}.webp`;
-}
-
-function addSourceMonsterImageToDraft(entry, sourceMonster) {
-	if (!entry || !sourceMonster) return entry;
-	const imageUrl = getMonsterTokenImageUrl(sourceMonster);
-	if (!imageUrl) return entry;
-	const resources = Array.isArray(entry?.changes?.resources)
-		? entry.changes.resources
-		: [];
-	let changed = false;
-	const nextResources = resources.map((resource) => {
-		if (
-			resource?.kind !== "custom-monster" ||
-			resource.before !== null ||
-			!resource.after ||
-			resource.after.imageUrl
-		) {
-			return resource;
-		}
-		changed = true;
-		return {
-			...resource,
-			after: {
-				...resource.after,
-				imageUrl,
-				originalBestiaryName:
-					resource.after.originalBestiaryName || sourceMonster.name,
-			},
-		};
-	});
-	if (!changed) return entry;
-	return {
-		...entry,
-		changes: {
-			...(entry.changes || {}),
-			resources: nextResources,
-		},
-	};
-}
-
-function buildAiChangeSummary(resources = []) {
-	return resources.reduce(
-		(summary, resource) => {
-			if (resource.before === null && resource.after !== null) {
-				summary.added += 1;
-			} else if (resource.before !== null && resource.after === null) {
-				summary.deleted += 1;
-			} else {
-				summary.modified += 1;
-			}
-			summary.total += 1;
-			return summary;
-		},
-		{ added: 0, deleted: 0, modified: 0, total: 0 },
-	);
+	return getLocalizedDiffResourceState(resource, lang.t);
 }
 
 function getGridMonsterKey(monster) {
@@ -509,26 +420,10 @@ function EncounterView() {
 	const saveAiDraftResponseChanges = async (resources) => {
 		if (!aiDraftResponseEntry?.id) return null;
 		if (aiDraftMode === "local") {
-			const afterById = new Map(
-				(Array.isArray(resources) ? resources : []).map((resource) => [
-					String(resource.id || ""),
-					resource.after ?? null,
-				]),
+			const updatedEntry = updateDraftResourceAfterValues(
+				aiDraftResponseEntry,
+				resources,
 			);
-			const nextResources = (aiDraftResponseEntry.changes?.resources || []).map(
-				(resource) =>
-					afterById.has(resource.id)
-						? { ...resource, after: afterById.get(resource.id) }
-						: resource,
-			);
-			const updatedEntry = {
-				...aiDraftResponseEntry,
-				changes: {
-					...(aiDraftResponseEntry.changes || {}),
-					resources: nextResources,
-					summary: buildAiChangeSummary(nextResources),
-				},
-			};
 			setAiDraftResponseEntry(updatedEntry);
 			return updatedEntry;
 		}

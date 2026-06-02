@@ -43,6 +43,13 @@ import {
 	hasMonsterHpFormula,
 } from "../src/utils/encounters.js";
 import {
+	addSourceMonsterImageToDraft,
+	buildAiChangeSummary,
+	getFirstChangedMonster,
+	getFirstChangedMonsterName,
+	updateDraftResourceAfterValues,
+} from "../src/utils/aiResponseHelpers.js";
+import {
 	getSpellByName,
 	getConditionByName,
 	getDiseaseByName,
@@ -795,6 +802,64 @@ await run(
 		);
 	},
 );
+
+await run("AI response helpers manage custom monster draft resources", () => {
+	const entry = {
+		id: "draft-1",
+		changes: {
+			resources: [
+				{
+					id: "custom-monster:old",
+					kind: "custom-monster",
+					before: { id: "old", name: "Old Beast", source: "CUSTOM" },
+					after: { id: "old", name: "Old Beast", source: "CUSTOM", cr: "2" },
+				},
+				{
+					id: "custom-monster:new",
+					kind: "custom-monster",
+					before: null,
+					after: { id: "new", name: "New Beast", source: "CUSTOM" },
+				},
+			],
+		},
+	};
+
+	assert.deepEqual(buildAiChangeSummary(entry.changes.resources), {
+		added: 1,
+		deleted: 0,
+		modified: 1,
+		total: 2,
+	});
+	assert.equal(getFirstChangedMonster(entry).name, "Old Beast");
+	assert.equal(getFirstChangedMonsterName(entry, ["custom-monster:new"]), "New Beast");
+
+	const withToken = addSourceMonsterImageToDraft(entry, {
+		name: "Wolf",
+		source: "MM",
+	});
+	assert.equal(
+		withToken.changes.resources[1].after.imageUrl,
+		"/api/bestiary/tokens/MM/Wolf.webp",
+	);
+	assert.equal(
+		withToken.changes.resources[1].after.originalBestiaryName,
+		"Wolf",
+	);
+
+	const edited = updateDraftResourceAfterValues(withToken, [
+		{
+			id: "custom-monster:new",
+			after: { id: "new", name: "Edited Beast", source: "CUSTOM" },
+		},
+	]);
+	assert.equal(edited.changes.resources[1].after.name, "Edited Beast");
+	assert.deepEqual(edited.changes.summary, {
+		added: 1,
+		deleted: 0,
+		modified: 1,
+		total: 2,
+	});
+});
 
 await run("AI mention processing preserves existing entity links", () => {
 	const { processGeneratedTextMentions } = aiRouter.__test;
