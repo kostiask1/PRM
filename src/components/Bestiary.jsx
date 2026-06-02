@@ -30,12 +30,16 @@ import { downloadJsonFile } from "../utils/download.js";
 import "../assets/components/Bestiary.css";
 import { lang } from "../services/localization";
 
+function translate(...args) {
+	return lang.t(...args);
+}
+
 function getHistoryChangeSummary(entry) {
-	return getAiHistoryChangeSummary(entry, lang.t);
+	return getAiHistoryChangeSummary(entry, translate);
 }
 
 function getDiffResourceState(resource) {
-	return getLocalizedDiffResourceState(resource, lang.t);
+	return getLocalizedDiffResourceState(resource, translate);
 }
 
 function monsterMatchesUrl(monster, name, source) {

@@ -60,6 +60,10 @@ const markdownTagsWithMentions = [
 	"span",
 ];
 
+function translate(...args) {
+	return lang.t(...args);
+}
+
 function renderMentionChildren(children) {
 	return Children.map(children, (child) => {
 		if (typeof child === "string") {
@@ -195,10 +199,77 @@ function formatResponseDate(date, language) {
 	return parsed.toLocaleString(language);
 }
 
+function findJsonObjectEnd(text, startIndex) {
+	let depth = 0;
+	let inString = false;
+	let escaped = false;
+	for (let index = startIndex; index < text.length; index += 1) {
+		const character = text[index];
+		if (escaped) {
+			escaped = false;
+			continue;
+		}
+		if (character === "\\") {
+			escaped = inString;
+			continue;
+		}
+		if (character === '"') {
+			inString = !inString;
+			continue;
+		}
+		if (inString) continue;
+		if (character === "{") {
+			depth += 1;
+		} else if (character === "}") {
+			depth -= 1;
+			if (depth === 0) return index + 1;
+		}
+	}
+	return -1;
+}
+
+function stripGeneratedMonsterEditPrompt(text) {
+	const source = String(text || "").trim();
+	if (!source) return "";
+
+	const createPrefixes = [
+		lang.t(
+			"Create a new custom creature based on the selected creature. Do not change the selected creature.",
+		),
+		"Create a new custom creature based on the selected creature. Do not change the selected creature.",
+	].filter(Boolean);
+	for (const prefix of createPrefixes) {
+		if (source.startsWith(prefix)) {
+			return source.slice(prefix.length).trim();
+		}
+	}
+
+	const creatureLabels = [
+		`${lang.t("Current encounter creature")}:`,
+		"Current encounter creature:",
+		"Поточна істота в бою:",
+	];
+	const labelIndex = creatureLabels.reduce((foundIndex, label) => {
+		if (foundIndex !== -1) return foundIndex;
+		return source.indexOf(label);
+	}, -1);
+	if (labelIndex === -1) return source;
+
+	const objectStart = source.indexOf("{", labelIndex);
+	if (objectStart === -1) return source;
+	const objectEnd = findJsonObjectEnd(source, objectStart);
+	if (objectEnd === -1) return source;
+	return source.slice(objectEnd).trim();
+}
+
 function getHistoryRequestText(entry) {
-	return String(
-		entry?.request?.userInstructions || entry?.userInstructions || "",
+	const explicitHistoryText = String(
+		entry?.retryPayload?.historyUserInstructions || "",
 	).trim();
+	if (explicitHistoryText) return explicitHistoryText;
+	return stripGeneratedMonsterEditPrompt(
+		entry?.request?.userInstructions || entry?.userInstructions || "",
+	);
 }
 
 function getHistoryModeName(mode) {
@@ -489,7 +560,7 @@ function getHistoryTitle(entry) {
 }
 
 function getHistoryChangeSummary(entry) {
-	return getAiHistoryChangeSummary(entry, lang.t);
+	return getAiHistoryChangeSummary(entry, translate);
 }
 
 function getAiResponseStateLabel(entry) {
@@ -501,7 +572,7 @@ function getAiResponseStateLabel(entry) {
 }
 
 function getDiffResourceState(resource) {
-	return getLocalizedDiffResourceState(resource, lang.t);
+	return getLocalizedDiffResourceState(resource, translate);
 }
 
 export default function AiAssistantPanel({

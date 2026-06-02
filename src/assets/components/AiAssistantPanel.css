@@ -697,7 +697,6 @@
 
 .MonsterStatBlock .is_ai_changed_field {
     padding: 8px!important;
-    margin:  0px -8px!important;
 }
 
 .AiAssistant__preview_card_surface .EditableField.is_ai_changed_field textarea,

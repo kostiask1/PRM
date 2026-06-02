@@ -41,12 +41,16 @@ function isCustomSource(source) {
 	return String(source || "").toUpperCase() === "CUSTOM";
 }
 
+function translate(...args) {
+	return lang.t(...args);
+}
+
 function getHistoryChangeSummary(entry) {
-	return getAiHistoryChangeSummary(entry, lang.t);
+	return getAiHistoryChangeSummary(entry, translate);
 }
 
 function getDiffResourceState(resource) {
-	return getLocalizedDiffResourceState(resource, lang.t);
+	return getLocalizedDiffResourceState(resource, translate);
 }
 
 function getGridMonsterKey(monster) {
@@ -367,6 +371,7 @@ function EncounterView() {
 				type: "custom-monster",
 				modelName: selectedAiModel || undefined,
 				userInstructions: finalInstructions,
+				historyUserInstructions: instructions,
 				path: {
 					campaign: campaign.slug,
 					session: sessionId,

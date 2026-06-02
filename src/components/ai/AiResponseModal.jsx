@@ -136,10 +136,12 @@ function getEncounterParticipantName(participant = {}) {
 }
 
 function getEncounterParticipantBaseKey(participant = {}) {
-	const name = getEncounterParticipantName(participant).toLowerCase();
-	const source = String(participant.source || "").trim().toLowerCase();
 	const type = String(participant.participantType || "monster").trim().toLowerCase();
-	return `${type}:${name}:${source}`;
+	const id = String(participant.id || participant.instanceId || "").trim();
+	if (id) return `${type}:id:${id}`;
+	const source = String(participant.source || "").trim().toLowerCase();
+	const name = getEncounterParticipantName(participant).toLowerCase();
+	return `${type}:name:${name}:${source}`;
 }
 
 function getEncounterParticipantEntries(list) {

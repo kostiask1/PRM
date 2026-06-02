@@ -16,6 +16,7 @@ const {
 	saveParsedAiResponse,
 } = require("../aiResponseHistoryService");
 const { applyAiOperations } = require("../aiPatchService");
+const { normalizeCustomMonster } = require("../aiCustomMonsterService");
 
 const ENV_PATH = path.join(__dirname, "..", "..", ".env");
 
@@ -179,6 +180,77 @@ function cloneJson(value) {
 	return JSON.parse(JSON.stringify(value ?? null));
 }
 
+function hasOwn(object, key) {
+	return Object.prototype.hasOwnProperty.call(object || {}, key);
+}
+
+function operationData(operation = {}) {
+	return operation.data && typeof operation.data === "object"
+		? operation.data
+		: operation.monster && typeof operation.monster === "object"
+			? operation.monster
+			: operation.payload && typeof operation.payload === "object"
+				? operation.payload
+				: operation;
+}
+
+function operationPatch(operation = {}) {
+	return operation.patch && typeof operation.patch === "object"
+		? operation.patch
+		: operation.changes && typeof operation.changes === "object"
+			? operation.changes
+			: operationData(operation);
+}
+
+function findMonsterOperation(generatedContent = {}) {
+	return (Array.isArray(generatedContent.operations)
+		? generatedContent.operations
+		: []
+	).find((operation) => {
+		const entity = asText(operation?.entity).toLowerCase();
+		const op = asText(operation?.op).toLowerCase();
+		return (
+			["monster", "custom-monster", "custommonster"].includes(entity) &&
+			["create", "update"].includes(op)
+		);
+	});
+}
+
+function buildLocalEncounterMonsterFromOperation(
+	generatedContent,
+	targetMonster,
+) {
+	const operation = findMonsterOperation(generatedContent);
+	if (!operation || !targetMonster) return null;
+	const op = asText(operation.op).toLowerCase();
+	const raw =
+		op === "update"
+			? {
+					...targetMonster,
+					...operationPatch(operation),
+					id: targetMonster.id || operation.id || operation.targetId,
+					name:
+						operationPatch(operation).name ||
+						targetMonster.name ||
+						operation.name ||
+						operation.targetName,
+				}
+			: {
+					...targetMonster,
+					...operationData(operation),
+					id: operationData(operation).id || targetMonster.id,
+					name: operationData(operation).name || targetMonster.name,
+				};
+	if (!hasOwn(raw, "originalBestiaryName")) {
+		raw.originalBestiaryName =
+			targetMonster.originalBestiaryName || targetMonster.name;
+	}
+	if (!hasOwn(raw, "imageUrl") && targetMonster.imageUrl) {
+		raw.imageUrl = targetMonster.imageUrl;
+	}
+	return normalizeCustomMonster(raw);
+}
+
 function getMonsterMaxHp(monster = {}, fallback = 0) {
 	const hpAverage =
 		monster.hp && typeof monster.hp === "object"
@@ -292,12 +364,21 @@ function getFailedAiResponseText(error, status = null) {
 		.join("\n");
 }
 
+function getHistoryUserInstructions(payload = {}) {
+	return asText(
+		Object.prototype.hasOwnProperty.call(payload, "historyUserInstructions")
+			? payload.historyUserInstructions
+			: payload.userInstructions,
+	);
+}
+
 async function saveFailedAiRequest(payload = {}, error, status = null) {
 	if (!shouldSaveAiResponseHistory(payload)) return null;
 	const path =
 		payload?.path && typeof payload.path === "object" ? payload.path : {};
 	const campaignSlug = asText(path.campaign);
 	if (!campaignSlug) return null;
+	const historyUserInstructions = getHistoryUserInstructions(payload);
 
 	const shouldParseAIResponse =
 		payload.type !== "image" &&
@@ -306,7 +387,7 @@ async function saveFailedAiRequest(payload = {}, error, status = null) {
 	const requestSnapshot = buildAiRequestSnapshot({
 		type: payload.type,
 		modelName: payload.modelName,
-		userInstructions: payload.userInstructions,
+		userInstructions: historyUserInstructions,
 		path,
 		sceneId: payload.sceneId,
 		imageTarget: payload.imageTarget,
@@ -329,7 +410,7 @@ async function saveFailedAiRequest(payload = {}, error, status = null) {
 		type: payload.type || null,
 		modelName: payload.modelName || null,
 		language: payload.language || null,
-		userInstructions: payload.userInstructions || "",
+		userInstructions: historyUserInstructions,
 		request: requestSnapshot,
 		status: "failed",
 		error: {
@@ -870,6 +951,7 @@ router.post("/generate", async (req, res, next) => {
 		const responseLanguage = String(language || "")
 			.trim()
 			.toLowerCase();
+		const historyUserInstructions = getHistoryUserInstructions(req.body);
 		if (!responseLanguage) {
 			return res.status(400).json({ error: "language is required." });
 		}
@@ -1067,6 +1149,95 @@ router.post("/generate", async (req, res, next) => {
 				requireOperations: true,
 			});
 
+			const isEncounterHistoryMode =
+				req.body?.historyMode === "encounter" &&
+				asText(path?.campaign) &&
+				asText(path?.session) &&
+				asText(path?.encounter);
+			if (isEncounterHistoryMode) {
+				const targetInstanceId = asText(
+					req.body?.targetInstanceId || customMonsterTarget?.instanceId,
+				);
+				const changedMonster = buildLocalEncounterMonsterFromOperation(
+					generatedContent,
+					customMonsterTarget,
+				);
+				const localEncounterResource = buildLocalEncounterMonsterSessionChange({
+					campaignSlug: asText(path.campaign),
+					sessionFile: asText(path.session),
+					encounterId: asText(path.encounter),
+					targetInstanceId,
+					beforeSession: customSession,
+					nextMonster: changedMonster,
+				});
+
+				if (!changedMonster || !localEncounterResource) {
+					const aiResponse = await saveFailedAiRequest(
+						req.body,
+						{ message: "AI did not return any valid creature." },
+						400,
+					);
+					return res.status(400).json({
+						error: "AI не повернув жодної коректної істоти.",
+						generated: generatedContent,
+						aiResponse,
+					});
+				}
+
+				const responsePath = {
+					campaign: asText(path.campaign),
+					session: asText(path.session),
+					encounter: asText(path.encounter),
+				};
+				const responseResources = [localEncounterResource];
+				const aiResponsePayload = {
+					text: formatGeneratedContentForHistory(generatedContent),
+					path: responsePath,
+					type: "custom-monster",
+					modelName,
+					language: responseLanguage,
+					userInstructions: historyUserInstructions,
+					request: buildAiRequestSnapshot({
+						type,
+						modelName,
+						userInstructions: historyUserInstructions,
+						path: responsePath,
+						parseAIResponse: true,
+						shouldParseAIResponse: true,
+						generateCharacters: false,
+						generateNpcs: false,
+						generateLocations: false,
+						generateEncounters: false,
+						generateCustomMonsters: false,
+						entityScope: "custom-bestiary",
+						contextConfig: null,
+						contextData: customContextData,
+						language: responseLanguage,
+						globalBasePrompt,
+						imagePromptBasePrompt,
+						campaignBasePrompt,
+					}),
+					retryPayload: cloneRetryPayload(req.body),
+					changes: {
+						resources: responseResources,
+						summary: buildAiChangeSummary(responseResources),
+					},
+				};
+				const aiResponse = await storage.addAiResponse({
+					...aiResponsePayload,
+					applyState: "draft",
+					appliedAt: null,
+				});
+				return res.json({
+					generated: {
+						...generatedContent,
+						monsters: [changedMonster],
+					},
+					draft: true,
+					aiResponse,
+				});
+			}
+
 			const applied = await applyAiOperations({
 				payload: generatedContent,
 				campaignSlug: "bestiary",
@@ -1099,50 +1270,18 @@ router.post("/generate", async (req, res, next) => {
 				beforeCustomMonsters,
 				monsters,
 			);
-			const isEncounterHistoryMode =
-				req.body?.historyMode === "encounter" &&
-				asText(path?.campaign) &&
-				asText(path?.session) &&
-				asText(path?.encounter);
-			const targetInstanceId = asText(
-				req.body?.targetInstanceId || customMonsterTarget?.instanceId,
-			);
-			const changedMonster =
-				applied.changedMonsters?.[0] ||
-				customBestiaryChangeResources.find((resource) => resource?.after)?.after ||
-				null;
-			const localEncounterResource = isEncounterHistoryMode
-				? buildLocalEncounterMonsterSessionChange({
-						campaignSlug: asText(path.campaign),
-						sessionFile: asText(path.session),
-						encounterId: asText(path.encounter),
-						targetInstanceId,
-						beforeSession: customSession,
-						nextMonster: changedMonster,
-					})
-				: null;
-			const responsePath = localEncounterResource
-				? {
-						campaign: asText(path.campaign),
-						session: asText(path.session),
-						encounter: asText(path.encounter),
-					}
-				: { campaign: "bestiary" };
-			const responseResources = localEncounterResource
-				? [localEncounterResource]
-				: customBestiaryChangeResources;
 			const aiResponsePayload = {
 				text: formatGeneratedContentForHistory(generatedContent),
-				path: responsePath,
+				path: { campaign: "bestiary" },
 				type: "custom-monster",
 				modelName,
 				language: responseLanguage,
-				userInstructions,
+				userInstructions: historyUserInstructions,
 				request: buildAiRequestSnapshot({
 					type,
 					modelName,
-					userInstructions,
-					path: responsePath,
+					userInstructions: historyUserInstructions,
+					path: { campaign: "bestiary" },
 					parseAIResponse: true,
 					shouldParseAIResponse: true,
 					generateCharacters: false,
@@ -1160,8 +1299,8 @@ router.post("/generate", async (req, res, next) => {
 				}),
 				retryPayload: cloneRetryPayload(req.body),
 				changes: {
-					resources: responseResources,
-					summary: buildAiChangeSummary(responseResources),
+					resources: customBestiaryChangeResources,
+					summary: buildAiChangeSummary(customBestiaryChangeResources),
 				},
 			};
 			const draftResponsePayload = {
@@ -1222,11 +1361,11 @@ router.post("/generate", async (req, res, next) => {
 				type: "image",
 				modelName,
 				language: responseLanguage,
-				userInstructions,
+				userInstructions: historyUserInstructions,
 				request: buildAiRequestSnapshot({
 					type,
 					modelName,
-					userInstructions,
+					userInstructions: historyUserInstructions,
 					path: { campaign: "bestiary" },
 					sceneId,
 					imageTarget,
@@ -1390,7 +1529,7 @@ router.post("/generate", async (req, res, next) => {
 		const requestSnapshot = buildAiRequestSnapshot({
 			type,
 			modelName,
-			userInstructions,
+			userInstructions: historyUserInstructions,
 			path,
 			sceneId,
 			imageTarget,
@@ -1417,7 +1556,7 @@ router.post("/generate", async (req, res, next) => {
 				type,
 				modelName,
 				language: responseLanguage,
-				userInstructions,
+				userInstructions: historyUserInstructions,
 				request: requestSnapshot,
 				retryPayload: cloneRetryPayload(req.body),
 			});
@@ -1454,7 +1593,7 @@ router.post("/generate", async (req, res, next) => {
 				type,
 				modelName,
 				language: responseLanguage,
-				userInstructions,
+				userInstructions: historyUserInstructions,
 				requestSnapshot,
 				retryPayload: cloneRetryPayload(req.body),
 				extraChangeResources,
@@ -1473,7 +1612,7 @@ router.post("/generate", async (req, res, next) => {
 			type,
 			modelName,
 			language: responseLanguage,
-			userInstructions,
+			userInstructions: historyUserInstructions,
 			requestSnapshot,
 			retryPayload: cloneRetryPayload(req.body),
 			extraChangeResources,
