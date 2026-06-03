@@ -42,6 +42,15 @@ function getSpellItemKey(spell) {
 	return `${spell.source || ""}:${spell.name}`;
 }
 
+function getSpellListIndex(spells, selectedSpell) {
+	if (!selectedSpell?.name) return -1;
+	return spells.findIndex(
+		(spell) =>
+			spell?.name === selectedSpell.name &&
+			spell?.source === selectedSpell.source,
+	);
+}
+
 export default function Spells({
 	isEmbedded = false,
 	onSelectSpell = null,
@@ -55,10 +64,13 @@ export default function Spells({
 		(state) => state.ui.useSearchDebounce !== false,
 	);
 	const urlSpellName = isEmbedded ? "" : urlSearchParams.get("spell") || "";
+	const urlSelectedSource = isEmbedded
+		? ""
+		: urlSearchParams.get("source") || "";
 	const urlSpellSource = isEmbedded ? "" : urlSearchParams.get("s_source") || "";
 	const [sources, setSources] = useState([]);
 	const [selectedSource, setSelectedSource] = useState(
-		() => urlSpellSource || "all",
+		() => urlSelectedSource || "all",
 	);
 	const [allSpells, setAllSpells] = useState([]);
 	const [spells, setSpells] = useState([]);
@@ -73,6 +85,7 @@ export default function Spells({
 	const [sortOrder, setSortOrder] = useState("none"); // 'none', 'asc', 'desc'
 	const listRef = useRef(null);
 	const selectedSpellRef = useRef(null);
+	const hasScrolledToInitialSpellRef = useRef(false);
 
 	useEffect(() => {
 		selectedSpellRef.current = selectedSpell;
@@ -149,11 +162,11 @@ export default function Spells({
 	}, [initialDetailedSearch, isEmbedded]);
 
 	useEffect(() => {
-		if (isEmbedded || !urlSpellSource) return;
+		if (isEmbedded || !urlSelectedSource) return;
 		setSelectedSource((current) =>
-			current === urlSpellSource ? current : urlSpellSource,
+			current === urlSelectedSource ? current : urlSelectedSource,
 		);
-	}, [isEmbedded, urlSpellSource]);
+	}, [isEmbedded, urlSelectedSource]);
 
 	// Завантаження всіх заклинань один раз; джерела далі фільтруються локально
 	useEffect(() => {
@@ -175,11 +188,11 @@ export default function Spells({
 
 	useEffect(() => {
 		if (isEmbedded) return;
-		if (urlSpellSource === selectedSource) return;
+		if ((urlSelectedSource || "all") === selectedSource) return;
 		setUrlSearchParams(
 			(current) => {
 				const next = new URLSearchParams(current);
-				next.set("s_source", selectedSource);
+				next.set("source", selectedSource);
 				return next;
 			},
 			{ replace: true },
@@ -188,7 +201,7 @@ export default function Spells({
 		isEmbedded,
 		selectedSource,
 		setUrlSearchParams,
-		urlSpellSource,
+		urlSelectedSource,
 	]);
 
 	// Фільтрація
@@ -260,9 +273,6 @@ export default function Spells({
 
 			if (spell) {
 				setSelectedSpell(spell);
-				if (spellToSelect >= 0) {
-					setTimeout(() => listRef?.current?.scrollTo(spellToSelect), 0);
-				}
 			}
 		};
 
@@ -282,17 +292,24 @@ export default function Spells({
 	useEffect(() => {
 		if (isEmbedded) return;
 		if (selectedSpell?.name) {
-			if (urlSpellName === selectedSpell.name) return;
+			if (
+				urlSpellName === selectedSpell.name &&
+				urlSpellSource === (selectedSpell.source || "")
+			) {
+				return;
+			}
 			setUrlSearchParams((current) => {
 				const next = new URLSearchParams(current);
 				next.set("spell", selectedSpell.name);
+				next.set("s_source", selectedSpell.source || "");
 				return next;
 			});
 		} else if (selectedSpell === "") {
-			if (!urlSpellName) return;
+			if (!urlSpellName && !urlSpellSource) return;
 			setUrlSearchParams((current) => {
 				const next = new URLSearchParams(current);
 				next.delete("spell");
+				next.delete("s_source");
 				return next;
 			});
 		}
@@ -301,12 +318,29 @@ export default function Spells({
 		selectedSpell,
 		setUrlSearchParams,
 		urlSpellName,
+		urlSpellSource,
 	]);
 
+	useEffect(() => {
+		if (isEmbedded || hasScrolledToInitialSpellRef.current || !urlSpellName) {
+			return undefined;
+		}
+		const selectedIndex = getSpellListIndex(displayedSpells, selectedSpell);
+		if (selectedIndex < 0) return undefined;
+
+		hasScrolledToInitialSpellRef.current = true;
+		const frameId = requestAnimationFrame(() => {
+			listRef.current?.scrollTo(selectedIndex);
+		});
+		return () => cancelAnimationFrame(frameId);
+	}, [displayedSpells, isEmbedded, selectedSpell, urlSpellName]);
+
 	const toggleSort = () => {
-		setSortOrder((prev) =>
-			prev === "none" ? "asc" : prev === "asc" ? "desc" : "none",
-		);
+		setSortOrder((prev) => {
+			if (prev === "none") return "desc";
+			if (prev === "desc") return "asc";
+			return "none";
+		});
 	};
 
 	const renderSpellItem = (index) => {

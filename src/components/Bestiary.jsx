@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useSearchParams } from "react-router";
 import { api } from "../api";
 import { alert, confirm } from "../actions/app";
 import { useAppDispatch, useAppSelector } from "../store/appStore";
@@ -57,16 +58,16 @@ function isSameMonsterIdentity(left, right) {
 	);
 }
 
+function getMonsterListIndex(monsters, selectedMonster) {
+	if (!selectedMonster?.name) return -1;
+	return monsters.findIndex((monster) =>
+		isSameMonsterIdentity(monster, selectedMonster),
+	);
+}
+
 function normalizeSourceSelection(source) {
 	if (isCustomSource(source)) return "CUSTOM";
 	return source || "all";
-}
-
-function clearMonsterUrlSelection() {
-	const params = new URLSearchParams(window.location.search);
-	params.delete("monster");
-	params.delete("m_source");
-	window.history.replaceState({}, "", `?${params.toString()}`);
 }
 
 function cloneCustomMonsters(monsters) {
@@ -78,6 +79,7 @@ function customMonsterListsEqual(left, right) {
 }
 
 export default function Bestiary({ onAddMonster, isEmbedded = false }) {
+	const [urlSearchParams, setUrlSearchParams] = useSearchParams();
 	const dispatch = useAppDispatch();
 	const currentLanguage = useAppSelector(
 		(state) => state.localization.language,
@@ -86,8 +88,17 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 		(state) => state.ui.useSearchDebounce !== false,
 	);
 	const syncEvent = useAppSelector((state) => state.sync.event);
+	const urlSelectedSource = isEmbedded
+		? ""
+		: urlSearchParams.get("source") || "";
+	const urlMonsterName = isEmbedded ? "" : urlSearchParams.get("monster") || "";
+	const urlMonsterSource = isEmbedded
+		? ""
+		: urlSearchParams.get("m_source") || "";
 	const [sources, setSources] = useState([]);
-	const [selectedSource, setSelectedSource] = useState("all");
+	const [selectedSource, setSelectedSource] = useState(() =>
+		normalizeSourceSelection(urlSelectedSource),
+	);
 	const [allMonsters, setAllMonsters] = useState([]);
 	const [monsters, setMonsters] = useState([]);
 	const [search, setSearch] = useState("");
@@ -118,8 +129,8 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	const selectedMonsterRef = useRef(null);
 	const aiDraftResponseRef = useRef(null);
 	const aiEditControllerRef = useRef(null);
-	const hasInitializedSourceRef = useRef(false);
 	const shouldAutoSelectMonsterRef = useRef(true);
+	const hasScrolledToInitialMonsterRef = useRef(false);
 
 	const sourceOptions = useMemo(
 		() => sources.filter((source) => !isCustomSource(source)),
@@ -129,6 +140,18 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	useEffect(() => {
 		selectedMonsterRef.current = selectedMonster;
 	}, [selectedMonster]);
+
+	const clearMonsterUrlSelection = useCallback(() => {
+		setUrlSearchParams(
+			(current) => {
+				const next = new URLSearchParams(current);
+				next.delete("monster");
+				next.delete("m_source");
+				return next;
+			},
+			{ replace: true },
+		);
+	}, [setUrlSearchParams]);
 
 	useEffect(() => {
 		return () => {
@@ -252,14 +275,6 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 				setSources(sourcesData);
 				setLegendaryGroups(legendaryData); // Зберігаємо дані легендарних груп
 				setFavorites(favData);
-				if (sourcesData.length > 0) {
-					const params = new URLSearchParams(window.location.search);
-					const sourceFromUrl = params.get("source");
-					if (!hasInitializedSourceRef.current) {
-						setSelectedSource(normalizeSourceSelection(sourceFromUrl));
-						hasInitializedSourceRef.current = true;
-					}
-				}
 			} catch (err) {
 				console.error(
 					"Failed to load bestiary sources or legendary groups",
@@ -269,6 +284,14 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 		};
 		loadInitialData();
 	}, []);
+
+	useEffect(() => {
+		if (isEmbedded || !urlSelectedSource) return;
+		const nextSource = normalizeSourceSelection(urlSelectedSource);
+		setSelectedSource((current) =>
+			current === nextSource ? current : nextSource,
+		);
+	}, [isEmbedded, urlSelectedSource]);
 
 	useEffect(() => {
 		if (!syncEvent?.version) return;
@@ -400,10 +423,17 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	}, [aiEditingMonster, aiModels.length]);
 
 	useEffect(() => {
-		const params = new URLSearchParams(window.location.search);
-		params.set("source", selectedSource);
-		window.history.replaceState({}, "", `?${params.toString()}`);
-	}, [selectedSource]);
+		if (isEmbedded) return;
+		if (normalizeSourceSelection(urlSelectedSource) === selectedSource) return;
+		setUrlSearchParams(
+			(current) => {
+				const next = new URLSearchParams(current);
+				next.set("source", selectedSource);
+				return next;
+			},
+			{ replace: true },
+		);
+	}, [isEmbedded, selectedSource, setUrlSearchParams, urlSelectedSource]);
 
 	// Локальна фільтрація списку за пошуковим запитом
 	useEffect(() => {
@@ -855,10 +885,8 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	};
 
 	useEffect(() => {
+		if (isEmbedded) return undefined;
 		const syncSelectionFromUrl = () => {
-			const params = new URLSearchParams(window.location.search);
-			const urlMonsterName = params.get("monster");
-			const urlMonsterSource = params.get("m_source");
 			const currentMonster = selectedMonsterRef.current;
 
 			if (!urlMonsterName) {
@@ -892,9 +920,6 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 
 			if (monster) {
 				setSelectedMonster(monster);
-				if (foundInList >= 0) {
-					setTimeout(() => listRef?.current?.scrollTo(foundInList), 0);
-				}
 			} else if (
 				monsterMatchesUrl(currentMonster, urlMonsterName, urlMonsterSource)
 			) {
@@ -908,32 +933,61 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			syncSelectionFromUrl();
 		}
 
-		window.addEventListener("popstate", syncSelectionFromUrl);
-		return () => window.removeEventListener("popstate", syncSelectionFromUrl);
-	}, [allMonsters, displayedMonsters]);
+		return undefined;
+	}, [
+		allMonsters,
+		displayedMonsters,
+		isEmbedded,
+		urlMonsterName,
+		urlMonsterSource,
+	]);
 
 	useEffect(() => {
+		if (isEmbedded) return;
 		if (selectedMonster?.name) {
-			const params = new URLSearchParams(window.location.search);
-			let changed = false;
-			if (params.get("monster") !== selectedMonster.name) {
-				params.set("monster", selectedMonster.name);
-				changed = true;
+			if (
+				urlMonsterName === selectedMonster.name &&
+				urlMonsterSource === (selectedMonster.source || "")
+			) {
+				return;
 			}
-			if (params.get("m_source") !== selectedMonster.source) {
-				params.set("m_source", selectedMonster.source || "");
-				changed = true;
-			}
-			if (changed) {
-				window.history.pushState({}, "", `?${params.toString()}`);
-			}
+			setUrlSearchParams((current) => {
+				const next = new URLSearchParams(current);
+				next.set("monster", selectedMonster.name);
+				next.set("m_source", selectedMonster.source || "");
+				return next;
+			});
 		} else if (selectedMonster === "") {
-			const params = new URLSearchParams(window.location.search);
-			if (params.has("monster") || params.has("m_source")) {
+			if (urlMonsterName || urlMonsterSource) {
 				clearMonsterUrlSelection();
 			}
 		}
-	}, [selectedMonster]);
+	}, [
+		clearMonsterUrlSelection,
+		isEmbedded,
+		selectedMonster,
+		setUrlSearchParams,
+		urlMonsterName,
+		urlMonsterSource,
+	]);
+
+	useEffect(() => {
+		if (
+			isEmbedded ||
+			hasScrolledToInitialMonsterRef.current ||
+			!urlMonsterName
+		) {
+			return undefined;
+		}
+		const selectedIndex = getMonsterListIndex(displayedMonsters, selectedMonster);
+		if (selectedIndex < 0) return undefined;
+
+		hasScrolledToInitialMonsterRef.current = true;
+		const frameId = requestAnimationFrame(() => {
+			listRef.current?.scrollTo(selectedIndex);
+		});
+		return () => cancelAnimationFrame(frameId);
+	}, [displayedMonsters, isEmbedded, selectedMonster, urlMonsterName]);
 
 	const toggleSort = () => {
 		setSortOrder((prev) => {
