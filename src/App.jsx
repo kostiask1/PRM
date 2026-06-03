@@ -238,7 +238,7 @@ export default function App() {
 					...locations
 						.map((entity) => toEntityOption(entity, "locations"))
 						.filter(Boolean),
-				].sort((a, b) => a.name.localeCompare(b.name, "uk"));
+				].sort((a, b) => a.name.localeCompare(b.name, currentLanguage));
 
 				if (entities.length === 0) {
 					cancel();
@@ -279,7 +279,7 @@ export default function App() {
 		};
 
 		handleMentionPicker();
-	}, [activeCampaignSlug, dispatch, mentionPickerRequest]);
+	}, [activeCampaignSlug, currentLanguage, dispatch, mentionPickerRequest]);
 
 	const handleToggleCampaignStatus = async (campaign) => {
 		const isCompleting = !campaign.completed;

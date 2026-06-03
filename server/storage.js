@@ -21,7 +21,7 @@ const DEFAULT_IMAGE_PROMPT_BASE_PROMPT =
 	"cinematic, photorealistic, ultra realistic, high detail, 8k, dramatic lighting, volumetric light, sharp focus, depth of field, film still, concept art";
 
 const DEFAULT_APP_SETTINGS = Object.freeze({
-	language: "uk",
+	language: "en",
 	theme: "light",
 	encounterViewMode: "grid",
 	encounterGridColumns: 3,
@@ -469,7 +469,7 @@ async function writeCustomBestiaryMonsters(monsters) {
 			return normalizedMonster;
 		})
 		.filter((monster) => monster.name)
-		.sort((a, b) => String(a.name).localeCompare(String(b.name), "uk"));
+		.sort((a, b) => String(a.name).localeCompare(String(b.name)));
 	await writeJson(CUSTOM_BESTIARY_PATH, {
 		_meta: {
 			sources: [
@@ -783,7 +783,7 @@ function normalizeSettings(settings = {}) {
 			: {};
 
 	return {
-		language: settings.language === "en" ? "en" : "uk",
+		language: settings.language === "uk" ? "uk" : "en",
 		theme: settings.theme === "dark" ? "dark" : "light",
 		encounterViewMode:
 			settings.encounterViewMode === "grid" ? "grid" : "single",
@@ -868,7 +868,7 @@ async function listEntities(campaignSlug, type) {
 				b.slug ||
 				"",
 		);
-		return aName.localeCompare(bName, "uk");
+		return aName.localeCompare(bName);
 	});
 }
 
@@ -1053,7 +1053,7 @@ async function listSessions(slug) {
 	const result = await Promise.all(sessionPromises);
 	return result.sort(
 		(a, b) =>
-			(a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name, "uk"),
+			(a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name),
 	);
 }
 
@@ -1071,7 +1071,7 @@ async function listCampaignsDetailed() {
 	const result = (await Promise.all(campaignPromises)).filter(Boolean);
 	return result.sort(
 		(a, b) =>
-			(a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name, "uk"),
+			(a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name),
 	);
 }
 

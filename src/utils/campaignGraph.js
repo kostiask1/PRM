@@ -172,7 +172,7 @@ function sortNodesByPriority(left, right) {
 	if (safeLeftPriority !== safeRightPriority) {
 		return safeLeftPriority - safeRightPriority;
 	}
-	return left.label.localeCompare(right.label, "uk");
+	return left.label.localeCompare(right.label);
 }
 
 export function buildCampaignGraph({

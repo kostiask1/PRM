@@ -90,7 +90,7 @@ export default class SpellCardModel {
 	/** @param {SpellData} spell */
 	constructor(spell = {}, options = {}) {
 		this.spell = spell;
-		this.language = String(options.language || "uk").toLowerCase();
+		this.language = String(options.language || "en").toLowerCase();
 		this.translate =
 			typeof options.translate === "function"
 				? options.translate

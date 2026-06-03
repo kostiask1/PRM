@@ -1872,7 +1872,11 @@ export default function AiAssistantPanel() {
 				_imagePromptEncounters: sessionData?.encounters || [],
 			}));
 	const sortedImagePromptCustomMonsters = [...imagePromptCustomMonsters].sort(
-		(a, b) => String(a?.name || "").localeCompare(String(b?.name || ""), "uk"),
+		(a, b) =>
+			String(a?.name || "").localeCompare(
+				String(b?.name || ""),
+				currentLanguage,
+			),
 	);
 	const imagePromptCustomMonstersWithoutImages =
 		sortedImagePromptCustomMonsters.filter((monster) => !monster?.imageUrl);
@@ -2051,13 +2055,13 @@ export default function AiAssistantPanel() {
 		userInstructions,
 	]);
 	const formattedTokenEstimate = new Intl.NumberFormat(
-		currentLanguage || "uk",
+		currentLanguage || "en",
 	).format(tokenEstimate.total);
 	const formattedTextTokenEstimate = new Intl.NumberFormat(
-		currentLanguage || "uk",
+		currentLanguage || "en",
 	).format(tokenEstimate.textTokens);
 	const formattedImageTokenEstimate = new Intl.NumberFormat(
-		currentLanguage || "uk",
+		currentLanguage || "en",
 	).format(tokenEstimate.imageTokens);
 
 	const getSceneEncounterForImagePrompt = (scene) => {

@@ -1,7 +1,12 @@
-export const DEFAULT_LANGUAGE = "uk";
+export const DEFAULT_LANGUAGE = "en";
 
 function loadLanguagePacks() {
-	const modules = import.meta.glob("../langs/*.json", { eager: true });
+	let modules = {};
+	try {
+		modules = import.meta.glob("../langs/*.json", { eager: true });
+	} catch {
+		return {};
+	}
 	const packs = {};
 
 	Object.entries(modules).forEach(([filePath, moduleValue]) => {

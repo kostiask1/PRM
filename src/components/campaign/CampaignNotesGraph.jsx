@@ -415,7 +415,7 @@ function sortLayoutNodes(left, right) {
 	const leftFileName = String(left.meta?.fileName || "");
 	const rightFileName = String(right.meta?.fileName || "");
 	if (leftFileName !== rightFileName) {
-		return leftFileName.localeCompare(rightFileName, "uk");
+		return leftFileName.localeCompare(rightFileName);
 	}
 
 	const leftSceneNumber = Number(left.meta?.sceneNumber || 0);
@@ -426,7 +426,6 @@ function sortLayoutNodes(left, right) {
 
 	return String(left.label || "").localeCompare(
 		String(right.label || ""),
-		"uk",
 	);
 }
 

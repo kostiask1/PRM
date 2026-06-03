@@ -14,6 +14,7 @@ import Notification from "../common/Notification";
 
 const DEFAULT_IMAGE_PROMPT_BASE_PROMPT =
 	"cinematic, photorealistic, ultra realistic, high detail, 8k, dramatic lighting, volumetric light, sharp focus, depth of field, film still, concept art";
+const GLOBAL_PROMPT_SCOPE = "__global__";
 
 export default function SettingsModalContent({ onCancel }) {
 	const dispatch = useAppDispatch();
@@ -60,8 +61,8 @@ export default function SettingsModalContent({ onCancel }) {
 	);
 	const [campaignImagePromptBasePrompts, setCampaignImagePromptBasePrompts] =
 		useState(storedCampaignImagePromptBasePrompts);
-	const [selectedCampaignSlug, setSelectedCampaignSlug] = useState(
-		activeCampaignSlug || campaigns[0]?.slug || "",
+	const [selectedPromptScope, setSelectedPromptScope] = useState(
+		activeCampaignSlug || GLOBAL_PROMPT_SCOPE,
 	);
 	const [promptStatus, setPromptStatus] = useState("idle");
 	const [notification, setNotification] = useState(null);
@@ -83,23 +84,32 @@ export default function SettingsModalContent({ onCancel }) {
 	}, [storedCampaignImagePromptBasePrompts]);
 
 	useEffect(() => {
+		if (selectedPromptScope === GLOBAL_PROMPT_SCOPE) return;
 		if (
-			selectedCampaignSlug &&
-			campaigns.some((campaign) => campaign.slug === selectedCampaignSlug)
+			selectedPromptScope &&
+			campaigns.some((campaign) => campaign.slug === selectedPromptScope)
 		) {
 			return;
 		}
-		setSelectedCampaignSlug(activeCampaignSlug || campaigns[0]?.slug || "");
-	}, [activeCampaignSlug, campaigns, selectedCampaignSlug]);
+		setSelectedPromptScope(activeCampaignSlug || GLOBAL_PROMPT_SCOPE);
+	}, [activeCampaignSlug, campaigns, selectedPromptScope]);
+
+	const isGlobalPromptScope = selectedPromptScope === GLOBAL_PROMPT_SCOPE;
 
 	const selectedCampaignPrompt = useMemo(
-		() => campaignAiBasePrompts[selectedCampaignSlug] || "",
-		[campaignAiBasePrompts, selectedCampaignSlug],
+		() => campaignAiBasePrompts[selectedPromptScope] || "",
+		[campaignAiBasePrompts, selectedPromptScope],
 	);
 	const selectedCampaignImagePrompt = useMemo(
-		() => campaignImagePromptBasePrompts[selectedCampaignSlug] || "",
-		[campaignImagePromptBasePrompts, selectedCampaignSlug],
+		() => campaignImagePromptBasePrompts[selectedPromptScope] || "",
+		[campaignImagePromptBasePrompts, selectedPromptScope],
 	);
+	const selectedBasePrompt = isGlobalPromptScope
+		? aiBasePrompt
+		: selectedCampaignPrompt;
+	const selectedImagePrompt = isGlobalPromptScope
+		? imagePromptBasePrompt
+		: selectedCampaignImagePrompt;
 
 	const patchSettings = async (payload) => {
 		try {
@@ -138,7 +148,7 @@ export default function SettingsModalContent({ onCancel }) {
 	const handleCampaignPromptChange = (value) => {
 		setCampaignAiBasePrompts((current) => ({
 			...current,
-			[selectedCampaignSlug]: value,
+			[selectedPromptScope]: value,
 		}));
 		setPromptStatus("idle");
 	};
@@ -146,8 +156,26 @@ export default function SettingsModalContent({ onCancel }) {
 	const handleCampaignImagePromptChange = (value) => {
 		setCampaignImagePromptBasePrompts((current) => ({
 			...current,
-			[selectedCampaignSlug]: value,
+			[selectedPromptScope]: value,
 		}));
+		setPromptStatus("idle");
+	};
+
+	const handleSelectedBasePromptChange = (value) => {
+		if (isGlobalPromptScope) {
+			setAiBasePrompt(value);
+		} else {
+			handleCampaignPromptChange(value);
+		}
+		setPromptStatus("idle");
+	};
+
+	const handleSelectedImagePromptChange = (value) => {
+		if (isGlobalPromptScope) {
+			setImagePromptBasePrompt(value);
+		} else {
+			handleCampaignImagePromptChange(value);
+		}
 		setPromptStatus("idle");
 	};
 
@@ -294,51 +322,15 @@ export default function SettingsModalContent({ onCancel }) {
 
 				<label className="SettingsModal__field">
 					<span className="SettingsModal__label">
-						{lang.t("Global base prompt")}
-					</span>
-					<EditableField
-						type="textarea"
-						className="SettingsModal__promptField"
-						value={aiBasePrompt}
-						onChange={(event) => {
-							setAiBasePrompt(event.target.value);
-							setPromptStatus("idle");
-						}}
-						placeholder={lang.t(
-							"Example: Keep answers concise, prefer dark fantasy tone, avoid comic relief...",
-						)}
-					/>
-				</label>
-
-				<label className="SettingsModal__field">
-					<span className="SettingsModal__label">
-						{lang.t("Image prompt base style")}
-					</span>
-					<div className="SettingsModal__hint">
-						{lang.t(
-							"These style instructions are added to every image prompt generation request.",
-						)}
-					</div>
-					<EditableField
-						type="textarea"
-						className="SettingsModal__promptField"
-						value={imagePromptBasePrompt}
-						onChange={(event) => {
-							setImagePromptBasePrompt(event.target.value);
-							setPromptStatus("idle");
-						}}
-						placeholder={DEFAULT_IMAGE_PROMPT_BASE_PROMPT}
-					/>
-				</label>
-
-				<label className="SettingsModal__field">
-					<span className="SettingsModal__label">
-						{lang.t("Campaign base prompt")}
+						{lang.t("AI base prompt")}
 					</span>
 					<Select
-						value={selectedCampaignSlug}
-						onChange={(event) => setSelectedCampaignSlug(event.target.value)}
+						value={selectedPromptScope}
+						onChange={(event) => setSelectedPromptScope(event.target.value)}
 					>
+						<option value={GLOBAL_PROMPT_SCOPE}>
+							{lang.t("Global base prompt")}
+						</option>
 						{campaigns.length === 0 && (
 							<option value="">{lang.t("No campaigns")}</option>
 						)}
@@ -351,35 +343,51 @@ export default function SettingsModalContent({ onCancel }) {
 					<EditableField
 						type="textarea"
 						className="SettingsModal__promptField"
-						value={selectedCampaignPrompt}
-						onChange={(event) => handleCampaignPromptChange(event.target.value)}
-						placeholder={lang.t(
-							"Example: This campaign is grounded, political, and low magic...",
-						)}
-						disabled={!selectedCampaignSlug}
+						value={selectedBasePrompt}
+						onChange={(event) =>
+							handleSelectedBasePromptChange(event.target.value)
+						}
+						placeholder={
+							isGlobalPromptScope
+								? lang.t(
+										"Example: Keep answers concise, prefer dark fantasy tone, avoid comic relief...",
+									)
+								: lang.t(
+										"Example: This campaign is grounded, political, and low magic...",
+									)
+						}
+						disabled={!isGlobalPromptScope && !selectedPromptScope}
 					/>
 				</label>
 
 				<label className="SettingsModal__field">
 					<span className="SettingsModal__label">
-						{lang.t("Campaign image prompt style")}
+						{lang.t("Image prompt base style")}
 					</span>
 					<div className="SettingsModal__hint">
-						{lang.t(
-							"Used instead of the global image style for this campaign.",
-						)}
+						{isGlobalPromptScope
+							? lang.t(
+									"These style instructions are added to every image prompt generation request.",
+								)
+							: lang.t(
+									"Used instead of the global image style for this campaign.",
+								)}
 					</div>
 					<EditableField
 						type="textarea"
 						className="SettingsModal__promptField"
-						value={selectedCampaignImagePrompt}
+						value={selectedImagePrompt}
 						onChange={(event) =>
-							handleCampaignImagePromptChange(event.target.value)
+							handleSelectedImagePromptChange(event.target.value)
 						}
-						placeholder={lang.t(
-							"Example: gothic oil painting, muted colors, candlelight, worn parchment textures...",
-						)}
-						disabled={!selectedCampaignSlug}
+						placeholder={
+							isGlobalPromptScope
+								? DEFAULT_IMAGE_PROMPT_BASE_PROMPT
+								: lang.t(
+										"Example: gothic oil painting, muted colors, candlelight, worn parchment textures...",
+									)
+						}
+						disabled={!isGlobalPromptScope && !selectedPromptScope}
 					/>
 				</label>
 			</div>

@@ -126,7 +126,6 @@ function buildCustomMonsterChangeResources(
 	resources.sort((a, b) =>
 		String(a.label || a.id || "").localeCompare(
 			String(b.label || b.id || ""),
-			"uk",
 		),
 	);
 	return resources;
@@ -215,7 +214,7 @@ function buildAiChangeSet(beforeBundle, afterBundle, campaignSlug) {
 		}
 	}
 
-	resources.sort((a, b) => a.label.localeCompare(b.label, "uk"));
+	resources.sort((a, b) => a.label.localeCompare(b.label));
 	return {
 		resources,
 		summary: buildAiChangeSummary(resources),
@@ -247,7 +246,6 @@ async function saveParsedAiResponse({
 		changes.resources.sort((a, b) =>
 			String(a.label || a.id || "").localeCompare(
 				String(b.label || b.id || ""),
-				"uk",
 			),
 		);
 		changes.summary = buildAiChangeSummary(changes.resources);
@@ -293,7 +291,6 @@ async function saveDraftParsedAiResponse({
 		changes.resources.sort((a, b) =>
 			String(a.label || a.id || "").localeCompare(
 				String(b.label || b.id || ""),
-				"uk",
 			),
 		);
 		changes.summary = buildAiChangeSummary(changes.resources);
