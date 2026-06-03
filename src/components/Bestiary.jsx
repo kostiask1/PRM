@@ -10,6 +10,7 @@ import BestiaryContent from "./bestiary/BestiaryContent";
 import MonsterFieldEditModal from "./bestiary/MonsterFieldEditModal";
 import MonsterAiActionModal from "./bestiary/MonsterAiActionModal";
 import MonsterAiEditModal from "./bestiary/MonsterAiEditModal";
+import MonsterStatBlockModel from "../models/MonsterStatBlockModel.js";
 import useDebounce from "../hooks/useDebounce.js";
 import { buildDiffResources } from "../utils/aiDiff.js";
 import {
@@ -112,6 +113,9 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	const [sortOrder, setSortOrder] = useState("none"); // 'none', 'desc', 'asc'
 	const [reloadToken, setReloadToken] = useState(0);
 	const [fieldEditingMonster, setFieldEditingMonster] = useState(null);
+	const [fieldEditingMode, setFieldEditingMode] = useState("edit");
+	const [fieldEditingOriginalMonster, setFieldEditingOriginalMonster] =
+		useState(null);
 	const [aiEditingMonster, setAiEditingMonster] = useState(null);
 	const [aiEditMode, setAiEditMode] = useState("edit");
 	const [aiActionMonster, setAiActionMonster] = useState(null);
@@ -130,6 +134,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	const aiDraftResponseRef = useRef(null);
 	const aiEditControllerRef = useRef(null);
 	const shouldAutoSelectMonsterRef = useRef(true);
+	const pendingUrlSelectionRef = useRef(null);
 	const hasScrolledToInitialMonsterRef = useRef(false);
 
 	const sourceOptions = useMemo(
@@ -152,6 +157,23 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			{ replace: true },
 		);
 	}, [setUrlSearchParams]);
+
+	const setMonsterUrlSelection = useCallback(
+		(monster, source = null) => {
+			if (isEmbedded || !monster?.name) return;
+			setUrlSearchParams(
+				(current) => {
+					const next = new URLSearchParams(current);
+					if (source) next.set("source", source);
+					next.set("monster", monster.name);
+					next.set("m_source", monster.source || "");
+					return next;
+				},
+				{ replace: true },
+			);
+		},
+		[isEmbedded, setUrlSearchParams],
+	);
 
 	useEffect(() => {
 		return () => {
@@ -211,10 +233,13 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			setSelectedSource("CUSTOM");
 			shouldAutoSelectMonsterRef.current = true;
 			selectedMonsterRef.current = nextSelected;
+			pendingUrlSelectionRef.current = nextSelected;
 			setSelectedMonster(nextSelected);
+			setMonsterUrlSelection(nextSelected, "CUSTOM");
 		} else if (options.clearSelection) {
 			shouldAutoSelectMonsterRef.current = false;
 			selectedMonsterRef.current = "";
+			pendingUrlSelectionRef.current = null;
 			setSelectedMonster("");
 			clearMonsterUrlSelection();
 		}
@@ -516,18 +541,36 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 		}
 		if (nextSelectedMonster) {
 			selectedMonsterRef.current = nextSelectedMonster;
+			pendingUrlSelectionRef.current = nextSelectedMonster;
 			setSelectedMonster(nextSelectedMonster);
+			setMonsterUrlSelection(nextSelectedMonster, "CUSTOM");
 		}
 		setReloadToken((value) => value + 1);
 	};
 
-	const openEditCustomMonster = (monster) => {
-		if (!isCustomSource(monster?.source)) return;
-		setFieldEditingMonster(monster);
+	const openEditMonster = (monster) => {
+		if (!monster?.name) return;
+		if (isCustomSource(monster.source)) {
+			setFieldEditingMode("edit");
+			setFieldEditingOriginalMonster(monster);
+			setFieldEditingMonster(monster);
+			return;
+		}
+		const model = new MonsterStatBlockModel(monster);
+		setFieldEditingMode("create-based");
+		setFieldEditingOriginalMonster(monster);
+		setFieldEditingMonster({
+			...monster,
+			name: monster.name || lang.t("Creature"),
+			source: "CUSTOM",
+			imageUrl: monster.imageUrl || model.localTokenSrc,
+		});
 	};
 
 	const closeEditCustomMonster = () => {
 		setFieldEditingMonster(null);
+		setFieldEditingMode("edit");
+		setFieldEditingOriginalMonster(null);
 	};
 
 	const openAiEditCustomMonster = (monster, mode = "edit") => {
@@ -584,8 +627,10 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			updatedMonster,
 		]);
 		setSelectedSource("CUSTOM");
+		pendingUrlSelectionRef.current = updatedMonster;
 		setSelectedMonster(updatedMonster);
 		selectedMonsterRef.current = updatedMonster;
+		setMonsterUrlSelection(updatedMonster, "CUSTOM");
 		if (previousName !== updatedMonster.name) {
 			setFavorites((current) =>
 				current.map((favorite) =>
@@ -600,12 +645,59 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	const saveEditedCustomMonster = async (draftMonster) => {
 		if (!fieldEditingMonster?.name || !draftMonster) return;
 		try {
-			const updatedMonster = await api.updateCustomBestiaryMonster(
-				fieldEditingMonster.name,
-				{ monster: { ...draftMonster, source: "CUSTOM" } },
-			);
-			applyUpdatedCustomMonster(fieldEditingMonster.name, updatedMonster);
+			if (fieldEditingMode === "create-based") {
+				const customData = await api.getCustomBestiaryData();
+				const customMonsters = Array.isArray(customData)
+					? customData
+					: customData?.monster || [];
+				const nextName = String(draftMonster.name || "")
+					.trim()
+					.toLowerCase();
+				if (
+					customMonsters.some(
+						(monster) =>
+							String(monster.name || "")
+								.trim()
+								.toLowerCase() === nextName,
+					)
+				) {
+					throw new Error(
+						lang.t("Custom creature with this name already exists."),
+					);
+				}
+				const originalModel = new MonsterStatBlockModel(
+					fieldEditingOriginalMonster || {},
+				);
+				const createdMonster = {
+					...draftMonster,
+					source: "CUSTOM",
+					imageUrl:
+						draftMonster.imageUrl ||
+						fieldEditingOriginalMonster?.imageUrl ||
+						originalModel.localTokenSrc,
+				};
+				const updated = await api.replaceCustomBestiaryMonsters([
+					...customMonsters,
+					createdMonster,
+				]);
+				const updatedMonster =
+					updated.find(
+						(monster) =>
+							String(monster.name || "")
+								.trim()
+								.toLowerCase() === nextName,
+					) || createdMonster;
+				applyUpdatedCustomMonster("", updatedMonster);
+			} else {
+				const updatedMonster = await api.updateCustomBestiaryMonster(
+					fieldEditingMonster.id || fieldEditingMonster.name,
+					{ monster: { ...draftMonster, source: "CUSTOM" } },
+				);
+				applyUpdatedCustomMonster(fieldEditingMonster.name, updatedMonster);
+			}
 			setFieldEditingMonster(null);
+			setFieldEditingMode("edit");
+			setFieldEditingOriginalMonster(null);
 		} catch (err) {
 			dispatch(
 				alert({
@@ -893,6 +985,22 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 		if (isEmbedded) return undefined;
 		const syncSelectionFromUrl = () => {
 			const currentMonster = selectedMonsterRef.current;
+			const pendingSelection = pendingUrlSelectionRef.current;
+			if (
+				pendingSelection &&
+				isSameMonsterIdentity(currentMonster, pendingSelection)
+			) {
+				if (
+					monsterMatchesUrl(
+						currentMonster,
+						urlMonsterName,
+						urlMonsterSource,
+					)
+				) {
+					pendingUrlSelectionRef.current = null;
+				}
+				return;
+			}
 
 			if (!urlMonsterName) {
 				// If URL has no selection and monsters are loaded, select the first one.
@@ -949,6 +1057,14 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 
 	useEffect(() => {
 		if (isEmbedded) return;
+		const pendingSelection = pendingUrlSelectionRef.current;
+		if (
+			pendingSelection &&
+			selectedMonster?.name &&
+			isSameMonsterIdentity(selectedMonster, pendingSelection)
+		) {
+			return;
+		}
 		if (selectedMonster?.name) {
 			if (
 				urlMonsterName === selectedMonster.name &&
@@ -956,12 +1072,15 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			) {
 				return;
 			}
-			setUrlSearchParams((current) => {
-				const next = new URLSearchParams(current);
-				next.set("monster", selectedMonster.name);
-				next.set("m_source", selectedMonster.source || "");
-				return next;
-			});
+			setUrlSearchParams(
+				(current) => {
+					const next = new URLSearchParams(current);
+					next.set("monster", selectedMonster.name);
+					next.set("m_source", selectedMonster.source || "");
+					return next;
+				},
+				{ replace: true },
+			);
 		} else if (selectedMonster === "") {
 			if (urlMonsterName || urlMonsterSource) {
 				clearMonsterUrlSelection();
@@ -1029,7 +1148,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			onAddMonster={onAddMonster}
 			onAiEditCustomMonster={openAiEditCustomMonster}
 			onDeleteCustomMonster={handleDeleteCustomMonster}
-			onEditCustomMonster={openEditCustomMonster}
+			onEditMonster={openEditMonster}
 			onFavoriteListChange={setFavorites}
 			onMonsterAiAction={openMonsterAiAction}
 			onToggleFavorite={handleToggleFavorite}

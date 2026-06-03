@@ -87,6 +87,17 @@ function MonsterListItem({
 								title={lang.t("Add to encounter")}
 							/>
 						)}
+						<Button
+							variant="ghost"
+							className="Bestiary__item_edit_btn"
+							size={Button.SIZES.SMALL}
+							icon="edit"
+							onClick={(event) => {
+								event.stopPropagation();
+								onEdit(monster);
+							}}
+							title={lang.t("Edit creature")}
+						/>
 						{isCustomSource(monster.source) && (
 							<>
 								<Button
@@ -99,17 +110,6 @@ function MonsterListItem({
 										onAiEdit(monster);
 									}}
 									title={lang.t("AI edit custom creature")}
-								/>
-								<Button
-									variant="ghost"
-									className="Bestiary__item_edit_btn"
-									size={Button.SIZES.SMALL}
-									icon="edit"
-									onClick={(event) => {
-										event.stopPropagation();
-										onEdit(monster);
-									}}
-									title={lang.t("Edit custom creature")}
 								/>
 								<Button
 									variant="danger"
@@ -171,7 +171,7 @@ export default function BestiaryContent({
 	loading,
 	onAddMonster,
 	onDeleteCustomMonster,
-	onEditCustomMonster,
+	onEditMonster,
 	onFavoriteListChange,
 	onMonsterAiAction,
 	onAiEditCustomMonster,
@@ -193,12 +193,13 @@ export default function BestiaryContent({
 }) {
 	const renderMonsterItem = (index) => (
 		<MonsterListItem
+			key={displayedMonsters[index].name + displayedMonsters[index].source}
 			favorites={favorites}
 			monster={displayedMonsters[index]}
 			onAddMonster={onAddMonster}
 			onAiEdit={onAiEditCustomMonster}
 			onDelete={onDeleteCustomMonster}
-			onEdit={onEditCustomMonster}
+			onEdit={onEditMonster}
 			onSelect={setSelectedMonster}
 			onToggleFavorite={onToggleFavorite}
 			search={searchHighlight}
@@ -298,9 +299,7 @@ export default function BestiaryContent({
 								onAddToEncounter={onAddMonster}
 								onAiAction={onMonsterAiAction}
 								onFieldEdit={
-									isCustomSource(selectedMonster?.source)
-										? onEditCustomMonster
-										: null
+									onEditMonster
 								}
 								searchHighlight={searchHighlight}
 							/>

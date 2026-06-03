@@ -334,7 +334,7 @@ function EncounterView() {
 			mode === "create-based"
 				? {
 						...target,
-						name: `${target.name || lang.t("Creature")} ${lang.t("Copy")}`,
+						name: target.name || lang.t("Creature"),
 						source: "CUSTOM",
 					}
 				: target;
