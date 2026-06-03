@@ -211,15 +211,6 @@
 	height: var(--size-3);
 }
 
-.Bestiary__edit_modal {
-	width: min(980px, calc(100vw - 32px));
-}
-
-.Bestiary__edit_modal .Modal__body {
-	overflow: hidden;
-	display: flex;
-}
-
 .Bestiary__ai_edit_modal {
 	width: min(720px, calc(100vw - 32px));
 }
@@ -234,17 +225,6 @@
 	width: 100%;
 	gap: var(--space-4);
 	min-height: 0;
-}
-
-.Bestiary__edit_json {
-	min-height: min(62vh, 680px);
-	font-family: var(--font-mono);
-	font-size: 0.86rem;
-	line-height: 1.45;
-	resize: vertical;
-	white-space: pre;
-	overflow: auto;
-	tab-size: 2;
 }
 
 .Bestiary__ai_edit_target {

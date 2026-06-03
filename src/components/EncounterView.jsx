@@ -5,7 +5,7 @@ import Modal from "./common/Modal";
 import Bestiary from "./Bestiary";
 import AiAssistantPanel from "./ai/AiAssistantPanel";
 import BestiaryAiDraftModal from "./bestiary/BestiaryAiDraftModal";
-import CustomMonsterEditModal from "./bestiary/CustomMonsterEditModal";
+import MonsterFieldEditModal from "./bestiary/MonsterFieldEditModal";
 import MonsterAiActionModal from "./bestiary/MonsterAiActionModal";
 import MonsterAiEditModal from "./bestiary/MonsterAiEditModal";
 import MonsterStatBlock from "./MonsterStatBlock";
@@ -146,10 +146,8 @@ function EncounterView() {
 	const [aiDraftMode, setAiDraftMode] = useState("global");
 	const [isRestoringAiResponse, setIsRestoringAiResponse] = useState(false);
 	const [aiTargetInstanceId, setAiTargetInstanceId] = useState(null);
-	const [editingMonster, setEditingMonster] = useState(null);
-	const [editingMonsterJson, setEditingMonsterJson] = useState("");
-	const [editingMonsterError, setEditingMonsterError] = useState("");
-	const [isSavingMonsterEdit, setIsSavingMonsterEdit] = useState(false);
+	const [fieldEditingMonster, setFieldEditingMonster] = useState(null);
+	const [editActionMonster, setEditActionMonster] = useState(null);
 	const aiDraftResponseRef = useRef(null);
 	const aiEditControllerRef = useRef(null);
 	const gridItemRefs = useRef(new Map());
@@ -308,64 +306,105 @@ function EncounterView() {
 		}
 	};
 
-	const handleRenameMonster = (monster) => {
-		view.handleRenameMonster(monster.instanceId, monster.name);
-	};
-
 	const handleMonsterAiAction = (monster) => {
 		if (!monster?.name) return;
 		setAiTargetInstanceId(monster.instanceId || null);
 		setAiActionMonster(monster);
 	};
 
-	const openEditMonsterJson = (monster) => {
+	const openEditMonsterAction = (monster) => {
 		if (!monster?.instanceId || isEncounterCharacterParticipant(monster)) return;
-		setEditingMonster(monster);
-		setEditingMonsterJson(JSON.stringify(monster, null, 2));
-		setEditingMonsterError("");
+		setEditActionMonster(monster);
 	};
 
-	const closeEditMonsterJson = () => {
-		if (isSavingMonsterEdit) return;
-		setEditingMonster(null);
-		setEditingMonsterJson("");
-		setEditingMonsterError("");
+	const closeEditMonsterAction = () => {
+		setEditActionMonster(null);
 	};
 
-	const saveEditedMonsterJson = () => {
-		if (!editingMonster?.instanceId) return;
-		setEditingMonsterError("");
+	const chooseEditMonsterAction = (mode) => {
+		if (!editActionMonster) return;
+		const target = editActionMonster;
+		setEditActionMonster(null);
+		const baseMonster =
+			mode === "create-based"
+				? {
+						...target,
+						name: `${target.name || lang.t("Creature")} ${lang.t("Copy")}`,
+						source: "CUSTOM",
+					}
+				: target;
+		setFieldEditingMonster({ mode, original: target, monster: baseMonster });
+	};
 
-		let parsed;
-		try {
-			parsed = JSON.parse(editingMonsterJson);
-		} catch (error) {
-			setEditingMonsterError(error.message || lang.t("Invalid JSON."));
-			return;
-		}
+	const closeEditMonsterFields = () => {
+		setFieldEditingMonster(null);
+	};
 
-		if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-			setEditingMonsterError(lang.t("Monster data must be a JSON object."));
-			return;
-		}
-		if (!String(parsed.name || "").trim()) {
-			setEditingMonsterError(lang.t("Name is required to create an entry."));
-			return;
-		}
-
-		setIsSavingMonsterEdit(true);
-		try {
-			view.updateMonsterFromAi(editingMonster.instanceId, parsed, {
+	const saveEditedMonsterFields = async (draftMonster) => {
+		if (!fieldEditingMonster?.original?.instanceId || !draftMonster) return;
+		const original = fieldEditingMonster.original;
+		const mode = fieldEditingMonster.mode;
+		const nextMonster = { ...draftMonster };
+		if (mode === "local-edit") {
+			["id", "participantType"].forEach((key) => {
+				if (
+					!Object.prototype.hasOwnProperty.call(nextMonster, key) &&
+					original[key] !== undefined
+				) {
+					nextMonster[key] = original[key];
+				}
+			});
+			nextMonster.instanceId = original.instanceId;
+			view.updateMonsterFromAi(original.instanceId, nextMonster, {
 				localOverride: true,
 				preserveCurrentHp: false,
 			});
-			setEditingMonster(null);
-			setEditingMonsterJson("");
-			setEditingMonsterError("");
+			closeEditMonsterFields();
+			return;
+		}
+
+		try {
+			let updatedMonster;
+			if (mode === "edit") {
+				updatedMonster = await api.updateCustomBestiaryMonster(original.name, {
+					monster: { ...nextMonster, source: "CUSTOM" },
+				});
+			} else {
+				const customData = await api.getCustomBestiaryData();
+				const customMonsters = Array.isArray(customData)
+					? customData
+					: customData?.monster || [];
+				const nextName = String(nextMonster.name || "").trim().toLowerCase();
+				if (
+					customMonsters.some(
+						(monster) =>
+							String(monster.name || "").trim().toLowerCase() === nextName,
+					)
+				) {
+					throw new Error(lang.t("Custom creature with this name already exists."));
+				}
+				const updated = await api.replaceCustomBestiaryMonsters([
+					...customMonsters,
+					{ ...nextMonster, source: "CUSTOM" },
+				]);
+				updatedMonster =
+					updated.find(
+						(monster) =>
+							String(monster.name || "").trim().toLowerCase() === nextName,
+					) || { ...nextMonster, source: "CUSTOM" };
+			}
+			dispatch(refreshEntitiesAction());
+			view.updateMonsterFromAi(original.instanceId, updatedMonster, {
+				preserveCurrentHp: false,
+			});
+			closeEditMonsterFields();
 		} catch (error) {
-			setEditingMonsterError(error.message || lang.t("Unknown error"));
-		} finally {
-			setIsSavingMonsterEdit(false);
+			dispatch(
+				alert({
+					title: lang.t("Error"),
+					message: error.message || lang.t("Unknown error"),
+				}),
+			);
 		}
 	};
 
@@ -1065,9 +1104,8 @@ function EncounterView() {
 										>
 											<MonsterStatBlock
 												monster={monster}
-												onNameRename={handleRenameMonster}
 												onAiAction={handleMonsterAiAction}
-												onJsonEdit={openEditMonsterJson}
+												onFieldEdit={openEditMonsterAction}
 												tokenImageOverrideUrl={view.getMonsterImageOverride(
 													monster,
 												)}
@@ -1098,9 +1136,8 @@ function EncounterView() {
 									) : (
 										<MonsterStatBlock
 											monster={view.selectedInstance}
-											onNameRename={handleRenameMonster}
 											onAiAction={handleMonsterAiAction}
-											onJsonEdit={openEditMonsterJson}
+											onFieldEdit={openEditMonsterAction}
 											tokenImageOverrideUrl={view.getMonsterImageOverride(
 												view.selectedInstance,
 											)}
@@ -1252,6 +1289,16 @@ function EncounterView() {
 				onCancel={closeMonsterAiAction}
 				onChoose={chooseMonsterAiAction}
 			/>
+			<MonsterAiActionModal
+				aiActionMonster={editActionMonster}
+				showLocalEdit={true}
+				showGlobalEdit={isCustomSource(editActionMonster?.source)}
+				targetLabel={lang.t("Encounter creature")}
+				title={lang.t("Edit creature")}
+				actionIcon="edit"
+				onCancel={closeEditMonsterAction}
+				onChoose={chooseEditMonsterAction}
+			/>
 			<MonsterAiEditModal
 				aiEditingMonster={aiEditingMonster}
 				aiEditError={aiEditError}
@@ -1266,14 +1313,10 @@ function EncounterView() {
 				onSave={saveAiEditedCustomMonster}
 				selectedAiModel={selectedAiModel}
 			/>
-			<CustomMonsterEditModal
-				editingMonster={editingMonster}
-				editingMonsterError={editingMonsterError}
-				editingMonsterJson={editingMonsterJson}
-				isSavingMonsterEdit={isSavingMonsterEdit}
-				onCancel={closeEditMonsterJson}
-				onJsonChange={setEditingMonsterJson}
-				onSave={saveEditedMonsterJson}
+			<MonsterFieldEditModal
+				editingMonster={fieldEditingMonster?.monster || null}
+				onCancel={closeEditMonsterFields}
+				onSave={saveEditedMonsterFields}
 				title={lang.t("Edit encounter creature")}
 			/>
 			<BestiaryAiDraftModal

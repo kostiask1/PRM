@@ -679,27 +679,6 @@ export default function useEncounterView() {
 		}
 	}, [encounter, applyEncounterUpdate, dispatch]);
 
-	const handleRenameMonster = useCallback(
-		async (instanceId, currentName) => {
-			if (!encounter) return;
-			const name = await dispatch(
-				prompt({
-					title: lang.t("Rename"),
-					message: lang.t("Enter a new monster name:"),
-					defaultValue: currentName,
-				}),
-			);
-			if (name && name !== currentName) {
-				const updatedMonsters = encounter.monsters.map((m) =>
-					m.instanceId === instanceId ? { ...m, name } : m,
-				);
-				const updated = { ...encounter, monsters: updatedMonsters };
-				applyEncounterUpdate(updated, { preferredId: instanceId });
-			}
-		},
-		[encounter, applyEncounterUpdate, dispatch],
-	);
-
 	const handleExport = useCallback(() => {
 		if (!encounter) return;
 		const data = {
@@ -980,7 +959,6 @@ export default function useEncounterView() {
 		updateMonsterHp,
 		updateMonsterMaxHp,
 		updateMonsterFromAi,
-		handleRenameMonster,
 		duplicateMonster,
 		rollMonsterHp,
 		getHpColor,

@@ -7,7 +7,7 @@ import Button from "./form/Button";
 import AiAssistantPanel from "./ai/AiAssistantPanel";
 import BestiaryAiDraftModal from "./bestiary/BestiaryAiDraftModal";
 import BestiaryContent from "./bestiary/BestiaryContent";
-import CustomMonsterEditModal from "./bestiary/CustomMonsterEditModal";
+import MonsterFieldEditModal from "./bestiary/MonsterFieldEditModal";
 import MonsterAiActionModal from "./bestiary/MonsterAiActionModal";
 import MonsterAiEditModal from "./bestiary/MonsterAiEditModal";
 import useDebounce from "../hooks/useDebounce.js";
@@ -101,10 +101,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	const [onlyFavorites, setOnlyFavorites] = useState(false);
 	const [sortOrder, setSortOrder] = useState("none"); // 'none', 'desc', 'asc'
 	const [reloadToken, setReloadToken] = useState(0);
-	const [editingMonster, setEditingMonster] = useState(null);
-	const [editingMonsterJson, setEditingMonsterJson] = useState("");
-	const [editingMonsterError, setEditingMonsterError] = useState("");
-	const [isSavingMonsterEdit, setIsSavingMonsterEdit] = useState(false);
+	const [fieldEditingMonster, setFieldEditingMonster] = useState(null);
 	const [aiEditingMonster, setAiEditingMonster] = useState(null);
 	const [aiEditMode, setAiEditMode] = useState("edit");
 	const [aiActionMonster, setAiActionMonster] = useState(null);
@@ -495,16 +492,11 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 
 	const openEditCustomMonster = (monster) => {
 		if (!isCustomSource(monster?.source)) return;
-		setEditingMonster(monster);
-		setEditingMonsterJson(JSON.stringify(monster, null, 2));
-		setEditingMonsterError("");
+		setFieldEditingMonster(monster);
 	};
 
 	const closeEditCustomMonster = () => {
-		if (isSavingMonsterEdit) return;
-		setEditingMonster(null);
-		setEditingMonsterJson("");
-		setEditingMonsterError("");
+		setFieldEditingMonster(null);
 	};
 
 	const openAiEditCustomMonster = (monster, mode = "edit") => {
@@ -549,67 +541,47 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 		openAiEditCustomMonster(target, mode);
 	};
 
-	const saveEditedCustomMonster = async () => {
-		if (!editingMonster?.name) return;
-		setEditingMonsterError("");
-
-		let parsed;
-		try {
-			parsed = JSON.parse(editingMonsterJson);
-		} catch (err) {
-			setEditingMonsterError(err.message || lang.t("Invalid JSON."));
-			return;
+	const applyUpdatedCustomMonster = (previousName, updatedMonster) => {
+		pushCustomUndoSnapshot(cloneCustomMonsters(customMonsters));
+		shouldAutoSelectMonsterRef.current = true;
+		setAllMonsters((current) => [
+			...current.filter(
+				(item) =>
+					!isCustomSource(item.source) ||
+					!(item.name === previousName || item.name === updatedMonster.name),
+			),
+			updatedMonster,
+		]);
+		setSelectedSource("CUSTOM");
+		setSelectedMonster(updatedMonster);
+		selectedMonsterRef.current = updatedMonster;
+		if (previousName !== updatedMonster.name) {
+			setFavorites((current) =>
+				current.map((favorite) =>
+					favorite.name === previousName && isCustomSource(favorite.source)
+						? { ...favorite, name: updatedMonster.name, source: "CUSTOM" }
+						: favorite,
+				),
+			);
 		}
+	};
 
-		if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-			setEditingMonsterError(lang.t("Monster data must be a JSON object."));
-			return;
-		}
-		if (!String(parsed.name || "").trim()) {
-			setEditingMonsterError(lang.t("Name is required to create an entry."));
-			return;
-		}
-
-		setIsSavingMonsterEdit(true);
-		const undoSnapshot = cloneCustomMonsters(customMonsters);
+	const saveEditedCustomMonster = async (draftMonster) => {
+		if (!fieldEditingMonster?.name || !draftMonster) return;
 		try {
 			const updatedMonster = await api.updateCustomBestiaryMonster(
-				editingMonster.name,
-				{ monster: { ...parsed, source: "CUSTOM" } },
+				fieldEditingMonster.name,
+				{ monster: { ...draftMonster, source: "CUSTOM" } },
 			);
-			pushCustomUndoSnapshot(undoSnapshot);
-			shouldAutoSelectMonsterRef.current = true;
-			setAllMonsters((current) => [
-				...current.filter(
-					(item) =>
-						!isCustomSource(item.source) ||
-						!(
-							item.name === editingMonster.name ||
-							item.name === updatedMonster.name
-						),
-				),
-				updatedMonster,
-			]);
-			setSelectedSource("CUSTOM");
-			setSelectedMonster(updatedMonster);
-			selectedMonsterRef.current = updatedMonster;
-			setEditingMonster(null);
-			setEditingMonsterJson("");
-			setEditingMonsterError("");
-			if (editingMonster.name !== updatedMonster.name) {
-				setFavorites((current) =>
-					current.map((favorite) =>
-						favorite.name === editingMonster.name &&
-						isCustomSource(favorite.source)
-							? { ...favorite, name: updatedMonster.name, source: "CUSTOM" }
-							: favorite,
-					),
-				);
-			}
+			applyUpdatedCustomMonster(fieldEditingMonster.name, updatedMonster);
+			setFieldEditingMonster(null);
 		} catch (err) {
-			setEditingMonsterError(err.message || lang.t("Unknown error"));
-		} finally {
-			setIsSavingMonsterEdit(false);
+			dispatch(
+				alert({
+					title: lang.t("Error"),
+					message: err.message || lang.t("Unknown error"),
+				}),
+			);
 		}
 	};
 
@@ -1019,13 +991,9 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 
 	const bestiaryModals = (
 		<>
-			<CustomMonsterEditModal
-				editingMonster={editingMonster}
-				editingMonsterError={editingMonsterError}
-				editingMonsterJson={editingMonsterJson}
-				isSavingMonsterEdit={isSavingMonsterEdit}
+			<MonsterFieldEditModal
+				editingMonster={fieldEditingMonster}
 				onCancel={closeEditCustomMonster}
-				onJsonChange={setEditingMonsterJson}
 				onSave={saveEditedCustomMonster}
 			/>
 			<MonsterAiActionModal

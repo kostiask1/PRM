@@ -7,6 +7,8 @@ export default function MonsterAiActionModal({
 	showLocalEdit = false,
 	showGlobalEdit = true,
 	targetLabel = null,
+	title = lang.t("AI creature action"),
+	actionIcon = "wand",
 	onCancel,
 	onChoose,
 }) {
@@ -14,7 +16,7 @@ export default function MonsterAiActionModal({
 
 	return (
 		<Modal
-			title={lang.t("AI creature action")}
+			title={title}
 			onCancel={onCancel}
 			showFooter={false}
 			className="Bestiary__ai_action_modal"
@@ -30,7 +32,7 @@ export default function MonsterAiActionModal({
 					{showLocalEdit && (
 						<Button
 							variant="primary"
-							icon="wand"
+							icon={actionIcon}
 							onClick={() => onChoose("local-edit")}
 						>
 							{lang.t("Edit only in this encounter")}
@@ -39,7 +41,7 @@ export default function MonsterAiActionModal({
 					{showGlobalEdit && (
 						<Button
 							variant={showLocalEdit ? "ghost" : "primary"}
-							icon="wand"
+							icon={actionIcon}
 							onClick={() => onChoose("edit")}
 						>
 							{lang.t("Edit this creature")}

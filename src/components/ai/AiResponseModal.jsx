@@ -5,7 +5,7 @@ import CharacterCard from "../CharacterCard";
 import LocationCard from "../LocationCard";
 import MonsterStatBlock from "../MonsterStatBlock";
 import NoteCard from "../common/NoteCard";
-import CustomMonsterEditModal from "../bestiary/CustomMonsterEditModal";
+import MonsterFieldEditModal from "../bestiary/MonsterFieldEditModal";
 import Button from "../form/Button";
 import EditableField from "../form/EditableField";
 import Modal from "../common/Modal";
@@ -319,10 +319,7 @@ export default function AiResponseModal({
 	const [draftResourceEdits, setDraftResourceEdits] = useState([]);
 	const [draftError, setDraftError] = useState("");
 	const [diffViewMode, setDiffViewMode] = useState("preview");
-	const [editingCreature, setEditingCreature] = useState(null);
-	const [editingCreatureJson, setEditingCreatureJson] = useState("");
-	const [editingCreatureError, setEditingCreatureError] = useState("");
-	const [isSavingCreatureEdit, setIsSavingCreatureEdit] = useState(false);
+	const [fieldEditingCreature, setFieldEditingCreature] = useState(null);
 
 	useEffect(() => {
 		setDraftEdits(
@@ -562,20 +559,6 @@ export default function AiResponseModal({
 		});
 		return next;
 	};
-	const openCreatureJsonEdit = (resource, monster, options = {}) => {
-		if (!isDraft || isResourceApplied(resource) || !isObjectSnapshot(monster)) {
-			return;
-		}
-		setEditingCreature({ resource, monster, ...options });
-		setEditingCreatureJson(JSON.stringify(monster, null, 2));
-		setEditingCreatureError("");
-	};
-	const closeCreatureJsonEdit = () => {
-		if (isSavingCreatureEdit) return;
-		setEditingCreature(null);
-		setEditingCreatureJson("");
-		setEditingCreatureError("");
-	};
 	const replaceEncounterParticipant = (encounter, participantKey, nextMonster) => {
 		const nextEncounter = cloneSnapshot(encounter || {});
 		nextEncounter.monsters = getEncounterParticipantEntries(
@@ -585,54 +568,39 @@ export default function AiResponseModal({
 		);
 		return nextEncounter;
 	};
-	const saveCreatureJsonEdit = () => {
-		if (!editingCreature?.resource) return;
-		setEditingCreatureError("");
-
-		let parsed;
-		try {
-			parsed = JSON.parse(editingCreatureJson);
-		} catch (error) {
-			setEditingCreatureError(error.message || lang.t("Invalid JSON."));
+	const openCreatureFieldEdit = (resource, monster, options = {}) => {
+		if (!isDraft || isResourceApplied(resource) || !isObjectSnapshot(monster)) {
 			return;
 		}
-
-		if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-			setEditingCreatureError(lang.t("Monster data must be a JSON object."));
+		setFieldEditingCreature({ resource, monster, ...options });
+	};
+	const closeCreatureFieldEdit = () => {
+		setFieldEditingCreature(null);
+	};
+	const saveCreatureFieldEdit = (draftMonster) => {
+		if (!fieldEditingCreature?.resource || !isObjectSnapshot(draftMonster)) {
 			return;
 		}
-		if (!String(parsed.name || "").trim()) {
-			setEditingCreatureError(lang.t("Name is required to create an entry."));
-			return;
-		}
-
-		setIsSavingCreatureEdit(true);
-		try {
-			const nextMonster = preserveCreatureIdentity(
-				editingCreature.monster,
-				parsed,
+		const nextMonster = preserveCreatureIdentity(
+			fieldEditingCreature.monster,
+			draftMonster,
+		);
+		if (fieldEditingCreature.mode === "encounter-participant") {
+			const editedResource = getEditedPreviewResource(
+				fieldEditingCreature.resource,
 			);
-			if (editingCreature.mode === "encounter-participant") {
-				const editedResource = getEditedPreviewResource(editingCreature.resource);
-				updateDraftResourceAfter(
-					editedResource,
-					replaceEncounterParticipant(
-						editedResource.after,
-						editingCreature.participantKey,
-						nextMonster,
-					),
-				);
-			} else {
-				updateDraftResourceAfter(editingCreature.resource, nextMonster);
-			}
-			setEditingCreature(null);
-			setEditingCreatureJson("");
-			setEditingCreatureError("");
-		} catch (error) {
-			setEditingCreatureError(error.message || lang.t("Unknown error"));
-		} finally {
-			setIsSavingCreatureEdit(false);
+			updateDraftResourceAfter(
+				editedResource,
+				replaceEncounterParticipant(
+					editedResource.after,
+					fieldEditingCreature.participantKey,
+					nextMonster,
+				),
+			);
+		} else {
+			updateDraftResourceAfter(fieldEditingCreature.resource, nextMonster);
 		}
+		closeCreatureFieldEdit();
 	};
 	const renderNoteCard = (
 		resource,
@@ -689,9 +657,9 @@ export default function AiResponseModal({
 					monster={snapshot}
 					showFavoriteAction={false}
 					allowTokenUpload={false}
-					onJsonEdit={
+					onFieldEdit={
 						editable
-							? (monster) => openCreatureJsonEdit(resource, monster)
+							? (monster) => openCreatureFieldEdit(resource, monster)
 							: null
 					}
 					searchHighlight=""
@@ -804,10 +772,10 @@ export default function AiResponseModal({
 					monster={participant}
 					showFavoriteAction={false}
 					allowTokenUpload={false}
-					onJsonEdit={
+					onFieldEdit={
 						editOptions
 							? (monster) =>
-									openCreatureJsonEdit(editOptions.resource, monster, {
+									openCreatureFieldEdit(editOptions.resource, monster, {
 										mode: "encounter-participant",
 										participantKey: editOptions.participantKey,
 									})
@@ -1571,15 +1539,10 @@ export default function AiResponseModal({
 				)}
 				</div>
 			</Modal>
-			<CustomMonsterEditModal
-				editingMonster={editingCreature?.monster || null}
-				editingMonsterError={editingCreatureError}
-				editingMonsterJson={editingCreatureJson}
-				isSavingMonsterEdit={isSavingCreatureEdit}
-				onCancel={closeCreatureJsonEdit}
-				onJsonChange={setEditingCreatureJson}
-				onSave={saveCreatureJsonEdit}
-				title={lang.t("Edit JSON")}
+			<MonsterFieldEditModal
+				editingMonster={fieldEditingCreature?.monster || null}
+				onCancel={closeCreatureFieldEdit}
+				onSave={saveCreatureFieldEdit}
 			/>
 		</>
 	);

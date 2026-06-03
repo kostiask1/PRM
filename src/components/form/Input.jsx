@@ -57,6 +57,18 @@ function resolveInitialCursorPosition(initialSelection, rawValue = "") {
 	return rawValue.length;
 }
 
+function supportsSelectionRange(type) {
+	return [
+		"textarea",
+		"text",
+		"search",
+		"tel",
+		"url",
+		"password",
+		"email",
+	].includes(type);
+}
+
 const Input = forwardRef(
 	(
 		{ type = "text", className = "", initialSelection, title, ...props },
@@ -79,6 +91,7 @@ const Input = forwardRef(
 		// Встановлюємо фокус, висоту та каретку
 		useLayoutEffect(() => {
 			if (!internalRef.current || hasAppliedInitialSelectionRef.current) return;
+			if (initialSelection == null || !supportsSelectionRange(type)) return;
 
 			const node = internalRef.current;
 			const pos = resolveInitialCursorPosition(
@@ -89,7 +102,7 @@ const Input = forwardRef(
 			node.focus({ preventScroll: true });
 			node.setSelectionRange(pos, pos);
 			hasAppliedInitialSelectionRef.current = true;
-		}, [initialSelection, props.value]);
+		}, [initialSelection, props.value, type]);
 
 		const setRefs = (node) => {
 			internalRef.current = node;

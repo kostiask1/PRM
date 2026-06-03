@@ -102,6 +102,20 @@ function getReferenceItemKey(tabId, item) {
 	return `${tabId}:${item.name}`;
 }
 
+function getReferenceInlineTag(tabId, item = {}) {
+	const name = String(item.name || "").trim();
+	if (!name) return "";
+	if (tabId === "conditions") {
+		const tagType = item.kind === "status" ? "status" : "condition";
+		return `{@${tagType} ${name}}`;
+	}
+	if (tabId === "diseases") return `{@disease ${name}}`;
+	if (tabId === "senses") return `{@sense ${name}}`;
+	if (tabId === "skills") return `{@skill ${name}}`;
+	if (tabId === "variantrules") return `{@variantrule ${name}}`;
+	return name;
+}
+
 function isEditableTarget(target) {
 	if (!(target instanceof HTMLElement)) return false;
 	return Boolean(
@@ -112,6 +126,7 @@ function isEditableTarget(target) {
 export default function RulesReferenceModalContent({
 	initialTab = "conditions",
 	initialName = "",
+	onSelectReference = null,
 }) {
 	const dispatch = useAppDispatch();
 	const listRef = useRef(null);
@@ -422,10 +437,22 @@ export default function RulesReferenceModalContent({
 		const item = filteredItems[index];
 		const meta = activeTab.meta?.(item);
 		const isActive = activeSelectedName === item.name;
+		const handleClick = () => {
+			if (onSelectReference) {
+				onSelectReference({
+					tabId: activeTab.id,
+					item,
+					name: item.name,
+					tag: getReferenceInlineTag(activeTab.id, item),
+				});
+				return;
+			}
+			selectItem(item.name);
+		};
 
 		return (
 			<div key={getReferenceItemKey(activeTab.id, item)}>
-				<ListCard onClick={() => selectItem(item.name)} active={isActive}>
+				<ListCard onClick={handleClick} active={isActive}>
 					<div className="ListCard__title">
 						{highlightText(item.name, query)}
 					</div>

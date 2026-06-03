@@ -306,15 +306,8 @@
 }
 
 .MonsterStatBlock__favorite_btn,
-.MonsterStatBlock__ai_btn {
-	border-radius: 100%;
-	border: unset;
-	width: var(--size-8);
-	height: var(--size-8);
-	padding: 0;
-}
-
-.MonsterStatBlock__rename_btn {
+.MonsterStatBlock__ai_btn,
+.MonsterStatBlock__edit_btn {
 	border-radius: 100%;
 	border: unset;
 	width: var(--size-8);
@@ -357,13 +350,8 @@
 	line-height: 1.15;
 }
 
-.MonsterStatBlock__grid .MonsterStatBlock__favorite_btn {
-	width: var(--size-7);
-	height: var(--size-7);
-	min-width: var(--size-7);
-}
-
-.MonsterStatBlock__grid .MonsterStatBlock__rename_btn {
+.MonsterStatBlock__grid .MonsterStatBlock__favorite_btn,
+.MonsterStatBlock__grid .MonsterStatBlock__edit_btn {
 	width: var(--size-7);
 	height: var(--size-7);
 	min-width: var(--size-7);

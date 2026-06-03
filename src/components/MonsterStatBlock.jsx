@@ -37,7 +37,6 @@ export default function MonsterStatBlock({
 	monster,
 	onNameClick,
 	nameTitle,
-	onNameRename,
 	onFavoriteChange,
 	favoriteActive = null,
 	tokenImageOverrideUrl = null,
@@ -47,7 +46,7 @@ export default function MonsterStatBlock({
 	allowTokenUpload = true,
 	onAddToEncounter,
 	onAiAction,
-	onJsonEdit,
+	onFieldEdit,
 	searchHighlight = "",
 	highlightFields = null,
 }) {
@@ -136,12 +135,6 @@ export default function MonsterStatBlock({
 				/>
 			),
 		});
-	};
-
-	const handleNameRename = (event) => {
-		event?.preventDefault?.();
-		event?.stopPropagation?.();
-		onNameRename?.(monster);
 	};
 
 	useEffect(() => {
@@ -527,7 +520,6 @@ export default function MonsterStatBlock({
 										changedClass("name"),
 									)}
 									onClick={() => onNameClick?.(monster)}
-									onContextMenu={onNameRename ? handleNameRename : undefined}
 								>
 									{highlight(monster.name)}
 								</h3>
@@ -540,20 +532,9 @@ export default function MonsterStatBlock({
 								)}
 								text={monster.name}
 								message={lang.t("Name copied!")}
-								onContextMenu={onNameRename ? handleNameRename : undefined}
 							>
 								{highlight(monster.name)}
 							</ClickToCopy>
-						)}
-						{onNameRename && (
-							<Button
-								variant="ghost"
-								size={Button.SIZES.SMALL}
-								icon="edit"
-								className="MonsterStatBlock__rename_btn"
-								onClick={handleNameRename}
-								title={lang.t("Rename")}
-							/>
 						)}
 						{showFavoriteAction && (
 							<Button
@@ -579,14 +560,14 @@ export default function MonsterStatBlock({
 								title={lang.t("AI creature action")}
 							/>
 						)}
-						{onJsonEdit && (
+						{onFieldEdit && (
 							<Button
 								variant="ghost"
 								size={Button.SIZES.SMALL}
-								icon="json-edit"
-								className="MonsterStatBlock__json_btn"
-								onClick={() => onJsonEdit(monster)}
-								title={lang.t("Edit JSON")}
+								icon="edit"
+								className="MonsterStatBlock__edit_btn"
+								onClick={() => onFieldEdit(monster)}
+								title={lang.t("Edit creature")}
 							/>
 						)}
 						{showAddToEncounterPicker && (

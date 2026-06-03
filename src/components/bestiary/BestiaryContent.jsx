@@ -104,7 +104,7 @@ function MonsterListItem({
 									variant="ghost"
 									className="Bestiary__item_edit_btn"
 									size={Button.SIZES.SMALL}
-									icon="json-edit"
+									icon="edit"
 									onClick={(event) => {
 										event.stopPropagation();
 										onEdit(monster);
@@ -300,6 +300,11 @@ export default function BestiaryContent({
 								showAddToEncounterPicker
 								onAddToEncounter={onAddMonster}
 								onAiAction={onMonsterAiAction}
+								onFieldEdit={
+									isCustomSource(selectedMonster?.source)
+										? onEditCustomMonster
+										: null
+								}
 								searchHighlight={searchHighlight}
 							/>
 						</div>
