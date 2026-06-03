@@ -22,6 +22,21 @@
 	border-color: color-mix(in srgb, var(--border), var(--accent) 25%);
 }
 
+.Input:disabled {
+	cursor: not-allowed;
+	border-color: color-mix(in srgb, var(--border), transparent 20%);
+	background: color-mix(in srgb, var(--input), var(--bg-2) 55%);
+	color: color-mix(in srgb, var(--muted), var(--text) 20%);
+	opacity: 0.72;
+	box-shadow: none;
+}
+
+.Input:disabled:hover,
+.Input:disabled:focus {
+	border-color: color-mix(in srgb, var(--border), transparent 20%);
+	box-shadow: none;
+}
+
 .Input:focus {
 	border-color: var(--accent);
 	box-shadow: var(--focus-ring);

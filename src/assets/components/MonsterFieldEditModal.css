@@ -44,6 +44,10 @@
 	letter-spacing: 0.04em;
 }
 
+.MonsterFieldEditModal__field.is_disabled>span {
+	color: color-mix(in srgb, var(--muted), transparent 22%);
+}
+
 .MonsterFieldEditModal__text_fields {
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));

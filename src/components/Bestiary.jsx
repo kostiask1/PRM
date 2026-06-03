@@ -1054,6 +1054,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 		<>
 			<MonsterFieldEditModal
 				editingMonster={fieldEditingMonster}
+				disableSourceField
 				onCancel={closeEditCustomMonster}
 				onSave={saveEditedCustomMonster}
 			/>

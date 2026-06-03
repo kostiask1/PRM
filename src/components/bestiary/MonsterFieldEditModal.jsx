@@ -262,6 +262,7 @@ function updateCreatureBasicField(monster, key, value) {
 export default function MonsterFieldEditModal({
 	editingMonster,
 	title = lang.t("Edit creature"),
+	disableSourceField = false,
 	onCancel,
 	onSave,
 }) {
@@ -432,10 +433,14 @@ export default function MonsterFieldEditModal({
 	};
 
 	const renderInputField = (key, label, options = {}) => (
-		<label key={key} className="MonsterFieldEditModal__field">
+		<label
+			key={key}
+			className={`MonsterFieldEditModal__field${options.disabled ? " is_disabled" : ""}`}
+		>
 			<span>{lang.t(label)}</span>
 			<Input
 				type={options.type || "text"}
+				disabled={options.disabled}
 				value={getCreatureEditableFieldInput(draft, key)}
 				onChange={(event) =>
 					updateDraft((current) =>
@@ -576,7 +581,9 @@ export default function MonsterFieldEditModal({
 						<>
 							<div className="MonsterFieldEditModal__fields">
 								{renderInputField("name", "Name")}
-								{renderInputField("source", "Source")}
+								{renderInputField("source", "Source", {
+									disabled: disableSourceField,
+								})}
 								{renderInputField("size", "Size")}
 								{renderInputField("type", "Type")}
 								{renderInputField("alignment", "Alignment")}
