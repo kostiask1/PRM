@@ -39,6 +39,7 @@ import {
 import { downloadBlob, downloadJsonFile } from "../src/utils/download.js";
 import {
 	createEncounterMonsterInstance,
+	ensureEncounterMonsterId,
 	getMonsterBaseHp,
 	hasMonsterHpFormula,
 } from "../src/utils/encounters.js";
@@ -1421,6 +1422,24 @@ await run(
 				hp: { special: "80" },
 			}).hit_points,
 			80,
+		);
+		const generatedIdMonster = createEncounterMonsterInstance({
+			name: "No Id Monster",
+			hp: { average: 12 },
+		});
+		assert.ok(generatedIdMonster.id);
+		assert.equal(
+			createEncounterMonsterInstance({
+				id: "existing-id",
+				name: "Existing Id Monster",
+				hp: { average: 12 },
+			}).id,
+			"existing-id",
+		);
+		assert.ok(ensureEncounterMonsterId({ name: "Imported" }).id);
+		assert.equal(
+			ensureEncounterMonsterId({ id: "imported-id", name: "Imported" }).id,
+			"imported-id",
 		);
 		assert.equal(hasMonsterHpFormula({ hp: { special: "80" } }), false);
 		assert.equal(hasMonsterHpFormula({ hp: { formula: "12d8+24" } }), true);

@@ -15,6 +15,8 @@ const CREATURE_ACTION_SECTIONS = [
 	{ key: "legendary", label: "Legendary Actions" },
 ];
 
+const SPEED_KEYS = new Set(["walk", "burrow", "climb", "fly", "swim"]);
+
 function cloneMonster(monster) {
 	return JSON.parse(JSON.stringify(monster ?? null));
 }
@@ -97,10 +99,85 @@ function splitListText(value) {
 		.filter(Boolean);
 }
 
+function formatSpeedValue(key, value) {
+	const label = key === "walk" ? "" : `${key} `;
+	if (value && typeof value === "object") {
+		const number = value.number ?? "";
+		const condition = value.condition ? ` ${value.condition}` : "";
+		return `${label}${number} ft.${condition}`.trim();
+	}
+	return `${label}${value} ft.`.trim();
+}
+
+function speedToText(speed) {
+	if (typeof speed === "string") return speed;
+	if (!speed || typeof speed !== "object" || Array.isArray(speed)) return "";
+
+	const parts = Object.entries(speed)
+		.filter(([key, value]) => SPEED_KEYS.has(key) && value !== false)
+		.map(([key, value]) => formatSpeedValue(key, value))
+		.filter(Boolean);
+
+	if (speed.canHover && !parts.join(" ").toLowerCase().includes("hover")) {
+		const flyIndex = parts.findIndex((part) => /^fly\b/i.test(part));
+		if (flyIndex >= 0) parts[flyIndex] = `${parts[flyIndex]} (hover)`;
+		else parts.push("hover");
+	}
+
+	return parts.join(", ");
+}
+
+function parseSpeedText(value) {
+	const text = String(value || "").trim();
+	if (!text) return "";
+	if (text.startsWith("{")) {
+		try {
+			const parsed = JSON.parse(text);
+			if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+				return parsed;
+			}
+		} catch {
+			return text;
+		}
+	}
+
+	const result = {};
+	let parsedAny = false;
+	let canHover = /\bhover\b/i.test(text);
+	const parts = text
+		.split(/[,\n]/)
+		.map((part) => part.trim())
+		.filter(Boolean);
+
+	parts.forEach((part) => {
+		if (/^hover$/i.test(part)) {
+			canHover = true;
+			return;
+		}
+		const match = part.match(
+			/^(?:(walk|burrow|climb|fly|swim)\s+)?(\d+)\s*(?:ft\.?|feet)?\s*(.*)$/i,
+		);
+		if (!match) return;
+
+		const key = (match[1] || "walk").toLowerCase();
+		const number = Number(match[2]);
+		const condition = String(match[3] || "")
+			.replace(/\(?\bhover\b\)?/gi, "")
+			.trim();
+		result[key] = condition ? { number, condition } : number;
+		parsedAny = true;
+	});
+
+	if (!parsedAny) return text;
+	if (canHover) result.canHover = true;
+	return result;
+}
+
 function getCreatureEditableFieldInput(monster = {}, key) {
 	if (key === "ac") return getCreatureAcInput(monster);
 	if (key === "hpAverage") return getCreatureHpAverageInput(monster);
 	if (key === "hpFormula") return getCreatureHpFormulaInput(monster);
+	if (key === "speed") return speedToText(monster.speed);
 	if (key === "desc" && Array.isArray(monster.desc)) {
 		return monster.desc
 			.map((entry) =>
@@ -140,6 +217,10 @@ function updateCreatureBasicField(monster, key, value) {
 	}
 	if (key === "cr") {
 		next.cr = value;
+		return next;
+	}
+	if (key === "speed") {
+		next.speed = parseSpeedText(value);
 		return next;
 	}
 	if (

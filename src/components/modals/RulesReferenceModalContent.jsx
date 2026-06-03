@@ -24,6 +24,22 @@ function getVariantRuleTypeLabel(ruleType) {
 	return lang.t(VARIANT_RULE_TYPE_LABELS[ruleType] || ruleType || "");
 }
 
+function getSpellMeta(spell = {}) {
+	const level =
+		spell.level_int !== undefined
+			? spell.level_int
+			: spell.level !== undefined
+				? spell.level
+				: "";
+	const levelLabel =
+		level === 0 || String(level) === "0"
+			? lang.t("Cantrip")
+			: level !== ""
+				? lang.t("Level {level}", { level })
+				: "";
+	return [levelLabel, spell.school, spell.source].filter(Boolean).join(" · ");
+}
+
 function getSearchValues(tab, item) {
 	const fieldValues = tab.searchFields.map((field) => item?.[field]);
 	const metaValue = tab.meta?.(item);
@@ -85,6 +101,14 @@ const REFERENCE_TABS = [
 		searchFields: ["name", "ruleType"],
 		meta: (item) => getVariantRuleTypeLabel(item.ruleType),
 	},
+	{
+		id: "spells",
+		label: "Spells",
+		emptyLabel: "No spells found.",
+		load: () => api.searchSpells(),
+		searchFields: ["name", "school", "source", "level", "level_int"],
+		meta: getSpellMeta,
+	},
 ];
 
 const TAB_BY_ID = new Map(REFERENCE_TABS.map((tab) => [tab.id, tab]));
@@ -113,6 +137,7 @@ function getReferenceInlineTag(tabId, item = {}) {
 	if (tabId === "senses") return `{@sense ${name}}`;
 	if (tabId === "skills") return `{@skill ${name}}`;
 	if (tabId === "variantrules") return `{@variantrule ${name}}`;
+	if (tabId === "spells") return `{@spell ${name}}`;
 	return name;
 }
 
@@ -435,6 +460,7 @@ export default function RulesReferenceModalContent({
 
 	const renderReferenceItem = (index) => {
 		const item = filteredItems[index];
+		if (!item) return null;
 		const meta = activeTab.meta?.(item);
 		const isActive = activeSelectedName === item.name;
 		const handleClick = () => {
@@ -534,6 +560,7 @@ export default function RulesReferenceModalContent({
 							<p className="muted">{lang.t("Loading...")}</p>
 						) : filteredItems.length ? (
 							<ReactList
+								key={`${activeTab.id}:${normalizedQuery}:${isDetailedSearch ? "detailed" : "simple"}`}
 								ref={listRef}
 								itemRenderer={renderReferenceItem}
 								length={filteredItems.length}

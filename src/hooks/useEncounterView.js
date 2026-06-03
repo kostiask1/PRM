@@ -13,6 +13,7 @@ import { navigateTo, useAppDispatch, useAppSelector } from "../store/appStore";
 import { lang } from "../services/localization";
 import {
 	createEncounterMonsterInstance,
+	ensureEncounterMonsterId,
 	createEncounterCharacterParticipant,
 	getMonsterBaseHp,
 	getMonsterHpFormula,
@@ -651,7 +652,7 @@ export default function useEncounterView() {
 					? parsedCurrentHp
 					: nextMaxHp;
 				return {
-					...nextMonster,
+					...ensureEncounterMonsterId(nextMonster),
 					instanceId,
 					...(options.localOverride ? { _localOverride: true } : {}),
 					currentHp: Math.min(nextCurrentHp, nextMaxHp),
@@ -716,10 +717,12 @@ export default function useEncounterView() {
 					const updated = {
 						...encounter,
 						name: imported.name || encounter.name,
-						monsters: imported.monsters.map((m, idx) => ({
-							...m,
-							instanceId: `inst-${Date.now()}-${idx}-${Math.floor(Math.random() * 1000)}`,
-						})),
+						monsters: imported.monsters.map((m, idx) =>
+							ensureEncounterMonsterId({
+								...m,
+								instanceId: `inst-${Date.now()}-${idx}-${Math.floor(Math.random() * 1000)}`,
+							}),
+						),
 					};
 
 					applyEncounterUpdate(updated, {
@@ -743,7 +746,7 @@ export default function useEncounterView() {
 			if (!encounter) return;
 			if (isEncounterCharacterParticipant(m)) return;
 			const newMonster = {
-				...m,
+				...ensureEncounterMonsterId(m),
 				instanceId: `inst-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
 			};
 			const index = encounter.monsters.findIndex(

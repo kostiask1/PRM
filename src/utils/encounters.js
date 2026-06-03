@@ -27,6 +27,23 @@ export function getMonsterBaseHp(monster = {}) {
 	return hpAverage ?? hpSpecial ?? hitPoints ?? 0;
 }
 
+export function createEncounterMonsterId() {
+	if (typeof globalThis.crypto?.randomUUID === "function") {
+		return globalThis.crypto.randomUUID();
+	}
+	return `monster-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+}
+
+export function ensureEncounterMonsterId(monster = {}) {
+	if (monster.id !== null && monster.id !== undefined && String(monster.id)) {
+		return monster;
+	}
+	return {
+		...monster,
+		id: createEncounterMonsterId(),
+	};
+}
+
 export function createEncounterMonsterInstance(monster) {
 	const hpVal = getMonsterBaseHp(monster);
 
@@ -36,14 +53,14 @@ export function createEncounterMonsterInstance(monster) {
 		acVal = typeof entry === "object" ? entry.ac : entry;
 	}
 
-	return {
+	return ensureEncounterMonsterId({
 		...monster,
 		instanceId: `inst-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
 		originalBestiaryName: monster.name,
 		currentHp: hpVal,
 		hit_points: hpVal,
 		armor_class: acVal,
-	};
+	});
 }
 
 export function isEncounterCharacterParticipant(entry = {}) {

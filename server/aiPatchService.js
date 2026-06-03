@@ -430,6 +430,7 @@ function buildMonsterInstance(monster, bestiaryIndex) {
 	const resolved = foundBase || null;
 	const instance = {
 		...(resolved || {}),
+		id: asText(monster?.id) || asText(resolved?.id) || makeId(),
 		instanceId: `inst-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
 		name: asText(monster?.name) || (resolved ? resolved.name : monsterName),
 		originalBestiaryName: resolved ? resolved.name : monsterName,
