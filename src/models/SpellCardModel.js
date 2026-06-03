@@ -1,13 +1,13 @@
 ﻿const SCHOOL_MAP = {
-	A: "Abjuration (Зречення)",
-	C: "Conjuration (Виклик)",
-	D: "Divination (Віщування)",
-	E: "Enchantment (Очарування)",
-	I: "Illusion (Ілюзія)",
-	N: "Necromancy (Некромантія)",
-	T: "Thaumaturgy (Тауматургія)",
-	P: "Transmutation (Перетворення)",
-	V: "Evocation (Втілення)",
+	A: "Abjuration",
+	C: "Conjuration",
+	D: "Divination",
+	E: "Enchantment",
+	I: "Illusion",
+	N: "Necromancy",
+	T: "Thaumaturgy",
+	P: "Transmutation",
+	V: "Evocation",
 };
 
 /**
@@ -80,8 +80,11 @@ export const SPELL_FIELD_SCHEMA = {
 
 export default class SpellCardModel {
 	/** @param {SpellData} spell */
-	constructor(spell = {}) {
+	constructor(spell = {}, options = {}) {
 		this.spell = spell;
+		this.language = String(options.language || "uk").toLowerCase();
+		this.translate =
+			typeof options.translate === "function" ? options.translate : (value) => value;
 	}
 
 	static get schema() {
@@ -103,7 +106,9 @@ export default class SpellCardModel {
 	}
 
 	get schoolLabel() {
-		return SCHOOL_MAP[this.spell.school] || this.spell.school;
+		const school = SCHOOL_MAP[this.spell.school] || this.spell.school;
+		if (!school || this.language.startsWith("en")) return school;
+		return this.translate(school);
 	}
 
 	get sourceLabel() {

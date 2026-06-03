@@ -1053,7 +1053,7 @@ await run("MonsterStatBlockModel formats combat data", () => {
 });
 
 await run("SpellCardModel formats spell labels", () => {
-	const model = new SpellCardModel({
+	const spell = {
 		name: "Magic Missile|PHB",
 		source: "PHB",
 		classes: ["Sorcerer", "Wizard"],
@@ -1063,10 +1063,18 @@ await run("SpellCardModel formats spell labels", () => {
 		range: { type: "point", distance: { type: "feet", amount: 120 } },
 		components: { v: true, s: true, m: "a bit of phosphorus" },
 		duration: [{ type: "instant" }],
+	};
+	const model = new SpellCardModel(spell, {
+		language: "uk",
+		translate: (value) =>
+			value === "Evocation" ? "Evocation (Втілення)" : value,
 	});
+	const englishModel = new SpellCardModel(spell, { language: "en" });
 	assert.equal(model.displayName, "Magic Missile");
 	assert.equal(model.sourceLabel, "PHB");
 	assert.equal(model.levelLabel, "1-й рівень");
+	assert.equal(model.schoolLabel, "Evocation (Втілення)");
+	assert.equal(englishModel.schoolLabel, "Evocation");
 	assert.match(model.rangeLabel, /120 фт/);
 	assert.equal(model.durationLabel, "Миттєво");
 	assert.equal(model.classesLabel, "Sorcerer, Wizard");
