@@ -44,6 +44,8 @@ export default function MonsterStatBlock({
 	showFavoriteAction = true,
 	showAddToEncounterPicker = false,
 	allowTokenUpload = true,
+	tokenUploadCampaignSlug = "general",
+	onTokenImageChange,
 	onAddToEncounter,
 	onAiAction,
 	onFieldEdit,
@@ -435,24 +437,24 @@ export default function MonsterStatBlock({
 		String(monster.source || "").toUpperCase() === "CUSTOM";
 	const customTokenSrc = customTokenUrl || monster.imageUrl || "";
 	const localSrc =
-		tokenImageOverrideUrl ||
-		(isCustomMonster && customTokenSrc ? customTokenSrc : model.localTokenSrc);
+		customTokenSrc || tokenImageOverrideUrl || model.localTokenSrc;
 	const externalSrc =
-		tokenImageOverrideUrl ||
-		(isCustomMonster && customTokenSrc
-			? customTokenSrc
-			: model.externalTokenSrc);
+		customTokenSrc || tokenImageOverrideUrl || model.externalTokenSrc;
 	const shouldShowTokenDropzone =
 		allowTokenUpload &&
-		isCustomMonster &&
-		!tokenImageOverrideUrl &&
-		(isReplacingToken || !customTokenSrc || hasImageError);
+		(isCustomMonster || onTokenImageChange) &&
+		(isReplacingToken || !localSrc || hasImageError);
 
 	const handleCustomTokenUpload = async (result) => {
 		const nextUrl = result?.url || "";
 		if (!nextUrl) return;
 		setCustomTokenUrl(nextUrl);
 		setHasImageError(false);
+		if (onTokenImageChange) {
+			onTokenImageChange(monster, nextUrl);
+			setIsReplacingToken(false);
+			return;
+		}
 		try {
 			const updatedMonster = await api.updateCustomBestiaryMonster(
 				effectiveName || monster.name,
@@ -747,8 +749,8 @@ export default function MonsterStatBlock({
 					{shouldShowTokenDropzone ? (
 						<div className="MonsterStatBlock__token_dropzone">
 							<ImageDropzone
-								campaignSlug="general"
-								initialSource="general"
+								campaignSlug={tokenUploadCampaignSlug}
+								initialSource={tokenUploadCampaignSlug}
 								initialCategory="tokens"
 								initialSubcategory=""
 								onUploadSuccess={handleCustomTokenUpload}
@@ -777,8 +779,7 @@ export default function MonsterStatBlock({
 								onError={() => setHasImageError(true)}
 							/>
 							{allowTokenUpload &&
-								isCustomMonster &&
-								!tokenImageOverrideUrl && (
+								(isCustomMonster || onTokenImageChange) && (
 									<Button
 										variant="ghost"
 										size={Button.SIZES.SMALL}

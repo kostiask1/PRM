@@ -638,6 +638,24 @@ export default function useEncounterView() {
 		[encounter, applyEncounterUpdate],
 	);
 
+	const updateMonsterImage = useCallback(
+		(instanceId, imageUrl) => {
+			if (!encounter) return;
+			const updatedMonsters = encounter.monsters.map((monster) =>
+				monster.instanceId === instanceId
+					? {
+							...monster,
+							imageUrl: imageUrl || "",
+							_localOverride: true,
+						}
+					: monster,
+			);
+			const updated = { ...encounter, monsters: updatedMonsters };
+			applyEncounterUpdate(updated, { preferredId: instanceId });
+		},
+		[encounter, applyEncounterUpdate],
+	);
+
 	const updateMonsterFromAi = useCallback(
 		(instanceId, nextMonster, options = {}) => {
 			if (!encounter || !nextMonster) return;
@@ -658,6 +676,15 @@ export default function useEncounterView() {
 				return {
 					...ensureEncounterMonsterId(nextMonster),
 					instanceId,
+					...(options.localOverride
+						? {
+								source: monster.source,
+								originalBestiaryName:
+									monster.originalBestiaryName ||
+									nextMonster.originalBestiaryName ||
+									nextMonster.name,
+							}
+						: {}),
 					...(options.localOverride ? { _localOverride: true } : {}),
 					currentHp: Math.min(nextCurrentHp, nextMaxHp),
 					hit_points: nextMaxHp,
@@ -968,6 +995,7 @@ export default function useEncounterView() {
 		removeMonster,
 		updateMonsterHp,
 		updateMonsterMaxHp,
+		updateMonsterImage,
 		updateMonsterFromAi,
 		duplicateMonster,
 		rollMonsterHp,

@@ -106,6 +106,9 @@ const aiHistoryService = require("../server/aiHistoryService.js");
 const aiResponseHistoryService = require("../server/aiResponseHistoryService.js");
 const aiPatchService = require("../server/aiPatchService.js");
 const aiPayloadSchemas = require("../server/aiPayloadSchemas.js");
+const {
+	buildLocalEncounterMonsterSessionChange,
+} = require("../server/ai/EncounterLocalMonsterAiFlow.js");
 
 const results = [];
 const TEST_PREFIX = `autotest-${Date.now()}`;
@@ -1469,6 +1472,49 @@ await run(
 		assert.equal(hasMonsterHpFormula({ hit_dice: "4d10+8" }), true);
 	},
 );
+
+await run("local encounter AI monster edits preserve source", () => {
+	const beforeSession = {
+		fileName: "session.json",
+		data: {
+			encounters: [
+				{
+					id: "enc-1",
+					monsters: [
+						{
+							id: "orc-id",
+							instanceId: "inst-1",
+							name: "Orc Brute",
+							originalBestiaryName: "Orc",
+							source: "MM",
+							currentHp: 15,
+							hit_points: 15,
+						},
+					],
+				},
+			],
+		},
+	};
+	const change = buildLocalEncounterMonsterSessionChange({
+		campaignSlug: "camp",
+		sessionFile: "session.json",
+		encounterId: "enc-1",
+		targetInstanceId: "inst-1",
+		beforeSession,
+		nextMonster: {
+			id: "orc-id",
+			name: "Orc Brute",
+			source: "CUSTOM",
+			hp: { average: 30, formula: "4d8+12" },
+		},
+	});
+	const editedMonster = change.after.data.encounters[0].monsters[0];
+
+	assert.equal(editedMonster.source, "MM");
+	assert.equal(editedMonster.originalBestiaryName, "Orc");
+	assert.equal(editedMonster._localOverride, true);
+	assert.equal(editedMonster.hit_points, 30);
+});
 
 await run(
 	"storage moveEntity transfers characters and preserves data",

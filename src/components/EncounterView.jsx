@@ -311,6 +311,11 @@ function EncounterView() {
 		setAiActionMonster(monster);
 	};
 
+	const handleMonsterTokenImageChange = (monster, imageUrl) => {
+		if (!monster?.instanceId) return;
+		view.updateMonsterImage(monster.instanceId, imageUrl);
+	};
+
 	const openEditMonsterAction = (monster) => {
 		if (!monster?.instanceId || isEncounterCharacterParticipant(monster))
 			return;
@@ -1125,6 +1130,8 @@ function EncounterView() {
 												monster={monster}
 												onAiAction={handleMonsterAiAction}
 												onFieldEdit={openEditMonsterAction}
+												onTokenImageChange={handleMonsterTokenImageChange}
+												tokenUploadCampaignSlug={campaign.slug}
 												tokenImageOverrideUrl={view.getMonsterImageOverride(
 													monster,
 												)}
@@ -1157,6 +1164,8 @@ function EncounterView() {
 											monster={view.selectedInstance}
 											onAiAction={handleMonsterAiAction}
 											onFieldEdit={openEditMonsterAction}
+											onTokenImageChange={handleMonsterTokenImageChange}
+											tokenUploadCampaignSlug={campaign.slug}
 											tokenImageOverrideUrl={view.getMonsterImageOverride(
 												view.selectedInstance,
 											)}

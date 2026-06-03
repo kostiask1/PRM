@@ -121,6 +121,11 @@ function buildLocalEncounterMonsterSessionChange({
 		return {
 			...nextMonster,
 			instanceId: targetInstanceId,
+			source: monster.source,
+			originalBestiaryName:
+				monster.originalBestiaryName ||
+				nextMonster.originalBestiaryName ||
+				nextMonster.name,
 			_localOverride: true,
 			currentHp: safeCurrentHp,
 			hit_points: nextMaxHp,
