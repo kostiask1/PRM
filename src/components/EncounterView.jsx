@@ -3,7 +3,6 @@ import Panel from "./common/Panel";
 import Button from "./form/Button";
 import Modal from "./common/Modal";
 import Bestiary from "./Bestiary";
-import AiAssistantPanel from "./ai/AiAssistantPanel";
 import BestiaryAiDraftModal from "./bestiary/BestiaryAiDraftModal";
 import MonsterFieldEditModal from "./bestiary/MonsterFieldEditModal";
 import MonsterAiActionModal from "./bestiary/MonsterAiActionModal";
@@ -1152,14 +1151,6 @@ function EncounterView() {
 						)}
 					</div>
 				</div>
-				<AiAssistantPanel
-					sessionData={view.encounter}
-					campaignContext={{
-						description: campaign.description,
-						notes: campaign.notes,
-					}}
-					onInsertResult={view.handleAiUpdate}
-				/>
 			</div>
 
 			{view.showBestiary && (

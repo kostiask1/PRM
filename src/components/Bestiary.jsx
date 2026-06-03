@@ -4,7 +4,6 @@ import { alert, confirm } from "../actions/app";
 import { useAppDispatch, useAppSelector } from "../store/appStore";
 import Panel from "./common/Panel";
 import Button from "./form/Button";
-import AiAssistantPanel from "./ai/AiAssistantPanel";
 import BestiaryAiDraftModal from "./bestiary/BestiaryAiDraftModal";
 import BestiaryContent from "./bestiary/BestiaryContent";
 import MonsterFieldEditModal from "./bestiary/MonsterFieldEditModal";
@@ -1095,11 +1094,6 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 				</div>
 			</div>
 			<div className="Panel__body">{bestiaryContent}</div>
-			<AiAssistantPanel
-				bestiaryMode
-				sessionData={{}}
-				onInsertResult={handleCustomBestiaryUpdate}
-			/>
 			{bestiaryModals}
 		</Panel>
 	);

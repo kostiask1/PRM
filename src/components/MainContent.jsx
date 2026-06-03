@@ -4,6 +4,7 @@ import Bestiary from "./Bestiary";
 import EncounterView from "./EncounterView";
 import Spells from "./Spells";
 import ProjectGuide from "./ProjectGuide";
+import AiAssistantPanel from "./ai/AiAssistantPanel";
 import { useAppSelector } from "../store/appStore";
 import { lang } from "../services/localization";
 import "../assets/components/MainContent.css";
@@ -13,14 +14,14 @@ export default function MainContent() {
 	const { activeSessionFileName, activeEncounterId } = useAppSelector(
 		(state) => state.navigation,
 	);
+	const shouldShowAiAssistant =
+		window.location.pathname === "/bestiary" || Boolean(campaign);
+	const aiAssistantRouteKey = [
+		window.location.pathname,
+		activeSessionFileName || "",
+		activeEncounterId || "",
+	].join(":");
 
-	if (window.location.pathname === "/bestiary") {
-		return (
-			<main className="MainContent">
-				<Bestiary />
-			</main>
-		);
-	}
 	if (window.location.pathname === "/spells") {
 		return (
 			<main className="MainContent">
@@ -29,7 +30,7 @@ export default function MainContent() {
 		);
 	}
 
-	if (!campaign) {
+	if (!campaign && window.location.pathname !== "/bestiary") {
 		return (
 			<main className="MainContent">
 				<section className="MainContent__emptyState Panel">
@@ -41,14 +42,21 @@ export default function MainContent() {
 		);
 	}
 
+	const content = window.location.pathname === "/bestiary" ? (
+		<Bestiary />
+	) : activeEncounterId ? (
+		<EncounterView />
+	) : activeSessionFileName ? (
+		<SessionView />
+	) : (
+		<CampaignView key={campaign.slug} />
+	);
+
 	return (
 		<main className="MainContent">
-			{activeEncounterId ? (
-				<EncounterView />
-			) : activeSessionFileName ? (
-				<SessionView />
-			) : (
-				<CampaignView key={campaign.slug} />
+			{content}
+			{shouldShowAiAssistant && (
+				<AiAssistantPanel key={aiAssistantRouteKey} />
 			)}
 		</main>
 	);

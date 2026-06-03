@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import Icon from "./common/Icon.jsx";
 import Button from "./form/Button";
 import EditableField from "./form/EditableField";
-import AiAssistantPanel from "./ai/AiAssistantPanel";
 import Panel from "./common/Panel.jsx";
 import DraggableList from "./common/DraggableList.jsx";
 import Modal from "./common/Modal.jsx";
@@ -34,7 +33,6 @@ import { EntityLinkResolverContext } from "./common/EntityLinkIdentity.js";
 import { findEntityByName } from "../services/entities.js";
 
 function SessionView() {
-	const resolvedCampaign = useAppSelector((state) => state.active.campaign);
 	const sessionId = useAppSelector(
 		(state) => state.navigation.activeSessionFileName,
 	);
@@ -609,15 +607,6 @@ function SessionView() {
 								</div>
 							}
 						>
-							<AiAssistantPanel
-								sessionName={session.name}
-								sessionData={session.data}
-								campaignContext={{
-									description: resolvedCampaign.description,
-									notes: resolvedCampaign.notes,
-								}}
-								onInsertResult={view.handleAiUpdate}
-							/>
 							{scenes.length > 0 && (
 								<DraggableList
 									items={scenes}

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import AiAssistantPanel from "./ai/AiAssistantPanel";
 import Button from "./form/Button";
 import EditableField from "./form/EditableField";
 import ListCard from "./common/ListCard.jsx";
@@ -713,20 +712,6 @@ function CampaignView() {
 							)}
 						</div>
 
-						<div className="CampaignView__section">
-							<AiAssistantPanel
-								sessionName={campaign.name}
-								sessionData={{
-									...campaign,
-									description: view.description,
-									notes: view.notes,
-									characters: view.characters,
-									npcs: view.npcs,
-									locations: view.locations,
-								}}
-								onInsertResult={view.handleAiUpdate}
-							/>
-						</div>
 					</div>
 				</div>
 			</div>

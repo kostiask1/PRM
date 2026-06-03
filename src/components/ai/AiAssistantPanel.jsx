@@ -25,8 +25,12 @@ import AiResponseModal from "./AiResponseModal.jsx";
 import {
 	alert,
 	confirm,
+	dataSyncReceivedAction,
 	refreshEntitiesAction,
 	requestCampaignsReloadAction,
+	setActiveCampaignAction,
+	setActiveEncounterAction,
+	setActiveSessionAction,
 } from "../../actions/app.js";
 import Tooltip from "../common/Tooltip.jsx";
 import { useAppDispatch, useAppSelector } from "../../store/appStore.js";
@@ -575,17 +579,14 @@ function getDiffResourceState(resource) {
 	return getLocalizedDiffResourceState(resource, translate);
 }
 
-export default function AiAssistantPanel({
-	sessionName,
-	sessionData,
-	campaignContext = null,
-	onInsertResult,
-	bestiaryMode = false,
-}) {
+export default function AiAssistantPanel() {
 	const dispatch = useAppDispatch();
 	const currentLanguage = useAppSelector(
 		(state) => state.localization.language,
 	);
+	const activeCampaign = useAppSelector((state) => state.active.campaign);
+	const activeSession = useAppSelector((state) => state.active.session);
+	const activeEncounter = useAppSelector((state) => state.active.encounter);
 	const imagePromptBasePrompt = useAppSelector(
 		(state) => state.ui.imagePromptBasePrompt || "",
 	);
@@ -616,7 +617,7 @@ export default function AiAssistantPanel({
 		imagePromptBasePrompt;
 	const activeCampaignBasePrompt =
 		campaignAiBasePrompts[initialRoute.campaign] || "";
-	const isBestiary = bestiaryMode || initialRoute.campaign === "bestiary";
+	const isBestiary = initialRoute.campaign === "bestiary";
 	const isCampaign = !initialRoute.session && !isBestiary;
 	const isEncounter = !!initialRoute.encounter;
 
@@ -698,6 +699,42 @@ export default function AiAssistantPanel({
 	const imagePromptBestiaryDataLoadedRef = useRef(false);
 	const [canCancelGenerate, setCanCancelGenerate] = useState(false);
 	const [isGeneratedPromptCopied, setIsGeneratedPromptCopied] = useState(false);
+	const sessionName = isCampaign
+		? activeCampaign?.name || ""
+		: activeSession?.name || "";
+	const campaignContext = useMemo(
+		() =>
+			!isBestiary
+				? {
+						description: activeCampaign?.description || "",
+						notes: activeCampaign?.notes || [],
+					}
+				: null,
+		[activeCampaign?.description, activeCampaign?.notes, isBestiary],
+	);
+	const sessionData = useMemo(() => {
+		if (isBestiary) return {};
+		if (isEncounter) return activeEncounter || {};
+		if (isCampaign) {
+			return {
+				...(activeCampaign || {}),
+				characters: charactersList,
+				npcs: npcsList,
+				locations: locationsList,
+			};
+		}
+		return activeSession?.data || {};
+	}, [
+		activeCampaign,
+		activeEncounter,
+		activeSession?.data,
+		charactersList,
+		isBestiary,
+		isCampaign,
+		isEncounter,
+		locationsList,
+		npcsList,
+	]);
 
 	const cancelGenerateRequest = () => {
 		activeGenerateControllerRef.current?.abort();
@@ -1118,6 +1155,94 @@ export default function AiAssistantPanel({
 	const getAiResponseHistoryCampaign = (entry) =>
 		entry?.path?.campaign || initialRoute.campaign;
 
+	const publishAiSyncEvent = useCallback(
+		(extra = {}) => {
+			dispatch(
+				dataSyncReceivedAction({
+					resource: "ai",
+					campaignSlug:
+						initialRoute.campaign && initialRoute.campaign !== "bestiary"
+							? initialRoute.campaign
+							: undefined,
+					sessionFileName: initialRoute.session || undefined,
+					...extra,
+				}),
+			);
+		},
+		[dispatch, initialRoute.campaign, initialRoute.session],
+	);
+
+	const applyUpdatedAiData = useCallback(
+		(updated, options = {}) => {
+			if (!updated || typeof updated !== "object") return false;
+			const entityTypes = Array.isArray(options.entityTypes)
+				? options.entityTypes
+				: getGeneratedEntityTypes(options.generated, options.historyEntry);
+			const updatedIsSessionLike =
+				updated.data && typeof updated.data === "object";
+
+			if (isBestiary) {
+				publishAiSyncEvent({ resource: "ai" });
+				dispatch(refreshEntitiesAction());
+				return true;
+			}
+
+			if (updatedIsSessionLike) {
+				dispatch(setActiveSessionAction(updated));
+				const updatedEncounter = isEncounter
+					? (updated.data.encounters || []).find(
+							(encounter) =>
+								String(encounter.id) === String(initialRoute.encounter),
+						)
+					: null;
+				if (updatedEncounter) {
+					dispatch(setActiveEncounterAction(updatedEncounter));
+				}
+				dispatch(requestCampaignsReloadAction());
+				publishAiSyncEvent({
+					sessionFileName:
+						updated.fileName || updated.file_name || initialRoute.session,
+				});
+				if (entityTypes.length > 0) {
+					dispatch(refreshEntitiesAction());
+				}
+				return true;
+			}
+
+			if (isCampaign) {
+				dispatch(
+					setActiveCampaignAction({
+						...(activeCampaign || {}),
+						...updated,
+					}),
+				);
+				dispatch(requestCampaignsReloadAction());
+				publishAiSyncEvent();
+				if (entityTypes.length > 0) {
+					dispatch(refreshEntitiesAction());
+				}
+				return true;
+			}
+
+			dispatch(requestCampaignsReloadAction());
+			publishAiSyncEvent();
+			if (entityTypes.length > 0) {
+				dispatch(refreshEntitiesAction());
+			}
+			return false;
+		},
+		[
+			activeCampaign,
+			dispatch,
+			initialRoute.encounter,
+			initialRoute.session,
+			isBestiary,
+			isCampaign,
+			isEncounter,
+			publishAiSyncEvent,
+		],
+	);
+
 	const refreshAfterAiHistoryRestore = (result, entry) => {
 		if (Array.isArray(result?.responses)) {
 			setResponseHistory(result.responses);
@@ -1134,7 +1259,7 @@ export default function AiAssistantPanel({
 
 		const updated = result?.updated;
 		let appliedDirectly = false;
-		if (updated && typeof updated === "object" && onInsertResult) {
+		if (updated && typeof updated === "object") {
 			const entryPath = nextEntry?.path || {};
 			const updatedIsSessionLike =
 				updated.data && typeof updated.data === "object";
@@ -1151,9 +1276,10 @@ export default function AiAssistantPanel({
 					updatedIsSessionLike);
 
 			if (canApplyDirectly) {
-				onInsertResult(updated, {
+				applyUpdatedAiData(updated, {
 					entityTypes: getHistoryChangedEntityTypes(nextEntry),
 					trackUndo: false,
+					historyEntry: nextEntry,
 				});
 				appliedDirectly = true;
 			}
@@ -1449,10 +1575,11 @@ export default function AiAssistantPanel({
 			data.aiResponse,
 		);
 
-		if (canApplyDirectly && onInsertResult) {
-			onInsertResult(data.updated, {
+		if (canApplyDirectly) {
+			applyUpdatedAiData(data.updated, {
 				entityTypes: generatedEntityTypes,
 				generated: data.generated,
+				historyEntry: data.aiResponse,
 			});
 			if (updatedIsSessionLike && hasCampaignChanges) {
 				dispatch(requestCampaignsReloadAction());
