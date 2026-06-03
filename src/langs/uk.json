@@ -687,12 +687,12 @@
 	"Resource not found (file or folder is missing).": "Ресурс не знайдено (файл або папка відсутні).",
 	"Access denied. Check permissions for the data folder.": "Доступ заборонено. Перевірте права доступу до папки data.",
 	"Creature name is required.": "Назва істоти обов'язкова.",
-	"Custom creature not found.": "Користувацьку істоту не знайдено.",
+	"Custom creature not found.": "Кастомну істоту не знайдено.",
 	"Invalid bundle format.": "Некоректний формат пакета.",
 	"Campaign for import was not found.": "Кампанію для імпорту не знайдено.",
 	"File was not found.": "Файл не знайдено.",
 	"File already exists.": "Файл уже існує.",
 	"Subcategory was not found.": "Підкатегорію не знайдено.",
 	"Subcategory already exists.": "Підкатегорія вже існує.",
-	"Encounter {number}": "Зустріч {number}"
+	"Encounter {number}": "Сутичка {number}"
 }
