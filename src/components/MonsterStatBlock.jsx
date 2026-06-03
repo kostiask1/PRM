@@ -435,7 +435,7 @@ export default function MonsterStatBlock({
 
 	const isCustomMonster =
 		String(monster.source || "").toUpperCase() === "CUSTOM";
-	const customTokenSrc = customTokenUrl || monster.imageUrl || "";
+	const customTokenSrc = customTokenUrl ?? monster.imageUrl ?? "";
 	const localSrc =
 		customTokenSrc || tokenImageOverrideUrl || model.localTokenSrc;
 	const externalSrc =
@@ -457,7 +457,7 @@ export default function MonsterStatBlock({
 		}
 		try {
 			const updatedMonster = await api.updateCustomBestiaryMonster(
-				effectiveName || monster.name,
+				monster.id || effectiveName || monster.name,
 				{
 					imageUrl: nextUrl,
 				},
@@ -466,6 +466,26 @@ export default function MonsterStatBlock({
 			setIsReplacingToken(false);
 		} catch (err) {
 			console.error("Failed to save custom monster token", err);
+		}
+	};
+
+	const handleReplaceTokenImage = async () => {
+		setCustomTokenUrl("");
+		setHasImageError(false);
+		setIsReplacingToken(true);
+		if (onTokenImageChange) {
+			onTokenImageChange(monster, null);
+			return;
+		}
+		try {
+			await api.updateCustomBestiaryMonster(
+				monster.id || effectiveName || monster.name,
+				{
+					imageUrl: null,
+				},
+			);
+		} catch (err) {
+			console.error("Failed to clear custom monster token", err);
 		}
 	};
 
@@ -785,7 +805,7 @@ export default function MonsterStatBlock({
 										size={Button.SIZES.SMALL}
 										icon="image"
 										className="MonsterStatBlock__replace_token_btn"
-										onClick={() => setIsReplacingToken(true)}
+										onClick={handleReplaceTokenImage}
 										title={lang.t("Replace image")}
 									/>
 								)}

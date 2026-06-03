@@ -15,6 +15,22 @@ function normalizeSource(source) {
 
 const CUSTOM_SOURCE = storage.CUSTOM_BESTIARY_SOURCE || "CUSTOM";
 
+function findCustomMonsterIndex(monsters, identifier) {
+	const target = String(identifier || "").trim();
+	if (!target) return -1;
+	const targetKey = target.toLowerCase();
+	const idIndex = monsters.findIndex(
+		(monster) => String(monster?.id || "").trim() === target,
+	);
+	if (idIndex >= 0) return idIndex;
+	return monsters.findIndex(
+		(monster) =>
+			String(monster?.name || "")
+				.trim()
+				.toLowerCase() === targetKey,
+	);
+}
+
 async function readAllDatabaseMonsters() {
 	const allPath = path.join(storage.BESTIARY_DIR, "all.json");
 	if (!(await storage.exists(allPath))) return [];
@@ -339,23 +355,20 @@ router.post("/favorites/toggle", async (req, res, next) => {
 router.patch("/custom/:name", async (req, res, next) => {
 	try {
 		disableResponseCache(res);
-		const targetName = String(req.params.name || "")
-			.trim()
-			.toLowerCase();
-		if (!targetName) {
+		const targetIdentifier = String(req.params.name || "").trim();
+		if (!targetIdentifier) {
 			return res.status(400).json({ error: "Creature name is required." });
 		}
 
 		const monsters = await storage.readCustomBestiaryMonsters();
-		const index = monsters.findIndex(
-			(monster) =>
-				String(monster.name || "")
-					.trim()
-					.toLowerCase() === targetName,
-		);
+		const index = findCustomMonsterIndex(monsters, targetIdentifier);
 		if (index < 0) {
 			return res.status(404).json({ error: "Custom creature not found." });
 		}
+		const previousNameKey = String(monsters[index]?.name || "")
+			.trim()
+			.toLowerCase();
+		const previousId = String(monsters[index]?.id || "").trim();
 
 		if (req.body?.monster && typeof req.body.monster === "object") {
 			const nextMonster = clone(req.body.monster);
@@ -382,12 +395,12 @@ router.patch("/custom/:name", async (req, res, next) => {
 			monsters[index] = normalizeCustomMonsterHpAverage(nextMonster);
 			const updated = await storage.writeCustomBestiaryMonsters(monsters);
 
-			if (nextNameKey !== targetName) {
+			if (nextNameKey !== previousNameKey) {
 				const favorites = await storage.readFavorites();
 				const nextFavorites = favorites.map((favorite) =>
 					String(favorite.name || "")
 						.trim()
-						.toLowerCase() === targetName &&
+						.toLowerCase() === previousNameKey &&
 					normalizeSource(favorite.source) === CUSTOM_SOURCE
 						? { ...favorite, name: nextName, source: CUSTOM_SOURCE }
 						: favorite,
@@ -417,9 +430,11 @@ router.patch("/custom/:name", async (req, res, next) => {
 		res.json(
 			updated.find(
 				(monster) =>
+					(previousId &&
+						String(monster.id || "").trim() === previousId) ||
 					String(monster.name || "")
 						.trim()
-						.toLowerCase() === targetName,
+						.toLowerCase() === previousNameKey,
 			) || monsters[index],
 		);
 	} catch (error) {
@@ -449,23 +464,22 @@ router.put("/custom", async (req, res, next) => {
 router.delete("/custom/:name", async (req, res, next) => {
 	try {
 		disableResponseCache(res);
-		const targetName = String(req.params.name || "")
-			.trim()
-			.toLowerCase();
-		if (!targetName) {
+		const targetIdentifier = String(req.params.name || "").trim();
+		if (!targetIdentifier) {
 			return res.status(400).json({ error: "Creature name is required." });
 		}
 
 		const monsters = await storage.readCustomBestiaryMonsters();
-		const nextMonsters = monsters.filter(
-			(monster) =>
-				String(monster.name || "")
-					.trim()
-					.toLowerCase() !== targetName,
-		);
-		if (nextMonsters.length === monsters.length) {
+		const index = findCustomMonsterIndex(monsters, targetIdentifier);
+		if (index < 0) {
 			return res.status(404).json({ error: "Custom creature not found." });
 		}
+		const targetName = String(monsters[index]?.name || "")
+			.trim()
+			.toLowerCase();
+		const nextMonsters = monsters.filter(
+			(monster, monsterIndex) => monsterIndex !== index,
+		);
 
 		const updated = await storage.writeCustomBestiaryMonsters(nextMonsters);
 		const favorites = await storage.readFavorites();
