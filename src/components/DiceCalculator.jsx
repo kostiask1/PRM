@@ -287,7 +287,9 @@ export default function DiceCalculator() {
 
 	const getRollBreakdownLabel = useCallback(
 		(result) => {
-			return result?.expressionBreakdown || getFullBreakdownString(result?.breakdown);
+			return (
+				result?.expressionBreakdown || getFullBreakdownString(result?.breakdown)
+			);
 		},
 		[getFullBreakdownString],
 	);

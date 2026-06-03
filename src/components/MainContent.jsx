@@ -44,22 +44,21 @@ export default function MainContent() {
 		);
 	}
 
-	const content = location.pathname === "/bestiary" ? (
-		<Bestiary />
-	) : activeEncounterId ? (
-		<EncounterView />
-	) : activeSessionFileName ? (
-		<SessionView />
-	) : (
-		<CampaignView key={campaign.slug} />
-	);
+	const content =
+		location.pathname === "/bestiary" ? (
+			<Bestiary />
+		) : activeEncounterId ? (
+			<EncounterView />
+		) : activeSessionFileName ? (
+			<SessionView />
+		) : (
+			<CampaignView key={campaign.slug} />
+		);
 
 	return (
 		<main className="MainContent">
 			{content}
-			{shouldShowAiAssistant && (
-				<AiAssistantPanel key={aiAssistantRouteKey} />
-			)}
+			{shouldShowAiAssistant && <AiAssistantPanel key={aiAssistantRouteKey} />}
 		</main>
 	);
 }

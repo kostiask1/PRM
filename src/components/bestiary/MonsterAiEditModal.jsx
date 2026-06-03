@@ -29,8 +29,8 @@ export default function MonsterAiEditModal({
 				isLocalEdit
 					? lang.t("AI edit encounter creature")
 					: isCreateBased
-					? lang.t("Create custom creature based on this")
-					: lang.t("AI edit custom creature")
+						? lang.t("Create custom creature based on this")
+						: lang.t("AI edit custom creature")
 			}
 			onCancel={onCancel}
 			showFooter={false}
@@ -43,8 +43,8 @@ export default function MonsterAiEditModal({
 						{isLocalEdit
 							? lang.t("Encounter creature")
 							: isCreateBased
-							? lang.t("Source creature")
-							: lang.t("Custom creature")}
+								? lang.t("Source creature")
+								: lang.t("Custom creature")}
 						:
 					</span>{" "}
 					{aiEditingMonster.name}
@@ -76,10 +76,8 @@ export default function MonsterAiEditModal({
 									"Describe what to create, or leave empty to let AI decide.",
 								)
 							: isLocalEdit
-								? lang.t(
-										"Describe what to change for this encounter only.",
-									)
-							: lang.t("Describe what to change.")
+								? lang.t("Describe what to change for this encounter only.")
+								: lang.t("Describe what to change.")
 					}
 					className="Bestiary__ai_edit_prompt"
 				/>
@@ -105,7 +103,7 @@ export default function MonsterAiEditModal({
 								? lang.t("Create custom creature")
 								: isLocalEdit
 									? lang.t("Apply local AI edit")
-								: lang.t("Apply AI edit")}
+									: lang.t("Apply AI edit")}
 					</Button>
 				</div>
 			</div>

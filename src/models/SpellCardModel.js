@@ -139,7 +139,8 @@ export default class SpellCardModel {
 		const distance = this.spell.range.distance;
 		if (!distance) return this.spell.range.type;
 
-		const unit = distance.type === "feet" ? this.translate("ft.") : distance.type;
+		const unit =
+			distance.type === "feet" ? this.translate("ft.") : distance.type;
 		return `${distance.amount || ""} ${unit} (${this.spell.range.type})`;
 	}
 
@@ -162,7 +163,8 @@ export default class SpellCardModel {
 		if (!this.spell.duration) return "-";
 		return this.spell.duration
 			.map((entry) => {
-				let value = entry.type === "instant" ? this.translate("Instantaneous") : "";
+				let value =
+					entry.type === "instant" ? this.translate("Instantaneous") : "";
 				if (entry.type === "timed" && entry.duration) {
 					value = `${entry.duration.amount} ${entry.duration.type}`;
 				}

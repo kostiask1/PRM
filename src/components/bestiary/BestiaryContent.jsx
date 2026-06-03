@@ -288,10 +288,7 @@ export default function BestiaryContent({
 						<div className="Bestiary__detail_container">
 							<MonsterStatBlock
 								monster={selectedMonster}
-								favoriteActive={isFavoriteMonster(
-									favorites,
-									selectedMonster,
-								)}
+								favoriteActive={isFavoriteMonster(favorites, selectedMonster)}
 								onNameClick={
 									onAddMonster ? (monster) => onAddMonster(monster) : undefined
 								}

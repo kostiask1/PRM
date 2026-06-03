@@ -112,7 +112,10 @@ export function setUiSettingsAction(payload) {
 	) {
 		nextPayload.simplifiedNotes = Boolean(payload.simplifiedNotes);
 	}
-	if (payload && Object.prototype.hasOwnProperty.call(payload, "aiBasePrompt")) {
+	if (
+		payload &&
+		Object.prototype.hasOwnProperty.call(payload, "aiBasePrompt")
+	) {
 		nextPayload.aiBasePrompt = String(payload.aiBasePrompt || "");
 	}
 	if (

@@ -119,7 +119,9 @@ function isNoteResource(resource) {
 function isEncounterResource(resource) {
 	return (
 		resource?.kind === "session" &&
-		String(resource?.id || "").toLowerCase().includes(":encounters/")
+		String(resource?.id || "")
+			.toLowerCase()
+			.includes(":encounters/")
 	);
 }
 
@@ -137,10 +139,14 @@ function getEncounterParticipantName(participant = {}) {
 }
 
 function getEncounterParticipantBaseKey(participant = {}) {
-	const type = String(participant.participantType || "monster").trim().toLowerCase();
+	const type = String(participant.participantType || "monster")
+		.trim()
+		.toLowerCase();
 	const id = String(participant.id || participant.instanceId || "").trim();
 	if (id) return `${type}:id:${id}`;
-	const source = String(participant.source || "").trim().toLowerCase();
+	const source = String(participant.source || "")
+		.trim()
+		.toLowerCase();
 	const name = getEncounterParticipantName(participant).toLowerCase();
 	return `${type}:name:${name}:${source}`;
 }
@@ -173,7 +179,10 @@ function getEncounterParticipantHp(participant = {}) {
 }
 
 function getEncounterParticipantAc(participant = {}) {
-	if (participant.armor_class !== undefined && participant.armor_class !== null) {
+	if (
+		participant.armor_class !== undefined &&
+		participant.armor_class !== null
+	) {
 		return participant.armor_class;
 	}
 	if (Array.isArray(participant.ac) && participant.ac.length > 0) {
@@ -192,7 +201,9 @@ function getEncounterParticipantMeta(participant = {}) {
 		getEncounterParticipantHp(participant)
 			? `HP ${getEncounterParticipantHp(participant)}`
 			: "",
-		participant.cr || participant.challenge ? `CR ${participant.cr || participant.challenge}` : "",
+		participant.cr || participant.challenge
+			? `CR ${participant.cr || participant.challenge}`
+			: "",
 	]
 		.filter(Boolean)
 		.join(" / ");
@@ -386,9 +397,7 @@ export default function AiResponseModal({
 		const [section] = suffix.split("/");
 		if (parentResource.kind === "session" && parentResource.after?.data) {
 			if (
-				["notes", "npcs", "locations", "scenes", "encounters"].includes(
-					section,
-				)
+				["notes", "npcs", "locations", "scenes", "encounters"].includes(section)
 			) {
 				return findEditedListItem(
 					parentResource.after.data[section],
@@ -398,7 +407,8 @@ export default function AiResponseModal({
 			}
 		}
 		if (
-			(parentResource.kind === "campaign" || parentResource.kind === "entity") &&
+			(parentResource.kind === "campaign" ||
+				parentResource.kind === "entity") &&
 			(suffix.startsWith("note:") || suffix.startsWith("notes/"))
 		) {
 			return findEditedListItem(
@@ -423,8 +433,13 @@ export default function AiResponseModal({
 		const draftResource = getDraftResourceForPreview(resource);
 		if (!draftResource) return resource;
 		if (draftResource.id === resource.id) return draftResource;
-		const editedAfter = getEditedResourceAfterFromParent(draftResource, resource);
-		return editedAfter === undefined ? resource : { ...resource, after: editedAfter };
+		const editedAfter = getEditedResourceAfterFromParent(
+			draftResource,
+			resource,
+		);
+		return editedAfter === undefined
+			? resource
+			: { ...resource, after: editedAfter };
 	};
 	const replaceItemInList = (list, beforeItem, nextItem, index = null) =>
 		(Array.isArray(list) ? list : []).map((item, itemIndex) => {
@@ -434,7 +449,11 @@ export default function AiResponseModal({
 			if (itemId && beforeId && itemId === beforeId) return nextItem;
 			const itemInstanceId = String(item?.instanceId || "");
 			const beforeInstanceId = String(beforeItem?.instanceId || "");
-			if (itemInstanceId && beforeInstanceId && itemInstanceId === beforeInstanceId) {
+			if (
+				itemInstanceId &&
+				beforeInstanceId &&
+				itemInstanceId === beforeInstanceId
+			) {
 				return nextItem;
 			}
 			if (JSON.stringify(item) === JSON.stringify(beforeItem)) return nextItem;
@@ -559,7 +578,11 @@ export default function AiResponseModal({
 		});
 		return next;
 	};
-	const replaceEncounterParticipant = (encounter, participantKey, nextMonster) => {
+	const replaceEncounterParticipant = (
+		encounter,
+		participantKey,
+		nextMonster,
+	) => {
 		const nextEncounter = cloneSnapshot(encounter || {});
 		nextEncounter.monsters = getEncounterParticipantEntries(
 			nextEncounter.monsters,
@@ -704,8 +727,14 @@ export default function AiResponseModal({
 		);
 	};
 
-	const renderEncounterParticipantList = (snapshot, counterpartSnapshot, side) => {
-		const entries = getEncounterParticipantEntries(getEncounterParticipants(snapshot));
+	const renderEncounterParticipantList = (
+		snapshot,
+		counterpartSnapshot,
+		side,
+	) => {
+		const entries = getEncounterParticipantEntries(
+			getEncounterParticipants(snapshot),
+		);
 		const counterpartEntries = getEncounterParticipantEntries(
 			getEncounterParticipants(counterpartSnapshot),
 		);
@@ -801,15 +830,16 @@ export default function AiResponseModal({
 		const afterByKey = new Map(
 			afterEntries.map((entry) => [entry.key, entry.participant]),
 		);
-		const changedKeys = [...new Set([...beforeByKey.keys(), ...afterByKey.keys()])]
-			.filter((key) => {
-				const before = beforeByKey.get(key) || null;
-				const after = afterByKey.get(key) || null;
-				if (before?.participantType === "character") return false;
-				if (after?.participantType === "character") return false;
-				if (!before || !after) return true;
-				return encounterMonsterStatsChanged(before, after);
-			});
+		const changedKeys = [
+			...new Set([...beforeByKey.keys(), ...afterByKey.keys()]),
+		].filter((key) => {
+			const before = beforeByKey.get(key) || null;
+			const after = afterByKey.get(key) || null;
+			if (before?.participantType === "character") return false;
+			if (after?.participantType === "character") return false;
+			if (!before || !after) return true;
+			return encounterMonsterStatsChanged(before, after);
+		});
 
 		if (changedKeys.length === 0) return null;
 
@@ -895,7 +925,9 @@ export default function AiResponseModal({
 		const isDeleted = resource.after === null;
 		const before = resource.before || null;
 		const after = resource.after || null;
-		const title = String(after?.name || before?.name || resource.label || "").trim();
+		const title = String(
+			after?.name || before?.name || resource.label || "",
+		).trim();
 
 		return (
 			<div
@@ -1358,185 +1390,188 @@ export default function AiResponseModal({
 				cancelDisabled={isRestoringResponse}
 			>
 				<div className="AiAssistant__prompt_result_wrap">
-				<div className="AiAssistant__prompt_result_actions">
-					{selectedResponseHasChanges && (
-						<>
-							{!isDraft && (
-								<Button
-									variant="ghost"
-									size={Button.SIZES.SMALL}
-									icon="undo"
-									onClick={onUndo}
-									disabled={isRestoringResponse}
-									title={lang.t("Undo AI changes")}
-								>
-									{lang.t("Undo")}
-								</Button>
-							)}
-							<Button
-								variant="primary"
-								size={Button.SIZES.SMALL}
-								icon="check"
-								onClick={handleApply}
-								disabled={isRestoringResponse}
-								title={lang.t("Apply AI changes")}
-							>
-								{lang.t("Apply")}
-							</Button>
-						</>
-					)}
-					{!selectedResponseHasChanges && (
-						<Button
-							variant="ghost"
-							size={Button.SIZES.SMALL}
-							icon={isGeneratedPromptCopied ? "check" : "copy"}
-							onClick={onCopy}
-							title={lang.t("Copy formatted text for Word")}
-						/>
-					)}
-				</div>
-				{!selectedResponseHasChanges && (
-					<div className="AiAssistant__prompt_result" ref={generatedPromptRef}>
-						<ReactMarkdown components={markdownComponents}>
-							{generatedPrompt}
-						</ReactMarkdown>
-					</div>
-				)}
-				{selectedResponseDetails.length > 0 && (
-					<div className="AiAssistant__response_details">
-						<div className="AiAssistant__response_details_title">
-							{lang.t("Request details")}
-						</div>
-						{selectedResponseDetails.map((row) => (
-							<div
-								key={row.label}
-								className="AiAssistant__response_details_row"
-							>
-								<span className="AiAssistant__response_details_label">
-									{row.label}
-								</span>
-								<span className="AiAssistant__response_details_value">
-									{row.value}
-								</span>
-							</div>
-						))}
-					</div>
-				)}
-				{selectedResponseHasChanges && (
-					<div className="AiAssistant__diff">
-						<div className="AiAssistant__diff_title">
-							<span>{lang.t("Changes")}</span>
-							<span>{getHistoryChangeSummary(selectedResponseEntry)}</span>
-						</div>
-						{isDraft && (
-							<div className="AiAssistant__diff_hint">
-								{lang.t(
-									"You can enable automatic applying of parsed AI changes in settings.",
+					<div className="AiAssistant__prompt_result_actions">
+						{selectedResponseHasChanges && (
+							<>
+								{!isDraft && (
+									<Button
+										variant="ghost"
+										size={Button.SIZES.SMALL}
+										icon="undo"
+										onClick={onUndo}
+										disabled={isRestoringResponse}
+										title={lang.t("Undo AI changes")}
+									>
+										{lang.t("Undo")}
+									</Button>
 								)}
-							</div>
+								<Button
+									variant="primary"
+									size={Button.SIZES.SMALL}
+									icon="check"
+									onClick={handleApply}
+									disabled={isRestoringResponse}
+									title={lang.t("Apply AI changes")}
+								>
+									{lang.t("Apply")}
+								</Button>
+							</>
 						)}
-						<div className="AiAssistant__diff_view_switch">
+						{!selectedResponseHasChanges && (
 							<Button
-								variant={diffViewMode === "preview" ? "primary" : "ghost"}
+								variant="ghost"
 								size={Button.SIZES.SMALL}
-								onClick={() => setDiffViewMode("preview")}
-							>
-								{lang.t("Preview")}
-							</Button>
-							<Button
-								variant={diffViewMode === "json" ? "primary" : "ghost"}
-								size={Button.SIZES.SMALL}
-								onClick={() => setDiffViewMode("json")}
-							>
-								JSON
-							</Button>
+								icon={isGeneratedPromptCopied ? "check" : "copy"}
+								onClick={onCopy}
+								title={lang.t("Copy formatted text for Word")}
+							/>
+						)}
+					</div>
+					{!selectedResponseHasChanges && (
+						<div
+							className="AiAssistant__prompt_result"
+							ref={generatedPromptRef}
+						>
+							<ReactMarkdown components={markdownComponents}>
+								{generatedPrompt}
+							</ReactMarkdown>
 						</div>
-						{diffViewMode === "preview" ? (
-							<div className="AiAssistant__preview_diff">
-								{selectedResponseDiffResources.map(renderPreviewResource)}
+					)}
+					{selectedResponseDetails.length > 0 && (
+						<div className="AiAssistant__response_details">
+							<div className="AiAssistant__response_details_title">
+								{lang.t("Request details")}
 							</div>
-						) : (
-							renderJsonDiff()
-						)}
-						{isDraft && draftResources.length > 0 && draftError && (
-							<div className="AiAssistant__draft_error">{draftError}</div>
-						)}
-						{isDraft &&
-							draftResources.length > 0 &&
-							diffViewMode === "json" && (
-								<div className="AiAssistant__draft_editor">
-									<div className="AiAssistant__draft_editor_title">
-										{lang.t("Draft values before applying")}
-									</div>
-									{draftResources.map((resource) => {
-										const isNew = resource.before === null;
-										return (
-											<div
-												key={resource.id}
-												className={classNames(
-													"AiAssistant__draft_resource",
-													isNew && "is_new",
-												)}
-											>
-												<div className="AiAssistant__draft_resource_header">
-													<span>{resource.label}</span>
-													<div className="AiAssistant__preview_resource_actions">
-														<span>{getDiffResourceState(resource)}</span>
-														{renderResourceActions(resource)}
-													</div>
-												</div>
-												<div className="AiAssistant__draft_columns">
-													{!isNew && (
-														<div className="AiAssistant__draft_column">
-															<div className="AiAssistant__draft_column_title">
-																{lang.t("Before")}
-															</div>
-															<pre>{snapshotToText(resource.before)}</pre>
-														</div>
-													)}
-													<div className="AiAssistant__draft_column">
-														<div className="AiAssistant__draft_column_title">
-															{isNew ? lang.t("New") : lang.t("After")}
-														</div>
-														<EditableField
-															type="textarea"
-															className="AiAssistant__draft_textarea"
-															value={draftEdits[resource.id] || ""}
-															onChange={(event) => {
-																const text = event.target.value;
-																setDraftEdits((current) => ({
-																	...current,
-																	[resource.id]: text,
-																}));
-																try {
-																	const after = parseSnapshotText(
-																		text,
-																		resource.after === null,
-																	);
-																	setDraftResourceEdits((current) =>
-																		current.map((item) =>
-																			item.id === resource.id
-																				? { ...item, after }
-																				: item,
-																		),
-																	);
-																	setDraftError("");
-																} catch {
-																	setDraftError(
-																		lang.t("Invalid draft changes"),
-																	);
-																}
-															}}
-														/>
-													</div>
-												</div>
-											</div>
-										);
-									})}
+							{selectedResponseDetails.map((row) => (
+								<div
+									key={row.label}
+									className="AiAssistant__response_details_row"
+								>
+									<span className="AiAssistant__response_details_label">
+										{row.label}
+									</span>
+									<span className="AiAssistant__response_details_value">
+										{row.value}
+									</span>
+								</div>
+							))}
+						</div>
+					)}
+					{selectedResponseHasChanges && (
+						<div className="AiAssistant__diff">
+							<div className="AiAssistant__diff_title">
+								<span>{lang.t("Changes")}</span>
+								<span>{getHistoryChangeSummary(selectedResponseEntry)}</span>
+							</div>
+							{isDraft && (
+								<div className="AiAssistant__diff_hint">
+									{lang.t(
+										"You can enable automatic applying of parsed AI changes in settings.",
+									)}
 								</div>
 							)}
-					</div>
-				)}
+							<div className="AiAssistant__diff_view_switch">
+								<Button
+									variant={diffViewMode === "preview" ? "primary" : "ghost"}
+									size={Button.SIZES.SMALL}
+									onClick={() => setDiffViewMode("preview")}
+								>
+									{lang.t("Preview")}
+								</Button>
+								<Button
+									variant={diffViewMode === "json" ? "primary" : "ghost"}
+									size={Button.SIZES.SMALL}
+									onClick={() => setDiffViewMode("json")}
+								>
+									JSON
+								</Button>
+							</div>
+							{diffViewMode === "preview" ? (
+								<div className="AiAssistant__preview_diff">
+									{selectedResponseDiffResources.map(renderPreviewResource)}
+								</div>
+							) : (
+								renderJsonDiff()
+							)}
+							{isDraft && draftResources.length > 0 && draftError && (
+								<div className="AiAssistant__draft_error">{draftError}</div>
+							)}
+							{isDraft &&
+								draftResources.length > 0 &&
+								diffViewMode === "json" && (
+									<div className="AiAssistant__draft_editor">
+										<div className="AiAssistant__draft_editor_title">
+											{lang.t("Draft values before applying")}
+										</div>
+										{draftResources.map((resource) => {
+											const isNew = resource.before === null;
+											return (
+												<div
+													key={resource.id}
+													className={classNames(
+														"AiAssistant__draft_resource",
+														isNew && "is_new",
+													)}
+												>
+													<div className="AiAssistant__draft_resource_header">
+														<span>{resource.label}</span>
+														<div className="AiAssistant__preview_resource_actions">
+															<span>{getDiffResourceState(resource)}</span>
+															{renderResourceActions(resource)}
+														</div>
+													</div>
+													<div className="AiAssistant__draft_columns">
+														{!isNew && (
+															<div className="AiAssistant__draft_column">
+																<div className="AiAssistant__draft_column_title">
+																	{lang.t("Before")}
+																</div>
+																<pre>{snapshotToText(resource.before)}</pre>
+															</div>
+														)}
+														<div className="AiAssistant__draft_column">
+															<div className="AiAssistant__draft_column_title">
+																{isNew ? lang.t("New") : lang.t("After")}
+															</div>
+															<EditableField
+																type="textarea"
+																className="AiAssistant__draft_textarea"
+																value={draftEdits[resource.id] || ""}
+																onChange={(event) => {
+																	const text = event.target.value;
+																	setDraftEdits((current) => ({
+																		...current,
+																		[resource.id]: text,
+																	}));
+																	try {
+																		const after = parseSnapshotText(
+																			text,
+																			resource.after === null,
+																		);
+																		setDraftResourceEdits((current) =>
+																			current.map((item) =>
+																				item.id === resource.id
+																					? { ...item, after }
+																					: item,
+																			),
+																		);
+																		setDraftError("");
+																	} catch {
+																		setDraftError(
+																			lang.t("Invalid draft changes"),
+																		);
+																	}
+																}}
+															/>
+														</div>
+													</div>
+												</div>
+											);
+										})}
+									</div>
+								)}
+						</div>
+					)}
 				</div>
 			</Modal>
 			<MonsterFieldEditModal

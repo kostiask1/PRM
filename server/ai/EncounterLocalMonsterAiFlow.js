@@ -28,9 +28,10 @@ function operationPatch(operation = {}) {
 }
 
 function findMonsterOperation(generatedContent = {}) {
-	return (Array.isArray(generatedContent.operations)
-		? generatedContent.operations
-		: []
+	return (
+		Array.isArray(generatedContent.operations)
+			? generatedContent.operations
+			: []
 	).find((operation) => {
 		const entity = asText(operation?.entity).toLowerCase();
 		const op = asText(operation?.op).toLowerCase();
@@ -109,7 +110,8 @@ function buildLocalEncounterMonsterSessionChange({
 
 	let changed = false;
 	encounter.monsters = encounter.monsters.map((monster) => {
-		if (asText(monster?.instanceId) !== asText(targetInstanceId)) return monster;
+		if (asText(monster?.instanceId) !== asText(targetInstanceId))
+			return monster;
 		const nextMaxHp = getMonsterMaxHp(nextMonster, monster.hit_points);
 		const currentHp = Number.parseInt(monster.currentHp, 10);
 		const safeCurrentHp = Number.isFinite(currentHp)

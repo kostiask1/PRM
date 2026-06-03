@@ -67,7 +67,9 @@ export default function Spells({
 	const urlSelectedSource = isEmbedded
 		? ""
 		: urlSearchParams.get("source") || "";
-	const urlSpellSource = isEmbedded ? "" : urlSearchParams.get("s_source") || "";
+	const urlSpellSource = isEmbedded
+		? ""
+		: urlSearchParams.get("s_source") || "";
 	const [sources, setSources] = useState([]);
 	const [selectedSource, setSelectedSource] = useState(
 		() => urlSelectedSource || "all",
@@ -79,7 +81,9 @@ export default function Spells({
 	const [selectedSchool, setSelectedSchool] = useState("all");
 	const [search, setSearch] = useState(initialSearch);
 	const debouncedSearch = useDebounce(search, useSearchDebounce ? 250 : 0);
-	const [isDetailedSearch, setIsDetailedSearch] = useState(initialDetailedSearch);
+	const [isDetailedSearch, setIsDetailedSearch] = useState(
+		initialDetailedSearch,
+	);
 	const [loading, setLoading] = useState(false);
 	const [selectedSpell, setSelectedSpell] = useState(null);
 	const [sortOrder, setSortOrder] = useState("none"); // 'none', 'asc', 'desc'
@@ -197,12 +201,7 @@ export default function Spells({
 			},
 			{ replace: true },
 		);
-	}, [
-		isEmbedded,
-		selectedSource,
-		setUrlSearchParams,
-		urlSelectedSource,
-	]);
+	}, [isEmbedded, selectedSource, setUrlSearchParams, urlSelectedSource]);
 
 	// Filtering
 	useEffect(() => {
@@ -281,13 +280,7 @@ export default function Spells({
 		}
 
 		return undefined;
-	}, [
-		allSpells,
-		displayedSpells,
-		isEmbedded,
-		urlSpellName,
-		urlSpellSource,
-	]);
+	}, [allSpells, displayedSpells, isEmbedded, urlSpellName, urlSpellSource]);
 
 	useEffect(() => {
 		if (isEmbedded) return;
@@ -373,14 +366,9 @@ export default function Spells({
 								: lang.t("{level}-level", { level: spell.level }),
 							debouncedSearch,
 						)}
-						{schoolName && (
-							<> • {highlightText(schoolName, debouncedSearch)}</>
-						)}
+						{schoolName && <> • {highlightText(schoolName, debouncedSearch)}</>}
 						{spell.classes?.length > 0 && (
-							<>
-								{" "}
-								• {highlightText(spell.classes.join(", "), debouncedSearch)}
-							</>
+							<> • {highlightText(spell.classes.join(", "), debouncedSearch)}</>
 						)}
 					</div>
 				</ListCard>
@@ -390,124 +378,122 @@ export default function Spells({
 
 	const content = (
 		<>
-				<div className="Spells__search">
-					{sources.length > 0 && (
-						<Select
-							value={selectedSource}
-							onChange={(e) => setSelectedSource(e.target.value)}
-						>
-							<option value="all">{lang.t("All sources")}</option>
-							{sources.map((s) => (
-								<option key={s} value={s}>
-									{s.toUpperCase()}
-								</option>
-							))}
-						</Select>
-					)}
+			<div className="Spells__search">
+				{sources.length > 0 && (
 					<Select
-						value={selectedLevel}
-						onChange={(e) => setSelectedLevel(e.target.value)}
-						className="Spells__level_select"
+						value={selectedSource}
+						onChange={(e) => setSelectedSource(e.target.value)}
 					>
-						<option value="all">{lang.t("All levels")}</option>
-						<option value="0">{lang.t("Cantrip (0)")}</option>
-						{[1, 2, 3, 4, 5, 6, 7, 8, 9].map((lvl) => (
-							<option key={lvl} value={String(lvl)}>
-								{lang.t("Level {level}", { level: lvl })}
+						<option value="all">{lang.t("All sources")}</option>
+						{sources.map((s) => (
+							<option key={s} value={s}>
+								{s.toUpperCase()}
 							</option>
 						))}
 					</Select>
-					<Select
-						value={selectedClass}
-						onChange={(e) => setSelectedClass(e.target.value)}
-						className="Spells__class_select"
+				)}
+				<Select
+					value={selectedLevel}
+					onChange={(e) => setSelectedLevel(e.target.value)}
+					className="Spells__level_select"
+				>
+					<option value="all">{lang.t("All levels")}</option>
+					<option value="0">{lang.t("Cantrip (0)")}</option>
+					{[1, 2, 3, 4, 5, 6, 7, 8, 9].map((lvl) => (
+						<option key={lvl} value={String(lvl)}>
+							{lang.t("Level {level}", { level: lvl })}
+						</option>
+					))}
+				</Select>
+				<Select
+					value={selectedClass}
+					onChange={(e) => setSelectedClass(e.target.value)}
+					className="Spells__class_select"
+				>
+					<option value="all">{lang.t("All classes")}</option>
+					{classOptions.map((className) => (
+						<option key={className} value={className}>
+							{className}
+						</option>
+					))}
+				</Select>
+				<Select
+					value={selectedSchool}
+					onChange={(e) => setSelectedSchool(e.target.value)}
+					className="Spells__school_select"
+				>
+					<option value="all">{lang.t("All schools")}</option>
+					{schoolOptions.map((school) => (
+						<option key={school} value={school}>
+							{SCHOOL_MAP[school]}
+						</option>
+					))}
+				</Select>
+				<Tooltip content={lang.t("Sort by level")}>
+					<button
+						className={classNames("Spells__sort_btn", {
+							is_active: sortOrder !== "none",
+						})}
+						onClick={toggleSort}
 					>
-						<option value="all">{lang.t("All classes")}</option>
-						{classOptions.map((className) => (
-							<option key={className} value={className}>
-								{className}
-							</option>
-						))}
-					</Select>
-					<Select
-						value={selectedSchool}
-						onChange={(e) => setSelectedSchool(e.target.value)}
-						className="Spells__school_select"
-					>
-						<option value="all">{lang.t("All schools")}</option>
-						{schoolOptions.map((school) => (
-							<option key={school} value={school}>
-								{SCHOOL_MAP[school]}
-							</option>
-						))}
-					</Select>
-					<Tooltip content={lang.t("Sort by level")}>
-						<button
-							className={classNames("Spells__sort_btn", {
-								is_active: sortOrder !== "none",
-							})}
-							onClick={toggleSort}
-						>
-							LVL <Icon name={`sort-${sortOrder}`} />
-						</button>
-					</Tooltip>
-					{!hideSearchInput && (
-						<div className="Spells__searchInput">
-							<Input
-								placeholder={lang.t("Search spell...")}
-								value={search}
-								onChange={(e) => setSearch(e.target.value)}
-							/>
-							<Button
-								variant={isDetailedSearch ? "primary" : "ghost"}
-								icon="search-detailed"
-								onClick={() => setIsDetailedSearch((value) => !value)}
-								title={lang.t("Detailed search")}
-								className="DetailedSearchButton Spells__detailed_search_btn"
-							/>
-						</div>
-					)}
-				</div>
-				<div className="Spells__content">
-					<div className="Spells__list">
-						<ReactList
-							ref={listRef}
-							itemRenderer={renderSpellItem}
-							length={displayedSpells.length}
-							type="uniform"
+						LVL <Icon name={`sort-${sortOrder}`} />
+					</button>
+				</Tooltip>
+				{!hideSearchInput && (
+					<div className="Spells__searchInput">
+						<Input
+							placeholder={lang.t("Search spell...")}
+							value={search}
+							onChange={(e) => setSearch(e.target.value)}
+						/>
+						<Button
+							variant={isDetailedSearch ? "primary" : "ghost"}
+							icon="search-detailed"
+							onClick={() => setIsDetailedSearch((value) => !value)}
+							title={lang.t("Detailed search")}
+							className="DetailedSearchButton Spells__detailed_search_btn"
 						/>
 					</div>
-					{loading && (
-						<div className="muted">{lang.t("Updating spells...")}</div>
-					)}
-
-					<div className="Spells__detail">
-						{selectedSpell ? (
-							<>
-								{onSelectSpell && (
-									<div className="Spells__select_actions">
-										<Button
-											variant="primary"
-											icon="plus"
-											onClick={() => onSelectSpell(selectedSpell)}
-										>
-											{lang.t("Insert")}
-										</Button>
-									</div>
-								)}
-								<SpellCard
-									spell={selectedSpell}
-									searchHighlight={debouncedSearch}
-									renderOptions={renderOptions}
-								/>
-							</>
-						) : (
-							<p className="muted">
-								{lang.t("Select a spell from the list to view details.")}
-							</p>
-						)}
-					</div>
+				)}
+			</div>
+			<div className="Spells__content">
+				<div className="Spells__list">
+					<ReactList
+						ref={listRef}
+						itemRenderer={renderSpellItem}
+						length={displayedSpells.length}
+						type="uniform"
+					/>
 				</div>
+				{loading && <div className="muted">{lang.t("Updating spells...")}</div>}
+
+				<div className="Spells__detail">
+					{selectedSpell ? (
+						<>
+							{onSelectSpell && (
+								<div className="Spells__select_actions">
+									<Button
+										variant="primary"
+										icon="plus"
+										onClick={() => onSelectSpell(selectedSpell)}
+									>
+										{lang.t("Insert")}
+									</Button>
+								</div>
+							)}
+							<SpellCard
+								spell={selectedSpell}
+								searchHighlight={debouncedSearch}
+								renderOptions={renderOptions}
+							/>
+						</>
+					) : (
+						<p className="muted">
+							{lang.t("Select a spell from the list to view details.")}
+						</p>
+					)}
+				</div>
+			</div>
 		</>
 	);
 

@@ -141,7 +141,14 @@ function getDiffItemKey(item, index, getName) {
 	return `index:${index}`;
 }
 
-function pushGranularDiff(resources, resource, suffix, before, after, meta = {}) {
+function pushGranularDiff(
+	resources,
+	resource,
+	suffix,
+	before,
+	after,
+	meta = {},
+) {
 	if (snapshotsEqual(before, after)) return;
 	resources.push({
 		...resource,

@@ -304,7 +304,10 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			.catch((error) =>
 				console.error("Failed to reload bestiary favorites", error),
 			);
-		if (syncEvent.resource === "custom-bestiary" || syncEvent.resource === "ai") {
+		if (
+			syncEvent.resource === "custom-bestiary" ||
+			syncEvent.resource === "ai"
+		) {
 			setReloadToken((current) => current + 1);
 		}
 	}, [syncEvent]);
@@ -637,22 +640,25 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 		const controller = new AbortController();
 		aiEditControllerRef.current = controller;
 		try {
-			const data = await api.generateAi({
-				type: "custom-monster",
-				modelName: selectedAiModel || undefined,
-				userInstructions: finalInstructions,
-				path: { campaign: "bestiary" },
-				customMonsterTarget: aiEditingMonster,
-				customMonsterMode: aiEditMode,
-				parseAIResponse: true,
-				generateCharacters: false,
-				generateNpcs: false,
-				generateLocations: false,
-				generateEncounters: false,
-				entityScope: "custom-bestiary",
-				contextConfig: null,
-				language: currentLanguage,
-			}, { signal: controller.signal });
+			const data = await api.generateAi(
+				{
+					type: "custom-monster",
+					modelName: selectedAiModel || undefined,
+					userInstructions: finalInstructions,
+					path: { campaign: "bestiary" },
+					customMonsterTarget: aiEditingMonster,
+					customMonsterMode: aiEditMode,
+					parseAIResponse: true,
+					generateCharacters: false,
+					generateNpcs: false,
+					generateLocations: false,
+					generateEncounters: false,
+					entityScope: "custom-bestiary",
+					contextConfig: null,
+					language: currentLanguage,
+				},
+				{ signal: controller.signal },
+			);
 			if (data.draft && data.aiResponse) {
 				setAiDraftResponseEntry(
 					addSourceMonsterImageToDraft(data.aiResponse, aiEditingMonster),
@@ -978,7 +984,10 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 		) {
 			return undefined;
 		}
-		const selectedIndex = getMonsterListIndex(displayedMonsters, selectedMonster);
+		const selectedIndex = getMonsterListIndex(
+			displayedMonsters,
+			selectedMonster,
+		);
 		if (selectedIndex < 0) return undefined;
 
 		hasScrolledToInitialMonsterRef.current = true;

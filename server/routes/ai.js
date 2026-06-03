@@ -4,10 +4,7 @@ const path = require("path");
 const router = express.Router();
 const storage = require("../storage");
 const aiService = require("../aiService");
-const {
-	AiHistoryWriter,
-	asText,
-} = require("../ai/AiHistoryWriter");
+const { AiHistoryWriter, asText } = require("../ai/AiHistoryWriter");
 const {
 	EncounterLocalMonsterAiFlow,
 } = require("../ai/EncounterLocalMonsterAiFlow");
@@ -145,7 +142,10 @@ function isObject(value) {
 	return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 
-function fillCurrentTargetIds(generatedContent, { path, sceneId, customMonsterTarget }) {
+function fillCurrentTargetIds(
+	generatedContent,
+	{ path, sceneId, customMonsterTarget },
+) {
 	if (!Array.isArray(generatedContent?.operations)) return generatedContent;
 	for (const operation of generatedContent.operations) {
 		if (!isObject(operation)) continue;
@@ -658,9 +658,7 @@ router.post("/api-key", async (req, res, next) => {
 	try {
 		const apiKey = normalizeApiKey(req.body?.apiKey);
 		if (!apiKey) {
-			return res
-				.status(400)
-				.json({ error: "GEMINI_API_KEY cannot be empty." });
+			return res.status(400).json({ error: "GEMINI_API_KEY cannot be empty." });
 		}
 		if (/[\r\n]/.test(apiKey)) {
 			return res
@@ -715,12 +713,16 @@ router.post("/generate", async (req, res, next) => {
 		const responseLanguage = String(language || "")
 			.trim()
 			.toLowerCase();
-		const historyUserInstructions = aiHistoryWriter.getUserInstructions(req.body);
+		const historyUserInstructions = aiHistoryWriter.getUserInstructions(
+			req.body,
+		);
 		if (!responseLanguage) {
 			return res.status(400).json({ error: "language is required." });
 		}
 		if (!process.env.GEMINI_API_KEY) {
-			return res.status(500).json({ error: "GEMINI_API_KEY is not configured." });
+			return res
+				.status(500)
+				.json({ error: "GEMINI_API_KEY is not configured." });
 		}
 		const requestedEncounterGeneration = Boolean(generateEncounters);
 		const shouldParseAIResponse =
@@ -1032,8 +1034,8 @@ router.post("/generate", async (req, res, next) => {
 			}
 			if (
 				isContextListIncluded(contextConfig.campaignNpcs) ||
-					(contextConfig.campaignNpcs === undefined &&
-						isContextListIncluded(contextConfig.campaignCharacters))
+				(contextConfig.campaignNpcs === undefined &&
+					isContextListIncluded(contextConfig.campaignCharacters))
 			) {
 				const npcs = await storage.listEntities(path.campaign, "npc");
 				contextData.campaign.npcs = filterEntitiesByContext(

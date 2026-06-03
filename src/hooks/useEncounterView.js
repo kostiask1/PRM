@@ -46,7 +46,9 @@ function parseChallengeRating(monster) {
 }
 
 function normalizeMonsterSource(source) {
-	return String(source || "").trim().toUpperCase();
+	return String(source || "")
+		.trim()
+		.toUpperCase();
 }
 
 function getMonsterBestiaryName(monster = {}) {
@@ -62,7 +64,8 @@ function getMonsterArmorClass(monster = {}) {
 }
 
 function mergeEncounterMonsterWithBestiaryMonster(current, bestiaryMonster) {
-	const nextMaxHp = getMonsterBaseHp(bestiaryMonster) || current.hit_points || 0;
+	const nextMaxHp =
+		getMonsterBaseHp(bestiaryMonster) || current.hit_points || 0;
 	const currentHp = Number.parseInt(current.currentHp, 10);
 	const safeCurrentHp = Number.isFinite(currentHp)
 		? Math.min(currentHp, nextMaxHp || currentHp)
@@ -94,10 +97,9 @@ function formatInitiativeValue(value) {
 export default function useEncounterView() {
 	const dispatch = useAppDispatch();
 	const campaign = useAppSelector((state) => state.active.campaign);
-	const {
-		activeSessionFileName,
-		activeEncounterId,
-	} = useAppSelector((state) => state.navigation);
+	const { activeSessionFileName, activeEncounterId } = useAppSelector(
+		(state) => state.navigation,
+	);
 	const syncEvent = useAppSelector((state) => state.sync.event);
 	const sessionId = activeSessionFileName;
 	const encounterId = activeEncounterId;
@@ -400,7 +402,9 @@ export default function useEncounterView() {
 				customMonsters
 					.filter((monster) => monster?.name)
 					.map((monster) => [
-						String(monster.name || "").trim().toLowerCase(),
+						String(monster.name || "")
+							.trim()
+							.toLowerCase(),
 						{
 							...monster,
 							source: normalizeMonsterSource(monster.source) || "CUSTOM",
@@ -856,11 +860,14 @@ export default function useEncounterView() {
 		applyEncounterUpdate,
 	]);
 
-	const getHpColor = useCallback((current, max) => {
-		const ratio = max > 0 ? Math.min(Math.max(0, current / max), 1) : 0;
-		const hue = ratio * 110;
-		return `hsl(${hue}, 80%, ${storeTheme === "dark" ? "60" : "43"}%)`;
-	}, [storeTheme]);
+	const getHpColor = useCallback(
+		(current, max) => {
+			const ratio = max > 0 ? Math.min(Math.max(0, current / max), 1) : 0;
+			const hue = ratio * 110;
+			return `hsl(${hue}, 80%, ${storeTheme === "dark" ? "60" : "43"}%)`;
+		},
+		[storeTheme],
+	);
 
 	const initiativeStats = useMemo(() => {
 		const monsters = encounter?.monsters || [];

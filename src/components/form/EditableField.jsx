@@ -149,9 +149,7 @@ function markdownToHtml(markdown = "", type = "text") {
 			flushParagraph();
 			const level = Math.min(headingMatch[1].length, 6);
 			html.push(
-				`<h${level}>${renderInlineMarkdown(
-					headingMatch[2],
-				)}</h${level}>`,
+				`<h${level}>${renderInlineMarkdown(headingMatch[2])}</h${level}>`,
 			);
 			continue;
 		}
@@ -904,7 +902,9 @@ function getCurrentBlockElement(editor) {
 	const element = getSelectionElement(editor);
 	if (!element) return null;
 
-	const block = element.closest?.("p, div, li, h1, h2, h3, h4, h5, h6, blockquote");
+	const block = element.closest?.(
+		"p, div, li, h1, h2, h3, h4, h5, h6, blockquote",
+	);
 	if (block && editor.contains(block)) return block;
 
 	return element === editor ? null : element;

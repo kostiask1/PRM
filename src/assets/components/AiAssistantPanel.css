@@ -695,7 +695,7 @@
 }
 
 .MonsterStatBlock .is_ai_changed_field {
-    padding: 8px!important;
+	padding: 8px !important;
 }
 
 .AiAssistant__preview_card_surface .EditableField.is_ai_changed_field textarea,
@@ -1347,7 +1347,7 @@
 	gap: var(--space-2);
 }
 
-.AiAssistant__image_prompt_field > span {
+.AiAssistant__image_prompt_field>span {
 	color: var(--muted);
 	font-size: 0.8rem;
 	font-weight: 600;

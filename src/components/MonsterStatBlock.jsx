@@ -176,10 +176,7 @@ export default function MonsterStatBlock({
 		if (!actions || actions.length === 0) return null;
 		return (
 			<div
-				className={classNames(
-					"MonsterStatBlock__section",
-					changedClass(field),
-				)}
+				className={classNames("MonsterStatBlock__section", changedClass(field))}
 			>
 				<h4>{title}:</h4>
 				{actions.map((action, index) => (
@@ -293,10 +290,7 @@ export default function MonsterStatBlock({
 			if (start > lastIndex) {
 				elements.push(
 					<React.Fragment key={`sense-text-${matchIndex}`}>
-						{parseRollsAndSpells(
-							text.slice(lastIndex, start),
-							searchHighlight,
-						)}
+						{parseRollsAndSpells(text.slice(lastIndex, start), searchHighlight)}
 					</React.Fragment>,
 				);
 			}
@@ -634,12 +628,7 @@ export default function MonsterStatBlock({
 								{renderRecursiveContent(model.ac.val, searchHighlight)}{" "}
 								{renderRecursiveContent(model.ac.desc, searchHighlight)}
 							</div>
-							<div
-								className={classNames(
-									"stat_item",
-									changedClass("speed"),
-								)}
-							>
+							<div className={classNames("stat_item", changedClass("speed"))}>
 								<strong>Speed:</strong> {highlight(model.speed)}
 							</div>
 						</div>

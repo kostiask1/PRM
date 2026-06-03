@@ -92,7 +92,11 @@ function connect() {
 }
 
 export function initRealtimeSync() {
-	if (initialized || typeof window === "undefined" || !("WebSocket" in window)) {
+	if (
+		initialized ||
+		typeof window === "undefined" ||
+		!("WebSocket" in window)
+	) {
 		return;
 	}
 	initialized = true;

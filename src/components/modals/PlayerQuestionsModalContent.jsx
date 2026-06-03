@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useLayoutEffect,
+	useRef,
+	useState,
+} from "react";
 import ReactList from "react-list";
 
 import { requestDiceRollAction } from "../../actions/app";
@@ -200,7 +206,9 @@ export default function PlayerQuestionsModalContent() {
 				onClick={(event) => handleQuestionClick(event, questionId)}
 				role="listitem"
 			>
-				<span className="PlayerQuestionsModalContent__number">{questionId}</span>
+				<span className="PlayerQuestionsModalContent__number">
+					{questionId}
+				</span>
 				<span className="PlayerQuestionsModalContent__question">
 					{question}
 				</span>
@@ -223,10 +231,10 @@ export default function PlayerQuestionsModalContent() {
 					/>
 				</div>
 				<div className="PlayerQuestionsModalContent__hint">
-					{lang.t(
-						"Standard dice formula for {count} questions: {formula}",
-						{ count: QUESTIONS_COUNT, formula: questionRollFormula },
-					)}
+					{lang.t("Standard dice formula for {count} questions: {formula}", {
+						count: QUESTIONS_COUNT,
+						formula: questionRollFormula,
+					})}
 				</div>
 			</div>
 

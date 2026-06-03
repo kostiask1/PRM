@@ -224,10 +224,7 @@ function normalizeCharacter(
 			: [];
 	const rawRace = firstOwnedValue(raw, ["race", "species"]);
 	const rawClass = firstOwnedValue(raw, ["class", "role"]);
-	const rawMotivation = firstOwnedValue(raw, [
-		"motivation",
-		"goal",
-	]);
+	const rawMotivation = firstOwnedValue(raw, ["motivation", "goal"]);
 	const rawDescription = firstOwnedValue(raw, [
 		"description",
 		"bio",
@@ -799,7 +796,8 @@ function queuePendingSceneEncounterLink(state, scene, raw) {
 }
 
 function resolvePendingSceneEncounterLinks(state) {
-	const { sessionData, clientIdMap, pendingSceneEncounterLinks, warnings } = state;
+	const { sessionData, clientIdMap, pendingSceneEncounterLinks, warnings } =
+		state;
 	if (!sessionData || pendingSceneEncounterLinks.length === 0) return false;
 	let changed = false;
 	const scenes = getSessionScenes(sessionData);
@@ -875,12 +873,7 @@ async function applyCampaignEntityOperation(state, operation, type, options) {
 			type,
 		);
 		if (duplicate) {
-			const payload = mergeNewEntityVersion(
-				type,
-				rawData,
-				duplicate,
-				options,
-			);
+			const payload = mergeNewEntityVersion(type, rawData, duplicate, options);
 			if (type === "locations" && !payload.name) return null;
 			if (type !== "locations" && !payload.firstName && !payload.lastName) {
 				return null;
@@ -1059,7 +1052,11 @@ async function applySessionEntityOperation(state, operation, type, options) {
 			}
 			const saved = buildSessionEntityFromPayload(type, payload);
 			list.push(saved);
-			await storage.deleteEntity(campaignSlug, type, duplicateCampaignEntity.slug);
+			await storage.deleteEntity(
+				campaignSlug,
+				type,
+				duplicateCampaignEntity.slug,
+			);
 			mapClientIdToEntity(clientIdMap, operation, type, "session", saved);
 			warnings.push(
 				`Moved duplicate campaign ${type} to session with new AI version for "${getEntityDisplayName(

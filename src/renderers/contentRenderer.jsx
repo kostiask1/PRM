@@ -123,7 +123,11 @@ export const renderRecursiveContent = (
 			);
 		}
 
-		return parseRollsAndSpells(JSON.stringify(content), highlightQuery, options);
+		return parseRollsAndSpells(
+			JSON.stringify(content),
+			highlightQuery,
+			options,
+		);
 	}
 
 	return null;
@@ -178,10 +182,7 @@ function parseTaggedName(raw) {
 
 function parseQuickrefName(raw) {
 	const parts = String(raw || "").split("|");
-	const label = parts
-		.slice(1)
-		.filter(Boolean)
-		.at(-1);
+	const label = parts.slice(1).filter(Boolean).at(-1);
 	const name = label && !/^\d+$/.test(label) ? label : parts[0];
 	const displayText = capitalizeWords(name);
 	return {

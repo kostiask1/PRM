@@ -1716,7 +1716,9 @@ async function getImageGalleryStorageStats({
 	const sourceSizes = {};
 	for (const entry of sourceEntries) {
 		if (!entry.isDirectory()) continue;
-		sourceSizes[entry.name] = await getDirectorySize(path.join(rootDir, entry.name));
+		sourceSizes[entry.name] = await getDirectorySize(
+			path.join(rootDir, entry.name),
+		);
 	}
 
 	const categoryNames =
@@ -1883,8 +1885,7 @@ async function renameImage(slug, category, subcategory, oldName, newName) {
 	const oldPath = path.join(dir, oldName);
 	const newPath = path.join(dir, newName);
 
-	if (!(await exists(oldPath)))
-		throw new Error("File was not found.");
+	if (!(await exists(oldPath))) throw new Error("File was not found.");
 	if (oldPath !== newPath && (await exists(newPath)))
 		throw new Error("File already exists.");
 

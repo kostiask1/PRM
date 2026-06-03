@@ -1,7 +1,8 @@
 // Get navigation state from URL.
 export const parseUrl = (pathname = null) => {
 	const path =
-		pathname ?? (typeof window !== "undefined" ? window.location.pathname : "/");
+		pathname ??
+		(typeof window !== "undefined" ? window.location.pathname : "/");
 	const parts = path.split("/").filter(Boolean);
 	let campaign = null;
 	let session = null;

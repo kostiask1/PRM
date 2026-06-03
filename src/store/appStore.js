@@ -182,34 +182,36 @@ function reducer(currentState, action) {
 				...action.payload,
 			};
 			const nextActiveCampaign =
-				currentState.active.campaign?.slug ===
-				nextNavigation.activeCampaignSlug
+				currentState.active.campaign?.slug === nextNavigation.activeCampaignSlug
 					? currentState.active.campaign
 					: findCampaignBySlug(
 							currentState.campaigns.items,
 							nextNavigation.activeCampaignSlug,
 						);
 			const isSameCampaign =
-				currentState.active.campaign?.slug === nextNavigation.activeCampaignSlug;
+				currentState.active.campaign?.slug ===
+				nextNavigation.activeCampaignSlug;
 			return {
 				...currentState,
 				navigation: nextNavigation,
 				active: {
 					campaign: nextActiveCampaign,
-					session: isSameCampaign &&
+					session:
+						isSameCampaign &&
 						isSessionForRoute(
 							currentState.active.session,
 							nextNavigation.activeSessionFileName,
 						)
-						? currentState.active.session
-						: null,
-					encounter: isSameCampaign &&
+							? currentState.active.session
+							: null,
+					encounter:
+						isSameCampaign &&
 						isEncounterForRoute(
 							currentState.active.encounter,
 							nextNavigation.activeEncounterId,
 						)
-						? currentState.active.encounter
-						: null,
+							? currentState.active.encounter
+							: null,
 				},
 			};
 		}

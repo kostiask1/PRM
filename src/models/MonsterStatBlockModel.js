@@ -107,7 +107,10 @@ export const MONSTER_FIELD_SCHEMA = {
 	ac: { type: "array", values: "[12] or [{ ac, from[] }]" },
 	hp: { type: "object", values: "{ average, formula } or { special }" },
 	speed: { type: "string|object", values: "walk/fly/swim/... + canHover" },
-	abilities: { type: "number", values: "str/dex/con/int/wis/cha from 1 to 30+" },
+	abilities: {
+		type: "number",
+		values: "str/dex/con/int/wis/cha from 1 to 30+",
+	},
 	save: { type: "object", values: "str/dex/con/int/wis/cha -> bonus" },
 	skill: { type: "object", values: "Skill name -> bonus" },
 	languages: { type: "string|string[]", values: "Languages or dash" },

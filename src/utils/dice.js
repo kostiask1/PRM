@@ -55,7 +55,10 @@ function addStats(left, right, sign = 1) {
 		average: left.average + right.average * sign,
 		min: sign === 1 ? left.min + right.min : left.min - right.max,
 		max: sign === 1 ? left.max + right.max : left.max - right.min,
-		breakdown: combineBreakdown(left.breakdown, applyBreakdownSign(right.breakdown, sign)),
+		breakdown: combineBreakdown(
+			left.breakdown,
+			applyBreakdownSign(right.breakdown, sign),
+		),
 		expression: `${left.expression} ${sign === 1 ? "+" : "-"} ${right.expression}`,
 		precedence: 1,
 		diceMap: mergeDiceMap({ ...left.diceMap }, right.diceMap),
@@ -126,7 +129,9 @@ function rollDiceTerm(count, sides, keepSuffix = "") {
 			idx,
 		}));
 		indexed.sort((a, b) => (type === "h" ? b.val - a.val : a.val - b.val));
-		const keptIndices = new Set(indexed.slice(0, keepCount).map((roll) => roll.idx));
+		const keptIndices = new Set(
+			indexed.slice(0, keepCount).map((roll) => roll.idx),
+		);
 
 		currentRolls.forEach((roll, idx) => {
 			if (keptIndices.has(idx)) {
@@ -228,7 +233,10 @@ function parseTokens(tokens) {
 	function parsePrimary() {
 		if (consume("+")) return parsePrimary();
 		if (consume("-")) {
-			return multiplyStats(createNumberStats(-1), parsePrimary() || createEmptyStats());
+			return multiplyStats(
+				createNumberStats(-1),
+				parsePrimary() || createEmptyStats(),
+			);
 		}
 
 		const current = peek();
@@ -347,12 +355,15 @@ export function rollDiceFormula(input) {
 
 	const hasAdvancedOperators = /[()*]/.test(cleanStr);
 	const isCritical =
-		stats.d20Count === 1 && (stats.lastD20Value === 1 || stats.lastD20Value === 20);
+		stats.d20Count === 1 &&
+		(stats.lastD20Value === 1 || stats.lastD20Value === 20);
 	const finalTotal = isCritical ? stats.lastD20Value : stats.total;
 
 	return {
 		id: Date.now(),
-		formula: hasAdvancedOperators ? formatFormula(input) : getLegacyFormula(stats),
+		formula: hasAdvancedOperators
+			? formatFormula(input)
+			: getLegacyFormula(stats),
 		breakdown: stats.breakdown,
 		expressionBreakdown: hasAdvancedOperators ? stats.expression : "",
 		total: finalTotal,

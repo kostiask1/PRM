@@ -778,9 +778,7 @@ function SessionView() {
 					</button>
 				</Tooltip>
 				{isGlobalSearchOpen && (
-					<GlobalSearchModal
-						onCancel={() => setIsGlobalSearchOpen(false)}
-					/>
+					<GlobalSearchModal onCancel={() => setIsGlobalSearchOpen(false)} />
 				)}
 			</Panel>
 		</EntityLinkResolverContext.Provider>

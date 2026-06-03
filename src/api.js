@@ -217,9 +217,7 @@ export const api = {
 	listAiResponses: (campaign) =>
 		api.request(`/ai/responses?campaign=${encodeURIComponent(campaign)}`),
 	getAiResponsesStats: (campaign) =>
-		api.request(
-			`/ai/responses/stats?campaign=${encodeURIComponent(campaign)}`,
-		),
+		api.request(`/ai/responses/stats?campaign=${encodeURIComponent(campaign)}`),
 	deleteAiResponse: (campaign, id) =>
 		api.request(
 			`/ai/responses/${encodeURIComponent(id)}?campaign=${encodeURIComponent(campaign)}`,

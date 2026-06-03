@@ -46,10 +46,22 @@ export const CAMPAIGN_FIELD_SCHEMA = {
 	notes: { type: "CampaignNote[]", values: "Campaign notes" },
 	characters: { type: "CharacterData[]", values: "Player characters" },
 	npcs: { type: "CharacterData[]", values: "Campaign NPC entities" },
-	locations: { type: "LocationData[]", values: "Campaign locations and factions" },
-	isDescriptionCollapsed: { type: "boolean", values: "Description section collapsed state" },
-	isNotesCollapsed: { type: "boolean", values: "Notes section collapsed state" },
-	isCharactersCollapsed: { type: "boolean", values: "Characters section collapsed state" },
+	locations: {
+		type: "LocationData[]",
+		values: "Campaign locations and factions",
+	},
+	isDescriptionCollapsed: {
+		type: "boolean",
+		values: "Description section collapsed state",
+	},
+	isNotesCollapsed: {
+		type: "boolean",
+		values: "Notes section collapsed state",
+	},
+	isCharactersCollapsed: {
+		type: "boolean",
+		values: "Characters section collapsed state",
+	},
 	isNpcsCollapsed: { type: "boolean", values: "NPC section collapsed state" },
 	isLocationsCollapsed: {
 		type: "boolean",

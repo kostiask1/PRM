@@ -36,7 +36,7 @@
 	gap: var(--space-1);
 }
 
-.MonsterFieldEditModal__field > span {
+.MonsterFieldEditModal__field>span {
 	color: var(--muted);
 	font-size: 0.74rem;
 	font-weight: 700;
@@ -150,6 +150,7 @@
 }
 
 @media (max-width: 860px) {
+
 	.MonsterFieldEditModal__abilities,
 	.MonsterFieldEditModal__text_fields {
 		grid-template-columns: minmax(0, 1fr);

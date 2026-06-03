@@ -313,7 +313,11 @@ export default function useSessionView() {
 		) {
 			return;
 		}
-		if (!["sessions", "ai", "import", "entities", "images"].includes(syncEvent.resource)) {
+		if (
+			!["sessions", "ai", "import", "entities", "images"].includes(
+				syncEvent.resource,
+			)
+		) {
 			return;
 		}
 		if (saveTimeout.current || pendingSessionSaveRef.current) return;

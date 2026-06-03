@@ -142,14 +142,16 @@ class AiHistoryWriter {
 	async saveDraftParsed(options) {
 		return saveDraftParsedAiResponse({
 			...options,
-			retryPayload: options.retryPayload ?? this.cloneRetryPayload(options.payload),
+			retryPayload:
+				options.retryPayload ?? this.cloneRetryPayload(options.payload),
 		});
 	}
 
 	async saveParsed(options) {
 		return saveParsedAiResponse({
 			...options,
-			retryPayload: options.retryPayload ?? this.cloneRetryPayload(options.payload),
+			retryPayload:
+				options.retryPayload ?? this.cloneRetryPayload(options.payload),
 		});
 	}
 }

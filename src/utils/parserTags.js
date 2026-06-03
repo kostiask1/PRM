@@ -102,10 +102,7 @@ export const preprocessTags = (text) => {
 		.replace(/{@loader\s+[^}]+}/gi, "")
 		.replace(/{@quickref\s+([^}]+)}/gi, (m, content) => {
 			const parts = content.split("|");
-			const label = parts
-				.slice(1)
-				.filter(Boolean)
-				.at(-1);
+			const label = parts.slice(1).filter(Boolean).at(-1);
 			return label && !/^\d+$/.test(label) ? label : parts[0];
 		})
 		.replace(

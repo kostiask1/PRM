@@ -312,7 +312,8 @@ function EncounterView() {
 	};
 
 	const openEditMonsterAction = (monster) => {
-		if (!monster?.instanceId || isEncounterCharacterParticipant(monster)) return;
+		if (!monster?.instanceId || isEncounterCharacterParticipant(monster))
+			return;
 		setEditActionMonster(monster);
 	};
 
@@ -373,24 +374,31 @@ function EncounterView() {
 				const customMonsters = Array.isArray(customData)
 					? customData
 					: customData?.monster || [];
-				const nextName = String(nextMonster.name || "").trim().toLowerCase();
+				const nextName = String(nextMonster.name || "")
+					.trim()
+					.toLowerCase();
 				if (
 					customMonsters.some(
 						(monster) =>
-							String(monster.name || "").trim().toLowerCase() === nextName,
+							String(monster.name || "")
+								.trim()
+								.toLowerCase() === nextName,
 					)
 				) {
-					throw new Error(lang.t("Custom creature with this name already exists."));
+					throw new Error(
+						lang.t("Custom creature with this name already exists."),
+					);
 				}
 				const updated = await api.replaceCustomBestiaryMonsters([
 					...customMonsters,
 					{ ...nextMonster, source: "CUSTOM" },
 				]);
-				updatedMonster =
-					updated.find(
-						(monster) =>
-							String(monster.name || "").trim().toLowerCase() === nextName,
-					) || { ...nextMonster, source: "CUSTOM" };
+				updatedMonster = updated.find(
+					(monster) =>
+						String(monster.name || "")
+							.trim()
+							.toLowerCase() === nextName,
+				) || { ...nextMonster, source: "CUSTOM" };
 			}
 			dispatch(refreshEntitiesAction());
 			view.updateMonsterFromAi(original.instanceId, updatedMonster, {
@@ -473,32 +481,33 @@ function EncounterView() {
 		const controller = new AbortController();
 		aiEditControllerRef.current = controller;
 		try {
-			const data = await api.generateAi({
-				type: "custom-monster",
-				modelName: selectedAiModel || undefined,
-				userInstructions: finalInstructions,
-				historyUserInstructions: instructions,
-				path: {
-					campaign: campaign.slug,
-					session: sessionId,
-					encounter: view.encounter?.id,
+			const data = await api.generateAi(
+				{
+					type: "custom-monster",
+					modelName: selectedAiModel || undefined,
+					userInstructions: finalInstructions,
+					historyUserInstructions: instructions,
+					path: {
+						campaign: campaign.slug,
+						session: sessionId,
+						encounter: view.encounter?.id,
+					},
+					customMonsterTarget: aiEditingMonster,
+					customMonsterMode:
+						isCreateBasedMode || isLocalEditMode ? "create-based" : "edit",
+					parseAIResponse: true,
+					generateCharacters: false,
+					generateNpcs: false,
+					generateLocations: false,
+					generateEncounters: false,
+					entityScope: "custom-bestiary",
+					contextConfig: null,
+					historyMode: isLocalEditMode ? "encounter" : undefined,
+					targetInstanceId: aiTargetInstanceId || aiEditingMonster.instanceId,
+					language: currentLanguage,
 				},
-				customMonsterTarget: aiEditingMonster,
-				customMonsterMode:
-					isCreateBasedMode || isLocalEditMode
-						? "create-based"
-						: "edit",
-				parseAIResponse: true,
-				generateCharacters: false,
-				generateNpcs: false,
-				generateLocations: false,
-				generateEncounters: false,
-				entityScope: "custom-bestiary",
-				contextConfig: null,
-				historyMode: isLocalEditMode ? "encounter" : undefined,
-				targetInstanceId: aiTargetInstanceId || aiEditingMonster.instanceId,
-				language: currentLanguage,
-			}, { signal: controller.signal });
+				{ signal: controller.signal },
+			);
 			if (data.draft && data.aiResponse) {
 				const draftEntry = addSourceMonsterImageToDraft(
 					data.aiResponse,
@@ -527,15 +536,23 @@ function EncounterView() {
 	const saveAiDraftResponseChanges = async (resources) => {
 		if (!aiDraftResponseEntry?.id) return null;
 		if (aiDraftMode === "local") {
-			const updatedEntry = await api.updateAiResponse(campaign.slug, aiDraftResponseEntry.id, {
-				resources,
-			});
+			const updatedEntry = await api.updateAiResponse(
+				campaign.slug,
+				aiDraftResponseEntry.id,
+				{
+					resources,
+				},
+			);
 			setAiDraftResponseEntry(updatedEntry);
 			return updatedEntry;
 		}
-		const updatedEntry = await api.updateAiResponse("bestiary", aiDraftResponseEntry.id, {
-			resources,
-		});
+		const updatedEntry = await api.updateAiResponse(
+			"bestiary",
+			aiDraftResponseEntry.id,
+			{
+				resources,
+			},
+		);
 		if (updatedEntry) {
 			setAiDraftResponseEntry(updatedEntry);
 		}
@@ -576,7 +593,10 @@ function EncounterView() {
 						});
 			const nextEntry = result?.response || entry;
 			setAiDraftResponseEntry(nextEntry);
-			const nextMonster = getFirstChangedMonster(nextEntry, options.resourceIds);
+			const nextMonster = getFirstChangedMonster(
+				nextEntry,
+				options.resourceIds,
+			);
 			if (mode !== "undo" && nextMonster && aiTargetInstanceId) {
 				view.updateMonsterFromAi(aiTargetInstanceId, nextMonster);
 			}

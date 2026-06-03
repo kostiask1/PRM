@@ -66,10 +66,13 @@ self.addEventListener("fetch", (event) => {
 							if (!networkResponse.ok) return networkResponse;
 
 							const headers = getCleanHeaders(networkResponse.headers);
-							const responseToCache = new Response(networkResponse.clone().body, {
-								status: networkResponse.status,
-								headers,
-							});
+							const responseToCache = new Response(
+								networkResponse.clone().body,
+								{
+									status: networkResponse.status,
+									headers,
+								},
+							);
 
 							cache.put(event.request, responseToCache);
 
@@ -86,10 +89,7 @@ self.addEventListener("fetch", (event) => {
 												const identifier = monster.slug || monster.name;
 												const monsterUrl = `${new URL(url).origin}/api/bestiary/virtual/${encodeURIComponent(identifier)}`;
 												const stubHeaders = new Headers();
-												stubHeaders.append(
-													"content-type",
-													"application/json",
-												);
+												stubHeaders.append("content-type", "application/json");
 												stubHeaders.append(
 													"sw-fetched-on",
 													Date.now().toString(),
@@ -127,10 +127,7 @@ self.addEventListener("fetch", (event) => {
 													.replace(/^-+|-+$/g, "");
 												const spellUrl = `${new URL(url).origin}/api/spells/virtual/${slug}`;
 												const stubHeaders = new Headers();
-												stubHeaders.append(
-													"content-type",
-													"application/json",
-												);
+												stubHeaders.append("content-type", "application/json");
 												stubHeaders.append(
 													"sw-fetched-on",
 													Date.now().toString(),

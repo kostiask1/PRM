@@ -259,9 +259,7 @@ export default function AiImagePromptPickerModal({
 									getDescription={(npc) =>
 										npc?.description || npc?.trait || npc?.motivation || ""
 									}
-									onSelect={(npc) =>
-										onSelectTarget(buildNpcImageTarget(npc))
-									}
+									onSelect={(npc) => onSelectTarget(buildNpcImageTarget(npc))}
 									loading={loading}
 									getPreview={getImagePromptPreview}
 								/>
@@ -295,8 +293,7 @@ export default function AiImagePromptPickerModal({
 										}
 										getDescription={(scene) => {
 											const sessionName = scene?._imagePromptSessionName;
-											const description =
-												getSceneImagePromptDescription(scene);
+											const description = getSceneImagePromptDescription(scene);
 											return [sessionName, description]
 												.filter(Boolean)
 												.join(" - ");

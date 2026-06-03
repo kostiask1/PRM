@@ -350,8 +350,7 @@ router.get("/:source", async (req, res, next) => {
 		const indexPath = path.join(storage.SPELLS_DIR, "index.json");
 		const index = await storage.readJson(indexPath);
 		const fileName = index[req.params.source];
-		if (!fileName)
-			return res.status(404).json({ error: "Source not found." });
+		if (!fileName) return res.status(404).json({ error: "Source not found." });
 		const data = await storage.readJson(
 			path.join(storage.SPELLS_DIR, fileName),
 		);

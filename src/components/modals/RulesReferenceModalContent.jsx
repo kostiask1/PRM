@@ -637,7 +637,7 @@ export default function RulesReferenceModalContent({
 										onRuleNavigate: navigateToReference,
 										openSpellInNestedModal: true,
 									})}
-									</div>
+								</div>
 							</>
 						)}
 					</div>

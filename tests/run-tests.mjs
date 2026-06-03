@@ -599,9 +599,7 @@ await run("AI operations schema validates patch contracts", () => {
 		],
 	});
 	assert.equal(invalidMove.valid, false);
-	assert.ok(
-		invalidMove.errors.some((entry) => entry.path === "operations[0]"),
-	);
+	assert.ok(invalidMove.errors.some((entry) => entry.path === "operations[0]"));
 
 	const invalidMixedScope = aiPayloadSchemas.validateAiGeneratedContent(
 		{
@@ -833,7 +831,10 @@ await run("AI response helpers manage custom monster draft resources", () => {
 		total: 2,
 	});
 	assert.equal(getFirstChangedMonster(entry).name, "Old Beast");
-	assert.equal(getFirstChangedMonsterName(entry, ["custom-monster:new"]), "New Beast");
+	assert.equal(
+		getFirstChangedMonsterName(entry, ["custom-monster:new"]),
+		"New Beast",
+	);
 
 	const withToken = addSourceMonsterImageToDraft(entry, {
 		name: "Wolf",
@@ -931,7 +932,12 @@ await run("AI route fills ids for current selected targets", () => {
 		version: 2,
 		operations: [
 			{ op: "update", entity: "encounter", patch: { name: "Hard Fight" } },
-			{ op: "updateNote", entity: "scene", noteId: "note-1", patch: { text: "x" } },
+			{
+				op: "updateNote",
+				entity: "scene",
+				noteId: "note-1",
+				patch: { text: "x" },
+			},
 			{ op: "delete", entity: "npc" },
 		],
 	};
@@ -1119,7 +1125,10 @@ await run("content tokens parse hit and recharge tags safely", () => {
 		"{@quickref Vision and Light||2||heavily obscured}",
 	);
 	assert.equal(quickref.length, 1);
-	assert.equal(quickref[0].quickrefValue, "Vision and Light||2||heavily obscured");
+	assert.equal(
+		quickref[0].quickrefValue,
+		"Vision and Light||2||heavily obscured",
+	);
 });
 
 await run("parser renders quickref display labels", () => {
@@ -1311,7 +1320,9 @@ await run(
 		const targetSlug = makeTestSlug("partial-target");
 		try {
 			for (const slug of [sourceSlug, targetSlug]) {
-				await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
+				await storage.ensureDir(
+					path.join(storage.campaignDir(slug), "sessions"),
+				);
 				await storage.writeJson(storage.campaignMetaPath(slug), {
 					id: `${slug}-id`,
 					name: `Campaign ${slug}`,
@@ -1349,9 +1360,7 @@ await run(
 								id: "session-1",
 								name: "Imported session",
 								data: {
-									npcs: [
-										{ id: "npc-1", firstName: "Imported", slug: "mira" },
-									],
+									npcs: [{ id: "npc-1", firstName: "Imported", slug: "mira" }],
 									locations: [
 										{ id: "loc-1", name: "Imported place", slug: "mill" },
 									],
@@ -1783,7 +1792,13 @@ await run(
 			await storage.writeJson(storage.sessionPath(slug, "session.json"), {
 				id: "session-id",
 				name: "Session",
-				data: { scenes: [], encounters: [], notes: [], npcs: [], locations: [] },
+				data: {
+					scenes: [],
+					encounters: [],
+					notes: [],
+					npcs: [],
+					locations: [],
+				},
 			});
 
 			const result = await aiPatchService.applyAiOperations({
@@ -1853,7 +1868,13 @@ await run(
 			await storage.writeJson(storage.sessionPath(slug, "session.json"), {
 				id: "session-id",
 				name: "Session",
-				data: { scenes: [], encounters: [], notes: [], npcs: [], locations: [] },
+				data: {
+					scenes: [],
+					encounters: [],
+					notes: [],
+					npcs: [],
+					locations: [],
+				},
 			});
 
 			const result = await aiPatchService.applyAiOperations({
@@ -1941,7 +1962,13 @@ await run(
 			await storage.writeJson(storage.sessionPath(slug, "session.json"), {
 				id: "session-id",
 				name: "Session",
-				data: { scenes: [], encounters: [], notes: [], npcs: [], locations: [] },
+				data: {
+					scenes: [],
+					encounters: [],
+					notes: [],
+					npcs: [],
+					locations: [],
+				},
 			});
 
 			await aiPatchService.applyAiOperations({
@@ -2005,7 +2032,13 @@ await run(
 			await storage.writeJson(storage.sessionPath(slug, "session.json"), {
 				id: "session-id",
 				name: "Session",
-				data: { scenes: [], encounters: [], notes: [], npcs: [], locations: [] },
+				data: {
+					scenes: [],
+					encounters: [],
+					notes: [],
+					npcs: [],
+					locations: [],
+				},
 			});
 
 			await aiPatchService.applyAiOperations({
@@ -2268,21 +2301,25 @@ await run("storage keeps AI response history per campaign", async () => {
 			assert.equal(firstHistory[0].text.includes("першої"), true);
 			assert.equal(secondHistory[0].text.includes("другої"), true);
 
-			const updatedFirst = await storage.updateAiResponse(firstSlug, firstEntry.id, {
-				applyState: "applied",
-				changes: {
-					resources: [
-						{
-							id: "campaign:test",
-							kind: "campaign",
-							label: "test",
-							before: { name: "Before" },
-							after: { name: "After" },
-						},
-					],
-					summary: { modified: 1, total: 1 },
+			const updatedFirst = await storage.updateAiResponse(
+				firstSlug,
+				firstEntry.id,
+				{
+					applyState: "applied",
+					changes: {
+						resources: [
+							{
+								id: "campaign:test",
+								kind: "campaign",
+								label: "test",
+								before: { name: "Before" },
+								after: { name: "After" },
+							},
+						],
+						summary: { modified: 1, total: 1 },
+					},
 				},
-			});
+			);
 			assert.equal(updatedFirst.applyState, "applied");
 			const afterUpdate = await storage.readAiResponses(firstSlug);
 			assert.equal(afterUpdate[0].changes.resources.length, 1);

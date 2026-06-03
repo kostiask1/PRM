@@ -59,7 +59,9 @@ function parseMaybeNumber(value) {
 function getCreatureAcInput(monster = {}) {
 	if (Array.isArray(monster.ac) && monster.ac[0] !== undefined) {
 		const entry = monster.ac[0];
-		return String(typeof entry === "object" ? entry.ac ?? entry.special ?? "" : entry);
+		return String(
+			typeof entry === "object" ? (entry.ac ?? entry.special ?? "") : entry,
+		);
 	}
 	return String(monster.armor_class ?? "");
 }
@@ -385,7 +387,11 @@ export default function MonsterFieldEditModal({
 
 		if (ruleInsertTarget.type === "field") {
 			updateDraft((current) =>
-				updateCreatureBasicField(current || {}, ruleInsertTarget.key, nextValue),
+				updateCreatureBasicField(
+					current || {},
+					ruleInsertTarget.key,
+					nextValue,
+				),
 			);
 		} else if (ruleInsertTarget.type === "action") {
 			updateAction(ruleInsertTarget.section, ruleInsertTarget.index, (action) =>
@@ -405,7 +411,11 @@ export default function MonsterFieldEditModal({
 				setError(err.message || lang.t("Invalid JSON."));
 				return;
 			}
-			if (!nextDraft || typeof nextDraft !== "object" || Array.isArray(nextDraft)) {
+			if (
+				!nextDraft ||
+				typeof nextDraft !== "object" ||
+				Array.isArray(nextDraft)
+			) {
 				setError(lang.t("Monster data must be a JSON object."));
 				return;
 			}
@@ -491,14 +501,10 @@ export default function MonsterFieldEditModal({
 										<Input
 											value={String(action?.name || "")}
 											onChange={(event) =>
-												updateAction(
-													section.key,
-													index,
-													(currentAction) => ({
-														...currentAction,
-														name: event.target.value,
-													}),
-												)
+												updateAction(section.key, index, (currentAction) => ({
+													...currentAction,
+													name: event.target.value,
+												}))
 											}
 										/>
 									</label>
@@ -517,14 +523,8 @@ export default function MonsterFieldEditModal({
 										rows={4}
 										value={actionEntriesToText(action)}
 										onChange={(event) =>
-											updateAction(
-												section.key,
-												index,
-												(currentAction) =>
-													actionFromText(
-														currentAction,
-														event.target.value,
-													),
+											updateAction(section.key, index, (currentAction) =>
+												actionFromText(currentAction, event.target.value),
 											)
 										}
 										onKeyDown={(event) =>

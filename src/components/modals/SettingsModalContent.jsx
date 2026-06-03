@@ -34,11 +34,10 @@ export default function SettingsModalContent({ onCancel }) {
 	const storedAiBasePrompt = useAppSelector(
 		(state) => state.ui.aiBasePrompt || "",
 	);
-	const storedImagePromptBasePrompt = useAppSelector(
-		(state) =>
-			state.ui.imagePromptBasePrompt === undefined
-				? DEFAULT_IMAGE_PROMPT_BASE_PROMPT
-				: state.ui.imagePromptBasePrompt,
+	const storedImagePromptBasePrompt = useAppSelector((state) =>
+		state.ui.imagePromptBasePrompt === undefined
+			? DEFAULT_IMAGE_PROMPT_BASE_PROMPT
+			: state.ui.imagePromptBasePrompt,
 	);
 	const storedCampaignAiBasePrompts = useAppSelector(
 		(state) => state.ui.campaignAiBasePrompts || {},
@@ -59,10 +58,8 @@ export default function SettingsModalContent({ onCancel }) {
 	const [campaignAiBasePrompts, setCampaignAiBasePrompts] = useState(
 		storedCampaignAiBasePrompts,
 	);
-	const [
-		campaignImagePromptBasePrompts,
-		setCampaignImagePromptBasePrompts,
-	] = useState(storedCampaignImagePromptBasePrompts);
+	const [campaignImagePromptBasePrompts, setCampaignImagePromptBasePrompts] =
+		useState(storedCampaignImagePromptBasePrompts);
 	const [selectedCampaignSlug, setSelectedCampaignSlug] = useState(
 		activeCampaignSlug || campaigns[0]?.slug || "",
 	);
@@ -179,8 +176,7 @@ export default function SettingsModalContent({ onCancel }) {
 				aiBasePrompt: saved.aiBasePrompt,
 				imagePromptBasePrompt: saved.imagePromptBasePrompt,
 				campaignAiBasePrompts: saved.campaignAiBasePrompts,
-				campaignImagePromptBasePrompts:
-					saved.campaignImagePromptBasePrompts,
+				campaignImagePromptBasePrompts: saved.campaignImagePromptBasePrompts,
 			};
 			dispatch(setUiSettingsAction(nextUiSettings));
 			setAiBasePrompt(nextUiSettings.aiBasePrompt || "");

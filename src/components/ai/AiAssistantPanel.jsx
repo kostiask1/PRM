@@ -1076,9 +1076,9 @@ export default function AiAssistantPanel() {
 					? data.monster
 					: Array.isArray(data?.monsters)
 						? data.monsters
-				: Array.isArray(data)
-					? data
-					: [];
+						: Array.isArray(data)
+							? data
+							: [];
 				setImagePromptCustomMonsters(monsters);
 				imagePromptBestiaryDataLoadedRef.current = true;
 			})
@@ -1661,9 +1661,7 @@ export default function AiAssistantPanel() {
 					generateCharacters: structuredEntityOptionsEnabled
 						? generateCharacters
 						: true,
-					generateNpcs: structuredEntityOptionsEnabled
-						? generateNpcs
-						: true,
+					generateNpcs: structuredEntityOptionsEnabled ? generateNpcs : true,
 					generateLocations: structuredEntityOptionsEnabled
 						? generateLocations
 						: true,
@@ -1837,11 +1835,7 @@ export default function AiAssistantPanel() {
 			responseHistory.filter((entry) =>
 				isAiResponseVisibleForRoute(entry, initialRoute, { isBestiary }),
 			),
-		[
-			initialRoute,
-			isBestiary,
-			responseHistory,
-		],
+		[initialRoute, isBestiary, responseHistory],
 	);
 	const isResponseParsingLocked = isBestiary;
 	const isCustomMonsterGenerationVisible =
@@ -2161,12 +2155,10 @@ export default function AiAssistantPanel() {
 		}
 		const fullSessions = await Promise.all(
 			sessions.map((session) =>
-				api
-					.getSession(initialRoute.campaign, session.fileName)
-					.catch((err) => {
-						console.error("Failed to load session for image prompt", err);
-						return null;
-					}),
+				api.getSession(initialRoute.campaign, session.fileName).catch((err) => {
+					console.error("Failed to load session for image prompt", err);
+					return null;
+				}),
 			),
 		);
 		setImagePromptSessions(fullSessions.filter(Boolean));
@@ -2421,9 +2413,7 @@ export default function AiAssistantPanel() {
 								setImagePromptRequest("");
 							}}
 							onCancel={closeImagePromptPicker}
-							onContinueWithoutSelection={
-								continueImagePromptWithoutTarget
-							}
+							onContinueWithoutSelection={continueImagePromptWithoutTarget}
 							onGenerate={generateImagePromptForTarget}
 							onInstructionsChange={setImagePromptInstructions}
 							onRequestChange={setImagePromptRequest}

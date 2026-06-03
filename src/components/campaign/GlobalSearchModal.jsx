@@ -12,12 +12,7 @@ import Modal from "../common/Modal";
 import classNames from "../../utils/classNames";
 import "../../assets/components/GlobalSearchModal.css";
 
-const FILTERS = [
-	"notes",
-	"scenes",
-	"npc",
-	"locations",
-];
+const FILTERS = ["notes", "scenes", "npc", "locations"];
 
 const FILTER_COLOR_BY_ID = {
 	notes: "#38bdf8",
@@ -121,7 +116,10 @@ function renderMentionChildren(children, highlightTerms = []) {
 }
 
 function ParsedSearchText({ text, inline = false, highlight = "" }) {
-	const highlightTerms = useMemo(() => getHighlightTerms(highlight), [highlight]);
+	const highlightTerms = useMemo(
+		() => getHighlightTerms(highlight),
+		[highlight],
+	);
 	const components = useMemo(
 		() =>
 			Object.fromEntries(
@@ -403,11 +401,7 @@ function openTarget(target) {
 	);
 	if (target.hash) {
 		const hash = `#${encodeURIComponent(target.hash)}`;
-		window.history.replaceState(
-			{},
-			"",
-			`${url}${hash}`,
-		);
+		window.history.replaceState({}, "", `${url}${hash}`);
 		window.setTimeout(() => scrollToHashTarget(`#${target.hash}`), 80);
 		window.setTimeout(() => {
 			if (window.location.pathname !== url) return;
@@ -498,15 +492,10 @@ export default function GlobalSearchModal({ onCancel }) {
 				key={result.id}
 				role="button"
 				tabIndex={0}
-				className={classNames(
-					"GlobalSearch__result",
-					`is_${result.filter}`,
-				)}
+				className={classNames("GlobalSearch__result", `is_${result.filter}`)}
 				style={{ "--search-result-color": FILTER_COLOR_BY_ID[result.filter] }}
 				onClick={(event) => {
-					if (
-						event.target?.closest?.("a, button, input, textarea, select")
-					) {
+					if (event.target?.closest?.("a, button, input, textarea, select")) {
 						return;
 					}
 					onCancel?.();
@@ -514,9 +503,7 @@ export default function GlobalSearchModal({ onCancel }) {
 				}}
 				onKeyDown={(event) => {
 					if (event.key !== "Enter" && event.key !== " ") return;
-					if (
-						event.target?.closest?.("a, button, input, textarea, select")
-					) {
+					if (event.target?.closest?.("a, button, input, textarea, select")) {
 						return;
 					}
 					event.preventDefault();

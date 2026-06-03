@@ -63,11 +63,9 @@
 
 .GlobalSearch__result:hover {
 	border-color: var(--search-result-color, var(--accent));
-	background: color-mix(
-		in srgb,
-		var(--search-result-color, var(--accent)),
-		transparent 92%
-	);
+	background: color-mix(in srgb,
+			var(--search-result-color, var(--accent)),
+			transparent 92%);
 }
 
 .GlobalSearch__result strong {
@@ -108,11 +106,9 @@
 	justify-self: start;
 	padding: 2px 7px;
 	border-radius: var(--radius-sm);
-	background: color-mix(
-		in srgb,
-		var(--search-result-color, var(--accent)),
-		transparent 88%
-	);
+	background: color-mix(in srgb,
+			var(--search-result-color, var(--accent)),
+			transparent 88%);
 	color: var(--search-result-color, var(--accent)) !important;
 	font-weight: 700;
 }

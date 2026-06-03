@@ -184,9 +184,7 @@ function CampaignView() {
 	};
 
 	const handleBulkNotesCollapse = (collapsed) => {
-		view.handleNotesReorder(
-			view.notes.map((note) => ({ ...note, collapsed })),
-		);
+		view.handleNotesReorder(view.notes.map((note) => ({ ...note, collapsed })));
 		view.finishTrackedReorder();
 	};
 
@@ -394,7 +392,10 @@ function CampaignView() {
 								<div className="CampaignView__notesViewToggle">
 									{!isNotesCollapsed &&
 										notesViewMode === "list" &&
-										renderBulkCollapseButton(view.notes, handleBulkNotesCollapse)}
+										renderBulkCollapseButton(
+											view.notes,
+											handleBulkNotesCollapse,
+										)}
 									<Button
 										variant={notesViewMode === "list" ? "primary" : "ghost"}
 										size={Button.SIZES.SMALL}
@@ -501,15 +502,13 @@ function CampaignView() {
 								</div>
 								{!isCharactersCollapsed && (
 									<div className="CampaignView__sectionActions">
-										{renderBulkCollapseButton(
-											view.characters,
-											(collapsed) =>
-												handleBulkEntitiesCollapse(
-													"characters",
-													view.characters,
-													view.handleCharactersReorder,
-													collapsed,
-												),
+										{renderBulkCollapseButton(view.characters, (collapsed) =>
+											handleBulkEntitiesCollapse(
+												"characters",
+												view.characters,
+												view.handleCharactersReorder,
+												collapsed,
+											),
 										)}
 										<CreateCharacterButton
 											campaignSlug={campaign.slug}
@@ -711,7 +710,6 @@ function CampaignView() {
 								/>
 							)}
 						</div>
-
 					</div>
 				</div>
 			</div>

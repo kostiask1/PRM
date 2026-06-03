@@ -32,8 +32,7 @@ export default function AiAssistantToolbar({
 	setUseContext,
 	useContext,
 }) {
-	const showParsedGenerationOptions =
-		!isBestiary && parseAIResponse;
+	const showParsedGenerationOptions = !isBestiary && parseAIResponse;
 	const showCharacterGeneration = showParsedGenerationOptions && isCampaign;
 
 	return (

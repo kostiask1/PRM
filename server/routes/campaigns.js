@@ -73,9 +73,7 @@ router.patch("/:slug", async (req, res, next) => {
 			? storage.sanitizeName(req.body.name)
 			: current.name;
 		if (!nextName)
-			return res
-				.status(400)
-				.json({ error: "Campaign name cannot be empty." });
+			return res.status(400).json({ error: "Campaign name cannot be empty." });
 
 		const nextSlug = await storage.ensureUniqueCampaignSlug(
 			storage.campaignSlug(nextName),
