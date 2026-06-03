@@ -141,10 +141,12 @@ function getDiffItemKey(item, index, getName) {
 	return `index:${index}`;
 }
 
-function pushGranularDiff(resources, resource, suffix, before, after) {
+function pushGranularDiff(resources, resource, suffix, before, after, meta = {}) {
 	if (snapshotsEqual(before, after)) return;
 	resources.push({
 		...resource,
+		...meta,
+		parentResourceId: resource.id,
 		id: `${resource.id}:${suffix}`,
 		label: `${resource.label}#${suffix}`,
 		before: before === undefined ? null : before,
@@ -171,17 +173,20 @@ function pushGranularArrayDiff(
 	const afterByKey = new Map(
 		afterList.map((item, index) => [
 			getDiffItemKey(item, index, getName),
-			item,
+			{ item, index },
 		]),
 	);
 
 	for (const key of new Set([...beforeByKey.keys(), ...afterByKey.keys()])) {
 		const beforeItem = beforeByKey.get(key);
-		const afterItem = afterByKey.get(key);
+		const afterEntry = afterByKey.get(key);
+		const afterItem = afterEntry?.item;
 		const labelSource = afterItem || beforeItem;
 		const name = String(getName?.(labelSource) || "").trim();
 		const suffix = name ? `${pathLabel}/${name}` : `${pathLabel}/${key}`;
-		pushGranularDiff(resources, resource, suffix, beforeItem, afterItem);
+		pushGranularDiff(resources, resource, suffix, beforeItem, afterItem, {
+			listIndex: afterEntry?.index ?? null,
+		});
 	}
 }
 

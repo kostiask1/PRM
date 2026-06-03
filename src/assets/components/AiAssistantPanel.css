@@ -643,7 +643,6 @@
 .AiAssistant__preview_card_surface .location_card,
 .AiAssistant__preview_card_surface .MonsterStatBlock,
 .AiAssistant__preview_note_surface .note_card_simple {
-	pointer-events: none;
 	margin: 0;
 	box-shadow: none;
 }
@@ -1438,4 +1437,11 @@
 	line-clamp: 2;
 	-webkit-line-clamp: 2;
 	-webkit-box-orient: vertical;
+}
+
+@media (max-width: 1700px) {
+	.AiAssistant__encounter_monsters .AiAssistant__preview_card_columns {
+		display: flex;
+		flex-direction: column;
+	}
 }

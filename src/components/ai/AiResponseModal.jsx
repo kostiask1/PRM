@@ -5,6 +5,7 @@ import CharacterCard from "../CharacterCard";
 import LocationCard from "../LocationCard";
 import MonsterStatBlock from "../MonsterStatBlock";
 import NoteCard from "../common/NoteCard";
+import CustomMonsterEditModal from "../bestiary/CustomMonsterEditModal";
 import Button from "../form/Button";
 import EditableField from "../form/EditableField";
 import Modal from "../common/Modal";
@@ -263,6 +264,14 @@ function buildCardHighlightFields(resource) {
 	};
 }
 
+function cloneSnapshot(value) {
+	return JSON.parse(JSON.stringify(value ?? null));
+}
+
+function hasOwn(object, key) {
+	return Object.prototype.hasOwnProperty.call(object || {}, key);
+}
+
 function buildNoteHighlightFields(resource) {
 	return ["title", "text"].filter(
 		(field) =>
@@ -310,6 +319,10 @@ export default function AiResponseModal({
 	const [draftResourceEdits, setDraftResourceEdits] = useState([]);
 	const [draftError, setDraftError] = useState("");
 	const [diffViewMode, setDiffViewMode] = useState("preview");
+	const [editingCreature, setEditingCreature] = useState(null);
+	const [editingCreatureJson, setEditingCreatureJson] = useState("");
+	const [editingCreatureError, setEditingCreatureError] = useState("");
+	const [isSavingCreatureEdit, setIsSavingCreatureEdit] = useState(false);
 
 	useEffect(() => {
 		setDraftEdits(
@@ -334,24 +347,99 @@ export default function AiResponseModal({
 	const noop = () => {};
 	const getDraftResourceForPreview = (resource) => {
 		if (!isDraft) return null;
+		const parentResourceId = String(resource?.parentResourceId || "");
 		return (
 			draftResourceEdits.find((item) => item.id === resource.id) ||
+			(parentResourceId
+				? draftResourceEdits.find((item) => item.id === parentResourceId)
+				: null) ||
 			draftResourceEdits.find((item) =>
 				String(resource.id || "").startsWith(`${item.id}:`),
 			) ||
 			null
 		);
 	};
+	const findEditedListItem = (list, originalItem, index = null) =>
+		(Array.isArray(list) ? list : []).find((item, itemIndex) => {
+			if (Number.isInteger(index) && itemIndex === index) return true;
+			const itemId = String(item?.id || "");
+			const originalId = String(originalItem?.id || "");
+			if (itemId && originalId) return itemId === originalId;
+			const itemInstanceId = String(item?.instanceId || "");
+			const originalInstanceId = String(originalItem?.instanceId || "");
+			if (itemInstanceId && originalInstanceId) {
+				return itemInstanceId === originalInstanceId;
+			}
+			return JSON.stringify(item) === JSON.stringify(originalItem);
+		});
+	const getEditedResourceAfterFromParent = (parentResource, resource) => {
+		if (!parentResource || parentResource.id === resource.id) {
+			return parentResource?.after;
+		}
+		const parentResourceId = String(
+			resource.parentResourceId || parentResource.id || "",
+		);
+		if (
+			!resource.parentResourceId &&
+			!String(resource.id || "").startsWith(`${parentResource.id}:`)
+		) {
+			return undefined;
+		}
+		const suffix = String(resource.id).slice(parentResourceId.length + 1);
+		const [section] = suffix.split("/");
+		if (parentResource.kind === "session" && parentResource.after?.data) {
+			if (
+				["notes", "npcs", "locations", "scenes", "encounters"].includes(
+					section,
+				)
+			) {
+				return findEditedListItem(
+					parentResource.after.data[section],
+					resource.after,
+					resource.listIndex,
+				);
+			}
+		}
+		if (
+			(parentResource.kind === "campaign" || parentResource.kind === "entity") &&
+			(suffix.startsWith("note:") || suffix.startsWith("notes/"))
+		) {
+			return findEditedListItem(
+				parentResource.after?.notes,
+				resource.after,
+				resource.listIndex,
+			);
+		}
+		if (
+			parentResource.kind === "custom-bestiary" &&
+			suffix.startsWith("monsters/")
+		) {
+			return findEditedListItem(
+				parentResource.after,
+				resource.after,
+				resource.listIndex,
+			);
+		}
+		return undefined;
+	};
 	const getEditedPreviewResource = (resource) => {
 		const draftResource = getDraftResourceForPreview(resource);
-		if (!draftResource || draftResource.id !== resource.id) return resource;
-		return draftResource;
+		if (!draftResource) return resource;
+		if (draftResource.id === resource.id) return draftResource;
+		const editedAfter = getEditedResourceAfterFromParent(draftResource, resource);
+		return editedAfter === undefined ? resource : { ...resource, after: editedAfter };
 	};
-	const replaceItemInList = (list, beforeItem, nextItem) =>
-		(Array.isArray(list) ? list : []).map((item) => {
+	const replaceItemInList = (list, beforeItem, nextItem, index = null) =>
+		(Array.isArray(list) ? list : []).map((item, itemIndex) => {
+			if (Number.isInteger(index) && itemIndex === index) return nextItem;
 			const itemId = String(item?.id || "");
 			const beforeId = String(beforeItem?.id || "");
 			if (itemId && beforeId && itemId === beforeId) return nextItem;
+			const itemInstanceId = String(item?.instanceId || "");
+			const beforeInstanceId = String(beforeItem?.instanceId || "");
+			if (itemInstanceId && beforeInstanceId && itemInstanceId === beforeInstanceId) {
+				return nextItem;
+			}
 			if (JSON.stringify(item) === JSON.stringify(beforeItem)) return nextItem;
 			return item;
 		});
@@ -360,8 +448,12 @@ export default function AiResponseModal({
 		setDraftResourceEdits((current) =>
 			current.map((item) => {
 				if (item.id === resource.id) return { ...item, after: nextSnapshot };
-				if (!String(resource.id || "").startsWith(`${item.id}:`)) return item;
-				const suffix = String(resource.id).slice(item.id.length + 1);
+				const isParentResource = resource.parentResourceId
+					? item.id === resource.parentResourceId
+					: String(resource.id || "").startsWith(`${item.id}:`);
+				if (!isParentResource) return item;
+				const parentResourceId = String(resource.parentResourceId || item.id);
+				const suffix = String(resource.id).slice(parentResourceId.length + 1);
 				const nextAfter = JSON.parse(JSON.stringify(item.after ?? {}));
 				if (item.kind === "session" && nextAfter.data) {
 					const [section] = suffix.split("/");
@@ -374,14 +466,32 @@ export default function AiResponseModal({
 							nextAfter.data[section],
 							resource.after,
 							nextSnapshot,
+							resource.listIndex,
 						);
 					}
-				} else if (item.kind === "entity" && suffix.startsWith("notes/")) {
+				} else if (
+					(item.kind === "campaign" || item.kind === "entity") &&
+					(suffix.startsWith("note:") || suffix.startsWith("notes/"))
+				) {
 					nextAfter.notes = replaceItemInList(
 						nextAfter.notes,
 						resource.after,
 						nextSnapshot,
+						resource.listIndex,
 					);
+				} else if (
+					item.kind === "custom-bestiary" &&
+					suffix.startsWith("monsters/")
+				) {
+					return {
+						...item,
+						after: replaceItemInList(
+							item.after,
+							resource.after,
+							nextSnapshot,
+							resource.listIndex,
+						),
+					};
 				}
 				return { ...item, after: nextAfter };
 			}),
@@ -443,6 +553,87 @@ export default function AiResponseModal({
 			</>
 		);
 	};
+	const preserveCreatureIdentity = (original, parsed) => {
+		const next = { ...parsed };
+		["id", "instanceId", "participantType"].forEach((key) => {
+			if (!hasOwn(next, key) && original?.[key] !== undefined) {
+				next[key] = original[key];
+			}
+		});
+		return next;
+	};
+	const openCreatureJsonEdit = (resource, monster, options = {}) => {
+		if (!isDraft || isResourceApplied(resource) || !isObjectSnapshot(monster)) {
+			return;
+		}
+		setEditingCreature({ resource, monster, ...options });
+		setEditingCreatureJson(JSON.stringify(monster, null, 2));
+		setEditingCreatureError("");
+	};
+	const closeCreatureJsonEdit = () => {
+		if (isSavingCreatureEdit) return;
+		setEditingCreature(null);
+		setEditingCreatureJson("");
+		setEditingCreatureError("");
+	};
+	const replaceEncounterParticipant = (encounter, participantKey, nextMonster) => {
+		const nextEncounter = cloneSnapshot(encounter || {});
+		nextEncounter.monsters = getEncounterParticipantEntries(
+			nextEncounter.monsters,
+		).map((entry) =>
+			entry.key === participantKey ? nextMonster : entry.participant,
+		);
+		return nextEncounter;
+	};
+	const saveCreatureJsonEdit = () => {
+		if (!editingCreature?.resource) return;
+		setEditingCreatureError("");
+
+		let parsed;
+		try {
+			parsed = JSON.parse(editingCreatureJson);
+		} catch (error) {
+			setEditingCreatureError(error.message || lang.t("Invalid JSON."));
+			return;
+		}
+
+		if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+			setEditingCreatureError(lang.t("Monster data must be a JSON object."));
+			return;
+		}
+		if (!String(parsed.name || "").trim()) {
+			setEditingCreatureError(lang.t("Name is required to create an entry."));
+			return;
+		}
+
+		setIsSavingCreatureEdit(true);
+		try {
+			const nextMonster = preserveCreatureIdentity(
+				editingCreature.monster,
+				parsed,
+			);
+			if (editingCreature.mode === "encounter-participant") {
+				const editedResource = getEditedPreviewResource(editingCreature.resource);
+				updateDraftResourceAfter(
+					editedResource,
+					replaceEncounterParticipant(
+						editedResource.after,
+						editingCreature.participantKey,
+						nextMonster,
+					),
+				);
+			} else {
+				updateDraftResourceAfter(editingCreature.resource, nextMonster);
+			}
+			setEditingCreature(null);
+			setEditingCreatureJson("");
+			setEditingCreatureError("");
+		} catch (error) {
+			setEditingCreatureError(error.message || lang.t("Unknown error"));
+		} finally {
+			setIsSavingCreatureEdit(false);
+		}
+	};
 	const renderNoteCard = (
 		resource,
 		note,
@@ -498,6 +689,11 @@ export default function AiResponseModal({
 					monster={snapshot}
 					showFavoriteAction={false}
 					allowTokenUpload={false}
+					onJsonEdit={
+						editable
+							? (monster) => openCreatureJsonEdit(resource, monster)
+							: null
+					}
 					searchHighlight=""
 					highlightFields={highlightFields}
 				/>
@@ -593,6 +789,7 @@ export default function AiResponseModal({
 		participant,
 		className,
 		highlightFields = null,
+		editOptions = null,
 	) => {
 		if (!isObjectSnapshot(participant)) return null;
 		return (
@@ -607,6 +804,15 @@ export default function AiResponseModal({
 					monster={participant}
 					showFavoriteAction={false}
 					allowTokenUpload={false}
+					onJsonEdit={
+						editOptions
+							? (monster) =>
+									openCreatureJsonEdit(editOptions.resource, monster, {
+										mode: "encounter-participant",
+										participantKey: editOptions.participantKey,
+									})
+							: null
+					}
 					searchHighlight=""
 					highlightFields={highlightFields}
 				/>
@@ -656,6 +862,10 @@ export default function AiResponseModal({
 								: buildCardHighlightFields({ before: {}, after });
 
 					if (!before || !after) {
+						const editOptions =
+							after && isDraft && !isResourceApplied(resource)
+								? { resource, participantKey: key }
+								: null;
 						return (
 							<div
 								key={`${resource.id}-${key}`}
@@ -669,6 +879,7 @@ export default function AiResponseModal({
 										before || after,
 										before ? "is_removed" : "is_added",
 										highlightFields,
+										editOptions,
 									)}
 								</div>
 							</div>
@@ -698,6 +909,9 @@ export default function AiResponseModal({
 									after,
 									"is_after",
 									highlightFields,
+									isDraft && !isResourceApplied(resource)
+										? { resource, participantKey: key }
+										: null,
 								)}
 							</div>
 						</div>
@@ -863,12 +1077,17 @@ export default function AiResponseModal({
 				{keys.map((key, index) => {
 					const before = beforeByKey.get(key) ?? null;
 					const after = afterByKey.get(key) ?? null;
+					const listIndex = afterList.findIndex(
+						(note, noteIndex) => getNoteDiffKey(note, noteIndex) === key,
+					);
 					return renderNoteCardDiff({
 						...resource,
+						parentResourceId: resource.id,
 						id: `${resource.id}:note:${key}`,
 						label: `${resource.label} / ${lang.t("Note")} ${index + 1}`,
 						before,
 						after,
+						listIndex: listIndex >= 0 ? listIndex : null,
 					});
 				})}
 			</div>
@@ -1159,17 +1378,18 @@ export default function AiResponseModal({
 	};
 
 	return (
-		<Modal
-			title={lang.t("Response")}
-			onCancel={onCancel}
-			showFooter={false}
-			overlayClassName={classNames(
-				"AiAssistant__response_overlay",
-				selectedResponseHasChanges && "AiAssistant__response_overlay_wide",
-			)}
-			cancelDisabled={isRestoringResponse}
-		>
-			<div className="AiAssistant__prompt_result_wrap">
+		<>
+			<Modal
+				title={lang.t("Response")}
+				onCancel={onCancel}
+				showFooter={false}
+				overlayClassName={classNames(
+					"AiAssistant__response_overlay",
+					selectedResponseHasChanges && "AiAssistant__response_overlay_wide",
+				)}
+				cancelDisabled={isRestoringResponse}
+			>
+				<div className="AiAssistant__prompt_result_wrap">
 				<div className="AiAssistant__prompt_result_actions">
 					{selectedResponseHasChanges && (
 						<>
@@ -1349,7 +1569,18 @@ export default function AiResponseModal({
 							)}
 					</div>
 				)}
-			</div>
-		</Modal>
+				</div>
+			</Modal>
+			<CustomMonsterEditModal
+				editingMonster={editingCreature?.monster || null}
+				editingMonsterError={editingCreatureError}
+				editingMonsterJson={editingCreatureJson}
+				isSavingMonsterEdit={isSavingCreatureEdit}
+				onCancel={closeCreatureJsonEdit}
+				onJsonChange={setEditingCreatureJson}
+				onSave={saveCreatureJsonEdit}
+				title={lang.t("Edit JSON")}
+			/>
+		</>
 	);
 }
