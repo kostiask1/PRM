@@ -1,6 +1,7 @@
 export const DEFAULT_LANGUAGE = "uk";
 
 function loadLanguagePacks() {
+	if (typeof import.meta.glob !== "function") return {};
 	const modules = import.meta.glob("../langs/*.json", { eager: true });
 	const packs = {};
 

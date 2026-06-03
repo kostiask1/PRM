@@ -83,15 +83,15 @@ export const SESSION_FIELD_SCHEMA = {
 	fileName: {
 		type: "string",
 		required: true,
-		values: "Ідентифікатор файлу сесії",
+		values: "Session file identifier",
 	},
-	name: { type: "string", required: true, values: "Назва сесії" },
+	name: { type: "string", required: true, values: "Session name" },
 	data: {
 		type: "SessionDataPayload",
 		values:
-			"Контент сесії: notes, scenes, encounters, npcs, locations, result_text, *_check",
+			"Session content: notes, scenes, encounters, npcs, locations, result_text, *_check",
 	},
-	isSaving: { type: "boolean", values: "Локальний стан автозбереження" },
+	isSaving: { type: "boolean", values: "Local autosave state" },
 };
 
 export default class SessionViewModel {

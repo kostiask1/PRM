@@ -1,4 +1,4 @@
-// Функція для отримання стану з URL
+// Get navigation state from URL.
 export const parseUrl = (pathname = null) => {
 	const path =
 		pathname ?? (typeof window !== "undefined" ? window.location.pathname : "/");

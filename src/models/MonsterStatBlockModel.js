@@ -95,29 +95,29 @@ const NEW_SAVE_MAP = {
  */
 
 export const MONSTER_FIELD_SCHEMA = {
-	name: { type: "string", required: true, values: "Назва монстра" },
+	name: { type: "string", required: true, values: "Monster name" },
 	source: {
 		type: "string",
 		required: true,
-		values: "Код джерела, напр. MM, PHB, XMM або локальний bestiary-*",
+		values: "Source code, e.g. MM, PHB, XMM, or local bestiary-*",
 	},
 	size: { type: "string[]|string", values: "T/S/M/L/H/G" },
-	type: { type: "string|object", values: "Рядок або { type, tags[] }" },
-	alignment: { type: "string[]|string", values: "L/C/G/E/N/U або текст" },
-	ac: { type: "array", values: "[12] або [{ ac, from[] }]" },
-	hp: { type: "object", values: "{ average, formula } або { special }" },
+	type: { type: "string|object", values: "String or { type, tags[] }" },
+	alignment: { type: "string[]|string", values: "L/C/G/E/N/U or text" },
+	ac: { type: "array", values: "[12] or [{ ac, from[] }]" },
+	hp: { type: "object", values: "{ average, formula } or { special }" },
 	speed: { type: "string|object", values: "walk/fly/swim/... + canHover" },
-	abilities: { type: "number", values: "str/dex/con/int/wis/cha від 1 до 30+" },
-	save: { type: "object", values: "str/dex/con/int/wis/cha -> бонус" },
-	skill: { type: "object", values: "Назва навички -> бонус" },
-	languages: { type: "string|string[]", values: "Мови або тире" },
+	abilities: { type: "number", values: "str/dex/con/int/wis/cha from 1 to 30+" },
+	save: { type: "object", values: "str/dex/con/int/wis/cha -> bonus" },
+	skill: { type: "object", values: "Skill name -> bonus" },
+	languages: { type: "string|string[]", values: "Languages or dash" },
 	cr: { type: "string|number|object", values: "1/4, 2, 30, { cr }" },
 	spellcasting: {
 		type: "array",
-		values: "Блоки заклять з header/will/daily/spells",
+		values: "Spellcasting blocks with header/will/daily/spells",
 	},
-	spell_list: { type: "string[]", values: "URL або slug заклять" },
-	originalBestiaryName: { type: "string", values: "Локальне поле застосунку" },
+	spell_list: { type: "string[]", values: "Spell URLs or slugs" },
+	originalBestiaryName: { type: "string", values: "Local app field" },
 };
 
 export default class MonsterStatBlockModel {

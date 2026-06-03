@@ -491,13 +491,13 @@
 
 .dice_min {
 	color: var(--danger);
-	/* Червоний для одиниці */
+	/* Red for one. */
 	font-weight: bold;
 }
 
 .dice_max {
 	color: var(--success);
-	/* Зелений для максимального значення */
+	/* Green for the maximum value. */
 	font-weight: bold;
 }
 

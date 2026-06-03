@@ -1,3 +1,5 @@
+import { lang } from "./services/localization.js";
+
 const API_BASE = "/api";
 
 function getSyncClientHeader() {
@@ -35,7 +37,7 @@ export const api = {
 		if (response.status === 204) return null;
 		const data = await response.json().catch(() => null);
 		if (!response.ok) {
-			const error = new Error(data?.error || "Помилка запиту");
+			const error = new Error(lang.t(data?.error || "Request error"));
 			error.status = response.status;
 			error.data = data;
 			throw error;
@@ -52,10 +54,10 @@ export const api = {
 			},
 		});
 		if (!response.ok) {
-			let message = "Помилка запиту";
+			let message = lang.t("Request error");
 			try {
 				const data = await response.json();
-				message = data?.error || message;
+				message = data?.error ? lang.t(data.error) : message;
 			} catch {
 				// ignore parse failures for binary responses
 			}
@@ -320,7 +322,7 @@ export const api = {
 	uploadImage: (slug, category, subcategory, file) => {
 		const formData = new FormData();
 		if (subcategory) formData.append("subcategory", subcategory);
-		formData.append("image", file); // Файл має бути останнім, щоб multer бачив інші поля
+		formData.append("image", file); // File must be last so multer can read other fields.
 
 		return api.request(
 			`/campaigns/${encodeURIComponent(slug)}/images/${category}`,

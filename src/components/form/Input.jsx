@@ -78,7 +78,7 @@ const Input = forwardRef(
 		const internalRef = useRef(null);
 		const hasAppliedInitialSelectionRef = useRef(false);
 
-		// Синхронізуємо висоту textarea з контентом
+		// Sync textarea height with content.
 		useLayoutEffect(() => {
 			if (type === "textarea" && internalRef.current) {
 				const node = internalRef.current;
@@ -88,7 +88,7 @@ const Input = forwardRef(
 			}
 		}, [props.value, type]);
 
-		// Встановлюємо фокус, висоту та каретку
+		// Set focus, height, and caret.
 		useLayoutEffect(() => {
 			if (!internalRef.current || hasAppliedInitialSelectionRef.current) return;
 			if (initialSelection == null || !supportsSelectionRange(type)) return;
@@ -143,7 +143,7 @@ const Input = forwardRef(
 				return;
 			}
 
-			// Підтримка Ctrl+K (Посилання/Mention) + укр розкладка
+			// Support Ctrl+K (link/mention) with Ukrainian keyboard layout.
 			if (type === "textarea" && isMod && (key === "k" || key === "л")) {
 				e.preventDefault();
 
@@ -275,7 +275,7 @@ const Input = forwardRef(
 				return;
 			}
 
-			// Підтримка Ctrl+B (Жирний) та Ctrl+I (Курсив) + укр розкладка
+			// Support Ctrl+B (bold) and Ctrl+I (italic) with Ukrainian keyboard layout.
 			if (
 				type === "textarea" &&
 				isMod &&
@@ -354,7 +354,7 @@ const Input = forwardRef(
 				return;
 			}
 
-			// Підтримка Ctrl + ] / Ctrl + [
+			// Support Ctrl + ] / Ctrl + [
 			const isListAdd = key === "]" || key === "ї";
 			const isListRemove = key === "[" || key === "х";
 
@@ -597,7 +597,7 @@ const Input = forwardRef(
 		};
 
 		const baseClass = type === "textarea" ? "Input Input__textarea" : "Input";
-		// Додаємо клас для підсвітки спеціального синтаксису, якщо потрібно
+		// Add a class for special syntax highlighting when needed.
 		const combinedClassName = classNames(
 			baseClass,
 			className,

@@ -343,7 +343,7 @@ router.patch("/custom/:name", async (req, res, next) => {
 			.trim()
 			.toLowerCase();
 		if (!targetName) {
-			return res.status(400).json({ error: "Назва істоти обов'язкова." });
+			return res.status(400).json({ error: "Creature name is required." });
 		}
 
 		const monsters = await storage.readCustomBestiaryMonsters();
@@ -354,14 +354,14 @@ router.patch("/custom/:name", async (req, res, next) => {
 					.toLowerCase() === targetName,
 		);
 		if (index < 0) {
-			return res.status(404).json({ error: "Кастомну істоту не знайдено." });
+			return res.status(404).json({ error: "Custom creature not found." });
 		}
 
 		if (req.body?.monster && typeof req.body.monster === "object") {
 			const nextMonster = clone(req.body.monster);
 			const nextName = String(nextMonster.name || "").trim();
 			if (!nextName) {
-				return res.status(400).json({ error: "Назва істоти обов'язкова." });
+				return res.status(400).json({ error: "Creature name is required." });
 			}
 			const nextNameKey = nextName.toLowerCase();
 			const duplicate = monsters.some(
@@ -373,7 +373,7 @@ router.patch("/custom/:name", async (req, res, next) => {
 			);
 			if (duplicate) {
 				return res.status(409).json({
-					error: "Кастомна істота з такою назвою вже існує.",
+					error: "Custom creature with this name already exists.",
 				});
 			}
 
@@ -453,7 +453,7 @@ router.delete("/custom/:name", async (req, res, next) => {
 			.trim()
 			.toLowerCase();
 		if (!targetName) {
-			return res.status(400).json({ error: "Назва істоти обов'язкова." });
+			return res.status(400).json({ error: "Creature name is required." });
 		}
 
 		const monsters = await storage.readCustomBestiaryMonsters();
@@ -464,7 +464,7 @@ router.delete("/custom/:name", async (req, res, next) => {
 					.toLowerCase() !== targetName,
 		);
 		if (nextMonsters.length === monsters.length) {
-			return res.status(404).json({ error: "Кастомну істоту не знайдено." });
+			return res.status(404).json({ error: "Custom creature not found." });
 		}
 
 		const updated = await storage.writeCustomBestiaryMonsters(nextMonsters);
@@ -566,7 +566,7 @@ router.get("/:source", async (req, res, next) => {
 		);
 
 		if (!(await storage.exists(filePath))) {
-			// Спробуємо знайти файл з префіксом bestiary-, якщо прямий шлях не знайдено
+			// Try the bestiary- prefix when the direct path is not found.
 			const prefixedPath = path.join(
 				storage.BESTIARY_DIR,
 				`bestiary-${path.basename(sourceParam)}.json`,
@@ -579,7 +579,7 @@ router.get("/:source", async (req, res, next) => {
 		if (!(await storage.exists(filePath))) {
 			const allPath = path.join(storage.BESTIARY_DIR, "all.json");
 			if (!(await storage.exists(allPath)))
-				return res.status(404).json({ error: "Джерело не знайдено." });
+				return res.status(404).json({ error: "Source not found." });
 
 			const allData = await storage.readJson(allPath);
 			const allMonsters = Array.isArray(allData)

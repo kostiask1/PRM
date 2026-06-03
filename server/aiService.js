@@ -885,26 +885,26 @@ ${normalizedImagePromptBasePrompt}`,
 		systemInstruction: systemInstructionParts.join("\n\n"),
 	});
 
-	// 1. Гнучка фільтрація сесій згідно з налаштованим контекстом
+	// 1. Flexible session filtering based on configured context.
 	const filteredSessions = (contextData?.sessions || [])
 		.map((s) => {
 			const sessionContext = { id: s.slug, slug: s.slug, name: s.name };
 			const conf = s.conf || {};
 			const data = s.data || {};
 
-			// Додаємо нотатки, якщо обрано
+			// Add notes when selected.
 			if (conf.included && conf.notes && data.notes) {
 				sessionContext.notes = data.notes
 					.map(noteToContextNote)
 					.filter(Boolean);
 			}
 
-			// Додаємо результат сесії, якщо обрано
+			// Add session result when selected.
 			if (conf.included && conf.result_text && data.result_text) {
 				sessionContext.result = data.result_text;
 			}
 
-			// Додаємо лише вибрані сцени та їх конкретні поля
+			// Add only selected scenes and their specific fields.
 			if (conf.included && data.scenes) {
 				const hasSceneConfig =
 					conf.scenes &&
@@ -941,7 +941,7 @@ ${normalizedImagePromptBasePrompt}`,
 							: defaultSceneConf;
 						const resultScene = { id: scene.id };
 
-						// Якщо обрано енкаунтер, шукаємо імена монстрів
+						// If an encounter is selected, look up monster names.
 						if (sceneConf.encounter && scene.encounterId) {
 							const encounter = (data.encounters || []).find(
 								(e) => e.id.toString() === scene.encounterId.toString(),
@@ -954,7 +954,7 @@ ${normalizedImagePromptBasePrompt}`,
 						}
 
 						sceneFields.forEach((field) => {
-							if (field === "encounter") return; // Вже оброблено вище
+							if (field === "encounter") return; // Already handled above.
 							if (field === "notes") {
 								if (sceneConf[field])
 									resultScene[field] = (scene.notes || [])
@@ -1001,9 +1001,9 @@ ${normalizedImagePromptBasePrompt}`,
 
 			return sessionContext;
 		})
-		.filter((s) => s.notes || s.result || s.scenes || s.npcs || s.locations); // Прибираємо сесії без контенту
+		.filter((s) => s.notes || s.result || s.scenes || s.npcs || s.locations); // Remove sessions without content.
 
-	// 2. Формуємо фінальний JSON контексту для Gemini
+	// 2. Build final JSON context for Gemini.
 	const contextJson = {};
 	if (campaign) {
 		contextJson.campaign = {
@@ -1105,7 +1105,7 @@ ${normalizedImagePromptBasePrompt}`,
 		contextJson.selectedSessions = filteredSessions;
 	}
 
-	// Додаємо дані про поточний бій, якщо ми в режимі Encounter
+	// Add current encounter data when in Encounter mode.
 	if (encounterId && session) {
 		const currentEnc = (session.data.encounters || []).find(
 			(e) => e.id.toString() === encounterId.toString(),
@@ -1128,7 +1128,7 @@ ${normalizedImagePromptBasePrompt}`,
 		userPrompt += `IMAGE TARGET (JSON):\n${JSON.stringify(imageTarget, null, 2)}\n\n`;
 	}
 
-	// Додаємо специфічні інструкції залежно від типу задачі
+	// Add task-specific instructions.
 	if (useKey === "image") {
 		if (imageTarget?.type) {
 			userPrompt += `TASK: Generate a detailed image prompt for the selected ${imageTarget.type} from IMAGE TARGET.\n`;
@@ -1191,7 +1191,7 @@ If selectedMonster exists and selectedMonsterMode is not "create-based", update 
 	const response = await result.response;
 	let text = response.text();
 
-	// Допоміжна функція для рекурсивного виправлення екранованих символів переносу (\\n -> \n)
+	// Helper for recursively fixing escaped line breaks (\\n -> \n).
 	const fixNewLines = (val) => {
 		if (typeof val === "string") return val.replace(/\\n/g, "\n");
 		if (Array.isArray(val)) return val.map(fixNewLines);
@@ -1208,15 +1208,15 @@ If selectedMonster exists and selectedMonsterMode is not "create-based", update 
 	}
 
 	try {
-		// Очищення тільки зовнішнього markdown fence, якщо він проскочив.
+		// Clean only the outer markdown fence if it slipped through.
 		const cleanJson = extractFirstJsonObject(text);
 
 		return fixNewLines(JSON.parse(cleanJson));
 	} catch (e) {
 		console.error("Failed to parse AI response as JSON:", text, e);
-		// Якщо парсинг не вдався, повертаємо структуровану помилку
+		// If parsing failed, return a structured error.
 		return {
-			error: "AI повернув некоректний JSON. Спробуйте ще раз.",
+			error: "AI returned invalid JSON. Try again.",
 			raw_response: text.replace(/\\n/g, "\n"),
 		};
 	}

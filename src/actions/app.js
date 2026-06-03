@@ -1,3 +1,5 @@
+import { lang } from "../services/localization";
+
 export const OPEN_MODAL = "modal/open";
 export const CLOSE_MODAL = "modal/close";
 export const REFRESH_ENTITIES = "entities/refresh";
@@ -292,7 +294,9 @@ export function dispatchConfirm(dispatch, payload) {
 }
 
 export function alertModal(dispatch, title, message, status = null) {
-	const fullMessage = status ? `[Статус: ${status}] ${message}` : message;
+	const fullMessage = status
+		? `[${lang.t("Status")}: ${status}] ${message}`
+		: message;
 	return dispatch(alert({ title, message: fullMessage }));
 }
 
@@ -305,6 +309,8 @@ export function promptModal(dispatch, title, message, defaultValue = "") {
 }
 
 export function confirmModal(dispatch, title, message, status = null) {
-	const fullMessage = status ? `[Статус: ${status}] ${message}` : message;
+	const fullMessage = status
+		? `[${lang.t("Status")}: ${status}] ${message}`
+		: message;
 	return dispatch(confirm({ title, message: fullMessage }));
 }

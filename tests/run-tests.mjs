@@ -1066,8 +1066,13 @@ await run("SpellCardModel formats spell labels", () => {
 	};
 	const model = new SpellCardModel(spell, {
 		language: "uk",
-		translate: (value) =>
-			value === "Evocation" ? "Evocation (Втілення)" : value,
+		translate: (value, variables = {}) => {
+			if (value === "Evocation") return "Evocation (Втілення)";
+			if (value === "Spell level {level}") return `${variables.level}-й рівень`;
+			if (value === "ft.") return "фт.";
+			if (value === "Instantaneous") return "Миттєво";
+			return value;
+		},
 	});
 	const englishModel = new SpellCardModel(spell, { language: "en" });
 	assert.equal(model.displayName, "Magic Missile");

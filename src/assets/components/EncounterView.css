@@ -215,10 +215,10 @@
 	font-weight: 700;
 	transition: border-color 0.2s;
 	appearance: textfield;
-	/* Приховуємо стрілки у Firefox */
+	/* Hide arrows in Firefox. */
 }
 
-/* Приховуємо стандартні стрілки для Chrome, Safari, Edge та Opera */
+/* Hide default arrows for Chrome, Safari, Edge, and Opera. */
 .EncounterMonsterRow__hpInput::-webkit-outer-spin-button,
 .EncounterMonsterRow__hpInput::-webkit-inner-spin-button,
 .EncounterMonsterRow__maxHpInput::-webkit-outer-spin-button,

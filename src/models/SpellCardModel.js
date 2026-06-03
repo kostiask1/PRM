@@ -10,6 +10,14 @@
 	V: "Evocation",
 };
 
+function formatTemplate(template, variables = {}) {
+	return String(template || "").replace(/\{([a-zA-Z0-9_]+)\}/g, (match, key) =>
+		Object.prototype.hasOwnProperty.call(variables, key)
+			? String(variables[key])
+			: match,
+	);
+}
+
 /**
  * @typedef {Object} SpellTime
  * @property {number} number
@@ -59,23 +67,23 @@
  */
 
 export const SPELL_FIELD_SCHEMA = {
-	name: { type: "string", required: true, values: "Назва або назва|джерело" },
+	name: { type: "string", required: true, values: "Name or name|source" },
 	source: { type: "string", required: true, values: "PHB, XPHB, ..." },
-	classes: { type: "string[]", values: "Класи, які мають доступ до закляття" },
+	classes: { type: "string[]", values: "Classes that can access the spell" },
 	level: { type: "number", required: true, values: "0..9" },
 	school: { type: "string", required: true, values: "A/C/D/E/I/N/T/P/V" },
 	time: { type: "array", values: "[{ number, unit, condition? }]" },
 	range: { type: "object", values: "{ type, distance? }" },
 	components: {
 		type: "object",
-		values: "V/S/M; M може бути string або object",
+		values: "V/S/M; M can be a string or object",
 	},
 	duration: {
 		type: "array",
 		values: "instant/timed/permanent + concentration",
 	},
-	entries: { type: "array", values: "Основний опис закляття" },
-	entriesHigherLevel: { type: "array", values: "Опис на вищих рівнях" },
+	entries: { type: "array", values: "Main spell description" },
+	entriesHigherLevel: { type: "array", values: "Higher-level description" },
 };
 
 export default class SpellCardModel {
@@ -84,7 +92,9 @@ export default class SpellCardModel {
 		this.spell = spell;
 		this.language = String(options.language || "uk").toLowerCase();
 		this.translate =
-			typeof options.translate === "function" ? options.translate : (value) => value;
+			typeof options.translate === "function"
+				? options.translate
+				: formatTemplate;
 	}
 
 	static get schema() {
@@ -101,8 +111,8 @@ export default class SpellCardModel {
 
 	get levelLabel() {
 		return this.spell.level === 0
-			? "Замовляння"
-			: `${this.spell.level}-й рівень`;
+			? this.translate("Cantrip")
+			: this.translate("Spell level {level}", { level: this.spell.level });
 	}
 
 	get schoolLabel() {
@@ -129,7 +139,7 @@ export default class SpellCardModel {
 		const distance = this.spell.range.distance;
 		if (!distance) return this.spell.range.type;
 
-		const unit = distance.type === "feet" ? "фт." : distance.type;
+		const unit = distance.type === "feet" ? this.translate("ft.") : distance.type;
 		return `${distance.amount || ""} ${unit} (${this.spell.range.type})`;
 	}
 
@@ -152,11 +162,15 @@ export default class SpellCardModel {
 		if (!this.spell.duration) return "-";
 		return this.spell.duration
 			.map((entry) => {
-				let value = entry.type === "instant" ? "Миттєво" : "";
+				let value = entry.type === "instant" ? this.translate("Instantaneous") : "";
 				if (entry.type === "timed" && entry.duration) {
 					value = `${entry.duration.amount} ${entry.duration.type}`;
 				}
-				if (entry.concentration) return `Концентрація, до ${value}`;
+				if (entry.concentration) {
+					return this.translate("Concentration, up to {duration}", {
+						duration: value,
+					});
+				}
 				return value;
 			})
 			.join(", ");

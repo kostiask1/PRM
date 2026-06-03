@@ -1,4 +1,4 @@
-require("dotenv").config({
+﻿require("dotenv").config({
 	path: require("path").join(__dirname, "..", ".env"),
 });
 
@@ -53,13 +53,13 @@ app.get("*", async (req, res, next) => {
 
 app.use((err, _req, res, _next) => {
 	let status = err.status || 500;
-	let message = err.message || "Внутрішня помилка сервера.";
+	let message = err.message || "Internal server error.";
 	if (err.code === "ENOENT") {
 		status = 404;
-		message = "Ресурс не знайдено (файл або папка відсутні).";
+		message = "Resource not found (file or folder is missing).";
 	} else if (err.code === "EACCES") {
 		status = 403;
-		message = "Доступ заборонено. Перевірте права доступу до папки data.";
+		message = "Access denied. Check permissions for the data folder.";
 	}
 	res.status(status).json({
 		error: message,

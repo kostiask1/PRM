@@ -660,12 +660,12 @@ router.post("/api-key", async (req, res, next) => {
 		if (!apiKey) {
 			return res
 				.status(400)
-				.json({ error: "GEMINI_API_KEY не може бути порожнім." });
+				.json({ error: "GEMINI_API_KEY cannot be empty." });
 		}
 		if (/[\r\n]/.test(apiKey)) {
 			return res
 				.status(400)
-				.json({ error: "GEMINI_API_KEY має бути одним рядком." });
+				.json({ error: "GEMINI_API_KEY must be a single line." });
 		}
 
 		let envText = "";
@@ -720,7 +720,7 @@ router.post("/generate", async (req, res, next) => {
 			return res.status(400).json({ error: "language is required." });
 		}
 		if (!process.env.GEMINI_API_KEY) {
-			return res.status(500).json({ error: "GEMINI_API_KEY не налаштовано." });
+			return res.status(500).json({ error: "GEMINI_API_KEY is not configured." });
 		}
 		const requestedEncounterGeneration = Boolean(generateEncounters);
 		const shouldParseAIResponse =

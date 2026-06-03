@@ -1,4 +1,4 @@
-import {
+﻿import {
 	Children,
 	cloneElement,
 	createElement,
@@ -251,7 +251,6 @@ function stripGeneratedMonsterEditPrompt(text) {
 	const creatureLabels = [
 		`${lang.t("Current encounter creature")}:`,
 		"Current encounter creature:",
-		"Поточна істота в бою:",
 	];
 	const labelIndex = creatureLabels.reduce((foundIndex, label) => {
 		if (foundIndex !== -1) return foundIndex;
@@ -1625,8 +1624,8 @@ export default function AiAssistantPanel() {
 		setLoading(true);
 		setError("");
 
-		// Створюємо чисту копію конфігурації без важких даних сесій (data)
-		// Сервер сам завантажить необхідні файли за потребою
+		// Create a clean config copy without heavy session data.
+		// The server loads required files when needed.
 		const configToSend = JSON.parse(JSON.stringify(contextConfig));
 		if (configToSend.sessions) {
 			Object.keys(configToSend.sessions).forEach((slug) => {
@@ -1711,7 +1710,7 @@ export default function AiAssistantPanel() {
 				alert({
 					title: lang.t("AI error"),
 					message: err.status
-						? `[Статус: ${err.status}] ${err.message}`
+						? `[${lang.t("Status")}: ${err.status}] ${err.message}`
 						: err.message,
 				}),
 			);
@@ -1775,7 +1774,7 @@ export default function AiAssistantPanel() {
 				alert({
 					title: lang.t("AI error"),
 					message: err.status
-						? `[Статус: ${err.status}] ${err.message}`
+						? `[${lang.t("Status")}: ${err.status}] ${err.message}`
 						: err.message,
 				}),
 			);

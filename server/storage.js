@@ -1370,7 +1370,7 @@ function normalizeImportedAiResponse(entry, sourceSlug, slug) {
 
 async function importCampaignBundle(bundle, options = {}) {
 	const { meta, sessions = [], entities = {}, aiResponses = [] } = bundle;
-	if (!meta || !meta.name) throw new Error("Невірний формат бандла");
+	if (!meta || !meta.name) throw new Error("Invalid bundle format.");
 	const sourceSlug = meta.slug || campaignSlug(meta.name);
 	const forcedSlug = options.forcedSlug
 		? path.basename(options.forcedSlug)
@@ -1554,7 +1554,7 @@ async function exportCampaignPartialArchiveBundle(slug, sections = []) {
 async function importCampaignPartialArchiveBundle(targetSlug, archiveBundle) {
 	const target = path.basename(String(targetSlug || ""));
 	if (!target || !(await exists(campaignMetaPath(target)))) {
-		throw new Error("Кампанію для імпорту не знайдено.");
+		throw new Error("Campaign for import was not found.");
 	}
 
 	const sections = normalizePartialArchiveSections(
@@ -1680,7 +1680,7 @@ function makeDefaultSessionData(name) {
 }
 
 async function listImages(slug, category, subcategory = "") {
-	const sub = subcategory || ""; // Захист від null/undefined
+	const sub = subcategory || ""; // Guard against null/undefined.
 	const dir = campaignImagesDir(slug, category, sub);
 	if (!(await exists(dir))) return [];
 	const entries = await fs.readdir(dir, { withFileTypes: true });
@@ -1762,7 +1762,7 @@ async function updateAllImageReferences(moveResults) {
 
 	const campaigns = await listCampaignSlugs();
 	for (const slug of campaigns) {
-		// 1. Оновлення мети кампанії
+		// 1. Update campaign metadata.
 		const metaPath = campaignMetaPath(slug);
 		if (await exists(metaPath)) {
 			let meta = await readJson(metaPath);
@@ -1776,7 +1776,7 @@ async function updateAllImageReferences(moveResults) {
 			if (changed) await writeJson(metaPath, meta);
 		}
 
-		// 2. Оновлення персонажів, NPC та локацій
+		// 2. Update characters, NPCs, and locations.
 		for (const type of ENTITY_TYPES) {
 			const entities = await listEntities(slug, type);
 			for (const entity of entities) {
@@ -1793,7 +1793,7 @@ async function updateAllImageReferences(moveResults) {
 			}
 		}
 
-		// 3. Оновлення сесій (тексти сцен, опис)
+		// 3. Update sessions (scene texts and description).
 		const sessions = await listSessions(slug);
 		for (const s of sessions) {
 			const sPath = sessionPath(slug, s.fileName);
@@ -1831,7 +1831,7 @@ async function moveImages(items, src, dest) {
 		if (await exists(oldPath)) {
 			const isDir = (await fs.stat(oldPath)).isDirectory();
 
-			// Збираємо список файлів для оновлення посилань
+			// Collect files for reference updates.
 			const filesToTrack = [];
 			if (isDir) {
 				const walk = async (dir, sub = "") => {
@@ -1884,9 +1884,9 @@ async function renameImage(slug, category, subcategory, oldName, newName) {
 	const newPath = path.join(dir, newName);
 
 	if (!(await exists(oldPath)))
-		throw new Error(`Файл '${oldName}' не знайдено.`);
+		throw new Error("File was not found.");
 	if (oldPath !== newPath && (await exists(newPath)))
-		throw new Error(`Файл '${newName}' вже існує.`);
+		throw new Error("File already exists.");
 
 	await renameWithRetry(oldPath, newPath);
 
@@ -1944,10 +1944,10 @@ async function renameSubcategory(slug, category, oldName, newName) {
 	const newPath = path.join(root, newName);
 
 	if (!(await exists(oldPath))) {
-		throw new Error(`Підкатегорія '${oldName}' не знайдена.`);
+		throw new Error("Subcategory was not found.");
 	}
 	if (oldPath !== newPath && (await exists(newPath))) {
-		throw new Error(`Підкатегорія '${newName}' вже існує.`);
+		throw new Error("Subcategory already exists.");
 	}
 	await fs.rename(oldPath, newPath);
 }

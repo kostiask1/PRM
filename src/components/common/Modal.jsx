@@ -29,7 +29,9 @@ function createModalApi(setModalConfig) {
 	const close = () => setModalConfig(null);
 
 	const alert = (title, message, status = null) => {
-		const fullMessage = status ? `[Статус: ${status}] ${message}` : message;
+		const fullMessage = status
+			? `[${lang.t("Status")}: ${status}] ${message}`
+			: message;
 		return open({
 			title,
 			message: fullMessage,
@@ -47,7 +49,9 @@ function createModalApi(setModalConfig) {
 		});
 
 	const confirm = (title, message, status = null) => {
-		const fullMessage = status ? `[Статус: ${status}] ${message}` : message;
+		const fullMessage = status
+			? `[${lang.t("Status")}: ${status}] ${message}`
+			: message;
 		return open({ title, message: fullMessage, type: "confirm" });
 	};
 

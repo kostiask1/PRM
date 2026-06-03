@@ -144,7 +144,7 @@ router.post(
 	async (req, res, next) => {
 		try {
 			if (!req.file?.buffer) {
-				return res.status(400).json({ error: "Файл архіву не передано." });
+				return res.status(400).json({ error: "Archive file was not provided." });
 			}
 
 			const parsed = parseArchivePayload(req.file.buffer);
@@ -205,7 +205,7 @@ router.post(
 	async (req, res, next) => {
 		try {
 			if (!req.file?.buffer) {
-				return res.status(400).json({ error: "Файл архіву не передано." });
+				return res.status(400).json({ error: "Archive file was not provided." });
 			}
 
 			const mode = req.query.mode === "campaign" ? "campaign" : "all";

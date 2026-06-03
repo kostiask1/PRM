@@ -262,8 +262,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 		}
 	};
 
-	// Допоміжна функція для отримання текстового представлення типу монстра
-	// Завантаження списку доступних джерел (файлів)
+	// Load available source files.
 	useEffect(() => {
 		const loadInitialData = async () => {
 			try {
@@ -273,7 +272,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 					api.getBestiaryFavorites(),
 				]);
 				setSources(sourcesData);
-				setLegendaryGroups(legendaryData); // Зберігаємо дані легендарних груп
+				setLegendaryGroups(legendaryData); // Keep legendary group data.
 				setFavorites(favData);
 			} catch (err) {
 				console.error(
@@ -310,7 +309,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 		}
 	}, [syncEvent]);
 
-	// Завантаження повного списку монстрів один раз; джерела далі фільтруються локально
+	// Load the full monster list once; sources are filtered locally after that.
 	useEffect(() => {
 		if (sources.length === 0) return;
 
@@ -322,10 +321,10 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 					? data
 					: data.monster || data.monsters || data.results || [];
 
-				// Об'єднуємо дані монстрів з легендарними діями/регіональними ефектами
+				// Merge monsters with legendary actions and regional effects.
 
 				const enrichedMonsters = combinedList.map((monster) => {
-					// Шукаємо групу: або за спеціальним посиланням legendaryGroup, або за ім'ям самого монстра
+					// Find a group by explicit legendaryGroup reference or monster name.
 					const groupRef = monster.legendaryGroup;
 					const targetName = groupRef?.name || monster.name;
 					const targetSource = groupRef?.source || monster.source;
@@ -435,7 +434,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 		);
 	}, [isEmbedded, selectedSource, setUrlSearchParams, urlSelectedSource]);
 
-	// Локальна фільтрація списку за пошуковим запитом
+	// Local search filtering.
 	useEffect(() => {
 		const filtered = allMonsters.filter((m) => {
 			const isFav = favorites.some(
@@ -890,7 +889,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			const currentMonster = selectedMonsterRef.current;
 
 			if (!urlMonsterName) {
-				// Якщо нічого не вибрано в URL, але монстри завантажені — вибираємо першого
+				// If URL has no selection and monsters are loaded, select the first one.
 				if (
 					shouldAutoSelectMonsterRef.current &&
 					displayedMonsters.length > 0 &&
@@ -901,13 +900,13 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 				return;
 			}
 
-			// Якщо в URL той самий монстр, що вже вибраний - нічого не робимо
+			// If URL points to the current monster, do nothing.
 			if (monsterMatchesUrl(currentMonster, urlMonsterName, urlMonsterSource)) {
 				return;
 			}
 
-			// Шукаємо в поточному видимому списку для прокрутки; деталі можна
-			// показати й для монстра, який не підпадає під активний пошук.
+			// Search the visible list for scrolling; details can still be shown for
+			// a monster that does not match the active search.
 			const foundInList = displayedMonsters.findIndex((m) =>
 				monsterMatchesUrl(m, urlMonsterName, urlMonsterSource),
 			);
@@ -928,7 +927,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			}
 		};
 
-		// Ініціалізація при зміні списку всіх монстрів
+		// Initialize when the full monster list changes.
 		if (displayedMonsters.length > 0 || allMonsters.length > 0) {
 			syncSelectionFromUrl();
 		}

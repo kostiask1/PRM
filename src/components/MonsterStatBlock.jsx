@@ -435,7 +435,7 @@ export default function MonsterStatBlock({
 		);
 	};
 
-	// Допоміжні функції для парсингу нових структур даних
+	// Helpers for parsing newer data structures.
 
 	const isCustomMonster =
 		String(monster.source || "").toUpperCase() === "CUSTOM";
@@ -477,7 +477,7 @@ export default function MonsterStatBlock({
 		if (!externalSrc) return;
 		e.dataTransfer.effectAllowed = "copy";
 
-		// Найчастіше корисні типи для веб-дропзон
+		// Commonly useful types for web drop zones.
 		e.dataTransfer.setData("text/uri-list", externalSrc);
 		e.dataTransfer.setData("text/plain", externalSrc);
 		e.dataTransfer.setData(
@@ -485,8 +485,8 @@ export default function MonsterStatBlock({
 			`<img src="${externalSrc}" alt="${monster.name}">`,
 		);
 
-		// Не обов'язково, але іноді допомагає стороннім дропзонам
-		// Формат: mimeType:filename:url
+		// Optional, but sometimes useful for third-party drop zones.
+		// Format: mimeType:filename:url
 		e.dataTransfer.setData(
 			"DownloadURL",
 			`image/webp:${effectiveName}.webp:${externalSrc}`,

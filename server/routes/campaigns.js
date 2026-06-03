@@ -4,7 +4,7 @@ const storage = require("../storage");
 
 function validateEntityType(type, res) {
 	if (storage.ENTITY_TYPES.includes(type)) return true;
-	res.status(400).json({ error: "Невідомий тип сутності." });
+	res.status(400).json({ error: "Unknown entity type." });
 	return false;
 }
 
@@ -30,7 +30,7 @@ router.post("/", async (req, res, next) => {
 	try {
 		const name = storage.sanitizeName(req.body?.name);
 		if (!name)
-			return res.status(400).json({ error: "Назва кампанії обов’язкова." });
+			return res.status(400).json({ error: "Campaign name is required." });
 		const slug = await storage.ensureUniqueCampaignSlug(
 			storage.campaignSlug(name),
 		);
@@ -66,7 +66,7 @@ router.patch("/:slug", async (req, res, next) => {
 	try {
 		const oldSlug = req.params.slug;
 		if (!(await storage.exists(storage.campaignMetaPath(oldSlug)))) {
-			return res.status(404).json({ error: "Кампанію не знайдено." });
+			return res.status(404).json({ error: "Campaign not found." });
 		}
 		const current = await storage.readCampaign(oldSlug);
 		const nextName = req.body?.name
@@ -75,7 +75,7 @@ router.patch("/:slug", async (req, res, next) => {
 		if (!nextName)
 			return res
 				.status(400)
-				.json({ error: "Назва кампанії не може бути порожньою." });
+				.json({ error: "Campaign name cannot be empty." });
 
 		const nextSlug = await storage.ensureUniqueCampaignSlug(
 			storage.campaignSlug(nextName),
@@ -105,7 +105,7 @@ router.delete("/:slug", async (req, res, next) => {
 		const slug = req.params.slug;
 		const dir = storage.campaignDir(slug);
 		if (!(await storage.exists(dir)))
-			return res.status(404).json({ error: "Кампанію не знайдено." });
+			return res.status(404).json({ error: "Campaign not found." });
 		await storage.deleteCampaignData(slug, {
 			moveImagesToGeneral: Boolean(req.body?.moveImagesToGeneral),
 		});
@@ -153,7 +153,7 @@ router.post("/:slug/entities/:type", async (req, res, next) => {
 			isLocation ? req.body.name : req.body.firstName || req.body.name,
 		);
 		if (!name) {
-			return res.status(400).json({ error: "Назва обов'язкова." });
+			return res.status(400).json({ error: "Name is required." });
 		}
 		const baseSlug = storage.campaignSlug(name);
 		const entitySlug = await storage.ensureUniqueEntitySlug(

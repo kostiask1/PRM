@@ -1331,7 +1331,7 @@ async function applyEncounterOperation(state, operation) {
 	if (normalizedOp === "create") {
 		const clientId = asText(operation.clientId);
 		const rawData = operationData(operation);
-		const fallbackName = `Бій ${encounters.length + 1}`;
+		const fallbackName = `Encounter ${encounters.length + 1}`;
 		const encounterName = asText(rawData.name) || fallbackName;
 		if (!clientId) {
 			warnings.push(
@@ -1376,7 +1376,7 @@ async function applyEncounterOperation(state, operation) {
 					: existing.monsters || [],
 			},
 			bestiaryIndex,
-			existing.name || "Бій",
+			existing.name || "Encounter",
 		);
 		existing.name = normalized.name;
 		existing.monsters = normalized.monsters;

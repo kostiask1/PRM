@@ -6,8 +6,8 @@ import classNames from "../../utils/classNames";
 import { lang } from "../../services/localization";
 
 /**
- * Універсальний компонент для копіювання тексту в буфер обміну.
- * Інкапсулює в собі логіку копіювання та показ сповіщення.
+ * Generic component for copying text to the clipboard.
+ * Encapsulates copy logic and notification display.
  */
 export default function ClickToCopy({
 	text,

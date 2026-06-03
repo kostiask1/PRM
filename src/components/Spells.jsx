@@ -124,7 +124,7 @@ export default function Spells({
 		[allSpells],
 	);
 
-	// Завантаження списку доступних джерел
+	// Load available source list.
 	useEffect(() => {
 		if (isEmbedded) return;
 		const loadSources = async () => {
@@ -168,7 +168,7 @@ export default function Spells({
 		);
 	}, [isEmbedded, urlSelectedSource]);
 
-	// Завантаження всіх заклинань один раз; джерела далі фільтруються локально
+	// Load all spells once; sources are filtered locally after that.
 	useEffect(() => {
 		if (sources.length === 0) return;
 
@@ -204,7 +204,7 @@ export default function Spells({
 		urlSelectedSource,
 	]);
 
-	// Фільтрація
+	// Filtering
 	useEffect(() => {
 		const filtered = allSpells.filter((s) => {
 			const matchesSource =
@@ -241,7 +241,7 @@ export default function Spells({
 		isDetailedSearch,
 	]);
 
-	// початковий вибір
+	// Initial selection
 	useEffect(() => {
 		if (isEmbedded) {
 			if (displayedSpells.length > 0 && !selectedSpellRef.current?.name) {

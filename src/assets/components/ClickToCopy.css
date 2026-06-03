@@ -1,7 +1,7 @@
 .ClickToCopy {
 	cursor: pointer;
 	display: contents;
-	/* Щоб не ламати верстку обгорткою */
+	/* Avoid breaking layout with a wrapper. */
 }
 
 .ClickToCopy:hover {

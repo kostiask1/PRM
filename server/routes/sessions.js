@@ -41,7 +41,7 @@ router.get("/:fileName", async (req, res, next) => {
 	try {
 		const fullPath = storage.sessionPath(req.campaignSlug, req.params.fileName);
 		if (!(await storage.exists(fullPath)))
-			return res.status(404).json({ error: "Сесію не знайдено." });
+			return res.status(404).json({ error: "Session not found." });
 		const session = await storage.readJson(fullPath);
 		res.json({ ...session, fileName: req.params.fileName });
 	} catch (error) {
@@ -55,14 +55,14 @@ router.patch("/:fileName", async (req, res, next) => {
 		const { fileName } = req.params;
 		const fullPath = storage.sessionPath(slug, fileName);
 		if (!(await storage.exists(fullPath)))
-			return res.status(404).json({ error: "Сесію не знайдено." });
+			return res.status(404).json({ error: "Session not found." });
 
 		const current = await storage.readJson(fullPath);
 		const nextName = req.body?.name
 			? storage.sanitizeName(req.body.name)
 			: current.name;
 		if (!nextName)
-			return res.status(400).json({ error: "Назва не може бути порожньою." });
+			return res.status(400).json({ error: "Name cannot be empty." });
 
 		const nextFileName = await storage.ensureUniqueSessionFile(
 			slug,
@@ -94,7 +94,7 @@ router.delete("/:fileName", async (req, res, next) => {
 	try {
 		const fullPath = storage.sessionPath(req.campaignSlug, req.params.fileName);
 		if (!(await storage.exists(fullPath)))
-			return res.status(404).json({ error: "Сесію не знайдено." });
+			return res.status(404).json({ error: "Session not found." });
 		await require("fs/promises").rm(fullPath, { force: true });
 		res.status(204).send();
 	} catch (error) {

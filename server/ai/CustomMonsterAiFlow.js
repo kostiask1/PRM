@@ -46,7 +46,7 @@ class CustomMonsterAiFlow {
 			return {
 				status: 400,
 				body: {
-					error: "AI не повернув жодної коректної істоти.",
+					error: "AI did not return any valid creature.",
 					generated: generatedContent,
 					aiResponse,
 				},

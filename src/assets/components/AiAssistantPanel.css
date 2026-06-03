@@ -1,4 +1,4 @@
-/* Збільшуємо ширину модального вікна саме для AI Assistant */
+/* Increase modal width specifically for AI Assistant. */
 .Modal__card.AiAssistant__main_modal {
 	max-width: 1180px;
 	width: 96vw;
@@ -95,7 +95,7 @@
 	background: var(--panel-2);
 	transition: all 0.2s ease;
 	height: 38px;
-	/* Фіксована висота для вирівнювання з іншими кнопками */
+	/* Fixed height for alignment with other buttons. */
 }
 
 .AiAssistant__context_toggle:hover {

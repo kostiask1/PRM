@@ -2,13 +2,13 @@ import "../../assets/components/ListCard.css";
 import classNames from "../../utils/classNames";
 
 export default function ListCard({
-	children, // Основний контент картки (назва, мета)
-	actions, // Елементи дій праворуч (бейдж статусу, кнопки)
+	children, // Main card content (title, meta)
+	actions, // Right-side actions (status badge, buttons)
 	active = false,
 	onClick,
 	href,
 	className = "",
-	...dragProps // Пропси для drag-and-drop (draggable, onDragStart, etc.)
+	...dragProps // Drag-and-drop props (draggable, onDragStart, etc.)
 }) {
 	const combinedClassName = classNames("ListCard", className, {
 		ListCard__active: active,

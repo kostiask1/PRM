@@ -9,7 +9,7 @@ const DRAGGING_BODY_CLASS = "prm_draggable_list_dragging";
 let nextListId = 1;
 
 /**
- * Універсальний компонент для сортування списків перетягуванням.
+ * Generic component for drag-and-drop list sorting.
  */
 export default function DraggableList({
 	items = [],
