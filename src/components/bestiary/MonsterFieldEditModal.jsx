@@ -640,6 +640,7 @@ export default function MonsterFieldEditModal({
 					title={lang.t("Rules Reference")}
 					onCancel={() => setRuleInsertTarget(null)}
 					showFooter={false}
+					type="custom"
 					className="MonsterFieldEditModal__rules_modal"
 					overlayClassName="MonsterFieldEditModal__rules_overlay"
 				>

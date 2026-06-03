@@ -7,6 +7,7 @@ import "../../assets/components/RulesReferenceModalContent.css";
 import ListCard from "../common/ListCard.jsx";
 import Button from "../form/Button.jsx";
 import Input from "../form/Input";
+import Spells from "../Spells.jsx";
 import { renderRecursiveContent } from "../../renderers/contentRenderer.jsx";
 import { lang } from "../../services/localization";
 import { useAppDispatch } from "../../store/appStore";
@@ -458,26 +459,40 @@ export default function RulesReferenceModalContent({
 		setSelectedByTab((current) => ({ ...current, [activeTab.id]: name }));
 	};
 
+	const selectSpellReference = (spell) => {
+		if (!spell?.name || !onSelectReference) return;
+		onSelectReference({
+			tabId: "spells",
+			item: spell,
+			name: spell.name,
+			tag: getReferenceInlineTag("spells", spell),
+		});
+	};
+
+	const insertReference = (tabId, item) => {
+		if (!item?.name || !onSelectReference) return;
+		onSelectReference({
+			tabId,
+			item,
+			name: item.name,
+			tag: getReferenceInlineTag(tabId, item),
+		});
+	};
+
 	const renderReferenceItem = (index) => {
 		const item = filteredItems[index];
 		if (!item) return null;
 		const meta = activeTab.meta?.(item);
 		const isActive = activeSelectedName === item.name;
 		const handleClick = () => {
-			if (onSelectReference) {
-				onSelectReference({
-					tabId: activeTab.id,
-					item,
-					name: item.name,
-					tag: getReferenceInlineTag(activeTab.id, item),
-				});
-				return;
-			}
 			selectItem(item.name);
 		};
 
 		return (
-			<div key={getReferenceItemKey(activeTab.id, item)}>
+			<div
+				key={getReferenceItemKey(activeTab.id, item)}
+				onDoubleClick={() => insertReference(activeTab.id, item)}
+			>
 				<ListCard onClick={handleClick} active={isActive}>
 					<div className="ListCard__title">
 						{highlightText(item.name, query)}
@@ -553,52 +568,81 @@ export default function RulesReferenceModalContent({
 				))}
 			</div>
 
-			<div className="RulesReferenceModalContent__main">
-				<div className="RulesReferenceModalContent__sidebar">
-					<div className="RulesReferenceModalContent__list">
-						{isLoading ? (
-							<p className="muted">{lang.t("Loading...")}</p>
-						) : filteredItems.length ? (
-							<ReactList
-								key={`${activeTab.id}:${normalizedQuery}:${isDetailedSearch ? "detailed" : "simple"}`}
-								ref={listRef}
-								itemRenderer={renderReferenceItem}
-								length={filteredItems.length}
-								type="uniform"
-							/>
-						) : (
-							<p className="muted">{lang.t(activeTab.emptyLabel)}</p>
+			{activeTab.id === "spells" ? (
+				<div className="RulesReferenceModalContent__spellBrowser">
+					<Spells
+						isEmbedded
+						hideSearchInput
+						initialSearch={query}
+						initialDetailedSearch={isDetailedSearch}
+						onSelectSpell={onSelectReference ? selectSpellReference : null}
+						renderOptions={{
+							onRuleNavigate: navigateToReference,
+							openSpellInNestedModal: false,
+						}}
+					/>
+				</div>
+			) : (
+				<div className="RulesReferenceModalContent__main">
+					<div className="RulesReferenceModalContent__sidebar">
+						<div className="RulesReferenceModalContent__list">
+							{isLoading ? (
+								<p className="muted">{lang.t("Loading...")}</p>
+							) : filteredItems.length ? (
+								<ReactList
+									key={`${activeTab.id}:${normalizedQuery}:${isDetailedSearch ? "detailed" : "simple"}`}
+									ref={listRef}
+									itemRenderer={renderReferenceItem}
+									length={filteredItems.length}
+									type="uniform"
+								/>
+							) : (
+								<p className="muted">{lang.t(activeTab.emptyLabel)}</p>
+							)}
+						</div>
+					</div>
+
+					<div className="RulesReferenceModalContent__content">
+						{selectedItem && (
+							<>
+								<div className="RulesReferenceModalContent__contentHeader">
+									<h3 className="RulesReferenceModalContent__title">
+										{highlightText(selectedItem.name, query)}
+									</h3>
+									{selectedMeta && (
+										<div className="muted">
+											{highlightText(selectedMeta, query)}
+										</div>
+									)}
+									{onSelectReference && (
+										<div className="RulesReferenceModalContent__contentActions">
+											<Button
+												variant="primary"
+												icon="plus"
+												onClick={() =>
+													insertReference(activeTab.id, selectedItem)
+												}
+											>
+												{lang.t("Insert")}
+											</Button>
+										</div>
+									)}
+								</div>
+
+								<div
+									key={getReferenceItemKey(activeTab.id, selectedItem)}
+									className="RulesReferenceModalContent__entryContent"
+								>
+									{renderRecursiveContent(selectedItem.entries, query, {
+										onRuleNavigate: navigateToReference,
+										openSpellInNestedModal: true,
+									})}
+									</div>
+							</>
 						)}
 					</div>
 				</div>
-
-				<div className="RulesReferenceModalContent__content">
-					{selectedItem && (
-						<>
-							<div className="RulesReferenceModalContent__contentHeader">
-								<h3 className="RulesReferenceModalContent__title">
-									{highlightText(selectedItem.name, query)}
-								</h3>
-								{selectedMeta && (
-									<div className="muted">
-										{highlightText(selectedMeta, query)}
-									</div>
-								)}
-							</div>
-
-							<div
-								key={getReferenceItemKey(activeTab.id, selectedItem)}
-								className="RulesReferenceModalContent__entryContent"
-							>
-								{renderRecursiveContent(selectedItem.entries, query, {
-									onRuleNavigate: navigateToReference,
-									openSpellInNestedModal: true,
-								})}
-							</div>
-						</>
-					)}
-				</div>
-			</div>
+			)}
 		</div>
 	);
 }

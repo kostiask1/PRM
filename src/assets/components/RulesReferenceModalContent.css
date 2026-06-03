@@ -86,6 +86,11 @@
 	flex: 1;
 }
 
+.RulesReferenceModalContent__spellBrowser {
+	min-height: 0;
+	flex: 1;
+}
+
 .RulesReferenceModalContent__sidebar {
 	display: flex;
 	flex-direction: column;
@@ -116,6 +121,7 @@
 }
 
 .RulesReferenceModalContent__content {
+	position: relative;
 	min-width: 0;
 	border: 1px solid color-mix(in srgb, var(--border), transparent 30%);
 	border-radius: var(--radius-2xl);
@@ -128,6 +134,15 @@
 	padding-bottom: var(--space-3);
 	margin-bottom: var(--space-3);
 	border-bottom: 1px solid color-mix(in srgb, var(--border), transparent 45%);
+}
+
+.RulesReferenceModalContent__contentActions {
+	position: absolute;
+	top: var(--space-3);
+	right: var(--space-3);
+	display: flex;
+	justify-content: flex-end;
+	margin-top: var(--space-2);
 }
 
 .RulesReferenceModalContent__title {

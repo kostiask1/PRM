@@ -41,7 +41,14 @@ function getSpellItemKey(spell) {
 	return `${spell.source || ""}:${spell.name}`;
 }
 
-export default function Spells() {
+export default function Spells({
+	isEmbedded = false,
+	onSelectSpell = null,
+	initialSearch = "",
+	initialDetailedSearch = false,
+	hideSearchInput = false,
+	renderOptions = {},
+}) {
 	const useSearchDebounce = useAppSelector(
 		(state) => state.ui.useSearchDebounce !== false,
 	);
@@ -52,9 +59,9 @@ export default function Spells() {
 	const [selectedLevel, setSelectedLevel] = useState("all");
 	const [selectedClass, setSelectedClass] = useState("all");
 	const [selectedSchool, setSelectedSchool] = useState("all");
-	const [search, setSearch] = useState("");
+	const [search, setSearch] = useState(initialSearch);
 	const debouncedSearch = useDebounce(search, useSearchDebounce ? 250 : 0);
-	const [isDetailedSearch, setIsDetailedSearch] = useState(false);
+	const [isDetailedSearch, setIsDetailedSearch] = useState(initialDetailedSearch);
 	const [loading, setLoading] = useState(false);
 	const [selectedSpell, setSelectedSpell] = useState(null);
 	const [sortOrder, setSortOrder] = useState("none"); // 'none', 'asc', 'desc'
@@ -100,6 +107,7 @@ export default function Spells() {
 
 	// Завантаження списку доступних джерел
 	useEffect(() => {
+		if (isEmbedded) return;
 		const loadSources = async () => {
 			try {
 				const data = await api.getSpellSources();
@@ -112,7 +120,30 @@ export default function Spells() {
 			}
 		};
 		loadSources();
-	}, []);
+	}, [isEmbedded]);
+
+	useEffect(() => {
+		if (!isEmbedded) return;
+		const loadSources = async () => {
+			try {
+				const data = await api.getSpellSources();
+				setSources(data);
+			} catch (err) {
+				console.error("Failed to load spell sources", err);
+			}
+		};
+		loadSources();
+	}, [isEmbedded]);
+
+	useEffect(() => {
+		if (!isEmbedded) return;
+		setSearch(initialSearch);
+	}, [initialSearch, isEmbedded]);
+
+	useEffect(() => {
+		if (!isEmbedded) return;
+		setIsDetailedSearch(Boolean(initialDetailedSearch));
+	}, [initialDetailedSearch, isEmbedded]);
 
 	// Завантаження всіх заклинань один раз; джерела далі фільтруються локально
 	useEffect(() => {
@@ -133,10 +164,11 @@ export default function Spells() {
 	}, [sources]);
 
 	useEffect(() => {
+		if (isEmbedded) return;
 		const params = new URLSearchParams(window.location.search);
 		params.set("s_source", selectedSource);
 		window.history.replaceState({}, "", `?${params.toString()}`);
-	}, [selectedSource]);
+	}, [isEmbedded, selectedSource]);
 
 	// Фільтрація
 	useEffect(() => {
@@ -177,6 +209,13 @@ export default function Spells() {
 
 	// початковий вибір
 	useEffect(() => {
+		if (isEmbedded) {
+			if (displayedSpells.length > 0 && !selectedSpell?.name) {
+				setSelectedSpell(displayedSpells[0]);
+			}
+			return undefined;
+		}
+
 		const syncSelectionFromUrl = () => {
 			const params = new URLSearchParams(window.location.search);
 			const urlSpellName = params.get("spell");
@@ -215,9 +254,10 @@ export default function Spells() {
 
 		window.addEventListener("popstate", syncSelectionFromUrl);
 		return () => window.removeEventListener("popstate", syncSelectionFromUrl);
-	}, [allSpells, displayedSpells]);
+	}, [allSpells, displayedSpells, isEmbedded, selectedSpell?.name]);
 
 	useEffect(() => {
+		if (isEmbedded) return;
 		if (selectedSpell?.name) {
 			const params = new URLSearchParams(window.location.search);
 			let changed = false;
@@ -234,7 +274,7 @@ export default function Spells() {
 
 			window.history.pushState({}, "", `?${params.toString()}`);
 		}
-	}, [selectedSpell]);
+	}, [isEmbedded, selectedSpell]);
 
 	const toggleSort = () => {
 		setSortOrder((prev) =>
@@ -244,13 +284,17 @@ export default function Spells() {
 
 	const renderSpellItem = (index) => {
 		const spell = displayedSpells[index];
+		if (!spell) return null;
 		const schoolName = SCHOOL_MAP[spell.school];
 		const isSelected =
 			selectedSpell?.name === spell.name &&
 			selectedSpell?.source === spell.source;
 
 		return (
-			<div key={getSpellItemKey(spell)}>
+			<div
+				key={getSpellItemKey(spell)}
+				onDoubleClick={() => onSelectSpell?.(spell)}
+			>
 				<ListCard
 					active={isSelected}
 					onClick={() => setSelectedSpell(isSelected ? "" : spell)}
@@ -283,12 +327,8 @@ export default function Spells() {
 		);
 	};
 
-	return (
-		<Panel className="Spells">
-			<div className="Panel__header">
-				<h2>{lang.t("Spells")}</h2>
-			</div>
-			<div className="Panel__body Spells__body">
+	const content = (
+		<>
 				<div className="Spells__search">
 					{sources.length > 0 && (
 						<Select
@@ -350,20 +390,22 @@ export default function Spells() {
 							LVL <Icon name={`sort-${sortOrder}`} />
 						</button>
 					</Tooltip>
-					<div className="Spells__searchInput">
-						<Input
-							placeholder={lang.t("Search spell...")}
-							value={search}
-							onChange={(e) => setSearch(e.target.value)}
-						/>
-						<Button
-							variant={isDetailedSearch ? "primary" : "ghost"}
-							icon="search-detailed"
-							onClick={() => setIsDetailedSearch((value) => !value)}
-							title={lang.t("Detailed search")}
-							className="DetailedSearchButton Spells__detailed_search_btn"
-						/>
-					</div>
+					{!hideSearchInput && (
+						<div className="Spells__searchInput">
+							<Input
+								placeholder={lang.t("Search spell...")}
+								value={search}
+								onChange={(e) => setSearch(e.target.value)}
+							/>
+							<Button
+								variant={isDetailedSearch ? "primary" : "ghost"}
+								icon="search-detailed"
+								onClick={() => setIsDetailedSearch((value) => !value)}
+								title={lang.t("Detailed search")}
+								className="DetailedSearchButton Spells__detailed_search_btn"
+							/>
+						</div>
+					)}
 				</div>
 				<div className="Spells__content">
 					<div className="Spells__list">
@@ -380,10 +422,24 @@ export default function Spells() {
 
 					<div className="Spells__detail">
 						{selectedSpell ? (
-							<SpellCard
-								spell={selectedSpell}
-								searchHighlight={debouncedSearch}
-							/>
+							<>
+								{onSelectSpell && (
+									<div className="Spells__select_actions">
+										<Button
+											variant="primary"
+											icon="plus"
+											onClick={() => onSelectSpell(selectedSpell)}
+										>
+											{lang.t("Insert")}
+										</Button>
+									</div>
+								)}
+								<SpellCard
+									spell={selectedSpell}
+									searchHighlight={debouncedSearch}
+									renderOptions={renderOptions}
+								/>
+							</>
 						) : (
 							<p className="muted">
 								{lang.t("Select a spell from the list to view details.")}
@@ -391,7 +447,23 @@ export default function Spells() {
 						)}
 					</div>
 				</div>
+		</>
+	);
+
+	if (isEmbedded) {
+		return (
+			<div className="Spells Spells__embedded">
+				<div className="Spells__body">{content}</div>
 			</div>
+		);
+	}
+
+	return (
+		<Panel className="Spells">
+			<div className="Panel__header">
+				<h2>{lang.t("Spells")}</h2>
+			</div>
+			<div className="Panel__body Spells__body">{content}</div>
 		</Panel>
 	);
 }

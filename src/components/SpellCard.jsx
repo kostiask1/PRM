@@ -8,7 +8,11 @@ import SpellCardModel from "../models/SpellCardModel.js";
 import { lang } from "../services/localization";
 import { highlightText } from "../utils/searchHighlight.jsx";
 
-export default function SpellCard({ spell, searchHighlight = "" }) {
+export default function SpellCard({
+	spell,
+	searchHighlight = "",
+	renderOptions = {},
+}) {
 	if (!spell) return null;
 
 	const model = new SpellCardModel(spell);
@@ -49,11 +53,15 @@ export default function SpellCard({ spell, searchHighlight = "" }) {
 				)}
 			</div>
 			<div className="SpellCard__desc">
-				{renderRecursiveContent(spell.entries, searchHighlight)}
+				{renderRecursiveContent(spell.entries, searchHighlight, renderOptions)}
 
 				{spell.entriesHigherLevel && (
 					<div className="SpellCard__higher">
-						{renderRecursiveContent(spell.entriesHigherLevel, searchHighlight)}
+						{renderRecursiveContent(
+							spell.entriesHigherLevel,
+							searchHighlight,
+							renderOptions,
+						)}
 					</div>
 				)}
 			</div>

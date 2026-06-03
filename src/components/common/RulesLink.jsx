@@ -64,6 +64,11 @@ export default function RulesLink({
 		const spell = await resolveSpellInput(referenceName);
 		if (!spell) return;
 
+		if (onNavigate) {
+			onNavigate("spells", spell.name);
+			return;
+		}
+
 		if (openInNestedModal) {
 			setNestedSpell(spell);
 			return;
