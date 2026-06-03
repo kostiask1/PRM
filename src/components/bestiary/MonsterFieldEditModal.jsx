@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Modal from "../common/Modal";
 import Button from "../form/Button";
 import Input from "../form/Input";
+import Select from "../form/Select";
 import RulesReferenceModalContent from "../modals/RulesReferenceModalContent";
 import { lang } from "../../services/localization";
 import "../../assets/components/MonsterFieldEditModal.css";
@@ -16,6 +17,28 @@ const CREATURE_ACTION_SECTIONS = [
 ];
 
 const SPEED_KEYS = new Set(["walk", "burrow", "climb", "fly", "swim"]);
+
+const SIZE_OPTIONS = [
+	{ value: "T", label: "Tiny" },
+	{ value: "S", label: "Small" },
+	{ value: "M", label: "Medium" },
+	{ value: "L", label: "Large" },
+	{ value: "H", label: "Huge" },
+	{ value: "G", label: "Gargantuan" },
+];
+
+const ALIGNMENT_OPTIONS = [
+	{ value: "L G", label: "Lawful Good" },
+	{ value: "N G", label: "Neutral Good" },
+	{ value: "C G", label: "Chaotic Good" },
+	{ value: "L N", label: "Lawful Neutral" },
+	{ value: "N", label: "Neutral" },
+	{ value: "C N", label: "Chaotic Neutral" },
+	{ value: "L E", label: "Lawful Evil" },
+	{ value: "N E", label: "Neutral Evil" },
+	{ value: "C E", label: "Chaotic Evil" },
+	{ value: "U", label: "Unaligned" },
+];
 
 function cloneMonster(monster) {
 	return JSON.parse(JSON.stringify(monster ?? null));
@@ -56,6 +79,32 @@ function parseMaybeNumber(value) {
 	return Number.isFinite(number) ? number : text;
 }
 
+function calculateDiceAverage(formula) {
+	const text = String(formula || "").trim();
+	if (!text) return undefined;
+
+	const expression = text.replace(
+		/(\d*)d(\d+)(?:\s*[hl]\s*\d+)?/gi,
+		(_match, countText, sidesText) => {
+			const count = Number(countText || 1);
+			const sides = Number(sidesText);
+			if (!Number.isFinite(count) || !Number.isFinite(sides) || sides <= 0) {
+				return "0";
+			}
+			return String(count * ((sides + 1) / 2));
+		},
+	);
+
+	if (!/^[\d+\-*/().\s]+$/.test(expression)) return undefined;
+
+	try {
+		const value = Function(`"use strict"; return (${expression});`)();
+		return Number.isFinite(value) ? Math.round(value) : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
 function getCreatureAcInput(monster = {}) {
 	if (Array.isArray(monster.ac) && monster.ac[0] !== undefined) {
 		const entry = monster.ac[0];
@@ -64,13 +113,6 @@ function getCreatureAcInput(monster = {}) {
 		);
 	}
 	return String(monster.armor_class ?? "");
-}
-
-function getCreatureHpAverageInput(monster = {}) {
-	if (monster.hp && typeof monster.hp === "object") {
-		return String(monster.hp.average ?? monster.hp.special ?? "");
-	}
-	return String(monster.hit_points ?? "");
 }
 
 function getCreatureHpFormulaInput(monster = {}) {
@@ -177,7 +219,6 @@ function parseSpeedText(value) {
 
 function getCreatureEditableFieldInput(monster = {}, key) {
 	if (key === "ac") return getCreatureAcInput(monster);
-	if (key === "hpAverage") return getCreatureHpAverageInput(monster);
 	if (key === "hpFormula") return getCreatureHpFormulaInput(monster);
 	if (key === "speed") return speedToText(monster.speed);
 	if (key === "desc" && Array.isArray(monster.desc)) {
@@ -193,6 +234,25 @@ function getCreatureEditableFieldInput(monster = {}, key) {
 	return listLikeValueToText(monster[key]);
 }
 
+function getCreatureSelectValue(monster = {}, key) {
+	if (key === "size") {
+		const value = Array.isArray(monster.size) ? monster.size[0] : monster.size;
+		return String(value || "M");
+	}
+	if (key === "alignment") {
+		const value = monster.alignment;
+		if (Array.isArray(value)) return value.join(" ");
+		return String(value || "U");
+	}
+	return String(monster[key] || "");
+}
+
+function parseAlignmentSelectValue(value) {
+	const text = String(value || "").trim();
+	if (!text) return ["U"];
+	return text.includes(" ") ? text.split(/\s+/).filter(Boolean) : [text];
+}
+
 function updateCreatureBasicField(monster, key, value) {
 	const next = { ...monster };
 	if (key === "ac") {
@@ -200,20 +260,16 @@ function updateCreatureBasicField(monster, key, value) {
 		next.armor_class = parseMaybeNumber(value) ?? "";
 		return next;
 	}
-	if (key === "hpAverage") {
-		const parsed = parseMaybeNumber(value);
-		next.hp = {
-			...(next.hp && typeof next.hp === "object" ? next.hp : {}),
-			average: parsed ?? "",
-		};
-		next.hit_points = parsed ?? "";
-		return next;
-	}
 	if (key === "hpFormula") {
+		const average = calculateDiceAverage(value);
 		next.hp = {
 			...(next.hp && typeof next.hp === "object" ? next.hp : {}),
 			formula: value,
 		};
+		if (average !== undefined) {
+			next.hp.average = average;
+			next.hit_points = average;
+		}
 		next.hit_dice = value;
 		return next;
 	}
@@ -226,12 +282,18 @@ function updateCreatureBasicField(monster, key, value) {
 		return next;
 	}
 	if (
-		key === "size" ||
-		key === "alignment" ||
 		key === "senses" ||
 		key === "languages"
 	) {
 		next[key] = Array.isArray(monster?.[key]) ? splitListText(value) : value;
+		return next;
+	}
+	if (key === "size") {
+		next.size = [value];
+		return next;
+	}
+	if (key === "alignment") {
+		next.alignment = parseAlignmentSelectValue(value);
 		return next;
 	}
 	if (key === "type") {
@@ -262,7 +324,6 @@ function updateCreatureBasicField(monster, key, value) {
 export default function MonsterFieldEditModal({
 	editingMonster,
 	title = lang.t("Edit creature"),
-	disableSourceField = false,
 	onCancel,
 	onSave,
 }) {
@@ -425,6 +486,10 @@ export default function MonsterFieldEditModal({
 			setError(lang.t("Name is required to create an entry."));
 			return;
 		}
+		nextDraft = {
+			...nextDraft,
+			source: editingMonster.source,
+		};
 		try {
 			onSave?.(cloneMonster(nextDraft));
 		} catch (err) {
@@ -450,6 +515,43 @@ export default function MonsterFieldEditModal({
 			/>
 		</label>
 	);
+
+	const renderSelectField = (key, label, options) => {
+		const currentValue = getCreatureSelectValue(draft, key);
+		const fullOptions = options.some((option) => option.value === currentValue)
+			? options
+			: [
+					...options,
+					{
+						value: currentValue,
+						label: currentValue || lang.t("Custom"),
+					},
+				];
+
+		return (
+			<label key={key} className="MonsterFieldEditModal__field">
+				<span>{lang.t(label)}</span>
+				<Select
+					value={currentValue}
+					onChange={(event) =>
+						updateDraft((current) =>
+							updateCreatureBasicField(
+								current || {},
+								key,
+								event.target.value,
+							),
+						)
+					}
+				>
+					{fullOptions.map((option) => (
+						<option key={option.value} value={option.value}>
+							{lang.t(option.label)}
+						</option>
+					))}
+				</Select>
+			</label>
+		);
+	};
 
 	const renderTextField = (key, label, rows = 3) => (
 		<label key={key} className="MonsterFieldEditModal__field">
@@ -581,14 +683,15 @@ export default function MonsterFieldEditModal({
 						<>
 							<div className="MonsterFieldEditModal__fields">
 								{renderInputField("name", "Name")}
-								{renderInputField("source", "Source", {
-									disabled: disableSourceField,
-								})}
-								{renderInputField("size", "Size")}
+								{renderInputField("source", "Source", { disabled: true })}
+								{renderSelectField("size", "Size", SIZE_OPTIONS)}
 								{renderInputField("type", "Type")}
-								{renderInputField("alignment", "Alignment")}
+								{renderSelectField(
+									"alignment",
+									"Alignment",
+									ALIGNMENT_OPTIONS,
+								)}
 								{renderInputField("ac", "Armor Class")}
-								{renderInputField("hpAverage", "Hit Points")}
 								{renderInputField("hpFormula", "HP Formula")}
 								{renderInputField("cr", "Challenge Rating")}
 							</div>

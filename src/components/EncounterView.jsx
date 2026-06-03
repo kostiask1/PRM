@@ -1335,7 +1335,6 @@ function EncounterView() {
 			/>
 			<MonsterFieldEditModal
 				editingMonster={fieldEditingMonster?.monster || null}
-				disableSourceField={fieldEditingMonster?.mode !== "local-edit"}
 				onCancel={closeEditMonsterFields}
 				onSave={saveEditedMonsterFields}
 				title={lang.t("Edit encounter creature")}
