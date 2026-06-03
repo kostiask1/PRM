@@ -1,5 +1,5 @@
 ﻿const SCHOOL_MAP = {
-	A: "Abjuration (Огородження)",
+	A: "Abjuration (Зречення)",
 	C: "Conjuration (Виклик)",
 	D: "Divination (Віщування)",
 	E: "Enchantment (Очарування)",
@@ -104,6 +104,10 @@ export default class SpellCardModel {
 
 	get schoolLabel() {
 		return SCHOOL_MAP[this.spell.school] || this.spell.school;
+	}
+
+	get sourceLabel() {
+		return this.spell.source || "";
 	}
 
 	get castingTimeLabel() {

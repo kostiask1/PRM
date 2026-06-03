@@ -1,4 +1,5 @@
 ﻿import { useCallback, useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router";
 import { api } from "./api";
 import DiceCalculator from "./components/DiceCalculator";
 import MainContent from "./components/MainContent";
@@ -24,13 +25,16 @@ import {
 	navigateTo,
 	openModalRequest,
 	resolveModalRequest,
-	syncNavigationFromUrl,
+	setRouterNavigate,
+	syncNavigationFromPath,
 	useAppDispatch,
 	useAppSelector,
 } from "./store/appStore";
 
 export default function App() {
 	const dispatch = useAppDispatch();
+	const location = useLocation();
+	const routerNavigate = useNavigate();
 	const [isCTRLPressed, setCTRLPressed] = useState(false);
 	const modalState = useAppSelector((store) => store.modal);
 	const mentionPickerRequest = useAppSelector(
@@ -94,12 +98,17 @@ export default function App() {
 	}, []);
 
 	useEffect(() => {
-		syncNavigationFromUrl();
 		initRealtimeSync();
-		const handlePopState = () => syncNavigationFromUrl();
-		window.addEventListener("popstate", handlePopState);
-		return () => window.removeEventListener("popstate", handlePopState);
 	}, []);
+
+	useEffect(() => {
+		setRouterNavigate(routerNavigate);
+		return () => setRouterNavigate(null);
+	}, [routerNavigate]);
+
+	useEffect(() => {
+		syncNavigationFromPath(location.pathname);
+	}, [location.pathname]);
 
 	useEffect(() => {
 		loadCampaigns();

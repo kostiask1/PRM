@@ -5,24 +5,26 @@ import EncounterView from "./EncounterView";
 import Spells from "./Spells";
 import ProjectGuide from "./ProjectGuide";
 import AiAssistantPanel from "./ai/AiAssistantPanel";
+import { useLocation } from "react-router";
 import { useAppSelector } from "../store/appStore";
 import { lang } from "../services/localization";
 import "../assets/components/MainContent.css";
 
 export default function MainContent() {
+	const location = useLocation();
 	const campaign = useAppSelector((state) => state.active.campaign);
 	const { activeSessionFileName, activeEncounterId } = useAppSelector(
 		(state) => state.navigation,
 	);
 	const shouldShowAiAssistant =
-		window.location.pathname === "/bestiary" || Boolean(campaign);
+		location.pathname === "/bestiary" || Boolean(campaign);
 	const aiAssistantRouteKey = [
-		window.location.pathname,
+		location.pathname,
 		activeSessionFileName || "",
 		activeEncounterId || "",
 	].join(":");
 
-	if (window.location.pathname === "/spells") {
+	if (location.pathname === "/spells") {
 		return (
 			<main className="MainContent">
 				<Spells />
@@ -30,7 +32,7 @@ export default function MainContent() {
 		);
 	}
 
-	if (!campaign && window.location.pathname !== "/bestiary") {
+	if (!campaign && location.pathname !== "/bestiary") {
 		return (
 			<main className="MainContent">
 				<section className="MainContent__emptyState Panel">
@@ -42,7 +44,7 @@ export default function MainContent() {
 		);
 	}
 
-	const content = window.location.pathname === "/bestiary" ? (
+	const content = location.pathname === "/bestiary" ? (
 		<Bestiary />
 	) : activeEncounterId ? (
 		<EncounterView />

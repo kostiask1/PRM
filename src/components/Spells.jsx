@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { api } from "../api.js";
 import ReactList from "react-list";
+import { useSearchParams } from "react-router";
 import Panel from "./common/Panel.jsx";
 import Input from "./form/Input";
 import Button from "./form/Button";
@@ -49,11 +50,16 @@ export default function Spells({
 	hideSearchInput = false,
 	renderOptions = {},
 }) {
+	const [urlSearchParams, setUrlSearchParams] = useSearchParams();
 	const useSearchDebounce = useAppSelector(
 		(state) => state.ui.useSearchDebounce !== false,
 	);
+	const urlSpellName = isEmbedded ? "" : urlSearchParams.get("spell") || "";
+	const urlSpellSource = isEmbedded ? "" : urlSearchParams.get("s_source") || "";
 	const [sources, setSources] = useState([]);
-	const [selectedSource, setSelectedSource] = useState("all");
+	const [selectedSource, setSelectedSource] = useState(
+		() => urlSpellSource || "all",
+	);
 	const [allSpells, setAllSpells] = useState([]);
 	const [spells, setSpells] = useState([]);
 	const [selectedLevel, setSelectedLevel] = useState("all");
@@ -112,9 +118,6 @@ export default function Spells({
 			try {
 				const data = await api.getSpellSources();
 				setSources(data);
-				const params = new URLSearchParams(window.location.search);
-				const sourceFromUrl = params.get("s_source");
-				if (sourceFromUrl) setSelectedSource(sourceFromUrl);
 			} catch (err) {
 				console.error("Failed to load spell sources", err);
 			}
@@ -145,6 +148,13 @@ export default function Spells({
 		setIsDetailedSearch(Boolean(initialDetailedSearch));
 	}, [initialDetailedSearch, isEmbedded]);
 
+	useEffect(() => {
+		if (isEmbedded || !urlSpellSource) return;
+		setSelectedSource((current) =>
+			current === urlSpellSource ? current : urlSpellSource,
+		);
+	}, [isEmbedded, urlSpellSource]);
+
 	// Завантаження всіх заклинань один раз; джерела далі фільтруються локально
 	useEffect(() => {
 		if (sources.length === 0) return;
@@ -165,10 +175,21 @@ export default function Spells({
 
 	useEffect(() => {
 		if (isEmbedded) return;
-		const params = new URLSearchParams(window.location.search);
-		params.set("s_source", selectedSource);
-		window.history.replaceState({}, "", `?${params.toString()}`);
-	}, [isEmbedded, selectedSource]);
+		if (urlSpellSource === selectedSource) return;
+		setUrlSearchParams(
+			(current) => {
+				const next = new URLSearchParams(current);
+				next.set("s_source", selectedSource);
+				return next;
+			},
+			{ replace: true },
+		);
+	}, [
+		isEmbedded,
+		selectedSource,
+		setUrlSearchParams,
+		urlSpellSource,
+	]);
 
 	// Фільтрація
 	useEffect(() => {
@@ -210,16 +231,13 @@ export default function Spells({
 	// початковий вибір
 	useEffect(() => {
 		if (isEmbedded) {
-			if (displayedSpells.length > 0 && !selectedSpell?.name) {
+			if (displayedSpells.length > 0 && !selectedSpellRef.current?.name) {
 				setSelectedSpell(displayedSpells[0]);
 			}
 			return undefined;
 		}
 
 		const syncSelectionFromUrl = () => {
-			const params = new URLSearchParams(window.location.search);
-			const urlSpellName = params.get("spell");
-			const urlSpellSource = params.get("s_source");
 			const currentSpell = selectedSpellRef.current;
 
 			if (!urlSpellName) {
@@ -252,29 +270,38 @@ export default function Spells({
 			syncSelectionFromUrl();
 		}
 
-		window.addEventListener("popstate", syncSelectionFromUrl);
-		return () => window.removeEventListener("popstate", syncSelectionFromUrl);
-	}, [allSpells, displayedSpells, isEmbedded, selectedSpell?.name]);
+		return undefined;
+	}, [
+		allSpells,
+		displayedSpells,
+		isEmbedded,
+		urlSpellName,
+		urlSpellSource,
+	]);
 
 	useEffect(() => {
 		if (isEmbedded) return;
 		if (selectedSpell?.name) {
-			const params = new URLSearchParams(window.location.search);
-			let changed = false;
-			if (params.get("spell") !== selectedSpell.name) {
-				params.set("spell", selectedSpell.name);
-				changed = true;
-			}
-			if (changed) {
-				window.history.pushState({}, "", `?${params.toString()}`);
-			}
+			if (urlSpellName === selectedSpell.name) return;
+			setUrlSearchParams((current) => {
+				const next = new URLSearchParams(current);
+				next.set("spell", selectedSpell.name);
+				return next;
+			});
 		} else if (selectedSpell === "") {
-			const params = new URLSearchParams(window.location.search);
-			params.delete("spell");
-
-			window.history.pushState({}, "", `?${params.toString()}`);
+			if (!urlSpellName) return;
+			setUrlSearchParams((current) => {
+				const next = new URLSearchParams(current);
+				next.delete("spell");
+				return next;
+			});
 		}
-	}, [isEmbedded, selectedSpell]);
+	}, [
+		isEmbedded,
+		selectedSpell,
+		setUrlSearchParams,
+		urlSpellName,
+	]);
 
 	const toggleSort = () => {
 		setSortOrder((prev) =>

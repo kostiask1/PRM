@@ -18,6 +18,11 @@ export default function SpellCard({
 	const model = new SpellCardModel(spell);
 	const renderInlineInfo = (value) =>
 		parseRollsAndSpells(String(value || "-"), searchHighlight);
+	const metaParts = [
+		model.levelLabel,
+		model.schoolLabel,
+		model.sourceLabel,
+	].filter(Boolean);
 
 	return (
 		<div className="SpellCard">
@@ -25,8 +30,12 @@ export default function SpellCard({
 				{highlightText(capitalizeWords(model.displayName), searchHighlight)}
 			</h3>
 			<div className="SpellCard__meta">
-				{highlightText(model.levelLabel, searchHighlight)},{" "}
-				{highlightText(model.schoolLabel, searchHighlight)}
+				{metaParts.map((part, index) => (
+					<span key={`${index}:${part}`}>
+						{index > 0 ? " · " : ""}
+						{highlightText(part, searchHighlight)}
+					</span>
+				))}
 			</div>
 			<div className="SpellCard__props">
 				<div>

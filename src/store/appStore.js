@@ -111,6 +111,7 @@ let state = initialState;
 const listeners = new Set();
 let modalRequestSeq = 1;
 const modalResolvers = new Map();
+let routerNavigate = null;
 
 function emitChange() {
 	listeners.forEach((listener) => listener());
@@ -367,6 +368,21 @@ export function syncNavigationFromUrl() {
 	);
 }
 
+export function syncNavigationFromPath(pathname) {
+	const route = parseUrl(pathname);
+	appStore.dispatch(
+		setNavigationAction({
+			activeCampaignSlug: route.campaign || null,
+			activeSessionFileName: route.session || null,
+			activeEncounterId: route.encounter || null,
+		}),
+	);
+}
+
+export function setRouterNavigate(navigate) {
+	routerNavigate = typeof navigate === "function" ? navigate : null;
+}
+
 export function navigateTo(
 	slug,
 	fileName = null,
@@ -386,6 +402,11 @@ export function navigateTo(
 			activeEncounterId: encounterId || null,
 		}),
 	);
-	if (replace) window.history.replaceState({}, "", url);
-	else window.history.pushState({}, "", url);
+	if (routerNavigate) {
+		routerNavigate(url, { replace });
+	} else if (replace) {
+		window.history.replaceState({}, "", url);
+	} else {
+		window.history.pushState({}, "", url);
+	}
 }

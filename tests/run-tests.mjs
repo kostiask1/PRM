@@ -1065,6 +1065,7 @@ await run("SpellCardModel formats spell labels", () => {
 		duration: [{ type: "instant" }],
 	});
 	assert.equal(model.displayName, "Magic Missile");
+	assert.equal(model.sourceLabel, "PHB");
 	assert.equal(model.levelLabel, "1-й рівень");
 	assert.match(model.rangeLabel, /120 фт/);
 	assert.equal(model.durationLabel, "Миттєво");
