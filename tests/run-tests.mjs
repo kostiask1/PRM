@@ -3185,7 +3185,12 @@ await run("storage searches image gallery locally and globally", async () => {
 				search: "animated coffin",
 				categories: IMAGE_GALLERY_CATEGORIES.map((category) => category.id),
 			});
-			assert.ok(official.images.some((item) => item.readonly));
+			const officialImage = official.images.find((item) => item.readonly);
+			assert.ok(officialImage);
+			assert.equal(officialImage.source, "general");
+			assert.equal(officialImage.assetSource, "bestiary");
+			assert.equal(officialImage.category, "tokens");
+			assert.equal(officialImage.subcategory, "AATM");
 		});
 	});
 });

@@ -24,6 +24,71 @@ const SUB_ICON_NAMES = {
 	players: "folder-players",
 };
 
+const getImageGalleryModalTitle = (onSelect) =>
+	lang.t(
+		typeof onSelect === "function" ? "Choose an image" : "Image gallery",
+	);
+
+const getImageScrollId = (name) => encodeURIComponent(name || "");
+
+const getGalleryPathKey = (source, category, subcategory = "") =>
+	`${source || ""}\u0000${category || ""}\u0000${subcategory || ""}`;
+
+const scrollGalleryImageIntoView = (viewportRef, imageName) => {
+	const imageScrollId = getImageScrollId(imageName);
+	requestAnimationFrame(() => {
+		requestAnimationFrame(() => {
+			const viewport = viewportRef.current;
+			const target = viewport?.querySelector(
+				`[data-gallery-image-id="${imageScrollId}"]`,
+			);
+			target?.scrollIntoView({ block: "center", inline: "nearest" });
+		});
+	});
+};
+
+const findPendingGalleryImage = ({ pendingSelection, currentPathKey, images }) => {
+	if (!pendingSelection || pendingSelection.pathKey !== currentPathKey) {
+		return null;
+	}
+	return (
+		images.find(
+			(image) => image.name === pendingSelection.name && !image.globalSearch,
+		) || null
+	);
+};
+
+const resolvePendingGallerySelection = ({
+	pendingSelection,
+	currentPathKey,
+	images,
+	allSubsLength,
+	galleryColumns,
+	selectImageByName,
+	listRef,
+	viewportRef,
+	setPendingSelection,
+	setHighlightedImageName,
+}) => {
+	const targetImage = findPendingGalleryImage({
+		pendingSelection,
+		currentPathKey,
+		images,
+	});
+	if (!targetImage || !selectImageByName(targetImage.name)) return;
+	const imageIndex = images.findIndex(
+		(image) => image.name === targetImage.name && !image.globalSearch,
+	);
+	const rowIndex = Math.floor((allSubsLength + imageIndex) / galleryColumns);
+	setHighlightedImageName("");
+	requestAnimationFrame(() => {
+		listRef.current?.scrollTo(rowIndex);
+		scrollGalleryImageIntoView(viewportRef, targetImage.name);
+		setHighlightedImageName(targetImage.name);
+	});
+	setPendingSelection(null);
+};
+
 function ImageGallery({
 	isOpen,
 	onClose,
@@ -34,9 +99,12 @@ function ImageGallery({
 }) {
 	const dispatch = useAppDispatch();
 	const galleryViewportRef = React.useRef(null);
+	const galleryListRef = React.useRef(null);
 	const [isMoveModalOpen, setIsMoveModalOpen] = React.useState(false);
 	const [previewImage, setPreviewImage] = React.useState(null);
 	const [galleryColumns, setGalleryColumns] = React.useState(1);
+	const [pendingSelection, setPendingSelection] = React.useState(null);
+	const [highlightedImageName, setHighlightedImageName] = React.useState("");
 	const [moveTarget, setMoveTarget] = React.useState({
 		slug: "general",
 		category: "attachments",
@@ -60,7 +128,6 @@ function ImageGallery({
 		storageStats,
 		selectedFilenames,
 		selectedSubs,
-		loading,
 		isCreatingSub,
 		setIsCreatingSub,
 		newSubName,
@@ -72,6 +139,7 @@ function ImageGallery({
 		setDragOverTarget,
 		hasSelection,
 		clearSelection,
+		selectImageByName,
 		allSubs,
 		handleCreateSub,
 		handleBulkDelete,
@@ -144,6 +212,40 @@ function ImageGallery({
 		return () => resizeObserver.disconnect();
 	}, [isOpen]);
 
+	React.useEffect(() => {
+		resolvePendingGallerySelection({
+			pendingSelection,
+			currentPathKey: getGalleryPathKey(
+				selectedSource,
+				selectedCat.id,
+				selectedSub,
+			),
+			images,
+			allSubsLength: allSubs.length,
+			galleryColumns,
+			selectImageByName,
+			listRef: galleryListRef,
+			viewportRef: galleryViewportRef,
+			setPendingSelection,
+			setHighlightedImageName,
+		});
+	}, [
+		pendingSelection,
+		selectImageByName,
+		images,
+		allSubs.length,
+		galleryColumns,
+		selectedSource,
+		selectedCat.id,
+		selectedSub,
+	]);
+
+	React.useEffect(() => {
+		if (!highlightedImageName) return undefined;
+		const timeout = setTimeout(() => setHighlightedImageName(""), 2800);
+		return () => clearTimeout(timeout);
+	}, [highlightedImageName]);
+
 	const availableSources = [
 		{ slug: "general", name: lang.t("General") },
 		...campaigns,
@@ -157,18 +259,14 @@ function ImageGallery({
 		});
 		setIsMoveModalOpen(true);
 	};
-	const modalTitle =
-		typeof onSelect === "function"
-			? lang.t("Choose an image")
-			: lang.t("Image gallery");
+	const modalTitle = getImageGalleryModalTitle(onSelect);
 	const sourceSizes = storageStats?.sourceSizes || {};
 	const galleryItems = React.useMemo(() => {
-		if (loading) return [];
 		return [
 			...allSubs.map((sub) => ({ type: "sub", sub })),
 			...images.map((image) => ({ type: "image", image })),
 		];
-	}, [allSubs, images, loading]);
+	}, [allSubs, images]);
 	const galleryRowCount = Math.ceil(galleryItems.length / galleryColumns);
 	const openGlobalResultPath = (image) => {
 		if (typeof onSelect === "function" || !image?.globalSearch) return false;
@@ -180,6 +278,14 @@ function ImageGallery({
 		setSelectedSub(image.subcategory || "");
 		setSearchQuery("");
 		setSearchMode("local");
+		setPendingSelection({
+			name: image.name,
+			pathKey: getGalleryPathKey(
+				image.source || "general",
+				image.category,
+				image.subcategory || "",
+			),
+		});
 		clearSelection();
 		return true;
 	};
@@ -276,8 +382,10 @@ function ImageGallery({
 				content={lang.t("Right-click: open fullscreen")}
 			>
 				<div
+					data-gallery-image-id={getImageScrollId(img.name)}
 					className={classNames("ImageGallery__item", {
-						is_selected: !imageReadonly && selectedFilenames.has(img.name),
+						is_selected: selectedFilenames.has(img.name),
+						is_navigated: highlightedImageName === img.name,
 						is_protected: imageReadonly,
 					})}
 					onClick={(e) => {
@@ -689,8 +797,16 @@ function ImageGallery({
 
 						{galleryRowCount > 0 && (
 							<ReactList
+								ref={galleryListRef}
 								itemRenderer={renderGalleryRow}
 								length={galleryRowCount}
+								itemSizeEstimator={() => {
+									const row =
+										galleryViewportRef.current?.querySelector(
+											".ImageGallery__row",
+										);
+									return row?.getBoundingClientRect().height || 170;
+								}}
 								type="uniform"
 							/>
 						)}

@@ -35,9 +35,11 @@ export default function useImageGallery({
 	const [isDraggingOver, setIsDraggingOver] = useState(false);
 	const [dragSource, setDragSource] = useState(null);
 	const [dragOverTarget, setDragOverTarget] = useState(null);
-	const hasSelection = selectedFilenames.size > 0 || selectedSubs.size > 0;
 	const debouncedSearchQuery = useDebounce(searchQuery, 250);
-	const normalizedSearchQuery = debouncedSearchQuery.trim().toLowerCase();
+	const normalizedSearchQuery = searchQuery.trim()
+		? debouncedSearchQuery.trim().toLowerCase()
+		: "";
+	const activeSearchQuery = normalizedSearchQuery ? debouncedSearchQuery : "";
 	const isGlobalSearch = searchMode === "global" && normalizedSearchQuery;
 	const isSearchResults = Boolean(normalizedSearchQuery);
 	const isGeneralTokens =
@@ -75,6 +77,30 @@ export default function useImageGallery({
 	);
 	const isReadonlyCurrentFolder =
 		isGeneralTokens && selectedSubRoot && isReadonlyPath(selectedSub);
+	const selectImageByName = useCallback(
+		(name) => {
+			const image = images.find((item) => item.name === name);
+			if (!image) return false;
+			setSelectedFilenames(new Set([name]));
+			setSelectedSubs(new Set());
+			setLastSelectedIndex(null);
+			return true;
+		},
+		[images],
+	);
+	const hasSelection = useMemo(
+		() =>
+			images.some(
+				(image) => selectedFilenames.has(image.name) && !isReadonlyImage(image),
+			) || Array.from(selectedSubs).some((name) => !isReadonlySub(name)),
+		[
+			images,
+			selectedFilenames,
+			selectedSubs,
+			isReadonlyImage,
+			isReadonlySub,
+		],
+	);
 
 	const getCleanName = useCallback((name) => {
 		return name.replace(/\.[^/.]+$/, "").replace(/-\d{10,}$/, "");
@@ -90,7 +116,7 @@ export default function useImageGallery({
 			const [subs, officialAssets, officialRootAssets] = await Promise.all([
 				api.getSubcategories(selectedSource, selectedCat.id, selectedSub),
 				isGeneralTokens
-					? api.getBestiaryTokenAssets(selectedSub, debouncedSearchQuery)
+					? api.getBestiaryTokenAssets(selectedSub, activeSearchQuery)
 					: Promise.resolve(null),
 				isGeneralTokens
 					? api.getBestiaryTokenAssets("", "")
@@ -124,7 +150,7 @@ export default function useImageGallery({
 		selectedCat.id,
 		selectedSub,
 		isGeneralTokens,
-		debouncedSearchQuery,
+		activeSearchQuery,
 		normalizedSearchQuery,
 	]);
 
@@ -145,7 +171,7 @@ export default function useImageGallery({
 			const [data, officialAssets] = await Promise.all([
 				api.getImages(selectedSource, selectedCat.id, selectedSub),
 				isGeneralTokens
-					? api.getBestiaryTokenAssets(selectedSub, debouncedSearchQuery)
+					? api.getBestiaryTokenAssets(selectedSub, activeSearchQuery)
 					: Promise.resolve(null),
 			]);
 			const userImages = (Array.isArray(data) ? data : []).filter((image) =>
@@ -169,6 +195,7 @@ export default function useImageGallery({
 		selectedSub,
 		isGeneralTokens,
 		isGlobalSearch,
+		activeSearchQuery,
 		debouncedSearchQuery,
 		normalizedSearchQuery,
 	]);
@@ -759,6 +786,7 @@ export default function useImageGallery({
 		setDragOverTarget,
 		hasSelection,
 		clearSelection,
+		selectImageByName,
 		allSubs,
 		handleCreateSub,
 		handleBulkDelete,

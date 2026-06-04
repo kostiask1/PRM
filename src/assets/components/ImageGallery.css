@@ -421,6 +421,26 @@
 	box-shadow: 0 0 10px color-mix(in srgb, var(--accent), transparent 50%);
 }
 
+.ImageGallery__item.is_navigated .ImageGallery__image_wrap {
+	animation: ImageGalleryNavigatePulse 1.35s ease-in-out 2;
+}
+
+@keyframes ImageGalleryNavigatePulse {
+	0%,
+	100% {
+		border-color: var(--accent);
+		box-shadow: 0 0 0 color-mix(in srgb, var(--accent), transparent 100%);
+	}
+
+	45%,
+	55% {
+		border-color: var(--accent);
+		box-shadow:
+			0 0 0 4px color-mix(in srgb, var(--accent), transparent 60%),
+			0 0 18px color-mix(in srgb, var(--accent), transparent 35%);
+	}
+}
+
 .ImageGallery__item__folder .ImageGallery__image_wrap {
 	display: flex;
 	align-items: center;

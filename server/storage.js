@@ -1788,6 +1788,8 @@ async function searchImageGalleryAssets({
 			const subcategory = relativeParts.slice(0, -1).join("/");
 			images.push({
 				...image,
+				assetSource: image.source,
+				source: "general",
 				category: "tokens",
 				subcategory,
 				locationLabel: ["general", "tokens", subcategory]
