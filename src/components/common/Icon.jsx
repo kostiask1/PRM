@@ -70,8 +70,8 @@ const icons = {
 	check: <polyline points="20 6 9 17 4 12" />,
 	x: (
 		<>
-			<line x1="17" y1="7" x2="7" y2="17" />
-			<line x1="7" y1="7" x2="17" y2="17" />
+			<line x1="17" y1="9" x2="7" y2="19" />
+			<line x1="7" y1="9" x2="17" y2="19" />
 		</>
 	),
 	chevron: <polyline points="6 9 12 15 18 9" />,

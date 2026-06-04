@@ -34,6 +34,23 @@ const getImageScrollId = (name) => encodeURIComponent(name || "");
 const getGalleryPathKey = (source, category, subcategory = "") =>
 	`${source || ""}\u0000${category || ""}\u0000${subcategory || ""}`;
 
+const getGalleryPathEntry = (source, category, subcategory = "") => ({
+	source: source || "general",
+	category: category || "",
+	subcategory: subcategory || "",
+	pathKey: getGalleryPathKey(source || "general", category || "", subcategory || ""),
+});
+
+const galleryPathEntriesEqual = (left, right) =>
+	Boolean(left && right && left.pathKey === right.pathKey);
+
+function isEditableTarget(target) {
+	if (!(target instanceof HTMLElement)) return false;
+	return Boolean(
+		target.closest("input, textarea, select, [contenteditable='true']"),
+	);
+}
+
 const scrollGalleryImageIntoView = (viewportRef, imageName) => {
 	const imageScrollId = getImageScrollId(imageName);
 	requestAnimationFrame(() => {
@@ -100,11 +117,16 @@ function ImageGallery({
 	const dispatch = useAppDispatch();
 	const galleryViewportRef = React.useRef(null);
 	const galleryListRef = React.useRef(null);
+	const isApplyingHistoryRef = React.useRef(false);
 	const [isMoveModalOpen, setIsMoveModalOpen] = React.useState(false);
 	const [previewImage, setPreviewImage] = React.useState(null);
 	const [galleryColumns, setGalleryColumns] = React.useState(1);
 	const [pendingSelection, setPendingSelection] = React.useState(null);
 	const [highlightedImageName, setHighlightedImageName] = React.useState("");
+	const [navigationHistory, setNavigationHistory] = React.useState({
+		entries: [],
+		index: -1,
+	});
 	const [moveTarget, setMoveTarget] = React.useState({
 		slug: "general",
 		category: "attachments",
@@ -250,6 +272,98 @@ function ImageGallery({
 		{ slug: "general", name: lang.t("General") },
 		...campaigns,
 	];
+	const canNavigateBack = navigationHistory.index > 0;
+	const canNavigateForward =
+		navigationHistory.index >= 0 &&
+		navigationHistory.index < navigationHistory.entries.length - 1;
+
+	const recordNavigation = React.useCallback((entry) => {
+		if (!entry?.category) return;
+		setNavigationHistory((current) => {
+			const currentEntry = current.entries[current.index];
+			if (galleryPathEntriesEqual(currentEntry, entry)) return current;
+			const entries = current.entries.slice(0, current.index + 1).concat(entry);
+			return {
+				entries,
+				index: entries.length - 1,
+			};
+		});
+	}, []);
+
+	const applyNavigationEntry = React.useCallback(
+		(entry) => {
+			if (!entry) return;
+			const nextCategory = categories.find((cat) => cat.id === entry.category);
+			if (!nextCategory) return;
+			isApplyingHistoryRef.current = true;
+			setSelectedSource(entry.source);
+			setSelectedCat(nextCategory);
+			setSelectedSub(entry.subcategory || "");
+			setSearchQuery("");
+			setSearchMode("local");
+			setPendingSelection(null);
+			setHighlightedImageName("");
+			clearSelection();
+		},
+		[
+			categories,
+			setSelectedSource,
+			setSelectedCat,
+			setSelectedSub,
+			setSearchQuery,
+			setSearchMode,
+			clearSelection,
+		],
+	);
+
+	const navigateHistory = React.useCallback(
+		(direction) => {
+			const nextIndex = navigationHistory.index + direction;
+			const nextEntry = navigationHistory.entries[nextIndex];
+			if (!nextEntry) return;
+			setNavigationHistory((current) => ({ ...current, index: nextIndex }));
+			applyNavigationEntry(nextEntry);
+		},
+		[applyNavigationEntry, navigationHistory],
+	);
+
+	React.useEffect(() => {
+		if (!isOpen) return;
+		if (isApplyingHistoryRef.current) {
+			isApplyingHistoryRef.current = false;
+			return;
+		}
+		recordNavigation(
+			getGalleryPathEntry(selectedSource, selectedCat.id, selectedSub),
+		);
+	}, [isOpen, recordNavigation, selectedSource, selectedCat.id, selectedSub]);
+
+	React.useEffect(() => {
+		const handleHistoryKeyDown = (event) => {
+			if (isEditableTarget(event.target)) return;
+			const hasOnlyAlt = event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey;
+			const hasNoModifiers =
+				!event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey;
+			const shouldNavigateBack =
+				(event.key === "Backspace" && hasNoModifiers) ||
+				(event.key === "ArrowLeft" && hasOnlyAlt);
+			const shouldNavigateForward =
+				event.key === "ArrowRight" && hasOnlyAlt;
+
+			if (shouldNavigateBack) {
+				if (!canNavigateBack) return;
+				event.preventDefault();
+				navigateHistory(-1);
+				return;
+			}
+			if (!shouldNavigateForward || !canNavigateForward) return;
+			event.preventDefault();
+			navigateHistory(1);
+		};
+
+		window.addEventListener("keydown", handleHistoryKeyDown);
+		return () => window.removeEventListener("keydown", handleHistoryKeyDown);
+	}, [canNavigateBack, canNavigateForward, navigateHistory]);
 
 	const openMoveModal = () => {
 		setMoveTarget({
@@ -575,6 +689,26 @@ function ImageGallery({
 					</header>
 
 					<div className="ImageGallery__toolbar">
+						<div className="ImageGallery__nav">
+							<Button
+								variant="ghost"
+								size={Button.SIZES.SMALL}
+								icon="back"
+								onClick={() => navigateHistory(-1)}
+								disabled={!canNavigateBack}
+								title={lang.t("Back")}
+								className="ImageGallery__nav_btn"
+							/>
+							<Button
+								variant="ghost"
+								size={Button.SIZES.SMALL}
+								icon="forward"
+								onClick={() => navigateHistory(1)}
+								disabled={!canNavigateForward}
+								title={lang.t("Forward")}
+								className="ImageGallery__nav_btn"
+							/>
+						</div>
 						<div className="ImageGallery__breadcrumbs">
 							<button
 								className={classNames("BreadcrumbItem", {

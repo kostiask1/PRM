@@ -197,6 +197,19 @@
 	gap: var(--space-4);
 }
 
+.ImageGallery__nav {
+	display: flex;
+	align-items: center;
+	gap: var(--space-1);
+	flex: 0 0 auto;
+}
+
+.ImageGallery__nav_btn {
+	width: var(--size-8);
+	height: var(--size-8);
+	padding: 0 !important;
+}
+
 .ImageGallery__breadcrumbs {
 	display: flex;
 	align-items: center;
