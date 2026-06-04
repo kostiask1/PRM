@@ -26,7 +26,13 @@
 
 .character_card.is_collapsed .character_card__header {
     display: grid;
-    grid-template-columns: var(--size-8) var(--size-10) minmax(0, 0.7fr) minmax(0, 1fr) auto var(--size-8);
+    grid-template-columns:
+        [toggle] var(--size-8)
+        [image] var(--size-10)
+        [name] minmax(0, 0.7fr)
+        [meta] minmax(0, 1fr)
+        [actions] auto
+        [delete] var(--size-8);
     align-items: center;
     background: unset;
 }
@@ -47,15 +53,15 @@
 }
 
 .character_card.is_collapsed .character_card__header:not(:has(.character_card__mini_portrait)) .character_card__name {
-    grid-column: 2 / 4;
+    grid-column: image / meta;
 }
 
 .character_card.is_collapsed .character_card__header:has(.character_card__mini_portrait) .character_card__name {
-    grid-column: 3;
+    grid-column: name;
 }
 
 .character_card.is_collapsed .character_card__meta_brief {
-    grid-column: 4;
+    grid-column: meta;
 }
 
 .character_card__name {
@@ -86,13 +92,13 @@
 }
 
 .character_card.is_collapsed .character_card__actions {
-    grid-column: 5;
+    grid-column: actions;
     justify-content: flex-end;
     min-width: max-content;
 }
 
 .character_card.is_collapsed .character_card__header>.Button__danger:last-child {
-    grid-column: 6;
+    grid-column: delete;
     padding: 0;
 }
 
@@ -304,7 +310,7 @@
 }
 
 .character_card__mini_portrait {
-    grid-column: 2;
+    grid-column: image;
     width: var(--size-10);
     height: var(--size-10);
     border-radius: var(--radius-xxs);
