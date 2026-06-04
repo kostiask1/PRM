@@ -14,6 +14,7 @@ const DISEASES_PATH = path.join(DATABASE_DIR, "diseases.json");
 const VARIANT_RULES_PATH = path.join(DATABASE_DIR, "variantrules.json");
 const SKILLS_PATH = path.join(DATABASE_DIR, "skills.json");
 const SENSES_PATH = path.join(DATABASE_DIR, "senses.json");
+const SOURCES_PATH = path.join(DATABASE_DIR, "sources.json");
 const TMP_DIR = path.join(ROOT_DIR, ".tmp-5etools-update");
 const CONDITION_PRUNE_KEYS = new Set([
 	"page",
@@ -77,6 +78,7 @@ Downloads spell and bestiary JSON from:
   https://github.com/${OWNER}/${REPO}/blob/${ref}/data/variantrules.json
   https://github.com/${OWNER}/${REPO}/blob/${ref}/data/skills.json
   https://github.com/${OWNER}/${REPO}/blob/${ref}/data/senses.json
+  https://github.com/${OWNER}/${REPO}/blob/${ref}/data/generated/gendata-nav-adventure-book-index.json
 
 Excluded files: fluff, foundry/foundy, template.
 After download, materializes bestiary _copy entries and rebuilds all.json files.`);
@@ -339,6 +341,29 @@ function normalizeDiseasesData(data) {
 	};
 }
 
+function normalizeSourceEntries(data) {
+	const seen = new Set();
+	const result = [];
+	const sections = [data?.adventure, data?.book];
+
+	for (const section of sections) {
+		if (!Array.isArray(section)) continue;
+
+		for (const item of section) {
+			const name = String(item?.name || "").trim();
+			const source = String(item?.source || "").trim();
+			if (!name || !source) continue;
+
+			const key = `${name.toLowerCase()}|${source.toUpperCase()}`;
+			if (seen.has(key)) continue;
+			seen.add(key);
+			result.push({ name, source });
+		}
+	}
+
+	return result.sort((a, b) => a.name.localeCompare(b.name));
+}
+
 async function writeConditionsWithLocalExhaustion(downloadedPath) {
 	const downloaded = await readJson(downloadedPath);
 	const current = (await exists(CONDITIONS_PATH))
@@ -414,6 +439,18 @@ async function writeSenses(downloadedPath) {
 	return normalized.sense.length;
 }
 
+async function writeSources(downloadedPath) {
+	const downloaded = await readJson(downloadedPath);
+	const normalized = normalizeSourceEntries(downloaded);
+	await fs.mkdir(path.dirname(SOURCES_PATH), { recursive: true });
+	await fs.writeFile(
+		SOURCES_PATH,
+		`${JSON.stringify(normalized, null, 2)}\n`,
+		"utf8",
+	);
+	return normalized.length;
+}
+
 async function removeJsonFiles(dir) {
 	if (!(await exists(dir))) return;
 	const entries = await fs.readdir(dir, { withFileTypes: true });
@@ -466,6 +503,10 @@ async function main() {
 	const tmpVariantRulesPath = path.join(TMP_DIR, "variantrules.json");
 	const tmpSkillsPath = path.join(TMP_DIR, "skills.json");
 	const tmpSensesPath = path.join(TMP_DIR, "senses.json");
+	const tmpSourcesPath = path.join(
+		TMP_DIR,
+		"gendata-nav-adventure-book-index.json",
+	);
 
 	await fs.rm(TMP_DIR, { recursive: true, force: true });
 	const [bestiaryCount, spellCount] = await Promise.all([
@@ -475,10 +516,14 @@ async function main() {
 		downloadFile("data/variantrules.json", tmpVariantRulesPath),
 		downloadFile("data/skills.json", tmpSkillsPath),
 		downloadFile("data/senses.json", tmpSensesPath),
+		downloadFile(
+			"data/generated/gendata-nav-adventure-book-index.json",
+			tmpSourcesPath,
+		),
 	]);
 
 	console.log(
-		`${isDryRun ? "Dry run" : "Downloaded"}: ${bestiaryCount} bestiary JSON files, ${spellCount} spell JSON files, conditionsdiseases.json, variantrules.json, skills.json, and senses.json from ${OWNER}/${REPO}@${ref}.`,
+		`${isDryRun ? "Dry run" : "Downloaded"}: ${bestiaryCount} bestiary JSON files, ${spellCount} spell JSON files, conditionsdiseases.json, variantrules.json, skills.json, senses.json, and gendata-nav-adventure-book-index.json from ${OWNER}/${REPO}@${ref}.`,
 	);
 
 	if (isDryRun) {
@@ -498,6 +543,7 @@ async function main() {
 	await writeVariantRules(tmpVariantRulesPath);
 	await writeSkills(tmpSkillsPath);
 	await writeSenses(tmpSensesPath);
+	const sourcesCount = await writeSources(tmpSourcesPath);
 	await fs.rm(TMP_DIR, { recursive: true, force: true });
 
 	runNodeScript(path.join("scripts", "materialize-bestiary-copies.mjs"));
@@ -507,7 +553,7 @@ async function main() {
 	);
 	await cleanupUnneededSupportFiles();
 
-	console.log("Done: 5etools data updated.");
+	console.log(`Done: 5etools data updated. Wrote ${sourcesCount} sources.`);
 }
 
 main().catch(async (error) => {

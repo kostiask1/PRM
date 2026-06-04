@@ -1,0 +1,642 @@
+[
+  {
+    "name": "A Zib for Your Thoughts",
+    "source": "AZfyT"
+  },
+  {
+    "name": "Acquisitions Incorporated",
+    "source": "AI"
+  },
+  {
+    "name": "Adventure Atlas: The Mortuary",
+    "source": "AATM"
+  },
+  {
+    "name": "Adventure with Muk",
+    "source": "AWM"
+  },
+  {
+    "name": "Adventurers League",
+    "source": "AL"
+  },
+  {
+    "name": "Adventures in the Forgotten Realms: A Verdant Tomb",
+    "source": "AitFR-AVT"
+  },
+  {
+    "name": "Adventures in the Forgotten Realms: Deepest Night",
+    "source": "AitFR-DN"
+  },
+  {
+    "name": "Adventures in the Forgotten Realms: From Cyan Depths",
+    "source": "AitFR-FCD"
+  },
+  {
+    "name": "Adventures in the Forgotten Realms: In Scarlet Flames",
+    "source": "AitFR-ISF"
+  },
+  {
+    "name": "Adventures in the Forgotten Realms: The Hidden Page",
+    "source": "AitFR-THP"
+  },
+  {
+    "name": "Astarion's Book of Hungers",
+    "source": "ABH"
+  },
+  {
+    "name": "Astral Adventurer's Guide",
+    "source": "AAG"
+  },
+  {
+    "name": "Baldur's Gate: Descent Into Avernus",
+    "source": "BGDIA"
+  },
+  {
+    "name": "Bigby Presents: Glory of the Giants",
+    "source": "BGG"
+  },
+  {
+    "name": "Boo's Astral Menagerie",
+    "source": "BAM"
+  },
+  {
+    "name": "Borderlands Quest: Dagger Danger!",
+    "source": "BQDD"
+  },
+  {
+    "name": "Borderlands Quest: Goblin Trouble",
+    "source": "BQGT"
+  },
+  {
+    "name": "Candlekeep Mysteries",
+    "source": "CM"
+  },
+  {
+    "name": "Chains of Asmodeus",
+    "source": "CoA"
+  },
+  {
+    "name": "Critical Role: Call of the Netherdeep",
+    "source": "CRCotN"
+  },
+  {
+    "name": "Crochet: A Book of Many Patterns",
+    "source": "CaBoMP"
+  },
+  {
+    "name": "Curse of Strahd",
+    "source": "CoS"
+  },
+  {
+    "name": "Descent into the Lost Caverns of Tsojcanth",
+    "source": "DitLCoT"
+  },
+  {
+    "name": "Domains of Delight",
+    "source": "DoD"
+  },
+  {
+    "name": "Dragon Delves: A Copper for a Song",
+    "source": "DrDe-ACfaS"
+  },
+  {
+    "name": "Dragon Delves: Baker's Doesn't",
+    "source": "DrDe-BD"
+  },
+  {
+    "name": "Dragon Delves: Before the Storm",
+    "source": "DrDe-BtS"
+  },
+  {
+    "name": "Dragon Delves: Death at Sunset",
+    "source": "DrDe-DaS"
+  },
+  {
+    "name": "Dragon Delves: Dragons of the Sandstone City",
+    "source": "DrDe-DotSC"
+  },
+  {
+    "name": "Dragon Delves: For Whom the Void Calls",
+    "source": "DrDe-FWtVC"
+  },
+  {
+    "name": "Dragon Delves: Shivering Death",
+    "source": "DrDe-SD"
+  },
+  {
+    "name": "Dragon Delves: The Dragon of Najkir",
+    "source": "DrDe-TDoN"
+  },
+  {
+    "name": "Dragon Delves: The Forbidden Vale",
+    "source": "DrDe-TFV"
+  },
+  {
+    "name": "Dragon Delves: The Will of Orcus",
+    "source": "DrDe-TWoO"
+  },
+  {
+    "name": "Dragonlance: Shadow of the Dragon Queen",
+    "source": "DSotDQ"
+  },
+  {
+    "name": "Dragons of Stormwreck Isle",
+    "source": "DoSI"
+  },
+  {
+    "name": "Dungeon Master's Guide (2014)",
+    "source": "DMG"
+  },
+  {
+    "name": "Dungeon Master's Guide (2024)",
+    "source": "XDMG"
+  },
+  {
+    "name": "Dungeon Master's Screen",
+    "source": "Screen"
+  },
+  {
+    "name": "Dungeon Master's Screen (2024)",
+    "source": "XScreen"
+  },
+  {
+    "name": "Dungeon Master's Screen: Dungeon Kit",
+    "source": "ScreenDungeonKit"
+  },
+  {
+    "name": "Dungeon Master's Screen: Spelljammer",
+    "source": "ScreenSpelljammer"
+  },
+  {
+    "name": "Dungeon Master's Screen: Wilderness Kit",
+    "source": "ScreenWildernessKit"
+  },
+  {
+    "name": "Dungeons & Dragons vs. Rick and Morty: Basic Rules",
+    "source": "RMR"
+  },
+  {
+    "name": "Eberron: Forge of the Artificer",
+    "source": "EFA"
+  },
+  {
+    "name": "Eberron: Forgotten Relics",
+    "source": "EFR"
+  },
+  {
+    "name": "Eberron: Rising from the Last War",
+    "source": "ERLW"
+  },
+  {
+    "name": "Essentials Kit: Divine Contention",
+    "source": "DC"
+  },
+  {
+    "name": "Essentials Kit: Dragon of Icespire Peak",
+    "source": "DIP"
+  },
+  {
+    "name": "Essentials Kit: Sleeping Dragon's Wake",
+    "source": "SDW"
+  },
+  {
+    "name": "Essentials Kit: Storm Lord's Wrath",
+    "source": "SLW"
+  },
+  {
+    "name": "Explorer's Guide to Wildemount",
+    "source": "EGW"
+  },
+  {
+    "name": "Fated Flight of the Recluse",
+    "source": "FFotR"
+  },
+  {
+    "name": "Fizban's Treasury of Dragons",
+    "source": "FTD"
+  },
+  {
+    "name": "Forgotten Realms: Adventures in Faerûn",
+    "source": "FRAiF"
+  },
+  {
+    "name": "Forgotten Realms: Heroes of Faerûn",
+    "source": "FRHoF"
+  },
+  {
+    "name": "Ghosts of Saltmarsh",
+    "source": "GoS"
+  },
+  {
+    "name": "Giants of the Star Forge",
+    "source": "GotSF"
+  },
+  {
+    "name": "Guildmasters' Guide to Ravnica",
+    "source": "GGR"
+  },
+  {
+    "name": "Heroes of the Borderlands",
+    "source": "HotB"
+  },
+  {
+    "name": "Heroes' Feast",
+    "source": "HF"
+  },
+  {
+    "name": "Heroes' Feast Flavors of the Multiverse",
+    "source": "HFFotM"
+  },
+  {
+    "name": "Heroes' Feast: Saving the Children's Menu",
+    "source": "HFStCM"
+  },
+  {
+    "name": "Hoard of the Dragon Queen",
+    "source": "HotDQ"
+  },
+  {
+    "name": "Hold Back The Dead",
+    "source": "HBTD"
+  },
+  {
+    "name": "Hunt for the Thessalhydra",
+    "source": "HftT"
+  },
+  {
+    "name": "Icewind Dale: Rime of the Frostmaiden",
+    "source": "IDRotF"
+  },
+  {
+    "name": "Infernal Machine Rebuild",
+    "source": "IMR"
+  },
+  {
+    "name": "Journeys through the Radiant Citadel",
+    "source": "JttRC"
+  },
+  {
+    "name": "Keys from the Golden Vault",
+    "source": "KftGV"
+  },
+  {
+    "name": "Krenko's Way",
+    "source": "KKW"
+  },
+  {
+    "name": "Light of Xaryxis",
+    "source": "LoX"
+  },
+  {
+    "name": "Lightning Keep",
+    "source": "LK"
+  },
+  {
+    "name": "Locathah Rising",
+    "source": "LR"
+  },
+  {
+    "name": "Lorwyn: First Light",
+    "source": "LFL"
+  },
+  {
+    "name": "Lost Laboratory of Kwalish",
+    "source": "LLK"
+  },
+  {
+    "name": "Lost Mine of Phandelver",
+    "source": "LMoP"
+  },
+  {
+    "name": "Minsc and Boo's Journal of Villainy",
+    "source": "MaBJoV"
+  },
+  {
+    "name": "Monster Manual (2014)",
+    "source": "MM"
+  },
+  {
+    "name": "Monster Manual (2025)",
+    "source": "XMM"
+  },
+  {
+    "name": "Monstrous Compendium Volume 4: Eldraine Creatures",
+    "source": "MCV4EC"
+  },
+  {
+    "name": "Mordenkainen Presents: Monsters of the Multiverse",
+    "source": "MPMM"
+  },
+  {
+    "name": "Mordenkainen's Tome of Foes",
+    "source": "MTF"
+  },
+  {
+    "name": "Morte's Planar Parade",
+    "source": "MPP"
+  },
+  {
+    "name": "Muk's Guide to Everything He Learned From Tasha",
+    "source": "MGELFT"
+  },
+  {
+    "name": "Mythic Odysseys of Theros",
+    "source": "MOT"
+  },
+  {
+    "name": "NERDS Restoring Harmony: A Sticky Situation",
+    "source": "NRH-ASS"
+  },
+  {
+    "name": "NERDS Restoring Harmony: A Voice in the Wilderness",
+    "source": "NRH-AVitW"
+  },
+  {
+    "name": "NERDS Restoring Harmony: A Web of Lies",
+    "source": "NRH-AWoL"
+  },
+  {
+    "name": "NERDS Restoring Harmony: Adventure Together",
+    "source": "NRH-AT"
+  },
+  {
+    "name": "NERDS Restoring Harmony: Circus of Illusion",
+    "source": "NRH-CoI"
+  },
+  {
+    "name": "NERDS Restoring Harmony: The Candy Mountain Caper",
+    "source": "NRH-TCMC"
+  },
+  {
+    "name": "NERDS Restoring Harmony: The Lost Tomb",
+    "source": "NRH-TLT"
+  },
+  {
+    "name": "Netheril's Fall",
+    "source": "NF"
+  },
+  {
+    "name": "One Grung Above",
+    "source": "OGA"
+  },
+  {
+    "name": "Out of the Abyss",
+    "source": "OotA"
+  },
+  {
+    "name": "Peril in Pinebrook",
+    "source": "PiP"
+  },
+  {
+    "name": "Phandelver and Below: The Shattered Obelisk",
+    "source": "PaBTSO"
+  },
+  {
+    "name": "Plane Shift: Amonkhet",
+    "source": "PSA"
+  },
+  {
+    "name": "Plane Shift: Dominaria",
+    "source": "PSD"
+  },
+  {
+    "name": "Plane Shift: Innistrad",
+    "source": "PSI"
+  },
+  {
+    "name": "Plane Shift: Ixalan",
+    "source": "PSX"
+  },
+  {
+    "name": "Plane Shift: Kaladesh",
+    "source": "PSK"
+  },
+  {
+    "name": "Plane Shift: Zendikar",
+    "source": "PSZ"
+  },
+  {
+    "name": "Player's Handbook (2014)",
+    "source": "PHB"
+  },
+  {
+    "name": "Player's Handbook (2024)",
+    "source": "XPHB"
+  },
+  {
+    "name": "Princes of the Apocalypse",
+    "source": "PotA"
+  },
+  {
+    "name": "Puncheons and Flagons",
+    "source": "PaF"
+  },
+  {
+    "name": "Quests from the Infinite Staircase",
+    "source": "QftIS"
+  },
+  {
+    "name": "Ravenloft: The House of Lament",
+    "source": "HoL"
+  },
+  {
+    "name": "Red Dragon's Tale: A LEGO Adventure",
+    "source": "LRDT"
+  },
+  {
+    "name": "Return to the Glory",
+    "source": "RtG"
+  },
+  {
+    "name": "Rise of Tiamat",
+    "source": "RoT"
+  },
+  {
+    "name": "Sage Advice Compendium (2014)",
+    "source": "SAC"
+  },
+  {
+    "name": "Sage Advice Compendium (2025)",
+    "source": "XSAC"
+  },
+  {
+    "name": "Scions of Elemental Evil",
+    "source": "ScoEE"
+  },
+  {
+    "name": "Sigil and the Outlands",
+    "source": "SatO"
+  },
+  {
+    "name": "Spelljammer Academy",
+    "source": "SjA"
+  },
+  {
+    "name": "Storm King's Thunder",
+    "source": "SKT"
+  },
+  {
+    "name": "Stranger Things: Welcome to the Hellfire Club",
+    "source": "WttHC"
+  },
+  {
+    "name": "Strixhaven: A Curriculum of Chaos",
+    "source": "SCC"
+  },
+  {
+    "name": "Strixhaven: A Reckoning in Ruins",
+    "source": "SCC-ARiR"
+  },
+  {
+    "name": "Strixhaven: Campus Kerfuffle",
+    "source": "SCC-CK"
+  },
+  {
+    "name": "Strixhaven: Hunt for Mage Tower",
+    "source": "SCC-HfMT"
+  },
+  {
+    "name": "Strixhaven: The Magister's Masquerade",
+    "source": "SCC-TMM"
+  },
+  {
+    "name": "Sword Coast Adventurer's Guide",
+    "source": "SCAG"
+  },
+  {
+    "name": "Tales from the Yawning Portal: Against the Giants",
+    "source": "TftYP-AtG"
+  },
+  {
+    "name": "Tales from the Yawning Portal: Dead in Thay",
+    "source": "TftYP-DiT"
+  },
+  {
+    "name": "Tales from the Yawning Portal: The Forge of Fury",
+    "source": "TftYP-TFoF"
+  },
+  {
+    "name": "Tales from the Yawning Portal: The Hidden Shrine of Tamoachan",
+    "source": "TftYP-THSoT"
+  },
+  {
+    "name": "Tales from the Yawning Portal: The Sunless Citadel",
+    "source": "TftYP-TSC"
+  },
+  {
+    "name": "Tales from the Yawning Portal: Tomb of Horrors",
+    "source": "TftYP-ToH"
+  },
+  {
+    "name": "Tales from the Yawning Portal: White Plume Mountain",
+    "source": "TftYP-WPM"
+  },
+  {
+    "name": "Tarot Deck",
+    "source": "TD"
+  },
+  {
+    "name": "Tasha's Cauldron of Everything",
+    "source": "TCE"
+  },
+  {
+    "name": "The Book of Many Things",
+    "source": "BMT"
+  },
+  {
+    "name": "The Deck of Many Things: Card Reference Guide",
+    "source": "DMTCRG"
+  },
+  {
+    "name": "The Lost Dungeon of Rickedness: Big Rick Energy",
+    "source": "RMBRE"
+  },
+  {
+    "name": "The Lost Kenku",
+    "source": "TLK"
+  },
+  {
+    "name": "The Lost Library of Lethchauntos",
+    "source": "FRAiF"
+  },
+  {
+    "name": "The Orrery of the Wanderer",
+    "source": "OoW"
+  },
+  {
+    "name": "The Tortle Package",
+    "source": "TTP"
+  },
+  {
+    "name": "The Wild Beyond the Witchlight",
+    "source": "WBtW"
+  },
+  {
+    "name": "Theros: No Silent Secret",
+    "source": "MOT"
+  },
+  {
+    "name": "Thieves' Gallery",
+    "source": "HAT-TG"
+  },
+  {
+    "name": "Tomb of Annihilation",
+    "source": "ToA"
+  },
+  {
+    "name": "Turn of Fortune's Wheel",
+    "source": "ToFW"
+  },
+  {
+    "name": "Uni and the Hunt for the Lost Horn",
+    "source": "UtHftLH"
+  },
+  {
+    "name": "Van Richten's Guide to Ravenloft",
+    "source": "VRGR"
+  },
+  {
+    "name": "Vecna: Eve of Ruin",
+    "source": "VEoR"
+  },
+  {
+    "name": "Vecna: Nest of the Eldritch Eye",
+    "source": "VNotEE"
+  },
+  {
+    "name": "Volo's Guide to Monsters",
+    "source": "VGM"
+  },
+  {
+    "name": "Waterdeep: Dragon Heist",
+    "source": "WDH"
+  },
+  {
+    "name": "Waterdeep: Dungeon of the Mad Mage",
+    "source": "WDMM"
+  },
+  {
+    "name": "Wildemount: Dangerous Designs",
+    "source": "DD"
+  },
+  {
+    "name": "Wildemount: Frozen Sick",
+    "source": "FS"
+  },
+  {
+    "name": "Wildemount: Tide of Retribution",
+    "source": "ToR"
+  },
+  {
+    "name": "Wildemount: Unwelcome Spirits",
+    "source": "US"
+  },
+  {
+    "name": "X Marks the Spot",
+    "source": "XMtS"
+  },
+  {
+    "name": "Xanathar's Guide to Everything",
+    "source": "XGE"
+  }
+]
