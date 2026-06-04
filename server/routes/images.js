@@ -81,6 +81,19 @@ router.get("/images/stats", async (req, res, next) => {
 	}
 });
 
+router.get("/images/bestiary-tokens", async (req, res, next) => {
+	try {
+		res.json(
+			await storage.listBestiaryTokenAssets({
+				subcategory: req.query.subcategory || "",
+				search: req.query.search || "",
+			}),
+		);
+	} catch (error) {
+		next(error);
+	}
+});
+
 router.post(
 	"/campaigns/:slug/images/:category",
 	upload.single("image"),

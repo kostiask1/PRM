@@ -83,6 +83,38 @@
 	gap: var(--space-4);
 }
 
+.ImageGallery__search {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	min-width: 180px;
+	width: min(260px, 24vw);
+	height: var(--size-8);
+	padding: 0 var(--space-2);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--panel-2);
+	color: var(--muted);
+}
+
+.ImageGallery__search input {
+	flex: 1;
+	min-width: 0;
+	border: 0;
+	outline: 0;
+	background: transparent;
+	color: var(--text);
+	font: inherit;
+	font-size: 0.85rem;
+}
+
+.ImageGallery__search .Button {
+	min-height: unset;
+	padding: 0;
+	border: 0;
+	background: transparent;
+}
+
 .SourceBtn.is_drag_over {
 	background: color-mix(in srgb, var(--accent), transparent 80%);
 }
@@ -344,6 +376,10 @@
 	transition: transform 0.2s;
 }
 
+.ImageGallery__item.is_protected {
+	cursor: default;
+}
+
 .ImageGallery__image_wrap {
 	aspect-ratio: 1;
 	border-radius: var(--radius-md);
@@ -380,6 +416,15 @@
 .ImageGallery__item__folder.is_protected .ImageGallery__image_wrap {
 	background: color-mix(in srgb, var(--accent), transparent 90%);
 	border-color: color-mix(in srgb, var(--accent), transparent 60%);
+}
+
+.ImageGallery__item.is_protected .ImageGallery__nameBtn {
+	cursor: default;
+}
+
+.ImageGallery__item.is_protected .ImageGallery__nameBtn:hover {
+	color: inherit;
+	text-decoration: none;
 }
 
 .ImageGallery__image_wrap img {

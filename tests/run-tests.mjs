@@ -3111,6 +3111,32 @@ await run("storage image listing and subcategory discovery", async () => {
 	});
 });
 
+await run("storage lists readonly official bestiary token assets", async () => {
+	const rootAssets = await storage.listBestiaryTokenAssets();
+	assert.ok(rootAssets.subcategories.includes("AATM"));
+	assert.deepEqual(rootAssets.images, []);
+
+	const sourceAssets = await storage.listBestiaryTokenAssets({
+		subcategory: "AATM",
+	});
+	assert.ok(
+		sourceAssets.images.some((item) => item.name === "Animated Coffin.webp"),
+	);
+	assert.equal(sourceAssets.images[0].readonly, true);
+	assert.match(sourceAssets.images[0].url, /^\/api\/bestiary\/tokens\/AATM\//);
+
+	const searchAssets = await storage.listBestiaryTokenAssets({
+		search: "animated coffin",
+	});
+	assert.ok(
+		searchAssets.images.some(
+			(item) =>
+				item.name === "Animated Coffin.webp" &&
+				item.displayName === "Animated Coffin (AATM)",
+		),
+	);
+});
+
 await run("storage detects campaign images recursively", async () => {
 	await withTestSlug("campaign-has-images", async (slug) => {
 		const category = "attachments";

@@ -49,6 +49,8 @@ function ImageGallery({
 		selectedSub,
 		setSelectedSub,
 		images,
+		searchQuery,
+		setSearchQuery,
 		storageStats,
 		selectedFilenames,
 		selectedSubs,
@@ -77,7 +79,10 @@ function ImageGallery({
 		handleDragEnd,
 		getCleanName,
 		handleRenameImage,
-		isProtectedSystemSub,
+		isReadonlySub,
+		isReadonlyImage,
+		isReadonlyCurrentFolder,
+		isReadonlyPath,
 	} = useImageGallery({
 		isOpen,
 		initialSource,
@@ -157,6 +162,7 @@ function ImageGallery({
 								slug: "general",
 								category: selectedCat.id,
 								subcategory: selectedSub,
+								readonly: isReadonlyPath(selectedSub),
 							})
 						}
 					>
@@ -189,6 +195,7 @@ function ImageGallery({
 									slug: c.slug,
 									category: selectedCat.id,
 									subcategory: selectedSub,
+									readonly: false,
 								})
 							}
 						>
@@ -226,6 +233,7 @@ function ImageGallery({
 										slug: selectedSource,
 										category: cat.id,
 										subcategory: "",
+										readonly: false,
 									})
 								}
 							>
@@ -255,6 +263,7 @@ function ImageGallery({
 										slug: selectedSource,
 										category: selectedCat.id,
 										subcategory: "",
+										readonly: false,
 									})
 								}
 							>
@@ -296,6 +305,7 @@ function ImageGallery({
 															slug: selectedSource,
 															category: selectedCat.id,
 															subcategory: breadcrumbPath,
+															readonly: isReadonlyPath(breadcrumbPath),
 														})
 													}
 												>
@@ -306,6 +316,7 @@ function ImageGallery({
 									</React.Fragment>
 								))}
 							<Icon name="chevron" size={10} className="BreadcrumbSeparator" />
+							{!isReadonlyCurrentFolder && (
 							<div className="ImageGallery__new_sub">
 								{isCreatingSub ? (
 									<>
@@ -337,6 +348,25 @@ function ImageGallery({
 									/>
 								)}
 							</div>
+							)}
+						</div>
+						<div className="ImageGallery__search">
+							<Icon name="search" size={14} />
+							<input
+								type="search"
+								value={searchQuery}
+								onChange={(e) => setSearchQuery(e.target.value)}
+								placeholder={lang.t("Search images...")}
+							/>
+							{searchQuery && (
+								<Button
+									variant="ghost"
+									size={Button.SIZES.SMALL}
+									icon="x"
+									onClick={() => setSearchQuery("")}
+									title={lang.t("Clear search")}
+								/>
+							)}
 						</div>
 						<div className="ImageGallery__storage_stats">
 							<span>
@@ -372,6 +402,7 @@ function ImageGallery({
 									</Button>
 								</>
 							)}
+							{!isReadonlyCurrentFolder && (
 							<label className="UploadBtn">
 								<Icon name="plus" size={14} />
 								<span>{lang.t("Upload")}</span>
@@ -383,6 +414,7 @@ function ImageGallery({
 									onChange={(e) => handleFileUpload(e.target.files)}
 								/>
 							</label>
+							)}
 						</div>
 					</div>
 
@@ -398,7 +430,9 @@ function ImageGallery({
 								dragSource.category === selectedCat.id &&
 								dragSource.subcategory === selectedSub;
 
-							if (!isSameLocation) setIsDraggingOver(true);
+							if (!isSameLocation && !isReadonlyCurrentFolder) {
+								setIsDraggingOver(true);
+							}
 						}}
 						onDragLeave={() => setIsDraggingOver(false)}
 						onDrop={(e) =>
@@ -406,6 +440,7 @@ function ImageGallery({
 								slug: selectedSource,
 								category: selectedCat.id,
 								subcategory: selectedSub,
+								readonly: isReadonlyCurrentFolder,
 							})
 						}
 					>
@@ -418,7 +453,7 @@ function ImageGallery({
 
 						{!loading &&
 							allSubs.map((sub, index) => {
-								const isProtected = isProtectedSystemSub(sub);
+								const isReadonly = isReadonlySub(sub);
 								const folderIcon = SUB_ICON_NAMES[sub] || "folder";
 								return (
 									<div
@@ -429,11 +464,11 @@ function ImageGallery({
 											{
 												is_selected: selectedSubs.has(sub),
 												is_drag_over: dragOverTarget?.id === sub,
-												is_protected: isProtected,
+												is_protected: isReadonly,
 											},
 										)}
 										onClick={(e) => {
-											if (isProtected) return;
+											if (isReadonly) return;
 											handleItemClick(sub, "sub", index, e);
 										}}
 										onDoubleClick={() => {
@@ -442,10 +477,11 @@ function ImageGallery({
 												: sub;
 											setSelectedSub(nextPath);
 										}}
-										draggable={!isProtected}
+										draggable={!isReadonly}
 										onDragStart={(e) => handleDragStart(e, sub, "sub")}
 										onDragEnd={handleDragEnd}
 										onDragOver={(e) => {
+											if (isReadonly) return;
 											e.preventDefault();
 											if (dragOverTarget?.id !== sub) {
 												setDragOverTarget({ type: "sub", id: sub });
@@ -460,12 +496,13 @@ function ImageGallery({
 												slug: selectedSource,
 												category: selectedCat.id,
 												subcategory: destSub,
+												readonly: isReadonlyPath(destSub),
 											});
 										}}
 									>
 										<div className="ImageGallery__image_wrap">
 											<Icon name={folderIcon} size={48} />
-											{!isProtected && (
+											{!isReadonly && (
 												<div
 													className="ImageGallery__checkbox"
 													onClick={(e) => toggleSelect(sub, "sub", e)}
@@ -481,8 +518,8 @@ function ImageGallery({
 											<button
 												type="button"
 												className="ImageGallery__nameBtn"
-												onClick={async (e) => {
-													if (isProtected) return;
+													onClick={async (e) => {
+													if (isReadonly) return;
 													e.stopPropagation();
 													const newName = await dispatch(
 														prompt({
@@ -503,14 +540,18 @@ function ImageGallery({
 
 						{!loading &&
 							images.length > 0 &&
-							images.map((img, index) => (
+							images.map((img, index) => {
+								const imageReadonly = isReadonlyImage(img);
+								return (
 								<Tooltip
 									key={img.url}
 									content={lang.t("Right-click: open fullscreen")}
 								>
 									<div
 										className={classNames("ImageGallery__item", {
-											is_selected: selectedFilenames.has(img.name),
+											is_selected:
+												!imageReadonly && selectedFilenames.has(img.name),
+											is_protected: imageReadonly,
 										})}
 										onClick={(e) =>
 											handleItemClick(
@@ -525,12 +566,13 @@ function ImageGallery({
 											e.preventDefault();
 											setPreviewImage(img);
 										}}
-										draggable
+										draggable={!imageReadonly}
 										onDragStart={(e) => handleDragStart(e, img, "image")}
 										onDragEnd={handleDragEnd}
 									>
 										<div className="ImageGallery__image_wrap">
 											<img src={img.url} alt="" />
+											{!imageReadonly && (
 											<div
 												className="ImageGallery__checkbox"
 												onClick={(e) => toggleSelect(img.name, "image", e)}
@@ -542,13 +584,15 @@ function ImageGallery({
 													size={12}
 												/>
 											</div>
+											)}
 										</div>
-										<Tooltip content={img.name}>
+										<Tooltip content={img.displayName || img.name}>
 											<span className="ImageGallery__name">
 												<button
 													type="button"
 													className="ImageGallery__nameBtn"
 													onClick={async (e) => {
+														if (imageReadonly) return;
 														e.stopPropagation();
 														const currentClean = getCleanName(img.name);
 														const newBaseName = await dispatch(
@@ -567,13 +611,14 @@ function ImageGallery({
 														}
 													}}
 												>
-													{getCleanName(img.name)}
+													{getCleanName(img.displayName || img.name)}
 												</button>
 											</span>
 										</Tooltip>
 									</div>
 								</Tooltip>
-							))}
+								);
+							})}
 					</div>
 				</main>
 			</div>

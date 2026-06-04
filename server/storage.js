@@ -10,6 +10,7 @@ const ROOT_DIR = path.join(__dirname, "..");
 const DATA_DIR = path.join(ROOT_DIR, "data");
 const CAMPAIGNS_DIR = path.join(DATA_DIR, "campaigns");
 const BESTIARY_DIR = path.join(ROOT_DIR, "database", "bestiary");
+const BESTIARY_TOKENS_DIR = path.join(BESTIARY_DIR, "tokens");
 const CUSTOM_BESTIARY_SOURCE = "CUSTOM";
 const CUSTOM_BESTIARY_PATH = path.join(DATA_DIR, "custom-bestiary.json");
 const BESTIARY_AI_RESPONSES_PATH = path.join(
@@ -21,6 +22,7 @@ const FAVORITES_PATH = path.join(DATA_DIR, "favorites.json");
 const IMAGES_DIR = path.join(DATA_DIR, "images");
 const SETTINGS_PATH = path.join(DATA_DIR, "settings.json");
 const ENTITY_TYPES = Object.freeze(["characters", "npc", "locations"]);
+const IMAGE_FILE_RE = /\.(jpg|jpeg|png|webp|gif|svg)$/i;
 const DEFAULT_IMAGE_PROMPT_BASE_PROMPT =
 	"cinematic, photorealistic, ultra realistic, high detail, 8k, dramatic lighting, volumetric light, sharp focus, depth of field, film still, concept art";
 
@@ -110,6 +112,25 @@ function campaignImagesDir(slug, category, subcategory = "") {
 
 function sessionPath(slug, fileName) {
 	return path.join(campaignDir(slug), "sessions", path.basename(fileName));
+}
+
+function encodeUrlPathSegments(...parts) {
+	return parts
+		.flatMap((part) =>
+			String(part || "")
+				.split(/[\\/]+/)
+				.filter(Boolean),
+		)
+		.map((part) => encodeURIComponent(part))
+		.join("/");
+}
+
+function normalizePathSegments(value) {
+	return String(value || "")
+		.split(/[\\/]+/)
+		.map((part) => part.trim())
+		.filter(Boolean)
+		.filter((part) => part !== "." && part !== ".." && part === path.basename(part));
 }
 
 async function ensureDir(dirPath) {
@@ -1585,7 +1606,7 @@ async function listImages(slug, category, subcategory = "") {
 	if (!(await exists(dir))) return [];
 	const entries = await fs.readdir(dir, { withFileTypes: true });
 	const files = entries
-		.filter((e) => e.isFile() && /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(e.name))
+		.filter((e) => e.isFile() && IMAGE_FILE_RE.test(e.name))
 		.map(async (e) => ({
 			name: e.name,
 			url: `/api/images/${encodeURIComponent(slug)}/${encodeURIComponent(category)}${sub ? "/" + encodeURIComponent(sub) : ""}/${encodeURIComponent(e.name)}`,
@@ -1593,6 +1614,70 @@ async function listImages(slug, category, subcategory = "") {
 			sizeBytes: await getFileSize(path.join(dir, e.name)),
 		}));
 	return Promise.all(files);
+}
+
+async function listBestiaryTokenAssets({ subcategory = "", search = "" } = {}) {
+	const subParts = normalizePathSegments(subcategory);
+	const query = String(search || "").trim().toLowerCase();
+	const baseDir = path.join(BESTIARY_TOKENS_DIR, ...subParts);
+	if (!(await exists(baseDir))) return { subcategories: [], images: [] };
+
+	const makeImage = async (filePath, relativeParts) => {
+		const fileName = relativeParts[relativeParts.length - 1];
+		const folderParts = relativeParts.slice(0, -1);
+		const cleanName = path.parse(fileName).name;
+		const displayName =
+			query && folderParts.length > 0
+				? `${cleanName} (${folderParts.join("/")})`
+				: fileName;
+		return {
+			name: fileName,
+			displayName,
+			url: `/api/bestiary/tokens/${encodeUrlPathSegments(...relativeParts)}`,
+			path: path.join("bestiary", "tokens", ...relativeParts),
+			sizeBytes: await getFileSize(filePath),
+			readonly: true,
+			source: "bestiary",
+		};
+	};
+
+	if (query) {
+		const images = [];
+		const walk = async (dir, relativeParts = []) => {
+			const entries = await fs.readdir(dir, { withFileTypes: true });
+			for (const entry of entries) {
+				const nextRelativeParts = [...relativeParts, entry.name];
+				const nextPath = path.join(dir, entry.name);
+				if (entry.isDirectory()) {
+					await walk(nextPath, nextRelativeParts);
+				} else if (
+					entry.isFile() &&
+					IMAGE_FILE_RE.test(entry.name) &&
+					nextRelativeParts.join("/").toLowerCase().includes(query)
+				) {
+					images.push(await makeImage(nextPath, nextRelativeParts));
+				}
+			}
+		};
+		await walk(BESTIARY_TOKENS_DIR);
+		images.sort((a, b) => a.displayName.localeCompare(b.displayName));
+		return { subcategories: [], images };
+	}
+
+	const entries = await fs.readdir(baseDir, { withFileTypes: true });
+	const subcategories = entries
+		.filter((entry) => entry.isDirectory())
+		.map((entry) => entry.name)
+		.sort((a, b) => a.localeCompare(b));
+	const images = await Promise.all(
+		entries
+			.filter((entry) => entry.isFile() && IMAGE_FILE_RE.test(entry.name))
+			.map((entry) =>
+				makeImage(path.join(baseDir, entry.name), [...subParts, entry.name]),
+			),
+	);
+	images.sort((a, b) => a.name.localeCompare(b.name));
+	return { subcategories, images };
 }
 
 async function getImageGalleryStorageStats({
@@ -1918,6 +2003,7 @@ module.exports = {
 	normalizeCustomBestiaryMonster,
 	writeCustomBestiaryMonsters,
 	listImages,
+	listBestiaryTokenAssets,
 	getImageGalleryStorageStats,
 	listSubcategories,
 	moveImages,

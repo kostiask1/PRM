@@ -334,6 +334,12 @@ export const api = {
 		api.request(
 			`/campaigns/${encodeURIComponent(slug)}/images/${category}${subcategory ? `?subcategory=${encodeURIComponent(subcategory)}` : ""}`,
 		),
+	getBestiaryTokenAssets: (subcategory = "", search = "") => {
+		const query = new URLSearchParams();
+		if (subcategory) query.set("subcategory", subcategory);
+		if (search) query.set("search", search);
+		return api.request(`/images/bestiary-tokens?${query.toString()}`);
+	},
 	getImageGalleryStats: (slug, category, subcategory, categories = []) => {
 		const query = new URLSearchParams();
 		query.set("source", slug);

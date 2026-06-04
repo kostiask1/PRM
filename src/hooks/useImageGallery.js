@@ -19,7 +19,10 @@ export default function useImageGallery({
 	const [selectedCat, setSelectedCat] = useState(IMAGE_GALLERY_CATEGORIES[0]);
 	const [selectedSub, setSelectedSub] = useState("");
 	const [dynamicSubs, setDynamicSubs] = useState([]);
+	const [officialSubs, setOfficialSubs] = useState(new Set());
+	const [officialRootSubs, setOfficialRootSubs] = useState(new Set());
 	const [images, setImages] = useState([]);
+	const [searchQuery, setSearchQuery] = useState("");
 	const [storageStats, setStorageStats] = useState(null);
 	const [selectedFilenames, setSelectedFilenames] = useState(new Set());
 	const [selectedSubs, setSelectedSubs] = useState(new Set());
@@ -31,6 +34,10 @@ export default function useImageGallery({
 	const [dragSource, setDragSource] = useState(null);
 	const [dragOverTarget, setDragOverTarget] = useState(null);
 	const hasSelection = selectedFilenames.size > 0 || selectedSubs.size > 0;
+	const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+	const isGeneralTokens =
+		selectedSource === "general" && selectedCat.id === "tokens";
+	const selectedSubRoot = selectedSub.split("/").filter(Boolean)[0] || "";
 
 	const clearSelection = useCallback(() => {
 		setSelectedFilenames(new Set());
@@ -44,6 +51,22 @@ export default function useImageGallery({
 			(name === "players" || name === "npc"),
 		[selectedCat.id, selectedSub],
 	);
+	const isReadonlySub = useCallback(
+		(name) => isProtectedSystemSub(name) || officialSubs.has(name),
+		[isProtectedSystemSub, officialSubs],
+	);
+	const isReadonlyImage = useCallback((image) => Boolean(image?.readonly), []);
+	const isReadonlyPath = useCallback(
+		(subcategory = "") => {
+			const root = String(subcategory || "")
+				.split("/")
+				.filter(Boolean)[0];
+			return Boolean(isGeneralTokens && root && officialRootSubs.has(root));
+		},
+		[isGeneralTokens, officialRootSubs],
+	);
+	const isReadonlyCurrentFolder =
+		isGeneralTokens && selectedSubRoot && isReadonlyPath(selectedSub);
 
 	const getCleanName = useCallback((name) => {
 		return name.replace(/\.[^/.]+$/, "").replace(/-\d{10,}$/, "");
@@ -51,33 +74,79 @@ export default function useImageGallery({
 
 	const loadSubcategories = useCallback(async () => {
 		try {
-			const subs = await api.getSubcategories(
-				selectedSource,
-				selectedCat.id,
-				selectedSub,
+			const [subs, officialAssets, officialRootAssets] = await Promise.all([
+				api.getSubcategories(selectedSource, selectedCat.id, selectedSub),
+				isGeneralTokens
+					? api.getBestiaryTokenAssets(selectedSub, searchQuery)
+					: Promise.resolve(null),
+				isGeneralTokens
+					? api.getBestiaryTokenAssets("", "")
+					: Promise.resolve(null),
+			]);
+			const nextSubs = Array.isArray(subs) ? subs : [];
+			const nextOfficialSubs = Array.isArray(officialAssets?.subcategories)
+				? officialAssets.subcategories
+				: [];
+			const nextOfficialRootSubs = Array.isArray(
+				officialRootAssets?.subcategories,
+			)
+				? officialRootAssets.subcategories
+				: nextOfficialSubs;
+			setOfficialSubs(new Set(nextOfficialSubs));
+			setOfficialRootSubs(new Set(nextOfficialRootSubs));
+			setDynamicSubs(
+				[...nextSubs, ...nextOfficialSubs].filter((sub) =>
+					normalizedSearchQuery
+						? sub.toLowerCase().includes(normalizedSearchQuery)
+						: true,
+				),
 			);
-			setDynamicSubs(subs);
 		} catch (err) {
 			console.error(err);
+			setOfficialSubs(new Set());
+			setOfficialRootSubs(new Set());
 		}
-	}, [selectedSource, selectedCat.id, selectedSub]);
+	}, [
+		selectedSource,
+		selectedCat.id,
+		selectedSub,
+		isGeneralTokens,
+		searchQuery,
+		normalizedSearchQuery,
+	]);
 
 	const loadImages = useCallback(async () => {
 		setLoading(true);
 		try {
-			const data = await api.getImages(
-				selectedSource,
-				selectedCat.id,
-				selectedSub,
+			const [data, officialAssets] = await Promise.all([
+				api.getImages(selectedSource, selectedCat.id, selectedSub),
+				isGeneralTokens
+					? api.getBestiaryTokenAssets(selectedSub, searchQuery)
+					: Promise.resolve(null),
+			]);
+			const userImages = (Array.isArray(data) ? data : []).filter((image) =>
+				normalizedSearchQuery
+					? image.name.toLowerCase().includes(normalizedSearchQuery)
+					: true,
 			);
-			setImages(data || []);
+			const officialImages = Array.isArray(officialAssets?.images)
+				? officialAssets.images
+				: [];
+			setImages([...userImages, ...officialImages]);
 		} catch (err) {
 			console.error("Failed to load images:", err);
 			setImages([]);
 		} finally {
 			setLoading(false);
 		}
-	}, [selectedSource, selectedCat.id, selectedSub]);
+	}, [
+		selectedSource,
+		selectedCat.id,
+		selectedSub,
+		isGeneralTokens,
+		searchQuery,
+		normalizedSearchQuery,
+	]);
 
 	const loadStorageStats = useCallback(async () => {
 		try {
@@ -132,6 +201,7 @@ export default function useImageGallery({
 
 	const handleFileUpload = useCallback(
 		async (files) => {
+			if (isReadonlyCurrentFolder) return;
 			setLoading(true);
 			try {
 				for (const file of Array.from(files || [])) {
@@ -151,15 +221,24 @@ export default function useImageGallery({
 				setLoading(false);
 			}
 		},
-		[selectedSource, selectedCat.id, selectedSub, loadImages, loadStorageStats],
+		[
+			selectedSource,
+			selectedCat.id,
+			selectedSub,
+			isReadonlyCurrentFolder,
+			loadImages,
+			loadStorageStats,
+		],
 	);
 
 	const handleDrop = useCallback(
 		async (e, dest) => {
 			e.preventDefault();
+			e.stopPropagation();
 			setIsDraggingOver(false);
 			setDragOverTarget(null);
 			setDragSource(null);
+			if (dest.readonly) return;
 			setLoading(true);
 
 			try {
@@ -204,12 +283,27 @@ export default function useImageGallery({
 		[handleFileUpload, loadImages, loadSubcategories, loadStorageStats],
 	);
 
+	const getMovableSelectedItems = useCallback(() => {
+		const safeSubs = Array.from(selectedSubs).filter(
+			(name) => !isReadonlySub(name),
+		);
+		const safeFilenames = images
+			.filter(
+				(image) => selectedFilenames.has(image.name) && !isReadonlyImage(image),
+			)
+			.map((image) => image.name);
+		return { safeFilenames, safeSubs, items: [...safeFilenames, ...safeSubs] };
+	}, [
+		selectedFilenames,
+		selectedSubs,
+		images,
+		isReadonlyImage,
+		isReadonlySub,
+	]);
+
 	const handleMoveSelection = useCallback(
 		async (dest) => {
-			const safeSubs = Array.from(selectedSubs).filter(
-				(name) => !isProtectedSystemSub(name),
-			);
-			const items = [...Array.from(selectedFilenames), ...safeSubs];
+			const { items } = getMovableSelectedItems();
 			if (!items.length) return false;
 
 			const src = {
@@ -246,9 +340,7 @@ export default function useImageGallery({
 			}
 		},
 		[
-			selectedFilenames,
-			selectedSubs,
-			isProtectedSystemSub,
+			getMovableSelectedItems,
 			selectedSource,
 			selectedCat.id,
 			selectedSub,
@@ -260,6 +352,7 @@ export default function useImageGallery({
 	);
 
 	const handleCreateSub = useCallback(async () => {
+		if (isReadonlyCurrentFolder) return;
 		if (!newSubName.trim()) return;
 		try {
 			const fullPath = selectedSub
@@ -278,6 +371,7 @@ export default function useImageGallery({
 		selectedSub,
 		selectedSource,
 		selectedCat.id,
+		isReadonlyCurrentFolder,
 		loadSubcategories,
 		dispatch,
 	]);
@@ -347,26 +441,26 @@ export default function useImageGallery({
 		(name, type, e) => {
 			e.stopPropagation();
 			if (type === "image") {
+				const image = images.find((item) => item.name === name);
+				if (isReadonlyImage(image)) return;
 				const next = new Set(selectedFilenames);
 				if (next.has(name)) next.delete(name);
 				else next.add(name);
 				setSelectedFilenames(next);
 			} else {
-				if (isProtectedSystemSub(name)) return;
+				if (isReadonlySub(name)) return;
 				const next = new Set(selectedSubs);
 				if (next.has(name)) next.delete(name);
 				else next.add(name);
 				setSelectedSubs(next);
 			}
 		},
-		[selectedFilenames, selectedSubs, isProtectedSystemSub],
+		[selectedFilenames, selectedSubs, images, isReadonlyImage, isReadonlySub],
 	);
 
 	const handleBulkDelete = useCallback(async () => {
-		const safeSubs = Array.from(selectedSubs).filter(
-			(name) => !isProtectedSystemSub(name),
-		);
-		const total = selectedFilenames.size + safeSubs.length;
+		const { safeFilenames, safeSubs, items } = getMovableSelectedItems();
+		const total = safeFilenames.length + safeSubs.length;
 		if (!total) return;
 
 		setLoading(true);
@@ -409,7 +503,7 @@ export default function useImageGallery({
 			if (!confirmed?.confirmed) return;
 
 			await api.deleteImages({
-				items: [...Array.from(selectedFilenames), ...safeSubs],
+				items,
 				src: {
 					slug: selectedSource,
 					category: selectedCat.id,
@@ -432,9 +526,7 @@ export default function useImageGallery({
 			setLoading(false);
 		}
 	}, [
-		selectedFilenames,
-		selectedSubs,
-		isProtectedSystemSub,
+		getMovableSelectedItems,
 		selectedSource,
 		selectedCat.id,
 		selectedSub,
@@ -471,6 +563,10 @@ export default function useImageGallery({
 			...(selectedSub === "" ? selectedCat.subs || [] : []),
 			...dynamicSubs,
 		]),
+	).filter((sub) =>
+		normalizedSearchQuery
+			? sub.toLowerCase().includes(normalizedSearchQuery)
+			: true,
 	);
 
 	const handleItemClick = useCallback(
@@ -492,8 +588,13 @@ export default function useImageGallery({
 				for (let i = start; i <= end; i++) {
 					const item = combinedItems[i];
 					if (item.type === "sub") {
-						if (!isProtectedSystemSub(item.name)) nextSubs.add(item.name);
-					} else nextFilenames.add(item.name);
+						if (!isReadonlySub(item.name)) nextSubs.add(item.name);
+					} else {
+						const image = images.find(
+							(imageItem) => imageItem.name === item.name,
+						);
+						if (!isReadonlyImage(image)) nextFilenames.add(item.name);
+					}
 				}
 
 				setSelectedFilenames(nextFilenames);
@@ -502,7 +603,13 @@ export default function useImageGallery({
 				toggleSelect(name, type, e);
 				setLastSelectedIndex(index);
 			} else {
-				if (type === "sub" && isProtectedSystemSub(name)) return;
+				if (type === "sub" && isReadonlySub(name)) return;
+				if (
+					type === "image" &&
+					isReadonlyImage(images.find((image) => image.name === name))
+				) {
+					return;
+				}
 				const isSelected =
 					type === "image"
 						? selectedFilenames.has(name)
@@ -527,14 +634,19 @@ export default function useImageGallery({
 			selectedFilenames,
 			selectedSubs,
 			toggleSelect,
-			isProtectedSystemSub,
+			isReadonlyImage,
+			isReadonlySub,
 		],
 	);
 
 	const handleDragStart = useCallback(
 		(e, item, type = "image") => {
 			const itemName = type === "image" ? item.name : item;
-			if (type === "sub" && isProtectedSystemSub(itemName)) {
+			if (type === "sub" && isReadonlySub(itemName)) {
+				e.preventDefault();
+				return;
+			}
+			if (type === "image" && isReadonlyImage(item)) {
 				e.preventDefault();
 				return;
 			}
@@ -544,8 +656,12 @@ export default function useImageGallery({
 					: selectedSubs.has(itemName);
 
 			const itemsToMove = isSelected
-				? [...Array.from(selectedFilenames), ...Array.from(selectedSubs)]
+				? getMovableSelectedItems().items
 				: [itemName];
+			if (!itemsToMove.length) {
+				e.preventDefault();
+				return;
+			}
 
 			e.dataTransfer.setData(
 				"application/json",
@@ -568,7 +684,9 @@ export default function useImageGallery({
 		[
 			selectedFilenames,
 			selectedSubs,
-			isProtectedSystemSub,
+			getMovableSelectedItems,
+			isReadonlyImage,
+			isReadonlySub,
 			selectedSource,
 			selectedCat.id,
 			selectedSub,
@@ -590,6 +708,10 @@ export default function useImageGallery({
 		selectedSub,
 		setSelectedSub,
 		images,
+		searchQuery,
+		setSearchQuery,
+		isReadonlyCurrentFolder,
+		isReadonlyPath,
 		storageStats,
 		selectedFilenames,
 		selectedSubs,
@@ -619,5 +741,7 @@ export default function useImageGallery({
 		getCleanName,
 		handleRenameImage,
 		isProtectedSystemSub,
+		isReadonlySub,
+		isReadonlyImage,
 	};
 }
