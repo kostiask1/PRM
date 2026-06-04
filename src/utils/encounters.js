@@ -27,7 +27,7 @@ export function getMonsterBaseHp(monster = {}) {
 	return hpAverage ?? hpSpecial ?? hitPoints ?? 0;
 }
 
-export function createEncounterMonsterId() {
+function createEncounterMonsterId() {
 	if (typeof globalThis.crypto?.randomUUID === "function") {
 		return globalThis.crypto.randomUUID();
 	}

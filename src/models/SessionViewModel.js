@@ -79,37 +79,14 @@ const SCENE_SCHEMA = [
  * @property {boolean} [isSaving]
  */
 
-export const SESSION_FIELD_SCHEMA = {
-	fileName: {
-		type: "string",
-		required: true,
-		values: "Session file identifier",
-	},
-	name: { type: "string", required: true, values: "Session name" },
-	data: {
-		type: "SessionDataPayload",
-		values:
-			"Session content: notes, scenes, encounters, npcs, locations, result_text, *_check",
-	},
-	isSaving: { type: "boolean", values: "Local autosave state" },
-};
-
 export default class SessionViewModel {
 	/** @param {SessionData} session */
 	constructor(session = {}) {
 		this.session = session;
 	}
 
-	static get schema() {
-		return SESSION_FIELD_SCHEMA;
-	}
-
 	static get sceneSchema() {
 		return SCENE_SCHEMA;
-	}
-
-	get data() {
-		return this.session;
 	}
 
 	get notes() {
@@ -122,14 +99,6 @@ export default class SessionViewModel {
 
 	get encounters() {
 		return this.session?.data?.encounters || [];
-	}
-
-	get npcs() {
-		return this.session?.data?.npcs || [];
-	}
-
-	get locations() {
-		return this.session?.data?.locations || [];
 	}
 
 	/** @param {SessionScene} scene */

@@ -1724,11 +1724,5 @@ async function applyAiOperations({
 
 module.exports = {
 	applyAiOperations,
-	applyMonsterOperations,
-	asText,
 	mergeAiIgnoredNotes,
-	normalizeCharacter,
-	normalizeLocation,
-	normalizeNote,
-	normalizeScene,
 };

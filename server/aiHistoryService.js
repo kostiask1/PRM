@@ -189,9 +189,6 @@ function formatGeneratedContentForHistory(generatedContent) {
 }
 
 module.exports = {
-	buildAiContextSummary,
-	buildAiOptionsSummary,
 	buildAiRequestSnapshot,
 	formatGeneratedContentForHistory,
-	getAiRequestMode,
 };

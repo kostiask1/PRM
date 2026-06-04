@@ -1,4 +1,4 @@
-export const ABILITY_MAP = {
+const ABILITY_MAP = {
 	str: "Strength",
 	dex: "Dexterity",
 	con: "Constitution",
@@ -7,7 +7,7 @@ export const ABILITY_MAP = {
 	cha: "Charisma",
 };
 
-export const ATTACK_TYPE_MAP = {
+const ATTACK_TYPE_MAP = {
 	m: "Melee",
 	r: "Ranged",
 	"m,r": "Melee or Ranged",

@@ -1,5 +1,3 @@
-import { lang } from "../services/localization";
-
 export const OPEN_MODAL = "modal/open";
 export const CLOSE_MODAL = "modal/close";
 export const REFRESH_ENTITIES = "entities/refresh";
@@ -220,7 +218,7 @@ export function publishDiceResultAction(result, context = null) {
 	};
 }
 
-export function showMessageBoxAction(payload) {
+function showMessageBoxAction(payload) {
 	return {
 		type: SHOW_MESSAGE_BOX,
 		payload,
@@ -253,14 +251,6 @@ export function alert(payload) {
 	});
 }
 
-export function success(payload) {
-	return createMessageBoxThunk({
-		type: "success",
-		isAlert: true,
-		...payload,
-	});
-}
-
 export function prompt(payload) {
 	return createMessageBoxThunk({
 		type: "confirm",
@@ -278,42 +268,4 @@ export function confirm(payload) {
 
 export function hideMessageBox() {
 	return { type: HIDE_MESSAGE_BOX };
-}
-
-export function dispatchAlert(dispatch, payload) {
-	return dispatch(alert(payload));
-}
-
-export function dispatchSuccess(dispatch, payload) {
-	return dispatch(success(payload));
-}
-
-export function dispatchPrompt(dispatch, payload) {
-	return dispatch(prompt(payload));
-}
-
-export function dispatchConfirm(dispatch, payload) {
-	return dispatch(confirm(payload));
-}
-
-export function alertModal(dispatch, title, message, status = null) {
-	const fullMessage = status
-		? `[${lang.t("Status")}: ${status}] ${message}`
-		: message;
-	return dispatch(alert({ title, message: fullMessage }));
-}
-
-export function successModal(dispatch, title, message) {
-	return dispatch(success({ title, message }));
-}
-
-export function promptModal(dispatch, title, message, defaultValue = "") {
-	return dispatch(prompt({ title, message, defaultValue }));
-}
-
-export function confirmModal(dispatch, title, message, status = null) {
-	const fullMessage = status
-		? `[${lang.t("Status")}: ${status}] ${message}`
-		: message;
-	return dispatch(confirm({ title, message: fullMessage }));
 }

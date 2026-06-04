@@ -3,7 +3,7 @@ export const THEMES = Object.freeze({
 	DARK: "dark",
 });
 
-export function normalizeTheme(theme) {
+function normalizeTheme(theme) {
 	return theme === THEMES.DARK ? THEMES.DARK : THEMES.LIGHT;
 }
 

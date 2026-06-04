@@ -1,6 +1,6 @@
 import { getDiffResourceState as getBaseDiffResourceState } from "./aiDiff.js";
 
-export function getAiChangeResources(entry) {
+function getAiChangeResources(entry) {
 	return Array.isArray(entry?.changes?.resources)
 		? entry.changes.resources
 		: [];
@@ -46,7 +46,7 @@ export function getLocalizedDiffResourceState(
 	});
 }
 
-export function getCustomMonsterResource(entry, resourceIds = null) {
+function getCustomMonsterResource(entry, resourceIds = null) {
 	const ids = Array.isArray(resourceIds)
 		? new Set(resourceIds.map((id) => String(id || "")).filter(Boolean))
 		: null;
@@ -67,7 +67,7 @@ export function getFirstChangedMonsterName(entry, resourceIds = null) {
 	);
 }
 
-export function getMonsterTokenImageUrl(monster) {
+function getMonsterTokenImageUrl(monster) {
 	if (!monster) return "";
 	if (monster.imageUrl) return monster.imageUrl;
 	const source = String(monster.source || "").trim();

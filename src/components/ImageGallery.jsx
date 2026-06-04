@@ -639,5 +639,4 @@ function ImageGallery({
 	);
 }
 
-export { ImageGallery };
 export default ImageGallery;

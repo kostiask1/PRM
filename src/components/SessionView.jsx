@@ -8,6 +8,7 @@ import DraggableList from "./common/DraggableList.jsx";
 import Modal from "./common/Modal.jsx";
 import NoteCard from "./common/NoteCard.jsx";
 import AiContextIgnoreButton from "./common/AiContextIgnoreButton.jsx";
+import BulkCollapseButton from "./common/BulkCollapseButton.jsx";
 import CollapseToggleButton from "./common/CollapseToggleButton.jsx";
 import TodoSection from "./session/TodoSection";
 import TodoItem from "./session/TodoItem";
@@ -246,29 +247,6 @@ function SessionView() {
 			),
 		);
 	};
-	const getBulkCollapseState = (items) =>
-		items.some((item) => !item._isVirtual && !item.collapsed);
-
-	const renderBulkCollapseButton = (items, onChange) => {
-		const realItems = items.filter((item) => !item._isVirtual);
-		if (realItems.length === 0) return null;
-		const shouldCollapse = getBulkCollapseState(realItems);
-		return (
-			<Button
-				variant="ghost"
-				size={Button.SIZES.SMALL}
-				icon="chevron"
-				iconSize={16}
-				onClick={() => onChange(shouldCollapse)}
-				title={lang.t(
-					shouldCollapse ? "Collapse all items" : "Expand all items",
-				)}
-			>
-				{lang.t(shouldCollapse ? "Collapse all" : "Expand all")}
-			</Button>
-		);
-	};
-
 	const handleBulkSessionNotesCollapse = (collapsed) => {
 		view.updateData(
 			"notes",
@@ -385,10 +363,11 @@ function SessionView() {
 									: undefined
 							}
 							action={
-								!isSessionNotesCollapsed &&
-								renderBulkCollapseButton(
-									viewModel.notes || [],
-									handleBulkSessionNotesCollapse,
+								!isSessionNotesCollapsed && (
+									<BulkCollapseButton
+										items={viewModel.notes || []}
+										onChange={handleBulkSessionNotesCollapse}
+									/>
 								)
 							}
 						>
@@ -432,13 +411,16 @@ function SessionView() {
 							title={lang.t("Session NPCs")}
 							action={
 								<div className="SessionView__sectionActions">
-									{renderBulkCollapseButton(view.sessionNpcs, (collapsed) =>
-										handleBulkSessionEntitiesCollapse(
-											"npc",
-											view.sessionNpcs,
-											collapsed,
-										),
-									)}
+									<BulkCollapseButton
+										items={view.sessionNpcs}
+										onChange={(collapsed) =>
+											handleBulkSessionEntitiesCollapse(
+												"npc",
+												view.sessionNpcs,
+												collapsed,
+											)
+										}
+									/>
 									<CreateCharacterButton
 										buttonVariant="primary"
 										campaignSlug={view.campaignSlug}
@@ -508,15 +490,16 @@ function SessionView() {
 							title={lang.t("Session locations/factions")}
 							action={
 								<div className="SessionView__sectionActions">
-									{renderBulkCollapseButton(
-										view.sessionLocations,
-										(collapsed) =>
+									<BulkCollapseButton
+										items={view.sessionLocations}
+										onChange={(collapsed) =>
 											handleBulkSessionEntitiesCollapse(
 												"locations",
 												view.sessionLocations,
 												collapsed,
-											),
-									)}
+											)
+										}
+									/>
 									<CreateLocationButton
 										buttonVariant="primary"
 										campaignSlug={view.campaignSlug}
@@ -594,7 +577,10 @@ function SessionView() {
 							title={lang.t("Scenes")}
 							action={
 								<div className="SessionView__sectionActions">
-									{renderBulkCollapseButton(scenes, handleBulkScenesCollapse)}
+									<BulkCollapseButton
+										items={scenes}
+										onChange={handleBulkScenesCollapse}
+									/>
 									<Button
 										variant="primary"
 										size={Button.SIZES.SMALL}
@@ -785,7 +771,6 @@ function SessionView() {
 	);
 }
 
-export { SessionView };
 export default SessionView;
 
 function SceneCard(props) {

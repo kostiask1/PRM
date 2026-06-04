@@ -6,8 +6,6 @@ import { useAppDispatch } from "../store/appStore";
 import { lang } from "../services/localization";
 import { IMAGE_GALLERY_CATEGORIES } from "../features/images/imageGalleryConfig";
 
-export { IMAGE_GALLERY_CATEGORIES };
-
 export default function useImageGallery({
 	isOpen,
 	initialSource,

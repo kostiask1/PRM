@@ -14,7 +14,7 @@ let reconnectTimer = null;
 let reconnectDelay = RECONNECT_BASE_DELAY;
 let initialized = false;
 
-export function getSyncClientId() {
+function getSyncClientId() {
 	if (clientId) return clientId;
 	if (window.__PRM_SYNC_CLIENT_ID__) {
 		clientId = window.__PRM_SYNC_CLIENT_ID__;

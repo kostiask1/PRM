@@ -104,18 +104,6 @@ function campaignImagesDir(slug, category, subcategory = "") {
 	return path.join(IMAGES_DIR, safeSlug, safeCat, safeSub);
 }
 
-function characterDir(campaignSlug, charSlug) {
-	return path.join(
-		campaignDir(campaignSlug),
-		"characters",
-		path.basename(charSlug),
-	);
-}
-
-function npcDir(campaignSlug, npcSlug) {
-	return path.join(campaignDir(campaignSlug), "npc", path.basename(npcSlug));
-}
-
 function sessionPath(slug, fileName) {
 	return path.join(campaignDir(slug), "sessions", path.basename(fileName));
 }
@@ -483,26 +471,6 @@ async function writeCustomBestiaryMonsters(monsters) {
 		monster: normalized,
 	});
 	return normalized;
-}
-
-async function upsertCustomBestiaryMonsters(monsters) {
-	const existing = await readCustomBestiaryMonsters();
-	const byName = new Map(
-		existing.map((monster) => [
-			String(monster.name || "")
-				.trim()
-				.toLowerCase(),
-			{ ...monster, source: CUSTOM_BESTIARY_SOURCE },
-		]),
-	);
-	for (const monster of Array.isArray(monsters) ? monsters : []) {
-		if (!monster?.name) continue;
-		byName.set(String(monster.name).trim().toLowerCase(), {
-			...monster,
-			source: CUSTOM_BESTIARY_SOURCE,
-		});
-	}
-	return writeCustomBestiaryMonsters([...byName.values()]);
 }
 
 async function readCampaign(slug) {
@@ -1958,14 +1926,9 @@ module.exports = {
 	CAMPAIGNS_DIR,
 	BESTIARY_DIR,
 	CUSTOM_BESTIARY_SOURCE,
-	CUSTOM_BESTIARY_PATH,
-	BESTIARY_AI_RESPONSES_PATH,
 	SPELLS_DIR,
 	IMAGES_DIR,
-	SETTINGS_PATH,
 	ENTITY_TYPES,
-	DEFAULT_APP_SETTINGS,
-	DEFAULT_IMAGE_PROMPT_BASE_PROMPT,
 	createId,
 	sanitizeName,
 	campaignSlug,
@@ -1974,8 +1937,6 @@ module.exports = {
 	campaignAiResponsesPath,
 	aiResponsesPath,
 	campaignImagesDir,
-	characterDir,
-	npcDir,
 	campaignMetaPath,
 	sessionPath,
 	ensureDir,
@@ -2009,11 +1970,9 @@ module.exports = {
 	exportCampaignArchiveBundle,
 	exportCampaignPartialArchiveBundle,
 	importCampaignBundle,
-	importCampaignArchiveBundle,
 	importCampaignArchiveBundleWithStrategy,
 	importCampaignPartialArchiveBundle,
 	findCampaignSlugById,
-	moveCampaignImagesToGeneral,
 	campaignHasImages,
 	deleteCampaignData,
 	clearAllCampaignData,
@@ -2026,7 +1985,6 @@ module.exports = {
 	readCustomBestiaryMonsters,
 	normalizeCustomBestiaryMonster,
 	writeCustomBestiaryMonsters,
-	upsertCustomBestiaryMonsters,
 	listImages,
 	getImageGalleryStorageStats,
 	listSubcategories,

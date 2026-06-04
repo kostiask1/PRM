@@ -264,6 +264,5 @@ class EncounterLocalMonsterAiFlow {
 
 module.exports = {
 	EncounterLocalMonsterAiFlow,
-	buildLocalEncounterMonsterFromOperation,
 	buildLocalEncounterMonsterSessionChange,
 };

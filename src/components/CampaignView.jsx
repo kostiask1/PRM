@@ -6,6 +6,7 @@ import Panel from "./common/Panel.jsx";
 import DraggableList from "./common/DraggableList.jsx";
 import NoteCard from "./common/NoteCard.jsx";
 import AiContextIgnoreButton from "./common/AiContextIgnoreButton.jsx";
+import BulkCollapseButton from "./common/BulkCollapseButton.jsx";
 import CharacterCard from "./CharacterCard";
 import LocationCard from "./LocationCard";
 import CampaignNotesGraph from "./campaign/CampaignNotesGraph.jsx";
@@ -158,29 +159,6 @@ function CampaignView() {
 			view.setIsNotesCollapsed(false);
 			view.triggerSave({ isNotesCollapsed: false });
 		}
-	};
-
-	const getBulkCollapseState = (items) =>
-		items.some((item) => !item._isVirtual && !item.collapsed);
-
-	const renderBulkCollapseButton = (items, onChange) => {
-		const realItems = items.filter((item) => !item._isVirtual);
-		if (realItems.length === 0) return null;
-		const shouldCollapse = getBulkCollapseState(realItems);
-		return (
-			<Button
-				variant="ghost"
-				size={Button.SIZES.SMALL}
-				icon="chevron"
-				iconSize={16}
-				onClick={() => onChange(shouldCollapse)}
-				title={lang.t(
-					shouldCollapse ? "Collapse all items" : "Expand all items",
-				)}
-			>
-				{lang.t(shouldCollapse ? "Collapse all" : "Expand all")}
-			</Button>
-		);
 	};
 
 	const handleBulkNotesCollapse = (collapsed) => {
@@ -391,10 +369,11 @@ function CampaignView() {
 								</div>
 								<div className="CampaignView__notesViewToggle">
 									{!isNotesCollapsed &&
-										notesViewMode === "list" &&
-										renderBulkCollapseButton(
-											view.notes,
-											handleBulkNotesCollapse,
+										notesViewMode === "list" && (
+											<BulkCollapseButton
+												items={view.notes}
+												onChange={handleBulkNotesCollapse}
+											/>
 										)}
 									<Button
 										variant={notesViewMode === "list" ? "primary" : "ghost"}
@@ -502,14 +481,17 @@ function CampaignView() {
 								</div>
 								{!isCharactersCollapsed && (
 									<div className="CampaignView__sectionActions">
-										{renderBulkCollapseButton(view.characters, (collapsed) =>
-											handleBulkEntitiesCollapse(
-												"characters",
-												view.characters,
-												view.handleCharactersReorder,
-												collapsed,
-											),
-										)}
+										<BulkCollapseButton
+											items={view.characters}
+											onChange={(collapsed) =>
+												handleBulkEntitiesCollapse(
+													"characters",
+													view.characters,
+													view.handleCharactersReorder,
+													collapsed,
+												)
+											}
+										/>
 										<CreateCharacterButton
 											campaignSlug={campaign.slug}
 											entityType="characters"
@@ -578,14 +560,17 @@ function CampaignView() {
 								</div>
 								{!isNpcsCollapsed && (
 									<div className="CampaignView__sectionActions">
-										{renderBulkCollapseButton(view.npcs, (collapsed) =>
-											handleBulkEntitiesCollapse(
-												"npc",
-												view.npcs,
-												view.handleNpcsReorder,
-												collapsed,
-											),
-										)}
+										<BulkCollapseButton
+											items={view.npcs}
+											onChange={(collapsed) =>
+												handleBulkEntitiesCollapse(
+													"npc",
+													view.npcs,
+													view.handleNpcsReorder,
+													collapsed,
+												)
+											}
+										/>
 										<CreateCharacterButton
 											campaignSlug={campaign.slug}
 											entityType="npc"
@@ -658,14 +643,17 @@ function CampaignView() {
 								</div>
 								{!isLocationsCollapsed && (
 									<div className="CampaignView__sectionActions">
-										{renderBulkCollapseButton(view.locations, (collapsed) =>
-											handleBulkEntitiesCollapse(
-												"locations",
-												view.locations,
-												view.handleLocationsReorder,
-												collapsed,
-											),
-										)}
+										<BulkCollapseButton
+											items={view.locations}
+											onChange={(collapsed) =>
+												handleBulkEntitiesCollapse(
+													"locations",
+													view.locations,
+													view.handleLocationsReorder,
+													collapsed,
+												)
+											}
+										/>
 										<CreateLocationButton campaignSlug={campaign.slug} />
 									</div>
 								)}
@@ -743,5 +731,4 @@ function CampaignView() {
 	);
 }
 
-export { CampaignView };
 export default CampaignView;

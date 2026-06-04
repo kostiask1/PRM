@@ -1,4 +1,4 @@
-export const DEFAULT_LANGUAGE = "en";
+const DEFAULT_LANGUAGE = "en";
 
 function loadLanguagePacks() {
 	let modules = {};
@@ -72,7 +72,5 @@ class Localization {
 		return formatTemplate(translated, variables);
 	}
 }
-
-export { Localization };
 
 export const lang = new Localization();

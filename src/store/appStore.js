@@ -359,17 +359,6 @@ export function closeActiveModal(value = null) {
 	resolveModalRequest(requestId, value);
 }
 
-export function syncNavigationFromUrl() {
-	const route = parseUrl();
-	appStore.dispatch(
-		setNavigationAction({
-			activeCampaignSlug: route.campaign || null,
-			activeSessionFileName: route.session || null,
-			activeEncounterId: route.encounter || null,
-		}),
-	);
-}
-
 export function syncNavigationFromPath(pathname) {
 	const route = parseUrl(pathname);
 	appStore.dispatch(

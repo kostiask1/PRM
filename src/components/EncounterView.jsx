@@ -1368,5 +1368,4 @@ function EncounterView() {
 	);
 }
 
-export { EncounterView };
 export default EncounterView;

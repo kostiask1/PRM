@@ -29,46 +29,10 @@ import { createEmptyNote, upsertNoteById } from "../utils/noteUtils.js";
  * @property {boolean} [_isNew]
  */
 
-export const CHARACTER_FIELD_SCHEMA = {
-	id: {
-		type: "number|string",
-		required: true,
-		values: "Date.now() or backend id",
-	},
-	slug: { type: "string", values: "Backend entity slug" },
-	firstName: { type: "string", values: "First name" },
-	lastName: { type: "string", values: "Last name" },
-	race: { type: "string", values: "D&D race" },
-	class: { type: "string", values: "D&D class" },
-	level: { type: "number|string", values: "1..20" },
-	motivation: { type: "string", values: "Character motivation" },
-	description: { type: "string", values: "Character description" },
-	trait: { type: "string", values: "Trait or habit" },
-	notes: {
-		type: "CharacterNote[]",
-		values: "Notes list, always with at least one item",
-	},
-	collapsed: { type: "boolean", values: "Card collapsed state" },
-	isNotesCollapsed: { type: "boolean", values: "Notes block collapsed state" },
-	imageUrl: { type: "string|null", values: "Portrait URL" },
-};
-
 export default class CharacterCardModel {
 	/** @param {CharacterData} character */
 	constructor(character = {}) {
 		this.character = character;
-	}
-
-	static get schema() {
-		return CHARACTER_FIELD_SCHEMA;
-	}
-
-	static createEmptyNote() {
-		return createEmptyNote();
-	}
-
-	get data() {
-		return this.character;
 	}
 
 	get displayName() {
@@ -108,18 +72,6 @@ export default class CharacterCardModel {
 
 	get trait() {
 		return this.character.trait || "";
-	}
-
-	get hasImage() {
-		return Boolean(this.character.imageUrl);
-	}
-
-	get initialCategory() {
-		return this.character.type === "npc" ? "tokens" : "characters";
-	}
-
-	get initialSubcategory() {
-		return this.character.type === "npc" ? "npc" : "players";
 	}
 
 	withField(field, value) {

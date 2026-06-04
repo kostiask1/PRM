@@ -521,7 +521,6 @@ async function restoreAiResponseSnapshot(entry, snapshotKey, options = {}) {
 }
 
 module.exports = {
-	buildAiChangeSet,
 	buildCustomMonsterChangeResources,
 	restoreAiResponseSnapshot,
 	saveParsedAiResponse,

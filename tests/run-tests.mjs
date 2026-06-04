@@ -1009,7 +1009,6 @@ await run(
 		assert.equal(model.displayName, "Місто");
 		assert.match(model.briefMeta, /\.\.\.$/);
 		assert.equal(model.notes.length, 1);
-		assert.equal(model.hasImage, true);
 		assert.equal(model.withField("name", "Новий").name, "Новий");
 
 		const notedModel = new LocationCardModel({

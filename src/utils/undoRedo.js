@@ -1,4 +1,4 @@
-export function cloneHistorySnapshot(value) {
+function cloneHistorySnapshot(value) {
 	if (value === undefined) return undefined;
 	if (value === null) return null;
 	if (typeof structuredClone === "function") return structuredClone(value);

@@ -21,33 +21,10 @@ import { createEmptyNote, upsertNoteById } from "../utils/noteUtils.js";
  * @property {string|null} [imageUrl]
  */
 
-export const LOCATION_FIELD_SCHEMA = {
-	id: { type: "number|string", required: true },
-	slug: { type: "string" },
-	name: { type: "string", required: true },
-	description: { type: "string" },
-	notes: { type: "LocationNote[]" },
-	collapsed: { type: "boolean" },
-	isNotesCollapsed: { type: "boolean" },
-	imageUrl: { type: "string|null" },
-};
-
 export default class LocationCardModel {
 	/** @param {LocationData} location */
 	constructor(location = {}) {
 		this.location = location;
-	}
-
-	static get schema() {
-		return LOCATION_FIELD_SCHEMA;
-	}
-
-	static createEmptyNote() {
-		return createEmptyNote();
-	}
-
-	get data() {
-		return this.location;
 	}
 
 	get displayName() {
@@ -67,10 +44,6 @@ export default class LocationCardModel {
 			? [...this.location.notes]
 			: [];
 		return notes.length > 0 ? notes : [createEmptyNote()];
-	}
-
-	get hasImage() {
-		return Boolean(this.location.imageUrl);
 	}
 
 	withField(field, value) {

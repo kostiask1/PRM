@@ -66,26 +66,6 @@ function formatTemplate(template, variables = {}) {
  * @property {string[]} [miscTags]
  */
 
-export const SPELL_FIELD_SCHEMA = {
-	name: { type: "string", required: true, values: "Name or name|source" },
-	source: { type: "string", required: true, values: "PHB, XPHB, ..." },
-	classes: { type: "string[]", values: "Classes that can access the spell" },
-	level: { type: "number", required: true, values: "0..9" },
-	school: { type: "string", required: true, values: "A/C/D/E/I/N/T/P/V" },
-	time: { type: "array", values: "[{ number, unit, condition? }]" },
-	range: { type: "object", values: "{ type, distance? }" },
-	components: {
-		type: "object",
-		values: "V/S/M; M can be a string or object",
-	},
-	duration: {
-		type: "array",
-		values: "instant/timed/permanent + concentration",
-	},
-	entries: { type: "array", values: "Main spell description" },
-	entriesHigherLevel: { type: "array", values: "Higher-level description" },
-};
-
 export default class SpellCardModel {
 	/** @param {SpellData} spell */
 	constructor(spell = {}, options = {}) {
@@ -95,14 +75,6 @@ export default class SpellCardModel {
 			typeof options.translate === "function"
 				? options.translate
 				: formatTemplate;
-	}
-
-	static get schema() {
-		return SPELL_FIELD_SCHEMA;
-	}
-
-	get data() {
-		return this.spell;
 	}
 
 	get displayName() {

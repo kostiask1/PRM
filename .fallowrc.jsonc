@@ -1,0 +1,4 @@
+{
+	// Registered at runtime from src/main.jsx via navigator.serviceWorker.register.
+	"dynamicallyLoaded": ["public/service-worker.js"]
+}

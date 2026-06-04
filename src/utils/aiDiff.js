@@ -8,7 +8,7 @@ function splitDiffText(value) {
 	return text ? text.split(/\r?\n/) : [];
 }
 
-export function createLineDiff(before, after) {
+function createLineDiff(before, after) {
 	const oldLines = splitDiffText(before);
 	const newLines = splitDiffText(after);
 	if (oldLines.length === 0 && newLines.length === 0) return [];
