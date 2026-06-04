@@ -86,11 +86,10 @@
 .ImageGallery__search {
 	display: flex;
 	align-items: center;
-	gap: var(--space-2);
 	min-width: 180px;
-	width: min(260px, 24vw);
+	width: min(300px, 28vw);
 	height: var(--size-8);
-	padding: 0 var(--space-2);
+	padding: 0 var(--space-1) 0 var(--space-2);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-sm);
 	background: var(--panel-2);
@@ -106,13 +105,29 @@
 	color: var(--text);
 	font: inherit;
 	font-size: 0.85rem;
+	padding: 0 var(--space-1);
 }
 
-.ImageGallery__search .Button {
+.ImageGallery__search .Button:not(.ImageGallery__globalSearchBtn) {
+	width: var(--size-6);
+	height: var(--size-6);
 	min-height: unset;
+	min-width: unset;
 	padding: 0;
 	border: 0;
 	background: transparent;
+}
+
+.ImageGallery__search .ImageGallery__globalSearchBtn {
+	width: var(--size-8);
+	height: var(--size-8);
+	min-width: var(--size-8);
+	min-height: var(--size-8);
+	margin-right: calc(var(--space-1) * -1);
+	padding: 0 !important;
+	border: 0;
+	border-left: 1px solid var(--border);
+	border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 
 .SourceBtn.is_drag_over {
@@ -342,12 +357,18 @@
 .ImageGallery__grid {
 	position: relative;
 	flex: 1;
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-	grid-auto-rows: min-content;
-	gap: var(--space-4);
+	--gallery-gap: var(--space-4);
+	column-gap: var(--gallery-gap);
 	padding: var(--space-6);
 	overflow-y: auto;
+}
+
+.ImageGallery__row {
+	display: grid;
+	grid-template-columns: repeat(var(--gallery-columns), minmax(0, 1fr));
+	gap: var(--gallery-gap);
+	padding-bottom: var(--gallery-gap);
+	box-sizing: border-box;
 }
 
 .ImageGallery__grid.is_dragging {
@@ -485,6 +506,18 @@
 .ImageGallery__nameBtn:hover {
 	color: var(--accent);
 	text-decoration: underline;
+}
+
+.ImageGallery__location {
+	display: block;
+	margin-top: 2px;
+	color: var(--muted);
+	font-size: 0.68rem;
+	line-height: 1.2;
+	text-align: center;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .ImageGallery__previewModal {

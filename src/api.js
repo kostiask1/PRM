@@ -2,6 +2,16 @@ import { lang } from "./services/localization.js";
 
 const API_BASE = "/api";
 
+function appendImageGalleryQuery(
+	query,
+	{ source = "", category = "", subcategory = "", categories = [] } = {},
+) {
+	if (source) query.set("source", source);
+	if (category) query.set("category", category);
+	if (subcategory) query.set("subcategory", subcategory);
+	if (categories.length > 0) query.set("categories", categories.join(","));
+}
+
 function getSyncClientHeader() {
 	if (typeof window === "undefined") return {};
 	try {
@@ -340,12 +350,31 @@ export const api = {
 		if (search) query.set("search", search);
 		return api.request(`/images/bestiary-tokens?${query.toString()}`);
 	},
+	searchImageGallery: ({
+		search = "",
+		source = "",
+		category = "",
+		subcategory = "",
+		categories = [],
+	} = {}) => {
+		const query = new URLSearchParams();
+		if (search) query.set("search", search);
+		appendImageGalleryQuery(query, {
+			source,
+			category,
+			subcategory,
+			categories,
+		});
+		return api.request(`/images/search?${query.toString()}`);
+	},
 	getImageGalleryStats: (slug, category, subcategory, categories = []) => {
 		const query = new URLSearchParams();
-		query.set("source", slug);
-		if (category) query.set("category", category);
-		if (subcategory) query.set("subcategory", subcategory);
-		if (categories.length > 0) query.set("categories", categories.join(","));
+		appendImageGalleryQuery(query, {
+			source: slug,
+			category,
+			subcategory,
+			categories,
+		});
 		return api.request(`/images/stats?${query.toString()}`);
 	},
 

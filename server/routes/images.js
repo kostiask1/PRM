@@ -6,6 +6,18 @@ const storage = require("../storage");
 
 const router = express.Router();
 
+function parseImageGalleryQuery(query, defaultSource = "") {
+	return {
+		source: query.source || defaultSource,
+		category: query.category || "",
+		subcategory: query.subcategory || "",
+		categories: String(query.categories || "")
+			.split(",")
+			.map((category) => category.trim())
+			.filter(Boolean),
+	};
+}
+
 const upload = multer({
 	storage: multer.diskStorage({
 		destination: async (req, _file, cb) => {
@@ -67,13 +79,7 @@ router.get("/images/stats", async (req, res, next) => {
 	try {
 		res.json(
 			await storage.getImageGalleryStorageStats({
-				source: req.query.source || "general",
-				category: req.query.category || "",
-				subcategory: req.query.subcategory || "",
-				categories: String(req.query.categories || "")
-					.split(",")
-					.map((category) => category.trim())
-					.filter(Boolean),
+				...parseImageGalleryQuery(req.query, "general"),
 			}),
 		);
 	} catch (error) {
@@ -87,6 +93,19 @@ router.get("/images/bestiary-tokens", async (req, res, next) => {
 			await storage.listBestiaryTokenAssets({
 				subcategory: req.query.subcategory || "",
 				search: req.query.search || "",
+			}),
+		);
+	} catch (error) {
+		next(error);
+	}
+});
+
+router.get("/images/search", async (req, res, next) => {
+	try {
+		res.json(
+			await storage.searchImageGalleryAssets({
+				search: req.query.search || "",
+				...parseImageGalleryQuery(req.query),
 			}),
 		);
 	} catch (error) {

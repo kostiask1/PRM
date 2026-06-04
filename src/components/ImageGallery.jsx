@@ -1,4 +1,5 @@
 ﻿import React from "react";
+import ReactList from "react-list";
 import Modal from "./common/Modal";
 import Icon from "./common/Icon";
 import "../assets/components/ImageGallery.css";
@@ -32,8 +33,10 @@ function ImageGallery({
 	initialSubcategory,
 }) {
 	const dispatch = useAppDispatch();
+	const galleryViewportRef = React.useRef(null);
 	const [isMoveModalOpen, setIsMoveModalOpen] = React.useState(false);
 	const [previewImage, setPreviewImage] = React.useState(null);
+	const [galleryColumns, setGalleryColumns] = React.useState(1);
 	const [moveTarget, setMoveTarget] = React.useState({
 		slug: "general",
 		category: "attachments",
@@ -51,6 +54,9 @@ function ImageGallery({
 		images,
 		searchQuery,
 		setSearchQuery,
+		searchMode,
+		setSearchMode,
+		isSearchResults,
 		storageStats,
 		selectedFilenames,
 		selectedSubs,
@@ -114,7 +120,29 @@ function ImageGallery({
 			window.removeEventListener("keydown", handleEscapeSelection, true);
 	}, [hasSelection, clearSelection, previewImage]);
 
-	if (!isOpen) return null;
+	React.useEffect(() => {
+		if (!isOpen) return undefined;
+		const element = galleryViewportRef.current;
+		if (!element) return undefined;
+
+		const updateColumns = () => {
+			const styles = window.getComputedStyle(element);
+			const gap = Number.parseFloat(styles.columnGap) || 16;
+			const minItemWidth = 120;
+			const nextColumns = Math.max(
+				1,
+				Math.floor((element.clientWidth + gap) / (minItemWidth + gap)),
+			);
+			setGalleryColumns((current) =>
+				current === nextColumns ? current : nextColumns,
+			);
+		};
+
+		updateColumns();
+		const resizeObserver = new ResizeObserver(updateColumns);
+		resizeObserver.observe(element);
+		return () => resizeObserver.disconnect();
+	}, [isOpen]);
 
 	const availableSources = [
 		{ slug: "general", name: lang.t("General") },
@@ -134,6 +162,201 @@ function ImageGallery({
 			? lang.t("Choose an image")
 			: lang.t("Image gallery");
 	const sourceSizes = storageStats?.sourceSizes || {};
+	const galleryItems = React.useMemo(() => {
+		if (loading) return [];
+		return [
+			...allSubs.map((sub) => ({ type: "sub", sub })),
+			...images.map((image) => ({ type: "image", image })),
+		];
+	}, [allSubs, images, loading]);
+	const galleryRowCount = Math.ceil(galleryItems.length / galleryColumns);
+	const openGlobalResultPath = (image) => {
+		if (typeof onSelect === "function" || !image?.globalSearch) return false;
+		const nextCategory = categories.find((cat) => cat.id === image.category);
+		if (!nextCategory) return false;
+
+		setSelectedSource(image.source || "general");
+		setSelectedCat(nextCategory);
+		setSelectedSub(image.subcategory || "");
+		setSearchQuery("");
+		setSearchMode("local");
+		clearSelection();
+		return true;
+	};
+
+	const renderGalleryItem = (item, itemIndex) => {
+		if (item.type === "sub") {
+			const sub = item.sub;
+			const isReadonly = isReadonlySub(sub);
+			const folderIcon = SUB_ICON_NAMES[sub] || "folder";
+			return (
+				<div
+					key={`sub:${sub}`}
+					className={classNames(
+						"ImageGallery__item",
+						"ImageGallery__item__folder",
+						{
+							is_selected: selectedSubs.has(sub),
+							is_drag_over: dragOverTarget?.id === sub,
+							is_protected: isReadonly,
+						},
+					)}
+					onClick={(e) => {
+						if (isReadonly) return;
+						handleItemClick(sub, "sub", itemIndex, e);
+					}}
+					onDoubleClick={() => {
+						const nextPath = selectedSub ? `${selectedSub}/${sub}` : sub;
+						setSelectedSub(nextPath);
+					}}
+					draggable={!isReadonly}
+					onDragStart={(e) => handleDragStart(e, sub, "sub")}
+					onDragEnd={handleDragEnd}
+					onDragOver={(e) => {
+						if (isReadonly) return;
+						e.preventDefault();
+						if (dragOverTarget?.id !== sub) {
+							setDragOverTarget({ type: "sub", id: sub });
+						}
+					}}
+					onDragLeave={() => setDragOverTarget(null)}
+					onDrop={(e) => {
+						const destSub = selectedSub ? `${selectedSub}/${sub}` : sub;
+						handleDrop(e, {
+							slug: selectedSource,
+							category: selectedCat.id,
+							subcategory: destSub,
+							readonly: isReadonlyPath(destSub),
+						});
+					}}
+				>
+					<div className="ImageGallery__image_wrap">
+						<Icon name={folderIcon} size={48} />
+						{!isReadonly && (
+							<div
+								className="ImageGallery__checkbox"
+								onClick={(e) => toggleSelect(sub, "sub", e)}
+							>
+								<Icon
+									name={selectedSubs.has(sub) ? "check" : "plus"}
+									size={12}
+								/>
+							</div>
+						)}
+					</div>
+					<span className="ImageGallery__name">
+						<button
+							type="button"
+							className="ImageGallery__nameBtn"
+							onClick={async (e) => {
+								if (isReadonly) return;
+								e.stopPropagation();
+								const newName = await dispatch(
+									prompt({
+										title: lang.t("Rename folder"),
+										message: lang.t("Enter a new name:"),
+										defaultValue: sub,
+									}),
+								);
+								if (newName) handleRenameSub(sub, newName);
+							}}
+						>
+							{lang.t(SUB_LABELS[sub] || sub)}
+						</button>
+					</span>
+				</div>
+			);
+		}
+
+		const img = item.image;
+		const imageReadonly = isReadonlyImage(img);
+		return (
+			<Tooltip
+				key={`image:${img.url}`}
+				content={lang.t("Right-click: open fullscreen")}
+			>
+				<div
+					className={classNames("ImageGallery__item", {
+						is_selected: !imageReadonly && selectedFilenames.has(img.name),
+						is_protected: imageReadonly,
+					})}
+					onClick={(e) => {
+						e.stopPropagation();
+						if (openGlobalResultPath(img)) return;
+						handleItemClick(img.name, "image", itemIndex, e);
+					}}
+					onDoubleClick={() => onSelect?.(img)}
+					onContextMenu={(e) => {
+						e.preventDefault();
+						setPreviewImage(img);
+					}}
+					draggable={!imageReadonly}
+					onDragStart={(e) => handleDragStart(e, img, "image")}
+					onDragEnd={handleDragEnd}
+				>
+					<div className="ImageGallery__image_wrap">
+						<img src={img.url} alt="" loading="lazy" decoding="async" />
+						{!imageReadonly && (
+							<div
+								className="ImageGallery__checkbox"
+								onClick={(e) => toggleSelect(img.name, "image", e)}
+							>
+								<Icon
+									name={selectedFilenames.has(img.name) ? "check" : "plus"}
+									size={12}
+								/>
+							</div>
+						)}
+					</div>
+					<Tooltip content={img.displayName || img.name}>
+						<span className="ImageGallery__name">
+							<button
+								type="button"
+								className="ImageGallery__nameBtn"
+								onClick={async (e) => {
+									if (imageReadonly) return;
+									e.stopPropagation();
+									const currentClean = getCleanName(img.name);
+									const newBaseName = await dispatch(
+										prompt({
+											title: lang.t("Rename file"),
+											message: lang.t("Enter a new name:"),
+											defaultValue: currentClean,
+										}),
+									);
+									if (newBaseName && newBaseName !== currentClean) {
+										const ext = img.name.split(".").pop();
+										handleRenameImage(img.name, `${newBaseName}.${ext}`);
+									}
+								}}
+							>
+								{getCleanName(img.displayName || img.name)}
+							</button>
+						</span>
+					</Tooltip>
+					{isSearchResults && img.locationLabel && (
+						<span className="ImageGallery__location">{img.locationLabel}</span>
+					)}
+				</div>
+			</Tooltip>
+		);
+	};
+
+	const renderGalleryRow = (rowIndex, key) => {
+		const start = rowIndex * galleryColumns;
+		const rowItems = galleryItems.slice(start, start + galleryColumns);
+		return (
+			<div
+				key={key}
+				className="ImageGallery__row"
+				style={{ "--gallery-columns": galleryColumns }}
+			>
+				{rowItems.map((item, index) => renderGalleryItem(item, start + index))}
+			</div>
+		);
+	};
+
+	if (!isOpen) return null;
 
 	return (
 		<Modal
@@ -353,7 +576,7 @@ function ImageGallery({
 						<div className="ImageGallery__search">
 							<Icon name="search" size={14} />
 							<input
-								type="search"
+								type="text"
 								value={searchQuery}
 								onChange={(e) => setSearchQuery(e.target.value)}
 								placeholder={lang.t("Search images...")}
@@ -367,6 +590,18 @@ function ImageGallery({
 									title={lang.t("Clear search")}
 								/>
 							)}
+							<Button
+								className="DetailedSearchButton ImageGallery__globalSearchBtn"
+								variant={searchMode === "global" ? "primary" : "ghost"}
+								size={Button.SIZES.SMALL}
+								icon="search-detailed"
+								onClick={() =>
+									setSearchMode((mode) =>
+										mode === "global" ? "local" : "global",
+									)
+								}
+								title={lang.t("Global search")}
+							/>
 						</div>
 						<div className="ImageGallery__storage_stats">
 							<span>
@@ -419,6 +654,7 @@ function ImageGallery({
 					</div>
 
 					<div
+						ref={galleryViewportRef}
 						className={classNames("ImageGallery__grid", {
 							is_dragging: isDraggingOver,
 						})}
@@ -451,174 +687,13 @@ function ImageGallery({
 							</div>
 						)}
 
-						{!loading &&
-							allSubs.map((sub, index) => {
-								const isReadonly = isReadonlySub(sub);
-								const folderIcon = SUB_ICON_NAMES[sub] || "folder";
-								return (
-									<div
-										key={sub}
-										className={classNames(
-											"ImageGallery__item",
-											"ImageGallery__item__folder",
-											{
-												is_selected: selectedSubs.has(sub),
-												is_drag_over: dragOverTarget?.id === sub,
-												is_protected: isReadonly,
-											},
-										)}
-										onClick={(e) => {
-											if (isReadonly) return;
-											handleItemClick(sub, "sub", index, e);
-										}}
-										onDoubleClick={() => {
-											const nextPath = selectedSub
-												? `${selectedSub}/${sub}`
-												: sub;
-											setSelectedSub(nextPath);
-										}}
-										draggable={!isReadonly}
-										onDragStart={(e) => handleDragStart(e, sub, "sub")}
-										onDragEnd={handleDragEnd}
-										onDragOver={(e) => {
-											if (isReadonly) return;
-											e.preventDefault();
-											if (dragOverTarget?.id !== sub) {
-												setDragOverTarget({ type: "sub", id: sub });
-											}
-										}}
-										onDragLeave={() => setDragOverTarget(null)}
-										onDrop={(e) => {
-											const destSub = selectedSub
-												? `${selectedSub}/${sub}`
-												: sub;
-											handleDrop(e, {
-												slug: selectedSource,
-												category: selectedCat.id,
-												subcategory: destSub,
-												readonly: isReadonlyPath(destSub),
-											});
-										}}
-									>
-										<div className="ImageGallery__image_wrap">
-											<Icon name={folderIcon} size={48} />
-											{!isReadonly && (
-												<div
-													className="ImageGallery__checkbox"
-													onClick={(e) => toggleSelect(sub, "sub", e)}
-												>
-													<Icon
-														name={selectedSubs.has(sub) ? "check" : "plus"}
-														size={12}
-													/>
-												</div>
-											)}
-										</div>
-										<span className="ImageGallery__name">
-											<button
-												type="button"
-												className="ImageGallery__nameBtn"
-													onClick={async (e) => {
-													if (isReadonly) return;
-													e.stopPropagation();
-													const newName = await dispatch(
-														prompt({
-															title: lang.t("Rename folder"),
-															message: lang.t("Enter a new name:"),
-															defaultValue: sub,
-														}),
-													);
-													if (newName) handleRenameSub(sub, newName);
-												}}
-											>
-												{lang.t(SUB_LABELS[sub] || sub)}
-											</button>
-										</span>
-									</div>
-								);
-							})}
-
-						{!loading &&
-							images.length > 0 &&
-							images.map((img, index) => {
-								const imageReadonly = isReadonlyImage(img);
-								return (
-								<Tooltip
-									key={img.url}
-									content={lang.t("Right-click: open fullscreen")}
-								>
-									<div
-										className={classNames("ImageGallery__item", {
-											is_selected:
-												!imageReadonly && selectedFilenames.has(img.name),
-											is_protected: imageReadonly,
-										})}
-										onClick={(e) =>
-											handleItemClick(
-												img.name,
-												"image",
-												allSubs.length + index,
-												e,
-											)
-										}
-										onDoubleClick={() => onSelect?.(img)}
-										onContextMenu={(e) => {
-											e.preventDefault();
-											setPreviewImage(img);
-										}}
-										draggable={!imageReadonly}
-										onDragStart={(e) => handleDragStart(e, img, "image")}
-										onDragEnd={handleDragEnd}
-									>
-										<div className="ImageGallery__image_wrap">
-											<img src={img.url} alt="" />
-											{!imageReadonly && (
-											<div
-												className="ImageGallery__checkbox"
-												onClick={(e) => toggleSelect(img.name, "image", e)}
-											>
-												<Icon
-													name={
-														selectedFilenames.has(img.name) ? "check" : "plus"
-													}
-													size={12}
-												/>
-											</div>
-											)}
-										</div>
-										<Tooltip content={img.displayName || img.name}>
-											<span className="ImageGallery__name">
-												<button
-													type="button"
-													className="ImageGallery__nameBtn"
-													onClick={async (e) => {
-														if (imageReadonly) return;
-														e.stopPropagation();
-														const currentClean = getCleanName(img.name);
-														const newBaseName = await dispatch(
-															prompt({
-																title: lang.t("Rename file"),
-																message: lang.t("Enter a new name:"),
-																defaultValue: currentClean,
-															}),
-														);
-														if (newBaseName && newBaseName !== currentClean) {
-															const ext = img.name.split(".").pop();
-															handleRenameImage(
-																img.name,
-																`${newBaseName}.${ext}`,
-															);
-														}
-													}}
-												>
-													{getCleanName(img.displayName || img.name)}
-												</button>
-											</span>
-										</Tooltip>
-									</div>
-								</Tooltip>
-								);
-							})}
+						{galleryRowCount > 0 && (
+							<ReactList
+								itemRenderer={renderGalleryRow}
+								length={galleryRowCount}
+								type="uniform"
+							/>
+						)}
 					</div>
 				</main>
 			</div>

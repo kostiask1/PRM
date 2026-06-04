@@ -1659,7 +1659,7 @@ async function listBestiaryTokenAssets({ subcategory = "", search = "" } = {}) {
 				}
 			}
 		};
-		await walk(BESTIARY_TOKENS_DIR);
+		await walk(baseDir, subParts);
 		images.sort((a, b) => a.displayName.localeCompare(b.displayName));
 		return { subcategories: [], images };
 	}
@@ -1678,6 +1678,130 @@ async function listBestiaryTokenAssets({ subcategory = "", search = "" } = {}) {
 	);
 	images.sort((a, b) => a.name.localeCompare(b.name));
 	return { subcategories, images };
+}
+
+async function searchImageGalleryAssets({
+	search = "",
+	source = "",
+	category = "",
+	subcategory = "",
+	categories = [],
+} = {}) {
+	const query = String(search || "").trim().toLowerCase();
+	if (!query) return { images: [] };
+
+	const sourceFilter = String(source || "").trim();
+	const selectedCategory = String(category || "").trim();
+	const selectedSubcategory = normalizePathSegments(subcategory).join("/");
+	const categoryFilter = new Set(
+		(Array.isArray(categories) ? categories : [])
+			.map((category) => String(category || "").trim())
+			.filter(Boolean),
+	);
+	const shouldIncludeCategory = (category) =>
+		(selectedCategory ? category === selectedCategory : true) &&
+		(categoryFilter.size === 0 || categoryFilter.has(category));
+	const images = [];
+
+	const addUserImage = async (source, category, subcategory, entryName, filePath) => {
+		const searchText = [entryName, source, category, subcategory]
+			.filter(Boolean)
+			.join("/")
+			.toLowerCase();
+		if (!searchText.includes(query)) return;
+
+		const urlSub = subcategory
+			? `/${encodeUrlPathSegments(subcategory)}`
+			: "";
+		images.push({
+			name: entryName,
+			displayName: path.parse(entryName).name,
+			url: `/api/images/${encodeURIComponent(source)}/${encodeURIComponent(category)}${urlSub}/${encodeURIComponent(entryName)}`,
+			path: path.join(category, subcategory, entryName),
+			sizeBytes: await getFileSize(filePath),
+			source,
+			category,
+			subcategory,
+			locationLabel: [source, category, subcategory].filter(Boolean).join(" / "),
+			readonly: false,
+			globalSearch: true,
+		});
+	};
+
+	if (await exists(IMAGES_DIR)) {
+		const sourceEntries = await fs.readdir(IMAGES_DIR, { withFileTypes: true });
+		for (const sourceEntry of sourceEntries) {
+			if (!sourceEntry.isDirectory()) continue;
+			const source = sourceEntry.name;
+			if (sourceFilter && source !== sourceFilter) continue;
+			const sourceDir = path.join(IMAGES_DIR, source);
+			const categoryEntries = await fs.readdir(sourceDir, { withFileTypes: true });
+			for (const categoryEntry of categoryEntries) {
+				if (!categoryEntry.isDirectory()) continue;
+				const category = categoryEntry.name;
+				if (!shouldIncludeCategory(category)) continue;
+				const categoryDir = path.join(
+					sourceDir,
+					category,
+					...normalizePathSegments(selectedSubcategory),
+				);
+				if (!(await exists(categoryDir))) continue;
+				const walk = async (dir, subParts = []) => {
+					const entries = await fs.readdir(dir, { withFileTypes: true });
+					for (const entry of entries) {
+						const nextPath = path.join(dir, entry.name);
+						if (entry.isDirectory()) {
+							await walk(nextPath, [...subParts, entry.name]);
+						} else if (entry.isFile() && IMAGE_FILE_RE.test(entry.name)) {
+							const fullSubParts = [
+								...normalizePathSegments(selectedSubcategory),
+								...subParts,
+							];
+							await addUserImage(
+								source,
+								category,
+								fullSubParts.join("/"),
+								entry.name,
+								nextPath,
+							);
+						}
+					}
+				};
+				await walk(categoryDir);
+			}
+		}
+	}
+
+	if (
+		(!sourceFilter || sourceFilter === "general") &&
+		shouldIncludeCategory("tokens")
+	) {
+		const officialAssets = await listBestiaryTokenAssets({
+			subcategory: selectedCategory === "tokens" ? selectedSubcategory : "",
+			search: query,
+		});
+		for (const image of officialAssets.images) {
+			const relativeParts = String(image.path || "")
+				.split(/[\\/]+/)
+				.filter(Boolean)
+				.slice(2);
+			const subcategory = relativeParts.slice(0, -1).join("/");
+			images.push({
+				...image,
+				category: "tokens",
+				subcategory,
+				locationLabel: ["general", "tokens", subcategory]
+					.filter(Boolean)
+					.join(" / "),
+				globalSearch: true,
+			});
+		}
+	}
+
+	images.sort((a, b) =>
+		String(a.displayName || a.name).localeCompare(String(b.displayName || b.name)),
+	);
+	return { images };
 }
 
 async function getImageGalleryStorageStats({
@@ -2004,6 +2128,7 @@ module.exports = {
 	writeCustomBestiaryMonsters,
 	listImages,
 	listBestiaryTokenAssets,
+	searchImageGalleryAssets,
 	getImageGalleryStorageStats,
 	listSubcategories,
 	moveImages,

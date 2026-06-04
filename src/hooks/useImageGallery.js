@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { alert, confirm } from "../actions/app";
 import { api } from "../api";
 import { useAppDispatch } from "../store/appStore";
 import { lang } from "../services/localization";
 import { IMAGE_GALLERY_CATEGORIES } from "../features/images/imageGalleryConfig";
+import useDebounce from "./useDebounce";
 
 export default function useImageGallery({
 	isOpen,
@@ -23,6 +24,7 @@ export default function useImageGallery({
 	const [officialRootSubs, setOfficialRootSubs] = useState(new Set());
 	const [images, setImages] = useState([]);
 	const [searchQuery, setSearchQuery] = useState("");
+	const [searchMode, setSearchMode] = useState("local");
 	const [storageStats, setStorageStats] = useState(null);
 	const [selectedFilenames, setSelectedFilenames] = useState(new Set());
 	const [selectedSubs, setSelectedSubs] = useState(new Set());
@@ -34,7 +36,10 @@ export default function useImageGallery({
 	const [dragSource, setDragSource] = useState(null);
 	const [dragOverTarget, setDragOverTarget] = useState(null);
 	const hasSelection = selectedFilenames.size > 0 || selectedSubs.size > 0;
-	const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+	const debouncedSearchQuery = useDebounce(searchQuery, 250);
+	const normalizedSearchQuery = debouncedSearchQuery.trim().toLowerCase();
+	const isGlobalSearch = searchMode === "global" && normalizedSearchQuery;
+	const isSearchResults = Boolean(normalizedSearchQuery);
 	const isGeneralTokens =
 		selectedSource === "general" && selectedCat.id === "tokens";
 	const selectedSubRoot = selectedSub.split("/").filter(Boolean)[0] || "";
@@ -55,7 +60,10 @@ export default function useImageGallery({
 		(name) => isProtectedSystemSub(name) || officialSubs.has(name),
 		[isProtectedSystemSub, officialSubs],
 	);
-	const isReadonlyImage = useCallback((image) => Boolean(image?.readonly), []);
+	const isReadonlyImage = useCallback(
+		(image) => Boolean(image?.readonly || image?.globalSearch),
+		[],
+	);
 	const isReadonlyPath = useCallback(
 		(subcategory = "") => {
 			const root = String(subcategory || "")
@@ -73,11 +81,16 @@ export default function useImageGallery({
 	}, []);
 
 	const loadSubcategories = useCallback(async () => {
+		if (normalizedSearchQuery) {
+			setDynamicSubs([]);
+			setOfficialSubs(new Set());
+			return;
+		}
 		try {
 			const [subs, officialAssets, officialRootAssets] = await Promise.all([
 				api.getSubcategories(selectedSource, selectedCat.id, selectedSub),
 				isGeneralTokens
-					? api.getBestiaryTokenAssets(selectedSub, searchQuery)
+					? api.getBestiaryTokenAssets(selectedSub, debouncedSearchQuery)
 					: Promise.resolve(null),
 				isGeneralTokens
 					? api.getBestiaryTokenAssets("", "")
@@ -111,17 +124,28 @@ export default function useImageGallery({
 		selectedCat.id,
 		selectedSub,
 		isGeneralTokens,
-		searchQuery,
+		debouncedSearchQuery,
 		normalizedSearchQuery,
 	]);
 
 	const loadImages = useCallback(async () => {
 		setLoading(true);
 		try {
+			if (normalizedSearchQuery) {
+				const result = await api.searchImageGallery({
+					search: debouncedSearchQuery,
+					source: isGlobalSearch ? "" : selectedSource,
+					category: isGlobalSearch ? "" : selectedCat.id,
+					subcategory: isGlobalSearch ? "" : selectedSub,
+					categories: IMAGE_GALLERY_CATEGORIES.map((category) => category.id),
+				});
+				setImages(Array.isArray(result?.images) ? result.images : []);
+				return;
+			}
 			const [data, officialAssets] = await Promise.all([
 				api.getImages(selectedSource, selectedCat.id, selectedSub),
 				isGeneralTokens
-					? api.getBestiaryTokenAssets(selectedSub, searchQuery)
+					? api.getBestiaryTokenAssets(selectedSub, debouncedSearchQuery)
 					: Promise.resolve(null),
 			]);
 			const userImages = (Array.isArray(data) ? data : []).filter((image) =>
@@ -144,7 +168,8 @@ export default function useImageGallery({
 		selectedCat.id,
 		selectedSub,
 		isGeneralTokens,
-		searchQuery,
+		isGlobalSearch,
+		debouncedSearchQuery,
 		normalizedSearchQuery,
 	]);
 
@@ -194,6 +219,7 @@ export default function useImageGallery({
 		selectedCat,
 		selectedSub,
 		isOpen,
+		searchMode,
 		loadImages,
 		loadSubcategories,
 		loadStorageStats,
@@ -558,15 +584,17 @@ export default function useImageGallery({
 		return () => window.removeEventListener("keydown", handleKeyDown);
 	}, [selectedSub, isOpen, handleBulkDelete]);
 
-	const allSubs = Array.from(
-		new Set([
-			...(selectedSub === "" ? selectedCat.subs || [] : []),
-			...dynamicSubs,
-		]),
-	).filter((sub) =>
-		normalizedSearchQuery
-			? sub.toLowerCase().includes(normalizedSearchQuery)
-			: true,
+	const allSubs = useMemo(
+		() =>
+			normalizedSearchQuery
+				? []
+				: Array.from(
+						new Set([
+							...(selectedSub === "" ? selectedCat.subs || [] : []),
+							...dynamicSubs,
+						]),
+					),
+		[normalizedSearchQuery, selectedSub, selectedCat.subs, dynamicSubs],
 	);
 
 	const handleItemClick = useCallback(
@@ -710,6 +738,10 @@ export default function useImageGallery({
 		images,
 		searchQuery,
 		setSearchQuery,
+		searchMode,
+		setSearchMode,
+		isGlobalSearch,
+		isSearchResults,
 		isReadonlyCurrentFolder,
 		isReadonlyPath,
 		storageStats,

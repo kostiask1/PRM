@@ -3137,6 +3137,59 @@ await run("storage lists readonly official bestiary token assets", async () => {
 	);
 });
 
+await run("storage searches image gallery locally and globally", async () => {
+	await withTestSlug("images-search-a", async (firstSlug) => {
+		await withTestSlug("images-search-b", async (secondSlug) => {
+			const firstDir = storage.campaignImagesDir(
+				firstSlug,
+				"maps",
+				"city/deep",
+			);
+			const secondDir = storage.campaignImagesDir(secondSlug, "props");
+			await storage.ensureDir(firstDir);
+			await storage.ensureDir(secondDir);
+			await fs.writeFile(path.join(firstDir, "hidden-map.png"), "a", "utf8");
+			await fs.writeFile(path.join(secondDir, "hidden-prop.webp"), "b", "utf8");
+
+			const local = await storage.searchImageGalleryAssets({
+				search: "hidden",
+				source: firstSlug,
+				category: "maps",
+				subcategory: "city",
+			});
+			assert.deepEqual(
+				local.images.map((item) => item.name),
+				["hidden-map.png"],
+			);
+			assert.equal(local.images[0].subcategory, "city/deep");
+
+			const global = await storage.searchImageGalleryAssets({
+				search: "hidden",
+				categories: IMAGE_GALLERY_CATEGORIES.map((category) => category.id),
+			});
+			assert.ok(
+				global.images.some(
+					(item) =>
+						item.source === firstSlug &&
+						item.category === "maps" &&
+						item.subcategory === "city/deep",
+				),
+			);
+			assert.ok(
+				global.images.some(
+					(item) => item.source === secondSlug && item.category === "props",
+				),
+			);
+
+			const official = await storage.searchImageGalleryAssets({
+				search: "animated coffin",
+				categories: IMAGE_GALLERY_CATEGORIES.map((category) => category.id),
+			});
+			assert.ok(official.images.some((item) => item.readonly));
+		});
+	});
+});
+
 await run("storage detects campaign images recursively", async () => {
 	await withTestSlug("campaign-has-images", async (slug) => {
 		const category = "attachments";
