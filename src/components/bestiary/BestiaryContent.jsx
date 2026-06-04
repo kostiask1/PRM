@@ -298,6 +298,11 @@ export default function BestiaryContent({
 								showAddToEncounterPicker
 								onAddToEncounter={onAddMonster}
 								onAiAction={onMonsterAiAction}
+								onDelete={
+									isCustomSource(selectedMonster.source)
+										? onDeleteCustomMonster
+										: undefined
+								}
 								onFieldEdit={
 									onEditMonster
 								}

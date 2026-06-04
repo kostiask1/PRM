@@ -48,6 +48,7 @@ export default function MonsterStatBlock({
 	onTokenImageChange,
 	onAddToEncounter,
 	onAiAction,
+	onDelete,
 	onFieldEdit,
 	searchHighlight = "",
 	highlightFields = null,
@@ -584,6 +585,16 @@ export default function MonsterStatBlock({
 								className="MonsterStatBlock__edit_btn"
 								onClick={() => onFieldEdit(monster)}
 								title={lang.t("Edit creature")}
+							/>
+						)}
+						{onDelete && (
+							<Button
+								variant="danger"
+								size={Button.SIZES.SMALL}
+								icon="trash"
+								className="MonsterStatBlock__delete_btn"
+								onClick={() => onDelete(monster)}
+								title={lang.t("Delete custom creature")}
 							/>
 						)}
 						{showAddToEncounterPicker && (

@@ -307,7 +307,8 @@
 
 .MonsterStatBlock__favorite_btn,
 .MonsterStatBlock__ai_btn,
-.MonsterStatBlock__edit_btn {
+.MonsterStatBlock__edit_btn,
+.MonsterStatBlock__delete_btn {
 	border-radius: 100%;
 	border: unset;
 	width: var(--size-8);
@@ -351,7 +352,8 @@
 }
 
 .MonsterStatBlock__grid .MonsterStatBlock__favorite_btn,
-.MonsterStatBlock__grid .MonsterStatBlock__edit_btn {
+.MonsterStatBlock__grid .MonsterStatBlock__edit_btn,
+.MonsterStatBlock__grid .MonsterStatBlock__delete_btn {
 	width: var(--size-7);
 	height: var(--size-7);
 	min-width: var(--size-7);
