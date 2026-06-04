@@ -50,9 +50,7 @@ export default class CharacterCardModel {
 	get briefMeta() {
 		const race = this.character.race || "";
 		const className = this.character.class || "";
-		const levelPart = this.character.level
-			? `• Lvl. ${this.character.level}`
-			: "";
+
 		return [race && className ? `${race} |` : race, className]
 			.filter(Boolean)
 			.join(" ")
