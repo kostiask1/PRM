@@ -45,7 +45,6 @@ import {
 } from "../src/utils/encounters.js";
 import {
 	addSourceMonsterImageToDraft,
-	buildAiChangeSummary,
 	getFirstChangedMonster,
 	getFirstChangedMonsterName,
 	isAiResponseVisibleForRoute,
@@ -104,6 +103,7 @@ const aiService = require("../server/aiService.js");
 const aiHistoryService = require("../server/aiHistoryService.js");
 const aiResponseHistoryService = require("../server/aiResponseHistoryService.js");
 const aiPatchService = require("../server/aiPatchService.js");
+const { buildAiChangeSummary } = require("../server/ai/aiChangeSummary.js");
 const aiPayloadSchemas = require("../server/aiPayloadSchemas.js");
 const {
 	buildLocalEncounterMonsterSessionChange,

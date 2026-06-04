@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const path = require("path");
 const storage = require("../storage");
+const { sortByNameQuery } = require("./searchUtils");
 
 function getSourcePriority(source) {
 	const normalized = String(source || "").toUpperCase();
@@ -18,6 +19,38 @@ function pickPreferredRecord(current, candidate) {
 		return candidatePriority > currentPriority ? candidate : current;
 	}
 	return current;
+}
+
+function databasePath(fileName) {
+	return path.join(__dirname, "..", "..", "database", fileName);
+}
+
+async function readNamedReferenceRecords(fileName, listKey, kind, extraFields) {
+	const filePath = databasePath(fileName);
+	if (!(await storage.exists(filePath))) return [];
+
+	const data = await storage.readJson(filePath);
+	const list = Array.isArray(data?.[listKey]) ? data[listKey] : [];
+	const byName = new Map();
+
+	for (const item of list) {
+		const name = String(item?.name || "").trim();
+		if (!name) continue;
+		const key = name.toLowerCase();
+		const normalized = {
+			name,
+			kind,
+			source: item?.source || null,
+			page: item?.page || null,
+			...(extraFields ? extraFields(item) : {}),
+			entries: item?.entries || [],
+		};
+		byName.set(key, pickPreferredRecord(byName.get(key), normalized));
+	}
+
+	return Array.from(byName.values()).sort((a, b) =>
+		a.name.localeCompare(b.name),
+	);
 }
 
 router.get("/search", async (req, res, next) => {
@@ -72,23 +105,7 @@ router.get("/search", async (req, res, next) => {
 			}
 		}
 
-		if (nameQuery) {
-			results.sort((a, b) => {
-				const nA = a.name?.toLowerCase() || "";
-				const nB = b.name?.toLowerCase() || "";
-
-				if (nA === nameQuery && nB !== nameQuery) return -1;
-				if (nB === nameQuery && nA !== nameQuery) return 1;
-
-				const startsA = nA.startsWith(nameQuery);
-				const startsB = nB.startsWith(nameQuery);
-				if (startsA && !startsB) return -1;
-				if (startsB && !startsA) return 1;
-
-				if (nA.length !== nB.length) return nA.length - nB.length;
-				return nA.localeCompare(nB);
-			});
-		}
+		sortByNameQuery(results, nameQuery);
 
 		res.json(results);
 	} catch (error) {
@@ -216,36 +233,11 @@ router.get("/diseases", async (_req, res, next) => {
 
 router.get("/variantrules", async (_req, res, next) => {
 	try {
-		const variantRulesPath = path.join(
-			__dirname,
-			"..",
-			"..",
-			"database",
+		const rules = await readNamedReferenceRecords(
 			"variantrules.json",
-		);
-		if (!(await storage.exists(variantRulesPath))) return res.json([]);
-
-		const data = await storage.readJson(variantRulesPath);
-		const list = Array.isArray(data?.variantrule) ? data.variantrule : [];
-		const byName = new Map();
-
-		for (const item of list) {
-			const name = String(item?.name || "").trim();
-			if (!name) continue;
-			const key = name.toLowerCase();
-			const normalized = {
-				name,
-				kind: "variantrule",
-				source: item?.source || null,
-				page: item?.page || null,
-				ruleType: item?.ruleType || null,
-				entries: item?.entries || [],
-			};
-			byName.set(key, pickPreferredRecord(byName.get(key), normalized));
-		}
-
-		const rules = Array.from(byName.values()).sort((a, b) =>
-			a.name.localeCompare(b.name),
+			"variantrule",
+			"variantrule",
+			(item) => ({ ruleType: item?.ruleType || null }),
 		);
 		res.json(rules);
 	} catch (error) {
@@ -255,36 +247,11 @@ router.get("/variantrules", async (_req, res, next) => {
 
 router.get("/skills", async (_req, res, next) => {
 	try {
-		const skillsPath = path.join(
-			__dirname,
-			"..",
-			"..",
-			"database",
+		const skills = await readNamedReferenceRecords(
 			"skills.json",
-		);
-		if (!(await storage.exists(skillsPath))) return res.json([]);
-
-		const data = await storage.readJson(skillsPath);
-		const list = Array.isArray(data?.skill) ? data.skill : [];
-		const byName = new Map();
-
-		for (const item of list) {
-			const name = String(item?.name || "").trim();
-			if (!name) continue;
-			const key = name.toLowerCase();
-			const normalized = {
-				name,
-				kind: "skill",
-				source: item?.source || null,
-				page: item?.page || null,
-				ability: item?.ability || null,
-				entries: item?.entries || [],
-			};
-			byName.set(key, pickPreferredRecord(byName.get(key), normalized));
-		}
-
-		const skills = Array.from(byName.values()).sort((a, b) =>
-			a.name.localeCompare(b.name),
+			"skill",
+			"skill",
+			(item) => ({ ability: item?.ability || null }),
 		);
 		res.json(skills);
 	} catch (error) {
@@ -294,35 +261,10 @@ router.get("/skills", async (_req, res, next) => {
 
 router.get("/senses", async (_req, res, next) => {
 	try {
-		const sensesPath = path.join(
-			__dirname,
-			"..",
-			"..",
-			"database",
+		const senses = await readNamedReferenceRecords(
 			"senses.json",
-		);
-		if (!(await storage.exists(sensesPath))) return res.json([]);
-
-		const data = await storage.readJson(sensesPath);
-		const list = Array.isArray(data?.sense) ? data.sense : [];
-		const byName = new Map();
-
-		for (const item of list) {
-			const name = String(item?.name || "").trim();
-			if (!name) continue;
-			const key = name.toLowerCase();
-			const normalized = {
-				name,
-				kind: "sense",
-				source: item?.source || null,
-				page: item?.page || null,
-				entries: item?.entries || [],
-			};
-			byName.set(key, pickPreferredRecord(byName.get(key), normalized));
-		}
-
-		const senses = Array.from(byName.values()).sort((a, b) =>
-			a.name.localeCompare(b.name),
+			"sense",
+			"sense",
 		);
 		res.json(senses);
 	} catch (error) {

@@ -3,6 +3,9 @@ const path = require("path");
 
 const storage = require("./storage");
 const { formatGeneratedContentForHistory } = require("./aiHistoryService");
+const {
+	buildAiChangeSummary,
+} = require("./ai/aiChangeSummary");
 
 function cloneSnapshotValue(value) {
 	if (value === undefined) return null;
@@ -15,23 +18,6 @@ function snapshotValueChanged(before, after) {
 
 function getEntityResourceLabel(campaignSlug, type, slug) {
 	return `${campaignSlug}/${type}/${slug}/info.json`;
-}
-
-function buildAiChangeSummary(resources) {
-	return resources.reduce(
-		(summary, resource) => {
-			if (resource.before === null && resource.after !== null) {
-				summary.added += 1;
-			} else if (resource.before !== null && resource.after === null) {
-				summary.deleted += 1;
-			} else {
-				summary.modified += 1;
-			}
-			summary.total += 1;
-			return summary;
-		},
-		{ added: 0, deleted: 0, modified: 0, total: 0 },
-	);
 }
 
 function getCustomMonsterId(monster) {
@@ -221,18 +207,11 @@ function buildAiChangeSet(beforeBundle, afterBundle, campaignSlug) {
 	};
 }
 
-async function saveParsedAiResponse({
+async function buildParsedAiChanges(
 	beforeApplyBundle,
-	generatedContent,
-	path: responsePath,
-	type,
-	modelName,
-	language,
-	userInstructions,
-	requestSnapshot,
-	retryPayload = null,
+	responsePath,
 	extraChangeResources = [],
-}) {
+) {
 	const afterApplyBundle = await storage.exportCampaignBundle(
 		responsePath.campaign,
 	);
@@ -250,8 +229,23 @@ async function saveParsedAiResponse({
 		);
 		changes.summary = buildAiChangeSummary(changes.resources);
 	}
-	const appliedAt = new Date().toISOString();
-	return storage.addAiResponse({
+	return changes;
+}
+
+function buildParsedAiResponsePayload({
+	generatedContent,
+	path: responsePath,
+	type,
+	modelName,
+	language,
+	userInstructions,
+	requestSnapshot,
+	retryPayload,
+	changes,
+	applyState,
+	appliedAt,
+}) {
+	return {
 		text: formatGeneratedContentForHistory(generatedContent),
 		path: responsePath,
 		type,
@@ -261,9 +255,43 @@ async function saveParsedAiResponse({
 		request: requestSnapshot,
 		retryPayload,
 		changes,
-		applyState: "applied",
+		applyState,
 		appliedAt,
-	});
+	};
+}
+
+async function saveParsedAiResponse({
+	beforeApplyBundle,
+	generatedContent,
+	path: responsePath,
+	type,
+	modelName,
+	language,
+	userInstructions,
+	requestSnapshot,
+	retryPayload = null,
+	extraChangeResources = [],
+}) {
+	const changes = await buildParsedAiChanges(
+		beforeApplyBundle,
+		responsePath,
+		extraChangeResources,
+	);
+	return storage.addAiResponse(
+		buildParsedAiResponsePayload({
+			generatedContent,
+			path: responsePath,
+			type,
+			modelName,
+			language,
+			userInstructions,
+			requestSnapshot,
+			retryPayload,
+			changes,
+			applyState: "applied",
+			appliedAt: new Date().toISOString(),
+		}),
+	);
 }
 
 async function saveDraftParsedAiResponse({
@@ -278,37 +306,27 @@ async function saveDraftParsedAiResponse({
 	retryPayload = null,
 	extraChangeResources = [],
 }) {
-	const afterApplyBundle = await storage.exportCampaignBundle(
-		responsePath.campaign,
-	);
-	const changes = buildAiChangeSet(
+	const changes = await buildParsedAiChanges(
 		beforeApplyBundle,
-		afterApplyBundle,
-		responsePath.campaign,
+		responsePath,
+		extraChangeResources,
 	);
-	if (Array.isArray(extraChangeResources) && extraChangeResources.length > 0) {
-		changes.resources.push(...extraChangeResources);
-		changes.resources.sort((a, b) =>
-			String(a.label || a.id || "").localeCompare(
-				String(b.label || b.id || ""),
-			),
-		);
-		changes.summary = buildAiChangeSummary(changes.resources);
-	}
 
-	const response = await storage.addAiResponse({
-		text: formatGeneratedContentForHistory(generatedContent),
-		path: responsePath,
-		type,
-		modelName,
-		language,
-		userInstructions,
-		request: requestSnapshot,
-		retryPayload,
-		changes,
-		applyState: "draft",
-		appliedAt: null,
-	});
+	const response = await storage.addAiResponse(
+		buildParsedAiResponsePayload({
+			generatedContent,
+			path: responsePath,
+			type,
+			modelName,
+			language,
+			userInstructions,
+			requestSnapshot,
+			retryPayload,
+			changes,
+			applyState: "draft",
+			appliedAt: null,
+		}),
+	);
 
 	for (const resource of changes.resources) {
 		await writeAiResourceSnapshot(resource, resource.before ?? null);

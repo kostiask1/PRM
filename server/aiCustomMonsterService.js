@@ -1,17 +1,9 @@
 const storage = require("./storage");
-
-function asText(value) {
-	if (value === null || value === undefined) return "";
-	if (typeof value === "string") return value.trim();
-	if (
-		typeof value === "number" ||
-		typeof value === "bigint" ||
-		typeof value === "boolean"
-	) {
-		return String(value).trim();
-	}
-	return "";
-}
+const {
+	coerceAiText: asText,
+	sanitizeAiName: sanitizeMonsterName,
+} = require("./ai/textUtils");
+const { stripMentionBrackets } = require("../shared/bestiaryUtils.cjs");
 
 function hasOwn(value, key) {
 	return Boolean(
@@ -19,17 +11,6 @@ function hasOwn(value, key) {
 		typeof value === "object" &&
 		Object.prototype.hasOwnProperty.call(value, key),
 	);
-}
-
-function sanitizeMonsterName(value) {
-	let name = asText(value);
-	if (!name) return "";
-
-	while (name.startsWith("[") && name.endsWith("]")) {
-		name = name.slice(1, -1).trim();
-	}
-
-	return name.replace(/\s+/g, " ");
 }
 
 function normalizeMonsterSize(value) {
@@ -147,24 +128,6 @@ function normalizeMonsterEntries(value) {
 	return (Array.isArray(value) ? value : [])
 		.map(normalizeMonsterEntry)
 		.filter((entry) => entry && entry.entries.length > 0);
-}
-
-function stripMentionBrackets(value) {
-	if (typeof value === "string") {
-		return value.replace(/\[([^[\]]+)\]/g, "$1");
-	}
-	if (Array.isArray(value)) {
-		return value.map(stripMentionBrackets);
-	}
-	if (value && typeof value === "object") {
-		return Object.fromEntries(
-			Object.entries(value).map(([key, entryValue]) => [
-				key,
-				stripMentionBrackets(entryValue),
-			]),
-		);
-	}
-	return value;
 }
 
 function copyMonsterObjectField(target, raw, key) {

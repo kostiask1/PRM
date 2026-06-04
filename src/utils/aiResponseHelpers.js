@@ -1,12 +1,6 @@
 import { getDiffResourceState as getBaseDiffResourceState } from "./aiDiff.js";
 
-function getAiChangeResources(entry) {
-	return Array.isArray(entry?.changes?.resources)
-		? entry.changes.resources
-		: [];
-}
-
-export function buildAiChangeSummary(resources = []) {
+function buildAiChangeSummary(resources = []) {
 	return (Array.isArray(resources) ? resources : []).reduce(
 		(summary, resource) => {
 			if (resource.before === null && resource.after !== null) {
@@ -21,6 +15,12 @@ export function buildAiChangeSummary(resources = []) {
 		},
 		{ added: 0, deleted: 0, modified: 0, total: 0 },
 	);
+}
+
+function getAiChangeResources(entry) {
+	return Array.isArray(entry?.changes?.resources)
+		? entry.changes.resources
+		: [];
 }
 
 export function getHistoryChangeSummary(entry, translate = (value) => value) {

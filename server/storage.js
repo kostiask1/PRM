@@ -1,6 +1,10 @@
 const fs = require("fs/promises");
 const path = require("path");
 const crypto = require("crypto");
+const {
+	calculateDiceFormulaAverage,
+	stripMentionBrackets,
+} = require("../shared/bestiaryUtils.cjs");
 
 const ROOT_DIR = path.join(__dirname, "..");
 const DATA_DIR = path.join(ROOT_DIR, "data");
@@ -237,16 +241,20 @@ async function listCampaignSlugs() {
 	return slugs;
 }
 
+function addMonstersToBestiaryIndex(index, monsters, fallbackSource = "") {
+	for (const monster of monsters) {
+		if (!monster.name) continue;
+		const monsterSource = String(monster.source || fallbackSource).toUpperCase();
+		const key = `${monster.name.trim().toLowerCase()}|${monsterSource}`;
+		index.set(key, { ...monster, source: monsterSource });
+	}
+}
+
 async function getBestiaryIndex() {
 	const customMonsters = await readCustomBestiaryMonsters();
 	if (!(await exists(BESTIARY_DIR))) {
 		const customIndex = new Map();
-		for (const m of customMonsters) {
-			if (!m.name) continue;
-			const monsterSource = String(m.source || "CUSTOM").toUpperCase();
-			const key = `${m.name.trim().toLowerCase()}|${monsterSource}`;
-			customIndex.set(key, { ...m, source: monsterSource });
-		}
+		addMonstersToBestiaryIndex(customIndex, customMonsters, "CUSTOM");
 		return customIndex;
 	}
 
@@ -257,18 +265,8 @@ async function getBestiaryIndex() {
 			? data
 			: data.monster || data.monsters || data.results || [];
 		const index = new Map();
-		for (const m of monsters) {
-			if (!m.name) continue;
-			const monsterSource = String(m.source || "").toUpperCase();
-			const key = `${m.name.trim().toLowerCase()}|${monsterSource}`;
-			index.set(key, { ...m, source: monsterSource });
-		}
-		for (const m of customMonsters) {
-			if (!m.name) continue;
-			const monsterSource = String(m.source || "CUSTOM").toUpperCase();
-			const key = `${m.name.trim().toLowerCase()}|${monsterSource}`;
-			index.set(key, { ...m, source: monsterSource });
-		}
+		addMonstersToBestiaryIndex(index, monsters);
+		addMonstersToBestiaryIndex(index, customMonsters, "CUSTOM");
 		return index;
 	}
 
@@ -295,19 +293,9 @@ async function getBestiaryIndex() {
 			? data
 			: data.monster || data.monsters || data.results || [];
 
-		for (const m of monsters) {
-			if (!m.name) continue;
-			const monsterSource = (m.source || fileSource).toUpperCase();
-			const key = `${m.name.trim().toLowerCase()}|${monsterSource}`;
-			index.set(key, { ...m, source: monsterSource });
-		}
+		addMonstersToBestiaryIndex(index, monsters, fileSource);
 	}
-	for (const m of customMonsters) {
-		if (!m.name) continue;
-		const monsterSource = String(m.source || "CUSTOM").toUpperCase();
-		const key = `${m.name.trim().toLowerCase()}|${monsterSource}`;
-		index.set(key, { ...m, source: monsterSource });
-	}
+	addMonstersToBestiaryIndex(index, customMonsters, "CUSTOM");
 	return index;
 }
 
@@ -330,62 +318,6 @@ async function readCustomBestiary() {
 
 async function readCustomBestiaryMonsters() {
 	return (await readCustomBestiary()).monster;
-}
-
-function calculateDiceFormulaAverage(input) {
-	const clean = String(input || "")
-		.toLowerCase()
-		.replace(/\s+/g, "");
-	if (!clean) return null;
-
-	const parts = clean.replace(/-/g, "+-").split("+").filter(Boolean);
-	if (parts.length === 0) return null;
-
-	let average = 0;
-	for (const part of parts) {
-		const dieMatch = part.match(/^(\d+)?d(\d+)([hl]\d+)?$/i);
-		if (dieMatch) {
-			const count = Number.parseInt(dieMatch[1], 10) || 1;
-			const sides = Number.parseInt(dieMatch[2], 10);
-			const keepSuffix = dieMatch[3];
-			if (!Number.isFinite(count) || !Number.isFinite(sides) || sides < 1) {
-				return null;
-			}
-			const keepCount = keepSuffix
-				? Math.min(Number.parseInt(keepSuffix.slice(1), 10), count)
-				: count;
-			if (!Number.isFinite(keepCount) || keepCount < 0) return null;
-			average += keepCount * ((sides + 1) / 2);
-			continue;
-		}
-
-		if (/^[+-]?\d+$/.test(part)) {
-			average += Number.parseInt(part, 10);
-			continue;
-		}
-
-		return null;
-	}
-
-	return Math.max(1, Math.floor(average));
-}
-
-function stripMentionBrackets(value) {
-	if (typeof value === "string") {
-		return value.replace(/\[([^[\]]+)\]/g, "$1");
-	}
-	if (Array.isArray(value)) {
-		return value.map(stripMentionBrackets);
-	}
-	if (value && typeof value === "object") {
-		return Object.fromEntries(
-			Object.entries(value).map(([key, entryValue]) => [
-				key,
-				stripMentionBrackets(entryValue),
-			]),
-		);
-	}
-	return value;
 }
 
 function normalizeCustomBestiaryEntryList(value) {

@@ -569,6 +569,24 @@ export default function AiResponseModal({
 			</>
 		);
 	};
+	const getPreviewResourceClassName = (resource, ...extraClassNames) =>
+		classNames(
+			"AiAssistant__preview_resource",
+			...extraClassNames,
+			resource.before === null && "is_added",
+			resource.after === null && "is_removed",
+			isResourceApplied(resource) && "is_applied",
+			isResourceUndone(resource) && "is_undone",
+		);
+	const renderPreviewResourceHeader = (resource, label = resource.label) => (
+		<div className="AiAssistant__preview_resource_header">
+			<span>{label || resource.label}</span>
+			<div className="AiAssistant__preview_resource_actions">
+				<span>{getDiffResourceState(resource)}</span>
+				{renderResourceActions(resource)}
+			</div>
+		</div>
+	);
 	const preserveCreatureIdentity = (original, parsed) => {
 		const next = { ...parsed };
 		["id", "instanceId", "participantType"].forEach((key) => {
@@ -932,22 +950,12 @@ export default function AiResponseModal({
 		return (
 			<div
 				key={resource.id}
-				className={classNames(
-					"AiAssistant__preview_resource",
+				className={getPreviewResourceClassName(
+					resource,
 					"AiAssistant__preview_resource_encounter",
-					isNew && "is_added",
-					isDeleted && "is_removed",
-					isResourceApplied(resource) && "is_applied",
-					isResourceUndone(resource) && "is_undone",
 				)}
 			>
-				<div className="AiAssistant__preview_resource_header">
-					<span>{title || resource.label}</span>
-					<div className="AiAssistant__preview_resource_actions">
-						<span>{getDiffResourceState(resource)}</span>
-						{renderResourceActions(resource)}
-					</div>
-				</div>
+				{renderPreviewResourceHeader(resource, title)}
 				<div className="AiAssistant__preview_card_columns AiAssistant__encounter_columns">
 					{!isNew && (
 						<div className="AiAssistant__preview_card_frame">
@@ -982,22 +990,12 @@ export default function AiResponseModal({
 		return (
 			<div
 				key={resource.id}
-				className={classNames(
-					"AiAssistant__preview_resource",
+				className={getPreviewResourceClassName(
+					resource,
 					"AiAssistant__preview_resource_notes",
-					isNew && "is_added",
-					isDeleted && "is_removed",
-					isResourceApplied(resource) && "is_applied",
-					isResourceUndone(resource) && "is_undone",
 				)}
 			>
-				<div className="AiAssistant__preview_resource_header">
-					<span>{resource.label}</span>
-					<div className="AiAssistant__preview_resource_actions">
-						<span>{getDiffResourceState(resource)}</span>
-						{renderResourceActions(resource)}
-					</div>
-				</div>
+				{renderPreviewResourceHeader(resource)}
 				{isNew || isDeleted ? (
 					<div className="AiAssistant__preview_card_stack">
 						<div className="AiAssistant__preview_card_frame">
@@ -1117,22 +1115,12 @@ export default function AiResponseModal({
 			return (
 				<div
 					key={resource.id}
-					className={classNames(
-						"AiAssistant__preview_resource",
+					className={getPreviewResourceClassName(
+						resource,
 						"AiAssistant__preview_resource_cards",
-						isNew && "is_added",
-						isDeleted && "is_removed",
-						isResourceApplied(resource) && "is_applied",
-						isResourceUndone(resource) && "is_undone",
 					)}
 				>
-					<div className="AiAssistant__preview_resource_header">
-						<span>{resource.label}</span>
-						<div className="AiAssistant__preview_resource_actions">
-							<span>{getDiffResourceState(resource)}</span>
-							{renderResourceActions(resource)}
-						</div>
-					</div>
+					{renderPreviewResourceHeader(resource)}
 					{isNew || isDeleted ? (
 						<div className="AiAssistant__preview_card_stack">
 							<div className="AiAssistant__preview_card_frame">
@@ -1208,20 +1196,9 @@ export default function AiResponseModal({
 			return (
 				<div
 					key={resource.id}
-					className={classNames(
-						"AiAssistant__preview_resource",
-						isNew ? "is_added" : "is_removed",
-						isResourceApplied(resource) && "is_applied",
-						isResourceUndone(resource) && "is_undone",
-					)}
+					className={getPreviewResourceClassName(resource)}
 				>
-					<div className="AiAssistant__preview_resource_header">
-						<span>{resource.label}</span>
-						<div className="AiAssistant__preview_resource_actions">
-							<span>{getDiffResourceState(resource)}</span>
-							{renderResourceActions(resource)}
-						</div>
-					</div>
+					{renderPreviewResourceHeader(resource)}
 					<div className="AiAssistant__preview_stack">
 						{keys.map((key) => (
 							<div
@@ -1240,19 +1217,9 @@ export default function AiResponseModal({
 		return (
 			<div
 				key={resource.id}
-				className={classNames(
-					"AiAssistant__preview_resource",
-					isResourceApplied(resource) && "is_applied",
-					isResourceUndone(resource) && "is_undone",
-				)}
+				className={getPreviewResourceClassName(resource)}
 			>
-				<div className="AiAssistant__preview_resource_header">
-					<span>{resource.label}</span>
-					<div className="AiAssistant__preview_resource_actions">
-						<span>{getDiffResourceState(resource)}</span>
-						{renderResourceActions(resource)}
-					</div>
-				</div>
+				{renderPreviewResourceHeader(resource)}
 				{fieldKeys.map((key) => (
 					<div
 						key={`${resource.id}-${key}`}

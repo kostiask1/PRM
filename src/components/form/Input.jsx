@@ -110,6 +110,61 @@ const Input = forwardRef(
 			else if (ref) ref.current = node;
 		};
 
+		const applyTextareaValue = (
+			e,
+			newValue,
+			selectionStart,
+			selectionEnd = selectionStart,
+		) => {
+			props.onChange?.({
+				...e,
+				target: { ...e.target, value: newValue },
+			});
+
+			setTimeout(() => {
+				const node = internalRef.current;
+				if (node) {
+					node.focus();
+					node.setSelectionRange(
+						Math.max(0, selectionStart),
+						Math.max(0, selectionEnd),
+					);
+				}
+			}, 0);
+		};
+
+		const applyTextareaBlockEdit = (e, transformLine) => {
+			e.preventDefault();
+			const { selectionStart, selectionEnd, value } = e.target;
+
+			const startOfFirstLine = value.lastIndexOf("\n", selectionStart - 1) + 1;
+			let endOfLastLine = value.indexOf("\n", selectionEnd);
+			if (endOfLastLine === -1) endOfLastLine = value.length;
+
+			const before = value.substring(0, startOfFirstLine);
+			const after = value.substring(endOfLastLine);
+			const block = value.substring(startOfFirstLine, endOfLastLine);
+
+			let firstLineShift = 0;
+			let totalShift = 0;
+			const newLines = block.split("\n").map((line, idx) => {
+				const result = transformLine(line);
+				if (idx === 0) firstLineShift = result.shift;
+				totalShift += result.shift;
+				return result.line;
+			});
+
+			const newValue = before + newLines.join("\n") + after;
+			if (newValue !== value) {
+				applyTextareaValue(
+					e,
+					newValue,
+					selectionStart + firstLineShift,
+					selectionEnd + totalShift,
+				);
+			}
+		};
+
 		const handleKeyDown = (e) => {
 			const isMod = e.ctrlKey || e.metaKey;
 			const key = e.key.toLowerCase();
@@ -122,23 +177,7 @@ const Input = forwardRef(
 				const right = value.substring(selectionEnd);
 				const newValue = left + "\t" + right;
 
-				if (props.onChange) {
-					props.onChange({
-						...e,
-						target: { ...e.target, value: newValue },
-					});
-				}
-
-				setTimeout(() => {
-					const node = internalRef.current;
-					if (node) {
-						node.focus();
-						node.setSelectionRange(
-							Math.max(0, selectionStart + 1),
-							Math.max(0, selectionStart + 1),
-						);
-					}
-				}, 0);
+				applyTextareaValue(e, newValue, selectionStart + 1);
 
 				return;
 			}
@@ -210,20 +249,7 @@ const Input = forwardRef(
 						unwrappedSelection +
 						value.substring(selectionEnd);
 
-					if (props.onChange) {
-						props.onChange({
-							...e,
-							target: { ...e.target, value: newValue },
-						});
-					}
-
-					setTimeout(() => {
-						const node = internalRef.current;
-						if (node) {
-							node.focus();
-							node.setSelectionRange(selectionStart, selectionEnd - 2);
-						}
-					}, 0);
+					applyTextareaValue(e, newValue, selectionStart, selectionEnd - 2);
 					return;
 				}
 
@@ -233,20 +259,7 @@ const Input = forwardRef(
 						selection +
 						value.substring(selectionEnd + 1);
 
-					if (props.onChange) {
-						props.onChange({
-							...e,
-							target: { ...e.target, value: newValue },
-						});
-					}
-
-					setTimeout(() => {
-						const node = internalRef.current;
-						if (node) {
-							node.focus();
-							node.setSelectionRange(selectionStart - 1, selectionEnd - 1);
-						}
-					}, 0);
+					applyTextareaValue(e, newValue, selectionStart - 1, selectionEnd - 1);
 					return;
 				}
 
@@ -257,20 +270,7 @@ const Input = forwardRef(
 					"]" +
 					value.substring(selectionEnd);
 
-				if (props.onChange) {
-					props.onChange({
-						...e,
-						target: { ...e.target, value: newValue },
-					});
-				}
-
-				setTimeout(() => {
-					const node = internalRef.current;
-					if (node) {
-						node.focus();
-						node.setSelectionRange(selectionStart + 1, selectionEnd + 1);
-					}
-				}, 0);
+				applyTextareaValue(e, newValue, selectionStart + 1, selectionEnd + 1);
 
 				return;
 			}
@@ -336,20 +336,7 @@ const Input = forwardRef(
 					newEnd = selectionEnd + tag.length;
 				}
 
-				if (props.onChange) {
-					props.onChange({
-						...e,
-						target: { ...e.target, value: newValue },
-					});
-				}
-
-				setTimeout(() => {
-					const node = internalRef.current;
-					if (node) {
-						node.focus();
-						node.setSelectionRange(newStart, newEnd);
-					}
-				}, 0);
+				applyTextareaValue(e, newValue, newStart, newEnd);
 
 				return;
 			}
@@ -359,59 +346,17 @@ const Input = forwardRef(
 			const isListRemove = key === "[" || key === "х";
 
 			if (type === "textarea" && isMod && (isListAdd || isListRemove)) {
-				e.preventDefault();
-				const { selectionStart, selectionEnd, value } = e.target;
-
-				const startOfFirstLine =
-					value.lastIndexOf("\n", selectionStart - 1) + 1;
-				let endOfLastLine = value.indexOf("\n", selectionEnd);
-				if (endOfLastLine === -1) endOfLastLine = value.length;
-
-				const before = value.substring(0, startOfFirstLine);
-				const after = value.substring(endOfLastLine);
-				const block = value.substring(startOfFirstLine, endOfLastLine);
-
-				const lines = block.split("\n");
-				let firstLineShift = 0;
-				let totalShift = 0;
-
-				const newLines = lines.map((line, idx) => {
+				applyTextareaBlockEdit(e, (line) => {
 					if (isListAdd) {
-						totalShift += 2;
-						if (idx === 0) firstLineShift = 2;
-						return "- " + line;
+						return { line: "- " + line, shift: 2 };
 					}
 
 					if (line.startsWith("- ")) {
-						totalShift -= 2;
-						if (idx === 0) firstLineShift = -2;
-						return line.slice(2);
+						return { line: line.slice(2), shift: -2 };
 					}
 
-					return line;
+					return { line, shift: 0 };
 				});
-
-				const newValue = before + newLines.join("\n") + after;
-
-				if (newValue !== value) {
-					if (props.onChange) {
-						props.onChange({
-							...e,
-							target: { ...e.target, value: newValue },
-						});
-					}
-
-					setTimeout(() => {
-						const node = internalRef.current;
-						if (node) {
-							node.focus();
-							node.setSelectionRange(
-								Math.max(0, selectionStart + firstLineShift),
-								Math.max(0, selectionEnd + totalShift),
-							);
-						}
-					}, 0);
-				}
 
 				return;
 			}
@@ -420,25 +365,10 @@ const Input = forwardRef(
 			const isHeader = !isNaN(key) && key >= "1" && key <= "6";
 
 			if (type === "textarea" && isMod && isHeader) {
-				e.preventDefault();
 				const level = parseInt(key, 10);
 				const headerTag = "#".repeat(level) + " ";
-				const { selectionStart, selectionEnd, value } = e.target;
 
-				const startOfFirstLine =
-					value.lastIndexOf("\n", selectionStart - 1) + 1;
-				let endOfLastLine = value.indexOf("\n", selectionEnd);
-				if (endOfLastLine === -1) endOfLastLine = value.length;
-
-				const before = value.substring(0, startOfFirstLine);
-				const after = value.substring(endOfLastLine);
-				const block = value.substring(startOfFirstLine, endOfLastLine);
-
-				const lines = block.split("\n");
-				let firstLineShift = 0;
-				let totalShift = 0;
-
-				const newLines = lines.map((line, idx) => {
+				applyTextareaBlockEdit(e, (line) => {
 					const existingHeaderMatch = line.match(/^#{1,6} /);
 					let newLine = line;
 					let shift = 0;
@@ -457,55 +387,15 @@ const Input = forwardRef(
 						shift = headerTag.length;
 					}
 
-					if (idx === 0) firstLineShift = shift;
-					totalShift += shift;
-					return newLine;
+					return { line: newLine, shift };
 				});
-
-				const newValue = before + newLines.join("\n") + after;
-
-				if (newValue !== value) {
-					if (props.onChange) {
-						props.onChange({
-							...e,
-							target: { ...e.target, value: newValue },
-						});
-					}
-
-					setTimeout(() => {
-						const node = internalRef.current;
-						if (node) {
-							node.focus();
-							node.setSelectionRange(
-								Math.max(0, selectionStart + firstLineShift),
-								Math.max(0, selectionEnd + totalShift),
-							);
-						}
-					}, 0);
-				}
 
 				return;
 			}
 
 			// Ctrl + Q
 			if (type === "textarea" && isMod && (key === "q" || key === "й")) {
-				e.preventDefault();
-				const { selectionStart, selectionEnd, value } = e.target;
-
-				const startOfFirstLine =
-					value.lastIndexOf("\n", selectionStart - 1) + 1;
-				let endOfLastLine = value.indexOf("\n", selectionEnd);
-				if (endOfLastLine === -1) endOfLastLine = value.length;
-
-				const before = value.substring(0, startOfFirstLine);
-				const after = value.substring(endOfLastLine);
-				const block = value.substring(startOfFirstLine, endOfLastLine);
-
-				const lines = block.split("\n");
-				let firstLineShift = 0;
-				let totalShift = 0;
-
-				const newLines = lines.map((line, idx) => {
+				applyTextareaBlockEdit(e, (line) => {
 					let newLine = line;
 					let shift = 0;
 
@@ -517,32 +407,8 @@ const Input = forwardRef(
 						shift = 2;
 					}
 
-					if (idx === 0) firstLineShift = shift;
-					totalShift += shift;
-					return newLine;
+					return { line: newLine, shift };
 				});
-
-				const newValue = before + newLines.join("\n") + after;
-
-				if (newValue !== value) {
-					if (props.onChange) {
-						props.onChange({
-							...e,
-							target: { ...e.target, value: newValue },
-						});
-					}
-
-					setTimeout(() => {
-						const node = internalRef.current;
-						if (node) {
-							node.focus();
-							node.setSelectionRange(
-								Math.max(0, selectionStart + firstLineShift),
-								Math.max(0, selectionEnd + totalShift),
-							);
-						}
-					}, 0);
-				}
 
 				return;
 			}
@@ -579,21 +445,8 @@ const Input = forwardRef(
 				plainText +
 				value.substring(selectionEnd);
 
-			if (props.onChange) {
-				props.onChange({
-					...e,
-					target: { ...e.target, value: newValue },
-				});
-			}
-
 			const cursor = selectionStart + plainText.length;
-			setTimeout(() => {
-				const node = internalRef.current;
-				if (node) {
-					node.focus();
-					node.setSelectionRange(cursor, cursor);
-				}
-			}, 0);
+			applyTextareaValue(e, newValue, cursor);
 		};
 
 		const baseClass = type === "textarea" ? "Input Input__textarea" : "Input";

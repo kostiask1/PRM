@@ -1,6 +1,9 @@
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
+import bestiaryUtils from "../shared/bestiaryUtils.cjs";
+
+const { applyArrayMod, clone, toArray } = bestiaryUtils;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,10 +20,6 @@ if (args.has("--help") || args.has("-h")) {
 Replaces bestiary monsters that use _copy with fully materialized monster data.
 The script updates JSON files in database/bestiary unless --dry-run is used.`);
 	process.exit(0);
-}
-
-function clone(value) {
-	return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
 }
 
 function normalizeSource(source) {
@@ -47,11 +46,6 @@ function getMonsterList(data) {
 	return data?.monster || data?.monsters || data?.results || [];
 }
 
-function toArray(value) {
-	if (value === undefined || value === null) return [];
-	return Array.isArray(value) ? value : [value];
-}
-
 function escapeRegExp(value) {
 	return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -64,34 +58,6 @@ function replaceTextInValue(value, mod) {
 	const regex = new RegExp(escapeRegExp(replace), mod.flags || "g");
 	const serialized = JSON.stringify(value);
 	return JSON.parse(serialized.replace(regex, mod.with ?? ""));
-}
-
-function entryName(value) {
-	if (value && typeof value === "object") {
-		return value.name || value.id || value.title || "";
-	}
-	return value;
-}
-
-function matchesEntry(value, expected) {
-	return (
-		String(entryName(value)).toLowerCase() === String(expected).toLowerCase()
-	);
-}
-
-function ensureArray(target, prop) {
-	if (!Array.isArray(target[prop])) target[prop] = [];
-	return target[prop];
-}
-
-function appendUnique(targetList, items) {
-	const seen = new Set(targetList.map((item) => JSON.stringify(item)));
-	for (const item of items) {
-		const key = JSON.stringify(item);
-		if (seen.has(key)) continue;
-		targetList.push(item);
-		seen.add(key);
-	}
 }
 
 function getPrimarySpellcasting(target) {
@@ -193,44 +159,6 @@ function removeSpells(target, mod) {
 				removeFromList(block.spells[level]?.spells, spells);
 			}
 		}
-	}
-}
-
-function applyArrayMod(target, prop, mod) {
-	const list = ensureArray(target, prop);
-	const items = clone(toArray(mod.items));
-
-	if (mod.mode === "appendArr") {
-		list.push(...items);
-		return;
-	}
-	if (mod.mode === "prependArr") {
-		list.unshift(...items);
-		return;
-	}
-	if (mod.mode === "appendIfNotExistsArr") {
-		appendUnique(list, items);
-		return;
-	}
-	if (mod.mode === "insertArr") {
-		const index = Math.max(0, Math.min(Number(mod.index) || 0, list.length));
-		list.splice(index, 0, ...items);
-		return;
-	}
-	if (mod.mode === "replaceArr") {
-		const next = [];
-		for (const entry of list) {
-			if (matchesEntry(entry, mod.replace)) next.push(...items);
-			else next.push(entry);
-		}
-		target[prop] = next;
-		return;
-	}
-	if (mod.mode === "removeArr") {
-		const names = toArray(mod.names ?? mod.items);
-		target[prop] = list.filter(
-			(entry) => !names.some((name) => matchesEntry(entry, name)),
-		);
 	}
 }
 

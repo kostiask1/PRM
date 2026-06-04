@@ -1,21 +1,12 @@
 const storage = require("./storage");
 const { normalizeCustomMonster } = require("./aiCustomMonsterService");
+const {
+	coerceAiText: asText,
+	sanitizeAiName: sanitizeEntityName,
+} = require("./ai/textUtils");
 
 function makeId() {
 	return storage.createId();
-}
-
-function asText(value) {
-	if (value === null || value === undefined) return "";
-	if (typeof value === "string") return value.trim();
-	if (
-		typeof value === "number" ||
-		typeof value === "bigint" ||
-		typeof value === "boolean"
-	) {
-		return String(value).trim();
-	}
-	return "";
 }
 
 function hasOwn(value, key) {
@@ -31,17 +22,6 @@ function firstOwnedValue(value, keys) {
 		if (hasOwn(value, key)) return value[key];
 	}
 	return undefined;
-}
-
-function sanitizeEntityName(value) {
-	let name = asText(value);
-	if (!name) return "";
-
-	while (name.startsWith("[") && name.endsWith("]")) {
-		name = name.slice(1, -1).trim();
-	}
-
-	return name.replace(/\s+/g, " ");
 }
 
 function parseNameParts(raw = {}) {

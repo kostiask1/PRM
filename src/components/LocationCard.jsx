@@ -5,7 +5,7 @@ import EditableField from "./form/EditableField";
 import DraggableList from "./common/DraggableList.jsx";
 import ImageAssetField from "./form/ImageAssetField.jsx";
 import NoteCard from "./common/NoteCard.jsx";
-import AiContextIgnoreButton from "./common/AiContextIgnoreButton.jsx";
+import { getAiIgnoredNoteListProps } from "./common/aiIgnoredNoteListProps.jsx";
 import CollapseToggleButton from "./common/CollapseToggleButton.jsx";
 import LocationCardModel from "../models/LocationCardModel.js";
 import classNames from "../utils/classNames";
@@ -263,20 +263,7 @@ export default function LocationCard({
 								className="location_card__notes_list"
 								onReorder={handleNotesReorder}
 								onDrop={onReorderDrop}
-								keyExtractor={(note) => note.id}
-								isItemDraggable={(note) => !note._isVirtual}
-								isolateDragEvents
-								isItemControlActive={(note) => Boolean(note._aiIgnored)}
-								renderItemControl={(note) =>
-									!note._isVirtual && (
-										<AiContextIgnoreButton
-											ignored={Boolean(note._aiIgnored)}
-											onToggle={(ignored) =>
-												handleNoteAiIgnoredChange(note.id, ignored)
-											}
-										/>
-									)
-								}
+								{...getAiIgnoredNoteListProps(handleNoteAiIgnoredChange)}
 								renderItem={(note, isDragging, index) => (
 									<NoteCard
 										note={note}

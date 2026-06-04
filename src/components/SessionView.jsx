@@ -8,6 +8,7 @@ import DraggableList from "./common/DraggableList.jsx";
 import Modal from "./common/Modal.jsx";
 import NoteCard from "./common/NoteCard.jsx";
 import AiContextIgnoreButton from "./common/AiContextIgnoreButton.jsx";
+import { getAiIgnoredNoteListProps } from "./common/aiIgnoredNoteListProps.jsx";
 import BulkCollapseButton from "./common/BulkCollapseButton.jsx";
 import CollapseToggleButton from "./common/CollapseToggleButton.jsx";
 import TodoSection from "./session/TodoSection";
@@ -863,20 +864,9 @@ function SceneCard(props) {
 									items={sceneNotesForRender}
 									className="SceneCard__notes_list"
 									onReorder={props.onSceneNotesReorder}
-									keyExtractor={(note) => note.id}
-									isItemDraggable={(note) => !note._isVirtual}
-									isolateDragEvents
-									isItemControlActive={(note) => Boolean(note._aiIgnored)}
-									renderItemControl={(note) =>
-										!note._isVirtual && (
-											<AiContextIgnoreButton
-												ignored={Boolean(note._aiIgnored)}
-												onToggle={(ignored) =>
-													props.onSceneNoteAiIgnoredChange?.(note.id, ignored)
-												}
-											/>
-										)
-									}
+									{...getAiIgnoredNoteListProps(
+										props.onSceneNoteAiIgnoredChange,
+									)}
 									renderItem={(note, isDragging, index) => (
 										<NoteCard
 											note={note}

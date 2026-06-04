@@ -12,6 +12,9 @@ const { CustomMonsterAiFlow } = require("../ai/CustomMonsterAiFlow");
 const { CampaignAiFlow } = require("../ai/CampaignAiFlow");
 const { assertAiGeneratedContentContract } = require("../aiPayloadSchemas");
 const { restoreAiResponseSnapshot } = require("../aiResponseHistoryService");
+const {
+	buildAiChangeSummary,
+} = require("../ai/aiChangeSummary");
 
 const ENV_PATH = path.join(__dirname, "..", "..", ".env");
 const aiHistoryWriter = new AiHistoryWriter();
@@ -42,23 +45,6 @@ function updateEnvValue(envText, key, value) {
 
 	const suffix = envText && !envText.endsWith("\n") ? eol : "";
 	return `${envText}${suffix}${line}${eol}`;
-}
-
-function buildAiChangeSummary(resources = []) {
-	return resources.reduce(
-		(summary, resource) => {
-			if (resource.before === null && resource.after !== null) {
-				summary.added += 1;
-			} else if (resource.before !== null && resource.after === null) {
-				summary.deleted += 1;
-			} else {
-				summary.modified += 1;
-			}
-			summary.total += 1;
-			return summary;
-		},
-		{ added: 0, deleted: 0, modified: 0, total: 0 },
-	);
 }
 
 function preserveExistingIds(before, after) {
@@ -527,6 +513,33 @@ function collectMentionCandidates(generatedContent, contextData = {}) {
 	return normalizeMentionCandidates(names);
 }
 
+async function handleAiHistoryRequest(req, res, next, handler) {
+	try {
+		const campaignSlug = getAiHistoryCampaignSlug(req);
+		if (!campaignSlug) {
+			return res.status(400).json({ error: "campaign is required." });
+		}
+		return res.json(await handler(campaignSlug));
+	} catch (error) {
+		if (error.status) {
+			return res.status(error.status).json({ error: error.message });
+		}
+		next(error);
+	}
+}
+
+async function handleAiResponseEntryRequest(req, res, next, handler) {
+	return handleAiHistoryRequest(req, res, next, async (campaignSlug) => {
+		const entry = await storage.getAiResponse(campaignSlug, req.params.id);
+		if (!entry) {
+			const error = new Error("AI response not found.");
+			error.status = 404;
+			throw error;
+		}
+		return handler(entry, campaignSlug);
+	});
+}
+
 router.get("/models", async (_req, res, next) => {
 	try {
 		const result = await aiService.listAvailableModels();
@@ -536,123 +549,52 @@ router.get("/models", async (_req, res, next) => {
 	}
 });
 
-router.get("/responses", async (req, res, next) => {
-	try {
-		const campaignSlug = getAiHistoryCampaignSlug(req);
-		if (!campaignSlug) {
-			return res.status(400).json({ error: "campaign is required." });
-		}
-		res.json(await storage.readAiResponses(campaignSlug));
-	} catch (error) {
-		next(error);
-	}
-});
+router.get("/responses", (req, res, next) =>
+	handleAiHistoryRequest(req, res, next, (campaignSlug) =>
+		storage.readAiResponses(campaignSlug),
+	),
+);
 
-router.get("/responses/stats", async (req, res, next) => {
-	try {
-		const campaignSlug = getAiHistoryCampaignSlug(req);
-		if (!campaignSlug) {
-			return res.status(400).json({ error: "campaign is required." });
-		}
-		res.json(await storage.getAiResponsesStorageStats(campaignSlug));
-	} catch (error) {
-		next(error);
-	}
-});
+router.get("/responses/stats", (req, res, next) =>
+	handleAiHistoryRequest(req, res, next, (campaignSlug) =>
+		storage.getAiResponsesStorageStats(campaignSlug),
+	),
+);
 
-router.delete("/responses/:id", async (req, res, next) => {
-	try {
-		const campaignSlug = getAiHistoryCampaignSlug(req);
-		if (!campaignSlug) {
-			return res.status(400).json({ error: "campaign is required." });
-		}
-		res.json(await storage.deleteAiResponse(campaignSlug, req.params.id));
-	} catch (error) {
-		next(error);
-	}
-});
+router.delete("/responses/:id", (req, res, next) =>
+	handleAiHistoryRequest(req, res, next, (campaignSlug) =>
+		storage.deleteAiResponse(campaignSlug, req.params.id),
+	),
+);
 
-router.delete("/responses", async (req, res, next) => {
-	try {
-		const campaignSlug = getAiHistoryCampaignSlug(req);
-		if (!campaignSlug) {
-			return res.status(400).json({ error: "campaign is required." });
-		}
-		res.json(await storage.clearAiResponses(campaignSlug));
-	} catch (error) {
-		next(error);
-	}
-});
+router.delete("/responses", (req, res, next) =>
+	handleAiHistoryRequest(req, res, next, (campaignSlug) =>
+		storage.clearAiResponses(campaignSlug),
+	),
+);
 
-router.patch("/responses/:id", async (req, res, next) => {
-	try {
-		const campaignSlug = getAiHistoryCampaignSlug(req);
-		if (!campaignSlug) {
-			return res.status(400).json({ error: "campaign is required." });
-		}
-		const entry = await storage.getAiResponse(campaignSlug, req.params.id);
-		if (!entry) {
-			return res.status(404).json({ error: "AI response not found." });
-		}
+router.patch("/responses/:id", (req, res, next) =>
+	handleAiResponseEntryRequest(req, res, next, async (entry, campaignSlug) => {
 		const changes = patchDraftAiChanges(entry, req.body?.resources);
-		res.json(
-			await storage.updateAiResponse(campaignSlug, entry.id, {
-				changes,
-			}),
-		);
-	} catch (error) {
-		if (error.status) {
-			return res.status(error.status).json({ error: error.message });
-		}
-		next(error);
-	}
-});
+		return storage.updateAiResponse(campaignSlug, entry.id, { changes });
+	}),
+);
 
-router.post("/responses/:id/apply", async (req, res, next) => {
-	try {
-		const campaignSlug = getAiHistoryCampaignSlug(req);
-		if (!campaignSlug) {
-			return res.status(400).json({ error: "campaign is required." });
-		}
-		const entry = await storage.getAiResponse(campaignSlug, req.params.id);
-		if (!entry) {
-			return res.status(404).json({ error: "AI response not found." });
-		}
-		res.json(
-			await restoreAiResponseSnapshot(entry, "after", {
-				resourceIds: req.body?.resourceIds,
-			}),
-		);
-	} catch (error) {
-		if (error.status) {
-			return res.status(error.status).json({ error: error.message });
-		}
-		next(error);
-	}
-});
+router.post("/responses/:id/apply", (req, res, next) =>
+	handleAiResponseEntryRequest(req, res, next, (entry) =>
+		restoreAiResponseSnapshot(entry, "after", {
+			resourceIds: req.body?.resourceIds,
+		}),
+	),
+);
 
-router.post("/responses/:id/undo", async (req, res, next) => {
-	try {
-		const campaignSlug = getAiHistoryCampaignSlug(req);
-		if (!campaignSlug) {
-			return res.status(400).json({ error: "campaign is required." });
-		}
-		const entry = await storage.getAiResponse(campaignSlug, req.params.id);
-		if (!entry) {
-			return res.status(404).json({ error: "AI response not found." });
-		}
-		res.json(
-			await restoreAiResponseSnapshot(entry, "before", {
-				resourceIds: req.body?.resourceIds,
-			}),
-		);
-	} catch (error) {
-		if (error.status) {
-			return res.status(error.status).json({ error: error.message });
-		}
-		next(error);
-	}
-});
+router.post("/responses/:id/undo", (req, res, next) =>
+	handleAiResponseEntryRequest(req, res, next, (entry) =>
+		restoreAiResponseSnapshot(entry, "before", {
+			resourceIds: req.body?.resourceIds,
+		}),
+	),
+);
 
 router.post("/api-key", async (req, res, next) => {
 	try {

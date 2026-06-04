@@ -1,17 +1,8 @@
 import { createContext } from "react";
+import { getEntityDisplayName } from "../../services/entities.js";
 
 function normalizeIdentityPart(value) {
 	return String(value || "").trim();
-}
-
-function getEntityDisplayName(entity, type) {
-	if (type === "locations") {
-		return String(entity?.name || entity?.title || "").trim();
-	}
-	return (
-		`${entity?.firstName || ""} ${entity?.lastName || ""}`.trim() ||
-		String(entity?.name || entity?.title || "").trim()
-	);
 }
 
 function getEntityIdentity(entity, type, scope = "") {

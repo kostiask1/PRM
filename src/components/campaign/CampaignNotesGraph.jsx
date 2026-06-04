@@ -22,6 +22,7 @@ import {
 	useAppSelector,
 } from "../../store/appStore";
 import { renderMentionText } from "../../renderers/contentRenderer.jsx";
+import { getEntityDisplayName } from "../../services/entities.js";
 import "../../assets/components/CampaignNotesGraph.css";
 
 const GRAPH_WIDTH = 1400;
@@ -946,16 +947,6 @@ function constrainMovedNodesToGroupCollisions({
 	}
 
 	return nextOffsets;
-}
-
-function getEntityDisplayName(entity, type) {
-	if (type === "locations") {
-		return String(entity.name || entity.title || "").trim();
-	}
-	return (
-		`${entity.firstName || ""} ${entity.lastName || ""}`.trim() ||
-		String(entity.name || entity.title || "").trim()
-	);
 }
 
 function findByIdOrSlug(items, sourceId, sourceSlug) {

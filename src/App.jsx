@@ -66,6 +66,41 @@ export default function App() {
 		}
 	}, [dispatch]);
 
+	const applySettingsToStore = useCallback(
+		(settings) => {
+			dispatch(setLanguageAction(settings.language));
+			dispatch(
+				setUiSettingsAction({
+					theme: settings.theme,
+					encounterViewMode: settings.encounterViewMode,
+					encounterGridColumns: settings.encounterGridColumns,
+					simplifiedNotes: settings.simplifiedNotes,
+					aiBasePrompt: settings.aiBasePrompt,
+					imagePromptBasePrompt: settings.imagePromptBasePrompt,
+					campaignAiBasePrompts: settings.campaignAiBasePrompts,
+					campaignImagePromptBasePrompts:
+						settings.campaignImagePromptBasePrompts,
+					autoApplyAiChanges: settings.autoApplyAiChanges,
+					useSearchDebounce: settings.useSearchDebounce,
+				}),
+			);
+		},
+		[dispatch],
+	);
+
+	const loadSettings = useCallback(
+		async (isMounted, errorMessage) => {
+			try {
+				const settings = await api.getSettings();
+				if (!isMounted() || !settings) return;
+				applySettingsToStore(settings);
+			} catch (error) {
+				console.error(errorMessage, error);
+			}
+		},
+		[applySettingsToStore],
+	);
+
 	useEffect(() => {
 		const isEditableTarget = (target) =>
 			target?.tagName === "INPUT" ||
@@ -120,74 +155,25 @@ export default function App() {
 
 	useEffect(() => {
 		let isMounted = true;
-
-		const loadSettings = async () => {
-			try {
-				const settings = await api.getSettings();
-				if (!isMounted || !settings) return;
-
-				dispatch(setLanguageAction(settings.language));
-				dispatch(
-					setUiSettingsAction({
-						theme: settings.theme,
-						encounterViewMode: settings.encounterViewMode,
-						encounterGridColumns: settings.encounterGridColumns,
-						simplifiedNotes: settings.simplifiedNotes,
-						aiBasePrompt: settings.aiBasePrompt,
-						imagePromptBasePrompt: settings.imagePromptBasePrompt,
-						campaignAiBasePrompts: settings.campaignAiBasePrompts,
-						campaignImagePromptBasePrompts:
-							settings.campaignImagePromptBasePrompts,
-						autoApplyAiChanges: settings.autoApplyAiChanges,
-						useSearchDebounce: settings.useSearchDebounce,
-					}),
-				);
-			} catch (error) {
-				console.error("Failed to load settings", error);
-			}
-		};
-
-		loadSettings();
+		loadSettings(() => isMounted, "Failed to load settings");
 
 		return () => {
 			isMounted = false;
 		};
-	}, [dispatch]);
+	}, [loadSettings]);
 
 	useEffect(() => {
 		if (syncEvent?.resource !== "settings") return;
 
 		let isMounted = true;
-		const loadSettings = async () => {
-			try {
-				const settings = await api.getSettings();
-				if (!isMounted || !settings) return;
-				dispatch(setLanguageAction(settings.language));
-				dispatch(
-					setUiSettingsAction({
-						theme: settings.theme,
-						encounterViewMode: settings.encounterViewMode,
-						encounterGridColumns: settings.encounterGridColumns,
-						simplifiedNotes: settings.simplifiedNotes,
-						aiBasePrompt: settings.aiBasePrompt,
-						imagePromptBasePrompt: settings.imagePromptBasePrompt,
-						campaignAiBasePrompts: settings.campaignAiBasePrompts,
-						campaignImagePromptBasePrompts:
-							settings.campaignImagePromptBasePrompts,
-						autoApplyAiChanges: settings.autoApplyAiChanges,
-						useSearchDebounce: settings.useSearchDebounce,
-					}),
-				);
-			} catch (error) {
-				console.error("Failed to reload settings after sync event", error);
-			}
-		};
-
-		loadSettings();
+		loadSettings(
+			() => isMounted,
+			"Failed to reload settings after sync event",
+		);
 		return () => {
 			isMounted = false;
 		};
-	}, [dispatch, syncEvent]);
+	}, [loadSettings, syncEvent]);
 
 	useEffect(() => {
 		const handleMentionPicker = async () => {
