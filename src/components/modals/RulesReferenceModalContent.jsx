@@ -13,6 +13,7 @@ import { lang } from "../../services/localization";
 import { useAppDispatch } from "../../store/appStore";
 import { objectMatchesSearch } from "../../utils/deepSearch.js";
 import { highlightText } from "../../utils/searchHighlight.jsx";
+import { formatSourceLabel } from "../../utils/sourceNames.js";
 
 const VARIANT_RULE_TYPE_LABELS = {
 	C: "Core Rule",
@@ -38,7 +39,9 @@ function getSpellMeta(spell = {}) {
 			: level !== ""
 				? lang.t("Level {level}", { level })
 				: "";
-	return [levelLabel, spell.school, spell.source].filter(Boolean).join(" · ");
+	return [levelLabel, spell.school, formatSourceLabel(spell.source)]
+		.filter(Boolean)
+		.join(" · ");
 }
 
 function getSearchValues(tab, item) {

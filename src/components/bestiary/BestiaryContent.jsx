@@ -9,6 +9,7 @@ import Tooltip from "../common/Tooltip";
 import classNames from "../../utils/classNames";
 import { getMonsterTypeString } from "../../utils/bestiary.js";
 import { highlightText } from "../../utils/searchHighlight.jsx";
+import { formatSourceLabel, getSourceFullName } from "../../utils/sourceNames.js";
 import { lang } from "../../services/localization";
 
 function getMonsterItemKey(monster) {
@@ -49,6 +50,7 @@ function MonsterListItem({
 		selectedMonster?.name === monster.name &&
 		selectedMonster?.source === monster.source;
 	const isFavorite = isFavoriteMonster(favorites, monster);
+	const sourceFullName = getSourceFullName(monster.source);
 
 	return (
 		<div key={getMonsterItemKey(monster)}>
@@ -143,10 +145,12 @@ function MonsterListItem({
 								search,
 							)}
 							{monster.source && (
-								<span className="Bestiary__item_source">
-									{" "}
-									• {highlightText(monster.source, search)}
-								</span>
+								<Tooltip content={sourceFullName} disabled={!sourceFullName}>
+									<span className="Bestiary__item_source">
+										{" "}
+										• {highlightText(monster.source, search)}
+									</span>
+								</Tooltip>
 							)}
 						</div>
 					</div>
@@ -213,6 +217,8 @@ export default function BestiaryContent({
 				<div className="Bestiary__search">
 					{sources.length > 0 && (
 						<Select
+							className="Bestiary__source_select"
+							dropdownMinWidth={450}
 							value={selectedSource}
 							onChange={(event) =>
 								setSelectedSource(normalizeSourceSelection(event.target.value))
@@ -222,7 +228,7 @@ export default function BestiaryContent({
 							<option value="CUSTOM">{lang.t("Custom creatures")}</option>
 							{sourceOptions.map((source) => (
 								<option key={source} value={source}>
-									{source.replace(/^bestiary-/i, "").toUpperCase()}
+									{formatSourceLabel(source.replace(/^bestiary-/i, ""))}
 								</option>
 							))}
 						</Select>

@@ -10,6 +10,7 @@ import Button from "../form/Button";
 import EditableField from "../form/EditableField";
 import Modal from "../common/Modal";
 import classNames from "../../utils/classNames";
+import { formatSourceLabel } from "../../utils/sourceNames";
 import { lang } from "../../services/localization";
 
 function snapshotToText(value) {
@@ -194,7 +195,7 @@ function getEncounterParticipantAc(participant = {}) {
 
 function getEncounterParticipantMeta(participant = {}) {
 	return [
-		participant.source ? String(participant.source).toUpperCase() : "",
+		formatSourceLabel(participant.source),
 		getEncounterParticipantAc(participant)
 			? `AC ${getEncounterParticipantAc(participant)}`
 			: "",

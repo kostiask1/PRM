@@ -13,6 +13,7 @@ import classNames from "../utils/classNames";
 import { formatBytes } from "../utils/formatBytes";
 import { useAppDispatch } from "../store/appStore";
 import { lang } from "../services/localization";
+import { getSourceFullName } from "../utils/sourceNames";
 
 const SUB_LABELS = {
 	npc: "NPC",
@@ -43,6 +44,17 @@ const getGalleryPathEntry = (source, category, subcategory = "") => ({
 
 const galleryPathEntriesEqual = (left, right) =>
 	Boolean(left && right && left.pathKey === right.pathKey);
+
+const formatBestiaryFolderLabel = (value, isBestiaryPath) => {
+	const label = lang.t(SUB_LABELS[value] || value);
+	return isBestiaryPath ? getSourceFullName(label) : label;
+};
+
+const formatImageLocationLabel = (label) =>
+	String(label || "")
+		.split(" / ")
+		.map((part) => getSourceFullName(part))
+		.join(" / ");
 
 function isEditableTarget(target) {
 	if (!(target instanceof HTMLElement)) return false;
@@ -410,6 +422,7 @@ function ImageGallery({
 			const sub = item.sub;
 			const isReadonly = isReadonlySub(sub);
 			const isBestiaryFolder = isOfficialSub(sub);
+			const folderLabel = formatBestiaryFolderLabel(sub, isBestiaryFolder);
 			const folderIcon = isBestiaryFolder
 				? "folder-bestiary"
 				: SUB_ICON_NAMES[sub] || "folder";
@@ -469,26 +482,28 @@ function ImageGallery({
 							</div>
 						)}
 					</div>
-					<span className="ImageGallery__name">
-						<button
-							type="button"
-							className="ImageGallery__nameBtn"
-							onClick={async (e) => {
-								if (isReadonly) return;
-								e.stopPropagation();
-								const newName = await dispatch(
-									prompt({
-										title: lang.t("Rename folder"),
-										message: lang.t("Enter a new name:"),
-										defaultValue: sub,
-									}),
-								);
-								if (newName) handleRenameSub(sub, newName);
-							}}
-						>
-							{lang.t(SUB_LABELS[sub] || sub)}
-						</button>
-					</span>
+					<Tooltip content={folderLabel} disabled={!isBestiaryFolder}>
+						<span className="ImageGallery__name">
+							<button
+								type="button"
+								className="ImageGallery__nameBtn"
+								onClick={async (e) => {
+									if (isReadonly) return;
+									e.stopPropagation();
+									const newName = await dispatch(
+										prompt({
+											title: lang.t("Rename folder"),
+											message: lang.t("Enter a new name:"),
+											defaultValue: sub,
+										}),
+									);
+									if (newName) handleRenameSub(sub, newName);
+								}}
+							>
+								{folderLabel}
+							</button>
+						</span>
+					</Tooltip>
 				</div>
 			);
 		}
@@ -562,7 +577,9 @@ function ImageGallery({
 						</span>
 					</Tooltip>
 					{isSearchResults && img.locationLabel && (
-						<span className="ImageGallery__location">{img.locationLabel}</span>
+						<span className="ImageGallery__location">
+							{formatImageLocationLabel(img.locationLabel)}
+						</span>
 					)}
 				</div>
 			</Tooltip>
@@ -751,36 +768,47 @@ function ImageGallery({
 										/>
 										{(() => {
 											const breadcrumbPath = arr.slice(0, idx + 1).join("/");
+											const isBestiaryBreadcrumb =
+												isReadonlyPath(breadcrumbPath);
+											const breadcrumbLabel = formatBestiaryFolderLabel(
+												part,
+												isBestiaryBreadcrumb,
+											);
 											return (
-												<button
-													className={classNames("BreadcrumbItem", {
-														is_active: idx === arr.length - 1,
-														is_drag_over:
-															dragOverTarget?.type === "breadcrumb" &&
-															dragOverTarget?.id === breadcrumbPath,
-													})}
-													onClick={() => {
-														setSelectedSub(breadcrumbPath);
-													}}
-													onDragOver={(e) => {
-														e.preventDefault();
-														setDragOverTarget({
-															type: "breadcrumb",
-															id: breadcrumbPath,
-														});
-													}}
-													onDragLeave={() => setDragOverTarget(null)}
-													onDrop={(e) =>
-														handleDrop(e, {
-															slug: selectedSource,
-															category: selectedCat.id,
-															subcategory: breadcrumbPath,
-															readonly: isReadonlyPath(breadcrumbPath),
-														})
-													}
+												<Tooltip
+													content={breadcrumbLabel}
+													disabled={!isBestiaryBreadcrumb}
 												>
-													{lang.t(SUB_LABELS[part] || part)}
-												</button>
+													<button
+														className={classNames("BreadcrumbItem", {
+															is_active: idx === arr.length - 1,
+															is_drag_over:
+																dragOverTarget?.type === "breadcrumb" &&
+																dragOverTarget?.id === breadcrumbPath,
+														})}
+														onClick={() => {
+															setSelectedSub(breadcrumbPath);
+														}}
+														onDragOver={(e) => {
+															e.preventDefault();
+															setDragOverTarget({
+																type: "breadcrumb",
+																id: breadcrumbPath,
+															});
+														}}
+														onDragLeave={() => setDragOverTarget(null)}
+														onDrop={(e) =>
+															handleDrop(e, {
+																slug: selectedSource,
+																category: selectedCat.id,
+																subcategory: breadcrumbPath,
+																readonly: isReadonlyPath(breadcrumbPath),
+															})
+														}
+													>
+														{breadcrumbLabel}
+													</button>
+												</Tooltip>
 											);
 										})()}
 									</React.Fragment>

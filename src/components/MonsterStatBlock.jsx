@@ -29,6 +29,7 @@ import AddMonsterToEncounterModalContent from "./modals/AddMonsterToEncounterMod
 import RulesLink from "./common/RulesLink.jsx";
 import { highlightText } from "../utils/searchHighlight.jsx";
 import ImageDropzone from "./form/ImageDropzone.jsx";
+import { formatSourceLabel } from "../utils/sourceNames.js";
 
 const SPELL_CACHE = new Map();
 const SENSE_NAME_REGEX = /\b(blindsight|darkvision|tremorsense|truesight)\b/gi;
@@ -64,6 +65,7 @@ export default function MonsterStatBlock({
 
 	const model = useMemo(() => new MonsterStatBlockModel(monster), [monster]);
 	const effectiveName = model.effectiveName;
+	const sourceLabel = formatSourceLabel(monster.source);
 	const highlight = (value) => highlightText(value, searchHighlight);
 	const isFieldHighlighted = (...fields) =>
 		fields.some((field) => highlightFields?.fields?.includes?.(field));
@@ -631,6 +633,16 @@ export default function MonsterStatBlock({
 						{highlight(model.size)} {highlight(model.typeLabel)},{" "}
 						{highlight(model.alignment)}
 					</div>
+					{sourceLabel && (
+						<div
+							className={classNames(
+								"MonsterStatBlock__meta_line",
+								changedClass("source"),
+							)}
+						>
+							<strong>Source:</strong> {highlight(sourceLabel)}
+						</div>
+					)}
 					<div className="MonsterStatBlock__stats__wrap">
 						<div className="MonsterStatBlock__stats">
 							<div

@@ -21,6 +21,7 @@ import {
 import { useAppDispatch } from "../../store/appStore.js";
 import classNames from "../../utils/classNames.js";
 import { capitalizeWords, preprocessTags } from "../../utils/parser.jsx";
+import { formatSourceLabel } from "../../utils/sourceNames.js";
 import { openRulesReferenceModal } from "../modals/openRulesReferenceModal.jsx";
 import Tooltip from "./Tooltip.jsx";
 
@@ -120,7 +121,9 @@ function getSpellTooltipMeta(spell) {
 			: level !== ""
 				? lang.t("Level {level}", { level })
 				: "";
-	return [levelLabel, spell.school, spell.source].filter(Boolean).join(" - ");
+	return [levelLabel, spell.school, formatSourceLabel(spell.source)]
+		.filter(Boolean)
+		.join(" - ");
 }
 
 export default function RulesLink({

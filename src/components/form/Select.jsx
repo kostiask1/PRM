@@ -14,6 +14,7 @@ export default function Select({
 	children,
 	className = "",
 	disabled = false,
+	dropdownMinWidth = 180,
 	...props
 }) {
 	const [isOpen, setIsOpen] = useState(false);
@@ -40,7 +41,7 @@ export default function Select({
 		const viewportHeight = window.innerHeight;
 
 		const width = Math.min(
-			Math.max(rect.width, 180),
+			Math.max(rect.width, dropdownMinWidth),
 			viewportWidth - DROPDOWN_VIEWPORT_GAP * 2,
 		);
 		const left = Math.min(
@@ -74,7 +75,7 @@ export default function Select({
 			width,
 			maxHeight,
 		});
-	}, []);
+	}, [dropdownMinWidth]);
 
 	useEffect(() => {
 		const handleClickOutside = (event) => {

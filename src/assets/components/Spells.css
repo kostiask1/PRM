@@ -27,6 +27,12 @@
 	flex-wrap: wrap;
 }
 
+.Spells__source_select {
+	flex: 0 0 220px;
+	width: 220px;
+	min-width: 0;
+}
+
 .Spells__searchInput {
 	display: flex;
 	align-items: center;

@@ -7,6 +7,7 @@ import { capitalizeWords } from "../utils/parser.jsx";
 import SpellCardModel from "../models/SpellCardModel.js";
 import { lang } from "../services/localization";
 import { highlightText } from "../utils/searchHighlight.jsx";
+import { formatSourceLabel } from "../utils/sourceNames.js";
 
 export default function SpellCard({
 	spell,
@@ -24,7 +25,7 @@ export default function SpellCard({
 	const metaParts = [
 		model.levelLabel,
 		model.schoolLabel,
-		model.sourceLabel,
+		formatSourceLabel(model.sourceLabel),
 	].filter(Boolean);
 
 	return (

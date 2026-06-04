@@ -37,6 +37,12 @@
 	padding: var(--space-1) 0;
 }
 
+.Bestiary__source_select {
+	flex: 0 0 220px;
+	width: 220px;
+	min-width: 0;
+}
+
 .Bestiary__searchInput {
 	display: flex;
 	align-items: center;

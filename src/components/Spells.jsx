@@ -18,6 +18,7 @@ import { objectMatchesSearch } from "../utils/deepSearch.js";
 import { highlightText } from "../utils/searchHighlight.jsx";
 import useDebounce from "../hooks/useDebounce.js";
 import { useAppSelector } from "../store/appStore.js";
+import { formatSourceLabel } from "../utils/sourceNames.js";
 
 const SCHOOL_MAP = {
 	A: "Abjuration",
@@ -431,13 +432,15 @@ export default function Spells({
 			<div className="Spells__search">
 				{sources.length > 0 && (
 					<Select
+						className="Spells__source_select"
+						dropdownMinWidth={450}
 						value={selectedSource}
 						onChange={(e) => setSelectedSource(e.target.value)}
 					>
 						<option value="all">{lang.t("All sources")}</option>
 						{sources.map((s) => (
 							<option key={s} value={s}>
-								{s.toUpperCase()}
+								{formatSourceLabel(s)}
 							</option>
 						))}
 					</Select>

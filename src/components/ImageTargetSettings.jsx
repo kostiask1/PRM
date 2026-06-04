@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import Icon from "./common/Icon";
 import "../assets/components/ImageTargetSettings.css";
 import classNames from "../utils/classNames";
+import { getSourceFullName } from "../utils/sourceNames";
 import { lang } from "../services/localization";
 
 const SUB_LABELS = {
@@ -13,6 +14,11 @@ function normalizePath(path) {
 	return String(path || "")
 		.replace(/^\/+|\/+$/g, "")
 		.replace(/\/{2,}/g, "/");
+}
+
+function getSubLabel(value, useSourceName = false) {
+	const label = lang.t(SUB_LABELS[value] || value);
+	return useSourceName ? getSourceFullName(label) : label;
 }
 
 export default function ImageTargetSettings({
@@ -74,6 +80,8 @@ export default function ImageTargetSettings({
 	}, [loadSubcategories, value.source, value.category, currentSub]);
 
 	const subButtons = atRoot && staticSubs.length > 0 ? staticSubs : nestedSubs;
+	const useBestiarySourceNames =
+		value.source === "general" && value.category === "tokens";
 
 	const handleSelectCategory = (cat) => {
 		setPatch({
@@ -192,7 +200,7 @@ export default function ImageTargetSettings({
 							})}
 							onClick={() => handleNavigateToPart(index)}
 						>
-							{lang.t(SUB_LABELS[part] || part)}
+							{getSubLabel(part, useBestiarySourceNames)}
 						</button>
 					))}
 					{typeof createSubcategory === "function" && (
@@ -268,7 +276,7 @@ export default function ImageTargetSettings({
 								className="ImageTargetSettings__tabBtn"
 								onClick={() => handleEnterSubfolder(sub)}
 							>
-								{lang.t(SUB_LABELS[sub] || sub)}
+								{getSubLabel(sub, useBestiarySourceNames)}
 							</button>
 						))}
 						{!isLoadingSubs && subButtons.length === 0 && (
