@@ -49,6 +49,14 @@ const icons = {
 			<circle cx="12" cy="14" r="2.2" />
 		</g>
 	),
+	"folder-bestiary": (
+		<g strokeWidth="1">
+			<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+			<path d="M8 10.5h8.5a1.5 1.5 0 0 1 1.5 1.5v5H9.5A1.5 1.5 0 0 1 8 15.5z" />
+			<path d="M8 10.5V16a1.5 1.5 0 0 0 1.5 1.5H18" />
+			<path d="M11 13h4" />
+		</g>
+	),
 	restore: (
 		<>
 			<path d="M3 2v6h6" />

@@ -477,6 +477,22 @@
 	border-color: color-mix(in srgb, var(--accent), transparent 60%);
 }
 
+.ImageGallery__item__folder.is_bestiary .ImageGallery__image_wrap {
+	color: var(--warning);
+	background:
+		linear-gradient(
+			135deg,
+			color-mix(in srgb, var(--warning), transparent 82%),
+			color-mix(in srgb, var(--accent), transparent 92%)
+		);
+	border-color: color-mix(in srgb, var(--warning), transparent 45%);
+}
+
+.ImageGallery__item__folder.is_bestiary .ImageGallery__nameBtn {
+	color: color-mix(in srgb, var(--warning), var(--text) 35%);
+	font-weight: 700;
+}
+
 .ImageGallery__item.is_protected .ImageGallery__nameBtn {
 	cursor: default;
 }

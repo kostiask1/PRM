@@ -62,6 +62,7 @@ export default function useImageGallery({
 		(name) => isProtectedSystemSub(name) || officialSubs.has(name),
 		[isProtectedSystemSub, officialSubs],
 	);
+	const isOfficialSub = useCallback((name) => officialSubs.has(name), [officialSubs]);
 	const isReadonlyImage = useCallback(
 		(image) => Boolean(image?.readonly || image?.globalSearch),
 		[],
@@ -801,6 +802,7 @@ export default function useImageGallery({
 		getCleanName,
 		handleRenameImage,
 		isProtectedSystemSub,
+		isOfficialSub,
 		isReadonlySub,
 		isReadonlyImage,
 	};

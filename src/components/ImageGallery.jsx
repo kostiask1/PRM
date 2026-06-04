@@ -175,6 +175,7 @@ function ImageGallery({
 		handleDragEnd,
 		getCleanName,
 		handleRenameImage,
+		isOfficialSub,
 		isReadonlySub,
 		isReadonlyImage,
 		isReadonlyCurrentFolder,
@@ -408,7 +409,10 @@ function ImageGallery({
 		if (item.type === "sub") {
 			const sub = item.sub;
 			const isReadonly = isReadonlySub(sub);
-			const folderIcon = SUB_ICON_NAMES[sub] || "folder";
+			const isBestiaryFolder = isOfficialSub(sub);
+			const folderIcon = isBestiaryFolder
+				? "folder-bestiary"
+				: SUB_ICON_NAMES[sub] || "folder";
 			return (
 				<div
 					key={`sub:${sub}`}
@@ -419,6 +423,7 @@ function ImageGallery({
 							is_selected: selectedSubs.has(sub),
 							is_drag_over: dragOverTarget?.id === sub,
 							is_protected: isReadonly,
+							is_bestiary: isBestiaryFolder,
 						},
 					)}
 					onClick={(e) => {
