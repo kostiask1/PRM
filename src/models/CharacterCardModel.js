@@ -53,7 +53,7 @@ export default class CharacterCardModel {
 		const levelPart = this.character.level
 			? `• Lvl. ${this.character.level}`
 			: "";
-		return [race && className ? `${race} |` : race, className, levelPart]
+		return [race && className ? `${race} |` : race, className]
 			.filter(Boolean)
 			.join(" ")
 			.trim();

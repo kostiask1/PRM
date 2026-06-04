@@ -16,7 +16,7 @@
 
 .location_card.is_collapsed .location_card__header {
     display: grid;
-    grid-template-columns: var(--size-8) var(--size-10) minmax(0, 0.45fr) minmax(0, 1fr) auto var(--size-8);
+    grid-template-columns: var(--size-8) var(--size-10) minmax(0, 0.5fr) minmax(0, 1fr) auto var(--size-8);
     align-items: center;
     background: unset;
 }
