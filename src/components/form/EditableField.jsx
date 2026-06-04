@@ -1512,7 +1512,6 @@ export default function EditableField({
 			</Tooltip>
 			<EntityModal
 				modalState={modalState}
-				campaignSlug={resolvedCampaignSlug}
 				onClose={handleCloseMentionModal}
 			/>
 		</div>

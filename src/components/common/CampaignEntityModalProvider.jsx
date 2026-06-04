@@ -1,12 +1,12 @@
-import { useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 import { confirm, refreshEntitiesAction } from "../../actions/app";
 import { api } from "../../api";
-import { useAppDispatch } from "../../store/appStore";
 import { lang } from "../../services/localization";
+import { useAppDispatch } from "../../store/appStore";
 import CharacterCard from "../CharacterCard";
 import LocationCard from "../LocationCard";
-import { EntityLinkScope } from "../common/EntityLinkContext";
+import { EntityLinkResolverContext } from "./EntityLinkIdentity";
 
 const sanitizeEntityForSave = (entity) =>
 	Object.fromEntries(
@@ -19,7 +19,7 @@ const normalizeMentionName = (value) =>
 		.replace(/\s+/g, " ")
 		.toLowerCase();
 
-export default function EntityModalContent({
+function CampaignEntityModalContent({
 	initialEntity,
 	campaignSlug,
 	type,
@@ -73,44 +73,80 @@ export default function EntityModalContent({
 		return true;
 	};
 
+	const handleDelete = async () => {
+		await api.deleteEntity(campaignSlug, type, entity.slug);
+		dispatch(refreshEntitiesAction());
+		onClose?.();
+	};
+
+	if (!campaignSlug || !entity) return null;
+
 	if (type === "locations") {
 		return (
-			<EntityLinkScope entity={entity} type={type}>
-				<LocationCard
-					key={entity?.id || entity?.slug || "entity-modal-location-card"}
-					location={{ ...entity, collapsed: false }}
-					onChange={handleUpdate}
-					onNameBlur={handleNameBlur}
-					onDelete={async () => {
-						await api.deleteEntity(campaignSlug, type, entity.slug);
-						dispatch(refreshEntitiesAction());
-						onClose();
-					}}
-					onToggleCollapse={null}
-					campaignSlug={campaignSlug}
-					viewMode="modal"
-				/>
-			</EntityLinkScope>
+			<LocationCard
+				key={entity?.id || entity?.slug || "entity-modal-location-card"}
+				location={{ ...entity, collapsed: false }}
+				onChange={handleUpdate}
+				onNameBlur={handleNameBlur}
+				onDelete={handleDelete}
+				onToggleCollapse={null}
+				campaignSlug={campaignSlug}
+				viewMode="modal"
+			/>
 		);
 	}
 
 	return (
-		<EntityLinkScope entity={entity} type={type}>
-			<CharacterCard
-				key={entity?.id || entity?.slug || "entity-modal-card"}
-				character={{ ...entity, collapsed: false }}
-				onChange={handleUpdate}
-				onNameBlur={handleNameBlur}
-				onDelete={async () => {
-					await api.deleteEntity(campaignSlug, type, entity.slug);
-					dispatch(refreshEntitiesAction());
-					onClose();
-				}}
-				onToggleCollapse={null}
-				campaignSlug={campaignSlug}
-				type={type}
-				viewMode="modal"
-			/>
-		</EntityLinkScope>
+		<CharacterCard
+			key={entity?.id || entity?.slug || "entity-modal-card"}
+			character={{ ...entity, collapsed: false }}
+			onChange={handleUpdate}
+			onNameBlur={handleNameBlur}
+			onDelete={handleDelete}
+			onToggleCollapse={null}
+			campaignSlug={campaignSlug}
+			type={type}
+			viewMode="modal"
+		/>
+	);
+}
+
+export default function CampaignEntityModalProvider({
+	campaignSlug,
+	children,
+}) {
+	const parentEntityLinks = useContext(EntityLinkResolverContext);
+
+	const renderModalContent = useCallback(
+		(modalState, onClose) => {
+			const parentContent =
+				parentEntityLinks?.renderModalContent?.(modalState, onClose);
+			if (parentContent) return parentContent;
+			if (!campaignSlug || modalState?.scope) return null;
+
+			return (
+				<CampaignEntityModalContent
+					initialEntity={modalState.entity}
+					campaignSlug={campaignSlug}
+					type={modalState.type}
+					onClose={onClose}
+				/>
+			);
+		},
+		[campaignSlug, parentEntityLinks],
+	);
+
+	const value = useMemo(
+		() => ({
+			...(parentEntityLinks || {}),
+			renderModalContent,
+		}),
+		[parentEntityLinks, renderModalContent],
+	);
+
+	return (
+		<EntityLinkResolverContext.Provider value={value}>
+			{children}
+		</EntityLinkResolverContext.Provider>
 	);
 }

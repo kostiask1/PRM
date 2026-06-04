@@ -9,20 +9,15 @@ import ReactMarkdown from "react-markdown";
 
 import Button from "../form/Button";
 import EditableField from "../form/EditableField";
-import EntityModalContent from "../modals/EntityModalContent.jsx";
+import EntityModal from "../common/EntityModal";
 import classNames from "../../utils/classNames";
 import {
 	buildCampaignGraph,
 	normalizeGraphName,
 } from "../../utils/campaignGraph.js";
 import { lang } from "../../services/localization";
-import {
-	closeActiveModal,
-	openModalRequest,
-	useAppSelector,
-} from "../../store/appStore";
+import { openModalRequest, useAppSelector } from "../../store/appStore";
 import { renderMentionText } from "../../renderers/contentRenderer.jsx";
-import { getEntityDisplayName } from "../../services/entities.js";
 import "../../assets/components/CampaignNotesGraph.css";
 
 const GRAPH_WIDTH = 1400;
@@ -1023,6 +1018,7 @@ export default function CampaignNotesGraph({
 	const [enabledFilters, setEnabledFilters] = useState(DEFAULT_FILTERS);
 	const [query, setQuery] = useState("");
 	const [selectedNodeId, setSelectedNodeId] = useState(null);
+	const [entityModalState, setEntityModalState] = useState(null);
 	const [hoveredNodeId, setHoveredNodeId] = useState(null);
 	const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
 	const [nodePositionOffsets, setNodePositionOffsets] = useState({});
@@ -1202,30 +1198,9 @@ export default function CampaignNotesGraph({
 						: null;
 
 		if (entityConfig?.entity) {
-			openModalRequest({
-				title: lang
-					.t("{type}: {name}", {
-						type:
-							entityConfig.type === "locations"
-								? lang.t("Location/Faction")
-								: entityConfig.type === "npc"
-									? "NPC"
-									: lang.t("Character"),
-						name: getEntityDisplayName(entityConfig.entity, entityConfig.type),
-					})
-					.trim(),
-				type: entityConfig.type === "locations" ? "location" : "character",
-				className:
-					entityConfig.type === "locations" ? "EntityLinkModal__location" : "",
-				showFooter: false,
-				children: (
-					<EntityModalContent
-						initialEntity={entityConfig.entity}
-						campaignSlug={campaign.slug}
-						type={entityConfig.type}
-						onClose={() => closeActiveModal(null)}
-					/>
-				),
+			setEntityModalState({
+				entity: entityConfig.entity,
+				type: entityConfig.type,
 			});
 			return;
 		}
@@ -1687,6 +1662,10 @@ export default function CampaignNotesGraph({
 					</>
 				)}
 			</aside>
+			<EntityModal
+				modalState={entityModalState}
+				onClose={() => setEntityModalState(null)}
+			/>
 		</div>
 	);
 }

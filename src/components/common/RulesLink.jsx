@@ -1,7 +1,6 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { alert } from "../../actions/app.js";
 import "../../assets/components/RulesLink.css";
-import { renderRecursiveContent } from "../../renderers/contentRenderer.jsx";
 import { lang } from "../../services/localization.js";
 import {
 	getConditionByName,
@@ -19,26 +18,120 @@ import {
 	resolveSpellInput,
 	resolveVariantRuleInput,
 } from "../../services/referenceResolvers.js";
-import { openModalRequest, useAppDispatch } from "../../store/appStore.js";
+import { useAppDispatch } from "../../store/appStore.js";
 import classNames from "../../utils/classNames.js";
-import { capitalizeWords } from "../../utils/parser.jsx";
+import { capitalizeWords, preprocessTags } from "../../utils/parser.jsx";
 import { openRulesReferenceModal } from "../modals/openRulesReferenceModal.jsx";
-import Modal from "./Modal.jsx";
 import Tooltip from "./Tooltip.jsx";
 
-const SpellCard = lazy(() => import("../SpellCard.jsx"));
+function getTaggedDisplayValue(raw) {
+	const parts = String(raw || "").split("|");
+	return String(parts[2] || parts[0] || "").trim();
+}
+
+function renderTooltipText(value) {
+	return preprocessTags(String(value || ""))
+		.replace(
+			/\{@(?:spell|condition|status|disease|variantrule|skill|sense|quickref)\s+([^}]+)\}/gi,
+			(_, raw) => capitalizeWords(getTaggedDisplayValue(raw)),
+		)
+		.replace(/\{@(?:hit|dc|damage|dice|recharge)\s+([^}]+)\}/gi, "$1");
+}
+
+function renderTooltipEntries(content) {
+	if (content === undefined || content === null) return null;
+
+	if (typeof content === "string" || typeof content === "number") {
+		return renderTooltipText(content);
+	}
+
+	if (Array.isArray(content)) {
+		return content.map((item, index) => (
+			<span key={index}>{renderTooltipEntries(item)}</span>
+		));
+	}
+
+	if (typeof content === "object") {
+		if (content.entry) return renderTooltipEntries(content.entry);
+
+		if (content.type === "list" && Array.isArray(content.items)) {
+			return (
+				<ul>
+					{content.items.map((item, index) => (
+						<li key={index}>{renderTooltipEntries(item)}</li>
+					))}
+				</ul>
+			);
+		}
+
+		if (
+			(content.type === "entries" || content.type === "section") &&
+			Array.isArray(content.entries)
+		) {
+			return (
+				<div>
+					{content.name && <strong>{content.name}. </strong>}
+					{renderTooltipEntries(content.entries)}
+				</div>
+			);
+		}
+
+		if (content.type === "table" && Array.isArray(content.rows)) {
+			return (
+				<table>
+					{content.colLabels && (
+						<thead>
+							<tr>
+								{content.colLabels.map((label, index) => (
+									<th key={index}>{renderTooltipEntries(label)}</th>
+								))}
+							</tr>
+						</thead>
+					)}
+					<tbody>
+						{content.rows.map((row, rowIndex) => (
+							<tr key={rowIndex}>
+								{row.map((cell, cellIndex) => (
+									<td key={cellIndex}>{renderTooltipEntries(cell)}</td>
+								))}
+							</tr>
+						))}
+					</tbody>
+				</table>
+			);
+		}
+
+		return renderTooltipText(JSON.stringify(content));
+	}
+
+	return null;
+}
+
+function getSpellTooltipMeta(spell) {
+	const level =
+		spell.level_int !== undefined
+			? spell.level_int
+			: spell.level !== undefined
+				? spell.level
+				: "";
+	const levelLabel =
+		level === 0 || String(level) === "0"
+			? lang.t("Cantrip")
+			: level !== ""
+				? lang.t("Level {level}", { level })
+				: "";
+	return [levelLabel, spell.school, spell.source].filter(Boolean).join(" - ");
+}
 
 export default function RulesLink({
 	children,
 	name,
 	type = "spell",
 	onNavigate,
-	openInNestedModal = false,
 }) {
 	const dispatch = useAppDispatch();
 	const [tooltipContent, setTooltipContent] = useState(null);
 	const [isLoading, setIsLoading] = useState(false);
-	const [nestedSpell, setNestedSpell] = useState(null);
 
 	const referenceName = name || String(children || "").trim();
 	const referenceKey = `${type}:${referenceName}`;
@@ -69,21 +162,7 @@ export default function RulesLink({
 			return;
 		}
 
-		if (openInNestedModal) {
-			setNestedSpell(spell);
-			return;
-		}
-
-		openModalRequest({
-			title: capitalizeWords(spell.name.split("|")[0]),
-			type: "confirm",
-			showFooter: false,
-			children: (
-				<Suspense fallback={null}>
-					<SpellCard spell={spell} />
-				</Suspense>
-			),
-		});
+		openRulesReferenceModal("spells", spell.name);
 	};
 
 	const handleClick = async () => {
@@ -132,9 +211,13 @@ export default function RulesLink({
 			if (!spell) return null;
 			return (
 				<div className="Tooltip__spell_card">
-					<Suspense fallback={null}>
-						<SpellCard spell={spell} />
-					</Suspense>
+					<div className="Tooltip__title">
+						{capitalizeWords(spell.name.split("|")[0])}
+					</div>
+					<div className="Tooltip__meta">{getSpellTooltipMeta(spell)}</div>
+					<div className="Tooltip__text">
+						{renderTooltipEntries(spell.entries)}
+					</div>
 				</div>
 			);
 		}
@@ -146,7 +229,7 @@ export default function RulesLink({
 				<div>
 					<div className="Tooltip__title">{condition.name}</div>
 					<div className="Tooltip__text">
-						{renderRecursiveContent(condition.entries)}
+						{renderTooltipEntries(condition.entries)}
 					</div>
 				</div>
 			);
@@ -160,7 +243,7 @@ export default function RulesLink({
 					<div className="Tooltip__title">{disease.name}</div>
 					{disease.type && <div className="Tooltip__meta">{disease.type}</div>}
 					<div className="Tooltip__text">
-						{renderRecursiveContent(disease.entries)}
+						{renderTooltipEntries(disease.entries)}
 					</div>
 				</div>
 			);
@@ -173,7 +256,7 @@ export default function RulesLink({
 				<div>
 					<div className="Tooltip__title">{rule.name}</div>
 					<div className="Tooltip__text">
-						{renderRecursiveContent(rule.entries)}
+						{renderTooltipEntries(rule.entries)}
 					</div>
 				</div>
 			);
@@ -189,7 +272,7 @@ export default function RulesLink({
 						<div className="Tooltip__meta">{skill.ability.toUpperCase()}</div>
 					)}
 					<div className="Tooltip__text">
-						{renderRecursiveContent(skill.entries)}
+						{renderTooltipEntries(skill.entries)}
 					</div>
 				</div>
 			);
@@ -202,7 +285,7 @@ export default function RulesLink({
 				<div>
 					<div className="Tooltip__title">{sense.name}</div>
 					<div className="Tooltip__text">
-						{renderRecursiveContent(sense.entries)}
+						{renderTooltipEntries(sense.entries)}
 					</div>
 				</div>
 			);
@@ -240,29 +323,14 @@ export default function RulesLink({
 		) : null);
 
 	return (
-		<>
-			<Tooltip content={resolvedContent}>
-				<span
-					className={classNames("RulesLink", type && `RulesLink__${type}`)}
-					onClick={handleClick}
-					onMouseEnter={handleMouseEnter}
-				>
-					{children}
-				</span>
-			</Tooltip>
-			{nestedSpell && (
-				<Modal
-					title={capitalizeWords(nestedSpell.name.split("|")[0])}
-					type="confirm"
-					showFooter={false}
-					onConfirm={() => setNestedSpell(null)}
-					onCancel={() => setNestedSpell(null)}
-				>
-					<Suspense fallback={null}>
-						<SpellCard spell={nestedSpell} />
-					</Suspense>
-				</Modal>
-			)}
-		</>
+		<Tooltip content={resolvedContent}>
+			<span
+				className={classNames("RulesLink", type && `RulesLink__${type}`)}
+				onClick={handleClick}
+				onMouseEnter={handleMouseEnter}
+			>
+				{children}
+			</span>
+		</Tooltip>
 	);
 }

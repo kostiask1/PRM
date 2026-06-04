@@ -5,9 +5,11 @@ import DiceCalculator from "./components/DiceCalculator";
 import MainContent from "./components/MainContent";
 import MessageBox from "./components/common/MessageBox";
 import Modal from "./components/common/Modal";
+import CampaignEntityModalProvider from "./components/common/CampaignEntityModalProvider";
 import Sidebar from "./components/Sidebar";
 import MentionPickerModalContent from "./components/modals/MentionPickerModalContent";
 import CreateCampaignModalContent from "./components/modals/CreateCampaignModalContent";
+import RulesReferenceModalHost from "./components/modals/RulesReferenceModalHost";
 import { lang } from "./services/localization";
 import {
 	alert,
@@ -357,36 +359,39 @@ export default function App() {
 
 	return (
 		<div className="App" data-lang={currentLanguage}>
-			<Sidebar
-				className="App__sidebar"
-				campaigns={campaigns}
-				activeCampaignId={activeCampaignSlug}
-				onSelectCampaign={(slug) =>
-					navigateTo(slug, null, false, null, isCTRLPressed)
-				}
-				onCreateCampaign={openCreateCampaignModal}
-				onToggleCampaignStatus={handleToggleCampaignStatus}
-			/>
-			<MainContent className="App__main" />
-
-			{modalState.config && (
-				<Modal
-					{...modalState.config}
-					onConfirm={(value) =>
-						resolveModalRequest(modalState.requestId, value)
+			<CampaignEntityModalProvider campaignSlug={activeCampaignSlug}>
+				<Sidebar
+					className="App__sidebar"
+					campaigns={campaigns}
+					activeCampaignId={activeCampaignSlug}
+					onSelectCampaign={(slug) =>
+						navigateTo(slug, null, false, null, isCTRLPressed)
 					}
-					onCancel={
-						modalState.config?.isAlert
-							? null
-							: () => {
-									modalState.config?.onCancelAction?.();
-									resolveModalRequest(modalState.requestId, null);
-								}
-					}
+					onCreateCampaign={openCreateCampaignModal}
+					onToggleCampaignStatus={handleToggleCampaignStatus}
 				/>
-			)}
-			<MessageBox />
-			<DiceCalculator />
+				<MainContent className="App__main" />
+
+				{modalState.config && (
+					<Modal
+						{...modalState.config}
+						onConfirm={(value) =>
+							resolveModalRequest(modalState.requestId, value)
+						}
+						onCancel={
+							modalState.config?.isAlert
+								? null
+								: () => {
+										modalState.config?.onCancelAction?.();
+										resolveModalRequest(modalState.requestId, null);
+									}
+						}
+					/>
+				)}
+				<MessageBox />
+				<DiceCalculator />
+				<RulesReferenceModalHost />
+			</CampaignEntityModalProvider>
 		</div>
 	);
 }

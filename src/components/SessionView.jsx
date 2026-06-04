@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 
 import Icon from "./common/Icon.jsx";
 import Button from "./form/Button";
@@ -53,6 +53,7 @@ function SessionView() {
 		sessionLocations,
 		sessionNpcs,
 	} = view;
+	const parentEntityLinks = useContext(EntityLinkResolverContext);
 	const sessionScopedEntityLinks = useMemo(() => {
 		const scopedEntities = [
 			...sessionNpcs.map((entity) => ({
@@ -78,9 +79,17 @@ function SessionView() {
 
 		return {
 			resolveEntityByName(name) {
-				return findEntityByName(scopedEntities, name) || null;
+				return (
+					findEntityByName(scopedEntities, name) ||
+					parentEntityLinks?.resolveEntityByName?.(name) ||
+					null
+				);
 			},
 			renderModalContent(modalState, onClose) {
+				if (modalState.scope !== "session") {
+					return parentEntityLinks?.renderModalContent?.(modalState, onClose);
+				}
+
 				const entity = findCurrentSessionEntity(modalState);
 				if (modalState.type === "locations") {
 					return (
@@ -121,6 +130,7 @@ function SessionView() {
 		handleSessionLocationDelete,
 		handleSessionNpcChange,
 		handleSessionNpcDelete,
+		parentEntityLinks,
 		scopedCampaignSlug,
 		sessionLocations,
 		sessionNpcs,

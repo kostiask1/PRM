@@ -81,7 +81,6 @@ export default function EntityLink({ name, children, className = "" }) {
 			</a>
 			<EntityModal
 				modalState={modalState}
-				campaignSlug={resolvedCampaignSlug}
 				onClose={handleCloseModal}
 			/>
 		</>

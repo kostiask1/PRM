@@ -51,11 +51,18 @@ function getSpellListIndex(spells, selectedSpell) {
 	);
 }
 
+function findSpellByName(spells, name) {
+	const normalizedName = String(name || "").trim();
+	if (!normalizedName) return null;
+	return spells.find((spell) => spell?.name === normalizedName) || null;
+}
+
 export default function Spells({
 	isEmbedded = false,
 	onSelectSpell = null,
 	initialSearch = "",
 	initialDetailedSearch = false,
+	initialSelectedName = "",
 	hideSearchInput = false,
 	renderOptions = {},
 }) {
@@ -90,6 +97,7 @@ export default function Spells({
 	const listRef = useRef(null);
 	const selectedSpellRef = useRef(null);
 	const hasScrolledToInitialSpellRef = useRef(false);
+	const embeddedScrolledSpellRef = useRef("");
 
 	useEffect(() => {
 		selectedSpellRef.current = selectedSpell;
@@ -164,6 +172,11 @@ export default function Spells({
 		if (!isEmbedded) return;
 		setIsDetailedSearch(Boolean(initialDetailedSearch));
 	}, [initialDetailedSearch, isEmbedded]);
+
+	useEffect(() => {
+		if (!isEmbedded) return;
+		embeddedScrolledSpellRef.current = "";
+	}, [initialSelectedName, isEmbedded]);
 
 	useEffect(() => {
 		if (isEmbedded || !urlSelectedSource) return;
@@ -243,7 +256,20 @@ export default function Spells({
 	// Initial selection
 	useEffect(() => {
 		if (isEmbedded) {
-			if (displayedSpells.length > 0 && !selectedSpellRef.current?.name) {
+			const targetSpell =
+				findSpellByName(displayedSpells, initialSelectedName) ||
+				findSpellByName(allSpells, initialSelectedName);
+			if (
+				targetSpell &&
+				(selectedSpellRef.current?.name !== targetSpell.name ||
+					selectedSpellRef.current?.source !== targetSpell.source)
+			) {
+				setSelectedSpell(targetSpell);
+			} else if (
+				!targetSpell &&
+				displayedSpells.length > 0 &&
+				!selectedSpellRef.current?.name
+			) {
 				setSelectedSpell(displayedSpells[0]);
 			}
 			return undefined;
@@ -280,7 +306,14 @@ export default function Spells({
 		}
 
 		return undefined;
-	}, [allSpells, displayedSpells, isEmbedded, urlSpellName, urlSpellSource]);
+	}, [
+		allSpells,
+		displayedSpells,
+		initialSelectedName,
+		isEmbedded,
+		urlSpellName,
+		urlSpellSource,
+	]);
 
 	useEffect(() => {
 		if (isEmbedded) return;
@@ -327,6 +360,23 @@ export default function Spells({
 		});
 		return () => cancelAnimationFrame(frameId);
 	}, [displayedSpells, isEmbedded, selectedSpell, urlSpellName]);
+
+	useEffect(() => {
+		if (!isEmbedded || !initialSelectedName || !selectedSpell?.name) {
+			return undefined;
+		}
+		const scrollKey = `${selectedSpell.source || ""}:${selectedSpell.name}`;
+		if (embeddedScrolledSpellRef.current === scrollKey) return undefined;
+
+		const selectedIndex = getSpellListIndex(displayedSpells, selectedSpell);
+		if (selectedIndex < 0) return undefined;
+
+		embeddedScrolledSpellRef.current = scrollKey;
+		const frameId = requestAnimationFrame(() => {
+			listRef.current?.scrollTo(selectedIndex);
+		});
+		return () => cancelAnimationFrame(frameId);
+	}, [displayedSpells, initialSelectedName, isEmbedded, selectedSpell]);
 
 	const toggleSort = () => {
 		setSortOrder((prev) => {
