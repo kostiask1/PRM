@@ -101,11 +101,16 @@
 	min-width: 0;
 	border: 0;
 	outline: 0;
+	height: 100%;
 	background: transparent;
 	color: var(--text);
 	font: inherit;
 	font-size: 0.85rem;
 	padding: 0 var(--space-1);
+}
+
+.ImageGallery__search input:focus-visible {
+	box-shadow: unset;
 }
 
 .ImageGallery__search .Button:not(.ImageGallery__globalSearchBtn) {
