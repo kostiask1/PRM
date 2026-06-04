@@ -17,11 +17,11 @@ import {
 	createDistinctUndoTransition,
 } from "../utils/undoRedo.js";
 import { lang } from "../services/localization";
+import { getEntityDisplayName } from "../services/entities.js";
 import {
 	areHistoryStatesEqual,
 	campaignHistoryPayload,
 	cloneHistoryList,
-	getCharacterDisplayName,
 	getLocationDisplayName,
 	normalizeMentionName,
 	replaceMentionsInValue,
@@ -618,7 +618,10 @@ export default function useCampaignView(props) {
 				}),
 			);
 			setCharacters((prev) => prev.map((c) => (c.id === id ? saved : c)));
-			applyMentionRenameToLocalState(oldName, getCharacterDisplayName(saved));
+			applyMentionRenameToLocalState(
+				oldName,
+				getEntityDisplayName(saved, "characters"),
+			);
 		} catch (err) {
 			console.error("Failed to finish character editing", err);
 			dispatch(
@@ -674,7 +677,7 @@ export default function useCampaignView(props) {
 				}),
 			);
 			setNpcs((prev) => prev.map((n) => (n.id === id ? saved : n)));
-			applyMentionRenameToLocalState(oldName, getCharacterDisplayName(saved));
+			applyMentionRenameToLocalState(oldName, getEntityDisplayName(saved, "npc"));
 		} catch (err) {
 			console.error("Failed to finish NPC editing", err);
 			dispatch(

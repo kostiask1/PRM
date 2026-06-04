@@ -47,10 +47,6 @@ export const replaceMentionsInValue = (value, oldName, newName) => {
 	return value;
 };
 
-export const getCharacterDisplayName = (entity) =>
-	`${entity?.firstName || ""} ${entity?.lastName || ""}`.trim() ||
-	String(entity?.name || entity?.title || "").trim();
-
 export const getLocationDisplayName = (entity) =>
 	String(entity?.name || entity?.title || "").trim();
 

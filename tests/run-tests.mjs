@@ -81,7 +81,6 @@ import {
 	areHistoryStatesEqual,
 	campaignHistoryPayload,
 	cloneHistoryList,
-	getCharacterDisplayName as getCampaignCharacterDisplayName,
 	getLocationDisplayName as getCampaignLocationDisplayName,
 	normalizeMentionName,
 	replaceBracketedMentionNames,
@@ -486,14 +485,6 @@ await run(
 			),
 			{ text: "[New Name]", list: ["No", "[New Name]"] },
 		);
-		assert.equal(
-			getCampaignCharacterDisplayName({
-				firstName: "Ім'я",
-				lastName: "Прізвище",
-			}),
-			"Ім'я Прізвище",
-		);
-		assert.equal(getCampaignCharacterDisplayName({ name: "NPC" }), "NPC");
 		assert.equal(
 			getCampaignLocationDisplayName({ title: "Фракція" }),
 			"Фракція",

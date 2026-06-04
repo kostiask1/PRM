@@ -25,7 +25,7 @@ import { lang } from "../services/localization";
 import { useAppDispatch, useAppSelector } from "../store/appStore";
 import { renderMentionText } from "../renderers/contentRenderer";
 import {
-	getCharacterDisplayName,
+	getEncounterCharacterDisplayName,
 	hasMonsterHpFormula,
 	isEncounterCharacterParticipant,
 } from "../utils/encounters";
@@ -973,7 +973,7 @@ function EncounterView() {
 							renderItem={(m, isDragging) => {
 								const isCharacter = isEncounterCharacterParticipant(m);
 								const displayName = isCharacter
-									? getCharacterDisplayName(m)
+									? getEncounterCharacterDisplayName(m)
 									: String(m.name);
 								const rowStats = isCharacter
 									? null
@@ -1254,7 +1254,7 @@ function EncounterView() {
 											onClick={() => view.handleAddCharacter(character)}
 										>
 											<span className="EncounterCharacterPicker__name">
-												{getCharacterDisplayName(character)}
+												{getEncounterCharacterDisplayName(character)}
 											</span>
 											<span className="EncounterCharacterPicker__meta">
 												{[character.race, character.class]
@@ -1285,7 +1285,7 @@ function EncounterView() {
 
 			{modalCharacter && (
 				<Modal
-					title={getCharacterDisplayName(modalCharacter)}
+					title={getEncounterCharacterDisplayName(modalCharacter)}
 					onCancel={() => setModalCharacter(null)}
 					showFooter={false}
 					type="custom"

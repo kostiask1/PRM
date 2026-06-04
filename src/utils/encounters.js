@@ -67,7 +67,7 @@ export function isEncounterCharacterParticipant(entry = {}) {
 	return entry.participantType === "character";
 }
 
-export function getCharacterDisplayName(character = {}) {
+export function getEncounterCharacterDisplayName(character = {}) {
 	return (
 		`${character.firstName || ""} ${character.lastName || ""}`.trim() ||
 		String(character.name || character.title || "").trim() ||
@@ -77,7 +77,7 @@ export function getCharacterDisplayName(character = {}) {
 
 export function createEncounterCharacterParticipant(character) {
 	const characterId =
-		character.id || character.slug || getCharacterDisplayName(character);
+		character.id || character.slug || getEncounterCharacterDisplayName(character);
 
 	return {
 		...character,
@@ -85,6 +85,6 @@ export function createEncounterCharacterParticipant(character) {
 		instanceId: `char-${characterId}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
 		originalCharacterId: character.id || null,
 		originalCharacterSlug: character.slug || null,
-		name: getCharacterDisplayName(character),
+		name: getEncounterCharacterDisplayName(character),
 	};
 }
