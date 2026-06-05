@@ -2,6 +2,7 @@ import Button from "../form/Button";
 import EditableField from "../form/EditableField";
 import Select from "../form/Select";
 import Modal from "../common/Modal";
+import AiAttachmentControls from "./AiAttachmentControls";
 import { lang } from "../../services/localization";
 
 function ImagePromptColumn({
@@ -52,10 +53,13 @@ function ImagePromptColumn({
 }
 
 export default function AiImagePromptPickerModal({
+	attachedFiles,
+	attachedImages,
 	buildCustomMonsterImageTarget,
 	buildLocationImageTarget,
 	buildNpcImageTarget,
 	buildSceneImageTarget,
+	campaignSlug,
 	customMonstersWithImages,
 	customMonstersWithoutImages,
 	getCharacterDisplayName,
@@ -86,6 +90,8 @@ export default function AiImagePromptPickerModal({
 	onSelectTarget,
 	selectedModel,
 	selectedTarget,
+	setAttachedFiles,
+	setAttachedImages,
 }) {
 	if (!isOpen) return null;
 
@@ -187,6 +193,14 @@ export default function AiImagePromptPickerModal({
 							className="AiAssistant__image_prompt_model AiAssistant__image_prompt_instructions"
 						/>
 					</label>
+					<AiAttachmentControls
+						attachedFiles={attachedFiles}
+						attachedImages={attachedImages}
+						campaignSlug={campaignSlug}
+						disabled={loading}
+						setAttachedFiles={setAttachedFiles}
+						setAttachedImages={setAttachedImages}
+					/>
 					<div className="AiAssistant__image_prompt_actions">
 						<Button
 							variant="ghost"

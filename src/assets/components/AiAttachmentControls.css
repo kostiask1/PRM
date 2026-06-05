@@ -1,0 +1,73 @@
+.AiAttachmentControls {
+	display: grid;
+	gap: var(--space-2);
+	min-width: 0;
+	height: 100%;
+}
+
+.AiAttachmentControls__file_input {
+	display: none;
+}
+
+.AiAttachmentControls__list {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: var(--space-2);
+	max-height: 220px;
+	overflow-y: auto;
+}
+
+.AiAttachmentControls__image_picker .ImageDropzone {
+	min-height: 180px;
+	height: 100%;
+	max-height: 350px;
+	margin: 0;
+}
+
+.AiAttachmentControls__file_actions {
+	display: flex;
+}
+
+.AiAttachmentControls__file_actions .Button {
+	width: 100%;
+	justify-content: center;
+}
+
+.AiAttachmentControls__item {
+	display: grid;
+	grid-template-columns: 44px minmax(0, 1fr) auto;
+	align-items: center;
+	gap: var(--space-2);
+	min-width: 0;
+	padding: var(--space-2);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--bg-2);
+}
+
+.AiAttachmentControls__item img {
+	width: 44px;
+	height: 44px;
+	object-fit: cover;
+	border-radius: var(--radius-xs);
+	background: var(--panel);
+}
+
+.AiAttachmentControls__item span {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--text);
+	font-size: 0.85rem;
+}
+
+.AiAttachmentControls__file_icon {
+	display: grid;
+	place-items: center;
+	width: 44px;
+	height: 44px;
+	border-radius: var(--radius-xs);
+	background: var(--panel);
+	color: var(--accent);
+}

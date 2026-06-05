@@ -5,6 +5,8 @@ export default function BestiaryAiModals({
 	aiDraftDiffResources,
 	aiDraftResponseEntry,
 	aiDraftResponseRef,
+	aiEditAttachedFiles,
+	aiEditAttachedImages,
 	aiEditingMonster,
 	aiEditError,
 	aiEditInstructions,
@@ -26,12 +28,16 @@ export default function BestiaryAiModals({
 	onUndoDraft,
 	onUndoDraftResource,
 	selectedAiModel,
+	setAiEditAttachedFiles,
+	setAiEditAttachedImages,
 }) {
 	return (
 		<>
 			<MonsterAiEditModal
 				aiEditingMonster={aiEditingMonster}
 				aiEditError={aiEditError}
+				attachedFiles={aiEditAttachedFiles}
+				attachedImages={aiEditAttachedImages}
 				aiEditInstructions={aiEditInstructions}
 				aiEditMode={aiEditMode}
 				aiModels={aiModels}
@@ -42,6 +48,8 @@ export default function BestiaryAiModals({
 				onModelChange={onModelChange}
 				onSave={onSaveEdit}
 				selectedAiModel={selectedAiModel}
+				setAttachedFiles={setAiEditAttachedFiles}
+				setAttachedImages={setAiEditAttachedImages}
 			/>
 			<BestiaryAiDraftModal
 				aiDraftDiffResources={aiDraftDiffResources}

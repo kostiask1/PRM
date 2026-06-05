@@ -120,6 +120,8 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	const [aiEditMode, setAiEditMode] = useState("edit");
 	const [aiActionMonster, setAiActionMonster] = useState(null);
 	const [aiEditInstructions, setAiEditInstructions] = useState("");
+	const [aiEditAttachedImages, setAiEditAttachedImages] = useState([]);
+	const [aiEditAttachedFiles, setAiEditAttachedFiles] = useState([]);
 	const [aiEditError, setAiEditError] = useState("");
 	const [isAiEditingMonster, setIsAiEditingMonster] = useState(false);
 	const [aiModels, setAiModels] = useState([]);
@@ -574,6 +576,8 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 		setAiEditMode(mode);
 		setAiEditingMonster(monster);
 		setAiEditInstructions("");
+		setAiEditAttachedImages([]);
+		setAiEditAttachedFiles([]);
 		setAiEditError("");
 	};
 
@@ -582,6 +586,8 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 		setAiEditingMonster(null);
 		setAiEditMode("edit");
 		setAiEditInstructions("");
+		setAiEditAttachedImages([]);
+		setAiEditAttachedFiles([]);
 		setAiEditError("");
 	};
 
@@ -733,6 +739,8 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 					modelName: selectedAiModel || undefined,
 					userInstructions: finalInstructions,
 					path: { campaign: "bestiary" },
+					attachedImages: aiEditAttachedImages,
+					attachedFiles: aiEditAttachedFiles,
 					customMonsterTarget: aiEditingMonster,
 					customMonsterMode: aiEditMode,
 					parseAIResponse: true,
@@ -761,6 +769,8 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			setAiEditingMonster(null);
 			setAiEditMode("edit");
 			setAiEditInstructions("");
+			setAiEditAttachedImages([]);
+			setAiEditAttachedFiles([]);
 		} catch (err) {
 			if (err.name !== "AbortError") {
 				setAiEditError(err.message || lang.t("Unknown error"));
@@ -1180,6 +1190,8 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 				aiDraftDiffResources={aiDraftDiffResources}
 				aiDraftResponseEntry={aiDraftResponseEntry}
 				aiDraftResponseRef={aiDraftResponseRef}
+				aiEditAttachedFiles={aiEditAttachedFiles}
+				aiEditAttachedImages={aiEditAttachedImages}
 				aiEditingMonster={aiEditingMonster}
 				aiEditError={aiEditError}
 				aiEditInstructions={aiEditInstructions}
@@ -1205,6 +1217,8 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 					restoreAiDraftResponse(entry, "undo", { resourceIds })
 				}
 				selectedAiModel={selectedAiModel}
+				setAiEditAttachedFiles={setAiEditAttachedFiles}
+				setAiEditAttachedImages={setAiEditAttachedImages}
 			/>
 		</>
 	);

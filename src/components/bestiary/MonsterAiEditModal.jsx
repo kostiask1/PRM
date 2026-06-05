@@ -2,9 +2,12 @@ import Modal from "../common/Modal";
 import Button from "../form/Button";
 import EditableField from "../form/EditableField";
 import Select from "../form/Select";
+import AiAttachmentControls from "../ai/AiAttachmentControls";
 import { lang } from "../../services/localization";
 
 export default function MonsterAiEditModal({
+	attachedFiles,
+	attachedImages,
 	aiEditingMonster,
 	aiEditError,
 	aiEditInstructions,
@@ -17,6 +20,8 @@ export default function MonsterAiEditModal({
 	onModelChange,
 	onSave,
 	selectedAiModel,
+	setAttachedFiles,
+	setAttachedImages,
 }) {
 	if (!aiEditingMonster) return null;
 
@@ -80,6 +85,14 @@ export default function MonsterAiEditModal({
 								: lang.t("Describe what to change.")
 					}
 					className="Bestiary__ai_edit_prompt"
+				/>
+				<AiAttachmentControls
+					attachedFiles={attachedFiles}
+					attachedImages={attachedImages}
+					campaignSlug="general"
+					disabled={isAiEditingMonster}
+					setAttachedFiles={setAttachedFiles}
+					setAttachedImages={setAttachedImages}
 				/>
 				{aiEditError && (
 					<div className="Bestiary__edit_error">{aiEditError}</div>
