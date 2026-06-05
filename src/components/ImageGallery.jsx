@@ -76,6 +76,15 @@ const scrollGalleryImageIntoView = (viewportRef, imageName) => {
 	});
 };
 
+const scrollGalleryToTop = (listRef, viewportRef) => {
+	requestAnimationFrame(() => {
+		listRef.current?.scrollTo(0);
+		if (viewportRef.current) {
+			viewportRef.current.scrollTop = 0;
+		}
+	});
+};
+
 const findPendingGalleryImage = ({ pendingSelection, currentPathKey, images }) => {
 	if (!pendingSelection || pendingSelection.pathKey !== currentPathKey) {
 		return null;
@@ -130,6 +139,7 @@ function ImageGallery({
 	const galleryViewportRef = React.useRef(null);
 	const galleryListRef = React.useRef(null);
 	const isApplyingHistoryRef = React.useRef(false);
+	const pendingSelectionRef = React.useRef(null);
 	const [isMoveModalOpen, setIsMoveModalOpen] = React.useState(false);
 	const [previewImage, setPreviewImage] = React.useState(null);
 	const [galleryColumns, setGalleryColumns] = React.useState(1);
@@ -198,6 +208,8 @@ function ImageGallery({
 		initialCategory,
 		initialSubcategory,
 	});
+
+	pendingSelectionRef.current = pendingSelection;
 
 	React.useEffect(() => {
 		const handleEscapeSelection = (e) => {
@@ -274,6 +286,11 @@ function ImageGallery({
 		selectedCat.id,
 		selectedSub,
 	]);
+
+	React.useEffect(() => {
+		if (!isOpen || pendingSelectionRef.current) return;
+		scrollGalleryToTop(galleryListRef, galleryViewportRef);
+	}, [isOpen, selectedSource, selectedCat.id, selectedSub]);
 
 	React.useEffect(() => {
 		if (!highlightedImageName) return undefined;
