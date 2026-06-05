@@ -1,6 +1,6 @@
 import Modal from "../common/Modal";
 import Button from "../form/Button";
-import Input from "../form/Input";
+import EditableField from "../form/EditableField";
 import Select from "../form/Select";
 import { lang } from "../../services/localization";
 
@@ -65,7 +65,7 @@ export default function MonsterAiEditModal({
 						<option value="">{lang.t("Loading models...")}</option>
 					)}
 				</Select>
-				<Input
+				<EditableField
 					type="textarea"
 					value={aiEditInstructions}
 					onChange={(event) => onInstructionsChange(event.target.value)}

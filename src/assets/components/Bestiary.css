@@ -264,6 +264,10 @@
 	resize: vertical;
 }
 
+.Bestiary__ai_edit_prompt .MarkdownView {
+	min-height: 180px;
+}
+
 .Bestiary__edit_error {
 	color: var(--danger);
 	font-weight: 700;

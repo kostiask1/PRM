@@ -1,5 +1,5 @@
 import Button from "../form/Button";
-import Input from "../form/Input";
+import EditableField from "../form/EditableField";
 import Select from "../form/Select";
 import Modal from "../common/Modal";
 import { lang } from "../../services/localization";
@@ -163,7 +163,7 @@ export default function AiImagePromptPickerModal({
 					{isContextMode && (
 						<label className="AiAssistant__image_prompt_field">
 							<span>{lang.t("What to generate")}</span>
-							<Input
+							<EditableField
 								type="textarea"
 								value={imagePromptRequest}
 								onChange={(event) => onRequestChange(event.target.value)}
@@ -178,7 +178,7 @@ export default function AiImagePromptPickerModal({
 					)}
 					<label className="AiAssistant__image_prompt_field">
 						<span>{lang.t("Base image prompt")}</span>
-						<Input
+						<EditableField
 							type="textarea"
 							value={imagePromptInstructions}
 							onChange={(event) => onInstructionsChange(event.target.value)}

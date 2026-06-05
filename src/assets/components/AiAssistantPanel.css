@@ -1383,6 +1383,10 @@
 	resize: vertical;
 }
 
+.AiAssistant__image_prompt_instructions .MarkdownView {
+	min-height: 180px;
+}
+
 .AiAssistant__image_prompt_actions {
 	display: flex;
 	justify-content: flex-end;
