@@ -4,12 +4,21 @@ import { lang } from "../../services/localization";
 import { useAppDispatch } from "../../store/appStore";
 import Tooltip from "./Tooltip";
 
-export default function RollDice({ formula, children }) {
+export default function RollDice({ formula, children, context = null }) {
 	const dispatch = useAppDispatch();
 	const handleClick = (e) => {
 		e.preventDefault();
 		e.stopPropagation();
-		dispatch(requestDiceRollAction(formula));
+		dispatch(
+			requestDiceRollAction(
+				context
+					? {
+							formula,
+							context,
+						}
+					: formula,
+			),
+		);
 	};
 
 	return (

@@ -501,6 +501,16 @@
 	font-weight: bold;
 }
 
+.dice_recharge_fail {
+	color: var(--danger);
+	font-weight: bold;
+}
+
+.dice_recharge_success {
+	color: var(--success);
+	font-weight: bold;
+}
+
 .dice_dropped {
 	opacity: 0.4;
 	text-decoration: line-through;

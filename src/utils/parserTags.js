@@ -88,9 +88,10 @@ export const preprocessTags = (text) => {
 			/{@actSave\s+([a-z]{3})}/gi,
 			(m, g1) => `${ABILITY_MAP[g1] || g1} saving throw`,
 		)
-		.replace(/{@recharge(?:\s+(\d+))?}/gi, (m, g1) => {
-			const num = g1 || "6";
-			return num === "6" ? "(Recharge 6)" : `(Recharge ${num}-6)`;
+		.replace(/{@recharge(?:\s+(\d+(?:-\d+)?))?}/gi, (m, g1) => {
+			const value = g1 || "6";
+			if (value.includes("-")) return `(Recharge ${value})`;
+			return value === "6" ? "(Recharge 6)" : `(Recharge ${value}-6)`;
 		})
 		.replace(
 			/{@atkr\s+([a-z,]+)}/gi,

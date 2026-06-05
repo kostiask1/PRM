@@ -202,6 +202,11 @@ function getReferenceKey(prefix, matchIndex, name) {
 	return `${prefix}-${matchIndex}-${String(name || "").toLowerCase()}`;
 }
 
+function getRechargeThreshold(recharge) {
+	const match = String(recharge || "").match(/Recharge\s+(\d+)/i);
+	return match ? Number(match[1]) : 6;
+}
+
 export const parseRollsAndSpells = (
 	text,
 	highlightQuery = "",
@@ -250,8 +255,17 @@ export const parseRollsAndSpells = (
 		} = token;
 
 		if (recharge) {
+			const threshold = getRechargeThreshold(recharge);
 			elements.push(
-				<RollDice key={`re-${matchIndex}`} formula="1d6">
+				<RollDice
+					key={`re-${matchIndex}`}
+					formula="1d6"
+					context={{
+						type: "recharge",
+						threshold,
+						label: recharge,
+					}}
+				>
 					{highlightText(recharge, highlightQuery)}
 				</RollDice>,
 			);

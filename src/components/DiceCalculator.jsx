@@ -24,6 +24,18 @@ function isSingleDieRoll(result) {
 	);
 }
 
+function getRechargeThreshold(result) {
+	return result?.context?.type === "recharge"
+		? Number(result.context.threshold) || 6
+		: null;
+}
+
+function getRechargeResultClass(result, value = result?.total) {
+	const threshold = getRechargeThreshold(result);
+	if (!threshold || !Number.isFinite(Number(value))) return "";
+	return Number(value) >= threshold ? "dice_recharge_success" : "dice_recharge_fail";
+}
+
 export default function DiceCalculator() {
 	const [isOpen, setIsOpen] = useState(false);
 	const [isPanelMounted, setIsPanelMounted] = useState(false);
@@ -157,10 +169,11 @@ export default function DiceCalculator() {
 				});
 			});
 
-			setLastResult(entry);
-			setHistory((prev) => [entry, ...prev].slice(0, 10));
+			const resultEntry = context ? { ...entry, context } : entry;
+			setLastResult(resultEntry);
+			setHistory((prev) => [resultEntry, ...prev].slice(0, 10));
 			setIsOpen(true);
-			dispatch(publishDiceResultAction(entry, context));
+			dispatch(publishDiceResultAction(resultEntry, context));
 
 			if (autoCloseTimeoutRef.current) {
 				clearTimeout(autoCloseTimeoutRef.current);
@@ -237,7 +250,7 @@ export default function DiceCalculator() {
 		setLastResult(null);
 	};
 
-	const renderBreakdown = useCallback((breakdown) => {
+	const renderBreakdown = useCallback((breakdown, result = null) => {
 		if (!Array.isArray(breakdown)) return breakdown;
 
 		const limit = 10;
@@ -248,6 +261,8 @@ export default function DiceCalculator() {
 			const isMin = item.max && item.val === 1;
 			const isMax = item.max && item.val === item.max;
 			let dynamicClassName = isMin ? "dice_min" : isMax ? "dice_max" : "";
+			const rechargeClass = getRechargeResultClass(result, item.val);
+			if (rechargeClass) dynamicClassName = rechargeClass;
 			if (item.dropped) dynamicClassName += " dice_dropped";
 
 			const sign = idx > 0 && item.val >= 0 ? " + " : "";
@@ -307,7 +322,9 @@ export default function DiceCalculator() {
 			if (roll.expressionBreakdown) {
 				return <span className="muted">({roll.expressionBreakdown})</span>;
 			}
-			return <span className="muted">({renderBreakdown(roll.breakdown)})</span>;
+			return (
+				<span className="muted">({renderBreakdown(roll.breakdown, roll)})</span>
+			);
 		},
 		[renderBreakdown],
 	);
@@ -348,7 +365,10 @@ export default function DiceCalculator() {
 										{lastResult.formula} (
 										<Tooltip delay={500} content={lang.t("Rolled values")}>
 											{lastResult.expressionBreakdown ||
-												renderBreakdown(lastResult.breakdown)}
+												renderBreakdown(
+													lastResult.breakdown,
+													lastResult,
+												)}
 											)
 										</Tooltip>
 									</div>
@@ -356,6 +376,8 @@ export default function DiceCalculator() {
 								<div className="DiceCalculator__totalValue_container">
 									<span
 										className={classNames("DiceCalculator__totalValue", {
+											[getRechargeResultClass(lastResult)]:
+												Boolean(getRechargeResultClass(lastResult)),
 											dice_max:
 												lastResult.isCritical && lastResult.total === 20,
 											dice_min:
@@ -455,7 +477,18 @@ export default function DiceCalculator() {
 							{history.map((roll) => (
 								<div
 									className="DiceCalculator__historyItem"
-									onClick={() => dispatch(requestDiceRollAction(roll.formula))}
+									onClick={() =>
+										dispatch(
+											requestDiceRollAction(
+												roll.context
+													? {
+															formula: roll.formula,
+															context: roll.context,
+														}
+													: roll.formula,
+											),
+										)
+									}
 									key={roll.id}
 								>
 									<Tooltip
@@ -468,11 +501,12 @@ export default function DiceCalculator() {
 													{roll.formula} =
 													<span
 														className={
-															roll.isCritical
+															getRechargeResultClass(roll) ||
+															(roll.isCritical
 																? roll.total === 20
 																	? "dice_max"
 																	: "dice_min"
-																: ""
+																: "")
 														}
 													>
 														{" "}

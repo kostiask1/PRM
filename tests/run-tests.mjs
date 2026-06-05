@@ -1229,6 +1229,18 @@ await run("content tokens parse hit and recharge tags safely", () => {
 		recharge.some((token) => token.hit === "-6"),
 		false,
 	);
+	assert.equal(
+		preprocessTags("{@recharge 5-6} Breath."),
+		"(Recharge 5-6) Breath.",
+	);
+	assert.equal(preprocessTags("{@recharge 5} Breath."), "(Recharge 5-6) Breath.");
+	const taggedRecharge = extractContentTokens(
+		"{@recharge 4}, {@recharge 5-6}, {@recharge}",
+	);
+	assert.deepEqual(
+		taggedRecharge.map((token) => token.recharge),
+		["(Recharge 4-6)", "(Recharge 5-6)", "(Recharge 6)"],
+	);
 
 	const damage = extractContentTokens("take 10 ({@damage 3d6}) fire damage.");
 	assert.equal(damage.length, 1);
