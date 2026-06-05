@@ -163,24 +163,35 @@ export default function Tooltip({
 		}
 	}, []);
 
-	const openTooltip = () => {
+	const showTooltip = useCallback(() => {
+		const parentId = findParentTooltipId(
+			triggerRef.current,
+			tooltipIdRef.current,
+		);
+		parentTooltipIdRef.current = parentId;
+		tooltipParentById.set(tooltipIdRef.current, parentId);
+		setPosition((prev) => ({ ...prev, ready: false }));
+		setIsOpen(true);
+		setActiveTooltip(tooltipIdRef.current);
+		timerRef.current = null;
+	}, []);
+
+	const openTooltip = useCallback(() => {
 		if (disabled || !hasContent || isDraggableListDragging()) return;
 		cancelOpenTooltip();
 		cancelCloseTooltip();
 		cancelOtherTooltipTimeouts(tooltipIdRef.current);
 		timerRef.current = setTimeout(() => {
-			const parentId = findParentTooltipId(
-				triggerRef.current,
-				tooltipIdRef.current,
-			);
-			parentTooltipIdRef.current = parentId;
-			tooltipParentById.set(tooltipIdRef.current, parentId);
-			setPosition((prev) => ({ ...prev, ready: false }));
-			setIsOpen(true);
-			setActiveTooltip(tooltipIdRef.current);
-			timerRef.current = null;
+			showTooltip();
 		}, delay);
-	};
+	}, [
+		cancelCloseTooltip,
+		cancelOpenTooltip,
+		delay,
+		disabled,
+		hasContent,
+		showTooltip,
+	]);
 
 	const handleTriggerEnter = () => {
 		if (isDraggableListDragging()) {
@@ -220,18 +231,9 @@ export default function Tooltip({
 		}
 		cancelOtherTooltipTimeouts(tooltipIdRef.current);
 		timerRef.current = setTimeout(() => {
-			const parentId = findParentTooltipId(
-				triggerRef.current,
-				tooltipIdRef.current,
-			);
-			parentTooltipIdRef.current = parentId;
-			tooltipParentById.set(tooltipIdRef.current, parentId);
-			setPosition((prev) => ({ ...prev, ready: false }));
-			setIsOpen(true);
-			setActiveTooltip(tooltipIdRef.current);
-			timerRef.current = null;
+			showTooltip();
 		}, delay);
-	}, [content, delay, disabled, hasContent, isOpen]);
+	}, [content, delay, disabled, hasContent, isOpen, showTooltip]);
 
 	useEffect(() => {
 		if (!isOpen) return;

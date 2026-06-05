@@ -18,20 +18,42 @@ function normalizeSource(source) {
 
 const CUSTOM_SOURCE = storage.CUSTOM_BESTIARY_SOURCE || "CUSTOM";
 
+function monsterNameKey(monster) {
+	return String(monster?.name || "")
+		.trim()
+		.toLowerCase();
+}
+
+function monsterId(monster) {
+	return String(monster?.id || "").trim();
+}
+
 function findCustomMonsterIndex(monsters, identifier) {
 	const target = String(identifier || "").trim();
 	if (!target) return -1;
 	const targetKey = target.toLowerCase();
-	const idIndex = monsters.findIndex(
-		(monster) => String(monster?.id || "").trim() === target,
-	);
+	const idIndex = monsters.findIndex((monster) => monsterId(monster) === target);
 	if (idIndex >= 0) return idIndex;
 	return monsters.findIndex(
-		(monster) =>
-			String(monster?.name || "")
-				.trim()
-				.toLowerCase() === targetKey,
+		(monster) => monsterNameKey(monster) === targetKey,
 	);
+}
+
+async function readCustomMonsterTarget(identifier, res) {
+	const targetIdentifier = String(identifier || "").trim();
+	if (!targetIdentifier) {
+		res.status(400).json({ error: "Creature name is required." });
+		return null;
+	}
+
+	const monsters = await storage.readCustomBestiaryMonsters();
+	const index = findCustomMonsterIndex(monsters, targetIdentifier);
+	if (index < 0) {
+		res.status(404).json({ error: "Custom creature not found." });
+		return null;
+	}
+
+	return { monsters, index };
 }
 
 async function readAllDatabaseMonsters() {
@@ -213,20 +235,11 @@ router.post("/favorites/toggle", async (req, res, next) => {
 router.patch("/custom/:name", async (req, res, next) => {
 	try {
 		disableResponseCache(res);
-		const targetIdentifier = String(req.params.name || "").trim();
-		if (!targetIdentifier) {
-			return res.status(400).json({ error: "Creature name is required." });
-		}
-
-		const monsters = await storage.readCustomBestiaryMonsters();
-		const index = findCustomMonsterIndex(monsters, targetIdentifier);
-		if (index < 0) {
-			return res.status(404).json({ error: "Custom creature not found." });
-		}
-		const previousNameKey = String(monsters[index]?.name || "")
-			.trim()
-			.toLowerCase();
-		const previousId = String(monsters[index]?.id || "").trim();
+		const target = await readCustomMonsterTarget(req.params.name, res);
+		if (!target) return;
+		const { monsters, index } = target;
+		const previousNameKey = monsterNameKey(monsters[index]);
+		const previousId = monsterId(monsters[index]);
 
 		if (req.body?.monster && typeof req.body.monster === "object") {
 			const nextMonster = clone(req.body.monster);
@@ -237,10 +250,7 @@ router.patch("/custom/:name", async (req, res, next) => {
 			const nextNameKey = nextName.toLowerCase();
 			const duplicate = monsters.some(
 				(monster, monsterIndex) =>
-					monsterIndex !== index &&
-					String(monster.name || "")
-						.trim()
-						.toLowerCase() === nextNameKey,
+					monsterIndex !== index && monsterNameKey(monster) === nextNameKey,
 			);
 			if (duplicate) {
 				return res.status(409).json({
@@ -268,10 +278,7 @@ router.patch("/custom/:name", async (req, res, next) => {
 
 			return res.json(
 				updated.find(
-					(monster) =>
-						String(monster.name || "")
-							.trim()
-							.toLowerCase() === nextNameKey,
+					(monster) => monsterNameKey(monster) === nextNameKey,
 				) || nextMonster,
 			);
 		}
@@ -288,11 +295,8 @@ router.patch("/custom/:name", async (req, res, next) => {
 		res.json(
 			updated.find(
 				(monster) =>
-					(previousId &&
-						String(monster.id || "").trim() === previousId) ||
-					String(monster.name || "")
-						.trim()
-						.toLowerCase() === previousNameKey,
+					(previousId && monsterId(monster) === previousId) ||
+					monsterNameKey(monster) === previousNameKey,
 			) || monsters[index],
 		);
 	} catch (error) {
@@ -322,19 +326,10 @@ router.put("/custom", async (req, res, next) => {
 router.delete("/custom/:name", async (req, res, next) => {
 	try {
 		disableResponseCache(res);
-		const targetIdentifier = String(req.params.name || "").trim();
-		if (!targetIdentifier) {
-			return res.status(400).json({ error: "Creature name is required." });
-		}
-
-		const monsters = await storage.readCustomBestiaryMonsters();
-		const index = findCustomMonsterIndex(monsters, targetIdentifier);
-		if (index < 0) {
-			return res.status(404).json({ error: "Custom creature not found." });
-		}
-		const targetName = String(monsters[index]?.name || "")
-			.trim()
-			.toLowerCase();
+		const target = await readCustomMonsterTarget(req.params.name, res);
+		if (!target) return;
+		const { monsters, index } = target;
+		const targetName = monsterNameKey(monsters[index]);
 		const nextMonsters = monsters.filter(
 			(monster, monsterIndex) => monsterIndex !== index,
 		);

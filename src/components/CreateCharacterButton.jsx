@@ -1,12 +1,15 @@
 import { useState } from "react";
 
-import { alert, refreshEntitiesAction } from "../actions/app";
-import { api } from "../api";
+import { alert } from "../actions/app";
 import { useAppDispatch } from "../store/appStore";
 import { lang } from "../services/localization";
 import Button from "./form/Button";
 import Modal from "./common/Modal";
 import CharacterCard from "./CharacterCard";
+import {
+	buildCreateEntityPayload,
+	submitCreateEntity,
+} from "./createEntityButtonUtils.js";
 import "../assets/components/CreateCharacterButton.css";
 
 function createEmptyDraft(entityType) {
@@ -75,34 +78,32 @@ export default function CreateCharacterButton({
 			return;
 		}
 
-		const payload = {
-			firstName: "",
-			lastName: "",
-			race: "",
-			class: "",
-			level: 1,
-			motivation: "",
-			description: "",
-			trait: "",
-			notes: [],
-			collapsed: false,
-			isNotesCollapsed: false,
-			...Object.fromEntries(
-				Object.entries(draft || {}).filter(([key]) => !key.startsWith("_")),
-			),
-		};
+		const payload = buildCreateEntityPayload(
+			{
+				firstName: "",
+				lastName: "",
+				race: "",
+				class: "",
+				level: 1,
+				motivation: "",
+				description: "",
+				trait: "",
+				notes: [],
+				collapsed: false,
+				isNotesCollapsed: false,
+			},
+			draft,
+		);
 
 		setIsSubmitting(true);
 		try {
-			if (typeof onCreate === "function") {
-				await onCreate(payload);
-			} else {
-				delete payload.id;
-				delete payload.slug;
-				delete payload.createdAt;
-				await api.createEntity(campaignSlug, entityType, payload);
-				dispatch(refreshEntitiesAction());
-			}
+			await submitCreateEntity({
+				campaignSlug,
+				entityType,
+				payload,
+				onCreate,
+				dispatch,
+			});
 			setIsOpen(false);
 		} catch (error) {
 			console.error("Failed to create entity from modal", error);

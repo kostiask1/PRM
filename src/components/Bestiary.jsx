@@ -5,11 +5,10 @@ import { alert, confirm } from "../actions/app";
 import { useAppDispatch, useAppSelector } from "../store/appStore";
 import Panel from "./common/Panel";
 import Button from "./form/Button";
-import BestiaryAiDraftModal from "./bestiary/BestiaryAiDraftModal";
+import BestiaryAiModals from "./bestiary/BestiaryAiModals";
 import BestiaryContent from "./bestiary/BestiaryContent";
 import MonsterFieldEditModal from "./bestiary/MonsterFieldEditModal";
 import MonsterAiActionModal from "./bestiary/MonsterAiActionModal";
-import MonsterAiEditModal from "./bestiary/MonsterAiEditModal";
 import MonsterStatBlockModel from "../models/MonsterStatBlockModel.js";
 import useDebounce from "../hooks/useDebounce.js";
 import { buildDiffResources } from "../utils/aiDiff.js";
@@ -19,6 +18,7 @@ import {
 	getHistoryChangeSummary as getAiHistoryChangeSummary,
 	getLocalizedDiffResourceState,
 } from "../utils/aiResponseHelpers.js";
+import { loadAiModelOptions } from "../utils/aiModels.js";
 import { matchesMonsterSearch } from "../utils/bestiary.js";
 import { objectMatchesSearch } from "../utils/deepSearch.js";
 import {
@@ -434,19 +434,14 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 
 	useEffect(() => {
 		if (!aiEditingMonster || aiModels.length > 0) return;
-		api
-			.listAiModels()
-			.then((result) => {
-				const models = Array.isArray(result?.models) ? result.models : [];
-				setAiModels(models);
-				setSelectedAiModel(
-					(current) => current || result?.defaultModel || models[0]?.name || "",
-				);
-			})
-			.catch((err) => {
+		loadAiModelOptions({
+			setAiModels,
+			setSelectedAiModel,
+			onError: (err) => {
 				console.error("Failed to load AI models", err);
 				setAiEditError(err.message || lang.t("Failed to connect to AI."));
-			});
+			},
+		});
 	}, [aiEditingMonster, aiModels.length]);
 
 	useEffect(() => {
@@ -1181,37 +1176,35 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 				onCancel={closeMonsterAiAction}
 				onChoose={chooseMonsterAiAction}
 			/>
-			<MonsterAiEditModal
+			<BestiaryAiModals
+				aiDraftDiffResources={aiDraftDiffResources}
+				aiDraftResponseEntry={aiDraftResponseEntry}
+				aiDraftResponseRef={aiDraftResponseRef}
 				aiEditingMonster={aiEditingMonster}
 				aiEditError={aiEditError}
 				aiEditInstructions={aiEditInstructions}
 				aiEditMode={aiEditMode}
 				aiModels={aiModels}
-				isAiEditingMonster={isAiEditingMonster}
-				onCancel={closeAiEditCustomMonster}
-				onCancelRequest={cancelAiEditCustomMonsterRequest}
-				onInstructionsChange={setAiEditInstructions}
-				onModelChange={setSelectedAiModel}
-				onSave={saveAiEditedCustomMonster}
-				selectedAiModel={selectedAiModel}
-			/>
-			<BestiaryAiDraftModal
-				aiDraftDiffResources={aiDraftDiffResources}
-				aiDraftResponseEntry={aiDraftResponseEntry}
-				aiDraftResponseRef={aiDraftResponseRef}
 				getDiffResourceState={getDiffResourceState}
 				getHistoryChangeSummary={getHistoryChangeSummary}
+				isAiEditingMonster={isAiEditingMonster}
 				isRestoringAiResponse={isRestoringAiResponse}
-				onApply={(entry) => restoreAiDraftResponse(entry, "apply")}
-				onApplyResource={(entry, resourceIds) =>
+				onApplyDraft={(entry) => restoreAiDraftResponse(entry, "apply")}
+				onApplyDraftResource={(entry, resourceIds) =>
 					restoreAiDraftResponse(entry, "apply", { resourceIds })
 				}
-				onCancel={closeAiDraftResponse}
+				onCancelDraft={closeAiDraftResponse}
+				onCancelEdit={closeAiEditCustomMonster}
+				onCancelEditRequest={cancelAiEditCustomMonsterRequest}
+				onInstructionsChange={setAiEditInstructions}
+				onModelChange={setSelectedAiModel}
 				onSaveDraftChanges={saveAiDraftResponseChanges}
-				onUndo={(entry) => restoreAiDraftResponse(entry, "undo")}
-				onUndoResource={(entry, resourceIds) =>
+				onSaveEdit={saveAiEditedCustomMonster}
+				onUndoDraft={(entry) => restoreAiDraftResponse(entry, "undo")}
+				onUndoDraftResource={(entry, resourceIds) =>
 					restoreAiDraftResponse(entry, "undo", { resourceIds })
 				}
+				selectedAiModel={selectedAiModel}
 			/>
 		</>
 	);

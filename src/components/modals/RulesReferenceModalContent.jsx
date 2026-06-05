@@ -13,7 +13,7 @@ import { lang } from "../../services/localization";
 import { useAppDispatch } from "../../store/appStore";
 import { objectMatchesSearch } from "../../utils/deepSearch.js";
 import { highlightText } from "../../utils/searchHighlight.jsx";
-import { formatSourceLabel } from "../../utils/sourceNames.js";
+import { getSpellMeta as formatSpellMeta } from "../../utils/spellMeta.js";
 
 const VARIANT_RULE_TYPE_LABELS = {
 	C: "Core Rule",
@@ -27,21 +27,7 @@ function getVariantRuleTypeLabel(ruleType) {
 }
 
 function getSpellMeta(spell = {}) {
-	const level =
-		spell.level_int !== undefined
-			? spell.level_int
-			: spell.level !== undefined
-				? spell.level
-				: "";
-	const levelLabel =
-		level === 0 || String(level) === "0"
-			? lang.t("Cantrip")
-			: level !== ""
-				? lang.t("Level {level}", { level })
-				: "";
-	return [levelLabel, spell.school, formatSourceLabel(spell.source)]
-		.filter(Boolean)
-		.join(" · ");
+	return formatSpellMeta(spell, " · ");
 }
 
 function getSearchValues(tab, item) {

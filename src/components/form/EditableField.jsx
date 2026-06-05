@@ -10,35 +10,22 @@ import Button from "./Button";
 import "../../assets/components/EditableField.css";
 import classNames from "../../utils/classNames";
 import { lang } from "../../services/localization";
-import { openMentionPickerAction } from "../../actions/app";
 import { useAppDispatch } from "../../store/appStore";
 import { parseUrl } from "../../utils/navigation";
+import { requestMentionSelection } from "../../utils/mentionPicker";
 import EntityModal from "../common/EntityModal";
 import Tooltip from "../common/Tooltip";
-import { resolveEntityByName } from "../../services/entities.js";
 import {
 	EntityLinkContext,
 	EntityLinkResolverContext,
-	getEntityIdentity,
-	isSameEntityIdentity,
 } from "../common/EntityLinkIdentity";
+import { openEntityLinkModal } from "../common/entityLinkModalUtils";
 
 const MENTION_CLASS = "mention_link EditableField__mention";
 const MENTION_TOOLTIP_KEY = "Ctrl+click to open entity";
 const TAB_CLASS = "EditableField__tab";
 const INSERTION_MARKER_CLASS = "EditableField__insertionMarker";
 const CARET_ANCHOR_CLASS = "EditableField__caretAnchor";
-
-function requestMentionSelection(dispatch) {
-	return new Promise((resolve) => {
-		dispatch(
-			openMentionPickerAction({
-				select: (name) => resolve({ status: "selected", name: name || "" }),
-				cancel: () => resolve({ status: "cancelled" }),
-			}),
-		);
-	});
-}
 
 function escapeHtml(value = "") {
 	return String(value)
@@ -1084,42 +1071,15 @@ export default function EditableField({
 
 	const openMentionModal = useCallback(
 		async (mentionName) => {
-			if (!resolvedCampaignSlug || !mentionName) return;
-
-			try {
-				const found =
-					scopedEntityLinks?.resolveEntityByName?.(mentionName) ||
-					(await resolveEntityByName(resolvedCampaignSlug, mentionName));
-				if (!found) return;
-
-				const foundIdentity = getEntityIdentity(
-					found.entity,
-					found.type,
-					found.scope,
-				);
-				if (
-					isSameEntityIdentity(foundIdentity, currentEntityIdentity) ||
-					isSameEntityIdentity(
-						foundIdentity,
-						modalState
-							? getEntityIdentity(
-									modalState.entity,
-									modalState.type,
-									modalState.scope,
-								)
-							: null,
-					)
-				) {
-					return;
-				}
-
-				setModalState({
-					entity: found.entity,
-					type: found.type,
-				});
-			} catch (error) {
-				console.error("Failed to open entity mention modal", error);
-			}
+			await openEntityLinkModal({
+				campaignSlug: resolvedCampaignSlug,
+				currentEntityIdentity,
+				errorMessage: "Failed to open entity mention modal",
+				modalState,
+				name: mentionName,
+				scopedEntityLinks,
+				setModalState,
+			});
 		},
 		[
 			resolvedCampaignSlug,

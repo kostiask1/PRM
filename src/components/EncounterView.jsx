@@ -3,10 +3,9 @@ import Panel from "./common/Panel";
 import Button from "./form/Button";
 import Modal from "./common/Modal";
 import Bestiary from "./Bestiary";
-import BestiaryAiDraftModal from "./bestiary/BestiaryAiDraftModal";
+import BestiaryAiModals from "./bestiary/BestiaryAiModals";
 import MonsterFieldEditModal from "./bestiary/MonsterFieldEditModal";
 import MonsterAiActionModal from "./bestiary/MonsterAiActionModal";
-import MonsterAiEditModal from "./bestiary/MonsterAiEditModal";
 import MonsterStatBlock from "./MonsterStatBlock";
 import CharacterCard from "./CharacterCard";
 import Notification from "./common/Notification";
@@ -37,6 +36,7 @@ import {
 	getHistoryChangeSummary as getAiHistoryChangeSummary,
 	getLocalizedDiffResourceState,
 } from "../utils/aiResponseHelpers.js";
+import { loadAiModelOptions } from "../utils/aiModels.js";
 
 function isCustomSource(source) {
 	return String(source || "").toUpperCase() === "CUSTOM";
@@ -241,19 +241,14 @@ function EncounterView() {
 
 	useEffect(() => {
 		if (!aiEditingMonster || aiModels.length > 0) return;
-		api
-			.listAiModels()
-			.then((result) => {
-				const models = Array.isArray(result?.models) ? result.models : [];
-				setAiModels(models);
-				setSelectedAiModel(
-					(current) => current || result?.defaultModel || models[0]?.name || "",
-				);
-			})
-			.catch((error) => {
+		loadAiModelOptions({
+			setAiModels,
+			setSelectedAiModel,
+			onError: (error) => {
 				console.error("Failed to load AI models", error);
 				setAiEditError(error.message || lang.t("Failed to connect to AI."));
-			});
+			},
+		});
 	}, [aiEditingMonster, aiModels.length]);
 
 	if (!view.encounter) {
@@ -1319,18 +1314,34 @@ function EncounterView() {
 				onCancel={closeEditMonsterAction}
 				onChoose={chooseEditMonsterAction}
 			/>
-			<MonsterAiEditModal
+			<BestiaryAiModals
+				aiDraftDiffResources={aiDraftDiffResources}
+				aiDraftResponseEntry={aiDraftResponseEntry}
+				aiDraftResponseRef={aiDraftResponseRef}
 				aiEditingMonster={aiEditingMonster}
 				aiEditError={aiEditError}
 				aiEditInstructions={aiEditInstructions}
 				aiEditMode={aiEditMode}
 				aiModels={aiModels}
+				getDiffResourceState={getDiffResourceState}
+				getHistoryChangeSummary={getHistoryChangeSummary}
 				isAiEditingMonster={isAiEditingMonster}
-				onCancel={closeAiEditCustomMonster}
-				onCancelRequest={cancelAiEditCustomMonsterRequest}
+				isRestoringAiResponse={isRestoringAiResponse}
+				onApplyDraft={(entry) => restoreAiDraftResponse(entry, "apply")}
+				onApplyDraftResource={(entry, resourceIds) =>
+					restoreAiDraftResponse(entry, "apply", { resourceIds })
+				}
+				onCancelDraft={closeAiDraftResponse}
+				onCancelEdit={closeAiEditCustomMonster}
+				onCancelEditRequest={cancelAiEditCustomMonsterRequest}
 				onInstructionsChange={setAiEditInstructions}
 				onModelChange={setSelectedAiModel}
-				onSave={saveAiEditedCustomMonster}
+				onSaveDraftChanges={saveAiDraftResponseChanges}
+				onSaveEdit={saveAiEditedCustomMonster}
+				onUndoDraft={(entry) => restoreAiDraftResponse(entry, "undo")}
+				onUndoDraftResource={(entry, resourceIds) =>
+					restoreAiDraftResponse(entry, "undo", { resourceIds })
+				}
 				selectedAiModel={selectedAiModel}
 			/>
 			<MonsterFieldEditModal
@@ -1338,24 +1349,6 @@ function EncounterView() {
 				onCancel={closeEditMonsterFields}
 				onSave={saveEditedMonsterFields}
 				title={lang.t("Edit encounter creature")}
-			/>
-			<BestiaryAiDraftModal
-				aiDraftDiffResources={aiDraftDiffResources}
-				aiDraftResponseEntry={aiDraftResponseEntry}
-				aiDraftResponseRef={aiDraftResponseRef}
-				getDiffResourceState={getDiffResourceState}
-				getHistoryChangeSummary={getHistoryChangeSummary}
-				isRestoringAiResponse={isRestoringAiResponse}
-				onApply={(entry) => restoreAiDraftResponse(entry, "apply")}
-				onApplyResource={(entry, resourceIds) =>
-					restoreAiDraftResponse(entry, "apply", { resourceIds })
-				}
-				onCancel={closeAiDraftResponse}
-				onSaveDraftChanges={saveAiDraftResponseChanges}
-				onUndo={(entry) => restoreAiDraftResponse(entry, "undo")}
-				onUndoResource={(entry, resourceIds) =>
-					restoreAiDraftResponse(entry, "undo", { resourceIds })
-				}
 			/>
 
 			{view.notification && (

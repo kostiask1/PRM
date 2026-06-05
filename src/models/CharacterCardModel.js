@@ -1,4 +1,4 @@
-import { createEmptyNote, upsertNoteById } from "../utils/noteUtils.js";
+import { CardNoteModel } from "./cardNoteModelUtils.js";
 
 /**
  * @typedef {Object} CharacterNote
@@ -29,10 +29,15 @@ import { createEmptyNote, upsertNoteById } from "../utils/noteUtils.js";
  * @property {boolean} [_isNew]
  */
 
-export default class CharacterCardModel {
+export default class CharacterCardModel extends CardNoteModel {
 	/** @param {CharacterData} character */
 	constructor(character = {}) {
+		super();
 		this.character = character;
+	}
+
+	get entity() {
+		return this.character;
 	}
 
 	get displayName() {
@@ -57,41 +62,12 @@ export default class CharacterCardModel {
 			.trim();
 	}
 
-	get notes() {
-		const notes = Array.isArray(this.character.notes)
-			? [...this.character.notes]
-			: [];
-		return notes.length > 0 ? notes : [createEmptyNote()];
-	}
-
 	get description() {
 		return this.character.description || "";
 	}
 
 	get trait() {
 		return this.character.trait || "";
-	}
-
-	withField(field, value) {
-		return {
-			...this.character,
-			[field]: value,
-		};
-	}
-
-	withUpdatedNote(noteId, updates = {}) {
-		return upsertNoteById(this.notes, noteId, updates);
-	}
-
-	withDeletedNote(noteId) {
-		const nextNotes = this.notes.filter((note) => note.id !== noteId);
-		return nextNotes.length > 0 ? nextNotes : [createEmptyNote()];
-	}
-
-	toggleNoteCollapse(noteId) {
-		return this.notes.map((note) =>
-			note.id === noteId ? { ...note, collapsed: !note.collapsed } : note,
-		);
 	}
 
 	static getLevelOptions(max = 20) {

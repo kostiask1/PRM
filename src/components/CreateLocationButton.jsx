@@ -1,12 +1,15 @@
 import { useState } from "react";
 
-import { alert, refreshEntitiesAction } from "../actions/app";
-import { api } from "../api";
+import { alert } from "../actions/app";
 import { useAppDispatch } from "../store/appStore";
 import { lang } from "../services/localization";
 import Button from "./form/Button";
 import Modal from "./common/Modal";
 import LocationCard from "./LocationCard";
+import {
+	buildCreateEntityPayload,
+	submitCreateEntity,
+} from "./createEntityButtonUtils.js";
 import "../assets/components/CreateCharacterButton.css";
 
 function createEmptyDraft() {
@@ -58,29 +61,27 @@ export default function CreateLocationButton({
 			return;
 		}
 
-		const payload = {
-			name: "",
-			description: "",
-			notes: [],
-			imageUrl: null,
-			collapsed: false,
-			isNotesCollapsed: false,
-			...Object.fromEntries(
-				Object.entries(draft || {}).filter(([key]) => !key.startsWith("_")),
-			),
-		};
+		const payload = buildCreateEntityPayload(
+			{
+				name: "",
+				description: "",
+				notes: [],
+				imageUrl: null,
+				collapsed: false,
+				isNotesCollapsed: false,
+			},
+			draft,
+		);
 
 		setIsSubmitting(true);
 		try {
-			if (typeof onCreate === "function") {
-				await onCreate(payload);
-			} else {
-				delete payload.id;
-				delete payload.slug;
-				delete payload.createdAt;
-				await api.createEntity(campaignSlug, "locations", payload);
-				dispatch(refreshEntitiesAction());
-			}
+			await submitCreateEntity({
+				campaignSlug,
+				entityType: "locations",
+				payload,
+				onCreate,
+				dispatch,
+			});
 			setIsOpen(false);
 		} catch (error) {
 			console.error("Failed to create location from modal", error);

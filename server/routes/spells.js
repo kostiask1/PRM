@@ -21,25 +21,34 @@ function pickPreferredRecord(current, candidate) {
 	return current;
 }
 
+function getSpellRecords(data) {
+	return Array.isArray(data)
+		? data
+		: data.spell || data.spells || data.results || [];
+}
+
+function matchesSpellSearch(spell, { nameQuery, level, schoolQuery }) {
+	return (
+		(nameQuery ? spell.name?.toLowerCase().includes(nameQuery) : true) &&
+		(level !== undefined ? String(spell.level) === String(level) : true) &&
+		(schoolQuery ? spell.school?.toLowerCase() === schoolQuery : true)
+	);
+}
+
 function databasePath(fileName) {
 	return path.join(__dirname, "..", "..", "database", fileName);
 }
 
-async function readNamedReferenceRecords(fileName, listKey, kind, extraFields) {
-	const filePath = databasePath(fileName);
-	if (!(await storage.exists(filePath))) return [];
-
-	const data = await storage.readJson(filePath);
-	const list = Array.isArray(data?.[listKey]) ? data[listKey] : [];
+function normalizeNamedReferenceRecords(items, kind, extraFields) {
 	const byName = new Map();
 
-	for (const item of list) {
+	for (const item of Array.isArray(items) ? items : []) {
 		const name = String(item?.name || "").trim();
 		if (!name) continue;
 		const key = name.toLowerCase();
 		const normalized = {
 			name,
-			kind,
+			kind: item?.kind || kind,
 			source: item?.source || null,
 			page: item?.page || null,
 			...(extraFields ? extraFields(item) : {}),
@@ -50,6 +59,18 @@ async function readNamedReferenceRecords(fileName, listKey, kind, extraFields) {
 
 	return Array.from(byName.values()).sort((a, b) =>
 		a.name.localeCompare(b.name),
+	);
+}
+
+async function readNamedReferenceRecords(fileName, listKey, kind, extraFields) {
+	const filePath = databasePath(fileName);
+	if (!(await storage.exists(filePath))) return [];
+
+	const data = await storage.readJson(filePath);
+	return normalizeNamedReferenceRecords(
+		Array.isArray(data?.[listKey]) ? data[listKey] : [],
+		kind,
+		extraFields,
 	);
 }
 
@@ -65,15 +86,10 @@ router.get("/search", async (req, res, next) => {
 
 		if (await storage.exists(allPath)) {
 			const data = await storage.readJson(allPath);
-			const spells = Array.isArray(data)
-				? data
-				: data.spell || data.spells || data.results || [];
+			const spells = getSpellRecords(data);
 			results.push(
-				...spells.filter(
-					(s) =>
-						(nameQuery ? s.name?.toLowerCase().includes(nameQuery) : true) &&
-						(level !== undefined ? String(s.level) === String(level) : true) &&
-						(schoolQuery ? s.school?.toLowerCase() === schoolQuery : true),
+				...spells.filter((spell) =>
+					matchesSpellSearch(spell, { nameQuery, level, schoolQuery }),
 				),
 			);
 		} else {
@@ -85,20 +101,15 @@ router.get("/search", async (req, res, next) => {
 				const data = await storage.readJson(
 					path.join(storage.SPELLS_DIR, fileName),
 				);
-				const spells = Array.isArray(data)
-					? data
-					: data.spell || data.spells || data.results || [];
+				const spells = getSpellRecords(data);
 				results.push(
 					...spells
-						.filter(
-							(s) =>
-								(nameQuery
-									? s.name?.toLowerCase().includes(nameQuery)
-									: true) &&
-								(level !== undefined
-									? String(s.level) === String(level)
-									: true) &&
-								(schoolQuery ? s.school?.toLowerCase() === schoolQuery : true),
+						.filter((spell) =>
+							matchesSpellSearch(spell, {
+								nameQuery,
+								level,
+								schoolQuery,
+							}),
 						)
 						.map((s) => ({ ...s, source: sourceKey })),
 				);
@@ -118,9 +129,7 @@ router.get("/sources", async (req, res, next) => {
 		const allPath = path.join(storage.SPELLS_DIR, "all.json");
 		if (await storage.exists(allPath)) {
 			const data = await storage.readJson(allPath);
-			const spells = Array.isArray(data)
-				? data
-				: data.spell || data.spells || data.results || [];
+			const spells = getSpellRecords(data);
 			const sources = [
 				...new Set(spells.map((spell) => spell.source).filter(Boolean)),
 			].sort((a, b) => a.localeCompare(b));
@@ -150,28 +159,12 @@ router.get("/conditions", async (_req, res, next) => {
 		const data = await storage.readJson(conditionsPath);
 		const conditionList = Array.isArray(data?.condition) ? data.condition : [];
 		const statusList = Array.isArray(data?.status) ? data.status : [];
-		const merged = [
-			...conditionList.map((item) => ({ ...item, kind: "condition" })),
-			...statusList.map((item) => ({ ...item, kind: "status" })),
-		];
-		const byName = new Map();
-
-		for (const item of merged) {
-			const name = String(item?.name || "").trim();
-			if (!name) continue;
-			const key = name.toLowerCase();
-			const normalized = {
-				name,
-				kind: item?.kind || "condition",
-				source: item?.source || null,
-				page: item?.page || null,
-				entries: item?.entries || [],
-			};
-			byName.set(key, pickPreferredRecord(byName.get(key), normalized));
-		}
-
-		const list = Array.from(byName.values()).sort((a, b) =>
-			a.name.localeCompare(b.name),
+		const list = normalizeNamedReferenceRecords(
+			[
+				...conditionList.map((item) => ({ ...item, kind: "condition" })),
+				...statusList.map((item) => ({ ...item, kind: "status" })),
+			],
+			"condition",
 		);
 		res.json(list);
 	} catch (error) {
@@ -205,25 +198,10 @@ router.get("/diseases", async (_req, res, next) => {
 			? await storage.readJson(diseasesPath)
 			: await storage.readJson(conditionsPath);
 		const diseaseList = Array.isArray(data?.disease) ? data.disease : [];
-		const byName = new Map();
-
-		for (const item of diseaseList) {
-			const name = String(item?.name || "").trim();
-			if (!name) continue;
-			const key = name.toLowerCase();
-			const normalized = {
-				name,
-				kind: "disease",
-				source: item?.source || null,
-				page: item?.page || null,
-				type: item?.type || null,
-				entries: item?.entries || [],
-			};
-			byName.set(key, pickPreferredRecord(byName.get(key), normalized));
-		}
-
-		const list = Array.from(byName.values()).sort((a, b) =>
-			a.name.localeCompare(b.name),
+		const list = normalizeNamedReferenceRecords(
+			diseaseList,
+			"disease",
+			(item) => ({ type: item?.type || null }),
 		);
 		res.json(list);
 	} catch (error) {
@@ -278,9 +256,7 @@ router.get("/:source", async (req, res, next) => {
 		const allPath = path.join(storage.SPELLS_DIR, "all.json");
 		if (await storage.exists(allPath)) {
 			const data = await storage.readJson(allPath);
-			const list = Array.isArray(data)
-				? data
-				: data.spell || data.spells || data.results || [];
+			const list = getSpellRecords(data);
 			if (sourceParam.toLowerCase() === "all") return res.json(list);
 
 			const source = sourceParam.toUpperCase();
@@ -296,9 +272,7 @@ router.get("/:source", async (req, res, next) => {
 		const data = await storage.readJson(
 			path.join(storage.SPELLS_DIR, fileName),
 		);
-		const list = Array.isArray(data)
-			? data
-			: data.spell || data.spells || data.results || [];
+		const list = getSpellRecords(data);
 		res.json(list.map((s) => ({ ...s, source: req.params.source })));
 	} catch (error) {
 		next(error);

@@ -2,19 +2,8 @@ import { forwardRef, useRef, useLayoutEffect } from "react";
 import "../../assets/components/Input.css";
 import Tooltip from "../common/Tooltip";
 import classNames from "../../utils/classNames";
-import { openMentionPickerAction } from "../../actions/app";
 import { useAppDispatch } from "../../store/appStore";
-
-function requestMentionSelection(dispatch) {
-	return new Promise((resolve) => {
-		dispatch(
-			openMentionPickerAction({
-				select: (name) => resolve({ status: "selected", name: name || "" }),
-				cancel: () => resolve({ status: "cancelled" }),
-			}),
-		);
-	});
-}
+import { requestMentionSelection } from "../../utils/mentionPicker";
 
 function isRangeInsideSquareBrackets(value = "", start = 0, end = start) {
 	const openIndex = value.lastIndexOf("[", Math.max(0, start - 1));

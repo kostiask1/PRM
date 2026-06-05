@@ -3,13 +3,11 @@ import { useCallback, useContext, useMemo, useState } from "react";
 import { parseUrl } from "../../utils/navigation";
 import EntityModal from "./EntityModal";
 import classNames from "../../utils/classNames";
-import { resolveEntityByName } from "../../services/entities.js";
 import {
 	EntityLinkContext,
 	EntityLinkResolverContext,
-	getEntityIdentity,
-	isSameEntityIdentity,
 } from "./EntityLinkIdentity";
+import { openEntityLinkModal } from "./entityLinkModalUtils";
 
 export default function EntityLink({ name, children, className = "" }) {
 	const [modalState, setModalState] = useState(null);
@@ -25,41 +23,15 @@ export default function EntityLink({ name, children, className = "" }) {
 			e.preventDefault();
 			e.stopPropagation();
 
-			if (!resolvedCampaignSlug || !name) return;
-
-			try {
-				const found =
-					scopedEntityLinks?.resolveEntityByName?.(name) ||
-					(await resolveEntityByName(resolvedCampaignSlug, name));
-				if (!found) return;
-				const foundIdentity = getEntityIdentity(
-					found.entity,
-					found.type,
-					found.scope,
-				);
-				if (
-					isSameEntityIdentity(foundIdentity, currentEntityIdentity) ||
-					isSameEntityIdentity(
-						foundIdentity,
-						modalState
-							? getEntityIdentity(
-									modalState.entity,
-									modalState.type,
-									modalState.scope,
-								)
-							: null,
-					)
-				) {
-					return;
-				}
-
-				setModalState({
-					entity: found.entity,
-					type: found.type,
-				});
-			} catch (error) {
-				console.error("Failed to open entity link modal", error);
-			}
+			await openEntityLinkModal({
+				campaignSlug: resolvedCampaignSlug,
+				currentEntityIdentity,
+				errorMessage: "Failed to open entity link modal",
+				modalState,
+				name,
+				scopedEntityLinks,
+				setModalState,
+			});
 		},
 		[
 			name,

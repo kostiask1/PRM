@@ -240,6 +240,17 @@ export default function MonsterStatBlock({
 		);
 	};
 
+	const renderAbilities = () => (
+		<>
+			{renderAbility("STR", model.abilityScores.str)}
+			{renderAbility("DEX", model.abilityScores.dex)}
+			{renderAbility("CON", model.abilityScores.con)}
+			{renderAbility("INT", model.abilityScores.int)}
+			{renderAbility("WIS", model.abilityScores.wis)}
+			{renderAbility("CHA", model.abilityScores.cha)}
+		</>
+	);
+
 	const renderSaves = () => {
 		if (model.saves.length === 0) return null;
 		return (
@@ -779,12 +790,7 @@ export default function MonsterStatBlock({
 					</div>
 					{!isGridLayout && (
 						<div className="MonsterStatBlock__abilities">
-							{renderAbility("STR", model.abilityScores.str)}
-							{renderAbility("DEX", model.abilityScores.dex)}
-							{renderAbility("CON", model.abilityScores.con)}
-							{renderAbility("INT", model.abilityScores.int)}
-							{renderAbility("WIS", model.abilityScores.wis)}
-							{renderAbility("CHA", model.abilityScores.cha)}
+							{renderAbilities()}
 						</div>
 					)}
 				</div>
@@ -842,12 +848,7 @@ export default function MonsterStatBlock({
 			</div>
 			{isGridLayout && (
 				<div className="MonsterStatBlock__abilities">
-					{renderAbility("STR", model.abilityScores.str)}
-					{renderAbility("DEX", model.abilityScores.dex)}
-					{renderAbility("CON", model.abilityScores.con)}
-					{renderAbility("INT", model.abilityScores.int)}
-					{renderAbility("WIS", model.abilityScores.wis)}
-					{renderAbility("CHA", model.abilityScores.cha)}
+					{renderAbilities()}
 				</div>
 			)}
 			{renderSpellcasting()}

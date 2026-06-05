@@ -4,6 +4,10 @@ const {
 	coerceAiText: asText,
 	sanitizeAiName: sanitizeEntityName,
 } = require("./ai/textUtils");
+const {
+	getCharacterDisplayName,
+	getLocationDisplayName,
+} = require("./ai/entityDisplayUtils");
 
 function makeId() {
 	return storage.createId();
@@ -448,18 +452,6 @@ function normalizeEncounterFromAi(rawEncounter, bestiaryIndex, fallbackName) {
 		name: asText(rawEncounter?.name) || fallbackName,
 		monsters,
 	};
-}
-
-function getCharacterDisplayName(entity = {}) {
-	const firstName = asText(entity.firstName || entity.first_name);
-	const lastName = asText(entity.lastName || entity.last_name);
-	const combined = `${firstName} ${lastName}`.trim();
-	if (combined) return combined;
-	return asText(entity.name || entity.title);
-}
-
-function getLocationDisplayName(entity = {}) {
-	return asText(entity.name || entity.title);
 }
 
 function entityNameKey(raw) {

@@ -15,6 +15,10 @@ const { restoreAiResponseSnapshot } = require("../aiResponseHistoryService");
 const {
 	buildAiChangeSummary,
 } = require("../ai/aiChangeSummary");
+const {
+	getCharacterDisplayName,
+	getLocationDisplayName,
+} = require("../ai/entityDisplayUtils");
 
 const ENV_PATH = path.join(__dirname, "..", "..", ".env");
 const aiHistoryWriter = new AiHistoryWriter();
@@ -175,20 +179,8 @@ function escapeRegExp(value) {
 	return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function getCharacterDisplayName(entity = {}) {
-	const firstName = asText(entity.firstName || entity.first_name);
-	const lastName = asText(entity.lastName || entity.last_name);
-	const combined = `${firstName} ${lastName}`.trim();
-	if (combined) return combined;
-	return asText(entity.name || entity.title);
-}
-
 function getCharacterContextKey(entity = {}) {
 	return asText(entity.slug || entity.id || getCharacterDisplayName(entity));
-}
-
-function getLocationDisplayName(entity = {}) {
-	return asText(entity.name || entity.title);
 }
 
 function getLocationContextKey(entity = {}) {
@@ -252,6 +244,102 @@ function filterLocationsByContext(locations = [], locationConfig) {
 		locationConfig,
 		getLocationContextKey,
 	);
+}
+
+async function appendConfiguredCampaignContext(
+	targetContext,
+	campaignSlug,
+	campaign,
+	contextConfig,
+) {
+	if (!targetContext || !campaign || !contextConfig) return;
+	if (contextConfig.campaignNotes) {
+		targetContext.campaign.notes = filterNotesForAiContext(campaign.notes);
+	}
+	if (isContextListIncluded(contextConfig.campaignCharacters)) {
+		const chars = await storage.listEntities(campaignSlug, "characters");
+		targetContext.campaign.characters = filterEntitiesByContext(
+			chars,
+			contextConfig.campaignCharacters,
+			getCharacterContextKey,
+		);
+	}
+	if (
+		isContextListIncluded(contextConfig.campaignNpcs) ||
+		(contextConfig.campaignNpcs === undefined &&
+			isContextListIncluded(contextConfig.campaignCharacters))
+	) {
+		const npcs = await storage.listEntities(campaignSlug, "npc");
+		targetContext.campaign.npcs = filterEntitiesByContext(
+			npcs,
+			contextConfig.campaignNpcs === undefined
+				? true
+				: contextConfig.campaignNpcs,
+			getCharacterContextKey,
+		);
+	}
+	if (isContextListIncluded(contextConfig.campaignLocations)) {
+		const locations = await storage.listEntities(campaignSlug, "locations");
+		targetContext.campaign.locations = filterLocationsByContext(
+			locations,
+			contextConfig.campaignLocations,
+		);
+	}
+
+	if (contextConfig.sessions) {
+		for (const [slug, conf] of Object.entries(contextConfig.sessions)) {
+			if (!conf.included) continue;
+			const sData = await storage.readSession(campaignSlug, slug);
+			targetContext.sessions.push({
+				slug,
+				fileName: slug,
+				name: sData.name,
+				conf,
+				data: filterSessionDataForAiContext(sData.data),
+			});
+		}
+	}
+}
+
+function buildGenerateContentRequestBase({
+	type,
+	userInstructions,
+	modelName,
+	attachedImages,
+	contextData,
+	entityScope,
+	responseLanguage,
+	simplifiedNotesEnabled,
+	globalBasePrompt,
+	imagePromptBasePrompt,
+	campaignBasePrompt,
+}) {
+	return {
+		type,
+		userInstructions,
+		modelName,
+		attachedImages,
+		contextData,
+		generateCharacters: false,
+		generateNpcs: false,
+		generateLocations: false,
+		generateEncounters: false,
+		entityScope,
+		language: responseLanguage,
+		simplifiedNotes: simplifiedNotesEnabled,
+		globalBasePrompt,
+		imagePromptBasePrompt,
+		campaignBasePrompt,
+	};
+}
+
+async function sendFailedGeneratedContent(req, res, generatedContent, status = 500) {
+	const aiResponse = await aiHistoryWriter.saveFailed(
+		req.body,
+		generatedContent,
+		status,
+	);
+	return res.status(status).json({ ...generatedContent, aiResponse });
 }
 
 function normalizeMentionCandidates(names = []) {
@@ -757,93 +845,36 @@ router.post("/generate", async (req, res, next) => {
 					.readSession(path.campaign, path.session)
 					.catch(() => null);
 
-				if (customCampaign && contextConfig) {
-					if (contextConfig.campaignNotes) {
-						customContextData.campaign.notes = filterNotesForAiContext(
-							customCampaign.notes,
-						);
-					}
-					if (isContextListIncluded(contextConfig.campaignCharacters)) {
-						const chars = await storage.listEntities(
-							path.campaign,
-							"characters",
-						);
-						customContextData.campaign.characters = filterEntitiesByContext(
-							chars,
-							contextConfig.campaignCharacters,
-							getCharacterContextKey,
-						);
-					}
-					if (
-						isContextListIncluded(contextConfig.campaignNpcs) ||
-						(contextConfig.campaignNpcs === undefined &&
-							isContextListIncluded(contextConfig.campaignCharacters))
-					) {
-						const npcs = await storage.listEntities(path.campaign, "npc");
-						customContextData.campaign.npcs = filterEntitiesByContext(
-							npcs,
-							contextConfig.campaignNpcs === undefined
-								? true
-								: contextConfig.campaignNpcs,
-							getCharacterContextKey,
-						);
-					}
-					if (isContextListIncluded(contextConfig.campaignLocations)) {
-						const locations = await storage.listEntities(
-							path.campaign,
-							"locations",
-						);
-						customContextData.campaign.locations = filterLocationsByContext(
-							locations,
-							contextConfig.campaignLocations,
-						);
-					}
-
-					if (contextConfig.sessions) {
-						for (const [slug, conf] of Object.entries(contextConfig.sessions)) {
-							if (!conf.included) continue;
-							const sData = await storage.readSession(path.campaign, slug);
-							customContextData.sessions.push({
-								slug,
-								fileName: slug,
-								name: sData.name,
-								conf,
-								data: filterSessionDataForAiContext(sData.data),
-							});
-						}
-					}
-				}
+				await appendConfiguredCampaignContext(
+					customContextData,
+					path.campaign,
+					customCampaign,
+					contextConfig,
+				);
 			}
 
 			const generatedContent = await aiService.generateContent({
-				type: "custom-monster",
+				...buildGenerateContentRequestBase({
+					type: "custom-monster",
+					userInstructions,
+					modelName,
+					attachedImages,
+					contextData: customContextData,
+					entityScope: "custom-bestiary",
+					responseLanguage,
+					simplifiedNotesEnabled,
+					globalBasePrompt,
+					imagePromptBasePrompt,
+					campaignBasePrompt,
+				}),
 				session: customSession,
 				campaign: customCampaign,
-				userInstructions,
-				modelName,
 				encounterId: path?.encounter,
-				attachedImages,
 				parseAIResponse: true,
-				contextData: customContextData,
-				generateCharacters: false,
-				generateNpcs: false,
-				generateLocations: false,
-				generateEncounters: false,
-				entityScope: "custom-bestiary",
-				language: responseLanguage,
-				simplifiedNotes: simplifiedNotesEnabled,
-				globalBasePrompt,
-				imagePromptBasePrompt,
-				campaignBasePrompt,
 			});
 
 			if (generatedContent.error) {
-				const aiResponse = await aiHistoryWriter.saveFailed(
-					req.body,
-					generatedContent,
-					500,
-				);
-				return res.status(500).json({ ...generatedContent, aiResponse });
+				return sendFailedGeneratedContent(req, res, generatedContent);
 			}
 
 			fillCurrentTargetIds(generatedContent, {
@@ -892,35 +923,28 @@ router.post("/generate", async (req, res, next) => {
 
 		if (type === "image" && path?.campaign === "bestiary") {
 			const generatedContent = await aiService.generateContent({
-				type: "image",
+				...buildGenerateContentRequestBase({
+					type: "image",
+					userInstructions,
+					modelName,
+					attachedImages,
+					contextData: {},
+					entityScope: "custom-bestiary",
+					responseLanguage,
+					simplifiedNotesEnabled,
+					globalBasePrompt,
+					imagePromptBasePrompt,
+					campaignBasePrompt,
+				}),
 				session: null,
 				campaign: null,
-				userInstructions,
-				modelName,
 				sceneId,
 				imageTarget,
-				attachedImages,
 				parseAIResponse: false,
-				contextData: {},
-				generateCharacters: false,
-				generateNpcs: false,
-				generateLocations: false,
-				generateEncounters: false,
-				entityScope: "custom-bestiary",
-				language: responseLanguage,
-				simplifiedNotes: simplifiedNotesEnabled,
-				globalBasePrompt,
-				imagePromptBasePrompt,
-				campaignBasePrompt,
 			});
 
 			if (generatedContent.error) {
-				const aiResponse = await aiHistoryWriter.saveFailed(
-					req.body,
-					generatedContent,
-					500,
-				);
-				return res.status(500).json({ ...generatedContent, aiResponse });
+				return sendFailedGeneratedContent(req, res, generatedContent);
 			}
 
 			const aiResponse = await storage.addAiResponse({
@@ -963,56 +987,12 @@ router.post("/generate", async (req, res, next) => {
 			.catch(() => null);
 
 		const contextData = { campaign: {}, sessions: [] };
-		if (contextConfig) {
-			if (contextConfig.campaignNotes)
-				contextData.campaign.notes = filterNotesForAiContext(campaign.notes);
-			if (isContextListIncluded(contextConfig.campaignCharacters)) {
-				const chars = await storage.listEntities(path.campaign, "characters");
-				contextData.campaign.characters = filterEntitiesByContext(
-					chars,
-					contextConfig.campaignCharacters,
-					getCharacterContextKey,
-				);
-			}
-			if (
-				isContextListIncluded(contextConfig.campaignNpcs) ||
-				(contextConfig.campaignNpcs === undefined &&
-					isContextListIncluded(contextConfig.campaignCharacters))
-			) {
-				const npcs = await storage.listEntities(path.campaign, "npc");
-				contextData.campaign.npcs = filterEntitiesByContext(
-					npcs,
-					contextConfig.campaignNpcs === undefined
-						? true
-						: contextConfig.campaignNpcs,
-					getCharacterContextKey,
-				);
-			}
-			if (isContextListIncluded(contextConfig.campaignLocations)) {
-				const locations = await storage.listEntities(
-					path.campaign,
-					"locations",
-				);
-				contextData.campaign.locations = filterLocationsByContext(
-					locations,
-					contextConfig.campaignLocations,
-				);
-			}
-
-			if (contextConfig.sessions) {
-				for (const [slug, conf] of Object.entries(contextConfig.sessions)) {
-					if (!conf.included) continue;
-					const sData = await storage.readSession(path.campaign, slug);
-					contextData.sessions.push({
-						slug,
-						fileName: slug,
-						name: sData.name,
-						conf,
-						data: filterSessionDataForAiContext(sData.data),
-					});
-				}
-			}
-		}
+		await appendConfiguredCampaignContext(
+			contextData,
+			path.campaign,
+			campaign,
+			contextConfig,
+		);
 		if (entityTargetScope === "mixed" && session) {
 			contextData.currentSession = {
 				slug: path.session,

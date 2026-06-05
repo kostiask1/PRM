@@ -94,6 +94,24 @@ export default function AiImagePromptPickerModal({
 	const canGenerate =
 		!loading &&
 		(!instructionsRequired || String(imagePromptRequest || "").trim());
+	const customMonsterColumns = [
+		{
+			title: "Custom creatures without images",
+			items: customMonstersWithoutImages,
+			emptyLabel: "No custom creatures without images.",
+			keyPrefix: "custom-empty",
+		},
+		{
+			title: "Custom creatures with images",
+			items: customMonstersWithImages,
+			emptyLabel: "No custom creatures with images.",
+			keyPrefix: "custom-image",
+		},
+	];
+	const getCustomMonsterDescription = (monster) =>
+		[monster?.type, monster?.cr ? `CR ${monster.cr}` : ""]
+			.filter(Boolean)
+			.join(" - ");
 
 	return (
 		<Modal
@@ -214,40 +232,22 @@ export default function AiImagePromptPickerModal({
 					<div className="AiAssistant__image_prompt_columns">
 						{isBestiary ? (
 							<>
-								<ImagePromptColumn
-									title="Custom creatures without images"
-									items={customMonstersWithoutImages}
-									emptyLabel="No custom creatures without images."
-									getKey={(monster) => `custom-empty-${monster?.name}`}
-									getName={(monster) => monster?.name || ""}
-									getDescription={(monster) =>
-										[monster?.type, monster?.cr ? `CR ${monster.cr}` : ""]
-											.filter(Boolean)
-											.join(" - ")
-									}
-									onSelect={(monster) =>
-										onSelectTarget(buildCustomMonsterImageTarget(monster))
-									}
-									loading={loading}
-									getPreview={getImagePromptPreview}
-								/>
-								<ImagePromptColumn
-									title="Custom creatures with images"
-									items={customMonstersWithImages}
-									emptyLabel="No custom creatures with images."
-									getKey={(monster) => `custom-image-${monster?.name}`}
-									getName={(monster) => monster?.name || ""}
-									getDescription={(monster) =>
-										[monster?.type, monster?.cr ? `CR ${monster.cr}` : ""]
-											.filter(Boolean)
-											.join(" - ")
-									}
-									onSelect={(monster) =>
-										onSelectTarget(buildCustomMonsterImageTarget(monster))
-									}
-									loading={loading}
-									getPreview={getImagePromptPreview}
-								/>
+								{customMonsterColumns.map((column) => (
+									<ImagePromptColumn
+										key={column.keyPrefix}
+										title={column.title}
+										items={column.items}
+										emptyLabel={column.emptyLabel}
+										getKey={(monster) => `${column.keyPrefix}-${monster?.name}`}
+										getName={(monster) => monster?.name || ""}
+										getDescription={getCustomMonsterDescription}
+										onSelect={(monster) =>
+											onSelectTarget(buildCustomMonsterImageTarget(monster))
+										}
+										loading={loading}
+										getPreview={getImagePromptPreview}
+									/>
+								))}
 							</>
 						) : (
 							<>

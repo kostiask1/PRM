@@ -137,9 +137,7 @@ export default function Spells({
 		[allSpells],
 	);
 
-	// Load available source list.
 	useEffect(() => {
-		if (isEmbedded) return;
 		const loadSources = async () => {
 			try {
 				const data = await api.getSpellSources();
@@ -149,20 +147,7 @@ export default function Spells({
 			}
 		};
 		loadSources();
-	}, [isEmbedded]);
-
-	useEffect(() => {
-		if (!isEmbedded) return;
-		const loadSources = async () => {
-			try {
-				const data = await api.getSpellSources();
-				setSources(data);
-			} catch (err) {
-				console.error("Failed to load spell sources", err);
-			}
-		};
-		loadSources();
-	}, [isEmbedded]);
+	}, []);
 
 	useEffect(() => {
 		if (!isEmbedded) return;

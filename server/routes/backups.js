@@ -17,6 +17,14 @@ function parseArchivePayload(buffer) {
 	return JSON.parse(raw.toString("utf8"));
 }
 
+function readUploadedArchivePayload(req, res) {
+	if (!req.file?.buffer) {
+		res.status(400).json({ error: "Archive file was not provided." });
+		return null;
+	}
+	return parseArchivePayload(req.file.buffer);
+}
+
 function normalizeImportStrategy(strategy) {
 	const value = String(strategy || "append").toLowerCase();
 	if (["append", "replace_by_id", "wipe_and_replace"].includes(value)) {
@@ -49,6 +57,27 @@ function attachmentDisposition(filename) {
 	return `attachment; filename="${fallback}"; filename*=UTF-8''${encodeHeaderFilename(filename)}`;
 }
 
+function sendArchive(res, payload, filename) {
+	const buffer = zlib.gzipSync(Buffer.from(JSON.stringify(payload), "utf8"));
+	res.setHeader("Content-Type", "application/gzip");
+	res.setHeader("Content-Disposition", attachmentDisposition(filename));
+	res.send(buffer);
+}
+
+function sendDatedArchive(res, payload, getFilename) {
+	const date = new Date().toISOString().slice(0, 10);
+	sendArchive(res, payload, getFilename(date));
+}
+
+function buildArchivePayload(scope, campaigns) {
+	return {
+		version: 2,
+		scope,
+		exportedAt: new Date().toISOString(),
+		campaigns,
+	};
+}
+
 router.get("/export-all", async (_req, res, next) => {
 	try {
 		const slugs = await storage.listCampaignSlugs();
@@ -68,20 +97,12 @@ router.get("/export-all/archive", async (_req, res, next) => {
 		const campaigns = await Promise.all(
 			slugs.map((slug) => storage.exportCampaignArchiveBundle(slug)),
 		);
-		const payload = {
-			version: 2,
-			scope: "all",
-			exportedAt: new Date().toISOString(),
-			campaigns,
-		};
-		const buffer = zlib.gzipSync(Buffer.from(JSON.stringify(payload), "utf8"));
-		const date = new Date().toISOString().slice(0, 10);
-		res.setHeader("Content-Type", "application/gzip");
-		res.setHeader(
-			"Content-Disposition",
-			attachmentDisposition(`prm-full-backup-${date}.prma.gz`),
+		const payload = buildArchivePayload("all", campaigns);
+		sendDatedArchive(
+			res,
+			payload,
+			(date) => `prm-full-backup-${date}.prma.gz`,
 		);
-		res.send(buffer);
 	} catch (error) {
 		next(error);
 	}
@@ -89,20 +110,14 @@ router.get("/export-all/archive", async (_req, res, next) => {
 
 router.get("/campaigns/:slug/export/archive", async (req, res, next) => {
 	try {
-		const payload = {
-			version: 2,
-			scope: "campaign",
-			exportedAt: new Date().toISOString(),
-			campaigns: [await storage.exportCampaignArchiveBundle(req.params.slug)],
-		};
-		const buffer = zlib.gzipSync(Buffer.from(JSON.stringify(payload), "utf8"));
-		const date = new Date().toISOString().slice(0, 10);
-		res.setHeader("Content-Type", "application/gzip");
-		res.setHeader(
-			"Content-Disposition",
-			attachmentDisposition(`campaign-${req.params.slug}-${date}.prma.gz`),
+		const payload = buildArchivePayload("campaign", [
+			await storage.exportCampaignArchiveBundle(req.params.slug),
+		]);
+		sendDatedArchive(
+			res,
+			payload,
+			(date) => `campaign-${req.params.slug}-${date}.prma.gz`,
 		);
-		res.send(buffer);
 	} catch (error) {
 		next(error);
 	}
@@ -120,18 +135,11 @@ router.get(
 				req.params.slug,
 				sections,
 			);
-			const buffer = zlib.gzipSync(
-				Buffer.from(JSON.stringify(payload), "utf8"),
+			sendDatedArchive(
+				res,
+				payload,
+				(date) => `campaign-${req.params.slug}-partial-${date}.prma.gz`,
 			);
-			const date = new Date().toISOString().slice(0, 10);
-			res.setHeader("Content-Type", "application/gzip");
-			res.setHeader(
-				"Content-Disposition",
-				attachmentDisposition(
-					`campaign-${req.params.slug}-partial-${date}.prma.gz`,
-				),
-			);
-			res.send(buffer);
 		} catch (error) {
 			next(error);
 		}
@@ -143,13 +151,8 @@ router.post(
 	archiveUpload.single("archive"),
 	async (req, res, next) => {
 		try {
-			if (!req.file?.buffer) {
-				return res
-					.status(400)
-					.json({ error: "Archive file was not provided." });
-			}
-
-			const parsed = parseArchivePayload(req.file.buffer);
+			const parsed = readUploadedArchivePayload(req, res);
+			if (!parsed) return;
 			const archiveBundle = Array.isArray(parsed?.campaigns)
 				? parsed.campaigns[0]
 				: parsed;
@@ -206,16 +209,11 @@ router.post(
 	archiveUpload.single("archive"),
 	async (req, res, next) => {
 		try {
-			if (!req.file?.buffer) {
-				return res
-					.status(400)
-					.json({ error: "Archive file was not provided." });
-			}
-
 			const mode = req.query.mode === "campaign" ? "campaign" : "all";
 			const strategy = normalizeImportStrategy(req.query.strategy);
 			const effectiveStrategy = mode === "all" ? strategy : "append";
-			const parsed = parseArchivePayload(req.file.buffer);
+			const parsed = readUploadedArchivePayload(req, res);
+			if (!parsed) return;
 			const campaigns = Array.isArray(parsed)
 				? parsed
 				: Array.isArray(parsed?.campaigns)

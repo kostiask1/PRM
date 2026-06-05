@@ -1,4 +1,4 @@
-import { createEmptyNote, upsertNoteById } from "../utils/noteUtils.js";
+import { CardNoteModel } from "./cardNoteModelUtils.js";
 
 /**
  * @typedef {Object} LocationNote
@@ -21,10 +21,15 @@ import { createEmptyNote, upsertNoteById } from "../utils/noteUtils.js";
  * @property {string|null} [imageUrl]
  */
 
-export default class LocationCardModel {
+export default class LocationCardModel extends CardNoteModel {
 	/** @param {LocationData} location */
 	constructor(location = {}) {
+		super();
 		this.location = location;
+	}
+
+	get entity() {
+		return this.location;
 	}
 
 	get displayName() {
@@ -39,32 +44,4 @@ export default class LocationCardModel {
 		return `${text.slice(0, 117).trim()}...`;
 	}
 
-	get notes() {
-		const notes = Array.isArray(this.location.notes)
-			? [...this.location.notes]
-			: [];
-		return notes.length > 0 ? notes : [createEmptyNote()];
-	}
-
-	withField(field, value) {
-		return {
-			...this.location,
-			[field]: value,
-		};
-	}
-
-	withUpdatedNote(noteId, updates = {}) {
-		return upsertNoteById(this.notes, noteId, updates);
-	}
-
-	withDeletedNote(noteId) {
-		const nextNotes = this.notes.filter((note) => note.id !== noteId);
-		return nextNotes.length > 0 ? nextNotes : [createEmptyNote()];
-	}
-
-	toggleNoteCollapse(noteId) {
-		return this.notes.map((note) =>
-			note.id === noteId ? { ...note, collapsed: !note.collapsed } : note,
-		);
-	}
 }

@@ -2,6 +2,13 @@ const express = require("express");
 const router = express.Router();
 const storage = require("../storage");
 
+async function getExistingSessionPath(campaignSlug, fileName, res) {
+	const fullPath = storage.sessionPath(campaignSlug, fileName);
+	if (await storage.exists(fullPath)) return fullPath;
+	res.status(404).json({ error: "Session not found." });
+	return null;
+}
+
 router.get("/", async (req, res, next) => {
 	try {
 		const sessions = await storage.listSessions(req.campaignSlug);
@@ -39,9 +46,12 @@ router.post("/", async (req, res, next) => {
 
 router.get("/:fileName", async (req, res, next) => {
 	try {
-		const fullPath = storage.sessionPath(req.campaignSlug, req.params.fileName);
-		if (!(await storage.exists(fullPath)))
-			return res.status(404).json({ error: "Session not found." });
+		const fullPath = await getExistingSessionPath(
+			req.campaignSlug,
+			req.params.fileName,
+			res,
+		);
+		if (!fullPath) return;
 		const session = await storage.readJson(fullPath);
 		res.json({ ...session, fileName: req.params.fileName });
 	} catch (error) {
@@ -53,9 +63,8 @@ router.patch("/:fileName", async (req, res, next) => {
 	try {
 		const { campaignSlug: slug } = req;
 		const { fileName } = req.params;
-		const fullPath = storage.sessionPath(slug, fileName);
-		if (!(await storage.exists(fullPath)))
-			return res.status(404).json({ error: "Session not found." });
+		const fullPath = await getExistingSessionPath(slug, fileName, res);
+		if (!fullPath) return;
 
 		const current = await storage.readJson(fullPath);
 		const nextName = req.body?.name
@@ -92,9 +101,12 @@ router.patch("/:fileName", async (req, res, next) => {
 
 router.delete("/:fileName", async (req, res, next) => {
 	try {
-		const fullPath = storage.sessionPath(req.campaignSlug, req.params.fileName);
-		if (!(await storage.exists(fullPath)))
-			return res.status(404).json({ error: "Session not found." });
+		const fullPath = await getExistingSessionPath(
+			req.campaignSlug,
+			req.params.fileName,
+			res,
+		);
+		if (!fullPath) return;
 		await require("fs/promises").rm(fullPath, { force: true });
 		res.status(204).send();
 	} catch (error) {

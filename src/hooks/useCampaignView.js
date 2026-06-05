@@ -78,6 +78,16 @@ export default function useCampaignView(props) {
 	);
 	const syncEvent = useAppSelector((store) => store.sync.event);
 
+	const applyCampaignState = useCallback((nextCampaign) => {
+		setDescription(nextCampaign.description || "");
+		setNotes(nextCampaign.notes || []);
+		setIsDescriptionCollapsed(nextCampaign.isDescriptionCollapsed || false);
+		setIsNotesCollapsed(nextCampaign.isNotesCollapsed || false);
+		setIsCharactersCollapsed(nextCampaign.isCharactersCollapsed || false);
+		setIsNpcsCollapsed(nextCampaign.isNpcsCollapsed || false);
+		setIsLocationsCollapsed(nextCampaign.isLocationsCollapsed || false);
+	}, []);
+
 	const discardEntitySaveTimers = useCallback(() => {
 		Object.values(entitySaveTimeoutsRef.current).forEach((timer) =>
 			clearTimeout(timer),
@@ -133,13 +143,15 @@ export default function useCampaignView(props) {
 
 	useEffect(() => {
 		if (lastSlugRef.current !== campaign.slug) {
-			setDescription(campaign.description || "");
-			setNotes(campaign.notes || []);
-			setIsDescriptionCollapsed(campaign.isDescriptionCollapsed || false);
-			setIsNotesCollapsed(campaign.isNotesCollapsed || false);
-			setIsCharactersCollapsed(campaign.isCharactersCollapsed || false);
-			setIsNpcsCollapsed(campaign.isNpcsCollapsed || false);
-			setIsLocationsCollapsed(campaign.isLocationsCollapsed || false);
+			applyCampaignState({
+				description: campaign.description,
+				notes: campaign.notes,
+				isDescriptionCollapsed: campaign.isDescriptionCollapsed,
+				isNotesCollapsed: campaign.isNotesCollapsed,
+				isCharactersCollapsed: campaign.isCharactersCollapsed,
+				isNpcsCollapsed: campaign.isNpcsCollapsed,
+				isLocationsCollapsed: campaign.isLocationsCollapsed,
+			});
 			setSessionDetails({});
 			sessionDetailsRef.current = {};
 			setIsGraphDataLoading(false);
@@ -158,19 +170,22 @@ export default function useCampaignView(props) {
 		campaign.isNpcsCollapsed,
 		campaign.notes,
 		campaign.slug,
+		applyCampaignState,
 	]);
 
 	useEffect(() => {
 		if (lastSlugRef.current !== campaign.slug) return;
 		if (isSavingRef.current || pendingCampaignUpdatesRef.current) return;
 
-		setDescription(campaign.description || "");
-		setNotes(campaign.notes || []);
-		setIsDescriptionCollapsed(campaign.isDescriptionCollapsed || false);
-		setIsNotesCollapsed(campaign.isNotesCollapsed || false);
-		setIsCharactersCollapsed(campaign.isCharactersCollapsed || false);
-		setIsNpcsCollapsed(campaign.isNpcsCollapsed || false);
-		setIsLocationsCollapsed(campaign.isLocationsCollapsed || false);
+		applyCampaignState({
+			description: campaign.description,
+			notes: campaign.notes,
+			isDescriptionCollapsed: campaign.isDescriptionCollapsed,
+			isNotesCollapsed: campaign.isNotesCollapsed,
+			isCharactersCollapsed: campaign.isCharactersCollapsed,
+			isNpcsCollapsed: campaign.isNpcsCollapsed,
+			isLocationsCollapsed: campaign.isLocationsCollapsed,
+		});
 	}, [
 		campaign.description,
 		campaign.isCharactersCollapsed,
@@ -180,6 +195,7 @@ export default function useCampaignView(props) {
 		campaign.isNpcsCollapsed,
 		campaign.notes,
 		campaign.slug,
+		applyCampaignState,
 	]);
 
 	useEffect(() => {

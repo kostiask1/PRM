@@ -9,7 +9,10 @@ import Tooltip from "../common/Tooltip";
 import classNames from "../../utils/classNames";
 import { getMonsterTypeString } from "../../utils/bestiary.js";
 import { highlightText } from "../../utils/searchHighlight.jsx";
-import { formatSourceLabel, getSourceFullName } from "../../utils/sourceNames.js";
+import {
+	formatSourceLabel,
+	getSourceFullName,
+} from "../../utils/sourceNames.js";
 import { lang } from "../../services/localization";
 
 function getMonsterItemKey(monster) {
@@ -273,7 +276,9 @@ export default function BestiaryContent({
 						/>
 					</Button>
 				</div>
-
+				{loading && (
+					<div className="muted">{lang.t("Indexing database...")}</div>
+				)}
 				<div
 					className={classNames("Bestiary__content", {
 						Bestiary__content__stacked: isEmbedded,
@@ -287,9 +292,6 @@ export default function BestiaryContent({
 							type="uniform"
 						/>
 					</div>
-					{loading && (
-						<div className="muted">{lang.t("Indexing database...")}</div>
-					)}
 
 					{selectedMonster && (
 						<div className="Bestiary__detail_container">
@@ -309,9 +311,7 @@ export default function BestiaryContent({
 										? onDeleteCustomMonster
 										: undefined
 								}
-								onFieldEdit={
-									onEditMonster
-								}
+								onFieldEdit={onEditMonster}
 								searchHighlight={searchHighlight}
 							/>
 						</div>

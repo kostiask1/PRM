@@ -7,19 +7,7 @@ const {
 	saveDraftParsedAiResponse,
 	saveParsedAiResponse,
 } = require("../aiResponseHistoryService");
-
-function asText(value) {
-	if (value === null || value === undefined) return "";
-	if (typeof value === "string") return value.trim();
-	if (
-		typeof value === "number" ||
-		typeof value === "bigint" ||
-		typeof value === "boolean"
-	) {
-		return String(value).trim();
-	}
-	return "";
-}
+const { coerceAiText: asText } = require("./textUtils");
 
 function getFailedAiResponseText(error, status = null) {
 	const message =

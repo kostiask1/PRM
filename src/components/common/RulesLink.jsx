@@ -21,7 +21,7 @@ import {
 import { useAppDispatch } from "../../store/appStore.js";
 import classNames from "../../utils/classNames.js";
 import { capitalizeWords, preprocessTags } from "../../utils/parser.jsx";
-import { formatSourceLabel } from "../../utils/sourceNames.js";
+import { getSpellMeta } from "../../utils/spellMeta.js";
 import { openRulesReferenceModal } from "../modals/openRulesReferenceModal.jsx";
 import Tooltip from "./Tooltip.jsx";
 
@@ -106,24 +106,6 @@ function renderTooltipEntries(content) {
 	}
 
 	return null;
-}
-
-function getSpellTooltipMeta(spell) {
-	const level =
-		spell.level_int !== undefined
-			? spell.level_int
-			: spell.level !== undefined
-				? spell.level
-				: "";
-	const levelLabel =
-		level === 0 || String(level) === "0"
-			? lang.t("Cantrip")
-			: level !== ""
-				? lang.t("Level {level}", { level })
-				: "";
-	return [levelLabel, spell.school, formatSourceLabel(spell.source)]
-		.filter(Boolean)
-		.join(" - ");
 }
 
 export default function RulesLink({
@@ -217,7 +199,7 @@ export default function RulesLink({
 					<div className="Tooltip__title">
 						{capitalizeWords(spell.name.split("|")[0])}
 					</div>
-					<div className="Tooltip__meta">{getSpellTooltipMeta(spell)}</div>
+					<div className="Tooltip__meta">{getSpellMeta(spell)}</div>
 					<div className="Tooltip__text">
 						{renderTooltipEntries(spell.entries)}
 					</div>
