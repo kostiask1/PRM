@@ -18,7 +18,7 @@ export default function SpellCard({
 
 	const model = new SpellCardModel(spell, {
 		language: lang.getLanguage(),
-		translate: (phrase) => lang.t(phrase),
+		translate: (phrase, variables) => lang.t(phrase, variables),
 	});
 	const renderInlineInfo = (value) =>
 		parseRollsAndSpells(String(value || "-"), searchHighlight);
