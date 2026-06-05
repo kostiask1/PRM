@@ -1,4 +1,4 @@
-import { lang } from "../services/localization";
+import { lang } from "../services/localization.js";
 import { formatSourceLabel } from "./sourceNames.js";
 
 function getSpellLevelLabel(spell = {}) {

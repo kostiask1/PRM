@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import fs from "node:fs/promises";
 import path from "node:path";
+import zlib from "node:zlib";
 
 import { idsEqual } from "../src/utils/id.js";
 import { isJsonObject, isJsonString } from "../src/utils/json.js";
@@ -98,6 +99,7 @@ import { api } from "../src/api.js";
 const require = createRequire(import.meta.url);
 const storage = require("../server/storage.js");
 const spellsRouter = require("../server/routes/spells.js");
+const backupsRouter = require("../server/routes/backups.js");
 const aiRouter = require("../server/routes/ai.js");
 const aiService = require("../server/aiService.js");
 const aiHistoryService = require("../server/aiHistoryService.js");
@@ -1023,6 +1025,94 @@ await run(
 		assert.equal(notedModel.toggleNoteCollapse("n1")[0].collapsed, true);
 	},
 );
+
+await run("CardNoteModel shared helpers preserve entity note behavior", async () => {
+	const { CardNoteModel } = await import("../src/models/cardNoteModelUtils.js");
+
+	class TestCardModel extends CardNoteModel {
+		constructor(entity) {
+			super();
+			this.testEntity = entity;
+		}
+
+		get entity() {
+			return this.testEntity;
+		}
+	}
+
+	const model = new TestCardModel({
+		id: "entity-1",
+		notes: [{ id: "note-1", title: "", text: "", collapsed: false }],
+	});
+
+	assert.equal(model.notes.length, 1);
+	assert.equal(model.withField("name", "Updated").name, "Updated");
+	assert.equal(model.withUpdatedNote("note-1", { text: "Body" })[0].text, "Body");
+	assert.equal(model.toggleNoteCollapse("note-1")[0].collapsed, true);
+	assert.equal(model.withDeletedNote("note-1").length, 1);
+});
+
+await run("mention picker helper resolves selected and cancelled states", async () => {
+	const { requestMentionSelection } = await import("../src/utils/mentionPicker.js");
+
+	let payload = null;
+	const selectedPromise = requestMentionSelection((action) => {
+		payload = action.payload;
+	});
+	payload.select("NPC Name");
+	assert.deepEqual(await selectedPromise, {
+		status: "selected",
+		name: "NPC Name",
+	});
+
+	const cancelledPromise = requestMentionSelection((action) => {
+		payload = action.payload;
+	});
+	payload.cancel();
+	assert.deepEqual(await cancelledPromise, { status: "cancelled" });
+});
+
+await run("entity link modal helper resolves entities and avoids current modal", async () => {
+	const { openEntityLinkModal } = await import(
+		"../src/components/common/entityLinkModalUtils.js"
+	);
+	const { getEntityIdentity } = await import(
+		"../src/components/common/EntityLinkIdentity.js"
+	);
+
+	const found = {
+		entity: { id: "npc-1", firstName: "Mira", lastName: "" },
+		type: "npc",
+		scope: "campaign",
+	};
+	let modalState = null;
+	await openEntityLinkModal({
+		campaignSlug: "campaign",
+		currentEntityIdentity: null,
+		errorMessage: "test",
+		modalState: null,
+		name: "Mira",
+		scopedEntityLinks: { resolveEntityByName: () => found },
+		setModalState: (value) => {
+			modalState = value;
+		},
+	});
+	assert.deepEqual(modalState, { entity: found.entity, type: "npc" });
+
+	modalState = null;
+	await openEntityLinkModal({
+		campaignSlug: "campaign",
+		currentEntityIdentity: getEntityIdentity(found.entity, found.type, found.scope),
+		errorMessage: "test",
+		modalState: null,
+		name: "Mira",
+		scopedEntityLinks: { resolveEntityByName: () => found },
+		setModalState: (value) => {
+			modalState = value;
+		},
+	});
+	assert.equal(modalState, null);
+});
 
 await run("MonsterStatBlockModel formats combat data", () => {
 	const model = new MonsterStatBlockModel({
@@ -2832,6 +2922,56 @@ await run(
 		}
 	},
 );
+
+await run("backups archive route sends gzip payload with dated filename", async () => {
+	const originalListCampaignSlugs = storage.listCampaignSlugs;
+	const originalExportCampaignArchiveBundle =
+		storage.exportCampaignArchiveBundle;
+	const layer = backupsRouter.stack.find(
+		(item) => item.route?.path === "/export-all/archive",
+	);
+	assert.ok(layer);
+	const handler = layer.route.stack[0].handle;
+
+	storage.listCampaignSlugs = async () => ["alpha"];
+	storage.exportCampaignArchiveBundle = async (slug) => ({
+		meta: { slug, name: "Alpha" },
+	});
+
+	try {
+		const headers = {};
+		let sentBuffer = null;
+		await handler(
+			{},
+			{
+				setHeader(name, value) {
+					headers[name] = value;
+				},
+				send(value) {
+					sentBuffer = value;
+				},
+			},
+			(error) => {
+				throw error;
+			},
+		);
+
+		assert.equal(headers["Content-Type"], "application/gzip");
+		assert.match(
+			headers["Content-Disposition"],
+			/filename="prm-full-backup-\d{4}-\d{2}-\d{2}\.prma\.gz"/,
+		);
+		const payload = JSON.parse(zlib.gunzipSync(sentBuffer).toString("utf8"));
+		assert.equal(payload.version, 2);
+		assert.equal(payload.scope, "all");
+		assert.deepEqual(payload.campaigns, [
+			{ meta: { slug: "alpha", name: "Alpha" } },
+		]);
+	} finally {
+		storage.listCampaignSlugs = originalListCampaignSlugs;
+		storage.exportCampaignArchiveBundle = originalExportCampaignArchiveBundle;
+	}
+});
 
 await run(
 	"spells conditions route merges kinds and prefers newer sources",

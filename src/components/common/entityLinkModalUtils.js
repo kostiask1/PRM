@@ -2,7 +2,7 @@ import { resolveEntityByName } from "../../services/entities.js";
 import {
 	getEntityIdentity,
 	isSameEntityIdentity,
-} from "./EntityLinkIdentity";
+} from "./EntityLinkIdentity.js";
 
 export async function openEntityLinkModal({
 	campaignSlug,
