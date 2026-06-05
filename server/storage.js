@@ -1863,11 +1863,28 @@ async function getImageGalleryStorageStats({
 	};
 }
 
-async function listSubcategories(slug, category, subcategory = "") {
+async function listSubcategories(slug, category, subcategory = "", options = {}) {
 	const dir = campaignImagesDir(slug, category, subcategory);
 	if (!(await exists(dir))) return [];
 	const entries = await fs.readdir(dir, { withFileTypes: true });
-	return entries.filter((e) => e.isDirectory()).map((e) => e.name);
+	const subcategories = entries
+		.filter((e) => e.isDirectory())
+		.map((e) => e.name)
+		.sort((a, b) => a.localeCompare(b));
+	if (!options.includeMeta) return subcategories;
+
+	return Promise.all(
+		subcategories.map(async (name) => {
+			const subDir = path.join(dir, name);
+			const subEntries = await fs.readdir(subDir, { withFileTypes: true });
+			return {
+				name,
+				hasFiles: subEntries.some(
+					(entry) => entry.isFile() && IMAGE_FILE_RE.test(entry.name),
+				),
+			};
+		}),
+	);
 }
 
 async function updateAllImageReferences(moveResults) {

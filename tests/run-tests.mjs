@@ -3227,11 +3227,14 @@ await run("storage image listing and subcategory discovery", async () => {
 		const category = "characters";
 		const rootDir = storage.campaignImagesDir(slug, category);
 		const nestedDir = storage.campaignImagesDir(slug, category, "nested");
+		const emptyDir = storage.campaignImagesDir(slug, category, "empty");
 		await storage.ensureDir(rootDir);
 		await storage.ensureDir(nestedDir);
+		await storage.ensureDir(emptyDir);
 		await fs.writeFile(path.join(rootDir, "a.png"), "a", "utf8");
 		await fs.writeFile(path.join(rootDir, "b.txt"), "b", "utf8");
 		await fs.writeFile(path.join(nestedDir, "c.webp"), "c", "utf8");
+		await fs.writeFile(path.join(emptyDir, "notes.txt"), "notes", "utf8");
 
 		const rootImages = await storage.listImages(slug, category);
 		assert.deepEqual(
@@ -3242,7 +3245,17 @@ await run("storage image listing and subcategory discovery", async () => {
 		assert.equal(rootImages[0].path, path.join(category, "", "a.png"));
 
 		const subcategories = await storage.listSubcategories(slug, category);
-		assert.deepEqual(subcategories, ["nested"]);
+		assert.deepEqual(subcategories, ["empty", "nested"]);
+		const subcategoryMeta = await storage.listSubcategories(
+			slug,
+			category,
+			"",
+			{ includeMeta: true },
+		);
+		assert.deepEqual(subcategoryMeta, [
+			{ name: "empty", hasFiles: false },
+			{ name: "nested", hasFiles: true },
+		]);
 		const nestedImages = await storage.listImages(slug, category, "nested");
 		assert.deepEqual(
 			nestedImages.map((item) => item.name),

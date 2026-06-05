@@ -208,6 +208,7 @@ function ImageGallery({
 		isReadonlyImage,
 		isReadonlyCurrentFolder,
 		isReadonlyPath,
+		subDetails,
 	} = useImageGallery({
 		isOpen,
 		initialSource,
@@ -445,6 +446,7 @@ function ImageGallery({
 			const sub = item.sub;
 			const isReadonly = isReadonlySub(sub);
 			const isBestiaryFolder = isOfficialSub(sub);
+			const hasFiles = Boolean(subDetails[sub]?.hasFiles);
 			const folderLabel = formatBestiaryFolderLabel(sub, isBestiaryFolder);
 			const folderIcon = isBestiaryFolder
 				? "folder-bestiary"
@@ -460,6 +462,7 @@ function ImageGallery({
 							is_drag_over: dragOverTarget?.id === sub,
 							is_protected: isReadonly,
 							is_bestiary: isBestiaryFolder,
+							has_files: hasFiles,
 						},
 					)}
 					onClick={(e) => {
@@ -493,6 +496,14 @@ function ImageGallery({
 				>
 					<div className="ImageGallery__image_wrap">
 						<Icon name={folderIcon} size={48} />
+						{hasFiles && (
+							<span
+								className="ImageGallery__folder_file_badge"
+								aria-hidden="true"
+							>
+								<Icon name="file" size={18} />
+							</span>
+						)}
 						{!isReadonly && (
 							<div
 								className="ImageGallery__checkbox"

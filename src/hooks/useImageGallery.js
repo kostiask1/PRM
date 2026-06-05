@@ -20,6 +20,7 @@ export default function useImageGallery({
 	const [selectedCat, setSelectedCat] = useState(IMAGE_GALLERY_CATEGORIES[0]);
 	const [selectedSub, setSelectedSub] = useState("");
 	const [dynamicSubs, setDynamicSubs] = useState([]);
+	const [subDetails, setSubDetails] = useState({});
 	const [officialSubs, setOfficialSubs] = useState(new Set());
 	const [officialRootSubs, setOfficialRootSubs] = useState(new Set());
 	const [images, setImages] = useState([]);
@@ -110,12 +111,15 @@ export default function useImageGallery({
 	const loadSubcategories = useCallback(async () => {
 		if (normalizedSearchQuery) {
 			setDynamicSubs([]);
+			setSubDetails({});
 			setOfficialSubs(new Set());
 			return;
 		}
 		try {
 			const [subs, officialAssets, officialRootAssets] = await Promise.all([
-				api.getSubcategories(selectedSource, selectedCat.id, selectedSub),
+				api.getSubcategories(selectedSource, selectedCat.id, selectedSub, {
+					includeMeta: true,
+				}),
 				isGeneralTokens
 					? api.getBestiaryTokenAssets(selectedSub, activeSearchQuery)
 					: Promise.resolve(null),
@@ -123,7 +127,19 @@ export default function useImageGallery({
 					? api.getBestiaryTokenAssets("", "")
 					: Promise.resolve(null),
 			]);
-			const nextSubs = Array.isArray(subs) ? subs : [];
+			const nextSubDetails = {};
+			const nextSubs = (Array.isArray(subs) ? subs : [])
+				.map((sub) => {
+					if (sub && typeof sub === "object") {
+						const name = String(sub.name || "").trim();
+						if (name) {
+							nextSubDetails[name] = { hasFiles: Boolean(sub.hasFiles) };
+						}
+						return name;
+					}
+					return String(sub || "").trim();
+				})
+				.filter(Boolean);
 			const nextOfficialSubs = Array.isArray(officialAssets?.subcategories)
 				? officialAssets.subcategories
 				: [];
@@ -134,6 +150,7 @@ export default function useImageGallery({
 				: nextOfficialSubs;
 			setOfficialSubs(new Set(nextOfficialSubs));
 			setOfficialRootSubs(new Set(nextOfficialRootSubs));
+			setSubDetails(nextSubDetails);
 			setDynamicSubs(
 				[...nextSubs, ...nextOfficialSubs].filter((sub) =>
 					normalizedSearchQuery
@@ -143,6 +160,7 @@ export default function useImageGallery({
 			);
 		} catch (err) {
 			console.error(err);
+			setSubDetails({});
 			setOfficialSubs(new Set());
 			setOfficialRootSubs(new Set());
 		}
@@ -789,6 +807,7 @@ export default function useImageGallery({
 		clearSelection,
 		selectImageByName,
 		allSubs,
+		subDetails,
 		handleCreateSub,
 		handleBulkDelete,
 		handleMoveSelection,

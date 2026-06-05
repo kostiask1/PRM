@@ -392,10 +392,15 @@ export const api = {
 				body: JSON.stringify({ name }),
 			},
 		),
-	getSubcategories: (slug, category, subcategory = "") =>
-		api.request(
-			`/campaigns/${encodeURIComponent(slug)}/images/${category}/subcategories${subcategory ? `?subcategory=${encodeURIComponent(subcategory)}` : ""}`,
-		),
+	getSubcategories: (slug, category, subcategory = "", options = {}) => {
+		const params = new URLSearchParams();
+		if (subcategory) params.set("subcategory", subcategory);
+		if (options.includeMeta) params.set("includeMeta", "1");
+		const query = params.toString();
+		return api.request(
+			`/campaigns/${encodeURIComponent(slug)}/images/${category}/subcategories${query ? `?${query}` : ""}`,
+		);
+	},
 
 	renameSubcategory: (slug, category, oldName, newName) =>
 		api.request(

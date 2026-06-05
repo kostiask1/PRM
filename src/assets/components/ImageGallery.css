@@ -492,6 +492,33 @@
 	font-weight: 700;
 }
 
+.ImageGallery__folder_file_badge {
+	position: absolute;
+	right: 8px;
+	bottom: 8px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	border-radius: 6px;
+	color: var(--accent);
+	background: var(--bg);
+	border: 1px solid color-mix(in srgb, var(--accent), transparent 45%);
+	box-shadow: 0 2px 8px color-mix(in srgb, var(--shadow), transparent 35%);
+}
+
+.ImageGallery__item__folder.is_selected .ImageGallery__folder_file_badge {
+	color: var(--accent);
+	background: white;
+	border-color: white;
+}
+
+.ImageGallery__item__folder.is_bestiary .ImageGallery__folder_file_badge {
+	color: var(--warning);
+	border-color: color-mix(in srgb, var(--warning), transparent 35%);
+}
+
 .ImageGallery__item.is_protected .ImageGallery__nameBtn {
 	cursor: default;
 }

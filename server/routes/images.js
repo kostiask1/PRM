@@ -137,6 +137,7 @@ router.get(
 				req.params.slug,
 				req.params.category,
 				req.query.subcategory || "",
+				{ includeMeta: req.query.includeMeta === "1" },
 			);
 			res.json(subs);
 		} catch (error) {
