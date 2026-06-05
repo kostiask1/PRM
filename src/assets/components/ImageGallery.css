@@ -87,7 +87,7 @@
 	display: flex;
 	align-items: center;
 	min-width: 180px;
-	width: min(300px, 28vw);
+	width: min(250px, 28vw);
 	height: var(--size-8);
 	padding: 0 var(--space-1) 0 var(--space-2);
 	border: 1px solid var(--border);
@@ -107,10 +107,6 @@
 	font: inherit;
 	font-size: 0.85rem;
 	padding: 0 var(--space-1);
-}
-
-.ImageGallery__search input:focus-visible {
-	box-shadow: unset;
 }
 
 .ImageGallery__search .Button:not(.ImageGallery__globalSearchBtn) {
@@ -221,9 +217,9 @@
 
 .ImageGallery__storage_stats {
 	display: flex;
+	flex-direction: column;
 	align-items: center;
-	flex-wrap: wrap;
-	gap: var(--space-3);
+	gap: var(--space-1);
 	color: var(--muted);
 	font-size: 0.75rem;
 	white-space: nowrap;
@@ -314,6 +310,9 @@
 	font-size: 0.75rem;
 	width: 80px;
 	outline: none;
+}
+.ImageGallery input:focus-visible {
+	box-shadow: unset;
 }
 
 .ImageGallery__new_sub .Button {
@@ -591,6 +590,7 @@
 .ImageGallery__previewImg {
 	max-width: 100%;
 	max-height: 100%;
+	min-width: 25vw;
 	object-fit: contain;
 }
 

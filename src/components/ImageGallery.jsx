@@ -26,9 +26,7 @@ const SUB_ICON_NAMES = {
 };
 
 const getImageGalleryModalTitle = (onSelect) =>
-	lang.t(
-		typeof onSelect === "function" ? "Choose an image" : "Image gallery",
-	);
+	lang.t(typeof onSelect === "function" ? "Choose an image" : "Image gallery");
 
 const getImageScrollId = (name) => encodeURIComponent(name || "");
 
@@ -39,7 +37,11 @@ const getGalleryPathEntry = (source, category, subcategory = "") => ({
 	source: source || "general",
 	category: category || "",
 	subcategory: subcategory || "",
-	pathKey: getGalleryPathKey(source || "general", category || "", subcategory || ""),
+	pathKey: getGalleryPathKey(
+		source || "general",
+		category || "",
+		subcategory || "",
+	),
 });
 
 const galleryPathEntriesEqual = (left, right) =>
@@ -85,7 +87,11 @@ const scrollGalleryToTop = (listRef, viewportRef) => {
 	});
 };
 
-const findPendingGalleryImage = ({ pendingSelection, currentPathKey, images }) => {
+const findPendingGalleryImage = ({
+	pendingSelection,
+	currentPathKey,
+	images,
+}) => {
 	if (!pendingSelection || pendingSelection.pathKey !== currentPathKey) {
 		return null;
 	}
@@ -371,14 +377,14 @@ function ImageGallery({
 	React.useEffect(() => {
 		const handleHistoryKeyDown = (event) => {
 			if (isEditableTarget(event.target)) return;
-			const hasOnlyAlt = event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey;
+			const hasOnlyAlt =
+				event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey;
 			const hasNoModifiers =
 				!event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey;
 			const shouldNavigateBack =
 				(event.key === "Backspace" && hasNoModifiers) ||
 				(event.key === "ArrowLeft" && hasOnlyAlt);
-			const shouldNavigateForward =
-				event.key === "ArrowRight" && hasOnlyAlt;
+			const shouldNavigateForward = event.key === "ArrowRight" && hasOnlyAlt;
 
 			if (shouldNavigateBack) {
 				if (!canNavigateBack) return;
@@ -832,37 +838,39 @@ function ImageGallery({
 								))}
 							<Icon name="chevron" size={10} className="BreadcrumbSeparator" />
 							{!isReadonlyCurrentFolder && (
-							<div className="ImageGallery__new_sub">
-								{isCreatingSub ? (
-									<>
-										<input
-											autoFocus
-											value={newSubName}
-											onChange={(e) => setNewSubName(e.target.value)}
-											onKeyDown={(e) => e.key === "Enter" && handleCreateSub()}
-											placeholder={lang.t("Folder name...")}
-										/>
+								<div className="ImageGallery__new_sub">
+									{isCreatingSub ? (
+										<>
+											<input
+												autoFocus
+												value={newSubName}
+												onChange={(e) => setNewSubName(e.target.value)}
+												onKeyDown={(e) =>
+													e.key === "Enter" && handleCreateSub()
+												}
+												placeholder={lang.t("Folder name...")}
+											/>
+											<Button
+												size={Button.SIZES.SMALL}
+												icon="check"
+												onClick={handleCreateSub}
+											/>
+											<Button
+												size={Button.SIZES.SMALL}
+												icon="x"
+												onClick={() => setIsCreatingSub(false)}
+											/>
+										</>
+									) : (
 										<Button
+											variant="ghost"
 											size={Button.SIZES.SMALL}
-											icon="check"
-											onClick={handleCreateSub}
+											icon="plus"
+											onClick={() => setIsCreatingSub(true)}
+											title={lang.t("Create subfolder")}
 										/>
-										<Button
-											size={Button.SIZES.SMALL}
-											icon="x"
-											onClick={() => setIsCreatingSub(false)}
-										/>
-									</>
-								) : (
-									<Button
-										variant="ghost"
-										size={Button.SIZES.SMALL}
-										icon="plus"
-										onClick={() => setIsCreatingSub(true)}
-										title={lang.t("Create subfolder")}
-									/>
-								)}
-							</div>
+									)}
+								</div>
 							)}
 						</div>
 						<div className="ImageGallery__search">
@@ -930,17 +938,17 @@ function ImageGallery({
 								</>
 							)}
 							{!isReadonlyCurrentFolder && (
-							<label className="UploadBtn">
-								<Icon name="plus" size={14} />
-								<span>{lang.t("Upload")}</span>
-								<input
-									type="file"
-									multiple
-									accept="image/*"
-									hidden
-									onChange={(e) => handleFileUpload(e.target.files)}
-								/>
-							</label>
+								<label className="UploadBtn">
+									<Icon name="plus" size={14} />
+									<span>{lang.t("Upload")}</span>
+									<input
+										type="file"
+										multiple
+										accept="image/*"
+										hidden
+										onChange={(e) => handleFileUpload(e.target.files)}
+									/>
+								</label>
 							)}
 						</div>
 					</div>
@@ -1045,12 +1053,14 @@ function ImageGallery({
 					showFooter={false}
 					onCancel={() => setPreviewImage(null)}
 				>
-					<div className="ImageGallery__previewWrap">
+					<div
+						className="ImageGallery__previewWrap"
+						onClick={() => setPreviewImage(null)}
+					>
 						<img
 							className="ImageGallery__previewImg"
 							src={previewImage.url}
 							alt={previewImage.name}
-							onClick={() => setPreviewImage(null)}
 						/>
 					</div>
 				</Modal>
