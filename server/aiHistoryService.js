@@ -128,6 +128,8 @@ function buildAiRequestSnapshot({
 	path,
 	sceneId,
 	imageTarget,
+	attachedImages,
+	attachedFiles,
 	parseAIResponse,
 	shouldParseAIResponse,
 	generateEncounters,
@@ -167,14 +169,36 @@ function buildAiRequestSnapshot({
 				: null,
 	};
 	const context = buildAiContextSummary(contextConfig, contextData);
+	const attachments = {};
+	const imageAttachments = Array.isArray(attachedImages)
+		? attachedImages
+				.map((image) => ({
+					name: asText(image?.name),
+					url: asText(image?.url) || undefined,
+				}))
+				.filter((image) => image.name || image.url)
+		: [];
+	const fileAttachments = Array.isArray(attachedFiles)
+		? attachedFiles
+				.map((file) => ({
+					name: asText(file?.name),
+				}))
+				.filter((file) => file.name)
+		: [];
+	if (imageAttachments.length > 0) attachments.images = imageAttachments;
+	if (fileAttachments.length > 0) attachments.files = fileAttachments;
 
-	return {
+	const snapshot = {
 		userInstructions: asText(userInstructions),
 		options,
 		optionsSummary: buildAiOptionsSummary(options),
 		context,
 		contextSummary: context.summary,
 	};
+	if (Object.keys(attachments).length > 0) {
+		snapshot.attachments = attachments;
+	}
+	return snapshot;
 }
 
 function formatGeneratedContentForHistory(generatedContent) {

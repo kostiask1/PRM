@@ -34,6 +34,15 @@ class AiHistoryWriter {
 				})
 				.filter(Boolean);
 		}
+		if (Array.isArray(cloned.attachedFiles)) {
+			cloned.attachedFiles = cloned.attachedFiles
+				.map((file) => {
+					if (!file || typeof file !== "object") return null;
+					const name = asText(file.name);
+					return name ? { name } : null;
+				})
+				.filter(Boolean);
+		}
 		return cloned;
 	}
 
@@ -97,6 +106,8 @@ class AiHistoryWriter {
 			path,
 			sceneId: payload.sceneId,
 			imageTarget: payload.imageTarget,
+			attachedImages: payload.attachedImages,
+			attachedFiles: payload.attachedFiles,
 			parseAIResponse: payload.parseAIResponse,
 			shouldParseAIResponse,
 			generateCharacters: payload.generateCharacters !== false,

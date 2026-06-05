@@ -1094,6 +1094,19 @@
 	margin: 0;
 }
 
+.AiAssistant__file_input {
+	display: none;
+}
+
+.AiAssistant__file_actions {
+	display: flex;
+}
+
+.AiAssistant__file_actions .Button {
+	width: 100%;
+	justify-content: center;
+}
+
 .AiAssistant__attachment_item {
 	display: grid;
 	grid-template-columns: 44px minmax(0, 1fr) auto;
@@ -1121,6 +1134,16 @@
 	white-space: nowrap;
 	color: var(--text);
 	font-size: 0.85rem;
+}
+
+.AiAssistant__attachment_file_icon {
+	display: grid;
+	place-items: center;
+	width: 44px;
+	height: 44px;
+	border-radius: var(--radius-xs);
+	background: var(--panel);
+	color: var(--accent);
 }
 
 .AiAssistant__prompt_input {

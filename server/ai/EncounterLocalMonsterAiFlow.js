@@ -224,6 +224,8 @@ class EncounterLocalMonsterAiFlow {
 				modelName,
 				userInstructions: historyUserInstructions,
 				path: responsePath,
+				attachedImages: payload.attachedImages,
+				attachedFiles: payload.attachedFiles,
 				parseAIResponse: true,
 				shouldParseAIResponse: true,
 				generateCharacters: false,

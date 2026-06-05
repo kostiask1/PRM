@@ -95,6 +95,30 @@ const markdownMentionComponents = Object.fromEntries(
 );
 
 const ESTIMATED_IMAGE_TOKENS = 260;
+const ESTIMATED_FILE_TOKEN_BYTES = 4;
+const MAX_AI_ATTACHMENTS = 4;
+const MAX_AI_FILE_BYTES = 10 * 1024 * 1024;
+const AI_FILE_MIME_BY_EXTENSION = Object.freeze({
+	".csv": "text/csv",
+	".css": "text/css",
+	".htm": "text/html",
+	".html": "text/html",
+	".js": "text/javascript",
+	".json": "application/json",
+	".md": "text/markdown",
+	".markdown": "text/markdown",
+	".pdf": "application/pdf",
+	".scss": "text/css",
+	".txt": "text/plain",
+	".xml": "application/xml",
+	".yaml": "application/x-yaml",
+	".yml": "application/x-yaml",
+});
+const AI_FILE_MIME_TYPES = new Set([
+	...Object.values(AI_FILE_MIME_BY_EXTENSION),
+	"text/xml",
+]);
+const AI_FILE_ACCEPT = Object.keys(AI_FILE_MIME_BY_EXTENSION).join(",");
 const SYSTEM_TOKEN_ESTIMATES = {
 	prompt: 650,
 	campaign: 1500,
@@ -119,6 +143,33 @@ function estimateValueTokens(value) {
 	if (value === null || value === undefined) return 0;
 	if (typeof value === "string") return estimateTextTokens(value);
 	return estimateTextTokens(JSON.stringify(value));
+}
+
+function getFileExtension(fileName) {
+	const match = String(fileName || "")
+		.toLowerCase()
+		.match(/\.[^.]+$/);
+	return match ? match[0] : "";
+}
+
+function getSupportedAiFileMimeType(file) {
+	if (!file) return "";
+	const byExtension = AI_FILE_MIME_BY_EXTENSION[getFileExtension(file.name)];
+	if (byExtension) return byExtension;
+	const mimeType = String(file.type || "").toLowerCase();
+	return AI_FILE_MIME_TYPES.has(mimeType) ? mimeType : "";
+}
+
+function readFileAsBase64(file) {
+	return new Promise((resolve, reject) => {
+		const reader = new FileReader();
+		reader.onload = () => {
+			const result = String(reader.result || "");
+			resolve(result.includes(",") ? result.split(",").pop() : result);
+		};
+		reader.onerror = () => reject(reader.error || new Error("File read failed."));
+		reader.readAsDataURL(file);
+	});
 }
 
 function compactNoteForEstimate(note) {
@@ -634,6 +685,7 @@ export default function AiAssistantPanel() {
 	const [selectedImagePromptTarget, setSelectedImagePromptTarget] =
 		useState(null);
 	const [attachedImages, setAttachedImages] = useState([]);
+	const [attachedFiles, setAttachedFiles] = useState([]);
 	const [attachmentPickerKey, setAttachmentPickerKey] = useState(0);
 	const [imagePromptInstructions, setImagePromptInstructions] = useState("");
 	const [imagePromptRequest, setImagePromptRequest] = useState("");
@@ -692,6 +744,7 @@ export default function AiAssistantPanel() {
 	const [responseHistorySizeBytes, setResponseHistorySizeBytes] = useState(0);
 	const [isRestoringResponse, setIsRestoringResponse] = useState(false);
 	const activeGenerateControllerRef = useRef(null);
+	const fileAttachmentInputRef = useRef(null);
 	const generatedPromptRef = useRef(null);
 	const imagePromptCampaignDataLoadedRef = useRef(false);
 	const imagePromptCampaignEntitiesLoadedRef = useRef(false);
@@ -772,18 +825,88 @@ export default function AiAssistantPanel() {
 
 	const getAttachedImageKey = (image) =>
 		image?.url || `${image?.name || ""}:${image?.sizeBytes || ""}`;
+	const getAttachedFileKey = (file) =>
+		`${file?.name || ""}:${file?.sizeBytes || ""}`;
 
 	const addAttachedImage = (image) => {
 		if (!image) return;
 		setAttachedImages((prev) => {
 			const key = getAttachedImageKey(image);
 			if (prev.some((item) => getAttachedImageKey(item) === key)) return prev;
-			return [...prev, image].slice(0, 4);
+			return [...prev, image].slice(0, MAX_AI_ATTACHMENTS);
 		});
 	};
 
 	const removeAttachedImage = (indexToRemove) => {
 		setAttachedImages((prev) =>
+			prev.filter((_, index) => index !== indexToRemove),
+		);
+	};
+
+	const handleAttachFiles = async (event) => {
+		const selectedFiles = Array.from(event.target.files || []);
+		event.target.value = "";
+		if (selectedFiles.length === 0) return;
+
+		const availableSlots = Math.max(
+			0,
+			MAX_AI_ATTACHMENTS - attachedFiles.length,
+		);
+		if (availableSlots === 0) return;
+
+		const nextFiles = [];
+		const skipped = [];
+		for (const file of selectedFiles.slice(0, availableSlots)) {
+			const mimeType = getSupportedAiFileMimeType(file);
+			if (!mimeType) {
+				skipped.push(file.name);
+				continue;
+			}
+			if (file.size > MAX_AI_FILE_BYTES) {
+				skipped.push(file.name);
+				continue;
+			}
+			try {
+				nextFiles.push({
+					name: file.name,
+					mimeType,
+					sizeBytes: file.size,
+					data: await readFileAsBase64(file),
+				});
+			} catch {
+				skipped.push(file.name);
+			}
+		}
+
+		if (nextFiles.length > 0) {
+			setAttachedFiles((prev) => {
+				const existing = new Set(prev.map(getAttachedFileKey));
+				const uniqueNext = nextFiles.filter((file) => {
+					const key = getAttachedFileKey(file);
+					if (existing.has(key)) return false;
+					existing.add(key);
+					return true;
+				});
+				return [...prev, ...uniqueNext].slice(0, MAX_AI_ATTACHMENTS);
+			});
+		}
+		if (
+			skipped.length > 0 ||
+			selectedFiles.length > availableSlots
+		) {
+			dispatch(
+				alert({
+					title: lang.t("File attachment error"),
+					message: lang.t(
+						"Some files could not be attached. Supported files: TXT, MD, JSON, CSV, HTML, XML, YAML, PDF. Maximum size: 10 MB.",
+					),
+				}),
+			);
+		}
+	};
+
+	const removeAttachedFile = (indexToRemove) => {
+		setAttachedFiles((prev) =>
 			prev.filter((_, index) => index !== indexToRemove),
 		);
 	};
@@ -1656,6 +1779,7 @@ export default function AiAssistantPanel() {
 					sceneId: targetSceneId,
 					imageTarget,
 					attachedImages,
+					attachedFiles,
 					imagePromptBasePromptOverride,
 					parseAIResponse: shouldParseResponse,
 					generateCharacters: structuredEntityOptionsEnabled
@@ -2016,18 +2140,31 @@ export default function AiAssistantPanel() {
 				name: image.name,
 				url: image.url,
 			})),
+			attachedFiles: attachedFiles.map((file) => ({
+				name: file.name,
+				mimeType: file.mimeType,
+				sizeBytes: file.sizeBytes,
+			})),
 		};
 		const textTokens =
 			(SYSTEM_TOKEN_ESTIMATES[mode] || SYSTEM_TOKEN_ESTIMATES.prompt) +
 			estimateValueTokens(requestShape);
 		const imageTokens = attachedImages.length * ESTIMATED_IMAGE_TOKENS;
+		const fileTokens = Math.ceil(
+			attachedFiles.reduce(
+				(total, file) => total + (Number(file.sizeBytes) || 0),
+				0,
+			) / ESTIMATED_FILE_TOKEN_BYTES,
+		);
 		return {
 			textTokens,
 			imageTokens,
-			total: textTokens + imageTokens,
+			fileTokens,
+			total: textTokens + imageTokens + fileTokens,
 		};
 	}, [
 		activeCampaignBasePrompt,
+		attachedFiles,
 		attachedImages,
 		campaignContext,
 		characterContext,
@@ -2063,6 +2200,9 @@ export default function AiAssistantPanel() {
 	const formattedImageTokenEstimate = new Intl.NumberFormat(
 		currentLanguage || "en",
 	).format(tokenEstimate.imageTokens);
+	const formattedFileTokenEstimate = new Intl.NumberFormat(
+		currentLanguage || "en",
+	).format(tokenEstimate.fileTokens || 0);
 
 	const getSceneEncounterForImagePrompt = (scene) => {
 		const encounters = Array.isArray(scene?._imagePromptEncounters)
@@ -2487,6 +2627,9 @@ export default function AiAssistantPanel() {
 											{tokenEstimate.imageTokens > 0
 												? `; ${lang.t("Images")}: ${formattedImageTokenEstimate}`
 												: ""}
+											{tokenEstimate.fileTokens > 0
+												? `; ${lang.t("Files")}: ${formattedFileTokenEstimate}`
+												: ""}
 										</span>
 									</div>
 									<Button
@@ -2510,7 +2653,15 @@ export default function AiAssistantPanel() {
 									)}
 								</div>
 								<div className="AiAssistant__attachments">
-									{attachedImages.length < 4 && (
+									<input
+										ref={fileAttachmentInputRef}
+										type="file"
+										multiple
+										accept={AI_FILE_ACCEPT}
+										className="AiAssistant__file_input"
+										onChange={handleAttachFiles}
+									/>
+									{attachedImages.length < MAX_AI_ATTACHMENTS && (
 										<ImageAssetField
 											key={attachmentPickerKey}
 											imageUrl=""
@@ -2553,6 +2704,48 @@ export default function AiAssistantPanel() {
 														onClick={() => removeAttachedImage(index)}
 														disabled={loading}
 														title={lang.t("Remove image")}
+													/>
+												</div>
+											))}
+										</div>
+									)}
+									<div className="AiAssistant__file_actions">
+										<Button
+											variant="ghost"
+											icon="file-plus"
+											onClick={() => fileAttachmentInputRef.current?.click()}
+											disabled={
+												loading ||
+												attachedFiles.length >= MAX_AI_ATTACHMENTS
+											}
+											title={lang.t("Attach files")}
+										>
+											{lang.t("Attach files")}
+										</Button>
+									</div>
+									{attachedFiles.length > 0 && (
+										<div className="AiAssistant__attachment_list">
+											{attachedFiles.map((file, index) => (
+												<div
+													key={`${file.name}-${file.sizeBytes}-${index}`}
+													className="AiAssistant__attachment_item AiAssistant__attachment_item_file"
+												>
+													<div className="AiAssistant__attachment_file_icon">
+														<Icon name="file" size={22} />
+													</div>
+													<span title={file.name}>
+														{file.name}
+														{file.sizeBytes
+															? ` (${formatBytes(file.sizeBytes)})`
+															: ""}
+													</span>
+													<Button
+														variant="danger"
+														size={Button.SIZES.SMALL}
+														icon="x"
+														onClick={() => removeAttachedFile(index)}
+														disabled={loading}
+														title={lang.t("Remove file")}
 													/>
 												</div>
 											))}

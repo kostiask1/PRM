@@ -8,6 +8,8 @@ const GEMINI_MODELS_ENDPOINT =
 const MODEL_CACHE_TTL_MS = 10 * 60 * 1000;
 const MAX_AI_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_AI_IMAGES = 4;
+const MAX_AI_FILE_BYTES = 10 * 1024 * 1024;
+const MAX_AI_FILES = 4;
 const AI_IMAGE_MIME_TYPES = Object.freeze({
 	".jpg": "image/jpeg",
 	".jpeg": "image/jpeg",
@@ -15,6 +17,38 @@ const AI_IMAGE_MIME_TYPES = Object.freeze({
 	".webp": "image/webp",
 	".gif": "image/gif",
 });
+const AI_FILE_MIME_TYPES = Object.freeze({
+	".csv": "text/csv",
+	".css": "text/css",
+	".htm": "text/html",
+	".html": "text/html",
+	".js": "text/javascript",
+	".json": "application/json",
+	".md": "text/markdown",
+	".markdown": "text/markdown",
+	".pdf": "application/pdf",
+	".scss": "text/css",
+	".txt": "text/plain",
+	".xml": "application/xml",
+	".yaml": "application/x-yaml",
+	".yml": "application/x-yaml",
+});
+const AI_TEXT_FILE_MIME_TYPES = new Set([
+	"application/json",
+	"application/x-yaml",
+	"application/xml",
+	"text/css",
+	"text/csv",
+	"text/html",
+	"text/javascript",
+	"text/markdown",
+	"text/plain",
+	"text/xml",
+]);
+const AI_ALLOWED_FILE_MIME_TYPES = new Set([
+	...Object.values(AI_FILE_MIME_TYPES),
+	"text/xml",
+]);
 const CORE_TEXT_MODELS = [
 	"gemini-3-flash-preview",
 	"gemini-3.1-flash-lite-preview",
@@ -622,6 +656,74 @@ async function buildImageParts(attachedImages = []) {
 	return parts;
 }
 
+function extensionFromName(fileName) {
+	return path.extname(String(fileName || "")).toLowerCase();
+}
+
+function normalizeAttachedFileMimeType(file = {}) {
+	const byExtension = AI_FILE_MIME_TYPES[extensionFromName(file.name)];
+	if (byExtension) return byExtension;
+	const mimeType = String(file.mimeType || "")
+		.trim()
+		.toLowerCase();
+	return AI_ALLOWED_FILE_MIME_TYPES.has(mimeType) ? mimeType : "";
+}
+
+function normalizeAttachedFileData(data) {
+	const value = String(data || "").trim();
+	if (!value) return "";
+	const commaIndex = value.indexOf(",");
+	return value.startsWith("data:") && commaIndex !== -1
+		? value.slice(commaIndex + 1)
+		: value;
+}
+
+function attachmentNameForPrompt(name) {
+	return String(name || "attached-file").replace(/[\r\n]+/g, " ").trim();
+}
+
+function attachedFileToPart(file = {}) {
+	const mimeType = normalizeAttachedFileMimeType(file);
+	if (!mimeType) return [];
+
+	const data = normalizeAttachedFileData(file.data);
+	if (!data) return [];
+
+	let buffer;
+	try {
+		buffer = Buffer.from(data, "base64");
+	} catch {
+		return [];
+	}
+	if (!buffer.length || buffer.length > MAX_AI_FILE_BYTES) return [];
+
+	const name = attachmentNameForPrompt(file.name);
+	if (AI_TEXT_FILE_MIME_TYPES.has(mimeType)) {
+		return [
+			{
+				text: `ATTACHED FILE: ${name} (${mimeType})\n\n${buffer.toString("utf8")}`,
+			},
+		];
+	}
+
+	return [
+		{ text: `ATTACHED FILE: ${name} (${mimeType})` },
+		{
+			inlineData: {
+				data: buffer.toString("base64"),
+				mimeType,
+			},
+		},
+	];
+}
+
+function buildFileParts(attachedFiles = []) {
+	const files = Array.isArray(attachedFiles)
+		? attachedFiles.slice(0, MAX_AI_FILES)
+		: [];
+	return files.flatMap(attachedFileToPart);
+}
+
 async function generateContent({
 	type,
 	session,
@@ -631,6 +733,7 @@ async function generateContent({
 	sceneId,
 	imageTarget,
 	attachedImages,
+	attachedFiles,
 	parseAIResponse,
 	contextData,
 	generateCharacters,
@@ -1185,8 +1288,12 @@ If selectedMonster exists and selectedMonsterMode is not "create-based", update 
 	userPrompt += `USER INSTRUCTIONS (PRIORITY): ${userInstructions || ""}\n`;
 
 	const imageParts = await buildImageParts(attachedImages);
+	const fileParts = buildFileParts(attachedFiles);
+	const attachmentParts = [...imageParts, ...fileParts];
 	const requestParts =
-		imageParts.length > 0 ? [{ text: userPrompt }, ...imageParts] : userPrompt;
+		attachmentParts.length > 0
+			? [{ text: userPrompt }, ...attachmentParts]
+			: userPrompt;
 	const result = await model.generateContent(requestParts);
 	const response = await result.response;
 	let text = response.text();

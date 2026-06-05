@@ -106,6 +106,7 @@ const aiHistoryService = require("../server/aiHistoryService.js");
 const aiResponseHistoryService = require("../server/aiResponseHistoryService.js");
 const aiPatchService = require("../server/aiPatchService.js");
 const { buildAiChangeSummary } = require("../server/ai/aiChangeSummary.js");
+const { AiHistoryWriter } = require("../server/ai/AiHistoryWriter.js");
 const aiPayloadSchemas = require("../server/aiPayloadSchemas.js");
 const {
 	buildLocalEncounterMonsterSessionChange,
@@ -742,6 +743,36 @@ await run("AI history service builds stable request snapshots", () => {
 	assert.equal(snapshot.options.mode, "custom-monster");
 	assert.match(snapshot.optionsSummary, /custom-monsters: off/);
 	assert.equal(snapshot.contextSummary, "context: off");
+});
+
+await run("AI history stores attached file names without file content", () => {
+	const attachedFiles = [
+		{
+			name: "notes.md",
+			mimeType: "text/markdown",
+			sizeBytes: 12,
+			data: Buffer.from("secret notes", "utf8").toString("base64"),
+		},
+	];
+	const snapshot = aiHistoryService.buildAiRequestSnapshot({
+		type: "prompt",
+		userInstructions: "Read the file",
+		path: { campaign: "demo" },
+		attachedFiles,
+		parseAIResponse: false,
+		shouldParseAIResponse: false,
+		contextConfig: null,
+		contextData: {},
+		language: "uk",
+	});
+	assert.deepEqual(snapshot.attachments.files, [{ name: "notes.md" }]);
+	assert.equal(JSON.stringify(snapshot).includes("secret"), false);
+	assert.equal(JSON.stringify(snapshot).includes(attachedFiles[0].data), false);
+
+	const retryPayload = new AiHistoryWriter().cloneRetryPayload({
+		attachedFiles,
+	});
+	assert.deepEqual(retryPayload.attachedFiles, [{ name: "notes.md" }]);
 });
 
 await run(

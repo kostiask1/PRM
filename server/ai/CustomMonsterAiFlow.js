@@ -70,6 +70,8 @@ class CustomMonsterAiFlow {
 				modelName,
 				userInstructions: historyUserInstructions,
 				path: { campaign: "bestiary" },
+				attachedImages: payload.attachedImages,
+				attachedFiles: payload.attachedFiles,
 				parseAIResponse: true,
 				shouldParseAIResponse: true,
 				generateCharacters: false,

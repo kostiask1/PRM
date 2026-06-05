@@ -43,6 +43,8 @@ class CampaignAiFlow {
 			path,
 			sceneId,
 			imageTarget,
+			attachedImages: payload.attachedImages,
+			attachedFiles: payload.attachedFiles,
 			parseAIResponse,
 			shouldParseAIResponse,
 			generateCharacters: characterGenerationEnabled,
