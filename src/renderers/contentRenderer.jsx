@@ -135,13 +135,14 @@ export const renderRecursiveContent = (
 
 function pushSafeMarkdownText(elements, text, key, highlightQuery = "") {
 	if (!text) return;
+	const processedText = preprocessTags(text);
 	const query = String(highlightQuery || "").trim();
 	if (query) {
 		const regex = new RegExp(
 			`(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
 			"gi",
 		);
-		const parts = String(text).split(regex);
+		const parts = String(processedText).split(regex);
 		const normalizedQuery = query.toLowerCase();
 		parts.forEach((part, index) => {
 			if (!part) return;
@@ -158,7 +159,7 @@ function pushSafeMarkdownText(elements, text, key, highlightQuery = "") {
 		return;
 	}
 
-	const safeText = preprocessTags(text)
+	const safeText = processedText
 		.replace(/^(\s*)([+\-*]|\d+\.)(\s)/gm, "$1\\$2$3")
 		.replace(/\n/gi, "&nbsp; \n")
 		.replace(/^ /g, "\u00A0")

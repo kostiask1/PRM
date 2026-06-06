@@ -1272,6 +1272,15 @@ await run("parser renders quickref display labels", () => {
 	);
 });
 
+await run("parser renders item filter display names", () => {
+	assert.equal(
+		preprocessTags(
+			"If you wear {@filter Light|items|type=Light Armor}, {@filter Medium|items|type=Medium Armor}, or {@filter Heavy|items|type=Heavy Armor} armor and lack training",
+		),
+		"If you wear Light, Medium, or Heavy armor and lack training",
+	);
+});
+
 await run("undo redo helpers move snapshots between stacks", () => {
 	const original = { value: 1, nested: { label: "one" } };
 	const undoStack = addUndoSnapshot([], original);

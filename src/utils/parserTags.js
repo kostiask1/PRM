@@ -107,9 +107,12 @@ export const preprocessTags = (text) => {
 			return label && !/^\d+$/.test(label) ? label : parts[0];
 		})
 		.replace(
-			/{@(creature|action|link|item|filter|book|area|hazard|trap|deck|optfeature|reward|feat|charoption|background|race)\s+([^|}]+)(?:\|([^|}]*))?(?:\|([^|}]*))?[^}]*}/gi,
+			/{@filter\s+([^|}]+)(?:\|[^}]*)?}/gi,
+			(m, name) => name,
+		)
+		.replace(
+			/{@(creature|action|link|item|book|area|hazard|trap|deck|optfeature|reward|feat|charoption|background|race)\s+([^|}]+)(?:\|([^|}]*))?(?:\|([^|}]*))?[^}]*}/gi,
 			(m, tag, name, source, label) => {
-				if (tag === "filter") return name;
 				return label || name;
 			},
 		)
