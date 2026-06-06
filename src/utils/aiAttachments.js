@@ -2,7 +2,7 @@ export const ESTIMATED_FILE_TOKEN_BYTES = 4;
 export const MAX_AI_ATTACHMENTS = 4;
 export const MAX_AI_FILE_BYTES = 10 * 1024 * 1024;
 
-export const AI_FILE_MIME_BY_EXTENSION = Object.freeze({
+const AI_FILE_MIME_BY_EXTENSION = Object.freeze({
 	".csv": "text/csv",
 	".css": "text/css",
 	".htm": "text/html",
@@ -26,7 +26,7 @@ const AI_FILE_MIME_TYPES = new Set([
 
 export const AI_FILE_ACCEPT = Object.keys(AI_FILE_MIME_BY_EXTENSION).join(",");
 
-export function getFileExtension(fileName) {
+function getFileExtension(fileName) {
 	const match = String(fileName || "")
 		.toLowerCase()
 		.match(/\.[^.]+$/);

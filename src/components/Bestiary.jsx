@@ -71,6 +71,12 @@ function normalizeSourceSelection(source) {
 	return source || "all";
 }
 
+function getAutoSelectedMonster(monsters, selectedSource) {
+	if (!monsters.length) return null;
+	if (selectedSource !== "all") return monsters[0];
+	return monsters.find((monster) => !isCustomSource(monster.source)) || null;
+}
+
 function cloneCustomMonsters(monsters) {
 	return JSON.parse(JSON.stringify(monsters || []));
 }
@@ -246,6 +252,16 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			clearMonsterUrlSelection();
 		}
 	};
+
+	const selectMonster = useCallback((monster) => {
+		shouldAutoSelectMonsterRef.current = false;
+		setSelectedMonster(monster);
+	}, []);
+
+	const selectSource = useCallback((source) => {
+		shouldAutoSelectMonsterRef.current = true;
+		setSelectedSource(source);
+	}, []);
 
 	const restoreCustomMonsters = async (nextCustomMonsters, options = {}) => {
 		const updated = await api.replaceCustomBestiaryMonsters(nextCustomMonsters);
@@ -1009,12 +1025,21 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 
 			if (!urlMonsterName) {
 				// If URL has no selection and monsters are loaded, select the first one.
+				const autoSelectedMonster = getAutoSelectedMonster(
+					displayedMonsters,
+					selectedSource,
+				);
+				const currentMonsterInList =
+					currentMonster?.name &&
+					getMonsterListIndex(displayedMonsters, currentMonster) >= 0;
 				if (
 					shouldAutoSelectMonsterRef.current &&
-					displayedMonsters.length > 0 &&
-					!currentMonster?.name
+					autoSelectedMonster &&
+					(!currentMonster?.name ||
+						!currentMonsterInList ||
+						(selectedSource === "all" && isCustomSource(currentMonster.source)))
 				) {
-					setSelectedMonster(displayedMonsters[0]);
+					setSelectedMonster(autoSelectedMonster);
 				}
 				return;
 			}
@@ -1056,6 +1081,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 		allMonsters,
 		displayedMonsters,
 		isEmbedded,
+		selectedSource,
 		urlMonsterName,
 		urlMonsterSource,
 	]);
@@ -1165,8 +1191,8 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			setIsDetailedSearch={setIsDetailedSearch}
 			setOnlyFavorites={setOnlyFavorites}
 			setSearch={setSearch}
-			setSelectedMonster={setSelectedMonster}
-			setSelectedSource={setSelectedSource}
+			setSelectedMonster={selectMonster}
+			setSelectedSource={selectSource}
 			sortOrder={sortOrder}
 			sourceOptions={sourceOptions}
 			sources={sources}
