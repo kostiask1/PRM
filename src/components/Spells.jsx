@@ -67,6 +67,7 @@ export default function Spells({
 	initialSearch = "",
 	initialDetailedSearch = false,
 	initialSelectedName = "",
+	scrollToInitialSelected = true,
 	hideSearchInput = false,
 	renderOptions = {},
 }) {
@@ -351,7 +352,12 @@ export default function Spells({
 	}, [displayedSpells, isEmbedded, selectedSpell, urlSpellName]);
 
 	useEffect(() => {
-		if (!isEmbedded || !initialSelectedName || !selectedSpell?.name) {
+		if (
+			!isEmbedded ||
+			!scrollToInitialSelected ||
+			!initialSelectedName ||
+			!selectedSpell?.name
+		) {
 			return undefined;
 		}
 		const scrollKey = `${selectedSpell.source || ""}:${selectedSpell.name}`;
@@ -365,7 +371,13 @@ export default function Spells({
 			listRef.current?.scrollTo(selectedIndex);
 		});
 		return () => cancelAnimationFrame(frameId);
-	}, [displayedSpells, initialSelectedName, isEmbedded, selectedSpell]);
+	}, [
+		displayedSpells,
+		initialSelectedName,
+		isEmbedded,
+		scrollToInitialSelected,
+		selectedSpell,
+	]);
 
 	const toggleSort = () => {
 		setSortOrder((prev) => {

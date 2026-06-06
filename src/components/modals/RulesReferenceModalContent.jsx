@@ -565,6 +565,7 @@ export default function RulesReferenceModalContent({
 						initialSearch={query}
 						initialDetailedSearch={isDetailedSearch}
 						initialSelectedName={activeSelectedName}
+						scrollToInitialSelected={false}
 						onSelectSpell={onSelectReference ? selectSpellReference : null}
 						renderOptions={{
 							onRuleNavigate: navigateToReference,
