@@ -356,7 +356,8 @@ export default function Spells({
 			!isEmbedded ||
 			!scrollToInitialSelected ||
 			!initialSelectedName ||
-			!selectedSpell?.name
+			!selectedSpell?.name ||
+			selectedSpell.name !== initialSelectedName
 		) {
 			return undefined;
 		}
