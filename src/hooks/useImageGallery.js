@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { alert, confirm } from "../actions/app";
 import { api } from "../api";
-import { useAppDispatch } from "../store/appStore";
+import { useAppDispatch, useAppSelector } from "../store/appStore";
 import { lang } from "../services/localization";
 import { IMAGE_GALLERY_CATEGORIES } from "../features/images/imageGalleryConfig";
 import useDebounce from "./useDebounce";
@@ -14,6 +14,9 @@ export default function useImageGallery({
 	initialSubcategory,
 }) {
 	const dispatch = useAppDispatch();
+	const useSearchDebounce = useAppSelector(
+		(state) => state.ui.useSearchDebounce !== false,
+	);
 
 	const [campaigns, setCampaigns] = useState([]);
 	const [selectedSource, setSelectedSource] = useState("general");
@@ -36,7 +39,10 @@ export default function useImageGallery({
 	const [isDraggingOver, setIsDraggingOver] = useState(false);
 	const [dragSource, setDragSource] = useState(null);
 	const [dragOverTarget, setDragOverTarget] = useState(null);
-	const debouncedSearchQuery = useDebounce(searchQuery, 250);
+	const debouncedSearchQuery = useDebounce(
+		searchQuery,
+		useSearchDebounce ? 250 : 0,
+	);
 	const normalizedSearchQuery = searchQuery.trim()
 		? debouncedSearchQuery.trim().toLowerCase()
 		: "";
