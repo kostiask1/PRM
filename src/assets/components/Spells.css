@@ -83,6 +83,13 @@
 	height: 81px;
 }
 
+.Spells__item_source {
+	text-transform: uppercase;
+	font-size: 0.7rem;
+	opacity: 0.5;
+	font-weight: 700;
+}
+
 .Spells__detail {
 	position: relative;
 	flex: 1;

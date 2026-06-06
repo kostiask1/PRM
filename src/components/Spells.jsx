@@ -18,7 +18,10 @@ import { objectMatchesSearch } from "../utils/deepSearch.js";
 import { highlightText } from "../utils/searchHighlight.jsx";
 import useDebounce from "../hooks/useDebounce.js";
 import { useAppSelector } from "../store/appStore.js";
-import { formatSourceLabel } from "../utils/sourceNames.js";
+import {
+	formatSourceLabel,
+	getSourceFullName,
+} from "../utils/sourceNames.js";
 
 const SCHOOL_MAP = {
 	A: "Abjuration",
@@ -376,6 +379,7 @@ export default function Spells({
 		const spell = displayedSpells[index];
 		if (!spell) return null;
 		const schoolName = SCHOOL_MAP[spell.school];
+		const sourceFullName = getSourceFullName(spell.source);
 		const isSelected =
 			selectedSpell?.name === spell.name &&
 			selectedSpell?.source === spell.source;
@@ -405,6 +409,14 @@ export default function Spells({
 						{schoolName && <> • {highlightText(schoolName, debouncedSearch)}</>}
 						{spell.classes?.length > 0 && (
 							<> • {highlightText(spell.classes.join(", "), debouncedSearch)}</>
+						)}
+						{spell.source && (
+							<Tooltip content={sourceFullName} disabled={!sourceFullName}>
+								<span className="Spells__item_source">
+									{" "}
+									• {highlightText(spell.source, debouncedSearch)}
+								</span>
+							</Tooltip>
 						)}
 					</div>
 				</ListCard>
