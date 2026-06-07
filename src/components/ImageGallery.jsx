@@ -1003,6 +1003,7 @@ function ImageGallery({
 								ref={galleryListRef}
 								itemRenderer={renderGalleryRow}
 								length={galleryRowCount}
+								threshold={400}
 								itemSizeEstimator={() => {
 									const row =
 										galleryViewportRef.current?.querySelector(
