@@ -184,12 +184,10 @@ function CampaignView() {
 					variant="danger"
 					icon="trash"
 					size={Button.SIZES.SMALL}
-					iconSize={16}
 					onClick={(e) => {
 						e.stopPropagation();
 						view.handleDeleteSession(session);
 					}}
-					title={lang.t("Delete session")}
 				/>
 			}
 		>

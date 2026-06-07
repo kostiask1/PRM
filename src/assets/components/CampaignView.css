@@ -91,10 +91,18 @@
 }
 
 .CampaignView__sessionDelete.Button {
-	min-width: var(--size-6);
-	min-height: var(--size-6);
+	border: unset;
 	padding: 0;
-	border-width: 1px;
+	opacity: 0.4;
+}
+
+.CampaignView__sessionDelete .Icon {
+	width: var(--size-3);
+}
+
+.CampaignView__sessionDelete.Button:hover {
+	opacity: 1;
+	background: unset;
 }
 
 .CampaignView__emptySessions {
