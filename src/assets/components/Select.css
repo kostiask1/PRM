@@ -81,13 +81,17 @@
 .Select__option {
 	display: flex;
 	align-items: center;
-	padding: 0 var(--space-3);
-	height: var(--size-8);
+	padding: var(--space-1) var(--space-3);
+	min-height: var(--size-8);
 	border-radius: var(--radius-md);
 	cursor: pointer;
 	font-size: 0.85rem;
 	transition: all 0.15s ease;
 	color: var(--muted);
+}
+
+.Select__option:not(:last-child) {
+	border-bottom: 1px solid color-mix(in srgb, var(--text-bright), transparent 90%);
 }
 
 .Select__option:hover {

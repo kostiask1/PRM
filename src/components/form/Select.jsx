@@ -21,6 +21,7 @@ export default function Select({
 	const [dropdownStyle, setDropdownStyle] = useState({});
 	const containerRef = useRef(null);
 	const dropdownRef = useRef(null);
+	const selectedOptionRef = useRef(null);
 
 	const options =
 		React.Children.map(children, (child) => {
@@ -108,6 +109,29 @@ export default function Select({
 		setIsOpen(false);
 	};
 
+	const scrollSelectedOptionIntoView = useCallback(() => {
+		const dropdown = dropdownRef.current;
+		const selectedOption = selectedOptionRef.current;
+		if (!dropdown || !selectedOption) return;
+
+		const optionTop = selectedOption.offsetTop;
+		const optionBottom = optionTop + selectedOption.offsetHeight;
+		const visibleTop = dropdown.scrollTop;
+		const visibleBottom = visibleTop + dropdown.clientHeight;
+
+		if (optionTop < visibleTop) {
+			dropdown.scrollTop = optionTop;
+		} else if (optionBottom > visibleBottom) {
+			dropdown.scrollTop = optionBottom - dropdown.clientHeight;
+		}
+	}, []);
+
+	useEffect(() => {
+		if (!isOpen) return;
+		const frame = requestAnimationFrame(scrollSelectedOptionIntoView);
+		return () => cancelAnimationFrame(frame);
+	}, [isOpen, scrollSelectedOptionIntoView, value]);
+
 	const renderDropdown =
 		isOpen &&
 		!disabled &&
@@ -121,6 +145,7 @@ export default function Select({
 				{options.map((opt) => (
 					<div
 						key={opt.value}
+						ref={opt.value === value ? selectedOptionRef : null}
 						className={classNames("Select__option", {
 							is_selected: opt.value === value,
 						})}
@@ -147,6 +172,7 @@ export default function Select({
 					className="Select__trigger"
 					onClick={() => {
 						if (disabled) return;
+						if (!isOpen) updateDropdownPosition();
 						setIsOpen((prev) => !prev);
 					}}
 				>
