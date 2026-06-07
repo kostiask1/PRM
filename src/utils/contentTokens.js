@@ -1,6 +1,25 @@
 export const CONTENT_TOKEN_REGEX =
 	/(\(Recharge\s+\d+(?:-\d+)?\)|\{@recharge(?:\s+\d+(?:-\d+)?)?})|(\{@(?:damage|scaledamage|scaledice)\s+([^|}]+)(?:\|([^|}]*))?(?:\|([^|}]*))?[^}]*\})|(\d+d\d+(?:\s*[+-]\s*\d+)?)|(\{@hit\s+([+-]?\d+)\})(\s+to\s+hit)?|(?<!\d)([+-]\d+)(\s+to\s+hit)?|(\{@spell\s+([^}]+)\})|(\{@(?:condition|status)\s+([^}]+)\})|(@condition\s+([A-Za-z][A-Za-z' -]*))|(\{@disease\s+([^}]+)\})|(\{@variantrule\s+([^}]+)\})|(\{@skill\s+([^}]+)\})|(\{@sense\s+([^}]+)\})|(\{@quickref\s+([^}]+)\})/gi;
 
+const DAMAGE_ROLL_PREFIX_REGEX =
+	/^\s*(\d+d\d+(?:\s*[+-]\s*(?:\d+d\d+|\d+))*)([\s\S]*)$/i;
+
+function splitDamageRoll(value) {
+	const text = String(value || "");
+	const match = text.match(DAMAGE_ROLL_PREFIX_REGEX);
+	if (!match) {
+		return {
+			roll: "",
+			remainder: text,
+		};
+	}
+
+	return {
+		roll: match[1].trim(),
+		remainder: match[2] || "",
+	};
+}
+
 function normalizeRechargeToken(value) {
 	const rechargeTag = String(value || "").match(
 		/^\{@recharge(?:\s+(\d+(?:-\d+)?))?}$/i,
@@ -14,11 +33,19 @@ function normalizeRechargeToken(value) {
 }
 
 export function tokenFromContentMatch(match) {
+	const damageParts = splitDamageRoll(match[3]);
+	const fallbackDamageParts = splitDamageRoll(match[4]);
+	const hasFallbackDamageRoll = !damageParts.roll && fallbackDamageParts.roll;
 	return {
 		fullMatch: match[0],
 		recharge: normalizeRechargeToken(match[1]),
-		damageRoll: match[3],
-		damageLabel: match[5],
+		damageRoll: hasFallbackDamageRoll
+			? fallbackDamageParts.roll
+			: damageParts.roll,
+		damageRemainder: hasFallbackDamageRoll
+			? fallbackDamageParts.remainder
+			: damageParts.remainder,
+		damageLabel: hasFallbackDamageRoll ? match[4] : match[5],
 		roll: match[6],
 		hit: match[8] || match[10],
 		hitSuffix: match[9] || match[11] || "",

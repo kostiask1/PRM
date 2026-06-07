@@ -44,7 +44,7 @@ export const getDamageBonus = (action) => {
 export const preprocessTags = (text) => {
 	if (typeof text !== "string") return text;
 	return text
-		.replace(/{@h}/gi, "Hit:")
+		.replace(/{@h}/gi, "Hit: ")
 		.replace(/{@dc\s+(\d+)}/gi, "DC $1")
 		.replace(/{@atk\s+mw}/gi, "Melee Weapon Attack:")
 		.replace(/{@atk\s+rw}/gi, "Ranged Weapon Attack:")
@@ -57,15 +57,15 @@ export const preprocessTags = (text) => {
 		)
 		.replace(
 			/{@damage\s+([^|}]+)(?:\|([^|}]*))?(?:\|([^|}]*))?}/gi,
-			(m, name, src, label) => label || name,
+			(m, name, fallback, label) => label || fallback || name,
 		)
 		.replace(
 			/{@scaledamage\s+([^|}]+)(?:\|([^|}]*))?(?:\|([^|}]*))?}/gi,
-			(m, name, src, label) => label || name,
+			(m, name, fallback, label) => label || fallback || name,
 		)
 		.replace(
 			/{@scaledice\s+([^|}]+)(?:\|([^|}]*))?(?:\|([^|}]*))?}/gi,
-			(m, name, src, label) => label || name,
+			(m, name, fallback, label) => label || fallback || name,
 		)
 		.replace(
 			/{@hitYourSpellAttack(?:\s+([^}]+))?}/gi,

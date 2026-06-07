@@ -1246,6 +1246,49 @@ await run("content tokens parse hit and recharge tags safely", () => {
 	assert.equal(damage.length, 1);
 	assert.equal(damage[0].fullMatch, "{@damage 3d6}");
 	assert.equal(damage[0].damageRoll, "3d6");
+	assert.equal(damage[0].damageRemainder, "");
+
+	const damageWithLevel = extractContentTokens(
+		"{@h}{@damage 1d10 + 3 + summonSpellLevel}",
+	);
+	assert.equal(damageWithLevel.length, 1);
+	assert.equal(
+		damageWithLevel[0].fullMatch,
+		"{@damage 1d10 + 3 + summonSpellLevel}",
+	);
+	assert.equal(damageWithLevel[0].damageRoll, "1d10 + 3");
+	assert.equal(damageWithLevel[0].damageRemainder, " + summonSpellLevel");
+	assert.equal(
+		preprocessTags("{@h}{@damage 1d10 + 3 + summonSpellLevel}"),
+		"Hit: 1d10 + 3 + summonSpellLevel",
+	);
+
+	const scaledSummonDamage = extractContentTokens(
+		"equal to {@damage (summonSpellLevel - 4)d4 + 3|1d4 + 3}, {@damage (summonSpellLevel - 3)d6 + 3|2d6 + 3} + your spellcasting",
+	);
+	assert.equal(scaledSummonDamage.length, 2);
+	assert.equal(scaledSummonDamage[0].damageRoll, "1d4 + 3");
+	assert.equal(scaledSummonDamage[0].damageRemainder, "");
+	assert.equal(scaledSummonDamage[0].damageLabel, "1d4 + 3");
+	assert.equal(scaledSummonDamage[1].damageRoll, "2d6 + 3");
+	assert.equal(scaledSummonDamage[1].damageRemainder, "");
+	assert.equal(scaledSummonDamage[1].damageLabel, "2d6 + 3");
+	assert.equal(
+		preprocessTags(
+			"equal to {@damage (summonSpellLevel - 4)d4 + 3|1d4 + 3}, {@damage (summonSpellLevel - 3)d6 + 3|2d6 + 3} + your spellcasting",
+		),
+		"equal to 1d4 + 3, 2d6 + 3 + your spellcasting",
+	);
+
+	const dynamicSummonDamage = extractContentTokens(
+		"{@damage (summonSpellLevel - 3)d12 + 3}",
+	);
+	assert.equal(dynamicSummonDamage.length, 1);
+	assert.equal(dynamicSummonDamage[0].damageRoll, "");
+	assert.equal(
+		dynamicSummonDamage[0].damageRemainder,
+		"(summonSpellLevel - 3)d12 + 3",
+	);
 
 	const quickref = extractContentTokens(
 		"{@quickref Vision and Light||2||heavily obscured}",

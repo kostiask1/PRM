@@ -208,6 +208,12 @@ function getRechargeThreshold(recharge) {
 	return match ? Number(match[1]) : 6;
 }
 
+function formatFormulaText(text) {
+	return String(text || "")
+		.replace(/\bsummonSpellLevel\b/g, "spell level")
+		.replace(/\bPB\b/g, "proficiency bonus");
+}
+
 export const parseRollsAndSpells = (
 	text,
 	highlightQuery = "",
@@ -239,6 +245,7 @@ export const parseRollsAndSpells = (
 		const {
 			recharge,
 			damageRoll,
+			damageRemainder,
 			damageLabel,
 			roll,
 			hit,
@@ -270,15 +277,23 @@ export const parseRollsAndSpells = (
 					{highlightText(recharge, highlightQuery)}
 				</RollDice>,
 			);
-		} else if (damageRoll) {
+		} else if (damageRoll || damageRemainder) {
 			const displayText = damageLabel || damageRoll;
-			elements.push(
-				<RollDice
-					key={`d-${matchIndex}`}
-					formula={damageRoll.replace(/\s+/g, "")}
-				>
-					{highlightText(displayText, highlightQuery)}
-				</RollDice>,
+			if (damageRoll) {
+				elements.push(
+					<RollDice
+						key={`d-${matchIndex}`}
+						formula={damageRoll.replace(/\s+/g, "")}
+					>
+						{highlightText(displayText, highlightQuery)}
+					</RollDice>,
+				);
+			}
+			pushSafeMarkdownText(
+				elements,
+				formatFormulaText(damageRemainder),
+				`d-${matchIndex}-remainder`,
+				highlightQuery,
 			);
 		} else if (roll) {
 			elements.push(
