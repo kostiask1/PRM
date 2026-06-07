@@ -47,7 +47,9 @@
 
 .Select__icon {
 	width: var(--size-4);
+	min-width: var(--size-4);
 	height: var(--size-4);
+	min-height: var(--size-4);
 	opacity: 0.5;
 	transition: transform 0.2s ease;
 }
