@@ -34,6 +34,19 @@ const NEW_SAVE_MAP = {
 	cha: "Cha",
 };
 
+function formatMonsterType(monsterType) {
+	if (!monsterType) return "";
+	if (typeof monsterType === "string") return monsterType;
+	if (typeof monsterType === "object") {
+		const type = monsterType.type;
+		if (typeof type === "string") return type;
+		if (type && typeof type === "object" && Array.isArray(type.choose)) {
+			return type.choose.join("/");
+		}
+	}
+	return "";
+}
+
 /**
  * Monster action/trait entry.
  * @typedef {Object} MonsterEntry
@@ -195,7 +208,7 @@ export default class MonsterStatBlockModel {
 	}
 
 	get typeLabel() {
-		const baseType = this.monster.type?.type || this.monster.type || "";
+		const baseType = formatMonsterType(this.monster.type);
 		const tags = this.monster.type?.tags?.length
 			? ` (${this.monster.type.tags.join(", ")})`
 			: "";

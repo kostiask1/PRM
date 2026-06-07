@@ -1170,6 +1170,14 @@ await run("MonsterStatBlockModel formats combat data", () => {
 	assert.equal(model.ac.val, 13);
 	assert.equal(model.hp.val, 15);
 	assert.match(model.localTokenSrc, /\/api\/bestiary\/tokens\/MM\/Orc\.webp$/);
+
+	const chooserModel = new MonsterStatBlockModel({
+		type: {
+			type: { choose: ["celestial", "fey", "fiend"] },
+			tags: ["spirit"],
+		},
+	});
+	assert.equal(chooserModel.typeLabel, "celestial/fey/fiend (spirit)");
 });
 
 await run("SpellCardModel formats spell labels", () => {

@@ -6,6 +6,7 @@ import Input from "../form/Input";
 import Select from "../form/Select";
 import RulesReferenceModalContent from "../modals/RulesReferenceModalContent";
 import { lang } from "../../services/localization";
+import { getMonsterTypeString } from "../../utils/bestiary";
 import "../../assets/components/MonsterFieldEditModal.css";
 
 const CREATURE_ACTION_SECTIONS = [
@@ -143,6 +144,13 @@ function splitListText(value) {
 		.filter(Boolean);
 }
 
+function splitTypeChoiceText(value) {
+	return String(value || "")
+		.split(/[,/]/)
+		.map((item) => item.trim())
+		.filter(Boolean);
+}
+
 function formatSpeedValue(key, value) {
 	const label = key === "walk" ? "" : `${key} `;
 	if (value && typeof value === "object") {
@@ -229,7 +237,7 @@ function getCreatureEditableFieldInput(monster = {}, key) {
 			.join("\n");
 	}
 	if (key === "type" && monster.type && typeof monster.type === "object") {
-		return String(monster.type.type || "");
+		return getMonsterTypeString(monster.type);
 	}
 	return listLikeValueToText(monster[key]);
 }
@@ -297,6 +305,17 @@ function updateCreatureBasicField(monster, key, value) {
 		return next;
 	}
 	if (key === "type") {
+		if (
+			monster?.type?.type &&
+			typeof monster.type.type === "object" &&
+			Array.isArray(monster.type.type.choose)
+		) {
+			next.type = {
+				...monster.type,
+				type: { ...monster.type.type, choose: splitTypeChoiceText(value) },
+			};
+			return next;
+		}
 		next.type =
 			monster?.type &&
 			typeof monster.type === "object" &&
