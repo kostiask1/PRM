@@ -181,114 +181,104 @@ export default function CharacterCard({
 
 			{!isCollapsed && (
 				<div className="character_card__body">
-					<div className="character_card__main_layout">
-						<div className="character_card__content_side">
-							<div className="character_card__info_side">
-								<div className="character_card__grid">
-									<EditableField
-										type="text"
-										value={character.firstName}
-										onChange={(e) => updateField("firstName", e.target.value)}
-										onBlur={handleNameBlur}
-										placeholder={lang.t("First name")}
-										className={
-											isFieldHighlighted("firstName")
-												? "is_ai_changed_field"
-												: ""
-										}
-									/>
-									<EditableField
-										type="text"
-										value={character.lastName}
-										onChange={(e) => updateField("lastName", e.target.value)}
-										onBlur={handleNameBlur}
-										placeholder={lang.t("Last name")}
-										className={
-											isFieldHighlighted("lastName")
-												? "is_ai_changed_field"
-												: ""
-										}
-									/>
-									<div className="character_card__row_trio">
-										<EditableField
-											type="text"
-											value={character.race}
-											onChange={(e) => updateField("race", e.target.value)}
-											placeholder={lang.t("Race")}
-											className={
-												isFieldHighlighted("race") ? "is_ai_changed_field" : ""
-											}
-										/>
-										<EditableField
-											type="text"
-											value={character.class}
-											onChange={(e) => updateField("class", e.target.value)}
-											placeholder={lang.t("Class")}
-											className={
-												isFieldHighlighted("class") ? "is_ai_changed_field" : ""
-											}
-										/>
-										<Select
-											value={characterModel.level}
-											onChange={(e) => updateField("level", e.target.value)}
-										>
-											<option value="">--</option>
-											{CharacterCardModel.getLevelOptions().map((level) => (
-												<option key={level} value={level}>
-													{lang.t("Level {level}", { level })}
-												</option>
-											))}
-										</Select>
-									</div>
-								</div>
-							</div>
-
-							<div className="character_card__details">
-								<div className="character_card__field">
-									<label>{lang.t("Motivation")}</label>
-									<EditableField
-										type="textarea"
-										value={character.motivation}
-										onChange={(e) => updateField("motivation", e.target.value)}
-										placeholder={lang.t("What does the character want...")}
-										className={
-											isFieldHighlighted("motivation")
-												? "is_ai_changed_field"
-												: ""
-										}
-									/>
-								</div>
-								<div className="character_card__field">
-									<label>{lang.t("Trait")}</label>
-									<EditableField
-										type="textarea"
-										value={characterModel.trait}
-										onChange={(e) => updateField("trait", e.target.value)}
-										placeholder={lang.t("Distinctive trait or habit...")}
-										className={
-											isFieldHighlighted("trait") ? "is_ai_changed_field" : ""
-										}
-									/>
-								</div>
+					<div className="character_card__image_side">
+						<ImageAssetField
+							imageUrl={character.imageUrl}
+							campaignSlug={campaignSlug}
+							target={type === "npc" ? "npc" : "character"}
+							showClearButton
+							onImageChange={(url) => updateField("imageUrl", url)}
+							imageAlt={lang.t("Portrait")}
+							containerClassName="character_card__portrait_container"
+							wrapperClassName={classNames(
+								"character_card__portrait_wrapper",
+								"is_editable",
+							)}
+							deleteButtonClassName="character_card__image_delete"
+							previewTitle={characterModel.fullName || lang.t("Portrait")}
+							previewModalClassName="CharacterImageModal"
+							previewContentClassName="CharacterImageModal__content"
+						/>
+					</div>
+					<div className="character_card__info_side">
+						<div className="character_card__grid">
+							<EditableField
+								type="text"
+								value={character.firstName}
+								onChange={(e) => updateField("firstName", e.target.value)}
+								onBlur={handleNameBlur}
+								placeholder={lang.t("First name")}
+								className={
+									isFieldHighlighted("firstName") ? "is_ai_changed_field" : ""
+								}
+							/>
+							<EditableField
+								type="text"
+								value={character.lastName}
+								onChange={(e) => updateField("lastName", e.target.value)}
+								onBlur={handleNameBlur}
+								placeholder={lang.t("Last name")}
+								className={
+									isFieldHighlighted("lastName") ? "is_ai_changed_field" : ""
+								}
+							/>
+							<div className="character_card__row_trio">
+								<EditableField
+									type="text"
+									value={character.race}
+									onChange={(e) => updateField("race", e.target.value)}
+									placeholder={lang.t("Race")}
+									className={
+										isFieldHighlighted("race") ? "is_ai_changed_field" : ""
+									}
+								/>
+								<EditableField
+									type="text"
+									value={character.class}
+									onChange={(e) => updateField("class", e.target.value)}
+									placeholder={lang.t("Class")}
+									className={
+										isFieldHighlighted("class") ? "is_ai_changed_field" : ""
+									}
+								/>
+								<Select
+									value={characterModel.level}
+									onChange={(e) => updateField("level", e.target.value)}
+								>
+									<option value="">--</option>
+									{CharacterCardModel.getLevelOptions().map((level) => (
+										<option key={level} value={level}>
+											{lang.t("Level {level}", { level })}
+										</option>
+									))}
+								</Select>
 							</div>
 						</div>
-						<div className="character_card__image_side">
-							<ImageAssetField
-								imageUrl={character.imageUrl}
-								campaignSlug={campaignSlug}
-								target={type === "npc" ? "npc" : "character"}
-								showClearButton
-								onImageChange={(url) => updateField("imageUrl", url)}
-								imageAlt={lang.t("Portrait")}
-								containerClassName="character_card__portrait_container"
-								wrapperClassName={classNames(
-									"character_card__portrait_wrapper",
-									"is_editable",
-								)}
-								deleteButtonClassName="character_card__image_delete"
-								previewTitle={characterModel.fullName || lang.t("Portrait")}
-								previewModalClassName="CharacterImageModal"
-								previewContentClassName="CharacterImageModal__content"
+					</div>
+
+					<div className="character_card__details">
+						<div className="character_card__field">
+							<label>{lang.t("Motivation")}</label>
+							<EditableField
+								type="textarea"
+								value={character.motivation}
+								onChange={(e) => updateField("motivation", e.target.value)}
+								placeholder={lang.t("What does the character want...")}
+								className={
+									isFieldHighlighted("motivation") ? "is_ai_changed_field" : ""
+								}
+							/>
+						</div>
+						<div className="character_card__field">
+							<label>{lang.t("Trait")}</label>
+							<EditableField
+								type="textarea"
+								value={characterModel.trait}
+								onChange={(e) => updateField("trait", e.target.value)}
+								placeholder={lang.t("Distinctive trait or habit...")}
+								className={
+									isFieldHighlighted("trait") ? "is_ai_changed_field" : ""
+								}
 							/>
 						</div>
 					</div>

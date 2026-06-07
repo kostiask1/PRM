@@ -176,60 +176,53 @@ export default function LocationCard({
 			)}
 
 			{!isCollapsed && (
-				<>
-					<div className="location_card__body">
-						<div className="location_card__content_side">
-							<div className="location_card__info_side">
-								<div className="location_card__grid">
-									<EditableField
-										type="text"
-										value={location.name || ""}
-										onChange={(e) => updateField("name", e.target.value)}
-										onBlur={handleNameBlur}
-										placeholder={lang.t("Name")}
-										className={
-											isFieldHighlighted("name") ? "is_ai_changed_field" : ""
-										}
-									/>
-								</div>
-							</div>
-
-							<div className="location_card__details">
-								<div className="location_card__field">
-									<EditableField
-										type="textarea"
-										value={location.description || ""}
-										onChange={(e) => updateField("description", e.target.value)}
-										placeholder={lang.t(
-											"Briefly describe the location or faction...",
-										)}
-										className={
-											isFieldHighlighted("description")
-												? "is_ai_changed_field"
-												: ""
-										}
-									/>
-								</div>
-							</div>
+				<div className="location_card__body">
+					<div className="location_card__image_side">
+						<ImageAssetField
+							imageUrl={location.imageUrl}
+							campaignSlug={campaignSlug}
+							target="location"
+							showClearButton
+							onImageChange={(url) => updateField("imageUrl", url)}
+							imageAlt={lang.t("Image")}
+							containerClassName="location_card__image_container"
+							wrapperClassName={classNames(
+								"location_card__image_wrapper",
+								"is_editable",
+							)}
+							deleteButtonClassName="location_card__image_delete"
+							previewTitle={displayName || lang.t("Image")}
+							previewModalClassName="LocationImageModal"
+							previewContentClassName="LocationImageModal__content"
+						/>
+					</div>
+					<div className="location_card__info_side">
+						<div className="location_card__grid">
+							<EditableField
+								type="text"
+								value={location.name || ""}
+								onChange={(e) => updateField("name", e.target.value)}
+								onBlur={handleNameBlur}
+								placeholder={lang.t("Name")}
+								className={
+									isFieldHighlighted("name") ? "is_ai_changed_field" : ""
+								}
+							/>
 						</div>
+					</div>
 
-						<div className="location_card__image_side">
-							<ImageAssetField
-								imageUrl={location.imageUrl}
-								campaignSlug={campaignSlug}
-								target="location"
-								showClearButton
-								onImageChange={(url) => updateField("imageUrl", url)}
-								imageAlt={lang.t("Image")}
-								containerClassName="location_card__image_container"
-								wrapperClassName={classNames(
-									"location_card__image_wrapper",
-									"is_editable",
+					<div className="location_card__details">
+						<div className="location_card__field">
+							<EditableField
+								type="textarea"
+								value={location.description || ""}
+								onChange={(e) => updateField("description", e.target.value)}
+								placeholder={lang.t(
+									"Briefly describe the location or faction...",
 								)}
-								deleteButtonClassName="location_card__image_delete"
-								previewTitle={displayName || lang.t("Image")}
-								previewModalClassName="LocationImageModal"
-								previewContentClassName="LocationImageModal__content"
+								className={
+									isFieldHighlighted("description") ? "is_ai_changed_field" : ""
+								}
 							/>
 						</div>
 					</div>
@@ -284,7 +277,7 @@ export default function LocationCard({
 							/>
 						)}
 					</div>
-				</>
+				</div>
 			)}
 		</div>
 	);
