@@ -95,7 +95,7 @@
 
 .location_card__image_side {
     float: right;
-    width: min(55%, 960px);
+    width: min(50%, 960px);
     min-width: 320px;
     margin: 0 0 var(--space-4) var(--space-6);
 }
