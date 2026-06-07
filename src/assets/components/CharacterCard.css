@@ -25,43 +25,30 @@
 }
 
 .character_card.is_collapsed .character_card__header {
-    display: grid;
-    grid-template-columns:
-        [toggle] var(--size-8)
-        [image] var(--size-10)
-        [name] minmax(0, 0.7fr)
-        [meta] minmax(0, 1fr)
-        [actions] auto
-        [delete] var(--size-8);
-    align-items: center;
     background: unset;
-}
-
-.character_card.is_collapsed .character_card__header>.CollapseToggleButton {
-    grid-column: 1;
 }
 
 .character_card__title_group {
     flex: 1;
+    min-width: 0;
     display: flex;
     align-items: center;
     gap: var(--space-3);
 }
 
 .character_card.is_collapsed .character_card__title_group {
-    display: contents;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: var(--space-1);
 }
 
-.character_card.is_collapsed .character_card__header:not(:has(.character_card__mini_portrait)) .character_card__name {
-    grid-column: image / meta;
-}
-
-.character_card.is_collapsed .character_card__header:has(.character_card__mini_portrait) .character_card__name {
-    grid-column: name;
+.character_card.is_collapsed .character_card__name {
+    line-height: var(--size-5);
 }
 
 .character_card.is_collapsed .character_card__meta_brief {
-    grid-column: meta;
+    line-height: var(--size-5);
 }
 
 .character_card__name {
@@ -92,14 +79,18 @@
 }
 
 .character_card.is_collapsed .character_card__actions {
-    grid-column: actions;
     justify-content: flex-end;
     min-width: max-content;
 }
 
-.character_card.is_collapsed .character_card__header>.Button__danger:last-child {
-    grid-column: delete;
-    padding: 0;
+.character_card .Button__danger {
+    border: unset;
+    opacity: 0.4;
+}
+
+.character_card .Button__danger:hover {
+    opacity: 1;
+    background: unset;
 }
 
 .character_card__body {
@@ -112,16 +103,22 @@
 }
 
 .character_card__grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-wrap: wrap;
     gap: var(--space-2) var(--space-3);
 }
 
+.character_card__grid>.EditableField {
+    flex: 1 1 calc(50% - var(--space-3));
+    min-width: 180px;
+}
+
 .character_card__row_trio {
-    grid-column: span 2;
     display: flex;
     align-items: center;
     gap: var(--space-3);
+    flex: 1 1 100%;
+    min-width: 0;
 }
 
 .character_card__row_trio>* {
@@ -131,10 +128,6 @@
 
 .character_card__row_trio .Select {
     flex: 0 0 110px;
-}
-
-.character_card__grid .Select {
-    grid-column: span 2;
 }
 
 .character_card__main_layout {
@@ -157,13 +150,12 @@
 }
 
 .character_card__content_side {
-    flex: 1;
-    min-width: 0;
+    flex: 0 1 700px;
+    min-width: 500px;
 }
 
 .character_card__image_side {
-    width: 180px;
-    flex-shrink: 0;
+    flex: 1 1 auto;
 }
 
 .character_card__portrait_container {
@@ -310,9 +302,9 @@
 }
 
 .character_card__mini_portrait {
-    grid-column: image;
     width: var(--size-10);
     height: var(--size-10);
+    flex: 0 0 var(--size-10);
     border-radius: var(--radius-xxs);
     overflow: hidden;
 }
@@ -348,16 +340,6 @@
 
 .Modal__card__character {
     position: relative;
-}
-
-.character_card__modal .character_card__header {
-    position: absolute;
-    top: var(--space-1);
-    right: 60px;
-    padding: 0 0 var(--space-3) 0;
-    gap: var(--space-2);
-    cursor: default;
-    background: transparent;
 }
 
 .character_card__modal .character_card__body {

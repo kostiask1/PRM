@@ -15,20 +15,7 @@
 }
 
 .location_card.is_collapsed .location_card__header {
-    display: grid;
-    grid-template-columns:
-        [toggle] var(--size-8)
-        [image] var(--size-10)
-        [name] minmax(0, 0.5fr)
-        [meta] minmax(0, 1fr)
-        [actions] auto
-        [delete] var(--size-8);
-    align-items: center;
     background: unset;
-}
-
-.location_card.is_collapsed .location_card__header>.CollapseToggleButton {
-    grid-column: 1;
 }
 
 .location_card__header {
@@ -43,25 +30,16 @@
 
 .location_card__title_group {
     flex: 1;
+    min-width: 0;
     display: flex;
     align-items: center;
     gap: var(--space-3);
 }
 
 .location_card.is_collapsed .location_card__title_group {
-    display: contents;
-}
-
-.location_card.is_collapsed .location_card__header:not(:has(.location_card__mini_image)) .location_card__name {
-    grid-column: image / meta;
-}
-
-.location_card.is_collapsed .location_card__header:has(.location_card__mini_image) .location_card__name {
-    grid-column: name;
-}
-
-.location_card.is_collapsed .location_card__meta_brief {
-    grid-column: meta;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
 }
 
 .location_card__name {
@@ -80,6 +58,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    line-height: var(--size-4);
 }
 
 .location_card__actions {
@@ -89,22 +68,25 @@
 }
 
 .location_card.is_collapsed .location_card__actions {
-    grid-column: actions;
     justify-content: flex-end;
     min-width: max-content;
 }
 
-.location_card.is_collapsed .location_card__header>.Button__danger:last-child {
-    grid-column: delete;
-    padding: 0;
+.location_card .Button__danger {
+    border: unset;
+    opacity: 0.4;
+}
+
+.location_card .Button__danger:hover {
+    opacity: 1;
+    background: unset;
 }
 
 .location_card__body {
     flex-grow: 1;
     padding: var(--space-4);
     border-top: 1px solid color-mix(in srgb, var(--text-bright), transparent 95%);
-    display: grid;
-    grid-template-columns: minmax(0, 500px) minmax(0, 1fr);
+    display: flex;
     gap: var(--space-6);
     align-items: start;
 }
@@ -120,14 +102,18 @@
     min-width: 0;
 }
 
+.location_card__content_side {
+    flex: 0 1 500px;
+}
+
 .location_card__image_side {
-    justify-self: stretch;
+    flex: 1 1 0;
 }
 
 .location_card__grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--space-2) var(--space-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
 }
 
 .location_card__grid .MarkdownView {
@@ -253,9 +239,9 @@
 }
 
 .location_card__mini_image {
-    grid-column: image;
     width: var(--size-10);
     height: var(--size-10);
+    flex: 0 0 var(--size-10);
     border-radius: var(--radius-xxs);
     overflow: hidden;
 }
@@ -272,16 +258,6 @@
     border-radius: 0;
     margin: 0;
     overflow: visible;
-}
-
-.location_card__modal .location_card__header {
-    position: absolute;
-    top: var(--space-1);
-    right: 60px;
-    padding: 0 0 var(--space-3) 0;
-    gap: var(--space-2);
-    cursor: default;
-    background: transparent;
 }
 
 .location_card__modal .location_card__body {

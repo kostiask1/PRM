@@ -92,6 +92,8 @@ function CampaignEntityModalContent({
 				onToggleCollapse={null}
 				campaignSlug={campaignSlug}
 				viewMode="modal"
+				showDeleteButton={false}
+				showHeader={false}
 			/>
 		);
 	}
@@ -107,6 +109,8 @@ function CampaignEntityModalContent({
 			campaignSlug={campaignSlug}
 			type={type}
 			viewMode="modal"
+			showDeleteButton={false}
+			showHeader={false}
 		/>
 	);
 }
