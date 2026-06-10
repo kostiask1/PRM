@@ -5,6 +5,7 @@
 const express = require("express");
 const http = require("http");
 const path = require("path");
+const os = require("os");
 const fs = require("fs/promises");
 const storage = require("./storage");
 const { realtimeMiddleware, setupRealtime } = require("./realtime");
@@ -73,9 +74,20 @@ storage
 	.then(() => {
 		const server = http.createServer(app);
 		setupRealtime(server);
-		server.listen(PORT, () =>
-			console.log(`Server running on http://localhost:${PORT}`),
-		);
+		server.listen(PORT, "0.0.0.0", () => {
+			const networkInterfaces = os.networkInterfaces();
+			let localIp = "localhost";
+
+			for (const name of Object.keys(networkInterfaces)) {
+				for (const iface of networkInterfaces[name]) {
+					if (iface.family === "IPv4" && !iface.internal) {
+						localIp = iface.address;
+						break;
+					}
+				}
+			}
+			console.log(`Server running on http://localhost:${PORT} and http://${localIp}:${PORT}`);
+		});
 	})
 	.catch((error) => {
 		console.error("Failed to initialize storage:", error);
