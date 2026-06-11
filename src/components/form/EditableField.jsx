@@ -1,6 +1,7 @@
 import {
 	useCallback,
 	useContext,
+	useEffect,
 	useLayoutEffect,
 	useMemo,
 	useRef,
@@ -79,6 +80,7 @@ const MENTION_TOOLTIP_KEY = "Ctrl+click to open entity";
 const TAB_CLASS = "EditableField__tab";
 const EDITOR_NAMESPACE = "EditableField";
 const EXTERNAL_UPDATE_TAG = "editable-field:external";
+const TEXTAREA_TYPE = "textarea";
 const EDITOR_MODULE_VERSION = (() => {
 	if (!import.meta.hot) return "static";
 
@@ -92,6 +94,13 @@ const MENTION_SHORTCUT_CODES = new Set(["KeyK"]);
 const LIST_SHORTCUT_CODES = new Set(["BracketRight"]);
 const OUTDENT_SHORTCUT_CODES = new Set(["BracketLeft"]);
 const QUOTE_SHORTCUT_CODES = new Set(["KeyQ"]);
+const EDITOR_NODES = [
+	HeadingNode,
+	QuoteNode,
+	ListNode,
+	ListItemNode,
+	MentionNode,
+];
 
 const EDITABLE_FIELD_THEME = {
 	heading: {
@@ -118,6 +127,15 @@ const EDITABLE_FIELD_THEME = {
 	},
 };
 
+function isTextareaType(type) {
+	return type === TEXTAREA_TYPE;
+}
+
+function setMentionDomAttributes(element, mentionName) {
+	element.dataset.mention = mentionName;
+	element.setAttribute("data-mention-tooltip", lang.t(MENTION_TOOLTIP_KEY));
+}
+
 class MentionNode extends TextNode {
 	static getType() {
 		return "mention";
@@ -136,11 +154,7 @@ class MentionNode extends TextNode {
 	createDOM(config) {
 		const element = super.createDOM(config);
 		element.className = `${element.className} ${MENTION_CLASS}`.trim();
-		element.dataset.mention = this.getTextContent();
-		element.setAttribute(
-			"data-mention-tooltip",
-			lang.t(MENTION_TOOLTIP_KEY),
-		);
+		setMentionDomAttributes(element, this.getTextContent());
 		element.spellcheck = false;
 		return element;
 	}
@@ -148,11 +162,7 @@ class MentionNode extends TextNode {
 	updateDOM(prevNode, dom, config) {
 		const shouldReplace = super.updateDOM(prevNode, dom, config);
 		if (!shouldReplace) {
-			dom.dataset.mention = this.getTextContent();
-			dom.setAttribute(
-				"data-mention-tooltip",
-				lang.t(MENTION_TOOLTIP_KEY),
-			);
+			setMentionDomAttributes(dom, this.getTextContent());
 		}
 		return shouldReplace;
 	}
@@ -232,7 +242,7 @@ function normalizeTextContent(value = "") {
 function normalizeMarkdown(value = "", type = "textarea") {
 	const normalized = normalizeTextContent(value).replace(/\r\n?/g, "\n");
 
-	if (type !== "textarea") {
+	if (!isTextareaType(type)) {
 		return normalized.replace(/\n+/g, " ").trim();
 	}
 
@@ -268,7 +278,7 @@ function $loadMarkdownValue(markdownValue, type = "textarea") {
 	const root = $getRoot();
 	root.clear();
 
-	if (type !== "textarea") {
+	if (!isTextareaType(type)) {
 		const paragraph = $createParagraphNode();
 		const text = normalizeTextContent(markdownValue)
 			.replace(/\r\n?/g, "\n")
@@ -288,7 +298,7 @@ function $loadMarkdownValue(markdownValue, type = "textarea") {
 }
 
 function $readMarkdownValue(type = "textarea") {
-	if (type !== "textarea") {
+	if (!isTextareaType(type)) {
 		return normalizeMarkdown($getRoot().getTextContent(), type);
 	}
 
@@ -356,7 +366,10 @@ function $insertMentionAtSelection(name) {
 	}
 	if (!mentionName || !$isRangeSelection(selection)) return;
 
-	selection.insertNodes([$createMentionNode(mentionName), $createTextNode(" ")]);
+	selection.insertNodes([
+		$createMentionNode(mentionName),
+		$createTextNode(" "),
+	]);
 }
 
 function $insertTabAtSelection() {
@@ -394,7 +407,7 @@ function createInitialConfig({ isDisabled, markdownValue, type }) {
 		editable: !isDisabled,
 		editorState: () => $loadMarkdownValue(markdownValue, type),
 		namespace: EDITOR_NAMESPACE,
-		nodes: [HeadingNode, QuoteNode, ListNode, ListItemNode, MentionNode],
+		nodes: EDITOR_NODES,
 		onError(error) {
 			console.error("Lexical EditableField error:", error);
 		},
@@ -471,6 +484,25 @@ function MarkdownChangePlugin({ lastEventRef, lastValueRef, onChange, type }) {
 	return <OnChangePlugin ignoreSelectionChange onChange={handleChange} />;
 }
 
+function EditablePlaceholder({ placeholder }) {
+	if (!placeholder) return null;
+	return <div className="MarkdownView__placeholder">{placeholder}</div>;
+}
+
+function EditorContentPlugin({ editableNode, placeholder, type }) {
+	const pluginProps = {
+		contentEditable: editableNode,
+		placeholder: <EditablePlaceholder placeholder={placeholder} />,
+		ErrorBoundary: LexicalErrorBoundary,
+	};
+
+	return isTextareaType(type) ? (
+		<RichTextPlugin {...pluginProps} />
+	) : (
+		<PlainTextPlugin {...pluginProps} />
+	);
+}
+
 function useCommandHandlers({ dispatch, isDisabled, onKeyDown, type }) {
 	const [editor] = useLexicalComposerContext();
 
@@ -492,7 +524,9 @@ function useCommandHandlers({ dispatch, isDisabled, onKeyDown, type }) {
 
 				const selection = $getSelection();
 				if ($isRangeSelection(selection) && !selection.isCollapsed()) {
-					selectedText = normalizeTextContent(selection.getTextContent()).trim();
+					selectedText = normalizeTextContent(
+						selection.getTextContent(),
+					).trim();
 					if (selectedText) {
 						$insertMentionAtSelection(selectedText);
 						handledExistingMention = true;
@@ -524,47 +558,56 @@ function useCommandHandlers({ dispatch, isDisabled, onKeyDown, type }) {
 				return;
 			}
 
-			if (type !== "textarea" && event.key === "Enter") {
+			if (!isTextareaType(type) && event.key === "Enter") {
 				event.preventDefault();
 				editor.blur();
 				return;
 			}
 
-			if (type !== "textarea" && (event.ctrlKey || event.metaKey)) {
+			if (!isTextareaType(type) && (event.ctrlKey || event.metaKey)) {
 				onKeyDown?.(event);
 				return;
 			}
 
-			if (type === "textarea" && key === "tab") {
+			if (isTextareaType(type) && key === "tab") {
 				event.preventDefault();
 				editor.update(() => $insertTabAtSelection());
 				return;
 			}
 
-			if (type === "textarea" && isShortcutCode(event, BOLD_SHORTCUT_CODES)) {
+			if (isTextareaType(type) && isShortcutCode(event, BOLD_SHORTCUT_CODES)) {
 				event.preventDefault();
 				editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold");
 				return;
 			}
 
-			if (type === "textarea" && isShortcutCode(event, ITALIC_SHORTCUT_CODES)) {
+			if (
+				isTextareaType(type) &&
+				isShortcutCode(event, ITALIC_SHORTCUT_CODES)
+			) {
 				event.preventDefault();
 				editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic");
 				return;
 			}
 
-			if (type === "textarea" && isShortcutCode(event, MENTION_SHORTCUT_CODES)) {
+			if (
+				isTextareaType(type) &&
+				isShortcutCode(event, MENTION_SHORTCUT_CODES)
+			) {
 				handleMentionShortcut(event);
 				return;
 			}
 
-			if (type === "textarea" && isShortcutCode(event, LIST_SHORTCUT_CODES)) {
+			if (isTextareaType(type) && isShortcutCode(event, LIST_SHORTCUT_CODES)) {
 				event.preventDefault();
 				editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined);
 				return;
 			}
 
-			if (type === "textarea" && isShortcutCode(event, OUTDENT_SHORTCUT_CODES)) {
+			if (
+				isTextareaType(type) &&
+				isShortcutCode(event, OUTDENT_SHORTCUT_CODES)
+			) {
 				event.preventDefault();
 				if (!editor.dispatchCommand(REMOVE_LIST_COMMAND, undefined)) {
 					editor.dispatchCommand(OUTDENT_CONTENT_COMMAND, undefined);
@@ -573,7 +616,7 @@ function useCommandHandlers({ dispatch, isDisabled, onKeyDown, type }) {
 			}
 
 			if (
-				type === "textarea" &&
+				isTextareaType(type) &&
 				(event.ctrlKey || event.metaKey) &&
 				key >= "1" &&
 				key <= "6"
@@ -583,7 +626,7 @@ function useCommandHandlers({ dispatch, isDisabled, onKeyDown, type }) {
 				return;
 			}
 
-			if (type === "textarea" && isShortcutCode(event, QUOTE_SHORTCUT_CODES)) {
+			if (isTextareaType(type) && isShortcutCode(event, QUOTE_SHORTCUT_CODES)) {
 				event.preventDefault();
 				editor.update(() => $toggleQuote());
 				return;
@@ -604,8 +647,6 @@ function useCommandHandlers({ dispatch, isDisabled, onKeyDown, type }) {
 			COMMAND_PRIORITY_HIGH,
 		);
 	}, [editor, handleKeyDown]);
-
-	return { handleKeyDown };
 }
 
 function LexicalEditableField({
@@ -722,16 +763,12 @@ function LexicalEditableField({
 
 	const editableNode = (
 		<ContentEditable
-			className={classNames(
-				"MarkdownView",
-				"MarkdownView__editable",
-				{
-					MarkdownView__active: isActive,
-					MarkdownView__disabled: isDisabled,
-				},
-			)}
+			className={classNames("MarkdownView", "MarkdownView__editable", {
+				MarkdownView__active: isActive,
+				MarkdownView__disabled: isDisabled,
+			})}
 			role="textbox"
-			aria-multiline={type === "textarea"}
+			aria-multiline={isTextareaType(type)}
 			aria-placeholder={placeholder}
 			data-placeholder={placeholder}
 			tabIndex={isDisabled ? -1 : 0}
@@ -749,27 +786,11 @@ function LexicalEditableField({
 
 	return (
 		<>
-			{type === "textarea" ? (
-				<RichTextPlugin
-					contentEditable={editableNode}
-					placeholder={
-						placeholder ? (
-							<div className="MarkdownView__placeholder">{placeholder}</div>
-						) : null
-					}
-					ErrorBoundary={LexicalErrorBoundary}
-				/>
-			) : (
-				<PlainTextPlugin
-					contentEditable={editableNode}
-					placeholder={
-						placeholder ? (
-							<div className="MarkdownView__placeholder">{placeholder}</div>
-						) : null
-					}
-					ErrorBoundary={LexicalErrorBoundary}
-				/>
-			)}
+			<EditorContentPlugin
+				editableNode={editableNode}
+				placeholder={placeholder}
+				type={type}
+			/>
 			<HistoryPlugin />
 			<MarkdownValuePlugin
 				isActive={isActive}
@@ -784,7 +805,7 @@ function LexicalEditableField({
 				type={type}
 			/>
 			<EditableStatePlugin isDisabled={isDisabled} />
-			{type === "textarea" && (
+			{isTextareaType(type) && (
 				<>
 					<ListPlugin />
 					<MarkdownShortcutPlugin transformers={MARKDOWN_TRANSFORMERS} />
@@ -828,6 +849,7 @@ export default function EditableField({
 	});
 	const editorRef = useRef(null);
 	const lastEventRef = useRef(null);
+	const copyTimeoutRef = useRef(null);
 	const markdownValue = value || value === 0 ? String(value) : "";
 	const normalizedMarkdownValue = normalizeMarkdown(markdownValue, type);
 	const lastValueRef = useRef(normalizedMarkdownValue);
@@ -845,39 +867,58 @@ export default function EditableField({
 	);
 
 	const editorKey = `${EDITOR_NAMESPACE}:${EDITOR_MODULE_VERSION}:${type}`;
-	const initialConfig = createInitialConfig({
-		isDisabled,
-		markdownValue: normalizedMarkdownValue,
-		type,
-	});
+	const initialConfig = useMemo(
+		() =>
+			createInitialConfig({
+				isDisabled,
+				markdownValue: normalizedMarkdownValue,
+				type,
+			}),
+		[isDisabled, normalizedMarkdownValue, type],
+	);
 
-	const handleCopy = async (event) => {
-		event.preventDefault();
-		event.stopPropagation();
+	useEffect(() => {
+		return () => {
+			if (copyTimeoutRef.current) {
+				clearTimeout(copyTimeoutRef.current);
+			}
+		};
+	}, []);
 
-		const editor = editorRef.current;
-		if (!editor || !normalizedMarkdownValue) return;
+	const handleCopy = useCallback(
+		async (event) => {
+			event.preventDefault();
+			event.stopPropagation();
 
-		try {
-			let html = "";
-			editor.getEditorState().read(() => {
-				html = $generateHtmlFromNodes(editor);
-			});
+			const editor = editorRef.current;
+			if (!editor || !normalizedMarkdownValue) return;
 
-			await navigator.clipboard.write([
-				new ClipboardItem({
-					"text/html": new Blob([html], { type: "text/html" }),
-					"text/plain": new Blob([normalizedMarkdownValue], {
-						type: "text/plain",
+			try {
+				let html = "";
+				editor.getEditorState().read(() => {
+					html = $generateHtmlFromNodes(editor);
+				});
+
+				await navigator.clipboard.write([
+					new ClipboardItem({
+						"text/html": new Blob([html], { type: "text/html" }),
+						"text/plain": new Blob([normalizedMarkdownValue], {
+							type: "text/plain",
+						}),
 					}),
-				}),
-			]);
-			setCopied(true);
-			setTimeout(() => setCopied(false), 2000);
-		} catch (error) {
-			console.error("Failed to copy formatted text:", error);
-		}
-	};
+				]);
+				setCopied(true);
+				if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+				copyTimeoutRef.current = setTimeout(() => {
+					setCopied(false);
+					copyTimeoutRef.current = null;
+				}, 2000);
+			} catch (error) {
+				console.error("Failed to copy formatted text:", error);
+			}
+		},
+		[normalizedMarkdownValue],
+	);
 
 	const handleFocus = useCallback(
 		(event) => {
@@ -925,9 +966,9 @@ export default function EditableField({
 		);
 	}, []);
 
-	const stopContainerEvent = (event) => {
+	const stopContainerEvent = useCallback((event) => {
 		event.stopPropagation();
-	};
+	}, []);
 
 	return (
 		<div
@@ -981,10 +1022,7 @@ export default function EditableField({
 					</LexicalComposer>
 				</div>
 			</Tooltip>
-			<EntityModal
-				modalState={modalState}
-				onClose={handleCloseMentionModal}
-			/>
+			<EntityModal modalState={modalState} onClose={handleCloseMentionModal} />
 		</div>
 	);
 }
