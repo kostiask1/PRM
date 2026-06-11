@@ -574,6 +574,7 @@
 
 @media (max-width: 767px) {
 	.EncounterView .Panel__header {
+		align-items: flex-start;
 		padding: var(--space-2);
 	}
 

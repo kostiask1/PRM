@@ -493,6 +493,19 @@
 }
 
 @media (max-width: 767px) {
+	.SessionView>.Panel__header {
+		gap: var(--space-2);
+		padding: var(--space-2);
+	}
+
+	.SessionView>.Panel__body {
+		padding: var(--space-2);
+	}
+
+	.SessionView__todoList {
+		gap: var(--space-3);
+	}
+
 	.SessionView__titleRow,
 	.SceneCard__header,
 	.SceneCard__notes_headerRow {
@@ -504,18 +517,61 @@
 		gap: var(--space-2);
 	}
 
+	.SessionView__titleGroup {
+		gap: var(--space-2);
+	}
+
+	.SessionView__titleRow h2 {
+		font-size: clamp(1.35rem, 8vw, 2rem);
+		line-height: 1.05;
+	}
+
+	.TodoSection {
+		border-radius: var(--radius-lg);
+	}
+
+	.TodoSection__header {
+		align-items: flex-start;
+		gap: var(--space-2);
+		padding: var(--space-2);
+		border-radius: var(--radius-lg);
+	}
+
+	.TodoSection__header h3 {
+		font-size: 0.98rem;
+		line-height: 1.15;
+	}
+
+	.TodoSection__titleGroup .Button {
+		min-width: 36px;
+		width: 36px;
+		min-height: 36px;
+		height: 36px;
+		padding: 0;
+	}
+
+	.TodoSection__body {
+		padding: var(--space-2);
+	}
+
 	.SessionView__headerActions,
 	.SessionView__sectionActions,
 	.SceneCard__headerActions {
 		width: 100%;
-		flex-wrap: wrap;
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		justify-content: flex-start;
+		padding-bottom: var(--space-1);
+		scrollbar-width: thin;
 	}
 
 	.SessionView__headerActions .Button,
 	.SessionView__sectionActions .Button,
 	.SceneCard__headerActions .Button {
-		flex: 1 1 140px;
-		min-height: 44px;
+		flex: 0 0 auto;
+		min-height: 40px;
+		font-size: 0.82rem;
+		padding-inline: var(--space-2);
 	}
 
 	.SessionView>.Panel__header .SessionView__headerActions {
@@ -527,6 +583,21 @@
 
 	.SessionView>.Panel__header .SessionView__headerActions .Button {
 		flex: 0 0 auto;
+	}
+
+	.SessionView__mobileIconOnly {
+		width: 40px;
+		min-width: 40px;
+		padding-inline: 0 !important;
+	}
+
+	.SessionView__mobileIconOnly>span {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		white-space: nowrap;
 	}
 
 	.SceneCard__headerActions .Button__danger {

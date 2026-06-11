@@ -437,12 +437,14 @@ function SessionView() {
 										campaignSlug={view.campaignSlug}
 										entityType="npc"
 										buttonLabel={lang.t("New session NPC")}
+										buttonClassName="SessionView__mobileIconOnly"
 										onCreate={view.handleCreateSessionNpc}
 									/>
 									<Button
 										variant="ghost"
 										size={Button.SIZES.SMALL}
 										icon="import"
+										className="SessionView__mobileIconOnly"
 										onClick={() => view.openCampaignScopeImport("npc")}
 									>
 										{lang.t("Move from campaign")}
@@ -515,12 +517,14 @@ function SessionView() {
 										buttonVariant="primary"
 										campaignSlug={view.campaignSlug}
 										buttonLabel={lang.t("New session location/faction")}
+										buttonClassName="SessionView__mobileIconOnly"
 										onCreate={view.handleCreateSessionLocation}
 									/>
 									<Button
 										variant="ghost"
 										size={Button.SIZES.SMALL}
 										icon="import"
+										className="SessionView__mobileIconOnly"
 										onClick={() => view.openCampaignScopeImport("locations")}
 									>
 										{lang.t("Move from campaign")}
@@ -598,6 +602,7 @@ function SessionView() {
 										onClick={view.addScene}
 										icon="plus"
 										iconSize={16}
+										className="SessionView__mobileIconOnly"
 									>
 										{lang.t("Add")}
 									</Button>

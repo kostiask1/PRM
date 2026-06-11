@@ -136,6 +136,17 @@
 	align-items: center;
 	gap: var(--space-3);
 	flex-wrap: wrap;
+	position: relative;
+}
+
+.CampaignView__headerActionsToggle {
+	display: none !important;
+}
+
+.CampaignView__headerActionsMenu {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
 }
 
 .CampaignView__section {
@@ -233,6 +244,12 @@
 	.CampaignView__sectionActions {
 		justify-content: flex-start;
 	}
+
+	.CampaignView__headerActions,
+	.CampaignView__sectionActions,
+	.CampaignView__notesViewToggle {
+		max-width: 100%;
+	}
 }
 
 @media (max-width: 767px) {
@@ -262,14 +279,68 @@
 		padding-bottom: var(--space-6);
 	}
 
-	.CampaignView__headerActions .Button,
-	.CampaignView__sectionActions .Button {
-		flex: 1 1 150px;
-		min-height: 44px;
+	.CampaignView__headerActions,
+	.CampaignView__sectionActions {
+		width: 100%;
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		justify-content: flex-start;
+		padding-bottom: var(--space-1);
+		scrollbar-width: thin;
 	}
 
-	.CampaignView__sectionActions {
-		flex-wrap: nowrap;
+	.CampaignView__headerActions {
+		gap: var(--space-2);
+		overflow-x: visible;
+	}
+
+	.CampaignView__headerActionsToggle {
+		display: inline-flex !important;
+	}
+
+	.CampaignView__headerActionsMenu {
+		position: absolute;
+		top: calc(100% + var(--space-1));
+		right: 0;
+		z-index: 20;
+		display: none;
+		flex-direction: column;
+		align-items: stretch;
+		min-width: min(280px, calc(100vw - var(--space-6)));
+		padding: var(--space-2);
+		border: 1px solid color-mix(in srgb, var(--border), transparent 35%);
+		border-radius: var(--radius-md);
+		background: var(--panel);
+		box-shadow: var(--shadow);
+	}
+
+	.CampaignView__headerActions.is_open .CampaignView__headerActionsMenu {
+		display: flex;
+	}
+
+	.CampaignView__headerActions .Button,
+	.CampaignView__sectionActions .Button,
+	.CampaignView__notesViewToggle .Button {
+		flex: 0 0 auto;
+		min-height: 40px;
+	}
+
+	.CampaignView__headerActions .Button {
+		font-size: 0.82rem;
+		padding-inline: var(--space-2);
+	}
+
+	.CampaignView__headerActionsMenu .Button {
+		width: 100%;
+		justify-content: flex-start;
+		padding-inline: var(--space-3);
+	}
+
+	.CampaignView__headerActions > .Button:not(:has(span)),
+	.CampaignView__headerActions > .Button__danger {
+		min-width: 44px;
+		width: 44px;
+		padding-inline: 0;
 	}
 
 	.CampaignView__notes,
@@ -313,4 +384,26 @@
 	background: var(--panel);
 	padding: var(--space-2) 0;
 	z-index: 1;
+}
+
+@media (max-width: 767px) {
+	.section_row {
+		align-items: flex-start;
+		flex-wrap: wrap;
+		gap: var(--space-2);
+	}
+
+	.section_title_group {
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+
+	.CampaignView__notesViewToggle {
+		width: 100%;
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		justify-content: flex-start;
+		padding-bottom: var(--space-1);
+		scrollbar-width: thin;
+	}
 }

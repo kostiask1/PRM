@@ -35,6 +35,6 @@
 @media (max-width: 767px) {
 	.Panel {
 		margin: 0;
-		max-height: calc(100dvh - var(--size-9) - var(--space-8, 40px));
+		max-height: calc(100dvh - var(--size-8) - var(--space-5));
 	}
 }
