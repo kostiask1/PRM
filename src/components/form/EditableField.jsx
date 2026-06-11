@@ -94,14 +94,6 @@ const MENTION_SHORTCUT_CODES = new Set(["KeyK"]);
 const LIST_SHORTCUT_CODES = new Set(["BracketRight"]);
 const OUTDENT_SHORTCUT_CODES = new Set(["BracketLeft"]);
 const QUOTE_SHORTCUT_CODES = new Set(["KeyQ"]);
-const EDITOR_NODES = [
-	HeadingNode,
-	QuoteNode,
-	ListNode,
-	ListItemNode,
-	MentionNode,
-];
-
 const EDITABLE_FIELD_THEME = {
 	heading: {
 		h1: "MarkdownView__heading MarkdownView__heading_h1",
@@ -187,6 +179,14 @@ class MentionNode extends TextNode {
 		return true;
 	}
 }
+
+const EDITOR_NODES = [
+	HeadingNode,
+	QuoteNode,
+	ListNode,
+	ListItemNode,
+	MentionNode,
+];
 
 function $createMentionNode(name = "") {
 	return $applyNodeReplacement(new MentionNode(String(name).trim())).setMode(
