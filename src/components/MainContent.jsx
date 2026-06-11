@@ -8,11 +8,12 @@ import AiAssistantPanel from "./ai/AiAssistantPanel";
 import { Outlet, Route, Routes, useLocation } from "react-router";
 import { useAppSelector } from "../store/appStore";
 import { lang } from "../services/localization";
+import classNames from "../utils/classNames";
 import "../assets/components/MainContent.css";
 
-function EmptyState() {
+function EmptyState({ className = "" }) {
 	return (
-		<main className="MainContent">
+		<main className={classNames("MainContent", className)}>
 			<section className="MainContent__emptyState Panel">
 				<h2>{lang.t("Choose a campaign or create a new one")}</h2>
 				<p>{lang.t("The campaign menu is on the left.")}</p>
@@ -22,7 +23,7 @@ function EmptyState() {
 	);
 }
 
-function MainContentLayout({ showAiAssistant = false }) {
+function MainContentLayout({ className = "", showAiAssistant = false }) {
 	const location = useLocation();
 	const { activeSessionFileName, activeEncounterId } = useAppSelector(
 		(state) => state.navigation,
@@ -34,7 +35,7 @@ function MainContentLayout({ showAiAssistant = false }) {
 	].join(":");
 
 	return (
-		<main className="MainContent">
+		<main className={classNames("MainContent", className)}>
 			<Outlet />
 			{showAiAssistant && <AiAssistantPanel key={aiAssistantRouteKey} />}
 		</main>
@@ -70,11 +71,15 @@ function SpellsRoute() {
 	return <Spells />;
 }
 
-export default function MainContent() {
+export default function MainContent({ className = "" }) {
 	return (
 		<Routes>
-			<Route path="/" element={<EmptyState />} />
-			<Route element={<MainContentLayout showAiAssistant />}>
+			<Route path="/" element={<EmptyState className={className} />} />
+			<Route
+				element={
+					<MainContentLayout className={className} showAiAssistant />
+				}
+			>
 				<Route path="/campaign/:slug" element={<CampaignRoute />} />
 				<Route
 					path="/campaign/:slug/session/:fileName"
