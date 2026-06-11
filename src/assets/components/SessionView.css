@@ -423,8 +423,64 @@
 }
 
 @media (max-width: 1024px) {
+	.SessionView>.Panel__header {
+		align-items: stretch;
+		flex-direction: column;
+		gap: var(--space-3);
+	}
+
+	.SessionView__header {
+		width: 100%;
+	}
+
 	.SessionView__titleGroup {
 		gap: var(--space-3);
+		width: 100%;
+	}
+
+	.SessionView__encountersQuickAccess {
+		display: grid;
+		width: 100%;
+		gap: var(--space-2);
+		padding: var(--space-2);
+		border: 1px solid color-mix(in srgb, var(--border), transparent 35%);
+		border-radius: var(--radius-md);
+		background: color-mix(in srgb, var(--bg), transparent 35%);
+	}
+
+	.SessionView__encountersList {
+		width: 100%;
+		display: flex;
+		flex-wrap: nowrap;
+		gap: var(--space-2);
+		overflow-x: auto;
+		overflow-y: hidden;
+		padding-bottom: var(--space-1);
+		overscroll-behavior-x: contain;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	.SessionView__encountersList .Button {
+		flex: 0 0 auto;
+		min-width: 150px;
+		max-width: 240px;
+		min-height: 44px;
+		white-space: normal;
+	}
+
+	.SessionView__encountersList .Button>span {
+		display: -webkit-box;
+		overflow: hidden;
+		line-clamp: 2;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		line-height: 1.15;
+		text-align: center;
+	}
+
+	.SessionView>.Panel__header .SessionView__headerActions {
+		width: 100%;
+		justify-content: flex-start;
 	}
 
 	.SceneCard__content {
@@ -462,6 +518,17 @@
 		min-height: 44px;
 	}
 
+	.SessionView>.Panel__header .SessionView__headerActions {
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		padding-bottom: var(--space-1);
+		overscroll-behavior-x: contain;
+	}
+
+	.SessionView>.Panel__header .SessionView__headerActions .Button {
+		flex: 0 0 auto;
+	}
+
 	.SceneCard__headerActions .Button__danger {
 		width: 44px;
 		min-width: 44px;
@@ -470,6 +537,19 @@
 	.SessionView__encountersQuickAccess,
 	.SessionView__encountersList {
 		width: 100%;
+	}
+
+	.SessionView__encountersQuickAccess {
+		padding: var(--space-2);
+	}
+
+	.SessionView__encountersLabel {
+		font-size: 0.74rem;
+	}
+
+	.SessionView__encountersList .Button {
+		min-width: min(72vw, 180px);
+		max-width: min(78vw, 220px);
 	}
 
 	.SceneCard__titleGroup,
