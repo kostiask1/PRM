@@ -29,6 +29,8 @@ const DB_IMPORT_STRATEGIES = [
 export default function Sidebar({
 	campaigns,
 	activeCampaignId,
+	isMobileOpen = false,
+	onClose,
 	onSelectCampaign,
 	onCreateCampaign,
 	onToggleCampaignStatus,
@@ -90,6 +92,7 @@ export default function Sidebar({
 	};
 
 	const handleOpenImportDb = () => {
+		onClose?.();
 		openModalRequest({
 			title: lang.t("Import data"),
 			type: "confirm",
@@ -122,10 +125,12 @@ export default function Sidebar({
 	};
 
 	const handleOpenRulesReference = () => {
+		onClose?.();
 		openRulesReferenceModal();
 	};
 
 	const handleOpenPlayerQuestions = () => {
+		onClose?.();
 		openModalRequest({
 			title: lang.t("Player questions"),
 			type: "confirm",
@@ -136,6 +141,7 @@ export default function Sidebar({
 	};
 
 	const handleOpenSettings = () => {
+		onClose?.();
 		dispatch(() => {
 			openModalRequest({
 				title: lang.t("Settings"),
@@ -154,10 +160,15 @@ export default function Sidebar({
 		onSelectCampaign(shouldClearSession ? "" : campaignSlug);
 	};
 
+	const handleOpenGallery = () => {
+		onClose?.();
+		setIsGalleryOpen(true);
+	};
+
 	return (
 		<>
 			<aside
-				className={`Sidebar App__sidebar${isSidebarHovered ? " Sidebar__hovered" : ""}`}
+				className={`Sidebar App__sidebar${isSidebarHovered || isMobileOpen ? " Sidebar__hovered" : ""}${isMobileOpen ? " Sidebar__mobile_open" : ""}`}
 				onMouseEnter={() => setIsSidebarHovered(true)}
 				onMouseLeave={() => setIsSidebarHovered(false)}
 			>
@@ -187,7 +198,7 @@ export default function Sidebar({
 						className="Sidebar__link"
 						onClick={(e) => {
 							e.preventDefault();
-							setIsGalleryOpen(true);
+							handleOpenGallery();
 						}}
 					>
 						<Icon name="image" />
@@ -232,7 +243,7 @@ export default function Sidebar({
 					</a>
 				</div>
 
-				<div className="Sidebar__section">
+				<div className="Sidebar__section Sidebar__section__campaigns">
 					<div className="Sidebar__headerSection">
 						<h2 className="Sidebar__sectionTitle">
 							<span>{lang.t("Campaigns")}</span>

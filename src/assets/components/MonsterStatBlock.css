@@ -433,3 +433,78 @@
 	font-size: 0.8rem;
 	line-height: 1.3;
 }
+
+@media (max-width: 1024px) {
+	.MonsterStatBlock {
+		padding: var(--space-3);
+	}
+
+	.MonsterStatBlock__header {
+		gap: var(--space-4);
+	}
+
+	.MonsterStatBlock__token_wrapper {
+		width: 200px;
+		height: 200px;
+	}
+
+	.MonsterStatBlock__stats__wrap {
+		flex-direction: column;
+	}
+}
+
+@media (max-width: 767px) {
+	.MonsterStatBlock {
+		height: auto;
+		overflow-y: visible;
+		padding: var(--space-3);
+	}
+
+	.MonsterStatBlock__header {
+		align-items: center;
+		flex-direction: column;
+		gap: var(--space-3);
+	}
+
+	.MonsterStatBlock__header__details {
+		gap: var(--space-3);
+	}
+
+	.MonsterStatBlock__token_wrapper {
+		width: min(64vw, 180px);
+		height: min(64vw, 180px);
+	}
+
+	.MonsterStatBlock__token_wrapper:hover .MonsterStatBlock__token,
+	.EncounterView__gridItem .MonsterStatBlock__token_wrapper:hover .MonsterStatBlock__token {
+		transform: none;
+	}
+
+	.MonsterStatBlock__name__row {
+		gap: var(--space-2);
+	}
+
+	.MonsterStatBlock__name {
+		font-size: 1.65rem;
+		overflow-wrap: anywhere;
+	}
+
+	.MonsterStatBlock__abilities,
+	.MonsterStatBlock__grid .MonsterStatBlock__abilities {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: var(--space-2);
+	}
+
+	.MonsterStatBlock__action_rolls {
+		flex-wrap: wrap;
+		gap: var(--space-2);
+	}
+
+	.MonsterStatBlock__favorite_btn,
+	.MonsterStatBlock__ai_btn,
+	.MonsterStatBlock__edit_btn,
+	.MonsterStatBlock__delete_btn,
+	.MonsterStatBlock__add_to_encounter_btn {
+		min-height: 44px;
+	}
+}

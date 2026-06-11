@@ -485,3 +485,79 @@
 		padding-top: var(--space-1);
 	}
 }
+
+@media (max-width: 767px) {
+	.Sidebar {
+		width: min(86vw, var(--sidebar-expanded));
+		max-width: 320px;
+		height: 100dvh;
+		padding: calc(var(--space-3) + var(--size-9)) var(--space-3)
+			var(--space-3);
+		align-items: stretch;
+		transform: translateX(-105%);
+		transition:
+			transform 0.18s ease,
+			box-shadow 0.18s ease;
+		z-index: 1200;
+		box-shadow: unset!important;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	.Sidebar.Sidebar__hovered,
+	.Sidebar.Sidebar__select_open,
+	.Sidebar.Sidebar__mobile_open {
+		max-width: unset;
+		width: 100%;
+		padding: calc(var(--space-3) + var(--size-9)) var(--space-3)
+			var(--space-3);
+		align-items: stretch;
+	}
+
+	.Sidebar.Sidebar__mobile_open {
+		transform: translateX(0);
+	}
+
+	.Sidebar__link,
+	.Sidebar .Button__create,
+	.Sidebar .Button__footer,
+	.Sidebar__resource_item,
+	.ListCard__sidebar_content {
+		min-height: 44px;
+	}
+
+	.Sidebar__header,
+	.Sidebar__links,
+	.Sidebar__footer {
+		flex: 0 0 auto;
+	}
+
+	.Sidebar__section__campaigns {
+		flex: 0 0 auto;
+		min-height: 0;
+		overflow: visible;
+	}
+
+	.Sidebar__section__campaigns .Sidebar__list {
+		flex: 0 0 auto;
+		overflow: visible;
+		padding-bottom: var(--space-2);
+	}
+
+	.Sidebar__section__resources {
+		flex: 0 0 auto;
+		max-height: none;
+		min-height: 0;
+		margin-top: 0;
+		overflow: visible;
+	}
+
+	.Sidebar__resource_list {
+		padding: 0;
+	}
+
+	.Sidebar__footerGrid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}

@@ -35,6 +35,18 @@ const SCHOOL_MAP = {
 	V: "Evocation",
 };
 
+function isMobileViewport() {
+	return (
+		typeof window !== "undefined" &&
+		window.matchMedia("(max-width: 767px)").matches
+	);
+}
+
+function getFallbackScrollParent() {
+	if (typeof window === "undefined") return null;
+	return window;
+}
+
 function spellMatchesUrl(spell, name, source) {
 	return (
 		spell?.name === name &&
@@ -100,6 +112,8 @@ export default function Spells({
 	const [selectedSpell, setSelectedSpell] = useState(null);
 	const [sortOrder, setSortOrder] = useState("none"); // 'none', 'asc', 'desc'
 	const listRef = useRef(null);
+	const listContainerRef = useRef(null);
+	const detailRef = useRef(null);
 	const selectedSpellRef = useRef(null);
 	const hasScrolledToInitialSpellRef = useRef(false);
 	const embeddedScrolledSpellRef = useRef("");
@@ -388,6 +402,35 @@ export default function Spells({
 		});
 	};
 
+	const scrollListIntoView = () => {
+		listContainerRef.current?.scrollIntoView({
+			behavior: "smooth",
+			block: "start",
+		});
+	};
+
+	const selectSpell = (spell) => {
+		setSelectedSpell(spell);
+		if (!spell?.name || !isMobileViewport()) return;
+
+		requestAnimationFrame(() => {
+			detailRef.current?.scrollIntoView({
+				behavior: "smooth",
+				block: "start",
+			});
+		});
+	};
+
+	useEffect(() => {
+		if (!selectedSpell?.name || !isMobileViewport()) return undefined;
+		const selectedIndex = getSpellListIndex(displayedSpells, selectedSpell);
+		if (selectedIndex < 0) return undefined;
+		const frameId = requestAnimationFrame(() => {
+			listRef.current?.scrollTo(selectedIndex);
+		});
+		return () => cancelAnimationFrame(frameId);
+	}, [displayedSpells, selectedSpell]);
+
 	const renderSpellItem = (index) => {
 		const spell = displayedSpells[index];
 		if (!spell) return null;
@@ -404,7 +447,7 @@ export default function Spells({
 			>
 				<ListCard
 					active={isSelected}
-					onClick={() => setSelectedSpell(isSelected ? "" : spell)}
+					onClick={() => selectSpell(isSelected ? "" : spell)}
 				>
 					<div className="ListCard__title">
 						{highlightText(
@@ -520,19 +563,38 @@ export default function Spells({
 				)}
 			</div>
 			<div className="Spells__content">
-				<div className="Spells__list">
+				<div className="Spells__list" ref={listContainerRef}>
 					<ReactList
 						ref={listRef}
 						itemRenderer={renderSpellItem}
 						length={displayedSpells.length}
+						scrollParentGetter={() =>
+							listContainerRef.current || getFallbackScrollParent()
+						}
+						scrollParentViewportSizeGetter={() =>
+							listContainerRef.current?.clientHeight ||
+							getFallbackScrollParent()?.innerHeight ||
+							0
+						}
 						type="uniform"
 					/>
 				</div>
 				{loading && <div className="muted">{lang.t("Updating spells...")}</div>}
 
-				<div className="Spells__detail">
+				<div className="Spells__detail" ref={detailRef}>
 					{selectedSpell ? (
 						<>
+							<div className="Spells__mobileDetailHeader">
+								<div className="Spells__mobileDetailTitle">
+									<span>{lang.t("Selected element")}</span>
+									<strong>
+										{capitalizeWords(selectedSpell.name.split("|")[0])}
+									</strong>
+								</div>
+								<Button variant="ghost" icon="back" onClick={scrollListIntoView}>
+									{lang.t("Back")}
+								</Button>
+							</div>
 							{onSelectSpell && (
 								<div className="Spells__select_actions">
 									<Button

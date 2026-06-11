@@ -87,3 +87,10 @@
 .ProjectGuide__hotkeys li {
 	line-height: 1.45;
 }
+
+@media (max-width: 767px) {
+	.ProjectGuide__layout {
+		display: flex;
+		flex-direction: column;
+	}
+}

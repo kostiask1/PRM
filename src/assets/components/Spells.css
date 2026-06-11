@@ -108,3 +108,117 @@
 	justify-content: flex-end;
 	margin-bottom: var(--space-3);
 }
+
+.Spells__mobileDetailHeader {
+	display: none;
+}
+
+@media (max-width: 1024px) {
+	.Spells__search {
+		align-items: stretch;
+	}
+
+	.Spells__source_select,
+	.Spells__level_select,
+	.Spells__class_select,
+	.Spells__school_select {
+		flex: 1 1 180px;
+		width: auto;
+		min-width: 0;
+	}
+
+	.Spells__searchInput {
+		flex: 1 1 320px;
+		min-width: 0;
+	}
+}
+
+@media (max-width: 767px) {
+	.Spells__body {
+		gap: var(--space-3);
+		height: auto;
+		min-height: 0;
+	}
+
+	.Spells__content {
+		flex-direction: column;
+		gap: var(--space-3);
+		min-height: 0;
+	}
+
+	.Spells__source_select,
+	.Spells__level_select,
+	.Spells__class_select,
+	.Spells__school_select,
+	.Spells__searchInput {
+		flex-basis: 100%;
+	}
+
+	.Spells__sort_btn,
+	.Spells__detailed_search_btn {
+		min-height: 44px;
+	}
+
+	.Spells__list {
+		width: 100%;
+		height: min(360px, 36dvh);
+		min-height: 220px;
+		padding-right: 0;
+		overflow-y: auto;
+		scroll-margin-top: calc(var(--size-9) + var(--space-4));
+		flex: 0 0 auto;
+	}
+
+	.Spells__detail {
+		width: 100%;
+		flex: 0 0 auto;
+		overflow: visible;
+		padding: var(--space-3);
+		scroll-margin-top: calc(var(--size-9) + var(--space-4));
+	}
+
+	.Spells__mobileDetailHeader {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: var(--space-2);
+		margin-bottom: var(--space-3);
+		padding-bottom: var(--space-2);
+		border-bottom: 1px solid color-mix(in srgb, var(--border), transparent 35%);
+	}
+
+	.Spells__mobileDetailTitle {
+		display: grid;
+		gap: 2px;
+		min-width: 0;
+	}
+
+	.Spells__mobileDetailTitle span {
+		color: var(--muted);
+		font-size: 0.72rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+	}
+
+	.Spells__mobileDetailTitle strong {
+		color: var(--text-bright);
+		overflow-wrap: anywhere;
+	}
+
+	.Spells__mobileDetailHeader .Button {
+		flex: 0 0 auto;
+		min-height: 44px;
+	}
+
+	.Spells__select_actions {
+		position: static;
+		justify-content: stretch;
+		margin-bottom: var(--space-3);
+	}
+
+	.Spells__select_actions .Button {
+		width: 100%;
+		min-height: 44px;
+	}
+}

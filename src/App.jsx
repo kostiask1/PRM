@@ -6,6 +6,7 @@ import MainContent from "./components/MainContent";
 import MessageBox from "./components/common/MessageBox";
 import Modal from "./components/common/Modal";
 import CampaignEntityModalProvider from "./components/common/CampaignEntityModalProvider";
+import Icon from "./components/common/Icon";
 import Sidebar from "./components/Sidebar";
 import MentionPickerModalContent from "./components/modals/MentionPickerModalContent";
 import CreateCampaignModalContent from "./components/modals/CreateCampaignModalContent";
@@ -38,6 +39,7 @@ export default function App() {
 	const location = useLocation();
 	const routerNavigate = useNavigate();
 	const [isCTRLPressed, setCTRLPressed] = useState(false);
+	const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 	const modalState = useAppSelector((store) => store.modal);
 	const mentionPickerRequest = useAppSelector(
 		(store) => store.mentionPickerRequest,
@@ -146,6 +148,34 @@ export default function App() {
 	useEffect(() => {
 		syncNavigationFromPath(location.pathname);
 	}, [location.pathname]);
+
+	useEffect(() => {
+		setMobileSidebarOpen(false);
+	}, [location.pathname]);
+
+	useEffect(() => {
+		document.body.classList.toggle(
+			"is-mobile-sidebar-open",
+			isMobileSidebarOpen,
+		);
+
+		return () => {
+			document.body.classList.remove("is-mobile-sidebar-open");
+		};
+	}, [isMobileSidebarOpen]);
+
+	useEffect(() => {
+		if (!isMobileSidebarOpen) return;
+
+		const handleKeyDown = (event) => {
+			if (event.key === "Escape") {
+				setMobileSidebarOpen(false);
+			}
+		};
+
+		document.addEventListener("keydown", handleKeyDown);
+		return () => document.removeEventListener("keydown", handleKeyDown);
+	}, [isMobileSidebarOpen]);
 
 	useEffect(() => {
 		loadCampaigns();
@@ -360,14 +390,41 @@ export default function App() {
 	return (
 		<div className="App" data-lang={currentLanguage}>
 			<CampaignEntityModalProvider campaignSlug={activeCampaignSlug}>
+				<button
+					type="button"
+					className="App__mobileNavButton"
+					aria-label={
+						isMobileSidebarOpen
+							? lang.t("Close navigation")
+							: lang.t("Open navigation")
+					}
+					aria-expanded={isMobileSidebarOpen}
+					onClick={() => setMobileSidebarOpen((isOpen) => !isOpen)}
+				>
+					<Icon name={isMobileSidebarOpen ? "x" : "menu"} size={22} />
+				</button>
+				{isMobileSidebarOpen && (
+					<button
+						type="button"
+						className="App__sidebarBackdrop"
+						aria-label={lang.t("Close navigation")}
+						onClick={() => setMobileSidebarOpen(false)}
+					/>
+				)}
 				<Sidebar
 					className="App__sidebar"
 					campaigns={campaigns}
 					activeCampaignId={activeCampaignSlug}
-					onSelectCampaign={(slug) =>
-						navigateTo(slug, null, false, null, isCTRLPressed)
-					}
-					onCreateCampaign={openCreateCampaignModal}
+					isMobileOpen={isMobileSidebarOpen}
+					onClose={() => setMobileSidebarOpen(false)}
+					onSelectCampaign={(slug) => {
+						setMobileSidebarOpen(false);
+						navigateTo(slug, null, false, null, isCTRLPressed);
+					}}
+					onCreateCampaign={() => {
+						setMobileSidebarOpen(false);
+						openCreateCampaignModal();
+					}}
 					onToggleCampaignStatus={handleToggleCampaignStatus}
 				/>
 				<MainContent className="App__main" />

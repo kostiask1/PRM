@@ -218,6 +218,79 @@
 	user-select: auto;
 }
 
+@media (max-width: 1024px) {
+	.CampaignView__layout {
+		grid-template-columns: 220px minmax(0, 1fr);
+		gap: var(--space-3);
+	}
+
+	.CampaignView__header {
+		align-items: flex-start;
+		gap: var(--space-3);
+		flex-direction: column;
+	}
+
+	.CampaignView__sectionActions {
+		justify-content: flex-start;
+	}
+}
+
+@media (max-width: 767px) {
+	.CampaignView__layout {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.CampaignView__sessionsPane {
+		position: static;
+		max-height: 46dvh;
+	}
+
+	.CampaignView__sessionsPaneList {
+		max-height: 32dvh;
+	}
+
+	.CampaignView__sessionCard {
+		grid-template-columns: minmax(0, 1fr) 44px;
+	}
+
+	.CampaignView__sessionDelete.Button {
+		min-width: 44px;
+		min-height: 44px;
+	}
+
+	.CampaignView__contentPanel {
+		padding-bottom: var(--space-6);
+	}
+
+	.CampaignView__headerActions .Button,
+	.CampaignView__sectionActions .Button {
+		flex: 1 1 150px;
+		min-height: 44px;
+	}
+
+	.CampaignView__sectionActions {
+		flex-wrap: nowrap;
+	}
+
+	.CampaignView__notes,
+	.CampaignView__characters,
+	.CampaignView__locations {
+		gap: var(--space-2);
+	}
+
+	.CampaignView__notes>div,
+	.CampaignView__characters>div,
+	.CampaignView__locations>div {
+		flex-basis: 100%;
+	}
+
+	.CampaignView__script,
+	.CampaignView__script.Input,
+	.CampaignView__script .MarkdownView {
+		min-height: 160px;
+	}
+}
+
 .CampaignView__locations {
 	display: flex;
 	flex-wrap: wrap;

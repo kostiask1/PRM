@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import ReactList from "react-list";
 import Button from "../form/Button";
 import Icon from "../common/Icon";
@@ -17,6 +18,18 @@ import { lang } from "../../services/localization";
 
 function getMonsterItemKey(monster) {
 	return `${monster.source || ""}:${monster.name}`;
+}
+
+function isMobileViewport() {
+	return (
+		typeof window !== "undefined" &&
+		window.matchMedia("(max-width: 767px)").matches
+	);
+}
+
+function getFallbackScrollParent() {
+	if (typeof window === "undefined") return null;
+	return window;
 }
 
 function isCustomSource(source) {
@@ -198,6 +211,43 @@ export default function BestiaryContent({
 	sources,
 	toggleSort,
 }) {
+	const listContainerRef = useRef(null);
+	const detailRef = useRef(null);
+
+	const scrollListIntoView = () => {
+		listContainerRef.current?.scrollIntoView({
+			behavior: "smooth",
+			block: "start",
+		});
+	};
+
+	const handleSelectMonster = (monster) => {
+		setSelectedMonster(monster);
+		if (!monster?.name || !isMobileViewport()) return;
+
+		requestAnimationFrame(() => {
+			detailRef.current?.scrollIntoView({
+				behavior: "smooth",
+				block: "start",
+			});
+		});
+	};
+
+	useEffect(() => {
+		if (!selectedMonster?.name || !isMobileViewport()) return undefined;
+		const selectedIndex = displayedMonsters.findIndex(
+			(monster) =>
+				monster?.name === selectedMonster.name &&
+				monster?.source === selectedMonster.source,
+		);
+		if (selectedIndex < 0) return undefined;
+
+		const frameId = requestAnimationFrame(() => {
+			listRef.current?.scrollTo(selectedIndex);
+		});
+		return () => cancelAnimationFrame(frameId);
+	}, [displayedMonsters, listRef, selectedMonster]);
+
 	const renderMonsterItem = (index) => (
 		<MonsterListItem
 			key={displayedMonsters[index].name + displayedMonsters[index].source}
@@ -207,7 +257,7 @@ export default function BestiaryContent({
 			onAiEdit={onAiEditCustomMonster}
 			onDelete={onDeleteCustomMonster}
 			onEdit={onEditMonster}
-			onSelect={setSelectedMonster}
+			onSelect={handleSelectMonster}
 			onToggleFavorite={onToggleFavorite}
 			search={searchHighlight}
 			selectedMonster={selectedMonster}
@@ -284,17 +334,34 @@ export default function BestiaryContent({
 						Bestiary__content__stacked: isEmbedded,
 					})}
 				>
-					<div className="Bestiary__list">
+					<div className="Bestiary__list" ref={listContainerRef}>
 						<ReactList
 							ref={listRef}
 							itemRenderer={renderMonsterItem}
 							length={displayedMonsters.length}
+							scrollParentGetter={() =>
+								listContainerRef.current || getFallbackScrollParent()
+							}
+							scrollParentViewportSizeGetter={() =>
+								listContainerRef.current?.clientHeight ||
+								getFallbackScrollParent()?.innerHeight ||
+								0
+							}
 							type="uniform"
 						/>
 					</div>
 
 					{selectedMonster && (
-						<div className="Bestiary__detail_container">
+						<div className="Bestiary__detail_container" ref={detailRef}>
+							<div className="Bestiary__mobileDetailHeader">
+								<div className="Bestiary__mobileDetailTitle">
+									<span>{lang.t("Selected element")}</span>
+									<strong>{selectedMonster.name}</strong>
+								</div>
+								<Button variant="ghost" icon="back" onClick={scrollListIntoView}>
+									{lang.t("Back")}
+								</Button>
+							</div>
 							<MonsterStatBlock
 								monster={selectedMonster}
 								favoriteActive={isFavoriteMonster(favorites, selectedMonster)}

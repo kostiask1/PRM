@@ -307,3 +307,146 @@
 .Bestiary__list .ListCard__actions .Button:hover {
 	background: color-mix(in srgb, var(--accent), transparent 80%);
 }
+
+.Bestiary__mobileDetailHeader {
+	display: none;
+}
+
+@media (max-width: 1024px) {
+	.Bestiary>.Panel__header {
+		align-items: flex-start;
+		flex-wrap: wrap;
+	}
+
+	.Bestiary__header_actions {
+		flex-wrap: wrap;
+	}
+
+	.Bestiary__search {
+		flex-wrap: wrap;
+		gap: var(--space-2);
+		margin-bottom: var(--space-3);
+	}
+
+	.Bestiary__source_select {
+		flex: 1 1 180px;
+		width: auto;
+	}
+
+	.Bestiary__searchInput {
+		flex: 1 1 320px;
+		min-width: 0;
+	}
+
+	.Bestiary__list {
+		width: 280px;
+	}
+}
+
+@media (max-width: 767px) {
+	.Bestiary,
+	.Bestiary__inner,
+	.Bestiary__inner>.Panel__body {
+		height: auto;
+		min-height: 0;
+	}
+
+	.Bestiary .Panel__body {
+		overflow-y: auto;
+	}
+
+	.Bestiary__header_actions,
+	.Bestiary__search {
+		width: 100%;
+	}
+
+	.Bestiary__header_actions .Button,
+	.Bestiary__sort_btn {
+		flex: 1 1 140px;
+		min-height: 44px;
+	}
+
+	.Bestiary__source_select,
+	.Bestiary__searchInput {
+		flex-basis: 100%;
+	}
+
+	.Bestiary__detailed_search_btn {
+		width: 44px;
+		height: 44px;
+	}
+
+	.Bestiary__content {
+		flex-direction: column;
+		height: auto;
+	}
+
+	.Bestiary__list {
+		width: 100%;
+		height: min(360px, 34dvh);
+		min-height: 220px;
+		padding-right: 0;
+		overflow-y: auto;
+		scroll-margin-top: calc(var(--size-9) + var(--space-4));
+		flex: 0 0 auto;
+	}
+
+	.Bestiary__detail_container {
+		width: 100%;
+		flex: 0 0 auto;
+		min-height: auto;
+		overflow: visible;
+		scroll-margin-top: calc(var(--size-9) + var(--space-4));
+	}
+
+	.Bestiary__mobileDetailHeader {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: var(--space-2);
+		margin-bottom: var(--space-3);
+		padding: var(--space-3);
+		border: 1px solid color-mix(in srgb, var(--border), transparent 35%);
+		border-radius: var(--radius-md);
+		background: color-mix(in srgb, var(--bg), transparent 20%);
+	}
+
+	.Bestiary__mobileDetailTitle {
+		display: grid;
+		gap: 2px;
+		min-width: 0;
+	}
+
+	.Bestiary__mobileDetailTitle span {
+		color: var(--muted);
+		font-size: 0.72rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+	}
+
+	.Bestiary__mobileDetailTitle strong {
+		color: var(--text-bright);
+		overflow-wrap: anywhere;
+	}
+
+	.Bestiary__mobileDetailHeader .Button {
+		flex: 0 0 auto;
+		min-height: 44px;
+	}
+
+	.Bestiary .ListCard {
+		min-height: 65px;
+	}
+
+	.Bestiary__edit_actions,
+	.Bestiary__ai_action_buttons {
+		flex-wrap: wrap;
+	}
+
+	.Bestiary__edit_actions .Button,
+	.Bestiary__ai_action_buttons .Button {
+		flex: 1 1 140px;
+		min-height: 44px;
+	}
+}

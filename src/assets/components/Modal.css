@@ -204,3 +204,67 @@
 	flex-wrap: wrap;
 	gap: var(--space-1);
 }
+
+@media (max-width: 767px) {
+	.Modal__overlay {
+		align-items: stretch;
+		padding: 0;
+	}
+
+	.Modal__card,
+	.Modal__card__custom,
+	.Modal__card__character,
+	.MentionPickerModal {
+		width: 100vw;
+		min-width: 0;
+		max-width: 100vw;
+		height: 100dvh;
+		max-height: 100dvh;
+		border-radius: 0;
+		border-left: 0;
+		border-right: 0;
+	}
+
+	.Modal__header {
+		padding: var(--space-3);
+		gap: var(--space-3);
+	}
+
+	.Modal__header h3 {
+		min-width: 0;
+		font-size: 1rem;
+		overflow-wrap: anywhere;
+	}
+
+	.Modal__close {
+		min-width: 44px;
+		min-height: 44px;
+	}
+
+	.Modal__body {
+		padding: var(--space-3);
+	}
+
+	.Modal__footer {
+		padding: var(--space-3);
+		flex-wrap: wrap;
+	}
+
+	.Modal__footer .Button {
+		flex: 1 1 140px;
+		min-height: 44px;
+	}
+
+	.MentionPicker__columns {
+		grid-template-columns: minmax(0, 1fr);
+		max-height: none;
+	}
+
+	.CreateCampaignModal__actions {
+		flex-wrap: wrap;
+	}
+
+	.CreateCampaignModal__actions .Button {
+		flex: 1 1 140px;
+	}
+}

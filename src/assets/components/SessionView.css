@@ -421,3 +421,99 @@
 	max-height: 100%;
 	object-fit: contain;
 }
+
+@media (max-width: 1024px) {
+	.SessionView__titleGroup {
+		gap: var(--space-3);
+	}
+
+	.SceneCard__content {
+		gap: var(--space-2);
+	}
+
+	.SceneCard__image_side {
+		margin-top: var(--space-4);
+	}
+}
+
+@media (max-width: 767px) {
+	.SessionView__titleRow,
+	.SceneCard__header,
+	.SceneCard__notes_headerRow {
+		align-items: flex-start;
+		flex-direction: column;
+	}
+
+	.SessionView__titleRow {
+		gap: var(--space-2);
+	}
+
+	.SessionView__headerActions,
+	.SessionView__sectionActions,
+	.SceneCard__headerActions {
+		width: 100%;
+		flex-wrap: wrap;
+	}
+
+	.SessionView__headerActions .Button,
+	.SessionView__sectionActions .Button,
+	.SceneCard__headerActions .Button {
+		flex: 1 1 140px;
+		min-height: 44px;
+	}
+
+	.SceneCard__headerActions .Button__danger {
+		width: 44px;
+		min-width: 44px;
+	}
+
+	.SessionView__encountersQuickAccess,
+	.SessionView__encountersList {
+		width: 100%;
+	}
+
+	.SceneCard__titleGroup,
+	.SceneCard__title {
+		min-width: 0;
+		max-width: 100%;
+		overflow-wrap: anywhere;
+	}
+
+	.SceneCard__content,
+	.SceneCard__grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.SceneCard__image_side {
+		margin-top: 0;
+	}
+
+	.SessionView__notes>div,
+	.SessionView__characters>div,
+	.SessionView__locations>div {
+		flex-basis: 100%;
+	}
+
+	.SessionView__scopeImportList {
+		min-width: 0;
+		width: 100%;
+	}
+
+	.SessionView__scopeImportItem {
+		align-items: flex-start;
+		flex-direction: column;
+	}
+
+	.SessionView__checklistToggle {
+		top: auto;
+		right: var(--space-3);
+		bottom: var(--space-3);
+		z-index: 900;
+	}
+
+	.SceneImageModal {
+		width: 100vw;
+		max-width: 100vw;
+		height: 100dvh;
+	}
+}
