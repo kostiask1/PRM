@@ -1172,9 +1172,13 @@ export default function useCampaignView(props) {
 	useEffect(() => {
 		const handleKeyDown = (e) => {
 			const isMod = e.ctrlKey || e.metaKey;
-			const key = e.key.toLowerCase();
+			const isInput =
+				e.target.tagName === "INPUT" ||
+				e.target.tagName === "TEXTAREA" ||
+				e.target.isContentEditable;
+			if (isInput) return;
 
-			if (isMod && key === "z") {
+			if (isMod && e.code === "KeyZ") {
 				if (e.shiftKey) {
 					e.preventDefault();
 					handleRedo();
@@ -1182,7 +1186,7 @@ export default function useCampaignView(props) {
 					e.preventDefault();
 					handleUndo();
 				}
-			} else if (isMod && key === "y") {
+			} else if (isMod && e.code === "KeyY") {
 				e.preventDefault();
 				handleRedo();
 			}

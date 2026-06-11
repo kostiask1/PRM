@@ -345,9 +345,8 @@ export default function useSessionView() {
 			}
 
 			const isMod = e.ctrlKey || e.metaKey;
-			const key = e.key.toLowerCase();
 
-			if (isMod && (key === "z" || key === "я")) {
+			if (isMod && e.code === "KeyZ") {
 				if (e.shiftKey) {
 					e.preventDefault();
 					handleRedo();
@@ -355,7 +354,7 @@ export default function useSessionView() {
 					e.preventDefault();
 					handleUndo();
 				}
-			} else if (isMod && (key === "y" || key === "н")) {
+			} else if (isMod && e.code === "KeyY") {
 				e.preventDefault();
 				handleRedo();
 			}

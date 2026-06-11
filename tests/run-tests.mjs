@@ -29,6 +29,7 @@ import {
 	createEmptyNote as createModelEmptyNote,
 	getNotesForRender,
 	isNoteEmpty,
+	isVirtualNoteId,
 	sanitizeNotesForSave,
 	upsertNoteById,
 } from "../src/utils/noteUtils.js";
@@ -214,6 +215,8 @@ await run("noteUtils renders virtual notes and sanitizes saved notes", () => {
 	const regularRender = getNotesForRender(withTitleOnly);
 	assert.equal(regularRender.length, 2);
 	assert.equal(regularRender[1]._isVirtual, true);
+	assert.equal(isVirtualNoteId(regularRender[1].id), true);
+	assert.equal(getNotesForRender(withTitleOnly)[1].id, regularRender[1].id);
 
 	const simplifiedRender = getNotesForRender(withTitleOnly, {
 		simplifiedNotes: true,
@@ -224,6 +227,13 @@ await run("noteUtils renders virtual notes and sanitizes saved notes", () => {
 	assert.deepEqual(updated, [
 		{ id: "new", title: "", text: "Body", collapsed: false },
 	]);
+
+	const materialized = upsertNoteById([], regularRender[1].id, {
+		text: "[Mention]",
+	});
+	assert.equal(materialized.length, 1);
+	assert.equal(isVirtualNoteId(materialized[0].id), false);
+	assert.equal(materialized[0].text, "[Mention]");
 
 	const sanitized = sanitizeNotesForSave([
 		{ id: "empty", title: "", text: "", collapsed: false, _isVirtual: true },
@@ -2726,9 +2736,10 @@ await run(
 		assert.match(editableFieldSource, /anchorElement=\{tooltipAnchor\}/);
 		assert.equal(editableFieldSource.includes("replace(/\\n{3,}/g"), false);
 		assert.equal(editableFieldSource.includes('paragraph.push("")'), false);
-		assert.match(editableFieldSource, /return "<p><br><\/p>";/);
-		assert.match(editableFieldSource, /contentEditable=\{!isDisabled\}/);
-		assert.match(editableFieldSource, /editorToMarkdown/);
+		assert.match(editableFieldSource, /LexicalComposer/);
+		assert.match(editableFieldSource, /MarkdownShortcutPlugin/);
+		assert.match(editableFieldSource, /\$readMarkdownValue/);
+		assert.match(editableFieldSource, /MentionNode extends TextNode/);
 		assert.equal(editableFieldSource.includes("mention.title ="), false);
 		assert.equal(editableFieldSource.includes("title={typeof title"), false);
 		assert.equal(

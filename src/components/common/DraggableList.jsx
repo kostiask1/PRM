@@ -16,7 +16,7 @@ export default function DraggableList({
 	onReorder,
 	onDrop,
 	renderItem,
-	keyExtractor,
+	keyExtractor = (item, index) => item?.id ?? index,
 	className = "",
 	itemClassName = "",
 	dragData,
@@ -164,7 +164,8 @@ export default function DraggableList({
 	const haveSameItemOrder = (left = [], right = []) => {
 		if (left.length !== right.length) return false;
 		return left.every(
-			(item, index) => keyExtractor(item) === keyExtractor(right[index]),
+			(item, index) =>
+				keyExtractor(item, index) === keyExtractor(right[index], index),
 		);
 	};
 
@@ -414,7 +415,7 @@ export default function DraggableList({
 			>
 				{displayItems.map((item, index) => (
 					<div
-						key={keyExtractor(item)}
+						key={keyExtractor(item, index)}
 						data-draggable-list-item="true"
 						data-draggable-list-item-index={index}
 						data-draggable-list-item-draggable={canDragItem(item, index)}

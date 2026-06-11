@@ -6,6 +6,59 @@ import {
 	useRef,
 	useState,
 } from "react";
+import { $generateHtmlFromNodes } from "@lexical/html";
+import {
+	$convertFromMarkdownString,
+	$convertToMarkdownString,
+	BOLD_STAR,
+	BOLD_UNDERSCORE,
+	HEADING,
+	ITALIC_STAR,
+	ITALIC_UNDERSCORE,
+	ORDERED_LIST,
+	QUOTE,
+	UNORDERED_LIST,
+} from "@lexical/markdown";
+import { ContentEditable } from "@lexical/react/LexicalContentEditable";
+import { LexicalComposer } from "@lexical/react/LexicalComposer";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
+import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
+import { ListPlugin } from "@lexical/react/LexicalListPlugin";
+import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
+import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
+import { PlainTextPlugin } from "@lexical/react/LexicalPlainTextPlugin";
+import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
+import {
+	$createParagraphNode,
+	$createTabNode,
+	$createTextNode,
+	$getRoot,
+	$getSelection,
+	$isRangeSelection,
+	$isTextNode,
+	$applyNodeReplacement,
+	COMMAND_PRIORITY_HIGH,
+	FORMAT_TEXT_COMMAND,
+	KEY_DOWN_COMMAND,
+	OUTDENT_CONTENT_COMMAND,
+	TextNode,
+} from "lexical";
+import {
+	$createHeadingNode,
+	$createQuoteNode,
+	$isHeadingNode,
+	$isQuoteNode,
+	HeadingNode,
+	QuoteNode,
+} from "@lexical/rich-text";
+import {
+	INSERT_UNORDERED_LIST_COMMAND,
+	ListItemNode,
+	ListNode,
+	REMOVE_LIST_COMMAND,
+} from "@lexical/list";
+import { $setBlocksType } from "@lexical/selection";
 import Button from "./Button";
 import "../../assets/components/EditableField.css";
 import classNames from "../../utils/classNames";
@@ -24,167 +77,150 @@ import { openEntityLinkModal } from "../common/entityLinkModalUtils";
 const MENTION_CLASS = "mention_link EditableField__mention";
 const MENTION_TOOLTIP_KEY = "Ctrl+click to open entity";
 const TAB_CLASS = "EditableField__tab";
-const INSERTION_MARKER_CLASS = "EditableField__insertionMarker";
-const CARET_ANCHOR_CLASS = "EditableField__caretAnchor";
+const EDITOR_NAMESPACE = "EditableField";
+const EXTERNAL_UPDATE_TAG = "editable-field:external";
+const EDITOR_MODULE_VERSION = (() => {
+	if (!import.meta.hot) return "static";
 
-function escapeHtml(value = "") {
-	return String(value)
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
-		.replace(/"/g, "&quot;")
-		.replace(/'/g, "&#39;");
-}
+	const data = import.meta.hot.data;
+	data.editableFieldVersion = (data.editableFieldVersion || 0) + 1;
+	return String(data.editableFieldVersion);
+})();
+const BOLD_SHORTCUT_CODES = new Set(["KeyB"]);
+const ITALIC_SHORTCUT_CODES = new Set(["KeyI"]);
+const MENTION_SHORTCUT_CODES = new Set(["KeyK"]);
+const LIST_SHORTCUT_CODES = new Set(["BracketRight"]);
+const OUTDENT_SHORTCUT_CODES = new Set(["BracketLeft"]);
+const QUOTE_SHORTCUT_CODES = new Set(["KeyQ"]);
 
-function escapeAttribute(value = "") {
-	return escapeHtml(value).replace(/`/g, "&#96;");
-}
+const EDITABLE_FIELD_THEME = {
+	heading: {
+		h1: "MarkdownView__heading MarkdownView__heading_h1",
+		h2: "MarkdownView__heading MarkdownView__heading_h2",
+		h3: "MarkdownView__heading MarkdownView__heading_h3",
+		h4: "MarkdownView__heading MarkdownView__heading_h4",
+		h5: "MarkdownView__heading MarkdownView__heading_h5",
+		h6: "MarkdownView__heading MarkdownView__heading_h6",
+	},
+	list: {
+		listitem: "MarkdownView__list_item",
+		nested: {
+			listitem: "MarkdownView__nested_list_item",
+		},
+		ol: "MarkdownView__ordered_list",
+		ul: "MarkdownView__unordered_list",
+	},
+	quote: "MarkdownView__quote",
+	tab: TAB_CLASS,
+	text: {
+		bold: "MarkdownView__bold",
+		italic: "MarkdownView__italic",
+	},
+};
 
-function renderText(value = "") {
-	return escapeHtml(value)
-		.replace(
-			/\t/g,
-			`<span class="${TAB_CLASS}" data-tab="true" contenteditable="false">&nbsp;</span>`,
-		)
-		.replace(/\r?\n/g, "<br>");
-}
-
-function renderMention(name) {
-	const safeName = String(name || "").trim();
-	if (!safeName) return "";
-
-	return `<span class="${MENTION_CLASS}" data-mention="${escapeAttribute(
-		safeName,
-	)}" data-mention-tooltip="${escapeAttribute(
-		lang.t(MENTION_TOOLTIP_KEY),
-	)}" contenteditable="false">${escapeHtml(safeName)}</span>`;
-}
-
-function withLeadingCaretAnchor(html = "") {
-	if (!html.startsWith(`<span class="${MENTION_CLASS}"`)) return html;
-
-	return `<span class="${CARET_ANCHOR_CLASS}" data-caret-anchor="true">\u200B</span>${html}`;
-}
-
-function renderBlankLine() {
-	return "<p><br></p>";
-}
-
-function renderInlineMarkdown(markdown = "") {
-	const source = String(markdown || "");
-	const tokenRegex =
-		/(\[[^\]\n]+\])|(\*\*([^*\n]+)\*\*)|(__([^_\n]+)__)|(\*([^*\n]+)\*)|(_([^_\n]+)_)/g;
-	let html = "";
-	let lastIndex = 0;
-	let match;
-
-	while ((match = tokenRegex.exec(source)) !== null) {
-		html += renderText(source.slice(lastIndex, match.index));
-
-		if (match[1]) {
-			html += renderMention(match[1].slice(1, -1));
-		} else if (match[3] || match[5]) {
-			html += `<strong>${renderInlineMarkdown(match[3] || match[5])}</strong>`;
-		} else if (match[7] || match[9]) {
-			html += `<em>${renderInlineMarkdown(match[7] || match[9])}</em>`;
-		}
-
-		lastIndex = match.index + match[0].length;
+class MentionNode extends TextNode {
+	static getType() {
+		return "mention";
 	}
 
-	html += renderText(source.slice(lastIndex));
-	return html;
-}
-
-function markdownToHtml(markdown = "", type = "text") {
-	const source = String(markdown ?? "").replace(/\r\n?/g, "\n");
-
-	if (type !== "textarea") {
-		return renderText(source.replace(/\n+/g, " "));
+	static clone(node) {
+		return new MentionNode(node.__text, node.__key);
 	}
 
-	if (!source) return "";
+	static importJSON(serializedNode) {
+		return $createMentionNode(serializedNode.text)
+			.updateFromJSON(serializedNode)
+			.setMode("token");
+	}
 
-	const lines = source.split("\n");
-	const html = [];
-	let paragraph = [];
+	createDOM(config) {
+		const element = super.createDOM(config);
+		element.className = `${element.className} ${MENTION_CLASS}`.trim();
+		element.dataset.mention = this.getTextContent();
+		element.setAttribute(
+			"data-mention-tooltip",
+			lang.t(MENTION_TOOLTIP_KEY),
+		);
+		element.spellcheck = false;
+		return element;
+	}
 
-	const flushParagraph = () => {
-		if (paragraph.length === 0) return;
-		if (!paragraph.some((line) => line.trim() || line.includes("\t"))) {
-			paragraph = [];
-			return;
-		}
-		html.push(`<p>${renderInlineMarkdown(paragraph.join("\n"))}</p>`);
-		paragraph = [];
-	};
-
-	for (let i = 0; i < lines.length; i += 1) {
-		const line = lines[i];
-		const headingMatch = line.match(/^(#{1,6})[ \t]+(.+)$/);
-		const unorderedMatch = line.match(/^[ \t]*[-*+][ \t]+(.+)$/);
-		const orderedMatch = line.match(/^[ \t]*\d+\.[ \t]+(.+)$/);
-		const quoteMatch = line.match(/^[ \t]*>[ \t]?(.*)$/);
-
-		if (!line.trim() && !line.includes("\t")) {
-			flushParagraph();
-			html.push(renderBlankLine());
-			continue;
-		}
-
-		if (headingMatch) {
-			flushParagraph();
-			const level = Math.min(headingMatch[1].length, 6);
-			html.push(
-				`<h${level}>${renderInlineMarkdown(headingMatch[2])}</h${level}>`,
+	updateDOM(prevNode, dom, config) {
+		const shouldReplace = super.updateDOM(prevNode, dom, config);
+		if (!shouldReplace) {
+			dom.dataset.mention = this.getTextContent();
+			dom.setAttribute(
+				"data-mention-tooltip",
+				lang.t(MENTION_TOOLTIP_KEY),
 			);
-			continue;
 		}
-
-		if (unorderedMatch || orderedMatch) {
-			flushParagraph();
-			const isOrdered = Boolean(orderedMatch);
-			const tag = isOrdered ? "ol" : "ul";
-			const items = [];
-
-			while (i < lines.length) {
-				const itemMatch = isOrdered
-					? lines[i].match(/^[ \t]*\d+\.[ \t]+(.+)$/)
-					: lines[i].match(/^[ \t]*[-*+][ \t]+(.+)$/);
-				if (!itemMatch) break;
-				items.push(`<li>${renderInlineMarkdown(itemMatch[1])}</li>`);
-				i += 1;
-			}
-
-			i -= 1;
-			html.push(`<${tag}>${items.join("")}</${tag}>`);
-			continue;
-		}
-
-		if (quoteMatch) {
-			flushParagraph();
-			const quoteLines = [];
-
-			while (i < lines.length) {
-				const currentQuote = lines[i].match(/^[ \t]*>[ \t]?(.*)$/);
-				if (!currentQuote) break;
-				quoteLines.push(currentQuote[1]);
-				i += 1;
-			}
-
-			i -= 1;
-			html.push(
-				`<blockquote>${renderInlineMarkdown(quoteLines.join("\n"))}</blockquote>`,
-			);
-			continue;
-		}
-
-		paragraph.push(line);
+		return shouldReplace;
 	}
 
-	flushParagraph();
-	return withLeadingCaretAnchor(html.join(""));
+	exportJSON() {
+		return {
+			...super.exportJSON(),
+			type: "mention",
+			version: 1,
+		};
+	}
+
+	canInsertTextBefore() {
+		return false;
+	}
+
+	canInsertTextAfter() {
+		return false;
+	}
+
+	isTextEntity() {
+		return true;
+	}
 }
+
+function $createMentionNode(name = "") {
+	return $applyNodeReplacement(new MentionNode(String(name).trim())).setMode(
+		"token",
+	);
+}
+
+function $isMentionNode(node) {
+	return node instanceof MentionNode;
+}
+
+const MENTION_TRANSFORMER = {
+	dependencies: [MentionNode],
+	export: (node) => {
+		if (!$isMentionNode(node)) return null;
+		const mentionName = normalizeTextContent(node.getTextContent()).trim();
+		return mentionName ? `[${mentionName}]` : "";
+	},
+	importRegExp: /\[([^\]\n]+)\]/,
+	regExp: /\[([^\]\n]+)\]$/,
+	replace: (textNode, match) => {
+		const mentionName = normalizeTextContent(match[1]).trim();
+		if (!mentionName) return;
+
+		const mentionNode = $createMentionNode(mentionName);
+		mentionNode.setFormat(textNode.getFormat());
+		textNode.replace(mentionNode);
+		return mentionNode;
+	},
+	trigger: "]",
+	type: "text-match",
+};
+
+const MARKDOWN_TRANSFORMERS = [
+	HEADING,
+	QUOTE,
+	UNORDERED_LIST,
+	ORDERED_LIST,
+	BOLD_STAR,
+	BOLD_UNDERSCORE,
+	ITALIC_STAR,
+	ITALIC_UNDERSCORE,
+	MENTION_TRANSFORMER,
+];
 
 function normalizeTextContent(value = "") {
 	return String(value || "")
@@ -207,734 +243,555 @@ function normalizeMarkdown(value = "", type = "textarea") {
 		.replace(/^\n+|\n+$/g, "");
 }
 
-function isBlockElement(node) {
-	if (node?.nodeType !== Node.ELEMENT_NODE) return false;
-	return /^(blockquote|div|h[1-6]|li|ol|p|ul)$/.test(
-		node.tagName.toLowerCase(),
-	);
-}
+function createChangeEvent(sourceEvent, value) {
+	const target = sourceEvent?.target || {};
+	const currentTarget = sourceEvent?.currentTarget || target;
 
-function childrenToMarkdown(node, options = {}) {
-	if (options.inline) {
-		return Array.from(node.childNodes || [])
-			.map((child) => nodeToMarkdown(child, options))
-			.join("");
-	}
-
-	let markdown = "";
-	let previousWasInline = false;
-
-	for (const child of Array.from(node.childNodes || [])) {
-		const childMarkdown = nodeToMarkdown(child, options);
-		if (!childMarkdown) continue;
-
-		const isBlock = isBlockElement(child);
-		if (isBlock && previousWasInline && markdown && !markdown.endsWith("\n")) {
-			markdown += "\n";
-		}
-
-		markdown += childMarkdown;
-		previousWasInline = !isBlock;
-	}
-
-	return markdown;
-}
-
-function blockMarkdown(content = "") {
-	const normalized = normalizeTextContent(content)
-		.split("\n")
-		.map((line) => line.replace(/ +$/g, ""))
-		.join("\n")
-		.replace(/^\n/, "");
-
-	if (!normalized.replace(/\n/g, "").trim()) return "";
-	return normalized.endsWith("\n") ? normalized : `${normalized}\n`;
-}
-
-function headingMarkdown(content = "") {
-	const normalized = normalizeTextContent(content)
-		.split("\n")
-		.map((line) => line.replace(/ +$/g, ""))
-		.join("\n")
-		.trim();
-
-	return normalized ? `${normalized}\n` : "";
-}
-
-function inlineMarkdown(node, options = {}) {
-	return childrenToMarkdown(node, { ...options, inline: true });
-}
-
-function serializeList(listNode, ordered = false) {
-	const items = Array.from(listNode.children || []).filter(
-		(child) => child.tagName?.toLowerCase() === "li",
-	);
-
-	return (
-		items
-			.map((item, index) => {
-				const marker = ordered ? `${index + 1}.` : "-";
-				const content = inlineMarkdown(item)
-					.trim()
-					.replace(/\n{2,}/g, "\n")
-					.split("\n")
-					.map((line, lineIndex) => (lineIndex === 0 ? line : `  ${line}`))
-					.join("\n");
-				return `${marker} ${content}`.trimEnd();
-			})
-			.join("\n") + "\n"
-	);
-}
-
-function getHeaderLevelFromStyle(node) {
-	const attrSize = node.getAttribute?.("size");
-	if (attrSize) {
-		const size = parseInt(attrSize, 10);
-		if (size >= 6) return 1;
-		if (size === 5) return 2;
-		if (size === 4) return 3;
-	}
-
-	const fontSize = node.style?.fontSize;
-	if (!fontSize) return 0;
-
-	const value = parseFloat(fontSize);
-	if (isNaN(value)) return 0;
-
-	const isPt = fontSize.includes("pt");
-	const size = isPt ? value : value * 0.75;
-
-	if (size >= 20) return 1;
-	if (size >= 16) return 2;
-	if (size >= 13) return 3;
-	return 0;
-}
-
-function hasNormalFontWeight(element) {
-	const fontWeight = element.style?.fontWeight;
-	if (!fontWeight) return false;
-
-	const normalized = fontWeight.trim().toLowerCase();
-	if (normalized === "normal" || normalized === "lighter") return true;
-
-	const value = parseInt(normalized, 10);
-	return Number.isFinite(value) && value < 600;
-}
-
-function hasNormalFontStyle(element) {
-	const fontStyle = element.style?.fontStyle;
-	if (!fontStyle) return false;
-
-	return fontStyle.trim().toLowerCase() === "normal";
-}
-
-function nodeToMarkdown(node, options = {}) {
-	if (node.nodeType === Node.TEXT_NODE) {
-		return normalizeTextContent(node.textContent || "");
-	}
-
-	if (node.nodeType !== Node.ELEMENT_NODE) {
-		return "";
-	}
-
-	const element = node;
-	const tagName = element.tagName.toLowerCase();
-	const mentionName = element.dataset?.mention;
-	const childOptions = {
-		...options,
-		suppressBold: options.suppressBold || hasNormalFontWeight(element),
-		suppressItalic: options.suppressItalic || hasNormalFontStyle(element),
+	return {
+		...(sourceEvent || {}),
+		currentTarget: {
+			...currentTarget,
+			value,
+		},
+		target: {
+			...target,
+			value,
+		},
 	};
-
-	if (element.dataset?.insertionMarker === "true") {
-		return "";
-	}
-
-	if (element.dataset?.caretAnchor === "true") {
-		return "";
-	}
-
-	if (element.dataset?.tab === "true") {
-		return "\t";
-	}
-
-	if (mentionName) {
-		return `[${normalizeTextContent(mentionName).trim()}]`;
-	}
-
-	if (tagName === "br") {
-		return "\n";
-	}
-
-	if (tagName === "strong" || tagName === "b") {
-		const content = inlineMarkdown(element, childOptions);
-		if (!normalizeTextContent(content).replace(/\n/g, "").trim()) {
-			return content;
-		}
-		return childOptions.suppressBold ? content : `**${content}**`;
-	}
-
-	if (tagName === "em" || tagName === "i") {
-		const content = inlineMarkdown(element, childOptions);
-		if (!normalizeTextContent(content).replace(/\n/g, "").trim()) {
-			return content;
-		}
-		return childOptions.suppressItalic ? content : `*${content}*`;
-	}
-
-	if (tagName === "a" && element.classList.contains("mention_link")) {
-		return `[${normalizeTextContent(element.textContent || "").trim()}]`;
-	}
-
-	if (tagName === "span" || tagName === "a") {
-		return inlineMarkdown(element, childOptions);
-	}
-
-	if (tagName === "ul" || tagName === "ol") {
-		return serializeList(element, tagName === "ol");
-	}
-
-	if (tagName === "li") {
-		const content = inlineMarkdown(element, childOptions);
-		return options.inline ? content : blockMarkdown(content);
-	}
-
-	const styledHeaderLevel = getHeaderLevelFromStyle(element);
-	if (styledHeaderLevel > 0 && !/^h[1-6]$/.test(tagName)) {
-		const content = inlineMarkdown(element, childOptions).trim();
-		if (!content) return "";
-		return headingMarkdown(`${"#".repeat(styledHeaderLevel)} ${content}`);
-	}
-
-	if (/^h[1-6]$/.test(tagName)) {
-		const level = parseInt(tagName[1], 10);
-		const content = inlineMarkdown(element, childOptions).trim();
-		if (!content) return "";
-		return headingMarkdown(`${"#".repeat(level)} ${content}`);
-	}
-
-	if (tagName === "blockquote") {
-		const quote = normalizeMarkdown(
-			childrenToMarkdown(element, childOptions),
-			"textarea",
-		);
-		return blockMarkdown(
-			quote
-				.split("\n")
-				.map((line) => `> ${line}`)
-				.join("\n"),
-		);
-	}
-
-	if (tagName === "p" || tagName === "div") {
-		const content = inlineMarkdown(element, childOptions);
-		if (
-			!options.inline &&
-			content.includes("\n") &&
-			!normalizeTextContent(content).replace(/\n/g, "").trim()
-		) {
-			return "\n";
-		}
-		return options.inline ? content : blockMarkdown(content);
-	}
-
-	return childrenToMarkdown(element, childOptions);
 }
 
-function editorToMarkdown(editor, type = "text") {
-	if (!editor) return "";
+function isShortcutCode(event, codes) {
+	return Boolean(event.ctrlKey || event.metaKey) && codes.has(event.code);
+}
+
+function $loadMarkdownValue(markdownValue, type = "textarea") {
+	const root = $getRoot();
+	root.clear();
 
 	if (type !== "textarea") {
-		return normalizeMarkdown(editor.textContent || "", type);
+		const paragraph = $createParagraphNode();
+		const text = normalizeTextContent(markdownValue)
+			.replace(/\r\n?/g, "\n")
+			.replace(/\n+/g, " ");
+		if (text) paragraph.append($createTextNode(text));
+		root.append(paragraph);
+		return;
 	}
 
-	return normalizeMarkdown(childrenToMarkdown(editor), type);
-}
-
-function convertHtmlToMarkdown(html) {
-	const parser = new DOMParser();
-	const doc = parser.parseFromString(html, "text/html");
-	return normalizeMarkdown(childrenToMarkdown(doc.body), "textarea");
-}
-
-function createChangeEvent(sourceEvent, value) {
-	return {
-		...sourceEvent,
-		target: {
-			...sourceEvent.target,
-			value,
-		},
-		currentTarget: {
-			...sourceEvent.currentTarget,
-			value,
-		},
-	};
-}
-
-function getSelectionRangeInside(editor) {
-	const selection = window.getSelection?.();
-	if (!selection || selection.rangeCount === 0) return null;
-
-	const range = selection.getRangeAt(0);
-	if (!editor.contains(range.commonAncestorContainer)) return null;
-
-	return range;
-}
-
-function getElementFromNode(node) {
-	if (!node) return null;
-	return node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
-}
-
-function getMentionFromSelection(editor, key = "") {
-	const selection = window.getSelection?.();
-	if (!selection || selection.rangeCount === 0 || !editor) return null;
-
-	const range = selection.getRangeAt(0);
-	if (!editor.contains(range.commonAncestorContainer)) return null;
-
-	const anchorMention = getElementFromNode(selection.anchorNode)?.closest?.(
-		"[data-mention]",
+	$convertFromMarkdownString(
+		normalizeMarkdown(markdownValue, type),
+		MARKDOWN_TRANSFORMERS,
+		undefined,
+		true,
+		false,
 	);
-	if (anchorMention && editor.contains(anchorMention)) return anchorMention;
+}
 
-	const focusMention = getElementFromNode(selection.focusNode)?.closest?.(
-		"[data-mention]",
+function $readMarkdownValue(type = "textarea") {
+	if (type !== "textarea") {
+		return normalizeMarkdown($getRoot().getTextContent(), type);
+	}
+
+	return normalizeMarkdown(
+		$convertToMarkdownString(MARKDOWN_TRANSFORMERS, undefined, true),
+		type,
 	);
-	if (focusMention && editor.contains(focusMention)) return focusMention;
+}
 
-	const mentions = Array.from(editor.querySelectorAll("[data-mention]"));
-	const intersectedMention = mentions.find((mention) => {
-		try {
-			return range.intersectsNode(mention);
-		} catch {
-			return false;
-		}
-	});
-	if (intersectedMention) return intersectedMention;
+function $getSelectedTopLevelElement() {
+	const selection = $getSelection();
+	if (!$isRangeSelection(selection)) return null;
 
-	if (!range.collapsed) return null;
+	const anchorNode = selection.anchor.getNode();
+	return anchorNode.getTopLevelElement?.() || null;
+}
 
-	const container = range.startContainer;
-	const offset = range.startOffset;
-	if (container.nodeType === Node.ELEMENT_NODE) {
-		const child = container.childNodes[offset + (key === "backspace" ? -1 : 0)];
-		return child?.nodeType === Node.ELEMENT_NODE && child.dataset?.mention
-			? child
-			: null;
-	}
+function $getMentionNodeFromSelection() {
+	const selection = $getSelection();
+	if (!$isRangeSelection(selection)) return null;
 
-	if (key === "backspace" && offset === 0) {
-		const prev = container.previousSibling;
-		return prev?.nodeType === Node.ELEMENT_NODE && prev.dataset?.mention
-			? prev
-			: null;
-	}
+	const nodes = selection.getNodes();
+	const selectedMention = nodes.find((node) => $isMentionNode(node));
+	if (selectedMention) return selectedMention;
 
-	if (key === "delete" && offset === (container.textContent || "").length) {
-		const next = container.nextSibling;
-		return next?.nodeType === Node.ELEMENT_NODE && next.dataset?.mention
-			? next
-			: null;
+	const anchorNode = selection.anchor.getNode();
+	if ($isMentionNode(anchorNode)) return anchorNode;
+
+	if ($isTextNode(anchorNode)) {
+		const previousSibling = anchorNode.getPreviousSibling();
+		if ($isMentionNode(previousSibling)) return previousSibling;
+
+		const nextSibling = anchorNode.getNextSibling();
+		if ($isMentionNode(nextSibling)) return nextSibling;
 	}
 
 	return null;
 }
 
-function isRangeInsideEditor(editor, range) {
-	if (!editor || !range) return false;
-	return (
-		editor.contains(range.startContainer) && editor.contains(range.endContainer)
+function $replaceMentionWithText(mentionNode) {
+	const text = normalizeTextContent(mentionNode.getTextContent()).trim();
+	const textNode = $createTextNode(text);
+	mentionNode.replace(textNode);
+	textNode.select(0, text.length);
+}
+
+function $selectEditorEnd() {
+	const root = $getRoot();
+	if (root.getChildrenSize() === 0) {
+		const paragraph = $createParagraphNode();
+		root.append(paragraph);
+		paragraph.selectEnd();
+	} else {
+		root.selectEnd();
+	}
+	return $getSelection();
+}
+
+function $insertMentionAtSelection(name) {
+	const mentionName = normalizeTextContent(name).trim();
+	let selection = $getSelection();
+
+	if (!$isRangeSelection(selection)) {
+		selection = $selectEditorEnd();
+	}
+	if (!mentionName || !$isRangeSelection(selection)) return;
+
+	selection.insertNodes([$createMentionNode(mentionName), $createTextNode(" ")]);
+}
+
+function $insertTabAtSelection() {
+	const selection = $getSelection();
+	if (!$isRangeSelection(selection)) return;
+
+	selection.insertNodes([$createTabNode()]);
+}
+
+function $toggleHeading(tag) {
+	const selection = $getSelection();
+	if (!$isRangeSelection(selection)) return;
+
+	const currentBlock = $getSelectedTopLevelElement();
+	const isSameHeading =
+		$isHeadingNode(currentBlock) && currentBlock.getTag() === tag;
+
+	$setBlocksType(selection, () =>
+		isSameHeading ? $createParagraphNode() : $createHeadingNode(tag),
 	);
 }
 
-function selectRange(range) {
-	const selection = window.getSelection?.();
-	if (!selection || !range) return false;
+function $toggleQuote() {
+	const selection = $getSelection();
+	if (!$isRangeSelection(selection)) return;
 
-	selection.removeAllRanges();
-	selection.addRange(range);
-	return true;
+	const currentBlock = $getSelectedTopLevelElement();
+	$setBlocksType(selection, () =>
+		$isQuoteNode(currentBlock) ? $createParagraphNode() : $createQuoteNode(),
+	);
 }
 
-function getRangeMarkdownOffset(editor, range) {
-	if (!isRangeInsideEditor(editor, range)) return null;
-
-	const beforeRange = range.cloneRange();
-	beforeRange.selectNodeContents(editor);
-	beforeRange.setEnd(range.startContainer, range.startOffset);
-
-	const container = document.createElement("div");
-	container.append(beforeRange.cloneContents());
-	return childrenToMarkdown(container).length;
+function createInitialConfig({ isDisabled, markdownValue, type }) {
+	return {
+		editable: !isDisabled,
+		editorState: () => $loadMarkdownValue(markdownValue, type),
+		namespace: EDITOR_NAMESPACE,
+		nodes: [HeadingNode, QuoteNode, ListNode, ListItemNode, MentionNode],
+		onError(error) {
+			console.error("Lexical EditableField error:", error);
+		},
+		theme: EDITABLE_FIELD_THEME,
+	};
 }
 
-function createRangeFromMarkdownOffset(editor, offset) {
-	if (!Number.isFinite(offset)) return null;
+function EditableStatePlugin({ isDisabled }) {
+	const [editor] = useLexicalComposerContext();
 
-	const range = document.createRange();
-	let remaining = Math.max(0, offset);
-	let fallbackNode = editor;
+	useLayoutEffect(() => {
+		editor.setEditable(!isDisabled);
+	}, [editor, isDisabled]);
 
-	const placeBefore = (node) => {
-		range.setStartBefore(node);
-		range.collapse(true);
-		return range;
-	};
+	return null;
+}
 
-	const placeAfter = (node) => {
-		range.setStartAfter(node);
-		range.collapse(true);
-		fallbackNode = node;
-		return range;
-	};
+function EditorRefPlugin({ editorRef }) {
+	const [editor] = useLexicalComposerContext();
 
-	const walk = (node) => {
-		if (node.nodeType === Node.TEXT_NODE) {
-			const text = normalizeTextContent(node.textContent || "");
-			if (remaining <= text.length) {
-				range.setStart(node, Math.min(remaining, node.textContent.length));
-				range.collapse(true);
-				return range;
+	useLayoutEffect(() => {
+		editorRef.current = editor;
+		return () => {
+			if (editorRef.current === editor) editorRef.current = null;
+		};
+	}, [editor, editorRef]);
+
+	return null;
+}
+
+function MarkdownValuePlugin({ isActive, lastValueRef, markdownValue, type }) {
+	const [editor] = useLexicalComposerContext();
+	const normalizedValue = useMemo(
+		() => normalizeMarkdown(markdownValue, type),
+		[markdownValue, type],
+	);
+
+	useLayoutEffect(() => {
+		if (normalizedValue === lastValueRef.current) return;
+
+		const rootElement = editor.getRootElement();
+		if (isActive && document.activeElement === rootElement) return;
+
+		editor.update(
+			() => {
+				$loadMarkdownValue(normalizedValue, type);
+			},
+			{ tag: EXTERNAL_UPDATE_TAG },
+		);
+		lastValueRef.current = normalizedValue;
+	}, [editor, isActive, lastValueRef, normalizedValue, type]);
+
+	return null;
+}
+
+function MarkdownChangePlugin({ lastEventRef, lastValueRef, onChange, type }) {
+	const handleChange = useCallback(
+		(editorState, editor, tags) => {
+			if (tags.has(EXTERNAL_UPDATE_TAG)) return;
+
+			let nextValue = "";
+			editorState.read(() => {
+				nextValue = $readMarkdownValue(type);
+			});
+
+			if (nextValue === lastValueRef.current) return;
+
+			lastValueRef.current = nextValue;
+			onChange?.(createChangeEvent(lastEventRef.current, nextValue));
+		},
+		[lastEventRef, lastValueRef, onChange, type],
+	);
+
+	return <OnChangePlugin ignoreSelectionChange onChange={handleChange} />;
+}
+
+function useCommandHandlers({ dispatch, isDisabled, onKeyDown, type }) {
+	const [editor] = useLexicalComposerContext();
+
+	const handleMentionShortcut = useCallback(
+		async (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+
+			let handledExistingMention = false;
+			let selectedText = "";
+
+			editor.update(() => {
+				const mentionNode = $getMentionNodeFromSelection();
+				if (mentionNode) {
+					$replaceMentionWithText(mentionNode);
+					handledExistingMention = true;
+					return;
+				}
+
+				const selection = $getSelection();
+				if ($isRangeSelection(selection) && !selection.isCollapsed()) {
+					selectedText = normalizeTextContent(selection.getTextContent()).trim();
+					if (selectedText) {
+						$insertMentionAtSelection(selectedText);
+						handledExistingMention = true;
+					}
+				}
+			});
+
+			if (handledExistingMention) return;
+
+			const result = await requestMentionSelection(dispatch);
+			if (result.status !== "selected" || !result.name) return;
+
+			editor.focus();
+			editor.update(() => {
+				$insertMentionAtSelection(result.name);
+			});
+		},
+		[dispatch, editor],
+	);
+
+	const handleKeyDown = useCallback(
+		(event) => {
+			const key = event.key.toLowerCase();
+
+			event.stopPropagation();
+
+			if (isDisabled) {
+				onKeyDown?.(event);
+				return;
 			}
-			remaining -= text.length;
-			fallbackNode = node;
-			return null;
-		}
 
-		if (node.nodeType !== Node.ELEMENT_NODE) return null;
+			if (type !== "textarea" && event.key === "Enter") {
+				event.preventDefault();
+				editor.blur();
+				return;
+			}
 
-		const element = node;
-		const atomicValue =
-			element.dataset?.tab === "true"
-				? "\t"
-				: element.dataset?.mention
-					? `[${normalizeTextContent(element.dataset.mention).trim()}]`
-					: element.tagName?.toLowerCase() === "br"
-						? "\n"
-						: null;
+			if (type !== "textarea" && (event.ctrlKey || event.metaKey)) {
+				onKeyDown?.(event);
+				return;
+			}
 
-		if (atomicValue !== null) {
-			if (remaining <= 0) return placeBefore(element);
-			if (remaining <= atomicValue.length) return placeAfter(element);
-			remaining -= atomicValue.length;
-			fallbackNode = element;
-			return null;
-		}
+			if (type === "textarea" && key === "tab") {
+				event.preventDefault();
+				editor.update(() => $insertTabAtSelection());
+				return;
+			}
 
-		for (const child of Array.from(element.childNodes || [])) {
-			const found = walk(child);
-			if (found) return found;
-		}
+			if (type === "textarea" && isShortcutCode(event, BOLD_SHORTCUT_CODES)) {
+				event.preventDefault();
+				editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold");
+				return;
+			}
 
-		return null;
-	};
+			if (type === "textarea" && isShortcutCode(event, ITALIC_SHORTCUT_CODES)) {
+				event.preventDefault();
+				editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic");
+				return;
+			}
 
-	const found = walk(editor);
-	if (found) return found;
+			if (type === "textarea" && isShortcutCode(event, MENTION_SHORTCUT_CODES)) {
+				handleMentionShortcut(event);
+				return;
+			}
 
-	if (fallbackNode && fallbackNode !== editor) return placeAfter(fallbackNode);
-	return createEndRange(editor);
+			if (type === "textarea" && isShortcutCode(event, LIST_SHORTCUT_CODES)) {
+				event.preventDefault();
+				editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined);
+				return;
+			}
+
+			if (type === "textarea" && isShortcutCode(event, OUTDENT_SHORTCUT_CODES)) {
+				event.preventDefault();
+				if (!editor.dispatchCommand(REMOVE_LIST_COMMAND, undefined)) {
+					editor.dispatchCommand(OUTDENT_CONTENT_COMMAND, undefined);
+				}
+				return;
+			}
+
+			if (
+				type === "textarea" &&
+				(event.ctrlKey || event.metaKey) &&
+				key >= "1" &&
+				key <= "6"
+			) {
+				event.preventDefault();
+				editor.update(() => $toggleHeading(`h${key}`));
+				return;
+			}
+
+			if (type === "textarea" && isShortcutCode(event, QUOTE_SHORTCUT_CODES)) {
+				event.preventDefault();
+				editor.update(() => $toggleQuote());
+				return;
+			}
+
+			onKeyDown?.(event);
+		},
+		[editor, handleMentionShortcut, isDisabled, onKeyDown, type],
+	);
+
+	useLayoutEffect(() => {
+		return editor.registerCommand(
+			KEY_DOWN_COMMAND,
+			(event) => {
+				handleKeyDown(event);
+				return event.defaultPrevented;
+			},
+			COMMAND_PRIORITY_HIGH,
+		);
+	}, [editor, handleKeyDown]);
+
+	return { handleKeyDown };
 }
 
-function getInsertionRange(
-	editor,
-	preferredRange = null,
-	preferredOffset = null,
-) {
-	if (isRangeInsideEditor(editor, preferredRange)) {
-		return preferredRange.cloneRange();
-	}
+function LexicalEditableField({
+	dispatch,
+	isActive,
+	isDisabled,
+	lastEventRef,
+	lastValueRef,
+	markdownValue,
+	onBlur,
+	onChange,
+	onClick,
+	onFocus,
+	onInput,
+	onKeyDown,
+	onMentionHover,
+	onPaste,
+	openMentionModal,
+	placeholder,
+	type,
+}) {
+	const [editor] = useLexicalComposerContext();
+	useCommandHandlers({
+		dispatch,
+		isDisabled,
+		onKeyDown,
+		type,
+	});
 
-	const offsetRange = createRangeFromMarkdownOffset(editor, preferredOffset);
-	if (offsetRange) return offsetRange;
+	const handleFocus = useCallback(
+		(event) => {
+			event.stopPropagation();
+			onFocus?.(event);
+		},
+		[onFocus],
+	);
 
-	const selectionRange = getSelectionRangeInside(editor);
-	if (selectionRange) return selectionRange.cloneRange();
+	const handleBlur = useCallback(
+		(event) => {
+			event.stopPropagation();
+			onBlur?.(event);
+		},
+		[onBlur],
+	);
 
-	return createEndRange(editor);
-}
+	const handleClick = useCallback(
+		(event) => {
+			const mention = event.target.closest?.("[data-mention]");
+			if (mention && (event.ctrlKey || event.metaKey)) {
+				event.preventDefault();
+				event.stopPropagation();
+				openMentionModal(mention.dataset.mention);
+				return;
+			}
 
-function setCaretAfter(node) {
-	const range = document.createRange();
-	const selection = window.getSelection?.();
-	if (!selection) return;
+			if (event.target.closest?.("a")) {
+				event.preventDefault();
+			}
 
-	range.setStartAfter(node);
-	range.collapse(true);
-	selection.removeAllRanges();
-	selection.addRange(range);
-}
+			event.stopPropagation();
+			onClick?.(event);
+		},
+		[onClick, openMentionModal],
+	);
 
-function setCaretInsideTextNode(node, offset = 0) {
-	const range = document.createRange();
-	range.setStart(node, Math.min(offset, node.length));
-	range.collapse(true);
-	selectRange(range);
-}
+	const handleInput = useCallback(
+		(event) => {
+			event.stopPropagation();
+			lastEventRef.current = event;
+			onInput?.(event);
+		},
+		[lastEventRef, onInput],
+	);
 
-function selectTextNode(node) {
-	const range = document.createRange();
-	range.selectNodeContents(node);
-	selectRange(range);
-}
+	const handleKeyDown = useCallback(
+		(event) => {
+			lastEventRef.current = event;
+		},
+		[lastEventRef],
+	);
 
-function getMarkdownLength(node) {
-	const container = document.createElement("div");
-	container.append(node.cloneNode(true));
-	return childrenToMarkdown(container).length;
-}
+	const handlePaste = useCallback(
+		(event) => {
+			event.stopPropagation();
+			lastEventRef.current = event;
+			onPaste?.(event);
+		},
+		[lastEventRef, onPaste],
+	);
 
-function createEndRange(editor) {
-	const range = document.createRange();
-	range.selectNodeContents(editor);
-	range.collapse(false);
-	return range;
-}
+	const handleMouseMove = useCallback(
+		(event) => {
+			const mention = event.target.closest?.("[data-mention]");
+			if (mention) {
+				const rootElement = editor.getRootElement();
+				if (rootElement?.contains(mention)) {
+					onMentionHover({
+						anchor: mention,
+						content:
+							mention.dataset.mentionTooltip || lang.t(MENTION_TOOLTIP_KEY),
+					});
+					return;
+				}
+			}
 
-function insertNodeAtSelection(
-	editor,
-	node,
-	preferredRange = null,
-	preferredOffset = null,
-) {
-	editor.focus({ preventScroll: true });
+			onMentionHover({ anchor: null, content: null });
+		},
+		[editor, onMentionHover],
+	);
 
-	const range = getInsertionRange(editor, preferredRange, preferredOffset);
-	range.deleteContents();
-	range.insertNode(node);
-	setCaretAfter(node);
-}
+	const handleMouseDown = useCallback((event) => {
+		event.stopPropagation();
+	}, []);
 
-function createInsertionMarker(id) {
-	const marker = document.createElement("span");
-	marker.className = INSERTION_MARKER_CLASS;
-	marker.dataset.insertionMarker = "true";
-	marker.dataset.insertionMarkerId = id;
-	marker.contentEditable = "false";
-	marker.textContent = "\u200B";
-	return marker;
-}
+	const editableNode = (
+		<ContentEditable
+			className={classNames(
+				"MarkdownView",
+				"MarkdownView__editable",
+				{
+					MarkdownView__active: isActive,
+					MarkdownView__disabled: isDisabled,
+				},
+			)}
+			role="textbox"
+			aria-multiline={type === "textarea"}
+			aria-placeholder={placeholder}
+			data-placeholder={placeholder}
+			tabIndex={isDisabled ? -1 : 0}
+			onBlur={handleBlur}
+			onClick={handleClick}
+			onFocus={handleFocus}
+			onInput={handleInput}
+			onKeyDown={handleKeyDown}
+			onMouseDown={handleMouseDown}
+			onMouseLeave={() => onMentionHover({ anchor: null, content: null })}
+			onMouseMove={handleMouseMove}
+			onPaste={handlePaste}
+		/>
+	);
 
-function getInsertionMarker(editor, id) {
-	if (!editor || !id) return null;
 	return (
-		Array.from(editor.querySelectorAll("[data-insertion-marker='true']")).find(
-			(marker) => marker.dataset.insertionMarkerId === id,
-		) || null
+		<>
+			{type === "textarea" ? (
+				<RichTextPlugin
+					contentEditable={editableNode}
+					placeholder={
+						placeholder ? (
+							<div className="MarkdownView__placeholder">{placeholder}</div>
+						) : null
+					}
+					ErrorBoundary={LexicalErrorBoundary}
+				/>
+			) : (
+				<PlainTextPlugin
+					contentEditable={editableNode}
+					placeholder={
+						placeholder ? (
+							<div className="MarkdownView__placeholder">{placeholder}</div>
+						) : null
+					}
+					ErrorBoundary={LexicalErrorBoundary}
+				/>
+			)}
+			<HistoryPlugin />
+			<MarkdownValuePlugin
+				isActive={isActive}
+				lastValueRef={lastValueRef}
+				markdownValue={markdownValue}
+				type={type}
+			/>
+			<MarkdownChangePlugin
+				lastEventRef={lastEventRef}
+				lastValueRef={lastValueRef}
+				onChange={onChange}
+				type={type}
+			/>
+			<EditableStatePlugin isDisabled={isDisabled} />
+			{type === "textarea" && (
+				<>
+					<ListPlugin />
+					<MarkdownShortcutPlugin transformers={MARKDOWN_TRANSFORMERS} />
+				</>
+			)}
+		</>
 	);
-}
-
-function getInsertionMarkerRange(editor, id) {
-	const marker = getInsertionMarker(editor, id);
-	if (!marker) return null;
-
-	const range = document.createRange();
-	range.selectNode(marker);
-	return range;
-}
-
-function removeInsertionMarker(editor, id) {
-	const marker = getInsertionMarker(editor, id);
-	marker?.remove();
-}
-
-function insertInsertionMarker(editor, id, preferredRange = null) {
-	if (!editor || !id) return;
-	insertNodeAtSelection(editor, createInsertionMarker(id), preferredRange);
-}
-
-function insertHtmlAtSelection(editor, html) {
-	if (!html) return;
-
-	editor.focus({ preventScroll: true });
-
-	const range = getSelectionRangeInside(editor) || createEndRange(editor);
-	const template = document.createElement("template");
-	template.innerHTML = html;
-	const fragment = template.content;
-	const lastNode = fragment.lastChild;
-
-	range.deleteContents();
-	range.insertNode(fragment);
-	if (lastNode) setCaretAfter(lastNode);
-}
-
-function insertTextAtSelection(editor, text) {
-	if (!text) return;
-
-	insertNodeAtSelection(editor, document.createTextNode(text));
-}
-
-function createTabNode() {
-	const tab = document.createElement("span");
-	tab.className = TAB_CLASS;
-	tab.dataset.tab = "true";
-	tab.contentEditable = "false";
-	tab.innerHTML = "&nbsp;";
-	return tab;
-}
-
-function insertTabAtSelection(
-	editor,
-	preferredRange = null,
-	preferredOffset = null,
-) {
-	if (!editor) return;
-
-	editor.focus({ preventScroll: true });
-
-	const tab = createTabNode();
-	const caretNode = document.createTextNode("\u200B");
-	const range = getInsertionRange(editor, preferredRange, preferredOffset);
-	const fragment = document.createDocumentFragment();
-	fragment.append(tab, caretNode);
-
-	range.deleteContents();
-	range.insertNode(fragment);
-	setCaretInsideTextNode(caretNode, caretNode.length);
-}
-
-function insertMentionAtSelection(
-	editor,
-	name,
-	preferredRange = null,
-	preferredOffset = null,
-) {
-	const safeName = String(name || "").trim();
-	if (!editor || !safeName) return;
-
-	const mention = document.createElement("span");
-	mention.className = MENTION_CLASS;
-	mention.dataset.mention = safeName;
-	mention.dataset.mentionTooltip = lang.t(MENTION_TOOLTIP_KEY);
-	mention.contentEditable = "false";
-	mention.textContent = safeName;
-
-	const trailingSpace = document.createTextNode(" ");
-	const range = getInsertionRange(editor, preferredRange, preferredOffset);
-	const fragment = document.createDocumentFragment();
-	fragment.append(mention, trailingSpace);
-
-	editor.focus({ preventScroll: true });
-	range.deleteContents();
-	range.insertNode(fragment);
-	setCaretAfter(trailingSpace);
-}
-
-function unwrapMention(editor, mention, { selectText = false } = {}) {
-	if (!editor || !mention?.dataset?.mention) return false;
-
-	const text = normalizeTextContent(
-		mention.dataset.mention || mention.textContent || "",
-	);
-	const textNode = document.createTextNode(text);
-	mention.replaceWith(textNode);
-	editor.focus({ preventScroll: true });
-	if (selectText) {
-		selectTextNode(textNode);
-	} else {
-		setCaretInsideTextNode(textNode, textNode.length);
-	}
-	return true;
-}
-
-function removeMention(editor, mention) {
-	if (!editor || !mention?.dataset?.mention) return false;
-
-	const range = document.createRange();
-	range.setStartBefore(mention);
-	range.collapse(true);
-	mention.remove();
-	editor.focus({ preventScroll: true });
-	selectRange(range);
-	return true;
-}
-
-function setCaretFromTabClick(tab, event) {
-	if (!tab) return;
-
-	const rect = tab.getBoundingClientRect();
-	const range = document.createRange();
-	const setBefore = event.clientX < rect.left + rect.width / 2;
-
-	if (setBefore) {
-		range.setStartBefore(tab);
-	} else {
-		const next = tab.nextSibling;
-		if (next?.nodeType === Node.TEXT_NODE && next.textContent === "\u200B") {
-			range.setStart(next, next.length);
-		} else {
-			range.setStartAfter(tab);
-		}
-	}
-
-	range.collapse(true);
-	selectRange(range);
-}
-
-function getSelectionElement(editor) {
-	const selection = window.getSelection?.();
-	if (!selection || selection.rangeCount === 0) return null;
-
-	const node = selection.anchorNode;
-	const element =
-		node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
-	if (!element || !editor.contains(element)) return null;
-
-	return element;
-}
-
-function getCurrentBlockElement(editor) {
-	const element = getSelectionElement(editor);
-	if (!element) return null;
-
-	const block = element.closest?.(
-		"p, div, li, h1, h2, h3, h4, h5, h6, blockquote",
-	);
-	if (block && editor.contains(block)) return block;
-
-	return element === editor ? null : element;
-}
-
-function isSelectionInsideTag(editor, tagName) {
-	const element = getSelectionElement(editor);
-	return Boolean(element?.closest?.(tagName));
-}
-
-function isSelectionInsideList(editor) {
-	const element = getSelectionElement(editor);
-	return element?.closest?.("ul, ol") || null;
-}
-
-function cloneEditorHtml(editor) {
-	const clone = editor.cloneNode(true);
-	clone.removeAttribute("contenteditable");
-	clone.querySelectorAll("[contenteditable]").forEach((node) => {
-		node.removeAttribute("contenteditable");
-	});
-	clone.querySelectorAll("[data-insertion-marker]").forEach((node) => {
-		node.remove();
-	});
-	clone.querySelectorAll("[data-mention]").forEach((node) => {
-		node.removeAttribute("data-mention");
-	});
-	clone.querySelectorAll("[data-mention-tooltip]").forEach((node) => {
-		node.removeAttribute("data-mention-tooltip");
-		node.removeAttribute("title");
-	});
-	return clone.innerHTML;
-}
-
-function replaceElementTag(element, tagName) {
-	if (!element || element.tagName?.toLowerCase() === tagName) return element;
-
-	const replacement = document.createElement(tagName);
-	while (element.firstChild) {
-		replacement.appendChild(element.firstChild);
-	}
-	element.replaceWith(replacement);
-	return replacement;
 }
 
 export default function EditableField({
@@ -970,11 +827,10 @@ export default function EditableField({
 		anchor: null,
 	});
 	const editorRef = useRef(null);
-	const lastValueRef = useRef("");
-	const mentionInsertionRangeRef = useRef(null);
-	const mentionInsertionOffsetRef = useRef(null);
-	const mentionInsertionMarkerIdRef = useRef(null);
+	const lastEventRef = useRef(null);
 	const markdownValue = value || value === 0 ? String(value) : "";
+	const normalizedMarkdownValue = normalizeMarkdown(markdownValue, type);
+	const lastValueRef = useRef(normalizedMarkdownValue);
 	const isDisabled = Boolean(disabled || readOnly);
 	const fieldTooltipContent = useMemo(() => {
 		if (typeof title === "string" && title.trim()) return title;
@@ -988,64 +844,32 @@ export default function EditableField({
 		[campaignSlug],
 	);
 
-	const htmlValue = useMemo(
-		() => markdownToHtml(markdownValue, type),
-		[markdownValue, type],
-	);
-
-	const emitChange = useCallback(
-		(sourceEvent) => {
-			const editor = editorRef.current;
-			if (!editor) return;
-
-			const nextValue = editorToMarkdown(editor, type);
-			if (!nextValue) editor.innerHTML = "";
-			if (nextValue === lastValueRef.current) return;
-
-			lastValueRef.current = nextValue;
-			onChange?.(createChangeEvent(sourceEvent, nextValue));
-		},
-		[onChange, type],
-	);
-
-	useLayoutEffect(() => {
-		lastValueRef.current = markdownValue;
-	}, [markdownValue]);
-
-	useLayoutEffect(() => {
-		const editor = editorRef.current;
-		if (!editor) return;
-
-		if (
-			mentionInsertionMarkerIdRef.current &&
-			getInsertionMarker(editor, mentionInsertionMarkerIdRef.current)
-		) {
-			return;
-		}
-
-		const isFocused = document.activeElement === editor;
-
-		if (isActive && isFocused) return;
-		if (editor.innerHTML !== htmlValue) {
-			editor.innerHTML = htmlValue;
-		}
-	}, [htmlValue, isActive]);
+	const editorKey = `${EDITOR_NAMESPACE}:${EDITOR_MODULE_VERSION}:${type}`;
+	const initialConfig = createInitialConfig({
+		isDisabled,
+		markdownValue: normalizedMarkdownValue,
+		type,
+	});
 
 	const handleCopy = async (event) => {
 		event.preventDefault();
 		event.stopPropagation();
 
 		const editor = editorRef.current;
-		if (!editor || !markdownValue) return;
+		if (!editor || !normalizedMarkdownValue) return;
 
 		try {
-			const html = cloneEditorHtml(editor);
-			const text = markdownValue;
+			let html = "";
+			editor.getEditorState().read(() => {
+				html = $generateHtmlFromNodes(editor);
+			});
 
 			await navigator.clipboard.write([
 				new ClipboardItem({
 					"text/html": new Blob([html], { type: "text/html" }),
-					"text/plain": new Blob([text], { type: "text/plain" }),
+					"text/plain": new Blob([normalizedMarkdownValue], {
+						type: "text/plain",
+					}),
 				}),
 			]);
 			setCopied(true);
@@ -1055,17 +879,21 @@ export default function EditableField({
 		}
 	};
 
-	const handleFocus = (event) => {
-		event.stopPropagation();
-		setIsActive(true);
-		onFocus?.(event);
-	};
+	const handleFocus = useCallback(
+		(event) => {
+			setIsActive(true);
+			onFocus?.(event);
+		},
+		[onFocus],
+	);
 
-	const handleBlur = (event) => {
-		emitChange(event);
-		setIsActive(false);
-		onBlur?.(event);
-	};
+	const handleBlur = useCallback(
+		(event) => {
+			setIsActive(false);
+			onBlur?.(event);
+		},
+		[onBlur],
+	);
 
 	const handleCloseMentionModal = useCallback(() => setModalState(null), []);
 
@@ -1089,357 +917,17 @@ export default function EditableField({
 		],
 	);
 
-	const handleClick = (event) => {
-		const mention = event.target.closest?.("[data-mention]");
-		if (
-			mention &&
-			editorRef.current?.contains(mention) &&
-			(event.ctrlKey || event.metaKey)
-		) {
-			event.preventDefault();
-			event.stopPropagation();
-			openMentionModal(mention.dataset.mention);
-			return;
-		}
-
-		if (event.target.closest?.("a")) {
-			event.preventDefault();
-		}
-		event.stopPropagation();
-		onClick?.(event);
-	};
-
-	const stopEditorEvent = (event) => {
-		event.stopPropagation();
-	};
-
-	const handleInput = (event) => {
-		event.stopPropagation();
-		emitChange(event);
-		onInput?.(event);
-	};
-
-	const runCommand = (event, command, commandValue = null) => {
-		event.preventDefault();
-		document.execCommand(command, false, commandValue);
-		emitChange(event);
-	};
-
-	const runInlineCommand = (event, command) => {
-		event.preventDefault();
-
-		const editor = editorRef.current;
-		const range = getSelectionRangeInside(editor)?.cloneRange();
-		if (!editor || !range) {
-			document.execCommand(command, false);
-			emitChange(event);
-			return;
-		}
-
-		if (!range.collapsed) {
-			document.execCommand(command, false);
-			emitChange(event);
-			return;
-		}
-
-		const block = getCurrentBlockElement(editor);
-		if (!block || block === editor) {
-			document.execCommand(command, false);
-			emitChange(event);
-			return;
-		}
-
-		const beforeRange = range.cloneRange();
-		beforeRange.selectNodeContents(block);
-		beforeRange.setEnd(range.startContainer, range.startOffset);
-		const caretOffset = getMarkdownLength(beforeRange.cloneContents());
-
-		const blockRange = document.createRange();
-		blockRange.selectNodeContents(block);
-		selectRange(blockRange);
-		document.execCommand(command, false);
-		emitChange(event);
-
-		const nextRange = createRangeFromMarkdownOffset(block, caretOffset);
-		if (nextRange) selectRange(nextRange);
-	};
-
-	const runFormatBlockCommand = (event, tagName) => {
-		runCommand(event, "formatBlock", `<${tagName}>`);
-	};
-
-	const replaceCurrentBlock = (event, tagName) => {
-		event.preventDefault();
-
-		const editor = editorRef.current;
-		const block = getCurrentBlockElement(editor);
-		if (!block || block === editor) {
-			document.execCommand("formatBlock", false, `<${tagName}>`);
-			emitChange(event);
-			return;
-		}
-
-		const range = getSelectionRangeInside(editor)?.cloneRange();
-		const nextBlock = replaceElementTag(block, tagName);
-		if (range) {
-			selectRange(range);
-		} else {
-			const nextRange = document.createRange();
-			nextRange.selectNodeContents(nextBlock);
-			nextRange.collapse(false);
-			selectRange(nextRange);
-		}
-		emitChange(event);
-	};
-
-	const handleMentionShortcut = async (event) => {
-		const editor = editorRef.current;
-		if (!editor) return;
-
-		event.preventDefault();
-
-		const selectedMention = getMentionFromSelection(editor);
-		if (selectedMention) {
-			unwrapMention(editor, selectedMention, { selectText: true });
-			emitChange(event);
-			return;
-		}
-
-		const currentRange = getSelectionRangeInside(editor);
-		const insertionRange = currentRange?.cloneRange() || null;
-		const insertionOffset = getRangeMarkdownOffset(editor, insertionRange);
-		const selection = window.getSelection?.();
-		const selectedText =
-			selection && editor.contains(selection.anchorNode)
-				? selection.toString().trim()
-				: "";
-
-		if (selectedText) {
-			insertMentionAtSelection(
-				editor,
-				selectedText,
-				insertionRange,
-				insertionOffset,
-			);
-			emitChange(event);
-			return;
-		}
-
-		const markerId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-		insertInsertionMarker(editor, markerId, insertionRange);
-		mentionInsertionRangeRef.current = insertionRange;
-		mentionInsertionOffsetRef.current = insertionOffset;
-		mentionInsertionMarkerIdRef.current = markerId;
-		const result = await requestMentionSelection(dispatch);
-		const savedMarkerId = mentionInsertionMarkerIdRef.current;
-		const savedRange = mentionInsertionRangeRef.current;
-		const savedOffset = mentionInsertionOffsetRef.current;
-		mentionInsertionRangeRef.current = null;
-		mentionInsertionOffsetRef.current = null;
-		mentionInsertionMarkerIdRef.current = null;
-
-		if (result.status !== "selected") {
-			removeInsertionMarker(editor, savedMarkerId);
-			return;
-		}
-
-		const markerRange = getInsertionMarkerRange(editor, savedMarkerId);
-		insertMentionAtSelection(
-			editor,
-			result.name,
-			markerRange || savedRange,
-			savedOffset,
+	const handleMentionHover = useCallback(({ anchor, content }) => {
+		setMentionTooltip((current) =>
+			current.content === content && current.anchor === anchor
+				? current
+				: { content, anchor },
 		);
-		emitChange(event);
-	};
-
-	const handleKeyDown = (event) => {
-		const key = event.key.toLowerCase();
-		const isMod = event.ctrlKey || event.metaKey;
-		const isHistoryShortcut =
-			isMod && (key === "z" || key === "я" || key === "y" || key === "н");
-
-		if (isHistoryShortcut) {
-			onKeyDown?.(event);
-			return;
-		}
-
-		event.stopPropagation();
-
-		if (isDisabled) {
-			onKeyDown?.(event);
-			return;
-		}
-
-		if (type !== "textarea" && event.key === "Enter") {
-			event.preventDefault();
-			editorRef.current?.blur();
-			return;
-		}
-
-		if (type === "textarea" && key === "tab") {
-			event.preventDefault();
-			insertTabAtSelection(editorRef.current);
-			emitChange(event);
-			return;
-		}
-
-		if (type === "textarea" && (key === "backspace" || key === "delete")) {
-			const mention = getMentionFromSelection(editorRef.current, key);
-			if (mention) {
-				event.preventDefault();
-				removeMention(editorRef.current, mention);
-				emitChange(event);
-				return;
-			}
-		}
-
-		if (type === "textarea" && isMod && (key === "b" || key === "и")) {
-			runInlineCommand(event, "bold");
-			return;
-		}
-
-		if (type === "textarea" && isMod && (key === "i" || key === "ш")) {
-			runInlineCommand(event, "italic");
-			return;
-		}
-
-		if (type === "textarea" && isMod && (key === "k" || key === "л")) {
-			handleMentionShortcut(event);
-			return;
-		}
-
-		if (type === "textarea" && isMod && (key === "]" || key === "ї")) {
-			runCommand(event, "insertUnorderedList");
-			return;
-		}
-
-		if (type === "textarea" && isMod && (key === "[" || key === "х")) {
-			event.preventDefault();
-			const list = isSelectionInsideList(editorRef.current);
-			if (list?.tagName?.toLowerCase() === "ol") {
-				document.execCommand("insertOrderedList", false);
-			} else if (list) {
-				document.execCommand("insertUnorderedList", false);
-			} else {
-				document.execCommand("outdent", false);
-			}
-			emitChange(event);
-			return;
-		}
-
-		if (type === "textarea" && isMod && key >= "1" && key <= "6") {
-			const tag = `h${key}`;
-			const nextTag = isSelectionInsideTag(editorRef.current, tag) ? "p" : tag;
-			replaceCurrentBlock(event, nextTag);
-			return;
-		}
-
-		if (type === "textarea" && isMod && (key === "q" || key === "й")) {
-			const nextTag = isSelectionInsideTag(editorRef.current, "blockquote")
-				? "p"
-				: "blockquote";
-			runFormatBlockCommand(event, nextTag);
-			return;
-		}
-
-		onKeyDown?.(event);
-	};
-
-	const handlePaste = (event) => {
-		event.stopPropagation();
-
-		if (isDisabled) {
-			onPaste?.(event);
-			return;
-		}
-
-		event.preventDefault();
-
-		const editor = editorRef.current;
-		const html = event.clipboardData.getData("text/html");
-		const plainText = event.clipboardData
-			.getData("text/plain")
-			.replace(/\r\n?/g, "\n");
-
-		if (type !== "textarea") {
-			insertTextAtSelection(editor, plainText.replace(/\n+/g, " "));
-			emitChange(event);
-			onPaste?.(event);
-			return;
-		}
-
-		const markdown = html ? convertHtmlToMarkdown(html) : plainText;
-		insertHtmlAtSelection(editor, markdownToHtml(markdown, type));
-		emitChange(event);
-		onPaste?.(event);
-	};
+	}, []);
 
 	const stopContainerEvent = (event) => {
 		event.stopPropagation();
 	};
-
-	const clearMentionTooltip = () => {
-		setMentionTooltip((current) =>
-			current.content || current.anchor
-				? { content: null, anchor: null }
-				: current,
-		);
-	};
-
-	const handleMouseMove = (event) => {
-		const mention = event.target.closest?.("[data-mention]");
-		if (mention && editorRef.current?.contains(mention)) {
-			const content =
-				mention.dataset.mentionTooltip || lang.t(MENTION_TOOLTIP_KEY);
-			setMentionTooltip((current) =>
-				current.content === content && current.anchor === mention
-					? current
-					: { content, anchor: mention },
-			);
-			return;
-		}
-
-		clearMentionTooltip();
-	};
-
-	const handleMouseDown = (event) => {
-		const tab = event.target.closest?.("[data-tab]");
-		if (tab && editorRef.current?.contains(tab)) {
-			event.preventDefault();
-			event.stopPropagation();
-			editorRef.current.focus({ preventScroll: true });
-			setCaretFromTabClick(tab, event);
-			return;
-		}
-
-		stopEditorEvent(event);
-	};
-
-	const editorNode = (
-		<div
-			ref={editorRef}
-			className={classNames("MarkdownView", "MarkdownView__editable", {
-				MarkdownView__active: isActive,
-				MarkdownView__disabled: isDisabled,
-			})}
-			contentEditable={!isDisabled}
-			suppressContentEditableWarning
-			role="textbox"
-			aria-multiline={type === "textarea"}
-			data-placeholder={placeholder}
-			tabIndex={isDisabled ? -1 : 0}
-			onBlur={handleBlur}
-			onClick={handleClick}
-			onFocus={handleFocus}
-			onInput={handleInput}
-			onKeyDown={handleKeyDown}
-			onMouseDown={handleMouseDown}
-			onMouseLeave={clearMentionTooltip}
-			onMouseMove={handleMouseMove}
-			onPaste={handlePaste}
-		/>
-	);
 
 	return (
 		<div
@@ -1452,7 +940,7 @@ export default function EditableField({
 			onMouseDown={stopContainerEvent}
 			style={{ position: "relative", ...domProps.style }}
 		>
-			{markdownValue && showCopyButton && (
+			{normalizedMarkdownValue && showCopyButton && (
 				<Button
 					variant="ghost"
 					size={Button.SIZES.SMALL}
@@ -1468,7 +956,30 @@ export default function EditableField({
 				className="EditableField__tooltip"
 				anchorElement={tooltipAnchor}
 			>
-				{editorNode}
+				<div className="EditableField__editor_shell">
+					<LexicalComposer key={editorKey} initialConfig={initialConfig}>
+						<EditorRefPlugin editorRef={editorRef} />
+						<LexicalEditableField
+							dispatch={dispatch}
+							isActive={isActive}
+							isDisabled={isDisabled}
+							lastEventRef={lastEventRef}
+							lastValueRef={lastValueRef}
+							markdownValue={normalizedMarkdownValue}
+							onBlur={handleBlur}
+							onChange={onChange}
+							onClick={onClick}
+							onFocus={handleFocus}
+							onInput={onInput}
+							onKeyDown={onKeyDown}
+							onMentionHover={handleMentionHover}
+							onPaste={onPaste}
+							openMentionModal={openMentionModal}
+							placeholder={placeholder}
+							type={type}
+						/>
+					</LexicalComposer>
+				</div>
 			</Tooltip>
 			<EntityModal
 				modalState={modalState}

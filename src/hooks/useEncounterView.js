@@ -512,9 +512,8 @@ export default function useEncounterView() {
 			if (isInput) return;
 
 			const isMod = e.ctrlKey || e.metaKey;
-			const key = e.key.toLowerCase();
 
-			if (isMod && (key === "z" || key === "я")) {
+			if (isMod && e.code === "KeyZ") {
 				e.preventDefault();
 				if (e.shiftKey) {
 					handleRedo();
@@ -524,7 +523,7 @@ export default function useEncounterView() {
 				return;
 			}
 
-			if (isMod && (key === "y" || key === "н")) {
+			if (isMod && e.code === "KeyY") {
 				e.preventDefault();
 				handleRedo();
 			}

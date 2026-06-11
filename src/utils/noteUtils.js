@@ -1,10 +1,25 @@
+const VIRTUAL_NOTE_ID_PREFIX = "__virtual_note__:";
+
+function createNoteId() {
+	return Date.now();
+}
+
 export function createEmptyNote() {
 	return {
-		id: Date.now(),
+		id: createNoteId(),
 		title: "",
 		text: "",
 		collapsed: false,
 	};
+}
+
+export function isVirtualNoteId(noteId) {
+	return String(noteId || "").startsWith(VIRTUAL_NOTE_ID_PREFIX);
+}
+
+function createVirtualNoteId(notes = []) {
+	const last = notes[notes.length - 1];
+	return `${VIRTUAL_NOTE_ID_PREFIX}${last?.id ?? "empty"}`;
 }
 
 export function isNoteEmpty(note = {}, simplifiedMode = false) {
@@ -26,6 +41,7 @@ export function getNotesForRender(
 	if (next.length === 0 || !isNoteEmpty(last, simplifiedNotes)) {
 		next.push({
 			...createEmptyNote(),
+			id: createVirtualNoteId(next),
 			_isVirtual: true,
 		});
 	}
@@ -36,10 +52,11 @@ export function getNotesForRender(
 export function upsertNoteById(notes = [], noteId, updates = {}) {
 	const next = [...(notes || [])];
 	const index = next.findIndex((note) => note.id === noteId);
+	const resolvedNoteId = isVirtualNoteId(noteId) ? createNoteId() : noteId;
 
 	if (index === -1) {
 		next.push({
-			id: noteId,
+			id: resolvedNoteId,
 			title: "",
 			text: "",
 			collapsed: false,
