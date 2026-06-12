@@ -23,6 +23,7 @@ export default function CharacterCard({
 	onDelete,
 	onReorderDrop,
 	campaignSlug,
+	enableHistory = true,
 	type = "characters",
 	viewMode = "card",
 	showDeleteButton = true,
@@ -205,6 +206,7 @@ export default function CharacterCard({
 							<EditableField
 								type="text"
 								value={character.firstName}
+								enableHistory={enableHistory}
 								onChange={(e) => updateField("firstName", e.target.value)}
 								onBlur={handleNameBlur}
 								placeholder={lang.t("First name")}
@@ -215,6 +217,7 @@ export default function CharacterCard({
 							<EditableField
 								type="text"
 								value={character.lastName}
+								enableHistory={enableHistory}
 								onChange={(e) => updateField("lastName", e.target.value)}
 								onBlur={handleNameBlur}
 								placeholder={lang.t("Last name")}
@@ -226,6 +229,7 @@ export default function CharacterCard({
 								<EditableField
 									type="text"
 									value={character.race}
+									enableHistory={enableHistory}
 									onChange={(e) => updateField("race", e.target.value)}
 									placeholder={lang.t("Race")}
 									className={
@@ -235,6 +239,7 @@ export default function CharacterCard({
 								<EditableField
 									type="text"
 									value={character.class}
+									enableHistory={enableHistory}
 									onChange={(e) => updateField("class", e.target.value)}
 									placeholder={lang.t("Class")}
 									className={
@@ -262,6 +267,7 @@ export default function CharacterCard({
 							<EditableField
 								type="textarea"
 								value={character.motivation}
+								enableHistory={enableHistory}
 								onChange={(e) => updateField("motivation", e.target.value)}
 								placeholder={lang.t("What does the character want...")}
 								className={
@@ -274,6 +280,7 @@ export default function CharacterCard({
 							<EditableField
 								type="textarea"
 								value={characterModel.trait}
+								enableHistory={enableHistory}
 								onChange={(e) => updateField("trait", e.target.value)}
 								placeholder={lang.t("Distinctive trait or habit...")}
 								className={
@@ -287,6 +294,7 @@ export default function CharacterCard({
 						<EditableField
 							type="textarea"
 							value={characterModel.description}
+							enableHistory={enableHistory}
 							onChange={(e) => updateField("description", e.target.value)}
 							placeholder={lang.t("Character description...")}
 							className={
@@ -331,6 +339,7 @@ export default function CharacterCard({
 										note={note}
 										isLast={index === notesForRender.length - 1}
 										campaignSlug={campaignSlug}
+										enableHistory={enableHistory}
 										onToggleCollapse={(id) => {
 											updateField(
 												"notes",

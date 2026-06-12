@@ -24,6 +24,7 @@ export default function LocationCard({
 	onDelete,
 	onReorderDrop,
 	campaignSlug,
+	enableHistory = true,
 	viewMode = "card",
 	showDeleteButton = true,
 	showHeader = true,
@@ -201,6 +202,7 @@ export default function LocationCard({
 							<EditableField
 								type="text"
 								value={location.name || ""}
+								enableHistory={enableHistory}
 								onChange={(e) => updateField("name", e.target.value)}
 								onBlur={handleNameBlur}
 								placeholder={lang.t("Name")}
@@ -216,6 +218,7 @@ export default function LocationCard({
 							<EditableField
 								type="textarea"
 								value={location.description || ""}
+								enableHistory={enableHistory}
 								onChange={(e) => updateField("description", e.target.value)}
 								placeholder={lang.t(
 									"Briefly describe the location or faction...",
@@ -262,6 +265,7 @@ export default function LocationCard({
 										note={note}
 										isLast={index === notesForRender.length - 1}
 										campaignSlug={campaignSlug}
+										enableHistory={enableHistory}
 										onToggleCollapse={(id) => {
 											updateField(
 												"notes",

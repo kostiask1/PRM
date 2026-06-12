@@ -5,6 +5,16 @@ function cloneHistorySnapshot(value) {
 	return JSON.parse(JSON.stringify(value));
 }
 
+export function isHistoryShortcutEvent(event) {
+	const isMod = Boolean(event?.ctrlKey || event?.metaKey);
+	return isMod && (event.code === "KeyZ" || event.code === "KeyY");
+}
+
+export function shouldUseAppHistoryForEvent(event) {
+	const target = event?.target;
+	return Boolean(target?.closest?.("[data-app-history-shortcuts='true']"));
+}
+
 export function addUndoSnapshot(
 	undoStack,
 	snapshot,

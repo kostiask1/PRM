@@ -94,6 +94,7 @@ const MENTION_SHORTCUT_CODES = new Set(["KeyK"]);
 const LIST_SHORTCUT_CODES = new Set(["BracketRight"]);
 const OUTDENT_SHORTCUT_CODES = new Set(["BracketLeft"]);
 const QUOTE_SHORTCUT_CODES = new Set(["KeyQ"]);
+const HISTORY_SHORTCUT_CODES = new Set(["KeyZ", "KeyY"]);
 const EDITABLE_FIELD_THEME = {
 	heading: {
 		h1: "MarkdownView__heading MarkdownView__heading_h1",
@@ -438,7 +439,7 @@ function EditorRefPlugin({ editorRef }) {
 	return null;
 }
 
-function MarkdownValuePlugin({ isActive, lastValueRef, markdownValue, type }) {
+function MarkdownValuePlugin({ lastValueRef, markdownValue, type }) {
 	const [editor] = useLexicalComposerContext();
 	const normalizedValue = useMemo(
 		() => normalizeMarkdown(markdownValue, type),
@@ -448,9 +449,6 @@ function MarkdownValuePlugin({ isActive, lastValueRef, markdownValue, type }) {
 	useLayoutEffect(() => {
 		if (normalizedValue === lastValueRef.current) return;
 
-		const rootElement = editor.getRootElement();
-		if (isActive && document.activeElement === rootElement) return;
-
 		editor.update(
 			() => {
 				$loadMarkdownValue(normalizedValue, type);
@@ -458,7 +456,7 @@ function MarkdownValuePlugin({ isActive, lastValueRef, markdownValue, type }) {
 			{ tag: EXTERNAL_UPDATE_TAG },
 		);
 		lastValueRef.current = normalizedValue;
-	}, [editor, isActive, lastValueRef, normalizedValue, type]);
+	}, [editor, lastValueRef, normalizedValue, type]);
 
 	return null;
 }
@@ -503,7 +501,13 @@ function EditorContentPlugin({ editableNode, placeholder, type }) {
 	);
 }
 
-function useCommandHandlers({ dispatch, isDisabled, onKeyDown, type }) {
+function useCommandHandlers({
+	dispatch,
+	enableHistory,
+	isDisabled,
+	onKeyDown,
+	type,
+}) {
 	const [editor] = useLexicalComposerContext();
 
 	const handleMentionShortcut = useCallback(
@@ -550,6 +554,11 @@ function useCommandHandlers({ dispatch, isDisabled, onKeyDown, type }) {
 	const handleKeyDown = useCallback(
 		(event) => {
 			const key = event.key.toLowerCase();
+
+			if (!enableHistory && isShortcutCode(event, HISTORY_SHORTCUT_CODES)) {
+				onKeyDown?.(event);
+				return;
+			}
 
 			event.stopPropagation();
 
@@ -634,7 +643,7 @@ function useCommandHandlers({ dispatch, isDisabled, onKeyDown, type }) {
 
 			onKeyDown?.(event);
 		},
-		[editor, handleMentionShortcut, isDisabled, onKeyDown, type],
+		[editor, enableHistory, handleMentionShortcut, isDisabled, onKeyDown, type],
 	);
 
 	useLayoutEffect(() => {
@@ -651,6 +660,7 @@ function useCommandHandlers({ dispatch, isDisabled, onKeyDown, type }) {
 
 function LexicalEditableField({
 	dispatch,
+	enableHistory,
 	isActive,
 	isDisabled,
 	lastEventRef,
@@ -671,6 +681,7 @@ function LexicalEditableField({
 	const [editor] = useLexicalComposerContext();
 	useCommandHandlers({
 		dispatch,
+		enableHistory,
 		isDisabled,
 		onKeyDown,
 		type,
@@ -770,6 +781,7 @@ function LexicalEditableField({
 			role="textbox"
 			aria-multiline={isTextareaType(type)}
 			aria-placeholder={placeholder}
+			data-app-history-shortcuts={enableHistory ? undefined : "true"}
 			data-placeholder={placeholder}
 			tabIndex={isDisabled ? -1 : 0}
 			onBlur={handleBlur}
@@ -791,9 +803,8 @@ function LexicalEditableField({
 				placeholder={placeholder}
 				type={type}
 			/>
-			<HistoryPlugin />
+			{enableHistory && <HistoryPlugin />}
 			<MarkdownValuePlugin
-				isActive={isActive}
 				lastValueRef={lastValueRef}
 				markdownValue={markdownValue}
 				type={type}
@@ -821,6 +832,7 @@ export default function EditableField({
 	placeholder,
 	className,
 	type = "text",
+	enableHistory = true,
 	showCopyButton = false,
 	campaignSlug,
 	...props
@@ -1002,6 +1014,7 @@ export default function EditableField({
 						<EditorRefPlugin editorRef={editorRef} />
 						<LexicalEditableField
 							dispatch={dispatch}
+							enableHistory={enableHistory}
 							isActive={isActive}
 							isDisabled={isDisabled}
 							lastEventRef={lastEventRef}

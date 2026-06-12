@@ -20,6 +20,8 @@ import {
 	createDistinctUndoTransition,
 	createRedoTransition,
 	createUndoTransition,
+	isHistoryShortcutEvent,
+	shouldUseAppHistoryForEvent,
 } from "../src/utils/undoRedo.js";
 import {
 	normalizeConditionName,
@@ -1390,6 +1392,21 @@ await run("undo redo helpers skip duplicate current snapshots", () => {
 	assert.deepEqual(redo.redoStack, []);
 });
 
+await run("undo redo helpers detect app-level editor shortcuts", () => {
+	assert.equal(isHistoryShortcutEvent({ ctrlKey: true, code: "KeyZ" }), true);
+	assert.equal(isHistoryShortcutEvent({ metaKey: true, code: "KeyY" }), true);
+	assert.equal(isHistoryShortcutEvent({ ctrlKey: true, code: "KeyB" }), false);
+
+	const appHistoryTarget = {
+		closest(selector) {
+			return selector === "[data-app-history-shortcuts='true']";
+		},
+	};
+	const plainTarget = { closest: () => null };
+	assert.equal(shouldUseAppHistoryForEvent({ target: appHistoryTarget }), true);
+	assert.equal(shouldUseAppHistoryForEvent({ target: plainTarget }), false);
+});
+
 await run("download helpers create and revoke blob URL", () => {
 	const originalURL = global.URL;
 	const originalDocument = global.document;
@@ -2698,6 +2715,42 @@ await run(
 			"src/assets/components/EditableField.css",
 			"utf8",
 		);
+		const campaignViewSource = await fs.readFile(
+			"src/components/CampaignView.jsx",
+			"utf8",
+		);
+		const sessionViewSource = await fs.readFile(
+			"src/components/SessionView.jsx",
+			"utf8",
+		);
+		const noteCardSource = await fs.readFile(
+			"src/components/common/NoteCard.jsx",
+			"utf8",
+		);
+		const characterCardSource = await fs.readFile(
+			"src/components/CharacterCard.jsx",
+			"utf8",
+		);
+		const locationCardSource = await fs.readFile(
+			"src/components/LocationCard.jsx",
+			"utf8",
+		);
+		const graphSource = await fs.readFile(
+			"src/components/campaign/CampaignNotesGraph.jsx",
+			"utf8",
+		);
+		const campaignHookSource = await fs.readFile(
+			"src/hooks/useCampaignView.js",
+			"utf8",
+		);
+		const sessionHookSource = await fs.readFile(
+			"src/hooks/useSessionView.js",
+			"utf8",
+		);
+		const sceneFieldsSource = await fs.readFile(
+			"src/components/session/SceneCardFields.jsx",
+			"utf8",
+		);
 		const mainContentCss = await fs.readFile(
 			"src/assets/components/MainContent.css",
 			"utf8",
@@ -2740,6 +2793,23 @@ await run(
 		assert.match(editableFieldSource, /MarkdownShortcutPlugin/);
 		assert.match(editableFieldSource, /\$readMarkdownValue/);
 		assert.match(editableFieldSource, /MentionNode extends TextNode/);
+		assert.match(editableFieldSource, /enableHistory = true/);
+		assert.match(editableFieldSource, /\{enableHistory && <HistoryPlugin \/>}/);
+		assert.match(editableFieldSource, /data-app-history-shortcuts/);
+		assert.match(editableFieldSource, /HISTORY_SHORTCUT_CODES/);
+		assert.match(campaignHookSource, /shouldUseAppHistoryForEvent/);
+		assert.match(sessionHookSource, /shouldUseAppHistoryForEvent/);
+		assert.match(noteCardSource, /enableHistory = true/);
+		assert.match(noteCardSource, /enableHistory=\{enableHistory\}/);
+		assert.match(characterCardSource, /enableHistory = true/);
+		assert.match(characterCardSource, /enableHistory=\{enableHistory\}/);
+		assert.match(locationCardSource, /enableHistory = true/);
+		assert.match(locationCardSource, /enableHistory=\{enableHistory\}/);
+		assert.match(sceneFieldsSource, /enableHistory = true/);
+		assert.match(sceneFieldsSource, /enableHistory=\{enableHistory\}/);
+		assert.match(campaignViewSource, /enableHistory=\{false\}/);
+		assert.match(sessionViewSource, /enableHistory=\{false\}/);
+		assert.match(graphSource, /enableHistory=\{false\}/);
 		assert.equal(editableFieldSource.includes("mention.title ="), false);
 		assert.equal(editableFieldSource.includes("title={typeof title"), false);
 		assert.equal(

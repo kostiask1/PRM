@@ -363,6 +363,7 @@ function GraphNoteModalContent({
 			{!simplifiedNotes && (
 				<EditableField
 					value={draft.title || ""}
+					enableHistory={false}
 					onChange={(event) => updateDraft({ title: event.target.value })}
 					placeholder={lang.t("New note")}
 					className="CampaignNotesGraph__noteTitle"
@@ -371,6 +372,7 @@ function GraphNoteModalContent({
 			<EditableField
 				type="textarea"
 				value={draft.text || ""}
+				enableHistory={false}
 				onChange={(event) => updateDraft({ text: event.target.value })}
 				placeholder={lang.t("Note text...")}
 				campaignSlug={campaignSlug}

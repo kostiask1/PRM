@@ -15,6 +15,8 @@ import {
 	clearRedoStack,
 	createDistinctRedoTransition,
 	createDistinctUndoTransition,
+	isHistoryShortcutEvent,
+	shouldUseAppHistoryForEvent,
 } from "../utils/undoRedo.js";
 import { lang } from "../services/localization";
 import { getEntityDisplayName } from "../services/entities.js";
@@ -1171,14 +1173,13 @@ export default function useCampaignView(props) {
 
 	useEffect(() => {
 		const handleKeyDown = (e) => {
-			const isMod = e.ctrlKey || e.metaKey;
 			const isInput =
 				e.target.tagName === "INPUT" ||
 				e.target.tagName === "TEXTAREA" ||
 				e.target.isContentEditable;
-			if (isInput) return;
+			if (isInput && !shouldUseAppHistoryForEvent(e)) return;
 
-			if (isMod && e.code === "KeyZ") {
+			if (isHistoryShortcutEvent(e) && e.code === "KeyZ") {
 				if (e.shiftKey) {
 					e.preventDefault();
 					handleRedo();
@@ -1186,7 +1187,7 @@ export default function useCampaignView(props) {
 					e.preventDefault();
 					handleUndo();
 				}
-			} else if (isMod && e.code === "KeyY") {
+			} else if (isHistoryShortcutEvent(e) && e.code === "KeyY") {
 				e.preventDefault();
 				handleRedo();
 			}

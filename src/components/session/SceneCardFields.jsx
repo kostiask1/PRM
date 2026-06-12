@@ -2,7 +2,12 @@ import EditableField from "../form/EditableField";
 import "../../assets/components/SceneCardFields.css";
 import { lang } from "../../services/localization";
 
-export default function SceneCardFields({ fields, scene, onUpdateField }) {
+export default function SceneCardFields({
+	fields,
+	scene,
+	enableHistory = true,
+	onUpdateField,
+}) {
 	return (
 		<div className="SceneCard__grid">
 			{fields.map((field) => (
@@ -11,6 +16,7 @@ export default function SceneCardFields({ fields, scene, onUpdateField }) {
 					<EditableField
 						type={field.type}
 						value={scene.texts?.[field.key] || ""}
+						enableHistory={enableHistory}
 						onChange={(event) => onUpdateField(field.key, event.target.value)}
 						placeholder={lang.t(field.placeholder)}
 					/>

@@ -106,6 +106,7 @@ function SessionView() {
 							}}
 							onToggleCollapse={null}
 							campaignSlug={scopedCampaignSlug}
+							enableHistory={false}
 							viewMode="modal"
 						/>
 					);
@@ -122,6 +123,7 @@ function SessionView() {
 						}}
 						onToggleCollapse={null}
 						campaignSlug={scopedCampaignSlug}
+						enableHistory={false}
 						type="npc"
 						viewMode="modal"
 					/>
@@ -454,6 +456,7 @@ function SessionView() {
 												note={note}
 												isLast={index === sessionNotesForRender.length - 1}
 												campaignSlug={view.campaignSlug}
+												enableHistory={false}
 												onToggleCollapse={view.handleToggleNoteCollapse}
 												onTitleChange={view.handleNoteTitleChange}
 												onTextChange={view.handleNoteChange}
@@ -521,6 +524,7 @@ function SessionView() {
 												onChange={view.handleSessionNpcChange}
 												onDelete={view.handleSessionNpcDelete}
 												campaignSlug={view.campaignSlug}
+												enableHistory={false}
 												type="npc"
 												headerActions={
 													<Button
@@ -609,6 +613,7 @@ function SessionView() {
 												onChange={view.handleSessionLocationChange}
 												onDelete={view.handleSessionLocationDelete}
 												campaignSlug={view.campaignSlug}
+												enableHistory={false}
 												headerActions={
 													<Button
 														variant="ghost"
@@ -726,6 +731,7 @@ function SessionView() {
 							<EditableField
 								type="textarea"
 								className="field__result"
+								enableHistory={false}
 								placeholder={lang.t("Summary of what actually happened...")}
 								value={session.data.result_text || ""}
 								onChange={(e) => view.updateData("result_text", e.target.value)}
@@ -880,6 +886,7 @@ function SceneCard(props) {
 						<SceneCardFields
 							fields={props.fields}
 							scene={props.scene}
+							enableHistory={false}
 							onUpdateField={props.onUpdateField}
 						/>
 						<div className="SceneCard__notes">
@@ -933,6 +940,7 @@ function SceneCard(props) {
 											note={note}
 											isLast={index === sceneNotesForRender.length - 1}
 											campaignSlug={props.campaignSlug}
+											enableHistory={false}
 											onToggleCollapse={props.onSceneNoteToggleCollapse}
 											onTitleChange={props.onSceneNoteTitleChange}
 											onTextChange={props.onSceneNoteChange}

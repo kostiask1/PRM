@@ -381,6 +381,7 @@ function CampaignView() {
 								<EditableField
 									type="textarea"
 									className="CampaignView__script"
+									enableHistory={false}
 									placeholder={lang.t(
 										"Describe the main plotline, key events, and goals...",
 									)}
@@ -469,6 +470,7 @@ function CampaignView() {
 												note={note}
 												isLast={index === notesForRender.length - 1}
 												campaignSlug={campaign.slug}
+												enableHistory={false}
 												onToggleCollapse={view.handleToggleNoteCollapse}
 												onTitleChange={view.handleNoteTitleChange}
 												onTextChange={view.handleNoteChange}
@@ -570,6 +572,7 @@ function CampaignView() {
 												onDelete={view.handleDeleteCharacter}
 												onReorderDrop={view.finishTrackedReorder}
 												campaignSlug={campaign.slug}
+												enableHistory={false}
 												type="characters"
 											/>
 										</div>
@@ -656,6 +659,7 @@ function CampaignView() {
 												onDelete={view.handleNpcDelete}
 												onReorderDrop={view.finishTrackedReorder}
 												campaignSlug={campaign.slug}
+												enableHistory={false}
 												type="npc"
 											/>
 										</div>
@@ -739,6 +743,7 @@ function CampaignView() {
 												onDelete={view.handleLocationDelete}
 												onReorderDrop={view.finishTrackedReorder}
 												campaignSlug={campaign.slug}
+												enableHistory={false}
 											/>
 										</div>
 									)}

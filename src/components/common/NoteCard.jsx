@@ -13,6 +13,7 @@ export default function NoteCard({
 	note,
 	isLast,
 	campaignSlug,
+	enableHistory = true,
 	onToggleCollapse,
 	onTitleChange,
 	onTextChange,
@@ -57,6 +58,7 @@ export default function NoteCard({
 					)}
 					<EditableField
 						value={note.title || ""}
+						enableHistory={enableHistory}
 						onChange={(event) => onTitleChange(note.id, event.target.value)}
 						placeholder={lang.t("New note")}
 						className={classNames(
@@ -117,6 +119,7 @@ export default function NoteCard({
 					<EditableField
 						type="textarea"
 						value={note.text}
+						enableHistory={enableHistory}
 						onChange={(event) => onTextChange(note.id, event.target.value)}
 						placeholder={lang.t("Note text...")}
 						campaignSlug={campaignSlug}

@@ -24,6 +24,8 @@ import {
 	clearRedoStack,
 	createRedoTransition,
 	createUndoTransition,
+	isHistoryShortcutEvent,
+	shouldUseAppHistoryForEvent,
 } from "../utils/undoRedo.js";
 
 function cloneEncounterSnapshot(value) {
@@ -509,11 +511,9 @@ export default function useEncounterView() {
 				e.target.tagName === "INPUT" ||
 				e.target.tagName === "TEXTAREA" ||
 				e.target.isContentEditable;
-			if (isInput) return;
+			if (isInput && !shouldUseAppHistoryForEvent(e)) return;
 
-			const isMod = e.ctrlKey || e.metaKey;
-
-			if (isMod && e.code === "KeyZ") {
+			if (isHistoryShortcutEvent(e) && e.code === "KeyZ") {
 				e.preventDefault();
 				if (e.shiftKey) {
 					handleRedo();
@@ -523,7 +523,7 @@ export default function useEncounterView() {
 				return;
 			}
 
-			if (isMod && e.code === "KeyY") {
+			if (isHistoryShortcutEvent(e) && e.code === "KeyY") {
 				e.preventDefault();
 				handleRedo();
 			}
