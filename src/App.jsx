@@ -427,7 +427,7 @@ export default function App() {
 					}}
 					onToggleCampaignStatus={handleToggleCampaignStatus}
 				/>
-				<MainContent className="App__main" />
+				<MainContent />
 
 				{modalState.config && (
 					<Modal

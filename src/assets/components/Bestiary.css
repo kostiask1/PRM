@@ -1,7 +1,3 @@
-.Bestiary {
-	height: 100%;
-}
-
 .Bestiary>.Panel__header {
 	display: flex;
 	align-items: center;

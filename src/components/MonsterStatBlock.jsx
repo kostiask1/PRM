@@ -540,6 +540,57 @@ export default function MonsterStatBlock({
 			})}
 		>
 			<div className="MonsterStatBlock__header">
+				<div className="MonsterStatBlock__token_wrapper">
+					{shouldShowTokenDropzone ? (
+						<div className="MonsterStatBlock__token_dropzone">
+							<ImageDropzone
+								campaignSlug={tokenUploadCampaignSlug}
+								initialSource={tokenUploadCampaignSlug}
+								initialCategory="tokens"
+								initialSubcategory=""
+								onUploadSuccess={handleCustomTokenUpload}
+							/>
+							{customTokenSrc && !hasImageError && (
+								<Button
+									variant="ghost"
+									size={Button.SIZES.SMALL}
+									onClick={() => setIsReplacingToken(false)}
+								>
+									{lang.t("Cancel")}
+								</Button>
+							)}
+						</div>
+					) : !hasImageError ? (
+						<div
+							className="MonsterStatBlock__tokenDragProxy"
+							draggable
+							onDragStart={handleDragStart}
+						>
+							<img
+								src={localSrc}
+								alt={monster.name}
+								className="MonsterStatBlock__token"
+								draggable={false}
+								onError={() => setHasImageError(true)}
+							/>
+							{allowTokenUpload &&
+								(isCustomMonster || onTokenImageChange) && (
+									<Button
+										variant="ghost"
+										size={Button.SIZES.SMALL}
+										icon="image"
+										className="MonsterStatBlock__replace_token_btn"
+										onClick={handleReplaceTokenImage}
+										title={lang.t("Replace image")}
+									/>
+								)}
+						</div>
+					) : (
+						<div className="MonsterStatBlock__token_skeleton">
+							<Icon name="dice" />
+						</div>
+					)}
+				</div>
 				<div className="MonsterStatBlock__header__details">
 					<div className="MonsterStatBlock__name__row">
 						{onNameClick ? (
@@ -791,57 +842,6 @@ export default function MonsterStatBlock({
 					{!isGridLayout && (
 						<div className="MonsterStatBlock__abilities">
 							{renderAbilities()}
-						</div>
-					)}
-				</div>
-				<div className="MonsterStatBlock__token_wrapper">
-					{shouldShowTokenDropzone ? (
-						<div className="MonsterStatBlock__token_dropzone">
-							<ImageDropzone
-								campaignSlug={tokenUploadCampaignSlug}
-								initialSource={tokenUploadCampaignSlug}
-								initialCategory="tokens"
-								initialSubcategory=""
-								onUploadSuccess={handleCustomTokenUpload}
-							/>
-							{customTokenSrc && !hasImageError && (
-								<Button
-									variant="ghost"
-									size={Button.SIZES.SMALL}
-									onClick={() => setIsReplacingToken(false)}
-								>
-									{lang.t("Cancel")}
-								</Button>
-							)}
-						</div>
-					) : !hasImageError ? (
-						<div
-							className="MonsterStatBlock__tokenDragProxy"
-							draggable
-							onDragStart={handleDragStart}
-						>
-							<img
-								src={localSrc}
-								alt={monster.name}
-								className="MonsterStatBlock__token"
-								draggable={false}
-								onError={() => setHasImageError(true)}
-							/>
-							{allowTokenUpload &&
-								(isCustomMonster || onTokenImageChange) && (
-									<Button
-										variant="ghost"
-										size={Button.SIZES.SMALL}
-										icon="image"
-										className="MonsterStatBlock__replace_token_btn"
-										onClick={handleReplaceTokenImage}
-										title={lang.t("Replace image")}
-									/>
-								)}
-						</div>
-					) : (
-						<div className="MonsterStatBlock__token_skeleton">
-							<Icon name="dice" />
 						</div>
 					)}
 				</div>

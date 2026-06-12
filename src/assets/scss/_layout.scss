@@ -5,8 +5,8 @@
 	margin-left: var(--sidebar-collapsed);
 }
 
-.App__main {
-	padding: var(--space-6);
+.MainContent {
+	padding: var(--space-3);
 	min-width: 0;
 }
 
@@ -77,8 +77,14 @@
 	}
 }
 
+@media (max-width: 1600px) {
+	.MainContent {
+		padding: var(--space-3);
+	}
+}
+
 @media (max-width: 1024px) {
-	.App__main {
+	.MainContent {
 		padding: 0;
 	}
 }

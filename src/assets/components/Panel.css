@@ -3,7 +3,6 @@
 	border: 1px solid color-mix(in srgb, var(--border), transparent 25%);
 	border-radius: var(--radius);
 	box-shadow: var(--shadow);
-	margin: var(--space-3);
 	max-height: calc(100vh - var(--size-6));
 	height: 100%;
 	overflow: hidden;
@@ -33,9 +32,16 @@
 	padding: 0;
 }
 
+@media (max-width: 1600px) {
+
+	.Panel__header {
+		padding: var(--size-2) var(--size-3);
+		border-radius: unset;
+	}
+}
+
 @media (max-width: 1024px) {
 	.Panel {
-		margin: 0;
 		max-height: 100vh;
 		border-radius: unset;
 	}

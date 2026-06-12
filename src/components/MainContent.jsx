@@ -71,15 +71,11 @@ function SpellsRoute() {
 	return <Spells />;
 }
 
-export default function MainContent({ className = "" }) {
+export default function MainContent() {
 	return (
 		<Routes>
-			<Route path="/" element={<EmptyState className={className} />} />
-			<Route
-				element={
-					<MainContentLayout className={className} showAiAssistant />
-				}
-			>
+			<Route path="/" element={<EmptyState />} />
+			<Route element={<MainContentLayout showAiAssistant />}>
 				<Route path="/campaign/:slug" element={<CampaignRoute />} />
 				<Route
 					path="/campaign/:slug/session/:fileName"
