@@ -6,6 +6,7 @@ import Icon from "./common/Icon";
 import StatusBadge from "./common/StatusBadge";
 import ListCard from "./common/ListCard";
 import DraggableList from "./common/DraggableList";
+import CollapseToggleButton from "./common/CollapseToggleButton";
 import ImageGallery from "./ImageGallery";
 import { openRulesReferenceModal } from "./modals/openRulesReferenceModal";
 import PlayerQuestionsModalContent from "./modals/PlayerQuestionsModalContent";
@@ -42,6 +43,8 @@ export default function Sidebar({
 	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 	const [isSidebarHovered, setIsSidebarHovered] = useState(false);
 	const [isSidebarPinnedOpen, setIsSidebarPinnedOpen] = useState(false);
+	const [isCompletedCampaignsCollapsed, setIsCompletedCampaignsCollapsed] =
+		useState(false);
 	const activeNavigationSlug = useAppSelector(
 		(store) => store.navigation.activeCampaignSlug,
 	);
@@ -59,7 +62,7 @@ export default function Sidebar({
 		setLocalCampaigns(campaigns);
 	}, [campaigns]);
 
-	const displayedCampaigns = useMemo(() => {
+	const campaignGroups = useMemo(() => {
 		const active = [];
 		const completed = [];
 
@@ -71,7 +74,7 @@ export default function Sidebar({
 			active.push(campaign);
 		});
 
-		return [...active, ...completed];
+		return { active, completed };
 	}, [localCampaigns]);
 
 	const handleFileChange = async (event) => {
@@ -93,12 +96,30 @@ export default function Sidebar({
 		}
 	};
 
-	const handleDragEnd = (newList) => {
+	const persistCampaignOrder = (newList) => {
 		const orders = {};
 		newList.forEach((item, idx) => {
 			orders[item.slug] = idx;
 		});
 		api.reorderCampaigns(orders);
+	};
+
+	const handleCampaignGroupReorder = (group, newGroupList) => {
+		setLocalCampaigns(() => {
+			const next =
+				group === "completed"
+					? [...campaignGroups.active, ...newGroupList]
+					: [...newGroupList, ...campaignGroups.completed];
+			return next;
+		});
+	};
+
+	const handleCampaignGroupDrop = (group, newGroupList) => {
+		const next =
+			group === "completed"
+				? [...campaignGroups.active, ...newGroupList]
+				: [...newGroupList, ...campaignGroups.completed];
+		persistCampaignOrder(next);
 	};
 
 	const handleSelectImportStrategy = (strategyId) => {
@@ -198,6 +219,41 @@ export default function Sidebar({
 	const isSidebarExpanded =
 		isSidebarHovered || isSidebarPinnedOpen || isMobileOpen;
 
+	const renderCampaignCard = (campaign) => (
+		<ListCard
+			className={campaign.completed ? "Sidebar__campaignCompleted" : ""}
+			active={activeCampaignId === campaign.slug}
+			href={`/campaign/${encodeURIComponent(campaign.slug)}`}
+			onClick={() => handleCampaignClick(campaign.slug)}
+			actions={
+				<StatusBadge
+					completed={campaign.completed}
+					onClick={(e) => {
+						e.stopPropagation();
+						onToggleCampaignStatus(campaign);
+					}}
+				/>
+			}
+		>
+			<div className="ListCard__sidebar_content">
+				<Icon name="map" className="ListCard__sidebar_icon" />
+				<div className="ListCard__sidebar_info">
+					<div
+						className="ListCard__title Sidebar__campaignTitle"
+						title={campaign.name}
+					>
+						{campaign.name}
+					</div>
+					<div className="ListCard__meta">
+						{lang.t("{count} sessions", {
+							count: campaign.sessionCount || 0,
+						})}
+					</div>
+				</div>
+			</div>
+		</ListCard>
+	);
+
 	return (
 		<>
 			<aside
@@ -295,45 +351,58 @@ export default function Sidebar({
 					</Button>
 
 					<DraggableList
-						items={displayedCampaigns}
+						items={campaignGroups.active}
 						className="Sidebar__list"
-						onReorder={setLocalCampaigns}
-						onDrop={handleDragEnd}
+						onReorder={(newList) =>
+							handleCampaignGroupReorder("active", newList)
+						}
+						onDrop={(newList) => handleCampaignGroupDrop("active", newList)}
 						keyExtractor={(c) => c.slug}
-						renderItem={(campaign) => (
-							<ListCard
-								active={activeCampaignId === campaign.slug}
-								href={`/campaign/${encodeURIComponent(campaign.slug)}`}
-								onClick={() => handleCampaignClick(campaign.slug)}
-								actions={
-									<StatusBadge
-										completed={campaign.completed}
-										onClick={(e) => {
-											e.stopPropagation();
-											onToggleCampaignStatus(campaign);
-										}}
-									/>
-								}
-							>
-								<div className="ListCard__sidebar_content">
-									<Icon name="map" className="ListCard__sidebar_icon" />
-									<div className="ListCard__sidebar_info">
-										<div
-											className="ListCard__title Sidebar__campaignTitle"
-											title={campaign.name}
-										>
-											{campaign.name}
-										</div>
-										<div className="ListCard__meta">
-											{lang.t("{count} sessions", {
-												count: campaign.sessionCount || 0,
-											})}
-										</div>
-									</div>
-								</div>
-							</ListCard>
-						)}
+						renderItem={renderCampaignCard}
 					/>
+					{campaignGroups.completed.length > 0 && (
+						<div className="Sidebar__completedCampaigns">
+							<div
+								role="button"
+								tabIndex={0}
+								className="Sidebar__completedHeader"
+								onClick={() =>
+									setIsCompletedCampaignsCollapsed((value) => !value)
+								}
+								onKeyDown={(event) => {
+									if (event.key !== "Enter" && event.key !== " ") return;
+									event.preventDefault();
+									setIsCompletedCampaignsCollapsed((value) => !value);
+								}}
+							>
+								<CollapseToggleButton
+									size={Button.SIZES.SMALL}
+									collapsed={isCompletedCampaignsCollapsed}
+									onClick={() =>
+										setIsCompletedCampaignsCollapsed((value) => !value)
+									}
+								/>
+								<span>{lang.t("Completed campaigns")}</span>
+								<span className="Sidebar__completedCount">
+									{campaignGroups.completed.length}
+								</span>
+							</div>
+							{!isCompletedCampaignsCollapsed && (
+								<DraggableList
+									items={campaignGroups.completed}
+									className="Sidebar__list Sidebar__completedList"
+									onReorder={(newList) =>
+										handleCampaignGroupReorder("completed", newList)
+									}
+									onDrop={(newList) =>
+										handleCampaignGroupDrop("completed", newList)
+									}
+									keyExtractor={(c) => c.slug}
+									renderItem={renderCampaignCard}
+								/>
+							)}
+						</div>
+					)}
 				</div>
 
 				<div className="Sidebar__section Sidebar__section__resources">

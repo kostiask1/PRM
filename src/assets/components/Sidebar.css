@@ -135,6 +135,50 @@
 	padding: 0 var(--space-1);
 }
 
+.Sidebar__completedCampaigns {
+	display: grid;
+	gap: var(--space-1);
+	padding-top: var(--space-1);
+	border-top: 1px solid color-mix(in srgb, var(--border), transparent 55%);
+}
+
+.Sidebar__completedHeader {
+	display: flex;
+	align-items: center;
+	gap: var(--space-1);
+	min-height: var(--size-7);
+	padding: 0 var(--space-1);
+	border-radius: var(--radius-sm);
+	color: var(--muted);
+	cursor: pointer;
+	user-select: none;
+}
+
+.Sidebar__completedHeader:hover,
+.Sidebar__completedHeader:focus-visible {
+	background: color-mix(in srgb, var(--text-bright), transparent 95%);
+	color: var(--text);
+	outline: none;
+}
+
+.Sidebar__completedHeader .CollapseToggleButton {
+	flex: 0 0 auto;
+}
+
+.Sidebar__completedHeader>span {
+	min-width: 0;
+	font-size: 0.82rem;
+	font-weight: 700;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.Sidebar__completedCount {
+	margin-left: auto;
+	color: var(--muted);
+	font-size: 0.76rem !important;
+}
+
 .Sidebar__list .ListCard__main {
 	padding-left: 0;
 	padding-right: 0;
@@ -229,6 +273,36 @@
 
 .ListCard__active .ListCard__sidebar_icon {
 	color: var(--accent);
+}
+
+.Sidebar__campaignCompleted {
+	background:
+		repeating-linear-gradient(
+			-45deg,
+			color-mix(in srgb, var(--muted), transparent 88%) 0 6px,
+			transparent 6px 12px
+		),
+		color-mix(in srgb, var(--bg), transparent 45%);
+}
+
+.Sidebar__campaignCompleted:hover {
+	background:
+		repeating-linear-gradient(
+			-45deg,
+			color-mix(in srgb, var(--muted), transparent 84%) 0 6px,
+			transparent 6px 12px
+		),
+		color-mix(in srgb, var(--bg), transparent 30%);
+}
+
+.Sidebar__campaignCompleted.ListCard__active {
+	background:
+		repeating-linear-gradient(
+			-45deg,
+			color-mix(in srgb, var(--accent), transparent 74%) 0 6px,
+			transparent 6px 12px
+		),
+		color-mix(in srgb, var(--accent), transparent 90%) !important;
 }
 
 .ListCard__sidebar_info {
