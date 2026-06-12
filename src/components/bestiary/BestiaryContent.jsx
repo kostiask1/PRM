@@ -56,6 +56,7 @@ function MonsterListItem({
 	onAiEdit,
 	onDelete,
 	onEdit,
+	onSelectMonster,
 	onSelect,
 	onToggleFavorite,
 	search,
@@ -73,7 +74,10 @@ function MonsterListItem({
 			<ListCard
 				active={isSelected}
 				onClick={() => onSelect(isSelected ? "" : monster)}
-				onDoubleClick={() => onAddMonster && onAddMonster(monster)}
+				onDoubleClick={() => {
+					if (onSelectMonster) onSelectMonster(monster);
+					else if (onAddMonster) onAddMonster(monster);
+				}}
 				actions={
 					<>
 						<Button
@@ -93,16 +97,21 @@ function MonsterListItem({
 									: lang.t("Add to favorites")
 							}
 						/>
-						{onAddMonster && (
+						{(onAddMonster || onSelectMonster) && (
 							<Button
 								variant="ghost"
 								size={Button.SIZES.SMALL}
 								icon="plus"
 								onClick={(event) => {
 									event.stopPropagation();
-									onAddMonster(monster);
+									if (onSelectMonster) onSelectMonster(monster);
+									else onAddMonster(monster);
 								}}
-								title={lang.t("Add to encounter")}
+								title={
+									onSelectMonster
+										? lang.t("Insert")
+										: lang.t("Add to encounter")
+								}
 							/>
 						)}
 						<Button
@@ -185,6 +194,8 @@ function MonsterListItem({
 export default function BestiaryContent({
 	displayedMonsters,
 	favorites,
+	headerActions = null,
+	hideSearchInput = false,
 	isDetailedSearch,
 	isEmbedded,
 	listRef,
@@ -195,6 +206,7 @@ export default function BestiaryContent({
 	onFavoriteListChange,
 	onMonsterAiAction,
 	onAiEditCustomMonster,
+	onSelectMonster,
 	onToggleFavorite,
 	onlyFavorites,
 	search,
@@ -213,13 +225,6 @@ export default function BestiaryContent({
 }) {
 	const listContainerRef = useRef(null);
 	const detailRef = useRef(null);
-
-	const scrollListIntoView = () => {
-		listContainerRef.current?.scrollIntoView({
-			behavior: "smooth",
-			block: "start",
-		});
-	};
 
 	const handleSelectMonster = (monster) => {
 		setSelectedMonster(monster);
@@ -257,6 +262,7 @@ export default function BestiaryContent({
 			onAiEdit={onAiEditCustomMonster}
 			onDelete={onDeleteCustomMonster}
 			onEdit={onEditMonster}
+			onSelectMonster={onSelectMonster}
 			onSelect={handleSelectMonster}
 			onToggleFavorite={onToggleFavorite}
 			search={searchHighlight}
@@ -286,21 +292,23 @@ export default function BestiaryContent({
 							))}
 						</Select>
 					)}
-					<div className="Bestiary__searchInput">
-						<Input
-							icon="search-detailed"
-							placeholder={lang.t("Search by name or type...")}
-							value={search}
-							onChange={(event) => setSearch(event.target.value)}
-						/>
-						<Button
-							variant={isDetailedSearch ? "primary" : "ghost"}
-							icon="search-detailed"
-							onClick={() => setIsDetailedSearch((value) => !value)}
-							title={lang.t("Detailed search")}
-							className="DetailedSearchButton Bestiary__detailed_search_btn"
-						/>
-					</div>
+					{!hideSearchInput && (
+						<div className="Bestiary__searchInput">
+							<Input
+								icon="search-detailed"
+								placeholder={lang.t("Search by name or type...")}
+								value={search}
+								onChange={(event) => setSearch(event.target.value)}
+							/>
+							<Button
+								variant={isDetailedSearch ? "primary" : "ghost"}
+								icon="search-detailed"
+								onClick={() => setIsDetailedSearch((value) => !value)}
+								title={lang.t("Detailed search")}
+								className="DetailedSearchButton Bestiary__detailed_search_btn"
+							/>
+						</div>
+					)}
 					<Button
 						variant={onlyFavorites ? "primary" : "ghost"}
 						icon="star"
@@ -325,6 +333,9 @@ export default function BestiaryContent({
 							)}
 						/>
 					</Button>
+					{headerActions && (
+						<div className="Bestiary__embedded_actions">{headerActions}</div>
+					)}
 				</div>
 				{loading && (
 					<div className="muted">{lang.t("Indexing database...")}</div>
@@ -353,6 +364,17 @@ export default function BestiaryContent({
 
 					{selectedMonster && (
 						<div className="Bestiary__detail_container" ref={detailRef}>
+							{onSelectMonster && (
+								<div className="Bestiary__select_actions">
+									<Button
+										variant="primary"
+										icon="plus"
+										onClick={() => onSelectMonster(selectedMonster)}
+									>
+										{lang.t("Insert")}
+									</Button>
+								</div>
+							)}
 							<MonsterStatBlock
 								monster={selectedMonster}
 								favoriteActive={isFavoriteMonster(favorites, selectedMonster)}
@@ -361,7 +383,7 @@ export default function BestiaryContent({
 								}
 								nameTitle={onAddMonster && lang.t("Add to encounter")}
 								onFavoriteChange={onFavoriteListChange}
-								showAddToEncounterPicker
+								showAddToEncounterPicker={Boolean(onAddMonster)}
 								onAddToEncounter={onAddMonster}
 								onAiAction={onMonsterAiAction}
 								onDelete={

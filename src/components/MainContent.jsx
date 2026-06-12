@@ -1,8 +1,6 @@
 import CampaignView from "./CampaignView";
 import SessionView from "./SessionView";
-import Bestiary from "./Bestiary";
 import EncounterView from "./EncounterView";
-import Spells from "./Spells";
 import ProjectGuide from "./ProjectGuide";
 import AiAssistantPanel from "./ai/AiAssistantPanel";
 import { Outlet, Route, Routes, useLocation } from "react-router";
@@ -63,14 +61,6 @@ function EncounterRoute() {
 	return <EncounterView />;
 }
 
-function BestiaryRoute() {
-	return <Bestiary />;
-}
-
-function SpellsRoute() {
-	return <Spells />;
-}
-
 export default function MainContent() {
 	return (
 		<Routes>
@@ -85,10 +75,6 @@ export default function MainContent() {
 					path="/campaign/:slug/session/:fileName/encounter/:encounterId"
 					element={<EncounterRoute />}
 				/>
-				<Route path="/bestiary" element={<BestiaryRoute />} />
-			</Route>
-			<Route element={<MainContentLayout />}>
-				<Route path="/spells" element={<SpellsRoute />} />
 			</Route>
 			<Route path="*" element={<EmptyState />} />
 		</Routes>

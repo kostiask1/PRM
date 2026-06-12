@@ -247,7 +247,7 @@ await run("noteUtils renders virtual notes and sanitizes saved notes", () => {
 });
 
 await run(
-	"parseUrl supports campaign/session/encounter and static sections",
+	"parseUrl supports campaign/session/encounter routes",
 	() => {
 		const originalWindow = global.window;
 		try {
@@ -267,13 +267,13 @@ await run(
 			});
 			global.window = { location: { pathname: "/bestiary" } };
 			assert.deepEqual(parseUrl(), {
-				campaign: "bestiary",
+				campaign: null,
 				session: null,
 				encounter: null,
 			});
 			global.window = { location: { pathname: "/spells" } };
 			assert.deepEqual(parseUrl(), {
-				campaign: "spells",
+				campaign: null,
 				session: null,
 				encounter: null,
 			});
@@ -295,8 +295,8 @@ await run(
 		assert.equal(shouldOpenInNewTabFromEvent(null), false);
 
 		assert.equal(buildNavigationUrl(null), "/");
-		assert.equal(buildNavigationUrl("bestiary"), "/bestiary");
-		assert.equal(buildNavigationUrl("spells"), "/spells");
+		assert.equal(buildNavigationUrl("bestiary"), "/campaign/bestiary");
+		assert.equal(buildNavigationUrl("spells"), "/campaign/spells");
 		assert.equal(
 			buildNavigationUrl("camp", "sess 1", "enc-1"),
 			"/campaign/camp/session/sess%201/encounter/enc-1",
@@ -1377,12 +1377,19 @@ await run("parser renders dice and creature tags as interactive components", asy
 	assert.match(rendererSource, /name=\{creatureValue\}/);
 	assert.match(
 		rendererSource,
-		/type="creature"\s+name=\{creatureValue\}\s+>/,
+		/type="creature"\s+name=\{creatureValue\}\s+onNavigate=\{options\.onRuleNavigate\}/,
 	);
 	assert.match(rulesLinkSource, /const openCreature = \(\) =>/);
-	assert.match(rulesLinkSource, /query\.set\("monster", creature\.name\)/);
-	assert.match(rulesLinkSource, /query\.set\("m_source", creature\.source\)/);
-	assert.match(rulesLinkSource, /syncNavigationFromPath\("\/bestiary"\)/);
+	assert.match(rulesLinkSource, /onNavigate\("bestiary", referenceName\)/);
+	assert.match(
+		rulesLinkSource,
+		/openRulesReferenceModal\("bestiary", referenceName\)/,
+	);
+	assert.match(rendererSource, /onNavigate=\{options\.onRuleNavigate\}/);
+	assert.match(rulesReferenceSource, /import Bestiary from "\.\.\/Bestiary\.jsx"/);
+	assert.match(rulesReferenceSource, /id: "bestiary"/);
+	assert.match(rulesReferenceSource, /api\.searchBestiary\(\)/);
+	assert.match(rulesReferenceSource, /<Bestiary\s+isEmbedded/);
 	assert.match(rulesReferenceSource, /renderRecursiveContent\(selectedItem\.entries/);
 	assert.match(rulesReferenceSource, /onRuleNavigate: navigateToReference/);
 	assert.match(rulesLinkCss, /\.RulesLink__creature/);
@@ -1395,6 +1402,35 @@ await run("parser renders item filter display names", () => {
 		),
 		"If you wear Light, Medium, or Heavy armor and lack training",
 	);
+});
+
+await run("rules reference modal owns spells and bestiary navigation", async () => {
+	const mainContentSource = await fs.readFile(
+		"src/components/MainContent.jsx",
+		"utf8",
+	);
+	const sidebarSource = await fs.readFile("src/components/Sidebar.jsx", "utf8");
+	const bestiarySource = await fs.readFile(
+		"src/components/Bestiary.jsx",
+		"utf8",
+	);
+	const bestiaryContentSource = await fs.readFile(
+		"src/components/bestiary/BestiaryContent.jsx",
+		"utf8",
+	);
+
+	assert.doesNotMatch(mainContentSource, /path="\/bestiary"/);
+	assert.doesNotMatch(mainContentSource, /path="\/spells"/);
+	assert.doesNotMatch(mainContentSource, /import Bestiary from/);
+	assert.doesNotMatch(mainContentSource, /import Spells from/);
+	assert.match(sidebarSource, /handleOpenRulesReference\("bestiary"\)/);
+	assert.match(sidebarSource, /handleOpenRulesReference\("spells"\)/);
+	assert.doesNotMatch(sidebarSource, /onSelectCampaign\("bestiary"\)/);
+	assert.doesNotMatch(sidebarSource, /onSelectCampaign\("spells"\)/);
+	assert.match(bestiarySource, /initialSelectedName = ""/);
+	assert.match(bestiarySource, /hideSearchInput = false/);
+	assert.match(bestiaryContentSource, /onSelectMonster/);
+	assert.match(bestiaryContentSource, /showAddToEncounterPicker=\{Boolean\(onAddMonster\)\}/);
 });
 
 await run("undo redo helpers move snapshots between stacks", () => {

@@ -16,18 +16,12 @@ export const parseUrl = (pathname = null) => {
 				encounter = decodeURIComponent(parts[5]);
 			}
 		}
-	} else if (parts[0] === "bestiary") {
-		campaign = "bestiary";
-	} else if (parts[0] === "spells") {
-		campaign = "spells";
 	}
 	return { campaign, session, encounter };
 };
 
 export function buildNavigationUrl(slug, fileName = null, encounterId = null) {
 	if (!slug) return "/";
-	if (slug === "bestiary") return "/bestiary";
-	if (slug === "spells") return "/spells";
 	let url = `/campaign/${encodeURIComponent(slug)}`;
 	if (fileName) {
 		url += `/session/${encodeURIComponent(fileName)}`;

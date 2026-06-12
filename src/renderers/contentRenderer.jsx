@@ -329,7 +329,7 @@ export const parseRollsAndSpells = (
 					key={`h-${matchIndex}`}
 					formula={`1d20${formatModifier(parseInt(bonus, 10))}`}
 				>
-					{highlightText(`${hit}${hitSuffix}`, highlightQuery)}
+					{highlightText(`+${hit}${hitSuffix}`, highlightQuery)}
 				</RollDice>,
 			);
 		} else if (spellTag) {
@@ -353,6 +353,7 @@ export const parseRollsAndSpells = (
 					key={getReferenceKey("c", matchIndex, rawCreatureName)}
 					type="creature"
 					name={creatureValue}
+					onNavigate={options.onRuleNavigate}
 				>
 					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,

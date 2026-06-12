@@ -48,6 +48,24 @@ function monsterMatchesUrl(monster, name, source) {
 	return monster?.name === name && (!source || monster.source === source);
 }
 
+function parseMonsterReference(value, fallbackSource = "") {
+	const parts = String(value || "").split("|");
+	return {
+		name: String(parts[0] || "").trim(),
+		source: String(fallbackSource || parts[1] || "").trim(),
+	};
+}
+
+function monsterMatchesReference(monster, reference) {
+	if (!monster?.name || !reference?.name) return false;
+	return (
+		String(monster.name || "").trim() === reference.name &&
+		(!reference.source ||
+			String(monster.source || "").toUpperCase() ===
+				reference.source.toUpperCase())
+	);
+}
+
 function isCustomSource(source) {
 	return String(source || "").toUpperCase() === "CUSTOM";
 }
@@ -86,7 +104,17 @@ function customMonsterListsEqual(left, right) {
 	return JSON.stringify(left || []) === JSON.stringify(right || []);
 }
 
-export default function Bestiary({ onAddMonster, isEmbedded = false }) {
+export default function Bestiary({
+	onAddMonster,
+	isEmbedded = false,
+	initialSearch = "",
+	initialDetailedSearch = false,
+	initialSelectedName = "",
+	initialSelectedSource = "",
+	scrollToInitialSelected = true,
+	hideSearchInput = false,
+	onSelectMonster = null,
+}) {
 	const [urlSearchParams, setUrlSearchParams] = useSearchParams();
 	const dispatch = useAppDispatch();
 	const currentLanguage = useAppSelector(
@@ -103,15 +131,23 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	const urlMonsterSource = isEmbedded
 		? ""
 		: urlSearchParams.get("m_source") || "";
+	const initialMonsterReference = useMemo(
+		() => parseMonsterReference(initialSelectedName, initialSelectedSource),
+		[initialSelectedName, initialSelectedSource],
+	);
 	const [sources, setSources] = useState([]);
 	const [selectedSource, setSelectedSource] = useState(() =>
-		normalizeSourceSelection(urlSelectedSource),
+		normalizeSourceSelection(
+			urlSelectedSource || initialMonsterReference.source,
+		),
 	);
 	const [allMonsters, setAllMonsters] = useState([]);
 	const [monsters, setMonsters] = useState([]);
-	const [search, setSearch] = useState("");
+	const [search, setSearch] = useState(initialSearch);
 	const debouncedSearch = useDebounce(search, useSearchDebounce ? 250 : 0);
-	const [isDetailedSearch, setIsDetailedSearch] = useState(false);
+	const [isDetailedSearch, setIsDetailedSearch] = useState(
+		initialDetailedSearch,
+	);
 	const [loading, setLoading] = useState(false);
 	const [selectedMonster, setSelectedMonster] = useState(null);
 	const [legendaryGroups, setLegendaryGroups] = useState([]);
@@ -147,6 +183,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	const shouldAutoSelectMonsterRef = useRef(true);
 	const pendingUrlSelectionRef = useRef(null);
 	const hasScrolledToInitialMonsterRef = useRef(false);
+	const embeddedScrolledMonsterRef = useRef("");
 
 	const sourceOptions = useMemo(
 		() => sources.filter((source) => !isCustomSource(source)),
@@ -156,6 +193,31 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	useEffect(() => {
 		selectedMonsterRef.current = selectedMonster;
 	}, [selectedMonster]);
+
+	useEffect(() => {
+		if (!isEmbedded) return;
+		setSearch(initialSearch);
+	}, [initialSearch, isEmbedded]);
+
+	useEffect(() => {
+		if (!isEmbedded) return;
+		setIsDetailedSearch(Boolean(initialDetailedSearch));
+	}, [initialDetailedSearch, isEmbedded]);
+
+	useEffect(() => {
+		if (!isEmbedded) return;
+		embeddedScrolledMonsterRef.current = "";
+	}, [initialSelectedName, initialSelectedSource, isEmbedded]);
+
+	useEffect(() => {
+		if (!isEmbedded || !initialMonsterReference.name) return;
+		const nextSource = normalizeSourceSelection(
+			initialMonsterReference.source || "all",
+		);
+		setSelectedSource((current) =>
+			current === nextSource ? current : nextSource,
+		);
+	}, [initialMonsterReference, isEmbedded]);
 
 	useEffect(() => {
 		if (!isHeaderActionsOpen) return undefined;
@@ -1104,6 +1166,47 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	]);
 
 	useEffect(() => {
+		if (!isEmbedded) return;
+
+		const targetMonster = initialMonsterReference.name
+			? displayedMonsters.find((monster) =>
+					monsterMatchesReference(monster, initialMonsterReference),
+				) ||
+				allMonsters.find((monster) =>
+					monsterMatchesReference(monster, initialMonsterReference),
+				)
+			: null;
+
+		if (targetMonster) {
+			if (!isSameMonsterIdentity(selectedMonsterRef.current, targetMonster)) {
+				shouldAutoSelectMonsterRef.current = false;
+				setSelectedMonster(targetMonster);
+			}
+			return;
+		}
+
+		if (initialMonsterReference.name) return;
+
+		const autoSelectedMonster = getAutoSelectedMonster(
+			displayedMonsters,
+			selectedSource,
+		);
+		const currentMonster = selectedMonsterRef.current;
+		const currentMonsterInList =
+			currentMonster?.name &&
+			getMonsterListIndex(displayedMonsters, currentMonster) >= 0;
+		if (autoSelectedMonster && (!currentMonster?.name || !currentMonsterInList)) {
+			setSelectedMonster(autoSelectedMonster);
+		}
+	}, [
+		allMonsters,
+		displayedMonsters,
+		initialMonsterReference,
+		isEmbedded,
+		selectedSource,
+	]);
+
+	useEffect(() => {
 		if (isEmbedded) return;
 		const pendingSelection = pendingUrlSelectionRef.current;
 		if (
@@ -1164,6 +1267,36 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 		return () => cancelAnimationFrame(frameId);
 	}, [displayedMonsters, isEmbedded, selectedMonster, urlMonsterName]);
 
+	useEffect(() => {
+		if (
+			!isEmbedded ||
+			!scrollToInitialSelected ||
+			!initialMonsterReference.name ||
+			!selectedMonster?.name ||
+			!monsterMatchesReference(selectedMonster, initialMonsterReference)
+		) {
+			return undefined;
+		}
+
+		const scrollKey = `${selectedMonster.source || ""}:${selectedMonster.name}`;
+		if (embeddedScrolledMonsterRef.current === scrollKey) return undefined;
+
+		const selectedIndex = getMonsterListIndex(displayedMonsters, selectedMonster);
+		if (selectedIndex < 0) return undefined;
+
+		embeddedScrolledMonsterRef.current = scrollKey;
+		const frameId = requestAnimationFrame(() => {
+			listRef.current?.scrollTo(selectedIndex);
+		});
+		return () => cancelAnimationFrame(frameId);
+	}, [
+		displayedMonsters,
+		initialMonsterReference,
+		isEmbedded,
+		scrollToInitialSelected,
+		selectedMonster,
+	]);
+
 	const toggleSort = () => {
 		setSortOrder((prev) => {
 			if (prev === "none") return "desc";
@@ -1185,10 +1318,86 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 		return parseFloat(crStr) || 0;
 	}
 
+	const bestiaryActions = (
+		<div
+			ref={headerActionsRef}
+			className={classNames("Bestiary__header_actions", {
+				is_open: isHeaderActionsOpen,
+			})}
+		>
+			<input
+				ref={customImportInputRef}
+				type="file"
+				accept=".json"
+				style={{ display: "none" }}
+				onChange={handleImportCustomMonsters}
+			/>
+			<Button
+				variant="ghost"
+				size={Button.SIZES.SMALL}
+				icon="menu"
+				className="Bestiary__header_actionsToggle"
+				onClick={() => setIsHeaderActionsOpen((value) => !value)}
+				title={lang.t("Bestiary actions")}
+			/>
+			<div className="Bestiary__header_actionsMenu">
+				<Button
+					variant="ghost"
+					size={Button.SIZES.SMALL}
+					icon="import"
+					onClick={() => {
+						setIsHeaderActionsOpen(false);
+						customImportInputRef.current?.click();
+					}}
+					title={lang.t("Import custom creatures")}
+				>
+					{lang.t("Import")}
+				</Button>
+				<Button
+					variant="ghost"
+					size={Button.SIZES.SMALL}
+					icon="export"
+					onClick={() => {
+						setIsHeaderActionsOpen(false);
+						handleExportCustomMonsters();
+					}}
+					disabled={customMonsters.length === 0}
+					title={lang.t("Export custom creatures")}
+				>
+					{lang.t("Export")}
+				</Button>
+				<Button
+					variant="ghost"
+					size={Button.SIZES.SMALL}
+					icon="undo"
+					onClick={() => {
+						setIsHeaderActionsOpen(false);
+						handleUndo();
+					}}
+					disabled={undoStack.length === 0}
+					title={lang.t("Undo (Ctrl+Z)")}
+				/>
+				<Button
+					variant="ghost"
+					size={Button.SIZES.SMALL}
+					icon="redo"
+					onClick={() => {
+						setIsHeaderActionsOpen(false);
+						handleRedo();
+					}}
+					disabled={redoStack.length === 0}
+					title={lang.t("Redo (Ctrl+Y)")}
+				/>
+			</div>
+		</div>
+	);
+
 	const bestiaryContent = (
 		<BestiaryContent
 			displayedMonsters={displayedMonsters}
 			favorites={favorites}
+			headerActions={isEmbedded ? bestiaryActions : null}
+			hideSearchInput={hideSearchInput}
 			isDetailedSearch={isDetailedSearch}
 			isEmbedded={isEmbedded}
 			listRef={listRef}
@@ -1199,6 +1408,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 			onEditMonster={openEditMonster}
 			onFavoriteListChange={setFavorites}
 			onMonsterAiAction={openMonsterAiAction}
+			onSelectMonster={onSelectMonster}
 			onToggleFavorite={handleToggleFavorite}
 			onlyFavorites={onlyFavorites}
 			search={search}
@@ -1279,77 +1489,7 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 		<Panel className="Bestiary">
 			<div className="Panel__header">
 				<h2>{lang.t("Bestiary")}</h2>
-				<div
-					ref={headerActionsRef}
-					className={classNames("Bestiary__header_actions", {
-						is_open: isHeaderActionsOpen,
-					})}
-				>
-					<input
-						ref={customImportInputRef}
-						type="file"
-						accept=".json"
-						style={{ display: "none" }}
-						onChange={handleImportCustomMonsters}
-					/>
-					<Button
-						variant="ghost"
-						size={Button.SIZES.SMALL}
-						icon="menu"
-						className="Bestiary__header_actionsToggle"
-						onClick={() => setIsHeaderActionsOpen((value) => !value)}
-						title={lang.t("Bestiary actions")}
-					/>
-					<div className="Bestiary__header_actionsMenu">
-						<Button
-							variant="ghost"
-							size={Button.SIZES.SMALL}
-							icon="import"
-							onClick={() => {
-								setIsHeaderActionsOpen(false);
-								customImportInputRef.current?.click();
-							}}
-							title={lang.t("Import custom creatures")}
-						>
-							{lang.t("Import")}
-						</Button>
-						<Button
-							variant="ghost"
-							size={Button.SIZES.SMALL}
-							icon="export"
-							onClick={() => {
-								setIsHeaderActionsOpen(false);
-								handleExportCustomMonsters();
-							}}
-							disabled={customMonsters.length === 0}
-							title={lang.t("Export custom creatures")}
-						>
-							{lang.t("Export")}
-						</Button>
-						<Button
-							variant="ghost"
-							size={Button.SIZES.SMALL}
-							icon="undo"
-							onClick={() => {
-								setIsHeaderActionsOpen(false);
-								handleUndo();
-							}}
-							disabled={undoStack.length === 0}
-							title={lang.t("Undo (Ctrl+Z)")}
-						/>
-						<Button
-							variant="ghost"
-							size={Button.SIZES.SMALL}
-							icon="redo"
-							onClick={() => {
-								setIsHeaderActionsOpen(false);
-								handleRedo();
-							}}
-							disabled={redoStack.length === 0}
-							title={lang.t("Redo (Ctrl+Y)")}
-						/>
-					</div>
-				</div>
+				{bestiaryActions}
 			</div>
 			<div className="Panel__body">{bestiaryContent}</div>
 			{bestiaryModals}

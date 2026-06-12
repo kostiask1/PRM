@@ -18,10 +18,7 @@ import {
 	resolveSpellInput,
 	resolveVariantRuleInput,
 } from "../../services/referenceResolvers.js";
-import {
-	syncNavigationFromPath,
-	useAppDispatch,
-} from "../../store/appStore.js";
+import { useAppDispatch } from "../../store/appStore.js";
 import classNames from "../../utils/classNames.js";
 import { capitalizeWords, preprocessTags } from "../../utils/parser.jsx";
 import { getSpellMeta } from "../../utils/spellMeta.js";
@@ -45,7 +42,7 @@ function parseReferenceParts(raw) {
 function renderTooltipText(value) {
 	return preprocessTags(String(value || ""))
 		.replace(
-			/\{@(?:spell|condition|status|disease|variantrule|skill|sense|quickref)\s+([^}]+)\}/gi,
+			/\{@(?:spell|creature|condition|status|disease|variantrule|skill|sense|quickref)\s+([^}]+)\}/gi,
 			(_, raw) => capitalizeWords(getTaggedDisplayValue(raw)),
 		)
 		.replace(/\{@(?:hit|dc|damage|dice|recharge)\s+([^}]+)\}/gi, "$1");
@@ -166,13 +163,12 @@ export default function RulesLink({
 		const creature = parseReferenceParts(referenceName);
 		if (!creature.name) return;
 
-		const query = new URLSearchParams();
-		if (creature.source) query.set("source", creature.source);
-		query.set("monster", creature.name);
-		if (creature.source) query.set("m_source", creature.source);
-		const url = `/bestiary?${query.toString()}`;
-		window.history.pushState({}, "", url);
-		syncNavigationFromPath("/bestiary");
+		if (onNavigate) {
+			onNavigate("bestiary", referenceName);
+			return;
+		}
+
+		openRulesReferenceModal("bestiary", referenceName);
 	};
 
 	const handleClick = async () => {

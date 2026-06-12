@@ -4,6 +4,7 @@ import ReactList from "react-list";
 import { alert } from "../../actions/app";
 import { api } from "../../api";
 import "../../assets/components/RulesReferenceModalContent.css";
+import Bestiary from "../Bestiary.jsx";
 import ListCard from "../common/ListCard.jsx";
 import Button from "../form/Button.jsx";
 import Input from "../form/Input";
@@ -28,6 +29,13 @@ function getVariantRuleTypeLabel(ruleType) {
 
 function getSpellMeta(spell = {}) {
 	return formatSpellMeta(spell, " · ");
+}
+
+function getMonsterMeta(monster = {}) {
+	const crValue = monster.cr?.cr !== undefined ? monster.cr.cr : monster.cr;
+	return [monster.source, crValue ? `CR ${crValue}` : ""]
+		.filter(Boolean)
+		.join(" / ");
 }
 
 function getSearchValues(tab, item) {
@@ -99,6 +107,14 @@ const REFERENCE_TABS = [
 		searchFields: ["name", "school", "source", "level", "level_int"],
 		meta: getSpellMeta,
 	},
+	{
+		id: "bestiary",
+		label: "Bestiary",
+		emptyLabel: "No creatures found.",
+		load: () => api.searchBestiary(),
+		searchFields: ["name", "source", "cr"],
+		meta: getMonsterMeta,
+	},
 ];
 
 const TAB_BY_ID = new Map(REFERENCE_TABS.map((tab) => [tab.id, tab]));
@@ -128,6 +144,10 @@ function getReferenceInlineTag(tabId, item = {}) {
 	if (tabId === "skills") return `{@skill ${name}}`;
 	if (tabId === "variantrules") return `{@variantrule ${name}}`;
 	if (tabId === "spells") return `{@spell ${name}}`;
+	if (tabId === "bestiary") {
+		const source = String(item.source || "").trim();
+		return source ? `{@creature ${name}|${source}}` : `{@creature ${name}}`;
+	}
 	return name;
 }
 
@@ -570,6 +590,21 @@ export default function RulesReferenceModalContent({
 							onRuleNavigate: navigateToReference,
 							openSpellInNestedModal: false,
 						}}
+					/>
+				</div>
+			) : activeTab.id === "bestiary" ? (
+				<div className="RulesReferenceModalContent__bestiaryBrowser">
+					<Bestiary
+						isEmbedded
+						hideSearchInput
+						initialSearch={query}
+						initialDetailedSearch={isDetailedSearch}
+						initialSelectedName={activeSelectedName}
+						onSelectMonster={
+							onSelectReference
+								? (monster) => insertReference(activeTab.id, monster)
+								: null
+						}
 					/>
 				</div>
 			) : (

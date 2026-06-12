@@ -55,8 +55,6 @@ export default function Sidebar({
 		(store) => store.navigation.activeEncounterId,
 	);
 	const effectiveActiveSlug = activeCampaignId || activeNavigationSlug;
-	const isBestiaryActive = effectiveActiveSlug === "bestiary";
-	const isSpellsActive = effectiveActiveSlug === "spells";
 
 	useEffect(() => {
 		setLocalCampaigns(campaigns);
@@ -161,9 +159,9 @@ export default function Sidebar({
 		});
 	};
 
-	const handleOpenRulesReference = () => {
+	const handleOpenRulesReference = (initialTab = "conditions") => {
 		onClose?.();
-		openRulesReferenceModal();
+		openRulesReferenceModal(initialTab);
 	};
 
 	const handleOpenPlayerQuestions = () => {
@@ -302,26 +300,22 @@ export default function Sidebar({
 						<span>{lang.t("Gallery")}</span>
 					</a>
 					<a
-						href="/bestiary"
-						className={`Sidebar__link${isBestiaryActive ? " Sidebar__link__active" : ""}`}
+						href="#"
+						className="Sidebar__link"
 						onClick={(e) => {
-							if (!e.ctrlKey && !e.metaKey) {
-								e.preventDefault();
-								onSelectCampaign("bestiary");
-							}
+							e.preventDefault();
+							handleOpenRulesReference("bestiary");
 						}}
 					>
 						<Icon name="skull" />
 						<span>{lang.t("Bestiary")}</span>
 					</a>
 					<a
-						href="/spells"
-						className={`Sidebar__link${isSpellsActive ? " Sidebar__link__active" : ""}`}
+						href="#"
+						className="Sidebar__link"
 						onClick={(e) => {
-							if (!e.ctrlKey && !e.metaKey) {
-								e.preventDefault();
-								onSelectCampaign("spells");
-							}
+							e.preventDefault();
+							handleOpenRulesReference("spells");
 						}}
 					>
 						<Icon name="magic" />
