@@ -15,7 +15,8 @@
 	display: flex;
 	justify-content: space-between;
 	gap: var(--space-6);
-	align-items: center;
+	align-items: flex-start;
+	position: relative;
 	padding: var(--space-3) var(--space-4);
 	border-bottom: 1px solid color-mix(in srgb, var(--border), transparent 45%);
 	background: var(--panel);
@@ -32,9 +33,28 @@
 	padding: 0;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1024px) {
 	.Panel {
 		margin: 0;
-		max-height: calc(100dvh - var(--size-8) - var(--space-5));
+		max-height: 100vh;
+		border-radius: unset;
+	}
+
+	.Panel__header {
+		padding: var(--size-2) var(--size-3);
+		border-radius: unset;
+	}
+}
+
+@media (max-width: 767px) {
+	.Panel {
+		max-height: 100vh;
+		border-radius: unset;
+	}
+
+	.Panel__header {
+		padding: var(--size-2) var(--size-3);
+		padding-left: var(--size-10);
+		border-radius: unset;
 	}
 }

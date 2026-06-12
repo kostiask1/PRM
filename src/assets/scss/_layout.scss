@@ -79,7 +79,7 @@
 
 @media (max-width: 1024px) {
 	.App__main {
-		padding: var(--space-4);
+		padding: 0;
 	}
 }
 
@@ -90,11 +90,6 @@
 
 	.App {
 		margin-left: 0;
-	}
-
-	.App__main {
-		padding: calc(var(--size-8) + var(--space-4)) var(--space-3)
-			var(--space-4);
 	}
 
 	.App__mobileNavButton {

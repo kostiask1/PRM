@@ -30,6 +30,7 @@ import {
 import { downloadJsonFile } from "../utils/download.js";
 import "../assets/components/Bestiary.css";
 import { lang } from "../services/localization";
+import classNames from "../utils/classNames.js";
 
 function translate(...args) {
 	return lang.t(...args);
@@ -134,10 +135,12 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	const [selectedAiModel, setSelectedAiModel] = useState("");
 	const [aiDraftResponseEntry, setAiDraftResponseEntry] = useState(null);
 	const [isRestoringAiResponse, setIsRestoringAiResponse] = useState(false);
+	const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);
 	const [undoStack, setUndoStack] = useState([]);
 	const [redoStack, setRedoStack] = useState([]);
 	const listRef = useRef(null);
 	const customImportInputRef = useRef(null);
+	const headerActionsRef = useRef(null);
 	const selectedMonsterRef = useRef(null);
 	const aiDraftResponseRef = useRef(null);
 	const aiEditControllerRef = useRef(null);
@@ -153,6 +156,20 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 	useEffect(() => {
 		selectedMonsterRef.current = selectedMonster;
 	}, [selectedMonster]);
+
+	useEffect(() => {
+		if (!isHeaderActionsOpen) return undefined;
+
+		const handlePointerDown = (event) => {
+			if (headerActionsRef.current?.contains(event.target)) return;
+			setIsHeaderActionsOpen(false);
+		};
+
+		document.addEventListener("pointerdown", handlePointerDown);
+		return () => {
+			document.removeEventListener("pointerdown", handlePointerDown);
+		};
+	}, [isHeaderActionsOpen]);
 
 	const clearMonsterUrlSelection = useCallback(() => {
 		setUrlSearchParams(
@@ -1262,7 +1279,12 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 		<Panel className="Bestiary">
 			<div className="Panel__header">
 				<h2>{lang.t("Bestiary")}</h2>
-				<div className="Bestiary__header_actions">
+				<div
+					ref={headerActionsRef}
+					className={classNames("Bestiary__header_actions", {
+						is_open: isHeaderActionsOpen,
+					})}
+				>
 					<input
 						ref={customImportInputRef}
 						type="file"
@@ -1273,38 +1295,60 @@ export default function Bestiary({ onAddMonster, isEmbedded = false }) {
 					<Button
 						variant="ghost"
 						size={Button.SIZES.SMALL}
-						icon="import"
-						onClick={() => customImportInputRef.current?.click()}
-						title={lang.t("Import custom creatures")}
-					>
-						{lang.t("Import")}
-					</Button>
-					<Button
-						variant="ghost"
-						size={Button.SIZES.SMALL}
-						icon="export"
-						onClick={handleExportCustomMonsters}
-						disabled={customMonsters.length === 0}
-						title={lang.t("Export custom creatures")}
-					>
-						{lang.t("Export")}
-					</Button>
-					<Button
-						variant="ghost"
-						size={Button.SIZES.SMALL}
-						icon="undo"
-						onClick={handleUndo}
-						disabled={undoStack.length === 0}
-						title={lang.t("Undo (Ctrl+Z)")}
+						icon="menu"
+						className="Bestiary__header_actionsToggle"
+						onClick={() => setIsHeaderActionsOpen((value) => !value)}
+						title={lang.t("Bestiary actions")}
 					/>
-					<Button
-						variant="ghost"
-						size={Button.SIZES.SMALL}
-						icon="redo"
-						onClick={handleRedo}
-						disabled={redoStack.length === 0}
-						title={lang.t("Redo (Ctrl+Y)")}
-					/>
+					<div className="Bestiary__header_actionsMenu">
+						<Button
+							variant="ghost"
+							size={Button.SIZES.SMALL}
+							icon="import"
+							onClick={() => {
+								setIsHeaderActionsOpen(false);
+								customImportInputRef.current?.click();
+							}}
+							title={lang.t("Import custom creatures")}
+						>
+							{lang.t("Import")}
+						</Button>
+						<Button
+							variant="ghost"
+							size={Button.SIZES.SMALL}
+							icon="export"
+							onClick={() => {
+								setIsHeaderActionsOpen(false);
+								handleExportCustomMonsters();
+							}}
+							disabled={customMonsters.length === 0}
+							title={lang.t("Export custom creatures")}
+						>
+							{lang.t("Export")}
+						</Button>
+						<Button
+							variant="ghost"
+							size={Button.SIZES.SMALL}
+							icon="undo"
+							onClick={() => {
+								setIsHeaderActionsOpen(false);
+								handleUndo();
+							}}
+							disabled={undoStack.length === 0}
+							title={lang.t("Undo (Ctrl+Z)")}
+						/>
+						<Button
+							variant="ghost"
+							size={Button.SIZES.SMALL}
+							icon="redo"
+							onClick={() => {
+								setIsHeaderActionsOpen(false);
+								handleRedo();
+							}}
+							disabled={redoStack.length === 0}
+							title={lang.t("Redo (Ctrl+Y)")}
+						/>
+					</div>
 				</div>
 			</div>
 			<div className="Panel__body">{bestiaryContent}</div>

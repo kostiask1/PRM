@@ -17,6 +17,17 @@
 	align-items: center;
 	gap: var(--space-2);
 	flex-wrap: wrap;
+	position: relative;
+}
+
+.SessionView__headerActionsToggle {
+	display: none !important;
+}
+
+.SessionView__headerActionsMenu {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
 }
 
 .ProgressBar {
@@ -427,6 +438,7 @@
 		align-items: stretch;
 		flex-direction: column;
 		gap: var(--space-3);
+		position: relative;
 	}
 
 	.SessionView__header {
@@ -479,8 +491,49 @@
 	}
 
 	.SessionView>.Panel__header .SessionView__headerActions {
-		width: 100%;
-		justify-content: flex-start;
+		position: absolute;
+		top: var(--space-2);
+		right: var(--space-3);
+		z-index: 5;
+		width: auto;
+		margin-left: 0;
+		overflow: visible;
+		padding-bottom: 0;
+	}
+
+	.SessionView__headerActionsToggle {
+		display: inline-flex !important;
+	}
+
+	.SessionView__headerActionsMenu {
+		position: absolute;
+		top: calc(100% + var(--space-1));
+		right: 0;
+		z-index: 20;
+		display: none;
+		align-items: center;
+		gap: var(--space-2);
+		padding: var(--space-2);
+		border: 1px solid color-mix(in srgb, var(--border), transparent 35%);
+		border-radius: var(--radius-md);
+		background: var(--panel);
+		box-shadow: var(--shadow);
+	}
+
+	.SessionView__headerActions.is_open .SessionView__headerActionsMenu {
+		display: flex;
+	}
+
+	.SessionView__headerActions .Button,
+	.SessionView__headerActionsMenu .Button {
+		flex: 0 0 auto;
+		min-height: var(--control-h-sm);
+		font-size: 0.82rem;
+		padding-inline: var(--space-2);
+	}
+
+	.SessionView__titleRow {
+		padding-right: calc(var(--size-8) + var(--space-4));
 	}
 
 	.SceneCard__content {
@@ -506,7 +559,6 @@
 		gap: var(--space-3);
 	}
 
-	.SessionView__titleRow,
 	.SceneCard__header,
 	.SceneCard__notes_headerRow {
 		align-items: flex-start;
@@ -515,6 +567,7 @@
 
 	.SessionView__titleRow {
 		gap: var(--space-2);
+		padding-left: var(--size-9);
 	}
 
 	.SessionView__titleGroup {
@@ -522,7 +575,7 @@
 	}
 
 	.SessionView__titleRow h2 {
-		font-size: clamp(1.35rem, 8vw, 2rem);
+		font-size: 1.3rem;
 		line-height: 1.05;
 	}
 
@@ -554,7 +607,6 @@
 		padding: var(--space-2);
 	}
 
-	.SessionView__headerActions,
 	.SessionView__sectionActions,
 	.SceneCard__headerActions {
 		width: 100%;
@@ -565,24 +617,12 @@
 		scrollbar-width: thin;
 	}
 
-	.SessionView__headerActions .Button,
 	.SessionView__sectionActions .Button,
 	.SceneCard__headerActions .Button {
 		flex: 0 0 auto;
-		min-height: 40px;
+		min-height: var(--control-h-sm);
 		font-size: 0.82rem;
 		padding-inline: var(--space-2);
-	}
-
-	.SessionView>.Panel__header .SessionView__headerActions {
-		flex-wrap: nowrap;
-		overflow-x: auto;
-		padding-bottom: var(--space-1);
-		overscroll-behavior-x: contain;
-	}
-
-	.SessionView>.Panel__header .SessionView__headerActions .Button {
-		flex: 0 0 auto;
 	}
 
 	.SessionView__mobileIconOnly {

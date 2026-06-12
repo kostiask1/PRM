@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 
 import Icon from "./common/Icon.jsx";
 import Button from "./form/Button";
@@ -33,6 +33,7 @@ import CreateLocationButton from "./CreateLocationButton.jsx";
 import { renderMentionText } from "../renderers/contentRenderer.jsx";
 import { EntityLinkResolverContext } from "./common/EntityLinkIdentity.js";
 import { findEntityByName } from "../services/entities.js";
+import classNames from "../utils/classNames";
 
 function SessionView() {
 	const sessionId = useAppSelector(
@@ -40,6 +41,8 @@ function SessionView() {
 	);
 	const view = useSessionView();
 	const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
+	const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);
+	const headerActionsRef = useRef(null);
 	const session = view.session;
 	const simplifiedNotesEnabled = useAppSelector(
 		(state) => state.ui.simplifiedNotes,
@@ -190,6 +193,20 @@ function SessionView() {
 		scenes,
 	]);
 
+	useEffect(() => {
+		if (!isHeaderActionsOpen) return undefined;
+
+		const handlePointerDown = (event) => {
+			if (headerActionsRef.current?.contains(event.target)) return;
+			setIsHeaderActionsOpen(false);
+		};
+
+		document.addEventListener("pointerdown", handlePointerDown);
+		return () => {
+			document.removeEventListener("pointerdown", handlePointerDown);
+		};
+	}, [isHeaderActionsOpen]);
+
 	if (!session) return null;
 
 	const openEncounterFromQuickAccess = (encounterId, event) => {
@@ -329,37 +346,66 @@ function SessionView() {
 							)}
 						</div>
 					</div>
-					<div className="SessionView__headerActions">
+					<div
+						ref={headerActionsRef}
+						className={classNames("SessionView__headerActions", {
+							is_open: isHeaderActionsOpen,
+						})}
+					>
 						<Button
 							variant="ghost"
 							size={Button.SIZES.SMALL}
-							icon="search"
-							onClick={() => setIsGlobalSearchOpen(true)}
-							title={lang.t("Global search")}
-						>
-							{lang.t("Search")}
-						</Button>
-						<Button
-							variant="ghost"
-							size={Button.SIZES.SMALL}
-							icon="undo"
-							onClick={view.handleUndo}
-							disabled={view.undoStack.length === 0 || view.isSaving}
-							title={lang.t("Undo (Ctrl+Z)")}
+							icon="menu"
+							className="SessionView__headerActionsToggle"
+							onClick={() => setIsHeaderActionsOpen((value) => !value)}
+							title={lang.t("Session actions")}
 						/>
-						<Button
-							variant="ghost"
-							size={Button.SIZES.SMALL}
-							icon="redo"
-							onClick={view.handleRedo}
-							disabled={view.redoStack.length === 0 || view.isSaving}
-							title={lang.t("Redo (Ctrl+Y)")}
-						/>
-						<Button
-							variant="danger"
-							icon="trash"
-							onClick={view.handleDeleteSessionAndBack}
-						/>
+						<div className="SessionView__headerActionsMenu">
+							<Button
+								variant="ghost"
+								size={Button.SIZES.SMALL}
+								icon="search"
+								onClick={() => {
+									setIsHeaderActionsOpen(false);
+									setIsGlobalSearchOpen(true);
+								}}
+								title={lang.t("Global search")}
+							>
+								{lang.t("Search")}
+							</Button>
+							<Button
+								variant="ghost"
+								size={Button.SIZES.SMALL}
+								icon="undo"
+								onClick={() => {
+									setIsHeaderActionsOpen(false);
+									view.handleUndo();
+								}}
+								disabled={view.undoStack.length === 0 || view.isSaving}
+								title={lang.t("Undo (Ctrl+Z)")}
+							/>
+							<Button
+								variant="ghost"
+								size={Button.SIZES.SMALL}
+								icon="redo"
+								onClick={() => {
+									setIsHeaderActionsOpen(false);
+									view.handleRedo();
+								}}
+								disabled={view.redoStack.length === 0 || view.isSaving}
+								title={lang.t("Redo (Ctrl+Y)")}
+							/>
+							<Button
+								variant="danger"
+								size={Button.SIZES.SMALL}
+								icon="trash"
+								onClick={() => {
+									setIsHeaderActionsOpen(false);
+									view.handleDeleteSessionAndBack();
+								}}
+								title={lang.t("Delete session")}
+							/>
+						</div>
 					</div>
 				</div>
 

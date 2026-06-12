@@ -13,6 +13,17 @@
 	display: flex;
 	align-items: center;
 	gap: var(--space-2);
+	position: relative;
+}
+
+.Bestiary__header_actionsToggle {
+	display: none !important;
+}
+
+.Bestiary__header_actionsMenu {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
 }
 
 .Bestiary__inner {
@@ -308,18 +319,50 @@
 	background: color-mix(in srgb, var(--accent), transparent 80%);
 }
 
-.Bestiary__mobileDetailHeader {
-	display: none;
-}
-
 @media (max-width: 1024px) {
 	.Bestiary>.Panel__header {
 		align-items: flex-start;
 		flex-wrap: wrap;
+		position: relative;
+		padding-right: calc(var(--size-8) + var(--space-5));
 	}
 
 	.Bestiary__header_actions {
-		flex-wrap: wrap;
+		position: absolute;
+		top: var(--space-2);
+		right: var(--space-3);
+		z-index: 5;
+	}
+
+	.Bestiary__header_actionsToggle {
+		display: inline-flex !important;
+	}
+
+	.Bestiary__header_actionsMenu {
+		position: absolute;
+		top: calc(100% + var(--space-1));
+		right: 0;
+		z-index: 20;
+		display: none;
+		align-items: center;
+		gap: var(--space-2);
+		padding: var(--space-2);
+		border: 1px solid color-mix(in srgb, var(--border), transparent 35%);
+		border-radius: var(--radius-md);
+		background: var(--panel);
+		box-shadow: var(--shadow);
+	}
+
+	.Bestiary__header_actions.is_open .Bestiary__header_actionsMenu {
+		display: flex;
+	}
+
+	.Bestiary__header_actions .Button,
+	.Bestiary__header_actionsMenu .Button {
+		flex: 0 0 auto;
+		min-height: var(--control-h-sm);
+		font-size: 0.82rem;
+		padding-inline: var(--space-2);
 	}
 
 	.Bestiary__search {
@@ -355,12 +398,10 @@
 		overflow-y: auto;
 	}
 
-	.Bestiary__header_actions,
 	.Bestiary__search {
 		width: 100%;
 	}
 
-	.Bestiary__header_actions .Button,
 	.Bestiary__sort_btn {
 		flex: 1 1 140px;
 		min-height: 44px;
@@ -399,18 +440,6 @@
 		scroll-margin-top: calc(var(--size-9) + var(--space-4));
 	}
 
-	.Bestiary__mobileDetailHeader {
-		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: var(--space-2);
-		margin-bottom: var(--space-3);
-		padding: var(--space-3);
-		border: 1px solid color-mix(in srgb, var(--border), transparent 35%);
-		border-radius: var(--radius-md);
-		background: color-mix(in srgb, var(--bg), transparent 20%);
-	}
-
 	.Bestiary__mobileDetailTitle {
 		display: grid;
 		gap: 2px;
@@ -430,10 +459,6 @@
 		overflow-wrap: anywhere;
 	}
 
-	.Bestiary__mobileDetailHeader .Button {
-		flex: 0 0 auto;
-		min-height: 44px;
-	}
 
 	.Bestiary .ListCard {
 		min-height: 65px;

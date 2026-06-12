@@ -353,15 +353,6 @@ export default function BestiaryContent({
 
 					{selectedMonster && (
 						<div className="Bestiary__detail_container" ref={detailRef}>
-							<div className="Bestiary__mobileDetailHeader">
-								<div className="Bestiary__mobileDetailTitle">
-									<span>{lang.t("Selected element")}</span>
-									<strong>{selectedMonster.name}</strong>
-								</div>
-								<Button variant="ghost" icon="back" onClick={scrollListIntoView}>
-									{lang.t("Back")}
-								</Button>
-							</div>
 							<MonsterStatBlock
 								monster={selectedMonster}
 								favoriteActive={isFavoriteMonster(favorites, selectedMonster)}

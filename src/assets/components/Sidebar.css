@@ -510,13 +510,16 @@
 	.Sidebar.Sidebar__mobile_open {
 		max-width: unset;
 		width: 100%;
-		padding: calc(var(--space-3) + var(--size-9)) var(--space-3)
-			var(--space-3);
+		padding: var(--space-3);
 		align-items: stretch;
 	}
 
 	.Sidebar.Sidebar__mobile_open {
 		transform: translateX(0);
+	}
+
+	.Sidebar__header {
+		padding-left: var(--size-9);
 	}
 
 	.Sidebar__link,

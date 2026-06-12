@@ -162,6 +162,7 @@
 }
 
 .CampaignView__header {
+	width: 100%;
 	display: flex;
 	align-items: flex-end;
 	gap: var(--space-6);
@@ -239,6 +240,10 @@
 		align-items: flex-start;
 		gap: var(--space-3);
 		flex-direction: column;
+	}
+
+	.CampaignView__header .muted {
+		display: none;
 	}
 
 	.CampaignView__sectionActions {
@@ -322,7 +327,7 @@
 	.CampaignView__sectionActions .Button,
 	.CampaignView__notesViewToggle .Button {
 		flex: 0 0 auto;
-		min-height: 40px;
+		min-height: var(--control-h-sm);
 	}
 
 	.CampaignView__headerActions .Button {
@@ -336,8 +341,8 @@
 		padding-inline: var(--space-3);
 	}
 
-	.CampaignView__headerActions > .Button:not(:has(span)),
-	.CampaignView__headerActions > .Button__danger {
+	.CampaignView__headerActions>.Button:not(:has(span)),
+	.CampaignView__headerActions>.Button__danger {
 		min-width: 44px;
 		width: 44px;
 		padding-inline: 0;
