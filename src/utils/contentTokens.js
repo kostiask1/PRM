@@ -1,5 +1,5 @@
 export const CONTENT_TOKEN_REGEX =
-	/(\(Recharge\s+\d+(?:-\d+)?\)|\{@recharge(?:\s+\d+(?:-\d+)?)?})|(\{@(?:damage|scaledamage|scaledice)\s+([^|}]+)(?:\|([^|}]*))?(?:\|([^|}]*))?[^}]*\})|(\d+d\d+(?:\s*[+-]\s*\d+)?)|(\{@hit\s+([+-]?\d+)\})(\s+to\s+hit)?|(?<!\d)([+-]\d+)(\s+to\s+hit)?|(\{@spell\s+([^}]+)\})|(\{@(?:condition|status)\s+([^}]+)\})|(@condition\s+([A-Za-z][A-Za-z' -]*))|(\{@disease\s+([^}]+)\})|(\{@variantrule\s+([^}]+)\})|(\{@skill\s+([^}]+)\})|(\{@sense\s+([^}]+)\})|(\{@quickref\s+([^}]+)\})/gi;
+	/(\(Recharge\s+\d+(?:-\d+)?\)|\{@recharge(?:\s+\d+(?:-\d+)?)?})|(\{@(?:damage|scaledamage|scaledice)\s+([^|}]+)(?:\|([^|}]*))?(?:\|([^|}]*))?[^}]*\})|(\{@dice\s+([^|}]+)(?:\|([^|}]*))?[^}]*\})|(\d+d\d+(?:\s*[+-]\s*\d+)?)|(\{@hit\s+([+-]?\d+)\})(\s+to\s+hit)?|(?<!\d)([+-]\d+)(\s+to\s+hit)?|(\{@spell\s+([^}]+)\})|(\{@creature\s+([^}]+)\})|(\{@(?:condition|status)\s+([^}]+)\})|(@condition\s+([A-Za-z][A-Za-z' -]*))|(\{@disease\s+([^}]+)\})|(\{@variantrule\s+([^}]+)\})|(\{@skill\s+([^}]+)\})|(\{@sense\s+([^}]+)\})|(\{@quickref\s+([^}]+)\})/gi;
 
 const DAMAGE_ROLL_PREFIX_REGEX =
 	/^\s*(\d+d\d+(?:\s*[+-]\s*(?:\d+d\d+|\d+))*)([\s\S]*)$/i;
@@ -46,19 +46,24 @@ export function tokenFromContentMatch(match) {
 			? fallbackDamageParts.remainder
 			: damageParts.remainder,
 		damageLabel: hasFallbackDamageRoll ? match[4] : match[5],
-		roll: match[6],
-		hit: match[8] || match[10],
-		hitSuffix: match[9] || match[11] || "",
-		spellTag: match[12],
-		spellValue: match[13],
-		conditionTag: match[14],
-		conditionValue: match[15],
-		conditionPlain: match[16],
-		diseaseValue: match[19],
-		variantRuleValue: match[21],
-		skillValue: match[23],
-		senseValue: match[25],
-		quickrefValue: match[27],
+		diceTag: match[6],
+		diceFormula: match[7],
+		diceLabel: match[8],
+		roll: match[9],
+		hit: match[11] || match[13],
+		hitSuffix: match[12] || match[14] || "",
+		spellTag: match[15],
+		spellValue: match[16],
+		creatureTag: match[17],
+		creatureValue: match[18],
+		conditionTag: match[19],
+		conditionValue: match[20],
+		conditionPlain: match[21],
+		diseaseValue: match[24],
+		variantRuleValue: match[26],
+		skillValue: match[28],
+		senseValue: match[30],
+		quickrefValue: match[32],
 	};
 }
 

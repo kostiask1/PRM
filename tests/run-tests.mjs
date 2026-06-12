@@ -1318,6 +1318,19 @@ await run("content tokens parse hit and recharge tags safely", () => {
 		quickref[0].quickrefValue,
 		"Vision and Light||2||heavily obscured",
 	);
+
+	const diceTag = extractContentTokens("{@dice 1d10}");
+	assert.equal(diceTag.length, 1);
+	assert.equal(diceTag[0].fullMatch, "{@dice 1d10}");
+	assert.equal(diceTag[0].diceFormula, "1d10");
+	assert.equal(diceTag[0].roll, undefined);
+
+	const creatureTag = extractContentTokens(
+		"{@creature Wereraven|VRGR} and {@creature Loup Garou|VRGR}",
+	);
+	assert.equal(creatureTag.length, 2);
+	assert.equal(creatureTag[0].creatureValue, "Wereraven|VRGR");
+	assert.equal(creatureTag[1].creatureValue, "Loup Garou|VRGR");
 });
 
 await run("parser renders quickref display labels", () => {
@@ -1333,6 +1346,46 @@ await run("parser renders quickref display labels", () => {
 		preprocessTags("{@quickref Cover||3||Total cover} blocks the sphere."),
 		"Total cover blocks the sphere.",
 	);
+});
+
+await run("parser renders dice and creature tags as interactive components", async () => {
+	const contentTokensSource = await fs.readFile(
+		"src/utils/contentTokens.js",
+		"utf8",
+	);
+	const rendererSource = await fs.readFile(
+		"src/renderers/contentRenderer.jsx",
+		"utf8",
+	);
+	const rulesLinkSource = await fs.readFile(
+		"src/components/common/RulesLink.jsx",
+		"utf8",
+	);
+	const rulesReferenceSource = await fs.readFile(
+		"src/components/modals/RulesReferenceModalContent.jsx",
+		"utf8",
+	);
+	const rulesLinkCss = await fs.readFile(
+		"src/assets/components/RulesLink.css",
+		"utf8",
+	);
+
+	assert.match(contentTokensSource, /\{@dice\\s\+/);
+	assert.match(contentTokensSource, /\{@creature\\s\+/);
+	assert.match(rendererSource, /diceTag/);
+	assert.match(rendererSource, /type="creature"/);
+	assert.match(rendererSource, /name=\{creatureValue\}/);
+	assert.match(
+		rendererSource,
+		/type="creature"\s+name=\{creatureValue\}\s+>/,
+	);
+	assert.match(rulesLinkSource, /const openCreature = \(\) =>/);
+	assert.match(rulesLinkSource, /query\.set\("monster", creature\.name\)/);
+	assert.match(rulesLinkSource, /query\.set\("m_source", creature\.source\)/);
+	assert.match(rulesLinkSource, /syncNavigationFromPath\("\/bestiary"\)/);
+	assert.match(rulesReferenceSource, /renderRecursiveContent\(selectedItem\.entries/);
+	assert.match(rulesReferenceSource, /onRuleNavigate: navigateToReference/);
+	assert.match(rulesLinkCss, /\.RulesLink__creature/);
 });
 
 await run("parser renders item filter display names", () => {

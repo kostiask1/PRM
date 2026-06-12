@@ -56,7 +56,10 @@ export const renderRecursiveContent = (
 						return (
 							<li key={idx}>
 								{isObject && item.name && (
-									<strong>{highlightText(item.name, highlightQuery)}. </strong>
+									<strong>
+										{renderRecursiveContent(item.name, highlightQuery, options)}
+										.{" "}
+									</strong>
 								)}
 								{renderRecursiveContent(
 									isObject ? item.entries || item.entry : item,
@@ -77,7 +80,10 @@ export const renderRecursiveContent = (
 			return (
 				<div key={content.name || Math.random()} className="parser_section">
 					{content.name && (
-						<strong>{highlightText(content.name, highlightQuery)}. </strong>
+						<strong>
+							{renderRecursiveContent(content.name, highlightQuery, options)}
+							.{" "}
+						</strong>
 					)}
 					{renderRecursiveContent(content.entries, highlightQuery, options)}
 				</div>
@@ -247,11 +253,16 @@ export const parseRollsAndSpells = (
 			damageRoll,
 			damageRemainder,
 			damageLabel,
+			diceTag,
+			diceFormula,
+			diceLabel,
 			roll,
 			hit,
 			hitSuffix,
 			spellTag,
 			spellValue,
+			creatureTag,
+			creatureValue,
 			conditionTag,
 			conditionValue,
 			conditionPlain,
@@ -301,6 +312,16 @@ export const parseRollsAndSpells = (
 					{highlightText(roll, highlightQuery)}
 				</RollDice>,
 			);
+		} else if (diceTag) {
+			const displayText = diceLabel || diceFormula;
+			elements.push(
+				<RollDice
+					key={`di-${matchIndex}`}
+					formula={String(diceFormula || "").replace(/\s+/g, "")}
+				>
+					{highlightText(displayText, highlightQuery)}
+				</RollDice>,
+			);
 		} else if (hit) {
 			const bonus = hit.split(" ")[0];
 			elements.push(
@@ -320,6 +341,18 @@ export const parseRollsAndSpells = (
 					name={rawSpellName}
 					onNavigate={options.onRuleNavigate}
 					openInNestedModal={options.openSpellInNestedModal}
+				>
+					{highlightText(displayText, highlightQuery)}
+				</RulesLink>,
+			);
+		} else if (creatureTag) {
+			const { name: rawCreatureName, displayText } =
+				parseTaggedName(creatureValue);
+			elements.push(
+				<RulesLink
+					key={getReferenceKey("c", matchIndex, rawCreatureName)}
+					type="creature"
+					name={creatureValue}
 				>
 					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,

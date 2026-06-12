@@ -47,3 +47,7 @@
 .RulesLink__sense {
 	--rules-link-color: #5f8f3a;
 }
+
+.RulesLink__creature {
+	--rules-link-color: #a85535;
+}

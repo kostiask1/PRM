@@ -18,7 +18,10 @@ import {
 	resolveSpellInput,
 	resolveVariantRuleInput,
 } from "../../services/referenceResolvers.js";
-import { useAppDispatch } from "../../store/appStore.js";
+import {
+	syncNavigationFromPath,
+	useAppDispatch,
+} from "../../store/appStore.js";
 import classNames from "../../utils/classNames.js";
 import { capitalizeWords, preprocessTags } from "../../utils/parser.jsx";
 import { getSpellMeta } from "../../utils/spellMeta.js";
@@ -28,6 +31,15 @@ import Tooltip from "./Tooltip.jsx";
 function getTaggedDisplayValue(raw) {
 	const parts = String(raw || "").split("|");
 	return String(parts[2] || parts[0] || "").trim();
+}
+
+function parseReferenceParts(raw) {
+	const parts = String(raw || "").split("|");
+	return {
+		name: String(parts[0] || "").trim(),
+		source: String(parts[1] || "").trim(),
+		label: String(parts[2] || "").trim(),
+	};
 }
 
 function renderTooltipText(value) {
@@ -150,10 +162,25 @@ export default function RulesLink({
 		openRulesReferenceModal("spells", spell.name);
 	};
 
+	const openCreature = () => {
+		const creature = parseReferenceParts(referenceName);
+		if (!creature.name) return;
+
+		const query = new URLSearchParams();
+		if (creature.source) query.set("source", creature.source);
+		query.set("monster", creature.name);
+		if (creature.source) query.set("m_source", creature.source);
+		const url = `/bestiary?${query.toString()}`;
+		window.history.pushState({}, "", url);
+		syncNavigationFromPath("/bestiary");
+	};
+
 	const handleClick = async () => {
 		try {
 			if (type === "spell") {
 				await openSpell();
+			} else if (type === "creature") {
+				openCreature();
 			} else if (type === "condition" || type === "status") {
 				const condition = await resolveConditionInput(referenceName);
 				if (condition) {
