@@ -515,3 +515,10 @@
 	opacity: 0.4;
 	text-decoration: line-through;
 }
+
+@media (max-width: 767px) {
+	.DiceCalculator {
+		bottom: var(--space-3);
+		right: var(--space-3);
+	}
+}
