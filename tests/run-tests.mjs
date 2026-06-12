@@ -1810,6 +1810,31 @@ await run(
 	},
 );
 
+await run("5etools updater downloads missing tokens for new monsters", async () => {
+	const source = await fs.readFile("scripts/update-5etools-data.mjs", "utf8");
+
+	assert.match(source, /const IMG_REPO = "5etools-img"/);
+	assert.match(
+		source,
+		/const BESTIARY_TOKENS_DIR = path\.join\(BESTIARY_DIR, "tokens"\)/,
+	);
+	assert.match(source, /function getRemoteTokenUrl\(monster\)/);
+	assert.match(
+		source,
+		/raw\.githubusercontent\.com\/\$\{IMG_OWNER\}\/\$\{IMG_REPO\}/,
+	);
+	assert.match(source, /\/bestiary\/\$\{encodeURIComponent\(source\)\}/);
+	assert.match(source, /async function downloadMissingNewBestiaryTokens/);
+	assert.match(source, /function getNewMonsters\(currentKeys, monsters = \[\]\)/);
+	assert.match(source, /collectCurrentBestiaryMonsterKeys\(\)/);
+	assert.match(source, /collectMonstersFromJsonFiles\(tmpBestiaryDir\)/);
+	assert.match(source, /downloadMissingNewBestiaryTokens\(newMonsters\)/);
+	assert.match(
+		source,
+		/New monsters: \$\{newMonsters\.length\}; tokens downloaded:/,
+	);
+});
+
 await run("AI patch service applies targeted session operations", async () => {
 	await withTestSlug("ai-patch-session", async (slug) => {
 		await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));

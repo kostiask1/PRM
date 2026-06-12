@@ -15,6 +15,7 @@ const VARIANT_RULES_PATH = path.join(DATABASE_DIR, "variantrules.json");
 const SKILLS_PATH = path.join(DATABASE_DIR, "skills.json");
 const SENSES_PATH = path.join(DATABASE_DIR, "senses.json");
 const SOURCES_PATH = path.join(DATABASE_DIR, "sources.json");
+const BESTIARY_TOKENS_DIR = path.join(BESTIARY_DIR, "tokens");
 const TMP_DIR = path.join(ROOT_DIR, ".tmp-5etools-update");
 const CONDITION_PRUNE_KEYS = new Set([
 	"page",
@@ -60,6 +61,9 @@ const CUSTOMIZING_ABILITY_SCORES_POINT_BUY_LINK =
 
 const OWNER = "5etools-mirror-3";
 const REPO = "5etools-src";
+const IMG_OWNER = "5etools-mirror-3";
+const IMG_REPO = "5etools-img";
+const IMG_REF = "main";
 const DEFAULT_REF = "main";
 const args = new Set(process.argv.slice(2));
 const isDryRun = args.has("--dry-run") || args.has("--check");
@@ -79,6 +83,8 @@ Downloads spell and bestiary JSON from:
   https://github.com/${OWNER}/${REPO}/blob/${ref}/data/skills.json
   https://github.com/${OWNER}/${REPO}/blob/${ref}/data/senses.json
   https://github.com/${OWNER}/${REPO}/blob/${ref}/data/generated/gendata-nav-adventure-book-index.json
+Downloads missing new bestiary tokens from:
+  https://github.com/${IMG_OWNER}/${IMG_REPO}/tree/${IMG_REF}/bestiary/{source}
 
 Excluded files: fluff, foundry/foundy, template.
 After download, materializes bestiary _copy entries and rebuilds all.json files.`);
@@ -141,6 +147,21 @@ async function fetchText(url) {
 	return response.text();
 }
 
+async function fetchBinaryIfExists(url) {
+	const response = await fetch(url, {
+		headers: {
+			"User-Agent": "dnd-session-manager-data-updater",
+		},
+	});
+	if (response.status === 404) return null;
+	if (!response.ok) {
+		throw new Error(
+			`Failed to download ${url}: ${response.status} ${response.statusText}`,
+		);
+	}
+	return Buffer.from(await response.arrayBuffer());
+}
+
 async function listRemoteFiles(remotePath) {
 	const url = new URL(
 		`https://api.github.com/repos/${OWNER}/${REPO}/contents/${remotePath}`,
@@ -199,6 +220,130 @@ async function downloadFile(remotePath, targetPath) {
 
 async function readJson(filePath) {
 	return JSON.parse(await fs.readFile(filePath, "utf8"));
+}
+
+function normalizeMonsterKey(monster) {
+	const name = String(monster?.name || "").trim().toLowerCase();
+	const source = String(monster?.source || "").trim().toUpperCase();
+	return name && source ? `${name}|${source}` : "";
+}
+
+function isSafeTokenFileName(fileName) {
+	return (
+		fileName &&
+		!/[<>:"/\\|?*\u0000-\u001F]/.test(fileName) &&
+		!/[. ]$/.test(fileName)
+	);
+}
+
+function getTokenFileName(monster) {
+	const name = String(monster?.name || "").trim();
+	return name ? `${name}.webp` : "";
+}
+
+function getTokenFilePath(monster) {
+	return path.join(
+		BESTIARY_TOKENS_DIR,
+		String(monster?.source || "").trim(),
+		getTokenFileName(monster),
+	);
+}
+
+function getRemoteTokenUrl(monster) {
+	const source = String(monster?.source || "").trim();
+	const fileName = getTokenFileName(monster);
+	return `https://raw.githubusercontent.com/${IMG_OWNER}/${IMG_REPO}/${IMG_REF}/bestiary/${encodeURIComponent(source)}/${encodeURIComponent(fileName)}`;
+}
+
+function collectMonstersFromBestiaryData(data) {
+	const monsters = Array.isArray(data)
+		? data
+		: Array.isArray(data?.monster)
+			? data.monster
+			: [];
+	return monsters.filter((monster) => normalizeMonsterKey(monster));
+}
+
+async function collectMonstersFromJsonFiles(dir) {
+	if (!(await exists(dir))) return [];
+	const entries = await fs.readdir(dir, { withFileTypes: true });
+	const monsters = [];
+	for (const entry of entries) {
+		if (!entry.isFile() || !entry.name.toLowerCase().endsWith(".json"))
+			continue;
+		const data = await readJson(path.join(dir, entry.name));
+		monsters.push(...collectMonstersFromBestiaryData(data));
+	}
+	return monsters;
+}
+
+async function collectCurrentBestiaryMonsterKeys() {
+	const allPath = path.join(BESTIARY_DIR, "all.json");
+	if (await exists(allPath)) {
+		return new Set(
+			collectMonstersFromBestiaryData(await readJson(allPath)).map(
+				normalizeMonsterKey,
+			),
+		);
+	}
+	return new Set(
+		(await collectMonstersFromJsonFiles(BESTIARY_DIR)).map(normalizeMonsterKey),
+	);
+}
+
+function getNewMonsters(currentKeys, monsters = []) {
+	const seen = new Set();
+	const result = [];
+	for (const monster of monsters) {
+		const key = normalizeMonsterKey(monster);
+		if (!key || currentKeys.has(key) || seen.has(key)) continue;
+		seen.add(key);
+		result.push(monster);
+	}
+	return result;
+}
+
+async function downloadMissingNewBestiaryTokens(newMonsters = []) {
+	let downloaded = 0;
+	let missing = 0;
+	let skipped = 0;
+
+	for (const monster of newMonsters) {
+		const fileName = getTokenFileName(monster);
+		if (!isSafeTokenFileName(fileName)) {
+			skipped += 1;
+			console.warn(
+				`skip token: unsafe local filename for ${monster.name} (${monster.source})`,
+			);
+			continue;
+		}
+
+		const targetPath = getTokenFilePath(monster);
+		if (await exists(targetPath)) continue;
+
+		try {
+			const content = await fetchBinaryIfExists(getRemoteTokenUrl(monster));
+			if (!content) {
+				missing += 1;
+				if (isVerbose) {
+					console.log(`missing token ${monster.source}/${fileName}`);
+				}
+				continue;
+			}
+
+			await fs.mkdir(path.dirname(targetPath), { recursive: true });
+			await fs.writeFile(targetPath, content);
+			downloaded += 1;
+			if (isVerbose) console.log(`download token ${monster.source}/${fileName}`);
+		} catch (error) {
+			missing += 1;
+			console.warn(
+				`failed token ${monster.source}/${fileName}: ${error.message}`,
+			);
+		}
+	}
+
+	return { downloaded, missing, skipped };
 }
 
 function getLocalExhaustionEntries(currentConditions) {
@@ -531,6 +676,10 @@ async function main() {
 		return;
 	}
 
+	const currentMonsterKeys = await collectCurrentBestiaryMonsterKeys();
+	const downloadedMonsters = await collectMonstersFromJsonFiles(tmpBestiaryDir);
+	const newMonsters = getNewMonsters(currentMonsterKeys, downloadedMonsters);
+
 	await Promise.all([
 		removeJsonFiles(BESTIARY_DIR),
 		removeJsonFiles(SPELLS_DIR),
@@ -544,6 +693,7 @@ async function main() {
 	await writeSkills(tmpSkillsPath);
 	await writeSenses(tmpSensesPath);
 	const sourcesCount = await writeSources(tmpSourcesPath);
+	const tokenResult = await downloadMissingNewBestiaryTokens(newMonsters);
 	await fs.rm(TMP_DIR, { recursive: true, force: true });
 
 	runNodeScript(path.join("scripts", "materialize-bestiary-copies.mjs"));
@@ -553,7 +703,9 @@ async function main() {
 	);
 	await cleanupUnneededSupportFiles();
 
-	console.log(`Done: 5etools data updated. Wrote ${sourcesCount} sources.`);
+	console.log(
+		`Done: 5etools data updated. Wrote ${sourcesCount} sources. New monsters: ${newMonsters.length}; tokens downloaded: ${tokenResult.downloaded}; missing: ${tokenResult.missing}; skipped: ${tokenResult.skipped}.`,
+	);
 }
 
 main().catch(async (error) => {
