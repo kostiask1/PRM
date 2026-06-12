@@ -775,6 +775,33 @@ function EncounterView() {
 			</div>
 		</div>
 	);
+	const encounterMetricsTooltip = (
+		<div className="EncounterView__metricsTooltip">
+			<div className="Tooltip__title">{lang.t("Combat encounters")}</div>
+			<div className="EncounterView__metricsTooltipList">
+				<div className="EncounterView__metricsTooltipRow">
+					<span>{lang.t("Participants")}</span>
+					<strong>{view.encounter.monsters.length}</strong>
+				</div>
+				{view.encounter.monsters.length > 0 && (
+					<>
+						<div className="EncounterView__metricsTooltipRow">
+							<span>{lang.t("Avg initiative")}</span>
+							<strong>{view.initiativeStats.average}</strong>
+						</div>
+						<div className="EncounterView__metricsTooltipRow">
+							<span>{lang.t("Max initiative")}</span>
+							<strong>{view.initiativeStats.max}</strong>
+						</div>
+						<div className="EncounterView__metricsTooltipRow">
+							<span>{lang.t("CR-weighted avg initiative")}</span>
+							<strong>{view.initiativeStats.weightedAverage}</strong>
+						</div>
+					</>
+				)}
+			</div>
+		</div>
+	);
 
 	return (
 		<Panel className="EncounterView">
@@ -852,6 +879,19 @@ function EncounterView() {
 						is_open: isHeaderActionsOpen,
 					})}
 				>
+					<Tooltip
+						content={encounterMetricsTooltip}
+						className="EncounterView__metricsTooltipTrigger"
+					>
+						<Button
+							variant="ghost"
+							size={Button.SIZES.SMALL}
+							icon="swords"
+							aria-label={lang.t("Combat encounters")}
+						>
+							{view.encounter.monsters.length}
+						</Button>
+					</Tooltip>
 					<Button
 						variant="ghost"
 						size={Button.SIZES.SMALL}
