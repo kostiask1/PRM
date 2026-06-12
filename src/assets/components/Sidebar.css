@@ -40,6 +40,10 @@
 	white-space: nowrap;
 }
 
+.Sidebar__touchToggle {
+	display: none !important;
+}
+
 .Sidebar:not(.Sidebar__hovered):not(.Sidebar__select_open) .Sidebar__link {
 	width: var(--size-9);
 	height: var(--size-9);
@@ -258,6 +262,10 @@
 	margin: 0 auto;
 }
 
+.Sidebar:not(.Sidebar__hovered):not(.Sidebar__select_open) .Sidebar__touchToggle {
+	display: none !important;
+}
+
 .Sidebar:not(.Sidebar__hovered):not(.Sidebar__select_open) .Sidebar__resource_item {
 	width: var(--size-9);
 	height: var(--size-7);
@@ -353,6 +361,17 @@
 
 .Sidebar .DraggableList>div:hover>.DraggableList__handle:hover {
 	border-radius: var(--radius-xxs);
+}
+
+@media (hover: none), (pointer: coarse) {
+	.Sidebar__touchToggle {
+		display: inline-flex !important;
+		flex: 0 0 auto;
+	}
+
+	.Sidebar:not(.Sidebar__hovered):not(.Sidebar__select_open) .Sidebar__touchToggle {
+		display: inline-flex !important;
+	}
 }
 
 @media (max-height: 899px) {
@@ -486,7 +505,49 @@
 	}
 }
 
+@media (max-height: 699px) {
+	.Sidebar {
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	.Sidebar__header,
+	.Sidebar__links,
+	.Sidebar__footer {
+		flex: 0 0 auto;
+	}
+
+	.Sidebar__section__campaigns {
+		flex: 0 0 auto;
+		min-height: 0;
+		overflow: visible;
+	}
+
+	.Sidebar__section__campaigns .Sidebar__list {
+		flex: 0 0 auto;
+		overflow: visible;
+		padding-bottom: var(--space-2);
+	}
+
+	.Sidebar__section__resources {
+		flex: 0 0 auto;
+		max-height: none;
+		min-height: 0;
+		margin-top: 0;
+		overflow: visible;
+	}
+
+	.Sidebar__resource_list {
+		padding: 0 var(--space-1);
+	}
+}
+
 @media (max-width: 767px) {
+	.Sidebar__touchToggle {
+		display: none !important;
+	}
+
 	.Sidebar {
 		width: min(86vw, var(--sidebar-expanded));
 		max-width: 320px;

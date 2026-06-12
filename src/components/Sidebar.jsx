@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { alert } from "../actions/app";
 import { api } from "../api";
 import Button from "./form/Button";
@@ -41,6 +41,7 @@ export default function Sidebar({
 	const [localCampaigns, setLocalCampaigns] = useState(campaigns);
 	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 	const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+	const [isSidebarPinnedOpen, setIsSidebarPinnedOpen] = useState(false);
 	const activeNavigationSlug = useAppSelector(
 		(store) => store.navigation.activeCampaignSlug,
 	);
@@ -57,6 +58,21 @@ export default function Sidebar({
 	useEffect(() => {
 		setLocalCampaigns(campaigns);
 	}, [campaigns]);
+
+	const displayedCampaigns = useMemo(() => {
+		const active = [];
+		const completed = [];
+
+		localCampaigns.forEach((campaign) => {
+			if (campaign.completed) {
+				completed.push(campaign);
+				return;
+			}
+			active.push(campaign);
+		});
+
+		return [...active, ...completed];
+	}, [localCampaigns]);
 
 	const handleFileChange = async (event) => {
 		const file = event.target.files[0];
@@ -165,13 +181,38 @@ export default function Sidebar({
 		setIsGalleryOpen(true);
 	};
 
+	const canUseHoverSidebar = () =>
+		typeof window !== "undefined" &&
+		window.matchMedia?.("(hover: hover) and (pointer: fine)")?.matches;
+
+	const handleSidebarPointerEnter = (event) => {
+		if (event.pointerType !== "mouse" || !canUseHoverSidebar()) return;
+		setIsSidebarHovered(true);
+	};
+
+	const handleSidebarPointerLeave = (event) => {
+		if (event.pointerType !== "mouse") return;
+		setIsSidebarHovered(false);
+	};
+
+	const isSidebarExpanded =
+		isSidebarHovered || isSidebarPinnedOpen || isMobileOpen;
+
 	return (
 		<>
 			<aside
-				className={`Sidebar App__sidebar${isSidebarHovered || isMobileOpen ? " Sidebar__hovered" : ""}${isMobileOpen ? " Sidebar__mobile_open" : ""}`}
-				onMouseEnter={() => setIsSidebarHovered(true)}
-				onMouseLeave={() => setIsSidebarHovered(false)}
+				className={`Sidebar App__sidebar${isSidebarExpanded ? " Sidebar__hovered" : ""}${isMobileOpen ? " Sidebar__mobile_open" : ""}`}
+				onPointerEnter={handleSidebarPointerEnter}
+				onPointerLeave={handleSidebarPointerLeave}
 			>
+				<Button
+					variant="ghost"
+					size={Button.SIZES.SMALL}
+					icon={isSidebarPinnedOpen ? "back" : "menu"}
+					className="Sidebar__touchToggle"
+					onClick={() => setIsSidebarPinnedOpen((value) => !value)}
+					title={isSidebarPinnedOpen ? lang.t("Collapse") : lang.t("Open navigation")}
+				/>
 				<div className="Sidebar__header">
 					<h1 className="Sidebar__title">D&D Session Manager</h1>
 					<p className="Sidebar__description">
@@ -254,7 +295,7 @@ export default function Sidebar({
 					</Button>
 
 					<DraggableList
-						items={localCampaigns}
+						items={displayedCampaigns}
 						className="Sidebar__list"
 						onReorder={setLocalCampaigns}
 						onDrop={handleDragEnd}
