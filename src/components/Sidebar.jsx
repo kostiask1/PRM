@@ -44,7 +44,7 @@ export default function Sidebar({
 	const [isSidebarHovered, setIsSidebarHovered] = useState(false);
 	const [isSidebarPinnedOpen, setIsSidebarPinnedOpen] = useState(false);
 	const [isCompletedCampaignsCollapsed, setIsCompletedCampaignsCollapsed] =
-		useState(false);
+		useState(true);
 	const activeNavigationSlug = useAppSelector(
 		(store) => store.navigation.activeCampaignSlug,
 	);

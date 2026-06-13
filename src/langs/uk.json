@@ -699,5 +699,6 @@
 	"File already exists.": "Файл уже існує.",
 	"Subcategory was not found.": "Підкатегорію не знайдено.",
 	"Subcategory already exists.": "Підкатегорія вже існує.",
-	"Encounter {number}": "Сутичка {number}"
+	"Encounter {number}": "Сутичка {number}",
+	"Completed campaigns": "Завершені кампанії"
 }
