@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -2011,6 +2012,143 @@ await run("5etools updater downloads missing tokens for new monsters", async () 
 		source,
 		/New monsters: \$\{newMonsters\.length\}; tokens downloaded:/,
 	);
+});
+
+await run("5etools materializer preserves copied monster names", async () => {
+	const tempRoot = path.join(
+		process.cwd(),
+		`.tmp-materialize-test-${Date.now()}-${Math.random()
+			.toString(36)
+			.slice(2, 8)}`,
+	);
+	const tempBestiaryDir = path.join(tempRoot, "database", "bestiary");
+
+	try {
+		await fs.mkdir(tempBestiaryDir, { recursive: true });
+		await fs.mkdir(path.join(tempRoot, "scripts"), { recursive: true });
+		await fs.cp(
+			path.join(process.cwd(), "scripts", "materialize-bestiary-copies.mjs"),
+			path.join(tempRoot, "scripts", "materialize-bestiary-copies.mjs"),
+		);
+		await fs.cp(path.join(process.cwd(), "shared"), path.join(tempRoot, "shared"), {
+			recursive: true,
+		});
+
+		await fs.writeFile(
+			path.join(tempBestiaryDir, "bestiary-mm.json"),
+			`${JSON.stringify(
+				{
+					monster: [
+						{
+							name: "Tribal Warrior",
+							source: "MM",
+							type: "humanoid",
+							trait: [{ name: "Brave", entries: ["A tribal warrior acts."] }],
+						},
+						{
+							name: "Vampire",
+							source: "MM",
+							type: "undead",
+							trait: [{ name: "Vampire Weaknesses", entries: ["The vampire waits."] }],
+						},
+						{
+							name: "Wraith",
+							source: "MM",
+							type: "undead",
+							trait: [{ name: "Incorporeal", entries: ["The wraith moves."] }],
+						},
+					],
+				},
+				null,
+				2,
+			)}\n`,
+			"utf8",
+		);
+		await fs.writeFile(
+			path.join(tempBestiaryDir, "bestiary-copies.json"),
+			`${JSON.stringify(
+				{
+					monster: [
+						{
+							name: "Tribal Warrior Spore Servant",
+							source: "IDRotF",
+							_copy: {
+								name: "Tribal Warrior",
+								source: "MM",
+								_mod: {
+									"*": [
+										{
+											mode: "replaceTxt",
+											replace: "tribal warrior",
+											with: "spore servant",
+											flags: "i",
+										},
+									],
+								},
+							},
+						},
+						{
+							name: "Ctenmiir the Vampire",
+							source: "LLK",
+							_copy: {
+								name: "Vampire",
+								source: "MM",
+								_mod: {
+									"*": {
+										mode: "replaceTxt",
+										replace: "the vampire",
+										with: "Ctenmiir",
+										flags: "i",
+									},
+								},
+							},
+						},
+						{
+							name: "Mormesk the Wraith",
+							source: "PaBTSO",
+							_copy: {
+								name: "Wraith",
+								source: "MM",
+								_mod: {
+									"*": {
+										mode: "replaceTxt",
+										replace: "the wraith",
+										with: "Mormesk",
+										flags: "i",
+									},
+								},
+							},
+						},
+					],
+				},
+				null,
+				2,
+			)}\n`,
+			"utf8",
+		);
+
+		const result = spawnSync(
+			process.execPath,
+			[path.join("scripts", "materialize-bestiary-copies.mjs")],
+			{ cwd: tempRoot, encoding: "utf8" },
+		);
+		assert.equal(result.status, 0, result.stderr || result.stdout);
+
+		const materialized = JSON.parse(
+			await fs.readFile(path.join(tempBestiaryDir, "bestiary-copies.json"), "utf8"),
+		).monster;
+		assert.deepEqual(
+			materialized.map((monster) => monster.name),
+			[
+				"Tribal Warrior Spore Servant",
+				"Ctenmiir the Vampire",
+				"Mormesk the Wraith",
+			],
+		);
+		assert.equal(materialized.some((monster) => monster._copy), false);
+	} finally {
+		await fs.rm(tempRoot, { recursive: true, force: true });
+	}
 });
 
 await run("AI patch service applies targeted session operations", async () => {

@@ -87500,7 +87500,7 @@
     ]
   },
   {
-    "name": "Ctenmiir Ctenmiir",
+    "name": "Ctenmiir the Vampire",
     "source": "LLK",
     "size": [
       "M"
@@ -262270,7 +262270,95 @@
     }
   },
   {
-    "name": "Mormesk Mormesk",
+    "name": "Mormesk the Wraith",
+    "source": "LMOP",
+    "size": [
+      "M"
+    ],
+    "type": "undead",
+    "alignment": [
+      "N",
+      "E"
+    ],
+    "ac": [
+      13
+    ],
+    "hp": {
+      "average": 45,
+      "formula": "6d8 + 18"
+    },
+    "speed": {
+      "walk": 0,
+      "fly": 60
+    },
+    "str": 6,
+    "dex": 16,
+    "con": 16,
+    "int": 12,
+    "wis": 14,
+    "cha": 15,
+    "senses": [
+      "darkvision 60 ft."
+    ],
+    "resist": [
+      "acid",
+      "cold",
+      "fire",
+      "lightning",
+      "thunder",
+      {
+        "resist": [
+          "bludgeoning",
+          "piercing",
+          "slashing"
+        ],
+        "note": "from nonmagical attacks that aren't silvered",
+        "cond": true
+      }
+    ],
+    "immune": [
+      "necrotic",
+      "poison"
+    ],
+    "conditionImmune": [
+      "charmed",
+      "grappled",
+      "paralyzed",
+      "petrified",
+      "poisoned",
+      "prone",
+      "restrained"
+    ],
+    "languages": [
+      "Common",
+      "Infernal"
+    ],
+    "cr": "3",
+    "trait": [
+      {
+        "name": "Incorporeal Movement",
+        "entries": [
+          "The wraith can move through an object or another creature, but can't stop there."
+        ]
+      },
+      {
+        "name": "Sunlight Sensitivity",
+        "entries": [
+          "While in sunlight, the wraith has disadvantage on attack rolls and on Wisdom ({@skill Perception}) checks that rely on sight."
+        ]
+      }
+    ],
+    "action": [
+      {
+        "name": "Life Drain",
+        "entries": [
+          "{@atk mw} {@hit 5} to hit, reach 5 ft., one creature. {@h}16 ({@damage 3d8 + 3}) necrotic damage, and the target must succeed on a {@dc 13} Constitution saving throw or its hit point maximum is reduced by an amount equal to the damage taken. If this attack reduces the target's hit point maximum to 0, the target dies. This reduction to the target's hit point maximum lasts until the target finishes a long rest."
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Mormesk the Wraith",
     "source": "PABTSO",
     "size": [
       "M"
@@ -262363,94 +262451,6 @@
         "name": "Create Specter",
         "entries": [
           "The wraith targets a humanoid within 10 feet of it that has been dead for no longer than 1 minute and died violently. The target's spirit rises as a {@creature specter} in the space of its corpse or in the nearest unoccupied space. The {@creature specter} is under the wraith's control. The wraith can have no more than seven specters under its control at one time."
-        ]
-      }
-    ]
-  },
-  {
-    "name": "Mormesk the Wraith",
-    "source": "LMOP",
-    "size": [
-      "M"
-    ],
-    "type": "undead",
-    "alignment": [
-      "N",
-      "E"
-    ],
-    "ac": [
-      13
-    ],
-    "hp": {
-      "average": 45,
-      "formula": "6d8 + 18"
-    },
-    "speed": {
-      "walk": 0,
-      "fly": 60
-    },
-    "str": 6,
-    "dex": 16,
-    "con": 16,
-    "int": 12,
-    "wis": 14,
-    "cha": 15,
-    "senses": [
-      "darkvision 60 ft."
-    ],
-    "resist": [
-      "acid",
-      "cold",
-      "fire",
-      "lightning",
-      "thunder",
-      {
-        "resist": [
-          "bludgeoning",
-          "piercing",
-          "slashing"
-        ],
-        "note": "from nonmagical attacks that aren't silvered",
-        "cond": true
-      }
-    ],
-    "immune": [
-      "necrotic",
-      "poison"
-    ],
-    "conditionImmune": [
-      "charmed",
-      "grappled",
-      "paralyzed",
-      "petrified",
-      "poisoned",
-      "prone",
-      "restrained"
-    ],
-    "languages": [
-      "Common",
-      "Infernal"
-    ],
-    "cr": "3",
-    "trait": [
-      {
-        "name": "Incorporeal Movement",
-        "entries": [
-          "The wraith can move through an object or another creature, but can't stop there."
-        ]
-      },
-      {
-        "name": "Sunlight Sensitivity",
-        "entries": [
-          "While in sunlight, the wraith has disadvantage on attack rolls and on Wisdom ({@skill Perception}) checks that rely on sight."
-        ]
-      }
-    ],
-    "action": [
-      {
-        "name": "Life Drain",
-        "entries": [
-          "{@atk mw} {@hit 5} to hit, reach 5 ft., one creature. {@h}16 ({@damage 3d8 + 3}) necrotic damage, and the target must succeed on a {@dc 13} Constitution saving throw or its hit point maximum is reduced by an amount equal to the damage taken. If this attack reduces the target's hit point maximum to 0, the target dies. This reduction to the target's hit point maximum lasts until the target finishes a long rest."
         ]
       }
     ]
@@ -352203,58 +352203,6 @@
     ]
   },
   {
-    "name": "spore servant Spore Servant",
-    "source": "IDROTF",
-    "size": [
-      "M"
-    ],
-    "type": "plant",
-    "alignment": [
-      "U"
-    ],
-    "ac": [
-      {
-        "ac": 12,
-        "from": [
-          "{@item hide armor|phb}"
-        ]
-      }
-    ],
-    "hp": {
-      "average": 11,
-      "formula": "2d8 + 2"
-    },
-    "speed": {
-      "walk": 20
-    },
-    "str": 13,
-    "dex": 11,
-    "con": 12,
-    "int": 2,
-    "wis": 6,
-    "cha": 1,
-    "languages": null,
-    "cr": "1/8",
-    "trait": null,
-    "action": [
-      {
-        "name": "Spear",
-        "entries": [
-          "{@atk mw,rw} {@hit 3} to hit, reach 5 ft. or range 20/60 ft., one target. {@h}4 ({@damage 1d6 + 1}) piercing damage, or 5 ({@damage 1d8 + 1}) piercing damage if used with two hands to make a melee attack."
-        ]
-      }
-    ],
-    "senses": [
-      "blindsight 30 ft. (blind beyond this radius)"
-    ],
-    "conditionImmune": [
-      "blinded",
-      "charmed",
-      "frightened",
-      "paralyzed"
-    ]
-  },
-  {
     "name": "Spotted Lion",
     "source": "BGG",
     "size": [
@@ -383401,6 +383349,58 @@
           "{@atk mw,rw} {@hit 3} to hit, reach 5 ft. or range 20/60 ft., one target. {@h}4 ({@damage 1d6 + 1}) piercing damage, or 5 ({@damage 1d8 + 1}) piercing damage if used with two hands to make a melee attack."
         ]
       }
+    ]
+  },
+  {
+    "name": "Tribal Warrior Spore Servant",
+    "source": "IDROTF",
+    "size": [
+      "M"
+    ],
+    "type": "plant",
+    "alignment": [
+      "U"
+    ],
+    "ac": [
+      {
+        "ac": 12,
+        "from": [
+          "{@item hide armor|phb}"
+        ]
+      }
+    ],
+    "hp": {
+      "average": 11,
+      "formula": "2d8 + 2"
+    },
+    "speed": {
+      "walk": 20
+    },
+    "str": 13,
+    "dex": 11,
+    "con": 12,
+    "int": 2,
+    "wis": 6,
+    "cha": 1,
+    "languages": null,
+    "cr": "1/8",
+    "trait": null,
+    "action": [
+      {
+        "name": "Spear",
+        "entries": [
+          "{@atk mw,rw} {@hit 3} to hit, reach 5 ft. or range 20/60 ft., one target. {@h}4 ({@damage 1d6 + 1}) piercing damage, or 5 ({@damage 1d8 + 1}) piercing damage if used with two hands to make a melee attack."
+        ]
+      }
+    ],
+    "senses": [
+      "blindsight 30 ft. (blind beyond this radius)"
+    ],
+    "conditionImmune": [
+      "blinded",
+      "charmed",
+      "frightened",
+      "paralyzed"
     ]
   },
   {

@@ -284,6 +284,8 @@ function resolveMonster(monster, fileSource, index, warnings, stack = []) {
 		`${monster.name} (${monsterSource})`,
 	);
 
+	if (monster.name) resolved.name = clone(monster.name);
+
 	delete resolved._copy;
 	delete resolved._mod;
 	return resolved;
