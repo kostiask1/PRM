@@ -1416,6 +1416,10 @@ await run("parser renders dice and creature tags as interactive components", asy
 	assert.match(monsterStatBlockSource, /creatureSourceFallback: monster\.source/);
 	assert.match(monsterStatBlockSource, /referenceRenderOptions/);
 	assert.match(rulesLinkSource, /const openCreature = \(\) =>/);
+	assert.match(rulesLinkSource, /CONTENT_TOKEN_REGEX/);
+	assert.match(rulesLinkSource, /tokenFromContentMatch/);
+	assert.match(rulesLinkSource, /<RollDice/);
+	assert.match(rulesLinkSource, /type: "recharge"/);
 	assert.match(
 		rulesLinkSource,
 		/requestRulesReferenceNavigation\("bestiary", referenceName\)/,

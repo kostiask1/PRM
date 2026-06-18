@@ -23,8 +23,17 @@ import {
 	useAppDispatch,
 } from "../../store/appStore.js";
 import classNames from "../../utils/classNames.js";
-import { capitalizeWords, preprocessTags } from "../../utils/parser.jsx";
+import {
+	capitalizeWords,
+	formatModifier,
+	preprocessTags,
+} from "../../utils/parser.jsx";
+import {
+	CONTENT_TOKEN_REGEX,
+	tokenFromContentMatch,
+} from "../../utils/contentTokens.js";
 import { getSpellMeta } from "../../utils/spellMeta.js";
+import RollDice from "./RollDice.jsx";
 import Tooltip from "./Tooltip.jsx";
 
 function getTaggedDisplayValue(raw) {
@@ -41,13 +50,144 @@ function parseReferenceParts(raw) {
 	};
 }
 
-function renderTooltipText(value) {
-	return preprocessTags(String(value || ""))
+function getRechargeThreshold(recharge) {
+	const match = String(recharge || "").match(/Recharge\s+(\d+)/i);
+	return match ? Number(match[1]) : 6;
+}
+
+function formatFormulaText(text) {
+	return String(text || "")
+		.replace(/\bsummonSpellLevel\b/g, "spell level")
+		.replace(/\bPB\b/g, "proficiency bonus");
+}
+
+function formatTooltipText(value) {
+	const diceTags = [];
+	const protectedText = String(value || "").replace(
+		/\{@(?:hit|damage|scaledamage|scaledice|dice|recharge)\s*[^}]*}/gi,
+		(match) => {
+			const token = `__TOOLTIP_DICE_TAG_${diceTags.length}__`;
+			diceTags.push(match);
+			return token;
+		},
+	);
+	return preprocessTags(protectedText)
 		.replace(
 			/\{@(?:spell|creature|condition|status|disease|variantrule|skill|sense|quickref)\s+([^}]+)\}/gi,
 			(_, raw) => capitalizeWords(getTaggedDisplayValue(raw)),
 		)
-		.replace(/\{@(?:hit|dc|damage|dice|recharge)\s+([^}]+)\}/gi, "$1");
+		.replace(
+			/__TOOLTIP_DICE_TAG_(\d+)__/g,
+			(_, index) => diceTags[index] || "",
+		);
+}
+
+export function renderTooltipText(value) {
+	const text = formatTooltipText(value);
+	const elements = [];
+	const regex = new RegExp(
+		CONTENT_TOKEN_REGEX.source,
+		CONTENT_TOKEN_REGEX.flags,
+	);
+	let lastIndex = 0;
+	let matchIndex = 0;
+	let match;
+
+	while ((match = regex.exec(text)) !== null) {
+		const token = tokenFromContentMatch(match);
+		const start = match.index;
+		if (start > lastIndex) {
+			elements.push(text.slice(lastIndex, start));
+		}
+
+		const {
+			fullMatch,
+			recharge,
+			damageRoll,
+			damageRemainder,
+			damageLabel,
+			diceTag,
+			diceFormula,
+			diceLabel,
+			roll,
+			hit,
+			hitSuffix,
+		} = token;
+
+		if (recharge) {
+			const threshold = getRechargeThreshold(recharge);
+			elements.push(
+				<RollDice
+					key={`tooltip-re-${matchIndex}`}
+					formula="1d6"
+					context={{
+						type: "recharge",
+						threshold,
+						label: recharge,
+					}}
+				>
+					{recharge}
+				</RollDice>,
+			);
+		} else if (damageRoll || damageRemainder) {
+			const displayText = damageLabel || damageRoll;
+			if (damageRoll) {
+				elements.push(
+					<RollDice
+						key={`tooltip-d-${matchIndex}`}
+						formula={damageRoll.replace(/\s+/g, "")}
+					>
+						{displayText}
+					</RollDice>,
+				);
+			}
+			if (damageRemainder) {
+				elements.push(formatFormulaText(damageRemainder));
+			}
+		} else if (roll) {
+			elements.push(
+				<RollDice
+					key={`tooltip-r-${matchIndex}`}
+					formula={roll.replace(/\s+/g, "")}
+				>
+					{roll}
+				</RollDice>,
+			);
+		} else if (diceTag) {
+			const displayText = diceLabel || diceFormula;
+			elements.push(
+				<RollDice
+					key={`tooltip-di-${matchIndex}`}
+					formula={String(diceFormula || "").replace(/\s+/g, "")}
+				>
+					{displayText}
+				</RollDice>,
+			);
+		} else if (hit) {
+			const bonus = hit.split(" ")[0];
+			const displayHit =
+				hit.startsWith("+") || hit.startsWith("-") ? hit : `+${hit}`;
+			elements.push(
+				<RollDice
+					key={`tooltip-h-${matchIndex}`}
+					formula={`1d20${formatModifier(parseInt(bonus, 10))}`}
+				>
+					{`${displayHit}${hitSuffix}`}
+				</RollDice>,
+			);
+		} else {
+			elements.push(fullMatch);
+		}
+
+		lastIndex = start + fullMatch.length;
+		matchIndex += 1;
+	}
+
+	if (lastIndex < text.length) {
+		elements.push(text.slice(lastIndex));
+	}
+
+	return elements.length > 0 ? elements : text;
 }
 
 function renderTooltipEntries(content) {
