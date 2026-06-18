@@ -15,12 +15,16 @@ import {
 	SET_ACTIVE_ENCOUNTER,
 	SET_ACTIVE_SESSION,
 	REQUEST_DICE_ROLL,
+	REQUEST_RULES_REFERENCE_NAVIGATION,
 	SET_CAMPAIGNS,
 	SET_NAVIGATION,
+	SET_RULES_REFERENCE_MODAL_OPEN,
 	SHOW_MESSAGE_BOX,
 	closeModalAction,
 	openModalAction,
+	requestRulesReferenceNavigationAction,
 	setNavigationAction,
+	setRulesReferenceModalOpenAction,
 } from "../actions/app";
 import { buildNavigationUrl, parseUrl } from "../utils/navigation";
 import { lang } from "../services/localization";
@@ -104,6 +108,10 @@ const initialState = {
 	sync: {
 		version: 0,
 		event: null,
+	},
+	rulesReference: {
+		isOpen: false,
+		navigationRequest: null,
 	},
 };
 
@@ -294,6 +302,22 @@ function reducer(currentState, action) {
 					event: action.payload,
 				},
 			};
+		case REQUEST_RULES_REFERENCE_NAVIGATION:
+			return {
+				...currentState,
+				rulesReference: {
+					...currentState.rulesReference,
+					navigationRequest: action.payload,
+				},
+			};
+		case SET_RULES_REFERENCE_MODAL_OPEN:
+			return {
+				...currentState,
+				rulesReference: {
+					...currentState.rulesReference,
+					isOpen: action.payload,
+				},
+			};
 		default:
 			return currentState;
 	}
@@ -357,6 +381,14 @@ export function resolveModalRequest(requestId, value) {
 export function closeActiveModal(value = null) {
 	const requestId = appStore.getState().modal.requestId;
 	resolveModalRequest(requestId, value);
+}
+
+export function requestRulesReferenceNavigation(tabId, name = "") {
+	appStore.dispatch(requestRulesReferenceNavigationAction(tabId, name));
+}
+
+export function setRulesReferenceModalOpen(isOpen) {
+	appStore.dispatch(setRulesReferenceModalOpenAction(isOpen));
 }
 
 export function syncNavigationFromPath(pathname) {

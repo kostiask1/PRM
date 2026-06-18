@@ -16,10 +16,14 @@ export const REQUEST_CAMPAIGNS_RELOAD = "campaigns/requestReload";
 export const SET_LANGUAGE = "language/set";
 export const SET_UI_SETTINGS = "ui/setSettings";
 export const DATA_SYNC_RECEIVED = "sync/dataReceived";
+export const REQUEST_RULES_REFERENCE_NAVIGATION =
+	"rulesReference/requestNavigation";
+export const SET_RULES_REFERENCE_MODAL_OPEN = "rulesReference/setModalOpen";
 
 let mentionRequestSeq = 1;
 let diceRollRequestSeq = 1;
 let diceRollResultSeq = 1;
+let rulesReferenceNavigationSeq = 1;
 
 export function openModalAction(requestId, config) {
 	return {
@@ -180,6 +184,24 @@ export function dataSyncReceivedAction(payload) {
 	return {
 		type: DATA_SYNC_RECEIVED,
 		payload: payload && typeof payload === "object" ? payload : null,
+	};
+}
+
+export function requestRulesReferenceNavigationAction(tabId, name = "") {
+	return {
+		type: REQUEST_RULES_REFERENCE_NAVIGATION,
+		payload: {
+			requestId: rulesReferenceNavigationSeq++,
+			tabId: String(tabId || "conditions"),
+			name: String(name || ""),
+		},
+	};
+}
+
+export function setRulesReferenceModalOpenAction(isOpen) {
+	return {
+		type: SET_RULES_REFERENCE_MODAL_OPEN,
+		payload: Boolean(isOpen),
 	};
 }
 

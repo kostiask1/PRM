@@ -187,6 +187,17 @@ function parseTaggedName(raw) {
 	};
 }
 
+function addFallbackTaggedSource(raw, fallbackSource = "") {
+	const parts = String(raw || "").split("|");
+	const name = String(parts[0] || "").trim();
+	const source = String(parts[1] || "").trim();
+	const sourceFallback = String(fallbackSource || "").trim();
+	if (!name || source || !sourceFallback) return String(raw || "");
+
+	const label = String(parts[2] || "").trim();
+	return label ? `${name}|${sourceFallback}|${label}` : `${name}|${sourceFallback}`;
+}
+
 function parseQuickrefName(raw) {
 	const parts = String(raw || "").split("|");
 	const label = parts.slice(1).filter(Boolean).at(-1);
@@ -339,8 +350,6 @@ export const parseRollsAndSpells = (
 					key={getReferenceKey("s", matchIndex, rawSpellName)}
 					type="spell"
 					name={rawSpellName}
-					onNavigate={options.onRuleNavigate}
-					openInNestedModal={options.openSpellInNestedModal}
 				>
 					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,
@@ -348,12 +357,15 @@ export const parseRollsAndSpells = (
 		} else if (creatureTag) {
 			const { name: rawCreatureName, displayText } =
 				parseTaggedName(creatureValue);
+			const creatureReferenceName = addFallbackTaggedSource(
+				creatureValue,
+				options.creatureSourceFallback,
+			);
 			elements.push(
 				<RulesLink
 					key={getReferenceKey("c", matchIndex, rawCreatureName)}
 					type="creature"
-					name={creatureValue}
-					onNavigate={options.onRuleNavigate}
+					name={creatureReferenceName}
 				>
 					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,
@@ -371,7 +383,6 @@ export const parseRollsAndSpells = (
 					key={getReferenceKey(conditionType, matchIndex, rawCondition)}
 					type={conditionType}
 					name={rawCondition}
-					onNavigate={options.onRuleNavigate}
 				>
 					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,
@@ -384,7 +395,6 @@ export const parseRollsAndSpells = (
 					key={getReferenceKey("d", matchIndex, rawDiseaseName)}
 					type="disease"
 					name={rawDiseaseName}
-					onNavigate={options.onRuleNavigate}
 				>
 					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,
@@ -397,7 +407,6 @@ export const parseRollsAndSpells = (
 					key={getReferenceKey("v", matchIndex, rawRuleName)}
 					type="variantrule"
 					name={rawRuleName}
-					onNavigate={options.onRuleNavigate}
 				>
 					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,
@@ -409,7 +418,6 @@ export const parseRollsAndSpells = (
 					key={getReferenceKey("sk", matchIndex, rawSkillName)}
 					type="skill"
 					name={rawSkillName}
-					onNavigate={options.onRuleNavigate}
 				>
 					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,
@@ -421,7 +429,6 @@ export const parseRollsAndSpells = (
 					key={getReferenceKey("se", matchIndex, rawSenseName)}
 					type="sense"
 					name={rawSenseName}
-					onNavigate={options.onRuleNavigate}
 				>
 					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,
@@ -434,7 +441,6 @@ export const parseRollsAndSpells = (
 					key={getReferenceKey("q", matchIndex, rawRuleName)}
 					type="variantrule"
 					name={rawRuleName}
-					onNavigate={options.onRuleNavigate}
 				>
 					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,

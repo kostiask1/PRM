@@ -52,8 +52,10 @@ function parseMonsterReference(value, fallbackSource = "") {
 
 function monsterMatchesReference(monster, reference) {
 	if (!monster?.name || !reference?.name) return false;
+	const monsterName = String(monster.name || "").trim().toLowerCase();
+	const referenceName = String(reference.name || "").trim().toLowerCase();
 	return (
-		String(monster.name || "").trim() === reference.name &&
+		monsterName === referenceName &&
 		(!reference.source ||
 			String(monster.source || "").toUpperCase() ===
 				reference.source.toUpperCase())
@@ -95,11 +97,6 @@ function getMonsterListIndex(monsters, selectedMonster) {
 	);
 }
 
-function normalizeSourceSelection(source) {
-	if (isCustomSource(source)) return "CUSTOM";
-	return source || "all";
-}
-
 function getAutoSelectedMonster(monsters, selectedSource) {
 	if (!monsters.length) return null;
 	if (selectedSource !== "all") return monsters[0];
@@ -138,9 +135,7 @@ export default function Bestiary({
 		[initialSelectedName, initialSelectedSource],
 	);
 	const [sources, setSources] = useState([]);
-	const [selectedSource, setSelectedSource] = useState(() =>
-		normalizeSourceSelection(initialMonsterReference.source),
-	);
+	const [selectedSource, setSelectedSource] = useState("all");
 	const [allMonsters, setAllMonsters] = useState([]);
 	const [monsters, setMonsters] = useState([]);
 	const [search, setSearch] = useState(initialSearch);
@@ -204,16 +199,6 @@ export default function Bestiary({
 	useEffect(() => {
 		embeddedScrolledMonsterRef.current = "";
 	}, [initialSelectedName, initialSelectedSource]);
-
-	useEffect(() => {
-		if (!initialMonsterReference.name) return;
-		const nextSource = normalizeSourceSelection(
-			initialMonsterReference.source || "all",
-		);
-		setSelectedSource((current) =>
-			current === nextSource ? current : nextSource,
-		);
-	}, [initialMonsterReference]);
 
 	useEffect(() => {
 		if (!isHeaderActionsOpen) return undefined;

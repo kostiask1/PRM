@@ -11,7 +11,11 @@ import Input from "../form/Input";
 import Spells from "../Spells.jsx";
 import { renderRecursiveContent } from "../../renderers/contentRenderer.jsx";
 import { lang } from "../../services/localization";
-import { useAppDispatch } from "../../store/appStore";
+import {
+	setRulesReferenceModalOpen,
+	useAppDispatch,
+	useAppSelector,
+} from "../../store/appStore";
 import { objectMatchesSearch } from "../../utils/deepSearch.js";
 import { highlightText } from "../../utils/searchHighlight.jsx";
 import { getSpellMeta as formatSpellMeta } from "../../utils/spellMeta.js";
@@ -172,9 +176,13 @@ export default function RulesReferenceModalContent({
 	onSelectReference = null,
 }) {
 	const dispatch = useAppDispatch();
+	const navigationRequest = useAppSelector(
+		(state) => state.rulesReference.navigationRequest,
+	);
 	const listRef = useRef(null);
 	const isMountedRef = useRef(false);
 	const requestedTabsRef = useRef(new Set());
+	const handledNavigationRequestIdRef = useRef(null);
 	const shouldScrollToActiveRef = useRef(false);
 	const pendingNavigationTabRef = useRef(null);
 	const [activeTabId, setActiveTabId] = useState(getInitialTabId(initialTab));
@@ -267,10 +275,22 @@ export default function RulesReferenceModalContent({
 
 	useEffect(() => {
 		isMountedRef.current = true;
+		setRulesReferenceModalOpen(true);
 		return () => {
 			isMountedRef.current = false;
+			setRulesReferenceModalOpen(false);
 		};
 	}, []);
+
+	useEffect(() => {
+		if (!navigationRequest?.requestId) return;
+		if (handledNavigationRequestIdRef.current === navigationRequest.requestId) {
+			return;
+		}
+
+		handledNavigationRequestIdRef.current = navigationRequest.requestId;
+		navigateToReference(navigationRequest.tabId, navigationRequest.name);
+	}, [navigateToReference, navigationRequest]);
 
 	useEffect(() => {
 		const nextTabId = getInitialTabId(initialTab);
@@ -618,7 +638,6 @@ export default function RulesReferenceModalContent({
 						}
 						onSelectSpell={onSelectReference ? selectSpellReference : null}
 						renderOptions={{
-							onRuleNavigate: navigateToReference,
 							openSpellInNestedModal: false,
 						}}
 					/>
@@ -695,7 +714,6 @@ export default function RulesReferenceModalContent({
 									className="RulesReferenceModalContent__entryContent"
 								>
 									{renderRecursiveContent(selectedItem.entries, query, {
-										onRuleNavigate: navigateToReference,
 										openSpellInNestedModal: true,
 									})}
 								</div>

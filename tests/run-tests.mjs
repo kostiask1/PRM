@@ -1365,6 +1365,10 @@ await run("parser renders dice and creature tags as interactive components", asy
 		"src/components/modals/RulesReferenceModalContent.jsx",
 		"utf8",
 	);
+	const monsterStatBlockSource = await fs.readFile(
+		"src/components/MonsterStatBlock.jsx",
+		"utf8",
+	);
 	const rulesLinkCss = await fs.readFile(
 		"src/assets/components/RulesLink.css",
 		"utf8",
@@ -1374,25 +1378,26 @@ await run("parser renders dice and creature tags as interactive components", asy
 	assert.match(contentTokensSource, /\{@creature\\s\+/);
 	assert.match(rendererSource, /diceTag/);
 	assert.match(rendererSource, /type="creature"/);
-	assert.match(rendererSource, /name=\{creatureValue\}/);
-	assert.match(
-		rendererSource,
-		/type="creature"\s+name=\{creatureValue\}\s+onNavigate=\{options\.onRuleNavigate\}/,
-	);
+	assert.match(rendererSource, /function addFallbackTaggedSource/);
+	assert.match(rendererSource, /creatureSourceFallback/);
+	assert.match(rendererSource, /name=\{creatureReferenceName\}/);
+	assert.doesNotMatch(rendererSource, /onNavigate=\{options\.onRuleNavigate\}/);
+	assert.doesNotMatch(rendererSource, /onRuleNavigate/);
+	assert.match(monsterStatBlockSource, /creatureSourceFallback: monster\.source/);
+	assert.match(monsterStatBlockSource, /referenceRenderOptions/);
 	assert.match(rulesLinkSource, /const openCreature = \(\) =>/);
-	assert.match(rulesLinkSource, /onNavigate\("bestiary", referenceName\)/);
 	assert.match(
 		rulesLinkSource,
-		/openRulesReferenceModal\("bestiary", referenceName\)/,
+		/requestRulesReferenceNavigation\("bestiary", referenceName\)/,
 	);
-	assert.match(rendererSource, /onNavigate=\{options\.onRuleNavigate\}/);
+	assert.doesNotMatch(rulesLinkSource, /onNavigate/);
 	assert.match(rulesReferenceSource, /import Bestiary from "\.\.\/Bestiary\.jsx"/);
 	assert.match(rulesReferenceSource, /id: "bestiary"/);
 	assert.match(rulesReferenceSource, /api\.searchBestiary\(\)/);
 	assert.match(rulesReferenceSource, /<Bestiary/);
 	assert.doesNotMatch(rulesReferenceSource, new RegExp("is" + "Embedded"));
 	assert.match(rulesReferenceSource, /renderRecursiveContent\(selectedItem\.entries/);
-	assert.match(rulesReferenceSource, /onRuleNavigate: navigateToReference/);
+	assert.doesNotMatch(rulesReferenceSource, /onRuleNavigate/);
 	assert.match(rulesLinkCss, /\.RulesLink__creature/);
 });
 
@@ -1425,6 +1430,10 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 		"src/components/modals/RulesReferenceModalContent.jsx",
 		"utf8",
 	);
+	const rulesReferenceHostSource = await fs.readFile(
+		"src/components/modals/RulesReferenceModalHost.jsx",
+		"utf8",
+	);
 	const aiAssistantSource = await fs.readFile(
 		"src/components/ai/AiAssistantPanel.jsx",
 		"utf8",
@@ -1443,6 +1452,9 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.match(bestiarySource, /pendingSyncSelectionRef/);
 	assert.match(bestiarySource, /syncEvent\.monsterName/);
 	assert.match(bestiarySource, /shouldAutoSelectMonsterRef\.current = false/);
+	assert.match(bestiarySource, /referenceName.*toLowerCase/s);
+	assert.match(bestiarySource, /const \[selectedSource, setSelectedSource\] = useState\("all"\)/);
+	assert.doesNotMatch(bestiarySource, /normalizeSourceSelection\(initialMonsterReference\.source\)/);
 	assert.doesNotMatch(bestiarySource, embeddedPropPattern);
 	assert.doesNotMatch(bestiarySource, /useSearchParams/);
 	assert.doesNotMatch(bestiarySource, /next\.set\("monster"/);
@@ -1458,6 +1470,10 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.match(rulesReferenceSource, /recordNavigation\(tabId, name\)/);
 	assert.match(rulesReferenceSource, /onActiveSpellChange/);
 	assert.match(rulesReferenceSource, /onActiveMonsterChange/);
+	assert.match(
+		rulesReferenceHostSource,
+		/handledRequestIdRef\.current = navigationRequest\.requestId;\s*if \(isOpen\) return;/,
+	);
 	assert.match(aiAssistantSource, /aiHistoryCampaign = isBestiary \? "bestiary"/);
 	assert.match(aiAssistantSource, /resource: "custom-bestiary"/);
 	assert.match(aiAssistantSource, /monsterName:/);

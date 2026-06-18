@@ -18,11 +18,13 @@ import {
 	resolveSpellInput,
 	resolveVariantRuleInput,
 } from "../../services/referenceResolvers.js";
-import { useAppDispatch } from "../../store/appStore.js";
+import {
+	requestRulesReferenceNavigation,
+	useAppDispatch,
+} from "../../store/appStore.js";
 import classNames from "../../utils/classNames.js";
 import { capitalizeWords, preprocessTags } from "../../utils/parser.jsx";
 import { getSpellMeta } from "../../utils/spellMeta.js";
-import { openRulesReferenceModal } from "../modals/openRulesReferenceModal.jsx";
 import Tooltip from "./Tooltip.jsx";
 
 function getTaggedDisplayValue(raw) {
@@ -121,7 +123,6 @@ export default function RulesLink({
 	children,
 	name,
 	type = "spell",
-	onNavigate,
 }) {
 	const dispatch = useAppDispatch();
 	const [tooltipContent, setTooltipContent] = useState(null);
@@ -151,24 +152,14 @@ export default function RulesLink({
 		const spell = await resolveSpellInput(referenceName);
 		if (!spell) return;
 
-		if (onNavigate) {
-			onNavigate("spells", spell.name);
-			return;
-		}
-
-		openRulesReferenceModal("spells", spell.name);
+		requestRulesReferenceNavigation("spells", spell.name);
 	};
 
 	const openCreature = () => {
 		const creature = parseReferenceParts(referenceName);
 		if (!creature.name) return;
 
-		if (onNavigate) {
-			onNavigate("bestiary", referenceName);
-			return;
-		}
-
-		openRulesReferenceModal("bestiary", referenceName);
+		requestRulesReferenceNavigation("bestiary", referenceName);
 	};
 
 	const handleClick = async () => {
@@ -180,32 +171,27 @@ export default function RulesLink({
 			} else if (type === "condition" || type === "status") {
 				const condition = await resolveConditionInput(referenceName);
 				if (condition) {
-					if (onNavigate) onNavigate("conditions", condition.name);
-					else openRulesReferenceModal("conditions", condition.name);
+					requestRulesReferenceNavigation("conditions", condition.name);
 				}
 			} else if (type === "disease") {
 				const disease = await resolveDiseaseInput(referenceName);
 				if (disease) {
-					if (onNavigate) onNavigate("diseases", disease.name);
-					else openRulesReferenceModal("diseases", disease.name);
+					requestRulesReferenceNavigation("diseases", disease.name);
 				}
 			} else if (type === "variantrule") {
 				const rule = await resolveVariantRuleInput(referenceName);
 				if (rule) {
-					if (onNavigate) onNavigate("variantrules", rule.name);
-					else openRulesReferenceModal("variantrules", rule.name);
+					requestRulesReferenceNavigation("variantrules", rule.name);
 				}
 			} else if (type === "skill") {
 				const skill = await resolveSkillInput(referenceName);
 				if (skill) {
-					if (onNavigate) onNavigate("skills", skill.name);
-					else openRulesReferenceModal("skills", skill.name);
+					requestRulesReferenceNavigation("skills", skill.name);
 				}
 			} else if (type === "sense") {
 				const sense = await resolveSenseInput(referenceName);
 				if (sense) {
-					if (onNavigate) onNavigate("senses", sense.name);
-					else openRulesReferenceModal("senses", sense.name);
+					requestRulesReferenceNavigation("senses", sense.name);
 				}
 			}
 		} catch (error) {
