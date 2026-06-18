@@ -97,7 +97,10 @@ export const preprocessTags = (text) => {
 			/{@atkr\s+([a-z,]+)}/gi,
 			(m, g1) => `${ATTACK_TYPE_MAP[g1] || g1} Attack: `,
 		)
-		.replace(/{@chance\s+(\d+)}/gi, "$1%")
+		.replace(
+			/{@chance\s+([^|}]+)(?:\|([^|}]*))?(?:\|([^|}]*))?(?:\|([^|}]*))?(?:\|([^|}]*))?}/gi,
+			(m, chance, label) => label || `${chance}%`,
+		)
 		.replace(/{@note\s+([^}]+)}/gi, "$1")
 		.replace(/{@hom}/gi, "")
 		.replace(/{@loader\s+[^}]+}/gi, "")

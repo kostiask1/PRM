@@ -1376,6 +1376,15 @@ await run("parser renders quickref display labels", () => {
 		preprocessTags("{@quickref Cover||3||Total cover} blocks the sphere."),
 		"Total cover blocks the sphere.",
 	);
+	assert.equal(preprocessTags("{@chance 25} chance"), "25% chance");
+	assert.equal(
+		preprocessTags("{@chance 50|50 percent|50% summoning chance} chance"),
+		"50 percent chance",
+	);
+	assert.equal(
+		preprocessTags("{@chance 25|||No answer!|Answer} chance"),
+		"25% chance",
+	);
 });
 
 await run("parser renders dice and creature tags as interactive components", async () => {
