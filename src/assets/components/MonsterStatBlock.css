@@ -28,6 +28,12 @@
 	justify-content: center;
 }
 
+.MonsterStatBlock__meta_line {
+	display: flex;
+	gap: var(--space-2);
+	margin-bottom: var(--space-2);
+}
+
 .MonsterStatBlock__token_wrapper .ImageDropzone {
 	padding: var(--space-1) var(--space-2);
 	border-radius: var(--radius-md);
@@ -124,7 +130,7 @@
 .MonsterStatBlock__stats__wrap {
 	display: flex;
 	gap: var(--space-2);
-	margin-top: var(--space-4);
+	margin-top: var(--space-2);
 }
 
 .MonsterStatBlock__stats {
@@ -175,7 +181,7 @@
 	display: grid;
 	grid-template-columns: repeat(6, 1fr);
 	text-align: center;
-	margin-top: var(--space-2);
+	margin-top: var(--space-4);
 	gap: var(--space-3);
 }
 

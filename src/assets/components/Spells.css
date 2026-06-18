@@ -5,8 +5,8 @@
 	height: 100%;
 }
 
-.Spells__embedded {
-	min-height: 0;
+.Spells {
+	height: 100%;
 }
 
 .Spells__content {

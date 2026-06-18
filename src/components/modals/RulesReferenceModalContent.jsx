@@ -118,6 +118,7 @@ const REFERENCE_TABS = [
 ];
 
 const TAB_BY_ID = new Map(REFERENCE_TABS.map((tab) => [tab.id, tab]));
+const EMBEDDED_BROWSER_TAB_IDS = new Set(["spells", "bestiary"]);
 const EMPTY_ITEMS = [];
 
 function normalizeList(list) {
@@ -149,6 +150,13 @@ function getReferenceInlineTag(tabId, item = {}) {
 		return source ? `{@creature ${name}|${source}}` : `{@creature ${name}}`;
 	}
 	return name;
+}
+
+function getCreatureReferenceName(monster = {}) {
+	const name = String(monster.name || "").trim();
+	if (!name) return "";
+	const source = String(monster.source || "").trim();
+	return source ? `${name}|${source}` : name;
 }
 
 function isEditableTarget(target) {
@@ -313,6 +321,7 @@ export default function RulesReferenceModalContent({
 				}));
 				setSelectedByTab((current) => {
 					if (current[tab.id]) return current;
+					if (EMBEDDED_BROWSER_TAB_IDS.has(tab.id)) return current;
 					return {
 						...current,
 						[tab.id]: normalizedList[0]?.name || "",
@@ -363,6 +372,7 @@ export default function RulesReferenceModalContent({
 
 	useEffect(() => {
 		if (!hasLoadedActiveTab || isLoading) return;
+		if (EMBEDDED_BROWSER_TAB_IDS.has(activeTab.id)) return;
 
 		const selectedItemExists = activeItems.some(
 			(item) => item.name === activeSelectedName,
@@ -452,9 +462,12 @@ export default function RulesReferenceModalContent({
 		shouldScrollToActiveRef.current = false;
 		const nextName =
 			selectedByTab[tabId] || (itemsByTab[tabId] || EMPTY_ITEMS)[0]?.name || "";
-		if (nextName) {
+		if (nextName && !EMBEDDED_BROWSER_TAB_IDS.has(tabId)) {
 			pendingNavigationTabRef.current = null;
 			recordNavigation(tabId, nextName);
+		} else if (selectedByTab[tabId]) {
+			pendingNavigationTabRef.current = null;
+			recordNavigation(tabId, selectedByTab[tabId]);
 		} else {
 			pendingNavigationTabRef.current = tabId;
 		}
@@ -477,6 +490,22 @@ export default function RulesReferenceModalContent({
 			tag: getReferenceInlineTag("spells", spell),
 		});
 	};
+
+	const recordEmbeddedReferenceSelection = useCallback(
+		(tabId, name) => {
+			if (!TAB_BY_ID.has(tabId) || !name) return;
+			pendingNavigationTabRef.current = null;
+			recordNavigation(tabId, name);
+			setSelectedByTab((current) => {
+				if (!current[tabId]) return current;
+				return {
+					...current,
+					[tabId]: "",
+				};
+			});
+		},
+		[recordNavigation],
+	);
 
 	const insertReference = (tabId, item) => {
 		if (!item?.name || !onSelectReference) return;
@@ -580,11 +609,13 @@ export default function RulesReferenceModalContent({
 			{activeTab.id === "spells" ? (
 				<div className="RulesReferenceModalContent__spellBrowser">
 					<Spells
-						isEmbedded
 						hideSearchInput
 						initialSearch={query}
 						initialDetailedSearch={isDetailedSearch}
 						initialSelectedName={activeSelectedName}
+						onActiveSpellChange={(spell) =>
+							recordEmbeddedReferenceSelection("spells", spell.name)
+						}
 						onSelectSpell={onSelectReference ? selectSpellReference : null}
 						renderOptions={{
 							onRuleNavigate: navigateToReference,
@@ -595,11 +626,16 @@ export default function RulesReferenceModalContent({
 			) : activeTab.id === "bestiary" ? (
 				<div className="RulesReferenceModalContent__bestiaryBrowser">
 					<Bestiary
-						isEmbedded
 						hideSearchInput
 						initialSearch={query}
 						initialDetailedSearch={isDetailedSearch}
 						initialSelectedName={activeSelectedName}
+						onActiveMonsterChange={(monster) =>
+							recordEmbeddedReferenceSelection(
+								"bestiary",
+								getCreatureReferenceName(monster),
+							)
+						}
 						onSelectMonster={
 							onSelectReference
 								? (monster) => insertReference(activeTab.id, monster)

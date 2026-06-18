@@ -1,8 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { api } from "../api.js";
 import ReactList from "react-list";
-import { useSearchParams } from "react-router";
-import Panel from "./common/Panel.jsx";
 import Input from "./form/Input";
 import Button from "./form/Button";
 import Select from "./form/Select";
@@ -47,13 +45,6 @@ function getFallbackScrollParent() {
 	return window;
 }
 
-function spellMatchesUrl(spell, name, source) {
-	return (
-		spell?.name === name &&
-		(!source || source === "all" || spell.source === source)
-	);
-}
-
 function getSpellItemKey(spell) {
 	return `${spell.source || ""}:${spell.name}`;
 }
@@ -74,7 +65,7 @@ function findSpellByName(spells, name) {
 }
 
 export default function Spells({
-	isEmbedded = false,
+	onActiveSpellChange = null,
 	onSelectSpell = null,
 	initialSearch = "",
 	initialDetailedSearch = false,
@@ -83,21 +74,11 @@ export default function Spells({
 	hideSearchInput = false,
 	renderOptions = {},
 }) {
-	const [urlSearchParams, setUrlSearchParams] = useSearchParams();
 	const useSearchDebounce = useAppSelector(
 		(state) => state.ui.useSearchDebounce !== false,
 	);
-	const urlSpellName = isEmbedded ? "" : urlSearchParams.get("spell") || "";
-	const urlSelectedSource = isEmbedded
-		? ""
-		: urlSearchParams.get("source") || "";
-	const urlSpellSource = isEmbedded
-		? ""
-		: urlSearchParams.get("s_source") || "";
 	const [sources, setSources] = useState([]);
-	const [selectedSource, setSelectedSource] = useState(
-		() => urlSelectedSource || "all",
-	);
+	const [selectedSource, setSelectedSource] = useState("all");
 	const [allSpells, setAllSpells] = useState([]);
 	const [spells, setSpells] = useState([]);
 	const [selectedLevel, setSelectedLevel] = useState("all");
@@ -115,7 +96,6 @@ export default function Spells({
 	const listContainerRef = useRef(null);
 	const detailRef = useRef(null);
 	const selectedSpellRef = useRef(null);
-	const hasScrolledToInitialSpellRef = useRef(false);
 	const embeddedScrolledSpellRef = useRef("");
 
 	useEffect(() => {
@@ -168,26 +148,16 @@ export default function Spells({
 	}, []);
 
 	useEffect(() => {
-		if (!isEmbedded) return;
 		setSearch(initialSearch);
-	}, [initialSearch, isEmbedded]);
+	}, [initialSearch]);
 
 	useEffect(() => {
-		if (!isEmbedded) return;
 		setIsDetailedSearch(Boolean(initialDetailedSearch));
-	}, [initialDetailedSearch, isEmbedded]);
+	}, [initialDetailedSearch]);
 
 	useEffect(() => {
-		if (!isEmbedded) return;
 		embeddedScrolledSpellRef.current = "";
-	}, [initialSelectedName, isEmbedded]);
-
-	useEffect(() => {
-		if (isEmbedded || !urlSelectedSource) return;
-		setSelectedSource((current) =>
-			current === urlSelectedSource ? current : urlSelectedSource,
-		);
-	}, [isEmbedded, urlSelectedSource]);
+	}, [initialSelectedName]);
 
 	// Load all spells once; sources are filtered locally after that.
 	useEffect(() => {
@@ -206,19 +176,6 @@ export default function Spells({
 		};
 		loadData();
 	}, [sources]);
-
-	useEffect(() => {
-		if (isEmbedded) return;
-		if ((urlSelectedSource || "all") === selectedSource) return;
-		setUrlSearchParams(
-			(current) => {
-				const next = new URLSearchParams(current);
-				next.set("source", selectedSource);
-				return next;
-			},
-			{ replace: true },
-		);
-	}, [isEmbedded, selectedSource, setUrlSearchParams, urlSelectedSource]);
 
 	// Filtering
 	useEffect(() => {
@@ -259,115 +216,27 @@ export default function Spells({
 
 	// Initial selection
 	useEffect(() => {
-		if (isEmbedded) {
-			const targetSpell =
-				findSpellByName(displayedSpells, initialSelectedName) ||
-				findSpellByName(allSpells, initialSelectedName);
-			if (
-				targetSpell &&
-				(selectedSpellRef.current?.name !== targetSpell.name ||
-					selectedSpellRef.current?.source !== targetSpell.source)
-			) {
-				setSelectedSpell(targetSpell);
-			} else if (
-				!targetSpell &&
-				displayedSpells.length > 0 &&
-				!selectedSpellRef.current?.name
-			) {
-				setSelectedSpell(displayedSpells[0]);
-			}
-			return undefined;
+		const targetSpell =
+			findSpellByName(displayedSpells, initialSelectedName) ||
+			findSpellByName(allSpells, initialSelectedName);
+		if (
+			targetSpell &&
+			(selectedSpellRef.current?.name !== targetSpell.name ||
+				selectedSpellRef.current?.source !== targetSpell.source)
+		) {
+			setSelectedSpell(targetSpell);
+		} else if (
+			!targetSpell &&
+			displayedSpells.length > 0 &&
+			!selectedSpellRef.current?.name
+		) {
+			setSelectedSpell(displayedSpells[0]);
 		}
-
-		const syncSelectionFromUrl = () => {
-			const currentSpell = selectedSpellRef.current;
-
-			if (!urlSpellName) {
-				if (displayedSpells.length > 0 && !currentSpell?.name) {
-					setSelectedSpell(displayedSpells[0]);
-				}
-				return;
-			}
-
-			if (spellMatchesUrl(currentSpell, urlSpellName, urlSpellSource)) {
-				return;
-			}
-
-			const spellToSelect = displayedSpells.findIndex((s) =>
-				spellMatchesUrl(s, urlSpellName, urlSpellSource),
-			);
-			const spell =
-				displayedSpells[spellToSelect] ||
-				allSpells.find((s) => spellMatchesUrl(s, urlSpellName, urlSpellSource));
-
-			if (spell) {
-				setSelectedSpell(spell);
-			}
-		};
-
-		if (displayedSpells.length > 0 || allSpells.length > 0) {
-			syncSelectionFromUrl();
-		}
-
 		return undefined;
-	}, [
-		allSpells,
-		displayedSpells,
-		initialSelectedName,
-		isEmbedded,
-		urlSpellName,
-		urlSpellSource,
-	]);
-
-	useEffect(() => {
-		if (isEmbedded) return;
-		if (selectedSpell?.name) {
-			if (
-				urlSpellName === selectedSpell.name &&
-				urlSpellSource === (selectedSpell.source || "")
-			) {
-				return;
-			}
-			setUrlSearchParams((current) => {
-				const next = new URLSearchParams(current);
-				next.set("spell", selectedSpell.name);
-				next.set("s_source", selectedSpell.source || "");
-				return next;
-			});
-		} else if (selectedSpell === "") {
-			if (!urlSpellName && !urlSpellSource) return;
-			setUrlSearchParams((current) => {
-				const next = new URLSearchParams(current);
-				next.delete("spell");
-				next.delete("s_source");
-				return next;
-			});
-		}
-	}, [
-		isEmbedded,
-		selectedSpell,
-		setUrlSearchParams,
-		urlSpellName,
-		urlSpellSource,
-	]);
-
-	useEffect(() => {
-		if (isEmbedded || hasScrolledToInitialSpellRef.current || !urlSpellName) {
-			return undefined;
-		}
-		const selectedIndex = getSpellListIndex(displayedSpells, selectedSpell);
-		if (selectedIndex < 0) return undefined;
-
-		hasScrolledToInitialSpellRef.current = true;
-		const frameId = requestAnimationFrame(() => {
-			listRef.current?.scrollTo(selectedIndex);
-		});
-		return () => cancelAnimationFrame(frameId);
-	}, [displayedSpells, isEmbedded, selectedSpell, urlSpellName]);
+	}, [allSpells, displayedSpells, initialSelectedName]);
 
 	useEffect(() => {
 		if (
-			!isEmbedded ||
 			!scrollToInitialSelected ||
 			!initialSelectedName ||
 			!selectedSpell?.name ||
@@ -389,7 +258,6 @@ export default function Spells({
 	}, [
 		displayedSpells,
 		initialSelectedName,
-		isEmbedded,
 		scrollToInitialSelected,
 		selectedSpell,
 	]);
@@ -411,6 +279,9 @@ export default function Spells({
 
 	const selectSpell = (spell) => {
 		setSelectedSpell(spell);
+		if (spell?.name) {
+			onActiveSpellChange?.(spell);
+		}
 		if (!spell?.name || !isMobileViewport()) return;
 
 		requestAnimationFrame(() => {
@@ -622,20 +493,9 @@ export default function Spells({
 		</>
 	);
 
-	if (isEmbedded) {
-		return (
-			<div className="Spells Spells__embedded">
-				<div className="Spells__body">{content}</div>
-			</div>
-		);
-	}
-
 	return (
-		<Panel className="Spells">
-			<div className="Panel__header">
-				<h2>{lang.t("Spells")}</h2>
-			</div>
-			<div className="Panel__body Spells__body">{content}</div>
-		</Panel>
+		<div className="Spells">
+			<div className="Spells__body">{content}</div>
+		</div>
 	);
 }

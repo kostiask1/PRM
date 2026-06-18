@@ -13,10 +13,10 @@ export default function RollDice({ formula, children, context = null }) {
 			requestDiceRollAction(
 				context
 					? {
-							formula,
+							formula: formula.replace(/×/g, "*"),
 							context,
 						}
-					: formula,
+					: formula.replace(/×/g, "*"),
 			),
 		);
 	};

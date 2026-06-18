@@ -10079,7 +10079,7 @@
       {
         "name": "Horrifying Visage",
         "entries": [
-          "Each non-undead creature within 60 feet of the ghost that can see it must succeed on a {@dc 13} Wisdom saving throw or be {@condition frightened} for 1 minute. If the save fails by 5 or more, the target also ages {@dice 1d4 × 10} years. A {@condition frightened} target can repeat the saving throw at the end of each of its turns, ending the {@condition frightened} condition on itself on a success. If a target's saving throw is successful or the effect ends for it, the target is immune to this ghost's Horrifying Visage for the next 24 hours. The aging effect can be reversed with a  {@spell greater restoration} spell, but only within 24 hours of it occurring."
+          "Each non-undead creature within 60 feet of the ghost that can see it must succeed on a {@dc 13} Wisdom saving throw or be {@condition frightened} for 1 minute. If the save fails by 5 or more, the target also ages {@dice 1d4 × 10} years. A {@condition frightened} target can repeat the saving throw at the end of each of its turns, ending the {@condition frightened} condition on itself on a success. If a target's saving throw is successful or the effect ends for it, the target is immune to this ghost's Horrifying Visage for the next 24 hours. The aging effect can be reversed with a {@spell greater restoration} spell, but only within 24 hours of it occurring."
         ]
       },
       {
@@ -16315,7 +16315,7 @@
       {
         "name": "Horrifying Visage",
         "entries": [
-          "Each non-undead creature within 60 feet of the ghost that can see it must succeed on a {@dc 13} Wisdom saving throw or be {@condition frightened} for 1 minute. If the save fails by 5 or more, the target also ages {@dice 1d4 × 10} years. A {@condition frightened} target can repeat the saving throw at the end of each of its turns, ending the {@condition frightened} condition on itself on a success. If a target's saving throw is successful or the effect ends for it, the target is immune to this ghost's Horrifying Visage for the next 24 hours. The aging effect can be reversed with a  {@spell greater restoration} spell, but only within 24 hours of it occurring."
+          "Each non-undead creature within 60 feet of the ghost that can see it must succeed on a {@dc 13} Wisdom saving throw or be {@condition frightened} for 1 minute. If the save fails by 5 or more, the target also ages {@dice 1d4 × 10} years. A {@condition frightened} target can repeat the saving throw at the end of each of its turns, ending the {@condition frightened} condition on itself on a success. If a target's saving throw is successful or the effect ends for it, the target is immune to this ghost's Horrifying Visage for the next 24 hours. The aging effect can be reversed with a {@spell greater restoration} spell, but only within 24 hours of it occurring."
         ]
       },
       {
@@ -47643,7 +47643,7 @@
       {
         "name": "Petrifying Gaze",
         "entries": [
-          "If a creature starts its turn within 30 feet of the basilisk and the two of them can see each other, the basilisk can force the creature to make a {@dc 12} Constitution saving throw if the basilisk isn't {@condition incapacitated}. On a failed save, the creature magically begins to turn to stone and is {@condition restrained}. It must repeat the saving throw at the end of its next turn. On a success, the effect ends. On a failure, the creature is {@condition petrified} until freed by the  {@spell greater restoration} spell or other magic.",
+          "If a creature starts its turn within 30 feet of the basilisk and the two of them can see each other, the basilisk can force the creature to make a {@dc 12} Constitution saving throw if the basilisk isn't {@condition incapacitated}. On a failed save, the creature magically begins to turn to stone and is {@condition restrained}. It must repeat the saving throw at the end of its next turn. On a success, the effect ends. On a failure, the creature is {@condition petrified} until freed by the {@spell greater restoration} spell or other magic.",
           "A creature that isn't {@status surprised} can avert its eyes to avoid the saving throw at the start of its turn. If it does so, it can't see the basilisk until the start of its next turn, when it can avert its eyes again. If it looks at the basilisk in the meantime, it must immediately make the save.",
           "If the basilisk sees its reflection within 30 feet of it in bright light, it mistakes itself for a rival and targets itself with its gaze."
         ]
@@ -49554,7 +49554,7 @@
               {
                 "type": "itemSub",
                 "name": "8. Petrification Ray",
-                "entry": "The targeted creature must make a {@dc 16} Dexterity saving throw. On a failed save, the creature begins to turn to stone and is {@condition restrained}. It must repeat the saving throw at the end of its next turn. On a success, the effect ends. On a failure, the creature is {@condition petrified} until freed by the  {@spell greater restoration} spell or other magic."
+                "entry": "The targeted creature must make a {@dc 16} Dexterity saving throw. On a failed save, the creature begins to turn to stone and is {@condition restrained}. It must repeat the saving throw at the end of its next turn. On a success, the effect ends. On a failure, the creature is {@condition petrified} until freed by the {@spell greater restoration} spell or other magic."
               },
               {
                 "type": "itemSub",
@@ -71553,7 +71553,7 @@
       {
         "name": "Horrifying Visage",
         "entries": [
-          "Each non-undead creature within 60 feet of the ghost that can see it must succeed on a {@dc 13} Wisdom saving throw or be {@condition frightened} for 1 minute. If the save fails by 5 or more, the target also ages {@dice 1d4 × 10} years. A {@condition frightened} target can repeat the saving throw at the end of each of its turns, ending the {@condition frightened} condition on itself on a success. If a target's saving throw is successful or the effect ends for it, the target is immune to this ghost's Horrifying Visage for the next 24 hours. The aging effect can be reversed with a  {@spell greater restoration} spell, but only within 24 hours of it occurring."
+          "Each non-undead creature within 60 feet of the ghost that can see it must succeed on a {@dc 13} Wisdom saving throw or be {@condition frightened} for 1 minute. If the save fails by 5 or more, the target also ages {@dice 1d4 × 10} years. A {@condition frightened} target can repeat the saving throw at the end of each of its turns, ending the {@condition frightened} condition on itself on a success. If a target's saving throw is successful or the effect ends for it, the target is immune to this ghost's Horrifying Visage for the next 24 hours. The aging effect can be reversed with a {@spell greater restoration} spell, but only within 24 hours of it occurring."
         ]
       },
       {
@@ -73639,7 +73639,7 @@
       {
         "name": "Proboscis",
         "entries": [
-          "{@atk mw} {@hit 5} to hit, reach 5 ft., one creature. {@h}16 ({@damage 4d6 + 2}) piercing damage plus 24 ({@damage 7d6}) necrotic damage, and the target's hit point maximum is reduced by an amount equal to the necrotic damage taken. If this effect reduces a creature's hit point maximum to 0, the creature dies. This reduction to a creature's hit point maximum lasts until the creature finishes a long rest or until it is affected by a spell like  {@spell greater restoration}."
+          "{@atk mw} {@hit 5} to hit, reach 5 ft., one creature. {@h}16 ({@damage 4d6 + 2}) piercing damage plus 24 ({@damage 7d6}) necrotic damage, and the target's hit point maximum is reduced by an amount equal to the necrotic damage taken. If this effect reduces a creature's hit point maximum to 0, the creature dies. This reduction to a creature's hit point maximum lasts until the creature finishes a long rest or until it is affected by a spell like {@spell greater restoration}."
         ]
       }
     ]
@@ -76777,7 +76777,7 @@
       {
         "name": "Slam",
         "entries": [
-          "{@atk mw} {@hit 8} to hit, reach 5 ft., one target. {@h}16 ({@damage 2d10 + 5}) bludgeoning damage. If the target is a creature, it must succeed on a {@dc 15} Constitution saving throw or have its hit point maximum reduced by an amount equal to the damage taken. The target dies if this attack reduces its hit point maximum to 0. The reduction lasts until removed by the  {@spell greater restoration} spell or other magic."
+          "{@atk mw} {@hit 8} to hit, reach 5 ft., one target. {@h}16 ({@damage 2d10 + 5}) bludgeoning damage. If the target is a creature, it must succeed on a {@dc 15} Constitution saving throw or have its hit point maximum reduced by an amount equal to the damage taken. The target dies if this attack reduces its hit point maximum to 0. The reduction lasts until removed by the {@spell greater restoration} spell or other magic."
         ]
       },
       {
@@ -88547,7 +88547,7 @@
       {
         "name": "Ritual Sickle",
         "entries": [
-          "{@atkr m} {@hit 4}, reach 5 ft.  {@h}{@damage 1d4 + 2} Slashing damage plus 1 Necrotic damage."
+          "{@atkr m} {@hit 4}, reach 5 ft. {@h}{@damage 1d4 + 2} Slashing damage plus 1 Necrotic damage."
         ]
       }
     ]
@@ -91192,7 +91192,7 @@
       {
         "name": "Fiery Claw",
         "entries": [
-          "{@atkr m} {@hit 7}, reach 5 ft.  {@h}8 ({@damage 1d8 + 4}) Slashing damage plus 7 ({@damage 2d6}) Fire damage."
+          "{@atkr m} {@hit 7}, reach 5 ft. {@h}8 ({@damage 1d8 + 4}) Slashing damage plus 7 ({@damage 2d6}) Fire damage."
         ]
       },
       {
@@ -94226,7 +94226,7 @@
               {
                 "type": "itemSub",
                 "name": "8. Petrification Ray",
-                "entry": "The targeted creature must make a {@dc 17} Dexterity saving throw. On a failed save, the creature begins to turn to stone and is {@condition restrained}. It must repeat the saving throw at the end of its next turn. On a success, the effect ends. On a failure, the creature is {@condition petrified} until freed by the  {@spell greater restoration} spell or other magic."
+                "entry": "The targeted creature must make a {@dc 17} Dexterity saving throw. On a failed save, the creature begins to turn to stone and is {@condition restrained}. It must repeat the saving throw at the end of its next turn. On a success, the effect ends. On a failure, the creature is {@condition petrified} until freed by the {@spell greater restoration} spell or other magic."
               },
               {
                 "type": "itemSub",
@@ -97771,7 +97771,7 @@
       {
         "name": "Energy Drain (Costs 2 Actions)",
         "entries": [
-          "Each creature with in 30 feet of the demilich must make a {@dc 15} Constitution saving throw. On a failed save, the creature's hit point maximum is magically reduced by 10 ({@dice 3d6}). If a creature's hit point maximum is reduced to 0 by this effect, the creature dies. A creature's hit point maximum can be restored with the  {@spell greater restoration} spell or similar magic."
+          "Each creature with in 30 feet of the demilich must make a {@dc 15} Constitution saving throw. On a failed save, the creature's hit point maximum is magically reduced by 10 ({@dice 3d6}). If a creature's hit point maximum is reduced to 0 by this effect, the creature dies. A creature's hit point maximum can be restored with the {@spell greater restoration} spell or similar magic."
         ]
       },
       {
@@ -97962,7 +97962,7 @@
       {
         "name": "Bite",
         "entries": [
-          "{@atkr m} {@hit 5} (with {@variantrule Advantage|XPHB} if the target is {@condition Grappled|XPHB} by a Demobat), reach 5 ft.  {@h}10 ({@damage 2d6 + 3}) Piercing damage."
+          "{@atkr m} {@hit 5} (with {@variantrule Advantage|XPHB} if the target is {@condition Grappled|XPHB} by a Demobat), reach 5 ft. {@h}10 ({@damage 2d6 + 3}) Piercing damage."
         ]
       },
       {
@@ -98113,7 +98113,7 @@
       {
         "name": "Bite",
         "entries": [
-          "{@atkr m} {@hit 7}, reach 10 ft.  {@h}11 ({@damage 2d6 + 4}) Piercing damage plus 4 ({@damage 1d8}) Acid damage."
+          "{@atkr m} {@hit 7}, reach 10 ft. {@h}11 ({@damage 2d6 + 4}) Piercing damage plus 4 ({@damage 1d8}) Acid damage."
         ]
       },
       {
@@ -122713,7 +122713,7 @@
       13,
       {
         "ac": 18,
-        "condition": "with {@item staff of power} and  {@spell mage armor}",
+        "condition": "with {@item staff of power} and {@spell mage armor}",
         "braces": true
       }
     ],
@@ -126476,7 +126476,7 @@
       {
         "name": "Mind-Scouring Spores {@recharge}",
         "entries": [
-          "{@actSave int} {@dc 18}, each creature in a 20-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} originating from the elder thing. {@actSaveFail} 55 ({@damage 10d10}) Psychic damage. For 1 minute, whenever the target takes the Magic action, it takes 10 ({@damage 3d6}) Psychic damage. {@actSaveSuccess} Half damage only."
+          "{@actSave int} {@dc 18}, each creature in a 20-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} originating from the elder thing. {@actSaveFail} 55 ({@damage 10d10}) Psychic damage. For 1 minute, whenever the target takes the {@action Magic|XPHB} action, it takes 10 ({@damage 3d6}) Psychic damage. {@actSaveSuccess} Half damage only."
         ]
       },
       {
@@ -128172,7 +128172,7 @@
       {
         "name": "+1 Longsword",
         "entries": [
-          "{@atk mw}  {@hit 2} to hit, reach 5 ft., one target. {@h}4 ({@damage 1d8}) slashing damage, or 5 ({@damage 1d10}) slashing damage when used with two hands. If the target is a creature that is Large or bigger, it takes an extra 5 ({@damage 1d10}) slashing damage."
+          "{@atk mw} {@hit 2} to hit, reach 5 ft., one target. {@h}4 ({@damage 1d8}) slashing damage, or 5 ({@damage 1d10}) slashing damage when used with two hands. If the target is a creature that is Large or bigger, it takes an extra 5 ({@damage 1d10}) slashing damage."
         ]
       }
     ],
@@ -128870,13 +128870,13 @@
       {
         "name": "Flail",
         "entries": [
-          "{@atkr m} {@hit 6}, reach 5 ft.  {@h}8 ({@damage 1d8 + 4}) Bludgeoning damage—plus 7 ({@damage 2d6}) Necrotic damage if the commander is Bloodied—and the target has {@variantrule Disadvantage|XPHB} on its next attack roll before the start of the commander's next turn."
+          "{@atkr m} {@hit 6}, reach 5 ft. {@h}8 ({@damage 1d8 + 4}) Bludgeoning damage—plus 7 ({@damage 2d6}) Necrotic damage if the commander is Bloodied—and the target has {@variantrule Disadvantage|XPHB} on its next attack roll before the start of the commander's next turn."
         ]
       },
       {
         "name": "Javelin",
         "entries": [
-          "{@atkr m,r} {@hit 6}, reach 5 ft. or range 30/120 ft.  {@h}7 ({@damage 1d6 + 4}) Piercing damage—plus 7 ({@damage 2d6}) Necrotic damage if the commander is {@status Bloodied|XPHB}."
+          "{@atkr m,r} {@hit 6}, reach 5 ft. or range 30/120 ft. {@h}7 ({@damage 1d6 + 4}) Piercing damage—plus 7 ({@damage 2d6}) Necrotic damage if the commander is {@status Bloodied|XPHB}."
         ]
       }
     ]
@@ -131142,7 +131142,7 @@
       {
         "name": "Petrifying Gaze",
         "entries": [
-          "When a creature that can see the medusa's eyes starts its turn within 30 feet of the medusa, the medusa can force it to make a {@dc 14} Constitution saving throw if the medusa isn't {@condition incapacitated} and can see the creature. If the saving throw fails by 5 or more, the creature is instantly {@condition petrified}. Otherwise, a creature that fails the save begins to turn to metal, wood, or porcelain (the medusa's choice) and is {@condition restrained}. The {@condition restrained} creature must repeat the saving throw at the end of its next turn, becoming {@condition petrified} on a failure or ending the effect on a success. The petrification lasts until the creature is freed by the  {@spell greater restoration} spell or other magic.",
+          "When a creature that can see the medusa's eyes starts its turn within 30 feet of the medusa, the medusa can force it to make a {@dc 14} Constitution saving throw if the medusa isn't {@condition incapacitated} and can see the creature. If the saving throw fails by 5 or more, the creature is instantly {@condition petrified}. Otherwise, a creature that fails the save begins to turn to metal, wood, or porcelain (the medusa's choice) and is {@condition restrained}. The {@condition restrained} creature must repeat the saving throw at the end of its next turn, becoming {@condition petrified} on a failure or ending the effect on a success. The petrification lasts until the creature is freed by the {@spell greater restoration} spell or other magic.",
           "Unless {@status surprised}, a creature can avert its eyes to avoid the saving throw at the start of its turn. If the creature does so, it can't see the medusa until the start of its next turn, when it can avert its eyes again. If the creature looks at the medusa in the meantime, it must immediately make the save.",
           "If the medusa sees itself reflected on a polished surface within 30 feet of it and in an area of bright light, the medusa is, due to its curse, affected by its own gaze."
         ]
@@ -141154,7 +141154,7 @@
       {
         "name": "Horrifying Visage",
         "entries": [
-          "Each non-undead creature within 60 feet of the ghost that can see it must succeed on a {@dc 13} Wisdom saving throw or be {@condition frightened} for 1 minute. If the save fails by 5 or more, the target also ages {@dice 1d4 × 10} years. A {@condition frightened} target can repeat the saving throw at the end of each of its turns, ending the {@condition frightened} condition on itself on a success. If a target's saving throw is successful or the effect ends for it, the target is immune to this ghost's Horrifying Visage for the next 24 hours. The aging effect can be reversed with a  {@spell greater restoration} spell, but only within 24 hours of it occurring."
+          "Each non-undead creature within 60 feet of the ghost that can see it must succeed on a {@dc 13} Wisdom saving throw or be {@condition frightened} for 1 minute. If the save fails by 5 or more, the target also ages {@dice 1d4 × 10} years. A {@condition frightened} target can repeat the saving throw at the end of each of its turns, ending the {@condition frightened} condition on itself on a success. If a target's saving throw is successful or the effect ends for it, the target is immune to this ghost's Horrifying Visage for the next 24 hours. The aging effect can be reversed with a {@spell greater restoration} spell, but only within 24 hours of it occurring."
         ]
       },
       {
@@ -158233,7 +158233,7 @@
       {
         "name": "Horrifying Visage",
         "entries": [
-          "Each non-undead creature within 60 feet of the ghost that can see it must succeed on a {@dc 13} Wisdom saving throw or be {@condition frightened} for 1 minute. If the save fails by 5 or more, the target also ages {@dice 1d4 × 10} years. A {@condition frightened} target can repeat the saving throw at the end of each of its turns, ending the {@condition frightened} condition on itself on a success. If a target's saving throw is successful or the effect ends for it, the target is immune to this ghost's Horrifying Visage for the next 24 hours. The aging effect can be reversed with a  {@spell greater restoration} spell, but only within 24 hours of it occurring."
+          "Each non-undead creature within 60 feet of the ghost that can see it must succeed on a {@dc 13} Wisdom saving throw or be {@condition frightened} for 1 minute. If the save fails by 5 or more, the target also ages {@dice 1d4 × 10} years. A {@condition frightened} target can repeat the saving throw at the end of each of its turns, ending the {@condition frightened} condition on itself on a success. If a target's saving throw is successful or the effect ends for it, the target is immune to this ghost's Horrifying Visage for the next 24 hours. The aging effect can be reversed with a {@spell greater restoration} spell, but only within 24 hours of it occurring."
         ]
       },
       {
@@ -170031,7 +170031,7 @@
       {
         "name": "Petrifying Gaze",
         "entries": [
-          "When a creature that can see Gloine's eyes starts its turn within 30 feet of the medusa, the medusa can force it to make a {@dc 14} Constitution saving throw if the medusa isn't {@condition incapacitated} and can see the creature. If the saving throw fails by 5 or more, the creature is instantly {@condition petrified}. Otherwise, a creature that fails the save begins to turn to glass and is {@condition restrained}. The {@condition restrained} creature must repeat the saving throw at the end of its next turn, becoming {@condition petrified} on a failure or ending the effect on a success. The petrification lasts until the creature is freed by the  {@spell greater restoration} spell or other magic.",
+          "When a creature that can see Gloine's eyes starts its turn within 30 feet of the medusa, the medusa can force it to make a {@dc 14} Constitution saving throw if the medusa isn't {@condition incapacitated} and can see the creature. If the saving throw fails by 5 or more, the creature is instantly {@condition petrified}. Otherwise, a creature that fails the save begins to turn to glass and is {@condition restrained}. The {@condition restrained} creature must repeat the saving throw at the end of its next turn, becoming {@condition petrified} on a failure or ending the effect on a success. The petrification lasts until the creature is freed by the {@spell greater restoration} spell or other magic.",
           "Unless {@status surprised}, a creature can avert its eyes to avoid the saving throw at the start of its turn. If the creature does so, it can't see the medusa until the start of its next turn, when it can avert its eyes again. If the creature looks at the medusa in the meantime, it must immediately make the save.",
           "If the medusa sees itself reflected on a polished surface within 30 feet of it and in an area of bright light, the medusa is, due to its curse, affected by its own gaze."
         ]
@@ -174457,7 +174457,7 @@
       {
         "name": "Petrifying Breath {@recharge 5}",
         "entries": [
-          "The gorgon exhales petrifying gas in a 30-foot cone. Each creature in that area must succeed on a {@dc 13} Constitution saving throw. On a failed save, a target begins to turn to stone and is {@condition restrained}. The {@condition restrained} target must repeat the saving throw at the end of its next turn. On a success, the effect ends on the target. On a failure, the target is {@condition petrified} until freed by the  {@spell greater restoration} spell or other magic."
+          "The gorgon exhales petrifying gas in a 30-foot cone. Each creature in that area must succeed on a {@dc 13} Constitution saving throw. On a failed save, a target begins to turn to stone and is {@condition restrained}. The {@condition restrained} target must repeat the saving throw at the end of its next turn. On a success, the effect ends on the target. On a failure, the target is {@condition petrified} until freed by the {@spell greater restoration} spell or other magic."
         ]
       }
     ]
@@ -188559,7 +188559,7 @@
                 "type": "item",
                 "name": "3: Mind Flare",
                 "entries": [
-                  "{@actSave int} {@dc 18}. {@actSaveFail} 13 ({@damage 2d12}) Psychic damage, and the target can't take the Magic action until the end of its next turn."
+                  "{@actSave int} {@dc 18}. {@actSaveFail} 13 ({@damage 2d12}) Psychic damage, and the target can't take the {@action Magic|XPHB} action until the end of its next turn."
                 ]
               },
               {
@@ -195174,7 +195174,7 @@
       {
         "name": "Petrifying Gaze",
         "entries": [
-          "When a creature that can see Honna's eyes starts its turn within 30 feet of the medusa, the medusa can force it to make a {@dc 14} Constitution saving throw if the medusa isn't {@condition incapacitated} and can see the creature. If the saving throw fails by 5 or more, the creature is instantly {@condition petrified}. Otherwise, a creature that fails the save begins to turn to stone and is {@condition restrained}. The {@condition restrained} creature must repeat the saving throw at the end of its next turn, becoming {@condition petrified} on a failure or ending the effect on a success. The petrification lasts until the creature is freed by the  {@spell greater restoration} spell or other magic.",
+          "When a creature that can see Honna's eyes starts its turn within 30 feet of the medusa, the medusa can force it to make a {@dc 14} Constitution saving throw if the medusa isn't {@condition incapacitated} and can see the creature. If the saving throw fails by 5 or more, the creature is instantly {@condition petrified}. Otherwise, a creature that fails the save begins to turn to stone and is {@condition restrained}. The {@condition restrained} creature must repeat the saving throw at the end of its next turn, becoming {@condition petrified} on a failure or ending the effect on a success. The petrification lasts until the creature is freed by the {@spell greater restoration} spell or other magic.",
           "Unless {@status surprised}, a creature can avert its eyes to avoid the saving throw at the start of its turn. If the creature does so, it can't see the medusa until the start of its next turn, when it can avert its eyes again. If the creature looks at the medusa in the meantime, it must immediately make the save.",
           "If the medusa sees itself reflected on a polished surface within 30 feet of it and in an area of bright light, the medusa is, due to its curse, affected by its own gaze."
         ]
@@ -197837,7 +197837,7 @@
       {
         "name": "Slam",
         "entries": [
-          "{@atk mw} {@hit 8} to hit, reach 5 ft., one target. {@h}16 ({@damage 2d10 + 5}) bludgeoning damage. If the target is a creature, it must succeed on a {@dc 15} Constitution saving throw or have its hit point maximum reduced by an amount equal to the damage taken. The target dies if this attack reduces its hit point maximum to 0. The reduction lasts until removed by the  {@spell greater restoration} spell or other magic."
+          "{@atk mw} {@hit 8} to hit, reach 5 ft., one target. {@h}16 ({@damage 2d10 + 5}) bludgeoning damage. If the target is a creature, it must succeed on a {@dc 15} Constitution saving throw or have its hit point maximum reduced by an amount equal to the damage taken. The target dies if this attack reduces its hit point maximum to 0. The reduction lasts until removed by the {@spell greater restoration} spell or other magic."
         ]
       },
       {
@@ -199761,7 +199761,7 @@
       {
         "name": "Claw",
         "entries": [
-          "{@atk mw} {@hit 9} to hit, reach 5 ft., one target.  {@h}14 ({@damage 2d8 + 5}) force damage plus 9 ({@damage 2d10}) psychic damage."
+          "{@atk mw} {@hit 9} to hit, reach 5 ft., one target. {@h}14 ({@damage 2d8 + 5}) force damage plus 9 ({@damage 2d10}) psychic damage."
         ]
       },
       {
@@ -221278,7 +221278,7 @@
       {
         "name": "Slam",
         "entries": [
-          "{@atk mw} {@hit 8} to hit, reach 5 ft., one target. {@h}16 ({@damage 2d10 + 5}) bludgeoning damage. If the target is a creature, it must succeed on a {@dc 15} Constitution saving throw or have its hit point maximum reduced by an amount equal to the damage taken. The target dies if this attack reduces its hit point maximum to 0. The reduction lasts until removed by the  {@spell greater restoration} spell or other magic."
+          "{@atk mw} {@hit 8} to hit, reach 5 ft., one target. {@h}16 ({@damage 2d10 + 5}) bludgeoning damage. If the target is a creature, it must succeed on a {@dc 15} Constitution saving throw or have its hit point maximum reduced by an amount equal to the damage taken. The target dies if this attack reduces its hit point maximum to 0. The reduction lasts until removed by the {@spell greater restoration} spell or other magic."
         ]
       },
       {
@@ -222360,9 +222360,6 @@
     },
     "alignment": [
       "L",
-      "NX",
-      "C",
-      "NY",
       "E"
     ],
     "ac": [
@@ -241521,7 +241518,7 @@
       {
         "name": "Nightmare Haunting (1/Day)",
         "entries": [
-          "While on the Ethereal Plane, the hag magically touches a sleeping humanoid on the Material Plane. A {@spell protection from evil and good} spell cast on the target prevents this contact, as does a magic circle. As long as the contact persists, the target has dreadful visions. If these visions last for at least 1 hour, the target gains no benefit from its rest, and its hit point maximum is reduced by 5 ({@dice 1d10}). If this effect reduces the target's hit point maximum to 0, the target dies, and if the target was evil, its soul is trapped in the hag's soul bag. The reduction to the target's hit point maximum lasts until removed by the  {@spell greater restoration} spell or similar magic."
+          "While on the Ethereal Plane, the hag magically touches a sleeping humanoid on the Material Plane. A {@spell protection from evil and good} spell cast on the target prevents this contact, as does a magic circle. As long as the contact persists, the target has dreadful visions. If these visions last for at least 1 hour, the target gains no benefit from its rest, and its hit point maximum is reduced by 5 ({@dice 1d10}). If this effect reduces the target's hit point maximum to 0, the target dies, and if the target was evil, its soul is trapped in the hag's soul bag. The reduction to the target's hit point maximum lasts until removed by the {@spell greater restoration} spell or similar magic."
         ]
       }
     ],
@@ -246701,7 +246698,7 @@
       {
         "name": "Horrifying Visage",
         "entries": [
-          "Each non-undead creature within 60 feet of the ghost that can see it must succeed on a {@dc 13} Wisdom saving throw or be {@condition frightened} for 1 minute. If the save fails by 5 or more, the target also ages {@dice 1d4 × 10} years. A {@condition frightened} target can repeat the saving throw at the end of each of its turns, ending the {@condition frightened} condition on itself on a success. If a target's saving throw is successful or the effect ends for it, the target is immune to this ghost's Horrifying Visage for the next 24 hours. The aging effect can be reversed with a  {@spell greater restoration} spell, but only within 24 hours of it occurring."
+          "Each non-undead creature within 60 feet of the ghost that can see it must succeed on a {@dc 13} Wisdom saving throw or be {@condition frightened} for 1 minute. If the save fails by 5 or more, the target also ages {@dice 1d4 × 10} years. A {@condition frightened} target can repeat the saving throw at the end of each of its turns, ending the {@condition frightened} condition on itself on a success. If a target's saving throw is successful or the effect ends for it, the target is immune to this ghost's Horrifying Visage for the next 24 hours. The aging effect can be reversed with a {@spell greater restoration} spell, but only within 24 hours of it occurring."
         ]
       },
       {
@@ -249860,7 +249857,7 @@
       {
         "name": "Petrifying Gaze",
         "entries": [
-          "When a creature that can see the medusa's eyes starts its turn within 30 feet of the medusa, the medusa can force it to make a {@dc 14} Constitution saving throw if the medusa isn't {@condition incapacitated} and can see the creature. If the saving throw fails by 5 or more, the creature is instantly {@condition petrified}. Otherwise, a creature that fails the save begins to turn to stone and is {@condition restrained}. The {@condition restrained} creature must repeat the saving throw at the end of its next turn, becoming {@condition petrified} on a failure or ending the effect on a success. The petrification lasts until the creature is freed by the  {@spell greater restoration} spell or other magic.",
+          "When a creature that can see the medusa's eyes starts its turn within 30 feet of the medusa, the medusa can force it to make a {@dc 14} Constitution saving throw if the medusa isn't {@condition incapacitated} and can see the creature. If the saving throw fails by 5 or more, the creature is instantly {@condition petrified}. Otherwise, a creature that fails the save begins to turn to stone and is {@condition restrained}. The {@condition restrained} creature must repeat the saving throw at the end of its next turn, becoming {@condition petrified} on a failure or ending the effect on a success. The petrification lasts until the creature is freed by the {@spell greater restoration} spell or other magic.",
           "Unless {@status surprised}, a creature can avert its eyes to avoid the saving throw at the start of its turn. If the creature does so, it can't see the medusa until the start of its next turn, when it can avert its eyes again. If the creature looks at the medusa in the meantime, it must immediately make the save.",
           "If the medusa sees itself reflected on a polished surface within 30 feet of it and in an area of bright light, the medusa is, due to its curse, affected by its own gaze."
         ]
@@ -249942,7 +249939,7 @@
       {
         "name": "Petrifying Gaze",
         "entries": [
-          "When a creature that can see the medusa's eyes starts its turn within 30 feet of the medusa, the medusa can force it to make a {@dc 14} Constitution saving throw if the medusa isn't {@condition incapacitated} and can see the creature. If the saving throw fails by 5 or more, the creature is instantly {@condition petrified}. Otherwise, a creature that fails the save begins to turn to stone and is {@condition restrained}. The {@condition restrained} creature must repeat the saving throw at the end of its next turn, becoming {@condition petrified} on a failure or ending the effect on a success. The petrification lasts until the creature is freed by the  {@spell greater restoration} spell or other magic.",
+          "When a creature that can see the medusa's eyes starts its turn within 30 feet of the medusa, the medusa can force it to make a {@dc 14} Constitution saving throw if the medusa isn't {@condition incapacitated} and can see the creature. If the saving throw fails by 5 or more, the creature is instantly {@condition petrified}. Otherwise, a creature that fails the save begins to turn to stone and is {@condition restrained}. The {@condition restrained} creature must repeat the saving throw at the end of its next turn, becoming {@condition petrified} on a failure or ending the effect on a success. The petrification lasts until the creature is freed by the {@spell greater restoration} spell or other magic.",
           "Unless {@status surprised}, a creature can avert its eyes to avoid the saving throw at the start of its turn. If the creature does so, it can't see the medusa until the start of its next turn, when it can avert its eyes again. If the creature looks at the medusa in the meantime, it must immediately make the save.",
           "If the medusa sees itself reflected on a polished surface within 30 feet of it and in an area of bright light, the medusa is, due to its curse, affected by its own gaze."
         ]
@@ -252401,7 +252398,7 @@
       {
         "name": "Horrifying Visage",
         "entries": [
-          "Each non-undead creature within 60 feet of the ghost that can see it must succeed on a {@dc 13} Wisdom saving throw or be {@condition frightened} for 1 minute. If the save fails by 5 or more, the target also ages {@dice 1d4 × 10} years. A {@condition frightened} target can repeat the saving throw at the end of each of its turns, ending the {@condition frightened} condition on itself on a success. If a target's saving throw is successful or the effect ends for it, the target is immune to this ghost's Horrifying Visage for the next 24 hours. The aging effect can be reversed with a  {@spell greater restoration} spell, but only within 24 hours of it occurring."
+          "Each non-undead creature within 60 feet of the ghost that can see it must succeed on a {@dc 13} Wisdom saving throw or be {@condition frightened} for 1 minute. If the save fails by 5 or more, the target also ages {@dice 1d4 × 10} years. A {@condition frightened} target can repeat the saving throw at the end of each of its turns, ending the {@condition frightened} condition on itself on a success. If a target's saving throw is successful or the effect ends for it, the target is immune to this ghost's Horrifying Visage for the next 24 hours. The aging effect can be reversed with a {@spell greater restoration} spell, but only within 24 hours of it occurring."
         ]
       },
       {
@@ -261958,7 +261955,7 @@
       {
         "name": "Nightmare Haunting (1/Day)",
         "entries": [
-          "While on the Ethereal Plane, the hag magically touches a sleeping humanoid on the Material Plane. A {@spell protection from evil and good} spell cast on the target prevents this contact, as does a magic circle. As long as the contact persists, the target has dreadful visions. If these visions last for at least 1 hour, the target gains no benefit from its rest, and its hit point maximum is reduced by 5 ({@dice 1d10}). If this effect reduces the target's hit point maximum to 0, the target dies, and if the target was evil, its soul is trapped in the hag's soul bag. The reduction to the target's hit point maximum lasts until removed by the  {@spell greater restoration} spell or similar magic."
+          "While on the Ethereal Plane, the hag magically touches a sleeping humanoid on the Material Plane. A {@spell protection from evil and good} spell cast on the target prevents this contact, as does a magic circle. As long as the contact persists, the target has dreadful visions. If these visions last for at least 1 hour, the target gains no benefit from its rest, and its hit point maximum is reduced by 5 ({@dice 1d10}). If this effect reduces the target's hit point maximum to 0, the target dies, and if the target was evil, its soul is trapped in the hag's soul bag. The reduction to the target's hit point maximum lasts until removed by the {@spell greater restoration} spell or similar magic."
         ]
       }
     ],
@@ -272984,7 +272981,7 @@
       {
         "name": "Nightmare Haunting (1/Day)",
         "entries": [
-          "While on the Ethereal Plane, the hag magically touches a sleeping humanoid on the Material Plane. A {@spell protection from evil and good} spell cast on the target prevents this contact, as does a magic circle. As long as the contact persists, the target has dreadful visions. If these visions last for at least 1 hour, the target gains no benefit from its rest, and its hit point maximum is reduced by 5 ({@dice 1d10}). If this effect reduces the target's hit point maximum to 0, the target dies, and if the target was evil, its soul is trapped in the hag's soul bag. The reduction to the target's hit point maximum lasts until removed by the  {@spell greater restoration} spell or similar magic."
+          "While on the Ethereal Plane, the hag magically touches a sleeping humanoid on the Material Plane. A {@spell protection from evil and good} spell cast on the target prevents this contact, as does a magic circle. As long as the contact persists, the target has dreadful visions. If these visions last for at least 1 hour, the target gains no benefit from its rest, and its hit point maximum is reduced by 5 ({@dice 1d10}). If this effect reduces the target's hit point maximum to 0, the target dies, and if the target was evil, its soul is trapped in the hag's soul bag. The reduction to the target's hit point maximum lasts until removed by the {@spell greater restoration} spell or similar magic."
         ]
       }
     ],
@@ -306374,7 +306371,7 @@
       {
         "name": "Death Burst",
         "entries": [
-          "The companion explodes when it dies. {@actSave dex} DC equals your spell save DC, each creature in a 10-foot Emanation originating from the companion. {@actSaveFail} {@damage 2d4} Necrotic damage. {@actSaveSuccess} Half damage."
+          "The companion explodes when it dies. {@actSave dex} DC equals {@dcYourSpellSave}, each creature in a 10-foot Emanation originating from the companion. {@actSaveFail} {@damage 2d4} Necrotic damage. {@actSaveSuccess} Half damage."
         ]
       },
       {
@@ -308262,7 +308259,7 @@
       {
         "name": "Petrifying Gaze",
         "entries": [
-          "If a creature starts its turn within 30 feet of the basilisk and the two of them can see each other, the basilisk can force the creature to make a {@dc 12} Constitution saving throw if the basilisk isn't {@condition incapacitated}. On a failed save, the creature magically begins to turn to stone and is {@condition restrained}. It must repeat the saving throw at the end of its next turn. On a success, the effect ends. On a failure, the creature is {@condition petrified} until freed by the  {@spell greater restoration} spell or other magic.",
+          "If a creature starts its turn within 30 feet of the basilisk and the two of them can see each other, the basilisk can force the creature to make a {@dc 12} Constitution saving throw if the basilisk isn't {@condition incapacitated}. On a failed save, the creature magically begins to turn to stone and is {@condition restrained}. It must repeat the saving throw at the end of its next turn. On a success, the effect ends. On a failure, the creature is {@condition petrified} until freed by the {@spell greater restoration} spell or other magic.",
           "A creature that isn't {@status surprised} can avert its eyes to avoid the saving throw at the start of its turn. If it does so, it can't see the basilisk until the start of its next turn, when it can avert its eyes again. If it looks at the basilisk in the meantime, it must immediately make the save.",
           "If the basilisk sees its reflection within 30 feet of it in bright light, it mistakes itself for a rival and targets itself with its gaze."
         ]
@@ -308468,7 +308465,7 @@
               {
                 "type": "itemSub",
                 "name": "8. Petrification Ray",
-                "entry": "The targeted creature must make a {@dc 16} Dexterity saving throw. On a failed save, the creature begins to turn to stone and is {@condition restrained}. It must repeat the saving throw at the end of its next turn. On a success, the effect ends. On a failure, the creature is {@condition petrified} until freed by the  {@spell greater restoration} spell or other magic."
+                "entry": "The targeted creature must make a {@dc 16} Dexterity saving throw. On a failed save, the creature begins to turn to stone and is {@condition restrained}. It must repeat the saving throw at the end of its next turn. On a success, the effect ends. On a failure, the creature is {@condition petrified} until freed by the {@spell greater restoration} spell or other magic."
               },
               {
                 "type": "itemSub",
@@ -308759,7 +308756,7 @@
       {
         "name": "Slam",
         "entries": [
-          "{@atk mw} {@hit 8} to hit, reach 5 ft., one target. {@h}16 ({@damage 2d10 + 5}) bludgeoning damage. If the target is a creature, it must succeed on a {@dc 15} Constitution saving throw or have its hit point maximum reduced by an amount equal to the damage taken. The target dies if this attack reduces its hit point maximum to 0. The reduction lasts until removed by the  {@spell greater restoration} spell or other magic."
+          "{@atk mw} {@hit 8} to hit, reach 5 ft., one target. {@h}16 ({@damage 2d10 + 5}) bludgeoning damage. If the target is a creature, it must succeed on a {@dc 15} Constitution saving throw or have its hit point maximum reduced by an amount equal to the damage taken. The target dies if this attack reduces its hit point maximum to 0. The reduction lasts until removed by the {@spell greater restoration} spell or other magic."
         ]
       },
       {
@@ -315168,7 +315165,7 @@
       {
         "name": "Horrifying Visage",
         "entries": [
-          "Each non-undead creature within 60 feet of the ghost that can see it must succeed on a {@dc 13} Wisdom saving throw or be {@condition frightened} for 1 minute. If the save fails by 5 or more, the target also ages {@dice 1d4 × 10} years. A {@condition frightened} target can repeat the saving throw at the end of each of its turns, ending the {@condition frightened} condition on itself on a success. If a target's saving throw is successful or the effect ends for it, the target is immune to this ghost's Horrifying Visage for the next 24 hours. The aging effect can be reversed with a  {@spell greater restoration} spell, but only within 24 hours of it occurring."
+          "Each non-undead creature within 60 feet of the ghost that can see it must succeed on a {@dc 13} Wisdom saving throw or be {@condition frightened} for 1 minute. If the save fails by 5 or more, the target also ages {@dice 1d4 × 10} years. A {@condition frightened} target can repeat the saving throw at the end of each of its turns, ending the {@condition frightened} condition on itself on a success. If a target's saving throw is successful or the effect ends for it, the target is immune to this ghost's Horrifying Visage for the next 24 hours. The aging effect can be reversed with a {@spell greater restoration} spell, but only within 24 hours of it occurring."
         ]
       },
       {
@@ -350046,7 +350043,7 @@
       {
         "name": "Curse of the Riddle",
         "entries": [
-          "{@actSave int} {@dc 15}, one creature the sphinx can see within 60 feet. {@actSaveFail} 21 ({@damage 6d6}) Psychic damage, and the target is cursed with a riddle. The cursed target has {@variantrule Disadvantage|XPHB} on ability checks and attack rolls. In addition, if it takes the Magic action, it must succeed on a {@dc 15} Intelligence saving throw or that action is wasted. The cursed target can take a Study action to make a {@dc 15} Intelligence check, solving the riddle and ending the curse on a success. The curse ends early if the sphinx curses another target."
+          "{@actSave int} {@dc 15}, one creature the sphinx can see within 60 feet. {@actSaveFail} 21 ({@damage 6d6}) Psychic damage, and the target is cursed with a riddle. The cursed target has {@variantrule Disadvantage|XPHB} on ability checks and attack rolls. In addition, if it takes the {@action Magic|XPHB} action, it must succeed on a {@dc 15} Intelligence saving throw or that action is wasted. The cursed target can take a Study action to make a {@dc 15} Intelligence check, solving the riddle and ending the curse on a success. The curse ends early if the sphinx curses another target."
         ]
       }
     ]
@@ -351165,7 +351162,7 @@
       {
         "name": "Horrifying Visage",
         "entries": [
-          "Each non-undead creature within 60 feet of the spirit that can see it must succeed on a {@dc 13} Wisdom saving throw or be {@condition frightened} for 1 minute. If the save fails by 5 or more, the target also ages {@dice 1d4 × 10} years. A {@condition frightened} target can repeat the saving throw at the end of each of its turns, ending the {@condition frightened} condition on itself on a success. If a target's saving throw is successful or the effect ends for it, the target is immune to this spirit's Horrifying Visage for the next 24 hours. The aging effect can be reversed with a  {@spell greater restoration} spell, but only within 24 hours of it occurring."
+          "Each non-undead creature within 60 feet of the spirit that can see it must succeed on a {@dc 13} Wisdom saving throw or be {@condition frightened} for 1 minute. If the save fails by 5 or more, the target also ages {@dice 1d4 × 10} years. A {@condition frightened} target can repeat the saving throw at the end of each of its turns, ending the {@condition frightened} condition on itself on a success. If a target's saving throw is successful or the effect ends for it, the target is immune to this spirit's Horrifying Visage for the next 24 hours. The aging effect can be reversed with a {@spell greater restoration} spell, but only within 24 hours of it occurring."
         ]
       },
       {
@@ -388264,7 +388261,7 @@
       {
         "name": "Shadow Cowl",
         "entries": [
-          "{@actSave wis} {@dc 17}, one creature the shadow walker can see within 120 feet. {@actSaveFail} 14 ({@damage 4d6}) Necrotic damage, and the target has the  {@condition Blinded|XPHB} condition until the start of the shadow walker's next turn."
+          "{@actSave wis} {@dc 17}, one creature the shadow walker can see within 120 feet. {@actSaveFail} 14 ({@damage 4d6}) Necrotic damage, and the target has the {@condition Blinded|XPHB} condition until the start of the shadow walker's next turn."
         ]
       }
     ]
@@ -397730,7 +397727,7 @@
       {
         "name": "Petrifying Gaze",
         "entries": [
-          "If a creature starts its turn within 30 feet of Veldyskar and the two of them can see each other, the basilisk can force the creature to make a {@dc 12} Constitution saving throw if the basilisk isn't {@condition incapacitated}. On a failed save, the creature magically begins to turn to stone and is {@condition restrained}. It must repeat the saving throw at the end of its next turn. On a success, the effect ends. On a failure, the creature is {@condition petrified} until freed by the  {@spell greater restoration} spell or other magic.",
+          "If a creature starts its turn within 30 feet of Veldyskar and the two of them can see each other, the basilisk can force the creature to make a {@dc 12} Constitution saving throw if the basilisk isn't {@condition incapacitated}. On a failed save, the creature magically begins to turn to stone and is {@condition restrained}. It must repeat the saving throw at the end of its next turn. On a success, the effect ends. On a failure, the creature is {@condition petrified} until freed by the {@spell greater restoration} spell or other magic.",
           "A creature that isn't {@status surprised} can avert its eyes to avoid the saving throw at the start of its turn. If it does so, it can't see the basilisk until the start of its next turn, when it can avert its eyes again. If it looks at the basilisk in the meantime, it must immediately make the save.",
           "If the basilisk sees its reflection within 30 feet of it in bright light, it mistakes itself for a rival and targets itself with its gaze."
         ]
@@ -417428,7 +417425,7 @@
               {
                 "type": "itemSub",
                 "name": "8. Petrification Ray",
-                "entry": "The targeted creature must make a {@dc 16} Dexterity saving throw. On a failed save, the creature begins to turn to stone and is {@condition restrained}. It must repeat the saving throw at the end of its next turn. On a success, the effect ends. On a failure, the creature is {@condition petrified} until freed by the  {@spell greater restoration} spell or other magic."
+                "entry": "The targeted creature must make a {@dc 16} Dexterity saving throw. On a failed save, the creature begins to turn to stone and is {@condition restrained}. It must repeat the saving throw at the end of its next turn. On a success, the effect ends. On a failure, the creature is {@condition petrified} until freed by the {@spell greater restoration} spell or other magic."
               },
               {
                 "type": "itemSub",
@@ -417947,7 +417944,7 @@
               {
                 "type": "itemSub",
                 "name": "8. Petrification Ray",
-                "entry": "The targeted creature must make a {@dc 16} Dexterity saving throw. On a failed save, the creature begins to turn to stone and is {@condition restrained}. It must repeat the saving throw at the end of its next turn. On a success, the effect ends. On a failure, the creature is {@condition petrified} until freed by the  {@spell greater restoration} spell or other magic."
+                "entry": "The targeted creature must make a {@dc 16} Dexterity saving throw. On a failed save, the creature begins to turn to stone and is {@condition restrained}. It must repeat the saving throw at the end of its next turn. On a success, the effect ends. On a failure, the creature is {@condition petrified} until freed by the {@spell greater restoration} spell or other magic."
               },
               {
                 "type": "itemSub",
@@ -423536,7 +423533,7 @@
       {
         "name": "Petrifying Gaze",
         "entries": [
-          "If a creature starts its turn within 15 feet of the basilisk and the two of them can see each other, the basilisk can force the creature to make a {@dc 12} Constitution saving throw if the basilisk isn't {@condition incapacitated}. On a failed save, the creature magically begins to turn to stone and is {@condition restrained}. It must repeat the saving throw at the end of its next turn. On a success, the effect ends. On a failure, the creature is {@condition petrified} until freed by the  {@spell greater restoration} spell or other magic.",
+          "If a creature starts its turn within 15 feet of the basilisk and the two of them can see each other, the basilisk can force the creature to make a {@dc 12} Constitution saving throw if the basilisk isn't {@condition incapacitated}. On a failed save, the creature magically begins to turn to stone and is {@condition restrained}. It must repeat the saving throw at the end of its next turn. On a success, the effect ends. On a failure, the creature is {@condition petrified} until freed by the {@spell greater restoration} spell or other magic.",
           "A creature that isn't {@status surprised} can avert its eyes to avoid the saving throw at the start of its turn. If it does so, it can't see the basilisk until the start of its next turn, when it can avert its eyes again. If it looks at the basilisk in the meantime, it must immediately make the save.",
           "If the basilisk sees its reflection within 30 feet of it in bright light, it mistakes itself for a rival and targets itself with its gaze."
         ]
@@ -431709,7 +431706,7 @@
       {
         "name": "Petrifying Gaze",
         "entries": [
-          "When a creature that can see Zalkoré's eyes starts its turn within 30 feet of the medusa, the medusa can force it to make a {@dc 14} Constitution saving throw if the medusa isn't {@condition incapacitated} and can see the creature. If the saving throw fails by 5 or more, the creature is instantly {@condition petrified}. Otherwise, a creature that fails the save begins to turn to stone and is {@condition restrained}. The {@condition restrained} creature must repeat the saving throw at the end of its next turn, becoming {@condition petrified} on a failure or ending the effect on a success. The petrification lasts until the creature is freed by the  {@spell greater restoration} spell or other magic.",
+          "When a creature that can see Zalkoré's eyes starts its turn within 30 feet of the medusa, the medusa can force it to make a {@dc 14} Constitution saving throw if the medusa isn't {@condition incapacitated} and can see the creature. If the saving throw fails by 5 or more, the creature is instantly {@condition petrified}. Otherwise, a creature that fails the save begins to turn to stone and is {@condition restrained}. The {@condition restrained} creature must repeat the saving throw at the end of its next turn, becoming {@condition petrified} on a failure or ending the effect on a success. The petrification lasts until the creature is freed by the {@spell greater restoration} spell or other magic.",
           "Unless {@status surprised}, a creature can avert its eyes to avoid the saving throw at the start of its turn. If the creature does so, it can't see the medusa until the start of its next turn, when it can avert its eyes again. If the creature looks at the medusa in the meantime, it must immediately make the save.",
           "If the medusa sees itself reflected on a polished surface within 30 feet of it and in an area of bright light, the medusa is, due to its curse, affected by its own gaze."
         ]

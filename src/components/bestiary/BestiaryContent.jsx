@@ -15,6 +15,7 @@ import {
 	getSourceFullName,
 } from "../../utils/sourceNames.js";
 import { lang } from "../../services/localization";
+import AiAssistantPanel from "../ai/AiAssistantPanel.jsx";
 
 function getMonsterItemKey(monster) {
 	return `${monster.source || ""}:${monster.name}`;
@@ -197,7 +198,6 @@ export default function BestiaryContent({
 	headerActions = null,
 	hideSearchInput = false,
 	isDetailedSearch,
-	isEmbedded,
 	listRef,
 	loading,
 	onAddMonster,
@@ -342,7 +342,7 @@ export default function BestiaryContent({
 				)}
 				<div
 					className={classNames("Bestiary__content", {
-						Bestiary__content__stacked: isEmbedded,
+						Bestiary__content__stacked: true,
 					})}
 				>
 					<div className="Bestiary__list" ref={listContainerRef}>
@@ -398,6 +398,7 @@ export default function BestiaryContent({
 					)}
 				</div>
 			</div>
+			<AiAssistantPanel isBestiary />
 		</div>
 	);
 }

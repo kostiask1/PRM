@@ -40,6 +40,7 @@ import { formatBytes } from "../../utils/formatBytes.js";
 import { ESTIMATED_FILE_TOKEN_BYTES } from "../../utils/aiAttachments.js";
 import { buildDiffResources } from "../../utils/aiDiff.js";
 import {
+	getFirstChangedMonsterName,
 	getHistoryChangeSummary as getAiHistoryChangeSummary,
 	getLocalizedDiffResourceState,
 	isAiResponseVisibleForRoute,
@@ -579,7 +580,7 @@ function getDiffResourceState(resource) {
 	return getLocalizedDiffResourceState(resource, translate);
 }
 
-export default function AiAssistantPanel() {
+export default function AiAssistantPanel({ isBestiary = false }) {
 	const dispatch = useAppDispatch();
 	const currentLanguage = useAppSelector(
 		(state) => state.localization.language,
@@ -617,9 +618,9 @@ export default function AiAssistantPanel() {
 		imagePromptBasePrompt;
 	const activeCampaignBasePrompt =
 		campaignAiBasePrompts[initialRoute.campaign] || "";
-	const isBestiary = initialRoute.campaign === "bestiary";
 	const isCampaign = !initialRoute.session && !isBestiary;
 	const isEncounter = !!initialRoute.encounter;
+	const aiHistoryCampaign = isBestiary ? "bestiary" : initialRoute.campaign;
 
 	const [isOpen, setIsOpen] = useState(false);
 	const [isContextModalOpen, setIsContextModalOpen] = useState(false);
@@ -743,15 +744,15 @@ export default function AiAssistantPanel() {
 	};
 
 	const refreshResponseHistoryStats = useCallback(async () => {
-		if (!initialRoute.campaign) return;
+		if (!aiHistoryCampaign) return;
 		try {
-			const stats = await api.getAiResponsesStats(initialRoute.campaign);
+			const stats = await api.getAiResponsesStats(aiHistoryCampaign);
 			setResponseHistorySizeBytes(Number(stats?.bytes) || 0);
 		} catch (err) {
 			console.error("Failed to load AI response history stats", err);
 			setResponseHistorySizeBytes(0);
 		}
-	}, [initialRoute.campaign]);
+	}, [aiHistoryCampaign]);
 
 	const showGeneratedPrompt = (response) => {
 		const entry =
@@ -981,10 +982,10 @@ export default function AiAssistantPanel() {
 	}, [isOpen, isImagePromptPickerOpen, aiModels.length, selectedModel]);
 
 	useEffect(() => {
-		if (!isOpen || !initialRoute.campaign) return;
+		if (!isOpen || !aiHistoryCampaign) return;
 		Promise.all([
-			api.listAiResponses(initialRoute.campaign),
-			api.getAiResponsesStats(initialRoute.campaign).catch((err) => {
+			api.listAiResponses(aiHistoryCampaign),
+			api.getAiResponsesStats(aiHistoryCampaign).catch((err) => {
 				console.error("Failed to load AI response history stats", err);
 				return null;
 			}),
@@ -996,7 +997,7 @@ export default function AiAssistantPanel() {
 			.catch((err) => {
 				console.error("Failed to load AI response history", err);
 			});
-	}, [isOpen, initialRoute.campaign]);
+	}, [aiHistoryCampaign, isOpen]);
 
 	useEffect(() => {
 		if (!isImagePromptPickerOpen || !isCampaign || !initialRoute.campaign) {
@@ -1112,7 +1113,7 @@ export default function AiAssistantPanel() {
 		if (!confirmed) return;
 
 		try {
-			const responses = await api.clearAiResponses(initialRoute.campaign);
+			const responses = await api.clearAiResponses(aiHistoryCampaign);
 			setResponseHistory(Array.isArray(responses) ? responses : []);
 			refreshResponseHistoryStats();
 			closeGeneratedPrompt();
@@ -1135,7 +1136,7 @@ export default function AiAssistantPanel() {
 	};
 
 	const getAiResponseHistoryCampaign = (entry) =>
-		entry?.path?.campaign || initialRoute.campaign;
+		entry?.path?.campaign || aiHistoryCampaign;
 
 	const publishAiSyncEvent = useCallback(
 		(extra = {}) => {
@@ -1164,7 +1165,17 @@ export default function AiAssistantPanel() {
 				updated.data && typeof updated.data === "object";
 
 			if (isBestiary) {
-				publishAiSyncEvent({ resource: "ai" });
+				const changedMonsterName = getFirstChangedMonsterName(
+					options.historyEntry,
+				);
+				publishAiSyncEvent({
+					resource: "custom-bestiary",
+					monsterName:
+						changedMonsterName ||
+						options.generated?.monsters?.[0]?.name ||
+						undefined,
+					monsterSource: "CUSTOM",
+				});
 				dispatch(refreshEntitiesAction());
 				return true;
 			}

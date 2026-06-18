@@ -406,7 +406,7 @@ Use 5eTools inline tags in entries so the app can parse rolls and rules links:
 - Attack entries must use tags like "{@atk mw} {@hit 8} to hit, reach 5 ft., one target. {@h}12 ({@damage 2d6 + 5}) slashing damage."
 - Use "{@hit N}" for attack bonuses. Do not write attack bonuses as plain "+N" and do not use separate "attack_bonus" fields.
 - Use "{@damage FORMULA}" for damage dice. Do not use separate "damage_dice" or "damage_bonus" fields.
-- Use "{@dc N}" and "{@actSave str|dex|con|int|wis|cha}" for saving throws when appropriate.
+- Use "{@dc N}" and "{@actSave str|dex|con|int|wis|cha}" for saving throws when appropriate, for example "{@actSave dex} {@dc 11}".
 - Use spell links as "{@spell Spell Name|SOURCE}", e.g. "{@spell Gust of Wind|XPHB}". If the source is unknown, use "{@spell Spell Name}".
 - Use other supported tags where useful: "{@dice FORMULA}", "{@condition Name}", "{@recharge 5}", "{@h}", "{@actSaveFail}", "{@actSaveSuccess}", "{@actSaveSuccessOrFail}".
 - Lookup values inside 5eTools tags must stay in English and use canonical rule names, e.g. "{@condition stunned}", "{@condition poisoned}", "{@sense darkvision}", "{@skill Perception}", "{@spell Gust of Wind|XPHB}". Do not translate tag lookup values.

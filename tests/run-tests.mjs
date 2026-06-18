@@ -1389,7 +1389,8 @@ await run("parser renders dice and creature tags as interactive components", asy
 	assert.match(rulesReferenceSource, /import Bestiary from "\.\.\/Bestiary\.jsx"/);
 	assert.match(rulesReferenceSource, /id: "bestiary"/);
 	assert.match(rulesReferenceSource, /api\.searchBestiary\(\)/);
-	assert.match(rulesReferenceSource, /<Bestiary\s+isEmbedded/);
+	assert.match(rulesReferenceSource, /<Bestiary/);
+	assert.doesNotMatch(rulesReferenceSource, new RegExp("is" + "Embedded"));
 	assert.match(rulesReferenceSource, /renderRecursiveContent\(selectedItem\.entries/);
 	assert.match(rulesReferenceSource, /onRuleNavigate: navigateToReference/);
 	assert.match(rulesLinkCss, /\.RulesLink__creature/);
@@ -1405,6 +1406,7 @@ await run("parser renders item filter display names", () => {
 });
 
 await run("rules reference modal owns spells and bestiary navigation", async () => {
+	const embeddedPropPattern = new RegExp("is" + "Embedded");
 	const mainContentSource = await fs.readFile(
 		"src/components/MainContent.jsx",
 		"utf8",
@@ -1418,6 +1420,15 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 		"src/components/bestiary/BestiaryContent.jsx",
 		"utf8",
 	);
+	const spellsSource = await fs.readFile("src/components/Spells.jsx", "utf8");
+	const rulesReferenceSource = await fs.readFile(
+		"src/components/modals/RulesReferenceModalContent.jsx",
+		"utf8",
+	);
+	const aiAssistantSource = await fs.readFile(
+		"src/components/ai/AiAssistantPanel.jsx",
+		"utf8",
+	);
 
 	assert.doesNotMatch(mainContentSource, /path="\/bestiary"/);
 	assert.doesNotMatch(mainContentSource, /path="\/spells"/);
@@ -1429,8 +1440,27 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.doesNotMatch(sidebarSource, /onSelectCampaign\("spells"\)/);
 	assert.match(bestiarySource, /initialSelectedName = ""/);
 	assert.match(bestiarySource, /hideSearchInput = false/);
+	assert.match(bestiarySource, /pendingSyncSelectionRef/);
+	assert.match(bestiarySource, /syncEvent\.monsterName/);
+	assert.match(bestiarySource, /shouldAutoSelectMonsterRef\.current = false/);
+	assert.doesNotMatch(bestiarySource, embeddedPropPattern);
+	assert.doesNotMatch(bestiarySource, /useSearchParams/);
+	assert.doesNotMatch(bestiarySource, /next\.set\("monster"/);
+	assert.doesNotMatch(bestiarySource, /next\.set\("m_source"/);
 	assert.match(bestiaryContentSource, /onSelectMonster/);
 	assert.match(bestiaryContentSource, /showAddToEncounterPicker=\{Boolean\(onAddMonster\)\}/);
+	assert.doesNotMatch(spellsSource, embeddedPropPattern);
+	assert.doesNotMatch(spellsSource, /useSearchParams/);
+	assert.doesNotMatch(spellsSource, /next\.set\("spell"/);
+	assert.doesNotMatch(spellsSource, /next\.set\("s_source"/);
+	assert.match(rulesReferenceSource, /EMBEDDED_BROWSER_TAB_IDS/);
+	assert.match(rulesReferenceSource, /recordEmbeddedReferenceSelection/);
+	assert.match(rulesReferenceSource, /recordNavigation\(tabId, name\)/);
+	assert.match(rulesReferenceSource, /onActiveSpellChange/);
+	assert.match(rulesReferenceSource, /onActiveMonsterChange/);
+	assert.match(aiAssistantSource, /aiHistoryCampaign = isBestiary \? "bestiary"/);
+	assert.match(aiAssistantSource, /resource: "custom-bestiary"/);
+	assert.match(aiAssistantSource, /monsterName:/);
 });
 
 await run("undo redo helpers move snapshots between stacks", () => {

@@ -1224,7 +1224,7 @@ function EncounterView() {
 					showFooter={false}
 					type="custom"
 				>
-					<Bestiary onAddMonster={view.handleAddMonster} isEmbedded={true} />
+					<Bestiary onAddMonster={view.handleAddMonster} />
 				</Modal>
 			)}
 

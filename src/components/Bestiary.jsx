@@ -1,9 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { useSearchParams } from "react-router";
 import { api } from "../api";
 import { alert, confirm } from "../actions/app";
 import { useAppDispatch, useAppSelector } from "../store/appStore";
-import Panel from "./common/Panel";
 import Button from "./form/Button";
 import BestiaryAiModals from "./bestiary/BestiaryAiModals";
 import BestiaryContent from "./bestiary/BestiaryContent";
@@ -44,10 +42,6 @@ function getDiffResourceState(resource) {
 	return getLocalizedDiffResourceState(resource, translate);
 }
 
-function monsterMatchesUrl(monster, name, source) {
-	return monster?.name === name && (!source || monster.source === source);
-}
-
 function parseMonsterReference(value, fallbackSource = "") {
 	const parts = String(value || "").split("|");
 	return {
@@ -63,6 +57,22 @@ function monsterMatchesReference(monster, reference) {
 		(!reference.source ||
 			String(monster.source || "").toUpperCase() ===
 				reference.source.toUpperCase())
+	);
+}
+
+function findCustomMonsterByName(monsters, name) {
+	const normalizedName = String(name || "")
+		.trim()
+		.toLowerCase();
+	if (!normalizedName) return null;
+	return (
+		monsters.find(
+			(monster) =>
+				isCustomSource(monster.source) &&
+				String(monster.name || "")
+					.trim()
+					.toLowerCase() === normalizedName,
+		) || null
 	);
 }
 
@@ -106,16 +116,15 @@ function customMonsterListsEqual(left, right) {
 
 export default function Bestiary({
 	onAddMonster,
-	isEmbedded = false,
 	initialSearch = "",
 	initialDetailedSearch = false,
 	initialSelectedName = "",
 	initialSelectedSource = "",
 	scrollToInitialSelected = true,
 	hideSearchInput = false,
+	onActiveMonsterChange = null,
 	onSelectMonster = null,
 }) {
-	const [urlSearchParams, setUrlSearchParams] = useSearchParams();
 	const dispatch = useAppDispatch();
 	const currentLanguage = useAppSelector(
 		(state) => state.localization.language,
@@ -124,22 +133,13 @@ export default function Bestiary({
 		(state) => state.ui.useSearchDebounce !== false,
 	);
 	const syncEvent = useAppSelector((state) => state.sync.event);
-	const urlSelectedSource = isEmbedded
-		? ""
-		: urlSearchParams.get("source") || "";
-	const urlMonsterName = isEmbedded ? "" : urlSearchParams.get("monster") || "";
-	const urlMonsterSource = isEmbedded
-		? ""
-		: urlSearchParams.get("m_source") || "";
 	const initialMonsterReference = useMemo(
 		() => parseMonsterReference(initialSelectedName, initialSelectedSource),
 		[initialSelectedName, initialSelectedSource],
 	);
 	const [sources, setSources] = useState([]);
 	const [selectedSource, setSelectedSource] = useState(() =>
-		normalizeSourceSelection(
-			urlSelectedSource || initialMonsterReference.source,
-		),
+		normalizeSourceSelection(initialMonsterReference.source),
 	);
 	const [allMonsters, setAllMonsters] = useState([]);
 	const [monsters, setMonsters] = useState([]);
@@ -181,8 +181,7 @@ export default function Bestiary({
 	const aiDraftResponseRef = useRef(null);
 	const aiEditControllerRef = useRef(null);
 	const shouldAutoSelectMonsterRef = useRef(true);
-	const pendingUrlSelectionRef = useRef(null);
-	const hasScrolledToInitialMonsterRef = useRef(false);
+	const pendingSyncSelectionRef = useRef(null);
 	const embeddedScrolledMonsterRef = useRef("");
 
 	const sourceOptions = useMemo(
@@ -195,29 +194,26 @@ export default function Bestiary({
 	}, [selectedMonster]);
 
 	useEffect(() => {
-		if (!isEmbedded) return;
 		setSearch(initialSearch);
-	}, [initialSearch, isEmbedded]);
+	}, [initialSearch]);
 
 	useEffect(() => {
-		if (!isEmbedded) return;
 		setIsDetailedSearch(Boolean(initialDetailedSearch));
-	}, [initialDetailedSearch, isEmbedded]);
+	}, [initialDetailedSearch]);
 
 	useEffect(() => {
-		if (!isEmbedded) return;
 		embeddedScrolledMonsterRef.current = "";
-	}, [initialSelectedName, initialSelectedSource, isEmbedded]);
+	}, [initialSelectedName, initialSelectedSource]);
 
 	useEffect(() => {
-		if (!isEmbedded || !initialMonsterReference.name) return;
+		if (!initialMonsterReference.name) return;
 		const nextSource = normalizeSourceSelection(
 			initialMonsterReference.source || "all",
 		);
 		setSelectedSource((current) =>
 			current === nextSource ? current : nextSource,
 		);
-	}, [initialMonsterReference, isEmbedded]);
+	}, [initialMonsterReference]);
 
 	useEffect(() => {
 		if (!isHeaderActionsOpen) return undefined;
@@ -232,35 +228,6 @@ export default function Bestiary({
 			document.removeEventListener("pointerdown", handlePointerDown);
 		};
 	}, [isHeaderActionsOpen]);
-
-	const clearMonsterUrlSelection = useCallback(() => {
-		setUrlSearchParams(
-			(current) => {
-				const next = new URLSearchParams(current);
-				next.delete("monster");
-				next.delete("m_source");
-				return next;
-			},
-			{ replace: true },
-		);
-	}, [setUrlSearchParams]);
-
-	const setMonsterUrlSelection = useCallback(
-		(monster, source = null) => {
-			if (isEmbedded || !monster?.name) return;
-			setUrlSearchParams(
-				(current) => {
-					const next = new URLSearchParams(current);
-					if (source) next.set("source", source);
-					next.set("monster", monster.name);
-					next.set("m_source", monster.source || "");
-					return next;
-				},
-				{ replace: true },
-			);
-		},
-		[isEmbedded, setUrlSearchParams],
-	);
 
 	useEffect(() => {
 		return () => {
@@ -318,24 +285,26 @@ export default function Bestiary({
 		]);
 		if (nextSelected) {
 			setSelectedSource("CUSTOM");
-			shouldAutoSelectMonsterRef.current = true;
+			shouldAutoSelectMonsterRef.current = false;
 			selectedMonsterRef.current = nextSelected;
-			pendingUrlSelectionRef.current = nextSelected;
 			setSelectedMonster(nextSelected);
-			setMonsterUrlSelection(nextSelected, "CUSTOM");
 		} else if (options.clearSelection) {
 			shouldAutoSelectMonsterRef.current = false;
 			selectedMonsterRef.current = "";
-			pendingUrlSelectionRef.current = null;
 			setSelectedMonster("");
-			clearMonsterUrlSelection();
 		}
 	};
 
-	const selectMonster = useCallback((monster) => {
-		shouldAutoSelectMonsterRef.current = false;
-		setSelectedMonster(monster);
-	}, []);
+	const selectMonster = useCallback(
+		(monster) => {
+			shouldAutoSelectMonsterRef.current = false;
+			setSelectedMonster(monster);
+			if (monster?.name) {
+				onActiveMonsterChange?.(monster);
+			}
+		},
+		[onActiveMonsterChange],
+	);
 
 	const selectSource = useCallback((source) => {
 		shouldAutoSelectMonsterRef.current = true;
@@ -407,14 +376,6 @@ export default function Bestiary({
 	}, []);
 
 	useEffect(() => {
-		if (isEmbedded || !urlSelectedSource) return;
-		const nextSource = normalizeSourceSelection(urlSelectedSource);
-		setSelectedSource((current) =>
-			current === nextSource ? current : nextSource,
-		);
-	}, [isEmbedded, urlSelectedSource]);
-
-	useEffect(() => {
 		if (!syncEvent?.version) return;
 		if (!["bestiary", "custom-bestiary", "ai"].includes(syncEvent.resource)) {
 			return;
@@ -430,6 +391,14 @@ export default function Bestiary({
 			syncEvent.resource === "custom-bestiary" ||
 			syncEvent.resource === "ai"
 		) {
+			if (syncEvent.monsterName) {
+				pendingSyncSelectionRef.current = {
+					name: syncEvent.monsterName,
+					source: syncEvent.monsterSource || "CUSTOM",
+				};
+				shouldAutoSelectMonsterRef.current = false;
+				setSelectedSource("CUSTOM");
+			}
 			setReloadToken((current) => current + 1);
 		}
 	}, [syncEvent]);
@@ -513,14 +482,31 @@ export default function Bestiary({
 					...current.filter((monster) => !isCustomSource(monster.source)),
 					...enrichedCustomMonsters,
 				]);
+				const pendingSelection = pendingSyncSelectionRef.current;
+				if (pendingSelection?.name) {
+					const nextSelected =
+						findCustomMonsterByName(
+							enrichedCustomMonsters,
+							pendingSelection.name,
+						) || null;
+					if (nextSelected) {
+						pendingSyncSelectionRef.current = null;
+						shouldAutoSelectMonsterRef.current = false;
+						selectedMonsterRef.current = nextSelected;
+						setSelectedMonster(nextSelected);
+						return;
+					}
+				}
 				const currentSelected = selectedMonsterRef.current;
 				if (currentSelected && isCustomSource(currentSelected.source)) {
 					const nextSelected =
 						enrichedCustomMonsters.find((monster) =>
 							isSameMonsterIdentity(monster, currentSelected),
 						) || null;
-					selectedMonsterRef.current = nextSelected || "";
-					setSelectedMonster(nextSelected || "");
+					if (nextSelected) {
+						selectedMonsterRef.current = nextSelected;
+						setSelectedMonster(nextSelected);
+					}
 				}
 			} catch (error) {
 				console.error("Failed to load custom monsters", error);
@@ -540,19 +526,6 @@ export default function Bestiary({
 			},
 		});
 	}, [aiEditingMonster, aiModels.length]);
-
-	useEffect(() => {
-		if (isEmbedded) return;
-		if (normalizeSourceSelection(urlSelectedSource) === selectedSource) return;
-		setUrlSearchParams(
-			(current) => {
-				const next = new URLSearchParams(current);
-				next.set("source", selectedSource);
-				return next;
-			},
-			{ replace: true },
-		);
-	}, [isEmbedded, selectedSource, setUrlSearchParams, urlSelectedSource]);
 
 	// Local search filtering.
 	useEffect(() => {
@@ -624,7 +597,7 @@ export default function Bestiary({
 			selectedGeneratedMonster || selectedUpdatedMonster;
 
 		setSelectedSource("CUSTOM");
-		shouldAutoSelectMonsterRef.current = true;
+		shouldAutoSelectMonsterRef.current = false;
 		if (hasUpdatedCustomMonsters) {
 			setAllMonsters((current) => [
 				...current.filter((item) => !isCustomSource(item.source)),
@@ -633,9 +606,7 @@ export default function Bestiary({
 		}
 		if (nextSelectedMonster) {
 			selectedMonsterRef.current = nextSelectedMonster;
-			pendingUrlSelectionRef.current = nextSelectedMonster;
 			setSelectedMonster(nextSelectedMonster);
-			setMonsterUrlSelection(nextSelectedMonster, "CUSTOM");
 		}
 		setReloadToken((value) => value + 1);
 	};
@@ -713,7 +684,7 @@ export default function Bestiary({
 
 	const applyUpdatedCustomMonster = (previousName, updatedMonster) => {
 		pushCustomUndoSnapshot(cloneCustomMonsters(customMonsters));
-		shouldAutoSelectMonsterRef.current = true;
+		shouldAutoSelectMonsterRef.current = false;
 		setAllMonsters((current) => [
 			...current.filter(
 				(item) =>
@@ -723,10 +694,8 @@ export default function Bestiary({
 			updatedMonster,
 		]);
 		setSelectedSource("CUSTOM");
-		pendingUrlSelectionRef.current = updatedMonster;
 		setSelectedMonster(updatedMonster);
 		selectedMonsterRef.current = updatedMonster;
-		setMonsterUrlSelection(updatedMonster, "CUSTOM");
 		if (previousName !== updatedMonster.name) {
 			setFavorites((current) =>
 				current.map((favorite) =>
@@ -991,7 +960,6 @@ export default function Bestiary({
 			shouldAutoSelectMonsterRef.current = false;
 			selectedMonsterRef.current = "";
 			setSelectedMonster("");
-			clearMonsterUrlSelection();
 			setAllMonsters((current) => [
 				...current.filter((item) => !isCustomSource(item.source)),
 				...(Array.isArray(updatedCustomMonsters) ? updatedCustomMonsters : []),
@@ -1082,92 +1050,6 @@ export default function Bestiary({
 	};
 
 	useEffect(() => {
-		if (isEmbedded) return undefined;
-		const syncSelectionFromUrl = () => {
-			const currentMonster = selectedMonsterRef.current;
-			const pendingSelection = pendingUrlSelectionRef.current;
-			if (
-				pendingSelection &&
-				isSameMonsterIdentity(currentMonster, pendingSelection)
-			) {
-				if (
-					monsterMatchesUrl(
-						currentMonster,
-						urlMonsterName,
-						urlMonsterSource,
-					)
-				) {
-					pendingUrlSelectionRef.current = null;
-				}
-				return;
-			}
-
-			if (!urlMonsterName) {
-				// If URL has no selection and monsters are loaded, select the first one.
-				const autoSelectedMonster = getAutoSelectedMonster(
-					displayedMonsters,
-					selectedSource,
-				);
-				const currentMonsterInList =
-					currentMonster?.name &&
-					getMonsterListIndex(displayedMonsters, currentMonster) >= 0;
-				if (
-					shouldAutoSelectMonsterRef.current &&
-					autoSelectedMonster &&
-					(!currentMonster?.name ||
-						!currentMonsterInList ||
-						(selectedSource === "all" && isCustomSource(currentMonster.source)))
-				) {
-					setSelectedMonster(autoSelectedMonster);
-				}
-				return;
-			}
-
-			// If URL points to the current monster, do nothing.
-			if (monsterMatchesUrl(currentMonster, urlMonsterName, urlMonsterSource)) {
-				return;
-			}
-
-			// Search the visible list for scrolling; details can still be shown for
-			// a monster that does not match the active search.
-			const foundInList = displayedMonsters.findIndex((m) =>
-				monsterMatchesUrl(m, urlMonsterName, urlMonsterSource),
-			);
-
-			const monster =
-				displayedMonsters[foundInList] ||
-				allMonsters.find((m) =>
-					monsterMatchesUrl(m, urlMonsterName, urlMonsterSource),
-				);
-
-			if (monster) {
-				setSelectedMonster(monster);
-			} else if (
-				monsterMatchesUrl(currentMonster, urlMonsterName, urlMonsterSource)
-			) {
-				shouldAutoSelectMonsterRef.current = false;
-				setSelectedMonster("");
-			}
-		};
-
-		// Initialize when the full monster list changes.
-		if (displayedMonsters.length > 0 || allMonsters.length > 0) {
-			syncSelectionFromUrl();
-		}
-
-		return undefined;
-	}, [
-		allMonsters,
-		displayedMonsters,
-		isEmbedded,
-		selectedSource,
-		urlMonsterName,
-		urlMonsterSource,
-	]);
-
-	useEffect(() => {
-		if (!isEmbedded) return;
-
 		const targetMonster = initialMonsterReference.name
 			? displayedMonsters.find((monster) =>
 					monsterMatchesReference(monster, initialMonsterReference),
@@ -1195,81 +1077,22 @@ export default function Bestiary({
 		const currentMonsterInList =
 			currentMonster?.name &&
 			getMonsterListIndex(displayedMonsters, currentMonster) >= 0;
-		if (autoSelectedMonster && (!currentMonster?.name || !currentMonsterInList)) {
+		if (
+			shouldAutoSelectMonsterRef.current &&
+			autoSelectedMonster &&
+			(!currentMonster?.name || !currentMonsterInList)
+		) {
 			setSelectedMonster(autoSelectedMonster);
 		}
 	}, [
 		allMonsters,
 		displayedMonsters,
 		initialMonsterReference,
-		isEmbedded,
 		selectedSource,
 	]);
 
 	useEffect(() => {
-		if (isEmbedded) return;
-		const pendingSelection = pendingUrlSelectionRef.current;
 		if (
-			pendingSelection &&
-			selectedMonster?.name &&
-			isSameMonsterIdentity(selectedMonster, pendingSelection)
-		) {
-			return;
-		}
-		if (selectedMonster?.name) {
-			if (
-				urlMonsterName === selectedMonster.name &&
-				urlMonsterSource === (selectedMonster.source || "")
-			) {
-				return;
-			}
-			setUrlSearchParams(
-				(current) => {
-					const next = new URLSearchParams(current);
-					next.set("monster", selectedMonster.name);
-					next.set("m_source", selectedMonster.source || "");
-					return next;
-				},
-				{ replace: true },
-			);
-		} else if (selectedMonster === "") {
-			if (urlMonsterName || urlMonsterSource) {
-				clearMonsterUrlSelection();
-			}
-		}
-	}, [
-		clearMonsterUrlSelection,
-		isEmbedded,
-		selectedMonster,
-		setUrlSearchParams,
-		urlMonsterName,
-		urlMonsterSource,
-	]);
-
-	useEffect(() => {
-		if (
-			isEmbedded ||
-			hasScrolledToInitialMonsterRef.current ||
-			!urlMonsterName
-		) {
-			return undefined;
-		}
-		const selectedIndex = getMonsterListIndex(
-			displayedMonsters,
-			selectedMonster,
-		);
-		if (selectedIndex < 0) return undefined;
-
-		hasScrolledToInitialMonsterRef.current = true;
-		const frameId = requestAnimationFrame(() => {
-			listRef.current?.scrollTo(selectedIndex);
-		});
-		return () => cancelAnimationFrame(frameId);
-	}, [displayedMonsters, isEmbedded, selectedMonster, urlMonsterName]);
-
-	useEffect(() => {
-		if (
-			!isEmbedded ||
 			!scrollToInitialSelected ||
 			!initialMonsterReference.name ||
 			!selectedMonster?.name ||
@@ -1292,7 +1115,6 @@ export default function Bestiary({
 	}, [
 		displayedMonsters,
 		initialMonsterReference,
-		isEmbedded,
 		scrollToInitialSelected,
 		selectedMonster,
 	]);
@@ -1396,10 +1218,9 @@ export default function Bestiary({
 		<BestiaryContent
 			displayedMonsters={displayedMonsters}
 			favorites={favorites}
-			headerActions={isEmbedded ? bestiaryActions : null}
+			headerActions={bestiaryActions}
 			hideSearchInput={hideSearchInput}
 			isDetailedSearch={isDetailedSearch}
-			isEmbedded={isEmbedded}
 			listRef={listRef}
 			loading={loading}
 			onAddMonster={onAddMonster}
@@ -1476,23 +1297,10 @@ export default function Bestiary({
 		</>
 	);
 
-	if (isEmbedded) {
-		return (
-			<>
-				{bestiaryContent}
-				{bestiaryModals}
-			</>
-		);
-	}
-
 	return (
-		<Panel className="Bestiary">
-			<div className="Panel__header">
-				<h2>{lang.t("Bestiary")}</h2>
-				{bestiaryActions}
-			</div>
-			<div className="Panel__body">{bestiaryContent}</div>
+		<>
+			{bestiaryContent}
 			{bestiaryModals}
-		</Panel>
+		</>
 	);
 }
