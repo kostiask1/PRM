@@ -212,7 +212,6 @@
 
 	.RulesReferenceModalContent__search {
 		align-items: stretch;
-		flex-wrap: wrap;
 	}
 
 	.RulesReferenceModalContent__search .Input {

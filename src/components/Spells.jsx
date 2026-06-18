@@ -406,16 +406,20 @@ export default function Spells({
 						</option>
 					))}
 				</Select>
-				<Tooltip content={lang.t("Sort by level")}>
-					<button
-						className={classNames("Spells__sort_btn", {
-							is_active: sortOrder !== "none",
-						})}
-						onClick={toggleSort}
-					>
-						LVL <Icon name={`sort-${sortOrder}`} />
-					</button>
-				</Tooltip>
+				<Button
+					className={classNames("Spells__sort_btn", {
+						is_active: sortOrder !== "none",
+					})}
+					variant="ghost"
+					onClick={toggleSort}
+					title={lang.t("Sort by level")}
+				>
+					<span className="Spells__sort_label">LVL</span>
+					<Icon
+						name={`sort-${sortOrder}`}
+						className={classNames("Spells__sort_icon", `state-${sortOrder}`)}
+					/>
+				</Button>
 				{!hideSearchInput && (
 					<div className="Spells__searchInput">
 						<Input

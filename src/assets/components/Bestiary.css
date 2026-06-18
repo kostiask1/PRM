@@ -75,7 +75,6 @@
 	align-items: center;
 	gap: var(--space-2);
 	padding: 0 var(--space-3) !important;
-	height: var(--size-9);
 	min-width: 85px;
 	justify-content: center;
 	transition: all 0.2s ease;
@@ -380,13 +379,12 @@
 	.Bestiary__header_actions .Button,
 	.Bestiary__header_actionsMenu .Button {
 		flex: 0 0 auto;
-		min-height: var(--control-h-sm);
+		min-height: var(--control-h);
 		font-size: 0.82rem;
 		padding-inline: var(--space-2);
 	}
 
 	.Bestiary__search {
-		flex-wrap: wrap;
 		gap: var(--space-2);
 		margin-bottom: var(--space-3);
 	}
@@ -406,7 +404,7 @@
 	}
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1024px) {
 	.Bestiary,
 	.Bestiary__inner,
 	.Bestiary__inner>.Panel__body {
@@ -428,7 +426,6 @@
 
 	.Bestiary__sort_btn {
 		flex: 1 1 140px;
-		min-height: 44px;
 	}
 
 	.Bestiary__source_select,

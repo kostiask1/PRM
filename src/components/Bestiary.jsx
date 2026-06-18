@@ -1150,7 +1150,7 @@ export default function Bestiary({
 			<div className="Bestiary__header_actionsMenu">
 				<Button
 					variant="ghost"
-					size={Button.SIZES.SMALL}
+					size={Button.SIZES.MEDIUM}
 					icon="import"
 					onClick={() => {
 						setIsHeaderActionsOpen(false);
@@ -1162,7 +1162,7 @@ export default function Bestiary({
 				</Button>
 				<Button
 					variant="ghost"
-					size={Button.SIZES.SMALL}
+					size={Button.SIZES.MEDIUM}
 					icon="export"
 					onClick={() => {
 						setIsHeaderActionsOpen(false);
@@ -1175,7 +1175,7 @@ export default function Bestiary({
 				</Button>
 				<Button
 					variant="ghost"
-					size={Button.SIZES.SMALL}
+					size={Button.SIZES.MEDIUM}
 					icon="undo"
 					onClick={() => {
 						setIsHeaderActionsOpen(false);
@@ -1186,7 +1186,7 @@ export default function Bestiary({
 				/>
 				<Button
 					variant="ghost"
-					size={Button.SIZES.SMALL}
+					size={Button.SIZES.MEDIUM}
 					icon="redo"
 					onClick={() => {
 						setIsHeaderActionsOpen(false);
