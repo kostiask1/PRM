@@ -135,19 +135,37 @@ export default class SpellCardModel {
 		if (!this.spell.duration) return "-";
 		return this.spell.duration
 			.map((entry) => {
-				let value =
-					entry.type === "instant" ? this.translate("Instantaneous") : "";
+				let value = "";
+				if (entry.type === "instant") {
+					value = this.translate("Instantaneous");
+				}
 				if (entry.type === "timed" && entry.duration) {
 					value = `${entry.duration.amount} ${entry.duration.type}`;
+				}
+				if (entry.type === "permanent") {
+					value = this.formatPermanentDuration(entry.ends);
+				}
+				if (entry.type === "special") {
+					value = this.translate("Special");
 				}
 				if (entry.concentration) {
 					return this.translate("Concentration, up to {duration}", {
 						duration: value,
 					});
 				}
-				return value;
+				return value || entry.type || "-";
 			})
 			.join(", ");
+	}
+
+	formatPermanentDuration(ends = []) {
+		if (Array.isArray(ends) && ends.includes("trigger")) {
+			return this.translate("Until dispelled or triggered");
+		}
+		if (Array.isArray(ends) && ends.includes("dispel")) {
+			return this.translate("Until dispelled");
+		}
+		return this.translate("Permanent");
 	}
 
 	get classesLabel() {

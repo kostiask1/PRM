@@ -1223,6 +1223,36 @@ await run("SpellCardModel formats spell labels", () => {
 	assert.match(model.rangeLabel, /120 фт/);
 	assert.equal(model.durationLabel, "Миттєво");
 	assert.equal(model.classesLabel, "Sorcerer, Wizard");
+
+	const specialModel = new SpellCardModel(
+		{
+			name: "Creation",
+			duration: [{ type: "special" }],
+		},
+		{
+			language: "uk",
+			translate: (value) => (value === "Special" ? "Особлива" : value),
+		},
+	);
+	assert.equal(specialModel.durationLabel, "Особлива");
+
+	const permanentModel = new SpellCardModel(
+		{
+			name: "Glyph of Warding",
+			duration: [{ type: "permanent", ends: ["dispel", "trigger"] }],
+		},
+		{
+			language: "uk",
+			translate: (value) =>
+				value === "Until dispelled or triggered"
+					? "Доки не розвіяно або не спрацює"
+					: value,
+		},
+	);
+	assert.equal(
+		permanentModel.durationLabel,
+		"Доки не розвіяно або не спрацює",
+	);
 });
 
 await run("content tokens parse hit and recharge tags safely", () => {
