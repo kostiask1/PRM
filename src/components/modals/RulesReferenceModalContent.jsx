@@ -12,6 +12,8 @@ import Spells from "../Spells.jsx";
 import { renderRecursiveContent } from "../../renderers/contentRenderer.jsx";
 import { lang } from "../../services/localization";
 import {
+	recordRulesReferenceHistoryEntry,
+	setRulesReferenceHistoryIndex,
 	setRulesReferenceModalOpen,
 	useAppDispatch,
 	useAppSelector,
@@ -173,16 +175,21 @@ function isEditableTarget(target) {
 export default function RulesReferenceModalContent({
 	initialTab = "conditions",
 	initialName = "",
+	forceTab = false,
 	onSelectReference = null,
 }) {
 	const dispatch = useAppDispatch();
 	const navigationRequest = useAppSelector(
 		(state) => state.rulesReference.navigationRequest,
 	);
+	const navigationHistory = useAppSelector(
+		(state) => state.rulesReference.history,
+	);
 	const listRef = useRef(null);
 	const isMountedRef = useRef(false);
 	const requestedTabsRef = useRef(new Set());
 	const handledNavigationRequestIdRef = useRef(null);
+	const hasInitializedNavigationRef = useRef(false);
 	const shouldScrollToActiveRef = useRef(false);
 	const pendingNavigationTabRef = useRef(null);
 	const [activeTabId, setActiveTabId] = useState(getInitialTabId(initialTab));
@@ -191,10 +198,6 @@ export default function RulesReferenceModalContent({
 	const [itemsByTab, setItemsByTab] = useState({});
 	const [selectedByTab, setSelectedByTab] = useState({});
 	const [loadingByTab, setLoadingByTab] = useState({});
-	const [navigationHistory, setNavigationHistory] = useState({
-		entries: [],
-		index: -1,
-	});
 
 	const activeTab = TAB_BY_ID.get(activeTabId) || REFERENCE_TABS[0];
 	const hasLoadedActiveTab = Object.prototype.hasOwnProperty.call(
@@ -213,25 +216,7 @@ export default function RulesReferenceModalContent({
 
 	const recordNavigation = useCallback((tabId, name) => {
 		if (!tabId || !name) return;
-
-		setNavigationHistory((current) => {
-			const nextEntry = { tabId, name };
-			const currentEntry = current.entries[current.index];
-			if (
-				currentEntry?.tabId === nextEntry.tabId &&
-				currentEntry?.name === nextEntry.name
-			) {
-				return current;
-			}
-
-			const entries = current.entries
-				.slice(0, current.index + 1)
-				.concat(nextEntry);
-			return {
-				entries,
-				index: entries.length - 1,
-			};
-		});
+		recordRulesReferenceHistoryEntry(tabId, name);
 	}, []);
 
 	const applyNavigationEntry = useCallback((entry) => {
@@ -251,7 +236,7 @@ export default function RulesReferenceModalContent({
 			const nextEntry = navigationHistory.entries[nextIndex];
 			if (!nextEntry) return;
 
-			setNavigationHistory((current) => ({ ...current, index: nextIndex }));
+			setRulesReferenceHistoryIndex(nextIndex);
 			applyNavigationEntry(nextEntry);
 		},
 		[applyNavigationEntry, navigationHistory],
@@ -273,6 +258,17 @@ export default function RulesReferenceModalContent({
 		[recordNavigation],
 	);
 
+	const applyTabOnlyNavigation = useCallback((tabId) => {
+		if (!TAB_BY_ID.has(tabId)) return;
+
+		shouldScrollToActiveRef.current = false;
+		pendingNavigationTabRef.current = null;
+		setActiveTabId(tabId);
+		setSelectedByTab((current) =>
+			current[tabId] === "" ? current : { ...current, [tabId]: "" },
+		);
+	}, []);
+
 	useEffect(() => {
 		isMountedRef.current = true;
 		setRulesReferenceModalOpen(true);
@@ -289,10 +285,31 @@ export default function RulesReferenceModalContent({
 		}
 
 		handledNavigationRequestIdRef.current = navigationRequest.requestId;
+		if (navigationRequest.forceTab && !navigationRequest.name) {
+			applyTabOnlyNavigation(navigationRequest.tabId);
+			return;
+		}
 		navigateToReference(navigationRequest.tabId, navigationRequest.name);
-	}, [navigateToReference, navigationRequest]);
+	}, [applyTabOnlyNavigation, navigateToReference, navigationRequest]);
 
 	useEffect(() => {
+		if (hasInitializedNavigationRef.current) return;
+		hasInitializedNavigationRef.current = true;
+
+		if (forceTab) {
+			applyTabOnlyNavigation(getInitialTabId(initialTab));
+			if (initialName) {
+				navigateToReference(getInitialTabId(initialTab), initialName);
+			}
+			return;
+		}
+
+		const currentEntry = navigationHistory.entries[navigationHistory.index];
+		if (currentEntry) {
+			applyNavigationEntry(currentEntry);
+			return;
+		}
+
 		const nextTabId = getInitialTabId(initialTab);
 		setActiveTabId(nextTabId);
 		if (initialName) {
@@ -301,20 +318,29 @@ export default function RulesReferenceModalContent({
 				...current,
 				[nextTabId]: initialName,
 			}));
+			recordNavigation(nextTabId, initialName);
 		}
-	}, [initialName, initialTab]);
+	}, [
+		applyNavigationEntry,
+		applyTabOnlyNavigation,
+		forceTab,
+		initialName,
+		initialTab,
+		navigationHistory,
+		navigateToReference,
+		recordNavigation,
+	]);
 
 	useEffect(() => {
 		if (!activeSelectedName) return;
-
-		setNavigationHistory((current) => {
-			if (current.entries.length) return current;
-			return {
-				entries: [{ tabId: activeTab.id, name: activeSelectedName }],
-				index: 0,
-			};
-		});
-	}, [activeSelectedName, activeTab.id]);
+		if (navigationHistory.entries.length) return;
+		recordNavigation(activeTab.id, activeSelectedName);
+	}, [
+		activeSelectedName,
+		activeTab.id,
+		navigationHistory.entries.length,
+		recordNavigation,
+	]);
 
 	useEffect(() => {
 		const tabsToLoad = isGlobalSearch

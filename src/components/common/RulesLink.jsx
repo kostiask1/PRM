@@ -82,7 +82,7 @@ function formatTooltipText(value) {
 		);
 }
 
-export function renderTooltipText(value) {
+function renderTooltipText(value) {
 	const text = formatTooltipText(value);
 	const elements = [];
 	const regex = new RegExp(

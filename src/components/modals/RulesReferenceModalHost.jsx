@@ -7,6 +7,7 @@ import RulesReferenceModalContent from "./RulesReferenceModalContent";
 function openRulesReferenceModalContent({
 	initialTab = "conditions",
 	initialName = "",
+	forceTab = false,
 } = {}) {
 	openModalRequest({
 		title: lang.t("Rules Reference"),
@@ -16,6 +17,7 @@ function openRulesReferenceModalContent({
 			<RulesReferenceModalContent
 				initialTab={initialTab}
 				initialName={initialName}
+				forceTab={forceTab}
 			/>
 		),
 	});
@@ -38,6 +40,7 @@ export default function RulesReferenceModalHost() {
 		openRulesReferenceModalContent({
 			initialTab: navigationRequest.tabId,
 			initialName: navigationRequest.name,
+			forceTab: navigationRequest.forceTab,
 		});
 	}, [isOpen, navigationRequest]);
 

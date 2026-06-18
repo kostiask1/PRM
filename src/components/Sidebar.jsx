@@ -159,9 +159,9 @@ export default function Sidebar({
 		});
 	};
 
-	const handleOpenRulesReference = (initialTab = "conditions") => {
+	const handleOpenRulesReference = (initialTab = "conditions", options = {}) => {
 		onClose?.();
-		openRulesReferenceModal(initialTab);
+		openRulesReferenceModal(initialTab, "", options);
 	};
 
 	const handleOpenPlayerQuestions = () => {
@@ -304,7 +304,7 @@ export default function Sidebar({
 						className="Sidebar__link"
 						onClick={(e) => {
 							e.preventDefault();
-							handleOpenRulesReference("bestiary");
+							handleOpenRulesReference("bestiary", { forceTab: true });
 						}}
 					>
 						<Icon name="skull" />
@@ -315,7 +315,7 @@ export default function Sidebar({
 						className="Sidebar__link"
 						onClick={(e) => {
 							e.preventDefault();
-							handleOpenRulesReference("spells");
+							handleOpenRulesReference("spells", { forceTab: true });
 						}}
 					>
 						<Icon name="magic" />

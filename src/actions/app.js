@@ -19,6 +19,10 @@ export const DATA_SYNC_RECEIVED = "sync/dataReceived";
 export const REQUEST_RULES_REFERENCE_NAVIGATION =
 	"rulesReference/requestNavigation";
 export const SET_RULES_REFERENCE_MODAL_OPEN = "rulesReference/setModalOpen";
+export const RECORD_RULES_REFERENCE_HISTORY_ENTRY =
+	"rulesReference/recordHistoryEntry";
+export const SET_RULES_REFERENCE_HISTORY_INDEX =
+	"rulesReference/setHistoryIndex";
 
 let mentionRequestSeq = 1;
 let diceRollRequestSeq = 1;
@@ -187,13 +191,18 @@ export function dataSyncReceivedAction(payload) {
 	};
 }
 
-export function requestRulesReferenceNavigationAction(tabId, name = "") {
+export function requestRulesReferenceNavigationAction(
+	tabId,
+	name = "",
+	options = {},
+) {
 	return {
 		type: REQUEST_RULES_REFERENCE_NAVIGATION,
 		payload: {
 			requestId: rulesReferenceNavigationSeq++,
 			tabId: String(tabId || "conditions"),
 			name: String(name || ""),
+			forceTab: Boolean(options.forceTab),
 		},
 	};
 }
@@ -202,6 +211,23 @@ export function setRulesReferenceModalOpenAction(isOpen) {
 	return {
 		type: SET_RULES_REFERENCE_MODAL_OPEN,
 		payload: Boolean(isOpen),
+	};
+}
+
+export function recordRulesReferenceHistoryEntryAction(tabId, name) {
+	return {
+		type: RECORD_RULES_REFERENCE_HISTORY_ENTRY,
+		payload: {
+			tabId: String(tabId || ""),
+			name: String(name || ""),
+		},
+	};
+}
+
+export function setRulesReferenceHistoryIndexAction(index) {
+	return {
+		type: SET_RULES_REFERENCE_HISTORY_INDEX,
+		payload: Number.parseInt(index, 10),
 	};
 }
 

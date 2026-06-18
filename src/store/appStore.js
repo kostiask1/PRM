@@ -6,6 +6,7 @@ import {
 	OPEN_MENTION_PICKER,
 	OPEN_MODAL,
 	PUBLISH_DICE_RESULT,
+	RECORD_RULES_REFERENCE_HISTORY_ENTRY,
 	REFRESH_ENTITIES,
 	REQUEST_CAMPAIGNS_RELOAD,
 	SET_LANGUAGE,
@@ -22,9 +23,12 @@ import {
 	SHOW_MESSAGE_BOX,
 	closeModalAction,
 	openModalAction,
+	recordRulesReferenceHistoryEntryAction,
 	requestRulesReferenceNavigationAction,
 	setNavigationAction,
+	setRulesReferenceHistoryIndexAction,
 	setRulesReferenceModalOpenAction,
+	SET_RULES_REFERENCE_HISTORY_INDEX,
 } from "../actions/app";
 import { buildNavigationUrl, parseUrl } from "../utils/navigation";
 import { lang } from "../services/localization";
@@ -112,6 +116,10 @@ const initialState = {
 	rulesReference: {
 		isOpen: false,
 		navigationRequest: null,
+		history: {
+			entries: [],
+			index: -1,
+		},
 	},
 };
 
@@ -318,6 +326,54 @@ function reducer(currentState, action) {
 					isOpen: action.payload,
 				},
 			};
+		case RECORD_RULES_REFERENCE_HISTORY_ENTRY: {
+			const nextEntry = action.payload;
+			if (!nextEntry?.tabId || !nextEntry?.name) return currentState;
+
+			const history = currentState.rulesReference.history;
+			const currentEntry = history.entries[history.index];
+			if (
+				currentEntry?.tabId === nextEntry.tabId &&
+				currentEntry?.name === nextEntry.name
+			) {
+				return currentState;
+			}
+
+			const entries = history.entries
+				.slice(0, history.index + 1)
+				.concat(nextEntry);
+			return {
+				...currentState,
+				rulesReference: {
+					...currentState.rulesReference,
+					history: {
+						entries,
+						index: entries.length - 1,
+					},
+				},
+			};
+		}
+		case SET_RULES_REFERENCE_HISTORY_INDEX: {
+			const history = currentState.rulesReference.history;
+			if (!history.entries.length) return currentState;
+
+			const nextIndex = Math.min(
+				history.entries.length - 1,
+				Math.max(0, Number.isFinite(action.payload) ? action.payload : 0),
+			);
+			if (nextIndex === history.index) return currentState;
+
+			return {
+				...currentState,
+				rulesReference: {
+					...currentState.rulesReference,
+					history: {
+						...history,
+						index: nextIndex,
+					},
+				},
+			};
+		}
 		default:
 			return currentState;
 	}
@@ -383,12 +439,22 @@ export function closeActiveModal(value = null) {
 	resolveModalRequest(requestId, value);
 }
 
-export function requestRulesReferenceNavigation(tabId, name = "") {
-	appStore.dispatch(requestRulesReferenceNavigationAction(tabId, name));
+export function requestRulesReferenceNavigation(tabId, name = "", options = {}) {
+	appStore.dispatch(
+		requestRulesReferenceNavigationAction(tabId, name, options),
+	);
 }
 
 export function setRulesReferenceModalOpen(isOpen) {
 	appStore.dispatch(setRulesReferenceModalOpenAction(isOpen));
+}
+
+export function recordRulesReferenceHistoryEntry(tabId, name) {
+	appStore.dispatch(recordRulesReferenceHistoryEntryAction(tabId, name));
+}
+
+export function setRulesReferenceHistoryIndex(index) {
+	appStore.dispatch(setRulesReferenceHistoryIndexAction(index));
 }
 
 export function syncNavigationFromPath(pathname) {

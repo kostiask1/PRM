@@ -1478,6 +1478,8 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 		"src/components/modals/RulesReferenceModalHost.jsx",
 		"utf8",
 	);
+	const appActionsSource = await fs.readFile("src/actions/app.js", "utf8");
+	const appStoreSource = await fs.readFile("src/store/appStore.js", "utf8");
 	const aiAssistantSource = await fs.readFile(
 		"src/components/ai/AiAssistantPanel.jsx",
 		"utf8",
@@ -1487,8 +1489,8 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.doesNotMatch(mainContentSource, /path="\/spells"/);
 	assert.doesNotMatch(mainContentSource, /import Bestiary from/);
 	assert.doesNotMatch(mainContentSource, /import Spells from/);
-	assert.match(sidebarSource, /handleOpenRulesReference\("bestiary"\)/);
-	assert.match(sidebarSource, /handleOpenRulesReference\("spells"\)/);
+	assert.match(sidebarSource, /handleOpenRulesReference\("bestiary", \{ forceTab: true \}\)/);
+	assert.match(sidebarSource, /handleOpenRulesReference\("spells", \{ forceTab: true \}\)/);
 	assert.doesNotMatch(sidebarSource, /onSelectCampaign\("bestiary"\)/);
 	assert.doesNotMatch(sidebarSource, /onSelectCampaign\("spells"\)/);
 	assert.match(bestiarySource, /initialSelectedName = ""/);
@@ -1512,12 +1514,21 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.match(rulesReferenceSource, /EMBEDDED_BROWSER_TAB_IDS/);
 	assert.match(rulesReferenceSource, /recordEmbeddedReferenceSelection/);
 	assert.match(rulesReferenceSource, /recordNavigation\(tabId, name\)/);
+	assert.match(rulesReferenceSource, /recordRulesReferenceHistoryEntry/);
+	assert.match(rulesReferenceSource, /setRulesReferenceHistoryIndex/);
+	assert.match(rulesReferenceSource, /applyTabOnlyNavigation/);
+	assert.match(rulesReferenceSource, /navigationRequest\.forceTab/);
+	assert.doesNotMatch(rulesReferenceSource, /setNavigationHistory/);
 	assert.match(rulesReferenceSource, /onActiveSpellChange/);
 	assert.match(rulesReferenceSource, /onActiveMonsterChange/);
 	assert.match(
 		rulesReferenceHostSource,
 		/handledRequestIdRef\.current = navigationRequest\.requestId;\s*if \(isOpen\) return;/,
 	);
+	assert.match(appStoreSource, /rulesReference:[\s\S]*history:[\s\S]*entries: \[\]/);
+	assert.match(appActionsSource, /forceTab: Boolean\(options\.forceTab\)/);
+	assert.match(appStoreSource, /RECORD_RULES_REFERENCE_HISTORY_ENTRY/);
+	assert.match(appStoreSource, /SET_RULES_REFERENCE_HISTORY_INDEX/);
 	assert.match(aiAssistantSource, /aiHistoryCampaign = isBestiary \? "bestiary"/);
 	assert.match(aiAssistantSource, /resource: "custom-bestiary"/);
 	assert.match(aiAssistantSource, /monsterName:/);
