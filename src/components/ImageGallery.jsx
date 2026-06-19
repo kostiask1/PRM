@@ -44,6 +44,14 @@ const getGalleryPathEntry = (source, category, subcategory = "") => ({
 	),
 });
 
+const getGalleryImageKey = (image, fallbackPath) =>
+	[
+		image?.source || fallbackPath.source || "general",
+		image?.category || fallbackPath.category || "",
+		image?.subcategory ?? fallbackPath.subcategory ?? "",
+		String(image?.name || "").toLowerCase(),
+	].join("\u0000");
+
 const galleryPathEntriesEqual = (left, right) =>
 	Boolean(left && right && left.pathKey === right.pathKey);
 
@@ -54,9 +62,9 @@ const formatBestiaryFolderLabel = (value, isBestiaryPath) => {
 
 const formatImageLocationLabel = (label) =>
 	String(label || "")
-		.split(" / ")
+		.split("/")
 		.map((part) => getSourceFullName(part))
-		.join(" / ");
+		.join("/");
 
 function isEditableTarget(target) {
 	if (!(target instanceof HTMLElement)) return false;
@@ -412,12 +420,26 @@ function ImageGallery({
 	};
 	const modalTitle = getImageGalleryModalTitle(onSelect);
 	const sourceSizes = storageStats?.sourceSizes || {};
+	const displayImages = React.useMemo(() => {
+		const seen = new Set();
+		const fallbackPath = {
+			source: selectedSource,
+			category: selectedCat.id,
+			subcategory: selectedSub,
+		};
+		return images.filter((image) => {
+			const key = getGalleryImageKey(image, fallbackPath);
+			if (seen.has(key)) return false;
+			seen.add(key);
+			return true;
+		});
+	}, [images, selectedSource, selectedCat.id, selectedSub]);
 	const galleryItems = React.useMemo(() => {
 		return [
 			...allSubs.map((sub) => ({ type: "sub", sub })),
-			...images.map((image) => ({ type: "image", image })),
+			...displayImages.map((image) => ({ type: "image", image })),
 		];
-	}, [allSubs, images]);
+	}, [allSubs, displayImages]);
 	const galleryRowCount = Math.ceil(galleryItems.length / galleryColumns);
 	const openGlobalResultPath = (image) => {
 		if (typeof onSelect === "function" || !image?.globalSearch) return false;
@@ -544,6 +566,10 @@ function ImageGallery({
 
 		const img = item.image;
 		const imageReadonly = isReadonlyImage(img);
+		const imageLocationLabel =
+			isSearchResults && img.locationLabel
+				? formatImageLocationLabel(img.locationLabel)
+				: "";
 		return (
 			<Tooltip
 				key={`image:${img.url}`}
@@ -611,9 +637,11 @@ function ImageGallery({
 						</span>
 					</Tooltip>
 					{isSearchResults && img.locationLabel && (
-						<span className="ImageGallery__location">
-							{formatImageLocationLabel(img.locationLabel)}
-						</span>
+						<Tooltip content={imageLocationLabel}>
+							<span className="ImageGallery__location">
+								{imageLocationLabel}
+							</span>
+						</Tooltip>
 					)}
 				</div>
 			</Tooltip>
