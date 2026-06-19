@@ -4,10 +4,10 @@ import ReactList from "react-list";
 import { alert } from "../../actions/app";
 import { api } from "../../api";
 import "../../assets/components/RulesReferenceModalContent.css";
-import Bestiary from "../Bestiary.jsx";
 import ListCard from "../common/ListCard.jsx";
 import Button from "../form/Button.jsx";
 import Input from "../form/Input";
+import MonsterStatBlock from "../MonsterStatBlock.jsx";
 import Spells from "../Spells.jsx";
 import { renderRecursiveContent } from "../../renderers/contentRenderer.jsx";
 import { lang } from "../../services/localization";
@@ -124,7 +124,7 @@ const REFERENCE_TABS = [
 ];
 
 const TAB_BY_ID = new Map(REFERENCE_TABS.map((tab) => [tab.id, tab]));
-const EMBEDDED_BROWSER_TAB_IDS = new Set(["spells", "bestiary"]);
+const EMBEDDED_BROWSER_TAB_IDS = new Set(["spells"]);
 const EMPTY_ITEMS = [];
 
 function normalizeList(list) {
@@ -136,7 +136,7 @@ function getInitialTabId(initialTab = "") {
 }
 
 function getReferenceItemKey(tabId, item) {
-	return `${tabId}:${item.name}`;
+	return `${tabId}:${item.source || ""}:${item.name}`;
 }
 
 function getSpellReferenceName(spell = {}) {
@@ -170,6 +170,19 @@ function getCreatureReferenceName(monster = {}) {
 	if (!name) return "";
 	const source = String(monster.source || "").trim();
 	return source ? `${name}|${source}` : name;
+}
+
+function getReferenceSelectionName(tabId, item = {}) {
+	if (tabId === "spells") return getSpellReferenceName(item);
+	if (tabId === "bestiary") return getCreatureReferenceName(item);
+	return String(item?.name || "");
+}
+
+function itemMatchesSelectedName(tabId, item, selectedName) {
+	const normalizedSelected = String(selectedName || "").trim();
+	if (!normalizedSelected) return false;
+	if (getReferenceSelectionName(tabId, item) === normalizedSelected) return true;
+	return String(item?.name || "") === normalizedSelected;
 }
 
 function isEditableTarget(target) {
@@ -427,8 +440,8 @@ export default function RulesReferenceModalContent({
 		if (!hasLoadedActiveTab || isLoading) return;
 		if (EMBEDDED_BROWSER_TAB_IDS.has(activeTab.id)) return;
 
-		const selectedItemExists = activeItems.some(
-			(item) => item.name === activeSelectedName,
+		const selectedItemExists = activeItems.some((item) =>
+			itemMatchesSelectedName(activeTab.id, item, activeSelectedName),
 		);
 		if (selectedItemExists) return;
 
@@ -440,13 +453,16 @@ export default function RulesReferenceModalContent({
 			return;
 		}
 
-		const hasSelection = filteredItems.some(
-			(item) => item.name === activeSelectedName,
+		const hasSelection = filteredItems.some((item) =>
+			itemMatchesSelectedName(activeTab.id, item, activeSelectedName),
 		);
 		if (!hasSelection) {
 			setSelectedByTab((current) => ({
 				...current,
-				[activeTab.id]: filteredItems[0].name,
+				[activeTab.id]: getReferenceSelectionName(
+					activeTab.id,
+					filteredItems[0],
+				),
 			}));
 		}
 	}, [
@@ -462,8 +478,8 @@ export default function RulesReferenceModalContent({
 		if (!hasLoadedActiveTab || isLoading || !activeSelectedName) return;
 		if (!shouldScrollToActiveRef.current) return;
 
-		const activeIndex = filteredItems.findIndex(
-			(item) => item.name === activeSelectedName,
+		const activeIndex = filteredItems.findIndex((item) =>
+			itemMatchesSelectedName(activeTab.id, item, activeSelectedName),
 		);
 		shouldScrollToActiveRef.current = false;
 		if (activeIndex >= 0) {
@@ -506,15 +522,21 @@ export default function RulesReferenceModalContent({
 	}, [canNavigateBack, navigateHistory]);
 
 	const selectedItem =
-		filteredItems.find((item) => item.name === activeSelectedName) ||
-		activeItems.find((item) => item.name === activeSelectedName) ||
+		filteredItems.find((item) =>
+			itemMatchesSelectedName(activeTab.id, item, activeSelectedName),
+		) ||
+		activeItems.find((item) =>
+			itemMatchesSelectedName(activeTab.id, item, activeSelectedName),
+		) ||
 		null;
 	const selectedMeta = selectedItem ? activeTab.meta?.(selectedItem) : "";
 
 	const selectTab = (tabId) => {
 		shouldScrollToActiveRef.current = false;
 		const nextName =
-			selectedByTab[tabId] || (itemsByTab[tabId] || EMPTY_ITEMS)[0]?.name || "";
+			selectedByTab[tabId] ||
+			getReferenceSelectionName(tabId, (itemsByTab[tabId] || EMPTY_ITEMS)[0]) ||
+			"";
 		if (nextName && !EMBEDDED_BROWSER_TAB_IDS.has(tabId)) {
 			pendingNavigationTabRef.current = null;
 			recordNavigation(tabId, nextName);
@@ -574,9 +596,14 @@ export default function RulesReferenceModalContent({
 		const item = filteredItems[index];
 		if (!item) return null;
 		const meta = activeTab.meta?.(item);
-		const isActive = activeSelectedName === item.name;
+		const selectionName = getReferenceSelectionName(activeTab.id, item);
+		const isActive = itemMatchesSelectedName(
+			activeTab.id,
+			item,
+			activeSelectedName,
+		);
 		const handleClick = () => {
-			selectItem(item.name);
+			selectItem(selectionName);
 		};
 
 		return (
@@ -678,26 +705,6 @@ export default function RulesReferenceModalContent({
 						}}
 					/>
 				</div>
-			) : activeTab.id === "bestiary" ? (
-				<div className="RulesReferenceModalContent__bestiaryBrowser">
-					<Bestiary
-						hideSearchInput
-						initialSearch={query}
-						initialDetailedSearch={isDetailedSearch}
-						initialSelectedName={activeSelectedName}
-						onActiveMonsterChange={(monster) =>
-							recordEmbeddedReferenceSelection(
-								"bestiary",
-								getCreatureReferenceName(monster),
-							)
-						}
-						onSelectMonster={
-							onSelectReference
-								? (monster) => insertReference(activeTab.id, monster)
-								: null
-						}
-					/>
-				</div>
 			) : (
 				<div className="RulesReferenceModalContent__main">
 					<div className="RulesReferenceModalContent__sidebar">
@@ -749,9 +756,18 @@ export default function RulesReferenceModalContent({
 									key={getReferenceItemKey(activeTab.id, selectedItem)}
 									className="RulesReferenceModalContent__entryContent"
 								>
-									{renderRecursiveContent(selectedItem.entries, query, {
-										openSpellInNestedModal: true,
-									})}
+									{activeTab.id === "bestiary" ? (
+										<MonsterStatBlock
+											monster={selectedItem}
+											allowTokenUpload={false}
+											showFavoriteAction={false}
+											searchHighlight={query}
+										/>
+									) : (
+										renderRecursiveContent(selectedItem.entries, query, {
+											openSpellInNestedModal: true,
+										})
+									)}
 								</div>
 							</>
 						)}

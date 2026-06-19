@@ -19,12 +19,6 @@ export function getCampaignIgnoreSourcesList(campaign, globalIgnoreSourcesList) 
 	return normalizeIgnoreSourcesList(globalIgnoreSourcesList);
 }
 
-export function sourceIsIgnored(source, ignoreSourcesList) {
-	const normalized = normalizeSourceCode(source);
-	if (!normalized) return false;
-	return normalizeIgnoreSourcesList(ignoreSourcesList).includes(normalized);
-}
-
 export function getSelectedSourcesFromIgnoreList(sources, ignoreSourcesList) {
 	const ignored = new Set(normalizeIgnoreSourcesList(ignoreSourcesList));
 	return (Array.isArray(sources) ? sources : [])
