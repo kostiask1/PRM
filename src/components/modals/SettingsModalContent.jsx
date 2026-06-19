@@ -282,6 +282,15 @@ export default function SettingsModalContent({ onCancel }) {
 		setSourceStatus("idle");
 	};
 
+	const handleCopyGlobalSourcesToCampaign = () => {
+		if (isGlobalSourceScope || !selectedSourceScope) return;
+		setCampaignIgnoreSourcesLists((current) => ({
+			...current,
+			[selectedSourceScope]: normalizeIgnoreSourcesList(ignoreSourcesList),
+		}));
+		setSourceStatus("idle");
+	};
+
 	const handleSavePrompts = async () => {
 		const nextCampaignPrompts = Object.fromEntries(
 			Object.entries(campaignAiBasePrompts)
@@ -440,7 +449,7 @@ export default function SettingsModalContent({ onCancel }) {
 					</Button>
 				</div>
 
-				<label className="SettingsModal__field">
+				<div className="SettingsModal__field">
 					<span className="SettingsModal__label">
 						{lang.t("Visible sources")}
 					</span>
@@ -460,26 +469,40 @@ export default function SettingsModalContent({ onCancel }) {
 							</option>
 						))}
 					</Select>
-					<MultiSelect
-						className="SettingsModal__sourceSelect"
-						value={selectedSources}
-						onChange={handleSelectedSourcesChange}
-						disabled={!isGlobalSourceScope && !selectedSourceScope}
-						placeholder={lang.t("Sources")}
-						allSelectedLabel={lang.t("All sources")}
-						noneSelectedLabel={lang.t("No sources")}
-						selectAllLabel={lang.t("Select all")}
-						clearLabel={lang.t("Clear")}
-						dropdownMinWidth={520}
-						options={sourceOptions.map((source) => ({
-							value: source,
-							label:
-								source === "CUSTOM"
-									? lang.t("Custom creatures")
-									: formatSourceLabel(source),
-						}))}
-					/>
-				</label>
+					<div className="SettingsModal__sourceRow">
+						<MultiSelect
+							className="SettingsModal__sourceSelect"
+							value={selectedSources}
+							onChange={handleSelectedSourcesChange}
+							optionClickMode="toggle"
+							disabled={!isGlobalSourceScope && !selectedSourceScope}
+							placeholder={lang.t("Sources")}
+							allSelectedLabel={lang.t("All sources")}
+							noneSelectedLabel={lang.t("No sources")}
+							selectAllLabel={lang.t("Select all")}
+							clearLabel={lang.t("Clear")}
+							dropdownMinWidth={520}
+							options={sourceOptions.map((source) => ({
+								value: source,
+								label:
+									source === "CUSTOM"
+										? lang.t("Custom creatures")
+										: formatSourceLabel(source),
+							}))}
+						/>
+						{!isGlobalSourceScope && selectedSourceScope && (
+							<div className="SettingsModal__inlineActions">
+								<Button
+									variant="ghost"
+									size={Button.SIZES.SMALL}
+									onClick={handleCopyGlobalSourcesToCampaign}
+								>
+									{lang.t("Copy global settings")}
+								</Button>
+							</div>
+						)}
+					</div>
+				</div>
 			</div>
 
 			<div className="SettingsModal__group SettingsModal__section SettingsModal__section_ai">

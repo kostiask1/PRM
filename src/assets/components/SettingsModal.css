@@ -71,7 +71,32 @@
 }
 
 .SettingsModal__sourceSelect {
+	flex: 1 1 320px;
 	width: 100%;
+	min-width: 0;
+}
+
+.SettingsModal__sourceRow {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+}
+
+.SettingsModal__inlineActions {
+	display: flex;
+	justify-content: flex-end;
+	flex: 0 0 auto;
+}
+
+@media (max-width: 640px) {
+	.SettingsModal__sourceRow {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.SettingsModal__inlineActions .Button {
+		width: 100%;
+	}
 }
 
 .SettingsModal__promptHeader {

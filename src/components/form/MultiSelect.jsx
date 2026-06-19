@@ -15,6 +15,7 @@ export default function MultiSelect({
 	options = [],
 	onChange,
 	onOptionClick = null,
+	optionClickMode = "single",
 	activeValue = "",
 	allOptionLabel = "",
 	onAllOptionClick = null,
@@ -109,10 +110,16 @@ export default function MultiSelect({
 	useEffect(() => {
 		if (!isOpen) return undefined;
 		const frame = requestAnimationFrame(() => {
-			activeOptionRef.current?.scrollIntoView({
-				block: "nearest",
-				inline: "nearest",
-			});
+			if (activeOptionRef.current) {
+				activeOptionRef.current.scrollIntoView({
+					block: "nearest",
+					inline: "nearest",
+				});
+				return;
+			}
+			if (dropdownRef.current) {
+				dropdownRef.current.scrollTop = 0;
+			}
 		});
 		return () => cancelAnimationFrame(frame);
 	}, [isOpen]);
@@ -138,6 +145,10 @@ export default function MultiSelect({
 		if (typeof onOptionClick === "function") {
 			onOptionClick(optionValue);
 			setIsOpen(false);
+			return;
+		}
+		if (optionClickMode === "toggle") {
+			toggleOption(optionValue);
 			return;
 		}
 		emitChange(
@@ -200,8 +211,7 @@ export default function MultiSelect({
 							key={optionValue}
 							type="button"
 							ref={
-								(activeValue && String(activeValue) === optionValue) ||
-								(!activeValue && isSelected)
+								activeValue && String(activeValue) === optionValue
 									? activeOptionRef
 									: null
 							}
