@@ -599,13 +599,23 @@
 .ImageGallery__location {
 	display: block;
 	margin-top: 2px;
+	width: 100%;
+	border: 0;
+	background: transparent;
 	color: var(--muted);
+	cursor: pointer;
 	font-size: 0.68rem;
 	line-height: 1.2;
+	padding: 0;
 	text-align: center;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+}
+
+.ImageGallery__location:hover {
+	color: var(--accent);
+	text-decoration: underline;
 }
 
 .ImageGallery__previewModal {

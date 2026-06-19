@@ -585,7 +585,10 @@ function ImageGallery({
 				? formatImageLocationLabel(img.locationLabel)
 				: "";
 		return (
-			<Tooltip key={`tooltip:${img.galleryKey}`} content={lang.t("Right-click: open fullscreen")}>
+			<Tooltip
+				key={`tooltip:${img.galleryKey}`}
+				content={lang.t("Right-click: open fullscreen")}
+			>
 				<div
 					data-gallery-image-id={getImageScrollId(img.name)}
 					className={classNames("ImageGallery__item", {
@@ -595,7 +598,10 @@ function ImageGallery({
 					})}
 					onClick={(e) => {
 						e.stopPropagation();
-						if (openGlobalResultPath(img)) return;
+						if (isSearchResults) {
+							selectImageByName(img.name);
+							return;
+						}
 						handleItemClick(img.name, "image", itemIndex, e);
 					}}
 					onDoubleClick={() => onSelect?.(img)}
@@ -649,9 +655,16 @@ function ImageGallery({
 					</Tooltip>
 					{isSearchResults && img.locationLabel && (
 						<Tooltip content={imageLocationLabel}>
-							<span className="ImageGallery__location">
+							<button
+								type="button"
+								className="ImageGallery__location"
+								onClick={(e) => {
+									e.stopPropagation();
+									openGlobalResultPath(img);
+								}}
+							>
 								{imageLocationLabel}
-							</span>
+							</button>
 						</Tooltip>
 					)}
 				</div>
