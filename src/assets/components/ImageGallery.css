@@ -83,6 +83,10 @@
 	gap: var(--space-4);
 }
 
+.ImageGallery__upload_actions button span {
+	white-space: nowrap
+}
+
 .ImageGallery__search {
 	display: flex;
 	align-items: center;

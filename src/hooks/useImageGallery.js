@@ -81,10 +81,7 @@ export default function useImageGallery({
 		[isProtectedSystemSub, officialSubs],
 	);
 	const isOfficialSub = useCallback((name) => officialSubs.has(name), [officialSubs]);
-	const isReadonlyImage = useCallback(
-		(image) => Boolean(image?.readonly || image?.globalSearch),
-		[],
-	);
+	const isReadonlyImage = useCallback((image) => Boolean(image?.readonly), []);
 	const isReadonlyPath = useCallback(
 		(subcategory = "") => {
 			const root = String(subcategory || "")
@@ -428,23 +425,43 @@ export default function useImageGallery({
 		const safeSubs = Array.from(selectedSubs).filter(
 			(name) => !isReadonlySub(name),
 		);
-		const safeFilenames = images
-			.filter(
-				(image) => selectedFilenames.has(image.name) && !isReadonlyImage(image),
-			)
-			.map((image) => image.name);
-		return { safeFilenames, safeSubs, items: [...safeFilenames, ...safeSubs] };
+		const selectedImages = images.filter(
+			(image) => selectedFilenames.has(image.name) && !isReadonlyImage(image),
+		);
+		const imageGroupsMap = new Map();
+		for (const image of selectedImages) {
+			const src = {
+				slug: image.source || selectedSource,
+				category: image.category || selectedCat.id,
+				subcategory: image.subcategory || selectedSub,
+			};
+			const key = [src.slug, src.category, src.subcategory].join("\u0000");
+			const group = imageGroupsMap.get(key) || { src, items: [] };
+			group.items.push(image.name);
+			imageGroupsMap.set(key, group);
+		}
+		const imageGroups = Array.from(imageGroupsMap.values());
+		const safeFilenames = selectedImages.map((image) => image.name);
+		return {
+			safeFilenames,
+			safeSubs,
+			imageGroups,
+			items: [...safeFilenames, ...safeSubs],
+		};
 	}, [
 		selectedFilenames,
 		selectedSubs,
 		images,
 		isReadonlyImage,
 		isReadonlySub,
+		selectedSource,
+		selectedCat.id,
+		selectedSub,
 	]);
 
 	const handleMoveSelection = useCallback(
 		async (dest) => {
-			const { items } = getMovableSelectedItems();
+			const { items, imageGroups, safeSubs } = getMovableSelectedItems();
 			if (!items.length) return false;
 
 			const src = {
@@ -455,6 +472,8 @@ export default function useImageGallery({
 			const sSub = src.subcategory || "";
 			const dSub = dest.subcategory || "";
 			if (
+				safeSubs.length > 0 &&
+				imageGroups.length === 0 &&
 				src.slug === dest.slug &&
 				src.category === dest.category &&
 				sSub === dSub
@@ -464,7 +483,25 @@ export default function useImageGallery({
 
 			setLoading(true);
 			try {
-				await api.moveImages({ items, src, dest });
+				const moveRequests = [];
+				for (const group of imageGroups) {
+					const groupSub = group.src.subcategory || "";
+					if (
+						group.src.slug === dest.slug &&
+						group.src.category === dest.category &&
+						groupSub === dSub
+					) {
+						continue;
+					}
+					moveRequests.push(
+						api.moveImages({ items: group.items, src: group.src, dest }),
+					);
+				}
+				if (safeSubs.length > 0) {
+					moveRequests.push(api.moveImages({ items: safeSubs, src, dest }));
+				}
+				if (!moveRequests.length) return false;
+				await Promise.all(moveRequests);
 				setSelectedFilenames(new Set());
 				setSelectedSubs(new Set());
 				setLastSelectedIndex(null);
@@ -600,7 +637,8 @@ export default function useImageGallery({
 	);
 
 	const handleBulkDelete = useCallback(async () => {
-		const { safeFilenames, safeSubs, items } = getMovableSelectedItems();
+		const { safeFilenames, safeSubs, imageGroups } =
+			getMovableSelectedItems();
 		const total = safeFilenames.length + safeSubs.length;
 		if (!total) return;
 
@@ -643,19 +681,31 @@ export default function useImageGallery({
 
 			if (!confirmed?.confirmed) return;
 
-			await api.deleteImages({
-				items,
-				src: {
-					slug: selectedSource,
-					category: selectedCat.id,
-					subcategory: selectedSub,
-				},
-				options: {
-					extractFolderContents:
-						hasNonEmptySelectedFolders &&
-						Boolean(confirmed.extractFolderContents),
-				},
-			});
+			await Promise.all([
+				...imageGroups.map((group) =>
+					api.deleteImages({
+						items: group.items,
+						src: group.src,
+					}),
+				),
+				...(safeSubs.length > 0
+					? [
+							api.deleteImages({
+								items: safeSubs,
+								src: {
+									slug: selectedSource,
+									category: selectedCat.id,
+									subcategory: selectedSub,
+								},
+								options: {
+									extractFolderContents:
+										hasNonEmptySelectedFolders &&
+										Boolean(confirmed.extractFolderContents),
+								},
+							}),
+						]
+					: []),
+			]);
 			setSelectedFilenames(new Set());
 			setSelectedSubs(new Set());
 			loadImages();

@@ -599,7 +599,11 @@ function ImageGallery({
 					onClick={(e) => {
 						e.stopPropagation();
 						if (isSearchResults) {
-							selectImageByName(img.name);
+							if (selectedFilenames.has(img.name)) {
+								clearSelection();
+							} else {
+								selectImageByName(img.name);
+							}
 							return;
 						}
 						handleItemClick(img.name, "image", itemIndex, e);
@@ -609,7 +613,7 @@ function ImageGallery({
 						e.preventDefault();
 						setPreviewImage(img);
 					}}
-					draggable={!imageReadonly}
+					draggable={!imageReadonly && !img.globalSearch}
 					onDragStart={(e) => handleDragStart(e, img, "image")}
 					onDragEnd={handleDragEnd}
 				>
