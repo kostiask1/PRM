@@ -295,36 +295,33 @@ export default function BestiaryContent({
 		<div className="Bestiary Bestiary__inner">
 			<div className="Panel__body">
 				<div className="Bestiary__search">
-					{sources.length > 0 && (
-						<MultiSelect
-							className="Bestiary__source_select"
-							dropdownMinWidth={450}
-							value={selectedSources}
-							onChange={onSelectedSourcesChange}
-							onOptionClick={onSourceFilterChange}
-							activeValue={sourceFilter}
-							allOptionLabel={lang.t("All sources")}
-							onAllOptionClick={() => onSourceFilterChange?.("all")}
-							labelOverride={sourceFilterLabel}
-							placeholder={lang.t("Sources")}
-							allSelectedLabel={lang.t("All sources")}
-							noneSelectedLabel={lang.t("No sources")}
-							selectAllLabel={lang.t("Select all")}
-							clearLabel={lang.t("Clear")}
-							options={[
-								{
-									value: "CUSTOM",
-									label: lang.t("Custom creatures"),
-								},
-								...sourceOptions.map((source) => ({
-									value: source,
-									label: formatSourceLabel(
-										source.replace(/^bestiary-/i, ""),
-									),
-								})),
-							]}
-						/>
-					)}
+					<MultiSelect
+						className="Bestiary__source_select"
+						dropdownMinWidth={450}
+						value={selectedSources}
+						onChange={onSelectedSourcesChange}
+						onOptionClick={onSourceFilterChange}
+						activeValue={sourceFilter}
+						allOptionLabel={lang.t("All sources")}
+						onAllOptionClick={() => onSourceFilterChange?.("all")}
+						labelOverride={sourceFilterLabel}
+						placeholder={lang.t("Sources")}
+						allSelectedLabel={lang.t("All sources")}
+						noneSelectedLabel={lang.t("No sources")}
+						selectAllLabel={lang.t("Select all")}
+						clearLabel={lang.t("Clear")}
+						disabled={sources.length === 0}
+						options={[
+							{
+								value: "CUSTOM",
+								label: lang.t("Custom creatures"),
+							},
+							...sourceOptions.map((source) => ({
+								value: source,
+								label: formatSourceLabel(source.replace(/^bestiary-/i, "")),
+							})),
+						]}
+					/>
 					{!hideSearchInput && (
 						<div className="Bestiary__searchInput">
 							<Input

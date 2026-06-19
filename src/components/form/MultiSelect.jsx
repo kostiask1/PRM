@@ -110,6 +110,13 @@ export default function MultiSelect({
 	useEffect(() => {
 		if (!isOpen) return undefined;
 		const frame = requestAnimationFrame(() => {
+			const shouldScrollToActive = activeValue && activeValue !== "all";
+			if (!shouldScrollToActive) {
+				if (dropdownRef.current) {
+					dropdownRef.current.scrollTop = 0;
+				}
+				return;
+			}
 			if (activeOptionRef.current) {
 				activeOptionRef.current.scrollIntoView({
 					block: "nearest",
@@ -117,12 +124,9 @@ export default function MultiSelect({
 				});
 				return;
 			}
-			if (dropdownRef.current) {
-				dropdownRef.current.scrollTop = 0;
-			}
 		});
 		return () => cancelAnimationFrame(frame);
-	}, [isOpen]);
+	}, [activeValue, isOpen]);
 
 	const emitChange = (nextValues) => {
 		if (disabled || typeof onChange !== "function") return;
