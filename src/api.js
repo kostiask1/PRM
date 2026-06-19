@@ -353,13 +353,19 @@ export const api = {
 		api.request(
 			`/campaigns/${encodeURIComponent(slug)}/images/${category}${subcategory ? `?subcategory=${encodeURIComponent(subcategory)}` : ""}`,
 		),
-	getBestiaryTokenAssets: (subcategory = "", search = "", ignoreSourcesList = []) => {
+	getBestiaryTokenAssets: (
+		subcategory = "",
+		search = "",
+		ignoreSourcesList = [],
+		options = {},
+	) => {
 		const query = new URLSearchParams();
 		if (subcategory) query.set("subcategory", subcategory);
 		if (search) query.set("search", search);
 		if (ignoreSourcesList.length > 0) {
 			query.set("ignoreSources", ignoreSourcesList.join(","));
 		}
+		if (options.recursive) query.set("recursive", "1");
 		return api.request(`/images/bestiary-tokens?${query.toString()}`);
 	},
 	searchImageGallery: ({

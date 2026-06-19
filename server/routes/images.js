@@ -97,6 +97,7 @@ router.get("/images/bestiary-tokens", async (req, res, next) => {
 			await storage.listBestiaryTokenAssets({
 				subcategory: req.query.subcategory || "",
 				search: req.query.search || "",
+				recursive: req.query.recursive === "1",
 				ignoreSourcesList: String(req.query.ignoreSources || "")
 					.split(",")
 					.map((source) => source.trim())

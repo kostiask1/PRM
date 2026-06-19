@@ -1696,6 +1696,7 @@ async function listImages(slug, category, subcategory = "") {
 async function listBestiaryTokenAssets({
 	subcategory = "",
 	search = "",
+	recursive = false,
 	ignoreSourcesList = [],
 } = {}) {
 	const subParts = normalizePathSegments(subcategory);
@@ -1730,7 +1731,7 @@ async function listBestiaryTokenAssets({
 		};
 	};
 
-	if (query) {
+	if (query || recursive) {
 		const images = [];
 		const walk = async (dir, relativeParts = []) => {
 			const entries = await fs.readdir(dir, { withFileTypes: true });
@@ -1743,7 +1744,7 @@ async function listBestiaryTokenAssets({
 				} else if (
 					entry.isFile() &&
 					IMAGE_FILE_RE.test(entry.name) &&
-					nextRelativeParts.join("/").toLowerCase().includes(query)
+					(!query || nextRelativeParts.join("/").toLowerCase().includes(query))
 				) {
 					images.push(await makeImage(nextPath, nextRelativeParts));
 				}
@@ -1780,7 +1781,6 @@ async function searchImageGalleryAssets({
 	ignoreSourcesList = [],
 } = {}) {
 	const query = String(search || "").trim().toLowerCase();
-	if (!query) return { images: [] };
 
 	const sourceFilter = String(source || "").trim();
 	const selectedCategory = String(category || "").trim();
@@ -1800,7 +1800,7 @@ async function searchImageGalleryAssets({
 			.filter(Boolean)
 			.join("/")
 			.toLowerCase();
-		if (!searchText.includes(query)) return;
+		if (query && !searchText.includes(query)) return;
 
 		const urlSub = subcategory
 			? `/${encodeUrlPathSegments(subcategory)}`

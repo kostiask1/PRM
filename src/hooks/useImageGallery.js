@@ -38,7 +38,7 @@ export default function useImageGallery({
 	const [officialRootSubs, setOfficialRootSubs] = useState(new Set());
 	const [images, setImages] = useState([]);
 	const [searchQuery, setSearchQuery] = useState("");
-	const [searchMode, setSearchMode] = useState("local");
+	const [contentScope, setContentScope] = useState("local");
 	const [storageStats, setStorageStats] = useState(null);
 	const [selectedFilenames, setSelectedFilenames] = useState(new Set());
 	const [selectedSubs, setSelectedSubs] = useState(new Set());
@@ -57,8 +57,9 @@ export default function useImageGallery({
 		? debouncedSearchQuery.trim().toLowerCase()
 		: "";
 	const activeSearchQuery = normalizedSearchQuery ? debouncedSearchQuery : "";
-	const isGlobalSearch = searchMode === "global" && normalizedSearchQuery;
-	const isSearchResults = Boolean(normalizedSearchQuery);
+	const isScopedContent = contentScope !== "local";
+	const isGlobalSearch = contentScope === "all";
+	const isSearchResults = Boolean(normalizedSearchQuery || isScopedContent);
 	const isGeneralTokens =
 		selectedSource === "general" && selectedCat.id === "tokens";
 	const selectedSubRoot = selectedSub.split("/").filter(Boolean)[0] || "";
@@ -125,7 +126,7 @@ export default function useImageGallery({
 	}, []);
 
 	const loadSubcategories = useCallback(async () => {
-		if (normalizedSearchQuery) {
+		if (normalizedSearchQuery || isScopedContent) {
 			setDynamicSubs([]);
 			setSubDetails({});
 			setOfficialSubs(new Set());
@@ -191,18 +192,58 @@ export default function useImageGallery({
 		isGeneralTokens,
 		activeSearchQuery,
 		ignoreSourcesList,
+		isScopedContent,
 		normalizedSearchQuery,
 	]);
 
 	const loadImages = useCallback(async () => {
 		setLoading(true);
 		try {
-			if (normalizedSearchQuery) {
+			if (normalizedSearchQuery || isScopedContent) {
+				if (contentScope === "databaseTokens") {
+					const officialAssets = await api.getBestiaryTokenAssets(
+						"",
+						debouncedSearchQuery,
+						ignoreSourcesList,
+						{ recursive: true },
+					);
+					const officialImages = Array.isArray(officialAssets?.images)
+						? officialAssets.images
+						: [];
+					setImages(
+						officialImages.map((image) => ({
+							...image,
+							assetSource: image.source,
+							source: "general",
+							category: "tokens",
+							subcategory: String(image.path || "")
+								.split(/[\\/]+/)
+								.filter(Boolean)
+								.slice(2, -1)
+								.join("/"),
+							locationLabel: ["database", "tokens"]
+								.concat(
+									String(image.path || "")
+										.split(/[\\/]+/)
+										.filter(Boolean)
+										.slice(2, -1),
+								)
+								.filter(Boolean)
+								.join(" / "),
+							globalSearch: true,
+						})),
+					);
+					return;
+				}
+				const shouldSearchAll = contentScope === "all";
+				const shouldSearchSource = contentScope === "source";
 				const result = await api.searchImageGallery({
 					search: debouncedSearchQuery,
-					source: isGlobalSearch ? "" : selectedSource,
-					category: isGlobalSearch ? "" : selectedCat.id,
-					subcategory: isGlobalSearch ? "" : selectedSub,
+					source: shouldSearchAll ? "" : selectedSource,
+					category:
+						shouldSearchAll || shouldSearchSource ? "" : selectedCat.id,
+					subcategory:
+						shouldSearchAll || shouldSearchSource ? "" : selectedSub,
 					categories: IMAGE_GALLERY_CATEGORIES.map((category) => category.id),
 					ignoreSourcesList,
 				});
@@ -239,7 +280,8 @@ export default function useImageGallery({
 		selectedCat.id,
 		selectedSub,
 		isGeneralTokens,
-		isGlobalSearch,
+		contentScope,
+		isScopedContent,
 		activeSearchQuery,
 		debouncedSearchQuery,
 		ignoreSourcesList,
@@ -292,7 +334,7 @@ export default function useImageGallery({
 		selectedCat,
 		selectedSub,
 		isOpen,
-		searchMode,
+		contentScope,
 		loadImages,
 		loadSubcategories,
 		loadStorageStats,
@@ -659,7 +701,7 @@ export default function useImageGallery({
 
 	const allSubs = useMemo(
 		() =>
-			normalizedSearchQuery
+			normalizedSearchQuery || isScopedContent
 				? []
 				: Array.from(
 						new Set([
@@ -667,7 +709,13 @@ export default function useImageGallery({
 							...dynamicSubs,
 						]),
 					),
-		[normalizedSearchQuery, selectedSub, selectedCat.subs, dynamicSubs],
+		[
+			normalizedSearchQuery,
+			isScopedContent,
+			selectedSub,
+			selectedCat.subs,
+			dynamicSubs,
+		],
 	);
 
 	const handleItemClick = useCallback(
@@ -811,8 +859,8 @@ export default function useImageGallery({
 		images,
 		searchQuery,
 		setSearchQuery,
-		searchMode,
-		setSearchMode,
+		contentScope,
+		setContentScope,
 		isGlobalSearch,
 		isSearchResults,
 		isReadonlyCurrentFolder,

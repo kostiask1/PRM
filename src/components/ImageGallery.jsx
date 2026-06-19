@@ -49,6 +49,8 @@ const getGalleryImageKey = (image, fallbackPath) =>
 		image?.source || fallbackPath.source || "general",
 		image?.category || fallbackPath.category || "",
 		image?.subcategory ?? fallbackPath.subcategory ?? "",
+		image?.path || "",
+		image?.url || "",
 		String(image?.name || "").toLowerCase(),
 	].join("\u0000");
 
@@ -180,8 +182,8 @@ function ImageGallery({
 		images,
 		searchQuery,
 		setSearchQuery,
-		searchMode,
-		setSearchMode,
+		contentScope,
+		setContentScope,
 		isSearchResults,
 		storageStats,
 		selectedFilenames,
@@ -317,6 +319,11 @@ function ImageGallery({
 		{ slug: "general", name: lang.t("General") },
 		...campaigns,
 	];
+	const canShowDatabaseTokens =
+		selectedSource === "general" && selectedCat.id === "tokens";
+	const resetContentScope = React.useCallback(() => {
+		setContentScope("local");
+	}, [setContentScope]);
 	const canNavigateBack = navigationHistory.index > 0;
 	const canNavigateForward =
 		navigationHistory.index >= 0 &&
@@ -345,7 +352,7 @@ function ImageGallery({
 			setSelectedCat(nextCategory);
 			setSelectedSub(entry.subcategory || "");
 			setSearchQuery("");
-			setSearchMode("local");
+			setContentScope("local");
 			setPendingSelection(null);
 			setHighlightedImageName("");
 			clearSelection();
@@ -356,7 +363,7 @@ function ImageGallery({
 			setSelectedCat,
 			setSelectedSub,
 			setSearchQuery,
-			setSearchMode,
+			setContentScope,
 			clearSelection,
 		],
 	);
@@ -427,20 +434,26 @@ function ImageGallery({
 			category: selectedCat.id,
 			subcategory: selectedSub,
 		};
-		return images.filter((image) => {
+		return images.reduce((items, image) => {
 			const key = getGalleryImageKey(image, fallbackPath);
-			if (seen.has(key)) return false;
+			if (seen.has(key)) return items;
 			seen.add(key);
-			return true;
-		});
+			items.push({ ...image, galleryKey: key });
+			return items;
+		}, []);
 	}, [images, selectedSource, selectedCat.id, selectedSub]);
 	const galleryItems = React.useMemo(() => {
 		return [
-			...allSubs.map((sub) => ({ type: "sub", sub })),
-			...displayImages.map((image) => ({ type: "image", image })),
+			...allSubs.map((sub) => ({ type: "sub", sub, key: `sub:${sub}` })),
+			...displayImages.map((image) => ({
+				type: "image",
+				image,
+				key: `image:${image.galleryKey}`,
+			})),
 		];
 	}, [allSubs, displayImages]);
 	const galleryRowCount = Math.ceil(galleryItems.length / galleryColumns);
+	const galleryRenderThreshold = 400;
 	const openGlobalResultPath = (image) => {
 		if (typeof onSelect === "function" || !image?.globalSearch) return false;
 		const nextCategory = categories.find((cat) => cat.id === image.category);
@@ -450,7 +463,7 @@ function ImageGallery({
 		setSelectedCat(nextCategory);
 		setSelectedSub(image.subcategory || "");
 		setSearchQuery("");
-		setSearchMode("local");
+		setContentScope("local");
 		setPendingSelection({
 			name: image.name,
 			pathKey: getGalleryPathKey(
@@ -493,6 +506,7 @@ function ImageGallery({
 					}}
 					onDoubleClick={() => {
 						const nextPath = selectedSub ? `${selectedSub}/${sub}` : sub;
+						resetContentScope();
 						setSelectedSub(nextPath);
 					}}
 					draggable={!isReadonly}
@@ -571,10 +585,7 @@ function ImageGallery({
 				? formatImageLocationLabel(img.locationLabel)
 				: "";
 		return (
-			<Tooltip
-				key={`image:${img.url}`}
-				content={lang.t("Right-click: open fullscreen")}
-			>
+			<Tooltip key={`tooltip:${img.galleryKey}`} content={lang.t("Right-click: open fullscreen")}>
 				<div
 					data-gallery-image-id={getImageScrollId(img.name)}
 					className={classNames("ImageGallery__item", {
@@ -651,13 +662,18 @@ function ImageGallery({
 	const renderGalleryRow = (rowIndex, key) => {
 		const start = rowIndex * galleryColumns;
 		const rowItems = galleryItems.slice(start, start + galleryColumns);
+		const rowKey = rowItems.map((item) => item.key).join("|") || key;
 		return (
 			<div
-				key={key}
+				key={rowKey}
 				className="ImageGallery__row"
 				style={{ "--gallery-columns": galleryColumns }}
 			>
-				{rowItems.map((item, index) => renderGalleryItem(item, start + index))}
+				{rowItems.map((item, index) => (
+					<React.Fragment key={item.key}>
+						{renderGalleryItem(item, start + index)}
+					</React.Fragment>
+				))}
 			</div>
 		);
 	};
@@ -678,7 +694,10 @@ function ImageGallery({
 							is_active: selectedSource === "general",
 							is_drag_over: dragOverTarget?.id === "general",
 						})}
-						onClick={() => setSelectedSource("general")}
+						onClick={() => {
+							resetContentScope();
+							setSelectedSource("general");
+						}}
 						onDragOver={(e) => {
 							e.preventDefault();
 							if (dragOverTarget?.id !== "general") {
@@ -711,7 +730,10 @@ function ImageGallery({
 								is_active: selectedSource === c.slug,
 								is_drag_over: dragOverTarget?.id === c.slug,
 							})}
-							onClick={() => setSelectedSource(c.slug)}
+							onClick={() => {
+								resetContentScope();
+								setSelectedSource(c.slug);
+							}}
 							onDragOver={(e) => {
 								e.preventDefault();
 								if (dragOverTarget?.id !== c.slug) {
@@ -747,6 +769,7 @@ function ImageGallery({
 									is_drag_over: dragOverTarget?.id === cat.id,
 								})}
 								onClick={() => {
+									resetContentScope();
 									setSelectedCat(cat);
 									setSelectedSub("");
 								}}
@@ -801,7 +824,10 @@ function ImageGallery({
 										dragOverTarget?.type === "breadcrumb" &&
 										dragOverTarget?.id === "__root__",
 								})}
-								onClick={() => setSelectedSub("")}
+								onClick={() => {
+									resetContentScope();
+									setSelectedSub("");
+								}}
 								onDragOver={(e) => {
 									e.preventDefault();
 									setDragOverTarget({ type: "breadcrumb", id: "__root__" });
@@ -849,6 +875,7 @@ function ImageGallery({
 																dragOverTarget?.id === breadcrumbPath,
 														})}
 														onClick={() => {
+															resetContentScope();
 															setSelectedSub(breadcrumbPath);
 														}}
 														onDragOver={(e) => {
@@ -930,16 +957,50 @@ function ImageGallery({
 								/>
 							)}
 							<Button
-								className="DetailedSearchButton ImageGallery__globalSearchBtn"
-								variant={searchMode === "global" ? "primary" : "ghost"}
+								className="DetailedSearchButton ImageGallery__globalSearchBtn ImageGallery__scopeBtn"
+								variant={contentScope === "source" ? "primary" : "ghost"}
 								size={Button.SIZES.SMALL}
-								icon="search-detailed"
+								icon={"map"}
 								onClick={() =>
-									setSearchMode((mode) =>
-										mode === "global" ? "local" : "global",
+									setContentScope((scope) =>
+										scope === "source" ? "local" : "source",
 									)
 								}
-								title={lang.t("Global search")}
+								title={lang.t(
+									selectedSource === "general"
+										? "Show all general content"
+										: "Show all campaign content",
+								)}
+							/>
+							{canShowDatabaseTokens && (
+								<Button
+									className="DetailedSearchButton ImageGallery__globalSearchBtn ImageGallery__scopeBtn"
+									variant={
+										contentScope === "databaseTokens" ? "primary" : "ghost"
+									}
+									size={Button.SIZES.SMALL}
+									icon="book"
+									onClick={() =>
+										setContentScope((scope) =>
+											scope === "databaseTokens"
+												? "local"
+												: "databaseTokens",
+										)
+									}
+									title={lang.t("Show all database tokens")}
+								/>
+							)}
+							<Button
+								className="DetailedSearchButton ImageGallery__globalSearchBtn ImageGallery__scopeBtn"
+								variant={contentScope === "all" ? "primary" : "ghost"}
+								size={Button.SIZES.SMALL}
+								icon="layers"
+								onClick={() =>
+									setContentScope((scope) =>
+										scope === "all" ? "local" : "all",
+									)
+								}
+								title={lang.t("Show all gallery content")}
 							/>
 						</div>
 						<div className="ImageGallery__storage_stats">
@@ -1031,7 +1092,7 @@ function ImageGallery({
 								ref={galleryListRef}
 								itemRenderer={renderGalleryRow}
 								length={galleryRowCount}
-								threshold={400}
+								threshold={galleryRenderThreshold}
 								itemSizeEstimator={() => {
 									const row =
 										galleryViewportRef.current?.querySelector(
