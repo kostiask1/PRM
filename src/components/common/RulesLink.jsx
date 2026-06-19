@@ -50,6 +50,13 @@ function parseReferenceParts(raw) {
 	};
 }
 
+function getSpellReferenceName(spell = {}) {
+	const name = String(spell.name || "").trim();
+	if (!name) return "";
+	const source = String(spell.source || "").trim();
+	return source ? `${name}|${source}` : name;
+}
+
 function getRechargeThreshold(recharge) {
 	const match = String(recharge || "").match(/Recharge\s+(\d+)/i);
 	return match ? Number(match[1]) : 6;
@@ -292,7 +299,7 @@ export default function RulesLink({
 		const spell = await resolveSpellInput(referenceName);
 		if (!spell) return;
 
-		requestRulesReferenceNavigation("spells", spell.name);
+		requestRulesReferenceNavigation("spells", getSpellReferenceName(spell));
 	};
 
 	const openCreature = () => {

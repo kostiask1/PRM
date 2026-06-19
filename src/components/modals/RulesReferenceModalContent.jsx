@@ -139,6 +139,13 @@ function getReferenceItemKey(tabId, item) {
 	return `${tabId}:${item.name}`;
 }
 
+function getSpellReferenceName(spell = {}) {
+	const name = String(spell.name || "").trim();
+	if (!name) return "";
+	const source = String(spell.source || "").trim();
+	return source ? `${name}|${source}` : name;
+}
+
 function getReferenceInlineTag(tabId, item = {}) {
 	const name = String(item.name || "").trim();
 	if (!name) return "";
@@ -150,7 +157,7 @@ function getReferenceInlineTag(tabId, item = {}) {
 	if (tabId === "senses") return `{@sense ${name}}`;
 	if (tabId === "skills") return `{@skill ${name}}`;
 	if (tabId === "variantrules") return `{@variantrule ${name}}`;
-	if (tabId === "spells") return `{@spell ${name}}`;
+	if (tabId === "spells") return `{@spell ${getSpellReferenceName(item)}}`;
 	if (tabId === "bestiary") {
 		const source = String(item.source || "").trim();
 		return source ? `{@creature ${name}|${source}}` : `{@creature ${name}}`;
@@ -660,7 +667,10 @@ export default function RulesReferenceModalContent({
 						initialDetailedSearch={isDetailedSearch}
 						initialSelectedName={activeSelectedName}
 						onActiveSpellChange={(spell) =>
-							recordEmbeddedReferenceSelection("spells", spell.name)
+							recordEmbeddedReferenceSelection(
+								"spells",
+								getSpellReferenceName(spell),
+							)
 						}
 						onSelectSpell={onSelectReference ? selectSpellReference : null}
 						renderOptions={{

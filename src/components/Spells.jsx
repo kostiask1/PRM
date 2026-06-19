@@ -49,6 +49,21 @@ function getSpellItemKey(spell) {
 	return `${spell.source || ""}:${spell.name}`;
 }
 
+function parseSpellReferenceKey(value) {
+	const [name = "", source = ""] = String(value || "").split("|");
+	return {
+		name: name.trim(),
+		source: source.trim(),
+	};
+}
+
+function spellMatchesReferenceKey(spell, value) {
+	const { name, source } = parseSpellReferenceKey(value);
+	return Boolean(
+		spell?.name && spell.name === name && (!source || spell.source === source),
+	);
+}
+
 function getSpellListIndex(spells, selectedSpell) {
 	if (!selectedSpell?.name) return -1;
 	return spells.findIndex(
@@ -59,9 +74,14 @@ function getSpellListIndex(spells, selectedSpell) {
 }
 
 function findSpellByName(spells, name) {
-	const normalizedName = String(name || "").trim();
+	const { name: normalizedName, source } = parseSpellReferenceKey(name);
 	if (!normalizedName) return null;
-	return spells.find((spell) => spell?.name === normalizedName) || null;
+	return (
+		spells.find(
+			(spell) =>
+				spell?.name === normalizedName && (!source || spell?.source === source),
+		) || null
+	);
 }
 
 export default function Spells({
@@ -240,7 +260,7 @@ export default function Spells({
 			!scrollToInitialSelected ||
 			!initialSelectedName ||
 			!selectedSpell?.name ||
-			selectedSpell.name !== initialSelectedName
+			!spellMatchesReferenceKey(selectedSpell, initialSelectedName)
 		) {
 			return undefined;
 		}
