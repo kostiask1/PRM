@@ -32,3 +32,34 @@
 	white-space: normal;
 	overflow-wrap: anywhere;
 }
+
+.Tooltip__creature_card {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--space-3);
+	min-width: min(320px, calc(100vw - var(--size-8)));
+}
+
+.Tooltip__creature_token {
+	width: 72px;
+	height: 72px;
+	flex: 0 0 72px;
+	object-fit: contain;
+	border-radius: 50%;
+	background: color-mix(in srgb, var(--bg), transparent 25%);
+}
+
+.Tooltip__creature_body {
+	min-width: 0;
+}
+
+.Tooltip__creature_stats {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-3);
+	font-size: 0.82rem;
+}
+
+.Tooltip__creature_stats strong {
+	color: var(--accent);
+}

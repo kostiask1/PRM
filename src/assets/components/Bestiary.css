@@ -306,6 +306,16 @@
 	height: 65px;
 }
 
+.Bestiary__item_token {
+	display: none;
+	width: 44px;
+	height: 44px;
+	flex: 0 0 44px;
+	object-fit: contain;
+	border-radius: 50%;
+	background: color-mix(in srgb, var(--panel), transparent 35%);
+}
+
 .Bestiary__list .ListCard__actions .Tooltip__trigger {
 	display: flex;
 }
@@ -395,6 +405,16 @@
 
 	.Bestiary__list {
 		width: 280px;
+	}
+}
+
+@media (min-width: 1200px) {
+	.Bestiary__item_token:not([hidden]) {
+		display: block;
+	}
+
+	.Bestiary__list {
+		width: 380px;
 	}
 }
 

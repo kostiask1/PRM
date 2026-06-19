@@ -5,6 +5,7 @@ import Icon from "../common/Icon";
 import Input from "../form/Input";
 import ListCard from "../common/ListCard";
 import MonsterStatBlock from "../MonsterStatBlock";
+import MonsterStatBlockModel from "../../models/MonsterStatBlockModel.js";
 import MultiSelect from "../form/MultiSelect";
 import Tooltip from "../common/Tooltip";
 import classNames from "../../utils/classNames";
@@ -64,6 +65,7 @@ function MonsterListItem({
 		selectedMonster?.source === monster.source;
 	const isFavorite = isFavoriteMonster(favorites, monster);
 	const sourceFullName = getSourceFullName(monster.source);
+	const tokenSrc = new MonsterStatBlockModel(monster).localTokenSrc;
 
 	return (
 		<div key={getMonsterItemKey(monster)}>
@@ -151,6 +153,16 @@ function MonsterListItem({
 				}
 			>
 				<div className="Bestiary__item_content">
+					<img
+						className="Bestiary__item_token"
+						src={monster.imageUrl || tokenSrc}
+						alt=""
+						loading="lazy"
+						draggable={false}
+						onError={(event) => {
+							event.currentTarget.hidden = true;
+						}}
+					/>
 					<div className="Bestiary__item_info">
 						<div className="ListCard__title">
 							{highlightText(monster.name, search)}

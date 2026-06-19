@@ -4,6 +4,7 @@ import "../../assets/components/RulesLink.css";
 import { lang } from "../../services/localization.js";
 import {
 	getConditionByName,
+	getCreatureByName,
 	getDiseaseByName,
 	getSenseByName,
 	getSkillByName,
@@ -32,7 +33,10 @@ import {
 	CONTENT_TOKEN_REGEX,
 	tokenFromContentMatch,
 } from "../../utils/contentTokens.js";
+import { getMonsterTypeString } from "../../utils/bestiary.js";
+import MonsterStatBlockModel from "../../models/MonsterStatBlockModel.js";
 import { getSpellMeta } from "../../utils/spellMeta.js";
+import { formatSourceLabel } from "../../utils/sourceNames.js";
 import RollDice from "./RollDice.jsx";
 import Tooltip from "./Tooltip.jsx";
 
@@ -60,6 +64,26 @@ function getSpellReferenceName(spell = {}) {
 function getRechargeThreshold(recharge) {
 	const match = String(recharge || "").match(/Recharge\s+(\d+)/i);
 	return match ? Number(match[1]) : 6;
+}
+
+function getCreatureCr(creature = {}) {
+	return creature.cr?.cr !== undefined ? creature.cr.cr : creature.cr;
+}
+
+function getCreatureHp(creature = {}) {
+	if (creature.hp && typeof creature.hp === "object") {
+		return creature.hp.special || creature.hp.average || "";
+	}
+	return creature.hit_points || "";
+}
+
+function getCreatureAc(creature = {}) {
+	if (Array.isArray(creature.ac) && creature.ac[0]) {
+		const ac = creature.ac[0];
+		return typeof ac === "object" ? ac.special || ac.ac || "" : ac;
+	}
+	if (Array.isArray(creature.armor_class)) return creature.armor_class[0] || "";
+	return creature.armor_class || "";
 }
 
 function formatFormulaText(text) {
@@ -358,6 +382,51 @@ export default function RulesLink({
 					<div className="Tooltip__meta">{getSpellMeta(spell)}</div>
 					<div className="Tooltip__text">
 						{renderTooltipEntries(spell.entries)}
+					</div>
+				</div>
+			);
+		}
+
+		if (type === "creature") {
+			const creature = await getCreatureByName(referenceName);
+			if (!creature) return null;
+			const model = new MonsterStatBlockModel(creature);
+			const sourceLabel = formatSourceLabel(creature.source);
+			const meta = [
+				sourceLabel,
+				getMonsterTypeString(creature.type),
+				getCreatureCr(creature) ? `CR ${getCreatureCr(creature)}` : "",
+			].filter(Boolean);
+
+			return (
+				<div className="Tooltip__creature_card">
+					<img
+						className="Tooltip__creature_token"
+						src={creature.imageUrl || model.localTokenSrc}
+						alt=""
+						loading="lazy"
+						draggable={false}
+						onError={(event) => {
+							event.currentTarget.hidden = true;
+						}}
+					/>
+					<div className="Tooltip__creature_body">
+						<div className="Tooltip__title">{creature.name}</div>
+						{meta.length > 0 && (
+							<div className="Tooltip__meta">{meta.join(" • ")}</div>
+						)}
+						<div className="Tooltip__creature_stats">
+							{getCreatureAc(creature) && (
+								<span>
+									<strong>AC</strong> {getCreatureAc(creature)}
+								</span>
+							)}
+							{getCreatureHp(creature) && (
+								<span>
+									<strong>HP</strong> {getCreatureHp(creature)}
+								</span>
+							)}
+						</div>
 					</div>
 				</div>
 			);

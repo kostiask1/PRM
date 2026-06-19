@@ -9,6 +9,7 @@ import { loadSkillsMap, normalizeSkillName } from "./skills.js";
 import { loadSensesMap, normalizeSenseName } from "./senses.js";
 
 const spellCache = new Map();
+const creatureCache = new Map();
 
 function normalizeSpellName(name) {
 	return String(name || "")
@@ -30,6 +31,46 @@ export async function getSpellByName(name) {
 
 	if (spell) spellCache.set(key, spell);
 	return spell;
+}
+
+function parseCreatureReference(name) {
+	const parts = String(name || "").split("|");
+	return {
+		name: String(parts[0] || "").trim(),
+		source: String(parts[1] || "").trim(),
+	};
+}
+
+function normalizeCreatureName(name) {
+	return parseCreatureReference(name).name.toLowerCase();
+}
+
+export async function getCreatureByName(name) {
+	const reference = parseCreatureReference(name);
+	const key = `${reference.name.toLowerCase()}|${reference.source.toUpperCase()}`;
+	if (!reference.name) return null;
+	if (creatureCache.has(key)) return creatureCache.get(key);
+
+	const results = await api.searchBestiary(reference.name);
+	const creature =
+		results.find((item) => {
+			const nameMatches =
+				normalizeCreatureName(item.name) === reference.name.toLowerCase();
+			if (!nameMatches) return false;
+			if (!reference.source) return true;
+			return (
+				String(item.source || "").toUpperCase() ===
+				reference.source.toUpperCase()
+			);
+		}) ||
+		results.find(
+			(item) => normalizeCreatureName(item.name) === reference.name.toLowerCase(),
+		) ||
+		results[0] ||
+		null;
+
+	if (creature) creatureCache.set(key, creature);
+	return creature;
 }
 
 export async function getConditionByName(name) {
