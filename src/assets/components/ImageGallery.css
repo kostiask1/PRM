@@ -135,7 +135,7 @@
 	border-radius: 0;
 }
 
-.ImageGallery__search .ImageGallery__globalSearchBtn:last-child {
+.ImageGallery__search .Tooltip__trigger:last-child .ImageGallery__globalSearchBtn {
 	border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 
