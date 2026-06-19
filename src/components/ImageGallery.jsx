@@ -599,11 +599,7 @@ function ImageGallery({
 					onClick={(e) => {
 						e.stopPropagation();
 						if (isSearchResults) {
-							if (selectedFilenames.has(img.name)) {
-								clearSelection();
-							} else {
-								selectImageByName(img.name);
-							}
+							handleItemClick(img.name, "image", itemIndex, e);
 							return;
 						}
 						handleItemClick(img.name, "image", itemIndex, e);
@@ -614,11 +610,23 @@ function ImageGallery({
 						setPreviewImage(img);
 					}}
 					draggable={!imageReadonly && !img.globalSearch}
-					onDragStart={(e) => handleDragStart(e, img, "image")}
+					onDragStart={(e) => {
+						if (img.globalSearch) {
+							e.preventDefault();
+							return;
+						}
+						handleDragStart(e, img, "image");
+					}}
 					onDragEnd={handleDragEnd}
 				>
 					<div className="ImageGallery__image_wrap">
-						<img src={img.url} alt="" loading="lazy" decoding="async" />
+						<img
+							src={img.url}
+							alt=""
+							loading="lazy"
+							decoding="async"
+							draggable={false}
+						/>
 						{!imageReadonly && (
 							<div
 								className="ImageGallery__checkbox"
@@ -1077,6 +1085,10 @@ function ImageGallery({
 						})}
 						onDragOver={(e) => {
 							e.preventDefault();
+							if (isSearchResults) {
+								setIsDraggingOver(false);
+								return;
+							}
 							const isSameLocation =
 								dragSource &&
 								dragSource.slug === selectedSource &&
@@ -1088,14 +1100,19 @@ function ImageGallery({
 							}
 						}}
 						onDragLeave={() => setIsDraggingOver(false)}
-						onDrop={(e) =>
+						onDrop={(e) => {
+							if (isSearchResults) {
+								e.preventDefault();
+								setIsDraggingOver(false);
+								return;
+							}
 							handleDrop(e, {
 								slug: selectedSource,
 								category: selectedCat.id,
 								subcategory: selectedSub,
 								readonly: isReadonlyCurrentFolder,
-							})
-						}
+							});
+						}}
 					>
 						{isDraggingOver && (
 							<div className="ImageGallery__drop_overlay">
