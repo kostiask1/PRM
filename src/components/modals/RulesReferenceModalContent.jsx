@@ -79,6 +79,30 @@ function itemMatchesQuery(tab, item, normalizedQuery, isDetailedSearch) {
 	);
 }
 
+async function loadSpellReferenceItems() {
+	return api.getSpellData("all");
+}
+
+async function loadBestiaryReferenceItems() {
+	const [officialData, customData] = await Promise.all([
+		api.getBestiaryData("all"),
+		api.getCustomBestiaryData().catch(() => []),
+	]);
+	const officialList = Array.isArray(officialData)
+		? officialData
+		: officialData?.monster ||
+			officialData?.monsters ||
+			officialData?.results ||
+			[];
+	const customList = Array.isArray(customData)
+		? customData
+		: customData?.monster ||
+			customData?.monsters ||
+			customData?.results ||
+			[];
+	return [...officialList, ...customList];
+}
+
 const REFERENCE_TABS = [
 	{
 		id: "conditions",
@@ -122,7 +146,7 @@ const REFERENCE_TABS = [
 		id: "spells",
 		label: "Spells",
 		emptyLabel: "No spells found.",
-		load: () => api.searchSpells(),
+		load: loadSpellReferenceItems,
 		searchFields: ["name", "school", "source", "level", "level_int"],
 		meta: getSpellMeta,
 	},
@@ -130,7 +154,7 @@ const REFERENCE_TABS = [
 		id: "bestiary",
 		label: "Bestiary",
 		emptyLabel: "No creatures found.",
-		load: () => api.searchBestiary(),
+		load: loadBestiaryReferenceItems,
 		searchFields: ["name", "source", "cr"],
 		meta: getMonsterMeta,
 	},

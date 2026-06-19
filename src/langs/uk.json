@@ -355,7 +355,6 @@
 	"Imported custom creatures: {count}": "Імпортовано кастомних істот: {count}",
 	"Insert": "Вставити",
 	"Include in AI context": "Додавати в контекст ШІ",
-	"Indexing database...": "Індексація бази даних...",
 	"Invalid draft changes": "Некоректні зміни чернетки",
 	"Invalid file format (monster list is missing)": "Невірний формат файлу (відсутній список монстрів)",
 	"Invalid JSON.": "Некоректний JSON.",

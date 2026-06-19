@@ -1440,7 +1440,8 @@ await run("parser renders dice and creature tags as interactive components", asy
 	assert.match(rulesReferenceSource, /import MonsterStatBlock from "\.\.\/MonsterStatBlock\.jsx"/);
 	assert.match(rulesReferenceSource, /import MonsterStatBlockModel from "\.\.\/\.\.\/models\/MonsterStatBlockModel\.js"/);
 	assert.match(rulesReferenceSource, /id: "bestiary"/);
-	assert.match(rulesReferenceSource, /api\.searchBestiary\(\)/);
+	assert.match(rulesReferenceSource, /api\.getBestiaryData\("all"\)/);
+	assert.match(rulesReferenceSource, /api\.getSpellData\("all"\)/);
 	assert.match(rulesReferenceSource, /<Bestiary/);
 	assert.match(rulesReferenceSource, /<MonsterStatBlock/);
 	assert.match(rulesReferenceSource, /Bestiary__item_token/);

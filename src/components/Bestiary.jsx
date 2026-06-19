@@ -122,6 +122,31 @@ function customMonsterListsEqual(left, right) {
 	return JSON.stringify(left || []) === JSON.stringify(right || []);
 }
 
+function getMonsterListFromResponse(data) {
+	return Array.isArray(data)
+		? data
+		: data?.monster || data?.monsters || data?.results || [];
+}
+
+function enrichMonstersWithLegendaryGroups(monsters, legendaryGroups) {
+	return monsters.map((monster) => {
+		const groupRef = monster.legendaryGroup;
+		const targetName = groupRef?.name || monster.name;
+		const targetSource = groupRef?.source || monster.source;
+		const legendaryEntry = legendaryGroups.find(
+			(lg) =>
+				lg.name === targetName &&
+				lg.source?.toUpperCase() === targetSource?.toUpperCase(),
+		);
+		if (!legendaryEntry) return monster;
+		return {
+			...monster,
+			lairActions: legendaryEntry.lairActions,
+			regionalEffects: legendaryEntry.regionalEffects,
+		};
+	});
+}
+
 export default function Bestiary({
 	onAddMonster,
 	initialSearch = "",
@@ -196,6 +221,7 @@ export default function Bestiary({
 	const shouldAutoSelectMonsterRef = useRef(true);
 	const pendingSyncSelectionRef = useRef(null);
 	const embeddedScrolledMonsterRef = useRef("");
+	const hasLoadedInitialMonstersRef = useRef(false);
 
 	const sourceOptions = useMemo(
 		() => sources.filter((source) => !isCustomSource(source)),
@@ -473,36 +499,22 @@ export default function Bestiary({
 		const loadData = async () => {
 			setLoading(true);
 			try {
-				const data = await api.getBestiaryData("all");
-				const combinedList = Array.isArray(data)
-					? data
-					: data.monster || data.monsters || data.results || [];
-
-				// Merge monsters with legendary actions and regional effects.
-
-				const enrichedMonsters = combinedList.map((monster) => {
-					// Find a group by explicit legendaryGroup reference or monster name.
-					const groupRef = monster.legendaryGroup;
-					const targetName = groupRef?.name || monster.name;
-					const targetSource = groupRef?.source || monster.source;
-
-					const legendaryEntry = legendaryGroups.find(
-						(lg) =>
-							lg.name === targetName &&
-							lg.source?.toUpperCase() === targetSource?.toUpperCase(),
-					);
-					if (legendaryEntry) {
-						return {
-							...monster,
-							lairActions: legendaryEntry.lairActions,
-							regionalEffects: legendaryEntry.regionalEffects,
-						};
-					}
-					return monster;
-				});
-				setAllMonsters((current) => [
-					...enrichedMonsters,
-					...current.filter((monster) => isCustomSource(monster.source)),
+				const [officialData, customData] = await Promise.all([
+					api.getBestiaryData("all"),
+					api.getCustomBestiaryData(),
+				]);
+				const enrichedOfficialMonsters = enrichMonstersWithLegendaryGroups(
+					getMonsterListFromResponse(officialData),
+					legendaryGroups,
+				);
+				const enrichedCustomMonsters = enrichMonstersWithLegendaryGroups(
+					getMonsterListFromResponse(customData),
+					legendaryGroups,
+				);
+				hasLoadedInitialMonstersRef.current = true;
+				setAllMonsters([
+					...enrichedOfficialMonsters,
+					...enrichedCustomMonsters,
 				]);
 			} catch (error) {
 				console.error("Failed to load local monsters", error);
@@ -514,33 +526,15 @@ export default function Bestiary({
 	}, [sources, legendaryGroups]);
 
 	useEffect(() => {
-		if (sources.length === 0) return;
+		if (sources.length === 0 || !hasLoadedInitialMonstersRef.current) return;
 
 		const loadCustomData = async () => {
 			try {
 				const customData = await api.getCustomBestiaryData();
-				const customList = Array.isArray(customData)
-					? customData
-					: customData.monster ||
-						customData.monsters ||
-						customData.results ||
-						[];
-				const enrichedCustomMonsters = customList.map((monster) => {
-					const groupRef = monster.legendaryGroup;
-					const targetName = groupRef?.name || monster.name;
-					const targetSource = groupRef?.source || monster.source;
-					const legendaryEntry = legendaryGroups.find(
-						(lg) =>
-							lg.name === targetName &&
-							lg.source?.toUpperCase() === targetSource?.toUpperCase(),
-					);
-					if (!legendaryEntry) return monster;
-					return {
-						...monster,
-						lairActions: legendaryEntry.lairActions,
-						regionalEffects: legendaryEntry.regionalEffects,
-					};
-				});
+				const enrichedCustomMonsters = enrichMonstersWithLegendaryGroups(
+					getMonsterListFromResponse(customData),
+					legendaryGroups,
+				);
 				setAllMonsters((current) => [
 					...current.filter((monster) => !isCustomSource(monster.source)),
 					...enrichedCustomMonsters,

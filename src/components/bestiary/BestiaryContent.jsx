@@ -367,15 +367,17 @@ export default function BestiaryContent({
 						<div className="Bestiary__embedded_actions">{headerActions}</div>
 					)}
 				</div>
-				{loading && (
-					<div className="muted">{lang.t("Indexing database...")}</div>
-				)}
 				<div
 					className={classNames("Bestiary__content", {
 						Bestiary__content__stacked: true,
 					})}
 				>
 					<div className="Bestiary__list" ref={listContainerRef}>
+						{loading && displayedMonsters.length === 0 && (
+							<div className="Bestiary__loading muted">
+								{lang.t("Loading...")}
+							</div>
+						)}
 						<ReactList
 							ref={listRef}
 							itemRenderer={renderMonsterItem}
