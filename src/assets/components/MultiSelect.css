@@ -72,10 +72,19 @@
 }
 
 .MultiSelect__option:hover,
-.MultiSelect__option.is_selected,
-.MultiSelect__option.is_active_filter {
+.MultiSelect__option.is_selected {
 	background: color-mix(in srgb, var(--accent), transparent 86%);
 	color: var(--text-bright);
+}
+
+.MultiSelect__option.is_active_filter {
+	background: color-mix(in srgb, var(--accent), transparent 72%);
+	color: var(--text-bright);
+	box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.MultiSelect__option.is_active_filter:hover {
+	background: color-mix(in srgb, var(--accent), transparent 66%);
 }
 
 .MultiSelect__checkbox {

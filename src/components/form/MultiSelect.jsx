@@ -32,6 +32,7 @@ export default function MultiSelect({
 	const [dropdownStyle, setDropdownStyle] = useState({});
 	const containerRef = useRef(null);
 	const dropdownRef = useRef(null);
+	const activeOptionRef = useRef(null);
 
 	const normalizedValue = useMemo(
 		() => new Set((Array.isArray(value) ? value : []).map(String)),
@@ -105,6 +106,17 @@ export default function MultiSelect({
 		};
 	}, [isOpen, updateDropdownPosition]);
 
+	useEffect(() => {
+		if (!isOpen) return undefined;
+		const frame = requestAnimationFrame(() => {
+			activeOptionRef.current?.scrollIntoView({
+				block: "nearest",
+				inline: "nearest",
+			});
+		});
+		return () => cancelAnimationFrame(frame);
+	}, [isOpen]);
+
 	const emitChange = (nextValues) => {
 		if (disabled || typeof onChange !== "function") return;
 		onChange(nextValues);
@@ -149,6 +161,9 @@ export default function MultiSelect({
 				{allOptionLabel && (
 					<button
 						type="button"
+						ref={
+							activeValue === "all" || !activeValue ? activeOptionRef : null
+						}
 						className={classNames("MultiSelect__option", {
 							is_active_filter: activeValue === "all" || !activeValue,
 						})}
@@ -184,6 +199,12 @@ export default function MultiSelect({
 						<button
 							key={optionValue}
 							type="button"
+							ref={
+								(activeValue && String(activeValue) === optionValue) ||
+								(!activeValue && isSelected)
+									? activeOptionRef
+									: null
+							}
 							className={classNames("MultiSelect__option", {
 								is_selected: isSelected,
 								is_active_filter:
