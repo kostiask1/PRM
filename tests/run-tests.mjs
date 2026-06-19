@@ -4136,6 +4136,76 @@ await run(
 	},
 );
 
+await run(
+	"storage renames campaign data and image folders together",
+	async () => {
+		const oldSlug = makeTestSlug("rename-campaign-old");
+		const newSlug = makeTestSlug("rename-campaign-new");
+		try {
+			await cleanupTestData(oldSlug);
+			await cleanupTestData(newSlug);
+
+			const category = "characters";
+			const subcategory = "players";
+			const imagesDir = storage.campaignImagesDir(
+				oldSlug,
+				category,
+				subcategory,
+			);
+			await storage.ensureDir(imagesDir);
+			await fs.writeFile(path.join(imagesDir, "hero.png"), "x", "utf8");
+
+			const oldUrl = `/api/images/${encodeURIComponent(oldSlug)}/${encodeURIComponent(category)}/${subcategory}/hero.png`;
+			const newUrl = `/api/images/${encodeURIComponent(newSlug)}/${encodeURIComponent(category)}/${subcategory}/hero.png`;
+
+			await storage.ensureDir(path.join(storage.campaignDir(oldSlug), "sessions"));
+			await storage.writeJson(storage.campaignMetaPath(oldSlug), {
+				id: `${oldSlug}-id`,
+				name: "Old Campaign",
+				slug: oldSlug,
+				imageUrl: oldUrl,
+			});
+			await storage.writeEntity(oldSlug, "characters", "hero", {
+				id: "hero-1",
+				firstName: "Hero",
+				imageUrl: oldUrl,
+			});
+			await storage.writeJson(storage.sessionPath(oldSlug, "session.json"), {
+				id: "session-1",
+				name: "Session",
+				data: { notes: [{ id: 1, text: oldUrl }] },
+			});
+			await storage.addAiResponse({
+				id: "response-1",
+				path: { campaign: oldSlug },
+				createdAt: new Date().toISOString(),
+				text: oldUrl,
+			});
+
+			await storage.renameCampaignData(oldSlug, newSlug);
+
+			assert.equal(await storage.exists(storage.campaignDir(oldSlug)), false);
+			assert.equal(await storage.exists(storage.campaignDir(newSlug)), true);
+			assert.equal(await storage.exists(path.join(storage.IMAGES_DIR, oldSlug)), false);
+			assert.equal(await storage.exists(path.join(storage.IMAGES_DIR, newSlug)), true);
+
+			const meta = await storage.readCampaign(newSlug);
+			assert.equal(meta.imageUrl, newUrl);
+			const characters = await storage.listEntities(newSlug, "characters");
+			assert.equal(characters[0].imageUrl, newUrl);
+			const session = await storage.readSession(newSlug, "session.json");
+			assert.equal(JSON.stringify(session).includes(newUrl), true);
+			assert.equal(JSON.stringify(session).includes(oldUrl), false);
+			const history = await storage.readAiResponses(newSlug);
+			assert.equal(JSON.stringify(history).includes(newUrl), true);
+			assert.equal(JSON.stringify(history).includes(oldUrl), false);
+		} finally {
+			await cleanupTestData(oldSlug);
+			await cleanupTestData(newSlug);
+		}
+	},
+);
+
 const failed = results.filter((r) => !r.ok);
 console.log(
 	`\nTotal: ${results.length}, Passed: ${results.length - failed.length}, Failed: ${failed.length}`,

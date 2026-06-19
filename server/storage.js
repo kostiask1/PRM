@@ -1031,7 +1031,8 @@ async function ensureUniqueCampaignSlug(baseSlug, ignoreSlug = null) {
 	let counter = 2;
 	while (true) {
 		const dir = campaignDir(slug);
-		const taken = await exists(dir);
+		const imagesDir = path.join(IMAGES_DIR, path.basename(slug));
+		const taken = (await exists(dir)) || (await exists(imagesDir));
 		if (!taken || slug === ignoreSlug) return slug;
 		slug = `${baseSlug}-${counter}`;
 		counter += 1;
@@ -1247,6 +1248,70 @@ function replaceImageSlugReferences(value, oldSlug, newSlug) {
 	const serialized = JSON.stringify(value);
 	if (!serialized.includes(oldSegment)) return value;
 	return JSON.parse(serialized.split(oldSegment).join(newSegment));
+}
+
+async function updateCampaignImageSlugReferences(oldSlug, newSlug) {
+	if (!oldSlug || !newSlug || oldSlug === newSlug) return;
+
+	const campaigns = await listCampaignSlugs();
+	for (const slug of campaigns) {
+		const metaPath = campaignMetaPath(slug);
+		if (await exists(metaPath)) {
+			const meta = await readJson(metaPath);
+			const normalized = replaceImageSlugReferences(meta, oldSlug, newSlug);
+			if (normalized !== meta) await writeJson(metaPath, normalized);
+		}
+
+		for (const type of ENTITY_TYPES) {
+			const entities = await listEntities(slug, type);
+			for (const entity of entities) {
+				const normalized = replaceImageSlugReferences(entity, oldSlug, newSlug);
+				if (normalized !== entity) {
+					await writeEntity(slug, type, normalized.slug, normalized);
+				}
+			}
+		}
+
+		const sessions = await listSessions(slug);
+		for (const session of sessions) {
+			const sPath = sessionPath(slug, session.fileName);
+			const sessionData = await readJson(sPath);
+			const normalized = replaceImageSlugReferences(
+				sessionData,
+				oldSlug,
+				newSlug,
+			);
+			if (normalized !== sessionData) await writeJson(sPath, normalized);
+		}
+
+		const aiPath = campaignAiResponsesPath(slug);
+		if (await exists(aiPath)) {
+			const aiResponses = await readJson(aiPath);
+			const normalized = replaceImageSlugReferences(
+				aiResponses,
+				oldSlug,
+				newSlug,
+			);
+			if (normalized !== aiResponses) await writeJson(aiPath, normalized);
+		}
+	}
+}
+
+async function renameCampaignData(oldSlug, newSlug) {
+	if (!oldSlug || !newSlug || oldSlug === newSlug) return;
+
+	await renameWithRetry(campaignDir(oldSlug), campaignDir(newSlug));
+
+	const oldImagesDir = path.join(IMAGES_DIR, path.basename(oldSlug));
+	const newImagesDir = path.join(IMAGES_DIR, path.basename(newSlug));
+	if (await exists(oldImagesDir)) {
+		if (await exists(newImagesDir)) {
+			throw new Error("Campaign images folder already exists.");
+		}
+		await renameWithRetry(oldImagesDir, newImagesDir);
+	}
+
+	await updateCampaignImageSlugReferences(oldSlug, newSlug);
 }
 
 function replaceCampaignSlugFields(value, oldSlug, newSlug) {
@@ -2163,6 +2228,8 @@ module.exports = {
 	findCampaignSlugById,
 	campaignHasImages,
 	deleteCampaignData,
+	renameCampaignData,
+	replaceImageSlugReferences,
 	clearAllCampaignData,
 	ensureUniqueCampaignSlug,
 	ensureUniqueSessionFile,

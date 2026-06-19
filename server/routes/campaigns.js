@@ -80,17 +80,15 @@ router.patch("/:slug", async (req, res, next) => {
 			oldSlug,
 		);
 		if (nextSlug !== oldSlug) {
-			await storage.renameWithRetry(
-				storage.campaignDir(oldSlug),
-				storage.campaignDir(nextSlug),
-			);
+			await storage.renameCampaignData(oldSlug, nextSlug);
 		}
-		const updated = {
+		let updated = {
 			...current,
 			...req.body,
 			slug: nextSlug,
 			name: nextName,
 		};
+		updated = storage.replaceImageSlugReferences(updated, oldSlug, nextSlug);
 		if (Object.prototype.hasOwnProperty.call(req.body || {}, "ignoreSourcesList")) {
 			updated.ignoreSourcesList = storage.normalizeSourceList(
 				req.body.ignoreSourcesList,
