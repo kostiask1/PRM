@@ -22,6 +22,21 @@ function getMonsterItemKey(monster) {
 	return `${monster.source || ""}:${monster.name}`;
 }
 
+function normalizeMonsterName(name) {
+	return String(name || "").trim().toLowerCase();
+}
+
+function normalizeMonsterSource(source) {
+	return String(source || "").trim().toUpperCase();
+}
+
+function isSameMonsterIdentity(left, right) {
+	const leftName = normalizeMonsterName(left?.name);
+	const rightName = normalizeMonsterName(right?.name);
+	if (!leftName || !rightName || leftName !== rightName) return false;
+	return normalizeMonsterSource(left?.source) === normalizeMonsterSource(right?.source);
+}
+
 function isMobileViewport() {
 	return (
 		typeof window !== "undefined" &&
@@ -60,9 +75,7 @@ function MonsterListItem({
 	selectedMonster,
 }) {
 	const crValue = monster.cr?.cr !== undefined ? monster.cr.cr : monster.cr;
-	const isSelected =
-		selectedMonster?.name === monster.name &&
-		selectedMonster?.source === monster.source;
+	const isSelected = isSameMonsterIdentity(selectedMonster, monster);
 	const isFavorite = isFavoriteMonster(favorites, monster);
 	const sourceFullName = getSourceFullName(monster.source);
 	const tokenSrc = new MonsterStatBlockModel(monster).localTokenSrc;
@@ -251,9 +264,7 @@ export default function BestiaryContent({
 	useEffect(() => {
 		if (!selectedMonster?.name || !isMobileViewport()) return undefined;
 		const selectedIndex = displayedMonsters.findIndex(
-			(monster) =>
-				monster?.name === selectedMonster.name &&
-				monster?.source === selectedMonster.source,
+			(monster) => isSameMonsterIdentity(monster, selectedMonster),
 		);
 		if (selectedIndex < 0) return undefined;
 

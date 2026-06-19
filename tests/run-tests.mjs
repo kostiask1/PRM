@@ -1432,15 +1432,19 @@ await run("parser renders dice and creature tags as interactive components", asy
 	assert.match(rulesLinkSource, /type: "recharge"/);
 	assert.match(
 		rulesLinkSource,
-		/requestRulesReferenceNavigation\("bestiary", referenceName\)/,
+		/requestRulesReferenceNavigation\("bestiary", getCreatureReferenceName\(creature\)\)/,
 	);
+	assert.match(rulesLinkSource, /function getCreatureReferenceName/);
 	assert.doesNotMatch(rulesLinkSource, /onNavigate/);
 	assert.doesNotMatch(rulesReferenceSource, /import Bestiary from "\.\.\/Bestiary\.jsx"/);
 	assert.match(rulesReferenceSource, /import MonsterStatBlock from "\.\.\/MonsterStatBlock\.jsx"/);
+	assert.match(rulesReferenceSource, /import MonsterStatBlockModel from "\.\.\/\.\.\/models\/MonsterStatBlockModel\.js"/);
 	assert.match(rulesReferenceSource, /id: "bestiary"/);
 	assert.match(rulesReferenceSource, /api\.searchBestiary\(\)/);
 	assert.doesNotMatch(rulesReferenceSource, /<Bestiary/);
 	assert.match(rulesReferenceSource, /<MonsterStatBlock/);
+	assert.match(rulesReferenceSource, /Bestiary__item_token/);
+	assert.match(rulesReferenceSource, /normalizeCreatureReferenceName/);
 	assert.doesNotMatch(rulesReferenceSource, new RegExp("is" + "Embedded"));
 	assert.match(rulesReferenceSource, /renderRecursiveContent\(selectedItem\.entries/);
 	assert.doesNotMatch(rulesReferenceSource, /onRuleNavigate/);
@@ -1522,6 +1526,7 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.match(rulesReferenceSource, /setRulesReferenceHistoryIndex/);
 	assert.match(rulesReferenceSource, /applyTabOnlyNavigation/);
 	assert.match(rulesReferenceSource, /navigationRequest\.forceTab/);
+	assert.match(rulesReferenceSource, /if \(initialName\) \{/);
 	assert.doesNotMatch(rulesReferenceSource, /setNavigationHistory/);
 	assert.match(rulesReferenceSource, /onActiveSpellChange/);
 	assert.match(rulesReferenceSource, /getCreatureReferenceName/);

@@ -3,11 +3,14 @@ import ReactList from "react-list";
 
 import { alert } from "../../actions/app";
 import { api } from "../../api";
+import "../../assets/components/Bestiary.css";
 import "../../assets/components/RulesReferenceModalContent.css";
 import ListCard from "../common/ListCard.jsx";
+import Tooltip from "../common/Tooltip.jsx";
 import Button from "../form/Button.jsx";
 import Input from "../form/Input";
 import MonsterStatBlock from "../MonsterStatBlock.jsx";
+import MonsterStatBlockModel from "../../models/MonsterStatBlockModel.js";
 import Spells from "../Spells.jsx";
 import { renderRecursiveContent } from "../../renderers/contentRenderer.jsx";
 import { lang } from "../../services/localization";
@@ -19,8 +22,13 @@ import {
 	useAppSelector,
 } from "../../store/appStore";
 import { objectMatchesSearch } from "../../utils/deepSearch.js";
+import { getMonsterTypeString } from "../../utils/bestiary.js";
 import { highlightText } from "../../utils/searchHighlight.jsx";
 import { getSpellMeta as formatSpellMeta } from "../../utils/spellMeta.js";
+import {
+	formatSourceLabel,
+	getSourceFullName,
+} from "../../utils/sourceNames.js";
 
 const VARIANT_RULE_TYPE_LABELS = {
 	C: "Core Rule",
@@ -39,9 +47,13 @@ function getSpellMeta(spell = {}) {
 
 function getMonsterMeta(monster = {}) {
 	const crValue = monster.cr?.cr !== undefined ? monster.cr.cr : monster.cr;
-	return [monster.source, crValue ? `CR ${crValue}` : ""]
+	return [formatSourceLabel(monster.source), crValue ? `CR ${crValue}` : ""]
 		.filter(Boolean)
 		.join(" / ");
+}
+
+function getMonsterCr(monster = {}) {
+	return monster.cr?.cr !== undefined ? monster.cr.cr : monster.cr;
 }
 
 function getSearchValues(tab, item) {
@@ -172,6 +184,56 @@ function getCreatureReferenceName(monster = {}) {
 	return source ? `${name}|${source}` : name;
 }
 
+function normalizeCreatureReferenceName(value) {
+	const [name = "", source = ""] = String(value || "").split("|");
+	const normalizedName = name.trim();
+	if (!normalizedName) return "";
+	const normalizedSource = source.trim();
+	return normalizedSource
+		? `${normalizedName}|${normalizedSource}`
+		: normalizedName;
+}
+
+function parseCreatureReference(value) {
+	const [name = "", source = ""] = normalizeCreatureReferenceName(value).split(
+		"|",
+	);
+	return {
+		name: name.trim().toLowerCase(),
+		source: source.trim().toUpperCase(),
+	};
+}
+
+function getCreatureReferenceMatchRank(item, selectedName) {
+	const selected = parseCreatureReference(selectedName);
+	const itemReference = parseCreatureReference(getCreatureReferenceName(item));
+	if (!selected.name || itemReference.name !== selected.name) return 0;
+	if (!selected.source) return 2;
+	return itemReference.source === selected.source ? 3 : 1;
+}
+
+function findSelectedReferenceItem(tabId, items, selectedName) {
+	if (tabId !== "bestiary") {
+		return (
+			items.find((item) => getReferenceSelectionName(tabId, item) === selectedName) ||
+			items.find((item) => String(item?.name || "") === selectedName) ||
+			null
+		);
+	}
+
+	let bestMatch = null;
+	let bestRank = 0;
+	for (const item of items) {
+		const rank = getCreatureReferenceMatchRank(item, selectedName);
+		if (rank > bestRank) {
+			bestMatch = item;
+			bestRank = rank;
+		}
+		if (rank === 3) break;
+	}
+	return bestMatch;
+}
+
 function getReferenceSelectionName(tabId, item = {}) {
 	if (tabId === "spells") return getSpellReferenceName(item);
 	if (tabId === "bestiary") return getCreatureReferenceName(item);
@@ -181,6 +243,9 @@ function getReferenceSelectionName(tabId, item = {}) {
 function itemMatchesSelectedName(tabId, item, selectedName) {
 	const normalizedSelected = String(selectedName || "").trim();
 	if (!normalizedSelected) return false;
+	if (tabId === "bestiary") {
+		return getCreatureReferenceMatchRank(item, normalizedSelected) > 0;
+	}
 	if (getReferenceSelectionName(tabId, item) === normalizedSelected) return true;
 	return String(item?.name || "") === normalizedSelected;
 }
@@ -325,21 +390,25 @@ export default function RulesReferenceModalContent({
 		}
 
 		const currentEntry = navigationHistory.entries[navigationHistory.index];
-		if (currentEntry) {
-			applyNavigationEntry(currentEntry);
-			return;
-		}
-
 		const nextTabId = getInitialTabId(initialTab);
-		setActiveTabId(nextTabId);
 		if (initialName) {
 			shouldScrollToActiveRef.current = true;
+			pendingNavigationTabRef.current = null;
+			setActiveTabId(nextTabId);
 			setSelectedByTab((current) => ({
 				...current,
 				[nextTabId]: initialName,
 			}));
 			recordNavigation(nextTabId, initialName);
+			return;
 		}
+
+		if (currentEntry) {
+			applyNavigationEntry(currentEntry);
+			return;
+		}
+
+		setActiveTabId(nextTabId);
 	}, [
 		applyNavigationEntry,
 		applyTabOnlyNavigation,
@@ -390,7 +459,7 @@ export default function RulesReferenceModalContent({
 					if (EMBEDDED_BROWSER_TAB_IDS.has(tab.id)) return current;
 					return {
 						...current,
-						[tab.id]: normalizedList[0]?.name || "",
+						[tab.id]: getReferenceSelectionName(tab.id, normalizedList[0]),
 					};
 				});
 			} catch (error) {
@@ -478,9 +547,12 @@ export default function RulesReferenceModalContent({
 		if (!hasLoadedActiveTab || isLoading || !activeSelectedName) return;
 		if (!shouldScrollToActiveRef.current) return;
 
-		const activeIndex = filteredItems.findIndex((item) =>
-			itemMatchesSelectedName(activeTab.id, item, activeSelectedName),
+		const activeItem = findSelectedReferenceItem(
+			activeTab.id,
+			filteredItems,
+			activeSelectedName,
 		);
+		const activeIndex = activeItem ? filteredItems.indexOf(activeItem) : -1;
 		shouldScrollToActiveRef.current = false;
 		if (activeIndex >= 0) {
 			setTimeout(() => listRef.current?.scrollTo(activeIndex), 0);
@@ -522,12 +594,8 @@ export default function RulesReferenceModalContent({
 	}, [canNavigateBack, navigateHistory]);
 
 	const selectedItem =
-		filteredItems.find((item) =>
-			itemMatchesSelectedName(activeTab.id, item, activeSelectedName),
-		) ||
-		activeItems.find((item) =>
-			itemMatchesSelectedName(activeTab.id, item, activeSelectedName),
-		) ||
+		findSelectedReferenceItem(activeTab.id, filteredItems, activeSelectedName) ||
+		findSelectedReferenceItem(activeTab.id, activeItems, activeSelectedName) ||
 		null;
 	const selectedMeta = selectedItem ? activeTab.meta?.(selectedItem) : "";
 
@@ -597,14 +665,16 @@ export default function RulesReferenceModalContent({
 		if (!item) return null;
 		const meta = activeTab.meta?.(item);
 		const selectionName = getReferenceSelectionName(activeTab.id, item);
-		const isActive = itemMatchesSelectedName(
-			activeTab.id,
-			item,
-			activeSelectedName,
-		);
+		const isActive = selectedItem === item;
 		const handleClick = () => {
 			selectItem(selectionName);
 		};
+		const isBestiaryItem = activeTab.id === "bestiary";
+		const tokenSrc = isBestiaryItem
+			? item.imageUrl || new MonsterStatBlockModel(item).localTokenSrc
+			: "";
+		const sourceFullName = isBestiaryItem ? getSourceFullName(item.source) : "";
+		const crValue = isBestiaryItem ? getMonsterCr(item) : "";
 
 		return (
 			<div
@@ -612,11 +682,59 @@ export default function RulesReferenceModalContent({
 				onDoubleClick={() => insertReference(activeTab.id, item)}
 			>
 				<ListCard onClick={handleClick} active={isActive}>
-					<div className="ListCard__title">
-						{highlightText(item.name, query)}
-					</div>
-					{meta && (
-						<div className="ListCard__meta">{highlightText(meta, query)}</div>
+					{isBestiaryItem ? (
+						<div className="Bestiary__item_content">
+							<img
+								className="Bestiary__item_token"
+								src={tokenSrc}
+								alt=""
+								loading="lazy"
+								draggable={false}
+								onError={(event) => {
+									event.currentTarget.hidden = true;
+								}}
+							/>
+							<div className="Bestiary__item_info">
+								<div className="ListCard__title">
+									{highlightText(item.name, query)}
+								</div>
+								<div className="ListCard__meta">
+									{highlightText(
+										Array.isArray(item.size) ? item.size[0] : item.size,
+										query,
+									)}{" "}
+									{highlightText(getMonsterTypeString(item.type), query)}
+									{item.source && (
+										<Tooltip
+											content={sourceFullName}
+											disabled={!sourceFullName}
+										>
+											<span className="Bestiary__item_source">
+												{" "}
+												• {highlightText(item.source, query)}
+											</span>
+										</Tooltip>
+									)}
+								</div>
+							</div>
+							<Tooltip content={lang.t("Challenge Rating")}>
+								<div className="Bestiary__item_cr">
+									<div className="Bestiary__cr_label">CR</div>
+									<div className="Bestiary__cr_value">{crValue || "--"}</div>
+								</div>
+							</Tooltip>
+						</div>
+					) : (
+						<>
+							<div className="ListCard__title">
+								{highlightText(item.name, query)}
+							</div>
+							{meta && (
+								<div className="ListCard__meta">
+									{highlightText(meta, query)}
+								</div>
+							)}
+						</>
 					)}
 				</ListCard>
 			</div>

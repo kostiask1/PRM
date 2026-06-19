@@ -61,6 +61,13 @@ function getSpellReferenceName(spell = {}) {
 	return source ? `${name}|${source}` : name;
 }
 
+function getCreatureReferenceName(creature = {}) {
+	const name = String(creature.name || "").trim();
+	if (!name) return "";
+	const source = String(creature.source || "").trim();
+	return source ? `${name}|${source}` : name;
+}
+
 function getRechargeThreshold(recharge) {
 	const match = String(recharge || "").match(/Recharge\s+(\d+)/i);
 	return match ? Number(match[1]) : 6;
@@ -330,7 +337,7 @@ export default function RulesLink({
 		const creature = parseReferenceParts(referenceName);
 		if (!creature.name) return;
 
-		requestRulesReferenceNavigation("bestiary", referenceName);
+		requestRulesReferenceNavigation("bestiary", getCreatureReferenceName(creature));
 	};
 
 	const handleClick = async () => {
