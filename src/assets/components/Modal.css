@@ -44,7 +44,7 @@
 }
 
 .Modal__card__custom {
-	max-width: min(1500px, 96vw);
+	max-width: min(1600px, 96vw);
 	width: 100%;
 	height: 90vh;
 }
