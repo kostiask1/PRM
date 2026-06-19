@@ -167,6 +167,21 @@ export function setUiSettingsAction(payload) {
 	}
 	if (
 		payload &&
+		Object.prototype.hasOwnProperty.call(payload, "ignoreSourcesList")
+	) {
+		nextPayload.ignoreSourcesList = Array.from(
+			new Set(
+				(Array.isArray(payload.ignoreSourcesList)
+					? payload.ignoreSourcesList
+					: []
+				)
+					.map((source) => String(source || "").trim().toUpperCase())
+					.filter(Boolean),
+			),
+		).sort((a, b) => a.localeCompare(b));
+	}
+	if (
+		payload &&
 		Object.prototype.hasOwnProperty.call(payload, "autoApplyAiChanges")
 	) {
 		nextPayload.autoApplyAiChanges = payload.autoApplyAiChanges !== false;

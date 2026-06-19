@@ -70,6 +70,10 @@
 	min-height: 120px;
 }
 
+.SettingsModal__sourceSelect {
+	width: 100%;
+}
+
 .SettingsModal__promptHeader {
 	display: flex;
 	align-items: flex-start;

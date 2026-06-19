@@ -6,6 +6,7 @@ import { useAppDispatch, useAppSelector } from "../store/appStore";
 import { lang } from "../services/localization";
 import { IMAGE_GALLERY_CATEGORIES } from "../features/images/imageGalleryConfig";
 import useDebounce from "./useDebounce";
+import { getCampaignIgnoreSourcesList } from "../utils/sourceIgnore";
 
 export default function useImageGallery({
 	isOpen,
@@ -16,6 +17,15 @@ export default function useImageGallery({
 	const dispatch = useAppDispatch();
 	const useSearchDebounce = useAppSelector(
 		(state) => state.ui.useSearchDebounce !== false,
+	);
+	const activeCampaign = useAppSelector((state) => state.active.campaign);
+	const globalIgnoreSourcesList = useAppSelector(
+		(state) => state.ui.ignoreSourcesList || [],
+	);
+	const ignoreSourcesList = useMemo(
+		() =>
+			getCampaignIgnoreSourcesList(activeCampaign, globalIgnoreSourcesList),
+		[activeCampaign, globalIgnoreSourcesList],
 	);
 
 	const [campaigns, setCampaigns] = useState([]);
@@ -127,10 +137,14 @@ export default function useImageGallery({
 					includeMeta: true,
 				}),
 				isGeneralTokens
-					? api.getBestiaryTokenAssets(selectedSub, activeSearchQuery)
+					? api.getBestiaryTokenAssets(
+							selectedSub,
+							activeSearchQuery,
+							ignoreSourcesList,
+						)
 					: Promise.resolve(null),
 				isGeneralTokens
-					? api.getBestiaryTokenAssets("", "")
+					? api.getBestiaryTokenAssets("", "", ignoreSourcesList)
 					: Promise.resolve(null),
 			]);
 			const nextSubDetails = {};
@@ -176,6 +190,7 @@ export default function useImageGallery({
 		selectedSub,
 		isGeneralTokens,
 		activeSearchQuery,
+		ignoreSourcesList,
 		normalizedSearchQuery,
 	]);
 
@@ -189,6 +204,7 @@ export default function useImageGallery({
 					category: isGlobalSearch ? "" : selectedCat.id,
 					subcategory: isGlobalSearch ? "" : selectedSub,
 					categories: IMAGE_GALLERY_CATEGORIES.map((category) => category.id),
+					ignoreSourcesList,
 				});
 				setImages(Array.isArray(result?.images) ? result.images : []);
 				return;
@@ -196,7 +212,11 @@ export default function useImageGallery({
 			const [data, officialAssets] = await Promise.all([
 				api.getImages(selectedSource, selectedCat.id, selectedSub),
 				isGeneralTokens
-					? api.getBestiaryTokenAssets(selectedSub, activeSearchQuery)
+					? api.getBestiaryTokenAssets(
+							selectedSub,
+							activeSearchQuery,
+							ignoreSourcesList,
+						)
 					: Promise.resolve(null),
 			]);
 			const userImages = (Array.isArray(data) ? data : []).filter((image) =>
@@ -222,6 +242,7 @@ export default function useImageGallery({
 		isGlobalSearch,
 		activeSearchQuery,
 		debouncedSearchQuery,
+		ignoreSourcesList,
 		normalizedSearchQuery,
 	]);
 

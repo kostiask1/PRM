@@ -62,6 +62,7 @@ function getInitialUiSettings() {
 		imagePromptBasePrompt: DEFAULT_IMAGE_PROMPT_BASE_PROMPT,
 		campaignAiBasePrompts: {},
 		campaignImagePromptBasePrompts: {},
+		ignoreSourcesList: [],
 		autoApplyAiChanges: false,
 		useSearchDebounce: true,
 	};

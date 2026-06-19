@@ -4,6 +4,7 @@ import ReactList from "react-list";
 import Input from "./form/Input";
 import Button from "./form/Button";
 import Select from "./form/Select";
+import MultiSelect from "./form/MultiSelect";
 import ListCard from "./common/ListCard.jsx";
 import SpellCard from "./SpellCard";
 import Icon from "./common/Icon.jsx";
@@ -15,11 +16,22 @@ import { lang } from "../services/localization";
 import { objectMatchesSearch } from "../utils/deepSearch.js";
 import { highlightText } from "../utils/searchHighlight.jsx";
 import useDebounce from "../hooks/useDebounce.js";
-import { useAppSelector } from "../store/appStore.js";
+import { useAppDispatch, useAppSelector } from "../store/appStore.js";
+import {
+	alert,
+	setCampaignsAction,
+	setUiSettingsAction,
+} from "../actions/app.js";
 import {
 	formatSourceLabel,
 	getSourceFullName,
 } from "../utils/sourceNames.js";
+import {
+	getCampaignIgnoreSourcesList,
+	getIgnoreSourcesListFromSelectedSources,
+	getSelectedSourcesFromIgnoreList,
+	normalizeSourceCode,
+} from "../utils/sourceIgnore.js";
 
 const SCHOOL_MAP = {
 	A: "Abjuration",
@@ -94,11 +106,19 @@ export default function Spells({
 	hideSearchInput = false,
 	renderOptions = {},
 }) {
+	const dispatch = useAppDispatch();
 	const useSearchDebounce = useAppSelector(
 		(state) => state.ui.useSearchDebounce !== false,
 	);
+	const activeCampaignSlug = useAppSelector(
+		(state) => state.navigation.activeCampaignSlug,
+	);
+	const activeCampaign = useAppSelector((state) => state.active.campaign);
+	const globalIgnoreSourcesList = useAppSelector(
+		(state) => state.ui.ignoreSourcesList || [],
+	);
 	const [sources, setSources] = useState([]);
-	const [selectedSource, setSelectedSource] = useState("all");
+	const [sourceFilter, setSourceFilter] = useState("all");
 	const [allSpells, setAllSpells] = useState([]);
 	const [spells, setSpells] = useState([]);
 	const [selectedLevel, setSelectedLevel] = useState("all");
@@ -154,6 +174,30 @@ export default function Spells({
 				.sort((a, b) => SCHOOL_MAP[a].localeCompare(SCHOOL_MAP[b])),
 		[allSpells],
 	);
+	const ignoreSourcesList = useMemo(
+		() =>
+			getCampaignIgnoreSourcesList(activeCampaign, globalIgnoreSourcesList),
+		[activeCampaign, globalIgnoreSourcesList],
+	);
+	const selectedSources = useMemo(
+		() => getSelectedSourcesFromIgnoreList(sources, ignoreSourcesList),
+		[sources, ignoreSourcesList],
+	);
+	const sourceFilterLabel = useMemo(
+		() =>
+			sourceFilter === "all"
+				? lang.t("All sources")
+				: formatSourceLabel(sourceFilter),
+		[sourceFilter],
+	);
+
+	useEffect(() => {
+		if (sourceFilter === "all") return;
+		const selectedSourceSet = new Set(selectedSources.map(normalizeSourceCode));
+		if (!selectedSourceSet.has(normalizeSourceCode(sourceFilter))) {
+			setSourceFilter("all");
+		}
+	}, [selectedSources, sourceFilter]);
 
 	useEffect(() => {
 		const loadSources = async () => {
@@ -199,10 +243,12 @@ export default function Spells({
 
 	// Filtering
 	useEffect(() => {
+		const selectedSourceSet = new Set(selectedSources.map(normalizeSourceCode));
 		const filtered = allSpells.filter((s) => {
-			const matchesSource =
-				selectedSource === "all" ||
-				s.source?.toUpperCase() === selectedSource.toUpperCase();
+			const matchesSource = selectedSourceSet.has(normalizeSourceCode(s.source));
+			const matchesSourceFilter =
+				sourceFilter === "all" ||
+				normalizeSourceCode(s.source) === normalizeSourceCode(sourceFilter);
 			const normalizedSearch = debouncedSearch.trim().toLowerCase();
 			const matchesSearch =
 				!normalizedSearch ||
@@ -217,6 +263,7 @@ export default function Spells({
 				selectedSchool === "all" || s.school === selectedSchool;
 			return (
 				matchesSource &&
+				matchesSourceFilter &&
 				matchesSearch &&
 				matchesLevel &&
 				matchesClass &&
@@ -228,11 +275,45 @@ export default function Spells({
 		debouncedSearch,
 		allSpells,
 		selectedLevel,
-		selectedSource,
+		selectedSources,
+		sourceFilter,
 		selectedClass,
 		selectedSchool,
 		isDetailedSearch,
 	]);
+
+	const saveSelectedSources = async (nextSelectedSources) => {
+		const nextIgnoreSourcesList = getIgnoreSourcesListFromSelectedSources(
+			sources,
+			nextSelectedSources,
+		);
+		try {
+			if (activeCampaignSlug) {
+				await api.updateCampaign(activeCampaignSlug, {
+					ignoreSourcesList: nextIgnoreSourcesList,
+				});
+				const campaigns = await api.listCampaigns();
+				dispatch(setCampaignsAction(campaigns));
+				return;
+			}
+			const saved = await api.updateSettings({
+				ignoreSourcesList: nextIgnoreSourcesList,
+			});
+			dispatch(
+				setUiSettingsAction({
+					ignoreSourcesList: saved.ignoreSourcesList,
+				}),
+			);
+		} catch (error) {
+			console.error("Failed to save ignored sources", error);
+			dispatch(
+				alert({
+					title: lang.t("Error"),
+					message: error.message || lang.t("Unknown error"),
+				}),
+			);
+		}
+	};
 
 	// Initial selection
 	useEffect(() => {
@@ -375,19 +456,26 @@ export default function Spells({
 		<>
 			<div className="Spells__search">
 				{sources.length > 0 && (
-					<Select
+					<MultiSelect
 						className="Spells__source_select"
 						dropdownMinWidth={450}
-						value={selectedSource}
-						onChange={(e) => setSelectedSource(e.target.value)}
-					>
-						<option value="all">{lang.t("All sources")}</option>
-						{sources.map((s) => (
-							<option key={s} value={s}>
-								{formatSourceLabel(s)}
-							</option>
-						))}
-					</Select>
+						value={selectedSources}
+						onChange={saveSelectedSources}
+						onOptionClick={setSourceFilter}
+						activeValue={sourceFilter}
+						allOptionLabel={lang.t("All sources")}
+						onAllOptionClick={() => setSourceFilter("all")}
+						labelOverride={sourceFilterLabel}
+						placeholder={lang.t("Sources")}
+						allSelectedLabel={lang.t("All sources")}
+						noneSelectedLabel={lang.t("No sources")}
+						selectAllLabel={lang.t("Select all")}
+						clearLabel={lang.t("Clear")}
+						options={sources.map((source) => ({
+							value: source,
+							label: formatSourceLabel(source),
+						}))}
+					/>
 				)}
 				<Select
 					value={selectedLevel}

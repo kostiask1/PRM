@@ -1,6 +1,11 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { api } from "../api";
-import { alert, confirm } from "../actions/app";
+import {
+	alert,
+	confirm,
+	setCampaignsAction,
+	setUiSettingsAction,
+} from "../actions/app";
 import { useAppDispatch, useAppSelector } from "../store/appStore";
 import Button from "./form/Button";
 import BestiaryAiModals from "./bestiary/BestiaryAiModals";
@@ -19,6 +24,13 @@ import {
 import { loadAiModelOptions } from "../utils/aiModels.js";
 import { matchesMonsterSearch } from "../utils/bestiary.js";
 import { objectMatchesSearch } from "../utils/deepSearch.js";
+import {
+	getCampaignIgnoreSourcesList,
+	getIgnoreSourcesListFromSelectedSources,
+	getSelectedSourcesFromIgnoreList,
+	normalizeSourceCode,
+} from "../utils/sourceIgnore.js";
+import { formatSourceLabel } from "../utils/sourceNames.js";
 import {
 	addUndoSnapshot,
 	clearRedoStack,
@@ -97,9 +109,8 @@ function getMonsterListIndex(monsters, selectedMonster) {
 	);
 }
 
-function getAutoSelectedMonster(monsters, selectedSource) {
+function getAutoSelectedMonster(monsters) {
 	if (!monsters.length) return null;
-	if (selectedSource !== "all") return monsters[0];
 	return monsters.find((monster) => !isCustomSource(monster.source)) || null;
 }
 
@@ -129,13 +140,20 @@ export default function Bestiary({
 	const useSearchDebounce = useAppSelector(
 		(state) => state.ui.useSearchDebounce !== false,
 	);
+	const activeCampaignSlug = useAppSelector(
+		(state) => state.navigation.activeCampaignSlug,
+	);
+	const activeCampaign = useAppSelector((state) => state.active.campaign);
+	const globalIgnoreSourcesList = useAppSelector(
+		(state) => state.ui.ignoreSourcesList || [],
+	);
 	const syncEvent = useAppSelector((state) => state.sync.event);
 	const initialMonsterReference = useMemo(
 		() => parseMonsterReference(initialSelectedName, initialSelectedSource),
 		[initialSelectedName, initialSelectedSource],
 	);
 	const [sources, setSources] = useState([]);
-	const [selectedSource, setSelectedSource] = useState("all");
+	const [sourceFilter, setSourceFilter] = useState("all");
 	const [allMonsters, setAllMonsters] = useState([]);
 	const [monsters, setMonsters] = useState([]);
 	const [search, setSearch] = useState(initialSearch);
@@ -183,6 +201,36 @@ export default function Bestiary({
 		() => sources.filter((source) => !isCustomSource(source)),
 		[sources],
 	);
+	const filterSourceOptions = useMemo(
+		() => ["CUSTOM", ...sourceOptions],
+		[sourceOptions],
+	);
+	const ignoreSourcesList = useMemo(
+		() =>
+			getCampaignIgnoreSourcesList(activeCampaign, globalIgnoreSourcesList),
+		[activeCampaign, globalIgnoreSourcesList],
+	);
+	const selectedSources = useMemo(
+		() =>
+			getSelectedSourcesFromIgnoreList(
+				filterSourceOptions,
+				ignoreSourcesList,
+			),
+		[filterSourceOptions, ignoreSourcesList],
+	);
+	const sourceFilterLabel = useMemo(() => {
+		if (sourceFilter === "all") return lang.t("All sources");
+		if (isCustomSource(sourceFilter)) return lang.t("Custom creatures");
+		return formatSourceLabel(sourceFilter.replace(/^bestiary-/i, ""));
+	}, [sourceFilter]);
+
+	useEffect(() => {
+		if (sourceFilter === "all") return;
+		const selectedSourceSet = new Set(selectedSources.map(normalizeSourceCode));
+		if (!selectedSourceSet.has(normalizeSourceCode(sourceFilter))) {
+			setSourceFilter("all");
+		}
+	}, [selectedSources, sourceFilter]);
 
 	useEffect(() => {
 		selectedMonsterRef.current = selectedMonster;
@@ -269,7 +317,6 @@ export default function Bestiary({
 			...nextCustomMonsters,
 		]);
 		if (nextSelected) {
-			setSelectedSource("CUSTOM");
 			shouldAutoSelectMonsterRef.current = false;
 			selectedMonsterRef.current = nextSelected;
 			setSelectedMonster(nextSelected);
@@ -291,10 +338,42 @@ export default function Bestiary({
 		[onActiveMonsterChange],
 	);
 
-	const selectSource = useCallback((source) => {
-		shouldAutoSelectMonsterRef.current = true;
-		setSelectedSource(source);
-	}, []);
+	const saveSelectedSources = useCallback(
+		async (nextSelectedSources) => {
+			const nextIgnoreSourcesList = getIgnoreSourcesListFromSelectedSources(
+				filterSourceOptions,
+				nextSelectedSources,
+			);
+			shouldAutoSelectMonsterRef.current = true;
+			try {
+				if (activeCampaignSlug) {
+					await api.updateCampaign(activeCampaignSlug, {
+						ignoreSourcesList: nextIgnoreSourcesList,
+					});
+					const campaigns = await api.listCampaigns();
+					dispatch(setCampaignsAction(campaigns));
+					return;
+				}
+				const saved = await api.updateSettings({
+					ignoreSourcesList: nextIgnoreSourcesList,
+				});
+				dispatch(
+					setUiSettingsAction({
+						ignoreSourcesList: saved.ignoreSourcesList,
+					}),
+				);
+			} catch (error) {
+				console.error("Failed to save ignored sources", error);
+				dispatch(
+					alert({
+						title: lang.t("Error"),
+						message: error.message || lang.t("Unknown error"),
+					}),
+				);
+			}
+		},
+		[activeCampaignSlug, dispatch, filterSourceOptions],
+	);
 
 	const restoreCustomMonsters = async (nextCustomMonsters, options = {}) => {
 		const updated = await api.replaceCustomBestiaryMonsters(nextCustomMonsters);
@@ -382,7 +461,6 @@ export default function Bestiary({
 					source: syncEvent.monsterSource || "CUSTOM",
 				};
 				shouldAutoSelectMonsterRef.current = false;
-				setSelectedSource("CUSTOM");
 			}
 			setReloadToken((current) => current + 1);
 		}
@@ -515,16 +593,22 @@ export default function Bestiary({
 	// Local search filtering.
 	useEffect(() => {
 		const filtered = allMonsters.filter((m) => {
+			const matchesSource = selectedSources
+				.map(normalizeSourceCode)
+				.includes(normalizeSourceCode(m.source));
+			if (!matchesSource) return false;
+			if (
+				sourceFilter !== "all" &&
+				normalizeSourceCode(m.source) !== normalizeSourceCode(sourceFilter)
+			) {
+				return false;
+			}
 			const isFav = favorites.some(
 				(f) =>
 					f.name === m.name &&
 					f.source?.toUpperCase() === m.source?.toUpperCase(),
 			);
 			if (onlyFavorites && !isFav) return false;
-			const matchesSource =
-				selectedSource === "all" ||
-				m.source?.toUpperCase() === selectedSource.toUpperCase();
-			if (!onlyFavorites && !matchesSource) return false;
 
 			return isDetailedSearch
 				? objectMatchesSearch(m, debouncedSearch)
@@ -536,7 +620,8 @@ export default function Bestiary({
 		allMonsters,
 		onlyFavorites,
 		favorites,
-		selectedSource,
+		selectedSources,
+		sourceFilter,
 		isDetailedSearch,
 	]);
 
@@ -581,7 +666,6 @@ export default function Bestiary({
 		const nextSelectedMonster =
 			selectedGeneratedMonster || selectedUpdatedMonster;
 
-		setSelectedSource("CUSTOM");
 		shouldAutoSelectMonsterRef.current = false;
 		if (hasUpdatedCustomMonsters) {
 			setAllMonsters((current) => [
@@ -678,7 +762,6 @@ export default function Bestiary({
 			),
 			updatedMonster,
 		]);
-		setSelectedSource("CUSTOM");
 		setSelectedMonster(updatedMonster);
 		selectedMonsterRef.current = updatedMonster;
 		if (previousName !== updatedMonster.name) {
@@ -1015,7 +1098,6 @@ export default function Bestiary({
 				selectedName: validImported[0].name,
 			});
 			pushCustomUndoSnapshot(undoSnapshot);
-			setSelectedSource("CUSTOM");
 			dispatch(
 				alert({
 					title: lang.t("Import custom creatures"),
@@ -1038,9 +1120,6 @@ export default function Bestiary({
 		const targetMonster = initialMonsterReference.name
 			? displayedMonsters.find((monster) =>
 					monsterMatchesReference(monster, initialMonsterReference),
-				) ||
-				allMonsters.find((monster) =>
-					monsterMatchesReference(monster, initialMonsterReference),
 				)
 			: null;
 
@@ -1054,10 +1133,7 @@ export default function Bestiary({
 
 		if (initialMonsterReference.name) return;
 
-		const autoSelectedMonster = getAutoSelectedMonster(
-			displayedMonsters,
-			selectedSource,
-		);
+		const autoSelectedMonster = getAutoSelectedMonster(displayedMonsters);
 		const currentMonster = selectedMonsterRef.current;
 		const currentMonsterInList =
 			currentMonster?.name &&
@@ -1070,10 +1146,8 @@ export default function Bestiary({
 			setSelectedMonster(autoSelectedMonster);
 		}
 	}, [
-		allMonsters,
 		displayedMonsters,
 		initialMonsterReference,
-		selectedSource,
 	]);
 
 	useEffect(() => {
@@ -1220,12 +1294,15 @@ export default function Bestiary({
 			search={search}
 			searchHighlight={debouncedSearch}
 			selectedMonster={selectedMonster}
-			selectedSource={selectedSource}
+			onSelectedSourcesChange={saveSelectedSources}
+			onSourceFilterChange={setSourceFilter}
 			setIsDetailedSearch={setIsDetailedSearch}
 			setOnlyFavorites={setOnlyFavorites}
 			setSearch={setSearch}
 			setSelectedMonster={selectMonster}
-			setSelectedSource={selectSource}
+			selectedSources={selectedSources}
+			sourceFilter={sourceFilter}
+			sourceFilterLabel={sourceFilterLabel}
 			sortOrder={sortOrder}
 			sourceOptions={sourceOptions}
 			sources={sources}

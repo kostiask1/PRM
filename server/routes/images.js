@@ -15,6 +15,10 @@ function parseImageGalleryQuery(query, defaultSource = "") {
 			.split(",")
 			.map((category) => category.trim())
 			.filter(Boolean),
+		ignoreSourcesList: String(query.ignoreSources || "")
+			.split(",")
+			.map((source) => source.trim())
+			.filter(Boolean),
 	};
 }
 
@@ -93,6 +97,10 @@ router.get("/images/bestiary-tokens", async (req, res, next) => {
 			await storage.listBestiaryTokenAssets({
 				subcategory: req.query.subcategory || "",
 				search: req.query.search || "",
+				ignoreSourcesList: String(req.query.ignoreSources || "")
+					.split(",")
+					.map((source) => source.trim())
+					.filter(Boolean),
 			}),
 		);
 	} catch (error) {

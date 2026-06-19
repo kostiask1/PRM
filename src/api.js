@@ -4,12 +4,21 @@ const API_BASE = "/api";
 
 function appendImageGalleryQuery(
 	query,
-	{ source = "", category = "", subcategory = "", categories = [] } = {},
+	{
+		source = "",
+		category = "",
+		subcategory = "",
+		categories = [],
+		ignoreSourcesList = [],
+	} = {},
 ) {
 	if (source) query.set("source", source);
 	if (category) query.set("category", category);
 	if (subcategory) query.set("subcategory", subcategory);
 	if (categories.length > 0) query.set("categories", categories.join(","));
+	if (ignoreSourcesList.length > 0) {
+		query.set("ignoreSources", ignoreSourcesList.join(","));
+	}
 }
 
 function getSyncClientHeader() {
@@ -344,10 +353,13 @@ export const api = {
 		api.request(
 			`/campaigns/${encodeURIComponent(slug)}/images/${category}${subcategory ? `?subcategory=${encodeURIComponent(subcategory)}` : ""}`,
 		),
-	getBestiaryTokenAssets: (subcategory = "", search = "") => {
+	getBestiaryTokenAssets: (subcategory = "", search = "", ignoreSourcesList = []) => {
 		const query = new URLSearchParams();
 		if (subcategory) query.set("subcategory", subcategory);
 		if (search) query.set("search", search);
+		if (ignoreSourcesList.length > 0) {
+			query.set("ignoreSources", ignoreSourcesList.join(","));
+		}
 		return api.request(`/images/bestiary-tokens?${query.toString()}`);
 	},
 	searchImageGallery: ({
@@ -356,6 +368,7 @@ export const api = {
 		category = "",
 		subcategory = "",
 		categories = [],
+		ignoreSourcesList = [],
 	} = {}) => {
 		const query = new URLSearchParams();
 		if (search) query.set("search", search);
@@ -364,6 +377,7 @@ export const api = {
 			category,
 			subcategory,
 			categories,
+			ignoreSourcesList,
 		});
 		return api.request(`/images/search?${query.toString()}`);
 	},

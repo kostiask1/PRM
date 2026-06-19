@@ -5,7 +5,7 @@ import Icon from "../common/Icon";
 import Input from "../form/Input";
 import ListCard from "../common/ListCard";
 import MonsterStatBlock from "../MonsterStatBlock";
-import Select from "../form/Select";
+import MultiSelect from "../form/MultiSelect";
 import Tooltip from "../common/Tooltip";
 import classNames from "../../utils/classNames";
 import { getMonsterTypeString } from "../../utils/bestiary.js";
@@ -35,11 +35,6 @@ function getFallbackScrollParent() {
 
 function isCustomSource(source) {
 	return String(source || "").toUpperCase() === "CUSTOM";
-}
-
-function normalizeSourceSelection(source) {
-	if (isCustomSource(source)) return "CUSTOM";
-	return source || "all";
 }
 
 function isFavoriteMonster(favorites, monster) {
@@ -205,6 +200,8 @@ export default function BestiaryContent({
 	onEditMonster,
 	onFavoriteListChange,
 	onMonsterAiAction,
+	onSelectedSourcesChange,
+	onSourceFilterChange,
 	onAiEditCustomMonster,
 	onSelectMonster,
 	onToggleFavorite,
@@ -212,12 +209,13 @@ export default function BestiaryContent({
 	search,
 	searchHighlight = search,
 	selectedMonster,
-	selectedSource,
+	selectedSources,
+	sourceFilter,
+	sourceFilterLabel,
 	setIsDetailedSearch,
 	setOnlyFavorites,
 	setSearch,
 	setSelectedMonster,
-	setSelectedSource,
 	sortOrder,
 	sourceOptions,
 	sources,
@@ -275,22 +273,34 @@ export default function BestiaryContent({
 			<div className="Panel__body">
 				<div className="Bestiary__search">
 					{sources.length > 0 && (
-						<Select
+						<MultiSelect
 							className="Bestiary__source_select"
 							dropdownMinWidth={450}
-							value={selectedSource}
-							onChange={(event) =>
-								setSelectedSource(normalizeSourceSelection(event.target.value))
-							}
-						>
-							<option value="all">{lang.t("All sources")}</option>
-							<option value="CUSTOM">{lang.t("Custom creatures")}</option>
-							{sourceOptions.map((source) => (
-								<option key={source} value={source}>
-									{formatSourceLabel(source.replace(/^bestiary-/i, ""))}
-								</option>
-							))}
-						</Select>
+							value={selectedSources}
+							onChange={onSelectedSourcesChange}
+							onOptionClick={onSourceFilterChange}
+							activeValue={sourceFilter}
+							allOptionLabel={lang.t("All sources")}
+							onAllOptionClick={() => onSourceFilterChange?.("all")}
+							labelOverride={sourceFilterLabel}
+							placeholder={lang.t("Sources")}
+							allSelectedLabel={lang.t("All sources")}
+							noneSelectedLabel={lang.t("No sources")}
+							selectAllLabel={lang.t("Select all")}
+							clearLabel={lang.t("Clear")}
+							options={[
+								{
+									value: "CUSTOM",
+									label: lang.t("Custom creatures"),
+								},
+								...sourceOptions.map((source) => ({
+									value: source,
+									label: formatSourceLabel(
+										source.replace(/^bestiary-/i, ""),
+									),
+								})),
+							]}
+						/>
 					)}
 					{!hideSearchInput && (
 						<div className="Bestiary__searchInput">

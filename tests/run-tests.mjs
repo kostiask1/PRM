@@ -1499,7 +1499,9 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.match(bestiarySource, /syncEvent\.monsterName/);
 	assert.match(bestiarySource, /shouldAutoSelectMonsterRef\.current = false/);
 	assert.match(bestiarySource, /referenceName.*toLowerCase/s);
-	assert.match(bestiarySource, /const \[selectedSource, setSelectedSource\] = useState\("all"\)/);
+	assert.match(bestiarySource, /ignoreSourcesList/);
+	assert.match(bestiarySource, /selectedSources/);
+	assert.doesNotMatch(bestiarySource, /setSelectedSource/);
 	assert.doesNotMatch(bestiarySource, /normalizeSourceSelection\(initialMonsterReference\.source\)/);
 	assert.doesNotMatch(bestiarySource, embeddedPropPattern);
 	assert.doesNotMatch(bestiarySource, /useSearchParams/);

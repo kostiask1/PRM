@@ -36,6 +36,7 @@ const DEFAULT_APP_SETTINGS = Object.freeze({
 	imagePromptBasePrompt: DEFAULT_IMAGE_PROMPT_BASE_PROMPT,
 	campaignAiBasePrompts: {},
 	campaignImagePromptBasePrompts: {},
+	ignoreSourcesList: [],
 	autoApplyAiChanges: false,
 	useSearchDebounce: true,
 });
@@ -570,6 +571,16 @@ function normalizeCampaignSlug(slug) {
 	return normalized || null;
 }
 
+function normalizeSourceList(value) {
+	const seen = new Set();
+	const sourceList = Array.isArray(value) ? value : [];
+	for (const source of sourceList) {
+		const normalized = String(source || "").trim().toUpperCase();
+		if (normalized) seen.add(normalized);
+	}
+	return [...seen].sort((a, b) => a.localeCompare(b));
+}
+
 async function readAiResponses(campaignSlugValue) {
 	const slug = normalizeCampaignSlug(campaignSlugValue);
 	if (!slug) return [];
@@ -723,6 +734,7 @@ function normalizeSettings(settings = {}) {
 				: String(settings.imagePromptBasePrompt || ""),
 		campaignAiBasePrompts,
 		campaignImagePromptBasePrompts,
+		ignoreSourcesList: normalizeSourceList(settings.ignoreSourcesList),
 		autoApplyAiChanges: settings.autoApplyAiChanges !== false,
 		useSearchDebounce: settings.useSearchDebounce !== false,
 	};
@@ -1616,9 +1628,21 @@ async function listImages(slug, category, subcategory = "") {
 	return Promise.all(files);
 }
 
-async function listBestiaryTokenAssets({ subcategory = "", search = "" } = {}) {
+async function listBestiaryTokenAssets({
+	subcategory = "",
+	search = "",
+	ignoreSourcesList = [],
+} = {}) {
 	const subParts = normalizePathSegments(subcategory);
 	const query = String(search || "").trim().toLowerCase();
+	const ignoredSources = new Set(normalizeSourceList(ignoreSourcesList));
+	const isIgnoredSourcePath = (relativeParts = []) => {
+		const rootSource = String(relativeParts[0] || "").trim().toUpperCase();
+		return Boolean(rootSource && ignoredSources.has(rootSource));
+	};
+	if (subParts.length > 0 && isIgnoredSourcePath(subParts)) {
+		return { subcategories: [], images: [] };
+	}
 	const baseDir = path.join(BESTIARY_TOKENS_DIR, ...subParts);
 	if (!(await exists(baseDir))) return { subcategories: [], images: [] };
 
@@ -1648,6 +1672,7 @@ async function listBestiaryTokenAssets({ subcategory = "", search = "" } = {}) {
 			for (const entry of entries) {
 				const nextRelativeParts = [...relativeParts, entry.name];
 				const nextPath = path.join(dir, entry.name);
+				if (isIgnoredSourcePath(nextRelativeParts)) continue;
 				if (entry.isDirectory()) {
 					await walk(nextPath, nextRelativeParts);
 				} else if (
@@ -1668,6 +1693,7 @@ async function listBestiaryTokenAssets({ subcategory = "", search = "" } = {}) {
 	const subcategories = entries
 		.filter((entry) => entry.isDirectory())
 		.map((entry) => entry.name)
+		.filter((name) => !isIgnoredSourcePath([...subParts, name]))
 		.sort((a, b) => a.localeCompare(b));
 	const images = await Promise.all(
 		entries
@@ -1686,6 +1712,7 @@ async function searchImageGalleryAssets({
 	category = "",
 	subcategory = "",
 	categories = [],
+	ignoreSourcesList = [],
 } = {}) {
 	const query = String(search || "").trim().toLowerCase();
 	if (!query) return { images: [] };
@@ -1779,6 +1806,7 @@ async function searchImageGalleryAssets({
 		const officialAssets = await listBestiaryTokenAssets({
 			subcategory: selectedCategory === "tokens" ? selectedSubcategory : "",
 			search: query,
+			ignoreSourcesList,
 		});
 		for (const image of officialAssets.images) {
 			const relativeParts = String(image.path || "")
@@ -2144,6 +2172,7 @@ module.exports = {
 	readCustomBestiary,
 	readCustomBestiaryMonsters,
 	normalizeCustomBestiaryMonster,
+	normalizeSourceList,
 	writeCustomBestiaryMonsters,
 	listImages,
 	listBestiaryTokenAssets,

@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { setLanguageAction, setUiSettingsAction } from "../../actions/app";
+import {
+	setCampaignsAction,
+	setLanguageAction,
+	setUiSettingsAction,
+} from "../../actions/app";
 import { api } from "../../api";
 import { lang } from "../../services/localization";
 import { THEMES } from "../../services/uiSettings";
@@ -7,10 +11,17 @@ import { useAppDispatch, useAppSelector } from "../../store/appStore";
 import "../../assets/components/SettingsModal.css";
 import Button from "../form/Button";
 import EditableField from "../form/EditableField";
+import MultiSelect from "../form/MultiSelect";
 import Select from "../form/Select";
 import Switch from "../form/Switch";
 import ColorThemeSwitcher from "../ColorThemeSwitcher";
 import Notification from "../common/Notification";
+import { formatSourceLabel } from "../../utils/sourceNames";
+import {
+	getIgnoreSourcesListFromSelectedSources,
+	getSelectedSourcesFromIgnoreList,
+	normalizeIgnoreSourcesList,
+} from "../../utils/sourceIgnore";
 
 const DEFAULT_IMAGE_PROMPT_BASE_PROMPT =
 	"cinematic, photorealistic, ultra realistic, high detail, 8k, dramatic lighting, volumetric light, sharp focus, depth of field, film still, concept art";
@@ -46,6 +57,9 @@ export default function SettingsModalContent({ onCancel }) {
 	const storedCampaignImagePromptBasePrompts = useAppSelector(
 		(state) => state.ui.campaignImagePromptBasePrompts || {},
 	);
+	const storedIgnoreSourcesList = useAppSelector(
+		(state) => state.ui.ignoreSourcesList || [],
+	);
 	const autoApplyAiChanges = useAppSelector(
 		(state) => state.ui.autoApplyAiChanges !== false,
 	);
@@ -61,10 +75,21 @@ export default function SettingsModalContent({ onCancel }) {
 	);
 	const [campaignImagePromptBasePrompts, setCampaignImagePromptBasePrompts] =
 		useState(storedCampaignImagePromptBasePrompts);
+	const [ignoreSourcesList, setIgnoreSourcesList] = useState(
+		storedIgnoreSourcesList,
+	);
+	const [campaignIgnoreSourcesLists, setCampaignIgnoreSourcesLists] = useState(
+		{},
+	);
+	const [sourceOptions, setSourceOptions] = useState([]);
 	const [selectedPromptScope, setSelectedPromptScope] = useState(
 		activeCampaignSlug || GLOBAL_PROMPT_SCOPE,
 	);
+	const [selectedSourceScope, setSelectedSourceScope] = useState(
+		activeCampaignSlug || GLOBAL_PROMPT_SCOPE,
+	);
 	const [promptStatus, setPromptStatus] = useState("idle");
+	const [sourceStatus, setSourceStatus] = useState("idle");
 	const [notification, setNotification] = useState(null);
 
 	useEffect(() => {
@@ -84,6 +109,48 @@ export default function SettingsModalContent({ onCancel }) {
 	}, [storedCampaignImagePromptBasePrompts]);
 
 	useEffect(() => {
+		setIgnoreSourcesList(storedIgnoreSourcesList);
+	}, [storedIgnoreSourcesList]);
+
+	useEffect(() => {
+		setCampaignIgnoreSourcesLists(
+			Object.fromEntries(
+				campaigns
+					.filter((campaign) => Array.isArray(campaign.ignoreSourcesList))
+					.map((campaign) => [
+						campaign.slug,
+						normalizeIgnoreSourcesList(campaign.ignoreSourcesList),
+					]),
+			),
+		);
+	}, [campaigns]);
+
+	useEffect(() => {
+		const loadSourceOptions = async () => {
+			try {
+				const [bestiarySources, spellSources] = await Promise.all([
+					api.getBestiarySources(),
+					api.getSpellSources(),
+				]);
+				const nextSources = Array.from(
+					new Set([
+						"CUSTOM",
+						...(Array.isArray(bestiarySources) ? bestiarySources : []),
+						...(Array.isArray(spellSources) ? spellSources : []),
+					]),
+				)
+					.map((source) => String(source || "").trim())
+					.filter(Boolean)
+					.sort((a, b) => a.localeCompare(b));
+				setSourceOptions(nextSources);
+			} catch (error) {
+				console.error("Failed to load content sources", error);
+			}
+		};
+		loadSourceOptions();
+	}, []);
+
+	useEffect(() => {
 		if (selectedPromptScope === GLOBAL_PROMPT_SCOPE) return;
 		if (
 			selectedPromptScope &&
@@ -94,7 +161,19 @@ export default function SettingsModalContent({ onCancel }) {
 		setSelectedPromptScope(activeCampaignSlug || GLOBAL_PROMPT_SCOPE);
 	}, [activeCampaignSlug, campaigns, selectedPromptScope]);
 
+	useEffect(() => {
+		if (selectedSourceScope === GLOBAL_PROMPT_SCOPE) return;
+		if (
+			selectedSourceScope &&
+			campaigns.some((campaign) => campaign.slug === selectedSourceScope)
+		) {
+			return;
+		}
+		setSelectedSourceScope(activeCampaignSlug || GLOBAL_PROMPT_SCOPE);
+	}, [activeCampaignSlug, campaigns, selectedSourceScope]);
+
 	const isGlobalPromptScope = selectedPromptScope === GLOBAL_PROMPT_SCOPE;
+	const isGlobalSourceScope = selectedSourceScope === GLOBAL_PROMPT_SCOPE;
 
 	const selectedCampaignPrompt = useMemo(
 		() => campaignAiBasePrompts[selectedPromptScope] || "",
@@ -110,6 +189,14 @@ export default function SettingsModalContent({ onCancel }) {
 	const selectedImagePrompt = isGlobalPromptScope
 		? imagePromptBasePrompt
 		: selectedCampaignImagePrompt;
+	const selectedIgnoreSourcesList = isGlobalSourceScope
+		? ignoreSourcesList
+		: campaignIgnoreSourcesLists[selectedSourceScope] || ignoreSourcesList;
+	const selectedSources = useMemo(
+		() =>
+			getSelectedSourcesFromIgnoreList(sourceOptions, selectedIgnoreSourcesList),
+		[sourceOptions, selectedIgnoreSourcesList],
+	);
 
 	const patchSettings = async (payload) => {
 		try {
@@ -179,6 +266,22 @@ export default function SettingsModalContent({ onCancel }) {
 		setPromptStatus("idle");
 	};
 
+	const handleSelectedSourcesChange = (nextSelectedSources) => {
+		const nextIgnoreSourcesList = getIgnoreSourcesListFromSelectedSources(
+			sourceOptions,
+			nextSelectedSources,
+		);
+		if (isGlobalSourceScope) {
+			setIgnoreSourcesList(nextIgnoreSourcesList);
+		} else {
+			setCampaignIgnoreSourcesLists((current) => ({
+				...current,
+				[selectedSourceScope]: nextIgnoreSourcesList,
+			}));
+		}
+		setSourceStatus("idle");
+	};
+
 	const handleSavePrompts = async () => {
 		const nextCampaignPrompts = Object.fromEntries(
 			Object.entries(campaignAiBasePrompts)
@@ -223,6 +326,34 @@ export default function SettingsModalContent({ onCancel }) {
 			console.error("Failed to save AI base prompts", error);
 			setPromptStatus("idle");
 			setNotification(lang.t("Failed to save prompts"));
+		}
+	};
+
+	const handleSaveSources = async () => {
+		setSourceStatus("saving");
+		try {
+			if (isGlobalSourceScope) {
+				const saved = await api.updateSettings({ ignoreSourcesList });
+				dispatch(
+					setUiSettingsAction({
+						ignoreSourcesList: saved.ignoreSourcesList,
+					}),
+				);
+				setIgnoreSourcesList(saved.ignoreSourcesList || []);
+			} else if (selectedSourceScope) {
+				await api.updateCampaign(selectedSourceScope, {
+					ignoreSourcesList:
+						campaignIgnoreSourcesLists[selectedSourceScope] || [],
+				});
+				const nextCampaigns = await api.listCampaigns();
+				dispatch(setCampaignsAction(nextCampaigns));
+			}
+			setSourceStatus("idle");
+			setNotification(lang.t("Source settings saved"));
+		} catch (error) {
+			console.error("Failed to save source settings", error);
+			setSourceStatus("idle");
+			setNotification(lang.t("Failed to save source settings"));
 		}
 	};
 
@@ -284,6 +415,71 @@ export default function SettingsModalContent({ onCancel }) {
 						"When disabled, search results update immediately while typing.",
 					)}
 				/>
+			</div>
+
+			<div className="SettingsModal__group SettingsModal__section">
+				<div className="SettingsModal__promptHeader">
+					<div>
+						<div className="SettingsModal__label">
+							{lang.t("Content sources")}
+						</div>
+						<div className="SettingsModal__hint">
+							{lang.t(
+								"Unchecked sources are hidden in Bestiary, Spells, and official tokens.",
+							)}
+						</div>
+					</div>
+					<Button
+						variant="primary"
+						onClick={handleSaveSources}
+						disabled={sourceStatus === "saving"}
+					>
+						{sourceStatus === "saving"
+							? lang.t("Saving...")
+							: lang.t("Save sources")}
+					</Button>
+				</div>
+
+				<label className="SettingsModal__field">
+					<span className="SettingsModal__label">
+						{lang.t("Visible sources")}
+					</span>
+					<Select
+						value={selectedSourceScope}
+						onChange={(event) => setSelectedSourceScope(event.target.value)}
+					>
+						<option value={GLOBAL_PROMPT_SCOPE}>
+							{lang.t("Global source settings")}
+						</option>
+						{campaigns.length === 0 && (
+							<option value="">{lang.t("No campaigns")}</option>
+						)}
+						{campaigns.map((campaign) => (
+							<option key={campaign.slug} value={campaign.slug}>
+								{campaign.name}
+							</option>
+						))}
+					</Select>
+					<MultiSelect
+						className="SettingsModal__sourceSelect"
+						value={selectedSources}
+						onChange={handleSelectedSourcesChange}
+						disabled={!isGlobalSourceScope && !selectedSourceScope}
+						placeholder={lang.t("Sources")}
+						allSelectedLabel={lang.t("All sources")}
+						noneSelectedLabel={lang.t("No sources")}
+						selectAllLabel={lang.t("Select all")}
+						clearLabel={lang.t("Clear")}
+						dropdownMinWidth={520}
+						options={sourceOptions.map((source) => ({
+							value: source,
+							label:
+								source === "CUSTOM"
+									? lang.t("Custom creatures")
+									: formatSourceLabel(source),
+						}))}
+					/>
+				</label>
 			</div>
 
 			<div className="SettingsModal__group SettingsModal__section SettingsModal__section_ai">

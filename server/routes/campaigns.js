@@ -91,6 +91,11 @@ router.patch("/:slug", async (req, res, next) => {
 			slug: nextSlug,
 			name: nextName,
 		};
+		if (Object.prototype.hasOwnProperty.call(req.body || {}, "ignoreSourcesList")) {
+			updated.ignoreSourcesList = storage.normalizeSourceList(
+				req.body.ignoreSourcesList,
+			);
+		}
 		await storage.writeJson(storage.campaignMetaPath(nextSlug), updated);
 		res.json(updated);
 	} catch (error) {

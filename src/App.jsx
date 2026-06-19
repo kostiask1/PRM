@@ -84,6 +84,7 @@ export default function App() {
 					campaignAiBasePrompts: settings.campaignAiBasePrompts,
 					campaignImagePromptBasePrompts:
 						settings.campaignImagePromptBasePrompts,
+					ignoreSourcesList: settings.ignoreSourcesList,
 					autoApplyAiChanges: settings.autoApplyAiChanges,
 					useSearchDebounce: settings.useSearchDebounce,
 				}),

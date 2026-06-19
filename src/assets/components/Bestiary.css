@@ -45,8 +45,7 @@
 }
 
 .Bestiary__source_select {
-	flex: 0 0 220px;
-	width: 220px;
+	width: auto;
 	min-width: 0;
 }
 
@@ -387,11 +386,6 @@
 	.Bestiary__search {
 		gap: var(--space-2);
 		margin-bottom: var(--space-3);
-	}
-
-	.Bestiary__source_select {
-		flex: 1 1 180px;
-		width: auto;
 	}
 
 	.Bestiary__searchInput {
