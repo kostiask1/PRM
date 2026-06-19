@@ -421,10 +421,6 @@ export default function MonsterStatBlock({
 									))}
 								</p>
 							))}
-					</div>
-				))}
-				{monster.spellcasting.map((sc, idx) => (
-					<div key={`slots-${idx}`}>
 						{sc.spells &&
 							Object.entries(sc.spells).map(([lvl, info]) => (
 								<p key={lvl} className="MonsterStatBlock__action">
@@ -440,6 +436,7 @@ export default function MonsterStatBlock({
 									))}
 								</p>
 							))}
+						{sc.footerEntries && <p>{renderContent(sc.footerEntries)}</p>}
 					</div>
 				))}
 			</div>

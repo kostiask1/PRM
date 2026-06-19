@@ -165,7 +165,10 @@ function pushSafeMarkdownText(elements, text, key, highlightQuery = "") {
 		return;
 	}
 
-	const safeText = processedText
+	const markdownText = /^[*_]+$/.test(processedText)
+		? processedText.replace(/([*_])/g, "\\$1")
+		: processedText;
+	const safeText = markdownText
 		.replace(/^(\s*)([+\-*]|\d+\.)(\s)/gm, "$1\\$2$3")
 		.replace(/\n/gi, "&nbsp; \n")
 		.replace(/^ /g, "\u00A0")
