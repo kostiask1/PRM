@@ -562,7 +562,7 @@ export default function Spells({
 						type="uniform"
 					/>
 				</div>
-				{loading && <div className="muted">{lang.t("Updating spells...")}</div>}
+				{loading && <div className="muted Spells__loading">{lang.t("Updating spells...")}</div>}
 
 				<div className="Spells__detail" ref={detailRef}>
 					{selectedSpell ? (

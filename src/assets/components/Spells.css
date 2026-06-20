@@ -9,6 +9,10 @@
 	height: 100%;
 }
 
+.Spells__loading {
+	position: absolute;
+}
+
 .Spells__content {
 	display: flex;
 	gap: var(--space-1);
