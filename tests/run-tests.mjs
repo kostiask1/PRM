@@ -12,7 +12,10 @@ import {
 	getMonsterTypeString,
 } from "../src/utils/bestiary.js";
 import classNames from "../src/utils/classNames.js";
-import { rollDiceFormula } from "../src/utils/dice.js";
+import {
+	getDiceProbabilityDistribution,
+	rollDiceFormula,
+} from "../src/utils/dice.js";
 import { extractContentTokens } from "../src/utils/contentTokens.js";
 import { preprocessTags } from "../src/utils/parserTags.js";
 import {
@@ -3297,6 +3300,28 @@ await run("rollDiceFormula supports multiplication and parentheses", () => {
 		Math.random = originalRandom;
 		Date.now = originalNow;
 	}
+});
+
+await run("dice probability distribution supports dice formulas", () => {
+	const basic = getDiceProbabilityDistribution("2d6+1");
+	assert.equal(basic.min, 3);
+	assert.equal(basic.max, 13);
+	assert.equal(basic.average, 8);
+	assert.equal(basic.outcomes.length, 11);
+	assert.ok(
+		Math.abs(
+			basic.outcomes.find((outcome) => outcome.value === 8).probability -
+				6 / 36,
+		) < 0.0000001,
+	);
+
+	const keepHighest = getDiceProbabilityDistribution("3d6h2");
+	assert.equal(keepHighest.min, 2);
+	assert.equal(keepHighest.max, 12);
+	assert.ok(
+		keepHighest.outcomes.find((outcome) => outcome.value === 12).probability >
+			0,
+	);
 });
 
 await run(

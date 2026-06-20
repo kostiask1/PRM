@@ -422,7 +422,7 @@
 
 .DiceCalculator__actions {
 	display: grid;
-	grid-template-columns: 1fr 2fr;
+	grid-template-columns: 1fr 1fr 2fr;
 	gap: var(--space-2);
 	margin-top: var(--space-2);
 }
@@ -516,9 +516,134 @@
 	text-decoration: line-through;
 }
 
+.DiceCalculator__probabilityOverlay {
+	z-index: 3200;
+}
+
+.Modal__card.DiceCalculator__probabilityModal {
+	width: min(92vw, 860px);
+	height: auto;
+	max-height: min(90vh, 760px);
+}
+
+.DiceCalculator__probability {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-4);
+	min-height: 0;
+}
+
+.DiceCalculator__probabilitySummary {
+	display: grid;
+	grid-template-columns: minmax(0, 2fr) repeat(3, minmax(74px, 1fr));
+	gap: var(--space-2);
+}
+
+.DiceCalculator__probabilitySummary>div {
+	min-width: 0;
+	padding: var(--space-3);
+	border: 1px solid color-mix(in srgb, var(--border), transparent 45%);
+	border-radius: var(--radius-md);
+	background: color-mix(in srgb, var(--bg-2), transparent 55%);
+}
+
+.DiceCalculator__probabilitySummary span {
+	display: block;
+	margin-bottom: var(--space-1);
+	color: var(--muted);
+	font-size: 0.72rem;
+	line-height: 1.2;
+}
+
+.DiceCalculator__probabilitySummary strong {
+	display: block;
+	color: var(--text-bright);
+	font-size: 0.95rem;
+	line-height: 1.25;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.DiceCalculator__probabilityChart {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+	max-height: min(56vh, 480px);
+	overflow-y: auto;
+	padding-right: var(--space-1);
+}
+
+.DiceCalculator__probabilityRow {
+	display: grid;
+	grid-template-columns: minmax(42px, max-content) minmax(0, 1fr) minmax(74px, max-content);
+	align-items: center;
+	gap: var(--space-3);
+	min-height: 28px;
+}
+
+.DiceCalculator__probabilityValue,
+.DiceCalculator__probabilityPercent {
+	font-variant-numeric: tabular-nums;
+	font-size: 0.8rem;
+	color: var(--muted);
+}
+
+.DiceCalculator__probabilityValue {
+	text-align: right;
+	color: var(--text);
+}
+
+.DiceCalculator__probabilityPercent {
+	text-align: left;
+}
+
+.DiceCalculator__probabilityTrack {
+	height: 14px;
+	border-radius: var(--radius-sm);
+	background: color-mix(in srgb, var(--border), transparent 70%);
+	overflow: hidden;
+}
+
+.DiceCalculator__probabilityBar {
+	height: 100%;
+	min-width: 2px;
+	border-radius: inherit;
+	background: linear-gradient(
+		90deg,
+		color-mix(in srgb, var(--accent), white 8%),
+		color-mix(in srgb, var(--success), var(--accent) 45%)
+	);
+}
+
+.DiceCalculator__probabilityEmpty {
+	padding: var(--space-5);
+	border: 1px dashed color-mix(in srgb, var(--border), transparent 35%);
+	border-radius: var(--radius-md);
+	color: var(--muted);
+	text-align: center;
+}
+
 @media (max-width: 767px) {
 	.DiceCalculator {
 		bottom: var(--space-3);
 		right: var(--space-3);
+	}
+
+	.DiceCalculator__panel {
+		width: calc(100vw - var(--space-6));
+	}
+
+	.DiceCalculator__probabilitySummary {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+
+	.DiceCalculator__probabilitySummary>div:first-child {
+		grid-column: 1 / -1;
+	}
+
+	.DiceCalculator__probabilityRow {
+		grid-template-columns: minmax(34px, max-content) minmax(0, 1fr) minmax(62px, max-content);
+		gap: var(--space-2);
 	}
 }

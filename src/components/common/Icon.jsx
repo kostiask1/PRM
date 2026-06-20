@@ -235,6 +235,14 @@ const icons = {
 			</svg>
 		</>
 	),
+	"bar-chart": (
+		<>
+			<line x1="3" y1="21" x2="21" y2="21" />
+			<rect x="6" y="11" width="3" height="7" rx="1" />
+			<rect x="11" y="6" width="3" height="12" rx="1" />
+			<rect x="16" y="3" width="3" height="15" rx="1" />
+		</>
+	),
 	file: (
 		<>
 			<path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
