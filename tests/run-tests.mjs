@@ -1365,6 +1365,13 @@ await run("content tokens parse hit and recharge tags safely", () => {
 	assert.equal(creatureTag.length, 2);
 	assert.equal(creatureTag[0].creatureValue, "Wereraven|VRGR");
 	assert.equal(creatureTag[1].creatureValue, "Loup Garou|VRGR");
+
+	const itemTag = extractContentTokens("{@item +2 Dagger}.");
+	assert.equal(itemTag.length, 1);
+	assert.equal(itemTag[0].fullMatch, "{@item +2 Dagger}");
+	assert.equal(itemTag[0].displayValue, "+2 Dagger");
+	assert.equal(itemTag[0].hit, undefined);
+	assert.equal(itemTag[0].roll, undefined);
 });
 
 await run("parser renders quickref display labels", () => {
@@ -1421,6 +1428,8 @@ await run("parser renders dice and creature tags as interactive components", asy
 	assert.match(contentTokensSource, /\{@creature\\s\+/);
 	assert.match(rendererSource, /diceTag/);
 	assert.match(rendererSource, /type="creature"/);
+	assert.match(rendererSource, /disableNonRechargeRolls/);
+	assert.match(rendererSource, /const displayHit/);
 	assert.match(rendererSource, /function addFallbackTaggedSource/);
 	assert.match(rendererSource, /creatureSourceFallback/);
 	assert.match(rendererSource, /name=\{creatureReferenceName\}/);
@@ -1428,6 +1437,9 @@ await run("parser renders dice and creature tags as interactive components", asy
 	assert.doesNotMatch(rendererSource, /onRuleNavigate/);
 	assert.match(monsterStatBlockSource, /creatureSourceFallback: monster\.source/);
 	assert.match(monsterStatBlockSource, /referenceRenderOptions/);
+	assert.match(monsterStatBlockSource, /renderActionName/);
+	assert.match(monsterStatBlockSource, /disableNonRechargeRolls: true/);
+	assert.doesNotMatch(monsterStatBlockSource, /<strong>\{renderContent\(action\.name\)\}\.<\/strong>/);
 	assert.match(rulesLinkSource, /const openCreature = \(\) =>/);
 	assert.match(rulesLinkSource, /CONTENT_TOKEN_REGEX/);
 	assert.match(rulesLinkSource, /tokenFromContentMatch/);

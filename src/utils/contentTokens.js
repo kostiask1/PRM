@@ -1,5 +1,5 @@
 export const CONTENT_TOKEN_REGEX =
-	/(\(Recharge\s+\d+(?:-\d+)?\)|\{@recharge(?:\s+\d+(?:-\d+)?)?})|(\{@(?:damage|scaledamage|scaledice)\s+([^|}]+)(?:\|([^|}]*))?(?:\|([^|}]*))?[^}]*\})|(\{@dice\s+([^|}]+)(?:\|([^|}]*))?[^}]*\})|(\d+d\d+(?:\s*[+-]\s*\d+)?)|(\{@hit\s+([+-]?\d+)\})(\s+to\s+hit)?|(?<!\d)([+-]\d+)(\s+to\s+hit)?|(\{@spell\s+([^}]+)\})|(\{@creature\s+([^}]+)\})|(\{@(?:condition|status)\s+([^}]+)\})|(@condition\s+([A-Za-z][A-Za-z' -]*))|(\{@disease\s+([^}]+)\})|(\{@variantrule\s+([^}]+)\})|(\{@skill\s+([^}]+)\})|(\{@sense\s+([^}]+)\})|(\{@quickref\s+([^}]+)\})/gi;
+	/(\(Recharge\s+\d+(?:-\d+)?\)|\{@recharge(?:\s+\d+(?:-\d+)?)?})|(\{@(?:damage|scaledamage|scaledice)\s+([^|}]+)(?:\|([^|}]*))?(?:\|([^|}]*))?[^}]*\})|(\{@dice\s+([^|}]+)(?:\|([^|}]*))?[^}]*\})|(\d+d\d+(?:\s*[+-]\s*\d+)?)|(\{@hit\s+([+-]?\d+)\})(\s+to\s+hit)?|(?<!\d)([+-]\d+)(\s+to\s+hit)?|(\{@spell\s+([^}]+)\})|(\{@creature\s+([^}]+)\})|(\{@(?:condition|status)\s+([^}]+)\})|(@condition\s+([A-Za-z][A-Za-z' -]*))|(\{@disease\s+([^}]+)\})|(\{@variantrule\s+([^}]+)\})|(\{@skill\s+([^}]+)\})|(\{@sense\s+([^}]+)\})|(\{@quickref\s+([^}]+)\})|(\{@(?:action|link|item|book|area|hazard|trap|deck|optfeature|reward|feat|charoption|background|race)\s+([^|}]+)(?:\|([^|}]*))?(?:\|([^|}]*))?[^}]*\})/gi;
 
 const DAMAGE_ROLL_PREFIX_REGEX =
 	/^\s*(\d+d\d+(?:\s*[+-]\s*(?:\d+d\d+|\d+))*)([\s\S]*)$/i;
@@ -64,6 +64,8 @@ export function tokenFromContentMatch(match) {
 		skillValue: match[28],
 		senseValue: match[30],
 		quickrefValue: match[32],
+		displayTag: match[33],
+		displayValue: match[36] || match[34],
 	};
 }
 

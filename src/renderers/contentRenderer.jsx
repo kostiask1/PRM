@@ -243,6 +243,7 @@ export const parseRollsAndSpells = (
 
 	const cleanText = stripNotesReferenceText(text);
 	const elements = [];
+	const disableNonRechargeRolls = Boolean(options.disableNonRechargeRolls);
 	const regex = new RegExp(
 		CONTENT_TOKEN_REGEX.source,
 		CONTENT_TOKEN_REGEX.flags,
@@ -285,6 +286,7 @@ export const parseRollsAndSpells = (
 			skillValue,
 			senseValue,
 			quickrefValue,
+			displayValue,
 		} = token;
 
 		if (recharge) {
@@ -304,6 +306,17 @@ export const parseRollsAndSpells = (
 			);
 		} else if (damageRoll || damageRemainder) {
 			const displayText = damageLabel || damageRoll;
+			if (disableNonRechargeRolls) {
+				pushSafeMarkdownText(
+					elements,
+					`${displayText || ""}${formatFormulaText(damageRemainder)}`,
+					`d-${matchIndex}-plain`,
+					highlightQuery,
+				);
+				lastIndex = start + fullMatch.length;
+				matchIndex += 1;
+				continue;
+			}
 			if (damageRoll) {
 				elements.push(
 					<RollDice
@@ -321,6 +334,17 @@ export const parseRollsAndSpells = (
 				highlightQuery,
 			);
 		} else if (roll) {
+			if (disableNonRechargeRolls || options.disablePlainRolls) {
+				pushSafeMarkdownText(
+					elements,
+					roll,
+					`r-${matchIndex}-plain`,
+					highlightQuery,
+				);
+				lastIndex = start + fullMatch.length;
+				matchIndex += 1;
+				continue;
+			}
 			elements.push(
 				<RollDice key={`r-${matchIndex}`} formula={roll.replace(/\s+/g, "")}>
 					{highlightText(roll, highlightQuery)}
@@ -328,6 +352,17 @@ export const parseRollsAndSpells = (
 			);
 		} else if (diceTag) {
 			const displayText = diceLabel || diceFormula;
+			if (disableNonRechargeRolls) {
+				pushSafeMarkdownText(
+					elements,
+					displayText,
+					`di-${matchIndex}-plain`,
+					highlightQuery,
+				);
+				lastIndex = start + fullMatch.length;
+				matchIndex += 1;
+				continue;
+			}
 			elements.push(
 				<RollDice
 					key={`di-${matchIndex}`}
@@ -337,13 +372,29 @@ export const parseRollsAndSpells = (
 				</RollDice>,
 			);
 		} else if (hit) {
+			if (
+				disableNonRechargeRolls ||
+				(options.disablePlainRolls && !fullMatch.startsWith("{@hit"))
+			) {
+				pushSafeMarkdownText(
+					elements,
+					`${hit}${hitSuffix}`,
+					`h-${matchIndex}-plain`,
+					highlightQuery,
+				);
+				lastIndex = start + fullMatch.length;
+				matchIndex += 1;
+				continue;
+			}
 			const bonus = hit.split(" ")[0];
+			const displayHit =
+				hit.startsWith("+") || hit.startsWith("-") ? hit : `+${hit}`;
 			elements.push(
 				<RollDice
 					key={`h-${matchIndex}`}
 					formula={`1d20${formatModifier(parseInt(bonus, 10))}`}
 				>
-					{highlightText(`+${hit}${hitSuffix}`, highlightQuery)}
+					{highlightText(`${displayHit}${hitSuffix}`, highlightQuery)}
 				</RollDice>,
 			);
 		} else if (spellTag) {
@@ -447,6 +498,13 @@ export const parseRollsAndSpells = (
 				>
 					{highlightText(displayText, highlightQuery)}
 				</RulesLink>,
+			);
+		} else if (displayValue) {
+			pushSafeMarkdownText(
+				elements,
+				displayValue,
+				`t-${matchIndex}-display`,
+				highlightQuery,
 			);
 		} else {
 			pushSafeMarkdownText(

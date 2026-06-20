@@ -150,6 +150,7 @@ function renderTooltipText(value) {
 			roll,
 			hit,
 			hitSuffix,
+			displayValue,
 		} = token;
 
 		if (recharge) {
@@ -213,6 +214,8 @@ function renderTooltipText(value) {
 					{`${displayHit}${hitSuffix}`}
 				</RollDice>,
 			);
+		} else if (displayValue) {
+			elements.push(displayValue);
 		} else {
 			elements.push(fullMatch);
 		}

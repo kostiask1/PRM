@@ -75,6 +75,11 @@ export default function MonsterStatBlock({
 	);
 	const renderContent = (content) =>
 		renderRecursiveContent(content, searchHighlight, referenceRenderOptions);
+	const renderActionName = (content) =>
+		renderRecursiveContent(content, searchHighlight, {
+			...referenceRenderOptions,
+			disableNonRechargeRolls: true,
+		});
 	const renderInlineText = (text) =>
 		parseRollsAndSpells(text, searchHighlight, referenceRenderOptions);
 	const isFieldHighlighted = (...fields) =>
@@ -196,7 +201,7 @@ export default function MonsterStatBlock({
 				<h4>{title}:</h4>
 				{actions.map((action, index) => (
 					<div key={index} className="MonsterStatBlock__action">
-						<strong>{renderContent(action.name)}.</strong>{" "}
+						<strong>{renderActionName(action.name)}.</strong>{" "}
 						{renderContent(action.entries || action.desc)}
 						<div className="MonsterStatBlock__action_rolls">
 							{action.attack_bonus && (
