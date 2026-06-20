@@ -39,6 +39,7 @@ function getRechargeResultClass(result, value = result?.total) {
 
 function formatProbability(value) {
 	const percent = value * 100;
+	if (percent > 0 && percent < 0.001) return "<0.001%";
 	if (percent >= 10) return `${percent.toFixed(1)}%`;
 	if (percent >= 1) return `${percent.toFixed(2)}%`;
 	return `${percent.toFixed(3)}%`;
