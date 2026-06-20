@@ -1114,12 +1114,16 @@ export default function Bestiary({
 		const targetMonster = initialMonsterReference.name
 			? displayedMonsters.find((monster) =>
 					monsterMatchesReference(monster, initialMonsterReference),
+				) ||
+				allMonsters.find((monster) =>
+					monsterMatchesReference(monster, initialMonsterReference),
 				)
 			: null;
 
 		if (targetMonster) {
 			if (!isSameMonsterIdentity(selectedMonsterRef.current, targetMonster)) {
 				shouldAutoSelectMonsterRef.current = false;
+				selectedMonsterRef.current = targetMonster;
 				setSelectedMonster(targetMonster);
 			}
 			return;
@@ -1140,6 +1144,7 @@ export default function Bestiary({
 			setSelectedMonster(autoSelectedMonster);
 		}
 	}, [
+		allMonsters,
 		displayedMonsters,
 		initialMonsterReference,
 	]);

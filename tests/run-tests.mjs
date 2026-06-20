@@ -1523,6 +1523,8 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.match(bestiarySource, /referenceName.*toLowerCase/s);
 	assert.match(bestiarySource, /ignoreSourcesList/);
 	assert.match(bestiarySource, /selectedSources/);
+	assert.match(bestiarySource, /displayedMonsters\.find[\s\S]*allMonsters\.find/);
+	assert.match(bestiarySource, /selectedMonsterRef\.current = targetMonster/);
 	assert.doesNotMatch(bestiarySource, /setSelectedSource/);
 	assert.doesNotMatch(bestiarySource, /normalizeSourceSelection\(initialMonsterReference\.source\)/);
 	assert.doesNotMatch(bestiarySource, embeddedPropPattern);
@@ -1535,6 +1537,8 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.doesNotMatch(spellsSource, /useSearchParams/);
 	assert.doesNotMatch(spellsSource, /next\.set\("spell"/);
 	assert.doesNotMatch(spellsSource, /next\.set\("s_source"/);
+	assert.match(spellsSource, /findSpellByName\(displayedSpells, initialSelectedName\) \|\|/);
+	assert.match(spellsSource, /findSpellByName\(allSpells, initialSelectedName\)/);
 	assert.match(rulesReferenceSource, /EMBEDDED_BROWSER_TAB_IDS/);
 	assert.match(rulesReferenceSource, /recordEmbeddedReferenceSelection/);
 	assert.match(rulesReferenceSource, /recordNavigation\(tabId, name\)/);
