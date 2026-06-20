@@ -459,14 +459,14 @@ export default function DiceCalculator() {
 					<div className="DiceCalculator__actions">
 						<Button
 							variant="danger"
-							size={Button.SIZES.SMALL}
+							size={Button.SIZES.MEDIUM}
 							onClick={clearFormula}
 						>
 							{lang.t("Clear")}
 						</Button>
 						<Button
 							variant="ghost"
-							size={Button.SIZES.SMALL}
+							size={Button.SIZES.MEDIUM}
 							icon="bar-chart"
 							title={lang.t("Probability graph")}
 							onClick={openProbabilityModal}

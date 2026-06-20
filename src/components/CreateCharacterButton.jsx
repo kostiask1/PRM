@@ -9,7 +9,7 @@ import CharacterCard from "./CharacterCard";
 import {
 	buildCreateEntityPayload,
 	submitCreateEntity,
-} from "./createEntityButtonUtils.js";
+} from "../utils/createEntityButtonUtils.js";
 import "../assets/components/CreateCharacterButton.css";
 
 function createEmptyDraft(entityType) {
