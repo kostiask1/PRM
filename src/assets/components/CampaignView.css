@@ -209,12 +209,17 @@
 
 .CampaignView__notes .note_card_simple {
 	height: 100%;
+	align-items: center;
 }
 
 .CampaignView__script,
 .CampaignView__script.Input,
 .CampaignView__script .MarkdownView {
 	min-height: 200px;
+}
+
+.CampaignView__notes .note_card_simple .note_card_simple__content {
+	width: 100%;
 }
 
 .CampaignView__notes>div {
