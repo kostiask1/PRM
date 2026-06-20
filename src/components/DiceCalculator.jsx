@@ -1,11 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Button from "./form/Button";
 import Input from "./form/Input";
 import Icon from "./common/Icon";
 import Tooltip from "./common/Tooltip";
 import Modal from "./common/Modal";
+import DiceProbabilityModalContent from "./DiceProbabilityModalContent";
 import { publishDiceResultAction, requestDiceRollAction } from "../actions/app";
-import { getDiceProbabilityDistribution, rollDiceFormula } from "../utils/dice";
+import { rollDiceFormula } from "../utils/dice";
 import { useAppDispatch, useAppSelector } from "../store/appStore";
 import classNames from "../utils/classNames";
 import { lang } from "../services/localization";
@@ -35,89 +36,6 @@ function getRechargeResultClass(result, value = result?.total) {
 	const threshold = getRechargeThreshold(result);
 	if (!threshold || !Number.isFinite(Number(value))) return "";
 	return Number(value) >= threshold ? "dice_recharge_success" : "dice_recharge_fail";
-}
-
-function formatProbability(value) {
-	const percent = value * 100;
-	if (percent > 0 && percent < 0.001) return "<0.001%";
-	if (percent >= 10) return `${percent.toFixed(1)}%`;
-	if (percent >= 1) return `${percent.toFixed(2)}%`;
-	return `${percent.toFixed(3)}%`;
-}
-
-function DiceProbabilityModalContent({ formula }) {
-	const distribution = useMemo(
-		() =>
-			getDiceProbabilityDistribution(formula, {
-				maxRollCombinations: 200000,
-				maxStates: 20000,
-			}),
-		[formula],
-	);
-
-	if (!distribution) {
-		return (
-			<div className="DiceCalculator__probabilityEmpty">
-				{lang.t("Probability graph is unavailable for this formula.")}
-			</div>
-		);
-	}
-
-	return (
-		<div className="DiceCalculator__probability">
-			<div className="DiceCalculator__probabilitySummary">
-				<div>
-					<span>{lang.t("Formula")}</span>
-					<strong>{distribution.formula}</strong>
-				</div>
-				<div>
-					<span>{lang.t("Min")}</span>
-					<strong>{distribution.min}</strong>
-				</div>
-				<div>
-					<span>{lang.t("Avg")}</span>
-					<strong>{distribution.average.toFixed(2)}</strong>
-				</div>
-				<div>
-					<span>{lang.t("Max")}</span>
-					<strong>{distribution.max}</strong>
-				</div>
-			</div>
-
-			<div className="DiceCalculator__probabilityChart">
-				{distribution.outcomes.map((outcome) => {
-					const width =
-						distribution.maxProbability > 0
-							? (outcome.probability / distribution.maxProbability) * 100
-							: 0;
-					return (
-						<div
-							className="DiceCalculator__probabilityRow"
-							key={outcome.value}
-						>
-							<div className="DiceCalculator__probabilityValue">
-								{outcome.value}
-							</div>
-							<div
-								className="DiceCalculator__probabilityTrack"
-								aria-label={`${outcome.value}: ${formatProbability(
-									outcome.probability,
-								)}`}
-							>
-								<div
-									className="DiceCalculator__probabilityBar"
-									style={{ width: `${width}%` }}
-								/>
-							</div>
-							<div className="DiceCalculator__probabilityPercent">
-								{formatProbability(outcome.probability)}
-							</div>
-						</div>
-					);
-				})}
-			</div>
-		</div>
-	);
 }
 
 export default function DiceCalculator() {
