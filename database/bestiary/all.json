@@ -947,7 +947,7 @@
       {
         "name": "Flyby",
         "entries": [
-          "The death's head doesn't provoke an Opportunity Attack when it flies out of an enemy's reach."
+          "The death's head doesn't provoke an {@action Opportunity Attack|XPHB} when it flies out of an enemy's reach."
         ]
       }
     ],
@@ -1089,7 +1089,7 @@
       {
         "name": "Regeneration (Slaad Only)",
         "entries": [
-          "The spirit regains 5 Hit Points at the start of its turn if it has at least 1 Hit Point."
+          "The spirit regains 5 {@variantrule Hit Points|XPHB} at the start of its turn if it has at least 1 {@variantrule Hit Points|XPHB|Hit Point}."
         ]
       },
       {
@@ -1109,7 +1109,7 @@
       {
         "name": "Claw (Slaad Only)",
         "entries": [
-          "{@atkr m} {@hitYourSpellAttack Bonus equals your spell attack modifier}, reach 5 ft. {@h}{@damage 1d10 + 3 + summonSpellLevel} Slashing damage, and the target can't regain Hit Points until the start of the spirit's next turn."
+          "{@atkr m} {@hitYourSpellAttack Bonus equals your spell attack modifier}, reach 5 ft. {@h}{@damage 1d10 + 3 + summonSpellLevel} Slashing damage, and the target can't regain {@variantrule Hit Points|XPHB} until the start of the spirit's next turn."
         ]
       },
       {
@@ -4240,7 +4240,7 @@
           "{@spell Detect Magic|XPHB}",
           "{@spell Minor Illusion|XPHB}",
           "{@spell Scorching Ray|XPHB}",
-          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no Concentration or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)",
+          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no {@status Concentration|XPHB} or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)",
           "{@spell Speak with Animals|XPHB}"
         ],
         "daily": {
@@ -4537,7 +4537,7 @@
         "will": [
           "{@spell Detect Magic|XPHB}",
           "{@spell Guiding Bolt|XPHB} (level 2 version)",
-          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no Concentration or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)",
+          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no {@status Concentration|XPHB} or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)",
           "{@spell Speak with Animals|XPHB}",
           "{@spell Thaumaturgy|XPHB}"
         ],
@@ -4829,7 +4829,7 @@
           "{@spell Detect Magic|XPHB}",
           "{@spell Mind Spike|XPHB} (level 4 version)",
           "{@spell Minor Illusion|XPHB}",
-          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no Concentration or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)"
+          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no {@status Concentration|XPHB} or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)"
         ],
         "daily": {
           "1e": [
@@ -5721,7 +5721,7 @@
         "will": [
           "{@spell Detect Magic|XPHB}",
           "{@spell Guiding Bolt|XPHB} (level 2 version)",
-          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no Concentration or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)"
+          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no {@status Concentration|XPHB} or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)"
         ],
         "daily": {
           "1e": [
@@ -7721,7 +7721,7 @@
           "{@spell Detect Magic|XPHB}",
           "{@spell Hold Monster|XPHB}",
           "{@spell Ice Knife|XPHB}",
-          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no Concentration or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)"
+          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no {@status Concentration|XPHB} or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)"
         ],
         "daily": {
           "1e": [
@@ -7990,7 +7990,7 @@
         ],
         "will": [
           "{@spell Detect Magic|XPHB}",
-          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no Concentration or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)",
+          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no {@status Concentration|XPHB} or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)",
           "{@spell Thunderwave|XPHB}"
         ],
         "daily": {
@@ -17881,7 +17881,7 @@
           "{@spell Detect Magic|XPHB}",
           "{@spell Minor Illusion|XPHB}",
           "{@spell Scorching Ray|XPHB} (level 3 version)",
-          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no Concentration or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)",
+          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no {@status Concentration|XPHB} or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)",
           "{@spell Speak with Animals|XPHB}"
         ],
         "daily": {
@@ -18178,7 +18178,7 @@
         "will": [
           "{@spell Detect Magic|XPHB}",
           "{@spell Guiding Bolt|XPHB} (level 2 version)",
-          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no Concentration or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)",
+          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no {@status Concentration|XPHB} or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)",
           "{@spell Speak with Animals|XPHB}",
           "{@spell Thaumaturgy|XPHB}"
         ],
@@ -18479,7 +18479,7 @@
           "{@spell Detect Magic|XPHB}",
           "{@spell Mind Spike|XPHB} (level 5 version)",
           "{@spell Minor Illusion|XPHB}",
-          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no Concentration or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)"
+          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no {@status Concentration|XPHB} or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)"
         ],
         "daily": {
           "1e": [
@@ -19638,7 +19638,7 @@
         "will": [
           "{@spell Detect Magic|XPHB}",
           "{@spell Guiding Bolt|XPHB} (level 4 version)",
-          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no Concentration or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)"
+          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no {@status Concentration|XPHB} or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)"
         ],
         "daily": {
           "1e": [
@@ -21064,7 +21064,7 @@
           "{@spell Detect Magic|XPHB}",
           "{@spell Hold Monster|XPHB}",
           "{@spell Ice Knife|XPHB} (level 2 version)",
-          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no Concentration or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)"
+          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no {@status Concentration|XPHB} or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)"
         ],
         "daily": {
           "1e": [
@@ -21332,7 +21332,7 @@
         ],
         "will": [
           "{@spell Detect Magic|XPHB}",
-          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no Concentration or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)",
+          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no {@status Concentration|XPHB} or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)",
           "{@spell Thunderwave|XPHB} (level 2 version)"
         ],
         "daily": {
@@ -23768,7 +23768,7 @@
       {
         "name": "Flyby",
         "entries": [
-          "The broom doesn't provoke an Opportunity Attack when it flies out of an enemy's reach."
+          "The broom doesn't provoke an {@action Opportunity Attack|XPHB} when it flies out of an enemy's reach."
         ]
       }
     ],
@@ -25856,7 +25856,7 @@
         "will": [
           "{@spell Dispel Magic|XPHB}",
           "{@spell Divination|XPHB}",
-          "{@spell Mage Hand|XPHB} (hand is Invisible)",
+          "{@spell Mage Hand|XPHB} (hand is {@condition Invisible|XPHB})",
           "{@spell Power Word Stun|XPHB}"
         ],
         "daily": {
@@ -38727,7 +38727,7 @@
       {
         "name": "Incorporeal Movement",
         "entries": [
-          "The avatar can move through other creatures and objects as if they were Difficult Terrain. It takes 5 ({@damage 1d10}) Force damage if it ends its turn inside an object."
+          "The avatar can move through other creatures and objects as if they were {@variantrule Difficult Terrain|XPHB}. It takes 5 ({@damage 1d10}) Force damage if it ends its turn inside an object."
         ]
       }
     ],
@@ -51852,7 +51852,7 @@
       {
         "name": "Pack Tactics (Land and Water Only)",
         "entries": [
-          "The spirit has Advantage on an attack roll against a creature if at least one of the spirit's allies is within 5 feet of the creature and the ally doesn't have the {@condition Incapacitated|XPHB} condition."
+          "The spirit has {@variantrule Advantage|XPHB} on an attack roll against a creature if at least one of the spirit's allies is within 5 feet of the creature and the ally doesn't have the {@condition Incapacitated|XPHB} condition."
         ]
       },
       {
@@ -59959,7 +59959,7 @@
       {
         "name": "Unraveling Flesh (1/Day)",
         "entries": [
-          "{@actSave wis} {@dc 11}, each creature within 30 feet that can see the boneless. {@actSaveFail} The target has the {@condition Frightened|XPHB} condition. {@actSaveSuccessOrFail} The boneless moves up to its {@variantrule Speed|XPHB} without provoking Opportunity Attacks."
+          "{@actSave wis} {@dc 11}, each creature within 30 feet that can see the boneless. {@actSaveFail} The target has the {@condition Frightened|XPHB} condition. {@actSaveSuccessOrFail} The boneless moves up to its {@variantrule Speed|XPHB} without provoking {@action Opportunity Attack|XPHB|Opportunity Attacks}."
         ]
       }
     ]
@@ -71692,13 +71692,13 @@
       {
         "name": "Radiant Mace (Defender Only)",
         "entries": [
-          "{@atkr m} {@hitYourSpellAttack Bonus equals your spell attack modifier}, reach 5 ft. {@h}{@damage 1d10 + 3 + summonSpellLevel} Radiant damage, and the spirit can choose itself or another creature it can see within 10 feet of the target. The chosen creature gains {@dice 1d10} Temporary Hit Points."
+          "{@atkr m} {@hitYourSpellAttack Bonus equals your spell attack modifier}, reach 5 ft. {@h}{@damage 1d10 + 3 + summonSpellLevel} Radiant damage, and the spirit can choose itself or another creature it can see within 10 feet of the target. The chosen creature gains {@dice 1d10} {@variantrule Temporary Hit Points|XPHB}."
         ]
       },
       {
         "name": "Healing Touch (1/Day)",
         "entries": [
-          "The spirit touches another creature. The target regains Hit Points equal to {@dice 2d8 + summonSpellLevel}."
+          "The spirit touches another creature. The target regains {@variantrule Hit Points|XPHB} equal to {@dice 2d8 + summonSpellLevel}."
         ]
       }
     ]
@@ -72534,7 +72534,7 @@
       {
         "name": "Prowl (Panther or Hybrid Form Only)",
         "entries": [
-          "Chakuna moves up to her {@variantrule Speed|XPHB} without provoking Opportunity Attacks. At the end of this movement, she can take the Hide action."
+          "Chakuna moves up to her {@variantrule Speed|XPHB} without provoking {@action Opportunity Attack|XPHB|Opportunity Attacks}. At the end of this movement, she can take the {@action Hide|XPHB} action."
         ]
       },
       {
@@ -72554,7 +72554,7 @@
       {
         "name": "Strike from Shadows",
         "entries": [
-          "Chakuna makes one Barbed Spear attack. If Chakuna has the Hide action's {@condition Invisible|XPHB} condition, this attack doesn't end that condition. Chakuna can't take this action again until the start of her next turn."
+          "Chakuna makes one Barbed Spear attack. If Chakuna has the {@action Hide|XPHB} action's {@condition Invisible|XPHB} condition, this attack doesn't end that condition. Chakuna can't take this action again until the start of her next turn."
         ]
       },
       {
@@ -79653,7 +79653,7 @@
       {
         "name": "Flyby",
         "entries": [
-          "The cockatrice doesn't provoke an Opportunity Attack when it flies out of an enemy's reach."
+          "The cockatrice doesn't provoke an {@action Opportunity Attack|XPHB} when it flies out of an enemy's reach."
         ]
       }
     ],
@@ -81489,7 +81489,7 @@
       {
         "name": "Stony Lethargy (Stone Only)",
         "entries": [
-          "When a creature starts its turn within 10 feet of the spirit, the spirit can target it with magical energy if the spirit can see it. {@actSave wis} DC equals your spell save DC, the target. {@actSaveFail} Until the start of its next turn, the target can't make {@action Opportunity Attack|XPHB|Opportunity Attacks}, and its Speed is halved."
+          "When a creature starts its turn within 10 feet of the spirit, the spirit can target it with magical energy if the spirit can see it. {@actSave wis} DC equals your spell save DC, the target. {@actSaveFail} Until the start of its next turn, the target can't make {@action Opportunity Attack|XPHB|Opportunity Attacks}, and its {@variantrule Speed|XPHB} is halved."
         ]
       }
     ],
@@ -81511,7 +81511,7 @@
       {
         "name": "Berserk Lashing (Clay Only)",
         "entries": [
-          "{@actTrigger} The spirit takes damage from a creature. {@actResponse} The spirit makes a Slam attack against that creature if possible, or the spirit moves up to half its Speed toward that creature without provoking {@action Opportunity Attack|XPHB|Opportunity Attacks}."
+          "{@actTrigger} The spirit takes damage from a creature. {@actResponse} The spirit makes a Slam attack against that creature if possible, or the spirit moves up to half its {@variantrule Speed|XPHB} toward that creature without provoking {@action Opportunity Attack|XPHB|Opportunity Attacks}."
         ]
       }
     ]
@@ -83598,7 +83598,7 @@
           "{@spell Detect Evil and Good|XPHB}",
           "{@spell Detect Magic|XPHB}",
           "{@spell Detect Thoughts|XPHB}",
-          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no Concentration or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)"
+          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no {@status Concentration|XPHB} or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)"
         ],
         "daily": {
           "1e": [
@@ -88485,7 +88485,7 @@
       {
         "name": "Blood-Soaked Resolve",
         "entries": [
-          "While Bloodied, the cultist has {@variantrule Advantage|XPHB} on saving throws."
+          "While {@status Bloodied|XPHB}, the cultist has {@variantrule Advantage|XPHB} on saving throws."
         ]
       }
     ],
@@ -88626,7 +88626,7 @@
       {
         "name": "Nearer to the Dead",
         "entries": [
-          "While Bloodied, the cultist has {@variantrule Immunity|XPHB} to the {@condition Frightened|XPHB} and {@condition Poisoned|XPHB} conditions."
+          "While {@status Bloodied|XPHB}, the cultist has {@variantrule Immunity|XPHB} to the {@condition Frightened|XPHB} and {@condition Poisoned|XPHB} conditions."
         ]
       }
     ],
@@ -94503,7 +94503,7 @@
       {
         "name": "Flyby",
         "entries": [
-          "The death's head doesn't provoke an Opportunity Attack when it flies out of an enemy's reach."
+          "The death's head doesn't provoke an {@action Opportunity Attack|XPHB} when it flies out of an enemy's reach."
         ]
       }
     ],
@@ -97103,7 +97103,7 @@
       {
         "name": "Agile",
         "entries": [
-          "The deer doesn't provoke an Opportunity Attack when it moves out of an enemy's reach."
+          "The deer doesn't provoke an {@action Opportunity Attack|XPHB} when it moves out of an enemy's reach."
         ]
       }
     ],
@@ -100679,7 +100679,7 @@
         ],
         "will": [
           "{@spell Detect Evil and Good|XPHB}",
-          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no Concentration or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)"
+          "{@spell Shapechange|XPHB} (Beast or Humanoid form only, no {@variantrule Temporary Hit Points|XPHB} gained from the spell, and no {@status Concentration|XPHB} or {@variantrule Temporary Hit Points|XPHB} required to maintain the spell)"
         ],
         "daily": {
           "1e": [
@@ -106696,7 +106696,7 @@
       {
         "name": "Shared Resistances",
         "entries": [
-          "When you summon the spirit, choose one of its Resistances. You have Resistance to the chosen damage type until the spell ends."
+          "When you summon the spirit, choose one of its Resistances. You have {@variantrule Resistance|XPHB} to the chosen damage type until the spell ends."
         ]
       }
     ],
@@ -106716,7 +106716,7 @@
       {
         "name": "Breath Weapon",
         "entries": [
-          "{@actSave dex} DC equals your spell save DC, each creature in a 30-foot Cone. {@actSaveFail} {@damage 2d6} damage of a type this spirit has Resistance to (your choice when you cast the spell). {@actSaveSuccess} Half damage."
+          "{@actSave dex} DC equals your spell save DC, each creature in a 30-foot {@variantrule Cone [Area of Effect]|XPHB|Cone}. {@actSaveFail} {@damage 2d6} damage of a type this spirit has {@variantrule Resistance|XPHB} to (your choice when you cast the spell). {@actSaveSuccess} Half damage."
         ]
       }
     ]
@@ -127430,7 +127430,7 @@
       {
         "name": "Amorphous Form (Air, Fire, and Water Only)",
         "entries": [
-          "The spirit can move through a space as narrow as 1 inch wide without it counting as Difficult Terrain."
+          "The spirit can move through a space as narrow as 1 inch wide without it counting as {@variantrule Difficult Terrain|XPHB}."
         ]
       }
     ],
@@ -135117,7 +135117,7 @@
       {
         "name": "Inspiring Rally",
         "entries": [
-          "Ez chooses up to six allies within 60 feet. Each target that can hear her can take a {@variantrule Reaction|XPHB} to move up to its {@variantrule Speed|XPHB} without provoking Opportunity Attacks."
+          "Ez chooses up to six allies within 60 feet. Each target that can hear her can take a {@variantrule Reaction|XPHB} to move up to its {@variantrule Speed|XPHB} without provoking {@action Opportunity Attack|XPHB|Opportunity Attacks}."
         ]
       }
     ]
@@ -140820,7 +140820,7 @@
                 "name": "Fuming",
                 "type": "item",
                 "entries": [
-                  "The spirit has Advantage on the next attack roll it makes before the end of this turn."
+                  "The spirit has {@variantrule Advantage|XPHB} on the next attack roll it makes before the end of this turn."
                 ]
               },
               {
@@ -140834,7 +140834,7 @@
                 "name": "Tricksy",
                 "type": "item",
                 "entries": [
-                  "The spirit fills a 10-foot Cube within 5 feet of it with magical Darkness, which lasts until the end of its next turn."
+                  "The spirit fills a 10-foot {@variantrule Cube [Area of Effect]|XPHB|Cube} within 5 feet of it with magical Darkness, which lasts until the end of its next turn."
                 ]
               }
             ]
@@ -141962,19 +141962,19 @@
       {
         "name": "Death Throes (Demon Only)",
         "entries": [
-          "When the spirit drops to 0 Hit Points or the spell ends, the spirit explodes. {@actSave dex} DC equals your spell save DC, each creature in a 10-foot Emanation originating from the spirit. {@actSaveFail} {@damage 2d10} plus this spell's level Fire damage. {@actSaveSuccess} Half damage."
+          "When the spirit drops to 0 {@variantrule Hit Points|XPHB} or the spell ends, the spirit explodes. {@actSave dex} DC equals your spell save DC, each creature in a 10-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} originating from the spirit. {@actSaveFail} {@damage 2d10} plus this spell's level Fire damage. {@actSaveSuccess} Half damage."
         ]
       },
       {
         "name": "Devil's Sight (Devil Only)",
         "entries": [
-          "Magical Darkness doesn't impede the spirit's Darkvision."
+          "Magical {@variantrule Darkness|XPHB} doesn't impede the spirit's Darkvision."
         ]
       },
       {
         "name": "Magic Resistance",
         "entries": [
-          "The spirit has Advantage on saving throws against spells and other magical effects."
+          "The spirit has {@variantrule Advantage|XPHB} on saving throws against spells and other magical effects."
         ]
       }
     ],
@@ -148060,7 +148060,7 @@
       {
         "name": "Flyby",
         "entries": [
-          "The snake doesn't provoke an Opportunity Attack when it flies out of an enemy's reach."
+          "The snake doesn't provoke an {@action Opportunity Attack|XPHB} when it flies out of an enemy's reach."
         ]
       }
     ],
@@ -155435,7 +155435,7 @@
       {
         "name": "Flyby",
         "entries": [
-          "The gargoyle doesn't provoke an Opportunity Attack when it flies out of an enemy's reach."
+          "The gargoyle doesn't provoke an {@action Opportunity Attack|XPHB} when it flies out of an enemy's reach."
         ]
       }
     ],
@@ -161158,7 +161158,7 @@
       {
         "name": "Web Bolt (Spider Only)",
         "entries": [
-          "{@atkr r} {@hitYourSpellAttack Bonus equals your spell attack modifier}, range 60 ft. {@h}{@damage 1d10 + 3 + summonSpellLevel} Bludgeoning damage, and the target's Speed is reduced to 0 until the start of the insect's next turn."
+          "{@atkr r} {@hitYourSpellAttack Bonus equals your spell attack modifier}, range 60 ft. {@h}{@damage 1d10 + 3 + summonSpellLevel} Bludgeoning damage, and the target's {@variantrule Speed|XPHB} is reduced to 0 until the start of the insect's next turn."
         ]
       }
     ],
@@ -161658,7 +161658,7 @@
       {
         "name": "Flyby",
         "entries": [
-          "The owl doesn't provoke an Opportunity Attack when it flies out of an enemy's reach."
+          "The owl doesn't provoke an {@action Opportunity Attack|XPHB} when it flies out of an enemy's reach."
         ]
       }
     ],
@@ -163988,7 +163988,7 @@
       {
         "name": "Flyby",
         "entries": [
-          "The wasp doesn't provoke an Opportunity Attack when it flies out of an enemy's reach."
+          "The wasp doesn't provoke an {@action Opportunity Attack|XPHB} when it flies out of an enemy's reach."
         ]
       }
     ],
@@ -166174,7 +166174,7 @@
           "The githyanki casts one of the following spells, requiring no spell components and using Intelligence as the spellcasting ability (spell save {@dc 18}, {@hit 10} to hit with spell attacks):"
         ],
         "will": [
-          "{@spell Mage Hand|XPHB} (the hand is Invisible)"
+          "{@spell Mage Hand|XPHB} (the hand is {@condition Invisible|XPHB})"
         ],
         "daily": {
           "2e": [
@@ -166832,7 +166832,7 @@
           "The githyanki casts one of the following spells, requiring no spell components and using Intelligence as the spellcasting ability (spell save {@dc 13}):"
         ],
         "will": [
-          "{@spell Mage Hand|XPHB} (the hand is Invisible)"
+          "{@spell Mage Hand|XPHB} (the hand is {@condition Invisible|XPHB})"
         ],
         "daily": {
           "2e": [
@@ -167365,7 +167365,7 @@
           "The githyanki casts one of the following spells, requiring no spell components and using Intelligence as the spellcasting ability:"
         ],
         "will": [
-          "{@spell Mage Hand|XPHB} (the hand is Invisible)"
+          "{@spell Mage Hand|XPHB} (the hand is {@condition Invisible|XPHB})"
         ],
         "daily": {
           "2": [
@@ -168253,7 +168253,7 @@
           "The githzerai casts one of the following spells, requiring no spell components and using Wisdom as the spellcasting ability:"
         ],
         "will": [
-          "{@spell Mage Hand|XPHB} (the hand is Invisible)"
+          "{@spell Mage Hand|XPHB} (the hand is {@condition Invisible|XPHB})"
         ],
         "daily": {
           "1": [
@@ -168375,7 +168375,7 @@
           "The githzerai casts one of the following spells, requiring no spell components and using Intelligence as the spellcasting ability (spell save {@dc 16}):"
         ],
         "will": [
-          "{@spell Mage Hand|XPHB} (the hand is Invisible)"
+          "{@spell Mage Hand|XPHB} (the hand is {@condition Invisible|XPHB})"
         ],
         "daily": {
           "1e": [
@@ -168806,7 +168806,7 @@
           "The githzerai casts one of the following spells, requiring no spell components and using Wisdom as the spellcasting ability (spell save {@dc 14}):"
         ],
         "will": [
-          "{@spell Mage Hand|XPHB} (the hand is Invisible)"
+          "{@spell Mage Hand|XPHB} (the hand is {@condition Invisible|XPHB})"
         ],
         "daily": {
           "1e": [
@@ -178738,7 +178738,7 @@
         "will": [
           "{@spell Dancing Lights|XPHB}",
           "{@spell Disguise Self|XPHB} (24-hour duration)",
-          "{@spell Invisibility|XPHB} (self only, and the hag leaves no tracks while Invisible)",
+          "{@spell Invisibility|XPHB} (self only, and the hag leaves no tracks while {@condition Invisible|XPHB})",
           "{@spell Minor Illusion|XPHB}",
           "{@spell Ray of Sickness|XPHB} (level 3 version)"
         ],
@@ -187764,7 +187764,7 @@
       {
         "name": "Confounding Ray",
         "entries": [
-          "{@atkr r} {@hit 5}, range 120 ft. {@h}13 ({@damage 2d12}) Psychic damage. If the target is a creature, it can't make Opportunity Attacks until the start of the devil's next turn."
+          "{@atkr r} {@hit 5}, range 120 ft. {@h}13 ({@damage 2d12}) Psychic damage. If the target is a creature, it can't make {@action Opportunity Attack|XPHB|Opportunity Attacks} until the start of the devil's next turn."
         ]
       },
       {
@@ -192941,7 +192941,7 @@
       {
         "name": "Flyby",
         "entries": [
-          "The hippogriff doesn't provoke an Opportunity Attack when it flies out of an enemy's reach."
+          "The hippogriff doesn't provoke an {@action Opportunity Attack|XPHB} when it flies out of an enemy's reach."
         ]
       }
     ],
@@ -203520,7 +203520,7 @@
       {
         "name": "Ephemeral Movement",
         "entries": [
-          "The incarnation can move through other creatures and objects as if they were {@variantrule Difficult Terrain|XPHB}, and its movement doesn't provoke Opportunity Attacks. It takes 5 ({@damage 1d10}) Force damage if it ends its turn inside an object."
+          "The incarnation can move through other creatures and objects as if they were {@variantrule Difficult Terrain|XPHB}, and its movement doesn't provoke {@action Opportunity Attack|XPHB|Opportunity Attacks}. It takes 5 ({@damage 1d10}) Force damage if it ends its turn inside an object."
         ]
       },
       {
@@ -204722,7 +204722,7 @@
           "{@spell Detect Magic|XPHB}",
           "{@spell Detect Thoughts|XPHB}",
           "{@spell Dispel Magic|XPHB}",
-          "{@spell Mage Hand|XPHB} (the hand is Invisible)",
+          "{@spell Mage Hand|XPHB} (the hand is {@condition Invisible|XPHB})",
           "{@spell Sending|XPHB}"
         ],
         "daily": {
@@ -204751,7 +204751,7 @@
       {
         "name": "Inquisitor's Command {@recharge 5}",
         "entries": [
-          "{@actSave wis} {@dc 16}, each creature of the inquisitor's choice that it can see within 60 feet. {@actSaveFail} The target has the {@condition Charmed|XPHB} condition until the start of the inquisitor's next turn. On the {@condition Charmed|XPHB} target's turn, the inquisitor can telepathically control the target's move and make the target take the Attack action (the inquisitor chooses the target), the Dash action, or no action."
+          "{@actSave wis} {@dc 16}, each creature of the inquisitor's choice that it can see within 60 feet. {@actSaveFail} The target has the {@condition Charmed|XPHB} condition until the start of the inquisitor's next turn. On the {@condition Charmed|XPHB} target's turn, the inquisitor can telepathically control the target's move and make the target take the {@action Attack|XPHB} action (the inquisitor chooses the target), the {@action Dash|XPHB} action, or no action."
         ]
       },
       {
@@ -204924,7 +204924,7 @@
           "{@spell Detect Magic|XPHB}",
           "{@spell Detect Thoughts|XPHB}",
           "{@spell Dispel Magic|XPHB}",
-          "{@spell Mage Hand|XPHB} (the hand is Invisible)",
+          "{@spell Mage Hand|XPHB} (the hand is {@condition Invisible|XPHB})",
           "{@spell Sending|XPHB}"
         ],
         "daily": {
@@ -205128,7 +205128,7 @@
           "{@spell Detect Magic|XPHB}",
           "{@spell Dispel Magic|XPHB}",
           "{@spell Mage Armor|XPHB} (included in AC)",
-          "{@spell Mage Hand|XPHB} (the hand is Invisible)",
+          "{@spell Mage Hand|XPHB} (the hand is {@condition Invisible|XPHB})",
           "{@spell Sending|XPHB}"
         ],
         "daily": {
@@ -209881,7 +209881,7 @@
       {
         "name": "Quick Disguise",
         "entries": [
-          "Jacko spends 1 minute to disguise himself as a different Humanoid of approximately his height and weight. While Jacko is disguised, a creature that takes the Study action to inspect Jacko's appearance can make a {@dc 13} Intelligence ({@skill Investigation|XPHB}) check, discerning his disguise on a successful check."
+          "Jacko spends 1 minute to disguise himself as a different Humanoid of approximately his height and weight. While Jacko is disguised, a creature that takes the {@action Study|XPHB} action to inspect Jacko's appearance can make a {@dc 13} Intelligence ({@skill Investigation|XPHB}) check, discerning his disguise on a successful check."
         ]
       }
     ],
@@ -212577,7 +212577,7 @@
                 "type": "item",
                 "name": "Susceptible to Holy Symbols",
                 "entries": [
-                  "While the jiangshi is wearing or touching a Holy Symbol, it loses its {@variantrule Immunity|XPHB} to the {@condition Frightened|XPHB} condition and automatically fails saving throws to avoid or end the {@condition Frightened|XPHB} condition."
+                  "While the jiangshi is wearing or touching a {@item Holy Symbol|XPHB}, it loses its {@variantrule Immunity|XPHB} to the {@condition Frightened|XPHB} condition and automatically fails saving throws to avoid or end the {@condition Frightened|XPHB} condition."
                 ]
               }
             ]
@@ -212609,7 +212609,7 @@
       {
         "name": "Hungering Stride (Requires Consume Energy)",
         "entries": [
-          "The jiangshi takes the Dash action."
+          "The jiangshi takes the {@action Dash|XPHB} action."
         ]
       },
       {
@@ -216726,7 +216726,7 @@
       {
         "name": "Withdraw",
         "entries": [
-          "Karas moves up to half her {@variantrule Speed|XPHB} without provoking Opportunity Attack action and takes the {@action Hide|XPHB} action."
+          "Karas moves up to half her {@variantrule Speed|XPHB} without provoking {@action Opportunity Attack|XPHB} action and takes the {@action Hide|XPHB} action."
         ]
       }
     ],
@@ -239451,7 +239451,7 @@
       {
         "name": "Mauling Charge",
         "entries": [
-          "The loup garou moves up to half its {@variantrule Speed|XPHB} without provoking Opportunity Attacks and makes one Longsword or Rend attack."
+          "The loup garou moves up to half its {@variantrule Speed|XPHB} without provoking {@action Opportunity Attack|XPHB|Opportunity Attacks} and makes one Longsword or Rend attack."
         ]
       },
       {
@@ -249766,8 +249766,10 @@
         "name": "Spellcasting",
         "type": "spellcasting",
         "headerEntries": [
-          "The inquisitive casts one of the following spells, requiring no Material components and using Wisdom as the spellcasting ability (spell save {@dc 13}):",
-          "At Will : Guidance"
+          "The inquisitive casts one of the following spells, requiring no Material components and using Wisdom as the spellcasting ability (spell save {@dc 13}):"
+        ],
+        "will": [
+          "{@spell Guidance|XPHB}"
         ],
         "daily": {
           "1e": [
@@ -255314,7 +255316,7 @@
           "{@spell Detect Magic|XPHB}",
           "{@spell Detect Thoughts|XPHB}",
           "{@spell Disguise Self|XPHB}",
-          "{@spell Mage Hand|XPHB} (the hand is Invisible)"
+          "{@spell Mage Hand|XPHB} (the hand is {@condition Invisible|XPHB})"
         ],
         "daily": {
           "1e": [
@@ -262879,7 +262881,7 @@
           "{@spell Charm Person|XPHB}",
           "{@spell Dancing Lights|XPHB}",
           "{@spell Disguise Self|XPHB} (24-hour duration)",
-          "{@spell Invisibility|XPHB} (self only, and Lorinda leaves no tracks while Invisible)",
+          "{@spell Invisibility|XPHB} (self only, and Lorinda leaves no tracks while {@condition Invisible|XPHB})",
           "{@spell Minor Illusion|XPHB}",
           "{@spell Ray of Sickness|XPHB} (level 3 version)"
         ],
@@ -273251,7 +273253,7 @@
       {
         "name": "Flyby",
         "entries": [
-          "The nightgaunt doesn't provoke an Opportunity Attack when it flies out of an enemy's reach."
+          "The nightgaunt doesn't provoke an {@action Opportunity Attack|XPHB} when it flies out of an enemy's reach."
         ]
       }
     ],
@@ -286890,7 +286892,7 @@
       {
         "name": "Life Bond",
         "entries": [
-          "When you regain Hit Points from a level 1+ spell, the steed regains the same number of Hit Points if you're within 5 feet of it."
+          "When you regain {@variantrule Hit Points|XPHB} from a level 1+ spell, the steed regains the same number of {@variantrule Hit Points|XPHB} if you're within 5 feet of it."
         ]
       }
     ],
@@ -286918,7 +286920,7 @@
       {
         "name": "Healing Touch (Celestial Only; Recharges after a Long Rest)",
         "entries": [
-          "One creature within 5 feet of the steed regains a number of Hit Points equal to {@dice 2d8 + summonSpellLevel}."
+          "One creature within 5 feet of the steed regains a number of {@variantrule Hit Points|XPHB} equal to {@dice 2d8 + summonSpellLevel}."
         ]
       }
     ]
@@ -291293,7 +291295,7 @@
       {
         "name": "Flyby",
         "entries": [
-          "The peryton doesn't provoke an Opportunity Attack when it flies out of an enemy's reach."
+          "The peryton doesn't provoke an {@action Opportunity Attack|XPHB} when it flies out of an enemy's reach."
         ]
       }
     ],
@@ -291544,7 +291546,7 @@
       {
         "name": "Flyby",
         "entries": [
-          "The death's head doesn't provoke an Opportunity Attack when it flies out of an enemy's reach."
+          "The death's head doesn't provoke an {@action Opportunity Attack|XPHB} when it flies out of an enemy's reach."
         ]
       }
     ],
@@ -300518,7 +300520,7 @@
       {
         "name": "Flyby",
         "entries": [
-          "The pteranodon doesn't provoke an Opportunity Attack when it flies out of an enemy's reach."
+          "The pteranodon doesn't provoke an {@action Opportunity Attack|XPHB} when it flies out of an enemy's reach."
         ]
       }
     ],
@@ -301442,7 +301444,7 @@
           "The quaggoth casts one of the following spells, requiring no spell components and using Wisdom as the spellcasting ability (spell save {@dc 12}):"
         ],
         "will": [
-          "{@spell Mage Hand|XPHB} (the hand is Invisible)",
+          "{@spell Mage Hand|XPHB} (the hand is {@condition Invisible|XPHB})",
           "{@spell Minor Illusion|XPHB}"
         ],
         "daily": {
@@ -305071,7 +305073,7 @@
         "vulnerable": [
           "piercing"
         ],
-        "note": "damage from weapons wielded by creatures under the effect of a Bless spell",
+        "note": "damage from weapons wielded by creatures under the effect of a {@spell Bless|XPHB} spell",
         "cond": true
       }
     ],
@@ -305462,7 +305464,7 @@
         "type": "spellcasting",
         "headerEntries": [
           "Ramya casts {@spell Disguise Self|XPHB} using the same spellcasting ability as Spellcasting. The spell lasts until Ramya drops to 80 {@variantrule Hit Points|XPHB} or fewer or uses her Vengeful Fire action. Intelligence ({@skill Investigation|XPHB}) checks to discern her true appearance are made with {@variantrule Disadvantage|XPHB}.",
-          "When the disguise ends, each creature in a 30-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} originating from Ramya is subjected to the following effect. Wisdom {@variantrule Saving Throw|XPHB}: {@dc 17} (the target succeeds automatically if it is a Construct or an Undead). Failure: The target has the Frightened condition for 1 minute. While Frightened, the target has {@variantrule Disadvantage|XPHB} on saving throws."
+          "When the disguise ends, each creature in a 30-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} originating from Ramya is subjected to the following effect. Wisdom {@variantrule Saving Throw|XPHB}: {@dc 17} (the target succeeds automatically if it is a Construct or an Undead). Failure: The target has the {@condition Frightened|XPHB} condition for 1 minute. While {@condition Frightened|XPHB}, the target has {@variantrule Disadvantage|XPHB} on saving throws."
         ],
         "will": [
           "{@spell Disguise Self|XPHB}"
@@ -306371,13 +306373,13 @@
       {
         "name": "Death Burst",
         "entries": [
-          "The companion explodes when it dies. {@actSave dex} DC equals {@dcYourSpellSave}, each creature in a 10-foot Emanation originating from the companion. {@actSaveFail} {@damage 2d4} Necrotic damage. {@actSaveSuccess} Half damage."
+          "The companion explodes when it dies. {@actSave dex} DC equals {@dcYourSpellSave}, each creature in a 10-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} originating from the companion. {@actSaveFail} {@damage 2d4} Necrotic damage. {@actSaveSuccess} Half damage."
         ]
       },
       {
         "name": "Lightning Absorption",
         "entries": [
-          "Whenever the companion is subjected to Lightning damage, it regains a number of Hit Points equal to the Lightning damage dealt."
+          "Whenever the companion is subjected to Lightning damage, it regains a number of {@variantrule Hit Points|XPHB} equal to the Lightning damage dealt."
         ]
       }
     ],
@@ -306385,7 +306387,7 @@
       {
         "name": "Dreadful Swipe",
         "entries": [
-          "{@atkr m} {@hitYourSpellAttack Bonus equals your spell attack modifier}, reach 5 ft. {@h}{@dice 1d4} plus your Intelligence modifier Necrotic damage, and the target can't take Opportunity Attacks until the start of its next turn."
+          "{@atkr m} {@hitYourSpellAttack Bonus equals your spell attack modifier}, reach 5 ft. {@h}{@dice 1d4} plus your Intelligence modifier Necrotic damage, and the target can't take {@action Opportunity Attack|XPHB|Opportunity Attacks} until the start of its next turn."
         ]
       }
     ]
@@ -339699,9 +339701,11 @@
           "{@spell Mage Armor|XPHB} (included in AC)",
           "{@spell Message|XPHB}"
         ],
-        "footerEntries": [
-          "1/Da y: Sending"
-        ],
+        "daily": {
+          "1e": [
+            "{@spell Sending|XPHB}"
+          ]
+        },
         "ability": "int",
         "displayAs": "action"
       }
@@ -350043,7 +350047,7 @@
       {
         "name": "Curse of the Riddle",
         "entries": [
-          "{@actSave int} {@dc 15}, one creature the sphinx can see within 60 feet. {@actSaveFail} 21 ({@damage 6d6}) Psychic damage, and the target is cursed with a riddle. The cursed target has {@variantrule Disadvantage|XPHB} on ability checks and attack rolls. In addition, if it takes the {@action Magic|XPHB} action, it must succeed on a {@dc 15} Intelligence saving throw or that action is wasted. The cursed target can take a Study action to make a {@dc 15} Intelligence check, solving the riddle and ending the curse on a success. The curse ends early if the sphinx curses another target."
+          "{@actSave int} {@dc 15}, one creature the sphinx can see within 60 feet. {@actSaveFail} 21 ({@damage 6d6}) Psychic damage, and the target is cursed with a riddle. The cursed target has {@variantrule Disadvantage|XPHB} on ability checks and attack rolls. In addition, if it takes the {@action Magic|XPHB} action, it must succeed on a {@dc 15} Intelligence saving throw or that action is wasted. The cursed target can take a {@action Study|XPHB} action to make a {@dc 15} Intelligence check, solving the riddle and ending the curse on a success. The curse ends early if the sphinx curses another target."
         ]
       }
     ]
@@ -351032,7 +351036,7 @@
       {
         "name": "Flyby",
         "entries": [
-          "The devil doesn't provoke an Opportunity Attack when it flies out of an enemy's reach."
+          "The devil doesn't provoke an {@action Opportunity Attack|XPHB} when it flies out of an enemy's reach."
         ]
       },
       {
@@ -360080,7 +360084,7 @@
         "name": "Charm",
         "type": "spellcasting",
         "headerEntries": [
-          "Strahd casts {@spell Charm Person|XPHB}, requiring no spell components and using the same spellcasting ability as Spellcasting. When the spell is cast this way, its duration is 24 hours, and the Charmed target is a willing recipient of Strahd's Bite, the damage of which doesn't end the spell. When the spell ends, the target is unaware it was Charmed by Strahd."
+          "Strahd casts {@spell Charm Person|XPHB}, requiring no spell components and using the same spellcasting ability as Spellcasting. When the spell is cast this way, its duration is 24 hours, and the {@condition Charmed|XPHB} target is a willing recipient of Strahd's Bite, the damage of which doesn't end the spell. When the spell ends, the target is unaware it was {@condition Charmed|XPHB} by Strahd."
         ],
         "will": [
           "{@spell Charm Person|XPHB}"
@@ -362773,7 +362777,7 @@
       {
         "name": "Flyby (Swan Form Only)",
         "entries": [
-          "The swanmay doesn't provoke an Opportunity Attack action when it flies out of an enemy's reach."
+          "The swanmay doesn't provoke an {@action Opportunity Attack|XPHB} action when it flies out of an enemy's reach."
         ]
       }
     ],
@@ -376138,7 +376142,7 @@
           "The thri-kreen casts one of the following spells, requiring no spell components and using Intelligence as the spellcasting ability (spell save {@dc 15}):"
         ],
         "will": [
-          "{@spell Mage Hand|XPHB} (the hand is Invisible)"
+          "{@spell Mage Hand|XPHB} (the hand is {@condition Invisible|XPHB})"
         ],
         "daily": {
           "1e": [
@@ -388858,13 +388862,13 @@
       {
         "name": "Festering Aura (Putrid Only)",
         "entries": [
-          "{@actSave con} DC equals your spell save DC, any creature (other than you) that starts its turn within a 5-foot Emanation originating from the spirit. {@actSaveFail} The creature has the {@condition Poisoned|XPHB} condition until the start of its next turn."
+          "{@actSave con} DC equals your spell save DC, any creature (other than you) that starts its turn within a 5-foot {@variantrule Emanation [Area of Effect]|XPHB|Emanation} originating from the spirit. {@actSaveFail} The creature has the {@condition Poisoned|XPHB} condition until the start of its next turn."
         ]
       },
       {
         "name": "Incorporeal Passage (Ghostly Only)",
         "entries": [
-          "The spirit can move through other creatures and objects as if they were Difficult Terrain. If it ends its turn inside an object, it is shunted to the nearest unoccupied space and takes {@damage 1d10} Force damage for every 5 feet traveled."
+          "The spirit can move through other creatures and objects as if they were {@variantrule Difficult Terrain|XPHB}. If it ends its turn inside an object, it is shunted to the nearest unoccupied space and takes {@damage 1d10} Force damage for every 5 feet traveled."
         ]
       }
     ],
@@ -389837,7 +389841,7 @@
       {
         "name": "Warp Mind",
         "entries": [
-          "{@actTrigger} A creature the horror can see within 120 feet of itself takes the Study action or makes a Constitution saving throw to maintain {@status Concentration|XPHB}. {@actResponse d}{@actSave wis} {@dc 15}, the triggering creature. {@actSaveFail} 7 ({@damage 2d6}) Psychic damage, and the target has the {@condition Stunned|XPHB} condition until the end of its next turn."
+          "{@actTrigger} A creature the horror can see within 120 feet of itself takes the {@action Study|XPHB} action or makes a Constitution saving throw to maintain {@status Concentration|XPHB}. {@actResponse d}{@actSave wis} {@dc 15}, the triggering creature. {@actSaveFail} 7 ({@damage 2d6}) Psychic damage, and the target has the {@condition Stunned|XPHB} condition until the end of its next turn."
         ]
       }
     ]
@@ -393181,7 +393185,7 @@
         "name": "Charm {@recharge 5}",
         "type": "spellcasting",
         "headerEntries": [
-          "The vampire casts {@spell Charm Person|XPHB}, requiring no spell components and using Charisma as the spellcasting ability (spell save {@dc 17}), and the duration is 24 hours. The Charmed target is a willing recipient of the vampire's Bite, the damage of which doesn't end the spell. When the spell ends, the target is unaware it was Charmed by the vampire."
+          "The vampire casts {@spell Charm Person|XPHB}, requiring no spell components and using Charisma as the spellcasting ability (spell save {@dc 17}), and the duration is 24 hours. The {@condition Charmed|XPHB} target is a willing recipient of the vampire's Bite, the damage of which doesn't end the spell. When the spell ends, the target is unaware it was {@condition Charmed|XPHB} by the vampire."
         ],
         "recharge": {
           "5": [
@@ -394015,7 +394019,7 @@
       {
         "name": "Bloodthirsty Slash",
         "entries": [
-          "{@actTrigger} A {@status Bloodied|XPHB} creature the nosferatu can see within 40 feet takes damage. {@actResponse} The nosferatu moves up to its {@variantrule Speed|XPHB} without provoking Opportunity Attacks and makes a Claw attack against the triggering creature."
+          "{@actTrigger} A {@status Bloodied|XPHB} creature the nosferatu can see within 40 feet takes damage. {@actResponse} The nosferatu moves up to its {@variantrule Speed|XPHB} without provoking {@action Opportunity Attack|XPHB|Opportunity Attacks} and makes a Claw attack against the triggering creature."
         ]
       }
     ]
@@ -410247,7 +410251,7 @@
       {
         "name": "Flyby (Wyvern or Hybrid Form Only)",
         "entries": [
-          "The werewyvern doesn't provoke an Opportunity Attack action when it flies out of an enemy's reach."
+          "The werewyvern doesn't provoke an {@action Opportunity Attack|XPHB} action when it flies out of an enemy's reach."
         ]
       }
     ],
