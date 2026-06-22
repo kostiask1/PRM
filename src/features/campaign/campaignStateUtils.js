@@ -1,11 +1,16 @@
 import { sanitizeNotesForSave } from "../../utils/noteUtils.js";
 
-export const sanitizeEntityForSave = (entity) =>
-	Object.fromEntries(
+export const sanitizeEntityForSave = (entity) => {
+	const sanitized = Object.fromEntries(
 		Object.entries(entity || {}).filter(
 			([key]) => !key.startsWith("_") || key === "_aiIgnored",
 		),
 	);
+	if (Array.isArray(sanitized.notes)) {
+		sanitized.notes = sanitizeNotesForSave(sanitized.notes);
+	}
+	return sanitized;
+};
 
 export const sanitizeLoadedEntity = (entity) => sanitizeEntityForSave(entity);
 

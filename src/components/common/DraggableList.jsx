@@ -16,7 +16,7 @@ export default function DraggableList({
 	onReorder,
 	onDrop,
 	renderItem,
-	keyExtractor = (item, index) => item?.id ?? index,
+	keyExtractor = (item, index) => item?._renderKey ?? item?.id ?? index,
 	className = "",
 	itemClassName = "",
 	dragData,

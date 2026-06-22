@@ -4,14 +4,20 @@ import { confirm, refreshEntitiesAction } from "../../actions/app";
 import { api } from "../../api";
 import { lang } from "../../services/localization";
 import { useAppDispatch } from "../../store/appStore";
+import { sanitizeNotesForSave } from "../../utils/noteUtils";
 import CharacterCard from "../CharacterCard";
 import LocationCard from "../LocationCard";
 import { EntityLinkResolverContext } from "./EntityLinkIdentity";
 
-const sanitizeEntityForSave = (entity) =>
-	Object.fromEntries(
+const sanitizeEntityForSave = (entity) => {
+	const sanitized = Object.fromEntries(
 		Object.entries(entity || {}).filter(([key]) => !key.startsWith("_")),
 	);
+	if (Array.isArray(sanitized.notes)) {
+		sanitized.notes = sanitizeNotesForSave(sanitized.notes);
+	}
+	return sanitized;
+};
 
 const normalizeMentionName = (value) =>
 	String(value || "")

@@ -24,7 +24,11 @@ import "../assets/components/SessionView.css";
 import useSessionView from "../hooks/useSessionView";
 import SessionViewModel from "../models/SessionViewModel.js";
 import { lang } from "../services/localization";
-import { getNotesForRender, sanitizeNotesForSave } from "../utils/noteUtils";
+import {
+	getNoteRenderKey,
+	getNotesForRender,
+	sanitizeNotesForSave,
+} from "../utils/noteUtils";
 import { navigateTo, useAppSelector } from "../store/appStore";
 import { shouldOpenInNewTabFromEvent } from "../utils/navigation.js";
 import { makeDomId, scrollToHashTarget } from "../utils/domNavigation";
@@ -437,7 +441,7 @@ function SessionView() {
 									onReorder={(notes) =>
 										view.updateData("notes", sanitizeNotesForSave(notes))
 									}
-									keyExtractor={(note) => note.id}
+									keyExtractor={(note, index) => getNoteRenderKey(note, index)}
 									isItemDraggable={(note) => !note._isVirtual}
 									isItemControlActive={(note) => Boolean(note._aiIgnored)}
 									renderItemControl={(note) =>

@@ -33,6 +33,7 @@ import {
 } from "../src/utils/conditions.js";
 import {
 	createEmptyNote as createModelEmptyNote,
+	getNoteRenderKey,
 	getNotesForRender,
 	isNoteEmpty,
 	isVirtualNoteId,
@@ -239,11 +240,20 @@ await run("noteUtils renders virtual notes and sanitizes saved notes", () => {
 	});
 	assert.equal(materialized.length, 1);
 	assert.equal(isVirtualNoteId(materialized[0].id), false);
+	assert.equal(materialized[0]._renderKey, regularRender[1].id);
+	assert.equal(getNoteRenderKey(materialized[0]), regularRender[1].id);
 	assert.equal(materialized[0].text, "[Mention]");
 
 	const sanitized = sanitizeNotesForSave([
 		{ id: "empty", title: "", text: "", collapsed: false, _isVirtual: true },
-		{ id: "filled", title: "T", text: "", collapsed: true, _isVirtual: true },
+		{
+			id: "filled",
+			title: "T",
+			text: "",
+			collapsed: true,
+			_isVirtual: true,
+			_renderKey: "__virtual_note__:empty",
+		},
 	]);
 	assert.deepEqual(sanitized, [
 		{ id: "filled", title: "T", text: "", collapsed: true },

@@ -21,7 +21,7 @@ import useCampaignView from "../hooks/useCampaignView";
 import CampaignViewModel from "../models/CampaignViewModel.js";
 import { navigateTo, useAppSelector } from "../store/appStore";
 import { lang } from "../services/localization";
-import { getNotesForRender } from "../utils/noteUtils";
+import { getNoteRenderKey, getNotesForRender } from "../utils/noteUtils";
 import { makeDomId, scrollToHashTarget } from "../utils/domNavigation";
 import classNames from "../utils/classNames";
 
@@ -451,7 +451,7 @@ function CampaignView() {
 									className="CampaignView__notes"
 									onReorder={view.handleNotesReorder}
 									onDrop={view.finishTrackedReorder}
-									keyExtractor={(note) => note.id}
+									keyExtractor={(note, index) => getNoteRenderKey(note, index)}
 									isItemDraggable={(note) => !note._isVirtual}
 									isItemControlActive={(note) => Boolean(note._aiIgnored)}
 									renderItemControl={(note) =>
