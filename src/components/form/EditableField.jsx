@@ -36,6 +36,7 @@ import {
 	$createTextNode,
 	$getRoot,
 	$getSelection,
+	$isElementNode,
 	$isRangeSelection,
 	$isTextNode,
 	$applyNodeReplacement,
@@ -81,6 +82,7 @@ const TAB_CLASS = "EditableField__tab";
 const EDITOR_NAMESPACE = "EditableField";
 const EXTERNAL_UPDATE_TAG = "editable-field:external";
 const TEXTAREA_TYPE = "textarea";
+const MENTION_BOUNDARY = "\u200B";
 const EDITOR_MODULE_VERSION = (() => {
 	if (!import.meta.hot) return "static";
 
@@ -199,6 +201,10 @@ function $isMentionNode(node) {
 	return node instanceof MentionNode;
 }
 
+function $createMentionBoundaryNode(text = "") {
+	return $createTextNode(`${MENTION_BOUNDARY}${text}`);
+}
+
 const MENTION_TRANSFORMER = {
 	dependencies: [MentionNode],
 	export: (node) => {
@@ -215,6 +221,7 @@ const MENTION_TRANSFORMER = {
 		const mentionNode = $createMentionNode(mentionName);
 		mentionNode.setFormat(textNode.getFormat());
 		textNode.replace(mentionNode);
+		mentionNode.insertAfter($createMentionBoundaryNode());
 		return mentionNode;
 	},
 	trigger: "]",
@@ -346,6 +353,50 @@ function $replaceMentionWithText(mentionNode) {
 	textNode.select(0, text.length);
 }
 
+function $getMentionBeforeCollapsedSelection(selection) {
+	if (!$isRangeSelection(selection) || !selection.isCollapsed()) return null;
+
+	const anchorNode = selection.anchor.getNode();
+	const offset = selection.anchor.offset;
+	if ($isMentionNode(anchorNode)) {
+		return offset >= anchorNode.getTextContentSize() ? anchorNode : null;
+	}
+
+	if ($isTextNode(anchorNode) && offset === 0) {
+		const previousSibling = anchorNode.getPreviousSibling();
+		return $isMentionNode(previousSibling) ? previousSibling : null;
+	}
+
+	if ($isElementNode(anchorNode) && offset > 0) {
+		const previousChild = anchorNode.getChildAtIndex(offset - 1);
+		return $isMentionNode(previousChild) ? previousChild : null;
+	}
+
+	return null;
+}
+
+function $insertSpaceAfterMentionAtSelection() {
+	const selection = $getSelection();
+	const mentionNode = $getMentionBeforeCollapsedSelection(selection);
+	if (!mentionNode) return false;
+
+	const nextSibling = mentionNode.getNextSibling();
+	if ($isTextNode(nextSibling)) {
+		const nextText = nextSibling.getTextContent();
+		const tail = nextText.startsWith(MENTION_BOUNDARY)
+			? nextText.slice(MENTION_BOUNDARY.length)
+			: nextText;
+		nextSibling.setTextContent(`${MENTION_BOUNDARY} ${tail}`);
+		nextSibling.select(2, 2);
+		return true;
+	}
+
+	const spaceNode = $createMentionBoundaryNode(" ");
+	mentionNode.insertAfter(spaceNode);
+	spaceNode.select(2, 2);
+	return true;
+}
+
 function $selectEditorEnd() {
 	const root = $getRoot();
 	if (root.getChildrenSize() === 0) {
@@ -367,10 +418,9 @@ function $insertMentionAtSelection(name) {
 	}
 	if (!mentionName || !$isRangeSelection(selection)) return;
 
-	selection.insertNodes([
-		$createMentionNode(mentionName),
-		$createTextNode(" "),
-	]);
+	const boundaryNode = $createMentionBoundaryNode();
+	selection.insertNodes([$createMentionNode(mentionName), boundaryNode]);
+	boundaryNode.select(1, 1);
 }
 
 function $insertTabAtSelection() {
@@ -582,6 +632,17 @@ function useCommandHandlers({
 				event.preventDefault();
 				editor.update(() => $insertTabAtSelection());
 				return;
+			}
+
+			if (isTextareaType(type) && (event.key === " " || event.code === "Space")) {
+				let insertedSpace = false;
+				editor.update(() => {
+					insertedSpace = $insertSpaceAfterMentionAtSelection();
+				});
+				if (insertedSpace) {
+					event.preventDefault();
+					return;
+				}
 			}
 
 			if (isTextareaType(type) && isShortcutCode(event, BOLD_SHORTCUT_CODES)) {
