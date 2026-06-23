@@ -50,8 +50,8 @@ const AI_ALLOWED_FILE_MIME_TYPES = new Set([
 	"text/xml",
 ]);
 const CORE_TEXT_MODELS = [
-	"gemini-3-flash-preview",
 	"gemini-3.1-flash-lite-preview",
+	"gemini-3-flash-preview",
 	"gemini-2.5-flash",
 	"gemini-2.5-pro",
 	"gemini-2.5-flash-lite",
@@ -59,8 +59,8 @@ const CORE_TEXT_MODELS = [
 ];
 const FALLBACK_TEXT_MODELS = ["gemini-2.5-flash", "gemini-2.5-pro"];
 const PREFERRED_FAST_TEXT_MODELS = [
-	"gemini-3-flash-preview",
 	"gemini-3.1-flash-lite-preview",
+	"gemini-3-flash-preview",
 	"gemini-2.5-flash",
 	"gemini-2.5-flash-lite",
 	"gemini-2.0-flash",
