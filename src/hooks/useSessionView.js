@@ -102,7 +102,6 @@ function prepareCampaignEntityPayload(type, entity = {}) {
 export default function useSessionView() {
 	const dispatch = useAppDispatch();
 	const campaign = useAppSelector((state) => state.active.campaign);
-	const activeSession = useAppSelector((state) => state.active.session);
 	const sessionId = useAppSelector(
 		(state) => state.navigation.activeSessionFileName,
 	);
@@ -114,7 +113,6 @@ export default function useSessionView() {
 	const [scopeImportModal, setScopeImportModal] = useState(null);
 	const saveTimeout = useRef(null);
 	const pendingSessionSaveRef = useRef(null);
-	const lastAppliedActiveSessionRef = useRef(null);
 
 	const campaignSlug = campaign.slug;
 	const handleBack = useCallback(() => {
@@ -345,10 +343,21 @@ export default function useSessionView() {
 		) {
 			return;
 		}
+		if (syncEvent.resource === "ai") {
+			discardPendingSessionSave();
+			loadSession({ force: true });
+			return;
+		}
 		if (saveTimeout.current || pendingSessionSaveRef.current) return;
 
 		loadSession({ force: true });
-	}, [campaignSlug, loadSession, sessionId, syncEvent]);
+	}, [
+		campaignSlug,
+		discardPendingSessionSave,
+		loadSession,
+		sessionId,
+		syncEvent,
+	]);
 
 	useEffect(() => {
 		dispatch(setActiveSessionAction(session));
@@ -864,16 +873,6 @@ export default function useSessionView() {
 			isUpdatingHistory.current = false;
 		}, 0);
 	}, [discardPendingSessionSave, normalizeLoadedSession, session]);
-
-	useEffect(() => {
-		if (!activeSession || activeSession === session) return;
-		if (lastAppliedActiveSessionRef.current === activeSession) return;
-		if (String(activeSession.fileName || "") !== String(sessionId)) return;
-		if (!activeSession.data || typeof activeSession.data !== "object") return;
-
-		lastAppliedActiveSessionRef.current = activeSession;
-		handleAiUpdate(activeSession);
-	}, [activeSession, handleAiUpdate, session, sessionId]);
 
 	const checklistItems = [
 		{ id: "goal", label: lang.t("Define the main session goal") },
