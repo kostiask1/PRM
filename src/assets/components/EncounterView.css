@@ -430,6 +430,10 @@
 	background: transparent;
 }
 
+.EncounterView .character_card__header {
+	display: none;
+}
+
 .EncounterView__gridItem .character_card__body {
 	padding: 0;
 }

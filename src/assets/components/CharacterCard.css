@@ -137,10 +137,6 @@
     height: var(--size-9);
 }
 
-.character_card__info_side {
-    margin-bottom: var(--space-4);
-}
-
 .character_card__image_side {
     float: right;
     width: min(38%, 520px);
@@ -240,7 +236,7 @@
     margin-bottom: 6px;
 }
 
-.character_card__body>.character_card__field {
+.character_card__body .character_card__field {
     margin-top: var(--space-4);
 }
 
