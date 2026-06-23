@@ -102,6 +102,7 @@ function prepareCampaignEntityPayload(type, entity = {}) {
 export default function useSessionView() {
 	const dispatch = useAppDispatch();
 	const campaign = useAppSelector((state) => state.active.campaign);
+	const activeSession = useAppSelector((state) => state.active.session);
 	const sessionId = useAppSelector(
 		(state) => state.navigation.activeSessionFileName,
 	);
@@ -113,6 +114,7 @@ export default function useSessionView() {
 	const [scopeImportModal, setScopeImportModal] = useState(null);
 	const saveTimeout = useRef(null);
 	const pendingSessionSaveRef = useRef(null);
+	const lastAppliedActiveSessionRef = useRef(null);
 
 	const campaignSlug = campaign.slug;
 	const handleBack = useCallback(() => {
@@ -130,6 +132,33 @@ export default function useSessionView() {
 				isNotesCollapsed: !!scene.isNotesCollapsed,
 			};
 		});
+	}, []);
+	const normalizeLoadedSession = useCallback(
+		(nextSession) => {
+			if (!nextSession?.data) return nextSession;
+			return {
+				...nextSession,
+				data: {
+					...nextSession.data,
+					notes: nextSession.data.notes || [],
+					scenes: normalizeSceneNotes(nextSession.data.scenes || []),
+					npcs: normalizeSessionEntities("npc", nextSession.data.npcs),
+					locations: normalizeSessionEntities(
+						"locations",
+						nextSession.data.locations,
+					),
+				},
+			};
+		},
+		[normalizeSceneNotes],
+	);
+
+	const discardPendingSessionSave = useCallback(() => {
+		if (saveTimeout.current) {
+			clearTimeout(saveTimeout.current);
+			saveTimeout.current = null;
+		}
+		pendingSessionSaveRef.current = null;
 	}, []);
 
 	const saveToServer = useCallback(
@@ -278,14 +307,8 @@ export default function useSessionView() {
 			if (!force && lastLoadedSessionIdRef.current === routeKey) return;
 
 			try {
-				const data = await api.getSession(campaignSlug, sessionId);
-
-				data.data.notes = data.data.notes || [];
-				data.data.scenes = normalizeSceneNotes(data.data.scenes || []);
-				data.data.npcs = normalizeSessionEntities("npc", data.data.npcs);
-				data.data.locations = normalizeSessionEntities(
-					"locations",
-					data.data.locations,
+				const data = normalizeLoadedSession(
+					await api.getSession(campaignSlug, sessionId),
 				);
 
 				setSession(data);
@@ -297,7 +320,7 @@ export default function useSessionView() {
 				console.error("Failed to load session", err);
 			}
 		},
-		[campaignSlug, sessionId, normalizeSceneNotes],
+		[campaignSlug, sessionId, normalizeLoadedSession],
 	);
 
 	useEffect(() => {
@@ -822,7 +845,7 @@ export default function useSessionView() {
 		updateData(`is${key}Collapsed`, !isCollapsed, true);
 	};
 
-	const handleAiUpdate = (updatedSession) => {
+	const handleAiUpdate = useCallback((updatedSession) => {
 		if (!session) return;
 
 		setUndoStack((prev) =>
@@ -833,25 +856,24 @@ export default function useSessionView() {
 		setRedoStack(clearRedoStack());
 
 		isUpdatingHistory.current = true;
+		discardPendingSessionSave();
 
-		updatedSession.data.notes = updatedSession.data.notes || [];
-		updatedSession.data.scenes = normalizeSceneNotes(
-			updatedSession.data.scenes || [],
-		);
-		updatedSession.data.npcs = normalizeSessionEntities(
-			"npc",
-			updatedSession.data.npcs,
-		);
-		updatedSession.data.locations = normalizeSessionEntities(
-			"locations",
-			updatedSession.data.locations,
-		);
-
-		setSession(updatedSession);
+		setSession(normalizeLoadedSession(updatedSession));
+		setIsSaving(false);
 		setTimeout(() => {
 			isUpdatingHistory.current = false;
 		}, 0);
-	};
+	}, [discardPendingSessionSave, normalizeLoadedSession, session]);
+
+	useEffect(() => {
+		if (!activeSession || activeSession === session) return;
+		if (lastAppliedActiveSessionRef.current === activeSession) return;
+		if (String(activeSession.fileName || "") !== String(sessionId)) return;
+		if (!activeSession.data || typeof activeSession.data !== "object") return;
+
+		lastAppliedActiveSessionRef.current = activeSession;
+		handleAiUpdate(activeSession);
+	}, [activeSession, handleAiUpdate, session, sessionId]);
 
 	const checklistItems = [
 		{ id: "goal", label: lang.t("Define the main session goal") },
