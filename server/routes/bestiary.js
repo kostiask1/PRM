@@ -39,6 +39,17 @@ function findCustomMonsterIndex(monsters, identifier) {
 	);
 }
 
+function buildReplacementCustomMonster(previousMonster, rawMonster) {
+	const nextMonster = clone(rawMonster);
+	const nextName = String(nextMonster.name || "").trim();
+	nextMonster.name = nextName;
+	nextMonster.source = CUSTOM_SOURCE;
+	if (!Object.prototype.hasOwnProperty.call(nextMonster, "imageUrl")) {
+		nextMonster.imageUrl = previousMonster?.imageUrl || null;
+	}
+	return nextMonster;
+}
+
 async function readCustomMonsterTarget(identifier, res) {
 	const targetIdentifier = String(identifier || "").trim();
 	if (!targetIdentifier) {
@@ -242,7 +253,10 @@ router.patch("/custom/:name", async (req, res, next) => {
 		const previousId = monsterId(monsters[index]);
 
 		if (req.body?.monster && typeof req.body.monster === "object") {
-			const nextMonster = clone(req.body.monster);
+			const nextMonster = buildReplacementCustomMonster(
+				monsters[index],
+				req.body.monster,
+			);
 			const nextName = String(nextMonster.name || "").trim();
 			if (!nextName) {
 				return res.status(400).json({ error: "Creature name is required." });
@@ -257,9 +271,6 @@ router.patch("/custom/:name", async (req, res, next) => {
 					error: "Custom creature with this name already exists.",
 				});
 			}
-
-			nextMonster.name = nextName;
-			nextMonster.source = CUSTOM_SOURCE;
 			monsters[index] = normalizeCustomMonsterHpAverage(nextMonster);
 			const updated = await storage.writeCustomBestiaryMonsters(monsters);
 
@@ -477,6 +488,12 @@ router.get("/:source", async (req, res, next) => {
 	} catch (error) {
 		next(error);
 	}
+});
+
+Object.defineProperty(router, "__test", {
+	value: {
+		buildReplacementCustomMonster,
+	},
 });
 
 module.exports = router;

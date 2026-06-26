@@ -819,7 +819,17 @@ export default function Bestiary({
 			} else {
 				const updatedMonster = await api.updateCustomBestiaryMonster(
 					fieldEditingMonster.id || fieldEditingMonster.name,
-					{ monster: { ...draftMonster, source: "CUSTOM" } },
+					{
+						monster: {
+							...draftMonster,
+							source: "CUSTOM",
+							imageUrl:
+								draftMonster.imageUrl ??
+								fieldEditingMonster.imageUrl ??
+								fieldEditingOriginalMonster?.imageUrl ??
+								null,
+						},
+					},
 				);
 				applyUpdatedCustomMonster(fieldEditingMonster.name, updatedMonster);
 			}

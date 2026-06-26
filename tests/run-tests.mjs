@@ -109,6 +109,7 @@ const storage = require("../server/storage.js");
 const spellsRouter = require("../server/routes/spells.js");
 const backupsRouter = require("../server/routes/backups.js");
 const aiRouter = require("../server/routes/ai.js");
+const bestiaryRouter = require("../server/routes/bestiary.js");
 const aiService = require("../server/aiService.js");
 const aiHistoryService = require("../server/aiHistoryService.js");
 const aiResponseHistoryService = require("../server/aiResponseHistoryService.js");
@@ -1284,6 +1285,27 @@ await run("MonsterStatBlockModel formats combat data", () => {
 		},
 	});
 	assert.equal(chooserModel.typeLabel, "celestial/fey/fiend (spirit)");
+});
+
+await run("custom monster replacement preserves token image when renamed", () => {
+	const { buildReplacementCustomMonster } = bestiaryRouter.__test;
+	const replacement = buildReplacementCustomMonster(
+		{
+			id: "monster-1",
+			name: "Old",
+			source: "CUSTOM",
+			imageUrl: "/api/images/general/tokens/old.png",
+		},
+		{
+			id: "monster-1",
+			name: "New",
+			source: "CUSTOM",
+			cr: "1",
+		},
+	);
+
+	assert.equal(replacement.name, "New");
+	assert.equal(replacement.imageUrl, "/api/images/general/tokens/old.png");
 });
 
 await run("SpellCardModel formats spell labels", () => {
