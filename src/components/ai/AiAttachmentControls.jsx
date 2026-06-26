@@ -190,28 +190,39 @@ export default function AiAttachmentControls({
 				className="AiAttachmentControls__file_input"
 				onChange={handleAttachImages}
 			/>
-			{attachedImages.length < MAX_AI_ATTACHMENTS && (
-				<div className="AiAttachmentControls__file_actions">
-					<Button
-						variant="ghost"
-						icon="image"
-						onClick={() => imageInputRef.current?.click()}
-						disabled={disabled}
-						title={lang.t("Attach images")}
-					>
-						{lang.t("Attach images")}
-					</Button>
-					<Button
-						variant="ghost"
-						icon="database"
-						onClick={() => setIsGalleryOpen(true)}
-						disabled={disabled}
-						title={lang.t("From gallery")}
-					>
-						{lang.t("From gallery")}
-					</Button>
-				</div>
-			)}
+			<div className="AiAttachmentControls__file_actions">
+				{attachedImages.length < MAX_AI_ATTACHMENTS && (
+					<>
+						<Button
+							variant="ghost"
+							icon="image"
+							onClick={() => imageInputRef.current?.click()}
+							disabled={disabled}
+							title={lang.t("Attach images")}
+						>
+							{lang.t("Attach images")}
+						</Button>
+						<Button
+							variant="ghost"
+							icon="database"
+							onClick={() => setIsGalleryOpen(true)}
+							disabled={disabled}
+							title={lang.t("From gallery")}
+						>
+							{lang.t("From gallery")}
+						</Button>
+					</>
+				)}
+				<Button
+					variant="ghost"
+					icon="file-plus"
+					onClick={() => resolvedFileInputRef.current?.click()}
+					disabled={disabled || attachedFiles.length >= MAX_AI_ATTACHMENTS}
+					title={lang.t("Attach files")}
+				>
+					{lang.t("Attach files")}
+				</Button>
+			</div>
 			{attachedImages.length > 0 && (
 				<div className="AiAttachmentControls__list">
 					{attachedImages.map((image, index) => (
@@ -238,17 +249,6 @@ export default function AiAttachmentControls({
 					))}
 				</div>
 			)}
-			<div className="AiAttachmentControls__file_actions">
-				<Button
-					variant="ghost"
-					icon="file-plus"
-					onClick={() => resolvedFileInputRef.current?.click()}
-					disabled={disabled || attachedFiles.length >= MAX_AI_ATTACHMENTS}
-					title={lang.t("Attach files")}
-				>
-					{lang.t("Attach files")}
-				</Button>
-			</div>
 			{attachedFiles.length > 0 && (
 				<div className="AiAttachmentControls__list">
 					{attachedFiles.map((file, index) => (
