@@ -580,7 +580,10 @@ function getDiffResourceState(resource) {
 	return getLocalizedDiffResourceState(resource, translate);
 }
 
-export default function AiAssistantPanel({ isBestiary = false }) {
+export default function AiAssistantPanel({
+	isBestiary = false,
+	onRegisterImagePromptAction,
+}) {
 	const dispatch = useAppDispatch();
 	const currentLanguage = useAppSelector(
 		(state) => state.localization.language,
@@ -603,11 +606,12 @@ export default function AiAssistantPanel({ isBestiary = false }) {
 	const navigation = useAppSelector((state) => state.navigation);
 	const initialRoute = useMemo(
 		() => ({
-			campaign: navigation.activeCampaignSlug,
+			campaign: isBestiary ? "bestiary" : navigation.activeCampaignSlug,
 			session: navigation.activeSessionFileName,
 			encounter: navigation.activeEncounterId,
 		}),
 		[
+			isBestiary,
 			navigation.activeCampaignSlug,
 			navigation.activeEncounterId,
 			navigation.activeSessionFileName,
@@ -2298,11 +2302,80 @@ export default function AiAssistantPanel({ isBestiary = false }) {
 		},
 	});
 
+	const openImagePromptForMonster = useCallback(
+		(monster) => {
+			if (!monster?.name) return;
+			setSelectedImagePromptTarget(buildCustomMonsterImageTarget(monster));
+			setIsImagePromptContextMode(false);
+			setImagePromptInstructions(activeImagePromptBasePrompt);
+			setImagePromptRequest("");
+			setIsImagePromptPickerOpen(true);
+		},
+		[activeImagePromptBasePrompt],
+	);
+
+	useEffect(() => {
+		if (!isBestiary || typeof onRegisterImagePromptAction !== "function") {
+			return undefined;
+		}
+		onRegisterImagePromptAction(openImagePromptForMonster);
+		return () => onRegisterImagePromptAction(null);
+	}, [isBestiary, onRegisterImagePromptAction, openImagePromptForMonster]);
+
 	useEffect(() => {
 		return () => {
 			cancelGenerateRequest();
 		};
 	}, []);
+
+	const imagePromptModal = (
+		<AiImagePromptPickerModal
+			attachedFiles={attachedFiles}
+			attachedImages={attachedImages}
+			buildCustomMonsterImageTarget={buildCustomMonsterImageTarget}
+			buildLocationImageTarget={buildLocationImageTarget}
+			buildNpcImageTarget={buildNpcImageTarget}
+			buildSceneImageTarget={buildSceneImageTarget}
+			campaignSlug={isBestiary ? "general" : initialRoute.campaign}
+			customMonstersWithImages={imagePromptCustomMonstersWithImages}
+			customMonstersWithoutImages={imagePromptCustomMonstersWithoutImages}
+			getCharacterDisplayName={getCharacterDisplayName}
+			getImagePromptPreview={getImagePromptPreview}
+			getImagePromptTargetTitle={getImagePromptTargetTitle}
+			getLocationDisplayName={getLocationDisplayName}
+			getSceneImagePromptDescription={getSceneImagePromptDescription}
+			getSceneImagePromptTitle={getSceneImagePromptTitle}
+			imagePromptInstructions={imagePromptInstructions}
+			imagePromptLocations={imagePromptLocations}
+			imagePromptNpcs={imagePromptNpcs}
+			imagePromptScenes={imagePromptScenes}
+			aiModels={aiModels}
+			isBestiary={isBestiary}
+			isCampaign={isCampaign}
+			isDataLoading={isImagePromptDataLoading}
+			isOpen={isImagePromptPickerOpen}
+			loading={loading}
+			onBackToSelection={() => {
+				setSelectedImagePromptTarget(null);
+				setIsImagePromptContextMode(false);
+				setImagePromptInstructions(activeImagePromptBasePrompt);
+				setImagePromptRequest("");
+			}}
+			onCancel={closeImagePromptPicker}
+			onContinueWithoutSelection={continueImagePromptWithoutTarget}
+			onGenerate={generateImagePromptForTarget}
+			onInstructionsChange={setImagePromptInstructions}
+			onRequestChange={setImagePromptRequest}
+			onModelChange={setSelectedModel}
+			onSelectTarget={selectImagePromptTarget}
+			isContextMode={isImagePromptContextMode}
+			imagePromptRequest={imagePromptRequest}
+			selectedModel={selectedModel}
+			selectedTarget={selectedImagePromptTarget}
+			setAttachedFiles={setAttachedFiles}
+			setAttachedImages={setAttachedImages}
+		/>
+	);
 
 	return (
 		<div className="AiAssistant">
@@ -2394,55 +2467,6 @@ export default function AiAssistantPanel({ isBestiary = false }) {
 							}
 							updateCampaignContextListItem={updateCampaignContextListItem}
 							updateContextConfig={updateContextConfig}
-						/>
-
-						<AiImagePromptPickerModal
-							attachedFiles={attachedFiles}
-							attachedImages={attachedImages}
-							buildCustomMonsterImageTarget={buildCustomMonsterImageTarget}
-							buildLocationImageTarget={buildLocationImageTarget}
-							buildNpcImageTarget={buildNpcImageTarget}
-							buildSceneImageTarget={buildSceneImageTarget}
-							campaignSlug={isBestiary ? "general" : initialRoute.campaign}
-							customMonstersWithImages={imagePromptCustomMonstersWithImages}
-							customMonstersWithoutImages={
-								imagePromptCustomMonstersWithoutImages
-							}
-							getCharacterDisplayName={getCharacterDisplayName}
-							getImagePromptPreview={getImagePromptPreview}
-							getImagePromptTargetTitle={getImagePromptTargetTitle}
-							getLocationDisplayName={getLocationDisplayName}
-							getSceneImagePromptDescription={getSceneImagePromptDescription}
-							getSceneImagePromptTitle={getSceneImagePromptTitle}
-							imagePromptInstructions={imagePromptInstructions}
-							imagePromptLocations={imagePromptLocations}
-							imagePromptNpcs={imagePromptNpcs}
-							imagePromptScenes={imagePromptScenes}
-							aiModels={aiModels}
-							isBestiary={isBestiary}
-							isCampaign={isCampaign}
-							isDataLoading={isImagePromptDataLoading}
-							isOpen={isImagePromptPickerOpen}
-							loading={loading}
-							onBackToSelection={() => {
-								setSelectedImagePromptTarget(null);
-								setIsImagePromptContextMode(false);
-								setImagePromptInstructions(activeImagePromptBasePrompt);
-								setImagePromptRequest("");
-							}}
-							onCancel={closeImagePromptPicker}
-							onContinueWithoutSelection={continueImagePromptWithoutTarget}
-							onGenerate={generateImagePromptForTarget}
-							onInstructionsChange={setImagePromptInstructions}
-							onRequestChange={setImagePromptRequest}
-							onModelChange={setSelectedModel}
-							onSelectTarget={selectImagePromptTarget}
-							isContextMode={isImagePromptContextMode}
-							imagePromptRequest={imagePromptRequest}
-							selectedModel={selectedModel}
-							selectedTarget={selectedImagePromptTarget}
-							setAttachedFiles={setAttachedFiles}
-							setAttachedImages={setAttachedImages}
 						/>
 
 						<AiResponseModal
@@ -2558,6 +2582,8 @@ export default function AiAssistantPanel({ isBestiary = false }) {
 					</div>
 				</Modal>
 			)}
+
+			{imagePromptModal}
 
 			{notification && (
 				<Notification

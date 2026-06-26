@@ -225,6 +225,7 @@ export default function BestiaryContent({
 	onEditMonster,
 	onFavoriteListChange,
 	onMonsterAiAction,
+	onRegisterImagePromptAction,
 	onSelectedSourcesChange,
 	onSourceFilterChange,
 	onAiEditCustomMonster,
@@ -430,7 +431,10 @@ export default function BestiaryContent({
 					)}
 				</div>
 			</div>
-			<AiAssistantPanel isBestiary />
+			<AiAssistantPanel
+				isBestiary
+				onRegisterImagePromptAction={onRegisterImagePromptAction}
+			/>
 		</div>
 	);
 }

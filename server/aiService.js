@@ -17,6 +17,7 @@ const AI_IMAGE_MIME_TYPES = Object.freeze({
 	".webp": "image/webp",
 	".gif": "image/gif",
 });
+const AI_ALLOWED_IMAGE_MIME_TYPES = new Set(Object.values(AI_IMAGE_MIME_TYPES));
 const AI_FILE_MIME_TYPES = Object.freeze({
 	".csv": "text/csv",
 	".css": "text/css",
@@ -643,15 +644,65 @@ async function imageUrlToInlinePart(imageUrl) {
 	};
 }
 
+function normalizeAttachedImageMimeType(image = {}) {
+	const mimeType = String(image.mimeType || "")
+		.trim()
+		.toLowerCase();
+	if (AI_ALLOWED_IMAGE_MIME_TYPES.has(mimeType)) return mimeType;
+	const byExtension = AI_IMAGE_MIME_TYPES[extensionFromName(image.name)];
+	return byExtension || "";
+}
+
+function normalizeAttachedImageData(data) {
+	const value = String(data || "").trim();
+	if (!value) return "";
+	const commaIndex = value.indexOf(",");
+	return value.startsWith("data:") && commaIndex !== -1
+		? value.slice(commaIndex + 1)
+		: value;
+}
+
+function attachedImageToInlinePart(image = {}) {
+	const mimeType = normalizeAttachedImageMimeType(image);
+	if (!mimeType) return null;
+
+	const data = normalizeAttachedImageData(image.data);
+	if (!data) return null;
+
+	let buffer;
+	try {
+		buffer = Buffer.from(data, "base64");
+	} catch {
+		return null;
+	}
+	if (!buffer.length || buffer.length > MAX_AI_IMAGE_BYTES) return null;
+
+	return {
+		inlineData: {
+			data: buffer.toString("base64"),
+			mimeType,
+		},
+	};
+}
+
 async function buildImageParts(attachedImages = []) {
 	const images = Array.isArray(attachedImages)
 		? attachedImages.slice(0, MAX_AI_IMAGES)
 		: [];
-	const urls = [...new Set(collectImageUrls(images))];
 	const parts = [];
-	for (const url of urls) {
-		const part = await imageUrlToInlinePart(url);
-		if (part) parts.push(part);
+	const seenUrls = new Set();
+	for (const image of images) {
+		const inlinePart = attachedImageToInlinePart(image);
+		if (inlinePart) {
+			parts.push(inlinePart);
+			continue;
+		}
+
+		const url = String(image?.url || "").trim();
+		if (!url || seenUrls.has(url)) continue;
+		seenUrls.add(url);
+		const urlPart = await imageUrlToInlinePart(url);
+		if (urlPart) parts.push(urlPart);
 	}
 	return parts;
 }
@@ -1338,5 +1389,6 @@ module.exports = {
 		extractFirstJsonObject,
 		collectImageUrls,
 		resolveLocalImageUrl,
+		buildImageParts,
 	},
 };

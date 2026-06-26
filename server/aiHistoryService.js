@@ -172,10 +172,14 @@ function buildAiRequestSnapshot({
 	const attachments = {};
 	const imageAttachments = Array.isArray(attachedImages)
 		? attachedImages
-				.map((image) => ({
-					name: asText(image?.name),
-					url: asText(image?.url) || undefined,
-				}))
+				.map((image) => {
+					const name = asText(image?.name);
+					const url = asText(image?.url);
+					return {
+						...(name ? { name } : {}),
+						...(url ? { url } : {}),
+					};
+				})
 				.filter((image) => image.name || image.url)
 		: [];
 	const fileAttachments = Array.isArray(attachedFiles)

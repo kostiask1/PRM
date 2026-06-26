@@ -1,3 +1,7 @@
+.MonsterFieldEditModal__overlay {
+	z-index: 1200;
+}
+
 .MonsterFieldEditModal__overlay .Modal__card,
 .Modal__card.MonsterFieldEditModal__modal {
 	width: min(1180px, 96vw);
@@ -145,6 +149,10 @@
 	padding-top: var(--space-3);
 	background: var(--panel);
 	border-top: 1px solid var(--border);
+}
+
+.MonsterFieldEditModal__rules_overlay {
+	z-index: 1300;
 }
 
 .MonsterFieldEditModal__rules_overlay .Modal__card,

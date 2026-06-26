@@ -24,12 +24,19 @@ class AiHistoryWriter {
 			cloned.attachedImages = cloned.attachedImages
 				.map((image) => {
 					if (!image || typeof image !== "object") return null;
+					const name = asText(image.name);
+					const url = asText(image.url);
+					const mimeType = asText(image.mimeType);
+					const sizeBytes = Number(image.sizeBytes) || 0;
+					if (!name && !url && !mimeType && !sizeBytes && !image.data) {
+						return null;
+					}
 					return {
-						name: asText(image.name),
-						url: asText(image.url) || undefined,
-						mimeType: asText(image.mimeType) || undefined,
-						sizeBytes: Number(image.sizeBytes) || undefined,
-						omittedData: image.data ? true : undefined,
+						...(name ? { name } : {}),
+						...(url ? { url } : {}),
+						...(mimeType ? { mimeType } : {}),
+						...(sizeBytes ? { sizeBytes } : {}),
+						...(image.data ? { omittedData: true } : {}),
 					};
 				})
 				.filter(Boolean);

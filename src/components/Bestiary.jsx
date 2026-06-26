@@ -218,6 +218,7 @@ export default function Bestiary({
 	const selectedMonsterRef = useRef(null);
 	const aiDraftResponseRef = useRef(null);
 	const aiEditControllerRef = useRef(null);
+	const openImagePromptForMonsterRef = useRef(null);
 	const shouldAutoSelectMonsterRef = useRef(true);
 	const pendingSyncSelectionRef = useRef(null);
 	const embeddedScrolledMonsterRef = useRef("");
@@ -726,11 +727,7 @@ export default function Bestiary({
 
 	const openMonsterAiAction = (monster) => {
 		if (!monster?.name) return;
-		if (isCustomSource(monster.source)) {
-			setAiActionMonster(monster);
-			return;
-		}
-		openAiEditCustomMonster(monster, "create-based");
+		setAiActionMonster(monster);
 	};
 
 	const closeMonsterAiAction = () => {
@@ -742,6 +739,10 @@ export default function Bestiary({
 		if (!aiActionMonster) return;
 		const target = aiActionMonster;
 		setAiActionMonster(null);
+		if (mode === "image-prompt") {
+			openImagePromptForMonsterRef.current?.(target);
+			return;
+		}
 		openAiEditCustomMonster(target, mode);
 	};
 
@@ -1287,6 +1288,9 @@ export default function Bestiary({
 			onEditMonster={openEditMonster}
 			onFavoriteListChange={setFavorites}
 			onMonsterAiAction={openMonsterAiAction}
+			onRegisterImagePromptAction={(handler) => {
+				openImagePromptForMonsterRef.current = handler;
+			}}
 			onSelectMonster={onSelectMonster}
 			onToggleFavorite={handleToggleFavorite}
 			onlyFavorites={onlyFavorites}
@@ -1320,6 +1324,8 @@ export default function Bestiary({
 				aiActionMonster={aiActionMonster}
 				onCancel={closeMonsterAiAction}
 				onChoose={chooseMonsterAiAction}
+				showGlobalEdit={isCustomSource(aiActionMonster?.source)}
+				showImagePromptAction
 			/>
 			<BestiaryAiModals
 				aiDraftDiffResources={aiDraftDiffResources}

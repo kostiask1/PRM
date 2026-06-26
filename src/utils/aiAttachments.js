@@ -1,6 +1,15 @@
 export const ESTIMATED_FILE_TOKEN_BYTES = 4;
 export const MAX_AI_ATTACHMENTS = 4;
 export const MAX_AI_FILE_BYTES = 10 * 1024 * 1024;
+export const MAX_AI_IMAGE_BYTES = 10 * 1024 * 1024;
+
+const AI_IMAGE_MIME_BY_EXTENSION = Object.freeze({
+	".gif": "image/gif",
+	".jpeg": "image/jpeg",
+	".jpg": "image/jpeg",
+	".png": "image/png",
+	".webp": "image/webp",
+});
 
 const AI_FILE_MIME_BY_EXTENSION = Object.freeze({
 	".csv": "text/csv",
@@ -24,6 +33,7 @@ const AI_FILE_MIME_TYPES = new Set([
 	"text/xml",
 ]);
 
+export const AI_IMAGE_ACCEPT = Object.keys(AI_IMAGE_MIME_BY_EXTENSION).join(",");
 export const AI_FILE_ACCEPT = Object.keys(AI_FILE_MIME_BY_EXTENSION).join(",");
 
 function getFileExtension(fileName) {
@@ -39,6 +49,16 @@ export function getSupportedAiFileMimeType(file) {
 	if (byExtension) return byExtension;
 	const mimeType = String(file.type || "").toLowerCase();
 	return AI_FILE_MIME_TYPES.has(mimeType) ? mimeType : "";
+}
+
+export function getSupportedAiImageMimeType(file) {
+	if (!file) return "";
+	const byExtension = AI_IMAGE_MIME_BY_EXTENSION[getFileExtension(file.name)];
+	if (byExtension) return byExtension;
+	const mimeType = String(file.type || "").toLowerCase();
+	return Object.values(AI_IMAGE_MIME_BY_EXTENSION).includes(mimeType)
+		? mimeType
+		: "";
 }
 
 export function readFileAsBase64(file) {

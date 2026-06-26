@@ -5,16 +5,19 @@ import { lang } from "../../services/localization";
 import { formatBytes } from "../../utils/formatBytes";
 import {
 	AI_FILE_ACCEPT,
+	AI_IMAGE_ACCEPT,
 	getAttachedFileKey,
 	getAttachedImageKey,
 	getSupportedAiFileMimeType,
+	getSupportedAiImageMimeType,
 	MAX_AI_ATTACHMENTS,
 	MAX_AI_FILE_BYTES,
+	MAX_AI_IMAGE_BYTES,
 	readFileAsBase64,
 } from "../../utils/aiAttachments";
 import Button from "../form/Button";
-import ImageAssetField from "../form/ImageAssetField";
 import Icon from "../common/Icon";
+import ImageGallery from "../ImageGallery";
 import "../../assets/components/AiAttachmentControls.css";
 
 export default function AiAttachmentControls({
@@ -28,7 +31,8 @@ export default function AiAttachmentControls({
 }) {
 	const dispatch = useAppDispatch();
 	const internalFileInputRef = useRef(null);
-	const [attachmentPickerKey, setAttachmentPickerKey] = useState(0);
+	const imageInputRef = useRef(null);
+	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 	const resolvedFileInputRef = fileInputRef || internalFileInputRef;
 
 	const addAttachedImage = (image) => {
@@ -44,6 +48,63 @@ export default function AiAttachmentControls({
 		setAttachedImages((prev) =>
 			prev.filter((_, index) => index !== indexToRemove),
 		);
+	};
+
+	const handleAttachImages = async (event) => {
+		const selectedFiles = Array.from(event.target.files || []);
+		event.target.value = "";
+		if (selectedFiles.length === 0) return;
+
+		const availableSlots = Math.max(
+			0,
+			MAX_AI_ATTACHMENTS - attachedImages.length,
+		);
+		if (availableSlots === 0) return;
+
+		const nextImages = [];
+		const skipped = [];
+		for (const file of selectedFiles.slice(0, availableSlots)) {
+			const mimeType = getSupportedAiImageMimeType(file);
+			if (!mimeType || file.size > MAX_AI_IMAGE_BYTES) {
+				skipped.push(file.name);
+				continue;
+			}
+			try {
+				const data = await readFileAsBase64(file);
+				nextImages.push({
+					name: file.name,
+					mimeType,
+					sizeBytes: file.size,
+					data,
+					previewUrl: `data:${mimeType};base64,${data}`,
+				});
+			} catch {
+				skipped.push(file.name);
+			}
+		}
+
+		if (nextImages.length > 0) {
+			setAttachedImages((prev) => {
+				const existing = new Set(prev.map(getAttachedImageKey));
+				const uniqueNext = nextImages.filter((image) => {
+					const key = getAttachedImageKey(image);
+					if (existing.has(key)) return false;
+					existing.add(key);
+					return true;
+				});
+				return [...prev, ...uniqueNext].slice(0, MAX_AI_ATTACHMENTS);
+			});
+		}
+		if (skipped.length > 0 || selectedFiles.length > availableSlots) {
+			dispatch(
+				alert({
+					title: lang.t("Image attachment error"),
+					message: lang.t(
+						"Some images could not be attached. Supported images: JPG, PNG, WEBP, GIF. Maximum size: 10 MB.",
+					),
+				}),
+			);
+		}
 	};
 
 	const handleAttachFiles = async (event) => {
@@ -121,25 +182,35 @@ export default function AiAttachmentControls({
 				className="AiAttachmentControls__file_input"
 				onChange={handleAttachFiles}
 			/>
+			<input
+				ref={imageInputRef}
+				type="file"
+				multiple
+				accept={AI_IMAGE_ACCEPT}
+				className="AiAttachmentControls__file_input"
+				onChange={handleAttachImages}
+			/>
 			{attachedImages.length < MAX_AI_ATTACHMENTS && (
-				<ImageAssetField
-					key={attachmentPickerKey}
-					imageUrl=""
-					campaignSlug={campaignSlug || "general"}
-					target="attachment"
-					imageAlt={lang.t("Attached image")}
-					containerClassName="AiAttachmentControls__image_picker"
-					onImageChange={(url) => {
-						if (!url) return;
-						const name = String(url).split("/").pop() || url;
-						addAttachedImage({
-							name,
-							url,
-							previewUrl: url,
-						});
-						setAttachmentPickerKey((key) => key + 1);
-					}}
-				/>
+				<div className="AiAttachmentControls__file_actions">
+					<Button
+						variant="ghost"
+						icon="image"
+						onClick={() => imageInputRef.current?.click()}
+						disabled={disabled}
+						title={lang.t("Attach images")}
+					>
+						{lang.t("Attach images")}
+					</Button>
+					<Button
+						variant="ghost"
+						icon="database"
+						onClick={() => setIsGalleryOpen(true)}
+						disabled={disabled}
+						title={lang.t("From gallery")}
+					>
+						{lang.t("From gallery")}
+					</Button>
+				</div>
 			)}
 			{attachedImages.length > 0 && (
 				<div className="AiAttachmentControls__list">
@@ -204,6 +275,23 @@ export default function AiAttachmentControls({
 					))}
 				</div>
 			)}
+			<ImageGallery
+				isOpen={isGalleryOpen}
+				onClose={() => setIsGalleryOpen(false)}
+				onSelect={(img) => {
+					if (img?.url) {
+						addAttachedImage({
+							name: img.name || String(img.url).split("/").pop() || img.url,
+							url: img.url,
+							previewUrl: img.url,
+						});
+					}
+					setIsGalleryOpen(false);
+				}}
+				initialSource={campaignSlug || "general"}
+				initialCategory="attachments"
+				initialSubcategory=""
+			/>
 		</div>
 	);
 }

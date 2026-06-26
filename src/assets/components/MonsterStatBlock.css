@@ -24,7 +24,7 @@
 	border-radius: 50%;
 	overflow: visible;
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	justify-content: center;
 }
 

@@ -723,6 +723,29 @@ await run("AI service resolves attached images for Gemini inline data", () => {
 	);
 });
 
+await run("AI service accepts temporary attached image data", async () => {
+	const imageData = Buffer.from("temporary image bytes", "utf8").toString(
+		"base64",
+	);
+	const parts = await aiService.__test.buildImageParts([
+		{
+			name: "sketch.png",
+			mimeType: "image/png",
+			sizeBytes: 21,
+			data: imageData,
+			url: null,
+		},
+	]);
+
+	assert.equal(parts.length, 1);
+	assert.deepEqual(parts[0], {
+		inlineData: {
+			data: imageData,
+			mimeType: "image/png",
+		},
+	});
+});
+
 await run("AI payload schema rejects legacy final-state payloads", () => {
 	assert.equal(
 		aiPayloadSchemas.validateAiGeneratedContent({
@@ -799,6 +822,44 @@ await run("AI history stores attached file names without file content", () => {
 		attachedFiles,
 	});
 	assert.deepEqual(retryPayload.attachedFiles, [{ name: "notes.md" }]);
+});
+
+await run("AI history stores attached image names without file content", () => {
+	const attachedImages = [
+		{
+			name: "sketch.png",
+			mimeType: "image/png",
+			sizeBytes: 21,
+			data: Buffer.from("secret pixels", "utf8").toString("base64"),
+			previewUrl: "data:image/png;base64,ignored",
+		},
+	];
+	const snapshot = aiHistoryService.buildAiRequestSnapshot({
+		type: "prompt",
+		userInstructions: "Read the image",
+		path: { campaign: "demo" },
+		attachedImages,
+		parseAIResponse: false,
+		shouldParseAIResponse: false,
+		contextConfig: null,
+		contextData: {},
+		language: "uk",
+	});
+	assert.deepEqual(snapshot.attachments.images, [{ name: "sketch.png" }]);
+	assert.equal(JSON.stringify(snapshot).includes("secret"), false);
+	assert.equal(JSON.stringify(snapshot).includes(attachedImages[0].data), false);
+
+	const retryPayload = new AiHistoryWriter().cloneRetryPayload({
+		attachedImages,
+	});
+	assert.deepEqual(retryPayload.attachedImages, [
+		{
+			name: "sketch.png",
+			mimeType: "image/png",
+			sizeBytes: 21,
+			omittedData: true,
+		},
+	]);
 });
 
 await run(
@@ -1001,6 +1062,25 @@ await run("AI route fills ids for current selected targets", () => {
 	assert.equal(payload.operations[0].id, "enc-1");
 	assert.equal(payload.operations[1].id, "scene-1");
 	assert.equal(payload.operations[2].id, undefined);
+});
+
+await run("AI route treats custom monster image prompts as bestiary requests", () => {
+	const {
+		getGenerateRequestPath,
+		isBestiaryImagePromptRequestPayload,
+	} = aiRouter.__test;
+	const payload = {
+		type: "image",
+		path: { campaign: null, session: null, encounter: null },
+		imageTarget: { type: "custom-monster", name: "Кото-гусениця" },
+	};
+
+	assert.equal(isBestiaryImagePromptRequestPayload(payload), true);
+	assert.deepEqual(getGenerateRequestPath(payload), {
+		campaign: "bestiary",
+		session: null,
+		encounter: null,
+	});
 });
 
 await run("SessionViewModel encounter lookup", () => {
@@ -1571,6 +1651,10 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.match(appStoreSource, /RECORD_RULES_REFERENCE_HISTORY_ENTRY/);
 	assert.match(appStoreSource, /SET_RULES_REFERENCE_HISTORY_INDEX/);
 	assert.match(aiAssistantSource, /aiHistoryCampaign = isBestiary \? "bestiary"/);
+	assert.match(
+		aiAssistantSource,
+		/campaign: isBestiary \? "bestiary" : navigation\.activeCampaignSlug/,
+	);
 	assert.match(aiAssistantSource, /resource: "custom-bestiary"/);
 	assert.match(aiAssistantSource, /monsterName:/);
 });

@@ -498,6 +498,21 @@ function getAiHistoryCampaignSlug(req) {
 	return String(req.query?.campaign || req.body?.campaign || "").trim();
 }
 
+function isBestiaryImagePromptRequestPayload(payload = {}) {
+	return (
+		payload?.type === "image" &&
+		(payload?.path?.campaign === "bestiary" ||
+			asText(payload?.imageTarget?.type) === "custom-monster")
+	);
+}
+
+function getGenerateRequestPath(payload = {}) {
+	if (isBestiaryImagePromptRequestPayload(payload) && !payload?.path?.campaign) {
+		return { campaign: "bestiary", session: null, encounter: null };
+	}
+	return payload?.path && typeof payload.path === "object" ? payload.path : {};
+}
+
 function collectMentionCandidates(generatedContent, contextData = {}) {
 	const names = [];
 	const campaignContext = contextData?.campaign || {};
@@ -726,7 +741,6 @@ router.post("/generate", async (req, res, next) => {
 			type,
 			modelName,
 			userInstructions,
-			path,
 			sceneId,
 			imageTarget,
 			attachedImages,
@@ -757,11 +771,15 @@ router.post("/generate", async (req, res, next) => {
 				.status(500)
 				.json({ error: "GEMINI_API_KEY is not configured." });
 		}
+		const isBestiaryImagePromptRequest = isBestiaryImagePromptRequestPayload(
+			req.body,
+		);
+		const requestPath = getGenerateRequestPath(req.body);
 		const requestedEncounterGeneration = Boolean(generateEncounters);
 		const shouldParseAIResponse =
 			type !== "image" &&
 			Boolean(parseAIResponse) &&
-			(!path?.encounter || requestedEncounterGeneration);
+			(!requestPath?.encounter || requestedEncounterGeneration);
 		const encounterGenerationEnabled =
 			shouldParseAIResponse && requestedEncounterGeneration;
 		const customMonsterGenerationEnabled =
@@ -776,7 +794,7 @@ router.post("/generate", async (req, res, next) => {
 			? generateLocations !== false
 			: true;
 		const entityTargetScope =
-			shouldParseAIResponse && path?.session && !path?.encounter
+			shouldParseAIResponse && requestPath?.session && !requestPath?.encounter
 				? "mixed"
 				: "campaign";
 		const settings = await storage.readSettings();
@@ -790,9 +808,12 @@ router.post("/generate", async (req, res, next) => {
 				"imagePromptBasePromptOverride",
 			)
 				? asText(imagePromptBasePromptOverride)
-				: getCampaignImagePromptBasePrompt(settings, path?.campaign) ||
+				: getCampaignImagePromptBasePrompt(settings, requestPath?.campaign) ||
 					asText(settings.imagePromptBasePrompt);
-		const campaignBasePrompt = getCampaignBasePrompt(settings, path?.campaign);
+		const campaignBasePrompt = getCampaignBasePrompt(
+			settings,
+			requestPath?.campaign,
+		);
 
 		if (type === "custom-monster") {
 			let customBestiary = await storage.readCustomBestiary();
@@ -840,17 +861,17 @@ router.post("/generate", async (req, res, next) => {
 			}
 			let customCampaign = null;
 			let customSession = null;
-			if (path?.campaign && path.campaign !== "bestiary") {
+			if (requestPath?.campaign && requestPath.campaign !== "bestiary") {
 				customCampaign = await storage
-					.readCampaign(path.campaign)
+					.readCampaign(requestPath.campaign)
 					.catch(() => null);
 				customSession = await storage
-					.readSession(path.campaign, path.session)
+					.readSession(requestPath.campaign, requestPath.session)
 					.catch(() => null);
 
 				await appendConfiguredCampaignContext(
 					customContextData,
-					path.campaign,
+					requestPath.campaign,
 					customCampaign,
 					contextConfig,
 				);
@@ -873,7 +894,7 @@ router.post("/generate", async (req, res, next) => {
 				}),
 				session: customSession,
 				campaign: customCampaign,
-				encounterId: path?.encounter,
+				encounterId: requestPath?.encounter,
 				parseAIResponse: true,
 			});
 
@@ -925,7 +946,7 @@ router.post("/generate", async (req, res, next) => {
 			return res.status(result.status).json(result.body);
 		}
 
-		if (type === "image" && path?.campaign === "bestiary") {
+		if (isBestiaryImagePromptRequest) {
 			const generatedContent = await aiService.generateContent({
 				...buildGenerateContentRequestBase({
 					type: "image",
@@ -988,27 +1009,31 @@ router.post("/generate", async (req, res, next) => {
 			return res.json({ prompt: generatedContent, aiResponse });
 		}
 
-		const campaign = await storage.readCampaign(path.campaign);
+		if (!requestPath?.campaign) {
+			return res.status(400).json({ error: "path.campaign is required." });
+		}
+
+		const campaign = await storage.readCampaign(requestPath.campaign);
 		const session = await storage
-			.readSession(path.campaign, path.session)
+			.readSession(requestPath.campaign, requestPath.session)
 			.catch(() => null);
 
 		const contextData = { campaign: {}, sessions: [] };
 		await appendConfiguredCampaignContext(
 			contextData,
-			path.campaign,
+			requestPath.campaign,
 			campaign,
 			contextConfig,
 		);
 		if (entityTargetScope === "mixed" && session) {
 			contextData.currentSession = {
-				slug: path.session,
-				fileName: path.session,
+				slug: requestPath.session,
+				fileName: requestPath.session,
 				name: session.name,
 				data: filterSessionDataForAiContext(session.data),
 			};
 		}
-		if (path?.encounter || encounterGenerationEnabled) {
+		if (requestPath?.encounter || encounterGenerationEnabled) {
 			const customBestiary = await storage.readCustomBestiary();
 			const monsterNames = (
 				Array.isArray(customBestiary.monster) ? customBestiary.monster : []
@@ -1026,7 +1051,7 @@ router.post("/generate", async (req, res, next) => {
 			campaign,
 			userInstructions,
 			modelName,
-			encounterId: path.encounter,
+			encounterId: requestPath.encounter,
 			sceneId,
 			imageTarget,
 			attachedImages,
@@ -1048,7 +1073,7 @@ router.post("/generate", async (req, res, next) => {
 
 		if (shouldParseAIResponse) {
 			fillCurrentTargetIds(generatedContent, {
-				path,
+				path: requestPath,
 				sceneId,
 				customMonsterTarget: null,
 			});
@@ -1086,7 +1111,7 @@ router.post("/generate", async (req, res, next) => {
 			payload: req.body,
 			generatedContent,
 			session,
-			path,
+			path: requestPath,
 			type,
 			modelName,
 			responseLanguage,
@@ -1136,6 +1161,8 @@ Object.defineProperty(router, "__test", {
 	value: {
 		asText,
 		fillCurrentTargetIds,
+		getGenerateRequestPath,
+		isBestiaryImagePromptRequestPayload,
 		processGeneratedTextMentions,
 	},
 });

@@ -6,6 +6,7 @@ export default function MonsterAiActionModal({
 	aiActionMonster,
 	showLocalEdit = false,
 	showGlobalEdit = true,
+	showImagePromptAction = false,
 	targetLabel = null,
 	title = lang.t("AI creature action"),
 	actionIcon = "wand",
@@ -54,6 +55,15 @@ export default function MonsterAiActionModal({
 					>
 						{lang.t("Create new custom creature based on this")}
 					</Button>
+					{showImagePromptAction && (
+						<Button
+							variant="ghost"
+							icon="image"
+							onClick={() => onChoose("image-prompt")}
+						>
+							{lang.t("Generate image prompt")}
+						</Button>
+					)}
 				</div>
 			</div>
 		</Modal>
