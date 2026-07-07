@@ -160,6 +160,10 @@
     "source": "XScreen"
   },
   {
+    "name": "Dungeon Master's Screen; Ravenloft: The Horrors Within",
+    "source": "XScreenRHW"
+  },
+  {
     "name": "Dungeon Master's Screen: Dungeon Kit",
     "source": "ScreenDungeonKit"
   },

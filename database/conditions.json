@@ -86,7 +86,7 @@
               "type": "entries",
               "name": "D20 Tests Affected",
               "entries": [
-                "When you make a D20 Test the roll is reduced by 2 times your Exhaustion level."
+                "When you make a D20 Test, the roll is reduced by 2 times your Exhaustion level."
               ]
             },
             {

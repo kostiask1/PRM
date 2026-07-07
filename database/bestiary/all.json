@@ -3018,7 +3018,7 @@
         "name": "Spellcasting",
         "type": "spellcasting",
         "headerEntries": [
-          "The acolyte is a 1st-level spellcaster. Its spellcasting ability is Wisdom (spell save {@dc 12}, {@hit 4} to hit with spell attacks). The acolyte has following cleric spells prepared:"
+          "The acolyte is a 1st-level spellcaster. Its spellcasting ability is Wisdom (spell save {@dc 12}, {@hit 4} to hit with spell attacks). The acolyte has the following cleric spells prepared:"
         ],
         "spells": {
           "0": {
@@ -3214,7 +3214,7 @@
       {
         "name": "Explosive Crystal (Costs 3 Actions)",
         "entries": [
-          "The dragon spits an amethyst that that explodes at a point it can see within 60 feet of it. Each creature within a 20-foot-radius sphere centered on that point must succeed on a {@dc 20} Dexterity saving throw or take 13 ({@damage 3d8}) force damage and be knocked {@condition prone}."
+          "The dragon spits an amethyst that explodes at a point it can see within 60 feet of it. Each creature within a 20-foot-radius sphere centered on that point must succeed on a {@dc 20} Dexterity saving throw or take 13 ({@damage 3d8}) force damage and be knocked {@condition prone}."
         ]
       }
     ],
@@ -16991,7 +16991,7 @@
       {
         "name": "Explosive Crystal (Costs 3 Actions)",
         "entries": [
-          "The dragon spits an amethyst that that explodes at a point it can see within 60 feet of it. Each creature within a 20-foot-radius sphere centered on that point must succeed on a {@dc 23} Dexterity saving throw or take 18 ({@damage 4d8}) force damage and be knocked {@condition prone}."
+          "The dragon spits an amethyst that explodes at a point it can see within 60 feet of it. Each creature within a 20-foot-radius sphere centered on that point must succeed on a {@dc 23} Dexterity saving throw or take 18 ({@damage 4d8}) force damage and be knocked {@condition prone}."
         ]
       }
     ],
@@ -41321,7 +41321,7 @@
         "name": "Spellcasting",
         "type": "spellcasting",
         "headerEntries": [
-          "Azra is a 1st-level spellcaster. Its spellcasting ability is Wisdom (spell save {@dc 12}, {@hit 4} to hit with spell attacks). The acolyte has following cleric spells prepared:"
+          "Azra is a 1st-level spellcaster. Its spellcasting ability is Wisdom (spell save {@dc 12}, {@hit 4} to hit with spell attacks). The acolyte has the following cleric spells prepared:"
         ],
         "spells": {
           "0": {
@@ -42709,7 +42709,7 @@
       {
         "name": "Magic Resistance",
         "entries": [
-          "Bael have advantage on saving throws against spells and other magical effects."
+          "Bael has advantage on saving throws against spells and other magical effects."
         ]
       },
       {
@@ -52371,7 +52371,7 @@
       {
         "name": "Ice Walk",
         "entries": [
-          "The hag can move across and climb icy surfaces without needing to make an ability check, and {@quickref difficult terrain||3} composed of ice or snow doesn't cost the hag extra moment."
+          "The hag can move across and climb icy surfaces without needing to make an ability check, and {@quickref difficult terrain||3} composed of ice or snow doesn't cost the hag extra movement."
         ]
       }
     ],
@@ -56071,6 +56071,7 @@
       "Darkvision 60 ft."
     ],
     "languages": [
+      "Blink Dog",
       "understands Elvish and Sylvan but can't speak them"
     ],
     "cr": "1/4",
@@ -73619,7 +73620,7 @@
       {
         "name": "Drone",
         "entries": [
-          "The chasme produces a horrid droning sound to which demons are immune. Any other creature that starts its turn with in 30 feet of the chasme must succeed on a {@dc 12} Constitution saving throw or fall {@condition unconscious} for 10 minutes. A creature that can't hear the drone automatically succeeds on the save. The effect on the creature ends if it takes damage or if another creature takes an action to splash it with {@item Holy Water (Flask)|PHB|holy water}. If a creature's saving throw is successful or the effect ends for it, it is immune to the drone for the next 24 hours."
+          "The chasme produces a horrid droning sound to which demons are immune. Any other creature that starts its turn within 30 feet of the chasme must succeed on a {@dc 12} Constitution saving throw or fall {@condition unconscious} for 10 minutes. A creature that can't hear the drone automatically succeeds on the save. The effect on the creature ends if it takes damage or if another creature takes an action to splash it with {@item Holy Water (Flask)|PHB|holy water}. If a creature's saving throw is successful or the effect ends for it, it is immune to the drone for the next 24 hours."
         ]
       },
       {
@@ -76936,7 +76937,7 @@
       {
         "name": "Damage Transfer",
         "entries": [
-          "While attached to a creature, the cloaker takes only half the damage dealt to it (rounded down). and that creature takes the other half."
+          "While attached to a creature, the cloaker takes only half the damage dealt to it (rounded down), and that creature takes the other half."
         ]
       },
       {
@@ -84925,7 +84926,7 @@
       {
         "name": "Shattering Roar {@recharge 5}",
         "entries": [
-          "The cradle lets out a painfully load roar. Each creature within 60 feet of the cradle must make a {@dc 23} Constitution saving throw. On a failed save, a creature takes 33 ({@damage 6d10}) thunder damage and has the {@condition incapacitated} condition until the end of its next turn."
+          "The cradle lets out a painfully loud roar. Each creature within 60 feet of the cradle must make a {@dc 23} Constitution saving throw. On a failed save, a creature takes 33 ({@damage 6d10}) thunder damage and has the {@condition incapacitated} condition until the end of its next turn."
         ]
       }
     ],
@@ -97771,7 +97772,7 @@
       {
         "name": "Energy Drain (Costs 2 Actions)",
         "entries": [
-          "Each creature with in 30 feet of the demilich must make a {@dc 15} Constitution saving throw. On a failed save, the creature's hit point maximum is magically reduced by 10 ({@dice 3d6}). If a creature's hit point maximum is reduced to 0 by this effect, the creature dies. A creature's hit point maximum can be restored with the {@spell greater restoration} spell or similar magic."
+          "Each creature within 30 feet of the demilich must make a {@dc 15} Constitution saving throw. On a failed save, the creature's hit point maximum is magically reduced by 10 ({@dice 3d6}). If a creature's hit point maximum is reduced to 0 by this effect, the creature dies. A creature's hit point maximum can be restored with the {@spell greater restoration} spell or similar magic."
         ]
       },
       {
@@ -100784,7 +100785,7 @@
         "name": "Spellcasting",
         "type": "spellcasting",
         "headerEntries": [
-          "Devil Dog is a 1st-level spellcaster. Its spellcasting ability is Wisdom (spell save {@dc 12}, {@hit 4} to hit with spell attacks). The acolyte has following cleric spells prepared:"
+          "Devil Dog is a 1st-level spellcaster. Its spellcasting ability is Wisdom (spell save {@dc 12}, {@hit 4} to hit with spell attacks). The acolyte has the following cleric spells prepared:"
         ],
         "spells": {
           "0": {
@@ -104939,7 +104940,7 @@
         "name": "Spellcasting",
         "type": "spellcasting",
         "headerEntries": [
-          "Donavich is a 1st-level spellcaster. Its spellcasting ability is Wisdom (spell save {@dc 12}, {@hit 4} to hit with spell attacks). The acolyte has following cleric spells prepared:"
+          "Donavich is a 1st-level spellcaster. Its spellcasting ability is Wisdom (spell save {@dc 12}, {@hit 4} to hit with spell attacks). The acolyte has the following cleric spells prepared:"
         ],
         "spells": {
           "0": {
@@ -108657,7 +108658,7 @@
       {
         "name": "Necrotic Breath {@recharge}",
         "entries": [
-          "The dragonborn exhales shadowy fire in a 30-foot cone. Each creature in that area must make a {@dc 15} Wisdom saving throw. On a failed save, the creature takes 36 ({@damage 8d8}) necrotic damage and is {@condition frightened} of the dragonborn for 1 minute. On a successful save, the creature takes half as much damage and isn't {@condition frightened}. A {@condition frightened} creature can repeat the saving throw at end of each of its turns, ending the effect on itself on a success."
+          "The dragonborn exhales shadowy fire in a 30-foot cone. Each creature in that area must make a {@dc 15} Wisdom saving throw. On a failed save, the creature takes 36 ({@damage 8d8}) necrotic damage and is {@condition frightened} of the dragonborn for 1 minute. On a successful save, the creature takes half as much damage and isn't {@condition frightened}. A {@condition frightened} creature can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success."
         ]
       }
     ]
@@ -111501,7 +111502,7 @@
         "name": "Spellcasting",
         "type": "spellcasting",
         "headerEntries": [
-          "The acolyte is a 1st-level spellcaster. Its spellcasting ability is Wisdom (spell save {@dc 12}, {@hit 4} to hit with spell attacks). The acolyte has following cleric spells prepared:"
+          "The acolyte is a 1st-level spellcaster. Its spellcasting ability is Wisdom (spell save {@dc 12}, {@hit 4} to hit with spell attacks). The acolyte has the following cleric spells prepared:"
         ],
         "spells": {
           "0": {
@@ -113323,7 +113324,7 @@
         "name": "Spellcasting",
         "type": "spellcasting",
         "headerEntries": [
-          "The drow's casts one of the following spells, requiring no material components and using Charisma as the spellcasting ability (spell save {@dc 18}):"
+          "The drow casts one of the following spells, requiring no material components and using Charisma as the spellcasting ability (spell save {@dc 18}):"
         ],
         "will": [
           "{@spell dancing lights}",
@@ -122259,7 +122260,7 @@
       {
         "name": "Worthy Wielder",
         "entries": [
-          "{@actSave cha} {@dc 17}, one willing Humanoid within 5 feet. {@actSaveFail} 36 ({@damage 8d8}) Force damage. If this damage reduces the target to 0 {@variantrule Hit Points|XPHB}, Ebonbane devourers its soul. A creature whose soul has been devoured by Ebonbane can be restored to life only by a {@spell Wish|XPHB} spell. {@actSaveSuccess} The target attunes to Ebonbane and can wield the sword."
+          "{@actSave cha} {@dc 17}, one willing Humanoid within 5 feet. {@actSaveFail} 36 ({@damage 8d8}) Force damage. If this damage reduces the target to 0 {@variantrule Hit Points|XPHB}, Ebonbane devours its soul. A creature whose soul has been devoured by Ebonbane can be restored to life only by a {@spell Wish|XPHB} spell. {@actSaveSuccess} The target attunes to Ebonbane and can wield the sword."
         ]
       }
     ],
@@ -141798,7 +141799,7 @@
       {
         "name": "Battle Cry (1/Day)",
         "entries": [
-          "Each creature of the war chief's choice that is within 30 feet of it, can hear it, and not already affected by Battle Cry gain advantage on attack rolls until the start of the war chief's next turn. The war chief can then make one attack as a bonus action."
+          "Each creature of the war chief's choice that is within 30 feet of it, can hear it, and not already affected by Battle Cry gains advantage on attack rolls until the start of the war chief's next turn. The war chief can then make one attack as a bonus action."
         ]
       }
     ],
@@ -165383,7 +165384,7 @@
         "name": "Spellcasting",
         "type": "spellcasting",
         "headerEntries": [
-          "Gildha is a 1st-level spellcaster. Its spellcasting ability is Wisdom (spell save {@dc 12}, {@hit 4} to hit with spell attacks). The acolyte has following cleric spells prepared:"
+          "Gildha is a 1st-level spellcaster. Its spellcasting ability is Wisdom (spell save {@dc 12}, {@hit 4} to hit with spell attacks). The acolyte has the following cleric spells prepared:"
         ],
         "spells": {
           "0": {
@@ -170370,7 +170371,7 @@
         "name": "Spellcasting",
         "type": "spellcasting",
         "headerEntries": [
-          "The acolyte is a 1st-level spellcaster. Its spellcasting ability is Wisdom (spell save {@dc 12}, {@hit 4} to hit with spell attacks). The acolyte has following cleric spells prepared:"
+          "The acolyte is a 1st-level spellcaster. Its spellcasting ability is Wisdom (spell save {@dc 12}, {@hit 4} to hit with spell attacks). The acolyte has the following cleric spells prepared:"
         ],
         "spells": {
           "0": {
@@ -184226,7 +184227,7 @@
         "name": "Spellcasting",
         "type": "spellcasting",
         "headerEntries": [
-          "Gwyn is a 1st-level spellcaster. Its spellcasting ability is Wisdom (spell save {@dc 12}, {@hit 4} to hit with spell attacks). The acolyte has following cleric spells prepared:"
+          "Gwyn is a 1st-level spellcaster. Its spellcasting ability is Wisdom (spell save {@dc 12}, {@hit 4} to hit with spell attacks). The acolyte has the following cleric spells prepared:"
         ],
         "spells": {
           "0": {
@@ -186961,7 +186962,7 @@
       {
         "name": "Regeneration",
         "entries": [
-          "Harkon gains 10 {@variantrule Hit Points|XPHB} at the start of each of its turns if he has at least 1 {@variantrule Hit Points|XPHB|Hit Point}. If Harkon takes Radiant damage, this trait doesn't function at the start of its next turn."
+          "Harkon gains 10 {@variantrule Hit Points|XPHB} at the start of each of his turns if he has at least 1 {@variantrule Hit Points|XPHB|Hit Point}. If Harkon takes Radiant damage, this trait doesn't function at the start of his next turn."
         ]
       }
     ],
@@ -191045,7 +191046,7 @@
         "name": "Spellcasting",
         "type": "spellcasting",
         "headerEntries": [
-          "Hester is a 1st-level spellcaster. Its spellcasting ability is Wisdom (spell save {@dc 12}, {@hit 4} to hit with spell attacks). The acolyte has following cleric spells prepared:"
+          "Hester is a 1st-level spellcaster. Its spellcasting ability is Wisdom (spell save {@dc 12}, {@hit 4} to hit with spell attacks). The acolyte has the following cleric spells prepared:"
         ],
         "spells": {
           "0": {
@@ -200409,7 +200410,7 @@
         "name": "Spellcasting",
         "type": "spellcasting",
         "headerEntries": [
-          "Iaseda is a 1st-level spellcaster. Its spellcasting ability is Wisdom (spell save {@dc 12}, {@hit 4} to hit with spell attacks). The acolyte has following cleric spells prepared:"
+          "Iaseda is a 1st-level spellcaster. Its spellcasting ability is Wisdom (spell save {@dc 12}, {@hit 4} to hit with spell attacks). The acolyte has the following cleric spells prepared:"
         ],
         "spells": {
           "0": {
@@ -235211,7 +235212,7 @@
       {
         "name": "Blood-Chilling Roar {@recharge 4}",
         "entries": [
-          "The liondrake lets out a terrifying roar audible out to 300 feet. Any creature within 30 feet of the liondrake that can hear its roar must succeed on a {@dc 14} Wisdom saving throw or be {@condition frightened} of the liondrake for 1 minute. A creature that fails the save by 5 or more is also {@condition paralyzed} for the same duration. A creature can repeat the saving throw at the end of its turns, ending the effect on itself on a success. If a target's saving throw is successful or the effect ends for it, the target is immune to this liondrake's Blood-Chilling Roar for the next 24 hours."
+          "The liondrake lets out a terrifying roar audible out to 300 feet. Any creature within 30 feet of the liondrake that can hear its roar must succeed on a {@dc 14} Wisdom saving throw or be {@condition frightened} of the liondrake for 1 minute. A creature that fails the save by 5 or more is also {@condition paralyzed} for the same duration. A creature can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success. If a target's saving throw is successful or the effect ends for it, the target is immune to this liondrake's Blood-Chilling Roar for the next 24 hours."
         ]
       }
     ]
@@ -242543,7 +242544,7 @@
       "perception": "+4"
     },
     "languages": [
-      "Common and any three languages"
+      "Common plus three other languages"
     ],
     "cr": "6",
     "spellcasting": [
@@ -284374,7 +284375,7 @@
       {
         "name": "Battle Cry (1/Day)",
         "entries": [
-          "Each creature of the war chief's choice that is within 30 feet of it, can hear it, and not already affected by Battle Cry gain advantage on attack rolls until the start of the war chief's next turn. The war chief can then make one attack as a bonus action."
+          "Each creature of the war chief's choice that is within 30 feet of it, can hear it, and not already affected by Battle Cry gains advantage on attack rolls until the start of the war chief's next turn. The war chief can then make one attack as a bonus action."
         ]
       }
     ]
@@ -288719,7 +288720,7 @@
     "cha": 7,
     "skill": {
       "perception": "+4",
-      "stealth": "+6"
+      "stealth": "+7"
     },
     "senses": [
       "Darkvision 60 ft."
@@ -359729,7 +359730,7 @@
       {
         "name": "Shield Bash",
         "entries": [
-          "{@actSave str} {@dc 13}, one creature within 5 feet that the skeleton can see. {@actSaveFail} 10 ({@damage 2d6 + 3}) Bludgeoning damage. If the target is a Medium or smaller creature, it has the {@condition Prone|XPHB} condition"
+          "{@actSave str} {@dc 13}, one creature within 5 feet that the skeleton can see. {@actSaveFail} 10 ({@damage 2d6 + 3}) Bludgeoning damage. If the target is a Medium or smaller creature, it has the {@condition Prone|XPHB} condition."
         ]
       }
     ]
@@ -369975,7 +369976,7 @@
         "name": "Spellcasting",
         "type": "spellcasting",
         "headerEntries": [
-          "Tatina is a 1st-level spellcaster. Its spellcasting ability is Wisdom (spell save {@dc 12}, {@hit 4} to hit with spell attacks). The acolyte has following cleric spells prepared:"
+          "Tatina is a 1st-level spellcaster. Its spellcasting ability is Wisdom (spell save {@dc 12}, {@hit 4} to hit with spell attacks). The acolyte has the following cleric spells prepared:"
         ],
         "spells": {
           "0": {
@@ -385343,7 +385344,7 @@
         "name": "Spellcasting",
         "type": "spellcasting",
         "headerEntries": [
-          "Tungsten is a 1st-level spellcaster. Its spellcasting ability is Wisdom (spell save {@dc 12}, {@hit 4} to hit with spell attacks). The acolyte has following cleric spells prepared:"
+          "Tungsten is a 1st-level spellcaster. Its spellcasting ability is Wisdom (spell save {@dc 12}, {@hit 4} to hit with spell attacks). The acolyte has the following cleric spells prepared:"
         ],
         "spells": {
           "0": {
