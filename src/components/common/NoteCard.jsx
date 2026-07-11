@@ -46,17 +46,20 @@ export default function NoteCard({
 		>
 			{showClassicHeader && (
 				<div
+					key="classic-header"
 					className="note_card_simple__header"
 					onClick={() => canCollapse && onToggleCollapse(note.id)}
 				>
 					{canCollapse && (
 						<CollapseToggleButton
+							key="collapse-toggle"
 							size={Button.SIZES.SMALL}
 							collapsed={isCollapsed}
 							onClick={() => onToggleCollapse(note.id)}
 						/>
 					)}
 					<EditableField
+						key="title"
 						value={note.title || ""}
 						enableHistory={enableHistory}
 						onChange={(event) => onTitleChange(note.id, event.target.value)}
@@ -68,6 +71,7 @@ export default function NoteCard({
 					/>
 					{!isLast && (
 						<Button
+							key="delete"
 							variant="danger"
 							icon="trash"
 							size={Button.SIZES.SMALL}
@@ -82,15 +86,16 @@ export default function NoteCard({
 				</div>
 			)}
 			{showSimplifiedActions && isCollapsed && (
-				<span>
+				<span key="collapsed-preview">
 					{renderMentionText(shortText)}
 					{note.text.length > SHORT_TEXT_LENGTH && "..."}
 				</span>
 			)}
 			{showSimplifiedActions && (
-				<div className="note_card_simple__simpleActions">
+				<div key="simplified-actions" className="note_card_simple__simpleActions">
 					{canCollapse && (
 						<CollapseToggleButton
+							key="collapse-toggle"
 							size={Button.SIZES.SMALL}
 							collapsed={isCollapsed}
 							onClick={() => onToggleCollapse(note.id)}
@@ -101,6 +106,7 @@ export default function NoteCard({
 						/>
 					)}
 					<Button
+						key="delete"
 						variant="ghost"
 						icon="trash"
 						size={Button.SIZES.SMALL}
@@ -115,7 +121,7 @@ export default function NoteCard({
 				</div>
 			)}
 			{!isCollapsed && (
-				<div className="note_card_simple__content">
+				<div key="content" className="note_card_simple__content">
 					<EditableField
 						type="textarea"
 						value={note.text}

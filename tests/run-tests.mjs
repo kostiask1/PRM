@@ -4,6 +4,17 @@ import { createRequire } from "node:module";
 import fs from "node:fs/promises";
 import path from "node:path";
 import zlib from "node:zlib";
+import {
+	$applyNodeReplacement,
+	$createParagraphNode,
+	$getRoot,
+	$getSelection,
+	$isRangeSelection,
+	COMMAND_PRIORITY_HIGH,
+	KEY_DOWN_COMMAND,
+	TextNode,
+	createEditor,
+} from "lexical";
 
 import { idsEqual } from "../src/utils/id.js";
 import { isJsonObject, isJsonString } from "../src/utils/json.js";
@@ -40,6 +51,11 @@ import {
 	sanitizeNotesForSave,
 	upsertNoteById,
 } from "../src/utils/noteUtils.js";
+import {
+	MENTION_BOUNDARY,
+	createMentionBoundaryNode,
+	handleSpaceAfterMention,
+} from "../src/utils/mentionEditor.js";
 import {
 	buildNavigationUrl,
 	parseUrl,
@@ -275,6 +291,100 @@ await run("noteUtils renders virtual notes and sanitizes saved notes", () => {
 	assert.deepEqual(sanitized, [
 		{ id: "filled", title: "T", text: "", collapsed: true },
 	]);
+});
+
+await run("mention editor inserts Space after a link in the active command", async () => {
+	class TestMentionNode extends TextNode {
+		static getType() {
+			return "test-mention";
+		}
+
+		static clone(node) {
+			return new TestMentionNode(node.__text, node.__key);
+		}
+
+		canInsertTextBefore() {
+			return false;
+		}
+
+		canInsertTextAfter() {
+			return false;
+		}
+
+		isTextEntity() {
+			return true;
+		}
+	}
+
+	const editor = createEditor({
+		namespace: "mention-space-test",
+		nodes: [TestMentionNode],
+		onError: (error) => {
+			throw error;
+		},
+	});
+	const isMentionNode = (node) => node instanceof TestMentionNode;
+
+	editor.update(
+		() => {
+			const mention = $applyNodeReplacement(
+				new TestMentionNode("Link"),
+			).setMode("token");
+			const boundary = createMentionBoundaryNode();
+			$getRoot().append($createParagraphNode().append(mention, boundary));
+			boundary.select(1, 1);
+		},
+		{ discrete: true },
+	);
+
+	editor.registerCommand(
+		KEY_DOWN_COMMAND,
+		(event) => handleSpaceAfterMention(event, isMentionNode),
+		COMMAND_PRIORITY_HIGH,
+	);
+
+	const spaceEvent = {
+		key: " ",
+		code: "Space",
+		defaultPrevented: false,
+		preventDefault() {
+			this.defaultPrevented = true;
+		},
+	};
+	assert.equal(editor.dispatchCommand(KEY_DOWN_COMMAND, spaceEvent), true);
+	assert.equal(spaceEvent.defaultPrevented, true);
+	await new Promise((resolve) => setTimeout(resolve, 0));
+
+	let textAfterSpace = "";
+	let selectionOffset = null;
+	editor.getEditorState().read(() => {
+		textAfterSpace = $getRoot().getTextContent();
+		const selection = $getSelection();
+		selectionOffset = $isRangeSelection(selection)
+			? selection.anchor.offset
+			: null;
+	});
+	assert.equal(
+		textAfterSpace,
+		`Link${MENTION_BOUNDARY} ${MENTION_BOUNDARY}`,
+	);
+	assert.equal(selectionOffset, 2);
+
+	editor.update(
+		() => {
+			const selection = $getSelection();
+			assert.equal($isRangeSelection(selection), true);
+			selection.insertText("x");
+		},
+		{ discrete: true },
+	);
+	assert.equal(
+		editor
+			.getEditorState()
+			.read(() => $getRoot().getTextContent())
+			.replaceAll(MENTION_BOUNDARY, ""),
+		"Link x",
+	);
 });
 
 await run(
@@ -1142,16 +1252,17 @@ await run("CharacterCardModel derives fields and maintains notes", async () => {
 	assert.equal(model.displayName, "Ім'я");
 	assert.equal(model.fullName, "Ім'я Прізвище");
 	assert.equal(model.level, 3);
-	assert.equal(model.notes.length, 1);
-	const noteId = model.notes[0].id;
-	assert.ok(
-		model.withUpdatedNote(noteId, { title: "T" }).some((n) => n.title === "T"),
-	);
-	assert.equal(model.withDeletedNote(noteId).length, 1);
+	assert.equal(model.notes.length, 0);
+	const noteId = getNotesForRender(model.notes)[0].id;
+	const updatedNotes = model.withUpdatedNote(noteId, { title: "T" });
+	assert.equal(updatedNotes.length, 1);
+	assert.equal(updatedNotes[0].title, "T");
+	const updatedModel = new CharacterCardModel({ notes: updatedNotes });
+	assert.equal(updatedModel.withDeletedNote(updatedNotes[0].id).length, 0);
 });
 
 await run(
-	"LocationCardModel derives display data and preserves note slot",
+	"LocationCardModel derives display data and uses a virtual note slot",
 	() => {
 		const model = new LocationCardModel({
 			id: "loc-1",
@@ -1164,7 +1275,7 @@ await run(
 
 		assert.equal(model.displayName, "Місто");
 		assert.match(model.briefMeta, /\.\.\.$/);
-		assert.equal(model.notes.length, 1);
+		assert.equal(model.notes.length, 0);
 		assert.equal(model.withField("name", "Новий").name, "Новий");
 
 		const notedModel = new LocationCardModel({
@@ -1175,7 +1286,7 @@ await run(
 				.withUpdatedNote("n1", { text: "Text" })
 				.some((n) => n.text === "Text"),
 		);
-		assert.equal(notedModel.withDeletedNote("n1").length, 1);
+		assert.equal(notedModel.withDeletedNote("n1").length, 0);
 		assert.equal(notedModel.toggleNoteCollapse("n1")[0].collapsed, true);
 	},
 );
@@ -1203,7 +1314,15 @@ await run("CardNoteModel shared helpers preserve entity note behavior", async ()
 	assert.equal(model.withField("name", "Updated").name, "Updated");
 	assert.equal(model.withUpdatedNote("note-1", { text: "Body" })[0].text, "Body");
 	assert.equal(model.toggleNoteCollapse("note-1")[0].collapsed, true);
-	assert.equal(model.withDeletedNote("note-1").length, 1);
+	assert.equal(model.withDeletedNote("note-1").length, 0);
+
+	const emptyModel = new TestCardModel({ id: "entity-2", notes: [] });
+	const virtualNote = getNotesForRender(emptyModel.notes)[0];
+	const materializedNotes = emptyModel.withUpdatedNote(virtualNote.id, {
+		text: "First input",
+	});
+	assert.equal(materializedNotes.length, 1);
+	assert.equal(materializedNotes[0].text, "First input");
 });
 
 await run("mention picker helper resolves selected and cancelled states", async () => {
@@ -3242,6 +3361,18 @@ await run(
 			"src/components/common/NoteCard.jsx",
 			"utf8",
 		);
+		const draggableListSource = await fs.readFile(
+			"src/components/common/DraggableList.jsx",
+			"utf8",
+		);
+		const aiIgnoredNoteListSource = await fs.readFile(
+			"src/components/common/aiIgnoredNoteListProps.jsx",
+			"utf8",
+		);
+		const mentionEditorSource = await fs.readFile(
+			"src/utils/mentionEditor.js",
+			"utf8",
+		);
 		const characterCardSource = await fs.readFile(
 			"src/components/CharacterCard.jsx",
 			"utf8",
@@ -3310,6 +3441,13 @@ await run(
 		assert.match(editableFieldSource, /MentionNode extends TextNode/);
 		assert.equal(editableFieldSource.includes("$replaceMentionWithText"), false);
 		assert.match(editableFieldSource, /requestMentionSelection\(dispatch\)/);
+		assert.match(mentionEditorSource, /offset <= MENTION_BOUNDARY\.length/);
+		assert.match(editableFieldSource, /handleSpaceAfterMention/);
+		assert.equal(editableFieldSource.includes("let insertedSpace = false"), false);
+		assert.equal(
+			editableFieldSource.includes("let insertedFromSelection = false"),
+			false,
+		);
 		assert.match(editableFieldSource, /enableHistory = true/);
 		assert.match(editableFieldSource, /\{enableHistory && <HistoryPlugin \/>}/);
 		assert.match(editableFieldSource, /data-app-history-shortcuts/);
@@ -3318,6 +3456,10 @@ await run(
 		assert.match(sessionHookSource, /shouldUseAppHistoryForEvent/);
 		assert.match(noteCardSource, /enableHistory = true/);
 		assert.match(noteCardSource, /enableHistory=\{enableHistory\}/);
+		assert.match(noteCardSource, /key="content"/);
+		assert.match(noteCardSource, /key="title"/);
+		assert.match(draggableListSource, /<Fragment key="item-content">/);
+		assert.match(aiIgnoredNoteListSource, /getNoteRenderKey\(note, index\)/);
 		assert.match(characterCardSource, /enableHistory = true/);
 		assert.match(characterCardSource, /enableHistory=\{enableHistory\}/);
 		assert.match(locationCardSource, /enableHistory = true/);

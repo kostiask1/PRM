@@ -1,4 +1,5 @@
 import AiContextIgnoreButton from "./AiContextIgnoreButton.jsx";
+import { getNoteRenderKey } from "../../utils/noteUtils.js";
 
 function isRealNote(note) {
 	return !note._isVirtual;
@@ -6,7 +7,7 @@ function isRealNote(note) {
 
 function getAiIgnoredNoteListProps(onNoteAiIgnoredChange) {
 	return {
-		keyExtractor: (note) => note.id,
+		keyExtractor: (note, index) => getNoteRenderKey(note, index),
 		isItemDraggable: isRealNote,
 		isolateDragEvents: true,
 		isItemControlActive: (note) => Boolean(note._aiIgnored),

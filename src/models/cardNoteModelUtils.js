@@ -1,8 +1,7 @@
-import { createEmptyNote, upsertNoteById } from "../utils/noteUtils.js";
+import { upsertNoteById } from "../utils/noteUtils.js";
 
 function getCardNotes(entity = {}) {
-	const notes = Array.isArray(entity.notes) ? [...entity.notes] : [];
-	return notes.length > 0 ? notes : [createEmptyNote()];
+	return Array.isArray(entity.notes) ? [...entity.notes] : [];
 }
 
 function withCardField(entity = {}, field, value) {
@@ -17,8 +16,7 @@ function withUpdatedCardNote(notes, noteId, updates = {}) {
 }
 
 function withDeletedCardNote(notes, noteId) {
-	const nextNotes = notes.filter((note) => note.id !== noteId);
-	return nextNotes.length > 0 ? nextNotes : [createEmptyNote()];
+	return notes.filter((note) => note.id !== noteId);
 }
 
 function toggleCardNoteCollapse(notes, noteId) {

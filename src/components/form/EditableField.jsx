@@ -36,9 +36,7 @@ import {
 	$createTextNode,
 	$getRoot,
 	$getSelection,
-	$isElementNode,
 	$isRangeSelection,
-	$isTextNode,
 	$applyNodeReplacement,
 	COMMAND_PRIORITY_HIGH,
 	FORMAT_TEXT_COMMAND,
@@ -68,6 +66,10 @@ import { lang } from "../../services/localization";
 import { useAppDispatch } from "../../store/appStore";
 import { parseUrl } from "../../utils/navigation";
 import { requestMentionSelection } from "../../utils/mentionPicker";
+import {
+	createMentionBoundaryNode,
+	handleSpaceAfterMention,
+} from "../../utils/mentionEditor";
 import EntityModal from "../common/EntityModal";
 import Tooltip from "../common/Tooltip";
 import {
@@ -82,7 +84,6 @@ const TAB_CLASS = "EditableField__tab";
 const EDITOR_NAMESPACE = "EditableField";
 const EXTERNAL_UPDATE_TAG = "editable-field:external";
 const TEXTAREA_TYPE = "textarea";
-const MENTION_BOUNDARY = "\u200B";
 const EDITOR_MODULE_VERSION = (() => {
 	if (!import.meta.hot) return "static";
 
@@ -201,10 +202,6 @@ function $isMentionNode(node) {
 	return node instanceof MentionNode;
 }
 
-function $createMentionBoundaryNode(text = "") {
-	return $createTextNode(`${MENTION_BOUNDARY}${text}`);
-}
-
 const MENTION_TRANSFORMER = {
 	dependencies: [MentionNode],
 	export: (node) => {
@@ -221,7 +218,7 @@ const MENTION_TRANSFORMER = {
 		const mentionNode = $createMentionNode(mentionName);
 		mentionNode.setFormat(textNode.getFormat());
 		textNode.replace(mentionNode);
-		mentionNode.insertAfter($createMentionBoundaryNode());
+		mentionNode.insertAfter(createMentionBoundaryNode());
 		return mentionNode;
 	},
 	trigger: "]",
@@ -324,50 +321,6 @@ function $getSelectedTopLevelElement() {
 	return anchorNode.getTopLevelElement?.() || null;
 }
 
-function $getMentionBeforeCollapsedSelection(selection) {
-	if (!$isRangeSelection(selection) || !selection.isCollapsed()) return null;
-
-	const anchorNode = selection.anchor.getNode();
-	const offset = selection.anchor.offset;
-	if ($isMentionNode(anchorNode)) {
-		return offset >= anchorNode.getTextContentSize() ? anchorNode : null;
-	}
-
-	if ($isTextNode(anchorNode) && offset === 0) {
-		const previousSibling = anchorNode.getPreviousSibling();
-		return $isMentionNode(previousSibling) ? previousSibling : null;
-	}
-
-	if ($isElementNode(anchorNode) && offset > 0) {
-		const previousChild = anchorNode.getChildAtIndex(offset - 1);
-		return $isMentionNode(previousChild) ? previousChild : null;
-	}
-
-	return null;
-}
-
-function $insertSpaceAfterMentionAtSelection() {
-	const selection = $getSelection();
-	const mentionNode = $getMentionBeforeCollapsedSelection(selection);
-	if (!mentionNode) return false;
-
-	const nextSibling = mentionNode.getNextSibling();
-	if ($isTextNode(nextSibling)) {
-		const nextText = nextSibling.getTextContent();
-		const tail = nextText.startsWith(MENTION_BOUNDARY)
-			? nextText.slice(MENTION_BOUNDARY.length)
-			: nextText;
-		nextSibling.setTextContent(`${MENTION_BOUNDARY} ${tail}`);
-		nextSibling.select(2, 2);
-		return true;
-	}
-
-	const spaceNode = $createMentionBoundaryNode(" ");
-	mentionNode.insertAfter(spaceNode);
-	spaceNode.select(2, 2);
-	return true;
-}
-
 function $selectEditorEnd() {
 	const root = $getRoot();
 	if (root.getChildrenSize() === 0) {
@@ -389,7 +342,7 @@ function $insertMentionAtSelection(name) {
 	}
 	if (!mentionName || !$isRangeSelection(selection)) return;
 
-	const boundaryNode = $createMentionBoundaryNode();
+	const boundaryNode = createMentionBoundaryNode();
 	selection.insertNodes([$createMentionNode(mentionName), boundaryNode]);
 	boundaryNode.select(1, 1);
 }
@@ -536,23 +489,16 @@ function useCommandHandlers({
 			event.preventDefault();
 			event.stopPropagation();
 
-			let insertedFromSelection = false;
-			let selectedText = "";
-
-			editor.update(() => {
-				const selection = $getSelection();
-				if ($isRangeSelection(selection) && !selection.isCollapsed()) {
-					selectedText = normalizeTextContent(
-						selection.getTextContent(),
-					).trim();
-					if (selectedText) {
-						$insertMentionAtSelection(selectedText);
-						insertedFromSelection = true;
-					}
+			const selection = $getSelection();
+			if ($isRangeSelection(selection) && !selection.isCollapsed()) {
+				const selectedText = normalizeTextContent(
+					selection.getTextContent(),
+				).trim();
+				if (selectedText) {
+					$insertMentionAtSelection(selectedText);
+					return;
 				}
-			});
-
-			if (insertedFromSelection) return;
+			}
 
 			const result = await requestMentionSelection(dispatch);
 			if (result.status !== "selected" || !result.name) return;
@@ -598,15 +544,11 @@ function useCommandHandlers({
 				return;
 			}
 
-			if (isTextareaType(type) && (event.key === " " || event.code === "Space")) {
-				let insertedSpace = false;
-				editor.update(() => {
-					insertedSpace = $insertSpaceAfterMentionAtSelection();
-				});
-				if (insertedSpace) {
-					event.preventDefault();
-					return;
-				}
+			if (
+				isTextareaType(type) &&
+				handleSpaceAfterMention(event, $isMentionNode)
+			) {
+				return;
 			}
 
 			if (isTextareaType(type) && isShortcutCode(event, BOLD_SHORTCUT_CODES)) {
@@ -1020,6 +962,7 @@ export default function EditableField({
 		>
 			{normalizedMarkdownValue && showCopyButton && (
 				<Button
+					key="copy"
 					variant="ghost"
 					size={Button.SIZES.SMALL}
 					icon={copied ? "check" : "copy"}
@@ -1029,6 +972,7 @@ export default function EditableField({
 				/>
 			)}
 			<Tooltip
+				key="editor"
 				content={tooltipContent}
 				disabled={!tooltipContent}
 				className="EditableField__tooltip"
@@ -1060,7 +1004,11 @@ export default function EditableField({
 					</LexicalComposer>
 				</div>
 			</Tooltip>
-			<EntityModal modalState={modalState} onClose={handleCloseMentionModal} />
+			<EntityModal
+				key="entity-modal"
+				modalState={modalState}
+				onClose={handleCloseMentionModal}
+			/>
 		</div>
 	);
 }

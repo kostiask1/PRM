@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
 import "../../assets/components/DraggableList.css";
 import classNames from "../../utils/classNames";
 import Icon from "./Icon.jsx";
@@ -427,6 +427,7 @@ export default function DraggableList({
 					>
 						{canDragItem(item, index) && (
 							<span
+								key="drag-handle"
 								className="DraggableList__handle"
 								data-list-drag-handle="true"
 								aria-hidden="true"
@@ -436,6 +437,7 @@ export default function DraggableList({
 						)}
 						{renderItemControl && (
 							<div
+								key="item-control"
 								className={classNames(
 									"DraggableList__itemControl",
 									isItemControlActive?.(item, index) && "is_active",
@@ -444,7 +446,9 @@ export default function DraggableList({
 								{renderItemControl(item, index)}
 							</div>
 						)}
-						{renderItem(item, draggingIndex === index, index)}
+						<Fragment key="item-content">
+							{renderItem(item, draggingIndex === index, index)}
+						</Fragment>
 					</div>
 				))}
 			</div>
