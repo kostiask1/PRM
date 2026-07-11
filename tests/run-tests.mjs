@@ -96,6 +96,11 @@ import {
 	extractBracketMentions,
 	normalizeGraphName,
 } from "../src/utils/campaignGraph.js";
+import {
+	getCampaignGraphNodeSize,
+	layoutCampaignGraph,
+	resolveCampaignGraphNodeCollision,
+} from "../src/utils/campaignGraphLayout.js";
 import CampaignViewModel from "../src/models/CampaignViewModel.js";
 import SessionViewModel from "../src/models/SessionViewModel.js";
 import MonsterStatBlockModel from "../src/models/MonsterStatBlockModel.js";
@@ -607,6 +612,168 @@ await run("campaign graph builds nodes and mention edges", () => {
 	assert.equal(
 		simplifiedGraph.nodes.find((node) => node.type === "campaign-note")?.label,
 		"Текст нотатки.",
+	);
+});
+
+await run("campaign graph layout is deterministic, finite, and collision free", () => {
+	const nodes = [
+		{ id: "campaign:camp", type: "campaign" },
+		{ id: "campaign-note:plan", type: "campaign-note" },
+		{ id: "character:hero", type: "character" },
+		{ id: "npc:guide", type: "npc" },
+		{ id: "location:city", type: "location" },
+		{ id: "session:s1", type: "session" },
+		{ id: "scene:s1:one", type: "scene" },
+	];
+	const edges = [
+		{
+			id: "contains:campaign-note",
+			source: "campaign:camp",
+			target: "campaign-note:plan",
+			relation: "contains",
+		},
+		{
+			id: "contains:character",
+			source: "campaign:camp",
+			target: "character:hero",
+			relation: "contains",
+		},
+		{
+			id: "contains:session",
+			source: "campaign:camp",
+			target: "session:s1",
+			relation: "contains",
+		},
+		{
+			id: "contains:scene",
+			source: "session:s1",
+			target: "scene:s1:one",
+			relation: "contains",
+		},
+		{
+			id: "mentions:npc",
+			source: "campaign-note:plan",
+			target: "npc:guide",
+			relation: "mentions",
+		},
+		{
+			id: "related:location",
+			source: "npc:guide",
+			target: "location:city",
+			relation: "related",
+		},
+	];
+
+	const firstLayout = layoutCampaignGraph(nodes, edges);
+	const secondLayout = layoutCampaignGraph(nodes, edges);
+	assert.deepEqual(secondLayout, firstLayout);
+	assert.deepEqual(firstLayout["campaign:camp"], { x: 0, y: 0 });
+	assert.deepEqual(Object.keys(firstLayout).sort(), nodes.map((node) => node.id).sort());
+	Object.values(firstLayout).forEach((position) => {
+		assert.equal(Number.isFinite(position.x), true);
+		assert.equal(Number.isFinite(position.y), true);
+	});
+
+	for (let leftIndex = 0; leftIndex < nodes.length; leftIndex += 1) {
+		for (
+			let rightIndex = leftIndex + 1;
+			rightIndex < nodes.length;
+			rightIndex += 1
+		) {
+			const leftNode = nodes[leftIndex];
+			const rightNode = nodes[rightIndex];
+			const leftPosition = firstLayout[leftNode.id];
+			const rightPosition = firstLayout[rightNode.id];
+			const leftSize = getCampaignGraphNodeSize(leftNode.type);
+			const rightSize = getCampaignGraphNodeSize(rightNode.type);
+			const overlaps =
+				Math.abs(leftPosition.x - rightPosition.x) <
+					(leftSize.width + rightSize.width) / 2 &&
+				Math.abs(leftPosition.y - rightPosition.y) <
+					(leftSize.height + rightSize.height) / 2;
+			assert.equal(
+				overlaps,
+				false,
+				`${leftNode.id} does not overlap ${rightNode.id}`,
+			);
+		}
+	}
+
+	const relationNodes = [nodes[0], nodes[1]];
+	const containsLayout = layoutCampaignGraph(relationNodes, [
+		{
+			id: "relation",
+			source: relationNodes[0].id,
+			target: relationNodes[1].id,
+			relation: "contains",
+		},
+	]);
+	const mentionsLayout = layoutCampaignGraph(relationNodes, [
+		{
+			id: "relation",
+			source: relationNodes[0].id,
+			target: relationNodes[1].id,
+			relation: "mentions",
+		},
+	]);
+	const distanceBetween = (layout, leftId, rightId) =>
+		Math.hypot(
+			layout[leftId].x - layout[rightId].x,
+			layout[leftId].y - layout[rightId].y,
+		);
+	assert.equal(
+		distanceBetween(
+			containsLayout,
+			relationNodes[0].id,
+			relationNodes[1].id,
+		) <
+			distanceBetween(
+				mentionsLayout,
+				relationNodes[0].id,
+				relationNodes[1].id,
+			),
+		true,
+	);
+});
+
+await run("campaign graph drag collision moves only the visible dragged node", () => {
+	const flowNodes = [
+		{
+			id: "dragged",
+			position: { x: 0, y: 0 },
+			data: { graphNode: { type: "campaign-note" } },
+		},
+		{
+			id: "peer",
+			position: { x: 40, y: 0 },
+			measured: { width: 420, height: 90 },
+			data: { graphNode: { type: "npc" } },
+		},
+		{
+			id: "hidden-peer",
+			hidden: true,
+			position: { x: 0, y: -500 },
+			measured: { width: 1000, height: 1000 },
+			data: { graphNode: { type: "location" } },
+		},
+	];
+	const originalNodes = structuredClone(flowNodes);
+	const resolved = resolveCampaignGraphNodeCollision(flowNodes, "dragged", 16);
+	assert.deepEqual(flowNodes, originalNodes);
+	assert.notDeepEqual(resolved, flowNodes[0].position);
+
+	const draggedSize = getCampaignGraphNodeSize("campaign-note");
+	const overlapsVisiblePeer =
+		Math.abs(resolved.x - flowNodes[1].position.x) <
+			(draggedSize.width + flowNodes[1].measured.width) / 2 + 16 &&
+		Math.abs(resolved.y - flowNodes[1].position.y) <
+			(draggedSize.height + flowNodes[1].measured.height) / 2 + 16;
+	assert.equal(overlapsVisiblePeer, false);
+
+	const hiddenOnlyNodes = [flowNodes[0], flowNodes[2]];
+	assert.deepEqual(
+		resolveCampaignGraphNodeCollision(hiddenOnlyNodes, "dragged", 16),
+		flowNodes[0].position,
 	);
 });
 

@@ -37,6 +37,8 @@
     "@lexical/react": "^0.45.0",
     "@lexical/rich-text": "^0.45.0",
     "@lexical/selection": "^0.45.0",
+    "@xyflow/react": "^12.11.2",
+    "d3-force": "^3.0.0",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "lexical": "^0.45.0",

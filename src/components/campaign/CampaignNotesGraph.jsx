@@ -1,4 +1,5 @@
 import React, {
+	memo,
 	useCallback,
 	useEffect,
 	useMemo,
@@ -6,25 +7,37 @@ import React, {
 	useState,
 } from "react";
 import ReactMarkdown from "react-markdown";
+import {
+	Background,
+	BackgroundVariant,
+	Controls,
+	Handle,
+	MarkerType,
+	MiniMap,
+	Position,
+	ReactFlow,
+	useNodesState,
+} from "@xyflow/react";
 
 import Button from "../form/Button";
 import EditableField from "../form/EditableField";
 import EntityModal from "../common/EntityModal";
+import Icon from "../common/Icon";
 import classNames from "../../utils/classNames";
 import {
 	buildCampaignGraph,
 	normalizeGraphName,
 } from "../../utils/campaignGraph.js";
+import {
+	getCampaignGraphNodeSize,
+	layoutCampaignGraph,
+	resolveCampaignGraphNodeCollision,
+} from "../../utils/campaignGraphLayout.js";
 import { lang } from "../../services/localization";
 import { openModalRequest, useAppSelector } from "../../store/appStore";
 import { renderMentionText } from "../../renderers/contentRenderer.jsx";
+import "@xyflow/react/dist/style.css";
 import "../../assets/components/CampaignNotesGraph.css";
-
-const GRAPH_WIDTH = 1400;
-const GRAPH_HEIGHT = 840;
-const GRAPH_CENTER_X = GRAPH_WIDTH / 2;
-const GRAPH_CENTER_Y = GRAPH_HEIGHT / 2;
-const NODE_ZONE_PADDING = 26;
 
 const NODE_TYPE_ORDER = [
 	"campaign",
@@ -52,14 +65,40 @@ const TYPE_LABELS = {
 	unresolved: "Unknown mention",
 };
 
-const FILTER_COLOR_BY_ID = {
-	notes: "#38bdf8",
-	characters: "#22c55e",
+const NODE_COLOR_BY_TYPE = {
+	campaign: "#f59e0b",
+	"campaign-note": "#38bdf8",
+	character: "#22c55e",
 	npc: "#f97316",
-	locations: "#a3e635",
-	sessions: "#818cf8",
-	scenes: "#e879f9",
+	location: "#a3e635",
+	session: "#818cf8",
+	scene: "#e879f9",
+	"session-note": "#38bdf8",
+	"scene-note": "#38bdf8",
 	unresolved: "#94a3b8",
+};
+
+const NODE_ICON_BY_TYPE = {
+	campaign: "notes-graph",
+	"campaign-note": "book",
+	character: "user",
+	npc: "user",
+	location: "folder",
+	session: "layers",
+	scene: "book",
+	"session-note": "book",
+	"scene-note": "book",
+	unresolved: "x",
+};
+
+const FILTER_COLOR_BY_ID = {
+	notes: NODE_COLOR_BY_TYPE["campaign-note"],
+	characters: NODE_COLOR_BY_TYPE.character,
+	npc: NODE_COLOR_BY_TYPE.npc,
+	locations: NODE_COLOR_BY_TYPE.location,
+	sessions: NODE_COLOR_BY_TYPE.session,
+	scenes: NODE_COLOR_BY_TYPE.scene,
+	unresolved: NODE_COLOR_BY_TYPE.unresolved,
 };
 
 const FILTERS = [
@@ -74,28 +113,6 @@ const FILTERS = [
 	{ id: "sessions", label: "Sessions", types: ["session"] },
 	{ id: "scenes", label: "Scenes", types: ["scene"] },
 	{ id: "unresolved", label: "Unknown mention", types: ["unresolved"] },
-];
-
-const LAYOUT_GROUPS = [
-	{ id: "notes", label: "Notes", color: FILTER_COLOR_BY_ID.notes },
-	{
-		id: "characters",
-		label: "Characters",
-		color: FILTER_COLOR_BY_ID.characters,
-	},
-	{ id: "npc", label: "NPC", color: FILTER_COLOR_BY_ID.npc },
-	{
-		id: "locations",
-		label: "Locations/Factions",
-		color: FILTER_COLOR_BY_ID.locations,
-	},
-	{ id: "sessions", label: "Sessions", color: FILTER_COLOR_BY_ID.sessions },
-	{ id: "scenes", label: "Scenes", color: FILTER_COLOR_BY_ID.scenes },
-	{
-		id: "unresolved",
-		label: "Unknown mention",
-		color: FILTER_COLOR_BY_ID.unresolved,
-	},
 ];
 
 const DEFAULT_FILTERS = Object.fromEntries(
@@ -121,15 +138,18 @@ const MARKDOWN_TAGS_WITH_MENTIONS = [
 	"span",
 ];
 
+const HANDLE_POSITIONS = [
+	{ id: "top", position: Position.Top },
+	{ id: "right", position: Position.Right },
+	{ id: "bottom", position: Position.Bottom },
+	{ id: "left", position: Position.Left },
+];
+
 function renderMentionChildren(children) {
 	return React.Children.map(children, (child) => {
-		if (typeof child === "string") {
-			return renderMentionText(child);
-		}
+		if (typeof child === "string") return renderMentionText(child);
 		if (React.isValidElement(child) && child.props?.children) {
-			if (child.type === "code" || child.type === "pre") {
-				return child;
-			}
+			if (child.type === "code" || child.type === "pre") return child;
 			return React.cloneElement(child, {
 				...child.props,
 				children: renderMentionChildren(child.props.children),
@@ -148,33 +168,8 @@ function getNodeTypeClass(type) {
 	return `is_${String(type || "").replace(/-/g, "_")}`;
 }
 
-function truncateLabel(value, maxLength = 18) {
-	const text = String(value || "").trim();
-	if (text.length <= maxLength) return text;
-	return `${text
-		.slice(0, maxLength - 1)
-		.trim()
-		.replace(/[[\]]/g, "")}...`;
-}
-
 function getSessionDisplayName(fileName) {
 	return String(fileName || "").replace(/\.json$/i, "");
-}
-
-function getNodeRadius(node) {
-	if (node.type === "campaign") return 24;
-	if (node.type === "session") return 18;
-	if (node.type === "scene") return 15;
-	if (node.type === "unresolved") return 12;
-	return Math.min(19, 11 + Math.sqrt(Math.max(1, node.degree || 1)) * 2);
-}
-
-function getNodeZoneRadius(node) {
-	return getNodeRadius(node) + NODE_ZONE_PADDING;
-}
-
-function getNodeZoneDistance(leftNode, rightNode) {
-	return getNodeZoneRadius(leftNode || {}) + getNodeZoneRadius(rightNode || {});
 }
 
 function getRelationLabel(relation) {
@@ -263,11 +258,13 @@ function formatGraphSourceList(sources = []) {
 }
 
 function getEdgeStrokeWidth(edge) {
-	if (edge.relation === "mentions")
-		return Math.min(2.1, 0.9 + edge.count * 0.12);
-	if (edge.relation === "related")
-		return Math.min(1.8, 0.85 + edge.count * 0.1);
-	return 0.95;
+	if (edge.relation === "mentions") {
+		return Math.min(3.1, 1.5 + edge.count * 0.18);
+	}
+	if (edge.relation === "related") {
+		return Math.min(2.6, 1.35 + edge.count * 0.14);
+	}
+	return edge.relation === "sequence" ? 2.1 : 1.25;
 }
 
 function getEdgeColor(edge) {
@@ -277,11 +274,25 @@ function getEdgeColor(edge) {
 	return "#94a3b8";
 }
 
-function getEdgeOpacity(edge, isFocused) {
-	if (!isFocused) return 0.16;
-	if (edge.relation === "contains") return 0.24;
-	if (edge.relation === "sequence") return 0.46;
-	return 0.54;
+function getEdgeOpacity(edge, isFocused, hasFocus) {
+	if (hasFocus && !isFocused) return 0.07;
+	if (isFocused && hasFocus) return edge.relation === "contains" ? 0.55 : 0.9;
+	if (edge.relation === "contains") return 0.16;
+	if (edge.relation === "sequence") return 0.35;
+	return 0.32;
+}
+
+function getEdgeHandles(source, target) {
+	const dx = (target?.x || 0) - (source?.x || 0);
+	const dy = (target?.y || 0) - (source?.y || 0);
+	if (Math.abs(dx) >= Math.abs(dy)) {
+		return dx >= 0
+			? { sourceHandle: "source-right", targetHandle: "target-left" }
+			: { sourceHandle: "source-left", targetHandle: "target-right" };
+	}
+	return dy >= 0
+		? { sourceHandle: "source-bottom", targetHandle: "target-top" }
+		: { sourceHandle: "source-top", targetHandle: "target-bottom" };
 }
 
 function ParsedGraphText({ text, onOpen }) {
@@ -309,9 +320,7 @@ function ParsedGraphText({ text, onOpen }) {
 			tabIndex={onOpen ? 0 : undefined}
 			onClick={(event) => {
 				if (!onOpen) return;
-				if (event.target?.closest?.("a, button, input, textarea, select")) {
-					return;
-				}
+				if (event.target?.closest?.("a, button, input, textarea, select")) return;
 				onOpen();
 			}}
 			onKeyDown={(event) => {
@@ -341,21 +350,18 @@ function GraphNoteModalContent({
 	useEffect(() => {
 		if (!didMountRef.current) {
 			didMountRef.current = true;
-			return;
+			return undefined;
 		}
 
 		const timer = setTimeout(() => {
-			onSave?.({
-				title: draft.title || "",
-				text: draft.text || "",
-			});
+			onSave?.({ title: draft.title || "", text: draft.text || "" });
 		}, 450);
 
 		return () => clearTimeout(timer);
 	}, [draft, onSave]);
 
 	const updateDraft = (updates) => {
-		setDraft((prev) => ({ ...prev, ...updates }));
+		setDraft((previous) => ({ ...previous, ...updates }));
 	};
 
 	return (
@@ -382,404 +388,119 @@ function GraphNoteModalContent({
 	);
 }
 
-function pushMapValue(map, key, value) {
-	const current = map.get(key) || [];
-	current.push(value);
-	map.set(key, current);
-}
+const CampaignGraphNode = memo(function CampaignGraphNode({ data, selected }) {
+	const graphNode = data.graphNode;
+	const nodeTypeClass = getNodeTypeClass(graphNode.type);
 
-function getLayoutSortIndex(type) {
-	const order = [
-		"campaign",
-		"campaign-note",
-		"character",
-		"npc",
-		"location",
-		"session",
-		"scene",
-		"session-note",
-		"scene-note",
-		"unresolved",
-	];
-	const index = order.indexOf(type);
-	return index === -1 ? order.length : index;
-}
-
-function sortLayoutNodes(left, right) {
-	const typeDiff =
-		getLayoutSortIndex(left.type) - getLayoutSortIndex(right.type);
-	if (typeDiff !== 0) return typeDiff;
-
-	const leftFileName = String(left.meta?.fileName || "");
-	const rightFileName = String(right.meta?.fileName || "");
-	if (leftFileName !== rightFileName) {
-		return leftFileName.localeCompare(rightFileName);
-	}
-
-	const leftSceneNumber = Number(left.meta?.sceneNumber || 0);
-	const rightSceneNumber = Number(right.meta?.sceneNumber || 0);
-	if (leftSceneNumber !== rightSceneNumber) {
-		return leftSceneNumber - rightSceneNumber;
-	}
-
-	return String(left.label || "").localeCompare(
-		String(right.label || ""),
+	return (
+		<div
+			className={classNames(
+				"CampaignNotesGraph__nodeCard",
+				nodeTypeClass,
+				(selected || data.isSelected) && "is_selected",
+				data.isMuted && "is_muted",
+			)}
+			style={{ "--graph-node-color": data.color }}
+		>
+			{HANDLE_POSITIONS.flatMap(({ id, position }) => [
+				<Handle
+					key={`source-${id}`}
+					id={`source-${id}`}
+					type="source"
+					position={position}
+					isConnectable={false}
+					className="CampaignNotesGraph__handle"
+				/>,
+				<Handle
+					key={`target-${id}`}
+					id={`target-${id}`}
+					type="target"
+					position={position}
+					isConnectable={false}
+					className="CampaignNotesGraph__handle"
+				/>,
+			])}
+			<span className="CampaignNotesGraph__nodeIcon" aria-hidden="true">
+				<Icon name={NODE_ICON_BY_TYPE[graphNode.type]} size={16} />
+			</span>
+			<span className="CampaignNotesGraph__nodeContent">
+				<span className="CampaignNotesGraph__nodeType">{data.typeLabel}</span>
+				<strong title={graphNode.label}>{graphNode.label}</strong>
+				{graphNode.summary && (
+					<span className="CampaignNotesGraph__nodeSummary">
+						{graphNode.summary}
+					</span>
+				)}
+			</span>
+			{graphNode.degree > 0 && (
+				<span
+					className="CampaignNotesGraph__nodeDegree"
+					title={data.connectionsLabel}
+				>
+					{graphNode.degree}
+				</span>
+			)}
+			{data.canOpen && (
+				<button
+					type="button"
+					className="CampaignNotesGraph__nodeOpen nodrag nopan"
+					onClick={(event) => {
+						event.stopPropagation();
+						data.onOpen(graphNode);
+					}}
+					title={data.openLabel}
+					aria-label={data.openLabel}
+				>
+					<Icon name="forward" size={14} />
+				</button>
+			)}
+		</div>
 	);
+});
+
+const NODE_TYPES = { campaignGraphNode: CampaignGraphNode };
+
+function getGraphTopologyKey(nodes, edges) {
+	const nodeKey = nodes
+		.map((node) => `${node.id}:${node.type}`)
+		.sort()
+		.join("|");
+	const edgeKey = edges
+		.map(
+			(edge) =>
+				`${edge.id}:${edge.source}:${edge.target}:${edge.relation}`,
+		)
+		.sort()
+		.join("|");
+	return `${nodeKey}::${edgeKey}`;
 }
 
-function getLayoutGroupId(node, visibleNodeIds) {
-	if (!node || node.type === "campaign") return null;
-	if (node.type === "campaign-note") return "notes";
-	if (node.type === "character") return "characters";
-	if (node.type === "npc") return "npc";
-	if (node.type === "location") return "locations";
-	if (node.type === "session") return "sessions";
-	if (node.type === "unresolved") return "unresolved";
-	if (node.type === "scene") {
-		return visibleNodeIds.has(node.meta?.parentId) ? "sessions" : "scenes";
-	}
-	if (node.type === "session-note" || node.type === "scene-note") {
-		return visibleNodeIds.has(node.meta?.parentId) ? "sessions" : "notes";
-	}
-	return getFilterIdForType(node.type);
+function getGraphNodeTopologyKey(nodes) {
+	return nodes
+		.map(
+			(node) =>
+				`${node.id}:${node.data?.graphNode?.type || node.type}`,
+		)
+		.sort()
+		.join("|");
 }
 
-function getLayoutParentId(node, visibleNodeIds) {
-	const parentId = node?.meta?.parentId;
-	if (!parentId || !visibleNodeIds.has(parentId)) return null;
-	if (["scene", "session-note", "scene-note"].includes(node.type)) {
-		return parentId;
-	}
-	return null;
-}
-
-function getOrbitCapacity(radiusX, radiusY, minSpacing) {
-	const averageRadius = Math.sqrt((radiusX * radiusX + radiusY * radiusY) / 2);
-	return Math.max(1, Math.floor((Math.PI * 2 * averageRadius) / minSpacing));
-}
-
-function placeOrbitItems(items, center, positions, options = {}) {
-	const {
-		radiusX = 58,
-		radiusY = radiusX,
-		ringGapX = 42,
-		ringGapY = ringGapX,
-		minSpacing = 42,
-		angleOffset = 0,
-	} = options;
-	const sortedItems = [...items].sort(sortLayoutNodes);
-	let cursor = 0;
-	let ringIndex = 0;
-
-	while (cursor < sortedItems.length) {
-		const currentRadiusX = radiusX + ringGapX * ringIndex;
-		const currentRadiusY = radiusY + ringGapY * ringIndex;
-		const capacity = getOrbitCapacity(
-			currentRadiusX,
-			currentRadiusY,
-			minSpacing,
-		);
-		const ringItems = sortedItems.slice(cursor, cursor + capacity);
-		const step = (Math.PI * 2) / Math.max(1, ringItems.length);
-		const ringOffset = angleOffset + ringIndex * 0.37;
-
-		ringItems.forEach((node, index) => {
-			const angle = ringOffset + step * index;
-			positions.set(node.id, {
-				x: center.x + Math.cos(angle) * currentRadiusX,
-				y: center.y + Math.sin(angle) * currentRadiusY,
-			});
-		});
-
-		cursor += ringItems.length;
-		ringIndex += 1;
-	}
-}
-
-function getChildOrbitOptions(parentNode, childCount, angleOffset) {
-	const countBoost = Math.min(42, Math.sqrt(Math.max(1, childCount)) * 8);
-	if (parentNode.type === "session") {
-		return {
-			radiusX: 118 + countBoost,
-			radiusY: 92 + countBoost,
-			ringGapX: 86,
-			ringGapY: 70,
-			minSpacing: 96,
-			angleOffset,
+function useCampaignGraphLayout(nodes, edges) {
+	const cacheRef = useRef({ key: null, positions: {} });
+	const topologyKey = getGraphTopologyKey(nodes, edges);
+	if (cacheRef.current.key !== topologyKey) {
+		cacheRef.current = {
+			key: topologyKey,
+			positions: layoutCampaignGraph(nodes, edges),
 		};
 	}
-	if (parentNode.type === "scene") {
-		return {
-			radiusX: 84 + countBoost,
-			radiusY: 70 + countBoost,
-			ringGapX: 60,
-			ringGapY: 50,
-			minSpacing: 82,
-			angleOffset: angleOffset + 0.24,
-		};
-	}
-	return {
-		radiusX: 110 + countBoost,
-		radiusY: 86 + countBoost,
-		ringGapX: 78,
-		ringGapY: 64,
-		minSpacing: 94,
-		angleOffset,
-	};
-}
-
-function placeChildOrbits(parentNode, childrenByParent, positions, depth = 0) {
-	const children = childrenByParent.get(parentNode.id) || [];
-	const parentPosition = positions.get(parentNode.id);
-	if (children.length === 0 || !parentPosition) return;
-
-	if (parentNode.type === "session") {
-		const sceneChildren = children
-			.filter((childNode) => childNode.type === "scene")
-			.sort(sortLayoutNodes);
-		const otherChildren = children.filter(
-			(childNode) => childNode.type !== "scene",
-		);
-
-		if (sceneChildren.length > 0) {
-			const spacing = 190;
-			const y = parentPosition.y + 152 + depth * 20;
-			const startX =
-				parentPosition.x - ((sceneChildren.length - 1) * spacing) / 2;
-
-			sceneChildren.forEach((sceneNode, index) => {
-				positions.set(sceneNode.id, {
-					x: startX + index * spacing,
-					y,
-				});
-			});
-		}
-
-		if (otherChildren.length > 0) {
-			placeOrbitItems(otherChildren, parentPosition, positions, {
-				radiusX: 146,
-				radiusY: 110,
-				ringGapX: 92,
-				ringGapY: 74,
-				minSpacing: 102,
-				angleOffset: -Math.PI / 2,
-			});
-		}
-
-		children.forEach((childNode) => {
-			placeChildOrbits(childNode, childrenByParent, positions, depth + 1);
-		});
-		return;
-	}
-
-	if (parentNode.type === "scene") {
-		const sortedChildren = [...children].sort(sortLayoutNodes);
-		const spacingY = 104;
-		const startY = parentPosition.y + 122;
-
-		sortedChildren.forEach((childNode, index) => {
-			positions.set(childNode.id, {
-				x: parentPosition.x,
-				y: startY + index * spacingY,
-			});
-		});
-
-		sortedChildren.forEach((childNode) => {
-			placeChildOrbits(childNode, childrenByParent, positions, depth + 1);
-		});
-		return;
-	}
-
-	const outwardAngle =
-		Math.atan2(
-			parentPosition.y - GRAPH_CENTER_Y,
-			parentPosition.x - GRAPH_CENTER_X,
-		) +
-		depth * 0.18;
-
-	placeOrbitItems(
-		children,
-		parentPosition,
-		positions,
-		getChildOrbitOptions(parentNode, children.length, outwardAngle),
-	);
-
-	children.forEach((childNode) => {
-		placeChildOrbits(childNode, childrenByParent, positions, depth + 1);
-	});
-}
-
-function buildStructuredLayout(positions, groupGuides) {
-	return {
-		nodePositions: Object.fromEntries(positions.entries()),
-		groupGuides,
-	};
-}
-
-function estimateGroupRadius(groupId, nodeCount, rootCount) {
-	const densityRadius = 104 + Math.sqrt(Math.max(1, nodeCount)) * 34;
-	const rootRadius = Math.max(0, rootCount - 1) * 16;
-	const sessionBoost = groupId === "sessions" ? 76 : 0;
-	const notesBoost = groupId === "notes" ? 34 : 0;
-	return Math.min(320, densityRadius + rootRadius + sessionBoost + notesBoost);
-}
-
-function resolveGroupGuideOverlaps(groupGuides) {
-	const nextGroups = groupGuides.map((group) => ({ ...group }));
-
-	for (let iteration = 0; iteration < 18; iteration += 1) {
-		let moved = false;
-
-		for (let leftIndex = 0; leftIndex < nextGroups.length; leftIndex += 1) {
-			for (
-				let rightIndex = leftIndex + 1;
-				rightIndex < nextGroups.length;
-				rightIndex += 1
-			) {
-				const left = nextGroups[leftIndex];
-				const right = nextGroups[rightIndex];
-				let dx = right.x - left.x;
-				let dy = right.y - left.y;
-				let distance = Math.sqrt(dx * dx + dy * dy);
-
-				if (distance < 0.01) {
-					const angle =
-						((leftIndex + rightIndex + iteration + 1) * 2.399963) %
-						(Math.PI * 2);
-					dx = Math.cos(angle);
-					dy = Math.sin(angle);
-					distance = 1;
-				}
-
-				const minDistance =
-					(left.estimatedRadius || 126) + (right.estimatedRadius || 126) + 62;
-				if (distance >= minDistance) continue;
-
-				const push = (minDistance - distance) / 2;
-				const pushX = (dx / distance) * push;
-				const pushY = (dy / distance) * push;
-				left.x -= pushX;
-				left.y -= pushY;
-				right.x += pushX;
-				right.y += pushY;
-				moved = true;
-			}
-		}
-
-		if (!moved) break;
-	}
-
-	return nextGroups;
-}
-
-function computeLayout(nodes) {
-	if (nodes.length === 0) {
-		return { nodePositions: {}, groupGuides: [] };
-	}
-
-	const visibleNodeIds = new Set(nodes.map((node) => node.id));
-	const positions = new Map();
-	const childrenByParent = new Map();
-	const rootNodesByGroup = new Map();
-	const nodeIdsByGroup = new Map();
-
-	nodes.forEach((node) => {
-		if (node.type === "campaign") return;
-
-		const groupId = getLayoutGroupId(node, visibleNodeIds);
-		if (!groupId) return;
-		pushMapValue(nodeIdsByGroup, groupId, node.id);
-
-		const parentId = getLayoutParentId(node, visibleNodeIds);
-		if (parentId) {
-			pushMapValue(childrenByParent, parentId, node);
-			return;
-		}
-
-		pushMapValue(rootNodesByGroup, groupId, node);
-	});
-
-	const activeGroups = LAYOUT_GROUPS.filter(
-		(group) => (nodeIdsByGroup.get(group.id) || []).length > 0,
-	);
-	const groupEstimates = activeGroups.map((group) => {
-		const nodeIds = nodeIdsByGroup.get(group.id) || [];
-		const rootNodes = rootNodesByGroup.get(group.id) || [];
-		return {
-			...group,
-			nodeIds,
-			estimatedRadius: estimateGroupRadius(
-				group.id,
-				nodeIds.length,
-				rootNodes.length,
-			),
-		};
-	});
-	const requiredOrbit =
-		groupEstimates.reduce(
-			(total, group) => total + group.estimatedRadius * 2 + 62,
-			0,
-		) /
-		(Math.PI * 2);
-	const orbitX = Math.max(activeGroups.length <= 3 ? 400 : 510, requiredOrbit);
-	const orbitY = Math.max(
-		activeGroups.length <= 3 ? 285 : 365,
-		requiredOrbit * 0.64,
-	);
-	const groupGuides = resolveGroupGuideOverlaps(
-		groupEstimates.map((group, index) => {
-			const angle = -Math.PI / 2 + (index / activeGroups.length) * Math.PI * 2;
-
-			return {
-				...group,
-				angle,
-				x: GRAPH_CENTER_X + Math.cos(angle) * orbitX,
-				y: GRAPH_CENTER_Y + Math.sin(angle) * orbitY,
-			};
-		}),
-	);
-
-	groupGuides.forEach((group) => {
-		const rootNodes = rootNodesByGroup.get(group.id) || [];
-		placeOrbitItems(rootNodes, group, positions, {
-			radiusX: 142,
-			radiusY: 108,
-			ringGapX: 96,
-			ringGapY: 76,
-			minSpacing: 112,
-			angleOffset: group.angle,
-		});
-		rootNodes.forEach((node) => {
-			placeChildOrbits(node, childrenByParent, positions);
-		});
-	});
-
-	return buildStructuredLayout(positions, groupGuides);
-}
-
-function getDisplayGroupGuides(groupGuides, displayLayout) {
-	return groupGuides.map((group) => {
-		const radius = group.nodeIds.reduce((maxDistance, nodeId) => {
-			const position = displayLayout[nodeId];
-			if (!position) return maxDistance;
-			const dx = position.x - group.x;
-			const dy = position.y - group.y;
-			const distance = Math.sqrt(dx * dx + dy * dy) + 38;
-			return Math.max(maxDistance, distance);
-		}, 38);
-
-		return {
-			...group,
-			radius,
-			count: group.nodeIds.length,
-		};
-	});
+	return cacheRef.current.positions;
 }
 
 function getVisibleGraph(graph, enabledFilters, query) {
 	const normalizedQuery = normalizeGraphName(query);
 	const enabledNodes = graph.nodes.filter((node) => {
-		if (node.type === "campaign") return false;
+		if (node.type === "campaign") return true;
 		if (
 			node.type === "scene-note" &&
 			enabledFilters[getFilterIdForType("scene")] === false
@@ -794,45 +515,43 @@ function getVisibleGraph(graph, enabledFilters, query) {
 			enabledNodeIds.has(edge.source) && enabledNodeIds.has(edge.target),
 	);
 
-	if (!normalizedQuery) {
-		return {
-			nodes: enabledNodes,
-			edges: enabledEdges,
-			nodeById: new Map(enabledNodes.map((node) => [node.id, node])),
-		};
+	let visibleNodeIds = enabledNodeIds;
+	if (normalizedQuery) {
+		const matchedIds = new Set(
+			enabledNodes
+				.filter((node) => node.searchText.includes(normalizedQuery))
+				.map((node) => node.id),
+		);
+		visibleNodeIds = new Set(matchedIds);
+		enabledEdges.forEach((edge) => {
+			if (matchedIds.has(edge.source) || matchedIds.has(edge.target)) {
+				visibleNodeIds.add(edge.source);
+				visibleNodeIds.add(edge.target);
+			}
+		});
 	}
 
-	const matchedIds = new Set(
-		enabledNodes
-			.filter((node) => node.searchText.includes(normalizedQuery))
-			.map((node) => node.id),
-	);
-	const visibleIds = new Set(matchedIds);
-	enabledEdges.forEach((edge) => {
-		if (matchedIds.has(edge.source) || matchedIds.has(edge.target)) {
-			visibleIds.add(edge.source);
-			visibleIds.add(edge.target);
-		}
-	});
-
-	const nodes = enabledNodes.filter((node) => visibleIds.has(node.id));
-	const nodeIds = new Set(nodes.map((node) => node.id));
+	const nodes = enabledNodes.filter((node) => visibleNodeIds.has(node.id));
 	const edges = enabledEdges.filter(
-		(edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target),
+		(edge) =>
+			visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target),
 	);
 
 	return {
 		nodes,
 		edges,
+		visibleNodeIds,
+		visibleEdgeIds: new Set(edges.map((edge) => edge.id)),
 		nodeById: new Map(nodes.map((node) => [node.id, node])),
 	};
 }
 
 function getTypeCounts(nodes) {
-	return nodes.reduce((acc, node) => {
+	return nodes.reduce((counts, node) => {
+		if (node.type === "campaign") return counts;
 		const filterId = getFilterIdForType(node.type);
-		if (node.type !== "campaign") acc[filterId] = (acc[filterId] || 0) + 1;
-		return acc;
+		counts[filterId] = (counts[filterId] || 0) + 1;
+		return counts;
 	}, {});
 }
 
@@ -853,99 +572,6 @@ function getConnectedEdges(edges, nodeId) {
 	);
 }
 
-function getDescendantIds(
-	nodeId,
-	childIdsByParent,
-	shouldInclude = () => true,
-) {
-	const result = [];
-	const queue = [...(childIdsByParent.get(nodeId) || [])];
-	while (queue.length > 0) {
-		const childId = queue.shift();
-		if (shouldInclude(childId)) result.push(childId);
-		queue.push(...(childIdsByParent.get(childId) || []));
-	}
-	return result;
-}
-
-function getOffsetPosition(basePosition, offset = { x: 0, y: 0 }) {
-	return {
-		x: basePosition.x + offset.x,
-		y: basePosition.y + offset.y,
-	};
-}
-
-function constrainMovedNodesToGroupCollisions({
-	basePositions,
-	offsets,
-	groupNodeIds,
-	nodeById,
-	movedNodeIds,
-}) {
-	const nextOffsets = { ...offsets };
-	const movedNodeIdSet = new Set(movedNodeIds);
-	const staticNodeIds = groupNodeIds.filter(
-		(nodeId) => !movedNodeIdSet.has(nodeId),
-	);
-
-	for (let iteration = 0; iteration < 7; iteration += 1) {
-		let moved = false;
-
-		movedNodeIds.forEach((movedNodeId, movedIndex) => {
-			const movedBasePosition = basePositions[movedNodeId];
-			if (!movedBasePosition) return;
-
-			let movedPosition = getOffsetPosition(
-				movedBasePosition,
-				nextOffsets[movedNodeId],
-			);
-			const movedNode = nodeById.get(movedNodeId) || {};
-
-			staticNodeIds.forEach((staticNodeId, staticIndex) => {
-				const staticBasePosition = basePositions[staticNodeId];
-				if (!staticBasePosition) return;
-
-				const staticPosition = getOffsetPosition(
-					staticBasePosition,
-					nextOffsets[staticNodeId],
-				);
-				const staticNode = nodeById.get(staticNodeId) || {};
-				let dx = movedPosition.x - staticPosition.x;
-				let dy = movedPosition.y - staticPosition.y;
-				let distance = Math.sqrt(dx * dx + dy * dy);
-				if (distance < 0.01) {
-					const angle =
-						((movedIndex + staticIndex + iteration + 1) * 2.399963) %
-						(Math.PI * 2);
-					dx = Math.cos(angle);
-					dy = Math.sin(angle);
-					distance = 1;
-				}
-
-				const minDistance = getNodeZoneDistance(movedNode, staticNode);
-				if (distance >= minDistance) return;
-
-				const overlap = minDistance - distance;
-				const staticPushX = (dx / distance) * overlap * -1;
-				const staticPushY = (dy / distance) * overlap * -1;
-				const nextStaticPosition = {
-					x: staticPosition.x + staticPushX,
-					y: staticPosition.y + staticPushY,
-				};
-				nextOffsets[staticNodeId] = {
-					x: nextStaticPosition.x - staticBasePosition.x,
-					y: nextStaticPosition.y - staticBasePosition.y,
-				};
-				moved = true;
-			});
-		});
-
-		if (!moved) break;
-	}
-
-	return nextOffsets;
-}
-
 function findByIdOrSlug(items, sourceId, sourceSlug) {
 	return (items || []).find(
 		(item) =>
@@ -955,8 +581,7 @@ function findByIdOrSlug(items, sourceId, sourceSlug) {
 }
 
 function findSessionDetail(sessionDetails, fileName) {
-	if (sessionDetails instanceof Map)
-		return sessionDetails.get(fileName) || null;
+	if (sessionDetails instanceof Map) return sessionDetails.get(fileName) || null;
 	return sessionDetails?.[fileName] || null;
 }
 
@@ -969,26 +594,22 @@ function findGraphEntity(node, campaignEntities, sessionDetails, sessionKey) {
 			node.sourceSlug,
 		);
 	}
-
 	return findByIdOrSlug(campaignEntities, node.sourceId, node.sourceSlug);
 }
 
 function findEditableNote(node, notes, sessionDetails) {
 	if (!node) return null;
-
 	if (node.type === "campaign-note") {
 		return (notes || []).find(
 			(note) => String(note.id) === String(node.sourceId),
 		);
 	}
-
 	if (node.type === "session-note") {
 		const session = findSessionDetail(sessionDetails, node.meta?.fileName);
 		return (session?.data?.notes || []).find(
 			(note) => String(note.id) === String(node.sourceId),
 		);
 	}
-
 	if (node.type === "scene-note") {
 		const session = findSessionDetail(sessionDetails, node.meta?.fileName);
 		const scene = (session?.data?.scenes || []).find(
@@ -998,8 +619,18 @@ function findEditableNote(node, notes, sessionDetails) {
 			(note) => String(note.id) === String(node.sourceId),
 		);
 	}
-
 	return null;
+}
+
+function canOpenNode(node, onSaveNote) {
+	if (!node) return false;
+	if (["session", "character", "npc", "location"].includes(node.type)) {
+		return true;
+	}
+	return (
+		typeof onSaveNote === "function" &&
+		["campaign-note", "session-note", "scene-note"].includes(node.type)
+	);
 }
 
 export default function CampaignNotesGraph({
@@ -1022,17 +653,18 @@ export default function CampaignNotesGraph({
 	const [selectedNodeId, setSelectedNodeId] = useState(null);
 	const [entityModalState, setEntityModalState] = useState(null);
 	const [hoveredNodeId, setHoveredNodeId] = useState(null);
-	const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
-	const [nodePositionOffsets, setNodePositionOffsets] = useState({});
-	const [draggingNodeId, setDraggingNodeId] = useState(null);
+	const [flowInstance, setFlowInstance] = useState(null);
+	const [flowNodes, setFlowNodes, onFlowNodesChange] = useNodesState([]);
+	const fittedNodeTopologyRef = useRef(null);
+	const positionedCampaignRef = useRef(campaign.slug);
+	const hasManualPositionsRef = useRef(false);
 	const simplifiedNotesEnabled = useAppSelector(
 		(state) => state.ui.simplifiedNotes,
 	);
-	const panStartRef = useRef(null);
-	const nodeDragStartRef = useRef(null);
-	const suppressNextNodeClickRef = useRef(false);
-	const svgRef = useRef(null);
-	const canvasWrapRef = useRef(null);
+	const currentTheme = useAppSelector((state) => state.ui.theme);
+	const currentLanguage = useAppSelector(
+		(state) => state.localization.language,
+	);
 
 	useEffect(() => {
 		onLoadSessionDetails?.();
@@ -1069,53 +701,9 @@ export default function CampaignNotesGraph({
 		[enabledFilters, graph, query],
 	);
 	const typeCounts = useMemo(() => getTypeCounts(graph.nodes), [graph.nodes]);
-	const layout = useMemo(
-		() => computeLayout(visibleGraph.nodes),
-		[visibleGraph.nodes],
-	);
-	const displayLayout = useMemo(
-		() =>
-			Object.fromEntries(
-				Object.entries(layout.nodePositions).map(([nodeId, position]) => {
-					const offset = nodePositionOffsets[nodeId];
-					if (!offset) return [nodeId, position];
-					return [
-						nodeId,
-						{
-							x: position.x + offset.x,
-							y: position.y + offset.y,
-						},
-					];
-				}),
-			),
-		[layout, nodePositionOffsets],
-	);
-	const displayGroups = useMemo(
-		() => getDisplayGroupGuides(layout.groupGuides, displayLayout),
-		[displayLayout, layout.groupGuides],
-	);
-	const childIdsByParent = useMemo(() => {
-		const next = new Map();
-		visibleGraph.nodes.forEach((node) => {
-			const parentId = node.meta?.parentId;
-			if (!parentId || !visibleGraph.nodeById.has(parentId)) return;
-			pushMapValue(next, parentId, node.id);
-		});
-		return next;
-	}, [visibleGraph.nodeById, visibleGraph.nodes]);
-	const groupIdsByNodeId = useMemo(() => {
-		const next = new Map();
-		displayGroups.forEach((group) => {
-			group.nodeIds.forEach((nodeId) => {
-				next.set(nodeId, group.id);
-			});
-		});
-		return next;
-	}, [displayGroups]);
-	const groupNodeIdsById = useMemo(
-		() => new Map(displayGroups.map((group) => [group.id, group.nodeIds])),
-		[displayGroups],
-	);
+	const layoutPositions = useCampaignGraphLayout(graph.nodes, graph.edges);
+	const nodeTopologyKey = getGraphNodeTopologyKey(graph.nodes);
+	const flowNodeTopologyKey = getGraphNodeTopologyKey(flowNodes);
 	const focusedNodeId = hoveredNodeId || selectedNodeId;
 	const connectedIds = useMemo(
 		() => getConnectedIds(visibleGraph.edges, focusedNodeId),
@@ -1124,273 +712,331 @@ export default function CampaignNotesGraph({
 	const selectedNode = selectedNodeId
 		? visibleGraph.nodeById.get(selectedNodeId)
 		: null;
-	const selectedDetailText =
-		selectedNode?.detailText || selectedNode?.summary || "";
-	const hideSelectedTitle = Boolean(selectedNode?.meta?.isSimplifiedNote);
 	const selectedEdges = useMemo(
 		() => getConnectedEdges(visibleGraph.edges, selectedNodeId),
 		[selectedNodeId, visibleGraph.edges],
 	);
 
-	useEffect(() => {
-		if (selectedNodeId && !visibleGraph.nodeById.has(selectedNodeId)) {
-			setSelectedNodeId(null);
-		}
-	}, [selectedNodeId, visibleGraph.nodeById]);
-
-	useEffect(() => {
-		setNodePositionOffsets((prev) => {
-			const visibleNodeIds = new Set(visibleGraph.nodes.map((node) => node.id));
-			const next = Object.fromEntries(
-				Object.entries(prev).filter(([nodeId]) => visibleNodeIds.has(nodeId)),
-			);
-			return Object.keys(next).length === Object.keys(prev).length
-				? prev
-				: next;
-		});
-	}, [visibleGraph.nodes]);
-
-	const toggleFilter = (filterId) => {
-		setEnabledFilters((prev) => ({
-			...prev,
-			[filterId]: !prev[filterId],
-		}));
-	};
-
-	const handleNodeClick = (node, event) => {
-		event.stopPropagation();
-		if (suppressNextNodeClickRef.current) {
-			suppressNextNodeClickRef.current = false;
-			return;
-		}
-		if (selectedNodeId === node.id) {
-			openNode(node);
-			return;
-		}
-		setSelectedNodeId(node.id);
-	};
-
-	function openNode(node) {
-		if (node.type === "session" && node.meta?.fileName) {
-			onOpenSession?.(node.meta.fileName);
-			return;
-		}
-
-		const entityConfig =
-			node.type === "character"
-				? {
-						type: "characters",
-						entity: findByIdOrSlug(characters, node.sourceId, node.sourceSlug),
-					}
-				: node.type === "npc"
-					? {
-							type: "npc",
-							entity: findGraphEntity(node, npcs, sessionDetails, "npcs"),
-						}
-					: node.type === "location"
-						? {
-								type: "locations",
-								entity: findGraphEntity(
-									node,
-									locations,
-									sessionDetails,
-									"locations",
-								),
-							}
-						: null;
-
-		if (entityConfig?.entity) {
-			setEntityModalState({
-				entity: entityConfig.entity,
-				type: entityConfig.type,
-			});
-			return;
-		}
-
-		if (
-			["campaign-note", "session-note", "scene-note"].includes(node.type) &&
-			typeof onSaveNote === "function"
-		) {
-			const note = findEditableNote(node, notes, sessionDetails);
-			if (!note) return;
-
-			openModalRequest({
-				title: lang.t("Note"),
-				type: "note",
-				showFooter: false,
-				children: (
-					<GraphNoteModalContent
-						note={note}
-						simplifiedNotes={simplifiedNotesEnabled}
-						campaignSlug={campaign.slug}
-						onSave={(updates) =>
-							onSaveNote({
-								nodeType: node.type,
-								fileName: node.meta?.fileName,
-								sceneId: node.meta?.sceneId,
-								noteId: node.sourceId,
-								updates,
-							})
-						}
-					/>
-				),
-			});
-		}
-	}
-
-	const handleNodePointerDown = (node, event) => {
-		if (event.button !== 0) return;
-		if (node.type === "campaign") return;
-		const position = displayLayout[node.id];
-		if (!position) return;
-
-		event.stopPropagation();
-		event.currentTarget.setPointerCapture?.(event.pointerId);
-		const groupId = groupIdsByNodeId.get(node.id);
-		nodeDragStartRef.current = {
-			pointerId: event.pointerId,
-			nodeId: node.id,
-			x: event.clientX,
-			y: event.clientY,
-			startOffsets: nodePositionOffsets,
-			childIds: getDescendantIds(
-				node.id,
-				childIdsByParent,
-				(childId) => groupIdsByNodeId.get(childId) === groupId,
-			),
-			groupId,
-			didMove: false,
-		};
-		setDraggingNodeId(node.id);
-	};
-
-	const handlePointerDown = (event) => {
-		if (event.button !== 0) return;
-		if (event.target?.closest?.(".CampaignNotesGraph__node")) return;
-		panStartRef.current = {
-			pointerId: event.pointerId,
-			x: event.clientX,
-			y: event.clientY,
-			transform,
-		};
-		event.currentTarget.setPointerCapture?.(event.pointerId);
-	};
-
-	const handlePointerMove = (event) => {
-		if (nodeDragStartRef.current) {
-			const start = nodeDragStartRef.current;
-			if (start.pointerId !== event.pointerId) return;
-			const rect = svgRef.current?.getBoundingClientRect();
-			const scaleX = rect?.width ? GRAPH_WIDTH / rect.width : 1;
-			const scaleY = rect?.height ? GRAPH_HEIGHT / rect.height : 1;
-			const dx =
-				((event.clientX - start.x) * scaleX) / Math.max(0.1, transform.scale);
-			const dy =
-				((event.clientY - start.y) * scaleY) / Math.max(0.1, transform.scale);
-
-			if (Math.sqrt(dx * dx + dy * dy) > 3) {
-				start.didMove = true;
+	const openNode = useCallback(
+		(node) => {
+			if (node.type === "session" && node.meta?.fileName) {
+				onOpenSession?.(node.meta.fileName);
+				return;
 			}
 
-			setNodePositionOffsets(() => {
-				const next = { ...start.startOffsets };
-				const draggedStartOffset = start.startOffsets[start.nodeId] || {
-					x: 0,
-					y: 0,
-				};
-				next[start.nodeId] = {
-					x: draggedStartOffset.x + dx,
-					y: draggedStartOffset.y + dy,
-				};
+			const entityConfig =
+				node.type === "character"
+					? {
+							type: "characters",
+							entity: findByIdOrSlug(
+								characters,
+								node.sourceId,
+								node.sourceSlug,
+							),
+						}
+					: node.type === "npc"
+						? {
+								type: "npc",
+								entity: findGraphEntity(
+									node,
+									npcs,
+									sessionDetails,
+									"npcs",
+								),
+							}
+						: node.type === "location"
+							? {
+									type: "locations",
+									entity: findGraphEntity(
+										node,
+										locations,
+										sessionDetails,
+										"locations",
+									),
+								}
+							: null;
 
-				start.childIds.forEach((nodeId) => {
-					const childStartOffset = start.startOffsets[nodeId] || {
-						x: 0,
-						y: 0,
-					};
-					next[nodeId] = {
-						x: childStartOffset.x + dx,
-						y: childStartOffset.y + dy,
-					};
+			if (entityConfig?.entity) {
+				setEntityModalState({
+					entity: entityConfig.entity,
+					type: entityConfig.type,
 				});
+				return;
+			}
 
-				const movedNodeIds = [start.nodeId, ...start.childIds];
-				const groupNodeIds = groupNodeIdsById.get(start.groupId) || [];
-				if (groupNodeIds.length <= 1) return next;
-
-				return constrainMovedNodesToGroupCollisions({
-					basePositions: layout.nodePositions,
-					offsets: next,
-					groupNodeIds,
-					nodeById: visibleGraph.nodeById,
-					movedNodeIds,
+			if (
+				["campaign-note", "session-note", "scene-note"].includes(node.type) &&
+				typeof onSaveNote === "function"
+			) {
+				const note = findEditableNote(node, notes, sessionDetails);
+				if (!note) return;
+				openModalRequest({
+					title: lang.t("Note"),
+					type: "note",
+					showFooter: false,
+					children: (
+						<GraphNoteModalContent
+							note={note}
+							simplifiedNotes={simplifiedNotesEnabled}
+							campaignSlug={campaign.slug}
+							onSave={(updates) =>
+								onSaveNote({
+									nodeType: node.type,
+									fileName: node.meta?.fileName,
+									sceneId: node.meta?.sceneId,
+									noteId: node.sourceId,
+									updates,
+								})
+							}
+						/>
+					),
 				});
-			});
-			return;
-		}
-
-		if (!panStartRef.current) return;
-		const start = panStartRef.current;
-		const rect = svgRef.current?.getBoundingClientRect();
-		const scaleX = rect?.width ? GRAPH_WIDTH / rect.width : 1;
-		const scaleY = rect?.height ? GRAPH_HEIGHT / rect.height : 1;
-		setTransform({
-			...start.transform,
-			x: start.transform.x + (event.clientX - start.x) * scaleX,
-			y: start.transform.y + (event.clientY - start.y) * scaleY,
-		});
-	};
-
-	const handlePointerUp = (event) => {
-		if (nodeDragStartRef.current?.pointerId === event.pointerId) {
-			suppressNextNodeClickRef.current = nodeDragStartRef.current.didMove;
-			nodeDragStartRef.current = null;
-			setDraggingNodeId(null);
-		}
-		if (panStartRef.current?.pointerId === event.pointerId) {
-			panStartRef.current = null;
-		}
-	};
-
-	const handleWheel = useCallback((event) => {
-		event.preventDefault();
-		event.stopPropagation();
-		const rect = svgRef.current?.getBoundingClientRect();
-		if (!rect?.width || !rect?.height) return;
-		const point = {
-			x: ((event.clientX - rect.left) / rect.width) * GRAPH_WIDTH,
-			y: ((event.clientY - rect.top) / rect.height) * GRAPH_HEIGHT,
-		};
-		const direction = event.deltaY > 0 ? -1 : 1;
-		setTransform((prev) => {
-			const nextScale = Math.min(
-				2.3,
-				Math.max(0.45, prev.scale + direction * 0.09),
-			);
-			const graphPoint = {
-				x: (point.x - prev.x) / prev.scale,
-				y: (point.y - prev.y) / prev.scale,
-			};
-
-			return {
-				scale: nextScale,
-				x: point.x - graphPoint.x * nextScale,
-				y: point.y - graphPoint.y * nextScale,
-			};
-		});
-	}, []);
+			}
+		},
+		[
+			campaign.slug,
+			characters,
+			locations,
+			notes,
+			npcs,
+			onOpenSession,
+			onSaveNote,
+			sessionDetails,
+			simplifiedNotesEnabled,
+		],
+	);
 
 	useEffect(() => {
-		const element = canvasWrapRef.current;
-		if (!element) return undefined;
-		element.addEventListener("wheel", handleWheel, { passive: false });
-		return () => element.removeEventListener("wheel", handleWheel);
-	}, [handleWheel]);
-
-	const handleCanvasClick = (event) => {
-		if (event.target === event.currentTarget) {
+		if (selectedNodeId && !visibleGraph.visibleNodeIds.has(selectedNodeId)) {
 			setSelectedNodeId(null);
 		}
+	}, [selectedNodeId, visibleGraph.visibleNodeIds]);
+
+	useEffect(() => {
+		setSelectedNodeId(null);
+		setHoveredNodeId(null);
+		hasManualPositionsRef.current = false;
+		fittedNodeTopologyRef.current = null;
+	}, [campaign.slug]);
+
+	useEffect(() => {
+		setFlowNodes((currentNodes) => {
+			const shouldPreservePositions =
+				positionedCampaignRef.current === campaign.slug;
+			positionedCampaignRef.current = campaign.slug;
+			const currentNodeIds = new Set(currentNodes.map((node) => node.id));
+			const graphNodeIds = new Set(graph.nodes.map((node) => node.id));
+			const hasNodeTopologyChanged =
+				currentNodeIds.size !== graphNodeIds.size ||
+				[...graphNodeIds].some((nodeId) => !currentNodeIds.has(nodeId));
+			const shouldUseFreshLayout =
+				!shouldPreservePositions ||
+				currentNodes.length === 0 ||
+				(hasNodeTopologyChanged && !hasManualPositionsRef.current);
+			const currentById = !shouldUseFreshLayout
+				? new Map(currentNodes.map((node) => [node.id, node]))
+				: new Map();
+			let nextNodes = graph.nodes.map((graphNode) => {
+				const currentNode = currentById.get(graphNode.id);
+				const size = getCampaignGraphNodeSize(graphNode.type);
+				return {
+					...currentNode,
+					id: graphNode.id,
+					type: "campaignGraphNode",
+					position:
+						currentNode?.position ||
+						layoutPositions[graphNode.id] || { x: 0, y: 0 },
+					origin: [0.5, 0.5],
+					style: { width: size.width, height: size.height },
+					data: {
+						graphNode,
+						color: NODE_COLOR_BY_TYPE[graphNode.type],
+						typeLabel: lang.t(TYPE_LABELS[graphNode.type] || graphNode.type),
+						connectionsLabel: lang.t("Connections"),
+						isSelected: selectedNodeId === graphNode.id,
+						isMuted:
+							Boolean(focusedNodeId) && !connectedIds.has(graphNode.id),
+						canOpen: canOpenNode(graphNode, onSaveNote),
+						onOpen: openNode,
+						openLabel: lang.t("Open {name}", { name: graphNode.label }),
+					},
+					hidden: !visibleGraph.visibleNodeIds.has(graphNode.id),
+					selected: selectedNodeId === graphNode.id,
+					draggable: true,
+					selectable: true,
+					connectable: false,
+					deletable: false,
+					focusable: true,
+					ariaLabel: `${lang.t(TYPE_LABELS[graphNode.type] || graphNode.type)}: ${graphNode.label}`,
+					ariaRole: "button",
+					className: getNodeTypeClass(graphNode.type),
+				};
+			});
+
+			if (!shouldUseFreshLayout) {
+				const newNodeIds = nextNodes
+					.filter((node) => !currentNodeIds.has(node.id))
+					.map((node) => node.id);
+				newNodeIds.forEach((nodeId) => {
+					const position = resolveCampaignGraphNodeCollision(
+						nextNodes,
+						nodeId,
+					);
+					nextNodes = nextNodes.map((node) =>
+						node.id === nodeId ? { ...node, position } : node,
+					);
+				});
+			}
+
+			return nextNodes;
+		});
+	}, [
+		campaign.slug,
+		connectedIds,
+		focusedNodeId,
+		graph.nodes,
+		layoutPositions,
+		onSaveNote,
+		openNode,
+		selectedNodeId,
+		setFlowNodes,
+		visibleGraph.visibleNodeIds,
+	]);
+
+	const flowEdges = useMemo(() => {
+		const positions = new Map(flowNodes.map((node) => [node.id, node.position]));
+		const hasFocus = Boolean(focusedNodeId);
+		return graph.edges.map((edge) => {
+			const isVisible = visibleGraph.visibleEdgeIds.has(edge.id);
+			const isFocused =
+				!hasFocus ||
+				edge.source === focusedNodeId ||
+				edge.target === focusedNodeId;
+			const color = getEdgeColor(edge);
+			const handles = getEdgeHandles(
+				positions.get(edge.source),
+				positions.get(edge.target),
+			);
+
+			return {
+				id: edge.id,
+				source: edge.source,
+				target: edge.target,
+				...handles,
+				type: edge.relation === "contains" ? "smoothstep" : "default",
+				hidden: !isVisible,
+				selectable: false,
+				focusable: false,
+				deletable: false,
+				animated:
+					Boolean(focusedNodeId) && isFocused && edge.relation === "mentions",
+				className: classNames(
+					"CampaignNotesGraph__flowEdge",
+					`is_${edge.relation}`,
+					!isFocused && "is_muted",
+				),
+				style: {
+					stroke: color,
+					strokeWidth: getEdgeStrokeWidth(edge),
+					opacity: getEdgeOpacity(edge, isFocused, hasFocus),
+					strokeDasharray:
+						edge.relation === "related"
+							? "7 6"
+							: edge.relation === "sequence"
+								? "10 7"
+								: undefined,
+				},
+				markerEnd:
+					edge.relation === "sequence"
+						? {
+								type: MarkerType.ArrowClosed,
+								color,
+								width: 14,
+								height: 14,
+							}
+						: undefined,
+				label: isFocused && edge.count > 1 ? String(edge.count) : undefined,
+				labelStyle: { fill: "var(--text-bright)", fontWeight: 700 },
+				labelBgStyle: {
+					fill: "var(--panel)",
+					fillOpacity: 0.92,
+				},
+				labelBgPadding: [5, 3],
+				labelBgBorderRadius: 8,
+				zIndex: edge.relation === "contains" ? 0 : 1,
+			};
+		});
+	}, [flowNodes, focusedNodeId, graph.edges, visibleGraph.visibleEdgeIds]);
+
+	useEffect(() => {
+		if (
+			!flowInstance ||
+			flowNodes.length === 0 ||
+			flowNodes.length !== graph.nodes.length ||
+			flowNodeTopologyKey !== nodeTopologyKey ||
+			hasManualPositionsRef.current ||
+			fittedNodeTopologyRef.current === nodeTopologyKey
+		) {
+			return undefined;
+		}
+		fittedNodeTopologyRef.current = nodeTopologyKey;
+		const frame = requestAnimationFrame(() => {
+			flowInstance.fitView({ padding: 0.16, duration: 520 });
+		});
+		return () => cancelAnimationFrame(frame);
+	}, [
+		flowInstance,
+		flowNodeTopologyKey,
+		flowNodes.length,
+		graph.nodes.length,
+		nodeTopologyKey,
+	]);
+
+	const handleRelayout = useCallback(() => {
+		hasManualPositionsRef.current = false;
+		const nextPositions = layoutCampaignGraph(graph.nodes, graph.edges);
+		setFlowNodes((currentNodes) =>
+			currentNodes.map((node) => ({
+				...node,
+				position: nextPositions[node.id] || node.position,
+			})),
+		);
+		requestAnimationFrame(() => {
+			flowInstance?.fitView({ padding: 0.16, duration: 520 });
+		});
+	}, [flowInstance, graph.edges, graph.nodes, setFlowNodes]);
+
+	const handleNodeDragStop = useCallback(
+		(_event, draggedNode) => {
+			hasManualPositionsRef.current = true;
+			setFlowNodes((currentNodes) => {
+				const position = resolveCampaignGraphNodeCollision(
+					currentNodes,
+					draggedNode.id,
+				);
+				return currentNodes.map((node) =>
+					node.id === draggedNode.id ? { ...node, position } : node,
+				);
+			});
+		},
+		[setFlowNodes],
+	);
+
+	const handleFlowNodesChange = useCallback(
+		(changes) => {
+			if (changes.some((change) => change.type === "position")) {
+				hasManualPositionsRef.current = true;
+			}
+			onFlowNodesChange(changes);
+		},
+		[onFlowNodesChange],
+	);
+
+	const toggleFilter = (filterId) => {
+		setEnabledFilters((previous) => ({
+			...previous,
+			[filterId]: !previous[filterId],
+		}));
 	};
 
 	const renderConnection = (edge) => {
@@ -1426,84 +1072,67 @@ export default function CampaignNotesGraph({
 		);
 	};
 
-	const isGroupFocused = (group) =>
-		!focusedNodeId || group.nodeIds.some((nodeId) => connectedIds.has(nodeId));
+	const visibleNonCampaignNodes = visibleGraph.nodes.filter(
+		(node) => node.type !== "campaign",
+	).length;
+	const totalNonCampaignNodes = graph.nodes.filter(
+		(node) => node.type !== "campaign",
+	).length;
+	const selectedDetailText =
+		selectedNode?.detailText || selectedNode?.summary || "";
+	const hideSelectedTitle = Boolean(selectedNode?.meta?.isSimplifiedNote);
+	const selectedCanOpen = canOpenNode(selectedNode, onSaveNote);
 
-	const renderGroupGuide = (group) => {
-		const label = `${lang.t(group.label)} ${group.count}`;
-
-		return (
-			<g
-				key={`group:${group.id}`}
-				className={classNames(
-					"CampaignNotesGraph__group",
-					`is_${group.id}`,
-					!isGroupFocused(group) && "is_muted",
-				)}
-				transform={`translate(${group.x} ${group.y})`}
-				style={{ "--graph-group-color": group.color }}
-			>
-				<title>{label}</title>
-				<circle className="CampaignNotesGraph__groupOrbit" r={group.radius} />
-			</g>
-		);
-	};
-
-	const renderEdge = (edge) => {
-		const source = displayLayout[edge.source];
-		const target = displayLayout[edge.target];
-		if (!source || !target) return null;
-		const isFocused =
-			!focusedNodeId ||
-			edge.source === focusedNodeId ||
-			edge.target === focusedNodeId;
-
-		return (
-			<line
-				key={edge.id}
-				className={classNames(
-					"CampaignNotesGraph__edge",
-					`is_${edge.relation}`,
-					!isFocused && "is_muted",
-				)}
-				x1={source.x}
-				y1={source.y}
-				x2={target.x}
-				y2={target.y}
-				stroke={getEdgeColor(edge)}
-				strokeOpacity={getEdgeOpacity(edge, isFocused)}
-				strokeWidth={getEdgeStrokeWidth(edge)}
-				vectorEffect="non-scaling-stroke"
-			/>
-		);
-	};
-
-	const structuralEdges = visibleGraph.edges.filter(
-		(edge) => edge.relation === "contains",
+	const ariaLabelConfig = useMemo(
+		() => {
+			void currentLanguage;
+			return {
+				"node.a11yDescription.default": lang.t(
+					"Press Enter or Space to select a node. Use the arrow keys to move it.",
+				),
+				"node.a11yDescription.keyboardDisabled": lang.t(
+					"Press Enter or Space to select a node.",
+				),
+				"controls.ariaLabel": lang.t("Graph controls"),
+				"controls.zoomIn.ariaLabel": lang.t("Zoom in"),
+				"controls.zoomOut.ariaLabel": lang.t("Zoom out"),
+				"controls.fitView.ariaLabel": lang.t("Fit graph to view"),
+				"minimap.ariaLabel": lang.t("Graph minimap"),
+			};
+		},
+		[currentLanguage],
 	);
-	const relationEdges = visibleGraph.edges.filter(
-		(edge) => edge.relation !== "contains",
-	);
-
-	const openSelectedNode = () => {
-		if (selectedNode) openNode(selectedNode);
-	};
 
 	return (
-		<div
-			className={classNames(
-				"CampaignNotesGraph",
-				draggingNodeId && "is_dragging_node",
-			)}
-		>
+		<div className="CampaignNotesGraph">
 			<div className="CampaignNotesGraph__workspace">
 				<div className="CampaignNotesGraph__toolbar">
-					<input
-						className="CampaignNotesGraph__search"
-						value={query}
-						onChange={(event) => setQuery(event.target.value)}
-						placeholder={lang.t("Search graph...")}
-					/>
+					<div className="CampaignNotesGraph__toolbarPrimary">
+						<label className="CampaignNotesGraph__searchWrap">
+							<span className="CampaignNotesGraph__visuallyHidden">
+								{lang.t("Search graph...")}
+							</span>
+							<input
+								className="CampaignNotesGraph__search"
+								value={query}
+								onChange={(event) => setQuery(event.target.value)}
+								placeholder={lang.t("Search graph...")}
+							/>
+							<span className="CampaignNotesGraph__visibleCount">
+								{visibleNonCampaignNodes}/{totalNonCampaignNodes}
+							</span>
+						</label>
+						<Button
+							variant="ghost"
+							size={Button.SIZES.SMALL}
+							icon="restore"
+							onClick={handleRelayout}
+							className="CampaignNotesGraph__relayout"
+							title={lang.t("Arrange graph")}
+						>
+							{lang.t("Arrange")}
+						</Button>
+					</div>
 					<div className="CampaignNotesGraph__filters">
 						{FILTERS.map((filter) => (
 							<Button
@@ -1513,15 +1142,21 @@ export default function CampaignNotesGraph({
 								onClick={() => toggleFilter(filter.id)}
 								className="CampaignNotesGraph__filter"
 								style={{ "--filter-color": FILTER_COLOR_BY_ID[filter.id] }}
+								aria-pressed={enabledFilters[filter.id]}
 							>
 								{lang.t(filter.label)}
 								{typeCounts[filter.id] ? ` ${typeCounts[filter.id]}` : ""}
 							</Button>
 						))}
 					</div>
+					<p className="CampaignNotesGraph__hint">
+						{lang.t(
+							"Drag nodes to arrange them. Double-click or use the arrow to open an item.",
+						)}
+					</p>
 				</div>
 
-				<div ref={canvasWrapRef} className="CampaignNotesGraph__canvasWrap">
+				<div className="CampaignNotesGraph__canvasWrap">
 					{error && (
 						<div className="CampaignNotesGraph__message CampaignNotesGraph__message__error">
 							{error}
@@ -1532,87 +1167,102 @@ export default function CampaignNotesGraph({
 							{lang.t("Loading graph...")}
 						</div>
 					)}
-					{visibleGraph.nodes.length === 0 && !isLoading && (
+					{visibleNonCampaignNodes === 0 && !isLoading && (
 						<div className="CampaignNotesGraph__message">
 							{query ? lang.t("Nothing found.") : lang.t("No graph links yet.")}
 						</div>
 					)}
-					<svg
-						ref={svgRef}
-						className="CampaignNotesGraph__canvas"
-						viewBox={`0 0 ${GRAPH_WIDTH} ${GRAPH_HEIGHT}`}
-						role="img"
+					<ReactFlow
+						nodes={flowNodes}
+						edges={flowEdges}
+						nodeTypes={NODE_TYPES}
+						onInit={setFlowInstance}
+						onNodesChange={handleFlowNodesChange}
+						onNodeClick={(_event, node) => setSelectedNodeId(node.id)}
+						onNodeDoubleClick={(_event, node) => {
+							const graphNode = graph.nodes.find((item) => item.id === node.id);
+							if (graphNode) openNode(graphNode);
+						}}
+						onNodeMouseEnter={(_event, node) => setHoveredNodeId(node.id)}
+						onNodeMouseLeave={() => setHoveredNodeId(null)}
+						onNodeDragStop={handleNodeDragStop}
+						onPaneClick={() => setSelectedNodeId(null)}
+						onSelectionChange={({ nodes: selectedNodes }) => {
+							setSelectedNodeId(
+								selectedNodes.length > 0
+									? selectedNodes[selectedNodes.length - 1].id
+									: null,
+							);
+						}}
+						fitView
+						fitViewOptions={{ padding: 0.16 }}
+						minZoom={0.18}
+						maxZoom={2.2}
+						nodeOrigin={[0.5, 0.5]}
+						nodeDragThreshold={4}
+						nodesConnectable={false}
+						edgesReconnectable={false}
+						deleteKeyCode={null}
+						multiSelectionKeyCode={null}
+						zoomOnDoubleClick={false}
+						autoPanOnNodeDrag
+						autoPanOnNodeFocus
+						onlyRenderVisibleElements
 						aria-label={lang.t("Campaign graph")}
-						onClick={handleCanvasClick}
-						onPointerDown={handlePointerDown}
-						onPointerMove={handlePointerMove}
-						onPointerUp={handlePointerUp}
-						onPointerCancel={handlePointerUp}
+						ariaLabelConfig={ariaLabelConfig}
+						attributionPosition="top-right"
+						colorMode={currentTheme === "dark" ? "dark" : "light"}
 					>
-						<g
-							transform={`translate(${transform.x} ${transform.y}) scale(${transform.scale})`}
-						>
-							<g className="CampaignNotesGraph__edges">
-								{structuralEdges.map(renderEdge)}
-								{relationEdges.map(renderEdge)}
-							</g>
-							<g className="CampaignNotesGraph__groups">
-								{displayGroups.map(renderGroupGuide)}
-							</g>
-							<g className="CampaignNotesGraph__nodes">
-								{visibleGraph.nodes.map((node) => {
-									const position = displayLayout[node.id];
-									if (!position) return null;
-									const radius = getNodeRadius(node);
-									const isFocused = !focusedNodeId || connectedIds.has(node.id);
-									const isSelected = selectedNodeId === node.id;
-
-									return (
-										<g
-											key={node.id}
-											className={classNames(
-												"CampaignNotesGraph__node",
-												getNodeTypeClass(node.type),
-												isSelected && "is_selected",
-												draggingNodeId === node.id && "is_dragging",
-												!isFocused && "is_muted",
-											)}
-											transform={`translate(${position.x} ${position.y})`}
-											onPointerDown={(event) =>
-												handleNodePointerDown(node, event)
-											}
-											onClick={(event) => handleNodeClick(node, event)}
-											onMouseEnter={() => setHoveredNodeId(node.id)}
-											onMouseLeave={() => setHoveredNodeId(null)}
-										>
-											<title>{node.label}</title>
-											<circle r={radius} />
-											<text y={radius + 14}>{truncateLabel(node.label)}</text>
-										</g>
-									);
-								})}
-							</g>
-						</g>
-					</svg>
+						<Background
+							variant={BackgroundVariant.Dots}
+							gap={24}
+							size={1.25}
+						/>
+						<Controls
+							position="bottom-left"
+							showInteractive={false}
+							fitViewOptions={{ padding: 0.16, duration: 420 }}
+						/>
+						<MiniMap
+							position="bottom-right"
+							pannable
+							zoomable
+							nodeColor={(node) => node.data?.color || "#94a3b8"}
+							nodeStrokeColor={() => "rgba(255, 255, 255, 0.7)"}
+							nodeBorderRadius={12}
+						/>
+					</ReactFlow>
 				</div>
 			</div>
 
-			<aside
-				className="CampaignNotesGraph__details"
-				onWheel={(event) => event.stopPropagation()}
-			>
+			<aside className="CampaignNotesGraph__details">
 				{selectedNode ? (
 					<>
-						<div className="CampaignNotesGraph__type">
-							<span
-								className={`CampaignNotesGraph__dot ${getNodeTypeClass(selectedNode.type)}`}
-							/>
-							{lang.t(TYPE_LABELS[selectedNode.type] || selectedNode.type)}
+						<div className="CampaignNotesGraph__detailHeader">
+							<div>
+								<div className="CampaignNotesGraph__type">
+									<span
+										className={`CampaignNotesGraph__dot ${getNodeTypeClass(selectedNode.type)}`}
+									/>
+									{lang.t(TYPE_LABELS[selectedNode.type] || selectedNode.type)}
+								</div>
+								{!hideSelectedTitle && <h4>{selectedNode.label}</h4>}
+							</div>
+							{selectedCanOpen && (
+								<Button
+									variant="ghost"
+									size={Button.SIZES.SMALL}
+									icon="forward"
+									onClick={() => openNode(selectedNode)}
+									title={lang.t("Open {name}", {
+										name: selectedNode.label,
+									})}
+								/>
+							)}
 						</div>
-						{!hideSelectedTitle && <h4>{selectedNode.label}</h4>}
 						<ParsedGraphText
 							text={selectedDetailText}
-							onOpen={openSelectedNode}
+							onOpen={selectedCanOpen ? () => openNode(selectedNode) : null}
 						/>
 						<dl className="CampaignNotesGraph__stats">
 							<div>
@@ -1634,11 +1284,16 @@ export default function CampaignNotesGraph({
 					</>
 				) : (
 					<>
-						<h4>{lang.t("Graph overview")}</h4>
-						<dl className="CampaignNotesGraph__stats">
+						<div className="CampaignNotesGraph__overviewTitle">
+							<span className="CampaignNotesGraph__overviewIcon">
+								<Icon name="notes-graph" size={20} />
+							</span>
+							<h4>{lang.t("Graph overview")}</h4>
+						</div>
+						<dl className="CampaignNotesGraph__stats CampaignNotesGraph__stats__cards">
 							<div>
 								<dt>{lang.t("Nodes")}</dt>
-								<dd>{visibleGraph.nodes.length}</dd>
+								<dd>{visibleNonCampaignNodes}</dd>
 							</div>
 							<div>
 								<dt>{lang.t("Connections")}</dt>
