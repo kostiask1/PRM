@@ -3308,6 +3308,8 @@ await run(
 		assert.match(editableFieldSource, /MarkdownShortcutPlugin/);
 		assert.match(editableFieldSource, /\$readMarkdownValue/);
 		assert.match(editableFieldSource, /MentionNode extends TextNode/);
+		assert.equal(editableFieldSource.includes("$replaceMentionWithText"), false);
+		assert.match(editableFieldSource, /requestMentionSelection\(dispatch\)/);
 		assert.match(editableFieldSource, /enableHistory = true/);
 		assert.match(editableFieldSource, /\{enableHistory && <HistoryPlugin \/>}/);
 		assert.match(editableFieldSource, /data-app-history-shortcuts/);

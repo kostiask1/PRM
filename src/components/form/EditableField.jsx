@@ -324,35 +324,6 @@ function $getSelectedTopLevelElement() {
 	return anchorNode.getTopLevelElement?.() || null;
 }
 
-function $getMentionNodeFromSelection() {
-	const selection = $getSelection();
-	if (!$isRangeSelection(selection)) return null;
-
-	const nodes = selection.getNodes();
-	const selectedMention = nodes.find((node) => $isMentionNode(node));
-	if (selectedMention) return selectedMention;
-
-	const anchorNode = selection.anchor.getNode();
-	if ($isMentionNode(anchorNode)) return anchorNode;
-
-	if ($isTextNode(anchorNode)) {
-		const previousSibling = anchorNode.getPreviousSibling();
-		if ($isMentionNode(previousSibling)) return previousSibling;
-
-		const nextSibling = anchorNode.getNextSibling();
-		if ($isMentionNode(nextSibling)) return nextSibling;
-	}
-
-	return null;
-}
-
-function $replaceMentionWithText(mentionNode) {
-	const text = normalizeTextContent(mentionNode.getTextContent()).trim();
-	const textNode = $createTextNode(text);
-	mentionNode.replace(textNode);
-	textNode.select(0, text.length);
-}
-
 function $getMentionBeforeCollapsedSelection(selection) {
 	if (!$isRangeSelection(selection) || !selection.isCollapsed()) return null;
 
@@ -565,17 +536,10 @@ function useCommandHandlers({
 			event.preventDefault();
 			event.stopPropagation();
 
-			let handledExistingMention = false;
+			let insertedFromSelection = false;
 			let selectedText = "";
 
 			editor.update(() => {
-				const mentionNode = $getMentionNodeFromSelection();
-				if (mentionNode) {
-					$replaceMentionWithText(mentionNode);
-					handledExistingMention = true;
-					return;
-				}
-
 				const selection = $getSelection();
 				if ($isRangeSelection(selection) && !selection.isCollapsed()) {
 					selectedText = normalizeTextContent(
@@ -583,12 +547,12 @@ function useCommandHandlers({
 					).trim();
 					if (selectedText) {
 						$insertMentionAtSelection(selectedText);
-						handledExistingMention = true;
+						insertedFromSelection = true;
 					}
 				}
 			});
 
-			if (handledExistingMention) return;
+			if (insertedFromSelection) return;
 
 			const result = await requestMentionSelection(dispatch);
 			if (result.status !== "selected" || !result.name) return;
