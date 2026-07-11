@@ -290,7 +290,7 @@
 }
 
 .CampaignNotesGraph__nodeCard.is_muted {
-	opacity: 0.2;
+	opacity: 0.4;
 	filter: saturate(0.45);
 }
 

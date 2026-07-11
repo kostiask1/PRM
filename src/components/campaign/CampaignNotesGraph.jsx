@@ -1024,6 +1024,22 @@ export default function CampaignNotesGraph({
 
 	const handleFlowNodesChange = useCallback(
 		(changes) => {
+			const selectionChanges = changes.filter(
+				(change) => change.type === "select",
+			);
+			const selectedChange = selectionChanges.find(
+				(change) => change.selected,
+			);
+			if (selectedChange) {
+				setSelectedNodeId((currentNodeId) =>
+					currentNodeId === selectedChange.id
+						? currentNodeId
+						: selectedChange.id,
+				);
+			} else if (selectionChanges.length > 0) {
+				setSelectedNodeId(null);
+			}
+
 			if (changes.some((change) => change.type === "position")) {
 				hasManualPositionsRef.current = true;
 			}
@@ -1187,13 +1203,6 @@ export default function CampaignNotesGraph({
 						onNodeMouseLeave={() => setHoveredNodeId(null)}
 						onNodeDragStop={handleNodeDragStop}
 						onPaneClick={() => setSelectedNodeId(null)}
-						onSelectionChange={({ nodes: selectedNodes }) => {
-							setSelectedNodeId(
-								selectedNodes.length > 0
-									? selectedNodes[selectedNodes.length - 1].id
-									: null,
-							);
-						}}
 						fitView
 						fitViewOptions={{ padding: 0.16 }}
 						minZoom={0.18}
