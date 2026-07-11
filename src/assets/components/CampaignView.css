@@ -207,6 +207,12 @@
 	gap: var(--space-3);
 }
 
+.CampaignView__notes:has(.is_collapsed) .DraggableList__itemControl {
+	top: var(--space-2);
+	left: 0;
+	transform: translateX(-200%);
+}
+
 .CampaignView__notes .note_card_simple {
 	height: 100%;
 	align-items: center;
