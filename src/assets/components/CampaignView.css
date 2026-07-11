@@ -213,7 +213,7 @@
 	transform: translateX(-100%);
 }
 
-.DraggableList>div:hover .DraggableList__handle {
+.CampaignView__notes .DraggableList>div:hover .DraggableList__handle {
 	transform: translateX(-200%);
 }
 
