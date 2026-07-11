@@ -14635,7 +14635,8 @@
         "duration": {
           "type": "minute",
           "amount": 1
-        }
+        },
+        "concentration": true
       }
     ],
     "entries": [
