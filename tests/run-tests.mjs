@@ -245,6 +245,22 @@ await run("noteUtils renders virtual notes and sanitizes saved notes", () => {
 	assert.equal(getNoteRenderKey(materialized[0]), regularRender[1].id);
 	assert.equal(materialized[0].text, "[Mention]");
 
+	const numericNote = { id: 42, title: "Existing", text: "" };
+	const numericVirtualNote = getNotesForRender([numericNote])[1];
+	const distinctMaterialized = upsertNoteById(
+		[numericNote],
+		numericVirtualNote.id,
+		{ text: "New note" },
+	);
+	assert.notEqual(distinctMaterialized[1].id, numericNote.id);
+	assert.equal(
+		upsertNoteById(distinctMaterialized, distinctMaterialized[1].id, {
+			text: "Updated note",
+		})[1].text,
+		"Updated note",
+	);
+	assert.equal(distinctMaterialized[0].text, "");
+
 	const sanitized = sanitizeNotesForSave([
 		{ id: "empty", title: "", text: "", collapsed: false, _isVirtual: true },
 		{

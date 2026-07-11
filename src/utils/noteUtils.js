@@ -1,13 +1,16 @@
 const VIRTUAL_NOTE_ID_PREFIX = "__virtual_note__:";
+let lastNoteId = 0;
 
-function createNoteId() {
-	return Date.now();
+function createNoteId(notes = []) {
+	const existingIds = new Set((notes || []).map((note) => String(note?.id)));
+	let nextId = Math.max(Date.now(), lastNoteId + 1);
+	while (existingIds.has(String(nextId))) nextId += 1;
+	lastNoteId = nextId;
+	return nextId;
 }
 
-function resolveVirtualNoteId(noteId) {
-	const rawId = String(noteId || "").slice(VIRTUAL_NOTE_ID_PREFIX.length);
-	const numericId = Number(rawId);
-	return Number.isFinite(numericId) ? numericId : createNoteId();
+function resolveVirtualNoteId(notes = []) {
+	return createNoteId(notes);
 }
 
 export function createEmptyNote() {
@@ -50,8 +53,10 @@ export function getNotesForRender(
 
 	if (next.length === 0 || !isNoteEmpty(last, simplifiedNotes)) {
 		next.push({
-			...createEmptyNote(),
 			id: createVirtualNoteId(next),
+			title: "",
+			text: "",
+			collapsed: false,
 			_isVirtual: true,
 		});
 	}
@@ -63,7 +68,7 @@ export function upsertNoteById(notes = [], noteId, updates = {}) {
 	const next = [...(notes || [])];
 	const index = next.findIndex((note) => note.id === noteId);
 	const isVirtual = isVirtualNoteId(noteId);
-	const resolvedNoteId = isVirtual ? resolveVirtualNoteId(noteId) : noteId;
+	const resolvedNoteId = isVirtual ? resolveVirtualNoteId(next) : noteId;
 
 	if (index === -1) {
 		next.push({
@@ -82,11 +87,15 @@ export function upsertNoteById(notes = [], noteId, updates = {}) {
 }
 
 export function sanitizeNotesForSave(notes = []) {
-	return (notes || [])
-		.map((note) => {
+	const sourceNotes = notes || [];
+	return sourceNotes
+		.map((note, index) => {
 			const { _isVirtual, _renderKey, ...cleaned } = note || {};
 			if (isVirtualNoteId(cleaned.id)) {
-				return { ...cleaned, id: resolveVirtualNoteId(cleaned.id) };
+				return {
+					...cleaned,
+					id: resolveVirtualNoteId(sourceNotes.slice(0, index)),
+				};
 			}
 			return cleaned;
 		})
