@@ -13,11 +13,9 @@
 	border: 1px solid color-mix(in srgb, var(--border), transparent 20%);
 	border-radius: calc(var(--radius-md) + 2px);
 	background:
-		linear-gradient(
-			145deg,
+		linear-gradient(145deg,
 			color-mix(in srgb, var(--panel), transparent 5%),
-			color-mix(in srgb, var(--bg), var(--panel) 30%)
-		);
+			color-mix(in srgb, var(--bg), var(--panel) 30%));
 	box-shadow: var(--shadow-sm);
 }
 
@@ -142,54 +140,38 @@
 	min-height: 620px;
 	overflow: hidden;
 	background:
-		radial-gradient(
-			circle at 52% 42%,
+		radial-gradient(circle at 52% 42%,
 			color-mix(in srgb, var(--accent), transparent 92%),
-			transparent 48%
-		),
-		linear-gradient(
-			145deg,
+			transparent 48%),
+		linear-gradient(145deg,
 			color-mix(in srgb, var(--bg-deep), transparent 28%),
-			color-mix(in srgb, var(--bg), var(--panel) 18%)
-		);
+			color-mix(in srgb, var(--bg), var(--panel) 18%));
 	overscroll-behavior: contain;
 }
 
 .CampaignNotesGraph__canvasWrap .react-flow {
 	--xy-background-color: transparent;
 	--xy-edge-label-background-color: var(--panel);
-	--xy-controls-button-background-color: color-mix(
-		in srgb,
-		var(--panel),
-		transparent 8%
-	);
-	--xy-controls-button-background-color-hover: color-mix(
-		in srgb,
-		var(--accent),
-		var(--panel) 84%
-	);
+	--xy-controls-button-background-color: color-mix(in srgb,
+			var(--panel),
+			transparent 8%);
+	--xy-controls-button-background-color-hover: color-mix(in srgb,
+			var(--accent),
+			var(--panel) 84%);
 	--xy-controls-button-color: var(--text-bright);
 	--xy-controls-button-color-hover: var(--text-bright);
-	--xy-controls-button-border-color: color-mix(
-		in srgb,
-		var(--border),
-		transparent 30%
-	);
-	--xy-minimap-background-color: color-mix(
-		in srgb,
-		var(--panel),
-		transparent 7%
-	);
-	--xy-minimap-mask-background-color: color-mix(
-		in srgb,
-		var(--bg-deep),
-		transparent 62%
-	);
-	--xy-attribution-background-color: color-mix(
-		in srgb,
-		var(--panel),
-		transparent 25%
-	);
+	--xy-controls-button-border-color: color-mix(in srgb,
+			var(--border),
+			transparent 30%);
+	--xy-minimap-background-color: color-mix(in srgb,
+			var(--panel),
+			transparent 7%);
+	--xy-minimap-mask-background-color: color-mix(in srgb,
+			var(--bg-deep),
+			transparent 62%);
+	--xy-attribution-background-color: color-mix(in srgb,
+			var(--panel),
+			transparent 25%);
 }
 
 .CampaignNotesGraph__canvasWrap .react-flow__pane {
@@ -237,15 +219,14 @@
 	cursor: grabbing;
 }
 
-.CampaignNotesGraph__canvasWrap
-	.react-flow__node-campaignGraphNode:not(.dragging) {
+.CampaignNotesGraph__canvasWrap .react-flow__node-campaignGraphNode:not(.dragging) {
 	transition: transform 190ms cubic-bezier(0.2, 0.75, 0.25, 1);
 }
 
 .CampaignNotesGraph__nodeCard {
 	position: relative;
 	display: grid;
-	grid-template-columns: 34px minmax(0, 1fr) auto;
+	grid-template-columns: minmax(0, 1fr) auto;
 	gap: 9px;
 	align-items: center;
 	width: 100%;
@@ -254,12 +235,10 @@
 	border: 1px solid color-mix(in srgb, var(--graph-node-color), transparent 45%);
 	border-radius: 15px;
 	background:
-		linear-gradient(
-			130deg,
+		linear-gradient(130deg,
 			color-mix(in srgb, var(--graph-node-color), transparent 84%),
 			color-mix(in srgb, var(--panel), transparent 4%) 42%,
-			color-mix(in srgb, var(--bg), transparent 2%)
-		);
+			color-mix(in srgb, var(--bg), transparent 2%));
 	color: var(--text);
 	box-shadow:
 		0 12px 28px rgba(0, 0, 0, 0.2),
@@ -315,22 +294,18 @@
 	filter: saturate(0.45);
 }
 
-.CampaignNotesGraph__canvasWrap
-	.react-flow__node-campaignGraphNode:focus-visible
-	.CampaignNotesGraph__nodeCard {
+.CampaignNotesGraph__canvasWrap .react-flow__node-campaignGraphNode:focus-visible .CampaignNotesGraph__nodeCard {
 	outline: 2px solid var(--text-bright);
 	outline-offset: 4px;
 }
 
 .CampaignNotesGraph__nodeCard.is_campaign {
-	grid-template-columns: 38px minmax(0, 1fr) auto;
+	grid-template-columns: minmax(0, 1fr) auto;
 	border-width: 1.5px;
 	background:
-		linear-gradient(
-			135deg,
+		linear-gradient(135deg,
 			color-mix(in srgb, var(--graph-node-color), transparent 72%),
-			color-mix(in srgb, var(--panel), transparent 1%) 58%
-		);
+			color-mix(in srgb, var(--panel), transparent 1%) 58%);
 }
 
 .CampaignNotesGraph__nodeIcon,
@@ -345,6 +320,7 @@
 }
 
 .CampaignNotesGraph__nodeIcon {
+	display: none;
 	width: 34px;
 	height: 34px;
 }
@@ -372,7 +348,7 @@
 	overflow: hidden;
 	margin-bottom: 3px;
 	color: color-mix(in srgb, var(--graph-node-color), var(--text-bright) 26%);
-	font-size: 0.58rem;
+	font-size: 0.5rem;
 	font-weight: 780;
 	letter-spacing: 0.065em;
 	text-overflow: ellipsis;
@@ -605,11 +581,11 @@
 	outline: none;
 }
 
-.CampaignNotesGraph__detailText > :first-child {
+.CampaignNotesGraph__detailText> :first-child {
 	margin-top: 0;
 }
 
-.CampaignNotesGraph__detailText > :last-child {
+.CampaignNotesGraph__detailText> :last-child {
 	margin-bottom: 0;
 }
 
@@ -630,8 +606,7 @@
 	flex: 0 0 10px;
 	border-radius: 50%;
 	background: var(--graph-node-color, var(--accent));
-	box-shadow: 0 0 0 3px
-		color-mix(in srgb, var(--graph-node-color, var(--accent)), transparent 76%);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--graph-node-color, var(--accent)), transparent 76%);
 }
 
 .CampaignNotesGraph__stats {
@@ -640,7 +615,7 @@
 	margin: 0 0 var(--space-3);
 }
 
-.CampaignNotesGraph__stats > div {
+.CampaignNotesGraph__stats>div {
 	display: flex;
 	justify-content: space-between;
 	gap: var(--space-2);
@@ -665,7 +640,7 @@
 	grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.CampaignNotesGraph__stats__cards > div {
+.CampaignNotesGraph__stats__cards>div {
 	display: grid;
 	gap: 3px;
 	justify-content: initial;
@@ -707,14 +682,14 @@
 	gap: var(--space-2);
 }
 
-.CampaignNotesGraph__legend > span,
+.CampaignNotesGraph__legend>span,
 .CampaignNotesGraph__connection {
 	display: flex;
 	align-items: center;
 	gap: var(--space-2);
 }
 
-.CampaignNotesGraph__legend > span {
+.CampaignNotesGraph__legend>span {
 	min-width: 0;
 	color: var(--text);
 	font-size: 0.78rem;
@@ -821,7 +796,7 @@
 		width: 100%;
 	}
 
-	.CampaignNotesGraph__relayout > span {
+	.CampaignNotesGraph__relayout>span {
 		display: none;
 	}
 
@@ -846,6 +821,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
 	.CampaignNotesGraph *,
 	.CampaignNotesGraph *::before,
 	.CampaignNotesGraph *::after {
