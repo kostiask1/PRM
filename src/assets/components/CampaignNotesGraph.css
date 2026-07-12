@@ -163,12 +163,6 @@
 	--xy-controls-button-border-color: color-mix(in srgb,
 			var(--border),
 			transparent 30%);
-	--xy-minimap-background-color: color-mix(in srgb,
-			var(--panel),
-			transparent 7%);
-	--xy-minimap-mask-background-color: color-mix(in srgb,
-			var(--bg-deep),
-			transparent 62%);
 	--xy-attribution-background-color: color-mix(in srgb,
 			var(--panel),
 			transparent 25%);
@@ -450,6 +444,7 @@
 .CampaignNotesGraph__canvasWrap .react-flow__minimap {
 	border: 1px solid color-mix(in srgb, var(--border), transparent 24%);
 	border-radius: 12px;
+	background: color-mix(in srgb, var(--bg), transparent 18%);
 	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
 	overflow: hidden;
 	backdrop-filter: blur(10px);
@@ -468,6 +463,33 @@
 .CampaignNotesGraph__canvasWrap .react-flow__minimap {
 	width: 168px;
 	height: 112px;
+}
+
+.CampaignNotesGraph__miniMapSvg {
+	display: block;
+	width: 100%;
+	height: 100%;
+	touch-action: none;
+	cursor: crosshair;
+}
+
+.CampaignNotesGraph__miniMapSvg>rect:not(.CampaignNotesGraph__miniMapViewport) {
+	stroke: rgba(255, 255, 255, 0.72);
+	stroke-width: 2px;
+	vector-effect: non-scaling-stroke;
+}
+
+.CampaignNotesGraph__miniMapMask {
+	fill: color-mix(in srgb, var(--bg-deep), transparent 82%);
+	pointer-events: none;
+}
+
+.CampaignNotesGraph__miniMapViewport {
+	fill: none;
+	stroke: color-mix(in srgb, var(--accent), transparent 24%);
+	stroke-width: 1px;
+	vector-effect: non-scaling-stroke;
+	pointer-events: none;
 }
 
 .CampaignNotesGraph__canvasWrap .react-flow__attribution {
@@ -807,7 +829,7 @@
 
 	.CampaignNotesGraph__canvasWrap .react-flow__minimap {
 		width: 126px;
-		height: 86px;
+		height: 84px;
 	}
 
 	.CampaignNotesGraph__details {

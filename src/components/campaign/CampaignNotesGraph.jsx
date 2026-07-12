@@ -13,10 +13,12 @@ import {
 	Controls,
 	Handle,
 	MarkerType,
-	MiniMap,
 	Position,
 	ReactFlow,
 	useNodesState,
+	useReactFlow,
+	useStore,
+	useViewport,
 } from "@xyflow/react";
 
 import Button from "../form/Button";
@@ -569,6 +571,132 @@ function getConnectedEdges(edges, nodeId) {
 	if (!nodeId) return [];
 	return edges.filter(
 		(edge) => edge.source === nodeId || edge.target === nodeId,
+	);
+}
+
+const MINIMAP_ASPECT_RATIO = 3 / 2;
+
+function getMiniMapNodeSize(node) {
+	const fallback = getCampaignGraphNodeSize(node.data?.graphNode?.type);
+	return {
+		width: node.measured?.width || Number.parseFloat(node.style?.width) || fallback.width,
+		height: node.measured?.height || Number.parseFloat(node.style?.height) || fallback.height,
+	};
+}
+
+function getMiniMapBounds(nodes) {
+	const visibleNodes = nodes.filter((node) => !node.hidden);
+	if (!visibleNodes.length) return null;
+
+	const extents = visibleNodes.reduce((result, node) => {
+		const { width, height } = getMiniMapNodeSize(node);
+		const left = node.position.x - width / 2;
+		const top = node.position.y - height / 2;
+		return {
+			minX: Math.min(result.minX, left),
+			minY: Math.min(result.minY, top),
+			maxX: Math.max(result.maxX, left + width),
+			maxY: Math.max(result.maxY, top + height),
+		};
+	}, { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity });
+
+	let width = Math.max(extents.maxX - extents.minX, 1);
+	let height = Math.max(extents.maxY - extents.minY, 1);
+	const centerX = (extents.minX + extents.maxX) / 2;
+	const centerY = (extents.minY + extents.maxY) / 2;
+	const padding = Math.max(width, height) * 0.055;
+	width += padding * 2;
+	height += padding * 2;
+
+	if (width / height < MINIMAP_ASPECT_RATIO) width = height * MINIMAP_ASPECT_RATIO;
+	else height = width / MINIMAP_ASPECT_RATIO;
+
+	return { x: centerX - width / 2, y: centerY - height / 2, width, height };
+}
+
+function CampaignGraphMiniMap({ nodes }) {
+	const svgRef = useRef(null);
+	const activePointerRef = useRef(null);
+	const { setCenter } = useReactFlow();
+	const viewport = useViewport();
+	const flowWidth = useStore((state) => state.width);
+	const flowHeight = useStore((state) => state.height);
+	const bounds = useMemo(() => getMiniMapBounds(nodes), [nodes]);
+
+	const moveViewport = useCallback((event) => {
+		if (!bounds || !svgRef.current) return;
+		const rect = svgRef.current.getBoundingClientRect();
+		const x = bounds.x + ((event.clientX - rect.left) / rect.width) * bounds.width;
+		const y = bounds.y + ((event.clientY - rect.top) / rect.height) * bounds.height;
+		setCenter(x, y, { zoom: viewport.zoom, duration: 0 });
+	}, [bounds, setCenter, viewport.zoom]);
+
+	if (!bounds) return null;
+
+	const viewportRect = {
+		x: -viewport.x / viewport.zoom,
+		y: -viewport.y / viewport.zoom,
+		width: flowWidth / viewport.zoom,
+		height: flowHeight / viewport.zoom,
+	};
+	const maskX = Math.max(bounds.x, viewportRect.x);
+	const maskY = Math.max(bounds.y, viewportRect.y);
+	const maskRight = Math.min(bounds.x + bounds.width, viewportRect.x + viewportRect.width);
+	const maskBottom = Math.min(bounds.y + bounds.height, viewportRect.y + viewportRect.height);
+	const hasVisibleViewport = maskRight > maskX && maskBottom > maskY;
+
+	return (
+		<div className="react-flow__panel bottom right react-flow__minimap CampaignNotesGraph__miniMap nopan nowheel">
+			<svg
+				ref={svgRef}
+				className="CampaignNotesGraph__miniMapSvg"
+				viewBox={`${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`}
+				preserveAspectRatio="xMidYMid meet"
+				aria-label={lang.t("Graph minimap")}
+				onPointerDown={(event) => {
+					activePointerRef.current = event.pointerId;
+					event.currentTarget.setPointerCapture(event.pointerId);
+					moveViewport(event);
+				}}
+				onPointerMove={(event) => {
+					if (activePointerRef.current === event.pointerId) moveViewport(event);
+				}}
+				onPointerUp={(event) => {
+					if (activePointerRef.current === event.pointerId) activePointerRef.current = null;
+				}}
+			>
+				{nodes.filter((node) => !node.hidden).map((node) => {
+					const { width, height } = getMiniMapNodeSize(node);
+					return (
+						<rect
+							key={node.id}
+							x={node.position.x - width / 2}
+							y={node.position.y - height / 2}
+							width={width}
+							height={height}
+							rx={10}
+							fill={node.data?.color || "#94a3b8"}
+						/>
+					);
+				})}
+				{hasVisibleViewport && (
+					<>
+						<path
+							className="CampaignNotesGraph__miniMapMask"
+							fillRule="evenodd"
+							d={`M ${bounds.x} ${bounds.y} h ${bounds.width} v ${bounds.height} h ${-bounds.width} Z M ${maskX} ${maskY} h ${maskRight - maskX} v ${maskBottom - maskY} h ${maskX - maskRight} Z`}
+						/>
+						<rect
+							className="CampaignNotesGraph__miniMapViewport"
+							x={maskX}
+							y={maskY}
+							width={maskRight - maskX}
+							height={maskBottom - maskY}
+						/>
+					</>
+				)}
+			</svg>
+		</div>
 	);
 }
 
@@ -1262,14 +1390,7 @@ export default function CampaignNotesGraph({
 							showInteractive={false}
 							fitViewOptions={{ padding: 0.16, duration: 420 }}
 						/>
-						<MiniMap
-							position="bottom-right"
-							pannable
-							zoomable
-							nodeColor={(node) => node.data?.color || "#94a3b8"}
-							nodeStrokeColor={() => "rgba(255, 255, 255, 0.7)"}
-							nodeBorderRadius={12}
-						/>
+						<CampaignGraphMiniMap nodes={flowNodes} />
 					</ReactFlow>
 				</div>
 			</div>
