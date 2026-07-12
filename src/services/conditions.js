@@ -1,4 +1,4 @@
-import { api } from "../api.js";
+import { spellApi } from "../entities/spell/index.js";
 
 let conditionMapCache = null;
 let conditionPromise = null;
@@ -23,7 +23,7 @@ export async function loadConditionsMap() {
 	if (conditionMapCache) return conditionMapCache;
 	if (conditionPromise) return conditionPromise;
 
-	conditionPromise = api
+	conditionPromise = spellApi
 		.getConditions()
 		.then((list) => {
 			conditionMapCache = toConditionMap(list);

@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { alert, requestCampaignsReloadAction } from "../../actions/app";
-import { api } from "../../api";
+import { campaignApi } from "../../entities/campaign/index.js";
+import { sessionApi } from "../../entities/session/index.js";
+
+const api = { ...campaignApi, ...sessionApi };
 import { closeActiveModal, useAppDispatch } from "../../store/appStore";
 import { createEncounterMonsterInstance } from "../../utils/encounters";
 import Button from "../form/Button";

@@ -1,7 +1,7 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 import { confirm, refreshEntitiesAction } from "../../actions/app";
-import { api } from "../../api";
+import { campaignApi as api } from "../../entities/campaign/index.js";
 import { lang } from "../../services/localization";
 import { useAppDispatch } from "../../store/appStore";
 import { sanitizeNotesForSave } from "../../utils/noteUtils";

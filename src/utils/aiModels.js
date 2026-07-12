@@ -1,4 +1,4 @@
-import { api } from "../api";
+import { aiApi as api } from "../features/ai/index.js";
 
 export async function loadAiModelOptions({
 	setAiModels,

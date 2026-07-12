@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { api } from "../api.js";
+import { campaignApi } from "../entities/campaign/index.js";
+import { spellApi } from "../entities/spell/index.js";
+import { settingsApi } from "../features/settings/index.js";
 import ReactList from "react-list";
 import Input from "./form/Input";
 import Button from "./form/Button";
@@ -202,7 +204,7 @@ export default function Spells({
 	useEffect(() => {
 		const loadSources = async () => {
 			try {
-				const data = await api.getSpellSources();
+				const data = await spellApi.getSpellSources();
 				setSources(data);
 			} catch (err) {
 				console.error("Failed to load spell sources", err);
@@ -230,7 +232,7 @@ export default function Spells({
 		const loadData = async () => {
 			setLoading(true);
 			try {
-				const combinedList = await api.getSpellData("all");
+				const combinedList = await spellApi.getSpellData("all");
 				setAllSpells(combinedList);
 			} catch (error) {
 				console.error("Failed to load local spells", error);
@@ -289,14 +291,14 @@ export default function Spells({
 		);
 		try {
 			if (activeCampaignSlug) {
-				await api.updateCampaign(activeCampaignSlug, {
+				await campaignApi.updateCampaign(activeCampaignSlug, {
 					ignoreSourcesList: nextIgnoreSourcesList,
 				});
-				const campaigns = await api.listCampaigns();
+				const campaigns = await campaignApi.listCampaigns();
 				dispatch(setCampaignsAction(campaigns));
 				return;
 			}
-			const saved = await api.updateSettings({
+			const saved = await settingsApi.updateSettings({
 				ignoreSourcesList: nextIgnoreSourcesList,
 			});
 			dispatch(

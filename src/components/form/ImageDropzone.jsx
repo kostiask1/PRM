@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { alert } from "../../actions/app";
-import { api } from "../../api";
+import { campaignApi } from "../../entities/campaign/index.js";
+import { imageApi } from "../../features/images/index.js";
+
+const api = { ...campaignApi, ...imageApi };
 import "../../assets/components/ImageDropzone.css";
 import { IMAGE_GALLERY_CATEGORIES } from "../../features/images/imageGalleryConfig";
 import { lang } from "../../services/localization";

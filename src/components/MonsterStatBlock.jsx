@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { api } from "../api.js";
+import { bestiaryApi } from "../entities/bestiary/index.js";
+import { spellApi } from "../entities/spell/index.js";
 import RollDice from "./common/RollDice.jsx";
 import Icon from "./common/Icon.jsx";
 import {
@@ -95,7 +96,7 @@ export default function MonsterStatBlock({
 
 		const checkFavoriteStatus = async () => {
 			try {
-				const favs = await api.getBestiaryFavorites();
+				const favs = await bestiaryApi.getBestiaryFavorites();
 				const found = favs.some(
 					(f) =>
 						f.name === effectiveName &&
@@ -122,7 +123,7 @@ export default function MonsterStatBlock({
 
 	const handleToggleFavorite = async () => {
 		try {
-			const newFavs = await api.toggleBestiaryFavorite(
+			const newFavs = await bestiaryApi.toggleBestiaryFavorite(
 				effectiveName,
 				monster.source,
 			);
@@ -169,7 +170,7 @@ export default function MonsterStatBlock({
 							const slug = url.split("/").filter(Boolean).pop();
 
 							if (SPELL_CACHE.has(slug)) return SPELL_CACHE.get(slug);
-							const results = await api.searchSpells({ name: slug });
+							const results = await spellApi.searchSpells({ name: slug });
 							const data = results?.[0] || null;
 							if (data) SPELL_CACHE.set(slug, data);
 							return data;
@@ -473,7 +474,7 @@ export default function MonsterStatBlock({
 			return;
 		}
 		try {
-			const updatedMonster = await api.updateCustomBestiaryMonster(
+			const updatedMonster = await bestiaryApi.updateCustomBestiaryMonster(
 				monster.id || effectiveName || monster.name,
 				{
 					imageUrl: nextUrl,
@@ -495,7 +496,7 @@ export default function MonsterStatBlock({
 			return;
 		}
 		try {
-			await api.updateCustomBestiaryMonster(
+			await bestiaryApi.updateCustomBestiaryMonster(
 				monster.id || effectiveName || monster.name,
 				{
 					imageUrl: null,

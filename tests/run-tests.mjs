@@ -123,7 +123,8 @@ import {
 	getEntityDisplayName,
 	resolveEntityByName,
 } from "../src/services/entities.js";
-import { api } from "../src/api.js";
+import { campaignApi } from "../src/entities/campaign/index.js";
+import { spellApi } from "../src/entities/spell/index.js";
 
 const require = createRequire(import.meta.url);
 const storage = require("../server/storage.js");
@@ -1869,8 +1870,8 @@ await run("parser renders dice and creature tags as interactive components", asy
 	assert.match(rulesReferenceSource, /import MonsterStatBlock from "\.\.\/MonsterStatBlock\.jsx"/);
 	assert.match(rulesReferenceSource, /import MonsterStatBlockModel from "\.\.\/\.\.\/models\/MonsterStatBlockModel\.js"/);
 	assert.match(rulesReferenceSource, /id: "bestiary"/);
-	assert.match(rulesReferenceSource, /api\.getBestiaryData\("all"\)/);
-	assert.match(rulesReferenceSource, /api\.getSpellData\("all"\)/);
+	assert.match(rulesReferenceSource, /bestiaryApi\.getBestiaryData\("all"\)/);
+	assert.match(rulesReferenceSource, /spellApi\.getSpellData\("all"\)/);
 	assert.doesNotMatch(rulesReferenceSource, /<Bestiary/);
 	assert.match(rulesReferenceSource, /<MonsterStatBlock/);
 	assert.match(rulesReferenceSource, /Bestiary__item_token/);
@@ -3462,9 +3463,9 @@ await run(
 		);
 		assert.equal(await resolveEntityByName("", "Hero"), null);
 
-		const originalGetEntities = api.getEntities;
+		const originalGetEntities = campaignApi.getEntities;
 		const calls = [];
-		api.getEntities = async (slug, type) => {
+		campaignApi.getEntities = async (slug, type) => {
 			calls.push([slug, type]);
 			if (type === "characters") {
 				return [{ firstName: "Hero", lastName: "One" }];
@@ -3488,7 +3489,7 @@ await run(
 				"locations",
 			]);
 		} finally {
-			api.getEntities = originalGetEntities;
+			campaignApi.getEntities = originalGetEntities;
 		}
 	},
 );
@@ -3786,12 +3787,12 @@ await run("dice probability distribution supports dice formulas", () => {
 await run(
 	"conditions and reference resolvers use normalized keys and cache",
 	async () => {
-		const originalSearchSpells = api.searchSpells;
-		const originalGetConditions = api.getConditions;
-		const originalGetDiseases = api.getDiseases;
-		const originalGetVariantRules = api.getVariantRules;
-		const originalGetSkills = api.getSkills;
-		const originalGetSenses = api.getSenses;
+		const originalSearchSpells = spellApi.searchSpells;
+		const originalGetConditions = spellApi.getConditions;
+		const originalGetDiseases = spellApi.getDiseases;
+		const originalGetVariantRules = spellApi.getVariantRules;
+		const originalGetSkills = spellApi.getSkills;
+		const originalGetSenses = spellApi.getSenses;
 		let spellCalls = 0;
 		let conditionCalls = 0;
 		let diseaseCalls = 0;
@@ -3799,7 +3800,7 @@ await run(
 		let skillCalls = 0;
 		let senseCalls = 0;
 
-		api.searchSpells = async (params = {}) => {
+		spellApi.searchSpells = async (params = {}) => {
 			spellCalls += 1;
 			if (String(params.name || "").includes("magic missile")) {
 				return [
@@ -3810,7 +3811,7 @@ await run(
 			return [{ name: "Shield|PHB", source: "PHB" }];
 		};
 
-		api.getConditions = async () => {
+		spellApi.getConditions = async () => {
 			conditionCalls += 1;
 			if (conditionCalls === 1) {
 				throw new Error("temporary");
@@ -3821,7 +3822,7 @@ await run(
 			];
 		};
 
-		api.getDiseases = async () => {
+		spellApi.getDiseases = async () => {
 			diseaseCalls += 1;
 			return [
 				{ name: "Bluerot", entries: ["..."] },
@@ -3829,7 +3830,7 @@ await run(
 			];
 		};
 
-		api.getVariantRules = async () => {
+		spellApi.getVariantRules = async () => {
 			variantRuleCalls += 1;
 			return [
 				{ name: "Advantage", entries: ["..."] },
@@ -3837,7 +3838,7 @@ await run(
 			];
 		};
 
-		api.getSkills = async () => {
+		spellApi.getSkills = async () => {
 			skillCalls += 1;
 			return [
 				{ name: "Medicine", ability: "wis", entries: ["..."] },
@@ -3845,7 +3846,7 @@ await run(
 			];
 		};
 
-		api.getSenses = async () => {
+		spellApi.getSenses = async () => {
 			senseCalls += 1;
 			return [
 				{ name: "Darkvision", entries: ["..."] },
@@ -3945,12 +3946,12 @@ await run(
 			);
 			assert.equal(await resolveSenseInput({ foo: "bar" }), null);
 		} finally {
-			api.searchSpells = originalSearchSpells;
-			api.getConditions = originalGetConditions;
-			api.getDiseases = originalGetDiseases;
-			api.getVariantRules = originalGetVariantRules;
-			api.getSkills = originalGetSkills;
-			api.getSenses = originalGetSenses;
+			spellApi.searchSpells = originalSearchSpells;
+			spellApi.getConditions = originalGetConditions;
+			spellApi.getDiseases = originalGetDiseases;
+			spellApi.getVariantRules = originalGetVariantRules;
+			spellApi.getSkills = originalGetSkills;
+			spellApi.getSenses = originalGetSenses;
 		}
 	},
 );

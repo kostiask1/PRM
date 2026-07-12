@@ -1,4 +1,4 @@
-import { api } from "../api.js";
+import { spellApi } from "../entities/spell/index.js";
 
 let variantRuleMapCache = null;
 let variantRulePromise = null;
@@ -24,7 +24,7 @@ export async function loadVariantRulesMap() {
 	if (variantRuleMapCache) return variantRuleMapCache;
 	if (variantRulePromise) return variantRulePromise;
 
-	variantRulePromise = api
+	variantRulePromise = spellApi
 		.getVariantRules()
 		.then((list) => {
 			variantRuleMapCache = toVariantRuleMap(list);

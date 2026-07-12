@@ -1,4 +1,5 @@
-import { api } from "../api.js";
+import { bestiaryApi } from "../entities/bestiary/index.js";
+import { spellApi } from "../entities/spell/index.js";
 import { loadConditionsMap, normalizeConditionName } from "./conditions.js";
 import { loadDiseasesMap, normalizeDiseaseName } from "./diseases.js";
 import {
@@ -23,7 +24,7 @@ export async function getSpellByName(name) {
 	if (!key) return null;
 	if (spellCache.has(key)) return spellCache.get(key);
 
-	const results = await api.searchSpells({ name: key });
+	const results = await spellApi.searchSpells({ name: key });
 	const spell =
 		results.find((item) => normalizeSpellName(item.name) === key) ||
 		results[0] ||
@@ -51,7 +52,7 @@ export async function getCreatureByName(name) {
 	if (!reference.name) return null;
 	if (creatureCache.has(key)) return creatureCache.get(key);
 
-	const results = await api.searchBestiary(reference.name);
+	const results = await bestiaryApi.searchBestiary(reference.name);
 	const creature =
 		results.find((item) => {
 			const nameMatches =

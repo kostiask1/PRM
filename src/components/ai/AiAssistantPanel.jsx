@@ -9,7 +9,12 @@
 	useRef,
 	useState,
 } from "react";
-import { api } from "../../api.js";
+import { campaignApi } from "../../entities/campaign/index.js";
+import { sessionApi } from "../../entities/session/index.js";
+import { bestiaryApi } from "../../entities/bestiary/index.js";
+import { aiApi } from "../../features/ai/index.js";
+
+const api = { ...campaignApi, ...sessionApi, ...bestiaryApi, ...aiApi };
 import Button from "../form/Button.jsx";
 import EditableField from "../form/EditableField.jsx";
 import Icon from "../common/Icon.jsx";

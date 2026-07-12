@@ -1,4 +1,4 @@
-import { api } from "../api.js";
+import { spellApi } from "../entities/spell/index.js";
 
 let senseMapCache = null;
 let sensePromise = null;
@@ -24,7 +24,7 @@ export async function loadSensesMap() {
 	if (senseMapCache) return senseMapCache;
 	if (sensePromise) return sensePromise;
 
-	sensePromise = api
+	sensePromise = spellApi
 		.getSenses()
 		.then((list) => {
 			senseMapCache = toSenseMap(list);

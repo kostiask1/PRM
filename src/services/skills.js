@@ -1,4 +1,4 @@
-import { api } from "../api.js";
+import { spellApi } from "../entities/spell/index.js";
 
 let skillMapCache = null;
 let skillPromise = null;
@@ -24,7 +24,7 @@ export async function loadSkillsMap() {
 	if (skillMapCache) return skillMapCache;
 	if (skillPromise) return skillPromise;
 
-	skillPromise = api
+	skillPromise = spellApi
 		.getSkills()
 		.then((list) => {
 			skillMapCache = toSkillMap(list);

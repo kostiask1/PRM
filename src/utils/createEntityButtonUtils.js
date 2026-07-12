@@ -1,5 +1,5 @@
 import { refreshEntitiesAction } from "../actions/app";
-import { api } from "../api";
+import { campaignApi as api } from "../entities/campaign/index.js";
 
 export function buildCreateEntityPayload(defaults, draft) {
 	return {

@@ -13,7 +13,12 @@ import useEncounterView from "../hooks/useEncounterView";
 import Tooltip from "./common/Tooltip";
 import classNames from "../utils/classNames";
 import "../assets/components/EncounterView.css";
-import { api } from "../api";
+import { campaignApi } from "../entities/campaign/index.js";
+import { bestiaryApi } from "../entities/bestiary/index.js";
+import { aiApi } from "../features/ai/index.js";
+import { settingsApi } from "../features/settings/index.js";
+
+const api = { ...campaignApi, ...bestiaryApi, ...aiApi, ...settingsApi };
 import {
 	alert,
 	refreshEntitiesAction,

@@ -1,6 +1,10 @@
 ﻿import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
-import { api } from "./api";
+import { campaignApi } from "./entities/campaign/index.js";
+import { backupApi } from "./features/backup/index.js";
+import { settingsApi } from "./features/settings/index.js";
+
+const api = { ...campaignApi, ...backupApi, ...settingsApi };
 import DiceCalculator from "./components/DiceCalculator";
 import MainContent from "./components/MainContent";
 import MessageBox from "./components/common/MessageBox";

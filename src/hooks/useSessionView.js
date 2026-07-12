@@ -8,7 +8,10 @@ import {
 	requestCampaignsReloadAction,
 	setActiveSessionAction,
 } from "../actions/app";
-import { api } from "../api";
+import { campaignApi } from "../entities/campaign/index.js";
+import { sessionApi } from "../entities/session/index.js";
+
+const api = { ...campaignApi, ...sessionApi };
 import { sanitizeNotesForSave, upsertNoteById } from "../utils/noteUtils";
 import { idsEqual } from "../utils/id";
 import { shouldOpenInNewTabFromEvent } from "../utils/navigation.js";

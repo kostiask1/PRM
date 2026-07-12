@@ -1,5 +1,5 @@
 import { setUiSettingsAction } from "../actions/app";
-import { api } from "../api";
+import { settingsApi as api } from "../features/settings/index.js";
 import { lang } from "../services/localization";
 import { THEMES } from "../services/uiSettings";
 import { useAppDispatch, useAppSelector } from "../store/appStore";

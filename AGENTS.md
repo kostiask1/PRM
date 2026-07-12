@@ -21,7 +21,7 @@
 - `src/store/appStore.js` - легкий глобальний store через `useSyncExternalStore`; navigation, modal, messages, dice, language, UI settings.
 - `src/shared/api/httpClient.js` - спільний HTTP transport для `/api/...`.
 - `src/entities/*/api` та `src/features/*/api` - API-клієнти, що належать відповідному домену/use case.
-- `src/api.js` - тимчасовий compatibility facade для legacy-коду; новий код не повинен імпортувати його.
+- Compatibility facade `src/api.js` видалено; кожен consumer імпортує API client з domain owner.
 - `server/server.js` - Express entry point, монтує routes, віддає `dist/`.
 - `server/storage.js` - основний файловий storage layer, нормалізація шляхів, JSON read/write, кампанії, сесії, entities, image refs, imports/exports, AI history.
 - `server/routes/*.js` - REST API:
@@ -132,7 +132,7 @@
   - `/campaign/:slug/session/:fileName/encounter/:encounterId`
   - `/bestiary`
   - `/spells`
-- Нові slices викликають власні domain API clients; legacy views тимчасово можуть викликати compatibility facade `src/api.js`. Усі clients використовують `src/shared/api/httpClient.js` для Express routes під `/api`.
+- Views і slices викликають власні domain API clients. Усі clients використовують `src/shared/api/httpClient.js` для Express routes під `/api`.
 - `server/storage.js` reads/writes JSON and files under `data/`.
 - Campaign metadata: `data/campaigns/{slug}/_campaign.json`.
 - Entities: `data/campaigns/{slug}/characters|npc|locations/{entitySlug}/info.json`.
@@ -165,6 +165,8 @@
 
 ## Target Frontend Architecture (FSD)
 
+Поточний статус і послідовність міграції зафіксовані в `docs/architecture-migration.md`. Оновлюй статус phase та acceptance criteria разом зі структурними змінами.
+
 Frontend мігрує інкрементально до Feature-Sliced Design. Поточні `src/components`, `src/hooks`, `src/models`, `src/utils`, `src/services`, `src/store` є legacy-зонами: їх не потрібно масово переносити, але новий доменний функціонал слід створювати у FSD-шарах.
 
 Дозволений напрям залежностей:
@@ -183,7 +185,7 @@ Frontend мігрує інкрементально до Feature-Sliced Design. �
 - Нижчий FSD-шар не імпортує вищий. Правила закріплені в `.fallowrc.jsonc`.
 - Зовнішній код імпортує slice через його публічний `index.js`. Deep imports у чужий slice заборонені; виняток - внутрішні імпорти всередині того самого slice.
 - Не створюй broad barrel-файли, що реекспортують цілі дерева. Public API slice має бути мінімальним і явним.
-- Новий код не імпортує compatibility facade `src/api.js`. Імпортуй domain client з власника: наприклад `entities/bestiary`, `entities/campaign`, `features/ai`.
+- Імпортуй domain client з власника: наприклад `entities/bestiary`, `entities/campaign`, `features/ai`. Не створюй новий global API facade.
 - `shared/api/httpClient.js` знає лише HTTP-механіку. Domain endpoints не додаються до transport layer.
 - Не перенось state у глобальний store автоматично. Persistent domain state належить filesystem/server; route state - router; workflow/modal/filter/draft state - відповідному feature/widget. Store використовуй лише для справді глобального app state.
 - Не перетворюй кожен компонент або click handler на feature. Feature повинна представляти завершену дію/use case.

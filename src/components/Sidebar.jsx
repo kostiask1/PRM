@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { alert } from "../actions/app";
-import { api } from "../api";
+import { campaignApi } from "../entities/campaign/index.js";
+import { backupApi } from "../features/backup/index.js";
+
+const api = { ...campaignApi, ...backupApi };
 import Button from "./form/Button";
 import Icon from "./common/Icon";
 import StatusBadge from "./common/StatusBadge";

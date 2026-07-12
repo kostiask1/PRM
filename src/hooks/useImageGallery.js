@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { alert, confirm } from "../actions/app";
-import { api } from "../api";
+import { campaignApi } from "../entities/campaign/index.js";
+import { imageApi } from "../features/images/index.js";
+
+const api = { ...campaignApi, ...imageApi };
 import { useAppDispatch, useAppSelector } from "../store/appStore";
 import { lang } from "../services/localization";
 import { IMAGE_GALLERY_CATEGORIES } from "../features/images/imageGalleryConfig";

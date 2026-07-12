@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactList from "react-list";
 
 import { alert } from "../../actions/app";
-import { api } from "../../api";
+import { bestiaryApi } from "../../entities/bestiary/index.js";
+import { spellApi } from "../../entities/spell/index.js";
 import "../../assets/components/Bestiary.css";
 import "../../assets/components/RulesReferenceModalContent.css";
 import ListCard from "../common/ListCard.jsx";
@@ -79,13 +80,13 @@ function itemMatchesQuery(tab, item, normalizedQuery, isDetailedSearch) {
 }
 
 async function loadSpellReferenceItems() {
-	return api.getSpellData("all");
+	return spellApi.getSpellData("all");
 }
 
 async function loadBestiaryReferenceItems() {
 	const [officialData, customData] = await Promise.all([
-		api.getBestiaryData("all"),
-		api.getCustomBestiaryData().catch(() => []),
+		bestiaryApi.getBestiaryData("all"),
+		bestiaryApi.getCustomBestiaryData().catch(() => []),
 	]);
 	const officialList = Array.isArray(officialData)
 		? officialData
@@ -107,14 +108,14 @@ const REFERENCE_TABS = [
 		id: "conditions",
 		label: "Conditions",
 		emptyLabel: "No conditions or statuses found.",
-		load: () => api.getConditions(),
+		load: () => spellApi.getConditions(),
 		searchFields: ["name"],
 	},
 	{
 		id: "diseases",
 		label: "Diseases",
 		emptyLabel: "No diseases found.",
-		load: () => api.getDiseases(),
+		load: () => spellApi.getDiseases(),
 		searchFields: ["name", "type"],
 		meta: (item) => item.type || "",
 	},
@@ -122,14 +123,14 @@ const REFERENCE_TABS = [
 		id: "senses",
 		label: "Senses",
 		emptyLabel: "No senses found.",
-		load: () => api.getSenses(),
+		load: () => spellApi.getSenses(),
 		searchFields: ["name"],
 	},
 	{
 		id: "skills",
 		label: "Skills",
 		emptyLabel: "No skills found.",
-		load: () => api.getSkills(),
+		load: () => spellApi.getSkills(),
 		searchFields: ["name", "ability"],
 		meta: (item) => item.ability?.toUpperCase?.() || "",
 	},
@@ -137,7 +138,7 @@ const REFERENCE_TABS = [
 		id: "variantrules",
 		label: "Variant Rules",
 		emptyLabel: "No variant rules found.",
-		load: () => api.getVariantRules(),
+		load: () => spellApi.getVariantRules(),
 		searchFields: ["name", "ruleType"],
 		meta: (item) => getVariantRuleTypeLabel(item.ruleType),
 	},

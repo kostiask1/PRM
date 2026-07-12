@@ -8,7 +8,11 @@ import {
 	setActiveEncounterAction,
 	setActiveSessionAction,
 } from "../actions/app";
-import { api } from "../api";
+import { campaignApi } from "../entities/campaign/index.js";
+import { sessionApi } from "../entities/session/index.js";
+import { bestiaryApi } from "../entities/bestiary/index.js";
+
+const api = { ...campaignApi, ...sessionApi, ...bestiaryApi };
 import { navigateTo, useAppDispatch, useAppSelector } from "../store/appStore";
 import { lang } from "../services/localization";
 import {

@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
-import { api } from "../../api";
+import { campaignApi } from "../../entities/campaign/index.js";
+import { sessionApi } from "../../entities/session/index.js";
+
+const api = { ...campaignApi, ...sessionApi };
 import { navigateTo, useAppSelector } from "../../store/appStore";
 import { lang } from "../../services/localization";
 import { buildNavigationUrl } from "../../utils/navigation";

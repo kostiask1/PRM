@@ -7,7 +7,7 @@ import { prompt } from "../actions/app";
 import Button from "./form/Button";
 import useImageGallery from "../hooks/useImageGallery";
 import ImageTargetSettings from "./ImageTargetSettings";
-import { api } from "../api";
+import { imageApi as api } from "../features/images/index.js";
 import Tooltip from "./common/Tooltip";
 import classNames from "../utils/classNames";
 import { formatBytes } from "../utils/formatBytes";

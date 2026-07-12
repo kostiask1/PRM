@@ -4,7 +4,10 @@ import {
 	setLanguageAction,
 	setUiSettingsAction,
 } from "../../actions/app";
-import { api } from "../../api";
+import { campaignApi } from "../../entities/campaign/index.js";
+import { bestiaryApi } from "../../entities/bestiary/index.js";
+import { spellApi } from "../../entities/spell/index.js";
+import { settingsApi } from "../../features/settings/index.js";
 import { lang } from "../../services/localization";
 import { THEMES } from "../../services/uiSettings";
 import { useAppDispatch, useAppSelector } from "../../store/appStore";
@@ -129,8 +132,8 @@ export default function SettingsModalContent({ onCancel }) {
 		const loadSourceOptions = async () => {
 			try {
 				const [bestiarySources, spellSources] = await Promise.all([
-					api.getBestiarySources(),
-					api.getSpellSources(),
+					bestiaryApi.getBestiarySources(),
+					spellApi.getSpellSources(),
 				]);
 				const nextSources = Array.from(
 					new Set([
@@ -200,7 +203,7 @@ export default function SettingsModalContent({ onCancel }) {
 
 	const patchSettings = async (payload) => {
 		try {
-			await api.updateSettings(payload);
+			await settingsApi.updateSettings(payload);
 		} catch (error) {
 			console.error("Failed to save settings", error);
 		}
@@ -311,7 +314,7 @@ export default function SettingsModalContent({ onCancel }) {
 
 		setPromptStatus("saving");
 		try {
-			const saved = await api.updateSettings(payload);
+			const saved = await settingsApi.updateSettings(payload);
 			const nextUiSettings = {
 				aiBasePrompt: saved.aiBasePrompt,
 				imagePromptBasePrompt: saved.imagePromptBasePrompt,
@@ -342,7 +345,7 @@ export default function SettingsModalContent({ onCancel }) {
 		setSourceStatus("saving");
 		try {
 			if (isGlobalSourceScope) {
-				const saved = await api.updateSettings({ ignoreSourcesList });
+				const saved = await settingsApi.updateSettings({ ignoreSourcesList });
 				dispatch(
 					setUiSettingsAction({
 						ignoreSourcesList: saved.ignoreSourcesList,
@@ -350,11 +353,11 @@ export default function SettingsModalContent({ onCancel }) {
 				);
 				setIgnoreSourcesList(saved.ignoreSourcesList || []);
 			} else if (selectedSourceScope) {
-				await api.updateCampaign(selectedSourceScope, {
+				await campaignApi.updateCampaign(selectedSourceScope, {
 					ignoreSourcesList:
 						campaignIgnoreSourcesLists[selectedSourceScope] || [],
 				});
-				const nextCampaigns = await api.listCampaigns();
+				const nextCampaigns = await campaignApi.listCampaigns();
 				dispatch(setCampaignsAction(nextCampaigns));
 			}
 			setSourceStatus("idle");

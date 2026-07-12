@@ -1,4 +1,4 @@
-import { api } from "../api.js";
+import { spellApi } from "../entities/spell/index.js";
 
 let diseaseMapCache = null;
 let diseasePromise = null;
@@ -24,7 +24,7 @@ export async function loadDiseasesMap() {
 	if (diseaseMapCache) return diseaseMapCache;
 	if (diseasePromise) return diseasePromise;
 
-	diseasePromise = api
+	diseasePromise = spellApi
 		.getDiseases()
 		.then((list) => {
 			diseaseMapCache = toDiseaseMap(list);
