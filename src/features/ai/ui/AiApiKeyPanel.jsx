@@ -1,6 +1,6 @@
-import Button from "../form/Button";
-import Input from "../form/Input";
-import { lang } from "../../services/localization";
+import Button from "../../../components/form/Button";
+import Input from "../../../components/form/Input";
+import { lang } from "../../../services/localization";
 
 export default function AiApiKeyPanel({
 	apiKeyInput,

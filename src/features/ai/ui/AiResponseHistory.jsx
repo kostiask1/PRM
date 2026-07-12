@@ -1,8 +1,8 @@
 import ReactList from "react-list";
 
-import Button from "../form/Button";
-import ListCard from "../common/ListCard";
-import { lang } from "../../services/localization";
+import Button from "../../../components/form/Button";
+import ListCard from "../../../components/common/ListCard";
+import { lang } from "../../../services/localization";
 
 export default function AiResponseHistory({
 	entries,

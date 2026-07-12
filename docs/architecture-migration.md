@@ -107,8 +107,18 @@ Delivered:
 - AI history change detection and retry-payload reconstruction moved to `src/features/ai/model/historyWorkflow.js`.
 - AI request-mode resolution, payload construction, and removal of heavy session data moved to `src/features/ai/model/generationRequest.js`.
 - Generation and retry lifecycle now uses the explicit request-aware state model in `src/features/ai/model/generationLifecycle.js`; context loading remains separate.
+- History upsert, campaign ownership, partial apply/undo mode, and restore synchronization planning moved to `src/features/ai/model/historyState.js` with concurrency-safe functional updates in React.
+- Delete, clear, apply, undo, and draft-save commands moved to `src/features/ai/model/historyCommands.js`; the hook serializes restore commands with a ref-backed lock and exposes results through UI callbacks.
+- Stable visual composition moved to `src/features/ai/ui`: `AiAssistantShell`, `AiPromptComposer`, and `AiHistoryResponseDialog` own modal plumbing and presentation while the panel supplies workflow state and callbacks. UI exports use `src/features/ai/ui/index.js`, keeping the model/API entry Node-compatible.
+- Remaining AI-only toolbar, context settings, API-key, and history-list views moved from legacy `components/ai` into `src/features/ai/ui`.
+- Context list normalization, nested scene defaults, item toggles, and bulk selection moved to `src/features/ai/model/contextConfig.js`.
+- Campaign entity/session loading, selected-session hydration, and context-list synchronization moved to `src/features/ai/model/useAiContextData.js`; API operations are injected as ports and reused by image-prompt loading.
+- Token-estimate request shaping, route-mode context assembly, list filtering, and attachment costs moved to the pure `src/features/ai/model/tokenEstimation.js` model.
+- NPC, location, scene/encounter, and custom-monster image target construction moved to `src/features/ai/model/imageTargets.js`.
+- Campaign session hydration, custom-bestiary normalization, loading state, and fetch caching for image prompts moved to `src/features/ai/model/useAiImagePromptData.js`.
 - Focused regression tests cover ignored context, mode selection, retry reconstruction, generated entity types, and campaign-change detection.
 - `AiAssistantPanel` now consumes these feature model APIs instead of owning their implementations.
+- Backend module extraction has started: pure campaign/session/encounter input shaping and ignored-content filtering moved from `server/aiService.js` to `server/modules/ai/application/buildPromptContext.js`.
 
 Frontend scope:
 
@@ -118,7 +128,8 @@ Frontend scope:
 
 Next checkpoint:
 
-- Split history UI orchestration and apply/undo synchronization before moving visual subcomponents.
+- Continue the backend split by extracting task prompt construction, then introduce the Gemini invocation infrastructure adapter.
+- Begin the backend `server/modules/ai` application/infrastructure split.
 
 Backend scope:
 

@@ -1,8 +1,8 @@
-import Button from "../form/Button";
-import Checkbox from "../form/Checkbox";
-import CollapseToggleButton from "../common/CollapseToggleButton";
-import Modal from "../common/Modal";
-import { lang } from "../../services/localization";
+import Button from "../../../components/form/Button";
+import Checkbox from "../../../components/form/Checkbox";
+import CollapseToggleButton from "../../../components/common/CollapseToggleButton";
+import Modal from "../../../components/common/Modal";
+import { lang } from "../../../services/localization";
 
 const SCENE_FIELDS = [
 	{ key: "summary", label: "Scene summary" },

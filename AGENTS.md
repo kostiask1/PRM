@@ -88,10 +88,20 @@
 ### AI Assistance
 
 - What: prompt UI, context selection, image prompt generation, parsed operations, draft/apply/undo, history and retry.
-- Main UI: `src/components/AiAssistantPanel.jsx`, `src/components/ai/AiResponseModal.jsx`, `src/components/ai/AiResponseHistory.jsx`, `src/components/ai/AiImagePromptPickerModal.jsx`.
+- Main UI: `src/components/ai/AiAssistantPanel.jsx`, `src/features/ai/ui/*`, `src/components/ai/AiResponseModal.jsx`, `src/components/ai/AiImagePromptPickerModal.jsx`.
 - Backend: `server/routes/ai.js`, `server/aiService.js`, `server/aiPatchService.js`, `server/aiPayloadSchemas.js`, `server/aiHistoryService.js`, `server/aiResponseHistoryService.js`.
+- Backend AI application modules are being extracted under `server/modules/ai/application`; `buildPromptContext.js` owns ignored-content filtering and Gemini input-context shaping.
 - Frontend feature model: `src/features/ai/model/*`; pure estimation, history and workflow rules do not belong inside `AiAssistantPanel.jsx`.
 - AI generation/retry uses explicit lifecycle statuses and request IDs. Do not reintroduce a shared `loading` boolean for generation, retry, and context loading.
+- AI history collection and restore decisions belong to `src/features/ai/model/historyState.js`; React executes the plan using functional state updates so concurrent history entries are preserved.
+- Async AI history commands belong to `src/features/ai/model/historyCommands.js`; keep confirmation copy and screen-specific effects in the caller, and preserve the ref-backed restore lock.
+- AI-specific presentation boundaries live in `src/features/ai/ui`; keep modal shell, prompt composer, and response-dialog wiring out of `AiAssistantPanel.jsx`.
+- Import AI UI through `src/features/ai/ui/index.js`; do not re-export JSX from the model/API `src/features/ai/index.js`, because Node regression tests consume that entry directly.
+- Context list normalization and nested updates belong to `src/features/ai/model/contextConfig.js`; preserve default scene fields and immutable updates.
+- Context data fetching, session hydration, and entity-list synchronization belong to `src/features/ai/model/useAiContextData.js`; inject entity/session API functions instead of importing page clients into the hook.
+- Token-estimate request shaping, context compaction, and attachment cost calculation belong to `src/features/ai/model/tokenEstimation.js`; keep it pure and aligned with generation request modes.
+- Image prompt target shaping belongs to `src/features/ai/model/imageTargets.js`; keep ignored notes filtered and encounter monster summaries stable.
+- Image-prompt campaign/session and custom-bestiary loading belongs to `src/features/ai/model/useAiImagePromptData.js`; reuse injected context loaders and normalize both supported custom-monster response shapes.
 - Schema: parsed AI must return `{ "version": 2, "operations": [...] }`.
 - Allowed operation style is domain-specific (`create`, `update`, `delete`, `appendNote`, `updateNote`, `deleteNote`, `moveScope`), not raw RFC JSON Patch.
 - AI history is campaign-scoped in `data/campaigns/{slug}/_aiResponses.json`.
@@ -265,6 +275,7 @@ Routes не повинні напряму будувати filesystem paths. П�
 
 - `server/storage.js` path normalization, import/export/archive behavior, and image reference updates.
 - `server/aiService.js`, `server/routes/ai.js`, `server/aiPatchService.js`, `server/aiPayloadSchemas.js` prompt/schema/apply flow.
+- Preserve the `server/modules/ai/application/buildPromptContext.js` contract when changing campaign/session/encounter context selection; add focused tests for field filtering and simplified notes.
 - Entity scope/move logic in `useSessionView.js`, `useCampaignView.js`, `server/storage.js`.
 - Mention parsing and rendering: `EntityLink.jsx`, `entityLinkUtils.js`, `contentRenderer.jsx`, `parser.jsx`.
 - `CampaignNotesGraph.jsx` layout/drag collision code; small constants can drastically change UX.

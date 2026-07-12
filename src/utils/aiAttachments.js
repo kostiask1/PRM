@@ -1,4 +1,3 @@
-export const ESTIMATED_FILE_TOKEN_BYTES = 4;
 export const MAX_AI_ATTACHMENTS = 4;
 export const MAX_AI_FILE_BYTES = 10 * 1024 * 1024;
 export const MAX_AI_IMAGE_BYTES = 10 * 1024 * 1024;

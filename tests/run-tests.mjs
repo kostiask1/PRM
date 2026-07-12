@@ -81,15 +81,33 @@ import {
 	AI_GENERATION_STATUS,
 	aiGenerationLifecycleReducer,
 	buildAiGenerationRequest,
+	buildAiHistoryRestorePlan,
+	buildAiTokenEstimate,
+	buildCustomMonsterImageTarget,
+	buildNpcImageTarget,
+	buildSceneImageTarget,
 	createAiHistoryWorkflow,
+	createAiHistoryCommandService,
+	createInitialAiContextConfig,
+	ensureContextListItems,
 	estimateTextTokens,
 	estimateValueTokens,
 	getEstimatedAiMode,
 	getGeneratedEntityTypes,
+	getAiHistoryCampaign,
+	getAiHistoryRestoreMode,
+	getContextListConfig,
 	hasGeneratedCampaignChanges,
 	initialAiGenerationLifecycle,
 	isAiGenerationPending,
+	mergeLoadedAiSessionData,
+	normalizeCustomMonsterCollection,
 	sanitizeAiContextConfig,
+	setAllContextListItems,
+	upsertAiHistoryEntry,
+	updateContextConfigValue,
+	updateContextListIncluded,
+	updateContextListItem,
 } from "../src/features/ai/index.js";
 import {
 	getSpellByName,
@@ -149,6 +167,9 @@ const backupsRouter = require("../server/routes/backups.js");
 const aiRouter = require("../server/routes/ai.js");
 const bestiaryRouter = require("../server/routes/bestiary.js");
 const aiService = require("../server/aiService.js");
+const {
+	buildPromptContext,
+} = require("../server/modules/ai/application/buildPromptContext.js");
 const aiHistoryService = require("../server/aiHistoryService.js");
 const aiResponseHistoryService = require("../server/aiResponseHistoryService.js");
 const aiPatchService = require("../server/aiPatchService.js");
@@ -1034,6 +1055,56 @@ await run("AI service resolves attached images for Gemini inline data", () => {
 	);
 });
 
+await run("AI prompt context filters ignored data and selected scene fields", () => {
+	const context = buildPromptContext({
+		campaign: { name: "Campaign", description: "Description" },
+		session: {
+			id: "current",
+			name: "Current",
+			data: { encounters: [] },
+		},
+		contextData: {
+			campaign: {
+				notes: [
+					{ id: "visible", title: "Visible", text: "Text" },
+					{ id: "hidden", text: "Secret", _aiIgnored: true },
+				],
+				npcs: [{ id: "npc", firstName: "Iryna", trait: "Brave" }],
+			},
+			sessions: [
+				{
+					slug: "session-1",
+					name: "One",
+					conf: {
+						included: true,
+						scenes: {
+							scene: { included: true, summary: true, notes: false },
+						},
+					},
+					data: {
+						scenes: [
+							{
+								id: "scene",
+								texts: { summary: "Summary", goal: "Hidden goal" },
+								notes: [{ text: "Hidden note" }],
+							},
+						],
+					},
+				},
+			],
+		},
+		entityTargetScope: "session",
+		simplifiedNotesEnabled: true,
+	});
+	assert.deepEqual(context.campaign.notes, [
+		{ id: "visible", text: "Text" },
+	]);
+	assert.equal(context.campaign.npcs[0].name, "Iryna");
+	assert.equal(context.selectedSessions[0].scenes[0].summary, "Summary");
+	assert.equal("goal" in context.selectedSessions[0].scenes[0], true);
+	assert.equal("notes" in context.selectedSessions[0].scenes[0], false);
+});
+
 await run("AI service accepts temporary attached image data", async () => {
 	const imageData = Buffer.from("temporary image bytes", "utf8").toString(
 		"base64",
@@ -1375,7 +1446,7 @@ await run("AI route fills ids for current selected targets", () => {
 	assert.equal(payload.operations[2].id, undefined);
 });
 
-await run("AI feature model estimates context and rebuilds retry workflows", () => {
+await run("AI feature model estimates context and rebuilds retry workflows", async () => {
 	assert.equal(estimateTextTokens(""), 0);
 	assert.ok(estimateTextTokens("Український текст") > 0);
 	assert.equal(estimateValueTokens(null), 0);
@@ -1514,6 +1585,304 @@ await run("AI feature model estimates context and rebuilds retry workflows", () 
 			requestId: 2,
 		}).status,
 		AI_GENERATION_STATUS.FAILED,
+	);
+
+	const oldHistoryEntry = { id: "one", text: "Old" };
+	const newHistoryEntry = { id: "two", text: "New" };
+	assert.deepEqual(
+		upsertAiHistoryEntry([oldHistoryEntry, newHistoryEntry], {
+			id: "one",
+			text: "Updated",
+		}),
+		[{ id: "one", text: "Updated" }, newHistoryEntry],
+	);
+	assert.equal(
+		getAiHistoryCampaign({ path: { campaign: "entry-campaign" } }, "fallback"),
+		"entry-campaign",
+	);
+	assert.deepEqual(getAiHistoryRestoreMode("undo", ["resource-1"]), {
+		isUndo: true,
+		isPartial: true,
+		operation: "undo",
+	});
+
+	const restoredEntry = {
+		id: "history-1",
+		path: { campaign: "demo", session: "session-1" },
+		changes: {
+			resources: [{ kind: "entity", type: "npc" }],
+		},
+	};
+	const restorePlan = buildAiHistoryRestorePlan({
+		result: {
+			response: restoredEntry,
+			updated: { data: { scenes: [] } },
+		},
+		fallbackEntry: null,
+		selectedResponseId: "history-1",
+		currentRoute: { campaign: "demo", session: "session-1" },
+		isCampaign: false,
+		isBestiary: false,
+	});
+	assert.deepEqual(restorePlan.historyUpdate, {
+		type: "upsert",
+		entry: restoredEntry,
+	});
+	assert.equal(restorePlan.updateSelection, true);
+	assert.equal(restorePlan.applyDirectly, true);
+	assert.equal(restorePlan.requestReload, false);
+	assert.deepEqual(restorePlan.entityTypes, ["npc"]);
+
+	const foreignRestorePlan = buildAiHistoryRestorePlan({
+		result: {
+			responses: [restoredEntry],
+			updated: { data: { scenes: [] } },
+		},
+		fallbackEntry: restoredEntry,
+		selectedResponseId: null,
+		currentRoute: { campaign: "other", session: "session-1" },
+		isCampaign: false,
+		isBestiary: false,
+	});
+	assert.equal(foreignRestorePlan.historyUpdate.type, "replace");
+	assert.equal(foreignRestorePlan.applyDirectly, false);
+	assert.equal(foreignRestorePlan.requestReload, true);
+
+	const commandCalls = [];
+	const commandService = createAiHistoryCommandService({
+		deleteAiResponse: async (...args) => {
+			commandCalls.push(["delete", ...args]);
+			return [];
+		},
+		clearAiResponses: async (...args) => {
+			commandCalls.push(["clear", ...args]);
+			return [];
+		},
+		applyAiResponse: async (...args) => {
+			commandCalls.push(["apply", ...args]);
+			return { response: restoredEntry };
+		},
+		undoAiResponse: async (...args) => {
+			commandCalls.push(["undo", ...args]);
+			return { response: restoredEntry };
+		},
+		updateAiResponse: async (...args) => {
+			commandCalls.push(["save", ...args]);
+			return restoredEntry;
+		},
+	});
+	await commandService.deleteEntry("demo", "history-1");
+	await commandService.clearHistory("demo");
+	await commandService.restoreEntry("demo", "history-1", "apply", ["a"]);
+	await commandService.restoreEntry("demo", "history-1", "undo", ["b"]);
+	await commandService.saveDraft("demo", "history-1", [{ id: "a" }]);
+	assert.deepEqual(commandCalls, [
+		["delete", "demo", "history-1"],
+		["clear", "demo"],
+		["apply", "demo", "history-1", { resourceIds: ["a"] }],
+		["undo", "demo", "history-1", { resourceIds: ["b"] }],
+		["save", "demo", "history-1", { resources: [{ id: "a" }] }],
+	]);
+
+	assert.deepEqual(getContextListConfig(false), {
+		included: false,
+		items: {},
+	});
+	const initialContextList = { included: true, items: { existing: false } };
+	assert.deepEqual(
+		ensureContextListItems(
+			initialContextList,
+			[{ id: "existing" }, { id: "new" }],
+			(item) => item.id,
+		),
+		{ included: true, items: { existing: false, new: true } },
+	);
+	const withSceneValue = updateContextConfigValue(
+		{},
+		["sessions", "session-1", "scenes", "scene-1", "summary"],
+		false,
+	);
+	assert.deepEqual(withSceneValue.sessions["session-1"].scenes["scene-1"], {
+		included: true,
+		summary: false,
+		goal: true,
+		stakes: true,
+		location: true,
+		notes: true,
+		encounter: true,
+	});
+	const withDisabledList = updateContextListIncluded(
+		{},
+		"campaignNpcs",
+		false,
+	);
+	assert.equal(withDisabledList.campaignNpcs.included, false);
+	const withSelectedNpc = updateContextListItem(
+		withDisabledList,
+		"campaignNpcs",
+		"npc-1",
+		true,
+	);
+	assert.equal(withSelectedNpc.campaignNpcs.items["npc-1"], true);
+	const withAllNpcs = setAllContextListItems(
+		withSelectedNpc,
+		"campaignNpcs",
+		[{ id: "npc-1" }, { id: "npc-2" }],
+		(item) => item.id,
+		false,
+	);
+	assert.deepEqual(withAllNpcs.campaignNpcs, {
+		included: true,
+		items: { "npc-1": false, "npc-2": false },
+	});
+	const initialSessionContext = createInitialAiContextConfig("session-1");
+	assert.equal(initialSessionContext.sessions["session-1"].included, true);
+	assert.equal(initialSessionContext.sessions["session-1"].result_text, true);
+	const loadedSessionContext = mergeLoadedAiSessionData(initialSessionContext, [
+		["session-1", initialSessionContext.sessions["session-1"], { name: "One" }],
+	]);
+	assert.deepEqual(loadedSessionContext.sessions["session-1"].data, {
+		name: "One",
+	});
+	assert.equal(
+		mergeLoadedAiSessionData(loadedSessionContext, [
+			["session-1", {}, { name: "Replacement" }],
+		]),
+		loadedSessionContext,
+	);
+	const campaignEstimate = buildAiTokenEstimate({
+		activeCampaignBasePrompt: "Campaign",
+		attachedFiles: [{ name: "notes.md", sizeBytes: 8 }],
+		attachedImages: [{ name: "map.png", url: "/map.png" }],
+		characterContext: { included: true, items: { hidden: false } },
+		charactersList: [
+			{ id: "visible", name: "Visible" },
+			{ id: "hidden", name: "Hidden" },
+		],
+		contextConfig: {
+			campaignNotes: true,
+			sessions: {},
+		},
+		currentLanguage: "uk",
+		globalAiBasePrompt: "Global",
+		isCampaign: true,
+		locationContext: { included: true, items: {} },
+		npcContext: { included: true, items: {} },
+		parseAIResponse: true,
+		sessionData: { name: "Campaign", notes: [] },
+		useContext: true,
+		getCharacterKey: (entity) => entity.id,
+		getLocationKey: (entity) => entity.id,
+	});
+	assert.equal(campaignEstimate.imageTokens, 260);
+	assert.equal(campaignEstimate.fileTokens, 2);
+	assert.equal(campaignEstimate.total > campaignEstimate.imageTokens, true);
+	const bestiaryEstimate = buildAiTokenEstimate({
+		attachedFiles: [],
+		attachedImages: [],
+		contextConfig: { sessions: {} },
+		isBestiary: true,
+		getCharacterKey: () => "",
+		getLocationKey: () => "",
+	});
+	assert.equal(bestiaryEstimate.total >= 2200, true);
+	const monsterList = [{ name: "Mavka" }];
+	assert.equal(normalizeCustomMonsterCollection({ monster: monsterList }), monsterList);
+	assert.equal(
+		normalizeCustomMonsterCollection({ monsters: monsterList }),
+		monsterList,
+	);
+	assert.deepEqual(normalizeCustomMonsterCollection({ monster: null }), []);
+	assert.deepEqual(
+		buildNpcImageTarget(
+			{
+				id: "npc-1",
+				race: "Human",
+				notes: [{ title: "Visible", text: "Portrait details" }],
+			},
+			{ displayName: "Iryna", scope: "campaign" },
+		),
+		{
+			type: "npc",
+			id: "npc-1",
+			name: "Iryna",
+			race: "Human",
+			class: "",
+			level: "",
+			description: "",
+			motivation: "",
+			trait: "",
+			notes: ["Visible\nPortrait details"],
+			scope: "campaign",
+		},
+	);
+	const sceneImageTarget = buildSceneImageTarget(
+		{
+			id: "scene-1",
+			encounterId: "encounter-1",
+			_imagePromptEncounters: [
+				{
+					id: "encounter-1",
+					name: "Ambush",
+					monsters: [{ name: "Goblin" }],
+				},
+			],
+		},
+		{ title: "Forest road" },
+	);
+	assert.deepEqual(sceneImageTarget.encounter, {
+		name: "Ambush",
+		monsters: ["Goblin"],
+	});
+	const monsterImageTarget = buildCustomMonsterImageTarget({
+		name: "Ash Drake",
+		str: 18,
+		action: [{ name: "Bite" }],
+	});
+	assert.equal(monsterImageTarget.source, "CUSTOM");
+	assert.equal(monsterImageTarget.abilities.str, 18);
+	assert.equal(monsterImageTarget.actions[0].name, "Bite");
+});
+
+await run("AI assistant delegates stable visual composition to feature UI", async () => {
+	const panelSource = await fs.readFile(
+		"src/components/ai/AiAssistantPanel.jsx",
+		"utf8",
+	);
+	const shellSource = await fs.readFile(
+		"src/features/ai/ui/AiAssistantShell.jsx",
+		"utf8",
+	);
+	const promptSource = await fs.readFile(
+		"src/features/ai/ui/AiPromptComposer.jsx",
+		"utf8",
+	);
+	const responseSource = await fs.readFile(
+		"src/features/ai/ui/AiHistoryResponseDialog.jsx",
+		"utf8",
+	);
+	const toolbarSource = await fs.readFile(
+		"src/features/ai/ui/AiAssistantToolbar.jsx",
+		"utf8",
+	);
+	const contextSource = await fs.readFile(
+		"src/features/ai/ui/AiContextSettingsModal.jsx",
+		"utf8",
+	);
+
+	assert.match(panelSource, /<AiAssistantShell/);
+	assert.match(panelSource, /<AiPromptComposer/);
+	assert.match(panelSource, /<AiHistoryResponseDialog/);
+	assert.doesNotMatch(panelSource, /className="AiAssistant__prompt_area"/);
+	assert.doesNotMatch(panelSource, /<AiResponseModal/);
+	assert.match(shellSource, /className="AiAssistant__toggle"/);
+	assert.match(promptSource, /className="AiAssistant__token_estimate"/);
+	assert.match(responseSource, /onRestore\(entry, "apply"/);
+	assert.match(toolbarSource, /showParsedGenerationOptions/);
+	assert.match(contextSource, /CampaignEntityContext/);
+	await assert.rejects(
+		fs.access("src/components/ai/AiAssistantToolbar.jsx"),
+		/ENOENT/,
 	);
 });
 

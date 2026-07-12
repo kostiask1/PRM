@@ -15,38 +15,44 @@ import { sessionApi } from "../../entities/session/index.js";
 import { bestiaryApi } from "../../entities/bestiary/index.js";
 import {
 	aiApi,
-	ESTIMATED_IMAGE_TOKENS,
-	SYSTEM_TOKEN_ESTIMATES,
 	aiGenerationLifecycleReducer,
+	buildAiTokenEstimate,
 	buildAiGenerationRequest,
-	compactEntityForEstimate,
-	compactNoteForEstimate,
-	compactSessionForEstimate,
+	buildAiHistoryRestorePlan,
+	buildCustomMonsterImageTarget as buildCustomMonsterImageTargetModel,
+	buildLocationImageTarget as buildLocationImageTargetModel,
+	buildNpcImageTarget as buildNpcImageTargetModel,
+	buildSceneImageTarget as buildSceneImageTargetModel,
 	createAiHistoryWorkflow,
-	estimateValueTokens,
 	getGeneratedEntityTypes,
-	getHistoryChangedEntityTypes,
+	getAiHistoryCampaign,
+	getContextListConfig,
 	hasGeneratedCampaignChanges,
 	hasHistoryChanges,
 	initialAiGenerationLifecycle,
 	isAiGenerationPending,
+	upsertAiHistoryEntry,
+	useAiHistoryCommands,
 	isFailedHistoryEntry,
-	getEstimatedAiMode,
+	setAllContextListItems,
+	updateContextConfigValue,
+	updateContextListIncluded,
+	updateContextListItem,
+	useAiContextData,
+	useAiImagePromptData,
 } from "../../features/ai/index.js";
+import {
+	AiApiKeyPanel,
+	AiAssistantShell,
+	AiAssistantToolbar,
+	AiContextSettingsModal,
+	AiHistoryResponseDialog,
+	AiPromptComposer,
+	AiResponseHistory,
+} from "../../features/ai/ui/index.js";
 
 const api = { ...campaignApi, ...sessionApi, ...bestiaryApi, ...aiApi };
-import Button from "../form/Button.jsx";
-import EditableField from "../form/EditableField.jsx";
-import Icon from "../common/Icon.jsx";
-import AiAttachmentControls from "./AiAttachmentControls.jsx";
-import Modal from "../common/Modal.jsx";
-import Notification from "../common/Notification.jsx";
-import AiApiKeyPanel from "./AiApiKeyPanel.jsx";
-import AiAssistantToolbar from "./AiAssistantToolbar.jsx";
-import AiContextSettingsModal from "./AiContextSettingsModal.jsx";
 import AiImagePromptPickerModal from "./AiImagePromptPickerModal.jsx";
-import AiResponseHistory from "./AiResponseHistory.jsx";
-import AiResponseModal from "./AiResponseModal.jsx";
 import {
 	alert,
 	confirm,
@@ -57,12 +63,10 @@ import {
 	setActiveEncounterAction,
 	setActiveSessionAction,
 } from "../../actions/app.js";
-import Tooltip from "../common/Tooltip.jsx";
 import { useAppDispatch, useAppSelector } from "../../store/appStore.js";
 import { lang } from "../../services/localization.js";
 import { renderMentionText } from "../../renderers/contentRenderer.jsx";
 import { formatBytes } from "../../utils/formatBytes.js";
-import { ESTIMATED_FILE_TOKEN_BYTES } from "../../utils/aiAttachments.js";
 import { buildDiffResources } from "../../utils/aiDiff.js";
 import {
 	getFirstChangedMonsterName,
@@ -264,20 +268,6 @@ function getCharacterContextKey(character) {
 	).trim();
 }
 
-function getNoteTextForImagePrompt(note) {
-	if (!note) return "";
-	if (typeof note === "string") return note;
-	if (typeof note !== "object" || note._aiIgnored) return "";
-	return [note.title, note.text].filter(Boolean).join("\n").trim();
-}
-
-function getEntityNotesForImagePrompt(entity) {
-	return (entity?.notes || [])
-		.map(getNoteTextForImagePrompt)
-		.filter(Boolean)
-		.slice(0, 8);
-}
-
 function getSceneImagePromptTitle(scene, index) {
 	const summary = String(scene?.texts?.summary || scene?.summary || "").trim();
 	return summary || lang.t("Scene {number}", { number: index + 1 });
@@ -295,44 +285,6 @@ function getImagePromptPreview(text) {
 		.replace(/\s+/g, " ")
 		.trim();
 	return value.length > 120 ? `${value.slice(0, 117)}...` : value;
-}
-
-function getContextListConfig(value) {
-	if (value && typeof value === "object" && !Array.isArray(value)) {
-		return {
-			included: value.included !== false,
-			items: value.items && typeof value.items === "object" ? value.items : {},
-		};
-	}
-	return {
-		included: value !== false,
-		items: {},
-	};
-}
-
-function ensureContextListItems(currentValue, list, getKey) {
-	const current = getContextListConfig(currentValue);
-	const nextItems = { ...current.items };
-	let changed =
-		!currentValue ||
-		typeof currentValue !== "object" ||
-		Array.isArray(currentValue) ||
-		!currentValue.items;
-
-	for (const item of list) {
-		const key = getKey(item);
-		if (!key || Object.prototype.hasOwnProperty.call(nextItems, key)) {
-			continue;
-		}
-		nextItems[key] = true;
-		changed = true;
-	}
-
-	if (!changed) return currentValue;
-	return {
-		included: current.included,
-		items: nextItems,
-	};
 }
 
 function getHistoryOptionsSummary(entry) {
@@ -501,12 +453,6 @@ export default function AiAssistantPanel({
 	const [imagePromptRequest, setImagePromptRequest] = useState("");
 	const [isImagePromptContextMode, setIsImagePromptContextMode] =
 		useState(false);
-	const [imagePromptSessions, setImagePromptSessions] = useState([]);
-	const [imagePromptCustomMonsters, setImagePromptCustomMonsters] = useState(
-		[],
-	);
-	const [isImagePromptDataLoading, setIsImagePromptDataLoading] =
-		useState(false);
 	const [parseAIResponse, setParseAIResponse] = useState(isEncounter);
 	const [generateCharacters, setGenerateCharacters] = useState(false);
 	const [generateNpcs, setGenerateNpcs] = useState(true);
@@ -517,48 +463,51 @@ export default function AiAssistantPanel({
 	const [generateCustomMonsters, setGenerateCustomMonsters] = useState(false);
 	const [aiModels, setAiModels] = useState([]);
 	const [selectedModel, setSelectedModel] = useState("");
-	const [sessionsList, setSessionsList] = useState([]);
-	const [charactersList, setCharactersList] = useState([]);
-	const [npcsList, setNpcsList] = useState([]);
-	const [locationsList, setLocationsList] = useState([]);
 	const [expandedSessions, setExpandedSessions] = useState({});
-	const [contextConfig, setContextConfig] = useState(() => ({
-		campaignNotes: true,
-		campaignCharacters: {
-			included: true,
-			items: {},
-		},
-		campaignNpcs: {
-			included: true,
-			items: {},
-		},
-		campaignLocations: {
-			included: true,
-			items: {},
-		},
-		sessions: initialRoute.session
-			? {
-					[initialRoute.session]: {
-						included: true,
-						notes: true,
-						result_text: true,
-						scenes: {},
-					},
-				}
-			: {}, // { [slug]: { included: bool, notes: bool, result_text: bool, scenes: {}, data: {} } }
-	}));
+	const {
+		charactersList,
+		contextConfig,
+		ensureCampaignEntities,
+		ensureSessions,
+		locationsList,
+		npcsList,
+		sessionsList,
+		setContextConfig,
+	} = useAiContextData({
+		campaignSlug: initialRoute.campaign,
+		sessionSlug: initialRoute.session,
+		isBestiary,
+		isPanelOpen: isOpen,
+		isContextModalOpen,
+		isImagePromptPickerOpen,
+		useContext,
+		listSessions: api.listSessions,
+		getEntities: api.getEntities,
+		getSession: api.getSession,
+	});
+	const {
+		customMonsters: imagePromptCustomMonsters,
+		isLoading: isImagePromptDataLoading,
+		prepareImagePromptData,
+		sessions: imagePromptSessions,
+	} = useAiImagePromptData({
+		campaignSlug: initialRoute.campaign,
+		isCampaign,
+		isBestiary,
+		isPickerOpen: isImagePromptPickerOpen,
+		ensureCampaignEntities,
+		ensureSessions,
+		getSession: api.getSession,
+		getCustomBestiaryData: api.getCustomBestiaryData,
+	});
 	const [generatedPrompt, setGeneratedPrompt] = useState(null);
 	const [selectedResponseId, setSelectedResponseId] = useState(null);
 	const [selectedResponseEntry, setSelectedResponseEntry] = useState(null);
 	const [responseHistory, setResponseHistory] = useState([]);
 	const [responseHistorySizeBytes, setResponseHistorySizeBytes] = useState(0);
-	const [isRestoringResponse, setIsRestoringResponse] = useState(false);
 	const activeGenerateControllerRef = useRef(null);
 	const nextGenerationRequestIdRef = useRef(0);
 	const generatedPromptRef = useRef(null);
-	const imagePromptCampaignDataLoadedRef = useRef(false);
-	const imagePromptCampaignEntitiesLoadedRef = useRef(false);
-	const imagePromptBestiaryDataLoadedRef = useRef(false);
 	const [canCancelGenerate, setCanCancelGenerate] = useState(false);
 	const [isGeneratedPromptCopied, setIsGeneratedPromptCopied] = useState(false);
 	const sessionName = isCampaign
@@ -657,176 +606,6 @@ export default function AiAssistantPanel({
 	};
 
 	useEffect(() => {
-		if (
-			!isBestiary &&
-			(isOpen || isContextModalOpen || isImagePromptPickerOpen) &&
-			useContext &&
-			sessionsList.length === 0
-		) {
-			api.listSessions(initialRoute.campaign).then(setSessionsList);
-		}
-	}, [
-		isBestiary,
-		isOpen,
-		isContextModalOpen,
-		isImagePromptPickerOpen,
-		initialRoute.campaign,
-		sessionsList.length,
-		useContext,
-	]);
-
-	useEffect(() => {
-		if (isBestiary) return;
-		if (
-			isImagePromptPickerOpen &&
-			imagePromptCampaignEntitiesLoadedRef.current
-		) {
-			return;
-		}
-		if (!isOpen && !isContextModalOpen && !isImagePromptPickerOpen) return;
-		if (!useContext && !isContextModalOpen && !isImagePromptPickerOpen) return;
-
-		let cancelled = false;
-		const loadCampaignEntities = async (type, label) => {
-			try {
-				const entities = await api.getEntities(initialRoute.campaign, type);
-				return Array.isArray(entities) ? entities : [];
-			} catch (err) {
-				console.error(`Failed to load ${label}`, err);
-				return [];
-			}
-		};
-
-		Promise.all([
-			loadCampaignEntities("characters", "characters"),
-			loadCampaignEntities("npc", "NPCs"),
-			loadCampaignEntities("locations", "locations"),
-		])
-			.then(([characters, npcs, locations]) => {
-				if (cancelled) return;
-				setCharactersList(characters);
-				setNpcsList(npcs);
-				setLocationsList(locations);
-				if (isImagePromptPickerOpen) {
-					imagePromptCampaignEntitiesLoadedRef.current = true;
-				}
-			})
-			.catch((err) => console.error("Failed to load campaign context", err));
-
-		return () => {
-			cancelled = true;
-		};
-	}, [
-		isBestiary,
-		isOpen,
-		isContextModalOpen,
-		isImagePromptPickerOpen,
-		initialRoute.campaign,
-		useContext,
-	]);
-
-	useEffect(() => {
-		if (isBestiary || !isOpen || !useContext) return;
-		if (!initialRoute.campaign || !contextConfig.sessions) return;
-
-		const entriesToLoad = Object.entries(contextConfig.sessions).filter(
-			([, conf]) => conf?.included && !conf?.data,
-		);
-		if (entriesToLoad.length === 0) return;
-
-		let cancelled = false;
-		Promise.all(
-			entriesToLoad.map(async ([slug, conf]) => {
-				try {
-					const session = await api.getSession(initialRoute.campaign, slug);
-					return [slug, conf, session?.data || {}];
-				} catch (err) {
-					console.error("Failed to load session for token estimate", err);
-					return null;
-				}
-			}),
-		).then((loadedSessions) => {
-			if (cancelled) return;
-			const validSessions = loadedSessions.filter(Boolean);
-			if (validSessions.length === 0) return;
-			setContextConfig((prev) => {
-				const nextSessions = { ...(prev.sessions || {}) };
-				let changed = false;
-				for (const [slug, conf, data] of validSessions) {
-					if (nextSessions[slug]?.data) continue;
-					nextSessions[slug] = {
-						...(nextSessions[slug] || conf),
-						data,
-					};
-					changed = true;
-				}
-				return changed ? { ...prev, sessions: nextSessions } : prev;
-			});
-		});
-
-		return () => {
-			cancelled = true;
-		};
-	}, [
-		contextConfig.sessions,
-		initialRoute.campaign,
-		isBestiary,
-		isOpen,
-		useContext,
-	]);
-
-	useEffect(() => {
-		if (charactersList.length === 0) return;
-
-		setContextConfig((prev) => {
-			const nextCharacters = ensureContextListItems(
-				prev.campaignCharacters,
-				charactersList,
-				getCharacterContextKey,
-			);
-			if (nextCharacters === prev.campaignCharacters) return prev;
-			return {
-				...prev,
-				campaignCharacters: nextCharacters,
-			};
-		});
-	}, [charactersList]);
-
-	useEffect(() => {
-		if (npcsList.length === 0) return;
-
-		setContextConfig((prev) => {
-			const nextNpcs = ensureContextListItems(
-				prev.campaignNpcs,
-				npcsList,
-				getCharacterContextKey,
-			);
-			if (nextNpcs === prev.campaignNpcs) return prev;
-			return {
-				...prev,
-				campaignNpcs: nextNpcs,
-			};
-		});
-	}, [npcsList]);
-
-	useEffect(() => {
-		if (locationsList.length === 0) return;
-
-		setContextConfig((prev) => {
-			const nextLocations = ensureContextListItems(
-				prev.campaignLocations,
-				locationsList,
-				getLocationContextKey,
-			);
-			if (nextLocations === prev.campaignLocations) return prev;
-			return {
-				...prev,
-				campaignLocations: nextLocations,
-			};
-		});
-	}, [locationsList]);
-
-	useEffect(() => {
 		if ((!isOpen && !isImagePromptPickerOpen) || aiModels.length > 0) return;
 		api
 			.listAiModels()
@@ -860,135 +639,9 @@ export default function AiAssistantPanel({
 			});
 	}, [aiHistoryCampaign, isOpen]);
 
-	useEffect(() => {
-		if (!isImagePromptPickerOpen || !isCampaign || !initialRoute.campaign) {
-			return;
-		}
-		if (imagePromptCampaignDataLoadedRef.current) return;
-
-		let cancelled = false;
-		setIsImagePromptDataLoading(true);
-		(async () => {
-			try {
-				const sessions =
-					sessionsList.length > 0
-						? sessionsList
-						: await api.listSessions(initialRoute.campaign);
-				if (cancelled) return;
-				if (sessionsList.length === 0) {
-					setSessionsList(sessions);
-				}
-				const fullSessions = await Promise.all(
-					sessions.map((session) =>
-						api
-							.getSession(initialRoute.campaign, session.fileName)
-							.catch((err) => {
-								console.error("Failed to load session for image prompt", err);
-								return null;
-							}),
-					),
-				);
-				if (!cancelled) {
-					setImagePromptSessions(fullSessions.filter(Boolean));
-					imagePromptCampaignDataLoadedRef.current = true;
-				}
-			} finally {
-				if (!cancelled) setIsImagePromptDataLoading(false);
-			}
-		})();
-
-		return () => {
-			cancelled = true;
-		};
-	}, [
-		isImagePromptPickerOpen,
-		isCampaign,
-		initialRoute.campaign,
-		sessionsList,
-	]);
-
-	useEffect(() => {
-		if (!isImagePromptPickerOpen || !isBestiary) return;
-		if (imagePromptBestiaryDataLoadedRef.current) return;
-
-		let cancelled = false;
-		setIsImagePromptDataLoading(true);
-		api
-			.getCustomBestiaryData()
-			.then((data) => {
-				if (cancelled) return;
-				const monsters = Array.isArray(data?.monster)
-					? data.monster
-					: Array.isArray(data?.monsters)
-						? data.monsters
-						: Array.isArray(data)
-							? data
-							: [];
-				setImagePromptCustomMonsters(monsters);
-				imagePromptBestiaryDataLoadedRef.current = true;
-			})
-			.catch((err) => {
-				console.error("Failed to load custom monsters for image prompt", err);
-				if (!cancelled) setImagePromptCustomMonsters([]);
-			})
-			.finally(() => {
-				if (!cancelled) setIsImagePromptDataLoading(false);
-			});
-
-		return () => {
-			cancelled = true;
-		};
-	}, [isImagePromptPickerOpen, isBestiary]);
-
-	const deleteResponseHistoryEntry = async (entry) => {
-		const confirmed = await dispatch(
-			confirm({
-				title: lang.t("Delete response"),
-				message: lang.t("Delete this AI response?"),
-			}),
-		);
-		if (!confirmed) return;
-
-		try {
-			const responses = await api.deleteAiResponse(
-				getAiResponseHistoryCampaign(entry),
-				entry.id,
-			);
-			setResponseHistory(Array.isArray(responses) ? responses : []);
-			refreshResponseHistoryStats();
-			if (selectedResponseId === entry.id) {
-				closeGeneratedPrompt();
-			}
-		} catch (err) {
-			dispatch(alert({ title: lang.t("Delete error"), message: err.message }));
-		}
-	};
-
-	const clearResponseHistory = async () => {
-		const confirmed = await dispatch(
-			confirm({
-				title: lang.t("Clear response history"),
-				message: lang.t("Delete all saved AI responses?"),
-			}),
-		);
-		if (!confirmed) return;
-
-		try {
-			const responses = await api.clearAiResponses(aiHistoryCampaign);
-			setResponseHistory(Array.isArray(responses) ? responses : []);
-			refreshResponseHistoryStats();
-			closeGeneratedPrompt();
-		} catch (err) {
-			dispatch(alert({ title: lang.t("Delete error"), message: err.message }));
-		}
-	};
-
 	const upsertResponseHistoryEntry = (entry) => {
 		if (!entry?.id) return;
-		setResponseHistory((prev) => [
-			entry,
-			...prev.filter((item) => item.id !== entry.id),
-		]);
+		setResponseHistory((prev) => upsertAiHistoryEntry(prev, entry));
 		refreshResponseHistoryStats();
 		if (selectedResponseId === entry.id) {
 			setSelectedResponseEntry(entry);
@@ -997,7 +650,7 @@ export default function AiAssistantPanel({
 	};
 
 	const getAiResponseHistoryCampaign = (entry) =>
-		entry?.path?.campaign || aiHistoryCampaign;
+		getAiHistoryCampaign(entry, aiHistoryCampaign);
 
 	const publishAiSyncEvent = useCallback(
 		(extra = {}) => {
@@ -1098,138 +751,126 @@ export default function AiAssistantPanel({
 	);
 
 	const refreshAfterAiHistoryRestore = (result, entry) => {
-		if (Array.isArray(result?.responses)) {
-			setResponseHistory(result.responses);
+		const plan = buildAiHistoryRestorePlan({
+			result,
+			fallbackEntry: entry,
+			selectedResponseId,
+			currentRoute: initialRoute,
+			isBestiary,
+			isCampaign,
+		});
+
+		if (plan.historyUpdate?.type === "replace") {
+			setResponseHistory(plan.historyUpdate.responses);
 			refreshResponseHistoryStats();
-		} else if (result?.response) {
-			upsertResponseHistoryEntry(result.response);
+		} else if (plan.historyUpdate?.type === "upsert") {
+			setResponseHistory((current) =>
+				upsertAiHistoryEntry(current, plan.historyUpdate.entry),
+			);
+			refreshResponseHistoryStats();
 		}
 
-		const nextEntry = result?.response || entry;
-		if (nextEntry?.id === selectedResponseId) {
-			setSelectedResponseEntry(nextEntry);
-			setGeneratedPrompt(nextEntry.text);
+		if (plan.updateSelection) {
+			setSelectedResponseEntry(plan.nextEntry);
+			setGeneratedPrompt(plan.nextEntry.text);
 		}
 
-		const updated = result?.updated;
-		let appliedDirectly = false;
-		if (updated && typeof updated === "object") {
-			const entryPath = nextEntry?.path || {};
-			const updatedIsSessionLike =
-				updated.data && typeof updated.data === "object";
-			const isSameCampaign = entryPath.campaign === initialRoute.campaign;
-			const canApplyDirectly =
-				(isBestiary && Array.isArray(updated.monsters)) ||
-				(isCampaign &&
-					isSameCampaign &&
-					!entryPath.session &&
-					!updatedIsSessionLike) ||
-				(!isCampaign &&
-					isSameCampaign &&
-					entryPath.session === initialRoute.session &&
-					updatedIsSessionLike);
-
-			if (canApplyDirectly) {
-				applyUpdatedAiData(updated, {
-					entityTypes: getHistoryChangedEntityTypes(nextEntry),
+		if (plan.applyDirectly) {
+			applyUpdatedAiData(plan.updated, {
+					entityTypes: plan.entityTypes,
 					trackUndo: false,
-					historyEntry: nextEntry,
+					historyEntry: plan.nextEntry,
 				});
-				appliedDirectly = true;
-			}
 		}
 
-		if (!appliedDirectly) {
+		if (plan.requestReload) {
 			dispatch(requestCampaignsReloadAction());
-			if (getHistoryChangedEntityTypes(nextEntry).length > 0) {
+			if (plan.entityTypes.length > 0) {
 				dispatch(refreshEntitiesAction());
 			}
 		}
 	};
 
-	const restoreAiHistoryEntry = async (entry, mode, options = {}) => {
-		if (!entry?.id || isRestoringResponse) return;
-		const isUndo = mode === "undo";
-		const isPartialApply =
-			!isUndo &&
-			Array.isArray(options.resourceIds) &&
-			options.resourceIds.length > 0;
-		const isPartialUndo =
-			isUndo &&
-			Array.isArray(options.resourceIds) &&
-			options.resourceIds.length > 0;
-		const confirmed = await dispatch(
-			confirm({
-				title: isUndo
-					? isPartialUndo
-						? lang.t("Undo selected AI change")
-						: lang.t("Undo AI changes")
-					: isPartialApply
-						? lang.t("Apply selected AI change")
-						: lang.t("Apply AI changes"),
-				message: isUndo
-					? isPartialUndo
-						? lang.t(
-								"Undo only this AI change? Newer edits in this resource may be overwritten.",
-							)
-						: lang.t(
-								"Restore data to the state before this AI response? Newer edits in these resources may be overwritten.",
-							)
-					: isPartialApply
-						? lang.t(
-								"Apply only this AI change? Newer edits in this resource may be overwritten.",
-							)
-						: lang.t(
-								"Restore data to the state after this AI response? Newer edits in these resources may be overwritten.",
-							),
-			}),
-		);
-		if (!confirmed) return;
-
-		setIsRestoringResponse(true);
-		try {
-			const historyCampaign = getAiResponseHistoryCampaign(entry);
-			const result = isUndo
-				? await api.undoAiResponse(historyCampaign, entry.id, {
-						resourceIds: options.resourceIds,
-					})
-				: await api.applyAiResponse(historyCampaign, entry.id, {
-						resourceIds: options.resourceIds,
-					});
+	const {
+		isRestoring: isRestoringResponse,
+		deleteEntry: deleteResponseHistoryEntry,
+		clearHistory: clearResponseHistory,
+		restoreEntry: restoreAiHistoryEntry,
+		saveDraft: saveDraftHistoryEntryChanges,
+	} = useAiHistoryCommands({
+		historyCampaign: aiHistoryCampaign,
+		confirmDelete: () =>
+			dispatch(
+				confirm({
+					title: lang.t("Delete response"),
+					message: lang.t("Delete this AI response?"),
+				}),
+			),
+		confirmClear: () =>
+			dispatch(
+				confirm({
+					title: lang.t("Clear response history"),
+					message: lang.t("Delete all saved AI responses?"),
+				}),
+			),
+		confirmRestore: (_entry, { isUndo, isPartial }) =>
+			dispatch(
+				confirm({
+					title: isUndo
+						? isPartial
+							? lang.t("Undo selected AI change")
+							: lang.t("Undo AI changes")
+						: isPartial
+							? lang.t("Apply selected AI change")
+							: lang.t("Apply AI changes"),
+					message: isUndo
+						? isPartial
+							? lang.t(
+									"Undo only this AI change? Newer edits in this resource may be overwritten.",
+								)
+							: lang.t(
+									"Restore data to the state before this AI response? Newer edits in these resources may be overwritten.",
+								)
+						: isPartial
+							? lang.t(
+									"Apply only this AI change? Newer edits in this resource may be overwritten.",
+								)
+							: lang.t(
+									"Restore data to the state after this AI response? Newer edits in these resources may be overwritten.",
+								),
+				}),
+			),
+		onHistoryReplaced: setResponseHistory,
+		onHistoryChanged: refreshResponseHistoryStats,
+		onEntryDeleted: (entry) => {
+			if (selectedResponseId === entry.id) closeGeneratedPrompt();
+		},
+		onHistoryCleared: closeGeneratedPrompt,
+		onEntryUpserted: upsertResponseHistoryEntry,
+		onDraftSaved: (entry) => {
+			setSelectedResponseEntry(entry);
+			setGeneratedPrompt(entry.text);
+		},
+		onRestored: (result, entry, { isUndo }) => {
 			refreshAfterAiHistoryRestore(result, entry);
 			setNotification(
 				isUndo
 					? lang.t("AI changes undone.")
 					: lang.t("AI changes applied successfully!"),
 			);
-		} catch (err) {
+		},
+		onError: (command, error) => {
 			dispatch(
 				alert({
-					title: lang.t("AI history error"),
-					message: err.message || lang.t("Unknown error"),
+					title:
+						command === "delete"
+							? lang.t("Delete error")
+							: lang.t("AI history error"),
+					message: error.message || lang.t("Unknown error"),
 				}),
 			);
-		} finally {
-			setIsRestoringResponse(false);
-		}
-	};
-
-	const saveDraftHistoryEntryChanges = async (entry, resources) => {
-		if (!entry?.id) return null;
-		const updatedEntry = await api.updateAiResponse(
-			getAiResponseHistoryCampaign(entry),
-			entry.id,
-			{
-				resources,
-			},
-		);
-		if (updatedEntry) {
-			upsertResponseHistoryEntry(updatedEntry);
-			setSelectedResponseEntry(updatedEntry);
-			setGeneratedPrompt(updatedEntry.text);
-		}
-		return updatedEntry;
-	};
+		},
+	});
 
 	const handleSaveApiKey = async () => {
 		const apiKey = apiKeyInput.trim();
@@ -1304,77 +945,27 @@ export default function AiAssistantPanel({
 	};
 
 	const updateContextConfig = (path, value) => {
-		setContextConfig((prev) => {
-			const next = JSON.parse(JSON.stringify(prev));
-			let current = next;
-			for (let i = 0; i < path.length - 1; i++) {
-				if (!current[path[i]]) {
-					if (path[i - 1] === "scenes") {
-						current[path[i]] = {
-							included: true,
-							summary: true,
-							goal: true,
-							stakes: true,
-							location: true,
-							notes: true,
-							encounter: true,
-						};
-					} else {
-						current[path[i]] = {};
-					}
-				}
-				current = current[path[i]];
-			}
-			current[path[path.length - 1]] = value;
-			return next;
-		});
+		setContextConfig((current) =>
+			updateContextConfigValue(current, path, value),
+		);
 	};
 
 	const updateCampaignContextListIncluded = (contextKey, included) => {
-		setContextConfig((prev) => {
-			const current = getContextListConfig(prev[contextKey]);
-			return {
-				...prev,
-				[contextKey]: {
-					...current,
-					included,
-				},
-			};
-		});
+		setContextConfig((current) =>
+			updateContextListIncluded(current, contextKey, included),
+		);
 	};
 
 	const updateCampaignContextListItem = (contextKey, itemKey, value) => {
-		setContextConfig((prev) => {
-			const current = getContextListConfig(prev[contextKey]);
-			return {
-				...prev,
-				[contextKey]: {
-					...current,
-					items: {
-						...current.items,
-						[itemKey]: value,
-					},
-				},
-			};
-		});
+		setContextConfig((current) =>
+			updateContextListItem(current, contextKey, itemKey, value),
+		);
 	};
 
 	const setAllCampaignContextItems = (contextKey, list, getKey, checked) => {
-		const items = Object.fromEntries(
-			list
-				.map((item) => getKey(item))
-				.filter(Boolean)
-				.map((key) => [key, checked]),
+		setContextConfig((current) =>
+			setAllContextListItems(current, contextKey, list, getKey, checked),
 		);
-
-		setContextConfig((prev) => ({
-			...prev,
-			[contextKey]: {
-				...getContextListConfig(prev[contextKey]),
-				included: true,
-				items,
-			},
-		}));
 	};
 
 	const handleGeneratedAiData = ({
@@ -1722,154 +1313,37 @@ export default function AiAssistantPanel({
 				? lang.t("AI Encounter Assistant")
 				: lang.t("AI Session Assistant");
 	const tokenEstimate = useMemo(() => {
-		const mode = getEstimatedAiMode({
+		return buildAiTokenEstimate({
+			activeCampaignBasePrompt,
+			attachedFiles,
+			attachedImages,
+			campaignContext,
+			characterContext,
+			charactersList,
+			contextConfig,
+			currentLanguage,
+			generateCharacters,
+			generateCustomMonsters,
+			generateEncounters,
+			generateLocations,
+			generateNpcs,
+			globalAiBasePrompt,
 			isBestiary,
-			isEncounter,
 			isCampaign,
+			isEncounter,
+			locationContext,
+			locationsList,
+			npcContext,
+			npcsList,
 			parseAIResponse,
-		});
-		const filterByListConfig = (list, config, getKey) => {
-			const items = config.items || {};
-			const hasExplicitItems = Object.keys(items).length > 0;
-			if (config.included === false) return [];
-			return (Array.isArray(list) ? list : []).filter((item) => {
-				if (!hasExplicitItems) return true;
-				return items[getKey(item)] !== false;
-			});
-		};
-
-		const context = {};
-		if (!isBestiary) {
-			if (isCampaign) {
-				context.campaign = {
-					name: sessionData?.name || sessionName || "",
-					description: sessionData?.description || "",
-				};
-				if (useContext) {
-					if (contextConfig.campaignNotes) {
-						context.campaign.notes = (sessionData?.notes || [])
-							.map(compactNoteForEstimate)
-							.filter(Boolean);
-					}
-					context.campaign.characters = filterByListConfig(
-						sessionData?.characters || charactersList,
-						characterContext,
-						getCharacterContextKey,
-					)
-						.map(compactEntityForEstimate)
-						.filter(Boolean);
-					context.campaign.npcs = filterByListConfig(
-						sessionData?.npcs || npcsList,
-						npcContext,
-						getCharacterContextKey,
-					)
-						.map(compactEntityForEstimate)
-						.filter(Boolean);
-					context.campaign.locations = filterByListConfig(
-						sessionData?.locations || locationsList,
-						locationContext,
-						getLocationContextKey,
-					)
-						.map(compactEntityForEstimate)
-						.filter(Boolean);
-				}
-			} else {
-				context.campaign = {
-					description: campaignContext?.description || "",
-				};
-				if (isEncounter) {
-					context.currentEncounter = sessionData || {};
-				} else if (parseAIResponse) {
-					context.currentSession = compactSessionForEstimate(sessionData || {});
-				}
-				if (useContext) {
-					context.campaign = {
-						...context.campaign,
-						description: campaignContext?.description || "",
-						notes: contextConfig.campaignNotes
-							? (campaignContext?.notes || [])
-									.map(compactNoteForEstimate)
-									.filter(Boolean)
-							: [],
-						characters: filterByListConfig(
-							charactersList,
-							characterContext,
-							getCharacterContextKey,
-						)
-							.map(compactEntityForEstimate)
-							.filter(Boolean),
-						npcs: filterByListConfig(
-							npcsList,
-							npcContext,
-							getCharacterContextKey,
-						)
-							.map(compactEntityForEstimate)
-							.filter(Boolean),
-						locations: filterByListConfig(
-							locationsList,
-							locationContext,
-							getLocationContextKey,
-						)
-							.map(compactEntityForEstimate)
-							.filter(Boolean),
-					};
-					context.selectedSessions = Object.entries(
-						contextConfig.sessions || {},
-					)
-						.filter(([, conf]) => conf?.included && conf?.data)
-						.map(([slug, conf]) => ({
-							slug,
-							data: compactSessionForEstimate(conf.data),
-						}));
-				}
-			}
-		}
-
-		const requestShape = {
-			mode,
-			language: currentLanguage,
-			modelName: selectedModel,
+			selectedModel,
+			sessionData,
+			sessionName,
+			useContext,
 			userInstructions,
-			options: {
-				responseParsing: mode !== "prompt",
-				characterGeneration: generateCharacters,
-				npcGeneration: generateNpcs,
-				locationGeneration: generateLocations,
-				encounterGeneration: generateEncounters,
-				customMonsterGeneration: generateCustomMonsters,
-				contextEnabled: useContext && !isBestiary,
-			},
-			basePrompts: {
-				global: globalAiBasePrompt,
-				campaign: activeCampaignBasePrompt,
-			},
-			context,
-			attachedImages: attachedImages.map((image) => ({
-				name: image.name,
-				url: image.url,
-			})),
-			attachedFiles: attachedFiles.map((file) => ({
-				name: file.name,
-				mimeType: file.mimeType,
-				sizeBytes: file.sizeBytes,
-			})),
-		};
-		const textTokens =
-			(SYSTEM_TOKEN_ESTIMATES[mode] || SYSTEM_TOKEN_ESTIMATES.prompt) +
-			estimateValueTokens(requestShape);
-		const imageTokens = attachedImages.length * ESTIMATED_IMAGE_TOKENS;
-		const fileTokens = Math.ceil(
-			attachedFiles.reduce(
-				(total, file) => total + (Number(file.sizeBytes) || 0),
-				0,
-			) / ESTIMATED_FILE_TOKEN_BYTES,
-		);
-		return {
-			textTokens,
-			imageTokens,
-			fileTokens,
-			total: textTokens + imageTokens + fileTokens,
-		};
+			getCharacterKey: getCharacterContextKey,
+			getLocationKey: getLocationContextKey,
+		});
 	}, [
 		activeCampaignBasePrompt,
 		attachedFiles,
@@ -1911,21 +1385,6 @@ export default function AiAssistantPanel({
 	const formattedFileTokenEstimate = new Intl.NumberFormat(
 		currentLanguage || "en",
 	).format(tokenEstimate.fileTokens || 0);
-
-	const getSceneEncounterForImagePrompt = (scene) => {
-		const encounters = Array.isArray(scene?._imagePromptEncounters)
-			? scene._imagePromptEncounters
-			: [];
-		if (scene?.encounterId) {
-			return encounters.find(
-				(encounter) => String(encounter.id) === String(scene.encounterId),
-			);
-		}
-		if (Number.isInteger(scene?.encounterIndex)) {
-			return encounters[scene.encounterIndex];
-		}
-		return null;
-	};
 
 	const generateImagePromptForTarget = (target = null) => {
 		const basePrompt = imagePromptInstructions.trim();
@@ -1972,86 +1431,13 @@ export default function AiAssistantPanel({
 		setIsImagePromptContextMode(false);
 	};
 
-	const loadCampaignImagePromptData = async () => {
-		if (!initialRoute.campaign) return;
-
-		const loadCampaignEntities = async (type, label) => {
-			try {
-				const entities = await api.getEntities(initialRoute.campaign, type);
-				return Array.isArray(entities) ? entities : [];
-			} catch (err) {
-				console.error(`Failed to load ${label}`, err);
-				return [];
-			}
-		};
-
-		if (!imagePromptCampaignEntitiesLoadedRef.current) {
-			const [characters, npcs, locations] = await Promise.all([
-				loadCampaignEntities("characters", "characters"),
-				loadCampaignEntities("npc", "NPCs"),
-				loadCampaignEntities("locations", "locations"),
-			]);
-			setCharactersList(characters);
-			setNpcsList(npcs);
-			setLocationsList(locations);
-			imagePromptCampaignEntitiesLoadedRef.current = true;
-		}
-
-		if (!isCampaign || imagePromptCampaignDataLoadedRef.current) return;
-		const sessions =
-			sessionsList.length > 0
-				? sessionsList
-				: await api.listSessions(initialRoute.campaign);
-		if (sessionsList.length === 0) {
-			setSessionsList(sessions);
-		}
-		const fullSessions = await Promise.all(
-			sessions.map((session) =>
-				api.getSession(initialRoute.campaign, session.fileName).catch((err) => {
-					console.error("Failed to load session for image prompt", err);
-					return null;
-				}),
-			),
-		);
-		setImagePromptSessions(fullSessions.filter(Boolean));
-		imagePromptCampaignDataLoadedRef.current = true;
-	};
-
-	const loadBestiaryImagePromptData = async () => {
-		if (imagePromptBestiaryDataLoadedRef.current) return;
-		try {
-			const data = await api.getCustomBestiaryData();
-			const monsters = Array.isArray(data?.monster)
-				? data.monster
-				: Array.isArray(data?.monsters)
-					? data.monsters
-					: Array.isArray(data)
-						? data
-						: [];
-			setImagePromptCustomMonsters(monsters);
-		} catch (err) {
-			console.error("Failed to load custom monsters for image prompt", err);
-			setImagePromptCustomMonsters([]);
-		}
-		imagePromptBestiaryDataLoadedRef.current = true;
-	};
-
 	const openImagePromptPicker = async () => {
 		setSelectedImagePromptTarget(null);
 		setIsImagePromptContextMode(false);
 		setImagePromptInstructions(activeImagePromptBasePrompt);
 		setImagePromptRequest("");
-		setIsImagePromptDataLoading(true);
-		try {
-			if (isBestiary) {
-				await loadBestiaryImagePromptData();
-			} else if (initialRoute.campaign) {
-				await loadCampaignImagePromptData();
-			}
-		} finally {
-			setIsImagePromptDataLoading(false);
-			setIsImagePromptPickerOpen(true);
-		}
+		await prepareImagePromptData();
+		setIsImagePromptPickerOpen(true);
 	};
 
 	const getImagePromptTargetTitle = (target) => {
@@ -2062,83 +1448,27 @@ export default function AiAssistantPanel({
 		return target.name || target.id || target.type || "";
 	};
 
-	const buildNpcImageTarget = (npc) => ({
-		type: "npc",
-		id: npc?.id || npc?.slug || "",
-		name: getCharacterDisplayName(npc),
-		race: npc?.race || "",
-		class: npc?.class || "",
-		level: npc?.level ?? "",
-		description: npc?.description || "",
-		motivation: npc?.motivation || "",
-		trait: npc?.trait || "",
-		notes: getEntityNotesForImagePrompt(npc),
-		scope: isCampaign ? "campaign" : "session",
-	});
+	const buildNpcImageTarget = (npc) =>
+		buildNpcImageTargetModel(npc, {
+			displayName: getCharacterDisplayName(npc),
+			scope: isCampaign ? "campaign" : "session",
+		});
 
-	const buildLocationImageTarget = (location) => ({
-		type: "location",
-		id: location?.id || location?.slug || "",
-		name: getLocationDisplayName(location),
-		description: location?.description || "",
-		notes: getEntityNotesForImagePrompt(location),
-		scope: isCampaign ? "campaign" : "session",
-	});
+	const buildLocationImageTarget = (location) =>
+		buildLocationImageTargetModel(location, {
+			displayName: getLocationDisplayName(location),
+			scope: isCampaign ? "campaign" : "session",
+		});
 
-	const buildSceneImageTarget = (scene) => {
-		const encounter = getSceneEncounterForImagePrompt(scene);
-		return {
-			type: "scene",
-			id: scene?.id || "",
-			name: getSceneImagePromptTitle(scene, scene?._imagePromptIndex || 0),
-			sessionName: scene?._imagePromptSessionName || "",
-			sessionFileName: scene?._imagePromptSessionFileName || "",
-			texts: scene?.texts || {},
-			notes: getEntityNotesForImagePrompt(scene),
-			npcs: scene?.npcs || [],
-			encounter: encounter
-				? {
-						name: encounter.name || "",
-						monsters: (encounter.monsters || []).map(
-							(monster) => monster.name || monster.monsterName,
-						),
-					}
-				: null,
-		};
-	};
-
-	const buildCustomMonsterImageTarget = (monster) => ({
-		type: "custom-monster",
-		id: monster?.name || "",
-		name: monster?.name || "",
-		source: monster?.source || "CUSTOM",
-		size: monster?.size || "",
-		creatureType: monster?.type || "",
-		alignment: monster?.alignment || "",
-		description: monster?.description || monster?.desc || "",
-		trait: monster?.trait || [],
-		actions: monster?.action || [],
-		bonusActions: monster?.bonus || [],
-		reactions: monster?.reaction || [],
-		legendaryActions: monster?.legendary || [],
-		cr: monster?.cr || "",
-		ac: monster?.ac || "",
-		hp: monster?.hp || "",
-		speed: monster?.speed || "",
-		abilities: {
-			str: monster?.str ?? "",
-			dex: monster?.dex ?? "",
-			con: monster?.con ?? "",
-			int: monster?.int ?? "",
-			wis: monster?.wis ?? "",
-			cha: monster?.cha ?? "",
-		},
-	});
+	const buildSceneImageTarget = (scene) =>
+		buildSceneImageTargetModel(scene, {
+			title: getSceneImagePromptTitle(scene, scene?._imagePromptIndex || 0),
+		});
 
 	const openImagePromptForMonster = useCallback(
 		(monster) => {
 			if (!monster?.name) return;
-			setSelectedImagePromptTarget(buildCustomMonsterImageTarget(monster));
+			setSelectedImagePromptTarget(buildCustomMonsterImageTargetModel(monster));
 			setIsImagePromptContextMode(false);
 			setImagePromptInstructions(activeImagePromptBasePrompt);
 			setImagePromptRequest("");
@@ -2165,7 +1495,7 @@ export default function AiAssistantPanel({
 		<AiImagePromptPickerModal
 			attachedFiles={attachedFiles}
 			attachedImages={attachedImages}
-			buildCustomMonsterImageTarget={buildCustomMonsterImageTarget}
+			buildCustomMonsterImageTarget={buildCustomMonsterImageTargetModel}
 			buildLocationImageTarget={buildLocationImageTarget}
 			buildNpcImageTarget={buildNpcImageTarget}
 			buildSceneImageTarget={buildSceneImageTarget}
@@ -2211,25 +1541,19 @@ export default function AiAssistantPanel({
 	);
 
 	return (
-		<div className="AiAssistant">
-			<Tooltip className="AiAssistant__toggle" content={assistantTitle}>
-				<button onClick={() => setIsOpen(true)}>
-					<Icon name="wand" size={28} />
-				</button>
-			</Tooltip>
-
-			{isOpen && (
-				<Modal
-					title={assistantTitle}
-					className="AiAssistant__main_modal"
-					onCancel={() => {
-						if (loading) return;
-						setIsOpen(false);
-					}}
-					showFooter={false}
-					cancelDisabled={loading}
-				>
-					<div className="AiAssistant__content">
+		<AiAssistantShell
+			title={assistantTitle}
+			isOpen={isOpen}
+			isLoading={loading}
+			onOpen={() => setIsOpen(true)}
+			onClose={() => {
+				if (loading) return;
+				setIsOpen(false);
+			}}
+			imagePromptModal={imagePromptModal}
+			notification={notification}
+			onCloseNotification={() => setNotification(null)}
+		>
 						<AiAssistantToolbar
 							aiModels={aiModels}
 							generateCharacters={generateCharacters}
@@ -2302,29 +1626,16 @@ export default function AiAssistantPanel({
 							updateContextConfig={updateContextConfig}
 						/>
 
-						<AiResponseModal
+						<AiHistoryResponseDialog
 							generatedPrompt={generatedPrompt}
 							generatedPromptRef={generatedPromptRef}
 							isGeneratedPromptCopied={isGeneratedPromptCopied}
 							isRestoringResponse={isRestoringResponse}
 							markdownComponents={markdownMentionComponents}
-							onApply={(entry = selectedResponseEntry) =>
-								restoreAiHistoryEntry(entry, "apply")
-							}
-							onApplyResource={(entry = selectedResponseEntry, resourceIds) =>
-								restoreAiHistoryEntry(entry, "apply", { resourceIds })
-							}
+							onRestore={restoreAiHistoryEntry}
 							onCancel={closeGeneratedPrompt}
 							onCopy={copyGeneratedPrompt}
-							onSaveDraftChanges={(resources) =>
-								saveDraftHistoryEntryChanges(selectedResponseEntry, resources)
-							}
-							onUndo={() =>
-								restoreAiHistoryEntry(selectedResponseEntry, "undo")
-							}
-							onUndoResource={(entry = selectedResponseEntry, resourceIds) =>
-								restoreAiHistoryEntry(entry, "undo", { resourceIds })
-							}
+							onSaveDraftChanges={saveDraftHistoryEntryChanges}
 							selectedResponseDetails={selectedResponseDetails}
 							selectedResponseDiffResources={selectedResponseDiffResources}
 							selectedResponseEntry={selectedResponseEntry}
@@ -2333,68 +1644,25 @@ export default function AiAssistantPanel({
 							getHistoryChangeSummary={getHistoryChangeSummary}
 						/>
 
-						<div className="AiAssistant__prompt_area">
-							<div className="AiAssistant__prompt_row">
-								<div className="AiAssistant__prompt_column">
-									<EditableField
-										type="textarea"
-										className="AiAssistant__prompt_input"
-										placeholder={getPlaceholder()}
-										value={userInstructions}
-										onChange={(e) => setUserInstructions(e.target.value)}
-										disabled={loading}
-									/>
-									<div
-										className="AiAssistant__token_estimate"
-										title={lang.t(
-											"Approximate estimate. Actual token usage may differ.",
-										)}
-									>
-										<span>
-											{lang.t("Estimated request")}:{" "}
-											<strong>{formattedTokenEstimate}</strong>{" "}
-											{lang.t("tokens")}
-										</span>
-										<span>
-											{lang.t("Text")}: {formattedTextTokenEstimate}
-											{tokenEstimate.imageTokens > 0
-												? `; ${lang.t("Images")}: ${formattedImageTokenEstimate}`
-												: ""}
-											{tokenEstimate.fileTokens > 0
-												? `; ${lang.t("Files")}: ${formattedFileTokenEstimate}`
-												: ""}
-										</span>
-									</div>
-									<Button
-										variant="create"
-										className="AiAssistant__generate_btn"
-										disabled={loading}
-										onClick={() => generate()}
-									>
-										{loading
-											? lang.t("AI is working, please wait...")
-											: lang.t("Generate")}
-									</Button>
-									{canCancelGenerate && (
-										<Button
-											variant="danger"
-											className="AiAssistant__cancel_btn"
-											onClick={cancelGenerateRequest}
-										>
-											{lang.t("Cancel")}
-										</Button>
-									)}
-								</div>
-								<AiAttachmentControls
-									attachedFiles={attachedFiles}
-									attachedImages={attachedImages}
-									campaignSlug={isBestiary ? "general" : initialRoute.campaign}
-									disabled={loading}
-									setAttachedFiles={setAttachedFiles}
-									setAttachedImages={setAttachedImages}
-								/>
-							</div>
-						</div>
+						<AiPromptComposer
+							attachedFiles={attachedFiles}
+							attachedImages={attachedImages}
+							campaignSlug={isBestiary ? "general" : initialRoute.campaign}
+							canCancel={canCancelGenerate}
+							formattedFileTokenEstimate={formattedFileTokenEstimate}
+							formattedImageTokenEstimate={formattedImageTokenEstimate}
+							formattedTextTokenEstimate={formattedTextTokenEstimate}
+							formattedTokenEstimate={formattedTokenEstimate}
+							isLoading={loading}
+							onCancel={cancelGenerateRequest}
+							onGenerate={() => generate()}
+							onInstructionsChange={setUserInstructions}
+							placeholder={getPlaceholder()}
+							setAttachedFiles={setAttachedFiles}
+							setAttachedImages={setAttachedImages}
+							tokenEstimate={tokenEstimate}
+							userInstructions={userInstructions}
+						/>
 
 						{error && <div className="AiAssistant__error">{error}</div>}
 
@@ -2412,18 +1680,6 @@ export default function AiAssistantPanel({
 							getSummary={getHistoryChangeSummary}
 							getStateLabel={getAiResponseStateLabel}
 						/>
-					</div>
-				</Modal>
-			)}
-
-			{imagePromptModal}
-
-			{notification && (
-				<Notification
-					message={notification}
-					onClose={() => setNotification(null)}
-				/>
-			)}
-		</div>
+		</AiAssistantShell>
 	);
 }

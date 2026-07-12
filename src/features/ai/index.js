@@ -1,7 +1,9 @@
 export { aiApi } from "./api/aiApi.js";
 export {
 	ESTIMATED_IMAGE_TOKENS,
+	ESTIMATED_FILE_TOKEN_BYTES,
 	SYSTEM_TOKEN_ESTIMATES,
+	buildAiTokenEstimate,
 	compactEntityForEstimate,
 	compactNoteForEstimate,
 	compactSessionForEstimate,
@@ -30,3 +32,39 @@ export {
 	initialAiGenerationLifecycle,
 	isAiGenerationPending,
 } from "./model/generationLifecycle.js";
+export {
+	buildAiHistoryRestorePlan,
+	canApplyRestoredAiDataDirectly,
+	getAiHistoryCampaign,
+	getAiHistoryRestoreMode,
+	upsertAiHistoryEntry,
+} from "./model/historyState.js";
+export {
+	createAiHistoryCommandService,
+	useAiHistoryCommands,
+} from "./model/historyCommands.js";
+export {
+	ensureContextListItems,
+	getContextListConfig,
+	setAllContextListItems,
+	updateContextConfigValue,
+	updateContextListIncluded,
+	updateContextListItem,
+} from "./model/contextConfig.js";
+export {
+	buildCustomMonsterImageTarget,
+	buildLocationImageTarget,
+	buildNpcImageTarget,
+	buildSceneImageTarget,
+	getImageTargetNotes,
+	getSceneImageTargetEncounter,
+} from "./model/imageTargets.js";
+export {
+	createInitialAiContextConfig,
+	mergeLoadedAiSessionData,
+	useAiContextData,
+} from "./model/useAiContextData.js";
+export {
+	normalizeCustomMonsterCollection,
+	useAiImagePromptData,
+} from "./model/useAiImagePromptData.js";

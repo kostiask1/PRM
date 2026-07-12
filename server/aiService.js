@@ -2,6 +2,9 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const fs = require("fs/promises");
 const path = require("path");
 const storage = require("./storage");
+const {
+	buildPromptContext,
+} = require("./modules/ai/application/buildPromptContext");
 
 const GEMINI_MODELS_ENDPOINT =
 	"https://generativelanguage.googleapis.com/v1beta/models";
@@ -109,82 +112,6 @@ function normalizeResponseLanguage(language) {
 	return {
 		code,
 		label: aliases[code] || code,
-	};
-}
-
-function noteToPromptContext(note, { includeTitle = true } = {}) {
-	if (!note) return null;
-	if (typeof note === "string") {
-		return note.trim() ? { text: note } : null;
-	}
-	if (typeof note !== "object") return null;
-	if (note._aiIgnored) return null;
-
-	const title = includeTitle ? String(note.title || "").trim() : "";
-	const text = String(note.text || "");
-	if (!title && !text.trim()) return null;
-
-	return {
-		id: note.id,
-		...(includeTitle ? { title } : {}),
-		text,
-	};
-}
-
-function isAiIgnored(value = {}) {
-	return Boolean(value?._aiIgnored);
-}
-
-function entityContextName(entity = {}) {
-	return (
-		`${entity.firstName || entity.first_name || ""} ${
-			entity.lastName || entity.last_name || ""
-		}`.trim() ||
-		entity.name ||
-		entity.title
-	);
-}
-
-function characterToPromptContext(entity = {}, noteToContextNote) {
-	if (isAiIgnored(entity)) return null;
-	return {
-		id: entity.id,
-		slug: entity.slug,
-		name: entityContextName(entity),
-		race: entity.race,
-		class: entity.class,
-		level: entity.level,
-		motivation: entity.motivation,
-		description: entity.description,
-		trait: entity.trait,
-		notes: (entity.notes || []).map(noteToContextNote).filter(Boolean),
-	};
-}
-
-function npcToPromptContext(entity = {}, noteToContextNote) {
-	if (isAiIgnored(entity)) return null;
-	return {
-		id: entity.id,
-		slug: entity.slug,
-		name: entityContextName(entity),
-		race: entity.race,
-		class: entity.class,
-		level: entity.level,
-		description: entity.description,
-		motivation: entity.motivation,
-		trait: entity.trait,
-		notes: (entity.notes || []).map(noteToContextNote).filter(Boolean),
-	};
-}
-
-function locationToPromptContext(location = {}, noteToContextNote) {
-	if (isAiIgnored(location)) return null;
-	return {
-		id: location.id,
-		slug: location.slug,
-		name: location.name || location.title,
-		description: location.description,
-		notes: (location.notes || []).map(noteToContextNote).filter(Boolean),
 	};
 }
 
@@ -804,8 +731,6 @@ async function generateContent({
 	let userPrompt = "";
 	const responseLanguage = normalizeResponseLanguage(language);
 	const simplifiedNotesEnabled = Boolean(simplifiedNotes);
-	const noteToContextNote = (note) =>
-		noteToPromptContext(note, { includeTitle: !simplifiedNotesEnabled });
 	const encounterGenerationEnabled = Boolean(generateEncounters);
 	const customMonsterGenerationEnabled =
 		encounterGenerationEnabled && Boolean(generateCustomMonsters);
@@ -1039,244 +964,14 @@ ${normalizedImagePromptBasePrompt}`,
 		systemInstruction: systemInstructionParts.join("\n\n"),
 	});
 
-	// 1. Flexible session filtering based on configured context.
-	const filteredSessions = (contextData?.sessions || [])
-		.map((s) => {
-			const sessionContext = { id: s.slug, slug: s.slug, name: s.name };
-			const conf = s.conf || {};
-			const data = s.data || {};
-
-			// Add notes when selected.
-			if (conf.included && conf.notes && data.notes) {
-				sessionContext.notes = data.notes
-					.map(noteToContextNote)
-					.filter(Boolean);
-			}
-
-			// Add session result when selected.
-			if (conf.included && conf.result_text && data.result_text) {
-				sessionContext.result = data.result_text;
-			}
-
-			// Add only selected scenes and their specific fields.
-			if (conf.included && data.scenes) {
-				const hasSceneConfig =
-					conf.scenes &&
-					typeof conf.scenes === "object" &&
-					Object.keys(conf.scenes).length > 0;
-				const defaultSceneConf = {
-					included: true,
-					summary: true,
-					goal: true,
-					stakes: true,
-					location: true,
-					notes: true,
-					encounter: true,
-				};
-				const sceneFields = [
-					"summary",
-					"goal",
-					"stakes",
-					"location",
-					"encounter",
-					"notes",
-				];
-				const filteredScenes = data.scenes
-					.filter((scene) => {
-						if (!hasSceneConfig) return true;
-						return conf.scenes[scene.id]?.included;
-					})
-					.map((scene) => {
-						const sceneConf = hasSceneConfig
-							? {
-									...defaultSceneConf,
-									...(conf.scenes[scene.id] || {}),
-								}
-							: defaultSceneConf;
-						const resultScene = { id: scene.id };
-
-						// If an encounter is selected, look up monster names.
-						if (sceneConf.encounter && scene.encounterId) {
-							const encounter = (data.encounters || []).find(
-								(e) => e.id.toString() === scene.encounterId.toString(),
-							);
-							if (encounter && encounter.monsters) {
-								resultScene.monsters = encounter.monsters.map(
-									(m) => m.name || m.monsterName,
-								);
-							}
-						}
-
-						sceneFields.forEach((field) => {
-							if (field === "encounter") return; // Already handled above.
-							if (field === "notes") {
-								if (sceneConf[field])
-									resultScene[field] = (scene.notes || [])
-										.map(noteToContextNote)
-										.filter(Boolean);
-								return;
-							}
-							if (sceneConf[field]) {
-								const value = scene.texts?.[field];
-								if (value !== undefined && value !== null) {
-									resultScene[field] = value;
-								}
-							}
-						});
-						return resultScene;
-					});
-
-				if (filteredScenes.length > 0) {
-					sessionContext.scenes = filteredScenes;
-				}
-			}
-
-			if (conf.included && Array.isArray(data.npcs) && data.npcs.length > 0) {
-				sessionContext.npcs = data.npcs
-					.map((npc) => npcToPromptContext(npc, noteToContextNote))
-					.filter(
-						(npc) => npc && (npc.name || npc.description || npc.motivation),
-					);
-			}
-
-			if (
-				conf.included &&
-				Array.isArray(data.locations) &&
-				data.locations.length > 0
-			) {
-				sessionContext.locations = data.locations
-					.map((location) =>
-						locationToPromptContext(location, noteToContextNote),
-					)
-					.filter(
-						(location) => location && (location.name || location.description),
-					);
-			}
-
-			return sessionContext;
-		})
-		.filter((s) => s.notes || s.result || s.scenes || s.npcs || s.locations); // Remove sessions without content.
-
-	// 2. Build final JSON context for Gemini.
-	const contextJson = {};
-	if (campaign) {
-		contextJson.campaign = {
-			name: campaign.name,
-			description: campaign.description,
-			notes: contextData?.campaign?.notes
-				?.map(noteToContextNote)
-				.filter(Boolean),
-			characters: contextData?.campaign?.characters
-				?.map((c) => characterToPromptContext(c, noteToContextNote))
-				.filter(
-					(c) => c && (c.name || c.description || c.motivation || c.trait),
-				),
-			npcs: contextData?.campaign?.npcs
-				?.map((npc) => npcToPromptContext(npc, noteToContextNote))
-				.filter(
-					(npc) =>
-						npc && (npc.name || npc.description || npc.motivation || npc.trait),
-				),
-			locations: contextData?.campaign?.locations
-				?.map((location) =>
-					locationToPromptContext(location, noteToContextNote),
-				)
-				.filter(
-					(location) => location && (location.name || location.description),
-				),
-		};
-	}
-
-	if (contextData?.customBestiary) {
-		contextJson.customBestiary = contextData.customBestiary;
-	}
-
-	if (session && entityTargetScope !== "campaign") {
-		const currentSessionData =
-			contextData?.currentSession?.data &&
-			typeof contextData.currentSession.data === "object"
-				? contextData.currentSession.data
-				: session.data || {};
-		const currentSession = {
-			id: session.id,
-			slug: contextData?.currentSession?.slug,
-			fileName: contextData?.currentSession?.fileName,
-			name: contextData?.currentSession?.name || session.name,
-		};
-		if (
-			Array.isArray(currentSessionData.scenes) &&
-			currentSessionData.scenes.length > 0
-		) {
-			currentSession.scenes = currentSessionData.scenes.map((scene) => ({
-				id: scene.id,
-				texts: scene.texts,
-				encounterId: scene.encounterId || "",
-				notes: (scene.notes || []).map(noteToContextNote).filter(Boolean),
-				npcs: scene.npcs || [],
-			}));
-		}
-		if (
-			Array.isArray(currentSessionData.encounters) &&
-			currentSessionData.encounters.length > 0
-		) {
-			currentSession.encounters = currentSessionData.encounters.map(
-				(encounter) => ({
-					id: encounter.id,
-					name: encounter.name,
-					monsters: (encounter.monsters || []).map((monster) => ({
-						name: monster.name,
-						monsterName: monster.originalBestiaryName || monster.name,
-						cr: monster.cr || monster.challenge_rating,
-					})),
-				}),
-			);
-		}
-		if (
-			Array.isArray(currentSessionData.npcs) &&
-			currentSessionData.npcs.length > 0
-		) {
-			currentSession.npcs = currentSessionData.npcs
-				.map((npc) => npcToPromptContext(npc, noteToContextNote))
-				.filter(
-					(npc) =>
-						npc && (npc.name || npc.description || npc.motivation || npc.trait),
-				);
-		}
-		if (
-			Array.isArray(currentSessionData.locations) &&
-			currentSessionData.locations.length > 0
-		) {
-			currentSession.locations = currentSessionData.locations
-				.map((location) => locationToPromptContext(location, noteToContextNote))
-				.filter(
-					(location) => location && (location.name || location.description),
-				);
-		}
-		contextJson.currentSession = currentSession;
-	}
-
-	if (filteredSessions.length > 0) {
-		contextJson.selectedSessions = filteredSessions;
-	}
-
-	// Add current encounter data when in Encounter mode.
-	if (encounterId && session) {
-		const currentEnc = (session.data.encounters || []).find(
-			(e) => e.id.toString() === encounterId.toString(),
-		);
-		if (currentEnc) {
-			contextJson.currentEncounter = {
-				id: currentEnc.id,
-				name: currentEnc.name,
-				monsters: (currentEnc.monsters || []).map((m) => ({
-					name: m.name,
-					monsterName: m.originalBestiaryName || m.name,
-					cr: m.cr || m.challenge_rating,
-				})),
-			};
-		}
-	}
-
+	const contextJson = buildPromptContext({
+		campaign,
+		session,
+		contextData,
+		entityTargetScope,
+		encounterId,
+		simplifiedNotesEnabled,
+	});
 	userPrompt = `INPUT DATA (JSON):\n${JSON.stringify(contextJson, null, 2)}\n\n`;
 	if (useKey === "image" && imageTarget && typeof imageTarget === "object") {
 		userPrompt += `IMAGE TARGET (JSON):\n${JSON.stringify(imageTarget, null, 2)}\n\n`;
