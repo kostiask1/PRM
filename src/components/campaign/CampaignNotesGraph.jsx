@@ -848,6 +848,7 @@ export default function CampaignNotesGraph({
 						currentNode?.position ||
 						layoutPositions[graphNode.id] || { x: 0, y: 0 },
 					origin: [0.5, 0.5],
+					zIndex: selectedNodeId === graphNode.id ? 3 : 2,
 					style: { width: size.width, height: size.height },
 					data: {
 						graphNode,
@@ -991,7 +992,7 @@ export default function CampaignNotesGraph({
 				},
 				labelBgPadding: [5, 3],
 				labelBgBorderRadius: 8,
-				zIndex: edge.relation === "contains" ? 0 : 1,
+				zIndex: 0,
 			};
 		});
 	}, [flowNodes, focusedNodeId, graph.edges, visibleGraph.visibleEdgeIds]);
