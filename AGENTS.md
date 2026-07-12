@@ -17,9 +17,11 @@
 
 - `src/main.jsx` - frontend entry point, реєструє service worker.
 - `src/App.jsx` - кореневий React-компонент: завантажує кампанії/налаштування, керує глобальними modal/message/dice/mention потоками.
-- `src/components/MainContent.jsx` - вибирає основний екран за URL/state: `CampaignView`, `SessionView`, `EncounterView`, `Bestiary`, `Spells`.
+- `src/components/MainContent.jsx` - композиція маршрутів; нові екрани підключаються з `src/pages/*`.
 - `src/store/appStore.js` - легкий глобальний store через `useSyncExternalStore`; navigation, modal, messages, dice, language, UI settings.
-- `src/api.js` - єдиний frontend API wrapper для `/api/...`.
+- `src/shared/api/httpClient.js` - спільний HTTP transport для `/api/...`.
+- `src/entities/*/api` та `src/features/*/api` - API-клієнти, що належать відповідному домену/use case.
+- `src/api.js` - тимчасовий compatibility facade для legacy-коду; новий код не повинен імпортувати його.
 - `server/server.js` - Express entry point, монтує routes, віддає `dist/`.
 - `server/storage.js` - основний файловий storage layer, нормалізація шляхів, JSON read/write, кампанії, сесії, entities, image refs, imports/exports, AI history.
 - `server/routes/*.js` - REST API:
@@ -61,12 +63,13 @@
 - Main UI: `src/components/EncounterView.jsx`.
 - Main logic: `src/hooks/useEncounterView.js`, `src/utils/encounters.js`.
 - Backend data path: stored inside session data, not a separate DB.
-- Important integrations: `Bestiary.jsx`, `MonsterStatBlock.jsx`, `AddMonsterToEncounterModalContent.jsx`.
+- Important integrations: `src/widgets/bestiary-browser`, `MonsterStatBlock.jsx`, `AddMonsterToEncounterModalContent.jsx`.
 
 ### Bestiary and Custom Monsters
 
 - What: browse local bestiary, favorites, custom creatures, custom monster CRUD/import/export, token image upload.
-- Main UI: `src/components/Bestiary.jsx`, `src/components/MonsterStatBlock.jsx`.
+- Main UI: `src/pages/bestiary`, `src/widgets/bestiary-browser`, `src/components/MonsterStatBlock.jsx`.
+- Bestiary features: `src/features/edit-monster`, `src/features/ai-edit-monster`.
 - Main logic: `src/models/MonsterStatBlockModel.js`, `src/utils/bestiary.js`, `server/aiCustomMonsterService.js`.
 - Backend: `server/routes/bestiary.js`, `server/storage.js`.
 - Data:
@@ -110,7 +113,7 @@
 
 - What: full backup/archive, campaign archive, partial campaign archive, custom bestiary import/export.
 - Backend: `server/routes/backups.js`, `server/storage.js`.
-- UI: `CreateCampaignModalContent.jsx`, `PartialArchiveModal.jsx`, `Bestiary.jsx`.
+- UI: `CreateCampaignModalContent.jsx`, `PartialArchiveModal.jsx`, `src/widgets/bestiary-browser`.
 - Partial campaign archive currently covers sessions, NPC, locations, images, AI history. Custom monsters are handled from Bestiary.
 
 ### Settings and Localization
@@ -129,7 +132,7 @@
   - `/campaign/:slug/session/:fileName/encounter/:encounterId`
   - `/bestiary`
   - `/spells`
-- Views call `src/api.js`; API calls Express routes under `/api`.
+- Нові slices викликають власні domain API clients; legacy views тимчасово можуть викликати compatibility facade `src/api.js`. Усі clients використовують `src/shared/api/httpClient.js` для Express routes під `/api`.
 - `server/storage.js` reads/writes JSON and files under `data/`.
 - Campaign metadata: `data/campaigns/{slug}/_campaign.json`.
 - Entities: `data/campaigns/{slug}/characters|npc|locations/{entitySlug}/info.json`.
@@ -159,6 +162,54 @@
 - Frontend styles are mostly BEM-like classes in `src/assets/components/*.css` plus shared SCSS in `src/assets/scss/`.
 - Cards/components often have paired model files under `src/models/`; check models before changing display logic.
 - Many views debounce autosave; avoid adding immediate writes inside every keystroke unless existing code already does that.
+
+## Target Frontend Architecture (FSD)
+
+Frontend мігрує інкрементально до Feature-Sliced Design. Поточні `src/components`, `src/hooks`, `src/models`, `src/utils`, `src/services`, `src/store` є legacy-зонами: їх не потрібно масово переносити, але новий доменний функціонал слід створювати у FSD-шарах.
+
+Дозволений напрям залежностей:
+
+`app -> pages -> widgets -> features -> entities -> shared`
+
+- `app` - providers, routing, app initialization і глобальна композиція.
+- `pages` - тонкі route-компоненти; лише композиція widgets/features, без доменної логіки.
+- `widgets` - великі самодостатні частини сторінки, що компонують features та entities.
+- `features` - завершені дії користувача/use cases (`edit-monster`, `ai-edit-monster`, upload, apply/undo).
+- `entities` - доменні моделі, domain API, selectors, нормалізація та повторно використовуване domain UI.
+- `shared` - HTTP transport, загальний UI, config та справді доменно-нейтральні helpers.
+
+Обов'язкові правила:
+
+- Нижчий FSD-шар не імпортує вищий. Правила закріплені в `.fallowrc.jsonc`.
+- Зовнішній код імпортує slice через його публічний `index.js`. Deep imports у чужий slice заборонені; виняток - внутрішні імпорти всередині того самого slice.
+- Не створюй broad barrel-файли, що реекспортують цілі дерева. Public API slice має бути мінімальним і явним.
+- Новий код не імпортує compatibility facade `src/api.js`. Імпортуй domain client з власника: наприклад `entities/bestiary`, `entities/campaign`, `features/ai`.
+- `shared/api/httpClient.js` знає лише HTTP-механіку. Domain endpoints не додаються до transport layer.
+- Не перенось state у глобальний store автоматично. Persistent domain state належить filesystem/server; route state - router; workflow/modal/filter/draft state - відповідному feature/widget. Store використовуй лише для справді глобального app state.
+- Не перетворюй кожен компонент або click handler на feature. Feature повинна представляти завершену дію/use case.
+- Під час роботи з legacy-файлом мігруй лише той вертикальний workflow, якого стосується зміна; не роби масове переміщення без окремого запиту.
+- Після структурних змін запускай `npm run check:architecture`; результат має не містити нових cycles або boundary violations.
+
+Bestiary є пілотним FSD slice:
+
+- Entry point з Sidebar відкриває Bestiary у rules-reference modal flow; окремий route не створюється без зміни navigation UX.
+- Reusable browser/widget: `src/widgets/bestiary-browser`.
+- Monster edit use case: `src/features/edit-monster`.
+- AI monster edit/draft use case: `src/features/ai-edit-monster`.
+- Bestiary API owner: `src/entities/bestiary`.
+
+Не імпортуй повний Bestiary widget з rules/reference, entity або feature layers. Reference browser повинен використовувати власний lightweight list/detail view, щоб не створювати цикли.
+
+## Backend Architecture Direction
+
+Backend залишається modular monolith. FSD не застосовується до Express буквально. Новий або суттєво перероблений backend functionality організовуй вертикальними domain modules під `server/modules/<domain>`:
+
+- `domain` - invariants, validation, pure transformations.
+- `application` - use cases та orchestration.
+- `infrastructure` - filesystem/Gemini/archive adapters.
+- `http` - router, request mapping, response mapping.
+
+Routes не повинні напряму будувати filesystem paths. Поступово вводь focused repositories (`CampaignRepository`, `SessionRepository`, `BestiaryRepository`, `AiHistoryRepository`, `ImageRepository`) поверх чинного `server/storage.js`. Filesystem залишається source of truth; не додавай DB або microservices без окремої вимоги.
 
 ## Business Rules
 

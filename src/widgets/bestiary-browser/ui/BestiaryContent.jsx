@@ -1,22 +1,22 @@
 import { useEffect, useRef } from "react";
 import ReactList from "react-list";
-import Button from "../form/Button";
-import Icon from "../common/Icon";
-import Input from "../form/Input";
-import ListCard from "../common/ListCard";
-import MonsterStatBlock from "../MonsterStatBlock";
-import MonsterStatBlockModel from "../../models/MonsterStatBlockModel.js";
-import MultiSelect from "../form/MultiSelect";
-import Tooltip from "../common/Tooltip";
-import classNames from "../../utils/classNames";
-import { getMonsterTypeString } from "../../utils/bestiary.js";
-import { highlightText } from "../../utils/searchHighlight.jsx";
+import Button from "../../../components/form/Button";
+import Icon from "../../../components/common/Icon";
+import Input from "../../../components/form/Input";
+import ListCard from "../../../components/common/ListCard";
+import MonsterStatBlock from "../../../components/MonsterStatBlock";
+import MonsterStatBlockModel from "../../../models/MonsterStatBlockModel.js";
+import MultiSelect from "../../../components/form/MultiSelect";
+import Tooltip from "../../../components/common/Tooltip";
+import classNames from "../../../utils/classNames";
+import { getMonsterTypeString } from "../../../utils/bestiary.js";
+import { highlightText } from "../../../utils/searchHighlight.jsx";
 import {
 	formatSourceLabel,
 	getSourceFullName,
-} from "../../utils/sourceNames.js";
-import { lang } from "../../services/localization";
-import AiAssistantPanel from "../ai/AiAssistantPanel.jsx";
+} from "../../../utils/sourceNames.js";
+import { lang } from "../../../services/localization";
+import AiAssistantPanel from "../../../components/ai/AiAssistantPanel.jsx";
 
 function getMonsterItemKey(monster) {
 	return `${monster.source || ""}:${monster.name}`;

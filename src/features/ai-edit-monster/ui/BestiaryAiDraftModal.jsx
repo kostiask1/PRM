@@ -1,4 +1,4 @@
-import AiResponseModal from "../ai/AiResponseModal";
+import AiResponseModal from "../../../components/ai/AiResponseModal";
 
 export default function BestiaryAiDraftModal({
 	aiDraftDiffResources,

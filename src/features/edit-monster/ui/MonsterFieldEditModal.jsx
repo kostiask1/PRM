@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 
-import Modal from "../common/Modal";
-import Button from "../form/Button";
-import Input from "../form/Input";
-import Select from "../form/Select";
-import RulesReferenceModalContent from "../modals/RulesReferenceModalContent";
-import { lang } from "../../services/localization";
-import { getMonsterTypeString } from "../../utils/bestiary";
-import "../../assets/components/MonsterFieldEditModal.css";
+import Modal from "../../../components/common/Modal";
+import Button from "../../../components/form/Button";
+import Input from "../../../components/form/Input";
+import Select from "../../../components/form/Select";
+import RulesReferenceModalContent from "../../../components/modals/RulesReferenceModalContent";
+import { lang } from "../../../services/localization";
+import { getMonsterTypeString } from "../../../utils/bestiary";
+import "../../../assets/components/MonsterFieldEditModal.css";
 
 const CREATURE_ACTION_SECTIONS = [
 	{ key: "trait", label: "Traits" },

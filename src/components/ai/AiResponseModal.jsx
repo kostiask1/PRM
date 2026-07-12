@@ -5,7 +5,7 @@ import CharacterCard from "../CharacterCard";
 import LocationCard from "../LocationCard";
 import MonsterStatBlock from "../MonsterStatBlock";
 import NoteCard from "../common/NoteCard";
-import MonsterFieldEditModal from "../bestiary/MonsterFieldEditModal";
+import { MonsterFieldEditModal } from "../../features/edit-monster/index.js";
 import Button from "../form/Button";
 import EditableField from "../form/EditableField";
 import Modal from "../common/Modal";

@@ -1,46 +1,50 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { api } from "../api";
+import { campaignApi } from "../../../entities/campaign/index.js";
+import { bestiaryApi } from "../../../entities/bestiary/index.js";
+import { aiApi } from "../../../features/ai/index.js";
+import { settingsApi } from "../../../features/settings/index.js";
 import {
 	alert,
 	confirm,
 	setCampaignsAction,
 	setUiSettingsAction,
-} from "../actions/app";
-import { useAppDispatch, useAppSelector } from "../store/appStore";
-import Button from "./form/Button";
-import BestiaryAiModals from "./bestiary/BestiaryAiModals";
-import BestiaryContent from "./bestiary/BestiaryContent";
-import MonsterFieldEditModal from "./bestiary/MonsterFieldEditModal";
-import MonsterAiActionModal from "./bestiary/MonsterAiActionModal";
-import MonsterStatBlockModel from "../models/MonsterStatBlockModel.js";
-import useDebounce from "../hooks/useDebounce.js";
-import { buildDiffResources } from "../utils/aiDiff.js";
+} from "../../../actions/app";
+import { useAppDispatch, useAppSelector } from "../../../store/appStore";
+import Button from "../../../components/form/Button";
+import { BestiaryAiModals, MonsterAiActionModal } from "../../../features/ai-edit-monster/index.js";
+import BestiaryContent from "./BestiaryContent";
+import { MonsterFieldEditModal } from "../../../features/edit-monster/index.js";
+import MonsterStatBlockModel from "../../../models/MonsterStatBlockModel.js";
+import useDebounce from "../../../hooks/useDebounce.js";
+import { buildDiffResources } from "../../../utils/aiDiff.js";
 import {
 	addSourceMonsterImageToDraft,
 	getFirstChangedMonsterName,
 	getHistoryChangeSummary as getAiHistoryChangeSummary,
 	getLocalizedDiffResourceState,
-} from "../utils/aiResponseHelpers.js";
-import { loadAiModelOptions } from "../utils/aiModels.js";
-import { matchesMonsterSearch } from "../utils/bestiary.js";
-import { objectMatchesSearch } from "../utils/deepSearch.js";
+} from "../../../utils/aiResponseHelpers.js";
+import { loadAiModelOptions } from "../../../utils/aiModels.js";
+import { matchesMonsterSearch } from "../../../utils/bestiary.js";
+import { objectMatchesSearch } from "../../../utils/deepSearch.js";
 import {
 	getCampaignIgnoreSourcesList,
 	getIgnoreSourcesListFromSelectedSources,
 	getSelectedSourcesFromIgnoreList,
 	normalizeSourceCode,
-} from "../utils/sourceIgnore.js";
-import { formatSourceLabel } from "../utils/sourceNames.js";
+} from "../../../utils/sourceIgnore.js";
+import { formatSourceLabel } from "../../../utils/sourceNames.js";
 import {
 	addUndoSnapshot,
 	clearRedoStack,
 	createRedoTransition,
 	createUndoTransition,
-} from "../utils/undoRedo.js";
-import { downloadJsonFile } from "../utils/download.js";
-import "../assets/components/Bestiary.css";
-import { lang } from "../services/localization";
-import classNames from "../utils/classNames.js";
+} from "../../../utils/undoRedo.js";
+import { downloadJsonFile } from "../../../utils/download.js";
+import "../../../assets/components/Bestiary.css";
+import { lang } from "../../../services/localization";
+import classNames from "../../../utils/classNames.js";
+
+const api = { ...campaignApi, ...bestiaryApi, ...aiApi, ...settingsApi };
 
 function translate(...args) {
 	return lang.t(...args);
@@ -147,7 +151,7 @@ function enrichMonstersWithLegendaryGroups(monsters, legendaryGroups) {
 	});
 }
 
-export default function Bestiary({
+export default function BestiaryBrowser({
 	onAddMonster,
 	initialSearch = "",
 	initialDetailedSearch = false,

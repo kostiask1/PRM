@@ -9,7 +9,6 @@ import ListCard from "../common/ListCard.jsx";
 import Tooltip from "../common/Tooltip.jsx";
 import Button from "../form/Button.jsx";
 import Input from "../form/Input";
-import Bestiary from "../Bestiary.jsx";
 import MonsterStatBlock from "../MonsterStatBlock.jsx";
 import MonsterStatBlockModel from "../../models/MonsterStatBlockModel.js";
 import Spells from "../Spells.jsx";
@@ -161,7 +160,7 @@ const REFERENCE_TABS = [
 ];
 
 const TAB_BY_ID = new Map(REFERENCE_TABS.map((tab) => [tab.id, tab]));
-const EMBEDDED_BROWSER_TAB_IDS = new Set(["spells", "bestiary"]);
+const EMBEDDED_BROWSER_TAB_IDS = new Set(["spells"]);
 const EMPTY_ITEMS = [];
 
 function normalizeList(list) {
@@ -659,16 +658,6 @@ export default function RulesReferenceModalContent({
 		});
 	};
 
-	const selectCreatureReference = (monster) => {
-		if (!monster?.name || !onSelectReference) return;
-		onSelectReference({
-			tabId: "bestiary",
-			item: monster,
-			name: monster.name,
-			tag: getReferenceInlineTag("bestiary", monster),
-		});
-	};
-
 	const recordEmbeddedReferenceSelection = useCallback(
 		(tabId, name) => {
 			if (!TAB_BY_ID.has(tabId) || !name) return;
@@ -856,24 +845,6 @@ export default function RulesReferenceModalContent({
 						renderOptions={{
 							openSpellInNestedModal: false,
 						}}
-					/>
-				</div>
-			) : activeTab.id === "bestiary" ? (
-				<div className="RulesReferenceModalContent__bestiaryBrowser">
-					<Bestiary
-						hideSearchInput
-						initialSearch={query}
-						initialDetailedSearch={isDetailedSearch}
-						initialSelectedName={activeSelectedName}
-						onActiveMonsterChange={(monster) =>
-							recordEmbeddedReferenceSelection(
-								"bestiary",
-								getCreatureReferenceName(monster),
-							)
-						}
-						onSelectMonster={
-							onSelectReference ? selectCreatureReference : null
-						}
 					/>
 				</div>
 			) : (

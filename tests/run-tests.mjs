@@ -1865,13 +1865,13 @@ await run("parser renders dice and creature tags as interactive components", asy
 	);
 	assert.match(rulesLinkSource, /function getCreatureReferenceName/);
 	assert.doesNotMatch(rulesLinkSource, /onNavigate/);
-	assert.match(rulesReferenceSource, /import Bestiary from "\.\.\/Bestiary\.jsx"/);
+	assert.doesNotMatch(rulesReferenceSource, /import Bestiary from/);
 	assert.match(rulesReferenceSource, /import MonsterStatBlock from "\.\.\/MonsterStatBlock\.jsx"/);
 	assert.match(rulesReferenceSource, /import MonsterStatBlockModel from "\.\.\/\.\.\/models\/MonsterStatBlockModel\.js"/);
 	assert.match(rulesReferenceSource, /id: "bestiary"/);
 	assert.match(rulesReferenceSource, /api\.getBestiaryData\("all"\)/);
 	assert.match(rulesReferenceSource, /api\.getSpellData\("all"\)/);
-	assert.match(rulesReferenceSource, /<Bestiary/);
+	assert.doesNotMatch(rulesReferenceSource, /<Bestiary/);
 	assert.match(rulesReferenceSource, /<MonsterStatBlock/);
 	assert.match(rulesReferenceSource, /Bestiary__item_token/);
 	assert.match(rulesReferenceSource, /normalizeCreatureReferenceName/);
@@ -1898,11 +1898,11 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	);
 	const sidebarSource = await fs.readFile("src/components/Sidebar.jsx", "utf8");
 	const bestiarySource = await fs.readFile(
-		"src/components/Bestiary.jsx",
+		"src/widgets/bestiary-browser/ui/BestiaryBrowser.jsx",
 		"utf8",
 	);
 	const bestiaryContentSource = await fs.readFile(
-		"src/components/bestiary/BestiaryContent.jsx",
+		"src/widgets/bestiary-browser/ui/BestiaryContent.jsx",
 		"utf8",
 	);
 	const spellsSource = await fs.readFile("src/components/Spells.jsx", "utf8");
@@ -1963,7 +1963,7 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.match(rulesReferenceSource, /if \(initialName\) \{/);
 	assert.doesNotMatch(rulesReferenceSource, /setNavigationHistory/);
 	assert.match(rulesReferenceSource, /onActiveSpellChange/);
-	assert.match(rulesReferenceSource, /onActiveMonsterChange/);
+	assert.doesNotMatch(rulesReferenceSource, /onActiveMonsterChange/);
 	assert.match(rulesReferenceSource, /getCreatureReferenceName/);
 	assert.match(rulesReferenceSource, /itemMatchesSelectedName/);
 	assert.match(
