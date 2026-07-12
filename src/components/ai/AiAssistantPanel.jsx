@@ -12,7 +12,23 @@
 import { campaignApi } from "../../entities/campaign/index.js";
 import { sessionApi } from "../../entities/session/index.js";
 import { bestiaryApi } from "../../entities/bestiary/index.js";
-import { aiApi } from "../../features/ai/index.js";
+import {
+	aiApi,
+	ESTIMATED_IMAGE_TOKENS,
+	SYSTEM_TOKEN_ESTIMATES,
+	buildAiGenerationRequest,
+	compactEntityForEstimate,
+	compactNoteForEstimate,
+	compactSessionForEstimate,
+	createAiHistoryWorkflow,
+	estimateValueTokens,
+	getGeneratedEntityTypes,
+	getHistoryChangedEntityTypes,
+	hasGeneratedCampaignChanges,
+	hasHistoryChanges,
+	isFailedHistoryEntry,
+	getEstimatedAiMode,
+} from "../../features/ai/index.js";
 
 const api = { ...campaignApi, ...sessionApi, ...bestiaryApi, ...aiApi };
 import Button from "../form/Button.jsx";
@@ -100,91 +116,6 @@ const markdownMentionComponents = Object.fromEntries(
 			createElement(tag, tagProps, renderMentionChildren(children)),
 	]),
 );
-
-const ESTIMATED_IMAGE_TOKENS = 260;
-const SYSTEM_TOKEN_ESTIMATES = {
-	prompt: 650,
-	campaign: 1500,
-	scene: 1900,
-	encounter: 1200,
-	"custom-monster": 2200,
-	image: 550,
-};
-
-function estimateTextTokens(text) {
-	const value = String(text || "");
-	if (!value.trim()) return 0;
-
-	const cyrillic = (value.match(/[\u0400-\u04ff]/g) || []).length;
-	const latinDigits = (value.match(/[A-Za-z0-9]/g) || []).length;
-	const whitespace = (value.match(/\s/g) || []).length;
-	const other = Math.max(0, value.length - cyrillic - latinDigits - whitespace);
-	return Math.ceil(cyrillic / 2.7 + latinDigits / 4 + other / 3.5);
-}
-
-function estimateValueTokens(value) {
-	if (value === null || value === undefined) return 0;
-	if (typeof value === "string") return estimateTextTokens(value);
-	return estimateTextTokens(JSON.stringify(value));
-}
-
-function compactNoteForEstimate(note) {
-	if (!note || note._aiIgnored) return null;
-	return {
-		title: note.title || "",
-		text: note.text || "",
-	};
-}
-
-function compactEntityForEstimate(entity) {
-	if (!entity || entity._aiIgnored) return null;
-	return {
-		name:
-			[
-				entity.firstName || entity.first_name || "",
-				entity.lastName || entity.last_name || "",
-			]
-				.filter(Boolean)
-				.join(" ") ||
-			entity.name ||
-			entity.title ||
-			"",
-		description: entity.description || "",
-		motivation: entity.motivation || "",
-		trait: entity.trait || "",
-		notes: (entity.notes || []).map(compactNoteForEstimate).filter(Boolean),
-	};
-}
-
-function compactSessionForEstimate(data = {}) {
-	return {
-		notes: (data.notes || []).map(compactNoteForEstimate).filter(Boolean),
-		result: data.result_text || "",
-		scenes: (data.scenes || []).map((scene) => ({
-			texts: scene.texts || {},
-			notes: (scene.notes || []).map(compactNoteForEstimate).filter(Boolean),
-			npcs: scene.npcs || [],
-			encounterId: scene.encounterId || "",
-		})),
-		npcs: (data.npcs || []).map(compactEntityForEstimate).filter(Boolean),
-		locations: (data.locations || [])
-			.map(compactEntityForEstimate)
-			.filter(Boolean),
-	};
-}
-
-function getEstimatedAiMode({
-	isBestiary,
-	isEncounter,
-	isCampaign,
-	parseAIResponse,
-}) {
-	if (isBestiary) return "custom-monster";
-	if (!parseAIResponse) return "prompt";
-	if (isEncounter) return "encounter";
-	if (isCampaign) return "campaign";
-	return "scene";
-}
 
 function getResponsePreview(text) {
 	const plainText = [
@@ -281,6 +212,9 @@ function getHistoryRequestText(entry) {
 		entry?.request?.userInstructions || entry?.userInstructions || "",
 	);
 }
+
+const { buildRetryPayloadFromHistoryEntry, canRetryHistoryEntry } =
+	createAiHistoryWorkflow(getHistoryRequestText);
 
 function getHistoryModeName(mode) {
 	const labels = {
@@ -466,99 +400,6 @@ function getHistoryDetailRows(entry, language) {
 	if (createdAt) rows.push({ label: lang.t("Sent"), value: createdAt });
 
 	return rows;
-}
-
-function getHistoryChangeResources(entry) {
-	return Array.isArray(entry?.changes?.resources)
-		? entry.changes.resources
-		: [];
-}
-
-function getHistoryChangedEntityTypes(entry) {
-	return [
-		...new Set(
-			getHistoryChangeResources(entry)
-				.filter((resource) => resource?.kind === "entity" && resource.type)
-				.map((resource) => resource.type),
-		),
-	];
-}
-
-function getGeneratedEntityTypes(generated, historyEntry = null) {
-	const types = [];
-	if (Array.isArray(generated?.characters)) types.push("characters");
-	if (Array.isArray(generated?.npcs)) types.push("npc");
-	if (Array.isArray(generated?.locations)) types.push("locations");
-	if (types.length > 0) return types;
-	return historyEntry ? getHistoryChangedEntityTypes(historyEntry) : [];
-}
-
-function hasGeneratedCampaignChanges(generated, historyEntry = null) {
-	const operations = Array.isArray(generated?.operations)
-		? generated.operations
-		: [];
-	if (
-		operations.some(
-			(operation) =>
-				operation?.entity === "campaign" ||
-				operation?.scope === "campaign" ||
-				operation?.to === "campaign" ||
-				operation?.from === "campaign",
-		)
-	) {
-		return true;
-	}
-	return getHistoryChangeResources(historyEntry).some(
-		(resource) => resource?.kind === "campaign",
-	);
-}
-
-function hasHistoryChanges(entry) {
-	return getHistoryChangeResources(entry).length > 0;
-}
-
-function isFailedHistoryEntry(entry) {
-	return entry?.status === "failed";
-}
-
-function isNonParsedHistoryEntry(entry) {
-	return entry?.request?.options?.responseParsing === false;
-}
-
-function buildRetryPayloadFromHistoryEntry(entry) {
-	if (entry?.retryPayload && typeof entry.retryPayload === "object") {
-		return entry.retryPayload;
-	}
-	if (!isNonParsedHistoryEntry(entry)) return null;
-
-	const options = entry?.request?.options || {};
-	const path = entry?.path || {};
-	if (!path.campaign) return null;
-
-	return {
-		type: entry.type || options.mode || null,
-		modelName: entry.modelName || options.modelName || undefined,
-		userInstructions: getHistoryRequestText(entry),
-		path,
-		sceneId: options.sceneId || undefined,
-		imageTarget: options.imageTarget || undefined,
-		parseAIResponse: false,
-		generateCharacters: Boolean(options.characterGeneration),
-		generateNpcs: Boolean(options.npcGeneration),
-		generateLocations: Boolean(options.locationGeneration),
-		generateEncounters: false,
-		generateCustomMonsters: false,
-		contextConfig: null,
-		language: entry.language || undefined,
-	};
-}
-
-function canRetryHistoryEntry(entry) {
-	if (isFailedHistoryEntry(entry)) return Boolean(entry?.retryPayload);
-	if (isNonParsedHistoryEntry(entry)) {
-		return Boolean(buildRetryPayloadFromHistoryEntry(entry));
-	}
-	return false;
 }
 
 function getHistoryTitle(entry) {
@@ -1618,8 +1459,32 @@ export default function AiAssistantPanel({
 			userInstructionsOverride = null,
 		} = {},
 	) => {
-		const requestType =
-			isBestiary && type !== "image" ? "custom-monster" : type;
+		const { requestType, shouldParseResponse, payload } =
+			buildAiGenerationRequest({
+				type,
+				isBestiary,
+				isEncounter,
+				isCampaign,
+				forceParseAIResponse,
+				parseAIResponse,
+				selectedModel,
+				userInstructions,
+				userInstructionsOverride,
+				initialRoute,
+				targetSceneId,
+				imageTarget,
+				attachedImages,
+				attachedFiles,
+				imagePromptBasePromptOverride,
+				generateCharacters,
+				generateNpcs,
+				generateLocations,
+				generateEncounters,
+				generateCustomMonsters,
+				useContext,
+				contextConfig,
+				currentLanguage,
+			});
 		cancelGenerateRequest();
 		const controller = new AbortController();
 		activeGenerateControllerRef.current = controller;
@@ -1627,65 +1492,9 @@ export default function AiAssistantPanel({
 		setLoading(true);
 		setError("");
 
-		// Create a clean config copy without heavy session data.
-		// The server loads required files when needed.
-		const configToSend = JSON.parse(JSON.stringify(contextConfig));
-		if (configToSend.sessions) {
-			Object.keys(configToSend.sessions).forEach((slug) => {
-				delete configToSend.sessions[slug].data;
-			});
-		}
-
-		const shouldParseResponse =
-			requestType === "image"
-				? false
-				: isBestiary
-					? true
-					: forceParseAIResponse === null
-						? parseAIResponse
-						: forceParseAIResponse;
-		const structuredEntityOptionsEnabled =
-			shouldParseResponse && !isEncounter && !isBestiary;
 		try {
 			const data = await api.generateAi(
-				{
-					type: requestType,
-					modelName: selectedModel || undefined,
-					userInstructions:
-						userInstructionsOverride === null
-							? userInstructions
-							: userInstructionsOverride,
-					path: initialRoute,
-					sceneId: targetSceneId,
-					imageTarget,
-					attachedImages,
-					attachedFiles,
-					imagePromptBasePromptOverride,
-					parseAIResponse: shouldParseResponse,
-					generateCharacters: structuredEntityOptionsEnabled
-						? generateCharacters
-						: true,
-					generateNpcs: structuredEntityOptionsEnabled ? generateNpcs : true,
-					generateLocations: structuredEntityOptionsEnabled
-						? generateLocations
-						: true,
-					generateEncounters:
-						requestType === "image"
-							? false
-							: shouldParseResponse &&
-								!isCampaign &&
-								!isBestiary &&
-								generateEncounters,
-					generateCustomMonsters:
-						requestType !== "image" &&
-						shouldParseResponse &&
-						!isCampaign &&
-						!isBestiary &&
-						generateEncounters &&
-						generateCustomMonsters,
-					contextConfig: !isBestiary && useContext ? configToSend : null,
-					language: currentLanguage,
-				},
+				payload,
 				{ signal: controller.signal },
 			);
 			handleGeneratedAiData({

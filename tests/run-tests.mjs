@@ -76,6 +76,18 @@ import {
 	updateDraftResourceAfterValues,
 } from "../src/utils/aiResponseHelpers.js";
 import {
+	compactEntityForEstimate,
+	compactSessionForEstimate,
+	buildAiGenerationRequest,
+	createAiHistoryWorkflow,
+	estimateTextTokens,
+	estimateValueTokens,
+	getEstimatedAiMode,
+	getGeneratedEntityTypes,
+	hasGeneratedCampaignChanges,
+	sanitizeAiContextConfig,
+} from "../src/features/ai/index.js";
+import {
 	getSpellByName,
 	getConditionByName,
 	getDiseaseByName,
@@ -1357,6 +1369,116 @@ await run("AI route fills ids for current selected targets", () => {
 	assert.equal(payload.operations[0].id, "enc-1");
 	assert.equal(payload.operations[1].id, "scene-1");
 	assert.equal(payload.operations[2].id, undefined);
+});
+
+await run("AI feature model estimates context and rebuilds retry workflows", () => {
+	assert.equal(estimateTextTokens(""), 0);
+	assert.ok(estimateTextTokens("Український текст") > 0);
+	assert.equal(estimateValueTokens(null), 0);
+	assert.ok(estimateValueTokens({ prompt: "Create a scene" }) > 0);
+
+	assert.equal(
+		compactEntityForEstimate({ name: "Ignored", _aiIgnored: true }),
+		null,
+	);
+	assert.deepEqual(
+		compactEntityForEstimate({
+			firstName: "Iryna",
+			lastName: "Stone",
+			notes: [{ title: "Visible", text: "Text" }, { _aiIgnored: true }],
+		}),
+		{
+			name: "Iryna Stone",
+			description: "",
+			motivation: "",
+			trait: "",
+			notes: [{ title: "Visible", text: "Text" }],
+		},
+	);
+	assert.equal(
+		compactSessionForEstimate({ notes: [{ _aiIgnored: true }] }).notes.length,
+		0,
+	);
+
+	assert.equal(getEstimatedAiMode({ isBestiary: true }), "custom-monster");
+	assert.equal(
+		getEstimatedAiMode({ parseAIResponse: false, isEncounter: true }),
+		"prompt",
+	);
+	assert.equal(
+		getEstimatedAiMode({ parseAIResponse: true, isEncounter: true }),
+		"encounter",
+	);
+
+	const workflow = createAiHistoryWorkflow(() => "Retry this request");
+	const retryEntry = {
+		type: "campaign",
+		path: { campaign: "demo" },
+		request: {
+			options: {
+				responseParsing: false,
+				characterGeneration: true,
+			},
+		},
+	};
+	assert.equal(workflow.canRetryHistoryEntry(retryEntry), true);
+	assert.deepEqual(workflow.buildRetryPayloadFromHistoryEntry(retryEntry), {
+		type: "campaign",
+		modelName: undefined,
+		userInstructions: "Retry this request",
+		path: { campaign: "demo" },
+		sceneId: undefined,
+		imageTarget: undefined,
+		parseAIResponse: false,
+		generateCharacters: true,
+		generateNpcs: false,
+		generateLocations: false,
+		generateEncounters: false,
+		generateCustomMonsters: false,
+		contextConfig: null,
+		language: undefined,
+	});
+	assert.deepEqual(getGeneratedEntityTypes({ npcs: [] }), ["npc"]);
+	assert.equal(
+		hasGeneratedCampaignChanges({ operations: [{ scope: "campaign" }] }),
+		true,
+	);
+
+	const originalContext = {
+		sessions: { first: { included: true, data: { scenes: ["heavy"] } } },
+	};
+	assert.deepEqual(sanitizeAiContextConfig(originalContext), {
+		sessions: { first: { included: true } },
+	});
+	assert.ok(originalContext.sessions.first.data);
+
+	const generationRequest = buildAiGenerationRequest({
+		type: "scene",
+		parseAIResponse: true,
+		initialRoute: { campaign: "demo", session: "one" },
+		userInstructions: "Continue",
+		generateNpcs: true,
+		generateEncounters: true,
+		generateCustomMonsters: true,
+		useContext: true,
+		contextConfig: originalContext,
+		currentLanguage: "uk",
+	});
+	assert.equal(generationRequest.requestType, "scene");
+	assert.equal(generationRequest.shouldParseResponse, true);
+	assert.equal(generationRequest.payload.generateNpcs, true);
+	assert.equal(generationRequest.payload.generateEncounters, true);
+	assert.equal(generationRequest.payload.generateCustomMonsters, true);
+	assert.equal(generationRequest.payload.contextConfig.sessions.first.data, undefined);
+
+	const imageRequest = buildAiGenerationRequest({
+		type: "image",
+		isBestiary: true,
+		parseAIResponse: true,
+	});
+	assert.equal(imageRequest.requestType, "image");
+	assert.equal(imageRequest.shouldParseResponse, false);
+	assert.equal(imageRequest.payload.generateEncounters, false);
 });
 
 await run("AI route treats custom monster image prompts as bestiary requests", () => {

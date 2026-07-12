@@ -99,13 +99,26 @@ Acceptance criteria:
 
 ## Phase 4 — AI workflow decomposition
 
-Status: **Planned**
+Status: **In progress**
+
+Delivered:
+
+- Pure token-estimation and context-compaction logic moved to `src/features/ai/model/tokenEstimation.js`.
+- AI history change detection and retry-payload reconstruction moved to `src/features/ai/model/historyWorkflow.js`.
+- AI request-mode resolution, payload construction, and removal of heavy session data moved to `src/features/ai/model/generationRequest.js`.
+- Focused regression tests cover ignored context, mode selection, retry reconstruction, generated entity types, and campaign-change detection.
+- `AiAssistantPanel` now consumes these feature model APIs instead of owning their implementations.
 
 Frontend scope:
 
 - Split `AiAssistantPanel` into context selection, prompt editing, generation, history, draft review, apply/undo, and image-prompt workflows.
 - Replace boolean combinations with explicit workflow statuses.
 - Keep campaign/session/bestiary adapters outside reusable AI workflow UI.
+
+Next checkpoint:
+
+- Extract request construction and generation lifecycle from `AiAssistantPanel` behind an explicit workflow status model.
+- Then split history UI orchestration and apply/undo synchronization before moving visual subcomponents.
 
 Backend scope:
 

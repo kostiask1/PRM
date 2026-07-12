@@ -90,6 +90,7 @@
 - What: prompt UI, context selection, image prompt generation, parsed operations, draft/apply/undo, history and retry.
 - Main UI: `src/components/AiAssistantPanel.jsx`, `src/components/ai/AiResponseModal.jsx`, `src/components/ai/AiResponseHistory.jsx`, `src/components/ai/AiImagePromptPickerModal.jsx`.
 - Backend: `server/routes/ai.js`, `server/aiService.js`, `server/aiPatchService.js`, `server/aiPayloadSchemas.js`, `server/aiHistoryService.js`, `server/aiResponseHistoryService.js`.
+- Frontend feature model: `src/features/ai/model/*`; pure estimation, history and workflow rules do not belong inside `AiAssistantPanel.jsx`.
 - Schema: parsed AI must return `{ "version": 2, "operations": [...] }`.
 - Allowed operation style is domain-specific (`create`, `update`, `delete`, `appendNote`, `updateNote`, `deleteNote`, `moveScope`), not raw RFC JSON Patch.
 - AI history is campaign-scoped in `data/campaigns/{slug}/_aiResponses.json`.
