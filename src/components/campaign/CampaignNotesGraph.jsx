@@ -1151,7 +1151,10 @@ export default function CampaignNotesGraph({
 
 	const handleRelayout = useCallback(() => {
 		hasManualPositionsRef.current = false;
-		const nextPositions = layoutCampaignGraph(graph.nodes, graph.edges);
+		const nextPositions = layoutCampaignGraph(
+			visibleGraph.nodes,
+			visibleGraph.edges,
+		);
 		setFlowNodes((currentNodes) =>
 			currentNodes.map((node) => ({
 				...node,
@@ -1161,7 +1164,12 @@ export default function CampaignNotesGraph({
 		requestAnimationFrame(() => {
 			flowInstance?.fitView({ padding: 0.16, duration: 520 });
 		});
-	}, [flowInstance, graph.edges, graph.nodes, setFlowNodes]);
+	}, [
+		flowInstance,
+		setFlowNodes,
+		visibleGraph.edges,
+		visibleGraph.nodes,
+	]);
 
 	const handleNodeDragStop = useCallback(
 		(_event, draggedNode) => {
