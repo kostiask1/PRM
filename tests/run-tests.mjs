@@ -78,6 +78,8 @@ import {
 import {
 	compactEntityForEstimate,
 	compactSessionForEstimate,
+	AI_GENERATION_STATUS,
+	aiGenerationLifecycleReducer,
 	buildAiGenerationRequest,
 	createAiHistoryWorkflow,
 	estimateTextTokens,
@@ -85,6 +87,8 @@ import {
 	getEstimatedAiMode,
 	getGeneratedEntityTypes,
 	hasGeneratedCampaignChanges,
+	initialAiGenerationLifecycle,
+	isAiGenerationPending,
 	sanitizeAiContextConfig,
 } from "../src/features/ai/index.js";
 import {
@@ -1479,6 +1483,38 @@ await run("AI feature model estimates context and rebuilds retry workflows", () 
 	assert.equal(imageRequest.requestType, "image");
 	assert.equal(imageRequest.shouldParseResponse, false);
 	assert.equal(imageRequest.payload.generateEncounters, false);
+
+	const generating = aiGenerationLifecycleReducer(initialAiGenerationLifecycle, {
+		type: "start-generation",
+		requestId: 1,
+	});
+	assert.equal(generating.status, AI_GENERATION_STATUS.GENERATING);
+	assert.equal(isAiGenerationPending(generating), true);
+	assert.equal(
+		aiGenerationLifecycleReducer(generating, {
+			type: "cancel",
+			requestId: 0,
+		}),
+		generating,
+	);
+	const succeeded = aiGenerationLifecycleReducer(generating, {
+		type: "succeed",
+		requestId: 1,
+	});
+	assert.equal(succeeded.status, AI_GENERATION_STATUS.SUCCEEDED);
+	assert.equal(isAiGenerationPending(succeeded), false);
+	const retrying = aiGenerationLifecycleReducer(succeeded, {
+		type: "start-retry",
+		requestId: 2,
+	});
+	assert.equal(retrying.status, AI_GENERATION_STATUS.RETRYING);
+	assert.equal(
+		aiGenerationLifecycleReducer(retrying, {
+			type: "fail",
+			requestId: 2,
+		}).status,
+		AI_GENERATION_STATUS.FAILED,
+	);
 });
 
 await run("AI route treats custom monster image prompts as bestiary requests", () => {

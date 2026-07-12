@@ -6,6 +6,7 @@
 	useCallback,
 	useEffect,
 	useMemo,
+	useReducer,
 	useRef,
 	useState,
 } from "react";
@@ -16,6 +17,7 @@ import {
 	aiApi,
 	ESTIMATED_IMAGE_TOKENS,
 	SYSTEM_TOKEN_ESTIMATES,
+	aiGenerationLifecycleReducer,
 	buildAiGenerationRequest,
 	compactEntityForEstimate,
 	compactNoteForEstimate,
@@ -26,6 +28,8 @@ import {
 	getHistoryChangedEntityTypes,
 	hasGeneratedCampaignChanges,
 	hasHistoryChanges,
+	initialAiGenerationLifecycle,
+	isAiGenerationPending,
 	isFailedHistoryEntry,
 	getEstimatedAiMode,
 } from "../../features/ai/index.js";
@@ -474,7 +478,13 @@ export default function AiAssistantPanel({
 
 	const [isOpen, setIsOpen] = useState(false);
 	const [isContextModalOpen, setIsContextModalOpen] = useState(false);
-	const [loading, setLoading] = useState(false);
+	const [isContextLoading, setIsContextLoading] = useState(false);
+	const [generationLifecycle, dispatchGenerationLifecycle] = useReducer(
+		aiGenerationLifecycleReducer,
+		initialAiGenerationLifecycle,
+	);
+	const loading =
+		isContextLoading || isAiGenerationPending(generationLifecycle);
 	const [useContext, setUseContext] = useState(true);
 	const [error, setError] = useState("");
 	const [isApiKeyMissing, setIsApiKeyMissing] = useState(false);
@@ -544,6 +554,7 @@ export default function AiAssistantPanel({
 	const [responseHistorySizeBytes, setResponseHistorySizeBytes] = useState(0);
 	const [isRestoringResponse, setIsRestoringResponse] = useState(false);
 	const activeGenerateControllerRef = useRef(null);
+	const nextGenerationRequestIdRef = useRef(0);
 	const generatedPromptRef = useRef(null);
 	const imagePromptCampaignDataLoadedRef = useRef(false);
 	const imagePromptCampaignEntitiesLoadedRef = useRef(false);
@@ -1262,7 +1273,7 @@ export default function AiAssistantPanel({
 	const toggleSessionDetails = async (sessionSlug) => {
 		const isExpanded = !!expandedSessions[sessionSlug];
 		if (!isExpanded && !contextConfig.sessions[sessionSlug]?.data) {
-			setLoading(true);
+			setIsContextLoading(true);
 			try {
 				const fullData = await api.getSession(
 					initialRoute.campaign,
@@ -1286,7 +1297,7 @@ export default function AiAssistantPanel({
 			} catch (err) {
 				console.error("Failed to fetch session details", err);
 			} finally {
-				setLoading(false);
+				setIsContextLoading(false);
 			}
 		}
 		setExpandedSessions((prev) => ({ ...prev, [sessionSlug]: !isExpanded }));
@@ -1487,9 +1498,10 @@ export default function AiAssistantPanel({
 			});
 		cancelGenerateRequest();
 		const controller = new AbortController();
+		const requestId = (nextGenerationRequestIdRef.current += 1);
 		activeGenerateControllerRef.current = controller;
 		setCanCancelGenerate(true);
-		setLoading(true);
+		dispatchGenerationLifecycle({ type: "start-generation", requestId });
 		setError("");
 
 		try {
@@ -1502,10 +1514,13 @@ export default function AiAssistantPanel({
 				requestType,
 				shouldParseResponse,
 			});
+			dispatchGenerationLifecycle({ type: "succeed", requestId });
 		} catch (err) {
 			if (err?.name === "AbortError") {
+				dispatchGenerationLifecycle({ type: "cancel", requestId });
 				return;
 			}
+			dispatchGenerationLifecycle({ type: "fail", requestId });
 			if (err.data?.aiResponse) {
 				upsertResponseHistoryEntry(err.data.aiResponse);
 			}
@@ -1530,7 +1545,6 @@ export default function AiAssistantPanel({
 				activeGenerateControllerRef.current = null;
 				setCanCancelGenerate(false);
 			}
-			setLoading(false);
 		}
 	};
 
@@ -1548,9 +1562,10 @@ export default function AiAssistantPanel({
 
 		cancelGenerateRequest();
 		const controller = new AbortController();
+		const requestId = (nextGenerationRequestIdRef.current += 1);
 		activeGenerateControllerRef.current = controller;
 		setCanCancelGenerate(true);
-		setLoading(true);
+		dispatchGenerationLifecycle({ type: "start-retry", requestId });
 		setError("");
 
 		try {
@@ -1575,8 +1590,13 @@ export default function AiAssistantPanel({
 				shouldParseResponse,
 				clearPromptOnApplied: false,
 			});
+			dispatchGenerationLifecycle({ type: "succeed", requestId });
 		} catch (err) {
-			if (err?.name === "AbortError") return;
+			if (err?.name === "AbortError") {
+				dispatchGenerationLifecycle({ type: "cancel", requestId });
+				return;
+			}
+			dispatchGenerationLifecycle({ type: "fail", requestId });
 			if (err.data?.aiResponse) {
 				upsertResponseHistoryEntry(err.data.aiResponse);
 			}
@@ -1594,7 +1614,6 @@ export default function AiAssistantPanel({
 				activeGenerateControllerRef.current = null;
 				setCanCancelGenerate(false);
 			}
-			setLoading(false);
 		}
 	};
 
