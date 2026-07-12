@@ -658,6 +658,7 @@ export default function CampaignNotesGraph({
 	const fittedNodeTopologyRef = useRef(null);
 	const positionedCampaignRef = useRef(campaign.slug);
 	const hasManualPositionsRef = useRef(false);
+	const shouldRelayoutForFilterRef = useRef(false);
 	const simplifiedNotesEnabled = useAppSelector(
 		(state) => state.ui.simplifiedNotes,
 	);
@@ -903,6 +904,33 @@ export default function CampaignNotesGraph({
 		visibleGraph.visibleNodeIds,
 	]);
 
+	useEffect(() => {
+		if (!shouldRelayoutForFilterRef.current) return undefined;
+		shouldRelayoutForFilterRef.current = false;
+
+		const nextPositions = layoutCampaignGraph(
+			visibleGraph.nodes,
+			visibleGraph.edges,
+		);
+		setFlowNodes((currentNodes) =>
+			currentNodes.map((node) =>
+				nextPositions[node.id]
+					? { ...node, position: nextPositions[node.id] }
+					: node,
+			),
+		);
+
+		const frame = requestAnimationFrame(() => {
+			flowInstance?.fitView({ padding: 0.16, duration: 360 });
+		});
+		return () => cancelAnimationFrame(frame);
+	}, [
+		flowInstance,
+		setFlowNodes,
+		visibleGraph.edges,
+		visibleGraph.nodes,
+	]);
+
 	const flowEdges = useMemo(() => {
 		const positions = new Map(flowNodes.map((node) => [node.id, node.position]));
 		const hasFocus = Boolean(focusedNodeId);
@@ -1049,6 +1077,7 @@ export default function CampaignNotesGraph({
 	);
 
 	const toggleFilter = (filterId) => {
+		shouldRelayoutForFilterRef.current = true;
 		setEnabledFilters((previous) => ({
 			...previous,
 			[filterId]: !previous[filterId],
