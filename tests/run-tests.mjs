@@ -16,19 +16,22 @@ import {
 	createEditor,
 } from "lexical";
 
-import { idsEqual } from "../src/utils/id.js";
-import { isJsonObject, isJsonString } from "../src/utils/json.js";
+import { idsEqual } from "../src/shared/lib/index.js";
+import { isJsonObject, isJsonString } from "../src/shared/lib/index.js";
 import {
 	matchesMonsterSearch,
 	getMonsterTypeString,
-} from "../src/utils/bestiary.js";
-import classNames from "../src/utils/classNames.js";
+} from "../src/entities/bestiary/index.js";
+import { classNames } from "../src/shared/lib/index.js";
+import { applyTheme, THEMES } from "../src/features/settings/index.js";
 import {
 	getDiceProbabilityDistribution,
 	rollDiceFormula,
-} from "../src/utils/dice.js";
-import { extractContentTokens } from "../src/utils/contentTokens.js";
-import { preprocessTags } from "../src/utils/parserTags.js";
+} from "../src/shared/lib/index.js";
+import {
+	extractContentTokens,
+	preprocessTags,
+} from "../src/entities/reference/model.js";
 import {
 	addUndoSnapshot,
 	createDistinctRedoTransition,
@@ -37,11 +40,11 @@ import {
 	createUndoTransition,
 	isHistoryShortcutEvent,
 	shouldUseAppHistoryForEvent,
-} from "../src/utils/undoRedo.js";
+} from "../src/shared/lib/index.js";
 import {
 	normalizeConditionName,
 	loadConditionsMap,
-} from "../src/utils/conditions.js";
+} from "../src/entities/reference/model.js";
 import {
 	createEmptyNote as createModelEmptyNote,
 	getNoteRenderKey,
@@ -50,31 +53,33 @@ import {
 	isVirtualNoteId,
 	sanitizeNotesForSave,
 	upsertNoteById,
-} from "../src/utils/noteUtils.js";
+} from "../src/shared/lib/index.js";
 import {
 	MENTION_BOUNDARY,
 	createMentionBoundaryNode,
 	handleSpaceAfterMention,
-} from "../src/utils/mentionEditor.js";
+} from "../src/features/editor/model.js";
 import {
 	buildNavigationUrl,
 	parseUrl,
 	shouldOpenInNewTabFromEvent,
-} from "../src/utils/navigation.js";
-import { downloadBlob, downloadJsonFile } from "../src/utils/download.js";
+} from "../src/shared/lib/index.js";
+import { downloadBlob, downloadJsonFile } from "../src/shared/lib/index.js";
 import {
 	createEncounterMonsterInstance,
 	ensureEncounterMonsterId,
 	getMonsterBaseHp,
 	hasMonsterHpFormula,
-} from "../src/utils/encounters.js";
+} from "../src/entities/encounter/index.js";
 import {
 	addSourceMonsterImageToDraft,
+	buildDiffResources,
+	getDiffResourceState,
 	getFirstChangedMonster,
 	getFirstChangedMonsterName,
 	isAiResponseVisibleForRoute,
 	updateDraftResourceAfterValues,
-} from "../src/utils/aiResponseHelpers.js";
+} from "../src/features/ai/index.js";
 import {
 	compactEntityForEstimate,
 	compactSessionForEstimate,
@@ -94,6 +99,10 @@ import {
 	estimateValueTokens,
 	getEstimatedAiMode,
 	getGeneratedEntityTypes,
+	getAttachedFileKey,
+	getAttachedImageKey,
+	getSupportedAiFileMimeType,
+	getSupportedAiImageMimeType,
 	getAiHistoryCampaign,
 	getAiHistoryRestoreMode,
 	getContextListConfig,
@@ -116,7 +125,7 @@ import {
 	getSenseByName,
 	getSkillByName,
 	getVariantRuleByName,
-} from "../src/utils/referencePreview.js";
+} from "../src/entities/reference/model.js";
 import {
 	resolveSpellInput,
 	resolveConditionInput,
@@ -124,22 +133,22 @@ import {
 	resolveSenseInput,
 	resolveSkillInput,
 	resolveVariantRuleInput,
-} from "../src/utils/referenceResolvers.js";
+} from "../src/entities/reference/model.js";
 import {
 	buildCampaignGraph,
 	extractBracketMentions,
 	normalizeGraphName,
-} from "../src/utils/campaignGraph.js";
+} from "../src/pages/campaign/graph.js";
 import {
 	getCampaignGraphNodeSize,
 	layoutCampaignGraph,
 	resolveCampaignGraphNodeCollision,
-} from "../src/utils/campaignGraphLayout.js";
-import CampaignViewModel from "../src/models/CampaignViewModel.js";
-import SessionViewModel from "../src/models/SessionViewModel.js";
-import MonsterStatBlockModel from "../src/models/MonsterStatBlockModel.js";
-import SpellCardModel from "../src/models/SpellCardModel.js";
-import LocationCardModel from "../src/models/LocationCardModel.js";
+} from "../src/pages/campaign/graph.js";
+import { CampaignViewModel } from "../src/entities/campaign/index.js";
+import { SessionViewModel } from "../src/entities/session/index.js";
+import { MonsterStatBlockModel } from "../src/entities/bestiary/index.js";
+import { SpellCardModel } from "../src/entities/spell/index.js";
+import { LocationCardModel } from "../src/entities/campaign/index.js";
 import {
 	areHistoryStatesEqual,
 	campaignHistoryPayload,
@@ -156,9 +165,29 @@ import {
 	findEntityByName,
 	getEntityDisplayName,
 	resolveEntityByName,
-} from "../src/services/entities.js";
+} from "../src/entities/campaign/index.js";
 import { campaignApi } from "../src/entities/campaign/index.js";
 import { spellApi } from "../src/entities/spell/index.js";
+import {
+	buildCreateEntityPayload,
+	createCampaignEntityClient,
+	removeEntityById,
+	replaceEntityById,
+	withEntityOrder,
+} from "../src/features/campaign-entity/index.js";
+import {
+	addScene as addSessionScene,
+	createEmptyScene,
+	removeScene as removeSessionScene,
+	sceneRequiresDeleteConfirmation,
+	toggleSceneNoteCollapse,
+	updateSceneField,
+	updateSceneNote,
+} from "../src/features/session-editor/index.js";
+import {
+	buildEntityImageMap,
+	synchronizeCustomMonsterParticipants,
+} from "../src/features/encounter-editor/index.js";
 
 const require = createRequire(import.meta.url);
 const storage = require("../server/storage.js");
@@ -170,6 +199,97 @@ const aiService = require("../server/aiService.js");
 const {
 	buildPromptContext,
 } = require("../server/modules/ai/application/buildPromptContext.js");
+const {
+	buildUserPrompt,
+} = require("../server/modules/ai/application/buildUserPrompt.js");
+const {
+	buildSystemInstruction,
+} = require("../server/modules/ai/application/buildSystemInstruction.js");
+const {
+	createGeminiGateway,
+} = require("../server/modules/ai/infrastructure/geminiGateway.js");
+const {
+	buildFileParts,
+} = require("../server/modules/ai/infrastructure/attachmentParts.js");
+const {
+	parseAiResponseText,
+} = require("../server/modules/ai/application/parseAiResponse.js");
+const {
+	resolveAiRequest,
+	selectAiModel,
+} = require("../server/modules/ai/application/resolveAiRequest.js");
+const {
+	prepareGenerateAiRequest,
+} = require("../server/modules/ai/application/prepareGenerateAiRequest.js");
+const {
+	createGenerateBestiaryImagePrompt,
+} = require("../server/modules/ai/application/generateBestiaryImagePrompt.js");
+const {
+	createGenerateCustomMonster,
+} = require("../server/modules/ai/application/generateCustomMonster.js");
+const {
+	createGenerateCampaignContent,
+} = require("../server/modules/ai/application/generateCampaignContent.js");
+const {
+	createAppendConfiguredCampaignContext,
+} = require("../server/modules/ai/application/campaignContext.js");
+const {
+	createAiHistoryRepositoryPort,
+} = require("../server/modules/ai/application/ports/aiHistoryRepository.js");
+const {
+	createFileAiHistoryRepository,
+} = require("../server/modules/ai/infrastructure/fileAiHistoryRepository.js");
+const {
+	createAiHistoryCommands,
+} = require("../server/modules/ai/application/aiHistoryCommands.js");
+const {
+	createGenerateAiRequest,
+} = require("../server/modules/ai/application/generateAiRequest.js");
+const {
+	createSaveGeminiApiKey,
+} = require("../server/modules/ai/application/saveGeminiApiKey.js");
+const {
+	createEnvApiKeyStore,
+	updateEnvValue,
+} = require("../server/modules/ai/infrastructure/envApiKeyStore.js");
+const {
+	createCampaignEntityCommands,
+} = require("../server/modules/campaign/application/campaignEntityCommands.js");
+const {
+	createCampaignCommands,
+} = require("../server/modules/campaign/application/campaignCommands.js");
+const {
+	createBestiaryCommands,
+} = require("../server/modules/bestiary/application/bestiaryCommands.js");
+const {
+	createSettingsCommands,
+} = require("../server/modules/settings/application/settingsCommands.js");
+const {
+	createImageCommands,
+	parseGalleryQuery,
+} = require("../server/modules/images/application/imageCommands.js");
+const {
+	createReferenceCommands,
+} = require("../server/modules/reference/application/referenceCommands.js");
+const {
+	createBackupCommands,
+	parseArchivePayload,
+} = require("../server/modules/backups/application/backupCommands.js");
+const {
+	createCampaignEntityScopeCommands,
+} = require("../server/modules/campaign/application/campaignEntityScopeCommands.js");
+const {
+	createSceneEncounterCommand,
+} = require("../server/modules/session/application/createSceneEncounter.js");
+const {
+	createUpdateEncounterCommand,
+} = require("../server/modules/session/application/updateEncounter.js");
+const {
+	createSessionCommands,
+} = require("../server/modules/session/application/sessionCommands.js");
+const {
+	createFileCampaignEntityRepository,
+} = require("../server/modules/campaign/infrastructure/fileCampaignEntityRepository.js");
 const aiHistoryService = require("../server/aiHistoryService.js");
 const aiResponseHistoryService = require("../server/aiResponseHistoryService.js");
 const aiPatchService = require("../server/aiPatchService.js");
@@ -1105,6 +1225,1097 @@ await run("AI prompt context filters ignored data and selected scene fields", ()
 	assert.equal("notes" in context.selectedSessions[0].scenes[0], false);
 });
 
+await run("AI user prompt preserves mode-specific scope and encounter rules", () => {
+	const scenePrompt = buildUserPrompt({
+		contextJson: { campaign: { name: "Demo" } },
+		useKey: "scene",
+		entityTargetScope: "mixed",
+		encounterGenerationEnabled: true,
+		userInstructions: "Create an ambush.",
+	});
+	assert.match(scenePrompt, /INPUT DATA \(JSON\)/);
+	assert.match(scenePrompt, /\[Exact Entity Name\]/);
+	assert.match(scenePrompt, /Never create orphan encounters/);
+	assert.match(scenePrompt, /USER INSTRUCTIONS \(PRIORITY\): Create an ambush\./);
+
+	const imagePrompt = buildUserPrompt({
+		contextJson: {},
+		useKey: "image",
+		imageTarget: { type: "npc", name: "Iryna" },
+		userInstructions: "Painterly.",
+	});
+	assert.match(imagePrompt, /IMAGE TARGET \(JSON\)/);
+	assert.match(imagePrompt, /selected npc/);
+
+	const encounterPrompt = buildUserPrompt({
+		contextJson: {},
+		useKey: "encounter",
+		encounterId: "enc-1",
+		customMonsterGenerationEnabled: true,
+	});
+	assert.match(encounterPrompt, /enc-1/);
+	assert.match(encounterPrompt, /Custom monster creation is allowed/);
+});
+
+await run("AI system instruction composes mode contracts and generation toggles", () => {
+	const instruction = buildSystemInstruction({
+		useKey: "scene",
+		responseLanguage: { label: "Ukrainian" },
+		usesStructuredJsonContract: true,
+		simplifiedNotesEnabled: true,
+		effectiveParseAIResponse: true,
+		npcGenerationEnabled: true,
+		locationGenerationEnabled: false,
+		encounterGenerationEnabled: true,
+		customMonsterGenerationEnabled: false,
+		characterGenerationEnabled: false,
+		entityTargetScope: "mixed",
+		globalBasePrompt: "Dark fantasy",
+		campaignBasePrompt: "Low magic",
+	});
+	assert.match(instruction, /MANDATORY LANGUAGE RULE/);
+	assert.match(instruction, /SIMPLIFIED NOTES MODE IS ENABLED/);
+	assert.match(instruction, /Every created encounter MUST be paired/);
+	assert.match(instruction, /Custom monster generation is disabled/);
+	assert.match(instruction, /Character generation is disabled/);
+	assert.match(instruction, /Location\/faction generation is disabled/);
+	assert.match(instruction, /Never output "scope": "mixed"/);
+	assert.match(instruction, /GLOBAL BASE PROMPT:\nDark fantasy/);
+	assert.match(instruction, /CAMPAIGN BASE PROMPT:\nLow magic/);
+
+	const imageInstruction = buildSystemInstruction({
+		useKey: "image",
+		responseLanguage: { label: "English" },
+		imagePromptBasePrompt: "Oil painting",
+	});
+	assert.doesNotMatch(imageInstruction, /MANDATORY LANGUAGE RULE/);
+	assert.match(imageInstruction, /IMAGE PROMPT BASE STYLE/);
+	assert.match(imageInstruction, /Oil painting/);
+});
+
+await run("Gemini gateway owns SDK request shaping and refreshes changed keys", async () => {
+	let apiKey = "first";
+	const createdKeys = [];
+	const modelConfigs = [];
+	const requestPayloads = [];
+	const gateway = createGeminiGateway({
+		getApiKey: () => apiKey,
+		createClient: (key) => {
+			createdKeys.push(key);
+			return {
+				getGenerativeModel(config) {
+					modelConfigs.push(config);
+					return {
+						async generateContent(payload) {
+							requestPayloads.push(payload);
+							return {
+								response: Promise.resolve({ text: () => "generated" }),
+							};
+						},
+					};
+				},
+			};
+		},
+	});
+	const firstResult = await gateway.generateText({
+		modelName: "gemini-test",
+		systemInstruction: "System",
+		useJsonResponse: true,
+		userPrompt: "Prompt",
+		attachmentParts: [{ inlineData: { data: "a", mimeType: "image/png" } }],
+	});
+	assert.equal(firstResult, "generated");
+	assert.equal(modelConfigs[0].generationConfig.responseMimeType, "application/json");
+	assert.deepEqual(requestPayloads[0][0], { text: "Prompt" });
+	await gateway.generateText({
+		modelName: "gemini-test",
+		systemInstruction: "System",
+		useJsonResponse: false,
+		userPrompt: "Plain",
+	});
+	assert.equal(createdKeys.length, 1);
+	assert.equal(requestPayloads[1], "Plain");
+	apiKey = "second";
+	await gateway.generateText({
+		modelName: "gemini-test",
+		systemInstruction: "System",
+		userPrompt: "Changed key",
+	});
+	assert.deepEqual(createdKeys, ["first", "second"]);
+});
+
+await run("AI attachment infrastructure converts text and binary files", () => {
+	const textData = Buffer.from("Session notes", "utf8").toString("base64");
+	assert.deepEqual(
+		buildFileParts([
+			{ name: "notes.md", mimeType: "text/markdown", data: textData },
+		]),
+		[
+			{
+				text: "ATTACHED FILE: notes.md (text/markdown)\n\nSession notes",
+			},
+		],
+	);
+	const pdfData = Buffer.from("fake pdf", "utf8").toString("base64");
+	const pdfParts = buildFileParts([
+		{ name: "source.pdf", mimeType: "application/pdf", data: pdfData },
+	]);
+	assert.equal(pdfParts[0].text, "ATTACHED FILE: source.pdf (application/pdf)");
+	assert.equal(pdfParts[1].inlineData.mimeType, "application/pdf");
+	assert.equal(pdfParts[1].inlineData.data, pdfData);
+});
+
+await run("AI response parser handles plain parsed and invalid responses", () => {
+	assert.equal(
+		parseAiResponseText({ text: "Line one\\nLine two", shouldParse: false }),
+		"Line one\nLine two",
+	);
+	assert.deepEqual(
+		parseAiResponseText({
+			text: 'Before {"notes":["One\\\\nTwo"]} after',
+			shouldParse: true,
+		}),
+		{ notes: ["One\nTwo"] },
+	);
+	const parseErrors = [];
+	assert.deepEqual(
+		parseAiResponseText({
+			text: "not json\\nraw",
+			shouldParse: true,
+			onParseError: (...args) => parseErrors.push(args),
+		}),
+		{
+			error: "AI returned invalid JSON. Try again.",
+			raw_response: "not json\nraw",
+		},
+	);
+	assert.equal(parseErrors.length, 1);
+});
+
+await run("AI request resolution selects modes scopes and model fallbacks", () => {
+	const scene = resolveAiRequest({
+		type: "scene",
+		session: { id: "session" },
+		parseAIResponse: true,
+		generateEncounters: true,
+		generateCustomMonsters: true,
+		entityScope: "mixed",
+		language: "uk",
+	});
+	assert.equal(scene.useKey, "scene");
+	assert.equal(scene.entityTargetScope, "mixed");
+	assert.equal(scene.customMonsterGenerationEnabled, true);
+	assert.equal(scene.responseLanguage.label, "Ukrainian");
+	assert.equal(scene.usesStructuredJsonContract, true);
+
+	const disabledEncounter = resolveAiRequest({
+		type: "encounter",
+		session: { id: "session" },
+		encounterId: "encounter",
+		parseAIResponse: true,
+		generateEncounters: false,
+		language: "en",
+	});
+	assert.equal(disabledEncounter.useKey, "prompt");
+	assert.equal(disabledEncounter.effectiveParseAIResponse, false);
+	assert.equal(disabledEncounter.entityTargetScope, "campaign");
+
+	const customMonster = resolveAiRequest({
+		type: "custom-monster",
+		parseAIResponse: false,
+		language: "English",
+	});
+	assert.equal(customMonster.useKey, "custom-monster");
+	assert.equal(customMonster.effectiveParseAIResponse, true);
+	assert.equal(
+		selectAiModel(
+			{
+				models: [{ name: "gemini-selected" }],
+				defaultModel: "gemini-default",
+			},
+			"models/gemini-selected",
+		),
+		"gemini-selected",
+	);
+	assert.equal(
+		selectAiModel(
+			{ models: [], defaultModel: "gemini-default" },
+			"missing",
+		),
+		"gemini-default",
+	);
+});
+
+await run("AI generation preparation resolves settings without HTTP or files", async () => {
+	let settingsReads = 0;
+	const prepared = await prepareGenerateAiRequest({
+		payload: {
+			type: "scene",
+			path: { campaign: "demo", session: "session-1" },
+			language: "UK",
+			parseAIResponse: true,
+			generateEncounters: true,
+			generateCustomMonsters: true,
+			generateLocations: false,
+		},
+		apiKeyConfigured: true,
+		readSettings: async () => {
+			settingsReads += 1;
+			return {
+				simplifiedNotes: true,
+				autoApplyAiChanges: false,
+				aiBasePrompt: "Global",
+				imagePromptBasePrompt: "Image",
+				campaignAiBasePrompts: { demo: "Campaign" },
+			};
+		},
+	});
+	assert.equal(settingsReads, 1);
+	assert.equal(prepared.responseLanguage, "uk");
+	assert.equal(prepared.entityTargetScope, "mixed");
+	assert.equal(prepared.encounterGenerationEnabled, true);
+	assert.equal(prepared.customMonsterGenerationEnabled, true);
+	assert.equal(prepared.locationGenerationEnabled, false);
+	assert.equal(prepared.autoApplyAiChanges, false);
+	assert.equal(prepared.campaignBasePrompt, "Campaign");
+
+	assert.deepEqual(
+		await prepareGenerateAiRequest({
+			payload: {},
+			apiKeyConfigured: true,
+			readSettings: async () => {
+				throw new Error("settings must not be read");
+			},
+		}),
+		{ error: { status: 400, message: "language is required." } },
+	);
+	assert.deepEqual(
+		await prepareGenerateAiRequest({
+			payload: { language: "en" },
+			apiKeyConfigured: false,
+			readSettings: async () => {
+				throw new Error("settings must not be read");
+			},
+		}),
+		{
+			error: { status: 500, message: "GEMINI_API_KEY is not configured." },
+		},
+	);
+});
+
+await run("Bestiary image generation command runs without Express or Gemini", async () => {
+	const generatedRequests = [];
+	const savedEntries = [];
+	const historyWriter = {
+		buildRequestSnapshot: (request) => ({ snapshot: request }),
+		cloneRetryPayload: (payload) => ({ retry: payload.type }),
+		saveFailed: async () => {
+			throw new Error("not expected");
+		},
+	};
+	const command = createGenerateBestiaryImagePrompt({
+		generateContent: async (request) => {
+			generatedRequests.push(request);
+			return "Portrait prompt";
+		},
+		addAiResponse: async (entry) => {
+			savedEntries.push(entry);
+			return { id: "history-1", ...entry };
+		},
+		historyWriter,
+	});
+	const payload = {
+		type: "image",
+		modelName: "gemini-test",
+		userInstructions: "Paint Iryna",
+		imageTarget: { type: "custom-monster", name: "Mavka" },
+		attachedImages: [],
+		attachedFiles: [],
+	};
+	const result = await command({
+		payload,
+		preparedRequest: {
+			responseLanguage: "uk",
+			simplifiedNotesEnabled: true,
+			globalBasePrompt: "Global",
+			imagePromptBasePrompt: "Painterly",
+			campaignBasePrompt: "",
+		},
+		historyUserInstructions: "Paint Iryna",
+	});
+	assert.equal(result.status, 200);
+	assert.equal(result.body.prompt, "Portrait prompt");
+	assert.equal(generatedRequests[0].entityScope, "custom-bestiary");
+	assert.equal(generatedRequests[0].parseAIResponse, false);
+	assert.equal(savedEntries[0].path.campaign, "bestiary");
+
+	const failedCommand = createGenerateBestiaryImagePrompt({
+		generateContent: async () => ({ error: "failed" }),
+		addAiResponse: async () => {
+			throw new Error("not expected");
+		},
+		historyWriter: {
+			...historyWriter,
+			saveFailed: async () => ({ id: "failed-history" }),
+		},
+	});
+	const failed = await failedCommand({
+		payload,
+		preparedRequest: {
+			responseLanguage: "uk",
+			simplifiedNotesEnabled: false,
+		},
+		historyUserInstructions: "Paint Iryna",
+	});
+	assert.equal(failed.status, 500);
+	assert.equal(failed.body.aiResponse.id, "failed-history");
+});
+
+await run("Custom monster generation command normalizes context and selects draft flow", async () => {
+	const generatedRequests = [];
+	const flowCalls = [];
+	let normalizedWrites = 0;
+	const command = createGenerateCustomMonster({
+		readCustomBestiary: async () => ({
+			monster: [
+				{ name: "Mavka", source: "HB", type: "fey", cr: "3" },
+			],
+		}),
+		writeCustomBestiaryMonsters: async (monsters) => {
+			normalizedWrites += 1;
+			return monsters.map((monster) => ({ ...monster, id: "monster-1" }));
+		},
+		readCampaign: async () => null,
+		readSession: async () => null,
+		appendCampaignContext: async () => {},
+		generateContent: async (request) => {
+			generatedRequests.push(request);
+			return {
+				version: 2,
+				operations: [
+					{ op: "update", entity: "monster", patch: { cr: "4" } },
+				],
+			};
+		},
+		fillCurrentTargetIds: (content, target) => {
+			content.operations[0].id = target.customMonsterTarget.id;
+		},
+		assertGeneratedContent: () => {},
+		historyWriter: { saveFailed: async () => ({ id: "failed" }) },
+		encounterLocalFlow: {
+			isEnabled: () => false,
+			createDraft: async () => {
+				throw new Error("not expected");
+			},
+		},
+		customMonsterFlow: {
+			createDraft: async (input) => {
+				flowCalls.push(input);
+				return { status: 201, body: { draft: true } };
+			},
+		},
+	});
+	const result = await command({
+		payload: {
+			type: "custom-monster",
+			modelName: "gemini-test",
+			userInstructions: "Increase CR",
+			customMonsterTarget: { id: "monster-1", name: "Mavka" },
+			customMonsterMode: "edit",
+		},
+		preparedRequest: {
+			requestPath: { campaign: "bestiary" },
+			responseLanguage: "uk",
+			simplifiedNotesEnabled: true,
+		},
+		historyUserInstructions: "Increase CR",
+	});
+	assert.equal(result.status, 201);
+	assert.equal(normalizedWrites, 1);
+	assert.equal(
+		generatedRequests[0].contextData.customBestiary.selectedMonster.id,
+		"monster-1",
+	);
+	assert.equal(generatedRequests[0].parseAIResponse, true);
+	assert.equal(flowCalls[0].beforeCustomMonsters[0].id, "monster-1");
+	assert.equal(flowCalls[0].generatedContent.operations[0].id, "monster-1");
+
+	const failedCommand = createGenerateCustomMonster({
+		readCustomBestiary: async () => ({ monster: [] }),
+		writeCustomBestiaryMonsters: async () => [],
+		readCampaign: async () => null,
+		readSession: async () => null,
+		appendCampaignContext: async () => {},
+		generateContent: async () => ({ error: "invalid response" }),
+		fillCurrentTargetIds: () => {},
+		assertGeneratedContent: () => {},
+		historyWriter: { saveFailed: async () => ({ id: "failed-history" }) },
+		encounterLocalFlow: { isEnabled: () => false },
+		customMonsterFlow: {},
+	});
+	const failed = await failedCommand({
+		payload: { type: "custom-monster" },
+		preparedRequest: {
+			requestPath: { campaign: "bestiary" },
+			responseLanguage: "uk",
+		},
+		historyUserInstructions: "",
+	});
+	assert.equal(failed.status, 500);
+	assert.equal(failed.body.aiResponse.id, "failed-history");
+});
+
+await run("Campaign generation command builds context mentions and persistence input", async () => {
+	const generatedRequests = [];
+	const persisted = [];
+	const command = createGenerateCampaignContent({
+		readCampaign: async () => ({ name: "Demo", notes: [] }),
+		readSession: async () => ({
+			name: "Session One",
+			data: { scenes: [], npcs: [], locations: [] },
+		}),
+		readCustomBestiary: async () => ({
+			monster: [{ name: "Bog Warden" }],
+		}),
+		appendCampaignContext: async (context) => {
+			context.campaign.npcs = [{ id: "npc-1", name: "Iryna" }];
+		},
+		filterSessionData: (data) => ({ ...data, filtered: true }),
+		generateContent: async (request) => {
+			generatedRequests.push(request);
+			return {
+				version: 2,
+				operations: [
+					{
+						op: "update",
+						entity: "scene",
+						patch: { summary: "Iryna arrives" },
+					},
+				],
+			};
+		},
+		fillCurrentTargetIds: (content) => {
+			content.operations[0].id = "scene-1";
+		},
+		collectMentionCandidates: () => ["Iryna"],
+		applyMentionsToGeneratedContent: (content) => {
+			content.operations[0].patch.summary = "[Iryna] arrives";
+		},
+		assertGeneratedContent: () => {},
+		historyWriter: { saveFailed: async () => ({ id: "failed" }) },
+		campaignFlow: {
+			persistGeneratedContent: async (input) => {
+				persisted.push(input);
+				return { status: 200, body: { applied: true } };
+			},
+		},
+	});
+	const payload = {
+		type: "scene",
+		modelName: "gemini-test",
+		userInstructions: "Bring Iryna in",
+		sceneId: "scene-1",
+		parseAIResponse: true,
+		contextConfig: { campaignNpcs: true },
+	};
+	const result = await command({
+		payload,
+		preparedRequest: {
+			requestPath: {
+				campaign: "demo",
+				session: "session-1",
+				encounter: null,
+			},
+			responseLanguage: "uk",
+			shouldParseAIResponse: true,
+			entityTargetScope: "mixed",
+			characterGenerationEnabled: true,
+			npcGenerationEnabled: true,
+			locationGenerationEnabled: true,
+			encounterGenerationEnabled: true,
+			customMonsterGenerationEnabled: false,
+			simplifiedNotesEnabled: false,
+			autoApplyAiChanges: true,
+		},
+		historyUserInstructions: "Bring Iryna in",
+	});
+	assert.equal(result.status, 200);
+	assert.equal(generatedRequests[0].contextData.currentSession.data.filtered, true);
+	assert.deepEqual(generatedRequests[0].contextData.customBestiary, {
+		monsterNames: ["Bog Warden"],
+	});
+	assert.equal(
+		persisted[0].generatedContent.operations[0].patch.summary,
+		"[Iryna] arrives",
+	);
+	assert.equal(persisted[0].entityTargetScope, "mixed");
+
+	assert.deepEqual(
+		await command({
+			payload,
+			preparedRequest: { requestPath: {} },
+			historyUserInstructions: "",
+		}),
+		{ status: 400, body: { error: "path.campaign is required." } },
+	);
+});
+
+await run("AI campaign context loader uses injected entity and session ports", async () => {
+	const entityReads = [];
+	const appendContext = createAppendConfiguredCampaignContext({
+		listEntities: async (_campaign, type) => {
+			entityReads.push(type);
+			if (type === "npc") {
+				return [
+					{ id: "visible", name: "Visible" },
+					{ id: "hidden", name: "Hidden", _aiIgnored: true },
+				];
+			}
+			return [];
+		},
+		readSession: async () => ({
+			name: "One",
+			data: {
+				notes: [{ text: "Visible" }, { text: "Hidden", _aiIgnored: true }],
+				scenes: [],
+			},
+		}),
+	});
+	const target = { campaign: {}, sessions: [] };
+	await appendContext(
+		target,
+		"demo",
+		{ notes: [{ text: "Campaign" }] },
+		{
+			campaignNotes: true,
+			campaignNpcs: true,
+			sessions: { "session-1": { included: true, notes: true } },
+		},
+	);
+	assert.deepEqual(entityReads, ["npc"]);
+	assert.deepEqual(target.campaign.npcs, [
+		{ id: "visible", name: "Visible" },
+	]);
+	assert.deepEqual(target.sessions[0].data.notes, [{ text: "Visible" }]);
+});
+
+await run("AI history repository port validates and maps filesystem storage", async () => {
+	assert.throws(
+		() => createAiHistoryRepositoryPort({}),
+		/requires list\(\)/,
+	);
+	const calls = [];
+	const repository = createFileAiHistoryRepository({
+		readAiResponses: async (campaign) => {
+			calls.push(["list", campaign]);
+			return [];
+		},
+		getAiResponsesStorageStats: async (campaign) => {
+			calls.push(["stats", campaign]);
+			return { bytes: 0 };
+		},
+		getAiResponse: async (campaign, id) => {
+			calls.push(["get", campaign, id]);
+			return { id };
+		},
+		addAiResponse: async (entry) => {
+			calls.push(["add", entry.id]);
+			return entry;
+		},
+		updateAiResponse: async (campaign, id, patch) => {
+			calls.push(["update", campaign, id, patch]);
+			return { id, ...patch };
+		},
+		deleteAiResponse: async (campaign, id) => {
+			calls.push(["delete", campaign, id]);
+			return { ok: true };
+		},
+		clearAiResponses: async (campaign) => {
+			calls.push(["clear", campaign]);
+			return { ok: true };
+		},
+	});
+	await repository.list("demo");
+	await repository.stats("demo");
+	await repository.get("demo", "one");
+	await repository.add({ id: "two" });
+	await repository.update("demo", "two", { text: "updated" });
+	await repository.delete("demo", "two");
+	await repository.clear("demo");
+	assert.deepEqual(
+		calls.map(([method]) => method),
+		["list", "stats", "get", "add", "update", "delete", "clear"],
+	);
+	assert.equal(Object.isFrozen(repository), true);
+});
+
+await run("AI history commands edit drafts and delegate apply undo snapshots", async () => {
+	const updates = [];
+	const restores = [];
+	const entries = new Map([
+		[
+			"draft",
+			{
+				id: "draft",
+				applyState: "draft",
+				changes: {
+					resources: [
+						{
+							id: "resource-1",
+							before: { id: "stable", nested: { id: "nested" } },
+							after: { id: "stable", nested: { id: "nested" } },
+						},
+					],
+				},
+			},
+		],
+	]);
+	const commands = createAiHistoryCommands({
+		repository: {
+			get: async (_campaign, id) => entries.get(id) || null,
+			update: async (campaign, id, patch) => {
+				updates.push([campaign, id, patch]);
+				return { id, ...patch };
+			},
+		},
+		restoreSnapshot: async (entry, side, options) => {
+			restores.push([entry.id, side, options]);
+			return { restored: side };
+		},
+		buildChangeSummary: (resources) => ({ count: resources.length }),
+	});
+	await commands.patchDraft({
+		campaignSlug: "demo",
+		id: "draft",
+		resources: [
+			{
+				id: "resource-1",
+				after: { id: "changed", nested: { id: "changed-nested", value: 1 } },
+			},
+		],
+	});
+	const patched = updates[0][2].changes.resources[0].after;
+	assert.equal(patched.id, "stable");
+	assert.equal(patched.nested.id, "nested");
+	assert.equal(patched.nested.value, 1);
+	assert.deepEqual(updates[0][2].changes.summary, { count: 1 });
+	await commands.apply({
+		campaignSlug: "demo",
+		id: "draft",
+		resourceIds: ["resource-1"],
+	});
+	await commands.undo({
+		campaignSlug: "demo",
+		id: "draft",
+		resourceIds: ["resource-1"],
+	});
+	assert.deepEqual(restores, [
+		["draft", "after", { resourceIds: ["resource-1"] }],
+		["draft", "before", { resourceIds: ["resource-1"] }],
+	]);
+	await assert.rejects(
+		commands.apply({ campaignSlug: "demo", id: "missing" }),
+		(error) => error.status === 404 && error.message === "AI response not found.",
+	);
+	entries.set("applied", { id: "applied", applyState: "applied" });
+	await assert.rejects(
+		commands.patchDraft({ campaignSlug: "demo", id: "applied", resources: [] }),
+		(error) => error.status === 400,
+	);
+});
+
+await run("Top-level AI generation command selects workflows and records failures", async () => {
+	const selected = [];
+	const historyWriter = {
+		getUserInstructions: () => "History instructions",
+		saveFailed: async (_payload, error, status) => ({
+			id: "failed",
+			message: error.message,
+			status,
+		}),
+	};
+	const command = createGenerateAiRequest({
+		prepareRequest: async ({ payload }) => ({
+			isBestiaryImagePromptRequest: payload.type === "image",
+		}),
+		generateCustomMonster: async (input) => {
+			selected.push(["monster", input.historyUserInstructions]);
+			return { status: 201, body: {} };
+		},
+		generateBestiaryImagePrompt: async () => {
+			selected.push(["image"]);
+			return { status: 200, body: {} };
+		},
+		generateCampaignContent: async () => {
+			selected.push(["campaign"]);
+			return { status: 200, body: {} };
+		},
+		historyWriter,
+		isApiKeyConfigured: () => true,
+		readSettings: async () => ({}),
+	});
+	await command({ type: "custom-monster" });
+	await command({ type: "image" });
+	await command({ type: "scene" });
+	assert.deepEqual(selected, [
+		["monster", "History instructions"],
+		["image"],
+		["campaign"],
+	]);
+	const failedCommand = createGenerateAiRequest({
+		prepareRequest: async () => {
+			throw Object.assign(new Error("boom"), { status: 422 });
+		},
+		generateCustomMonster: async () => {},
+		generateBestiaryImagePrompt: async () => {},
+		generateCampaignContent: async () => {},
+		historyWriter,
+		isApiKeyConfigured: () => true,
+		readSettings: async () => ({}),
+	});
+	assert.deepEqual(await failedCommand({ type: "scene" }), {
+		status: 422,
+		body: {
+			error: "boom",
+			aiResponse: { id: "failed", message: "boom", status: 422 },
+		},
+	});
+});
+
+await run("Gemini API key command validates and persists through infrastructure", async () => {
+	assert.equal(updateEnvValue("A=1\n", "GEMINI_API_KEY", "key"), "A=1\nGEMINI_API_KEY=key\n");
+	assert.equal(
+		updateEnvValue("GEMINI_API_KEY=old\r\n", "GEMINI_API_KEY", "new"),
+		"GEMINI_API_KEY=new\r\n",
+	);
+	let written = null;
+	const environment = {};
+	const store = createEnvApiKeyStore({
+		filePath: ".env",
+		fileSystem: {
+			readFile: async () => "A=1\n",
+			writeFile: async (...args) => {
+				written = args;
+			},
+		},
+		environment,
+	});
+	let cacheClears = 0;
+	const save = createSaveGeminiApiKey({
+		apiKeyStore: store,
+		clearModelCache: () => {
+			cacheClears += 1;
+		},
+	});
+	assert.equal((await save(" ")).status, 400);
+	assert.equal((await save("one\ntwo")).status, 400);
+	assert.deepEqual(await save(" secret "), { status: 200, body: { ok: true } });
+	assert.deepEqual(written, [".env", "A=1\nGEMINI_API_KEY=secret\n", "utf8"]);
+	assert.equal(environment.GEMINI_API_KEY, "secret");
+	assert.equal(cacheClears, 1);
+});
+
+await run("Campaign entity commands preserve ids defaults mentions and repository contract", async () => {
+	const entities = new Map();
+	const mentionUpdates = [];
+	const repository = {
+		list: async () => Array.from(entities.values()),
+		read: async (_campaign, _type, slug) => entities.get(slug),
+		write: async (_campaign, _type, slug, data) => {
+			const saved = { ...data, slug };
+			entities.set(slug, saved);
+			return saved;
+		},
+		delete: async (_campaign, _type, slug) => entities.delete(slug),
+		createId: () => "stable-id",
+		sanitizeName: (name) => String(name || "").trim(),
+		toSlug: (name) => String(name).toLowerCase().replace(/\s+/g, "-"),
+		ensureUniqueSlug: async (_campaign, _type, slug) => slug,
+		updateMentionReferences: async (...args) => mentionUpdates.push(args),
+		move: async (...args) => ({ moved: args }),
+	};
+	const commands = createCampaignEntityCommands(repository);
+	const created = await commands.create({
+		campaignSlug: "demo",
+		type: "npc",
+		payload: { firstName: "Iryna", notes: [{ text: "Existing" }] },
+	});
+	assert.equal(created.id, "stable-id");
+	assert.equal(created.slug, "iryna");
+	assert.equal(created.level, 1);
+	assert.deepEqual(created.notes, [{ text: "Existing" }]);
+	const updated = await commands.update({
+		campaignSlug: "demo",
+		type: "npc",
+		entitySlug: "iryna",
+		payload: {
+			id: "changed-id",
+			slug: "changed-slug",
+			firstName: "Ira",
+			_updateMentionReferences: true,
+			_mentionOldName: "Iryna",
+		},
+	});
+	assert.equal(updated.id, "stable-id");
+	assert.equal(updated.slug, "iryna");
+	assert.deepEqual(mentionUpdates, [["demo", "Iryna", "Ira"]]);
+	await commands.delete({
+		campaignSlug: "demo",
+		type: "npc",
+		entitySlug: "iryna",
+	});
+	assert.equal(entities.size, 0);
+	await commands.replaceAll({
+		campaignSlug: "demo",
+		type: "npc",
+		entities: [
+			{ slug: "first", firstName: "First" },
+			{ slug: "second", firstName: "Second" },
+		],
+	});
+	assert.equal(entities.get("first").order, 0);
+	assert.equal(entities.get("second").order, 1);
+	await commands.replaceAll({
+		campaignSlug: "demo",
+		type: "npc",
+		entities: [{ slug: "second", firstName: "Second" }],
+	});
+	assert.equal(entities.has("first"), false);
+	const moved = await commands.moveBetweenCharacterTypes({
+		campaignSlug: "demo",
+		type: "npc",
+		entitySlug: "second",
+		targetType: "characters",
+	});
+	assert.deepEqual(moved.moved, ["demo", "npc", "second", "characters"]);
+	await assert.rejects(
+		commands.moveBetweenCharacterTypes({
+			campaignSlug: "demo",
+			type: "locations",
+			entitySlug: "second",
+			targetType: "npc",
+		}),
+		(error) => error.status === 400,
+	);
+	await assert.rejects(
+		commands.create({ campaignSlug: "demo", type: "unknown", payload: {} }),
+		(error) => error.status === 400 && error.message === "Unknown entity type.",
+	);
+
+	const adapter = createFileCampaignEntityRepository({
+		listEntities: async () => [],
+		readEntity: async () => ({}),
+		writeEntity: async () => ({}),
+		deleteEntity: async () => {},
+		createId: () => "id",
+		sanitizeName: (name) => name,
+		campaignSlug: (name) => name,
+		ensureUniqueEntitySlug: async (_campaign, _type, slug) => slug,
+		updateCampaignMentionReferences: async () => {},
+		moveEntity: async () => ({}),
+	});
+	assert.equal(Object.isFrozen(adapter), true);
+});
+
+await run("Campaign entity scope commands preserve ids and compensate partial writes", async () => {
+	const entities = new Map([
+		["npc:guide", { id: "npc-1", slug: "guide", firstName: "Guide" }],
+	]);
+	let session = {
+		id: "session-1",
+		name: "Arrival",
+		data: { npcs: [], locations: [] },
+	};
+	let failDelete = false;
+	const repository = {
+		readEntity: async (_campaign, type, slug) => entities.get(`${type}:${slug}`),
+		writeEntity: async (_campaign, type, slug, entity) => {
+			const saved = { ...entity, slug };
+			entities.set(`${type}:${slug}`, saved);
+			return saved;
+		},
+		deleteEntity: async (_campaign, type, slug) => {
+			if (failDelete) throw new Error("delete failed");
+			entities.delete(`${type}:${slug}`);
+		},
+		readSession: async () => structuredClone(session),
+		writeSession: async (_campaign, _fileName, next) => {
+			session = structuredClone(next);
+			return next;
+		},
+		sanitizeName: (name) => String(name || "").trim(),
+		toSlug: (name) => String(name).toLowerCase(),
+		ensureUniqueSlug: async (_campaign, _type, slug) => slug,
+	};
+	const commands = createCampaignEntityScopeCommands(repository);
+	const movedToSession = await commands.move({
+		campaignSlug: "demo",
+		fileName: "arrival",
+		type: "npc",
+		entitySlug: "guide",
+		targetScope: "session",
+	});
+	assert.equal(movedToSession.entity.id, "npc-1");
+	assert.equal(session.data.npcs[0].id, "npc-1");
+	assert.equal(entities.has("npc:guide"), false);
+
+	const movedToCampaign = await commands.move({
+		campaignSlug: "demo",
+		fileName: "arrival",
+		type: "npc",
+		entityId: "npc-1",
+		targetScope: "campaign",
+	});
+	assert.equal(movedToCampaign.entity.id, "npc-1");
+	assert.equal(entities.get("npc:guide").id, "npc-1");
+	assert.deepEqual(session.data.npcs, []);
+
+	entities.set("npc:scout", { id: "npc-2", slug: "scout", firstName: "Scout" });
+	failDelete = true;
+	await assert.rejects(
+		commands.move({
+			campaignSlug: "demo",
+			fileName: "arrival",
+			type: "npc",
+			entitySlug: "scout",
+			targetScope: "session",
+		}),
+		/delete failed/,
+	);
+	assert.deepEqual(session.data.npcs, []);
+	assert.equal(entities.has("npc:scout"), true);
+	await assert.rejects(
+		commands.move({
+			campaignSlug: "demo",
+			fileName: "arrival",
+			type: "characters",
+			targetScope: "session",
+		}),
+		(error) => error.status === 400,
+	);
+});
+
+await run("Campaign commands own lifecycle rename references and ordering", async () => {
+	const campaigns = new Map();
+	const renames = [];
+	const removals = [];
+	const repository = {
+		metaExists: async (slug) => campaigns.has(slug),
+		dataExists: async (slug) => campaigns.has(slug),
+		list: async () => Array.from(campaigns.values()),
+		read: async (slug) => structuredClone(campaigns.get(slug)),
+		write: async (slug, campaign) => {
+			campaigns.set(slug, structuredClone(campaign));
+			return structuredClone(campaign);
+		},
+		initialize: async () => {},
+		rename: async (oldSlug, nextSlug) => {
+			renames.push([oldSlug, nextSlug]);
+			campaigns.set(nextSlug, campaigns.get(oldSlug));
+			campaigns.delete(oldSlug);
+		},
+		remove: async (...args) => {
+			removals.push(args);
+			campaigns.delete(args[0]);
+		},
+		hasImages: async (slug) => slug === "renamed",
+		exportBundle: async (slug) => ({ slug }),
+		sanitizeName: (name) => String(name || "").trim(),
+		toSlug: (name) => String(name).toLowerCase().replace(/\s+/g, "-"),
+		ensureUniqueSlug: async (slug) => slug,
+		createId: () => "campaign-stable-id",
+		replaceImageSlugReferences: (campaign, oldSlug, nextSlug) => ({
+			...campaign,
+			imageUrl: String(campaign.imageUrl || "").replace(oldSlug, nextSlug),
+		}),
+		normalizeSourceList: (sources) =>
+			Array.from(new Set((sources || []).map((source) => source.toUpperCase()))),
+	};
+	const commands = createCampaignCommands(repository, {
+		now: () => new Date("2031-04-05T06:07:08.000Z"),
+		createNoteId: () => "note-id",
+	});
+	const created = await commands.create({ payload: { name: " Demo " } });
+	assert.equal(created.id, "campaign-stable-id");
+	assert.equal(created.slug, "demo");
+	assert.equal(created.createdAt, "2031-04-05T06:07:08.000Z");
+	assert.equal(created.notes[0].id, "note-id");
+	campaigns.set("demo", { ...created, imageUrl: "/demo/maps/a.png" });
+	const updated = await commands.update({
+		slug: "demo",
+		patch: {
+			id: "changed",
+			createdAt: "changed",
+			name: "Renamed",
+			ignoreSourcesList: ["phb", "PHB", "xge"],
+		},
+	});
+	assert.equal(updated.id, "campaign-stable-id");
+	assert.equal(updated.createdAt, "2031-04-05T06:07:08.000Z");
+	assert.equal(updated.slug, "renamed");
+	assert.equal(updated.imageUrl, "/renamed/maps/a.png");
+	assert.deepEqual(updated.ignoreSourcesList, ["PHB", "XGE"]);
+	assert.deepEqual(renames, [["demo", "renamed"]]);
+	assert.deepEqual(await commands.getImageStatus({ slug: "renamed" }), {
+		hasImages: true,
+	});
+	assert.deepEqual(await commands.export({ slug: "renamed" }), {
+		slug: "renamed",
+	});
+	await commands.reorder({ orders: { renamed: 7, missing: 2 } });
+	assert.equal(campaigns.get("renamed").order, 7);
+	await commands.remove({ slug: "renamed", moveImagesToGeneral: true });
+	assert.deepEqual(removals, [["renamed", { moveImagesToGeneral: true }]]);
+	await assert.rejects(
+		commands.update({ slug: "missing", patch: {} }),
+		(error) => error.status === 404,
+	);
+	await assert.rejects(
+		commands.create({ payload: { name: " " } }),
+		(error) => error.status === 400,
+	);
+});
+
+await run("Campaign entity frontend feature sanitizes create and delegates CRUD", async () => {
+	const calls = [];
+	const client = createCampaignEntityClient({
+		createEntity: async (...args) => calls.push(["create", ...args]),
+		updateEntity: async (...args) => calls.push(["update", ...args]),
+		deleteEntity: async (...args) => calls.push(["delete", ...args]),
+	});
+	const payload = buildCreateEntityPayload(
+		{ notes: [], level: 1 },
+		{ id: "temp", slug: "temp", createdAt: "now", firstName: "Iryna", _draft: true },
+	);
+	assert.equal("_draft" in payload, false);
+	await client.create("demo", "npc", payload);
+	await client.update("demo", "npc", "iryna", { firstName: "Ira" });
+	await client.delete("demo", "npc", "iryna");
+	assert.deepEqual(calls, [
+		[
+			"create",
+			"demo",
+			"npc",
+			{ notes: [], level: 1, firstName: "Iryna" },
+		],
+		["update", "demo", "npc", "iryna", { firstName: "Ira" }],
+		["delete", "demo", "npc", "iryna"],
+	]);
+	const entities = [
+		{ id: "one", name: "One" },
+		{ id: "two", name: "Two" },
+	];
+	assert.deepEqual(replaceEntityById(entities, "two", { id: "two", name: "Updated" }), [
+		entities[0],
+		{ id: "two", name: "Updated" },
+	]);
+	assert.deepEqual(removeEntityById(entities, "one"), [entities[1]]);
+	assert.deepEqual(withEntityOrder(entities), [
+		{ ...entities[0], order: 0 },
+		{ ...entities[1], order: 1 },
+	]);
+});
+
 await run("AI service accepts temporary attached image data", async () => {
 	const imageData = Buffer.from("temporary image bytes", "utf8").toString(
 		"base64",
@@ -1408,6 +2619,46 @@ await run("AI response helpers manage custom monster draft resources", () => {
 	);
 });
 
+await run("AI diff expands session resources and preserves line metadata", () => {
+	const resources = buildDiffResources(
+		{
+			id: "history-1",
+			changes: {
+				resources: [
+					{
+						id: "session:1",
+						kind: "session",
+						label: "Session",
+						before: {
+							id: "stable",
+							name: "Before",
+							data: { notes: [{ id: "note-1", text: "Old" }] },
+						},
+						after: {
+							id: "stable",
+							name: "After",
+							data: { notes: [{ id: "note-1", text: "New" }] },
+						},
+					},
+				],
+			},
+		},
+		{ note: "Note" },
+	);
+
+	const nameDiff = resources.find((resource) => resource.id === "session:1:name");
+	const noteDiff = resources.find(
+		(resource) => resource.id === "session:1:notes/New",
+	);
+	assert.ok(nameDiff);
+	assert.ok(noteDiff);
+	assert.equal(nameDiff.parentResourceId, "session:1");
+	assert.ok(nameDiff.lines.some((line) => line.type === "removed"));
+	assert.ok(nameDiff.lines.some((line) => line.type === "added"));
+	assert.equal(getDiffResourceState({ before: null, after: {} }), "Added");
+	assert.equal(getDiffResourceState({ before: {}, after: null }), "Deleted");
+});
+
 await run("AI mention processing preserves existing entity links", () => {
 	const { processGeneratedTextMentions } = aiRouter.__test;
 	assert.equal(
@@ -1689,6 +2940,14 @@ await run("AI feature model estimates context and rebuilds retry workflows", asy
 		items: {},
 	});
 	const initialContextList = { included: true, items: { existing: false } };
+	assert.equal(
+		ensureContextListItems(
+			initialContextList,
+			[{ id: "existing" }],
+			(item) => item.id,
+		),
+		initialContextList,
+	);
 	assert.deepEqual(
 		ensureContextListItems(
 			initialContextList,
@@ -1816,6 +3075,23 @@ await run("AI feature model estimates context and rebuilds retry workflows", asy
 			scope: "campaign",
 		},
 	);
+	assert.equal(
+		getSupportedAiImageMimeType({ name: "portrait.WEBP", type: "" }),
+		"image/webp",
+	);
+	assert.equal(
+		getSupportedAiFileMimeType({ name: "notes.unknown", type: "text/plain" }),
+		"text/plain",
+	);
+	assert.equal(
+		getSupportedAiFileMimeType({ name: "payload.exe", type: "application/octet-stream" }),
+		"",
+	);
+	assert.equal(
+		getAttachedImageKey({ name: "map.png", sizeBytes: 42, url: "/map.png" }),
+		"/map.png",
+	);
+	assert.equal(getAttachedFileKey({ name: "notes.md", sizeBytes: 8 }), "notes.md:8");
 	const sceneImageTarget = buildSceneImageTarget(
 		{
 			id: "scene-1",
@@ -1846,7 +3122,7 @@ await run("AI feature model estimates context and rebuilds retry workflows", asy
 
 await run("AI assistant delegates stable visual composition to feature UI", async () => {
 	const panelSource = await fs.readFile(
-		"src/components/ai/AiAssistantPanel.jsx",
+		"src/widgets/ai-assistant/ui/AiAssistantPanel.jsx",
 		"utf8",
 	);
 	const shellSource = await fs.readFile(
@@ -1905,6 +3181,317 @@ await run("AI route treats custom monster image prompts as bestiary requests", (
 	});
 });
 
+await run("Session editor mutations keep scenes notes and encounters consistent", () => {
+	const empty = createEmptyScene("scene-1");
+	let data = addSessionScene({ scenes: [], encounters: [] }, empty);
+	data = updateSceneField(data, "scene-1", "title", "Gate");
+	data = updateSceneField(data, "scene-1", "collapsed", true, true);
+	data = updateSceneNote(data, "scene-1", "note-1", { text: "Clue" });
+	data = toggleSceneNoteCollapse(data, "scene-1", "note-1");
+	assert.equal(data.scenes[0].texts.title, "Gate");
+	assert.equal(data.scenes[0].collapsed, true);
+	assert.equal(data.scenes[0].notes[0].text, "Clue");
+	assert.equal(data.scenes[0].notes[0].collapsed, true);
+	assert.equal(sceneRequiresDeleteConfirmation(data.scenes[0]), true);
+
+	data = {
+		...data,
+		scenes: [{ ...data.scenes[0], encounterId: "encounter-1" }],
+		encounters: [
+			{ id: "encounter-1", name: "Gate fight" },
+			{ id: "encounter-2", name: "Keep" },
+		],
+	};
+	data = removeSessionScene(data, "scene-1");
+	assert.deepEqual(data.scenes, []);
+	assert.deepEqual(data.encounters, [{ id: "encounter-2", name: "Keep" }]);
+});
+
+await run("Scene encounter command persists one linked encounter idempotently", async () => {
+	let session = {
+		id: "session-1",
+		data: { scenes: [{ id: 7, texts: {} }], encounters: [] },
+	};
+	let writes = 0;
+	const repository = {
+		read: async () => structuredClone(session),
+		write: async (_campaign, fileName, next) => {
+			writes += 1;
+			session = structuredClone(next);
+			return { ...next, fileName };
+		},
+		createId: () => "encounter-stable-id",
+	};
+	const createSceneEncounter = createSceneEncounterCommand(repository);
+	const created = await createSceneEncounter({
+		campaignSlug: "demo",
+		fileName: "arrival",
+		sceneId: "7",
+		name: "Gate fight",
+	});
+	assert.equal(created.created, true);
+	assert.equal(created.encounter.id, "encounter-stable-id");
+	assert.equal(session.data.scenes[0].encounterId, "encounter-stable-id");
+	assert.deepEqual(session.data.encounters, [
+		{ id: "encounter-stable-id", name: "Gate fight", monsters: [] },
+	]);
+
+	const existing = await createSceneEncounter({
+		campaignSlug: "demo",
+		fileName: "arrival",
+		sceneId: 7,
+		name: "Ignored duplicate",
+	});
+	assert.equal(existing.created, false);
+	assert.equal(existing.encounter.id, "encounter-stable-id");
+	assert.equal(writes, 1);
+	const updateEncounter = createUpdateEncounterCommand(repository);
+	const updated = await updateEncounter({
+		campaignSlug: "demo",
+		fileName: "arrival",
+		encounterId: "encounter-stable-id",
+		patch: { id: "changed", name: "Updated", monsters: [{ id: "monster-1" }] },
+	});
+	assert.equal(updated.encounter.id, "encounter-stable-id");
+	assert.equal(updated.encounter.name, "Updated");
+	assert.deepEqual(session.data.encounters[0].monsters, [{ id: "monster-1" }]);
+	assert.equal(writes, 2);
+	await assert.rejects(
+		createSceneEncounter({
+			campaignSlug: "demo",
+			fileName: "arrival",
+			sceneId: "missing",
+			name: "Missing",
+		}),
+		(error) => error.status === 404,
+	);
+	await assert.rejects(
+		updateEncounter({
+			campaignSlug: "demo",
+			fileName: "arrival",
+			encounterId: "missing",
+			patch: {},
+		}),
+		(error) => error.status === 404,
+	);
+});
+
+await run("Session commands own CRUD rename reorder and stable ids", async () => {
+	const files = new Map([
+		[
+			"existing",
+			{ id: "session-existing", name: "Existing", order: 2, data: {} },
+		],
+	]);
+	const repository = {
+		exists: async (_campaign, fileName) => files.has(fileName),
+		list: async () =>
+			Array.from(files, ([fileName, session]) => ({
+				id: session.id,
+				name: session.name,
+				order: session.order,
+				fileName,
+			})),
+		read: async (_campaign, fileName) => structuredClone(files.get(fileName)),
+		write: async (_campaign, fileName, session) => {
+			files.set(fileName, structuredClone(session));
+			return { ...structuredClone(session), fileName };
+		},
+		remove: async (_campaign, fileName) => files.delete(fileName),
+		rename: async (_campaign, oldFileName, newFileName) => {
+			files.set(newFileName, files.get(oldFileName));
+			files.delete(oldFileName);
+		},
+		createId: () => "unused",
+		sanitizeName: (name) => String(name || "").trim(),
+		createDefault: (name) => ({ id: `id-${name}`, name, data: { scenes: [] } }),
+		ensureUniqueFile: async (_campaign, name, ignored) =>
+			name === "Renamed" && ignored === "existing" ? "renamed" : name.toLowerCase(),
+	};
+	const commands = createSessionCommands(repository, {
+		now: () => new Date("2030-02-03T00:00:00.000Z"),
+	});
+	const created = await commands.create({ campaignSlug: "demo", payload: {} });
+	assert.equal(created.name, "2030-02-03");
+	assert.equal(created.order, 3);
+	assert.equal(created.fileName, "2030-02-03");
+
+	const updated = await commands.update({
+		campaignSlug: "demo",
+		fileName: "existing",
+		patch: { id: "changed", name: " Renamed ", data: { scenes: [1] } },
+	});
+	assert.equal(updated.id, "session-existing");
+	assert.equal(updated.fileName, "renamed");
+	assert.equal(files.has("existing"), false);
+	await commands.reorder({
+		campaignSlug: "demo",
+		orders: { renamed: 0, "2030-02-03": 1 },
+	});
+	assert.equal(files.get("renamed").order, 0);
+	assert.equal(files.get("2030-02-03").order, 1);
+	await commands.remove({ campaignSlug: "demo", fileName: "renamed" });
+	assert.equal(files.has("renamed"), false);
+	await assert.rejects(
+		commands.get({ campaignSlug: "demo", fileName: "missing" }),
+		(error) => error.status === 404,
+	);
+	await assert.rejects(
+		commands.reorder({ campaignSlug: "demo", orders: null }),
+		(error) => error.status === 400,
+	);
+});
+
+await run("Settings commands delegate normalized repository reads and patches", async () => {
+	let settings = { language: "uk", theme: "light" };
+	const calls = [];
+	const commands = createSettingsCommands({
+		read: async () => structuredClone(settings),
+		update: async (patch) => {
+			calls.push(structuredClone(patch));
+			settings = { ...settings, ...patch };
+			return structuredClone(settings);
+		},
+	});
+	assert.deepEqual(await commands.get(), settings);
+	assert.deepEqual(
+		await commands.update({ patch: { theme: "dark" } }),
+		{ language: "uk", theme: "dark" },
+	);
+	await commands.update({ patch: ["invalid"] });
+	assert.deepEqual(calls, [{ theme: "dark" }, {}]);
+});
+
+await run("Image commands parse gallery queries and delegate reference-safe mutations", async () => {
+	const calls = [];
+	const repository = Object.fromEntries(
+		[
+			"list",
+			"stats",
+			"listBestiaryTokens",
+			"search",
+			"listSubcategories",
+			"createSubcategory",
+			"renameImage",
+			"renameSubcategory",
+			"move",
+			"delete",
+		].map((method) => [
+			method,
+			async (...args) => {
+				calls.push([method, ...args]);
+				return method === "move" ? [{ oldUrl: "old", newUrl: "new" }] : [];
+			},
+		]),
+	);
+	const commands = createImageCommands(repository);
+	assert.deepEqual(
+		parseGalleryQuery(
+			{
+				categories: " maps, tokens, ",
+				ignoreSources: " phb, xge ",
+			},
+			"general",
+		),
+		{
+			source: "general",
+			category: "",
+			subcategory: "",
+			categories: ["maps", "tokens"],
+			ignoreSourcesList: ["phb", "xge"],
+		},
+	);
+	await commands.stats({
+		query: { source: "demo", categories: "maps,tokens" },
+	});
+	await commands.listBestiaryTokens({
+		query: {
+			subcategory: "MM",
+			search: "dragon",
+			recursive: "1",
+			ignoreSources: "UA,HB",
+		},
+	});
+	await commands.createSubcategory({
+		slug: "demo",
+		category: "maps",
+		name: "dungeon",
+	});
+	assert.deepEqual(await commands.move({ items: ["a.png"], src: {}, dest: {} }), [
+		{ oldUrl: "old", newUrl: "new" },
+	]);
+	assert.deepEqual(await commands.delete({ items: [], src: {} }), { ok: true });
+	assert.deepEqual(calls[0], [
+		"stats",
+		{
+			source: "demo",
+			category: "",
+			subcategory: "",
+			categories: ["maps", "tokens"],
+			ignoreSourcesList: [],
+		},
+	]);
+	assert.deepEqual(calls[1], [
+		"listBestiaryTokens",
+		{
+			subcategory: "MM",
+			search: "dragon",
+			recursive: true,
+			ignoreSourcesList: ["UA", "HB"],
+		},
+	]);
+	assert.deepEqual(calls[2], [
+		"createSubcategory",
+		{ slug: "demo", category: "maps", subcategory: "dungeon" },
+	]);
+});
+
+await run("Encounter participant synchronization preserves combat-local identity and HP", () => {
+	const official = { instanceId: "official", name: "Goblin", source: "MM" };
+	const character = {
+		instanceId: "character",
+		name: "Hero",
+		participantType: "character",
+	};
+	const custom = {
+		instanceId: "custom-1",
+		name: "Named Sentinel",
+		originalBestiaryName: "Sentinel",
+		source: "custom",
+		currentHp: 18,
+		hit_points: 30,
+	};
+	const result = synchronizeCustomMonsterParticipants(
+		{ id: "enc", monsters: [official, character, custom] },
+		{
+			monster: [
+				{
+					name: "Sentinel",
+					source: "",
+					hp: { average: 12 },
+					ac: [{ ac: 17 }],
+					trait: [{ name: "Updated" }],
+				},
+			],
+		},
+	);
+	assert.equal(result.changed, true);
+	assert.equal(result.encounter.monsters[0], official);
+	assert.equal(result.encounter.monsters[1], character);
+	assert.equal(result.encounter.monsters[2].instanceId, "custom-1");
+	assert.equal(result.encounter.monsters[2].name, "Named Sentinel");
+	assert.equal(result.encounter.monsters[2].currentHp, 12);
+	assert.equal(result.encounter.monsters[2].hit_points, 12);
+	assert.equal(result.encounter.monsters[2].armor_class, 17);
+	assert.equal(result.encounter.monsters[2].source, "CUSTOM");
+
+	const images = buildEntityImageMap([
+		{ firstName: "Iryna", lastName: "Vale", imageUrl: "/iryna.png" },
+		{ name: "  Iryna   Vale ", imageUrl: "/duplicate.png" },
+	]);
+	assert.equal(images.get("iryna vale"), "/iryna.png");
+});
+
 await run("SessionViewModel encounter lookup", () => {
 	const model = new SessionViewModel({
 		isSaving: true,
@@ -1921,8 +3508,8 @@ await run("SessionViewModel encounter lookup", () => {
 await run("CharacterCardModel derives fields and maintains notes", async () => {
 	let CharacterCardModel;
 	try {
-		({ default: CharacterCardModel } =
-			await import("../src/models/CharacterCardModel.js"));
+		({ CharacterCardModel } =
+			await import("../src/entities/campaign/index.js"));
 	} catch (error) {
 		if (
 			error?.code === "ERR_MODULE_NOT_FOUND" ||
@@ -1987,7 +3574,7 @@ await run(
 );
 
 await run("CardNoteModel shared helpers preserve entity note behavior", async () => {
-	const { CardNoteModel } = await import("../src/models/cardNoteModelUtils.js");
+	const { CardNoteModel } = await import("../src/entities/campaign/index.js");
 
 	class TestCardModel extends CardNoteModel {
 		constructor(entity) {
@@ -2021,7 +3608,7 @@ await run("CardNoteModel shared helpers preserve entity note behavior", async ()
 });
 
 await run("mention picker helper resolves selected and cancelled states", async () => {
-	const { requestMentionSelection } = await import("../src/utils/mentionPicker.js");
+	const { requestMentionSelection } = await import("../src/features/editor/model.js");
 
 	let payload = null;
 	const selectedPromise = requestMentionSelection((action) => {
@@ -2042,10 +3629,10 @@ await run("mention picker helper resolves selected and cancelled states", async 
 
 await run("entity link modal helper resolves entities and avoids current modal", async () => {
 	const { openEntityLinkModal } = await import(
-		"../src/components/common/entityLinkModalUtils.js"
+		"../src/features/entity-link/model.js"
 	);
 	const { getEntityIdentity } = await import(
-		"../src/components/common/EntityLinkIdentity.js"
+		"../src/features/entity-link/model.js"
 	);
 
 	const found = {
@@ -2115,6 +3702,109 @@ await run("MonsterStatBlockModel formats combat data", () => {
 		},
 	});
 	assert.equal(chooserModel.typeLabel, "celestial/fey/fiend (spirit)");
+});
+
+await run("Bestiary commands own custom monsters favorites and search", async () => {
+	let monsters = [
+		{
+			id: "custom-1",
+			name: "Sentinel",
+			source: "CUSTOM",
+			imageUrl: "/token.png",
+			hp: { average: "12" },
+		},
+		{ id: "custom-2", name: "Other", source: "CUSTOM" },
+	];
+	let favorites = [{ name: "Sentinel", source: "custom" }];
+	const repository = {
+		getIndex: async () =>
+			new Map([
+				["goblin|mm", { name: "Goblin", source: "MM", type: "humanoid" }],
+				["goblin boss|mm", { name: "Goblin Boss", source: "MM", type: "humanoid" }],
+			]),
+		readCustomMonsters: async () => structuredClone(monsters),
+		writeCustomMonsters: async (next) => {
+			monsters = structuredClone(next);
+			return structuredClone(monsters);
+		},
+		readFavorites: async () => structuredClone(favorites),
+		writeFavorites: async (next) => {
+			favorites = structuredClone(next);
+			return structuredClone(favorites);
+		},
+		readAllMonsters: async () => ({
+			exists: true,
+			monsters: [
+				{ name: "Wolf", source: "MM" },
+				{ name: "Mage", source: "XGE" },
+			],
+		}),
+		listSourceFiles: async () => ["fallback"],
+		readLegendaryGroups: async () => [
+			{ name: "Base", source: "MM", lairActions: ["Base action"] },
+			{
+				name: "Child",
+				source: "MM",
+				_copy: {
+					name: "Base",
+					source: "MM",
+					_mod: {
+						lairActions: { mode: "appendArr", items: ["Child action"] },
+					},
+				},
+			},
+		],
+		readSourceMonsters: async (source) =>
+			source === "phb"
+				? { fileSource: "phb", monsters: [{ name: "Guard" }] }
+				: null,
+	};
+	const commands = createBestiaryCommands(repository);
+	assert.deepEqual(
+		(await commands.search({ name: "goblin", type: "human" })).map(
+			(monster) => monster.name,
+		),
+		["Goblin", "Goblin Boss"],
+	);
+	assert.deepEqual(await commands.listSources(), ["CUSTOM", "MM", "XGE"]);
+	assert.deepEqual(await commands.getSource({ source: "phb" }), [
+		{ name: "Guard", source: "PHB" },
+	]);
+	assert.deepEqual(await commands.getSource({ source: "mm" }), [
+		{ name: "Wolf", source: "MM" },
+	]);
+	const legendaryGroups = await commands.listLegendaryGroups();
+	assert.deepEqual(legendaryGroups[1].lairActions, [
+		"Base action",
+		"Child action",
+	]);
+	assert.equal(Object.hasOwn(legendaryGroups[1], "_copy"), false);
+	const renamed = await commands.updateCustom({
+		identifier: "custom-1",
+		payload: { monster: { id: "custom-1", name: "Guardian", hp: { average: "18" } } },
+	});
+	assert.equal(renamed.name, "Guardian");
+	assert.equal(renamed.imageUrl, "/token.png");
+	assert.equal(renamed.hp.average, "18");
+	assert.deepEqual(favorites, [{ name: "Guardian", source: "CUSTOM" }]);
+	await assert.rejects(
+		commands.updateCustom({
+			identifier: "Guardian",
+			payload: { monster: { name: "Other" } },
+		}),
+		(error) => error.status === 409,
+	);
+	await commands.toggleFavorite({ name: "Guardian", source: "custom" });
+	assert.deepEqual(favorites, []);
+	await commands.toggleFavorite({ name: "Other", source: "custom" });
+	assert.deepEqual(favorites, [{ name: "Other", source: "CUSTOM" }]);
+	await commands.deleteCustom({ identifier: "custom-2" });
+	assert.equal(monsters.some((monster) => monster.name === "Other"), false);
+	assert.deepEqual(favorites, []);
+	const replaced = await commands.replaceCustom({
+		monsters: [{ name: "  New One " }, null, { name: " " }],
+	});
+	assert.deepEqual(replaced, [{ name: "New One", source: "CUSTOM" }]);
 });
 
 await run("custom monster replacement preserves token image when renamed", () => {
@@ -2342,23 +4032,23 @@ await run("parser renders quickref display labels", () => {
 
 await run("parser renders dice and creature tags as interactive components", async () => {
 	const contentTokensSource = await fs.readFile(
-		"src/utils/contentTokens.js",
+		"src/entities/reference/model/contentTokens.js",
 		"utf8",
 	);
 	const rendererSource = await fs.readFile(
-		"src/renderers/contentRenderer.jsx",
+		"src/features/rich-content/ui/RichContentRenderer.jsx",
 		"utf8",
 	);
 	const rulesLinkSource = await fs.readFile(
-		"src/components/common/RulesLink.jsx",
+		"src/features/rules-reference/ui/RulesLink.jsx",
 		"utf8",
 	);
 	const rulesReferenceSource = await fs.readFile(
-		"src/components/modals/RulesReferenceModalContent.jsx",
+		"src/widgets/rules-reference-modal/ui/RulesReferenceModalContent.jsx",
 		"utf8",
 	);
 	const monsterStatBlockSource = await fs.readFile(
-		"src/components/MonsterStatBlock.jsx",
+		"src/widgets/monster-stat-block/ui/MonsterStatBlock.jsx",
 		"utf8",
 	);
 	const rulesLinkCss = await fs.readFile(
@@ -2394,8 +4084,14 @@ await run("parser renders dice and creature tags as interactive components", asy
 	assert.match(rulesLinkSource, /function getCreatureReferenceName/);
 	assert.doesNotMatch(rulesLinkSource, /onNavigate/);
 	assert.doesNotMatch(rulesReferenceSource, /import Bestiary from/);
-	assert.match(rulesReferenceSource, /import MonsterStatBlock from "\.\.\/MonsterStatBlock\.jsx"/);
-	assert.match(rulesReferenceSource, /import MonsterStatBlockModel from "\.\.\/\.\.\/models\/MonsterStatBlockModel\.js"/);
+	assert.match(
+		rulesReferenceSource,
+		/import \{ MonsterStatBlock \} from "\.\.\/\.\.\/monster-stat-block\/index\.js"/,
+	);
+	assert.match(
+		rulesReferenceSource,
+		/import \{ bestiaryApi, MonsterStatBlockModel \} from "\.\.\/\.\.\/\.\.\/entities\/bestiary\/index\.js"/,
+	);
 	assert.match(rulesReferenceSource, /id: "bestiary"/);
 	assert.match(rulesReferenceSource, /bestiaryApi\.getBestiaryData\("all"\)/);
 	assert.match(rulesReferenceSource, /spellApi\.getSpellData\("all"\)/);
@@ -2421,10 +4117,13 @@ await run("parser renders item filter display names", () => {
 await run("rules reference modal owns spells and bestiary navigation", async () => {
 	const embeddedPropPattern = new RegExp("is" + "Embedded");
 	const mainContentSource = await fs.readFile(
-		"src/components/MainContent.jsx",
+		"src/app/routing/MainContent.jsx",
 		"utf8",
 	);
-	const sidebarSource = await fs.readFile("src/components/Sidebar.jsx", "utf8");
+	const sidebarSource = await fs.readFile(
+		"src/widgets/sidebar/ui/Sidebar.jsx",
+		"utf8",
+	);
 	const bestiarySource = await fs.readFile(
 		"src/widgets/bestiary-browser/ui/BestiaryBrowser.jsx",
 		"utf8",
@@ -2433,19 +4132,28 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 		"src/widgets/bestiary-browser/ui/BestiaryContent.jsx",
 		"utf8",
 	);
-	const spellsSource = await fs.readFile("src/components/Spells.jsx", "utf8");
+	const spellsSource = await fs.readFile(
+		"src/widgets/spells-browser/ui/SpellsBrowser.jsx",
+		"utf8",
+	);
 	const rulesReferenceSource = await fs.readFile(
-		"src/components/modals/RulesReferenceModalContent.jsx",
+		"src/widgets/rules-reference-modal/ui/RulesReferenceModalContent.jsx",
 		"utf8",
 	);
 	const rulesReferenceHostSource = await fs.readFile(
-		"src/components/modals/RulesReferenceModalHost.jsx",
+		"src/widgets/rules-reference-modal/ui/RulesReferenceModalHost.jsx",
 		"utf8",
 	);
-	const appActionsSource = await fs.readFile("src/actions/app.js", "utf8");
-	const appStoreSource = await fs.readFile("src/store/appStore.js", "utf8");
+	const appActionsSource = await fs.readFile(
+		"src/shared/model/rulesReferenceActions.ts",
+		"utf8",
+	);
+	const appStoreSource = [
+		await fs.readFile("src/shared/model/appStore.ts", "utf8"),
+		await fs.readFile("src/shared/model/workflowReducer.ts", "utf8"),
+	].join("\n");
 	const aiAssistantSource = await fs.readFile(
-		"src/components/ai/AiAssistantPanel.jsx",
+		"src/widgets/ai-assistant/ui/AiAssistantPanel.jsx",
 		"utf8",
 	);
 
@@ -3926,6 +5634,25 @@ await run("storage keeps AI response history per campaign", async () => {
 	});
 });
 
+await run("theme model normalizes document theme values", () => {
+	const previousDocument = globalThis.document;
+	const attributes = new Map();
+	globalThis.document = {
+		documentElement: {
+			setAttribute: (name, value) => attributes.set(name, value),
+		},
+	};
+	try {
+		applyTheme(THEMES.DARK);
+		assert.equal(attributes.get("data-theme"), "dark");
+		applyTheme("unsupported");
+		assert.equal(attributes.get("data-theme"), "light");
+	} finally {
+		if (previousDocument === undefined) delete globalThis.document;
+		else globalThis.document = previousDocument;
+	}
+});
+
 await run("classNames merges strings arrays objects and falsy values", () => {
 	assert.equal(classNames("a", "b"), "a b");
 	assert.equal(
@@ -4025,19 +5752,19 @@ await run(
 	"EditableField, Tooltip, and ProjectGuide keep tooltip behavior",
 	async () => {
 		const editableFieldSource = await fs.readFile(
-			"src/components/form/EditableField.jsx",
+			"src/features/editor/ui/EditableField.jsx",
 			"utf8",
 		);
 		const projectGuideSource = await fs.readFile(
-			"src/components/ProjectGuide.jsx",
+			"src/app/routing/ProjectGuide.jsx",
 			"utf8",
 		);
 		const mainContentSource = await fs.readFile(
-			"src/components/MainContent.jsx",
+			"src/app/routing/MainContent.jsx",
 			"utf8",
 		);
 		const tooltipSource = await fs.readFile(
-			"src/components/common/Tooltip.jsx",
+			"src/shared/ui/Tooltip.jsx",
 			"utf8",
 		);
 		const editableFieldCss = await fs.readFile(
@@ -4045,51 +5772,51 @@ await run(
 			"utf8",
 		);
 		const campaignViewSource = await fs.readFile(
-			"src/components/CampaignView.jsx",
+			"src/pages/campaign/ui/CampaignPage.jsx",
 			"utf8",
 		);
 		const sessionViewSource = await fs.readFile(
-			"src/components/SessionView.jsx",
+			"src/pages/session/ui/SessionPage.jsx",
 			"utf8",
 		);
 		const noteCardSource = await fs.readFile(
-			"src/components/common/NoteCard.jsx",
+			"src/features/notes/ui/NoteCard.jsx",
 			"utf8",
 		);
 		const draggableListSource = await fs.readFile(
-			"src/components/common/DraggableList.jsx",
+			"src/shared/ui/DraggableList.jsx",
 			"utf8",
 		);
 		const aiIgnoredNoteListSource = await fs.readFile(
-			"src/components/common/aiIgnoredNoteListProps.jsx",
+			"src/features/notes/ui/aiIgnoredNoteListProps.jsx",
 			"utf8",
 		);
 		const mentionEditorSource = await fs.readFile(
-			"src/utils/mentionEditor.js",
+			"src/features/editor/model/mentionEditor.js",
 			"utf8",
 		);
 		const characterCardSource = await fs.readFile(
-			"src/components/CharacterCard.jsx",
+			"src/widgets/campaign-entity-card/ui/CharacterCard.jsx",
 			"utf8",
 		);
 		const locationCardSource = await fs.readFile(
-			"src/components/LocationCard.jsx",
+			"src/widgets/campaign-entity-card/ui/LocationCard.jsx",
 			"utf8",
 		);
 		const graphSource = await fs.readFile(
-			"src/components/campaign/CampaignNotesGraph.jsx",
+			"src/pages/campaign/ui/components/CampaignNotesGraph.jsx",
 			"utf8",
 		);
 		const campaignHookSource = await fs.readFile(
-			"src/hooks/useCampaignView.js",
+			"src/pages/campaign/model/useCampaignView.js",
 			"utf8",
 		);
 		const sessionHookSource = await fs.readFile(
-			"src/hooks/useSessionView.js",
+			"src/pages/session/model/useSessionView.js",
 			"utf8",
 		);
 		const sceneFieldsSource = await fs.readFile(
-			"src/components/session/SceneCardFields.jsx",
+			"src/pages/session/ui/components/SceneCardFields.jsx",
 			"utf8",
 		);
 		const mainContentCss = await fs.readFile(
@@ -4100,7 +5827,7 @@ await run(
 
 		assert.match(
 			editableFieldSource,
-			/import Tooltip from "\.\.\/common\/Tooltip"/,
+			/import \{ Button, Tooltip \} from "\.\.\/\.\.\/\.\.\/shared\/ui\/index\.js"/,
 		);
 		assert.equal(editableFieldSource.includes("HotkeysTooltipContent"), false);
 		assert.equal(editableFieldSource.includes("Ctrl+B — Bold"), false);
@@ -4483,6 +6210,76 @@ await run(
 	},
 );
 
+await run("Backup commands own gzip payloads and import strategies", async () => {
+	const calls = [];
+	const repository = {
+		listCampaignSlugs: async () => ["one", "two"],
+		exportCampaignBundle: async (slug) => ({ meta: { slug } }),
+		exportCampaignArchiveBundle: async (slug) => ({ meta: { slug } }),
+		exportCampaignPartialArchiveBundle: async (slug, sections) => ({
+			scope: "partial",
+			slug,
+			sections,
+		}),
+		importCampaignPartialArchiveBundle: async (...args) => {
+			calls.push(["partial", ...args]);
+			return { imported: true };
+		},
+		clearAllCampaignData: async () => calls.push(["clear"]),
+		findCampaignSlugById: async (id) => (id === "existing-id" ? "existing" : null),
+		importCampaignBundle: async (...args) => calls.push(["bundle", ...args]),
+		importCampaignArchiveBundleWithStrategy: async (...args) =>
+			calls.push(["archive", ...args]),
+	};
+	const commands = createBackupCommands(repository, {
+		now: () => new Date("2032-06-07T08:09:10.000Z"),
+	});
+	const download = await commands.exportAllArchive();
+	assert.equal(download.filename, "prm-full-backup-2032-06-07.prma.gz");
+	const payload = parseArchivePayload(download.buffer);
+	assert.equal(payload.scope, "all");
+	assert.equal(payload.exportedAt, "2032-06-07T08:09:10.000Z");
+	assert.equal(payload.campaigns.length, 2);
+
+	await commands.importAll({
+		payload: [
+			{ meta: { id: "existing-id" } },
+			{ meta: { id: "new-id" } },
+		],
+		strategy: "replace_by_id",
+	});
+	assert.deepEqual(calls.slice(0, 2), [
+		[
+			"bundle",
+			{ meta: { id: "existing-id" } },
+			{ forcedSlug: "existing", replaceExisting: true },
+		],
+		["bundle", { meta: { id: "new-id" } }],
+	]);
+
+	const archiveBuffer = zlib.gzipSync(
+		Buffer.from(
+			JSON.stringify({ campaigns: [{ meta: { id: "one" } }, { meta: { id: "two" } }] }),
+			"utf8",
+		),
+	);
+	const imported = await commands.importArchive({
+		buffer: archiveBuffer,
+		mode: "campaign",
+		strategy: "wipe_and_replace",
+	});
+	assert.deepEqual(imported, { ok: true, imported: 1, strategy: "append" });
+	assert.deepEqual(calls.at(-1), [
+		"archive",
+		{ meta: { id: "one" } },
+		"append",
+	]);
+	await assert.rejects(
+		commands.importArchive({ buffer: null }),
+		(error) => error.status === 400,
+	);
+});
+
 await run("backups archive route sends gzip payload with dated filename", async () => {
 	const originalListCampaignSlugs = storage.listCampaignSlugs;
 	const originalExportCampaignArchiveBundle =
@@ -4531,6 +6328,57 @@ await run("backups archive route sends gzip payload with dated filename", async 
 		storage.listCampaignSlugs = originalListCampaignSlugs;
 		storage.exportCampaignArchiveBundle = originalExportCampaignArchiveBundle;
 	}
+});
+
+await run("Reference commands own spell search sources and named precedence", async () => {
+	const referenceFiles = {
+		"conditions.json": {
+			condition: [
+				{ name: "Blinded", source: "PHB", entries: ["old"] },
+				{ name: "Blinded", source: "XPHB", entries: ["new"] },
+			],
+			status: [{ name: "Surprised", source: "PHB" }],
+		},
+		"diseases.json": {
+			disease: [{ name: "Cackle Fever", source: "DMG", type: "disease" }],
+		},
+	};
+	const commands = createReferenceCommands({
+		readSpellAggregate: async () => ({
+			exists: true,
+			spells: [
+				{ name: "Fire Bolt", level: 0, school: "V", source: "PHB" },
+				{ name: "Fireball", level: 3, school: "V", source: "XPHB" },
+			],
+		}),
+		readSpellIndex: async () => null,
+		readSpellFile: async () => [],
+		readReferenceFile: async (fileName) => referenceFiles[fileName] || null,
+	});
+	assert.deepEqual(
+		(await commands.searchSpells({ name: "fire", school: "v" })).map(
+			(spell) => spell.name,
+		),
+		["Fireball", "Fire Bolt"],
+	);
+	assert.deepEqual(await commands.listSpellSources(), ["PHB", "XPHB"]);
+	const conditions = await commands.listConditions();
+	assert.equal(conditions[0].name, "Blinded");
+	assert.deepEqual(conditions[0].entries, ["new"]);
+	assert.equal(conditions[1].kind, "status");
+	assert.deepEqual(await commands.listDiseases(), [
+		{
+			name: "Cackle Fever",
+			kind: "disease",
+			source: "DMG",
+			page: null,
+			type: "disease",
+			entries: [],
+		},
+	]);
+	assert.deepEqual(await commands.getSpellSource({ source: "xphb" }), [
+		{ name: "Fireball", level: 3, school: "V", source: "XPHB" },
+	]);
 });
 
 await run(

@@ -1,21 +1,20 @@
-﻿import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { campaignApi } from "./entities/campaign/index.js";
 import { backupApi } from "./features/backup/index.js";
 import { settingsApi } from "./features/settings/index.js";
 
 const api = { ...campaignApi, ...backupApi, ...settingsApi };
-import DiceCalculator from "./components/DiceCalculator";
-import MainContent from "./components/MainContent";
-import MessageBox from "./components/common/MessageBox";
-import Modal from "./components/common/Modal";
-import CampaignEntityModalProvider from "./components/common/CampaignEntityModalProvider";
-import Icon from "./components/common/Icon";
-import Sidebar from "./components/Sidebar";
-import MentionPickerModalContent from "./components/modals/MentionPickerModalContent";
-import CreateCampaignModalContent from "./components/modals/CreateCampaignModalContent";
-import RulesReferenceModalHost from "./components/modals/RulesReferenceModalHost";
-import { lang } from "./services/localization";
+import { DiceCalculator } from "./features/dice/index.js";
+import MainContent from "./app/routing/MainContent.jsx";
+import { MessageBox, Modal } from "./features/modal/index.js";
+import { CampaignEntityModalProvider } from "./widgets/campaign-entity-modal/index.js";
+import { Icon } from "./shared/ui/index.js";
+import { Sidebar } from "./widgets/sidebar/index.js";
+import { MentionPickerModalContent } from "./features/editor/ui/index.js";
+import { CreateCampaignModalContent } from "./features/campaign-create/index.js";
+import { RulesReferenceModalHost } from "./widgets/rules-reference-modal/index.js";
+import { lang } from "./shared/lib/index.js";
 import {
 	alert,
 	closeMentionPickerAction,
@@ -24,9 +23,9 @@ import {
 	setLanguageAction,
 	setCampaignsAction,
 	setUiSettingsAction,
-} from "./actions/app";
-import { applyTheme } from "./services/uiSettings";
-import { initRealtimeSync } from "./services/realtimeSync";
+} from "./shared/model/index.js";
+import { applyTheme } from "./features/settings/index.js";
+import { initRealtimeSync } from "./app/realtime/index.js";
 import {
 	closeActiveModal,
 	navigateTo,
@@ -36,7 +35,7 @@ import {
 	syncNavigationFromPath,
 	useAppDispatch,
 	useAppSelector,
-} from "./store/appStore";
+} from "./shared/model/index.js";
 
 export default function App() {
 	const dispatch = useAppDispatch();

@@ -1,6 +1,6 @@
-import Modal from "../../../components/common/Modal";
-import Button from "../../../components/form/Button";
-import { lang } from "../../../services/localization";
+import { Modal } from "../../modal/index.js";
+import { Button } from "../../../shared/ui/index.js";
+import { lang } from "../../../shared/lib/index.js";
 
 export default function MonsterAiActionModal({
 	aiActionMonster,

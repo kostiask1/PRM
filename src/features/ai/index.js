@@ -1,4 +1,27 @@
-export { aiApi } from "./api/aiApi.js";
+export { aiApi } from "./api/aiApi.ts";
+export {
+	AI_FILE_ACCEPT,
+	AI_IMAGE_ACCEPT,
+	MAX_AI_ATTACHMENTS,
+	MAX_AI_FILE_BYTES,
+	MAX_AI_IMAGE_BYTES,
+	getAttachedFileKey,
+	getAttachedImageKey,
+	getSupportedAiFileMimeType,
+	getSupportedAiImageMimeType,
+	readFileAsBase64,
+} from "./model/aiAttachments.ts";
+export { buildDiffResources, getDiffResourceState } from "./model/aiDiff.ts";
+export { loadAiModelOptions } from "./model/aiModels.ts";
+export {
+	addSourceMonsterImageToDraft,
+	getFirstChangedMonster,
+	getFirstChangedMonsterName,
+	getHistoryChangeSummary,
+	getLocalizedDiffResourceState,
+	isAiResponseVisibleForRoute,
+	updateDraftResourceAfterValues,
+} from "./model/aiResponseHelpers.ts";
 export {
 	ESTIMATED_IMAGE_TOKENS,
 	ESTIMATED_FILE_TOKEN_BYTES,
@@ -10,7 +33,7 @@ export {
 	estimateTextTokens,
 	estimateValueTokens,
 	getEstimatedAiMode,
-} from "./model/tokenEstimation.js";
+} from "./model/tokenEstimation.ts";
 export {
 	buildRetryPayloadFromHistoryEntry,
 	createAiHistoryWorkflow,
@@ -21,28 +44,28 @@ export {
 	hasHistoryChanges,
 	isFailedHistoryEntry,
 	isNonParsedHistoryEntry,
-} from "./model/historyWorkflow.js";
+} from "./model/historyWorkflow.ts";
 export {
 	buildAiGenerationRequest,
 	sanitizeAiContextConfig,
-} from "./model/generationRequest.js";
+} from "./model/generationRequest.ts";
 export {
 	AI_GENERATION_STATUS,
 	aiGenerationLifecycleReducer,
 	initialAiGenerationLifecycle,
 	isAiGenerationPending,
-} from "./model/generationLifecycle.js";
+} from "./model/generationLifecycle.ts";
 export {
 	buildAiHistoryRestorePlan,
 	canApplyRestoredAiDataDirectly,
 	getAiHistoryCampaign,
 	getAiHistoryRestoreMode,
 	upsertAiHistoryEntry,
-} from "./model/historyState.js";
+} from "./model/historyState.ts";
 export {
 	createAiHistoryCommandService,
 	useAiHistoryCommands,
-} from "./model/historyCommands.js";
+} from "./model/historyCommands.ts";
 export {
 	ensureContextListItems,
 	getContextListConfig,
@@ -50,7 +73,7 @@ export {
 	updateContextConfigValue,
 	updateContextListIncluded,
 	updateContextListItem,
-} from "./model/contextConfig.js";
+} from "./model/contextConfig.ts";
 export {
 	buildCustomMonsterImageTarget,
 	buildLocationImageTarget,
@@ -58,13 +81,13 @@ export {
 	buildSceneImageTarget,
 	getImageTargetNotes,
 	getSceneImageTargetEncounter,
-} from "./model/imageTargets.js";
+} from "./model/imageTargets.ts";
 export {
 	createInitialAiContextConfig,
 	mergeLoadedAiSessionData,
 	useAiContextData,
-} from "./model/useAiContextData.js";
+} from "./model/useAiContextData.ts";
 export {
 	normalizeCustomMonsterCollection,
 	useAiImagePromptData,
-} from "./model/useAiImagePromptData.js";
+} from "./model/useAiImagePromptData.ts";

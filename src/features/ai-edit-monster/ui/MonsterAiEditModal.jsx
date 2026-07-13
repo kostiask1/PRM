@@ -1,9 +1,9 @@
-import Modal from "../../../components/common/Modal";
-import Button from "../../../components/form/Button";
-import EditableField from "../../../components/form/EditableField";
-import Select from "../../../components/form/Select";
-import AiAttachmentControls from "../../../components/ai/AiAttachmentControls";
-import { lang } from "../../../services/localization";
+import { Modal } from "../../modal/index.js";
+import { Button } from "../../../shared/ui/index.js";
+import { EditableField } from "../../editor/ui/index.js";
+import { Select } from "../../../shared/ui/index.js";
+import { AiAttachmentControls } from "../../ai/ui/index.js";
+import { lang } from "../../../shared/lib/index.js";
 
 export default function MonsterAiEditModal({
 	attachedFiles,

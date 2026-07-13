@@ -1,22 +1,22 @@
 import { useEffect, useRef } from "react";
 import ReactList from "react-list";
-import Button from "../../../components/form/Button";
-import Icon from "../../../components/common/Icon";
-import Input from "../../../components/form/Input";
-import ListCard from "../../../components/common/ListCard";
-import MonsterStatBlock from "../../../components/MonsterStatBlock";
-import MonsterStatBlockModel from "../../../models/MonsterStatBlockModel.js";
-import MultiSelect from "../../../components/form/MultiSelect";
-import Tooltip from "../../../components/common/Tooltip";
-import classNames from "../../../utils/classNames";
-import { getMonsterTypeString } from "../../../utils/bestiary.js";
-import { highlightText } from "../../../utils/searchHighlight.jsx";
+import { Button } from "../../../shared/ui/index.js";
+import { Icon } from "../../../shared/ui/index.js";
+import { Input } from "../../../features/editor/ui/index.js";
+import { ListCard } from "../../../shared/ui/index.js";
+import { MonsterStatBlock } from "../../monster-stat-block/index.js";
+import { MonsterStatBlockModel } from "../../../entities/bestiary/index.js";
+import { MultiSelect } from "../../../shared/ui/index.js";
+import { Tooltip } from "../../../shared/ui/index.js";
+import { classNames } from "../../../shared/lib/index.js";
+import { getMonsterTypeString } from "../../../entities/bestiary/index.js";
+import { highlightText } from "../../../shared/ui/index.js";
 import {
 	formatSourceLabel,
 	getSourceFullName,
-} from "../../../utils/sourceNames.js";
-import { lang } from "../../../services/localization";
-import AiAssistantPanel from "../../../components/ai/AiAssistantPanel.jsx";
+} from "../../../entities/reference/index.js";
+import { lang } from "../../../shared/lib/index.js";
+import { AiAssistantPanel } from "../../ai-assistant/index.js";
 
 function getMonsterItemKey(monster) {
 	return `${monster.source || ""}:${monster.name}`;

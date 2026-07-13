@@ -1,4 +1,4 @@
-import { sanitizeNotesForSave } from "../../utils/noteUtils.js";
+import { sanitizeNotesForSave } from "../../shared/lib/index.js";
 
 export const sanitizeEntityForSave = (entity) => {
 	const sanitized = Object.fromEntries(

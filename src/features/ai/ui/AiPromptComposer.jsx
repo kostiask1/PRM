@@ -1,7 +1,7 @@
-import AiAttachmentControls from "../../../components/ai/AiAttachmentControls.jsx";
-import Button from "../../../components/form/Button.jsx";
-import EditableField from "../../../components/form/EditableField.jsx";
-import { lang } from "../../../services/localization.js";
+import AiAttachmentControls from "./AiAttachmentControls.jsx";
+import { Button } from "../../../shared/ui/index.js";
+import { EditableField } from "../../editor/ui/index.js";
+import { lang } from "../../../shared/lib/index.js";
 
 export default function AiPromptComposer({
 	attachedFiles,

@@ -1,0 +1,790 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Button, Panel, Tooltip } from "../../../shared/ui/index.js";
+import { EditableField } from "../../../features/editor/ui/index.js";
+import { DraggableList, ListCard } from "../../../shared/ui/index.js";
+import {
+	AiContextIgnoreButton,
+	BulkCollapseButton,
+	NoteCard,
+} from "../../../features/notes/ui/index.js";
+import {
+	CharacterCard,
+	CreateCharacterButton,
+	CreateLocationButton,
+	LocationCard,
+} from "../../../widgets/campaign-entity-card/index.js";
+import CampaignNotesGraph from "./components/CampaignNotesGraph.jsx";
+import PartialArchiveModal from "./components/PartialArchiveModal.jsx";
+import { GlobalSearchModal } from "../../../widgets/campaign-search/index.js";
+import { CollapseToggleButton } from "../../../shared/ui/index.js";
+import "../../../assets/components/CampaignView.css";
+import useCampaignView from "../model/useCampaignView.js";
+import { CampaignViewModel } from "../../../entities/campaign/index.js";
+import { navigateTo, useAppSelector } from "../../../shared/model/index.js";
+import { lang } from "../../../shared/lib/index.js";
+import {
+	classNames,
+	getNoteRenderKey,
+	getNotesForRender,
+} from "../../../shared/lib/index.js";
+import { makeDomId, scrollToHashTarget } from "../../../shared/lib/index.js";
+
+function CampaignView() {
+	const campaign = useAppSelector((state) => state.active.campaign);
+	const view = useCampaignView({ campaign });
+	const viewModel = new CampaignViewModel(campaign);
+	const [sessionSearch, setSessionSearch] = useState("");
+	const [notesViewMode, setNotesViewMode] = useState("list");
+	const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
+	const [isPartialArchiveOpen, setIsPartialArchiveOpen] = useState(false);
+	const [isPartialArchiveBusy, setIsPartialArchiveBusy] = useState(false);
+	const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);
+	const headerActionsRef = useRef(null);
+	const simplifiedNotesEnabled = useAppSelector(
+		(state) => state.ui.simplifiedNotes,
+	);
+	const hasDescriptionData = String(view.description || "").trim().length > 0;
+	const hasNotesData = (view.notes || []).some(
+		(note) =>
+			String(note?.title || "").trim().length > 0 ||
+			String(note?.text || "").trim().length > 0,
+	);
+	const notesForRender = getNotesForRender(view.notes || [], {
+		simplifiedNotes: simplifiedNotesEnabled,
+	});
+	const toggleCampaignNoteAiIgnored = (noteId, ignored) => {
+		view.handleNotesReorder(
+			view.notes.map((note) =>
+				note.id === noteId ? { ...note, _aiIgnored: ignored } : note,
+			),
+		);
+	};
+	const toggleCampaignEntityAiIgnored = (type, entityId, ignored) => {
+		const list = type === "locations" ? view.locations : view.npcs;
+		const entity = list.find((item) => item.id === entityId);
+		if (!entity) return;
+		if (type === "locations") {
+			view.handleLocationChange(entityId, { ...entity, _aiIgnored: ignored });
+			return;
+		}
+		view.handleNpcChange(entityId, { ...entity, _aiIgnored: ignored });
+	};
+	const hasCharactersData = (view.characters || []).length > 0;
+	const hasNpcsData = (view.npcs || []).length > 0;
+	const hasLocationsData = (view.locations || []).length > 0;
+	const isDescriptionCollapsed = hasDescriptionData
+		? view.isDescriptionCollapsed
+		: false;
+	const isNotesCollapsed = hasNotesData ? view.isNotesCollapsed : false;
+	const isCharactersCollapsed = hasCharactersData
+		? view.isCharactersCollapsed
+		: false;
+	const isNpcsCollapsed = hasNpcsData ? view.isNpcsCollapsed : false;
+	const isLocationsCollapsed = hasLocationsData
+		? view.isLocationsCollapsed
+		: false;
+
+	const filteredSessions = useMemo(() => {
+		const query = sessionSearch.trim().toLowerCase();
+		return view.sessions.filter((session) => {
+			return (
+				!query ||
+				String(session.name || "")
+					.toLowerCase()
+					.includes(query)
+			);
+		});
+	}, [view.sessions, sessionSearch]);
+
+	const canReorderSessions = sessionSearch.trim().length === 0;
+	const {
+		setIsCharactersCollapsed,
+		setIsLocationsCollapsed,
+		setIsNotesCollapsed,
+		setIsNpcsCollapsed,
+	} = view;
+
+	useEffect(() => {
+		const hash = decodeURIComponent(window.location.hash || "");
+		if (hash.includes("campaign-note")) {
+			setNotesViewMode("list");
+			if (isNotesCollapsed) setIsNotesCollapsed(false);
+		} else if (hash.includes("campaign-character")) {
+			if (isCharactersCollapsed) setIsCharactersCollapsed(false);
+		} else if (hash.includes("campaign-npc")) {
+			if (isNpcsCollapsed) setIsNpcsCollapsed(false);
+		} else if (hash.includes("campaign-location")) {
+			if (isLocationsCollapsed) setIsLocationsCollapsed(false);
+		}
+		const timer = window.setTimeout(() => scrollToHashTarget(), 120);
+		return () => window.clearTimeout(timer);
+	}, [
+		campaign.slug,
+		isCharactersCollapsed,
+		isLocationsCollapsed,
+		isNotesCollapsed,
+		isNpcsCollapsed,
+		notesForRender,
+		setIsCharactersCollapsed,
+		setIsLocationsCollapsed,
+		setIsNotesCollapsed,
+		setIsNpcsCollapsed,
+	]);
+
+	useEffect(() => {
+		const handleCharacterDragDrop = (event) => {
+			const payload = event.detail?.payload;
+			if (payload?.kind !== "campaign-character") return;
+
+			const target = document.elementFromPoint(
+				event.detail.clientX,
+				event.detail.clientY,
+			);
+			const dropZone = target?.closest?.("[data-character-drop-type]");
+			const targetType = dropZone?.dataset.characterDropType;
+			if (!targetType) return;
+
+			view.handleCharacterTypeDrop({
+				sourceType: payload.sourceType,
+				targetType,
+				id: payload.id,
+			});
+		};
+
+		window.addEventListener("prm-draggable-list-drop", handleCharacterDragDrop);
+		return () => {
+			window.removeEventListener(
+				"prm-draggable-list-drop",
+				handleCharacterDragDrop,
+			);
+		};
+	}, [view]);
+
+	useEffect(() => {
+		if (!isHeaderActionsOpen) return undefined;
+
+		const handlePointerDown = (event) => {
+			if (headerActionsRef.current?.contains(event.target)) return;
+			setIsHeaderActionsOpen(false);
+		};
+
+		document.addEventListener("pointerdown", handlePointerDown);
+		return () => {
+			document.removeEventListener("pointerdown", handlePointerDown);
+		};
+	}, [isHeaderActionsOpen]);
+
+	const handleNotesViewModeChange = (mode) => {
+		setNotesViewMode(mode);
+		if (isNotesCollapsed) {
+			view.setIsNotesCollapsed(false);
+			view.triggerSave({ isNotesCollapsed: false });
+		}
+	};
+
+	const handleBulkNotesCollapse = (collapsed) => {
+		view.handleNotesReorder(view.notes.map((note) => ({ ...note, collapsed })));
+		view.finishTrackedReorder();
+	};
+
+	const handleBulkEntitiesCollapse = (type, items, onReorder, collapsed) => {
+		const nextItems = items.map((item) => ({ ...item, collapsed }));
+		onReorder(nextItems);
+		view.persistEntitiesReorder(type, nextItems);
+	};
+
+	const renderSessionCard = (session) => (
+		<ListCard
+			key={session.fileName}
+			className="CampaignView__sessionCard"
+			href={viewModel.buildSessionHref(session.fileName)}
+			onClick={() => navigateTo(campaign.slug, session.fileName)}
+			actions={
+				<Button
+					className="CampaignView__sessionDelete"
+					variant="danger"
+					icon="trash"
+					size={Button.SIZES.SMALL}
+					onClick={(e) => {
+						e.stopPropagation();
+						view.handleDeleteSession(session);
+					}}
+				/>
+			}
+		>
+			<div className="ListCard__title">{session.name}</div>
+		</ListCard>
+	);
+
+	return (
+		<Panel className="CampaignView">
+			<div className="Panel__header">
+				<div className="CampaignView__header">
+					<Tooltip content={lang.t("Click to rename")}>
+						<h2 className="editable_title" onClick={view.handleRename}>
+							{viewModel.name}
+						</h2>
+					</Tooltip>
+					<p className="muted">
+						{lang.t("Created")}: {viewModel.createdAtLabel}
+					</p>
+				</div>
+				<div
+					ref={headerActionsRef}
+					className={classNames("CampaignView__headerActions", {
+						is_open: isHeaderActionsOpen,
+					})}
+				>
+					<Button
+						variant="ghost"
+						size={Button.SIZES.SMALL}
+						icon="search"
+						onClick={() => setIsGlobalSearchOpen(true)}
+						title={lang.t("Global search")}
+					>
+						{lang.t("Search")}
+					</Button>
+					<Button
+						variant="ghost"
+						size={Button.SIZES.SMALL}
+						icon="undo"
+						onClick={view.handleUndo}
+						disabled={view.undoStack.length === 0}
+						title={lang.t("Undo (Ctrl+Z)")}
+					/>
+					<Button
+						variant="ghost"
+						size={Button.SIZES.SMALL}
+						icon="redo"
+						onClick={view.handleRedo}
+						disabled={view.redoStack.length === 0}
+						title={lang.t("Redo (Ctrl+Y)")}
+					/>
+					<Button
+						variant="ghost"
+						size={Button.SIZES.SMALL}
+						icon="menu"
+						className="CampaignView__headerActionsToggle"
+						onClick={() => setIsHeaderActionsOpen((value) => !value)}
+						title={lang.t("Campaign actions")}
+					/>
+					<div className="CampaignView__headerActionsMenu">
+						<Button
+							variant="ghost"
+							size={Button.SIZES.SMALL}
+							onClick={() => {
+								setIsHeaderActionsOpen(false);
+								view.handleExport();
+							}}
+							icon="export"
+						>
+							{lang.t("Export")}
+						</Button>
+						<Button
+							variant="ghost"
+							size={Button.SIZES.SMALL}
+							icon="database"
+							onClick={() => {
+								setIsHeaderActionsOpen(false);
+								setIsPartialArchiveOpen(true);
+							}}
+						>
+							{lang.t("Import/export parts")}
+						</Button>
+						<Button
+							variant="danger"
+							size={Button.SIZES.SMALL}
+							icon="trash"
+							onClick={() => {
+								setIsHeaderActionsOpen(false);
+								view.handleDeleteCampaign();
+							}}
+						>
+							{lang.t("Delete")}
+						</Button>
+					</div>
+				</div>
+			</div>
+			<div className="Panel__body">
+				<div className="CampaignView__layout">
+					<aside className="CampaignView__sessionsPane" id="campaign-sessions">
+						<div className="CampaignView__sessionsPaneHeader">
+							<h3>{lang.t("Sessions")}</h3>
+							<Button
+								variant="create"
+								onClick={view.handleCreateSession}
+								icon="plus"
+								size={Button.SIZES.SMALL}
+								strokeWidth={2.5}
+							>
+								{lang.t("New session")}
+							</Button>
+						</div>
+						<div className="CampaignView__sessionsPaneControls">
+							<input
+								className="CampaignView__sessionSearch"
+								placeholder={lang.t("Search sessions...")}
+								value={sessionSearch}
+								onChange={(e) => setSessionSearch(e.target.value)}
+							/>
+						</div>
+						<div className="CampaignView__sessionsPaneList">
+							{canReorderSessions ? (
+								<DraggableList
+									items={filteredSessions}
+									onReorder={view.setSessions}
+									onDrop={view.handleSessionReorderDrop}
+									keyExtractor={(session) => session.fileName}
+									renderItem={(session) => renderSessionCard(session)}
+								/>
+							) : (
+								<div className="CampaignView__sessions">
+									{filteredSessions.map((session) =>
+										renderSessionCard(session),
+									)}
+								</div>
+							)}
+							{filteredSessions.length === 0 && (
+								<div className="muted CampaignView__emptySessions">
+									{lang.t("No sessions found.")}
+								</div>
+							)}
+						</div>
+					</aside>
+
+					<div className="CampaignView__contentPanel">
+						<div
+							className="CampaignView__section"
+							id={makeDomId("campaign", "description")}
+						>
+							<div className="section_row">
+								<div
+									className="section_title_group"
+									onClick={() => {
+										if (!hasDescriptionData) return;
+										const next = !isDescriptionCollapsed;
+										view.setIsDescriptionCollapsed(next);
+										view.triggerSave({ isDescriptionCollapsed: next });
+									}}
+								>
+									{hasDescriptionData && (
+										<CollapseToggleButton
+											size={Button.SIZES.MEDIUM}
+											collapsed={isDescriptionCollapsed}
+											onClick={() => {
+												const next = !isDescriptionCollapsed;
+												view.setIsDescriptionCollapsed(next);
+												view.triggerSave({ isDescriptionCollapsed: next });
+											}}
+										/>
+									)}
+									<h3>{lang.t("Campaign story")}</h3>
+								</div>
+							</div>
+							{!isDescriptionCollapsed && (
+								<EditableField
+									type="textarea"
+									className="CampaignView__script"
+									enableHistory={false}
+									placeholder={lang.t(
+										"Describe the main plotline, key events, and goals...",
+									)}
+									value={view.description}
+									onChange={view.handleDescriptionChange}
+								/>
+							)}
+						</div>
+
+						<div className="CampaignView__section">
+							<div className="section_row">
+								<div
+									className="section_title_group"
+									onClick={() => {
+										if (!hasNotesData) return;
+										const next = !isNotesCollapsed;
+										view.setIsNotesCollapsed(next);
+										view.triggerSave({ isNotesCollapsed: next });
+									}}
+								>
+									{hasNotesData && (
+										<CollapseToggleButton
+											size={Button.SIZES.MEDIUM}
+											collapsed={isNotesCollapsed}
+											onClick={() => {
+												const next = !isNotesCollapsed;
+												view.setIsNotesCollapsed(next);
+												view.triggerSave({ isNotesCollapsed: next });
+											}}
+										/>
+									)}
+									<h3>{lang.t("Notes")}</h3>
+								</div>
+								<div className="CampaignView__notesViewToggle">
+									{!isNotesCollapsed &&
+										notesViewMode === "list" && (
+											<BulkCollapseButton
+												items={view.notes}
+												onChange={handleBulkNotesCollapse}
+											/>
+										)}
+									<Button
+										variant={notesViewMode === "list" ? "primary" : "ghost"}
+										size={Button.SIZES.SMALL}
+										icon="list"
+										iconSize={16}
+										onClick={() => handleNotesViewModeChange("list")}
+										title={lang.t("List view")}
+									>
+										{lang.t("List")}
+									</Button>
+									<Button
+										variant={notesViewMode === "graph" ? "primary" : "ghost"}
+										size={Button.SIZES.SMALL}
+										icon="notes-graph"
+										iconSize={16}
+										onClick={() => handleNotesViewModeChange("graph")}
+										title={lang.t("Graph view")}
+									>
+										{lang.t("Graph")}
+									</Button>
+								</div>
+							</div>
+							{!isNotesCollapsed && notesViewMode === "list" && (
+								<DraggableList
+									items={notesForRender}
+									className="CampaignView__notes"
+									onReorder={view.handleNotesReorder}
+									onDrop={view.finishTrackedReorder}
+									keyExtractor={(note, index) => getNoteRenderKey(note, index)}
+									isItemDraggable={(note) => !note._isVirtual}
+									isItemControlActive={(note) => Boolean(note._aiIgnored)}
+									renderItemControl={(note) =>
+										!note._isVirtual && (
+											<AiContextIgnoreButton
+												ignored={Boolean(note._aiIgnored)}
+												onToggle={(ignored) =>
+													toggleCampaignNoteAiIgnored(note.id, ignored)
+												}
+											/>
+										)
+									}
+									renderItem={(note, isDragging, index) => (
+										<div id={makeDomId("campaign", "note", note.id)}>
+											<NoteCard
+												note={note}
+												isLast={index === notesForRender.length - 1}
+												campaignSlug={campaign.slug}
+												enableHistory={false}
+												onToggleCollapse={view.handleToggleNoteCollapse}
+												onTitleChange={view.handleNoteTitleChange}
+												onTextChange={view.handleNoteChange}
+												onDelete={view.handleDeleteNote}
+											/>
+										</div>
+									)}
+								/>
+							)}
+							{!isNotesCollapsed && notesViewMode === "graph" && (
+								<CampaignNotesGraph
+									campaign={campaign}
+									description={view.description}
+									notes={view.notes}
+									characters={view.characters}
+									npcs={view.npcs}
+									locations={view.locations}
+									sessions={view.sessions}
+									sessionDetails={view.sessionDetails}
+									isLoading={view.isGraphDataLoading}
+									error={view.graphDataError}
+									onLoadSessionDetails={view.loadSessionDetailsForGraph}
+									onSaveNote={view.handleGraphNoteSave}
+									onOpenSession={(fileName) =>
+										navigateTo(campaign.slug, fileName)
+									}
+								/>
+							)}
+						</div>
+
+						<div
+							className="CampaignView__section"
+							data-character-drop-type="characters"
+						>
+							<div className="section_row">
+								<div
+									className="section_title_group"
+									onClick={() => {
+										if (!hasCharactersData) return;
+										const next = !isCharactersCollapsed;
+										view.setIsCharactersCollapsed(next);
+										view.triggerSave({ isCharactersCollapsed: next });
+									}}
+								>
+									{hasCharactersData && (
+										<CollapseToggleButton
+											size={Button.SIZES.MEDIUM}
+											collapsed={isCharactersCollapsed}
+											onClick={() => {
+												const next = !isCharactersCollapsed;
+												view.setIsCharactersCollapsed(next);
+												view.triggerSave({ isCharactersCollapsed: next });
+											}}
+										/>
+									)}
+									<h3>{lang.t("Characters")}</h3>
+								</div>
+								{!isCharactersCollapsed && (
+									<div className="CampaignView__sectionActions">
+										<BulkCollapseButton
+											items={view.characters}
+											onChange={(collapsed) =>
+												handleBulkEntitiesCollapse(
+													"characters",
+													view.characters,
+													view.handleCharactersReorder,
+													collapsed,
+												)
+											}
+										/>
+										<CreateCharacterButton
+											campaignSlug={campaign.slug}
+											entityType="characters"
+										/>
+									</div>
+								)}
+							</div>
+							{!isCharactersCollapsed && (
+								<DraggableList
+									items={view.characters}
+									className="CampaignView__characters"
+									onReorder={view.handleCharactersReorder}
+									onDrop={(items) =>
+										view.persistEntitiesReorder("characters", items)
+									}
+									dragData={(character) => ({
+										kind: "campaign-character",
+										sourceType: "characters",
+										id: character.id,
+									})}
+									keyExtractor={(char) => char.id}
+									renderItem={(character) => (
+										<div id={makeDomId("campaign", "character", character.id)}>
+											<CharacterCard
+												character={character}
+												onToggleCollapse={view.handleToggleCharacterCollapse}
+												onChange={view.handleCharacterChange}
+												onNameBlur={view.handleCharacterNameBlur}
+												onDelete={view.handleDeleteCharacter}
+												onReorderDrop={view.finishTrackedReorder}
+												campaignSlug={campaign.slug}
+												enableHistory={false}
+												type="characters"
+											/>
+										</div>
+									)}
+								/>
+							)}
+						</div>
+
+						<div
+							className="CampaignView__section"
+							data-character-drop-type="npc"
+						>
+							<div className="section_row">
+								<div
+									className="section_title_group"
+									onClick={() => {
+										if (!hasNpcsData) return;
+										const next = !isNpcsCollapsed;
+										view.setIsNpcsCollapsed(next);
+										view.triggerSave({ isNpcsCollapsed: next });
+									}}
+								>
+									{hasNpcsData && (
+										<CollapseToggleButton
+											size={Button.SIZES.MEDIUM}
+											collapsed={isNpcsCollapsed}
+											onClick={() => {
+												const next = !isNpcsCollapsed;
+												view.setIsNpcsCollapsed(next);
+												view.triggerSave({ isNpcsCollapsed: next });
+											}}
+										/>
+									)}
+									<h3>{lang.t("NPC")}</h3>
+								</div>
+								{!isNpcsCollapsed && (
+									<div className="CampaignView__sectionActions">
+										<BulkCollapseButton
+											items={view.npcs}
+											onChange={(collapsed) =>
+												handleBulkEntitiesCollapse(
+													"npc",
+													view.npcs,
+													view.handleNpcsReorder,
+													collapsed,
+												)
+											}
+										/>
+										<CreateCharacterButton
+											campaignSlug={campaign.slug}
+											entityType="npc"
+										/>
+									</div>
+								)}
+							</div>
+							{!isNpcsCollapsed && (
+								<DraggableList
+									items={view.npcs}
+									className="CampaignView__characters"
+									onReorder={view.handleNpcsReorder}
+									onDrop={(items) => view.persistEntitiesReorder("npc", items)}
+									dragData={(npc) => ({
+										kind: "campaign-character",
+										sourceType: "npc",
+										id: npc.id,
+									})}
+									keyExtractor={(npc) => npc.id}
+									isItemControlActive={(npc) => Boolean(npc._aiIgnored)}
+									renderItemControl={(npc) => (
+										<AiContextIgnoreButton
+											ignored={Boolean(npc._aiIgnored)}
+											onToggle={(ignored) =>
+												toggleCampaignEntityAiIgnored("npc", npc.id, ignored)
+											}
+										/>
+									)}
+									renderItem={(npc) => (
+										<div id={makeDomId("campaign", "npc", npc.id)}>
+											<CharacterCard
+												character={npc}
+												onToggleCollapse={view.handleToggleNpcCollapse}
+												onChange={view.handleNpcChange}
+												onNameBlur={view.handleNpcNameBlur}
+												onDelete={view.handleNpcDelete}
+												onReorderDrop={view.finishTrackedReorder}
+												campaignSlug={campaign.slug}
+												enableHistory={false}
+												type="npc"
+											/>
+										</div>
+									)}
+								/>
+							)}
+						</div>
+
+						<div className="CampaignView__section">
+							<div className="section_row">
+								<div
+									className="section_title_group"
+									onClick={() => {
+										if (!hasLocationsData) return;
+										const next = !isLocationsCollapsed;
+										view.setIsLocationsCollapsed(next);
+										view.triggerSave({ isLocationsCollapsed: next });
+									}}
+								>
+									{hasLocationsData && (
+										<CollapseToggleButton
+											size={Button.SIZES.MEDIUM}
+											collapsed={isLocationsCollapsed}
+											onClick={() => {
+												const next = !isLocationsCollapsed;
+												view.setIsLocationsCollapsed(next);
+												view.triggerSave({ isLocationsCollapsed: next });
+											}}
+										/>
+									)}
+									<h3>{lang.t("Locations/Factions")}</h3>
+								</div>
+								{!isLocationsCollapsed && (
+									<div className="CampaignView__sectionActions">
+										<BulkCollapseButton
+											items={view.locations}
+											onChange={(collapsed) =>
+												handleBulkEntitiesCollapse(
+													"locations",
+													view.locations,
+													view.handleLocationsReorder,
+													collapsed,
+												)
+											}
+										/>
+										<CreateLocationButton campaignSlug={campaign.slug} />
+									</div>
+								)}
+							</div>
+							{!isLocationsCollapsed && (
+								<DraggableList
+									items={view.locations}
+									className="CampaignView__locations"
+									onReorder={view.handleLocationsReorder}
+									onDrop={(items) =>
+										view.persistEntitiesReorder("locations", items)
+									}
+									keyExtractor={(location) => location.id}
+									isItemControlActive={(location) =>
+										Boolean(location._aiIgnored)
+									}
+									renderItemControl={(location) => (
+										<AiContextIgnoreButton
+											ignored={Boolean(location._aiIgnored)}
+											onToggle={(ignored) =>
+												toggleCampaignEntityAiIgnored(
+													"locations",
+													location.id,
+													ignored,
+												)
+											}
+										/>
+									)}
+									renderItem={(location) => (
+										<div id={makeDomId("campaign", "location", location.id)}>
+											<LocationCard
+												location={location}
+												onToggleCollapse={view.handleToggleLocationCollapse}
+												onChange={view.handleLocationChange}
+												onNameBlur={view.handleLocationNameBlur}
+												onDelete={view.handleLocationDelete}
+												onReorderDrop={view.finishTrackedReorder}
+												campaignSlug={campaign.slug}
+												enableHistory={false}
+											/>
+										</div>
+									)}
+								/>
+							)}
+						</div>
+					</div>
+				</div>
+			</div>
+			{isGlobalSearchOpen && (
+				<GlobalSearchModal onCancel={() => setIsGlobalSearchOpen(false)} />
+			)}
+			{isPartialArchiveOpen && (
+				<PartialArchiveModal
+					isBusy={isPartialArchiveBusy}
+					onCancel={() => setIsPartialArchiveOpen(false)}
+					onExport={async (sections) => {
+						setIsPartialArchiveBusy(true);
+						try {
+							await view.handleExportPartial(sections);
+						} finally {
+							setIsPartialArchiveBusy(false);
+						}
+					}}
+					onImport={async (file, sections) => {
+						setIsPartialArchiveBusy(true);
+						try {
+							await view.handleImportPartial(file, sections);
+							setIsPartialArchiveOpen(false);
+						} finally {
+							setIsPartialArchiveBusy(false);
+						}
+					}}
+				/>
+			)}
+		</Panel>
+	);
+}
+
+export default CampaignView;

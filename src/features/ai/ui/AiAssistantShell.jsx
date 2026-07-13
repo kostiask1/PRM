@@ -1,7 +1,7 @@
-import Icon from "../../../components/common/Icon.jsx";
-import Modal from "../../../components/common/Modal.jsx";
-import Notification from "../../../components/common/Notification.jsx";
-import Tooltip from "../../../components/common/Tooltip.jsx";
+import { Icon } from "../../../shared/ui/index.js";
+import { Modal } from "../../modal/index.js";
+import { Notification } from "../../../shared/ui/index.js";
+import { Tooltip } from "../../../shared/ui/index.js";
 
 export default function AiAssistantShell({
 	children,

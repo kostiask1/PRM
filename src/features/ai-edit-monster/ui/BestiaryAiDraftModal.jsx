@@ -1,6 +1,5 @@
-import AiResponseModal from "../../../components/ai/AiResponseModal";
-
 export default function BestiaryAiDraftModal({
+	ResponseModal,
 	aiDraftDiffResources,
 	aiDraftResponseEntry,
 	aiDraftResponseRef,
@@ -17,7 +16,7 @@ export default function BestiaryAiDraftModal({
 	if (!aiDraftResponseEntry) return null;
 
 	return (
-		<AiResponseModal
+		<ResponseModal
 			generatedPrompt={aiDraftResponseEntry.text}
 			generatedPromptRef={aiDraftResponseRef}
 			isGeneratedPromptCopied={false}

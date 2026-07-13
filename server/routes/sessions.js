@@ -1,18 +1,36 @@
 const express = require("express");
 const router = express.Router();
 const storage = require("../storage");
+const {
+	createCampaignEntityScopeCommands,
+} = require("../modules/campaign/application/campaignEntityScopeCommands");
+const {
+	createFileCampaignEntityScopeRepository,
+} = require("../modules/campaign/infrastructure/fileCampaignEntityScopeRepository");
+const {
+	createSceneEncounterCommand,
+} = require("../modules/session/application/createSceneEncounter");
+const {
+	createUpdateEncounterCommand,
+} = require("../modules/session/application/updateEncounter");
+const {
+	createSessionCommands,
+} = require("../modules/session/application/sessionCommands");
+const {
+	createFileSessionRepository,
+} = require("../modules/session/infrastructure/fileSessionRepository");
 
-async function getExistingSessionPath(campaignSlug, fileName, res) {
-	const fullPath = storage.sessionPath(campaignSlug, fileName);
-	if (await storage.exists(fullPath)) return fullPath;
-	res.status(404).json({ error: "Session not found." });
-	return null;
-}
+const entityScopeCommands = createCampaignEntityScopeCommands(
+	createFileCampaignEntityScopeRepository(storage),
+);
+const sessionRepository = createFileSessionRepository(storage);
+const createSceneEncounter = createSceneEncounterCommand(sessionRepository);
+const updateEncounter = createUpdateEncounterCommand(sessionRepository);
+const sessionCommands = createSessionCommands(sessionRepository);
 
 router.get("/", async (req, res, next) => {
 	try {
-		const sessions = await storage.listSessions(req.campaignSlug);
-		res.json(sessions);
+		res.json(await sessionCommands.list({ campaignSlug: req.campaignSlug }));
 	} catch (error) {
 		next(error);
 	}
@@ -20,25 +38,57 @@ router.get("/", async (req, res, next) => {
 
 router.post("/", async (req, res, next) => {
 	try {
-		const slug = req.campaignSlug;
-		const existingSessions = await storage.listSessions(slug);
-		const maxOrder = existingSessions.reduce(
-			(max, s) => Math.max(max, s.order || 0),
-			-1,
+		res.status(201).json(
+			await sessionCommands.create({
+				campaignSlug: req.campaignSlug,
+				payload: req.body,
+			}),
 		);
+	} catch (error) {
+		next(error);
+	}
+});
 
-		const baseName =
-			storage.sanitizeName(req.body?.name) ||
-			new Date().toISOString().slice(0, 10);
-		const session = storage.makeDefaultSessionData(baseName);
-		session.order = maxOrder + 1;
-		const fileName = await storage.ensureUniqueSessionFile(slug, session.name);
+router.post("/:fileName/entities/:type/:entityId/move-scope", async (req, res, next) => {
+	try {
+		const result = await entityScopeCommands.move({
+			campaignSlug: req.campaignSlug,
+			fileName: req.params.fileName,
+			type: req.params.type,
+			entityId: req.params.entityId,
+			entitySlug: req.body?.entitySlug,
+			targetScope: req.body?.targetScope,
+		});
+		res.json(result);
+	} catch (error) {
+		next(error);
+	}
+});
 
-		if (req.body?.data && typeof req.body.data === "object")
-			session.data = req.body.data;
-		await storage.writeJson(storage.sessionPath(slug, fileName), session);
+router.post("/:fileName/scenes/:sceneId/encounters", async (req, res, next) => {
+	try {
+		const result = await createSceneEncounter({
+			campaignSlug: req.campaignSlug,
+			fileName: req.params.fileName,
+			sceneId: req.params.sceneId,
+			name: req.body?.name,
+		});
+		res.status(result.created ? 201 : 200).json(result);
+	} catch (error) {
+		next(error);
+	}
+});
 
-		res.status(201).json({ ...session, fileName });
+router.patch("/:fileName/encounters/:encounterId", async (req, res, next) => {
+	try {
+		res.json(
+			await updateEncounter({
+				campaignSlug: req.campaignSlug,
+				fileName: req.params.fileName,
+				encounterId: req.params.encounterId,
+				patch: req.body,
+			}),
+		);
 	} catch (error) {
 		next(error);
 	}
@@ -46,14 +96,12 @@ router.post("/", async (req, res, next) => {
 
 router.get("/:fileName", async (req, res, next) => {
 	try {
-		const fullPath = await getExistingSessionPath(
-			req.campaignSlug,
-			req.params.fileName,
-			res,
+		res.json(
+			await sessionCommands.get({
+				campaignSlug: req.campaignSlug,
+				fileName: req.params.fileName,
+			}),
 		);
-		if (!fullPath) return;
-		const session = await storage.readJson(fullPath);
-		res.json({ ...session, fileName: req.params.fileName });
 	} catch (error) {
 		next(error);
 	}
@@ -61,39 +109,13 @@ router.get("/:fileName", async (req, res, next) => {
 
 router.patch("/:fileName", async (req, res, next) => {
 	try {
-		const { campaignSlug: slug } = req;
-		const { fileName } = req.params;
-		const fullPath = await getExistingSessionPath(slug, fileName, res);
-		if (!fullPath) return;
-
-		const current = await storage.readJson(fullPath);
-		const nextName = req.body?.name
-			? storage.sanitizeName(req.body.name)
-			: current.name;
-		if (!nextName)
-			return res.status(400).json({ error: "Name cannot be empty." });
-
-		const nextFileName = await storage.ensureUniqueSessionFile(
-			slug,
-			nextName,
-			fileName,
+		res.json(
+			await sessionCommands.update({
+				campaignSlug: req.campaignSlug,
+				fileName: req.params.fileName,
+				patch: req.body,
+			}),
 		);
-		const updated = {
-			...current,
-			...req.body,
-			name: nextName,
-			id: current.id,
-		};
-
-		if (nextFileName !== fileName) {
-			await storage.renameWithRetry(
-				fullPath,
-				storage.sessionPath(slug, nextFileName),
-			);
-		}
-
-		await storage.writeJson(storage.sessionPath(slug, nextFileName), updated);
-		res.json({ ...updated, fileName: nextFileName });
 	} catch (error) {
 		next(error);
 	}
@@ -101,13 +123,10 @@ router.patch("/:fileName", async (req, res, next) => {
 
 router.delete("/:fileName", async (req, res, next) => {
 	try {
-		const fullPath = await getExistingSessionPath(
-			req.campaignSlug,
-			req.params.fileName,
-			res,
-		);
-		if (!fullPath) return;
-		await require("fs/promises").rm(fullPath, { force: true });
+		await sessionCommands.remove({
+			campaignSlug: req.campaignSlug,
+			fileName: req.params.fileName,
+		});
 		res.status(204).send();
 	} catch (error) {
 		next(error);
@@ -116,16 +135,12 @@ router.delete("/:fileName", async (req, res, next) => {
 
 router.post("/reorder", async (req, res, next) => {
 	try {
-		const { campaignSlug: slug } = req;
-		const { orders } = req.body;
-		for (const fileName of Object.keys(orders)) {
-			const session = await storage.readJson(
-				storage.sessionPath(slug, fileName),
-			);
-			session.order = orders[fileName];
-			await storage.writeJson(storage.sessionPath(slug, fileName), session);
-		}
-		res.json({ ok: true });
+		res.json(
+			await sessionCommands.reorder({
+				campaignSlug: req.campaignSlug,
+				orders: req.body?.orders,
+			}),
+		);
 	} catch (error) {
 		next(error);
 	}

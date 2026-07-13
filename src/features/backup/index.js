@@ -1,1 +1,1 @@
-export { backupApi } from "./api/backupApi.js";
+export { backupApi } from "./api/backupApi.ts";

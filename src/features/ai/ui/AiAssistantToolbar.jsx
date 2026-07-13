@@ -1,8 +1,7 @@
-import Button from "../../../components/form/Button";
-import Checkbox from "../../../components/form/Checkbox";
-import Select from "../../../components/form/Select";
-import classNames from "../../../utils/classNames";
-import { lang } from "../../../services/localization";
+import { Button } from "../../../shared/ui/index.js";
+import { Checkbox, Select } from "../../../shared/ui/index.js";
+import { classNames } from "../../../shared/lib/index.js";
+import { lang } from "../../../shared/lib/index.js";
 
 export default function AiAssistantToolbar({
 	aiModels,

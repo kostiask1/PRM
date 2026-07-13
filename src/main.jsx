@@ -1,8 +1,8 @@
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router";
 import App from "./App";
-import { lang } from "./services/localization";
-import { openModalRequest } from "./store/appStore";
+import { lang } from "./shared/lib/index.js";
+import { openModalRequest } from "./shared/model/index.js";
 import "./assets/scss/main.scss"; // Importing BEM styles
 
 ReactDOM.createRoot(document.getElementById("root")).render(

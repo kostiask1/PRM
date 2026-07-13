@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 
-import Modal from "../../../components/common/Modal";
-import Button from "../../../components/form/Button";
-import Input from "../../../components/form/Input";
-import Select from "../../../components/form/Select";
-import RulesReferenceModalContent from "../../../components/modals/RulesReferenceModalContent";
-import { lang } from "../../../services/localization";
-import { getMonsterTypeString } from "../../../utils/bestiary";
+import { Modal } from "../../modal/index.js";
+import { Button } from "../../../shared/ui/index.js";
+import { Input } from "../../editor/ui/index.js";
+import { Select } from "../../../shared/ui/index.js";
+import { lang } from "../../../shared/lib/index.js";
+import { getMonsterTypeString } from "../../../entities/bestiary/index.js";
 import "../../../assets/components/MonsterFieldEditModal.css";
 
 const CREATURE_ACTION_SECTIONS = [
@@ -345,6 +344,7 @@ export default function MonsterFieldEditModal({
 	title = lang.t("Edit creature"),
 	onCancel,
 	onSave,
+	RulesReferenceContent = null,
 }) {
 	const [draft, setDraft] = useState(null);
 	const [jsonText, setJsonText] = useState("");
@@ -764,7 +764,7 @@ export default function MonsterFieldEditModal({
 					</div>
 				</div>
 			</Modal>
-			{ruleInsertTarget && (
+			{ruleInsertTarget && RulesReferenceContent && (
 				<Modal
 					title={lang.t("Rules Reference")}
 					onCancel={() => setRuleInsertTarget(null)}
@@ -773,7 +773,7 @@ export default function MonsterFieldEditModal({
 					className="MonsterFieldEditModal__rules_modal"
 					overlayClassName="MonsterFieldEditModal__rules_overlay"
 				>
-					<RulesReferenceModalContent onSelectReference={applyRuleInsert} />
+					<RulesReferenceContent onSelectReference={applyRuleInsert} />
 				</Modal>
 			)}
 		</>

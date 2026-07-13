@@ -2,6 +2,7 @@ import BestiaryAiDraftModal from "./BestiaryAiDraftModal";
 import MonsterAiEditModal from "./MonsterAiEditModal";
 
 export default function BestiaryAiModals({
+	ResponseModal,
 	aiDraftDiffResources,
 	aiDraftResponseEntry,
 	aiDraftResponseRef,
@@ -52,6 +53,7 @@ export default function BestiaryAiModals({
 				setAttachedImages={setAiEditAttachedImages}
 			/>
 			<BestiaryAiDraftModal
+				ResponseModal={ResponseModal}
 				aiDraftDiffResources={aiDraftDiffResources}
 				aiDraftResponseEntry={aiDraftResponseEntry}
 				aiDraftResponseRef={aiDraftResponseRef}

@@ -8,41 +8,42 @@ import {
 	confirm,
 	setCampaignsAction,
 	setUiSettingsAction,
-} from "../../../actions/app";
-import { useAppDispatch, useAppSelector } from "../../../store/appStore";
-import Button from "../../../components/form/Button";
+} from "../../../shared/model/index.js";
+import { useAppDispatch, useAppSelector } from "../../../shared/model/index.js";
+import { Button } from "../../../shared/ui/index.js";
 import { BestiaryAiModals, MonsterAiActionModal } from "../../../features/ai-edit-monster/index.js";
+import { AiResponseModal } from "../../ai-response-modal/index.js";
 import BestiaryContent from "./BestiaryContent";
-import { MonsterFieldEditModal } from "../../../features/edit-monster/index.js";
-import MonsterStatBlockModel from "../../../models/MonsterStatBlockModel.js";
-import useDebounce from "../../../hooks/useDebounce.js";
-import { buildDiffResources } from "../../../utils/aiDiff.js";
+import { MonsterEditorModal } from "../../monster-editor-modal/index.js";
+import { MonsterStatBlockModel } from "../../../entities/bestiary/index.js";
+import { useDebounce } from "../../../shared/lib/index.js";
+import { buildDiffResources } from "../../../features/ai/index.js";
 import {
 	addSourceMonsterImageToDraft,
 	getFirstChangedMonsterName,
 	getHistoryChangeSummary as getAiHistoryChangeSummary,
 	getLocalizedDiffResourceState,
-} from "../../../utils/aiResponseHelpers.js";
-import { loadAiModelOptions } from "../../../utils/aiModels.js";
-import { matchesMonsterSearch } from "../../../utils/bestiary.js";
-import { objectMatchesSearch } from "../../../utils/deepSearch.js";
+} from "../../../features/ai/index.js";
+import { loadAiModelOptions } from "../../../features/ai/index.js";
+import { matchesMonsterSearch } from "../../../entities/bestiary/index.js";
+import { objectMatchesSearch } from "../../../shared/lib/index.js";
 import {
 	getCampaignIgnoreSourcesList,
 	getIgnoreSourcesListFromSelectedSources,
 	getSelectedSourcesFromIgnoreList,
 	normalizeSourceCode,
-} from "../../../utils/sourceIgnore.js";
-import { formatSourceLabel } from "../../../utils/sourceNames.js";
+} from "../../../entities/reference/index.js";
+import { formatSourceLabel } from "../../../entities/reference/index.js";
 import {
 	addUndoSnapshot,
 	clearRedoStack,
 	createRedoTransition,
 	createUndoTransition,
-} from "../../../utils/undoRedo.js";
-import { downloadJsonFile } from "../../../utils/download.js";
+} from "../../../shared/lib/index.js";
+import { downloadJsonFile } from "../../../shared/lib/index.js";
 import "../../../assets/components/Bestiary.css";
-import { lang } from "../../../services/localization";
-import classNames from "../../../utils/classNames.js";
+import { lang } from "../../../shared/lib/index.js";
+import { classNames } from "../../../shared/lib/index.js";
 
 const api = { ...campaignApi, ...bestiaryApi, ...aiApi, ...settingsApi };
 
@@ -1329,7 +1330,7 @@ export default function BestiaryBrowser({
 
 	const bestiaryModals = (
 		<>
-			<MonsterFieldEditModal
+			<MonsterEditorModal
 				editingMonster={fieldEditingMonster}
 				onCancel={closeEditCustomMonster}
 				onSave={saveEditedCustomMonster}
@@ -1342,6 +1343,7 @@ export default function BestiaryBrowser({
 				showImagePromptAction
 			/>
 			<BestiaryAiModals
+				ResponseModal={AiResponseModal}
 				aiDraftDiffResources={aiDraftDiffResources}
 				aiDraftResponseEntry={aiDraftResponseEntry}
 				aiDraftResponseRef={aiDraftResponseRef}

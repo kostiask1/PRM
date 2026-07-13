@@ -1,6 +1,5 @@
-import AiResponseModal from "../../../components/ai/AiResponseModal.jsx";
-
 export default function AiHistoryResponseDialog({
+	ResponseModal,
 	generatedPrompt,
 	generatedPromptRef,
 	isGeneratedPromptCopied,
@@ -18,7 +17,7 @@ export default function AiHistoryResponseDialog({
 	getHistoryChangeSummary,
 }) {
 	return (
-		<AiResponseModal
+		<ResponseModal
 			generatedPrompt={generatedPrompt}
 			generatedPromptRef={generatedPromptRef}
 			isGeneratedPromptCopied={isGeneratedPromptCopied}
