@@ -15,6 +15,8 @@ export interface SessionOrder {
 	order: number;
 }
 
+export type SessionOrderPayload = SessionOrder[] | Record<string, number>;
+
 export interface EntityScopeMovePayload extends Record<string, unknown> {
 	targetScope: "campaign" | "session";
 	entitySlug?: string;
@@ -64,7 +66,7 @@ export const sessionApi = {
 		}),
 	deleteSession: (slug: string, fileName: string) =>
 		request<void>(sessionPath(slug, fileName), { method: "DELETE" }),
-	reorderSessions: (slug: string, orders: SessionOrder[]) =>
+	reorderSessions: (slug: string, orders: SessionOrderPayload) =>
 		request<SessionRecord[]>(`${sessionPath(slug)}/reorder`, {
 			method: "POST",
 			body: JSON.stringify({ orders }),

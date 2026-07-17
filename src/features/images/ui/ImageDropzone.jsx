@@ -5,7 +5,7 @@ import { imageApi } from "../api/imageApi.ts";
 
 const api = { ...campaignApi, ...imageApi };
 import "../../../assets/components/ImageDropzone.css";
-import { IMAGE_GALLERY_CATEGORIES } from "../imageGalleryConfig";
+import { IMAGE_GALLERY_CATEGORIES } from "../imageGalleryConfig.ts";
 import { lang } from "../../../shared/lib/index.js";
 import { useAppDispatch } from "../../../shared/model/index.js";
 import { classNames } from "../../../shared/lib/index.js";

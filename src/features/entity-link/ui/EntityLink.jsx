@@ -6,8 +6,8 @@ import { classNames } from "../../../shared/lib/index.js";
 import {
 	EntityLinkContext,
 	EntityLinkResolverContext,
-} from "../model/EntityLinkIdentity.js";
-import { openEntityLinkModal } from "../model/entityLinkModalUtils.js";
+} from "../model/EntityLinkIdentity.ts";
+import { openEntityLinkModal } from "../model/entityLinkModalUtils.ts";
 
 export default function EntityLink({ name, children, className = "" }) {
 	const [modalState, setModalState] = useState(null);

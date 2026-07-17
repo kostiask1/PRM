@@ -2,7 +2,7 @@ import { useContext } from "react";
 
 import { Modal } from "../../modal/index.js";
 import { EntityLinkScope } from "./EntityLinkContext.jsx";
-import { EntityLinkResolverContext } from "../model/EntityLinkIdentity.js";
+import { EntityLinkResolverContext } from "../model/EntityLinkIdentity.ts";
 import { getEntityDisplayName } from "../../../entities/campaign/index.js";
 import { lang } from "../../../shared/lib/index.js";
 

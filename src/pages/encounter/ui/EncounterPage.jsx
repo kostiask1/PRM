@@ -8,7 +8,7 @@ import { MonsterEditorModal } from "../../../widgets/monster-editor-modal/index.
 import { MonsterStatBlock } from "../../../widgets/monster-stat-block/index.js";
 import { CharacterCard } from "../../../widgets/campaign-entity-card/index.js";
 import { DraggableList } from "../../../shared/ui/index.js";
-import useEncounterView from "../model/useEncounterView.js";
+import useEncounterView from "../model/useEncounterView.ts";
 import { classNames } from "../../../shared/lib/index.js";
 import "../../../assets/components/EncounterView.css";
 import { campaignApi } from "../../../entities/campaign/index.js";

@@ -18,7 +18,7 @@ import PartialArchiveModal from "./components/PartialArchiveModal.jsx";
 import { GlobalSearchModal } from "../../../widgets/campaign-search/index.js";
 import { CollapseToggleButton } from "../../../shared/ui/index.js";
 import "../../../assets/components/CampaignView.css";
-import useCampaignView from "../model/useCampaignView.js";
+import useCampaignView from "../model/useCampaignView.ts";
 import { CampaignViewModel } from "../../../entities/campaign/index.js";
 import { navigateTo, useAppSelector } from "../../../shared/model/index.js";
 import { lang } from "../../../shared/lib/index.js";

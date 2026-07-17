@@ -24,7 +24,7 @@ import {
 	LocationCard,
 } from "../../../widgets/campaign-entity-card/index.js";
 import "../../../assets/components/SessionView.css";
-import useSessionView from "../model/useSessionView.js";
+import useSessionView from "../model/useSessionView.ts";
 import { SessionViewModel } from "../../../entities/session/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import {

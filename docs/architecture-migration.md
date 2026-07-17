@@ -44,7 +44,7 @@ Status: **Complete**
 
 Delivered:
 
-- HTTP mechanics moved to `src/shared/api/httpClient.js`.
+- HTTP mechanics moved to `src/shared/api/httpClient.ts`.
 - Domain clients created for campaigns, sessions, Bestiary, and spells.
 - Use-case clients created for AI, backups, images, and settings.
 - All production consumers migrated to their owning clients.
@@ -103,19 +103,19 @@ Status: **Complete**
 
 Delivered:
 
-- Pure token-estimation and context-compaction logic moved to `src/features/ai/model/tokenEstimation.js`.
-- AI history change detection and retry-payload reconstruction moved to `src/features/ai/model/historyWorkflow.js`.
-- AI request-mode resolution, payload construction, and removal of heavy session data moved to `src/features/ai/model/generationRequest.js`.
-- Generation and retry lifecycle now uses the explicit request-aware state model in `src/features/ai/model/generationLifecycle.js`; context loading remains separate.
-- History upsert, campaign ownership, partial apply/undo mode, and restore synchronization planning moved to `src/features/ai/model/historyState.js` with concurrency-safe functional updates in React.
-- Delete, clear, apply, undo, and draft-save commands moved to `src/features/ai/model/historyCommands.js`; the hook serializes restore commands with a ref-backed lock and exposes results through UI callbacks.
+- Pure token-estimation and context-compaction logic moved to `src/features/ai/model/tokenEstimation.ts`.
+- AI history change detection and retry-payload reconstruction moved to `src/features/ai/model/historyWorkflow.ts`.
+- AI request-mode resolution, payload construction, and removal of heavy session data moved to `src/features/ai/model/generationRequest.ts`.
+- Generation and retry lifecycle now uses the explicit request-aware state model in `src/features/ai/model/generationLifecycle.ts`; context loading remains separate.
+- History upsert, campaign ownership, partial apply/undo mode, and restore synchronization planning moved to `src/features/ai/model/historyState.ts` with concurrency-safe functional updates in React.
+- Delete, clear, apply, undo, and draft-save commands moved to `src/features/ai/model/historyCommands.ts`; the hook serializes restore commands with a ref-backed lock and exposes results through UI callbacks.
 - Stable visual composition moved to `src/features/ai/ui`: `AiAssistantShell`, `AiPromptComposer`, and `AiHistoryResponseDialog` own modal plumbing and presentation while the panel supplies workflow state and callbacks. UI exports use `src/features/ai/ui/index.js`, keeping the model/API entry Node-compatible.
 - Remaining AI-only toolbar, context settings, API-key, and history-list views moved from legacy `components/ai` into `src/features/ai/ui`.
-- Context list normalization, nested scene defaults, item toggles, and bulk selection moved to `src/features/ai/model/contextConfig.js`.
-- Campaign entity/session loading, selected-session hydration, and context-list synchronization moved to `src/features/ai/model/useAiContextData.js`; API operations are injected as ports and reused by image-prompt loading.
-- Token-estimate request shaping, route-mode context assembly, list filtering, and attachment costs moved to the pure `src/features/ai/model/tokenEstimation.js` model.
-- NPC, location, scene/encounter, and custom-monster image target construction moved to `src/features/ai/model/imageTargets.js`.
-- Campaign session hydration, custom-bestiary normalization, loading state, and fetch caching for image prompts moved to `src/features/ai/model/useAiImagePromptData.js`.
+- Context list normalization, nested scene defaults, item toggles, and bulk selection moved to `src/features/ai/model/contextConfig.ts`.
+- Campaign entity/session loading, selected-session hydration, and context-list synchronization moved to `src/features/ai/model/useAiContextData.ts`; API operations are injected as ports and reused by image-prompt loading.
+- Token-estimate request shaping, route-mode context assembly, list filtering, and attachment costs moved to the pure `src/features/ai/model/tokenEstimation.ts` model.
+- NPC, location, scene/encounter, and custom-monster image target construction moved to `src/features/ai/model/imageTargets.ts`.
+- Campaign session hydration, custom-bestiary normalization, loading state, and fetch caching for image prompts moved to `src/features/ai/model/useAiImagePromptData.ts`.
 - Focused regression tests cover ignored context, mode selection, retry reconstruction, generated entity types, and campaign-change detection.
 - `AiAssistantPanel` now consumes these feature model APIs instead of owning their implementations.
 - Backend module extraction has started: pure campaign/session/encounter input shaping and ignored-content filtering moved from `server/aiService.js` to `server/modules/ai/application/buildPromptContext.js`.
@@ -170,12 +170,12 @@ Current checkpoint:
 
 - Campaign character/NPC/location create/update/delete now delegates through `src/features/campaign-entity`, removing direct CRUD calls and the legacy create utility from page-level callers.
 - Backend CRUD defaults, type validation, stable ID/slug preservation, mention updates, and deletion now live in `server/modules/campaign/application/campaignEntityCommands.js` over an explicit repository port and filesystem adapter.
-- Debounced campaign entity persistence, pending update ownership, flush/discard, and per-entity timer cancellation moved from `useCampaignView` to `src/features/campaign-entity/model/useCampaignEntityPersistence.js`; pending writes retain their originating campaign slug.
+- Debounced campaign entity persistence, pending update ownership, flush/discard, and per-entity timer cancellation moved from `useCampaignView` to `src/features/campaign-entity/model/useCampaignEntityPersistence.ts`; pending writes retain their originating campaign slug.
 - Optimistic changes, collapse persistence, rename confirmation and mention updates, deletion, and reload-on-error for all three campaign entity collections moved to `useCampaignEntityCollection`; `useCampaignView` now wires campaign-specific callbacks instead of implementing three workflows.
 - Character/NPC type movement, pending-write flushing, optimistic collection transfer, entity ordering, one-shot reorder undo tracking, persistence, and reload-on-error moved to `useCampaignEntityOrdering`.
 - NPC/location movement between campaign and session scope now uses one backend application command over an explicit cross-scope repository port. It preserves entity IDs, compensates partial filesystem writes, and replaces the previous two-request UI transaction.
 - Scope import state, confirmation orchestration, pending-session-save flushing, mutation requests, and refresh notifications moved to `useCampaignEntityScopeMovement`.
-- Session and scene mutation rules now live in `src/features/session-editor/model/sessionMutations.js`; `useSessionEditing` owns scene/note editing and linked-encounter removal orchestration.
+- Session and scene mutation rules now live in `src/features/session-editor/model/sessionMutations.ts`; `useSessionEditing` owns scene/note editing and linked-encounter removal orchestration.
 - Debounced session persistence, flush/discard, rename notification, failure propagation, and unmount flushing moved to `useSessionPersistence`. Undo/redo snapshots and AI replacement history moved to `useSessionHistory`.
 - Encounter creation and scene linking now use an idempotent backend application command with server-generated IDs over the new `SessionRepository` port. The frontend `useEncounterCreation` workflow flushes session edits, creates or resolves the link, updates local state, and navigates.
 - Encounter edits now use a focused backend update command instead of client-side session read/modify/write. `useEncounterPersistence` owns debounce state, pending writes, unmount flushing, and refresh notifications.
@@ -300,7 +300,7 @@ Current checkpoint:
 - Localization moved to `shared/lib`, while WebSocket reconnect and data-refresh orchestration moved to `app/realtime`. The legacy `src/services` tree is now fully retired.
 - Global action contracts, action creators, external-store state, React selectors, modal request coordination, and navigation commands moved together into `shared/model`. This dependency-safe owner is reachable by every FSD layer without upward imports; consumers use `shared/model/index.js`. The legacy `src/actions` and `src/store` trees are retired.
 - Interactive recursive content rendering moved to `features/rich-content`, where composition of dice, rules-reference, and entity-link controls has an explicit owner. Token extraction and tag preprocessing remain in `entities/reference`; consumers use the feature public API and `src/renderers` is retired.
-- Shared HTTP transport is exposed through `shared/api/index.js`; domain API adapters no longer deep-import its implementation.
+- Shared HTTP transport is exposed through `shared/api/index.ts`; domain API adapters no longer deep-import its implementation.
 - ESLint rejects deep image/shared imports and retired image/primitive paths.
 - Legacy counts are now 0 component files, 0 hook files, 0 model files, 0 utility files, 0 service files, 0 action files, 0 store files, and 0 renderer files. The legacy `src/components`, `src/hooks`, `src/models`, `src/utils`, `src/services`, `src/actions`, `src/store`, and `src/renderers` trees are retired.
 
@@ -359,6 +359,18 @@ Current checkpoint:
 - Converted the encounter participant model, session view projection, and spell-card formatter to TypeScript. Monster HP/AC variants, stable participant identity, character projections, session notes/scenes/encounters, spell time/range/components/duration, translation callbacks, and permanent-duration rules now have entity-owned contracts. A narrow declaration bridge keeps the session model on the shared public utility barrel.
 - Converted rules-reference navigation, theme application, and Bestiary search/type normalization to TypeScript. Navigation options remain behind the shared model public barrel, theme values are narrowed to light/dark with DOM-safe application, and monster type choices/tags have entity-owned search contracts. Added a complete declaration facade for the shared model barrel and a theme normalization regression test.
 - Converted `MonsterStatBlockModel` to TypeScript, completing the Bestiary entity model layer. Official/custom and legacy monster shapes now cover HP, AC, speed, size, alignment, structured types/tags, abilities, saves, skills, languages, challenge rating, actions, and nested damage defenses without weakening runtime fallbacks.
+- Converted the entity-link identity and modal-resolution model pair to TypeScript. Entity identity precedence, scope-aware equality, current-modal suppression, injected session resolution, and campaign fallback behavior now have explicit contracts; the Node-safe JavaScript model barrel remains the compatibility entrypoint.
+- Converted the complete campaign entity model layer to TypeScript: entity lookup/resolution, campaign view projection, shared card-note mutations, and character/location card derivation. The public JavaScript barrel remains runtime-compatible, while its declaration facade now re-exports the owning TypeScript contracts instead of duplicating them.
+- Converted the editor mention model layer to TypeScript. Lexical selection/node boundaries, zero-width marker insertion, keyboard-event handling, picker dispatch, and the selected/cancelled result union now compile strictly while the Node-safe JavaScript model barrel remains stable.
+- Converted the pure session-editor mutation core to TypeScript. Scene/note/resource IDs, immutable session updates, encounter cleanup, note materialization/sanitization, collapse transitions, and updater callbacks now have feature-owned contracts; React persistence/history hooks remain separate migration slices.
+- Converted encounter participant synchronization to TypeScript. Custom payload envelopes, entity image identity, participant/local-combat fields, synchronization results, custom-only refresh rules, and entity-owned participant inputs now have explicit contracts. Four internal normalization/merge helpers were removed from the public feature surface.
+- Converted the complete reference entity model layer to TypeScript: condition/disease/skill/sense/variant caches, previews and resolvers, content-token extraction, tag preprocessing, source filtering/names, and spell metadata. Typed public facades preserve both the browser entrypoint and the JSON-free Node entrypoint; nullable API collections now normalize safely at this trust boundary.
+- Converted the complete campaign-entity feature model to TypeScript. Create/update/delete ports, payload sanitization, debounced pending writes, optimistic collection changes, mention-aware rename recovery, reorder undo tracking, character/NPC movement, and campaign/session scope movement now share feature-owned contracts behind the existing JavaScript public facade.
+- Converted the complete session-editor feature model to TypeScript. Editing commands, delayed and immediate save lifecycles, flush/discard semantics, rename notifications, pending-save detection, undo/redo snapshots, history-application suppression, and external session replacement now share feature-owned contracts behind the existing JavaScript facade.
+- Converted the complete encounter-editor feature model to TypeScript. Existing-link navigation, server-created encounter validation, pending session flush, encounter persistence/debounce, unmount flushing, campaign participant image loading, custom Bestiary synchronization, realtime version guards, and selected participant preservation now share feature-owned contracts behind the JavaScript facade.
+- Converted the complete image-gallery model to TypeScript and typed its category configuration. Gallery source/category/subcategory paths, content scopes, official/read-only assets, storage statistics, selection and move groups, file uploads, drag/drop events, and mutation results now have feature-owned contracts behind the existing JavaScript public facade. Nullable HTTP collections, unknown errors, modal results, and parsed drag payloads are handled explicitly.
+- Converted the encounter page model to TypeScript with explicit page/session/sync/dice/import/update contracts and a typed page entry declaration. Encounter-editor updates are normalized before entering page state, nullable route identifiers and session payloads are handled explicitly, and unknown import errors no longer assume an `Error` instance. Initiative and challenge-rating derivation moved to a pure typed module with regression coverage for fractional and structured CR values; persistence and participant synchronization remain in `features/encounter-editor`.
+- Converted the session page model to TypeScript with explicit loaded-session, sync-event, checklist, entity-list, scene, note, navigation, and cross-feature setter contracts plus a typed page entry declaration. Session results from scope movement and encounter creation now pass through typed normalization adapters before entering page state. Session NPC/location normalization moved into a pure typed page-model module with regression coverage for UTF-8 names, internal-field stripping, `_aiIgnored`, notes, and location defaults; editing/history/persistence, encounter creation, and scope movement remain in their owning feature slices.
 
 Next:
 

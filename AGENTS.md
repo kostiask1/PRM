@@ -19,7 +19,7 @@
 - `src/App.jsx` - кореневий React-компонент: завантажує кампанії/налаштування, керує глобальними modal/message/dice/mention потоками.
 - `src/app/routing/MainContent.jsx` - композиція маршрутів; нові екрани підключаються з `src/pages/*`.
 - `src/shared/model/appStore.ts` - strict TypeScript global store через `useSyncExternalStore`; імпортується через `src/shared/model/index.js`.
-- `src/shared/api/httpClient.js` - спільний HTTP transport для `/api/...`; consumers import it through `src/shared/api/index.js`.
+- `src/shared/api/httpClient.ts` - спільний HTTP transport для `/api/...`; consumers import it through `src/shared/api/index.ts`.
 - `src/entities/*/api` та `src/features/*/api` - API-клієнти, що належать відповідному домену/use case.
 - Compatibility facade `src/api.js` видалено; кожен consumer імпортує API client з domain owner.
 - `server/server.js` - Express entry point, монтує routes, віддає `dist/`.
@@ -45,16 +45,21 @@
 
 - What: campaigns with story, notes, sessions, PCs, NPCs, locations/factions, graph, import/export.
 - Main UI: `src/pages/campaign/ui/CampaignPage.jsx`.
-- Main logic: `src/pages/campaign/model/useCampaignView.js`, `src/entities/campaign/model/CampaignViewModel.js`, `src/features/campaign/campaignStateUtils.js`.
+- Main logic: `src/pages/campaign/model/useCampaignView.js`, `src/entities/campaign/model/CampaignViewModel.ts`, `src/features/campaign/campaignStateUtils.js`.
 - Backend: `server/routes/campaigns.js`, `server/routes/backups.js`, `server/storage.js`.
 - Important files: `CharacterCard.jsx`, `LocationCard.jsx`, `NoteCard.jsx`, `DraggableList.jsx`, `CampaignNotesGraph.jsx`, `GlobalSearchModal.jsx`, `PartialArchiveModal.jsx`.
 - Campaign character/NPC/location CRUD frontend ownership is `src/features/campaign-entity`; creation payload cleanup and create/update/delete delegation must go through its client.
+- `src/features/campaign-entity/model` is fully TypeScript. Extend entity IDs, payloads, setters, sanitizers, pending saves, reorder/move commands, and scope-modal contracts at this boundary; runtime consumers continue importing through `features/campaign-entity/index.js`.
 - Optimistic collection changes, collapse persistence, rename confirmation/application, mention rename callbacks, deletion, and reload-on-error belong to `useCampaignEntityCollection`; debounced writes belong to `useCampaignEntityPersistence`.
 - Character/NPC type movement and entity reorder/undo persistence belong to `useCampaignEntityOrdering`; page hooks only supply campaign state, reload callbacks, and user-facing errors.
 - Campaign/session NPC and location scope changes must use `useCampaignEntityScopeMovement` and the backend `campaignEntityScopeCommands` transaction. Preserve IDs, flush pending session saves first, and keep compensation behavior for partial filesystem failures.
 - Session/scene/note mutations belong to `features/session-editor`; use `useSessionEditing` for editing, `useSessionPersistence` for debounced writes, and `useSessionHistory` for undo/redo or AI replacement snapshots. Keep encounter creation/linking out of this slice.
+- Pure session/scene/note mutation contracts live in `features/session-editor/model/sessionMutations.ts`. Preserve resource IDs, immutable updates, encounter cleanup when deleting linked scenes, virtual-note sanitization on reorder, and dynamic section-collapse keys.
+- `src/features/session-editor/model` is fully TypeScript. Preserve delayed-save ownership by the originating session, flush-on-unmount behavior, explicit throw/update-UI save options, history application suppression, distinct snapshot transitions, and external replacement discarding pending writes.
 - Encounter creation/linking and encounter persistence belong to `features/encounter-editor` and backend session application commands. IDs are server-generated, scene linking is idempotent, and page hooks must not read/modify/write whole sessions to save an encounter.
-- Encounter participant source loading and custom Bestiary refreshes belong to `useEncounterParticipantSynchronization`; merge rules belong to `participantSynchronization.js`. Preserve `instanceId`, local display name/current HP, and never rewrite official monsters or character participants during custom refresh.
+- `src/features/encounter-editor/model` is fully TypeScript. Preserve server-generated encounter IDs, existing-link navigation without duplicate creation, pending-session flush before creation, debounced encounter writes, unmount flushing, custom-only participant refresh, pending-save sync guards, and selected-instance preservation.
+- Encounter participant source loading and custom Bestiary refreshes belong to `useEncounterParticipantSynchronization`; typed merge rules belong to `participantSynchronization.ts`. Preserve `instanceId`, local display name/current HP, and never rewrite official monsters or character participants during custom refresh.
+- `participantSynchronization.ts` exposes only participant-name normalization, entity image-map construction, and the synchronization command. Source normalization, payload extraction, identity-name derivation, and individual merge mechanics are private implementation details.
 - Session CRUD, rename, deletion, ordering, encounter linking, and encounter persistence must go through backend session application commands and `SessionRepository`. `server/routes/sessions.js` only maps HTTP; do not add filesystem paths or JSON manipulation back to it.
 - Campaign lifecycle, rename/reference updates, deletion, export, image checks, ordering, bulk entity replacement, and character/NPC movement must go through campaign application commands and repository ports. `server/routes/campaigns.js` is HTTP-only; preserve campaign/entity IDs and `createdAt`.
 - Custom bestiary search/mutations and favorites must go through `bestiaryCommands` and `BestiaryRepository`. Preserve omitted token images, update CUSTOM favorites on rename/delete, reject duplicate names, and keep custom legendary actions on the monster object.
@@ -65,6 +70,7 @@
 - Full/partial backup exports and imports use `BackupRepository`/`backupCommands`. Preserve gzip/UTF-8 payloads, campaign-only append behavior, replace-by-ID/wipe strategies, and archive response headers; keep persistence orchestration out of `server/routes/backups.js`.
 - Static asset directories are resolved in `modules/assets/infrastructure`; routes may mount `express.static` but must not construct filesystem paths.
 - Image gallery UI and state (`ImageGallery`, `ImageTargetSettings`, `ImageDropzone`, `ImageAssetField`, `useImageGallery`) belong to `features/images`. External code imports them only through `features/images/index.js`; do not recreate legacy `components/Image*` or `hooks/useImageGallery` paths.
+- `src/features/images/model` is fully TypeScript. Keep gallery categories, content scopes, image locations, readonly assets, drag/drop payloads, selection groups, and storage statistics owned by the image feature. Normalize nullable HTTP results and narrow parsed drag data before applying mutations; do not move modal/UI composition into the model.
 - Generic `Button`, `Checkbox`, `Icon`, `MultiSelect`, `Select`, `Tooltip`, `Panel`, `Notification`, and `Switch` live in `shared/ui`; import them only from `shared/ui/index.js`. `Input` and `EditableField` remain app-coupled and must not be moved into shared without first removing their store/entity dependencies. `classNames` lives in `shared/lib` and is imported through its public index; the legacy utility path is retired.
 - Generic note-state helpers live in `shared/lib` and must be imported through its public index. Character/location card models live in `entities/campaign/model` and are exposed only by `entities/campaign/index.js`; their former `models/*CardModel` paths are retired.
 - `CharacterCard`, `LocationCard`, and their create-button/modal compositions live in `widgets/campaign-entity-card`; import them only through `widgets/campaign-entity-card/index.js`. Submit behavior stays in `features/campaign-entity`; the composed UI is a widget because it depends on image/editor features and app state.
@@ -75,7 +81,9 @@
 - Campaign graph projection and layout live in `pages/campaign/model`; page UI and Node-based tests consume the Node-safe `pages/campaign/graph.js` entrypoint. The former `src/utils/campaignGraph*` paths are retired.
 - AI attachment validation, diff construction, model-option loading, and response-resource helpers live in `features/ai/model` and are exposed through `features/ai/index.js`. The former `src/utils/aiAttachments`, `aiDiff`, `aiModels`, and `aiResponseHelpers` paths are retired.
 - Reference caches/resolvers, content tokens, tag preprocessing, source metadata/filtering, and spell metadata live in `entities/reference/model`. Browser consumers use `entities/reference/index.js`; Node code/tests use the JSON-free `entities/reference/model.js` entrypoint. Their former `src/services` and `src/utils` paths are retired.
+- `src/entities/reference/model` is fully TypeScript. Keep cache maps, nullable API handling, token match indexes, parser fallbacks, source normalization, and resolver object passthrough explicit. Maintain matching declaration facades for `index.js` and the JSON-free `model.js`; Node consumers must not load `sourceNames.ts` or its JSON catalog.
 - Generic search highlighting lives in `shared/ui`. Mention boundary/picker behavior lives in `features/editor/model` and is exposed through the Node-safe `features/editor/model.js` entrypoint. Do not recreate the retired `src/utils` tree.
+- `src/features/editor/model` is fully TypeScript. Preserve zero-width mention boundaries, Lexical selection guards, Space insertion behavior, and the selected/cancelled picker result union; keep `features/editor/model.js` as the Node-safe compatibility entrypoint.
 - Campaign entity name lookup/resolution lives in `entities/campaign/model`; theme behavior lives in `features/settings/model`; localization lives in `shared/lib`; realtime synchronization lives in `app/realtime`. Import through their public entrypoints and do not recreate the retired `src/services` tree.
 - Global action contracts, action creators, external-store state, selectors, modal coordination, and navigation commands live in `shared/model` and are imported through `shared/model/index.js`. This placement prevents lower FSD layers from importing upward into `app`; do not recreate `src/actions` or `src/store`.
 - Recursive rich-content rendering lives in `features/rich-content` and is imported through its public index. It composes dice, rules-reference, and entity-link controls; token/tag parsing stays in `entities/reference`. Do not recreate `src/renderers`.
@@ -86,7 +94,7 @@
 - Typed global workflow action modules live beside `shared/model/actions.js`; the JavaScript action barrel remains the runtime-compatible public facade. Keep each workflow focused and preserve action type strings and payload normalization during conversion.
 - Modal, rules-reference, mention-picker, dice, and message-box workflows already have focused TypeScript action modules. New workflow actions should follow this pattern instead of growing the compatibility barrel.
 - All global action creators now originate in typed workflow modules; `shared/model/actions.js` is re-export compatibility only. `appStoreTypes.ts` defines the composed state/action/dispatch contracts, while `appStore.ts` implements the strict public store API directly.
-- Typed reducer sections live beside `appStore.js`; the store delegates to them before its remaining switch. Keep each extraction behavior-identical and covered by the existing store/workflow tests.
+- Typed reducer sections live beside `appStore.ts`; the store delegates to them before its remaining switch. Keep each extraction behavior-identical and covered by the existing store/workflow tests.
 - Store transitions are split across `settingsSyncReducer.ts`, `workflowReducer.ts`, and `navigationStateReducer.ts`; `appStore.ts` owns only typed infrastructure and reducer composition. Do not reintroduce a monolithic reducer switch.
 - Every backend repository port has a colocated TypeScript declaration. Keep required-method runtime guards; declarations describe trusted internal calls but do not validate filesystem, HTTP, archive, or AI input.
 - Shared HTTP transport is TypeScript and exported through `shared/api/index.ts`. Domain clients must keep importing the public barrel and should specify focused payload/result types as they migrate.
@@ -101,16 +109,20 @@
 - Rules-reference navigation, theme application, and Bestiary search normalization are typed at their owning feature/entity boundaries. Keep rules navigation on `shared/model/index.js`, theme writes limited to `data-theme`, and search normalization tolerant of string and structured monster types.
 - `src/entities/bestiary/model` is fully TypeScript. Preserve legacy and 5eTools-compatible HP/AC/speed/save/type/defense variants in `MonsterStatBlockModel`; do not narrow official/custom monster input to only one source schema.
 - `CampaignViewModel` and `SessionViewModel` live in their respective entity `model` segments and are imported through entity public indexes. `idsEqual` lives in `shared/lib`. Do not recreate the retired `src/models` directory.
+- `src/entities/campaign/model` is fully TypeScript. Keep entity lookup and card/view contracts owned there, preserve note IDs and virtual-note materialization, and import runtime values through `entities/campaign/index.js`; the declaration facade must re-export owning types rather than duplicate them.
 - Generic `useDebounce` lives in `shared/lib` and is imported through its public index; do not recreate `hooks/useDebounce`.
 - Campaign screen orchestration lives in `pages/campaign`; import `CampaignPage` only through `pages/campaign/index.js`. Former `components/CampaignView` and `hooks/useCampaignView` paths are retired.
 - Session screen orchestration lives in `pages/session`; import `SessionPage` only through `pages/session/index.js`. Former `components/SessionView` and `hooks/useSessionView` paths are retired.
+- `src/pages/session/model` is fully TypeScript. Keep loaded-session normalization, keyboard/history routing, checklist progress, page callback composition, and cross-feature setter adapters at this boundary. Session-scoped NPC/location normalization and display-name rules belong in `sessionEntityModel.ts`; strip internal fields except the explicit `_aiIgnored` flag. Editing/history/persistence remain in `features/session-editor`, encounter creation in `features/encounter-editor`, and scope movement in `features/campaign-entity`.
 - Encounter screen orchestration lives in `pages/encounter`; import `EncounterPage` only through `pages/encounter/index.js`. Former `components/EncounterView` and `hooks/useEncounterView` paths are retired. Do not recreate the retired `src/hooks` directory.
+- `src/pages/encounter/model` is fully TypeScript. Keep page-state normalization, undo/redo coordination, import/export events, dice-result routing, participant selection, and encounter-page callbacks at this boundary. Pure initiative/CR derivation belongs in `encounterViewMetrics.ts`; preserve fractional and structured CR support. Persistence and custom participant synchronization remain owned by `features/encounter-editor`.
 - The embedded spells browser lives in `widgets/spells-browser` and is imported through its public index. Individual rendered spell cards live in `widgets/spell-card`; do not recreate `components/Spells`.
 - Rich monster rendering lives in `widgets/monster-stat-block` and is imported through its public index; pure monster derivation stays in `entities/bestiary`. Do not recreate `components/MonsterStatBlock`.
 - Dice formula parsing, rolling, and probability utilities live in `shared/lib`. Interactive dice UI lives in `features/dice` and is imported through `features/dice/index.js`; former dice component and `utils/dice` paths are retired.
 - Rules link/preview behavior and rules-modal navigation commands live in `features/rules-reference`. Rules modal composition lives in `widgets/rules-reference-modal`; composed monster editing with reference insertion lives in `widgets/monster-editor-modal`. `features/edit-monster` accepts injected reference content and must not import widgets.
 - Generic `ListCard`, `CollapseToggleButton`, and `DraggableList` live in `shared/ui` and must be imported through its public index; their former `components/common` paths are retired.
 - Entity-link behavior, identity, contexts, and generic entity modal resolution live in `features/entity-link`. UI consumers use `index.js`; Node-only/model consumers may use the model-only public `model.js` entrypoint. Campaign-specific entity modal rendering lives in `widgets/campaign-entity-modal`. Do not recreate former `components/common/Entity*` paths.
+- `src/features/entity-link/model` is fully TypeScript. Preserve scope-aware identity matching, ID/slug/name precedence, current-modal suppression, and injected session resolution; keep `features/entity-link/model.js` as the Node-safe compatibility entrypoint.
 - App-aware modal and global message-box UI lives in `features/modal` and is imported through its public index. It is not shared UI because it owns localized prompt fields and store-backed message behavior; former `components/common/Modal|MessageBox` paths are retired.
 - AI attachment controls live in `features/ai/ui`; browser UI consumers import them from the UI public entrypoint `features/ai/ui/index.js`, while AI slice internals use relative imports. Keep `features/ai/index.js` model-safe for Node consumers and do not recreate `components/ai/AiAttachmentControls`.
 - AI response composition lives in `widgets/ai-response-modal`. Feature-level history/draft dialogs accept the response component through injection; they must not import this widget directly. Former `components/ai/AiResponseModal` is retired.
@@ -130,7 +142,7 @@
 
 - What: session planning, scenes, scene notes, session-scoped NPC/location entities, encounter links, todo/prep state.
 - Main UI: `src/pages/session/ui/SessionPage.jsx`, `src/pages/session/ui/components/*`.
-- Main logic: `src/pages/session/model/useSessionView.js`, `src/entities/session/model/SessionViewModel.js`.
+- Main logic: `src/pages/session/model/useSessionView.ts`, `src/entities/session/model/SessionViewModel.ts`.
 - Backend: `server/routes/sessions.js`, `server/storage.js`.
 - Business detail: NPC/location can be campaign-scoped or session-scoped; scope changes must preserve IDs/references where intended.
 
@@ -138,7 +150,7 @@
 
 - What: combat encounters linked to session scenes, monsters/characters, HP, initiative, grid/focused views, import/export.
 - Main UI: `src/pages/encounter/ui/EncounterPage.jsx`.
-- Main logic: `src/pages/encounter/model/useEncounterView.js`, `src/entities/encounter/model/participants.js`.
+- Main logic: `src/pages/encounter/model/useEncounterView.ts`, `src/entities/encounter/model/participants.ts`.
 - Backend data path: stored inside session data, not a separate DB.
 - Important integrations: `src/widgets/bestiary-browser`, `MonsterStatBlock.jsx`, `AddMonsterToEncounterModalContent.jsx`.
 
@@ -147,7 +159,7 @@
 - What: browse local bestiary, favorites, custom creatures, custom monster CRUD/import/export, token image upload.
 - Main UI: `src/pages/bestiary`, `src/widgets/bestiary-browser`, `src/widgets/monster-stat-block`.
 - Bestiary features: `src/features/edit-monster`, `src/features/ai-edit-monster`.
-- Main logic: `src/entities/bestiary/model/MonsterStatBlockModel.js`, `src/entities/bestiary/model/bestiarySearch.js`, `server/aiCustomMonsterService.js`.
+- Main logic: `src/entities/bestiary/model/MonsterStatBlockModel.ts`, `src/entities/bestiary/model/bestiarySearch.ts`, `server/aiCustomMonsterService.js`.
 - Backend: `server/routes/bestiary.js`, `server/storage.js`.
 - Data:
   - Official/local reference: `database/bestiary/all.json`, `database/bestiary/legendarygroups.json`, `database/bestiary/tokens/`.
@@ -158,7 +170,7 @@
 
 - What: spell browser, condition/disease/variant rule/skill/sense references, parsed 5eTools-style tags.
 - Main UI: `src/widgets/spells-browser`, `src/widgets/spell-card`, `src/features/rules-reference`.
-- Main logic: `src/features/rich-content/ui/RichContentRenderer.jsx`, `src/entities/reference/model/parserTags.js`, `src/entities/reference/model/contentTokens.js`, `src/entities/reference/model/referenceResolvers.js`.
+- Main logic: `src/features/rich-content/ui/RichContentRenderer.jsx`, `src/entities/reference/model/parserTags.ts`, `src/entities/reference/model/contentTokens.ts`, `src/entities/reference/model/referenceResolvers.ts`.
 - Backend: `server/routes/spells.js`.
 - Data: `database/spells/all.json`, `database/conditions.json`, `database/diseases.json`, `database/skills.json`, `database/senses.json`, `database/variantrules.json`.
 
@@ -186,15 +198,15 @@
 - Generated entity mention candidate collection, safe text-field wrapping, canonicalization, and nested-bracket cleanup belong to `server/modules/ai/application/mentionProcessing.js`, not HTTP routes.
 - Frontend feature model: `src/features/ai/model/*`; pure estimation, history and workflow rules do not belong inside `AiAssistantPanel.jsx`.
 - AI generation/retry uses explicit lifecycle statuses and request IDs. Do not reintroduce a shared `loading` boolean for generation, retry, and context loading.
-- AI history collection and restore decisions belong to `src/features/ai/model/historyState.js`; React executes the plan using functional state updates so concurrent history entries are preserved.
-- Async AI history commands belong to `src/features/ai/model/historyCommands.js`; keep confirmation copy and screen-specific effects in the caller, and preserve the ref-backed restore lock.
+- AI history collection and restore decisions belong to `src/features/ai/model/historyState.ts`; React executes the plan using functional state updates so concurrent history entries are preserved.
+- Async AI history commands belong to `src/features/ai/model/historyCommands.ts`; keep confirmation copy and screen-specific effects in the caller, and preserve the ref-backed restore lock.
 - AI-specific presentation boundaries live in `src/features/ai/ui`; keep modal shell, prompt composer, and response-dialog wiring out of `AiAssistantPanel.jsx`.
 - Import AI UI through `src/features/ai/ui/index.js`; do not re-export JSX from the model/API `src/features/ai/index.js`, because Node regression tests consume that entry directly.
-- Context list normalization and nested updates belong to `src/features/ai/model/contextConfig.js`; preserve default scene fields and immutable updates.
-- Context data fetching, session hydration, and entity-list synchronization belong to `src/features/ai/model/useAiContextData.js`; inject entity/session API functions instead of importing page clients into the hook.
-- Token-estimate request shaping, context compaction, and attachment cost calculation belong to `src/features/ai/model/tokenEstimation.js`; keep it pure and aligned with generation request modes.
-- Image prompt target shaping belongs to `src/features/ai/model/imageTargets.js`; keep ignored notes filtered and encounter monster summaries stable.
-- Image-prompt campaign/session and custom-bestiary loading belongs to `src/features/ai/model/useAiImagePromptData.js`; reuse injected context loaders and normalize both supported custom-monster response shapes.
+- Context list normalization and nested updates belong to `src/features/ai/model/contextConfig.ts`; preserve default scene fields and immutable updates.
+- Context data fetching, session hydration, and entity-list synchronization belong to `src/features/ai/model/useAiContextData.ts`; inject entity/session API functions instead of importing page clients into the hook.
+- Token-estimate request shaping, context compaction, and attachment cost calculation belong to `src/features/ai/model/tokenEstimation.ts`; keep it pure and aligned with generation request modes.
+- Image prompt target shaping belongs to `src/features/ai/model/imageTargets.ts`; keep ignored notes filtered and encounter monster summaries stable.
+- Image-prompt campaign/session and custom-bestiary loading belongs to `src/features/ai/model/useAiImagePromptData.ts`; reuse injected context loaders and normalize both supported custom-monster response shapes.
 - Schema: parsed AI must return `{ "version": 2, "operations": [...] }`.
 - Allowed operation style is domain-specific (`create`, `update`, `delete`, `appendNote`, `updateNote`, `deleteNote`, `moveScope`), not raw RFC JSON Patch.
 - AI history is campaign-scoped in `data/campaigns/{slug}/_aiResponses.json`.
@@ -237,7 +249,7 @@
   - `/campaign/:slug/session/:fileName/encounter/:encounterId`
   - `/bestiary`
   - `/spells`
-- Views і slices викликають власні domain API clients. Усі clients використовують `src/shared/api/httpClient.js` для Express routes під `/api`.
+- Views і slices викликають власні domain API clients. Усі clients використовують `src/shared/api/httpClient.ts` для Express routes під `/api`.
 - `server/storage.js` reads/writes JSON and files under `data/`.
 - Campaign metadata: `data/campaigns/{slug}/_campaign.json`.
 - Entities: `data/campaigns/{slug}/characters|npc|locations/{entitySlug}/info.json`.
@@ -291,7 +303,7 @@ Frontend використовує Feature-Sliced Design. `src/components`, `src/
 - Зовнішній код імпортує slice через його публічний `index.js`. Deep imports у чужий slice заборонені; виняток - внутрішні імпорти всередині того самого slice.
 - Не створюй broad barrel-файли, що реекспортують цілі дерева. Public API slice має бути мінімальним і явним.
 - Імпортуй domain client з власника: наприклад `entities/bestiary`, `entities/campaign`, `features/ai`. Не створюй новий global API facade.
-- `shared/api/httpClient.js` знає лише HTTP-механіку. Domain endpoints не додаються до transport layer.
+- `shared/api/httpClient.ts` знає лише HTTP-механіку. Domain endpoints не додаються до transport layer.
 - Не перенось state у глобальний store автоматично. Persistent domain state належить filesystem/server; route state - router; workflow/modal/filter/draft state - відповідному feature/widget. Store використовуй лише для справді глобального app state.
 - Не перетворюй кожен компонент або click handler на feature. Feature повинна представляти завершену дію/use case.
 - Під час роботи з legacy-файлом мігруй лише той вертикальний workflow, якого стосується зміна; не роби масове переміщення без окремого запиту.
@@ -349,7 +361,7 @@ Routes не повинні напряму будувати filesystem paths. П�
   - `server/modules/ai/domain/aiPayloadSchemas.js`
   - `server/aiPatchService.js`
   - `tests/run-tests.mjs`
-- When changing parsers/renderers, test `src/entities/reference/model/parserTags.js`, `src/entities/reference/model/contentTokens.js`, and `src/features/rich-content/ui/RichContentRenderer.jsx`.
+- When changing parsers/renderers, test `src/entities/reference/model/parserTags.ts`, `src/entities/reference/model/contentTokens.ts`, and `src/features/rich-content/ui/RichContentRenderer.jsx`.
 
 ## Common Pitfalls
 

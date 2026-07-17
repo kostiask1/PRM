@@ -5,15 +5,15 @@ export {
 	deleteCampaignEntity,
 	submitCreateEntity,
 	updateCampaignEntity,
-} from "./model/createEntity.js";
-export { useCampaignEntityPersistence } from "./model/useCampaignEntityPersistence.js";
+} from "./model/createEntity.ts";
+export { useCampaignEntityPersistence } from "./model/useCampaignEntityPersistence.ts";
 export {
 	removeEntityById,
 	replaceEntityById,
 	useCampaignEntityCollection,
-} from "./model/useCampaignEntityCollection.js";
+} from "./model/useCampaignEntityCollection.ts";
 export {
 	useCampaignEntityOrdering,
 	withEntityOrder,
-} from "./model/useCampaignEntityOrdering.js";
-export { useCampaignEntityScopeMovement } from "./model/useCampaignEntityScopeMovement.js";
+} from "./model/useCampaignEntityOrdering.ts";
+export { useCampaignEntityScopeMovement } from "./model/useCampaignEntityScopeMovement.ts";

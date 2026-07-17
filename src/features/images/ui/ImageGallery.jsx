@@ -5,7 +5,7 @@ import { Icon } from "../../../shared/ui/index.js";
 import "../../../assets/components/ImageGallery.css";
 import { prompt } from "../../../shared/model/index.js";
 import { Button } from "../../../shared/ui/index.js";
-import useImageGallery from "../model/useImageGallery";
+import useImageGallery from "../model/useImageGallery.ts";
 import ImageTargetSettings from "./ImageTargetSettings";
 import { imageApi as api } from "../api/imageApi.ts";
 import { Tooltip } from "../../../shared/ui/index.js";

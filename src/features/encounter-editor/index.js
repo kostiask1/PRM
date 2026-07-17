@@ -1,4 +1,4 @@
-export { useEncounterCreation } from "./model/useEncounterCreation.js";
-export { useEncounterPersistence } from "./model/useEncounterPersistence.js";
-export * from "./model/participantSynchronization.js";
-export { useEncounterParticipantSynchronization } from "./model/useEncounterParticipantSynchronization.js";
+export { useEncounterCreation } from "./model/useEncounterCreation.ts";
+export { useEncounterPersistence } from "./model/useEncounterPersistence.ts";
+export * from "./model/participantSynchronization.ts";
+export { useEncounterParticipantSynchronization } from "./model/useEncounterParticipantSynchronization.ts";

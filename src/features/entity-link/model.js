@@ -2,5 +2,5 @@ export {
 	EntityLinkContext,
 	EntityLinkResolverContext,
 	getEntityIdentity,
-} from "./model/EntityLinkIdentity.js";
-export { openEntityLinkModal } from "./model/entityLinkModalUtils.js";
+} from "./model/EntityLinkIdentity.ts";
+export { openEntityLinkModal } from "./model/entityLinkModalUtils.ts";

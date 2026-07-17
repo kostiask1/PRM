@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import {
 	EntityLinkContext,
 	getEntityIdentity,
-} from "../model/EntityLinkIdentity.js";
+} from "../model/EntityLinkIdentity.ts";
 
 function EntityLinkScope({ entity, type, scope = "", children }) {
 	const value = useMemo(

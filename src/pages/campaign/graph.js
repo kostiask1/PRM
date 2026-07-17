@@ -2,10 +2,10 @@ export {
 	buildCampaignGraph,
 	extractBracketMentions,
 	normalizeGraphName,
-} from "./model/campaignGraph.js";
+} from "./model/campaignGraph.ts";
 export {
 	CAMPAIGN_GRAPH_NODE_SIZES,
 	getCampaignGraphNodeSize,
 	layoutCampaignGraph,
 	resolveCampaignGraphNodeCollision,
-} from "./model/campaignGraphLayout.js";
+} from "./model/campaignGraphLayout.ts";

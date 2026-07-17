@@ -72,6 +72,14 @@ import {
 	hasMonsterHpFormula,
 } from "../src/entities/encounter/index.js";
 import {
+	calculateInitiativeStats,
+	parseChallengeRating,
+} from "../src/pages/encounter/model/encounterViewMetrics.ts";
+import {
+	getSessionEntityDisplayName,
+	normalizeSessionEntity,
+} from "../src/pages/session/model/sessionEntityModel.ts";
+import {
 	addSourceMonsterImageToDraft,
 	buildDiffResources,
 	getDiffResourceState,
@@ -3492,6 +3500,38 @@ await run("Encounter participant synchronization preserves combat-local identity
 	assert.equal(images.get("iryna vale"), "/iryna.png");
 });
 
+await run("encounter initiative metrics support fractional and structured challenge ratings", () => {
+	assert.equal(parseChallengeRating({ cr: "1/2" }), 0.5);
+	assert.equal(parseChallengeRating({ cr: { cr: "4" } }), 4);
+	assert.deepEqual(
+		calculateInitiativeStats([
+			{ dex: 14, cr: "1/2" },
+			{ dexterity: 10, cr: { cr: "4" } },
+		]),
+		{ average: "11.5", max: "12.5", weightedAverage: "11.0" },
+	);
+});
+
+await run("session entity normalization strips internal fields and preserves supported state", () => {
+	const npc = normalizeSessionEntity("npc", {
+		id: 7,
+		name: "Ірина",
+		_hidden: "remove",
+		_aiIgnored: true,
+		notes: [{ id: 1 }],
+	});
+	assert.equal(npc.id, 7);
+	assert.equal(npc.firstName, "Ірина");
+	assert.equal(npc._hidden, undefined);
+	assert.equal(npc._aiIgnored, true);
+	assert.deepEqual(npc.notes, [{ id: 1 }]);
+	assert.equal(getSessionEntityDisplayName("npc", npc), "Ірина");
+
+	const location = normalizeSessionEntity("locations", { title: "Брама" });
+	assert.equal(location.name, "Брама");
+	assert.equal(location.imageUrl, null);
+});
+
 await run("SessionViewModel encounter lookup", () => {
 	const model = new SessionViewModel({
 		isSaving: true,
@@ -4032,7 +4072,7 @@ await run("parser renders quickref display labels", () => {
 
 await run("parser renders dice and creature tags as interactive components", async () => {
 	const contentTokensSource = await fs.readFile(
-		"src/entities/reference/model/contentTokens.js",
+		"src/entities/reference/model/contentTokens.ts",
 		"utf8",
 	);
 	const rendererSource = await fs.readFile(
@@ -5792,7 +5832,7 @@ await run(
 			"utf8",
 		);
 		const mentionEditorSource = await fs.readFile(
-			"src/features/editor/model/mentionEditor.js",
+			"src/features/editor/model/mentionEditor.ts",
 			"utf8",
 		);
 		const characterCardSource = await fs.readFile(
@@ -5812,7 +5852,7 @@ await run(
 			"utf8",
 		);
 		const sessionHookSource = await fs.readFile(
-			"src/pages/session/model/useSessionView.js",
+		"src/pages/session/model/useSessionView.ts",
 			"utf8",
 		);
 		const sceneFieldsSource = await fs.readFile(

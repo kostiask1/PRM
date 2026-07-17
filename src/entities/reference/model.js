@@ -1,7 +1,7 @@
 export {
 	loadConditionsMap,
 	normalizeConditionName,
-} from "./model/conditions.js";
+} from "./model/conditions.ts";
 export {
 	getConditionByName,
 	getCreatureByName,
@@ -10,7 +10,7 @@ export {
 	getSkillByName,
 	getSpellByName,
 	getVariantRuleByName,
-} from "./model/referencePreview.js";
+} from "./model/referencePreview.ts";
 export {
 	resolveConditionInput,
 	resolveDiseaseInput,
@@ -18,16 +18,16 @@ export {
 	resolveSkillInput,
 	resolveSpellInput,
 	resolveVariantRuleInput,
-} from "./model/referenceResolvers.js";
+} from "./model/referenceResolvers.ts";
 export {
 	CONTENT_TOKEN_REGEX,
 	extractContentTokens,
 	tokenFromContentMatch,
-} from "./model/contentTokens.js";
+} from "./model/contentTokens.ts";
 export {
 	capitalizeWords,
 	formatModifier,
 	getAbilityModifier,
 	getDamageBonus,
 	preprocessTags,
-} from "./model/parserTags.js";
+} from "./model/parserTags.ts";
