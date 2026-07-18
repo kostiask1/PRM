@@ -3,4 +3,7 @@ export {
 	EntityLinkResolverContext,
 	getEntityIdentity,
 } from "./model/EntityLinkIdentity.ts";
-export { openEntityLinkModal } from "./model/entityLinkModalUtils.ts";
+export {
+	getEntityModalPresentation,
+	openEntityLinkModal,
+} from "./model/entityLinkModalUtils.ts";

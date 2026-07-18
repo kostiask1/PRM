@@ -1,1 +1,1 @@
-export { default as SpellCard } from "./ui/SpellCard.jsx";
+export { default as SpellCard } from "./ui/SpellCard.tsx";

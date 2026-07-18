@@ -31,3 +31,10 @@ export {
 	getDamageBonus,
 	preprocessTags,
 } from "./model/parserTags.ts";
+export {
+	getCampaignIgnoreSourcesList,
+	getIgnoreSourcesListFromSelectedSources,
+	getSelectedSourcesFromIgnoreList,
+	normalizeIgnoreSourcesList,
+	normalizeSourceCode,
+} from "./model/sourceIgnore.ts";

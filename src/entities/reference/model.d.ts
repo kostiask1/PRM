@@ -34,3 +34,11 @@ export {
 	preprocessTags,
 	type DamageAction,
 } from "./model/parserTags.ts";
+export {
+	getCampaignIgnoreSourcesList,
+	getIgnoreSourcesListFromSelectedSources,
+	getSelectedSourcesFromIgnoreList,
+	normalizeIgnoreSourcesList,
+	normalizeSourceCode,
+	type CampaignSourceSettings,
+} from "./model/sourceIgnore.ts";

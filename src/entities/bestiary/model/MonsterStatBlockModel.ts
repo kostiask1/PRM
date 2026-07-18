@@ -70,7 +70,7 @@ export interface MonsterData extends Record<string, unknown> {
 	ac?: Array<number | string | { ac?: number | string; special?: string; from?: string[] }>;
 	armor_class?: unknown;
 	armor_desc?: unknown;
-	speed?: string | Record<string, number | boolean | { number: number; condition?: string }>;
+	speed?: string | Record<string, unknown>;
 	size?: string | string[];
 	alignment?: string | string[];
 	type?: string | MonsterTypeDescriptor;
@@ -243,7 +243,8 @@ export default class MonsterStatBlockModel {
 			.map(([key, value]) => {
 				const label = key === "walk" ? "" : key;
 				if (typeof value === "object" && value !== null) {
-					return `${label} ${value.number} ft. ${value.condition || ""}`.trim();
+					const speed = value as Record<string, unknown>;
+					return `${label} ${String(speed.number ?? "")} ft. ${String(speed.condition || "")}`.trim();
 				}
 				return `${label} ${value} ft.`.trim();
 			});

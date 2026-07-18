@@ -1,8 +1,9 @@
-export { default as AiApiKeyPanel } from "./AiApiKeyPanel.jsx";
-export { default as AiAttachmentControls } from "./AiAttachmentControls.jsx";
-export { default as AiAssistantShell } from "./AiAssistantShell.jsx";
-export { default as AiAssistantToolbar } from "./AiAssistantToolbar.jsx";
-export { default as AiContextSettingsModal } from "./AiContextSettingsModal.jsx";
-export { default as AiHistoryResponseDialog } from "./AiHistoryResponseDialog.jsx";
-export { default as AiPromptComposer } from "./AiPromptComposer.jsx";
-export { default as AiResponseHistory } from "./AiResponseHistory.jsx";
+export { default as AiApiKeyPanel } from "./AiApiKeyPanel.tsx";
+export { default as AiAttachmentControls } from "./AiAttachmentControls.tsx";
+export { default as renderAiModelOptions } from "./AiModelOptions.tsx";
+export { default as AiAssistantShell } from "./AiAssistantShell.tsx";
+export { default as AiAssistantToolbar } from "./AiAssistantToolbar.tsx";
+export { default as AiContextSettingsModal } from "./AiContextSettingsModal.tsx";
+export { default as AiHistoryResponseDialog } from "./AiHistoryResponseDialog.tsx";
+export { default as AiPromptComposer } from "./AiPromptComposer.tsx";
+export { default as AiResponseHistory } from "./AiResponseHistory.tsx";

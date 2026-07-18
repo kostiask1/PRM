@@ -1,9 +1,8 @@
 import { request } from "../../../shared/api/index.ts";
+import type { MonsterData } from "../model/MonsterStatBlockModel.ts";
 
-export interface BestiaryMonster extends Record<string, unknown> {
+export interface BestiaryMonster extends MonsterData {
 	name: string;
-	source?: string;
-	type?: unknown;
 }
 
 export interface BestiaryFavorite extends Record<string, unknown> {

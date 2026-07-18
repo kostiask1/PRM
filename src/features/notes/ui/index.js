@@ -1,4 +1,4 @@
-export { default as AiContextIgnoreButton } from "./AiContextIgnoreButton.jsx";
-export { default as BulkCollapseButton } from "./BulkCollapseButton.jsx";
-export { getAiIgnoredNoteListProps } from "./aiIgnoredNoteListProps.jsx";
-export { default as NoteCard } from "./NoteCard.jsx";
+export { default as AiContextIgnoreButton } from "./AiContextIgnoreButton.tsx";
+export { default as BulkCollapseButton } from "./BulkCollapseButton.tsx";
+export { getAiIgnoredNoteListProps } from "./aiIgnoredNoteListProps.tsx";
+export { default as NoteCard } from "./NoteCard.tsx";

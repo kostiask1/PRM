@@ -5,8 +5,8 @@ export type MessageBoxValue = unknown;
 
 export interface MessageBoxPayload extends Record<string, unknown> {
 	type?: "error" | "confirm";
-	title?: unknown;
-	message?: unknown;
+	title?: string;
+	message?: string;
 	isAlert?: boolean;
 	showInput?: boolean;
 	onResolve?: (value: MessageBoxValue) => void;

@@ -1,1 +1,1 @@
-export { default as AddMonsterToEncounterModalContent } from "./AddMonsterToEncounterModalContent.jsx";
+export { default as AddMonsterToEncounterModalContent } from "./AddMonsterToEncounterModalContent.tsx";

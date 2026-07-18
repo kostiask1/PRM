@@ -1,1 +1,1 @@
-export { default as SpellsBrowser } from "./ui/SpellsBrowser.jsx";
+export { default as SpellsBrowser } from "./ui/SpellsBrowser.tsx";

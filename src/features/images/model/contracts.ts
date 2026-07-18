@@ -41,6 +41,11 @@ export interface GalleryDropTarget extends ImageLocation {
 	readonly?: boolean;
 }
 
+export interface GalleryDragOverTarget {
+	type: "source" | "cat" | "sub" | "breadcrumb";
+	id: string;
+}
+
 export interface GalleryMoveGroup {
 	src: ImageLocation;
 	items: string[];

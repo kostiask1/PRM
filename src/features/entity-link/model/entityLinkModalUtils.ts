@@ -7,14 +7,39 @@ import {
 	type EntityLinkResolver,
 } from "./EntityLinkIdentity.ts";
 
-interface OpenEntityLinkModalOptions {
-	campaignSlug: string;
+export interface OpenEntityLinkModalOptions {
+	campaignSlug: string | null;
 	currentEntityIdentity: EntityIdentity | null;
 	errorMessage: string;
 	modalState: EntityLinkModalState | null;
 	name: string;
 	scopedEntityLinks?: EntityLinkResolver | null;
 	setModalState: (value: EntityLinkModalState) => void;
+}
+
+export type EntityModalTitleKind = "character" | "location" | "npc";
+
+export interface EntityModalPresentation {
+	titleKind: EntityModalTitleKind;
+	modalType: "character" | "location";
+	className: string;
+}
+
+export function getEntityModalPresentation(
+	entityType: string,
+): EntityModalPresentation {
+	if (entityType === "locations") {
+		return {
+			titleKind: "location",
+			modalType: "location",
+			className: "EntityLinkModal__location",
+		};
+	}
+	return {
+		titleKind: entityType === "npc" ? "npc" : "character",
+		modalType: "character",
+		className: "",
+	};
 }
 
 export async function openEntityLinkModal({

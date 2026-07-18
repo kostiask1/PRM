@@ -25,7 +25,10 @@ export interface EntityScopeMovePayload extends Record<string, unknown> {
 export interface EncounterRecord extends Record<string, unknown> {
 	id?: SessionDomainId;
 	name?: string;
+	monsters?: EncounterMonsterRecord[];
 }
+
+export type EncounterMonsterRecord = Record<string, unknown>;
 
 export interface EntityScopeMoveResult {
 	entity: Record<string, unknown>;
@@ -41,6 +44,10 @@ export interface SceneEncounterResult {
 export interface EncounterUpdateResult {
 	encounter: EncounterRecord;
 	session: SessionRecord;
+}
+
+export interface AddEncounterMonsterResult extends EncounterUpdateResult {
+	monster: EncounterMonsterRecord;
 }
 
 const sessionPath = (slug: string, fileName = "") =>
@@ -101,5 +108,15 @@ export const sessionApi = {
 		request<EncounterUpdateResult>(
 			`${sessionPath(slug, fileName)}/encounters/${encodeURIComponent(String(encounterId))}`,
 			{ method: "PATCH", body: JSON.stringify(patch) },
+		),
+	addEncounterMonster: (
+		slug: string,
+		fileName: string,
+		encounterId: SessionDomainId,
+		monster: EncounterMonsterRecord,
+	) =>
+		request<AddEncounterMonsterResult>(
+			`${sessionPath(slug, fileName)}/encounters/${encodeURIComponent(String(encounterId))}/monsters`,
+			{ method: "POST", body: JSON.stringify({ monster }) },
 		),
 };

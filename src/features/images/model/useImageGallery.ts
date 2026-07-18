@@ -29,6 +29,7 @@ import {
 } from "../../../entities/reference/index.js";
 import type {
 	GalleryDropTarget,
+	GalleryDragOverTarget,
 	GalleryImage,
 	GalleryItemType,
 	GalleryMoveGroup,
@@ -37,6 +38,16 @@ import type {
 	ImageGalleryContentScope,
 	UseImageGalleryOptions,
 } from "./contracts.ts";
+import {
+	buildGalleryMovePayloads,
+	getGalleryDragPlan,
+	getGalleryDropPlan,
+	getGallerySelectionPlan,
+} from "./imageGalleryInteraction.ts";
+import {
+	loadGalleryImages,
+	loadGallerySubcategoryData,
+} from "./imageGalleryLoading.ts";
 
 interface DeleteConfirmationResult {
 	confirmed?: boolean;
@@ -94,7 +105,7 @@ export default function useImageGallery({
 	const [isDraggingOver, setIsDraggingOver] = useState(false);
 	const [dragSource, setDragSource] = useState<ImageLocation | null>(null);
 	const [dragOverTarget, setDragOverTarget] =
-		useState<GalleryDropTarget | null>(null);
+		useState<GalleryDragOverTarget | null>(null);
 	const debouncedSearchQuery = useDebounce(
 		searchQuery,
 		useSearchDebounce ? 250 : 0,
@@ -137,8 +148,9 @@ export default function useImageGallery({
 		},
 		[isGeneralTokens, officialRootSubs],
 	);
-	const isReadonlyCurrentFolder =
-		isGeneralTokens && selectedSubRoot && isReadonlyPath(selectedSub);
+	const isReadonlyCurrentFolder = Boolean(
+		isGeneralTokens && selectedSubRoot && isReadonlyPath(selectedSub),
+	);
 	const selectImageByName = useCallback(
 		(name: string) => {
 			const image = images.find((item) => item.name === name);
@@ -168,65 +180,35 @@ export default function useImageGallery({
 		return name.replace(/\.[^/.]+$/, "").replace(/-\d{10,}$/, "");
 	}, []);
 
+	const resetSubcategories = useCallback(() => {
+		setDynamicSubs([]);
+		setSubDetails({});
+		setOfficialSubs(new Set());
+		setOfficialRootSubs(new Set());
+	}, []);
+
 	const loadSubcategories = useCallback(async () => {
-		if (normalizedSearchQuery || isScopedContent) {
-			setDynamicSubs([]);
-			setSubDetails({});
-			setOfficialSubs(new Set());
+		if (Boolean(normalizedSearchQuery || isScopedContent)) {
+			resetSubcategories();
 			return;
 		}
 		try {
-			const [subs, officialAssets, officialRootAssets] = await Promise.all([
-				api.getSubcategories(selectedSource, selectedCat.id, selectedSub, {
-					includeMeta: true,
-				}),
-				isGeneralTokens
-					? api.getBestiaryTokenAssets(
-							selectedSub,
-							activeSearchQuery,
-							ignoreSourcesList,
-						)
-					: Promise.resolve(null),
-				isGeneralTokens
-					? api.getBestiaryTokenAssets("", "", ignoreSourcesList)
-					: Promise.resolve(null),
-			]);
-			const nextSubDetails: GallerySubcategoryDetailsMap = {};
-			const nextSubs = (Array.isArray(subs) ? subs : [])
-				.map((sub) => {
-					if (sub && typeof sub === "object") {
-						const name = String(sub.name || "").trim();
-						if (name) {
-							nextSubDetails[name] = { hasFiles: Boolean(sub.hasFiles) };
-						}
-						return name;
-					}
-					return String(sub || "").trim();
-				})
-				.filter(Boolean);
-			const nextOfficialSubs = Array.isArray(officialAssets?.subcategories)
-				? officialAssets.subcategories
-				: [];
-			const nextOfficialRootSubs = Array.isArray(
-				officialRootAssets?.subcategories,
-			)
-				? officialRootAssets.subcategories
-				: nextOfficialSubs;
-			setOfficialSubs(new Set(nextOfficialSubs));
-			setOfficialRootSubs(new Set(nextOfficialRootSubs));
-			setSubDetails(nextSubDetails);
-			setDynamicSubs(
-				[...nextSubs, ...nextOfficialSubs].filter((sub) =>
-					normalizedSearchQuery
-						? sub.toLowerCase().includes(normalizedSearchQuery)
-						: true,
-				),
-			);
+			const result = await loadGallerySubcategoryData({
+				activeSearchQuery,
+				api,
+				category: selectedCat.id,
+				ignoreSourcesList,
+				isGeneralTokens,
+				selectedSub,
+				selectedSource,
+			});
+			setOfficialSubs(result.officialSubs);
+			setOfficialRootSubs(result.officialRootSubs);
+			setSubDetails(result.subDetails);
+			setDynamicSubs(result.dynamicSubs);
 		} catch (err) {
 			console.error(err);
-			setSubDetails({});
-			setOfficialSubs(new Set());
-			setOfficialRootSubs(new Set());
+			resetSubcategories();
 		}
 	}, [
 		selectedSource,
@@ -237,81 +219,30 @@ export default function useImageGallery({
 		ignoreSourcesList,
 		isScopedContent,
 		normalizedSearchQuery,
+		resetSubcategories,
 	]);
 
 	const loadImages = useCallback(async () => {
 		setLoading(true);
 		try {
-			if (normalizedSearchQuery || isScopedContent) {
-				if (contentScope === "databaseTokens") {
-					const officialAssets = await api.getBestiaryTokenAssets(
-						"",
-						debouncedSearchQuery,
-						ignoreSourcesList,
-						{ recursive: true },
-					);
-					const officialImages = Array.isArray(officialAssets?.images)
-						? officialAssets.images
-						: [];
-					setImages(
-						officialImages.map((image) => ({
-							...image,
-							assetSource: image.source,
-							source: "general",
-							category: "tokens",
-							subcategory: String(image.path || "")
-								.split(/[\\/]+/)
-								.filter(Boolean)
-								.slice(2, -1)
-								.join("/"),
-							locationLabel: ["database", "tokens"]
-								.concat(
-									String(image.path || "")
-										.split(/[\\/]+/)
-										.filter(Boolean)
-										.slice(2, -1),
-								)
-								.filter(Boolean)
-								.join(" / "),
-							globalSearch: true,
-						})),
-					);
-					return;
-				}
-				const shouldSearchAll = contentScope === "all";
-				const shouldSearchSource = contentScope === "source";
-				const result = await api.searchImageGallery({
-					search: debouncedSearchQuery,
-					source: shouldSearchAll ? "" : selectedSource,
-					category:
-						shouldSearchAll || shouldSearchSource ? "" : selectedCat.id,
-					subcategory:
-						shouldSearchAll || shouldSearchSource ? "" : selectedSub,
-					categories: IMAGE_GALLERY_CATEGORIES.map((category) => category.id),
+			setImages(
+				await loadGalleryImages({
+					activeSearchQuery,
+					api,
+					categories: IMAGE_GALLERY_CATEGORIES.map(
+						(category) => category.id,
+					),
+					category: selectedCat.id,
+					contentScope,
 					ignoreSourcesList,
-				});
-				setImages(Array.isArray(result?.images) ? result.images : []);
-				return;
-			}
-			const [data, officialAssets] = await Promise.all([
-				api.getImages(selectedSource, selectedCat.id, selectedSub),
-				isGeneralTokens
-					? api.getBestiaryTokenAssets(
-							selectedSub,
-							activeSearchQuery,
-							ignoreSourcesList,
-						)
-					: Promise.resolve(null),
-			]);
-			const userImages = (Array.isArray(data) ? data : []).filter((image) =>
-				normalizedSearchQuery
-					? image.name.toLowerCase().includes(normalizedSearchQuery)
-					: true,
+					isGeneralTokens,
+					isScopedContent,
+					normalizedSearchQuery,
+					search: debouncedSearchQuery,
+					selectedSub,
+					selectedSource,
+				}),
 			);
-			const officialImages = Array.isArray(officialAssets?.images)
-				? officialAssets.images
-				: [];
-			setImages([...userImages, ...officialImages]);
 		} catch (err) {
 			console.error("Failed to load images:", err);
 			setImages([]);
@@ -422,45 +353,24 @@ export default function useImageGallery({
 			setIsDraggingOver(false);
 			setDragOverTarget(null);
 			setDragSource(null);
-			if (dest.readonly) return;
+			const plan = getGalleryDropPlan({
+				dest,
+				hasFiles: e.dataTransfer.files.length > 0,
+				jsonData: e.dataTransfer.getData("application/json"),
+			});
+			if (plan.kind === "ignore") return;
+			if (plan.kind === "upload") {
+				await handleFileUpload(e.dataTransfer.files);
+				return;
+			}
 			setLoading(true);
-
 			try {
-				const jsonData = e.dataTransfer.getData("application/json");
-
-				if (jsonData) {
-					const data = JSON.parse(jsonData) as {
-						items?: string[];
-						src: ImageLocation;
-					};
-					if (!data.items?.length) return;
-
-					const sSub = data.src.subcategory || "";
-					const dSub = dest.subcategory || "";
-
-					if (
-						data.src.slug === dest.slug &&
-						data.src.category === dest.category &&
-						sSub === dSub
-					) {
-						setLoading(false);
-						return;
-					}
-
-					await api.moveImages({
-						items: data.items,
-						src: data.src,
-						dest,
-					});
-					setSelectedFilenames(new Set());
-					setSelectedSubs(new Set());
-					loadImages();
-					loadSubcategories();
-					loadStorageStats();
-				} else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-					await handleFileUpload(e.dataTransfer.files);
-					return;
-				}
+				await api.moveImages(plan.payload);
+				setSelectedFilenames(new Set());
+				setSelectedSubs(new Set());
+				loadImages();
+				loadSubcategories();
+				loadStorageStats();
 			} catch (err) {
 				console.error("Move failed", err);
 			} finally {
@@ -512,45 +422,21 @@ export default function useImageGallery({
 		async (dest: ImageLocation) => {
 			const { items, imageGroups, safeSubs } = getMovableSelectedItems();
 			if (!items.length) return false;
-
 			const src = {
 				slug: selectedSource,
 				category: selectedCat.id,
 				subcategory: selectedSub,
 			};
-			const sSub = src.subcategory || "";
-			const dSub = dest.subcategory || "";
-			if (
-				safeSubs.length > 0 &&
-				imageGroups.length === 0 &&
-				src.slug === dest.slug &&
-				src.category === dest.category &&
-				sSub === dSub
-			) {
-				return false;
-			}
-
+			const movePayloads = buildGalleryMovePayloads({
+				dest,
+				imageGroups,
+				safeSubs,
+				src,
+			});
+			if (movePayloads.length === 0) return false;
 			setLoading(true);
 			try {
-				const moveRequests: Array<ReturnType<typeof api.moveImages>> = [];
-				for (const group of imageGroups) {
-					const groupSub = group.src.subcategory || "";
-					if (
-						group.src.slug === dest.slug &&
-						group.src.category === dest.category &&
-						groupSub === dSub
-					) {
-						continue;
-					}
-					moveRequests.push(
-						api.moveImages({ items: group.items, src: group.src, dest }),
-					);
-				}
-				if (safeSubs.length > 0) {
-					moveRequests.push(api.moveImages({ items: safeSubs, src, dest }));
-				}
-				if (!moveRequests.length) return false;
-				await Promise.all(moveRequests);
+				await Promise.all(movePayloads.map((payload) => api.moveImages(payload)));
 				setSelectedFilenames(new Set());
 				setSelectedSubs(new Set());
 				setLastSelectedIndex(null);
@@ -827,60 +713,24 @@ export default function useImageGallery({
 	const handleItemClick = useCallback(
 		(name: string, type: GalleryItemType, index: number, e: ReactMouseEvent) => {
 			e.stopPropagation();
-
-			if (e.shiftKey && lastSelectedIndex !== null) {
-				const start = Math.min(index, lastSelectedIndex);
-				const end = Math.max(index, lastSelectedIndex);
-				const isAdditive = e.ctrlKey || e.metaKey;
-				const nextFilenames = new Set(isAdditive ? selectedFilenames : []);
-				const nextSubs = new Set(isAdditive ? selectedSubs : []);
-
-				const combinedItems = [
-					...allSubs.map((s) => ({ name: s, type: "sub" })),
-					...images.map((i) => ({ name: i.name, type: "image" })),
-				];
-
-				for (let i = start; i <= end; i++) {
-					const item = combinedItems[i];
-					if (item.type === "sub") {
-						if (!isReadonlySub(item.name)) nextSubs.add(item.name);
-					} else {
-						const image = images.find(
-							(imageItem) => imageItem.name === item.name,
-						);
-						if (!isReadonlyImage(image)) nextFilenames.add(item.name);
-					}
-				}
-
-				setSelectedFilenames(nextFilenames);
-				setSelectedSubs(nextSubs);
-			} else if (e.ctrlKey || e.metaKey) {
-				toggleSelect(name, type, e);
-				setLastSelectedIndex(index);
-			} else {
-				if (type === "sub" && isReadonlySub(name)) return;
-				if (
-					type === "image" &&
-					isReadonlyImage(images.find((image) => image.name === name))
-				) {
-					return;
-				}
-				const isSelected =
-					type === "image"
-						? selectedFilenames.has(name)
-						: selectedSubs.has(name);
-				const totalSelected = selectedFilenames.size + selectedSubs.size;
-
-				if (isSelected && totalSelected === 1) {
-					setSelectedFilenames(new Set());
-					setSelectedSubs(new Set());
-					setLastSelectedIndex(null);
-				} else {
-					setSelectedFilenames(type === "image" ? new Set([name]) : new Set());
-					setSelectedSubs(type === "sub" ? new Set([name]) : new Set());
-					setLastSelectedIndex(index);
-				}
-			}
+			const plan = getGallerySelectionPlan({
+				allSubs,
+				filenames: selectedFilenames,
+				images,
+				index,
+				isAdditive: e.ctrlKey || e.metaKey,
+				isReadonlyImage,
+				isReadonlySub,
+				isShift: e.shiftKey,
+				lastIndex: lastSelectedIndex,
+				name,
+				subfolders: selectedSubs,
+				type,
+			});
+			if (!plan) return;
+			setSelectedFilenames(plan.filenames);
+			setSelectedSubs(plan.subfolders);
+			setLastSelectedIndex(plan.lastIndex);
 		},
 		[
 			allSubs,
@@ -888,7 +738,6 @@ export default function useImageGallery({
 			lastSelectedIndex,
 			selectedFilenames,
 			selectedSubs,
-			toggleSelect,
 			isReadonlyImage,
 			isReadonlySub,
 		],
@@ -896,46 +745,31 @@ export default function useImageGallery({
 
 	const handleDragStart = useCallback(
 		(e: DragEvent, item: GalleryImage | string, type: GalleryItemType = "image") => {
-			const imageItem = typeof item === "string" ? undefined : item;
-			const itemName = type === "image" ? imageItem?.name || "" : String(item);
-			if (type === "sub" && isReadonlySub(itemName)) {
-				e.preventDefault();
-				return;
-			}
-			if (type === "image" && isReadonlyImage(imageItem)) {
-				e.preventDefault();
-				return;
-			}
-			const isSelected =
-				type === "image"
-					? selectedFilenames.has(itemName)
-					: selectedSubs.has(itemName);
-
-			const itemsToMove = isSelected
-				? getMovableSelectedItems().items
-				: [itemName];
-			if (!itemsToMove.length) {
-				e.preventDefault();
-				return;
-			}
-
-			e.dataTransfer.setData(
-				"application/json",
-				JSON.stringify({
-					items: itemsToMove,
-					src: {
-						slug: selectedSource,
-						category: selectedCat.id,
-						subcategory: selectedSub,
-					},
-				}),
-			);
-			e.dataTransfer.effectAllowed = "move";
-			setDragSource({
+			const location = {
 				slug: selectedSource,
 				category: selectedCat.id,
 				subcategory: selectedSub,
+			};
+			const plan = getGalleryDragPlan({
+				item,
+				location,
+				getMovableSelection: () => getMovableSelectedItems().items,
+				selectedFilenames,
+				selectedSubs,
+				type,
+				isReadonlyImage,
+				isReadonlySub,
 			});
+			if (!plan) {
+				e.preventDefault();
+				return;
+			}
+			e.dataTransfer.setData(
+				"application/json",
+				JSON.stringify(plan),
+			);
+			e.dataTransfer.effectAllowed = "move";
+			setDragSource(plan.src);
 		},
 		[
 			selectedFilenames,

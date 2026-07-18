@@ -18,5 +18,11 @@ export {
 	type CardNote,
 } from "./model/cardNoteModel.ts";
 export { default as CampaignViewModel } from "./model/CampaignViewModel.ts";
-export { default as CharacterCardModel } from "./model/CharacterCardModel.ts";
-export { default as LocationCardModel } from "./model/LocationCardModel.ts";
+export {
+	default as CharacterCardModel,
+	type CharacterData,
+} from "./model/CharacterCardModel.ts";
+export {
+	default as LocationCardModel,
+	type LocationData,
+} from "./model/LocationCardModel.ts";

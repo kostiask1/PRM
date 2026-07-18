@@ -23,7 +23,7 @@ export interface CharacterData extends CardEntity {
 	_isNew?: boolean;
 }
 
-export default class CharacterCardModel extends CardNoteModel {
+export default class CharacterCardModel extends CardNoteModel<CharacterData> {
 	character: CharacterData;
 
 	constructor(character: CharacterData = {}) {

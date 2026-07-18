@@ -17,15 +17,34 @@ export interface AiContextEntity extends Record<string, unknown> {
 
 export interface AiContextSession extends Record<string, unknown> {
 	fileName: string;
-	data?: Record<string, unknown>;
+	name?: string;
+	data?: AiContextSessionData;
+}
+
+export interface AiContextScene extends Record<string, unknown> {
+	id: string;
+}
+
+export interface AiContextSessionData extends Record<string, unknown> {
+	scenes?: AiContextScene[];
+}
+
+export interface AiSessionSceneContextConfig extends Record<string, unknown> {
+	included: boolean;
+	summary: boolean;
+	goal: boolean;
+	stakes: boolean;
+	location: boolean;
+	notes: boolean;
+	encounter: boolean;
 }
 
 export interface AiSessionContextConfig extends Record<string, unknown> {
 	included: boolean;
 	notes?: boolean;
 	result_text?: boolean;
-	scenes?: Record<string, unknown>;
-	data?: Record<string, unknown>;
+	scenes?: Record<string, AiSessionSceneContextConfig>;
+	data?: AiContextSessionData;
 }
 
 export interface AiContextDataConfig {
@@ -92,7 +111,7 @@ const getCharacterContextKey = (character: AiContextEntity) => {
 type LoadedSessionTuple = readonly [
 	string,
 	AiSessionContextConfig,
-	Record<string, unknown>,
+	AiContextSessionData,
 ];
 
 export function mergeLoadedAiSessionData(

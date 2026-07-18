@@ -2,4 +2,4 @@ export {
 	parseRollsAndSpells,
 	renderMentionText,
 	renderRecursiveContent,
-} from "./ui/RichContentRenderer.jsx";
+} from "./ui/RichContentRenderer.tsx";

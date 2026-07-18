@@ -1,1 +1,1 @@
-export { default as ClickToCopy } from "./ui/ClickToCopy.jsx";
+export { default as ClickToCopy } from "./ui/ClickToCopy.tsx";

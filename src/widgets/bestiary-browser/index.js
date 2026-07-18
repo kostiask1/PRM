@@ -1,1 +1,1 @@
-export { default as BestiaryBrowser } from "./ui/BestiaryBrowser.jsx";
+export { default as BestiaryBrowser } from "./ui/BestiaryBrowser.tsx";

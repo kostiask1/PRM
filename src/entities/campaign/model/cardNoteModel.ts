@@ -17,15 +17,15 @@ function getCardNotes(entity: CardEntity = {}): CardNote[] {
 	return Array.isArray(entity.notes) ? [...entity.notes] : [];
 }
 
-function withCardField(
-	entity: CardEntity = {},
+function withCardField<Entity extends CardEntity>(
+	entity: Entity,
 	field: string,
 	value: unknown,
-): CardEntity {
+): Entity {
 	return {
 		...entity,
 		[field]: value,
-	};
+	} as Entity;
 }
 
 function withUpdatedCardNote(
@@ -52,16 +52,16 @@ function toggleCardNoteCollapse(
 	);
 }
 
-export class CardNoteModel {
-	get entity(): CardEntity {
-		return {};
+export class CardNoteModel<Entity extends CardEntity = CardEntity> {
+	get entity(): Entity {
+		return {} as Entity;
 	}
 
 	get notes(): CardNote[] {
 		return getCardNotes(this.entity);
 	}
 
-	withField(field: string, value: unknown): CardEntity {
+	withField(field: string, value: unknown): Entity {
 		return withCardField(this.entity, field, value);
 	}
 

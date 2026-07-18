@@ -1,2 +1,2 @@
-export { default as ColorThemeSwitcher } from "./ColorThemeSwitcher.jsx";
-export { default as SettingsModalContent } from "./SettingsModalContent.jsx";
+export { default as ColorThemeSwitcher } from "./ColorThemeSwitcher.tsx";
+export { default as SettingsModalContent } from "./SettingsModalContent.tsx";

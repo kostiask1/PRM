@@ -1,1 +1,1 @@
-export { default as StatusBadge } from "./ui/StatusBadge.jsx";
+export { default as StatusBadge } from "./ui/StatusBadge.tsx";

@@ -1,1 +1,1 @@
-export { default as MonsterStatBlock } from "./ui/MonsterStatBlock.jsx";
+export { default as MonsterStatBlock } from "./ui/MonsterStatBlock.tsx";

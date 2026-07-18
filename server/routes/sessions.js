@@ -14,6 +14,9 @@ const {
 	createUpdateEncounterCommand,
 } = require("../modules/session/application/updateEncounter");
 const {
+	createAddEncounterMonsterCommand,
+} = require("../modules/session/application/addEncounterMonster");
+const {
 	createSessionCommands,
 } = require("../modules/session/application/sessionCommands");
 const {
@@ -26,6 +29,7 @@ const entityScopeCommands = createCampaignEntityScopeCommands(
 const sessionRepository = createFileSessionRepository(storage);
 const createSceneEncounter = createSceneEncounterCommand(sessionRepository);
 const updateEncounter = createUpdateEncounterCommand(sessionRepository);
+const addEncounterMonster = createAddEncounterMonsterCommand(sessionRepository);
 const sessionCommands = createSessionCommands(sessionRepository);
 
 router.get("/", async (req, res, next) => {
@@ -93,6 +97,24 @@ router.patch("/:fileName/encounters/:encounterId", async (req, res, next) => {
 		next(error);
 	}
 });
+
+router.post(
+	"/:fileName/encounters/:encounterId/monsters",
+	async (req, res, next) => {
+		try {
+			res.status(201).json(
+				await addEncounterMonster({
+					campaignSlug: req.campaignSlug,
+					fileName: req.params.fileName,
+					encounterId: req.params.encounterId,
+					monster: req.body?.monster,
+				}),
+			);
+		} catch (error) {
+			next(error);
+		}
+	},
+);
 
 router.get("/:fileName", async (req, res, next) => {
 	try {

@@ -1,3 +1,3 @@
-export { default as DiceCalculator } from "./ui/DiceCalculator.jsx";
-export { default as DiceProbabilityModalContent } from "./ui/DiceProbabilityModalContent.jsx";
-export { default as RollDice } from "./ui/RollDice.jsx";
+export { default as DiceCalculator } from "./ui/DiceCalculator.tsx";
+export { default as DiceProbabilityModalContent } from "./ui/DiceProbabilityModalContent.tsx";
+export { default as RollDice } from "./ui/RollDice.tsx";

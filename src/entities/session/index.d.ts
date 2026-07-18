@@ -1,6 +1,9 @@
 export {
 	sessionApi,
+	type AddEncounterMonsterResult,
 	type EntityScopeMoveResult,
+	type EncounterMonsterRecord,
+	type EncounterRecord,
 	type EncounterUpdateResult,
 	type SceneEncounterResult,
 	type SessionDomainId,

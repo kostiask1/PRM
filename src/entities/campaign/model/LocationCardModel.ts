@@ -16,7 +16,7 @@ export interface LocationData extends CardEntity {
 	imageUrl?: string | null;
 }
 
-export default class LocationCardModel extends CardNoteModel {
+export default class LocationCardModel extends CardNoteModel<LocationData> {
 	location: LocationData;
 
 	constructor(location: LocationData = {}) {

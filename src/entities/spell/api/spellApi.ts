@@ -1,10 +1,8 @@
 import { request } from "../../../shared/api/index.ts";
+import type { SpellData } from "../model/SpellCardModel.ts";
 
-export interface SpellRecord extends Record<string, unknown> {
+export interface SpellRecord extends SpellData {
 	name: string;
-	source?: string;
-	level?: number;
-	school?: string;
 }
 
 export interface ReferenceRecord extends Record<string, unknown> {

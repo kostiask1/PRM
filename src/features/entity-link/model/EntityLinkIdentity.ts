@@ -1,4 +1,4 @@
-import { createContext } from "react";
+import { createContext, type ReactNode } from "react";
 import {
 	getEntityDisplayName,
 	type CampaignEntity,
@@ -25,7 +25,7 @@ export interface EntityLinkResolver {
 	renderModalContent?: (
 		modalState: EntityLinkModalState,
 		onClose: () => void,
-	) => unknown;
+	) => ReactNode;
 }
 
 function normalizeIdentityPart(value: unknown): string {

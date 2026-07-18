@@ -1,2 +1,2 @@
-export { default as RulesReferenceModalContent } from "./ui/RulesReferenceModalContent.jsx";
-export { default as RulesReferenceModalHost } from "./ui/RulesReferenceModalHost.jsx";
+export { default as RulesReferenceModalContent } from "./ui/RulesReferenceModalContent.tsx";
+export { default as RulesReferenceModalHost } from "./ui/RulesReferenceModalHost.tsx";

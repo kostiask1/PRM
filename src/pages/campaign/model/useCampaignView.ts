@@ -1,6 +1,4 @@
 import {
-	type Dispatch,
-	type SetStateAction,
 	useCallback,
 	useEffect,
 	useRef,
@@ -16,12 +14,11 @@ import {
 import { campaignApi } from "../../../entities/campaign/index.js";
 import type { CampaignEntityType } from "../../../entities/campaign/index.js";
 import { sessionApi } from "../../../entities/session/index.js";
-import type { SessionOrder, SessionRecord } from "../../../entities/session/api/sessionApi.ts";
+import type { SessionRecord } from "../../../entities/session/api/sessionApi.ts";
 import {
 	useCampaignEntityCollection,
 	useCampaignEntityOrdering,
 	useCampaignEntityPersistence,
-	type CampaignFeatureEntityId,
 } from "../../../features/campaign-entity/index.js";
 
 const api = { ...campaignApi, ...sessionApi };
@@ -52,7 +49,6 @@ import {
 import type {
 	CampaignAiUpdateOptions,
 	CampaignGraphNoteSave,
-	CampaignGraphScene,
 	CampaignHistoryState,
 	CampaignPageCampaign,
 	CampaignPageEntity,
@@ -911,6 +907,7 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 
 	const handleDeleteSession = async (session: SessionRecord) => {
 		if (!session.fileName) return;
+		const fileName = session.fileName;
 		if (
 			!(await dispatch(
 				confirm({
@@ -923,12 +920,12 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 		)
 			return;
 		try {
-			await api.deleteSession(campaign.slug, session.fileName);
+			await api.deleteSession(campaign.slug, fileName);
 			const data = await api.listSessions(campaign.slug);
 			setSessions(data || []);
 			setSessionDetails((prev) => {
 				const next = { ...prev };
-				delete next[session.fileName];
+				delete next[fileName];
 				return next;
 			});
 			dispatch(requestCampaignsReloadAction());

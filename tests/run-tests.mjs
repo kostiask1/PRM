@@ -23,7 +23,24 @@ import {
 	getMonsterTypeString,
 } from "../src/entities/bestiary/index.js";
 import { classNames } from "../src/shared/lib/index.js";
-import { applyTheme, THEMES } from "../src/features/settings/index.js";
+import {
+	applyTheme,
+	getNextTheme,
+	getThemeToggleIcon,
+	THEMES,
+} from "../src/features/settings/index.js";
+import {
+	DEFAULT_IMAGE_PROMPT_BASE_PROMPT,
+	GLOBAL_SETTINGS_SCOPE,
+	buildCampaignIgnoreSourcesMap,
+	buildPromptSettingsPayload,
+	mergeContentSourceOptions,
+	normalizeSavedIgnoreSources,
+	normalizeSavedPromptSettings,
+	normalizeSettingsCampaigns,
+	resolveSettingsScope,
+	setSettingsPromptForScope,
+} from "../src/features/settings/model/settingsModal.ts";
 import {
 	getDiceProbabilityDistribution,
 	rollDiceFormula,
@@ -32,6 +49,69 @@ import {
 	extractContentTokens,
 	preprocessTags,
 } from "../src/entities/reference/model.js";
+import {
+	addFallbackTaggedSource,
+	getContentTokenRenderPlan,
+	parseQuickrefName,
+	stripNotesReferenceText,
+} from "../src/features/rich-content/model.js";
+import {
+	filterBestiaryMonsters,
+	getAiMonsterInstructionPlan,
+	getBestiarySelectionPlan,
+	getBestiarySourceCodes,
+	getCreateBasedMonsterPlan,
+	getCustomBestiaryUpdatePlan,
+	getCustomRefreshSelection,
+	getMonsterListFromResponse,
+	getNextBestiarySortOrder,
+	isSameMonsterIdentity,
+	mergeImportedCustomMonsters,
+	monsterMatchesReference,
+	parseImportedCustomMonsters,
+	parseBestiarySyncEvent,
+	parseMonsterReference,
+	preserveAiDraftResourceMetadata,
+	sortBestiaryMonsters,
+} from "../src/widgets/bestiary-browser/model.js";
+import {
+	getChangedFieldClass,
+	getMonsterMutationKey,
+	getMonsterSpellSlug,
+	getMonsterSpellcastingEntries,
+	getMonsterTokenSources,
+	getSenseTextParts,
+	getTokenDragPayload,
+	getUploadedTokenUrl,
+	groupMonsterSpellsByLevel,
+	loadMonsterSpells,
+	shouldShowMonsterTokenDropzone,
+} from "../src/widgets/monster-stat-block/model.js";
+import {
+	filterSpells,
+	findSpellByReference,
+	getInitialSpellSelection,
+	getNextSpellSortOrder,
+	getSettingsIgnoreSources,
+	getSpellClassOptions,
+	getSpellItemKey,
+	getSpellListIndex,
+	getSpellSchoolOptions,
+	getValidSourceFilter,
+	normalizeSpellList,
+	parseSpellReferenceKey,
+	sortSpells,
+	spellMatchesReferenceKey,
+} from "../src/widgets/spells-browser/model.js";
+import {
+	REFERENCE_TAB_POLICIES,
+	combineBestiaryLists,
+	createReferenceSelection,
+	findSelectedReferenceItem,
+	getInitialTabId,
+	getReferenceInlineTag,
+	itemMatchesQuery,
+} from "../src/widgets/rules-reference-modal/model.js";
 import {
 	addUndoSnapshot,
 	createDistinctRedoTransition,
@@ -59,6 +139,19 @@ import {
 	createMentionBoundaryNode,
 	handleSpaceAfterMention,
 } from "../src/features/editor/model.js";
+import {
+	applyInputBlockEdit,
+	filterMentionEntities,
+	getEditableShortcutAction,
+	getInputShortcutAction,
+	groupMentionEntities,
+	insertInputTab,
+	isRangeInsideSquareBrackets,
+	normalizeEditableMarkdown,
+	resolveInitialCursorPosition,
+	toggleInputFormat,
+	toggleInputMention,
+} from "../src/features/editor/ui/editorPresentation.ts";
 import {
 	buildNavigationUrl,
 	parseUrl,
@@ -127,6 +220,21 @@ import {
 	updateContextListItem,
 } from "../src/features/ai/index.js";
 import {
+	getAiSceneContextConfig,
+	getAiSessionContextConfig,
+	getAiEncounterGenerationTogglePlan,
+	getAvailableAiAttachmentSlots,
+	getAiPromptTokenVisibility,
+	getAiToolbarVisibility,
+	hasAiResponseHistory,
+	isAiApiKeySaveDisabled,
+	mergeUniqueAiAttachments,
+	prepareAiAttachmentSelection,
+	removeAiAttachmentAt,
+	shouldSubmitAiApiKey,
+	shouldReportAiAttachmentSelectionError,
+} from "../src/features/ai/ui/presentationModel.ts";
+import {
 	getSpellByName,
 	getConditionByName,
 	getDiseaseByName,
@@ -158,6 +266,19 @@ import { MonsterStatBlockModel } from "../src/entities/bestiary/index.js";
 import { SpellCardModel } from "../src/entities/spell/index.js";
 import { LocationCardModel } from "../src/entities/campaign/index.js";
 import {
+	createCharacterDraft,
+	createLocationDraft,
+	getCampaignEntityFieldClass,
+	getCampaignNoteHighlightFields,
+	getCharacterCardPresentation,
+	getCharacterDisplayName,
+	getLocationCardPresentation,
+	getLocationDisplayName,
+	isCharacterDraftValid,
+	isLocationDraftValid,
+	setCampaignNoteAiIgnored,
+} from "../src/widgets/campaign-entity-card/model.js";
+import {
 	areHistoryStatesEqual,
 	campaignHistoryPayload,
 	cloneHistoryList,
@@ -169,6 +290,43 @@ import {
 	sanitizeLoadedEntity,
 } from "../src/features/campaign/campaignStateUtils.js";
 import { IMAGE_GALLERY_CATEGORIES } from "../src/features/images/imageGalleryConfig.js";
+import {
+	getImageAssetPreset,
+	parseGalleryLocationFromImageUrl,
+	resolveImageAssetLocation,
+} from "../src/features/images/model/imageAssetField.ts";
+import {
+	getImageUploadFileName,
+	getImageUploadSourceOptions,
+	normalizeImageCampaigns,
+	resolveImageUploadSource,
+	splitImageFileName,
+} from "../src/features/images/model/imageUpload.ts";
+import {
+	enterImageTargetSubfolder,
+	getImageTargetParentPath,
+	navigateImageTargetPath,
+	normalizeImageTargetPath,
+	normalizeSubcategoryNames,
+} from "../src/features/images/model/imageTargetSettings.ts";
+import {
+	buildGalleryPresentationItems,
+	deduplicateGalleryImages,
+	getGalleryHistoryKeyDirection,
+	getGalleryNavigationEntry,
+	getGalleryPathEntry,
+	recordGalleryNavigation,
+} from "../src/features/images/model/imageGalleryPresentation.ts";
+import {
+	buildGalleryMovePayloads,
+	getGalleryDragPlan,
+	getGalleryDropPlan,
+	getGallerySelectionPlan,
+} from "../src/features/images/model/imageGalleryInteraction.ts";
+import {
+	loadGalleryImages,
+	loadGallerySubcategoryData,
+} from "../src/features/images/model/imageGalleryLoading.ts";
 import {
 	findEntityByName,
 	getEntityDisplayName,
@@ -196,6 +354,113 @@ import {
 	buildEntityImageMap,
 	synchronizeCustomMonsterParticipants,
 } from "../src/features/encounter-editor/index.js";
+import {
+	buildEncounterTargetCampaignGroup,
+	createEncounterTargetId,
+	normalizeActiveEncounterCampaigns,
+	normalizeEncounterSessionSummaries,
+} from "../src/features/encounter-editor/model/addMonsterTargets.ts";
+import {
+	calculateTooltipPosition,
+	cancelOtherTooltipTimeouts,
+	closeAllTooltips,
+	getActiveTooltipId,
+	isAncestorTooltip,
+	removeTooltipParent,
+	removeTooltipTimeoutController,
+	setActiveTooltip,
+	setTooltipParent,
+	setTooltipTimeoutController,
+	subscribeActiveTooltip,
+} from "../src/shared/ui/tooltipModel.ts";
+import {
+	BUTTON_SIZES,
+	getButtonAppearance,
+	normalizeButtonSize,
+} from "../src/shared/ui/buttonModel.ts";
+import { getListCardClickPlan } from "../src/shared/ui/listCardModel.ts";
+import { splitSearchHighlight } from "../src/shared/ui/searchHighlightModel.ts";
+import {
+	calculateSelectDropdownStyle,
+	createSelectChangeEvent,
+	getSelectedOption,
+	getSelectScrollTop,
+} from "../src/shared/ui/selectModel.ts";
+import {
+	calculateMultiSelectDropdownStyle,
+	getMultiSelectActiveScrollTarget,
+	getMultiSelectOptionAction,
+	getMultiSelectSelectionState,
+	selectOnlyMultiSelectValue,
+	toggleMultiSelectValue,
+} from "../src/shared/ui/multiSelectModel.ts";
+import {
+	getDefaultDraggableItemKey,
+	getDraggableReorderResult,
+	hasReachedDragStartThreshold,
+	haveSameDraggableItemOrder,
+	reorderDraggableItems,
+} from "../src/shared/ui/draggableListModel.ts";
+import {
+	getBulkCollapseAction,
+	getNoteCardPresentation,
+	isRealNote,
+} from "../src/features/notes/model.ts";
+import {
+	createModalApi,
+	formatModalStatusMessage,
+	getModalCloseAction,
+	getModalFocusTarget,
+	getModalKeyboardPlan,
+	resolveModalConfirmValue,
+} from "../src/features/modal/model.ts";
+import {
+	getDiceResultId,
+	getQuestionDiceRoll,
+	getQuestionRollFormula,
+	getQuestionSearchTarget,
+	getStandardDiceFactors,
+	normalizeQuestionSearch,
+} from "../src/features/player-questions/model.ts";
+import {
+	addDieToFormula,
+	createHistoryRollPayload,
+	createRollDicePayload,
+	formatDiceProbability,
+	getCurrentDiceFormula,
+	getDiceBreakdownLabel,
+	getDiceProbabilityBarWidth,
+	getFullDiceBreakdownString,
+	getRechargeResultClass,
+	getRechargeThreshold,
+	isDicePanelShortcut,
+	isPlayerQuestionsRollContext,
+	isSingleDieRoll,
+	normalizeDiceFormula,
+	prependDiceHistory,
+	readPendingDiceRoll,
+} from "../src/features/dice/model.ts";
+import { getMonsterAiEditPresentation } from "../src/features/ai-edit-monster/model.ts";
+import {
+	actionEntriesToText,
+	actionFromText,
+	addMonsterAction,
+	applyRuleReferenceTag,
+	calculateDiceAverage,
+	isRulesReferenceShortcut,
+	parseMonsterJson,
+	parseSpeedText,
+	prepareMonsterDraftForSave,
+	removeMonsterAction,
+	speedToText,
+	updateCreatureBasicField,
+} from "../src/features/edit-monster/model.ts";
+import {
+	buildTooltipTextParts,
+	formatRulesTooltipText,
+	loadRulesLinkPreview,
+	resolveRulesLinkNavigation,
+} from "../src/features/rules-reference/model/rulesLink.ts";
 
 const require = createRequire(import.meta.url);
 const storage = require("../server/storage.js");
@@ -292,6 +557,9 @@ const {
 const {
 	createUpdateEncounterCommand,
 } = require("../server/modules/session/application/updateEncounter.js");
+const {
+	createAddEncounterMonsterCommand,
+} = require("../server/modules/session/application/addEncounterMonster.js");
 const {
 	createSessionCommands,
 } = require("../server/modules/session/application/sessionCommands.js");
@@ -558,6 +826,89 @@ await run("mention editor inserts Space after a link in the active command", asy
 	);
 });
 
+await run("editor presentation preserves mention grouping and cursor mapping", () => {
+	const entities = [
+		{ id: 1, type: "characters", firstName: "Ірина", lastName: "Коваль" },
+		{ id: 2, type: "npc", name: "Вартовий" },
+		{ id: 3, type: "locations", name: "Срібна гавань" },
+	];
+	assert.deepEqual(filterMentionEntities(entities, "коваль"), [entities[0]]);
+	assert.deepEqual(
+		groupMentionEntities(entities).map((group) => [group.key, group.items.length]),
+		[
+			["characters", 1],
+			["npc", 1],
+			["locations", 1],
+		],
+	);
+	assert.equal(resolveInitialCursorPosition(99, "abc"), 3);
+	assert.equal(
+		resolveInitialCursorPosition(
+			{ previewOffset: 1, previewToRaw: [0, 4, 8] },
+			"abcdefghij",
+		),
+		4,
+	);
+	assert.equal(isRangeInsideSquareBrackets("before [link] after", 9, 11), true);
+	assert.equal(normalizeEditableMarkdown("  one  \r\n two  ", "textarea"), "  one\n two");
+});
+
+await run("editor input policies preserve markdown shortcuts", () => {
+	assert.deepEqual(
+		getInputShortcutAction({
+			ctrlKey: true,
+			metaKey: false,
+			key: "л",
+			type: "textarea",
+		}),
+		{ kind: "mention" },
+	);
+	assert.deepEqual(insertInputTab("ab", 1, 1), {
+		value: "a\tb",
+		selectionStart: 2,
+		selectionEnd: 2,
+	});
+	assert.deepEqual(toggleInputMention("name", 0, 4), {
+		value: "[name]",
+		selectionStart: 1,
+		selectionEnd: 5,
+	});
+	assert.deepEqual(toggleInputFormat("word", 0, 4, "**"), {
+		value: "**word**",
+		selectionStart: 2,
+		selectionEnd: 6,
+	});
+	assert.deepEqual(applyInputBlockEdit("one\ntwo", 0, 7, { kind: "quote" }), {
+		value: "> one\n> two",
+		selectionStart: 2,
+		selectionEnd: 11,
+	});
+	assert.equal(
+		getEditableShortcutAction({
+			code: "BracketRight",
+			ctrlKey: true,
+			enableHistory: true,
+			isDisabled: false,
+			key: "]",
+			metaKey: false,
+			type: "textarea",
+		}),
+		"list",
+	);
+	assert.equal(
+		getEditableShortcutAction({
+			code: "KeyZ",
+			ctrlKey: true,
+			enableHistory: false,
+			isDisabled: false,
+			key: "z",
+			metaKey: false,
+			type: "textarea",
+		}),
+		"delegate",
+	);
+});
+
 await run(
 	"parseUrl supports campaign/session/encounter routes",
 	() => {
@@ -779,6 +1130,787 @@ await run("campaign graph builds nodes and mention edges", () => {
 		simplifiedGraph.nodes.find((node) => node.type === "campaign-note")?.label,
 		"Текст нотатки.",
 	);
+});
+
+await run("tooltip model coordinates nesting, timers, and viewport layout", () => {
+	const below = calculateTooltipPosition(
+		{ left: 100, top: 20, right: 140, bottom: 40, width: 40, height: 20 },
+		{ left: 0, top: 0, right: 100, bottom: 30, width: 100, height: 30 },
+		300,
+		200,
+	);
+	assert.deepEqual(below, { top: 48, left: 70, ready: true });
+
+	const aboveAndClamped = calculateTooltipPosition(
+		{ left: 0, top: 150, right: 10, bottom: 170, width: 10, height: 20 },
+		{ left: 0, top: 0, right: 100, bottom: 50, width: 100, height: 50 },
+		300,
+		180,
+	);
+	assert.deepEqual(aboveAndClamped, { top: 92, left: 8, ready: true });
+
+	const observed = [];
+	const unsubscribe = subscribeActiveTooltip((id) => observed.push(id));
+	setTooltipParent("tooltip-child", "tooltip-root");
+	assert.equal(isAncestorTooltip("tooltip-root", "tooltip-child"), true);
+	assert.equal(isAncestorTooltip("tooltip-child", "tooltip-root"), false);
+
+	const calls = { kept: 0, otherOpen: 0, otherClose: 0, otherClosed: 0 };
+	setTooltipTimeoutController("tooltip-root", {
+		cancelOpen: () => {
+			calls.kept += 1;
+		},
+	});
+	setTooltipTimeoutController("tooltip-child", {
+		cancelOpen: () => {
+			calls.otherOpen += 1;
+		},
+		cancelClose: () => {
+			calls.otherClose += 1;
+		},
+		close: () => {
+			calls.otherClosed += 1;
+		},
+	});
+	setActiveTooltip("tooltip-child");
+	cancelOtherTooltipTimeouts("tooltip-root");
+	assert.deepEqual(calls, {
+		kept: 0,
+		otherOpen: 1,
+		otherClose: 1,
+		otherClosed: 0,
+	});
+	closeAllTooltips();
+	assert.equal(getActiveTooltipId(), null);
+	assert.deepEqual(observed, ["tooltip-child", null]);
+	assert.deepEqual(calls, {
+		kept: 1,
+		otherOpen: 2,
+		otherClose: 2,
+		otherClosed: 1,
+	});
+
+	unsubscribe();
+	removeTooltipParent("tooltip-child");
+	removeTooltipTimeoutController("tooltip-root");
+	removeTooltipTimeoutController("tooltip-child");
+});
+
+await run("button model preserves sizes, classes, and icon stroke rules", () => {
+	assert.equal(normalizeButtonSize(), BUTTON_SIZES.MEDIUM);
+	assert.equal(normalizeButtonSize("small"), BUTTON_SIZES.SMALL);
+	assert.equal(normalizeButtonSize(BUTTON_SIZES.LARGE), BUTTON_SIZES.LARGE);
+	assert.equal(normalizeButtonSize("invalid"), BUTTON_SIZES.MEDIUM);
+
+	assert.deepEqual(
+		getButtonAppearance({
+			variant: "create",
+			size: "small",
+			disabled: true,
+			className: "custom",
+		}),
+		{
+			normalizedSize: BUTTON_SIZES.SMALL,
+			className:
+				"Button Button__create Button__sm is_disabled custom",
+			strokeWidth: 2.5,
+		},
+	);
+	assert.equal(
+		getButtonAppearance({ variant: "primary" }).strokeWidth,
+		2,
+	);
+});
+
+await run("list cards and search highlighting preserve navigation decisions", () => {
+	const plainEvent = { ctrlKey: false, metaKey: false, shiftKey: false };
+	assert.deepEqual(getListCardClickPlan("/campaign/demo", true, plainEvent), {
+		preventDefault: true,
+		invokeOnClick: true,
+	});
+	assert.deepEqual(
+		getListCardClickPlan("/campaign/demo", true, {
+			...plainEvent,
+			ctrlKey: true,
+		}),
+		{ preventDefault: false, invokeOnClick: false },
+	);
+	assert.deepEqual(getListCardClickPlan(undefined, true, plainEvent), {
+		preventDefault: false,
+		invokeOnClick: true,
+	});
+	assert.deepEqual(getListCardClickPlan("/campaign/demo", false, plainEvent), {
+		preventDefault: true,
+		invokeOnClick: false,
+	});
+
+	assert.equal(splitSearchHighlight(null, "demo"), null);
+	assert.equal(splitSearchHighlight(42, ""), "42");
+	assert.deepEqual(splitSearchHighlight("Fire [Bolt] fire", "fire"), [
+		{ text: "", highlighted: false },
+		{ text: "Fire", highlighted: true },
+		{ text: " [Bolt] ", highlighted: false },
+		{ text: "fire", highlighted: true },
+		{ text: "", highlighted: false },
+	]);
+	assert.deepEqual(splitSearchHighlight("a+b A+B", "a+b"), [
+		{ text: "", highlighted: false },
+		{ text: "a+b", highlighted: true },
+		{ text: " ", highlighted: false },
+		{ text: "A+B", highlighted: true },
+		{ text: "", highlighted: false },
+	]);
+});
+
+await run("select model preserves fallback, event, placement, and scrolling", () => {
+	const options = [
+		{ value: "all", label: "All" },
+		{ value: "custom", label: "Custom" },
+	];
+	assert.equal(getSelectedOption(options, "custom"), options[1]);
+	assert.equal(getSelectedOption(options, "missing"), options[0]);
+	assert.equal(getSelectedOption([], "missing"), undefined);
+	assert.deepEqual(createSelectChangeEvent("custom"), {
+		target: { value: "custom" },
+	});
+
+	assert.deepEqual(
+		calculateSelectDropdownStyle(
+			{ left: 20, top: 100, bottom: 140, width: 100 },
+			{ width: 400, height: 600 },
+			180,
+		),
+		{
+			position: "fixed",
+			left: 20,
+			top: 144,
+			width: 180,
+			maxHeight: 300,
+		},
+	);
+	assert.deepEqual(
+		calculateSelectDropdownStyle(
+			{ left: 350, top: 500, bottom: 540, width: 120 },
+			{ width: 400, height: 600 },
+			180,
+		),
+		{
+			position: "fixed",
+			left: 212,
+			bottom: 104,
+			width: 180,
+			maxHeight: 300,
+		},
+	);
+
+	assert.equal(
+		getSelectScrollTop({
+			optionTop: 20,
+			optionHeight: 30,
+			scrollTop: 80,
+			viewportHeight: 100,
+		}),
+		20,
+	);
+	assert.equal(
+		getSelectScrollTop({
+			optionTop: 180,
+			optionHeight: 30,
+			scrollTop: 80,
+			viewportHeight: 100,
+		}),
+		110,
+	);
+	assert.equal(
+		getSelectScrollTop({
+			optionTop: 100,
+			optionHeight: 30,
+			scrollTop: 80,
+			viewportHeight: 100,
+		}),
+		80,
+	);
+});
+
+await run("multi-select model preserves normalized selection and click modes", () => {
+	const options = [
+		{ value: "PHB", label: "Player's Handbook" },
+		{ value: "DMG", label: "Dungeon Master's Guide" },
+	];
+	const selection = getMultiSelectSelectionState(options, ["PHB"]);
+	assert.deepEqual([...selection.normalizedValues], ["PHB"]);
+	assert.equal(selection.selectedCount, 1);
+	assert.deepEqual(toggleMultiSelectValue(options, ["PHB"], "PHB"), []);
+	assert.deepEqual(toggleMultiSelectValue(options, ["PHB"], "DMG"), [
+		"PHB",
+		"DMG",
+	]);
+
+	const equivalentValues = [
+		{ value: 1, label: "Numeric" },
+		{ value: "1", label: "String" },
+	];
+	assert.equal(
+		getMultiSelectSelectionState(equivalentValues, [1]).selectedCount,
+		2,
+	);
+	assert.deepEqual(selectOnlyMultiSelectValue(equivalentValues, 1), [1, "1"]);
+
+	assert.deepEqual(
+		getMultiSelectOptionAction({
+			options,
+			selectedValues: ["PHB"],
+			optionValue: "DMG",
+			mode: "single",
+			hasOptionClickHandler: true,
+		}),
+		{ kind: "delegate", close: true },
+	);
+	assert.deepEqual(
+		getMultiSelectOptionAction({
+			options,
+			selectedValues: ["PHB"],
+			optionValue: "DMG",
+			mode: "toggle",
+			hasOptionClickHandler: false,
+		}),
+		{ kind: "change", close: false, values: ["PHB", "DMG"] },
+	);
+	assert.deepEqual(
+		getMultiSelectOptionAction({
+			options,
+			selectedValues: ["PHB"],
+			optionValue: "DMG",
+			mode: "single",
+			hasOptionClickHandler: false,
+		}),
+		{ kind: "change", close: true, values: ["DMG"] },
+	);
+
+	assert.equal(getMultiSelectActiveScrollTarget(undefined), "top");
+	assert.equal(getMultiSelectActiveScrollTarget("all"), "top");
+	assert.equal(getMultiSelectActiveScrollTarget(0), "top");
+	assert.equal(getMultiSelectActiveScrollTarget("PHB"), "active");
+	assert.deepEqual(
+		calculateMultiSelectDropdownStyle(
+			{ left: 20, top: 100, bottom: 140, width: 100 },
+			{ width: 500, height: 800 },
+			240,
+		),
+		{
+			position: "fixed",
+			left: 20,
+			top: 144,
+			width: 240,
+			maxHeight: 340,
+		},
+	);
+});
+
+await run("draggable-list model preserves threshold, keys, and reorder rules", () => {
+	assert.equal(getDefaultDraggableItemKey({ _renderKey: "render", id: 1 }, 9), "render");
+	assert.equal(getDefaultDraggableItemKey({ _renderKey: null, id: 1 }, 9), 1);
+	assert.equal(getDefaultDraggableItemKey({}, 9), 9);
+	assert.equal(getDefaultDraggableItemKey("item", 9), 9);
+	assert.equal(hasReachedDragStartThreshold(0, 0, 3, 4), true);
+	assert.equal(hasReachedDragStartThreshold(0, 0, 2, 4), false);
+
+	const items = [{ id: "a" }, { id: "b" }, { id: "c" }];
+	const keyExtractor = (item) => item.id;
+	const reordered = reorderDraggableItems(items, 0, 2);
+	assert.deepEqual(reordered.map((item) => item.id), ["b", "c", "a"]);
+	assert.notEqual(reordered, items);
+	assert.equal(reorderDraggableItems(items, 1, 1), items);
+	assert.equal(reorderDraggableItems(items, -1, 1), items);
+	assert.equal(haveSameDraggableItemOrder(items, [...items], keyExtractor), true);
+	assert.equal(haveSameDraggableItemOrder(items, reordered, keyExtractor), false);
+
+	assert.deepEqual(
+		getDraggableReorderResult({
+			originalItems: items,
+			sourceIndex: 0,
+			targetIndex: 2,
+			visitedDifferentTarget: true,
+			keyExtractor,
+		}),
+		{ items: reordered, hasReordered: true },
+	);
+	assert.equal(
+		getDraggableReorderResult({
+			originalItems: items,
+			sourceIndex: 0,
+			targetIndex: 0,
+			visitedDifferentTarget: true,
+			keyExtractor,
+		}).hasReordered,
+		false,
+	);
+});
+
+await run("note presentation preserves collapse and virtual-item decisions", () => {
+	assert.deepEqual(
+		getNoteCardPresentation(
+			{ id: "note", title: " Plan ", text: "Details", collapsed: true },
+			false,
+			true,
+			4,
+		),
+		{
+			canCollapse: true,
+			isCollapsed: true,
+			showClassicHeader: false,
+			showSimplifiedActions: true,
+			shortText: "Deta",
+			hasTruncatedPreview: true,
+		},
+	);
+	assert.deepEqual(
+		getNoteCardPresentation(
+			{ id: "last", title: "", text: "Text", collapsed: true },
+			true,
+			false,
+		),
+		{
+			canCollapse: false,
+			isCollapsed: false,
+			showClassicHeader: true,
+			showSimplifiedActions: false,
+			shortText: "Text",
+			hasTruncatedPreview: false,
+		},
+	);
+
+	assert.equal(getBulkCollapseAction([]), null);
+	assert.equal(
+		getBulkCollapseAction([{ collapsed: false }, { _isVirtual: true }]),
+		true,
+	);
+	assert.equal(
+		getBulkCollapseAction([{ collapsed: true }, { collapsed: true }]),
+		false,
+	);
+	assert.equal(isRealNote({ _isVirtual: true }), false);
+	assert.equal(isRealNote({ _isVirtual: false }), true);
+});
+
+await run("modal model preserves API, focus, keyboard, and close contracts", async () => {
+	assert.equal(
+		formatModalStatusMessage("Failed", "403", "Status"),
+		"[Status: 403] Failed",
+	);
+	assert.equal(formatModalStatusMessage("Failed", null, "Status"), "Failed");
+	assert.equal(
+		resolveModalConfirmValue({
+			showInput: true,
+			inputValue: "answer",
+			checkboxValue: false,
+		}),
+		"answer",
+	);
+	assert.deepEqual(
+		resolveModalConfirmValue({
+			showInput: false,
+			inputValue: "ignored",
+			checkboxValue: true,
+			getConfirmValue: (value, checked) => ({ value, checked }),
+		}),
+		{ value: true, checked: true },
+	);
+
+	assert.equal(getModalFocusTarget(true, true), null);
+	assert.equal(getModalFocusTarget(false, true), "input");
+	assert.equal(getModalFocusTarget(false, false), "confirm");
+	assert.deepEqual(getModalKeyboardPlan("Escape", false, false), {
+		preventDefault: false,
+		action: "close",
+	});
+	assert.deepEqual(getModalKeyboardPlan("Enter", false, true), {
+		preventDefault: true,
+		action: null,
+	});
+	assert.deepEqual(getModalKeyboardPlan("Enter", false, false), {
+		preventDefault: true,
+		action: "confirm",
+	});
+	assert.deepEqual(getModalKeyboardPlan("Enter", true, false), {
+		preventDefault: false,
+		action: null,
+	});
+	assert.equal(getModalCloseAction(true, true), "blocked");
+	assert.equal(getModalCloseAction(false, true), "cancel");
+	assert.equal(getModalCloseAction(false, false), "confirm");
+
+	let modalConfig = null;
+	let statusLabelCalls = 0;
+	const api = createModalApi(
+		(value) => {
+			modalConfig = value;
+		},
+		() => {
+			statusLabelCalls += 1;
+			return "Status";
+		},
+	);
+	const alertPromise = api.alert("Error", "Failed");
+	assert.equal(statusLabelCalls, 0);
+	assert.equal(modalConfig.message, "Failed");
+	assert.equal(modalConfig.onCancel, null);
+	modalConfig.onConfirm("acknowledged");
+	assert.equal(await alertPromise, "acknowledged");
+	assert.equal(modalConfig, null);
+
+	const confirmPromise = api.confirm("Confirm", "Continue?", "pending");
+	assert.equal(statusLabelCalls, 1);
+	assert.equal(modalConfig.message, "[Status: pending] Continue?");
+	modalConfig.onCancel();
+	assert.equal(await confirmPromise, null);
+	assert.equal(modalConfig, null);
+});
+
+await run("player questions preserve dice formulas and result targeting", () => {
+	assert.deepEqual(getStandardDiceFactors(80), [8, 10]);
+	assert.equal(getQuestionRollFormula(80), "((1d8 - 1) * 10) + 1d10");
+	assert.equal(getQuestionRollFormula(37), "1d37");
+	assert.equal(normalizeQuestionSearch("question 120", 100), "100");
+	assert.equal(normalizeQuestionSearch("none", 100), "");
+	assert.equal(getQuestionSearchTarget("0", 100), 1);
+	assert.equal(getQuestionSearchTarget("invalid", 100), null);
+
+	const rolledResult = {
+		resultId: 7,
+		context: { type: "playerQuestions" },
+		result: { total: "12" },
+	};
+	assert.equal(getDiceResultId(rolledResult), 7);
+	assert.deepEqual(getQuestionDiceRoll(rolledResult, 100), {
+		resultId: 7,
+		questionId: 12,
+	});
+	assert.deepEqual(
+		getQuestionDiceRoll(
+			{ ...rolledResult, context: { type: "encounter" } },
+			100,
+		),
+		{ resultId: 7, questionId: null },
+	);
+});
+
+await run("dice presentation preserves roll payloads and probability labels", () => {
+	assert.equal(normalizeDiceFormula("2d6 × 3"), "2d6 * 3");
+	assert.equal(createRollDicePayload("1d20×2", null), "1d20*2");
+	assert.deepEqual(createRollDicePayload("1d6×4", { type: "damage" }), {
+		formula: "1d6*4",
+		context: { type: "damage" },
+	});
+	assert.equal(createRollDicePayload("1d8", 0), "1d8");
+
+	assert.equal(formatDiceProbability(0.2), "20.0%");
+	assert.equal(formatDiceProbability(0.05), "5.00%");
+	assert.equal(formatDiceProbability(0.00005), "0.005%");
+	assert.equal(formatDiceProbability(0.000001), "<0.001%");
+	assert.equal(formatDiceProbability(0), "0.000%");
+	assert.equal(getDiceProbabilityBarWidth(0.25, 0.5), 50);
+	assert.equal(getDiceProbabilityBarWidth(0.25, 0), 0);
+});
+
+await run("AI monster edit presentation preserves mode-specific copy", () => {
+	const translate = (value) => `uk:${value}`;
+	assert.deepEqual(getMonsterAiEditPresentation("edit", translate), {
+		title: "uk:AI edit custom creature",
+		targetLabel: "uk:Custom creature",
+		placeholder: "uk:Describe what to change.",
+		submitLabel: "uk:Apply AI edit",
+	});
+	assert.deepEqual(getMonsterAiEditPresentation("local-edit", translate), {
+		title: "uk:AI edit encounter creature",
+		targetLabel: "uk:Encounter creature",
+		placeholder: "uk:Describe what to change for this encounter only.",
+		submitLabel: "uk:Apply local AI edit",
+	});
+	assert.deepEqual(getMonsterAiEditPresentation("create-based", translate), {
+		title: "uk:Create custom creature based on this",
+		targetLabel: "uk:Source creature",
+		placeholder:
+			"uk:Describe what to create, or leave empty to let AI decide.",
+		submitLabel: "uk:Create custom creature",
+	});
+});
+
+await run("monster field editing preserves schema variants and rule insertion", () => {
+	assert.equal(calculateDiceAverage("2d8 + 6"), 15);
+	assert.equal(calculateDiceAverage("2d6 * 2"), 14);
+	assert.equal(calculateDiceAverage("not dice"), undefined);
+	assert.deepEqual(parseSpeedText("30 ft., fly 60 ft. (hover)"), {
+		walk: 30,
+		fly: 60,
+		canHover: true,
+	});
+	assert.equal(
+		speedToText({ walk: 30, fly: { number: 60 }, canHover: true }),
+		"30 ft., fly 60 ft. (hover)",
+	);
+
+	const typedMonster = updateCreatureBasicField(
+		{ name: "Мімік", type: { type: { choose: ["aberration"] }, tags: ["shapechanger"] } },
+		"type",
+		"construct/monstrosity",
+	);
+	assert.deepEqual(typedMonster.type, {
+		type: { choose: ["construct", "monstrosity"] },
+		tags: ["shapechanger"],
+	});
+	const hpMonster = updateCreatureBasicField(
+		{ name: "Мімік", hp: { formula: "1d8", special: "legacy" } },
+		"hpFormula",
+		"4d8 + 12",
+	);
+	assert.deepEqual(hpMonster.hp, {
+		formula: "4d8 + 12",
+		special: "legacy",
+		average: 30,
+	});
+	assert.equal(hpMonster.hit_points, 30);
+
+	assert.equal(actionEntriesToText({ desc: "Old text" }), "Old text");
+	assert.deepEqual(actionFromText({ desc: "Old text" }, "New text"), {
+		desc: "New text",
+	});
+	let actionMonster = addMonsterAction({ name: "Мімік" }, "action");
+	actionMonster = applyRuleReferenceTag(
+		actionMonster,
+		{
+			type: "action",
+			section: "action",
+			index: 0,
+			selectionStart: 0,
+			selectionEnd: 0,
+		},
+		"{@spell Shield|XPHB}",
+	);
+	assert.equal(
+		actionEntriesToText(actionMonster.action[0]),
+		"{@spell Shield|XPHB}",
+	);
+	actionMonster = removeMonsterAction(actionMonster, "action", 0);
+	assert.deepEqual(actionMonster.action, []);
+
+	assert.equal(
+		isRulesReferenceShortcut({ ctrlKey: true, key: "л" }),
+		true,
+	);
+	assert.equal(isRulesReferenceShortcut({ metaKey: true, key: "k" }), true);
+	assert.equal(isRulesReferenceShortcut({ ctrlKey: false, key: "k" }), false);
+});
+
+await run("monster field editing validates JSON and restores source on save", () => {
+	assert.deepEqual(parseMonsterJson("[]"), {
+		ok: false,
+		reason: "not-object",
+		message: "",
+	});
+	assert.equal(parseMonsterJson("{").reason, "invalid-json");
+	const result = prepareMonsterDraftForSave({
+		draft: { name: "Ignored" },
+		jsonText: JSON.stringify({ name: "Оновлений", source: "WRONG" }),
+		editMode: "json",
+		source: "CUSTOM",
+	});
+	assert.deepEqual(result, {
+		ok: true,
+		monster: { name: "Оновлений", source: "CUSTOM" },
+	});
+	assert.deepEqual(
+		prepareMonsterDraftForSave({
+			draft: { name: "" },
+			jsonText: "{}",
+			editMode: "fields",
+			source: "CUSTOM",
+		}),
+		{ ok: false, reason: "missing-name", message: "" },
+	);
+});
+
+await run("rules links resolve typed navigation targets", async () => {
+	const resolvers = {
+		resolveSpell: async () => ({ name: "Shield", source: "XPHB" }),
+		resolveCondition: async () => ({ name: "Blinded", entries: ["text"] }),
+		resolveDisease: async () => ({ name: "Sight Rot" }),
+		resolveVariantRule: async () => ({ name: "Flanking" }),
+		resolveSkill: async () => ({ name: "Arcana" }),
+		resolveSense: async () => ({ name: "Darkvision" }),
+	};
+	assert.deepEqual(
+		await resolveRulesLinkNavigation("spell", "Shield", resolvers),
+		{ tab: "spells", name: "Shield|XPHB" },
+	);
+	assert.deepEqual(
+		await resolveRulesLinkNavigation(
+			"creature",
+			"Adult Red Dragon|MM|Dragon",
+			resolvers,
+		),
+		{ tab: "bestiary", name: "Adult Red Dragon|MM" },
+	);
+	assert.deepEqual(
+		await resolveRulesLinkNavigation("status", "Blinded", resolvers),
+		{ tab: "conditions", name: "Blinded" },
+	);
+});
+
+await run("rules link previews preserve creature and reference metadata", async () => {
+	const loaders = {
+		getSpell: async () => ({
+			name: "fireball",
+			source: "XPHB",
+			level: 3,
+			school: "V",
+			entries: ["Flame"],
+		}),
+		getCreature: async () => ({
+			name: "Мімік",
+			source: "MM",
+			type: { type: "monstrosity" },
+			cr: { cr: "2" },
+			ac: [{ ac: 12 }],
+			hp: { special: "variable" },
+		}),
+		getCondition: async () => ({ name: "Blinded", entries: ["Cannot see"] }),
+		getDisease: async () => ({ name: "Sight Rot", type: "Disease" }),
+		getVariantRule: async () => ({ name: "Flanking" }),
+		getSkill: async () => ({ name: "Arcana", ability: "int", entries: [] }),
+		getSense: async () => ({ name: "Darkvision" }),
+	};
+	const formatters = {
+		formatSource: (source) =>
+			source === "MM" ? "Monster Manual" : String(source || ""),
+		formatSpellMeta: (spell) => `${spell.level} - ${spell.school}`,
+	};
+	assert.deepEqual(
+		await loadRulesLinkPreview("creature", "Мімік|MM", loaders, formatters),
+		{
+			kind: "creature",
+			title: "Мімік",
+			meta: "Monster Manual • monstrosity • CR 2",
+			imageSrc: "/api/bestiary/tokens/MM/%D0%9C%D1%96%D0%BC%D1%96%D0%BA.webp",
+			ac: 12,
+			hp: "variable",
+		},
+	);
+	assert.deepEqual(
+		await loadRulesLinkPreview("skill", "Arcana", loaders, formatters),
+		{
+			kind: "reference",
+			title: "Arcana",
+			meta: "INT",
+			entries: [],
+		},
+	);
+});
+
+await run("rules tooltip text produces stable interactive roll descriptors", () => {
+	assert.equal(
+		formatRulesTooltipText("{@spell fireball|PHB|Flame} and PB"),
+		"Flame and PB",
+	);
+	const parts = buildTooltipTextParts(
+		"Claw. {@hit 6} to hit, {@damage 2d6 + 3}, {@recharge 5}",
+	);
+	assert.deepEqual(
+		parts.filter((part) => part.kind === "roll"),
+		[
+			{ kind: "roll", formula: "1d20+6", label: "+6 to hit" },
+			{ kind: "roll", formula: "2d6+3", label: "2d6 + 3" },
+			{
+				kind: "roll",
+				formula: "1d6",
+				label: "(Recharge 5-6)",
+				context: {
+					type: "recharge",
+					threshold: 5,
+					label: "(Recharge 5-6)",
+				},
+			},
+		],
+	);
+});
+
+await run("dice calculator model preserves request, formula, and result policies", () => {
+	assert.equal(
+		isDicePanelShortcut({ ctrlKey: true, metaKey: false, key: "d" }),
+		true,
+	);
+	assert.equal(
+		isDicePanelShortcut({ ctrlKey: false, metaKey: true, key: "В" }),
+		true,
+	);
+	assert.equal(
+		isDicePanelShortcut({ ctrlKey: false, metaKey: false, key: "d" }),
+		false,
+	);
+
+	assert.deepEqual(readPendingDiceRoll({ requestId: 4, data: "1d20" }), {
+		requestId: 4,
+		formula: "1d20",
+		context: null,
+	});
+	assert.deepEqual(
+		readPendingDiceRoll({
+			requestId: 5,
+			data: { value: "1d6", context: { type: "damage" } },
+		}),
+		{ requestId: 5, formula: "1d6", context: { type: "damage" } },
+	);
+	assert.deepEqual(readPendingDiceRoll({ requestId: 6, data: 12 }), {
+		requestId: 6,
+		formula: null,
+		context: null,
+	});
+	assert.equal(readPendingDiceRoll({ requestId: 0, data: "1d4" }), null);
+	assert.equal(isPlayerQuestionsRollContext({ type: "playerQuestions" }), true);
+	assert.equal(isPlayerQuestionsRollContext({ type: "damage" }), false);
+
+	assert.equal(addDieToFormula("", 6), "1d6");
+	assert.equal(addDieToFormula("1d6", 6), "2d6");
+	assert.equal(addDieToFormula("2d6+", 8), "2d6+1d8");
+	assert.equal(addDieToFormula("1d20+5", 4), "1d20+5+1d4");
+
+	const roll = {
+		id: 1,
+		formula: "1d6 + 2",
+		breakdown: [
+			{ val: 6, max: 6 },
+			{ val: -2, max: null, dropped: true },
+		],
+		total: 4,
+		average: 5,
+		min: 3,
+		max: 8,
+		isCritical: false,
+		context: { type: "recharge", threshold: 5 },
+	};
+	assert.equal(getFullDiceBreakdownString(roll.breakdown), "6 - [2]");
+	assert.equal(getDiceBreakdownLabel(roll), "6 - [2]");
+	assert.equal(getRechargeThreshold(roll), 5);
+	assert.equal(getRechargeResultClass(roll), "dice_recharge_fail");
+	assert.equal(getRechargeResultClass(roll, 5), "dice_recharge_success");
+	assert.equal(isSingleDieRoll(roll), false);
+	assert.equal(
+		isSingleDieRoll({
+			...roll,
+			formula: "1d6",
+			breakdown: [{ val: 6, max: 6 }],
+		}),
+		true,
+	);
+	assert.equal(getCurrentDiceFormula(" 2d8 ", roll), "2d8");
+	assert.equal(getCurrentDiceFormula("", roll), roll.formula);
+	assert.deepEqual(createHistoryRollPayload(roll), {
+		formula: roll.formula,
+		context: roll.context,
+	});
+	assert.deepEqual(prependDiceHistory([roll], { ...roll, id: 2 }, 1), [
+		{ ...roll, id: 2 },
+	]);
 });
 
 await run("campaign graph layout is deterministic, finite, and collision free", () => {
@@ -3134,23 +4266,23 @@ await run("AI assistant delegates stable visual composition to feature UI", asyn
 		"utf8",
 	);
 	const shellSource = await fs.readFile(
-		"src/features/ai/ui/AiAssistantShell.jsx",
+		"src/features/ai/ui/AiAssistantShell.tsx",
 		"utf8",
 	);
 	const promptSource = await fs.readFile(
-		"src/features/ai/ui/AiPromptComposer.jsx",
+		"src/features/ai/ui/AiPromptComposer.tsx",
 		"utf8",
 	);
 	const responseSource = await fs.readFile(
-		"src/features/ai/ui/AiHistoryResponseDialog.jsx",
+		"src/features/ai/ui/AiHistoryResponseDialog.tsx",
 		"utf8",
 	);
 	const toolbarSource = await fs.readFile(
-		"src/features/ai/ui/AiAssistantToolbar.jsx",
+		"src/features/ai/ui/AiAssistantToolbar.tsx",
 		"utf8",
 	);
 	const contextSource = await fs.readFile(
-		"src/features/ai/ui/AiContextSettingsModal.jsx",
+		"src/features/ai/ui/AiContextSettingsModal.tsx",
 		"utf8",
 	);
 
@@ -3168,6 +4300,107 @@ await run("AI assistant delegates stable visual composition to feature UI", asyn
 		fs.access("src/components/ai/AiAssistantToolbar.jsx"),
 		/ENOENT/,
 	);
+});
+
+await run("AI attachment presentation preserves limits and validation", async () => {
+	const imageKey = (attachment) =>
+		attachment.url || `${attachment.name}:${attachment.sizeBytes}`;
+	assert.equal(getAvailableAiAttachmentSlots(3, 4), 1);
+	assert.equal(getAvailableAiAttachmentSlots(7, 4), 0);
+	assert.deepEqual(
+		mergeUniqueAiAttachments(
+			[{ name: "map.png", sizeBytes: 10 }],
+			[
+				{ name: "map.png", sizeBytes: 10 },
+				{ name: "token.png", sizeBytes: 20 },
+			],
+			imageKey,
+			4,
+		),
+		[
+			{ name: "map.png", sizeBytes: 10 },
+			{ name: "token.png", sizeBytes: 20 },
+		],
+	);
+	assert.deepEqual(removeAiAttachmentAt([{ name: "a" }, { name: "b" }], 0), [
+		{ name: "b" },
+	]);
+	assert.equal(shouldReportAiAttachmentSelectionError(3, 2, 0), true);
+	assert.equal(shouldReportAiAttachmentSelectionError(1, 2, 0), false);
+	const selection = await prepareAiAttachmentSelection({
+		availableSlots: 3,
+		files: [
+			{ name: "valid.png", size: 5, type: "image/png" },
+			{ name: "large.png", size: 50, type: "image/png" },
+			{ name: "broken.png", size: 5, type: "image/png" },
+		],
+		getMimeType: (file) => file.type,
+		includePreview: true,
+		maxBytes: 10,
+		readBase64: async (file) => {
+			if (file.name === "broken.png") throw new Error("read failed");
+			return "YWJj";
+		},
+	});
+	assert.deepEqual(selection.skippedNames, ["large.png", "broken.png"]);
+	assert.equal(selection.attachments[0].previewUrl, "data:image/png;base64,YWJj");
+});
+
+await run("AI context presentation preserves session and scene defaults", () => {
+	const context = createInitialAiContextConfig();
+	assert.deepEqual(getAiSessionContextConfig(context, "session-1"), {
+		included: false,
+		notes: true,
+		result_text: true,
+		scenes: {},
+	});
+	assert.deepEqual(
+		getAiSceneContextConfig(
+			{ included: true, scenes: {} },
+			"scene-1",
+		),
+		{
+			included: true,
+			summary: true,
+			goal: true,
+			stakes: true,
+			location: true,
+			notes: true,
+			encounter: true,
+		},
+	);
+});
+
+await run("AI presentation policies preserve API key and prompt decisions", () => {
+	assert.equal(isAiApiKeySaveDisabled("", false, false), true);
+	assert.equal(isAiApiKeySaveDisabled("  ", false, false), true);
+	assert.equal(isAiApiKeySaveDisabled("key", true, false), true);
+	assert.equal(isAiApiKeySaveDisabled("key", false, true), true);
+	assert.equal(isAiApiKeySaveDisabled("key", false, false), false);
+	assert.equal(shouldSubmitAiApiKey("Enter"), true);
+	assert.equal(shouldSubmitAiApiKey("Escape"), false);
+	assert.deepEqual(
+		getAiPromptTokenVisibility({ fileTokens: 0, imageTokens: 12 }),
+		{ showFileTokens: false, showImageTokens: true },
+	);
+	assert.equal(hasAiResponseHistory([]), false);
+	assert.equal(hasAiResponseHistory([{ id: 1 }]), true);
+	assert.deepEqual(
+		getAiToolbarVisibility({
+			isBestiary: false,
+			isCampaign: true,
+			parseAIResponse: true,
+		}),
+		{ showCharacterGeneration: true, showParsedGenerationOptions: true },
+	);
+	assert.deepEqual(getAiEncounterGenerationTogglePlan(false), {
+		generateCustomMonsters: null,
+		generateEncounters: true,
+	});
+	assert.deepEqual(getAiEncounterGenerationTogglePlan(true), {
+		generateCustomMonsters: false,
+		generateEncounters: false,
+	});
 });
 
 await run("AI route treats custom monster image prompts as bestiary requests", () => {
@@ -3264,6 +4497,20 @@ await run("Scene encounter command persists one linked encounter idempotently", 
 	assert.equal(updated.encounter.name, "Updated");
 	assert.deepEqual(session.data.encounters[0].monsters, [{ id: "monster-1" }]);
 	assert.equal(writes, 2);
+	const addEncounterMonster = createAddEncounterMonsterCommand(repository);
+	const added = await addEncounterMonster({
+		campaignSlug: "demo",
+		fileName: "arrival",
+		encounterId: "encounter-stable-id",
+		monster: { id: "monster-2", instanceId: "instance-2", name: "Goblin" },
+	});
+	assert.equal(added.encounter.id, "encounter-stable-id");
+	assert.equal(added.monster.instanceId, "instance-2");
+	assert.deepEqual(session.data.encounters[0].monsters, [
+		{ id: "monster-1" },
+		{ id: "monster-2", instanceId: "instance-2", name: "Goblin" },
+	]);
+	assert.equal(writes, 3);
 	await assert.rejects(
 		createSceneEncounter({
 			campaignSlug: "demo",
@@ -3281,6 +4528,24 @@ await run("Scene encounter command persists one linked encounter idempotently", 
 			patch: {},
 		}),
 		(error) => error.status === 404,
+	);
+	await assert.rejects(
+		addEncounterMonster({
+			campaignSlug: "demo",
+			fileName: "arrival",
+			encounterId: "missing",
+			monster: { id: "monster-3" },
+		}),
+		(error) => error.status === 404,
+	);
+	await assert.rejects(
+		addEncounterMonster({
+			campaignSlug: "demo",
+			fileName: "arrival",
+			encounterId: "encounter-stable-id",
+			monster: null,
+		}),
+		(error) => error.status === 400,
 	);
 });
 
@@ -3500,6 +4765,39 @@ await run("Encounter participant synchronization preserves combat-local identity
 	assert.equal(images.get("iryna vale"), "/iryna.png");
 });
 
+await run("encounter add-monster targets normalize active campaign sessions", () => {
+	const campaigns = normalizeActiveEncounterCampaigns([
+		{ slug: "active", name: "Активна", completed: false },
+		{ slug: "done", name: "Done", completed: true },
+		{ slug: 1, name: "Invalid" },
+	]);
+	assert.deepEqual(campaigns.map((campaign) => campaign.slug), ["active"]);
+	assert.deepEqual(
+		normalizeEncounterSessionSummaries([
+			{ fileName: "one.json", name: "One" },
+			{ fileName: null, name: "Invalid" },
+		]),
+		[{ fileName: "one.json", name: "One" }],
+	);
+
+	const group = buildEncounterTargetCampaignGroup(campaigns[0], [
+		{
+			fileName: "one.json",
+			name: "Session One",
+			data: {
+				encounters: [
+					{ id: 7, name: "Bridge" },
+					{ id: null, name: "Invalid" },
+				],
+			},
+		},
+		{ fileName: "empty.json", name: "Empty", data: { encounters: [] } },
+	]);
+	assert.equal(group.sessions.length, 1);
+	assert.deepEqual(group.sessions[0].encounters, [{ id: 7, name: "Bridge" }]);
+	assert.equal(createEncounterTargetId("active", "one.json", 7), "active:one.json:7");
+});
+
 await run("encounter initiative metrics support fractional and structured challenge ratings", () => {
 	assert.equal(parseChallengeRating({ cr: "1/2" }), 0.5);
 	assert.equal(parseChallengeRating({ cr: { cr: "4" } }), 4);
@@ -3613,6 +4911,47 @@ await run(
 	},
 );
 
+await run("campaign entity card policies preserve collapse, identity, highlights, and drafts", () => {
+	const notes = [
+		{ id: "n1", title: "Таємниця", text: "Прихований хід", collapsed: false },
+	];
+	assert.deepEqual(
+		getCharacterCardPresentation(
+			{ firstName: "Ірина", notes, collapsed: true, isNotesCollapsed: true },
+			notes,
+			"card",
+			true,
+		),
+		{
+			hasNotesData: true,
+			hasCardData: true,
+			canCollapseCard: true,
+			isCollapsed: true,
+			isNotesCollapsed: true,
+		},
+	);
+	assert.equal(
+		getLocationCardPresentation({ name: "Брама", collapsed: true }, [], "modal", true).isCollapsed,
+		false,
+	);
+	assert.equal(getCharacterDisplayName({ firstName: "Ірина", lastName: "Срібна" }), "Ірина Срібна");
+	assert.equal(getLocationDisplayName({ title: "Стара вежа" }), "Стара вежа");
+	const highlights = { fields: ["description"], notes: { n1: ["text"] } };
+	assert.equal(getCampaignEntityFieldClass(highlights, "description"), "is_ai_changed_field");
+	assert.deepEqual(getCampaignNoteHighlightFields(highlights, notes[0]), ["text"]);
+	assert.equal(setCampaignNoteAiIgnored(notes, "n1", true)[0]._aiIgnored, true);
+
+	const characterDraft = createCharacterDraft("npc", 100);
+	assert.equal(characterDraft.id, "new-npc-100");
+	assert.equal(characterDraft.notes[0].id, 101);
+	assert.equal(isCharacterDraftValid(characterDraft), false);
+	assert.equal(isCharacterDraftValid({ firstName: "  Лада  " }), true);
+	const locationDraft = createLocationDraft(200);
+	assert.equal(locationDraft.id, "new-locations-200");
+	assert.equal(isLocationDraftValid(locationDraft), false);
+	assert.equal(isLocationDraftValid({ name: "Міст" }), true);
+});
+
 await run("CardNoteModel shared helpers preserve entity note behavior", async () => {
 	const { CardNoteModel } = await import("../src/entities/campaign/index.js");
 
@@ -3674,6 +5013,25 @@ await run("entity link modal helper resolves entities and avoids current modal",
 	const { getEntityIdentity } = await import(
 		"../src/features/entity-link/model.js"
 	);
+	const { getEntityModalPresentation } = await import(
+		"../src/features/entity-link/model.js"
+	);
+
+	assert.deepEqual(getEntityModalPresentation("locations"), {
+		titleKind: "location",
+		modalType: "location",
+		className: "EntityLinkModal__location",
+	});
+	assert.deepEqual(getEntityModalPresentation("npc"), {
+		titleKind: "npc",
+		modalType: "character",
+		className: "",
+	});
+	assert.deepEqual(getEntityModalPresentation("characters"), {
+		titleKind: "character",
+		modalType: "character",
+		className: "",
+	});
 
 	const found = {
 		entity: { id: "npc-1", firstName: "Mira", lastName: "" },
@@ -3931,6 +5289,41 @@ await run("SpellCardModel formats spell labels", () => {
 	);
 });
 
+await run("spells browser policies preserve references, filters, sorting, and selection", () => {
+	const spells = [
+		{ name: "Вогняна куля", source: "PHB", level: 3, school: "V", classes: ["Wizard"], entries: ["полум'я"] },
+		{ name: "Світло", source: "XPHB", level: 0, school: "E", classes: ["Cleric", "Wizard"] },
+		{ name: "Щит", source: "PHB", level: 1, school: "A", classes: ["Wizard"] },
+	];
+	assert.deepEqual(parseSpellReferenceKey("Щит|PHB"), { name: "Щит", source: "PHB" });
+	assert.equal(spellMatchesReferenceKey(spells[2], "Щит|PHB"), true);
+	assert.equal(findSpellByReference(spells, "Щит|PHB"), spells[2]);
+	assert.equal(getSpellListIndex(spells, spells[1]), 1);
+	assert.equal(getSpellItemKey(spells[0]), "PHB:Вогняна куля");
+	assert.deepEqual(getSpellClassOptions(spells), ["Cleric", "Wizard"]);
+	assert.deepEqual(getSpellSchoolOptions(spells), ["A", "E", "V"]);
+	assert.deepEqual(sortSpells(spells, "asc").map((spell) => spell.name), ["Світло", "Щит", "Вогняна куля"]);
+	assert.equal(getNextSpellSortOrder("none"), "desc");
+	assert.equal(getNextSpellSortOrder("desc"), "asc");
+	assert.equal(getNextSpellSortOrder("asc"), "none");
+	assert.deepEqual(
+		filterSpells(spells, {
+			search: "полум",
+			detailedSearch: true,
+			selectedLevel: "3",
+			selectedClass: "Wizard",
+			selectedSchool: "V",
+			selectedSources: ["phb"],
+			sourceFilter: "PHB",
+		}, (spell, query) => JSON.stringify(spell).toLowerCase().includes(query)),
+		[spells[0]],
+	);
+	assert.equal(getValidSourceFilter("XPHB", ["PHB"]), "all");
+	assert.deepEqual(getSettingsIgnoreSources({ ignoreSourcesList: ["DMG", 4, "MM"] }), ["DMG", "MM"]);
+	assert.deepEqual(normalizeSpellList([spells[0], null, { source: "PHB" }]), [spells[0]]);
+	assert.deepEqual(getInitialSpellSelection([spells[2]], spells, "Світло|XPHB", null), { spell: spells[1], changed: true });
+});
+
 await run("content tokens parse hit and recharge tags safely", () => {
 	const hitOnly = extractContentTokens("Claw. +6 до влучання.");
 	assert.equal(hitOnly.length, 1);
@@ -4076,19 +5469,31 @@ await run("parser renders dice and creature tags as interactive components", asy
 		"utf8",
 	);
 	const rendererSource = await fs.readFile(
-		"src/features/rich-content/ui/RichContentRenderer.jsx",
+		"src/features/rich-content/ui/RichContentRenderer.tsx",
+		"utf8",
+	);
+	const presentationSource = await fs.readFile(
+		"src/features/rich-content/model/richContentPresentation.ts",
 		"utf8",
 	);
 	const rulesLinkSource = await fs.readFile(
-		"src/features/rules-reference/ui/RulesLink.jsx",
+		"src/features/rules-reference/ui/RulesLink.tsx",
 		"utf8",
 	);
-	const rulesReferenceSource = await fs.readFile(
-		"src/widgets/rules-reference-modal/ui/RulesReferenceModalContent.jsx",
+	const rulesLinkModelSource = await fs.readFile(
+		"src/features/rules-reference/model/rulesLink.ts",
 		"utf8",
 	);
+	const rulesReferenceSource = (
+		await Promise.all([
+			"src/widgets/rules-reference-modal/ui/RulesReferenceModalContent.tsx",
+			"src/widgets/rules-reference-modal/ui/RulesReferenceModalView.tsx",
+			"src/widgets/rules-reference-modal/ui/RulesReferenceListItem.tsx",
+			"src/widgets/rules-reference-modal/model/rulesReferenceModal.ts",
+		].map((file) => fs.readFile(file, "utf8")))
+	).join("\n");
 	const monsterStatBlockSource = await fs.readFile(
-		"src/widgets/monster-stat-block/ui/MonsterStatBlock.jsx",
+		"src/widgets/monster-stat-block/ui/MonsterStatBlock.tsx",
 		"utf8",
 	);
 	const rulesLinkCss = await fs.readFile(
@@ -4098,51 +5503,104 @@ await run("parser renders dice and creature tags as interactive components", asy
 
 	assert.match(contentTokensSource, /\{@dice\\s\+/);
 	assert.match(contentTokensSource, /\{@creature\\s\+/);
-	assert.match(rendererSource, /diceTag/);
-	assert.match(rendererSource, /type="creature"/);
-	assert.match(rendererSource, /disableNonRechargeRolls/);
-	assert.match(rendererSource, /const displayHit/);
-	assert.match(rendererSource, /function addFallbackTaggedSource/);
-	assert.match(rendererSource, /creatureSourceFallback/);
-	assert.match(rendererSource, /name=\{creatureReferenceName\}/);
+	assert.match(rendererSource, /getContentTokenRenderPlan/);
+	assert.match(rendererSource, /plan\.referenceType/);
+	assert.match(presentationSource, /disableNonRechargeRolls/);
+	assert.match(presentationSource, /const displayHit/);
+	assert.match(presentationSource, /function addFallbackTaggedSource/);
+	assert.match(presentationSource, /creatureSourceFallback/);
 	assert.doesNotMatch(rendererSource, /onNavigate=\{options\.onRuleNavigate\}/);
 	assert.doesNotMatch(rendererSource, /onRuleNavigate/);
-	assert.match(monsterStatBlockSource, /creatureSourceFallback: monster\.source/);
+	assert.match(monsterStatBlockSource, /creatureSourceFallback: source/);
 	assert.match(monsterStatBlockSource, /referenceRenderOptions/);
 	assert.match(monsterStatBlockSource, /renderActionName/);
 	assert.match(monsterStatBlockSource, /disableNonRechargeRolls: true/);
 	assert.doesNotMatch(monsterStatBlockSource, /<strong>\{renderContent\(action\.name\)\}\.<\/strong>/);
-	assert.match(rulesLinkSource, /const openCreature = \(\) =>/);
-	assert.match(rulesLinkSource, /CONTENT_TOKEN_REGEX/);
-	assert.match(rulesLinkSource, /tokenFromContentMatch/);
+	assert.match(rulesLinkSource, /resolveRulesLinkNavigation/);
+	assert.match(rulesLinkModelSource, /extractContentTokens/);
 	assert.match(rulesLinkSource, /<RollDice/);
-	assert.match(rulesLinkSource, /type: "recharge"/);
-	assert.match(
-		rulesLinkSource,
-		/requestRulesReferenceNavigation\("bestiary", getCreatureReferenceName\(creature\)\)/,
-	);
-	assert.match(rulesLinkSource, /function getCreatureReferenceName/);
+	assert.match(rulesLinkModelSource, /type:\s*"recharge"/);
+	assert.match(rulesLinkSource, /requestRulesReferenceNavigation\(target\.tab, target\.name\)/);
+	assert.match(rulesLinkModelSource, /function getCreatureReferenceName/);
 	assert.doesNotMatch(rulesLinkSource, /onNavigate/);
 	assert.doesNotMatch(rulesReferenceSource, /import Bestiary from/);
 	assert.match(
 		rulesReferenceSource,
 		/import \{ MonsterStatBlock \} from "\.\.\/\.\.\/monster-stat-block\/index\.js"/,
 	);
-	assert.match(
-		rulesReferenceSource,
-		/import \{ bestiaryApi, MonsterStatBlockModel \} from "\.\.\/\.\.\/\.\.\/entities\/bestiary\/index\.js"/,
-	);
+	assert.match(rulesReferenceSource, /bestiaryApi/);
+	assert.match(rulesReferenceSource, /MonsterStatBlockModel/);
 	assert.match(rulesReferenceSource, /id: "bestiary"/);
 	assert.match(rulesReferenceSource, /bestiaryApi\.getBestiaryData\("all"\)/);
 	assert.match(rulesReferenceSource, /spellApi\.getSpellData\("all"\)/);
-	assert.doesNotMatch(rulesReferenceSource, /<Bestiary/);
+	assert.doesNotMatch(rulesReferenceSource, /<Bestiary(?:\s|\/|>)/);
 	assert.match(rulesReferenceSource, /<MonsterStatBlock/);
 	assert.match(rulesReferenceSource, /Bestiary__item_token/);
-	assert.match(rulesReferenceSource, /normalizeCreatureReferenceName/);
+	assert.match(rulesReferenceSource, /getCreatureReferenceMatchRank/);
 	assert.doesNotMatch(rulesReferenceSource, new RegExp("is" + "Embedded"));
 	assert.match(rulesReferenceSource, /renderRecursiveContent\(selectedItem\.entries/);
 	assert.doesNotMatch(rulesReferenceSource, /onRuleNavigate/);
 	assert.match(rulesLinkCss, /\.RulesLink__creature/);
+});
+
+await run("rich-content token plans preserve interactive rendering rules", () => {
+	const token = (overrides = {}) => ({
+		fullMatch: "raw",
+		damageRoll: "",
+		damageRemainder: "",
+		hitSuffix: "",
+		...overrides,
+	});
+
+	assert.deepEqual(
+		getContentTokenRenderPlan(
+			token({ fullMatch: "{@recharge 5}", recharge: "(Recharge 5-6)" }),
+		),
+		{
+			kind: "roll",
+			formula: "1d6",
+			displayText: "(Recharge 5-6)",
+			keyPrefix: "re",
+			context: {
+				type: "recharge",
+				threshold: 5,
+				label: "(Recharge 5-6)",
+			},
+		},
+	);
+	assert.deepEqual(
+		getContentTokenRenderPlan(
+			token({ fullMatch: "{@hit 7}", hit: "7", hitSuffix: " to hit" }),
+			{ disableNonRechargeRolls: true },
+		),
+		{ kind: "text", text: "7 to hit", keyPrefix: "h" },
+	);
+	assert.deepEqual(
+		getContentTokenRenderPlan(
+			token({
+				fullMatch: "{@creature goblin||Goblin}",
+				creatureTag: "{@creature goblin||Goblin}",
+				creatureValue: "goblin||Goblin",
+			}),
+			{ creatureSourceFallback: "MM" },
+		),
+		{
+			kind: "reference",
+			referenceType: "creature",
+			keyPrefix: "c",
+			name: "goblin|MM|Goblin",
+			displayText: "Goblin",
+		},
+	);
+	assert.equal(addFallbackTaggedSource("goblin||Goblin", "MM"), "goblin|MM|Goblin");
+	assert.deepEqual(parseQuickrefName("cover||3||total cover"), {
+		name: "Total Cover",
+		displayText: "Total Cover",
+	});
+	assert.equal(
+		stripNotesReferenceText('Текст (see the “Rule” in notes). Далі'),
+		"Текст Далі",
+	);
 });
 
 await run("parser renders item filter display names", () => {
@@ -4152,6 +5610,223 @@ await run("parser renders item filter display names", () => {
 		),
 		"If you wear Light, Medium, or Heavy armor and lack training",
 	);
+});
+
+await run("monster stat block presentation policies normalize source variants", async () => {
+	assert.equal(getChangedFieldClass({ fields: ["name", "опис"] }, ["опис"]), "is_ai_changed_field");
+	assert.equal(getChangedFieldClass({ fields: ["name"] }, ["source"]), "");
+	assert.deepEqual(getSenseTextParts("darkvision 60 ft., passive Perception"), [
+		{ kind: "reference", name: "darkvision" },
+		{ kind: "text", text: " 60 ft., passive Perception" },
+	]);
+	assert.equal(getMonsterSpellSlug("/api/spells/fireball/"), "fireball");
+	assert.equal(getMonsterSpellSlug(null), "");
+
+	const cache = new Map();
+	let searches = 0;
+	const searchSpells = async ({ name }) => {
+		searches += 1;
+		return name === "fireball"
+			? [{ name: "Fireball", slug: "fireball", level_int: 3 }]
+			: null;
+	};
+	assert.deepEqual(
+		await loadMonsterSpells(
+			["/api/spells/fireball", "", "/api/spells/missing"],
+			searchSpells,
+			cache,
+		),
+		[{ name: "Fireball", slug: "fireball", level_int: 3 }],
+	);
+	assert.deepEqual(await loadMonsterSpells(["/api/spells/fireball"], searchSpells, cache), [
+		{ name: "Fireball", slug: "fireball", level_int: 3 },
+	]);
+	assert.equal(searches, 2);
+	assert.deepEqual(groupMonsterSpellsByLevel([
+		{ name: "Fireball", level_int: 3 },
+		{ name: "Light", level: 0 },
+	]), [
+		{ level: "0", spells: [{ name: "Light", level: 0 }] },
+		{ level: "3", spells: [{ name: "Fireball", level_int: 3 }] },
+	]);
+
+	assert.deepEqual(getMonsterSpellcastingEntries([{ name: "Innate", daily: { "1": ["fireball"] }, spells: { "3": { slots: 2, spells: ["fireball"] } } }]), [
+		{ name: "Innate", headerEntries: undefined, footerEntries: undefined, will: undefined, daily: { "1": ["fireball"] }, spells: { "3": { slots: 2, spells: ["fireball"] } } },
+	]);
+	const monster = { id: "custom-1", name: "Вартовий", source: "CUSTOM", imageUrl: "/custom.webp" };
+	assert.deepEqual(getMonsterTokenSources(monster, "", null, "/local.webp", "/external.webp"), {
+		customTokenSrc: "/custom.webp",
+		localSrc: "/custom.webp",
+		externalSrc: "/custom.webp",
+		isCustomMonster: true,
+	});
+	assert.equal(shouldShowMonsterTokenDropzone({ allowTokenUpload: true, hasImageError: false, isReplacingToken: false, localSrc: "", isCustomMonster: true, hasTokenImageChange: false }), true);
+	assert.equal(shouldShowMonsterTokenDropzone({ allowTokenUpload: false, hasImageError: true, isReplacingToken: true, localSrc: "", isCustomMonster: true, hasTokenImageChange: true }), false);
+	assert.equal(getUploadedTokenUrl({ url: "/next.webp" }), "/next.webp");
+	assert.equal(getUploadedTokenUrl({ url: 3 }), "");
+	assert.equal(getMonsterMutationKey(monster, "Вартовий"), "custom-1");
+	assert.deepEqual(getTokenDragPayload("/external.webp", "Вартовий", "Guardian"), {
+		uri: "/external.webp",
+		html: '<img src="/external.webp" alt="Вартовий">',
+		downloadUrl: "image/webp:Guardian.webp:/external.webp",
+	});
+});
+
+await run("Bestiary browser policies preserve identity filtering and custom imports", () => {
+	const goblin = { name: "Goblin", source: "MM", cr: "1/4" };
+	const dragon = { name: "Дракон", source: "CUSTOM", cr: { cr: "5" } };
+	const reference = parseMonsterReference("goblin|MM");
+
+	assert.deepEqual(reference, { name: "goblin", source: "MM" });
+	assert.equal(monsterMatchesReference(goblin, reference), true);
+	assert.equal(
+		isSameMonsterIdentity(dragon, { name: " дракон ", source: "custom" }),
+		true,
+	);
+	assert.deepEqual(
+		getMonsterListFromResponse({ monsters: [goblin, null, { source: "MM" }] }),
+		[goblin],
+	);
+	assert.deepEqual(sortBestiaryMonsters([dragon, goblin], "asc"), [
+		goblin,
+		dragon,
+	]);
+	assert.deepEqual(
+		filterBestiaryMonsters([goblin, dragon], {
+			selectedSources: ["MM", "CUSTOM"],
+			sourceFilter: "CUSTOM",
+			onlyFavorites: true,
+			favorites: [{ name: "Дракон", source: "custom" }],
+			search: "дра",
+			isDetailedSearch: false,
+			matchesDetailedSearch: () => false,
+			matchesSimpleSearch: (monster, search) =>
+				monster.name.toLowerCase().includes(search),
+		}),
+		[dragon],
+	);
+	assert.equal(getNextBestiarySortOrder("none"), "desc");
+	assert.equal(getNextBestiarySortOrder("desc"), "asc");
+	assert.equal(getNextBestiarySortOrder("asc"), "none");
+	assert.deepEqual(
+		getBestiarySourceCodes(["MM", { source: "XPHB" }, null, { nope: true }]),
+		["MM", "XPHB"],
+	);
+	assert.deepEqual(
+		parseBestiarySyncEvent({
+			version: 7,
+			resource: "custom-bestiary",
+			monsterName: "Дракон",
+		}),
+		{ version: 7, resource: "custom-bestiary", monsterName: "Дракон", monsterSource: undefined },
+	);
+	assert.equal(parseBestiarySyncEvent({ resource: "bestiary" }), null);
+	assert.deepEqual(
+		getBestiarySelectionPlan([goblin, dragon], [goblin, dragon], reference, null, true),
+		{ monster: goblin, explicit: true },
+	);
+
+	const generated = { name: "Виверна", source: "CUSTOM" };
+	const updatePlan = getCustomBestiaryUpdatePlan(
+		{ monsters: [dragon, generated] },
+		{ generated: { monsters: [{ ...generated, imageUrl: "/draft.png" }] } },
+	);
+	assert.equal(updatePlan.trackUndo, true);
+	assert.equal(updatePlan.nextSelectedMonster, generated);
+	assert.equal(
+		getCustomRefreshSelection([dragon], { name: "Дракон", source: "CUSTOM" }, null),
+		dragon,
+	);
+	assert.deepEqual(
+		getAiMonsterInstructionPlan("create-based", "  сильніший  ", "Створи копію"),
+		{ error: null, instructions: "Створи копію\n\nсильніший" },
+	);
+	assert.deepEqual(
+		getCreateBasedMonsterPlan(
+			[dragon],
+			{ name: "Виверна", source: "MM" },
+			{ name: "Виверна", source: "MM", imageUrl: "/token.webp" },
+			"/fallback.webp",
+		),
+		{
+			duplicate: false,
+			normalizedName: "виверна",
+			monster: { name: "Виверна", source: "CUSTOM", imageUrl: "/token.webp" },
+		},
+	);
+	assert.deepEqual(
+		preserveAiDraftResourceMetadata(
+			[{ id: "monster-1", after: { name: "Виверна" } }],
+			[{
+				id: "monster-1",
+				after: {
+					name: "Виверна",
+					imageUrl: "/token.webp",
+					originalBestiaryName: "Wyvern",
+				},
+			}],
+		),
+		[{
+			id: "monster-1",
+			after: {
+				name: "Виверна",
+				imageUrl: "/token.webp",
+				originalBestiaryName: "Wyvern",
+			},
+		}],
+	);
+
+	const imported = parseImportedCustomMonsters(
+		JSON.stringify({ monster: [{ name: "  Дракон  ", source: "MM", hp: 42 }] }),
+	);
+	assert.deepEqual(imported, [
+		{ name: "Дракон", source: "CUSTOM", hp: 42 },
+	]);
+	assert.deepEqual(
+		mergeImportedCustomMonsters(
+			[dragon, { name: "Огр", source: "CUSTOM" }],
+			imported,
+		),
+		[imported[0], { name: "Огр", source: "CUSTOM" }],
+	);
+});
+
+await run("rules reference modal policies preserve qualified identities and UTF-8 tags", () => {
+	assert.equal(REFERENCE_TAB_POLICIES.length, 7);
+	assert.equal(getInitialTabId("bestiary"), "bestiary");
+	assert.equal(getInitialTabId("unknown"), "conditions");
+	assert.deepEqual(
+		combineBestiaryLists(
+			{ monsters: [{ name: "Вовк", source: "MM" }] },
+			{ results: [{ name: "Мавка", source: "CUSTOM" }] },
+		).map((item) => item.name),
+		["Вовк", "Мавка"],
+	);
+	assert.equal(
+		getReferenceInlineTag("conditions", { name: "Отруєний" }),
+		"{@condition Отруєний}",
+	);
+	assert.equal(
+		getReferenceInlineTag("conditions", { name: "Захоплений", kind: "status" }),
+		"{@status Захоплений}",
+	);
+	assert.equal(
+		getReferenceInlineTag("spells", { name: "Вогняна куля", source: "PHB" }),
+		"{@spell Вогняна куля|PHB}",
+	);
+	assert.equal(
+		createReferenceSelection("bestiary", { name: "Дракон", source: "MM" }).tag,
+		"{@creature Дракон|MM}",
+	);
+	const creatures = [
+		{ name: "Дракон", source: "XMM" },
+		{ name: "Дракон", source: "MM" },
+	];
+	assert.equal(findSelectedReferenceItem("bestiary", creatures, "Дракон|MM"), creatures[1]);
+	assert.equal(findSelectedReferenceItem("bestiary", creatures, "Дракон"), creatures[0]);
+	const diseasePolicy = REFERENCE_TAB_POLICIES.find((tab) => tab.id === "diseases");
+	assert.equal(itemMatchesQuery(diseasePolicy, { name: "Сліпа гарячка", entries: ["лихоманка"] }, "лихоманка", true), true);
+	assert.equal(itemMatchesQuery(diseasePolicy, { name: "Сліпа гарячка" }, "гаряч", false), true);
 });
 
 await run("rules reference modal owns spells and bestiary navigation", async () => {
@@ -4165,23 +5840,30 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 		"utf8",
 	);
 	const bestiarySource = await fs.readFile(
-		"src/widgets/bestiary-browser/ui/BestiaryBrowser.jsx",
+		"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
 		"utf8",
 	);
 	const bestiaryContentSource = await fs.readFile(
-		"src/widgets/bestiary-browser/ui/BestiaryContent.jsx",
+		"src/widgets/bestiary-browser/ui/BestiaryContent.tsx",
+		"utf8",
+	);
+	const bestiaryModelSource = await fs.readFile(
+		"src/widgets/bestiary-browser/model/bestiaryBrowser.ts",
 		"utf8",
 	);
 	const spellsSource = await fs.readFile(
-		"src/widgets/spells-browser/ui/SpellsBrowser.jsx",
+		"src/widgets/spells-browser/ui/SpellsBrowser.tsx",
 		"utf8",
 	);
-	const rulesReferenceSource = await fs.readFile(
-		"src/widgets/rules-reference-modal/ui/RulesReferenceModalContent.jsx",
-		"utf8",
-	);
+	const rulesReferenceSource = (
+		await Promise.all([
+			"src/widgets/rules-reference-modal/ui/RulesReferenceModalContent.tsx",
+			"src/widgets/rules-reference-modal/ui/RulesReferenceModalView.tsx",
+			"src/widgets/rules-reference-modal/model/rulesReferenceModal.ts",
+		].map((file) => fs.readFile(file, "utf8")))
+	).join("\n");
 	const rulesReferenceHostSource = await fs.readFile(
-		"src/widgets/rules-reference-modal/ui/RulesReferenceModalHost.jsx",
+		"src/widgets/rules-reference-modal/ui/RulesReferenceModalHost.tsx",
 		"utf8",
 	);
 	const appActionsSource = await fs.readFile(
@@ -4210,11 +5892,11 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.match(bestiarySource, /pendingSyncSelectionRef/);
 	assert.match(bestiarySource, /syncEvent\.monsterName/);
 	assert.match(bestiarySource, /shouldAutoSelectMonsterRef\.current = false/);
-	assert.match(bestiarySource, /referenceName.*toLowerCase/s);
+	assert.match(bestiaryModelSource, /normalizeMonsterName/);
 	assert.match(bestiarySource, /ignoreSourcesList/);
 	assert.match(bestiarySource, /selectedSources/);
-	assert.match(bestiarySource, /displayedMonsters\.find[\s\S]*allMonsters\.find/);
-	assert.match(bestiarySource, /selectedMonsterRef\.current = targetMonster/);
+	assert.match(bestiaryModelSource, /function findReferencedMonster/);
+	assert.match(bestiarySource, /selectedMonsterRef\.current = plan\.monster/);
 	assert.doesNotMatch(bestiarySource, /setSelectedSource/);
 	assert.doesNotMatch(bestiarySource, /normalizeSourceSelection\(initialMonsterReference\.source\)/);
 	assert.doesNotMatch(bestiarySource, embeddedPropPattern);
@@ -4227,8 +5909,7 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.doesNotMatch(spellsSource, /useSearchParams/);
 	assert.doesNotMatch(spellsSource, /next\.set\("spell"/);
 	assert.doesNotMatch(spellsSource, /next\.set\("s_source"/);
-	assert.match(spellsSource, /findSpellByName\(displayedSpells, initialSelectedName\) \|\|/);
-	assert.match(spellsSource, /findSpellByName\(allSpells, initialSelectedName\)/);
+	assert.match(spellsSource, /getInitialSpellSelection\(displayedSpells, allSpells/);
 	assert.match(rulesReferenceSource, /EMBEDDED_BROWSER_TAB_IDS/);
 	assert.match(rulesReferenceSource, /recordEmbeddedReferenceSelection/);
 	assert.match(rulesReferenceSource, /recordNavigation\(tabId, name\)/);
@@ -5675,6 +7356,11 @@ await run("storage keeps AI response history per campaign", async () => {
 });
 
 await run("theme model normalizes document theme values", () => {
+	assert.equal(getNextTheme(THEMES.LIGHT), THEMES.DARK);
+	assert.equal(getNextTheme(THEMES.DARK), THEMES.LIGHT);
+	assert.equal(getThemeToggleIcon(THEMES.LIGHT), "moon");
+	assert.equal(getThemeToggleIcon(THEMES.DARK), "sun");
+
 	const previousDocument = globalThis.document;
 	const attributes = new Map();
 	globalThis.document = {
@@ -5691,6 +7377,68 @@ await run("theme model normalizes document theme values", () => {
 		if (previousDocument === undefined) delete globalThis.document;
 		else globalThis.document = previousDocument;
 	}
+});
+
+await run("settings modal model normalizes scopes, sources, and prompt saves", () => {
+	const campaigns = normalizeSettingsCampaigns([
+		{
+			slug: "curse-of-strahd",
+			name: "Прокляття Страда",
+			ignoreSourcesList: ["mm", " MM ", "phb"],
+		},
+		{ slug: 42, name: "Invalid" },
+	]);
+	assert.equal(campaigns.length, 1);
+	assert.deepEqual(buildCampaignIgnoreSourcesMap(campaigns), {
+		"curse-of-strahd": ["MM", "PHB"],
+	});
+	assert.deepEqual(
+		mergeContentSourceOptions(["MM", " phb ", null], ["PHB", "XPHB"]),
+		["CUSTOM", "MM", "phb", "PHB", "XPHB"],
+	);
+	assert.equal(
+		resolveSettingsScope("curse-of-strahd", null, campaigns),
+		"curse-of-strahd",
+	);
+	assert.equal(
+		resolveSettingsScope("missing", "curse-of-strahd", campaigns),
+		"curse-of-strahd",
+	);
+	assert.equal(
+		resolveSettingsScope(GLOBAL_SETTINGS_SCOPE, null, campaigns),
+		GLOBAL_SETTINGS_SCOPE,
+	);
+
+	assert.deepEqual(setSettingsPromptForScope({}, "curse-of-strahd", "Dark"), {
+		"curse-of-strahd": "Dark",
+	});
+	assert.deepEqual(
+		buildPromptSettingsPayload({
+			aiBasePrompt: "Concise",
+			imagePromptBasePrompt: "Gothic",
+			campaignAiBasePrompts: {
+				"curse-of-strahd": "Political",
+				empty: "   ",
+			},
+			campaignImagePromptBasePrompts: { "curse-of-strahd": "Fog" },
+		}),
+		{
+			aiBasePrompt: "Concise",
+			imagePromptBasePrompt: "Gothic",
+			campaignAiBasePrompts: { "curse-of-strahd": "Political" },
+			campaignImagePromptBasePrompts: { "curse-of-strahd": "Fog" },
+		},
+	);
+	assert.deepEqual(normalizeSavedPromptSettings(null), {
+		aiBasePrompt: "",
+		imagePromptBasePrompt: DEFAULT_IMAGE_PROMPT_BASE_PROMPT,
+		campaignAiBasePrompts: {},
+		campaignImagePromptBasePrompts: {},
+	});
+	assert.deepEqual(
+		normalizeSavedIgnoreSources({ ignoreSourcesList: [" phb", "PHB", "mm"] }),
+		["MM", "PHB"],
+	);
 });
 
 await run("classNames merges strings arrays objects and falsy values", () => {
@@ -5792,7 +7540,7 @@ await run(
 	"EditableField, Tooltip, and ProjectGuide keep tooltip behavior",
 	async () => {
 		const editableFieldSource = await fs.readFile(
-			"src/features/editor/ui/EditableField.jsx",
+		"src/features/editor/ui/EditableField.tsx",
 			"utf8",
 		);
 		const projectGuideSource = await fs.readFile(
@@ -5804,7 +7552,7 @@ await run(
 			"utf8",
 		);
 		const tooltipSource = await fs.readFile(
-			"src/shared/ui/Tooltip.jsx",
+			"src/shared/ui/Tooltip.tsx",
 			"utf8",
 		);
 		const editableFieldCss = await fs.readFile(
@@ -5820,15 +7568,15 @@ await run(
 			"utf8",
 		);
 		const noteCardSource = await fs.readFile(
-			"src/features/notes/ui/NoteCard.jsx",
+			"src/features/notes/ui/NoteCard.tsx",
 			"utf8",
 		);
 		const draggableListSource = await fs.readFile(
-			"src/shared/ui/DraggableList.jsx",
+			"src/shared/ui/DraggableList.tsx",
 			"utf8",
 		);
 		const aiIgnoredNoteListSource = await fs.readFile(
-			"src/features/notes/ui/aiIgnoredNoteListProps.jsx",
+			"src/features/notes/ui/aiIgnoredNoteListProps.tsx",
 			"utf8",
 		);
 		const mentionEditorSource = await fs.readFile(
@@ -5836,11 +7584,11 @@ await run(
 			"utf8",
 		);
 		const characterCardSource = await fs.readFile(
-			"src/widgets/campaign-entity-card/ui/CharacterCard.jsx",
+			"src/widgets/campaign-entity-card/ui/CharacterCard.tsx",
 			"utf8",
 		);
 		const locationCardSource = await fs.readFile(
-			"src/widgets/campaign-entity-card/ui/LocationCard.jsx",
+			"src/widgets/campaign-entity-card/ui/LocationCard.tsx",
 			"utf8",
 		);
 		const graphSource = await fs.readFile(
@@ -5848,7 +7596,7 @@ await run(
 			"utf8",
 		);
 		const campaignHookSource = await fs.readFile(
-			"src/pages/campaign/model/useCampaignView.js",
+			"src/pages/campaign/model/useCampaignView.ts",
 			"utf8",
 		);
 		const sessionHookSource = await fs.readFile(
@@ -5913,7 +7661,7 @@ await run(
 		assert.match(editableFieldSource, /enableHistory = true/);
 		assert.match(editableFieldSource, /\{enableHistory && <HistoryPlugin \/>}/);
 		assert.match(editableFieldSource, /data-app-history-shortcuts/);
-		assert.match(editableFieldSource, /HISTORY_SHORTCUT_CODES/);
+		assert.match(editableFieldSource, /shouldDelegateEditableHistory/);
 		assert.match(campaignHookSource, /shouldUseAppHistoryForEvent/);
 		assert.match(sessionHookSource, /shouldUseAppHistoryForEvent/);
 		assert.match(noteCardSource, /enableHistory = true/);
@@ -7035,6 +8783,245 @@ await run(
 		});
 	},
 );
+
+await run("image asset locations preserve encoded paths and target presets", () => {
+	assert.deepEqual(
+		parseGalleryLocationFromImageUrl(
+			"/api/images/кампанія/characters/герої/Ірина.png?size=small",
+			"http://localhost:5173",
+		),
+		{
+			source: "кампанія",
+			category: "characters",
+			subcategory: "герої",
+		},
+	);
+	assert.equal(
+		parseGalleryLocationFromImageUrl("/outside/images/token.png"),
+		null,
+	);
+	assert.deepEqual(getImageAssetPreset("npc", "мій-світ"), {
+		source: "мій-світ",
+		category: "characters",
+		subcategory: "npc",
+	});
+	assert.deepEqual(
+		resolveImageAssetLocation({ target: "attachment" }),
+		{
+			source: "general",
+			category: "attachments",
+			subcategory: "",
+		},
+	);
+});
+
+await run("image upload policies preserve filenames, sources, and campaigns", () => {
+	assert.deepEqual(splitImageFileName("портрет героя.webp"), {
+		baseName: "портрет героя",
+		extension: ".webp",
+	});
+	assert.deepEqual(splitImageFileName(".hidden"), {
+		baseName: ".hidden",
+		extension: "",
+	});
+	assert.equal(
+		getImageUploadFileName("token.png", "  новий токен  "),
+		"новий токен.png",
+	);
+	assert.equal(resolveImageUploadSource("", "кампанія"), "кампанія");
+	assert.equal(resolveImageUploadSource(null, null), "general");
+	const campaigns = normalizeImageCampaigns([
+		{ slug: "curse", name: "Прокляття" },
+		{ slug: "broken" },
+		null,
+	]);
+	assert.deepEqual(campaigns, [{ slug: "curse", name: "Прокляття" }]);
+	assert.deepEqual(getImageUploadSourceOptions(campaigns, "Загальні"), [
+		{ id: "general", label: "Загальні", icon: "database" },
+		{ id: "curse", label: "Прокляття", icon: "map" },
+	]);
+});
+
+await run("image target policies normalize nested folder navigation", () => {
+	assert.equal(normalizeImageTargetPath("//герої///союзники//"), "герої/союзники");
+	assert.equal(
+		enterImageTargetSubfolder("герої/союзники", "/маги/"),
+		"герої/союзники/маги",
+	);
+	assert.equal(
+		navigateImageTargetPath("герої/союзники/маги", 1),
+		"герої/союзники",
+	);
+	assert.equal(navigateImageTargetPath("герої", -1), "");
+	assert.equal(
+		getImageTargetParentPath("герої/союзники/маги"),
+		"герої/союзники",
+	);
+	assert.deepEqual(normalizeSubcategoryNames(["npc", { name: "ignored" }, ""]), [
+		"npc",
+	]);
+});
+
+await run("image gallery presentation preserves history and unique items", () => {
+	const root = getGalleryPathEntry("general", "tokens", "");
+	const nested = getGalleryPathEntry("general", "tokens", "герої");
+	let history = recordGalleryNavigation({ entries: [], index: -1 }, root);
+	history = recordGalleryNavigation(history, nested);
+	assert.equal(recordGalleryNavigation(history, nested), history);
+	assert.deepEqual(getGalleryNavigationEntry(history, -1), {
+		entry: root,
+		index: 0,
+	});
+	assert.equal(getGalleryNavigationEntry(history, 1), null);
+	assert.equal(
+		getGalleryHistoryKeyDirection({
+			altKey: false,
+			ctrlKey: false,
+			key: "Backspace",
+			metaKey: false,
+			shiftKey: false,
+		}),
+		-1,
+	);
+	assert.equal(
+		getGalleryHistoryKeyDirection({
+			altKey: true,
+			ctrlKey: false,
+			key: "ArrowRight",
+			metaKey: false,
+			shiftKey: false,
+		}),
+		1,
+	);
+	const images = deduplicateGalleryImages(
+		[
+			{ name: "Ірина.png", url: "/api/images/general/tokens/Ірина.png" },
+			{ name: "Ірина.png", url: "/api/images/general/tokens/Ірина.png" },
+		],
+		{ source: "general", category: "tokens", subcategory: "герої" },
+	);
+	assert.equal(images.length, 1);
+	assert.deepEqual(
+		buildGalleryPresentationItems(["npc"], images).map((item) => item.type),
+		["sub", "image"],
+	);
+});
+
+await run("image gallery interaction plans validate drops, moves, and selection", () => {
+	const destination = { slug: "curse", category: "tokens", subcategory: "герої" };
+	assert.deepEqual(
+		getGalleryDropPlan({ dest: destination, hasFiles: false, jsonData: "broken" }),
+		{ kind: "ignore" },
+	);
+	assert.deepEqual(
+		getGalleryDropPlan({ dest: destination, hasFiles: true, jsonData: "" }),
+		{ kind: "upload" },
+	);
+	const movePlan = getGalleryDropPlan({
+		dest: destination,
+		hasFiles: false,
+		jsonData: JSON.stringify({
+			items: ["Ірина.png"],
+			src: { slug: "general", category: "tokens", subcategory: "npc" },
+		}),
+	});
+	assert.equal(movePlan.kind, "move");
+	assert.equal(movePlan.payload.items[0], "Ірина.png");
+	assert.deepEqual(
+		buildGalleryMovePayloads({
+			dest: destination,
+			imageGroups: [
+				{ src: destination, items: ["same.png"] },
+				{
+					src: { slug: "general", category: "tokens", subcategory: "npc" },
+					items: ["other.png"],
+				},
+			],
+			safeSubs: ["маги"],
+			src: { slug: "curse", category: "tokens", subcategory: "root" },
+		}).map((payload) => payload.items),
+		[["other.png"], ["маги"]],
+	);
+	const selection = getGallerySelectionPlan({
+		allSubs: ["official", "custom"],
+		filenames: new Set(),
+		images: [{ name: "hero.png", url: "/hero.png" }],
+		index: 2,
+		isAdditive: false,
+		isReadonlyImage: () => false,
+		isReadonlySub: (name) => name === "official",
+		isShift: true,
+		lastIndex: 0,
+		name: "hero.png",
+		subfolders: new Set(),
+		type: "image",
+	});
+	assert.deepEqual([...selection.subfolders], ["custom"]);
+	assert.deepEqual([...selection.filenames], ["hero.png"]);
+	assert.deepEqual(
+		getGalleryDragPlan({
+			item: { name: "hero.png", url: "/hero.png" },
+			location: destination,
+			getMovableSelection: () => ["hero.png", "ally.png"],
+			selectedFilenames: new Set(["hero.png"]),
+			selectedSubs: new Set(),
+			type: "image",
+			isReadonlyImage: () => false,
+			isReadonlySub: () => false,
+		}),
+		{ items: ["hero.png", "ally.png"], src: destination },
+	);
+});
+
+await run("image gallery loaders normalize metadata and official token paths", async () => {
+	const api = {
+		getSubcategories: async (_source, _category, subcategory) =>
+			subcategory ? [] : [{ name: "герої", hasFiles: true }, "npc"],
+		getBestiaryTokenAssets: async (subcategory, _search, _ignored, options) =>
+			options?.recursive
+				? {
+						images: [
+							{
+								name: "Ірина.png",
+								url: "/token.png",
+								path: "tokens/MM/герої/Ірина.png",
+								source: "MM",
+							},
+						],
+					}
+				: { images: [], subcategories: subcategory ? ["nested"] : ["MM"] },
+		getImages: async () => [],
+		searchImageGallery: async () => ({ images: [] }),
+	};
+	const subcategories = await loadGallerySubcategoryData({
+		activeSearchQuery: "",
+		api,
+		category: "tokens",
+		ignoreSourcesList: [],
+		isGeneralTokens: true,
+		selectedSub: "",
+		selectedSource: "general",
+	});
+	assert.deepEqual(subcategories.dynamicSubs, ["герої", "npc", "MM"]);
+	assert.equal(subcategories.subDetails.герої.hasFiles, true);
+	const images = await loadGalleryImages({
+		activeSearchQuery: "",
+		api,
+		categories: ["tokens"],
+		category: "tokens",
+		contentScope: "databaseTokens",
+		ignoreSourcesList: [],
+		isGeneralTokens: true,
+		isScopedContent: true,
+		normalizedSearchQuery: "",
+		search: "ірина",
+		selectedSub: "",
+		selectedSource: "general",
+	});
+	assert.equal(images[0].subcategory, "герої");
+	assert.equal(images[0].locationLabel, "database / tokens / герої");
+	assert.equal(images[0].globalSearch, true);
+});
 
 await run(
 	"storage renames campaign data and image folders together",

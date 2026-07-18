@@ -1,7 +1,10 @@
 import { Button, Select } from "../../../shared/ui/index.js";
 import { EditableField } from "../../../features/editor/ui/index.js";
 import { Modal } from "../../../features/modal/index.js";
-import { AiAttachmentControls } from "../../../features/ai/ui/index.js";
+import {
+	AiAttachmentControls,
+	renderAiModelOptions,
+} from "../../../features/ai/ui/index.js";
 import { lang } from "../../../shared/lib/index.js";
 
 function ImagePromptColumn({
@@ -155,15 +158,7 @@ export default function AiImagePromptPickerModal({
 							loading || !Array.isArray(aiModels) || aiModels.length === 0
 						}
 					>
-						{Array.isArray(aiModels) && aiModels.length > 0 ? (
-							aiModels.map((model) => (
-								<option key={model.name} value={model.name}>
-									{model.displayName || model.name}
-								</option>
-							))
-						) : (
-							<option value="">{lang.t("Loading models...")}</option>
-						)}
+						{renderAiModelOptions(aiModels)}
 					</Select>
 					{isContextMode && (
 						<label className="AiAssistant__image_prompt_field">
