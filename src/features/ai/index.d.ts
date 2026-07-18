@@ -11,6 +11,15 @@ export {
 	getDiffResourceState,
 	type DiffResource,
 } from "./model/aiDiff.ts";
+export {
+	AI_MODEL_REFRESH_ATTEMPTS,
+	AI_MODEL_REFRESH_DELAY_MS,
+	getAiModelSelection,
+	saveGeminiApiKeyAndRefreshModels,
+	type AiApiKeyModelSelection,
+	type AiApiKeySaveResult,
+	type SaveAiApiKeyOptions,
+} from "./model/apiKeyWorkflow.ts";
 export { loadAiModelOptions } from "./model/aiModels.ts";
 export {
 	addSourceMonsterImageToDraft,

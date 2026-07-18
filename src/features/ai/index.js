@@ -12,6 +12,12 @@ export {
 	readFileAsBase64,
 } from "./model/aiAttachments.ts";
 export { buildDiffResources, getDiffResourceState } from "./model/aiDiff.ts";
+export {
+	AI_MODEL_REFRESH_ATTEMPTS,
+	AI_MODEL_REFRESH_DELAY_MS,
+	getAiModelSelection,
+	saveGeminiApiKeyAndRefreshModels,
+} from "./model/apiKeyWorkflow.ts";
 export { loadAiModelOptions } from "./model/aiModels.ts";
 export {
 	addSourceMonsterImageToDraft,

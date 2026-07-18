@@ -31,6 +31,7 @@ import {
 	hasHistoryChanges,
 	initialAiGenerationLifecycle,
 	isAiGenerationPending,
+	saveGeminiApiKeyAndRefreshModels,
 	upsertAiHistoryEntry,
 	useAiHistoryCommands,
 	isFailedHistoryEntry,
@@ -657,24 +658,18 @@ export default function AiAssistantPanel({
 		setIsSavingApiKey(true);
 		setError("");
 		try {
-			await api.saveGeminiApiKey(apiKey);
-			let result = null;
-			for (let attempt = 0; attempt < 5; attempt++) {
-				try {
-					result = await api.listAiModels();
-					break;
-				} catch (err) {
-					if (attempt === 4) {
-						console.error("Failed to refresh AI models after saving key", err);
-						break;
-					}
-					await new Promise((resolve) => setTimeout(resolve, 500));
-				}
-			}
-			if (result) {
-				const models = Array.isArray(result?.models) ? result.models : [];
-				setAiModels(models);
-				setSelectedModel(result?.defaultModel || models[0]?.name || "");
+			const result = await saveGeminiApiKeyAndRefreshModels({
+				apiKey,
+				onRefreshError: (refreshError) => {
+					console.error(
+						"Failed to refresh AI models after saving key",
+						refreshError,
+					);
+				},
+			});
+			if (result.status === "saved" && result.modelSelection) {
+				setAiModels(result.modelSelection.models);
+				setSelectedModel(result.modelSelection.selectedModel);
 			}
 			setApiKeyInput("");
 			setIsApiKeyMissing(false);

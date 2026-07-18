@@ -246,6 +246,7 @@ import {
 	isAiGenerationPending,
 	mergeLoadedAiSessionData,
 	normalizeCustomMonsterCollection,
+	saveGeminiApiKeyAndRefreshModels,
 	sanitizeAiContextConfig,
 	setAllContextListItems,
 	upsertAiHistoryEntry,
@@ -4402,6 +4403,105 @@ await run("AI context presentation preserves session and scene defaults", () => 
 			notes: true,
 			encounter: true,
 		},
+	);
+});
+
+await run("AI API key workflow persists once and retries model discovery", async () => {
+	const savedKeys = [];
+	const waits = [];
+	let listAttempts = 0;
+	const result = await saveGeminiApiKeyAndRefreshModels({
+		apiKey: "  gemini-secret  ",
+		saveApiKey: async (apiKey) => savedKeys.push(apiKey),
+		listAiModels: async () => {
+			listAttempts += 1;
+			if (listAttempts < 3) throw new Error("Моделі ще оновлюються");
+			return {
+				models: [
+					{ name: "gemini-fast", displayName: "Gemini Fast" },
+					{ name: "gemini-pro", displayName: "Gemini Pro" },
+				],
+				defaultModel: "gemini-pro",
+				source: "gemini",
+			};
+		},
+		wait: async (delayMs) => waits.push(delayMs),
+	});
+
+	assert.deepEqual(savedKeys, ["gemini-secret"]);
+	assert.equal(listAttempts, 3);
+	assert.deepEqual(waits, [500, 500]);
+	assert.deepEqual(result, {
+		status: "saved",
+		modelSelection: {
+			models: [
+				{ name: "gemini-fast", displayName: "Gemini Fast" },
+				{ name: "gemini-pro", displayName: "Gemini Pro" },
+			],
+			selectedModel: "gemini-pro",
+		},
+	});
+
+	let missingKeySaveCalls = 0;
+	assert.deepEqual(
+		await saveGeminiApiKeyAndRefreshModels({
+			apiKey: "   ",
+			saveApiKey: async () => {
+				missingKeySaveCalls += 1;
+			},
+		}),
+		{ status: "missing-key" },
+	);
+	assert.equal(missingKeySaveCalls, 0);
+
+	const refreshErrors = [];
+	let failedRefreshAttempts = 0;
+	const nonFatalRefreshResult = await saveGeminiApiKeyAndRefreshModels({
+		apiKey: "key",
+		saveApiKey: async () => {},
+		listAiModels: async () => {
+			failedRefreshAttempts += 1;
+			throw new Error("Немає моделей");
+		},
+		wait: async () => {},
+		refreshAttempts: 2,
+		onRefreshError: (error) => refreshErrors.push(error.message),
+	});
+	assert.equal(failedRefreshAttempts, 2);
+	assert.deepEqual(refreshErrors, ["Немає моделей"]);
+	assert.deepEqual(nonFatalRefreshResult, {
+		status: "saved",
+		modelSelection: null,
+	});
+
+	let nullRefreshAttempts = 0;
+	assert.deepEqual(
+		await saveGeminiApiKeyAndRefreshModels({
+			apiKey: "key",
+			saveApiKey: async () => {},
+			listAiModels: async () => {
+				nullRefreshAttempts += 1;
+				return null;
+			},
+			wait: async () => {
+				throw new Error("Null result must not retry");
+			},
+		}),
+		{ status: "saved", modelSelection: null },
+	);
+	assert.equal(nullRefreshAttempts, 1);
+
+	await assert.rejects(
+		saveGeminiApiKeyAndRefreshModels({
+			apiKey: "key",
+			saveApiKey: async () => {
+				throw new Error("Не вдалося зберегти");
+			},
+			listAiModels: async () => {
+				throw new Error("Must not run");
+			},
+		}),
+		/Не вдалося зберегти/,
 	);
 });
 
