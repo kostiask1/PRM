@@ -113,6 +113,40 @@ import {
 	itemMatchesQuery,
 } from "../src/widgets/rules-reference-modal/model.js";
 import {
+	buildSidebarCampaignOrder,
+	getSidebarCampaignSelection,
+	getSidebarClassName,
+	getSidebarErrorMessage,
+	groupSidebarCampaigns,
+	isSidebarToggleKey,
+	mergeSidebarCampaignGroup,
+} from "../src/widgets/sidebar/model.js";
+import {
+	createAiAssistantPresentation,
+	getCustomMonsterPromptDescription,
+	getImagePromptItemKey,
+	getImagePromptPickerState,
+	getScenePromptDescription,
+	getScenePromptItemKey,
+} from "../src/widgets/ai-assistant/model.js";
+import {
+	CAMPAIGN_SEARCH_FILTERS,
+	buildCampaignSearchIndex,
+	buildCampaignSearchSnippet,
+	campaignSearchValueToText,
+	filterCampaignSearchResults,
+	getCampaignSearchHighlightTerms,
+	loadCampaignSearchIndex,
+	toggleCampaignSearchFilter,
+} from "../src/widgets/campaign-search/model.js";
+import {
+	getCampaignEntityModalCardPlan,
+	getCampaignEntityRenamePlan,
+	isCampaignModalEntity,
+	sanitizeCampaignModalEntity,
+	shouldRenderCampaignEntityModal,
+} from "../src/widgets/campaign-entity-modal/model.js";
+import {
 	addUndoSnapshot,
 	createDistinctRedoTransition,
 	createDistinctUndoTransition,
@@ -5829,6 +5863,369 @@ await run("rules reference modal policies preserve qualified identities and UTF-
 	assert.equal(itemMatchesQuery(diseasePolicy, { name: "Сліпа гарячка" }, "гаряч", false), true);
 });
 
+await run("campaign search policies index campaign and session content", async () => {
+	const translate = (key, params = {}) =>
+		key.replace("{number}", String(params.number ?? ""));
+	const campaign = {
+		slug: "ukrainian-campaign",
+		name: "Кампанія",
+		description: "Таємниця старого лісу",
+		notes: [{ id: "n1", title: "Підказка", text: "Шукати біля брами" }],
+	};
+	const index = buildCampaignSearchIndex(
+		{
+			campaign,
+			entities: {
+				characters: [{ id: "hero", firstName: "Олена", lastName: "Мудра", race: "людина" }],
+				npc: [{ id: "npc1", name: "Коваль", notes: [{ id: "nn", text: "Знає пароль" }] }],
+				locations: [{ id: "loc1", title: "Стара брама", description: "Вкрита мохом" }],
+			},
+			sessions: [{
+				fileName: "session-1.json",
+				detail: {
+					name: "Перша сесія",
+					data: {
+						scenes: [{ id: "scene1", title: "Зустріч", description: "Коваль чекає", notes: [{ id: "sn", title: "Репліка", text: "Назви пароль" }] }],
+					},
+				},
+			}],
+		},
+		translate,
+	);
+	assert.equal(index.some((item) => item.title === "Олена Мудра" && item.filter === "npc"), true);
+	assert.equal(index.some((item) => item.title === "Стара брама" && item.filter === "locations"), true);
+	assert.equal(index.some((item) => item.title === "Зустріч" && item.target.hash === "session-scene-scene1"), true);
+	assert.equal(filterCampaignSearchResults(index, "пароль", new Set(CAMPAIGN_SEARCH_FILTERS)).length, 4);
+	assert.deepEqual(getCampaignSearchHighlightTerms("а ліс  ліс брама"), ["ліс", "брама"]);
+	assert.equal(campaignSearchValueToText({ name: "видиме", _private: "ні", imageUrl: "ні" }), "видиме");
+	assert.match(buildCampaignSearchSnippet(`${"початок ".repeat(20)}ключ далі`, "ключ"), /^\.\.\./);
+	assert.deepEqual([...toggleCampaignSearchFilter(new Set(["notes"]), "notes")], ["notes"]);
+
+	const calls = [];
+	const loaded = await loadCampaignSearchIndex({
+		campaign: { ...campaign, characters: [{ id: "local", name: "Локальний герой" }] },
+		currentData: { ...campaign, characters: [{ id: "local", name: "Локальний герой" }] },
+		translate,
+		api: {
+			getEntities: async (_slug, type) => { calls.push(type); return [{ id: `remote-${type}`, name: `remote-${type}` }]; },
+			listSessions: async () => [{ fileName: "s.json", name: "Список" }],
+			getSession: async () => ({ name: "Деталі", data: { notes: [{ id: "loaded", title: "Завантажено" }] } }),
+		},
+	});
+	assert.deepEqual(calls, ["characters", "npc", "locations"]);
+	assert.equal(loaded.some((item) => item.title === "Локальний герой"), true);
+	assert.equal(loaded.some((item) => item.title === "remote-characters"), false);
+	assert.equal(loaded.some((item) => item.title === "Завантажено"), true);
+});
+
+await run("campaign entity modal policies preserve rename and save contracts", () => {
+	assert.equal(
+		getCampaignEntityRenamePlan("  Пан Коваль ", "пан   коваль").requiresConfirmation,
+		false,
+	);
+	assert.equal(
+		getCampaignEntityRenamePlan("Пан Коваль", "Майстер Коваль").requiresConfirmation,
+		true,
+	);
+	assert.equal(getCampaignEntityRenamePlan("", "Нове ім'я").requiresConfirmation, false);
+	assert.equal(isCampaignModalEntity({ slug: "npc-1" }), true);
+	assert.equal(isCampaignModalEntity({ slug: "  " }), false);
+	assert.deepEqual(
+		sanitizeCampaignModalEntity({
+			id: "npc-1",
+			slug: "npc-1",
+			name: "Коваль",
+			_scope: "campaign",
+			_internal: true,
+			notes: [
+				{ id: 1, title: "Плітка", text: "Знає пароль", collapsed: false, _renderKey: "one" },
+				{ title: "Без ID", text: "Зберегти", collapsed: false },
+				{ id: 2, title: "", text: "", collapsed: false },
+			],
+		}),
+		{
+			id: "npc-1",
+			slug: "npc-1",
+			name: "Коваль",
+			notes: [
+				{ id: 1, title: "Плітка", text: "Знає пароль", collapsed: false },
+				{ title: "Без ID", text: "Зберегти", collapsed: false },
+			],
+		},
+	);
+	assert.deepEqual(getCampaignEntityModalCardPlan("locations", { id: 7 }), {
+		kind: "location",
+		key: "7",
+	});
+	assert.deepEqual(getCampaignEntityModalCardPlan("npc", {}), {
+		kind: "character",
+		key: "entity-modal-card",
+	});
+	assert.equal(shouldRenderCampaignEntityModal("campaign", undefined), true);
+	assert.equal(shouldRenderCampaignEntityModal("campaign", "session"), false);
+	assert.equal(shouldRenderCampaignEntityModal("", undefined), false);
+});
+
+await run("AI assistant presentation preserves history and entity contracts", () => {
+	const translate = (phrase, variables = {}) =>
+		phrase === "Scene {number}"
+			? `Сцена ${variables.number}`
+			: phrase === "Untitled"
+				? "Без назви"
+				: phrase;
+	const presentation = createAiAssistantPresentation({
+		translate,
+		isFailedHistoryEntry: (entry) => entry.status === "failed",
+		hasHistoryChanges: (entry) => entry.hasChanges === true,
+	});
+
+	assert.equal(
+		presentation.getCharacterDisplayName({
+			first_name: "  Ірина ",
+			lastName: " Штормова ",
+		}),
+		"Ірина Штормова",
+	);
+	assert.equal(
+		presentation.getCharacterContextKey({ title: "Архіварка" }),
+		"Архіварка",
+	);
+	assert.equal(
+		presentation.getLocationDisplayName({}),
+		"Без назви",
+	);
+	assert.equal(
+		presentation.getSceneImagePromptTitle({ texts: {} }, 2),
+		"Сцена 3",
+	);
+	assert.equal(
+		presentation.getSceneImagePromptDescription({
+			texts: {
+				summary: "Причал",
+				goal: "Зупинити корабель",
+				stakes: "Місто затопить",
+			},
+		}),
+		"Причал Зупинити корабель Місто затопить",
+	);
+	assert.equal(
+		presentation.getImagePromptPreview(`  ${"буря ".repeat(30)} `).length,
+		120,
+	);
+	assert.equal(
+		presentation.stripGeneratedMonsterEditPrompt(
+			'Current encounter creature: {"name":"Вартовий","trait":{"text":"каже \\\"стій\\\""}} Зміни обладунок',
+		),
+		"Зміни обладунок",
+	);
+	assert.equal(
+		presentation.getHistoryRequestText({
+			retryPayload: { historyUserInstructions: "  Повтори запит  " },
+		}),
+		"Повтори запит",
+	);
+	assert.equal(
+		presentation.getHistoryOptionsSummary({
+			request: {
+				options: {
+					mode: "campaign",
+					responseParsing: true,
+					characterGeneration: true,
+					npcGeneration: false,
+					locationGeneration: true,
+					encounterGeneration: false,
+					customMonsterGeneration: true,
+					contextEnabled: true,
+				},
+			},
+		}),
+		"Mode: AI Story Assistant; Response parsing: On; Create characters: On; Create NPCs: Off; Create locations/factions: On; Encounter generation: Off; Custom monster generation: On; Context: On",
+	);
+	assert.equal(
+		presentation.getHistoryContextSummary({
+			request: {
+				context: {
+					enabled: true,
+					campaignNotes: 2,
+					campaignCharacters: 1,
+					scenes: 3,
+				},
+			},
+		}),
+		"Context: Notes: 2, Characters: 1, Scenes: 3",
+	);
+	assert.deepEqual(
+		presentation.getHistoryDetailRows({
+			createdAt: "not-a-date",
+			request: { optionsSummary: "Налаштування" },
+		}),
+		[{ label: "Settings", value: "Налаштування" }],
+	);
+	assert.equal(
+		presentation.getHistoryTitle({ status: "failed" }),
+		"Failed AI request",
+	);
+	assert.equal(
+		presentation.getHistoryTitle({ hasChanges: true }),
+		"AI changes",
+	);
+	assert.equal(
+		presentation.getHistoryTitle({ text: "**Готова відповідь**" }),
+		"Готова відповідь",
+	);
+	assert.equal(
+		presentation.getAiResponseStateLabel({ applyState: "undone" }),
+		"Undone",
+	);
+	assert.notEqual(presentation.formatResponseDate(0, "en-US"), "");
+});
+
+await run("AI image prompt picker preserves target and generation policies", () => {
+	assert.deepEqual(getImagePromptPickerState({}), {
+		isDetailsVisible: false,
+		instructionsRequired: false,
+		canGenerate: true,
+		titleKey: "Choose an element to generate a prompt",
+	});
+	assert.deepEqual(
+		getImagePromptPickerState({
+			isContextMode: true,
+			request: "  Намалюй штормове узбережжя  ",
+		}),
+		{
+			isDetailsVisible: true,
+			instructionsRequired: true,
+			canGenerate: true,
+			titleKey: "Image prompt",
+		},
+	);
+	assert.equal(
+		getImagePromptPickerState({
+			isContextMode: true,
+			request: "   ",
+		}).canGenerate,
+		false,
+	);
+	assert.equal(
+		getImagePromptPickerState({
+			selectedTarget: { type: "scene", id: 7, name: "Брама" },
+			loading: true,
+		}).canGenerate,
+		false,
+	);
+	assert.equal(
+		getImagePromptItemKey({ id: 0, slug: "вартовий" }, 2, "NPCs"),
+		"вартовий",
+	);
+	assert.equal(
+		getImagePromptItemKey({}, 2, "NPCs", "session:npc"),
+		"session:npc",
+	);
+	assert.equal(
+		getCustomMonsterPromptDescription({ type: "дракон", cr: "7" }),
+		"дракон - CR 7",
+	);
+	assert.equal(
+		getScenePromptItemKey(
+			{ _imagePromptSessionFileName: "сесія-1.json", id: "брама" },
+			0,
+		),
+		"сесія-1.json:брама",
+	);
+	assert.equal(
+		getScenePromptDescription(
+			{ _imagePromptSessionName: "Шторм" },
+			"Бій на причалі",
+		),
+		"Шторм - Бій на причалі",
+	);
+});
+
+await run("sidebar keeps campaign navigation and ordering policies stable", () => {
+	const activeCampaign = {
+		slug: "буря-на-морі",
+		name: "Буря на морі",
+		sessionCount: 3,
+	};
+	const completedCampaign = {
+		slug: "завершена",
+		name: "Завершена кампанія",
+		completed: true,
+	};
+	const secondActiveCampaign = {
+		slug: "підземелля",
+		name: "Підземелля",
+	};
+	const groups = groupSidebarCampaigns([
+		activeCampaign,
+		completedCampaign,
+		secondActiveCampaign,
+	]);
+
+	assert.deepEqual(groups, {
+		active: [activeCampaign, secondActiveCampaign],
+		completed: [completedCampaign],
+	});
+	assert.deepEqual(
+		mergeSidebarCampaignGroup(groups, "active", [
+			secondActiveCampaign,
+			activeCampaign,
+		]),
+		[secondActiveCampaign, activeCampaign, completedCampaign],
+	);
+	assert.deepEqual(
+		mergeSidebarCampaignGroup(groups, "completed", [completedCampaign]),
+		[activeCampaign, secondActiveCampaign, completedCampaign],
+	);
+	assert.deepEqual(
+		buildSidebarCampaignOrder([
+			secondActiveCampaign,
+			activeCampaign,
+			completedCampaign,
+		]),
+		{ "підземелля": 0, "буря-на-морі": 1, "завершена": 2 },
+	);
+	assert.equal(
+		getSidebarCampaignSelection({
+			campaignSlug: activeCampaign.slug,
+			activeCampaignSlug: activeCampaign.slug,
+		}),
+		"",
+	);
+	assert.equal(
+		getSidebarCampaignSelection({
+			campaignSlug: activeCampaign.slug,
+			activeCampaignSlug: activeCampaign.slug,
+			activeSessionFileName: "session-1.json",
+		}),
+		activeCampaign.slug,
+	);
+	assert.equal(
+		getSidebarCampaignSelection({
+			campaignSlug: activeCampaign.slug,
+			activeCampaignSlug: activeCampaign.slug,
+			activeEncounterId: 0,
+		}),
+		"",
+	);
+	assert.equal(getSidebarClassName(true, false), "Sidebar App__sidebar Sidebar__hovered");
+	assert.equal(
+		getSidebarClassName(false, true),
+		"Sidebar App__sidebar Sidebar__mobile_open",
+	);
+	assert.equal(isSidebarToggleKey("Enter"), true);
+	assert.equal(isSidebarToggleKey(" "), true);
+	assert.equal(isSidebarToggleKey("Escape"), false);
+	assert.equal(
+		getSidebarErrorMessage(new Error("Помилка архіву"), "Невідома помилка"),
+		"Помилка архіву",
+	);
+	assert.equal(
+		getSidebarErrorMessage({ message: "небезпечне поле" }, "Невідома помилка"),
+		"Невідома помилка",
+	);
+});
+
 await run("rules reference modal owns spells and bestiary navigation", async () => {
 	const embeddedPropPattern = new RegExp("is" + "Embedded");
 	const mainContentSource = await fs.readFile(
@@ -5836,7 +6233,7 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 		"utf8",
 	);
 	const sidebarSource = await fs.readFile(
-		"src/widgets/sidebar/ui/Sidebar.jsx",
+		"src/widgets/sidebar/ui/Sidebar.tsx",
 		"utf8",
 	);
 	const bestiarySource = await fs.readFile(

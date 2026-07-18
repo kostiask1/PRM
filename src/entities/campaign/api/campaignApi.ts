@@ -16,11 +16,7 @@ export interface CampaignEntityRecord extends Record<string, unknown> {
 	name?: string;
 }
 
-export interface CampaignOrder {
-	id?: DomainId;
-	slug?: string;
-	order: number;
-}
+export type CampaignOrder = Record<string, number>;
 
 export interface CampaignDeleteOptions {
 	moveImagesToGeneral?: boolean;
@@ -92,7 +88,7 @@ export const campaignApi = {
 			body: formData,
 		});
 	},
-	reorderCampaigns: (orders: CampaignOrder[]) =>
+	reorderCampaigns: (orders: CampaignOrder) =>
 		request<CampaignRecord[]>("/campaigns/reorder", {
 			method: "POST",
 			body: JSON.stringify({ orders }),

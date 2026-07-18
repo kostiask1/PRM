@@ -135,7 +135,6 @@ function pushNote(results: CampaignSearchResult[], note: CampaignSearchRecord, o
 interface EntityOptions extends NoteOptions {
 	filter: Extract<CampaignSearchFilter, "npc" | "locations">;
 	title: (entity: CampaignSearchRecord) => string;
-	noteLabel: string;
 }
 
 function pushEntity(results: CampaignSearchResult[], entity: CampaignSearchRecord, options: EntityOptions): void {
@@ -169,9 +168,9 @@ export function buildCampaignSearchIndex(
 
 	pushResult(results, { id: "campaign-description", filter: "notes", title: translate("Campaign description"), subtitle: campaign.name, text: campaign.description || "", target: { ...campaignTarget, hash: makeDomId("campaign", "description") } });
 	normalizeCampaignSearchRecords(campaign.notes).forEach((note, index) => pushNote(results, note, { idPrefix: `campaign-note-${String(note.id || index)}`, subtitle: `${campaign.name} · ${translate("Campaign notes")}`, target: { ...campaignTarget, hash: makeDomId("campaign", "note", note.id || index) } }));
-	entities.characters.forEach((entity) => pushEntity(results, entity, { filter: "npc", idPrefix: "campaign-character", subtitle: translate("Character"), title: entityName, noteLabel: translate("Note"), target: { ...campaignTarget, hash: makeDomId("campaign", "character", entity.id || entity.slug) } }));
-	entities.npc.forEach((entity) => pushEntity(results, entity, { filter: "npc", idPrefix: "campaign-npc", subtitle: `${translate("NPC")} · ${translate("Campaign scope")}`, title: entityName, noteLabel: translate("Note"), target: { ...campaignTarget, hash: makeDomId("campaign", "npc", entity.id || entity.slug) } }));
-	entities.locations.forEach((entity) => pushEntity(results, entity, { filter: "locations", idPrefix: "campaign-location", subtitle: `${translate("Location")} · ${translate("Campaign scope")}`, title: locationName, noteLabel: translate("Note"), target: { ...campaignTarget, hash: makeDomId("campaign", "location", entity.id || entity.slug) } }));
+	entities.characters.forEach((entity) => pushEntity(results, entity, { filter: "npc", idPrefix: "campaign-character", subtitle: translate("Character"), title: entityName, target: { ...campaignTarget, hash: makeDomId("campaign", "character", entity.id || entity.slug) } }));
+	entities.npc.forEach((entity) => pushEntity(results, entity, { filter: "npc", idPrefix: "campaign-npc", subtitle: `${translate("NPC")} · ${translate("Campaign scope")}`, title: entityName, target: { ...campaignTarget, hash: makeDomId("campaign", "npc", entity.id || entity.slug) } }));
+	entities.locations.forEach((entity) => pushEntity(results, entity, { filter: "locations", idPrefix: "campaign-location", subtitle: `${translate("Location")} · ${translate("Campaign scope")}`, title: locationName, target: { ...campaignTarget, hash: makeDomId("campaign", "location", entity.id || entity.slug) } }));
 	sessions.forEach((entry) => appendSessionResults(results, campaign.slug, entry, translate, entityName, locationName));
 	return results;
 }
@@ -190,8 +189,8 @@ function appendSessionResults(
 	const target = { campaignSlug, sessionFileName: fileName };
 	const sessionName = String(session.name || fileName);
 	normalizeCampaignSearchRecords(data.notes).forEach((note, index) => pushNote(results, note, { idPrefix: `session-${fileName}-note-${String(note.id || index)}`, subtitle: `${sessionName} · ${translate("Notes")}`, target: { ...target, hash: makeDomId("session", "note", note.id || index) } }));
-	normalizeCampaignSearchRecords(data.npcs).forEach((entity) => pushEntity(results, entity, { filter: "npc", idPrefix: `session-${fileName}-npc`, subtitle: `${translate("NPC")} · ${sessionName}`, title: entityName, noteLabel: translate("Note"), target: { ...target, hash: makeDomId("session", "npc", entity.id) } }));
-	normalizeCampaignSearchRecords(data.locations).forEach((entity) => pushEntity(results, entity, { filter: "locations", idPrefix: `session-${fileName}-location`, subtitle: `${translate("Location")} · ${sessionName}`, title: locationName, noteLabel: translate("Note"), target: { ...target, hash: makeDomId("session", "location", entity.id) } }));
+	normalizeCampaignSearchRecords(data.npcs).forEach((entity) => pushEntity(results, entity, { filter: "npc", idPrefix: `session-${fileName}-npc`, subtitle: `${translate("NPC")} · ${sessionName}`, title: entityName, target: { ...target, hash: makeDomId("session", "npc", entity.id) } }));
+	normalizeCampaignSearchRecords(data.locations).forEach((entity) => pushEntity(results, entity, { filter: "locations", idPrefix: `session-${fileName}-location`, subtitle: `${translate("Location")} · ${sessionName}`, title: locationName, target: { ...target, hash: makeDomId("session", "location", entity.id) } }));
 	normalizeCampaignSearchRecords(data.scenes).forEach((scene, index) => appendSceneResults(results, scene, index, sessionName, fileName, target, translate));
 }
 
@@ -222,7 +221,10 @@ export async function loadCampaignSearchIndex(
 		api.getEntities(campaign.slug, "characters"), api.getEntities(campaign.slug, "npc"), api.getEntities(campaign.slug, "locations"), api.listSessions(campaign.slug),
 	]);
 	const sessions = normalizeCampaignSearchRecords(rawSessions);
-	const details = await Promise.all(sessions.map(async (session) => ({ ...session, detail: await api.getSession(campaign.slug, String(session.fileName || "")) })));
+	const details = await Promise.all(sessions.map(async (session) => ({
+		...session,
+		detail: asRecord(await api.getSession(campaign.slug, String(session.fileName || ""))),
+	})));
 	return buildCampaignSearchIndex({
 		campaign: { ...campaign, ...(currentData || {}) },
 		entities: {

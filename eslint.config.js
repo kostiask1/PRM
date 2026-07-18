@@ -224,24 +224,36 @@ export default [
             message: 'Import composed monster editors through widgets/monster-editor-modal/index.js.',
           },
           {
-            group: ['**/widgets/campaign-entity-modal/ui/*'],
-            message: 'Import campaign entity modal composition through widgets/campaign-entity-modal/index.js.',
+            group: [
+              '**/widgets/campaign-entity-modal/model/*',
+              '**/widgets/campaign-entity-modal/ui/*',
+            ],
+            message: 'Import campaign entity modal composition through widgets/campaign-entity-modal/index.js or its Node-safe model.js facade.',
           },
           {
             group: ['**/widgets/ai-response-modal/ui/*'],
             message: 'Import AI response modal composition through widgets/ai-response-modal/index.js.',
           },
           {
-            group: ['**/widgets/ai-assistant/ui/*'],
-            message: 'Import AI assistant composition through widgets/ai-assistant/index.js.',
+            group: [
+              '**/widgets/ai-assistant/model/*',
+              '**/widgets/ai-assistant/ui/*',
+            ],
+            message: 'Import AI assistant composition through widgets/ai-assistant/index.js or its Node-safe model.js facade.',
           },
           {
-            group: ['**/widgets/campaign-search/ui/*'],
-            message: 'Import campaign search through widgets/campaign-search/index.js.',
+            group: [
+              '**/widgets/campaign-search/model/*',
+              '**/widgets/campaign-search/ui/*',
+            ],
+            message: 'Import campaign search through widgets/campaign-search/index.js or its Node-safe model.js facade.',
           },
           {
-            group: ['**/widgets/sidebar/ui/*'],
-            message: 'Import the sidebar through widgets/sidebar/index.js.',
+            group: [
+              '**/widgets/sidebar/model/*',
+              '**/widgets/sidebar/ui/*',
+            ],
+            message: 'Import the sidebar through widgets/sidebar/index.js or its Node-safe model.js facade.',
           },
           {
             group: ['**/pages/campaign/ui/*', '**/pages/campaign/model/*'],

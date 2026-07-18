@@ -52,7 +52,8 @@ import {
 } from "../../../features/ai/ui/index.js";
 
 const api = { ...campaignApi, ...sessionApi, ...bestiaryApi, ...aiApi };
-import AiImagePromptPickerModal from "./AiImagePromptPickerModal.jsx";
+import AiImagePromptPickerModal from "./AiImagePromptPickerModal.tsx";
+import { createAiAssistantPresentation } from "../model/assistantPresentation.ts";
 import { AiResponseModal } from "../../ai-response-modal/index.js";
 import {
 	alert,
@@ -100,6 +101,28 @@ function translate(...args) {
 	return lang.t(...args);
 }
 
+const {
+	formatResponseDate,
+	getAiResponseStateLabel,
+	getCharacterContextKey,
+	getCharacterDisplayName,
+	getHistoryDetailRows,
+	getHistoryRequestText,
+	getHistoryTitle,
+	getImagePromptPreview,
+	getLocationContextKey,
+	getLocationDisplayName,
+	getSceneImagePromptDescription,
+	getSceneImagePromptTitle,
+} = createAiAssistantPresentation({
+	translate,
+	isFailedHistoryEntry,
+	hasHistoryChanges,
+});
+
+const { buildRetryPayloadFromHistoryEntry, canRetryHistoryEntry } =
+	createAiHistoryWorkflow(getHistoryRequestText);
+
 function renderMentionChildren(children) {
 	return Children.map(children, (child) => {
 		if (typeof child === "string") {
@@ -126,257 +149,8 @@ const markdownMentionComponents = Object.fromEntries(
 	]),
 );
 
-function getResponsePreview(text) {
-	const plainText = [
-		"#",
-		"*",
-		"_",
-		"`",
-		">",
-		"|",
-		"~",
-		"[",
-		"]",
-		"(",
-		")",
-	].reduce((value, marker) => value.split(marker).join(""), String(text || ""));
-
-	return plainText.replace(/\s+/g, " ").trim();
-}
-
-function formatResponseDate(date, language) {
-	const parsed = new Date(date);
-	if (Number.isNaN(parsed.getTime())) return "";
-	return parsed.toLocaleString(language);
-}
-
-function findJsonObjectEnd(text, startIndex) {
-	let depth = 0;
-	let inString = false;
-	let escaped = false;
-	for (let index = startIndex; index < text.length; index += 1) {
-		const character = text[index];
-		if (escaped) {
-			escaped = false;
-			continue;
-		}
-		if (character === "\\") {
-			escaped = inString;
-			continue;
-		}
-		if (character === '"') {
-			inString = !inString;
-			continue;
-		}
-		if (inString) continue;
-		if (character === "{") {
-			depth += 1;
-		} else if (character === "}") {
-			depth -= 1;
-			if (depth === 0) return index + 1;
-		}
-	}
-	return -1;
-}
-
-function stripGeneratedMonsterEditPrompt(text) {
-	const source = String(text || "").trim();
-	if (!source) return "";
-
-	const createPrefixes = [
-		lang.t(
-			"Create a new custom creature based on the selected creature. Do not change the selected creature.",
-		),
-		"Create a new custom creature based on the selected creature. Do not change the selected creature.",
-	].filter(Boolean);
-	for (const prefix of createPrefixes) {
-		if (source.startsWith(prefix)) {
-			return source.slice(prefix.length).trim();
-		}
-	}
-
-	const creatureLabels = [
-		`${lang.t("Current encounter creature")}:`,
-		"Current encounter creature:",
-	];
-	const labelIndex = creatureLabels.reduce((foundIndex, label) => {
-		if (foundIndex !== -1) return foundIndex;
-		return source.indexOf(label);
-	}, -1);
-	if (labelIndex === -1) return source;
-
-	const objectStart = source.indexOf("{", labelIndex);
-	if (objectStart === -1) return source;
-	const objectEnd = findJsonObjectEnd(source, objectStart);
-	if (objectEnd === -1) return source;
-	return source.slice(objectEnd).trim();
-}
-
-function getHistoryRequestText(entry) {
-	const explicitHistoryText = String(
-		entry?.retryPayload?.historyUserInstructions || "",
-	).trim();
-	if (explicitHistoryText) return explicitHistoryText;
-	return stripGeneratedMonsterEditPrompt(
-		entry?.request?.userInstructions || entry?.userInstructions || "",
-	);
-}
-
-const { buildRetryPayloadFromHistoryEntry, canRetryHistoryEntry } =
-	createAiHistoryWorkflow(getHistoryRequestText);
-
-function getHistoryModeName(mode) {
-	const labels = {
-		image: "Image prompt",
-		encounter: "AI Encounter Assistant",
-		session: "AI Session Assistant",
-		campaign: "AI Story Assistant",
-	};
-	return lang.t(labels[mode] || mode || "AI response");
-}
-
-function getOnOffLabel(value) {
-	return value ? lang.t("On") : lang.t("Off");
-}
-
-function getLocationContextKey(location) {
-	return String(location?.slug || location?.id || location?.name || "").trim();
-}
-
-function getLocationDisplayName(location) {
-	return String(location?.name || location?.title || lang.t("Untitled")).trim();
-}
-
-function getCharacterDisplayName(character) {
-	const firstName = String(
-		character?.firstName || character?.first_name || "",
-	).trim();
-	const lastName = String(
-		character?.lastName || character?.last_name || "",
-	).trim();
-	const fullName = `${firstName} ${lastName}`.trim();
-	return String(
-		fullName || character?.name || character?.title || lang.t("Untitled"),
-	).trim();
-}
-
-function getCharacterContextKey(character) {
-	return String(
-		character?.slug ||
-			character?.id ||
-			getCharacterDisplayName(character) ||
-			"",
-	).trim();
-}
-
-function getSceneImagePromptTitle(scene, index) {
-	const summary = String(scene?.texts?.summary || scene?.summary || "").trim();
-	return summary || lang.t("Scene {number}", { number: index + 1 });
-}
-
-function getSceneImagePromptDescription(scene) {
-	const texts = scene?.texts || {};
-	return [texts.summary, texts.goal, texts.stakes, texts.location]
-		.filter(Boolean)
-		.join(" ");
-}
-
-function getImagePromptPreview(text) {
-	const value = String(text || "")
-		.replace(/\s+/g, " ")
-		.trim();
-	return value.length > 120 ? `${value.slice(0, 117)}...` : value;
-}
-
-function getHistoryOptionsSummary(entry) {
-	const options = entry?.request?.options;
-	if (!options || typeof options !== "object" || !options.mode) {
-		return entry?.request?.optionsSummary || "";
-	}
-
-	return [
-		`${lang.t("Mode")}: ${getHistoryModeName(options.mode)}`,
-		`${lang.t("Response parsing")}: ${getOnOffLabel(options.responseParsing)}`,
-		options.responseParsing
-			? `${lang.t("Create characters")}: ${getOnOffLabel(options.characterGeneration)}`
-			: null,
-		options.responseParsing
-			? `${lang.t("Create NPCs")}: ${getOnOffLabel(options.npcGeneration)}`
-			: null,
-		options.responseParsing
-			? `${lang.t("Create locations/factions")}: ${getOnOffLabel(options.locationGeneration)}`
-			: null,
-		options.responseParsing
-			? `${lang.t("Encounter generation")}: ${getOnOffLabel(options.encounterGeneration)}`
-			: null,
-		options.responseParsing
-			? `${lang.t("Custom monster generation")}: ${getOnOffLabel(options.customMonsterGeneration)}`
-			: null,
-		`${lang.t("Context")}: ${getOnOffLabel(options.contextEnabled)}`,
-	]
-		.filter(Boolean)
-		.join("; ");
-}
-
-function getHistoryContextSummary(entry) {
-	const context = entry?.request?.context;
-	if (!context || typeof context !== "object") {
-		return entry?.request?.contextSummary || "";
-	}
-	if (!context.enabled) {
-		return `${lang.t("Context")}: ${lang.t("Off")}`;
-	}
-
-	const parts = [];
-	if (context.campaignNotes)
-		parts.push(`${lang.t("Notes")}: ${context.campaignNotes}`);
-	if (context.campaignCharacters)
-		parts.push(`${lang.t("Characters")}: ${context.campaignCharacters}`);
-	if (context.campaignNpcs)
-		parts.push(`${lang.t("NPCs")}: ${context.campaignNpcs}`);
-	if (context.campaignLocations)
-		parts.push(`${lang.t("Locations/Factions")}: ${context.campaignLocations}`);
-	if (context.sessions)
-		parts.push(`${lang.t("Sessions")}: ${context.sessions}`);
-	if (context.scenes) parts.push(`${lang.t("Scenes")}: ${context.scenes}`);
-	return `${lang.t("Context")}: ${parts.length ? parts.join(", ") : lang.t("Empty")}`;
-}
-
-function getHistoryDetailRows(entry, language) {
-	const rows = [];
-	const requestText = getHistoryRequestText(entry);
-	const optionsSummary = getHistoryOptionsSummary(entry);
-	const contextSummary = getHistoryContextSummary(entry);
-	const createdAt = formatResponseDate(entry?.createdAt, language);
-
-	if (requestText) rows.push({ label: lang.t("Request"), value: requestText });
-	if (optionsSummary)
-		rows.push({ label: lang.t("Settings"), value: optionsSummary });
-	if (contextSummary)
-		rows.push({ label: lang.t("Context"), value: contextSummary });
-	if (createdAt) rows.push({ label: lang.t("Sent"), value: createdAt });
-
-	return rows;
-}
-
-function getHistoryTitle(entry) {
-	const requestText = getHistoryRequestText(entry);
-	if (requestText) return requestText;
-	if (isFailedHistoryEntry(entry)) return lang.t("Failed AI request");
-	if (hasHistoryChanges(entry)) return lang.t("AI changes");
-	return getResponsePreview(entry?.text) || lang.t("AI response");
-}
-
 function getHistoryChangeSummary(entry) {
 	return getAiHistoryChangeSummary(entry, translate);
-}
-
-function getAiResponseStateLabel(entry) {
-	if (isFailedHistoryEntry(entry)) return lang.t("Failed");
-	if (entry?.applyState === "draft") return lang.t("Draft");
-	if (entry?.applyState === "applied") return lang.t("Applied");
-	if (entry?.applyState === "undone") return lang.t("Undone");
-	return "";
 }
 
 function getDiffResourceState(resource) {
