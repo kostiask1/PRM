@@ -36,6 +36,7 @@ import {
 	type CreatureActionSection,
 	type CreatureEditableFieldKey,
 	type MonsterEditMode,
+	type NamedMonsterData,
 	type RuleInsertTarget,
 	type RuleReferenceSelection,
 } from "../model.ts";
@@ -49,7 +50,7 @@ export interface MonsterFieldEditModalProps {
 	editingMonster?: MonsterData | null;
 	title?: ReactNode;
 	onCancel: () => void;
-	onSave?: (monster: MonsterData) => void;
+	onSave?: (monster: NamedMonsterData) => void | Promise<void>;
 	RulesReferenceContent?: ComponentType<RulesReferenceContentProps> | null;
 }
 

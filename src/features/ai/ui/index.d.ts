@@ -35,6 +35,7 @@ export type { AiAttachmentStateSetter, AiUiAttachment } from "./types.ts";
 export type {
 	AiHistoryRestoreMode,
 	AiHistoryRestoreOptions,
+	AiResponseDetailRow,
 	AiResponseHistoryEntry,
 	AiResponseModalComponent,
 	AiResponseModalProps,

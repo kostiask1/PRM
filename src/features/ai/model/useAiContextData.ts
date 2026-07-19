@@ -47,7 +47,7 @@ export interface AiSessionContextConfig extends Record<string, unknown> {
 	data?: AiContextSessionData;
 }
 
-export interface AiContextDataConfig {
+export interface AiContextDataConfig extends Record<string, unknown> {
 	campaignNotes: boolean;
 	campaignCharacters: ContextListConfig;
 	campaignNpcs: ContextListConfig;

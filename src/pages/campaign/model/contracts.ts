@@ -1,5 +1,4 @@
-import type { ChangeEvent } from "react";
-import type { CampaignRecord } from "../../../entities/campaign/index.js";
+import type { CampaignRecord, CardNote } from "../../../entities/campaign/index.js";
 import type { SessionRecord } from "../../../entities/session/index.js";
 import type { SharedNote } from "../../../shared/lib/index.js";
 import type { CampaignFeatureEntity } from "../../../features/campaign-entity/index.js";
@@ -9,7 +8,7 @@ export interface CampaignPageEntity extends CampaignFeatureEntity {
 	title?: string;
 	firstName?: string;
 	lastName?: string;
-	notes?: SharedNote[];
+	notes?: CardNote[];
 }
 
 export interface CampaignPageCampaign extends CampaignRecord {
@@ -74,4 +73,6 @@ export interface UseCampaignViewProps {
 	campaign: CampaignPageCampaign;
 }
 
-export type DescriptionChangeEvent = ChangeEvent<HTMLTextAreaElement>;
+export interface DescriptionChangeEvent {
+	target: { value: string };
+}

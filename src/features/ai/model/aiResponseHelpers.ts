@@ -179,7 +179,11 @@ export function updateDraftResourceAfterValues(
 
 export function isAiResponseVisibleForRoute(
 	entry: AiHistoryEntry | null | undefined,
-	route: { campaign?: string; session?: string; encounter?: string } = {},
+	route: {
+		campaign?: string | null;
+		session?: string | null;
+		encounter?: string | number | null;
+	} = {},
 	{ isBestiary = false }: { isBestiary?: boolean } = {},
 ): boolean {
 	const entryPath = entry?.path || {};

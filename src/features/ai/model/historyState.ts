@@ -14,8 +14,8 @@ export interface AiHistoryRestoreMode {
 }
 
 export interface AiRouteLocation {
-	campaign?: string;
-	session?: string;
+	campaign?: string | null;
+	session?: string | null;
 }
 
 export function upsertAiHistoryEntry(

@@ -1,1 +1,1 @@
-export { default as AiAssistantPanel } from "./ui/AiAssistantPanel.jsx";
+export { default as AiAssistantPanel } from "./ui/AiAssistantPanel.tsx";

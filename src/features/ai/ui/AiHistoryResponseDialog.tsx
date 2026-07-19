@@ -1,4 +1,5 @@
 import type { RefObject } from "react";
+import type { Components } from "react-markdown";
 
 import type { AiHistoryResource } from "../api/aiApi.ts";
 import type { DiffResource } from "../model/aiDiff.ts";
@@ -6,6 +7,7 @@ import type {
 	AiHistoryRestoreMode,
 	AiHistoryRestoreOptions,
 	AiResponseHistoryEntry,
+	AiResponseDetailRow,
 	AiResponseModalComponent,
 	AiResponseModalProps,
 } from "./responseModalContracts.ts";
@@ -16,7 +18,7 @@ export interface AiHistoryResponseDialogProps {
 	generatedPromptRef: RefObject<HTMLDivElement | null>;
 	isGeneratedPromptCopied: boolean;
 	isRestoringResponse: boolean;
-	markdownComponents: Record<string, unknown>;
+	markdownComponents: Components;
 	onRestore: (
 		entry: AiResponseHistoryEntry | null | undefined,
 		mode: AiHistoryRestoreMode,
@@ -28,7 +30,7 @@ export interface AiHistoryResponseDialogProps {
 		entry: AiResponseHistoryEntry | null,
 		resources: AiHistoryResource[],
 	) => Promise<AiResponseHistoryEntry | null | undefined>;
-	selectedResponseDetails: unknown[];
+	selectedResponseDetails: AiResponseDetailRow[];
 	selectedResponseDiffResources: DiffResource[];
 	selectedResponseEntry: AiResponseHistoryEntry | null;
 	selectedResponseHasChanges: boolean;

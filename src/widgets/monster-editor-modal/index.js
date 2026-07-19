@@ -1,1 +1,1 @@
-export { default as MonsterEditorModal } from "./ui/MonsterEditorModal.jsx";
+export { default as MonsterEditorModal } from "./ui/MonsterEditorModal.tsx";

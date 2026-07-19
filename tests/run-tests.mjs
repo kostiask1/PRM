@@ -22,6 +22,16 @@ import {
 	matchesMonsterSearch,
 	getMonsterTypeString,
 } from "../src/entities/bestiary/index.js";
+import {
+	filterCampaignSessions,
+	getCampaignCharacterDropRequest,
+	getCampaignEntityRenderKey,
+	getCampaignHashTarget,
+	getCampaignPageCampaign,
+	getCampaignSectionState,
+	hasCampaignNoteContent,
+	normalizeCampaignCardNotes,
+} from "../src/pages/campaign/model/campaignPagePresentation.ts";
 import { classNames } from "../src/shared/lib/index.js";
 import {
 	applyTheme,
@@ -122,13 +132,33 @@ import {
 	mergeSidebarCampaignGroup,
 } from "../src/widgets/sidebar/model.js";
 import {
+	buildAiImagePromptGenerationPlan,
 	createAiAssistantPresentation,
+	getAiAssistantContextProjection,
+	getAiAssistantHistoryView,
+	getAiAssistantPromptPlaceholder,
+	getAiAssistantRouteState,
+	getAiAssistantTitle,
+	getAiHistoryDeleteConfirmation,
+	getAiHistoryErrorMessage,
+	getAiHistoryRestoreConfirmation,
+	getAiImagePromptCollections,
 	getCustomMonsterPromptDescription,
 	getImagePromptItemKey,
 	getImagePromptPickerState,
+	getImagePromptTargetTitle,
 	getScenePromptDescription,
 	getScenePromptItemKey,
 } from "../src/widgets/ai-assistant/model.js";
+import {
+	buildCardHighlightFields as buildAiResponseCardHighlightFields,
+	findDraftResourceForPreview,
+	getEditedResourceAfterFromParent,
+	getEncounterParticipantEntries as getAiResponseEncounterParticipantEntries,
+	getPreviewCardType as getAiResponsePreviewCardType,
+	parseSnapshotText as parseAiResponseSnapshotText,
+	updateDraftResourceCollection,
+} from "../src/widgets/ai-response-modal/model.js";
 import {
 	CAMPAIGN_SEARCH_FILTERS,
 	buildCampaignSearchIndex,
@@ -220,25 +250,34 @@ import {
 	compactSessionForEstimate,
 	AI_GENERATION_STATUS,
 	aiGenerationLifecycleReducer,
+	buildAiGeneratedResultPlan,
 	buildAiGenerationRequest,
 	buildAiHistoryRestorePlan,
 	buildAiTokenEstimate,
+	buildAiUpdatedDataPlan,
 	buildCustomMonsterImageTarget,
 	buildNpcImageTarget,
 	buildSceneImageTarget,
 	createAiHistoryWorkflow,
 	createAiHistoryCommandService,
+	createTransientAiHistoryEntry,
 	createInitialAiContextConfig,
 	ensureContextListItems,
+	executeAiGeneratedResultPlan,
+	executeAiGeneration,
+	executeAiHistoryRetry,
+	executeAiUpdatedDataPlan,
 	estimateTextTokens,
 	estimateValueTokens,
 	getEstimatedAiMode,
+	formatAiGenerationFailureAlert,
 	getGeneratedEntityTypes,
 	getAttachedFileKey,
 	getAttachedImageKey,
 	getSupportedAiFileMimeType,
 	getSupportedAiImageMimeType,
 	getAiHistoryCampaign,
+	getAiHistoryRetryFailure,
 	getAiHistoryRestoreMode,
 	getContextListConfig,
 	hasGeneratedCampaignChanges,
@@ -1002,6 +1041,72 @@ await run(
 	},
 );
 
+await run("campaign page presentation narrows routes, sessions, and card notes", () => {
+	assert.equal(getCampaignPageCampaign(null), null);
+	assert.deepEqual(getCampaignPageCampaign({ slug: "ніч", name: "Нічна варта" }), {
+		slug: "ніч",
+		name: "Нічна варта",
+	});
+	assert.deepEqual(
+		filterCampaignSessions(
+			[
+				{ name: "Вступ", fileName: "session-1.json" },
+				{ name: "Таємниця" },
+				{ name: "Фінал", fileName: "session-3.json" },
+			],
+			"фін",
+		),
+		[{ name: "Фінал", fileName: "session-3.json" }],
+	);
+	assert.equal(hasCampaignNoteContent([{ title: "", text: "  " }]), false);
+	assert.equal(hasCampaignNoteContent([{ title: "Нотатка" }]), true);
+	assert.deepEqual(
+		getCampaignSectionState({
+			description: "",
+			notes: [{ id: 1, title: "Нотатка" }],
+			characters: [],
+			npcs: [{ id: "npc-1" }],
+			locations: [],
+			isDescriptionCollapsed: true,
+			isNotesCollapsed: true,
+			isCharactersCollapsed: true,
+			isNpcsCollapsed: true,
+			isLocationsCollapsed: true,
+		}),
+		{
+			hasDescriptionData: false,
+			hasNotesData: true,
+			hasCharactersData: false,
+			hasNpcsData: true,
+			hasLocationsData: false,
+			isDescriptionCollapsed: false,
+			isNotesCollapsed: true,
+			isCharactersCollapsed: false,
+			isNpcsCollapsed: true,
+			isLocationsCollapsed: false,
+		},
+	);
+	assert.deepEqual(normalizeCampaignCardNotes([{ id: 1, title: "НПС" }]), [
+		{ id: 1, title: "НПС", text: "", collapsed: false },
+	]);
+	assert.equal(getCampaignEntityRenderKey({ slug: "вартовий" }, 2), "вартовий");
+	assert.equal(getCampaignHashTarget("#campaign-location-1"), "locations");
+	assert.deepEqual(
+		getCampaignCharacterDropRequest(
+			{ kind: "campaign-character", sourceType: "npc", id: 7 },
+			"characters",
+		),
+		{ sourceType: "npc", targetType: "characters", id: 7 },
+	);
+	assert.equal(
+		getCampaignCharacterDropRequest(
+			{ kind: "campaign-character", sourceType: "location", id: 7 },
+			"npc",
+		),
+		null,
+	);
+});
+
 await run("CampaignViewModel formats links and creation date", () => {
 	const model = new CampaignViewModel({
 		slug: "my-campaign",
@@ -1754,6 +1859,15 @@ await run("monster field editing validates JSON and restores source on save", ()
 		ok: true,
 		monster: { name: "Оновлений", source: "CUSTOM" },
 	});
+	assert.deepEqual(
+		prepareMonsterDraftForSave({
+			draft: { name: "Ignored" },
+			jsonText: JSON.stringify({ name: 42 }),
+			editMode: "json",
+			source: "CUSTOM",
+		}),
+		{ ok: true, monster: { name: "42", source: "CUSTOM" } },
+	);
 	assert.deepEqual(
 		prepareMonsterDraftForSave({
 			draft: { name: "" },
@@ -3913,6 +4027,7 @@ await run("AI feature model estimates context and rebuilds retry workflows", asy
 
 	const workflow = createAiHistoryWorkflow(() => "Retry this request");
 	const retryEntry = {
+		id: "retry-1",
 		type: "campaign",
 		path: { campaign: "demo" },
 		request: {
@@ -3938,6 +4053,128 @@ await run("AI feature model estimates context and rebuilds retry workflows", asy
 		generateCustomMonsters: false,
 		contextConfig: null,
 		language: undefined,
+	});
+	assert.deepEqual(
+		workflow.buildRetryPlan(retryEntry, {
+			isBestiary: true,
+			historyCampaign: "fallback",
+		}),
+		{
+			entryId: "retry-1",
+			retryPayload: workflow.buildRetryPayloadFromHistoryEntry(retryEntry),
+			requestType: "campaign",
+			shouldParseResponse: false,
+			deleteFailedEntry: null,
+		},
+	);
+	assert.equal(
+		workflow.buildRetryPlan(retryEntry, { isLoading: true }),
+		null,
+	);
+	const failedRetryEntry = {
+		id: "failed-1",
+		status: "failed",
+		path: { campaign: "буря" },
+		retryPayload: {
+			type: "image",
+			parseAIResponse: true,
+			userInstructions: "Повтори",
+		},
+	};
+	const failedRetryPlan = workflow.buildRetryPlan(failedRetryEntry, {
+		isBestiary: true,
+		historyCampaign: "fallback",
+	});
+	assert.deepEqual(failedRetryPlan, {
+		entryId: "failed-1",
+		retryPayload: failedRetryEntry.retryPayload,
+		requestType: "image",
+		shouldParseResponse: false,
+		deleteFailedEntry: { campaign: "буря", id: "failed-1" },
+	});
+
+	const retryEvents = [];
+	const retrySuccess = await executeAiHistoryRetry({
+		plan: failedRetryPlan,
+		signal: new AbortController().signal,
+		deleteAiResponse: async (campaign, id) => {
+			retryEvents.push(["delete", campaign, id]);
+			return [{ id: "remaining" }];
+		},
+		generateAi: async (payload) => {
+			retryEvents.push(["generate", payload.userInstructions]);
+			return { prompt: "Готово" };
+		},
+		onFailedEntryDeleted: (responses) =>
+			retryEvents.push(["deleted", responses.map((entry) => entry.id)]),
+		onSucceeded: (data) => retryEvents.push(["succeeded", data.prompt]),
+	});
+	assert.deepEqual(retrySuccess, {
+		status: "succeeded",
+		data: { prompt: "Готово" },
+	});
+	assert.deepEqual(retryEvents, [
+		["delete", "буря", "failed-1"],
+		["deleted", ["remaining"]],
+		["generate", "Повтори"],
+		["succeeded", "Готово"],
+	]);
+	let cancelledCallbackCount = 0;
+	assert.deepEqual(
+		await executeAiHistoryRetry({
+			plan: failedRetryPlan,
+			signal: new AbortController().signal,
+			deleteAiResponse: async () => {
+				const error = new Error("Cancelled");
+				error.name = "AbortError";
+				throw error;
+			},
+			generateAi: async () => {
+				throw new Error("Must not run");
+			},
+			onCancelled: () => {
+				cancelledCallbackCount += 1;
+			},
+		}),
+		{ status: "cancelled" },
+	);
+	assert.equal(cancelledCallbackCount, 1);
+	const failedCallbackMessages = [];
+	const retryFailure = await executeAiHistoryRetry({
+		plan: { ...failedRetryPlan, deleteFailedEntry: null },
+		signal: new AbortController().signal,
+		deleteAiResponse: async () => [],
+		generateAi: async () => {
+			throw Object.assign(new Error("Помилка генерації"), {
+				status: 502,
+			});
+		},
+		onFailed: (error) => failedCallbackMessages.push(error.message),
+	});
+	assert.equal(retryFailure.status, "failed");
+	assert.equal(retryFailure.error.message, "Помилка генерації");
+	assert.deepEqual(failedCallbackMessages, ["Помилка генерації"]);
+	assert.deepEqual(
+		getAiHistoryRetryFailure(
+			{
+				message: "Помилка генерації",
+				status: 502,
+				data: { aiResponse: { id: "failed-history", text: "Збережено" } },
+			},
+			"Статус",
+		),
+		{
+			historyEntry: { id: "failed-history", text: "Збережено" },
+			message: "Помилка генерації",
+			status: 502,
+			alertMessage: "[Статус: 502] Помилка генерації",
+		},
+	);
+	assert.deepEqual(getAiHistoryRetryFailure("invalid", "Статус"), {
+		historyEntry: null,
+		message: "",
+		status: null,
+		alertMessage: "",
 	});
 	assert.deepEqual(getGeneratedEntityTypes({ npcs: [] }), ["npc"]);
 	assert.equal(
@@ -4295,9 +4532,331 @@ await run("AI feature model estimates context and rebuilds retry workflows", asy
 	assert.equal(monsterImageTarget.actions[0].name, "Bite");
 });
 
+await run("AI generation result plans preserve prompt draft and update behavior", () => {
+	assert.deepEqual(
+		createTransientAiHistoryEntry("Prompt", () => 1000, () => 0.5),
+		{
+			id: "1000-i",
+			text: "Prompt",
+			createdAt: "1970-01-01T00:00:01.000Z",
+		},
+	);
+	assert.deepEqual(
+		buildAiGeneratedResultPlan({
+			data: null,
+			requestType: null,
+			shouldParseResponse: false,
+			isBestiary: false,
+			isCampaign: false,
+			isEncounter: false,
+		}),
+		{ kind: "none" },
+	);
+
+	const promptEntry = { id: "prompt-1", text: "Generated prompt" };
+	assert.deepEqual(
+		buildAiGeneratedResultPlan({
+			data: { prompt: "Generated prompt" },
+			requestType: "image",
+			shouldParseResponse: false,
+			isBestiary: false,
+			isCampaign: true,
+			isEncounter: false,
+			createPromptHistoryEntry: (prompt) => ({ ...promptEntry, text: prompt }),
+		}),
+		{ kind: "prompt", historyEntry: promptEntry },
+	);
+
+	const draftEntry = { id: "draft-1", text: "Draft" };
+	assert.deepEqual(
+		buildAiGeneratedResultPlan({
+			data: { draft: true, aiResponse: draftEntry },
+			requestType: "scene",
+			shouldParseResponse: true,
+			isBestiary: false,
+			isCampaign: false,
+			isEncounter: false,
+		}),
+		{
+			kind: "draft",
+			historyEntry: draftEntry,
+			notification: "draft-created",
+			closeAuxiliaryDialogs: true,
+		},
+	);
+
+	const campaignPlan = buildAiGeneratedResultPlan({
+		data: {
+			updated: { name: "Updated campaign" },
+			generated: { npcs: [] },
+			aiResponse: { id: "applied-1" },
+		},
+		requestType: "custom-monster",
+		shouldParseResponse: false,
+		isBestiary: false,
+		isCampaign: true,
+		isEncounter: false,
+		clearPromptOnApplied: false,
+	});
+	assert.equal(campaignPlan.kind, "updated");
+	assert.equal(campaignPlan.applyDirectly, true);
+	assert.equal(campaignPlan.requestCampaignReload, false);
+	assert.equal(campaignPlan.clearPrompt, false);
+	assert.equal(campaignPlan.refreshEntities, false);
+	assert.deepEqual(campaignPlan.entityTypes, ["npc"]);
+	assert.equal(campaignPlan.notification, "custom-creatures-saved");
+	const executionEvents = [];
+	executeAiGeneratedResultPlan({
+		plan: campaignPlan,
+		onHistoryEntry: (entry) => executionEvents.push(["history", entry.id]),
+		onShowPrompt: (entry) => executionEvents.push(["prompt", entry.id]),
+		onNotification: (notification) =>
+			executionEvents.push(["notification", notification]),
+		onApplyUpdated: (plan) => executionEvents.push(["apply", plan.updated.name]),
+		onCampaignReload: () => executionEvents.push(["reload"]),
+		onClearPrompt: () => executionEvents.push(["clear"]),
+		onRefreshEntities: () => executionEvents.push(["refresh"]),
+		onCloseAuxiliaryDialogs: () => executionEvents.push(["close-auxiliary"]),
+		onCloseAssistantDialogs: () => executionEvents.push(["close-all"]),
+	});
+	assert.deepEqual(executionEvents, [
+		["history", "applied-1"],
+		["apply", "Updated campaign"],
+		["notification", "custom-creatures-saved"],
+	]);
+
+	const sessionPlan = buildAiGeneratedResultPlan({
+		data: {
+			updated: { data: { scenes: [] } },
+			generated: { operations: [{ op: "update", entity: "campaign" }] },
+		},
+		requestType: "session",
+		shouldParseResponse: true,
+		isBestiary: false,
+		isCampaign: false,
+		isEncounter: false,
+	});
+	assert.equal(sessionPlan.kind, "updated");
+	assert.equal(sessionPlan.applyDirectly, true);
+	assert.equal(sessionPlan.requestCampaignReload, true);
+	assert.equal(sessionPlan.closeAssistantDialogs, true);
+	assert.equal(sessionPlan.notification, "changes-applied");
+
+	const mismatchedPlan = buildAiGeneratedResultPlan({
+		data: { updated: { data: { scenes: [] } } },
+		requestType: "session",
+		shouldParseResponse: false,
+		isBestiary: false,
+		isCampaign: true,
+		isEncounter: false,
+	});
+	assert.equal(mismatchedPlan.kind, "updated");
+	assert.equal(mismatchedPlan.applyDirectly, false);
+	assert.equal(mismatchedPlan.requestCampaignReload, true);
+
+	assert.deepEqual(
+		buildAiGeneratedResultPlan({
+			data: { updated: "invalid" },
+			requestType: null,
+			shouldParseResponse: false,
+			isBestiary: false,
+			isCampaign: false,
+			isEncounter: false,
+		}),
+		{ kind: "none" },
+	);
+});
+
+await run("AI generation execution classifies success cancellation and failures", async () => {
+	const signal = new AbortController().signal;
+	const noGenerationCallbacks = {
+		onSucceeded: () => {},
+		onCancelled: () => {},
+		onFailedHistoryEntry: () => {},
+		onApiKeyMissing: () => {},
+		onFailed: () => {},
+	};
+	const successEvents = [];
+	assert.deepEqual(
+		await executeAiGeneration({
+			payload: { type: "scene" },
+			signal,
+			generateAi: async (payload, options) => {
+				successEvents.push(["generate", payload.type, options.signal === signal]);
+				return { prompt: "Ready" };
+			},
+			...noGenerationCallbacks,
+			onSucceeded: (data) => successEvents.push(["success", data.prompt]),
+		}),
+		{ status: "succeeded", data: { prompt: "Ready" } },
+	);
+	assert.deepEqual(successEvents, [
+		["generate", "scene", true],
+		["success", "Ready"],
+	]);
+
+	let cancelCount = 0;
+	assert.deepEqual(
+		await executeAiGeneration({
+			payload: {},
+			signal,
+			generateAi: async () => {
+				throw Object.assign(new Error("Cancelled"), { name: "AbortError" });
+			},
+			...noGenerationCallbacks,
+			onCancelled: () => {
+				cancelCount += 1;
+			},
+		}),
+		{ status: "cancelled" },
+	);
+	assert.equal(cancelCount, 1);
+
+	const apiKeyEvents = [];
+	const apiKeyError = Object.assign(new Error("Missing GEMINI_API_KEY"), {
+		data: { aiResponse: { id: "failed-key", status: "failed" } },
+	});
+	assert.deepEqual(
+		await executeAiGeneration({
+			payload: {},
+			signal,
+			generateAi: async () => {
+				throw apiKeyError;
+			},
+			...noGenerationCallbacks,
+			onFailedHistoryEntry: (entry) => apiKeyEvents.push(["history", entry.id]),
+			onApiKeyMissing: () => apiKeyEvents.push(["api-key"]),
+			onFailed: () => apiKeyEvents.push(["failed"]),
+		}),
+		{ status: "api-key-missing" },
+	);
+	assert.deepEqual(apiKeyEvents, [["history", "failed-key"], ["api-key"]]);
+
+	let capturedFailure = null;
+	const serviceError = Object.assign(new Error("Unavailable"), { status: 503 });
+	const failureOutcome = await executeAiGeneration({
+		payload: {},
+		signal,
+		generateAi: async () => {
+			throw serviceError;
+		},
+		...noGenerationCallbacks,
+		onFailed: (failure) => {
+			capturedFailure = failure;
+		},
+	});
+	assert.equal(failureOutcome.status, "failed");
+	assert.equal(capturedFailure.message, "Unavailable");
+	assert.equal(capturedFailure.status, 503);
+	assert.equal(
+		formatAiGenerationFailureAlert(capturedFailure, "Status"),
+		"[Status: 503] Unavailable",
+	);
+});
+
+await run("AI updated data plans target bestiary session campaign and reload flows", () => {
+	const bestiaryPlan = buildAiUpdatedDataPlan({
+		updated: { monsters: [] },
+		generated: { monsters: [{ name: "Ash Drake" }] },
+		isBestiary: true,
+		isCampaign: false,
+		isEncounter: false,
+	});
+	assert.equal(bestiaryPlan.applied, true);
+	assert.deepEqual(bestiaryPlan.syncEvent, {
+		resource: "custom-bestiary",
+		monsterName: "Ash Drake",
+		monsterSource: "CUSTOM",
+	});
+	assert.equal(bestiaryPlan.refreshEntities, true);
+	assert.equal(bestiaryPlan.requestCampaignReload, false);
+
+	const sessionPlan = buildAiUpdatedDataPlan({
+		updated: {
+			file_name: "session-2",
+			data: {
+				encounters: [
+					{ id: 3, name: "Ambush" },
+					{ id: 4, name: "Other" },
+				],
+			},
+		},
+		entityTypes: ["npc"],
+		isBestiary: false,
+		isCampaign: false,
+		isEncounter: true,
+		encounterId: "3",
+		fallbackSessionFileName: "fallback",
+	});
+	assert.equal(sessionPlan.applied, true);
+	assert.equal(sessionPlan.activeSession.file_name, "session-2");
+	assert.equal(sessionPlan.activeEncounter.name, "Ambush");
+	assert.deepEqual(sessionPlan.syncEvent, { sessionFileName: "session-2" });
+	assert.equal(sessionPlan.refreshEntities, true);
+
+	const campaignPlan = buildAiUpdatedDataPlan({
+		updated: { name: "Renamed" },
+		activeCampaign: { id: "campaign-1", name: "Old" },
+		entityTypes: [],
+		isBestiary: false,
+		isCampaign: true,
+		isEncounter: false,
+	});
+	assert.deepEqual(campaignPlan.activeCampaign, {
+		id: "campaign-1",
+		name: "Renamed",
+	});
+	assert.equal(campaignPlan.refreshEntities, false);
+
+	const reloadPlan = buildAiUpdatedDataPlan({
+		updated: { name: "Foreign campaign" },
+		entityTypes: ["locations", null],
+		isBestiary: false,
+		isCampaign: false,
+		isEncounter: false,
+	});
+	assert.equal(reloadPlan.applied, false);
+	assert.equal(reloadPlan.requestCampaignReload, true);
+	assert.equal(reloadPlan.refreshEntities, true);
+	assert.equal(
+		buildAiUpdatedDataPlan({
+			updated: [],
+			isBestiary: false,
+			isCampaign: false,
+			isEncounter: false,
+		}),
+		null,
+	);
+
+	const events = [];
+	assert.equal(
+		executeAiUpdatedDataPlan({
+			plan: sessionPlan,
+			onSetActiveCampaign: () => events.push("campaign"),
+			onSetActiveSession: () => events.push("session"),
+			onSetActiveEncounter: () => events.push("encounter"),
+			onRequestCampaignReload: () => events.push("reload"),
+			onPublishSyncEvent: () => events.push("sync"),
+			onRefreshEntities: () => events.push("entities"),
+		}),
+		true,
+	);
+	assert.deepEqual(events, [
+		"session",
+		"encounter",
+		"reload",
+		"sync",
+		"entities",
+	]);
+});
+
 await run("AI assistant delegates stable visual composition to feature UI", async () => {
 	const panelSource = await fs.readFile(
-		"src/widgets/ai-assistant/ui/AiAssistantPanel.jsx",
+		"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
+		"utf8",
+	);
+	const panelViewSource = await fs.readFile(
+		"src/widgets/ai-assistant/ui/AiAssistantPanelView.tsx",
 		"utf8",
 	);
 	const shellSource = await fs.readFile(
@@ -4321,9 +4880,10 @@ await run("AI assistant delegates stable visual composition to feature UI", asyn
 		"utf8",
 	);
 
-	assert.match(panelSource, /<AiAssistantShell/);
-	assert.match(panelSource, /<AiPromptComposer/);
-	assert.match(panelSource, /<AiHistoryResponseDialog/);
+	assert.match(panelSource, /<AiAssistantPanelView/);
+	assert.match(panelViewSource, /<AiAssistantShell/);
+	assert.match(panelViewSource, /<AiPromptComposer/);
+	assert.match(panelViewSource, /<AiHistoryResponseDialog/);
 	assert.doesNotMatch(panelSource, /className="AiAssistant__prompt_area"/);
 	assert.doesNotMatch(panelSource, /<AiResponseModal/);
 	assert.match(shellSource, /className="AiAssistant__toggle"/);
@@ -6066,6 +6626,359 @@ await run("campaign entity modal policies preserve rename and save contracts", (
 	assert.equal(shouldRenderCampaignEntityModal("", undefined), false);
 });
 
+await run("AI assistant context projection preserves route-specific contracts", () => {
+	const campaign = {
+		id: "campaign-1",
+		name: "Бурштинова брама",
+		description: "Місто над прірвою",
+		notes: [{ id: "note-1", text: "Стара угода" }],
+	};
+	const session = {
+		name: "Засідання ради",
+		data: { scenes: [{ id: "scene-1" }] },
+	};
+	const encounter = { id: "encounter-1", name: "Засідка" };
+	const collections = {
+		characters: [{ id: "character-1" }],
+		npcs: [{ id: "npc-1" }],
+		locations: [{ id: "location-1" }],
+	};
+
+	const bestiaryProjection = getAiAssistantContextProjection({
+		activeCampaign: campaign,
+		activeSession: session,
+		activeEncounter: encounter,
+		...collections,
+		isBestiary: true,
+		isCampaign: false,
+		isEncounter: false,
+		parseAiResponse: true,
+		generateEncounters: true,
+	});
+	assert.equal(bestiaryProjection.sessionName, "Засідання ради");
+	assert.equal(bestiaryProjection.campaignContext, null);
+	assert.deepEqual(bestiaryProjection.sessionData, {});
+	assert.equal(bestiaryProjection.isResponseParsingLocked, true);
+	assert.equal(bestiaryProjection.isCustomMonsterGenerationVisible, false);
+
+	const campaignProjection = getAiAssistantContextProjection({
+		activeCampaign: campaign,
+		activeSession: session,
+		...collections,
+		isBestiary: false,
+		isCampaign: true,
+		isEncounter: false,
+		parseAiResponse: true,
+		generateEncounters: true,
+	});
+	assert.equal(campaignProjection.sessionName, "Бурштинова брама");
+	assert.deepEqual(campaignProjection.campaignContext, {
+		description: "Місто над прірвою",
+		notes: campaign.notes,
+	});
+	assert.deepEqual(campaignProjection.sessionData, {
+		...campaign,
+		...collections,
+	});
+	assert.equal(campaignProjection.isCustomMonsterGenerationVisible, false);
+
+	const sessionProjection = getAiAssistantContextProjection({
+		activeCampaign: campaign,
+		activeSession: session,
+		...collections,
+		isBestiary: false,
+		isCampaign: false,
+		isEncounter: false,
+		parseAiResponse: true,
+		generateEncounters: true,
+	});
+	assert.equal(sessionProjection.sessionName, "Засідання ради");
+	assert.deepEqual(sessionProjection.sessionData, session.data);
+	assert.equal(sessionProjection.isCustomMonsterGenerationVisible, true);
+
+	const encounterProjection = getAiAssistantContextProjection({
+		activeCampaign: campaign,
+		activeSession: session,
+		activeEncounter: encounter,
+		...collections,
+		isBestiary: false,
+		isCampaign: false,
+		isEncounter: true,
+		parseAiResponse: true,
+		generateEncounters: true,
+	});
+	assert.deepEqual(encounterProjection.sessionData, encounter);
+	assert.equal(encounterProjection.isCustomMonsterGenerationVisible, false);
+
+	assert.deepEqual(
+		getAiAssistantContextProjection({
+			activeCampaign: "invalid",
+			activeSession: { data: [] },
+			characters: [],
+			npcs: [],
+			locations: [],
+			isBestiary: false,
+			isCampaign: false,
+			isEncounter: false,
+			parseAiResponse: false,
+			generateEncounters: false,
+		}),
+		{
+			sessionName: "",
+			campaignContext: { description: "", notes: [] },
+			sessionData: {},
+			isResponseParsingLocked: false,
+			isCustomMonsterGenerationVisible: false,
+		},
+	);
+	const translate = (phrase) => `uk:${phrase}`;
+	assert.equal(
+		getAiAssistantTitle(
+			{
+				isBestiary: false,
+				isCampaign: false,
+				isEncounter: true,
+			},
+			translate,
+		),
+		"uk:AI Encounter Assistant",
+	);
+	assert.equal(
+		getAiAssistantPromptPlaceholder(
+			{
+				isBestiary: false,
+				isCampaign: false,
+				isEncounter: false,
+				parseAiResponse: false,
+			},
+			translate,
+		),
+		"uk:Send your request. The response will appear in a dialog and will not change your data.",
+	);
+	assert.deepEqual(
+		getAiAssistantRouteState({
+			isBestiary: false,
+			navigation: {
+				activeCampaignSlug: "бурштинова-брама",
+				activeSessionFileName: "session-1.json",
+				activeEncounterId: "encounter-1",
+			},
+			imagePromptBasePrompt: "global image",
+			campaignAiBasePrompts: {
+				"бурштинова-брама": "campaign story",
+			},
+			campaignImagePromptBasePrompts: {
+				"бурштинова-брама": "campaign image",
+			},
+		}),
+		{
+			route: {
+				campaign: "бурштинова-брама",
+				session: "session-1.json",
+				encounter: "encounter-1",
+			},
+			activeImagePromptBasePrompt: "campaign image",
+			activeCampaignBasePrompt: "campaign story",
+			isCampaign: false,
+			isEncounter: true,
+			historyCampaign: "бурштинова-брама",
+			assetCampaignSlug: "бурштинова-брама",
+			generateEncountersByDefault: true,
+		},
+	);
+	assert.equal(
+		getAiAssistantRouteState({
+			isBestiary: true,
+			navigation: { activeCampaignSlug: "ignored" },
+			imagePromptBasePrompt: "global image",
+		}).assetCampaignSlug,
+		"general",
+	);
+	assert.deepEqual(
+		getAiAssistantContextProjection({
+			activeCampaign: {
+				description: "Безпечний контекст",
+				notes: [{ id: "valid" }, "invalid", null],
+			},
+			characters: [],
+			npcs: [],
+			locations: [],
+			isBestiary: false,
+			isCampaign: true,
+			isEncounter: false,
+			parseAiResponse: true,
+			generateEncounters: false,
+		}).campaignContext,
+		{
+			description: "Безпечний контекст",
+			notes: [{ id: "valid" }],
+		},
+	);
+});
+
+await run("AI assistant history policies preserve filtering, diffs, and confirmations", () => {
+	const matchingEncounter = {
+		id: "matching",
+		path: { campaign: "кампанія", session: "session-1", encounter: "enc-1" },
+		changes: {
+			resources: [
+				{
+					id: "scene-1",
+					kind: "scene",
+					before: { title: "До" },
+					after: { title: "Після" },
+				},
+			],
+		},
+	};
+	const entries = [
+		{ id: "bestiary", path: { campaign: "bestiary" } },
+		matchingEncounter,
+		{
+			id: "other-encounter",
+			path: { campaign: "кампанія", session: "session-1", encounter: "enc-2" },
+		},
+		{ id: "campaign-response", path: { campaign: "кампанія" } },
+	];
+	const view = getAiAssistantHistoryView({
+		entries,
+		selectedEntry: matchingEncounter,
+		route: { campaign: "кампанія", session: "session-1", encounter: "enc-1" },
+		isBestiary: false,
+		labels: {
+			note: "Нотатка",
+			scene: "Сцена",
+			encounter: "Енкаунтер",
+			creature: "Істота",
+		},
+	});
+	assert.deepEqual(
+		view.visibleEntries.map((entry) => entry.id),
+		["matching", "campaign-response"],
+	);
+	assert.equal(view.hasChanges, true);
+	assert.equal(view.diffResources.length, 1);
+	assert.equal(view.diffResources[0].id, "scene-1");
+
+	const translate = (phrase) => `uk:${phrase}`;
+	assert.deepEqual(getAiHistoryDeleteConfirmation("entry", translate), {
+		title: "uk:Delete response",
+		message: "uk:Delete this AI response?",
+	});
+	assert.deepEqual(
+		getAiHistoryRestoreConfirmation(
+			{ isUndo: true, isPartial: true },
+			translate,
+		),
+		{
+			title: "uk:Undo selected AI change",
+			message:
+				"uk:Undo only this AI change? Newer edits in this resource may be overwritten.",
+		},
+	);
+	assert.deepEqual(
+		getAiHistoryRestoreConfirmation(
+			{ isUndo: false, isPartial: false },
+			translate,
+		),
+		{
+			title: "uk:Apply AI changes",
+			message:
+				"uk:Restore data to the state after this AI response? Newer edits in these resources may be overwritten.",
+		},
+	);
+	assert.equal(getAiHistoryErrorMessage(new Error("Помилка"), "fallback"), "Помилка");
+	assert.equal(getAiHistoryErrorMessage({ message: "unsafe" }, "fallback"), "fallback");
+});
+
+await run("AI response modal policies preserve nested draft and preview identity", () => {
+	assert.equal(
+		getAiResponsePreviewCardType({
+			id: "campaign:npcs/коваль",
+			kind: "entity",
+			type: "npc",
+		}),
+		"character",
+	);
+	assert.equal(
+		getAiResponsePreviewCardType({
+			id: "campaign:locations/брама",
+			kind: "entity",
+		}),
+		"location",
+	);
+	assert.deepEqual(
+		getAiResponseEncounterParticipantEntries([
+			{ name: "Вартовий", source: "CUSTOM" },
+			{ name: "Вартовий", source: "CUSTOM" },
+		]).map((entry) => entry.key),
+		[
+			"monster:name:вартовий:custom:1",
+			"monster:name:вартовий:custom:2",
+		],
+	);
+
+	const parent = {
+		id: "session-1",
+		kind: "session",
+		after: {
+			data: {
+				scenes: [
+					{ id: "scene-1", title: "До" },
+					{ id: "scene-2", title: "Інша" },
+				],
+			},
+		},
+	};
+	const child = {
+		id: "session-1:scenes/scene-1",
+		parentResourceId: "session-1",
+		kind: "session",
+		before: { id: "scene-1", title: "До" },
+		after: { id: "scene-1", title: "Після" },
+		listIndex: 0,
+	};
+	assert.deepEqual(getEditedResourceAfterFromParent(parent, child), {
+		id: "scene-1",
+		title: "До",
+	});
+	assert.equal(findDraftResourceForPreview([parent], child, true), parent);
+	const updated = updateDraftResourceCollection(
+		[parent],
+		child,
+		{ id: "scene-1", title: "Після" },
+	);
+	assert.deepEqual(updated[0].after.data.scenes, [
+		{ id: "scene-1", title: "Після" },
+		{ id: "scene-2", title: "Інша" },
+	]);
+	assert.deepEqual(parent.after.data.scenes[0], {
+		id: "scene-1",
+		title: "До",
+	});
+	assert.deepEqual(
+		buildAiResponseCardHighlightFields({
+			id: "npc-1",
+			before: {
+				name: "Коваль",
+				notes: [{ id: "note-1", title: "Чутка", text: "До" }],
+			},
+			after: {
+				name: "Майстер Коваль",
+				notes: [{ id: "note-1", title: "Чутка", text: "Після" }],
+			},
+		}),
+		{
+			fields: ["name"],
+			notes: { "note-1": ["text"], "Чутка": ["text"] },
+		},
+	);
+	assert.throws(
+		() => parseAiResponseSnapshotText("", false, "Чернетка порожня"),
+		/Чернетка порожня/,
+	);
+});
+
 await run("AI assistant presentation preserves history and entity contracts", () => {
 	const translate = (phrase, variables = {}) =>
 		phrase === "Scene {number}"
@@ -6239,6 +7152,74 @@ await run("AI image prompt picker preserves target and generation policies", () 
 		),
 		"Шторм - Бій на причалі",
 	);
+	const campaignCollections = getAiImagePromptCollections({
+		isCampaign: true,
+		currentLanguage: "en",
+		sessionData: { npcs: [], locations: [{ id: "local-location" }] },
+		npcs: [{ id: "fallback-npc" }],
+		locations: [{ id: "fallback-location" }],
+		sessions: [
+			{
+				name: "Storm",
+				fileName: "storm.json",
+				data: {
+					scenes: [{ id: "scene-1" }],
+					encounters: [{ id: "encounter-1" }],
+				},
+			},
+		],
+		customMonsters: [
+			{ name: "Wyvern", imageUrl: "/wyvern.png" },
+			{ name: "Drake" },
+		],
+	});
+	assert.deepEqual(campaignCollections.npcs, [{ id: "fallback-npc" }]);
+	assert.deepEqual(campaignCollections.locations, [{ id: "local-location" }]);
+	assert.equal(campaignCollections.scenes[0]._imagePromptSessionName, "Storm");
+	assert.equal(
+		campaignCollections.scenes[0]._imagePromptSessionFileName,
+		"storm.json",
+	);
+	assert.deepEqual(
+		campaignCollections.customMonstersWithoutImages.map((monster) => monster.name),
+		["Drake"],
+	);
+	assert.deepEqual(
+		campaignCollections.customMonstersWithImages.map((monster) => monster.name),
+		["Wyvern"],
+	);
+	assert.deepEqual(
+		buildAiImagePromptGenerationPlan(null, "  Painterly  ", "   "),
+		{
+			errorKey:
+				"Image prompt instructions are required when no element is selected.",
+			targetSceneId: null,
+			options: {
+				imageTarget: null,
+				imagePromptBasePromptOverride: "Painterly",
+				userInstructionsOverride: "",
+			},
+		},
+	);
+	const sceneTarget = {
+		type: "scene",
+		id: "scene-1",
+		name: "Gate",
+		sessionName: "Storm",
+	};
+	assert.equal(getImagePromptTargetTitle(sceneTarget), "Gate - Storm");
+	assert.deepEqual(
+		buildAiImagePromptGenerationPlan(sceneTarget, " Ink ", "ignored"),
+		{
+			errorKey: null,
+			targetSceneId: "scene-1",
+			options: {
+				imageTarget: sceneTarget,
+				imagePromptBasePromptOverride: "Ink",
+				userInstructionsOverride: "",
+			},
+		},
+	);
 });
 
 await run("sidebar keeps campaign navigation and ordering policies stable", () => {
@@ -6372,7 +7353,15 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 		await fs.readFile("src/shared/model/workflowReducer.ts", "utf8"),
 	].join("\n");
 	const aiAssistantSource = await fs.readFile(
-		"src/widgets/ai-assistant/ui/AiAssistantPanel.jsx",
+		"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
+		"utf8",
+	);
+	const aiUpdatedDataWorkflowSource = await fs.readFile(
+		"src/features/ai/model/updatedDataWorkflow.ts",
+		"utf8",
+	);
+	const aiAssistantContextSource = await fs.readFile(
+		"src/widgets/ai-assistant/model/assistantContext.ts",
 		"utf8",
 	);
 
@@ -6428,13 +7417,17 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.match(appActionsSource, /forceTab: Boolean\(options\.forceTab\)/);
 	assert.match(appStoreSource, /RECORD_RULES_REFERENCE_HISTORY_ENTRY/);
 	assert.match(appStoreSource, /SET_RULES_REFERENCE_HISTORY_INDEX/);
-	assert.match(aiAssistantSource, /aiHistoryCampaign = isBestiary \? "bestiary"/);
+	assert.match(aiAssistantSource, /historyCampaign: aiHistoryCampaign/);
 	assert.match(
-		aiAssistantSource,
-		/campaign: isBestiary \? "bestiary" : navigation\.activeCampaignSlug/,
+		aiAssistantContextSource,
+		/historyCampaign: isBestiary \? "bestiary" : campaign/,
 	);
-	assert.match(aiAssistantSource, /resource: "custom-bestiary"/);
-	assert.match(aiAssistantSource, /monsterName:/);
+	assert.match(aiAssistantSource, /getAiAssistantRouteState/);
+	assert.match(aiAssistantSource, /buildAiUpdatedDataPlan/);
+	assert.match(aiAssistantSource, /executeAiUpdatedDataPlan/);
+	assert.doesNotMatch(aiAssistantSource, /resource: "custom-bestiary"/);
+	assert.match(aiUpdatedDataWorkflowSource, /resource: "custom-bestiary"/);
+	assert.match(aiUpdatedDataWorkflowSource, /monsterName/);
 });
 
 await run("undo redo helpers move snapshots between stacks", () => {
@@ -8057,7 +9050,7 @@ await run(
 			"utf8",
 		);
 		const campaignViewSource = await fs.readFile(
-			"src/pages/campaign/ui/CampaignPage.jsx",
+			"src/pages/campaign/ui/CampaignPage.tsx",
 			"utf8",
 		);
 		const sessionViewSource = await fs.readFile(

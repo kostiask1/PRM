@@ -1,11 +1,11 @@
-import type { CardNote } from "./cardNoteModel.ts";
+import type { SharedNote } from "../../../shared/lib/index.js";
 
 export interface CampaignData extends Record<string, unknown> {
 	slug?: string;
 	name?: string;
 	createdAt?: string;
 	description?: string;
-	notes?: CardNote[];
+	notes?: SharedNote[];
 	characters?: Record<string, unknown>[];
 	npcs?: Record<string, unknown>[];
 	locations?: Record<string, unknown>[];

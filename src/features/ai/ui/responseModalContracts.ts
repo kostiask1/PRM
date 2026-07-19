@@ -1,4 +1,5 @@
-import type { ComponentType, RefObject } from "react";
+import type { ComponentType, ReactNode, RefObject } from "react";
+import type { Components } from "react-markdown";
 
 import type {
 	AiHistoryEntry,
@@ -10,12 +11,17 @@ export interface AiResponseHistoryEntry extends AiHistoryEntry {
 	text?: string;
 }
 
+export interface AiResponseDetailRow {
+	label: string;
+	value: ReactNode;
+}
+
 export interface AiResponseModalProps {
 	generatedPrompt?: string;
 	generatedPromptRef: RefObject<HTMLDivElement | null>;
 	isGeneratedPromptCopied: boolean;
 	isRestoringResponse: boolean;
-	markdownComponents: Record<string, unknown>;
+	markdownComponents: Components;
 	onApply: (
 		entry?: AiResponseHistoryEntry | null,
 	) => void | Promise<void>;
@@ -35,7 +41,7 @@ export interface AiResponseModalProps {
 		entry: AiResponseHistoryEntry | null | undefined,
 		resourceIds: string[],
 	) => void | Promise<void>;
-	selectedResponseDetails: unknown[];
+	selectedResponseDetails: AiResponseDetailRow[];
 	selectedResponseDiffResources: DiffResource[];
 	selectedResponseEntry: AiResponseHistoryEntry | null;
 	selectedResponseHasChanges: boolean;

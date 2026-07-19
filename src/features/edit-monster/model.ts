@@ -91,8 +91,12 @@ type JsonParseResult =
 	| { ok: false; reason: "invalid-json"; message: string }
 	| { ok: false; reason: "not-object"; message: "" };
 
+export interface NamedMonsterData extends MonsterData {
+	name: string;
+}
+
 export type MonsterSaveResult =
-	| { ok: true; monster: MonsterData }
+	| { ok: true; monster: NamedMonsterData }
 	| { ok: false; reason: "invalid-json"; message: string }
 	| { ok: false; reason: "not-object" | "missing-name"; message: "" };
 
@@ -106,9 +110,11 @@ function hasOwn(object: unknown, key: string): boolean {
 	return isRecord(object) && Object.prototype.hasOwnProperty.call(object, key);
 }
 
-export function cloneMonster(monster: MonsterData | null | undefined): MonsterData | null {
+export function cloneMonster<T extends MonsterData>(
+	monster: T | null | undefined,
+): T | null {
 	if (!monster) return null;
-	return JSON.parse(JSON.stringify(monster)) as MonsterData;
+	return JSON.parse(JSON.stringify(monster)) as T;
 }
 
 export function actionEntriesToText(action: MonsterEntry = {}): string {
@@ -532,8 +538,9 @@ export function prepareMonsterDraftForSave({
 		if (!parsed.ok) return parsed;
 		nextDraft = parsed.monster;
 	}
-	if (!String(nextDraft.name || "").trim()) {
+	const name = String(nextDraft.name || "");
+	if (!name.trim()) {
 		return { ok: false, reason: "missing-name", message: "" };
 	}
-	return { ok: true, monster: { ...nextDraft, source } };
+	return { ok: true, monster: { ...nextDraft, name, source } };
 }

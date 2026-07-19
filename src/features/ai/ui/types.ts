@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 
-export interface AiUiAttachment {
+export interface AiUiAttachment extends Record<string, unknown> {
 	name?: string;
 	mimeType?: string;
 	sizeBytes?: number;

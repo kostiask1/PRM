@@ -42,8 +42,11 @@ export {
 } from "./model/tokenEstimation.ts";
 export {
 	buildRetryPayloadFromHistoryEntry,
+	buildAiHistoryRetryPlan,
 	createAiHistoryWorkflow,
+	executeAiHistoryRetry,
 	getGeneratedEntityTypes,
+	getAiHistoryRetryFailure,
 	getHistoryChangeResources,
 	getHistoryChangedEntityTypes,
 	hasGeneratedCampaignChanges,
@@ -61,6 +64,19 @@ export {
 	initialAiGenerationLifecycle,
 	isAiGenerationPending,
 } from "./model/generationLifecycle.ts";
+export {
+	executeAiGeneration,
+	formatAiGenerationFailureAlert,
+} from "./model/generationExecution.ts";
+export {
+	buildAiGeneratedResultPlan,
+	createTransientAiHistoryEntry,
+	executeAiGeneratedResultPlan,
+} from "./model/generationResultWorkflow.ts";
+export {
+	buildAiUpdatedDataPlan,
+	executeAiUpdatedDataPlan,
+} from "./model/updatedDataWorkflow.ts";
 export {
 	buildAiHistoryRestorePlan,
 	canApplyRestoredAiDataDirectly,

@@ -81,9 +81,12 @@ export type AiGenerationPayload = Record<string, unknown>;
 
 export interface AiGenerationResult extends Record<string, unknown> {
 	aiResponse?: AiHistoryEntry;
+	draft?: boolean;
 	error?: string;
+	generated?: unknown;
 	generatedContent?: unknown;
 	prompt?: string;
+	updated?: unknown;
 }
 
 const historyPath = (campaign: string, id?: AiHistoryId) =>
