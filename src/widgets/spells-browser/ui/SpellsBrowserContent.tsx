@@ -7,9 +7,9 @@ import { lang } from "../../../shared/lib/index.js";
 import { Button, highlightText, ListCard, Tooltip } from "../../../shared/ui/index.js";
 import { SpellCard } from "../../spell-card/index.js";
 import {
-	SPELL_SCHOOL_NAMES,
-	getSpellItemKey,
-	isSpellSchoolCode,
+	executeSpellInsertAction,
+	getSpellListItemPresentation,
+	type SpellListItemPresentation,
 } from "../model/spellsBrowser.ts";
 
 interface SpellListItemProps {
@@ -21,21 +21,75 @@ interface SpellListItemProps {
 }
 
 function SpellListItem({ spell, selected, search, onSelect, onInsert }: SpellListItemProps) {
-	const schoolName = isSpellSchoolCode(spell.school) ? SPELL_SCHOOL_NAMES[spell.school] : "";
-	const sourceFullName = getSourceFullName(spell.source);
-	const classes = Array.isArray(spell.classes) ? spell.classes.filter((value): value is string => typeof value === "string") : [];
+	const presentation = getSpellListItemPresentation(spell, {
+		selected,
+		capitalizeName: capitalizeWords,
+		resolveSourceName: getSourceFullName,
+		translate: lang.t,
+	});
 	return (
-		<div key={getSpellItemKey(spell)} onDoubleClick={() => onInsert?.(spell)}>
-			<ListCard active={selected} onClick={() => onSelect(selected ? null : spell)}>
-				<div className="ListCard__title">{highlightText(capitalizeWords(spell.name.split("|")[0]), search)}</div>
+		<div
+			key={presentation.itemKey}
+			onDoubleClick={() => executeSpellInsertAction(onInsert, spell)}
+		>
+			<ListCard
+				active={presentation.active}
+				onClick={() => onSelect(presentation.nextSelection)}
+			>
+				<div className="ListCard__title">
+					{highlightText(presentation.displayName, search)}
+				</div>
 				<div className="ListCard__meta">
-					{highlightText(spell.level === 0 ? lang.t("Cantrip") : lang.t("{level}-level", { level: spell.level }), search)}
-					{schoolName && <> • {highlightText(schoolName, search)}</>}
-					{classes.length > 0 && <> • {highlightText(classes.join(", "), search)}</>}
-					{spell.source && <Tooltip content={sourceFullName} disabled={!sourceFullName}><span className="Spells__item_source"> • {highlightText(spell.source, search)}</span></Tooltip>}
+					{highlightText(presentation.levelLabel, search)}
+					<SpellSchoolMeta presentation={presentation} search={search} />
+					<SpellClassesMeta presentation={presentation} search={search} />
+					<SpellSourceMeta presentation={presentation} search={search} />
 				</div>
 			</ListCard>
 		</div>
+	);
+}
+
+function SpellSchoolMeta({
+	presentation,
+	search,
+}: {
+	presentation: SpellListItemPresentation;
+	search: string;
+}) {
+	if (!presentation.showSchool) return null;
+	return <> • {highlightText(presentation.schoolName, search)}</>;
+}
+
+function SpellClassesMeta({
+	presentation,
+	search,
+}: {
+	presentation: SpellListItemPresentation;
+	search: string;
+}) {
+	if (!presentation.showClasses) return null;
+	return <> • {highlightText(presentation.classesLabel, search)}</>;
+}
+
+function SpellSourceMeta({
+	presentation,
+	search,
+}: {
+	presentation: SpellListItemPresentation;
+	search: string;
+}) {
+	if (!presentation.showSource) return null;
+	return (
+		<Tooltip
+			content={presentation.sourceFullName}
+			disabled={presentation.disableSourceTooltip}
+		>
+			<span className="Spells__item_source">
+				{" • "}
+				{highlightText(presentation.source, search)}
+			</span>
+		</Tooltip>
 	);
 }
 

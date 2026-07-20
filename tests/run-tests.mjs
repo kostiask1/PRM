@@ -65,13 +65,22 @@ import {
 } from "../src/pages/campaign/model/campaignPagePresentation.ts";
 import {
 	DEFAULT_CAMPAIGN_GRAPH_FILTERS,
+	findCampaignGraphEditableNote,
 	formatCampaignGraphSourceField,
+	getCampaignGraphDetailTextPresentation,
 	getCampaignGraphEdgeHandles,
+	getCampaignGraphEdgeOpacity,
 	getCampaignGraphEdgePresentation,
+	getCampaignGraphFlowNodePresentation,
 	getCampaignGraphMiniMapBounds,
+	getCampaignGraphMiniMapNodeSize,
+	getCampaignGraphNodeCardPresentation,
 	getCampaignGraphNoteSaveRequest,
 	getCampaignGraphOpenTarget,
 	getVisibleCampaignGraph,
+	resolveNewCampaignGraphNodeCollisions,
+	shouldActivateCampaignGraphDetailText,
+	shouldFitCampaignGraphTopology,
 } from "../src/pages/campaign/model/campaignGraphPresentation.ts";
 import {
 	applyCampaignGraphCampaignNoteSave,
@@ -166,11 +175,17 @@ import {
 	sortBestiaryMonsters,
 } from "../src/widgets/bestiary-browser/model.js";
 import {
+	executeMonsterAction,
+	executeMonsterTokenUpload,
 	getChangedFieldClass,
+	getMonsterMetadataPresentation,
 	getMonsterMutationKey,
+	getMonsterNameRowPresentation,
 	getMonsterSpellSlug,
 	getMonsterSpellcastingEntries,
+	getMonsterSpellcastingEntryPresentation,
 	getMonsterTokenSources,
+	getMonsterTokenSectionPresentation,
 	getSenseTextParts,
 	getTokenDragPayload,
 	getUploadedTokenUrl,
@@ -179,14 +194,17 @@ import {
 	shouldShowMonsterTokenDropzone,
 } from "../src/widgets/monster-stat-block/model.js";
 import {
+	executeSpellInsertAction,
 	filterSpells,
 	findSpellByReference,
 	getInitialSpellSelection,
+	getInitialSpellScrollPlan,
 	getNextSpellSortOrder,
 	getSettingsIgnoreSources,
 	getSpellClassOptions,
 	getSpellItemKey,
 	getSpellListIndex,
+	getSpellListItemPresentation,
 	getSpellSchoolOptions,
 	getValidSourceFilter,
 	normalizeSpellList,
@@ -196,12 +214,32 @@ import {
 } from "../src/widgets/spells-browser/model.js";
 import {
 	REFERENCE_TAB_POLICIES,
+	applyLoadedReferenceSelection,
+	applyReferenceTabOnlySelection,
+	applyReferenceSelectionReconciliationPlan,
 	combineBestiaryLists,
 	createReferenceSelection,
+	executeReferenceInitialNavigationPlan,
+	executeReferenceTabSelectionPlan,
 	findSelectedReferenceItem,
+	getCreatureReferenceMatchRank,
+	getCreatureReferenceName,
 	getInitialTabId,
+	getReferenceHistoryAvailability,
+	getReferenceInitialNavigationPlan,
 	getReferenceInlineTag,
+	getReferenceKeyboardPlan,
+	getReferenceLoadErrorMessage,
+	getReferenceModalHostPlan,
+	getReferenceNavigationRequestPlan,
+	getReferenceScrollPlan,
+	getReferenceSelectionReconciliationPlan,
+	getReferenceTabSelectionPlan,
+	getReferenceTabsToLoad,
+	getSpellReferenceName,
+	itemMatchesSelectedName,
 	itemMatchesQuery,
+	normalizeReferenceList,
 } from "../src/widgets/rules-reference-modal/model.js";
 import {
 	buildSidebarCampaignOrder,
@@ -246,7 +284,9 @@ import {
 	buildCampaignSearchIndex,
 	buildCampaignSearchSnippet,
 	campaignSearchValueToText,
+	executeCampaignSearchIndexLoad,
 	filterCampaignSearchResults,
+	getCampaignSearchErrorMessage,
 	getCampaignSearchHighlightTerms,
 	loadCampaignSearchIndex,
 	toggleCampaignSearchFilter,
@@ -2009,6 +2049,13 @@ await run("campaign graph builds nodes and mention edges", () => {
 		"Ім'я",
 		"NPC One",
 	]);
+	assert.deepEqual(extractBracketMentions(null), []);
+	assert.deepEqual(extractBracketMentions(17), []);
+	assert.deepEqual(extractBracketMentions("Без дужок"), []);
+	assert.deepEqual(
+		extractBracketMentions("[] [   ] [ Один   Два ] [Один   Два] [Рядок\nдалі]"),
+		["Один Два", "Один Два"],
+	);
 	assert.equal(normalizeGraphName("  NPC   One "), "npc one");
 
 	const graph = buildCampaignGraph({
@@ -2248,6 +2295,261 @@ await run("campaign graph builds nodes and mention edges", () => {
 		simplifiedGraph.nodes.find((node) => node.type === "scene-note")?.label,
 		"Текст сцени.",
 	);
+});
+
+await run("campaign graph scene projection preserves text identity and mention scope", () => {
+	const graph = buildCampaignGraph({
+		campaign: { slug: "scene-projection", name: "Проєкція" },
+		sessions: [{ fileName: "projection.json", name: "Сесія" }],
+		sessionDetails: {
+			"projection.json": {
+				data: {
+					scenes: [{
+						description: "[Не індексувати поза texts]",
+						texts: {
+							summary: "Коротко [Ціль у texts]",
+							goal: "Знайти браму",
+							location: "Старий ліс",
+							stakes: "Висока ціна",
+							extra: "Додаткова деталь",
+						},
+						notes: [{ id: "note", text: "Нотатка сцени" }],
+					}],
+				},
+			},
+		},
+	});
+	const scene = graph.nodes.find((node) => node.id === "scene:projection.json:0");
+	assert.equal(scene?.label, "Сесія: Scene 1");
+	assert.equal(scene?.summary, "Коротко [Ціль у texts] Знайти браму Старий ліс Висока ціна");
+	assert.equal(
+		scene?.detailText,
+		"Коротко [Ціль у texts]\n\nЗнайти браму\n\nСтарий ліс\n\nВисока ціна\n\nДодаткова деталь",
+	);
+	assert.deepEqual(scene?.aliases, ["Scene 1", "Сесія Scene 1"]);
+	assert.deepEqual(scene?.meta, {
+		fileName: "projection.json",
+		parentId: "session:projection.json",
+		sceneNumber: 1,
+	});
+	assert.equal(graph.nodes.some((node) => node.label === "Ціль у texts"), true);
+	assert.equal(graph.nodes.some((node) => node.label === "Не індексувати поза texts"), false);
+	assert.equal(
+		graph.nodes.some((node) => node.id === "scene-note:projection.json:0:note"),
+		true,
+	);
+});
+
+await run("campaign graph recursive text collection preserves paths and ignored keys", () => {
+	const graph = buildCampaignGraph({
+		campaign: { slug: "recursive-text", name: "Рекурсія" },
+		characters: [{
+			id: "hero",
+			name: "Героїня",
+			profile: {
+				public: ["[Видимий зв'язок]", { deep: "[Глибокий зв'язок]" }, 17, true, null],
+				_private: "[Приватний зв'язок]",
+				imageUrl: "[Зображення]",
+				blank: "   ",
+			},
+		}],
+	});
+	for (const label of ["Видимий зв'язок", "Глибокий зв'язок"]) {
+		assert.equal(graph.nodes.some((node) => node.label === label), true);
+	}
+	for (const label of ["Приватний зв'язок", "Зображення"]) {
+		assert.equal(graph.nodes.some((node) => node.label === label), false);
+	}
+	const visibleEdge = graph.edges.find((edge) =>
+		edge.relation === "mentions" &&
+		graph.nodes.some((node) => node.id === edge.target && node.label === "Видимий зв'язок")
+	);
+	const deepEdge = graph.edges.find((edge) =>
+		edge.relation === "mentions" &&
+		graph.nodes.some((node) => node.id === edge.target && node.label === "Глибокий зв'язок")
+	);
+	assert.equal(visibleEdge?.sources[0]?.field, "character.profile.public[0]");
+	assert.equal(deepEdge?.sources[0]?.field, "character.profile.public[1].deep");
+});
+
+await run("campaign graph registry preserves first nodes canonical edges and degrees", () => {
+	const graph = buildCampaignGraph({
+		campaign: { slug: "registry", name: "Реєстр" },
+		description: "[Зета] зустрічає [Альфа] і знову [Зета].",
+		notes: [{ id: "note", text: "[Альфа] відповідає [Зета]." }],
+		characters: [
+			{ id: "duplicate", firstName: "Перша", description: "Перший опис" },
+			{ id: "duplicate", firstName: "Друга", description: "Другий опис" },
+			{ id: "fallback", firstName: "   ", name: 0, title: "Титул" },
+		],
+	});
+	const duplicateNodes = graph.nodes.filter((node) => node.id === "character:duplicate");
+	assert.equal(duplicateNodes.length, 1);
+	assert.equal(duplicateNodes[0].label, "Перша");
+	assert.equal(duplicateNodes[0].detailText, "Перший опис");
+	assert.equal(graph.nodes.find((node) => node.id === "character:fallback")?.label, "Титул");
+	assert.equal(graph.nodes.filter((node) => node.type === "unresolved").length, 2);
+
+	const alpha = graph.nodes.find((node) => node.label === "Альфа");
+	const zeta = graph.nodes.find((node) => node.label === "Зета");
+	assert.ok(alpha);
+	assert.ok(zeta);
+	const related = graph.edges.find((edge) => edge.relation === "related");
+	assert.deepEqual([related?.source, related?.target], [alpha.id, zeta.id].sort());
+	assert.equal(related?.count, 2);
+	assert.deepEqual(related?.sources.map((source) => source.type), ["campaign", "campaign-note"]);
+	assert.equal(graph.edges.filter((edge) => edge.relation === "related").length, 1);
+	assert.equal(alpha.degree, 3);
+	assert.equal(zeta.degree, 3);
+	assert.equal(graph.stats.unresolved, 2);
+	assert.equal(graph.stats.nodes, graph.nodes.length);
+	assert.equal(graph.stats.edges, graph.edges.length);
+});
+
+await run("campaign graph notes preserve eligibility label modes and fallback", () => {
+	const regular = buildCampaignGraph({
+		campaign: { slug: "note-labels", name: "Нотатки" },
+		notes: [
+			{ id: "title", title: "  Заголовок  ", text: "Текст" },
+			{ id: "markdown", text: "```прихований код```" },
+			{ id: "virtual", _isVirtual: true, text: "Чернетка" },
+			{ id: "empty", title: "  ", text: "\n" },
+		],
+	});
+	assert.equal(regular.nodes.find((node) => node.id === "campaign-note:title")?.label, "Заголовок");
+	assert.equal(regular.nodes.find((node) => node.id === "campaign-note:markdown")?.label, "Note 2");
+	assert.equal(regular.nodes.some((node) => node.id === "campaign-note:virtual"), false);
+	assert.equal(regular.nodes.some((node) => node.id === "campaign-note:empty"), false);
+
+	const simplified = buildCampaignGraph({
+		campaign: { slug: "simple-note", name: "Спрощення" },
+		notes: [{ id: "simple", title: "Не показувати", text: "**Видимий текст**" }],
+		simplifiedNotes: true,
+	});
+	const simplifiedNote = simplified.nodes.find((node) => node.id === "campaign-note:simple");
+	assert.equal(simplifiedNote?.label, "Видимий текст");
+	assert.deepEqual(simplifiedNote?.aliases, []);
+	assert.equal(simplifiedNote?.meta.isSimplifiedNote, true);
+});
+
+await run("campaign graph session detail preserves participant note and scene order", () => {
+	const graph = buildCampaignGraph({
+		campaign: { slug: "session-order", name: "Порядок" },
+		sessions: [{ fileName: "ordered.json", name: "Сесія" }],
+		sessionDetails: {
+			"ordered.json": {
+				data: {
+					npcs: [{ id: "npc", name: "NPC" }],
+					locations: [{ id: "location", name: "Локація" }],
+					notes: [{ id: "note", text: "Нотатка" }],
+					scenes: [{ id: "scene", texts: { summary: "Сцена" } }],
+				},
+			},
+		},
+	});
+	const orderedIds = [
+		"session:ordered.json",
+		"session-npc:ordered.json:npc",
+		"session-location:ordered.json:location",
+		"session-note:ordered.json:note",
+		"scene:ordered.json:scene",
+	];
+	assert.deepEqual(
+		orderedIds.map((id) => graph.nodes.findIndex((node) => node.id === id)),
+		[1, 2, 3, 4, 5],
+	);
+	assert.equal(graph.edges.find((edge) => edge.source === "session:ordered.json" && edge.target === "scene:ordered.json:scene")?.sources[0]?.field, "scenes");
+});
+
+await run("campaign graph session detail lookup preserves record map and array sources", () => {
+	const detail = (id, marker) => ({
+		id,
+		fileName: "lookup.json",
+		data: { result_text: marker },
+	});
+	const buildWithDetails = (sessionDetails) => buildCampaignGraph({
+		campaign: { slug: "lookup", name: "Пошук" },
+		sessions: [{ fileName: "lookup.json", name: "Список" }],
+		sessionDetails,
+	});
+	const recordGraph = buildWithDetails({ "lookup.json": detail("record-id", "Record marker") });
+	const mapGraph = buildWithDetails(new Map([["lookup.json", detail("map-id", "Map marker")]]));
+	const arrayGraph = buildWithDetails([
+		{ fileName: "other.json", id: "other" },
+		detail("array-first", "Array first marker"),
+		detail("array-second", "Array second marker"),
+	]);
+	assert.equal(recordGraph.nodes.find((node) => node.type === "session")?.sourceId, "record-id");
+	assert.equal(mapGraph.nodes.find((node) => node.type === "session")?.sourceId, "map-id");
+	assert.equal(arrayGraph.nodes.find((node) => node.type === "session")?.sourceId, "array-first");
+	assert.equal(arrayGraph.nodes.some((node) => node.searchText.includes("array second marker")), false);
+	assert.equal(buildWithDetails(new Map()).nodes.find((node) => node.type === "session")?.sourceId, undefined);
+});
+
+await run("campaign graph flow-node projection preserves positions visibility and collisions", () => {
+	const graphNode = {
+		id: "session:one",
+		type: "session",
+		label: "Сесія",
+		meta: {},
+		searchText: "сесія",
+		degree: 0,
+	};
+	const currentPosition = { x: 40, y: 50 };
+	const presentation = getCampaignGraphFlowNodePresentation({
+		graphNode,
+		currentNode: { id: graphNode.id, position: currentPosition },
+		layoutPosition: { x: 400, y: 500 },
+		selectedNodeId: graphNode.id,
+		focusedNodeId: "another",
+		connectedIds: new Set(["another"]),
+		visibleNodeIds: new Set(),
+		canSaveNote: false,
+		colors: { session: "#123456" },
+		typeLabels: { session: "Sessions" },
+	});
+	assert.equal(presentation.position, currentPosition);
+	assert.deepEqual(presentation.size, getCampaignGraphNodeSize("session"));
+	assert.deepEqual({
+		color: presentation.color,
+		typeLabelKey: presentation.typeLabelKey,
+		isSelected: presentation.isSelected,
+		isMuted: presentation.isMuted,
+		canOpen: presentation.canOpen,
+		hidden: presentation.hidden,
+		className: presentation.className,
+	}, {
+		color: "#123456",
+		typeLabelKey: "Sessions",
+		isSelected: true,
+		isMuted: true,
+		canOpen: true,
+		hidden: true,
+		className: "is_session",
+	});
+	assert.deepEqual(getCampaignGraphFlowNodePresentation({
+		graphNode: { ...graphNode, id: "unknown", type: "unknown" },
+		layoutPosition: { x: 8, y: 9 },
+		selectedNodeId: null,
+		focusedNodeId: null,
+		connectedIds: new Set(),
+		visibleNodeIds: new Set(["unknown"]),
+		canSaveNote: false,
+		colors: {},
+		typeLabels: {},
+	}).position, { x: 8, y: 9 });
+
+	const nodes = [
+		{ id: "existing", position: { x: 40, y: 0 }, measured: { width: 420, height: 90 }, data: { graphNode: { type: "npc" } } },
+		{ id: "new", position: { x: 0, y: 0 }, data: { graphNode: { type: "campaign-note" } } },
+	];
+	const originalNodes = structuredClone(nodes);
+	assert.equal(resolveNewCampaignGraphNodeCollisions(nodes, new Set(), true), nodes);
+	const resolved = resolveNewCampaignGraphNodeCollisions(nodes, new Set(["existing"]), false);
+	assert.deepEqual(nodes, originalNodes);
+	assert.equal(resolved[0], nodes[0]);
+	assert.notDeepEqual(resolved[1].position, nodes[1].position);
+	assert.equal(resolveNewCampaignGraphNodeCollisions(nodes, new Set(["existing", "new"]), false), nodes);
 });
 
 await run("tooltip model coordinates nesting, timers, and viewport layout", () => {
@@ -7490,11 +7792,229 @@ await run("campaign graph presentation preserves labels, visibility, and open ta
 		},
 	);
 	assert.deepEqual(
+		getCampaignGraphMiniMapNodeSize({
+			type: "location",
+			data: { graphNode: { type: "npc" } },
+			measured: { width: 0, height: 75 },
+			width: "123.5px",
+			height: -5,
+			style: { width: 400, height: "81.25rem" },
+		}),
+		{ width: 123.5, height: 75 },
+	);
+	assert.deepEqual(
+		getCampaignGraphMiniMapNodeSize({
+			type: "location",
+			data: { graphNode: { type: "npc" } },
+			measured: { width: Number.NaN, height: 0 },
+			width: -1,
+			height: "invalid",
+			style: { width: 0, height: -3 },
+		}),
+		getCampaignGraphNodeSize("location"),
+	);
+	assert.deepEqual(
 		getCampaignGraphMiniMapBounds([
 			{ id: "one", type: "npc", position: { x: 0, y: 0 }, style: { width: 100, height: 50 } },
 		]),
 		{ x: -55.5, y: -37, width: 111, height: 74 },
 	);
+});
+
+await run("campaign graph presentation contracts preserve edge focus and opacity", () => {
+	const edge = (relation, count = 1) => ({
+		id: `${relation}-${count}`,
+		source: "one",
+		target: "two",
+		relation,
+		count,
+		sources: [],
+	});
+	assert.deepEqual(getCampaignGraphEdgePresentation(edge("contains"), null), {
+		isFocused: true,
+		type: "smoothstep",
+		animated: false,
+		isMuted: false,
+		strokeDasharray: undefined,
+		hasSequenceMarker: false,
+		label: undefined,
+	});
+	assert.deepEqual(getCampaignGraphEdgePresentation(edge("mentions", 3), "one"), {
+		isFocused: true,
+		type: "default",
+		animated: true,
+		isMuted: false,
+		strokeDasharray: undefined,
+		hasSequenceMarker: false,
+		label: "3",
+	});
+	assert.deepEqual(getCampaignGraphEdgePresentation(edge("related", 2), "other"), {
+		isFocused: false,
+		type: "default",
+		animated: false,
+		isMuted: true,
+		strokeDasharray: "7 6",
+		hasSequenceMarker: false,
+		label: undefined,
+	});
+	assert.deepEqual(
+		["contains", "sequence", "mentions"].map((relation) =>
+			getCampaignGraphEdgeOpacity(edge(relation), true, false)),
+		[0.16, 0.35, 0.32],
+	);
+	assert.equal(getCampaignGraphEdgeOpacity(edge("contains"), true, true), 0.55);
+	assert.equal(getCampaignGraphEdgeOpacity(edge("mentions"), true, true), 0.9);
+	assert.equal(getCampaignGraphEdgeOpacity(edge("sequence"), false, true), 0.07);
+});
+
+await run("campaign graph presentation contracts preserve note and entity targets", () => {
+	const campaignNote = { id: 0, title: "Кампанія" };
+	const sessionNote = { id: "session-note", title: "Сесія" };
+	const sceneNote = { id: 7, title: "Сцена" };
+	const sessionNpc = { id: "npc-1", firstName: "Сесійний NPC" };
+	const sessionLocation = { slug: "cellar", name: "Підвал" };
+	const sessionDetails = {
+		"session.json": {
+			data: {
+				notes: [sessionNote],
+				npcs: [sessionNpc],
+				locations: [sessionLocation],
+				scenes: [{ id: "scene-1", notes: [sceneNote] }],
+			},
+		},
+	};
+	const node = (type, sourceId, meta = {}) => ({
+		id: `${type}:${String(sourceId)}`,
+		type,
+		label: type,
+		sourceId,
+		meta,
+	});
+	const campaignNode = node("campaign-note", "0");
+	const sessionNode = node("session-note", "session-note", { fileName: "session.json" });
+	const sceneNode = node("scene-note", "7", { fileName: "session.json", sceneId: "scene-1" });
+	assert.equal(findCampaignGraphEditableNote(campaignNode, [campaignNote], sessionDetails), campaignNote);
+	assert.equal(findCampaignGraphEditableNote(sessionNode, [], sessionDetails), sessionNote);
+	assert.equal(findCampaignGraphEditableNote(sceneNode, [], sessionDetails), sceneNote);
+	assert.equal(findCampaignGraphEditableNote(node("npc", "npc-1"), [], sessionDetails), null);
+
+	const baseInput = {
+		characters: [],
+		npcs: [],
+		locations: [],
+		notes: [campaignNote],
+		sessionDetails,
+		canSaveNote: true,
+	};
+	assert.deepEqual(getCampaignGraphOpenTarget({
+		...baseInput,
+		node: node("session", "session", { fileName: "session.json" }),
+	}), { kind: "session", fileName: "session.json" });
+	assert.deepEqual(getCampaignGraphOpenTarget({ ...baseInput, node: campaignNode }), {
+		kind: "note",
+		note: campaignNote,
+	});
+	assert.deepEqual(getCampaignGraphOpenTarget({
+		...baseInput,
+		node: node("npc", "npc-1", { scope: "session", fileName: "session.json" }),
+	}), { kind: "entity", entity: sessionNpc, entityType: "npc" });
+	assert.deepEqual(getCampaignGraphOpenTarget({
+		...baseInput,
+		node: { ...node("location", "missing", { scope: "session", fileName: "session.json" }), sourceSlug: "cellar" },
+	}), { kind: "entity", entity: sessionLocation, entityType: "locations" });
+	assert.deepEqual(getCampaignGraphOpenTarget({ ...baseInput, node: campaignNode, canSaveNote: false }), {
+		kind: "none",
+	});
+	assert.deepEqual(getCampaignGraphOpenTarget({ ...baseInput, node: node("npc", "missing") }), {
+		kind: "none",
+	});
+});
+
+await run("campaign graph presentation contracts validate note save requests", () => {
+	const updates = { title: "Зміна" };
+	const node = (type, sourceId, meta = {}) => ({ id: "note", type, label: "Нотатка", sourceId, meta });
+	assert.equal(getCampaignGraphNoteSaveRequest(node("npc", "npc-1"), updates), null);
+	assert.equal(getCampaignGraphNoteSaveRequest(node("campaign-note", null), updates), null);
+	const request = getCampaignGraphNoteSaveRequest(
+		node("scene-note", 0, { fileName: "session.json", sceneId: 7 }),
+		updates,
+	);
+	assert.deepEqual(request, {
+		nodeType: "scene-note",
+		fileName: "session.json",
+		sceneId: 7,
+		noteId: 0,
+		updates,
+	});
+	assert.equal(request.updates, updates);
+});
+
+await run("campaign graph UI policies preserve text, node-card, and fit decisions", () => {
+	assert.deepEqual(getCampaignGraphDetailTextPresentation("  [Герой]  ", true), {
+		text: "  [Герой]  ",
+		isVisible: true,
+		className: "CampaignNotesGraph__detailText is_clickable",
+		role: "button",
+		tabIndex: 0,
+	});
+	assert.deepEqual(getCampaignGraphDetailTextPresentation(0, false), {
+		text: "",
+		isVisible: false,
+		className: "CampaignNotesGraph__detailText",
+		role: undefined,
+		tabIndex: undefined,
+	});
+	assert.equal(shouldActivateCampaignGraphDetailText(true, "pointer"), true);
+	assert.equal(shouldActivateCampaignGraphDetailText(true, "pointer", true), false);
+	assert.equal(shouldActivateCampaignGraphDetailText(true, "Enter"), true);
+	assert.equal(shouldActivateCampaignGraphDetailText(true, " "), true);
+	assert.equal(shouldActivateCampaignGraphDetailText(true, "Escape"), false);
+	assert.equal(shouldActivateCampaignGraphDetailText(false, "Enter"), false);
+
+	const graphNode = {
+		id: "npc",
+		type: "npc",
+		label: "Вартовий",
+		summary: "Біля брами",
+		degree: 2,
+		meta: {},
+	};
+	assert.deepEqual(getCampaignGraphNodeCardPresentation(graphNode, false, true, true, true), {
+		className: "CampaignNotesGraph__nodeCard is_npc is_selected is_muted",
+		showSummary: true,
+		showDegree: true,
+		showOpen: true,
+	});
+	assert.deepEqual(
+		getCampaignGraphNodeCardPresentation({ ...graphNode, summary: "", degree: 0 }, false, false, false, false),
+		{
+			className: "CampaignNotesGraph__nodeCard is_npc",
+			showSummary: false,
+			showDegree: false,
+			showOpen: false,
+		},
+	);
+
+	const fitInput = {
+		hasFlowInstance: true,
+		flowNodeCount: 2,
+		graphNodeCount: 2,
+		flowNodeTopologyKey: "same",
+		nodeTopologyKey: "same",
+		hasManualPositions: false,
+		hasFittedTopology: false,
+	};
+	assert.equal(shouldFitCampaignGraphTopology(fitInput), true);
+	for (const invalid of [
+		{ hasFlowInstance: false },
+		{ flowNodeCount: 0, graphNodeCount: 0 },
+		{ graphNodeCount: 3 },
+		{ flowNodeTopologyKey: "other" },
+		{ hasManualPositions: true },
+		{ hasFittedTopology: true },
+	]) {
+		assert.equal(shouldFitCampaignGraphTopology({ ...fitInput, ...invalid }), false);
+	}
 });
 
 await run("campaign graph note saves plan immutable optimistic updates", async () => {
@@ -10008,6 +10528,144 @@ await run("spells browser policies preserve references, filters, sorting, and se
 	assert.deepEqual(getSettingsIgnoreSources({ ignoreSourcesList: ["DMG", 4, "MM"] }), ["DMG", "MM"]);
 	assert.deepEqual(normalizeSpellList([spells[0], null, { source: "PHB" }]), [spells[0]]);
 	assert.deepEqual(getInitialSpellSelection([spells[2]], spells, "Світло|XPHB", null), { spell: spells[1], changed: true });
+	assert.deepEqual(
+		getInitialSpellSelection([spells[2]], spells, "Щит|PHB", spells[0]),
+		{ spell: spells[2], changed: true },
+	);
+	assert.deepEqual(
+		getInitialSpellSelection([spells[0]], spells, "Немає|PHB", null),
+		{ spell: spells[0], changed: true },
+	);
+	assert.deepEqual(
+		getInitialSpellSelection([spells[0]], spells, "Немає|PHB", spells[1]),
+		{ spell: spells[1], changed: false },
+	);
+
+	assert.equal(
+		getInitialSpellScrollPlan(spells, "Світло|XPHB", spells[1], false, ""),
+		null,
+	);
+	assert.equal(getInitialSpellScrollPlan(spells, "", spells[1], true, ""), null);
+	assert.equal(
+		getInitialSpellScrollPlan(spells, "Світло|PHB", spells[1], true, ""),
+		null,
+	);
+	assert.equal(
+		getInitialSpellScrollPlan(
+			[spells[0], spells[2]],
+			"Світло|XPHB",
+			spells[1],
+			true,
+			"",
+		),
+		null,
+	);
+	assert.deepEqual(
+		getInitialSpellScrollPlan(
+			spells,
+			"Світло|XPHB",
+			spells[1],
+			true,
+			"",
+		),
+		{ scrollKey: "XPHB:Світло", selectedIndex: 1 },
+	);
+	assert.equal(
+		getInitialSpellScrollPlan(
+			spells,
+			"Світло",
+			spells[1],
+			true,
+			"XPHB:Світло",
+		),
+		null,
+	);
+
+	const rowSpell = {
+		name: "вогняна КУЛЯ|PHB",
+		source: "PHB",
+		level: 0,
+		school: "V",
+		classes: ["Wizard", 4, "", "Друїд"],
+	};
+	const rowCalls = [];
+	const rowPresentation = getSpellListItemPresentation(rowSpell, {
+		selected: false,
+		capitalizeName: (name) => {
+			rowCalls.push(["capitalize", name]);
+			return `CAP:${name}`;
+		},
+		resolveSourceName: (source) => {
+			rowCalls.push(["source", source]);
+			return "Player's Handbook";
+		},
+		translate: (template, variables) => {
+			rowCalls.push(["translate", template, variables]);
+			return template === "Cantrip" ? "Замовляння" : "unexpected";
+		},
+	});
+	assert.deepEqual(rowPresentation, {
+		itemKey: "PHB:вогняна КУЛЯ|PHB",
+		displayName: "CAP:вогняна КУЛЯ",
+		levelLabel: "Замовляння",
+		schoolName: "Evocation",
+		showSchool: true,
+		classesLabel: "Wizard, , Друїд",
+		showClasses: true,
+		source: "PHB",
+		sourceFullName: "Player's Handbook",
+		showSource: true,
+		disableSourceTooltip: false,
+		active: false,
+		nextSelection: rowSpell,
+	});
+	assert.equal(rowPresentation.nextSelection, rowSpell);
+	assert.deepEqual(rowCalls, [
+		["source", "PHB"],
+		["capitalize", "вогняна КУЛЯ"],
+		["translate", "Cantrip", undefined],
+	]);
+	const selectedRow = getSpellListItemPresentation(
+		{ name: "Без джерела", school: "v" },
+		{
+			selected: true,
+			capitalizeName: (name) => name,
+			resolveSourceName: () => "",
+			translate: (template, variables) => `${template}:${String(variables?.level)}`,
+		},
+	);
+	assert.deepEqual(selectedRow, {
+		itemKey: ":Без джерела",
+		displayName: "Без джерела",
+		levelLabel: "{level}-level:undefined",
+		schoolName: "",
+		showSchool: false,
+		classesLabel: "",
+		showClasses: false,
+		source: "",
+		sourceFullName: "",
+		showSource: false,
+		disableSourceTooltip: true,
+		active: true,
+		nextSelection: null,
+	});
+	const whitespaceSourceRow = getSpellListItemPresentation(
+		{ name: "Пробіл", source: "   ", level: 1 },
+		{
+			selected: false,
+			capitalizeName: (name) => name,
+			resolveSourceName: () => "",
+			translate: () => "1-й рівень",
+		},
+	);
+	assert.equal(whitespaceSourceRow.showSource, true);
+	assert.equal(whitespaceSourceRow.disableSourceTooltip, true);
+
+	const insertedSpells = [];
+	executeSpellInsertAction((spell) => insertedSpells.push(spell), rowSpell);
+	executeSpellInsertAction(null, spells[0]);
+	assert.deepEqual(insertedSpells, [rowSpell]);
+	assert.equal(insertedSpells[0], rowSpell);
 });
 
 await run("content tokens parse hit and recharge tags safely", () => {
@@ -10224,7 +10882,7 @@ await run("parser renders dice and creature tags as interactive components", asy
 	assert.match(rulesReferenceSource, /Bestiary__item_token/);
 	assert.match(rulesReferenceSource, /getCreatureReferenceMatchRank/);
 	assert.doesNotMatch(rulesReferenceSource, new RegExp("is" + "Embedded"));
-	assert.match(rulesReferenceSource, /renderRecursiveContent\(selectedItem\.entries/);
+	assert.match(rulesReferenceSource, /renderRecursiveContent\(item\.entries/);
 	assert.doesNotMatch(rulesReferenceSource, /onRuleNavigate/);
 	assert.match(rulesLinkCss, /\.RulesLink__creature/);
 });
@@ -10339,15 +10997,178 @@ await run("monster stat block presentation policies normalize source variants", 
 	assert.deepEqual(getMonsterSpellcastingEntries([{ name: "Innate", daily: { "1": ["fireball"] }, spells: { "3": { slots: 2, spells: ["fireball"] } } }]), [
 		{ name: "Innate", headerEntries: undefined, footerEntries: undefined, will: undefined, daily: { "1": ["fireball"] }, spells: { "3": { slots: 2, spells: ["fireball"] } } },
 	]);
+	const spellHeader = [];
+	const spellWill = [];
+	const spellFooter = ["Кінець"];
+	const dailySpell = ["misty step"];
+	const cantrips = ["light"];
+	const leveledSpells = ["fireball"];
+	const spellcastingPresentation = getMonsterSpellcastingEntryPresentation({
+		name: "Чарування",
+		headerEntries: spellHeader,
+		will: spellWill,
+		daily: { "1/day": dailySpell },
+		spells: {
+			"0": { slots: 0, spells: cantrips },
+			"3": { slots: 2, spells: leveledSpells },
+		},
+		footerEntries: spellFooter,
+	});
+	assert.equal(spellcastingPresentation.headerEntries, spellHeader);
+	assert.equal(spellcastingPresentation.willLine.values, spellWill);
+	assert.equal(spellcastingPresentation.footerEntries, spellFooter);
+	assert.deepEqual(spellcastingPresentation.dailyLines, [
+		{ key: "1/day", label: "1/day each", values: dailySpell },
+	]);
+	assert.deepEqual(spellcastingPresentation.spellLines, [
+		{ key: "0", label: "Cantrips", values: cantrips },
+		{ key: "3", label: "Level 3 (2 slots)", values: leveledSpells },
+	]);
+	assert.deepEqual(
+		getMonsterSpellcastingEntryPresentation({ name: "Порожнє" }),
+		{
+			headerEntries: null,
+			willLine: null,
+			dailyLines: [],
+			spellLines: [],
+			footerEntries: null,
+		},
+	);
+	assert.equal(
+		getMonsterSpellcastingEntryPresentation({
+			name: "Дивне",
+			spells: { "-1": { slots: -1, spells: [] } },
+		}).spellLines[0].label,
+		"Level -1 (-1 slots)",
+	);
 	const monster = { id: "custom-1", name: "Вартовий", source: "CUSTOM", imageUrl: "/custom.webp" };
+	assert.deepEqual(getMonsterMetadataPresentation(monster, "MM"), {
+		originalName: "",
+		showOriginalName: false,
+		showSource: true,
+	});
+	assert.deepEqual(
+		getMonsterMetadataPresentation(
+			{ ...monster, originalBestiaryName: "Guardian" },
+			"",
+		),
+		{
+			originalName: "Guardian",
+			showOriginalName: true,
+			showSource: false,
+		},
+	);
+	assert.deepEqual(
+		getMonsterMetadataPresentation(
+			{ ...monster, originalBestiaryName: "Вартовий" },
+			"   ",
+		),
+		{
+			originalName: "",
+			showOriginalName: false,
+			showSource: true,
+		},
+	);
+	assert.equal(
+		getMonsterMetadataPresentation(
+			{ ...monster, originalBestiaryName: 42 },
+			"",
+		).showOriginalName,
+		false,
+	);
 	assert.deepEqual(getMonsterTokenSources(monster, "", null, "/local.webp", "/external.webp"), {
 		customTokenSrc: "/custom.webp",
 		localSrc: "/custom.webp",
 		externalSrc: "/custom.webp",
 		isCustomMonster: true,
 	});
+	assert.deepEqual(
+		getMonsterTokenSources(
+			{ name: "Тінь", source: " custom ", imageUrl: 42 },
+			"",
+			"/override.webp",
+			"/local.webp",
+			"/external.webp",
+		),
+		{
+			customTokenSrc: "",
+			localSrc: "/override.webp",
+			externalSrc: "/override.webp",
+			isCustomMonster: false,
+		},
+	);
+	assert.deepEqual(
+		getMonsterTokenSources(
+			{ name: "Тінь", source: "custom", imageUrl: "/monster.webp" },
+			"  /explicit.webp  ",
+			null,
+			"/local.webp",
+			"/external.webp",
+		),
+		{
+			customTokenSrc: "  /explicit.webp  ",
+			localSrc: "  /explicit.webp  ",
+			externalSrc: "  /explicit.webp  ",
+			isCustomMonster: true,
+		},
+	);
+	assert.deepEqual(
+		getMonsterTokenSources(
+			{ name: "Тінь", source: null, imageUrl: "" },
+			"",
+			null,
+			"/local-only.webp",
+			"/external-only.webp",
+		),
+		{
+			customTokenSrc: "",
+			localSrc: "/local-only.webp",
+			externalSrc: "/external-only.webp",
+			isCustomMonster: false,
+		},
+	);
 	assert.equal(shouldShowMonsterTokenDropzone({ allowTokenUpload: true, hasImageError: false, isReplacingToken: false, localSrc: "", isCustomMonster: true, hasTokenImageChange: false }), true);
 	assert.equal(shouldShowMonsterTokenDropzone({ allowTokenUpload: false, hasImageError: true, isReplacingToken: true, localSrc: "", isCustomMonster: true, hasTokenImageChange: true }), false);
+	const disabledVisibilityReads = [];
+	assert.equal(
+		shouldShowMonsterTokenDropzone(
+			new Proxy(
+				{ allowTokenUpload: false },
+				{
+					get(target, property) {
+						disabledVisibilityReads.push(property);
+						return target[property];
+					},
+				},
+			),
+		),
+		false,
+	);
+	assert.deepEqual(disabledVisibilityReads, ["allowTokenUpload"]);
+	const replacementVisibilityReads = [];
+	assert.equal(
+		shouldShowMonsterTokenDropzone(
+			new Proxy(
+				{
+					allowTokenUpload: true,
+					isCustomMonster: true,
+					isReplacingToken: true,
+				},
+				{
+					get(target, property) {
+						replacementVisibilityReads.push(property);
+						return target[property];
+					},
+				},
+			),
+		),
+		true,
+	);
+	assert.deepEqual(replacementVisibilityReads, [
+		"allowTokenUpload",
+		"isCustomMonster",
+		"isReplacingToken",
+	]);
 	assert.equal(getUploadedTokenUrl({ url: "/next.webp" }), "/next.webp");
 	assert.equal(getUploadedTokenUrl({ url: 3 }), "");
 	assert.equal(getMonsterMutationKey(monster, "Вартовий"), "custom-1");
@@ -10356,6 +11177,283 @@ await run("monster stat block presentation policies normalize source variants", 
 		html: '<img src="/external.webp" alt="Вартовий">',
 		downloadUrl: "image/webp:Guardian.webp:/external.webp",
 	});
+
+	assert.deepEqual(
+		getMonsterTokenSectionPresentation({
+			showDropzone: true,
+			hasImageError: false,
+			allowTokenUpload: false,
+			customTokenSrc: "/український-токен.webp",
+			isCustomMonster: false,
+			hasTokenImageChange: false,
+		}),
+		{
+			mode: "dropzone",
+			showCancelReplace: true,
+			showReplaceAction: false,
+		},
+	);
+	assert.deepEqual(
+		getMonsterTokenSectionPresentation({
+			showDropzone: true,
+			hasImageError: true,
+			allowTokenUpload: true,
+			customTokenSrc: "/token.webp",
+			isCustomMonster: true,
+			hasTokenImageChange: true,
+		}),
+		{
+			mode: "dropzone",
+			showCancelReplace: false,
+			showReplaceAction: false,
+		},
+	);
+	assert.deepEqual(
+		getMonsterTokenSectionPresentation({
+			showDropzone: false,
+			hasImageError: false,
+			allowTokenUpload: true,
+			customTokenSrc: "",
+			isCustomMonster: false,
+			hasTokenImageChange: true,
+		}),
+		{
+			mode: "image",
+			showCancelReplace: false,
+			showReplaceAction: true,
+		},
+	);
+	assert.deepEqual(
+		getMonsterTokenSectionPresentation({
+			showDropzone: false,
+			hasImageError: true,
+			allowTokenUpload: true,
+			customTokenSrc: "/token.webp",
+			isCustomMonster: true,
+			hasTokenImageChange: true,
+		}),
+		{
+			mode: "skeleton",
+			showCancelReplace: false,
+			showReplaceAction: false,
+		},
+	);
+	assert.equal(
+		getMonsterTokenSectionPresentation({
+			showDropzone: false,
+			hasImageError: false,
+			allowTokenUpload: true,
+			customTokenSrc: "",
+			isCustomMonster: true,
+			hasTokenImageChange: false,
+		}).showReplaceAction,
+		true,
+	);
+	assert.equal(
+		getMonsterTokenSectionPresentation({
+			showDropzone: false,
+			hasImageError: false,
+			allowTokenUpload: true,
+			customTokenSrc: "",
+			isCustomMonster: false,
+			hasTokenImageChange: false,
+		}).showReplaceAction,
+		false,
+	);
+
+	assert.deepEqual(
+		getMonsterNameRowPresentation({
+			name: "Мавка",
+			hasNameAction: true,
+			showFavoriteAction: true,
+			isFavorite: true,
+			hasAiAction: true,
+			hasFieldEditAction: true,
+			hasDeleteAction: true,
+			showAddToEncounterAction: true,
+		}),
+		{
+			name: "Мавка",
+			useNameAction: true,
+			showFavoriteAction: true,
+			favoriteTitle: "Remove from favorites",
+			favoriteActive: true,
+			showAiAction: true,
+			showFieldEditAction: true,
+			showDeleteAction: true,
+			showAddToEncounterAction: true,
+		},
+	);
+	assert.deepEqual(
+		getMonsterNameRowPresentation({
+			name: 0,
+			hasNameAction: false,
+			showFavoriteAction: false,
+			isFavorite: false,
+			hasAiAction: false,
+			hasFieldEditAction: false,
+			hasDeleteAction: false,
+			showAddToEncounterAction: false,
+		}),
+		{
+			name: "0",
+			useNameAction: false,
+			showFavoriteAction: false,
+			favoriteTitle: "Add to favorites",
+			favoriteActive: false,
+			showAiAction: false,
+			showFieldEditAction: false,
+			showDeleteAction: false,
+			showAddToEncounterAction: false,
+		},
+	);
+	const actionCalls = [];
+	executeMonsterAction((receivedMonster) => actionCalls.push(receivedMonster), monster);
+	executeMonsterAction(null, { name: "Не викликати" });
+	assert.deepEqual(actionCalls, [monster]);
+	assert.equal(actionCalls[0], monster);
+
+	const skippedUploadReads = [];
+	assert.deepEqual(
+		await executeMonsterTokenUpload(
+			new Proxy(
+				{ result: { url: "" } },
+				{
+					get(target, property) {
+						skippedUploadReads.push(property);
+						return target[property];
+					},
+				},
+			),
+		),
+		{ status: "skipped" },
+	);
+	assert.deepEqual(skippedUploadReads, ["result"]);
+
+	const injectedUploadEvents = [];
+	const injectedUploadOutcome = await executeMonsterTokenUpload({
+		result: { url: "/нова-мавка.webp" },
+		monster,
+		effectiveName: "Вартовий",
+		onTokenImageChange: (receivedMonster, imageUrl) =>
+			injectedUploadEvents.push(["injected", receivedMonster, imageUrl]),
+		persist: async () => assert.fail("injected upload must not persist"),
+		onTokenUrl: (imageUrl) => injectedUploadEvents.push(["url", imageUrl]),
+		onImageError: (hasError) => injectedUploadEvents.push(["error", hasError]),
+		onReplacing: (isReplacing) =>
+			injectedUploadEvents.push(["replacing", isReplacing]),
+		onPersistenceError: (error) =>
+			assert.fail(`injected upload must not report persistence: ${error}`),
+	});
+	assert.deepEqual(injectedUploadOutcome, {
+		status: "succeeded",
+		mode: "injected",
+		imageUrl: "/нова-мавка.webp",
+	});
+	assert.deepEqual(injectedUploadEvents, [
+		["url", "/нова-мавка.webp"],
+		["error", false],
+		["injected", monster, "/нова-мавка.webp"],
+		["replacing", false],
+	]);
+	assert.equal(injectedUploadEvents[2][1], monster);
+
+	const persistedUploadEvents = [];
+	const persistedUploadOutcome = await executeMonsterTokenUpload({
+		result: { url: "/temporary.webp" },
+		monster,
+		effectiveName: "Fallback name",
+		persist: async (mutationKey, payload) => {
+			persistedUploadEvents.push(["persist", mutationKey, payload]);
+			return { ...monster, imageUrl: "/canonical.webp" };
+		},
+		onTokenUrl: (imageUrl) => persistedUploadEvents.push(["url", imageUrl]),
+		onImageError: (hasError) => persistedUploadEvents.push(["error", hasError]),
+		onReplacing: (isReplacing) =>
+			persistedUploadEvents.push(["replacing", isReplacing]),
+		onPersistenceError: (error) =>
+			assert.fail(`unexpected persistence error: ${error}`),
+	});
+	assert.deepEqual(persistedUploadOutcome, {
+		status: "succeeded",
+		mode: "persisted",
+		imageUrl: "/canonical.webp",
+	});
+	assert.deepEqual(persistedUploadEvents, [
+		["url", "/temporary.webp"],
+		["error", false],
+		["persist", "custom-1", { imageUrl: "/temporary.webp" }],
+		["url", "/canonical.webp"],
+		["replacing", false],
+	]);
+	const fallbackUploadUrls = [];
+	assert.deepEqual(
+		await executeMonsterTokenUpload({
+			result: { url: "/fallback.webp" },
+			monster,
+			effectiveName: "Вартовий",
+			persist: async () => ({ ...monster, imageUrl: 0 }),
+			onTokenUrl: (imageUrl) => fallbackUploadUrls.push(imageUrl),
+			onImageError: () => {},
+			onReplacing: () => {},
+			onPersistenceError: (error) =>
+				assert.fail(`unexpected fallback persistence error: ${error}`),
+		}),
+		{
+			status: "succeeded",
+			mode: "persisted",
+			imageUrl: "/fallback.webp",
+		},
+	);
+	assert.deepEqual(fallbackUploadUrls, ["/fallback.webp", "/fallback.webp"]);
+
+	const persistenceError = new Error("save failed");
+	const failedUploadEvents = [];
+	const failedUploadOutcome = await executeMonsterTokenUpload({
+		result: { url: "/unsaved.webp" },
+		monster,
+		effectiveName: "Вартовий",
+		persist: async () => {
+			failedUploadEvents.push(["persist"]);
+			throw persistenceError;
+		},
+		onTokenUrl: (imageUrl) => failedUploadEvents.push(["url", imageUrl]),
+		onImageError: (hasError) => failedUploadEvents.push(["error", hasError]),
+		onReplacing: () => assert.fail("failed upload must retain replacing state"),
+		onPersistenceError: (error) => failedUploadEvents.push(["failure", error]),
+	});
+	assert.deepEqual(failedUploadOutcome, {
+		status: "failed",
+		error: persistenceError,
+		imageUrl: "/unsaved.webp",
+	});
+	assert.deepEqual(failedUploadEvents, [
+		["url", "/unsaved.webp"],
+		["error", false],
+		["persist"],
+		["failure", persistenceError],
+	]);
+
+	const injectedError = new Error("injected callback failed");
+	const injectedFailureEvents = [];
+	await assert.rejects(
+		executeMonsterTokenUpload({
+			result: { url: "/injected-failure.webp" },
+			monster,
+			effectiveName: "Вартовий",
+			onTokenImageChange: () => {
+				injectedFailureEvents.push("injected");
+				throw injectedError;
+			},
+			persist: async () => assert.fail("failed injected callback must not persist"),
+			onTokenUrl: () => injectedFailureEvents.push("url"),
+			onImageError: () => injectedFailureEvents.push("image-error"),
+			onReplacing: () => injectedFailureEvents.push("replacing"),
+			onPersistenceError: () => injectedFailureEvents.push("persistence-error"),
+		}),
+		(error) => error === injectedError,
+	);
+	assert.deepEqual(injectedFailureEvents, ["url", "image-error", "injected"]);
 });
 
 await run("Bestiary browser policies preserve identity filtering and custom imports", async () => {
@@ -12476,6 +13574,9 @@ await run("rules reference modal policies preserve qualified identities and UTF-
 	assert.equal(REFERENCE_TAB_POLICIES.length, 7);
 	assert.equal(getInitialTabId("bestiary"), "bestiary");
 	assert.equal(getInitialTabId("unknown"), "conditions");
+	const directList = [{ name: "Прямий список" }];
+	assert.equal(normalizeReferenceList(directList), directList);
+	assert.deepEqual(normalizeReferenceList({ monsters: directList }), []);
 	assert.deepEqual(
 		combineBestiaryLists(
 			{ monsters: [{ name: "Вовк", source: "MM" }] },
@@ -12483,6 +13584,31 @@ await run("rules reference modal policies preserve qualified identities and UTF-
 		).map((item) => item.name),
 		["Вовк", "Мавка"],
 	);
+	assert.deepEqual(
+		combineBestiaryLists(
+			{
+				monster: null,
+				monsters: [{ name: "Вибраний envelope" }],
+				results: [{ name: "Пізній fallback" }],
+			},
+			undefined,
+		).map((item) => item.name),
+		["Вибраний envelope"],
+	);
+	assert.deepEqual(
+		combineBestiaryLists(
+			{ monster: {}, monsters: [{ name: "Не використовується" }] },
+			"invalid custom payload",
+		),
+		[],
+	);
+	assert.equal(
+		getCreatureReferenceName({ name: "  Мавка  ", source: "  CUSTOM  " }),
+		"Мавка|CUSTOM",
+	);
+	assert.equal(getSpellReferenceName({ name: " Щит ", source: "   " }), "Щит");
+	assert.equal(getCreatureReferenceName({ name: 0, source: "MM" }), "");
+	assert.equal(getCreatureReferenceName({ name: "Вовк", source: 0 }), "Вовк");
 	assert.equal(
 		getReferenceInlineTag("conditions", { name: "Отруєний" }),
 		"{@condition Отруєний}",
@@ -12496,6 +13622,11 @@ await run("rules reference modal policies preserve qualified identities and UTF-
 		"{@spell Вогняна куля|PHB}",
 	);
 	assert.equal(
+		getReferenceInlineTag("diseases", { name: "Сліпа гарячка" }),
+		"{@disease Сліпа гарячка}",
+	);
+	assert.equal(getReferenceInlineTag("skills", { name: "" }), "");
+	assert.equal(
 		createReferenceSelection("bestiary", { name: "Дракон", source: "MM" }).tag,
 		"{@creature Дракон|MM}",
 	);
@@ -12505,9 +13636,400 @@ await run("rules reference modal policies preserve qualified identities and UTF-
 	];
 	assert.equal(findSelectedReferenceItem("bestiary", creatures, "Дракон|MM"), creatures[1]);
 	assert.equal(findSelectedReferenceItem("bestiary", creatures, "Дракон"), creatures[0]);
+	assert.equal(getCreatureReferenceMatchRank(creatures[0], ""), 0);
+	assert.equal(getCreatureReferenceMatchRank(creatures[0], "Мавка|XMM"), 0);
+	assert.equal(getCreatureReferenceMatchRank(creatures[0], "Дракон"), 2);
+	assert.equal(getCreatureReferenceMatchRank(creatures[0], "Дракон|xmm"), 3);
+	assert.equal(getCreatureReferenceMatchRank(creatures[0], "Дракон|MM"), 1);
+	assert.equal(itemMatchesSelectedName("bestiary", creatures[0], "Дракон|MM"), true);
+	assert.equal(itemMatchesSelectedName("conditions", { name: "Отруєний" }, " Отруєний "), true);
+	assert.equal(
+		itemMatchesSelectedName("spells", { name: "Щит", source: "PHB" }, "Щит"),
+		true,
+	);
+	assert.equal(
+		itemMatchesSelectedName("spells", { name: "Щит", source: "PHB" }, "Щит|PHB"),
+		true,
+	);
+	const rankedCreatures = [
+		{ name: "Дракон", source: "XMM" },
+		{ name: "Дракон", source: "TCE" },
+		{ name: "Дракон", source: "MM" },
+		{ name: "Дракон", source: "MM" },
+	];
+	assert.equal(
+		findSelectedReferenceItem("bestiary", rankedCreatures, "Дракон|MM"),
+		rankedCreatures[2],
+	);
+	assert.equal(
+		findSelectedReferenceItem("bestiary", rankedCreatures.slice(0, 2), "Дракон|MM"),
+		rankedCreatures[0],
+	);
+	const unreadableAfterExact = { get name() { throw new Error("lookup continued after exact match"); } };
+	assert.equal(
+		findSelectedReferenceItem("bestiary", [rankedCreatures[2], unreadableAfterExact], "Дракон|MM"),
+		rankedCreatures[2],
+	);
+	const duplicateConditions = [{ name: "Отруєний" }, { name: "Отруєний" }];
+	assert.equal(
+		findSelectedReferenceItem("conditions", duplicateConditions, "Отруєний"),
+		duplicateConditions[0],
+	);
 	const diseasePolicy = REFERENCE_TAB_POLICIES.find((tab) => tab.id === "diseases");
 	assert.equal(itemMatchesQuery(diseasePolicy, { name: "Сліпа гарячка", entries: ["лихоманка"] }, "лихоманка", true), true);
 	assert.equal(itemMatchesQuery(diseasePolicy, { name: "Сліпа гарячка" }, "гаряч", false), true);
+});
+
+await run("rules reference modal plans preserve keyboard and tab navigation", () => {
+	const baseKeyboardInput = {
+		key: "Backspace",
+		altKey: false,
+		ctrlKey: false,
+		metaKey: false,
+		shiftKey: false,
+		isEditableTarget: false,
+		canNavigateBack: true,
+	};
+	assert.deepEqual(getReferenceKeyboardPlan(baseKeyboardInput), {
+		preventDefault: true,
+		historyDirection: -1,
+	});
+	for (const override of [
+		{ key: "Delete" },
+		{ altKey: true },
+		{ ctrlKey: true },
+		{ metaKey: true },
+		{ shiftKey: true },
+		{ isEditableTarget: true },
+		{ canNavigateBack: false },
+	]) {
+		assert.equal(getReferenceKeyboardPlan({ ...baseKeyboardInput, ...override }), null);
+	}
+
+	assert.deepEqual(
+		getReferenceTabSelectionPlan("conditions", "", { name: "Отруєний" }),
+		{
+			tabId: "conditions",
+			navigationName: "Отруєний",
+			pendingNavigationTabId: null,
+		},
+	);
+	assert.deepEqual(
+		getReferenceTabSelectionPlan("bestiary", "", { name: "Мавка", source: "CUSTOM" }),
+		{
+			tabId: "bestiary",
+			navigationName: "Мавка|CUSTOM",
+			pendingNavigationTabId: null,
+		},
+	);
+	assert.deepEqual(
+		getReferenceTabSelectionPlan("conditions", "Збережений вибір", { name: "Перший" }),
+		{
+			tabId: "conditions",
+			navigationName: "Збережений вибір",
+			pendingNavigationTabId: null,
+		},
+	);
+	assert.deepEqual(getReferenceTabSelectionPlan("conditions", "", { name: "" }), {
+		tabId: "conditions",
+		navigationName: null,
+		pendingNavigationTabId: "conditions",
+	});
+	assert.deepEqual(getReferenceTabSelectionPlan("spells", "Вогняна куля|PHB", null), {
+		tabId: "spells",
+		navigationName: "Вогняна куля|PHB",
+		pendingNavigationTabId: null,
+	});
+	assert.deepEqual(getReferenceTabSelectionPlan("spells", "", { name: "Щит", source: "PHB" }), {
+		tabId: "spells",
+		navigationName: null,
+		pendingNavigationTabId: "spells",
+	});
+	assert.equal(getReferenceTabSelectionPlan("unknown", "", null), null);
+});
+
+await run("rules reference modal orchestration plans preserve request, load, and host effects", () => {
+	assert.equal(getReferenceNavigationRequestPlan(undefined, null), null);
+	assert.equal(getReferenceNavigationRequestPlan({ requestId: 0, tabId: "skills" }, null), null);
+	assert.equal(
+		getReferenceNavigationRequestPlan({ requestId: 4, tabId: "skills" }, 4),
+		null,
+	);
+	assert.deepEqual(
+		getReferenceNavigationRequestPlan({ requestId: 5, tabId: "skills", forceTab: true }, null),
+		{ type: "tab-only", requestId: 5, tabId: "skills" },
+	);
+	assert.deepEqual(
+		getReferenceNavigationRequestPlan({ requestId: 6, tabId: "spells", name: "Щит|PHB", forceTab: true }, 5),
+		{ type: "reference", requestId: 6, tabId: "spells", name: "Щит|PHB" },
+	);
+	assert.deepEqual(
+		getReferenceNavigationRequestPlan({ requestId: 7, tabId: "conditions" }, null),
+		{ type: "reference", requestId: 7, tabId: "conditions", name: "" },
+	);
+
+	const historyEntry = { tabId: "bestiary", name: "Мавка|CUSTOM" };
+	assert.equal(
+		getReferenceInitialNavigationPlan(true, false, "skills", "", historyEntry),
+		null,
+	);
+	const initialPlans = [
+		getReferenceInitialNavigationPlan(false, true, "spells", "Щит|PHB", historyEntry),
+		getReferenceInitialNavigationPlan(false, true, "skills", "", historyEntry),
+		getReferenceInitialNavigationPlan(false, false, "conditions", "Отруєний", historyEntry),
+		getReferenceInitialNavigationPlan(false, false, "conditions", "", historyEntry),
+		getReferenceInitialNavigationPlan(false, false, "invalid", "", null),
+	];
+	assert.deepEqual(initialPlans, [
+		{ type: "force-reference", tabId: "spells", name: "Щит|PHB" },
+		{ type: "force-tab", tabId: "skills" },
+		{ type: "reference", tabId: "conditions", name: "Отруєний" },
+		{ type: "history", entry: historyEntry },
+		{ type: "tab", tabId: "conditions" },
+	]);
+	const initialEvents = [];
+	assert.equal(
+		executeReferenceInitialNavigationPlan(initialPlans[0], {
+			onTabOnly: (tabId) => initialEvents.push(["tab-only", tabId]),
+			onReference: (tabId, name) => initialEvents.push(["reference", tabId, name]),
+			onHistory: (entry) => initialEvents.push(["history", entry]),
+			onTab: (tabId) => initialEvents.push(["tab", tabId]),
+		}),
+		true,
+	);
+	assert.deepEqual(initialEvents, [
+		["tab-only", "spells"],
+		["reference", "spells", "Щит|PHB"],
+	]);
+	assert.equal(
+		executeReferenceInitialNavigationPlan(null, {
+			onTabOnly: () => assert.fail("null plan must not execute"),
+			onReference: () => assert.fail("null plan must not execute"),
+			onHistory: () => assert.fail("null plan must not execute"),
+			onTab: () => assert.fail("null plan must not execute"),
+		}),
+		false,
+	);
+
+	const loadedConditions = [{ name: "Отруєний" }];
+	const itemsByTab = { conditions: loadedConditions };
+	assert.deepEqual(
+		getReferenceTabsToLoad(
+			true,
+			["conditions", "diseases", "spells"],
+			"conditions",
+			itemsByTab,
+			new Set(["spells"]),
+		),
+		["diseases"],
+	);
+	assert.deepEqual(
+		getReferenceTabsToLoad(false, ["conditions", "skills"], "skills", itemsByTab, new Set()),
+		["skills"],
+	);
+	assert.deepEqual(
+		getReferenceTabsToLoad(false, ["conditions", "skills"], "skills", itemsByTab, new Set(["skills"])),
+		[],
+	);
+	const selectedConditions = { conditions: "Збережений" };
+	assert.equal(
+		applyLoadedReferenceSelection(selectedConditions, "conditions", loadedConditions),
+		selectedConditions,
+	);
+	const selectedSpells = {};
+	assert.equal(
+		applyLoadedReferenceSelection(selectedSpells, "spells", [{ name: "Щит", source: "PHB" }]),
+		selectedSpells,
+	);
+	assert.deepEqual(
+		applyLoadedReferenceSelection({}, "conditions", loadedConditions),
+		{ conditions: "Отруєний" },
+	);
+	const cleared = { conditions: "" };
+	assert.equal(applyReferenceTabOnlySelection(cleared, "conditions"), cleared);
+	assert.deepEqual(applyReferenceTabOnlySelection({}, "conditions"), { conditions: "" });
+	assert.equal(getReferenceLoadErrorMessage(new Error("Помилка завантаження"), "Fallback"), "Помилка завантаження");
+	assert.equal(getReferenceLoadErrorMessage({ message: "unsafe" }, "Невідома помилка"), "Невідома помилка");
+
+	const tabEvents = [];
+	assert.equal(
+		executeReferenceTabSelectionPlan(
+			{ tabId: "conditions", navigationName: "Отруєний", pendingNavigationTabId: null },
+			{
+				onScrollRequest: (value) => tabEvents.push(["scroll", value]),
+				onPendingNavigation: (tabId) => tabEvents.push(["pending", tabId]),
+				onNavigation: (tabId, name) => tabEvents.push(["navigation", tabId, name]),
+				onActiveTab: (tabId) => tabEvents.push(["active", tabId]),
+			},
+		),
+		true,
+	);
+	assert.deepEqual(tabEvents, [
+		["scroll", false],
+		["pending", null],
+		["navigation", "conditions", "Отруєний"],
+		["active", "conditions"],
+	]);
+	const pendingTabEvents = [];
+	executeReferenceTabSelectionPlan(
+		{ tabId: "spells", navigationName: null, pendingNavigationTabId: "spells" },
+		{
+			onScrollRequest: (value) => pendingTabEvents.push(["scroll", value]),
+			onPendingNavigation: (tabId) => pendingTabEvents.push(["pending", tabId]),
+			onNavigation: () => assert.fail("pending tab must not record navigation"),
+			onActiveTab: (tabId) => pendingTabEvents.push(["active", tabId]),
+		},
+	);
+	assert.deepEqual(pendingTabEvents, [
+		["scroll", false],
+		["pending", "spells"],
+		["active", "spells"],
+	]);
+
+	assert.equal(getReferenceModalHostPlan(undefined, null, false), null);
+	assert.equal(
+		getReferenceModalHostPlan({ requestId: 8, tabId: "skills" }, 8, false),
+		null,
+	);
+	assert.deepEqual(
+		getReferenceModalHostPlan(
+			{ requestId: 9, tabId: "bestiary", name: "Мавка|CUSTOM", forceTab: true },
+			8,
+			true,
+		),
+		{
+			requestId: 9,
+			shouldOpen: false,
+			initialTab: "bestiary",
+			initialName: "Мавка|CUSTOM",
+			forceTab: true,
+		},
+	);
+});
+
+await run("rules reference modal plans reconcile selections and consume scroll requests", () => {
+	assert.deepEqual(getReferenceHistoryAvailability(-1, 3), {
+		canNavigateBack: false,
+		canNavigateForward: false,
+	});
+	assert.deepEqual(getReferenceHistoryAvailability(0, 3), {
+		canNavigateBack: false,
+		canNavigateForward: true,
+	});
+	assert.deepEqual(getReferenceHistoryAvailability(1, 3), {
+		canNavigateBack: true,
+		canNavigateForward: true,
+	});
+	assert.deepEqual(getReferenceHistoryAvailability(2, 3), {
+		canNavigateBack: true,
+		canNavigateForward: false,
+	});
+	const wolf = { name: "Вовк", source: "MM" };
+	const mavka = { name: "Мавка", source: "CUSTOM" };
+	const reconciliationInput = {
+		tabId: "bestiary",
+		hasLoaded: true,
+		isLoading: false,
+		activeItems: [],
+		filteredItems: [wolf, mavka],
+		selectedName: "Невідомий|MM",
+	};
+	assert.deepEqual(
+		getReferenceSelectionReconciliationPlan(reconciliationInput),
+		{ type: "select", tabId: "bestiary", name: "Вовк|MM" },
+	);
+	assert.equal(
+		getReferenceSelectionReconciliationPlan({
+			...reconciliationInput,
+			hasLoaded: false,
+		}),
+		null,
+	);
+	assert.equal(
+		getReferenceSelectionReconciliationPlan({
+			...reconciliationInput,
+			isLoading: true,
+		}),
+		null,
+	);
+	assert.equal(
+		getReferenceSelectionReconciliationPlan({
+			...reconciliationInput,
+			tabId: "spells",
+		}),
+		null,
+	);
+	assert.equal(
+		getReferenceSelectionReconciliationPlan({
+			...reconciliationInput,
+			activeItems: [wolf],
+			selectedName: "Вовк|MM",
+		}),
+		null,
+	);
+	assert.equal(
+		getReferenceSelectionReconciliationPlan({
+			...reconciliationInput,
+			filteredItems: [wolf],
+			selectedName: "Вовк",
+		}),
+		null,
+	);
+	const clearPlan = getReferenceSelectionReconciliationPlan({
+		...reconciliationInput,
+		filteredItems: [],
+	});
+	assert.deepEqual(clearPlan, { type: "clear", tabId: "bestiary" });
+	const emptySelections = { conditions: "" };
+	assert.equal(
+		applyReferenceSelectionReconciliationPlan(emptySelections, clearPlan),
+		emptySelections,
+	);
+	assert.deepEqual(
+		applyReferenceSelectionReconciliationPlan(
+			{ bestiary: "Старий вибір|MM", conditions: "Отруєний" },
+			clearPlan,
+		),
+		{ bestiary: "", conditions: "Отруєний" },
+	);
+	const selectPlan = getReferenceSelectionReconciliationPlan(reconciliationInput);
+	assert.deepEqual(
+		applyReferenceSelectionReconciliationPlan(
+			{ conditions: "Отруєний" },
+			selectPlan,
+		),
+		{ conditions: "Отруєний", bestiary: "Вовк|MM" },
+	);
+
+	const dragons = [
+		{ name: "Дракон", source: "XMM" },
+		{ name: "Дракон", source: "MM" },
+	];
+	const scrollInput = {
+		tabId: "bestiary",
+		hasLoaded: true,
+		isLoading: false,
+		shouldScroll: true,
+		filteredItems: dragons,
+		selectedName: "Дракон|MM",
+	};
+	assert.deepEqual(getReferenceScrollPlan(scrollInput), { scrollIndex: 1 });
+	assert.deepEqual(
+		getReferenceScrollPlan({ ...scrollInput, selectedName: "Дракон|XMM" }),
+		{ scrollIndex: 0 },
+	);
+	assert.deepEqual(
+		getReferenceScrollPlan({ ...scrollInput, selectedName: "Мавка|CUSTOM" }),
+		{ scrollIndex: -1 },
+	);
+	for (const override of [
+		{ hasLoaded: false },
+		{ isLoading: true },
+		{ shouldScroll: false },
+		{ selectedName: "" },
+	]) {
+		assert.equal(getReferenceScrollPlan({ ...scrollInput, ...override }), null);
+	}
 });
 
 await run("campaign search policies index campaign and session content", async () => {
@@ -12563,6 +14085,208 @@ await run("campaign search policies index campaign and session content", async (
 	assert.equal(loaded.some((item) => item.title === "Локальний герой"), true);
 	assert.equal(loaded.some((item) => item.title === "remote-characters"), false);
 	assert.equal(loaded.some((item) => item.title === "Завантажено"), true);
+});
+
+await run("campaign search text and snippet policies preserve recursive boundaries", () => {
+	assert.equal(campaignSearchValueToText(null), "");
+	assert.equal(campaignSearchValueToText(undefined), "");
+	assert.equal(campaignSearchValueToText("Брама"), "Брама");
+	assert.equal(campaignSearchValueToText(0), "0");
+	assert.equal(campaignSearchValueToText(true), "");
+	assert.equal(
+		campaignSearchValueToText({
+			visible: ["Ліс", { text: "брама", _secret: "не індексувати" }, true],
+			imageUrl: "не індексувати",
+			nested: { imageUrl: "також ні", number: 7 },
+		}),
+		"Ліс\nбрама\n\n7",
+	);
+
+	assert.equal(buildCampaignSearchSnippet(null, "ключ"), "");
+	assert.equal(buildCampaignSearchSnippet("  Перша\n\tбрама  ", ""), "Перша брама");
+	assert.equal(buildCampaignSearchSnippet("Ключ зберігає РЕГІСТР", "ключ"), "Ключ зберігає РЕГІСТР");
+	assert.equal(buildCampaignSearchSnippet("x".repeat(180), "відсутній"), "x".repeat(180));
+	assert.equal(buildCampaignSearchSnippet("x".repeat(181), "відсутній"), `${"x".repeat(180)}...`);
+	const centeredMatch = `${"a".repeat(80)}КЛЮЧ${"b".repeat(105)}`;
+	assert.equal(buildCampaignSearchSnippet(centeredMatch, "ключ"), `...${centeredMatch.slice(10)}`);
+});
+
+await run("campaign search names preserve fallback precedence", () => {
+	const index = buildCampaignSearchIndex({
+		campaign: { slug: "names", name: "Імена" },
+		entities: {
+			characters: [
+				{ id: "full", firstName: "Олена", lastName: "Мудра", name: "Ігнороване ім'я" },
+				{ id: "last", lastName: "Самітня" },
+				{ id: "name", name: "Коваль", title: "Майстер" },
+				{ id: "title", title: "Безіменний вартовий" },
+				{ id: "untitled" },
+			],
+			npc: [],
+			locations: [],
+		},
+		sessions: [],
+	}, (key) => key === "Untitled" ? "Без назви" : key);
+	const titles = index.filter((item) => item.id.startsWith("campaign-character:")).map((item) => item.title);
+	assert.deepEqual(titles, ["Олена Мудра", "Самітня", "Коваль", "Безіменний вартовий", "Без назви"]);
+});
+
+await run("campaign search loader preserves request order overrides and fail-fast errors", async () => {
+	const calls = [];
+	const translate = (key) => key;
+	const loaded = await loadCampaignSearchIndex({
+		campaign: { slug: "loader", name: "Loader" },
+		currentData: {
+			slug: "loader",
+			name: "Локальна кампанія",
+			characters: [],
+			npcs: null,
+		},
+		translate,
+		api: {
+			getEntities: async (_slug, type) => {
+				calls.push(`entities:${type}`);
+				return [{ id: type, name: `remote-${type}` }];
+			},
+			listSessions: async () => {
+				calls.push("sessions:list");
+				return [{ fileName: "first.json" }, "invalid", { fileName: 0 }];
+			},
+			getSession: async (_slug, fileName) => {
+				calls.push(`session:${fileName}`);
+				return { data: { notes: [{ id: `note-${fileName}`, title: `detail-${fileName}` }] } };
+			},
+		},
+	});
+	assert.deepEqual(calls, [
+		"entities:characters",
+		"entities:npc",
+		"entities:locations",
+		"sessions:list",
+		"session:first.json",
+		"session:",
+		"session:",
+	]);
+	assert.equal(loaded.some((item) => item.title === "remote-characters"), false);
+	assert.equal(loaded.some((item) => item.title === "remote-npc"), true);
+	assert.equal(loaded.some((item) => item.title === "remote-locations"), true);
+	assert.equal(loaded.some((item) => item.title === "detail-first.json"), true);
+
+	const sourceError = new Error("source failed");
+	await assert.rejects(
+		loadCampaignSearchIndex({
+			campaign: { slug: "failure", name: "Failure" },
+			translate,
+			api: {
+				getEntities: async (_slug, type) => type === "npc" ? Promise.reject(sourceError) : [],
+				listSessions: async () => [],
+				getSession: async () => ({}),
+			},
+		}),
+		(error) => error === sourceError,
+	);
+
+	const hydrationError = new Error("hydration failed");
+	await assert.rejects(
+		loadCampaignSearchIndex({
+			campaign: { slug: "failure", name: "Failure" },
+			translate,
+			api: {
+				getEntities: async () => [],
+				listSessions: async () => [{ fileName: "broken.json" }],
+				getSession: async () => Promise.reject(hydrationError),
+			},
+		}),
+		(error) => error === hydrationError,
+	);
+});
+
+await run("campaign search load execution preserves effects errors and cancellation", async () => {
+	const createApi = (sessions = []) => ({
+		getEntities: async () => [],
+		listSessions: async () => sessions,
+		getSession: async () => ({}),
+	});
+	const campaign = { slug: "executor", name: "Виконавець" };
+	const events = [];
+	await executeCampaignSearchIndexLoad({
+		campaign,
+		currentData: campaign,
+		api: createApi(),
+		translate: (key) => key,
+		unknownErrorMessage: "Невідома помилка",
+		isCancelled: () => false,
+		effects: {
+			setIndex: (index) => events.push(["index", index]),
+			setError: (message) => events.push(["error", message]),
+			setLoading: (loading) => events.push(["loading", loading]),
+		},
+	});
+	assert.equal(events[0][0], "index");
+	assert.equal(events[0][1].some((item) => item.id === "campaign-description"), true);
+	assert.deepEqual(events[1], ["loading", false]);
+
+	const failureEvents = [];
+	await executeCampaignSearchIndexLoad({
+		campaign,
+		api: {
+			...createApi(),
+			listSessions: async () => { throw new Error("Помилка сесій"); },
+		},
+		translate: (key) => key,
+		unknownErrorMessage: "Невідома помилка",
+		isCancelled: () => false,
+		effects: {
+			setIndex: (index) => failureEvents.push(["index", index]),
+			setError: (message) => failureEvents.push(["error", message]),
+			setLoading: (loading) => failureEvents.push(["loading", loading]),
+		},
+	});
+	assert.deepEqual(failureEvents, [["error", "Помилка сесій"], ["loading", false]]);
+	assert.equal(getCampaignSearchErrorMessage("невідоме", "Запасне"), "Запасне");
+
+	const cancelledEvents = [];
+	await executeCampaignSearchIndexLoad({
+		campaign,
+		api: createApi(),
+		translate: (key) => key,
+		unknownErrorMessage: "Невідома помилка",
+		isCancelled: () => true,
+		effects: {
+			setIndex: (index) => cancelledEvents.push(["index", index]),
+			setError: (message) => cancelledEvents.push(["error", message]),
+			setLoading: (loading) => cancelledEvents.push(["loading", loading]),
+		},
+	});
+	assert.deepEqual(cancelledEvents, []);
+});
+
+await run("campaign search scenes preserve identity title and lazy fallback", () => {
+	const translationCalls = [];
+	const translate = (key, params = {}) => {
+		translationCalls.push(key);
+		return key.replace("{number}", String(params.number ?? ""));
+	};
+	const index = buildCampaignSearchIndex({
+		campaign: { slug: "scenes", name: "Сцени" },
+		entities: { characters: [], npc: [], locations: [] },
+		sessions: [{
+			fileName: "scene.json",
+			detail: { data: { scenes: [
+				{ id: "named", title: "Названа сцена" },
+				{ name: "Альтернативна назва" },
+				{},
+			] } },
+		}],
+	}, translate);
+	const scenes = index.filter((item) => item.filter === "scenes");
+	assert.deepEqual(scenes.map((item) => item.title), ["Названа сцена", "Альтернативна назва", "Scene 3"]);
+	assert.deepEqual(scenes.map((item) => item.id), [
+		"session-scene.json-scene-named",
+		"session-scene.json-scene-1",
+		"session-scene.json-scene-2",
+	]);
+	assert.equal(translationCalls.filter((key) => key === "Scene {number}").length, 1);
 });
 
 await run("campaign entity modal policies preserve rename and save contracts", () => {
@@ -13674,14 +15398,16 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.doesNotMatch(spellsSource, /next\.set\("spell"/);
 	assert.doesNotMatch(spellsSource, /next\.set\("s_source"/);
 	assert.match(spellsSource, /getInitialSpellSelection\(displayedSpells, allSpells/);
-	assert.match(rulesReferenceSource, /EMBEDDED_BROWSER_TAB_IDS/);
+	assert.match(rulesReferenceSource, /tabId === "spells"/);
 	assert.match(rulesReferenceSource, /recordEmbeddedReferenceSelection/);
 	assert.match(rulesReferenceSource, /recordNavigation\(tabId, name\)/);
 	assert.match(rulesReferenceSource, /recordRulesReferenceHistoryEntry/);
 	assert.match(rulesReferenceSource, /setRulesReferenceHistoryIndex/);
 	assert.match(rulesReferenceSource, /applyTabOnlyNavigation/);
-	assert.match(rulesReferenceSource, /navigationRequest\.forceTab/);
-	assert.match(rulesReferenceSource, /if \(initialName\) \{/);
+	assert.match(rulesReferenceSource, /getReferenceNavigationRequestPlan/);
+	assert.match(rulesReferenceSource, /normalizedRequest\.forceTab/);
+	assert.match(rulesReferenceSource, /getReferenceInitialNavigationPlan/);
+	assert.match(rulesReferenceSource, /Boolean\(initialName\)/);
 	assert.doesNotMatch(rulesReferenceSource, /setNavigationHistory/);
 	assert.match(rulesReferenceSource, /onActiveSpellChange/);
 	assert.doesNotMatch(rulesReferenceSource, /onActiveMonsterChange/);
@@ -13689,7 +15415,7 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.match(rulesReferenceSource, /itemMatchesSelectedName/);
 	assert.match(
 		rulesReferenceHostSource,
-		/handledRequestIdRef\.current = navigationRequest\.requestId;\s*if \(isOpen\) return;/,
+		/handledRequestIdRef\.current = plan\.requestId;\s*if \(!plan\.shouldOpen\) return;/,
 	);
 	assert.match(appStoreSource, /rulesReference:[\s\S]*history:[\s\S]*entries: \[\]/);
 	assert.match(appActionsSource, /forceTab: Boolean\(options\.forceTab\)/);

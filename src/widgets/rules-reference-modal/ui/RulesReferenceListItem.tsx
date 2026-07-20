@@ -18,28 +18,49 @@ function getMonsterCr(monster: BestiaryMonster): unknown {
 	return monster.cr && typeof monster.cr === "object" ? monster.cr.cr : monster.cr;
 }
 
+function getCreatureTokenSrc(monster: BestiaryMonster): string {
+	return String(monster.imageUrl || new MonsterStatBlockModel(monster).localTokenSrc);
+}
+
+function getCreatureSize(monster: BestiaryMonster): unknown {
+	return Array.isArray(monster.size) ? monster.size[0] : monster.size;
+}
+
+function getCreatureCrLabel(monster: BestiaryMonster): string {
+	return String(getMonsterCr(monster) || "--");
+}
+
+function getCreatureListPresentation(monster: BestiaryMonster) {
+	const source = String(monster.source || "");
+	return {
+		tokenSrc: getCreatureTokenSrc(monster),
+		source,
+		sourceFullName: getSourceFullName(source),
+		size: getCreatureSize(monster),
+		type: getMonsterTypeString(monster.type),
+		cr: getCreatureCrLabel(monster),
+	};
+}
+
 function CreatureListContent({ item, query }: { item: ReferenceItem; query: string }) {
 	const monster = item as BestiaryMonster;
-	const tokenSrc = String(monster.imageUrl || new MonsterStatBlockModel(monster).localTokenSrc);
-	const source = String(monster.source || "");
-	const sourceFullName = getSourceFullName(source);
-	const size = Array.isArray(monster.size) ? monster.size[0] : monster.size;
+	const presentation = getCreatureListPresentation(monster);
 	return (
 		<div className="Bestiary__item_content">
-			<img className="Bestiary__item_token" src={tokenSrc} alt="" loading="lazy" draggable={false} onError={(event) => { event.currentTarget.hidden = true; }} />
+			<img className="Bestiary__item_token" src={presentation.tokenSrc} alt="" loading="lazy" draggable={false} onError={(event) => { event.currentTarget.hidden = true; }} />
 			<div className="Bestiary__item_info">
 				<div className="ListCard__title">{highlightText(monster.name, query)}</div>
 				<div className="ListCard__meta">
-					{highlightText(size, query)} {highlightText(getMonsterTypeString(monster.type), query)}
-					{source && (
-						<Tooltip content={sourceFullName} disabled={!sourceFullName}>
-							<span className="Bestiary__item_source"> • {highlightText(source, query)}</span>
+					{highlightText(presentation.size, query)} {highlightText(presentation.type, query)}
+					{presentation.source && (
+						<Tooltip content={presentation.sourceFullName} disabled={!presentation.sourceFullName}>
+							<span className="Bestiary__item_source"> • {highlightText(presentation.source, query)}</span>
 						</Tooltip>
 					)}
 				</div>
 			</div>
 			<Tooltip content={lang.t("Challenge Rating")}>
-				<div className="Bestiary__item_cr"><div className="Bestiary__cr_label">CR</div><div className="Bestiary__cr_value">{String(getMonsterCr(monster) || "--")}</div></div>
+				<div className="Bestiary__item_cr"><div className="Bestiary__cr_label">CR</div><div className="Bestiary__cr_value">{presentation.cr}</div></div>
 			</Tooltip>
 		</div>
 	);

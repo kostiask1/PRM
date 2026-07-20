@@ -138,18 +138,26 @@ export function normalizeGraphName(value: unknown): string {
 }
 
 export function extractBracketMentions(text: unknown): string[] {
-	if (typeof text !== "string" || !text.includes("[")) return [];
-
+	if (!isBracketMentionText(text)) return [];
 	const mentions: string[] = [];
 	const regex = /\[([^[\]\r\n]+)\]/g;
 	let match;
 	while ((match = regex.exec(text)) !== null) {
-		const name = String(match[1] || "")
-			.trim()
-			.replace(/\s+/g, " ");
-		if (name) mentions.push(name);
+		appendBracketMention(match, mentions);
 	}
 	return mentions;
+}
+
+function isBracketMentionText(text: unknown): text is string {
+	if (typeof text !== "string") return false;
+	return text.includes("[");
+}
+
+function appendBracketMention(match: RegExpExecArray, mentions: string[]): void {
+	const name = String(getTruthyCampaignGraphValue(match[1], ""))
+		.trim()
+		.replace(/\s+/g, " ");
+	if (name) mentions.push(name);
 }
 
 function isEmptyNote(note: CampaignGraphRecord = {}): boolean {
@@ -198,33 +206,78 @@ function excerpt(
 	return `${normalizedText.slice(0, maxLength - 1).trim()}...`;
 }
 
+type GraphTextValueKind = "empty" | "string" | "array" | "record" | "ignored";
+
+const GRAPH_TEXT_VALUE_KIND_BY_TYPE: Partial<Record<string, GraphTextValueKind>> = {
+	string: "string",
+	object: "record",
+};
+
+function getGraphTextValueKind(value: unknown): GraphTextValueKind {
+	if ([value === null, value === undefined].includes(true)) return "empty";
+	if (Array.isArray(value)) return "array";
+	return GRAPH_TEXT_VALUE_KIND_BY_TYPE[typeof value] ?? "ignored";
+}
+
+function collectGraphString(
+	value: unknown,
+	path: string,
+	output: GraphTextField[],
+): GraphTextField[] {
+	const text = value as string;
+	if (text.trim()) output.push({ value: text, field: path || "text" });
+	return output;
+}
+
+function collectGraphArrayStrings(
+	value: unknown,
+	path: string,
+	output: GraphTextField[],
+): GraphTextField[] {
+	(value as unknown[]).forEach((item, index) => {
+		collectStrings(item, `${path}[${index}]`, output);
+	});
+	return output;
+}
+
+function isSearchableGraphTextEntry([key]: [string, unknown]): boolean {
+	return !key.startsWith("_") && !IGNORED_TEXT_KEYS.has(key);
+}
+
+function getNestedGraphTextPath(path: string, key: string): string {
+	return path ? `${path}.${key}` : key;
+}
+
+function collectGraphRecordStrings(
+	value: unknown,
+	path: string,
+	output: GraphTextField[],
+): GraphTextField[] {
+	Object.entries(value as Record<string, unknown>)
+		.filter(isSearchableGraphTextEntry)
+		.forEach(([key, item]) => {
+			collectStrings(item, getNestedGraphTextPath(path, key), output);
+		});
+	return output;
+}
+
+const GRAPH_TEXT_COLLECTORS: Record<
+	GraphTextValueKind,
+	(value: unknown, path: string, output: GraphTextField[]) => GraphTextField[]
+> = {
+	empty: (_value, _path, output) => output,
+	string: collectGraphString,
+	array: collectGraphArrayStrings,
+	record: collectGraphRecordStrings,
+	ignored: (_value, _path, output) => output,
+};
+
 function collectStrings(
 	value: unknown,
 	path = "",
 	output: GraphTextField[] = [],
 ): GraphTextField[] {
-	if (value === null || value === undefined) return output;
-
-	if (typeof value === "string") {
-		if (value.trim()) output.push({ value, field: path || "text" });
-		return output;
-	}
-
-	if (Array.isArray(value)) {
-		value.forEach((item, index) => {
-			collectStrings(item, `${path}[${index}]`, output);
-		});
-		return output;
-	}
-
-	if (typeof value === "object") {
-		Object.entries(value).forEach(([key, item]) => {
-			if (key.startsWith("_") || IGNORED_TEXT_KEYS.has(key)) return;
-			collectStrings(item, path ? `${path}.${key}` : key, output);
-		});
-	}
-
-	return output;
+	return GRAPH_TEXT_COLLECTORS[getGraphTextValueKind(value)](value, path, output);
 }
 
 function getMentionsFromValue(value: unknown, sourceField: string): GraphMention[] {
@@ -237,10 +290,24 @@ function getCharacterLabel(
 	entity: CampaignGraphRecord = {},
 	fallback?: string,
 ): string {
-	return (
-		`${entity.firstName || ""} ${entity.lastName || ""}`.trim() ||
-		String(entity.name || entity.title || fallback || "").trim()
-	);
+	const fullName = [entity.firstName, entity.lastName]
+		.map(stringifyTruthyCampaignGraphValue)
+		.join(" ")
+		.trim();
+	return String(getFirstTruthyCampaignGraphValue([
+		fullName,
+		entity.name,
+		entity.title,
+		fallback,
+	], "")).trim();
+}
+
+function stringifyTruthyCampaignGraphValue(value: unknown): string {
+	return value ? String(value) : "";
+}
+
+function getFirstTruthyCampaignGraphValue<T>(values: T[], fallback: T): T {
+	return values.find(Boolean) ?? fallback;
 }
 
 function getLocationLabel(
@@ -255,15 +322,60 @@ function getSessionDetail(
 	fileName: string,
 ): CampaignGraphRecord | null {
 	if (!sessionDetails || !fileName) return null;
-	if (sessionDetails instanceof Map)
-		return sessionDetails.get(fileName) || null;
-	if (Array.isArray(sessionDetails)) {
-		return (
-			sessionDetails.find((session) => session?.fileName === fileName) || null
-		);
-	}
-	return sessionDetails[fileName] || null;
+	return SESSION_DETAIL_READERS[getSessionDetailCollectionKind(sessionDetails)](
+		sessionDetails,
+		fileName,
+	);
 }
+
+type SessionDetailCollection = NonNullable<CampaignGraphInput["sessionDetails"]>;
+type SessionDetailCollectionKind = "map" | "array" | "record";
+
+function getSessionDetailCollectionKind(
+	sessionDetails: SessionDetailCollection,
+): SessionDetailCollectionKind {
+	if (sessionDetails instanceof Map) return "map";
+	if (Array.isArray(sessionDetails)) return "array";
+	return "record";
+}
+
+function readMapSessionDetail(
+	sessionDetails: SessionDetailCollection,
+	fileName: string,
+): CampaignGraphRecord | null {
+	return (sessionDetails as Map<string, CampaignGraphRecord>).get(fileName) || null;
+}
+
+function isSessionDetailForFile(
+	session: CampaignGraphRecord | undefined,
+	fileName: string,
+): boolean {
+	return session?.fileName === fileName;
+}
+
+function readArraySessionDetail(
+	sessionDetails: SessionDetailCollection,
+	fileName: string,
+): CampaignGraphRecord | null {
+	return (sessionDetails as CampaignGraphRecord[])
+		.find((session) => isSessionDetailForFile(session, fileName)) || null;
+}
+
+function readRecordSessionDetail(
+	sessionDetails: SessionDetailCollection,
+	fileName: string,
+): CampaignGraphRecord | null {
+	return (sessionDetails as Record<string, CampaignGraphRecord>)[fileName] || null;
+}
+
+const SESSION_DETAIL_READERS: Record<
+	SessionDetailCollectionKind,
+	(sessionDetails: SessionDetailCollection, fileName: string) => CampaignGraphRecord | null
+> = {
+	map: readMapSessionDetail,
+	array: readArraySessionDetail,
+	record: readRecordSessionDetail,
+};
 
 function encodedPart(value: unknown): string {
 	return encodeURIComponent(String(value ?? ""));
@@ -337,12 +449,17 @@ interface GraphNoteProjectionInput {
 }
 
 function getGraphNoteLabel(input: GraphNoteProjectionInput): string {
-	const { note, fallbackLabel, simplifiedNotes } = input;
-	if (!simplifiedNotes) {
-		const title = String(note.title || "").trim();
-		if (title) return title;
-	}
-	return excerpt(note.text, 48, { stripMarkdown: true }) || fallbackLabel;
+	const title = getRegularGraphNoteTitle(input.note, input.simplifiedNotes);
+	const text = excerpt(input.note.text, 48, { stripMarkdown: true });
+	return getFirstTruthyCampaignGraphValue([title, text], input.fallbackLabel);
+}
+
+function getRegularGraphNoteTitle(
+	note: CampaignGraphRecord,
+	simplifiedNotes: boolean,
+): string {
+	if (simplifiedNotes) return "";
+	return String(getTruthyCampaignGraphValue(note.title, "")).trim();
 }
 
 function createGraphNoteNode(
@@ -368,70 +485,30 @@ function createGraphNoteNode(
 }
 
 function projectGraphNote(
-	{
-		note,
-		noteIndex,
-		nodeIdPrefix,
-		nodeType,
-		parentId,
-		parentType,
-		parentLabel,
-		fallbackLabel,
-		mentionField,
-		propagateTo,
-		meta,
-		simplifiedNotes,
-	}: GraphNoteProjectionInput,
+	input: GraphNoteProjectionInput,
 	commands: CampaignGraphProjectionCommands,
 ): void {
-	if (!note || note._isVirtual || isEmptyNote(note)) return;
-	const noteId = `${nodeIdPrefix}:${encodedPart(note.id ?? noteIndex)}`;
-	const noteLabel = getGraphNoteLabel({
-		note,
-		noteIndex,
-		nodeIdPrefix,
-		nodeType,
-		parentId,
-		parentType,
-		parentLabel,
-		fallbackLabel,
-		mentionField,
-		propagateTo,
-		meta,
-		simplifiedNotes,
-	});
-	commands.addNode(
-		createGraphNoteNode(
-			{
-				note,
-				noteIndex,
-				nodeIdPrefix,
-				nodeType,
-				parentId,
-				parentType,
-				parentLabel,
-				fallbackLabel,
-				mentionField,
-				propagateTo,
-				meta,
-				simplifiedNotes,
-			},
-			noteId,
-			noteLabel,
-		),
-	);
-	commands.addEdge(parentId, noteId, "contains", {
-		type: parentType,
-		label: parentLabel,
+	if (!isProjectableGraphNote(input.note)) return;
+	const noteId = `${input.nodeIdPrefix}:${encodedPart(input.note.id ?? input.noteIndex)}`;
+	const noteLabel = getGraphNoteLabel(input);
+	commands.addNode(createGraphNoteNode(input, noteId, noteLabel));
+	commands.addEdge(input.parentId, noteId, "contains", {
+		type: input.parentType,
+		label: input.parentLabel,
 		field: "notes",
 	});
 	commands.queueMentionEdges(
 		noteId,
 		noteLabel,
-		getMentionsFromValue(note, mentionField),
-		nodeType,
-		propagateTo,
+		getMentionsFromValue(input.note, input.mentionField),
+		input.nodeType,
+		input.propagateTo,
 	);
+}
+
+function isProjectableGraphNote(note: CampaignGraphRecord | null | undefined): note is CampaignGraphRecord {
+	if (!note) return false;
+	return [!note._isVirtual, !isEmptyNote(note)].every(Boolean);
 }
 
 function projectCampaignNote(
@@ -614,61 +691,81 @@ function projectSessionScene(
 	context: SessionGraphProjectionContext,
 	commands: CampaignGraphProjectionCommands,
 ): string {
-	const sceneId = `scene:${encodedPart(context.fileName)}:${encodedPart(scene.id ?? sceneIndex)}`;
-	const sceneName = `Scene ${sceneIndex + 1}`;
-	const sceneLabel = `${context.label}: ${sceneName}`;
-	const sceneSummary = excerpt(
-		[
-			scene.texts?.summary,
-			scene.texts?.goal,
-			scene.texts?.location,
-			scene.texts?.stakes,
-		]
-			.filter(Boolean)
-			.join(" "),
-	);
+	const projection = createSessionSceneProjection(scene, sceneIndex, context);
 	commands.addNode({
-		id: sceneId,
+		id: projection.id,
 		type: "scene",
-		label: sceneLabel,
-		summary: sceneSummary,
-		detailText: Object.values(scene.texts || {})
-			.filter(Boolean)
-			.join("\n\n"),
-		aliases: [sceneName, `${context.label} ${sceneName}`],
+		label: projection.label,
+		summary: projection.summary,
+		detailText: projection.detailText,
+		aliases: projection.aliases,
 		sourceId: scene.id,
-		meta: {
-			fileName: context.fileName,
-			parentId: context.sessionId,
-			sceneNumber: sceneIndex + 1,
-		},
+		meta: projection.meta,
 	});
-	commands.addEdge(context.sessionId, sceneId, "contains", {
+	commands.addEdge(context.sessionId, projection.id, "contains", {
 		type: "session",
 		label: context.label,
 		field: "scenes",
 	});
 	commands.queueMentionEdges(
-		sceneId,
-		sceneLabel,
-		getMentionsFromValue(scene.texts || scene, "scene"),
+		projection.id,
+		projection.label,
+		getMentionsFromValue(projection.mentionSource, "scene"),
 		"scene",
 		[{ sourceId: context.sessionId, sourceLabel: context.label }],
 	);
-	(scene.notes || []).forEach((note, noteIndex) => {
+	getTruthyCampaignGraphValue(scene.notes, []).forEach((note, noteIndex) => {
 		projectSceneNote(
 			note,
 			noteIndex,
 			scene,
 			sceneIndex,
-			sceneId,
-			sceneLabel,
-			sceneName,
+			projection.id,
+			projection.label,
+			projection.name,
 			context,
 			commands,
 		);
 	});
-	return sceneId;
+	return projection.id;
+}
+
+interface SessionSceneProjection {
+	id: string;
+	name: string;
+	label: string;
+	summary: string;
+	detailText: string;
+	aliases: string[];
+	meta: CampaignGraphNodeMeta;
+	mentionSource: unknown;
+}
+
+function getTruthyCampaignGraphValue<T>(value: T | undefined, fallback: T): T {
+	return value ? value : fallback;
+}
+
+function createSessionSceneProjection(
+	scene: CampaignGraphRecord,
+	sceneIndex: number,
+	context: SessionGraphProjectionContext,
+): SessionSceneProjection {
+	const texts = getTruthyCampaignGraphValue(scene.texts, {});
+	const name = `Scene ${sceneIndex + 1}`;
+	return {
+		id: `scene:${encodedPart(context.fileName)}:${encodedPart(scene.id ?? sceneIndex)}`,
+		name,
+		label: `${context.label}: ${name}`,
+		summary: excerpt([texts.summary, texts.goal, texts.location, texts.stakes].filter(Boolean).join(" ")),
+		detailText: Object.values(texts).filter(Boolean).join("\n\n"),
+		aliases: [name, `${context.label} ${name}`],
+		meta: {
+			fileName: context.fileName,
+			parentId: context.sessionId,
+			sceneNumber: sceneIndex + 1,
+		},
+		mentionSource: getTruthyCampaignGraphValue(scene.texts, scene),
+	};
 }
 
 function projectSessionScenes(
@@ -701,19 +798,42 @@ function createCampaignSessionProjection(
 	index: number,
 	input: Pick<CampaignGraphInput, "sessionDetails" | "simplifiedNotes">,
 ): CampaignSessionProjection {
-	const fileName = session.fileName || `session-${index}`;
+	const fileName = getCampaignSessionFileName(session, index);
 	const detail = getSessionDetail(input.sessionDetails, fileName);
-	const sessionData = detail?.data || {};
+	const sessionData = getCampaignSessionDetailData(detail);
 	return {
 		detail,
 		sessionData,
 		context: {
 			fileName,
 			sessionId: `session:${encodedPart(fileName)}`,
-			label: session.name || detail?.name || `Session ${index + 1}`,
+			label: getFirstTruthyCampaignGraphValue([
+				session.name,
+				getCampaignSessionDetailField(detail, "name"),
+			], `Session ${index + 1}`),
 			simplifiedNotes: Boolean(input.simplifiedNotes),
 		},
 	};
+}
+
+function getCampaignSessionFileName(
+	session: CampaignGraphRecord,
+	index: number,
+): string {
+	return session.fileName ? session.fileName : `session-${index}`;
+}
+
+function getCampaignSessionDetailField(
+	detail: CampaignGraphRecord | null,
+	field: string,
+): unknown {
+	return detail ? detail[field] : undefined;
+}
+
+function getCampaignSessionDetailData(
+	detail: CampaignGraphRecord | null,
+): CampaignGraphRecord {
+	return getTruthyCampaignGraphValue(detail?.data, {});
 }
 
 function createCampaignSessionNode(
@@ -721,14 +841,22 @@ function createCampaignSessionNode(
 	projection: CampaignSessionProjection,
 ): CampaignGraphNodeInput {
 	const { context, detail, sessionData } = projection;
+	const resultText = getTruthyCampaignGraphValue(sessionData.result_text, "");
 	return {
 		id: context.sessionId,
 		type: "session",
 		label: context.label,
-		summary: excerpt(sessionData.result_text || detail?.name || session.name),
-		detailText: sessionData.result_text || "",
-		aliases: [session.name, detail?.name, context.fileName].filter(Boolean),
-		sourceId: detail?.id || session.id,
+		summary: excerpt(getFirstTruthyCampaignGraphValue([
+			resultText,
+			getCampaignSessionDetailField(detail, "name"),
+			session.name,
+		], undefined)),
+		detailText: resultText,
+		aliases: [session.name, getCampaignSessionDetailField(detail, "name"), context.fileName].filter(Boolean),
+		sourceId: getFirstTruthyCampaignGraphValue([
+			getCampaignSessionDetailField(detail, "id"),
+			session.id,
+		], undefined),
 		meta: { fileName: context.fileName },
 	};
 }
@@ -741,19 +869,19 @@ function projectCampaignSessionDetail(
 	commands.queueMentionEdges(
 		context.sessionId,
 		context.label,
-		getMentionsFromValue(sessionData.result_text || "", "result_text"),
+		getMentionsFromValue(getTruthyCampaignGraphValue(sessionData.result_text, ""), "result_text"),
 		"session",
 	);
-	(sessionData.npcs || []).forEach((npc, npcIndex) =>
+	getTruthyCampaignGraphValue(sessionData.npcs, []).forEach((npc, npcIndex) =>
 		projectSessionNpc(npc, npcIndex, context, commands),
 	);
-	(sessionData.locations || []).forEach((location, locationIndex) =>
+	getTruthyCampaignGraphValue(sessionData.locations, []).forEach((location, locationIndex) =>
 		projectSessionLocation(location, locationIndex, context, commands),
 	);
-	(sessionData.notes || []).forEach((note, noteIndex) =>
+	getTruthyCampaignGraphValue(sessionData.notes, []).forEach((note, noteIndex) =>
 		projectSessionNote(note, noteIndex, context, commands),
 	);
-	projectSessionScenes(sessionData.scenes || [], context, commands);
+	projectSessionScenes(getTruthyCampaignGraphValue(sessionData.scenes, []), context, commands);
 }
 
 function projectCampaignSession(
@@ -778,6 +906,290 @@ function getCampaignSourceLabel(campaign: CampaignGraphRecord): unknown {
 	return campaign.name || campaign.slug;
 }
 
+interface CampaignGraphStores {
+	nodesById: Map<string, CampaignGraphNode>;
+	aliases: Map<string, string[]>;
+	edgesById: Map<string, CampaignGraphEdge>;
+}
+
+function registerCampaignGraphAlias(
+	stores: CampaignGraphStores,
+	alias: unknown,
+	nodeId: string,
+): void {
+	const key = normalizeGraphName(alias);
+	if (!key) return;
+	const current = stores.aliases.get(key) || [];
+	current.push(nodeId);
+	stores.aliases.set(key, current);
+}
+
+function createCampaignGraphNode(
+	node: CampaignGraphNodeInput,
+): CampaignGraphNode {
+	const nextNode: CampaignGraphNode = {
+		...node,
+		label: String(node.label || "").trim() || "Untitled",
+		meta: node.meta || {},
+		searchText: "",
+		degree: 0,
+	};
+	nextNode.searchText = buildNodeSearchText(nextNode);
+	return nextNode;
+}
+
+function addCampaignGraphNode(
+	stores: CampaignGraphStores,
+	node: CampaignGraphNodeInput,
+): CampaignGraphNode | undefined {
+	if (!node.id || stores.nodesById.has(node.id)) return stores.nodesById.get(node.id);
+	const nextNode = createCampaignGraphNode(node);
+	stores.nodesById.set(nextNode.id, nextNode);
+	getTruthyCampaignGraphValue(node.aliases, [nextNode.label])
+		.forEach((alias) => registerCampaignGraphAlias(stores, alias, nextNode.id));
+	return nextNode;
+}
+
+function getCampaignGraphEdgeEndpoints(
+	source: string,
+	target: string,
+	relation: string,
+): [string, string] {
+	if (relation === "related" && source.localeCompare(target) > 0) return [target, source];
+	return [source, target];
+}
+
+function appendCampaignGraphEdgeSource(
+	edge: CampaignGraphEdge,
+	sourceInfo: Record<string, unknown>,
+): void {
+	edge.count += 1;
+	edge.sources.push(sourceInfo);
+}
+
+function addCampaignGraphEdge(
+	stores: CampaignGraphStores,
+	source: string | null | undefined,
+	target: string | null | undefined,
+	relation: string,
+	sourceInfo: Record<string, unknown> = {},
+): void {
+	const validEndpoints = getValidCampaignGraphEdgeEndpoints(source, target);
+	if (!validEndpoints) return;
+	const [validSource, validTarget] = validEndpoints;
+	const [edgeSource, edgeTarget] = getCampaignGraphEdgeEndpoints(validSource, validTarget, relation);
+	const id = `${relation}:${edgeSource}->${edgeTarget}`;
+	const current = stores.edgesById.get(id);
+	if (current) {
+		appendCampaignGraphEdgeSource(current, sourceInfo);
+		return;
+	}
+	stores.edgesById.set(id, {
+		id,
+		source: edgeSource,
+		target: edgeTarget,
+		relation,
+		count: 1,
+		sources: [sourceInfo],
+	});
+}
+
+function getValidCampaignGraphEdgeEndpoints(
+	source: string | null | undefined,
+	target: string | null | undefined,
+): [string, string] | null {
+	if (![Boolean(source), Boolean(target), source !== target].every(Boolean)) return null;
+	return [source as string, target as string];
+}
+
+interface CampaignGraphRootContext {
+	id: string;
+	label: unknown;
+}
+
+function projectCampaignRoot(
+	campaign: CampaignGraphRecord,
+	description: unknown,
+	context: CampaignGraphRootContext,
+	commands: CampaignGraphProjectionCommands,
+): void {
+	commands.addNode({
+		id: context.id,
+		type: "campaign",
+		label: getFirstTruthyCampaignGraphValue([context.label], "Campaign"),
+		summary: excerpt(description),
+		detailText: description,
+		aliases: [campaign.name, campaign.slug].filter(Boolean),
+		meta: { sourceSlug: campaign.slug },
+	});
+	commands.queueMentionEdges(
+		context.id,
+		context.label,
+		getMentionsFromValue(description, "description"),
+		"campaign",
+	);
+}
+
+interface CampaignPersonProjectionOptions {
+	type: "character" | "npc";
+	fallback: string;
+	containsField: "characters" | "npc";
+	summaryValues: unknown[];
+}
+
+function projectCampaignPerson(
+	entity: CampaignGraphRecord,
+	index: number,
+	options: CampaignPersonProjectionOptions,
+	context: CampaignGraphRootContext,
+	commands: CampaignGraphProjectionCommands,
+): void {
+	const label = getCharacterLabel(entity, `${options.fallback} ${index + 1}`);
+	const entityId = `${options.type}:${encodedPart(entity.id ?? entity.slug ?? index)}`;
+	commands.addNode({
+		id: entityId,
+		type: options.type,
+		label,
+		summary: excerpt(options.summaryValues.filter(Boolean).join(" ")),
+		detailText: [entity.description, entity.motivation, entity.trait].filter(Boolean).join("\n\n"),
+		aliases: [label, entity.firstName, entity.name, entity.title].filter(Boolean),
+		sourceId: entity.id,
+		sourceSlug: entity.slug,
+		meta: { sourceSlug: entity.slug },
+	});
+	commands.addEdge(context.id, entityId, "contains", {
+		type: "campaign",
+		label: context.label,
+		field: options.containsField,
+	});
+	commands.queueMentionEdges(
+		entityId,
+		label,
+		getMentionsFromValue(entity, options.type),
+		options.type,
+	);
+}
+
+function projectCampaignLocation(
+	location: CampaignGraphRecord,
+	index: number,
+	context: CampaignGraphRootContext,
+	commands: CampaignGraphProjectionCommands,
+): void {
+	const label = getLocationLabel(location, `Location ${index + 1}`);
+	const locationId = `location:${encodedPart(location.id ?? location.slug ?? index)}`;
+	commands.addNode({
+		id: locationId,
+		type: "location",
+		label,
+		summary: excerpt(location.description),
+		detailText: getTruthyCampaignGraphValue(location.description, ""),
+		aliases: [label, location.name, location.title].filter(Boolean),
+		sourceId: location.id,
+		sourceSlug: location.slug,
+		meta: { sourceSlug: location.slug },
+	});
+	commands.addEdge(context.id, locationId, "contains", {
+		type: "campaign",
+		label: context.label,
+		field: "locations",
+	});
+	commands.queueMentionEdges(
+		locationId,
+		label,
+		getMentionsFromValue(location, "location"),
+		"location",
+	);
+}
+
+function projectCampaignCollections(
+	input: CampaignGraphInput,
+	context: CampaignGraphRootContext,
+	commands: CampaignGraphProjectionCommands,
+): void {
+	getTruthyCampaignGraphValue(input.notes, []).forEach((note, index) => {
+		projectCampaignNote(note, index, context.id, context.label, Boolean(input.simplifiedNotes), commands);
+	});
+	getTruthyCampaignGraphValue(input.characters, []).forEach((character, index) => {
+		projectCampaignPerson(character, index, {
+			type: "character",
+			fallback: "Character",
+			containsField: "characters",
+			summaryValues: [character.race, character.class, character.motivation, character.description, character.trait],
+		}, context, commands);
+	});
+	getTruthyCampaignGraphValue(input.npcs, []).forEach((npc, index) => {
+		projectCampaignPerson(npc, index, {
+			type: "npc",
+			fallback: "NPC",
+			containsField: "npc",
+			summaryValues: [npc.race, npc.class, npc.description, npc.motivation, npc.trait],
+		}, context, commands);
+	});
+	getTruthyCampaignGraphValue(input.locations, []).forEach((location, index) => {
+		projectCampaignLocation(location, index, context, commands);
+	});
+	getTruthyCampaignGraphValue(input.sessions, []).forEach((session, index) => {
+		projectCampaignSession(
+			session,
+			index,
+			{ sessionDetails: input.sessionDetails, simplifiedNotes: input.simplifiedNotes },
+			context.id,
+			context.label,
+			commands,
+		);
+	});
+}
+
+type AddMentionEdges = (
+	sourceId: string,
+	sourceLabel: unknown,
+	mentions: GraphMention[],
+	sourceType: string,
+	options?: { includeRelated?: boolean },
+) => void;
+
+function flushCampaignGraphMentionQueue(
+	pendingMentionEdges: PendingMentionEdge[],
+	addMentionEdges: AddMentionEdges,
+): void {
+	pendingMentionEdges.forEach((entry) => {
+		addMentionEdges(entry.sourceId, entry.sourceLabel, entry.mentions, entry.sourceType);
+		getTruthyCampaignGraphValue(entry.propagateTo, []).forEach((source) => {
+			addMentionEdges(
+				source.sourceId,
+				source.sourceLabel,
+				entry.mentions,
+				entry.sourceType,
+				{ includeRelated: false },
+			);
+		});
+	});
+}
+
+function finalizeCampaignGraph(stores: CampaignGraphStores): CampaignGraphResult {
+	const nodes = [...stores.nodesById.values()].map((node) => ({ ...node, degree: 0 }));
+	const nodeById = new Map(nodes.map((node) => [node.id, node]));
+	const edges = [...stores.edgesById.values()].filter(
+		(edge) => nodeById.has(edge.source) && nodeById.has(edge.target),
+	);
+	edges.forEach((edge) => {
+		const source = nodeById.get(edge.source);
+		const target = nodeById.get(edge.target);
+		if (source) source.degree += 1;
+		if (target) target.degree += 1;
+	});
+	return {
+		nodes,
+		edges,
+		stats: {
+			nodes: nodes.length,
+			edges: edges.length,
+			unresolved: nodes.filter((node) => node.type === "unresolved").length,
+		},
+	};
+}
+
 export function buildCampaignGraph({
 	campaign = {},
 	description = "",
@@ -793,60 +1205,18 @@ export function buildCampaignGraph({
 	const aliases = new Map<string, string[]>();
 	const edgesById = new Map<string, CampaignGraphEdge>();
 	const pendingMentionEdges: PendingMentionEdge[] = [];
+	const stores = { nodesById, aliases, edgesById };
 	const campaignId = `campaign:${encodedPart(campaign.slug || "current")}`;
 	const campaignSourceLabel = getCampaignSourceLabel(campaign);
 
-	const addNode = (node: CampaignGraphNodeInput): CampaignGraphNode | undefined => {
-		if (!node.id || nodesById.has(node.id)) return nodesById.get(node.id);
-		const nextNode: CampaignGraphNode = {
-			...node,
-			label: String(node.label || "").trim() || "Untitled",
-			meta: node.meta || {},
-			searchText: "",
-			degree: 0,
-		};
-		nextNode.searchText = buildNodeSearchText(nextNode);
-		nodesById.set(nextNode.id, nextNode);
-
-		(node.aliases || [nextNode.label]).forEach((alias) => {
-			const key = normalizeGraphName(alias);
-			if (!key) return;
-			const current = aliases.get(key) || [];
-			current.push(nextNode.id);
-			aliases.set(key, current);
-		});
-
-		return nextNode;
-	};
+	const addNode = (node: CampaignGraphNodeInput) => addCampaignGraphNode(stores, node);
 
 	const addEdge = (
 		source: string | null | undefined,
 		target: string | null | undefined,
 		relation: string,
 		sourceInfo: Record<string, unknown> = {},
-	): void => {
-		if (!source || !target || source === target) return;
-		const [edgeSource, edgeTarget] =
-			relation === "related" && source.localeCompare(target) > 0
-				? [target, source]
-				: [source, target];
-		const id = `${relation}:${edgeSource}->${edgeTarget}`;
-		const current = edgesById.get(id);
-		if (current) {
-			current.count += 1;
-			current.sources.push(sourceInfo);
-			return;
-		}
-
-		edgesById.set(id, {
-			id,
-			source: edgeSource,
-			target: edgeTarget,
-			relation,
-			count: 1,
-			sources: [sourceInfo],
-		});
-	};
+	): void => addCampaignGraphEdge(stores, source, target, relation, sourceInfo);
 
 	const resolveMention = (name: string): string | null => {
 		const key = normalizeGraphName(name);
@@ -962,193 +1332,9 @@ export function buildCampaignGraph({
 		queueMentionEdges,
 	};
 
-	addNode({
-		id: campaignId,
-		type: "campaign",
-		label: campaignSourceLabel || "Campaign",
-		summary: excerpt(description),
-		detailText: description,
-		aliases: [campaign.name, campaign.slug].filter(Boolean),
-		meta: {
-			sourceSlug: campaign.slug,
-		},
-	});
-
-	const campaignMentions = getMentionsFromValue(description, "description");
-	queueMentionEdges(
-		campaignId,
-		campaignSourceLabel,
-		campaignMentions,
-		"campaign",
-	);
-
-	(notes || []).forEach((note, index) => {
-		projectCampaignNote(
-			note,
-			index,
-			campaignId,
-			campaignSourceLabel,
-			Boolean(simplifiedNotes),
-			projectionCommands,
-		);
-	});
-
-	(characters || []).forEach((character, index) => {
-		const label = getCharacterLabel(character, `Character ${index + 1}`);
-		const characterId = `character:${encodedPart(character.id ?? character.slug ?? index)}`;
-		addNode({
-			id: characterId,
-			type: "character",
-			label,
-			summary: excerpt(
-				[
-					character.race,
-					character.class,
-					character.motivation,
-					character.description,
-					character.trait,
-				]
-					.filter(Boolean)
-					.join(" "),
-			),
-			detailText: [character.description, character.motivation, character.trait]
-				.filter(Boolean)
-				.join("\n\n"),
-			aliases: [
-				label,
-				character.firstName,
-				character.name,
-				character.title,
-			].filter(Boolean),
-			sourceId: character.id,
-			sourceSlug: character.slug,
-			meta: {
-				sourceSlug: character.slug,
-			},
-		});
-		addEdge(campaignId, characterId, "contains", {
-			type: "campaign",
-			label: campaignSourceLabel,
-			field: "characters",
-		});
-		queueMentionEdges(
-			characterId,
-			label,
-			getMentionsFromValue(character, "character"),
-			"character",
-		);
-	});
-
-	(npcs || []).forEach((npc, index) => {
-		const label = getCharacterLabel(npc, `NPC ${index + 1}`);
-		const npcId = `npc:${encodedPart(npc.id ?? npc.slug ?? index)}`;
-		addNode({
-			id: npcId,
-			type: "npc",
-			label,
-			summary: excerpt(
-				[npc.race, npc.class, npc.description, npc.motivation, npc.trait]
-					.filter(Boolean)
-					.join(" "),
-			),
-			detailText: [npc.description, npc.motivation, npc.trait]
-				.filter(Boolean)
-				.join("\n\n"),
-			aliases: [label, npc.firstName, npc.name, npc.title].filter(Boolean),
-			sourceId: npc.id,
-			sourceSlug: npc.slug,
-			meta: {
-				sourceSlug: npc.slug,
-			},
-		});
-		addEdge(campaignId, npcId, "contains", {
-			type: "campaign",
-			label: campaignSourceLabel,
-			field: "npc",
-		});
-		queueMentionEdges(npcId, label, getMentionsFromValue(npc, "npc"), "npc");
-	});
-
-	(locations || []).forEach((location, index) => {
-		const label = getLocationLabel(location, `Location ${index + 1}`);
-		const locationId = `location:${encodedPart(location.id ?? location.slug ?? index)}`;
-		addNode({
-			id: locationId,
-			type: "location",
-			label,
-			summary: excerpt(location.description),
-			detailText: location.description || "",
-			aliases: [label, location.name, location.title].filter(Boolean),
-			sourceId: location.id,
-			sourceSlug: location.slug,
-			meta: {
-				sourceSlug: location.slug,
-			},
-		});
-		addEdge(campaignId, locationId, "contains", {
-			type: "campaign",
-			label: campaignSourceLabel,
-			field: "locations",
-		});
-		queueMentionEdges(
-			locationId,
-			label,
-			getMentionsFromValue(location, "location"),
-			"location",
-		);
-	});
-
-	(sessions || []).forEach((session, index) => {
-		projectCampaignSession(
-			session,
-			index,
-			{ sessionDetails, simplifiedNotes },
-			campaignId,
-			campaignSourceLabel,
-			projectionCommands,
-		);
-	});
-	pendingMentionEdges.forEach((entry) => {
-		addMentionEdges(
-			entry.sourceId,
-			entry.sourceLabel,
-			entry.mentions,
-			entry.sourceType,
-		);
-		(entry.propagateTo || []).forEach((source) => {
-			addMentionEdges(
-				source.sourceId,
-				source.sourceLabel,
-				entry.mentions,
-				entry.sourceType,
-				{ includeRelated: false },
-			);
-		});
-	});
-
-	const nodes = [...nodesById.values()].map((node) => ({
-		...node,
-		degree: 0,
-	}));
-	const nodeById = new Map(nodes.map((node) => [node.id, node]));
-	const edges = [...edgesById.values()].filter(
-		(edge) => nodeById.has(edge.source) && nodeById.has(edge.target),
-	);
-
-	edges.forEach((edge) => {
-		const source = nodeById.get(edge.source);
-		const target = nodeById.get(edge.target);
-		if (source) source.degree += 1;
-		if (target) target.degree += 1;
-	});
-
-	return {
-		nodes,
-		edges,
-		stats: {
-			nodes: nodes.length,
-			edges: edges.length,
-			unresolved: nodes.filter((node) => node.type === "unresolved").length,
-		},
-	};
+	const rootContext = { id: campaignId, label: campaignSourceLabel };
+	projectCampaignRoot(campaign, description, rootContext, projectionCommands);
+	projectCampaignCollections({ notes, characters, npcs, locations, sessions, sessionDetails, simplifiedNotes }, rootContext, projectionCommands);
+	flushCampaignGraphMentionQueue(pendingMentionEdges, addMentionEdges);
+	return finalizeCampaignGraph(stores);
 }

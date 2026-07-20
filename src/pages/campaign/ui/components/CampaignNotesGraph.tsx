@@ -45,7 +45,6 @@ import { classNames } from "../../../../shared/lib/index.js";
 import {
 	buildCampaignGraph,
 	normalizeGraphName,
-	getCampaignGraphNodeSize,
 	layoutCampaignGraph,
 	resolveCampaignGraphNodeCollision,
 } from "../../graph.js";
@@ -56,13 +55,16 @@ import {
 	formatCampaignGraphSourceList,
 	getCampaignGraphConnectedEdges,
 	getCampaignGraphConnectedIds,
+	getCampaignGraphDetailTextPresentation,
 	getCampaignGraphEdgeColor,
 	getCampaignGraphEdgeHandles,
 	getCampaignGraphEdgeOpacity,
 	getCampaignGraphEdgePresentation,
 	getCampaignGraphEdgeStrokeWidth,
+	getCampaignGraphFlowNodePresentation,
 	getCampaignGraphMiniMapBounds,
 	getCampaignGraphMiniMapNodeSize,
+	getCampaignGraphNodeCardPresentation,
 	getCampaignGraphNoteSaveRequest,
 	getCampaignGraphNodeTypeClass,
 	getCampaignGraphOpenTarget,
@@ -70,6 +72,9 @@ import {
 	getCampaignGraphSessionDisplayName,
 	getCampaignGraphTypeCounts,
 	getVisibleCampaignGraph,
+	resolveNewCampaignGraphNodeCollisions,
+	shouldActivateCampaignGraphDetailText,
+	shouldFitCampaignGraphTopology,
 	type CampaignGraphEnabledFilters,
 	type CampaignGraphFilterId,
 } from "../../model/campaignGraphPresentation.ts";
@@ -244,6 +249,7 @@ interface ParsedGraphTextProps {
 }
 
 function ParsedGraphText({ text, onOpen }: ParsedGraphTextProps) {
+	const presentation = getCampaignGraphDetailTextPresentation(text, Boolean(onOpen));
 	const components = useMemo<Components>(
 		() =>
 			Object.fromEntries(
@@ -256,32 +262,28 @@ function ParsedGraphText({ text, onOpen }: ParsedGraphTextProps) {
 		[],
 	);
 
-	if (!String(text || "").trim()) return null;
+	if (!presentation.isVisible) return null;
 
 	return (
 		<div
-			className={classNames(
-				"CampaignNotesGraph__detailText",
-				onOpen && "is_clickable",
-			)}
-			role={onOpen ? "button" : undefined}
-			tabIndex={onOpen ? 0 : undefined}
+			className={presentation.className}
+			role={presentation.role}
+			tabIndex={presentation.tabIndex}
 			onClick={(event) => {
-				if (!onOpen) return;
-				if (
+				const isInteractiveTarget =
 					event.target instanceof Element &&
-					event.target.closest("a, button, input, textarea, select")
-				)
-					return;
-				onOpen();
+					Boolean(event.target.closest("a, button, input, textarea, select"));
+				if (shouldActivateCampaignGraphDetailText(Boolean(onOpen), "pointer", isInteractiveTarget)) {
+					onOpen?.();
+				}
 			}}
 			onKeyDown={(event) => {
-				if (!onOpen || (event.key !== "Enter" && event.key !== " ")) return;
+				if (!shouldActivateCampaignGraphDetailText(Boolean(onOpen), event.key)) return;
 				event.preventDefault();
-				onOpen();
+				onOpen?.();
 			}}
 		>
-			<ReactMarkdown components={components}>{String(text || "")}</ReactMarkdown>
+			<ReactMarkdown components={components}>{presentation.text}</ReactMarkdown>
 		</div>
 	);
 }
@@ -368,49 +370,33 @@ const CampaignGraphNodeCard = memo(function CampaignGraphNodeCard({
 	selected,
 }: NodeProps<CampaignFlowNode>) {
 	const graphNode = data.graphNode;
-	const nodeTypeClass = getCampaignGraphNodeTypeClass(graphNode.type);
+	const presentation = getCampaignGraphNodeCardPresentation(
+		graphNode,
+		selected,
+		data.isSelected,
+		data.isMuted,
+		data.canOpen,
+	);
 
 	return (
 		<div
-			className={classNames(
-				"CampaignNotesGraph__nodeCard",
-				nodeTypeClass,
-				(selected || data.isSelected) && "is_selected",
-				data.isMuted && "is_muted",
-			)}
+			className={presentation.className}
 			style={{ "--graph-node-color": data.color } as GraphCssProperties}
 		>
-			{HANDLE_POSITIONS.flatMap(({ id, position }) => [
-				<Handle
-					key={`source-${id}`}
-					id={`source-${id}`}
-					type="source"
-					position={position}
-					isConnectable={false}
-					className="CampaignNotesGraph__handle"
-				/>,
-				<Handle
-					key={`target-${id}`}
-					id={`target-${id}`}
-					type="target"
-					position={position}
-					isConnectable={false}
-					className="CampaignNotesGraph__handle"
-				/>,
-			])}
+			<CampaignGraphNodeHandles />
 			<span className="CampaignNotesGraph__nodeIcon" aria-hidden="true">
 				<Icon name={NODE_ICON_BY_TYPE[graphNode.type]} size={16} />
 			</span>
 			<span className="CampaignNotesGraph__nodeContent">
 				<span className="CampaignNotesGraph__nodeType">{data.typeLabel}</span>
 				<strong title={graphNode.label}>{graphNode.label}</strong>
-				{graphNode.summary && (
+				{presentation.showSummary && (
 					<span className="CampaignNotesGraph__nodeSummary">
 						{graphNode.summary}
 					</span>
 				)}
 			</span>
-			{graphNode.degree > 0 && (
+			{presentation.showDegree && (
 				<span
 					className="CampaignNotesGraph__nodeDegree"
 					title={data.connectionsLabel}
@@ -418,7 +404,7 @@ const CampaignGraphNodeCard = memo(function CampaignGraphNodeCard({
 					{graphNode.degree}
 				</span>
 			)}
-			{data.canOpen && (
+			{presentation.showOpen && (
 				<button
 					type="button"
 					className="CampaignNotesGraph__nodeOpen nodrag nopan"
@@ -435,6 +421,27 @@ const CampaignGraphNodeCard = memo(function CampaignGraphNodeCard({
 		</div>
 	);
 });
+
+function CampaignGraphNodeHandles() {
+	return HANDLE_POSITIONS.flatMap(({ id, position }) => [
+		<Handle
+			key={`source-${id}`}
+			id={`source-${id}`}
+			type="source"
+			position={position}
+			isConnectable={false}
+			className="CampaignNotesGraph__handle"
+		/>,
+		<Handle
+			key={`target-${id}`}
+			id={`target-${id}`}
+			type="target"
+			position={position}
+			isConnectable={false}
+			className="CampaignNotesGraph__handle"
+		/>,
+	]);
+}
 
 const NODE_TYPES = { campaignGraphNode: CampaignGraphNodeCard };
 
@@ -770,46 +777,52 @@ function CampaignGraphSelectedDetails({
 }: CampaignGraphSelectedDetailsProps) {
 	return (
 		<>
-			<div className="CampaignNotesGraph__detailHeader">
-				<div>
-					<div className="CampaignNotesGraph__type">
-						<span
-							className={`CampaignNotesGraph__dot ${getCampaignGraphNodeTypeClass(node.type)}`}
-						/>
-						{lang.t(TYPE_LABELS[node.type] || node.type)}
-					</div>
-					{!hideTitle && <h4>{node.label}</h4>}
-				</div>
-				{canOpen && (
-					<Button
-						variant="ghost"
-						size={Button.SIZES.SMALL}
-						icon="forward"
-						onClick={onOpen}
-						title={lang.t("Open {name}", { name: node.label })}
-					/>
-				)}
-			</div>
+			<CampaignGraphSelectedHeader node={node} hideTitle={hideTitle} canOpen={canOpen} onOpen={onOpen} />
 			<ParsedGraphText text={detailText} onOpen={canOpen ? onOpen : undefined} />
-			<dl className="CampaignNotesGraph__stats">
-				<div>
-					<dt>{lang.t("Connections")}</dt>
-					<dd>{edges.length}</dd>
-				</div>
-				{node.meta.fileName && (
-					<div>
-						<dt>{lang.t("Session")}</dt>
-						<dd>{getCampaignGraphSessionDisplayName(node.meta.fileName)}</dd>
-					</div>
-				)}
-			</dl>
-			{edges.length > 0 && (
-				<div className="CampaignNotesGraph__connections">
-					{edges.map(renderConnection)}
-				</div>
-			)}
+			<CampaignGraphSelectedStats node={node} edgeCount={edges.length} />
+			<CampaignGraphSelectedConnections edges={edges} renderConnection={renderConnection} />
 		</>
 	);
+}
+
+function CampaignGraphSelectedHeader({ node, hideTitle, canOpen, onOpen }: Pick<
+	CampaignGraphSelectedDetailsProps,
+	"node" | "hideTitle" | "canOpen" | "onOpen"
+>) {
+	return (
+		<div className="CampaignNotesGraph__detailHeader">
+			<div>
+				<div className="CampaignNotesGraph__type">
+					<span className={`CampaignNotesGraph__dot ${getCampaignGraphNodeTypeClass(node.type)}`} />
+					{lang.t(TYPE_LABELS[node.type] || node.type)}
+				</div>
+				{!hideTitle && <h4>{node.label}</h4>}
+			</div>
+			{canOpen && (
+				<Button variant="ghost" size={Button.SIZES.SMALL} icon="forward" onClick={onOpen}
+					title={lang.t("Open {name}", { name: node.label })} />
+			)}
+		</div>
+	);
+}
+
+function CampaignGraphSelectedStats({ node, edgeCount }: { node: CampaignGraphNode; edgeCount: number }) {
+	return (
+		<dl className="CampaignNotesGraph__stats">
+			<div><dt>{lang.t("Connections")}</dt><dd>{edgeCount}</dd></div>
+			{node.meta.fileName && (
+				<div><dt>{lang.t("Session")}</dt><dd>{getCampaignGraphSessionDisplayName(node.meta.fileName)}</dd></div>
+			)}
+		</dl>
+	);
+}
+
+function CampaignGraphSelectedConnections({ edges, renderConnection }: Pick<
+	CampaignGraphSelectedDetailsProps,
+	"edges" | "renderConnection"
+>) {
+	if (edges.length === 0) return null;
+	return <div className="CampaignNotesGraph__connections">{edges.map(renderConnection)}</div>;
 }
 
 interface CampaignGraphOverviewProps {
@@ -1089,63 +1102,52 @@ export default function CampaignNotesGraph({
 			const currentById = !shouldUseFreshLayout
 				? new Map(currentNodes.map((node) => [node.id, node]))
 				: new Map<string, CampaignFlowNode>();
-			let nextNodes = graph.nodes.map<CampaignFlowNode>((graphNode) => {
+			const projectedNodes = graph.nodes.map<CampaignFlowNode>((graphNode) => {
 				const currentNode = currentById.get(graphNode.id);
-				const size = getCampaignGraphNodeSize(graphNode.type);
+				const presentation = getCampaignGraphFlowNodePresentation({
+					graphNode,
+					currentNode,
+					layoutPosition: layoutPositions[graphNode.id],
+					selectedNodeId,
+					focusedNodeId,
+					connectedIds,
+					visibleNodeIds: visibleGraph.visibleNodeIds,
+					canSaveNote: typeof onSaveNote === "function",
+					colors: NODE_COLOR_BY_TYPE,
+					typeLabels: TYPE_LABELS,
+				});
 				return {
 					...currentNode,
 					id: graphNode.id,
 					type: "campaignGraphNode",
-					position:
-						currentNode?.position ||
-						layoutPositions[graphNode.id] || { x: 0, y: 0 },
+					position: presentation.position,
 					origin: [0.5, 0.5] as const,
-					zIndex: selectedNodeId === graphNode.id ? 3 : 2,
-					style: { width: size.width, height: size.height },
+					zIndex: presentation.isSelected ? 3 : 2,
+					style: { width: presentation.size.width, height: presentation.size.height },
 					data: {
 						graphNode,
-						color: NODE_COLOR_BY_TYPE[graphNode.type] ?? "#94a3b8",
-						typeLabel: lang.t(TYPE_LABELS[graphNode.type] || graphNode.type),
+						color: presentation.color,
+						typeLabel: lang.t(presentation.typeLabelKey),
 						connectionsLabel: lang.t("Connections"),
-						isSelected: selectedNodeId === graphNode.id,
-						isMuted:
-							Boolean(focusedNodeId) && !connectedIds.has(graphNode.id),
-						canOpen: canOpenCampaignGraphNode(
-							graphNode,
-							typeof onSaveNote === "function",
-						),
+						isSelected: presentation.isSelected,
+						isMuted: presentation.isMuted,
+						canOpen: presentation.canOpen,
 						onOpen: openNode,
 						openLabel: lang.t("Open {name}", { name: graphNode.label }),
 					},
-					hidden: !visibleGraph.visibleNodeIds.has(graphNode.id),
-					selected: selectedNodeId === graphNode.id,
+					hidden: presentation.hidden,
+					selected: presentation.isSelected,
 					draggable: true,
 					selectable: true,
 					connectable: false,
 					deletable: false,
 					focusable: true,
-					ariaLabel: `${lang.t(TYPE_LABELS[graphNode.type] || graphNode.type)}: ${graphNode.label}`,
+					ariaLabel: `${lang.t(presentation.typeLabelKey)}: ${graphNode.label}`,
 					ariaRole: "button",
-					className: getCampaignGraphNodeTypeClass(graphNode.type),
+					className: presentation.className,
 				};
 			});
-
-			if (!shouldUseFreshLayout) {
-				const newNodeIds = nextNodes
-					.filter((node) => !currentNodeIds.has(node.id))
-					.map((node) => node.id);
-				newNodeIds.forEach((nodeId) => {
-					const position = resolveCampaignGraphNodeCollision(
-						nextNodes,
-						nodeId,
-					);
-					nextNodes = nextNodes.map((node) =>
-						node.id === nodeId ? { ...node, position } : node,
-					);
-				});
-			}
-
-			return nextNodes;
+			return resolveNewCampaignGraphNodeCollisions(projectedNodes, currentNodeIds, shouldUseFreshLayout);
 		});
 	}, [
 		campaign.slug,
@@ -1243,19 +1245,20 @@ export default function CampaignNotesGraph({
 	}, [flowNodes, focusedNodeId, graph.edges, visibleGraph.visibleEdgeIds]);
 
 	useEffect(() => {
-		if (
-			!flowInstance ||
-			flowNodes.length === 0 ||
-			flowNodes.length !== graph.nodes.length ||
-			flowNodeTopologyKey !== nodeTopologyKey ||
-			hasManualPositionsRef.current ||
-			fittedNodeTopologyRef.current === nodeTopologyKey
-		) {
+		if (!shouldFitCampaignGraphTopology({
+			hasFlowInstance: Boolean(flowInstance),
+			flowNodeCount: flowNodes.length,
+			graphNodeCount: graph.nodes.length,
+			flowNodeTopologyKey,
+			nodeTopologyKey,
+			hasManualPositions: hasManualPositionsRef.current,
+			hasFittedTopology: fittedNodeTopologyRef.current === nodeTopologyKey,
+		})) {
 			return undefined;
 		}
 		fittedNodeTopologyRef.current = nodeTopologyKey;
 		const frame = requestAnimationFrame(() => {
-			flowInstance.fitView({ padding: 0.16, duration: 520 });
+			flowInstance?.fitView({ padding: 0.16, duration: 520 });
 		});
 		return () => cancelAnimationFrame(frame);
 	}, [

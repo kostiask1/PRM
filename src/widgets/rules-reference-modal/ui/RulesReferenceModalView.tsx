@@ -65,18 +65,59 @@ function ReferenceTabs({ tabs, activeTab, tabsWithSearchMatches, onSelectTab }: 
 	);
 }
 
+function ReferenceDetailsHeader({ activeTab, query, selectedItem, selectedMeta, canInsertReference, onInsertReference }: Pick<RulesReferenceModalViewProps, "activeTab" | "query" | "selectedItem" | "selectedMeta" | "canInsertReference" | "onInsertReference"> & { selectedItem: ReferenceItem }) {
+	return (
+		<div className="RulesReferenceModalContent__contentHeader">
+			<h3 className="RulesReferenceModalContent__title">{highlightText(String(selectedItem.name || ""), query)}</h3>
+			{selectedMeta && <div className="muted">{highlightText(selectedMeta, query)}</div>}
+			{canInsertReference && <div className="RulesReferenceModalContent__contentActions"><Button variant="primary" icon="plus" onClick={() => onInsertReference(activeTab.id, selectedItem)}>{lang.t("Insert")}</Button></div>}
+		</div>
+	);
+}
+
+function BestiaryReferenceEntry({ item, query }: { item: ReferenceItem; query: string }) {
+	return <MonsterStatBlock monster={item as BestiaryMonster} allowTokenUpload={false} showFavoriteAction={false} searchHighlight={query} />;
+}
+
+function GenericReferenceEntry({ item, query }: { item: ReferenceItem; query: string }) {
+	return renderRecursiveContent(item.entries, query);
+}
+
 function ReferenceDetails({ activeTab, query, selectedItem, selectedMeta, canInsertReference, onInsertReference }: Pick<RulesReferenceModalViewProps, "activeTab" | "query" | "selectedItem" | "selectedMeta" | "canInsertReference" | "onInsertReference">) {
 	if (!selectedItem) return <div className="RulesReferenceModalContent__content" />;
+	const Entry = activeTab.id === "bestiary" ? BestiaryReferenceEntry : GenericReferenceEntry;
 	return (
 		<div className="RulesReferenceModalContent__content">
-			<div className="RulesReferenceModalContent__contentHeader">
-				<h3 className="RulesReferenceModalContent__title">{highlightText(String(selectedItem.name || ""), query)}</h3>
-				{selectedMeta && <div className="muted">{highlightText(selectedMeta, query)}</div>}
-				{canInsertReference && <div className="RulesReferenceModalContent__contentActions"><Button variant="primary" icon="plus" onClick={() => onInsertReference(activeTab.id, selectedItem)}>{lang.t("Insert")}</Button></div>}
-			</div>
+			<ReferenceDetailsHeader {...{ activeTab, query, selectedItem, selectedMeta, canInsertReference, onInsertReference }} />
 			<div key={getReferenceItemKey(activeTab.id, selectedItem)} className="RulesReferenceModalContent__entryContent">
-				{activeTab.id === "bestiary" ? <MonsterStatBlock monster={selectedItem as BestiaryMonster} allowTokenUpload={false} showFavoriteAction={false} searchHighlight={query} /> : renderRecursiveContent(selectedItem.entries, query)}
+				<Entry item={selectedItem} query={query} />
 			</div>
+		</div>
+	);
+}
+
+function EmbeddedSpellReference({ query, isDetailedSearch, activeSelectedName, onEmbeddedSelection, onSelectSpell }: Pick<RulesReferenceModalViewProps, "query" | "isDetailedSearch" | "activeSelectedName" | "onEmbeddedSelection" | "onSelectSpell">) {
+	return (
+		<div className="RulesReferenceModalContent__spellBrowser">
+			<SpellsBrowser hideSearchInput initialSearch={query} initialDetailedSearch={isDetailedSearch} initialSelectedName={activeSelectedName} onActiveSpellChange={(spell) => onEmbeddedSelection("spells", getSpellReferenceName(spell))} onSelectSpell={onSelectSpell} renderOptions={{}} />
+		</div>
+	);
+}
+
+function ReferenceSidebar({ activeTab, isDetailedSearch, isLoading, normalizedQuery, filteredItems, listRef, renderReferenceItem }: Pick<RulesReferenceModalViewProps, "activeTab" | "isDetailedSearch" | "isLoading" | "normalizedQuery" | "filteredItems" | "listRef" | "renderReferenceItem">) {
+	if (isLoading) return <p className="muted">{lang.t("Loading...")}</p>;
+	if (!filteredItems.length) return <p className="muted">{lang.t(activeTab.emptyLabel)}</p>;
+	const searchMode = isDetailedSearch ? "detailed" : "simple";
+	return <ReactList key={`${activeTab.id}:${normalizedQuery}:${searchMode}`} ref={listRef} itemRenderer={renderReferenceItem} length={filteredItems.length} type="uniform" />;
+}
+
+function StandardReferenceLayout(props: Pick<RulesReferenceModalViewProps, "activeTab" | "query" | "isDetailedSearch" | "isLoading" | "normalizedQuery" | "filteredItems" | "selectedItem" | "selectedMeta" | "canInsertReference" | "listRef" | "renderReferenceItem" | "onInsertReference">) {
+	return (
+		<div className="RulesReferenceModalContent__main">
+			<div className="RulesReferenceModalContent__sidebar"><div className="RulesReferenceModalContent__list">
+				<ReferenceSidebar {...props} />
+			</div></div>
+			<ReferenceDetails {...props} />
 		</div>
 	);
 }
@@ -88,14 +129,9 @@ export default function RulesReferenceModalView(props: RulesReferenceModalViewPr
 			<ReferenceSearch {...{ query, isDetailedSearch, canNavigateBack, canNavigateForward, onNavigateHistory, onQueryChange, onToggleDetailedSearch }} />
 			<ReferenceTabs tabs={tabs} activeTab={activeTab} tabsWithSearchMatches={tabsWithSearchMatches} onSelectTab={onSelectTab} />
 			{activeTab.id === "spells" ? (
-				<div className="RulesReferenceModalContent__spellBrowser"><SpellsBrowser hideSearchInput initialSearch={query} initialDetailedSearch={isDetailedSearch} initialSelectedName={activeSelectedName} onActiveSpellChange={(spell) => onEmbeddedSelection("spells", getSpellReferenceName(spell))} onSelectSpell={onSelectSpell} renderOptions={{}} /></div>
+				<EmbeddedSpellReference {...{ query, isDetailedSearch, activeSelectedName, onEmbeddedSelection, onSelectSpell }} />
 			) : (
-				<div className="RulesReferenceModalContent__main">
-					<div className="RulesReferenceModalContent__sidebar"><div className="RulesReferenceModalContent__list">
-						{isLoading ? <p className="muted">{lang.t("Loading...")}</p> : filteredItems.length ? <ReactList key={`${activeTab.id}:${normalizedQuery}:${isDetailedSearch ? "detailed" : "simple"}`} ref={listRef} itemRenderer={renderReferenceItem} length={filteredItems.length} type="uniform" /> : <p className="muted">{lang.t(activeTab.emptyLabel)}</p>}
-					</div></div>
-					<ReferenceDetails activeTab={activeTab} query={query} selectedItem={selectedItem} selectedMeta={selectedMeta} canInsertReference={canInsertReference} onInsertReference={onInsertReference} />
-				</div>
+				<StandardReferenceLayout {...{ activeTab, query, isDetailedSearch, isLoading, normalizedQuery, filteredItems, selectedItem, selectedMeta, canInsertReference, listRef, renderReferenceItem, onInsertReference }} />
 			)}
 		</div>
 	);

@@ -21,6 +21,7 @@ import { classNames } from "../../../shared/lib/index.js";
 import { highlightText } from "../../../shared/ui/index.js";
 import "../../../assets/components/MonsterStatBlock.css";
 import {
+	executeMonsterTokenUpload,
 	getChangedFieldClass,
 	getMonsterContentArray,
 	getMonsterEntries,
@@ -29,7 +30,6 @@ import {
 	getMonsterTokenSources,
 	getSenseTextParts,
 	getTokenDragPayload,
-	getUploadedTokenUrl,
 	groupMonsterSpellsByLevel,
 	loadMonsterSpells,
 	shouldShowMonsterTokenDropzone,
@@ -189,22 +189,18 @@ export default function MonsterStatBlock({
 	};
 
 	const handleTokenUpload = async (result: unknown) => {
-		const nextUrl = getUploadedTokenUrl(result);
-		if (!nextUrl) return;
-		setCustomTokenUrl(nextUrl);
-		setHasImageError(false);
-		if (onTokenImageChange) {
-			onTokenImageChange(monster, nextUrl);
-			setIsReplacingToken(false);
-			return;
-		}
-		try {
-			const updated = await bestiaryApi.updateCustomBestiaryMonster(getMonsterMutationKey(monster, effectiveName), { imageUrl: nextUrl });
-			setCustomTokenUrl(updated ? getStringField(updated, "imageUrl") || nextUrl : nextUrl);
-			setIsReplacingToken(false);
-		} catch (error) {
-			console.error("Failed to save custom monster token", error);
-		}
+		await executeMonsterTokenUpload({
+			result,
+			monster,
+			effectiveName,
+			onTokenImageChange,
+			persist: bestiaryApi.updateCustomBestiaryMonster,
+			onTokenUrl: setCustomTokenUrl,
+			onImageError: setHasImageError,
+			onReplacing: setIsReplacingToken,
+			onPersistenceError: (error) =>
+				console.error("Failed to save custom monster token", error),
+		});
 	};
 
 	const handleReplaceToken = async () => {
@@ -251,7 +247,6 @@ export default function MonsterStatBlock({
 			<div className="MonsterStatBlock__header">
 				<MonsterTokenSection
 					monster={monster}
-					effectiveName={effectiveName}
 					sources={tokenSources}
 					showDropzone={showTokenDropzone}
 					hasImageError={hasImageError}

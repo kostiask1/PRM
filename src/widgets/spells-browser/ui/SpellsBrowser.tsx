@@ -23,6 +23,7 @@ import {
 	filterSpells,
 	getErrorMessage,
 	getInitialSpellSelection,
+	getInitialSpellScrollPlan,
 	getNextSpellSortOrder,
 	getSettingsIgnoreSources,
 	getSpellClassOptions,
@@ -33,7 +34,6 @@ import {
 	normalizeSpellList,
 	normalizeStringList,
 	sortSpells,
-	spellMatchesReferenceKey,
 	type SpellSortOrder,
 } from "../model/spellsBrowser.ts";
 import SpellsBrowserContent from "./SpellsBrowserContent.tsx";
@@ -134,13 +134,18 @@ export default function SpellsBrowser({
 	}, [allSpells, displayedSpells, initialSelectedName]);
 
 	useEffect(() => {
-		if (!scrollToInitialSelected || !initialSelectedName || !selectedSpell || !spellMatchesReferenceKey(selectedSpell, initialSelectedName)) return;
-		const scrollKey = `${selectedSpell.source ?? ""}:${selectedSpell.name}`;
-		if (embeddedScrolledSpellRef.current === scrollKey) return;
-		const selectedIndex = getSpellListIndex(displayedSpells, selectedSpell);
-		if (selectedIndex < 0) return;
-		embeddedScrolledSpellRef.current = scrollKey;
-		const frameId = requestAnimationFrame(() => listRef.current?.scrollTo(selectedIndex));
+		const plan = getInitialSpellScrollPlan(
+			displayedSpells,
+			initialSelectedName,
+			selectedSpell,
+			scrollToInitialSelected,
+			embeddedScrolledSpellRef.current,
+		);
+		if (!plan) return;
+		embeddedScrolledSpellRef.current = plan.scrollKey;
+		const frameId = requestAnimationFrame(() =>
+			listRef.current?.scrollTo(plan.selectedIndex),
+		);
 		return () => cancelAnimationFrame(frameId);
 	}, [displayedSpells, initialSelectedName, scrollToInitialSelected, selectedSpell]);
 

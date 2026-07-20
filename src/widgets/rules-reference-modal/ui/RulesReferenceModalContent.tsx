@@ -23,15 +23,28 @@ import {
 } from "../../../entities/reference/index.js";
 import {
 	REFERENCE_TAB_POLICIES,
+	applyLoadedReferenceSelection,
+	applyReferenceTabOnlySelection,
+	applyReferenceSelectionReconciliationPlan,
 	combineBestiaryLists,
 	createReferenceSelection,
 	findSelectedReferenceItem,
 	getInitialTabId,
+	executeReferenceInitialNavigationPlan,
+	executeReferenceTabSelectionPlan,
+	getReferenceInitialNavigationPlan,
+	getReferenceLoadErrorMessage,
+	getReferenceNavigationRequestPlan,
+	getReferenceHistoryAvailability,
+	getReferenceKeyboardPlan,
 	getReferenceItemKey,
+	getReferenceScrollPlan,
 	getReferenceSelectionName,
+	getReferenceSelectionReconciliationPlan,
+	getReferenceTabSelectionPlan,
+	getReferenceTabsToLoad,
 	isReferenceTabId,
 	itemMatchesQuery,
-	itemMatchesSelectedName,
 	normalizeReferenceList,
 	type ReferenceItem,
 	type ReferenceSelection,
@@ -124,7 +137,6 @@ const REFERENCE_TABS: ReferenceTab[] = REFERENCE_TAB_POLICIES.map((policy) => ({
 }));
 
 const TAB_BY_ID = new Map(REFERENCE_TABS.map((tab) => [tab.id, tab]));
-const EMBEDDED_BROWSER_TAB_IDS = new Set<ReferenceTabId>(["spells"]);
 const EMPTY_ITEMS: UiReferenceItem[] = [];
 
 function isEditableTarget(target: EventTarget | null) {
@@ -132,6 +144,19 @@ function isEditableTarget(target: EventTarget | null) {
 	return Boolean(
 		target.closest("input, textarea, select, [contenteditable='true']"),
 	);
+}
+
+function getReferenceMeta(tab: ReferenceTab, item: UiReferenceItem | null): string {
+	if (!item || !tab.meta) return "";
+	return tab.meta(item);
+}
+
+function getEnabledHandler<THandler>(enabled: unknown, handler: THandler): THandler | null {
+	return enabled ? handler : null;
+}
+
+function runWhenMounted(mountedRef: { current: boolean }, effect: () => void): void {
+	if (mountedRef.current) effect();
 }
 
 export default function RulesReferenceModalContent({
@@ -170,10 +195,10 @@ export default function RulesReferenceModalContent({
 		normalizedQuery,
 	} = deriveActiveState(activeTabId, itemsByTab, selectedByTab, loadingByTab, query);
 	const isGlobalSearch = Boolean(normalizedQuery);
-	const canNavigateBack = navigationHistory.index > 0;
-	const canNavigateForward =
-		navigationHistory.index >= 0 &&
-		navigationHistory.index < navigationHistory.entries.length - 1;
+	const { canNavigateBack, canNavigateForward } = getReferenceHistoryAvailability(
+		navigationHistory.index,
+		navigationHistory.entries.length,
+	);
 
 	const recordNavigation = useCallback((tabId: ReferenceTabId, name: string) => {
 		if (!tabId || !name) return;
@@ -225,9 +250,7 @@ export default function RulesReferenceModalContent({
 		shouldScrollToActiveRef.current = false;
 		pendingNavigationTabRef.current = null;
 		setActiveTabId(tabId);
-		setSelectedByTab((current) =>
-			current[tabId] === "" ? current : { ...current, [tabId]: "" },
-		);
+		setSelectedByTab((current) => applyReferenceTabOnlySelection(current, tabId));
 	}, []);
 
 	useEffect(() => {
@@ -240,51 +263,33 @@ export default function RulesReferenceModalContent({
 	}, []);
 
 	useEffect(() => {
-		if (!navigationRequest?.requestId) return;
-		if (handledNavigationRequestIdRef.current === navigationRequest.requestId) {
-			return;
-		}
-
-		handledNavigationRequestIdRef.current = navigationRequest.requestId;
-		if (navigationRequest.forceTab && !navigationRequest.name) {
-			applyTabOnlyNavigation(navigationRequest.tabId);
-			return;
-		}
-		navigateToReference(navigationRequest.tabId, navigationRequest.name);
+		const plan = getReferenceNavigationRequestPlan(
+			navigationRequest,
+			handledNavigationRequestIdRef.current,
+		);
+		if (!plan) return;
+		handledNavigationRequestIdRef.current = plan.requestId;
+		if (plan.type === "tab-only") applyTabOnlyNavigation(plan.tabId);
+		else navigateToReference(plan.tabId, plan.name);
 	}, [applyTabOnlyNavigation, navigateToReference, navigationRequest]);
 
 	useEffect(() => {
-		if (hasInitializedNavigationRef.current) return;
-		hasInitializedNavigationRef.current = true;
-
-		if (forceTab) {
-			applyTabOnlyNavigation(getInitialTabId(initialTab));
-			if (initialName) {
-				navigateToReference(getInitialTabId(initialTab), initialName);
-			}
-			return;
-		}
-
 		const currentEntry = navigationHistory.entries[navigationHistory.index];
-		const nextTabId = getInitialTabId(initialTab);
-		if (initialName) {
-			shouldScrollToActiveRef.current = true;
-			pendingNavigationTabRef.current = null;
-			setActiveTabId(nextTabId);
-			setSelectedByTab((current) => ({
-				...current,
-				[nextTabId]: initialName,
-			}));
-			recordNavigation(nextTabId, initialName);
-			return;
-		}
-
-		if (currentEntry) {
-			applyNavigationEntry(currentEntry);
-			return;
-		}
-
-		setActiveTabId(nextTabId);
+		const plan = getReferenceInitialNavigationPlan(
+			hasInitializedNavigationRef.current,
+			forceTab,
+			initialTab,
+			initialName,
+			currentEntry,
+		);
+		if (!plan) return;
+		hasInitializedNavigationRef.current = true;
+		executeReferenceInitialNavigationPlan(plan, {
+			onTabOnly: applyTabOnlyNavigation,
+			onReference: navigateToReference,
+			onHistory: (entry) => applyNavigationEntry(entry as RulesReferenceHistoryEntry),
+			onTab: setActiveTabId,
+		});
 	}, [
 		applyNavigationEntry,
 		applyTabOnlyNavigation,
@@ -308,13 +313,13 @@ export default function RulesReferenceModalContent({
 	]);
 
 	useEffect(() => {
-		const tabsToLoad = isGlobalSearch
-			? REFERENCE_TABS.filter(
-					(tab) => !itemsByTab[tab.id] && !requestedTabsRef.current.has(tab.id),
-				)
-			: !itemsByTab[activeTab.id] && !requestedTabsRef.current.has(activeTab.id)
-				? [activeTab]
-				: [];
+		const tabsToLoad = getReferenceTabsToLoad(
+			isGlobalSearch,
+			REFERENCE_TAB_POLICIES.map((tab) => tab.id),
+			activeTab.id,
+			itemsByTab,
+			requestedTabsRef.current,
+		).map((tabId) => TAB_BY_ID.get(tabId) as ReferenceTab);
 
 		if (!tabsToLoad.length) return undefined;
 
@@ -323,35 +328,30 @@ export default function RulesReferenceModalContent({
 			setLoadingByTab((current) => ({ ...current, [tab.id]: true }));
 			try {
 				const list = await tab.load();
-				if (!isMountedRef.current) return;
-
-				const normalizedList = normalizeReferenceList(list) as UiReferenceItem[];
-				setItemsByTab((current) => ({
-					...current,
-					[tab.id]: normalizedList,
-				}));
-				setSelectedByTab((current) => {
-					if (current[tab.id]) return current;
-					if (EMBEDDED_BROWSER_TAB_IDS.has(tab.id)) return current;
-					return {
+				runWhenMounted(isMountedRef, () => {
+					const normalizedList = normalizeReferenceList(list) as UiReferenceItem[];
+					setItemsByTab((current) => ({
 						...current,
-						[tab.id]: getReferenceSelectionName(tab.id, normalizedList[0]),
-					};
+						[tab.id]: normalizedList,
+					}));
+					setSelectedByTab((current) =>
+						applyLoadedReferenceSelection(current, tab.id, normalizedList),
+					);
 				});
 			} catch (error: unknown) {
 				requestedTabsRef.current.delete(tab.id);
-				if (!isMountedRef.current) return;
-
-				dispatch(
-					alert({
-						title: lang.t("Error"),
-						message: error instanceof Error ? error.message : lang.t("Unknown error"),
-					}),
-				);
+				runWhenMounted(isMountedRef, () => {
+					dispatch(
+						alert({
+							title: lang.t("Error"),
+							message: getReferenceLoadErrorMessage(error, lang.t("Unknown error")),
+						}),
+					);
+				});
 			} finally {
-				if (isMountedRef.current) {
+				runWhenMounted(isMountedRef, () => {
 					setLoadingByTab((current) => ({ ...current, [tab.id]: false }));
-				}
+				});
 			}
 		};
 
@@ -382,34 +382,18 @@ export default function RulesReferenceModalContent({
 	}, [filteredItemsByTab, normalizedQuery]);
 
 	useEffect(() => {
-		if (!hasLoadedActiveTab || isLoading) return;
-		if (EMBEDDED_BROWSER_TAB_IDS.has(activeTab.id)) return;
-
-		const selectedItemExists = activeItems.some((item) =>
-			itemMatchesSelectedName(activeTab.id, item, activeSelectedName),
+		const plan = getReferenceSelectionReconciliationPlan({
+			tabId: activeTab.id,
+			hasLoaded: hasLoadedActiveTab,
+			isLoading,
+			activeItems,
+			filteredItems,
+			selectedName: activeSelectedName,
+		});
+		if (!plan) return;
+		setSelectedByTab((current) =>
+			applyReferenceSelectionReconciliationPlan(current, plan),
 		);
-		if (selectedItemExists) return;
-
-		if (!filteredItems.length) {
-			setSelectedByTab((current) => {
-				if (!current[activeTab.id]) return current;
-				return { ...current, [activeTab.id]: "" };
-			});
-			return;
-		}
-
-		const hasSelection = filteredItems.some((item) =>
-			itemMatchesSelectedName(activeTab.id, item, activeSelectedName),
-		);
-		if (!hasSelection) {
-			setSelectedByTab((current) => ({
-				...current,
-				[activeTab.id]: getReferenceSelectionName(
-					activeTab.id,
-					filteredItems[0],
-				),
-			}));
-		}
 	}, [
 		activeSelectedName,
 		activeTab.id,
@@ -420,18 +404,18 @@ export default function RulesReferenceModalContent({
 	]);
 
 	useEffect(() => {
-		if (!hasLoadedActiveTab || isLoading || !activeSelectedName) return;
-		if (!shouldScrollToActiveRef.current) return;
-
-		const activeItem = findSelectedReferenceItem(
-			activeTab.id,
+		const plan = getReferenceScrollPlan({
+			tabId: activeTab.id,
+			hasLoaded: hasLoadedActiveTab,
+			isLoading,
+			shouldScroll: shouldScrollToActiveRef.current,
 			filteredItems,
-			activeSelectedName,
-		);
-		const activeIndex = activeItem ? filteredItems.indexOf(activeItem) : -1;
+			selectedName: activeSelectedName,
+		});
+		if (!plan) return;
 		shouldScrollToActiveRef.current = false;
-		if (activeIndex >= 0) {
-			setTimeout(() => listRef.current?.scrollTo(activeIndex), 0);
+		if (plan.scrollIndex >= 0) {
+			setTimeout(() => listRef.current?.scrollTo(plan.scrollIndex), 0);
 		}
 	}, [
 		activeSelectedName,
@@ -455,14 +439,19 @@ export default function RulesReferenceModalContent({
 
 	useEffect(() => {
 		const handleKeyDown = (event: KeyboardEvent) => {
-			if (event.key !== "Backspace") return;
-			if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey)
-				return;
-			if (isEditableTarget(event.target)) return;
-			if (!canNavigateBack) return;
+			const plan = getReferenceKeyboardPlan({
+				key: event.key,
+				altKey: event.altKey,
+				ctrlKey: event.ctrlKey,
+				metaKey: event.metaKey,
+				shiftKey: event.shiftKey,
+				isEditableTarget: isEditableTarget(event.target),
+				canNavigateBack,
+			});
+			if (!plan) return;
 
-			event.preventDefault();
-			navigateHistory(-1);
+			if (plan.preventDefault) event.preventDefault();
+			navigateHistory(plan.historyDirection);
 		};
 
 		window.addEventListener("keydown", handleKeyDown);
@@ -470,24 +459,24 @@ export default function RulesReferenceModalContent({
 	}, [canNavigateBack, navigateHistory]);
 
 	const selectedItem = resolveSelectedItem(activeTab.id, filteredItems, activeItems, activeSelectedName);
-	const selectedMeta = selectedItem && activeTab.meta ? activeTab.meta(selectedItem) : "";
+	const selectedMeta = getReferenceMeta(activeTab, selectedItem);
 
 	const selectTab = (tabId: ReferenceTabId) => {
-		shouldScrollToActiveRef.current = false;
-		const nextName =
-			selectedByTab[tabId] ||
-			getReferenceSelectionName(tabId, (itemsByTab[tabId] || EMPTY_ITEMS)[0]) ||
-			"";
-		if (nextName && !EMBEDDED_BROWSER_TAB_IDS.has(tabId)) {
-			pendingNavigationTabRef.current = null;
-			recordNavigation(tabId, nextName);
-		} else if (selectedByTab[tabId]) {
-			pendingNavigationTabRef.current = null;
-			recordNavigation(tabId, selectedByTab[tabId]);
-		} else {
-			pendingNavigationTabRef.current = tabId;
-		}
-		setActiveTabId(tabId);
+		const plan = getReferenceTabSelectionPlan(
+			tabId,
+			selectedByTab[tabId] || "",
+			(itemsByTab[tabId] || EMPTY_ITEMS)[0],
+		);
+		executeReferenceTabSelectionPlan(plan, {
+			onScrollRequest: (shouldScroll) => {
+				shouldScrollToActiveRef.current = shouldScroll;
+			},
+			onPendingNavigation: (pendingTabId) => {
+				pendingNavigationTabRef.current = pendingTabId;
+			},
+			onNavigation: recordNavigation,
+			onActiveTab: setActiveTabId,
+		});
 	};
 
 	const selectItem = (name: string) => {
@@ -533,7 +522,7 @@ export default function RulesReferenceModalContent({
 				tabId={activeTab.id}
 				item={item}
 				query={query}
-				meta={activeTab.meta?.(item)}
+				meta={getReferenceMeta(activeTab, item)}
 				active={selectedItem === item}
 				onSelect={() => selectItem(selectionName)}
 				onInsert={() => insertReference(activeTab.id, item)}
@@ -555,7 +544,7 @@ export default function RulesReferenceModalContent({
 			normalizedQuery={normalizedQuery}
 			filteredItems={filteredItems}
 			selectedItem={selectedItem}
-			selectedMeta={selectedMeta || ""}
+			selectedMeta={selectedMeta}
 			canInsertReference={Boolean(onSelectReference)}
 			listRef={listRef}
 			renderReferenceItem={renderReferenceItem}
@@ -564,7 +553,7 @@ export default function RulesReferenceModalContent({
 			onToggleDetailedSearch={() => setIsDetailedSearch((value) => !value)}
 			onSelectTab={selectTab}
 			onEmbeddedSelection={recordEmbeddedReferenceSelection}
-			onSelectSpell={onSelectReference ? selectSpellReference : null}
+			onSelectSpell={getEnabledHandler(onSelectReference, selectSpellReference)}
 			onInsertReference={insertReference}
 		/>
 	);

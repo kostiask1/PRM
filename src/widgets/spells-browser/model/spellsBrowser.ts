@@ -41,6 +41,41 @@ export interface SpellSelectionPlan {
 	changed: boolean;
 }
 
+export interface InitialSpellScrollPlan {
+	scrollKey: string;
+	selectedIndex: number;
+}
+
+export type SpellBrowserTranslate = (
+	template: string,
+	variables?: Record<string, unknown>,
+) => string;
+
+export interface SpellListItemPresentationOptions {
+	selected: boolean;
+	capitalizeName(name: string): string;
+	resolveSourceName(source: unknown): string;
+	translate: SpellBrowserTranslate;
+}
+
+export interface SpellListItemPresentation {
+	itemKey: string;
+	displayName: string;
+	levelLabel: string;
+	schoolName: string;
+	showSchool: boolean;
+	classesLabel: string;
+	showClasses: boolean;
+	source: string;
+	sourceFullName: string;
+	showSource: boolean;
+	disableSourceTooltip: boolean;
+	active: boolean;
+	nextSelection: SpellRecord | null;
+}
+
+export type SpellInsertAction = (spell: SpellRecord) => void;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
@@ -180,6 +215,113 @@ export function getInitialSpellSelection(
 	if (!target) return { spell: currentSpell, changed: false };
 	const changed = !isSameSpellIdentity(target, currentSpell);
 	return { spell: changed ? target : currentSpell, changed };
+}
+
+function canScrollToInitialSpell(
+	enabled: boolean,
+	initialSelectedName: unknown,
+	selectedSpell: SpellRecord | null,
+): selectedSpell is SpellRecord {
+	return Boolean(enabled && initialSelectedName && selectedSpell);
+}
+
+function getInitialSpellScrollKey(
+	initialSelectedName: unknown,
+	selectedSpell: SpellRecord | null,
+	enabled: boolean,
+): string | null {
+	if (!canScrollToInitialSpell(enabled, initialSelectedName, selectedSpell)) {
+		return null;
+	}
+	return spellMatchesReferenceKey(selectedSpell, initialSelectedName)
+		? `${selectedSpell.source ?? ""}:${selectedSpell.name}`
+		: null;
+}
+
+function isUnseenSpellScrollKey(
+	scrollKey: string | null,
+	lastScrollKey: string,
+): scrollKey is string {
+	return Boolean(scrollKey && lastScrollKey !== scrollKey);
+}
+
+function getInitialSpellScrollTarget(
+	displayedSpells: readonly SpellRecord[],
+	selectedSpell: SpellRecord,
+	scrollKey: string,
+): InitialSpellScrollPlan | null {
+	const selectedIndex = getSpellListIndex(displayedSpells, selectedSpell);
+	return selectedIndex < 0 ? null : { scrollKey, selectedIndex };
+}
+
+export function getInitialSpellScrollPlan(
+	displayedSpells: readonly SpellRecord[],
+	initialSelectedName: unknown,
+	selectedSpell: SpellRecord | null,
+	enabled: boolean,
+	lastScrollKey: string,
+): InitialSpellScrollPlan | null {
+	const scrollKey = getInitialSpellScrollKey(
+		initialSelectedName,
+		selectedSpell,
+		enabled,
+	);
+	if (!isUnseenSpellScrollKey(scrollKey, lastScrollKey) || !selectedSpell) {
+		return null;
+	}
+	return getInitialSpellScrollTarget(displayedSpells, selectedSpell, scrollKey);
+}
+
+function getSpellListSchoolName(school: unknown): string {
+	return isSpellSchoolCode(school) ? SPELL_SCHOOL_NAMES[school] : "";
+}
+
+function getSpellListLevelLabel(
+	level: number | undefined,
+	translate: SpellBrowserTranslate,
+): string {
+	if (level === 0) return translate("Cantrip");
+	return translate("{level}-level", { level });
+}
+
+function getSpellListDisplayName(
+	spell: SpellRecord,
+	capitalizeName: (name: string) => string,
+): string {
+	return capitalizeName(spell.name.split("|")[0]);
+}
+
+export function getSpellListItemPresentation(
+	spell: SpellRecord,
+	options: SpellListItemPresentationOptions,
+): SpellListItemPresentation {
+	const schoolName = getSpellListSchoolName(spell.school);
+	const sourceFullName = options.resolveSourceName(spell.source);
+	const classes = normalizeStringList(spell.classes);
+	const classesLabel = classes.join(", ");
+	const source = spell.source ?? "";
+	return {
+		itemKey: getSpellItemKey(spell),
+		displayName: getSpellListDisplayName(spell, options.capitalizeName),
+		levelLabel: getSpellListLevelLabel(spell.level, options.translate),
+		schoolName,
+		showSchool: Boolean(schoolName),
+		classesLabel,
+		showClasses: classes.length > 0,
+		source,
+		sourceFullName,
+		showSource: Boolean(source),
+		disableSourceTooltip: !sourceFullName,
+		active: options.selected,
+		nextSelection: options.selected ? null : spell,
+	};
+}
+
+export function executeSpellInsertAction(
+	action: SpellInsertAction | null | undefined,
+	spell: SpellRecord,
+): void {
+	action?.(spell);
 }
 
 export function getValidSourceFilter(sourceFilter: string, selectedSources: readonly string[]): string {

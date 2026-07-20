@@ -4,7 +4,7 @@ import { lang } from "../../../shared/lib/index.js";
 import { openModalRequest, useAppSelector } from "../../../shared/model/index.js";
 import RulesReferenceModalContent from "./RulesReferenceModalContent.tsx";
 
-import type { ReferenceTabId } from "../model.js";
+import { getReferenceModalHostPlan, type ReferenceTabId } from "../model.js";
 
 interface OpenRulesReferenceModalOptions {
 	initialTab?: ReferenceTabId;
@@ -39,16 +39,19 @@ export default function RulesReferenceModalHost() {
 	const handledRequestIdRef = useRef<number | null>(null);
 
 	useEffect(() => {
-		if (!navigationRequest?.requestId) return;
-		if (handledRequestIdRef.current === navigationRequest.requestId) return;
-
-		handledRequestIdRef.current = navigationRequest.requestId;
-		if (isOpen) return;
+		const plan = getReferenceModalHostPlan(
+			navigationRequest,
+			handledRequestIdRef.current,
+			isOpen,
+		);
+		if (!plan) return;
+		handledRequestIdRef.current = plan.requestId;
+		if (!plan.shouldOpen) return;
 
 		openRulesReferenceModalContent({
-			initialTab: navigationRequest.tabId as ReferenceTabId,
-			initialName: navigationRequest.name,
-			forceTab: navigationRequest.forceTab,
+			initialTab: plan.initialTab as ReferenceTabId,
+			initialName: plan.initialName,
+			forceTab: plan.forceTab,
 		});
 	}, [isOpen, navigationRequest]);
 

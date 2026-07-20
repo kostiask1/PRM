@@ -72,15 +72,45 @@ export function normalizeCampaignSearchRecords(value: unknown): CampaignSearchRe
 	return Array.isArray(value) ? value.map(asRecord) : [];
 }
 
-export function campaignSearchValueToText(value: unknown): string {
-	if (value === null || value === undefined) return "";
-	if (typeof value === "string" || typeof value === "number") return String(value);
-	if (Array.isArray(value)) return value.map(campaignSearchValueToText).join("\n");
-	if (typeof value !== "object") return "";
-	return Object.entries(value)
-		.filter(([key]) => !key.startsWith("_") && key !== "imageUrl")
+type CampaignSearchValueKind = "empty" | "scalar" | "array" | "record" | "ignored";
+
+const CAMPAIGN_SEARCH_VALUE_KIND_BY_TYPE: Partial<Record<string, CampaignSearchValueKind>> = {
+	string: "scalar",
+	number: "scalar",
+	object: "record",
+};
+
+function getCampaignSearchValueKind(value: unknown): CampaignSearchValueKind {
+	if ([value === null, value === undefined].includes(true)) return "empty";
+	if (Array.isArray(value)) return "array";
+	return CAMPAIGN_SEARCH_VALUE_KIND_BY_TYPE[typeof value] ?? "ignored";
+}
+
+function isSearchableCampaignEntry([key]: [string, unknown]): boolean {
+	return [!key.startsWith("_"), key !== "imageUrl"].every(Boolean);
+}
+
+function getCampaignSearchArrayText(value: unknown): string {
+	return (value as unknown[]).map(campaignSearchValueToText).join("\n");
+}
+
+function getCampaignSearchRecordText(value: unknown): string {
+	return Object.entries(value as Record<string, unknown>)
+		.filter(isSearchableCampaignEntry)
 		.map(([, item]) => campaignSearchValueToText(item))
 		.join("\n");
+}
+
+const CAMPAIGN_SEARCH_VALUE_READERS: Record<CampaignSearchValueKind, (value: unknown) => string> = {
+	empty: () => "",
+	scalar: (value) => String(value),
+	array: getCampaignSearchArrayText,
+	record: getCampaignSearchRecordText,
+	ignored: () => "",
+};
+
+export function campaignSearchValueToText(value: unknown): string {
+	return CAMPAIGN_SEARCH_VALUE_READERS[getCampaignSearchValueKind(value)](value);
 }
 
 export function normalizeCampaignSearchText(value: unknown): string {
@@ -95,19 +125,40 @@ export function getCampaignSearchResultTitle(value: unknown): string {
 	return String(value || "").split(/\r?\n/).map((line) => line.trim()).find(Boolean) || "";
 }
 
+function getCampaignSearchSnippetIndex(source: string, normalizedQuery: string): number {
+	if (!normalizedQuery) return -1;
+	return normalizeCampaignSearchText(source).indexOf(normalizedQuery);
+}
+
+function getCampaignSearchEllipsis(show: boolean): string {
+	return ["", "..."][Number(show)];
+}
+
 export function buildCampaignSearchSnippet(text: unknown, query: unknown): string {
 	const source = String(text || "").replace(/\s+/g, " ").trim();
 	if (!source) return "";
 	const normalizedQuery = normalizeCampaignSearchText(query);
-	const index = normalizedQuery ? normalizeCampaignSearchText(source).indexOf(normalizedQuery) : -1;
-	const start = index >= 0 ? Math.max(0, index - 70) : 0;
+	const index = getCampaignSearchSnippetIndex(source, normalizedQuery);
+	const start = Math.max(0, index - 70);
 	const snippet = source.slice(start, start + 180);
-	return `${start > 0 ? "..." : ""}${snippet}${start + 180 < source.length ? "..." : ""}`;
+	const prefix = getCampaignSearchEllipsis(start > 0);
+	const suffix = getCampaignSearchEllipsis(start + 180 < source.length);
+	return `${prefix}${snippet}${suffix}`;
 }
 
 function getEntityName(entity: CampaignSearchRecord, fallback: string, untitled: string): string {
-	const fullName = `${String(entity.firstName || "")} ${String(entity.lastName || "")}`.trim();
-	return fullName || String(entity.name || entity.title || fallback || untitled);
+	const fullName = [entity.firstName, entity.lastName]
+		.map(stringifyTruthyCampaignSearchValue)
+		.filter(Boolean)
+		.join(" ")
+		.trim();
+	const candidates = [fullName, entity.name, entity.title, fallback]
+		.map(stringifyTruthyCampaignSearchValue);
+	return candidates.find(Boolean) ?? String(untitled);
+}
+
+function stringifyTruthyCampaignSearchValue(value: unknown): string {
+	return value ? String(value) : "";
 }
 
 function pushResult(results: CampaignSearchResult[], item: Omit<CampaignSearchResult, "searchText">): void {
@@ -195,10 +246,45 @@ function appendSessionResults(
 }
 
 function appendSceneResults(results: CampaignSearchResult[], scene: CampaignSearchRecord, index: number, sessionName: string, fileName: string, target: CampaignSearchTarget, translate: CampaignSearchTranslate): void {
-	const title = String(scene.title || scene.name || translate("Scene {number}", { number: index + 1 }));
-	const sceneTarget = { ...target, hash: makeDomId("session", "scene", scene.id || index) };
-	pushResult(results, { id: `session-${fileName}-scene-${String(scene.id || index)}`, filter: "scenes", title, subtitle: `${translate("Scene")} · ${sessionName}`, text: campaignSearchValueToText(scene), target: sceneTarget });
-	normalizeCampaignSearchRecords(scene.notes).forEach((note, noteIndex) => pushNote(results, note, { idPrefix: `session-${fileName}-scene-${String(scene.id || index)}-note-${String(note.id || noteIndex)}`, subtitle: `${title} · ${translate("Scene notes")}`, target: sceneTarget }));
+	const identity = getCampaignSearchIdentity(scene.id, index);
+	const title = getCampaignSearchSceneTitle(scene, index, translate);
+	const sceneTarget = { ...target, hash: makeDomId("session", "scene", identity) };
+	pushResult(results, { id: `session-${fileName}-scene-${String(identity)}`, filter: "scenes", title, subtitle: `${translate("Scene")} · ${sessionName}`, text: campaignSearchValueToText(scene), target: sceneTarget });
+	appendCampaignSearchSceneNotes(results, scene, { identity, title, fileName, target: sceneTarget, translate });
+}
+
+function getCampaignSearchIdentity(value: unknown, fallback: unknown): unknown {
+	return value ? value : fallback;
+}
+
+function getCampaignSearchSceneTitle(
+	scene: CampaignSearchRecord,
+	index: number,
+	translate: CampaignSearchTranslate,
+): string {
+	const title = getCampaignSearchIdentity(scene.title, scene.name);
+	if (title) return String(title);
+	return String(translate("Scene {number}", { number: index + 1 }));
+}
+
+interface CampaignSearchSceneNoteOptions {
+	identity: unknown;
+	title: string;
+	fileName: string;
+	target: CampaignSearchTarget;
+	translate: CampaignSearchTranslate;
+}
+
+function appendCampaignSearchSceneNotes(
+	results: CampaignSearchResult[],
+	scene: CampaignSearchRecord,
+	options: CampaignSearchSceneNoteOptions,
+): void {
+	normalizeCampaignSearchRecords(scene.notes).forEach((note, noteIndex) => pushNote(results, note, {
+		idPrefix: `session-${options.fileName}-scene-${String(options.identity)}-note-${String(getCampaignSearchIdentity(note.id, noteIndex))}`,
+		subtitle: `${options.title} · ${options.translate("Scene notes")}`,
+		target: options.target,
+	}));
 }
 
 export function filterCampaignSearchResults(index: CampaignSearchResult[], query: unknown, activeFilters: ReadonlySet<CampaignSearchFilter>, limit = 80): CampaignSearchResult[] {
@@ -217,21 +303,110 @@ export async function loadCampaignSearchIndex(
 	options: { campaign: CampaignSearchCampaign; currentData?: CampaignSearchCampaign | null; api: CampaignSearchApi; translate: CampaignSearchTranslate },
 ): Promise<CampaignSearchResult[]> {
 	const { campaign, currentData, api, translate } = options;
-	const [characters, npc, locations, rawSessions] = await Promise.all([
-		api.getEntities(campaign.slug, "characters"), api.getEntities(campaign.slug, "npc"), api.getEntities(campaign.slug, "locations"), api.listSessions(campaign.slug),
-	]);
-	const sessions = normalizeCampaignSearchRecords(rawSessions);
-	const details = await Promise.all(sessions.map(async (session) => ({
-		...session,
-		detail: asRecord(await api.getSession(campaign.slug, String(session.fileName || ""))),
-	})));
+	const sources = await loadCampaignSearchSources(campaign.slug, api);
+	const details = await hydrateCampaignSearchSessions(campaign.slug, sources.rawSessions, api);
 	return buildCampaignSearchIndex({
-		campaign: { ...campaign, ...(currentData || {}) },
+		campaign: mergeCampaignSearchCampaign(campaign, currentData),
 		entities: {
-			characters: normalizeCampaignSearchRecords(currentData?.characters ?? characters),
-			npc: normalizeCampaignSearchRecords(currentData?.npcs ?? npc),
-			locations: normalizeCampaignSearchRecords(currentData?.locations ?? locations),
+			characters: getCampaignSearchEntityRecords(currentData, "characters", sources.characters),
+			npc: getCampaignSearchEntityRecords(currentData, "npcs", sources.npc),
+			locations: getCampaignSearchEntityRecords(currentData, "locations", sources.locations),
 		},
 		sessions: details,
 	}, translate);
+}
+
+export interface CampaignSearchLoadEffects {
+	setIndex(index: CampaignSearchResult[]): void;
+	setError(message: string): void;
+	setLoading(loading: boolean): void;
+}
+
+export interface CampaignSearchLoadExecutionOptions {
+	campaign: CampaignSearchCampaign;
+	currentData?: CampaignSearchCampaign | null;
+	api: CampaignSearchApi;
+	translate: CampaignSearchTranslate;
+	unknownErrorMessage: string;
+	isCancelled: () => boolean;
+	effects: CampaignSearchLoadEffects;
+}
+
+function runActiveCampaignSearchEffect(isCancelled: () => boolean, effect: () => void): void {
+	if (!isCancelled()) effect();
+}
+
+export function getCampaignSearchErrorMessage(error: unknown, fallback: string): string {
+	return error instanceof Error && error.message ? error.message : fallback;
+}
+
+export async function executeCampaignSearchIndexLoad(
+	options: CampaignSearchLoadExecutionOptions,
+): Promise<void> {
+	try {
+		const index = await loadCampaignSearchIndex(options);
+		runActiveCampaignSearchEffect(options.isCancelled, () => options.effects.setIndex(index));
+	} catch (error) {
+		const message = getCampaignSearchErrorMessage(error, options.unknownErrorMessage);
+		runActiveCampaignSearchEffect(options.isCancelled, () => options.effects.setError(message));
+	} finally {
+		runActiveCampaignSearchEffect(options.isCancelled, () => options.effects.setLoading(false));
+	}
+}
+
+interface CampaignSearchSources {
+	characters: unknown;
+	npc: unknown;
+	locations: unknown;
+	rawSessions: unknown;
+}
+
+async function loadCampaignSearchSources(
+	campaignSlug: string,
+	api: CampaignSearchApi,
+): Promise<CampaignSearchSources> {
+	const [characters, npc, locations, rawSessions] = await Promise.all([
+		api.getEntities(campaignSlug, "characters"),
+		api.getEntities(campaignSlug, "npc"),
+		api.getEntities(campaignSlug, "locations"),
+		api.listSessions(campaignSlug),
+	]);
+	return { characters, npc, locations, rawSessions };
+}
+
+async function hydrateCampaignSearchSession(
+	campaignSlug: string,
+	session: CampaignSearchRecord,
+	api: CampaignSearchApi,
+): Promise<CampaignSearchSession> {
+	const fileName = stringifyTruthyCampaignSearchValue(session.fileName);
+	return {
+		...session,
+		detail: asRecord(await api.getSession(campaignSlug, fileName)),
+	};
+}
+
+async function hydrateCampaignSearchSessions(
+	campaignSlug: string,
+	rawSessions: unknown,
+	api: CampaignSearchApi,
+): Promise<CampaignSearchSession[]> {
+	const sessions = normalizeCampaignSearchRecords(rawSessions);
+	return Promise.all(sessions.map((session) => hydrateCampaignSearchSession(campaignSlug, session, api)));
+}
+
+function mergeCampaignSearchCampaign(
+	campaign: CampaignSearchCampaign,
+	currentData: CampaignSearchCampaign | null | undefined,
+): CampaignSearchCampaign {
+	return { ...campaign, ...(currentData ? currentData : {}) };
+}
+
+function getCampaignSearchEntityRecords(
+	currentData: CampaignSearchCampaign | null | undefined,
+	key: "characters" | "npcs" | "locations",
+	fallback: unknown,
+): CampaignSearchRecord[] {
+	const currentValue = currentData ? currentData[key] : undefined;
+	return normalizeCampaignSearchRecords(currentValue ?? fallback);
 }

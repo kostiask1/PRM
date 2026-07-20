@@ -13,11 +13,21 @@ import { classNames, lang } from "../../../shared/lib/index.js";
 import { Button, Icon, Tooltip } from "../../../shared/ui/index.js";
 import type {
 	LoadedMonsterSpell,
+	MonsterNameRowPresentation,
+	MonsterSpellcastingEntryPresentation,
 	MonsterSpellcastingEntry,
+	MonsterTokenSectionPresentation,
 	MonsterTokenSources,
 	SenseTextPart,
 	SpellLevelGroup,
 	TokenDragPayload,
+} from "../model/monsterStatBlockPresentation.ts";
+import {
+	executeMonsterAction,
+	getMonsterMetadataPresentation,
+	getMonsterNameRowPresentation,
+	getMonsterSpellcastingEntryPresentation,
+	getMonsterTokenSectionPresentation,
 } from "../model/monsterStatBlockPresentation.ts";
 
 export interface RenderHelpers {
@@ -30,7 +40,6 @@ export interface RenderHelpers {
 
 interface TokenSectionProps {
 	monster: BestiaryMonster;
-	effectiveName: string;
 	sources: MonsterTokenSources;
 	showDropzone: boolean;
 	hasImageError: boolean;
@@ -42,6 +51,104 @@ interface TokenSectionProps {
 	onCancelReplace: () => void;
 	onReplace: () => void;
 	onImageError: () => void;
+}
+
+function applyTokenDragPayload(
+	event: DragEvent<HTMLDivElement>,
+	dragPayload: TokenDragPayload | null,
+): void {
+	if (!dragPayload) return;
+	event.dataTransfer.effectAllowed = "copy";
+	event.dataTransfer.setData("text/uri-list", dragPayload.uri);
+	event.dataTransfer.setData("text/plain", dragPayload.uri);
+	event.dataTransfer.setData("text/html", dragPayload.html);
+	event.dataTransfer.setData("DownloadURL", dragPayload.downloadUrl);
+}
+
+function MonsterTokenDropzone({
+	tokenUploadCampaignSlug,
+	onUpload,
+	onCancelReplace,
+	presentation,
+}: Pick<
+	TokenSectionProps,
+	"tokenUploadCampaignSlug" | "onUpload" | "onCancelReplace"
+> & { presentation: MonsterTokenSectionPresentation }) {
+	return (
+		<div className="MonsterStatBlock__token_dropzone">
+			<ImageDropzone
+				campaignSlug={tokenUploadCampaignSlug}
+				initialSource={tokenUploadCampaignSlug}
+				initialCategory="tokens"
+				initialSubcategory=""
+				onUploadSuccess={onUpload}
+			/>
+			{presentation.showCancelReplace && (
+				<Button
+					variant="ghost"
+					size={Button.SIZES.SMALL}
+					onClick={onCancelReplace}
+				>
+					{lang.t("Cancel")}
+				</Button>
+			)}
+		</div>
+	);
+}
+
+function MonsterTokenImage({
+	monster,
+	sources,
+	dragPayload,
+	onReplace,
+	onImageError,
+	presentation,
+}: Pick<
+	TokenSectionProps,
+	"monster" | "sources" | "dragPayload" | "onReplace" | "onImageError"
+> & { presentation: MonsterTokenSectionPresentation }) {
+	return (
+		<div
+			className="MonsterStatBlock__tokenDragProxy"
+			draggable
+			onDragStart={(event) => applyTokenDragPayload(event, dragPayload)}
+		>
+			<img
+				src={sources.localSrc}
+				alt={String(monster.name ?? "")}
+				className="MonsterStatBlock__token"
+				draggable={false}
+				onError={onImageError}
+			/>
+			{presentation.showReplaceAction && (
+				<Button
+					variant="ghost"
+					size={Button.SIZES.SMALL}
+					icon="image"
+					className="MonsterStatBlock__replace_token_btn"
+					onClick={onReplace}
+					title={lang.t("Replace image")}
+				/>
+			)}
+		</div>
+	);
+}
+
+function MonsterTokenContent(
+	props: TokenSectionProps & { presentation: MonsterTokenSectionPresentation },
+) {
+	switch (props.presentation.mode) {
+		case "dropzone":
+			return <MonsterTokenDropzone {...props} />;
+		case "image":
+			return <MonsterTokenImage {...props} />;
+		default:
+			return (
+				<div className="MonsterStatBlock__token_skeleton">
+					<Icon name="dice" />
+				</div>
+			);
+	}
 }
 
 export function MonsterTokenSection({
@@ -58,55 +165,32 @@ export function MonsterTokenSection({
 	onReplace,
 	onImageError,
 }: TokenSectionProps) {
-	const handleDragStart = (event: DragEvent<HTMLDivElement>) => {
-		if (!dragPayload) return;
-		event.dataTransfer.effectAllowed = "copy";
-		event.dataTransfer.setData("text/uri-list", dragPayload.uri);
-		event.dataTransfer.setData("text/plain", dragPayload.uri);
-		event.dataTransfer.setData("text/html", dragPayload.html);
-		event.dataTransfer.setData("DownloadURL", dragPayload.downloadUrl);
-	};
+	const presentation = getMonsterTokenSectionPresentation({
+		showDropzone,
+		hasImageError,
+		allowTokenUpload,
+		customTokenSrc: sources.customTokenSrc,
+		isCustomMonster: sources.isCustomMonster,
+		hasTokenImageChange,
+	});
 
 	return (
 		<div className="MonsterStatBlock__token_wrapper">
-			{showDropzone ? (
-				<div className="MonsterStatBlock__token_dropzone">
-					<ImageDropzone
-						campaignSlug={tokenUploadCampaignSlug}
-						initialSource={tokenUploadCampaignSlug}
-						initialCategory="tokens"
-						initialSubcategory=""
-						onUploadSuccess={onUpload}
-					/>
-					{sources.customTokenSrc && !hasImageError && (
-						<Button variant="ghost" size={Button.SIZES.SMALL} onClick={onCancelReplace}>
-							{lang.t("Cancel")}
-						</Button>
-					)}
-				</div>
-			) : !hasImageError ? (
-				<div className="MonsterStatBlock__tokenDragProxy" draggable onDragStart={handleDragStart}>
-					<img
-						src={sources.localSrc}
-						alt={String(monster.name ?? "")}
-						className="MonsterStatBlock__token"
-						draggable={false}
-						onError={onImageError}
-					/>
-					{allowTokenUpload && (sources.isCustomMonster || hasTokenImageChange) && (
-						<Button
-							variant="ghost"
-							size={Button.SIZES.SMALL}
-							icon="image"
-							className="MonsterStatBlock__replace_token_btn"
-							onClick={onReplace}
-							title={lang.t("Replace image")}
-						/>
-					)}
-				</div>
-			) : (
-				<div className="MonsterStatBlock__token_skeleton"><Icon name="dice" /></div>
-			)}
+			<MonsterTokenContent
+				monster={monster}
+				sources={sources}
+				showDropzone={showDropzone}
+				hasImageError={hasImageError}
+				allowTokenUpload={allowTokenUpload}
+				tokenUploadCampaignSlug={tokenUploadCampaignSlug}
+				hasTokenImageChange={hasTokenImageChange}
+				dragPayload={dragPayload}
+				onUpload={onUpload}
+				onCancelReplace={onCancelReplace}
+				onReplace={onReplace}
+				onImageError={onImageError}
+				presentation={presentation}
+			/>
 		</div>
 	);
 }
@@ -181,36 +265,238 @@ export function MonsterHeaderDetails(props: HeaderDetailsProps) {
 
 function MonsterNameRow(props: HeaderDetailsProps) {
 	const { monster, helpers } = props;
-	const name = String(monster.name ?? "");
+	const presentation = getMonsterNameRowPresentation({
+		name: monster.name,
+		hasNameAction: Boolean(props.onNameClick),
+		showFavoriteAction: props.showFavoriteAction,
+		isFavorite: props.isFavorite,
+		hasAiAction: Boolean(props.onAiAction),
+		hasFieldEditAction: Boolean(props.onFieldEdit),
+		hasDeleteAction: Boolean(props.onDelete),
+		showAddToEncounterAction: props.showAddToEncounterPicker,
+	});
+	const nameClass = classNames(
+		"MonsterStatBlock__name",
+		helpers.changedClass("name"),
+	);
 	return (
 		<div className="MonsterStatBlock__name__row">
-			{props.onNameClick ? (
-				<Tooltip content={props.nameTitle} disabled={!props.nameTitle}>
-					<h3 className={classNames("MonsterStatBlock__name", helpers.changedClass("name"))} onClick={() => props.onNameClick?.(monster)}>{helpers.highlight(name)}</h3>
-				</Tooltip>
-			) : (
-				<ClickToCopy className={classNames("MonsterStatBlock__name", helpers.changedClass("name"))} text={name} message={lang.t("Name copied!")}>{helpers.highlight(name)}</ClickToCopy>
-			)}
-			{props.showFavoriteAction && <Button variant="ghost" size={Button.SIZES.SMALL} icon="star" className={classNames("MonsterStatBlock__favorite_btn", { is_active: props.isFavorite })} onClick={props.onFavorite} title={props.isFavorite ? "Remove from favorites" : "Add to favorites"} />}
-			{props.onAiAction && <Button variant="ghost" size={Button.SIZES.SMALL} icon="wand" className="MonsterStatBlock__ai_btn" onClick={() => props.onAiAction?.(monster)} title={lang.t("AI creature action")} />}
-			{props.onFieldEdit && <Button variant="ghost" size={Button.SIZES.SMALL} icon="edit" className="MonsterStatBlock__edit_btn" onClick={() => props.onFieldEdit?.(monster)} title={lang.t("Edit creature")} />}
-			{props.onDelete && <Button variant="danger" size={Button.SIZES.SMALL} icon="trash" className="MonsterStatBlock__delete_btn" onClick={() => props.onDelete?.(monster)} title={lang.t("Delete custom creature")} />}
-			{props.showAddToEncounterPicker && <Button variant="primary" size={Button.SIZES.SMALL} icon="plus" className="MonsterStatBlock__add_to_encounter_btn" onClick={props.onAddToEncounter}>{lang.t("Add to encounter")}</Button>}
+			<MonsterNameControl
+				monster={monster}
+				presentation={presentation}
+				nameClass={nameClass}
+				nameTitle={props.nameTitle}
+				onNameClick={props.onNameClick}
+				highlight={helpers.highlight}
+			/>
+			<MonsterFavoriteAction
+				presentation={presentation}
+				onFavorite={props.onFavorite}
+			/>
+			<MonsterCallbackAction
+				monster={monster}
+				visible={presentation.showAiAction}
+				onAction={props.onAiAction}
+				variant="ghost"
+				icon="wand"
+				className="MonsterStatBlock__ai_btn"
+				titleKey="AI creature action"
+			/>
+			<MonsterCallbackAction
+				monster={monster}
+				visible={presentation.showFieldEditAction}
+				onAction={props.onFieldEdit}
+				variant="ghost"
+				icon="edit"
+				className="MonsterStatBlock__edit_btn"
+				titleKey="Edit creature"
+			/>
+			<MonsterCallbackAction
+				monster={monster}
+				visible={presentation.showDeleteAction}
+				onAction={props.onDelete}
+				variant="danger"
+				icon="trash"
+				className="MonsterStatBlock__delete_btn"
+				titleKey="Delete custom creature"
+			/>
+			<MonsterAddToEncounterAction
+				visible={presentation.showAddToEncounterAction}
+				onAdd={props.onAddToEncounter}
+			/>
 		</div>
 	);
 }
 
+interface MonsterNameControlProps {
+	monster: BestiaryMonster;
+	presentation: MonsterNameRowPresentation;
+	nameClass: string;
+	nameTitle?: ReactNode;
+	onNameClick?: (monster: BestiaryMonster) => void;
+	highlight: RenderHelpers["highlight"];
+}
+
+function MonsterNameControl({
+	monster,
+	presentation,
+	nameClass,
+	nameTitle,
+	onNameClick,
+	highlight,
+}: MonsterNameControlProps) {
+	if (presentation.useNameAction) {
+		return (
+			<Tooltip content={nameTitle} disabled={!nameTitle}>
+				<h3
+					className={nameClass}
+					onClick={() => executeMonsterAction(onNameClick, monster)}
+				>
+					{highlight(presentation.name)}
+				</h3>
+			</Tooltip>
+		);
+	}
+	return (
+		<ClickToCopy
+			className={nameClass}
+			text={presentation.name}
+			message={lang.t("Name copied!")}
+		>
+			{highlight(presentation.name)}
+		</ClickToCopy>
+	);
+}
+
+function MonsterFavoriteAction({
+	presentation,
+	onFavorite,
+}: {
+	presentation: MonsterNameRowPresentation;
+	onFavorite: () => void;
+}) {
+	if (!presentation.showFavoriteAction) return null;
+	return (
+		<Button
+			variant="ghost"
+			size={Button.SIZES.SMALL}
+			icon="star"
+			className={classNames("MonsterStatBlock__favorite_btn", {
+				is_active: presentation.favoriteActive,
+			})}
+			onClick={onFavorite}
+			title={presentation.favoriteTitle}
+		/>
+	);
+}
+
+interface MonsterCallbackActionProps {
+	monster: BestiaryMonster;
+	visible: boolean;
+	onAction?: (monster: BestiaryMonster) => void;
+	variant: "ghost" | "danger";
+	icon: "wand" | "edit" | "trash";
+	className: string;
+	titleKey: string;
+}
+
+function MonsterCallbackAction({
+	monster,
+	visible,
+	onAction,
+	variant,
+	icon,
+	className,
+	titleKey,
+}: MonsterCallbackActionProps) {
+	if (!visible || !onAction) return null;
+	return (
+		<Button
+			variant={variant}
+			size={Button.SIZES.SMALL}
+			icon={icon}
+			className={className}
+			onClick={() => executeMonsterAction(onAction, monster)}
+			title={lang.t(titleKey)}
+		/>
+	);
+}
+
+function MonsterAddToEncounterAction({
+	visible,
+	onAdd,
+}: {
+	visible: boolean;
+	onAdd: () => void;
+}) {
+	if (!visible) return null;
+	return (
+		<Button
+			variant="primary"
+			size={Button.SIZES.SMALL}
+			icon="plus"
+			className="MonsterStatBlock__add_to_encounter_btn"
+			onClick={onAdd}
+		>
+			{lang.t("Add to encounter")}
+		</Button>
+	);
+}
+
 function MonsterMetadata({ monster, model, sourceLabel, helpers }: Pick<HeaderDetailsProps, "monster" | "model" | "sourceLabel" | "helpers">) {
-	const name = String(monster.name ?? "");
-	const originalName = typeof monster.originalBestiaryName === "string" && monster.originalBestiaryName !== name
-		? monster.originalBestiaryName
-		: "";
+	const presentation = getMonsterMetadataPresentation(monster, sourceLabel);
 	return (
 		<>
-			{originalName && <div className={classNames("MonsterStatBlock__original_name muted", helpers.changedClass("originalBestiaryName"))}>({helpers.highlight(originalName)})</div>}
+			<MonsterOriginalName presentation={presentation} helpers={helpers} />
 			<div className={classNames("MonsterStatBlock__meta_line", helpers.changedClass("size", "type", "alignment"))}>{helpers.highlight(model.size)} {helpers.highlight(model.typeLabel)}, {helpers.highlight(model.alignment)}</div>
-			{sourceLabel && <div className={classNames("MonsterStatBlock__meta_line", helpers.changedClass("source"))}><strong>Source:</strong> {helpers.highlight(sourceLabel)}</div>}
+			<MonsterSourceLine
+				presentation={presentation}
+				sourceLabel={sourceLabel}
+				helpers={helpers}
+			/>
 		</>
+	);
+}
+
+function MonsterOriginalName({
+	presentation,
+	helpers,
+}: {
+	presentation: ReturnType<typeof getMonsterMetadataPresentation>;
+	helpers: RenderHelpers;
+}) {
+	if (!presentation.showOriginalName) return null;
+	return (
+		<div
+			className={classNames(
+				"MonsterStatBlock__original_name muted",
+				helpers.changedClass("originalBestiaryName"),
+			)}
+		>
+			({helpers.highlight(presentation.originalName)})
+		</div>
+	);
+}
+
+function MonsterSourceLine({
+	presentation,
+	sourceLabel,
+	helpers,
+}: {
+	presentation: ReturnType<typeof getMonsterMetadataPresentation>;
+	sourceLabel: string;
+	helpers: RenderHelpers;
+}) {
+	if (!presentation.showSource) return null;
+	return (
+		<div
+			className={classNames(
+				"MonsterStatBlock__meta_line",
+				helpers.changedClass("source"),
+			)}
+		>
+			<strong>Source:</strong> {helpers.highlight(sourceLabel)}
+		</div>
 	);
 }
 
@@ -265,7 +551,77 @@ function SpellLinks({ spells, highlight }: { spells: LoadedMonsterSpell[]; highl
 
 export function StructuredSpellcastingSection({ entries, helpers }: SpellSectionProps & { entries: MonsterSpellcastingEntry[] }) {
 	if (entries.length === 0) return null;
-	return <div className={classNames("MonsterStatBlock__section MonsterStatBlock__spells", helpers.changedClass("spellcasting"))}>{entries.map((entry, index) => <div key={`${entry.name}-${index}`} className="MonsterStatBlock__action"><h4>{entry.name}:</h4>{entry.headerEntries && <p>{helpers.renderContent(entry.headerEntries)}</p>}{entry.will && <SpellContentLine label="At will" values={entry.will} helpers={helpers} />}{entry.daily && Object.entries(entry.daily).map(([frequency, values]) => <SpellContentLine key={frequency} label={`${frequency} each`} values={values} helpers={helpers} />)}{entry.spells && Object.entries(entry.spells).map(([level, info]) => <SpellContentLine key={level} label={`${level === "0" ? "Cantrips" : `Level ${level}`} ${info.slots ? `(${info.slots} slots)` : ""}`.trim()} values={info.spells} helpers={helpers} />)}{entry.footerEntries && <p>{helpers.renderContent(entry.footerEntries)}</p>}</div>)}</div>;
+	return (
+		<div
+			className={classNames(
+				"MonsterStatBlock__section MonsterStatBlock__spells",
+				helpers.changedClass("spellcasting"),
+			)}
+		>
+			{entries.map((entry, index) => (
+				<StructuredSpellcastingEntry
+					key={`${entry.name}-${index}`}
+					entry={entry}
+					helpers={helpers}
+				/>
+			))}
+		</div>
+	);
+}
+
+function StructuredSpellcastingEntry({
+	entry,
+	helpers,
+}: {
+	entry: MonsterSpellcastingEntry;
+	helpers: RenderHelpers;
+}) {
+	const presentation = getMonsterSpellcastingEntryPresentation(entry);
+	return (
+		<div className="MonsterStatBlock__action">
+			<h4>{entry.name}:</h4>
+			{presentation.headerEntries && (
+				<p>{helpers.renderContent(presentation.headerEntries)}</p>
+			)}
+			<OptionalSpellContentLine
+				line={presentation.willLine}
+				helpers={helpers}
+			/>
+			<SpellContentLines lines={presentation.dailyLines} helpers={helpers} />
+			<SpellContentLines lines={presentation.spellLines} helpers={helpers} />
+			{presentation.footerEntries && (
+				<p>{helpers.renderContent(presentation.footerEntries)}</p>
+			)}
+		</div>
+	);
+}
+
+function OptionalSpellContentLine({
+	line,
+	helpers,
+}: {
+	line: MonsterSpellcastingEntryPresentation["willLine"];
+	helpers: RenderHelpers;
+}) {
+	if (!line) return null;
+	return <SpellContentLine label={line.label} values={line.values} helpers={helpers} />;
+}
+
+function SpellContentLines({
+	lines,
+	helpers,
+}: {
+	lines: MonsterSpellcastingEntryPresentation["dailyLines"];
+	helpers: RenderHelpers;
+}) {
+	return lines.map((line) => (
+		<SpellContentLine
+			key={line.key}
+			label={line.label}
+			values={line.values}
+			helpers={helpers}
+		/>
+	));
 }
 
 function SpellContentLine({ label, values, helpers }: { label: string; values: unknown[]; helpers: RenderHelpers }) {

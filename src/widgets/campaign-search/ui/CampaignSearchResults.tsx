@@ -38,12 +38,23 @@ function renderHighlightedText(text: unknown, terms: string[]): ReactNode {
 }
 
 function renderMentionChildren(children: ReactNode, terms: string[]): ReactNode {
-	return React.Children.map(children, (child) => {
-		if (typeof child === "string") return renderHighlightedText(child, terms);
-		if (!React.isValidElement<{ children?: ReactNode }>(child) || !child.props.children) return child;
-		if (child.type === "code" || child.type === "pre") return child;
-		return React.cloneElement(child, { children: renderMentionChildren(child.props.children, terms) });
-	});
+	return React.Children.map(children, (child) => renderMentionChild(child, terms));
+}
+
+function isElementWithMentionChildren(child: ReactNode): child is React.ReactElement<{ children: ReactNode }> {
+	if (!React.isValidElement<{ children?: ReactNode }>(child)) return false;
+	return Boolean(child.props.children);
+}
+
+function isMentionExcludedElement(child: React.ReactElement): boolean {
+	return ["code", "pre"].includes(String(child.type));
+}
+
+function renderMentionChild(child: ReactNode, terms: string[]): ReactNode {
+	if (typeof child === "string") return renderHighlightedText(child, terms);
+	if (!isElementWithMentionChildren(child)) return child;
+	if (isMentionExcludedElement(child)) return child;
+	return React.cloneElement(child, { children: renderMentionChildren(child.props.children, terms) });
 }
 
 function ParsedSearchText({ text, inline = false, highlight = "" }: { text: unknown; inline?: boolean; highlight?: string }) {
