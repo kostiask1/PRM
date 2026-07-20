@@ -1,9 +1,162 @@
-import type { ImageLocation, ImageMovePayload } from "../api/imageApi.ts";
 import type {
+	ImageDeletePayload,
+	ImageLocation,
+	ImageMovePayload,
+} from "../api/imageApi.ts";
+import type {
+	GalleryDragOverTarget,
+	GalleryDropTarget,
 	GalleryImage,
 	GalleryItemType,
 	GalleryMoveGroup,
 } from "./contracts.ts";
+
+export interface GalleryFolderDragOverPlan {
+	preventDefault: boolean;
+	target: GalleryDragOverTarget | null;
+}
+
+export type GalleryKeyboardPlan =
+	| { action: "none"; preventDefault: boolean }
+	| { action: "delete-selection"; preventDefault: false }
+	| {
+			action: "navigate-parent";
+			preventDefault: true;
+			subcategory: string;
+	  };
+
+export interface GallerySubcategoryRenamePlan {
+	newPath: string;
+	oldPath: string;
+	selectedSubcategory: string | null;
+}
+
+export interface GalleryBulkDeleteSummary {
+	hasFolders: boolean;
+	total: number;
+}
+
+export interface GalleryBulkDeleteConfirmation {
+	confirmed: true;
+	extractFolderContents: boolean;
+}
+
+export interface GalleryBulkDeleteConfirmationPlan {
+	count: number;
+	showExtractFolderContents: boolean;
+}
+
+const GALLERY_KEYBOARD_NONE_PLAN: GalleryKeyboardPlan = Object.freeze({
+	action: "none",
+	preventDefault: false,
+});
+
+function isGalleryKeyboardBlocked(
+	isOpen: boolean,
+	targetTagName: string | null | undefined,
+): boolean {
+	return !isOpen || targetTagName === "INPUT" || targetTagName === "TEXTAREA";
+}
+
+function getGalleryParentSubcategory(selectedSub: string): string {
+	const parts = selectedSub.split("/").filter(Boolean);
+	parts.pop();
+	return parts.join("/");
+}
+
+function getGalleryNestedSubcategoryPath(
+	selectedSub: string,
+	name: string,
+): string {
+	return selectedSub ? `${selectedSub}/${name}` : name;
+}
+
+export function getGallerySubcategoryRenamePlan({
+	newName,
+	oldName,
+	selectedSub,
+}: {
+	newName: string;
+	oldName: string;
+	selectedSub: string;
+}): GallerySubcategoryRenamePlan | null {
+	if (!newName.trim() || oldName === newName) return null;
+	return {
+		newPath: getGalleryNestedSubcategoryPath(selectedSub, newName),
+		oldPath: getGalleryNestedSubcategoryPath(selectedSub, oldName),
+		selectedSubcategory: selectedSub === oldName ? newName : null,
+	};
+}
+
+function getOpenGalleryKeyboardPlan(
+	key: string,
+	selectedSub: string,
+): GalleryKeyboardPlan {
+	switch (key) {
+		case "Delete":
+			return { action: "delete-selection", preventDefault: false };
+		case "Backspace":
+			return selectedSub
+				? {
+						action: "navigate-parent",
+						preventDefault: true,
+						subcategory: getGalleryParentSubcategory(selectedSub),
+					}
+				: { action: "none", preventDefault: true };
+		default:
+			return GALLERY_KEYBOARD_NONE_PLAN;
+	}
+}
+
+export function getGalleryKeyboardPlan({
+	isOpen,
+	key,
+	selectedSub,
+	targetTagName,
+}: {
+	isOpen: boolean;
+	key: string;
+	selectedSub: string;
+	targetTagName?: string | null;
+}): GalleryKeyboardPlan {
+	return isGalleryKeyboardBlocked(isOpen, targetTagName)
+		? GALLERY_KEYBOARD_NONE_PLAN
+		: getOpenGalleryKeyboardPlan(key, selectedSub);
+}
+
+export function getGalleryFolderDragOverPlan({
+	currentTargetId,
+	isReadonly,
+	sub,
+}: {
+	currentTargetId?: string;
+	isReadonly: boolean;
+	sub: string;
+}): GalleryFolderDragOverPlan {
+	if (isReadonly) return { preventDefault: false, target: null };
+	return {
+		preventDefault: true,
+		target: currentTargetId === sub ? null : { type: "sub", id: sub },
+	};
+}
+
+export function getGalleryFolderDropTarget({
+	category,
+	isReadonly,
+	slug,
+	subcategory,
+}: {
+	category: string;
+	isReadonly: boolean;
+	slug: string;
+	subcategory: string;
+}): GalleryDropTarget {
+	return { slug, category, subcategory, readonly: isReadonly };
+}
+
+export function getGalleryFolderRenameName(value: unknown): string | null {
+	return typeof value === "string" && value ? value : null;
+}
 
 export type GalleryDropPlan =
 	| { kind: "ignore" }
@@ -98,6 +251,95 @@ export function buildGalleryMovePayloads({
 	return payloads;
 }
 
+export function getGalleryBulkDeleteSummary({
+	safeFilenames,
+	safeSubs,
+}: {
+	safeFilenames: string[];
+	safeSubs: string[];
+}): GalleryBulkDeleteSummary | null {
+	const total = safeFilenames.length + safeSubs.length;
+	return total > 0 ? { hasFolders: safeSubs.length > 0, total } : null;
+}
+
+export function getGalleryBulkDeleteConfirmationPlan({
+	hasNonEmptySelectedFolders,
+	total,
+}: {
+	hasNonEmptySelectedFolders: boolean;
+	total: number;
+}): GalleryBulkDeleteConfirmationPlan {
+	return {
+		count: total,
+		showExtractFolderContents: hasNonEmptySelectedFolders,
+	};
+}
+
+export function createGalleryBulkDeleteConfirmation(
+	extractFolderContents: unknown,
+): GalleryBulkDeleteConfirmation {
+	return {
+		confirmed: true,
+		extractFolderContents: Boolean(extractFolderContents),
+	};
+}
+
+export function normalizeGalleryBulkDeleteConfirmation(
+	value: unknown,
+): GalleryBulkDeleteConfirmation | null {
+	if (!isRecord(value) || !value.confirmed) return null;
+	return createGalleryBulkDeleteConfirmation(value.extractFolderContents);
+}
+
+function getGalleryFolderDeletePayload({
+	extractFolderContents,
+	hasNonEmptySelectedFolders,
+	safeSubs,
+	src,
+}: {
+	extractFolderContents: boolean;
+	hasNonEmptySelectedFolders: boolean;
+	safeSubs: string[];
+	src: ImageLocation;
+}): ImageDeletePayload | null {
+	if (safeSubs.length === 0) return null;
+	return {
+		items: safeSubs,
+		src,
+		options: {
+			extractFolderContents:
+				hasNonEmptySelectedFolders && extractFolderContents,
+		},
+	};
+}
+
+export function buildGalleryBulkDeletePayloads({
+	extractFolderContents,
+	hasNonEmptySelectedFolders,
+	imageGroups,
+	safeSubs,
+	src,
+}: {
+	extractFolderContents: boolean;
+	hasNonEmptySelectedFolders: boolean;
+	imageGroups: GalleryMoveGroup[];
+	safeSubs: string[];
+	src: ImageLocation;
+}): ImageDeletePayload[] {
+	const payloads = imageGroups.map((group) => ({
+		items: group.items,
+		src: group.src,
+	}));
+	const folderPayload = getGalleryFolderDeletePayload({
+		extractFolderContents,
+		hasNonEmptySelectedFolders,
+		safeSubs,
+		src,
+	});
+	if (folderPayload) payloads.push(folderPayload);
+	return payloads;
+}
+
 export interface GallerySelectionState {
 	filenames: Set<string>;
 	subfolders: Set<string>;
@@ -131,26 +373,69 @@ function isGallerySelectionItemReadonly(
 			);
 }
 
-function buildGalleryRangeSelection(
-	options: GallerySelectionOptions,
-): GallerySelectionState {
-	const start = Math.min(options.index, options.lastIndex ?? options.index);
-	const end = Math.max(options.index, options.lastIndex ?? options.index);
-	const filenames = new Set(options.isAdditive ? options.filenames : []);
-	const subfolders = new Set(options.isAdditive ? options.subfolders : []);
-	const items: Array<{ name: string; type: GalleryItemType }> = [
+interface GallerySelectionItem {
+	name: string;
+	type: GalleryItemType;
+}
+
+function getOrderedGallerySelectionItems(
+	options: Pick<GallerySelectionOptions, "allSubs" | "images">,
+): GallerySelectionItem[] {
+	return [
 		...options.allSubs.map((name) => ({ name, type: "sub" as const })),
 		...options.images.map((image) => ({
 			name: image.name,
 			type: "image" as const,
 		})),
 	];
-	for (const item of items.slice(start, end + 1)) {
-		if (isGallerySelectionItemReadonly(item.name, item.type, options)) continue;
-		if (item.type === "sub") subfolders.add(item.name);
-		else filenames.add(item.name);
+}
+
+function getGallerySelectionRange(
+	index: number,
+	lastIndex: number | null,
+): { start: number; end: number } {
+	const anchor = lastIndex ?? index;
+	return {
+		start: Math.min(index, anchor),
+		end: Math.max(index, anchor),
+	};
+}
+
+function createGalleryRangeSelectionSeed(
+	options: Pick<
+		GallerySelectionOptions,
+		"filenames" | "isAdditive" | "subfolders"
+	>,
+): Pick<GallerySelectionState, "filenames" | "subfolders"> {
+	return {
+		filenames: new Set(options.isAdditive ? options.filenames : []),
+		subfolders: new Set(options.isAdditive ? options.subfolders : []),
+	};
+}
+
+function addGalleryRangeSelectionItem(
+	item: GallerySelectionItem,
+	selection: Pick<GallerySelectionState, "filenames" | "subfolders">,
+	options: Pick<
+		GallerySelectionOptions,
+		"images" | "isReadonlyImage" | "isReadonlySub"
+	>,
+): void {
+	if (isGallerySelectionItemReadonly(item.name, item.type, options)) return;
+	const target = item.type === "sub" ? selection.subfolders : selection.filenames;
+	target.add(item.name);
+}
+
+function buildGalleryRangeSelection(
+	options: GallerySelectionOptions,
+): GallerySelectionState {
+	const range = getGallerySelectionRange(options.index, options.lastIndex);
+	const selection = createGalleryRangeSelectionSeed(options);
+	const items = getOrderedGallerySelectionItems(options);
+	for (const item of items.slice(range.start, range.end + 1)) {
+		addGalleryRangeSelectionItem(item, selection, options);
 	}
-	return { filenames, subfolders, lastIndex: options.lastIndex };
+	return { ...selection, lastIndex: options.lastIndex };
 }
 
 function buildGalleryModifiedSelection(
@@ -166,26 +451,76 @@ function buildGalleryModifiedSelection(
 	return { filenames, subfolders, lastIndex: options.index };
 }
 
+type GallerySingleSelectionAction = "clear" | "ignore" | "select";
+
+function isGallerySelectionItemSelected(
+	options: Pick<
+		GallerySelectionOptions,
+		"filenames" | "name" | "subfolders" | "type"
+	>,
+): boolean {
+	const selectedItems =
+		options.type === "image" ? options.filenames : options.subfolders;
+	return selectedItems.has(options.name);
+}
+
+function isOnlyGallerySelectionItemSelected(
+	options: Pick<
+		GallerySelectionOptions,
+		"filenames" | "name" | "subfolders" | "type"
+	>,
+): boolean {
+	return (
+		isGallerySelectionItemSelected(options) &&
+		options.filenames.size + options.subfolders.size === 1
+	);
+}
+
+function getGallerySingleSelectionAction(
+	options: GallerySelectionOptions,
+): GallerySingleSelectionAction {
+	if (isGallerySelectionItemReadonly(options.name, options.type, options)) {
+		return "ignore";
+	}
+	return isOnlyGallerySelectionItemSelected(options) ? "clear" : "select";
+}
+
+function createClearedGallerySelection(): GallerySelectionState {
+	return { filenames: new Set(), subfolders: new Set(), lastIndex: null };
+}
+
+function createGallerySelectedItemSets(
+	name: string,
+	type: GalleryItemType,
+): Pick<GallerySelectionState, "filenames" | "subfolders"> {
+	switch (type) {
+		case "image":
+			return { filenames: new Set([name]), subfolders: new Set() };
+		case "sub":
+			return { filenames: new Set(), subfolders: new Set([name]) };
+	}
+}
+
+function createGallerySingleItemSelection(
+	options: Pick<GallerySelectionOptions, "index" | "name" | "type">,
+): GallerySelectionState {
+	return {
+		...createGallerySelectedItemSets(options.name, options.type),
+		lastIndex: options.index,
+	};
+}
+
 function buildGallerySingleSelection(
 	options: GallerySelectionOptions,
 ): GallerySelectionState | null {
-	if (isGallerySelectionItemReadonly(options.name, options.type, options)) {
-		return null;
+	switch (getGallerySingleSelectionAction(options)) {
+		case "ignore":
+			return null;
+		case "clear":
+			return createClearedGallerySelection();
+		case "select":
+			return createGallerySingleItemSelection(options);
 	}
-	const isSelected =
-		options.type === "image"
-			? options.filenames.has(options.name)
-			: options.subfolders.has(options.name);
-	if (isSelected && options.filenames.size + options.subfolders.size === 1) {
-		return { filenames: new Set(), subfolders: new Set(), lastIndex: null };
-	}
-	return {
-		filenames:
-			options.type === "image" ? new Set([options.name]) : new Set(),
-		subfolders:
-			options.type === "sub" ? new Set([options.name]) : new Set(),
-		lastIndex: options.index,
-	};
 }
 
 export function getGallerySelectionPlan(

@@ -8,6 +8,7 @@ import type {
 	GallerySubcategoryDetailsMap,
 	ImageGalleryContentScope,
 } from "./contracts.ts";
+import { getGalleryFolderSubcategory } from "./imageGalleryPresentation.ts";
 
 type GalleryLoadingApi = Pick<
 	typeof imageApi,
@@ -129,27 +130,133 @@ async function loadDatabaseTokenImages(
 		: [];
 }
 
-async function loadScopedGalleryImages({
+type GalleryFolderInspectionApi = Pick<
+	GalleryLoadingApi,
+	"getImages" | "getSubcategories"
+>;
+
+function hasGalleryFolderContents(
+	images: unknown,
+	subcategories: unknown,
+): boolean {
+	return (
+		(Array.isArray(images) ? images.length : 0) > 0 ||
+		(Array.isArray(subcategories) ? subcategories.length : 0) > 0
+	);
+}
+
+async function inspectGalleryFolderContents({
 	api,
-	categories,
+	category,
+	folderName,
+	selectedSource,
+	selectedSub,
+}: {
+	api: GalleryFolderInspectionApi;
+	category: string;
+	folderName: string;
+	selectedSource: string;
+	selectedSub: string;
+}): Promise<boolean> {
+	const folderPath = getGalleryFolderSubcategory(selectedSub, folderName);
+	const [images, subcategories] = await Promise.all([
+		api.getImages(selectedSource, category, folderPath),
+		api.getSubcategories(selectedSource, category, folderPath),
+	]);
+	return hasGalleryFolderContents(images, subcategories);
+}
+
+export async function hasNonEmptyGalleryFolders({
+	api,
+	category,
+	folderNames,
+	selectedSource,
+	selectedSub,
+}: {
+	api: GalleryFolderInspectionApi;
+	category: string;
+	folderNames: string[];
+	selectedSource: string;
+	selectedSub: string;
+}): Promise<boolean> {
+	if (folderNames.length === 0) return false;
+	const inspections = await Promise.all(
+		folderNames.map((folderName) =>
+			inspectGalleryFolderContents({
+				api,
+				category,
+				folderName,
+				selectedSource,
+				selectedSub,
+			}),
+		),
+	);
+	return inspections.some(Boolean);
+}
+
+type ScopedGallerySearchOptions = Pick<
+	GalleryImageLoadOptions,
+	| "categories"
+	| "category"
+	| "contentScope"
+	| "ignoreSourcesList"
+	| "search"
+	| "selectedSub"
+	| "selectedSource"
+>;
+
+interface ScopedGallerySearchQuery {
+	search: string;
+	source: string;
+	category: string;
+	subcategory: string;
+	categories: string[];
+	ignoreSourcesList: string[];
+}
+
+function getScopedGallerySearchPath({
 	category,
 	contentScope,
-	ignoreSourcesList,
-	search,
 	selectedSub,
 	selectedSource,
-}: GalleryImageLoadOptions): Promise<GalleryImage[]> {
-	const searchAll = contentScope === "all";
-	const searchSource = contentScope === "source";
-	const result = await api.searchImageGallery({
-		search,
-		source: searchAll ? "" : selectedSource,
-		category: searchAll || searchSource ? "" : category,
-		subcategory: searchAll || searchSource ? "" : selectedSub,
-		categories,
-		ignoreSourcesList,
-	});
+}: ScopedGallerySearchOptions): Pick<
+	ScopedGallerySearchQuery,
+	"source" | "category" | "subcategory"
+> {
+	switch (contentScope) {
+		case "all":
+			return { source: "", category: "", subcategory: "" };
+		case "source":
+			return { source: selectedSource, category: "", subcategory: "" };
+		default:
+			return { source: selectedSource, category, subcategory: selectedSub };
+	}
+}
+
+export function getScopedGallerySearchQuery(
+	options: ScopedGallerySearchOptions,
+): ScopedGallerySearchQuery {
+	return {
+		search: options.search,
+		...getScopedGallerySearchPath(options),
+		categories: options.categories,
+		ignoreSourcesList: options.ignoreSourcesList,
+	};
+}
+
+function normalizeScopedGalleryImages(
+	result: { images?: GalleryImage[] | null } | null | undefined,
+): GalleryImage[] {
 	return Array.isArray(result?.images) ? result.images : [];
+}
+
+async function loadScopedGalleryImages(
+	options: GalleryImageLoadOptions,
+): Promise<GalleryImage[]> {
+	const result = await options.api.searchImageGallery(
+		getScopedGallerySearchQuery(options),
+	);
+	return normalizeScopedGalleryImages(result);
 }
 
 async function loadLocalGalleryImages({

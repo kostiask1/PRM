@@ -54,30 +54,45 @@ function resolveImagePathname(imageUrl: string, baseOrigin?: string): string {
 	}
 }
 
+function getImagePathParts(imageUrl: string, baseOrigin?: string): string[] {
+	return resolveImagePathname(imageUrl, baseOrigin).split("/").filter(Boolean);
+}
+
+function hasImageGalleryApiPrefix(parts: readonly string[]): boolean {
+	return parts.length >= 5 && parts[0] === "api" && parts[1] === "images";
+}
+
+function getImageGallerySubcategory(parts: readonly string[]): string {
+	return parts
+		.slice(4, -1)
+		.map(decodeImagePathSegment)
+		.filter(Boolean)
+		.join("/");
+}
+
+function projectImageGalleryLocation(
+	parts: readonly string[],
+): ImageAssetGalleryLocation | null {
+	const source = decodeImagePathSegment(parts[2]);
+	if (!source) return null;
+	const category = decodeImagePathSegment(parts[3]);
+	if (!category) return null;
+	return {
+		source,
+		category,
+		subcategory: getImageGallerySubcategory(parts),
+	};
+}
+
 export function parseGalleryLocationFromImageUrl(
 	imageUrl: string | null | undefined,
 	baseOrigin?: string,
 ): ImageAssetGalleryLocation | null {
 	if (!imageUrl) return null;
-	const parts = resolveImagePathname(imageUrl, baseOrigin)
-		.split("/")
-		.filter(Boolean);
-	if (parts.length < 5 || parts[0] !== "api" || parts[1] !== "images") {
-		return null;
-	}
-	const source = decodeImagePathSegment(parts[2]);
-	const category = decodeImagePathSegment(parts[3]);
-	const tail = parts.slice(4);
-	if (!source || !category || tail.length === 0) return null;
-	return {
-		source,
-		category,
-		subcategory: tail
-			.slice(0, -1)
-			.map(decodeImagePathSegment)
-			.filter(Boolean)
-			.join("/"),
-	};
+	const parts = getImagePathParts(imageUrl, baseOrigin);
+	return hasImageGalleryApiPrefix(parts)
+		? projectImageGalleryLocation(parts)
+		: null;
 }
 
 export function getImageAssetPreset(

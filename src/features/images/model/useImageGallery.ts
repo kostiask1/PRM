@@ -39,23 +39,50 @@ import type {
 	UseImageGalleryOptions,
 } from "./contracts.ts";
 import {
+	buildGalleryBulkDeletePayloads,
 	buildGalleryMovePayloads,
+	createGalleryBulkDeleteConfirmation,
+	getGalleryBulkDeleteConfirmationPlan,
+	getGalleryBulkDeleteSummary,
 	getGalleryDragPlan,
 	getGalleryDropPlan,
+	getGalleryKeyboardPlan,
 	getGallerySelectionPlan,
+	getGallerySubcategoryRenamePlan,
+	normalizeGalleryBulkDeleteConfirmation,
+	type GalleryKeyboardPlan,
 } from "./imageGalleryInteraction.ts";
 import {
+	hasNonEmptyGalleryFolders,
 	loadGalleryImages,
 	loadGallerySubcategoryData,
 } from "./imageGalleryLoading.ts";
 
-interface DeleteConfirmationResult {
-	confirmed?: boolean;
-	extractFolderContents?: boolean;
-}
-
 function getErrorMessage(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
+}
+
+function getGalleryKeyboardTargetTagName(
+	target: EventTarget | null,
+): string | null {
+	return target instanceof HTMLElement ? target.tagName : null;
+}
+
+function executeGalleryKeyboardPlan(
+	plan: GalleryKeyboardPlan,
+	event: Pick<globalThis.KeyboardEvent, "preventDefault">,
+	deleteSelection: () => void,
+	setSelectedSub: (subcategory: string) => void,
+): void {
+	if (plan.preventDefault) event.preventDefault();
+	switch (plan.action) {
+		case "delete-selection":
+			deleteSelection();
+			break;
+		case "navigate-parent":
+			setSelectedSub(plan.subcategory);
+			break;
+	}
 }
 
 export default function useImageGallery({
@@ -491,22 +518,24 @@ export default function useImageGallery({
 
 	const handleRenameSub = useCallback(
 		async (oldName: string, newName: string) => {
-			if (!newName.trim() || oldName === newName) {
-				return;
-			}
+			const plan = getGallerySubcategoryRenamePlan({
+				newName,
+				oldName,
+				selectedSub,
+			});
+			if (!plan) return;
 			try {
-				const oldPath = selectedSub ? `${selectedSub}/${oldName}` : oldName;
-				const newPath = selectedSub ? `${selectedSub}/${newName}` : newName;
-
 				await api.renameSubcategory(
 					selectedSource,
 					selectedCat.id,
-					oldPath,
-					newPath,
+					plan.oldPath,
+					plan.newPath,
 				);
 				loadSubcategories();
 				loadImages();
-				if (selectedSub === oldName) setSelectedSub(newName);
+				if (plan.selectedSubcategory !== null) {
+					setSelectedSub(plan.selectedSubcategory);
+				}
 			} catch (err) {
 				dispatch(
 					alert({ title: lang.t("Rename error"), message: getErrorMessage(err) }),
@@ -574,76 +603,58 @@ export default function useImageGallery({
 	const handleBulkDelete = useCallback(async () => {
 		const { safeFilenames, safeSubs, imageGroups } =
 			getMovableSelectedItems();
-		const total = safeFilenames.length + safeSubs.length;
-		if (!total) return;
+		const summary = getGalleryBulkDeleteSummary({ safeFilenames, safeSubs });
+		if (!summary) return;
 
 		setLoading(true);
 		try {
-			let hasNonEmptySelectedFolders = false;
-			if (safeSubs.length > 0) {
-				const checks = await Promise.all(
-					safeSubs.map(async (folderName) => {
-						const folderPath = selectedSub
-							? `${selectedSub}/${folderName}`
-							: folderName;
-						const [folderImages, nestedFolders] = await Promise.all([
-							api.getImages(selectedSource, selectedCat.id, folderPath),
-							api.getSubcategories(selectedSource, selectedCat.id, folderPath),
-						]);
-						return (
-							(Array.isArray(folderImages) ? folderImages.length : 0) > 0 ||
-							(Array.isArray(nestedFolders) ? nestedFolders.length : 0) > 0
-						);
-					}),
-				);
-				hasNonEmptySelectedFolders = checks.some(Boolean);
-			}
+			const hasNonEmptySelectedFolders = summary.hasFolders
+				? await hasNonEmptyGalleryFolders({
+						api,
+						category: selectedCat.id,
+						folderNames: safeSubs,
+						selectedSource,
+						selectedSub,
+					})
+				: false;
+			const confirmationPlan = getGalleryBulkDeleteConfirmationPlan({
+				hasNonEmptySelectedFolders,
+				total: summary.total,
+			});
 
-			const confirmed = (await dispatch(
+			const confirmed = normalizeGalleryBulkDeleteConfirmation(
+				await dispatch(
 				confirm({
 					title: lang.t("Delete"),
-					message: lang.t("Delete selected items ({count})?", { count: total }),
-					checkboxLabel: hasNonEmptySelectedFolders
+					message: lang.t("Delete selected items ({count})?", {
+						count: confirmationPlan.count,
+					}),
+					checkboxLabel: confirmationPlan.showExtractFolderContents
 						? lang.t("Extract contents from folder?")
 						: null,
 					checkboxDefaultChecked: false,
 					getConfirmValue: (
 						_value: unknown,
 						extractFolderContents: boolean,
-					) => ({
-						confirmed: true,
-						extractFolderContents: Boolean(extractFolderContents),
-					}),
+					) => createGalleryBulkDeleteConfirmation(extractFolderContents),
 				}),
-			)) as DeleteConfirmationResult | null;
-
-			if (!confirmed?.confirmed) return;
-
-			await Promise.all([
-				...imageGroups.map((group) =>
-					api.deleteImages({
-						items: group.items,
-						src: group.src,
-					}),
 				),
-				...(safeSubs.length > 0
-					? [
-							api.deleteImages({
-								items: safeSubs,
-								src: {
-									slug: selectedSource,
-									category: selectedCat.id,
-									subcategory: selectedSub,
-								},
-								options: {
-									extractFolderContents:
-										hasNonEmptySelectedFolders &&
-										Boolean(confirmed.extractFolderContents),
-								},
-							}),
-						]
-					: []),
-			]);
+			);
+
+			if (!confirmed) return;
+
+			const deletePayloads = buildGalleryBulkDeletePayloads({
+				extractFolderContents: confirmed.extractFolderContents,
+				hasNonEmptySelectedFolders,
+				imageGroups,
+				safeSubs,
+				src: {
+					slug: selectedSource,
+					category: selectedCat.id,
+					subcategory: selectedSub,
+				},
+			});
+			await Promise.all(deletePayloads.map((payload) => api.deleteImages(payload)));
 			setSelectedFilenames(new Set());
 			setSelectedSubs(new Set());
 			loadImages();
@@ -667,24 +678,18 @@ export default function useImageGallery({
 
 	useEffect(() => {
 		const handleKeyDown = (e: globalThis.KeyboardEvent) => {
-			if (!isOpen) return;
-			const target = e.target;
-			if (
-				target instanceof HTMLElement &&
-				(target.tagName === "INPUT" || target.tagName === "TEXTAREA")
-			)
-				return;
-
-			if (e.key === "Delete") {
-				handleBulkDelete();
-			} else if (e.key === "Backspace") {
-				e.preventDefault();
-				if (selectedSub) {
-					const parts = selectedSub.split("/").filter(Boolean);
-					parts.pop();
-					setSelectedSub(parts.join("/"));
-				}
-			}
+			const plan = getGalleryKeyboardPlan({
+				isOpen,
+				key: e.key,
+				selectedSub,
+				targetTagName: getGalleryKeyboardTargetTagName(e.target),
+			});
+			executeGalleryKeyboardPlan(
+				plan,
+				e,
+				handleBulkDelete,
+				setSelectedSub,
+			);
 		};
 
 		window.addEventListener("keydown", handleKeyDown);

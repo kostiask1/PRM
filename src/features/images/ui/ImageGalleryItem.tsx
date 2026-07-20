@@ -1,18 +1,23 @@
 import type { Dispatch, SetStateAction } from "react";
-import { Icon, Tooltip, type IconName } from "../../../shared/ui/index.js";
+import { Icon, Tooltip } from "../../../shared/ui/index.js";
 import { classNames, lang } from "../../../shared/lib/index.js";
 import { prompt, type useAppDispatch } from "../../../shared/model/index.js";
 import type { ImageAsset } from "../api/imageApi.ts";
-import type { GalleryImage } from "../model/contracts.ts";
-import type { GalleryPresentationItem } from "../model/imageGalleryPresentation.ts";
+import type { GalleryDragOverTarget, GalleryImage } from "../model/contracts.ts";
+import {
+	getGalleryFolderPresentation,
+	type GalleryFolderPresentation,
+	type GalleryPresentationItem,
+} from "../model/imageGalleryPresentation.ts";
+import {
+	getGalleryFolderDragOverPlan,
+	getGalleryFolderDropTarget,
+	getGalleryFolderRenameName,
+	type GalleryFolderDragOverPlan,
+} from "../model/imageGalleryInteraction.ts";
 import type useImageGallery from "../model/useImageGallery.ts";
 
 type ImageGalleryController = ReturnType<typeof useImageGallery>;
-
-const SUB_ICON_NAMES: Readonly<Record<string, IconName>> = {
-	npc: "folder-npc",
-	players: "folder-players",
-};
 
 interface ImageGalleryItemProps {
 	controller: ImageGalleryController;
@@ -26,6 +31,23 @@ interface ImageGalleryItemProps {
 	onSelect?: (image: ImageAsset | null | undefined) => void;
 	resetContentScope: () => void;
 	setPreviewImage: Dispatch<SetStateAction<GalleryImage | null>>;
+}
+
+function executeGalleryFolderClick<TEvent>(
+	canInteract: boolean,
+	event: TEvent,
+	onClick: (event: TEvent) => void,
+): void {
+	if (canInteract) onClick(event);
+}
+
+function executeGalleryFolderDragOver(
+	event: { preventDefault: () => void },
+	plan: GalleryFolderDragOverPlan,
+	setDragOverTarget: (target: GalleryDragOverTarget) => void,
+): void {
+	if (plan.preventDefault) event.preventDefault();
+	if (plan.target) setDragOverTarget(plan.target);
 }
 
 export default function ImageGalleryItem(props: ImageGalleryItemProps) {
@@ -66,13 +88,21 @@ function ImageGalleryFolderItem({
 		toggleSelect,
 	} = controller;
 	const { sub } = item;
-	const isReadonly = isReadonlySub(sub);
-	const isBestiaryFolder = isOfficialSub(sub);
-	const hasFiles = Boolean(subDetails[sub]?.hasFiles);
-	const folderLabel = formatFolderLabel(sub, isBestiaryFolder);
-	const folderIcon: IconName = isBestiaryFolder
-		? "folder-bestiary"
-		: SUB_ICON_NAMES[sub] || "folder";
+	const presentation = getGalleryFolderPresentation({
+		dragOverTargetId: dragOverTarget?.id,
+		hasFiles: Boolean(subDetails[sub]?.hasFiles),
+		isBestiaryFolder: isOfficialSub(sub),
+		isReadonly: isReadonlySub(sub),
+		isSelected: selectedSubs.has(sub),
+		selectedSub,
+		sub,
+	});
+	const folderLabel = formatFolderLabel(sub, presentation.isBestiaryFolder);
+	const dragOverPlan = getGalleryFolderDragOverPlan({
+		currentTargetId: dragOverTarget?.id,
+		isReadonly: presentation.isReadonly,
+		sub,
+	});
 
 	return (
 		<div
@@ -80,82 +110,125 @@ function ImageGalleryFolderItem({
 				"ImageGallery__item",
 				"ImageGallery__item__folder",
 				{
-					is_selected: selectedSubs.has(sub),
-					is_drag_over: dragOverTarget?.id === sub,
-					is_protected: isReadonly,
-					is_bestiary: isBestiaryFolder,
-					has_files: hasFiles,
+					is_selected: presentation.isSelected,
+					is_drag_over: presentation.isDragOver,
+					is_protected: presentation.isReadonly,
+					is_bestiary: presentation.isBestiaryFolder,
+					has_files: presentation.hasFiles,
 				},
 			)}
-			onClick={(event) => {
-				if (!isReadonly) handleItemClick(sub, "sub", itemIndex, event);
-			}}
+			onClick={(event) =>
+				executeGalleryFolderClick(presentation.canInteract, event, (clickEvent) =>
+					handleItemClick(sub, "sub", itemIndex, clickEvent),
+				)
+			}
 			onDoubleClick={() => {
 				resetContentScope();
-				setSelectedSub(selectedSub ? `${selectedSub}/${sub}` : sub);
+				setSelectedSub(presentation.subcategory);
 			}}
-			draggable={!isReadonly}
+			draggable={presentation.canInteract}
 			onDragStart={(event) => handleDragStart(event, sub, "sub")}
 			onDragEnd={handleDragEnd}
-			onDragOver={(event) => {
-				if (isReadonly) return;
-				event.preventDefault();
-				if (dragOverTarget?.id !== sub) {
-					setDragOverTarget({ type: "sub", id: sub });
-				}
-			}}
+			onDragOver={(event) =>
+				executeGalleryFolderDragOver(
+					event,
+					dragOverPlan,
+					setDragOverTarget,
+				)
+			}
 			onDragLeave={() => setDragOverTarget(null)}
 			onDrop={(event) => {
-				const subcategory = selectedSub ? `${selectedSub}/${sub}` : sub;
-				void handleDrop(event, {
+				const target = getGalleryFolderDropTarget({
 					slug: selectedSource,
 					category: selectedCat.id,
-					subcategory,
-					readonly: isReadonlyPath(subcategory),
+					subcategory: presentation.subcategory,
+					isReadonly: isReadonlyPath(presentation.subcategory),
 				});
+				void handleDrop(event, target);
 			}}
 		>
-			<div className="ImageGallery__image_wrap">
-				<Icon name={folderIcon} size={48} />
-				{hasFiles && (
-					<span className="ImageGallery__folder_file_badge" aria-hidden="true">
-						<Icon name="file" size={18} />
-					</span>
-				)}
-				{!isReadonly && (
-					<div
-						className="ImageGallery__checkbox"
-						onClick={(event) => toggleSelect(sub, "sub", event)}
-					>
-						<Icon name={selectedSubs.has(sub) ? "check" : "plus"} size={12} />
-					</div>
-				)}
-			</div>
-			<Tooltip content={folderLabel} disabled={!isBestiaryFolder}>
-				<span className="ImageGallery__name">
-					<button
-						type="button"
-						className="ImageGallery__nameBtn"
-						onClick={async (event) => {
-							if (isReadonly) return;
-							event.stopPropagation();
-							const newName = await dispatch(
-								prompt({
-									title: lang.t("Rename folder"),
-									message: lang.t("Enter a new name:"),
-									defaultValue: sub,
-								}),
-							);
-							if (typeof newName === "string" && newName) {
-								void handleRenameSub(sub, newName);
-							}
-						}}
-					>
-						{folderLabel}
-					</button>
-				</span>
-			</Tooltip>
+			<ImageGalleryFolderVisual
+				presentation={presentation}
+				sub={sub}
+				toggleSelect={toggleSelect}
+			/>
+			<ImageGalleryFolderName
+				dispatch={dispatch}
+				folderLabel={folderLabel}
+				handleRenameSub={handleRenameSub}
+				presentation={presentation}
+				sub={sub}
+			/>
 		</div>
+	);
+}
+
+function ImageGalleryFolderVisual({
+	presentation,
+	sub,
+	toggleSelect,
+}: {
+	presentation: GalleryFolderPresentation;
+	sub: string;
+	toggleSelect: ImageGalleryController["toggleSelect"];
+}) {
+	return (
+		<div className="ImageGallery__image_wrap">
+			<Icon name={presentation.folderIcon} size={48} />
+			{presentation.hasFiles && (
+				<span className="ImageGallery__folder_file_badge" aria-hidden="true">
+					<Icon name="file" size={18} />
+				</span>
+			)}
+			{presentation.canInteract && (
+				<div
+					className="ImageGallery__checkbox"
+					onClick={(event) => toggleSelect(sub, "sub", event)}
+				>
+					<Icon name={presentation.checkboxIcon} size={12} />
+				</div>
+			)}
+		</div>
+	);
+}
+
+function ImageGalleryFolderName({
+	dispatch,
+	folderLabel,
+	handleRenameSub,
+	presentation,
+	sub,
+}: {
+	dispatch: ReturnType<typeof useAppDispatch>;
+	folderLabel: string;
+	handleRenameSub: ImageGalleryController["handleRenameSub"];
+	presentation: GalleryFolderPresentation;
+	sub: string;
+}) {
+	return (
+		<Tooltip content={folderLabel} disabled={!presentation.isBestiaryFolder}>
+			<span className="ImageGallery__name">
+				<button
+					type="button"
+					className="ImageGallery__nameBtn"
+					onClick={async (event) => {
+						if (!presentation.canInteract) return;
+						event.stopPropagation();
+						const result = await dispatch(
+							prompt({
+								title: lang.t("Rename folder"),
+								message: lang.t("Enter a new name:"),
+								defaultValue: sub,
+							}),
+						);
+						const newName = getGalleryFolderRenameName(result);
+						if (newName) void handleRenameSub(sub, newName);
+					}}
+				>
+					{folderLabel}
+				</button>
+			</span>
+		</Tooltip>
 	);
 }
 

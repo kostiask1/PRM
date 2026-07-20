@@ -32,12 +32,23 @@ import {
 	buildGalleryPresentationItems,
 	deduplicateGalleryImages,
 	findPendingGalleryImage,
-	getGalleryHistoryKeyDirection,
+	getGlobalGalleryResultNavigationPlan,
+	getGalleryHistoryKeyboardPlan,
 	getGalleryNavigationEntry,
 	getGalleryPathEntry,
 	getGalleryPathKey,
 	recordGalleryNavigation,
 } from "../model/imageGalleryPresentation.ts";
+
+function executeGalleryHistoryKeyboardPlan(
+	plan: ReturnType<typeof getGalleryHistoryKeyboardPlan>,
+	event: Pick<globalThis.KeyboardEvent, "preventDefault">,
+	navigateHistory: (direction: GalleryHistoryDirection) => void,
+): void {
+	if (plan.action === "none") return;
+	event.preventDefault();
+	navigateHistory(plan.direction);
+}
 
 const SUB_LABELS: Readonly<Record<string, string>> = {
 	npc: "NPC",
@@ -366,18 +377,23 @@ function ImageGallery({
 
 	React.useEffect(() => {
 		const handleHistoryKeyDown = (event: globalThis.KeyboardEvent) => {
-			if (isEditableTarget(event.target)) return;
-			const direction = getGalleryHistoryKeyDirection(event);
-			if (!direction) return;
-			if (direction === -1 && !canNavigateBack) return;
-			if (direction === 1 && !canNavigateForward) return;
-			event.preventDefault();
-			navigateHistory(direction);
+			const plan = getGalleryHistoryKeyboardPlan({
+				altKey: event.altKey,
+				canNavigateBack,
+				canNavigateForward,
+				ctrlKey: event.ctrlKey,
+				isEditableTarget: isEditableTarget(event.target),
+				isOpen,
+				key: event.key,
+				metaKey: event.metaKey,
+				shiftKey: event.shiftKey,
+			});
+			executeGalleryHistoryKeyboardPlan(plan, event, navigateHistory);
 		};
 
 		window.addEventListener("keydown", handleHistoryKeyDown);
 		return () => window.removeEventListener("keydown", handleHistoryKeyDown);
-	}, [canNavigateBack, canNavigateForward, navigateHistory]);
+	}, [canNavigateBack, canNavigateForward, isOpen, navigateHistory]);
 
 	const openMoveModal = () => {
 		setMoveTarget({
@@ -403,23 +419,19 @@ function ImageGallery({
 	const galleryRowCount = Math.ceil(galleryItems.length / galleryColumns);
 	const galleryRenderThreshold = 400;
 	const openGlobalResultPath = (image: GalleryImage) => {
-		if (typeof onSelect === "function" || !image?.globalSearch) return false;
-		const nextCategory = categories.find((cat) => cat.id === image.category);
-		if (!nextCategory) return false;
-
-		setSelectedSource(image.source || "general");
-		setSelectedCat(nextCategory);
-		setSelectedSub(image.subcategory || "");
-		setSearchQuery("");
-		setContentScope("local");
-		setPendingSelection({
-			name: image.name,
-			pathKey: getGalleryPathKey(
-				image.source || "general",
-				image.category,
-				image.subcategory || "",
-			),
+		const plan = getGlobalGalleryResultNavigationPlan({
+			categories,
+			image,
+			isSelectionMode: typeof onSelect === "function",
 		});
+		if (!plan) return false;
+
+		setSelectedSource(plan.path.source);
+		setSelectedCat(plan.category);
+		setSelectedSub(plan.path.subcategory);
+		setSearchQuery(plan.searchQuery);
+		setContentScope(plan.contentScope);
+		setPendingSelection(plan.pendingSelection);
 		clearSelection();
 		return true;
 	};

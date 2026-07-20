@@ -486,18 +486,36 @@ import {
 import {
 	buildGalleryPresentationItems,
 	deduplicateGalleryImages,
+	getGalleryFolderPresentation,
+	getGalleryFolderSubcategory,
+	getGlobalGalleryResultNavigationPlan,
+	getGalleryImageKey,
 	getGalleryHistoryKeyDirection,
+	getGalleryHistoryKeyboardPlan,
 	getGalleryNavigationEntry,
 	getGalleryPathEntry,
+	getGallerySearchPresentation,
 	recordGalleryNavigation,
 } from "../src/features/images/model/imageGalleryPresentation.ts";
 import {
+	buildGalleryBulkDeletePayloads,
 	buildGalleryMovePayloads,
+	createGalleryBulkDeleteConfirmation,
+	getGalleryBulkDeleteConfirmationPlan,
+	getGalleryBulkDeleteSummary,
+	getGalleryFolderDragOverPlan,
+	getGalleryFolderDropTarget,
+	getGalleryFolderRenameName,
 	getGalleryDragPlan,
 	getGalleryDropPlan,
+	getGalleryKeyboardPlan,
 	getGallerySelectionPlan,
+	getGallerySubcategoryRenamePlan,
+	normalizeGalleryBulkDeleteConfirmation,
 } from "../src/features/images/model/imageGalleryInteraction.ts";
 import {
+	getScopedGallerySearchQuery,
+	hasNonEmptyGalleryFolders,
 	loadGalleryImages,
 	loadGallerySubcategoryData,
 } from "../src/features/images/model/imageGalleryLoading.ts";
@@ -13659,6 +13677,9 @@ await run(
 );
 
 await run("image asset locations preserve encoded paths and target presets", () => {
+	for (const imageUrl of [undefined, null, ""]) {
+		assert.equal(parseGalleryLocationFromImageUrl(imageUrl), null);
+	}
 	assert.deepEqual(
 		parseGalleryLocationFromImageUrl(
 			"/api/images/кампанія/characters/герої/Ірина.png?size=small",
@@ -13670,8 +13691,61 @@ await run("image asset locations preserve encoded paths and target presets", () 
 			subcategory: "герої",
 		},
 	);
+	assert.deepEqual(
+		parseGalleryLocationFromImageUrl("api/images/general/scenes/token.png"),
+		{
+			source: "general",
+			category: "scenes",
+			subcategory: "",
+		},
+	);
+	assert.deepEqual(
+		parseGalleryLocationFromImageUrl(
+			"/api//images/%D1%81%D0%B2%D1%96%D1%82/characters//heroes%2Fparty//token.png",
+		),
+		{
+			source: "світ",
+			category: "characters",
+			subcategory: "heroes/party",
+		},
+	);
+	assert.deepEqual(
+		parseGalleryLocationFromImageUrl(
+			"/api/images/world/scenes/%E0%A4%A/token.png",
+		),
+		{
+			source: "world",
+			category: "scenes",
+			subcategory: "%E0%A4%A",
+		},
+	);
+	assert.deepEqual(
+		parseGalleryLocationFromImageUrl(
+			"https://cdn.example/api/images/world/characters/folder/token.png?size=small#preview",
+			"http://localhost:5173",
+		),
+		{
+			source: "world",
+			category: "characters",
+			subcategory: "folder",
+		},
+	);
+	assert.equal(
+		parseGalleryLocationFromImageUrl(
+			"https://cdn.example/api/images/world/characters/token.png",
+		),
+		null,
+	);
 	assert.equal(
 		parseGalleryLocationFromImageUrl("/outside/images/token.png"),
+		null,
+	);
+	assert.equal(
+		parseGalleryLocationFromImageUrl("/API/images/world/scenes/token.png"),
+		null,
+	);
+	assert.equal(
+		parseGalleryLocationFromImageUrl("/api/images/world/scenes"),
 		null,
 	);
 	assert.deepEqual(getImageAssetPreset("npc", "мій-світ"), {
@@ -13818,6 +13892,63 @@ await run("image gallery presentation preserves history and unique items", () =>
 		}),
 		1,
 	);
+	const getHistoryKeyboardPlan = (overrides = {}) =>
+		getGalleryHistoryKeyboardPlan({
+			altKey: false,
+			canNavigateBack: true,
+			canNavigateForward: true,
+			ctrlKey: false,
+			isEditableTarget: false,
+			isOpen: true,
+			key: "Backspace",
+			metaKey: false,
+			shiftKey: false,
+			...overrides,
+		});
+	assert.deepEqual(getHistoryKeyboardPlan(), {
+		action: "navigate",
+		direction: -1,
+		preventDefault: true,
+	});
+	assert.deepEqual(
+		getHistoryKeyboardPlan({ altKey: true, key: "ArrowLeft" }),
+		{ action: "navigate", direction: -1, preventDefault: true },
+	);
+	assert.deepEqual(
+		getHistoryKeyboardPlan({ altKey: true, key: "ArrowRight" }),
+		{ action: "navigate", direction: 1, preventDefault: true },
+	);
+	for (const overrides of [
+		{ canNavigateBack: false },
+		{ altKey: true, canNavigateBack: false, key: "ArrowLeft" },
+		{ altKey: true, canNavigateForward: false, key: "ArrowRight" },
+		{ isEditableTarget: true },
+		{ isOpen: false },
+		{ key: "backspace" },
+		{ key: "ArrowLeft" },
+		{ altKey: true },
+		{ altKey: true, ctrlKey: true, key: "ArrowLeft" },
+		{ altKey: true, key: "ArrowRight", metaKey: true },
+		{ altKey: true, key: "ArrowRight", shiftKey: true },
+		{ ctrlKey: true },
+		{ metaKey: true },
+		{ shiftKey: true },
+		{ key: "Delete" },
+	]) {
+		assert.deepEqual(getHistoryKeyboardPlan(overrides), {
+			action: "none",
+			preventDefault: false,
+		});
+	}
+	assert.deepEqual(
+		getHistoryKeyboardPlan({
+			altKey: true,
+			canNavigateBack: false,
+			canNavigateForward: true,
+			key: "ArrowRight",
+		}),
+		{ action: "navigate", direction: 1, preventDefault: true },
+	);
 	const images = deduplicateGalleryImages(
 		[
 			{ name: "Ірина.png", url: "/api/images/general/tokens/Ірина.png" },
@@ -13826,9 +13957,270 @@ await run("image gallery presentation preserves history and unique items", () =>
 		{ source: "general", category: "tokens", subcategory: "герої" },
 	);
 	assert.equal(images.length, 1);
+	assert.equal(
+		getGalleryImageKey(
+			{
+				name: "ІРИНА.PNG",
+				url: "",
+				path: "",
+				source: "",
+				category: "",
+				subcategory: "",
+			},
+			{ source: "кампанія", category: "characters", subcategory: "герої" },
+		),
+		"кампанія\u0000characters\u0000\u0000\u0000\u0000ірина.png",
+	);
+	assert.equal(
+		getGalleryImageKey(
+			{ name: "token.png", url: "/token.png" },
+			{ source: "", category: "", subcategory: "" },
+		),
+		"general\u0000\u0000\u0000\u0000/token.png\u0000token.png",
+	);
+	const subcategoryVariants = deduplicateGalleryImages(
+		[
+			{
+				name: "same.png",
+				url: "/same.png",
+				subcategory: "",
+			},
+			{ name: "same.png", url: "/same.png" },
+			{
+				name: "same.png",
+				url: "/same.png",
+				subcategory: null,
+			},
+		],
+		{ source: "general", category: "tokens", subcategory: "герої" },
+	);
+	assert.equal(subcategoryVariants.length, 2);
+	assert.deepEqual(
+		subcategoryVariants.map((image) => image.galleryKey.split("\u0000")[2]),
+		["", "герої"],
+	);
 	assert.deepEqual(
 		buildGalleryPresentationItems(["npc"], images).map((item) => item.type),
 		["sub", "image"],
+	);
+	const categories = [
+		{ id: "tokens", label: "Tokens", icon: "token" },
+		{ id: "characters", label: "Characters", icon: "user" },
+	];
+	assert.deepEqual(
+		getGlobalGalleryResultNavigationPlan({
+			categories,
+			image: {
+				name: "Ірина.png",
+				url: "/api/images/кампанія/characters/герої/Ірина.png",
+				source: "кампанія",
+				category: "characters",
+				subcategory: "герої",
+				globalSearch: true,
+			},
+			isSelectionMode: false,
+		}),
+		{
+			category: categories[1],
+			contentScope: "local",
+			path: {
+				source: "кампанія",
+				category: "characters",
+				subcategory: "герої",
+			},
+			pendingSelection: {
+				name: "Ірина.png",
+				pathKey: "кампанія\u0000characters\u0000герої",
+			},
+			searchQuery: "",
+		},
+	);
+	assert.deepEqual(
+		getGlobalGalleryResultNavigationPlan({
+			categories,
+			image: {
+				name: "token.png",
+				url: "/api/images/general/tokens/token.png",
+				category: "tokens",
+				globalSearch: true,
+			},
+			isSelectionMode: false,
+		})?.path,
+		{ source: "general", category: "tokens", subcategory: "" },
+	);
+	for (const input of [
+		{
+			image: null,
+			isSelectionMode: false,
+		},
+		{
+			image: { name: "local.png", url: "/local.png" },
+			isSelectionMode: false,
+		},
+		{
+			image: {
+				name: "unknown.png",
+				url: "/unknown.png",
+				category: "unknown",
+				globalSearch: true,
+			},
+			isSelectionMode: false,
+		},
+		{
+			image: {
+				name: "select.png",
+				url: "/select.png",
+				category: "tokens",
+				globalSearch: true,
+			},
+			isSelectionMode: true,
+		},
+	]) {
+		assert.equal(
+			getGlobalGalleryResultNavigationPlan({ categories, ...input }),
+			null,
+		);
+	}
+	assert.deepEqual(
+		getGalleryFolderPresentation({
+			dragOverTargetId: "npc",
+			hasFiles: true,
+			isBestiaryFolder: true,
+			isReadonly: true,
+			isSelected: true,
+			selectedSub: "герої",
+			sub: "npc",
+		}),
+		{
+			canInteract: false,
+			checkboxIcon: "check",
+			folderIcon: "folder-bestiary",
+			hasFiles: true,
+			isBestiaryFolder: true,
+			isDragOver: true,
+			isReadonly: true,
+			isSelected: true,
+			subcategory: "герої/npc",
+		},
+	);
+	for (const [sub, folderIcon] of [
+		["npc", "folder-npc"],
+		["players", "folder-players"],
+		["мапи", "folder"],
+	]) {
+		const presentation = getGalleryFolderPresentation({
+			dragOverTargetId: "other",
+			hasFiles: false,
+			isBestiaryFolder: false,
+			isReadonly: false,
+			isSelected: false,
+			selectedSub: "",
+			sub,
+		});
+		assert.equal(presentation.folderIcon, folderIcon);
+		assert.equal(presentation.checkboxIcon, "plus");
+		assert.equal(presentation.canInteract, true);
+		assert.equal(presentation.isDragOver, false);
+		assert.equal(presentation.subcategory, sub);
+	}
+	assert.equal(getGalleryFolderSubcategory("root/nested", "leaf"), "root/nested/leaf");
+});
+
+await run("image gallery search presentation preserves scope and reset policies", () => {
+	assert.deepEqual(
+		getGallerySearchPresentation({
+			canShowDatabaseTokens: false,
+			contentScope: "local",
+			searchQuery: "",
+			selectedSource: "general",
+		}),
+		{
+			clearSearchQuery: "",
+			clearTitleKey: "Clear search",
+			placeholderKey: "Search images...",
+			scopeControls: [
+				{
+					icon: "map",
+					isActive: false,
+					nextScope: "source",
+					scope: "source",
+					titleKey: "Show all general content",
+				},
+				{
+					icon: "layers",
+					isActive: false,
+					nextScope: "all",
+					scope: "all",
+					titleKey: "Show all gallery content",
+				},
+			],
+			showClearButton: false,
+		},
+	);
+	const campaignSource = getGallerySearchPresentation({
+		canShowDatabaseTokens: true,
+		contentScope: "source",
+		searchQuery: " ",
+		selectedSource: "кампанія",
+	});
+	assert.equal(campaignSource.showClearButton, true);
+	assert.equal(campaignSource.clearSearchQuery, "");
+	assert.deepEqual(
+		campaignSource.scopeControls.map((control) => control.scope),
+		["source", "databaseTokens", "all"],
+	);
+	assert.deepEqual(campaignSource.scopeControls[0], {
+		icon: "map",
+		isActive: true,
+		nextScope: "local",
+		scope: "source",
+		titleKey: "Show all campaign content",
+	});
+	assert.deepEqual(campaignSource.scopeControls[1], {
+		icon: "book",
+		isActive: false,
+		nextScope: "databaseTokens",
+		scope: "databaseTokens",
+		titleKey: "Show all database tokens",
+	});
+	const databaseScope = getGallerySearchPresentation({
+		canShowDatabaseTokens: true,
+		contentScope: "databaseTokens",
+		searchQuery: "Ірина",
+		selectedSource: "general",
+	});
+	assert.equal(databaseScope.scopeControls[1].isActive, true);
+	assert.equal(databaseScope.scopeControls[1].nextScope, "local");
+	assert.equal(databaseScope.scopeControls[0].nextScope, "source");
+	const allScope = getGallerySearchPresentation({
+		canShowDatabaseTokens: false,
+		contentScope: "all",
+		searchQuery: "Ірина",
+		selectedSource: "",
+	});
+	assert.deepEqual(allScope.scopeControls.at(-1), {
+		icon: "layers",
+		isActive: true,
+		nextScope: "local",
+		scope: "all",
+		titleKey: "Show all gallery content",
+	});
+	assert.equal(
+		allScope.scopeControls[0].titleKey,
+		"Show all campaign content",
+	);
+	const unexpectedScope = getGallerySearchPresentation({
+		canShowDatabaseTokens: true,
+		contentScope: "unexpected",
+		searchQuery: "0",
+		selectedSource: "general",
+	});
+	assert.equal(unexpectedScope.showClearButton, true);
+	assert.equal(
+		unexpectedScope.scopeControls.every(
+			(control) => !control.isActive && control.nextScope === control.scope,
+		),
+		true,
 	);
 });
 
@@ -13883,6 +14275,62 @@ await run("image gallery interaction plans validate drops, moves, and selection"
 	});
 	assert.deepEqual([...selection.subfolders], ["custom"]);
 	assert.deepEqual([...selection.filenames], ["hero.png"]);
+	assert.equal(selection.lastIndex, 0);
+	const rangeImages = [
+		{ name: "hero.png", url: "/hero.png" },
+		{ name: "locked.png", url: "/locked.png", readonly: true },
+		{ name: "ally.png", url: "/ally.png" },
+	];
+	const previousFilenames = new Set(["existing.png"]);
+	const previousSubfolders = new Set(["existing-folder"]);
+	const reverseAdditiveSelection = getGallerySelectionPlan({
+		allSubs: ["official", "custom"],
+		filenames: previousFilenames,
+		images: rangeImages,
+		index: 1,
+		isAdditive: true,
+		isReadonlyImage: (image) => Boolean(image?.readonly),
+		isReadonlySub: (name) => name === "official",
+		isShift: true,
+		lastIndex: 4,
+		name: "custom",
+		subfolders: previousSubfolders,
+		type: "sub",
+	});
+	assert.deepEqual([...reverseAdditiveSelection.subfolders], [
+		"existing-folder",
+		"custom",
+	]);
+	assert.deepEqual([...reverseAdditiveSelection.filenames], [
+		"existing.png",
+		"hero.png",
+		"ally.png",
+	]);
+	assert.equal(reverseAdditiveSelection.lastIndex, 4);
+	assert.deepEqual([...previousFilenames], ["existing.png"]);
+	assert.deepEqual([...previousSubfolders], ["existing-folder"]);
+	assert.notEqual(reverseAdditiveSelection.filenames, previousFilenames);
+	assert.notEqual(reverseAdditiveSelection.subfolders, previousSubfolders);
+	const freshReverseSelection = getGallerySelectionPlan({
+		allSubs: ["official", "custom"],
+		filenames: previousFilenames,
+		images: rangeImages,
+		index: 0,
+		isAdditive: false,
+		isReadonlyImage: (image) => Boolean(image?.readonly),
+		isReadonlySub: (name) => name === "official",
+		isShift: true,
+		lastIndex: 4,
+		name: "official",
+		subfolders: previousSubfolders,
+		type: "sub",
+	});
+	assert.deepEqual([...freshReverseSelection.subfolders], ["custom"]);
+	assert.deepEqual([...freshReverseSelection.filenames], [
+		"hero.png",
+		"ally.png",
+	]);
+	assert.equal(freshReverseSelection.lastIndex, 4);
 	assert.deepEqual(
 		getGalleryDragPlan({
 			item: { name: "hero.png", url: "/hero.png" },
@@ -13895,6 +14343,453 @@ await run("image gallery interaction plans validate drops, moves, and selection"
 			isReadonlySub: () => false,
 		}),
 		{ items: ["hero.png", "ally.png"], src: destination },
+	);
+	assert.deepEqual(
+		getGalleryFolderDragOverPlan({
+			currentTargetId: "other",
+			isReadonly: true,
+			sub: "герої",
+		}),
+		{ preventDefault: false, target: null },
+	);
+	assert.deepEqual(
+		getGalleryFolderDragOverPlan({
+			currentTargetId: "герої",
+			isReadonly: false,
+			sub: "герої",
+		}),
+		{ preventDefault: true, target: null },
+	);
+	assert.deepEqual(
+		getGalleryFolderDragOverPlan({
+			currentTargetId: "other",
+			isReadonly: false,
+			sub: "герої",
+		}),
+		{ preventDefault: true, target: { type: "sub", id: "герої" } },
+	);
+	assert.deepEqual(
+		getGalleryFolderDropTarget({
+			category: "tokens",
+			isReadonly: true,
+			slug: "кампанія",
+			subcategory: "герої/npc",
+		}),
+		{
+			slug: "кампанія",
+			category: "tokens",
+			subcategory: "герої/npc",
+			readonly: true,
+		},
+	);
+	for (const value of [undefined, null, "", 0, false]) {
+		assert.equal(getGalleryFolderRenameName(value), null);
+	}
+	assert.equal(getGalleryFolderRenameName("Нова назва"), "Нова назва");
+	assert.equal(getGalleryFolderRenameName(" "), " ");
+	assert.deepEqual(
+		getGalleryKeyboardPlan({
+			isOpen: true,
+			key: "Delete",
+			selectedSub: "герої/npc",
+		}),
+		{ action: "delete-selection", preventDefault: false },
+	);
+	assert.deepEqual(
+		getGalleryKeyboardPlan({
+			isOpen: true,
+			key: "Backspace",
+			selectedSub: "герої//npc/",
+		}),
+		{
+			action: "navigate-parent",
+			preventDefault: true,
+			subcategory: "герої",
+		},
+	);
+	assert.deepEqual(
+		getGalleryKeyboardPlan({
+			isOpen: true,
+			key: "Backspace",
+			selectedSub: "/",
+		}),
+		{ action: "navigate-parent", preventDefault: true, subcategory: "" },
+	);
+	assert.deepEqual(
+		getGalleryKeyboardPlan({
+			isOpen: true,
+			key: "Backspace",
+			selectedSub: "",
+		}),
+		{ action: "none", preventDefault: true },
+	);
+	for (const input of [
+		{ isOpen: false, key: "Backspace", targetTagName: null },
+		{ isOpen: true, key: "Delete", targetTagName: "INPUT" },
+		{ isOpen: true, key: "Backspace", targetTagName: "TEXTAREA" },
+		{ isOpen: true, key: "Escape", targetTagName: null },
+	]) {
+		assert.deepEqual(
+			getGalleryKeyboardPlan({ ...input, selectedSub: "герої" }),
+			{ action: "none", preventDefault: false },
+		);
+	}
+	for (const targetTagName of ["SELECT", "DIV", "input"]) {
+		assert.deepEqual(
+			getGalleryKeyboardPlan({
+				isOpen: true,
+				key: "Delete",
+				selectedSub: "герої",
+				targetTagName,
+			}),
+			{ action: "delete-selection", preventDefault: false },
+		);
+	}
+	for (const input of [
+		{ newName: "", oldName: "old", selectedSub: "" },
+		{ newName: "   ", oldName: "old", selectedSub: "root" },
+		{ newName: "same", oldName: "same", selectedSub: "root" },
+	]) {
+		assert.equal(getGallerySubcategoryRenamePlan(input), null);
+	}
+	assert.deepEqual(
+		getGallerySubcategoryRenamePlan({
+			newName: "нові",
+			oldName: "герої",
+			selectedSub: "",
+		}),
+		{
+			newPath: "нові",
+			oldPath: "герої",
+			selectedSubcategory: null,
+		},
+	);
+	assert.deepEqual(
+		getGallerySubcategoryRenamePlan({
+			newName: " нові ",
+			oldName: "герої",
+			selectedSub: "кампанія//tokens",
+		}),
+		{
+			newPath: "кампанія//tokens/ нові ",
+			oldPath: "кампанія//tokens/герої",
+			selectedSubcategory: null,
+		},
+	);
+	assert.deepEqual(
+		getGallerySubcategoryRenamePlan({
+			newName: "нові",
+			oldName: "герої",
+			selectedSub: "герої",
+		}),
+		{
+			newPath: "герої/нові",
+			oldPath: "герої/герої",
+			selectedSubcategory: "нові",
+		},
+	);
+	assert.equal(
+		getGallerySubcategoryRenamePlan({
+			newName: "нові",
+			oldName: "герої",
+			selectedSub: "root/герої",
+		})?.selectedSubcategory,
+		null,
+	);
+});
+
+await run("image gallery single selection preserves toggle, type, and Set identity", () => {
+	const images = [
+		{ name: "Ірина.png", url: "/iryna.png" },
+		{ name: "protected.png", url: "/protected.png", readonly: true },
+	];
+	const getSingleSelection = (overrides = {}) =>
+		getGallerySelectionPlan({
+			allSubs: ["герої", "protected-folder"],
+			filenames: new Set(),
+			images,
+			index: 0,
+			isAdditive: false,
+			isReadonlyImage: (image) => Boolean(image?.readonly),
+			isReadonlySub: (name) => name === "protected-folder",
+			isShift: false,
+			lastIndex: null,
+			name: "Ірина.png",
+			subfolders: new Set(),
+			type: "image",
+			...overrides,
+		});
+
+	const readonlyFilenames = new Set(["Ірина.png"]);
+	const readonlySubfolders = new Set(["герої"]);
+	assert.equal(
+		getSingleSelection({
+			filenames: readonlyFilenames,
+			index: 1,
+			name: "protected.png",
+			subfolders: readonlySubfolders,
+		}),
+		null,
+	);
+	assert.equal(
+		getSingleSelection({
+			filenames: readonlyFilenames,
+			name: "protected-folder",
+			subfolders: readonlySubfolders,
+			type: "sub",
+		}),
+		null,
+	);
+	assert.deepEqual([...readonlyFilenames], ["Ірина.png"]);
+	assert.deepEqual([...readonlySubfolders], ["герої"]);
+
+	let missingImageCandidate = "not-called";
+	assert.equal(
+		getSingleSelection({
+			isReadonlyImage: (image) => {
+				missingImageCandidate = image;
+				return true;
+			},
+			name: "відсутня.png",
+		}),
+		null,
+	);
+	assert.equal(missingImageCandidate, undefined);
+
+	const selectedImageSet = new Set(["Ірина.png"]);
+	const clearedImage = getSingleSelection({ filenames: selectedImageSet });
+	assert.deepEqual([...clearedImage.filenames], []);
+	assert.deepEqual([...clearedImage.subfolders], []);
+	assert.equal(clearedImage.lastIndex, null);
+	assert.notEqual(clearedImage.filenames, selectedImageSet);
+	assert.deepEqual([...selectedImageSet], ["Ірина.png"]);
+
+	const selectedFolderSet = new Set(["герої"]);
+	const clearedFolder = getSingleSelection({
+		name: "герої",
+		subfolders: selectedFolderSet,
+		type: "sub",
+	});
+	assert.deepEqual([...clearedFolder.filenames], []);
+	assert.deepEqual([...clearedFolder.subfolders], []);
+	assert.equal(clearedFolder.lastIndex, null);
+	assert.notEqual(clearedFolder.subfolders, selectedFolderSet);
+	assert.deepEqual([...selectedFolderSet], ["герої"]);
+
+	const multipleFilenames = new Set(["Ірина.png", "інша.png"]);
+	const multipleSubfolders = new Set(["герої"]);
+	const narrowedImage = getSingleSelection({
+		filenames: multipleFilenames,
+		index: 7,
+		subfolders: multipleSubfolders,
+	});
+	assert.deepEqual([...narrowedImage.filenames], ["Ірина.png"]);
+	assert.deepEqual([...narrowedImage.subfolders], []);
+	assert.equal(narrowedImage.lastIndex, 7);
+	assert.notEqual(narrowedImage.filenames, multipleFilenames);
+	assert.notEqual(narrowedImage.subfolders, multipleSubfolders);
+	assert.deepEqual([...multipleFilenames], ["Ірина.png", "інша.png"]);
+	assert.deepEqual([...multipleSubfolders], ["герої"]);
+
+	const narrowedFolder = getSingleSelection({
+		filenames: multipleFilenames,
+		index: 0,
+		name: "герої",
+		subfolders: multipleSubfolders,
+		type: "sub",
+	});
+	assert.deepEqual([...narrowedFolder.filenames], []);
+	assert.deepEqual([...narrowedFolder.subfolders], ["герої"]);
+	assert.equal(narrowedFolder.lastIndex, 0);
+
+	const sameNameOppositeType = getSingleSelection({
+		filenames: new Set(),
+		name: "герої",
+		subfolders: new Set(["герої"]),
+		type: "image",
+	});
+	assert.deepEqual([...sameNameOppositeType.filenames], ["герої"]);
+	assert.deepEqual([...sameNameOppositeType.subfolders], []);
+	assert.equal(sameNameOppositeType.lastIndex, 0);
+});
+
+await run("image gallery bulk-delete policies preserve safe selection and payload semantics", () => {
+	assert.equal(
+		getGalleryBulkDeleteSummary({ safeFilenames: [], safeSubs: [] }),
+		null,
+	);
+	assert.deepEqual(
+		getGalleryBulkDeleteSummary({
+			safeFilenames: ["Ірина.png", "npc.png"],
+			safeSubs: ["герої"],
+		}),
+		{ hasFolders: true, total: 3 },
+	);
+	assert.deepEqual(
+		getGalleryBulkDeleteSummary({
+			safeFilenames: ["Ірина.png"],
+			safeSubs: [],
+		}),
+		{ hasFolders: false, total: 1 },
+	);
+	assert.deepEqual(
+		getGalleryBulkDeleteConfirmationPlan({
+			hasNonEmptySelectedFolders: true,
+			total: 3,
+		}),
+		{ count: 3, showExtractFolderContents: true },
+	);
+	assert.deepEqual(createGalleryBulkDeleteConfirmation("так"), {
+		confirmed: true,
+		extractFolderContents: true,
+	});
+	assert.deepEqual(createGalleryBulkDeleteConfirmation(0), {
+		confirmed: true,
+		extractFolderContents: false,
+	});
+	for (const value of [null, undefined, "confirmed", {}, { confirmed: 0 }]) {
+		assert.equal(normalizeGalleryBulkDeleteConfirmation(value), null);
+	}
+	assert.deepEqual(
+		normalizeGalleryBulkDeleteConfirmation({
+			confirmed: "yes",
+			extractFolderContents: "так",
+		}),
+		{ confirmed: true, extractFolderContents: true },
+	);
+	assert.deepEqual(
+		normalizeGalleryBulkDeleteConfirmation({ confirmed: true }),
+		{ confirmed: true, extractFolderContents: false },
+	);
+
+	const currentLocation = {
+		slug: "кампанія",
+		category: "tokens",
+		subcategory: "герої",
+	};
+	const imageGroups = [
+		{
+			items: ["Ірина.png"],
+			src: currentLocation,
+		},
+		{
+			items: ["official.png"],
+			src: { slug: "general", category: "tokens", subcategory: "MM" },
+		},
+	];
+	assert.deepEqual(
+		buildGalleryBulkDeletePayloads({
+			extractFolderContents: false,
+			hasNonEmptySelectedFolders: false,
+			imageGroups,
+			safeSubs: [],
+			src: currentLocation,
+		}),
+		imageGroups,
+	);
+	assert.deepEqual(
+		buildGalleryBulkDeletePayloads({
+			extractFolderContents: true,
+			hasNonEmptySelectedFolders: true,
+			imageGroups,
+			safeSubs: ["npc", "лиходії"],
+			src: currentLocation,
+		}),
+		[
+			...imageGroups,
+			{
+				items: ["npc", "лиходії"],
+				src: currentLocation,
+				options: { extractFolderContents: true },
+			},
+		],
+	);
+	assert.deepEqual(
+		buildGalleryBulkDeletePayloads({
+			extractFolderContents: true,
+			hasNonEmptySelectedFolders: false,
+			imageGroups: [],
+			safeSubs: ["порожня"],
+			src: currentLocation,
+		}),
+		[
+			{
+				items: ["порожня"],
+				src: currentLocation,
+				options: { extractFolderContents: false },
+			},
+		],
+	);
+});
+
+await run("image gallery folder inspection is parallel and null-safe", async () => {
+	const emptyCalls = [];
+	assert.equal(
+		await hasNonEmptyGalleryFolders({
+			api: {
+				getImages: async (...args) => emptyCalls.push(["images", ...args]),
+				getSubcategories: async (...args) =>
+					emptyCalls.push(["subcategories", ...args]),
+			},
+			category: "tokens",
+			folderNames: [],
+			selectedSource: "кампанія",
+			selectedSub: "герої",
+		}),
+		false,
+	);
+	assert.deepEqual(emptyCalls, []);
+
+	const calls = [];
+	const api = {
+		getImages: async (source, category, subcategory) => {
+			calls.push(["images", source, category, subcategory]);
+			return subcategory.endsWith("/лиходії") ? null : [];
+		},
+		getSubcategories: async (source, category, subcategory) => {
+			calls.push(["subcategories", source, category, subcategory]);
+			return subcategory.endsWith("/лиходії") ? ["боси"] : "invalid";
+		},
+	};
+	const inspection = hasNonEmptyGalleryFolders({
+		api,
+		category: "tokens",
+		folderNames: ["npc", "лиходії"],
+		selectedSource: "кампанія",
+		selectedSub: "герої//tokens",
+	});
+	assert.deepEqual(calls, [
+		["images", "кампанія", "tokens", "герої//tokens/npc"],
+		["subcategories", "кампанія", "tokens", "герої//tokens/npc"],
+		["images", "кампанія", "tokens", "герої//tokens/лиходії"],
+		["subcategories", "кампанія", "tokens", "герої//tokens/лиходії"],
+	]);
+	assert.equal(await inspection, true);
+	assert.equal(
+		await hasNonEmptyGalleryFolders({
+			api: {
+				getImages: async () => [{ name: "Ірина.png" }],
+				getSubcategories: async () => [],
+			},
+			category: "characters",
+			folderNames: ["герої"],
+			selectedSource: "кампанія",
+			selectedSub: "",
+		}),
+		true,
+	);
+	assert.equal(
+		await hasNonEmptyGalleryFolders({
+			api: {
+				getImages: async () => undefined,
+				getSubcategories: async () => ({ length: 2 }),
+			},
+			category: "characters",
+			folderNames: ["порожня"],
+			selectedSource: "кампанія",
+			selectedSub: "",
+		}),
+		false,
 	);
 });
 
@@ -13946,6 +14841,80 @@ await run("image gallery loaders normalize metadata and official token paths", a
 	assert.equal(images[0].subcategory, "герої");
 	assert.equal(images[0].locationLabel, "database / tokens / герої");
 	assert.equal(images[0].globalSearch, true);
+	const scopedBase = {
+		categories: ["tokens", "characters"],
+		category: "characters",
+		ignoreSourcesList: ["UA"],
+		search: "ірина",
+		selectedSub: "герої",
+		selectedSource: "кампанія",
+	};
+	assert.deepEqual(
+		getScopedGallerySearchQuery({ ...scopedBase, contentScope: "all" }),
+		{
+			search: "ірина",
+			source: "",
+			category: "",
+			subcategory: "",
+			categories: ["tokens", "characters"],
+			ignoreSourcesList: ["UA"],
+		},
+	);
+	assert.deepEqual(
+		getScopedGallerySearchQuery({ ...scopedBase, contentScope: "source" }),
+		{
+			search: "ірина",
+			source: "кампанія",
+			category: "",
+			subcategory: "",
+			categories: ["tokens", "characters"],
+			ignoreSourcesList: ["UA"],
+		},
+	);
+	const localQuery = {
+		search: "ірина",
+		source: "кампанія",
+		category: "characters",
+		subcategory: "герої",
+		categories: ["tokens", "characters"],
+		ignoreSourcesList: ["UA"],
+	};
+	for (const contentScope of ["local", "databaseTokens", "unexpected"]) {
+		assert.deepEqual(
+			getScopedGallerySearchQuery({ ...scopedBase, contentScope }),
+			localQuery,
+		);
+	}
+	const scopedCalls = [];
+	let scopedResponse = {
+		images: [{ name: "Ірина.png", url: "/scoped.png" }],
+	};
+	const scopedApi = {
+		...api,
+		searchImageGallery: async (query) => {
+			scopedCalls.push(query);
+			return scopedResponse;
+		},
+	};
+	const scopedOptions = {
+		activeSearchQuery: "ірина",
+		api: scopedApi,
+		...scopedBase,
+		contentScope: "source",
+		isGeneralTokens: false,
+		isScopedContent: true,
+		normalizedSearchQuery: "ірина",
+	};
+	assert.deepEqual(await loadGalleryImages(scopedOptions), scopedResponse.images);
+	assert.deepEqual(scopedCalls[0], {
+		...localQuery,
+		category: "",
+		subcategory: "",
+	});
+	scopedResponse = null;
+	assert.deepEqual(await loadGalleryImages(scopedOptions), []);
+	scopedResponse = { images: "invalid" };
+	assert.deepEqual(await loadGalleryImages(scopedOptions), []);
 });
 
 await run(

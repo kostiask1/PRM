@@ -4,7 +4,12 @@ import { classNames, formatBytes, lang } from "../../../shared/lib/index.js";
 import { Modal } from "../../modal/index.js";
 import type { ImageLocation } from "../api/imageApi.ts";
 import { imageApi as api } from "../api/imageApi.ts";
-import type { GalleryHistoryDirection } from "../model/imageGalleryPresentation.ts";
+import {
+	getGallerySearchPresentation,
+	type GalleryHistoryDirection,
+	type GallerySearchPresentation,
+	type GallerySearchScopeControl,
+} from "../model/imageGalleryPresentation.ts";
 import type { GalleryImage } from "../model/contracts.ts";
 import type useImageGallery from "../model/useImageGallery.ts";
 import ImageTargetSettings from "./ImageTargetSettings.tsx";
@@ -175,6 +180,56 @@ export function ImageGalleryNavigation({
 	);
 }
 
+function ImageGallerySearchInput({
+	presentation,
+	searchQuery,
+	setSearchQuery,
+}: {
+	presentation: GallerySearchPresentation;
+	searchQuery: string;
+	setSearchQuery: (value: string) => void;
+}) {
+	return (
+		<>
+			<Icon name="search" size={14} />
+			<input
+				type="text"
+				value={searchQuery}
+				onChange={(event) => setSearchQuery(event.target.value)}
+				placeholder={lang.t(presentation.placeholderKey)}
+			/>
+			{presentation.showClearButton && (
+				<Button
+					variant="ghost"
+					size={Button.SIZES.SMALL}
+					icon="x"
+					onClick={() => setSearchQuery(presentation.clearSearchQuery)}
+					title={lang.t(presentation.clearTitleKey)}
+				/>
+			)}
+		</>
+	);
+}
+
+function ImageGalleryScopeButton({
+	control,
+	setContentScope,
+}: {
+	control: GallerySearchScopeControl;
+	setContentScope: (scope: GallerySearchScopeControl["nextScope"]) => void;
+}) {
+	return (
+		<Button
+			className="DetailedSearchButton ImageGallery__globalSearchBtn ImageGallery__scopeBtn"
+			variant={control.isActive ? "primary" : "ghost"}
+			size={Button.SIZES.SMALL}
+			icon={control.icon}
+			onClick={() => setContentScope(control.nextScope)}
+			title={lang.t(control.titleKey)}
+		/>
+	);
+}
+
 export function ImageGallerySearch({
 	canShowDatabaseTokens,
 	controller,
@@ -189,64 +244,26 @@ export function ImageGallerySearch({
 		setContentScope,
 		setSearchQuery,
 	} = controller;
+	const presentation = getGallerySearchPresentation({
+		canShowDatabaseTokens,
+		contentScope,
+		searchQuery,
+		selectedSource,
+	});
 	return (
 		<div className="ImageGallery__search">
-			<Icon name="search" size={14} />
-			<input
-				type="text"
-				value={searchQuery}
-				onChange={(event) => setSearchQuery(event.target.value)}
-				placeholder={lang.t("Search images...")}
+			<ImageGallerySearchInput
+				presentation={presentation}
+				searchQuery={searchQuery}
+				setSearchQuery={setSearchQuery}
 			/>
-			{searchQuery && (
-				<Button
-					variant="ghost"
-					size={Button.SIZES.SMALL}
-					icon="x"
-					onClick={() => setSearchQuery("")}
-					title={lang.t("Clear search")}
+			{presentation.scopeControls.map((control) => (
+				<ImageGalleryScopeButton
+					key={control.scope}
+					control={control}
+					setContentScope={setContentScope}
 				/>
-			)}
-			<Button
-				className="DetailedSearchButton ImageGallery__globalSearchBtn ImageGallery__scopeBtn"
-				variant={contentScope === "source" ? "primary" : "ghost"}
-				size={Button.SIZES.SMALL}
-				icon="map"
-				onClick={() =>
-					setContentScope((scope) =>
-						scope === "source" ? "local" : "source",
-					)
-				}
-				title={lang.t(
-					selectedSource === "general"
-						? "Show all general content"
-						: "Show all campaign content",
-				)}
-			/>
-			{canShowDatabaseTokens && (
-				<Button
-					className="DetailedSearchButton ImageGallery__globalSearchBtn ImageGallery__scopeBtn"
-					variant={contentScope === "databaseTokens" ? "primary" : "ghost"}
-					size={Button.SIZES.SMALL}
-					icon="book"
-					onClick={() =>
-						setContentScope((scope) =>
-							scope === "databaseTokens" ? "local" : "databaseTokens",
-						)
-					}
-					title={lang.t("Show all database tokens")}
-				/>
-			)}
-			<Button
-				className="DetailedSearchButton ImageGallery__globalSearchBtn ImageGallery__scopeBtn"
-				variant={contentScope === "all" ? "primary" : "ghost"}
-				size={Button.SIZES.SMALL}
-				icon="layers"
-				onClick={() =>
-					setContentScope((scope) => (scope === "all" ? "local" : "all"))
-				}
-				title={lang.t("Show all gallery content")}
-			/>
+			))}
 		</div>
 	);
 }
