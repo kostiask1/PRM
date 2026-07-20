@@ -126,11 +126,28 @@ import {
 	stripNotesReferenceText,
 } from "../src/features/rich-content/model.js";
 import {
+	enrichMonstersWithLegendaryGroups,
+	executeAiDraftRestore,
+	executeAiMonsterEditRequest,
+	executeBestiaryFieldEditSave,
+	executeBestiarySelectedSourcesSave,
+	executeBestiarySyncEventPlan,
 	filterBestiaryMonsters,
+	getAiDraftRestoreResultPlan,
+	getAiDraftRestoreStartPlan,
+	getAiMonsterEditErrorMessage,
+	getAiMonsterEditStartPlan,
+	getAiMonsterGenerationResultPlan,
 	getAiMonsterInstructionPlan,
+	getBestiaryDetailPresentation,
+	getBestiaryFieldEditStartPlan,
+	getBestiaryInitialSelectionScrollPlan,
+	getBestiaryMonsterRowPresentation,
 	getBestiarySelectionPlan,
 	getBestiarySourceCodes,
+	getBestiarySyncEventPlan,
 	getCreateBasedMonsterPlan,
+	getCustomMonsterDeleteStartPlan,
 	getCustomBestiaryUpdatePlan,
 	getCustomRefreshSelection,
 	getMonsterListFromResponse,
@@ -140,8 +157,12 @@ import {
 	monsterMatchesReference,
 	parseImportedCustomMonsters,
 	parseBestiarySyncEvent,
+	parseMonsterCr,
 	parseMonsterReference,
 	preserveAiDraftResourceMetadata,
+	removeDeletedCustomMonsterFavorite,
+	replaceDeletedCustomMonsterList,
+	shouldClearAiMonsterEditController,
 	sortBestiaryMonsters,
 } from "../src/widgets/bestiary-browser/model.js";
 import {
@@ -194,6 +215,7 @@ import {
 import {
 	buildAiImagePromptGenerationPlan,
 	createAiAssistantPresentation,
+	executeAiAssistantHistoryRestorePlan,
 	getAiAssistantContextProjection,
 	getAiAssistantHistoryView,
 	getAiAssistantPromptPlaceholder,
@@ -392,9 +414,13 @@ import {
 import {
 	getAiSceneContextConfig,
 	getAiSessionContextConfig,
+	getAiEncounterGenerationActionsView,
 	getAiEncounterGenerationTogglePlan,
+	getAiEntityGenerationActionsView,
+	getAiAttachmentControlsView,
 	getAvailableAiAttachmentSlots,
 	getAiPromptTokenVisibility,
+	getAiResponseHistoryRowView,
 	getAiToolbarVisibility,
 	hasAiResponseHistory,
 	isAiApiKeySaveDisabled,
@@ -489,12 +515,14 @@ import {
 	getGalleryFolderPresentation,
 	getGalleryFolderSubcategory,
 	getGlobalGalleryResultNavigationPlan,
+	getGalleryColumnCount,
 	getGalleryImageKey,
 	getGalleryHistoryKeyDirection,
 	getGalleryHistoryKeyboardPlan,
 	getGalleryNavigationEntry,
 	getGalleryPathEntry,
 	getGallerySearchPresentation,
+	getGalleryStatsAndActionsPresentation,
 	recordGalleryNavigation,
 } from "../src/features/images/model/imageGalleryPresentation.ts";
 import {
@@ -503,9 +531,13 @@ import {
 	createGalleryBulkDeleteConfirmation,
 	getGalleryBulkDeleteConfirmationPlan,
 	getGalleryBulkDeleteSummary,
+	getGalleryEscapePlan,
 	getGalleryFolderDragOverPlan,
 	getGalleryFolderDropTarget,
 	getGalleryFolderRenameName,
+	getGalleryGridDragOverPlan,
+	getGalleryGridDropPlan,
+	getGalleryGridDropTarget,
 	getGalleryDragPlan,
 	getGalleryDropPlan,
 	getGalleryKeyboardPlan,
@@ -5398,6 +5430,40 @@ await run("AI response helpers manage custom monster draft resources", () => {
 		getFirstChangedMonsterName(entry, ["custom-monster:new"]),
 		"New Beast",
 	);
+	assert.equal(getFirstChangedMonster(null), null);
+	assert.equal(getFirstChangedMonsterName(entry, []), null);
+	assert.equal(
+		getFirstChangedMonsterName({
+			changes: {
+				resources: [
+					{
+						id: "custom-monster:fallback",
+						kind: "custom-monster",
+						name: "Resource Beast",
+						before: { name: "Before Beast" },
+						after: { name: "" },
+					},
+				],
+			},
+		}),
+		"Before Beast",
+	);
+	assert.equal(
+		getFirstChangedMonsterName({
+			changes: {
+				resources: [
+					{
+						id: "custom-monster:invalid-name",
+						kind: "custom-monster",
+						name: "Resource Beast",
+						before: { name: "Before Beast" },
+						after: { name: 42 },
+					},
+				],
+			},
+		}),
+		null,
+	);
 
 	const withToken = addSourceMonsterImageToDraft(entry, {
 		name: "Wolf",
@@ -5410,6 +5476,72 @@ await run("AI response helpers manage custom monster draft resources", () => {
 	assert.equal(
 		withToken.changes.resources[1].after.originalBestiaryName,
 		"Wolf",
+	);
+	assert.strictEqual(addSourceMonsterImageToDraft(entry, null), entry);
+	assert.strictEqual(
+		addSourceMonsterImageToDraft(entry, { name: "Wolf" }),
+		entry,
+	);
+	const explicitTokenEntry = {
+		id: "direct-token",
+		changes: {
+			summary: { added: 7, deleted: 0, modified: 0, total: 7 },
+			resources: [
+				{
+					id: "custom-monster:direct",
+					kind: "custom-monster",
+					before: null,
+					after: { name: "Примарний вовк", source: "CUSTOM" },
+				},
+			],
+		},
+	};
+	const withExplicitToken = addSourceMonsterImageToDraft(explicitTokenEntry, {
+		name: "Source Wolf",
+		imageUrl: "/images/custom/source-wolf.png",
+	});
+	assert.equal(
+		withExplicitToken.changes.resources[0].after.imageUrl,
+		"/images/custom/source-wolf.png",
+	);
+	assert.strictEqual(
+		withExplicitToken.changes.summary,
+		explicitTokenEntry.changes.summary,
+	);
+	const encodedToken = addSourceMonsterImageToDraft(explicitTokenEntry, {
+		name: "Fallback Wolf",
+		originalBestiaryName: "Dire Wolf",
+		source: " M M ",
+	});
+	assert.equal(
+		encodedToken.changes.resources[0].after.imageUrl,
+		"/api/bestiary/tokens/M%20M/Dire%20Wolf.webp",
+	);
+	const existingTokenEntry = {
+		id: "existing-token",
+		changes: {
+			resources: [
+				{
+					id: "custom-monster:existing-token",
+					kind: "custom-monster",
+					before: null,
+					after: { name: "Existing", imageUrl: "/existing.png" },
+				},
+				{
+					id: "custom-monster:modified",
+					kind: "custom-monster",
+					before: { name: "Modified" },
+					after: { name: "Modified" },
+				},
+			],
+		},
+	};
+	assert.strictEqual(
+		addSourceMonsterImageToDraft(existingTokenEntry, {
+			name: "Wolf",
+			source: "MM",
+		}),
+		existingTokenEntry,
 	);
 
 	const edited = updateDraftResourceAfterValues(withToken, [
@@ -5591,6 +5723,85 @@ await run("AI diff expands session resources and preserves line metadata", () =>
 		),
 	);
 
+	const orderedResources = buildDiffResources(
+		{
+			id: "history-ordered",
+			changes: {
+				resources: [
+					{
+						id: "session:ordered",
+						kind: "session",
+						label: "Ordered session",
+						before: {
+							status: undefined,
+							data: {
+								npcs: [{ id: "removed", firstName: "Видалений" }],
+							},
+						},
+						after: {
+							name: "Нова назва",
+							status: "ready",
+							data: {
+								result_text: "Новий підсумок",
+								notes: [{ id: "note", title: "", text: "" }],
+								npcs: [],
+								locations: [{ id: "location", title: "  Брама  " }],
+								scenes: [
+									{ id: "scene", texts: { summary: "  Прибуття  " } },
+								],
+								encounters: [{ id: "encounter", name: "" }],
+								weather: "sun",
+							},
+						},
+					},
+					{
+						id: "bestiary:deleted",
+						kind: "custom-bestiary",
+						label: "Bestiary",
+						before: [{ id: "removed", name: "Зниклий звір" }],
+						after: [],
+					},
+				],
+			},
+		},
+		{
+			note: "Нотатка",
+			encounter: "Енкаунтер",
+			creature: "Істота",
+		},
+	);
+	assert.deepEqual(
+		orderedResources.map((resource) => resource.id),
+		[
+			"session:ordered:name",
+			"session:ordered:summary",
+			"session:ordered:notes/Нотатка",
+			"session:ordered:npcs/Видалений",
+			"session:ordered:locations/Брама",
+			"session:ordered:scenes/Прибуття",
+			"session:ordered:encounters/Енкаунтер",
+			"session:ordered:data.weather",
+			"session:ordered:status",
+			"bestiary:deleted:monsters/Зниклий звір",
+		],
+	);
+	assert.deepEqual(
+		orderedResources.map((resource) => resource.listIndex ?? null),
+		[null, null, 0, null, 0, 0, 0, null, null, null],
+	);
+	assert.equal(orderedResources[0].before, null);
+	assert.equal(orderedResources[1].before, null);
+	assert.equal(orderedResources[7].before, null);
+	assert.equal(orderedResources[8].before, null);
+	assert.equal(orderedResources.at(-1).after, null);
+	assert.ok(
+		orderedResources.every((resource) =>
+			resource.id.startsWith("bestiary:")
+				? resource.parentResourceId === "bestiary:deleted"
+				: resource.parentResourceId === "session:ordered",
+		),
+	);
+
 	const unchangedResource = {
 		id: "session:unchanged",
 		kind: "session",
@@ -5607,6 +5818,49 @@ await run("AI diff expands session resources and preserves line metadata", () =>
 	assert.equal(unchanged[0].parentResourceId, undefined);
 	assert.deepEqual(unchanged[0].fieldSummary, []);
 	assert.ok(unchanged[0].lines.every((line) => line.type === "context"));
+
+	const getGenericLineDiff = (before, after) =>
+		buildDiffResources({
+			id: "history-line-diff",
+			changes: {
+				resources: [
+					{
+						id: "entity:line-diff",
+						kind: "entity",
+						before,
+						after,
+					},
+				],
+			},
+		})[0].lines;
+	const unicodeReplacementLines = getGenericLineDiff(
+		{ text: "Старий рядок" },
+		{ text: "Новий рядок" },
+	);
+	assert.deepEqual(
+		unicodeReplacementLines.map((line) => [
+			line.type,
+			line.oldNumber,
+			line.newNumber,
+			line.text,
+		]),
+		[
+			["context", 1, 1, "{"],
+			["removed", 2, null, '  "text": "Старий рядок"'],
+			["added", null, 2, '  "text": "Новий рядок"'],
+			["context", 3, 3, "}"],
+		],
+	);
+	assert.deepEqual(
+		getGenericLineDiff({ b: "Спільний" }, { a: "Новий", b: "Спільний" })
+			.map((line) => line.type),
+		["context", "added", "context", "context"],
+	);
+	assert.deepEqual(
+		getGenericLineDiff({ a: "Старий", b: "Спільний" }, { b: "Спільний" })
+			.map((line) => line.type),
+		["context", "removed", "context", "context"],
+	);
 
 	const largeBefore = Array.from({ length: 450 }, (_, index) => `old-${index}`);
 	const largeAfter = Array.from({ length: 450 }, (_, index) => `new-${index}`);
@@ -5702,6 +5956,20 @@ await run("AI feature model estimates context and rebuilds retry workflows", asy
 		},
 	);
 	assert.equal(
+		compactEntityForEstimate({
+			firstName: "",
+			first_name: "Марія",
+			lastName: "",
+			last_name: "Коваль",
+			name: "Ignored fallback",
+		}).name,
+		"Марія Коваль",
+	);
+	assert.equal(
+		compactEntityForEstimate({ name: "", title: "Архіваріус" }).name,
+		"Архіваріус",
+	);
+	assert.equal(
 		compactSessionForEstimate({ notes: [{ _aiIgnored: true }] }).notes.length,
 		0,
 	);
@@ -5763,6 +6031,122 @@ await run("AI feature model estimates context and rebuilds retry workflows", asy
 				npcs: [],
 				locations: [],
 			},
+		},
+	);
+	assert.deepEqual(
+		buildAiTokenEstimateContext({
+			...tokenEstimateBase,
+			isCampaign: true,
+			sessionName: "Fallback campaign",
+			sessionData: {
+				name: "",
+				description: "Опис без контексту",
+				notes: [{ title: "Не включати" }],
+				characters: [{ id: "session-character", name: "Не включати" }],
+			},
+			charactersList: [{ id: "fallback-character", name: "Не включати" }],
+			useContext: false,
+		}),
+		{
+			campaign: {
+				name: "Fallback campaign",
+				description: "Опис без контексту",
+			},
+		},
+	);
+	const fallbackCampaignContext = buildAiTokenEstimateContext({
+		...tokenEstimateBase,
+		contextConfig: { campaignNotes: false, sessions: {} },
+		isCampaign: true,
+		sessionData: { name: "Кампанія без колекцій" },
+		charactersList: [{ id: "hero", name: "Fallback hero" }],
+		npcsList: [
+			{ id: "kept", name: "Visible NPC" },
+			{ id: "hidden", name: "Hidden NPC" },
+		],
+		locationsList: [{ id: "place", title: "Fallback place" }],
+		characterContext: { included: false, items: { hero: true } },
+		npcContext: { included: true, items: { hidden: false } },
+		locationContext: { included: true, items: { place: false } },
+		useContext: true,
+	});
+	assert.equal(
+		Object.hasOwn(fallbackCampaignContext.campaign, "notes"),
+		false,
+	);
+	assert.deepEqual(fallbackCampaignContext.campaign.characters, []);
+	assert.deepEqual(
+		fallbackCampaignContext.campaign.npcs.map((npc) => npc.name),
+		["Visible NPC"],
+	);
+	assert.deepEqual(fallbackCampaignContext.campaign.locations, []);
+	const emptySessionCollections = buildAiTokenEstimateContext({
+		...tokenEstimateBase,
+		isCampaign: true,
+		sessionData: { characters: [], npcs: [], locations: [] },
+		charactersList: [{ id: "fallback", name: "Fallback" }],
+		npcsList: [{ id: "fallback", name: "Fallback" }],
+		locationsList: [{ id: "fallback", name: "Fallback" }],
+		useContext: true,
+	});
+	assert.deepEqual(emptySessionCollections.campaign.characters, []);
+	assert.deepEqual(emptySessionCollections.campaign.npcs, []);
+	assert.deepEqual(emptySessionCollections.campaign.locations, []);
+
+	assert.deepEqual(
+		buildAiTokenEstimateContext({
+			...tokenEstimateBase,
+			campaignContext: {
+				description: "Світ",
+				notes: [{ title: "Кампанійна нотатка", text: "Текст" }],
+			},
+			contextConfig: {
+				campaignNotes: true,
+				sessions: {
+					selected: {
+						included: true,
+						data: {
+							result_text: "Підсумок",
+							notes: [{ title: "Сесійна нотатка", text: "Текст" }],
+						},
+					},
+					excluded: {
+						included: false,
+						data: { result_text: "Не включати" },
+					},
+				},
+			},
+			parseAIResponse: true,
+			sessionData: { result_text: "Поточна сесія" },
+			useContext: true,
+		}),
+		{
+			campaign: {
+				description: "Світ",
+				notes: [{ title: "Кампанійна нотатка", text: "Текст" }],
+				characters: [],
+				npcs: [],
+				locations: [],
+			},
+			currentSession: {
+				notes: [],
+				result: "Поточна сесія",
+				scenes: [],
+				npcs: [],
+				locations: [],
+			},
+			selectedSessions: [
+				{
+					slug: "selected",
+					data: {
+						notes: [{ title: "Сесійна нотатка", text: "Текст" }],
+						result: "Підсумок",
+						scenes: [],
+						npcs: [],
+						locations: [],
+					},
+				},
+			],
 		},
 	);
 	const encounterData = { id: "encounter-1", name: "Засідка" };
@@ -5884,6 +6268,44 @@ await run("AI feature model estimates context and rebuilds retry workflows", asy
 		["generate", "Повтори"],
 		["succeeded", "Готово"],
 	]);
+	const nullableDeleteEvents = [];
+	assert.deepEqual(
+		await executeAiHistoryRetry({
+			plan: failedRetryPlan,
+			signal: new AbortController().signal,
+			deleteAiResponse: async () => null,
+			generateAi: async (_payload, { signal }) => {
+				nullableDeleteEvents.push(["signal", signal.aborted]);
+				return null;
+			},
+			onFailedEntryDeleted: (responses) =>
+				nullableDeleteEvents.push(["deleted", responses]),
+			onSucceeded: (data) => nullableDeleteEvents.push(["succeeded", data]),
+		}),
+		{ status: "succeeded", data: null },
+	);
+	assert.deepEqual(nullableDeleteEvents, [
+		["deleted", []],
+		["signal", false],
+		["succeeded", null],
+	]);
+	const successCallbackError = new Error("Result delegation failed");
+	const delegatedFailures = [];
+	const delegatedFailure = await executeAiHistoryRetry({
+		plan: { ...failedRetryPlan, deleteFailedEntry: null },
+		signal: new AbortController().signal,
+		deleteAiResponse: async () => {
+			throw new Error("Must not delete");
+		},
+		generateAi: async () => ({ prompt: "Generated" }),
+		onSucceeded: () => {
+			throw successCallbackError;
+		},
+		onFailed: (error) => delegatedFailures.push(error),
+	});
+	assert.equal(delegatedFailure.status, "failed");
+	assert.strictEqual(delegatedFailure.error, successCallbackError);
+	assert.deepEqual(delegatedFailures, [successCallbackError]);
 	let cancelledCallbackCount = 0;
 	assert.deepEqual(
 		await executeAiHistoryRetry({
@@ -5942,6 +6364,31 @@ await run("AI feature model estimates context and rebuilds retry workflows", asy
 		alertMessage: "",
 	});
 	assert.deepEqual(getGeneratedEntityTypes({ npcs: [] }), ["npc"]);
+	assert.deepEqual(
+		getGeneratedEntityTypes({ characters: [], npcs: [], locations: [] }),
+		["characters", "npc", "locations"],
+	);
+	const generatedTypeHistoryEntry = {
+		changes: {
+			resources: [
+				{ kind: "entity", type: "locations" },
+				{ kind: "entity", type: "npc" },
+				{ kind: "entity", type: "locations" },
+				{ kind: "campaign", type: "characters" },
+			],
+		},
+	};
+	assert.deepEqual(
+		getGeneratedEntityTypes(null, generatedTypeHistoryEntry),
+		["locations", "npc"],
+	);
+	assert.deepEqual(
+		getGeneratedEntityTypes(
+			{ characters: "invalid", npcs: {}, locations: null },
+			generatedTypeHistoryEntry,
+		),
+		["locations", "npc"],
+	);
 	assert.equal(
 		hasGeneratedCampaignChanges({ operations: [{ scope: "campaign" }] }),
 		true,
@@ -6114,7 +6561,9 @@ await run("AI feature model estimates context and rebuilds retry workflows", asy
 		requestId: 1,
 	});
 	assert.equal(generating.status, AI_GENERATION_STATUS.GENERATING);
+	assert.equal(generating.requestId, 1);
 	assert.equal(isAiGenerationPending(generating), true);
+	assert.equal(isAiGenerationPending(null), false);
 	assert.equal(
 		aiGenerationLifecycleReducer(generating, {
 			type: "cancel",
@@ -6127,6 +6576,7 @@ await run("AI feature model estimates context and rebuilds retry workflows", asy
 		requestId: 1,
 	});
 	assert.equal(succeeded.status, AI_GENERATION_STATUS.SUCCEEDED);
+	assert.equal(succeeded.requestId, null);
 	assert.equal(isAiGenerationPending(succeeded), false);
 	const retrying = aiGenerationLifecycleReducer(succeeded, {
 		type: "start-retry",
@@ -6139,6 +6589,26 @@ await run("AI feature model estimates context and rebuilds retry workflows", asy
 			requestId: 2,
 		}).status,
 		AI_GENERATION_STATUS.FAILED,
+	);
+	const replacedGeneration = aiGenerationLifecycleReducer(retrying, {
+		type: "start-generation",
+		requestId: 3,
+	});
+	assert.deepEqual(replacedGeneration, {
+		status: AI_GENERATION_STATUS.GENERATING,
+		requestId: 3,
+	});
+	const cancelled = aiGenerationLifecycleReducer(replacedGeneration, {
+		type: "cancel",
+		requestId: 3,
+	});
+	assert.deepEqual(cancelled, {
+		status: AI_GENERATION_STATUS.CANCELLED,
+		requestId: null,
+	});
+	assert.strictEqual(
+		aiGenerationLifecycleReducer(cancelled, { type: "reset" }),
+		initialAiGenerationLifecycle,
 	);
 
 	const oldHistoryEntry = { id: "one", text: "Old" };
@@ -6360,7 +6830,57 @@ await run("AI feature model estimates context and rebuilds retry workflows", asy
 	assert.equal(foreignRestorePlan.applyDirectly, false);
 	assert.equal(foreignRestorePlan.requestReload, true);
 
+	const restoreEffectCalls = [];
+	executeAiAssistantHistoryRestorePlan(restorePlan, {
+		onHistoryReplace: (responses) =>
+			restoreEffectCalls.push(["replace", responses]),
+		onHistoryUpsert: (entry) => restoreEffectCalls.push(["upsert", entry]),
+		onHistoryChanged: () => restoreEffectCalls.push(["history-changed"]),
+		onSelectionUpdate: (entry) =>
+			restoreEffectCalls.push(["selection", entry]),
+		onApplyUpdatedData: (updated, options) =>
+			restoreEffectCalls.push(["apply", updated, options]),
+		onRequestReload: (entityTypes) =>
+			restoreEffectCalls.push(["reload", entityTypes]),
+	});
+	assert.deepEqual(restoreEffectCalls, [
+		["upsert", restoredEntry],
+		["history-changed"],
+		["selection", restoredEntry],
+		[
+			"apply",
+			{ data: { scenes: [] } },
+			{
+				entityTypes: ["npc"],
+				historyEntry: restoredEntry,
+				trackUndo: false,
+			},
+		],
+	]);
+
+	const foreignRestoreEffectCalls = [];
+	executeAiAssistantHistoryRestorePlan(foreignRestorePlan, {
+		onHistoryReplace: (responses) =>
+			foreignRestoreEffectCalls.push(["replace", responses]),
+		onHistoryUpsert: (entry) =>
+			foreignRestoreEffectCalls.push(["upsert", entry]),
+		onHistoryChanged: () =>
+			foreignRestoreEffectCalls.push(["history-changed"]),
+		onSelectionUpdate: (entry) =>
+			foreignRestoreEffectCalls.push(["selection", entry]),
+		onApplyUpdatedData: (updated, options) =>
+			foreignRestoreEffectCalls.push(["apply", updated, options]),
+		onRequestReload: (entityTypes) =>
+			foreignRestoreEffectCalls.push(["reload", entityTypes]),
+	});
+	assert.deepEqual(foreignRestoreEffectCalls, [
+		["replace", [restoredEntry]],
+		["history-changed"],
+		["reload", ["npc"]],
+	]);
+
 	const commandCalls = [];
+	let applyRestoreResult = { response: restoredEntry };
 	const commandService = createAiHistoryCommandService({
 		deleteAiResponse: async (...args) => {
 			commandCalls.push(["delete", ...args]);
@@ -6372,7 +6892,7 @@ await run("AI feature model estimates context and rebuilds retry workflows", asy
 		},
 		applyAiResponse: async (...args) => {
 			commandCalls.push(["apply", ...args]);
-			return { response: restoredEntry };
+			return applyRestoreResult;
 		},
 		undoAiResponse: async (...args) => {
 			commandCalls.push(["undo", ...args]);
@@ -6394,6 +6914,17 @@ await run("AI feature model estimates context and rebuilds retry workflows", asy
 		["apply", "demo", "history-1", { resourceIds: ["a"] }],
 		["undo", "demo", "history-1", { resourceIds: ["b"] }],
 		["save", "demo", "history-1", { resources: [{ id: "a" }] }],
+	]);
+	applyRestoreResult = null;
+	await assert.rejects(
+		() => commandService.restoreEntry("demo", "history-1", "apply"),
+		/AI restore response was empty/,
+	);
+	assert.deepEqual(commandCalls.at(-1), [
+		"apply",
+		"demo",
+		"history-1",
+		{ resourceIds: undefined },
 	]);
 
 	assert.deepEqual(getContextListConfig(false), {
@@ -6417,6 +6948,34 @@ await run("AI feature model estimates context and rebuilds retry workflows", asy
 		),
 		{ included: true, items: { existing: false, new: true } },
 	);
+	const malformedContextList = { included: false, items: [] };
+	const normalizedMalformedContextList = ensureContextListItems(
+		malformedContextList,
+		[],
+		(item) => item.id,
+	);
+	assert.notEqual(normalizedMalformedContextList, malformedContextList);
+	assert.deepEqual(normalizedMalformedContextList, {
+		included: false,
+		items: {},
+	});
+	assert.deepEqual(
+		ensureContextListItems({ items: { existing: false } }, [], (item) => item.id),
+		{ included: true, items: { existing: false } },
+	);
+	assert.deepEqual(
+		ensureContextListItems(
+			false,
+			[{ id: "" }, { id: "new" }, { id: "new" }],
+			(item) => item.id,
+		),
+		{ included: false, items: { new: true } },
+	);
+	const emptyPathContext = { sessions: { existing: true } };
+	assert.strictEqual(
+		updateContextConfigValue(emptyPathContext, [], false),
+		emptyPathContext,
+	);
 	const withSceneValue = updateContextConfigValue(
 		{},
 		["sessions", "session-1", "scenes", "scene-1", "summary"],
@@ -6431,6 +6990,30 @@ await run("AI feature model estimates context and rebuilds retry workflows", asy
 		notes: true,
 		encounter: true,
 	});
+	const existingSceneContext = {
+		sessions: {
+			"session-1": {
+				scenes: {
+					"scene-1": { included: false, custom: "Зберегти" },
+				},
+			},
+		},
+		unrelated: { enabled: true },
+	};
+	const updatedExistingSceneContext = updateContextConfigValue(
+		existingSceneContext,
+		["sessions", "session-1", "scenes", "scene-1", "summary"],
+		false,
+	);
+	assert.deepEqual(
+		updatedExistingSceneContext.sessions["session-1"].scenes["scene-1"],
+		{ included: false, custom: "Зберегти", summary: false },
+	);
+	assert.equal(
+		existingSceneContext.sessions["session-1"].scenes["scene-1"].summary,
+		undefined,
+	);
+	assert.notEqual(updatedExistingSceneContext.unrelated, existingSceneContext.unrelated);
 	const withDisabledList = updateContextListIncluded(
 		{},
 		"campaignNpcs",
@@ -6470,6 +7053,50 @@ await run("AI feature model estimates context and rebuilds retry workflows", asy
 		]),
 		loadedSessionContext,
 	);
+	const existingLoadedSession = {
+		included: true,
+		notes: false,
+		data: { name: "Already loaded" },
+	};
+	const multiSessionContext = {
+		...createInitialAiContextConfig(),
+		sessions: {
+			pending: { included: true, notes: false },
+			loaded: existingLoadedSession,
+		},
+	};
+	const mergedMultiSessionContext = mergeLoadedAiSessionData(
+		multiSessionContext,
+		[
+			[
+				"pending",
+				{ included: false, notes: true },
+				{ name: "Завантажена сесія" },
+			],
+			["loaded", { included: false }, { name: "Must not replace" }],
+		],
+	);
+	assert.notEqual(mergedMultiSessionContext, multiSessionContext);
+	assert.deepEqual(mergedMultiSessionContext.sessions.pending, {
+		included: true,
+		notes: false,
+		data: { name: "Завантажена сесія" },
+	});
+	assert.strictEqual(
+		mergedMultiSessionContext.sessions.loaded,
+		existingLoadedSession,
+	);
+	const duplicateSessionContext = mergeLoadedAiSessionData(
+		{ ...createInitialAiContextConfig(), sessions: null },
+		[
+			["duplicate", { included: false }, {}],
+			["duplicate", { included: true }, { name: "Second" }],
+		],
+	);
+	assert.deepEqual(duplicateSessionContext.sessions.duplicate, {
+		included: false,
+		data: {},
+	});
 	const campaignEstimate = buildAiTokenEstimate({
 		activeCampaignBasePrompt: "Campaign",
 		attachedFiles: [{ name: "notes.md", sizeBytes: 8 }],
@@ -6512,7 +7139,46 @@ await run("AI feature model estimates context and rebuilds retry workflows", asy
 		normalizeCustomMonsterCollection({ monsters: monsterList }),
 		monsterList,
 	);
+	assert.equal(normalizeCustomMonsterCollection(monsterList), monsterList);
+	const emptyMonsterList = [];
+	assert.equal(
+		normalizeCustomMonsterCollection({ monster: emptyMonsterList }),
+		emptyMonsterList,
+	);
+	const fallbackMonsterList = [{ name: "Лісовик" }];
+	assert.equal(
+		normalizeCustomMonsterCollection({
+			monster: null,
+			monsters: fallbackMonsterList,
+		}),
+		fallbackMonsterList,
+	);
+	assert.equal(
+		normalizeCustomMonsterCollection({
+			monster: monsterList,
+			monsters: fallbackMonsterList,
+		}),
+		monsterList,
+	);
+	const mixedMonsterList = [
+		{ name: "Мавка" },
+		null,
+		"not-a-monster",
+		() => null,
+		[{ name: "Nested" }],
+		{ name: "Вовкулака" },
+	];
+	const normalizedMixedMonsters = normalizeCustomMonsterCollection({
+		monster: mixedMonsterList,
+	});
+	assert.notEqual(normalizedMixedMonsters, mixedMonsterList);
+	assert.deepEqual(normalizedMixedMonsters, [
+		{ name: "Мавка" },
+		{ name: "Вовкулака" },
+	]);
 	assert.deepEqual(normalizeCustomMonsterCollection({ monster: null }), []);
+	assert.deepEqual(normalizeCustomMonsterCollection(null), []);
+	assert.deepEqual(normalizeCustomMonsterCollection("not-a-collection"), []);
 	assert.deepEqual(
 		buildNpcImageTarget(
 			{
@@ -6599,6 +7265,22 @@ await run("AI feature model estimates context and rebuilds retry workflows", asy
 		"/map.png",
 	);
 	assert.equal(getAttachedFileKey({ name: "notes.md", sizeBytes: 8 }), "notes.md:8");
+	assert.equal(
+		getAttachedImageKey({ name: "карта.png", sizeBytes: 42, url: "" }),
+		"карта.png:42",
+	);
+	assert.equal(getAttachedImageKey({ name: "map.png", url: " " }), " ");
+	assert.equal(getAttachedImageKey(null), ":");
+	assert.equal(getAttachedFileKey({ name: "empty.txt", sizeBytes: 0 }), "empty.txt:");
+	assert.equal(getAttachedFileKey({ name: "odd.txt", sizeBytes: -1 }), "odd.txt:-1");
+	assert.equal(
+		getAttachedImageKey({ name: "safe.png", sizeBytes: 7, url: 123 }),
+		"safe.png:7",
+	);
+	assert.equal(
+		getAttachedFileKey({ name: "notes.md", sizeBytes: 8, url: "/ignored" }),
+		"notes.md:8",
+	);
 	const sceneImageTarget = buildSceneImageTarget(
 		{
 			id: "scene-1",
@@ -7006,6 +7688,23 @@ await run("AI generation result plans preserve prompt draft and update behavior"
 		}),
 		{ kind: "prompt", historyEntry: promptEntry },
 	);
+	const precedenceEntry = { id: "precedence-1", text: "Stored prompt" };
+	assert.deepEqual(
+		buildAiGeneratedResultPlan({
+			data: {
+				prompt: "Highest priority",
+				draft: true,
+				updated: { name: "Must not apply" },
+				aiResponse: precedenceEntry,
+			},
+			requestType: "campaign",
+			shouldParseResponse: true,
+			isBestiary: false,
+			isCampaign: true,
+			isEncounter: false,
+		}),
+		{ kind: "prompt", historyEntry: precedenceEntry },
+	);
 
 	const draftEntry = { id: "draft-1", text: "Draft" };
 	assert.deepEqual(
@@ -7105,6 +7804,99 @@ await run("AI generation result plans preserve prompt draft and update behavior"
 		}),
 		{ kind: "none" },
 	);
+
+	const reloadEntry = {
+		id: "reload-1",
+		changes: {
+			resources: [{ kind: "entity", type: "locations" }],
+		},
+	};
+	const fullReloadPlan = buildAiGeneratedResultPlan({
+		data: {
+			updated: { data: { scenes: [] } },
+			generated: [],
+			aiResponse: reloadEntry,
+		},
+		requestType: "session",
+		shouldParseResponse: true,
+		isBestiary: false,
+		isCampaign: true,
+		isEncounter: false,
+	});
+	assert.equal(fullReloadPlan.kind, "updated");
+	assert.equal(fullReloadPlan.generated, null);
+	assert.equal(fullReloadPlan.applyDirectly, false);
+	assert.equal(fullReloadPlan.requestCampaignReload, true);
+	assert.equal(fullReloadPlan.clearPrompt, true);
+	assert.equal(fullReloadPlan.refreshEntities, true);
+	assert.equal(fullReloadPlan.closeAssistantDialogs, true);
+	assert.deepEqual(fullReloadPlan.entityTypes, ["locations"]);
+	const fullReloadEvents = [];
+	executeAiGeneratedResultPlan({
+		plan: fullReloadPlan,
+		onHistoryEntry: (entry) => fullReloadEvents.push(["history", entry.id]),
+		onShowPrompt: (entry) => fullReloadEvents.push(["prompt", entry.id]),
+		onNotification: (notification) =>
+			fullReloadEvents.push(["notification", notification]),
+		onApplyUpdated: () => fullReloadEvents.push(["apply"]),
+		onCampaignReload: () => fullReloadEvents.push(["reload"]),
+		onClearPrompt: () => fullReloadEvents.push(["clear"]),
+		onRefreshEntities: () => fullReloadEvents.push(["refresh"]),
+		onCloseAuxiliaryDialogs: () => fullReloadEvents.push(["close-auxiliary"]),
+		onCloseAssistantDialogs: () => fullReloadEvents.push(["close-all"]),
+	});
+	assert.deepEqual(fullReloadEvents, [
+		["history", "reload-1"],
+		["reload"],
+		["clear"],
+		["notification", "changes-applied"],
+		["refresh"],
+		["close-all"],
+	]);
+
+	const promptExecutionEvents = [];
+	executeAiGeneratedResultPlan({
+		plan: { kind: "prompt", historyEntry: promptEntry },
+		onHistoryEntry: (entry) => promptExecutionEvents.push(["history", entry.id]),
+		onShowPrompt: (entry) => promptExecutionEvents.push(["prompt", entry.id]),
+		onNotification: () => promptExecutionEvents.push(["notification"]),
+		onApplyUpdated: () => promptExecutionEvents.push(["apply"]),
+		onCampaignReload: () => promptExecutionEvents.push(["reload"]),
+		onClearPrompt: () => promptExecutionEvents.push(["clear"]),
+		onRefreshEntities: () => promptExecutionEvents.push(["refresh"]),
+		onCloseAuxiliaryDialogs: () => promptExecutionEvents.push(["close-auxiliary"]),
+		onCloseAssistantDialogs: () => promptExecutionEvents.push(["close-all"]),
+	});
+	assert.deepEqual(promptExecutionEvents, [
+		["history", "prompt-1"],
+		["prompt", "prompt-1"],
+	]);
+	const draftExecutionEvents = [];
+	executeAiGeneratedResultPlan({
+		plan: {
+			kind: "draft",
+			historyEntry: draftEntry,
+			notification: "draft-created",
+			closeAuxiliaryDialogs: true,
+		},
+		onHistoryEntry: (entry) => draftExecutionEvents.push(["history", entry.id]),
+		onShowPrompt: (entry) => draftExecutionEvents.push(["prompt", entry.id]),
+		onNotification: (notification) =>
+			draftExecutionEvents.push(["notification", notification]),
+		onApplyUpdated: () => draftExecutionEvents.push(["apply"]),
+		onCampaignReload: () => draftExecutionEvents.push(["reload"]),
+		onClearPrompt: () => draftExecutionEvents.push(["clear"]),
+		onRefreshEntities: () => draftExecutionEvents.push(["refresh"]),
+		onCloseAuxiliaryDialogs: () =>
+			draftExecutionEvents.push(["close-auxiliary"]),
+		onCloseAssistantDialogs: () => draftExecutionEvents.push(["close-all"]),
+	});
+	assert.deepEqual(draftExecutionEvents, [
+		["history", "draft-1"],
+		["prompt", "draft-1"],
+		["notification", "draft-created"],
+		["close-auxiliary"],
+	]);
 });
 
 await run("AI generation execution classifies success cancellation and failures", async () => {
@@ -7340,6 +8132,34 @@ await run("AI assistant delegates stable visual composition to feature UI", asyn
 await run("AI attachment presentation preserves limits and validation", async () => {
 	const imageKey = (attachment) =>
 		attachment.url || `${attachment.name}:${attachment.sizeBytes}`;
+	assert.deepEqual(
+		getAiAttachmentControlsView({
+			attachedFileCount: 4,
+			attachedImageCount: 3,
+			campaignSlug: "кампанія",
+			disabled: false,
+			maximum: 4,
+		}),
+		{
+			fileActionDisabled: true,
+			gallerySource: "кампанія",
+			showImageActions: true,
+		},
+	);
+	assert.deepEqual(
+		getAiAttachmentControlsView({
+			attachedFileCount: 0,
+			attachedImageCount: 4,
+			campaignSlug: "",
+			disabled: true,
+			maximum: 4,
+		}),
+		{
+			fileActionDisabled: true,
+			gallerySource: "general",
+			showImageActions: false,
+		},
+	);
 	assert.equal(getAvailableAiAttachmentSlots(3, 4), 1);
 	assert.equal(getAvailableAiAttachmentSlots(7, 4), 0);
 	assert.deepEqual(
@@ -7379,6 +8199,66 @@ await run("AI attachment presentation preserves limits and validation", async ()
 	});
 	assert.deepEqual(selection.skippedNames, ["large.png", "broken.png"]);
 	assert.equal(selection.attachments[0].previewUrl, "data:image/png;base64,YWJj");
+});
+
+await run("AI response history rows preserve labels and retry visibility", () => {
+	const entry = {
+		id: "history-рядок",
+		createdAt: "2026-07-20T10:30:00.000Z",
+	};
+	const calls = [];
+	assert.deepEqual(
+		getAiResponseHistoryRowView({
+			entry,
+			currentLanguage: "uk",
+			fallbackTitle: "Відповідь ШІ",
+			canRetry: (candidate) => {
+				calls.push(["retry", candidate]);
+				return true;
+			},
+			formatResponseDate: (createdAt, language) => {
+				calls.push(["date", createdAt, language]);
+				return "20 липня";
+			},
+			getTitle: (candidate) => {
+				calls.push(["title", candidate]);
+				return "";
+			},
+			getSummary: (candidate) => {
+				calls.push(["summary", candidate]);
+				return "Зміни: +1";
+			},
+			getStateLabel: (candidate) => {
+				calls.push(["state", candidate]);
+				return "Застосовано";
+			},
+		}),
+		{
+			changeSummary: "Зміни: +1",
+			dateLabel: "20 липня",
+			showRetry: true,
+			stateLabel: "Застосовано",
+			title: "Відповідь ШІ",
+		},
+	);
+	assert.deepEqual(calls, [
+		["summary", entry],
+		["date", entry.createdAt, "uk"],
+		["retry", entry],
+		["state", entry],
+		["title", entry],
+	]);
+	assert.equal(
+		getAiResponseHistoryRowView({
+			entry,
+			fallbackTitle: "Fallback",
+			formatResponseDate: () => "date",
+			getTitle: () => "Explicit title",
+			getSummary: () => "",
+			getStateLabel: () => "",
+		}).showRetry,
+		false,
+	);
 });
 
 await run("AI context presentation preserves session and scene defaults", () => {
@@ -7535,6 +8415,69 @@ await run("AI presentation policies preserve API key and prompt decisions", () =
 		generateCustomMonsters: false,
 		generateEncounters: false,
 	});
+	assert.deepEqual(
+		getAiEntityGenerationActionsView({
+			isEncounter: false,
+			showCharacterGeneration: true,
+			showParsedGenerationOptions: true,
+		}),
+		{ showActions: true, showCharacterAction: true },
+	);
+	assert.deepEqual(
+		getAiEntityGenerationActionsView({
+			isEncounter: true,
+			showCharacterGeneration: true,
+			showParsedGenerationOptions: true,
+		}),
+		{ showActions: false, showCharacterAction: false },
+	);
+	assert.deepEqual(
+		getAiEntityGenerationActionsView({
+			isEncounter: false,
+			showCharacterGeneration: false,
+			showParsedGenerationOptions: true,
+		}),
+		{ showActions: true, showCharacterAction: false },
+	);
+	assert.deepEqual(
+		getAiEncounterGenerationActionsView({
+			isCampaign: true,
+			isCustomMonsterGenerationVisible: true,
+			isEncounter: false,
+			showParsedGenerationOptions: true,
+		}),
+		{
+			encounterTitleKind: "scenes",
+			showActions: true,
+			showCreateCustomCreatureAction: false,
+			showCustomMonsterAction: true,
+			showEncounterAction: false,
+		},
+	);
+	assert.deepEqual(
+		getAiEncounterGenerationActionsView({
+			isCampaign: false,
+			isCustomMonsterGenerationVisible: false,
+			isEncounter: true,
+			showParsedGenerationOptions: true,
+		}),
+		{
+			encounterTitleKind: "current",
+			showActions: true,
+			showCreateCustomCreatureAction: true,
+			showCustomMonsterAction: false,
+			showEncounterAction: true,
+		},
+	);
+	assert.equal(
+		getAiEncounterGenerationActionsView({
+			isCampaign: false,
+			isCustomMonsterGenerationVisible: true,
+			isEncounter: true,
+			showParsedGenerationOptions: false,
+		}).showActions,
+		false,
+	);
 });
 
 await run("AI route treats custom monster image prompts as bestiary requests", () => {
@@ -9415,17 +10358,668 @@ await run("monster stat block presentation policies normalize source variants", 
 	});
 });
 
-await run("Bestiary browser policies preserve identity filtering and custom imports", () => {
+await run("Bestiary browser policies preserve identity filtering and custom imports", async () => {
 	const goblin = { name: "Goblin", source: "MM", cr: "1/4" };
 	const dragon = { name: "Дракон", source: "CUSTOM", cr: { cr: "5" } };
 	const reference = parseMonsterReference("goblin|MM");
+	let tokenResolutionCount = 0;
+	const resolveToken = (monster) => {
+		tokenResolutionCount += 1;
+		return `/tokens/${monster.source}/${monster.name}.webp`;
+	};
+
+	assert.deepEqual(
+		getBestiaryFieldEditStartPlan(null, "Істота", resolveToken),
+		{ kind: "skip" },
+	);
+	assert.deepEqual(
+		getBestiaryFieldEditStartPlan(
+			{ name: "", source: "MM" },
+			"Істота",
+			resolveToken,
+		),
+		{ kind: "skip" },
+	);
+	const customEditPlan = getBestiaryFieldEditStartPlan(
+		{ ...dragon, source: " custom " },
+		"Істота",
+		resolveToken,
+	);
+	assert.equal(customEditPlan.kind, "ready");
+	assert.equal(customEditPlan.mode, "edit");
+	assert.equal(customEditPlan.originalMonster, customEditPlan.draftMonster);
+	assert.equal(tokenResolutionCount, 0);
+	const officialWithImage = {
+		...goblin,
+		imageUrl: "  /явний-токен.webp  ",
+	};
+	const explicitImagePlan = getBestiaryFieldEditStartPlan(
+		officialWithImage,
+		"Істота",
+		resolveToken,
+	);
+	assert.equal(explicitImagePlan.kind, "ready");
+	assert.equal(explicitImagePlan.mode, "create-based");
+	assert.equal(explicitImagePlan.originalMonster, officialWithImage);
+	assert.notEqual(explicitImagePlan.draftMonster, officialWithImage);
+	assert.deepEqual(explicitImagePlan.draftMonster, {
+		...officialWithImage,
+		source: "CUSTOM",
+	});
+	assert.equal(tokenResolutionCount, 0);
+	const fallbackImagePlan = getBestiaryFieldEditStartPlan(
+		{ ...goblin, imageUrl: "" },
+		"Істота",
+		resolveToken,
+	);
+	assert.equal(fallbackImagePlan.kind, "ready");
+	assert.equal(fallbackImagePlan.draftMonster.imageUrl, "/tokens/MM/Goblin.webp");
+	assert.equal(tokenResolutionCount, 1);
+	const skippedFieldSaveReads = [];
+	const skippedFieldSaveOptions = new Proxy(
+		{ editingMonster: null },
+		{
+			get(target, property) {
+				skippedFieldSaveReads.push(property);
+				if (property !== "editingMonster") {
+					throw new Error(`Skipped save read unexpected dependency: ${String(property)}`);
+				}
+				return target[property];
+			},
+		},
+	);
+	assert.deepEqual(
+		await executeBestiaryFieldEditSave(skippedFieldSaveOptions),
+		{ status: "skipped" },
+	);
+	assert.deepEqual(skippedFieldSaveReads, ["editingMonster"]);
+	assert.deepEqual(
+		await executeBestiaryFieldEditSave({
+			draftMonster: dragon,
+			editingMonster: { name: "", source: "CUSTOM" },
+			mode: "edit",
+			createBased: async () => {
+				throw new Error("Nameless save must not create");
+			},
+			update: async () => {
+				throw new Error("Nameless save must not update");
+			},
+			onApplied: () => {
+				throw new Error("Nameless save must not apply");
+			},
+			onClose: () => {
+				throw new Error("Nameless save must not close");
+			},
+			onError: () => {
+				throw new Error("Nameless save must not report an error");
+			},
+		}),
+		{ status: "skipped" },
+	);
+
+	const fieldSaveDraft = { name: "Нова мавка", source: "CUSTOM" };
+	const createdFieldMonster = { name: "Нова мавка", source: "CUSTOM", id: "new-1" };
+	const createFieldSaveEvents = [];
+	const createFieldSaveOutcome = await executeBestiaryFieldEditSave({
+		draftMonster: fieldSaveDraft,
+		editingMonster: goblin,
+		mode: "create-based",
+		createBased: async (draftMonster) => {
+			assert.equal(draftMonster, fieldSaveDraft);
+			createFieldSaveEvents.push("create");
+			return createdFieldMonster;
+		},
+		update: async () => {
+			throw new Error("Create-based save must not update");
+		},
+		onApplied: (previousName, updatedMonster) => {
+			assert.equal(previousName, "");
+			assert.equal(updatedMonster, createdFieldMonster);
+			createFieldSaveEvents.push("apply");
+		},
+		onClose: () => createFieldSaveEvents.push("close"),
+		onError: () => createFieldSaveEvents.push("error"),
+	});
+	assert.deepEqual(createFieldSaveOutcome, {
+		status: "succeeded",
+		updatedMonster: createdFieldMonster,
+	});
+	assert.deepEqual(createFieldSaveEvents, ["create", "apply", "close"]);
+
+	const editingFieldMonster = { name: "  Стара мавка  ", source: "CUSTOM" };
+	const updatedFieldMonster = { name: "Мавка", source: "CUSTOM", id: "old-1" };
+	const updateFieldSaveEvents = [];
+	const updateFieldSaveOutcome = await executeBestiaryFieldEditSave({
+		draftMonster: fieldSaveDraft,
+		editingMonster: editingFieldMonster,
+		mode: "edit",
+		createBased: async () => {
+			throw new Error("Edit save must not create");
+		},
+		update: async (draftMonster, editingMonster) => {
+			assert.equal(draftMonster, fieldSaveDraft);
+			assert.equal(editingMonster, editingFieldMonster);
+			updateFieldSaveEvents.push("update");
+			return updatedFieldMonster;
+		},
+		onApplied: (previousName, updatedMonster) => {
+			assert.equal(previousName, "  Стара мавка  ");
+			assert.equal(updatedMonster, updatedFieldMonster);
+			updateFieldSaveEvents.push("apply");
+		},
+		onClose: () => updateFieldSaveEvents.push("close"),
+		onError: () => updateFieldSaveEvents.push("error"),
+	});
+	assert.deepEqual(updateFieldSaveOutcome, {
+		status: "succeeded",
+		updatedMonster: updatedFieldMonster,
+	});
+	assert.deepEqual(updateFieldSaveEvents, ["update", "apply", "close"]);
+
+	const transportFieldSaveError = new Error("Помилка збереження");
+	const transportFailureEvents = [];
+	const transportFailureOutcome = await executeBestiaryFieldEditSave({
+		draftMonster: fieldSaveDraft,
+		editingMonster: editingFieldMonster,
+		mode: "edit",
+		createBased: async () => createdFieldMonster,
+		update: async () => {
+			transportFailureEvents.push("update");
+			throw transportFieldSaveError;
+		},
+		onApplied: () => transportFailureEvents.push("apply"),
+		onClose: () => transportFailureEvents.push("close"),
+		onError: (error) => {
+			assert.equal(error, transportFieldSaveError);
+			transportFailureEvents.push("error");
+		},
+	});
+	assert.deepEqual(transportFailureOutcome, {
+		status: "failed",
+		error: transportFieldSaveError,
+	});
+	assert.deepEqual(transportFailureEvents, ["update", "error"]);
+
+	const applyFieldSaveError = new Error("Помилка застосування");
+	const applyFailureEvents = [];
+	const applyFailureOutcome = await executeBestiaryFieldEditSave({
+		draftMonster: fieldSaveDraft,
+		editingMonster: editingFieldMonster,
+		mode: "edit",
+		createBased: async () => createdFieldMonster,
+		update: async () => {
+			applyFailureEvents.push("update");
+			return updatedFieldMonster;
+		},
+		onApplied: () => {
+			applyFailureEvents.push("apply");
+			throw applyFieldSaveError;
+		},
+		onClose: () => applyFailureEvents.push("close"),
+		onError: (error) => {
+			assert.equal(error, applyFieldSaveError);
+			applyFailureEvents.push("error");
+		},
+	});
+	assert.deepEqual(applyFailureOutcome, {
+		status: "failed",
+		error: applyFieldSaveError,
+	});
+	assert.deepEqual(applyFailureEvents, ["update", "apply", "error"]);
+
+	const closeFieldSaveError = new Error("Помилка закриття");
+	const closeFailureEvents = [];
+	const closeFailureOutcome = await executeBestiaryFieldEditSave({
+		draftMonster: fieldSaveDraft,
+		editingMonster: editingFieldMonster,
+		mode: "edit",
+		createBased: async () => createdFieldMonster,
+		update: async () => {
+			closeFailureEvents.push("update");
+			return updatedFieldMonster;
+		},
+		onApplied: () => closeFailureEvents.push("apply"),
+		onClose: () => {
+			closeFailureEvents.push("close");
+			throw closeFieldSaveError;
+		},
+		onError: (error) => {
+			assert.equal(error, closeFieldSaveError);
+			closeFailureEvents.push("error");
+		},
+	});
+	assert.deepEqual(closeFailureOutcome, {
+		status: "failed",
+		error: closeFieldSaveError,
+	});
+	assert.deepEqual(closeFailureEvents, ["update", "apply", "close", "error"]);
+
+	const sourceFilterOptions = ["MM", "XPHB", "CUSTOM"];
+	const nextSelectedSources = ["MM", "CUSTOM"];
+	const requestedIgnoreSources = ["XPHB"];
+	const createSelectedSourcesSaveOptions = (events, overrides = {}) => ({
+		filterSourceOptions: sourceFilterOptions,
+		nextSelectedSources,
+		activeCampaignSlug: null,
+		getIgnoreSourcesList: (filterOptions, selectedSources) => {
+			assert.equal(filterOptions, sourceFilterOptions);
+			assert.equal(selectedSources, nextSelectedSources);
+			events.push("derive");
+			return requestedIgnoreSources;
+		},
+		onEnableAutoSelection: () => events.push("enable-auto-selection"),
+		updateCampaign: async () => {
+			throw new Error("Global source save must not update a campaign");
+		},
+		listCampaigns: async () => {
+			throw new Error("Global source save must not list campaigns");
+		},
+		onCampaigns: () => {
+			throw new Error("Global source save must not dispatch campaigns");
+		},
+		updateSettings: async () => {
+			throw new Error("Selected-source test must provide settings transport");
+		},
+		onUiIgnoreSources: () => events.push("ui-sources"),
+		onLogError: () => events.push("log-error"),
+		onError: () => events.push("alert-error"),
+		...overrides,
+	});
+
+	const campaignSourceSaveEvents = [];
+	const campaignListIdentity = [{ slug: "кампанія", name: "Кампанія" }];
+	const campaignSourceSaveOutcome = await executeBestiarySelectedSourcesSave(
+		createSelectedSourcesSaveOptions(campaignSourceSaveEvents, {
+			activeCampaignSlug: "  кампанія  ",
+			updateCampaign: async (slug, payload) => {
+				assert.equal(slug, "  кампанія  ");
+				assert.equal(payload.ignoreSourcesList, requestedIgnoreSources);
+				campaignSourceSaveEvents.push("update-campaign");
+			},
+			listCampaigns: async () => {
+				campaignSourceSaveEvents.push("list-campaigns");
+				return campaignListIdentity;
+			},
+			onCampaigns: (campaigns) => {
+				assert.equal(campaigns, campaignListIdentity);
+				campaignSourceSaveEvents.push("dispatch-campaigns");
+			},
+			updateSettings: async () => {
+				throw new Error("Campaign source save must not update global settings");
+			},
+			onUiIgnoreSources: () => {
+				throw new Error("Campaign source save must not dispatch UI settings");
+			},
+		}),
+	);
+	assert.deepEqual(campaignSourceSaveOutcome, {
+		status: "succeeded",
+		scope: "campaign",
+		ignoreSourcesList: requestedIgnoreSources,
+	});
+	assert.equal(campaignSourceSaveOutcome.ignoreSourcesList, requestedIgnoreSources);
+	assert.deepEqual(campaignSourceSaveEvents, [
+		"derive",
+		"enable-auto-selection",
+		"update-campaign",
+		"list-campaigns",
+		"dispatch-campaigns",
+	]);
+
+	const nullableCampaignEvents = [];
+	let nullableCampaignFallback = null;
+	await executeBestiarySelectedSourcesSave(
+		createSelectedSourcesSaveOptions(nullableCampaignEvents, {
+			activeCampaignSlug: "кампанія",
+			updateCampaign: async () => nullableCampaignEvents.push("update-campaign"),
+			listCampaigns: async () => null,
+			onCampaigns: (campaigns) => {
+				nullableCampaignFallback = campaigns;
+				nullableCampaignEvents.push("dispatch-campaigns");
+			},
+		}),
+	);
+	assert.deepEqual(nullableCampaignFallback, []);
+
+	const globalSourceSaveEvents = [];
+	const savedIgnoreSourcesIdentity = ["UA", 7];
+	let receivedUiIgnoreSources = null;
+	const globalSourceSaveOutcome = await executeBestiarySelectedSourcesSave(
+		createSelectedSourcesSaveOptions(globalSourceSaveEvents, {
+			updateSettings: async (payload) => {
+				assert.equal(payload.ignoreSourcesList, requestedIgnoreSources);
+				globalSourceSaveEvents.push("update-settings");
+				return { ignoreSourcesList: savedIgnoreSourcesIdentity };
+			},
+			onUiIgnoreSources: (ignoreSourcesList) => {
+				receivedUiIgnoreSources = ignoreSourcesList;
+				globalSourceSaveEvents.push("dispatch-ui-settings");
+			},
+		}),
+	);
+	assert.deepEqual(globalSourceSaveOutcome, {
+		status: "succeeded",
+		scope: "global",
+		ignoreSourcesList: requestedIgnoreSources,
+	});
+	assert.equal(receivedUiIgnoreSources, savedIgnoreSourcesIdentity);
+	assert.deepEqual(globalSourceSaveEvents, [
+		"derive",
+		"enable-auto-selection",
+		"update-settings",
+		"dispatch-ui-settings",
+	]);
+
+	const globalFallbackEvents = [];
+	let globalFallbackIdentity = null;
+	await executeBestiarySelectedSourcesSave(
+		createSelectedSourcesSaveOptions(globalFallbackEvents, {
+			updateSettings: async () => ({ ignoreSourcesList: "XPHB" }),
+			onUiIgnoreSources: (ignoreSourcesList) => {
+				globalFallbackIdentity = ignoreSourcesList;
+			},
+		}),
+	);
+	assert.equal(globalFallbackIdentity, requestedIgnoreSources);
+
+	const selectedSourcesSaveError = new Error("Не вдалося зберегти джерела");
+	const sourceSaveFailureEvents = [];
+	const sourceSaveFailureOutcome = await executeBestiarySelectedSourcesSave(
+		createSelectedSourcesSaveOptions(sourceSaveFailureEvents, {
+			updateSettings: async () => {
+				sourceSaveFailureEvents.push("update-settings");
+				throw selectedSourcesSaveError;
+			},
+			onUiIgnoreSources: () => sourceSaveFailureEvents.push("dispatch-ui-settings"),
+			onLogError: (error) => {
+				assert.equal(error, selectedSourcesSaveError);
+				sourceSaveFailureEvents.push("log-error");
+			},
+			onError: (error) => {
+				assert.equal(error, selectedSourcesSaveError);
+				sourceSaveFailureEvents.push("alert-error");
+			},
+		}),
+	);
+	assert.deepEqual(sourceSaveFailureOutcome, {
+		status: "failed",
+		error: selectedSourcesSaveError,
+		ignoreSourcesList: requestedIgnoreSources,
+	});
+	assert.deepEqual(sourceSaveFailureEvents, [
+		"derive",
+		"enable-auto-selection",
+		"update-settings",
+		"log-error",
+		"alert-error",
+	]);
+
+	const campaignDispatchError = new Error("Не вдалося оновити store");
+	const campaignDispatchFailureEvents = [];
+	const campaignDispatchFailureOutcome = await executeBestiarySelectedSourcesSave(
+		createSelectedSourcesSaveOptions(campaignDispatchFailureEvents, {
+			activeCampaignSlug: "кампанія",
+			updateCampaign: async () =>
+				campaignDispatchFailureEvents.push("update-campaign"),
+			listCampaigns: async () => {
+				campaignDispatchFailureEvents.push("list-campaigns");
+				return campaignListIdentity;
+			},
+			onCampaigns: () => {
+				campaignDispatchFailureEvents.push("dispatch-campaigns");
+				throw campaignDispatchError;
+			},
+			onLogError: (error) => {
+				assert.equal(error, campaignDispatchError);
+				campaignDispatchFailureEvents.push("log-error");
+			},
+			onError: (error) => {
+				assert.equal(error, campaignDispatchError);
+				campaignDispatchFailureEvents.push("alert-error");
+			},
+		}),
+	);
+	assert.equal(campaignDispatchFailureOutcome.status, "failed");
+	assert.deepEqual(campaignDispatchFailureEvents, [
+		"derive",
+		"enable-auto-selection",
+		"update-campaign",
+		"list-campaigns",
+		"dispatch-campaigns",
+		"log-error",
+		"alert-error",
+	]);
+
+	const deriveSelectedSourcesError = new Error("Помилка побудови списку");
+	const deriveFailureEvents = [];
+	await assert.rejects(
+		executeBestiarySelectedSourcesSave(
+			createSelectedSourcesSaveOptions(deriveFailureEvents, {
+				getIgnoreSourcesList: () => {
+					deriveFailureEvents.push("derive");
+					throw deriveSelectedSourcesError;
+				},
+			}),
+		),
+		(error) => error === deriveSelectedSourcesError,
+	);
+	assert.deepEqual(deriveFailureEvents, ["derive"]);
+	assert.deepEqual(
+		getCustomMonsterDeleteStartPlan({ name: "Goblin", source: "MM" }),
+		{ kind: "skip" },
+	);
+	assert.deepEqual(
+		getCustomMonsterDeleteStartPlan({ name: "", source: "CUSTOM" }),
+		{ kind: "skip" },
+	);
+	assert.deepEqual(
+		getCustomMonsterDeleteStartPlan({ name: "  Дракон  ", source: " custom " }),
+		{ kind: "ready", monsterName: "  Дракон  " },
+	);
+	const legendaryMonster = {
+		name: "Давній дракон",
+		source: "XMM",
+		legendaryGroup: { name: "  Двір дракона ", source: " mm " },
+		lairActions: ["старе лігво"],
+		regionalEffects: ["старий регіон"],
+	};
+	const fallbackLegendaryMonster = {
+		name: "Числове джерело",
+		source: 7,
+		legendaryGroup: { name: 9, source: false },
+	};
+	const emptyOverrideMonster = {
+		name: "Не використовується",
+		source: "MM",
+		legendaryGroup: { name: "", source: "" },
+		lairActions: ["буде стерто"],
+	};
+	const unmatchedLegendaryMonster = {
+		name: "Без групи",
+		source: null,
+		legendaryGroup: [],
+	};
+	const dragonGroup = {
+		name: "двір дракона",
+		source: "MM",
+		lairActions: ["нове лігво"],
+		regionalEffects: ["новий регіон"],
+	};
+	const numericSourceGroup = {
+		name: "числове джерело",
+		source: "7",
+		lairActions: ["числове лігво"],
+	};
+	const emptyIdentityGroup = { name: 9, source: false };
+	const legendaryInput = [
+		legendaryMonster,
+		fallbackLegendaryMonster,
+		emptyOverrideMonster,
+		unmatchedLegendaryMonster,
+	];
+	const enrichedLegendaryMonsters = enrichMonstersWithLegendaryGroups(
+		legendaryInput,
+		[dragonGroup, numericSourceGroup, emptyIdentityGroup],
+	);
+	assert.notEqual(enrichedLegendaryMonsters, legendaryInput);
+	assert.notEqual(enrichedLegendaryMonsters[0], legendaryMonster);
+	assert.deepEqual(enrichedLegendaryMonsters[0], {
+		...legendaryMonster,
+		lairActions: dragonGroup.lairActions,
+		regionalEffects: dragonGroup.regionalEffects,
+	});
+	assert.deepEqual(enrichedLegendaryMonsters[1], {
+		...fallbackLegendaryMonster,
+		lairActions: numericSourceGroup.lairActions,
+		regionalEffects: undefined,
+	});
+	assert.deepEqual(enrichedLegendaryMonsters[2], {
+		...emptyOverrideMonster,
+		lairActions: undefined,
+		regionalEffects: undefined,
+	});
+	assert.equal(enrichedLegendaryMonsters[3], unmatchedLegendaryMonster);
+	assert.deepEqual(legendaryInput, [
+		legendaryMonster,
+		fallbackLegendaryMonster,
+		emptyOverrideMonster,
+		unmatchedLegendaryMonster,
+	]);
+	const updatedCustomMonster = { name: "Виверна", source: "CUSTOM" };
+	assert.deepEqual(
+		replaceDeletedCustomMonsterList(
+			[goblin, dragon, { name: "Ведмідь", source: " custom " }],
+			[updatedCustomMonster],
+		),
+		[goblin, updatedCustomMonster],
+	);
+	assert.deepEqual(
+		replaceDeletedCustomMonsterList([goblin, dragon], null),
+		[goblin],
+	);
+	const retainedOfficialFavorite = { name: "Дракон", source: "MM" };
+	const retainedCaseVariant = { name: "дракон", source: "CUSTOM" };
+	assert.deepEqual(
+		removeDeletedCustomMonsterFavorite(
+			[
+				{ name: "Дракон", source: " custom " },
+				retainedOfficialFavorite,
+				retainedCaseVariant,
+			],
+			"Дракон",
+		),
+		[retainedOfficialFavorite, retainedCaseVariant],
+	);
 
 	assert.deepEqual(reference, { name: "goblin", source: "MM" });
 	assert.equal(monsterMatchesReference(goblin, reference), true);
+	assert.equal(monsterMatchesReference(goblin, null), false);
+	assert.equal(monsterMatchesReference(null, { name: "", source: "" }), true);
+	assert.equal(
+		monsterMatchesReference(
+			{
+				name: " Мавка ",
+				get source() {
+					throw new Error("Wildcard reference must not read monster source");
+				},
+			},
+			{ name: "мавка", source: "   " },
+		),
+		true,
+	);
+	const referenceMismatchReads = [];
+	assert.equal(
+		monsterMatchesReference(
+			{
+				name: "Мавка",
+				get source() {
+					referenceMismatchReads.push("monster-source");
+					return "CUSTOM";
+				},
+			},
+			{
+				name: "Лісовик",
+				get source() {
+					referenceMismatchReads.push("reference-source");
+					return "CUSTOM";
+				},
+			},
+		),
+		false,
+	);
+	assert.deepEqual(referenceMismatchReads, []);
+	assert.equal(
+		monsterMatchesReference(
+			{ name: "Числова істота", source: 7 },
+			{ name: " числова ІСТОТА ", source: " 7 " },
+		),
+		true,
+	);
+	assert.equal(
+		monsterMatchesReference(
+			{ name: "Числова істота", source: 7 },
+			{ name: "Числова істота", source: "8" },
+		),
+		false,
+	);
 	assert.equal(
 		isSameMonsterIdentity(dragon, { name: " дракон ", source: "custom" }),
 		true,
 	);
+	for (const [left, right] of [
+		[null, null],
+		[undefined, dragon],
+		[{ name: "", source: "CUSTOM" }, { name: "", source: "CUSTOM" }],
+		[{ name: "   ", source: "CUSTOM" }, { name: "   ", source: "CUSTOM" }],
+		[dragon, { name: "Інший", source: "CUSTOM" }],
+		[dragon, { name: "Дракон", source: "MM" }],
+	]) {
+		assert.equal(isSameMonsterIdentity(left, right), false);
+	}
+	const sourcelessIdentity = { name: "Без джерела" };
+	assert.equal(
+		isSameMonsterIdentity(sourcelessIdentity, {
+			name: " без ДЖЕРЕЛА ",
+			source: "",
+		}),
+		true,
+	);
+	const numericIdentity = { name: "Числова істота", source: 7 };
+	const normalizedNumericIdentity = {
+		name: " числова ІСТОТА ",
+		source: " 7 ",
+	};
+	assert.equal(
+		isSameMonsterIdentity(numericIdentity, normalizedNumericIdentity),
+		true,
+	);
+	assert.equal(
+		isSameMonsterIdentity(normalizedNumericIdentity, numericIdentity),
+		true,
+	);
+	const identityReadOrder = [];
+	const emptyIdentityLeft = {
+		get name() {
+			identityReadOrder.push("left-name");
+			return "";
+		},
+		get source() {
+			identityReadOrder.push("left-source");
+			return "CUSTOM";
+		},
+	};
+	const emptyIdentityRight = {
+		get name() {
+			identityReadOrder.push("right-name");
+			return "";
+		},
+		get source() {
+			identityReadOrder.push("right-source");
+			return "CUSTOM";
+		},
+	};
+	assert.equal(isSameMonsterIdentity(emptyIdentityLeft, emptyIdentityRight), false);
+	assert.deepEqual(identityReadOrder, ["left-name", "right-name"]);
 	assert.deepEqual(
 		getMonsterListFromResponse({ monsters: [goblin, null, { source: "MM" }] }),
 		[goblin],
@@ -9434,6 +11028,114 @@ await run("Bestiary browser policies preserve identity filtering and custom impo
 		goblin,
 		dragon,
 	]);
+	assert.equal(parseMonsterCr({ name: "Число", cr: 3 }), 3);
+	assert.equal(
+		parseMonsterCr({ name: "Структурований", cr: { cr: "1/8" } }),
+		0.125,
+	);
+	assert.equal(parseMonsterCr({ name: "Десятковий", cr: "2.5xyz" }), 2.5);
+	assert.equal(parseMonsterCr({ name: "Порожній", cr: null }), 0);
+	assert.equal(parseMonsterCr({ name: "Нуль знаменника", cr: "4/0" }), 0);
+	assert.equal(parseMonsterCr({ name: "Зайва частина", cr: "3/2/9" }), 1.5);
+	assert.equal(
+		Number.isNaN(parseMonsterCr({ name: "Невалідний чисельник", cr: "x/2" })),
+		true,
+	);
+	assert.equal(
+		Number.isNaN(parseMonsterCr({ name: "NaN", cr: Number.NaN })),
+		true,
+	);
+	assert.equal(
+		parseMonsterCr({ name: "Infinity", cr: Number.POSITIVE_INFINITY }),
+		Number.POSITIVE_INFINITY,
+	);
+	const invalidCr = { name: "Невідомий", cr: "unknown" };
+	const halfCr = { name: "Половина", cr: "1/2" };
+	const oneCrB = { name: "Бета", cr: 1 };
+	const oneCrA = { name: "Альфа", cr: { cr: "1" } };
+	const twoCr = { name: "Два", cr: 2 };
+	const crSortInput = [oneCrB, twoCr, invalidCr, oneCrA, halfCr];
+	const noneSorted = sortBestiaryMonsters(crSortInput, "none");
+	assert.notEqual(noneSorted, crSortInput);
+	assert.deepEqual(noneSorted, crSortInput);
+	assert.equal(noneSorted[0], oneCrB);
+	assert.deepEqual(sortBestiaryMonsters(crSortInput, "asc"), [
+		invalidCr,
+		halfCr,
+		oneCrA,
+		oneCrB,
+		twoCr,
+	]);
+	assert.deepEqual(sortBestiaryMonsters(crSortInput, "desc"), [
+		twoCr,
+		oneCrA,
+		oneCrB,
+		halfCr,
+		invalidCr,
+	]);
+	assert.deepEqual(crSortInput, [oneCrB, twoCr, invalidCr, oneCrA, halfCr]);
+	const filterSearch = "  ДРА  ";
+	const filterCalls = [];
+	const favoriteBear = { name: "Ведмідь", source: " custom " };
+	const filterInput = [goblin, dragon, favoriteBear];
+	const detailedFiltered = filterBestiaryMonsters(filterInput, {
+		selectedSources: [" mm ", " custom "],
+		sourceFilter: "all",
+		onlyFavorites: true,
+		favorites: [
+			{ name: " дракон ", source: "CUSTOM" },
+			{ name: "ВЕДМІДЬ", source: "custom" },
+		],
+		search: filterSearch,
+		isDetailedSearch: true,
+		matchesDetailedSearch: (monster, search) => {
+			filterCalls.push(["detailed", monster, search]);
+			return true;
+		},
+		matchesSimpleSearch: (monster, search) => {
+			filterCalls.push(["simple", monster, search]);
+			return false;
+		},
+	});
+	assert.deepEqual(detailedFiltered, [dragon, favoriteBear]);
+	assert.equal(detailedFiltered[0], dragon);
+	assert.equal(detailedFiltered[1], favoriteBear);
+	assert.deepEqual(filterCalls, [
+		["detailed", dragon, filterSearch],
+		["detailed", favoriteBear, filterSearch],
+	]);
+	assert.deepEqual(filterInput, [goblin, dragon, favoriteBear]);
+	let emptySelectionMatcherCalls = 0;
+	assert.deepEqual(
+		filterBestiaryMonsters([dragon], {
+			selectedSources: [],
+			sourceFilter: "all",
+			onlyFavorites: false,
+			favorites: [],
+			search: "Дракон",
+			isDetailedSearch: false,
+			matchesDetailedSearch: () => false,
+			matchesSimpleSearch: () => {
+				emptySelectionMatcherCalls += 1;
+				return true;
+			},
+		}),
+		[],
+	);
+	assert.equal(emptySelectionMatcherCalls, 0);
+	assert.deepEqual(
+		filterBestiaryMonsters([dragon], {
+			selectedSources: ["CUSTOM"],
+			sourceFilter: "ALL",
+			onlyFavorites: false,
+			favorites: [],
+			search: "",
+			isDetailedSearch: false,
+			matchesDetailedSearch: () => false,
+			matchesSimpleSearch: () => true,
+		}),
+		[],
+	);
 	assert.deepEqual(
 		filterBestiaryMonsters([goblin, dragon], {
 			selectedSources: ["MM", "CUSTOM"],
@@ -9455,6 +11157,28 @@ await run("Bestiary browser policies preserve identity filtering and custom impo
 		getBestiarySourceCodes(["MM", { source: "XPHB" }, null, { nope: true }]),
 		["MM", "XPHB"],
 	);
+	for (const invalidSourceRoot of [null, {}, "MM", 7, () => {}]) {
+		assert.deepEqual(getBestiarySourceCodes(invalidSourceRoot), []);
+	}
+	assert.deepEqual(
+		getBestiarySourceCodes([
+			"MM",
+			"",
+			"  ",
+			"MM",
+			{ value: "XPHB", source: "ignored" },
+			{ value: null, source: "UA" },
+			{ value: 0, source: "blocked" },
+			{ value: false, id: "blocked" },
+			{ value: "", source: "blocked" },
+			{ value: undefined, source: null, id: "ID" },
+			{ source: undefined, id: null, name: "ІМ'Я" },
+			{ source: {}, id: "blocked" },
+			null,
+			[],
+		]),
+		["MM", "  ", "MM", "XPHB", "UA", "ID", "ІМ'Я"],
+	);
 	assert.deepEqual(
 		parseBestiarySyncEvent({
 			version: 7,
@@ -9463,10 +11187,515 @@ await run("Bestiary browser policies preserve identity filtering and custom impo
 		}),
 		{ version: 7, resource: "custom-bestiary", monsterName: "Дракон", monsterSource: undefined },
 	);
-	assert.equal(parseBestiarySyncEvent({ resource: "bestiary" }), null);
+	for (const malformedRoot of [null, [], "event", 7, () => {}]) {
+		assert.equal(parseBestiarySyncEvent(malformedRoot), null);
+	}
+	for (const invalidResource of [undefined, null, 0, {}, []]) {
+		assert.equal(
+			parseBestiarySyncEvent({ version: 1, resource: invalidResource }),
+			null,
+		);
+	}
+	for (const invalidVersion of [undefined, null, true, 1n, {}, []]) {
+		assert.equal(
+			parseBestiarySyncEvent({
+				version: invalidVersion,
+				resource: "bestiary",
+			}),
+			null,
+		);
+	}
+	assert.deepEqual(
+		parseBestiarySyncEvent({
+			version: "",
+			resource: "",
+			monsterName: "",
+			monsterSource: "",
+		}),
+		{ version: "", resource: "", monsterName: "", monsterSource: "" },
+	);
+	assert.deepEqual(
+		parseBestiarySyncEvent({
+			version: 0,
+			resource: " bestiary ",
+			monsterName: null,
+			monsterSource: 17,
+		}),
+		{
+			version: 0,
+			resource: " bestiary ",
+			monsterName: undefined,
+			monsterSource: undefined,
+		},
+	);
+	const nanVersionEvent = parseBestiarySyncEvent({
+		version: Number.NaN,
+		resource: "bestiary",
+	});
+	assert.equal(Number.isNaN(nanVersionEvent.version), true);
+	assert.equal(nanVersionEvent.resource, "bestiary");
+	assert.equal(
+		parseBestiarySyncEvent({
+			version: Number.POSITIVE_INFINITY,
+			resource: "ai",
+		}).version,
+		Number.POSITIVE_INFINITY,
+	);
+	assert.equal(getBestiarySyncEventPlan(null), null);
+	assert.equal(
+		getBestiarySyncEventPlan({ version: 0, resource: "bestiary" }),
+		null,
+	);
+	assert.equal(
+		getBestiarySyncEventPlan({ version: "", resource: "bestiary" }),
+		null,
+	);
+	assert.equal(
+		getBestiarySyncEventPlan({ version: Number.NaN, resource: "bestiary" }),
+		null,
+	);
+	assert.equal(
+		getBestiarySyncEventPlan({ version: 1, resource: "BESTIARY" }),
+		null,
+	);
+	assert.deepEqual(
+		getBestiarySyncEventPlan({
+			version: "0",
+			resource: "bestiary",
+			monsterName: "Ігнорована Мавка",
+		}),
+		{
+			pendingSelection: null,
+			refreshFavorites: true,
+			reloadMonsters: false,
+			suppressAutoSelection: false,
+		},
+	);
+	assert.deepEqual(
+		getBestiarySyncEventPlan({
+			version: 2,
+			resource: "custom-bestiary",
+		}),
+		{
+			pendingSelection: null,
+			refreshFavorites: true,
+			reloadMonsters: true,
+			suppressAutoSelection: false,
+		},
+	);
+	assert.deepEqual(
+		getBestiarySyncEventPlan({
+			version: 3,
+			resource: "custom-bestiary",
+			monsterName: "Мавка",
+			monsterSource: "",
+		}),
+		{
+			pendingSelection: { name: "Мавка", source: "CUSTOM" },
+			refreshFavorites: true,
+			reloadMonsters: true,
+			suppressAutoSelection: true,
+		},
+	);
+	const nullSyncExecutionReads = [];
+	const nullSyncExecutionOptions = new Proxy(
+		{ plan: null },
+		{
+			get(target, property) {
+				nullSyncExecutionReads.push(property);
+				if (property !== "plan") {
+					throw new Error(`Null plan read unexpected dependency: ${String(property)}`);
+				}
+				return target[property];
+			},
+		},
+	);
+	assert.equal(executeBestiarySyncEventPlan(nullSyncExecutionOptions), null);
+	assert.deepEqual(nullSyncExecutionReads, ["plan"]);
+
+	const syncExecutionPlan = getBestiarySyncEventPlan({
+		version: 5,
+		resource: "custom-bestiary",
+		monsterName: "Мавка",
+		monsterSource: "CUSTOM",
+	});
+	const pendingSyncSelection = syncExecutionPlan.pendingSelection;
+	const syncExecutionEvents = [];
+	let resolveSyncFavorites;
+	let appliedSyncFavorites = null;
+	let reloadToken = 7;
+	const pendingFavorites = new Promise((resolve) => {
+		resolveSyncFavorites = resolve;
+	});
+	const syncExecution = executeBestiarySyncEventPlan({
+		plan: syncExecutionPlan,
+		refreshFavorites: () => {
+			syncExecutionEvents.push("refresh-start");
+			return pendingFavorites;
+		},
+		onFavorites: (favorites) => {
+			appliedSyncFavorites = favorites;
+			syncExecutionEvents.push("favorites");
+		},
+		onRefreshError: () => syncExecutionEvents.push("refresh-error"),
+		onPendingSelection: (selection) => {
+			assert.equal(selection, pendingSyncSelection);
+			syncExecutionEvents.push("pending-selection");
+		},
+		onSuppressAutoSelection: () =>
+			syncExecutionEvents.push("suppress-auto-selection"),
+		onReloadMonsters: () => {
+			reloadToken += 1;
+			syncExecutionEvents.push("reload");
+		},
+	});
+	assert.deepEqual(syncExecutionEvents, [
+		"refresh-start",
+		"pending-selection",
+		"suppress-auto-selection",
+		"reload",
+	]);
+	assert.equal(reloadToken, 8);
+	resolveSyncFavorites(null);
+	await syncExecution.favoritesRefresh;
+	assert.deepEqual(syncExecutionEvents, [
+		"refresh-start",
+		"pending-selection",
+		"suppress-auto-selection",
+		"reload",
+		"favorites",
+	]);
+	assert.deepEqual(appliedSyncFavorites, []);
+	const officialSyncPlan = getBestiarySyncEventPlan({
+		version: 6,
+		resource: "bestiary",
+	});
+	const favoriteIdentity = [{ name: "Мавка", source: "CUSTOM" }];
+	let receivedFavoriteIdentity = null;
+	const officialSyncExecution = executeBestiarySyncEventPlan({
+		plan: officialSyncPlan,
+		refreshFavorites: async () => favoriteIdentity,
+		onFavorites: (favorites) => {
+			receivedFavoriteIdentity = favorites;
+		},
+		onRefreshError: () => {
+			throw new Error("Successful favorites refresh must not report an error");
+		},
+		onPendingSelection: () => {
+			throw new Error("Official sync must not select a pending monster");
+		},
+		onSuppressAutoSelection: () => {
+			throw new Error("Official sync must not suppress auto-selection");
+		},
+		onReloadMonsters: () => {
+			throw new Error("Official sync must not reload monsters");
+		},
+	});
+	await officialSyncExecution.favoritesRefresh;
+	assert.equal(receivedFavoriteIdentity, favoriteIdentity);
+
+	const syncRefreshError = new Error("Не вдалося оновити обране");
+	const failedSyncEvents = [];
+	let reportedSyncRefreshError = null;
+	const failedSyncExecution = executeBestiarySyncEventPlan({
+		plan: syncExecutionPlan,
+		refreshFavorites: () => {
+			failedSyncEvents.push("refresh-start");
+			return Promise.reject(syncRefreshError);
+		},
+		onFavorites: () => failedSyncEvents.push("favorites"),
+		onRefreshError: (error) => {
+			reportedSyncRefreshError = error;
+			failedSyncEvents.push("refresh-error");
+		},
+		onPendingSelection: () => failedSyncEvents.push("pending-selection"),
+		onSuppressAutoSelection: () =>
+			failedSyncEvents.push("suppress-auto-selection"),
+		onReloadMonsters: () => failedSyncEvents.push("reload"),
+	});
+	assert.deepEqual(failedSyncEvents, [
+		"refresh-start",
+		"pending-selection",
+		"suppress-auto-selection",
+		"reload",
+	]);
+	await failedSyncExecution.favoritesRefresh;
+	assert.equal(reportedSyncRefreshError, syncRefreshError);
+	assert.deepEqual(failedSyncEvents, [
+		"refresh-start",
+		"pending-selection",
+		"suppress-auto-selection",
+		"reload",
+		"refresh-error",
+	]);
+	assert.deepEqual(
+		getBestiarySyncEventPlan({
+			version: 4,
+			resource: "ai",
+			monsterName: "  ",
+			monsterSource: " custom-source ",
+		}),
+		{
+			pendingSelection: { name: "  ", source: " custom-source " },
+			refreshFavorites: true,
+			reloadMonsters: true,
+			suppressAutoSelection: true,
+		},
+	);
 	assert.deepEqual(
 		getBestiarySelectionPlan([goblin, dragon], [goblin, dragon], reference, null, true),
 		{ monster: goblin, explicit: true },
+	);
+	const officialRow = getBestiaryMonsterRowPresentation(
+		goblin,
+		null,
+		[],
+		false,
+		false,
+		"/tokens/goblin.webp",
+	);
+	assert.deepEqual(officialRow, {
+		crDisplay: "1/4",
+		favoriteTitleKey: "Add to favorites",
+		isCustom: false,
+		isFavorite: false,
+		isSelected: false,
+		nextSelection: goblin,
+		primaryAction: null,
+		primaryTitleKey: null,
+		tokenSrc: "/tokens/goblin.webp",
+	});
+	assert.equal(officialRow.nextSelection, goblin);
+	const selectedFavoriteRow = getBestiaryMonsterRowPresentation(
+		goblin,
+		{ name: " goblin ", source: "mm" },
+		[{ name: "GOBLIN", source: "mm" }],
+		true,
+		true,
+		"/tokens/goblin.webp",
+	);
+	assert.equal(selectedFavoriteRow.isSelected, true);
+	assert.equal(selectedFavoriteRow.nextSelection, null);
+	assert.equal(selectedFavoriteRow.isFavorite, true);
+	assert.equal(selectedFavoriteRow.favoriteTitleKey, "Remove from favorites");
+	assert.equal(selectedFavoriteRow.primaryAction, "select");
+	assert.equal(selectedFavoriteRow.primaryTitleKey, "Insert");
+	const addOnlyRow = getBestiaryMonsterRowPresentation(
+		goblin,
+		null,
+		[],
+		false,
+		true,
+		"/tokens/goblin.webp",
+	);
+	assert.equal(addOnlyRow.primaryAction, "add");
+	assert.equal(addOnlyRow.primaryTitleKey, "Add to encounter");
+	const customEmptyImageRow = getBestiaryMonsterRowPresentation(
+		{ ...dragon, imageUrl: "", cr: 0 },
+		null,
+		[],
+		false,
+		false,
+		"/tokens/dragon.webp",
+	);
+	assert.equal(customEmptyImageRow.isCustom, true);
+	assert.equal(customEmptyImageRow.tokenSrc, "");
+	assert.equal(customEmptyImageRow.crDisplay, "--");
+	const normalizedCustomFallbackRow = getBestiaryMonsterRowPresentation(
+		{ ...dragon, source: " custom ", imageUrl: 0, cr: "" },
+		null,
+		[],
+		false,
+		false,
+		"/tokens/normalized-custom.webp",
+	);
+	assert.equal(normalizedCustomFallbackRow.isCustom, true);
+	assert.equal(
+		normalizedCustomFallbackRow.tokenSrc,
+		"/tokens/normalized-custom.webp",
+	);
+	assert.equal(normalizedCustomFallbackRow.crDisplay, "--");
+	assert.equal(
+		getBestiaryMonsterRowPresentation(
+			{ ...dragon, imageUrl: null },
+			null,
+			[],
+			false,
+			false,
+			"/tokens/dragon.webp",
+		).tokenSrc,
+		"/tokens/dragon.webp",
+	);
+	let detailTitleResolutionCount = 0;
+	const getDetailAddTitle = () => {
+		detailTitleResolutionCount += 1;
+		return "Додати до енкаунтера";
+	};
+	assert.equal(
+		getBestiaryDetailPresentation(
+			null,
+			[],
+			null,
+			null,
+			null,
+			getDetailAddTitle,
+		),
+		null,
+	);
+	assert.equal(detailTitleResolutionCount, 0);
+	const officialDetail = getBestiaryDetailPresentation(
+		goblin,
+		[{ name: " goblin ", source: "mm" }],
+		null,
+		null,
+		() => {},
+		getDetailAddTitle,
+	);
+	assert.equal(detailTitleResolutionCount, 0);
+	assert.deepEqual(officialDetail, {
+		monster: goblin,
+		favoriteActive: true,
+		insertAction: undefined,
+		addAction: undefined,
+		addTitle: undefined,
+		showAddToEncounterPicker: false,
+		deleteAction: undefined,
+	});
+	const detailCalls = [];
+	const selectDetailMonster = (monster) => detailCalls.push(["select", monster]);
+	const addDetailMonster = (monster) => detailCalls.push(["add", monster]);
+	const deleteDetailMonster = (monster) => detailCalls.push(["delete", monster]);
+	const customDetail = getBestiaryDetailPresentation(
+		dragon,
+		[],
+		selectDetailMonster,
+		addDetailMonster,
+		deleteDetailMonster,
+		getDetailAddTitle,
+	);
+	assert.equal(detailTitleResolutionCount, 1);
+	assert.equal(customDetail.monster, dragon);
+	assert.equal(customDetail.favoriteActive, false);
+	assert.equal(customDetail.insertAction, selectDetailMonster);
+	assert.equal(customDetail.addAction, addDetailMonster);
+	assert.equal(customDetail.addTitle, "Додати до енкаунтера");
+	assert.equal(customDetail.showAddToEncounterPicker, true);
+	assert.equal(customDetail.deleteAction, deleteDetailMonster);
+	customDetail.insertAction(customDetail.monster);
+	customDetail.addAction(customDetail.monster);
+	customDetail.deleteAction(customDetail.monster);
+	assert.deepEqual(detailCalls, [
+		["select", dragon],
+		["add", dragon],
+		["delete", dragon],
+	]);
+	assert.equal(
+		getBestiaryDetailPresentation(
+			dragon,
+			[],
+			undefined,
+			undefined,
+			null,
+			() => "Додати до енкаунтера",
+		).deleteAction,
+		undefined,
+	);
+	const selectedDragon = {
+		name: " Дракон ",
+		source: "custom",
+		cr: "5",
+	};
+	const dragonReference = { name: "дракон", source: "CUSTOM" };
+	assert.equal(
+		getBestiaryInitialSelectionScrollPlan(
+			[dragon],
+			dragonReference,
+			selectedDragon,
+			false,
+			"",
+		),
+		null,
+	);
+	assert.equal(
+		getBestiaryInitialSelectionScrollPlan(
+			[dragon],
+			{ name: "", source: "CUSTOM" },
+			selectedDragon,
+			true,
+			"",
+		),
+		null,
+	);
+	assert.equal(
+		getBestiaryInitialSelectionScrollPlan(
+			[dragon],
+			dragonReference,
+			null,
+			true,
+			"",
+		),
+		null,
+	);
+	assert.equal(
+		getBestiaryInitialSelectionScrollPlan(
+			[dragon],
+			{ name: "Огр", source: "CUSTOM" },
+			selectedDragon,
+			true,
+			"",
+		),
+		null,
+	);
+	assert.equal(
+		getBestiaryInitialSelectionScrollPlan(
+			[dragon],
+			{ name: "Дракон", source: "MM" },
+			selectedDragon,
+			true,
+			"",
+		),
+		null,
+	);
+	assert.equal(
+		getBestiaryInitialSelectionScrollPlan(
+			[goblin],
+			dragonReference,
+			selectedDragon,
+			true,
+			"",
+		),
+		null,
+	);
+	assert.deepEqual(
+		getBestiaryInitialSelectionScrollPlan(
+			[goblin, dragon],
+			dragonReference,
+			selectedDragon,
+			true,
+			"",
+		),
+		{ scrollKey: "custom: Дракон ", selectedIndex: 1 },
+	);
+	assert.equal(
+		getBestiaryInitialSelectionScrollPlan(
+			[goblin, dragon],
+			dragonReference,
+			selectedDragon,
+			true,
+			"custom: Дракон ",
+		),
+		null,
+	);
+	const sourcelessMonster = { name: "Без джерела" };
+	assert.deepEqual(
+		getBestiaryInitialSelectionScrollPlan(
+			[sourcelessMonster, { ...sourcelessMonster }],
+			{ name: "Без джерела", source: "" },
+			sourcelessMonster,
+			true,
+			"",
+		),
+		{ scrollKey: ":Без джерела", selectedIndex: 0 },
 	);
 
 	const generated = { name: "Виверна", source: "CUSTOM" };
@@ -9476,14 +11705,402 @@ await run("Bestiary browser policies preserve identity filtering and custom impo
 	);
 	assert.equal(updatePlan.trackUndo, true);
 	assert.equal(updatePlan.nextSelectedMonster, generated);
+	assert.equal(updatePlan.updatedMonsters[1], generated);
+	assert.deepEqual(getCustomBestiaryUpdatePlan(null), {
+		hasUpdatedMonsters: false,
+		updatedMonsters: [],
+		nextSelectedMonster: null,
+		trackUndo: false,
+	});
+	assert.deepEqual(
+		getCustomBestiaryUpdatePlan({ results: [generated] }, { selectedName: "Виверна" }),
+		{
+			hasUpdatedMonsters: false,
+			updatedMonsters: [],
+			nextSelectedMonster: null,
+			trackUndo: false,
+		},
+	);
+	assert.deepEqual(getCustomBestiaryUpdatePlan({ monsters: [] }), {
+		hasUpdatedMonsters: true,
+		updatedMonsters: [],
+		nextSelectedMonster: null,
+		trackUndo: true,
+	});
+	const selectedReturnedMonster = { name: "  Мантикора ", source: " custom " };
+	const selectedByNamePlan = getCustomBestiaryUpdatePlan(
+		{ monsters: [null, { source: "CUSTOM" }, selectedReturnedMonster] },
+		{ selectedName: "МАНТИКОРА", trackUndo: false },
+	);
+	assert.deepEqual(selectedByNamePlan.updatedMonsters, [selectedReturnedMonster]);
+	assert.equal(selectedByNamePlan.nextSelectedMonster, selectedReturnedMonster);
+	assert.equal(selectedByNamePlan.trackUndo, false);
+	const generatedDraft = { name: "Грифон", source: "CUSTOM", imageUrl: "/draft.png" };
+	const selectedByGeneratedPlan = getCustomBestiaryUpdatePlan(
+		{ monsters: [selectedReturnedMonster] },
+		{
+			generated: { monsters: [generatedDraft] },
+			selectedName: "Мантикора",
+		},
+	);
+	assert.equal(selectedByGeneratedPlan.nextSelectedMonster, generatedDraft);
+	assert.equal(
+		getCustomBestiaryUpdatePlan(
+			{ monsters: [selectedReturnedMonster] },
+			{
+				generated: {
+					monsters: [{ name: "мантикора", source: "CUSTOM" }],
+				},
+				selectedName: "не використовується",
+			},
+		).nextSelectedMonster,
+		selectedReturnedMonster,
+	);
 	assert.equal(
 		getCustomRefreshSelection([dragon], { name: "Дракон", source: "CUSTOM" }, null),
 		dragon,
 	);
+	const officialRefreshCandidate = { name: "Мавка", source: "MM" };
+	const firstCustomRefreshCandidate = { name: " Мавка ", source: " custom " };
+	const duplicateCustomRefreshCandidate = { name: "МАВКА", source: "CUSTOM" };
+	const currentCustomRefreshCandidate = { name: "Лісовик", source: "CUSTOM" };
+	const refreshCandidates = [
+		officialRefreshCandidate,
+		firstCustomRefreshCandidate,
+		duplicateCustomRefreshCandidate,
+		currentCustomRefreshCandidate,
+	];
+	assert.equal(
+		getCustomRefreshSelection(
+			refreshCandidates,
+			{ name: "мавка", source: "WRONG-SOURCE" },
+			{ name: "Лісовик", source: "CUSTOM" },
+		),
+		firstCustomRefreshCandidate,
+	);
+	assert.equal(
+		getCustomRefreshSelection(
+			refreshCandidates,
+			{ name: "", source: "CUSTOM" },
+			{ name: " лісовик ", source: " custom " },
+		),
+		currentCustomRefreshCandidate,
+	);
+	assert.equal(
+		getCustomRefreshSelection(refreshCandidates, null, {
+			name: "Лісовик",
+			source: "MM",
+		}),
+		null,
+	);
+	assert.equal(
+		getCustomRefreshSelection(refreshCandidates, undefined, {
+			name: "Відсутній",
+			source: "CUSTOM",
+		}),
+		null,
+	);
+	assert.equal(getCustomRefreshSelection(refreshCandidates, null, null), null);
 	assert.deepEqual(
 		getAiMonsterInstructionPlan("create-based", "  сильніший  ", "Створи копію"),
 		{ error: null, instructions: "Створи копію\n\nсильніший" },
 	);
+	assert.deepEqual(
+		getAiMonsterEditStartPlan({
+			targetMonster: null,
+			mode: "edit",
+			rawInstructions: "посиль",
+			createInstruction: "Створи копію",
+			selectedModel: "gemini-test",
+			attachedImages: [],
+			attachedFiles: [],
+			language: "uk",
+		}),
+		{ kind: "skip" },
+	);
+	assert.deepEqual(
+		getAiMonsterEditStartPlan({
+			targetMonster: dragon,
+			mode: "local-edit",
+			rawInstructions: "   ",
+			createInstruction: "Створи копію",
+			selectedModel: "",
+			attachedImages: [],
+			attachedFiles: [],
+			language: "uk",
+		}),
+		{ kind: "invalid", error: "missing-instructions" },
+	);
+	const attachedImages = [{ name: "дракон.png" }];
+	const attachedFiles = [{ name: "опис.md" }];
+	const aiEditStartPlan = getAiMonsterEditStartPlan({
+		targetMonster: dragon,
+		mode: "create-based",
+		rawInstructions: "  додай крила  ",
+		createInstruction: "Створи копію",
+		selectedModel: "",
+		attachedImages,
+		attachedFiles,
+		language: "uk",
+	});
+	assert.equal(aiEditStartPlan.kind, "ready");
+	assert.equal(aiEditStartPlan.targetMonster, dragon);
+	assert.equal(aiEditStartPlan.payload.attachedImages, attachedImages);
+	assert.equal(aiEditStartPlan.payload.attachedFiles, attachedFiles);
+	assert.equal(aiEditStartPlan.payload.customMonsterTarget, dragon);
+	assert.deepEqual(aiEditStartPlan.payload, {
+		type: "custom-monster",
+		modelName: undefined,
+		userInstructions: "Створи копію\n\nдодай крила",
+		path: { campaign: "bestiary" },
+		attachedImages,
+		attachedFiles,
+		customMonsterTarget: dragon,
+		customMonsterMode: "create-based",
+		parseAIResponse: true,
+		generateCharacters: false,
+		generateNpcs: false,
+		generateLocations: false,
+		generateEncounters: false,
+		entityScope: "custom-bestiary",
+		contextConfig: null,
+		language: "uk",
+	});
+	const aiDraftEntry = {
+		id: "чернетка-1",
+		changes: {
+			resources: [{
+				id: "монстр-1",
+				kind: "custom-monster",
+				before: null,
+				after: { name: "Новий дракон" },
+			}],
+		},
+	};
+	const aiDraftTarget = {
+		...dragon,
+		imageUrl: "/токени/дракон.webp",
+	};
+	const draftGenerationPlan = getAiMonsterGenerationResultPlan(
+		{
+			draft: true,
+			aiResponse: aiDraftEntry,
+			get updated() {
+				throw new Error("Draft result must win before updated is read");
+			},
+			get generated() {
+				throw new Error("Draft result must win before generated is read");
+			},
+		},
+		aiDraftTarget,
+		"edit",
+	);
+	assert.equal(draftGenerationPlan.kind, "draft");
+	assert.notEqual(draftGenerationPlan.entry, aiDraftEntry);
+	assert.deepEqual(
+		draftGenerationPlan.entry.changes.resources[0].after,
+		{
+			name: "Новий дракон",
+			imageUrl: "/токени/дракон.webp",
+			originalBestiaryName: "Дракон",
+		},
+	);
+	assert.equal(aiDraftEntry.changes.resources[0].after.imageUrl, undefined);
+
+	const generatedMonsters = { monsters: [dragon] };
+	const updatedMonsters = { monsters: [dragon] };
+	const updateGenerationPlan = getAiMonsterGenerationResultPlan(
+		{
+			draft: true,
+			aiResponse: null,
+			updated: updatedMonsters,
+			generated: generatedMonsters,
+		},
+		dragon,
+		"edit",
+	);
+	assert.deepEqual(updateGenerationPlan, {
+		kind: "update",
+		updated: updatedMonsters,
+		options: {
+			generated: generatedMonsters,
+			selectedName: "Дракон",
+			trackUndo: false,
+		},
+	});
+	assert.equal(updateGenerationPlan.updated, updatedMonsters);
+	assert.equal(updateGenerationPlan.options.generated, generatedMonsters);
+
+	const nonEditGenerationPlan = getAiMonsterGenerationResultPlan(
+		{
+			draft: false,
+			aiResponse: aiDraftEntry,
+			updated: "оновлено",
+			generated: undefined,
+		},
+		{
+			name: "Не читати токен",
+			source: "MM",
+			get imageUrl() {
+				throw new Error("Update result must not enrich draft images");
+			},
+		},
+		"local-edit",
+	);
+	assert.deepEqual(nonEditGenerationPlan, {
+		kind: "update",
+		updated: "оновлено",
+		options: {
+			generated: undefined,
+			selectedName: undefined,
+			trackUndo: false,
+		},
+	});
+	assert.deepEqual(
+		getAiMonsterGenerationResultPlan(
+			{
+				draft: true,
+				aiResponse: null,
+				updated: 0,
+				generated: generatedMonsters,
+			},
+			dragon,
+			"create-based",
+		),
+		{ kind: "skip" },
+	);
+	assert.equal(
+		getAiMonsterEditErrorMessage(
+			new DOMException("Скасовано", "AbortError"),
+			"Невідома помилка",
+		),
+		null,
+	);
+	assert.equal(
+		getAiMonsterEditErrorMessage(new Error("Помилка моделі"), "Невідома помилка"),
+		"Помилка моделі",
+	);
+	assert.equal(
+		getAiMonsterEditErrorMessage(new Error(""), "Невідома помилка"),
+		"Невідома помилка",
+	);
+	const activeController = {};
+	assert.equal(
+		shouldClearAiMonsterEditController(activeController, activeController),
+		true,
+	);
+	assert.equal(shouldClearAiMonsterEditController({}, activeController), false);
+	const aiEditSignal = new AbortController().signal;
+	const aiEditExecutionEvents = [];
+	let appliedAiEditData = null;
+	const aiEditExecutionOutcome = await executeAiMonsterEditRequest({
+		plan: aiEditStartPlan,
+		signal: aiEditSignal,
+		fallbackError: "Невідома помилка",
+		generateAi: async (payload, options) => {
+			assert.equal(payload, aiEditStartPlan.payload);
+			assert.equal(options.signal, aiEditSignal);
+			aiEditExecutionEvents.push("generate");
+			return {
+				draft: true,
+				aiResponse: { id: "відповідь-1" },
+				generated: { monsters: [dragon] },
+				updated: { monsters: [dragon] },
+			};
+		},
+		onApplied: (data, targetMonster) => {
+			assert.equal(targetMonster, dragon);
+			appliedAiEditData = data;
+			aiEditExecutionEvents.push("apply");
+		},
+		onReset: () => aiEditExecutionEvents.push("reset"),
+		onError: () => aiEditExecutionEvents.push("error"),
+		onSettled: () => aiEditExecutionEvents.push("settled"),
+	});
+	assert.deepEqual(aiEditExecutionEvents, [
+		"generate",
+		"apply",
+		"reset",
+		"settled",
+	]);
+	assert.equal(aiEditExecutionOutcome.status, "succeeded");
+	assert.equal(aiEditExecutionOutcome.data, appliedAiEditData);
+	assert.equal(appliedAiEditData.draft, true);
+	assert.equal(appliedAiEditData.aiResponse.id, "відповідь-1");
+	assert.equal(appliedAiEditData.generated.monsters[0], dragon);
+
+	const cancelledAiEditEvents = [];
+	const cancelledAiEditOutcome = await executeAiMonsterEditRequest({
+		plan: aiEditStartPlan,
+		signal: aiEditSignal,
+		fallbackError: "Невідома помилка",
+		generateAi: async () => {
+			cancelledAiEditEvents.push("generate");
+			throw new DOMException("Скасовано", "AbortError");
+		},
+		onApplied: () => cancelledAiEditEvents.push("apply"),
+		onReset: () => cancelledAiEditEvents.push("reset"),
+		onError: () => cancelledAiEditEvents.push("error"),
+		onSettled: () => cancelledAiEditEvents.push("settled"),
+	});
+	assert.deepEqual(cancelledAiEditOutcome, { status: "cancelled" });
+	assert.deepEqual(cancelledAiEditEvents, ["generate", "settled"]);
+
+	const failedAiEditEvents = [];
+	const aiEditFailure = new Error("Помилка виконання");
+	const failedAiEditOutcome = await executeAiMonsterEditRequest({
+		plan: aiEditStartPlan,
+		signal: aiEditSignal,
+		fallbackError: "Невідома помилка",
+		generateAi: async () => {
+			failedAiEditEvents.push("generate");
+			throw aiEditFailure;
+		},
+		onApplied: () => failedAiEditEvents.push("apply"),
+		onReset: () => failedAiEditEvents.push("reset"),
+		onError: (message) => failedAiEditEvents.push(`error:${message}`),
+		onSettled: () => failedAiEditEvents.push("settled"),
+	});
+	assert.deepEqual(failedAiEditOutcome, {
+		status: "failed",
+		error: aiEditFailure,
+		message: "Помилка виконання",
+	});
+	assert.deepEqual(failedAiEditEvents, [
+		"generate",
+		"error:Помилка виконання",
+		"settled",
+	]);
+
+	const failedAiEditApplyEvents = [];
+	const aiEditApplyFailure = new Error("Не вдалося застосувати");
+	const failedAiEditApplyOutcome = await executeAiMonsterEditRequest({
+		plan: aiEditStartPlan,
+		signal: aiEditSignal,
+		fallbackError: "Невідома помилка",
+		generateAi: async () => {
+			failedAiEditApplyEvents.push("generate");
+			return null;
+		},
+		onApplied: () => {
+			failedAiEditApplyEvents.push("apply");
+			throw aiEditApplyFailure;
+		},
+		onReset: () => failedAiEditApplyEvents.push("reset"),
+		onError: (message) => failedAiEditApplyEvents.push(`error:${message}`),
+		onSettled: () => failedAiEditApplyEvents.push("settled"),
+	});
+	assert.deepEqual(failedAiEditApplyOutcome, {
+		status: "failed",
+		error: aiEditApplyFailure,
+		message: "Не вдалося застосувати",
+	});
+	assert.deepEqual(failedAiEditApplyEvents, [
+		"generate",
+		"apply",
+		"error:Не вдалося застосувати",
+		"settled",
+	]);
 	assert.deepEqual(
 		getCreateBasedMonsterPlan(
 			[dragon],
@@ -9519,6 +12136,150 @@ await run("Bestiary browser policies preserve identity filtering and custom impo
 		}],
 	);
 
+	const draftEntry = {
+		id: "draft-1",
+		changes: {
+			resources: [
+				{
+					id: "monster-1",
+					kind: "custom-monster",
+					after: { name: "Мавка" },
+				},
+				{
+					id: "monster-2",
+					kind: "custom-monster",
+					after: { name: "Лісовик" },
+				},
+			],
+		},
+	};
+	const currentCustomMonsters = [
+		{ name: "Мавка", source: "CUSTOM", hp: 27 },
+	];
+	assert.equal(
+		getAiDraftRestoreStartPlan(
+			null,
+			"apply",
+			undefined,
+			false,
+			currentCustomMonsters,
+		),
+		null,
+	);
+	assert.equal(
+		getAiDraftRestoreStartPlan(
+			{ id: "" },
+			"apply",
+			undefined,
+			false,
+			currentCustomMonsters,
+		),
+		null,
+	);
+	assert.equal(
+		getAiDraftRestoreStartPlan(
+			draftEntry,
+			"apply",
+			undefined,
+			true,
+			currentCustomMonsters,
+		),
+		null,
+	);
+	const selectedResourceIds = ["monster-2"];
+	const applyRestoreStart = getAiDraftRestoreStartPlan(
+		draftEntry,
+		"apply",
+		selectedResourceIds,
+		false,
+		currentCustomMonsters,
+	);
+	assert.equal(applyRestoreStart.entry, draftEntry);
+	assert.equal(applyRestoreStart.resourceIds, selectedResourceIds);
+	assert.deepEqual(applyRestoreStart.undoSnapshot, currentCustomMonsters);
+	assert.notEqual(applyRestoreStart.undoSnapshot, currentCustomMonsters);
+	currentCustomMonsters[0].hp = 1;
+	assert.equal(applyRestoreStart.undoSnapshot[0].hp, 27);
+	assert.deepEqual(getAiDraftRestoreResultPlan(applyRestoreStart, null), {
+		nextEntry: draftEntry,
+		update: null,
+	});
+
+	const restoredEntry = {
+		...draftEntry,
+		id: "draft-restored",
+	};
+	const changedUpdatedBestiary = {
+		monsters: [{ name: "Лісовик", source: "CUSTOM", hp: 45 }],
+	};
+	const applyRestoreResult = getAiDraftRestoreResultPlan(applyRestoreStart, {
+		response: restoredEntry,
+		updated: changedUpdatedBestiary,
+	});
+	assert.equal(applyRestoreResult.nextEntry, restoredEntry);
+	assert.equal(applyRestoreResult.update.updated, changedUpdatedBestiary);
+	assert.deepEqual(applyRestoreResult.update.options, {
+		selectedName: "Лісовик",
+		trackUndo: false,
+	});
+	assert.equal(
+		applyRestoreResult.update.undoSnapshot,
+		applyRestoreStart.undoSnapshot,
+	);
+	const sameUpdatedBestiary = {
+		monsters: applyRestoreStart.undoSnapshot,
+	};
+	assert.equal(
+		getAiDraftRestoreResultPlan(applyRestoreStart, {
+			updated: sameUpdatedBestiary,
+		}).update.undoSnapshot,
+		null,
+	);
+	const noSelectedResourceStart = getAiDraftRestoreStartPlan(
+		draftEntry,
+		"apply",
+		[],
+		false,
+		[],
+	);
+	assert.deepEqual(
+		getAiDraftRestoreResultPlan(noSelectedResourceStart, {
+			updated: { monsters: [] },
+		}).update.options,
+		{ selectedName: undefined, trackUndo: false },
+	);
+
+	const undoRestoreStart = getAiDraftRestoreStartPlan(
+		draftEntry,
+		"undo",
+		selectedResourceIds,
+		false,
+		currentCustomMonsters,
+	);
+	assert.equal(undoRestoreStart.undoSnapshot, null);
+	const undoUpdatedBestiary = {
+		monsters: [{ name: "Мавка", source: "CUSTOM", hp: 27 }],
+	};
+	assert.deepEqual(
+		getAiDraftRestoreResultPlan(undoRestoreStart, {
+			updated: undoUpdatedBestiary,
+		}),
+		{
+			nextEntry: draftEntry,
+			update: {
+				updated: undoUpdatedBestiary,
+				options: { trackUndo: false },
+				undoSnapshot: null,
+			},
+		},
+	);
+	assert.deepEqual(
+		getAiDraftRestoreResultPlan(undoRestoreStart, {
+			response: restoredEntry,
+		}),
+		{ nextEntry: restoredEntry, update: null },
+	);
+
 	const imported = parseImportedCustomMonsters(
 		JSON.stringify({ monster: [{ name: "  Дракон  ", source: "MM", hp: 42 }] }),
 	);
@@ -9532,6 +12293,183 @@ await run("Bestiary browser policies preserve identity filtering and custom impo
 		),
 		[imported[0], { name: "Огр", source: "CUSTOM" }],
 	);
+});
+
+await run("Bestiary AI draft restore executor preserves routing and lifecycle order", async () => {
+	const skippedReads = [];
+	const skipped = await executeAiDraftRestore(
+		new Proxy(
+			{ start: null },
+			{
+				get(target, property) {
+					skippedReads.push(property);
+					return target[property];
+				},
+			},
+		),
+	);
+	assert.deepEqual(skipped, { status: "skipped" });
+	assert.deepEqual(skippedReads, ["start"]);
+
+	const entry = {
+		id: "draft-apply",
+		changes: {
+			resources: [{ id: "monster-2", after: { name: "Forest Spirit" } }],
+		},
+	};
+	const restoredEntry = { ...entry, id: "draft-applied" };
+	const resourceIds = ["monster-2"];
+	const undoSnapshot = [{ name: "River Spirit", source: "CUSTOM", hp: 21 }];
+	const updated = {
+		monsters: [{ name: "Forest Spirit", source: "CUSTOM", hp: 38 }],
+	};
+	const applyStart = {
+		entry,
+		mode: "apply",
+		resourceIds,
+		undoSnapshot,
+	};
+	const applyEvents = [];
+	const applyOutcome = await executeAiDraftRestore({
+		start: applyStart,
+		onBusy: (isBusy) => applyEvents.push(["busy", isBusy]),
+		apply: async (receivedEntry, payload) => {
+			applyEvents.push(["apply", receivedEntry, payload]);
+			assert.equal(receivedEntry, entry);
+			assert.deepEqual(Object.keys(payload), ["resourceIds"]);
+			assert.equal(payload.resourceIds, resourceIds);
+			return { response: restoredEntry, updated };
+		},
+		undo: async () => assert.fail("apply restore must not call undo"),
+		onEntry: (nextEntry) => applyEvents.push(["entry", nextEntry]),
+		onUndoSnapshot: (snapshot) => applyEvents.push(["snapshot", snapshot]),
+		onUpdate: (nextUpdated, options) =>
+			applyEvents.push(["update", nextUpdated, options]),
+		onError: (error) => assert.fail(`unexpected restore error: ${error}`),
+	});
+	assert.equal(applyOutcome.status, "succeeded");
+	assert.equal(applyOutcome.plan.nextEntry, restoredEntry);
+	assert.deepEqual(
+		applyEvents.map(([name, value]) => [name, value]),
+		[
+			["busy", true],
+			["apply", entry],
+			["entry", restoredEntry],
+			["snapshot", undoSnapshot],
+			["update", updated],
+			["busy", false],
+		],
+	);
+
+	const undoEvents = [];
+	const undoStart = {
+		entry,
+		mode: "undo",
+		resourceIds: undefined,
+		undoSnapshot: null,
+	};
+	const undoOutcome = await executeAiDraftRestore({
+		start: undoStart,
+		onBusy: (isBusy) => undoEvents.push(["busy", isBusy]),
+		apply: async () => assert.fail("undo restore must not call apply"),
+		undo: async (receivedEntry, payload) => {
+			undoEvents.push(["undo", receivedEntry, payload]);
+			assert.deepEqual(payload, { resourceIds: undefined });
+			return { updated };
+		},
+		onEntry: (nextEntry) => undoEvents.push(["entry", nextEntry]),
+		onUndoSnapshot: () => assert.fail("undo restore must not create a snapshot"),
+		onUpdate: (nextUpdated, options) =>
+			undoEvents.push(["update", nextUpdated, options]),
+		onError: (error) => assert.fail(`unexpected restore error: ${error}`),
+	});
+	assert.equal(undoOutcome.status, "succeeded");
+	assert.deepEqual(
+		undoEvents.map(([name, value]) => [name, value]),
+		[
+			["busy", true],
+			["undo", entry],
+			["entry", entry],
+			["update", updated],
+			["busy", false],
+		],
+	);
+});
+
+await run("Bestiary AI draft restore executor reports failures and always settles", async () => {
+	const entry = { id: "draft-failure" };
+	const start = {
+		entry,
+		mode: "apply",
+		resourceIds: undefined,
+		undoSnapshot: [],
+	};
+	const transportError = new Error("restore failed");
+	const transportEvents = [];
+	const transportOutcome = await executeAiDraftRestore({
+		start,
+		onBusy: (isBusy) => transportEvents.push(["busy", isBusy]),
+		apply: async () => {
+			transportEvents.push(["apply"]);
+			throw transportError;
+		},
+		undo: async () => assert.fail("apply restore must not call undo"),
+		onEntry: () => assert.fail("failed transport must not apply entry"),
+		onUndoSnapshot: () => assert.fail("failed transport must not apply snapshot"),
+		onUpdate: () => assert.fail("failed transport must not apply update"),
+		onError: (error) => transportEvents.push(["error", error]),
+	});
+	assert.deepEqual(transportOutcome, { status: "failed", error: transportError });
+	assert.deepEqual(transportEvents, [
+		["busy", true],
+		["apply"],
+		["error", transportError],
+		["busy", false],
+	]);
+
+	const effectError = new Error("entry effect failed");
+	const effectEvents = [];
+	const effectOutcome = await executeAiDraftRestore({
+		start,
+		onBusy: (isBusy) => effectEvents.push(["busy", isBusy]),
+		apply: async () => ({ updated: { monsters: [] } }),
+		undo: async () => assert.fail("apply restore must not call undo"),
+		onEntry: () => {
+			effectEvents.push(["entry"]);
+			throw effectError;
+		},
+		onUndoSnapshot: () => assert.fail("entry failure must stop snapshot"),
+		onUpdate: () => assert.fail("entry failure must stop update"),
+		onError: (error) => effectEvents.push(["error", error]),
+	});
+	assert.deepEqual(effectOutcome, { status: "failed", error: effectError });
+	assert.deepEqual(effectEvents, [
+		["busy", true],
+		["entry"],
+		["error", effectError],
+		["busy", false],
+	]);
+
+	const alertError = new Error("alert failed");
+	const alertBusy = [];
+	await assert.rejects(
+		executeAiDraftRestore({
+			start,
+			onBusy: (isBusy) => alertBusy.push(isBusy),
+			apply: async () => {
+				throw transportError;
+			},
+			undo: async () => assert.fail("apply restore must not call undo"),
+			onEntry: () => {},
+			onUndoSnapshot: () => {},
+			onUpdate: () => {},
+			onError: () => {
+				throw alertError;
+			},
+		}),
+		(error) => error === alertError,
+	);
+	assert.deepEqual(alertBusy, [true, false]);
 });
 
 await run("rules reference modal policies preserve qualified identities and UTF-8 tags", () => {
@@ -9865,6 +12803,114 @@ await run("AI assistant context projection preserves route-specific contracts", 
 	);
 });
 
+await run("AI assistant route state preserves falsy and bestiary target semantics", () => {
+	assert.deepEqual(
+		getAiAssistantRouteState({
+			isBestiary: false,
+			navigation: {
+				activeCampaignSlug: null,
+				activeSessionFileName: "",
+				activeEncounterId: 0,
+			},
+			imagePromptBasePrompt: "global image",
+			campaignAiBasePrompts: { "": "root story" },
+			campaignImagePromptBasePrompts: { "": "" },
+		}),
+		{
+			route: { campaign: "", session: "", encounter: 0 },
+			activeImagePromptBasePrompt: "global image",
+			activeCampaignBasePrompt: "root story",
+			isCampaign: true,
+			isEncounter: false,
+			historyCampaign: "",
+			assetCampaignSlug: "",
+			generateEncountersByDefault: false,
+		},
+	);
+
+	assert.deepEqual(
+		getAiAssistantRouteState({
+			isBestiary: false,
+			navigation: {
+				activeCampaignSlug: "кампанія",
+				activeSessionFileName: "session.json",
+				activeEncounterId: 7,
+			},
+			imagePromptBasePrompt: "global image",
+			campaignAiBasePrompts: { кампанія: "" },
+			campaignImagePromptBasePrompts: { кампанія: "campaign image" },
+		}),
+		{
+			route: {
+				campaign: "кампанія",
+				session: "session.json",
+				encounter: 7,
+			},
+			activeImagePromptBasePrompt: "campaign image",
+			activeCampaignBasePrompt: "",
+			isCampaign: false,
+			isEncounter: true,
+			historyCampaign: "кампанія",
+			assetCampaignSlug: "кампанія",
+			generateEncountersByDefault: true,
+		},
+	);
+
+	assert.deepEqual(
+		getAiAssistantRouteState({
+			isBestiary: true,
+			navigation: {
+				activeCampaignSlug: "ignored",
+				activeSessionFileName: null,
+				activeEncounterId: "monster-draft",
+			},
+			imagePromptBasePrompt: "global image",
+			campaignAiBasePrompts: { bestiary: "bestiary story" },
+			campaignImagePromptBasePrompts: { bestiary: "bestiary image" },
+		}),
+		{
+			route: {
+				campaign: "bestiary",
+				session: null,
+				encounter: "monster-draft",
+			},
+			activeImagePromptBasePrompt: "bestiary image",
+			activeCampaignBasePrompt: "bestiary story",
+			isCampaign: false,
+			isEncounter: true,
+			historyCampaign: "bestiary",
+			assetCampaignSlug: "general",
+			generateEncountersByDefault: false,
+		},
+	);
+
+	const conflictingProjection = getAiAssistantContextProjection({
+		activeCampaign: { name: "Кампанія" },
+		activeSession: { name: "Сесія", data: { source: "session" } },
+		activeEncounter: { source: "encounter" },
+		isBestiary: false,
+		isCampaign: true,
+		isEncounter: true,
+		parseAiResponse: true,
+		generateEncounters: true,
+	});
+	assert.equal(conflictingProjection.sessionName, "Кампанія");
+	assert.deepEqual(conflictingProjection.sessionData, { source: "encounter" });
+
+	const bestiaryPrecedence = getAiAssistantContextProjection({
+		activeCampaign: { name: "Кампанія" },
+		activeEncounter: { source: "encounter" },
+		isBestiary: true,
+		isCampaign: true,
+		isEncounter: true,
+		parseAiResponse: true,
+		generateEncounters: true,
+	});
+	assert.equal(bestiaryPrecedence.sessionName, "Кампанія");
+	assert.deepEqual(bestiaryPrecedence.sessionData, {});
+	assert.equal(bestiaryPrecedence.campaignContext, null);
+});
+
 await run("AI assistant history policies preserve filtering, diffs, and confirmations", () => {
 	const matchingEncounter = {
 		id: "matching",
@@ -10049,6 +13095,22 @@ await run("AI assistant presentation preserves history and entity contracts", ()
 		"Ірина Штормова",
 	);
 	assert.equal(
+		presentation.getCharacterDisplayName({
+			firstName: "   ",
+			first_name: "Ірина",
+			name: "Запасне ім'я",
+		}),
+		"Запасне ім'я",
+	);
+	assert.equal(
+		presentation.getCharacterDisplayName({ name: "   ", title: "Архіварка" }),
+		"",
+	);
+	assert.equal(
+		presentation.getCharacterDisplayName({ firstName: 0, title: "Архіварка" }),
+		"Архіварка",
+	);
+	assert.equal(
 		presentation.getCharacterContextKey({ title: "Архіварка" }),
 		"Архіварка",
 	);
@@ -10082,11 +13144,49 @@ await run("AI assistant presentation preserves history and entity contracts", ()
 		),
 		"Зміни обладунок",
 	);
+	const unicodeMonsterSnapshot = JSON.stringify({
+		name: "Мавка {ніч}",
+		trait: {
+			text: 'каже "стій" і показує } знак',
+			path: "C:\\ліс\\мавка",
+		},
+	});
+	assert.equal(
+		presentation.stripGeneratedMonsterEditPrompt(
+			`Current encounter creature: ${unicodeMonsterSnapshot} Залиши український опис`,
+		),
+		"Залиши український опис",
+	);
+	const incompleteMonsterPrompt =
+		'Current encounter creature: {"name":"Мавка","trait":{"text":"незавершено }';
+	assert.equal(
+		presentation.stripGeneratedMonsterEditPrompt(incompleteMonsterPrompt),
+		incompleteMonsterPrompt,
+	);
+	const missingObjectPrompt =
+		"Current encounter creature: опис без JSON об'єкта";
+	assert.equal(
+		presentation.stripGeneratedMonsterEditPrompt(missingObjectPrompt),
+		missingObjectPrompt,
+	);
+	assert.equal(
+		presentation.stripGeneratedMonsterEditPrompt(
+			"Create a new custom creature based on the selected creature. Do not change the selected creature.  Додай крила",
+		),
+		"Додай крила",
+	);
 	assert.equal(
 		presentation.getHistoryRequestText({
 			retryPayload: { historyUserInstructions: "  Повтори запит  " },
 		}),
 		"Повтори запит",
+	);
+	assert.equal(
+		presentation.getHistoryRequestText({
+			request: { userInstructions: "   " },
+			userInstructions: "Не використовувати через truthy precedence",
+		}),
+		"",
 	);
 	assert.equal(
 		presentation.getHistoryOptionsSummary({
@@ -10118,6 +13218,30 @@ await run("AI assistant presentation preserves history and entity contracts", ()
 		}),
 		"Context: Notes: 2, Characters: 1, Scenes: 3",
 	);
+	assert.equal(
+		presentation.getHistoryContextSummary({
+			request: { context: { enabled: true } },
+		}),
+		"Context: Empty",
+	);
+	assert.equal(
+		presentation.getHistoryContextSummary({
+			request: { context: { enabled: false, scenes: 3 } },
+		}),
+		"Context: Off",
+	);
+	assert.equal(
+		presentation.getHistoryOptionsSummary({
+			request: {
+				options: {
+					mode: "невідомий-режим",
+					responseParsing: false,
+					contextEnabled: false,
+				},
+			},
+		}),
+		"Mode: невідомий-режим; Response parsing: Off; Context: Off",
+	);
 	assert.deepEqual(
 		presentation.getHistoryDetailRows({
 			createdAt: "not-a-date",
@@ -10142,6 +13266,22 @@ await run("AI assistant presentation preserves history and entity contracts", ()
 		"Undone",
 	);
 	assert.notEqual(presentation.formatResponseDate(0, "en-US"), "");
+	let untitledTranslationCalls = 0;
+	const lazyFallbackPresentation = createAiAssistantPresentation({
+		translate: (phrase) => {
+			if (phrase === "Untitled") untitledTranslationCalls += 1;
+			return phrase;
+		},
+		isFailedHistoryEntry: () => false,
+		hasHistoryChanges: () => false,
+	});
+	assert.equal(
+		lazyFallbackPresentation.getCharacterDisplayName({ name: "Ірина" }),
+		"Ірина",
+	);
+	assert.equal(untitledTranslationCalls, 0);
+	assert.equal(lazyFallbackPresentation.getCharacterDisplayName({}), "Untitled");
+	assert.equal(untitledTranslationCalls, 1);
 });
 
 await run("AI image prompt picker preserves target and generation policies", () => {
@@ -10252,6 +13392,22 @@ await run("AI image prompt picker preserves target and generation policies", () 
 			},
 		},
 	);
+	assert.deepEqual(
+		buildAiImagePromptGenerationPlan(
+			null,
+			"  Watercolor  ",
+			"  Намалюй мавку  ",
+		),
+		{
+			errorKey: null,
+			targetSceneId: null,
+			options: {
+				imageTarget: null,
+				imagePromptBasePromptOverride: "Watercolor",
+				userInstructionsOverride: "Намалюй мавку",
+			},
+		},
+	);
 	const sceneTarget = {
 		type: "scene",
 		id: "scene-1",
@@ -10271,6 +13427,61 @@ await run("AI image prompt picker preserves target and generation policies", () 
 			},
 		},
 	);
+	const zeroSceneTarget = {
+		type: "scene",
+		id: 0,
+		name: "Нульова сцена",
+	};
+	assert.deepEqual(
+		buildAiImagePromptGenerationPlan(zeroSceneTarget, "  Etching  ", "skip"),
+		{
+			errorKey: null,
+			targetSceneId: null,
+			options: {
+				imageTarget: zeroSceneTarget,
+				imagePromptBasePromptOverride: "Etching",
+				userInstructionsOverride: "",
+			},
+		},
+	);
+	const unnamedNpcTarget = {
+		type: "npc",
+		id: 0,
+		name: "",
+	};
+	assert.equal(getImagePromptTargetTitle(unnamedNpcTarget), "npc");
+	assert.equal(
+		buildAiImagePromptGenerationPlan(unnamedNpcTarget, "", "ignored")
+			.targetSceneId,
+		null,
+	);
+	assert.equal(
+		getImagePromptTargetTitle({
+			type: "scene",
+			id: "scene-empty-name",
+			name: "",
+			sessionName: "Шторм",
+		}),
+		" - Шторм",
+	);
+	assert.equal(
+		getImagePromptTargetTitle({
+			type: "scene",
+			id: "scene-id",
+			name: "",
+		}),
+		"scene-id",
+	);
+	assert.equal(
+		getImagePromptTargetTitle({
+			type: "location",
+			id: "location-id",
+			name: "  ",
+		}),
+		"  ",
+	);
+	assert.equal(getImagePromptTargetTitle(null), "");
+	assert.equal(getImagePromptTargetTitle(undefined), "");
 });
 
 await run("sidebar keeps campaign navigation and ordering policies stable", () => {
@@ -10432,7 +13643,13 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.match(bestiarySource, /initialSelectedName = ""/);
 	assert.match(bestiarySource, /hideSearchInput = false/);
 	assert.match(bestiarySource, /pendingSyncSelectionRef/);
-	assert.match(bestiarySource, /syncEvent\.monsterName/);
+	assert.match(bestiarySource, /getBestiarySyncEventPlan\(syncEvent\)/);
+	assert.match(bestiarySource, /executeBestiarySyncEventPlan\(\{/);
+	assert.match(bestiarySource, /executeBestiaryFieldEditSave\(\{/);
+	assert.match(bestiarySource, /executeBestiarySelectedSourcesSave\(\{/);
+	assert.match(bestiaryModelSource, /function applyBestiarySyncPendingSelection/);
+	assert.match(bestiaryModelSource, /event\.monsterName/);
+	assert.match(bestiaryModelSource, /event\.monsterSource \|\| "CUSTOM"/);
 	assert.match(bestiarySource, /shouldAutoSelectMonsterRef\.current = false/);
 	assert.match(bestiaryModelSource, /normalizeMonsterName/);
 	assert.match(bestiarySource, /ignoreSourcesList/);
@@ -10446,7 +13663,12 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.doesNotMatch(bestiarySource, /next\.set\("monster"/);
 	assert.doesNotMatch(bestiarySource, /next\.set\("m_source"/);
 	assert.match(bestiaryContentSource, /onSelectMonster/);
-	assert.match(bestiaryContentSource, /showAddToEncounterPicker=\{Boolean\(onAddMonster\)\}/);
+	assert.match(bestiaryContentSource, /getBestiaryDetailPresentation\(/);
+	assert.match(
+		bestiaryContentSource,
+		/showAddToEncounterPicker=\{presentation\.showAddToEncounterPicker\}/,
+	);
+	assert.match(bestiaryModelSource, /showAddToEncounterPicker: Boolean\(onAddMonster\)/);
 	assert.doesNotMatch(spellsSource, embeddedPropPattern);
 	assert.doesNotMatch(spellsSource, /useSearchParams/);
 	assert.doesNotMatch(spellsSource, /next\.set\("spell"/);
@@ -10476,8 +13698,9 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.match(aiAssistantSource, /historyCampaign: aiHistoryCampaign/);
 	assert.match(
 		aiAssistantContextSource,
-		/historyCampaign: isBestiary \? "bestiary" : campaign/,
+		/historyCampaign: isBestiary \? "bestiary" : route\.campaign/,
 	);
+	assert.match(aiAssistantContextSource, /getAiAssistantRouteTargets/);
 	assert.match(aiAssistantSource, /getAiAssistantRouteState/);
 	assert.match(aiAssistantSource, /buildAiUpdatedDataPlan/);
 	assert.match(aiAssistantSource, /executeAiUpdatedDataPlan/);
@@ -13862,6 +17085,13 @@ await run("image target policies normalize nested folder navigation", () => {
 });
 
 await run("image gallery presentation preserves history and unique items", () => {
+	assert.equal(getGalleryColumnCount(500, "16px"), 3);
+	assert.equal(getGalleryColumnCount(120, "4px"), 1);
+	assert.equal(getGalleryColumnCount(500, "0px"), 3);
+	assert.equal(getGalleryColumnCount(500, "normal"), 3);
+	assert.equal(getGalleryColumnCount(-100, "16px"), 1);
+	assert.equal(getGalleryColumnCount(Number.POSITIVE_INFINITY, "16px"), Infinity);
+	assert.equal(Number.isNaN(getGalleryColumnCount(Number.NaN, "16px")), true);
 	const root = getGalleryPathEntry("general", "tokens", "");
 	const nested = getGalleryPathEntry("general", "tokens", "герої");
 	let history = recordGalleryNavigation({ entries: [], index: -1 }, root);
@@ -14222,9 +17452,130 @@ await run("image gallery search presentation preserves scope and reset policies"
 		),
 		true,
 	);
+	assert.equal(isAiResponseVisibleForRoute(null), true);
+	assert.equal(
+		isAiResponseVisibleForRoute({ path: { encounter: 0 } }, {}),
+		true,
+	);
+});
+
+await run("image gallery stats and actions preserve nullable and visibility policies", () => {
+	assert.deepEqual(
+		getGalleryStatsAndActionsPresentation({
+			hasSelection: false,
+			isReadonlyCurrentFolder: false,
+			selectedFilenameCount: 0,
+			selectedSubfolderCount: 0,
+			storageStats: null,
+		}),
+		{
+			selectionCount: 0,
+			showSelectionActions: false,
+			showUpload: true,
+			storageItems: [
+				{ bytes: 0, id: "total", labelKey: "Total gallery size" },
+				{ bytes: 0, id: "category", labelKey: "Tab size" },
+			],
+		},
+	);
+	const selectedReadonly = getGalleryStatsAndActionsPresentation({
+		hasSelection: true,
+		isReadonlyCurrentFolder: true,
+		selectedFilenameCount: 2,
+		selectedSubfolderCount: 3,
+		storageStats: {
+			totalBytes: 4096,
+			sourceBytes: 3072,
+			categoryBytes: 1024,
+			subcategoryBytes: 512,
+			sourceSizes: {},
+			categorySizes: {},
+		},
+	});
+	assert.equal(selectedReadonly.selectionCount, 5);
+	assert.equal(selectedReadonly.showSelectionActions, true);
+	assert.equal(selectedReadonly.showUpload, false);
+	assert.deepEqual(selectedReadonly.storageItems, [
+		{ bytes: 4096, id: "total", labelKey: "Total gallery size" },
+		{ bytes: 1024, id: "category", labelKey: "Tab size" },
+	]);
+	const inconsistentSelection = getGalleryStatsAndActionsPresentation({
+		hasSelection: true,
+		isReadonlyCurrentFolder: false,
+		selectedFilenameCount: 0,
+		selectedSubfolderCount: 0,
+		storageStats: undefined,
+	});
+	assert.equal(inconsistentSelection.selectionCount, 0);
+	assert.equal(inconsistentSelection.showSelectionActions, true);
+	const hiddenNonzeroSelection = getGalleryStatsAndActionsPresentation({
+		hasSelection: false,
+		isReadonlyCurrentFolder: false,
+		selectedFilenameCount: 4,
+		selectedSubfolderCount: 1,
+		storageStats: { totalBytes: -5, categoryBytes: Number.NaN },
+	});
+	assert.equal(hiddenNonzeroSelection.selectionCount, 5);
+	assert.equal(hiddenNonzeroSelection.showSelectionActions, false);
+	assert.equal(hiddenNonzeroSelection.storageItems[0].bytes, -5);
+	assert.equal(Number.isNaN(hiddenNonzeroSelection.storageItems[1].bytes), true);
+	const nullishFields = getGalleryStatsAndActionsPresentation({
+		hasSelection: false,
+		isReadonlyCurrentFolder: true,
+		selectedFilenameCount: 0,
+		selectedSubfolderCount: 0,
+		storageStats: { totalBytes: null, categoryBytes: undefined },
+	});
+	assert.deepEqual(
+		nullishFields.storageItems.map((item) => item.bytes),
+		[0, 0],
+	);
+	assert.equal(nullishFields.showUpload, false);
 });
 
 await run("image gallery interaction plans validate drops, moves, and selection", () => {
+	assert.deepEqual(
+		getGalleryEscapePlan({
+			hasPreview: false,
+			hasSelection: true,
+			key: "Enter",
+		}),
+		{ action: "none", preventDefault: false, stopPropagation: false },
+	);
+	assert.deepEqual(
+		getGalleryEscapePlan({
+			hasPreview: false,
+			hasSelection: false,
+			key: "Escape",
+		}),
+		{ action: "none", preventDefault: false, stopPropagation: false },
+	);
+	assert.deepEqual(
+		getGalleryEscapePlan({
+			hasPreview: false,
+			hasSelection: true,
+			key: "Escape",
+		}),
+		{
+			action: "clear-selection",
+			preventDefault: true,
+			stopPropagation: true,
+		},
+	);
+	for (const hasSelection of [false, true]) {
+		assert.deepEqual(
+			getGalleryEscapePlan({
+				hasPreview: true,
+				hasSelection,
+				key: "Escape",
+			}),
+			{
+				action: "close-preview",
+				preventDefault: true,
+				stopPropagation: true,
+			},
+		);
+	}
 	const destination = { slug: "curse", category: "tokens", subcategory: "герої" };
 	assert.deepEqual(
 		getGalleryDropPlan({ dest: destination, hasFiles: false, jsonData: "broken" }),
@@ -14259,6 +17610,121 @@ await run("image gallery interaction plans validate drops, moves, and selection"
 		}).map((payload) => payload.items),
 		[["other.png"], ["маги"]],
 	);
+	const gridTarget = getGalleryGridDropTarget({
+		category: "tokens",
+		isReadonly: false,
+		slug: "кампанія",
+		subcategory: "герої/Ірина",
+	});
+	assert.deepEqual(gridTarget, {
+		slug: "кампанія",
+		category: "tokens",
+		subcategory: "герої/Ірина",
+		readonly: false,
+	});
+	assert.deepEqual(
+		getGalleryGridDragOverPlan({
+			dragSource: null,
+			isSearchResults: false,
+			target: gridTarget,
+		}),
+		{ nextDraggingOver: true, preventDefault: true },
+	);
+	assert.deepEqual(
+		getGalleryGridDragOverPlan({
+			dragSource: {
+				slug: "кампанія",
+				category: "tokens",
+				subcategory: "герої/Ірина",
+			},
+			isSearchResults: false,
+			target: gridTarget,
+		}),
+		{ nextDraggingOver: null, preventDefault: true },
+	);
+	assert.deepEqual(
+		getGalleryGridDragOverPlan({
+			dragSource: {
+				slug: "кампанія",
+				category: "tokens",
+				subcategory: "герої/Ірина",
+			},
+			isSearchResults: true,
+			target: gridTarget,
+		}),
+		{ nextDraggingOver: false, preventDefault: true },
+	);
+	const readonlyGridTarget = getGalleryGridDropTarget({
+		category: "tokens",
+		isReadonly: true,
+		slug: "general",
+		subcategory: "MM",
+	});
+	assert.deepEqual(
+		getGalleryGridDragOverPlan({
+			dragSource: null,
+			isSearchResults: false,
+			target: readonlyGridTarget,
+		}),
+		{ nextDraggingOver: null, preventDefault: true },
+	);
+	assert.deepEqual(
+		getGalleryGridDragOverPlan({
+			dragSource: null,
+			isSearchResults: true,
+			target: readonlyGridTarget,
+		}),
+		{ nextDraggingOver: false, preventDefault: true },
+	);
+	const rootTarget = getGalleryGridDropTarget({
+		category: "tokens",
+		isReadonly: false,
+		slug: "general",
+		subcategory: "",
+	});
+	assert.deepEqual(
+		getGalleryGridDragOverPlan({
+			dragSource: { slug: "general", category: "tokens" },
+			isSearchResults: false,
+			target: rootTarget,
+		}),
+		{ nextDraggingOver: true, preventDefault: true },
+	);
+	for (const dragSource of [
+		{ slug: "other", category: "tokens", subcategory: "герої/Ірина" },
+		{ slug: "кампанія", category: "attachments", subcategory: "герої/Ірина" },
+		{ slug: "кампанія", category: "tokens", subcategory: "інша" },
+	]) {
+		assert.deepEqual(
+			getGalleryGridDragOverPlan({
+				dragSource,
+				isSearchResults: false,
+				target: gridTarget,
+			}),
+			{ nextDraggingOver: true, preventDefault: true },
+		);
+	}
+	assert.deepEqual(
+		getGalleryGridDropPlan({
+			isSearchResults: true,
+			target: gridTarget,
+		}),
+		{
+			action: "reject-search",
+			nextDraggingOver: false,
+			preventDefault: true,
+		},
+	);
+	const delegatedGridDrop = getGalleryGridDropPlan({
+		isSearchResults: false,
+		target: readonlyGridTarget,
+	});
+	assert.deepEqual(delegatedGridDrop, {
+		action: "delegate",
+		preventDefault: false,
+		target: readonlyGridTarget,
+	});
+	assert.equal(delegatedGridDrop.target, readonlyGridTarget);
 	const selection = getGallerySelectionPlan({
 		allSubs: ["official", "custom"],
 		filenames: new Set(),

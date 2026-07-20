@@ -16,6 +16,28 @@ export interface GalleryFolderDragOverPlan {
 	target: GalleryDragOverTarget | null;
 }
 
+export interface GalleryGridDragOverPlan {
+	nextDraggingOver: boolean | null;
+	preventDefault: true;
+}
+
+export type GalleryEscapePlan =
+	| { action: "clear-selection"; preventDefault: true; stopPropagation: true }
+	| { action: "close-preview"; preventDefault: true; stopPropagation: true }
+	| { action: "none"; preventDefault: false; stopPropagation: false };
+
+export type GalleryGridDropPlan =
+	| {
+			action: "delegate";
+			preventDefault: false;
+			target: GalleryDropTarget;
+	  }
+	| {
+			action: "reject-search";
+			nextDraggingOver: false;
+			preventDefault: true;
+	  };
+
 export type GalleryKeyboardPlan =
 	| { action: "none"; preventDefault: boolean }
 	| { action: "delete-selection"; preventDefault: false }
@@ -50,6 +72,39 @@ const GALLERY_KEYBOARD_NONE_PLAN: GalleryKeyboardPlan = Object.freeze({
 	action: "none",
 	preventDefault: false,
 });
+
+const GALLERY_ESCAPE_NONE_PLAN: GalleryEscapePlan = Object.freeze({
+	action: "none",
+	preventDefault: false,
+	stopPropagation: false,
+});
+
+export function getGalleryEscapePlan({
+	hasPreview,
+	hasSelection,
+	key,
+}: {
+	hasPreview: boolean;
+	hasSelection: boolean;
+	key: string;
+}): GalleryEscapePlan {
+	if (key !== "Escape") return GALLERY_ESCAPE_NONE_PLAN;
+	if (hasPreview) {
+		return {
+			action: "close-preview",
+			preventDefault: true,
+			stopPropagation: true,
+		};
+	}
+	if (hasSelection) {
+		return {
+			action: "clear-selection",
+			preventDefault: true,
+			stopPropagation: true,
+		};
+	}
+	return GALLERY_ESCAPE_NONE_PLAN;
+}
 
 function isGalleryKeyboardBlocked(
 	isOpen: boolean,
@@ -138,6 +193,68 @@ export function getGalleryFolderDragOverPlan({
 		preventDefault: true,
 		target: currentTargetId === sub ? null : { type: "sub", id: sub },
 	};
+}
+
+export function getGalleryGridDropTarget({
+	category,
+	isReadonly,
+	slug,
+	subcategory,
+}: {
+	category: string;
+	isReadonly: boolean;
+	slug: string;
+	subcategory: string;
+}): GalleryDropTarget {
+	return { slug, category, subcategory, readonly: isReadonly };
+}
+
+function isExactGalleryGridDragLocation(
+	dragSource: ImageLocation | null,
+	target: GalleryDropTarget,
+): boolean {
+	return Boolean(
+		dragSource &&
+			dragSource.slug === target.slug &&
+			dragSource.category === target.category &&
+			dragSource.subcategory === target.subcategory,
+	);
+}
+
+export function getGalleryGridDragOverPlan({
+	dragSource,
+	isSearchResults,
+	target,
+}: {
+	dragSource: ImageLocation | null;
+	isSearchResults: boolean;
+	target: GalleryDropTarget;
+}): GalleryGridDragOverPlan {
+	if (isSearchResults) {
+		return { nextDraggingOver: false, preventDefault: true };
+	}
+	const canShowOverlay =
+		!isExactGalleryGridDragLocation(dragSource, target) && !target.readonly;
+	return {
+		nextDraggingOver: canShowOverlay ? true : null,
+		preventDefault: true,
+	};
+}
+
+export function getGalleryGridDropPlan({
+	isSearchResults,
+	target,
+}: {
+	isSearchResults: boolean;
+	target: GalleryDropTarget;
+}): GalleryGridDropPlan {
+	return isSearchResults
+		? {
+			action: "reject-search",
+			nextDraggingOver: false,
+			preventDefault: true,
+		}
+		: { action: "delegate", preventDefault: false, target };
 }
 
 export function getGalleryFolderDropTarget({

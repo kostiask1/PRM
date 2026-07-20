@@ -1,12 +1,67 @@
-import type { Dispatch, SetStateAction } from "react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 
 import { classNames, lang } from "../../../shared/lib/index.js";
 import { Button, Checkbox, Select } from "../../../shared/ui/index.js";
 import type { AiModelDescriptor } from "../api/aiApi.ts";
 import renderAiModelOptions from "./AiModelOptions.tsx";
-import { getAiEncounterGenerationTogglePlan } from "./presentationModel.ts";
+import {
+	getAiEncounterGenerationActionsView,
+	getAiEncounterGenerationTogglePlan,
+	getAiEntityGenerationActionsView,
+} from "./presentationModel.ts";
 
 export type AiBooleanSetter = Dispatch<SetStateAction<boolean>>;
+
+function AiGenerationToggleButton({
+	active,
+	children,
+	disabled,
+	icon,
+	setActive,
+	title,
+}: {
+	active: boolean;
+	children: ReactNode;
+	disabled: boolean;
+	icon: "folder-npc" | "map" | "users" | "wand";
+	setActive: AiBooleanSetter;
+	title: string;
+}) {
+	return (
+		<Button
+			variant={active ? "primary" : "ghost"}
+			size={Button.SIZES.SMALL}
+			icon={icon}
+			onClick={() => setActive((value) => !value)}
+			disabled={disabled}
+			title={title}
+		>
+			{children}
+		</Button>
+	);
+}
+
+function applyAiEncounterGenerationToggle(
+	generateEncounters: boolean,
+	setGenerateCustomMonsters: AiBooleanSetter,
+	setGenerateEncounters: AiBooleanSetter,
+): void {
+	const plan = getAiEncounterGenerationTogglePlan(generateEncounters);
+	setGenerateEncounters(plan.generateEncounters);
+	if (plan.generateCustomMonsters !== null) {
+		setGenerateCustomMonsters(plan.generateCustomMonsters);
+	}
+}
+
+function getAiEncounterGenerationTitle(kind: "current" | "scenes"): string {
+	return kind === "current"
+		? lang.t(
+				"AI will update the current encounter with monsters based on character levels",
+			)
+		: lang.t(
+				"AI will try to pick monsters for each scene based on character levels",
+			);
+}
 
 export function AiModelPicker({
 	aiModels,
@@ -128,41 +183,43 @@ export function AiEntityGenerationActions({
 	showCharacterGeneration: boolean;
 	showParsedGenerationOptions: boolean;
 }) {
-	if (!showParsedGenerationOptions || isEncounter) return null;
+	const view = getAiEntityGenerationActionsView({
+		isEncounter,
+		showCharacterGeneration,
+		showParsedGenerationOptions,
+	});
+	if (!view.showActions) return null;
 	return (
 		<>
-			{showCharacterGeneration && (
-				<Button
-					variant={generateCharacters ? "primary" : "ghost"}
-					size={Button.SIZES.SMALL}
-					icon="users"
-					onClick={() => setGenerateCharacters((value) => !value)}
+			{view.showCharacterAction && (
+				<AiGenerationToggleButton
+					active={generateCharacters}
 					disabled={loading}
+					icon="users"
+					setActive={setGenerateCharacters}
 					title={lang.t("Create characters with AI")}
 				>
 					{lang.t("Create characters")}
-				</Button>
+				</AiGenerationToggleButton>
 			)}
-			<Button
-				variant={generateNpcs ? "primary" : "ghost"}
-				size={Button.SIZES.SMALL}
-				icon="folder-npc"
-				onClick={() => setGenerateNpcs((value) => !value)}
+			<AiGenerationToggleButton
+				active={generateNpcs}
 				disabled={loading}
+				icon="folder-npc"
+				setActive={setGenerateNpcs}
 				title={lang.t("Create NPCs with AI")}
 			>
 				{lang.t("Create NPCs")}
-			</Button>
-			<Button
-				variant={generateLocations ? "primary" : "ghost"}
-				size={Button.SIZES.SMALL}
-				icon="map"
-				onClick={() => setGenerateLocations((value) => !value)}
+			</AiGenerationToggleButton>
+			<AiGenerationToggleButton
+				active={generateLocations}
 				disabled={loading}
+				icon="map"
+				setActive={setGenerateLocations}
 				title={lang.t("Create locations/factions with AI")}
 			>
 				{lang.t("Create locations/factions")}
-			</Button>
+			</AiGenerationToggleButton>
 		</>
 	);
 }
@@ -226,51 +283,47 @@ export function AiEncounterGenerationActions({
 	setGenerateEncounters: AiBooleanSetter;
 	showParsedGenerationOptions: boolean;
 }) {
-	if (!showParsedGenerationOptions) return null;
-	const toggleEncounterGeneration = () => {
-		const plan = getAiEncounterGenerationTogglePlan(generateEncounters);
-		setGenerateEncounters(plan.generateEncounters);
-		if (plan.generateCustomMonsters !== null) {
-			setGenerateCustomMonsters(plan.generateCustomMonsters);
-		}
-	};
+	const view = getAiEncounterGenerationActionsView({
+		isCampaign,
+		isCustomMonsterGenerationVisible,
+		isEncounter,
+		showParsedGenerationOptions,
+	});
+	if (!view.showActions) return null;
+	const toggleEncounterGeneration = () =>
+		applyAiEncounterGenerationToggle(
+			generateEncounters,
+			setGenerateCustomMonsters,
+			setGenerateEncounters,
+		);
 	return (
 		<>
-			{!isCampaign && (
+			{view.showEncounterAction && (
 				<Button
 					variant={generateEncounters ? "primary" : "ghost"}
 					size={Button.SIZES.SMALL}
 					icon="swords"
 					onClick={toggleEncounterGeneration}
 					disabled={loading}
-					title={
-						isEncounter
-							? lang.t(
-									"AI will update the current encounter with monsters based on character levels",
-								)
-							: lang.t(
-									"AI will try to pick monsters for each scene based on character levels",
-								)
-					}
+					title={getAiEncounterGenerationTitle(view.encounterTitleKind)}
 				>
 					{lang.t("Encounter generation")}
 				</Button>
 			)}
-			{isCustomMonsterGenerationVisible && (
-				<Button
-					variant={generateCustomMonsters ? "primary" : "ghost"}
-					size={Button.SIZES.SMALL}
-					icon="wand"
-					onClick={() => setGenerateCustomMonsters((value) => !value)}
+			{view.showCustomMonsterAction && (
+				<AiGenerationToggleButton
+					active={generateCustomMonsters}
 					disabled={loading}
+					icon="wand"
+					setActive={setGenerateCustomMonsters}
 					title={lang.t(
 						"AI may create custom creatures only when official monsters do not fit the scene",
 					)}
 				>
 					{lang.t("Generate monsters")}
-				</Button>
+				</AiGenerationToggleButton>
 			)}
-			{isEncounter && (
+			{view.showCreateCustomCreatureAction && (
 				<Button
 					variant="ghost"
 					size={Button.SIZES.SMALL}

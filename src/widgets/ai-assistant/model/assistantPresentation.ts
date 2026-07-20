@@ -82,31 +82,100 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 		: null;
 }
 
+function getFirstTruthyValue(...values: unknown[]): unknown {
+	for (const value of values) {
+		if (value) return value;
+	}
+	return "";
+}
+
+function stringifyTruthy(value: unknown): string {
+	return String(value || "");
+}
+
+function findMatchingPrefix(
+	source: string,
+	prefixes: Array<string | null | undefined>,
+): string | undefined {
+	return (
+		prefixes.find((prefix) => Boolean(prefix) && source.startsWith(prefix!)) ??
+		undefined
+	);
+}
+
+function findFirstLabelIndex(source: string, labels: string[]): number | undefined {
+	for (const label of labels) {
+		const index = source.indexOf(label);
+		if (index >= 0) return index;
+	}
+	return undefined;
+}
+
+type JsonStringScanState = "outside" | "inside" | "escaped";
+
+function getNextJsonStringScanState(
+	state: JsonStringScanState,
+	character: string,
+): JsonStringScanState {
+	if (state === "escaped") return "inside";
+	if (state === "inside" && character === "\\") return "escaped";
+	if (character === '"') return state === "inside" ? "outside" : "inside";
+	return state;
+}
+
+function getJsonObjectDepthDelta(
+	state: JsonStringScanState,
+	character: string,
+): number {
+	if (state !== "outside") return 0;
+	if (character === "{") return 1;
+	return character === "}" ? -1 : 0;
+}
+
 function findJsonObjectEnd(text: string, startIndex: number): number {
 	let depth = 0;
-	let inString = false;
-	let escaped = false;
+	let stringState: JsonStringScanState = "outside";
 	for (let index = startIndex; index < text.length; index += 1) {
 		const character = text[index];
-		if (escaped) {
-			escaped = false;
-			continue;
-		}
-		if (character === "\\") {
-			escaped = inString;
-			continue;
-		}
-		if (character === '"') {
-			inString = !inString;
-			continue;
-		}
-		if (inString) continue;
-		if (character === "{") depth += 1;
-		if (character !== "}") continue;
-		depth -= 1;
-		if (depth === 0) return index + 1;
+		stringState = getNextJsonStringScanState(stringState, character);
+		depth += getJsonObjectDepthDelta(stringState, character);
+		if (character === "}" && depth === 0) return index + 1;
 	}
 	return -1;
+}
+
+function stripLabeledJsonObject(source: string, labelIndex?: number): string {
+	if (labelIndex === undefined) return source;
+	const objectStart = source.indexOf("{", labelIndex);
+	if (objectStart < 0) return source;
+	const objectEnd = findJsonObjectEnd(source, objectStart);
+	return objectEnd < 0 ? source : source.slice(objectEnd).trim();
+}
+
+function getHistoryGenerationOptionRows(
+	options: Record<string, unknown>,
+	translate: AssistantTranslate,
+	getOnOffLabel: (value: unknown) => string,
+): string[] {
+	return HISTORY_GENERATION_OPTIONS.map(
+		([label, key]) => `${translate(label)}: ${getOnOffLabel(options[key])}`,
+	);
+}
+
+function getHistoryContextParts(
+	context: Record<string, unknown>,
+	translate: AssistantTranslate,
+): string[] {
+	return HISTORY_CONTEXT_FIELDS.filter(([, key]) => Boolean(context[key])).map(
+		([label, key]) => `${translate(label)}: ${String(context[key])}`,
+	);
+}
+
+function formatHistoryContextParts(
+	parts: string[],
+	translate: AssistantTranslate,
+): string {
+	return parts.length ? parts.join(", ") : translate("Empty");
 }
 
 export function createAiAssistantPresentation({
@@ -133,35 +202,35 @@ export function createAiAssistantPresentation({
 	};
 
 	const stripGeneratedMonsterEditPrompt = (text: unknown): string => {
-		const source = String(text || "").trim();
+		const source = stringifyTruthy(text).trim();
 		if (!source) return "";
 		const baseCreatePrefix =
 			"Create a new custom creature based on the selected creature. Do not change the selected creature.";
-		const createPrefix = [translate(baseCreatePrefix), baseCreatePrefix].find(
-			(prefix) => prefix && source.startsWith(prefix),
+		const createPrefix = findMatchingPrefix(
+			source,
+			[translate(baseCreatePrefix), baseCreatePrefix],
 		);
 		if (createPrefix) return source.slice(createPrefix.length).trim();
 
-		const labelIndex = [
-			`${translate("Current encounter creature")}:`,
-			"Current encounter creature:",
-		]
-			.map((label) => source.indexOf(label))
-			.find((index) => index >= 0);
-		if (labelIndex === undefined) return source;
-		const objectStart = source.indexOf("{", labelIndex);
-		if (objectStart < 0) return source;
-		const objectEnd = findJsonObjectEnd(source, objectStart);
-		return objectEnd < 0 ? source : source.slice(objectEnd).trim();
+		return stripLabeledJsonObject(
+			source,
+			findFirstLabelIndex(source, [
+				`${translate("Current encounter creature")}:`,
+				"Current encounter creature:",
+			]),
+		);
 	};
 
 	const getHistoryRequestText = (entry: AssistantHistoryEntry): string => {
-		const explicitText = String(
-			entry.retryPayload?.historyUserInstructions || "",
+		const explicitText = stringifyTruthy(
+			entry.retryPayload?.historyUserInstructions,
 		).trim();
 		if (explicitText) return explicitText;
 		return stripGeneratedMonsterEditPrompt(
-			entry.request?.userInstructions || entry.userInstructions || "",
+			getFirstTruthyValue(
+				entry.request?.userInstructions,
+				entry.userInstructions,
+			),
 		);
 	};
 
@@ -172,18 +241,20 @@ export function createAiAssistantPresentation({
 		String(location.name || location.title || translate("Untitled")).trim();
 
 	const getCharacterDisplayName = (character: AssistantEntity): string => {
-		const firstName = String(
-			character.firstName || character.first_name || "",
+		const firstName = stringifyTruthy(
+			getFirstTruthyValue(character.firstName, character.first_name),
 		).trim();
-		const lastName = String(
-			character.lastName || character.last_name || "",
+		const lastName = stringifyTruthy(
+			getFirstTruthyValue(character.lastName, character.last_name),
 		).trim();
-		return String(
-			`${firstName} ${lastName}`.trim() ||
-				character.name ||
-				character.title ||
-				translate("Untitled"),
-		).trim();
+		const displayName = getFirstTruthyValue(
+			`${firstName} ${lastName}`.trim(),
+			character.name,
+			character.title,
+		);
+		return displayName
+			? String(displayName).trim()
+			: translate("Untitled").trim();
 	};
 
 	const getSceneImagePromptTitle = (
@@ -212,17 +283,15 @@ export function createAiAssistantPresentation({
 	const getHistoryOptionsSummary = (entry: AssistantHistoryEntry): string => {
 		const request = asRecord(entry.request);
 		const options = asRecord(request?.options);
-		if (!options?.mode) return String(request?.optionsSummary || "");
+		if (!options?.mode) return stringifyTruthy(request?.optionsSummary);
+		const mode = String(options.mode);
 		const rows = [
-			`${translate("Mode")}: ${translate(HISTORY_MODE_LABELS[String(options.mode)] || String(options.mode) || "AI response")}`,
+			`${translate("Mode")}: ${translate(String(getFirstTruthyValue(HISTORY_MODE_LABELS[mode], mode, "AI response")))}`,
 			`${translate("Response parsing")}: ${getOnOffLabel(options.responseParsing)}`,
 		];
 		if (options.responseParsing) {
 			rows.push(
-				...HISTORY_GENERATION_OPTIONS.map(
-					([label, key]) =>
-						`${translate(label)}: ${getOnOffLabel(options[key])}`,
-				),
+				...getHistoryGenerationOptionRows(options, translate, getOnOffLabel),
 			);
 		}
 		rows.push(`${translate("Context")}: ${getOnOffLabel(options.contextEnabled)}`);
@@ -232,12 +301,10 @@ export function createAiAssistantPresentation({
 	const getHistoryContextSummary = (entry: AssistantHistoryEntry): string => {
 		const request = asRecord(entry.request);
 		const context = asRecord(request?.context);
-		if (!context) return String(request?.contextSummary || "");
+		if (!context) return stringifyTruthy(request?.contextSummary);
 		if (!context.enabled) return `${translate("Context")}: ${translate("Off")}`;
-		const parts = HISTORY_CONTEXT_FIELDS.flatMap(([label, key]) =>
-			context[key] ? [`${translate(label)}: ${String(context[key])}`] : [],
-		);
-		return `${translate("Context")}: ${parts.length ? parts.join(", ") : translate("Empty")}`;
+		const parts = getHistoryContextParts(context, translate);
+		return `${translate("Context")}: ${formatHistoryContextParts(parts, translate)}`;
 	};
 
 	const getHistoryDetailRows = (

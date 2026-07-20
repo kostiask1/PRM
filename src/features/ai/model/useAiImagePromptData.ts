@@ -11,6 +11,39 @@ interface MonsterCollectionEnvelope {
 	monsters?: unknown;
 }
 
+function asMonsterCollectionEnvelope(
+	data: unknown,
+): MonsterCollectionEnvelope | null {
+	return data && typeof data === "object" && !Array.isArray(data)
+		? (data as MonsterCollectionEnvelope)
+		: null;
+}
+
+function getEnvelopeMonsterCollection(
+	envelope: MonsterCollectionEnvelope | null,
+): unknown[] | null {
+	if (Array.isArray(envelope?.monster)) return envelope.monster;
+	if (Array.isArray(envelope?.monsters)) return envelope.monsters;
+	return null;
+}
+
+function getCustomMonsterCollection(data: unknown): unknown[] {
+	return (
+		getEnvelopeMonsterCollection(asMonsterCollectionEnvelope(data)) ??
+		(Array.isArray(data) ? data : [])
+	);
+}
+
+function isAiImagePromptMonster(value: unknown): value is AiImagePromptMonster {
+	return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function retainMonsterRecords(collection: unknown[]): AiImagePromptMonster[] {
+	return collection.every(isAiImagePromptMonster)
+		? (collection as AiImagePromptMonster[])
+		: collection.filter(isAiImagePromptMonster);
+}
+
 export interface UseAiImagePromptDataOptions {
 	campaignSlug?: string | null;
 	isCampaign?: boolean;
@@ -29,13 +62,7 @@ export interface UseAiImagePromptDataOptions {
 export function normalizeCustomMonsterCollection(
 	data: unknown,
 ): AiImagePromptMonster[] {
-	const envelope =
-		data && typeof data === "object" && !Array.isArray(data)
-			? (data as MonsterCollectionEnvelope)
-			: null;
-	if (Array.isArray(envelope?.monster)) return envelope.monster;
-	if (Array.isArray(envelope?.monsters)) return envelope.monsters;
-	return Array.isArray(data) ? data : [];
+	return retainMonsterRecords(getCustomMonsterCollection(data));
 }
 
 export function useAiImagePromptData({

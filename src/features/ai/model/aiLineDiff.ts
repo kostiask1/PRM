@@ -13,6 +13,11 @@ interface DiffCursor {
 	newNumber: number;
 }
 
+interface DiffCursorAvailability {
+	hasOldLine: boolean;
+	hasNewLine: boolean;
+}
+
 function createFullReplacementDiff(
 	oldLines: readonly string[],
 	newLines: readonly string[],
@@ -54,27 +59,56 @@ function buildLongestCommonSubsequenceTable(
 	return table;
 }
 
+function getDiffCursorAvailability(
+	oldLines: readonly string[],
+	newLines: readonly string[],
+	cursor: DiffCursor,
+): DiffCursorAvailability {
+	return {
+		hasOldLine: cursor.oldIndex < oldLines.length,
+		hasNewLine: cursor.newIndex < newLines.length,
+	};
+}
+
+function areCurrentDiffLinesEqual(
+	oldLines: readonly string[],
+	newLines: readonly string[],
+	cursor: DiffCursor,
+	availability: DiffCursorAvailability,
+): boolean {
+	return (
+		availability.hasOldLine &&
+		availability.hasNewLine &&
+		oldLines[cursor.oldIndex] === newLines[cursor.newIndex]
+	);
+}
+
+function shouldRemoveNextDiffLine(
+	table: readonly number[][],
+	cursor: DiffCursor,
+	availability: DiffCursorAvailability,
+): boolean {
+	if (!availability.hasNewLine) return true;
+	if (!availability.hasOldLine) return false;
+	return (
+		table[cursor.oldIndex + 1][cursor.newIndex] >=
+		table[cursor.oldIndex][cursor.newIndex + 1]
+	);
+}
+
 function getNextDiffLineType(
 	oldLines: readonly string[],
 	newLines: readonly string[],
 	table: readonly number[][],
 	cursor: DiffCursor,
 ): DiffLineType {
-	const hasOldLine = cursor.oldIndex < oldLines.length;
-	const hasNewLine = cursor.newIndex < newLines.length;
-	if (
-		hasOldLine &&
-		hasNewLine &&
-		oldLines[cursor.oldIndex] === newLines[cursor.newIndex]
-	) {
+	const availability = getDiffCursorAvailability(oldLines, newLines, cursor);
+	if (areCurrentDiffLinesEqual(oldLines, newLines, cursor, availability)) {
 		return "context";
 	}
-	const shouldRemove =
-		!hasNewLine ||
-		(hasOldLine &&
-			table[cursor.oldIndex + 1][cursor.newIndex] >=
-				table[cursor.oldIndex][cursor.newIndex + 1]);
-	return shouldRemove ? "removed" : "added";
+	return shouldRemoveNextDiffLine(table, cursor, availability)
+		? "removed"
+		: "added";
 }
 
 function createDiffLine(

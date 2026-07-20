@@ -1,20 +1,61 @@
-import { Fragment, type Dispatch, type ReactNode, type RefObject, type SetStateAction } from "react";
+import {
+	Fragment,
+	type Dispatch,
+	type DragEvent,
+	type ReactNode,
+	type RefObject,
+	type SetStateAction,
+} from "react";
 import { Button, Icon, Tooltip } from "../../../shared/ui/index.js";
 import { classNames, formatBytes, lang } from "../../../shared/lib/index.js";
 import { Modal } from "../../modal/index.js";
 import type { ImageLocation } from "../api/imageApi.ts";
 import { imageApi as api } from "../api/imageApi.ts";
 import {
+	getGalleryStatsAndActionsPresentation,
 	getGallerySearchPresentation,
 	type GalleryHistoryDirection,
 	type GallerySearchPresentation,
 	type GallerySearchScopeControl,
+	type GalleryStatsAndActionsPresentation,
 } from "../model/imageGalleryPresentation.ts";
 import type { GalleryImage } from "../model/contracts.ts";
 import type useImageGallery from "../model/useImageGallery.ts";
+import {
+	getGalleryGridDragOverPlan,
+	getGalleryGridDropPlan,
+	getGalleryGridDropTarget,
+	type GalleryGridDragOverPlan,
+	type GalleryGridDropPlan,
+} from "../model/imageGalleryInteraction.ts";
 import ImageTargetSettings from "./ImageTargetSettings.tsx";
 
 type ImageGalleryController = ReturnType<typeof useImageGallery>;
+
+function executeGalleryGridDragOverPlan(
+	plan: GalleryGridDragOverPlan,
+	event: Pick<DragEvent, "preventDefault">,
+	setIsDraggingOver: (value: boolean) => void,
+): void {
+	event.preventDefault();
+	if (plan.nextDraggingOver !== null) {
+		setIsDraggingOver(plan.nextDraggingOver);
+	}
+}
+
+function executeGalleryGridDropPlan(
+	plan: GalleryGridDropPlan,
+	event: DragEvent,
+	setIsDraggingOver: (value: boolean) => void,
+	handleDrop: ImageGalleryController["handleDrop"],
+): void {
+	if (plan.action === "reject-search") {
+		event.preventDefault();
+		setIsDraggingOver(plan.nextDraggingOver);
+		return;
+	}
+	void handleDrop(event, plan.target);
+}
 
 export function ImageGalleryNavigation({
 	canNavigateBack,
@@ -268,6 +309,81 @@ export function ImageGallerySearch({
 	);
 }
 
+function ImageGalleryStorageStats({
+	presentation,
+}: {
+	presentation: GalleryStatsAndActionsPresentation;
+}) {
+	return (
+		<div className="ImageGallery__storage_stats">
+			{presentation.storageItems.map((item) => (
+				<span key={item.id}>
+					{lang.t(item.labelKey)}: {" "}
+					<strong>{formatBytes(item.bytes)}</strong>
+				</span>
+			))}
+		</div>
+	);
+}
+
+function ImageGallerySelectionActions({
+	onDelete,
+	onOpenMove,
+	presentation,
+}: {
+	onDelete: () => void;
+	onOpenMove: () => void;
+	presentation: GalleryStatsAndActionsPresentation;
+}) {
+	if (!presentation.showSelectionActions) return null;
+	return (
+		<>
+			<Button
+				variant="ghost"
+				size={Button.SIZES.SMALL}
+				icon="export"
+				onClick={onOpenMove}
+			>
+				{lang.t("Move")} ({presentation.selectionCount})
+			</Button>
+			<Button
+				className="ImageGallery__deleteBtn"
+				variant="danger"
+				size={Button.SIZES.SMALL}
+				icon="trash"
+				onClick={onDelete}
+			>
+				{lang.t("Delete")} ({presentation.selectionCount})
+			</Button>
+		</>
+	);
+}
+
+function ImageGalleryUploadControl({
+	onUpload,
+	presentation,
+}: {
+	onUpload: (files: FileList) => void;
+	presentation: GalleryStatsAndActionsPresentation;
+}) {
+	if (!presentation.showUpload) return null;
+	return (
+		<label className="UploadBtn">
+			<Icon name="plus" size={14} />
+			<span>{lang.t("Upload")}</span>
+			<input
+				type="file"
+				multiple
+				accept="image/*"
+				hidden
+				onChange={(event) => {
+					if (event.target.files) onUpload(event.target.files);
+				}}
+			/>
+		</label>
+	);
+}
+
 export function ImageGalleryStatsAndActions({
 	controller,
 	onOpenMove,
@@ -284,56 +400,26 @@ export function ImageGalleryStatsAndActions({
 		selectedSubs,
 		storageStats,
 	} = controller;
-	const selectionCount = selectedFilenames.size + selectedSubs.size;
+	const presentation = getGalleryStatsAndActionsPresentation({
+		hasSelection,
+		isReadonlyCurrentFolder,
+		selectedFilenameCount: selectedFilenames.size,
+		selectedSubfolderCount: selectedSubs.size,
+		storageStats,
+	});
 	return (
 		<>
-			<div className="ImageGallery__storage_stats">
-				<span>
-					{lang.t("Total gallery size")}: {" "}
-					<strong>{formatBytes(storageStats?.totalBytes ?? 0)}</strong>
-				</span>
-				<span>
-					{lang.t("Tab size")}: {" "}
-					<strong>{formatBytes(storageStats?.categoryBytes ?? 0)}</strong>
-				</span>
-			</div>
+			<ImageGalleryStorageStats presentation={presentation} />
 			<div className="ImageGallery__upload_actions">
-				{hasSelection && (
-					<>
-						<Button
-							variant="ghost"
-							size={Button.SIZES.SMALL}
-							icon="export"
-							onClick={onOpenMove}
-						>
-							{lang.t("Move")} ({selectionCount})
-						</Button>
-						<Button
-							className="ImageGallery__deleteBtn"
-							variant="danger"
-							size={Button.SIZES.SMALL}
-							icon="trash"
-							onClick={handleBulkDelete}
-						>
-							{lang.t("Delete")} ({selectionCount})
-						</Button>
-					</>
-				)}
-				{!isReadonlyCurrentFolder && (
-					<label className="UploadBtn">
-						<Icon name="plus" size={14} />
-						<span>{lang.t("Upload")}</span>
-						<input
-							type="file"
-							multiple
-							accept="image/*"
-							hidden
-							onChange={(event) => {
-								if (event.target.files) void handleFileUpload(event.target.files);
-							}}
-						/>
-					</label>
-				)}
+				<ImageGallerySelectionActions
+					onDelete={handleBulkDelete}
+					onOpenMove={onOpenMove}
+					presentation={presentation}
+				/>
+				<ImageGalleryUploadControl
+					onUpload={(files) => void handleFileUpload(files)}
+					presentation={presentation}
+				/>
 			</div>
 		</>
 	);
@@ -359,6 +445,12 @@ export function ImageGalleryGrid({
 		selectedSub,
 		setIsDraggingOver,
 	} = controller;
+	const dropTarget = getGalleryGridDropTarget({
+		category: selectedCat.id,
+		isReadonly: isReadonlyCurrentFolder,
+		slug: selectedSource,
+		subcategory: selectedSub,
+	});
 	return (
 		<div
 			ref={viewportRef}
@@ -366,30 +458,25 @@ export function ImageGalleryGrid({
 				is_dragging: isDraggingOver,
 			})}
 			onDragOver={(event) => {
-				event.preventDefault();
-				if (isSearchResults) {
-					setIsDraggingOver(false);
-					return;
-				}
-				const isSameLocation =
-					dragSource?.slug === selectedSource &&
-					dragSource.category === selectedCat.id &&
-					dragSource.subcategory === selectedSub;
-				if (!isSameLocation && !isReadonlyCurrentFolder) setIsDraggingOver(true);
+				const plan = getGalleryGridDragOverPlan({
+					dragSource,
+					isSearchResults,
+					target: dropTarget,
+				});
+				executeGalleryGridDragOverPlan(plan, event, setIsDraggingOver);
 			}}
 			onDragLeave={() => setIsDraggingOver(false)}
 			onDrop={(event) => {
-				if (isSearchResults) {
-					event.preventDefault();
-					setIsDraggingOver(false);
-					return;
-				}
-				void handleDrop(event, {
-					slug: selectedSource,
-					category: selectedCat.id,
-					subcategory: selectedSub,
-					readonly: isReadonlyCurrentFolder,
+				const plan = getGalleryGridDropPlan({
+					isSearchResults,
+					target: dropTarget,
 				});
+				executeGalleryGridDropPlan(
+					plan,
+					event,
+					setIsDraggingOver,
+					handleDrop,
+				);
 			}}
 		>
 			{isDraggingOver && (

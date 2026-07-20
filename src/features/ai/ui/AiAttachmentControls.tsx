@@ -18,6 +18,7 @@ import {
 } from "../model/aiAttachments.ts";
 import {
 	getAvailableAiAttachmentSlots,
+	getAiAttachmentControlsView,
 	mergeUniqueAiAttachments,
 	prepareAiAttachmentSelection,
 	removeAiAttachmentAt,
@@ -38,6 +39,134 @@ export interface AiAttachmentControlsProps {
 	setAttachedImages?: AiAttachmentStateSetter;
 }
 
+interface AiAttachmentActionsProps {
+	disabled: boolean;
+	fileActionDisabled: boolean;
+	fileInputRef: RefObject<HTMLInputElement>;
+	imageInputRef: RefObject<HTMLInputElement | null>;
+	onOpenGallery(): void;
+	showImageActions: boolean;
+}
+
+function AiAttachmentActions({
+	disabled,
+	fileActionDisabled,
+	fileInputRef,
+	imageInputRef,
+	onOpenGallery,
+	showImageActions,
+}: AiAttachmentActionsProps) {
+	return (
+		<div className="AiAttachmentControls__file_actions">
+			{showImageActions && (
+				<>
+					<Button
+						variant="ghost"
+						icon="image"
+						onClick={() => imageInputRef.current?.click()}
+						disabled={disabled}
+						title={lang.t("Attach images")}
+					>
+						{lang.t("Attach images")}
+					</Button>
+					<Button
+						variant="ghost"
+						icon="database"
+						onClick={onOpenGallery}
+						disabled={disabled}
+						title={lang.t("From gallery")}
+					>
+						{lang.t("From gallery")}
+					</Button>
+				</>
+			)}
+			<Button
+				variant="ghost"
+				icon="file-plus"
+				onClick={() => fileInputRef.current?.click()}
+				disabled={fileActionDisabled}
+				title={lang.t("Attach files")}
+			>
+				{lang.t("Attach files")}
+			</Button>
+		</div>
+	);
+}
+
+function AttachedImageList({
+	attachments,
+	disabled,
+	onRemove,
+}: {
+	attachments: AiUiAttachment[];
+	disabled: boolean;
+	onRemove(index: number): void;
+}) {
+	if (attachments.length === 0) return null;
+	return (
+		<div className="AiAttachmentControls__list">
+			{attachments.map((image, index) => (
+				<div
+					key={`${image.url || image.name}-${index}`}
+					className="AiAttachmentControls__item"
+				>
+					<img
+						src={image.previewUrl || image.url}
+						alt={image.name || lang.t("Attached image")}
+					/>
+					<span title={image.name || image.url}>{image.name || image.url}</span>
+					<Button
+						variant="danger"
+						size={Button.SIZES.SMALL}
+						icon="x"
+						onClick={() => onRemove(index)}
+						disabled={disabled}
+						title={lang.t("Remove image")}
+					/>
+				</div>
+			))}
+		</div>
+	);
+}
+
+function AttachedFileList({
+	attachments,
+	disabled,
+	onRemove,
+}: {
+	attachments: AiUiAttachment[];
+	disabled: boolean;
+	onRemove(index: number): void;
+}) {
+	if (attachments.length === 0) return null;
+	return (
+		<div className="AiAttachmentControls__list">
+			{attachments.map((file, index) => (
+				<div
+					key={`${file.name}-${file.sizeBytes}-${index}`}
+					className="AiAttachmentControls__item"
+				>
+					<div className="AiAttachmentControls__file_icon">
+						<Icon name="file" size={22} />
+					</div>
+					<span title={file.name}>
+						{file.name}
+						{file.sizeBytes ? ` (${formatBytes(file.sizeBytes)})` : ""}
+					</span>
+					<Button
+						variant="danger"
+						size={Button.SIZES.SMALL}
+						icon="x"
+						onClick={() => onRemove(index)}
+						disabled={disabled}
+						title={lang.t("Remove file")}
+					/>
+				</div>
+			))}
+		</div>
+	);
+}
+
 export default function AiAttachmentControls({
 	attachedFiles = [],
 	attachedImages = [],
@@ -52,6 +181,13 @@ export default function AiAttachmentControls({
 	const imageInputRef = useRef<HTMLInputElement>(null);
 	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 	const resolvedFileInputRef = fileInputRef || internalFileInputRef;
+	const view = getAiAttachmentControlsView({
+		attachedFileCount: attachedFiles.length,
+		attachedImageCount: attachedImages.length,
+		campaignSlug,
+		disabled,
+		maximum: MAX_AI_ATTACHMENTS,
+	});
 
 	const addAttachedImage = (image: AiUiAttachment | null | undefined) => {
 		if (!image) return;
@@ -200,96 +336,29 @@ export default function AiAttachmentControls({
 				className="AiAttachmentControls__file_input"
 				onChange={handleAttachImages}
 			/>
-			<div className="AiAttachmentControls__file_actions">
-				{attachedImages.length < MAX_AI_ATTACHMENTS && (
-					<>
-						<Button
-							variant="ghost"
-							icon="image"
-							onClick={() => imageInputRef.current?.click()}
-							disabled={disabled}
-							title={lang.t("Attach images")}
-						>
-							{lang.t("Attach images")}
-						</Button>
-						<Button
-							variant="ghost"
-							icon="database"
-							onClick={() => setIsGalleryOpen(true)}
-							disabled={disabled}
-							title={lang.t("From gallery")}
-						>
-							{lang.t("From gallery")}
-						</Button>
-					</>
-				)}
-				<Button
-					variant="ghost"
-					icon="file-plus"
-					onClick={() => resolvedFileInputRef.current?.click()}
-					disabled={disabled || attachedFiles.length >= MAX_AI_ATTACHMENTS}
-					title={lang.t("Attach files")}
-				>
-					{lang.t("Attach files")}
-				</Button>
-			</div>
-			{attachedImages.length > 0 && (
-				<div className="AiAttachmentControls__list">
-					{attachedImages.map((image, index) => (
-						<div
-							key={`${image.url || image.name}-${index}`}
-							className="AiAttachmentControls__item"
-						>
-							<img
-								src={image.previewUrl || image.url}
-								alt={image.name || lang.t("Attached image")}
-							/>
-							<span title={image.name || image.url}>
-								{image.name || image.url}
-							</span>
-							<Button
-								variant="danger"
-								size={Button.SIZES.SMALL}
-								icon="x"
-								onClick={() => removeAttachedImage(index)}
-								disabled={disabled}
-								title={lang.t("Remove image")}
-							/>
-						</div>
-					))}
-				</div>
-			)}
-			{attachedFiles.length > 0 && (
-				<div className="AiAttachmentControls__list">
-					{attachedFiles.map((file, index) => (
-						<div
-							key={`${file.name}-${file.sizeBytes}-${index}`}
-							className="AiAttachmentControls__item"
-						>
-							<div className="AiAttachmentControls__file_icon">
-								<Icon name="file" size={22} />
-							</div>
-							<span title={file.name}>
-								{file.name}
-								{file.sizeBytes ? ` (${formatBytes(file.sizeBytes)})` : ""}
-							</span>
-							<Button
-								variant="danger"
-								size={Button.SIZES.SMALL}
-								icon="x"
-								onClick={() => removeAttachedFile(index)}
-								disabled={disabled}
-								title={lang.t("Remove file")}
-							/>
-						</div>
-					))}
-				</div>
-			)}
+			<AiAttachmentActions
+				disabled={disabled}
+				fileActionDisabled={view.fileActionDisabled}
+				fileInputRef={resolvedFileInputRef}
+				imageInputRef={imageInputRef}
+				onOpenGallery={() => setIsGalleryOpen(true)}
+				showImageActions={view.showImageActions}
+			/>
+			<AttachedImageList
+				attachments={attachedImages}
+				disabled={disabled}
+				onRemove={removeAttachedImage}
+			/>
+			<AttachedFileList
+				attachments={attachedFiles}
+				disabled={disabled}
+				onRemove={removeAttachedFile}
+			/>
 			<ImageGallery
 				isOpen={isGalleryOpen}
 				onClose={() => setIsGalleryOpen(false)}
 				onSelect={selectGalleryImage}
-				initialSource={campaignSlug || "general"}
+				initialSource={view.gallerySource}
 				initialCategory="attachments"
 				initialSubcategory=""
 			/>

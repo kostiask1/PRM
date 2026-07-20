@@ -93,21 +93,145 @@ type LoadedSessionTuple = readonly [
 	AiContextSessionData,
 ];
 
+type PendingSessionEntry = readonly [string, AiSessionContextConfig];
+type ContextListConfigKey =
+	| "campaignCharacters"
+	| "campaignNpcs"
+	| "campaignLocations";
+
+function mergeLoadedSessionTuple(
+	sessions: Record<string, AiSessionContextConfig>,
+	[slug, fallbackConfig, data]: LoadedSessionTuple,
+): boolean {
+	if (sessions[slug]?.data) return false;
+	sessions[slug] = {
+		...(sessions[slug] || fallbackConfig),
+		data,
+	};
+	return true;
+}
+
 export function mergeLoadedAiSessionData(
 	current: AiContextDataConfig,
 	loadedSessions: readonly LoadedSessionTuple[],
 ): AiContextDataConfig {
 	const nextSessions = { ...(current.sessions || {}) };
 	let changed = false;
-	for (const [slug, fallbackConfig, data] of loadedSessions) {
-		if (nextSessions[slug]?.data) continue;
-		nextSessions[slug] = {
-			...(nextSessions[slug] || fallbackConfig),
-			data,
-		};
-		changed = true;
+	for (const loadedSession of loadedSessions) {
+		if (mergeLoadedSessionTuple(nextSessions, loadedSession)) changed = true;
 	}
 	return changed ? { ...current, sessions: nextSessions } : current;
+}
+
+interface ContextDataVisibility {
+	isBestiary?: boolean;
+	isPanelOpen?: boolean;
+	isContextModalOpen?: boolean;
+	isImagePromptPickerOpen?: boolean;
+	useContext?: boolean;
+}
+
+function isAnyContextSurfaceOpen({
+	isPanelOpen,
+	isContextModalOpen,
+	isImagePromptPickerOpen,
+}: ContextDataVisibility): boolean {
+	return Boolean(
+		isPanelOpen || isContextModalOpen || isImagePromptPickerOpen,
+	);
+}
+
+function shouldLoadCampaignEntities(
+	visibility: ContextDataVisibility,
+): boolean {
+	if (visibility.isBestiary) return false;
+	if (visibility.isContextModalOpen || visibility.isImagePromptPickerOpen) {
+		return true;
+	}
+	return Boolean(visibility.isPanelOpen && visibility.useContext);
+}
+
+function shouldLoadContextSessions(
+	visibility: ContextDataVisibility,
+): boolean {
+	return Boolean(
+		!visibility.isBestiary &&
+			visibility.useContext &&
+			isAnyContextSurfaceOpen(visibility),
+	);
+}
+
+function getContextSessionHydrationCampaign(
+	campaignSlug: string | null | undefined,
+	visibility: ContextDataVisibility,
+): string | null {
+	if (visibility.isBestiary || !visibility.isPanelOpen || !visibility.useContext) {
+		return null;
+	}
+	return campaignSlug || null;
+}
+
+function getPendingSessionEntries(
+	sessions: Record<string, AiSessionContextConfig>,
+): PendingSessionEntry[] {
+	return Object.entries(sessions).filter(
+		([, config]) => config?.included && !config?.data,
+	);
+}
+
+async function loadContextSessionTuple(
+	campaignSlug: string,
+	[slug, config]: PendingSessionEntry,
+	getSession: UseAiContextDataOptions["getSession"],
+	onLoadError: NonNullable<UseAiContextDataOptions["onLoadError"]>,
+): Promise<LoadedSessionTuple | null> {
+	try {
+		const session = await getSession(campaignSlug, slug);
+		return [slug, config, session?.data || {}] as const;
+	} catch (error) {
+		onLoadError("Failed to load session for token estimate", error);
+		return null;
+	}
+}
+
+function loadContextSessionTuples(
+	campaignSlug: string,
+	entries: readonly PendingSessionEntry[],
+	getSession: UseAiContextDataOptions["getSession"],
+	onLoadError: NonNullable<UseAiContextDataOptions["onLoadError"]>,
+): Promise<Array<LoadedSessionTuple | null>> {
+	return Promise.all(
+		entries.map((entry) =>
+			loadContextSessionTuple(campaignSlug, entry, getSession, onLoadError),
+		),
+	);
+}
+
+function applyLoadedContextSessions(
+	loaded: Array<LoadedSessionTuple | null>,
+	cancelled: boolean,
+	setContextConfig: (
+		updater: (current: AiContextDataConfig) => AiContextDataConfig,
+	) => void,
+): void {
+	if (cancelled) return;
+	const valid = loaded.filter(
+		(item): item is LoadedSessionTuple => Boolean(item),
+	);
+	if (valid.length === 0) return;
+	setContextConfig((current) => mergeLoadedAiSessionData(current, valid));
+}
+
+function synchronizeContextList<T>(
+	current: AiContextDataConfig,
+	configKey: ContextListConfigKey,
+	list: readonly T[],
+	getKey: (item: T) => string,
+): AiContextDataConfig {
+	const next = ensureContextListItems(current[configKey], list, getKey);
+	return next === current[configKey]
+		? current
+		: { ...current, [configKey]: next };
 }
 
 export function useAiContextData({
@@ -187,48 +311,43 @@ export function useAiContextData({
 	]);
 
 	useEffect(() => {
-		if (
-			isBestiary ||
-			(!isPanelOpen && !isContextModalOpen && !isImagePromptPickerOpen) ||
-			(!useContext && !isContextModalOpen && !isImagePromptPickerOpen)
-		) return;
+		if (!shouldLoadCampaignEntities({
+			isBestiary,
+			isPanelOpen,
+			isContextModalOpen,
+			isImagePromptPickerOpen,
+			useContext,
+		})) return;
 		void ensureCampaignEntities();
 	}, [ensureCampaignEntities, isBestiary, isContextModalOpen, isImagePromptPickerOpen, isPanelOpen, useContext]);
 
 	useEffect(() => {
-		if (
-			isBestiary ||
-			(!isPanelOpen && !isContextModalOpen && !isImagePromptPickerOpen) ||
-			!useContext
-		) return;
+		if (!shouldLoadContextSessions({
+			isBestiary,
+			isPanelOpen,
+			isContextModalOpen,
+			isImagePromptPickerOpen,
+			useContext,
+		})) return;
 		void ensureSessions();
 	}, [ensureSessions, isBestiary, isContextModalOpen, isImagePromptPickerOpen, isPanelOpen, useContext]);
 
 	useEffect(() => {
-		if (isBestiary || !isPanelOpen || !useContext || !campaignSlug) return;
-		const entries = Object.entries(contextConfig.sessions || {}).filter(
-			([, config]) => config?.included && !config?.data,
+		const hydrationCampaign = getContextSessionHydrationCampaign(
+			campaignSlug,
+			{ isBestiary, isPanelOpen, useContext },
 		);
+		if (!hydrationCampaign) return;
+		const entries = getPendingSessionEntries(contextConfig.sessions || {});
 		if (entries.length === 0) return;
 		let cancelled = false;
-		Promise.all(
-			entries.map(async ([slug, config]): Promise<LoadedSessionTuple | null> => {
-				try {
-					const session = await getSession(campaignSlug, slug);
-					return [slug, config, session?.data || {}] as const;
-				} catch (error) {
-					onLoadError("Failed to load session for token estimate", error);
-					return null;
-				}
-			}),
+		void loadContextSessionTuples(
+			hydrationCampaign,
+			entries,
+			getSession,
+			onLoadError,
 		).then((loaded) => {
-			if (cancelled) return;
-			const valid = loaded.filter(
-				(item): item is LoadedSessionTuple => Boolean(item),
-			);
-			if (valid.length > 0) {
-				setContextConfig((current) => mergeLoadedAiSessionData(current, valid));
-			}
+			applyLoadedContextSessions(loaded, cancelled, setContextConfig);
 		});
 		return () => {
 			cancelled = true;
@@ -237,26 +356,38 @@ export function useAiContextData({
 
 	useEffect(() => {
 		if (charactersList.length === 0) return;
-		setContextConfig((current) => {
-			const next = ensureContextListItems(current.campaignCharacters, charactersList, getAiCharacterContextKey);
-			return next === current.campaignCharacters ? current : { ...current, campaignCharacters: next };
-		});
+		setContextConfig((current) =>
+			synchronizeContextList(
+				current,
+				"campaignCharacters",
+				charactersList,
+				getAiCharacterContextKey,
+			),
+		);
 	}, [charactersList]);
 
 	useEffect(() => {
 		if (npcsList.length === 0) return;
-		setContextConfig((current) => {
-			const next = ensureContextListItems(current.campaignNpcs, npcsList, getAiCharacterContextKey);
-			return next === current.campaignNpcs ? current : { ...current, campaignNpcs: next };
-		});
+		setContextConfig((current) =>
+			synchronizeContextList(
+				current,
+				"campaignNpcs",
+				npcsList,
+				getAiCharacterContextKey,
+			),
+		);
 	}, [npcsList]);
 
 	useEffect(() => {
 		if (locationsList.length === 0) return;
-		setContextConfig((current) => {
-			const next = ensureContextListItems(current.campaignLocations, locationsList, getAiLocationContextKey);
-			return next === current.campaignLocations ? current : { ...current, campaignLocations: next };
-		});
+		setContextConfig((current) =>
+			synchronizeContextList(
+				current,
+				"campaignLocations",
+				locationsList,
+				getAiLocationContextKey,
+			),
+		);
 	}, [locationsList]);
 
 	return {

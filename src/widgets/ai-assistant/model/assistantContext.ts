@@ -59,6 +59,56 @@ export interface AiAssistantRouteState {
 	generateEncountersByDefault: boolean;
 }
 
+function getAiAssistantRoute(
+	isBestiary: boolean,
+	navigation: AiAssistantRouteStateInput["navigation"],
+): AiAssistantRouteState["route"] {
+	return {
+		campaign: isBestiary
+			? "bestiary"
+			: navigation.activeCampaignSlug || "",
+		session: navigation.activeSessionFileName,
+		encounter: navigation.activeEncounterId,
+	};
+}
+
+function getAiAssistantRouteTargets(
+	isBestiary: boolean,
+	route: AiAssistantRouteState["route"],
+): Pick<
+	AiAssistantRouteState,
+	| "isCampaign"
+	| "isEncounter"
+	| "historyCampaign"
+	| "assetCampaignSlug"
+	| "generateEncountersByDefault"
+> {
+	const isCampaign = !route.session && !isBestiary;
+	return {
+		isCampaign,
+		isEncounter: Boolean(route.encounter),
+		historyCampaign: isBestiary ? "bestiary" : route.campaign,
+		assetCampaignSlug: isBestiary ? "general" : route.campaign,
+		generateEncountersByDefault: !isCampaign && !isBestiary,
+	};
+}
+
+function getAiAssistantRoutePrompts(
+	campaign: string,
+	imagePromptBasePrompt: string,
+	campaignAiBasePrompts: Record<string, string>,
+	campaignImagePromptBasePrompts: Record<string, string>,
+): Pick<
+	AiAssistantRouteState,
+	"activeImagePromptBasePrompt" | "activeCampaignBasePrompt"
+> {
+	return {
+		activeImagePromptBasePrompt:
+			campaignImagePromptBasePrompts[campaign] || imagePromptBasePrompt,
+		activeCampaignBasePrompt: campaignAiBasePrompts[campaign] || "",
+	};
+}
+
 export function getAiAssistantRouteState({
 	isBestiary,
 	navigation,
@@ -66,25 +116,16 @@ export function getAiAssistantRouteState({
 	campaignAiBasePrompts = {},
 	campaignImagePromptBasePrompts = {},
 }: AiAssistantRouteStateInput): AiAssistantRouteState {
-	const campaign = isBestiary
-		? "bestiary"
-		: navigation.activeCampaignSlug || "";
-	const route = {
-		campaign,
-		session: navigation.activeSessionFileName,
-		encounter: navigation.activeEncounterId,
-	};
-	const isCampaign = !route.session && !isBestiary;
+	const route = getAiAssistantRoute(isBestiary, navigation);
 	return {
 		route,
-		activeImagePromptBasePrompt:
-			campaignImagePromptBasePrompts[campaign] || imagePromptBasePrompt,
-		activeCampaignBasePrompt: campaignAiBasePrompts[campaign] || "",
-		isCampaign,
-		isEncounter: Boolean(route.encounter),
-		historyCampaign: isBestiary ? "bestiary" : campaign,
-		assetCampaignSlug: isBestiary ? "general" : campaign,
-		generateEncountersByDefault: !isCampaign && !isBestiary,
+		...getAiAssistantRoutePrompts(
+			route.campaign,
+			imagePromptBasePrompt,
+			campaignAiBasePrompts,
+			campaignImagePromptBasePrompts,
+		),
+		...getAiAssistantRouteTargets(isBestiary, route),
 	};
 }
 
@@ -168,14 +209,30 @@ function getSessionData({
 }: AiAssistantContextProjectionInput): Record<string, unknown> {
 	if (isBestiary) return {};
 	if (isEncounter) return asRecord(activeEncounter) || {};
-	if (isCampaign) {
-		return {
-			...(asRecord(activeCampaign) || {}),
-			characters,
-			npcs,
-			locations,
-		};
-	}
+	if (isCampaign) return getCampaignSessionData(
+		activeCampaign,
+		characters,
+		npcs,
+		locations,
+	);
+	return getActiveSessionData(activeSession);
+}
+
+function getCampaignSessionData(
+	activeCampaign: unknown,
+	characters: Record<string, unknown>[],
+	npcs: Record<string, unknown>[],
+	locations: Record<string, unknown>[],
+): Record<string, unknown> {
+	return {
+		...(asRecord(activeCampaign) || {}),
+		characters,
+		npcs,
+		locations,
+	};
+}
+
+function getActiveSessionData(activeSession: unknown): Record<string, unknown> {
 	const session = asRecord(activeSession);
 	return asRecord(session?.data) || {};
 }

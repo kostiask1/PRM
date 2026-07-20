@@ -3,6 +3,7 @@ import type {
 	ImageGalleryCategory,
 	ImageGalleryContentScope,
 } from "./contracts.ts";
+import type { ImageGalleryStats } from "../api/imageApi.ts";
 
 export interface GalleryPath {
 	source: string;
@@ -84,6 +85,17 @@ export interface GallerySearchPresentation {
 	showClearButton: boolean;
 }
 
+export interface GalleryStatsAndActionsPresentation {
+	selectionCount: number;
+	showSelectionActions: boolean;
+	showUpload: boolean;
+	storageItems: Array<{
+		bytes: number;
+		id: "category" | "total";
+		labelKey: "Tab size" | "Total gallery size";
+	}>;
+}
+
 const GALLERY_HISTORY_SHORTCUTS: Readonly<
 	Record<string, GalleryHistoryDirection>
 > = Object.freeze({
@@ -99,6 +111,14 @@ const GALLERY_FOLDER_ICON_NAMES = Object.freeze({
 	npc: "folder-npc",
 	players: "folder-players",
 } as const);
+
+export function getGalleryColumnCount(
+	containerWidth: number,
+	columnGap: string,
+): number {
+	const gap = Number.parseFloat(columnGap) || 16;
+	return Math.max(1, Math.floor((containerWidth + gap) / (120 + gap)));
+}
 
 function getGallerySourceScopeTitleKey(
 	selectedSource: string,
@@ -188,6 +208,38 @@ export function getGallerySearchPresentation({
 			selectedSource,
 		}),
 		showClearButton: Boolean(searchQuery),
+	};
+}
+
+export function getGalleryStatsAndActionsPresentation({
+	hasSelection,
+	isReadonlyCurrentFolder,
+	selectedFilenameCount,
+	selectedSubfolderCount,
+	storageStats,
+}: {
+	hasSelection: boolean;
+	isReadonlyCurrentFolder: boolean;
+	selectedFilenameCount: number;
+	selectedSubfolderCount: number;
+	storageStats: ImageGalleryStats | null | undefined;
+}): GalleryStatsAndActionsPresentation {
+	return {
+		selectionCount: selectedFilenameCount + selectedSubfolderCount,
+		showSelectionActions: hasSelection,
+		showUpload: !isReadonlyCurrentFolder,
+		storageItems: [
+			{
+				bytes: storageStats?.totalBytes ?? 0,
+				id: "total",
+				labelKey: "Total gallery size",
+			},
+			{
+				bytes: storageStats?.categoryBytes ?? 0,
+				id: "category",
+				labelKey: "Tab size",
+			},
+		],
 	};
 }
 

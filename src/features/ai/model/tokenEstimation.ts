@@ -156,11 +156,30 @@ function getTruthyEstimateField(
 	return entity[field] || "";
 }
 
+function getFirstTruthyEstimateValue<T>(
+	values: readonly (T | undefined)[],
+	fallback: T,
+): T {
+	for (const value of values) {
+		if (value) return value;
+	}
+	return fallback;
+}
+
 function getEstimateEntityName(entity: EstimateEntity): string {
-	const firstName = entity.firstName || entity.first_name || "";
-	const lastName = entity.lastName || entity.last_name || "";
+	const firstName = getFirstTruthyEstimateValue(
+		[entity.firstName, entity.first_name],
+		"",
+	);
+	const lastName = getFirstTruthyEstimateValue(
+		[entity.lastName, entity.last_name],
+		"",
+	);
 	const fullName = [firstName, lastName].filter(Boolean).join(" ");
-	return fullName || entity.name || entity.title || "";
+	return getFirstTruthyEstimateValue(
+		[fullName, entity.name, entity.title],
+		"",
+	);
 }
 
 export function compactEntityForEstimate(
@@ -243,40 +262,63 @@ function getCampaignModeEntityList(
 	return input.sessionData?.[field] || fallbackLists[field] || [];
 }
 
-function buildCampaignModeContext(
+function buildCampaignModeHeader(
 	input: AiTokenEstimateInput,
-): AiTokenEstimateContext {
-	const campaign: Record<string, unknown> = {
+): Record<string, unknown> {
+	return {
 		name: input.sessionData?.name || input.sessionName || "",
 		description: input.sessionData?.description || "",
 	};
-	if (!input.useContext) return { campaign };
+}
 
-	if (input.contextConfig.campaignNotes) {
-		campaign.notes = compactEstimateNotes(input.sessionData?.notes);
-	}
-	campaign.characters = compactEntities(
-		filterByContextList(
-			getCampaignModeEntityList(input, "characters"),
-			input.characterContext,
-			input.getCharacterKey,
+function buildCampaignModeNotes(
+	input: AiTokenEstimateInput,
+): Record<string, unknown> {
+	return input.contextConfig.campaignNotes
+		? { notes: compactEstimateNotes(input.sessionData?.notes) }
+		: {};
+}
+
+function buildCampaignModeEntities(
+	input: AiTokenEstimateInput,
+): Record<string, unknown> {
+	return {
+		characters: compactEntities(
+			filterByContextList(
+				getCampaignModeEntityList(input, "characters"),
+				input.characterContext,
+				input.getCharacterKey,
+			),
 		),
-	);
-	campaign.npcs = compactEntities(
-		filterByContextList(
-			getCampaignModeEntityList(input, "npcs"),
-			input.npcContext,
-			input.getCharacterKey,
+		npcs: compactEntities(
+			filterByContextList(
+				getCampaignModeEntityList(input, "npcs"),
+				input.npcContext,
+				input.getCharacterKey,
+			),
 		),
-	);
-	campaign.locations = compactEntities(
-		filterByContextList(
-			getCampaignModeEntityList(input, "locations"),
-			input.locationContext,
-			input.getLocationKey,
+		locations: compactEntities(
+			filterByContextList(
+				getCampaignModeEntityList(input, "locations"),
+				input.locationContext,
+				input.getLocationKey,
+			),
 		),
-	);
-	return { campaign };
+	};
+}
+
+function buildCampaignModeContext(
+	input: AiTokenEstimateInput,
+): AiTokenEstimateContext {
+	const campaign = buildCampaignModeHeader(input);
+	if (!input.useContext) return { campaign };
+	return {
+		campaign: {
+			...campaign,
+			...buildCampaignModeNotes(input),
+			...buildCampaignModeEntities(input),
+		},
+	};
 }
 
 function buildCurrentScopeContext(

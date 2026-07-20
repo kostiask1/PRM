@@ -213,6 +213,34 @@ export function getAiImagePromptCollections({
 	};
 }
 
+function getAiImagePromptGenerationError(
+	target: ImagePromptTarget | null,
+	normalizedRequest: string,
+): AiImagePromptGenerationPlan["errorKey"] {
+	return target || normalizedRequest
+		? null
+		: "Image prompt instructions are required when no element is selected.";
+}
+
+function getAiImagePromptTargetSceneId(
+	target: ImagePromptTarget | null,
+): string | number | null {
+	if (target?.type !== "scene") return null;
+	return target.id || null;
+}
+
+function getAiImagePromptGenerationOptions(
+	target: ImagePromptTarget | null,
+	instructions: string,
+	normalizedRequest: string,
+): AiImagePromptGenerationPlan["options"] {
+	return {
+		imageTarget: target,
+		imagePromptBasePromptOverride: instructions.trim(),
+		userInstructionsOverride: target ? "" : normalizedRequest,
+	};
+}
+
 export function buildAiImagePromptGenerationPlan(
 	target: ImagePromptTarget | null,
 	instructions: string,
@@ -220,26 +248,35 @@ export function buildAiImagePromptGenerationPlan(
 ): AiImagePromptGenerationPlan {
 	const normalizedRequest = request.trim();
 	return {
-		errorKey:
-			!target && !normalizedRequest
-				? "Image prompt instructions are required when no element is selected."
-				: null,
-		targetSceneId:
-			target?.type === "scene" ? target.id || null : null,
-		options: {
-			imageTarget: target,
-			imagePromptBasePromptOverride: instructions.trim(),
-			userInstructionsOverride: target ? "" : normalizedRequest,
-		},
+		errorKey: getAiImagePromptGenerationError(target, normalizedRequest),
+		targetSceneId: getAiImagePromptTargetSceneId(target),
+		options: getAiImagePromptGenerationOptions(
+			target,
+			instructions,
+			normalizedRequest,
+		),
 	};
+}
+
+function getQualifiedSceneImagePromptTitle(
+	target: ImagePromptTarget,
+): string | null {
+	if (target.type !== "scene" || !target.sessionName) return null;
+	return `${target.name} - ${target.sessionName}`;
+}
+
+function getImagePromptTargetFallbackTitle(
+	target: ImagePromptTarget,
+): string {
+	return String(target.name || target.id || target.type || "");
 }
 
 export function getImagePromptTargetTitle(
 	target: ImagePromptTarget | null | undefined,
 ): string {
 	if (!target) return "";
-	if (target.type === "scene" && target.sessionName) {
-		return `${target.name} - ${target.sessionName}`;
-	}
-	return String(target.name || target.id || target.type || "");
+	return (
+		getQualifiedSceneImagePromptTitle(target) ||
+		getImagePromptTargetFallbackTitle(target)
+	);
 }

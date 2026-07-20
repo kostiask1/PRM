@@ -35,6 +35,26 @@ export interface AiHistoryCommandClient {
 	): Promise<AiHistoryEntry | null>;
 }
 
+function executeAiHistoryRestoreTransport(
+	apiClient: AiHistoryCommandClient,
+	campaign: string,
+	entryId: AiHistoryId,
+	mode: AiHistoryRestoreOperation,
+	resourceIds?: string[],
+): Promise<AiHistoryRestoreResult | null> {
+	const payload = { resourceIds };
+	return mode === "undo"
+		? apiClient.undoAiResponse(campaign, entryId, payload)
+		: apiClient.applyAiResponse(campaign, entryId, payload);
+}
+
+function requireAiHistoryRestoreResult(
+	result: AiHistoryRestoreResult | null,
+): AiHistoryRestoreResult {
+	if (!result) throw new Error("AI restore response was empty.");
+	return result;
+}
+
 export function createAiHistoryCommandService(apiClient: AiHistoryCommandClient) {
 	if (!apiClient) throw new TypeError("apiClient is required");
 	return {
@@ -44,16 +64,21 @@ export function createAiHistoryCommandService(apiClient: AiHistoryCommandClient)
 		clearHistory(campaign: string) {
 			return apiClient.clearAiResponses(campaign);
 		},
-		restoreEntry(
+		async restoreEntry(
 			campaign: string,
 			entryId: AiHistoryId,
 			mode: AiHistoryRestoreOperation,
 			resourceIds?: string[],
 		) {
-			const payload = { resourceIds };
-			return mode === "undo"
-				? apiClient.undoAiResponse(campaign, entryId, payload)
-				: apiClient.applyAiResponse(campaign, entryId, payload);
+			return requireAiHistoryRestoreResult(
+				await executeAiHistoryRestoreTransport(
+					apiClient,
+					campaign,
+					entryId,
+					mode,
+					resourceIds,
+				),
+			);
 		},
 		saveDraft(
 			campaign: string,
@@ -92,6 +117,74 @@ export interface UseAiHistoryCommandsOptions {
 		mode: AiHistoryRestoreMode,
 	): void;
 	onError(action: "delete" | "restore" | "save", error: unknown): void;
+}
+
+interface RestoreLock {
+	current: boolean;
+}
+
+interface ExecuteAiHistoryRestoreOptions {
+	entry: AiHistoryEntry;
+	mode: AiHistoryRestoreMode;
+	resourceIds?: string[];
+	campaign: string;
+	releaseLock(): void;
+	onRestored(
+		result: AiHistoryRestoreResult,
+		entry: AiHistoryEntry,
+		mode: AiHistoryRestoreMode,
+	): void;
+	onError(action: "restore", error: unknown): void;
+}
+
+async function getConfirmedAiHistoryRestoreMode(
+	entry: AiHistoryEntry,
+	mode: string,
+	options: AiHistoryRestoreOptions,
+	confirmRestore: UseAiHistoryCommandsOptions["confirmRestore"],
+): Promise<AiHistoryRestoreMode | null> {
+	if (!entry?.id) return null;
+	const restoreMode = getAiHistoryRestoreMode(mode, options.resourceIds);
+	return (await confirmRestore(entry, restoreMode, options)) ? restoreMode : null;
+}
+
+function acquireAiHistoryRestoreLock(
+	lock: RestoreLock,
+	setIsRestoring: (value: boolean) => void,
+): (() => void) | null {
+	if (lock.current) return null;
+	lock.current = true;
+	setIsRestoring(true);
+	return () => {
+		lock.current = false;
+		setIsRestoring(false);
+	};
+}
+
+async function executeAiHistoryRestore({
+	entry,
+	mode,
+	resourceIds,
+	campaign,
+	releaseLock,
+	onRestored,
+	onError,
+}: ExecuteAiHistoryRestoreOptions): Promise<boolean> {
+	try {
+		const result = await aiHistoryCommands.restoreEntry(
+			campaign,
+			entry.id,
+			mode.operation,
+			resourceIds,
+		);
+		onRestored(result, entry, mode);
+		return true;
+	} catch (error) {
+		onError("restore", error);
+		return false;
+	} finally {
+		releaseLock();
+	}
 }
 
 export function useAiHistoryCommands({
@@ -170,29 +263,29 @@ export function useAiHistoryCommands({
 			mode: string,
 			options: AiHistoryRestoreOptions = {},
 		): Promise<boolean> => {
-			if (!entry?.id || restoringRef.current) return false;
-			const restoreMode = getAiHistoryRestoreMode(mode, options.resourceIds);
-			if (!(await confirmRestore(entry, restoreMode, options))) return false;
+			if (restoringRef.current) return false;
+			const restoreMode = await getConfirmedAiHistoryRestoreMode(
+				entry,
+				mode,
+				options,
+				confirmRestore,
+			);
+			if (!restoreMode) return false;
+			const releaseLock = acquireAiHistoryRestoreLock(
+				restoringRef,
+				setIsRestoring,
+			);
+			if (!releaseLock) return false;
 
-			restoringRef.current = true;
-			setIsRestoring(true);
-			try {
-				const result = await aiHistoryCommands.restoreEntry(
-					resolveCampaign(entry),
-					entry.id,
-					restoreMode.operation,
-					options.resourceIds,
-				);
-				if (!result) throw new Error("AI restore response was empty.");
-				onRestored(result, entry, restoreMode);
-				return true;
-			} catch (error) {
-				onError("restore", error);
-				return false;
-			} finally {
-				restoringRef.current = false;
-				setIsRestoring(false);
-			}
+			return executeAiHistoryRestore({
+				entry,
+				mode: restoreMode,
+				resourceIds: options.resourceIds,
+				campaign: resolveCampaign(entry),
+				releaseLock,
+				onRestored,
+				onError,
+			});
 		},
 		[confirmRestore, onError, onRestored, resolveCampaign],
 	);

@@ -41,6 +41,22 @@ function getAiChangeResources(
 		: [];
 }
 
+function getRequestedResourceIds(
+	resourceIds: Array<string | number> | null,
+): Set<string> | null {
+	if (!Array.isArray(resourceIds)) return null;
+	return new Set(
+		resourceIds.map((id) => String(id || "")).filter(Boolean),
+	);
+}
+
+function isRequestedResource(
+	resource: AiHistoryResource,
+	resourceIds: Set<string> | null,
+): boolean {
+	return resourceIds === null || resourceIds.has(String(resource.id));
+}
+
 export function getLocalizedDiffResourceState(
 	resource: AiHistoryResource,
 	translate: Translate = (value) => value,
@@ -56,14 +72,22 @@ function getCustomMonsterResource(
 	entry: AiHistoryEntry | null | undefined,
 	resourceIds: Array<string | number> | null = null,
 ): AiHistoryResource | undefined {
-	const ids = Array.isArray(resourceIds)
-		? new Set(resourceIds.map((id) => String(id || "")).filter(Boolean))
-		: null;
+	const ids = getRequestedResourceIds(resourceIds);
 	return getAiChangeResources(entry).find(
 		(resource) =>
 			resource.kind === "custom-monster" &&
-			(!ids || ids.has(String(resource.id))),
+			isRequestedResource(resource, ids),
 	);
+}
+
+function getPreferredMonsterName(
+	resource: AiHistoryResource | undefined,
+): unknown {
+	return [
+		asRecord(resource?.after)?.name,
+		asRecord(resource?.before)?.name,
+		resource?.name,
+	].find(Boolean);
 }
 
 export function getFirstChangedMonster(
@@ -78,62 +102,131 @@ export function getFirstChangedMonsterName(
 	resourceIds: Array<string | number> | null = null,
 ): string | null {
 	const resource = getCustomMonsterResource(entry, resourceIds);
-	const after = asRecord(resource?.after);
-	const before = asRecord(resource?.before);
-	const name = after?.name || before?.name || resource?.name;
+	const name = getPreferredMonsterName(resource);
 	return typeof name === "string" ? name : null;
 }
 
-function getMonsterTokenImageUrl(monster: MonsterRecord | null | undefined) {
-	if (!monster) return "";
-	if (typeof monster.imageUrl === "string" && monster.imageUrl) {
-		return monster.imageUrl;
+function getExplicitMonsterImageUrl(
+	monster: MonsterRecord | null | undefined,
+): string {
+	return typeof monster?.imageUrl === "string" ? monster.imageUrl : "";
+}
+
+function getMonsterTokenSource(
+	monster: MonsterRecord | null | undefined,
+): string {
+	return String(monster?.source || "").trim();
+}
+
+function getMonsterTokenName(
+	monster: MonsterRecord | null | undefined,
+): string {
+	return String(monster?.originalBestiaryName || monster?.name || "").trim();
+}
+
+function buildMonsterTokenImageUrl(source: string, name: string): string {
+	return source && name
+		? `/api/bestiary/tokens/${encodeURIComponent(source)}/${encodeURIComponent(name)}.webp`
+		: "";
+}
+
+function getMonsterTokenImageUrl(
+	monster: MonsterRecord | null | undefined,
+): string {
+	return (
+		getExplicitMonsterImageUrl(monster) ||
+		buildMonsterTokenImageUrl(
+			getMonsterTokenSource(monster),
+			getMonsterTokenName(monster),
+		)
+	);
+}
+
+function addMonsterImageToDraftResource(
+	resource: AiHistoryResource,
+	imageUrl: string,
+	sourceMonsterName: string | undefined,
+): AiHistoryResource {
+	const after = asRecord(resource.after);
+	if (
+		resource.kind !== "custom-monster" ||
+		resource.before !== null ||
+		!after ||
+		after.imageUrl
+	) {
+		return resource;
 	}
-	const source = String(monster.source || "").trim();
-	const name = String(monster.originalBestiaryName || monster.name || "").trim();
-	if (!source || !name) return "";
-	return `/api/bestiary/tokens/${encodeURIComponent(source)}/${encodeURIComponent(name)}.webp`;
+	return {
+		...resource,
+		after: {
+			...after,
+			imageUrl,
+			originalBestiaryName: after.originalBestiaryName || sourceMonsterName,
+		},
+	};
+}
+
+function resourcesChanged(
+	resources: AiHistoryResource[],
+	nextResources: AiHistoryResource[],
+): boolean {
+	return nextResources.some((resource, index) => resource !== resources[index]);
+}
+
+function addMonsterImageToDraftResources(
+	resources: AiHistoryResource[],
+	imageUrl: string,
+	sourceMonsterName: string | undefined,
+): AiHistoryResource[] {
+	return resources.map((resource) =>
+		addMonsterImageToDraftResource(resource, imageUrl, sourceMonsterName),
+	);
+}
+
+function buildEntryWithDraftResources(
+	entry: AiHistoryEntry,
+	resources: AiHistoryResource[],
+): AiHistoryEntry {
+	return {
+		...entry,
+		changes: {
+			...(entry.changes || {}),
+			resources,
+			summary: entry.changes?.summary || buildAiChangeSummary(resources),
+		},
+	};
 }
 
 export function addSourceMonsterImageToDraft(
 	entry: AiHistoryEntry | null | undefined,
 	sourceMonster: MonsterRecord | null | undefined,
 ): AiHistoryEntry | null | undefined {
-	if (!entry || !sourceMonster) return entry;
+	if (!entry) return entry;
 	const imageUrl = getMonsterTokenImageUrl(sourceMonster);
 	if (!imageUrl) return entry;
 	const resources = getAiChangeResources(entry);
-	let changed = false;
-	const nextResources = resources.map((resource) => {
-		const after = asRecord(resource.after);
-		if (
-			resource.kind !== "custom-monster" ||
-			resource.before !== null ||
-			!after ||
-			after.imageUrl
-		) {
-			return resource;
-		}
-		changed = true;
-		return {
-			...resource,
-			after: {
-				...after,
-				imageUrl,
-				originalBestiaryName:
-					after.originalBestiaryName || sourceMonster.name,
-			},
-		};
-	});
-	if (!changed) return entry;
-	return {
-		...entry,
-		changes: {
-			...(entry.changes || {}),
-			resources: nextResources,
-			summary: entry.changes?.summary || buildAiChangeSummary(nextResources),
-		},
-	};
+	const nextResources = addMonsterImageToDraftResources(
+		resources,
+		imageUrl,
+		sourceMonster?.name,
+	);
+	if (!resourcesChanged(resources, nextResources)) return entry;
+	return buildEntryWithDraftResources(entry, nextResources);
+}
+
+function isEncounterRouteMatch(
+	entryPath: NonNullable<AiHistoryEntry["path"]>,
+	route: {
+		campaign?: string | null;
+		session?: string | null;
+		encounter?: string | number | null;
+	},
+): boolean {
+	return (
+		entryPath.campaign === route.campaign &&
+		entryPath.session === route.session &&
+		entryPath.encounter === route.encounter
+	);
 }
 
 export function updateDraftResourceAfterValues(
@@ -173,12 +266,5 @@ export function isAiResponseVisibleForRoute(
 ): boolean {
 	const entryPath = entry?.path || {};
 	if (entryPath.campaign === "bestiary") return isBestiary;
-	if (entryPath.encounter) {
-		return (
-			entryPath.campaign === route.campaign &&
-			entryPath.session === route.session &&
-			entryPath.encounter === route.encounter
-		);
-	}
-	return true;
+	return !entryPath.encounter || isEncounterRouteMatch(entryPath, route);
 }

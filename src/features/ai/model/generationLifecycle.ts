@@ -34,6 +34,17 @@ export type AiGenerationLifecycleEvent =
 	| FinishGenerationEvent
 	| ResetGenerationEvent;
 
+const START_STATUS_BY_EVENT = {
+	"start-generation": AI_GENERATION_STATUS.GENERATING,
+	"start-retry": AI_GENERATION_STATUS.RETRYING,
+} as const satisfies Record<StartGenerationEvent["type"], AiGenerationStatus>;
+
+const FINISH_STATUS_BY_EVENT = {
+	succeed: AI_GENERATION_STATUS.SUCCEEDED,
+	fail: AI_GENERATION_STATUS.FAILED,
+	cancel: AI_GENERATION_STATUS.CANCELLED,
+} as const satisfies Record<FinishGenerationEvent["type"], AiGenerationStatus>;
+
 export const initialAiGenerationLifecycle: AiGenerationLifecycle = Object.freeze({
 	status: AI_GENERATION_STATUS.IDLE,
 	requestId: null,
@@ -48,33 +59,39 @@ export function isAiGenerationPending(
 	);
 }
 
+function isStartGenerationEvent(
+	event: AiGenerationLifecycleEvent,
+): event is StartGenerationEvent {
+	return event.type === "start-generation" || event.type === "start-retry";
+}
+
+function createStartedGenerationLifecycle(
+	event: StartGenerationEvent,
+): AiGenerationLifecycle {
+	return {
+		status: START_STATUS_BY_EVENT[event.type],
+		requestId: event.requestId,
+	};
+}
+
+function finishGenerationLifecycle(
+	state: AiGenerationLifecycle,
+	event: FinishGenerationEvent,
+): AiGenerationLifecycle {
+	if (event.requestId !== state.requestId) return state;
+	return {
+		status: FINISH_STATUS_BY_EVENT[event.type],
+		requestId: null,
+	};
+}
+
 export function aiGenerationLifecycleReducer(
 	state: AiGenerationLifecycle,
 	event: AiGenerationLifecycleEvent,
 ): AiGenerationLifecycle {
-	switch (event.type) {
-		case "start-generation":
-			return {
-				status: AI_GENERATION_STATUS.GENERATING,
-				requestId: event.requestId,
-			};
-		case "start-retry":
-			return {
-				status: AI_GENERATION_STATUS.RETRYING,
-				requestId: event.requestId,
-			};
-		case "succeed":
-		case "fail":
-		case "cancel": {
-			if (event.requestId !== state.requestId) return state;
-			const statusByEvent = {
-				succeed: AI_GENERATION_STATUS.SUCCEEDED,
-				fail: AI_GENERATION_STATUS.FAILED,
-				cancel: AI_GENERATION_STATUS.CANCELLED,
-			} as const;
-			return { status: statusByEvent[event.type], requestId: null };
-		}
-		case "reset":
-			return initialAiGenerationLifecycle;
+	if (event.type === "reset") return initialAiGenerationLifecycle;
+	if (isStartGenerationEvent(event)) {
+		return createStartedGenerationLifecycle(event);
 	}
+	return finishGenerationLifecycle(state, event);
 }

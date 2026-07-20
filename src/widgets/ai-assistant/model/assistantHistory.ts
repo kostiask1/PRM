@@ -1,7 +1,9 @@
 import {
+	buildAiHistoryRestorePlan,
 	buildDiffResources,
 	isAiResponseVisibleForRoute,
 	type AiHistoryEntry,
+	type AiHistoryRestoreResult,
 	type DiffResource,
 } from "../../../features/ai/index.js";
 
@@ -29,7 +31,56 @@ export interface AiHistoryConfirmationCopy {
 	message: string;
 }
 
+export type AiAssistantHistoryRestorePlan = ReturnType<
+	typeof buildAiHistoryRestorePlan
+>;
+
+export interface AiAssistantHistoryRestoreEffects {
+	onApplyUpdatedData(
+		updated: AiHistoryRestoreResult["updated"],
+		options: {
+			entityTypes: string[];
+			historyEntry: AiHistoryEntry;
+			trackUndo: false;
+		},
+	): void;
+	onHistoryChanged(): void;
+	onHistoryReplace(responses: AiHistoryEntry[]): void;
+	onHistoryUpsert(entry: AiHistoryEntry): void;
+	onRequestReload(entityTypes: string[]): void;
+	onSelectionUpdate(entry: AiHistoryEntry): void;
+}
+
 type Translate = (phrase: string) => string;
+
+function executeAiAssistantHistoryUpdate(
+	update: AiAssistantHistoryRestorePlan["historyUpdate"],
+	effects: AiAssistantHistoryRestoreEffects,
+): void {
+	if (!update) return;
+	if (update.type === "replace") {
+		effects.onHistoryReplace(update.responses);
+	} else {
+		effects.onHistoryUpsert(update.entry);
+	}
+	effects.onHistoryChanged();
+}
+
+export function executeAiAssistantHistoryRestorePlan(
+	plan: AiAssistantHistoryRestorePlan,
+	effects: AiAssistantHistoryRestoreEffects,
+): void {
+	executeAiAssistantHistoryUpdate(plan.historyUpdate, effects);
+	if (plan.updateSelection) effects.onSelectionUpdate(plan.nextEntry);
+	if (plan.applyDirectly) {
+		effects.onApplyUpdatedData(plan.updated, {
+			entityTypes: plan.entityTypes,
+			historyEntry: plan.nextEntry,
+			trackUndo: false,
+		});
+	}
+	if (plan.requestReload) effects.onRequestReload(plan.entityTypes);
+}
 
 export function getAiHistoryDeleteConfirmation(
 	kind: "entry" | "all",

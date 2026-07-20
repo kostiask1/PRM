@@ -9,6 +9,12 @@ import type { AiGeneratedContent } from "./operationContracts.ts";
 
 type GeneratedContent = AiGeneratedContent | null | undefined;
 
+const GENERATED_ENTITY_COLLECTION_TYPES = [
+	{ collection: "characters", type: "characters" },
+	{ collection: "npcs", type: "npc" },
+	{ collection: "locations", type: "locations" },
+] as const;
+
 export interface AiHistoryRetryPlan {
 	entryId: AiHistoryId;
 	retryPayload: AiGenerationPayload;
@@ -129,14 +135,19 @@ export function getHistoryChangedEntityTypes(
 	];
 }
 
+function getGeneratedEntityCollectionTypes(
+	generated: GeneratedContent,
+): string[] {
+	return GENERATED_ENTITY_COLLECTION_TYPES.filter(({ collection }) =>
+		Array.isArray(generated?.[collection]),
+	).map(({ type }) => type);
+}
+
 export function getGeneratedEntityTypes(
 	generated: GeneratedContent,
 	historyEntry: AiHistoryEntry | null = null,
 ): string[] {
-	const types: string[] = [];
-	if (Array.isArray(generated?.characters)) types.push("characters");
-	if (Array.isArray(generated?.npcs)) types.push("npc");
-	if (Array.isArray(generated?.locations)) types.push("locations");
+	const types = getGeneratedEntityCollectionTypes(generated);
 	return types.length > 0 ? types : getHistoryChangedEntityTypes(historyEntry);
 }
 
@@ -296,6 +307,48 @@ function isAbortError(error: unknown): boolean {
 	);
 }
 
+async function deleteFailedRetryEntry(
+	plan: AiHistoryRetryPlan,
+	deleteAiResponse: ExecuteAiHistoryRetryOptions["deleteAiResponse"],
+	onFailedEntryDeleted: ExecuteAiHistoryRetryOptions["onFailedEntryDeleted"],
+): Promise<void> {
+	if (!plan.deleteFailedEntry) return;
+	const responses = await deleteAiResponse(
+		plan.deleteFailedEntry.campaign,
+		plan.deleteFailedEntry.id,
+	);
+	onFailedEntryDeleted?.(Array.isArray(responses) ? responses : []);
+}
+
+function generateRetryData(
+	plan: AiHistoryRetryPlan,
+	signal: AbortSignal,
+	generateAi: ExecuteAiHistoryRetryOptions["generateAi"],
+): Promise<AiGenerationResult | null> {
+	return generateAi(plan.retryPayload, { signal });
+}
+
+function getSuccessfulRetryOutcome(
+	data: AiGenerationResult | null,
+	onSucceeded: ExecuteAiHistoryRetryOptions["onSucceeded"],
+): AiHistoryRetryOutcome {
+	onSucceeded?.(data);
+	return { status: "succeeded", data };
+}
+
+function getFailedRetryOutcome(
+	error: unknown,
+	onCancelled: ExecuteAiHistoryRetryOptions["onCancelled"],
+	onFailed: ExecuteAiHistoryRetryOptions["onFailed"],
+): AiHistoryRetryOutcome {
+	if (isAbortError(error)) {
+		onCancelled?.();
+		return { status: "cancelled" };
+	}
+	onFailed?.(error);
+	return { status: "failed", error };
+}
+
 export async function executeAiHistoryRetry({
 	plan,
 	signal,
@@ -307,22 +360,14 @@ export async function executeAiHistoryRetry({
 	onFailed,
 }: ExecuteAiHistoryRetryOptions): Promise<AiHistoryRetryOutcome> {
 	try {
-		if (plan.deleteFailedEntry) {
-			const responses = await deleteAiResponse(
-				plan.deleteFailedEntry.campaign,
-				plan.deleteFailedEntry.id,
-			);
-			onFailedEntryDeleted?.(Array.isArray(responses) ? responses : []);
-		}
-		const data = await generateAi(plan.retryPayload, { signal });
-		onSucceeded?.(data);
-		return { status: "succeeded", data };
+		await deleteFailedRetryEntry(
+			plan,
+			deleteAiResponse,
+			onFailedEntryDeleted,
+		);
+		const data = await generateRetryData(plan, signal, generateAi);
+		return getSuccessfulRetryOutcome(data, onSucceeded);
 	} catch (error) {
-		if (isAbortError(error)) {
-			onCancelled?.();
-			return { status: "cancelled" };
-		}
-		onFailed?.(error);
-		return { status: "failed", error };
+		return getFailedRetryOutcome(error, onCancelled, onFailed);
 	}
 }

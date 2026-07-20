@@ -16,6 +16,19 @@ export interface AiToolbarVisibility {
 	showParsedGenerationOptions: boolean;
 }
 
+export interface AiEntityGenerationActionsView {
+	showActions: boolean;
+	showCharacterAction: boolean;
+}
+
+export interface AiEncounterGenerationActionsView {
+	encounterTitleKind: "current" | "scenes";
+	showActions: boolean;
+	showCreateCustomCreatureAction: boolean;
+	showCustomMonsterAction: boolean;
+	showEncounterAction: boolean;
+}
+
 export function getAiToolbarVisibility({
 	isBestiary,
 	isCampaign,
@@ -74,11 +87,113 @@ export function hasAiResponseHistory<T>(
 	return Array.isArray(entries) && entries.length > 0;
 }
 
+export interface AiResponseHistoryRowView {
+	changeSummary: string;
+	dateLabel: string;
+	showRetry: boolean;
+	stateLabel: string;
+	title: string;
+}
+
+export function getAiResponseHistoryRowView<
+	TEntry extends { createdAt?: string },
+>({
+	canRetry,
+	currentLanguage,
+	entry,
+	fallbackTitle,
+	formatResponseDate,
+	getStateLabel,
+	getSummary,
+	getTitle,
+}: {
+	canRetry?: (entry: TEntry) => boolean;
+	currentLanguage?: string;
+	entry: TEntry;
+	fallbackTitle: string;
+	formatResponseDate: (createdAt?: string, language?: string) => string;
+	getStateLabel: (entry: TEntry) => string;
+	getSummary: (entry: TEntry) => string;
+	getTitle: (entry: TEntry) => string;
+}): AiResponseHistoryRowView {
+	return {
+		changeSummary: getSummary(entry),
+		dateLabel: formatResponseDate(entry.createdAt, currentLanguage),
+		showRetry: Boolean(canRetry?.(entry)),
+		stateLabel: getStateLabel(entry),
+		title: getTitle(entry) || fallbackTitle,
+	};
+}
+
+export function getAiEntityGenerationActionsView({
+	isEncounter,
+	showCharacterGeneration,
+	showParsedGenerationOptions,
+}: {
+	isEncounter: boolean;
+	showCharacterGeneration: boolean;
+	showParsedGenerationOptions: boolean;
+}): AiEntityGenerationActionsView {
+	const showActions = showParsedGenerationOptions && !isEncounter;
+	return {
+		showActions,
+		showCharacterAction: showActions && showCharacterGeneration,
+	};
+}
+
+export function getAiEncounterGenerationActionsView({
+	isCampaign,
+	isCustomMonsterGenerationVisible,
+	isEncounter,
+	showParsedGenerationOptions,
+}: {
+	isCampaign: boolean;
+	isCustomMonsterGenerationVisible: boolean;
+	isEncounter: boolean;
+	showParsedGenerationOptions: boolean;
+}): AiEncounterGenerationActionsView {
+	return {
+		encounterTitleKind: isEncounter ? "current" : "scenes",
+		showActions: showParsedGenerationOptions,
+		showCreateCustomCreatureAction:
+			showParsedGenerationOptions && isEncounter,
+		showCustomMonsterAction:
+			showParsedGenerationOptions && isCustomMonsterGenerationVisible,
+		showEncounterAction: showParsedGenerationOptions && !isCampaign,
+	};
+}
+
 export function getAvailableAiAttachmentSlots(
 	currentCount: number,
 	maximum: number,
 ): number {
 	return Math.max(0, maximum - currentCount);
+}
+
+export interface AiAttachmentControlsView {
+	fileActionDisabled: boolean;
+	gallerySource: string;
+	showImageActions: boolean;
+}
+
+export function getAiAttachmentControlsView({
+	attachedFileCount,
+	attachedImageCount,
+	campaignSlug,
+	disabled,
+	maximum,
+}: {
+	attachedFileCount: number;
+	attachedImageCount: number;
+	campaignSlug?: string | null;
+	disabled: boolean;
+	maximum: number;
+}): AiAttachmentControlsView {
+	return {
+		fileActionDisabled: disabled || attachedFileCount >= maximum,
+		gallerySource: campaignSlug || "general",
+		showImageActions: attachedImageCount < maximum,
+	};
 }
 
 export function mergeUniqueAiAttachments(

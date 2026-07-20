@@ -23,6 +23,13 @@ interface SessionArrayDiffPolicy {
 	getName: NameReader;
 }
 
+interface SessionDiffSnapshots {
+	before: SnapshotRecord;
+	after: SnapshotRecord;
+	beforeData: SnapshotRecord;
+	afterData: SnapshotRecord;
+}
+
 const SESSION_ARRAY_PATHS = [
 	"notes",
 	"npcs",
@@ -69,6 +76,44 @@ function indexDiffItems(
 	);
 }
 
+function getGranularArrayItemSuffix(
+	pathLabel: string,
+	key: string,
+	beforeItem: unknown,
+	afterItem: unknown,
+	getName: NameReader,
+): string {
+	const labelRecord = asSnapshotRecord(afterItem ?? beforeItem) || {};
+	const name = normalizeDiffIdentity(getName(labelRecord));
+	return `${pathLabel}/${name || key}`;
+}
+
+function createGranularArrayItemDiff(
+	resource: DiffWorkResource,
+	pathLabel: string,
+	key: string,
+	beforeByKey: Map<string, IndexedDiffItem>,
+	afterByKey: Map<string, IndexedDiffItem>,
+	getName: NameReader,
+): DiffWorkResource | null {
+	const beforeItem = beforeByKey.get(key)?.item;
+	const afterEntry = afterByKey.get(key);
+	const afterItem = afterEntry?.item;
+	return createGranularDiff(
+		resource,
+		getGranularArrayItemSuffix(
+			pathLabel,
+			key,
+			beforeItem,
+			afterItem,
+			getName,
+		),
+		beforeItem,
+		afterItem,
+		{ listIndex: afterEntry?.index ?? null },
+	);
+}
+
 function getGranularArrayDiff(
 	resource: DiffWorkResource,
 	pathLabel: string,
@@ -80,18 +125,13 @@ function getGranularArrayDiff(
 	const afterByKey = indexDiffItems(after, getName);
 	const keys = new Set([...beforeByKey.keys(), ...afterByKey.keys()]);
 	return [...keys].flatMap((key) => {
-		const beforeItem = beforeByKey.get(key)?.item;
-		const afterEntry = afterByKey.get(key);
-		const afterItem = afterEntry?.item;
-		const labelRecord = asSnapshotRecord(afterItem ?? beforeItem) || {};
-		const name = normalizeDiffIdentity(getName(labelRecord));
-		const suffix = `${pathLabel}/${name || key}`;
-		const diff = createGranularDiff(
+		const diff = createGranularArrayItemDiff(
 			resource,
-			suffix,
-			beforeItem,
-			afterItem,
-			{ listIndex: afterEntry?.index ?? null },
+			pathLabel,
+			key,
+			beforeByKey,
+			afterByKey,
+			getName,
 		);
 		return diff ? [diff] : [];
 	});
@@ -99,6 +139,19 @@ function getGranularArrayDiff(
 
 function getSessionSnapshotData(snapshot: SnapshotRecord): SnapshotRecord {
 	return asSnapshotRecord(snapshot.data) || {};
+}
+
+function getSessionDiffSnapshots(
+	resource: DiffWorkResource,
+): SessionDiffSnapshots {
+	const before = asSnapshotRecord(resource.before) || {};
+	const after = asSnapshotRecord(resource.after) || {};
+	return {
+		before,
+		after,
+		beforeData: getSessionSnapshotData(before),
+		afterData: getSessionSnapshotData(after),
+	};
 }
 
 function getSessionArrayDiffPolicies(
@@ -147,6 +200,84 @@ function getUncoveredRecordDiffs(
 	});
 }
 
+function getKnownSessionDiffs(
+	resource: DiffWorkResource,
+	snapshots: SessionDiffSnapshots,
+): DiffWorkResource[] {
+	return [
+		createGranularDiff(
+			resource,
+			"name",
+			snapshots.before.name,
+			snapshots.after.name,
+		),
+		createGranularDiff(
+			resource,
+			"summary",
+			snapshots.beforeData.result_text,
+			snapshots.afterData.result_text,
+		),
+	].filter((diff): diff is DiffWorkResource => diff !== null);
+}
+
+function getSessionArrayDiffs(
+	resource: DiffWorkResource,
+	snapshots: SessionDiffSnapshots,
+	labels: DiffLabels,
+): DiffWorkResource[] {
+	const policies = getSessionArrayDiffPolicies(labels);
+	return SESSION_ARRAY_PATHS.flatMap((key) => {
+		const policy = policies[key];
+		return getGranularArrayDiff(
+			resource,
+			policy.path,
+			snapshots.beforeData[key],
+			snapshots.afterData[key],
+			policy.getName,
+		);
+	});
+}
+
+function getExtraSessionDiffs(
+	resource: DiffWorkResource,
+	snapshots: SessionDiffSnapshots,
+): DiffWorkResource[] {
+	return [
+		...getUncoveredRecordDiffs(
+			resource,
+			snapshots.beforeData,
+			snapshots.afterData,
+			COVERED_SESSION_DATA_KEYS,
+			"data.",
+		),
+		...getUncoveredRecordDiffs(
+			resource,
+			snapshots.before,
+			snapshots.after,
+			COVERED_SESSION_TOP_LEVEL_KEYS,
+		),
+	];
+}
+
+function getExpandedSessionDiffs(
+	resource: DiffWorkResource,
+	labels: DiffLabels,
+): DiffWorkResource[] {
+	const snapshots = getSessionDiffSnapshots(resource);
+	return [
+		...getKnownSessionDiffs(resource, snapshots),
+		...getSessionArrayDiffs(resource, snapshots, labels),
+		...getExtraSessionDiffs(resource, snapshots),
+	];
+}
+
+function retainOriginalWhenEmpty(
+	resource: DiffWorkResource,
+	expanded: DiffWorkResource[],
+): DiffWorkResource[] {
+	return expanded.length > 0 ? expanded : [resource];
+}
+
 export function expandSessionDiffResource(
 	resource: DiffWorkResource,
 	labels: DiffLabels = {},
@@ -154,50 +285,10 @@ export function expandSessionDiffResource(
 	if (resource.kind !== "session" || (!resource.before && !resource.after)) {
 		return [resource];
 	}
-	const before = asSnapshotRecord(resource.before) || {};
-	const after = asSnapshotRecord(resource.after) || {};
-	const beforeData = getSessionSnapshotData(before);
-	const afterData = getSessionSnapshotData(after);
-	const knownDiffs = [
-		createGranularDiff(resource, "name", before.name, after.name),
-		createGranularDiff(
-			resource,
-			"summary",
-			beforeData.result_text,
-			afterData.result_text,
-		),
-	].filter((diff): diff is DiffWorkResource => diff !== null);
-	const policies = getSessionArrayDiffPolicies(labels);
-	const arrayDiffs = SESSION_ARRAY_PATHS.flatMap((key) => {
-		const policy = policies[key];
-		return getGranularArrayDiff(
-			resource,
-			policy.path,
-			beforeData[key],
-			afterData[key],
-			policy.getName,
-		);
-	});
-	const extraDataDiffs = getUncoveredRecordDiffs(
+	return retainOriginalWhenEmpty(
 		resource,
-		beforeData,
-		afterData,
-		COVERED_SESSION_DATA_KEYS,
-		"data.",
+		getExpandedSessionDiffs(resource, labels),
 	);
-	const extraTopLevelDiffs = getUncoveredRecordDiffs(
-		resource,
-		before,
-		after,
-		COVERED_SESSION_TOP_LEVEL_KEYS,
-	);
-	const expanded = [
-		...knownDiffs,
-		...arrayDiffs,
-		...extraDataDiffs,
-		...extraTopLevelDiffs,
-	];
-	return expanded.length > 0 ? expanded : [resource];
 }
 
 export function expandCustomBestiaryDiffResource(
@@ -217,5 +308,5 @@ export function expandCustomBestiaryDiffResource(
 		resource.after,
 		(monster) => monster.name || labels.creature || "Creature",
 	);
-	return expanded.length > 0 ? expanded : [resource];
+	return retainOriginalWhenEmpty(resource, expanded);
 }

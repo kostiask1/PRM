@@ -32,6 +32,31 @@ export function getContextListConfig(value: unknown): ContextListConfig {
 	return { included: value !== false, items: {} };
 }
 
+function isNormalizedContextListConfig(
+	value: unknown,
+): value is ContextListConfig {
+	return (
+		isRecord(value) &&
+		typeof value.included === "boolean" &&
+		isRecord(value.items)
+	);
+}
+
+function addMissingContextListItems<T>(
+	items: Record<string, boolean>,
+	list: readonly T[],
+	getKey: (item: T) => string,
+): boolean {
+	let changed = false;
+	for (const item of list) {
+		const key = getKey(item);
+		if (!key || Object.prototype.hasOwnProperty.call(items, key)) continue;
+		items[key] = true;
+		changed = true;
+	}
+	return changed;
+}
+
 export function ensureContextListItems<T>(
 	currentValue: unknown,
 	list: readonly T[],
@@ -39,21 +64,48 @@ export function ensureContextListItems<T>(
 ): ContextListConfig {
 	const current = getContextListConfig(currentValue);
 	const nextItems = { ...current.items };
-	let changed =
-		!currentValue ||
-		typeof currentValue !== "object" ||
-		Array.isArray(currentValue) ||
-		!(currentValue as Record<string, unknown>).items;
-
-	for (const item of list) {
-		const key = getKey(item);
-		if (!key || Object.prototype.hasOwnProperty.call(nextItems, key)) continue;
-		nextItems[key] = true;
-		changed = true;
+	const itemsChanged = addMissingContextListItems(nextItems, list, getKey);
+	if (isNormalizedContextListConfig(currentValue) && !itemsChanged) {
+		return currentValue;
 	}
-
-	if (!changed) return currentValue as ContextListConfig;
 	return { included: current.included, items: nextItems };
+}
+
+function cloneContextConfiguration(
+	config: AiContextConfiguration | null | undefined,
+): AiContextConfiguration {
+	return JSON.parse(JSON.stringify(config || {})) as AiContextConfiguration;
+}
+
+function createContextPathNode(parentKey: string | undefined) {
+	return parentKey === "scenes" ? { ...DEFAULT_SCENE_CONTEXT } : {};
+}
+
+function getOrCreateContextPathNode(
+	current: AiContextConfiguration,
+	key: string,
+	parentKey: string | undefined,
+): AiContextConfiguration {
+	if (!isRecord(current[key])) {
+		current[key] = createContextPathNode(parentKey);
+	}
+	return current[key] as AiContextConfiguration;
+}
+
+function setNestedContextValue(
+	config: AiContextConfiguration,
+	path: string[],
+	value: unknown,
+): void {
+	let current = config;
+	for (let index = 0; index < path.length - 1; index += 1) {
+		current = getOrCreateContextPathNode(
+			current,
+			path[index],
+			path[index - 1],
+		);
+	}
+	current[path[path.length - 1]] = value;
 }
 
 export function updateContextConfigValue(
@@ -62,19 +114,8 @@ export function updateContextConfigValue(
 	value: unknown,
 ): AiContextConfiguration | null | undefined {
 	if (!Array.isArray(path) || path.length === 0) return config;
-	const next = JSON.parse(
-		JSON.stringify(config || {}),
-	) as AiContextConfiguration;
-	let current: AiContextConfiguration = next;
-	for (let index = 0; index < path.length - 1; index += 1) {
-		const key = path[index];
-		if (!isRecord(current[key])) {
-			current[key] =
-				path[index - 1] === "scenes" ? { ...DEFAULT_SCENE_CONTEXT } : {};
-		}
-		current = current[key] as AiContextConfiguration;
-	}
-	current[path[path.length - 1]] = value;
+	const next = cloneContextConfiguration(config);
+	setNestedContextValue(next, path, value);
 	return next;
 }
 

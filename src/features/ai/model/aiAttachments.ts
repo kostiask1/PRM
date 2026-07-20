@@ -81,10 +81,36 @@ export function readFileAsBase64(file: Blob): Promise<string> {
 	});
 }
 
+function getAttachmentUrl(
+	attachment: AiAttachmentDescriptor | null | undefined,
+): string {
+	return typeof attachment?.url === "string" ? attachment.url : "";
+}
+
+function getAttachmentName(
+	attachment: AiAttachmentDescriptor | null | undefined,
+): string {
+	return typeof attachment?.name === "string" ? attachment.name : "";
+}
+
+function getAttachmentSize(
+	attachment: AiAttachmentDescriptor | null | undefined,
+): string {
+	return typeof attachment?.sizeBytes === "number" && attachment.sizeBytes
+		? String(attachment.sizeBytes)
+		: "";
+}
+
+function getAttachmentMetadataKey(
+	attachment: AiAttachmentDescriptor | null | undefined,
+): string {
+	return `${getAttachmentName(attachment)}:${getAttachmentSize(attachment)}`;
+}
+
 export function getAttachedImageKey(image: AiAttachmentDescriptor | null | undefined): string {
-	return image?.url || `${image?.name || ""}:${image?.sizeBytes || ""}`;
+	return getAttachmentUrl(image) || getAttachmentMetadataKey(image);
 }
 
 export function getAttachedFileKey(file: AiAttachmentDescriptor | null | undefined): string {
-	return `${file?.name || ""}:${file?.sizeBytes || ""}`;
+	return getAttachmentMetadataKey(file);
 }

@@ -11,6 +11,7 @@ import {
 	getAiHistoryDeleteConfirmation,
 	getAiHistoryErrorMessage,
 	getAiHistoryRestoreConfirmation,
+	executeAiAssistantHistoryRestorePlan,
 	type AiAssistantHistoryLabels,
 	type AiAssistantHistoryRoute,
 } from "./assistantHistory.ts";
@@ -176,27 +177,20 @@ export function useAiAssistantHistoryController({
 				isBestiary,
 				isCampaign,
 			});
-			if (plan.historyUpdate?.type === "replace") {
-				setResponseHistory(plan.historyUpdate.responses);
-				void refreshStats();
-			} else if (plan.historyUpdate?.type === "upsert") {
-				setResponseHistory((current) =>
-					upsertAiHistoryEntry(current, plan.historyUpdate?.entry),
-				);
-				void refreshStats();
-			}
-			if (plan.updateSelection) {
-				setSelectedResponseEntry(plan.nextEntry);
-				setGeneratedPrompt(getEntryText(plan.nextEntry));
-			}
-			if (plan.applyDirectly) {
-				applyUpdatedData(plan.updated, {
-					entityTypes: plan.entityTypes,
-					trackUndo: false,
-					historyEntry: plan.nextEntry,
-				});
-			}
-			if (plan.requestReload) requestReload(plan.entityTypes);
+			executeAiAssistantHistoryRestorePlan(plan, {
+				onHistoryReplace: setResponseHistory,
+				onHistoryUpsert: (restoredEntry) =>
+					setResponseHistory((current) =>
+						upsertAiHistoryEntry(current, restoredEntry),
+					),
+				onHistoryChanged: () => void refreshStats(),
+				onSelectionUpdate: (restoredEntry) => {
+					setSelectedResponseEntry(restoredEntry);
+					setGeneratedPrompt(getEntryText(restoredEntry));
+				},
+				onApplyUpdatedData: applyUpdatedData,
+				onRequestReload: requestReload,
+			});
 		},
 		[
 			applyUpdatedData,

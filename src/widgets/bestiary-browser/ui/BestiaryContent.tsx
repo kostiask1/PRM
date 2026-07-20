@@ -2,6 +2,7 @@ import {
 	useEffect,
 	useRef,
 	type Dispatch,
+	type MouseEvent as ReactMouseEvent,
 	type ReactNode,
 	type RefObject,
 	type SetStateAction,
@@ -29,13 +30,14 @@ import {
 import { lang } from "../../../shared/lib/index.js";
 import { AiAssistantPanel } from "../../ai-assistant/index.js";
 import {
-	getMonsterCrDisplay,
+	getBestiaryDetailPresentation,
+	getBestiaryMonsterRowPresentation,
 	getMonsterItemKey,
 	getMonsterSizeText,
 	getMonsterTagText,
-	isCustomSource,
-	isFavoriteMonster,
 	isSameMonsterIdentity,
+	type BestiaryMonsterRowPresentation,
+	type BestiaryMonsterRowPrimaryAction,
 	type BestiarySortOrder,
 } from "../model.js";
 
@@ -51,156 +53,216 @@ function getFallbackScrollParent() {
 	return window;
 }
 
-function MonsterListItem({
-	favorites,
+function executeMonsterRowPrimaryAction(
+	action: BestiaryMonsterRowPrimaryAction,
+	monster: BestiaryMonster,
+	onSelectMonster: MonsterListItemProps["onSelectMonster"],
+	onAddMonster: MonsterListItemProps["onAddMonster"],
+) {
+	if (action === "select") {
+		onSelectMonster?.(monster);
+		return;
+	}
+	if (action === "add") onAddMonster?.(monster);
+}
+
+function executeStoppedMonsterRowAction(
+	event: ReactMouseEvent<HTMLElement>,
+	action: () => void,
+) {
+	event.stopPropagation();
+	action();
+}
+
+interface MonsterListItemActionsProps {
+	monster: BestiaryMonster;
+	onAddMonster: MonsterListItemProps["onAddMonster"];
+	onAiEdit: MonsterListItemProps["onAiEdit"];
+	onDelete: MonsterListItemProps["onDelete"];
+	onEdit: MonsterListItemProps["onEdit"];
+	onSelectMonster: MonsterListItemProps["onSelectMonster"];
+	onToggleFavorite: MonsterListItemProps["onToggleFavorite"];
+	presentation: BestiaryMonsterRowPresentation;
+}
+
+function MonsterListItemActions({
 	monster,
 	onAddMonster,
 	onAiEdit,
 	onDelete,
 	onEdit,
 	onSelectMonster,
-	onSelect,
 	onToggleFavorite,
-	search,
-	selectedMonster,
-}: MonsterListItemProps) {
-	const crValue = getMonsterCrDisplay(monster);
-	const isSelected = isSameMonsterIdentity(selectedMonster, monster);
-	const isFavorite = isFavoriteMonster(favorites, monster);
-	const sourceFullName = getSourceFullName(monster.source);
-	const tokenSrc = new MonsterStatBlockModel(monster).localTokenSrc;
+	presentation,
+}: MonsterListItemActionsProps) {
+	return (
+		<>
+			<Button
+				variant="ghost"
+				size={Button.SIZES.SMALL}
+				icon="star"
+				className={classNames("Bestiary__item_fav_btn", {
+					is_active: presentation.isFavorite,
+				})}
+				onClick={(event) =>
+					executeStoppedMonsterRowAction(event, () =>
+						onToggleFavorite(monster),
+					)
+				}
+				title={lang.t(presentation.favoriteTitleKey)}
+			/>
+			{presentation.primaryTitleKey && (
+				<Button
+					variant="ghost"
+					size={Button.SIZES.SMALL}
+					icon="plus"
+					onClick={(event) =>
+						executeStoppedMonsterRowAction(event, () =>
+							executeMonsterRowPrimaryAction(
+								presentation.primaryAction,
+								monster,
+								onSelectMonster,
+								onAddMonster,
+							),
+						)
+					}
+					title={lang.t(presentation.primaryTitleKey)}
+				/>
+			)}
+			<Button
+				variant="ghost"
+				className="Bestiary__item_edit_btn"
+				size={Button.SIZES.SMALL}
+				icon="edit"
+				onClick={(event) =>
+					executeStoppedMonsterRowAction(event, () => onEdit(monster))
+				}
+				title={lang.t("Edit creature")}
+			/>
+			{presentation.isCustom && (
+				<>
+					<Button
+						variant="ghost"
+						className="Bestiary__item_ai_edit_btn"
+						size={Button.SIZES.SMALL}
+						icon="wand"
+						onClick={(event) =>
+							executeStoppedMonsterRowAction(event, () => onAiEdit(monster))
+						}
+						title={lang.t("AI edit custom creature")}
+					/>
+					<Button
+						variant="danger"
+						className="Bestiary__item_delete_btn"
+						size={Button.SIZES.SMALL}
+						icon="trash"
+						onClick={(event) =>
+							executeStoppedMonsterRowAction(event, () => onDelete(monster))
+						}
+						title={lang.t("Delete custom creature")}
+					/>
+				</>
+			)}
+		</>
+	);
+}
 
+interface MonsterListItemContentProps {
+	monster: BestiaryMonster;
+	presentation: BestiaryMonsterRowPresentation;
+	search: string;
+	sourceFullName: string;
+}
+
+function MonsterListItemContent({
+	monster,
+	presentation,
+	search,
+	sourceFullName,
+}: MonsterListItemContentProps) {
+	return (
+		<div className="Bestiary__item_content">
+			<img
+				className="Bestiary__item_token"
+				src={presentation.tokenSrc}
+				alt=""
+				loading="lazy"
+				draggable={false}
+				onError={(event) => {
+					event.currentTarget.hidden = true;
+				}}
+			/>
+			<div className="Bestiary__item_info">
+				<div className="ListCard__title">
+					{highlightText(monster.name, search)}
+				</div>
+				<div className="ListCard__meta">
+					{highlightText(getMonsterSizeText(monster), search)}{" "}
+					{highlightText(getMonsterTypeString(monster.type), search)}{" "}
+					{highlightText(getMonsterTagText(monster), search)}
+					{monster.source && (
+						<Tooltip content={sourceFullName} disabled={!sourceFullName}>
+							<span className="Bestiary__item_source">
+								{" "}
+								• {highlightText(monster.source, search)}
+							</span>
+						</Tooltip>
+					)}
+				</div>
+			</div>
+			<Tooltip content={lang.t("Challenge Rating")}>
+				<div className="Bestiary__item_cr">
+					<div className="Bestiary__cr_label">CR</div>
+					<div className="Bestiary__cr_value">{presentation.crDisplay}</div>
+				</div>
+			</Tooltip>
+		</div>
+	);
+}
+
+function MonsterListItem(props: MonsterListItemProps) {
+	const { favorites, monster, search, selectedMonster } = props;
+	const fallbackTokenSrc = new MonsterStatBlockModel(monster).localTokenSrc;
+	const presentation = getBestiaryMonsterRowPresentation(
+		monster,
+		selectedMonster,
+		favorites,
+		Boolean(props.onSelectMonster),
+		Boolean(props.onAddMonster),
+		fallbackTokenSrc,
+	);
 	return (
 		<div>
 			<ListCard
-				active={isSelected}
-				onClick={() => onSelect(isSelected ? null : monster)}
-				onDoubleClick={() => {
-					if (onSelectMonster) onSelectMonster(monster);
-					else if (onAddMonster) onAddMonster(monster);
-				}}
+				active={presentation.isSelected}
+				onClick={() => props.onSelect(presentation.nextSelection)}
+				onDoubleClick={() =>
+					executeMonsterRowPrimaryAction(
+						presentation.primaryAction,
+						monster,
+						props.onSelectMonster,
+						props.onAddMonster,
+					)
+				}
 				actions={
-					<>
-						<Button
-							variant="ghost"
-							size={Button.SIZES.SMALL}
-							icon="star"
-							className={classNames("Bestiary__item_fav_btn", {
-								is_active: isFavorite,
-							})}
-							onClick={(event) => {
-								event.stopPropagation();
-								onToggleFavorite(monster);
-							}}
-							title={
-								isFavorite
-									? lang.t("Remove from favorites")
-									: lang.t("Add to favorites")
-							}
-						/>
-						{(onAddMonster || onSelectMonster) && (
-							<Button
-								variant="ghost"
-								size={Button.SIZES.SMALL}
-								icon="plus"
-								onClick={(event) => {
-									event.stopPropagation();
-									if (onSelectMonster) onSelectMonster(monster);
-									else onAddMonster?.(monster);
-								}}
-								title={
-									onSelectMonster
-										? lang.t("Insert")
-										: lang.t("Add to encounter")
-								}
-							/>
-						)}
-						<Button
-							variant="ghost"
-							className="Bestiary__item_edit_btn"
-							size={Button.SIZES.SMALL}
-							icon="edit"
-							onClick={(event) => {
-								event.stopPropagation();
-								onEdit(monster);
-							}}
-							title={lang.t("Edit creature")}
-						/>
-						{isCustomSource(monster.source) && (
-							<>
-								<Button
-									variant="ghost"
-									className="Bestiary__item_ai_edit_btn"
-									size={Button.SIZES.SMALL}
-									icon="wand"
-									onClick={(event) => {
-										event.stopPropagation();
-										onAiEdit(monster);
-									}}
-									title={lang.t("AI edit custom creature")}
-								/>
-								<Button
-									variant="danger"
-									className="Bestiary__item_delete_btn"
-									size={Button.SIZES.SMALL}
-									icon="trash"
-									onClick={(event) => {
-										event.stopPropagation();
-										onDelete(monster);
-									}}
-									title={lang.t("Delete custom creature")}
-								/>
-							</>
-						)}
-					</>
+					<MonsterListItemActions
+						monster={monster}
+						onAddMonster={props.onAddMonster}
+						onAiEdit={props.onAiEdit}
+						onDelete={props.onDelete}
+						onEdit={props.onEdit}
+						onSelectMonster={props.onSelectMonster}
+						onToggleFavorite={props.onToggleFavorite}
+						presentation={presentation}
+					/>
 				}
 			>
-				<div className="Bestiary__item_content">
-					<img
-						className="Bestiary__item_token"
-						src={
-							typeof monster.imageUrl === "string"
-								? monster.imageUrl
-								: tokenSrc
-						}
-						alt=""
-						loading="lazy"
-						draggable={false}
-						onError={(event) => {
-							event.currentTarget.hidden = true;
-						}}
-					/>
-					<div className="Bestiary__item_info">
-						<div className="ListCard__title">
-							{highlightText(monster.name, search)}
-						</div>
-						<div className="ListCard__meta">
-							{highlightText(
-								getMonsterSizeText(monster),
-								search,
-							)}{" "}
-							{highlightText(getMonsterTypeString(monster.type), search)}{" "}
-							{highlightText(
-								getMonsterTagText(monster),
-								search,
-							)}
-							{monster.source && (
-								<Tooltip content={sourceFullName} disabled={!sourceFullName}>
-									<span className="Bestiary__item_source">
-										{" "}
-										• {highlightText(monster.source, search)}
-									</span>
-								</Tooltip>
-							)}
-						</div>
-					</div>
-					<Tooltip content={lang.t("Challenge Rating")}>
-						<div className="Bestiary__item_cr">
-							<div className="Bestiary__cr_label">CR</div>
-							<div className="Bestiary__cr_value">{crValue || "--"}</div>
-						</div>
-					</Tooltip>
-				</div>
+				<MonsterListItemContent
+					monster={monster}
+					presentation={presentation}
+					search={search}
+					sourceFullName={getSourceFullName(monster.source)}
+				/>
 			</ListCard>
 		</div>
 	);
@@ -434,34 +496,40 @@ function BestiaryDetail({
 	searchHighlight,
 	selectedMonster,
 }: BestiaryDetailProps) {
-	if (!selectedMonster) return null;
+	const presentation = getBestiaryDetailPresentation(
+		selectedMonster,
+		favorites,
+		onSelectMonster,
+		onAddMonster,
+		onDeleteCustomMonster,
+		() => lang.t("Add to encounter"),
+	);
+	if (!presentation) return null;
 	return (
 		<div className="Bestiary__detail_container" ref={detailRef}>
-			{onSelectMonster && (
+			{presentation.insertAction && (
 				<div className="Bestiary__select_actions">
 					<Button
 						variant="primary"
 						icon="plus"
-						onClick={() => onSelectMonster(selectedMonster)}
+						onClick={() =>
+							presentation.insertAction?.(presentation.monster)
+						}
 					>
 						{lang.t("Insert")}
 					</Button>
 				</div>
 			)}
 			<MonsterStatBlock
-				monster={selectedMonster}
-				favoriteActive={isFavoriteMonster(favorites, selectedMonster)}
-				onNameClick={onAddMonster ?? undefined}
-				nameTitle={onAddMonster ? lang.t("Add to encounter") : undefined}
+				monster={presentation.monster}
+				favoriteActive={presentation.favoriteActive}
+				onNameClick={presentation.addAction}
+				nameTitle={presentation.addTitle}
 				onFavoriteChange={onFavoriteListChange}
-				showAddToEncounterPicker={Boolean(onAddMonster)}
-				onAddToEncounter={onAddMonster ?? undefined}
+				showAddToEncounterPicker={presentation.showAddToEncounterPicker}
+				onAddToEncounter={presentation.addAction}
 				onAiAction={onMonsterAiAction}
-				onDelete={
-					isCustomSource(selectedMonster.source)
-						? onDeleteCustomMonster
-						: undefined
-				}
+				onDelete={presentation.deleteAction}
 				onFieldEdit={onEditMonster}
 				searchHighlight={searchHighlight}
 			/>

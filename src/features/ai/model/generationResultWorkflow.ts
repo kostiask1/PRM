@@ -49,6 +49,15 @@ export type AiGeneratedResultPlan =
 
 type UpdatedResultPlan = Extract<AiGeneratedResultPlan, { kind: "updated" }>;
 
+interface UpdatedPlanAnalysis {
+	historyEntry: AiHistoryEntry | null;
+	generated: AiGeneratedContent | null;
+	updatedIsSessionLike: boolean;
+	applyDirectly: boolean;
+	entityTypes: string[];
+	hasCampaignChanges: boolean;
+}
+
 export interface ExecuteAiGeneratedResultPlanOptions {
 	plan: AiGeneratedResultPlan;
 	onHistoryEntry(entry: AiHistoryEntry): void;
@@ -137,6 +146,58 @@ function shouldRequestCampaignReload(
 	return updatedIsSessionLike && hasCampaignChanges;
 }
 
+function getUpdatedPlanGeneratedContent(
+	data: AiGenerationResult,
+): AiGeneratedContent | null {
+	return isRecord(data.generated)
+		? (data.generated as AiGeneratedContent)
+		: null;
+}
+
+function analyzeUpdatedPlan(
+	data: AiGenerationResult & { updated: Record<string, unknown> },
+	options: Pick<
+		BuildAiGeneratedResultPlanOptions,
+		"isBestiary" | "isCampaign"
+	>,
+): UpdatedPlanAnalysis {
+	const historyEntry = data.aiResponse || null;
+	const generated = getUpdatedPlanGeneratedContent(data);
+	const updatedIsSessionLike = isSessionLike(data.updated);
+	const applyDirectly = canApplyUpdatedDataDirectly(
+		options.isBestiary,
+		options.isCampaign,
+		updatedIsSessionLike,
+	);
+	return {
+		historyEntry,
+		generated,
+		updatedIsSessionLike,
+		applyDirectly,
+		entityTypes: getGeneratedEntityTypes(generated, historyEntry),
+		hasCampaignChanges: hasGeneratedCampaignChanges(generated, historyEntry),
+	};
+}
+
+function shouldClearAppliedPrompt(value: boolean | undefined): boolean {
+	return value ?? true;
+}
+
+function shouldRefreshUpdatedEntities(
+	applyDirectly: boolean,
+	entityTypes: string[],
+): boolean {
+	return !applyDirectly && entityTypes.length > 0;
+}
+
+function getUpdatedNotification(
+	requestType: string | null,
+): UpdatedResultPlan["notification"] {
+	return requestType === "custom-monster"
+		? "custom-creatures-saved"
+		: "changes-applied";
+}
+
 function buildUpdatedPlan(
 	data: AiGenerationResult & { updated: Record<string, unknown> },
 	options: Omit<
@@ -145,43 +206,27 @@ function buildUpdatedPlan(
 	>,
 	closeAssistantDialogs: boolean,
 ): UpdatedResultPlan {
-	const generated = isRecord(data.generated)
-		? (data.generated as AiGeneratedContent)
-		: null;
-	const updatedIsSessionLike = isSessionLike(data.updated);
-	const applyDirectly = canApplyUpdatedDataDirectly(
-		options.isBestiary,
-		options.isCampaign,
-		updatedIsSessionLike,
-	);
-	const entityTypes = getGeneratedEntityTypes(
-		generated,
-		data.aiResponse || null,
-	);
-	const hasCampaignChanges = hasGeneratedCampaignChanges(
-		generated,
-		data.aiResponse || null,
-	);
+	const analysis = analyzeUpdatedPlan(data, options);
 
 	return {
 		kind: "updated",
-		historyEntry: data.aiResponse || null,
+		historyEntry: analysis.historyEntry,
 		updated: data.updated,
-		generated,
-		entityTypes,
-		applyDirectly,
+		generated: analysis.generated,
+		entityTypes: analysis.entityTypes,
+		applyDirectly: analysis.applyDirectly,
 		requestCampaignReload: shouldRequestCampaignReload(
-			applyDirectly,
-			updatedIsSessionLike,
-			hasCampaignChanges,
+			analysis.applyDirectly,
+			analysis.updatedIsSessionLike,
+			analysis.hasCampaignChanges,
 		),
-		clearPrompt: options.clearPromptOnApplied ?? true,
-		refreshEntities: !applyDirectly && entityTypes.length > 0,
+		clearPrompt: shouldClearAppliedPrompt(options.clearPromptOnApplied),
+		refreshEntities: shouldRefreshUpdatedEntities(
+			analysis.applyDirectly,
+			analysis.entityTypes,
+		),
 		closeAssistantDialogs,
-		notification:
-			options.requestType === "custom-monster"
-				? "custom-creatures-saved"
-				: "changes-applied",
+		notification: getUpdatedNotification(options.requestType),
 	};
 }
 
@@ -223,17 +268,31 @@ export function buildAiGeneratedResultPlan({
 	);
 }
 
-function executeUpdatedPlan(
+function executeUpdatedPersistenceEffects(
 	plan: UpdatedResultPlan,
 	actions: ExecuteAiGeneratedResultPlanOptions,
 ): void {
 	if (plan.historyEntry) actions.onHistoryEntry(plan.historyEntry);
 	if (plan.applyDirectly) actions.onApplyUpdated(plan);
 	if (plan.requestCampaignReload) actions.onCampaignReload();
+}
+
+function executeUpdatedPresentationEffects(
+	plan: UpdatedResultPlan,
+	actions: ExecuteAiGeneratedResultPlanOptions,
+): void {
 	if (plan.clearPrompt) actions.onClearPrompt();
 	actions.onNotification(plan.notification);
 	if (plan.refreshEntities) actions.onRefreshEntities();
 	if (plan.closeAssistantDialogs) actions.onCloseAssistantDialogs();
+}
+
+function executeUpdatedPlan(
+	plan: UpdatedResultPlan,
+	actions: ExecuteAiGeneratedResultPlanOptions,
+): void {
+	executeUpdatedPersistenceEffects(plan, actions);
+	executeUpdatedPresentationEffects(plan, actions);
 }
 
 export function executeAiGeneratedResultPlan(
