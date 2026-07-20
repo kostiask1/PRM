@@ -34,7 +34,6 @@ import {
 	useSessionHistory,
 	useSessionPersistence,
 	type SessionResourceId,
-	type SessionScene,
 } from "../../../features/session-editor/index.js";
 
 const api = { ...campaignApi, ...sessionApi };
@@ -59,8 +58,12 @@ import type {
 	SessionSyncEvent,
 } from "./contracts.ts";
 import {
+	executeSessionRenamePlan,
 	getSessionKeyboardAction,
+	getSessionRenamePlan,
 	getSessionSyncAction,
+	isSessionEditableTarget,
+	normalizeSessionPageSession,
 } from "./sessionPagePresentation.ts";
 
 interface ActiveCampaign {
@@ -80,10 +83,7 @@ function getKeyboardActionFromEvent(event: KeyboardEvent) {
 		shiftKey: event.shiftKey,
 		isHistoryShortcut: isHistoryShortcutEvent(event),
 		shouldUseAppHistory: shouldUseAppHistoryForEvent(event),
-		isEditableTarget:
-			target?.tagName === "INPUT" ||
-			target?.tagName === "TEXTAREA" ||
-			Boolean(target?.isContentEditable),
+		isEditableTarget: isSessionEditableTarget(target),
 	});
 }
 
@@ -137,39 +137,7 @@ export default function useSessionView() {
 		resetHistory,
 		undoStack,
 	} = useSessionHistory({ session, setSession, scheduleSave: triggerSave });
-	const normalizeSceneNotes = useCallback((scenes: SessionScene[] = []) => {
-		return (scenes || []).map((scene) => {
-			const notes = scene.notes || [];
-			return {
-				...scene,
-				notes,
-				isNotesCollapsed: !!scene.isNotesCollapsed,
-			};
-		});
-	}, []);
-	const normalizeLoadedSession = useCallback(
-		(nextSession: unknown): SessionPageSession => {
-			const source =
-				nextSession && typeof nextSession === "object"
-					? (nextSession as SessionPageSession)
-					: {};
-			if (!source.data) return source;
-			return {
-				...source,
-				data: {
-					...source.data,
-					notes: source.data.notes || [],
-					scenes: normalizeSceneNotes(source.data.scenes || []),
-					npcs: normalizeSessionEntities("npc", source.data.npcs),
-					locations: normalizeSessionEntities(
-						"locations",
-						source.data.locations,
-					),
-				},
-			};
-		},
-		[normalizeSceneNotes],
-	);
+	const normalizeLoadedSession = useCallback(normalizeSessionPageSession, []);
 	const setScopeSession = useCallback<
 		Dispatch<
 			SetStateAction<CampaignEntitySession | SessionRecord | null>
@@ -577,9 +545,10 @@ export default function useSessionView() {
 				defaultValue: session.name,
 			}),
 		);
-		if (typeof name === "string" && name && name !== session.name) {
-			updateSession({ name }, true);
-		}
+		executeSessionRenamePlan(
+			getSessionRenamePlan(name, session.name),
+			(nextName) => updateSession({ name: nextName }, true),
+		);
 	};
 
 	const handleDeleteSessionAndBack = async () => {

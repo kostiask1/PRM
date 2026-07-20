@@ -49,9 +49,12 @@ import {
 	getMonsterTypeString,
 } from "../src/entities/bestiary/index.js";
 import {
+	executeCampaignHashNavigationPlan,
 	filterCampaignSessions,
 	getCampaignCharacterDropRequest,
+	getCampaignEntityAiIgnoredUpdate,
 	getCampaignEntityRenderKey,
+	getCampaignHashNavigationPlan,
 	getCampaignHashTarget,
 	getCampaignKeyboardAction,
 	getCampaignNotesCollapsePatch,
@@ -65,16 +68,20 @@ import {
 } from "../src/pages/campaign/model/campaignPagePresentation.ts";
 import {
 	DEFAULT_CAMPAIGN_GRAPH_FILTERS,
+	executeCampaignGraphOpenTarget,
 	findCampaignGraphEditableNote,
 	formatCampaignGraphSourceField,
+	getCampaignGraphConnectionPresentation,
 	getCampaignGraphDetailTextPresentation,
 	getCampaignGraphEdgeHandles,
 	getCampaignGraphEdgeOpacity,
 	getCampaignGraphEdgePresentation,
 	getCampaignGraphFlowNodePresentation,
+	getCampaignGraphFlowProjectionPlan,
 	getCampaignGraphMiniMapBounds,
 	getCampaignGraphMiniMapNodeSize,
 	getCampaignGraphNodeCardPresentation,
+	getCampaignGraphNodeTopologyKey,
 	getCampaignGraphNoteSaveRequest,
 	getCampaignGraphOpenTarget,
 	getVisibleCampaignGraph,
@@ -88,6 +95,23 @@ import {
 	executeCampaignGraphSessionNoteSave,
 	getCampaignGraphNoteSavePlan,
 } from "../src/pages/campaign/model/campaignGraphNoteSave.ts";
+import {
+	executeCampaignAiEntityReload,
+	executeCampaignDelete,
+	executeCampaignImageCheck,
+	executeCampaignRename,
+	executeCampaignSessionCreation,
+	executeCampaignSyncPlan,
+	getCampaignAiUpdatePlan,
+	getCampaignDeleteConfirmationConfig,
+	getCampaignRenameErrorMessage,
+	getCampaignRenamePlan,
+	getCampaignSessionCreationErrorMessage,
+	getCampaignSessionCreationPlan,
+	getCampaignSyncPlan,
+	getCampaignViewEntities,
+	getCampaignViewStateProjection,
+} from "../src/pages/campaign/model/campaignViewOrchestration.ts";
 import {
 	createDefaultPartialArchiveSelection,
 	getOrderedPartialArchiveSections,
@@ -371,12 +395,19 @@ import {
 	normalizeSessionEntity,
 } from "../src/pages/session/model/sessionEntityModel.ts";
 import {
+	executeSessionRenamePlan,
 	getSceneNotesWithCollapsedState,
 	getSessionEncounterLinks,
 	getSessionKeyboardAction,
+	getSessionPageData,
+	getSessionRenamePlan,
+	getSessionSceneNotesPresentation,
 	getSessionScopeImportCopy,
+	getSessionScopeImportPresentation,
 	getSessionSyncAction,
 	hasSessionNoteContent,
+	isSessionEditableTarget,
+	normalizeSessionPageSession,
 } from "../src/pages/session/model/sessionPagePresentation.ts";
 import {
 	addSourceMonsterImageToDraft,
@@ -1833,6 +1864,83 @@ await run("campaign page presentation narrows routes, sessions, and card notes",
 	]);
 	assert.equal(getCampaignEntityRenderKey({ slug: "вартовий" }, 2), "вартовий");
 	assert.equal(getCampaignHashTarget("#campaign-location-1"), "locations");
+	assert.equal(
+		getCampaignHashTarget("#campaign-npc-1/campaign-note-2"),
+		"notes",
+	);
+	assert.equal(getCampaignHashTarget("#campaign-character-1/campaign-npc-2"), "characters");
+	assert.equal(getCampaignHashTarget({ toString: () => "#campaign-npc-7" }), "npc");
+	assert.equal(getCampaignHashTarget(0), null);
+	const hashPlan = getCampaignHashNavigationPlan({
+		hash: "#campaign-note-1",
+		collapsed: { notes: true, characters: false, npc: false, locations: false },
+	});
+	assert.deepEqual(hashPlan, {
+		target: "notes",
+		shouldUseListView: true,
+		sectionToExpand: "notes",
+	});
+	assert.deepEqual(
+		getCampaignHashNavigationPlan({
+			hash: "#campaign-location-1",
+			collapsed: { notes: false, characters: false, npc: false, locations: false },
+		}),
+		{ target: "locations", shouldUseListView: false, sectionToExpand: null },
+	);
+	assert.deepEqual(
+		getCampaignHashNavigationPlan({
+			hash: "#other",
+			collapsed: { notes: true, characters: true, npc: true, locations: true },
+		}),
+		{ target: null, shouldUseListView: false, sectionToExpand: null },
+	);
+	const hashEffects = [];
+	executeCampaignHashNavigationPlan(hashPlan, {
+		useListView: () => hashEffects.push("list"),
+		expandSection: (target) => hashEffects.push(`expand:${target}`),
+	});
+	assert.deepEqual(hashEffects, ["list", "expand:notes"]);
+	executeCampaignHashNavigationPlan(
+		{ target: "npc", shouldUseListView: false, sectionToExpand: null },
+		{
+			useListView: () => hashEffects.push("unexpected-list"),
+			expandSection: () => hashEffects.push("unexpected-expand"),
+		},
+	);
+	assert.deepEqual(hashEffects, ["list", "expand:notes"]);
+
+	const npcEntity = { id: 0, firstName: "Вартова", _aiIgnored: false };
+	const locationEntity = { id: "0", name: "Брама" };
+	const npcUpdate = getCampaignEntityAiIgnoredUpdate(
+		"npc",
+		0,
+		true,
+		[npcEntity],
+		[locationEntity],
+	);
+	assert.deepEqual(npcUpdate, {
+		kind: "npc",
+		entityId: 0,
+		entity: { id: 0, firstName: "Вартова", _aiIgnored: true },
+	});
+	assert.notEqual(npcUpdate.entity, npcEntity);
+	assert.equal(npcEntity._aiIgnored, false);
+	assert.deepEqual(
+		getCampaignEntityAiIgnoredUpdate("locations", "0", false, [npcEntity], [locationEntity]),
+		{
+			kind: "locations",
+			entityId: "0",
+			entity: { id: "0", name: "Брама", _aiIgnored: false },
+		},
+	);
+	assert.deepEqual(
+		getCampaignEntityAiIgnoredUpdate("npc", "0", true, [npcEntity], [locationEntity]),
+		{ kind: "none" },
+	);
+	assert.deepEqual(
+		getCampaignEntityAiIgnoredUpdate("npc", undefined, true, [npcEntity], [locationEntity]),
+		{ kind: "none" },
+	);
 	assert.deepEqual(
 		getCampaignCharacterDropRequest(
 			{ kind: "campaign-character", sourceType: "npc", id: 7 },
@@ -1886,7 +1994,10 @@ await run("campaign page presentation narrows routes, sessions, and card notes",
 	assert.equal(isCampaignEditableTarget({ tagName: "INPUT" }), true);
 	assert.equal(isCampaignEditableTarget({ tagName: "TEXTAREA" }), true);
 	assert.equal(isCampaignEditableTarget({ isContentEditable: true }), true);
+	assert.equal(isCampaignEditableTarget({ isContentEditable: "false" }), true);
 	assert.equal(isCampaignEditableTarget({ tagName: "BUTTON" }), false);
+	assert.equal(isCampaignEditableTarget({ tagName: "input" }), false);
+	assert.equal(isCampaignEditableTarget(null), false);
 	assert.equal(
 		getCampaignKeyboardAction({
 			code: "KeyZ",
@@ -3862,6 +3973,31 @@ await run("campaign graph layout is deterministic, finite, and collision free", 
 			),
 		true,
 	);
+
+	assert.deepEqual(layoutCampaignGraph(null, null), {});
+	const normalizedNodes = [
+		{ id: 0, type: "campaign" },
+		{ id: "npc", type: "npc" },
+		{ id: null, type: "location" },
+	];
+	const disconnectedLayout = layoutCampaignGraph(normalizedNodes, []);
+	assert.deepEqual(Object.keys(disconnectedLayout).sort(), ["0", "npc"]);
+	assert.deepEqual(disconnectedLayout["0"], { x: 0, y: 0 });
+	assert.deepEqual(
+		layoutCampaignGraph(normalizedNodes, [
+			{ id: "self", source: "npc", target: "npc", relation: "contains" },
+			{ id: "missing", source: "npc", target: "missing", relation: "mentions" },
+		]),
+		disconnectedLayout,
+	);
+	assert.deepEqual(
+		layoutCampaignGraph(normalizedNodes, [
+			{ id: "edge", source: { id: 0 }, target: { id: "npc" }, relation: "contains" },
+		]),
+		layoutCampaignGraph(normalizedNodes, [
+			{ id: "edge", source: "0", target: "npc", relation: "contains" },
+		]),
+	);
 });
 
 await run("campaign graph drag collision moves only the visible dragged node", () => {
@@ -3902,6 +4038,21 @@ await run("campaign graph drag collision moves only the visible dragged node", (
 	assert.deepEqual(
 		resolveCampaignGraphNodeCollision(hiddenOnlyNodes, "dragged", 16),
 		flowNodes[0].position,
+	);
+	assert.deepEqual(resolveCampaignGraphNodeCollision(null, "missing"), { x: 0, y: 0 });
+	assert.deepEqual(
+		resolveCampaignGraphNodeCollision([
+			{ id: "hidden", hidden: true, position: { x: 5, y: Number.POSITIVE_INFINITY } },
+		], "hidden"),
+		{ x: 5, y: 0 },
+	);
+	assert.deepEqual(
+		resolveCampaignGraphNodeCollision(flowNodes, "dragged", -5),
+		resolveCampaignGraphNodeCollision(flowNodes, "dragged", 0),
+	);
+	assert.deepEqual(
+		resolveCampaignGraphNodeCollision(flowNodes, "dragged", Number.NaN),
+		resolveCampaignGraphNodeCollision(flowNodes, "dragged", 16),
 	);
 });
 
@@ -8017,7 +8168,454 @@ await run("campaign graph UI policies preserve text, node-card, and fit decision
 	}
 });
 
+await run("campaign graph UI policies preserve topology, projection, and target routing", () => {
+	assert.equal(
+		getCampaignGraphNodeTopologyKey([
+			{ id: "two", type: "npc", data: { graphNode: { type: "scene" } } },
+			{ id: "one", type: "campaign" },
+		]),
+		"one:campaign|two:scene",
+	);
+	assert.equal(
+		getCampaignGraphNodeTopologyKey([{ id: "one", type: "npc", data: null }]),
+		"one:npc",
+	);
+
+	const stableProjection = getCampaignGraphFlowProjectionPlan(
+		["one", "two"],
+		["two", "one"],
+		true,
+		false,
+	);
+	assert.equal(stableProjection.shouldUseFreshLayout, false);
+	assert.deepEqual([...stableProjection.currentNodeIds], ["one", "two"]);
+	assert.equal(
+		getCampaignGraphFlowProjectionPlan(["one"], ["one"], false, false).shouldUseFreshLayout,
+		true,
+	);
+	assert.equal(
+		getCampaignGraphFlowProjectionPlan([], [], true, false).shouldUseFreshLayout,
+		true,
+	);
+	assert.equal(
+		getCampaignGraphFlowProjectionPlan(["one"], ["two"], true, false).shouldUseFreshLayout,
+		true,
+	);
+	assert.equal(
+		getCampaignGraphFlowProjectionPlan(["one"], ["two"], true, true).shouldUseFreshLayout,
+		false,
+	);
+
+	const npc = { id: "npc", type: "npc", label: "Вартовий", meta: {} };
+	const session = {
+		id: "session",
+		type: "session",
+		label: "Сесія",
+		meta: { fileName: "session.json" },
+	};
+	const nodeById = new Map([[npc.id, npc], [session.id, session]]);
+	const edge = {
+		id: "edge",
+		source: "npc",
+		target: "session",
+		relation: "mentions",
+		count: 3,
+		sources: [],
+	};
+	const sessionConnection = getCampaignGraphConnectionPresentation(
+		edge,
+		"npc",
+		nodeById,
+		"Mentions",
+		"Scene text",
+	);
+	assert.deepEqual(sessionConnection, {
+		node: session,
+		metaText: "Mentions (3) · Scene text",
+		action: { kind: "session", fileName: "session.json" },
+	});
+	assert.equal(sessionConnection.node, session);
+	assert.deepEqual(
+		getCampaignGraphConnectionPresentation(edge, "session", nodeById, "Mentions", ""),
+		{ node: npc, metaText: "Mentions (3)", action: { kind: "select", nodeId: "npc" } },
+	);
+	assert.equal(
+		getCampaignGraphConnectionPresentation(edge, "npc", new Map(), "Mentions", ""),
+		null,
+	);
+
+	const routed = [];
+	const handlers = {
+		session: (fileName) => routed.push(["session", fileName]),
+		entity: (entity, entityType) => routed.push(["entity", entity, entityType]),
+		note: (note) => routed.push(["note", note]),
+		none: () => routed.push(["none"]),
+	};
+	const note = { id: "note", title: "Нотатка" };
+	executeCampaignGraphOpenTarget({ kind: "session", fileName: "session.json" }, handlers);
+	executeCampaignGraphOpenTarget({ kind: "entity", entity: npc, entityType: "npc" }, handlers);
+	executeCampaignGraphOpenTarget({ kind: "note", note }, handlers);
+	executeCampaignGraphOpenTarget({ kind: "none" }, handlers);
+	assert.deepEqual(routed, [
+		["session", "session.json"],
+		["entity", npc, "npc"],
+		["note", note],
+		["none"],
+	]);
+});
+
+await run("campaign view orchestration preserves state, sync, delete, and AI flows", async () => {
+	const notes = [{ id: "note-1", text: "Український текст" }];
+	const entities = [{ id: "hero-1", name: "Герой" }];
+	const projection = getCampaignViewStateProjection({
+		description: "Опис",
+		notes,
+		isDescriptionCollapsed: true,
+		isNotesCollapsed: false,
+	});
+	assert.equal(projection.description, "Опис");
+	assert.equal(projection.notes, notes);
+	assert.equal(projection.isDescriptionCollapsed, true);
+	assert.equal(projection.isNotesCollapsed, false);
+	assert.deepEqual(getCampaignViewStateProjection({}), {
+		description: "",
+		notes: [],
+		isDescriptionCollapsed: false,
+		isNotesCollapsed: false,
+		isCharactersCollapsed: false,
+		isNpcsCollapsed: false,
+		isLocationsCollapsed: false,
+	});
+	assert.equal(getCampaignViewEntities(entities), entities);
+	assert.deepEqual(getCampaignViewEntities(null), []);
+
+	assert.deepEqual(getCampaignSyncPlan(null, "кампанія"), {
+		reloadEntities: false,
+		reloadSessions: false,
+	});
+	assert.deepEqual(
+		getCampaignSyncPlan(
+			{ version: 1, campaignSlug: "інша", resource: "ai" },
+			"кампанія",
+		),
+		{ reloadEntities: false, reloadSessions: false },
+	);
+	const syncExpectations = new Map([
+		["entities", [true, false]],
+		["images", [true, false]],
+		["sessions", [false, true]],
+		["ai", [true, true]],
+		["import", [true, true]],
+		["unknown", [false, false]],
+	]);
+	for (const [resource, [reloadEntities, reloadSessions]] of syncExpectations) {
+		assert.deepEqual(
+			getCampaignSyncPlan({ version: 1, resource }, "кампанія"),
+			{ reloadEntities, reloadSessions },
+		);
+	}
+	const syncCalls = [];
+	executeCampaignSyncPlan(
+		{ reloadEntities: true, reloadSessions: true },
+		{
+			reloadEntities: () => syncCalls.push("entities"),
+			reloadSessions: () => syncCalls.push("sessions"),
+		},
+	);
+	assert.deepEqual(syncCalls, ["entities", "sessions"]);
+
+	const imageErrors = [];
+	assert.equal(
+		await executeCampaignImageCheck({
+			campaignSlug: "кампанія",
+			checkImages: async (slug) => ({ hasImages: slug === "кампанія" }),
+			onError: (error) => imageErrors.push(error),
+		}),
+		true,
+	);
+	const imageFailure = new Error("image check failed");
+	assert.equal(
+		await executeCampaignImageCheck({
+			campaignSlug: "кампанія",
+			checkImages: async () => { throw imageFailure; },
+			onError: (error) => imageErrors.push(error),
+		}),
+		true,
+	);
+	assert.deepEqual(imageErrors, [imageFailure]);
+
+	const translations = [];
+	const translate = (key) => {
+		translations.push(key);
+		return `t:${key}`;
+	};
+	const withImages = getCampaignDeleteConfirmationConfig(true, translate);
+	assert.equal(withImages.checkboxDefaultChecked, true);
+	assert.deepEqual(withImages.getConfirmValue(null, false), {
+		confirmed: true,
+		moveImagesToGeneral: false,
+	});
+	const withoutImages = getCampaignDeleteConfirmationConfig(false, translate);
+	assert.equal(withoutImages.checkboxLabel, undefined);
+	assert.deepEqual(withoutImages.getConfirmValue(), {
+		confirmed: true,
+		moveImagesToGeneral: false,
+	});
+	assert.equal(translations.length, 5);
+	const deleteCalls = [];
+	assert.equal(
+		await executeCampaignDelete({
+			campaignSlug: "кампанія",
+			hasCampaignImages: true,
+			confirmation: { confirmed: true, moveImagesToGeneral: true },
+			deleteCampaign: async (...args) => deleteCalls.push(["delete", ...args]),
+			onDeleted: () => deleteCalls.push(["deleted"]),
+			onError: (error) => deleteCalls.push(["error", error]),
+		}),
+		"deleted",
+	);
+	assert.deepEqual(deleteCalls, [
+		["delete", "кампанія", { moveImagesToGeneral: true }],
+		["deleted"],
+	]);
+	assert.equal(
+		await executeCampaignDelete({
+			campaignSlug: "кампанія",
+			hasCampaignImages: false,
+			confirmation: null,
+			deleteCampaign: async () => { throw new Error("must not run"); },
+			onDeleted: () => { throw new Error("must not run"); },
+			onError: () => { throw new Error("must not run"); },
+		}),
+		"cancelled",
+	);
+
+	const defaultAiPlan = getCampaignAiUpdatePlan({ description: "", notes }, {});
+	assert.deepEqual(defaultAiPlan.campaignState, { description: "", notes });
+	assert.deepEqual(defaultAiPlan.entityTypes, ["characters", "npc", "locations"]);
+	const explicitTypes = [];
+	assert.equal(getCampaignAiUpdatePlan(null, { entityTypes: explicitTypes }).entityTypes, explicitTypes);
+	const aiCalls = [];
+	assert.equal(
+		await executeCampaignAiEntityReload({
+			campaignSlug: "кампанія",
+			entityTypes: ["characters", "locations"],
+			getEntities: async (slug, type) => {
+				aiCalls.push(["get", slug, type]);
+				return type === "characters" ? entities : null;
+			},
+			normalizeEntity: (entity) => ({ ...entity, normalized: true }),
+			setEntities: {
+				characters: (value) => aiCalls.push(["set", "characters", value]),
+				npc: (value) => aiCalls.push(["set", "npc", value]),
+				locations: (value) => aiCalls.push(["set", "locations", value]),
+			},
+			onError: (error) => aiCalls.push(["error", error]),
+		}),
+		"reloaded",
+	);
+	assert.deepEqual(aiCalls.filter(([kind]) => kind === "set"), [
+		["set", "characters", [{ id: "hero-1", name: "Герой", normalized: true }]],
+		["set", "locations", []],
+	]);
+	assert.equal(
+		await executeCampaignAiEntityReload({
+			campaignSlug: "кампанія",
+			entityTypes: [],
+			getEntities: async () => { throw new Error("must not run"); },
+			normalizeEntity: (entity) => entity,
+			setEntities: {},
+			onError: () => { throw new Error("must not run"); },
+		}),
+		"skipped",
+	);
+});
+
+await run("campaign create-session and rename orchestration preserves exact workflows", async () => {
+	assert.deepEqual(getCampaignSessionCreationPlan(null), { kind: "cancelled" });
+	assert.deepEqual(getCampaignSessionCreationPlan(undefined), {
+		kind: "create",
+		name: "",
+	});
+	assert.deepEqual(getCampaignSessionCreationPlan(0), {
+		kind: "create",
+		name: "",
+	});
+	assert.deepEqual(getCampaignSessionCreationPlan("  Сесія  "), {
+		kind: "create",
+		name: "  Сесія  ",
+	});
+
+	const createdSession = {
+		id: "session-1",
+		fileName: "перша-сесія.json",
+		name: "Перша сесія",
+	};
+	const sessionCalls = [];
+	assert.equal(
+		await executeCampaignSessionCreation({
+			campaignSlug: "кампанія",
+			plan: { kind: "create", name: "Перша сесія" },
+			createSession: async (...args) => {
+				sessionCalls.push(["create", ...args]);
+				return createdSession;
+			},
+			onCreated: (session) => sessionCalls.push(["created", session]),
+			onError: (error) => sessionCalls.push(["error", error]),
+		}),
+		"created",
+	);
+	assert.deepEqual(sessionCalls, [
+		["create", "кампанія", "Перша сесія"],
+		["created", createdSession],
+	]);
+	assert.equal(
+		await executeCampaignSessionCreation({
+			campaignSlug: "кампанія",
+			plan: { kind: "cancelled" },
+			createSession: async () => { throw new Error("must not run"); },
+			onCreated: () => { throw new Error("must not run"); },
+			onError: () => { throw new Error("must not run"); },
+		}),
+		"cancelled",
+	);
+	const missingSessionErrors = [];
+	assert.equal(
+		await executeCampaignSessionCreation({
+			campaignSlug: "кампанія",
+			plan: { kind: "create", name: "" },
+			createSession: async () => null,
+			onCreated: () => { throw new Error("must not run"); },
+			onError: (error) => missingSessionErrors.push(error),
+		}),
+		"failed",
+	);
+	assert.equal(missingSessionErrors[0].message, "Session creation returned no session");
+
+	assert.deepEqual(getCampaignRenamePlan(null, "Стара"), { kind: "cancelled" });
+	assert.deepEqual(getCampaignRenamePlan("", "Стара"), { kind: "cancelled" });
+	assert.deepEqual(getCampaignRenamePlan("Стара", "Стара"), {
+		kind: "cancelled",
+	});
+	assert.deepEqual(getCampaignRenamePlan("  Нова  ", "Стара"), {
+		kind: "rename",
+		name: "  Нова  ",
+	});
+	const renamedCampaign = { id: "campaign-1", slug: "нова", name: "Нова" };
+	const renameCalls = [];
+	assert.equal(
+		await executeCampaignRename({
+			campaignSlug: "стара",
+			plan: { kind: "rename", name: "Нова" },
+			renameCampaign: async (...args) => {
+				renameCalls.push(["rename", ...args]);
+				return renamedCampaign;
+			},
+			onRenamed: (campaign) => renameCalls.push(["renamed", campaign]),
+			onError: (error) => renameCalls.push(["error", error]),
+		}),
+		"renamed",
+	);
+	assert.deepEqual(renameCalls, [
+		["rename", "стара", { name: "Нова" }],
+		["renamed", renamedCampaign],
+	]);
+	assert.equal(
+		await executeCampaignRename({
+			campaignSlug: "стара",
+			plan: { kind: "cancelled" },
+			renameCampaign: async () => { throw new Error("must not run"); },
+			onRenamed: () => { throw new Error("must not run"); },
+			onError: () => { throw new Error("must not run"); },
+		}),
+		"cancelled",
+	);
+	const missingCampaignErrors = [];
+	assert.equal(
+		await executeCampaignRename({
+			campaignSlug: "стара",
+			plan: { kind: "rename", name: "Нова" },
+			renameCampaign: async () => null,
+			onRenamed: () => { throw new Error("must not run"); },
+			onError: (error) => missingCampaignErrors.push(error),
+		}),
+		"failed",
+	);
+	assert.equal(missingCampaignErrors[0].message, "Campaign rename returned no campaign");
+	const renameFailure = new Error("rename failed");
+	const renameErrors = [];
+	assert.equal(
+		await executeCampaignRename({
+			campaignSlug: "стара",
+			plan: { kind: "rename", name: "Нова" },
+			renameCampaign: async () => { throw renameFailure; },
+			onRenamed: () => { throw new Error("must not run"); },
+			onError: (error) => renameErrors.push(error),
+		}),
+		"failed",
+	);
+	assert.deepEqual(renameErrors, [renameFailure]);
+
+	const statusError = Object.assign(new Error("Недоступно"), { status: 503 });
+	const translate = (key, variables) => variables?.error
+		? `${key}:${variables.error}`
+		: `t:${key}`;
+	assert.equal(
+		getCampaignSessionCreationErrorMessage(statusError, translate),
+		"[t:Status: 503] Недоступно",
+	);
+	assert.equal(
+		getCampaignSessionCreationErrorMessage("Помилка", translate),
+		"Помилка",
+	);
+	assert.equal(
+		getCampaignRenameErrorMessage(renameFailure, translate),
+		"Failed to rename campaign: {error}:rename failed",
+	);
+});
+
 await run("campaign graph note saves plan immutable optimistic updates", async () => {
+	const updateIdentity = { text: "Точна зміна" };
+	const identityPlan = getCampaignGraphNoteSavePlan({
+		nodeType: "session-note",
+		fileName: "session.json",
+		noteId: 0,
+		updates: updateIdentity,
+	});
+	assert.equal(identityPlan.updates, updateIdentity);
+	assert.deepEqual(
+		getCampaignGraphNoteSavePlan({ nodeType: "campaign-note", noteId: false, updates: {} }),
+		{ kind: "none" },
+	);
+	assert.deepEqual(
+		getCampaignGraphNoteSavePlan({ nodeType: "campaign-note", noteId: "note", updates: null }),
+		{ kind: "none" },
+	);
+	assert.deepEqual(
+		getCampaignGraphNoteSavePlan({
+			nodeType: "scene-note",
+			fileName: "session.json",
+			noteId: "note",
+			updates: {},
+		}),
+		{ kind: "none" },
+	);
+	assert.deepEqual(
+		getCampaignGraphNoteSavePlan({
+			nodeType: "unexpected-note",
+			fileName: "session.json",
+			sceneId: 0,
+			noteId: "note",
+			updates: updateIdentity,
+		}),
+		{
+			kind: "scene-note",
+			fileName: "session.json",
+			sceneId: 0,
+			noteId: "note",
+			updates: updateIdentity,
+		},
+	);
 	const campaignPlan = getCampaignGraphNoteSavePlan({
 		nodeType: "campaign-note",
 		noteId: 0,
@@ -9824,6 +10422,30 @@ await run("session entity normalization strips internal fields and preserves sup
 		{ id: 1, title: "", text: "", collapsed: false },
 	]);
 	assert.equal(getSessionEntityDisplayName("npc", npc), "Ірина");
+	assert.equal(
+		getSessionEntityDisplayName("npc", {
+			firstName: "  ",
+			lastName: " ",
+			name: "Запасне ім'я",
+		}),
+		"Запасне ім'я",
+	);
+	assert.equal(
+		getSessionEntityDisplayName("npc", {
+			firstName: " Марко ",
+			lastName: " Вовк ",
+			name: "Запасне ім'я",
+		}),
+		"Марко   Вовк",
+	);
+	assert.equal(
+		getSessionEntityDisplayName("locations", {
+			name: "   ",
+			title: "Не використовується після truthy name",
+		}),
+		"",
+	);
+	assert.equal(getSessionEntityDisplayName("locations", {}, "Без назви"), "Без назви");
 
 	const location = normalizeSessionEntity("locations", { title: "Брама" });
 	assert.equal(location.name, "Брама");
@@ -9836,9 +10458,24 @@ await run("session entity normalization strips internal fields and preserves sup
 	assert.match(String(malformed.id), /^session-npc-/);
 	assert.deepEqual(malformed.notes, []);
 	assert.equal(malformed.imageUrl, null);
+	assert.equal(normalizeSessionEntity("npc", { id: 0 }).id, 0);
+	assert.equal(normalizeSessionEntity("npc", { id: "npc-0" }).id, "npc-0");
+	assert.match(
+		String(normalizeSessionEntity("locations", { id: "" }).id),
+		/^session-locations-/,
+	);
+	assert.match(
+		String(normalizeSessionEntity("npc", { id: Number.POSITIVE_INFINITY }).id),
+		/^session-npc-/,
+	);
 });
 
 await run("session page policies preserve keyboard, sync, and presentation behavior", () => {
+	assert.equal(isSessionEditableTarget({ tagName: "INPUT" }), true);
+	assert.equal(isSessionEditableTarget({ tagName: "TEXTAREA" }), true);
+	assert.equal(isSessionEditableTarget({ tagName: "input" }), false);
+	assert.equal(isSessionEditableTarget({ isContentEditable: "yes" }), true);
+	assert.equal(isSessionEditableTarget(null), false);
 	assert.equal(
 		getSessionKeyboardAction({
 			key: "Escape",
@@ -9884,7 +10521,55 @@ await run("session page policies preserve keyboard, sync, and presentation behav
 		),
 		"ignore",
 	);
+	for (const resource of ["sessions", "import", "entities", "images"]) {
+		assert.equal(
+			getSessionSyncAction(
+				{ version: 1, resource },
+				"кампанія",
+				"сесія.json",
+				false,
+			),
+			"reload",
+		);
+		assert.equal(
+			getSessionSyncAction(
+				{ version: 1, resource },
+				"кампанія",
+				"сесія.json",
+				true,
+			),
+			"ignore",
+		);
+	}
+	assert.equal(
+		getSessionSyncAction(
+			{ version: 1, sessionFileName: 0, resource: "sessions" },
+			"кампанія",
+			"0",
+			false,
+		),
+		"reload",
+	);
+	assert.equal(
+		getSessionSyncAction(
+			{ version: 0, resource: "ai" },
+			"кампанія",
+			"сесія.json",
+			false,
+		),
+		"ignore",
+	);
+	assert.equal(
+		getSessionSyncAction(
+			{ version: 1, resource: "unknown" },
+			"кампанія",
+			"сесія.json",
+			false,
+		),
+		"ignore",
+	);
 	assert.equal(hasSessionNoteContent([{ id: 1, text: " Нотатка " }]), true);
+	assert.equal(hasSessionNoteContent([{ id: 1, title: " ", text: "" }]), false);
 	assert.deepEqual(
 		getSessionEncounterLinks(
 			[
@@ -9903,6 +10588,101 @@ await run("session page policies preserve keyboard, sync, and presentation behav
 			emptyText: "No campaign locations/factions available.",
 		},
 	);
+	assert.deepEqual(
+		getSessionScopeImportPresentation(null, (value) => value),
+		{ type: "npc", copy: null },
+	);
+	assert.deepEqual(
+		getSessionScopeImportPresentation(
+			{ type: "locations" },
+			(value) => `t:${value}`,
+		),
+		{
+			type: "locations",
+			copy: {
+				title: "t:Choose location/faction to move into this session",
+				emptyText: "t:No campaign locations/factions available.",
+			},
+		},
+	);
+	const sessionData = { notes: [{ id: 1, text: "Текст" }] };
+	assert.equal(getSessionPageData({ data: sessionData }), sessionData);
+	assert.deepEqual(getSessionPageData(null), {});
+	const sessionWithoutData = { id: "session-identity", name: "Без даних" };
+	assert.equal(normalizeSessionPageSession(sessionWithoutData), sessionWithoutData);
+	const rawSession = {
+		id: "session-normalized",
+		marker: "preserved",
+		data: {
+			result_text: "Підсумок",
+			notes: null,
+			scenes: [{ id: 0, notes: null, isNotesCollapsed: "yes", texts: {} }],
+			npcs: [{ id: 0, name: "Нульовий NPC" }],
+			locations: [{ id: "location-1", title: "Брама" }],
+		},
+	};
+	const normalizedSession = normalizeSessionPageSession(rawSession);
+	assert.notEqual(normalizedSession, rawSession);
+	assert.equal(normalizedSession.marker, "preserved");
+	assert.equal(normalizedSession.data.result_text, "Підсумок");
+	assert.deepEqual(normalizedSession.data.notes, []);
+	assert.deepEqual(normalizedSession.data.scenes[0].notes, []);
+	assert.equal(normalizedSession.data.scenes[0].isNotesCollapsed, true);
+	assert.equal(normalizedSession.data.npcs[0].id, 0);
+	assert.equal(normalizedSession.data.locations[0].name, "Брама");
+	assert.equal(rawSession.data.notes, null);
+
+	assert.deepEqual(getSessionRenamePlan(null, "Стара"), { kind: "cancelled" });
+	assert.deepEqual(getSessionRenamePlan("", "Стара"), { kind: "cancelled" });
+	assert.deepEqual(getSessionRenamePlan("Стара", "Стара"), {
+		kind: "cancelled",
+	});
+	assert.deepEqual(getSessionRenamePlan("  Нова  ", "Стара"), {
+		kind: "rename",
+		name: "  Нова  ",
+	});
+	const renameCalls = [];
+	assert.equal(
+		executeSessionRenamePlan(
+			{ kind: "rename", name: "Нова" },
+			(name) => renameCalls.push(name),
+		),
+		"renamed",
+	);
+	assert.deepEqual(renameCalls, ["Нова"]);
+	assert.equal(
+		executeSessionRenamePlan(
+			{ kind: "cancelled" },
+			() => { throw new Error("must not run"); },
+		),
+		"cancelled",
+	);
+
+	const emptySceneNotes = getSessionSceneNotesPresentation([], true, false);
+	assert.equal(emptySceneNotes.hasData, false);
+	assert.equal(emptySceneNotes.isCollapsed, false);
+	assert.equal(emptySceneNotes.showBulkAction, false);
+	assert.equal(emptySceneNotes.showList, true);
+	assert.equal(emptySceneNotes.renderableNotes.at(-1)._isVirtual, true);
+	const openSceneNotes = getSessionSceneNotesPresentation(
+		[{ id: 1, title: "План", collapsed: false }],
+		false,
+		false,
+	);
+	assert.equal(openSceneNotes.bulkActionShouldCollapse, true);
+	assert.equal(openSceneNotes.bulkActionTitleKey, "Collapse all items");
+	assert.equal(openSceneNotes.bulkActionLabelKey, "Collapse all");
+	assert.equal(openSceneNotes.showBulkAction, true);
+	const collapsedSceneNotes = getSessionSceneNotesPresentation(
+		[{ id: 1, title: "План", collapsed: true }],
+		true,
+		true,
+	);
+	assert.equal(collapsedSceneNotes.isCollapsed, true);
+	assert.equal(collapsedSceneNotes.showList, false);
+	assert.equal(collapsedSceneNotes.showBulkAction, false);
+	assert.equal(collapsedSceneNotes.bulkActionShouldCollapse, false);
+	assert.equal(collapsedSceneNotes.bulkActionTitleKey, "Expand all items");
 	assert.deepEqual(
 		getSceneNotesWithCollapsedState([{ id: 1, title: "План" }], true),
 		[{ id: 1, title: "План", collapsed: true }],

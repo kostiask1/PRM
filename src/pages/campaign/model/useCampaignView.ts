@@ -13,7 +13,6 @@ import {
 } from "../../../shared/model/index.js";
 import { campaignApi } from "../../../entities/campaign/index.js";
 import type {
-	CampaignEntityType,
 	CampaignPartialArchiveSection,
 } from "../../../entities/campaign/index.js";
 import { sessionApi } from "../../../entities/session/index.js";
@@ -71,15 +70,27 @@ import {
 	getCampaignGraphNoteSavePlan,
 } from "./campaignGraphNoteSave.ts";
 import type { CampaignGraphSessionNoteSavePlan } from "./campaignGraphNoteSave.ts";
+import {
+	executeCampaignAiEntityReload,
+	executeCampaignDelete,
+	executeCampaignImageCheck,
+	executeCampaignRename,
+	executeCampaignSessionCreation,
+	executeCampaignSyncPlan,
+	getCampaignAiUpdatePlan,
+	getCampaignDeleteConfirmationConfig,
+	getCampaignRenameErrorMessage,
+	getCampaignRenamePlan,
+	getCampaignSessionCreationErrorMessage,
+	getCampaignSessionCreationPlan,
+	getCampaignSyncPlan,
+	getCampaignViewEntities,
+	getCampaignViewStateProjection,
+	type CampaignDeleteConfirmation,
+} from "./campaignViewOrchestration.ts";
 
 function getErrorMessage(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
-}
-
-function getErrorStatus(error: unknown): unknown {
-	return error && typeof error === "object" && "status" in error
-		? error.status
-		: null;
 }
 
 function getCampaignKeyboardActionFromEvent(
@@ -95,14 +106,10 @@ function getCampaignKeyboardActionFromEvent(
 	});
 }
 
-interface CampaignDeleteConfirmation {
-	confirmed?: boolean;
-	moveImagesToGeneral?: boolean;
-}
-
 export default function useCampaignView(props: UseCampaignViewProps) {
 	const { campaign } = props;
 	const dispatch = useAppDispatch();
+	const initialCampaignState = getCampaignViewStateProjection(campaign);
 
 	const [sessions, setSessions] = useState<SessionRecord[]>([]);
 	const [sessionDetails, setSessionDetails] = useState<CampaignSessionDetails>({});
@@ -110,25 +117,27 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 	const [graphDataError, setGraphDataError] = useState("");
 	const isGraphDataLoadingRef = useRef(false);
 	const sessionDetailsRef = useRef<CampaignSessionDetails>({});
-	const [description, setDescription] = useState(campaign.description || "");
-	const [notes, setNotes] = useState(campaign.notes || []);
-	const [characters, setCharacters] = useState<CampaignPageEntity[]>(campaign.characters || []);
+	const [description, setDescription] = useState(initialCampaignState.description);
+	const [notes, setNotes] = useState(initialCampaignState.notes);
+	const [characters, setCharacters] = useState<CampaignPageEntity[]>(
+		getCampaignViewEntities(campaign.characters),
+	);
 	const [npcs, setNpcs] = useState<CampaignPageEntity[]>([]);
 	const [locations, setLocations] = useState<CampaignPageEntity[]>([]);
 	const [isDescriptionCollapsed, setIsDescriptionCollapsed] = useState(
-		campaign.isDescriptionCollapsed || false,
+		initialCampaignState.isDescriptionCollapsed,
 	);
 	const [isNotesCollapsed, setIsNotesCollapsed] = useState(
-		campaign.isNotesCollapsed || false,
+		initialCampaignState.isNotesCollapsed,
 	);
 	const [isCharactersCollapsed, setIsCharactersCollapsed] = useState(
-		campaign.isCharactersCollapsed || false,
+		initialCampaignState.isCharactersCollapsed,
 	);
 	const [isNpcsCollapsed, setIsNpcsCollapsed] = useState(
-		campaign.isNpcsCollapsed || false,
+		initialCampaignState.isNpcsCollapsed,
 	);
 	const [isLocationsCollapsed, setIsLocationsCollapsed] = useState(
-		campaign.isLocationsCollapsed || false,
+		initialCampaignState.isLocationsCollapsed,
 	);
 	const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const pendingCampaignUpdatesRef = useRef<Partial<CampaignPageCampaign> | null>(null);
@@ -154,13 +163,14 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 	});
 
 	const applyCampaignState = useCallback((nextCampaign: Partial<CampaignPageCampaign>) => {
-		setDescription(nextCampaign.description || "");
-		setNotes(nextCampaign.notes || []);
-		setIsDescriptionCollapsed(nextCampaign.isDescriptionCollapsed || false);
-		setIsNotesCollapsed(nextCampaign.isNotesCollapsed || false);
-		setIsCharactersCollapsed(nextCampaign.isCharactersCollapsed || false);
-		setIsNpcsCollapsed(nextCampaign.isNpcsCollapsed || false);
-		setIsLocationsCollapsed(nextCampaign.isLocationsCollapsed || false);
+		const nextState = getCampaignViewStateProjection(nextCampaign);
+		setDescription(nextState.description);
+		setNotes(nextState.notes);
+		setIsDescriptionCollapsed(nextState.isDescriptionCollapsed);
+		setIsNotesCollapsed(nextState.isNotesCollapsed);
+		setIsCharactersCollapsed(nextState.isCharactersCollapsed);
+		setIsNpcsCollapsed(nextState.isNpcsCollapsed);
+		setIsLocationsCollapsed(nextState.isLocationsCollapsed);
 	}, []);
 
 	const discardCampaignSaveTimer = useCallback(() => {
@@ -687,21 +697,19 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 	}, [loadSessions]);
 
 	useEffect(() => {
-		if (!syncEvent?.version) return;
-		const isRelevantCampaign =
-			!syncEvent.campaignSlug || syncEvent.campaignSlug === campaign.slug;
-		if (!isRelevantCampaign) return;
-
-		if (["entities", "ai", "import", "images"].includes(String(syncEvent.resource || ""))) {
+		const plan = getCampaignSyncPlan(syncEvent, campaign.slug);
+		executeCampaignSyncPlan(plan, {
+			reloadEntities: () => {
 			loadCharacters();
 			loadNpcs();
 			loadLocations();
-		}
-		if (["sessions", "ai", "import"].includes(String(syncEvent.resource || ""))) {
+			},
+			reloadSessions: () => {
 			loadSessions();
 			setSessionDetails({});
 			sessionDetailsRef.current = {};
-		}
+			},
+		});
 	}, [
 		campaign.slug,
 		loadCharacters,
@@ -752,26 +760,22 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 				message: lang.t("Enter a name or leave empty to use current date:"),
 			}),
 		);
-		if (name === null) return;
-		try {
-			const newSession = await api.createSession(
-				campaign.slug,
-				typeof name === "string" ? name : "",
-			);
-			if (!newSession) throw new Error("Session creation returned no session");
-			setSessions([...sessions, newSession]);
-			navigateTo(campaign.slug, newSession.fileName);
-			dispatch(requestCampaignsReloadAction());
-		} catch (err) {
-			dispatch(
+		await executeCampaignSessionCreation({
+			campaignSlug: campaign.slug,
+			plan: getCampaignSessionCreationPlan(name),
+			createSession: api.createSession,
+			onCreated: (newSession) => {
+				setSessions([...sessions, newSession]);
+				navigateTo(campaign.slug, newSession.fileName);
+				dispatch(requestCampaignsReloadAction());
+			},
+			onError: (error) => dispatch(
 				alert({
 					title: lang.t("Session creation error"),
-					message: getErrorStatus(err)
-						? `[${lang.t("Status")}: ${String(getErrorStatus(err))}] ${getErrorMessage(err)}`
-						: getErrorMessage(err),
+					message: getCampaignSessionCreationErrorMessage(error, lang.t),
 				}),
-			);
-		}
+			),
+		});
 	};
 
 	const saveGraphSessionNote = useCallback(
@@ -820,62 +824,36 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 	);
 
 	const handleDeleteCampaign = async () => {
-		let hasCampaignImages = true;
-		try {
-			const imageState = await api.campaignHasImages(campaign.slug);
-			hasCampaignImages = Boolean(imageState?.hasImages);
-		} catch (err) {
-			console.error("Failed to check campaign images", err);
-		}
-
-		const confirmationConfig = hasCampaignImages
-			? {
-					title: lang.t("Delete campaign"),
-					message: lang.t(
-						"All sessions in this campaign will be permanently lost. Campaign images will be moved to General if this option is enabled; otherwise they will be deleted. Continue?",
-					),
-					checkboxLabel: lang.t("Move campaign images to General"),
-					checkboxDefaultChecked: true,
-					getConfirmValue: (
-						_value: unknown,
-						moveImagesToGeneral: boolean,
-					) => ({
-						confirmed: true,
-						moveImagesToGeneral: Boolean(moveImagesToGeneral),
-					}),
-				}
-			: {
-					title: lang.t("Delete campaign"),
-					message: lang.t(
-						"All sessions in this campaign will be permanently lost. Continue?",
-					),
-					getConfirmValue: () => ({
-						confirmed: true,
-						moveImagesToGeneral: false,
-					}),
-				};
-
+		const hasCampaignImages = await executeCampaignImageCheck({
+			campaignSlug: campaign.slug,
+			checkImages: api.campaignHasImages,
+			onError: (error) => console.error("Failed to check campaign images", error),
+		});
+		const confirmationConfig = getCampaignDeleteConfirmationConfig(
+			hasCampaignImages,
+			lang.t,
+		);
 		const result = (await dispatch(
 			confirm(confirmationConfig),
 		)) as CampaignDeleteConfirmation | null;
-		if (!result?.confirmed) return;
-		try {
-			await api.deleteCampaign(campaign.slug, {
-				moveImagesToGeneral:
-					hasCampaignImages && Boolean(result.moveImagesToGeneral),
-			});
-			navigateTo(null);
-			dispatch(requestCampaignsReloadAction());
-		} catch (err) {
-			dispatch(
+		await executeCampaignDelete({
+			campaignSlug: campaign.slug,
+			hasCampaignImages,
+			confirmation: result,
+			deleteCampaign: api.deleteCampaign,
+			onDeleted: () => {
+				navigateTo(null);
+				dispatch(requestCampaignsReloadAction());
+			},
+			onError: (error) => dispatch(
 				alert({
 					title: lang.t("Error"),
 					message: lang.t("Failed to delete campaign: {error}", {
-						error: getErrorMessage(err),
+						error: getErrorMessage(error),
 					}),
 				}),
-			);
-		}
+			),
+		});
 	};
 
 	const handleRename = async () => {
@@ -886,23 +864,21 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 				defaultValue: campaign.name,
 			}),
 		);
-		if (typeof name === "string" && name && name !== campaign.name) {
-			try {
-				const updated = await api.updateCampaign(campaign.slug, { name });
-				if (!updated) throw new Error("Campaign rename returned no campaign");
+		await executeCampaignRename({
+			campaignSlug: campaign.slug,
+			plan: getCampaignRenamePlan(name, campaign.name),
+			renameCampaign: api.updateCampaign,
+			onRenamed: (updated) => {
 				dispatch(requestCampaignsReloadAction());
 				navigateTo(updated.slug, null, true);
-			} catch (err) {
-				dispatch(
-					alert({
-						title: lang.t("Error"),
-						message: lang.t("Failed to rename campaign: {error}", {
-							error: getErrorMessage(err),
-						}),
-					}),
-				);
-			}
-		}
+			},
+			onError: (error) => dispatch(
+				alert({
+					title: lang.t("Error"),
+					message: getCampaignRenameErrorMessage(error, lang.t),
+				}),
+			),
+		});
 	};
 
 	const handleDeleteSession = async (session: SessionRecord) => {
@@ -1027,30 +1003,23 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 		options: CampaignAiUpdateOptions = {},
 	) => {
 		pushToUndo();
-		if (updatedCampaign) {
-			setDescription(updatedCampaign.description || "");
-			setNotes(updatedCampaign.notes || []);
+		const plan = getCampaignAiUpdatePlan(updatedCampaign, options);
+		if (plan.campaignState) {
+			setDescription(plan.campaignState.description);
+			setNotes(plan.campaignState.notes);
 		}
-		const entityTypes = Array.isArray(options.entityTypes)
-			? options.entityTypes
-			: ["characters", "npc", "locations"];
-		if (entityTypes.length > 0) {
-			try {
-				await Promise.all(
-				entityTypes.map(async (type: CampaignEntityType) => {
-						const entities = await api.getEntities(campaign.slug, type);
-					const normalized = (entities || []).map((entity) =>
-						sanitizeLoadedEntity(entity as CampaignPageEntity),
-					);
-						if (type === "characters") setCharacters(normalized);
-						if (type === "npc") setNpcs(normalized);
-						if (type === "locations") setLocations(normalized);
-					}),
-				);
-			} catch (err) {
-				console.error("Failed to reload AI-updated entities", err);
-			}
-		}
+		await executeCampaignAiEntityReload({
+			campaignSlug: campaign.slug,
+			entityTypes: plan.entityTypes,
+			getEntities: api.getEntities,
+			normalizeEntity: sanitizeLoadedEntity,
+			setEntities: {
+				characters: setCharacters,
+				npc: setNpcs,
+				locations: setLocations,
+			},
+			onError: (error) => console.error("Failed to reload AI-updated entities", error),
+		});
 		dispatch(requestCampaignsReloadAction());
 	};
 

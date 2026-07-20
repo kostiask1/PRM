@@ -57,6 +57,10 @@ interface CollisionPeer {
 	size: GraphNodeSize;
 }
 
+interface NormalizedCampaignGraphLayoutNode extends CampaignGraphLayoutNode {
+	id: string;
+}
+
 export type CampaignGraphPositions = Record<string, GraphPosition>;
 
 const DEFAULT_NODE_SIZE = Object.freeze({ width: 176, height: 64 });
@@ -172,15 +176,18 @@ function roundPosition(value: number | undefined): number {
 }
 
 function toPositiveNumber(value: unknown): number | null {
-	if (typeof value === "string") {
-		const parsedValue = Number.parseFloat(value);
-		return Number.isFinite(parsedValue) && parsedValue > 0
-			? parsedValue
-			: null;
-	}
-	return typeof value === "number" && Number.isFinite(value) && value > 0
-		? value
-		: null;
+	const numericValue = getNumericDimensionCandidate(value);
+	return isPositiveFiniteNumber(numericValue) ? numericValue : null;
+}
+
+function getNumericDimensionCandidate(value: unknown): unknown {
+	if (typeof value === "string") return Number.parseFloat(value);
+	return value;
+}
+
+function isPositiveFiniteNumber(value: unknown): value is number {
+	if (typeof value !== "number") return false;
+	return [Number.isFinite(value), value > 0].every(Boolean);
 }
 
 function getFirstPositiveNodeDimension(
@@ -212,15 +219,14 @@ export function getCampaignGraphFlowNodeSize(
 
 function getFinitePosition(node: CampaignGraphLayoutNode = {}): GraphPosition {
 	return {
-		x:
-			typeof node.position?.x === "number" && Number.isFinite(node.position.x)
-				? node.position.x
-				: 0,
-		y:
-			typeof node.position?.y === "number" && Number.isFinite(node.position.y)
-				? node.position.y
-				: 0,
+		x: getFiniteCoordinate(node.position?.x),
+		y: getFiniteCoordinate(node.position?.y),
 	};
+}
+
+function getFiniteCoordinate(value: unknown): number {
+	if (typeof value !== "number") return 0;
+	return Number.isFinite(value) ? value : 0;
 }
 
 function positionsOverlap(
@@ -299,39 +305,69 @@ export function resolveCampaignGraphNodeCollision(
 	draggedNodeId: unknown,
 	margin = 16,
 ): GraphPosition {
-	const nodes = Array.isArray(flowNodes) ? flowNodes : [];
-	const draggedNode = nodes.find(
-		(node) => String(node?.id) === String(draggedNodeId),
-	);
+	const nodes = getCampaignGraphLayoutCollection(flowNodes);
+	const draggedNode = findCampaignGraphLayoutNode(nodes, draggedNodeId);
 	const origin = getFinitePosition(draggedNode);
-	if (!draggedNode || draggedNode.hidden) return origin;
-
-	const safeMargin = Number.isFinite(margin) ? Math.max(0, margin) : 16;
+	if (!isMovableCampaignGraphLayoutNode(draggedNode)) return origin;
+	const safeMargin = getCampaignGraphCollisionMargin(margin);
 	const draggedSize = getCampaignGraphFlowNodeSize(draggedNode);
-	const peers = nodes
-		.filter(
-			(node) =>
-				node &&
-				!node.hidden &&
-				String(node.id) !== String(draggedNodeId),
-		)
+	const peers = getCampaignGraphCollisionPeers(nodes, draggedNodeId);
+	return getFreeCampaignGraphPosition(origin, draggedSize, peers, safeMargin);
+}
+
+function getCampaignGraphLayoutCollection(
+	nodes: CampaignGraphLayoutNode[],
+): CampaignGraphLayoutNode[] {
+	return Array.isArray(nodes) ? nodes : [];
+}
+
+function findCampaignGraphLayoutNode(
+	nodes: CampaignGraphLayoutNode[],
+	nodeId: unknown,
+): CampaignGraphLayoutNode | undefined {
+	return nodes.find((node) => String(node?.id) === String(nodeId));
+}
+
+function isMovableCampaignGraphLayoutNode(
+	node: CampaignGraphLayoutNode | undefined,
+): node is CampaignGraphLayoutNode {
+	return Boolean(node) && !node?.hidden;
+}
+
+function getCampaignGraphCollisionMargin(margin: number): number {
+	return Number.isFinite(margin) ? Math.max(0, margin) : 16;
+}
+
+function getCampaignGraphCollisionPeers(
+	nodes: CampaignGraphLayoutNode[],
+	draggedNodeId: unknown,
+): CollisionPeer[] {
+	return nodes
+		.filter((node) => isCampaignGraphCollisionPeer(node, draggedNodeId))
 		.map((node) => ({
 			position: getFinitePosition(node),
 			size: getCampaignGraphFlowNodeSize(node),
 		}));
+}
 
-	if (isCandidateFree(origin, draggedSize, peers, safeMargin)) return origin;
+function isCampaignGraphCollisionPeer(
+	node: CampaignGraphLayoutNode | undefined,
+	draggedNodeId: unknown,
+): node is CampaignGraphLayoutNode {
+	if (!node) return false;
+	return [!node.hidden, String(node.id) !== String(draggedNodeId)].every(Boolean);
+}
 
-	const resolvedPosition = getCollisionCandidates(
-		origin,
-		draggedSize,
-		peers,
-		safeMargin,
-	).find((candidate) =>
-		isCandidateFree(candidate, draggedSize, peers, safeMargin),
-	);
-
-	return resolvedPosition || origin;
+function getFreeCampaignGraphPosition(
+	origin: GraphPosition,
+	draggedSize: GraphNodeSize,
+	peers: CollisionPeer[],
+	margin: number,
+): GraphPosition {
+	if (isCandidateFree(origin, draggedSize, peers, margin)) return origin;
+	return getCollisionCandidates(origin, draggedSize, peers, margin).find(
+		(candidate) => isCandidateFree(candidate, draggedSize, peers, margin),
+	) ?? origin;
 }
 
 function resolveRemainingLayoutCollisions(
@@ -373,43 +409,101 @@ export function layoutCampaignGraph(
 	nodes: CampaignGraphLayoutNode[],
 	edges: CampaignGraphLayoutEdge[],
 ): CampaignGraphPositions {
-	const graphNodes = (Array.isArray(nodes) ? nodes : [])
-		.filter((node) => node?.id !== undefined && node?.id !== null)
+	const graphNodes = normalizeCampaignGraphLayoutNodes(nodes);
+	if (graphNodes.length === 0) return {};
+	const nodeIds = new Set(graphNodes.map((node) => node.id));
+	const graphEdges = normalizeCampaignGraphLayoutEdges(edges, nodeIds);
+	const campaignNode = graphNodes.find((node) => node.type === "campaign");
+	const simulationNodes = createCampaignGraphSimulationNodes(graphNodes, campaignNode?.id);
+	const simulation = createCampaignGraphSimulation(simulationNodes, graphEdges);
+	runCampaignGraphSimulation(simulation);
+	return resolveRemainingLayoutCollisions(simulationNodes, campaignNode?.id);
+}
+
+function normalizeCampaignGraphLayoutNodes(
+	nodes: CampaignGraphLayoutNode[],
+): NormalizedCampaignGraphLayoutNode[] {
+	return getCampaignGraphLayoutCollection(nodes)
+		.filter(hasCampaignGraphLayoutNodeId)
 		.map((node) => ({ ...node, id: String(node.id) }))
 		.sort((left, right) => left.id.localeCompare(right.id));
-	if (graphNodes.length === 0) return {};
+}
 
-	const nodeIds = new Set(graphNodes.map((node) => node.id));
-	const graphEdges: SimulationGraphEdge[] = (Array.isArray(edges) ? edges : [])
-		.map((edge) => ({
-			...edge,
-			source: getEdgeNodeId(edge?.source),
-			target: getEdgeNodeId(edge?.target),
-		}))
-		.filter(
-			(edge) =>
-				edge.source !== edge.target &&
-				nodeIds.has(edge.source) &&
-				nodeIds.has(edge.target),
-		)
-		.sort((left, right) =>
-			String(left.id || `${left.source}->${left.target}`).localeCompare(
-				String(right.id || `${right.source}->${right.target}`),
-			),
-		);
-	const campaignNode = graphNodes.find((node) => node.type === "campaign");
-	const simulationNodes: SimulationGraphNode[] = graphNodes.map((node, index) => {
-		const initialPosition = getInitialPosition(node, index);
-		return {
-			id: node.id,
-			type: getNodeType(node),
-			x: initialPosition.x,
-			y: initialPosition.y,
-			...(node.id === campaignNode?.id ? { fx: 0, fy: 0 } : {}),
-		};
-	});
+function hasCampaignGraphLayoutNodeId(
+	node: CampaignGraphLayoutNode | undefined,
+): node is CampaignGraphLayoutNode & { id: unknown } {
+	return node?.id !== undefined && node.id !== null;
+}
 
-	const simulation = forceSimulation(simulationNodes)
+function normalizeCampaignGraphLayoutEdges(
+	edges: CampaignGraphLayoutEdge[],
+	nodeIds: ReadonlySet<string>,
+): SimulationGraphEdge[] {
+	return (Array.isArray(edges) ? edges : [])
+		.map(normalizeCampaignGraphLayoutEdge)
+		.filter((edge) => isCampaignGraphLayoutEdgeValid(edge, nodeIds))
+		.sort(compareCampaignGraphLayoutEdges);
+}
+
+function normalizeCampaignGraphLayoutEdge(edge: CampaignGraphLayoutEdge): SimulationGraphEdge {
+	return {
+		...edge,
+		source: getEdgeNodeId(edge?.source),
+		target: getEdgeNodeId(edge?.target),
+	};
+}
+
+function isCampaignGraphLayoutEdgeValid(
+	edge: SimulationGraphEdge,
+	nodeIds: ReadonlySet<string>,
+): boolean {
+	return [
+		edge.source !== edge.target,
+		nodeIds.has(String(edge.source)),
+		nodeIds.has(String(edge.target)),
+	].every(Boolean);
+}
+
+function compareCampaignGraphLayoutEdges(
+	left: SimulationGraphEdge,
+	right: SimulationGraphEdge,
+): number {
+	return getCampaignGraphLayoutEdgeSortKey(left).localeCompare(
+		getCampaignGraphLayoutEdgeSortKey(right),
+	);
+}
+
+function getCampaignGraphLayoutEdgeSortKey(edge: SimulationGraphEdge): string {
+	return String(edge.id || `${getEdgeNodeId(edge.source)}->${getEdgeNodeId(edge.target)}`);
+}
+
+function createCampaignGraphSimulationNodes(
+	nodes: NormalizedCampaignGraphLayoutNode[],
+	campaignNodeId?: string,
+): SimulationGraphNode[] {
+	return nodes.map((node, index) => createCampaignGraphSimulationNode(node, index, campaignNodeId));
+}
+
+function createCampaignGraphSimulationNode(
+	node: NormalizedCampaignGraphLayoutNode,
+	index: number,
+	campaignNodeId?: string,
+): SimulationGraphNode {
+	const initialPosition = getInitialPosition(node, index);
+	return {
+		id: node.id,
+		type: getNodeType(node),
+		x: initialPosition.x,
+		y: initialPosition.y,
+		...(node.id === campaignNodeId ? { fx: 0, fy: 0 } : {}),
+	};
+}
+
+function createCampaignGraphSimulation(
+	simulationNodes: SimulationGraphNode[],
+	graphEdges: SimulationGraphEdge[],
+) {
+	return forceSimulation(simulationNodes)
 		.randomSource(createSeededRandom())
 		.force(
 			"links",
@@ -449,14 +543,13 @@ export function layoutCampaignGraph(
 		.alphaDecay(0.025)
 		.velocityDecay(0.46)
 		.stop();
+}
 
+function runCampaignGraphSimulation(
+	simulation: ReturnType<typeof createCampaignGraphSimulation>,
+): void {
 	for (let index = 0; index < LAYOUT_TICKS; index += 1) {
 		simulation.tick();
 	}
 	simulation.stop();
-
-	return resolveRemainingLayoutCollisions(
-		simulationNodes,
-		campaignNode?.id,
-	);
 }

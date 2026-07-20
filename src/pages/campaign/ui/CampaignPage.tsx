@@ -40,10 +40,12 @@ import type { CampaignPartialArchiveSection } from "../../../entities/campaign/i
 import type { CampaignPageCampaign, CampaignPageEntity } from "../model/contracts.ts";
 import {
 	filterCampaignSessions,
+	executeCampaignHashNavigationPlan,
 	getCampaignCharacterDropRequest,
+	getCampaignEntityAiIgnoredUpdate,
 	getCampaignEntityRenderKey,
+	getCampaignHashNavigationPlan,
 	getCampaignPageCampaign,
-	getCampaignHashTarget,
 	getCampaignNotesViewModePlan,
 	getCampaignSectionState,
 	type CampaignEntitySectionType,
@@ -472,15 +474,18 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 		entityId: DomainId | undefined,
 		ignored: boolean,
 	) => {
-		if (entityId === undefined) return;
-		const list = type === "locations" ? view.locations : view.npcs;
-		const entity = list.find((item) => item.id === entityId);
-		if (!entity) return;
-		if (type === "locations") {
-			view.handleLocationChange(entityId, { ...entity, _aiIgnored: ignored });
-			return;
-		}
-		view.handleNpcChange(entityId, { ...entity, _aiIgnored: ignored });
+		const update = getCampaignEntityAiIgnoredUpdate(
+			type,
+			entityId,
+			ignored,
+			view.npcs,
+			view.locations,
+		);
+		if (update.kind === "none") return;
+		const applyUpdate = update.kind === "locations"
+			? view.handleLocationChange
+			: view.handleNpcChange;
+		applyUpdate(update.entityId, update.entity);
 	};
 	const filteredSessions = useMemo(
 		() => filterCampaignSessions(view.sessions, sessionSearch),
@@ -497,18 +502,25 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 
 	useEffect(() => {
 		const hash = decodeURIComponent(window.location.hash || "");
-		const target = getCampaignHashTarget(hash);
-		if (target === "notes") setNotesViewMode("list");
-		const sections = {
-			notes: [isNotesCollapsed, setIsNotesCollapsed],
-			characters: [isCharactersCollapsed, setIsCharactersCollapsed],
-			npc: [isNpcsCollapsed, setIsNpcsCollapsed],
-			locations: [isLocationsCollapsed, setIsLocationsCollapsed],
-		} as const;
-		const section = target ? sections[target] : null;
-		if (section?.[0]) {
-			section[1](false);
-		}
+		const plan = getCampaignHashNavigationPlan({
+			hash,
+			collapsed: {
+				notes: isNotesCollapsed,
+				characters: isCharactersCollapsed,
+				npc: isNpcsCollapsed,
+				locations: isLocationsCollapsed,
+			},
+		});
+		const sectionSetters = {
+			notes: setIsNotesCollapsed,
+			characters: setIsCharactersCollapsed,
+			npc: setIsNpcsCollapsed,
+			locations: setIsLocationsCollapsed,
+		};
+		executeCampaignHashNavigationPlan(plan, {
+			useListView: () => setNotesViewMode("list"),
+			expandSection: (target) => sectionSetters[target](false),
+		});
 		const timer = window.setTimeout(() => scrollToHashTarget(), 120);
 		return () => window.clearTimeout(timer);
 	}, [

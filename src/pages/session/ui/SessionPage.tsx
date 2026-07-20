@@ -59,13 +59,16 @@ import {
 import {
 	findEntityByName,
 } from "../../../entities/campaign/index.js";
+import type { CampaignEntityRecord } from "../../../entities/campaign/index.js";
 import { classNames } from "../../../shared/lib/index.js";
 import type { SharedNote } from "../../../shared/lib/index.js";
 import type { SessionResourceId } from "../../../features/session-editor/index.js";
 import {
 	getSceneNotesWithCollapsedState,
 	getSessionEncounterLinks,
-	getSessionScopeImportCopy,
+	getSessionPageData,
+	getSessionSceneNotesPresentation,
+	getSessionScopeImportPresentation,
 	getSessionSectionCollapsed,
 	hasSessionNoteContent,
 	shouldExpandSessionNotesFromHash,
@@ -197,6 +200,141 @@ type RenderableSessionNote = SharedNote & {
 	_isVirtual?: boolean;
 	_renderKey?: string | number;
 };
+
+interface SessionScopedEntityModalProps {
+	view: SessionController;
+	modalState: EntityLinkModalState;
+	onClose: () => void;
+}
+
+function getSessionScopedEntityLinks(view: SessionController) {
+	return [
+		...view.sessionNpcs.map((entity) => ({
+			entity: { ...entity, _scope: "session" },
+			type: "npc",
+			scope: "session",
+		})),
+		...view.sessionLocations.map((entity) => ({
+			entity: { ...entity, _scope: "session" },
+			type: "locations",
+			scope: "session",
+		})),
+	];
+}
+
+function getCurrentSessionEntity(
+	view: SessionController,
+	modalState: EntityLinkModalState,
+) {
+	const items = modalState.type === "locations"
+		? view.sessionLocations
+		: view.sessionNpcs;
+	return items.find(
+		(entity) => String(entity.id) === String(modalState.entity?.id),
+	) || modalState.entity;
+}
+
+function SessionScopedLocationModal({
+	view,
+	modalState,
+	onClose,
+}: SessionScopedEntityModalProps) {
+	const location = normalizeSessionEntity(
+		"locations",
+		getCurrentSessionEntity(view, modalState),
+	);
+	return (
+		<LocationCard
+			key={location.id}
+			location={{ ...location, collapsed: false }}
+			onChange={(id, updatedEntity) => {
+				if (isSessionEntityId(id)) {
+					view.handleSessionLocationChange(id, updatedEntity);
+				}
+			}}
+			onDelete={(id) => {
+				if (isSessionEntityId(id)) view.handleSessionLocationDelete(id);
+				onClose();
+			}}
+			onToggleCollapse={null}
+			campaignSlug={view.campaignSlug}
+			enableHistory={false}
+			viewMode="modal"
+		/>
+	);
+}
+
+function SessionScopedNpcModal({
+	view,
+	modalState,
+	onClose,
+}: SessionScopedEntityModalProps) {
+	const npc = normalizeSessionEntity(
+		"npc",
+		getCurrentSessionEntity(view, modalState),
+	);
+	return (
+		<CharacterCard
+			key={npc.id}
+			character={{ ...npc, collapsed: false }}
+			onChange={(id, updatedEntity) => {
+				if (isSessionEntityId(id)) view.handleSessionNpcChange(id, updatedEntity);
+			}}
+			onDelete={(id) => {
+				if (isSessionEntityId(id)) view.handleSessionNpcDelete(id);
+				onClose();
+			}}
+			onToggleCollapse={null}
+			campaignSlug={view.campaignSlug}
+			enableHistory={false}
+			type="npc"
+			viewMode="modal"
+		/>
+	);
+}
+
+function SessionScopedEntityModal(props: SessionScopedEntityModalProps) {
+	return props.modalState.type === "locations"
+		? <SessionScopedLocationModal {...props} />
+		: <SessionScopedNpcModal {...props} />;
+}
+
+function useSessionScopedEntityLinks(
+	view: SessionController,
+	parentEntityLinks: EntityLinkResolver | null,
+): EntityLinkResolver {
+	return useMemo(() => {
+		const scopedEntities = getSessionScopedEntityLinks(view);
+		return {
+			resolveEntityByName(name: string) {
+				return findEntityByName(scopedEntities, name) ||
+					parentEntityLinks?.resolveEntityByName?.(name) ||
+					null;
+			},
+			renderModalContent(modalState: EntityLinkModalState, onClose: () => void) {
+				if (modalState.scope !== "session") {
+					return parentEntityLinks?.renderModalContent?.(modalState, onClose);
+				}
+				return (
+					<SessionScopedEntityModal
+						view={view}
+						modalState={modalState}
+						onClose={onClose}
+					/>
+				);
+			},
+		};
+	}, [
+		parentEntityLinks,
+		view.campaignSlug,
+		view.handleSessionLocationChange,
+		view.handleSessionLocationDelete,
+		view.handleSessionNpcChange,
+		view.handleSessionNpcDelete,
+		view.sessionLocations,
+		view.sessionNpcs,
+	]);
+}
 
 interface SessionNotesSectionProps {
 	view: SessionController;
@@ -544,6 +682,65 @@ interface SessionScopeImportOverlayProps {
 	type: SessionEntityType;
 }
 
+interface SessionScopeImportItemProps {
+	view: SessionController;
+	type: SessionEntityType;
+	entity: CampaignEntityRecord;
+}
+
+function SessionScopeImportItem({
+	view,
+	type,
+	entity,
+}: SessionScopeImportItemProps) {
+	const name = getSessionEntityDisplayName(type, entity, lang.t("Untitled"));
+	return (
+		<div className="SessionView__scopeImportItem">
+			<span>{renderMentionText(name)}</span>
+			<Button
+				variant="primary"
+				size={Button.SIZES.SMALL}
+				icon="import"
+				onClick={() => view.moveCampaignEntityToSession(type, entity)}
+			>
+				{lang.t("Move to session")}
+			</Button>
+		</div>
+	);
+}
+
+function getSessionScopeImportItemKey(
+	entity: CampaignEntityRecord,
+	type: SessionEntityType,
+): string {
+	return String(
+		entity.slug ||
+		entity.id ||
+		getSessionEntityDisplayName(type, entity, lang.t("Untitled")),
+	);
+}
+
+function SessionScopeImportList({
+	view,
+	modal,
+	copy,
+	type,
+}: Omit<SessionScopeImportOverlayProps, "modal" | "copy"> & {
+	modal: NonNullable<SessionScopeImportOverlayProps["modal"]>;
+	copy: NonNullable<SessionScopeImportOverlayProps["copy"]>;
+}) {
+	if (modal.isLoading) return <div className="muted">{lang.t("Loading...")}</div>;
+	if (modal.items.length === 0) return <div className="muted">{copy.emptyText}</div>;
+	return modal.items.map((entity) => (
+		<SessionScopeImportItem
+			key={getSessionScopeImportItemKey(entity, type)}
+			view={view}
+			type={type}
+			entity={entity}
+		/>
+	));
+}
+
 function SessionScopeImportOverlay({
 	view,
 	modal,
@@ -554,22 +751,12 @@ function SessionScopeImportOverlay({
 	return (
 		<Modal title={copy.title} onConfirm={view.closeScopeImportModal} onCancel={view.closeScopeImportModal} showFooter={false}>
 			<div className="SessionView__scopeImportList">
-				{modal.isLoading && <div className="muted">{lang.t("Loading...")}</div>}
-				{!modal.isLoading && modal.items.length === 0 && (
-					<div className="muted">{copy.emptyText}</div>
-				)}
-				{!modal.isLoading &&
-					modal.items.map((entity) => {
-						const name = getSessionEntityDisplayName(type, entity, lang.t("Untitled"));
-						return (
-							<div key={entity.slug || entity.id || name} className="SessionView__scopeImportItem">
-								<span>{renderMentionText(name)}</span>
-								<Button variant="primary" size={Button.SIZES.SMALL} icon="import" onClick={() => view.moveCampaignEntityToSession(type, entity)}>
-									{lang.t("Move to session")}
-								</Button>
-							</div>
-						);
-					})}
+				<SessionScopeImportList
+					view={view}
+					modal={modal}
+					copy={copy}
+					type={type}
+				/>
 			</div>
 		</Modal>
 	);
@@ -599,6 +786,71 @@ function SessionFloatingActions({
 	);
 }
 
+function getSessionViewList<T>(value: T[] | null | undefined): T[] {
+	return value || [];
+}
+
+function getSessionPageDataRecord(session: SessionController["session"]) {
+	return session || {};
+}
+
+interface SessionHashNavigationOptions {
+	sessionId: string | null;
+	isSessionNotesCollapsed: boolean;
+	sessionNotesForRender: readonly SharedNote[];
+	sessionLocations: readonly SessionPageEntity[];
+	sessionNpcs: readonly SessionPageEntity[];
+	scenes: readonly SessionScene[];
+	onToggleSectionCollapse: (section: string) => void;
+}
+
+function useSessionHashNavigation({
+	sessionId,
+	isSessionNotesCollapsed,
+	sessionNotesForRender,
+	sessionLocations,
+	sessionNpcs,
+	scenes,
+	onToggleSectionCollapse,
+}: SessionHashNavigationOptions): void {
+	useEffect(() => {
+		if (shouldExpandSessionNotesFromHash(
+			window.location.hash,
+			isSessionNotesCollapsed,
+		)) {
+			onToggleSectionCollapse("Notes");
+		}
+		const timer = window.setTimeout(() => scrollToHashTarget(), 140);
+		return () => window.clearTimeout(timer);
+	}, [
+		isSessionNotesCollapsed,
+		onToggleSectionCollapse,
+		scenes,
+		sessionId,
+		sessionLocations,
+		sessionNotesForRender,
+		sessionNpcs,
+	]);
+}
+
+function useSessionHeaderActionsDismissal(
+	isOpen: boolean,
+	actionsRef: RefObject<HTMLDivElement>,
+	setIsOpen: (value: boolean) => void,
+): void {
+	useEffect(() => {
+		if (!isOpen) return undefined;
+		const handlePointerDown = (event: PointerEvent) => {
+			if (event.target instanceof Node && actionsRef.current?.contains(event.target)) {
+				return;
+			}
+			setIsOpen(false);
+		};
+		document.addEventListener("pointerdown", handlePointerDown);
+		return () => document.removeEventListener("pointerdown", handlePointerDown);
+	}, [actionsRef, isOpen, setIsOpen]);
+}
+
 function SessionView() {
 	const sessionId = useAppSelector(
 		(state) => state.navigation.activeSessionFileName,
@@ -611,125 +863,28 @@ function SessionView() {
 	const simplifiedNotesEnabled = useAppSelector(
 		(state) => state.ui.simplifiedNotes,
 	);
-	const {
-		campaignSlug: scopedCampaignSlug,
-		handleSessionLocationChange,
-		handleSessionLocationDelete,
-		handleSessionNpcChange,
-		handleSessionNpcDelete,
-		sessionLocations,
-		sessionNpcs,
-	} = view;
 	const parentEntityLinks = useContext(EntityLinkResolverContext);
-	const sessionScopedEntityLinks = useMemo<EntityLinkResolver>(() => {
-		const scopedEntities = [
-			...sessionNpcs.map((entity) => ({
-				entity: { ...entity, _scope: "session" },
-				type: "npc",
-				scope: "session",
-			})),
-			...sessionLocations.map((entity) => ({
-				entity: { ...entity, _scope: "session" },
-				type: "locations",
-				scope: "session",
-			})),
-		];
-		const findCurrentSessionEntity = (modalState: EntityLinkModalState) => {
-			const items =
-				modalState.type === "locations" ? sessionLocations : sessionNpcs;
-			return (
-				items.find(
-					(entity) => String(entity.id) === String(modalState.entity?.id),
-				) || modalState.entity
-			);
-		};
-
-		return {
-			resolveEntityByName(name: string) {
-				return (
-					findEntityByName(scopedEntities, name) ||
-					parentEntityLinks?.resolveEntityByName?.(name) ||
-					null
-				);
-			},
-			renderModalContent(modalState: EntityLinkModalState, onClose: () => void) {
-				if (modalState.scope !== "session") {
-					return parentEntityLinks?.renderModalContent?.(modalState, onClose);
-				}
-
-				const entity = findCurrentSessionEntity(modalState);
-				if (modalState.type === "locations") {
-					const location = normalizeSessionEntity("locations", entity);
-					return (
-						<LocationCard
-							key={location.id}
-							location={{ ...location, collapsed: false }}
-							onChange={(id, updatedEntity) => {
-								if (isSessionEntityId(id)) {
-									handleSessionLocationChange(id, updatedEntity);
-								}
-							}}
-							onDelete={(id) => {
-								if (isSessionEntityId(id)) handleSessionLocationDelete(id);
-								onClose();
-							}}
-							onToggleCollapse={null}
-							campaignSlug={scopedCampaignSlug}
-							enableHistory={false}
-							viewMode="modal"
-						/>
-					);
-				}
-
-				const npc = normalizeSessionEntity("npc", entity);
-				return (
-					<CharacterCard
-						key={npc.id}
-						character={{ ...npc, collapsed: false }}
-						onChange={(id, updatedEntity) => {
-							if (isSessionEntityId(id)) {
-								handleSessionNpcChange(id, updatedEntity);
-							}
-						}}
-						onDelete={(id) => {
-							if (isSessionEntityId(id)) handleSessionNpcDelete(id);
-							onClose();
-						}}
-						onToggleCollapse={null}
-						campaignSlug={scopedCampaignSlug}
-						enableHistory={false}
-						type="npc"
-						viewMode="modal"
-					/>
-				);
-			},
-		};
-	}, [
-		handleSessionLocationChange,
-		handleSessionLocationDelete,
-		handleSessionNpcChange,
-		handleSessionNpcDelete,
+	const sessionScopedEntityLinks = useSessionScopedEntityLinks(
+		view,
 		parentEntityLinks,
-		scopedCampaignSlug,
-		sessionLocations,
-		sessionNpcs,
-	]);
+	);
 
-	const sessionData = session?.data ?? {};
+	const sessionData = getSessionPageData(session);
 	const viewModel = useMemo(
 		() =>
 			new SessionViewModel({
-				...(session || {}),
+				...getSessionPageDataRecord(session),
 				data: sessionData,
 				isSaving: view.isSaving,
 			}),
 		[session, sessionData, view.isSaving],
 	);
 	const hasSessionNotesData = hasSessionNoteContent(viewModel.notes);
-	const sessionNotesForRender = getNotesForRender(viewModel.notes || [], {
+	const sessionNotes = getSessionViewList(viewModel.notes);
+	const sessionNotesForRender = getNotesForRender(sessionNotes, {
 		simplifiedNotes: simplifiedNotesEnabled,
 	});
-	const scenes = useMemo(() => viewModel.scenes || [], [viewModel]);
+	const scenes = useMemo(() => getSessionViewList(viewModel.scenes), [viewModel]);
 	const isSessionNotesCollapsed = getSessionSectionCollapsed(
 		hasSessionNotesData,
 		sessionData.isNotesCollapsed,
@@ -740,44 +895,20 @@ function SessionView() {
 		lang.t("Untitled"),
 	);
 	const { handleToggleSectionCollapse } = view;
-
-	useEffect(() => {
-		if (
-			shouldExpandSessionNotesFromHash(
-				window.location.hash,
-				isSessionNotesCollapsed,
-			)
-		) {
-			handleToggleSectionCollapse("Notes");
-		}
-		const timer = window.setTimeout(() => scrollToHashTarget(), 140);
-		return () => window.clearTimeout(timer);
-	}, [
-		isSessionNotesCollapsed,
+	useSessionHashNavigation({
 		sessionId,
+		isSessionNotesCollapsed,
 		sessionNotesForRender,
-		handleToggleSectionCollapse,
-		sessionLocations,
-		sessionNpcs,
+		sessionLocations: view.sessionLocations,
+		sessionNpcs: view.sessionNpcs,
 		scenes,
-	]);
-
-	useEffect(() => {
-		if (!isHeaderActionsOpen) return undefined;
-
-		const handlePointerDown = (event: PointerEvent) => {
-			if (
-			event.target instanceof Node &&
-			headerActionsRef.current?.contains(event.target)
-			) return;
-			setIsHeaderActionsOpen(false);
-		};
-
-		document.addEventListener("pointerdown", handlePointerDown);
-		return () => {
-			document.removeEventListener("pointerdown", handlePointerDown);
-		};
-	}, [isHeaderActionsOpen]);
+		onToggleSectionCollapse: handleToggleSectionCollapse,
+	});
+	useSessionHeaderActionsDismissal(
+		isHeaderActionsOpen,
+		headerActionsRef,
+		setIsHeaderActionsOpen,
+	);
 
 	if (!session) return null;
 
@@ -795,11 +926,10 @@ function SessionView() {
 	};
 
 	const scopeImportModal = view.scopeImportModal;
-	const scopeImportType: SessionEntityType =
-		scopeImportModal?.type === "locations" ? "locations" : "npc";
-	const scopeImportCopy = scopeImportModal
-		? getSessionScopeImportCopy(scopeImportType, lang.t)
-		: null;
+	const {
+		type: scopeImportType,
+		copy: scopeImportCopy,
+	} = getSessionScopeImportPresentation(scopeImportModal, lang.t);
 	const toggleSessionNoteAiIgnored = (
 		noteId: SessionResourceId,
 		ignored: boolean,
@@ -1011,23 +1141,16 @@ type SceneNotesProps = Pick<
 >;
 
 function SceneNotes(props: SceneNotesProps) {
-	const sceneNotes = props.scene.notes || [];
-	const sceneNotesForRender = getNotesForRender(sceneNotes, {
-		simplifiedNotes: props.simplifiedNotesEnabled,
-	});
-	const hasSceneNotesData = hasSessionNoteContent(sceneNotes);
-	const isSceneNotesCollapsed = getSessionSectionCollapsed(
-		hasSceneNotesData,
+	const presentation = getSessionSceneNotesPresentation(
+		props.scene.notes,
 		props.scene.isNotesCollapsed,
-	);
-	const sceneNotesActionShouldCollapse = sceneNotesForRender.some(
-		(note) => !note._isVirtual && !note.collapsed,
+		props.simplifiedNotesEnabled,
 	);
 	const handleBulkSceneNotesCollapse = () => {
 		props.onSceneNotesReorder(
 			getSceneNotesWithCollapsedState(
-				sceneNotes,
-				sceneNotesActionShouldCollapse,
+				presentation.notes,
+				presentation.bulkActionShouldCollapse,
 			),
 		);
 	};
@@ -1038,19 +1161,19 @@ function SceneNotes(props: SceneNotesProps) {
 								<div
 									className="SceneCard__notes_header"
 									onClick={
-										hasSceneNotesData ? props.onToggleNotesCollapse : undefined
+										presentation.hasData ? props.onToggleNotesCollapse : undefined
 									}
 								>
-									{hasSceneNotesData && (
+									{presentation.hasData && (
 										<CollapseToggleButton
 											size={Button.SIZES.SMALL}
-											collapsed={isSceneNotesCollapsed}
+											collapsed={presentation.isCollapsed}
 											onClick={props.onToggleNotesCollapse}
 										/>
 									)}
 									<label>{lang.t("Scene notes")}</label>
 								</div>
-								{!isSceneNotesCollapsed && sceneNotes.length > 0 && (
+								{presentation.showBulkAction && (
 									<Button
 										variant="ghost"
 										size={Button.SIZES.SMALL}
@@ -1058,22 +1181,16 @@ function SceneNotes(props: SceneNotesProps) {
 										iconSize={16}
 										onClick={handleBulkSceneNotesCollapse}
 										title={lang.t(
-											sceneNotesActionShouldCollapse
-												? "Collapse all items"
-												: "Expand all items",
+											presentation.bulkActionTitleKey,
 										)}
 									>
-										{lang.t(
-											sceneNotesActionShouldCollapse
-												? "Collapse all"
-												: "Expand all",
-										)}
+										{lang.t(presentation.bulkActionLabelKey)}
 									</Button>
 								)}
 							</div>
-							{!isSceneNotesCollapsed && (
+							{presentation.showList && (
 								<DraggableList
-									items={sceneNotesForRender}
+									items={presentation.renderableNotes}
 									className="SceneCard__notes_list"
 									onReorder={props.onSceneNotesReorder}
 									{...getAiIgnoredNoteListProps(
@@ -1082,7 +1199,7 @@ function SceneNotes(props: SceneNotesProps) {
 									renderItem={(note, isDragging, index) => (
 										<NoteCard
 											note={note}
-											isLast={index === sceneNotesForRender.length - 1}
+											isLast={index === presentation.renderableNotes.length - 1}
 											campaignSlug={props.campaignSlug}
 											enableHistory={false}
 											onToggleCollapse={props.onSceneNoteToggleCollapse}

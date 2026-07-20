@@ -130,6 +130,34 @@ export interface CampaignGraphTopologyFitInput {
 	hasFittedTopology: boolean;
 }
 
+export interface CampaignGraphTopologyNode extends Record<string, unknown> {
+	id: string;
+	type?: unknown;
+	data?: unknown;
+}
+
+export interface CampaignGraphFlowProjectionPlan {
+	currentNodeIds: Set<string>;
+	shouldUseFreshLayout: boolean;
+}
+
+export type CampaignGraphConnectionAction =
+	| { kind: "session"; fileName: string }
+	| { kind: "select"; nodeId: string };
+
+export interface CampaignGraphConnectionPresentation {
+	node: CampaignGraphNode;
+	metaText: string;
+	action: CampaignGraphConnectionAction;
+}
+
+export interface CampaignGraphOpenTargetHandlers {
+	session: (fileName: string) => void;
+	entity: (entity: CampaignPageEntity, entityType: CampaignGraphEntityType) => void;
+	note: (note: SharedNote) => void;
+	none?: () => void;
+}
+
 export type CampaignGraphOpenTarget =
 	| { kind: "session"; fileName: string }
 	| {
@@ -231,6 +259,91 @@ export function shouldFitCampaignGraphTopology(
 		!input.hasManualPositions,
 		!input.hasFittedTopology,
 	].every(Boolean);
+}
+
+export function getCampaignGraphNodeTopologyKey(
+	nodes: readonly CampaignGraphTopologyNode[],
+): string {
+	return nodes.map(getCampaignGraphTopologyNodeEntry).sort().join("|");
+}
+
+function getCampaignGraphTopologyNodeEntry(node: CampaignGraphTopologyNode): string {
+	return `${node.id}:${String(getCampaignGraphTopologyNodeType(node))}`;
+}
+
+function getCampaignGraphTopologyNodeType(node: CampaignGraphTopologyNode): unknown {
+	const data = node.data;
+	if (!data || typeof data !== "object" || !("graphNode" in data)) return node.type;
+	return (data.graphNode as CampaignGraphNode).type;
+}
+
+export function getCampaignGraphFlowProjectionPlan(
+	currentNodeIds: readonly string[],
+	graphNodeIds: readonly string[],
+	shouldPreservePositions: boolean,
+	hasManualPositions: boolean,
+): CampaignGraphFlowProjectionPlan {
+	const currentIds = new Set(currentNodeIds);
+	const graphIds = new Set(graphNodeIds);
+	const hasNodeTopologyChanged = hasCampaignGraphNodeTopologyChanged(currentIds, graphIds);
+	return {
+		currentNodeIds: currentIds,
+		shouldUseFreshLayout: [
+			!shouldPreservePositions,
+			currentNodeIds.length === 0,
+			hasNodeTopologyChanged && !hasManualPositions,
+		].some(Boolean),
+	};
+}
+
+function hasCampaignGraphNodeTopologyChanged(
+	currentNodeIds: ReadonlySet<string>,
+	graphNodeIds: ReadonlySet<string>,
+): boolean {
+	if (currentNodeIds.size !== graphNodeIds.size) return true;
+	return [...graphNodeIds].some((nodeId) => !currentNodeIds.has(nodeId));
+}
+
+export function getCampaignGraphConnectionPresentation(
+	edge: CampaignGraphEdge,
+	selectedNodeId: string | null,
+	nodeById: ReadonlyMap<string, CampaignGraphNode>,
+	relationLabel: string,
+	sourceLabels: string,
+): CampaignGraphConnectionPresentation | null {
+	const otherId = edge.source === selectedNodeId ? edge.target : edge.source;
+	const node = nodeById.get(otherId);
+	if (!node) return null;
+	return {
+		node,
+		metaText: `${relationLabel}${getCampaignGraphEdgeCountText(edge.count)}${getCampaignGraphSourceLabelsText(sourceLabels)}`,
+		action: getCampaignGraphConnectionAction(node),
+	};
+}
+
+function getCampaignGraphEdgeCountText(count: number): string {
+	return count > 1 ? ` (${count})` : "";
+}
+
+function getCampaignGraphSourceLabelsText(sourceLabels: string): string {
+	return sourceLabels ? ` · ${sourceLabels}` : "";
+}
+
+function getCampaignGraphConnectionAction(node: CampaignGraphNode): CampaignGraphConnectionAction {
+	if (node.type === "session" && typeof node.meta.fileName === "string" && node.meta.fileName) {
+		return { kind: "session", fileName: node.meta.fileName };
+	}
+	return { kind: "select", nodeId: node.id };
+}
+
+export function executeCampaignGraphOpenTarget(
+	target: CampaignGraphOpenTarget,
+	handlers: CampaignGraphOpenTargetHandlers,
+): void {
+	if (target.kind === "session") handlers.session(target.fileName);
+	else if (target.kind === "entity") handlers.entity(target.entity, target.entityType);
+	else if (target.kind === "note") handlers.note(target.note);
+	else handlers.none?.();
 }
 
 function getCampaignGraphFlowNodePosition(

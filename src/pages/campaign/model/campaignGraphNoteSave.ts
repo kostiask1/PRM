@@ -56,26 +56,51 @@ function isNoteUpdates(value: unknown): value is Partial<SharedNote> {
 export function getCampaignGraphNoteSavePlan(
 	request: CampaignGraphNoteSave,
 ): CampaignGraphNoteSavePlan {
-	if (!isResourceId(request.noteId) || !isNoteUpdates(request.updates)) {
-		return { kind: "none" };
-	}
+	if (!isValidCampaignGraphNoteSaveRequest(request)) return { kind: "none" };
 	const base = { noteId: request.noteId, updates: request.updates };
-	if (request.nodeType === "campaign-note") {
-		return { kind: "campaign-note", ...base };
-	}
-	if (!request.fileName) return { kind: "none" };
-	if (request.nodeType === "session-note") {
-		return { kind: "session-note", fileName: request.fileName, ...base };
-	}
-	return isResourceId(request.sceneId)
-		? {
-				kind: "scene-note",
-				fileName: request.fileName,
-				sceneId: request.sceneId,
-				...base,
-			}
-		: { kind: "none" };
+	const reader = CAMPAIGN_GRAPH_NOTE_SAVE_PLAN_READERS[request.nodeType]
+		?? getCampaignGraphSceneNoteSavePlan;
+	return reader(request, base);
 }
+
+function isValidCampaignGraphNoteSaveRequest(
+	request: CampaignGraphNoteSave,
+): request is CampaignGraphNoteSave & CampaignGraphNotePlanBase {
+	return [isResourceId(request.noteId), isNoteUpdates(request.updates)].every(Boolean);
+}
+
+type CampaignGraphNoteSavePlanReader = (
+	request: CampaignGraphNoteSave,
+	base: CampaignGraphNotePlanBase,
+) => CampaignGraphNoteSavePlan;
+
+const getCampaignGraphCampaignNoteSavePlan: CampaignGraphNoteSavePlanReader = (_request, base) => ({
+	kind: "campaign-note",
+	...base,
+});
+
+const getCampaignGraphSessionNoteSavePlan: CampaignGraphNoteSavePlanReader = (request, base) => {
+	if (!request.fileName) return { kind: "none" };
+	return { kind: "session-note", fileName: request.fileName, ...base };
+};
+
+const getCampaignGraphSceneNoteSavePlan: CampaignGraphNoteSavePlanReader = (request, base) => {
+	if (!request.fileName || !isResourceId(request.sceneId)) return { kind: "none" };
+	return {
+		kind: "scene-note",
+		fileName: request.fileName,
+		sceneId: request.sceneId,
+		...base,
+	};
+};
+
+const CAMPAIGN_GRAPH_NOTE_SAVE_PLAN_READERS: Readonly<
+	Record<string, CampaignGraphNoteSavePlanReader>
+> = {
+	"campaign-note": getCampaignGraphCampaignNoteSavePlan,
+	"session-note": getCampaignGraphSessionNoteSavePlan,
+	"scene-note": getCampaignGraphSceneNoteSavePlan,
+};
 
 function updateExistingGraphNoteList(
 	notes: SharedNote[] | undefined,

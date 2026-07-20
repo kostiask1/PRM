@@ -52,7 +52,9 @@ import {
 	CAMPAIGN_GRAPH_FILTERS,
 	DEFAULT_CAMPAIGN_GRAPH_FILTERS,
 	canOpenCampaignGraphNode,
+	executeCampaignGraphOpenTarget,
 	formatCampaignGraphSourceList,
+	getCampaignGraphConnectionPresentation,
 	getCampaignGraphConnectedEdges,
 	getCampaignGraphConnectedIds,
 	getCampaignGraphDetailTextPresentation,
@@ -62,9 +64,11 @@ import {
 	getCampaignGraphEdgePresentation,
 	getCampaignGraphEdgeStrokeWidth,
 	getCampaignGraphFlowNodePresentation,
+	getCampaignGraphFlowProjectionPlan,
 	getCampaignGraphMiniMapBounds,
 	getCampaignGraphMiniMapNodeSize,
 	getCampaignGraphNodeCardPresentation,
+	getCampaignGraphNodeTopologyKey,
 	getCampaignGraphNoteSaveRequest,
 	getCampaignGraphNodeTypeClass,
 	getCampaignGraphOpenTarget,
@@ -77,6 +81,7 @@ import {
 	shouldFitCampaignGraphTopology,
 	type CampaignGraphEnabledFilters,
 	type CampaignGraphFilterId,
+	type CampaignGraphConnectionAction,
 } from "../../model/campaignGraphPresentation.ts";
 import type {
 	CampaignGraphEdge,
@@ -231,16 +236,24 @@ export interface CampaignNotesGraphProps {
 }
 
 function renderMentionChildren(children: ReactNode): ReactNode {
-	return React.Children.map(children, (child) => {
-		if (typeof child === "string") return renderMentionText(child);
-		if (React.isValidElement<{ children?: ReactNode }>(child) && child.props.children) {
-			if (child.type === "code" || child.type === "pre") return child;
-			return React.cloneElement(child, {
-				children: renderMentionChildren(child.props.children),
-			});
-		}
-		return child;
-	});
+	return React.Children.map(children, renderMentionChild);
+}
+
+function renderMentionChild(child: ReactNode): ReactNode {
+	if (typeof child === "string") return renderMentionText(child);
+	const element = getRecursiveMentionElement(child);
+	return element
+		? React.cloneElement(element, { children: renderMentionChildren(element.props.children) })
+		: child;
+}
+
+function getRecursiveMentionElement(
+	child: ReactNode,
+): ReactElement<{ children?: ReactNode }> | null {
+	if (!React.isValidElement<{ children?: ReactNode }>(child)) return null;
+	if (!child.props.children) return null;
+	if (["code", "pre"].includes(String(child.type))) return null;
+	return child;
 }
 
 interface ParsedGraphTextProps {
@@ -445,6 +458,23 @@ function CampaignGraphNodeHandles() {
 
 const NODE_TYPES = { campaignGraphNode: CampaignGraphNodeCard };
 
+function getCurrentCampaignFlowNodeMap(
+	nodes: CampaignFlowNode[],
+	shouldUseFreshLayout: boolean,
+): Map<string, CampaignFlowNode> {
+	if (shouldUseFreshLayout) return new Map();
+	return new Map(nodes.map((node) => [node.id, node]));
+}
+
+function executeCampaignGraphConnectionAction(
+	action: CampaignGraphConnectionAction,
+	onOpenSession: ((fileName: string) => void) | undefined,
+	onSelectNode: (nodeId: string) => void,
+): void {
+	if (action.kind === "session") onOpenSession?.(action.fileName);
+	else onSelectNode(action.nodeId);
+}
+
 function getGraphTopologyKey(
 	nodes: CampaignGraphNode[],
 	edges: CampaignGraphEdge[],
@@ -461,22 +491,6 @@ function getGraphTopologyKey(
 		.sort()
 		.join("|");
 	return `${nodeKey}::${edgeKey}`;
-}
-
-function getGraphNodeTopologyKey(
-	nodes: Array<CampaignGraphNode | CampaignFlowNode>,
-): string {
-	return nodes
-		.map((node) => {
-			const data = "data" in node ? node.data : null;
-			const graphType =
-				data && typeof data === "object" && "graphNode" in data
-					? (data.graphNode as CampaignGraphNode).type
-					: node.type;
-			return `${node.id}:${graphType}`;
-		})
-		.sort()
-		.join("|");
 }
 
 function useCampaignGraphLayout(
@@ -698,21 +712,12 @@ function CampaignGraphCanvas({
 }: CampaignGraphCanvasProps) {
 	return (
 		<div className="CampaignNotesGraph__canvasWrap">
-			{error && (
-				<div className="CampaignNotesGraph__message CampaignNotesGraph__message__error">
-					{error}
-				</div>
-			)}
-			{isLoading && (
-				<div className="CampaignNotesGraph__message">
-					{lang.t("Loading graph...")}
-				</div>
-			)}
-			{visibleNodeCount === 0 && !isLoading && (
-				<div className="CampaignNotesGraph__message">
-					{query ? lang.t("Nothing found.") : lang.t("No graph links yet.")}
-				</div>
-			)}
+			<CampaignGraphCanvasMessages
+				error={error}
+				isLoading={isLoading}
+				visibleNodeCount={visibleNodeCount}
+				query={query}
+			/>
 			<ReactFlow<CampaignFlowNode, CampaignFlowEdge>
 				nodes={flowNodes}
 				edges={flowEdges}
@@ -754,6 +759,45 @@ function CampaignGraphCanvas({
 			</ReactFlow>
 		</div>
 	);
+}
+
+function CampaignGraphCanvasMessages({
+	error,
+	isLoading,
+	visibleNodeCount,
+	query,
+}: Pick<CampaignGraphCanvasProps, "error" | "isLoading" | "visibleNodeCount" | "query">) {
+	return (
+		<>
+			<CampaignGraphErrorMessage error={error} />
+			<CampaignGraphLoadingMessage isLoading={isLoading} />
+			<CampaignGraphEmptyMessage
+				isLoading={isLoading}
+				visibleNodeCount={visibleNodeCount}
+				query={query}
+			/>
+		</>
+	);
+}
+
+function CampaignGraphErrorMessage({ error }: Pick<CampaignGraphCanvasProps, "error">) {
+	if (!error) return null;
+	return <div className="CampaignNotesGraph__message CampaignNotesGraph__message__error">{error}</div>;
+}
+
+function CampaignGraphLoadingMessage({ isLoading }: Pick<CampaignGraphCanvasProps, "isLoading">) {
+	if (!isLoading) return null;
+	return <div className="CampaignNotesGraph__message">{lang.t("Loading graph...")}</div>;
+}
+
+function CampaignGraphEmptyMessage({
+	isLoading,
+	visibleNodeCount,
+	query,
+}: Pick<CampaignGraphCanvasProps, "isLoading" | "visibleNodeCount" | "query">) {
+	if (visibleNodeCount !== 0 || isLoading) return null;
+	const label = query ? "Nothing found." : "No graph links yet.";
+	return <div className="CampaignNotesGraph__message">{lang.t(label)}</div>;
 }
 
 interface CampaignGraphSelectedDetailsProps {
@@ -1003,8 +1047,8 @@ export default function CampaignNotesGraph({
 		[graph.nodes],
 	);
 	const layoutPositions = useCampaignGraphLayout(graph.nodes, graph.edges);
-	const nodeTopologyKey = getGraphNodeTopologyKey(graph.nodes);
-	const flowNodeTopologyKey = getGraphNodeTopologyKey(flowNodes);
+	const nodeTopologyKey = getCampaignGraphNodeTopologyKey(graph.nodes);
+	const flowNodeTopologyKey = getCampaignGraphNodeTopologyKey(flowNodes);
 	const focusedNodeId = hoveredNodeId || selectedNodeId;
 	const connectedIds = useMemo(
 		() => getCampaignGraphConnectedIds(visibleGraph.edges, focusedNodeId),
@@ -1018,6 +1062,29 @@ export default function CampaignNotesGraph({
 		[selectedNodeId, visibleGraph.edges],
 	);
 
+	const openGraphNote = useCallback(
+		(node: CampaignGraphNode, note: SharedNote) => {
+			if (typeof onSaveNote !== "function") return;
+			openModalRequest({
+				title: lang.t("Note"),
+				type: "note",
+				showFooter: false,
+				children: (
+					<GraphNoteModalContent
+						note={note}
+						simplifiedNotes={simplifiedNotesEnabled}
+						campaignSlug={campaign.slug}
+						onSave={(updates) => {
+							const request = getCampaignGraphNoteSaveRequest(node, updates);
+							if (request) return onSaveNote(request);
+						}}
+					/>
+				),
+			});
+		},
+		[campaign.slug, onSaveNote, simplifiedNotesEnabled],
+	);
+
 	const openNode = useCallback(
 		(node: CampaignGraphNode) => {
 			const target = getCampaignGraphOpenTarget({
@@ -1029,46 +1096,21 @@ export default function CampaignNotesGraph({
 				sessionDetails,
 				canSaveNote: typeof onSaveNote === "function",
 			});
-			if (target.kind === "session") {
-				onOpenSession?.(target.fileName);
-				return;
-			}
-			if (target.kind === "entity") {
-				setEntityModalState({
-					entity: target.entity,
-					type: target.entityType,
-				});
-				return;
-			}
-			if (target.kind === "note" && typeof onSaveNote === "function") {
-				openModalRequest({
-					title: lang.t("Note"),
-					type: "note",
-					showFooter: false,
-					children: (
-						<GraphNoteModalContent
-							note={target.note}
-							simplifiedNotes={simplifiedNotesEnabled}
-							campaignSlug={campaign.slug}
-							onSave={(updates) => {
-								const request = getCampaignGraphNoteSaveRequest(node, updates);
-								if (request) return onSaveNote(request);
-							}}
-						/>
-					),
-				});
-			}
+			executeCampaignGraphOpenTarget(target, {
+				session: (fileName) => onOpenSession?.(fileName),
+				entity: (entity, type) => setEntityModalState({ entity, type }),
+				note: (note) => openGraphNote(node, note),
+			});
 		},
 		[
-			campaign.slug,
 			characters,
 			locations,
 			notes,
 			npcs,
+			openGraphNote,
 			onOpenSession,
 			onSaveNote,
 			sessionDetails,
-			simplifiedNotesEnabled,
 		],
 	);
 
@@ -1090,18 +1132,16 @@ export default function CampaignNotesGraph({
 			const shouldPreservePositions =
 				positionedCampaignRef.current === campaign.slug;
 			positionedCampaignRef.current = campaign.slug;
-			const currentNodeIds = new Set(currentNodes.map((node) => node.id));
-			const graphNodeIds = new Set(graph.nodes.map((node) => node.id));
-			const hasNodeTopologyChanged =
-				currentNodeIds.size !== graphNodeIds.size ||
-				[...graphNodeIds].some((nodeId) => !currentNodeIds.has(nodeId));
-			const shouldUseFreshLayout =
-				!shouldPreservePositions ||
-				currentNodes.length === 0 ||
-				(hasNodeTopologyChanged && !hasManualPositionsRef.current);
-			const currentById = !shouldUseFreshLayout
-				? new Map(currentNodes.map((node) => [node.id, node]))
-				: new Map<string, CampaignFlowNode>();
+			const projection = getCampaignGraphFlowProjectionPlan(
+				currentNodes.map((node) => node.id),
+				graph.nodes.map((node) => node.id),
+				shouldPreservePositions,
+				hasManualPositionsRef.current,
+			);
+			const currentById = getCurrentCampaignFlowNodeMap(
+				currentNodes,
+				projection.shouldUseFreshLayout,
+			);
 			const projectedNodes = graph.nodes.map<CampaignFlowNode>((graphNode) => {
 				const currentNode = currentById.get(graphNode.id);
 				const presentation = getCampaignGraphFlowNodePresentation({
@@ -1147,7 +1187,11 @@ export default function CampaignNotesGraph({
 					className: presentation.className,
 				};
 			});
-			return resolveNewCampaignGraphNodeCollisions(projectedNodes, currentNodeIds, shouldUseFreshLayout);
+			return resolveNewCampaignGraphNodeCollisions(
+				projectedNodes,
+				projection.currentNodeIds,
+				projection.shouldUseFreshLayout,
+			);
 		});
 	}, [
 		campaign.slug,
@@ -1342,33 +1386,33 @@ export default function CampaignNotesGraph({
 	};
 
 	const renderConnection = (edge: CampaignGraphEdge): ReactElement | null => {
-		const otherId = edge.source === selectedNodeId ? edge.target : edge.source;
-		const otherNode = visibleGraph.nodeById.get(otherId);
-		if (!otherNode) return null;
 		const sourceLabels = formatCampaignGraphSourceList(edge.sources, lang.t);
-		const connectionMetaText = `${lang.t(getCampaignGraphRelationLabel(edge.relation))}${
-			edge.count > 1 ? ` (${edge.count})` : ""
-		}${sourceLabels ? ` · ${sourceLabels}` : ""}`;
+		const presentation = getCampaignGraphConnectionPresentation(
+			edge,
+			selectedNodeId,
+			visibleGraph.nodeById,
+			lang.t(getCampaignGraphRelationLabel(edge.relation)),
+			sourceLabels,
+		);
+		if (!presentation) return null;
 
 		return (
 			<button
 				key={edge.id}
 				type="button"
 				className="CampaignNotesGraph__connection"
-				onClick={() => {
-					if (otherNode.type === "session" && otherNode.meta?.fileName) {
-						onOpenSession?.(otherNode.meta.fileName);
-						return;
-					}
-					setSelectedNodeId(otherNode.id);
-				}}
+				onClick={() => executeCampaignGraphConnectionAction(
+					presentation.action,
+					onOpenSession,
+					setSelectedNodeId,
+				)}
 			>
 				<span
-					className={`CampaignNotesGraph__dot ${getCampaignGraphNodeTypeClass(otherNode.type)}`}
+					className={`CampaignNotesGraph__dot ${getCampaignGraphNodeTypeClass(presentation.node.type)}`}
 				/>
 				<span className="CampaignNotesGraph__connectionText">
-					<strong>{renderMentionText(otherNode.label)}</strong>
-					<span>{renderMentionText(connectionMetaText)}</span>
+					<strong>{renderMentionText(presentation.node.label)}</strong>
+					<span>{renderMentionText(presentation.metaText)}</span>
 				</span>
 			</button>
 		);

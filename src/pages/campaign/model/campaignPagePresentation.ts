@@ -95,6 +95,30 @@ export interface CampaignNotesViewModePlan {
 	collapsePatch: CampaignNotesCollapsePatch | null;
 }
 
+export interface CampaignHashNavigationInput {
+	hash: unknown;
+	collapsed: Readonly<Record<CampaignHashTarget, boolean>>;
+}
+
+export interface CampaignHashNavigationPlan {
+	target: CampaignHashTarget | null;
+	shouldUseListView: boolean;
+	sectionToExpand: CampaignHashTarget | null;
+}
+
+export interface CampaignHashNavigationEffects {
+	useListView: () => void;
+	expandSection: (target: CampaignHashTarget) => void;
+}
+
+export type CampaignEntityAiIgnoredUpdate =
+	| { kind: "none" }
+	| {
+			kind: "npc" | "locations";
+			entityId: DomainId;
+			entity: CampaignPageEntity;
+	  };
+
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -102,11 +126,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export function isCampaignEditableTarget(
 	target: CampaignKeyboardTarget | null | undefined,
 ): boolean {
-	return (
-		target?.tagName === "INPUT" ||
-		target?.tagName === "TEXTAREA" ||
-		Boolean(target?.isContentEditable)
-	);
+	return ["INPUT", "TEXTAREA"].includes(target?.tagName as string)
+		|| Boolean(target?.isContentEditable);
 }
 
 function canRouteCampaignHistoryAction({
@@ -266,10 +287,52 @@ export function getCampaignNotesViewModePlan(
 
 export function getCampaignHashTarget(hash: unknown): CampaignHashTarget | null {
 	const value = String(hash || "");
-	if (value.includes("campaign-note")) return "notes";
-	if (value.includes("campaign-character")) return "characters";
-	if (value.includes("campaign-npc")) return "npc";
-	return value.includes("campaign-location") ? "locations" : null;
+	return CAMPAIGN_HASH_TARGETS.find(([marker]) => value.includes(marker))?.[1] ?? null;
+}
+
+const CAMPAIGN_HASH_TARGETS: readonly (readonly [string, CampaignHashTarget])[] = [
+	["campaign-note", "notes"],
+	["campaign-character", "characters"],
+	["campaign-npc", "npc"],
+	["campaign-location", "locations"],
+];
+
+export function getCampaignHashNavigationPlan(
+	input: CampaignHashNavigationInput,
+): CampaignHashNavigationPlan {
+	const target = getCampaignHashTarget(input.hash);
+	const isCollapsed = target ? input.collapsed[target] : false;
+	return {
+		target,
+		shouldUseListView: target === "notes",
+		sectionToExpand: target && isCollapsed ? target : null,
+	};
+}
+
+export function executeCampaignHashNavigationPlan(
+	plan: CampaignHashNavigationPlan,
+	effects: CampaignHashNavigationEffects,
+): void {
+	if (plan.shouldUseListView) effects.useListView();
+	if (plan.sectionToExpand) effects.expandSection(plan.sectionToExpand);
+}
+
+export function getCampaignEntityAiIgnoredUpdate(
+	type: "npc" | "locations",
+	entityId: DomainId | undefined,
+	ignored: boolean,
+	npcs: CampaignPageEntity[],
+	locations: CampaignPageEntity[],
+): CampaignEntityAiIgnoredUpdate {
+	if (entityId === undefined) return { kind: "none" };
+	const collection = { npc: npcs, locations }[type];
+	const entity = collection.find((item) => item.id === entityId);
+	if (!entity) return { kind: "none" };
+	return {
+		kind: type,
+		entityId,
+		entity: { ...entity, _aiIgnored: ignored },
+	};
 }
 
 function getCampaignCharacterType(value: unknown): CampaignCharacterType | null {

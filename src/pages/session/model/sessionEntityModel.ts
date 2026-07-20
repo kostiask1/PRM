@@ -130,8 +130,22 @@ function normalizeSessionEntityId(
 	value: unknown,
 	type: SessionEntityType,
 ): SessionEntityId {
-	if (typeof value === "string" && value) return value;
-	if (typeof value === "number" && Number.isFinite(value)) return value;
+	return readSessionEntityId(value) ?? createSessionEntityId(type);
+}
+
+const SESSION_ENTITY_ID_READERS: Record<
+	string,
+	(value: unknown) => SessionEntityId | null
+> = {
+	string: (value) => value ? String(value) : null,
+	number: (value) => Number.isFinite(value) ? Number(value) : null,
+};
+
+function readSessionEntityId(value: unknown): SessionEntityId | null {
+	return SESSION_ENTITY_ID_READERS[typeof value]?.(value) ?? null;
+}
+
+function createSessionEntityId(type: SessionEntityType): string {
 	const prefix = type === "locations" ? "session-locations" : "session-npc";
 	return `${prefix}-${Date.now()}`;
 }
@@ -189,9 +203,24 @@ export function getSessionEntityDisplayName(
 	entity: SessionEntityNameSource = {},
 	untitledLabel = "Untitled",
 ): string {
-	if (type === "locations") {
-		return String(entity.name || entity.title || untitledLabel).trim();
-	}
-	const fullName = `${entity.firstName || ""} ${entity.lastName || ""}`.trim();
-	return String(fullName || entity.name || entity.title || untitledLabel).trim();
+	return type === "locations"
+		? getFirstSessionEntityName([entity.name, entity.title, untitledLabel])
+		: getFirstSessionEntityName([
+			getSessionEntityFullName(entity),
+			entity.name,
+			entity.title,
+			untitledLabel,
+		]);
+}
+
+function getSessionEntityFullName(entity: SessionEntityNameSource): string {
+	return `${getSessionEntityNamePart(entity.firstName)} ${getSessionEntityNamePart(entity.lastName)}`.trim();
+}
+
+function getSessionEntityNamePart(value: unknown): string {
+	return value ? String(value) : "";
+}
+
+function getFirstSessionEntityName(values: readonly unknown[]): string {
+	return String(values.find(Boolean) || "").trim();
 }
