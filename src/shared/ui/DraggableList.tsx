@@ -11,9 +11,12 @@ import {
 import "../../assets/components/DraggableList.css";
 import { classNames } from "../lib/index.js";
 import {
+	applyDraggableFinishPlan,
 	getDefaultDraggableItemKey,
-	getDraggableReorderResult,
+	getDraggableFinishPlan,
 	hasReachedDragStartThreshold,
+	type DraggableDropDetail,
+	type DraggableFinishPlan,
 	type DraggableItemKeyExtractor,
 } from "./draggableListModel.ts";
 import Icon from "./Icon.tsx";
@@ -213,20 +216,12 @@ export default function DraggableList<Item>({
 		return null;
 	};
 
-	const dispatchCustomDragDrop = (
-		event: DragPointerCoordinates,
-		payload: unknown,
-	) => {
-		if (!payload) return;
+	const dispatchCustomDragDrop = (detail: DraggableDropDetail | null) => {
+		if (!detail) return;
 		const ownerWindow = listRef.current?.ownerDocument?.defaultView || window;
 		ownerWindow.dispatchEvent(
 			new CustomEvent("prm-draggable-list-drop", {
-				detail: {
-					payload,
-					clientX: event.clientX,
-					clientY: event.clientY,
-					sourceListId: listIdRef.current,
-				},
+				detail,
 			}),
 		);
 	};
@@ -313,24 +308,37 @@ export default function DraggableList<Item>({
 		setDragOverIndex(targetIndex);
 	};
 
-	const finishPointerDrag = (event: DragPointerCoordinates) => {
+	const consumePointerDragState = () => {
 		removePointerListenersRef.current?.();
 		removePointerListenersRef.current = null;
 		pendingPointerRef.current = null;
-
 		const dragState = dragStateRef.current;
 		dragStateRef.current = null;
-		const reorderResult = dragState
-			? getDraggableReorderResult({
+		return dragState;
+	};
+
+	const createPointerDragFinishPlan = (
+		dragState: ActiveDrag<Item> | null,
+		event: DragPointerCoordinates,
+	): DraggableFinishPlan<Item> | null =>
+		dragState
+			? getDraggableFinishPlan({
 					originalItems: dragState.originalItems,
 					sourceIndex: dragState.sourceIndex,
 					targetIndex: dragState.targetIndex,
 					visitedDifferentTarget: dragState.hasReordered,
 					keyExtractor,
+					payload: dragState.payload,
+					clientX: event.clientX,
+					clientY: event.clientY,
+					sourceListId: listIdRef.current,
 				})
 			: null;
-		setDocumentPressMode(listRef.current?.ownerDocument || document, false);
-		setDocumentDragMode(listRef.current?.ownerDocument || document, false);
+
+	const resetPointerDragPresentation = () => {
+		const ownerDocument = listRef.current?.ownerDocument || document;
+		setDocumentPressMode(ownerDocument, false);
+		setDocumentDragMode(ownerDocument, false);
 		setDraggingIndex(null);
 		setDragOverIndex(null);
 		setDragPreview(null);
@@ -339,19 +347,29 @@ export default function DraggableList<Item>({
 			cancelAnimationFrame(dragPreviewFrameRef.current);
 			dragPreviewFrameRef.current = null;
 		}
+	};
 
-		if (!dragState) return;
-
+	const suppressNextClick = () => {
 		suppressClickRef.current = true;
 		window.setTimeout(() => {
 			suppressClickRef.current = false;
 		}, 0);
+	};
 
-		if (reorderResult?.hasReordered && typeof onReorder === "function") {
-			onReorder(reorderResult.items);
-		}
-		dispatchCustomDragDrop(event, dragState.payload);
-		if (reorderResult?.hasReordered && onDrop) onDrop(reorderResult.items);
+	const finishPointerDrag = (event: DragPointerCoordinates) => {
+		const finishPlan = createPointerDragFinishPlan(
+			consumePointerDragState(),
+			event,
+		);
+		resetPointerDragPresentation();
+
+		if (!finishPlan) return;
+		suppressNextClick();
+		applyDraggableFinishPlan(finishPlan, {
+			onReorder,
+			onCustomDrop: (detail) => dispatchCustomDragDrop(detail),
+			onDrop,
+		});
 	};
 
 	const handlePointerDown = (

@@ -2,6 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { sessionApi } from "../../../entities/session/index.js";
 import type { SessionRecord } from "../../../entities/session/index.js";
 import type { SessionEditorSession } from "./sessionMutations.ts";
+import {
+	executeSessionSave,
+	normalizeSessionSavePolicy,
+} from "./sessionPersistence.ts";
 
 export interface SessionSaveOptions {
 	throwOnError?: boolean;
@@ -60,27 +64,18 @@ export function useSessionPersistence({
 			options: SessionSaveOptions = {},
 		): Promise<SessionRecord | null> => {
 			if (!session) return null;
-			const { throwOnError = false, updateUi = true } = options;
 			clearTimer();
 			pendingSessionRef.current = null;
-			if (updateUi) setIsSaving(true);
-			try {
-				const result = await sessionApi.updateSession(
-					campaignSlug,
-					sessionId,
-					session,
-				);
-				if (updateUi && result?.fileName && result.fileName !== sessionId) {
-					onSessionRenamed?.(result);
-				}
-				return result;
-			} catch (error) {
-				onSaveError?.(error);
-				if (throwOnError) throw error;
-				return null;
-			} finally {
-				if (updateUi) setIsSaving(false);
-			}
+			return executeSessionSave({
+				campaignSlug,
+				sessionId,
+				session,
+				policy: normalizeSessionSavePolicy(options),
+				updateSession: sessionApi.updateSession,
+				setSaving: setIsSaving,
+				onSessionRenamed,
+				onSaveError,
+			});
 		},
 		[campaignSlug, clearTimer, onSaveError, onSessionRenamed, sessionId],
 	);

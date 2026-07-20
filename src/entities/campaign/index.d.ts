@@ -1,8 +1,10 @@
 export {
 	campaignApi,
+	CAMPAIGN_PARTIAL_ARCHIVE_SECTIONS,
 	type CampaignRecord,
 	type CampaignEntityRecord,
 	type CampaignEntityType,
+	type CampaignPartialArchiveSection,
 	type DomainId,
 } from "./api/campaignApi.ts";
 export {

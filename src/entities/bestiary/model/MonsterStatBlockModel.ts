@@ -115,6 +115,36 @@ function formatMonsterType(monsterType: unknown): string {
 	return "";
 }
 
+function getDamageDescriptorValue(
+	item: MonsterDamageDescriptor,
+): string | string[] | undefined {
+	return [
+		item.resist,
+		item.immune,
+		item.vulnerable,
+		item.conditionImmune,
+	].find(Boolean);
+}
+
+function formatDamageDescriptor(item: MonsterDamageDescriptor): string {
+	const nestedValue = getDamageDescriptorValue(item);
+	const base = Array.isArray(nestedValue)
+		? nestedValue.join(", ")
+		: nestedValue || "";
+	const prefix = item.preNote ? `${item.preNote} ` : "";
+	const suffix = item.note ? ` ${item.note}` : "";
+	return `${prefix}${base}${suffix}`.trim();
+}
+
+function formatDamagePropertyItem(
+	item: string | MonsterDamageDescriptor,
+): string {
+	if (typeof item === "string") return item;
+	return item && typeof item === "object"
+		? formatDamageDescriptor(item)
+		: "";
+}
+
 /**
  * Monster action/trait entry.
  * @typedef {Object} MonsterEntry
@@ -347,21 +377,7 @@ export default class MonsterStatBlockModel {
 		if (!Array.isArray(prop)) return null;
 
 		return prop
-			.map((item) => {
-				if (typeof item === "string") return item;
-				if (typeof item === "object" && item !== null) {
-					const nestedValue =
-						item.resist ||
-						item.immune ||
-						item.vulnerable ||
-						item.conditionImmune;
-					const base = Array.isArray(nestedValue)
-						? nestedValue.join(", ")
-						: nestedValue;
-					return `${item.preNote ? `${item.preNote} ` : ""}${base || ""}${item.note ? ` ${item.note}` : ""}`.trim();
-				}
-				return "";
-			})
+			.map(formatDamagePropertyItem)
 			.filter(Boolean)
 			.join(", ");
 	}

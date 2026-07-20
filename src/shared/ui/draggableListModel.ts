@@ -79,6 +79,25 @@ export interface DraggableReorderResult<Item> {
 	hasReordered: boolean;
 }
 
+export interface DraggableDropDetail {
+	payload: unknown;
+	clientX: number;
+	clientY: number;
+	sourceListId: string;
+}
+
+export interface DraggableFinishPlan<Item> {
+	items: Item[];
+	hasReordered: boolean;
+	dropDetail: DraggableDropDetail | null;
+}
+
+export interface DraggableFinishCallbacks<Item> {
+	onReorder?: (items: Item[]) => void;
+	onCustomDrop: (detail: DraggableDropDetail) => void;
+	onDrop?: (items: Item[]) => void;
+}
+
 export function getDraggableReorderResult<Item>({
 	originalItems,
 	sourceIndex,
@@ -103,4 +122,49 @@ export function getDraggableReorderResult<Item>({
 			visitedDifferentTarget &&
 			!haveSameDraggableItemOrder(originalItems, items, keyExtractor),
 	};
+}
+
+export function getDraggableFinishPlan<Item>({
+	originalItems,
+	sourceIndex,
+	targetIndex,
+	visitedDifferentTarget,
+	keyExtractor,
+	payload,
+	clientX,
+	clientY,
+	sourceListId,
+}: {
+	originalItems: Item[];
+	sourceIndex: number;
+	targetIndex: number;
+	visitedDifferentTarget: boolean;
+	keyExtractor: DraggableItemKeyExtractor<Item>;
+	payload: unknown;
+	clientX: number;
+	clientY: number;
+	sourceListId: string;
+}): DraggableFinishPlan<Item> {
+	const reorderResult = getDraggableReorderResult({
+		originalItems,
+		sourceIndex,
+		targetIndex,
+		visitedDifferentTarget,
+		keyExtractor,
+	});
+	return {
+		...reorderResult,
+		dropDetail: payload
+			? { payload, clientX, clientY, sourceListId }
+			: null,
+	};
+}
+
+export function applyDraggableFinishPlan<Item>(
+	plan: DraggableFinishPlan<Item>,
+	callbacks: DraggableFinishCallbacks<Item>,
+): void {
+	if (plan.hasReordered) callbacks.onReorder?.(plan.items);
+	if (plan.dropDetail) callbacks.onCustomDrop(plan.dropDetail);
+	if (plan.hasReordered) callbacks.onDrop?.(plan.items);
 }

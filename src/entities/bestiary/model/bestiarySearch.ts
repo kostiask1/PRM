@@ -12,38 +12,61 @@ export interface SearchableMonster {
 	type?: string | MonsterTypeDescriptor;
 }
 
+function isObject(value: unknown): value is Record<string, unknown> {
+	return Boolean(value) && typeof value === "object";
+}
+
+function getMonsterTypeChoiceString(value: unknown): string {
+	if (!isObject(value)) return "";
+	const choices = value.choose;
+	return Array.isArray(choices) ? choices.join("/") : "";
+}
+
 export function getMonsterTypeString(monsterType: unknown): string {
 	if (!monsterType) return "";
 	if (typeof monsterType === "string") return monsterType;
-	if (typeof monsterType === "object") {
-		const type = (monsterType as MonsterTypeDescriptor).type;
-		if (typeof type === "string") return type;
-		if (typeof type === "object" && Array.isArray(type.choose)) {
-			return type.choose.join("/");
-		}
-	}
-	return "";
+	if (!isObject(monsterType)) return "";
+	const type = monsterType.type;
+	return typeof type === "string" ? type : getMonsterTypeChoiceString(type);
+}
+
+function normalizeMonsterSearchQuery(searchQuery: unknown): string {
+	return String(searchQuery || "")
+		.trim()
+		.toLowerCase();
+}
+
+function getMonsterTypeDescriptor(
+	monsterType: SearchableMonster["type"],
+): MonsterTypeDescriptor | null {
+	return isObject(monsterType)
+		? (monsterType as MonsterTypeDescriptor)
+		: null;
+}
+
+function getMonsterTagText(descriptor: MonsterTypeDescriptor | null): string {
+	return Array.isArray(descriptor?.tags) ? descriptor.tags.join(" ") : "";
+}
+
+function appendSearchPart(parts: unknown[], value: unknown): void {
+	if (value) parts.push(value);
+}
+
+function getMonsterSearchText(
+	monster: SearchableMonster | null | undefined,
+): string {
+	const parts: unknown[] = [];
+	appendSearchPart(parts, monster?.name);
+	appendSearchPart(parts, getMonsterTypeString(monster?.type));
+	appendSearchPart(parts, getMonsterTagText(getMonsterTypeDescriptor(monster?.type)));
+	return parts.join(" ").toLowerCase();
 }
 
 export function matchesMonsterSearch(
 	monster: SearchableMonster | null | undefined,
-	searchQuery = "",
+	searchQuery: unknown = "",
 ): boolean {
-	const normalizedSearch = String(searchQuery || "")
-		.trim()
-		.toLowerCase();
+	const normalizedSearch = normalizeMonsterSearchQuery(searchQuery);
 	if (!normalizedSearch) return true;
-
-	const typeBase = getMonsterTypeString(monster?.type);
-	const descriptor =
-		monster?.type && typeof monster.type === "object" ? monster.type : null;
-	const tags = Array.isArray(descriptor?.tags)
-		? descriptor.tags.join(" ")
-		: "";
-	const searchableText = [monster?.name, typeBase, tags]
-		.filter(Boolean)
-		.join(" ")
-		.toLowerCase();
-
-	return searchableText.includes(normalizedSearch);
+	return getMonsterSearchText(monster).includes(normalizedSearch);
 }

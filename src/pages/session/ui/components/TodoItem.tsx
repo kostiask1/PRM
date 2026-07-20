@@ -1,8 +1,23 @@
+import type { ReactNode } from "react";
 import { Checkbox } from "../../../../shared/ui/index.js";
 import "../../../../assets/components/TodoItem.css";
 import { classNames } from "../../../../shared/lib/index.js";
 
-export default function TodoItem({ title, note, checked, onChange, children }) {
+export interface TodoItemProps {
+	title?: ReactNode;
+	note?: ReactNode;
+	checked: boolean;
+	onChange: (checked: boolean) => void;
+	children?: ReactNode;
+}
+
+export default function TodoItem({
+	title,
+	note,
+	checked,
+	onChange,
+	children,
+}: TodoItemProps) {
 	return (
 		<div className={classNames("TodoItem", { TodoItem__done: checked })}>
 			<Checkbox

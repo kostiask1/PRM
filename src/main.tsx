@@ -1,11 +1,14 @@
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router";
-import App from "./App";
+import App from "./App.tsx";
 import { lang } from "./shared/lib/index.js";
 import { openModalRequest } from "./shared/model/index.js";
 import "./assets/scss/main.scss"; // Importing BEM styles
 
-ReactDOM.createRoot(document.getElementById("root")).render(
+const root = document.getElementById("root");
+if (!root) throw new Error("Application root element was not found");
+
+ReactDOM.createRoot(root).render(
 	<BrowserRouter>
 		<App />
 	</BrowserRouter>,
@@ -28,8 +31,10 @@ async function clearWindowCaches() {
 	await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
 }
 
-async function applyServiceWorkerUpdate(registration) {
-	const waitingWorker = registration?.waiting;
+async function applyServiceWorkerUpdate(
+	registration: ServiceWorkerRegistration,
+) {
+	const waitingWorker = registration.waiting;
 
 	if (waitingWorker) {
 		isWaitingForUpdateReload = true;
@@ -42,7 +47,7 @@ async function applyServiceWorkerUpdate(registration) {
 	reloadForUpdate();
 }
 
-function showServiceWorkerUpdateModal(registration) {
+function showServiceWorkerUpdateModal(registration: ServiceWorkerRegistration) {
 	if (isUpdateModalOpen || hasReloadedForUpdate) return;
 	isUpdateModalOpen = true;
 
@@ -67,7 +72,7 @@ function showServiceWorkerUpdateModal(registration) {
 		});
 }
 
-function watchServiceWorkerRegistration(registration) {
+function watchServiceWorkerRegistration(registration: ServiceWorkerRegistration) {
 	if (registration.waiting && navigator.serviceWorker.controller) {
 		showServiceWorkerUpdateModal(registration);
 	}

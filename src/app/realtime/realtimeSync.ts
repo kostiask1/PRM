@@ -8,9 +8,20 @@ import { appStore } from "../../shared/model/index.js";
 const RECONNECT_BASE_DELAY = 1000;
 const RECONNECT_MAX_DELAY = 10000;
 
-let clientId = null;
-let socket = null;
-let reconnectTimer = null;
+declare global {
+	interface Window {
+		__PRM_SYNC_CLIENT_ID__?: string;
+	}
+}
+
+interface RealtimeSyncEvent extends Record<string, unknown> {
+	type?: string;
+	resource?: string;
+}
+
+let clientId: string | null = null;
+let socket: WebSocket | null = null;
+let reconnectTimer: number | null = null;
 let reconnectDelay = RECONNECT_BASE_DELAY;
 let initialized = false;
 
@@ -36,7 +47,8 @@ function getSyncUrl() {
 	return url.toString();
 }
 
-function isCampaignScopedEvent(event) {
+
+function isCampaignScopedEvent(event: RealtimeSyncEvent) {
 	return [
 		"campaigns",
 		"sessions",
@@ -44,10 +56,11 @@ function isCampaignScopedEvent(event) {
 		"images",
 		"import",
 		"ai",
-	].includes(event?.resource);
+	].includes(event.resource || "");
 }
 
-function handleDataChanged(event) {
+function handleDataChanged(event: unknown) {
+	if (!isRecord(event)) return;
 	if (!event || event.type !== "data:changed") return;
 
 	appStore.dispatch(dataSyncReceivedAction(event));
@@ -59,6 +72,10 @@ function handleDataChanged(event) {
 	if (isCampaignScopedEvent(event)) {
 		appStore.dispatch(requestCampaignsReloadAction());
 	}
+}
+
+function isRecord(value: unknown): value is RealtimeSyncEvent {
+	return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function scheduleReconnect() {

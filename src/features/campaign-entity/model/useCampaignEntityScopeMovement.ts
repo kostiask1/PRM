@@ -15,34 +15,19 @@ import type {
 	CampaignFeatureEntityId,
 	CampaignFeatureEntityType,
 } from "./contracts.ts";
-
-type EntityScope = "campaign" | "session";
-type ScopeMoveErrorOperation = "load" | "move-to-session" | "move-to-campaign";
-
-interface SessionEntityRecord extends CampaignEntityRecord {
-	id?: CampaignFeatureEntityId;
-	slug?: string;
-}
-
-interface CampaignEntitySessionData extends Record<string, unknown> {
-	npcs?: SessionEntityRecord[];
-	locations?: SessionEntityRecord[];
-}
-
-export interface CampaignEntitySession extends Record<string, unknown> {
-	fileName?: string;
-	data?: CampaignEntitySessionData;
-}
-
-export interface ScopeImportModalState {
-	type: CampaignFeatureEntityType;
-	items: CampaignEntityRecord[];
-	isLoading: boolean;
-}
-
-interface FlushPendingSaveOptions {
-	throwOnError: boolean;
-}
+import {
+	buildCampaignToSessionScopeMovePlan,
+	buildSessionToCampaignScopeMovePlan,
+	executeEntityScopeMove,
+	removeMovedCampaignEntityFromImport,
+	type CampaignEntitySession,
+	type EntityScope,
+	type EntityScopeMovePlan,
+	type FlushPendingSaveOptions,
+	type ScopeImportModalState,
+	type ScopeMoveErrorOperation,
+	type SessionEntityRecord,
+} from "./scopeMovement.ts";
 
 interface CampaignEntityScopeMovementOptions {
 	campaignSlug: string;
@@ -112,39 +97,29 @@ export function useCampaignEntityScopeMovement({
 		setScopeImportModal(null);
 	}, []);
 
-	const moveCampaignEntityToSession = useCallback(
-		async (
-			type: CampaignFeatureEntityType,
-			entity: SessionEntityRecord,
-		): Promise<void> => {
-			if (!session?.fileName || !entity?.slug) return;
-			if (!(await confirmMove("session", type, entity))) return;
-			try {
-				const flushedSession = await flushPendingSave?.({ throwOnError: true });
-				const fileName = flushedSession?.fileName || session.fileName;
-				const result = await sessionApi.moveEntityScope(
-					campaignSlug,
-					fileName,
-					type,
-					entity.id || entity.slug,
-					{ entitySlug: entity.slug, targetScope: "session" },
-				);
-				if (!result?.session) throw new Error("Entity scope move returned no session");
-				setSession(result.session);
-				setScopeImportModal((current) =>
-					current
-						? {
-								...current,
-								items: current.items.filter(
-									(item) => item.slug !== entity.slug,
-								),
-							}
-						: current,
-				);
-				onMoved?.(result);
-			} catch (error) {
-				onError?.(error, "move-to-session");
+	const executePlan = useCallback(
+		async (plan: EntityScopeMovePlan | null): Promise<void> => {
+			if (!plan) return;
+			const outcome = await executeEntityScopeMove(plan, {
+				campaignSlug,
+				confirmMove,
+				flushPendingSave,
+				api: sessionApi,
+			});
+			if (outcome.status === "failed") {
+				onError?.(outcome.error, plan.operation);
+				return;
 			}
+			if (outcome.status !== "moved") return;
+
+			setSession(outcome.result.session);
+			if (plan.operation === "move-to-session") {
+				const movedEntitySlug = plan.entitySlug;
+				setScopeImportModal((current) =>
+					removeMovedCampaignEntityFromImport(current, movedEntitySlug),
+				);
+			}
+			onMoved?.(outcome.result);
 		},
 		[
 			campaignSlug,
@@ -152,9 +127,20 @@ export function useCampaignEntityScopeMovement({
 			flushPendingSave,
 			onError,
 			onMoved,
-			session?.fileName,
 			setSession,
 		],
+	);
+
+	const moveCampaignEntityToSession = useCallback(
+		async (
+			type: CampaignFeatureEntityType,
+			entity: SessionEntityRecord,
+		): Promise<void> => {
+			await executePlan(
+				buildCampaignToSessionScopeMovePlan(session, type, entity),
+			);
+		},
+		[executePlan, session],
 	);
 
 	const moveSessionEntityToCampaign = useCallback(
@@ -162,38 +148,11 @@ export function useCampaignEntityScopeMovement({
 			type: CampaignFeatureEntityType,
 			id: CampaignFeatureEntityId,
 		): Promise<void> => {
-			if (!session?.fileName) return;
-			const key = type === "locations" ? "locations" : "npcs";
-			const entity = (session.data?.[key] || []).find(
-				(item) => String(item.id) === String(id),
+			await executePlan(
+				buildSessionToCampaignScopeMovePlan(session, type, id),
 			);
-			if (!entity || !(await confirmMove("campaign", type, entity))) return;
-			try {
-				const flushedSession = await flushPendingSave?.({ throwOnError: true });
-				const fileName = flushedSession?.fileName || session.fileName;
-				const result = await sessionApi.moveEntityScope(
-					campaignSlug,
-					fileName,
-					type,
-					id,
-					{ targetScope: "campaign" },
-				);
-				if (!result?.session) throw new Error("Entity scope move returned no session");
-				setSession(result.session);
-				onMoved?.(result);
-			} catch (error) {
-				onError?.(error, "move-to-campaign");
-			}
 		},
-		[
-			campaignSlug,
-			confirmMove,
-			flushPendingSave,
-			onError,
-			onMoved,
-			session,
-			setSession,
-		],
+		[executePlan, session],
 	);
 
 	return {
@@ -204,3 +163,8 @@ export function useCampaignEntityScopeMovement({
 		scopeImportModal,
 	};
 }
+
+export type {
+	CampaignEntitySession,
+	ScopeImportModalState,
+} from "./scopeMovement.ts";

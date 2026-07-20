@@ -1,6 +1,7 @@
 export {
 	sessionApi,
 	type AddEncounterMonsterResult,
+	type EntityScopeMovePayload,
 	type EntityScopeMoveResult,
 	type EncounterMonsterRecord,
 	type EncounterRecord,
@@ -9,4 +10,11 @@ export {
 	type SessionDomainId,
 	type SessionRecord,
 } from "./api/sessionApi.ts";
-export { default as SessionViewModel } from "./model/SessionViewModel.ts";
+export {
+	default as SessionViewModel,
+	type SessionEncounter,
+	type SessionNote,
+	type SessionScene,
+	type SessionSceneField,
+	type SessionViewData,
+} from "./model/SessionViewModel.ts";

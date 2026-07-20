@@ -41,21 +41,6 @@ function getAiChangeResources(
 		: [];
 }
 
-export function getHistoryChangeSummary(
-	entry: AiHistoryEntry | null | undefined,
-	translate: Translate = (value) => value,
-): string {
-	const resources = getAiChangeResources(entry);
-	const summary = entry?.changes?.summary || {};
-	const total = Number(summary.total) || resources.length || 0;
-	if (!total) return "";
-	const parts: string[] = [];
-	if (summary.added) parts.push(`+${summary.added}`);
-	if (summary.deleted) parts.push(`-${summary.deleted}`);
-	if (summary.modified) parts.push(`~${summary.modified}`);
-	return `${translate("Changes")}: ${parts.length ? parts.join(" ") : total}`;
-}
-
 export function getLocalizedDiffResourceState(
 	resource: AiHistoryResource,
 	translate: Translate = (value) => value,

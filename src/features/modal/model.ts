@@ -188,3 +188,72 @@ export function getModalCloseAction(
 	if (cancelDisabled) return "blocked";
 	return hasCancelHandler ? "cancel" : "confirm";
 }
+
+export interface ModalPresentationPlan {
+	showFooter: boolean;
+	showCancel: boolean;
+	confirmVariant: "danger" | "primary";
+	confirmLabelKind: "custom" | "ok" | "confirm";
+}
+
+export function getModalPresentationPlan({
+	showFooter,
+	hasCancelHandler,
+	type,
+	hasConfirmLabel,
+}: {
+	showFooter: boolean;
+	hasCancelHandler: boolean;
+	type?: ModalType;
+	hasConfirmLabel: boolean;
+}): ModalPresentationPlan {
+	return {
+		showFooter,
+		showCancel: hasCancelHandler,
+		confirmVariant: type === "error" ? "danger" : "primary",
+		confirmLabelKind: hasConfirmLabel
+			? "custom"
+			: hasCancelHandler
+				? "confirm"
+				: "ok",
+	};
+}
+
+export function executeModalClose({
+	cancelDisabled,
+	onCancel,
+	onConfirm,
+	blurActiveElement,
+}: {
+	cancelDisabled: boolean;
+	onCancel?: (() => void) | null;
+	onConfirm: () => void;
+	blurActiveElement: () => void;
+}): "blocked" | "cancel" | "confirm" {
+	const action = getModalCloseAction(
+		cancelDisabled,
+		typeof onCancel === "function",
+	);
+	if (action === "blocked") return action;
+	blurActiveElement();
+	if (action === "cancel") onCancel?.();
+	else onConfirm();
+	return action;
+}
+
+export function executeModalKeyboardPlan(
+	plan: ModalKeyboardPlan,
+	{
+		preventDefault,
+		onClose,
+		onConfirm,
+	}: {
+		preventDefault: () => void;
+		onClose: () => void;
+		onConfirm: () => void;
+	},
+): void {
+	if (plan.preventDefault) preventDefault();
+	if (plan.action === "close") onClose();
+	if (plan.action === "confirm") onConfirm();
+}

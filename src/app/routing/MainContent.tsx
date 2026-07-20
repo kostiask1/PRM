@@ -8,8 +8,9 @@ import { useAppSelector } from "../../shared/model/index.js";
 import { lang } from "../../shared/lib/index.js";
 import { classNames } from "../../shared/lib/index.js";
 import "../../assets/components/MainContent.css";
+import type { CampaignRecord } from "../../entities/campaign/index.js";
 
-function EmptyState({ className = "" }) {
+function EmptyState({ className = "" }: { className?: string }) {
 	return (
 		<main className={classNames("MainContent", className)}>
 			<section className="MainContent__emptyState Panel">
@@ -21,7 +22,13 @@ function EmptyState({ className = "" }) {
 	);
 }
 
-function MainContentLayout({ className = "", showAiAssistant = false }) {
+function MainContentLayout({
+	className = "",
+	showAiAssistant = false,
+}: {
+	className?: string;
+	showAiAssistant?: boolean;
+}) {
 	const location = useLocation();
 	const { activeSessionFileName, activeEncounterId } = useAppSelector(
 		(state) => state.navigation,
@@ -41,24 +48,30 @@ function MainContentLayout({ className = "", showAiAssistant = false }) {
 }
 
 function CampaignRoute() {
-	const campaign = useAppSelector((state) => state.active.campaign);
+	const campaign = useAppSelector(
+		(state) => state.active.campaign as CampaignRecord | null,
+	);
 	if (!campaign) return <EmptyState />;
 
 	return <CampaignPage key={campaign.slug} />;
 }
 
 function SessionRoute() {
-	const campaign = useAppSelector((state) => state.active.campaign);
+	const campaign = useAppSelector(
+		(state) => state.active.campaign as CampaignRecord | null,
+	);
 	if (!campaign) return <EmptyState />;
 
-		return <SessionPage />;
+	return <SessionPage />;
 }
 
 function EncounterRoute() {
-	const campaign = useAppSelector((state) => state.active.campaign);
+	const campaign = useAppSelector(
+		(state) => state.active.campaign as CampaignRecord | null,
+	);
 	if (!campaign) return <EmptyState />;
 
-		return <EncounterPage />;
+	return <EncounterPage />;
 }
 
 export default function MainContent() {

@@ -1,5 +1,14 @@
+import type { ReactNode } from "react";
 import { Button, CollapseToggleButton } from "../../../../shared/ui/index.js";
 import { classNames } from "../../../../shared/lib/index.js";
+
+export interface TodoSectionProps {
+	title: ReactNode;
+	children?: ReactNode;
+	action?: ReactNode;
+	collapsed?: boolean;
+	onToggle?: () => void;
+}
 
 export default function TodoSection({
 	title,
@@ -7,7 +16,7 @@ export default function TodoSection({
 	action,
 	collapsed = false,
 	onToggle,
-}) {
+}: TodoSectionProps) {
 	const isCollapsible = typeof onToggle === "function";
 
 	return (
@@ -25,7 +34,7 @@ export default function TodoSection({
 						<CollapseToggleButton
 							size={Button.SIZES.MEDIUM}
 							collapsed={collapsed}
-							onClick={() => onToggle()}
+							onClick={() => onToggle?.()}
 						/>
 					)}
 					<h3>{title}</h3>

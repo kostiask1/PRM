@@ -6,20 +6,23 @@ import type {
 export function parseChallengeRating(
 	monster: EncounterViewParticipant,
 ): number {
-	const crRecord =
-		monster.cr && typeof monster.cr === "object"
-			? (monster.cr as { cr?: unknown })
-			: null;
-	const crValue = crRecord?.cr !== undefined ? crRecord.cr : monster.cr;
+	const crValue = getChallengeRatingValue(monster.cr);
 	if (typeof crValue === "number") return crValue;
 
 	const crText = String(crValue || "0").trim();
-	if (crText.includes("/")) {
-		const [numerator, denominator] = crText.split("/").map(Number);
-		return denominator ? numerator / denominator : 0;
-	}
+	return crText.includes("/")
+		? parseFractionalChallengeRating(crText)
+		: Number.parseFloat(crText) || 0;
+}
 
-	return Number.parseFloat(crText) || 0;
+function getChallengeRatingValue(value: unknown): unknown {
+	if (!value || typeof value !== "object") return value;
+	return (value as { cr?: unknown }).cr;
+}
+
+function parseFractionalChallengeRating(value: string): number {
+	const [numerator, denominator] = value.split("/").map(Number);
+	return denominator ? numerator / denominator : 0;
 }
 
 export function getExpectedInitiative(

@@ -58,6 +58,10 @@ import type {
 	SessionPageSession,
 	SessionSyncEvent,
 } from "./contracts.ts";
+import {
+	getSessionKeyboardAction,
+	getSessionSyncAction,
+} from "./sessionPagePresentation.ts";
 
 interface ActiveCampaign {
 	slug: string;
@@ -67,6 +71,21 @@ type SessionUpdate = Partial<SessionPageSession>;
 type SessionEntityUpdater = (
 	entities: import("./sessionEntityModel.ts").SessionPageEntity[],
 ) => import("./sessionEntityModel.ts").SessionPageEntity[];
+
+function getKeyboardActionFromEvent(event: KeyboardEvent) {
+	const target = event.target instanceof HTMLElement ? event.target : null;
+	return getSessionKeyboardAction({
+		key: event.key,
+		code: event.code,
+		shiftKey: event.shiftKey,
+		isHistoryShortcut: isHistoryShortcutEvent(event),
+		shouldUseAppHistory: shouldUseAppHistoryForEvent(event),
+		isEditableTarget:
+			target?.tagName === "INPUT" ||
+			target?.tagName === "TEXTAREA" ||
+			Boolean(target?.isContentEditable),
+	});
+}
 
 export default function useSessionView() {
 	const dispatch = useAppDispatch();
@@ -201,31 +220,18 @@ export default function useSessionView() {
 	}, [loadSession]);
 
 	useEffect(() => {
-		if (!syncEvent?.version) return;
-		if (syncEvent.campaignSlug && syncEvent.campaignSlug !== campaignSlug) {
-			return;
-		}
-		if (
-			syncEvent.sessionFileName &&
-			String(syncEvent.sessionFileName) !== String(sessionId)
-		) {
-			return;
-		}
-		if (
-			!["sessions", "ai", "import", "entities", "images"].includes(
-					String(syncEvent.resource || ""),
-			)
-		) {
-			return;
-		}
-		if (syncEvent.resource === "ai") {
+		const action = getSessionSyncAction(
+			syncEvent,
+			campaignSlug,
+			sessionId,
+			hasPendingSave(),
+		);
+		if (action === "discard-and-reload") {
 			discardPendingSessionSave();
 			loadSession({ force: true });
 			return;
 		}
-		if (hasPendingSave()) return;
-
-		loadSession({ force: true });
+		if (action === "reload") loadSession({ force: true });
 	}, [
 		campaignSlug,
 		discardPendingSessionSave,
@@ -242,41 +248,11 @@ export default function useSessionView() {
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (document.querySelector(".Modal__overlay")) return;
-			const target = e.target instanceof HTMLElement ? e.target : null;
-
-			if (e.key === "Backspace" || e.key === "Escape") {
-				const isInput =
-					target?.tagName === "INPUT" ||
-					target?.tagName === "TEXTAREA" ||
-					Boolean(target?.isContentEditable);
-				if (!isInput) {
-					e.preventDefault();
-					handleBack();
-				}
-			}
-
-			if (
-				isHistoryShortcutEvent(e) &&
-				(target?.tagName === "INPUT" ||
-					target?.tagName === "TEXTAREA" ||
-					Boolean(target?.isContentEditable)) &&
-				!shouldUseAppHistoryForEvent(e)
-			) {
-				return;
-			}
-
-			if (isHistoryShortcutEvent(e) && e.code === "KeyZ") {
-				if (e.shiftKey) {
-					e.preventDefault();
-					handleRedo();
-				} else {
-					e.preventDefault();
-					handleUndo();
-				}
-			} else if (isHistoryShortcutEvent(e) && e.code === "KeyY") {
-				e.preventDefault();
-				handleRedo();
-			}
+			const action = getKeyboardActionFromEvent(e);
+			if (action === "none") return;
+			e.preventDefault();
+			const handlers = { back: handleBack, undo: handleUndo, redo: handleRedo };
+			handlers[action]();
 		};
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
@@ -328,9 +304,10 @@ export default function useSessionView() {
 
 	const handleSessionEntityChange = (
 		type: import("./sessionEntityModel.ts").SessionEntityType,
-		id: string | number,
+		id: string | number | undefined,
 		updatedEntity: Record<string, unknown>,
 	): void => {
+		if (id == null) return;
 		updateSessionEntityList(type, (current) =>
 			current.map((entity) =>
 				idsEqual(entity.id, id)
@@ -342,8 +319,9 @@ export default function useSessionView() {
 
 	const handleSessionEntityDelete = (
 		type: import("./sessionEntityModel.ts").SessionEntityType,
-		id: string | number,
+		id: string | number | undefined,
 	): void => {
+		if (id == null) return;
 		updateSessionEntityList(
 			type,
 			(current) => current.filter((entity) => !idsEqual(entity.id, id)),
@@ -353,8 +331,9 @@ export default function useSessionView() {
 
 	const handleSessionEntityToggleCollapse = (
 		type: import("./sessionEntityModel.ts").SessionEntityType,
-		id: string | number,
+		id: string | number | undefined,
 	): void => {
+		if (id == null) return;
 		updateSessionEntityList(
 			type,
 			(current) =>
@@ -385,7 +364,7 @@ export default function useSessionView() {
 		): Promise<boolean> => {
 			const name = getSessionEntityDisplayName(
 				type === "locations" ? "locations" : "npc",
-				entity as import("./sessionEntityModel.ts").SessionPageEntity,
+				entity,
 				lang.t("Untitled"),
 			);
 			return Boolean(await dispatch(
@@ -645,16 +624,16 @@ export default function useSessionView() {
 			handleCreateSessionEntity("npc", payload),
 		handleCreateSessionLocation: (payload: Record<string, unknown>) =>
 			handleCreateSessionEntity("locations", payload),
-		handleSessionNpcChange: (id: string | number, updatedEntity: Record<string, unknown>) =>
+		handleSessionNpcChange: (id: string | number | undefined, updatedEntity: Record<string, unknown>) =>
 			handleSessionEntityChange("npc", id, updatedEntity),
-		handleSessionLocationChange: (id: string | number, updatedEntity: Record<string, unknown>) =>
+		handleSessionLocationChange: (id: string | number | undefined, updatedEntity: Record<string, unknown>) =>
 			handleSessionEntityChange("locations", id, updatedEntity),
-		handleSessionNpcDelete: (id: string | number) => handleSessionEntityDelete("npc", id),
-		handleSessionLocationDelete: (id: string | number) =>
+		handleSessionNpcDelete: (id: string | number | undefined) => handleSessionEntityDelete("npc", id),
+		handleSessionLocationDelete: (id: string | number | undefined) =>
 			handleSessionEntityDelete("locations", id),
-		handleSessionNpcToggleCollapse: (id: string | number) =>
+		handleSessionNpcToggleCollapse: (id: string | number | undefined) =>
 			handleSessionEntityToggleCollapse("npc", id),
-		handleSessionLocationToggleCollapse: (id: string | number) =>
+		handleSessionLocationToggleCollapse: (id: string | number | undefined) =>
 			handleSessionEntityToggleCollapse("locations", id),
 		handleSessionNpcsReorder: (nextEntities: import("./sessionEntityModel.ts").SessionPageEntity[]) =>
 			handleSessionEntitiesReorder("npc", nextEntities),

@@ -1,12 +1,19 @@
 import { ImageAssetField } from "../../../../features/images/index.js";
 import { lang } from "../../../../shared/lib/index.js";
 
+export interface SceneCardMediaProps {
+	number: number;
+	imageUrl?: string | null;
+	campaignSlug?: string | null;
+	onImageChange: (imageUrl: string | null) => void;
+}
+
 export default function SceneCardMedia({
 	number,
 	imageUrl,
 	campaignSlug,
 	onImageChange,
-}) {
+}: SceneCardMediaProps) {
 	return (
 		<div className="SceneCard__image_side">
 			<ImageAssetField

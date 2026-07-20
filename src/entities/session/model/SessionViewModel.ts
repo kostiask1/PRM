@@ -1,5 +1,12 @@
 import { idsEqual } from "../../../shared/lib/index.js";
 
+export interface SessionSceneField {
+	key: string;
+	title: string;
+	type: "textarea";
+	placeholder: string;
+}
+
 const SCENE_SCHEMA = [
 	{
 		key: "summary",
@@ -25,21 +32,21 @@ const SCENE_SCHEMA = [
 		type: "textarea",
 		placeholder: "Where does this happen...",
 	},
-];
+] satisfies readonly SessionSceneField[];
 
 export type SessionDomainId = string | number;
 
 export interface SessionNote extends Record<string, unknown> {
-	id?: SessionDomainId;
+	id: SessionDomainId;
 	title?: string;
 	text?: string;
 	collapsed?: boolean;
 }
 
 export interface SessionScene extends Record<string, unknown> {
-	id?: SessionDomainId;
+	id: SessionDomainId;
 	collapsed?: boolean;
-	texts?: Record<string, string>;
+	texts?: Record<string, unknown>;
 	notes?: SessionNote[];
 	isNotesCollapsed?: boolean;
 	imageUrl?: string | null;

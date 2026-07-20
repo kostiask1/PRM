@@ -6,7 +6,7 @@ import { settingsApi } from "./features/settings/index.js";
 
 const api = { ...campaignApi, ...backupApi, ...settingsApi };
 import { DiceCalculator } from "./features/dice/index.js";
-import MainContent from "./app/routing/MainContent.jsx";
+import MainContent from "./app/routing/MainContent.tsx";
 import { MessageBox, Modal } from "./features/modal/index.js";
 import { CampaignEntityModalProvider } from "./widgets/campaign-entity-modal/index.js";
 import { Icon } from "./shared/ui/index.js";
@@ -24,6 +24,24 @@ import {
 	setCampaignsAction,
 	setUiSettingsAction,
 } from "./shared/model/index.js";
+import type { CampaignRecord } from "./entities/campaign/index.js";
+import type { SettingsPayload } from "./features/settings/index.js";
+import {
+	buildAppMentionOptions,
+	getAppErrorMessage,
+	getAppSettingsProjection,
+	getCampaignCompletionPlan,
+	hasValidMentionPickerCallbacks,
+	isEditableAppTarget,
+	isSettingsSyncEvent,
+} from "./app/model/appShellPresentation.ts";
+
+interface AppCampaign extends CampaignRecord {
+	completed?: boolean;
+	completedAt?: string | null;
+}
+
+type IsMounted = () => boolean;
 import { applyTheme } from "./features/settings/index.js";
 import { initRealtimeSync } from "./app/realtime/index.js";
 import {
@@ -47,7 +65,9 @@ export default function App() {
 	const mentionPickerRequest = useAppSelector(
 		(store) => store.mentionPickerRequest,
 	);
-	const campaigns = useAppSelector((store) => store.campaigns.items);
+	const campaigns = useAppSelector(
+		(store) => store.campaigns.items as AppCampaign[],
+	);
 	const campaignsReloadVersion = useAppSelector(
 		(store) => store.campaigns.reloadVersion,
 	);
@@ -74,30 +94,16 @@ export default function App() {
 	}, [dispatch]);
 
 	const applySettingsToStore = useCallback(
-		(settings) => {
-			dispatch(setLanguageAction(settings.language));
-			dispatch(
-				setUiSettingsAction({
-					theme: settings.theme,
-					encounterViewMode: settings.encounterViewMode,
-					encounterGridColumns: settings.encounterGridColumns,
-					simplifiedNotes: settings.simplifiedNotes,
-					aiBasePrompt: settings.aiBasePrompt,
-					imagePromptBasePrompt: settings.imagePromptBasePrompt,
-					campaignAiBasePrompts: settings.campaignAiBasePrompts,
-					campaignImagePromptBasePrompts:
-						settings.campaignImagePromptBasePrompts,
-					ignoreSourcesList: settings.ignoreSourcesList,
-					autoApplyAiChanges: settings.autoApplyAiChanges,
-					useSearchDebounce: settings.useSearchDebounce,
-				}),
-			);
+		(settings: SettingsPayload) => {
+			const projection = getAppSettingsProjection(settings);
+			dispatch(setLanguageAction(projection.language));
+			dispatch(setUiSettingsAction(projection.ui));
 		},
 		[dispatch],
 	);
 
 	const loadSettings = useCallback(
-		async (isMounted, errorMessage) => {
+		async (isMounted: IsMounted, errorMessage: string) => {
 			try {
 				const settings = await api.getSettings();
 				if (!isMounted() || !settings) return;
@@ -110,19 +116,14 @@ export default function App() {
 	);
 
 	useEffect(() => {
-		const isEditableTarget = (target) =>
-			target?.tagName === "INPUT" ||
-			target?.tagName === "TEXTAREA" ||
-			target?.isContentEditable;
-
-		const handleKeyDown = (e) => {
-			if (isEditableTarget(e.target)) return;
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if (isEditableAppTarget(e.target)) return;
 			if (e.ctrlKey || e.metaKey) {
 				setCTRLPressed(true);
 			}
 		};
-		const handleKeyUp = (e) => {
-			if (isEditableTarget(e.target)) return;
+		const handleKeyUp = (e: KeyboardEvent) => {
+			if (isEditableAppTarget(e.target)) return;
 			if (!e.ctrlKey && !e.metaKey) {
 				setCTRLPressed(false);
 			}
@@ -171,7 +172,7 @@ export default function App() {
 	useEffect(() => {
 		if (!isMobileSidebarOpen) return;
 
-		const handleKeyDown = (event) => {
+		const handleKeyDown = (event: KeyboardEvent) => {
 			if (event.key === "Escape") {
 				setMobileSidebarOpen(false);
 			}
@@ -199,7 +200,7 @@ export default function App() {
 	}, [loadSettings]);
 
 	useEffect(() => {
-		if (syncEvent?.resource !== "settings") return;
+		if (!isSettingsSyncEvent(syncEvent)) return;
 
 		let isMounted = true;
 		loadSettings(
@@ -216,7 +217,7 @@ export default function App() {
 			if (!mentionPickerRequest) return;
 			const { select, cancel } = mentionPickerRequest;
 
-			if (typeof select !== "function" || typeof cancel !== "function") {
+			if (!hasValidMentionPickerCallbacks(mentionPickerRequest)) {
 				dispatch(closeMentionPickerAction());
 				return;
 			}
@@ -233,34 +234,14 @@ export default function App() {
 					api.getEntities(activeCampaignSlug, "npc").catch(() => []),
 					api.getEntities(activeCampaignSlug, "locations").catch(() => []),
 				]);
-
-				const toEntityOption = (entity, type) => {
-					const firstName = (entity.firstName || "").trim();
-					const lastName = (entity.lastName || "").trim();
-					const fullName = `${firstName} ${lastName}`.trim();
-					const name = fullName || (entity.name || entity.title || "").trim();
-					if (!name) return null;
-
-					return {
-						id: entity.id || entity.slug || name,
-						type,
-						name,
-						firstName,
-						lastName,
-					};
-				};
-
-				const entities = [
-					...characters
-						.map((entity) => toEntityOption(entity, "characters"))
-						.filter(Boolean),
-					...npcs
-						.map((entity) => toEntityOption(entity, "npc"))
-						.filter(Boolean),
-					...locations
-						.map((entity) => toEntityOption(entity, "locations"))
-						.filter(Boolean),
-				].sort((a, b) => a.name.localeCompare(b.name, currentLanguage));
+				const entities = buildAppMentionOptions(
+					{
+						characters: characters || [],
+						npc: npcs || [],
+						locations: locations || [],
+					},
+					currentLanguage,
+				);
 
 				if (entities.length === 0) {
 					cancel();
@@ -303,36 +284,32 @@ export default function App() {
 		handleMentionPicker();
 	}, [activeCampaignSlug, currentLanguage, dispatch, mentionPickerRequest]);
 
-	const handleToggleCampaignStatus = async (campaign) => {
-		const isCompleting = !campaign.completed;
-		let completedAt = campaign.completedAt;
+	const handleToggleCampaignStatus = async (campaign: AppCampaign) => {
+		const completion = getCampaignCompletionPlan(
+			campaign,
+			new Date(),
+			(date) => date.toLocaleDateString(),
+		);
+		let completedAt = completion.completedAt;
 
-		if (isCompleting) {
-			const now = new Date().toISOString();
-			const todayLabel = new Date().toLocaleDateString();
-			const prevLabel = completedAt
-				? new Date(completedAt).toLocaleDateString()
-				: null;
-
-			if (completedAt && todayLabel !== prevLabel) {
+		if (completion.requiresDateConfirmation) {
 				const confirmUpdate = await dispatch(
 					confirm({
 						title: lang.t("Update completion date"),
 						message: lang.t(
 							"Campaign was already completed on {date}. Update completion date to today?",
-							{ date: prevLabel },
+							{ date: completion.previousDateLabel },
 						),
 					}),
 				);
-				if (confirmUpdate) completedAt = now;
-			} else {
-				completedAt = now;
-			}
+				if (confirmUpdate) completedAt = completion.nextCompletedAt;
+		} else if (completion.completed) {
+			completedAt = completion.nextCompletedAt;
 		}
 
 		try {
 			await api.updateCampaign(campaign.slug, {
-				completed: isCompleting,
+				completed: completion.completed,
 				completedAt,
 			});
 			dispatch(requestCampaignsReloadAction());
@@ -360,6 +337,7 @@ export default function App() {
 						if (!name?.trim()) return;
 						try {
 							const newCampaign = await api.createCampaign(name.trim());
+							if (!newCampaign) throw new Error("Campaign creation returned no result");
 							dispatch(requestCampaignsReloadAction());
 							handleClose();
 							navigateTo(newCampaign.slug);
@@ -367,7 +345,7 @@ export default function App() {
 							dispatch(
 								alert({
 									title: lang.t("Error"),
-									message: err.message || lang.t("Failed to create campaign"),
+									message: getAppErrorMessage(err, lang.t("Failed to create campaign")),
 								}),
 							);
 						}
@@ -381,7 +359,7 @@ export default function App() {
 							dispatch(
 								alert({
 									title: lang.t("Import error"),
-									message: err.message || lang.t("Failed to import campaign"),
+									message: getAppErrorMessage(err, lang.t("Failed to import campaign")),
 								}),
 							);
 						}
@@ -416,7 +394,6 @@ export default function App() {
 					/>
 				)}
 				<Sidebar
-					className="App__sidebar"
 					campaigns={campaigns}
 					activeCampaignId={activeCampaignSlug}
 					isMobileOpen={isMobileSidebarOpen}
@@ -443,7 +420,8 @@ export default function App() {
 							modalState.config?.isAlert
 								? null
 								: () => {
-										modalState.config?.onCancelAction?.();
+										const cancelAction = modalState.config?.onCancelAction;
+										if (typeof cancelAction === "function") cancelAction();
 										resolveModalRequest(modalState.requestId, null);
 									}
 						}

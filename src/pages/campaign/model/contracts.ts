@@ -32,6 +32,8 @@ export interface CampaignGraphScene extends Record<string, unknown> {
 export interface CampaignSessionData extends Record<string, unknown> {
 	notes?: SharedNote[];
 	scenes?: CampaignGraphScene[];
+	npcs?: CampaignPageEntity[];
+	locations?: CampaignPageEntity[];
 }
 
 export interface CampaignSessionDetail extends SessionRecord {

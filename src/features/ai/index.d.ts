@@ -40,13 +40,26 @@ export {
 	type ExecuteAiHistoryRetryOptions,
 } from "./model/historyWorkflow.ts";
 export {
+	buildAiTokenEstimateContext,
 	buildAiTokenEstimate,
+	estimateAiAttachmentTokens,
+	type AiAttachmentTokenEstimate,
 	type AiTokenEstimate,
+	type AiTokenEstimateContext,
 	type AiTokenEstimateInput,
 } from "./model/tokenEstimation.ts";
 export {
+	buildAiGenerationRequestAttachments,
+	buildAiGenerationRequestOptions,
+	buildAiGenerationRequestTarget,
 	buildAiGenerationRequest,
+	getAiGenerationRequestContext,
+	resolveAiGenerationRequestPolicy,
 	sanitizeAiContextConfig,
+	type AiGenerationRequestAttachments,
+	type AiGenerationRequestOptions,
+	type AiGenerationRequestPolicy,
+	type AiGenerationRequestTarget,
 } from "./model/generationRequest.ts";
 export {
 	aiGenerationLifecycleReducer,
@@ -112,6 +125,11 @@ export {
 	type UseAiContextDataOptions,
 } from "./model/useAiContextData.ts";
 export {
+	getAiCharacterContextKey,
+	getAiLocationContextKey,
+	type AiContextIdentityEntity,
+} from "./model/contextIdentity.ts";
+export {
 	normalizeCustomMonsterCollection,
 	useAiImagePromptData,
 	type AiImagePromptMonster,
@@ -122,14 +140,23 @@ export {
 	addSourceMonsterImageToDraft,
 	getFirstChangedMonster,
 	getFirstChangedMonsterName,
-	getHistoryChangeSummary,
 	getLocalizedDiffResourceState,
 	isAiResponseVisibleForRoute,
 	updateDraftResourceAfterValues,
 } from "./model/aiResponseHelpers.ts";
+export { getHistoryChangeSummary } from "./model/historyChangeSummary.ts";
 export {
 	buildAiHistoryRestorePlan,
+	canApplyRestoredAiDataDirectly,
+	getAiHistoryCampaign,
+	getAiHistoryRestoreMode,
+	getAiRestoredDataKind,
+	getAiRestoreRouteKind,
 	upsertAiHistoryEntry,
+	type AiHistoryRestoreMode,
+	type AiHistoryRestoreOperation,
+	type AiRestoredDataKind,
+	type AiRestoreRouteKind,
 	type AiRouteLocation,
 } from "./model/historyState.ts";
 export {

@@ -1,3 +1,4 @@
+import type { MouseEvent } from "react";
 import {
 	Button,
 	CollapseToggleButton,
@@ -5,6 +6,16 @@ import {
 } from "../../../../shared/ui/index.js";
 import { lang } from "../../../../shared/lib/index.js";
 import { renderMentionText } from "../../../../features/rich-content/index.js";
+
+export interface SceneCardHeaderProps {
+	number: number;
+	collapsed: boolean;
+	onToggle: () => void;
+	onOpenEncounter: (event: MouseEvent<HTMLButtonElement>) => void;
+	onRemove: () => void;
+	hasEncounter: boolean;
+	encounterName: string;
+}
 
 export default function SceneCardHeader({
 	number,
@@ -14,7 +25,7 @@ export default function SceneCardHeader({
 	onRemove,
 	hasEncounter,
 	encounterName,
-}) {
+}: SceneCardHeaderProps) {
 	return (
 		<div className="SceneCard__header">
 			<div className="SceneCard__titleGroup" onClick={onToggle}>

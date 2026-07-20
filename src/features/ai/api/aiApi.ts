@@ -55,6 +55,7 @@ export interface AiHistoryEntry extends Record<string, unknown> {
 	path?: {
 		campaign?: string;
 		session?: string;
+		encounter?: AiHistoryId;
 		[key: string]: unknown;
 	};
 }

@@ -1,4 +1,7 @@
-export { campaignApi } from "./api/campaignApi.ts";
+export {
+	CAMPAIGN_PARTIAL_ARCHIVE_SECTIONS,
+	campaignApi,
+} from "./api/campaignApi.ts";
 export {
 	findEntityByName,
 	getEntityDisplayName,

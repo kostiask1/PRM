@@ -10,13 +10,13 @@ import { createPortal } from "react-dom";
 
 import "../../assets/components/MultiSelect.css";
 import { classNames } from "../lib/index.js";
-import Button from "./Button.tsx";
-import Checkbox from "./Checkbox.tsx";
 import type { DropdownPortalStyle } from "./dropdownPortalModel.ts";
 import Icon from "./Icon.tsx";
+import MultiSelectDropdown from "./MultiSelectDropdown.tsx";
 import {
 	calculateMultiSelectDropdownStyle,
 	getMultiSelectActiveScrollTarget,
+	getMultiSelectLabel,
 	getMultiSelectOptionAction,
 	getMultiSelectSelectionState,
 	toggleMultiSelectValue,
@@ -80,13 +80,14 @@ export default function MultiSelect<
 		() => getMultiSelectSelectionState(options, value),
 		[options, value],
 	);
-	const selectionLabel =
-		selection.selectedCount === options.length
-			? allSelectedLabel || placeholder
-			: selection.selectedCount === 0
-				? noneSelectedLabel || placeholder
-				: `${selection.selectedCount} / ${options.length}`;
-	const label = labelOverride || selectionLabel;
+	const label = getMultiSelectLabel({
+		selectedCount: selection.selectedCount,
+		optionCount: options.length,
+		labelOverride,
+		placeholder,
+		allSelectedLabel,
+		noneSelectedLabel,
+	});
 
 	const updateDropdownPosition = useCallback(() => {
 		const container = containerRef.current;
@@ -154,81 +155,25 @@ export default function MultiSelect<
 		!disabled &&
 		typeof document !== "undefined" &&
 		createPortal(
-			<div
-				ref={dropdownRef}
-				className="MultiSelect__dropdown MultiSelect__dropdown__portal"
-				style={dropdownStyle}
-			>
-				{allOptionLabel && (
-					<button
-						type="button"
-						ref={
-							activeValue === "all" || !activeValue
-								? activeOptionRef
-								: null
-						}
-						className={classNames("MultiSelect__option", {
-							is_active_filter: activeValue === "all" || !activeValue,
-						})}
-						onClick={() => {
-							onAllOptionClick?.();
-							setIsOpen(false);
-						}}
-					>
-						<span className="MultiSelect__optionSpacer" />
-						<span className="MultiSelect__optionLabel">
-							{allOptionLabel}
-						</span>
-					</button>
-				)}
-				<div className="MultiSelect__actions">
-					<Button
-						variant="ghost"
-						size={Button.SIZES.SMALL}
-						onClick={() =>
-							emitChange(options.map((option) => option.value))
-						}
-					>
-						{selectAllLabel}
-					</Button>
-					<Button
-						variant="ghost"
-						size={Button.SIZES.SMALL}
-						onClick={() => emitChange([])}
-					>
-						{clearLabel}
-					</Button>
-				</div>
-				{options.map((option) => {
-					const optionValue = String(option.value);
-					const isSelected =
-						selection.normalizedValues.has(optionValue);
-					const isActive =
-						Boolean(activeValue) &&
-						String(activeValue) === optionValue;
-					return (
-						<button
-							key={optionValue}
-							type="button"
-							ref={isActive ? activeOptionRef : null}
-							className={classNames("MultiSelect__option", {
-								is_selected: isSelected,
-								is_active_filter: isActive,
-							})}
-							onClick={() => handleOptionClick(option.value)}
-						>
-							<Checkbox
-								checked={isSelected}
-								onChange={() => toggleOption(option.value)}
-								className="MultiSelect__checkbox"
-							/>
-							<span className="MultiSelect__optionLabel">
-								{option.label}
-							</span>
-						</button>
-					);
-				})}
-			</div>,
+			<MultiSelectDropdown
+				dropdownRef={dropdownRef}
+				activeOptionRef={activeOptionRef}
+				dropdownStyle={dropdownStyle}
+				options={options}
+				selection={selection}
+				activeValue={activeValue}
+				allOptionLabel={allOptionLabel}
+				selectAllLabel={selectAllLabel}
+				clearLabel={clearLabel}
+				onAllOptionSelect={() => {
+					onAllOptionClick?.();
+					setIsOpen(false);
+				}}
+				onSelectAll={() => emitChange(options.map((option) => option.value))}
+				onClear={() => emitChange([])}
+				onOptionClick={handleOptionClick}
+				onOptionToggle={toggleOption}
+			/>,
 			document.body,
 		);
 

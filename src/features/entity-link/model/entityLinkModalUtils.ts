@@ -1,11 +1,12 @@
 import { resolveEntityByName } from "../../../entities/campaign/index.js";
 import {
-	getEntityIdentity,
-	isSameEntityIdentity,
 	type EntityIdentity,
 	type EntityLinkModalState,
 	type EntityLinkResolver,
 } from "./EntityLinkIdentity.ts";
+import {
+	buildEntityLinkModalTargetPlan,
+} from "./entityLinkModalPlan.ts";
 
 export interface OpenEntityLinkModalOptions {
 	campaignSlug: string | null;
@@ -15,6 +16,15 @@ export interface OpenEntityLinkModalOptions {
 	name: string;
 	scopedEntityLinks?: EntityLinkResolver | null;
 	setModalState: (value: EntityLinkModalState) => void;
+}
+
+async function resolveEntityLinkModalTarget(
+	campaignSlug: string,
+	name: string,
+	scopedEntityLinks?: EntityLinkResolver | null,
+): Promise<EntityLinkModalState | null | undefined> {
+	const scopedTarget = await scopedEntityLinks?.resolveEntityByName?.(name);
+	return scopedTarget || resolveEntityByName(campaignSlug, name);
 }
 
 export type EntityModalTitleKind = "character" | "location" | "npc";
@@ -54,37 +64,23 @@ export async function openEntityLinkModal({
 	if (!campaignSlug || !name) return;
 
 	try {
-		const found =
-			scopedEntityLinks?.resolveEntityByName?.(name) ||
-			(await resolveEntityByName(campaignSlug, name));
-		if (!found) return;
-
-		const foundIdentity = getEntityIdentity(
-			found.entity,
-			found.type,
-			found.scope,
+		const found = await resolveEntityLinkModalTarget(
+			campaignSlug,
+			name,
+			scopedEntityLinks,
 		);
-		if (
-			isSameEntityIdentity(foundIdentity, currentEntityIdentity) ||
-			isSameEntityIdentity(
-				foundIdentity,
-				modalState
-					? getEntityIdentity(
-							modalState.entity,
-							modalState.type,
-							modalState.scope,
-						)
-					: null,
-			)
-		) {
-			return;
-		}
-
-		setModalState({
-			entity: found.entity,
-			type: found.type,
+		const plan = buildEntityLinkModalTargetPlan({
+			found,
+			currentEntityIdentity,
+			modalState,
 		});
+		if (plan.status === "open") setModalState(plan.modalState);
 	} catch (error) {
 		console.error(errorMessage, error);
 	}
 }
+
+export {
+	buildEntityLinkModalTargetPlan,
+	type EntityLinkModalTargetPlan,
+} from "./entityLinkModalPlan.ts";

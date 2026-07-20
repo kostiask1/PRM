@@ -83,6 +83,13 @@ export interface AiTokenEstimate {
 	total: number;
 }
 
+export interface AiAttachmentTokenEstimate {
+	imageTokens: number;
+	fileTokens: number;
+}
+
+export type AiTokenEstimateContext = Record<string, unknown>;
+
 export interface AiTokenEstimateInput {
 	activeCampaignBasePrompt?: string;
 	attachedFiles?: EstimateAttachment[];
@@ -142,25 +149,30 @@ export function compactNoteForEstimate(
 	};
 }
 
+function getTruthyEstimateField(
+	entity: EstimateEntity,
+	field: keyof EstimateEntity,
+): unknown {
+	return entity[field] || "";
+}
+
+function getEstimateEntityName(entity: EstimateEntity): string {
+	const firstName = entity.firstName || entity.first_name || "";
+	const lastName = entity.lastName || entity.last_name || "";
+	const fullName = [firstName, lastName].filter(Boolean).join(" ");
+	return fullName || entity.name || entity.title || "";
+}
+
 export function compactEntityForEstimate(
 	entity: EstimateEntity | null | undefined,
 ) {
 	if (!entity || entity._aiIgnored) return null;
 	return {
-		name:
-			[
-				entity.firstName || entity.first_name || "",
-				entity.lastName || entity.last_name || "",
-			]
-				.filter(Boolean)
-				.join(" ") ||
-			entity.name ||
-			entity.title ||
-			"",
-		description: entity.description || "",
-		motivation: entity.motivation || "",
-		trait: entity.trait || "",
-		notes: (entity.notes || []).map(compactNoteForEstimate).filter(Boolean),
+		name: getEstimateEntityName(entity),
+		description: getTruthyEstimateField(entity, "description"),
+		motivation: getTruthyEstimateField(entity, "motivation"),
+		trait: getTruthyEstimateField(entity, "trait"),
+		notes: compactEstimateNotes(entity.notes),
 	};
 }
 
@@ -215,132 +227,159 @@ function filterByContextList<T>(
 const compactEntities = (list: EstimateEntity[]) =>
 	list.map(compactEntityForEstimate).filter(Boolean);
 
-export function buildAiTokenEstimate({
-	activeCampaignBasePrompt,
-	attachedFiles = [],
-	attachedImages = [],
-	campaignContext,
-	characterContext,
-	charactersList = [],
-	contextConfig,
-	currentLanguage,
-	generateCharacters,
-	generateCustomMonsters,
-	generateEncounters,
-	generateLocations,
-	generateNpcs,
-	globalAiBasePrompt,
-	isBestiary,
-	isCampaign,
-	isEncounter,
-	locationContext,
-	locationsList = [],
-	npcContext,
-	npcsList = [],
-	parseAIResponse,
-	selectedModel,
-	sessionData,
-	sessionName,
-	useContext,
-	userInstructions,
-	getCharacterKey,
-	getLocationKey,
-}: AiTokenEstimateInput): AiTokenEstimate {
-	const mode = getEstimatedAiMode({
-		isBestiary,
-		isEncounter,
-		isCampaign,
-		parseAIResponse,
-	});
-	const context: Record<string, Record<string, unknown> | unknown[]> = {};
-	if (!isBestiary && isCampaign) {
-		context.campaign = {
-			name: sessionData?.name || sessionName || "",
-			description: sessionData?.description || "",
-		};
-		if (useContext) {
-			if (contextConfig.campaignNotes) {
-				context.campaign.notes = (sessionData?.notes || [])
-					.map(compactNoteForEstimate)
-					.filter(Boolean);
-			}
-			context.campaign.characters = compactEntities(
-				filterByContextList(
-					sessionData?.characters || charactersList,
-					characterContext,
-					getCharacterKey,
-				),
-			);
-			context.campaign.npcs = compactEntities(
-				filterByContextList(
-					sessionData?.npcs || npcsList,
-					npcContext,
-					getCharacterKey,
-				),
-			);
-			context.campaign.locations = compactEntities(
-				filterByContextList(
-					sessionData?.locations || locationsList,
-					locationContext,
-					getLocationKey,
-				),
-			);
-		}
-	} else if (!isBestiary) {
-		context.campaign = { description: campaignContext?.description || "" };
-		if (isEncounter) {
-			context.currentEncounter = sessionData || {};
-		} else if (parseAIResponse) {
-			context.currentSession = compactSessionForEstimate(sessionData || {});
-		}
-		if (useContext) {
-			context.campaign = {
-				...context.campaign,
-				notes: contextConfig.campaignNotes
-					? (campaignContext?.notes || [])
-							.map(compactNoteForEstimate)
-							.filter(Boolean)
-					: [],
-				characters: compactEntities(
-					filterByContextList(
-						charactersList,
-						characterContext,
-						getCharacterKey,
-					),
-				),
-				npcs: compactEntities(
-					filterByContextList(npcsList, npcContext, getCharacterKey),
-				),
-				locations: compactEntities(
-					filterByContextList(locationsList, locationContext, getLocationKey),
-				),
-			};
-			context.selectedSessions = Object.entries(contextConfig.sessions || {})
-				.filter(([, config]) => config?.included && config?.data)
-				.map(([slug, config]) => ({
-					slug,
-					data: compactSessionForEstimate(config.data),
-				}));
-		}
-	}
+function compactEstimateNotes(notes: EstimateNote[] | null | undefined) {
+	return (notes || []).map(compactNoteForEstimate).filter(Boolean);
+}
 
-	const requestShape = {
+function getCampaignModeEntityList(
+	input: AiTokenEstimateInput,
+	field: "characters" | "npcs" | "locations",
+): EstimateEntity[] {
+	const fallbackLists = {
+		characters: input.charactersList,
+		npcs: input.npcsList,
+		locations: input.locationsList,
+	};
+	return input.sessionData?.[field] || fallbackLists[field] || [];
+}
+
+function buildCampaignModeContext(
+	input: AiTokenEstimateInput,
+): AiTokenEstimateContext {
+	const campaign: Record<string, unknown> = {
+		name: input.sessionData?.name || input.sessionName || "",
+		description: input.sessionData?.description || "",
+	};
+	if (!input.useContext) return { campaign };
+
+	if (input.contextConfig.campaignNotes) {
+		campaign.notes = compactEstimateNotes(input.sessionData?.notes);
+	}
+	campaign.characters = compactEntities(
+		filterByContextList(
+			getCampaignModeEntityList(input, "characters"),
+			input.characterContext,
+			input.getCharacterKey,
+		),
+	);
+	campaign.npcs = compactEntities(
+		filterByContextList(
+			getCampaignModeEntityList(input, "npcs"),
+			input.npcContext,
+			input.getCharacterKey,
+		),
+	);
+	campaign.locations = compactEntities(
+		filterByContextList(
+			getCampaignModeEntityList(input, "locations"),
+			input.locationContext,
+			input.getLocationKey,
+		),
+	);
+	return { campaign };
+}
+
+function buildCurrentScopeContext(
+	input: AiTokenEstimateInput,
+): AiTokenEstimateContext {
+	if (input.isEncounter) return { currentEncounter: input.sessionData || {} };
+	if (input.parseAIResponse) {
+		return { currentSession: compactSessionForEstimate(input.sessionData || {}) };
+	}
+	return {};
+}
+
+function buildSelectedSessionContext(
+	contextConfig: EstimateContextConfig,
+): unknown[] {
+	return Object.entries(contextConfig.sessions || {})
+		.filter(([, config]) => config?.included && config?.data)
+		.map(([slug, config]) => ({
+			slug,
+			data: compactSessionForEstimate(config.data),
+		}));
+}
+
+function buildSharedCampaignContext(
+	input: AiTokenEstimateInput,
+): Record<string, unknown> {
+	return {
+		description: input.campaignContext?.description || "",
+		notes: input.contextConfig.campaignNotes
+			? compactEstimateNotes(input.campaignContext?.notes)
+			: [],
+		characters: compactEntities(
+			filterByContextList(
+				input.charactersList,
+				input.characterContext,
+				input.getCharacterKey,
+			),
+		),
+		npcs: compactEntities(
+			filterByContextList(
+				input.npcsList,
+				input.npcContext,
+				input.getCharacterKey,
+			),
+		),
+		locations: compactEntities(
+			filterByContextList(
+				input.locationsList,
+				input.locationContext,
+				input.getLocationKey,
+			),
+		),
+	};
+}
+
+function buildSessionModeContext(
+	input: AiTokenEstimateInput,
+): AiTokenEstimateContext {
+	const context: AiTokenEstimateContext = {
+		campaign: { description: input.campaignContext?.description || "" },
+		...buildCurrentScopeContext(input),
+	};
+	if (!input.useContext) return context;
+	return {
+		...context,
+		campaign: buildSharedCampaignContext(input),
+		selectedSessions: buildSelectedSessionContext(input.contextConfig),
+	};
+}
+
+export function buildAiTokenEstimateContext(
+	input: AiTokenEstimateInput,
+): AiTokenEstimateContext {
+	if (input.isBestiary) return {};
+	return input.isCampaign
+		? buildCampaignModeContext(input)
+		: buildSessionModeContext(input);
+}
+
+function buildAiTokenEstimateRequestShape(
+	input: AiTokenEstimateInput,
+	mode: EstimatedAiMode,
+	context: AiTokenEstimateContext,
+) {
+	const attachedImages = input.attachedImages || [];
+	const attachedFiles = input.attachedFiles || [];
+	return {
 		mode,
-		language: currentLanguage,
-		modelName: selectedModel,
-		userInstructions,
+		language: input.currentLanguage,
+		modelName: input.selectedModel,
+		userInstructions: input.userInstructions,
 		options: {
 			responseParsing: mode !== "prompt",
-			characterGeneration: generateCharacters,
-			npcGeneration: generateNpcs,
-			locationGeneration: generateLocations,
-			encounterGeneration: generateEncounters,
-			customMonsterGeneration: generateCustomMonsters,
-			contextEnabled: useContext && !isBestiary,
+			characterGeneration: input.generateCharacters,
+			npcGeneration: input.generateNpcs,
+			locationGeneration: input.generateLocations,
+			encounterGeneration: input.generateEncounters,
+			customMonsterGeneration: input.generateCustomMonsters,
+			contextEnabled: input.useContext && !input.isBestiary,
 		},
 		basePrompts: {
-			global: globalAiBasePrompt,
-			campaign: activeCampaignBasePrompt,
+			global: input.globalAiBasePrompt,
+			campaign: input.activeCampaignBasePrompt,
 		},
 		context,
 		attachedImages: attachedImages.map(({ name, url }) => ({ name, url })),
@@ -350,16 +389,40 @@ export function buildAiTokenEstimate({
 			sizeBytes,
 		})),
 	};
+}
+
+function getAttachmentSize(file: EstimateAttachment): number {
+	return Number(file.sizeBytes) || 0;
+}
+
+export function estimateAiAttachmentTokens({
+	attachedFiles = [],
+	attachedImages = [],
+}: Pick<
+	AiTokenEstimateInput,
+	"attachedFiles" | "attachedImages"
+>): AiAttachmentTokenEstimate {
+	const imageTokens = attachedImages.length * ESTIMATED_IMAGE_TOKENS;
+	const fileBytes = attachedFiles.reduce(
+		(total, file) => total + getAttachmentSize(file),
+		0,
+	);
+	return {
+		imageTokens,
+		fileTokens: Math.ceil(fileBytes / ESTIMATED_FILE_TOKEN_BYTES),
+	};
+}
+
+export function buildAiTokenEstimate(
+	input: AiTokenEstimateInput,
+): AiTokenEstimate {
+	const mode = getEstimatedAiMode(input);
+	const context = buildAiTokenEstimateContext(input);
+	const requestShape = buildAiTokenEstimateRequestShape(input, mode, context);
 	const textTokens =
 		(SYSTEM_TOKEN_ESTIMATES[mode] || SYSTEM_TOKEN_ESTIMATES.prompt) +
 		estimateValueTokens(requestShape);
-	const imageTokens = attachedImages.length * ESTIMATED_IMAGE_TOKENS;
-	const fileTokens = Math.ceil(
-		attachedFiles.reduce(
-			(total, file) => total + (Number(file.sizeBytes) || 0),
-			0,
-		) / ESTIMATED_FILE_TOKEN_BYTES,
-	);
+	const { imageTokens, fileTokens } = estimateAiAttachmentTokens(input);
 	return {
 		textTokens,
 		imageTokens,

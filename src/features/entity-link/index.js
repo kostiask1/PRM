@@ -3,5 +3,6 @@ export { default as EntityModal } from "./ui/EntityModal.tsx";
 export {
 	EntityLinkContext,
 	EntityLinkResolverContext,
+	buildEntityLinkModalTargetPlan,
 	openEntityLinkModal,
 } from "./model.js";

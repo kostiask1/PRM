@@ -12,7 +12,10 @@ import {
 	requestCampaignsReloadAction,
 } from "../../../shared/model/index.js";
 import { campaignApi } from "../../../entities/campaign/index.js";
-import type { CampaignEntityType } from "../../../entities/campaign/index.js";
+import type {
+	CampaignEntityType,
+	CampaignPartialArchiveSection,
+} from "../../../entities/campaign/index.js";
 import { sessionApi } from "../../../entities/session/index.js";
 import type { SessionRecord } from "../../../entities/session/api/sessionApi.ts";
 import {
@@ -58,6 +61,16 @@ import type {
 	DescriptionChangeEvent,
 	UseCampaignViewProps,
 } from "./contracts.ts";
+import {
+	getCampaignKeyboardAction,
+	isCampaignEditableTarget,
+} from "./campaignPagePresentation.ts";
+import {
+	applyCampaignGraphCampaignNoteSave,
+	executeCampaignGraphSessionNoteSave,
+	getCampaignGraphNoteSavePlan,
+} from "./campaignGraphNoteSave.ts";
+import type { CampaignGraphSessionNoteSavePlan } from "./campaignGraphNoteSave.ts";
 
 function getErrorMessage(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
@@ -67,6 +80,19 @@ function getErrorStatus(error: unknown): unknown {
 	return error && typeof error === "object" && "status" in error
 		? error.status
 		: null;
+}
+
+function getCampaignKeyboardActionFromEvent(
+	event: KeyboardEvent,
+) {
+	const target = event.target instanceof HTMLElement ? event.target : null;
+	return getCampaignKeyboardAction({
+		code: event.code,
+		shiftKey: event.shiftKey,
+		isHistoryShortcut: isHistoryShortcutEvent(event),
+		shouldUseAppHistory: shouldUseAppHistoryForEvent(event),
+		isEditableTarget: isCampaignEditableTarget(target),
+	});
 }
 
 interface CampaignDeleteConfirmation {
@@ -748,75 +774,49 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 		}
 	};
 
-	const saveGraphSessionDetail = useCallback(
-		(
-			fileName: string,
-			updater: (session: CampaignSessionDetail) => void,
-		) => {
-			const current = sessionDetailsRef.current[fileName];
-			if (!current) return;
-
-			const next = JSON.parse(JSON.stringify(current));
-			updater(next);
-
-			sessionDetailsRef.current = {
-				...sessionDetailsRef.current,
-				[fileName]: next,
-			};
-			setSessionDetails(sessionDetailsRef.current);
-
-			api
-				.updateSession(campaign.slug, fileName, { data: next.data })
-				.catch((err) => {
-					console.error("Failed to save graph note edit", err);
-					setGraphDataError(getErrorMessage(err) || lang.t("Failed to update entity."));
-				});
+	const saveGraphSessionNote = useCallback(
+		(plan: CampaignGraphSessionNoteSavePlan) => {
+			void executeCampaignGraphSessionNoteSave({
+				campaignSlug: campaign.slug,
+				plan,
+				currentSession: sessionDetailsRef.current[plan.fileName],
+				updateSession: api.updateSession,
+				onLocalUpdate: (fileName, nextSession) => {
+					sessionDetailsRef.current = {
+						...sessionDetailsRef.current,
+						[fileName]: nextSession,
+					};
+					setSessionDetails(sessionDetailsRef.current);
+				},
+				onError: (error) => {
+					console.error("Failed to save graph note edit", error);
+					setGraphDataError(
+						getErrorMessage(error) || lang.t("Failed to update entity."),
+					);
+				},
+			});
 		},
 		[campaign.slug],
 	);
 
 	const handleGraphNoteSave = useCallback(
-		({ nodeType, fileName, sceneId, noteId, updates }: CampaignGraphNoteSave) => {
-			if (!noteId || !updates) return;
+		(request: CampaignGraphNoteSave) => {
+			const plan = getCampaignGraphNoteSavePlan(request);
+			if (plan.kind === "none") return;
 
-			if (nodeType === "campaign-note") {
+			if (plan.kind === "campaign-note") {
 				if (!saveTimeout.current) pushToUndo();
 				setNotes((prev) => {
-					const next = upsertNoteById(prev, noteId, updates);
+					const next = applyCampaignGraphCampaignNoteSave(prev, plan);
 					triggerSave({ notes: sanitizeNotesForSave(next) });
 					return next;
 				});
 				return;
 			}
 
-			if (nodeType === "session-note" && fileName) {
-				saveGraphSessionDetail(fileName, (session: CampaignSessionDetail) => {
-					session.data = session.data || {};
-					session.data.notes = (session.data.notes || []).map((note) =>
-						String(note.id) === String(noteId) ? { ...note, ...updates } : note,
-					);
-				});
-				return;
-			}
-
-			if (nodeType === "scene-note" && fileName && sceneId) {
-				saveGraphSessionDetail(fileName, (session: CampaignSessionDetail) => {
-					session.data = session.data || {};
-					session.data.scenes = (session.data.scenes || []).map((scene) => {
-						if (String(scene.id) !== String(sceneId)) return scene;
-						return {
-							...scene,
-							notes: (scene.notes || []).map((note) =>
-								String(note.id) === String(noteId)
-									? { ...note, ...updates }
-									: note,
-							),
-						};
-					});
-				});
-			}
+			saveGraphSessionNote(plan);
 		},
-		[pushToUndo, saveGraphSessionDetail, triggerSave],
+		[pushToUndo, saveGraphSessionNote, triggerSave],
 	);
 
 	const handleDeleteCampaign = async () => {
@@ -953,7 +953,9 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 		}
 	};
 
-	const handleExportPartial = async (sections: string[] = []) => {
+	const handleExportPartial = async (
+		sections: CampaignPartialArchiveSection[] = [],
+	) => {
 		try {
 			const blob = await api.exportCampaignPartialArchive(
 				campaign.slug,
@@ -968,7 +970,10 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 		}
 	};
 
-	const handleImportPartial = async (file: Blob, sections: string[] = []) => {
+	const handleImportPartial = async (
+		file: Blob,
+		sections: CampaignPartialArchiveSection[] = [],
+	) => {
 		try {
 			await api.importCampaignPartialArchive(campaign.slug, file, sections);
 			await Promise.all([loadCharacters(), loadNpcs(), loadLocations()]);
@@ -1000,25 +1005,11 @@ export default function useCampaignView(props: UseCampaignViewProps) {
 
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
-			const target = e.target instanceof HTMLElement ? e.target : null;
-			const isInput =
-				target?.tagName === "INPUT" ||
-				target?.tagName === "TEXTAREA" ||
-				Boolean(target?.isContentEditable);
-			if (isInput && !shouldUseAppHistoryForEvent(e)) return;
-
-			if (isHistoryShortcutEvent(e) && e.code === "KeyZ") {
-				if (e.shiftKey) {
-					e.preventDefault();
-					handleRedo();
-				} else {
-					e.preventDefault();
-					handleUndo();
-				}
-			} else if (isHistoryShortcutEvent(e) && e.code === "KeyY") {
-				e.preventDefault();
-				handleRedo();
-			}
+			const action = getCampaignKeyboardActionFromEvent(e);
+			if (action === "none") return;
+			e.preventDefault();
+			const handlers = { undo: handleUndo, redo: handleRedo };
+			handlers[action]();
 		};
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);

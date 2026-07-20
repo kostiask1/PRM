@@ -8,6 +8,8 @@ export {
 	type EntityLinkResolver,
 } from "./model/EntityLinkIdentity.ts";
 export {
+	buildEntityLinkModalTargetPlan,
 	openEntityLinkModal,
+	type EntityLinkModalTargetPlan,
 	type OpenEntityLinkModalOptions,
 } from "./model/entityLinkModalUtils.ts";

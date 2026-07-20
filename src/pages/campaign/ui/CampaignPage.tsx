@@ -14,7 +14,6 @@ import { DraggableList, ListCard } from "../../../shared/ui/index.js";
 import {
 	AiContextIgnoreButton,
 	BulkCollapseButton,
-	NoteCard,
 } from "../../../features/notes/ui/index.js";
 import {
 	CharacterCard,
@@ -22,8 +21,8 @@ import {
 	CreateLocationButton,
 	LocationCard,
 } from "../../../widgets/campaign-entity-card/index.js";
-import CampaignNotesGraph from "./components/CampaignNotesGraph.jsx";
-import PartialArchiveModal from "./components/PartialArchiveModal.jsx";
+import CampaignNotesSection from "./components/CampaignNotesSection.tsx";
+import PartialArchiveModal from "./components/PartialArchiveModal.tsx";
 import { GlobalSearchModal } from "../../../widgets/campaign-search/index.js";
 import { CollapseToggleButton } from "../../../shared/ui/index.js";
 import "../../../assets/components/CampaignView.css";
@@ -33,11 +32,11 @@ import { navigateTo, useAppSelector } from "../../../shared/model/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import {
 	classNames,
-	getNoteRenderKey,
 	getNotesForRender,
 } from "../../../shared/lib/index.js";
 import { makeDomId, scrollToHashTarget } from "../../../shared/lib/index.js";
 import type { DomainId } from "../../../entities/campaign/index.js";
+import type { CampaignPartialArchiveSection } from "../../../entities/campaign/index.js";
 import type { CampaignPageCampaign, CampaignPageEntity } from "../model/contracts.ts";
 import {
 	filterCampaignSessions,
@@ -45,8 +44,8 @@ import {
 	getCampaignEntityRenderKey,
 	getCampaignPageCampaign,
 	getCampaignHashTarget,
+	getCampaignNotesViewModePlan,
 	getCampaignSectionState,
-	normalizeCampaignCardNote,
 	type CampaignEntitySectionType,
 	type CampaignCharacterDropPayload,
 	type CampaignNotesViewMode,
@@ -281,155 +280,6 @@ function CampaignDescriptionSection({
 	);
 }
 
-type CampaignRenderableNote = ReturnType<typeof getNotesForRender>[number];
-
-interface CampaignNotesListProps {
-	campaignSlug: string;
-	view: CampaignViewController;
-	notes: CampaignRenderableNote[];
-	onToggleIgnored: (noteId: DomainId, ignored: boolean) => void;
-}
-
-function CampaignNotesList({
-	campaignSlug,
-	view,
-	notes,
-	onToggleIgnored,
-}: CampaignNotesListProps) {
-	return (
-		<DraggableList
-			items={notes}
-			className="CampaignView__notes"
-			onReorder={view.handleNotesReorder}
-			onDrop={view.finishTrackedReorder}
-			keyExtractor={(note, index) => getNoteRenderKey(note, index)}
-			isItemDraggable={(note) => !note._isVirtual}
-			isItemControlActive={(note) => Boolean(note._aiIgnored)}
-			renderItemControl={(note) =>
-				!note._isVirtual && (
-					<AiContextIgnoreButton
-						ignored={Boolean(note._aiIgnored)}
-						onToggle={(ignored) => onToggleIgnored(note.id, ignored)}
-					/>
-				)
-			}
-			renderItem={(note, _isDragging, index) => (
-				<div id={makeDomId("campaign", "note", note.id)}>
-					<NoteCard
-						note={normalizeCampaignCardNote(note)}
-						isLast={index === notes.length - 1}
-						campaignSlug={campaignSlug}
-						enableHistory={false}
-						onToggleCollapse={view.handleToggleNoteCollapse}
-						onTitleChange={view.handleNoteTitleChange}
-						onTextChange={view.handleNoteChange}
-						onDelete={view.handleDeleteNote}
-					/>
-				</div>
-			)}
-		/>
-	);
-}
-
-interface CampaignNotesSectionProps {
-	campaign: CampaignPageCampaign;
-	view: CampaignViewController;
-	notes: CampaignRenderableNote[];
-	hasData: boolean;
-	isCollapsed: boolean;
-	viewMode: CampaignNotesViewMode;
-	onViewModeChange: (mode: CampaignNotesViewMode) => void;
-	onBulkCollapse: (collapsed: boolean) => void;
-	onToggleIgnored: (noteId: DomainId, ignored: boolean) => void;
-}
-
-function CampaignNotesSection({
-	campaign,
-	view,
-	notes,
-	hasData,
-	isCollapsed,
-	viewMode,
-	onViewModeChange,
-	onBulkCollapse,
-	onToggleIgnored,
-}: CampaignNotesSectionProps) {
-	const toggle = () => {
-		if (!hasData) return;
-		const next = !isCollapsed;
-		view.setIsNotesCollapsed(next);
-		view.triggerSave({ isNotesCollapsed: next });
-	};
-	const isListVisible = !isCollapsed && viewMode === "list";
-	const isGraphVisible = !isCollapsed && viewMode === "graph";
-	return (
-		<div className="CampaignView__section">
-			<div className="section_row">
-				<div className="section_title_group" onClick={toggle}>
-					{hasData && (
-						<CollapseToggleButton
-							size={Button.SIZES.MEDIUM}
-							collapsed={isCollapsed}
-							onClick={toggle}
-						/>
-					)}
-					<h3>{lang.t("Notes")}</h3>
-				</div>
-				<div className="CampaignView__notesViewToggle">
-					{isListVisible && (
-						<BulkCollapseButton items={view.notes} onChange={onBulkCollapse} />
-					)}
-					<Button
-						variant={viewMode === "list" ? "primary" : "ghost"}
-						size={Button.SIZES.SMALL}
-						icon="list"
-						iconSize={16}
-						onClick={() => onViewModeChange("list")}
-						title={lang.t("List view")}
-					>
-						{lang.t("List")}
-					</Button>
-					<Button
-						variant={viewMode === "graph" ? "primary" : "ghost"}
-						size={Button.SIZES.SMALL}
-						icon="notes-graph"
-						iconSize={16}
-						onClick={() => onViewModeChange("graph")}
-						title={lang.t("Graph view")}
-					>
-						{lang.t("Graph")}
-					</Button>
-				</div>
-			</div>
-			{isListVisible && (
-				<CampaignNotesList
-					campaignSlug={campaign.slug}
-					view={view}
-					notes={notes}
-					onToggleIgnored={onToggleIgnored}
-				/>
-			)}
-			{isGraphVisible && (
-				<CampaignNotesGraph
-					campaign={campaign}
-					description={view.description}
-					notes={view.notes}
-					characters={view.characters}
-					npcs={view.npcs}
-					locations={view.locations}
-					sessions={view.sessions}
-					sessionDetails={view.sessionDetails}
-					isLoading={view.isGraphDataLoading}
-					error={view.graphDataError}
-					onLoadSessionDetails={view.loadSessionDetailsForGraph}
-					onSaveNote={view.handleGraphNoteSave}
-					onOpenSession={(fileName) => navigateTo(campaign.slug, fileName)}
-				/>
-			)}
-		</div>
-	);
-}
-
 type CampaignCollapseField =
 	| "isCharactersCollapsed"
 	| "isNpcsCollapsed"
@@ -543,7 +393,9 @@ function CampaignPageDialogs({
 	onClosePartialArchive,
 }: CampaignPageDialogsProps) {
 	const [isPartialArchiveBusy, setIsPartialArchiveBusy] = useState(false);
-	const exportPartialArchive = async (sections: string[]) => {
+	const exportPartialArchive = async (
+		sections: CampaignPartialArchiveSection[],
+	) => {
 		setIsPartialArchiveBusy(true);
 		try {
 			await view.handleExportPartial(sections);
@@ -551,7 +403,10 @@ function CampaignPageDialogs({
 			setIsPartialArchiveBusy(false);
 		}
 	};
-	const importPartialArchive = async (file: File, sections: string[]) => {
+	const importPartialArchive = async (
+		file: File,
+		sections: CampaignPartialArchiveSection[],
+	) => {
 		setIsPartialArchiveBusy(true);
 		try {
 			await view.handleImportPartial(file, sections);
@@ -719,11 +574,11 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 	}, [isHeaderActionsOpen]);
 
 	const handleNotesViewModeChange = (mode: CampaignNotesViewMode) => {
-		setNotesViewMode(mode);
-		if (isNotesCollapsed) {
-			view.setIsNotesCollapsed(false);
-			view.triggerSave({ isNotesCollapsed: false });
-		}
+		const plan = getCampaignNotesViewModePlan(mode, isNotesCollapsed);
+		setNotesViewMode(plan.viewMode);
+		if (!plan.collapsePatch) return;
+		view.setIsNotesCollapsed(plan.collapsePatch.isNotesCollapsed);
+		view.triggerSave(plan.collapsePatch);
 	};
 
 	const handleBulkNotesCollapse = (collapsed: boolean) => {

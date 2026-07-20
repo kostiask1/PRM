@@ -8,7 +8,7 @@ const HOTKEYS = [
 	"Ctrl+[ — Remove list",
 	"Ctrl+1-6 — Headings",
 	"Ctrl+Q — Quote",
-];
+] as const;
 
 export default function ProjectGuide() {
 	const featureGroups = [

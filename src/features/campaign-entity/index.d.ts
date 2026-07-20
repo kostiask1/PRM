@@ -27,9 +27,22 @@ export {
 export {
 	useCampaignEntityScopeMovement,
 	type CampaignEntityScopeMovement,
-	type CampaignEntitySession,
-	type ScopeImportModalState,
 } from "./model/useCampaignEntityScopeMovement.ts";
+export {
+	buildCampaignToSessionScopeMovePlan,
+	buildSessionToCampaignScopeMovePlan,
+	executeEntityScopeMove,
+	removeMovedCampaignEntityFromImport,
+	type CampaignEntitySession,
+	type CampaignToSessionScopeMovePlan,
+	type EntityScope,
+	type EntityScopeMovePlan,
+	type SessionToCampaignScopeMovePlan,
+	type ScopeImportModalState,
+	type ScopeMoveExecutionDependencies,
+	type ScopeMoveExecutionOutcome,
+	type SessionEntityRecord,
+} from "./model/scopeMovement.ts";
 export type {
 	CampaignEntityErrorHandler,
 	CampaignEntityNormalizer,

@@ -1,3 +1,5 @@
+import { getAiCharacterContextKey } from "../../../features/ai/index.js";
+
 export type AssistantTranslate = (
 	phrase: string,
 	variables?: Record<string, unknown>,
@@ -184,14 +186,6 @@ export function createAiAssistantPresentation({
 		).trim();
 	};
 
-	const getCharacterContextKey = (character: AssistantEntity): string =>
-		String(
-			character.slug ||
-				character.id ||
-				getCharacterDisplayName(character) ||
-				"",
-		).trim();
-
 	const getSceneImagePromptTitle = (
 		scene: AssistantEntity,
 		index: number,
@@ -283,7 +277,7 @@ export function createAiAssistantPresentation({
 	return {
 		formatResponseDate,
 		getAiResponseStateLabel,
-		getCharacterContextKey,
+		getCharacterContextKey: getAiCharacterContextKey,
 		getCharacterDisplayName,
 		getHistoryContextSummary,
 		getHistoryDetailRows,

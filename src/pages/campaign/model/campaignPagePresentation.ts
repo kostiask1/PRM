@@ -14,6 +14,20 @@ export type CampaignNotesViewMode = "list" | "graph";
 export type CampaignEntitySectionType = "characters" | "npc" | "locations";
 export type CampaignCharacterType = "characters" | "npc";
 export type CampaignHashTarget = "notes" | "characters" | "npc" | "locations";
+export type CampaignKeyboardAction = "undo" | "redo" | "none";
+
+export interface CampaignKeyboardTarget {
+	tagName?: unknown;
+	isContentEditable?: unknown;
+}
+
+export interface CampaignKeyboardInput {
+	code: string;
+	shiftKey: boolean;
+	isHistoryShortcut: boolean;
+	shouldUseAppHistory: boolean;
+	isEditableTarget: boolean;
+}
 
 export interface CampaignCharacterDropPayload {
 	kind?: string;
@@ -57,8 +71,77 @@ export interface CampaignSectionState {
 	isLocationsCollapsed: boolean;
 }
 
+export interface CampaignNotesSectionInput {
+	hasData: boolean;
+	isCollapsed: boolean;
+	viewMode: CampaignNotesViewMode;
+}
+
+export interface CampaignNotesSectionPresentation {
+	canToggleCollapse: boolean;
+	isListVisible: boolean;
+	isGraphVisible: boolean;
+	showBulkCollapse: boolean;
+	listButtonVariant: "primary" | "ghost";
+	graphButtonVariant: "primary" | "ghost";
+}
+
+export type CampaignNotesCollapsePatch = Partial<CampaignPageCampaign> & {
+	isNotesCollapsed: boolean;
+};
+
+export interface CampaignNotesViewModePlan {
+	viewMode: CampaignNotesViewMode;
+	collapsePatch: CampaignNotesCollapsePatch | null;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+export function isCampaignEditableTarget(
+	target: CampaignKeyboardTarget | null | undefined,
+): boolean {
+	return (
+		target?.tagName === "INPUT" ||
+		target?.tagName === "TEXTAREA" ||
+		Boolean(target?.isContentEditable)
+	);
+}
+
+function canRouteCampaignHistoryAction({
+	isHistoryShortcut,
+	shouldUseAppHistory,
+	isEditableTarget,
+}: Pick<
+	CampaignKeyboardInput,
+	"isHistoryShortcut" | "shouldUseAppHistory" | "isEditableTarget"
+>): boolean {
+	const targetAllowsAppHistory = !isEditableTarget || shouldUseAppHistory;
+	return isHistoryShortcut && targetAllowsAppHistory;
+}
+
+function getCampaignHistoryKeyAction(
+	code: string,
+	shiftKey: boolean,
+): CampaignKeyboardAction {
+	if (code === "KeyZ") return shiftKey ? "redo" : "undo";
+	return code === "KeyY" ? "redo" : "none";
+}
+
+export function getCampaignKeyboardAction({
+	code,
+	shiftKey,
+	isHistoryShortcut,
+	shouldUseAppHistory,
+	isEditableTarget,
+}: CampaignKeyboardInput): CampaignKeyboardAction {
+	const canRoute = canRouteCampaignHistoryAction({
+		isHistoryShortcut,
+		shouldUseAppHistory,
+		isEditableTarget,
+	});
+	return canRoute ? getCampaignHistoryKeyAction(code, shiftKey) : "none";
 }
 
 export function getCampaignPageCampaign(
@@ -125,6 +208,62 @@ export function getCampaignSectionState(
 	};
 }
 
+function isCampaignNotesModeVisible(
+	isCollapsed: boolean,
+	viewMode: CampaignNotesViewMode,
+	targetMode: CampaignNotesViewMode,
+): boolean {
+	return !isCollapsed && viewMode === targetMode;
+}
+
+function getCampaignNotesButtonVariant(
+	viewMode: CampaignNotesViewMode,
+	targetMode: CampaignNotesViewMode,
+): "primary" | "ghost" {
+	return viewMode === targetMode ? "primary" : "ghost";
+}
+
+export function getCampaignNotesSectionPresentation({
+	hasData,
+	isCollapsed,
+	viewMode,
+}: CampaignNotesSectionInput): CampaignNotesSectionPresentation {
+	const isListVisible = isCampaignNotesModeVisible(
+		isCollapsed,
+		viewMode,
+		"list",
+	);
+	return {
+		canToggleCollapse: hasData,
+		isListVisible,
+		isGraphVisible: isCampaignNotesModeVisible(
+			isCollapsed,
+			viewMode,
+			"graph",
+		),
+		showBulkCollapse: isListVisible,
+		listButtonVariant: getCampaignNotesButtonVariant(viewMode, "list"),
+		graphButtonVariant: getCampaignNotesButtonVariant(viewMode, "graph"),
+	};
+}
+
+export function getCampaignNotesCollapsePatch(
+	hasData: boolean,
+	isCollapsed: boolean,
+): CampaignNotesCollapsePatch | null {
+	return hasData ? { isNotesCollapsed: !isCollapsed } : null;
+}
+
+export function getCampaignNotesViewModePlan(
+	viewMode: CampaignNotesViewMode,
+	isCollapsed: boolean,
+): CampaignNotesViewModePlan {
+	return {
+		viewMode,
+		collapsePatch: isCollapsed ? { isNotesCollapsed: false } : null,
+	};
+}
+
 export function getCampaignHashTarget(hash: unknown): CampaignHashTarget | null {
 	const value = String(hash || "");
 	if (value.includes("campaign-note")) return "notes";
@@ -133,19 +272,50 @@ export function getCampaignHashTarget(hash: unknown): CampaignHashTarget | null 
 	return value.includes("campaign-location") ? "locations" : null;
 }
 
-function isCampaignCharacterType(value: unknown): value is CampaignCharacterType {
-	return value === "characters" || value === "npc";
+function getCampaignCharacterType(value: unknown): CampaignCharacterType | null {
+	if (value === "characters") return "characters";
+	return value === "npc" ? "npc" : null;
+}
+
+function getCampaignCharacterDropSourceType(
+	payload: CampaignCharacterDropPayload | null | undefined,
+): CampaignCharacterType | null {
+	return payload?.kind === "campaign-character"
+		? getCampaignCharacterType(payload.sourceType)
+		: null;
+}
+
+function getCampaignCharacterDropId(value: unknown): DomainId | null {
+	if (typeof value === "string") return value;
+	return typeof value === "number" ? value : null;
+}
+
+interface CampaignCharacterDropCandidate {
+	sourceType: CampaignCharacterType | null;
+	targetType: CampaignCharacterType | null;
+	id: DomainId | null;
+}
+
+function isCampaignCharacterDropRequest(
+	candidate: CampaignCharacterDropCandidate,
+): candidate is CampaignCharacterDropRequest {
+	return (
+		candidate.sourceType !== null &&
+		candidate.targetType !== null &&
+		candidate.id !== null
+	);
 }
 
 export function getCampaignCharacterDropRequest(
 	payload: CampaignCharacterDropPayload | null | undefined,
 	targetType: unknown,
 ): CampaignCharacterDropRequest | null {
-	if (payload?.kind !== "campaign-character") return null;
-	if (!isCampaignCharacterType(payload.sourceType)) return null;
-	if (!isCampaignCharacterType(targetType)) return null;
-	if (typeof payload.id !== "string" && typeof payload.id !== "number") return null;
-	return { sourceType: payload.sourceType, targetType, id: payload.id };
+	const candidate: CampaignCharacterDropCandidate = {
+		sourceType: getCampaignCharacterDropSourceType(payload),
+		targetType: getCampaignCharacterType(targetType),
+		id: getCampaignCharacterDropId(payload?.id),
+	};
+	return isCampaignCharacterDropRequest(candidate) ? candidate : null;
 }
 
 export function filterCampaignSessions(

@@ -1,15 +1,16 @@
 import {
 	$createTextNode,
 	$getSelection,
-	$isElementNode,
-	$isRangeSelection,
 	$isTextNode,
-	type BaseSelection,
-	type LexicalNode,
 	type TextNode,
 } from "lexical";
+import {
+	getMentionBeforeCollapsedSelection,
+	MENTION_BOUNDARY,
+	type IsMentionNode,
+} from "./mentionSelectionPolicy.ts";
 
-export const MENTION_BOUNDARY = "\u200B";
+export { MENTION_BOUNDARY } from "./mentionSelectionPolicy.ts";
 
 export interface MentionKeyboardEvent {
 	key: string;
@@ -17,42 +18,8 @@ export interface MentionKeyboardEvent {
 	preventDefault: () => void;
 }
 
-export type IsMentionNode = (
-	node: LexicalNode | null | undefined,
-) => node is LexicalNode;
-
 export function createMentionBoundaryNode(text = ""): TextNode {
 	return $createTextNode(`${MENTION_BOUNDARY}${text}`);
-}
-
-function getMentionBeforeCollapsedSelection(
-	selection: BaseSelection | null,
-	isMentionNode: IsMentionNode,
-): LexicalNode | null {
-	if (!$isRangeSelection(selection) || !selection.isCollapsed()) return null;
-
-	const anchorNode = selection.anchor.getNode();
-	const offset = selection.anchor.offset;
-	if (isMentionNode(anchorNode)) {
-		return offset >= anchorNode.getTextContentSize() ? anchorNode : null;
-	}
-
-	if ($isTextNode(anchorNode)) {
-		const previousSibling = anchorNode.getPreviousSibling();
-		const isAtMentionBoundary =
-			anchorNode.getTextContent().startsWith(MENTION_BOUNDARY) &&
-			offset <= MENTION_BOUNDARY.length;
-		if (offset === 0 || isAtMentionBoundary) {
-			return isMentionNode(previousSibling) ? previousSibling : null;
-		}
-	}
-
-	if ($isElementNode(anchorNode) && offset > 0) {
-		const previousChild = anchorNode.getChildAtIndex(offset - 1);
-		return isMentionNode(previousChild) ? previousChild : null;
-	}
-
-	return null;
 }
 
 export function handleSpaceAfterMention(

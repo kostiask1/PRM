@@ -51,6 +51,9 @@ export interface CampaignGraphNodeMeta extends Record<string, unknown> {
 	fileName?: string;
 	sourceSlug?: unknown;
 	parentId?: string;
+	scope?: string;
+	sceneId?: unknown;
+	isSimplifiedNote?: boolean;
 }
 
 export interface CampaignGraphNode extends Record<string, unknown> {
@@ -294,6 +297,487 @@ function sortNodesByPriority(
 	return left.label.localeCompare(right.label);
 }
 
+interface CampaignGraphProjectionCommands {
+	addNode(node: CampaignGraphNodeInput): CampaignGraphNode | undefined;
+	addEdge(
+		source: string | null | undefined,
+		target: string | null | undefined,
+		relation: string,
+		sourceInfo?: Record<string, unknown>,
+	): void;
+	queueMentionEdges(
+		sourceId: string,
+		sourceLabel: unknown,
+		mentions: GraphMention[],
+		sourceType: string,
+		propagateTo?: PendingMentionEdge["propagateTo"],
+	): void;
+}
+
+interface SessionGraphProjectionContext {
+	fileName: string;
+	sessionId: string;
+	label: unknown;
+	simplifiedNotes: boolean;
+}
+
+interface GraphNoteProjectionInput {
+	note: CampaignGraphRecord;
+	noteIndex: number;
+	nodeIdPrefix: string;
+	nodeType: "campaign-note" | "session-note" | "scene-note";
+	parentId: string;
+	parentType: "campaign" | "session" | "scene";
+	parentLabel: unknown;
+	fallbackLabel: string;
+	mentionField: "note" | "session.note" | "scene.note";
+	propagateTo: PendingMentionEdge["propagateTo"];
+	meta: CampaignGraphNodeMeta;
+	simplifiedNotes: boolean;
+}
+
+function getGraphNoteLabel(input: GraphNoteProjectionInput): string {
+	const { note, fallbackLabel, simplifiedNotes } = input;
+	if (!simplifiedNotes) {
+		const title = String(note.title || "").trim();
+		if (title) return title;
+	}
+	return excerpt(note.text, 48, { stripMarkdown: true }) || fallbackLabel;
+}
+
+function createGraphNoteNode(
+	input: GraphNoteProjectionInput,
+	noteId: string,
+	noteLabel: string,
+): CampaignGraphNodeInput {
+	const { note, nodeType, parentId, meta, simplifiedNotes } = input;
+	return {
+		id: noteId,
+		type: nodeType,
+		label: noteLabel,
+		summary: excerpt(note.text || note.title, 160, { stripMarkdown: true }),
+		detailText: note.text || "",
+		aliases: simplifiedNotes ? [] : [note.title].filter(Boolean),
+		sourceId: note.id,
+		meta: {
+			...meta,
+			parentId,
+			isSimplifiedNote: Boolean(simplifiedNotes),
+		},
+	};
+}
+
+function projectGraphNote(
+	{
+		note,
+		noteIndex,
+		nodeIdPrefix,
+		nodeType,
+		parentId,
+		parentType,
+		parentLabel,
+		fallbackLabel,
+		mentionField,
+		propagateTo,
+		meta,
+		simplifiedNotes,
+	}: GraphNoteProjectionInput,
+	commands: CampaignGraphProjectionCommands,
+): void {
+	if (!note || note._isVirtual || isEmptyNote(note)) return;
+	const noteId = `${nodeIdPrefix}:${encodedPart(note.id ?? noteIndex)}`;
+	const noteLabel = getGraphNoteLabel({
+		note,
+		noteIndex,
+		nodeIdPrefix,
+		nodeType,
+		parentId,
+		parentType,
+		parentLabel,
+		fallbackLabel,
+		mentionField,
+		propagateTo,
+		meta,
+		simplifiedNotes,
+	});
+	commands.addNode(
+		createGraphNoteNode(
+			{
+				note,
+				noteIndex,
+				nodeIdPrefix,
+				nodeType,
+				parentId,
+				parentType,
+				parentLabel,
+				fallbackLabel,
+				mentionField,
+				propagateTo,
+				meta,
+				simplifiedNotes,
+			},
+			noteId,
+			noteLabel,
+		),
+	);
+	commands.addEdge(parentId, noteId, "contains", {
+		type: parentType,
+		label: parentLabel,
+		field: "notes",
+	});
+	commands.queueMentionEdges(
+		noteId,
+		noteLabel,
+		getMentionsFromValue(note, mentionField),
+		nodeType,
+		propagateTo,
+	);
+}
+
+function projectCampaignNote(
+	note: CampaignGraphRecord,
+	noteIndex: number,
+	campaignId: string,
+	campaignLabel: unknown,
+	simplifiedNotes: boolean,
+	commands: CampaignGraphProjectionCommands,
+): void {
+	projectGraphNote(
+		{
+			note,
+			noteIndex,
+			nodeIdPrefix: "campaign-note",
+			nodeType: "campaign-note",
+			parentId: campaignId,
+			parentType: "campaign",
+			parentLabel: campaignLabel,
+			fallbackLabel: `Note ${noteIndex + 1}`,
+			mentionField: "note",
+			propagateTo: [{ sourceId: campaignId, sourceLabel: campaignLabel }],
+			meta: {},
+			simplifiedNotes,
+		},
+		commands,
+	);
+}
+
+function projectSessionNpc(
+	npc: CampaignGraphRecord,
+	npcIndex: number,
+	context: SessionGraphProjectionContext,
+	commands: CampaignGraphProjectionCommands,
+): void {
+	const npcLabel = getCharacterLabel(npc, `NPC ${npcIndex + 1}`);
+	const npcId = `session-npc:${encodedPart(context.fileName)}:${encodedPart(npc.id ?? npc.slug ?? npcIndex)}`;
+	commands.addNode({
+		id: npcId,
+		type: "npc",
+		label: npcLabel,
+		summary: excerpt(
+			[npc.race, npc.class, npc.description, npc.motivation, npc.trait]
+				.filter(Boolean)
+				.join(" "),
+		),
+		detailText: [npc.description, npc.motivation, npc.trait]
+			.filter(Boolean)
+			.join("\n\n"),
+		aliases: [npcLabel, npc.firstName, npc.name, npc.title].filter(Boolean),
+		sourceId: npc.id,
+		sourceSlug: npc.slug,
+		meta: {
+			fileName: context.fileName,
+			parentId: context.sessionId,
+			scope: "session",
+			sourceSlug: npc.slug,
+		},
+	});
+	commands.addEdge(context.sessionId, npcId, "contains", {
+		type: "session",
+		label: context.label,
+		field: "npcs",
+	});
+	commands.queueMentionEdges(
+		npcId,
+		npcLabel,
+		getMentionsFromValue(npc, "npc"),
+		"npc",
+	);
+}
+
+function projectSessionLocation(
+	location: CampaignGraphRecord,
+	locationIndex: number,
+	context: SessionGraphProjectionContext,
+	commands: CampaignGraphProjectionCommands,
+): void {
+	const locationLabel = getLocationLabel(
+		location,
+		`Location ${locationIndex + 1}`,
+	);
+	const locationId = `session-location:${encodedPart(context.fileName)}:${encodedPart(location.id ?? location.slug ?? locationIndex)}`;
+	commands.addNode({
+		id: locationId,
+		type: "location",
+		label: locationLabel,
+		summary: excerpt(location.description),
+		detailText: location.description || "",
+		aliases: [locationLabel, location.name, location.title].filter(Boolean),
+		sourceId: location.id,
+		sourceSlug: location.slug,
+		meta: {
+			fileName: context.fileName,
+			parentId: context.sessionId,
+			scope: "session",
+			sourceSlug: location.slug,
+		},
+	});
+	commands.addEdge(context.sessionId, locationId, "contains", {
+		type: "session",
+		label: context.label,
+		field: "locations",
+	});
+	commands.queueMentionEdges(
+		locationId,
+		locationLabel,
+		getMentionsFromValue(location, "location"),
+		"location",
+	);
+}
+
+function projectSessionNote(
+	note: CampaignGraphRecord,
+	noteIndex: number,
+	context: SessionGraphProjectionContext,
+	commands: CampaignGraphProjectionCommands,
+): void {
+	projectGraphNote(
+		{
+			note,
+			noteIndex,
+			nodeIdPrefix: `session-note:${encodedPart(context.fileName)}`,
+			nodeType: "session-note",
+			parentId: context.sessionId,
+			parentType: "session",
+			parentLabel: context.label,
+			fallbackLabel: `${context.label} note ${noteIndex + 1}`,
+			mentionField: "session.note",
+			propagateTo: [
+				{ sourceId: context.sessionId, sourceLabel: context.label },
+			],
+			meta: { fileName: context.fileName },
+			simplifiedNotes: context.simplifiedNotes,
+		},
+		commands,
+	);
+}
+
+function projectSceneNote(
+	note: CampaignGraphRecord,
+	noteIndex: number,
+	scene: CampaignGraphRecord,
+	sceneIndex: number,
+	sceneId: string,
+	sceneLabel: string,
+	sceneName: string,
+	context: SessionGraphProjectionContext,
+	commands: CampaignGraphProjectionCommands,
+): void {
+	projectGraphNote(
+		{
+			note,
+			noteIndex,
+			nodeIdPrefix: `scene-note:${encodedPart(context.fileName)}:${encodedPart(scene.id ?? sceneIndex)}`,
+			nodeType: "scene-note",
+			parentId: sceneId,
+			parentType: "scene",
+			parentLabel: sceneLabel,
+			fallbackLabel: `${sceneName} note ${noteIndex + 1}`,
+			mentionField: "scene.note",
+			propagateTo: [
+				{ sourceId: sceneId, sourceLabel: sceneLabel },
+				{ sourceId: context.sessionId, sourceLabel: context.label },
+			],
+			meta: {
+				fileName: context.fileName,
+				sceneId: scene.id,
+				sceneNumber: sceneIndex + 1,
+			},
+			simplifiedNotes: context.simplifiedNotes,
+		},
+		commands,
+	);
+}
+
+function projectSessionScene(
+	scene: CampaignGraphRecord,
+	sceneIndex: number,
+	context: SessionGraphProjectionContext,
+	commands: CampaignGraphProjectionCommands,
+): string {
+	const sceneId = `scene:${encodedPart(context.fileName)}:${encodedPart(scene.id ?? sceneIndex)}`;
+	const sceneName = `Scene ${sceneIndex + 1}`;
+	const sceneLabel = `${context.label}: ${sceneName}`;
+	const sceneSummary = excerpt(
+		[
+			scene.texts?.summary,
+			scene.texts?.goal,
+			scene.texts?.location,
+			scene.texts?.stakes,
+		]
+			.filter(Boolean)
+			.join(" "),
+	);
+	commands.addNode({
+		id: sceneId,
+		type: "scene",
+		label: sceneLabel,
+		summary: sceneSummary,
+		detailText: Object.values(scene.texts || {})
+			.filter(Boolean)
+			.join("\n\n"),
+		aliases: [sceneName, `${context.label} ${sceneName}`],
+		sourceId: scene.id,
+		meta: {
+			fileName: context.fileName,
+			parentId: context.sessionId,
+			sceneNumber: sceneIndex + 1,
+		},
+	});
+	commands.addEdge(context.sessionId, sceneId, "contains", {
+		type: "session",
+		label: context.label,
+		field: "scenes",
+	});
+	commands.queueMentionEdges(
+		sceneId,
+		sceneLabel,
+		getMentionsFromValue(scene.texts || scene, "scene"),
+		"scene",
+		[{ sourceId: context.sessionId, sourceLabel: context.label }],
+	);
+	(scene.notes || []).forEach((note, noteIndex) => {
+		projectSceneNote(
+			note,
+			noteIndex,
+			scene,
+			sceneIndex,
+			sceneId,
+			sceneLabel,
+			sceneName,
+			context,
+			commands,
+		);
+	});
+	return sceneId;
+}
+
+function projectSessionScenes(
+	scenes: CampaignGraphRecord[],
+	context: SessionGraphProjectionContext,
+	commands: CampaignGraphProjectionCommands,
+): void {
+	const sceneNodeIds = scenes.map((scene, sceneIndex) =>
+		projectSessionScene(scene, sceneIndex, context, commands),
+	);
+	sceneNodeIds.forEach((sceneId, sceneIndex) => {
+		const nextSceneId = sceneNodeIds[sceneIndex + 1];
+		if (!nextSceneId) return;
+		commands.addEdge(sceneId, nextSceneId, "sequence", {
+			type: "session",
+			label: context.label,
+			field: "scenes",
+		});
+	});
+}
+
+interface CampaignSessionProjection {
+	detail: CampaignGraphRecord | null;
+	sessionData: CampaignGraphRecord;
+	context: SessionGraphProjectionContext;
+}
+
+function createCampaignSessionProjection(
+	session: CampaignGraphRecord,
+	index: number,
+	input: Pick<CampaignGraphInput, "sessionDetails" | "simplifiedNotes">,
+): CampaignSessionProjection {
+	const fileName = session.fileName || `session-${index}`;
+	const detail = getSessionDetail(input.sessionDetails, fileName);
+	const sessionData = detail?.data || {};
+	return {
+		detail,
+		sessionData,
+		context: {
+			fileName,
+			sessionId: `session:${encodedPart(fileName)}`,
+			label: session.name || detail?.name || `Session ${index + 1}`,
+			simplifiedNotes: Boolean(input.simplifiedNotes),
+		},
+	};
+}
+
+function createCampaignSessionNode(
+	session: CampaignGraphRecord,
+	projection: CampaignSessionProjection,
+): CampaignGraphNodeInput {
+	const { context, detail, sessionData } = projection;
+	return {
+		id: context.sessionId,
+		type: "session",
+		label: context.label,
+		summary: excerpt(sessionData.result_text || detail?.name || session.name),
+		detailText: sessionData.result_text || "",
+		aliases: [session.name, detail?.name, context.fileName].filter(Boolean),
+		sourceId: detail?.id || session.id,
+		meta: { fileName: context.fileName },
+	};
+}
+
+function projectCampaignSessionDetail(
+	projection: CampaignSessionProjection,
+	commands: CampaignGraphProjectionCommands,
+): void {
+	const { context, sessionData } = projection;
+	commands.queueMentionEdges(
+		context.sessionId,
+		context.label,
+		getMentionsFromValue(sessionData.result_text || "", "result_text"),
+		"session",
+	);
+	(sessionData.npcs || []).forEach((npc, npcIndex) =>
+		projectSessionNpc(npc, npcIndex, context, commands),
+	);
+	(sessionData.locations || []).forEach((location, locationIndex) =>
+		projectSessionLocation(location, locationIndex, context, commands),
+	);
+	(sessionData.notes || []).forEach((note, noteIndex) =>
+		projectSessionNote(note, noteIndex, context, commands),
+	);
+	projectSessionScenes(sessionData.scenes || [], context, commands);
+}
+
+function projectCampaignSession(
+	session: CampaignGraphRecord,
+	index: number,
+	input: Pick<CampaignGraphInput, "sessionDetails" | "simplifiedNotes">,
+	campaignId: string,
+	campaignLabel: unknown,
+	commands: CampaignGraphProjectionCommands,
+): void {
+	const projection = createCampaignSessionProjection(session, index, input);
+	commands.addNode(createCampaignSessionNode(session, projection));
+	commands.addEdge(campaignId, projection.context.sessionId, "contains", {
+		type: "campaign",
+		label: campaignLabel,
+		field: "sessions",
+	});
+	if (projection.detail) projectCampaignSessionDetail(projection, commands);
+}
+
+function getCampaignSourceLabel(campaign: CampaignGraphRecord): unknown {
+	return campaign.name || campaign.slug;
+}
+
 export function buildCampaignGraph({
 	campaign = {},
 	description = "",
@@ -310,6 +794,7 @@ export function buildCampaignGraph({
 	const edgesById = new Map<string, CampaignGraphEdge>();
 	const pendingMentionEdges: PendingMentionEdge[] = [];
 	const campaignId = `campaign:${encodedPart(campaign.slug || "current")}`;
+	const campaignSourceLabel = getCampaignSourceLabel(campaign);
 
 	const addNode = (node: CampaignGraphNodeInput): CampaignGraphNode | undefined => {
 		if (!node.id || nodesById.has(node.id)) return nodesById.get(node.id);
@@ -471,11 +956,16 @@ export function buildCampaignGraph({
 			propagateTo,
 		});
 	};
+	const projectionCommands: CampaignGraphProjectionCommands = {
+		addNode,
+		addEdge,
+		queueMentionEdges,
+	};
 
 	addNode({
 		id: campaignId,
 		type: "campaign",
-		label: campaign.name || campaign.slug || "Campaign",
+		label: campaignSourceLabel || "Campaign",
 		summary: excerpt(description),
 		detailText: description,
 		aliases: [campaign.name, campaign.slug].filter(Boolean),
@@ -487,42 +977,19 @@ export function buildCampaignGraph({
 	const campaignMentions = getMentionsFromValue(description, "description");
 	queueMentionEdges(
 		campaignId,
-		campaign.name || campaign.slug,
+		campaignSourceLabel,
 		campaignMentions,
 		"campaign",
 	);
 
 	(notes || []).forEach((note, index) => {
-		if (!note || note._isVirtual || isEmptyNote(note)) return;
-		const noteId = `campaign-note:${encodedPart(note.id ?? index)}`;
-		const noteLabel =
-			(!simplifiedNotes && String(note.title || "").trim()) ||
-			excerpt(note.text, 48, { stripMarkdown: true }) ||
-			`Note ${index + 1}`;
-		addNode({
-			id: noteId,
-			type: "campaign-note",
-			label: noteLabel,
-			summary: excerpt(note.text || note.title, 160, { stripMarkdown: true }),
-			detailText: note.text || "",
-			aliases: simplifiedNotes ? [] : [note.title].filter(Boolean),
-			sourceId: note.id,
-			meta: {
-				parentId: campaignId,
-				isSimplifiedNote: Boolean(simplifiedNotes),
-			},
-		});
-		addEdge(campaignId, noteId, "contains", {
-			type: "campaign",
-			label: campaign.name || campaign.slug,
-			field: "notes",
-		});
-		queueMentionEdges(
-			noteId,
-			noteLabel,
-			getMentionsFromValue(note, "note"),
-			"campaign-note",
-			[{ sourceId: campaignId, sourceLabel: campaign.name || campaign.slug }],
+		projectCampaignNote(
+			note,
+			index,
+			campaignId,
+			campaignSourceLabel,
+			Boolean(simplifiedNotes),
+			projectionCommands,
 		);
 	});
 
@@ -561,7 +1028,7 @@ export function buildCampaignGraph({
 		});
 		addEdge(campaignId, characterId, "contains", {
 			type: "campaign",
-			label: campaign.name || campaign.slug,
+			label: campaignSourceLabel,
 			field: "characters",
 		});
 		queueMentionEdges(
@@ -596,7 +1063,7 @@ export function buildCampaignGraph({
 		});
 		addEdge(campaignId, npcId, "contains", {
 			type: "campaign",
-			label: campaign.name || campaign.slug,
+			label: campaignSourceLabel,
 			field: "npc",
 		});
 		queueMentionEdges(npcId, label, getMentionsFromValue(npc, "npc"), "npc");
@@ -620,7 +1087,7 @@ export function buildCampaignGraph({
 		});
 		addEdge(campaignId, locationId, "contains", {
 			type: "campaign",
-			label: campaign.name || campaign.slug,
+			label: campaignSourceLabel,
 			field: "locations",
 		});
 		queueMentionEdges(
@@ -632,250 +1099,15 @@ export function buildCampaignGraph({
 	});
 
 	(sessions || []).forEach((session, index) => {
-		const fileName = session.fileName || `session-${index}`;
-		const sessionId = `session:${encodedPart(fileName)}`;
-		const detail = getSessionDetail(sessionDetails, fileName);
-		const sessionData = detail?.data || {};
-		const label = session.name || detail?.name || `Session ${index + 1}`;
-
-		addNode({
-			id: sessionId,
-			type: "session",
-			label,
-			summary: excerpt(sessionData.result_text || detail?.name || session.name),
-			detailText: sessionData.result_text || "",
-			aliases: [session.name, detail?.name, fileName].filter(Boolean),
-			sourceId: detail?.id || session.id,
-			meta: {
-				fileName,
-			},
-		});
-		addEdge(campaignId, sessionId, "contains", {
-			type: "campaign",
-			label: campaign.name || campaign.slug,
-			field: "sessions",
-		});
-
-		if (!detail) return;
-
-		const resultMentions = getMentionsFromValue(
-			sessionData.result_text || "",
-			"result_text",
+		projectCampaignSession(
+			session,
+			index,
+			{ sessionDetails, simplifiedNotes },
+			campaignId,
+			campaignSourceLabel,
+			projectionCommands,
 		);
-		queueMentionEdges(sessionId, label, resultMentions, "session");
-
-		(sessionData.npcs || []).forEach((npc, npcIndex) => {
-			const npcLabel = getCharacterLabel(npc, `NPC ${npcIndex + 1}`);
-			const npcId = `session-npc:${encodedPart(fileName)}:${encodedPart(npc.id ?? npc.slug ?? npcIndex)}`;
-			addNode({
-				id: npcId,
-				type: "npc",
-				label: npcLabel,
-				summary: excerpt(
-					[npc.race, npc.class, npc.description, npc.motivation, npc.trait]
-						.filter(Boolean)
-						.join(" "),
-				),
-				detailText: [npc.description, npc.motivation, npc.trait]
-					.filter(Boolean)
-					.join("\n\n"),
-				aliases: [npcLabel, npc.firstName, npc.name, npc.title].filter(Boolean),
-				sourceId: npc.id,
-				sourceSlug: npc.slug,
-				meta: {
-					fileName,
-					parentId: sessionId,
-					scope: "session",
-					sourceSlug: npc.slug,
-				},
-			});
-			addEdge(sessionId, npcId, "contains", {
-				type: "session",
-				label,
-				field: "npcs",
-			});
-			queueMentionEdges(
-				npcId,
-				npcLabel,
-				getMentionsFromValue(npc, "npc"),
-				"npc",
-			);
-		});
-
-		(sessionData.locations || []).forEach((location, locationIndex) => {
-			const locationLabel = getLocationLabel(
-				location,
-				`Location ${locationIndex + 1}`,
-			);
-			const locationId = `session-location:${encodedPart(fileName)}:${encodedPart(location.id ?? location.slug ?? locationIndex)}`;
-			addNode({
-				id: locationId,
-				type: "location",
-				label: locationLabel,
-				summary: excerpt(location.description),
-				detailText: location.description || "",
-				aliases: [locationLabel, location.name, location.title].filter(Boolean),
-				sourceId: location.id,
-				sourceSlug: location.slug,
-				meta: {
-					fileName,
-					parentId: sessionId,
-					scope: "session",
-					sourceSlug: location.slug,
-				},
-			});
-			addEdge(sessionId, locationId, "contains", {
-				type: "session",
-				label,
-				field: "locations",
-			});
-			queueMentionEdges(
-				locationId,
-				locationLabel,
-				getMentionsFromValue(location, "location"),
-				"location",
-			);
-		});
-
-		(sessionData.notes || []).forEach((note, noteIndex) => {
-			if (!note || note._isVirtual || isEmptyNote(note)) return;
-			const sessionNoteId = `session-note:${encodedPart(fileName)}:${encodedPart(note.id ?? noteIndex)}`;
-			const sessionNoteLabel =
-				(!simplifiedNotes && String(note.title || "").trim()) ||
-				excerpt(note.text, 48, { stripMarkdown: true }) ||
-				`${label} note ${noteIndex + 1}`;
-			addNode({
-				id: sessionNoteId,
-				type: "session-note",
-				label: sessionNoteLabel,
-				summary: excerpt(note.text || note.title, 160, {
-					stripMarkdown: true,
-				}),
-				detailText: note.text || "",
-				aliases: simplifiedNotes ? [] : [note.title].filter(Boolean),
-				sourceId: note.id,
-				meta: {
-					fileName,
-					parentId: sessionId,
-					isSimplifiedNote: Boolean(simplifiedNotes),
-				},
-			});
-			addEdge(sessionId, sessionNoteId, "contains", {
-				type: "session",
-				label,
-				field: "notes",
-			});
-			const sessionNoteMentions = getMentionsFromValue(note, "session.note");
-			queueMentionEdges(
-				sessionNoteId,
-				sessionNoteLabel,
-				sessionNoteMentions,
-				"session-note",
-				[{ sourceId: sessionId, sourceLabel: label }],
-			);
-		});
-
-		const sceneNodeIds: string[] = [];
-		(sessionData.scenes || []).forEach((scene, sceneIndex) => {
-			const sceneId = `scene:${encodedPart(fileName)}:${encodedPart(scene.id ?? sceneIndex)}`;
-			const sceneName = `Scene ${sceneIndex + 1}`;
-			sceneNodeIds.push(sceneId);
-			const sceneSummary = excerpt(
-				[
-					scene?.texts?.summary,
-					scene?.texts?.goal,
-					scene?.texts?.location,
-					scene?.texts?.stakes,
-				]
-					.filter(Boolean)
-					.join(" "),
-			);
-
-			addNode({
-				id: sceneId,
-				type: "scene",
-				label: `${label}: ${sceneName}`,
-				summary: sceneSummary,
-				detailText: Object.values(scene?.texts || {})
-					.filter(Boolean)
-					.join("\n\n"),
-				aliases: [sceneName, `${label} ${sceneName}`],
-				sourceId: scene.id,
-				meta: {
-					fileName,
-					parentId: sessionId,
-					sceneNumber: sceneIndex + 1,
-				},
-			});
-			addEdge(sessionId, sceneId, "contains", {
-				type: "session",
-				label,
-				field: "scenes",
-			});
-			const sceneMentions = getMentionsFromValue(scene.texts || scene, "scene");
-			queueMentionEdges(
-				sceneId,
-				`${label}: ${sceneName}`,
-				sceneMentions,
-				"scene",
-				[{ sourceId: sessionId, sourceLabel: label }],
-			);
-
-			(scene.notes || []).forEach((note, noteIndex) => {
-				if (!note || note._isVirtual || isEmptyNote(note)) return;
-				const sceneNoteId = `scene-note:${encodedPart(fileName)}:${encodedPart(scene.id ?? sceneIndex)}:${encodedPart(note.id ?? noteIndex)}`;
-				const sceneNoteLabel =
-					(!simplifiedNotes && String(note.title || "").trim()) ||
-					excerpt(note.text, 48, { stripMarkdown: true }) ||
-					`${sceneName} note ${noteIndex + 1}`;
-				addNode({
-					id: sceneNoteId,
-					type: "scene-note",
-					label: sceneNoteLabel,
-					summary: excerpt(note.text || note.title, 160, {
-						stripMarkdown: true,
-					}),
-					detailText: note.text || "",
-					aliases: simplifiedNotes ? [] : [note.title].filter(Boolean),
-					sourceId: note.id,
-					meta: {
-						fileName,
-						parentId: sceneId,
-						sceneId: scene.id,
-						sceneNumber: sceneIndex + 1,
-						isSimplifiedNote: Boolean(simplifiedNotes),
-					},
-				});
-				addEdge(sceneId, sceneNoteId, "contains", {
-					type: "scene",
-					label: `${label}: ${sceneName}`,
-					field: "notes",
-				});
-				const sceneNoteMentions = getMentionsFromValue(note, "scene.note");
-				queueMentionEdges(
-					sceneNoteId,
-					sceneNoteLabel,
-					sceneNoteMentions,
-					"scene-note",
-					[
-						{ sourceId: sceneId, sourceLabel: `${label}: ${sceneName}` },
-						{ sourceId: sessionId, sourceLabel: label },
-					],
-				);
-			});
-		});
-
-		sceneNodeIds.forEach((sceneId, sceneIndex) => {
-			const nextSceneId = sceneNodeIds[sceneIndex + 1];
-			if (!nextSceneId) return;
-			addEdge(sceneId, nextSceneId, "sequence", {
-				type: "session",
-				label,
-				field: "scenes",
-			});
-		});
 	});
-
 	pendingMentionEdges.forEach((entry) => {
 		addMentionEdges(
 			entry.sourceId,

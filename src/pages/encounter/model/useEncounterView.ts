@@ -55,6 +55,15 @@ import type {
 	MonsterAiUpdateOptions,
 } from "./contracts.ts";
 import { calculateInitiativeStats } from "./encounterViewMetrics.ts";
+import {
+	applyEncounterDiceHpResult,
+	getEncounterHistoryAction,
+	getEncounterNavigationAction,
+	getSelectedEncounterParticipant,
+	normalizeEncounterViewState,
+	replaceEncounterMonsterFromAi,
+	shouldReloadEncounterFromSync,
+} from "./encounterPagePresentation.ts";
 
 interface ActiveCampaign {
 	slug: string;
@@ -86,6 +95,22 @@ function cloneEncounterSnapshot<T>(value: T): T {
 	if (!value) return value;
 	if (typeof structuredClone === "function") return structuredClone(value);
 	return JSON.parse(JSON.stringify(value));
+}
+
+function getEncounterKeyboardInput(event: KeyboardEvent, showBestiary: boolean) {
+	const target = event.target instanceof HTMLElement ? event.target : null;
+	return {
+		key: event.key,
+		code: event.code,
+		shiftKey: event.shiftKey,
+		isEditableTarget:
+			target?.tagName === "INPUT" ||
+			target?.tagName === "TEXTAREA" ||
+			Boolean(target?.isContentEditable),
+		isHistoryShortcut: isHistoryShortcutEvent(event),
+		shouldUseAppHistory: shouldUseAppHistoryForEvent(event),
+		showBestiary,
+	};
 }
 
 export default function useEncounterView(): EncounterViewModel {
@@ -157,24 +182,13 @@ export default function useEncounterView(): EncounterViewModel {
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (document.querySelector(".Modal__overlay")) return;
-			const target = e.target instanceof HTMLElement ? e.target : null;
-			const isInput =
-				target?.tagName === "INPUT" ||
-				target?.tagName === "TEXTAREA" ||
-				Boolean(target?.isContentEditable);
-
-			if (e.key === "Escape" && showBestiary) {
-				setShowBestiary(false);
-			} else if (e.key === "Backspace" || e.key === "Escape") {
-				if (!isInput) {
-					e.preventDefault();
-					if (showBestiary) {
-						setShowBestiary(false);
-					} else {
-						handleBack();
-					}
-				}
-			}
+			const action = getEncounterNavigationAction(
+				getEncounterKeyboardInput(e, showBestiary),
+			);
+			if (action === "none") return;
+			e.preventDefault();
+			if (action === "close-bestiary") setShowBestiary(false);
+			if (action === "back") handleBack();
 		};
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
@@ -227,31 +241,25 @@ export default function useEncounterView(): EncounterViewModel {
 	}, [loadEncounter]);
 
 	useEffect(() => {
-		if (!syncEvent?.version) return;
-		if (syncEvent.campaignSlug && syncEvent.campaignSlug !== campaign.slug) {
-			return;
-		}
 		if (
-			syncEvent.sessionFileName &&
-			String(syncEvent.sessionFileName) !== String(sessionId)
+			shouldReloadEncounterFromSync(
+				syncEvent,
+				campaign.slug,
+				sessionId,
+				hasPendingSave(),
+			)
 		) {
-			return;
+			loadEncounter({ resetHistory: false });
 		}
-		if (!["sessions", "ai", "import"].includes(String(syncEvent.resource || ""))) return;
-		if (hasPendingSave()) return;
-
-		loadEncounter({ resetHistory: false });
 	}, [campaign.slug, hasPendingSave, loadEncounter, sessionId, syncEvent]);
 
 	const syncSelectedInstance = useCallback(
 		(nextEncounter: EncounterViewState | null, preferredId: string | null = null) => {
 			setSelectedInstance((prev) => {
-				if (!nextEncounter?.monsters?.length) return null;
-				const targetId = preferredId || prev?.instanceId;
-				if (!targetId) return nextEncounter.monsters[0];
-				return (
-				nextEncounter.monsters.find((m) => m.instanceId === targetId) ||
-					nextEncounter.monsters[0]
+				return getSelectedEncounterParticipant(
+					nextEncounter,
+					preferredId,
+					prev?.instanceId,
 				);
 			});
 		},
@@ -270,11 +278,7 @@ export default function useEncounterView(): EncounterViewModel {
 		) => {
 			if (!nextEncounter) return;
 			const current = encounterRef.current;
-			const normalizedNext: EncounterViewState = {
-				...nextEncounter,
-				name: String(nextEncounter.name || current?.name || ""),
-				monsters: (nextEncounter.monsters || []) as EncounterViewParticipant[],
-			};
+			const normalizedNext = normalizeEncounterViewState(nextEncounter, current);
 
 			if (pushUndo && current && !isUpdatingHistoryRef.current) {
 				setUndoStack((prev) =>
@@ -356,33 +360,18 @@ export default function useEncounterView(): EncounterViewModel {
 	useEffect(() => {
 		const handleHistoryShortcuts = (e: KeyboardEvent) => {
 			if (document.querySelector(".Modal__overlay")) return;
-
-			const target = e.target instanceof HTMLElement ? e.target : null;
-			const isInput =
-				target?.tagName === "INPUT" ||
-				target?.tagName === "TEXTAREA" ||
-				Boolean(target?.isContentEditable);
-			if (isInput && !shouldUseAppHistoryForEvent(e)) return;
-
-			if (isHistoryShortcutEvent(e) && e.code === "KeyZ") {
-				e.preventDefault();
-				if (e.shiftKey) {
-					handleRedo();
-				} else {
-					handleUndo();
-				}
-				return;
-			}
-
-			if (isHistoryShortcutEvent(e) && e.code === "KeyY") {
-				e.preventDefault();
-				handleRedo();
-			}
+			const action = getEncounterHistoryAction(
+				getEncounterKeyboardInput(e, showBestiary),
+			);
+			if (action === "none") return;
+			e.preventDefault();
+			if (action === "undo") handleUndo();
+			if (action === "redo") handleRedo();
 		};
 
 		window.addEventListener("keydown", handleHistoryShortcuts);
 		return () => window.removeEventListener("keydown", handleHistoryShortcuts);
-	}, [handleUndo, handleRedo]);
+	}, [handleUndo, handleRedo, showBestiary]);
 
 	const handleAiUpdate = useCallback(
 		(updatedSession: EncounterViewSession | null) => {
@@ -517,38 +506,12 @@ export default function useEncounterView(): EncounterViewModel {
 			options: MonsterAiUpdateOptions = {},
 		) => {
 			if (!encounter || !nextMonster) return;
-			const updatedMonsters = encounter.monsters.map((monster) => {
-				if (monster.instanceId !== instanceId) return monster;
-				const nextMaxHp =
-					parseInt(String(nextMonster.hit_points ?? (nextMonster.hp as { average?: unknown } | undefined)?.average ?? ""), 10) ||
-					parseInt(String(monster.hit_points ?? ""), 10) ||
-					0;
-				const parsedCurrentHp =
-					options.preserveCurrentHp === false &&
-					nextMonster.currentHp !== undefined
-						? parseInt(String(nextMonster.currentHp), 10)
-						: monster.currentHp;
-				const nextCurrentHp = Number.isFinite(parsedCurrentHp)
-					? parsedCurrentHp
-					: nextMaxHp;
-				return {
-					...ensureEncounterMonsterId(nextMonster),
-					instanceId,
-					...(options.localOverride
-						? {
-								source: monster.source,
-								originalBestiaryName:
-									monster.originalBestiaryName ||
-									nextMonster.originalBestiaryName ||
-									nextMonster.name,
-							}
-						: {}),
-					...(options.localOverride ? { _localOverride: true } : {}),
-					currentHp: Math.min(Number(nextCurrentHp), nextMaxHp),
-					hit_points: nextMaxHp,
-				};
-			});
-			const updated = { ...encounter, monsters: updatedMonsters };
+			const updated = replaceEncounterMonsterFromAi(
+				encounter,
+				instanceId,
+				nextMonster,
+				options,
+			);
 			applyEncounterUpdate(updated, { preferredId: instanceId });
 		},
 		[encounter, applyEncounterUpdate],
@@ -715,32 +678,18 @@ export default function useEncounterView(): EncounterViewModel {
 		if (!resultId || processedDiceResultIdRef.current === resultId) return;
 
 		processedDiceResultIdRef.current = resultId;
-		const result = diceRolledResult?.result;
-		const context = diceRolledResult?.context;
-		if (!result || !context) return;
-		if (context.kind !== "encounter_hp") return;
-		if (context.campaignSlug !== campaign.slug) return;
-		if (String(context.sessionId) !== String(sessionId)) return;
-		if (String(context.encounterId) !== String(encounterId)) return;
-
-		const rolledHp = Math.max(1, Number(result.total) || 0);
-		if (!rolledHp) return;
-
-		if (!encounter) return;
-		let updatedMonster = null;
-		const updatedMonsters = encounter.monsters.map((monster) => {
-			if (monster.instanceId !== context.instanceId) return monster;
-			updatedMonster = {
-				...monster,
-				hit_points: rolledHp,
-				currentHp: rolledHp,
-			};
-			return updatedMonster;
+		const update = applyEncounterDiceHpResult({
+			result: diceRolledResult?.result,
+			context: diceRolledResult?.context,
+			campaignSlug: campaign.slug,
+			sessionId: String(sessionId),
+			encounterId: String(encounterId),
+			encounter,
 		});
-		if (!updatedMonster) return;
-
-		const updatedEncounter = { ...encounter, monsters: updatedMonsters };
-		applyEncounterUpdate(updatedEncounter, { preferredId: context.instanceId });
+		if (!update) return;
+		applyEncounterUpdate(update.encounter, {
+			preferredId: update.preferredId,
+		});
 	}, [
 		campaign.slug,
 		diceRolledResult,

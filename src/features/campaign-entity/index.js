@@ -17,3 +17,9 @@ export {
 	withEntityOrder,
 } from "./model/useCampaignEntityOrdering.ts";
 export { useCampaignEntityScopeMovement } from "./model/useCampaignEntityScopeMovement.ts";
+export {
+	buildCampaignToSessionScopeMovePlan,
+	buildSessionToCampaignScopeMovePlan,
+	executeEntityScopeMove,
+	removeMovedCampaignEntityFromImport,
+} from "./model/scopeMovement.ts";

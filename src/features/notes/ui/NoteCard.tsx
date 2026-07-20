@@ -1,14 +1,17 @@
-import { classNames, lang } from "../../../shared/lib/index.js";
-import { useAppSelector } from "../../../shared/model/index.js";
 import "../../../assets/components/NoteCard.css";
-import { Button, CollapseToggleButton } from "../../../shared/ui/index.js";
-import { EditableField } from "../../editor/ui/index.js";
-import { renderMentionText } from "../../rich-content/index.js";
+import { classNames } from "../../../shared/lib/index.js";
+import { useAppSelector } from "../../../shared/model/index.js";
 import {
 	getNoteCardPresentation,
+	shouldExpandNoteFromCardClick,
 	type NoteCardNote,
 	type NoteId,
 } from "../model.ts";
+import {
+	NoteCardBody,
+	NoteCardHeader,
+	NoteCardSimplified,
+} from "./NoteCardParts.tsx";
 
 const SHORT_TEXT_LENGTH = 50;
 
@@ -38,14 +41,7 @@ export default function NoteCard({
 	const simplifiedNotesEnabled = useAppSelector(
 		(state) => state.ui.simplifiedNotes,
 	);
-	const {
-		canCollapse,
-		hasTruncatedPreview,
-		isCollapsed,
-		shortText,
-		showClassicHeader,
-		showSimplifiedActions,
-	} = getNoteCardPresentation(
+	const presentation = getNoteCardPresentation(
 		note,
 		isLast,
 		simplifiedNotesEnabled,
@@ -55,108 +51,50 @@ export default function NoteCard({
 	return (
 		<div
 			className={classNames("note_card_simple", {
-				is_collapsed: isCollapsed,
+				is_collapsed: presentation.isCollapsed,
 				note_card_simple__simplified: simplifiedNotesEnabled,
 			})}
 			onClick={() => {
-				if (isCollapsed && simplifiedNotesEnabled && canCollapse) {
+				if (
+					shouldExpandNoteFromCardClick(
+						presentation,
+						simplifiedNotesEnabled,
+					)
+				) {
 					onToggleCollapse(note.id);
 				}
 			}}
 		>
-			{showClassicHeader && (
-				<div
-					key="classic-header"
-					className="note_card_simple__header"
-					onClick={() => {
-						if (canCollapse) onToggleCollapse(note.id);
-					}}
-				>
-					{canCollapse && (
-						<CollapseToggleButton
-							key="collapse-toggle"
-							size={Button.SIZES.SMALL}
-							collapsed={isCollapsed}
-							onClick={() => onToggleCollapse(note.id)}
-						/>
-					)}
-					<EditableField
-						key="title"
-						value={note.title || ""}
-						enableHistory={enableHistory}
-						onChange={(event) => onTitleChange(note.id, event.target.value)}
-						placeholder={lang.t("New note")}
-						className={classNames(
-							"note_card_simple__title",
-							highlightFields?.includes?.("title") && "is_ai_changed_field",
-						)}
-					/>
-					{!isLast && (
-						<Button
-							key="delete"
-							variant="danger"
-							icon="trash"
-							size={Button.SIZES.SMALL}
-							iconSize={14}
-							onClick={(event) => {
-								event.stopPropagation();
-								onDelete(note.id);
-							}}
-							title={lang.t("Delete note")}
-						/>
-					)}
-				</div>
-			)}
-			{showSimplifiedActions && isCollapsed && (
-				<span key="collapsed-preview">
-					{renderMentionText(shortText)}
-					{hasTruncatedPreview && "..."}
-				</span>
-			)}
-			{showSimplifiedActions && (
-				<div key="simplified-actions" className="note_card_simple__simpleActions">
-					{canCollapse && (
-						<CollapseToggleButton
-							key="collapse-toggle"
-							size={Button.SIZES.SMALL}
-							collapsed={isCollapsed}
-							onClick={() => onToggleCollapse(note.id)}
-							title={
-								isCollapsed ? lang.t("Expand note") : lang.t("Collapse note")
-							}
-							className="note_card_simple__actionBtn"
-						/>
-					)}
-					<Button
-						key="delete"
-						variant="ghost"
-						icon="trash"
-						size={Button.SIZES.SMALL}
-						iconSize={14}
-						onClick={(event) => {
-							event.stopPropagation();
-							onDelete(note.id);
-						}}
-						title={lang.t("Delete note")}
-						className="note_card_simple__actionBtn note_card_simple__actionBtn__danger"
-					/>
-				</div>
-			)}
-			{!isCollapsed && (
-				<div key="content" className="note_card_simple__content">
-					<EditableField
-						type="textarea"
-						value={note.text}
-						enableHistory={enableHistory}
-						onChange={(event) => onTextChange(note.id, event.target.value)}
-						placeholder={lang.t("Note text...")}
-						campaignSlug={campaignSlug}
-						className={
-							highlightFields?.includes?.("text") ? "is_ai_changed_field" : ""
-						}
-					/>
-				</div>
-			)}
+			<NoteCardHeader
+				visible={presentation.showClassicHeader}
+				note={note}
+				isLast={isLast}
+				canCollapse={presentation.canCollapse}
+				isCollapsed={presentation.isCollapsed}
+				enableHistory={enableHistory}
+				highlightFields={highlightFields}
+				onToggleCollapse={onToggleCollapse}
+				onTitleChange={onTitleChange}
+				onDelete={onDelete}
+			/>
+			<NoteCardSimplified
+				visible={presentation.showSimplifiedActions}
+				noteId={note.id}
+				canCollapse={presentation.canCollapse}
+				isCollapsed={presentation.isCollapsed}
+				shortText={presentation.shortText}
+				hasTruncatedPreview={presentation.hasTruncatedPreview}
+				onToggleCollapse={onToggleCollapse}
+				onDelete={onDelete}
+			/>
+			<NoteCardBody
+				visible={!presentation.isCollapsed}
+				note={note}
+				campaignSlug={campaignSlug}
+				enableHistory={enableHistory}
+				highlightFields={highlightFields}
+				onTextChange={onTextChange}
+			/>
 		</div>
 	);
 }

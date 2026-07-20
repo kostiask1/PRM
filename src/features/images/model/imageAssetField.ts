@@ -11,6 +11,20 @@ export type ImageAssetTarget =
 	| "scene"
 	| "attachment";
 
+export type ImageAssetFieldContentState = "valid" | "missing" | "empty";
+
+export interface ImageAssetFieldPresentation {
+	contentState: ImageAssetFieldContentState;
+	resolvedImageUrl: string;
+	showPreview: boolean;
+}
+
+export interface ImageAssetFieldEventPlan {
+	preventDefault: boolean;
+	stopPropagation: boolean;
+	action: "open-gallery" | "none";
+}
+
 const TARGET_PRESETS: Readonly<
 	Record<
 		ImageAssetTarget,
@@ -93,4 +107,51 @@ export function resolveImageAssetLocation({
 		parseGalleryLocationFromImageUrl(imageUrl, baseOrigin) ??
 		getImageAssetPreset(target, campaignSlug)
 	);
+}
+
+function getImageAssetFieldContentState(
+	imageUrl: string | null | undefined,
+	hasImageError: boolean,
+): ImageAssetFieldContentState {
+	if (!imageUrl) return "empty";
+	return hasImageError ? "missing" : "valid";
+}
+
+export function getImageAssetFieldPresentation({
+	imageUrl,
+	hasImageError,
+	isImagePreviewOpen,
+}: {
+	imageUrl?: string | null;
+	hasImageError: boolean;
+	isImagePreviewOpen: boolean;
+}): ImageAssetFieldPresentation {
+	const contentState = getImageAssetFieldContentState(imageUrl, hasImageError);
+	return {
+		contentState,
+		resolvedImageUrl: imageUrl || "",
+		showPreview: isImagePreviewOpen && contentState === "valid",
+	};
+}
+
+export function getImageAssetFieldContextMenuPlan(
+	enableContextReplace: boolean,
+): ImageAssetFieldEventPlan {
+	return enableContextReplace
+		? {
+				preventDefault: true,
+				stopPropagation: true,
+				action: "open-gallery",
+			}
+		: {
+				preventDefault: false,
+				stopPropagation: false,
+				action: "none",
+			};
+}
+
+export function getImageAssetFieldSelectionUrl(
+	asset: { url?: string | null } | null | undefined,
+): string | null {
+	return asset?.url || null;
 }

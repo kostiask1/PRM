@@ -1,5 +1,6 @@
 export {
 	buildCampaignGraph,
+	normalizeGraphName,
 	type CampaignGraphEdge,
 	type CampaignGraphInput,
 	type CampaignGraphNode,
@@ -9,7 +10,11 @@ export {
 	type CampaignGraphResult,
 } from "./model/campaignGraph.ts";
 export {
-	calculateGraphLayout,
+	CAMPAIGN_GRAPH_NODE_SIZES,
+	getCampaignGraphFlowNodeSize,
+	getCampaignGraphNodeSize,
+	layoutCampaignGraph,
+	resolveCampaignGraphNodeCollision,
 	type CampaignGraphLayoutEdge,
 	type CampaignGraphLayoutNode,
 	type CampaignGraphPositions,

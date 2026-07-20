@@ -18,6 +18,17 @@ export interface CampaignEntityRecord extends Record<string, unknown> {
 
 export type CampaignOrder = Record<string, number>;
 
+export const CAMPAIGN_PARTIAL_ARCHIVE_SECTIONS = [
+	"sessions",
+	"npc",
+	"locations",
+	"images",
+	"aiHistory",
+] as const;
+
+export type CampaignPartialArchiveSection =
+	(typeof CAMPAIGN_PARTIAL_ARCHIVE_SECTIONS)[number];
+
 export interface CampaignDeleteOptions {
 	moveImagesToGeneral?: boolean;
 }
@@ -32,7 +43,7 @@ export interface CampaignImportResult extends Record<string, unknown> {
 	ok: boolean;
 	imported: number | Record<string, number>;
 	strategy?: string;
-	sections?: string[];
+	sections?: CampaignPartialArchiveSection[];
 }
 
 const campaignPath = (slug: string) =>
@@ -63,7 +74,10 @@ export const campaignApi = {
 		request<CampaignBundle>(`${campaignPath(slug)}/export`),
 	exportCampaignArchive: (slug: string) =>
 		requestBlob(`${campaignPath(slug)}/export/archive`),
-	exportCampaignPartialArchive: (slug: string, sections: string[] = []) => {
+	exportCampaignPartialArchive: (
+		slug: string,
+		sections: CampaignPartialArchiveSection[] = [],
+	) => {
 		const query = new URLSearchParams();
 		if (sections.length > 0) query.set("sections", sections.join(","));
 		return requestBlob(
@@ -78,15 +92,18 @@ export const campaignApi = {
 	importCampaignPartialArchive: (
 		slug: string,
 		file: Blob,
-		sections: string[] = [],
+		sections: CampaignPartialArchiveSection[] = [],
 	) => {
 		const formData = new FormData();
 		formData.append("archive", file);
 		if (sections.length > 0) formData.append("sections", sections.join(","));
-		return request<CampaignImportResult>(`${campaignPath(slug)}/import/partial-archive`, {
-			method: "POST",
-			body: formData,
-		});
+		return request<CampaignImportResult>(
+			`${campaignPath(slug)}/import/partial-archive`,
+			{
+				method: "POST",
+				body: formData,
+			},
+		);
 	},
 	reorderCampaigns: (orders: CampaignOrder) =>
 		request<CampaignRecord[]>("/campaigns/reorder", {

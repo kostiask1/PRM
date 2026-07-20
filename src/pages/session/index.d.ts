@@ -1,3 +1,1 @@
-import type { ComponentType } from "react";
-
-export const SessionPage: ComponentType;
+export { default as SessionPage } from "./ui/SessionPage.tsx";

@@ -3,17 +3,13 @@ import {
 	ensureContextListItems,
 	type ContextListConfig,
 } from "./contextConfig.ts";
+import {
+	getAiCharacterContextKey,
+	getAiLocationContextKey,
+	type AiContextIdentityEntity,
+} from "./contextIdentity.ts";
 
-export interface AiContextEntity extends Record<string, unknown> {
-	id?: string | number;
-	slug?: string;
-	name?: string;
-	title?: string;
-	firstName?: string;
-	first_name?: string;
-	lastName?: string;
-	last_name?: string;
-}
+export type AiContextEntity = AiContextIdentityEntity;
 
 export interface AiContextSession extends Record<string, unknown> {
 	fileName: string;
@@ -90,23 +86,6 @@ export const createInitialAiContextConfig = (
 			}
 		: {},
 });
-
-const getLocationContextKey = (location: AiContextEntity) =>
-	String(location?.slug || location?.id || location?.name || "").trim();
-
-const getCharacterContextKey = (character: AiContextEntity) => {
-	const fullName = `${character?.firstName || character?.first_name || ""} ${
-		character?.lastName || character?.last_name || ""
-	}`.trim();
-	return String(
-		character?.slug ||
-			character?.id ||
-			fullName ||
-			character?.name ||
-			character?.title ||
-			"",
-	).trim();
-};
 
 type LoadedSessionTuple = readonly [
 	string,
@@ -259,7 +238,7 @@ export function useAiContextData({
 	useEffect(() => {
 		if (charactersList.length === 0) return;
 		setContextConfig((current) => {
-			const next = ensureContextListItems(current.campaignCharacters, charactersList, getCharacterContextKey);
+			const next = ensureContextListItems(current.campaignCharacters, charactersList, getAiCharacterContextKey);
 			return next === current.campaignCharacters ? current : { ...current, campaignCharacters: next };
 		});
 	}, [charactersList]);
@@ -267,7 +246,7 @@ export function useAiContextData({
 	useEffect(() => {
 		if (npcsList.length === 0) return;
 		setContextConfig((current) => {
-			const next = ensureContextListItems(current.campaignNpcs, npcsList, getCharacterContextKey);
+			const next = ensureContextListItems(current.campaignNpcs, npcsList, getAiCharacterContextKey);
 			return next === current.campaignNpcs ? current : { ...current, campaignNpcs: next };
 		});
 	}, [npcsList]);
@@ -275,7 +254,7 @@ export function useAiContextData({
 	useEffect(() => {
 		if (locationsList.length === 0) return;
 		setContextConfig((current) => {
-			const next = ensureContextListItems(current.campaignLocations, locationsList, getLocationContextKey);
+			const next = ensureContextListItems(current.campaignLocations, locationsList, getAiLocationContextKey);
 			return next === current.campaignLocations ? current : { ...current, campaignLocations: next };
 		});
 	}, [locationsList]);

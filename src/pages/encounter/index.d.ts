@@ -1,3 +1,1 @@
-import type { ComponentType } from "react";
-
-export const EncounterPage: ComponentType;
+export { default as EncounterPage } from "./ui/EncounterPage.tsx";

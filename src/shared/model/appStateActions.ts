@@ -43,6 +43,13 @@ export interface NormalizedUiSettingsPatch {
 	useSearchDebounce?: boolean;
 }
 
+type UiSettingsField = keyof NormalizedUiSettingsPatch;
+type UiSettingsFieldPolicies = {
+	[K in UiSettingsField]-?: (
+		value: unknown,
+	) => Required<NormalizedUiSettingsPatch>[K];
+};
+
 export type SyncEvent = object;
 
 export type AppStateAction =
@@ -97,95 +104,65 @@ export function setLanguageAction(payload: unknown): AppStateAction {
 	};
 }
 
+function normalizeEncounterGridColumns(value: unknown): number {
+	const columns = Number.parseInt(String(value), 10);
+	return Math.min(4, Math.max(1, Number.isFinite(columns) ? columns : 2));
+}
+
+function normalizePromptValue(value: unknown): string {
+	return String(value || "");
+}
+
+function normalizeIgnoreSourcesList(value: unknown): string[] {
+	const sources = Array.isArray(value) ? value : [];
+	return Array.from(
+		new Set(
+			sources
+				.map((source) => String(source || "").trim().toUpperCase())
+				.filter(Boolean),
+		),
+	).sort((a, b) => a.localeCompare(b));
+}
+
+function normalizeEnabledByDefault(value: unknown): boolean {
+	return value !== false;
+}
+
+const UI_SETTINGS_FIELD_POLICIES: UiSettingsFieldPolicies = {
+	theme: (value) => (value === "dark" ? "dark" : "light"),
+	encounterViewMode: (value) => (value === "grid" ? "grid" : "single"),
+	encounterGridColumns: normalizeEncounterGridColumns,
+	simplifiedNotes: Boolean,
+	aiBasePrompt: normalizePromptValue,
+	imagePromptBasePrompt: normalizePromptValue,
+	campaignAiBasePrompts: normalizePromptMap,
+	campaignImagePromptBasePrompts: normalizePromptMap,
+	ignoreSourcesList: normalizeIgnoreSourcesList,
+	autoApplyAiChanges: normalizeEnabledByDefault,
+	useSearchDebounce: normalizeEnabledByDefault,
+};
+
+function hasOwnUiSetting(
+	payload: UiSettingsInput,
+	field: UiSettingsField,
+): boolean {
+	return Object.prototype.hasOwnProperty.call(payload, field);
+}
+
+export function normalizeUiSettingsPatch(
+	payload: UiSettingsInput | null | undefined,
+): NormalizedUiSettingsPatch {
+	if (!payload) return {};
+	const entries = (Object.keys(UI_SETTINGS_FIELD_POLICIES) as UiSettingsField[])
+		.filter((field) => hasOwnUiSetting(payload, field))
+		.map((field) => [field, UI_SETTINGS_FIELD_POLICIES[field](payload[field])]);
+	return Object.fromEntries(entries) as NormalizedUiSettingsPatch;
+}
+
 export function setUiSettingsAction(
 	payload: UiSettingsInput | null | undefined,
 ): AppStateAction {
-	const nextPayload: NormalizedUiSettingsPatch = {};
-	if (payload && Object.prototype.hasOwnProperty.call(payload, "theme")) {
-		nextPayload.theme = payload.theme === "dark" ? "dark" : "light";
-	}
-	if (
-		payload &&
-		Object.prototype.hasOwnProperty.call(payload, "encounterViewMode")
-	) {
-		nextPayload.encounterViewMode =
-			payload.encounterViewMode === "grid" ? "grid" : "single";
-	}
-	if (
-		payload &&
-		Object.prototype.hasOwnProperty.call(payload, "encounterGridColumns")
-	) {
-		const columns = Number.parseInt(String(payload.encounterGridColumns), 10);
-		nextPayload.encounterGridColumns = Math.min(
-			4,
-			Math.max(1, Number.isFinite(columns) ? columns : 2),
-		);
-	}
-	if (
-		payload &&
-		Object.prototype.hasOwnProperty.call(payload, "simplifiedNotes")
-	) {
-		nextPayload.simplifiedNotes = Boolean(payload.simplifiedNotes);
-	}
-	if (payload && Object.prototype.hasOwnProperty.call(payload, "aiBasePrompt")) {
-		nextPayload.aiBasePrompt = String(payload.aiBasePrompt || "");
-	}
-	if (
-		payload &&
-		Object.prototype.hasOwnProperty.call(payload, "imagePromptBasePrompt")
-	) {
-		nextPayload.imagePromptBasePrompt = String(
-			payload.imagePromptBasePrompt || "",
-		);
-	}
-	if (
-		payload &&
-		Object.prototype.hasOwnProperty.call(payload, "campaignAiBasePrompts")
-	) {
-		nextPayload.campaignAiBasePrompts = normalizePromptMap(
-			payload.campaignAiBasePrompts,
-		);
-	}
-	if (
-		payload &&
-		Object.prototype.hasOwnProperty.call(
-			payload,
-			"campaignImagePromptBasePrompts",
-		)
-	) {
-		nextPayload.campaignImagePromptBasePrompts = normalizePromptMap(
-			payload.campaignImagePromptBasePrompts,
-		);
-	}
-	if (
-		payload &&
-		Object.prototype.hasOwnProperty.call(payload, "ignoreSourcesList")
-	) {
-		nextPayload.ignoreSourcesList = Array.from(
-			new Set(
-				(Array.isArray(payload.ignoreSourcesList)
-					? payload.ignoreSourcesList
-					: []
-				)
-					.map((source) => String(source || "").trim().toUpperCase())
-					.filter(Boolean),
-			),
-		).sort((a, b) => a.localeCompare(b));
-	}
-	if (
-		payload &&
-		Object.prototype.hasOwnProperty.call(payload, "autoApplyAiChanges")
-	) {
-		nextPayload.autoApplyAiChanges = payload.autoApplyAiChanges !== false;
-	}
-	if (
-		payload &&
-		Object.prototype.hasOwnProperty.call(payload, "useSearchDebounce")
-	) {
-		nextPayload.useSearchDebounce = payload.useSearchDebounce !== false;
-	}
-
-	return { type: SET_UI_SETTINGS, payload: nextPayload };
+	return { type: SET_UI_SETTINGS, payload: normalizeUiSettingsPatch(payload) };
 }
 
 function normalizePromptMap(value: unknown): Record<string, string> {

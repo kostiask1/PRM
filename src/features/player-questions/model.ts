@@ -18,24 +18,45 @@ export function getDiceResultId(value: unknown): unknown {
 	return isRecord(value) ? (value.resultId ?? null) : null;
 }
 
+function getQuestionRollResult(value: unknown): UnknownRecord | null {
+	if (!isRecord(value) || !value.resultId) return null;
+	return value;
+}
+
+function isQuestionRollContext(value: unknown): boolean {
+	return isRecord(value) && value.type === QUESTION_ROLL_CONTEXT;
+}
+
+function normalizeRolledQuestionId(
+	value: unknown,
+	questionCount: number,
+): number | null {
+	const questionId = Number(value);
+	return Number.isInteger(questionId) &&
+		questionId >= 1 &&
+		questionId <= questionCount
+		? questionId
+		: null;
+}
+
+function getRolledQuestionId(
+	value: UnknownRecord,
+	questionCount: number,
+): number | null {
+	if (!isQuestionRollContext(value.context)) return null;
+	const result = isRecord(value.result) ? value.result : null;
+	return normalizeRolledQuestionId(result?.total, questionCount);
+}
+
 export function getQuestionDiceRoll(
 	value: unknown,
 	questionCount: number,
 ): QuestionDiceRoll | null {
-	if (!isRecord(value) || !value.resultId) return null;
-
-	const context = isRecord(value.context) ? value.context : null;
-	const result = isRecord(value.result) ? value.result : null;
-	const questionId = Number(result?.total);
-	const isQuestionRoll = context?.type === QUESTION_ROLL_CONTEXT;
-	const isValidQuestion =
-		Number.isInteger(questionId) &&
-		questionId >= 1 &&
-		questionId <= questionCount;
-
+	const rollResult = getQuestionRollResult(value);
+	if (!rollResult) return null;
 	return {
-		resultId: value.resultId,
-		questionId: isQuestionRoll && isValidQuestion ? questionId : null,
+		resultId: rollResult.resultId,
+		questionId: getRolledQuestionId(rollResult, questionCount),
 	};
 }
 

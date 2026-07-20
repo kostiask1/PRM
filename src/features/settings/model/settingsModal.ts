@@ -20,6 +20,17 @@ export interface PromptSettingsPayload extends Record<string, unknown> {
 	campaignImagePromptBasePrompts: SettingsPromptMap;
 }
 
+export interface SelectedPromptSettings {
+	isGlobalScope: boolean;
+	basePrompt: string;
+	imagePrompt: string;
+}
+
+export interface SelectedSourceSettings {
+	isGlobalScope: boolean;
+	ignoreSourcesList: string[];
+}
+
 interface UnknownRecord {
 	[key: string]: unknown;
 }
@@ -98,6 +109,51 @@ export function setSettingsPromptForScope(
 	value: string,
 ): SettingsPromptMap {
 	return { ...prompts, [scope]: value };
+}
+
+export function resolveSelectedPromptSettings(options: {
+	scope: string;
+	aiBasePrompt: string;
+	imagePromptBasePrompt: string;
+	campaignAiBasePrompts: SettingsPromptMap;
+	campaignImagePromptBasePrompts: SettingsPromptMap;
+}): SelectedPromptSettings {
+	const isGlobalScope = options.scope === GLOBAL_SETTINGS_SCOPE;
+	return {
+		isGlobalScope,
+		basePrompt: isGlobalScope
+			? options.aiBasePrompt
+			: options.campaignAiBasePrompts[options.scope] || "",
+		imagePrompt: isGlobalScope
+			? options.imagePromptBasePrompt
+			: options.campaignImagePromptBasePrompts[options.scope] || "",
+	};
+}
+
+export function resolveSelectedSourceSettings(options: {
+	scope: string;
+	ignoreSourcesList: string[];
+	campaignIgnoreSourcesLists: CampaignIgnoreSourcesMap;
+}): SelectedSourceSettings {
+	const isGlobalScope = options.scope === GLOBAL_SETTINGS_SCOPE;
+	return {
+		isGlobalScope,
+		ignoreSourcesList: isGlobalScope
+			? options.ignoreSourcesList
+			: options.campaignIgnoreSourcesLists[options.scope] ||
+				options.ignoreSourcesList,
+	};
+}
+
+export function setCampaignIgnoreSourcesForScope(
+	current: CampaignIgnoreSourcesMap,
+	scope: string,
+	ignoreSourcesList: string[],
+): CampaignIgnoreSourcesMap {
+	return {
+		...current,
+		[scope]: normalizeIgnoreSourcesList(ignoreSourcesList),
+	};
 }
 
 export function sanitizeSettingsPromptMap(

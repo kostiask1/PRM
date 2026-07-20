@@ -1,3 +1,5 @@
+import { parseDiceExpressionTokens } from "./diceExpressionParser.js";
+
 function normalizeFormula(input = "") {
 	return String(input || "")
 		.toLowerCase()
@@ -103,62 +105,81 @@ function multiplyStats(left, right) {
 	};
 }
 
-function rollDiceTerm(count, sides, keepSuffix = "") {
-	const stats = createEmptyStats();
-	const groupKey = `${sides}${keepSuffix || ""}`;
-	stats.diceMap[groupKey] = count;
-
-	const currentRolls = [];
+function collectDiceRolls(count, sides) {
+	const rolls = [];
 	for (let i = 0; i < count; i += 1) {
 		const roll = Math.floor(Math.random() * sides) + 1;
-		currentRolls.push({ val: roll, max: sides });
-
-		if (sides === 20 && !keepSuffix) {
-			stats.d20Count += 1;
-			stats.lastD20Value = roll;
-		}
+		rolls.push({ val: roll, max: sides });
 	}
+	return rolls;
+}
 
-	if (keepSuffix) {
-		const type = keepSuffix[0].toLowerCase();
-		const keepCount = Math.min(parseInt(keepSuffix.slice(1), 10), count);
-		stats.min += keepCount;
-		stats.max += keepCount * sides;
-		const indexed = currentRolls.map((roll, idx) => ({
-			val: roll.val,
-			idx,
-		}));
-		indexed.sort((a, b) => (type === "h" ? b.val - a.val : a.val - b.val));
-		const keptIndices = new Set(
-			indexed.slice(0, keepCount).map((roll) => roll.idx),
-		);
+function applyD20Tracking(stats, rolls, sides, keepSuffix) {
+	if (sides !== 20 || keepSuffix) return;
+	stats.d20Count = rolls.length;
+	stats.lastD20Value = rolls.length ? rolls[rolls.length - 1].val : 0;
+}
 
-		currentRolls.forEach((roll, idx) => {
-			if (keptIndices.has(idx)) {
+function getKeptRollIndices(rolls, keepType, keepCount) {
+	const indexed = rolls.map((roll, index) => ({
+		val: roll.val,
+		index,
+	}));
+	indexed.sort((left, right) =>
+		keepType === "h" ? right.val - left.val : left.val - right.val,
+	);
+	return new Set(indexed.slice(0, keepCount).map((roll) => roll.index));
+}
+
+function formatDiceRollExpression(rolls) {
+	return rolls
+		.map((roll) => (roll.dropped ? `[${roll.val}]` : String(roll.val)))
+		.join(" + ");
+}
+
+function projectKeptDiceStats(stats, rolls, sides, count, keepSuffix) {
+	const keepType = keepSuffix[0].toLowerCase();
+	const keepCount = Math.min(parseInt(keepSuffix.slice(1), 10), count);
+	const keptIndices = getKeptRollIndices(rolls, keepType, keepCount);
+	stats.min += keepCount;
+	stats.max += keepCount * sides;
+
+	rolls.forEach((roll, index) => {
+		if (keptIndices.has(index)) {
 				stats.total += roll.val;
 				stats.average += (sides + 1) / 2;
-			} else {
-				roll.dropped = true;
-			}
-			stats.breakdown.push(roll);
-		});
-		stats.expression = currentRolls
-			.map((roll) => (roll.dropped ? `[${roll.val}]` : String(roll.val)))
-			.join(" + ");
-		stats.precedence = keepCount > 1 ? 1 : 3;
-		return stats;
-	}
+		} else {
+			roll.dropped = true;
+		}
+		stats.breakdown.push(roll);
+	});
+	stats.expression = formatDiceRollExpression(rolls);
+	stats.precedence = keepCount > 1 ? 1 : 3;
+	return stats;
+}
 
+function projectPlainDiceStats(stats, rolls, sides, count) {
 	stats.min += count;
 	stats.max += count * sides;
-	currentRolls.forEach((roll) => {
+	rolls.forEach((roll) => {
 		stats.total += roll.val;
 		stats.average += (sides + 1) / 2;
 		stats.breakdown.push(roll);
 	});
-	stats.expression = currentRolls.map((roll) => String(roll.val)).join(" + ");
+	stats.expression = formatDiceRollExpression(rolls);
 	stats.precedence = count > 1 ? 1 : 3;
 	return stats;
+}
+
+function rollDiceTerm(count, sides, keepSuffix = "") {
+	const stats = createEmptyStats();
+	stats.diceMap[`${sides}${keepSuffix || ""}`] = count;
+	const rolls = collectDiceRolls(count, sides);
+	applyD20Tracking(stats, rolls, sides, keepSuffix);
+
+	return keepSuffix
+		? projectKeptDiceStats(stats, rolls, sides, count, keepSuffix)
+		: projectPlainDiceStats(stats, rolls, sides, count);
 }
 
 function createNumberStats(value) {
@@ -176,130 +197,77 @@ function createNumberStats(value) {
 	};
 }
 
+function readOperatorToken(input, index) {
+	const value = input[index];
+	if (!"()+-*".includes(value)) return null;
+	return {
+		token: { type: value, value },
+		length: 1,
+	};
+}
+
+function readDiceToken(input, index) {
+	const match = input.slice(index).match(/^(\d*)d(\d+)([hl]\d+)?/i);
+	if (!match) return null;
+	return {
+		token: {
+			type: "dice",
+			count: parseInt(match[1], 10) || 1,
+			sides: parseInt(match[2], 10),
+			keepSuffix: match[3] || "",
+		},
+		length: match[0].length,
+	};
+}
+
+function readNumberToken(input, index) {
+	const match = input.slice(index).match(/^\d+/);
+	if (!match) return null;
+	return {
+		token: {
+			type: "number",
+			value: parseInt(match[0], 10),
+		},
+		length: match[0].length,
+	};
+}
+
+function readNextToken(input, index) {
+	return (
+		readOperatorToken(input, index) ||
+		readDiceToken(input, index) ||
+		readNumberToken(input, index)
+	);
+}
+
 function tokenize(input) {
 	const tokens = [];
 	let index = 0;
-
 	while (index < input.length) {
-		const current = input[index];
-
-		if ("()+-*".includes(current)) {
-			tokens.push({ type: current, value: current });
-			index += 1;
-			continue;
-		}
-
-		const diceMatch = input.slice(index).match(/^(\d*)d(\d+)([hl]\d+)?/i);
-		if (diceMatch) {
-			tokens.push({
-				type: "dice",
-				count: parseInt(diceMatch[1], 10) || 1,
-				sides: parseInt(diceMatch[2], 10),
-				keepSuffix: diceMatch[3] || "",
-			});
-			index += diceMatch[0].length;
-			continue;
-		}
-
-		const numberMatch = input.slice(index).match(/^\d+/);
-		if (numberMatch) {
-			tokens.push({
-				type: "number",
-				value: parseInt(numberMatch[0], 10),
-			});
-			index += numberMatch[0].length;
-			continue;
-		}
-
-		return null;
+		const read = readNextToken(input, index);
+		if (!read) return null;
+		tokens.push(read.token);
+		index += read.length;
 	}
-
 	return tokens;
 }
 
+function createRollStatsValue(token) {
+	if (token.type === "number") return createNumberStats(token.value);
+	return rollDiceTerm(token.count, token.sides, token.keepSuffix);
+}
+
 function parseTokens(tokens) {
-	let index = 0;
-
-	function peek() {
-		return tokens[index];
-	}
-
-	function consume(type) {
-		if (peek()?.type !== type) return null;
-		index += 1;
-		return tokens[index - 1];
-	}
-
-	function parsePrimary() {
-		if (consume("+")) return parsePrimary();
-		if (consume("-")) {
-			return multiplyStats(
+	return parseDiceExpressionTokens(tokens, {
+		createValue: createRollStatsValue,
+		negate: (value) =>
+			multiplyStats(
 				createNumberStats(-1),
-				parsePrimary() || createEmptyStats(),
-			);
-		}
-
-		const current = peek();
-		if (!current) return null;
-
-		if (current.type === "number") {
-			index += 1;
-			return createNumberStats(current.value);
-		}
-
-		if (current.type === "dice") {
-			index += 1;
-			return rollDiceTerm(current.count, current.sides, current.keepSuffix);
-		}
-
-		if (consume("(")) {
-			const expression = parseExpression();
-			if (!consume(")")) return null;
-			return expression;
-		}
-
-		return null;
-	}
-
-	function parseMultiplication() {
-		let left = parsePrimary();
-		if (!left) return null;
-
-		while (consume("*")) {
-			const right = parsePrimary();
-			if (!right) return null;
-			left = multiplyStats(left, right);
-		}
-
-		return left;
-	}
-
-	function parseExpression() {
-		let left = parseMultiplication();
-		if (!left) return null;
-
-		while (true) {
-			if (consume("+")) {
-				const right = parseMultiplication();
-				if (!right) return null;
-				left = addStats(left, right, 1);
-				continue;
-			}
-			if (consume("-")) {
-				const right = parseMultiplication();
-				if (!right) return null;
-				left = addStats(left, right, -1);
-				continue;
-			}
-			break;
-		}
-
-		return left;
-	}
-
-	const result = parseExpression();
-	if (!result || index !== tokens.length) return null;
-	return result;
+				value || createEmptyStats(),
+			),
+		multiply: multiplyStats,
+		add: addStats,
+	});
 }
 
 function createConstantDistribution(value) {
@@ -397,137 +365,108 @@ function createKeptDiceDistribution(
 	return outcomes;
 }
 
+function createDistributionValue(
+	token,
+	{ maxStates, maxRollCombinations },
+) {
+	if (token.type === "number") {
+		return createConstantDistribution(token.value);
+	}
+	if (token.keepSuffix) {
+		return createKeptDiceDistribution(
+			token.count,
+			token.sides,
+			token.keepSuffix,
+			maxRollCombinations,
+		);
+	}
+	return createPlainDiceDistribution(token.count, token.sides, maxStates);
+}
+
 function parseDistributionTokens(tokens, options = {}) {
 	const maxStates = options.maxStates || 20000;
 	const maxRollCombinations = options.maxRollCombinations || 200000;
-	let index = 0;
-
-	function peek() {
-		return tokens[index];
-	}
-
-	function consume(type) {
-		if (peek()?.type !== type) return null;
-		index += 1;
-		return tokens[index - 1];
-	}
-
-	function parsePrimary() {
-		if (consume("+")) return parsePrimary();
-		if (consume("-")) {
-			const expression = parsePrimary();
-			if (!expression) return null;
-			return multiplyDistributions(
-				createConstantDistribution(-1),
-				expression,
-				maxStates,
-			);
-		}
-
-		const current = peek();
-		if (!current) return null;
-
-		if (current.type === "number") {
-			index += 1;
-			return createConstantDistribution(current.value);
-		}
-
-		if (current.type === "dice") {
-			index += 1;
-			if (current.keepSuffix) {
-				return createKeptDiceDistribution(
-					current.count,
-					current.sides,
-					current.keepSuffix,
-					maxRollCombinations,
-				);
-			}
-			return createPlainDiceDistribution(current.count, current.sides, maxStates);
-		}
-
-		if (consume("(")) {
-			const expression = parseExpression();
-			if (!consume(")")) return null;
-			return expression;
-		}
-
-		return null;
-	}
-
-	function parseMultiplication() {
-		let left = parsePrimary();
-		if (!left) return null;
-
-		while (consume("*")) {
-			const right = parsePrimary();
-			if (!right) return null;
-			left = multiplyDistributions(left, right, maxStates);
-			if (!left) return null;
-		}
-
-		return left;
-	}
-
-	function parseExpression() {
-		let left = parseMultiplication();
-		if (!left) return null;
-
-		while (true) {
-			if (consume("+")) {
-				const right = parseMultiplication();
-				if (!right) return null;
-				left = addDistributions(left, right, 1, maxStates);
-				if (!left) return null;
-				continue;
-			}
-			if (consume("-")) {
-				const right = parseMultiplication();
-				if (!right) return null;
-				left = addDistributions(left, right, -1, maxStates);
-				if (!left) return null;
-				continue;
-			}
-			break;
-		}
-
-		return left;
-	}
-
-	const distribution = parseExpression();
-	if (!distribution || index !== tokens.length) return null;
-	return distribution;
+	const limits = { maxStates, maxRollCombinations };
+	return parseDiceExpressionTokens(tokens, {
+		createValue: (token) => createDistributionValue(token, limits),
+		negate: (value) =>
+			value
+				? multiplyDistributions(
+						createConstantDistribution(-1),
+						value,
+						maxStates,
+					)
+				: null,
+		multiply: (left, right) =>
+			multiplyDistributions(left, right, maxStates),
+		add: (left, right, sign) =>
+			addDistributions(left, right, sign, maxStates),
+	});
 }
 
-export function getDiceProbabilityDistribution(input, options = {}) {
-	const cleanStr = normalizeFormula(input);
-	if (!cleanStr) return null;
+function createProbabilityDistributionRequest(input) {
+	const normalizedFormula = normalizeFormula(input);
+	if (!normalizedFormula) return null;
+	const tokens = tokenize(normalizedFormula);
+	return tokens ? { input, tokens } : null;
+}
 
-	const tokens = tokenize(cleanStr);
-	if (!tokens) return null;
+function evaluateProbabilityDistribution(request, options) {
+	return parseDistributionTokens(request.tokens, options);
+}
 
-	const distribution = parseDistributionTokens(tokens, options);
-	if (!distribution) return null;
-
-	const outcomes = [...distribution.entries()]
+function projectProbabilityOutcomes(distribution) {
+	return [...distribution.entries()]
 		.map(([value, probability]) => ({ value, probability }))
 		.sort((a, b) => a.value - b.value);
-	const maxProbability = outcomes.reduce(
+}
+
+function getMaximumOutcomeProbability(outcomes) {
+	return outcomes.reduce(
 		(max, outcome) => Math.max(max, outcome.probability),
 		0,
 	);
-	const average = outcomes.reduce(
+}
+
+function getProbabilityWeightedAverage(outcomes) {
+	return outcomes.reduce(
 		(sum, outcome) => sum + outcome.value * outcome.probability,
 		0,
 	);
+}
+
+function getOutcomeValue(outcomes, index) {
+	const outcome = outcomes[index];
+	return outcome ? outcome.value : 0;
+}
+
+function summarizeProbabilityOutcomes(outcomes) {
+	return {
+		maxProbability: getMaximumOutcomeProbability(outcomes),
+		average: getProbabilityWeightedAverage(outcomes),
+		min: getOutcomeValue(outcomes, 0),
+		max: getOutcomeValue(outcomes, outcomes.length - 1),
+	};
+}
+
+function createProbabilityDistributionResult(request, distribution) {
+	const outcomes = projectProbabilityOutcomes(distribution);
+	const summary = summarizeProbabilityOutcomes(outcomes);
 
 	return {
-		formula: formatFormula(input),
+		formula: formatFormula(request.input),
 		outcomes,
-		maxProbability,
-		average,
-		min: outcomes[0]?.value ?? 0,
-		max: outcomes[outcomes.length - 1]?.value ?? 0,
+		...summary,
 	};
+}
+
+export function getDiceProbabilityDistribution(input, options = {}) {
+	const request = createProbabilityDistributionRequest(input);
+	if (!request) return null;
+	const distribution = evaluateProbabilityDistribution(request, options);
+	return distribution
+		? createProbabilityDistributionResult(request, distribution)
+		: null;
 }
 
 function getLegacyFormula(stats) {
@@ -549,55 +488,63 @@ function getLegacyFormula(stats) {
 	return formulaParts.join(" + ").replace(/\+\s-/g, "- ");
 }
 
-export function rollDiceFormula(input) {
-	const cleanStr = normalizeFormula(input);
-	if (!cleanStr) return null;
-
-	const tokens = tokenize(cleanStr);
-	if (!tokens) {
-		return {
-			id: Date.now(),
-			formula: "",
-			breakdown: [],
-			total: 0,
-			average: 0,
-			min: 0,
-			max: 0,
-			isCritical: false,
-		};
-	}
-
-	const stats = parseTokens(tokens);
-	if (!stats) {
-		return {
-			id: Date.now(),
-			formula: "",
-			breakdown: [],
-			total: 0,
-			average: 0,
-			min: 0,
-			max: 0,
-			isCritical: false,
-		};
-	}
-
-	const hasAdvancedOperators = /[()*]/.test(cleanStr);
-	const isCritical =
-		stats.d20Count === 1 &&
-		(stats.lastD20Value === 1 || stats.lastD20Value === 20);
-	const finalTotal = isCritical ? stats.lastD20Value : stats.total;
-
+function createInvalidDiceFormulaResult() {
 	return {
 		id: Date.now(),
-		formula: hasAdvancedOperators
-			? formatFormula(input)
-			: getLegacyFormula(stats),
-		breakdown: stats.breakdown,
+		formula: "",
+		breakdown: [],
+		total: 0,
+		average: 0,
+		min: 0,
+		max: 0,
+		isCritical: false,
+	};
+}
+
+function parseRollStats(cleanFormula) {
+	const tokens = tokenize(cleanFormula);
+	return tokens ? parseTokens(tokens) : null;
+}
+
+function getDiceCriticalState(stats) {
+	const isCriticalValue =
+		stats.lastD20Value === 1 || stats.lastD20Value === 20;
+	const isCritical = stats.d20Count === 1 && isCriticalValue;
+	return {
+		isCritical,
+		total: isCritical ? stats.lastD20Value : stats.total,
+	};
+}
+
+function getDiceFormulaPresentation(input, cleanFormula, stats) {
+	const hasAdvancedOperators = /[()*]/.test(cleanFormula);
+	return {
+		formula: hasAdvancedOperators ? formatFormula(input) : getLegacyFormula(stats),
 		expressionBreakdown: hasAdvancedOperators ? stats.expression : "",
-		total: finalTotal,
+	};
+}
+
+function createDiceFormulaResult(input, cleanFormula, stats) {
+	const critical = getDiceCriticalState(stats);
+	const presentation = getDiceFormulaPresentation(input, cleanFormula, stats);
+	return {
+		id: Date.now(),
+		formula: presentation.formula,
+		breakdown: stats.breakdown,
+		expressionBreakdown: presentation.expressionBreakdown,
+		total: critical.total,
 		average: Math.floor(stats.average),
 		min: stats.min,
 		max: stats.max,
-		isCritical,
+		isCritical: critical.isCritical,
 	};
+}
+
+export function rollDiceFormula(input) {
+	const cleanStr = normalizeFormula(input);
+	if (!cleanStr) return null;
+	const stats = parseRollStats(cleanStr);
+	return stats
+		? createDiceFormulaResult(input, cleanStr, stats)
+		: createInvalidDiceFormulaResult();
 }

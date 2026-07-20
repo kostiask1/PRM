@@ -23,6 +23,15 @@ export interface MultiSelectSelectionState {
 	selectedCount: number;
 }
 
+export interface MultiSelectLabelInput<Label> {
+	selectedCount: number;
+	optionCount: number;
+	labelOverride: Label;
+	placeholder: Label;
+	allSelectedLabel: Label;
+	noneSelectedLabel: Label;
+}
+
 export type MultiSelectOptionAction<Value extends MultiSelectValue> =
 	| { kind: "delegate"; close: true }
 	| { kind: "change"; close: boolean; values: Value[] };
@@ -39,6 +48,33 @@ export function getMultiSelectSelectionState<
 	).length;
 
 	return { normalizedValues, selectedCount };
+}
+
+export function getMultiSelectLabel<Label>({
+	selectedCount,
+	optionCount,
+	labelOverride,
+	placeholder,
+	allSelectedLabel,
+	noneSelectedLabel,
+}: MultiSelectLabelInput<Label>): Label | string {
+	if (labelOverride) return labelOverride;
+	if (selectedCount === optionCount) return allSelectedLabel || placeholder;
+	if (selectedCount === 0) return noneSelectedLabel || placeholder;
+	return `${selectedCount} / ${optionCount}`;
+}
+
+export function getMultiSelectOptionPresentation(
+	optionValue: MultiSelectValue,
+	selection: MultiSelectSelectionState,
+	activeValue: MultiSelectValue | "all" | "",
+): { optionKey: string; isSelected: boolean; isActive: boolean } {
+	const optionKey = String(optionValue);
+	return {
+		optionKey,
+		isSelected: selection.normalizedValues.has(optionKey),
+		isActive: Boolean(activeValue) && String(activeValue) === optionKey,
+	};
 }
 
 export function toggleMultiSelectValue<Value extends MultiSelectValue>(

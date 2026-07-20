@@ -3,7 +3,7 @@ export type NoteId = string | number;
 export interface NoteCardNote {
 	id: NoteId;
 	title?: string;
-	text: string;
+	text?: string;
 	collapsed?: boolean;
 }
 
@@ -15,6 +15,8 @@ export interface NoteCardPresentation {
 	shortText: string;
 	hasTruncatedPreview: boolean;
 }
+
+export type NoteCardField = "title" | "text";
 
 export interface CollapsibleNoteItem {
 	collapsed?: boolean;
@@ -34,7 +36,8 @@ export function getNoteCardPresentation(
 	shortTextLength = 50,
 ): NoteCardPresentation {
 	const noteTitle = String(note.title || "").trim();
-	const noteText = String(note.text || "").trim();
+	const rawText = String(note.text || "");
+	const noteText = rawText.trim();
 	const canCollapse =
 		!isLast && (noteTitle.length > 0 || noteText.length > 0);
 	const isCollapsed = Boolean(canCollapse && note.collapsed);
@@ -44,9 +47,27 @@ export function getNoteCardPresentation(
 		isCollapsed,
 		showClassicHeader: !simplifiedNotesEnabled,
 		showSimplifiedActions: simplifiedNotesEnabled && !isLast,
-		shortText: note.text.slice(0, shortTextLength),
-		hasTruncatedPreview: note.text.length > shortTextLength,
+		shortText: rawText.slice(0, shortTextLength),
+		hasTruncatedPreview: rawText.length > shortTextLength,
 	};
+}
+
+export function shouldExpandNoteFromCardClick(
+	presentation: Pick<NoteCardPresentation, "canCollapse" | "isCollapsed">,
+	simplifiedNotesEnabled: boolean,
+): boolean {
+	return (
+		simplifiedNotesEnabled &&
+		presentation.canCollapse &&
+		presentation.isCollapsed
+	);
+}
+
+export function isNoteCardFieldHighlighted(
+	highlightFields: readonly string[] | null | undefined,
+	field: NoteCardField,
+): boolean {
+	return Boolean(highlightFields?.includes(field));
 }
 
 export function getBulkCollapseAction(

@@ -36,6 +36,30 @@ export interface BuiltAiGenerationRequest {
 	payload: AiGenerationPayload;
 }
 
+export interface AiGenerationRequestPolicy {
+	requestType: string | null;
+	shouldParseResponse: boolean;
+}
+
+export interface AiGenerationRequestOptions {
+	generateCharacters: boolean;
+	generateNpcs: boolean;
+	generateLocations: boolean;
+	generateEncounters: boolean;
+	generateCustomMonsters: boolean;
+}
+
+export interface AiGenerationRequestTarget {
+	path: Record<string, unknown>;
+	sceneId: string | number | null;
+	imageTarget: unknown;
+}
+
+export interface AiGenerationRequestAttachments {
+	attachedImages: Record<string, unknown>[];
+	attachedFiles: Record<string, unknown>[];
+}
+
 export function sanitizeAiContextConfig(
 	contextConfig: AiContextConfig | null | undefined,
 ): AiContextConfig | null {
@@ -49,86 +73,143 @@ export function sanitizeAiContextConfig(
 	return sanitized;
 }
 
-export function buildAiGenerationRequest({
+function resolveAiGenerationRequestType({
 	type = null,
 	isBestiary = false,
-	isEncounter = false,
-	isCampaign = false,
-	forceParseAIResponse = null,
-	parseAIResponse = false,
-	selectedModel = "",
-	userInstructions = "",
-	userInstructionsOverride = null,
+}: AiGenerationRequestInput): string | null {
+	return isBestiary && type !== "image" ? "custom-monster" : type;
+}
+
+function resolveAiGenerationResponseParsing(
+	{
+		isBestiary = false,
+		forceParseAIResponse = null,
+		parseAIResponse = false,
+	}: AiGenerationRequestInput,
+	requestType: string | null,
+): boolean {
+	if (requestType === "image") return false;
+	if (isBestiary) return true;
+	return forceParseAIResponse === null
+		? parseAIResponse
+		: forceParseAIResponse;
+}
+
+export function resolveAiGenerationRequestPolicy(
+	input: AiGenerationRequestInput,
+): AiGenerationRequestPolicy {
+	const requestType = resolveAiGenerationRequestType(input);
+	return {
+		requestType,
+		shouldParseResponse: resolveAiGenerationResponseParsing(input, requestType),
+	};
+}
+
+function areStructuredEntityOptionsEnabled(
+	input: AiGenerationRequestInput,
+	policy: AiGenerationRequestPolicy,
+): boolean {
+	return policy.shouldParseResponse && !input.isEncounter && !input.isBestiary;
+}
+
+function shouldGenerateEncounters(
+	input: AiGenerationRequestInput,
+	policy: AiGenerationRequestPolicy,
+): boolean {
+	return Boolean(
+		policy.requestType !== "image" &&
+			policy.shouldParseResponse &&
+			!input.isCampaign &&
+			!input.isBestiary &&
+			input.generateEncounters,
+	);
+}
+
+export function buildAiGenerationRequestOptions(
+	input: AiGenerationRequestInput,
+	policy: AiGenerationRequestPolicy,
+): AiGenerationRequestOptions {
+	const structuredEntityOptionsEnabled = areStructuredEntityOptionsEnabled(
+		input,
+		policy,
+	);
+	const generateEncounters = shouldGenerateEncounters(input, policy);
+	return {
+		generateCharacters: structuredEntityOptionsEnabled
+			? Boolean(input.generateCharacters)
+			: true,
+		generateNpcs: structuredEntityOptionsEnabled
+			? Boolean(input.generateNpcs)
+			: true,
+		generateLocations: structuredEntityOptionsEnabled
+			? Boolean(input.generateLocations)
+			: true,
+		generateEncounters,
+		generateCustomMonsters: Boolean(
+			generateEncounters && input.generateCustomMonsters,
+		),
+	};
+}
+
+export function getAiGenerationRequestContext(
+	{
+		isBestiary = false,
+		useContext = false,
+		contextConfig = null,
+	}: AiGenerationRequestInput,
+): AiContextConfig | null {
+	return !isBestiary && useContext
+		? sanitizeAiContextConfig(contextConfig)
+		: null;
+}
+
+export function buildAiGenerationRequestTarget({
 	initialRoute,
 	targetSceneId = null,
 	imageTarget = null,
+}: AiGenerationRequestInput): AiGenerationRequestTarget {
+	return {
+		path: initialRoute,
+		sceneId: targetSceneId,
+		imageTarget,
+	};
+}
+
+export function buildAiGenerationRequestAttachments({
 	attachedImages = [],
 	attachedFiles = [],
-	imagePromptBasePromptOverride,
-	generateCharacters = false,
-	generateNpcs = false,
-	generateLocations = false,
-	generateEncounters = false,
-	generateCustomMonsters = false,
-	useContext = false,
-	contextConfig = null,
-	currentLanguage,
-}: AiGenerationRequestInput): BuiltAiGenerationRequest {
-	const requestType = isBestiary && type !== "image" ? "custom-monster" : type;
-	const shouldParseResponse =
-		requestType === "image"
-			? false
-			: isBestiary
-				? true
-				: forceParseAIResponse === null
-					? parseAIResponse
-					: forceParseAIResponse;
-	const structuredEntityOptionsEnabled =
-		shouldParseResponse && !isEncounter && !isBestiary;
+}: AiGenerationRequestInput): AiGenerationRequestAttachments {
+	return { attachedImages, attachedFiles };
+}
 
+function getAiGenerationInstructions({
+	userInstructions = "",
+	userInstructionsOverride = null,
+}: AiGenerationRequestInput): string {
+	return userInstructionsOverride === null
+		? userInstructions
+		: userInstructionsOverride;
+}
+
+export function buildAiGenerationRequest(
+	input: AiGenerationRequestInput,
+): BuiltAiGenerationRequest {
+	const policy = resolveAiGenerationRequestPolicy(input);
+	const target = buildAiGenerationRequestTarget(input);
+	const attachments = buildAiGenerationRequestAttachments(input);
 	return {
-		requestType,
-		shouldParseResponse,
+		...policy,
 		payload: {
-			type: requestType,
-			modelName: selectedModel || undefined,
-			userInstructions:
-				userInstructionsOverride === null
-					? userInstructions
-					: userInstructionsOverride,
-			path: initialRoute,
-			sceneId: targetSceneId,
-			imageTarget,
-			attachedImages,
-			attachedFiles,
-			imagePromptBasePromptOverride,
-			parseAIResponse: shouldParseResponse,
-			generateCharacters: structuredEntityOptionsEnabled
-				? generateCharacters
-				: true,
-			generateNpcs: structuredEntityOptionsEnabled ? generateNpcs : true,
-			generateLocations: structuredEntityOptionsEnabled
-				? generateLocations
-				: true,
-			generateEncounters:
-				requestType === "image"
-					? false
-					: shouldParseResponse &&
-						!isCampaign &&
-						!isBestiary &&
-						generateEncounters,
-			generateCustomMonsters:
-				requestType !== "image" &&
-				shouldParseResponse &&
-				!isCampaign &&
-				!isBestiary &&
-				generateEncounters &&
-				generateCustomMonsters,
-			contextConfig:
-				!isBestiary && useContext
-					? sanitizeAiContextConfig(contextConfig)
-					: null,
-			language: currentLanguage,
+			type: policy.requestType,
+			modelName: input.selectedModel || undefined,
+			userInstructions: getAiGenerationInstructions(input),
+			...target,
+			...attachments,
+			imagePromptBasePromptOverride: input.imagePromptBasePromptOverride,
+			parseAIResponse: policy.shouldParseResponse,
+			...buildAiGenerationRequestOptions(input, policy),
+			contextConfig: getAiGenerationRequestContext(input),
+			language: input.currentLanguage,
 		},
 	};
 }

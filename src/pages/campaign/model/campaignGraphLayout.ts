@@ -183,19 +183,30 @@ function toPositiveNumber(value: unknown): number | null {
 		: null;
 }
 
-function getFlowNodeSize(node: CampaignGraphLayoutNode = {}): GraphNodeSize {
+function getFirstPositiveNodeDimension(
+	values: readonly unknown[],
+	fallback: number,
+): number {
+	for (const value of values) {
+		const dimension = toPositiveNumber(value);
+		if (dimension !== null) return dimension;
+	}
+	return fallback;
+}
+
+export function getCampaignGraphFlowNodeSize(
+	node: CampaignGraphLayoutNode = {},
+): GraphNodeSize {
 	const fallback = getCampaignGraphNodeSize(getNodeType(node));
 	return {
-		width:
-			toPositiveNumber(node.measured?.width) ||
-			toPositiveNumber(node.width) ||
-			toPositiveNumber(node.style?.width) ||
+		width: getFirstPositiveNodeDimension(
+			[node.measured?.width, node.width, node.style?.width],
 			fallback.width,
-		height:
-			toPositiveNumber(node.measured?.height) ||
-			toPositiveNumber(node.height) ||
-			toPositiveNumber(node.style?.height) ||
+		),
+		height: getFirstPositiveNodeDimension(
+			[node.measured?.height, node.height, node.style?.height],
 			fallback.height,
+		),
 	};
 }
 
@@ -296,7 +307,7 @@ export function resolveCampaignGraphNodeCollision(
 	if (!draggedNode || draggedNode.hidden) return origin;
 
 	const safeMargin = Number.isFinite(margin) ? Math.max(0, margin) : 16;
-	const draggedSize = getFlowNodeSize(draggedNode);
+	const draggedSize = getCampaignGraphFlowNodeSize(draggedNode);
 	const peers = nodes
 		.filter(
 			(node) =>
@@ -306,7 +317,7 @@ export function resolveCampaignGraphNodeCollision(
 		)
 		.map((node) => ({
 			position: getFinitePosition(node),
-			size: getFlowNodeSize(node),
+			size: getCampaignGraphFlowNodeSize(node),
 		}));
 
 	if (isCandidateFree(origin, draggedSize, peers, safeMargin)) return origin;
