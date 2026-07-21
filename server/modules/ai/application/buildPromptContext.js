@@ -1,208 +1,535 @@
-function noteToPromptContext(note, { includeTitle = true } = {}) {
-	if (!note) return null;
-	if (typeof note === "string") {
-		return note.trim() ? { text: note } : null;
-	}
-	if (typeof note !== "object" || note._aiIgnored) return null;
-	const title = includeTitle ? String(note.title || "").trim() : "";
-	const text = String(note.text || "");
-	if (!title && !text.trim()) return null;
-	return {
-		id: note.id,
-		...(includeTitle ? { title } : {}),
-		text,
-	};
+const SELECTED_SCENE_DEFAULTS = Object.freeze({
+	included: true,
+	summary: true,
+	goal: true,
+	stakes: true,
+	location: true,
+	notes: true,
+	encounter: true,
+});
+
+const SELECTED_SCENE_TEXT_FIELDS = ["summary", "goal", "stakes", "location"];
+
+function asArray(value) {
+	return Array.isArray(value) ? value : [];
 }
 
-const isAiIgnored = (value = {}) => Boolean(value?._aiIgnored);
+function firstTruthy(values) {
+	return values.find(Boolean);
+}
+
+function valueOr(value, fallback) {
+	return value || fallback;
+}
+
+function readProperty(value, key) {
+	if (value === null || value === undefined) return undefined;
+	return value[key];
+}
+
+function readNestedProperty(value, keys) {
+	return keys.reduce(readProperty, value);
+}
+
+function hasTruthyProperty(value, keys) {
+	if (!value) return false;
+	return Boolean(keys.map((key) => value[key]).find(Boolean));
+}
+
+function isAiIgnored(value = {}) {
+	return Boolean(readProperty(value, "_aiIgnored"));
+}
+
+function projectStringNote(note) {
+	return note.trim() ? { text: note } : null;
+}
+
+function isProjectableObjectNote(note) {
+	if (typeof note !== "object") return false;
+	return !isAiIgnored(note);
+}
+
+function projectNoteTitle(note, includeTitle) {
+	if (!includeTitle) return "";
+	return String(valueOr(note.title, "")).trim();
+}
+
+function hasProjectedNoteContent(title, text) {
+	return Boolean(firstTruthy([title, text.trim()]));
+}
+
+function projectObjectNote(note, includeTitle) {
+	if (!isProjectableObjectNote(note)) return null;
+	const title = projectNoteTitle(note, includeTitle);
+	const text = String(valueOr(note.text, ""));
+	if (!hasProjectedNoteContent(title, text)) return null;
+	const result = { id: note.id };
+	if (includeTitle) result.title = title;
+	result.text = text;
+	return result;
+}
+
+function noteToPromptContext(note, { includeTitle = true } = {}) {
+	if (!note) return null;
+	if (typeof note === "string") return projectStringNote(note);
+	return projectObjectNote(note, includeTitle);
+}
+
+function projectNotes(notes, noteToContextNote) {
+	return asArray(notes).map(noteToContextNote).filter(Boolean);
+}
 
 function entityContextName(entity = {}) {
-	return (
-		`${entity.firstName || entity.first_name || ""} ${
-			entity.lastName || entity.last_name || ""
-		}`.trim() ||
-		entity.name ||
-		entity.title
-	);
+	const value = valueOr(entity, {});
+	const firstName = valueOr(firstTruthy([value.firstName, value.first_name]), "");
+	const lastName = valueOr(firstTruthy([value.lastName, value.last_name]), "");
+	const fullName = `${firstName} ${lastName}`.trim();
+	return firstTruthy([fullName, value.name, value.title]);
 }
 
 function characterToPromptContext(entity = {}, noteToContextNote) {
 	if (isAiIgnored(entity)) return null;
+	const value = valueOr(entity, {});
 	return {
-		id: entity.id,
-		slug: entity.slug,
-		name: entityContextName(entity),
-		race: entity.race,
-		class: entity.class,
-		level: entity.level,
-		motivation: entity.motivation,
-		description: entity.description,
-		trait: entity.trait,
-		notes: (entity.notes || []).map(noteToContextNote).filter(Boolean),
+		id: value.id,
+		slug: value.slug,
+		name: entityContextName(value),
+		race: value.race,
+		class: value.class,
+		level: value.level,
+		motivation: value.motivation,
+		description: value.description,
+		trait: value.trait,
+		notes: projectNotes(value.notes, noteToContextNote),
 	};
 }
 
 function npcToPromptContext(entity = {}, noteToContextNote) {
 	if (isAiIgnored(entity)) return null;
+	const value = valueOr(entity, {});
 	return {
-		id: entity.id,
-		slug: entity.slug,
-		name: entityContextName(entity),
-		race: entity.race,
-		class: entity.class,
-		level: entity.level,
-		description: entity.description,
-		motivation: entity.motivation,
-		trait: entity.trait,
-		notes: (entity.notes || []).map(noteToContextNote).filter(Boolean),
+		id: value.id,
+		slug: value.slug,
+		name: entityContextName(value),
+		race: value.race,
+		class: value.class,
+		level: value.level,
+		description: value.description,
+		motivation: value.motivation,
+		trait: value.trait,
+		notes: projectNotes(value.notes, noteToContextNote),
 	};
 }
 
 function locationToPromptContext(location = {}, noteToContextNote) {
 	if (isAiIgnored(location)) return null;
+	const value = valueOr(location, {});
 	return {
-		id: location.id,
-		slug: location.slug,
-		name: location.name || location.title,
-		description: location.description,
-		notes: (location.notes || []).map(noteToContextNote).filter(Boolean),
+		id: value.id,
+		slug: value.slug,
+		name: firstTruthy([value.name, value.title]),
+		description: value.description,
+		notes: projectNotes(value.notes, noteToContextNote),
 	};
 }
 
-function buildSelectedSessions(sessions, noteToContextNote) {
-	return (sessions || [])
-		.map((session) => {
-			const result = {
-				id: session.slug,
-				slug: session.slug,
-				name: session.name,
-			};
-			const config = session.conf || {};
-			const data = session.data || {};
-			if (config.included && config.notes && data.notes) {
-				result.notes = data.notes.map(noteToContextNote).filter(Boolean);
-			}
-			if (config.included && config.result_text && data.result_text) {
-				result.result = data.result_text;
-			}
-			if (config.included && data.scenes) {
-				const hasConfig =
-					config.scenes &&
-					typeof config.scenes === "object" &&
-					Object.keys(config.scenes).length > 0;
-				const defaults = {
-					included: true,
-					summary: true,
-					goal: true,
-					stakes: true,
-					location: true,
-					notes: true,
-					encounter: true,
-				};
-				const fields = ["summary", "goal", "stakes", "location"];
-				const scenes = data.scenes
-					.filter((scene) => !hasConfig || config.scenes[scene.id]?.included)
-					.map((scene) => {
-						const sceneConfig = hasConfig
-							? { ...defaults, ...(config.scenes[scene.id] || {}) }
-							: defaults;
-						const sceneResult = { id: scene.id };
-						if (sceneConfig.encounter && scene.encounterId) {
-							const encounter = (data.encounters || []).find(
-								(item) => String(item.id) === String(scene.encounterId),
-							);
-							if (encounter?.monsters) {
-								sceneResult.monsters = encounter.monsters.map(
-									(monster) => monster.name || monster.monsterName,
-								);
-							}
-						}
-						if (sceneConfig.notes) {
-							sceneResult.notes = (scene.notes || [])
-								.map(noteToContextNote)
-								.filter(Boolean);
-						}
-						for (const field of fields) {
-							if (!sceneConfig[field]) continue;
-							const value = scene.texts?.[field];
-							if (value !== undefined && value !== null) {
-								sceneResult[field] = value;
-							}
-						}
-						return sceneResult;
-					});
-				if (scenes.length > 0) result.scenes = scenes;
-			}
-			if (config.included && Array.isArray(data.npcs) && data.npcs.length > 0) {
-				result.npcs = data.npcs
-					.map((npc) => npcToPromptContext(npc, noteToContextNote))
-					.filter((npc) => npc && (npc.name || npc.description || npc.motivation));
-			}
-			if (
-				config.included &&
-				Array.isArray(data.locations) &&
-				data.locations.length > 0
-			) {
-				result.locations = data.locations
-					.map((location) => locationToPromptContext(location, noteToContextNote))
-					.filter((location) => location && (location.name || location.description));
-			}
-			return result;
-		})
-		.filter((session) =>
-			Boolean(
-				session.notes ||
-					session.result ||
-					session.scenes ||
-					session.npcs ||
-					session.locations,
+function hasCampaignEntityContent(entity) {
+	return hasTruthyProperty(entity, [
+		"name",
+		"description",
+		"motivation",
+		"trait",
+	]);
+}
+
+function hasSelectedNpcContent(npc) {
+	return hasTruthyProperty(npc, ["name", "description", "motivation"]);
+}
+
+function hasLocationContent(location) {
+	return hasTruthyProperty(location, ["name", "description"]);
+}
+
+function projectEntityList(
+	values,
+	projectEntity,
+	noteToContextNote,
+	hasContent,
+) {
+	return asArray(values)
+		.map((entity) => projectEntity(entity, noteToContextNote))
+		.filter(hasContent);
+}
+
+function projectOptionalEntityList(
+	values,
+	projectEntity,
+	noteToContextNote,
+	hasContent,
+) {
+	if (values === null || values === undefined) return undefined;
+	return projectEntityList(
+		values,
+		projectEntity,
+		noteToContextNote,
+		hasContent,
+	);
+}
+
+function projectOptionalNotes(notes, noteToContextNote) {
+	if (notes === null || notes === undefined) return undefined;
+	return projectNotes(notes, noteToContextNote);
+}
+
+function hasConfiguredScenes(config) {
+	return Boolean(
+		config.scenes &&
+			typeof config.scenes === "object" &&
+			Object.keys(config.scenes).length > 0,
+	);
+}
+
+function isSelectedScene(scene, config, hasConfig) {
+	if (!hasConfig) return true;
+	const sceneId = readProperty(scene, "id");
+	return Boolean(readNestedProperty(config, ["scenes", sceneId, "included"]));
+}
+
+function getSelectedSceneConfig(scene, config, hasConfig) {
+	if (!hasConfig) return SELECTED_SCENE_DEFAULTS;
+	return {
+		...SELECTED_SCENE_DEFAULTS,
+		...valueOr(readNestedProperty(config, ["scenes", readProperty(scene, "id")]), {}),
+	};
+}
+
+function findEncounter(encounters, encounterId) {
+	return asArray(encounters).find(
+		(encounter) => String(readProperty(encounter, "id")) === String(encounterId),
+	);
+}
+
+function projectMonsterName(monster) {
+	return firstTruthy([
+		readProperty(monster, "name"),
+		readProperty(monster, "monsterName"),
+	]);
+}
+
+function projectEncounterMonster(monster) {
+	const value = valueOr(monster, {});
+	return {
+		name: value.name,
+		monsterName: firstTruthy([value.originalBestiaryName, value.name]),
+		cr: firstTruthy([value.cr, value.challenge_rating]),
+	};
+}
+
+function projectEncounterMonsters(monsters) {
+	return asArray(monsters).map(projectEncounterMonster);
+}
+
+function appendSelectedSceneEncounter(
+	result,
+	scene,
+	sceneConfig,
+	encounters,
+) {
+	if (!sceneConfig.encounter) return;
+	const encounterId = readProperty(scene, "encounterId");
+	if (!encounterId) return;
+	const encounter = findEncounter(encounters, encounterId);
+	const monsters = readProperty(encounter, "monsters");
+	if (monsters) {
+		result.monsters = asArray(monsters).map(projectMonsterName);
+	}
+}
+
+function appendSelectedSceneNotes(
+	result,
+	scene,
+	sceneConfig,
+	noteToContextNote,
+) {
+	if (!sceneConfig.notes) return;
+	result.notes = projectNotes(readProperty(scene, "notes"), noteToContextNote);
+}
+
+function appendSelectedSceneText(result, scene, sceneConfig, field) {
+	if (!sceneConfig[field]) return;
+	const value = readNestedProperty(scene, ["texts", field]);
+	if (value !== undefined && value !== null) result[field] = value;
+}
+
+function projectSelectedScene(
+	scene,
+	config,
+	hasConfig,
+	data,
+	noteToContextNote,
+) {
+	const sceneConfig = getSelectedSceneConfig(scene, config, hasConfig);
+	const result = { id: readProperty(scene, "id") };
+	appendSelectedSceneEncounter(result, scene, sceneConfig, data.encounters);
+	appendSelectedSceneNotes(result, scene, sceneConfig, noteToContextNote);
+	SELECTED_SCENE_TEXT_FIELDS.forEach((field) => {
+		appendSelectedSceneText(result, scene, sceneConfig, field);
+	});
+	return result;
+}
+
+function projectSelectedScenes(config, data, noteToContextNote) {
+	const hasConfig = hasConfiguredScenes(config);
+	return asArray(data.scenes)
+		.filter((scene) => isSelectedScene(scene, config, hasConfig))
+		.map((scene) =>
+			projectSelectedScene(
+				scene,
+				config,
+				hasConfig,
+				data,
+				noteToContextNote,
 			),
 		);
 }
 
+function appendSelectedSessionNotes(result, config, data, noteToContextNote) {
+	if (config.included && config.notes && data.notes) {
+		result.notes = projectNotes(data.notes, noteToContextNote);
+	}
+}
+
+function appendSelectedSessionResult(result, config, data) {
+	if (config.included && config.result_text && data.result_text) {
+		result.result = data.result_text;
+	}
+}
+
+function appendSelectedSessionScenes(result, config, data, noteToContextNote) {
+	if (!config.included || !data.scenes) return;
+	const scenes = projectSelectedScenes(config, data, noteToContextNote);
+	if (scenes.length > 0) result.scenes = scenes;
+}
+
+function appendSelectedSessionNpcs(result, config, data, noteToContextNote) {
+	if (!config.included || !Array.isArray(data.npcs) || data.npcs.length === 0) {
+		return;
+	}
+	result.npcs = projectEntityList(
+		data.npcs,
+		npcToPromptContext,
+		noteToContextNote,
+		hasSelectedNpcContent,
+	);
+}
+
+function appendSelectedSessionLocations(
+	result,
+	config,
+	data,
+	noteToContextNote,
+) {
+	if (
+		!config.included ||
+		!Array.isArray(data.locations) ||
+		data.locations.length === 0
+	) {
+		return;
+	}
+	result.locations = projectEntityList(
+		data.locations,
+		locationToPromptContext,
+		noteToContextNote,
+		hasLocationContent,
+	);
+}
+
+function projectSelectedSession(session, noteToContextNote) {
+	const value = valueOr(session, {});
+	const config = valueOr(value.conf, {});
+	const data = valueOr(value.data, {});
+	const result = {
+		id: value.slug,
+		slug: value.slug,
+		name: value.name,
+	};
+	appendSelectedSessionNotes(result, config, data, noteToContextNote);
+	appendSelectedSessionResult(result, config, data);
+	appendSelectedSessionScenes(result, config, data, noteToContextNote);
+	appendSelectedSessionNpcs(result, config, data, noteToContextNote);
+	appendSelectedSessionLocations(result, config, data, noteToContextNote);
+	return result;
+}
+
+function hasSelectedSessionContent(session) {
+	return hasTruthyProperty(session, [
+		"notes",
+		"result",
+		"scenes",
+		"npcs",
+		"locations",
+	]);
+}
+
+function buildSelectedSessions(sessions, noteToContextNote) {
+	return asArray(sessions)
+		.map((session) => projectSelectedSession(session, noteToContextNote))
+		.filter(hasSelectedSessionContent);
+}
+
+function getCurrentSessionData(session, contextData) {
+	const currentData = readNestedProperty(contextData, ["currentSession", "data"]);
+	if (currentData && typeof currentData === "object") return currentData;
+	return valueOr(session.data, {});
+}
+
+function projectCurrentScene(scene, noteToContextNote) {
+	const value = valueOr(scene, {});
+	return {
+		id: value.id,
+		texts: value.texts,
+		encounterId: valueOr(value.encounterId, ""),
+		notes: projectNotes(value.notes, noteToContextNote),
+		npcs: valueOr(value.npcs, []),
+	};
+}
+
+function projectCurrentEncounter(encounter) {
+	const value = valueOr(encounter, {});
+	return {
+		id: value.id,
+		name: value.name,
+		monsters: projectEncounterMonsters(value.monsters),
+	};
+}
+
+function appendCurrentSessionScenes(result, data, noteToContextNote) {
+	if (!Array.isArray(data.scenes) || data.scenes.length === 0) return;
+	result.scenes = data.scenes.map((scene) =>
+		projectCurrentScene(scene, noteToContextNote),
+	);
+}
+
+function appendCurrentSessionEncounters(result, data) {
+	if (!Array.isArray(data.encounters) || data.encounters.length === 0) return;
+	result.encounters = data.encounters.map(projectCurrentEncounter);
+}
+
+function appendCurrentSessionNpcs(result, data, noteToContextNote) {
+	if (!Array.isArray(data.npcs) || data.npcs.length === 0) return;
+	result.npcs = projectEntityList(
+		data.npcs,
+		npcToPromptContext,
+		noteToContextNote,
+		hasCampaignEntityContent,
+	);
+}
+
+function appendCurrentSessionLocations(result, data, noteToContextNote) {
+	if (!Array.isArray(data.locations) || data.locations.length === 0) return;
+	result.locations = projectEntityList(
+		data.locations,
+		locationToPromptContext,
+		noteToContextNote,
+		hasLocationContent,
+	);
+}
+
 function buildCurrentSession(session, contextData, noteToContextNote) {
-	const data =
-		contextData?.currentSession?.data &&
-		typeof contextData.currentSession.data === "object"
-			? contextData.currentSession.data
-			: session.data || {};
+	const data = getCurrentSessionData(session, contextData);
+	const currentSession = valueOr(readProperty(contextData, "currentSession"), {});
 	const result = {
 		id: session.id,
-		slug: contextData?.currentSession?.slug,
-		fileName: contextData?.currentSession?.fileName,
-		name: contextData?.currentSession?.name || session.name,
+		slug: currentSession.slug,
+		fileName: currentSession.fileName,
+		name: firstTruthy([currentSession.name, session.name]),
 	};
-	if (Array.isArray(data.scenes) && data.scenes.length > 0) {
-		result.scenes = data.scenes.map((scene) => ({
-			id: scene.id,
-			texts: scene.texts,
-			encounterId: scene.encounterId || "",
-			notes: (scene.notes || []).map(noteToContextNote).filter(Boolean),
-			npcs: scene.npcs || [],
-		}));
-	}
-	if (Array.isArray(data.encounters) && data.encounters.length > 0) {
-		result.encounters = data.encounters.map((encounter) => ({
-			id: encounter.id,
-			name: encounter.name,
-			monsters: (encounter.monsters || []).map((monster) => ({
-				name: monster.name,
-				monsterName: monster.originalBestiaryName || monster.name,
-				cr: monster.cr || monster.challenge_rating,
-			})),
-		}));
-	}
-	if (Array.isArray(data.npcs) && data.npcs.length > 0) {
-		result.npcs = data.npcs
-			.map((npc) => npcToPromptContext(npc, noteToContextNote))
-			.filter((npc) => npc && (npc.name || npc.description || npc.motivation || npc.trait));
-	}
-	if (Array.isArray(data.locations) && data.locations.length > 0) {
-		result.locations = data.locations
-			.map((location) => locationToPromptContext(location, noteToContextNote))
-			.filter((location) => location && (location.name || location.description));
-	}
+	appendCurrentSessionScenes(result, data, noteToContextNote);
+	appendCurrentSessionEncounters(result, data);
+	appendCurrentSessionNpcs(result, data, noteToContextNote);
+	appendCurrentSessionLocations(result, data, noteToContextNote);
 	return result;
+}
+
+function buildCampaignContext(campaign, campaignData, noteToContextNote) {
+	const data = valueOr(campaignData, {});
+	return {
+		name: campaign.name,
+		description: campaign.description,
+		notes: projectOptionalNotes(data.notes, noteToContextNote),
+		characters: projectOptionalEntityList(
+			data.characters,
+			characterToPromptContext,
+			noteToContextNote,
+			hasCampaignEntityContent,
+		),
+		npcs: projectOptionalEntityList(
+			data.npcs,
+			npcToPromptContext,
+			noteToContextNote,
+			hasCampaignEntityContent,
+		),
+		locations: projectOptionalEntityList(
+			data.locations,
+			locationToPromptContext,
+			noteToContextNote,
+			hasLocationContent,
+		),
+	};
+}
+
+function appendCampaignContext(result, campaign, contextData, noteToContextNote) {
+	if (!campaign) return;
+	result.campaign = buildCampaignContext(
+		campaign,
+		readProperty(contextData, "campaign"),
+		noteToContextNote,
+	);
+}
+
+function appendCustomBestiaryContext(result, contextData) {
+	const customBestiary = readProperty(contextData, "customBestiary");
+	if (customBestiary) {
+		result.customBestiary = customBestiary;
+	}
+}
+
+function appendCurrentSessionContext(
+	result,
+	session,
+	contextData,
+	entityTargetScope,
+	noteToContextNote,
+) {
+	if (!session || entityTargetScope === "campaign") return;
+	result.currentSession = buildCurrentSession(
+		session,
+		contextData,
+		noteToContextNote,
+	);
+}
+
+function appendSelectedSessionsContext(result, contextData, noteToContextNote) {
+	const selectedSessions = buildSelectedSessions(
+		readProperty(contextData, "sessions"),
+		noteToContextNote,
+	);
+	if (selectedSessions.length > 0) result.selectedSessions = selectedSessions;
+}
+
+function appendCurrentEncounterContext(result, session, encounterId) {
+	if (!encounterId) return;
+	if (!session) return;
+	const encounter = findEncounter(
+		readNestedProperty(session, ["data", "encounters"]),
+		encounterId,
+	);
+	if (encounter) result.currentEncounter = projectCurrentEncounter(encounter);
+}
+
+function createNoteProjector(simplifiedNotesEnabled) {
+	return (note) =>
+		noteToPromptContext(note, { includeTitle: !simplifiedNotesEnabled });
 }
 
 function buildPromptContext({
@@ -213,47 +540,19 @@ function buildPromptContext({
 	encounterId,
 	simplifiedNotesEnabled = false,
 }) {
-	const noteToContextNote = (note) =>
-		noteToPromptContext(note, { includeTitle: !simplifiedNotesEnabled });
+	const noteToContextNote = createNoteProjector(simplifiedNotesEnabled);
 	const result = {};
-	if (campaign) {
-		result.campaign = {
-			name: campaign.name,
-			description: campaign.description,
-			notes: contextData?.campaign?.notes?.map(noteToContextNote).filter(Boolean),
-			characters: contextData?.campaign?.characters
-				?.map((character) => characterToPromptContext(character, noteToContextNote))
-				.filter((character) => character && (character.name || character.description || character.motivation || character.trait)),
-			npcs: contextData?.campaign?.npcs
-				?.map((npc) => npcToPromptContext(npc, noteToContextNote))
-				.filter((npc) => npc && (npc.name || npc.description || npc.motivation || npc.trait)),
-			locations: contextData?.campaign?.locations
-				?.map((location) => locationToPromptContext(location, noteToContextNote))
-				.filter((location) => location && (location.name || location.description)),
-		};
-	}
-	if (contextData?.customBestiary) result.customBestiary = contextData.customBestiary;
-	if (session && entityTargetScope !== "campaign") {
-		result.currentSession = buildCurrentSession(session, contextData, noteToContextNote);
-	}
-	const selectedSessions = buildSelectedSessions(contextData?.sessions, noteToContextNote);
-	if (selectedSessions.length > 0) result.selectedSessions = selectedSessions;
-	if (encounterId && session) {
-		const encounter = (session.data.encounters || []).find(
-			(item) => String(item.id) === String(encounterId),
-		);
-		if (encounter) {
-			result.currentEncounter = {
-				id: encounter.id,
-				name: encounter.name,
-				monsters: (encounter.monsters || []).map((monster) => ({
-					name: monster.name,
-					monsterName: monster.originalBestiaryName || monster.name,
-					cr: monster.cr || monster.challenge_rating,
-				})),
-			};
-		}
-	}
+	appendCampaignContext(result, campaign, contextData, noteToContextNote);
+	appendCustomBestiaryContext(result, contextData);
+	appendCurrentSessionContext(
+		result,
+		session,
+		contextData,
+		entityTargetScope,
+		noteToContextNote,
+	);
+	appendSelectedSessionsContext(result, contextData, noteToContextNote);
+	appendCurrentEncounterContext(result, session, encounterId);
 	return result;
 }
 

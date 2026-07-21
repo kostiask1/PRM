@@ -1,7 +1,72 @@
 const { asText } = require("../../../ai/AiHistoryWriter");
 
+const EXISTING_TARGET_OPERATIONS = new Set([
+	"update",
+	"delete",
+	"updateNote",
+	"deleteNote",
+]);
+
+const EXISTING_TARGET_FIELDS = ["id", "slug", "name", "targetClientId"];
+
 function isObject(value) {
 	return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function hasExistingTarget(operation) {
+	return EXISTING_TARGET_FIELDS.some((field) => asText(operation[field]));
+}
+
+function assignEncounterTarget(operation, targets) {
+	const encounterId = targets.path?.encounter;
+	if (encounterId) operation.id = encounterId;
+}
+
+function assignSceneTarget(operation, targets) {
+	if (targets.sceneId) operation.id = targets.sceneId;
+}
+
+function assignCustomMonsterTarget(operation, targets) {
+	if (!targets.customMonsterTarget) return;
+	const id = asText(targets.customMonsterTarget.id);
+	if (id) {
+		operation.id = id;
+		return;
+	}
+	const name = asText(targets.customMonsterTarget.name);
+	if (name) operation.name = name;
+}
+
+const TARGET_COMMANDS = new Map([
+	["encounter", assignEncounterTarget],
+	["encounters", assignEncounterTarget],
+	["scene", assignSceneTarget],
+	["scenes", assignSceneTarget],
+	["monster", assignCustomMonsterTarget],
+	["custom-monster", assignCustomMonsterTarget],
+	["custommonster", assignCustomMonsterTarget],
+]);
+
+function getTargetCommand(operation) {
+	const op = asText(operation.op);
+	const entity = asText(operation.entity).toLowerCase();
+	if (!EXISTING_TARGET_OPERATIONS.has(op)) return null;
+	if (hasExistingTarget(operation)) return null;
+	return TARGET_COMMANDS.get(entity) || null;
+}
+
+function applyCurrentTarget(operation, targets) {
+	if (!isObject(operation)) return;
+	const command = getTargetCommand(operation);
+	if (command) command(operation, targets);
+}
+
+function createCurrentTargets(path, sceneId, customMonsterTarget) {
+	return {
+		path,
+		sceneId,
+		customMonsterTarget,
+	};
 }
 
 function fillCurrentTargetIds(
@@ -9,39 +74,9 @@ function fillCurrentTargetIds(
 	{ path, sceneId, customMonsterTarget },
 ) {
 	if (!Array.isArray(generatedContent?.operations)) return generatedContent;
+	const targets = createCurrentTargets(path, sceneId, customMonsterTarget);
 	for (const operation of generatedContent.operations) {
-		if (!isObject(operation)) continue;
-		const op = asText(operation.op);
-		const entity = asText(operation.entity).toLowerCase();
-		const needsExistingTarget = [
-			"update",
-			"delete",
-			"updateNote",
-			"deleteNote",
-		].includes(op);
-		if (!needsExistingTarget) continue;
-		if (
-			asText(operation.id) ||
-			asText(operation.slug) ||
-			asText(operation.name) ||
-			asText(operation.targetClientId)
-		) {
-			continue;
-		}
-		if (["encounter", "encounters"].includes(entity) && path?.encounter) {
-			operation.id = path.encounter;
-		} else if (["scene", "scenes"].includes(entity) && sceneId) {
-			operation.id = sceneId;
-		} else if (
-			["monster", "custom-monster", "custommonster"].includes(entity) &&
-			customMonsterTarget
-		) {
-			if (asText(customMonsterTarget.id)) {
-				operation.id = asText(customMonsterTarget.id);
-			} else if (asText(customMonsterTarget.name)) {
-				operation.name = asText(customMonsterTarget.name);
-			}
-		}
+		applyCurrentTarget(operation, targets);
 	}
 	return generatedContent;
 }

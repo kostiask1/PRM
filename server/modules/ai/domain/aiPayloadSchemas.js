@@ -28,6 +28,16 @@ const ALLOWED_ENTITIES = new Set([
 	"customMonster",
 ]);
 
+const TARGET_IDENTITY_KEYS = Object.freeze([
+	"id",
+	"slug",
+	"name",
+	"targetClientId",
+]);
+const TARGETED_OPERATION_NAMES = new Set(["update", "delete"]);
+const NOTE_MUTATION_NAMES = new Set(["updateNote", "deleteNote"]);
+const ENTITY_SCOPES = new Set(["campaign", "session"]);
+
 function isObject(value) {
 	return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
@@ -55,140 +65,230 @@ function requiresExplicitEntityScope(operation, options = {}) {
 	return ["npc", "location"].includes(normalizedEntityName(operation.entity));
 }
 
+function hasTargetIdentity(operation) {
+	return TARGET_IDENTITY_KEYS.some((key) => hasText(operation[key]));
+}
+
+function isImplicitCampaignUpdate(operation, entity) {
+	return operation.op === "update" && entity === "campaign";
+}
+
+function createOperationValidationContext(
+	operation,
+	index,
+	errors,
+	options,
+) {
+	const entity = String(operation.entity || "");
+	return {
+		operation,
+		path: `operations[${index}]`,
+		errors,
+		options,
+		entity,
+		implicitCampaignUpdate: isImplicitCampaignUpdate(operation, entity),
+	};
+}
+
+function validateAllowedOperation(context) {
+	if (ALLOWED_OPS.has(context.operation.op)) return;
+	addError(
+		context.errors,
+		`${context.path}.op`,
+		`must be one of: ${[...ALLOWED_OPS].join(", ")}`,
+	);
+}
+
+function validateAllowedEntity(context) {
+	if (ALLOWED_ENTITIES.has(context.operation.entity)) return;
+	addError(
+		context.errors,
+		`${context.path}.entity`,
+		`must be one of: ${[...ALLOWED_ENTITIES].join(", ")}`,
+	);
+}
+
+function validateExistingTargetIdentity(context) {
+	if (!TARGETED_OPERATION_NAMES.has(context.operation.op)) return;
+	if (context.implicitCampaignUpdate || hasTargetIdentity(context.operation)) {
+		return;
+	}
+	addError(
+		context.errors,
+		context.path,
+		"must identify an existing target by id, slug, or name",
+	);
+}
+
+function validateCreatePayload(context) {
+	if (context.operation.op !== "create") return;
+	if (isObject(context.operation.data) || isObject(context.operation.value)) {
+		return;
+	}
+	addError(
+		context.errors,
+		`${context.path}.data`,
+		"must be an object for create operations",
+	);
+}
+
+function validateUpdatePayload(context) {
+	if (context.operation.op !== "update") return;
+	if (isObject(context.operation.patch) || isObject(context.operation.data)) {
+		return;
+	}
+	addError(
+		context.errors,
+		`${context.path}.patch`,
+		"must be an object for update operations",
+	);
+}
+
+function validateAppendNotePayload(context) {
+	if (context.operation.op !== "appendNote") return;
+	if (
+		isObject(context.operation.note) ||
+		isObject(context.operation.data) ||
+		typeof context.operation.note === "string"
+	) {
+		return;
+	}
+	addError(
+		context.errors,
+		`${context.path}.note`,
+		"must be a note object or string",
+	);
+}
+
+function validateNoteMutationIdentity(context) {
+	if (!NOTE_MUTATION_NAMES.has(context.operation.op)) return;
+	if (hasText(context.operation.noteId)) return;
+	addError(
+		context.errors,
+		`${context.path}.noteId`,
+		"is required for note updates/deletes",
+	);
+}
+
+function isMoveScopeOperation(context) {
+	return context.operation.op === "moveScope";
+}
+
+function validateMoveScopeTarget(context) {
+	if (!isMoveScopeOperation(context) || hasTargetIdentity(context.operation)) {
+		return;
+	}
+	addError(
+		context.errors,
+		context.path,
+		"must identify an existing target by id, slug, name, or targetClientId",
+	);
+}
+
+function validateMoveScopeFrom(context) {
+	if (!isMoveScopeOperation(context)) return;
+	if (ENTITY_SCOPES.has(context.operation.from)) return;
+	addError(context.errors, `${context.path}.from`, "must be campaign or session");
+}
+
+function validateMoveScopeTo(context) {
+	if (!isMoveScopeOperation(context)) return;
+	if (ENTITY_SCOPES.has(context.operation.to)) return;
+	addError(context.errors, `${context.path}.to`, "must be campaign or session");
+}
+
+function validateRequiredEntityScope(context) {
+	if (!requiresExplicitEntityScope(context.operation, context.options)) return;
+	if (context.operation.scope !== undefined) return;
+	addError(
+		context.errors,
+		`${context.path}.scope`,
+		"is required in mixed entity scope mode",
+	);
+}
+
+function validateSuppliedEntityScope(context) {
+	if (context.operation.scope === undefined) return;
+	if (ENTITY_SCOPES.has(context.operation.scope)) return;
+	addError(
+		context.errors,
+		`${context.path}.scope`,
+		"must be campaign or session",
+	);
+}
+
+const OPERATION_VALIDATORS = Object.freeze([
+	validateAllowedOperation,
+	validateAllowedEntity,
+	validateExistingTargetIdentity,
+	validateCreatePayload,
+	validateUpdatePayload,
+	validateAppendNotePayload,
+	validateNoteMutationIdentity,
+	validateMoveScopeTarget,
+	validateMoveScopeFrom,
+	validateMoveScopeTo,
+	validateRequiredEntityScope,
+	validateSuppliedEntityScope,
+]);
+
 function validateOperation(operation, index, errors, options = {}) {
 	const path = `operations[${index}]`;
 	if (!isObject(operation)) {
 		addError(errors, path, "must be an object");
 		return;
 	}
-	const entity = String(operation.entity || "");
-	const isImplicitCampaignUpdate =
-		operation.op === "update" && entity === "campaign";
-
-	if (!ALLOWED_OPS.has(operation.op)) {
-		addError(
-			errors,
-			`${path}.op`,
-			`must be one of: ${[...ALLOWED_OPS].join(", ")}`,
-		);
-	}
-	if (!ALLOWED_ENTITIES.has(operation.entity)) {
-		addError(
-			errors,
-			`${path}.entity`,
-			`must be one of: ${[...ALLOWED_ENTITIES].join(", ")}`,
-		);
-	}
-
-	if (
-		["update", "delete"].includes(operation.op) &&
-		!isImplicitCampaignUpdate &&
-		!hasText(operation.id) &&
-		!hasText(operation.slug) &&
-		!hasText(operation.name) &&
-		!hasText(operation.targetClientId)
-	) {
-		addError(
-			errors,
-			path,
-			"must identify an existing target by id, slug, or name",
-		);
-	}
-	if (
-		operation.op === "create" &&
-		!isObject(operation.data) &&
-		!isObject(operation.value)
-	) {
-		addError(errors, `${path}.data`, "must be an object for create operations");
-	}
-	if (
-		operation.op === "update" &&
-		!isObject(operation.patch) &&
-		!isObject(operation.data)
-	) {
-		addError(
-			errors,
-			`${path}.patch`,
-			"must be an object for update operations",
-		);
-	}
-	if (
-		operation.op === "appendNote" &&
-		!isObject(operation.note) &&
-		!isObject(operation.data) &&
-		typeof operation.note !== "string"
-	) {
-		addError(errors, `${path}.note`, "must be a note object or string");
-	}
-	if (
-		["updateNote", "deleteNote"].includes(operation.op) &&
-		!hasText(operation.noteId)
-	) {
-		addError(errors, `${path}.noteId`, "is required for note updates/deletes");
-	}
-	if (operation.op === "moveScope") {
-		if (
-			!hasText(operation.id) &&
-			!hasText(operation.slug) &&
-			!hasText(operation.name) &&
-			!hasText(operation.targetClientId)
-		) {
-			addError(
-				errors,
-				path,
-				"must identify an existing target by id, slug, name, or targetClientId",
-			);
-		}
-		if (!["campaign", "session"].includes(operation.from)) {
-			addError(errors, `${path}.from`, "must be campaign or session");
-		}
-		if (!["campaign", "session"].includes(operation.to)) {
-			addError(errors, `${path}.to`, "must be campaign or session");
-		}
-	}
-	if (
-		requiresExplicitEntityScope(operation, options) &&
-		operation.scope === undefined
-	) {
-		addError(errors, `${path}.scope`, "is required in mixed entity scope mode");
-	}
-	if (
-		operation.scope !== undefined &&
-		!["campaign", "session"].includes(operation.scope)
-	) {
-		addError(errors, `${path}.scope`, "must be campaign or session");
-	}
+	const context = createOperationValidationContext(
+		operation,
+		index,
+		errors,
+		options,
+	);
+	for (const validate of OPERATION_VALIDATORS) validate(context);
 }
 
-function validateAiGeneratedContent(payload, options = {}) {
-	const errors = [];
-	if (!isObject(payload)) {
-		return {
-			valid: false,
-			errors: [{ path: "$", message: "must be an object" }],
-		};
-	}
+function invalidPayloadResult() {
+	return {
+		valid: false,
+		errors: [{ path: "$", message: "must be an object" }],
+	};
+}
 
-	if (payload.version !== 2) {
-		addError(errors, "version", "must be 2");
-	}
+function validatePayloadVersion(payload, errors) {
+	if (payload.version !== 2) addError(errors, "version", "must be 2");
+}
+
+function validateOperations(operations, errors, options) {
+	operations.forEach((operation, index) =>
+		validateOperation(operation, index, errors, options),
+	);
+}
+
+function validatePayloadOperations(payload, errors, options) {
 	if (!Array.isArray(payload.operations)) {
 		addError(errors, "operations", "must be an array");
-	} else if (
-		options.requireOperations === true &&
-		payload.operations.length === 0
-	) {
-		addError(errors, "operations", "must not be empty");
-	} else {
-		payload.operations.forEach((operation, index) =>
-			validateOperation(operation, index, errors, options),
-		);
+		return;
 	}
+	if (options.requireOperations === true && payload.operations.length === 0) {
+		addError(errors, "operations", "must not be empty");
+		return;
+	}
+	validateOperations(payload.operations, errors, options);
+}
 
+function validationResult(errors) {
 	return {
 		valid: errors.length === 0,
 		errors,
 	};
+}
+
+function validateAiGeneratedContent(payload, options = {}) {
+	if (!isObject(payload)) return invalidPayloadResult();
+	const errors = [];
+	validatePayloadVersion(payload, errors);
+	validatePayloadOperations(payload, errors, options);
+	return validationResult(errors);
 }
 
 function assertAiGeneratedContentContract(payload, options = {}) {

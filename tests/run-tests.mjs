@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { EventEmitter } from "node:events";
 import { createRequire } from "node:module";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -820,7 +821,9 @@ import {
 } from "../src/features/rules-reference/model/rulesLink.ts";
 
 const require = createRequire(import.meta.url);
+const crypto = require("crypto");
 const storage = require("../server/storage.js");
+const { realtimeMiddleware, setupRealtime } = require("../server/realtime.js");
 const spellsRouter = require("../server/routes/spells.js");
 const backupsRouter = require("../server/routes/backups.js");
 const aiRouter = require("../server/routes/ai.js");
@@ -847,10 +850,14 @@ const {
 	parseAiResponseText,
 } = require("../server/modules/ai/application/parseAiResponse.js");
 const {
+	normalizeModelName,
+	normalizeResponseLanguage,
 	resolveAiRequest,
 	selectAiModel,
 } = require("../server/modules/ai/application/resolveAiRequest.js");
 const {
+	getGenerateRequestPath,
+	isBestiaryImagePromptRequestPayload,
 	prepareGenerateAiRequest,
 } = require("../server/modules/ai/application/prepareGenerateAiRequest.js");
 const {
@@ -902,6 +909,9 @@ const {
 } = require("../server/modules/images/application/imageCommands.js");
 const {
 	createReferenceCommands,
+	getSourcePriority,
+	normalizeNamedReferenceRecords,
+	pickPreferredRecord,
 } = require("../server/modules/reference/application/referenceCommands.js");
 const {
 	createBackupCommands,
@@ -927,6 +937,9 @@ const {
 } = require("../server/modules/campaign/infrastructure/fileCampaignEntityRepository.js");
 const aiHistoryService = require("../server/aiHistoryService.js");
 const aiResponseHistoryService = require("../server/aiResponseHistoryService.js");
+const {
+	normalizeCustomMonster,
+} = require("../server/aiCustomMonsterService.js");
 const aiPatchService = require("../server/aiPatchService.js");
 const { buildAiChangeSummary } = require("../server/ai/aiChangeSummary.js");
 const { AiHistoryWriter } = require("../server/ai/AiHistoryWriter.js");
@@ -4487,6 +4500,194 @@ await run("AI operations schema validates patch contracts", () => {
 	);
 });
 
+await run("AI operation schema preserves ordered malformed and scope errors", () => {
+	const validateOperations = (operations, options = {}) =>
+		aiPayloadSchemas.validateAiGeneratedContent(
+			{ version: 2, operations },
+			options,
+		);
+	const mixedScopeOptions = { requireExplicitEntityScope: true };
+
+	assert.deepEqual(
+		validateOperations([{ op: "merge", entity: "dragon", scope: "world" }])
+			.errors,
+		[
+			{
+				path: "operations[0].op",
+				message:
+					"must be one of: create, update, delete, appendNote, updateNote, deleteNote, moveScope",
+			},
+			{
+				path: "operations[0].entity",
+				message:
+					"must be one of: campaign, session, character, characters, npc, npcs, location, locations, faction, factions, scene, scenes, encounter, encounters, monster, custom-monster, customMonster",
+			},
+			{
+				path: "operations[0].scope",
+				message: "must be campaign or session",
+			},
+		],
+	);
+	assert.deepEqual(
+		validateOperations(
+			[{ op: "update", entity: "npc" }],
+			mixedScopeOptions,
+		).errors,
+		[
+			{
+				path: "operations[0]",
+				message: "must identify an existing target by id, slug, or name",
+			},
+			{
+				path: "operations[0].patch",
+				message: "must be an object for update operations",
+			},
+			{
+				path: "operations[0].scope",
+				message: "is required in mixed entity scope mode",
+			},
+		],
+	);
+	assert.deepEqual(
+		validateOperations(
+			[
+				{
+					op: "moveScope",
+					entity: "locations",
+					from: "world",
+					to: null,
+					scope: "encounter",
+				},
+			],
+			mixedScopeOptions,
+		).errors,
+		[
+			{
+				path: "operations[0]",
+				message:
+					"must identify an existing target by id, slug, name, or targetClientId",
+			},
+			{
+				path: "operations[0].from",
+				message: "must be campaign or session",
+			},
+			{
+				path: "operations[0].to",
+				message: "must be campaign or session",
+			},
+			{
+				path: "operations[0].scope",
+				message: "must be campaign or session",
+			},
+		],
+	);
+
+	assert.deepEqual(
+		aiPayloadSchemas.validateAiGeneratedContent({
+			version: 1,
+			operations: [null, [], "operation"],
+		}).errors,
+		[
+			{ path: "version", message: "must be 2" },
+			{ path: "operations[0]", message: "must be an object" },
+			{ path: "operations[1]", message: "must be an object" },
+			{ path: "operations[2]", message: "must be an object" },
+		],
+	);
+	assert.deepEqual(aiPayloadSchemas.validateAiGeneratedContent(null).errors, [
+		{ path: "$", message: "must be an object" },
+	]);
+	assert.deepEqual(
+		aiPayloadSchemas.validateAiGeneratedContent({ version: 1 }).errors,
+		[
+			{ path: "version", message: "must be 2" },
+			{ path: "operations", message: "must be an array" },
+		],
+	);
+	assert.deepEqual(
+		validateOperations([], { requireOperations: true }).errors,
+		[{ path: "operations", message: "must not be empty" }],
+	);
+
+	const validOperations = [
+		{ op: "create", entity: "scene", data: { name: "Засідка" } },
+		{ op: "create", entity: "scene", value: { name: "Брама" } },
+		{ op: "update", entity: "scene", id: "scene-1", patch: {} },
+		{ op: "update", entity: "scene", slug: "scene-2", data: {} },
+		{ op: "update", entity: "campaign", patch: {} },
+		{ op: "delete", entity: "scene", name: true },
+		{ op: "appendNote", entity: "scene", note: "" },
+		{ op: "appendNote", entity: "scene", note: {} },
+		{ op: "appendNote", entity: "scene", data: {} },
+		{ op: "updateNote", entity: "scene", noteId: "note-1" },
+		{ op: "deleteNote", entity: "scene", noteId: true },
+		{
+			op: "moveScope",
+			entity: "factions",
+			targetClientId: "faction-1",
+			from: "campaign",
+			to: "session",
+		},
+	];
+	assert.equal(validateOperations(validOperations).valid, true);
+
+	for (const entity of ["npc", "npcs", "location", "locations", "faction", "factions"]) {
+		const result = validateOperations(
+			[{ op: "create", entity, data: { name: "Вартовий" } }],
+			mixedScopeOptions,
+		);
+		assert.deepEqual(result.errors, [
+			{
+				path: "operations[0].scope",
+				message: "is required in mixed entity scope mode",
+			},
+		]);
+	}
+
+	assert.deepEqual(
+		validateOperations(
+			[{ op: "create", entity: "npc", scope: null, data: {} }],
+			mixedScopeOptions,
+		).errors,
+		[
+			{
+				path: "operations[0].scope",
+				message: "must be campaign or session",
+			},
+		],
+	);
+	assert.deepEqual(
+		validateOperations([
+			{ op: "create", entity: "scene", data: [] },
+			{ op: "update", entity: "scene", id: 0, patch: [] },
+			{ op: "appendNote", entity: "scene", note: 42 },
+			{ op: "updateNote", entity: "scene", noteId: "   " },
+		]).errors,
+		[
+			{
+				path: "operations[0].data",
+				message: "must be an object for create operations",
+			},
+			{
+				path: "operations[1]",
+				message: "must identify an existing target by id, slug, or name",
+			},
+			{
+				path: "operations[1].patch",
+				message: "must be an object for update operations",
+			},
+			{
+				path: "operations[2].note",
+				message: "must be a note object or string",
+			},
+			{
+				path: "operations[3].noteId",
+				message: "is required for note updates/deletes",
+			},
+		],
+	);
+});
+
 await run("AI JSON fence cleanup preserves inner markdown fences", () => {
 	const raw = [
 		"```json",
@@ -4613,6 +4814,324 @@ await run("AI prompt context filters ignored data and selected scene fields", ()
 	assert.equal(context.selectedSessions[0].scenes[0].summary, "Summary");
 	assert.equal("goal" in context.selectedSessions[0].scenes[0], true);
 	assert.equal("notes" in context.selectedSessions[0].scenes[0], false);
+});
+
+await run("AI prompt context preserves complete projection policies", () => {
+	const customBestiary = { monsterNames: ["Тіньовий вовк"] };
+	const context = buildPromptContext({
+		campaign: { name: "Українська кампанія", description: "Опис" },
+		session: {
+			id: "current-id",
+			name: "Поточна сесія",
+			data: {
+				encounters: [
+					{
+						id: 42,
+						name: "Бій біля брами",
+						monsters: [
+							{
+								name: "Гоблін",
+								originalBestiaryName: "Goblin",
+								cr: 0,
+								challenge_rating: "1/4",
+							},
+						],
+					},
+				],
+			},
+		},
+		contextData: {
+			campaign: {
+				notes: [
+					"  Рядкова нотатка  ",
+					"   ",
+					{ id: "note", title: "  Заголовок  ", text: "  Текст  " },
+					{ id: "ignored", text: "Таємниця", _aiIgnored: true },
+				],
+				characters: [
+					{
+						id: "pc",
+						slug: "pc",
+						firstName: "Олена",
+						last_name: "Коваль",
+						race: "людина",
+						class: "воїн",
+						level: 4,
+						description: "Героїня",
+						notes: [{ id: "pc-note", title: "Риса", text: "Смілива" }],
+					},
+					{ id: "hidden-pc", name: "Прихована", _aiIgnored: true },
+				],
+				npcs: [
+					{
+						id: "guard",
+						name: "Варта",
+						motivation: "Захистити місто",
+					},
+				],
+				locations: [
+					{ id: "gate", title: "Північна брама", description: "Стара" },
+				],
+			},
+			currentSession: {
+				slug: "current-slug",
+				fileName: "current.json",
+				name: "",
+				data: {
+					scenes: [
+						{
+							id: 0,
+							texts: { summary: "Поточна сцена" },
+							encounterId: 0,
+							notes: [{ id: "scene-note", title: "Слід", text: "Знайдено" }],
+							npcs: "legacy-npcs",
+						},
+					],
+					encounters: [
+						{
+							id: "context-encounter",
+							name: "Контекстний бій",
+							monsters: [{ name: "Вовк", cr: "1/4" }],
+						},
+					],
+					npcs: [{ id: "trait-npc", trait: "Впертий" }],
+					locations: [{ id: "camp", title: "Табір" }],
+				},
+			},
+			customBestiary,
+			sessions: [
+				{
+					slug: "selected-1",
+					name: "Обрана сесія",
+					conf: {
+						included: true,
+						notes: true,
+						result_text: true,
+						scenes: {
+							selected: {
+								included: true,
+								summary: true,
+								goal: false,
+								notes: false,
+							},
+							hidden: { included: false },
+						},
+					},
+					data: {
+						notes: [],
+						result_text: "Підсумок",
+						scenes: [
+							{
+								id: "selected",
+								encounterId: "enc-1",
+								texts: {
+									summary: "",
+									goal: "Прихована ціль",
+									stakes: 0,
+									location: false,
+								},
+								notes: ["Не включати"],
+							},
+							{ id: "hidden", texts: { summary: "Приховано" } },
+							{ id: "unconfigured", texts: { summary: "Приховано" } },
+						],
+						encounters: [
+							{
+								id: "enc-1",
+								monsters: [
+									{ name: "Вовк" },
+									{ monsterName: "Тінь" },
+								],
+							},
+						],
+						npcs: [
+							{ id: "trait-only", trait: "Не достатньо" },
+							{ id: "elder", name: "Староста" },
+						],
+						locations: [{ id: "ruin", description: "Руїни" }],
+					},
+				},
+				{
+					slug: "selected-2",
+					name: "Без карти вибору",
+					conf: { included: true, scenes: "legacy-all" },
+					data: {
+						scenes: [
+							{
+								id: "free",
+								texts: { goal: "Ціль" },
+								notes: [" нотатка "],
+							},
+						],
+					},
+				},
+				{
+					slug: "excluded",
+					conf: { included: false, notes: true },
+					data: { notes: ["Не включати"] },
+				},
+				null,
+			],
+		},
+		entityTargetScope: "session",
+		encounterId: "42",
+	});
+
+	assert.equal(context.customBestiary, customBestiary);
+	assert.deepEqual(JSON.parse(JSON.stringify(context)), {
+		campaign: {
+			name: "Українська кампанія",
+			description: "Опис",
+			notes: [
+				{ text: "  Рядкова нотатка  " },
+				{ id: "note", title: "Заголовок", text: "  Текст  " },
+			],
+			characters: [
+				{
+					id: "pc",
+					slug: "pc",
+					name: "Олена Коваль",
+					race: "людина",
+					class: "воїн",
+					level: 4,
+					description: "Героїня",
+					notes: [
+						{ id: "pc-note", title: "Риса", text: "Смілива" },
+					],
+				},
+			],
+			npcs: [
+				{
+					id: "guard",
+					name: "Варта",
+					motivation: "Захистити місто",
+					notes: [],
+				},
+			],
+			locations: [
+				{
+					id: "gate",
+					name: "Північна брама",
+					description: "Стара",
+					notes: [],
+				},
+			],
+		},
+		customBestiary,
+		currentSession: {
+			id: "current-id",
+			slug: "current-slug",
+			fileName: "current.json",
+			name: "Поточна сесія",
+			scenes: [
+				{
+					id: 0,
+					texts: { summary: "Поточна сцена" },
+					encounterId: "",
+					notes: [
+						{ id: "scene-note", title: "Слід", text: "Знайдено" },
+					],
+					npcs: "legacy-npcs",
+				},
+			],
+			encounters: [
+				{
+					id: "context-encounter",
+					name: "Контекстний бій",
+					monsters: [
+						{ name: "Вовк", monsterName: "Вовк", cr: "1/4" },
+					],
+				},
+			],
+			npcs: [{ id: "trait-npc", trait: "Впертий", notes: [] }],
+			locations: [{ id: "camp", name: "Табір", notes: [] }],
+		},
+		selectedSessions: [
+			{
+				id: "selected-1",
+				slug: "selected-1",
+				name: "Обрана сесія",
+				notes: [],
+				result: "Підсумок",
+				scenes: [
+					{
+						id: "selected",
+						monsters: ["Вовк", "Тінь"],
+						summary: "",
+						stakes: 0,
+						location: false,
+					},
+				],
+				npcs: [{ id: "elder", name: "Староста", notes: [] }],
+				locations: [{ id: "ruin", description: "Руїни", notes: [] }],
+			},
+			{
+				id: "selected-2",
+				slug: "selected-2",
+				name: "Без карти вибору",
+				scenes: [
+					{
+						id: "free",
+						notes: [{ text: " нотатка " }],
+						goal: "Ціль",
+					},
+				],
+			},
+		],
+		currentEncounter: {
+			id: 42,
+			name: "Бій біля брами",
+			monsters: [
+				{ name: "Гоблін", monsterName: "Goblin", cr: "1/4" },
+			],
+		},
+	});
+
+	const simplified = buildPromptContext({
+		campaign: { name: "Кампанія" },
+		contextData: {
+			campaign: {
+				notes: [{ id: "simple", title: "Не включати", text: "Текст" }],
+				characters: "malformed",
+				npcs: null,
+				locations: false,
+			},
+			sessions: { malformed: true },
+		},
+		simplifiedNotesEnabled: true,
+	});
+	assert.deepEqual(JSON.parse(JSON.stringify(simplified)), {
+		campaign: {
+			name: "Кампанія",
+			notes: [{ id: "simple", text: "Текст" }],
+			characters: [],
+			locations: [],
+		},
+	});
+
+	const malformedCurrent = buildPromptContext({
+		campaign: {},
+		session: { id: "broken", name: "Broken", data: { encounters: "bad" } },
+		contextData: {
+			campaign: { notes: "bad", characters: {}, locations: false },
+			currentSession: { data: { scenes: {}, encounters: [], npcs: {} } },
+			sessions: {},
+		},
+		entityTargetScope: "session",
+		encounterId: "missing",
+	});
+	assert.deepEqual(JSON.parse(JSON.stringify(malformedCurrent)), {
+		campaign: { notes: [], characters: [], locations: [] },
+		currentSession: { id: "broken", name: "Broken" },
+	});
+
+	const campaignScope = buildPromptContext({
+		session: { id: "hidden", data: { encounters: [] } },
+		contextData: {},
+		entityTargetScope: "campaign",
+		encounterId: 0,
+	});
+	assert.deepEqual(campaignScope, {});
 });
 
 await run("AI user prompt preserves mode-specific scope and encounter rules", () => {
@@ -5003,6 +5522,266 @@ await run("AI request resolution selects modes scopes and model fallbacks", () =
 	);
 });
 
+await run("AI request language and model normalization preserve scalar rules", () => {
+	assert.deepEqual(
+		[
+			" UK ",
+			"ua",
+			"Ukrainian",
+			" EN ",
+			"English",
+			" PL ",
+			"toString",
+			7,
+			true,
+		].map(normalizeResponseLanguage),
+		[
+			{ code: "uk", label: "Ukrainian" },
+			{ code: "ua", label: "Ukrainian" },
+			{ code: "ukrainian", label: "Ukrainian" },
+			{ code: "en", label: "English" },
+			{ code: "english", label: "English" },
+			{ code: "pl", label: "pl" },
+			{ code: "tostring", label: "tostring" },
+			{ code: "7", label: "7" },
+			{ code: "true", label: "true" },
+		],
+	);
+	for (const language of [undefined, null, "", "   ", 0, false]) {
+		assert.throws(
+			() => normalizeResponseLanguage(language),
+			(error) => error.message === "language is required",
+		);
+	}
+
+	assert.deepEqual(
+		[
+			"models/gemini",
+			" models/gemini ",
+			"models/models/gemini",
+			"Models/gemini",
+			"models/ ",
+			0,
+			false,
+			null,
+		].map(normalizeModelName),
+		[
+			"gemini",
+			"models/gemini",
+			"models/gemini",
+			"Models/gemini",
+			"",
+			"",
+			"",
+			"",
+		],
+	);
+	const availableModels = {
+		models: [{ name: "gemini" }, { name: "models/gemini" }],
+		defaultModel: "fallback",
+	};
+	assert.equal(selectAiModel(availableModels, "models/gemini"), "gemini");
+	assert.equal(selectAiModel(availableModels, " models/gemini "), "models/gemini");
+	assert.equal(selectAiModel(availableModels, "GEMINI"), "fallback");
+});
+
+await run("AI request resolution preserves the complete routing decision matrix", () => {
+	assert.deepEqual(resolveAiRequest({ language: "en" }), {
+		characterGenerationEnabled: true,
+		customMonsterGenerationEnabled: false,
+		effectiveParseAIResponse: false,
+		encounterGenerationEnabled: false,
+		entityTargetScope: "campaign",
+		locationGenerationEnabled: true,
+		npcGenerationEnabled: true,
+		responseLanguage: { code: "en", label: "English" },
+		simplifiedNotesEnabled: false,
+		useKey: "prompt",
+		usesStructuredJsonContract: false,
+	});
+
+	const flags = resolveAiRequest({
+		language: "en",
+		generateCharacters: false,
+		generateNpcs: 0,
+		generateLocations: null,
+		generateEncounters: "false",
+		generateCustomMonsters: 1,
+		simplifiedNotes: "false",
+	});
+	assert.deepEqual(
+		{
+			characters: flags.characterGenerationEnabled,
+			npcs: flags.npcGenerationEnabled,
+			locations: flags.locationGenerationEnabled,
+			encounters: flags.encounterGenerationEnabled,
+			customMonsters: flags.customMonsterGenerationEnabled,
+			simplifiedNotes: flags.simplifiedNotesEnabled,
+		},
+		{
+			characters: false,
+			npcs: true,
+			locations: true,
+			encounters: true,
+			customMonsters: true,
+			simplifiedNotes: true,
+		},
+	);
+	assert.equal(
+		resolveAiRequest({
+			language: "en",
+			generateCustomMonsters: true,
+		}).customMonsterGenerationEnabled,
+		false,
+	);
+
+	const session = { id: "session" };
+	for (const [encounterId, entityScope, expected] of [
+		[undefined, "session", "session"],
+		[undefined, "mixed", "mixed"],
+		[undefined, undefined, "mixed"],
+		[undefined, "other", "mixed"],
+		[undefined, "campaign", "campaign"],
+		["encounter", "session", "campaign"],
+		[0, "session", "session"],
+	]) {
+		assert.equal(
+			resolveAiRequest({ language: "en", session, encounterId, entityScope })
+				.entityTargetScope,
+			expected,
+		);
+	}
+	for (const emptySession of [undefined, null, false, 0, ""]) {
+		assert.equal(
+			resolveAiRequest({
+				language: "en",
+				session: emptySession,
+				entityScope: "session",
+			}).entityTargetScope,
+			"campaign",
+		);
+	}
+
+	for (const type of [
+		"campaign",
+		"scene",
+		"encounter",
+		"character",
+		"npc",
+		"location",
+		"custom-monster",
+	]) {
+		const resolved = resolveAiRequest({
+			type,
+			language: "en",
+			parseAIResponse: true,
+			generateEncounters: true,
+		});
+		assert.equal(resolved.useKey, type);
+		assert.equal(resolved.effectiveParseAIResponse, true);
+		assert.equal(resolved.usesStructuredJsonContract, true);
+	}
+
+	const imageWithoutParsing = resolveAiRequest({
+		type: "image",
+		language: "en",
+		parseAIResponse: false,
+	});
+	assert.equal(imageWithoutParsing.useKey, "image");
+	assert.equal(imageWithoutParsing.effectiveParseAIResponse, false);
+	assert.equal(imageWithoutParsing.usesStructuredJsonContract, false);
+	const gatedImage = resolveAiRequest({
+		type: "image",
+		language: "en",
+		encounterId: "encounter",
+		parseAIResponse: true,
+		generateEncounters: false,
+	});
+	assert.equal(gatedImage.useKey, "image");
+	assert.equal(gatedImage.effectiveParseAIResponse, false);
+
+	const forcedCustomMonster = resolveAiRequest({
+		type: "custom-monster",
+		language: "en",
+		encounterId: "encounter",
+		parseAIResponse: false,
+		generateEncounters: false,
+		generateCustomMonsters: true,
+	});
+	assert.equal(forcedCustomMonster.useKey, "custom-monster");
+	assert.equal(forcedCustomMonster.effectiveParseAIResponse, true);
+	assert.equal(forcedCustomMonster.customMonsterGenerationEnabled, false);
+
+	for (const [input, expected] of [
+		[
+			{
+				type: "encounter",
+				session,
+				parseAIResponse: true,
+				generateEncounters: false,
+			},
+			{ useKey: "scene", parse: true, structured: true },
+		],
+		[
+			{
+				type: "encounter",
+				parseAIResponse: true,
+				generateEncounters: false,
+			},
+			{ useKey: "campaign", parse: true, structured: true },
+		],
+		[
+			{
+				type: "encounter",
+				encounterId: "encounter",
+				parseAIResponse: true,
+				generateEncounters: false,
+			},
+			{ useKey: "prompt", parse: false, structured: false },
+		],
+		[
+			{
+				type: "encounter",
+				encounterId: "encounter",
+				parseAIResponse: true,
+				generateEncounters: true,
+			},
+			{ useKey: "encounter", parse: true, structured: true },
+		],
+		[
+			{
+				type: "unsupported",
+				encounterId: "encounter",
+				parseAIResponse: true,
+				generateEncounters: true,
+			},
+			{ useKey: "encounter", parse: true, structured: true },
+		],
+		[
+			{ type: "unsupported", session, parseAIResponse: true },
+			{ useKey: "scene", parse: true, structured: true },
+		],
+		[
+			{ type: "unsupported", parseAIResponse: true },
+			{ useKey: "campaign", parse: true, structured: true },
+		],
+		[
+			{ type: "unsupported", session, parseAIResponse: false },
+			{ useKey: "prompt", parse: false, structured: false },
+		],
+	]) {
+		const resolved = resolveAiRequest({ language: "en", ...input });
+		assert.deepEqual(
+			{
+				useKey: resolved.useKey,
+				parse: resolved.effectiveParseAIResponse,
+				structured: resolved.usesStructuredJsonContract,
+			},
+			expected,
+		);
+	}
+});
+
 await run("AI generation preparation resolves settings without HTTP or files", async () => {
 	let settingsReads = 0;
 	const prepared = await prepareGenerateAiRequest({
@@ -5057,6 +5836,267 @@ await run("AI generation preparation resolves settings without HTTP or files", a
 		{
 			error: { status: 500, message: "GEMINI_API_KEY is not configured." },
 		},
+	);
+});
+
+await run("AI generation preparation preserves the complete request decision table", async () => {
+	const prepare = (payload, settings = {}) =>
+		prepareGenerateAiRequest({
+			payload,
+			apiKeyConfigured: true,
+			readSettings: async () => settings,
+		});
+
+	let languageReads = 0;
+	const missingLanguagePayload = {
+		get language() {
+			languageReads += 1;
+			return "  ";
+		},
+		get path() {
+			throw new Error("path must not be read before language validation");
+		},
+	};
+	assert.deepEqual(
+		await prepareGenerateAiRequest({
+			payload: missingLanguagePayload,
+			apiKeyConfigured: false,
+			readSettings: async () => {
+				throw new Error("settings must not be read before preflight");
+			},
+		}),
+		{ error: { status: 400, message: "language is required." } },
+	);
+	assert.equal(languageReads, 1);
+	assert.deepEqual(
+		await prepareGenerateAiRequest({
+			payload: {
+				language: "EN",
+				get path() {
+					throw new Error("path must not be read before API-key validation");
+				},
+			},
+			apiKeyConfigured: false,
+			readSettings: async () => {
+				throw new Error("settings must not be read before preflight");
+			},
+		}),
+		{
+			error: { status: 500, message: "GEMINI_API_KEY is not configured." },
+		},
+	);
+
+	const arrayPath = ["legacy"];
+	arrayPath.campaign = "масив";
+	assert.equal(
+		getGenerateRequestPath({ type: "scene", path: arrayPath }),
+		arrayPath,
+	);
+	assert.deepEqual(getGenerateRequestPath({ path: "legacy" }), {});
+	assert.deepEqual(
+		getGenerateRequestPath({
+			type: "image",
+			path: null,
+			imageTarget: { type: " custom-monster " },
+		}),
+		{ campaign: "bestiary", session: null, encounter: null },
+	);
+	const callablePath = () => {};
+	callablePath.campaign = "already-owned";
+	assert.deepEqual(
+		getGenerateRequestPath({
+			type: "image",
+			path: callablePath,
+			imageTarget: { type: "custom-monster" },
+		}),
+		{},
+	);
+	assert.equal(
+		isBestiaryImagePromptRequestPayload({
+			type: "scene",
+			path: { campaign: "bestiary" },
+		}),
+		false,
+	);
+	assert.equal(
+		isBestiaryImagePromptRequestPayload({
+			type: "image",
+			path: { campaign: "bestiary" },
+		}),
+		true,
+	);
+	assert.equal(
+		isBestiaryImagePromptRequestPayload({
+			type: "image",
+			imageTarget: { type: "CUSTOM-MONSTER" },
+		}),
+		false,
+	);
+
+	for (let mask = 0; mask < 8; mask += 1) {
+		const generateCharacters = Boolean(mask & 1);
+		const generateNpcs = Boolean(mask & 2);
+		const generateLocations = Boolean(mask & 4);
+		const result = await prepare({
+			type: "scene",
+			language: " УК ",
+			path: { campaign: "кампанія", session: "сесія" },
+			parseAIResponse: true,
+			generateCharacters,
+			generateNpcs,
+			generateLocations,
+		});
+		assert.equal(result.responseLanguage, "ук");
+		assert.equal(result.shouldParseAIResponse, true);
+		assert.equal(result.characterGenerationEnabled, generateCharacters);
+		assert.equal(result.npcGenerationEnabled, generateNpcs);
+		assert.equal(result.locationGenerationEnabled, generateLocations);
+		assert.equal(result.entityTargetScope, "mixed");
+	}
+
+	const blockedEncounter = await prepare({
+		type: "scene",
+		language: "en",
+		path: { campaign: "demo", session: "s", encounter: "e" },
+		parseAIResponse: true,
+		generateEncounters: false,
+		generateCustomMonsters: true,
+		generateCharacters: false,
+		generateNpcs: false,
+		generateLocations: false,
+	});
+	assert.deepEqual(
+		{
+			parse: blockedEncounter.shouldParseAIResponse,
+			encounters: blockedEncounter.encounterGenerationEnabled,
+			monsters: blockedEncounter.customMonsterGenerationEnabled,
+			characters: blockedEncounter.characterGenerationEnabled,
+			npcs: blockedEncounter.npcGenerationEnabled,
+			locations: blockedEncounter.locationGenerationEnabled,
+			scope: blockedEncounter.entityTargetScope,
+		},
+		{
+			parse: false,
+			encounters: false,
+			monsters: false,
+			characters: true,
+			npcs: true,
+			locations: true,
+			scope: "campaign",
+		},
+	);
+	const enabledEncounter = await prepare({
+		type: "scene",
+		language: "en",
+		path: { campaign: "demo", session: "s", encounter: "e" },
+		parseAIResponse: true,
+		generateEncounters: "yes",
+		generateCustomMonsters: 1,
+	});
+	assert.equal(enabledEncounter.shouldParseAIResponse, true);
+	assert.equal(enabledEncounter.encounterGenerationEnabled, true);
+	assert.equal(enabledEncounter.customMonsterGenerationEnabled, true);
+	assert.equal(enabledEncounter.entityTargetScope, "campaign");
+
+	const imageWithoutParsing = await prepare({
+		type: "image",
+		language: "en",
+		path: { campaign: "demo", session: "s" },
+		parseAIResponse: true,
+		generateEncounters: true,
+		generateCharacters: false,
+		generateNpcs: false,
+		generateLocations: false,
+	});
+	assert.equal(imageWithoutParsing.shouldParseAIResponse, false);
+	assert.equal(imageWithoutParsing.encounterGenerationEnabled, false);
+	assert.equal(imageWithoutParsing.characterGenerationEnabled, true);
+	assert.equal(imageWithoutParsing.npcGenerationEnabled, true);
+	assert.equal(imageWithoutParsing.locationGenerationEnabled, true);
+	assert.equal(imageWithoutParsing.entityTargetScope, "campaign");
+
+	const promptSettings = {
+		simplifiedNotes: "yes",
+		autoApplyAiChanges: 0,
+		aiBasePrompt: "  Глобальна база  ",
+		imagePromptBasePrompt: "  Глобальний стиль  ",
+		campaignAiBasePrompts: { demo: "  Кампанійна база  " },
+		campaignImagePromptBasePrompts: { demo: "  Кампанійний стиль  " },
+	};
+	const ownEmptyOverride = await prepare(
+		{
+			type: "image",
+			language: "uk",
+			path: { campaign: "demo" },
+			imagePromptBasePromptOverride: "   ",
+		},
+		promptSettings,
+	);
+	assert.equal(ownEmptyOverride.imagePromptBasePrompt, "");
+	assert.equal(ownEmptyOverride.globalBasePrompt, "Глобальна база");
+	assert.equal(ownEmptyOverride.campaignBasePrompt, "Кампанійна база");
+	assert.equal(ownEmptyOverride.simplifiedNotesEnabled, true);
+	assert.equal(ownEmptyOverride.autoApplyAiChanges, true);
+
+	const inheritedOverridePayload = Object.create({
+		imagePromptBasePromptOverride: "Успадкований стиль",
+	});
+	Object.assign(inheritedOverridePayload, {
+		type: "image",
+		language: "uk",
+		path: { campaign: "demo" },
+	});
+	assert.equal(
+		(await prepare(inheritedOverridePayload, promptSettings))
+			.imagePromptBasePrompt,
+		"Кампанійний стиль",
+	);
+	assert.equal(
+		(
+			await prepare(
+				{ type: "image", language: "uk", path: { campaign: "missing" } },
+				promptSettings,
+			)
+		).imagePromptBasePrompt,
+		"Глобальний стиль",
+	);
+	assert.equal(
+		(
+			await prepare(
+				{
+					type: "scene",
+					language: "uk",
+					path: { campaign: "demo" },
+					imagePromptBasePromptOverride: "Не для тексту",
+				},
+				promptSettings,
+			)
+		).imagePromptBasePrompt,
+		"Кампанійний стиль",
+	);
+
+	const emptySettings = await prepareGenerateAiRequest({
+		payload: { type: "scene", language: "en", path: 42 },
+		apiKeyConfigured: true,
+		readSettings: async () => null,
+	});
+	assert.deepEqual(emptySettings.requestPath, {});
+	assert.equal(emptySettings.simplifiedNotesEnabled, false);
+	assert.equal(emptySettings.autoApplyAiChanges, true);
+	assert.equal(emptySettings.globalBasePrompt, "");
+	assert.equal(emptySettings.imagePromptBasePrompt, "");
+	assert.equal(emptySettings.campaignBasePrompt, "");
+
+	const arrayPromptSettings = [];
+	arrayPromptSettings.campaignAiBasePrompts = [" Нульова кампанія "];
+	assert.equal(
+		(
+			await prepare(
+				{ type: "scene", language: "en", path: { campaign: 0 } },
+				arrayPromptSettings,
+			)
+		).campaignBasePrompt,
+		"Нульова кампанія",
 	);
 });
 
@@ -5126,6 +6166,249 @@ await run("Bestiary image generation command runs without Express or Gemini", as
 	});
 	assert.equal(failed.status, 500);
 	assert.equal(failed.body.aiResponse.id, "failed-history");
+});
+
+await run("custom monster normalization preserves aliases defaults and legacy shapes", () => {
+	const originalCreateId = storage.createId;
+	let generatedIds = 0;
+	storage.createId = () => `generated-monster-${++generatedIds}`;
+	try {
+		for (const invalid of [
+			null,
+			undefined,
+			"monster",
+			42,
+			() => null,
+			{},
+			{ name: "   " },
+			{ name: [], title: "Suppressed title" },
+			[],
+		]) {
+			assert.equal(normalizeCustomMonster(invalid), null);
+		}
+
+		const type = { type: "[fey]", tags: ["[shapechanger]"] };
+		const speed = { walk: 40, note: "[швидкий]" };
+		const save = { str: "+2", note: "[save]" };
+		const skill = ["[Stealth]"];
+		const spellcasting = {};
+		const raw = {
+			id: 0,
+			name: " [[Лісовий [Страж]]] ",
+			source: "MM",
+			size: ["tiny", "X", 0, ""],
+			type,
+			alignment: [" lawful ", 0, false, null, "[good]"],
+			ac: 0,
+			armor_class: 99,
+			hp: false,
+			hit_points: { average: 99, formula: "99d8" },
+			speed,
+			str: 0,
+			strength: 18,
+			dex: false,
+			dexterity: 17,
+			con: "",
+			constitution: 16,
+			int: null,
+			intelligence: 15,
+			wis: undefined,
+			wisdom: 14,
+			cha: "12x",
+			charisma: 13,
+			cr: 0,
+			challenge_rating: "9",
+			imageUrl: 0,
+			originalBestiaryName: "[[Dire Wolf]]",
+			save,
+			skill,
+			spellcasting,
+			traitTags: "ignored scalar",
+			actionTags: null,
+			languageTags: ["[ANY]"],
+			senseTags: { value: "[D]" },
+			miscTags: [],
+			senses: "darkvision [60 ft.]",
+			languages: [" Common ", 0, { ignored: true }],
+			resist: "",
+			immune: null,
+			vulnerable: false,
+			conditionImmune: ["[charmed]", "", true],
+			trait: [
+				" [Keen Smell] ",
+				"   ",
+				null,
+				{
+					title: "[Bite]",
+					text: "[Hit]",
+					extra: "[extra]",
+				},
+				{ name: "Empty", entries: [] },
+			],
+			action: [
+				{
+					name: "[Claw]",
+					entries: ["[Attack]", 0, { text: "[nested]" }],
+				},
+			],
+			bonus: [" Bonus text "],
+			reaction: [{ description: 0, content: "fallback content" }],
+			legendary: [{ content: { value: 1 } }],
+		};
+		const normalized = normalizeCustomMonster(raw);
+		assert.deepEqual(
+			{
+				id: normalized.id,
+				name: normalized.name,
+				source: normalized.source,
+				size: normalized.size,
+				type: normalized.type,
+				alignment: normalized.alignment,
+				ac: normalized.ac,
+				hp: normalized.hp,
+				speed: normalized.speed,
+				abilities: [
+					normalized.str,
+					normalized.dex,
+					normalized.con,
+					normalized.int,
+					normalized.wis,
+					normalized.cha,
+				],
+				cr: normalized.cr,
+				imageUrl: normalized.imageUrl,
+				originalBestiaryName: normalized.originalBestiaryName,
+			},
+			{
+				id: "0",
+				name: "Лісовий Страж",
+				source: "CUSTOM",
+				size: ["T", "M", "M"],
+				type: { type: "fey", tags: ["shapechanger"] },
+				alignment: ["lawful", "0", "false", "good"],
+				ac: [{ ac: 0 }],
+				hp: { average: 1, formula: "" },
+				speed: { walk: 40, note: "швидкий" },
+				abilities: [0, 10, 10, 15, 14, 12],
+				cr: "0",
+				imageUrl: "0",
+				originalBestiaryName: "Dire Wolf",
+			},
+		);
+		assert.deepEqual(normalized.save, { str: "+2", note: "save" });
+		assert.deepEqual(normalized.skill, ["Stealth"]);
+		assert.deepEqual(normalized.spellcasting, {});
+		assert.deepEqual(normalized.languageTags, ["ANY"]);
+		assert.deepEqual(normalized.senseTags, { value: "D" });
+		assert.deepEqual(normalized.miscTags, []);
+		assert.equal("traitTags" in normalized, false);
+		assert.equal("actionTags" in normalized, false);
+		assert.notEqual(normalized.type, type);
+		assert.notEqual(normalized.speed, speed);
+		assert.notEqual(normalized.save, save);
+		assert.notEqual(normalized.skill, skill);
+		assert.notEqual(normalized.spellcasting, spellcasting);
+		assert.deepEqual(normalized.senses, ["darkvision 60 ft."]);
+		assert.deepEqual(normalized.languages, ["Common", "0"]);
+		assert.equal("resist" in normalized, false);
+		assert.equal("immune" in normalized, false);
+		assert.deepEqual(normalized.vulnerable, ["false"]);
+		assert.deepEqual(normalized.conditionImmune, ["charmed", "true"]);
+		assert.deepEqual(normalized.trait, [
+			{ name: "", entries: ["Keen Smell"] },
+			{
+				title: "Bite",
+				text: "Hit",
+				extra: "extra",
+				name: "Bite",
+				entries: ["Hit"],
+			},
+		]);
+		assert.deepEqual(normalized.action, [
+			{
+				name: "Claw",
+				entries: ["Attack", 0, { text: "nested" }],
+			},
+		]);
+		assert.deepEqual(normalized.bonus, [
+			{ name: "", entries: ["Bonus text"] },
+		]);
+		assert.deepEqual(normalized.reaction, [
+			{
+				description: 0,
+				content: "fallback content",
+				name: "",
+				entries: ["fallback content"],
+			},
+		]);
+		assert.deepEqual(normalized.legendary, [
+			{
+				content: { value: 1 },
+				name: "",
+				entries: ["object Object"],
+			},
+		]);
+
+		const aliasMonster = normalizeCustomMonster({
+			title: " Alias Beast ",
+			size: null,
+			type: " Dragon ",
+			armor_class: [
+				{ ac: "17", from: ["[natural armor]"] },
+				"bad",
+			],
+			hit_points: { average: "22", formula: "4d8+4" },
+			strength: "19",
+			dexterity: "8",
+			constitution: "14",
+			intelligence: "6",
+			wisdom: "12",
+			charisma: "10",
+			challenge_rating: { cr: "3", note: "[elite]" },
+		});
+		assert.deepEqual(aliasMonster, {
+			id: "generated-monster-1",
+			name: "Alias Beast",
+			source: "CUSTOM",
+			size: ["M"],
+			type: "dragon",
+			alignment: ["N"],
+			ac: [
+				{ ac: 17, from: ["natural armor"] },
+				{ ac: 10 },
+			],
+			hp: { average: 22, formula: "4d8+4" },
+			speed: { walk: 30 },
+			str: 19,
+			dex: 8,
+			con: 14,
+			int: 6,
+			wis: 12,
+			cha: 10,
+			cr: { cr: "3", note: "elite" },
+		});
+
+		let alignmentReads = 0;
+		const alignmentGetterMonster = {
+			title: "Alignment Getter",
+			get alignment() {
+				alignmentReads += 1;
+				return alignmentReads === 1 ? ["N"] : ["C"];
+			},
+		};
+		assert.deepEqual(
+			normalizeCustomMonster(alignmentGetterMonster).alignment,
+			["C"],
+		);
+		assert.equal(alignmentReads, 2);
+
+		const legacyArray = [];
+		legacyArray.title = "Array-shaped Monster";
+		assert.equal(normalizeCustomMonster(legacyArray).name, "Array-shaped Monster");
+		assert.equal(generatedIds, 3);
+	} finally {
+		storage.createId = originalCreateId;
+	}
 });
 
 await run("Custom monster generation command normalizes context and selects draft flow", async () => {
@@ -5222,6 +6505,318 @@ await run("Custom monster generation command normalizes context and selects draf
 	assert.equal(failed.body.aiResponse.id, "failed-history");
 });
 
+await run("Custom monster generation preserves normalization and target-selection contracts", async () => {
+	const originalMonsters = [
+		{ id: 0, name: "Нульовий", source: "CUSTOM", extra: "keep-out" },
+		{ id: " ", name: null, source: "CUSTOM", traits: ["лісовий"] },
+	];
+	const normalizedMonsters = [
+		{ ...originalMonsters[0] },
+		{ ...originalMonsters[1], id: "monster-empty-name" },
+	];
+	let writtenMonsters = null;
+	let draftInput = null;
+	const command = createGenerateCustomMonster({
+		readCustomBestiary: async () => ({ monster: originalMonsters, meta: "Київ" }),
+		writeCustomBestiaryMonsters: async (monsters) => {
+			writtenMonsters = monsters;
+			return normalizedMonsters;
+		},
+		readCampaign: async () => {
+			throw new Error("Bestiary requests must not load a campaign");
+		},
+		readSession: async () => {
+			throw new Error("Bestiary requests must not load a session");
+		},
+		appendCampaignContext: async () => {
+			throw new Error("Bestiary requests must not append campaign context");
+		},
+		generateContent: async ({ contextData }) => {
+			assert.deepEqual(contextData.customBestiary.monsters, [
+				{
+					id: 0,
+					name: "Нульовий",
+					source: "CUSTOM",
+					type: undefined,
+					cr: undefined,
+				},
+				{
+					id: "monster-empty-name",
+					name: null,
+					source: "CUSTOM",
+					type: undefined,
+					cr: undefined,
+				},
+			]);
+			assert.equal(
+				contextData.customBestiary.selectedMonster,
+				normalizedMonsters[1],
+			);
+			assert.equal(
+				contextData.customBestiary.selectedMonsterMode,
+				"create-based",
+			);
+			return { operations: [] };
+		},
+		fillCurrentTargetIds: () => {},
+		assertGeneratedContent: () => {},
+		historyWriter: {},
+		encounterLocalFlow: { isEnabled: () => false },
+		customMonsterFlow: {
+			createDraft: async (input) => {
+				draftInput = input;
+				return { status: 200, body: {} };
+			},
+		},
+	});
+
+	await command({
+		payload: {
+			customMonsterTarget: { id: "not-found", name: "" },
+			customMonsterMode: "create-based",
+		},
+		preparedRequest: { requestPath: { campaign: "bestiary" } },
+		historyUserInstructions: "Створи мавку",
+	});
+	assert.equal(writtenMonsters, originalMonsters);
+	assert.equal(draftInput.beforeCustomMonsters, normalizedMonsters);
+
+	let writes = 0;
+	const nonArrayCommand = createGenerateCustomMonster({
+		readCustomBestiary: async () => ({ monster: { name: "not-an-array" } }),
+		writeCustomBestiaryMonsters: async () => {
+			writes += 1;
+			return [];
+		},
+		readCampaign: async () => null,
+		readSession: async () => null,
+		appendCampaignContext: async () => {},
+		generateContent: async ({ contextData }) => {
+			assert.deepEqual(contextData.customBestiary.monsters, []);
+			assert.equal(
+				contextData.customBestiary.selectedMonster.name,
+				"Запасна ціль",
+			);
+			assert.equal(contextData.customBestiary.selectedMonsterMode, "edit");
+			return { operations: [] };
+		},
+		fillCurrentTargetIds: () => {},
+		assertGeneratedContent: () => {},
+		historyWriter: {},
+		encounterLocalFlow: { isEnabled: () => false },
+		customMonsterFlow: { createDraft: async () => ({ status: 200 }) },
+	});
+	await nonArrayCommand({
+		payload: {
+			customMonsterTarget: { name: "Запасна ціль" },
+			customMonsterMode: "unknown",
+		},
+		preparedRequest: { requestPath: null },
+		historyUserInstructions: "",
+	});
+	assert.equal(writes, 0);
+});
+
+await run("Custom monster generation loads optional context and routes local drafts after validation", async () => {
+	const events = [];
+	const session = { id: "session-1", name: "Сесія" };
+	const localDrafts = [];
+	const payload = {
+		modelName: "gemini-test",
+		userInstructions: "Створи болотяника",
+		attachedImages: ["image"],
+		attachedFiles: ["file"],
+		customMonsterTarget: ["array-target"],
+		contextConfig: { include: true },
+	};
+	const preparedRequest = {
+		requestPath: {
+			campaign: "campaign-1",
+			session: "session-1",
+			encounter: "encounter-1",
+		},
+		responseLanguage: "uk",
+		simplifiedNotesEnabled: false,
+		globalBasePrompt: "global",
+		imagePromptBasePrompt: "image prompt",
+		campaignBasePrompt: "campaign prompt",
+	};
+	const generatedResponse = {
+		operations: [{ op: "create", entity: "monster" }],
+	};
+	const command = createGenerateCustomMonster({
+		readCustomBestiary: async () => ({ monster: [] }),
+		writeCustomBestiaryMonsters: async () => [],
+		readCampaign: async (campaignId) => {
+			events.push(["campaign", campaignId]);
+			throw new Error("missing campaign");
+		},
+		readSession: async (campaignId, sessionId) => {
+			events.push(["session", campaignId, sessionId]);
+			return session;
+		},
+		appendCampaignContext: async (context, campaignId, campaign, config) => {
+			events.push(["append", campaignId, campaign, config]);
+			context.campaign.appended = true;
+		},
+		generateContent: async (input) => {
+			events.push(["generate", input]);
+			return generatedResponse;
+		},
+		fillCurrentTargetIds: (content, target) => {
+			events.push(["fill", target]);
+			content.filled = true;
+		},
+		assertGeneratedContent: (content, options) => {
+			events.push(["validate", content.filled, options]);
+		},
+		historyWriter: {},
+		encounterLocalFlow: {
+			isEnabled: (receivedPayload) => {
+				events.push(["enabled", receivedPayload]);
+				return true;
+			},
+			createDraft: async (input) => {
+				events.push(["local-draft"]);
+				localDrafts.push(input);
+				return { status: 202, body: { local: true } };
+			},
+		},
+		customMonsterFlow: {
+			createDraft: async () => {
+				throw new Error("standard draft must not run");
+			},
+		},
+	});
+
+	const result = await command({
+		payload,
+		preparedRequest,
+		historyUserInstructions: "Історія",
+	});
+	assert.equal(result.status, 202);
+	assert.deepEqual(
+		events.map(([name]) => name),
+		["campaign", "session", "append", "generate", "fill", "validate", "enabled", "local-draft"],
+	);
+	assert.deepEqual(events[2], [
+		"append",
+		"campaign-1",
+		null,
+		payload.contextConfig,
+	]);
+	const generationInput = events[3][1];
+	assert.deepEqual(generationInput, {
+		type: "custom-monster",
+		userInstructions: payload.userInstructions,
+		modelName: payload.modelName,
+		attachedImages: payload.attachedImages,
+		attachedFiles: payload.attachedFiles,
+		contextData: generationInput.contextData,
+		generateCharacters: false,
+		generateNpcs: false,
+		generateLocations: false,
+		generateEncounters: false,
+		entityScope: "custom-bestiary",
+		language: "uk",
+		simplifiedNotes: false,
+		globalBasePrompt: "global",
+		imagePromptBasePrompt: "image prompt",
+		campaignBasePrompt: "campaign prompt",
+		session,
+		campaign: null,
+		encounterId: "encounter-1",
+		parseAIResponse: true,
+	});
+	assert.deepEqual(events[4][1], {
+		path: { campaign: "bestiary" },
+		sceneId: null,
+		customMonsterTarget: payload.customMonsterTarget,
+	});
+	assert.deepEqual(events[5].slice(1), [
+		true,
+		{ type: "custom-monster", requireOperations: true },
+	]);
+	assert.deepEqual(localDrafts[0], {
+		payload,
+		generatedContent: generatedResponse,
+		customMonsterTarget: payload.customMonsterTarget,
+		customSession: session,
+		modelName: "gemini-test",
+		responseLanguage: "uk",
+		historyUserInstructions: "Історія",
+		customContextData: generationInput.contextData,
+		globalBasePrompt: "global",
+		imagePromptBasePrompt: "image prompt",
+		campaignBasePrompt: "campaign prompt",
+	});
+	assert.equal(localDrafts[0].generatedContent.filled, true);
+});
+
+await run("Custom monster generation stops failed and invalid responses at their boundaries", async () => {
+	const events = [];
+	const generatedFailure = { error: "Невірна відповідь", detail: "точно" };
+	const failedCommand = createGenerateCustomMonster({
+		readCustomBestiary: async () => ({ monster: [] }),
+		writeCustomBestiaryMonsters: async () => [],
+		readCampaign: async () => null,
+		readSession: async () => null,
+		appendCampaignContext: async () => {},
+		generateContent: async () => generatedFailure,
+		fillCurrentTargetIds: () => events.push("fill"),
+		assertGeneratedContent: () => events.push("validate"),
+		historyWriter: {
+			saveFailed: async (payload, content, status) => {
+				events.push(["failed", payload, content, status]);
+				return { id: "history-1" };
+			},
+		},
+		encounterLocalFlow: { isEnabled: () => events.push("enabled") },
+		customMonsterFlow: { createDraft: () => events.push("draft") },
+	});
+	const failedPayload = { type: "custom-monster", marker: "payload" };
+	const failed = await failedCommand({
+		payload: failedPayload,
+		preparedRequest: { requestPath: null },
+		historyUserInstructions: "",
+	});
+	assert.deepEqual(failed, {
+		status: 500,
+		body: { ...generatedFailure, aiResponse: { id: "history-1" } },
+	});
+	assert.deepEqual(events, [
+		["failed", failedPayload, generatedFailure, 500],
+	]);
+
+	const invalidEvents = [];
+	const validationError = new Error("invalid operations");
+	const invalidCommand = createGenerateCustomMonster({
+		readCustomBestiary: async () => ({ monster: [] }),
+		writeCustomBestiaryMonsters: async () => [],
+		readCampaign: async () => null,
+		readSession: async () => null,
+		appendCampaignContext: async () => {},
+		generateContent: async () => ({ operations: [] }),
+		fillCurrentTargetIds: () => invalidEvents.push("fill"),
+		assertGeneratedContent: () => {
+			invalidEvents.push("validate");
+			throw validationError;
+		},
+		historyWriter: { saveFailed: () => invalidEvents.push("failed") },
+		encounterLocalFlow: { isEnabled: () => invalidEvents.push("enabled") },
+		customMonsterFlow: { createDraft: () => invalidEvents.push("draft") },
+	});
+	await assert.rejects(
+		invalidCommand({
+			payload: {},
+			preparedRequest: { requestPath: null },
+			historyUserInstructions: "",
+		}),
+		(error) => error === validationError,
+	);
+	assert.deepEqual(invalidEvents, ["fill", "validate"]);
+});
+
 await run("Campaign generation command builds context mentions and persistence input", async () => {
 	const generatedRequests = [];
 	const persisted = [];
@@ -5316,6 +6911,501 @@ await run("Campaign generation command builds context mentions and persistence i
 		{ status: 400, body: { error: "path.campaign is required." } },
 	);
 });
+
+await run(
+	"Campaign generation command preserves lazy validation and tolerant context loading",
+	async () => {
+		const unexpectedCalls = [];
+		const unexpected = async (name) => {
+			unexpectedCalls.push(name);
+			throw new Error(`Unexpected ${name}`);
+		};
+		const earlyCommand = createGenerateCampaignContent({
+			readCampaign: () => unexpected("campaign"),
+			readSession: () => unexpected("session"),
+			readCustomBestiary: () => unexpected("bestiary"),
+			appendCampaignContext: () => unexpected("context"),
+			filterSessionData: () => unexpected("filter"),
+			generateContent: () => unexpected("generate"),
+			fillCurrentTargetIds: () => unexpected("targets"),
+			collectMentionCandidates: () => unexpected("collect"),
+			applyMentionsToGeneratedContent: () => unexpected("mentions"),
+			assertGeneratedContent: () => unexpected("validate"),
+			historyWriter: { saveFailed: () => unexpected("history") },
+			campaignFlow: {
+				persistGeneratedContent: () => unexpected("persist"),
+			},
+		});
+		assert.deepEqual(
+			await earlyCommand({
+				payload: {},
+				preparedRequest: { requestPath: { campaign: "" } },
+				historyUserInstructions: "",
+			}),
+			{ status: 400, body: { error: "path.campaign is required." } },
+		);
+		assert.deepEqual(unexpectedCalls, []);
+
+		const events = [];
+		const generatedRequests = [];
+		const persistedRequests = [];
+		const campaign = { id: "campaign", name: "Київ" };
+		const payload = {
+			type: "campaign",
+			userInstructions: "Продовжити",
+			modelName: "gemini-test",
+			sceneId: "scene-1",
+			imageTarget: { kind: "campaign" },
+			attachedImages: [{ name: "map.png" }],
+			attachedFiles: [{ name: "notes.txt" }],
+			parseAIResponse: false,
+			contextConfig: { campaignNotes: true },
+		};
+		const preparedRequest = {
+			autoApplyAiChanges: false,
+			campaignBasePrompt: "campaign prompt",
+			characterGenerationEnabled: false,
+			customMonsterGenerationEnabled: false,
+			encounterGenerationEnabled: false,
+			entityTargetScope: "mixed",
+			globalBasePrompt: "global prompt",
+			imagePromptBasePrompt: "image prompt",
+			locationGenerationEnabled: true,
+			npcGenerationEnabled: false,
+			requestPath: { campaign: "demo", session: "missing", encounter: null },
+			responseLanguage: { code: "uk", label: "Ukrainian" },
+			shouldParseAIResponse: false,
+			simplifiedNotesEnabled: true,
+		};
+		const plainResult = { status: 202, body: { queued: true } };
+		const command = createGenerateCampaignContent({
+			readCampaign: async (slug) => {
+				events.push(`campaign:${slug}`);
+				return campaign;
+			},
+			readSession: async (campaignSlug, sessionSlug) => {
+				events.push(`session:${campaignSlug}:${sessionSlug}`);
+				throw new Error("missing session");
+			},
+			readCustomBestiary: () => unexpected("bestiary"),
+			appendCampaignContext: async (context, slug, value, config) => {
+				events.push("context");
+				assert.equal(slug, "demo");
+				assert.strictEqual(value, campaign);
+				assert.strictEqual(config, payload.contextConfig);
+				context.campaign.notes = ["Контекст"];
+			},
+			filterSessionData: () => unexpected("filter"),
+			generateContent: async (request) => {
+				events.push("generate");
+				generatedRequests.push(request);
+				return "plain response";
+			},
+			fillCurrentTargetIds: () => unexpected("targets"),
+			collectMentionCandidates: () => unexpected("collect"),
+			applyMentionsToGeneratedContent: () => unexpected("mentions"),
+			assertGeneratedContent: () => unexpected("validate"),
+			historyWriter: { saveFailed: () => unexpected("history") },
+			campaignFlow: {
+				persistGeneratedContent: async (request) => {
+					events.push("persist");
+					persistedRequests.push(request);
+					return plainResult;
+				},
+			},
+		});
+		const result = await command({
+			payload,
+			preparedRequest,
+			historyUserInstructions: "history instructions",
+		});
+		assert.strictEqual(result, plainResult);
+		assert.deepEqual(events, [
+			"campaign:demo",
+			"session:demo:missing",
+			"context",
+			"generate",
+			"persist",
+		]);
+		assert.deepEqual(generatedRequests, [
+			{
+				type: "campaign",
+				session: null,
+				campaign,
+				userInstructions: "Продовжити",
+				modelName: "gemini-test",
+				encounterId: null,
+				sceneId: "scene-1",
+				imageTarget: payload.imageTarget,
+				attachedImages: payload.attachedImages,
+				attachedFiles: payload.attachedFiles,
+				parseAIResponse: false,
+				contextData: {
+					campaign: { notes: ["Контекст"] },
+					sessions: [],
+				},
+				generateCharacters: false,
+				generateNpcs: false,
+				generateLocations: true,
+				generateEncounters: false,
+				generateCustomMonsters: false,
+				entityScope: "mixed",
+				language: preparedRequest.responseLanguage,
+				simplifiedNotes: true,
+				globalBasePrompt: "global prompt",
+				imagePromptBasePrompt: "image prompt",
+				campaignBasePrompt: "campaign prompt",
+			},
+		]);
+		assert.strictEqual(persistedRequests[0].payload, payload);
+		assert.equal(persistedRequests[0].generatedContent, "plain response");
+		assert.equal(persistedRequests[0].session, null);
+		assert.strictEqual(
+			persistedRequests[0].contextData,
+			generatedRequests[0].contextData,
+		);
+		assert.equal(
+			persistedRequests[0].historyUserInstructions,
+			"history instructions",
+		);
+	},
+);
+
+await run(
+	"Campaign generation command processes parsed errors before failure history",
+	async () => {
+		const events = [];
+		const payload = { type: "scene", sceneId: "scene-1" };
+		const generatedContent = { error: "Невірна відповідь", aiResponse: "old" };
+		const historyEntry = { id: "history-failed" };
+		const command = createGenerateCampaignContent({
+			readCampaign: async () => {
+				events.push("campaign");
+				return { id: "campaign" };
+			},
+			readSession: async () => {
+				events.push("session");
+				return { name: "One", data: {} };
+			},
+			readCustomBestiary: async () => {
+				events.push("bestiary");
+				return {
+					monster: [
+						null,
+						{},
+						{ name: " " },
+						{ name: " Відьма " },
+						{ name: 0 },
+						{ name: false },
+						{ name: 42 },
+					],
+				};
+			},
+			appendCampaignContext: async () => {
+				events.push("context");
+			},
+			filterSessionData: () => {
+				events.push("filter");
+				return {};
+			},
+			generateContent: async (request) => {
+				events.push("generate");
+				assert.deepEqual(request.contextData.customBestiary, {
+					monsterNames: ["Відьма", "0", "false", "42"],
+				});
+				return generatedContent;
+			},
+			fillCurrentTargetIds: (content, target) => {
+				events.push("targets");
+				assert.strictEqual(content, generatedContent);
+				assert.deepEqual(target, {
+					path: {
+						campaign: "demo",
+						session: "session-1",
+						encounter: "encounter-1",
+					},
+					sceneId: "scene-1",
+					customMonsterTarget: null,
+				});
+				content.targeted = true;
+			},
+			collectMentionCandidates: (content, context) => {
+				events.push("collect");
+				assert.strictEqual(content, generatedContent);
+				assert.deepEqual(context.customBestiary.monsterNames, [
+					"Відьма",
+					"0",
+					"false",
+					"42",
+				]);
+				return ["Відьма"];
+			},
+			applyMentionsToGeneratedContent: (content, names) => {
+				events.push("mentions");
+				assert.deepEqual(names, ["Відьма"]);
+				content.mentionsApplied = true;
+			},
+			assertGeneratedContent: () => {
+				throw new Error("validation must not run");
+			},
+			historyWriter: {
+				saveFailed: async (savedPayload, content, status) => {
+					events.push("history");
+					assert.strictEqual(savedPayload, payload);
+					assert.strictEqual(content, generatedContent);
+					assert.equal(status, 500);
+					return historyEntry;
+				},
+			},
+			campaignFlow: {
+				persistGeneratedContent: () => {
+					throw new Error("persistence must not run");
+				},
+			},
+		});
+		const result = await command({
+			payload,
+			preparedRequest: {
+				requestPath: {
+					campaign: "demo",
+					session: "session-1",
+					encounter: "encounter-1",
+				},
+				shouldParseAIResponse: true,
+				entityTargetScope: "campaign",
+				encounterGenerationEnabled: false,
+			},
+			historyUserInstructions: "",
+		});
+		assert.deepEqual(events, [
+			"campaign",
+			"session",
+			"context",
+			"bestiary",
+			"generate",
+			"targets",
+			"collect",
+			"mentions",
+			"history",
+		]);
+		assert.deepEqual(result, {
+			status: 500,
+			body: {
+				error: "Невірна відповідь",
+				aiResponse: historyEntry,
+				targeted: true,
+				mentionsApplied: true,
+			},
+		});
+	},
+);
+
+await run(
+	"Campaign generation command treats parsed arrays as mentionable validated content",
+	async () => {
+		const events = [];
+		const generatedContent = [];
+		const persistedResult = { status: 201, body: { saved: true } };
+		const command = createGenerateCampaignContent({
+			readCampaign: async () => ({ id: "campaign" }),
+			readSession: async () => null,
+			readCustomBestiary: async () => ({ monster: "malformed" }),
+			appendCampaignContext: async () => {},
+			filterSessionData: (data) => data,
+			generateContent: async (request) => {
+				events.push("generate");
+				assert.equal("customBestiary" in request.contextData, false);
+				return generatedContent;
+			},
+			fillCurrentTargetIds: (content) => {
+				events.push("targets");
+				assert.strictEqual(content, generatedContent);
+				content.push("targeted");
+			},
+			collectMentionCandidates: (content) => {
+				events.push("collect");
+				assert.strictEqual(content, generatedContent);
+				return ["Ірина"];
+			},
+			applyMentionsToGeneratedContent: (content) => {
+				events.push("mentions");
+				content.push("mentions");
+			},
+			assertGeneratedContent: (content, options) => {
+				events.push("validate");
+				assert.strictEqual(content, generatedContent);
+				assert.deepEqual(options, {
+					type: "scene",
+					requireExplicitEntityScope: true,
+				});
+			},
+			historyWriter: { saveFailed: async () => ({}) },
+			campaignFlow: {
+				persistGeneratedContent: async (request) => {
+					events.push("persist");
+					assert.strictEqual(request.generatedContent, generatedContent);
+					return persistedResult;
+				},
+			},
+		});
+		const result = await command({
+			payload: { type: "scene" },
+			preparedRequest: {
+				requestPath: { campaign: "demo" },
+				shouldParseAIResponse: true,
+				entityTargetScope: "mixed",
+				encounterGenerationEnabled: true,
+			},
+			historyUserInstructions: "",
+		});
+		assert.strictEqual(result, persistedResult);
+		assert.deepEqual(generatedContent, ["targeted", "mentions"]);
+		assert.deepEqual(events, [
+			"generate",
+			"targets",
+			"collect",
+			"mentions",
+			"validate",
+			"persist",
+		]);
+	},
+);
+
+await run(
+	"Campaign generation command preserves thrown dependency boundaries",
+	async () => {
+		const createDependencies = (events, overrides = {}) => ({
+			readCampaign: async () => {
+				events.push("campaign");
+				return { id: "campaign" };
+			},
+			readSession: async () => {
+				events.push("session");
+				return null;
+			},
+			readCustomBestiary: async () => ({ monster: [] }),
+			appendCampaignContext: async () => {
+				events.push("context");
+			},
+			filterSessionData: (data) => data,
+			generateContent: async () => {
+				events.push("generate");
+				return {};
+			},
+			fillCurrentTargetIds: () => events.push("targets"),
+			collectMentionCandidates: () => {
+				events.push("collect");
+				return [];
+			},
+			applyMentionsToGeneratedContent: () => events.push("mentions"),
+			assertGeneratedContent: () => events.push("validate"),
+			historyWriter: {
+				saveFailed: async () => {
+					events.push("history");
+					return {};
+				},
+			},
+			campaignFlow: {
+				persistGeneratedContent: async () => {
+					events.push("persist");
+					return {};
+				},
+			},
+			...overrides,
+		});
+		const parsedRequest = {
+			payload: { type: "campaign" },
+			preparedRequest: {
+				requestPath: { campaign: "demo" },
+				shouldParseAIResponse: true,
+				entityTargetScope: "campaign",
+				encounterGenerationEnabled: false,
+			},
+			historyUserInstructions: "",
+		};
+
+		const generationEvents = [];
+		const generationError = new Error("generation failed");
+		const generationCommand = createGenerateCampaignContent(
+			createDependencies(generationEvents, {
+				generateContent: async () => {
+					generationEvents.push("generate");
+					throw generationError;
+				},
+			}),
+		);
+		await assert.rejects(
+			() => generationCommand(parsedRequest),
+			(error) => error === generationError,
+		);
+		assert.deepEqual(generationEvents, [
+			"campaign",
+			"session",
+			"context",
+			"generate",
+		]);
+
+		const validationEvents = [];
+		const validationError = new Error("validation failed");
+		const validationCommand = createGenerateCampaignContent(
+			createDependencies(validationEvents, {
+				assertGeneratedContent: () => {
+					validationEvents.push("validate");
+					throw validationError;
+				},
+			}),
+		);
+		await assert.rejects(
+			() => validationCommand(parsedRequest),
+			(error) => error === validationError,
+		);
+		assert.deepEqual(validationEvents, [
+			"campaign",
+			"session",
+			"context",
+			"generate",
+			"targets",
+			"collect",
+			"mentions",
+			"validate",
+		]);
+
+		const historyEvents = [];
+		const historyError = new Error("history failed");
+		const historyCommand = createGenerateCampaignContent(
+			createDependencies(historyEvents, {
+				generateContent: async () => {
+					historyEvents.push("generate");
+					return { error: "bad" };
+				},
+				historyWriter: {
+					saveFailed: async () => {
+						historyEvents.push("history");
+						throw historyError;
+					},
+				},
+			}),
+		);
+		await assert.rejects(
+			() =>
+				historyCommand({
+					...parsedRequest,
+					preparedRequest: {
+						...parsedRequest.preparedRequest,
+						shouldParseAIResponse: false,
+					},
+				}),
+			(error) => error === historyError,
+		);
+		assert.deepEqual(historyEvents, [
+			"campaign",
+			"session",
+			"context",
+			"generate",
+			"history",
+		]);
+	},
+);
 
 await run("AI campaign context loader uses injected entity and session ports", async () => {
 	const entityReads = [];
@@ -6099,6 +8189,163 @@ await run("AI history service builds stable request snapshots", () => {
 	assert.equal(snapshot.contextSummary, "context: off");
 });
 
+await run("AI history snapshot policies preserve exact projections", () => {
+	const snapshot = aiHistoryService.buildAiRequestSnapshot({
+		modelName: "модель",
+		userInstructions: "  Створи варту біля брами.  ",
+		path: { encounter: "зустріч", session: "сесія" },
+		sceneId: "сцена",
+		imageTarget: { type: 7, name: "  Ціль  " },
+		attachedImages: [
+			{ name: "  Карта.png  ", url: null },
+			{ name: {}, url: "  /токен.webp  " },
+			{ name: 0, url: false },
+			null,
+		],
+		attachedFiles: [
+			{ name: "  нотатки.md  " },
+			{ name: 0 },
+			{ name: {} },
+			null,
+		],
+		parseAIResponse: false,
+		shouldParseAIResponse: true,
+		generateEncounters: [],
+		generateCustomMonsters: "",
+		generateCharacters: "yes",
+		generateNpcs: null,
+		generateLocations: 0,
+		contextConfig: {
+			campaignNotes: true,
+			campaignCharacters: { included: true },
+			campaignLocations: "yes",
+		},
+		contextData: {
+			campaign: {
+				notes: [{}],
+				characters: "malformed",
+				npcs: [{}, {}],
+				locations: [{}, {}],
+			},
+			sessions: [
+				null,
+				{ data: { scenes: [{}, {}] } },
+				{ data: { scenes: "malformed" } },
+			],
+		},
+		language: "uk",
+		globalBasePrompt: "  база  ",
+		imagePromptBasePrompt: 0,
+		campaignBasePrompt: false,
+	});
+
+	assert.deepEqual(snapshot, {
+		userInstructions: "Створи варту біля брами.",
+		options: {
+			mode: "encounter",
+			modelName: "модель",
+			language: "uk",
+			responseParsing: true,
+			requestedResponseParsing: false,
+			characterGeneration: true,
+			npcGeneration: false,
+			locationGeneration: false,
+			encounterGeneration: true,
+			customMonsterGeneration: false,
+			contextEnabled: true,
+			globalBasePrompt: true,
+			imagePromptBasePrompt: true,
+			campaignBasePrompt: true,
+			sceneId: "сцена",
+			imageTarget: { type: "7", name: "Ціль" },
+		},
+		optionsSummary:
+			"mode: encounter; parse: on; context: on; characters: on; npcs: off; locations: off; encounters: on; custom-monsters: off; model: модель; scene: сцена; image-target: 7: Ціль; global-base-prompt: on; image-base-prompt: on; campaign-base-prompt: on",
+		context: {
+			enabled: true,
+			campaignNotes: 1,
+			campaignCharacters: 0,
+			campaignNpcs: 2,
+			campaignLocations: 2,
+			sessions: 3,
+			scenes: 2,
+			summary:
+				"context: notes: 1, characters: 0, npcs: 2, locations: 2, sessions: 3, scenes: 2",
+		},
+		contextSummary:
+			"context: notes: 1, characters: 0, npcs: 2, locations: 2, sessions: 3, scenes: 2",
+		attachments: {
+			images: [
+				{ name: "Карта.png" },
+				{ url: "/токен.webp" },
+				{ name: "0", url: "false" },
+			],
+			files: [{ name: "нотатки.md" }, { name: "0" }],
+		},
+	});
+
+	const contextData = {
+		campaign: { characters: [{}], npcs: [{}] },
+		sessions: [],
+	};
+	const summarizeContext = (contextConfig) =>
+		aiHistoryService.buildAiRequestSnapshot({
+			path: {},
+			contextConfig,
+			contextData,
+		}).contextSummary;
+	assert.equal(
+		summarizeContext({ campaignCharacters: true }),
+		"context: characters: 1, npcs: 1",
+	);
+	assert.equal(
+		summarizeContext({ campaignCharacters: true, campaignNpcs: null }),
+		"context: characters: 1",
+	);
+	assert.equal(
+		summarizeContext({ campaignCharacters: { included: false } }),
+		"context: empty",
+	);
+	assert.equal(
+		summarizeContext({ campaignCharacters: false, campaignNpcs: true }),
+		"context: npcs: 1",
+	);
+	assert.equal(summarizeContext(true), "context: empty");
+
+	const disabledSnapshot = aiHistoryService.buildAiRequestSnapshot({
+		path: { session: "session" },
+		contextConfig: 0,
+		contextData: {
+			get sessions() {
+				throw new Error("disabled context must not read context data");
+			},
+		},
+		imageTarget: {},
+		attachedImages: [{ name: {}, url: null }],
+		attachedFiles: "not-an-array",
+	});
+	assert.deepEqual(disabledSnapshot.context, {
+		enabled: false,
+		campaignNotes: 0,
+		campaignCharacters: 0,
+		campaignNpcs: 0,
+		campaignLocations: 0,
+		sessions: 0,
+		scenes: 0,
+		summary: "context: off",
+	});
+	assert.equal(disabledSnapshot.optionsSummary.includes("image-target: "), true);
+	assert.equal("attachments" in disabledSnapshot, false);
+
+	assert.deepEqual(
+		[{}, { session: "s" }, { encounter: "e", session: "s" }].map(
+			(path) =>
+				aiHistoryService.buildAiRequestSnapshot({ path }).options.mode,
+		),
+		["campaign", "session", "encounter"],
+	);
+});
+
 await run("AI history stores attached file names without file content", () => {
 	const attachedFiles = [
 		{
@@ -6167,6 +8414,289 @@ await run("AI history stores attached image names without file content", () => {
 	]);
 });
 
+await run("AI history retry payload projection preserves attachment contracts", () => {
+	const writer = new AiHistoryWriter();
+	const payload = {
+		marker: "Залишити",
+		attachedImages: [
+			null,
+			"invalid",
+			{},
+			{ name: "  Токен.png  " },
+			{ name: 0, url: false, mimeType: true },
+			{ sizeBytes: "12", data: "secret-image" },
+			{ sizeBytes: -2 },
+		],
+		attachedFiles: [
+			null,
+			"invalid",
+			{},
+			{ name: "  нотатки.md  ", data: "secret-file" },
+			{ name: false },
+			{ name: { nested: true } },
+		],
+	};
+	const projected = writer.cloneRetryPayload(payload);
+	assert.deepEqual(projected, {
+		marker: "Залишити",
+		attachedImages: [
+			{ name: "Токен.png" },
+			{ name: "0", url: "false", mimeType: "true" },
+			{ sizeBytes: 12, omittedData: true },
+			{ sizeBytes: -2 },
+		],
+		attachedFiles: [{ name: "нотатки.md" }, { name: "false" }],
+	});
+	assert.equal(JSON.stringify(projected).includes("secret"), false);
+	assert.equal(payload.attachedImages[3].name, "  Токен.png  ");
+	assert.equal(payload.attachedImages[5].data, "secret-image");
+	assert.equal(payload.attachedFiles[3].data, "secret-file");
+	assert.notEqual(projected, payload);
+	assert.notEqual(projected.attachedImages, payload.attachedImages);
+
+	assert.deepEqual(writer.cloneRetryPayload(null), {});
+	assert.equal(writer.cloneRetryPayload(7), 7);
+	assert.deepEqual(
+		writer.cloneRetryPayload({
+			attachedImages: "unchanged",
+			attachedFiles: { malformed: true },
+		}),
+		{
+			attachedImages: "unchanged",
+			attachedFiles: { malformed: true },
+		},
+	);
+	const circular = {};
+	circular.self = circular;
+	assert.throws(() => writer.cloneRetryPayload(circular), TypeError);
+	assert.throws(
+		() => writer.cloneRetryPayload({ value: 1n }),
+		(error) => error instanceof TypeError,
+	);
+});
+
+await run("AI history failed writer preserves lazy guards and exact response payload", async () => {
+	const originalAddAiResponse = storage.addAiResponse;
+	const events = [];
+	const suppressedWriter = new AiHistoryWriter();
+	suppressedWriter.shouldSave = (payload) => {
+		events.push(["should-save", payload]);
+		return false;
+	};
+	const suppressedPayload = {
+		get path() {
+			throw new Error("suppressed history must not read path");
+		},
+	};
+	assert.equal(
+		await suppressedWriter.saveFailed(suppressedPayload, new Error("ignored")),
+		null,
+	);
+	assert.deepEqual(events, [["should-save", suppressedPayload]]);
+
+	const missingCampaignWriter = new AiHistoryWriter();
+	missingCampaignWriter.getUserInstructions = () => {
+		throw new Error("missing campaign must stop before instructions");
+	};
+	missingCampaignWriter.buildRequestSnapshot = () => {
+		throw new Error("missing campaign must stop before snapshot");
+	};
+	missingCampaignWriter.cloneRetryPayload = () => {
+		throw new Error("missing campaign must stop before retry cloning");
+	};
+	assert.equal(
+		await missingCampaignWriter.saveFailed(
+			{ path: { campaign: "   " } },
+			new Error("ignored"),
+		),
+		null,
+	);
+	assert.equal(
+		await missingCampaignWriter.saveFailed(
+			{ path: "malformed" },
+			new Error("ignored"),
+		),
+		null,
+	);
+
+	const writer = new AiHistoryWriter();
+	writer.shouldSave = (payload) => {
+		events.push(["save", payload]);
+		return true;
+	};
+	writer.getUserInstructions = (payload) => {
+		events.push(["instructions", payload]);
+		return "Історична інструкція";
+	};
+	writer.buildRequestSnapshot = (input) => {
+		events.push(["snapshot", input]);
+		return { snapshot: input };
+	};
+	writer.cloneRetryPayload = (payload) => {
+		events.push(["clone", payload]);
+		return { cloned: payload };
+	};
+	const path = { campaign: "  кампанія  ", session: "сесія" };
+	const payload = {
+		path,
+		type: 0,
+		modelName: "",
+		language: false,
+		historyUserInstructions: "не використовується перевизначенням",
+		userInstructions: "також не використовується",
+		sceneId: 0,
+		imageTarget: { name: "Ціль" },
+		attachedImages: ["image"],
+		attachedFiles: ["file"],
+		parseAIResponse: "yes",
+		generateCharacters: false,
+		generateNpcs: 0,
+		generateLocations: null,
+		generateEncounters: "enabled",
+		generateCustomMonsters: [],
+		entityScope: "mixed",
+		contextConfig: { campaignNotes: true },
+	};
+	let storedPayload = null;
+	try {
+		storage.addAiResponse = async (responsePayload) => {
+			events.push(["store", responsePayload]);
+			storedPayload = responsePayload;
+			return { id: "failed-history", ...responsePayload };
+		};
+		const result = await writer.saveFailed(
+			payload,
+			{ message: "   ", error: "should-not-win" },
+			0,
+		);
+		assert.equal(result.id, "failed-history");
+		assert.deepEqual(
+			events.slice(1).map(([name]) => name),
+			["save", "instructions", "snapshot", "clone", "store"],
+		);
+		const snapshotInput = events.at(-3)[1];
+		assert.deepEqual(snapshotInput, {
+			type: 0,
+			modelName: "",
+			userInstructions: "Історична інструкція",
+			path,
+			sceneId: 0,
+			imageTarget: payload.imageTarget,
+			attachedImages: payload.attachedImages,
+			attachedFiles: payload.attachedFiles,
+			parseAIResponse: "yes",
+			shouldParseAIResponse: true,
+			generateCharacters: false,
+			generateNpcs: true,
+			generateLocations: true,
+			generateEncounters: true,
+			generateCustomMonsters: true,
+			entityScope: "mixed",
+			contextConfig: payload.contextConfig,
+			contextData: {},
+			language: false,
+		});
+		assert.deepEqual(storedPayload, {
+			text: "AI request failed\nAI request failed.",
+			path,
+			type: null,
+			modelName: null,
+			language: null,
+			userInstructions: "Історична інструкція",
+			request: { snapshot: snapshotInput },
+			status: "failed",
+			error: { message: "AI request failed.", status: 0 },
+			retryPayload: { cloned: payload },
+		});
+	} finally {
+		storage.addAiResponse = originalAddAiResponse;
+	}
+});
+
+await run("AI history failed writer preserves parsing and persistence failures", async () => {
+	const originalAddAiResponse = storage.addAiResponse;
+	const requests = [];
+	const writer = new AiHistoryWriter();
+	writer.buildRequestSnapshot = (input) => {
+		requests.push(input);
+		return input;
+	};
+	writer.cloneRetryPayload = () => ({ retry: true });
+	try {
+		storage.addAiResponse = async (payload) => payload;
+		const cases = [
+			{
+				payload: {
+					path: { campaign: "c" },
+					type: "image",
+					parseAIResponse: true,
+				},
+				expected: false,
+			},
+			{
+				payload: {
+					path: { campaign: "c", encounter: "e" },
+					type: "prompt",
+					parseAIResponse: true,
+					generateEncounters: false,
+				},
+				expected: false,
+			},
+			{
+				payload: {
+					path: { campaign: "c", encounter: "e" },
+					type: "prompt",
+					parseAIResponse: true,
+					generateEncounters: "enabled",
+				},
+				expected: "enabled",
+			},
+			{
+				payload: {
+					path: { campaign: "c", encounter: 0 },
+					type: "prompt",
+					parseAIResponse: true,
+				},
+				expected: true,
+			},
+		];
+		for (const testCase of cases) {
+			await writer.saveFailed(testCase.payload, { error: "Помилка" }, 500);
+			assert.equal(requests.at(-1).shouldParseAIResponse, testCase.expected);
+		}
+
+		const ownedInstructionsWriter = new AiHistoryWriter();
+		ownedInstructionsWriter.buildRequestSnapshot = (input) => input;
+		ownedInstructionsWriter.cloneRetryPayload = () => ({});
+		const owned = await ownedInstructionsWriter.saveFailed(
+			{
+				path: { campaign: "c" },
+				historyUserInstructions: undefined,
+				userInstructions: "fallback must not win",
+			},
+			{ error: 404 },
+			"503",
+		);
+		assert.equal(owned.userInstructions, "");
+		assert.equal(owned.error.message, "404");
+		assert.equal(owned.text, "AI request failed\nStatus: 503\n404");
+
+		const storageError = new Error("Не вдалося зберегти історію");
+		storage.addAiResponse = async () => {
+			throw storageError;
+		};
+		await assert.rejects(
+			writer.saveFailed(
+				{ path: { campaign: "c" } },
+				new Error("generation failed"),
+			),
+			(error) => error === storageError,
+		);
+	} finally {
+		storage.addAiResponse = originalAddAiResponse;
+	}
+});
+
 await run(
 	"AI history service builds per-monster custom bestiary changes",
 	() => {
@@ -6219,6 +8749,497 @@ await run(
 				},
 			],
 		);
+	},
+);
+
+await run(
+	"AI history change sets preserve indexing cloning ordering and summaries",
+	async () => {
+		const originalExportCampaignBundle = storage.exportCampaignBundle;
+		const originalAddAiResponse = storage.addAiResponse;
+		const unchangedSession = { nested: { value: "same" } };
+		const beforeBundle = {
+			meta: { name: "Кампанія до", nested: { count: 1 } },
+			sessions: [
+				{ fileName: "duplicate.json", content: { version: "first" } },
+				{ fileName: "duplicate.json", content: { version: "before-last" } },
+				{ fileName: "deleted.json", content: { name: "Видалена" } },
+				{ fileName: "undefined.json", content: undefined },
+				{ fileName: "unchanged.json", content: unchangedSession },
+			],
+			entities: {
+				characters: [
+					{ slug: "hero", name: "Перша версія" },
+					{ slug: "hero", name: "Герой до", notes: [{ text: "до" }] },
+				],
+				npc: [{ slug: "old-npc", name: "Старий NPC" }],
+				locations: [{ slug: "same-place", name: "Незмінне місце" }],
+			},
+		};
+		const afterBundle = {
+			meta: { name: "Кампанія після", nested: { count: 2 } },
+			sessions: [
+				{ fileName: "duplicate.json", content: { version: "after-first" } },
+				{ fileName: "created.json", content: { name: "Створена" } },
+				{ fileName: "duplicate.json", content: { version: "after-last" } },
+				{ fileName: "undefined.json", content: { restored: true } },
+				{
+					fileName: "unchanged.json",
+					content: { nested: { value: "same" } },
+				},
+			],
+			entities: {
+				characters: [
+					{ slug: "hero", name: "Герой після", notes: [{ text: "після" }] },
+				],
+				npc: [{ slug: "new-npc", name: "Новий NPC" }],
+				locations: [{ slug: "same-place", name: "Незмінне місце" }],
+			},
+		};
+		let storedPayload = null;
+
+		try {
+			storage.exportCampaignBundle = async (campaignSlug) => {
+				assert.equal(campaignSlug, "кампанія");
+				return afterBundle;
+			};
+			storage.addAiResponse = async (payload) => {
+				storedPayload = payload;
+				return { id: "history-change-set", ...payload };
+			};
+
+			const result = await aiResponseHistoryService.saveParsedAiResponse({
+				beforeApplyBundle: beforeBundle,
+				generatedContent: { operations: [] },
+				path: { campaign: "кампанія" },
+				type: "prompt",
+				modelName: "model",
+				language: "uk",
+				userInstructions: "Онови світ",
+				requestSnapshot: { request: true },
+			});
+
+			assert.equal(result.id, "history-change-set");
+			assert.equal(storedPayload.applyState, "applied");
+			const { resources, summary } = storedPayload.changes;
+			assert.deepEqual(summary, {
+				added: 3,
+				deleted: 2,
+				modified: 3,
+				total: 8,
+			});
+			assert.deepEqual(
+				resources.map((resource) => resource.label),
+				resources
+					.map((resource) => resource.label)
+					.toSorted((a, b) => a.localeCompare(b)),
+			);
+			assert.deepEqual(
+				resources.map((resource) => resource.id),
+				[
+					"entity:characters:hero",
+					"entity:npc:new-npc",
+					"entity:npc:old-npc",
+					"campaign:кампанія",
+					"session:created.json",
+					"session:deleted.json",
+					"session:duplicate.json",
+					"session:undefined.json",
+				].toSorted((left, right) => {
+					const byId = new Map(resources.map((resource) => [resource.id, resource]));
+					return byId.get(left).label.localeCompare(byId.get(right).label);
+				}),
+			);
+			const campaignChange = resources.find(
+				(resource) => resource.kind === "campaign",
+			);
+			const sessionChange = resources.find(
+				(resource) => resource.id === "session:duplicate.json",
+			);
+			const undefinedChange = resources.find(
+				(resource) => resource.id === "session:undefined.json",
+			);
+			const characterChange = resources.find(
+				(resource) => resource.id === "entity:characters:hero",
+			);
+			assert.deepEqual(sessionChange.before, { version: "before-last" });
+			assert.deepEqual(sessionChange.after, { version: "after-last" });
+			assert.equal(undefinedChange.before, null);
+			assert.deepEqual(undefinedChange.after, { restored: true });
+			assert.equal(characterChange.before.name, "Герой до");
+			assert.equal(characterChange.after.name, "Герой після");
+			assert.equal(
+				resources.some((resource) => resource.slug === "same-place"),
+				false,
+			);
+			assert.equal(
+				resources.some((resource) => resource.fileName === "unchanged.json"),
+				false,
+			);
+
+			beforeBundle.meta.nested.count = 99;
+			afterBundle.meta.nested.count = 100;
+			beforeBundle.entities.characters[1].notes[0].text = "змінено зовні";
+			afterBundle.entities.characters[0].notes[0].text = "також змінено";
+			assert.equal(campaignChange.before.nested.count, 1);
+			assert.equal(campaignChange.after.nested.count, 2);
+			assert.equal(characterChange.before.notes[0].text, "до");
+			assert.equal(characterChange.after.notes[0].text, "після");
+			assert.notEqual(campaignChange.before, beforeBundle.meta);
+			assert.notEqual(characterChange.after, afterBundle.entities.characters[0]);
+		} finally {
+			storage.exportCampaignBundle = originalExportCampaignBundle;
+			storage.addAiResponse = originalAddAiResponse;
+		}
+	},
+);
+
+await run(
+	"AI history change sets preserve empty and malformed bundle boundaries",
+	async () => {
+		const originalExportCampaignBundle = storage.exportCampaignBundle;
+		const originalAddAiResponse = storage.addAiResponse;
+		const storedChanges = [];
+		let afterBundle = { meta: { name: "Після" } };
+
+		try {
+			storage.exportCampaignBundle = async () => afterBundle;
+			storage.addAiResponse = async (payload) => {
+				storedChanges.push(payload.changes);
+				return payload;
+			};
+			const save = (beforeApplyBundle) =>
+				aiResponseHistoryService.saveParsedAiResponse({
+					beforeApplyBundle,
+					generatedContent: {},
+					path: { campaign: "empty" },
+				});
+
+			await save(null);
+			afterBundle = null;
+			await save({ meta: { name: "До" } });
+			assert.deepEqual(storedChanges, [
+				{
+					resources: [],
+					summary: { added: 0, deleted: 0, modified: 0, total: 0 },
+				},
+				{
+					resources: [],
+					summary: { added: 0, deleted: 0, modified: 0, total: 0 },
+				},
+			]);
+
+			afterBundle = { sessions: [] };
+			await assert.rejects(
+				save({ sessions: { fileName: "malformed" } }),
+				(error) => error instanceof TypeError,
+			);
+			afterBundle = { entities: { characters: [] } };
+			await assert.rejects(
+				save({ entities: { characters: { slug: "malformed" } } }),
+				(error) => error instanceof TypeError,
+			);
+			assert.equal(storedChanges.length, 2);
+		} finally {
+			storage.exportCampaignBundle = originalExportCampaignBundle;
+			storage.addAiResponse = originalAddAiResponse;
+		}
+	},
+);
+
+await run(
+	"AI history snapshot restore dispatches every resource kind and preserves identity rules",
+	async () => {
+		const storageMethodNames = [
+			"writeCustomBestiaryMonsters",
+			"readCustomBestiaryMonsters",
+			"writeJson",
+			"campaignMetaPath",
+			"sessionPath",
+			"campaignDir",
+			"deleteEntity",
+			"updateAiResponse",
+			"readAiResponses",
+			"exists",
+		];
+		const originalStorageMethods = Object.fromEntries(
+			storageMethodNames.map((name) => [name, storage[name]]),
+		);
+		const originalRm = fs.rm;
+		const calls = [];
+		let currentMonsters = [];
+		let activeEntry = null;
+		let updateCount = 0;
+
+		storage.writeCustomBestiaryMonsters = async (monsters) => {
+			calls.push(["writeCustomBestiary", monsters]);
+			currentMonsters = monsters;
+			return monsters;
+		};
+		storage.readCustomBestiaryMonsters = async () => {
+			calls.push(["readCustomBestiary"]);
+			return currentMonsters;
+		};
+		storage.writeJson = async (filePath, value) => {
+			calls.push(["writeJson", filePath, value]);
+		};
+		storage.campaignMetaPath = (slug) => `meta:${slug}`;
+		storage.sessionPath = (slug, fileName) => `session:${slug}:${fileName}`;
+		storage.campaignDir = (slug) => `campaign:${slug}`;
+		storage.deleteEntity = async (...args) => {
+			calls.push(["deleteEntity", ...args]);
+		};
+		storage.updateAiResponse = async (campaign, id, patch) => {
+			updateCount += 1;
+			calls.push(["updateHistory", campaign, id, patch]);
+			return { ...activeEntry, ...patch };
+		};
+		storage.readAiResponses = async (campaign) => {
+			calls.push(["readHistory", campaign]);
+			return [];
+		};
+		storage.exists = async (filePath) => {
+			calls.push(["exists", filePath]);
+			return false;
+		};
+		fs.rm = async (...args) => {
+			calls.push(["rm", ...args]);
+		};
+
+		const restore = async (resources, snapshotKey = "after", options = {}) => {
+			activeEntry = {
+				id: `history-${updateCount + 1}`,
+				path: { campaign: "history-campaign" },
+				changes: { resources },
+			};
+			return aiResponseHistoryService.restoreAiResponseSnapshot(
+				activeEntry,
+				snapshotKey,
+				options,
+			);
+		};
+
+		try {
+			const snapshotMonster = { id: "snapshot-id", name: "Нова Істота" };
+			const initialMonsters = [
+				{ id: "before-id", name: "ID before" },
+				{ id: "after-id", name: "ID after" },
+				{ id: "snapshot-id", name: "ID snapshot" },
+				{ id: "resource-id", name: "ID resource" },
+				{ id: "name-resource", name: "  ЦІЛЬ РЕСУРСУ " },
+				{ id: "name-before", name: "Before Name" },
+				{ id: "name-after", name: "AFTER NAME" },
+				{ id: "name-snapshot", name: "нова істота" },
+				{ id: "0", name: "Zero Survivor" },
+				{ id: "survivor", name: "Залишається" },
+			];
+			const resources = [
+				{
+					id: "custom-bestiary:all",
+					kind: "custom-bestiary",
+					before: [],
+					after: initialMonsters,
+				},
+				{
+					id: "custom-monster:resource-id",
+					kind: "custom-monster",
+					name: "Ціль ресурсу",
+					before: { id: "before-id", name: "Before Name" },
+					after: { id: "after-id", name: "After Name" },
+				},
+				{
+					id: "campaign:main",
+					kind: "campaign",
+					campaign: "campaign-1",
+					before: { name: "До" },
+					after: { name: "Після" },
+				},
+				{
+					id: "session:delete",
+					kind: "session",
+					campaign: "campaign-1",
+					fileName: "../видалити.json",
+					before: { name: "Delete" },
+					after: null,
+				},
+				{
+					id: "session:write",
+					kind: "session",
+					campaign: "campaign-1",
+					fileName: "../записати.json",
+					before: null,
+					after: { name: "Записана сесія" },
+				},
+				{
+					id: "entity:delete",
+					kind: "entity",
+					campaign: "campaign-1",
+					type: "npc",
+					slug: "../старий",
+					before: { name: "Delete entity" },
+					after: null,
+				},
+				{
+					id: "entity:write",
+					kind: "entity",
+					campaign: "campaign-1",
+					type: "locations",
+					slug: "../млин",
+					before: null,
+					after: { name: "Млин", slug: "wrong" },
+				},
+			];
+			resources[1].after = snapshotMonster;
+
+			await restore(resources);
+			assert.deepEqual(
+				calls.map(([method]) => method),
+				[
+					"writeCustomBestiary",
+					"readCustomBestiary",
+					"writeCustomBestiary",
+					"writeJson",
+					"rm",
+					"writeJson",
+					"deleteEntity",
+					"writeJson",
+					"updateHistory",
+					"readHistory",
+					"exists",
+				],
+			);
+			assert.equal(calls[0][1], initialMonsters);
+			assert.deepEqual(calls[2][1], [
+				{ id: "after-id", name: "ID after" },
+				{ id: "name-after", name: "AFTER NAME" },
+				{ id: "0", name: "Zero Survivor" },
+				{ id: "survivor", name: "Залишається" },
+				snapshotMonster,
+			]);
+			assert.equal(calls[2][1][4], snapshotMonster);
+			assert.deepEqual(calls[3], [
+				"writeJson",
+				"meta:campaign-1",
+				{ name: "Після" },
+			]);
+			assert.deepEqual(calls[4], [
+				"rm",
+				"session:campaign-1:видалити.json",
+				{ force: true },
+			]);
+			assert.deepEqual(calls[5], [
+				"writeJson",
+				"session:campaign-1:записати.json",
+				{ name: "Записана сесія" },
+			]);
+			assert.deepEqual(calls[6], [
+				"deleteEntity",
+				"campaign-1",
+				"npc",
+				"старий",
+			]);
+			assert.deepEqual(calls[7], [
+				"writeJson",
+				path.join("campaign:campaign-1", "locations", "млин", "info.json"),
+				{ name: "Млин", slug: "млин" },
+			]);
+			assert.equal(calls[8][1], "history-campaign");
+			assert.equal(calls[8][3].applyState, "applied");
+
+			calls.length = 0;
+			await restore([
+				{
+					id: "custom-bestiary:invalid",
+					kind: "custom-bestiary",
+					after: { malformed: true },
+				},
+			]);
+			assert.deepEqual(calls[0], ["writeCustomBestiary", []]);
+
+			calls.length = 0;
+			currentMonsters = [
+				{ id: "remove", name: "Прибрати" },
+				{ id: "keep", name: "Лишити" },
+			];
+			await restore([
+				{
+					id: "custom-monster:remove",
+					kind: "custom-monster",
+					name: "Прибрати",
+					after: null,
+				},
+			]);
+			assert.deepEqual(calls[1], [
+				"writeCustomBestiary",
+				[{ id: "keep", name: "Лишити" }],
+			]);
+
+			const errorCases = [
+				[
+					{
+						kind: "campaign",
+						campaign: "campaign-1",
+						after: null,
+					},
+					/Campaign deletion cannot be restored/,
+				],
+				[{ kind: "entity", campaign: 0, after: {} }, /no campaign target/],
+				[
+					{ kind: "unknown", campaign: "campaign-1", after: {} },
+					/unknown target type/,
+				],
+				[{ kind: "unknown", after: {} }, /no campaign target/],
+				[
+					{ kind: "session", campaign: "campaign-1", fileName: "", after: {} },
+					/no session target/,
+				],
+				[
+					{
+						kind: "entity",
+						campaign: "campaign-1",
+						type: "characters",
+						slug: "",
+						after: {},
+					},
+					/invalid entity target/,
+				],
+				[
+					{
+						kind: "entity",
+						campaign: "campaign-1",
+						type: "unsupported",
+						slug: "hero",
+						after: {},
+					},
+					/invalid entity target/,
+				],
+			];
+			for (const [resource, message] of errorCases) {
+				const updatesBefore = updateCount;
+				await assert.rejects(restore([resource]), message);
+				assert.equal(updateCount, updatesBefore);
+			}
+
+			const delegatedError = new Error("Не вдалося записати snapshot");
+			storage.writeJson = async () => {
+				throw delegatedError;
+			};
+			const updatesBeforeFailure = updateCount;
+			await assert.rejects(
+				restore([
+					{
+						kind: "campaign",
+						campaign: "campaign-1",
+						after: { name: "Failure" },
+					},
+				]),
+				(error) => error === delegatedError,
+			);
+			assert.equal(updateCount, updatesBeforeFailure);
+		} finally {
+			Object.assign(storage, originalStorageMethods);
+			fs.rm = originalRm;
+		}
 	},
 );
 
@@ -6818,26 +9839,129 @@ await run("AI mention processing preserves existing entity links", () => {
 
 await run("AI route fills ids for current selected targets", () => {
 	const { fillCurrentTargetIds } = aiRouter.__test;
+	const dateOperation = new Date(0);
+	dateOperation.op = "delete";
+	dateOperation.entity = "scene";
+	const existingIdOperation = {
+		op: "update",
+		entity: "encounter",
+		id: " existing-id ",
+		get slug() {
+			throw new Error("existing id must short-circuit later target fields");
+		},
+	};
 	const payload = {
 		version: 2,
 		operations: [
 			{ op: "update", entity: "encounter", patch: { name: "Hard Fight" } },
+			{ op: "delete", entity: " ENCOUNTERS " },
 			{
 				op: "updateNote",
 				entity: "scene",
 				noteId: "note-1",
 				patch: { text: "x" },
 			},
+			{ op: "deleteNote", entity: "SCENES" },
+			{ op: "update", entity: "monster" },
+			{ op: "delete", entity: "custom-monster" },
+			{ op: "updateNote", entity: "custommonster" },
+			existingIdOperation,
+			{ op: "update", entity: "encounter", slug: 0 },
+			{ op: "update", entity: "encounter", name: false },
+			{ op: "update", entity: "encounter", targetClientId: 0n },
+			{ op: "update", entity: "encounter", id: {} },
+			{ op: "Update", entity: "encounter" },
+			{ op: " update ", entity: " encounter " },
+			{ op: "create", entity: "encounter" },
 			{ op: "delete", entity: "npc" },
+			Object.assign([], { op: "delete", entity: "scene" }),
+			dateOperation,
+			null,
+			"malformed",
 		],
 	};
-	fillCurrentTargetIds(payload, {
+	const operations = payload.operations;
+	const result = fillCurrentTargetIds(payload, {
 		path: { encounter: "enc-1" },
 		sceneId: "scene-1",
+		customMonsterTarget: { id: 0, name: "Не використовувати" },
 	});
+	assert.equal(result, payload);
+	assert.equal(payload.operations, operations);
 	assert.equal(payload.operations[0].id, "enc-1");
-	assert.equal(payload.operations[1].id, "scene-1");
-	assert.equal(payload.operations[2].id, undefined);
+	assert.equal(payload.operations[1].id, "enc-1");
+	assert.equal(payload.operations[2].id, "scene-1");
+	assert.equal(payload.operations[3].id, "scene-1");
+	assert.deepEqual(
+		payload.operations.slice(4, 7).map((operation) => operation.id),
+		["0", "0", "0"],
+	);
+	assert.equal(existingIdOperation.id, " existing-id ");
+	assert.equal(payload.operations[8].slug, 0);
+	assert.equal("id" in payload.operations[8], false);
+	assert.equal(payload.operations[9].name, false);
+	assert.equal("id" in payload.operations[9], false);
+	assert.equal(payload.operations[10].targetClientId, 0n);
+	assert.equal("id" in payload.operations[10], false);
+	assert.equal(payload.operations[11].id, "enc-1");
+	assert.equal("id" in payload.operations[12], false);
+	assert.equal(payload.operations[13].id, "enc-1");
+	assert.equal("id" in payload.operations[14], false);
+	assert.equal("id" in payload.operations[15], false);
+	assert.equal("id" in payload.operations[16], false);
+	assert.equal(dateOperation.id, "scene-1");
+
+	const namedMonster = { op: "delete", entity: " CUSTOM-MONSTER " };
+	const namedPayload = { operations: [namedMonster] };
+	assert.equal(
+		fillCurrentTargetIds(namedPayload, {
+			path: null,
+			sceneId: null,
+			customMonsterTarget: {
+				id: {},
+				name: "  Князь Тіней  ",
+			},
+		}),
+		namedPayload,
+	);
+	assert.deepEqual(namedMonster, {
+		op: "delete",
+		entity: " CUSTOM-MONSTER ",
+		name: "Князь Тіней",
+	});
+
+	const noTargets = {
+		operations: [
+			{ op: "update", entity: "encounter" },
+			{ op: "update", entity: "scene" },
+			{ op: "update", entity: "monster" },
+		],
+	};
+	fillCurrentTargetIds(noTargets, {
+		path: { encounter: 0 },
+		sceneId: 0,
+		customMonsterTarget: null,
+	});
+	assert.deepEqual(noTargets.operations, [
+		{ op: "update", entity: "encounter" },
+		{ op: "update", entity: "scene" },
+		{ op: "update", entity: "monster" },
+	]);
+
+	const ignoredPayload = { operations: [{ op: "create", entity: "encounter" }] };
+	assert.equal(
+		fillCurrentTargetIds(ignoredPayload, {
+			path: {
+				get encounter() {
+					throw new Error("ineligible operations must not read route targets");
+				},
+			},
+		}),
+		ignoredPayload,
+	);
+	assert.equal(fillCurrentTargetIds(null, {}), null);
+	const missingOperations = { operations: {} };
+	assert.equal(fillCurrentTargetIds(missingOperations, {}), missingOperations);
 });
 
 await run("AI feature model estimates context and rebuilds retry workflows", async () => {
@@ -17282,6 +20406,192 @@ await run("download helpers create and revoke blob URL", () => {
 	}
 });
 
+function createRealtimeTestSocket() {
+	const socket = new EventEmitter();
+	socket.destroyed = false;
+	socket.writes = [];
+	socket.write = (payload) => {
+		socket.writes.push(payload);
+		return true;
+	};
+	socket.destroy = () => {
+		socket.destroyed = true;
+	};
+	return socket;
+}
+
+function decodeRealtimeFrame(frame) {
+	assert.equal(Buffer.isBuffer(frame), true);
+	assert.equal(frame[0], 0x81);
+	let length = frame[1] & 0x7f;
+	let offset = 2;
+	if (length === 126) {
+		length = frame.readUInt16BE(2);
+		offset = 4;
+	} else if (length === 127) {
+		length = Number(frame.readBigUInt64BE(2));
+		offset = 10;
+	}
+	return JSON.parse(frame.subarray(offset, offset + length).toString("utf8"));
+}
+
+function getRealtimePayloads(socket) {
+	return socket.writes.filter(Buffer.isBuffer).map(decodeRealtimeFrame);
+}
+
+function connectRealtimeTestClient(server, clientId) {
+	const socket = createRealtimeTestSocket();
+	server.emit(
+		"upgrade",
+		{
+			url: `/api/sync?client=${encodeURIComponent(clientId)}`,
+			headers: { "sec-websocket-key": "dGhlIHNhbXBsZSBub25jZQ==" },
+		},
+		socket,
+	);
+	assert.match(socket.writes[0], /^HTTP\/1\.1 101 Switching Protocols/);
+	assert.equal(getRealtimePayloads(socket)[0].clientId, clientId);
+	return socket;
+}
+
+function finishRealtimeRequest(req, statusCode = 200, includeStatusCode = true) {
+	const response = new EventEmitter();
+	if (includeStatusCode) response.statusCode = statusCode;
+	let nextCalls = 0;
+	realtimeMiddleware(req, response, () => {
+		nextCalls += 1;
+	});
+	assert.equal(nextCalls, 1);
+	response.emit("finish");
+}
+
+await run(
+	"realtime classifies mutation routes and excludes the source client",
+	() => {
+		const server = new EventEmitter();
+		setupRealtime(server);
+		const source = connectRealtimeTestClient(server, "source");
+		const target = connectRealtimeTestClient(server, "target");
+		const initialSourcePayloads = getRealtimePayloads(source).length;
+		const cases = [
+			["/api/settings?scope=global", { resource: "settings" }],
+			["/api/bestiary/custom/Відьма", { resource: "custom-bestiary" }],
+			["/api/bestiary/customized", { resource: "bestiary" }],
+			["/api/images/general/tokens", { resource: "images" }],
+			[
+				"/api/ai/history?campaign=%D0%9A%D0%B8%D1%97%D0%B2",
+				{ resource: "ai", campaignSlug: "Київ" },
+			],
+			[
+				"/api/campaigns/%D0%A1%D0%B2%D1%96%D1%82/sessions/session%201.json",
+				{
+					resource: "sessions",
+					campaignSlug: "%D0%A1%D0%B2%D1%96%D1%82",
+					sessionFileName: "session%201.json",
+				},
+			],
+			[
+				"/api/campaigns/world/entities/npc/%D0%9C%D0%B0%D0%B3",
+				{
+					resource: "entities",
+					campaignSlug: "world",
+					entityType: "npc",
+					entitySlug: "%D0%9C%D0%B0%D0%B3",
+				},
+			],
+			[
+				"/api/campaigns/world/sessions/s1/import/images",
+				{
+					resource: "sessions",
+					campaignSlug: "world",
+					sessionFileName: "s1",
+				},
+			],
+			[
+				"/api/campaigns/world/archive/import/images",
+				{ resource: "images", campaignSlug: "world" },
+			],
+			[
+				"/api/campaigns/world/archive/import",
+				{ resource: "import", campaignSlug: "world" },
+			],
+			["/api/campaigns", { resource: "campaigns" }],
+			["/api/unknown", { resource: "unknown" }],
+		];
+
+		for (const [originalUrl] of cases) {
+			finishRealtimeRequest({
+				method: "PATCH",
+				originalUrl,
+				url: "/ignored-fallback",
+				headers: { "x-sync-client-id": "source" },
+			});
+		}
+
+		const payloads = getRealtimePayloads(target).slice(1);
+		assert.equal(payloads.length, cases.length);
+		assert.equal(getRealtimePayloads(source).length, initialSourcePayloads);
+		for (let index = 0; index < cases.length; index += 1) {
+			const [originalUrl, expected] = cases[index];
+			const payload = payloads[index];
+			assert.deepEqual(
+				{
+					type: payload.type,
+					method: payload.method,
+					path: payload.path,
+					resource: payload.resource,
+					campaignSlug: payload.campaignSlug,
+					sessionFileName: payload.sessionFileName,
+					entityType: payload.entityType,
+					entitySlug: payload.entitySlug,
+				},
+				{
+					type: "data:changed",
+					method: "PATCH",
+					path: originalUrl,
+					resource: expected.resource,
+					campaignSlug: expected.campaignSlug ?? null,
+					sessionFileName: expected.sessionFileName ?? null,
+					entityType: expected.entityType ?? null,
+					entitySlug: expected.entitySlug ?? null,
+				},
+			);
+			if (index > 0) {
+				assert.equal(payload.version, payloads[index - 1].version + 1);
+			}
+		}
+
+		source.emit("close");
+		target.emit("close");
+	},
+);
+
+await run("realtime middleware gates notifications after response finish", () => {
+	const server = new EventEmitter();
+	setupRealtime(server);
+	const target = connectRealtimeTestClient(server, "gate-target");
+	const initialPayloads = getRealtimePayloads(target).length;
+	const request = (method, originalUrl, url = originalUrl) => ({
+		method,
+		originalUrl,
+		url,
+		headers: {},
+	});
+
+	finishRealtimeRequest(request("GET", "/api/settings"));
+	finishRealtimeRequest(request("HEAD", "/api/settings"));
+	finishRealtimeRequest(request("OPTIONS", "/api/settings"));
+	finishRealtimeRequest(request("POST", "/api/settings"), 400);
+	finishRealtimeRequest(request("POST", "/health", "/api/settings"));
+	finishRealtimeRequest(request("POST", undefined, "/api/settings"));
+	assert.equal(getRealtimePayloads(target).length, initialPayloads);
+
+	finishRealtimeRequest(request("POST", "/api/settings"), 399);
+	finishRealtimeRequest(request("POST", "/api/settings"), undefined, false);
+	assert.equal(getRealtimePayloads(target).length, initialPayloads + 2);
+	target.emit("close");
+});
+
 await run("storage core helpers sanitize and build identifiers", () => {
 	const dirty = '  test<>:"/\\|?*\u0001  name...  ';
 	assert.equal(storage.sanitizeName(dirty), "test name");
@@ -17343,6 +20653,527 @@ await run(
 			});
 		} finally {
 			await fs.rm(atomicPath, { force: true });
+		}
+	},
+);
+
+await run(
+	"storage custom Bestiary normalization preserves the complete decision table",
+	() => {
+		const originalRandomUuid = crypto.randomUUID;
+		let generatedIds = 0;
+		crypto.randomUUID = () => `storage-monster-${++generatedIds}`;
+		try {
+			const hp = { formula: "3d8 + 6", average: 999, note: "[міцний]" };
+			const spellcasting = { name: "[Чари]" };
+			const raw = {
+				id: 0,
+				name: "  [Болотяна Мавка]  ",
+				title: "Title must not win",
+				source: "OTHER",
+				hp,
+				spellcasting,
+				trait: [
+					"  [Туманний крок]  ",
+					"   ",
+					null,
+					7,
+					{
+						name: "  [Кігті]  ",
+						title: "ignored title",
+						entries: ["[Удар]", 0],
+						extra: "[залишити]",
+					},
+					{
+						title: "  [Шепіт]  ",
+						text: 0,
+						description: "[Опис]",
+						content: "ignored content",
+					},
+					{ content: { nested: "[значення]" } },
+					{ name: "empty", entries: [] },
+				],
+				action: null,
+				bonus: undefined,
+				reaction: "not-an-array",
+				legendary: [],
+			};
+			const normalized = storage.normalizeCustomBestiaryMonster(raw);
+			assert.deepEqual(normalized, {
+				id: "storage-monster-1",
+				name: "Болотяна Мавка",
+				title: "Title must not win",
+				source: "CUSTOM",
+				hp: { formula: "3d8 + 6", average: 19, note: "міцний" },
+				spellcasting: [{ name: "Чари" }],
+				trait: [
+					{ name: "", entries: ["Туманний крок"] },
+					{
+						name: "Кігті",
+						title: "ignored title",
+						entries: ["Удар", 0],
+						extra: "залишити",
+					},
+					{
+						title: "  Шепіт  ",
+						text: 0,
+						description: "Опис",
+						content: "ignored content",
+						name: "Шепіт",
+						entries: ["Опис"],
+					},
+					{
+						content: { nested: "значення" },
+						name: "",
+						entries: ["[object Object]"],
+					},
+				],
+				bonus: undefined,
+			});
+			assert.equal("action" in normalized, false);
+			assert.equal("reaction" in normalized, false);
+			assert.equal("legendary" in normalized, false);
+			assert.equal("bonus" in normalized, true);
+			assert.notEqual(normalized.hp, hp);
+			assert.notEqual(normalized.spellcasting[0], spellcasting);
+			assert.deepEqual(hp, {
+				formula: "3d8 + 6",
+				average: 999,
+				note: "[міцний]",
+			});
+			assert.deepEqual(spellcasting, { name: "[Чари]" });
+
+			const hpCases = [
+				[{ formula: "invalid", average: "-4px" }, { formula: "invalid", average: 1 }],
+				[{ formula: "invalid", average: "none" }, { formula: "invalid", average: 1 }],
+				[{ formula: "invalid" }, { formula: "invalid" }],
+				[{ formula: "2d6", average: "bad" }, { formula: "2d6", average: 7 }],
+				[[{ average: 9 }], [{ average: 9 }]],
+				[null, null],
+			];
+			for (const [value, expected] of hpCases) {
+				assert.deepEqual(
+					storage.normalizeCustomBestiaryMonster({
+						id: `hp-${generatedIds}`,
+						name: "HP",
+						hp: value,
+					}).hp,
+					expected,
+				);
+			}
+
+			assert.deepEqual(
+				storage.normalizeCustomBestiaryMonster({
+					id: "spell-string",
+					name: "Spell",
+					spellcasting: "innate",
+				}).spellcasting,
+				["innate"],
+			);
+			assert.deepEqual(
+				storage.normalizeCustomBestiaryMonster({
+					id: "spell-array",
+					name: "Spell",
+					spellcasting: [],
+				}).spellcasting,
+				[],
+			);
+			assert.equal(
+				storage.normalizeCustomBestiaryMonster({
+					id: "spell-false",
+					name: "Spell",
+					spellcasting: false,
+				}).spellcasting,
+				false,
+			);
+
+			let idReads = 0;
+			let nameReads = 0;
+			let sourceReads = 0;
+			const getterMonster = {
+				get id() {
+					idReads += 1;
+					return idReads === 1 ? "spread-id" : "final-id";
+				},
+				get name() {
+					nameReads += 1;
+					return nameReads === 1 ? "Spread Name" : "[Final Name]";
+				},
+				get source() {
+					sourceReads += 1;
+					return "OTHER";
+				},
+			};
+			const getterResult = storage.normalizeCustomBestiaryMonster(getterMonster);
+			assert.equal(getterResult.id, "final-id");
+			assert.equal(getterResult.name, "Final Name");
+			assert.equal(getterResult.source, "CUSTOM");
+			assert.deepEqual([idReads, nameReads, sourceReads], [2, 2, 1]);
+			assert.throws(
+				() => storage.normalizeCustomBestiaryMonster(null),
+				TypeError,
+			);
+			assert.equal(
+				storage.normalizeCustomBestiaryMonster(7).id,
+				"storage-monster-2",
+			);
+			assert.equal(generatedIds, 2);
+		} finally {
+			crypto.randomUUID = originalRandomUuid;
+		}
+	},
+);
+
+await run(
+	"storage custom Bestiary writer normalizes filters sorts and resolves duplicate IDs",
+	async () => {
+		const customBestiaryPath = path.join(
+			storage.DATA_DIR,
+			"custom-bestiary.json",
+		);
+		const originalRandomUuid = crypto.randomUUID;
+		let generatedIds = 0;
+		crypto.randomUUID = () => `writer-monster-${++generatedIds}`;
+		let originalContent = null;
+		let existed = true;
+		try {
+			try {
+				originalContent = await fs.readFile(customBestiaryPath);
+			} catch (error) {
+				if (error?.code !== "ENOENT") throw error;
+				existed = false;
+			}
+			const source = [
+				{ id: "same", name: "  [Яруга]  ", action: ["[Удар]"] },
+				{ id: "same", name: "  [Аспид]  ", action: ["   "] },
+				{ id: "ignored", title: "   " },
+				null,
+				"malformed",
+			];
+			const normalized = await storage.writeCustomBestiaryMonsters(source);
+			assert.deepEqual(
+				normalized.map((monster) => ({
+					id: monster.id,
+					name: monster.name,
+					action: monster.action,
+				})),
+				[
+					{ id: "writer-monster-1", name: "Аспид", action: undefined },
+					{
+						id: "same",
+						name: "Яруга",
+						action: [{ name: "", entries: ["Удар"] }],
+					},
+				],
+			);
+			assert.equal(generatedIds, 1);
+			assert.equal(source[0].name, "  [Яруга]  ");
+			assert.equal(source[1].id, "same");
+			const stored = JSON.parse(await fs.readFile(customBestiaryPath, "utf8"));
+			assert.deepEqual(stored._meta.sources, [
+				{
+					json: "CUSTOM",
+					abbreviation: "CUSTOM",
+					full: "Custom",
+				},
+			]);
+			assert.deepEqual(stored.monster, normalized);
+		} finally {
+			crypto.randomUUID = originalRandomUuid;
+			if (existed) {
+				await fs.writeFile(customBestiaryPath, originalContent);
+			} else {
+				await fs.rm(customBestiaryPath, { force: true });
+			}
+		}
+	},
+);
+
+await run(
+	"full campaign import preserves replacement collisions history and write order",
+	async () => {
+		const sourceSlug = makeTestSlug("full-source");
+		const collisionBase = makeTestSlug("full-collision");
+		const collisionTarget = `${collisionBase}-2`;
+		const forcedSlug = makeTestSlug("full-forced");
+		const malformedSlug = makeTestSlug("full-malformed");
+		const failureSlug = makeTestSlug("full-failure");
+		const allSlugs = [
+			sourceSlug,
+			collisionBase,
+			collisionTarget,
+			forcedSlug,
+			malformedSlug,
+			failureSlug,
+		];
+		try {
+			await storage.ensureDir(
+				path.join(storage.campaignDir(collisionBase), "sessions"),
+			);
+			await storage.writeJson(storage.campaignMetaPath(collisionBase), {
+				id: "reserved-campaign",
+				name: "Reserved",
+				slug: collisionBase,
+			});
+
+			const sourceImageUrl = `/api/images/${encodeURIComponent(sourceSlug)}/portraits/герой.png`;
+			const createdAt = "2026-07-22T08:00:00.000Z";
+			const importedMeta = await storage.importCampaignBundle({
+				meta: {
+					id: "imported-campaign-id",
+					name: collisionBase,
+					slug: sourceSlug,
+					createdAt,
+					cover: sourceImageUrl,
+				},
+				sessions: [
+					{
+						fileName: "Спільна.json",
+						content: {
+							id: "session-one",
+							name: "Перша сесія",
+							imageUrl: sourceImageUrl,
+						},
+					},
+					{ fileName: "Спільна.json", content: false },
+				],
+				entities: {
+					characters: [
+						{
+							id: "character-one",
+							firstName: "Олена",
+							slug: "герой",
+							imageUrl: sourceImageUrl,
+						},
+						{
+							id: "character-two",
+							firstName: "Тарас",
+							slug: "герой",
+						},
+					],
+					npc: [{ id: "npc-one", firstName: "Кобзар" }],
+					locations: "malformed collection",
+				},
+				aiResponses: [
+					{
+						id: "history-one",
+						text: "Імпортована відповідь",
+						path: {
+							campaign: sourceSlug,
+							session: "Спільна.json",
+							encounter: null,
+						},
+						changes: {
+							resources: [
+								{
+									id: "campaign:source",
+									kind: "campaign",
+									campaign: sourceSlug,
+									label: `${sourceSlug}: кампанія`,
+									before: {
+										slug: sourceSlug,
+										imageUrl: sourceImageUrl,
+									},
+									after: { campaign: sourceSlug },
+								},
+							],
+						},
+						createdAt: "2026-07-22T09:00:00.000Z",
+					},
+				],
+			});
+
+			assert.deepEqual(importedMeta, {
+				id: "imported-campaign-id",
+				name: collisionBase,
+				slug: collisionTarget,
+				createdAt,
+				cover: `/api/images/${encodeURIComponent(collisionTarget)}/portraits/герой.png`,
+			});
+			assert.deepEqual(
+				await storage.readJson(storage.campaignMetaPath(collisionTarget)),
+				importedMeta,
+			);
+
+			const importedSessions = await storage.listSessions(collisionTarget);
+			assert.deepEqual(
+				importedSessions.map((session) => session.fileName).sort(),
+				["Спільна.json-2.json", "Спільна.json.json"],
+			);
+			const firstSession = await storage.readSession(
+				collisionTarget,
+				"Спільна.json.json",
+			);
+			assert.equal(firstSession.name, "Перша сесія");
+			assert.equal(
+				firstSession.imageUrl,
+				`/api/images/${encodeURIComponent(collisionTarget)}/portraits/герой.png`,
+			);
+			assert.deepEqual(
+				await storage.readJson(
+					storage.sessionPath(collisionTarget, "Спільна.json-2.json"),
+				),
+				{},
+			);
+
+			const characters = await storage.listEntities(
+				collisionTarget,
+				"characters",
+			);
+			assert.deepEqual(
+				characters.map((entity) => entity.slug).sort(),
+				["герой", "герой-2"],
+			);
+			assert.equal(
+				characters.find((entity) => entity.slug === "герой").imageUrl,
+				`/api/images/${encodeURIComponent(collisionTarget)}/portraits/герой.png`,
+			);
+			assert.equal(
+				(await storage.listEntities(collisionTarget, "npc"))[0].slug,
+				"кобзар",
+			);
+			assert.deepEqual(
+				await storage.listEntities(collisionTarget, "locations"),
+				[],
+			);
+
+			const history = await storage.readAiResponses(collisionTarget);
+			assert.equal(history.length, 1);
+			assert.equal(history[0].text, "Імпортована відповідь");
+			assert.equal(history[0].path.campaign, collisionTarget);
+			assert.equal(
+				history[0].changes.resources[0].campaign,
+				collisionTarget,
+			);
+			assert.equal(
+				history[0].changes.resources[0].label,
+				`${collisionTarget}: кампанія`,
+			);
+			assert.equal(
+				history[0].changes.resources[0].before.slug,
+				collisionTarget,
+			);
+			assert.equal(
+				history[0].changes.resources[0].before.imageUrl,
+				`/api/images/${encodeURIComponent(collisionTarget)}/portraits/герой.png`,
+			);
+			assert.equal(
+				history[0].changes.resources[0].after.campaign,
+				collisionTarget,
+			);
+
+			await storage.ensureDir(
+				path.join(storage.campaignDir(forcedSlug), "sessions"),
+			);
+			await storage.writeJson(storage.campaignMetaPath(forcedSlug), {
+				id: "old-id",
+				name: "Стара кампанія",
+				slug: forcedSlug,
+			});
+			await storage.writeJson(
+				storage.sessionPath(forcedSlug, "old.json"),
+				{ id: "old-session", name: "Стара сесія" },
+			);
+			await storage.writeEntity(forcedSlug, "npc", "old-npc", {
+				id: "old-npc",
+				name: "Старий NPC",
+			});
+			const oldImagePath = path.join(
+				storage.IMAGES_DIR,
+				forcedSlug,
+				"portraits",
+				"old.txt",
+			);
+			await storage.ensureDir(path.dirname(oldImagePath));
+			await fs.writeFile(oldImagePath, "old", "utf8");
+
+			const replacedMeta = await storage.importCampaignBundle(
+				{
+					meta: { id: "new-id", name: "Нова кампанія", slug: sourceSlug },
+					sessions: [
+						{ fileName: "new", content: { id: "new-session", name: "Нова" } },
+					],
+				},
+				{
+					forcedSlug: path.join("nested", forcedSlug),
+					replaceExisting: true,
+				},
+			);
+			assert.equal(replacedMeta.slug, forcedSlug);
+			assert.match(replacedMeta.createdAt, /^\d{4}-\d{2}-\d{2}T/);
+			assert.equal(
+				await storage.exists(storage.sessionPath(forcedSlug, "old.json")),
+				false,
+			);
+			assert.equal(
+				await storage.exists(storage.sessionPath(forcedSlug, "new.json")),
+				true,
+			);
+			assert.deepEqual(await storage.listEntities(forcedSlug, "npc"), []);
+			assert.equal(await storage.exists(oldImagePath), false);
+
+			const malformedMeta = await storage.importCampaignBundle(
+				{
+					meta: { id: "malformed-id", name: malformedSlug },
+					sessions: { invalid: true },
+					entities: null,
+					aiResponses: "invalid",
+				},
+				null,
+			);
+			assert.equal(malformedMeta.slug, malformedSlug);
+			assert.deepEqual(await storage.listSessions(malformedSlug), []);
+			assert.deepEqual(await storage.listEntities(malformedSlug, "npc"), []);
+			assert.deepEqual(await storage.readAiResponses(malformedSlug), []);
+
+			await assert.rejects(
+				storage.importCampaignBundle({
+					meta: { id: "failure-id", name: failureSlug, slug: sourceSlug },
+					sessions: [
+						{
+							fileName: "written-first",
+							content: { id: "written-first", name: "Записано першою" },
+						},
+					],
+					entities: {
+						characters: [
+							{ id: "character-first", firstName: "Перший", slug: "first" },
+						],
+						npc: [{ id: "npc-failure", name: "Помилка", value: 1n }],
+						locations: [
+							{ id: "location-late", name: "Не записувати", slug: "late" },
+						],
+					},
+					aiResponses: [{ text: "Не записувати історію" }],
+				}),
+				/BigInt|serialize/i,
+			);
+			assert.equal(
+				await storage.exists(storage.campaignMetaPath(failureSlug)),
+				true,
+			);
+			assert.equal(
+				await storage.exists(
+					storage.sessionPath(failureSlug, "written-first.json"),
+				),
+				true,
+			);
+			assert.equal(
+				(await storage.listEntities(failureSlug, "characters")).length,
+				1,
+			);
+			assert.deepEqual(await storage.listEntities(failureSlug, "locations"), []);
+			assert.equal(
+				await storage.exists(storage.campaignAiResponsesPath(failureSlug)),
+				false,
+			);
+
+			await assert.rejects(
+				storage.importCampaignBundle(null),
+				(error) => error?.message === "Invalid bundle format.",
+			);
+		} finally {
+			for (const slug of allSlugs) await cleanupTestData(slug);
 		}
 	},
 );
@@ -17460,6 +21291,239 @@ await run(
 		} finally {
 			await cleanupTestData(sourceSlug);
 			await cleanupTestData(targetSlug);
+		}
+	},
+);
+
+await run(
+	"partial campaign import preserves section order history images and partial failures",
+	async () => {
+		const sourceSlug = makeTestSlug("partial-matrix-source");
+		const targetSlug = makeTestSlug("partial-matrix-target");
+		const failureSlug = makeTestSlug("partial-matrix-failure");
+		try {
+			for (const slug of [targetSlug, failureSlug]) {
+				await storage.ensureDir(
+					path.join(storage.campaignDir(slug), "sessions"),
+				);
+				await storage.writeJson(storage.campaignMetaPath(slug), {
+					id: `${slug}-id`,
+					name: `Campaign ${slug}`,
+					slug,
+				});
+			}
+
+			const existingHistory = await storage.addAiResponse({
+				text: "Наявна історія",
+				path: { campaign: targetSlug, session: null, encounter: null },
+				createdAt: "2026-07-21T08:00:00.000Z",
+			});
+			const sourceImageUrl = `/api/images/${encodeURIComponent(sourceSlug)}/portraits/source.png`;
+			const result = await storage.importCampaignPartialArchiveBundle(
+				targetSlug,
+				{
+					sections:
+						"images,aiHistory,npc,sessions,images,unknown,locations",
+					bundle: {
+						meta: { slug: sourceSlug, name: "Джерело" },
+						sessions: [
+							{
+								fileName: "../Сесія<>.json",
+								content: {
+									id: "imported-session",
+									name: "Українська сесія",
+									imageUrl: sourceImageUrl,
+								},
+							},
+						],
+						entities: {
+							npc: [
+								{
+									id: "npc-кобзар",
+									firstName: "Кобзар",
+									slug: "../",
+									imageUrl: sourceImageUrl,
+								},
+							],
+							locations: [
+								{
+									id: "location-млин",
+									name: "Старий млин",
+									slug: "млин",
+								},
+							],
+						},
+						aiResponses: [
+							{
+								id: "source-history-id",
+								text: "Імпортована історія",
+								path: {
+									campaign: sourceSlug,
+									session: null,
+									encounter: null,
+								},
+								changes: {
+									resources: [
+										{
+											id: "campaign:source",
+											kind: "campaign",
+											campaign: sourceSlug,
+											label: `${sourceSlug}: зміна`,
+											before: { imageUrl: sourceImageUrl },
+											after: { imageUrl: sourceImageUrl },
+										},
+									],
+								},
+								createdAt: "2026-07-21T09:00:00.000Z",
+							},
+							null,
+						],
+					},
+					images: [
+						{
+							relativePath: "portraits/герой.txt",
+							base64: Buffer.from("образ", "utf8").toString("base64"),
+						},
+						{
+							relativePath: `../${targetSlug}-outside.txt`,
+							base64: Buffer.from("outside", "utf8").toString("base64"),
+						},
+					],
+				},
+			);
+
+			assert.deepEqual(result, {
+				ok: true,
+				imported: {
+					sessions: 1,
+					npc: 1,
+					locations: 1,
+					images: 2,
+					aiHistory: 2,
+				},
+				sections: ["images", "aiHistory", "npc", "sessions", "locations"],
+			});
+
+			const importedSession = await storage.readSession(
+				targetSlug,
+				"Сесія.json",
+			);
+			assert.equal(importedSession.name, "Українська сесія");
+			assert.equal(
+				importedSession.imageUrl,
+				`/api/images/${encodeURIComponent(targetSlug)}/portraits/source.png`,
+			);
+			const importedNpcs = await storage.listEntities(targetSlug, "npc");
+			assert.equal(importedNpcs.length, 1);
+			assert.equal(importedNpcs[0].firstName, "Кобзар");
+			assert.equal(importedNpcs[0].slug, "кобзар");
+			assert.equal(
+				importedNpcs[0].imageUrl.includes(encodeURIComponent(targetSlug)),
+				true,
+			);
+			const importedLocations = await storage.listEntities(
+				targetSlug,
+				"locations",
+			);
+			assert.equal(importedLocations[0].slug, "млин");
+
+			const history = await storage.readAiResponses(targetSlug);
+			assert.equal(history.length, 2);
+			assert.ok(history.some((entry) => entry.id === existingHistory.id));
+			const importedHistory = history.find(
+				(entry) => entry.text === "Імпортована історія",
+			);
+			assert.ok(importedHistory);
+			assert.notEqual(importedHistory.id, "source-history-id");
+			assert.equal(importedHistory.path.campaign, targetSlug);
+			assert.equal(importedHistory.changes.resources[0].campaign, targetSlug);
+			assert.equal(
+				importedHistory.changes.resources[0].label,
+				`${targetSlug}: зміна`,
+			);
+			assert.equal(
+				importedHistory.changes.resources[0].after.imageUrl.includes(
+					encodeURIComponent(targetSlug),
+				),
+				true,
+			);
+
+			const restoredImagePath = path.join(
+				storage.IMAGES_DIR,
+				targetSlug,
+				"portraits",
+				"герой.txt",
+			);
+			assert.equal(await storage.exists(restoredImagePath), true);
+			assert.equal(
+				await fs.readFile(restoredImagePath, "utf8"),
+				"образ",
+			);
+			assert.equal(
+				await storage.exists(
+					path.join(storage.IMAGES_DIR, `${targetSlug}-outside.txt`),
+				),
+				false,
+			);
+
+			assert.deepEqual(
+				await storage.importCampaignPartialArchiveBundle(targetSlug, {
+					sections: { malformed: true },
+					bundle: "malformed",
+				}),
+				{
+					ok: true,
+					imported: {
+						sessions: 0,
+						npc: 0,
+						locations: 0,
+						images: 0,
+						aiHistory: 0,
+					},
+					sections: [],
+				},
+			);
+
+			await assert.rejects(
+				storage.importCampaignPartialArchiveBundle(failureSlug, {
+					sections: ["npc", "sessions"],
+					bundle: {
+						meta: { slug: sourceSlug },
+						sessions: [
+							{
+								fileName: "first.json",
+								content: { id: "first", name: "Written first" },
+							},
+						],
+						entities: {
+							npc: [
+								{
+									firstName: "Fails later",
+									value: 1n,
+								},
+							],
+						},
+					},
+				}),
+				/BigInt|serialize/i,
+			);
+			assert.equal(
+				await storage.exists(storage.sessionPath(failureSlug, "first.json")),
+				true,
+			);
+			assert.equal((await storage.listEntities(failureSlug, "npc")).length, 0);
+
+			await assert.rejects(
+				storage.importCampaignPartialArchiveBundle(
+					makeTestSlug("missing-partial-target"),
+					{ sections: ["sessions"] },
+				),
+				/Campaign for import was not found/,
+			);
+		} finally {
+			await cleanupTestData(sourceSlug);
+			await cleanupTestData(targetSlug);
+			await cleanupTestData(failureSlug);
 		}
 	},
 );
@@ -17656,7 +21720,7 @@ await run("5etools updater downloads missing tokens for new monsters", async () 
 	);
 });
 
-await run("5etools materializer preserves copied monster names", async () => {
+await run("5etools materializer preserves modifier modes warnings and dry runs", async () => {
 	const tempRoot = path.join(
 		process.cwd(),
 		`.tmp-materialize-test-${Date.now()}-${Math.random()
@@ -17699,6 +21763,49 @@ await run("5etools materializer preserves copied monster names", async () => {
 							type: "undead",
 							trait: [{ name: "Incorporeal", entries: ["The wraith moves."] }],
 						},
+						{
+							name: "Modifier Base",
+							source: "MM",
+							description: "alpha Base description",
+							title: "Base title",
+							subtitle: "Base subtitle",
+							wholeText: "whole-token",
+							nested: { text: "whole-token" },
+							obsolete: "remove me",
+							skill: { perception: "+1" },
+							appendList: ["base"],
+							prependList: ["base"],
+							uniqueList: [{ name: "same" }],
+							insertList: ["a", "c"],
+							replaceList: [{ name: "old" }, { name: "keep" }],
+							removeList: [{ name: "remove" }, { name: "keep" }],
+							spellcasting: [
+								{
+									name: "Primary",
+									will: [
+										"old will",
+										"remove twice",
+										"keep will",
+										"remove twice",
+									],
+									daily: { "1e": ["old daily", "keep daily"] },
+									spells: {
+										1: {
+											slots: 1,
+											spells: ["old level", "keep level"],
+										},
+									},
+								},
+								{
+									name: "Secondary",
+									will: ["old will"],
+									daily: { "1e": ["old daily"] },
+									spells: {
+										1: { slots: 2, spells: ["old level"] },
+									},
+								},
+							],
+						},
 					],
 				},
 				null,
@@ -17706,6 +21813,65 @@ await run("5etools materializer preserves copied monster names", async () => {
 			)}\n`,
 			"utf8",
 		);
+		await fs.writeFile(
+			path.join(tempBestiaryDir, "bestiary-lookup.json"),
+			`${JSON.stringify(
+				{
+					_meta: { sources: [{ json: "MetaSrc" }] },
+					monster: 0,
+					monsters: [
+						{ name: "Fallback Base", source: "FIRST", marker: "first" },
+						{ name: "Fallback Base", source: "SECOND", marker: "second" },
+						{ name: "Duplicate Base", source: "DUP", marker: "early" },
+						{ name: "Duplicate Base", source: "DUP", marker: "last" },
+						{ name: "Meta Base", marker: "meta-source" },
+					],
+					results: [
+						{
+							name: "Shadowed Missing Copy",
+							_copy: { name: "Must Not Resolve", source: "NONE" },
+						},
+					],
+				},
+				null,
+				2,
+			)}\n`,
+			"utf8",
+		);
+		await fs.writeFile(
+			path.join(tempBestiaryDir, "bestiary-direct.json"),
+			`${JSON.stringify([{ name: "Direct Base", marker: "direct-array" }], null, 2)}\n`,
+			"utf8",
+		);
+		await fs.writeFile(
+			path.join(tempBestiaryDir, "bestiary-scalar.json"),
+			`${JSON.stringify(
+				{
+					monster: "legacy scalar",
+					results: [
+						{
+							name: "Scalar Shadowed Copy",
+							_copy: { name: "Must Not Resolve", source: "NONE" },
+						},
+					],
+				},
+				null,
+				2,
+			)}\n`,
+			"utf8",
+		);
+		for (const skippedName of [
+			"all.json",
+			"index.json",
+			"legendarygroups.json",
+		]) {
+			await fs.writeFile(
+				path.join(tempBestiaryDir, skippedName),
+				"invalid skipped JSON",
+				"utf8",
+			);
+		}
+		await fs.mkdir(path.join(tempBestiaryDir, "folder.json"));
 		await fs.writeFile(
 			path.join(tempBestiaryDir, "bestiary-copies.json"),
 			`${JSON.stringify(
@@ -17761,6 +21927,164 @@ await run("5etools materializer preserves copied monster names", async () => {
 								},
 							},
 						},
+						{
+							name: "Modifier Child",
+							source: "TEST",
+							_copy: {
+								name: "Modifier Base",
+								source: "MM",
+								_mod: {
+									obsolete: "remove",
+									description: [
+										{
+											mode: "replaceTxt",
+											replace: "alpha",
+											with: "beta",
+										},
+										{
+											mode: "replaceTxt",
+											replace: "beta",
+											with: "gamma",
+										},
+									],
+									selection: {
+										mode: "replaceTxt",
+										props: ["title", "subtitle"],
+										replace: "Base",
+										with: "Selected",
+									},
+									"*": {
+										mode: "replaceTxt",
+										replace: "whole-token",
+										with: "цілий знак",
+									},
+									appendList: {
+										mode: "appendArr",
+										items: ["appended"],
+									},
+									prependList: {
+										mode: "prependArr",
+										items: ["prepended"],
+									},
+									uniqueList: {
+										mode: "appendIfNotExistsArr",
+										items: [{ name: "same" }, { name: "new" }],
+									},
+									insertList: {
+										mode: "insertArr",
+										index: 1,
+										items: "b",
+									},
+									replaceList: {
+										mode: "replaceArr",
+										replace: "old",
+										items: [{ name: "new" }],
+									},
+									removeList: {
+										mode: "removeArr",
+										names: ["remove"],
+									},
+									seed: {
+										mode: "setProp",
+										prop: "orderValue",
+										value: "first",
+									},
+									orderValue: {
+										mode: "replaceTxt",
+										replace: "first",
+										with: "second",
+									},
+									skill: {
+										mode: "addSkills",
+										skills: { stealth: "+4" },
+									},
+									spellcasting: [
+										{
+											mode: "addSpells",
+											will: ["new will"],
+											daily: {
+												"1e": "new daily",
+												2: ["twice daily"],
+											},
+											spells: {
+												1: {
+													slots: 3,
+													lower: true,
+													spells: ["new level"],
+												},
+												2: "scalar level",
+											},
+										},
+										{
+											mode: "replaceSpells",
+											will: [
+												{ replace: "old will", with: "replaced will" },
+												{ replace: 7, with: "seven" },
+											],
+											daily: {
+												"1e": {
+													replace: "old daily",
+													with: "replaced daily",
+												},
+											},
+											spells: {
+												1: {
+													replace: "old level",
+													with: "replaced level",
+												},
+											},
+										},
+										{
+											mode: "removeSpells",
+											will: ["remove twice", "new will"],
+											daily: { "1e": "new daily" },
+											spells: { 1: "new level" },
+										},
+									],
+									warningOne: 17,
+									warningTwo: { mode: "mystery" },
+								},
+							},
+						},
+						{
+							name: "Modifier Grandchild",
+							source: "TEST2",
+							_copy: {
+								name: "Modifier Child",
+								source: "TEST",
+								_mod: {
+									marker: {
+										mode: "setProp",
+										prop: "chainMarker",
+										value: "успадковано",
+									},
+								},
+							},
+						},
+						{
+							name: "Duplicate Winner Child",
+							source: "CHILD",
+							_copy: { name: "Duplicate Base", source: "DUP" },
+						},
+						{
+							name: "Fallback First Child",
+							source: "CHILD2",
+							_copy: { name: "Fallback Base", source: "MISSING" },
+						},
+						{
+							name: "Exact Source Child",
+							source: "CHILD3",
+							_copy: { name: "Fallback Base", source: "SECOND" },
+						},
+						{
+							name: "Inherited Source Child",
+							_copy: { name: "Meta Base" },
+						},
+						{
+							name: "Direct Array Child",
+							source: "CHILD4",
+							_copy: { name: "Direct Base", source: "DIRECT" },
+						},
 					],
 				},
 				null,
@@ -17769,15 +22093,73 @@ await run("5etools materializer preserves copied monster names", async () => {
 			"utf8",
 		);
 
+		const copiesPath = path.join(
+			tempBestiaryDir,
+			"bestiary-copies.json",
+		);
+		const originalCopiesText = await fs.readFile(copiesPath, "utf8");
+		const dryRun = spawnSync(
+			process.execPath,
+			[
+				path.join("scripts", "materialize-bestiary-copies.mjs"),
+				"--dry-run",
+				"--verbose",
+			],
+			{ cwd: tempRoot, encoding: "utf8" },
+		);
+		assert.equal(dryRun.status, 0, dryRun.stderr || dryRun.stdout);
+		assert.match(
+			dryRun.stdout,
+			/Dry run: materialized 10 monsters in 1 files\./,
+		);
+		const verboseNames = [
+			"Tribal Warrior Spore Servant",
+			"Ctenmiir the Vampire",
+			"Mormesk the Wraith",
+			"Modifier Child",
+			"Modifier Grandchild",
+			"Duplicate Winner Child",
+			"Fallback First Child",
+			"Exact Source Child",
+			"Inherited Source Child",
+			"Direct Array Child",
+		];
+		let previousVerboseIndex = -1;
+		for (const name of verboseNames) {
+			const currentIndex = dryRun.stdout.indexOf(`materialized ${name} (`);
+			assert.ok(currentIndex > previousVerboseIndex, `verbose order for ${name}`);
+			previousVerboseIndex = currentIndex;
+		}
+		assert.match(dryRun.stdout, /Warnings: 2/);
+		assert.match(
+			dryRun.stderr,
+			/Modifier Child \(TEST\): unsupported mod 17 on warningOne/,
+		);
+		assert.match(
+			dryRun.stderr,
+			/Modifier Child \(TEST\): unsupported mode "mystery" on warningTwo/,
+		);
+		assert.equal(await fs.readFile(copiesPath, "utf8"), originalCopiesText);
+
 		const result = spawnSync(
 			process.execPath,
 			[path.join("scripts", "materialize-bestiary-copies.mjs")],
 			{ cwd: tempRoot, encoding: "utf8" },
 		);
 		assert.equal(result.status, 0, result.stderr || result.stdout);
+		assert.match(result.stdout, /Done: materialized 10 monsters in 1 files\./);
+		assert.match(result.stdout, /Warnings: 2/);
+		assert.match(
+			result.stderr,
+			/Modifier Child \(TEST\): unsupported mod 17 on warningOne/,
+		);
+		assert.match(
+			result.stderr,
+			/Modifier Child \(TEST\): unsupported mode "mystery" on warningTwo/,
+		);
 
 		const materialized = JSON.parse(
-			await fs.readFile(path.join(tempBestiaryDir, "bestiary-copies.json"), "utf8"),
+			await fs.readFile(copiesPath, "utf8"),
 		).monster;
 		assert.deepEqual(
 			materialized.map((monster) => monster.name),
@@ -17785,9 +22167,152 @@ await run("5etools materializer preserves copied monster names", async () => {
 				"Tribal Warrior Spore Servant",
 				"Ctenmiir the Vampire",
 				"Mormesk the Wraith",
+				"Modifier Child",
+				"Modifier Grandchild",
+				"Duplicate Winner Child",
+				"Fallback First Child",
+				"Exact Source Child",
+				"Inherited Source Child",
+				"Direct Array Child",
 			],
 		);
 		assert.equal(materialized.some((monster) => monster._copy), false);
+
+		const child = materialized.find(
+			(monster) => monster.name === "Modifier Child",
+		);
+		assert.ok(child);
+		assert.equal("obsolete" in child, false);
+		assert.equal(child.description, "gamma Base description");
+		assert.equal(child.title, "Selected title");
+		assert.equal(child.subtitle, "Selected subtitle");
+		assert.equal(child.wholeText, "цілий знак");
+		assert.equal(child.nested.text, "цілий знак");
+		assert.deepEqual(child.appendList, ["base", "appended"]);
+		assert.deepEqual(child.prependList, ["prepended", "base"]);
+		assert.deepEqual(child.uniqueList, [
+			{ name: "same" },
+			{ name: "new" },
+		]);
+		assert.deepEqual(child.insertList, ["a", "b", "c"]);
+		assert.deepEqual(child.replaceList, [
+			{ name: "new" },
+			{ name: "keep" },
+		]);
+		assert.deepEqual(child.removeList, [{ name: "keep" }]);
+		assert.equal(child.orderValue, "second");
+		assert.deepEqual(child.skill, { perception: "+1", stealth: "+4" });
+
+		const primarySpells = child.spellcasting[0];
+		assert.deepEqual(primarySpells.will, ["replaced will", "keep will"]);
+		assert.deepEqual(primarySpells.daily, {
+			"1e": ["replaced daily", "keep daily"],
+			2: ["twice daily"],
+		});
+		assert.deepEqual(primarySpells.spells, {
+			1: {
+				slots: 3,
+				spells: ["replaced level", "keep level"],
+				lower: true,
+			},
+			2: { spells: ["scalar level"] },
+		});
+		assert.deepEqual(child.spellcasting[1], {
+			name: "Secondary",
+			will: ["replaced will"],
+			daily: { "1e": ["replaced daily"] },
+			spells: {
+				1: { slots: 2, spells: ["replaced level"] },
+			},
+		});
+
+		const grandchild = materialized.find(
+			(monster) => monster.name === "Modifier Grandchild",
+		);
+		assert.equal(grandchild.chainMarker, "успадковано");
+		assert.deepEqual(grandchild.appendList, ["base", "appended"]);
+		assert.deepEqual(grandchild.spellcasting, child.spellcasting);
+
+		const byName = new Map(
+			materialized.map((monster) => [monster.name, monster]),
+		);
+		assert.equal(byName.get("Duplicate Winner Child").marker, "last");
+		assert.equal(byName.get("Fallback First Child").marker, "first");
+		assert.equal(byName.get("Exact Source Child").marker, "second");
+		assert.equal(byName.get("Inherited Source Child").marker, "meta-source");
+		assert.equal(byName.get("Inherited Source Child").source, "METASRC");
+		assert.equal(byName.get("Direct Array Child").marker, "direct-array");
+		for (const skippedName of [
+			"all.json",
+			"index.json",
+			"legendarygroups.json",
+		]) {
+			assert.equal(
+				await fs.readFile(path.join(tempBestiaryDir, skippedName), "utf8"),
+				"invalid skipped JSON",
+			);
+		}
+
+		await fs.writeFile(
+			copiesPath,
+			`${JSON.stringify(
+				{
+					monster: [
+						{
+							name: "Missing Child",
+							source: "MISS",
+							_copy: { name: "Absent", source: "NONE" },
+						},
+					],
+				},
+				null,
+				2,
+			)}\n`,
+			"utf8",
+		);
+		const missingBase = spawnSync(
+			process.execPath,
+			[path.join("scripts", "materialize-bestiary-copies.mjs")],
+			{ cwd: tempRoot, encoding: "utf8" },
+		);
+		assert.notEqual(missingBase.status, 0);
+		assert.match(
+			missingBase.stderr,
+			/Base monster not found for Missing Child \(MISS\): Absent/,
+		);
+
+		await fs.writeFile(
+			copiesPath,
+			`${JSON.stringify(
+				{
+					monster: [
+						{
+							name: "Loop A",
+							source: "LOOP",
+							_copy: { name: "Loop B", source: "LOOP" },
+						},
+						{
+							name: "Loop B",
+							source: "LOOP",
+							_copy: { name: "Loop A", source: "LOOP" },
+						},
+					],
+				},
+				null,
+				2,
+			)}\n`,
+			"utf8",
+		);
+		const circularCopy = spawnSync(
+			process.execPath,
+			[path.join("scripts", "materialize-bestiary-copies.mjs")],
+			{ cwd: tempRoot, encoding: "utf8" },
+		);
+		assert.notEqual(circularCopy.status, 0);
+		assert.match(
+			circularCopy.stderr,
+			/Circular _copy chain: loop a\|LOOP -> loop b\|LOOP -> loop a\|LOOP/,
+		);
 	} finally {
 		await fs.rm(tempRoot, { recursive: true, force: true });
 	}
@@ -23161,6 +27686,256 @@ await run("storage keeps AI response history per campaign", async () => {
 	});
 });
 
+await run(
+	"storage AI history normalization preserves legacy metadata and isolates malformed rows",
+	async () => {
+		await withTestSlug("ai-history-normalization", async (slug) => {
+			const options = [];
+			const context = [];
+			const summary = [];
+			const retryPayload = [];
+			const beforeMonster = { name: "Старий вартовий" };
+			const afterMonster = { name: "Новий вартовий" };
+			const request = [];
+			request.userInstructions = "  Зберегти відступи  ";
+			request.options = options;
+			request.optionsSummary = "Опції";
+			request.context = context;
+			request.contextSummary = "Контекст";
+			const responsePath = [];
+			responsePath.campaign = slug;
+			responsePath.session = 0;
+			responsePath.encounter = false;
+			const responseError = [];
+			responseError.message = 0;
+			responseError.status = "E_AI";
+
+			const directEntry = await storage.addAiResponse({
+				text: "  Відповідь без обрізання  ",
+				status: "failed",
+				path: responsePath,
+				type: 7,
+				modelName: 0,
+				language: "uk",
+				userInstructions: "legacy fallback",
+				request,
+				changes: {
+					resources: [
+						{
+							id: 0,
+							kind: "custom-monster",
+							before: beforeMonster,
+							after: afterMonster,
+							applyState: "applied",
+						},
+						{
+							id: "invalid-empty",
+							kind: "campaign",
+							before: null,
+							after: null,
+						},
+					],
+					summary,
+				},
+				applyState: "draft",
+				error: responseError,
+				retryPayload,
+			});
+
+			assert.equal(directEntry.text, "  Відповідь без обрізання  ");
+			assert.equal(directEntry.status, "failed");
+			assert.deepEqual(directEntry.path, {
+				campaign: slug,
+				session: null,
+				encounter: null,
+			});
+			assert.equal(directEntry.type, 7);
+			assert.equal(directEntry.modelName, null);
+			assert.equal(directEntry.userInstructions, "  Зберегти відступи  ");
+			assert.equal(directEntry.request.options, options);
+			assert.equal(directEntry.request.context, context);
+			assert.equal(directEntry.changes.summary, summary);
+			assert.equal(directEntry.retryPayload, retryPayload);
+			assert.deepEqual(directEntry.error, {
+				message: "",
+				status: "E_AI",
+			});
+			assert.equal(directEntry.changes.resources.length, 1);
+			assert.equal(
+				directEntry.changes.resources[0].before,
+				beforeMonster,
+			);
+			assert.equal(directEntry.changes.resources[0].after, afterMonster);
+			assert.equal(directEntry.changes.resources[0].name, "Новий вартовий");
+			assert.equal(directEntry.changes.resources[0].label, "custom-monster");
+			assert.notEqual(directEntry.changes.resources[0].id, "0");
+			assert.equal(directEntry.changes.resources[0].applyState, "applied");
+
+			const legacyResponse = {
+				id: "legacy-response",
+				text: "Сумісна відповідь",
+				status: "pending",
+				path: { campaign: 0, session: false, encounter: "encounter-1" },
+				type: 0,
+				modelName: false,
+				language: "uk",
+				userInstructions: "Старий запит",
+				request: {
+					userInstructions: 42,
+					options: [],
+					optionsSummary: "Стисло",
+					context: [],
+					contextSummary: 42,
+				},
+				changes: {
+					resources: [
+						{
+							id: "campaign:1",
+							kind: "campaign",
+							campaign: 0,
+							label: 0,
+							before: null,
+							after: 0,
+							applyState: "draft",
+							appliedAt: 0,
+						},
+						{
+							id: "session:1",
+							kind: "session",
+							label: "Сесія",
+							before: false,
+							after: null,
+							fileName: 0,
+						},
+						{
+							id: "entity:1",
+							kind: "entity",
+							before: {},
+							type: "npc",
+							slug: "вартовий",
+						},
+						{
+							id: "monster:1",
+							kind: "custom-monster",
+							name: "",
+							before: { name: "Старий" },
+							after: { name: "Новий" },
+						},
+						{
+							id: "bestiary:1",
+							kind: "custom-bestiary",
+							before: [],
+						},
+						{ kind: "campaign", before: null, after: null },
+						{ kind: "unknown", before: {}, after: {} },
+						null,
+					],
+					summary: [],
+				},
+				applyState: "invalid",
+				appliedAt: 0,
+				error: [],
+				retryPayload: [],
+				createdAt: "2026-07-21T10:00:00.000Z",
+			};
+			await storage.writeJson(storage.aiResponsesPath(slug), {
+				responses: [
+					null,
+					42,
+					"invalid",
+					[],
+					{ text: "   " },
+					legacyResponse,
+				],
+			});
+
+			const normalized = await storage.readAiResponses(slug);
+			assert.equal(normalized.length, 1);
+			assert.deepEqual(normalized[0], {
+				id: "legacy-response",
+				text: "Сумісна відповідь",
+				status: "completed",
+				path: { campaign: null, session: null, encounter: "encounter-1" },
+				type: null,
+				modelName: null,
+				language: "uk",
+				userInstructions: "Старий запит",
+				request: {
+					userInstructions: "Старий запит",
+					options: [],
+					optionsSummary: "Стисло",
+					context: [],
+					contextSummary: "",
+				},
+				changes: {
+					resources: [
+						{
+							id: "campaign:1",
+							kind: "campaign",
+							campaign: null,
+							label: "campaign:1",
+							before: null,
+							after: 0,
+							applyState: null,
+							appliedAt: null,
+						},
+						{
+							id: "session:1",
+							kind: "session",
+							campaign: null,
+							label: "Сесія",
+							before: false,
+							after: null,
+							applyState: null,
+							appliedAt: null,
+							fileName: null,
+						},
+						{
+							id: "entity:1",
+							kind: "entity",
+							campaign: null,
+							label: "entity:1",
+							before: {},
+							after: null,
+							applyState: null,
+							appliedAt: null,
+							type: "npc",
+							slug: "вартовий",
+						},
+						{
+							id: "monster:1",
+							kind: "custom-monster",
+							campaign: null,
+							label: "monster:1",
+							before: { name: "Старий" },
+							after: { name: "Новий" },
+							applyState: null,
+							appliedAt: null,
+							name: "Новий",
+						},
+						{
+							id: "bestiary:1",
+							kind: "custom-bestiary",
+							campaign: null,
+							label: "bestiary:1",
+							before: [],
+							after: null,
+							applyState: null,
+							appliedAt: null,
+						},
+					],
+					summary: [],
+				},
+				applyState: null,
+				appliedAt: null,
+				error: { message: "", status: null },
+				retryPayload: [],
+				createdAt: "2026-07-21T10:00:00.000Z",
+			});
+		});
+	},
+);
+
 await run("theme model normalizes document theme values", () => {
 	assert.equal(getNextTheme(THEMES.LIGHT), THEMES.DARK);
 	assert.equal(getNextTheme(THEMES.DARK), THEMES.LIGHT);
@@ -24271,6 +29046,11 @@ await run("backups archive route sends gzip payload with dated filename", async 
 });
 
 await run("Reference commands own spell search sources and named precedence", async () => {
+	const aggregateSpells = [
+		{ name: "Fire Bolt", level: 0, school: "V", source: "PHB" },
+		{ name: "Fireball", level: 3, school: "V", source: "XPHB" },
+	];
+	let indexReads = 0;
 	const referenceFiles = {
 		"conditions.json": {
 			condition: [
@@ -24286,12 +29066,12 @@ await run("Reference commands own spell search sources and named precedence", as
 	const commands = createReferenceCommands({
 		readSpellAggregate: async () => ({
 			exists: true,
-			spells: [
-				{ name: "Fire Bolt", level: 0, school: "V", source: "PHB" },
-				{ name: "Fireball", level: 3, school: "V", source: "XPHB" },
-			],
+			spells: aggregateSpells,
 		}),
-		readSpellIndex: async () => null,
+		readSpellIndex: async () => {
+			indexReads += 1;
+			return null;
+		},
 		readSpellFile: async () => [],
 		readReferenceFile: async (fileName) => referenceFiles[fileName] || null,
 	});
@@ -24319,7 +29099,243 @@ await run("Reference commands own spell search sources and named precedence", as
 	assert.deepEqual(await commands.getSpellSource({ source: "xphb" }), [
 		{ name: "Fireball", level: 3, school: "V", source: "XPHB" },
 	]);
+	assert.strictEqual(await commands.getSpellSource({ source: "ALL" }), aggregateSpells);
+	assert.deepEqual(await commands.getSpellSource({ source: "missing" }), []);
+	assert.equal(indexReads, 0);
 });
+
+await run(
+	"Reference normalization preserves source and projection precedence",
+	() => {
+		assert.deepEqual(
+			["xphb", "XdMg", "phb", "DMG", "UA", 0].map(getSourcePriority),
+			[3, 3, 2, 2, 1, 1],
+		);
+		const current = { source: "PHB", marker: "current" };
+		const equal = { source: "DMG", marker: "equal" };
+		const higher = { source: "XPHB", marker: "higher" };
+		assert.strictEqual(pickPreferredRecord(null, current), current);
+		assert.strictEqual(pickPreferredRecord(current, equal), current);
+		assert.strictEqual(pickPreferredRecord(current, higher), higher);
+		assert.strictEqual(pickPreferredRecord(higher, current), higher);
+
+		const records = normalizeNamedReferenceRecords(
+			[
+				null,
+				{ name: "   " },
+				{ name: "  Київ  ", source: "PHB", page: 0, entries: ["first"] },
+				{ name: "київ", source: "DMG", entries: ["equal"] },
+				{ name: "КИЇВ", source: "xphb", entries: ["preferred"] },
+				{ name: "Aura", source: "XPHB", entries: ["keep"] },
+				{ name: "aura", source: "PHB", entries: ["lose"] },
+			],
+			"condition",
+		);
+		assert.equal(records.length, 2);
+		assert.deepEqual(
+			records.map((record) => record.name),
+			["Aura", "КИЇВ"].sort((left, right) => left.localeCompare(right)),
+		);
+		assert.deepEqual(records.find((record) => record.name === "Aura").entries, [
+			"keep",
+		]);
+		assert.deepEqual(records.find((record) => record.name === "КИЇВ"), {
+			name: "КИЇВ",
+			kind: "condition",
+			source: "xphb",
+			page: null,
+			entries: ["preferred"],
+		});
+
+		assert.deepEqual(
+			normalizeNamedReferenceRecords(
+				[
+					{
+						name: "  Override  ",
+						kind: "original-kind",
+						source: "PHB",
+						page: 1,
+						entries: ["original entries"],
+					},
+				],
+				"fallback-kind",
+				(item) => ({
+					name: "Projected",
+					kind: "extra-kind",
+					source: "XPHB",
+					page: 2,
+					entries: ["ignored extra entries"],
+					originalName: item.name,
+				}),
+			),
+			[
+				{
+					name: "Projected",
+					kind: "extra-kind",
+					source: "XPHB",
+					page: 2,
+					entries: ["original entries"],
+					originalName: "  Override  ",
+				},
+			],
+		);
+		assert.deepEqual(
+			normalizeNamedReferenceRecords(
+				[{ name: 7, kind: 0, source: 0, page: 0, entries: "" }],
+				"fallback-kind",
+			),
+			[
+				{
+					name: "7",
+					kind: "fallback-kind",
+					source: null,
+					page: null,
+					entries: [],
+				},
+			],
+		);
+		assert.deepEqual(
+			normalizeNamedReferenceRecords({ name: "not-an-array" }, "sense"),
+			[],
+		);
+	},
+);
+
+await run(
+	"Reference commands preserve indexed files and named-reference fallbacks",
+	async () => {
+		const calls = [];
+		const spellFiles = {
+			"xphb.json": [
+				{
+					name: "Крижаний Болт",
+					level: 0,
+					school: "V",
+					source: "legacy",
+				},
+				{ name: "Shield", level: 1, school: "A" },
+			],
+			"phb.json": [{ name: "Fire Bolt", level: 0, school: "V" }],
+		};
+		const referenceFiles = {
+			"conditions.json": {
+				condition: [{ name: "Blinded", source: "PHB" }],
+				status: [{ name: "Surprised", source: "PHB" }],
+				disease: [
+					{ name: "Українська Хвороба", source: "XDMG", type: "magical" },
+				],
+			},
+			"diseases.json": null,
+			"variantrules.json": {
+				variantrule: [
+					{ name: "Hero Points", source: "DMG", ruleType: "optional" },
+				],
+			},
+			"skills.json": {
+				skill: [{ name: "Arcana", source: "PHB", ability: "int" }],
+			},
+			"senses.json": null,
+		};
+		const commands = createReferenceCommands({
+			readSpellAggregate: async () => ({ exists: false, spells: [] }),
+			readSpellIndex: async () => ({
+				XPHB: "xphb.json",
+				PHB: "phb.json",
+			}),
+			readSpellFile: async (fileName) => {
+				calls.push(`spell:${fileName}`);
+				return spellFiles[fileName];
+			},
+			readReferenceFile: async (fileName) => {
+				calls.push(`reference:${fileName}`);
+				return referenceFiles[fileName];
+			},
+		});
+
+		assert.deepEqual(
+			await commands.searchSpells({ name: "болт", level: "0", school: "v" }),
+			[
+				{
+					name: "Крижаний Болт",
+					level: 0,
+					school: "V",
+					source: "XPHB",
+				},
+			],
+		);
+		assert.deepEqual(
+			await commands.searchSpells({ name: "  болт", school: "v" }),
+			[],
+		);
+		assert.deepEqual(await commands.listSpellSources(), ["XPHB", "PHB"]);
+		assert.deepEqual(await commands.getSpellSource({ source: "PHB" }), [
+			{ name: "Fire Bolt", level: 0, school: "V", source: "PHB" },
+		]);
+		await assert.rejects(
+			() => commands.getSpellSource({ source: "phb" }),
+			(error) => error.message === "Source not found." && error.status === 404,
+		);
+
+		assert.deepEqual(await commands.listConditions(), [
+			{
+				name: "Blinded",
+				kind: "condition",
+				source: "PHB",
+				page: null,
+				entries: [],
+			},
+			{
+				name: "Surprised",
+				kind: "status",
+				source: "PHB",
+				page: null,
+				entries: [],
+			},
+		]);
+		assert.deepEqual(await commands.listDiseases(), [
+			{
+				name: "Українська Хвороба",
+				kind: "disease",
+				source: "XDMG",
+				page: null,
+				type: "magical",
+				entries: [],
+			},
+		]);
+		assert.deepEqual(await commands.listVariantRules(), [
+			{
+				name: "Hero Points",
+				kind: "variantrule",
+				source: "DMG",
+				page: null,
+				ruleType: "optional",
+				entries: [],
+			},
+		]);
+		assert.deepEqual(await commands.listSkills(), [
+			{
+				name: "Arcana",
+				kind: "skill",
+				source: "PHB",
+				page: null,
+				ability: "int",
+				entries: [],
+			},
+		]);
+		assert.deepEqual(await commands.listSenses(), []);
+		assert.deepEqual(
+			calls.filter((call) => call.startsWith("reference:")),
+			[
+				"reference:conditions.json",
+				"reference:diseases.json",
+				"reference:conditions.json",
+				"reference:variantrules.json",
+				"reference:skills.json",
+				"reference:senses.json",
+			],
+		);
+	},
+);
 
 await run(
 	"spells conditions route merges kinds and prefers newer sources",
@@ -24616,6 +29632,15 @@ await run("storage lists readonly official bestiary token assets", async () => {
 	const rootAssets = await storage.listBestiaryTokenAssets();
 	assert.ok(rootAssets.subcategories.includes("AATM"));
 	assert.deepEqual(rootAssets.images, []);
+	assert.deepEqual(
+		rootAssets.subcategories,
+		[...rootAssets.subcategories].sort((left, right) => left.localeCompare(right)),
+	);
+
+	const ignoredRootAssets = await storage.listBestiaryTokenAssets({
+		ignoreSourcesList: [" aatm ", "AATM", null],
+	});
+	assert.equal(ignoredRootAssets.subcategories.includes("AATM"), false);
 
 	const sourceAssets = await storage.listBestiaryTokenAssets({
 		subcategory: "AATM",
@@ -24625,6 +29650,59 @@ await run("storage lists readonly official bestiary token assets", async () => {
 	);
 	assert.equal(sourceAssets.images[0].readonly, true);
 	assert.match(sourceAssets.images[0].url, /^\/api\/bestiary\/tokens\/AATM\//);
+	assert.deepEqual(
+		sourceAssets.images.map((item) => item.name),
+		[...sourceAssets.images]
+			.map((item) => item.name)
+			.sort((left, right) => left.localeCompare(right)),
+	);
+	const animatedCoffin = sourceAssets.images.find(
+		(item) => item.name === "Animated Coffin.webp",
+	);
+	const animatedCoffinStats = await fs.stat(
+		path.resolve(
+			"database",
+			"bestiary",
+			"tokens",
+			"AATM",
+			"Animated Coffin.webp",
+		),
+	);
+	assert.deepEqual(animatedCoffin, {
+		name: "Animated Coffin.webp",
+		displayName: "Animated Coffin.webp",
+		url: "/api/bestiary/tokens/AATM/Animated%20Coffin.webp",
+		path: path.join(
+			"bestiary",
+			"tokens",
+			"AATM",
+			"Animated Coffin.webp",
+		),
+		sizeBytes: animatedCoffinStats.size,
+		readonly: true,
+		source: "bestiary",
+	});
+
+	const recursiveSourceAssets = await storage.listBestiaryTokenAssets({
+		subcategory: "./AATM/../",
+		recursive: true,
+		ignoreSourcesList: { malformed: true },
+	});
+	assert.deepEqual(
+		recursiveSourceAssets.images.map((item) => item.name),
+		sourceAssets.images.map((item) => item.name),
+	);
+	assert.deepEqual(recursiveSourceAssets.subcategories, []);
+	const ignoredRequestedSource = await storage.listBestiaryTokenAssets({
+		subcategory: "AATM",
+		recursive: true,
+		ignoreSourcesList: ["aatm"],
+	});
+	assert.deepEqual(ignoredRequestedSource, { subcategories: [], images: [] });
+	const missingSourceAssets = await storage.listBestiaryTokenAssets({
+		subcategory: "missing-token-source",
+	});
+	assert.deepEqual(missingSourceAssets, { subcategories: [], images: [] });
 
 	const searchAssets = await storage.listBestiaryTokenAssets({
 		search: "animated coffin",
@@ -24646,10 +29724,20 @@ await run("storage searches image gallery locally and globally", async () => {
 				"maps",
 				"city/deep",
 			);
+			const utf8Dir = path.join(firstDir, "Український район");
 			const secondDir = storage.campaignImagesDir(secondSlug, "props");
 			await storage.ensureDir(firstDir);
+			await storage.ensureDir(utf8Dir);
 			await storage.ensureDir(secondDir);
 			await fs.writeFile(path.join(firstDir, "hidden-map.png"), "a", "utf8");
+			await fs.writeFile(path.join(firstDir, "Alpha.webp"), "alpha", "utf8");
+			await fs.writeFile(path.join(firstDir, "z-last.svg"), "z", "utf8");
+			await fs.writeFile(path.join(firstDir, "ignored.txt"), "ignored", "utf8");
+			await fs.writeFile(
+				path.join(utf8Dir, "Карта брами.PNG"),
+				"карта",
+				"utf8",
+			);
 			await fs.writeFile(path.join(secondDir, "hidden-prop.webp"), "b", "utf8");
 
 			const local = await storage.searchImageGalleryAssets({
@@ -24663,6 +29751,101 @@ await run("storage searches image gallery locally and globally", async () => {
 				["hidden-map.png"],
 			);
 			assert.equal(local.images[0].subcategory, "city/deep");
+			assert.deepEqual(local.images[0], {
+				name: "hidden-map.png",
+				displayName: "hidden-map",
+				url: `/api/images/${encodeURIComponent(firstSlug)}/maps/city/deep/hidden-map.png`,
+				path: path.join("maps", "city/deep", "hidden-map.png"),
+				sizeBytes: 1,
+				source: firstSlug,
+				category: "maps",
+				subcategory: "city/deep",
+				locationLabel: `${firstSlug} / maps / city/deep`,
+				readonly: false,
+				globalSearch: true,
+			});
+
+			const utf8 = await storage.searchImageGalleryAssets({
+				search: "український район",
+				source: firstSlug,
+				category: "maps",
+				subcategory: " ./city\\deep/ ",
+			});
+			assert.deepEqual(
+				utf8.images.map((item) => ({
+					name: item.name,
+					subcategory: item.subcategory,
+					locationLabel: item.locationLabel,
+				})),
+				[
+					{
+						name: "Карта брами.PNG",
+						subcategory: "city/deep/Український район",
+						locationLabel: `${firstSlug} / maps / city/deep/Український район`,
+					},
+				],
+			);
+			assert.ok(
+				utf8.images[0].url.includes(
+					"/city/deep/%D0%A3%D0%BA%D1%80%D0%B0%D1%97%D0%BD%D1%81%D1%8C%D0%BA%D0%B8%D0%B9%20%D1%80%D0%B0%D0%B9%D0%BE%D0%BD/",
+				),
+			);
+			assert.ok(utf8.images[0].sizeBytes > 0);
+
+			const ordered = await storage.searchImageGalleryAssets({
+				source: firstSlug,
+				category: "maps",
+				subcategory: "city",
+				categories: [0, false, " maps ", ""],
+			});
+			assert.deepEqual(
+				ordered.images.map((item) => item.displayName),
+				[...ordered.images]
+					.map((item) => item.displayName)
+					.sort((left, right) => left.localeCompare(right)),
+			);
+			assert.equal(
+				ordered.images.some((item) => item.name === "ignored.txt"),
+				false,
+			);
+
+			const malformedCategories = await storage.searchImageGalleryAssets({
+				search: firstSlug.toUpperCase(),
+				source: firstSlug,
+				category: "maps",
+				categories: { malformed: true },
+			});
+			assert.ok(malformedCategories.images.length >= 4);
+			assert.ok(
+				malformedCategories.images.every(
+					(item) => item.source === firstSlug && item.category === "maps",
+				),
+			);
+			const categoryMatched = await storage.searchImageGalleryAssets({
+				search: "MAPS",
+				source: firstSlug,
+				category: "maps",
+			});
+			assert.ok(categoryMatched.images.length >= 4);
+
+			const excludedIntersection = await storage.searchImageGalleryAssets({
+				search: "hidden",
+				source: firstSlug,
+				category: "maps",
+				categories: ["props"],
+			});
+			assert.deepEqual(excludedIntersection, { images: [] });
+			const caseSensitiveSource = await storage.searchImageGalleryAssets({
+				search: "hidden",
+				source: firstSlug.toUpperCase(),
+				category: "maps",
+			});
+			assert.deepEqual(caseSensitiveSource, { images: [] });
+			const missingSource = await storage.searchImageGalleryAssets({
+				source: `${firstSlug}-missing`,
+				categories: [],
+			});
+			assert.deepEqual(missingSource, { images: [] });
 
 			const global = await storage.searchImageGalleryAssets({
 				search: "hidden",
@@ -24692,7 +29875,113 @@ await run("storage searches image gallery locally and globally", async () => {
 			assert.equal(officialImage.assetSource, "bestiary");
 			assert.equal(officialImage.category, "tokens");
 			assert.equal(officialImage.subcategory, "AATM");
+			assert.equal(officialImage.locationLabel, "general / tokens / AATM");
+			assert.equal(officialImage.globalSearch, true);
+
+			const officialBySubcategory = await storage.searchImageGalleryAssets({
+				search: "animated coffin",
+				source: "general",
+				category: "tokens",
+				subcategory: "AATM",
+				categories: ["tokens"],
+			});
+			assert.ok(
+				officialBySubcategory.images.some(
+					(item) => item.readonly && item.name === "Animated Coffin.webp",
+				),
+			);
+			const ignoredOfficialSource = await storage.searchImageGalleryAssets({
+				search: "animated coffin",
+				source: "general",
+				category: "tokens",
+				subcategory: "AATM",
+				categories: ["tokens"],
+				ignoreSourcesList: ["AATM"],
+			});
+			assert.equal(
+				ignoredOfficialSource.images.some((item) => item.readonly),
+				false,
+			);
+			const officialBlockedByCategory = await storage.searchImageGalleryAssets({
+				search: "animated coffin",
+				category: "props",
+				categories: IMAGE_GALLERY_CATEGORIES.map((item) => item.id),
+			});
+			assert.equal(
+				officialBlockedByCategory.images.some((item) => item.readonly),
+				false,
+			);
+			const officialBlockedBySource = await storage.searchImageGalleryAssets({
+				search: "animated coffin",
+				source: secondSlug,
+				categories: IMAGE_GALLERY_CATEGORIES.map((item) => item.id),
+			});
+			assert.deepEqual(officialBlockedBySource, { images: [] });
 		});
+	});
+});
+
+await run("storage image gallery stats preserve exact filesystem totals", async () => {
+	await withTestSlug("images-stats", async (slug) => {
+		const mapsDir = storage.campaignImagesDir(slug, "maps");
+		const cityDir = storage.campaignImagesDir(slug, "maps", "city");
+		const utf8Dir = storage.campaignImagesDir(
+			slug,
+			"maps",
+			"city/Україна",
+		);
+		const propsDir = storage.campaignImagesDir(slug, "props");
+		const emptyDir = storage.campaignImagesDir(slug, "empty");
+		await storage.ensureDir(mapsDir);
+		await storage.ensureDir(cityDir);
+		await storage.ensureDir(utf8Dir);
+		await storage.ensureDir(propsDir);
+		await storage.ensureDir(emptyDir);
+		await fs.writeFile(path.join(mapsDir, "root.bin"), "ab", "utf8");
+		await fs.writeFile(path.join(cityDir, "one.png"), "abc", "utf8");
+		await fs.writeFile(path.join(utf8Dir, "two.txt"), "ї", "utf8");
+		await fs.writeFile(path.join(propsDir, "prop.webp"), "1234", "utf8");
+
+		const stats = await storage.getImageGalleryStorageStats({
+			source: path.join("ignored-parent", slug),
+			category: "maps",
+			subcategory: "city",
+			categories: ["props", "maps", "props", 0, false, ""],
+		});
+		assert.equal(stats.sourceBytes, 11);
+		assert.equal(stats.categoryBytes, 7);
+		assert.equal(stats.subcategoryBytes, 5);
+		assert.equal(stats.sourceSizes[slug], 11);
+		assert.deepEqual(stats.categorySizes, { props: 4, maps: 7 });
+		assert.ok(stats.totalBytes >= stats.sourceBytes);
+
+		const discovered = await storage.getImageGalleryStorageStats({
+			source: slug,
+			category: "maps",
+			subcategory: "city/Україна",
+			categories: { malformed: true },
+		});
+		assert.equal(discovered.sourceBytes, 11);
+		assert.equal(discovered.categoryBytes, 7);
+		assert.equal(discovered.subcategoryBytes, 2);
+		assert.deepEqual(discovered.categorySizes, {
+			empty: 0,
+			maps: 7,
+			props: 4,
+		});
+
+		const missing = await storage.getImageGalleryStorageStats({
+			source: `${slug}-missing`,
+			category: "ghost",
+			subcategory: "nested",
+			categories: ["ghost", "ghost", " maps "],
+		});
+		assert.equal(missing.sourceBytes, 0);
+		assert.equal(missing.categoryBytes, 0);
+		assert.equal(missing.subcategoryBytes, 0);
+		assert.deepEqual(missing.categorySizes, { ghost: 0, " maps ": 0 });
+		assert.equal(missing.sourceSizes[slug], 11);
+		assert.ok(missing.totalBytes >= 11);
 	});
 });
 
@@ -24727,22 +30016,34 @@ await run("storage renameImage handles success and collisions", async () => {
 			"old.png",
 			"new.png",
 		);
-		assert.match(result.oldUrl, /old\.png$/);
-		assert.match(result.newUrl, /new\.png$/);
+		assert.deepEqual(result, {
+			oldUrl: `/api/images/${encodeURIComponent(slug)}/attachments/folder/old.png`,
+			newUrl: `/api/images/${encodeURIComponent(slug)}/attachments/folder/new.png`,
+		});
 		assert.equal(await storage.exists(path.join(dir, "new.png")), true);
 		assert.equal(await storage.exists(path.join(dir, "old.png")), false);
 
-		await assert.rejects(() =>
-			storage.renameImage(slug, category, subcategory, "missing.png", "x.png"),
+		await assert.rejects(
+			() =>
+				storage.renameImage(
+					slug,
+					category,
+					subcategory,
+					"missing.png",
+					"x.png",
+				),
+			/File was not found\./,
 		);
-		await assert.rejects(() =>
-			storage.renameImage(
-				slug,
-				category,
-				subcategory,
-				"new.png",
-				"existing.png",
-			),
+		await assert.rejects(
+			() =>
+				storage.renameImage(
+					slug,
+					category,
+					subcategory,
+					"new.png",
+					"existing.png",
+				),
+			/File already exists\./,
 		);
 	});
 });
@@ -24794,6 +30095,87 @@ await run("storage moveImages moves files and directories", async () => {
 });
 
 await run(
+	"storage moveImages preserves encoded file and recursive directory URL projections",
+	async () => {
+		await withTestSlug("move-image-urls", async (slug) => {
+			const category = "maps & notes";
+			const sourceSubcategory = "плани/source";
+			const destinationSubcategory = "архів/dest";
+			const sourceDir = storage.campaignImagesDir(
+				slug,
+				category,
+				sourceSubcategory,
+			);
+			await storage.ensureDir(path.join(sourceDir, "набір", "рівень"));
+			await storage.ensureDir(path.join(sourceDir, "порожній"));
+			await fs.writeFile(path.join(sourceDir, "карта 1.png"), "map", "utf8");
+			await fs.writeFile(
+				path.join(sourceDir, "набір", "рівень", "опис файлу.txt"),
+				"details",
+				"utf8",
+			);
+
+			const results = await storage.moveImages(
+				["missing.png", "карта 1.png", "набір", "порожній"],
+				{
+					slug: encodeURIComponent(slug),
+					category,
+					subcategory: sourceSubcategory,
+				},
+				{
+					slug: encodeURIComponent(slug),
+					category,
+					subcategory: destinationSubcategory,
+				},
+			);
+
+			assert.deepEqual(results, [
+				{
+					oldUrl: `/api/images/${encodeURIComponent(slug)}/maps%20%26%20notes/плани/source/${encodeURIComponent("карта 1.png")}`,
+					newUrl: `/api/images/${encodeURIComponent(slug)}/maps%20%26%20notes/архів/dest/${encodeURIComponent("карта 1.png")}`,
+				},
+				{
+					oldUrl: `/api/images/${encodeURIComponent(slug)}/maps%20%26%20notes/плани/source/набір/рівень/опис файлу.txt`,
+					newUrl: `/api/images/${encodeURIComponent(slug)}/maps%20%26%20notes/архів/dest/набір/рівень/опис файлу.txt`,
+				},
+			]);
+			const destinationDir = storage.campaignImagesDir(
+				slug,
+				category,
+				destinationSubcategory,
+			);
+			assert.equal(
+				await storage.exists(path.join(destinationDir, "карта 1.png")),
+				true,
+			);
+			assert.equal(
+				await storage.exists(
+					path.join(
+						destinationDir,
+						"набір",
+						"рівень",
+						"опис файлу.txt",
+					),
+				),
+				true,
+			);
+			assert.equal(
+				await storage.exists(path.join(destinationDir, "порожній")),
+				true,
+			);
+			assert.deepEqual(
+				await storage.moveImages(
+					["карта 1.png"],
+					{ slug, category, subcategory: destinationSubcategory },
+					{ slug, category, subcategory: destinationSubcategory },
+				),
+				[],
+			);
+		});
+	},
+);
+
+await run(
 	"storage deleteImages removes folders or extracts contents",
 	async () => {
 		await withTestSlug("delete-images", async (slug) => {
@@ -24817,6 +30199,8 @@ await run(
 				"c",
 				"utf8",
 			);
+			await storage.ensureDir(path.join(baseDir, "empty"));
+			await fs.writeFile(path.join(baseDir, "single.png"), "s", "utf8");
 
 			await storage.deleteImages(
 				["dropme"],
@@ -24839,6 +30223,13 @@ await run(
 				await storage.exists(path.join(baseDir, "inner", "c.png")),
 				true,
 			);
+			await storage.deleteImages(
+				["missing", "empty", "single.png"],
+				{ slug: encodeURIComponent(slug), category, subcategory: baseSubcategory },
+				{ extractFolderContents: true },
+			);
+			assert.equal(await storage.exists(path.join(baseDir, "empty")), false);
+			assert.equal(await storage.exists(path.join(baseDir, "single.png")), false);
 		});
 	},
 );
@@ -24901,6 +30292,11 @@ await run(
 				description: "A test location",
 				imageUrl: oldUrl,
 			});
+			await storage.writeEntity(slug, "npc", "guide", {
+				id: "guide-1",
+				name: "Guide",
+				imageUrl: oldUrl,
+			});
 
 			const sessionFile = "session.json";
 			await storage.writeJson(storage.sessionPath(slug, sessionFile), {
@@ -24929,6 +30325,8 @@ await run(
 			assert.equal(entities[0].imageUrl, expectedNewUrl);
 			const locations = await storage.listEntities(slug, "locations");
 			assert.equal(locations[0].imageUrl, expectedNewUrl);
+			const npcs = await storage.listEntities(slug, "npc");
+			assert.equal(npcs[0].imageUrl, expectedNewUrl);
 			const session = await storage.readSession(slug, sessionFile);
 			assert.equal(JSON.stringify(session).includes(expectedNewUrl), true);
 			assert.equal(JSON.stringify(session).includes(oldUrl), false);

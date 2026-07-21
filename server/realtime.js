@@ -96,62 +96,94 @@ function getPathSegments(originalUrl = "") {
 	return parsedUrl.pathname.split("/").filter(Boolean);
 }
 
-function describeChange(req) {
-	const segments = getPathSegments(req.originalUrl || req.url);
-	const event = {
+function getRequestUrl(req) {
+	return req.originalUrl || req.url;
+}
+
+function createChangeEvent(req, requestUrl) {
+	return {
 		type: "data:changed",
 		version: eventSeq++,
 		method: req.method,
-		path: req.originalUrl || req.url,
+		path: requestUrl,
 		resource: "unknown",
 		campaignSlug: null,
 		sessionFileName: null,
 		entityType: null,
 		entitySlug: null,
 	};
+}
+
+function describeSettingsChange(event) {
+	event.resource = "settings";
+}
+
+function describeBestiaryChange(event, segments) {
+	event.resource = segments[2] === "custom" ? "custom-bestiary" : "bestiary";
+}
+
+function describeImagesChange(event) {
+	event.resource = "images";
+}
+
+function describeAiChange(event, _segments, requestUrl) {
+	event.resource = "ai";
+	const parsedUrl = new URL(requestUrl, "http://localhost");
+	event.campaignSlug = parsedUrl.searchParams.get("campaign");
+}
+
+function describeCampaignSessionChange(event, segments) {
+	event.resource = "sessions";
+	event.sessionFileName = segments[4] || null;
+}
+
+function describeCampaignEntityChange(event, segments) {
+	event.resource = "entities";
+	event.entityType = segments[4] || null;
+	event.entitySlug = segments[5] || null;
+}
+
+function describeCampaignNestedChange(event, segments) {
+	if (segments[3] === "sessions") {
+		describeCampaignSessionChange(event, segments);
+		return;
+	}
+	if (segments[3] === "entities") {
+		describeCampaignEntityChange(event, segments);
+		return;
+	}
+	if (segments.includes("images")) {
+		event.resource = "images";
+		return;
+	}
+	if (segments.includes("import")) event.resource = "import";
+}
+
+function describeCampaignChange(event, segments) {
+	event.resource = "campaigns";
+	event.campaignSlug = segments[2] || null;
+	describeCampaignNestedChange(event, segments);
+}
+
+const CHANGE_DESCRIBERS = new Map([
+	["settings", describeSettingsChange],
+	["bestiary", describeBestiaryChange],
+	["images", describeImagesChange],
+	["ai", describeAiChange],
+	["campaigns", describeCampaignChange],
+]);
+
+function describeApiChange(event, segments, requestUrl) {
+	CHANGE_DESCRIBERS.get(segments[1])?.(event, segments, requestUrl);
+}
+
+function describeChange(req) {
+	const requestUrl = getRequestUrl(req);
+	const segments = getPathSegments(requestUrl);
+	const event = createChangeEvent(req, requestUrl);
 
 	if (segments[0] !== "api") return event;
-
-	if (segments[1] === "settings") {
-		event.resource = "settings";
-		return event;
-	}
-
-	if (segments[1] === "bestiary") {
-		event.resource = segments[2] === "custom" ? "custom-bestiary" : "bestiary";
-		return event;
-	}
-
-	if (segments[1] === "images") {
-		event.resource = "images";
-		return event;
-	}
-
-	if (segments[1] === "ai") {
-		event.resource = "ai";
-		const parsedUrl = new URL(req.originalUrl || req.url, "http://localhost");
-		event.campaignSlug = parsedUrl.searchParams.get("campaign");
-		return event;
-	}
-
-	if (segments[1] === "campaigns") {
-		event.resource = "campaigns";
-		event.campaignSlug = segments[2] || null;
-
-		if (segments[3] === "sessions") {
-			event.resource = "sessions";
-			event.sessionFileName = segments[4] || null;
-		} else if (segments[3] === "entities") {
-			event.resource = "entities";
-			event.entityType = segments[4] || null;
-			event.entitySlug = segments[5] || null;
-		} else if (segments.includes("images")) {
-			event.resource = "images";
-		} else if (segments.includes("import")) {
-			event.resource = "import";
-		}
-	}
-
+	describeApiChange(event, segments, requestUrl);
 	return event;
 }
 
@@ -165,12 +197,15 @@ function notifyChange(req) {
 	}
 }
 
+function shouldNotifyRealtimeChange(req, res) {
+	if (!req.originalUrl?.startsWith("/api/")) return false;
+	if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return false;
+	return !(res.statusCode >= 400);
+}
+
 function realtimeMiddleware(req, res, next) {
 	res.on("finish", () => {
-		if (!req.originalUrl?.startsWith("/api/")) return;
-		if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return;
-		if (res.statusCode >= 400) return;
-		notifyChange(req);
+		if (shouldNotifyRealtimeChange(req, res)) notifyChange(req);
 	});
 	next();
 }

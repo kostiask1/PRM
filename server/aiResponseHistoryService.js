@@ -126,85 +126,180 @@ function pushAiChange(resources, resource) {
 	});
 }
 
-function buildAiChangeSet(beforeBundle, afterBundle, campaignSlug) {
-	if (!beforeBundle || !afterBundle) {
-		return { resources: [], summary: buildAiChangeSummary([]) };
-	}
-
+function createEmptyAiChangeSet() {
 	const resources = [];
-	pushAiChange(resources, {
+	return { resources, summary: buildAiChangeSummary(resources) };
+}
+
+function createCampaignChangeResource(beforeBundle, afterBundle, campaignSlug) {
+	return {
 		id: `campaign:${campaignSlug}`,
 		kind: "campaign",
 		campaign: campaignSlug,
 		label: `${campaignSlug}/_campaign.json`,
 		before: beforeBundle.meta ?? null,
 		after: afterBundle.meta ?? null,
-	});
+	};
+}
 
-	const beforeSessions = new Map(
-		(beforeBundle.sessions || []).map((session) => [
-			session.fileName,
-			session.content,
-		]),
+function createResourceIndex(items, getKey, getValue) {
+	return new Map(items.map((item) => [getKey(item), getValue(item)]));
+}
+
+function createSessionIndex(bundle) {
+	return createResourceIndex(
+		bundle.sessions || [],
+		(session) => session.fileName,
+		(session) => session.content,
 	);
-	const afterSessions = new Map(
-		(afterBundle.sessions || []).map((session) => [
-			session.fileName,
-			session.content,
-		]),
+}
+
+function createEntityIndex(bundle, type) {
+	return createResourceIndex(
+		bundle.entities?.[type] || [],
+		(entity) => entity.slug,
+		(entity) => entity,
 	);
-	for (const fileName of new Set([
-		...beforeSessions.keys(),
-		...afterSessions.keys(),
-	])) {
-		pushAiChange(resources, {
-			id: `session:${fileName}`,
-			kind: "session",
-			campaign: campaignSlug,
-			fileName,
-			label: `${campaignSlug}/sessions/${fileName}`,
-			before: beforeSessions.has(fileName)
-				? beforeSessions.get(fileName)
-				: null,
-			after: afterSessions.has(fileName) ? afterSessions.get(fileName) : null,
+}
+
+function getCombinedResourceKeys(beforeIndex, afterIndex) {
+	return new Set([...beforeIndex.keys(), ...afterIndex.keys()]);
+}
+
+function getIndexedSnapshot(index, key) {
+	return index.has(key) ? index.get(key) : null;
+}
+
+function appendIndexedChanges({
+	resources,
+	beforeIndex,
+	afterIndex,
+	createResource,
+}) {
+	for (const key of getCombinedResourceKeys(beforeIndex, afterIndex)) {
+		pushAiChange(
+			resources,
+			createResource(
+				key,
+				getIndexedSnapshot(beforeIndex, key),
+				getIndexedSnapshot(afterIndex, key),
+			),
+		);
+	}
+}
+
+function createSessionChangeResource(
+	fileName,
+	before,
+	after,
+	campaignSlug,
+) {
+	return {
+		id: `session:${fileName}`,
+		kind: "session",
+		campaign: campaignSlug,
+		fileName,
+		label: `${campaignSlug}/sessions/${fileName}`,
+		before,
+		after,
+	};
+}
+
+function appendSessionChanges(
+	resources,
+	beforeBundle,
+	afterBundle,
+	campaignSlug,
+) {
+	appendIndexedChanges({
+		resources,
+		beforeIndex: createSessionIndex(beforeBundle),
+		afterIndex: createSessionIndex(afterBundle),
+		createResource: (fileName, before, after) =>
+			createSessionChangeResource(
+				fileName,
+				before,
+				after,
+				campaignSlug,
+			),
+	});
+}
+
+function createEntityChangeResource(
+	type,
+	slug,
+	before,
+	after,
+	campaignSlug,
+) {
+	return {
+		id: `entity:${type}:${slug}`,
+		kind: "entity",
+		campaign: campaignSlug,
+		type,
+		slug,
+		label: getEntityResourceLabel(campaignSlug, type, slug),
+		before,
+		after,
+	};
+}
+
+function appendEntityTypeChanges({
+	resources,
+	beforeBundle,
+	afterBundle,
+	campaignSlug,
+	type,
+}) {
+	appendIndexedChanges({
+		resources,
+		beforeIndex: createEntityIndex(beforeBundle, type),
+		afterIndex: createEntityIndex(afterBundle, type),
+		createResource: (slug, before, after) =>
+			createEntityChangeResource(type, slug, before, after, campaignSlug),
+	});
+}
+
+function appendEntityChanges(
+	resources,
+	beforeBundle,
+	afterBundle,
+	campaignSlug,
+) {
+	for (const type of storage.ENTITY_TYPES) {
+		appendEntityTypeChanges({
+			resources,
+			beforeBundle,
+			afterBundle,
+			campaignSlug,
+			type,
 		});
 	}
+}
 
-	for (const type of storage.ENTITY_TYPES) {
-		const beforeEntities = new Map(
-			(beforeBundle.entities?.[type] || []).map((entity) => [
-				entity.slug,
-				entity,
-			]),
-		);
-		const afterEntities = new Map(
-			(afterBundle.entities?.[type] || []).map((entity) => [
-				entity.slug,
-				entity,
-			]),
-		);
-		for (const slug of new Set([
-			...beforeEntities.keys(),
-			...afterEntities.keys(),
-		])) {
-			pushAiChange(resources, {
-				id: `entity:${type}:${slug}`,
-				kind: "entity",
-				campaign: campaignSlug,
-				type,
-				slug,
-				label: getEntityResourceLabel(campaignSlug, type, slug),
-				before: beforeEntities.has(slug) ? beforeEntities.get(slug) : null,
-				after: afterEntities.has(slug) ? afterEntities.get(slug) : null,
-			});
-		}
-	}
-
+function sortAiChangeResources(resources) {
 	resources.sort((a, b) => a.label.localeCompare(b.label));
+}
+
+function createAiChangeSet(resources) {
+	sortAiChangeResources(resources);
 	return {
 		resources,
 		summary: buildAiChangeSummary(resources),
 	};
+}
+
+function buildAiChangeSet(beforeBundle, afterBundle, campaignSlug) {
+	if (!beforeBundle || !afterBundle) return createEmptyAiChangeSet();
+
+	const resources = [];
+	pushAiChange(
+		resources,
+		createCampaignChangeResource(beforeBundle, afterBundle, campaignSlug),
+	);
+	appendSessionChanges(resources, beforeBundle, afterBundle, campaignSlug);
+	appendEntityChanges(resources, beforeBundle, afterBundle, campaignSlug);
+	return createAiChangeSet(resources);
 }
 
 async function buildParsedAiChanges(
@@ -335,100 +430,174 @@ async function saveDraftParsedAiResponse({
 	return response;
 }
 
-async function writeAiResourceSnapshot(resource, snapshotValue) {
-	if (resource.kind === "custom-bestiary") {
-		await storage.writeCustomBestiaryMonsters(
-			Array.isArray(snapshotValue) ? snapshotValue : [],
-		);
-		return;
-	}
+function normalizeSnapshotIdentityPart(value) {
+	return String(value || "").trim();
+}
 
-	if (resource.kind === "custom-monster") {
-		const current = await storage.readCustomBestiaryMonsters();
-		const targetIds = [
+function normalizeSnapshotNameKey(value) {
+	return normalizeSnapshotIdentityPart(value).toLowerCase();
+}
+
+function getCustomMonsterResourceId(resource) {
+	const resourceId = String(resource.id || "");
+	return resourceId.startsWith("custom-monster:")
+		? resourceId.slice("custom-monster:".length)
+		: "";
+}
+
+function compactSnapshotIdentityParts(values, normalize) {
+	return values.map(normalize).filter(Boolean);
+}
+
+function getCustomMonsterSnapshotTargetIds(resource, snapshotValue) {
+	return compactSnapshotIdentityParts(
+		[
 			resource.before?.id,
 			resource.after?.id,
 			snapshotValue?.id,
-			String(resource.id || "").startsWith("custom-monster:")
-				? String(resource.id).slice("custom-monster:".length)
-				: "",
-		]
-			.map((id) => String(id || "").trim())
-			.filter(Boolean);
-		const targetNames = [
+			getCustomMonsterResourceId(resource),
+		],
+		normalizeSnapshotIdentityPart,
+	);
+}
+
+function getCustomMonsterSnapshotTargetNames(resource, snapshotValue) {
+	return compactSnapshotIdentityParts(
+		[
 			resource.name,
 			resource.before?.name,
 			resource.after?.name,
 			snapshotValue?.name,
-		]
-			.map((name) =>
-				String(name || "")
-					.trim()
-					.toLowerCase(),
-			)
-			.filter(Boolean);
-		const next = current.filter(
-			(monster) =>
-				!targetIds.includes(String(monster?.id || "").trim()) &&
-				!targetNames.includes(
-					String(monster?.name || "")
-						.trim()
-						.toLowerCase(),
-				),
-		);
-		if (snapshotValue !== null) {
-			next.push(snapshotValue);
-		}
-		await storage.writeCustomBestiaryMonsters(next);
+		],
+		normalizeSnapshotNameKey,
+	);
+}
+
+function isCustomMonsterSnapshotTarget(monster, targetIds, targetNames) {
+	return (
+		targetIds.includes(normalizeSnapshotIdentityPart(monster?.id)) ||
+		targetNames.includes(normalizeSnapshotNameKey(monster?.name))
+	);
+}
+
+function projectCustomMonsterSnapshot(
+	current,
+	resource,
+	snapshotValue,
+) {
+	const targetIds = getCustomMonsterSnapshotTargetIds(resource, snapshotValue);
+	const targetNames = getCustomMonsterSnapshotTargetNames(
+		resource,
+		snapshotValue,
+	);
+	const next = current.filter(
+		(monster) =>
+			!isCustomMonsterSnapshotTarget(monster, targetIds, targetNames),
+	);
+	if (snapshotValue !== null) next.push(snapshotValue);
+	return next;
+}
+
+async function restoreCustomBestiarySnapshot({ snapshotValue }) {
+	await storage.writeCustomBestiaryMonsters(
+		Array.isArray(snapshotValue) ? snapshotValue : [],
+	);
+}
+
+async function restoreCustomMonsterSnapshot({ resource, snapshotValue }) {
+	const current = await storage.readCustomBestiaryMonsters();
+	const next = projectCustomMonsterSnapshot(
+		current,
+		resource,
+		snapshotValue,
+	);
+	await storage.writeCustomBestiaryMonsters(next);
+}
+
+function requireSnapshotCampaign(resource) {
+	if (resource.campaign) return resource.campaign;
+	throw new Error("AI response change has no campaign target.");
+}
+
+async function restoreCampaignSnapshot({ campaignSlug, snapshotValue }) {
+	if (snapshotValue === null) {
+		throw new Error("Campaign deletion cannot be restored from AI history.");
+	}
+	await storage.writeJson(
+		storage.campaignMetaPath(campaignSlug),
+		snapshotValue,
+	);
+}
+
+function getSnapshotSessionFileName(resource) {
+	const fileName = path.basename(String(resource.fileName || ""));
+	if (fileName) return fileName;
+	throw new Error("AI response change has no session target.");
+}
+
+async function restoreSessionSnapshot({
+	resource,
+	campaignSlug,
+	snapshotValue,
+}) {
+	const fileName = getSnapshotSessionFileName(resource);
+	const fullPath = storage.sessionPath(campaignSlug, fileName);
+	if (snapshotValue === null) {
+		await fs.rm(fullPath, { force: true });
 		return;
 	}
+	await storage.writeJson(fullPath, snapshotValue);
+}
 
-	const campaignSlug = resource.campaign;
-	if (!campaignSlug) {
-		throw new Error("AI response change has no campaign target.");
-	}
+function getSnapshotEntityTarget(resource) {
+	const type = resource.type;
+	const slug = path.basename(String(resource.slug || ""));
+	if (storage.ENTITY_TYPES.includes(type) && slug) return { type, slug };
+	throw new Error("AI response change has invalid entity target.");
+}
 
-	if (resource.kind === "campaign") {
-		if (snapshotValue === null) {
-			throw new Error("Campaign deletion cannot be restored from AI history.");
-		}
-		await storage.writeJson(
-			storage.campaignMetaPath(campaignSlug),
-			snapshotValue,
-		);
+async function restoreEntitySnapshot({
+	resource,
+	campaignSlug,
+	snapshotValue,
+}) {
+	const { type, slug } = getSnapshotEntityTarget(resource);
+	if (snapshotValue === null) {
+		await storage.deleteEntity(campaignSlug, type, slug);
 		return;
 	}
+	await storage.writeJson(
+		path.join(storage.campaignDir(campaignSlug), type, slug, "info.json"),
+		{ ...snapshotValue, slug },
+	);
+}
 
-	if (resource.kind === "session") {
-		const fileName = path.basename(String(resource.fileName || ""));
-		if (!fileName) throw new Error("AI response change has no session target.");
-		const fullPath = storage.sessionPath(campaignSlug, fileName);
-		if (snapshotValue === null) {
-			await fs.rm(fullPath, { force: true });
-		} else {
-			await storage.writeJson(fullPath, snapshotValue);
-		}
-		return;
-	}
+const CAMPAIGN_FREE_SNAPSHOT_COMMANDS = new Map([
+	["custom-bestiary", restoreCustomBestiarySnapshot],
+	["custom-monster", restoreCustomMonsterSnapshot],
+]);
 
-	if (resource.kind === "entity") {
-		const type = resource.type;
-		const slug = path.basename(String(resource.slug || ""));
-		if (!storage.ENTITY_TYPES.includes(type) || !slug) {
-			throw new Error("AI response change has invalid entity target.");
-		}
-		if (snapshotValue === null) {
-			await storage.deleteEntity(campaignSlug, type, slug);
-		} else {
-			await storage.writeJson(
-				path.join(storage.campaignDir(campaignSlug), type, slug, "info.json"),
-				{ ...snapshotValue, slug },
-			);
-		}
-		return;
-	}
+const CAMPAIGN_SNAPSHOT_COMMANDS = new Map([
+	["campaign", restoreCampaignSnapshot],
+	["session", restoreSessionSnapshot],
+	["entity", restoreEntitySnapshot],
+]);
 
+function getCampaignSnapshotCommand(kind) {
+	const command = CAMPAIGN_SNAPSHOT_COMMANDS.get(kind);
+	if (command) return command;
 	throw new Error("AI response change has unknown target type.");
+}
+
+async function writeAiResourceSnapshot(resource, snapshotValue) {
+	const campaignFreeCommand = CAMPAIGN_FREE_SNAPSHOT_COMMANDS.get(resource.kind);
+	if (campaignFreeCommand) {
+		await campaignFreeCommand({ resource, snapshotValue });
+		return;
+	}
+	const campaignSlug = requireSnapshotCampaign(resource);
+	const command = getCampaignSnapshotCommand(resource.kind);
+	await command({ resource, campaignSlug, snapshotValue });
 }
 
 async function readUpdatedObjectForAiResponse(entry) {

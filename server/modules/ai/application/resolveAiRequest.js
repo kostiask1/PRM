@@ -9,18 +9,18 @@ const SUPPORTED_REQUEST_TYPES = new Set([
 ]);
 
 const STRUCTURED_REQUEST_TYPES = new Set(SUPPORTED_REQUEST_TYPES);
+const RESPONSE_LANGUAGE_ALIASES = new Map([
+	["uk", "Ukrainian"],
+	["ua", "Ukrainian"],
+	["ukrainian", "Ukrainian"],
+	["en", "English"],
+	["english", "English"],
+]);
 
 function normalizeResponseLanguage(language) {
 	const code = String(language || "").trim().toLowerCase();
 	if (!code) throw new Error("language is required");
-	const aliases = {
-		uk: "Ukrainian",
-		ua: "Ukrainian",
-		ukrainian: "Ukrainian",
-		en: "English",
-		english: "English",
-	};
-	return { code, label: aliases[code] || code };
+	return { code, label: RESPONSE_LANGUAGE_ALIASES.get(code) || code };
 }
 
 function normalizeModelName(name) {
@@ -32,6 +32,87 @@ function selectAiModel(availableModels, requestedName) {
 	return availableModels.models.some((item) => item.name === requestedModel)
 		? requestedModel
 		: availableModels.defaultModel;
+}
+
+function isGenerationEnabled(value) {
+	return value !== false;
+}
+
+function resolveGenerationFlags({
+	generateCharacters,
+	generateNpcs,
+	generateLocations,
+	generateEncounters,
+	generateCustomMonsters,
+}) {
+	const encounterGenerationEnabled = Boolean(generateEncounters);
+	return {
+		characterGenerationEnabled: isGenerationEnabled(generateCharacters),
+		customMonsterGenerationEnabled:
+			encounterGenerationEnabled && Boolean(generateCustomMonsters),
+		encounterGenerationEnabled,
+		locationGenerationEnabled: isGenerationEnabled(generateLocations),
+		npcGenerationEnabled: isGenerationEnabled(generateNpcs),
+	};
+}
+
+function canUseSessionEntityScope(session, encounterId, entityScope) {
+	return session && !encounterId && entityScope !== "campaign";
+}
+
+function resolveEntityTargetScope(session, encounterId, entityScope) {
+	if (!canUseSessionEntityScope(session, encounterId, entityScope)) {
+		return "campaign";
+	}
+	return entityScope === "session" ? "session" : "mixed";
+}
+
+function canParseAiResponse(parseAIResponse, encounterId, encounterEnabled) {
+	return Boolean(parseAIResponse) && (!encounterId || encounterEnabled);
+}
+
+function resolveEffectiveParsing(
+	type,
+	parseAIResponse,
+	encounterId,
+	encounterEnabled,
+) {
+	return (
+		type === "custom-monster" ||
+		canParseAiResponse(parseAIResponse, encounterId, encounterEnabled)
+	);
+}
+
+function resolveRequestedType(type, encounterGenerationEnabled) {
+	return type === "encounter" && !encounterGenerationEnabled ? null : type;
+}
+
+function resolveRouteUseKey(encounterId, session) {
+	if (encounterId) return "encounter";
+	if (session) return "scene";
+	return "campaign";
+}
+
+function resolveParsedUseKey(requestedType, encounterId, session) {
+	return SUPPORTED_REQUEST_TYPES.has(requestedType)
+		? requestedType
+		: resolveRouteUseKey(encounterId, session);
+}
+
+function resolveUseKey(
+	requestedType,
+	effectiveParseAIResponse,
+	encounterId,
+	session,
+) {
+	if (requestedType === "image") return "image";
+	return effectiveParseAIResponse
+		? resolveParsedUseKey(requestedType, encounterId, session)
+		: "prompt";
+}
+
+function usesStructuredJsonContract(effectiveParseAIResponse, useKey) {
+	return effectiveParseAIResponse && STRUCTURED_REQUEST_TYPES.has(useKey);
 }
 
 function resolveAiRequest({
@@ -50,48 +131,50 @@ function resolveAiRequest({
 }) {
 	const responseLanguage = normalizeResponseLanguage(language);
 	const simplifiedNotesEnabled = Boolean(simplifiedNotes);
-	const encounterGenerationEnabled = Boolean(generateEncounters);
-	const customMonsterGenerationEnabled =
-		encounterGenerationEnabled && Boolean(generateCustomMonsters);
-	const characterGenerationEnabled = generateCharacters !== false;
-	const npcGenerationEnabled = generateNpcs !== false;
-	const locationGenerationEnabled = generateLocations !== false;
-	const entityTargetScope =
-		session && !encounterId && entityScope !== "campaign"
-			? entityScope === "session"
-				? "session"
-				: "mixed"
-			: "campaign";
-	const effectiveParseAIResponse =
-		type === "custom-monster" ||
-		(Boolean(parseAIResponse) && (!encounterId || encounterGenerationEnabled));
-	const requestedType =
-		type === "encounter" && !encounterGenerationEnabled ? null : type;
-	const useKey =
-		requestedType === "image"
-			? "image"
-			: !effectiveParseAIResponse
-				? "prompt"
-				: requestedType && SUPPORTED_REQUEST_TYPES.has(requestedType)
-					? requestedType
-					: encounterId
-						? "encounter"
-						: session
-							? "scene"
-							: "campaign";
-	return {
-		characterGenerationEnabled,
-		customMonsterGenerationEnabled,
+	const generationFlags = resolveGenerationFlags({
+		generateCharacters,
+		generateNpcs,
+		generateLocations,
+		generateEncounters,
+		generateCustomMonsters,
+	});
+	const entityTargetScope = resolveEntityTargetScope(
+		session,
+		encounterId,
+		entityScope,
+	);
+	const effectiveParseAIResponse = resolveEffectiveParsing(
+		type,
+		parseAIResponse,
+		encounterId,
+		generationFlags.encounterGenerationEnabled,
+	);
+	const requestedType = resolveRequestedType(
+		type,
+		generationFlags.encounterGenerationEnabled,
+	);
+	const useKey = resolveUseKey(
+		requestedType,
 		effectiveParseAIResponse,
-		encounterGenerationEnabled,
+		encounterId,
+		session,
+	);
+	return {
+		characterGenerationEnabled: generationFlags.characterGenerationEnabled,
+		customMonsterGenerationEnabled:
+			generationFlags.customMonsterGenerationEnabled,
+		effectiveParseAIResponse,
+		encounterGenerationEnabled: generationFlags.encounterGenerationEnabled,
 		entityTargetScope,
-		locationGenerationEnabled,
-		npcGenerationEnabled,
+		locationGenerationEnabled: generationFlags.locationGenerationEnabled,
+		npcGenerationEnabled: generationFlags.npcGenerationEnabled,
 		responseLanguage,
 		simplifiedNotesEnabled,
 		useKey,
-		usesStructuredJsonContract:
-			effectiveParseAIResponse && STRUCTURED_REQUEST_TYPES.has(useKey),
+		usesStructuredJsonContract: usesStructuredJsonContract(
+			effectiveParseAIResponse,
+			useKey,
+		),
 	};
 }
 
