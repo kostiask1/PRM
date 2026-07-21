@@ -32,6 +32,37 @@ export type MonsterFieldSavePlan =
 			normalizedName: string;
 		};
 
+export type MonsterFieldEditPlan =
+	| { kind: "none" }
+	| {
+			kind: "edit";
+			mode: MonsterAiEditMode;
+			original: EncounterMonsterTarget;
+			monster: EncounterMonsterTarget;
+	  };
+
+export interface MonsterFieldSaveEffects {
+	onLocal(instanceId: string, monster: EncounterMonsterTarget): void;
+	onPersistent(instanceId: string, monster: BestiaryMonster): void;
+	onRefresh(): void;
+	onClose(): void;
+	onError(error: unknown): void;
+}
+
+export interface MonsterAiDraftSavePlan<TResource> {
+	scope: string;
+	entryId: string | number;
+	resources: TResource[];
+	acceptEmptyResult: boolean;
+}
+
+export interface MonsterAiRestoreRequestPlan {
+	scope: string;
+	entryId: string | number;
+	action: "apply" | "undo";
+	resourceIds?: string[];
+}
+
 export interface MonsterAiGenerationPlan {
 	validationError?: string;
 	finalInstructions: string;
@@ -50,6 +81,13 @@ export interface MonsterFieldPersistencePort {
 	replaceCustomBestiaryMonsters(
 		monsters: BestiaryMonster[],
 	): Promise<BestiaryMonster[] | null>;
+}
+
+export interface MonsterAiRequestLifecycle<TResult> {
+	request(signal: AbortSignal): Promise<TResult>;
+	onResult(result: TResult): void;
+	onError(message: string): void;
+	onComplete(): void;
 }
 
 type Translate = (value: string) => string;
@@ -93,14 +131,45 @@ export function getMonsterFieldSavePlan(
 	original: EncounterMonsterTarget,
 	draft: Record<string, unknown> | null | undefined,
 ): MonsterFieldSavePlan {
-	if (!original.instanceId || !draft) return { kind: "invalid" };
-	if (mode === "local-edit") {
-		return {
-			kind: "local",
-			instanceId: original.instanceId,
-			monster: preserveEncounterIdentity(draft, original),
-		};
-	}
+	const context = getMonsterFieldSaveContext(original, draft);
+	if (!context) return { kind: "invalid" };
+	return mode === "local-edit"
+		? getLocalMonsterFieldSavePlan(context)
+		: getPersistentMonsterFieldSavePlan(mode, context);
+}
+
+interface MonsterFieldSaveContext {
+	original: EncounterMonsterTarget & { instanceId: string };
+	draft: Record<string, unknown>;
+}
+
+function getMonsterFieldSaveContext(
+	original: EncounterMonsterTarget,
+	draft: Record<string, unknown> | null | undefined,
+): MonsterFieldSaveContext | null {
+	if (!original.instanceId) return null;
+	if (!draft) return null;
+	return {
+		original: original as EncounterMonsterTarget & { instanceId: string },
+		draft,
+	};
+}
+
+function getLocalMonsterFieldSavePlan(
+	context: MonsterFieldSaveContext,
+): Extract<MonsterFieldSavePlan, { kind: "local" }> {
+	return {
+		kind: "local",
+		instanceId: context.original.instanceId,
+		monster: preserveEncounterIdentity(context.draft, context.original),
+	};
+}
+
+function getPersistentMonsterFieldSavePlan(
+	mode: MonsterAiEditMode,
+	context: MonsterFieldSaveContext,
+): MonsterFieldSavePlan {
+	const { original, draft } = context;
 	const monster = getNamedCustomMonster(draft);
 	if (!monster) return { kind: "invalid" };
 	return {
@@ -110,6 +179,33 @@ export function getMonsterFieldSavePlan(
 		originalName: String(original.name || ""),
 		monster,
 		normalizedName: normalizeMonsterName(monster.name),
+	};
+}
+
+export function getMonsterFieldEditPlan(
+	action: MonsterAiAction,
+	target: EncounterMonsterTarget | null,
+	defaultName: string,
+): MonsterFieldEditPlan {
+	if (action === "image-prompt" || !target) return { kind: "none" };
+	return {
+		kind: "edit",
+		mode: action,
+		original: target,
+		monster: getMonsterFieldEditDraft(action, target, defaultName),
+	};
+}
+
+function getMonsterFieldEditDraft(
+	mode: MonsterAiEditMode,
+	target: EncounterMonsterTarget,
+	defaultName: string,
+): EncounterMonsterTarget {
+	if (mode !== "create-based") return target;
+	return {
+		...target,
+		name: target.name || defaultName,
+		source: "CUSTOM",
 	};
 }
 
@@ -231,14 +327,58 @@ export function getMonsterAiRestoreScope(
 	return draftMode === "local" ? campaignSlug : "bestiary";
 }
 
+export function getMonsterAiDraftSavePlan<TResource>(
+	entryId: string | number | null | undefined,
+	draftMode: "local" | "global",
+	campaignSlug: string,
+	resources: TResource[],
+): MonsterAiDraftSavePlan<TResource> | null {
+	if (!entryId) return null;
+	return {
+		scope: getMonsterAiRestoreScope(draftMode, campaignSlug),
+		entryId,
+		resources,
+		acceptEmptyResult: draftMode === "local",
+	};
+}
+
+export function applyMonsterAiDraftSaveResult<TResult>(
+	plan: MonsterAiDraftSavePlan<unknown>,
+	result: TResult | null,
+	onEntry: (entry: TResult | null) => void,
+): TResult | null {
+	if (result || plan.acceptEmptyResult) onEntry(result);
+	return result;
+}
+
+export function getMonsterAiRestoreRequestPlan(
+	entryId: string | number | null | undefined,
+	isRestoring: boolean,
+	draftMode: "local" | "global",
+	campaignSlug: string,
+	action: "apply" | "undo",
+	resourceIds?: string[],
+): MonsterAiRestoreRequestPlan | null {
+	if (!entryId || isRestoring) return null;
+	return {
+		scope: getMonsterAiRestoreScope(draftMode, campaignSlug),
+		entryId,
+		action,
+		resourceIds,
+	};
+}
+
 export function getFirstGeneratedMonster(value: unknown): EncounterMonsterTarget | null {
-	if (!value || typeof value !== "object") return null;
-	const monsters = (value as { monsters?: unknown }).monsters;
-	if (!Array.isArray(monsters)) return null;
-	const monster = monsters[0];
+	const monster = getGeneratedMonsterList(value)[0];
 	return monster && typeof monster === "object"
 		? (monster as EncounterMonsterTarget)
 		: null;
+}
+
+function getGeneratedMonsterList(value: unknown): unknown[] {
+	if (!value || typeof value !== "object") return [];
+	const monsters = (value as { monsters?: unknown }).monsters;
+	return Array.isArray(monsters) ? monsters : [];
 }
 
 export async function persistMonsterFieldSavePlan(
@@ -246,20 +386,96 @@ export async function persistMonsterFieldSavePlan(
 	port: MonsterFieldPersistencePort,
 	duplicateMessage: string,
 ): Promise<BestiaryMonster> {
-	if (plan.mode === "edit") {
-		const updated = await port.updateCustomBestiaryMonster(plan.originalName, {
-			monster: plan.monster,
-		});
-		if (!updated) throw new Error("Monster update returned no result");
-		return updated;
-	}
-	const monsters = (await port.getCustomBestiaryData()) || [];
+	return plan.mode === "edit"
+		? persistEditedMonster(plan, port)
+		: persistCreatedMonster(plan, port, duplicateMessage);
+}
+
+async function persistEditedMonster(
+	plan: Extract<MonsterFieldSavePlan, { kind: "persistent" }>,
+	port: MonsterFieldPersistencePort,
+): Promise<BestiaryMonster> {
+	const updated = await port.updateCustomBestiaryMonster(plan.originalName, {
+		monster: plan.monster,
+	});
+	if (!updated) throw new Error("Monster update returned no result");
+	return updated;
+}
+
+async function persistCreatedMonster(
+	plan: Extract<MonsterFieldSavePlan, { kind: "persistent" }>,
+	port: MonsterFieldPersistencePort,
+	duplicateMessage: string,
+): Promise<BestiaryMonster> {
+	const monsters = normalizeCustomMonsterList(await port.getCustomBestiaryData());
 	if (hasCustomMonsterName(monsters, plan.normalizedName)) {
 		throw new Error(duplicateMessage);
 	}
-	const updated =
-		(await port.replaceCustomBestiaryMonsters([...monsters, plan.monster])) || [];
+	const updated = normalizeCustomMonsterList(
+		await port.replaceCustomBestiaryMonsters([...monsters, plan.monster]),
+	);
 	return findCustomMonsterByName(updated, plan.normalizedName, plan.monster);
+}
+
+function normalizeCustomMonsterList(
+	monsters: BestiaryMonster[] | null,
+): BestiaryMonster[] {
+	return monsters || [];
+}
+
+export async function executeMonsterFieldSavePlan(
+	plan: MonsterFieldSavePlan,
+	port: MonsterFieldPersistencePort,
+	duplicateMessage: string,
+	effects: MonsterFieldSaveEffects,
+): Promise<void> {
+	if (plan.kind === "invalid") return;
+	if (plan.kind === "local") {
+		effects.onLocal(plan.instanceId, plan.monster);
+		effects.onClose();
+		return;
+	}
+	await executePersistentMonsterFieldSave(plan, port, duplicateMessage, effects);
+}
+
+async function executePersistentMonsterFieldSave(
+	plan: Extract<MonsterFieldSavePlan, { kind: "persistent" }>,
+	port: MonsterFieldPersistencePort,
+	duplicateMessage: string,
+	effects: MonsterFieldSaveEffects,
+): Promise<void> {
+	try {
+		const monster = await persistMonsterFieldSavePlan(plan, port, duplicateMessage);
+		effects.onRefresh();
+		effects.onPersistent(plan.instanceId, monster);
+		effects.onClose();
+	} catch (error) {
+		effects.onError(error);
+	}
+}
+
+export async function executeMonsterAiRequest<TResult>(
+	controller: AbortController,
+	lifecycle: MonsterAiRequestLifecycle<TResult>,
+): Promise<void> {
+	try {
+		lifecycle.onResult(await lifecycle.request(controller.signal));
+	} catch (error) {
+		applyMonsterAiRequestError(error, lifecycle.onError);
+	} finally {
+		lifecycle.onComplete();
+	}
+}
+
+function applyMonsterAiRequestError(
+	error: unknown,
+	onError: (message: string) => void,
+): void {
+	if (error instanceof Error) {
+		if (error.name !== "AbortError") onError(error.message);
+		return;
+	}
+	onError("Unknown error");
 }
 
 export function buildMonsterAiRequestPayload({

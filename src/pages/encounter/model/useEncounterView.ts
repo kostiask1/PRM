@@ -31,7 +31,6 @@ import { lang } from "../../../shared/lib/index.js";
 import {
 	createEncounterMonsterInstance,
 	ensureEncounterMonsterId,
-	createEncounterCharacterParticipant,
 	getMonsterHpFormula,
 	isEncounterCharacterParticipant,
 } from "../../../entities/encounter/index.js";
@@ -56,11 +55,23 @@ import type {
 } from "./contracts.ts";
 import { calculateInitiativeStats } from "./encounterViewMetrics.ts";
 import {
-	applyEncounterDiceHpResult,
+	executeEncounterDiceProcessing,
+	executeEncounterHistoryAction,
+	executeEncounterLoadPlan,
+	executeEncounterMonsterDropPlan,
+	executeEncounterNavigationAction,
+	executeEncounterUpdatePlan,
+	getEncounterAddCharacterPlan,
+	getEncounterLoadPlan,
 	getEncounterHistoryAction,
+	getEncounterMonsterDropPlan,
 	getEncounterNavigationAction,
+	getEncounterRenamePlan,
+	getEncounterSessionEncounters,
+	getEncounterUpdatePlan,
 	getSelectedEncounterParticipant,
-	normalizeEncounterViewState,
+	isEncounterEditableTarget,
+	parseEncounterImport,
 	replaceEncounterMonsterFromAi,
 	shouldReloadEncounterFromSync,
 } from "./encounterPagePresentation.ts";
@@ -85,12 +96,6 @@ function getErrorMessage(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
 }
 
-function getSessionEncounters(value: unknown): EncounterViewState[] {
-	if (!value || typeof value !== "object") return [];
-	const data = (value as EncounterViewSession).data;
-	return Array.isArray(data?.encounters) ? data.encounters : [];
-}
-
 function cloneEncounterSnapshot<T>(value: T): T {
 	if (!value) return value;
 	if (typeof structuredClone === "function") return structuredClone(value);
@@ -103,10 +108,7 @@ function getEncounterKeyboardInput(event: KeyboardEvent, showBestiary: boolean) 
 		key: event.key,
 		code: event.code,
 		shiftKey: event.shiftKey,
-		isEditableTarget:
-			target?.tagName === "INPUT" ||
-			target?.tagName === "TEXTAREA" ||
-			Boolean(target?.isContentEditable),
+		isEditableTarget: isEncounterEditableTarget(target),
 		isHistoryShortcut: isHistoryShortcutEvent(event),
 		shouldUseAppHistory: shouldUseAppHistoryForEvent(event),
 		showBestiary,
@@ -182,13 +184,14 @@ export default function useEncounterView(): EncounterViewModel {
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (document.querySelector(".Modal__overlay")) return;
-			const action = getEncounterNavigationAction(
-				getEncounterKeyboardInput(e, showBestiary),
+			executeEncounterNavigationAction(
+				getEncounterNavigationAction(getEncounterKeyboardInput(e, showBestiary)),
+				{
+					onHandled: () => e.preventDefault(),
+					onCloseBestiary: () => setShowBestiary(false),
+					onBack: handleBack,
+				},
 			);
-			if (action === "none") return;
-			e.preventDefault();
-			if (action === "close-bestiary") setShowBestiary(false);
-			if (action === "back") handleBack();
 		};
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
@@ -199,36 +202,32 @@ export default function useEncounterView(): EncounterViewModel {
 			try {
 				const session = await api.getSession(campaign.slug, sessionId);
 				dispatch(setActiveSessionAction(session));
-
-				const found = getSessionEncounters(session).find(
-					(e) => String(e.id ?? "") === String(encounterId),
+				executeEncounterLoadPlan(
+					getEncounterLoadPlan(session, encounterId, retries, resetHistory),
+					{
+						onRetry: (nextRetries, shouldResetHistory) => {
+							setTimeout(() => loadEncounter({
+								retries: nextRetries,
+								resetHistory: shouldResetHistory,
+							}), 300);
+						},
+						onNotFound: () => {
+							dispatch(alert({
+								title: lang.t("Error"),
+								message: lang.t("Encounter not found or data is still updating."),
+							}));
+							handleBack();
+						},
+						onLoaded: (found, selected, shouldResetHistory) => {
+							setEncounter(found);
+							setSelectedInstance(selected);
+							if (shouldResetHistory) {
+								setUndoStack([]);
+								setRedoStack([]);
+							}
+						},
+					},
 				);
-
-				if (!found && retries > 0) {
-					setTimeout(
-						() => loadEncounter({ retries: retries - 1, resetHistory }),
-						300,
-					);
-					return;
-				}
-
-				if (!found) {
-					dispatch(
-						alert({
-							title: lang.t("Error"),
-							message: lang.t("Encounter not found or data is still updating."),
-						}),
-					);
-					handleBack();
-					return;
-				}
-
-				setEncounter(found);
-				setSelectedInstance(found.monsters?.[0] || null);
-				if (resetHistory) {
-					setUndoStack([]);
-					setRedoStack([]);
-				}
 			} catch (err) {
 				console.error("Failed to load encounter", err);
 			}
@@ -269,30 +268,27 @@ export default function useEncounterView(): EncounterViewModel {
 	const applyEncounterUpdate = useCallback(
 		(
 			nextEncounter: EncounterEditorState | null,
-			{
-				saveDebounceMs = 0,
-				pushUndo = true,
-				persist = true,
-				preferredId = null,
-			}: EncounterUpdateOptions = {},
+			options: EncounterUpdateOptions = {},
 		) => {
-			if (!nextEncounter) return;
-			const current = encounterRef.current;
-			const normalizedNext = normalizeEncounterViewState(nextEncounter, current);
-
-			if (pushUndo && current && !isUpdatingHistoryRef.current) {
-				setUndoStack((prev) =>
-					addUndoSnapshot(prev, current, cloneEncounterSnapshot),
-				);
-				setRedoStack(clearRedoStack());
-			}
-
-			setEncounter(normalizedNext);
-			syncSelectedInstance(normalizedNext, preferredId);
-
-			if (persist) {
-				saveEncounterState(normalizedNext, saveDebounceMs);
-			}
+			executeEncounterUpdatePlan(
+				getEncounterUpdatePlan(
+					nextEncounter,
+					encounterRef.current,
+					options,
+					isUpdatingHistoryRef.current,
+				),
+				{
+					recordUndo: (snapshot) => {
+						setUndoStack((prev) =>
+							addUndoSnapshot(prev, snapshot, cloneEncounterSnapshot),
+						);
+						setRedoStack(clearRedoStack());
+					},
+					setEncounter,
+					syncSelected: syncSelectedInstance,
+					persist: saveEncounterState,
+				},
+			);
 		},
 		[saveEncounterState, syncSelectedInstance],
 	);
@@ -360,13 +356,14 @@ export default function useEncounterView(): EncounterViewModel {
 	useEffect(() => {
 		const handleHistoryShortcuts = (e: KeyboardEvent) => {
 			if (document.querySelector(".Modal__overlay")) return;
-			const action = getEncounterHistoryAction(
-				getEncounterKeyboardInput(e, showBestiary),
+			executeEncounterHistoryAction(
+				getEncounterHistoryAction(getEncounterKeyboardInput(e, showBestiary)),
+				{
+					onHandled: () => e.preventDefault(),
+					onUndo: handleUndo,
+					onRedo: handleRedo,
+				},
 			);
-			if (action === "none") return;
-			e.preventDefault();
-			if (action === "undo") handleUndo();
-			if (action === "redo") handleRedo();
 		};
 
 		window.addEventListener("keydown", handleHistoryShortcuts);
@@ -377,7 +374,7 @@ export default function useEncounterView(): EncounterViewModel {
 		(updatedSession: EncounterViewSession | null) => {
 			if (!updatedSession) return;
 			const sData = updatedSession.data || updatedSession;
-			const found = getSessionEncounters({ data: sData }).find(
+			const found = getEncounterSessionEncounters({ data: sData }).find(
 					(e) => String(e.id ?? "") === String(encounterId),
 			);
 			if (found) {
@@ -412,23 +409,15 @@ export default function useEncounterView(): EncounterViewModel {
 
 	const handleAddCharacter = useCallback(
 		(character: import("../../../entities/campaign/index.js").CampaignEntityRecord) => {
-			if (!encounter) return;
-
-			const participant = createEncounterCharacterParticipant(
-				character,
-			) as EncounterViewParticipant;
-			const updated = {
-				...encounter,
-				monsters: [...(encounter.monsters || []), participant],
-			};
-
-			applyEncounterUpdate(updated, {
-				preferredId: participant.instanceId || null,
+			const plan = getEncounterAddCharacterPlan(encounter, character);
+			if (!plan) return;
+			applyEncounterUpdate(plan.encounter, {
+				preferredId: plan.preferredId,
 			});
 			setShowCharacterPicker(false);
 			setNotification(
 				lang.t("{name} added to encounter.", {
-					name: String(participant.name || ""),
+					name: plan.displayName,
 				}),
 			);
 		},
@@ -526,10 +515,8 @@ export default function useEncounterView(): EncounterViewModel {
 				defaultValue: encounter.name,
 			}),
 		);
-		if (typeof name === "string" && name && name !== encounter.name) {
-			const updated = { ...encounter, name };
-			applyEncounterUpdate(updated);
-		}
+		const plan = getEncounterRenamePlan(encounter, name);
+		if (plan) applyEncounterUpdate(plan.encounter);
 	}, [encounter, applyEncounterUpdate, dispatch]);
 
 	const handleExport = useCallback(() => {
@@ -559,28 +546,12 @@ export default function useEncounterView(): EncounterViewModel {
 			const reader = new FileReader();
 			reader.onload = async (event: ProgressEvent<FileReader>) => {
 				try {
-					const raw = event.target?.result;
-					if (typeof raw !== "string") throw new Error(lang.t("Invalid file format"));
-					const imported = JSON.parse(raw) as {
-						name?: unknown;
-						monsters?: EncounterViewParticipant[];
-					};
-					if (!imported.monsters || !Array.isArray(imported.monsters)) {
-						throw new Error(
-							lang.t("Invalid file format (monster list is missing)"),
-						);
-					}
-
-					const updated = {
-						...encounter,
-						name: String(imported.name || encounter.name),
-						monsters: imported.monsters.map((m, idx) =>
-							ensureEncounterMonsterId({
-								...m,
-								instanceId: `inst-${Date.now()}-${idx}-${Math.floor(Math.random() * 1000)}`,
-							}),
+					const updated = parseEncounterImport(event.target?.result, encounter, {
+						invalidFileMessage: lang.t("Invalid file format"),
+						missingMonstersMessage: lang.t(
+							"Invalid file format (monster list is missing)",
 						),
-					};
+					});
 
 					applyEncounterUpdate(updated, {
 						preferredId: updated.monsters[0]?.instanceId,
@@ -674,21 +645,22 @@ export default function useEncounterView(): EncounterViewModel {
 	);
 
 	useEffect(() => {
-		const resultId = diceRolledResult?.resultId;
-		if (!resultId || processedDiceResultIdRef.current === resultId) return;
-
-		processedDiceResultIdRef.current = resultId;
-		const update = applyEncounterDiceHpResult({
+		executeEncounterDiceProcessing({
+			resultId: diceRolledResult?.resultId,
+			processedResultId: processedDiceResultIdRef.current,
 			result: diceRolledResult?.result,
 			context: diceRolledResult?.context,
 			campaignSlug: campaign.slug,
 			sessionId: String(sessionId),
 			encounterId: String(encounterId),
 			encounter,
-		});
-		if (!update) return;
-		applyEncounterUpdate(update.encounter, {
-			preferredId: update.preferredId,
+		}, {
+			onProcessed: (resultId) => {
+				processedDiceResultIdRef.current = resultId;
+			},
+			onUpdate: (update) => applyEncounterUpdate(update.encounter, {
+				preferredId: update.preferredId,
+			}),
 		});
 	}, [
 		campaign.slug,
@@ -732,23 +704,24 @@ export default function useEncounterView(): EncounterViewModel {
 
 	const handleMonstersDrop = useCallback(
 		(nextMonsters: EncounterViewParticipant[] | null = null) => {
-			const current = nextMonsters
-				? { ...encounterRef.current, monsters: nextMonsters }
-				: encounterRef.current;
-			if (!current) return;
-			const start = reorderStartRef.current;
-			reorderStartRef.current = null;
-
-			if (
-				start &&
-				!isUpdatingHistoryRef.current &&
-				JSON.stringify(start.monsters || []) !==
-					JSON.stringify(current.monsters || [])
-			) {
-				setUndoStack((prev) => [...prev, start]);
-				setRedoStack([]);
-			}
-			saveEncounterState(current);
+			executeEncounterMonsterDropPlan(
+				getEncounterMonsterDropPlan({
+					nextMonsters,
+					currentEncounter: encounterRef.current,
+					reorderStart: reorderStartRef.current,
+					isUpdatingHistory: isUpdatingHistoryRef.current,
+				}),
+				{
+					clearReorderStart: () => {
+						reorderStartRef.current = null;
+					},
+					recordUndo: (snapshot) => {
+						setUndoStack((prev) => [...prev, snapshot]);
+						setRedoStack([]);
+					},
+					persist: saveEncounterState,
+				},
+			);
 		},
 		[saveEncounterState],
 	);

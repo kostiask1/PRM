@@ -13,12 +13,15 @@ import { BestiaryBrowser as Bestiary } from "../../../widgets/bestiary-browser/i
 import {
 	BestiaryAiModals,
 	MonsterAiActionModal,
+	applyMonsterAiDraftSaveResult,
 	buildMonsterAiRequestPayload,
-	getFirstGeneratedMonster,
+	executeMonsterAiRequest,
+	executeMonsterFieldSavePlan,
 	getMonsterAiGenerationPlan,
-	getMonsterAiRestoreScope,
+	getMonsterAiDraftSavePlan,
+	getMonsterAiRestoreRequestPlan,
+	getMonsterFieldEditPlan,
 	getMonsterFieldSavePlan,
-	persistMonsterFieldSavePlan,
 	type EncounterMonsterTarget,
 	type MonsterAiEditMode,
 	type MonsterAiAction,
@@ -38,7 +41,10 @@ import {
 } from "../../../entities/bestiary/index.js";
 import { aiApi } from "../../../features/ai/index.js";
 import { settingsApi } from "../../../features/settings/index.js";
-import { createCampaignEntity } from "../../../features/campaign-entity/index.js";
+import {
+	buildCreateEntityPayload,
+	createCampaignEntity,
+} from "../../../features/campaign-entity/index.js";
 
 const api = { ...campaignApi, ...bestiaryApi, ...aiApi, ...settingsApi };
 import {
@@ -58,20 +64,23 @@ import {
 	buildDiffResources,
 	type AiHistoryEntry,
 	type AiHistoryResource,
-	type AiGenerationResult,
-	type AiHistoryRestoreResult,
 	type AiModelDescriptor,
 } from "../../../features/ai/index.js";
 import {
-	addSourceMonsterImageToDraft,
-	getFirstChangedMonster,
 	getHistoryChangeSummary as getAiHistoryChangeSummary,
 	getLocalizedDiffResourceState,
 } from "../../../features/ai/index.js";
 import { loadAiModelOptions } from "../../../features/ai/index.js";
 import {
 	createEmptyEncounterCharacterDraft as createEmptyCharacterDraft,
-	getEncounterGridMonsterKey as getGridMonsterKey,
+	applyEncounterGeneratedMonsterResult,
+	applyEncounterMonsterRestoreResult,
+	executeEncounterAiRestoreRequest,
+	executeEncounterParticipantSelection,
+	executeEncounterPlayerCreation,
+	getAvailableEncounterCharacters,
+	getEncounterGridProjection,
+	getEncounterParticipantSelectionPlan,
 	getEncounterMonsterRowStats,
 	isCustomBestiarySource as isCustomSource,
 	resolveEncounterHpInputValue as resolveHpInputValue,
@@ -79,7 +88,6 @@ import {
 import type {
 	EncounterViewModel,
 	EncounterViewParticipant,
-	EncounterViewSession,
 } from "../model/contracts.ts";
 import type {
 	CampaignEntityRecord,
@@ -97,6 +105,22 @@ type FieldEditingMonster = {
 type PlayerDraft = CharacterData & { firstName: string };
 type RestoreMode = "apply" | "undo";
 type RestoreOptions = { resourceIds?: string[] };
+
+const ENCOUNTER_CHARACTER_DEFAULTS: Record<string, unknown> = {
+	firstName: "",
+	lastName: "",
+	race: "",
+	class: "",
+	level: 1,
+	motivation: "",
+	description: "",
+	trait: "",
+	notes: [],
+	collapsed: false,
+	isNotesCollapsed: false,
+};
+const EMPTY_ENCOUNTER_PARTICIPANTS: EncounterViewParticipant[] = [];
+const EMPTY_CAMPAIGN_ENTITIES: CampaignEntityRecord[] = [];
 
 function translate(...args: Parameters<typeof lang.t>) {
 	return lang.t(...args);
@@ -160,70 +184,16 @@ function getEditingMonster(
 	return editing ? editing.monster : null;
 }
 
-function applyGeneratedMonsterResult({
-	data,
-	sourceMonster,
-	draftMode,
-	targetInstanceId,
-	onDraftMode,
-	onDraftEntry,
-	onMonsterUpdate,
-}: {
-	data: AiGenerationResult | null;
-	sourceMonster: EncounterViewParticipant;
-	draftMode: EncounterDraftMode;
-	targetInstanceId: string | null;
-	onDraftMode: (mode: EncounterDraftMode) => void;
-	onDraftEntry: (entry: AiHistoryEntry | null) => void;
-	onMonsterUpdate: (instanceId: string, monster: EncounterViewParticipant) => void;
-}) {
-	if (data?.draft && data.aiResponse) {
-		onDraftMode(draftMode);
-		onDraftEntry(addSourceMonsterImageToDraft(data.aiResponse, sourceMonster) || null);
-		return;
-	}
-	if (!targetInstanceId) return;
-	const monster = getFirstGeneratedMonster(data?.updated);
-	if (monster) onMonsterUpdate(targetInstanceId, monster as EncounterViewParticipant);
+function getEncounterViewParticipants(
+	view: EncounterViewModel,
+): EncounterViewParticipant[] {
+	return view.encounter?.monsters || EMPTY_ENCOUNTER_PARTICIPANTS;
 }
 
-function applyMonsterRestoreResult({
-	result,
-	fallbackEntry,
-	draftMode,
-	mode,
-	resourceIds,
-	targetInstanceId,
-	onEntry,
-	onLocalUpdate,
-	onMonsterUpdate,
-}: {
-	result: AiHistoryRestoreResult | null;
-	fallbackEntry: AiHistoryEntry;
-	draftMode: EncounterDraftMode;
-	mode: RestoreMode;
-	resourceIds?: string[];
-	targetInstanceId: string | null;
-	onEntry: (entry: AiHistoryEntry) => void;
-	onLocalUpdate: (session: EncounterViewSession) => void;
-	onMonsterUpdate: (instanceId: string, monster: EncounterViewParticipant) => void;
-}) {
-	const entry = result?.response || fallbackEntry;
-	onEntry(entry);
-	if (draftMode === "local") {
-		if (result?.updated) onLocalUpdate(result.updated as EncounterViewSession);
-		return;
-	}
-	if (mode === "undo" || !targetInstanceId) return;
-	const monster = getFirstChangedMonster(entry, resourceIds);
-	if (monster) onMonsterUpdate(targetInstanceId, monster as EncounterViewParticipant);
-}
-
-function getAiEditFailureMessage(error: unknown): string | null {
-	if (error instanceof Error) {
-		return error.name === "AbortError" ? null : error.message;
-	}
-	return lang.t("Unknown error");
+function getEncounterViewPlayerCharacters(
+	view: EncounterViewModel,
+): CampaignEntityRecord[] {
+	return view.playerCharacters || EMPTY_CAMPAIGN_ENTITIES;
 }
 
 interface EncounterMonsterRowProps {
@@ -258,45 +228,45 @@ function EncounterMonsterCombatStats({
 	return (
 		<>
 			<div className="EncounterMonsterRow__hp">
-				<input
-					type="text"
-					value={hpDrafts[instanceId] ?? String(monster.currentHp ?? "")}
-					onChange={(event) => onHpChange(instanceId, event.target.value)}
-					onBlur={() => onHpBlur(monster)}
-					onKeyDown={(event) => {
-						if (event.key === "Enter") event.currentTarget.blur();
-					}}
-					onFocus={(event) => event.currentTarget.select()}
-					onClick={(event) => {
-						event.stopPropagation();
-						event.currentTarget.select();
-					}}
-					className="EncounterMonsterRow__hpInput"
-					style={{
-						color: view.getHpColor(
-							Number(monster.currentHp) || 0,
-							Number(rowStats.maxHp) || 0,
-						),
-					}}
-				/>
+				<EncounterCurrentHpInput {...{ monster, instanceId, hpDrafts, view, onHpChange, onHpBlur }} maxHp={rowStats.maxHp} />
 				<span className="muted">/</span>
-				<Tooltip content={lang.t("Max HP")}>
-					<input
-						type="number"
-						value={rowStats.maxHp}
-						onChange={(event) =>
-							view.updateMonsterMaxHp(instanceId, event.target.value)
-						}
-						onClick={(event) => event.stopPropagation()}
-						className="EncounterMonsterRow__maxHpInput"
-					/>
-				</Tooltip>
+				<EncounterMaxHpInput {...{ instanceId, view }} maxHp={rowStats.maxHp} />
 			</div>
-			<div className="EncounterMonsterRow__ac">
-				{lang.t("AC")} {rowStats.ac}
-			</div>
+			<div className="EncounterMonsterRow__ac">{lang.t("AC")} {rowStats.ac}</div>
 		</>
 	);
+}
+
+function EncounterCurrentHpInput({ monster, instanceId, hpDrafts, view, onHpChange, onHpBlur, maxHp }: Omit<EncounterMonsterRowProps, "isDragging" | "selectedInstanceId" | "onSelect"> & { instanceId: string; maxHp: string | number }) {
+	return (
+		<input
+			type="text"
+			value={getEncounterHpInputDisplay(hpDrafts[instanceId], monster.currentHp)}
+			onChange={(event) => onHpChange(instanceId, event.target.value)}
+			onBlur={() => onHpBlur(monster)}
+			onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }}
+			onFocus={(event) => event.currentTarget.select()}
+			onClick={(event) => { event.stopPropagation(); event.currentTarget.select(); }}
+			className="EncounterMonsterRow__hpInput"
+			style={{ color: view.getHpColor(toEncounterStatNumber(monster.currentHp), toEncounterStatNumber(maxHp)) }}
+		/>
+	);
+}
+
+function EncounterMaxHpInput({ instanceId, view, maxHp }: { instanceId: string; view: EncounterMonsterRowProps["view"]; maxHp: string | number }) {
+	return (
+		<Tooltip content={lang.t("Max HP")}>
+			<input type="number" value={maxHp} onChange={(event) => view.updateMonsterMaxHp(instanceId, event.target.value)} onClick={(event) => event.stopPropagation()} className="EncounterMonsterRow__maxHpInput" />
+		</Tooltip>
+	);
+}
+
+function getEncounterHpInputDisplay(draft: string | undefined, currentHp: unknown): string {
+	return draft === undefined ? String(currentHp ?? "") : draft;
+}
+
+function toEncounterStatNumber(value: unknown): number {
+	return Number(value) || 0;
 }
 
 function EncounterMonsterRowActions({
@@ -431,93 +401,66 @@ interface EncounterDetailProps {
 	getMonsterImageOverride: EncounterViewModel["getMonsterImageOverride"];
 }
 
-function EncounterDetail({
-	displayMode,
-	gridMonsters,
-	gridColumns,
-	selectedInstance,
-	selectedGridInstanceId,
-	focusedMonsterId,
-	campaignSlug,
-	setGridItemRef,
-	onAiAction,
-	onFieldEdit,
-	onTokenImageChange,
-	onCharacterChange,
-	getMonsterImageOverride,
-}: EncounterDetailProps) {
-	if (displayMode === "grid") {
-		return (
-			<div className="EncounterView__detailView EncounterView__detailView__grid">
-				{gridMonsters.length > 0 ? (
-					<div
-						className="EncounterView__grid"
-						style={
-							{ "--encounter-grid-columns": gridColumns } as CSSProperties
-						}
-					>
-						{gridMonsters.map((monster) => {
-							const instanceId = getParticipantInstanceId(monster);
-							return (
-								<div
-									key={instanceId}
-									ref={(node) => setGridItemRef(instanceId, node)}
-									className={classNames("EncounterView__gridItem", {
-										is_selected: selectedGridInstanceId === instanceId,
-										is_focused: focusedMonsterId === instanceId,
-									})}
-								>
-									<MonsterStatBlock
-										monster={monster as BestiaryMonster}
-										onAiAction={(value) => onAiAction(value as EncounterViewParticipant)}
-										onFieldEdit={(value) => onFieldEdit(value as EncounterViewParticipant)}
-										onTokenImageChange={(value, imageUrl) =>
-											onTokenImageChange(value as EncounterViewParticipant, imageUrl)
-										}
-										tokenUploadCampaignSlug={campaignSlug}
-										tokenImageOverrideUrl={getMonsterImageOverride(monster)}
-										layoutMode="grid"
-									/>
-								</div>
-							);
-						})}
-					</div>
-				) : (
-					<p className="muted">{lang.t("Select a monster from the list to see its stats.")}</p>
-				)}
-			</div>
-		);
-	}
+function EncounterDetail(props: EncounterDetailProps) {
+	return props.displayMode === "grid"
+		? <EncounterGridDetail {...props} />
+		: <EncounterSingleDetail {...props} />;
+}
 
+function EncounterGridDetail(props: EncounterDetailProps) {
 	return (
-		<div className="EncounterView__detailView EncounterView__detailView__single">
-			{selectedInstance ? (
-				isEncounterCharacterParticipant(selectedInstance) ? (
-					<CharacterCard
-						character={selectedInstance}
-						campaignSlug={campaignSlug}
-						type="characters"
-						viewMode="modal"
-						showDeleteButton={false}
-						onChange={onCharacterChange(getParticipantInstanceId(selectedInstance))}
-					/>
-				) : (
-					<MonsterStatBlock
-						monster={selectedInstance as BestiaryMonster}
-						onAiAction={(value) => onAiAction(value as EncounterViewParticipant)}
-						onFieldEdit={(value) => onFieldEdit(value as EncounterViewParticipant)}
-						onTokenImageChange={(value, imageUrl) =>
-							onTokenImageChange(value as EncounterViewParticipant, imageUrl)
-						}
-						tokenUploadCampaignSlug={campaignSlug}
-						tokenImageOverrideUrl={getMonsterImageOverride(selectedInstance)}
-					/>
-				)
-			) : (
-				<p className="muted">{lang.t("Select a monster from the list to see its stats.")}</p>
-			)}
+		<div className="EncounterView__detailView EncounterView__detailView__grid">
+			{props.gridMonsters.length > 0 ? (
+				<div className="EncounterView__grid" style={{ "--encounter-grid-columns": props.gridColumns } as CSSProperties}>
+					{props.gridMonsters.map((monster) => <EncounterGridMonster key={getParticipantInstanceId(monster)} monster={monster} props={props} />)}
+				</div>
+			) : <EncounterDetailEmptyState />}
 		</div>
 	);
+}
+
+function EncounterGridMonster({ monster, props }: { monster: EncounterViewParticipant; props: EncounterDetailProps }) {
+	const instanceId = getParticipantInstanceId(monster);
+	return (
+		<div ref={(node) => props.setGridItemRef(instanceId, node)} className={classNames("EncounterView__gridItem", { is_selected: props.selectedGridInstanceId === instanceId, is_focused: props.focusedMonsterId === instanceId })}>
+			<EncounterMonsterStatBlock monster={monster} props={props} layoutMode="grid" />
+		</div>
+	);
+}
+
+function EncounterSingleDetail(props: EncounterDetailProps) {
+	return (
+		<div className="EncounterView__detailView EncounterView__detailView__single">
+			<EncounterSelectedDetail {...props} />
+		</div>
+	);
+}
+
+function EncounterSelectedDetail(props: EncounterDetailProps) {
+	const selected = props.selectedInstance;
+	if (!selected) return <EncounterDetailEmptyState />;
+	if (isEncounterCharacterParticipant(selected)) {
+		return <CharacterCard character={selected} campaignSlug={props.campaignSlug} type="characters" viewMode="modal" showDeleteButton={false} onChange={props.onCharacterChange(getParticipantInstanceId(selected))} />;
+	}
+	return <EncounterMonsterStatBlock monster={selected} props={props} />;
+}
+
+function EncounterMonsterStatBlock({ monster, props, layoutMode }: { monster: EncounterViewParticipant; props: EncounterDetailProps; layoutMode?: "grid" }) {
+	return (
+		<MonsterStatBlock
+			monster={monster as BestiaryMonster}
+			onAiAction={(value) => props.onAiAction(value as EncounterViewParticipant)}
+			onFieldEdit={(value) => props.onFieldEdit(value as EncounterViewParticipant)}
+			onTokenImageChange={(value, imageUrl) => props.onTokenImageChange(value as EncounterViewParticipant, imageUrl)}
+			tokenUploadCampaignSlug={props.campaignSlug}
+			tokenImageOverrideUrl={props.getMonsterImageOverride(monster)}
+			layoutMode={layoutMode}
+		/>
+	);
+}
+
+function EncounterDetailEmptyState() {
+	return <p className="muted">{lang.t("Select a monster from the list to see its stats.")}</p>;
 }
 
 interface EncounterHeaderProps {
@@ -592,45 +535,75 @@ function EncounterHeader({
 }: EncounterHeaderProps) {
 	return (
 		<div className="Panel__header">
-			<div className="EncounterView__header">
-				<Button variant="ghost" size={Button.SIZES.SMALL} onClick={view.handleBack} icon="back" className="SessionView__backBtn" />
-				<Tooltip content={lang.t("Click to rename")}>
-					<h2 className="editable_title" onClick={view.handleRename}>
-						{renderMentionText(view.encounter?.name || "")}
-					</h2>
-				</Tooltip>
-				<EncounterMetrics
-					view={view}
-					averageTooltip={averageTooltip}
-					maxTooltip={maxTooltip}
-					weightedTooltip={weightedTooltip}
-				/>
-			</div>
-			<div ref={actionsRef as RefObject<HTMLDivElement>} className={classNames("EncounterView__headerActions", { is_open: isActionsOpen })}>
-				<Tooltip content={metricsTooltip} className="EncounterView__metricsTooltipTrigger">
-					<Button variant="ghost" size={Button.SIZES.SMALL} icon="swords" aria-label={lang.t("Combat encounters")}>{view.encounter?.monsters.length || 0}</Button>
-				</Tooltip>
-				<Button variant="ghost" size={Button.SIZES.SMALL} icon="menu" className="EncounterView__headerActionsToggle" onClick={onToggleActions} title={lang.t("Encounter actions")} />
-				<div className="EncounterView__headerActionsMenu">
-					<div className="EncounterView__viewModeSwitch">
-						<Button variant={displayMode === "single" ? "primary" : "ghost"} size={Button.SIZES.SMALL} icon="list" onClick={() => onDisplayMode("single")} title={lang.t("Preview")} />
-						<Button variant={displayMode === "grid" ? "primary" : "ghost"} size={Button.SIZES.SMALL} icon="layers" onClick={() => onDisplayMode("grid")} disabled={displayedMonsterCount === 1} title={lang.t("All")} />
-					</div>
-					{displayMode === "grid" && (
-						<div className="EncounterView__gridColumnsSwitch" aria-label={lang.t("Grid columns")}>
-							{[1, 2, 3, 4].map((columns) => (
-								<Button key={columns} variant={gridColumns === columns ? "primary" : "ghost"} size={Button.SIZES.SMALL} onClick={() => onGridColumns(columns)} title={lang.t("{count} columns", { count: columns })}>{columns}</Button>
-							))}
-						</div>
-					)}
-					<Button variant="ghost" size={Button.SIZES.SMALL} icon="undo" onClick={view.handleUndo} disabled={view.undoStack.length === 0 || view.isSaving} title={lang.t("Undo (Ctrl+Z)")} />
-					<Button variant="ghost" size={Button.SIZES.SMALL} icon="redo" onClick={view.handleRedo} disabled={view.redoStack.length === 0 || view.isSaving} title={lang.t("Redo (Ctrl+Y)")} />
-					<input type="file" ref={view.fileInputRef as RefObject<HTMLInputElement>} style={{ display: "none" }} accept=".json" onChange={view.handleFileChange} />
-					<Button variant="ghost" size={Button.SIZES.SMALL} icon="import" onClick={() => view.fileInputRef.current?.click()} title={lang.t("Import encounter")} />
-					<Button variant="ghost" size={Button.SIZES.SMALL} icon="export" onClick={view.handleExport} title={lang.t("Export encounter")} />
-				</div>
+			<EncounterHeaderIdentity view={view} averageTooltip={averageTooltip} maxTooltip={maxTooltip} weightedTooltip={weightedTooltip} />
+			<EncounterHeaderActions {...{ view, displayMode, displayedMonsterCount, gridColumns, isActionsOpen, actionsRef, metricsTooltip, onToggleActions, onDisplayMode, onGridColumns }} />
+		</div>
+	);
+}
+
+function EncounterHeaderIdentity({
+	view,
+	averageTooltip,
+	maxTooltip,
+	weightedTooltip,
+}: Pick<EncounterHeaderProps, "view" | "averageTooltip" | "maxTooltip" | "weightedTooltip">) {
+	return (
+		<div className="EncounterView__header">
+			<Button variant="ghost" size={Button.SIZES.SMALL} onClick={view.handleBack} icon="back" className="SessionView__backBtn" />
+			<Tooltip content={lang.t("Click to rename")}>
+				<h2 className="editable_title" onClick={view.handleRename}>{renderMentionText(view.encounter?.name || "")}</h2>
+			</Tooltip>
+			<EncounterMetrics {...{ view, averageTooltip, maxTooltip, weightedTooltip }} />
+		</div>
+	);
+}
+
+function EncounterHeaderActions(props: Omit<EncounterHeaderProps, "averageTooltip" | "maxTooltip" | "weightedTooltip">) {
+	const { view, displayMode, displayedMonsterCount, gridColumns, isActionsOpen, actionsRef, metricsTooltip, onToggleActions, onDisplayMode, onGridColumns } = props;
+	return (
+		<div ref={actionsRef as RefObject<HTMLDivElement>} className={classNames("EncounterView__headerActions", { is_open: isActionsOpen })}>
+			<Tooltip content={metricsTooltip} className="EncounterView__metricsTooltipTrigger">
+				<Button variant="ghost" size={Button.SIZES.SMALL} icon="swords" aria-label={lang.t("Combat encounters")}>{view.encounter?.monsters.length || 0}</Button>
+			</Tooltip>
+			<Button variant="ghost" size={Button.SIZES.SMALL} icon="menu" className="EncounterView__headerActionsToggle" onClick={onToggleActions} title={lang.t("Encounter actions")} />
+			<div className="EncounterView__headerActionsMenu">
+				<EncounterViewModeControls {...{ displayMode, displayedMonsterCount, onDisplayMode }} />
+				<EncounterGridColumnControls {...{ displayMode, gridColumns, onGridColumns }} />
+				<EncounterHistoryControls view={view} />
+				<input type="file" ref={view.fileInputRef as RefObject<HTMLInputElement>} style={{ display: "none" }} accept=".json" onChange={view.handleFileChange} />
+				<Button variant="ghost" size={Button.SIZES.SMALL} icon="import" onClick={() => view.fileInputRef.current?.click()} title={lang.t("Import encounter")} />
+				<Button variant="ghost" size={Button.SIZES.SMALL} icon="export" onClick={view.handleExport} title={lang.t("Export encounter")} />
 			</div>
 		</div>
+	);
+}
+
+function EncounterViewModeControls({ displayMode, displayedMonsterCount, onDisplayMode }: Pick<EncounterHeaderProps, "displayMode" | "displayedMonsterCount" | "onDisplayMode">) {
+	return (
+		<div className="EncounterView__viewModeSwitch">
+			<Button variant={displayMode === "single" ? "primary" : "ghost"} size={Button.SIZES.SMALL} icon="list" onClick={() => onDisplayMode("single")} title={lang.t("Preview")} />
+			<Button variant={displayMode === "grid" ? "primary" : "ghost"} size={Button.SIZES.SMALL} icon="layers" onClick={() => onDisplayMode("grid")} disabled={displayedMonsterCount === 1} title={lang.t("All")} />
+		</div>
+	);
+}
+
+function EncounterGridColumnControls({ displayMode, gridColumns, onGridColumns }: Pick<EncounterHeaderProps, "displayMode" | "gridColumns" | "onGridColumns">) {
+	if (displayMode !== "grid") return null;
+	return (
+		<div className="EncounterView__gridColumnsSwitch" aria-label={lang.t("Grid columns")}>
+			{[1, 2, 3, 4].map((columns) => (
+				<Button key={columns} variant={gridColumns === columns ? "primary" : "ghost"} size={Button.SIZES.SMALL} onClick={() => onGridColumns(columns)} title={lang.t("{count} columns", { count: columns })}>{columns}</Button>
+			))}
+		</div>
+	);
+}
+
+function EncounterHistoryControls({ view }: Pick<EncounterHeaderProps, "view">) {
+	return (
+		<>
+			<Button variant="ghost" size={Button.SIZES.SMALL} icon="undo" onClick={view.handleUndo} disabled={view.undoStack.length === 0 || view.isSaving} title={lang.t("Undo (Ctrl+Z)")} />
+			<Button variant="ghost" size={Button.SIZES.SMALL} icon="redo" onClick={view.handleRedo} disabled={view.redoStack.length === 0 || view.isSaving} title={lang.t("Redo (Ctrl+Y)")} />
+		</>
 	);
 }
 
@@ -671,62 +644,64 @@ interface EncounterCharacterOverlaysProps {
 }
 
 function EncounterCharacterOverlays(props: EncounterCharacterOverlaysProps) {
-	const {
-		open,
-		creating,
-		submitting,
-		draft,
-		available,
-		allCharacters,
-		modalCharacter,
-		campaignSlug,
-		onClosePicker,
-		onDraft,
-		onCreate,
-		onReset,
-		onStartCreate,
-		onAdd,
-		onCloseCharacter,
-		onCharacterChange,
-	} = props;
 	return (
 		<>
-			{open && (
-				<Modal onConfirm={() => {}} title={creating ? lang.t("New character") : lang.t("Choose player")} onCancel={onClosePicker} showFooter={false} type="custom">
-					<div className="EncounterCharacterPicker">
-						{creating ? (
-							<div className="EncounterCharacterPicker__create">
-								<CharacterCard character={draft} onChange={(_id, updated) => onDraft(updated as PlayerDraft)} onDelete={() => {}} onToggleCollapse={null} campaignSlug={campaignSlug} type="characters" viewMode="modal" showDeleteButton={false} showHeader={false} />
-								<div className="EncounterCharacterPicker__createActions">
-									<Button variant="primary" onClick={onCreate} disabled={submitting || !draft.firstName.trim()}>{lang.t("Create")}</Button>
-									<Button variant="ghost" onClick={onReset} disabled={submitting}>{lang.t("Back")}</Button>
-								</div>
-							</div>
-						) : (
-							<>
-								<Button variant="create" icon="plus" onClick={onStartCreate} className="EncounterCharacterPicker__createBtn">{lang.t("New character")}</Button>
-								{available.length > 0 ? available.map((character) => (
-									<button type="button" key={String(character.id || character.slug)} className="EncounterCharacterPicker__item" onClick={() => onAdd(character)}>
-										<span className="EncounterCharacterPicker__name">{getEncounterCharacterDisplayName(character)}</span>
-										<span className="EncounterCharacterPicker__meta">
-											{[character.race, character.class].filter(Boolean).join(" • ")}
-											{character.level ? ` • ${lang.t("Lvl. {level}", { level: character.level })}` : ""}
-										</span>
-									</button>
-								)) : (
-									<p className="muted">{allCharacters.length > 0 ? lang.t("All player characters are already in encounter.") : lang.t("No player characters found.")}</p>
-								)}
-							</>
-						)}
-					</div>
-				</Modal>
-			)}
-			{modalCharacter && (
-				<Modal onConfirm={() => {}} title={getEncounterCharacterDisplayName(modalCharacter)} onCancel={onCloseCharacter} showFooter={false} type="custom">
-					<CharacterCard character={modalCharacter} campaignSlug={campaignSlug} type="characters" viewMode="modal" showDeleteButton={false} onChange={onCharacterChange(getParticipantInstanceId(modalCharacter))} />
-				</Modal>
-			)}
+			<EncounterCharacterPickerOverlay {...props} />
+			<EncounterCharacterModalOverlay {...props} />
 		</>
+	);
+}
+
+function EncounterCharacterPickerOverlay(props: EncounterCharacterOverlaysProps) {
+	if (!props.open) return null;
+	return (
+		<Modal onConfirm={() => {}} title={props.creating ? lang.t("New character") : lang.t("Choose player")} onCancel={props.onClosePicker} showFooter={false} type="custom">
+			<div className="EncounterCharacterPicker">
+				{props.creating ? <EncounterCharacterCreateForm {...props} /> : <EncounterCharacterList {...props} />}
+			</div>
+		</Modal>
+	);
+}
+
+function EncounterCharacterCreateForm({ draft, submitting, campaignSlug, onDraft, onCreate, onReset }: EncounterCharacterOverlaysProps) {
+	return (
+		<div className="EncounterCharacterPicker__create">
+			<CharacterCard character={draft} onChange={(_id, updated) => onDraft(updated as PlayerDraft)} onDelete={() => {}} onToggleCollapse={null} campaignSlug={campaignSlug} type="characters" viewMode="modal" showDeleteButton={false} showHeader={false} />
+			<div className="EncounterCharacterPicker__createActions">
+				<Button variant="primary" onClick={onCreate} disabled={submitting || !draft.firstName.trim()}>{lang.t("Create")}</Button>
+				<Button variant="ghost" onClick={onReset} disabled={submitting}>{lang.t("Back")}</Button>
+			</div>
+		</div>
+	);
+}
+
+function EncounterCharacterList({ available, allCharacters, onStartCreate, onAdd }: EncounterCharacterOverlaysProps) {
+	return (
+		<>
+			<Button variant="create" icon="plus" onClick={onStartCreate} className="EncounterCharacterPicker__createBtn">{lang.t("New character")}</Button>
+			{available.length > 0 ? available.map((character) => (
+				<button type="button" key={String(character.id || character.slug)} className="EncounterCharacterPicker__item" onClick={() => onAdd(character)}>
+					<span className="EncounterCharacterPicker__name">{getEncounterCharacterDisplayName(character)}</span>
+					<span className="EncounterCharacterPicker__meta">
+						{[character.race, character.class].filter(Boolean).join(" • ")}
+						{character.level ? ` • ${lang.t("Lvl. {level}", { level: character.level })}` : ""}
+					</span>
+				</button>
+			)) : <EncounterCharacterEmptyState hasCharacters={allCharacters.length > 0} />}
+		</>
+	);
+}
+
+function EncounterCharacterEmptyState({ hasCharacters }: { hasCharacters: boolean }) {
+	return <p className="muted">{hasCharacters ? lang.t("All player characters are already in encounter.") : lang.t("No player characters found.")}</p>;
+}
+
+function EncounterCharacterModalOverlay({ modalCharacter, campaignSlug, onCloseCharacter, onCharacterChange }: EncounterCharacterOverlaysProps) {
+	if (!modalCharacter) return null;
+	return (
+		<Modal onConfirm={() => {}} title={getEncounterCharacterDisplayName(modalCharacter)} onCancel={onCloseCharacter} showFooter={false} type="custom">
+			<CharacterCard character={modalCharacter} campaignSlug={campaignSlug} type="characters" viewMode="modal" showDeleteButton={false} onChange={onCharacterChange(getParticipantInstanceId(modalCharacter))} />
+		</Modal>
 	);
 }
 
@@ -738,6 +713,50 @@ function EncounterNotification({
 	onClose: () => void;
 }) {
 	return message ? <Notification message={message} onClose={onClose} /> : null;
+}
+
+function useEncounterRequestCleanup(
+	focusTimeoutRef: RefObject<ReturnType<typeof setTimeout> | null>,
+	aiEditControllerRef: RefObject<AbortController | null>,
+) {
+	useEffect(() => () => {
+		if (focusTimeoutRef.current) clearTimeout(focusTimeoutRef.current);
+		aiEditControllerRef.current?.abort();
+	}, []);
+}
+
+function useEncounterHeaderDismissal(
+	isOpen: boolean,
+	actionsRef: RefObject<HTMLDivElement | null>,
+	onClose: () => void,
+) {
+	useEffect(() => {
+		if (!isOpen) return undefined;
+		const handlePointerDown = (event: PointerEvent) => {
+			if (!actionsRef.current?.contains(event.target as Node)) onClose();
+		};
+		document.addEventListener("pointerdown", handlePointerDown);
+		return () => document.removeEventListener("pointerdown", handlePointerDown);
+	}, [isOpen, onClose]);
+}
+
+function useEncounterAiModelLoading({
+	aiEditingMonster,
+	aiModelCount,
+	onModels,
+	onSelectedModel,
+	onError,
+}: {
+	aiEditingMonster: EncounterViewParticipant | null;
+	aiModelCount: number;
+	onModels: (models: AiModelDescriptor[]) => void;
+	onSelectedModel: (updater: (current: string) => string) => void;
+	onError: (error: unknown) => void;
+}) {
+	useEffect(() => {
+		if (!aiEditingMonster || aiModelCount > 0) return;
+		loadAiModelOptions({ setAiModels: onModels, setSelectedAiModel: onSelectedModel, onError });
+	}, [aiEditingMonster, aiModelCount]);
 }
 
 
@@ -794,33 +813,16 @@ function EncounterView() {
 	const headerActionsRef = useRef<HTMLDivElement | null>(null);
 	const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);
 	const view = useEncounterView();
+	const encounterParticipants = getEncounterViewParticipants(view);
+	const playerCharacters = getEncounterViewPlayerCharacters(view);
 
 	const { gridMonsters, gridRepresentativeByInstanceId } = useMemo(() => {
-		const uniqueMonsters: EncounterViewParticipant[] = [];
-		const representativeByKey = new Map<string, string>();
-		const representativeByInstanceId = new Map<string, string>();
-
-		(view.encounter?.monsters || [])
-			.filter((monster) => !isEncounterCharacterParticipant(monster))
-			.forEach((monster) => {
-				const key = getGridMonsterKey(monster);
-				const instanceId = getParticipantInstanceId(monster);
-				let representativeId = representativeByKey.get(key);
-
-				if (!representativeId) {
-					representativeId = instanceId;
-					representativeByKey.set(key, representativeId);
-					uniqueMonsters.push(monster);
-				}
-
-				representativeByInstanceId.set(instanceId, representativeId);
-			});
-
+		const projection = getEncounterGridProjection(encounterParticipants);
 		return {
-			gridMonsters: uniqueMonsters,
-			gridRepresentativeByInstanceId: representativeByInstanceId,
+			gridMonsters: projection.monsters,
+			gridRepresentativeByInstanceId: projection.representativeByInstanceId,
 		};
-	}, [view.encounter?.monsters]);
+	}, [encounterParticipants]);
 
 	const selectedGridInstanceId = getSelectedGridId(
 		view.selectedInstance,
@@ -840,65 +842,30 @@ function EncounterView() {
 		displayMode: effectiveDisplayMode,
 		gridColumns: effectiveGridColumns,
 	} = getEncounterLayout(displayMode, gridColumns, displayedMonsterCount);
-	const availablePlayerCharacters = useMemo(() => {
-		const addedIds = new Set(
-			(view.encounter?.monsters || [])
-				.filter(isEncounterCharacterParticipant)
-				.map((entry) => String(entry.originalCharacterId || entry.id || "")),
-		);
+	const availablePlayerCharacters = useMemo(
+		() => getAvailableEncounterCharacters(
+			encounterParticipants,
+			playerCharacters,
+		),
+		[encounterParticipants, playerCharacters],
+	);
 
-		return (view.playerCharacters || []).filter((character) => {
-			const id = String(character.id || "");
-			return !id || !addedIds.has(id);
-		});
-	}, [view.encounter?.monsters, view.playerCharacters]);
+	useEncounterRequestCleanup(focusTimeoutRef, aiEditControllerRef);
+	useEncounterHeaderDismissal(isHeaderActionsOpen, headerActionsRef, () => setIsHeaderActionsOpen(false));
+	useEncounterAiModelLoading({
+		aiEditingMonster,
+		aiModelCount: aiModels.length,
+		onModels: setAiModels,
+		onSelectedModel: setSelectedAiModel,
+		onError: (error) => {
+			console.error("Failed to load AI models", error);
+			setAiEditError(error instanceof Error ? error.message : lang.t("Failed to connect to AI."));
+		},
+	});
 
-	useEffect(() => {
-		return () => {
-			if (focusTimeoutRef.current) {
-				clearTimeout(focusTimeoutRef.current);
-			}
-			aiEditControllerRef.current?.abort();
-		};
-	}, []);
-
-	useEffect(() => {
-		if (!isHeaderActionsOpen) return undefined;
-
-		const handlePointerDown = (event: PointerEvent) => {
-			if (headerActionsRef.current?.contains(event.target as Node)) return;
-			setIsHeaderActionsOpen(false);
-		};
-
-		document.addEventListener("pointerdown", handlePointerDown);
-		return () => {
-			document.removeEventListener("pointerdown", handlePointerDown);
-		};
-	}, [isHeaderActionsOpen]);
-
-	useEffect(() => {
-		if (!aiEditingMonster || aiModels.length > 0) return;
-		loadAiModelOptions({
-			setAiModels,
-			setSelectedAiModel,
-			onError: (error) => {
-				console.error("Failed to load AI models", error);
-				setAiEditError(
-					error instanceof Error
-						? error.message
-						: lang.t("Failed to connect to AI."),
-				);
-			},
-		});
-	}, [aiEditingMonster, aiModels.length]);
-
-	if (!view.encounter || !campaign || !sessionId) {
-		return (
-			<Panel className="EncounterView">
-				<div className="Panel__body">{lang.t("Loading...")}</div>
-			</Panel>
-		);
-	}
+	const renderContext = getEncounterRenderContext(view, campaign, sessionId);
+	if (!renderContext) return <EncounterLoading />;
+	const { campaign: activeCampaign, sessionId: activeSessionId, encounter } = renderContext;
 
 	const setGridItemRef = (instanceId: string, node: HTMLDivElement | null) => {
 		if (node) {
@@ -927,18 +894,18 @@ function EncounterView() {
 	};
 
 	const handleSelectMonster = (monster: EncounterViewParticipant) => {
-		if (isEncounterCharacterParticipant(monster)) {
-			if (view.selectedInstance?.instanceId === monster.instanceId) {
-				setModalCharacter(monster);
-				return;
-			}
-			view.setSelectedInstance(monster);
-			return;
-		}
-		view.setSelectedInstance(monster);
-		if (effectiveDisplayMode === "grid") {
-			focusMonsterInGrid(getParticipantInstanceId(monster));
-		}
+		executeEncounterParticipantSelection(
+			getEncounterParticipantSelectionPlan(
+				monster,
+				view.selectedInstance?.instanceId,
+				effectiveDisplayMode,
+			),
+			{
+				onOpenCharacter: setModalCharacter,
+				onSelect: view.setSelectedInstance,
+				onFocus: focusMonsterInGrid,
+			},
+		);
 	};
 
 	const handleMonsterAiAction = (monster: EncounterViewParticipant) => {
@@ -966,20 +933,14 @@ function EncounterView() {
 	};
 
 	const chooseEditMonsterAction = (action: MonsterAiAction) => {
-		if (action === "image-prompt") return;
-		const mode = action;
-		if (!editActionMonster) return;
-		const target = editActionMonster;
+		const plan = getMonsterFieldEditPlan(action, editActionMonster, lang.t("Creature"));
+		if (plan.kind === "none") return;
 		setEditActionMonster(null);
-		const baseMonster =
-			mode === "create-based"
-				? {
-						...target,
-						name: target.name || lang.t("Creature"),
-						source: "CUSTOM",
-					}
-				: target;
-		setFieldEditingMonster({ mode, original: target, monster: baseMonster });
+		setFieldEditingMonster({
+			mode: plan.mode,
+			original: plan.original as EncounterViewParticipant,
+			monster: plan.monster,
+		});
 	};
 
 	const closeEditMonsterFields = () => {
@@ -993,35 +954,31 @@ function EncounterView() {
 			fieldEditingMonster.original,
 			draftMonster,
 		);
-		if (plan.kind === "invalid") return;
-		if (plan.kind === "local") {
-			view.updateMonsterFromAi(plan.instanceId, plan.monster, {
-				localOverride: true,
-				preserveCurrentHp: false,
-			});
-			closeEditMonsterFields();
-			return;
-		}
-
-		try {
-			const updatedMonster = await persistMonsterFieldSavePlan(
-				plan,
-				api,
-				lang.t("Custom creature with this name already exists."),
-			);
-			dispatch(refreshEntitiesAction());
-			view.updateMonsterFromAi(plan.instanceId, updatedMonster as EncounterViewParticipant, {
-				preserveCurrentHp: false,
-			});
-			closeEditMonsterFields();
-		} catch (error) {
-			dispatch(
+		await executeMonsterFieldSavePlan(
+			plan,
+			api,
+			lang.t("Custom creature with this name already exists."),
+			{
+				onLocal: (instanceId, monster) => view.updateMonsterFromAi(
+					instanceId,
+					monster as EncounterViewParticipant,
+					{ localOverride: true, preserveCurrentHp: false },
+				),
+				onPersistent: (instanceId, monster) => view.updateMonsterFromAi(
+					instanceId,
+					monster as EncounterViewParticipant,
+					{ preserveCurrentHp: false },
+				),
+				onRefresh: () => dispatch(refreshEntitiesAction()),
+				onClose: closeEditMonsterFields,
+				onError: (error) => dispatch(
 				alert({
 					title: lang.t("Error"),
 					message: error instanceof Error ? error.message : lang.t("Unknown error"),
 				}),
-			);
-		}
+				),
+			},
+		);
 	};
 
 	const closeMonsterAiAction = () => {
@@ -1070,69 +1027,54 @@ function EncounterView() {
 		setAiEditError("");
 		const controller = new AbortController();
 		aiEditControllerRef.current = controller;
-		try {
-			const data = await api.generateAi(
+		await executeMonsterAiRequest(controller, {
+			request: (signal) => api.generateAi(
 				buildMonsterAiRequestPayload({
 					plan,
 					modelName: selectedAiModel,
-					campaignSlug: campaign.slug,
-					sessionId,
-					encounterId: view.encounter?.id,
+					campaignSlug: activeCampaign.slug,
+					sessionId: activeSessionId,
+					encounterId: encounter.id,
 					monster: aiEditingMonster,
 					targetInstanceId: aiTargetInstanceId,
 					language: currentLanguage,
 				}),
-				{ signal: controller.signal },
-			);
-			applyGeneratedMonsterResult({
-				data,
-				sourceMonster: aiEditingMonster,
-				draftMode: plan.draftMode,
-				targetInstanceId: aiTargetInstanceId,
-				onDraftMode: setAiDraftMode,
-				onDraftEntry: setAiDraftResponseEntry,
-				onMonsterUpdate: view.updateMonsterFromAi,
-			});
-			setAiEditingMonster(null);
-			setAiEditMode("edit");
-			setAiEditInstructions("");
-		} catch (error) {
-			const message = getAiEditFailureMessage(error);
-			if (message) setAiEditError(message);
-		} finally {
-			if (aiEditControllerRef.current === controller) {
-				aiEditControllerRef.current = null;
-			}
-			setIsAiEditingMonster(false);
-		}
+				{ signal },
+			),
+			onResult: (data) => {
+				applyEncounterGeneratedMonsterResult(data, aiEditingMonster, plan.draftMode, aiTargetInstanceId, {
+					onDraftMode: setAiDraftMode,
+					onDraftEntry: setAiDraftResponseEntry,
+					onMonsterUpdate: view.updateMonsterFromAi,
+				});
+				setAiEditingMonster(null);
+				setAiEditMode("edit");
+				setAiEditInstructions("");
+			},
+			onError: setAiEditError,
+			onComplete: () => {
+				if (aiEditControllerRef.current === controller) aiEditControllerRef.current = null;
+				setIsAiEditingMonster(false);
+			},
+		});
 	};
 
 	const saveAiDraftResponseChanges = async (
 		resources: Array<Pick<AiHistoryResource, "id" | "after">>,
 	) => {
-		if (!aiDraftResponseEntry?.id) return null;
-		if (aiDraftMode === "local") {
-			const updatedEntry = await api.updateAiResponse(
-				campaign.slug,
-				aiDraftResponseEntry.id,
-				{
-					resources,
-				},
-			);
-			setAiDraftResponseEntry(updatedEntry);
-			return updatedEntry;
-		}
-		const updatedEntry = await api.updateAiResponse(
-			"bestiary",
-			aiDraftResponseEntry.id,
-			{
-				resources,
-			},
+		const plan = getMonsterAiDraftSavePlan(
+			aiDraftResponseEntry?.id,
+			aiDraftMode,
+			activeCampaign.slug,
+			resources,
 		);
-		if (updatedEntry) {
-			setAiDraftResponseEntry(updatedEntry);
-		}
-		return updatedEntry;
+		if (!plan) return null;
+		const updatedEntry = await api.updateAiResponse(
+			plan.scope,
+			plan.entryId,
+			{ resources: plan.resources },
+		);
+		return applyMonsterAiDraftSaveResult(plan, updatedEntry, setAiDraftResponseEntry);
 	};
 
 	const restoreAiDraftResponse = async (
@@ -1140,35 +1082,43 @@ function EncounterView() {
 		mode: RestoreMode = "apply",
 		options: RestoreOptions = {},
 	) => {
-		if (!entry?.id || isRestoringAiResponse) return;
+		const plan = getMonsterAiRestoreRequestPlan(
+			entry?.id,
+			isRestoringAiResponse,
+			aiDraftMode,
+			activeCampaign.slug,
+			mode,
+			options.resourceIds,
+		);
+		if (!plan || !entry) return;
 		setIsRestoringAiResponse(true);
-		try {
-			const scope = getMonsterAiRestoreScope(aiDraftMode, campaign.slug);
-			const restore = mode === "undo" ? api.undoAiResponse : api.applyAiResponse;
-			const result = await restore(scope, entry.id, {
-				resourceIds: options.resourceIds,
-			});
-			applyMonsterRestoreResult({
+		const restore = {
+			apply: api.applyAiResponse,
+			undo: api.undoAiResponse,
+		}[plan.action];
+		await executeEncounterAiRestoreRequest({
+			request: () => restore(plan.scope, plan.entryId, { resourceIds: plan.resourceIds }),
+			onResult: (result) => applyEncounterMonsterRestoreResult(
 				result,
-				fallbackEntry: entry,
-				draftMode: aiDraftMode,
-				mode,
-				resourceIds: options.resourceIds,
-				targetInstanceId: aiTargetInstanceId,
-				onEntry: setAiDraftResponseEntry,
-				onLocalUpdate: view.handleAiUpdate,
-				onMonsterUpdate: view.updateMonsterFromAi,
-			});
-		} catch (error) {
-			dispatch(
+				entry,
+				aiDraftMode,
+				plan.action,
+				plan.resourceIds,
+				aiTargetInstanceId,
+				{
+					onEntry: setAiDraftResponseEntry,
+					onLocalUpdate: view.handleAiUpdate,
+					onMonsterUpdate: view.updateMonsterFromAi,
+				},
+			),
+			onError: (error) => dispatch(
 				alert({
 					title: lang.t("AI history error"),
 					message: error instanceof Error ? error.message : lang.t("Unknown error"),
 				}),
-			);
-		} finally {
-			setIsRestoringAiResponse(false);
-		}
+			),
+			onComplete: () => setIsRestoringAiResponse(false),
+		});
 	};
 
 	const closeAiDraftResponse = () => {
@@ -1260,41 +1210,18 @@ function EncounterView() {
 			);
 			return;
 		}
-
-		const payload: Record<string, unknown> = {
-			firstName: "",
-			lastName: "",
-			race: "",
-			class: "",
-			level: 1,
-			motivation: "",
-			description: "",
-			trait: "",
-			notes: [],
-			collapsed: false,
-			isNotesCollapsed: false,
-			...Object.fromEntries(
-				Object.entries(playerDraft || {}).filter(
-					([key]) => !key.startsWith("_"),
-				),
-			),
-		};
-		delete payload.id;
-		delete payload.slug;
-		delete payload.createdAt;
-
+		const payload = buildCreateEntityPayload(ENCOUNTER_CHARACTER_DEFAULTS, playerDraft);
 		setIsPlayerSubmitting(true);
-		try {
-			const created = await createCampaignEntity(
-				campaign.slug,
+		await executeEncounterPlayerCreation({
+			request: () => createCampaignEntity(
+				activeCampaign.slug,
 				"characters",
-				payload,
-			);
-			dispatch(refreshEntitiesAction());
-			if (!created) throw new Error("Entity creation returned no result");
-			view.handleAddCharacter(created);
-			resetPlayerCreateForm();
-		} catch (error) {
+				payload as CampaignEntityRecord,
+			),
+			onRefresh: () => dispatch(refreshEntitiesAction()),
+			onAdd: view.handleAddCharacter,
+			onReset: resetPlayerCreateForm,
+			onError: (error) => {
 			console.error("Failed to create player from encounter", error);
 			dispatch(
 				alert({
@@ -1302,9 +1229,9 @@ function EncounterView() {
 					message: lang.t("Failed to create entity."),
 				}),
 			);
-		} finally {
-			setIsPlayerSubmitting(false);
-		}
+			},
+			onComplete: () => setIsPlayerSubmitting(false),
+		});
 	};
 
 	const averageInitiativeTooltip = (
@@ -1345,9 +1272,9 @@ function EncounterView() {
 			<div className="EncounterView__metricsTooltipList">
 				<div className="EncounterView__metricsTooltipRow">
 					<span>{lang.t("Participants")}</span>
-					<strong>{view.encounter.monsters.length}</strong>
+					<strong>{encounter.monsters.length}</strong>
 				</div>
-				{view.encounter.monsters.length > 0 && (
+				{encounter.monsters.length > 0 && (
 					<>
 						<div className="EncounterView__metricsTooltipRow">
 							<span>{lang.t("Avg initiative")}</span>
@@ -1407,7 +1334,7 @@ function EncounterView() {
 						</div>
 
 						<DraggableList
-							items={view.encounter.monsters}
+							items={encounter.monsters}
 							onReorder={view.handleReorderMonsters}
 							onDrop={view.handleMonstersDrop}
 							keyExtractor={(m) => m.instanceId || String(m.id || m.name || "")}
@@ -1433,7 +1360,7 @@ function EncounterView() {
 						selectedInstance={view.selectedInstance}
 						selectedGridInstanceId={selectedGridInstanceId}
 						focusedMonsterId={focusedMonsterId}
-						campaignSlug={campaign.slug}
+						campaignSlug={activeCampaign.slug}
 						setGridItemRef={setGridItemRef}
 						onAiAction={handleMonsterAiAction}
 						onFieldEdit={openEditMonsterAction}
@@ -1458,7 +1385,7 @@ function EncounterView() {
 				available={availablePlayerCharacters}
 				allCharacters={view.playerCharacters}
 				modalCharacter={modalCharacter}
-				campaignSlug={campaign.slug}
+				campaignSlug={activeCampaign.slug}
 				onClosePicker={closeCharacterPicker}
 				onDraft={setPlayerDraft}
 				onCreate={handleCreatePlayer}
@@ -1531,6 +1458,23 @@ function EncounterView() {
 			/>
 		</Panel>
 	);
+}
+
+function EncounterLoading() {
+	return (
+		<Panel className="EncounterView">
+			<div className="Panel__body">{lang.t("Loading...")}</div>
+		</Panel>
+	);
+}
+
+function getEncounterRenderContext(
+	view: EncounterViewModel,
+	campaign: CampaignRecord | null,
+	sessionId: string | null,
+) {
+	if (!view.encounter || !campaign || !sessionId) return null;
+	return { encounter: view.encounter, campaign, sessionId };
 }
 
 export default EncounterView;

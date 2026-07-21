@@ -234,91 +234,7 @@ If multiple generation settings are enabled, you may include operations for any 
 If an entity type is disabled, do not output operations for that entity type.
 Do not narrow the whole response to only NPCs, only locations, only characters, or only encounters just because one of those toggles is enabled.`;
 
-function buildSystemInstruction({
-	useKey,
-	responseLanguage,
-	usesStructuredJsonContract,
-	simplifiedNotesEnabled,
-	effectiveParseAIResponse,
-	npcGenerationEnabled,
-	locationGenerationEnabled,
-	encounterGenerationEnabled,
-	customMonsterGenerationEnabled,
-	characterGenerationEnabled,
-	entityTargetScope,
-	globalBasePrompt,
-	campaignBasePrompt,
-	imagePromptBasePrompt,
-}) {
-	const systemInstructionParts = [
-		systemInstructions[useKey] || systemInstructions.prompt,
-	];
-	if (useKey !== "image") {
-		systemInstructionParts.push(
-			`MANDATORY LANGUAGE RULE: Determine the response language from the text that appears after "USER INSTRUCTIONS (PRIORITY):". Write all user-visible output in that same language. If that text is empty or its language is ambiguous, use ${responseLanguage.label}.`,
-		);
-	}
-	if (useKey === "prompt") {
-		systemInstructionParts.push(imagePromptLanguageContract);
-	}
-	if (usesStructuredJsonContract) {
-		systemInstructionParts.push(
-			`NAME LANGUAGE RULE: Any new names you invent must use the language detected from "USER INSTRUCTIONS (PRIORITY):". If that text is empty or ambiguous, use ${responseLanguage.label}. This includes new character names, NPC names, place names, scene names, encounter names, aliases, titles, and display names.
-EXISTING NAME PROTECTION: Names that already exist in the input data must keep their exact original spelling and alphabet. Do not translate, transliterate, decline, paraphrase, rename, or otherwise alter existing names unless the user explicitly asks you to do that.
-Exception: technical lookup fields such as "monsterName" must remain exact lookup names. Use official English bestiary names for official creatures, or exact custom creature names from INPUT DATA.customBestiary.monsterNames for custom creatures.`,
-			characterLevelContract,
-			markdownFormattingContract,
-		);
-		systemInstructionParts.push(
-			structuredJsonResponseContract,
-			operationTargetIdentityContract,
-		);
-	}
-	if (usesStructuredJsonContract && simplifiedNotesEnabled) {
-		systemInstructionParts.push(
-			`SIMPLIFIED NOTES MODE IS ENABLED. In all note arrays, return note objects with "text" and optional existing "id"; do not use "title" or "name" for notes. When using input notes as context, treat only their text as meaningful and ignore any title fields.`,
-		);
-	}
-	if (usesStructuredJsonContract) {
-		systemInstructionParts.push(
-			useKey === "custom-monster"
-				? customMonsterNoEntityLinksContract
-				: entityMentionContract,
-		);
-	}
-	if (
-		effectiveParseAIResponse &&
-		npcGenerationEnabled &&
-		["campaign", "scene", "npc"].includes(useKey)
-	) {
-		systemInstructionParts.push(generatedNpcDetailContract);
-	}
-	if (
-		effectiveParseAIResponse &&
-		locationGenerationEnabled &&
-		["campaign", "scene", "location"].includes(useKey)
-	) {
-		systemInstructionParts.push(generatedLocationDetailContract);
-	}
-	if (
-		effectiveParseAIResponse &&
-		useKey === "scene" &&
-		encounterGenerationEnabled
-	) {
-		systemInstructionParts.push(
-			sceneCombatMechanicsContract,
-			encounterSceneLinkContract,
-		);
-	}
-	if (effectiveParseAIResponse && useKey === "scene") {
-		systemInstructionParts.push(sceneDataContract, sessionNotesContract);
-	}
-	if (effectiveParseAIResponse && ["campaign", "scene"].includes(useKey)) {
-		systemInstructionParts.push(additiveEntityGenerationContract);
-	}
-	if (useKey === "scene" && encounterGenerationEnabled) {
-		systemInstructionParts.push(
-			`Encounter generation is enabled. Every created encounter MUST be paired with a scene create/update operation in the same response:
+const SCENE_ENCOUNTER_GENERATION_CONTRACT = `Encounter generation is enabled. Every created encounter MUST be paired with a scene create/update operation in the same response:
 1) { "op": "create", "entity": "encounter", "clientId": "encounter-1", "data": { "name": "...", "monsters": [{ "monsterName": "Official D&D Monster Name or exact custom creature name", "name": "Optional display name" }] } }
 2) { "op": "update", "entity": "scene", "id": "existing-scene-id", "patch": { "encounterClientId": "encounter-1" } }
 or
@@ -327,68 +243,16 @@ Do not output encounter create operations without "clientId".
 Do not invent a final encounter "id" for a new encounter. Link new encounters only through encounter create "clientId" and scene "encounterClientId".
 If combat is not needed, omit encounter operations.
 Pick monsters according to party level and party size from context. You may use custom creatures from INPUT DATA.customBestiary.monsterNames when they fit the scenario; use their names exactly in "monsterName".
-If user instructions specify encounter difficulty, follow that strictly.`,
-		);
-		if (customMonsterGenerationEnabled) {
-			systemInstructionParts.push(
-				`Custom monster generation is enabled, but official D&D monsters are preferred. Use official bestiary monsters when they fit the scene, theme, difficulty, and role. Create new custom monsters only when the scene needs a sufficiently unique creature that official D&D monsters do not represent well.
-If you create custom monsters, use "create" operations for entity "monster" and reference each new creature from encounters by its exact "name" in "monsterName".`,
-			);
-		} else {
-			systemInstructionParts.push(
-				`Custom monster generation is disabled. Do not output operations for entity "monster". Use official bestiary monsters or existing INPUT DATA.customBestiary.monsterNames only.`,
-			);
-		}
-	} else if (useKey === "scene") {
-		systemInstructionParts.push(
-			`Encounter generation is disabled. Do not create or edit combat encounters.`,
-		);
-	}
-	if (useKey === "encounter") {
-		if (customMonsterGenerationEnabled) {
-			systemInstructionParts.push(
-				`Custom monster generation is enabled for this encounter, but official D&D monsters are preferred. Use official bestiary monsters when they fit. Create new custom monsters only for sufficiently unique threats. If you create custom monsters, output "create" operations for entity "monster" before the encounter update operation, then reference each new creature by its exact "name" in encounter "monsterName".`,
-			);
-		} else {
-			systemInstructionParts.push(
-				`Custom monster generation is disabled. Do not output operations for entity "monster". Use official bestiary monsters or existing INPUT DATA.customBestiary.monsterNames only.`,
-			);
-		}
-	}
-	if (["campaign", "scene"].includes(useKey)) {
-		systemInstructionParts.push(
-			characterGenerationEnabled
-				? `Character generation is enabled. You may create, update, delete, or add notes to entity "character" only when the user explicitly asks for player characters.`
-				: `Character generation is disabled. Do not create, update, delete, move, or add notes to entity "character".`,
-		);
-		systemInstructionParts.push(
-			npcGenerationEnabled
-				? `NPC generation is enabled. You may create, update, delete, move, or add notes to entity "npc" only when the user explicitly asks for NPCs. Scene-local NPC references belong inside scene data or scene patch.`
-				: `NPC generation is disabled. Do not create, update, delete, move, or add notes to entity "npc" and do not add scene-local NPC references.`,
-		);
-		systemInstructionParts.push(
-			locationGenerationEnabled
-				? `Location/faction generation is enabled. You may create, update, delete, move, or add notes to entity "location" only when the user explicitly asks for locations, factions, organizations, landmarks, or regions.`
-				: `Location/faction generation is disabled. Do not create, update, delete, move, or add notes to entity "location".`,
-		);
-		if (useKey === "scene") {
-			systemInstructionParts.push(
-				entityTargetScope === "mixed"
-					? `ENTITY SCOPE: This session request may create both campaign-scoped and session-scoped NPC/location operations in one response. New NPCs and locations/factions are session-scoped by default. Set "scope": "session" unless the entity is clearly reusable campaign content. Set "scope": "campaign" only for wider-campaign entities. Never output "scope": "mixed". If you create a campaign-scoped NPC/location and it should belong only to the current session, immediately follow that create operation with moveScope from "campaign" to "session" using targetClientId.`
-					: entityTargetScope === "session"
-						? `ENTITY SCOPE: "npc" and "location" operations are session-scoped by default. Set "scope": "campaign" only for clearly reusable campaign content. If you create a campaign-scoped NPC/location during a session request and it should belong only to the current session, immediately follow that create operation with moveScope from "campaign" to "session" using targetClientId.`
-						: `ENTITY SCOPE: "npc" and "location" operations are campaign-scoped by default.`,
-			);
-		}
-	}
-	if (
-		effectiveParseAIResponse &&
-		entityTargetScope !== "campaign" &&
-		["scene", "npc", "location"].includes(useKey)
-	) {
-		systemInstructionParts.push(sessionEntityScopeDecisionContract);
-		systemInstructionParts.push(
-			`SESSION/CAMPAIGN ENTITY OUTPUT RULE:
+If user instructions specify encounter difficulty, follow that strictly.`;
+
+const SCENE_CUSTOM_MONSTER_ENABLED_CONTRACT = `Custom monster generation is enabled, but official D&D monsters are preferred. Use official bestiary monsters when they fit the scene, theme, difficulty, and role. Create new custom monsters only when the scene needs a sufficiently unique creature that official D&D monsters do not represent well.
+If you create custom monsters, use "create" operations for entity "monster" and reference each new creature from encounters by its exact "name" in "monsterName".`;
+
+const CUSTOM_MONSTER_DISABLED_CONTRACT = `Custom monster generation is disabled. Do not output operations for entity "monster". Use official bestiary monsters or existing INPUT DATA.customBestiary.monsterNames only.`;
+
+const ENCOUNTER_CUSTOM_MONSTER_ENABLED_CONTRACT = `Custom monster generation is enabled for this encounter, but official D&D monsters are preferred. Use official bestiary monsters when they fit. Create new custom monsters only for sufficiently unique threats. If you create custom monsters, output "create" operations for entity "monster" before the encounter update operation, then reference each new creature by its exact "name" in encounter "monsterName".`;
+
+const SESSION_CAMPAIGN_ENTITY_OUTPUT_CONTRACT = `SESSION/CAMPAIGN ENTITY OUTPUT RULE:
 Do not create session copies of campaign-scoped NPCs or campaign-scoped locations/factions.
 If existing INPUT DATA.campaign.npcs or INPUT DATA.campaign.locations are needed in scenes, notes, goals, stakes, or location text, refer to them with [Exact Entity Name] mentions inside text fields instead of creating "npc" or "location" operations.
 Set "scope" explicitly on every "npc" and "location" operation. Use only "campaign" or "session"; never use "mixed" as an operation scope.
@@ -396,30 +260,238 @@ Use "scope": "session" for genuinely new NPCs/locations/factions that are only n
 Use "scope": "campaign" only for reusable NPCs/locations/factions that should remain available across the campaign.
 Update INPUT DATA.currentSession entities by id when changing session-only entities. Update INPUT DATA.campaign entities by id only when the user asks to change the campaign entity itself.
 If the user request or the content's logical use means an existing campaign NPC/location/faction should become session-only, output moveScope with "from": "campaign" and "to": "session" for that existing id.
-If you create an NPC/location with "scope": "campaign" during a session request but it should belong only to this session, output a follow-up moveScope operation using the create operation's targetClientId.`,
-		);
+If you create an NPC/location with "scope": "campaign" during a session request but it should belong only to this session, output a follow-up moveScope operation using the create operation's targetClientId.`;
+
+const ENTITY_SCOPE_INSTRUCTIONS = new Map([
+	[
+		"mixed",
+		`ENTITY SCOPE: This session request may create both campaign-scoped and session-scoped NPC/location operations in one response. New NPCs and locations/factions are session-scoped by default. Set "scope": "session" unless the entity is clearly reusable campaign content. Set "scope": "campaign" only for wider-campaign entities. Never output "scope": "mixed". If you create a campaign-scoped NPC/location and it should belong only to the current session, immediately follow that create operation with moveScope from "campaign" to "session" using targetClientId.`,
+	],
+	[
+		"session",
+		`ENTITY SCOPE: "npc" and "location" operations are session-scoped by default. Set "scope": "campaign" only for clearly reusable campaign content. If you create a campaign-scoped NPC/location during a session request and it should belong only to the current session, immediately follow that create operation with moveScope from "campaign" to "session" using targetClientId.`,
+	],
+]);
+
+const DEFAULT_ENTITY_SCOPE_INSTRUCTION = `ENTITY SCOPE: "npc" and "location" operations are campaign-scoped by default.`;
+
+function appendLanguageInstruction(parts, options) {
+	if (options.useKey === "image") return;
+	parts.push(
+		`MANDATORY LANGUAGE RULE: Determine the response language from the text that appears after "USER INSTRUCTIONS (PRIORITY):". Write all user-visible output in that same language. If that text is empty or its language is ambiguous, use ${options.responseLanguage.label}.`,
+	);
+}
+
+function appendPromptLanguageException(parts, options) {
+	if (options.useKey === "prompt") parts.push(imagePromptLanguageContract);
+}
+
+function appendStructuredResponseContracts(parts, options) {
+	if (!options.usesStructuredJsonContract) return;
+	parts.push(
+		`NAME LANGUAGE RULE: Any new names you invent must use the language detected from "USER INSTRUCTIONS (PRIORITY):". If that text is empty or ambiguous, use ${options.responseLanguage.label}. This includes new character names, NPC names, place names, scene names, encounter names, aliases, titles, and display names.
+EXISTING NAME PROTECTION: Names that already exist in the input data must keep their exact original spelling and alphabet. Do not translate, transliterate, decline, paraphrase, rename, or otherwise alter existing names unless the user explicitly asks you to do that.
+Exception: technical lookup fields such as "monsterName" must remain exact lookup names. Use official English bestiary names for official creatures, or exact custom creature names from INPUT DATA.customBestiary.monsterNames for custom creatures.`,
+		characterLevelContract,
+		markdownFormattingContract,
+	);
+	parts.push(structuredJsonResponseContract, operationTargetIdentityContract);
+}
+
+function appendSimplifiedNotesContract(parts, options) {
+	if (!options.usesStructuredJsonContract || !options.simplifiedNotesEnabled) {
+		return;
 	}
-	const normalizedGlobalBasePrompt = String(globalBasePrompt || "").trim();
-	const normalizedCampaignBasePrompt = String(campaignBasePrompt || "").trim();
-	const normalizedImagePromptBasePrompt = String(
-		imagePromptBasePrompt || "",
-	).trim();
-	if (normalizedGlobalBasePrompt || normalizedCampaignBasePrompt) {
-		systemInstructionParts.push(
-			`USER BASE PROMPTS:
+	parts.push(
+		`SIMPLIFIED NOTES MODE IS ENABLED. In all note arrays, return note objects with "text" and optional existing "id"; do not use "title" or "name" for notes. When using input notes as context, treat only their text as meaningful and ignore any title fields.`,
+	);
+}
+
+function appendMentionContract(parts, options) {
+	if (!options.usesStructuredJsonContract) return;
+	parts.push(
+		options.useKey === "custom-monster"
+			? customMonsterNoEntityLinksContract
+			: entityMentionContract,
+	);
+}
+
+function appendGeneratedNpcDetail(parts, options) {
+	if (
+		options.effectiveParseAIResponse &&
+		options.npcGenerationEnabled &&
+		["campaign", "scene", "npc"].includes(options.useKey)
+	) {
+		parts.push(generatedNpcDetailContract);
+	}
+}
+
+function appendGeneratedLocationDetail(parts, options) {
+	if (
+		options.effectiveParseAIResponse &&
+		options.locationGenerationEnabled &&
+		["campaign", "scene", "location"].includes(options.useKey)
+	) {
+		parts.push(generatedLocationDetailContract);
+	}
+}
+
+function appendSceneCombatContracts(parts, options) {
+	if (
+		options.effectiveParseAIResponse &&
+		options.useKey === "scene" &&
+		options.encounterGenerationEnabled
+	) {
+		parts.push(sceneCombatMechanicsContract, encounterSceneLinkContract);
+	}
+}
+
+function appendSceneDataContracts(parts, options) {
+	if (options.effectiveParseAIResponse && options.useKey === "scene") {
+		parts.push(sceneDataContract, sessionNotesContract);
+	}
+}
+
+function appendAdditiveGenerationContract(parts, options) {
+	if (
+		options.effectiveParseAIResponse &&
+		["campaign", "scene"].includes(options.useKey)
+	) {
+		parts.push(additiveEntityGenerationContract);
+	}
+}
+
+function appendSceneEncounterPolicy(parts, options) {
+	if (options.useKey !== "scene") return;
+	if (!options.encounterGenerationEnabled) {
+		parts.push(
+			`Encounter generation is disabled. Do not create or edit combat encounters.`,
+		);
+		return;
+	}
+	parts.push(SCENE_ENCOUNTER_GENERATION_CONTRACT);
+	parts.push(
+		options.customMonsterGenerationEnabled
+			? SCENE_CUSTOM_MONSTER_ENABLED_CONTRACT
+			: CUSTOM_MONSTER_DISABLED_CONTRACT,
+	);
+}
+
+function appendEncounterCustomMonsterPolicy(parts, options) {
+	if (options.useKey !== "encounter") return;
+	parts.push(
+		options.customMonsterGenerationEnabled
+			? ENCOUNTER_CUSTOM_MONSTER_ENABLED_CONTRACT
+			: CUSTOM_MONSTER_DISABLED_CONTRACT,
+	);
+}
+
+function characterGenerationInstruction(enabled) {
+	return enabled
+		? `Character generation is enabled. You may create, update, delete, or add notes to entity "character" only when the user explicitly asks for player characters.`
+		: `Character generation is disabled. Do not create, update, delete, move, or add notes to entity "character".`;
+}
+
+function npcGenerationInstruction(enabled) {
+	return enabled
+		? `NPC generation is enabled. You may create, update, delete, move, or add notes to entity "npc" only when the user explicitly asks for NPCs. Scene-local NPC references belong inside scene data or scene patch.`
+		: `NPC generation is disabled. Do not create, update, delete, move, or add notes to entity "npc" and do not add scene-local NPC references.`;
+}
+
+function locationGenerationInstruction(enabled) {
+	return enabled
+		? `Location/faction generation is enabled. You may create, update, delete, move, or add notes to entity "location" only when the user explicitly asks for locations, factions, organizations, landmarks, or regions.`
+		: `Location/faction generation is disabled. Do not create, update, delete, move, or add notes to entity "location".`;
+}
+
+function entityScopeInstruction(entityTargetScope) {
+	return (
+		ENTITY_SCOPE_INSTRUCTIONS.get(entityTargetScope) ||
+		DEFAULT_ENTITY_SCOPE_INSTRUCTION
+	);
+}
+
+function appendEntityGenerationToggles(parts, options) {
+	if (!["campaign", "scene"].includes(options.useKey)) return;
+	parts.push(characterGenerationInstruction(options.characterGenerationEnabled));
+	parts.push(npcGenerationInstruction(options.npcGenerationEnabled));
+	parts.push(locationGenerationInstruction(options.locationGenerationEnabled));
+	if (options.useKey === "scene") {
+		parts.push(entityScopeInstruction(options.entityTargetScope));
+	}
+}
+
+function appendSessionEntityScopeContracts(parts, options) {
+	if (
+		!options.effectiveParseAIResponse ||
+		options.entityTargetScope === "campaign" ||
+		!["scene", "npc", "location"].includes(options.useKey)
+	) {
+		return;
+	}
+	parts.push(sessionEntityScopeDecisionContract);
+	parts.push(SESSION_CAMPAIGN_ENTITY_OUTPUT_CONTRACT);
+}
+
+function normalizeBasePrompt(value) {
+	return String(value || "").trim();
+}
+
+function appendUserBasePrompts(parts, globalBasePrompt, campaignBasePrompt) {
+	if (!globalBasePrompt && !campaignBasePrompt) return;
+	parts.push(
+		`USER BASE PROMPTS:
 These are standing user preferences for all current and future requests. Follow them for style, tone, world assumptions, constraints, and recurring DM preferences unless they conflict with higher-priority system rules, JSON contracts, entity scope rules, or the user's current request.
 GLOBAL BASE PROMPT:
-${normalizedGlobalBasePrompt || "(none)"}
+${globalBasePrompt || "(none)"}
 CAMPAIGN BASE PROMPT:
-${normalizedCampaignBasePrompt || "(none)"}`,
-		);
-	}
-	if (useKey === "image" && normalizedImagePromptBasePrompt) {
-		systemInstructionParts.push(
-			`IMAGE PROMPT BASE STYLE:
+${campaignBasePrompt || "(none)"}`,
+	);
+}
+
+function appendImageBasePrompt(parts, useKey, imagePromptBasePrompt) {
+	if (useKey !== "image" || !imagePromptBasePrompt) return;
+	parts.push(
+		`IMAGE PROMPT BASE STYLE:
 Append or incorporate this user-configured image style guidance into every generated image prompt unless the current user instructions explicitly override it:
-${normalizedImagePromptBasePrompt}`,
-		);
+${imagePromptBasePrompt}`,
+	);
+}
+
+function appendBasePromptInstructions(parts, options) {
+	const globalBasePrompt = normalizeBasePrompt(options.globalBasePrompt);
+	const campaignBasePrompt = normalizeBasePrompt(options.campaignBasePrompt);
+	const imagePromptBasePrompt = normalizeBasePrompt(
+		options.imagePromptBasePrompt,
+	);
+	appendUserBasePrompts(parts, globalBasePrompt, campaignBasePrompt);
+	appendImageBasePrompt(parts, options.useKey, imagePromptBasePrompt);
+}
+
+const SYSTEM_INSTRUCTION_APPEND_POLICIES = Object.freeze([
+	appendLanguageInstruction,
+	appendPromptLanguageException,
+	appendStructuredResponseContracts,
+	appendSimplifiedNotesContract,
+	appendMentionContract,
+	appendGeneratedNpcDetail,
+	appendGeneratedLocationDetail,
+	appendSceneCombatContracts,
+	appendSceneDataContracts,
+	appendAdditiveGenerationContract,
+	appendSceneEncounterPolicy,
+	appendEncounterCustomMonsterPolicy,
+	appendEntityGenerationToggles,
+	appendSessionEntityScopeContracts,
+	appendBasePromptInstructions,
+]);
+
+function buildSystemInstruction(options) {
+	const systemInstructionParts = [
+		systemInstructions[options.useKey] || systemInstructions.prompt,
+	];
+	for (const appendPolicy of SYSTEM_INSTRUCTION_APPEND_POLICIES) {
+		appendPolicy(systemInstructionParts, options);
 	}
 	return systemInstructionParts.join("\n\n");
 }

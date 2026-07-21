@@ -37,7 +37,7 @@ function wrapMentionsInText(text, names) {
 }
 
 function collapseNestedMentionBrackets(text) {
-	if (typeof text !== "string" || !text) return text;
+	if (!isNonEmptyString(text)) return text;
 	let output = text;
 
 	// Collapse repeated opening/closing mention brackets: [[Name]] -> [Name]
@@ -48,6 +48,10 @@ function collapseNestedMentionBrackets(text) {
 	}
 
 	return output;
+}
+
+function isNonEmptyString(value) {
+	return typeof value === "string" && Boolean(value);
 }
 
 function normalizeNameForMatch(value) {
@@ -124,17 +128,24 @@ const AI_OPERATION_IDENTIFIER_KEYS = new Set([
 ]);
 
 function processOperationTextMentions(value, names, key = "") {
-	if (typeof value === "string") {
-		if (AI_OPERATION_IDENTIFIER_KEYS.has(key)) return value;
-		if (!AI_OPERATION_TEXT_KEYS.has(key)) return value;
-		return processGeneratedTextMentions(value, names);
-	}
+	if (typeof value === "string") return processOperationStringMention(value, names, key);
 	if (Array.isArray(value)) {
 		return value.map((item) => processOperationTextMentions(item, names, key));
 	}
-	if (!value || typeof value !== "object") return value;
+	return processOperationObjectMentions(value, names);
+}
+
+function processOperationStringMention(value, names, key) {
+	if (AI_OPERATION_IDENTIFIER_KEYS.has(key)) return value;
+	if (!AI_OPERATION_TEXT_KEYS.has(key)) return value;
+	return processGeneratedTextMentions(value, names);
+}
+
+function processOperationObjectMentions(value, names) {
+	const record = asOptionalRecord(value);
+	if (!record) return value;
 	return Object.fromEntries(
-		Object.entries(value).map(([entryKey, entryValue]) => [
+		Object.entries(record).map(([entryKey, entryValue]) => [
 			entryKey,
 			processOperationTextMentions(entryValue, names, entryKey),
 		]),
@@ -142,125 +153,148 @@ function processOperationTextMentions(value, names, key = "") {
 }
 
 function applyMentionsToGeneratedContent(generatedContent, names) {
-	if (
-		!generatedContent ||
-		typeof generatedContent !== "object" ||
-		!names.length
-	) {
-		return generatedContent;
-	}
-
-	if (Array.isArray(generatedContent.operations)) {
-		generatedContent.operations = generatedContent.operations.map((operation) =>
-			processOperationTextMentions(operation, names),
-		);
-	}
+	const record = asOptionalRecord(generatedContent);
+	if (!record) return generatedContent;
+	if (!names.length) return generatedContent;
+	applyMentionsToOperations(record, names);
 	return generatedContent;
 }
 
+function applyMentionsToOperations(generatedContent, names) {
+	if (!Array.isArray(generatedContent.operations)) return;
+	generatedContent.operations = generatedContent.operations.map((operation) =>
+		processOperationTextMentions(operation, names),
+	);
+}
+
 function collectMentionCandidates(generatedContent, contextData = {}) {
-	const names = [];
-	const campaignContext = contextData?.campaign || {};
-	const currentSessionData = contextData?.currentSession?.data || {};
+	return normalizeMentionCandidates([
+		...collectCampaignContextCandidates(contextData),
+		...collectCurrentSessionCandidates(contextData),
+		...collectConfiguredSessionCandidates(contextData),
+		...collectGeneratedEntityCandidates(generatedContent),
+		...collectGeneratedOperationCandidates(generatedContent),
+	]);
+}
 
-	if (Array.isArray(campaignContext.characters)) {
-		names.push(...campaignContext.characters.map(getCharacterDisplayName));
-	}
-	if (Array.isArray(campaignContext.npcs)) {
-		names.push(...campaignContext.npcs.map(getCharacterDisplayName));
-	}
-	if (Array.isArray(campaignContext.locations)) {
-		names.push(...campaignContext.locations.map(getLocationDisplayName));
-	}
-	if (Array.isArray(currentSessionData.npcs)) {
-		names.push(...currentSessionData.npcs.map(getCharacterDisplayName));
-	}
-	if (Array.isArray(currentSessionData.locations)) {
-		names.push(...currentSessionData.locations.map(getLocationDisplayName));
-	}
-	if (Array.isArray(currentSessionData.scenes)) {
-		for (const scene of currentSessionData.scenes) {
-			for (const npc of scene?.npcs || []) {
-				names.push(asText(npc?.name));
-			}
-		}
-	}
+function collectCampaignContextCandidates(contextData) {
+	const campaign = asRecord(contextData?.campaign);
+	return [
+		...mapDisplayNames(campaign.characters, getCharacterDisplayName),
+		...mapDisplayNames(campaign.npcs, getCharacterDisplayName),
+		...mapDisplayNames(campaign.locations, getLocationDisplayName),
+	];
+}
 
-	for (const sessionContext of contextData?.sessions || []) {
-		const conf = sessionContext?.conf || {};
-		const data = sessionContext?.data || {};
-		if (!conf.included) continue;
+function collectCurrentSessionCandidates(contextData) {
+	const data = asRecord(asRecord(contextData?.currentSession).data);
+	return [
+		...mapDisplayNames(data.npcs, getCharacterDisplayName),
+		...mapDisplayNames(data.locations, getLocationDisplayName),
+		...collectSceneNpcNames(data.scenes),
+	];
+}
 
-		if (Array.isArray(data.npcs)) {
-			names.push(...data.npcs.map(getCharacterDisplayName));
-		}
-		if (Array.isArray(data.locations)) {
-			names.push(...data.locations.map(getLocationDisplayName));
-		}
-		if (!Array.isArray(data.scenes)) continue;
+function collectConfiguredSessionCandidates(contextData) {
+	return asArray(contextData?.sessions).flatMap(collectConfiguredSessionCandidateNames);
+}
 
-		const hasSceneConfig =
-			conf.scenes &&
-			typeof conf.scenes === "object" &&
-			Object.keys(conf.scenes).length > 0;
+function collectConfiguredSessionCandidateNames(sessionContext) {
+	const session = asRecord(sessionContext);
+	const conf = asRecord(session.conf);
+	if (!conf.included) return [];
+	const data = asRecord(session.data);
+	return [
+		...mapDisplayNames(data.npcs, getCharacterDisplayName),
+		...mapDisplayNames(data.locations, getLocationDisplayName),
+		...collectConfiguredSceneNpcNames(data.scenes, conf.scenes),
+	];
+}
 
-		for (const scene of data.scenes) {
-			if (hasSceneConfig && !conf.scenes[scene.id]?.included) continue;
-			for (const npc of scene?.npcs || []) {
-				names.push(asText(npc?.name));
-			}
-		}
+function collectConfiguredSceneNpcNames(scenes, sceneConfigValue) {
+	const sceneConfig = asRecord(sceneConfigValue);
+	const hasSceneConfig = Object.keys(sceneConfig).length > 0;
+	return asArray(scenes)
+		.filter((scene) => isConfiguredSceneIncluded(scene, sceneConfig, hasSceneConfig))
+		.flatMap((scene) => collectSceneNpcNames([scene]));
+}
+
+function isConfiguredSceneIncluded(scene, sceneConfig, hasSceneConfig) {
+	if (!hasSceneConfig) return true;
+	const sceneId = asRecord(scene).id;
+	return Boolean(asRecord(sceneConfig[sceneId]).included);
+}
+
+function collectGeneratedEntityCandidates(generatedContent) {
+	const generated = asRecord(generatedContent);
+	return [
+		...mapDisplayNames(generated.characters, getCharacterDisplayName),
+		...mapDisplayNames(generated.npcs, getCharacterDisplayName),
+		...mapDisplayNames(generated.locations, getLocationDisplayName),
+		...collectSceneNpcNames(generated.scenes),
+	];
+}
+
+function collectGeneratedOperationCandidates(generatedContent) {
+	return asArray(asRecord(generatedContent).operations).flatMap(
+		collectGeneratedOperationCandidateNames,
+	);
+}
+
+function collectGeneratedOperationCandidateNames(operationValue) {
+	const operation = asRecord(operationValue);
+	const data = getOperationEntityData(operation);
+	if (!data) return [];
+	return getOperationEntityCandidateNames(asText(operation.entity).toLowerCase(), data);
+}
+
+function getOperationEntityData(operation) {
+	return asOptionalRecord(operation.data) || asOptionalRecord(operation.patch);
+}
+
+const CHARACTER_OPERATION_ENTITIES = new Set([
+	"character",
+	"characters",
+	"npc",
+	"npcs",
+]);
+const LOCATION_OPERATION_ENTITIES = new Set([
+	"location",
+	"locations",
+	"faction",
+	"factions",
+]);
+
+function getOperationEntityCandidateNames(entity, data) {
+	if (CHARACTER_OPERATION_ENTITIES.has(entity)) {
+		return [getCharacterDisplayName(data)];
 	}
-
-	if (Array.isArray(generatedContent?.characters)) {
-		for (const character of generatedContent.characters) {
-			names.push(getCharacterDisplayName(character));
-		}
+	if (LOCATION_OPERATION_ENTITIES.has(entity)) {
+		return [getLocationDisplayName(data)];
 	}
+	return entity === "scene" ? collectSceneNpcNames([data]) : [];
+}
 
-	if (Array.isArray(generatedContent?.npcs)) {
-		for (const npc of generatedContent.npcs) {
-			names.push(getCharacterDisplayName(npc));
-		}
-	}
+function collectSceneNpcNames(scenes) {
+	return asArray(scenes).flatMap((scene) =>
+		asArray(asRecord(scene).npcs).map((npc) => asText(asRecord(npc).name)),
+	);
+}
 
-	if (Array.isArray(generatedContent?.locations)) {
-		for (const location of generatedContent.locations) {
-			names.push(getLocationDisplayName(location));
-		}
-	}
+function mapDisplayNames(value, getDisplayName) {
+	return asArray(value).map(getDisplayName);
+}
 
-	if (Array.isArray(generatedContent?.scenes)) {
-		for (const scene of generatedContent.scenes) {
-			for (const npc of scene?.npcs || []) {
-				names.push(asText(npc?.name));
-			}
-		}
-	}
+function asArray(value) {
+	return Array.isArray(value) ? value : [];
+}
 
-	if (Array.isArray(generatedContent?.operations)) {
-		for (const operation of generatedContent.operations) {
-			const data =
-				operation?.data && typeof operation.data === "object"
-					? operation.data
-					: operation?.patch && typeof operation.patch === "object"
-						? operation.patch
-						: null;
-			if (!data) continue;
-			const entity = asText(operation.entity).toLowerCase();
-			if (["character", "characters", "npc", "npcs"].includes(entity)) {
-				names.push(getCharacterDisplayName(data));
-			} else if (
-				["location", "locations", "faction", "factions"].includes(entity)
-			) {
-				names.push(getLocationDisplayName(data));
-			} else if (entity === "scene" && Array.isArray(data.npcs)) {
-				for (const npc of data.npcs) names.push(asText(npc?.name));
-			}
-		}
-	}
+function asOptionalRecord(value) {
+	return value && typeof value === "object" ? value : null;
+}
 
-	return normalizeMentionCandidates(names);
+function asRecord(value) {
+	return asOptionalRecord(value) || {};
 }
 
 module.exports = {

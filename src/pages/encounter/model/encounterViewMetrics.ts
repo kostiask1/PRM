@@ -8,11 +8,12 @@ export function parseChallengeRating(
 ): number {
 	const crValue = getChallengeRatingValue(monster.cr);
 	if (typeof crValue === "number") return crValue;
+	return parseChallengeRatingText(String(crValue || "0").trim());
+}
 
-	const crText = String(crValue || "0").trim();
-	return crText.includes("/")
-		? parseFractionalChallengeRating(crText)
-		: Number.parseFloat(crText) || 0;
+function parseChallengeRatingText(value: string): number {
+	if (value.includes("/")) return parseFractionalChallengeRating(value);
+	return Number.parseFloat(value) || 0;
 }
 
 function getChallengeRatingValue(value: unknown): unknown {
