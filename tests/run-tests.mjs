@@ -354,14 +354,31 @@ import {
 } from "../src/features/editor/model.js";
 import {
 	applyInputBlockEdit,
+	createEditableFieldChangeEvent,
 	filterMentionEntities,
+	getEditableClickPlan,
+	getEditableCopyRequest,
+	getEditableKeyDownPlan,
+	getEditableMentionName,
 	getEditableShortcutAction,
+	getInitialInputSelectionPosition,
+	getInputBracketPasteEdit,
+	getInputClassPresentation,
+	getInputMentionCursorPosition,
+	getInputMentionInsertion,
+	getInputRawValue,
 	getInputShortcutAction,
+	getInputShortcutExecutionPlan,
+	getLexicalEditableFieldViewPresentation,
 	groupMentionEntities,
+	hasEditableLinkTarget,
 	insertInputTab,
 	isRangeInsideSquareBrackets,
 	normalizeEditableMarkdown,
 	resolveInitialCursorPosition,
+	shouldActivateEditableMention,
+	shouldDelegateEditableHistory,
+	shouldInsertEditableMentionResult,
 	toggleInputFormat,
 	toggleInputMention,
 } from "../src/features/editor/ui/editorPresentation.ts";
@@ -819,10 +836,16 @@ import {
 	loadRulesLinkPreview,
 	resolveRulesLinkNavigation,
 } from "../src/features/rules-reference/model/rulesLink.ts";
+import * as updaterPolicies from "../scripts/update-5etools-data-policies.mjs";
+import { create5eToolsUpdater } from "../scripts/update-5etools-data-runtime.mjs";
+import * as databaseBundlePolicies from "../scripts/build-database-bundles-policies.mjs";
 
 const require = createRequire(import.meta.url);
 const crypto = require("crypto");
 const storage = require("../server/storage.js");
+const bestiaryUtils = require("../shared/bestiaryUtils.cjs");
+const searchResults = require("../server/modules/search/application/searchResults.js");
+const campaignMentionReferences = require("../server/modules/campaign/infrastructure/campaignMentionReferences.js");
 const { realtimeMiddleware, setupRealtime } = require("../server/realtime.js");
 const spellsRouter = require("../server/routes/spells.js");
 const backupsRouter = require("../server/routes/backups.js");
@@ -833,9 +856,8 @@ const aiService = require("../server/aiService.js");
 const {
 	buildPromptContext,
 } = require("../server/modules/ai/application/buildPromptContext.js");
-const {
-	buildUserPrompt,
-} = require("../server/modules/ai/application/buildUserPrompt.js");
+const userPromptPolicies = require("../server/modules/ai/application/buildUserPrompt.js");
+const { buildTaskInstructions, buildUserPrompt } = userPromptPolicies;
 const {
 	buildSystemInstruction,
 	systemInstructions,
@@ -843,12 +865,20 @@ const {
 const {
 	createGeminiGateway,
 } = require("../server/modules/ai/infrastructure/geminiGateway.js");
+const attachmentParts = require("../server/modules/ai/infrastructure/attachmentParts.js");
 const {
 	buildFileParts,
-} = require("../server/modules/ai/infrastructure/attachmentParts.js");
+	buildImageParts,
+	collectImageUrls,
+	resolveLocalImageUrl,
+} = attachmentParts;
+const aiResponseParser = require("../server/modules/ai/application/parseAiResponse.js");
 const {
+	extractFirstJsonObject,
+	normalizeEscapedNewLines,
 	parseAiResponseText,
-} = require("../server/modules/ai/application/parseAiResponse.js");
+	stripOuterJsonFence,
+} = aiResponseParser;
 const {
 	normalizeModelName,
 	normalizeResponseLanguage,
@@ -871,6 +901,7 @@ const {
 } = require("../server/modules/ai/application/generateCampaignContent.js");
 const {
 	createAppendConfiguredCampaignContext,
+	filterSessionDataForAiContext,
 } = require("../server/modules/ai/application/campaignContext.js");
 const {
 	createAiHistoryRepositoryPort,
@@ -878,12 +909,18 @@ const {
 const {
 	createFileAiHistoryRepository,
 } = require("../server/modules/ai/infrastructure/fileAiHistoryRepository.js");
+const aiHistoryCommandsModule = require(
+	"../server/modules/ai/application/aiHistoryCommands.js",
+);
 const {
 	createAiHistoryCommands,
-} = require("../server/modules/ai/application/aiHistoryCommands.js");
-const {
-	createGenerateAiRequest,
-} = require("../server/modules/ai/application/generateAiRequest.js");
+	patchDraftAiChanges,
+	preserveExistingIds,
+} = aiHistoryCommandsModule;
+const generateAiRequestModule = require(
+	"../server/modules/ai/application/generateAiRequest.js",
+);
+const { createGenerateAiRequest } = generateAiRequestModule;
 const {
 	createSaveGeminiApiKey,
 } = require("../server/modules/ai/application/saveGeminiApiKey.js");
@@ -892,14 +929,24 @@ const {
 	updateEnvValue,
 } = require("../server/modules/ai/infrastructure/envApiKeyStore.js");
 const {
+	CAMPAIGN_ENTITY_TYPES,
 	createCampaignEntityCommands,
+	getEntityDisplayName: getServerCampaignEntityDisplayName,
 } = require("../server/modules/campaign/application/campaignEntityCommands.js");
 const {
 	createCampaignCommands,
 } = require("../server/modules/campaign/application/campaignCommands.js");
+const bestiaryCommandsModule = require(
+	"../server/modules/bestiary/application/bestiaryCommands.js",
+);
 const {
+	CUSTOM_SOURCE: BESTIARY_CUSTOM_SOURCE,
+	buildReplacementCustomMonster: buildBestiaryReplacementMonster,
 	createBestiaryCommands,
-} = require("../server/modules/bestiary/application/bestiaryCommands.js");
+	findCustomMonsterIndex,
+	normalizeSource: normalizeBestiarySource,
+	resolveLegendaryGroups,
+} = bestiaryCommandsModule;
 const {
 	createSettingsCommands,
 } = require("../server/modules/settings/application/settingsCommands.js");
@@ -917,12 +964,17 @@ const {
 	createBackupCommands,
 	parseArchivePayload,
 } = require("../server/modules/backups/application/backupCommands.js");
+const archiveImageRestoration = require("../server/modules/backups/infrastructure/archiveImageRestoration.js");
 const {
 	createCampaignEntityScopeCommands,
 } = require("../server/modules/campaign/application/campaignEntityScopeCommands.js");
+const sceneEncounterCommandModule = require(
+	"../server/modules/session/application/createSceneEncounter.js",
+);
 const {
 	createSceneEncounterCommand,
-} = require("../server/modules/session/application/createSceneEncounter.js");
+	findById: findSceneEncounterById,
+} = sceneEncounterCommandModule;
 const {
 	createUpdateEncounterCommand,
 } = require("../server/modules/session/application/updateEncounter.js");
@@ -945,6 +997,7 @@ const { buildAiChangeSummary } = require("../server/ai/aiChangeSummary.js");
 const { AiHistoryWriter } = require("../server/ai/AiHistoryWriter.js");
 const aiPayloadSchemas = require("../server/aiPayloadSchemas.js");
 const {
+	EncounterLocalMonsterAiFlow,
 	buildLocalEncounterMonsterSessionChange,
 } = require("../server/ai/EncounterLocalMonsterAiFlow.js");
 
@@ -1024,6 +1077,740 @@ await run("JSON helpers validate object and string payloads", () => {
 	assert.equal(isJsonString('{"a":1}'), false);
 	assert.equal(isJsonString("not-json"), false);
 });
+
+await run(
+	"shared search ranking preserves lazy mutation tiers and malformed boundaries",
+	() => {
+		assert.deepEqual(Object.keys(searchResults), ["sortByNameQuery"]);
+		const { sortByNameQuery } = searchResults;
+
+		let lazySortReads = 0;
+		const lazyResults = {
+			get sort() {
+				lazySortReads += 1;
+				throw new Error("Falsy query must not inspect results");
+			},
+		};
+		for (const query of [undefined, null, "", 0, false, Number.NaN]) {
+			assert.equal(sortByNameQuery(lazyResults, query), undefined);
+		}
+		assert.equal(lazySortReads, 0);
+
+		const ranked = [
+			{ id: "prefix", name: "alphabet" },
+			{ id: "longer", name: "beta" },
+			{ id: "exact-first", name: "Alpha" },
+			{ id: "short", name: "al" },
+			{ id: "accented", name: "Áльфа" },
+			{ id: "empty", name: null },
+			{ id: "missing" },
+			{ id: "middle", name: "alp" },
+			{ id: "exact-second", name: "alpha" },
+		];
+		assert.equal(sortByNameQuery(ranked, "alpha"), undefined);
+		assert.deepEqual(
+			ranked.map((item) => item.id),
+			[
+				"exact-first",
+				"exact-second",
+				"prefix",
+				"empty",
+				"missing",
+				"short",
+				"middle",
+				"longer",
+				"accented",
+			],
+		);
+
+		const rawQueryResults = [
+			{ id: "long", name: "alpha" },
+			{ id: "short", name: "a" },
+		];
+		sortByNameQuery(rawQueryResults, "ALPHA");
+		assert.deepEqual(
+			rawQueryResults.map((item) => item.id),
+			["short", "long"],
+		);
+
+		const calls = [];
+		const lowerA = {
+			startsWith(query) {
+				calls.push(["a:startsWith", query]);
+				return false;
+			},
+			get length() {
+				calls.push(["a:length"]);
+				return 5;
+			},
+			localeCompare(other) {
+				calls.push(["a:localeCompare", other]);
+				return -7;
+			},
+		};
+		const lowerB = {
+			startsWith(query) {
+				calls.push(["b:startsWith", query]);
+				return false;
+			},
+			get length() {
+				calls.push(["b:length"]);
+				return 5;
+			},
+		};
+		const left = {
+			get name() {
+				calls.push(["a:name"]);
+				return {
+					toLowerCase() {
+						calls.push(["a:lower"]);
+						return lowerA;
+					},
+				};
+			},
+		};
+		const right = {
+			get name() {
+				calls.push(["b:name"]);
+				return {
+					toLowerCase() {
+						calls.push(["b:lower"]);
+						return lowerB;
+					},
+				};
+			},
+		};
+		let comparatorResult = null;
+		const delegatedResults = {
+			sort(comparator) {
+				calls.push(["sort"]);
+				comparatorResult = comparator(left, right);
+				return "ignored sort result";
+			},
+		};
+		assert.equal(sortByNameQuery(delegatedResults, "needle"), undefined);
+		assert.equal(comparatorResult, -7);
+		assert.deepEqual(calls, [
+			["sort"],
+			["a:name"],
+			["a:lower"],
+			["b:name"],
+			["b:lower"],
+			["a:startsWith", "needle"],
+			["b:startsWith", "needle"],
+			["a:length"],
+			["b:length"],
+			["a:localeCompare", lowerB],
+		]);
+
+		assert.throws(() => sortByNameQuery(null, "x"), TypeError);
+		assert.throws(() => sortByNameQuery({}, "x"), TypeError);
+		assert.throws(
+			() => sortByNameQuery([null, { name: "x" }], "x"),
+			TypeError,
+		);
+		assert.throws(
+			() => sortByNameQuery([{ name: 7 }, { name: "x" }], "x"),
+			TypeError,
+		);
+		assert.throws(
+			() => sortByNameQuery([{ name: "a" }, { name: "b" }], Symbol("q")),
+			TypeError,
+		);
+		const lowerError = new Error("lowercase failed");
+		assert.throws(
+			() =>
+				sortByNameQuery(
+					[
+						{
+							name: {
+								toLowerCase() {
+									throw lowerError;
+								},
+							},
+						},
+						{ name: "x" },
+					],
+					"x",
+				),
+			lowerError,
+		);
+	},
+);
+
+await run(
+	"campaign mention policies preserve recursive projection and malformed boundaries",
+	() => {
+		assert.deepEqual(Object.keys(campaignMentionReferences), [
+			"createCampaignMentionReferenceUpdater",
+			"normalizeMentionName",
+			"replaceBracketedMentionNames",
+			"replaceMentionsInValue",
+		]);
+		const {
+			normalizeMentionName: normalizeServerMentionName,
+			replaceBracketedMentionNames: replaceServerBracketedMentionNames,
+			replaceMentionsInValue: replaceServerMentionsInValue,
+		} = campaignMentionReferences;
+
+		assert.equal(normalizeServerMentionName("  Старе \n ім'я  "), "старе ім'я");
+		for (const value of [undefined, null, "", 0, false, Number.NaN]) {
+			assert.equal(normalizeServerMentionName(value), "");
+		}
+		assert.equal(
+			replaceServerBracketedMentionNames(
+				"Meet [ OLD \n NAME ][old name], [Other], [], and [[Old Name]].",
+				" old name ",
+				"  Нове \t Ім'я  ",
+			),
+			"Meet [Нове Ім'я][Нове Ім'я], [Other], [], and [[Нове Ім'я]].",
+		);
+		assert.equal(
+			replaceServerBracketedMentionNames("[Old Name]", "", "New Name"),
+			"[Old Name]",
+		);
+		assert.equal(
+			replaceServerBracketedMentionNames("[Old Name]", "Old Name", " "),
+			"[Old Name]",
+		);
+		const nonString = { text: "[Old Name]" };
+		assert.equal(
+			replaceServerBracketedMentionNames(nonString, "Old Name", "New Name"),
+			nonString,
+		);
+
+		const symbolKey = Symbol("hidden");
+		const inherited = { inherited: "[Old Name]" };
+		const source = Object.create(inherited);
+		let getterReads = 0;
+		source.text = "[Old Name]";
+		source[symbolKey] = "[Old Name]";
+		Object.defineProperty(source, "derived", {
+			enumerable: true,
+			get() {
+				getterReads += 1;
+				return { note: "[ old   name ]" };
+			},
+		});
+		const sparse = new Array(3);
+		sparse[1] = source;
+		const callback = () => "[Old Name]";
+		const projected = replaceServerMentionsInValue(
+			{ sparse, callback, date: new Date(0) },
+			"Old Name",
+			"New Name",
+		);
+		assert.equal(getterReads, 1);
+		assert.notEqual(projected.sparse, sparse);
+		assert.notEqual(projected.sparse[1], source);
+		assert.equal(0 in projected.sparse, false);
+		assert.equal(1 in projected.sparse, true);
+		assert.equal(2 in projected.sparse, false);
+		assert.equal(Object.getPrototypeOf(projected.sparse[1]), Object.prototype);
+		assert.deepEqual(projected.sparse[1], {
+			text: "[New Name]",
+			derived: { note: "[New Name]" },
+		});
+		assert.equal(projected.sparse[1][symbolKey], undefined);
+		assert.equal(projected.sparse[1].inherited, undefined);
+		assert.equal(projected.callback, callback);
+		assert.deepEqual(projected.date, {});
+		assert.equal(replaceServerMentionsInValue(null, "a", "b"), null);
+		assert.equal(replaceServerMentionsInValue(7, "a", "b"), 7);
+
+		const circular = {};
+		circular.self = circular;
+		assert.throws(
+			() => replaceServerMentionsInValue(circular, "Old Name", "New Name"),
+			RangeError,
+		);
+		const getterFailure = new Error("mention getter failed");
+		assert.throws(
+			() =>
+				replaceServerMentionsInValue(
+					{
+						get text() {
+							throw getterFailure;
+						},
+					},
+					"Old Name",
+					"New Name",
+				),
+			getterFailure,
+		);
+	},
+);
+
+await run(
+	"campaign mention updater preserves lazy guards and sequential persistence",
+	async () => {
+		const { createCampaignMentionReferenceUpdater } =
+			campaignMentionReferences;
+		const forbiddenDependencies = {
+			entityTypes: ["characters"],
+			campaignMetaPath() {
+				throw new Error("invalid rename must remain filesystem-lazy");
+			},
+		};
+		const lazyUpdater = createCampaignMentionReferenceUpdater(
+			forbiddenDependencies,
+		);
+		const guardCalls = [];
+		const trackedName = (label, value) => ({
+			toString() {
+				guardCalls.push(label);
+				return value;
+			},
+		});
+		assert.equal(
+			await lazyUpdater("campaign", trackedName("old", " "), "new"),
+			undefined,
+		);
+		assert.deepEqual(guardCalls, ["old"]);
+		guardCalls.length = 0;
+		assert.equal(
+			await lazyUpdater(
+				"campaign",
+				trackedName("old", "Old"),
+				trackedName("new", " "),
+			),
+			undefined,
+		);
+		assert.deepEqual(guardCalls, ["old", "new"]);
+		guardCalls.length = 0;
+		assert.equal(
+			await lazyUpdater(
+				"campaign",
+				trackedName("old", " Old "),
+				trackedName("new", "old"),
+			),
+			undefined,
+		);
+		assert.deepEqual(guardCalls, ["old", "new", "old", "new"]);
+
+		const absentMetaEvents = [];
+		const absentMetaUpdater = createCampaignMentionReferenceUpdater({
+			entityTypes: [],
+			campaignMetaPath(slug) {
+				absentMetaEvents.push(`metaPath:${slug}`);
+				return "missing-meta";
+			},
+			async exists(filePath) {
+				absentMetaEvents.push(`exists:${filePath}`);
+				return false;
+			},
+			async listSessions(slug) {
+				absentMetaEvents.push(`listSessions:${slug}`);
+				return [];
+			},
+		});
+		await absentMetaUpdater("campaign", "Old Name", "New Name");
+		assert.deepEqual(absentMetaEvents, [
+			"metaPath:campaign",
+			"exists:missing-meta",
+			"listSessions:campaign",
+		]);
+
+		const events = [];
+		const values = {
+			meta: { text: "[Old Name]" },
+			"session:first.json": { text: "[ old name ]" },
+			"session:second.json": { text: "[Other]" },
+		};
+		const originalEntity = {
+			slug: "villain",
+			text: "[Old Name]",
+			toJSON() {
+				events.push(this === originalEntity ? "stringify:current" : "stringify:next");
+				return { slug: this.slug, text: this.text };
+			},
+		};
+		const updater = createCampaignMentionReferenceUpdater({
+			entityTypes: ["characters", "npc", "locations"],
+			campaignMetaPath(slug) {
+				events.push(`metaPath:${slug}`);
+				return "meta";
+			},
+			async exists(filePath) {
+				events.push(`exists:${filePath}`);
+				return true;
+			},
+			async readJson(filePath) {
+				events.push(`read:${filePath}`);
+				return values[filePath];
+			},
+			async writeJson(filePath, value) {
+				events.push(`writeJson:${filePath}:${value.text}`);
+			},
+			async listEntities(slug, type) {
+				events.push(`listEntities:${slug}:${type}`);
+				if (type === "characters") {
+					return [{ slug: "hero", text: "[Other]" }];
+				}
+				if (type === "npc") return [originalEntity];
+				return [];
+			},
+			async writeEntity(slug, type, entitySlug, value) {
+				events.push(
+					`writeEntity:${slug}:${type}:${entitySlug}:${value.text}`,
+				);
+			},
+			async listSessions(slug) {
+				events.push(`listSessions:${slug}`);
+				return [{ fileName: "first.json" }, { fileName: "second.json" }];
+			},
+			sessionPath(slug, fileName) {
+				events.push(`sessionPath:${slug}:${fileName}`);
+				return `session:${fileName}`;
+			},
+		});
+		assert.equal(
+			await updater("campaign", "Old Name", "  Нове \t Ім'я  "),
+			undefined,
+		);
+		assert.deepEqual(events, [
+			"metaPath:campaign",
+			"exists:meta",
+			"read:meta",
+			"writeJson:meta:[Нове Ім'я]",
+			"listEntities:campaign:characters",
+			"listEntities:campaign:npc",
+			"stringify:next",
+			"stringify:current",
+			"writeEntity:campaign:npc:villain:[Нове Ім'я]",
+			"listEntities:campaign:locations",
+			"listSessions:campaign",
+			"sessionPath:campaign:first.json",
+			"read:session:first.json",
+			"writeJson:session:first.json:[Нове Ім'я]",
+			"sessionPath:campaign:second.json",
+			"read:session:second.json",
+		]);
+
+		const failure = new Error("entity write failed");
+		const failureEvents = [];
+		const failingUpdater = createCampaignMentionReferenceUpdater({
+			entityTypes: ["characters", "npc"],
+			campaignMetaPath() {
+				failureEvents.push("metaPath");
+				return "meta";
+			},
+			async exists() {
+				failureEvents.push("exists");
+				return true;
+			},
+			async readJson() {
+				failureEvents.push("readMeta");
+				return { text: "[Old Name]" };
+			},
+			async writeJson() {
+				failureEvents.push("writeMeta");
+			},
+			async listEntities(_slug, type) {
+				failureEvents.push(`list:${type}`);
+				return [{ slug: "hero", text: "[Old Name]" }];
+			},
+			async writeEntity() {
+				failureEvents.push("writeEntity");
+				throw failure;
+			},
+			async listSessions() {
+				failureEvents.push("listSessions");
+				return [];
+			},
+			sessionPath() {
+				failureEvents.push("sessionPath");
+				return "session";
+			},
+		});
+		await assert.rejects(
+			failingUpdater("campaign", "Old Name", "New Name"),
+			failure,
+		);
+		assert.deepEqual(failureEvents, [
+			"metaPath",
+			"exists",
+			"readMeta",
+			"writeMeta",
+			"list:characters",
+			"writeEntity",
+		]);
+	},
+);
+
+await run(
+	"archive image restoration preserves path guards decoding and sequential writes",
+	async () => {
+		assert.deepEqual(Object.keys(archiveImageRestoration), [
+			"createCampaignArchiveImageRestorer",
+		]);
+		const { createCampaignArchiveImageRestorer } = archiveImageRestoration;
+		const events = [];
+		const imagesDir = path.resolve("virtual-archive-images");
+		const root = path.join(imagesDir, "кампанія");
+		const relativeToRoot = (targetPath) =>
+			path.relative(root, targetPath).split(path.sep).join("/") || ".";
+		const relativeDirectoryToRoot = (targetPath) =>
+			path.relative(root, targetPath).split(path.sep).join("/") || ".";
+		const restorer = createCampaignArchiveImageRestorer({
+			imagesDir,
+			async ensureDir(dirPath) {
+				events.push(["ensure", relativeDirectoryToRoot(dirPath)]);
+			},
+			async writeFile(targetPath, buffer) {
+				assert.equal(Buffer.isBuffer(buffer), true);
+				events.push([
+					"write",
+					relativeToRoot(targetPath),
+					buffer.toString("hex"),
+				]);
+			},
+		});
+		const lazySlug = {
+			toString() {
+				events.push(["slug:unexpected"]);
+				throw new Error("empty inputs must not coerce slug");
+			},
+		};
+		assert.equal(await restorer(lazySlug), undefined);
+		assert.equal(await restorer(lazySlug, null), undefined);
+		assert.equal(
+			await restorer(lazySlug, {
+				get length() {
+					events.push(["length:unexpected"]);
+					return 1;
+				},
+			}),
+			undefined,
+		);
+		assert.equal(await restorer(lazySlug, []), undefined);
+		assert.deepEqual(events, []);
+
+		function trackedFile(label, relativePath, base64) {
+			return {
+				get relativePath() {
+					events.push([`${label}:relative`]);
+					return relativePath;
+				},
+				get base64() {
+					events.push([`${label}:base64`]);
+					return base64;
+				},
+			};
+		}
+		const utf8Base64 = Buffer.from("образ", "utf8").toString("base64");
+		const literalBase64 = Buffer.from("literal", "utf8").toString("base64");
+		const firstDuplicate = Buffer.from("first", "utf8").toString("base64");
+		const secondDuplicate = Buffer.from("second", "utf8").toString("base64");
+		const permissiveBase64 = "not base64!!";
+		const slug = {
+			toString() {
+				events.push(["slug"]);
+				return "../кампанія";
+			},
+		};
+		assert.equal(
+			await restorer(slug, [
+				null,
+				trackedFile("empty", "", "ignored"),
+				trackedFile("no-payload", "ignored.txt", ""),
+				trackedFile("traversal", "../outside.txt", utf8Base64),
+				trackedFile(
+					"prefix-sibling",
+					"../кампанія-copy/outside.txt",
+					utf8Base64,
+				),
+				trackedFile("utf8", "/portraits\\герой.txt", utf8Base64),
+				trackedFile("encoded", "%2e%2e/literal.txt", literalBase64),
+				trackedFile("root", "folder/..", utf8Base64),
+				trackedFile("duplicate-one", "duplicate.txt", firstDuplicate),
+				trackedFile("duplicate-two", "duplicate.txt", secondDuplicate),
+				trackedFile("permissive", "permissive.bin", permissiveBase64),
+			]),
+			undefined,
+		);
+		assert.deepEqual(events, [
+			["slug"],
+			["empty:relative"],
+			["no-payload:relative"],
+			["no-payload:base64"],
+			["traversal:relative"],
+			["traversal:base64"],
+			["prefix-sibling:relative"],
+			["prefix-sibling:base64"],
+			["utf8:relative"],
+			["utf8:base64"],
+			["ensure", "portraits"],
+			["utf8:base64"],
+			["write", "portraits/герой.txt", Buffer.from("образ").toString("hex")],
+			["encoded:relative"],
+			["encoded:base64"],
+			["ensure", "%2e%2e"],
+			["encoded:base64"],
+			["write", "%2e%2e/literal.txt", Buffer.from("literal").toString("hex")],
+			["root:relative"],
+			["root:base64"],
+			["ensure", ".."],
+			["root:base64"],
+			["write", ".", Buffer.from("образ").toString("hex")],
+			["duplicate-one:relative"],
+			["duplicate-one:base64"],
+			["ensure", "."],
+			["duplicate-one:base64"],
+			["write", "duplicate.txt", Buffer.from("first").toString("hex")],
+			["duplicate-two:relative"],
+			["duplicate-two:base64"],
+			["ensure", "."],
+			["duplicate-two:base64"],
+			["write", "duplicate.txt", Buffer.from("second").toString("hex")],
+			["permissive:relative"],
+			["permissive:base64"],
+			["ensure", "."],
+			["permissive:base64"],
+			["write", "permissive.bin", Buffer.from(permissiveBase64, "base64").toString("hex")],
+		]);
+	},
+);
+
+await run(
+	"archive image restoration preserves getter failures and partial progress",
+	async () => {
+		const { createCampaignArchiveImageRestorer } = archiveImageRestoration;
+		const imagesDir = path.resolve("virtual-archive-failures");
+		const relativeFailure = new Error("relative path failed");
+		let base64Reads = 0;
+		const relativeFailureRestorer = createCampaignArchiveImageRestorer({
+			imagesDir,
+			async ensureDir() {
+				throw new Error("ensure should not run");
+			},
+			async writeFile() {
+				throw new Error("write should not run");
+			},
+		});
+		await assert.rejects(
+			relativeFailureRestorer("campaign", [
+				{
+					get relativePath() {
+						return {
+							toString() {
+								throw relativeFailure;
+							},
+						};
+					},
+					get base64() {
+						base64Reads += 1;
+						return "YQ==";
+					},
+				},
+			]),
+			relativeFailure,
+		);
+		assert.equal(base64Reads, 0);
+
+		const ensureFailure = new Error("ensure failed");
+		const ensureEvents = [];
+		const ensureFailureRestorer = createCampaignArchiveImageRestorer({
+			imagesDir,
+			async ensureDir() {
+				ensureEvents.push("ensure");
+				throw ensureFailure;
+			},
+			async writeFile() {
+				ensureEvents.push("write");
+			},
+		});
+		const ensureRow = {
+			get relativePath() {
+				ensureEvents.push("first:relative");
+				return "first.txt";
+			},
+			get base64() {
+				ensureEvents.push("first:base64");
+				return "YQ==";
+			},
+		};
+		const laterRow = {
+			get relativePath() {
+				ensureEvents.push("later:relative");
+				return "later.txt";
+			},
+			base64: "Yg==",
+		};
+		await assert.rejects(
+			ensureFailureRestorer("campaign", [ensureRow, laterRow]),
+			ensureFailure,
+		);
+		assert.deepEqual(ensureEvents, [
+			"first:relative",
+			"first:base64",
+			"ensure",
+		]);
+
+		const decodeFailureEvents = [];
+		const decodeFailureRestorer = createCampaignArchiveImageRestorer({
+			imagesDir,
+			async ensureDir() {
+				decodeFailureEvents.push("ensure");
+			},
+			async writeFile() {
+				decodeFailureEvents.push("write");
+			},
+		});
+		let dynamicBase64Read = 0;
+		await assert.rejects(
+			decodeFailureRestorer("campaign", [
+				{
+					relativePath: "dynamic.bin",
+					get base64() {
+						dynamicBase64Read += 1;
+						decodeFailureEvents.push(`base64:${dynamicBase64Read}`);
+						return dynamicBase64Read === 1 ? true : 7;
+					},
+				},
+			]),
+			TypeError,
+		);
+		assert.deepEqual(decodeFailureEvents, ["base64:1", "ensure", "base64:2"]);
+
+		const writeFailure = new Error("write failed");
+		const writeEvents = [];
+		const writeFailureRestorer = createCampaignArchiveImageRestorer({
+			imagesDir,
+			async ensureDir(dirPath) {
+				writeEvents.push(["ensure", path.basename(dirPath)]);
+			},
+			async writeFile(targetPath, buffer) {
+				writeEvents.push([
+					"write",
+					path.basename(targetPath),
+					buffer.toString("utf8"),
+				]);
+				if (path.basename(targetPath) === "second.txt") throw writeFailure;
+			},
+		});
+		await assert.rejects(
+			writeFailureRestorer("campaign", [
+				{ relativePath: "first.txt", base64: Buffer.from("first").toString("base64") },
+				{ relativePath: "second.txt", base64: Buffer.from("second").toString("base64") },
+				{
+					get relativePath() {
+						writeEvents.push(["third:unexpected"]);
+						return "third.txt";
+					},
+					base64: "dGhpcmQ=",
+				},
+			]),
+			writeFailure,
+		);
+		assert.deepEqual(writeEvents, [
+			["ensure", "campaign"],
+			["write", "first.txt", "first"],
+			["ensure", "campaign"],
+			["write", "second.txt", "second"],
+		]);
+	},
+);
 
 await run("UI settings actions apply declarative field normalization", () => {
 	const normalized = normalizeUiSettingsPatch({
@@ -1636,6 +2423,4198 @@ await run("editor presentation preserves mention grouping and cursor mapping", (
 	assert.equal(normalizeEditableMarkdown("  one  \r\n two  ", "textarea"), "  one\n two");
 });
 
+await run(
+	"editor cursor resolution preserves top-level precedence and getter order",
+	() => {
+		assert.equal(resolveInitialCursorPosition(null, "abc"), 3);
+		assert.equal(resolveInitialCursorPosition(undefined), 0);
+		for (const [position, expected] of [
+			[-3, 0],
+			[0, 0],
+			[2, 2],
+			[99, 3],
+			[Infinity, 3],
+			[-Infinity, 0],
+		]) {
+			assert.equal(resolveInitialCursorPosition(position, "abc"), expected);
+		}
+		assert.equal(
+			Number.isNaN(resolveInitialCursorPosition(Number.NaN, "abc")),
+			true,
+		);
+		assert.throws(
+			() => resolveInitialCursorPosition(null, null),
+			TypeError,
+		);
+
+		const indexedEvents = [];
+		let indexReads = 0;
+		const indexedSelection = {
+			get index() {
+				indexReads += 1;
+				indexedEvents.push(`index:${indexReads}`);
+				return indexReads === 1 ? 1 : 4;
+			},
+			get previewOffset() {
+				throw new Error("preview offset must stay lazy");
+			},
+		};
+		const indexedRawValue = {
+			get length() {
+				indexedEvents.push("raw.length");
+				return 3;
+			},
+		};
+		assert.equal(
+			resolveInitialCursorPosition(indexedSelection, indexedRawValue),
+			3,
+		);
+		assert.deepEqual(indexedEvents, ["index:1", "index:2", "raw.length"]);
+
+		const previewEvents = [];
+		const previewMap = new Proxy([0, 4, 8], {
+			get(target, property, receiver) {
+				previewEvents.push(`map.${String(property)}`);
+				return Reflect.get(target, property, receiver);
+			},
+		});
+		const previewSelection = {
+			get index() {
+				previewEvents.push("selection.index");
+				return "1";
+			},
+			get previewOffset() {
+				previewEvents.push("selection.previewOffset");
+				return 1;
+			},
+			get previewToRaw() {
+				previewEvents.push("selection.previewToRaw");
+				return previewMap;
+			},
+		};
+		const previewRawValue = {
+			get length() {
+				previewEvents.push("raw.length");
+				return 10;
+			},
+		};
+		assert.equal(
+			resolveInitialCursorPosition(previewSelection, previewRawValue),
+			4,
+		);
+		assert.deepEqual(previewEvents, [
+			"selection.index",
+			"raw.length",
+			"selection.previewOffset",
+			"selection.previewToRaw",
+			"map.length",
+			"map.length",
+			"map.1",
+		]);
+
+		const rawFailure = new Error("raw length failed");
+		const failureEvents = [];
+		const deferredPreview = {
+			get previewOffset() {
+				failureEvents.push("previewOffset");
+				return 0;
+			},
+			get previewToRaw() {
+				failureEvents.push("previewToRaw");
+				return [0];
+			},
+		};
+		assert.throws(
+			() =>
+				resolveInitialCursorPosition(deferredPreview, {
+					get length() {
+						failureEvents.push("raw.length");
+						throw rawFailure;
+					},
+				}),
+			(error) => error === rawFailure,
+		);
+		assert.deepEqual(failureEvents, ["raw.length"]);
+	},
+);
+
+await run(
+	"editor cursor preview mapping preserves offsets coercion and failures",
+	() => {
+		const rawValue = "abcdefghij";
+		const cases = [
+			["missing offset", {}, 10],
+			["non-number offset", { previewOffset: "1", previewToRaw: [0, 4] }, 10],
+			["non-array map", { previewOffset: 1, previewToRaw: { 1: 4 } }, 10],
+			["empty map", { previewOffset: Infinity, previewToRaw: [] }, 0],
+			["zero offset", { previewOffset: 0, previewToRaw: [-3, 4] }, 0],
+			["negative offset", { previewOffset: -1, previewToRaw: [15, 4] }, 15],
+			[
+				"negative infinite offset",
+				{ previewOffset: -Infinity, previewToRaw: [6, 4] },
+				6,
+			],
+			["first nullish value", { previewOffset: 0, previewToRaw: [null] }, 0],
+			["first falsy value", { previewOffset: 0, previewToRaw: [false] }, 0],
+			["first string value", { previewOffset: 0, previewToRaw: ["4"] }, 4],
+			["offset at length", { previewOffset: 2, previewToRaw: [0, 4] }, 10],
+			[
+				"positive infinite offset",
+				{ previewOffset: Infinity, previewToRaw: [0, 4] },
+				10,
+			],
+			["negative interior value", { previewOffset: 1, previewToRaw: [0, -3] }, 0],
+			["large interior value", { previewOffset: 1, previewToRaw: [0, 20] }, 10],
+			["nullish interior value", { previewOffset: 1, previewToRaw: [0, null] }, 10],
+			["falsy interior value", { previewOffset: 1, previewToRaw: [0, false] }, 0],
+			["string interior value", { previewOffset: 1, previewToRaw: [0, "4"] }, 4],
+			["sparse interior value", { previewOffset: 1, previewToRaw: [0, , 8] }, 10],
+		];
+		for (const [label, selection, expected] of cases) {
+			assert.equal(
+				resolveInitialCursorPosition(selection, rawValue),
+				expected,
+				label,
+			);
+		}
+
+		const fractionalMap = [0, 4, 8];
+		fractionalMap[1.5] = 7;
+		assert.equal(
+			resolveInitialCursorPosition(
+				{ previewOffset: 1.5, previewToRaw: fractionalMap },
+				rawValue,
+			),
+			7,
+		);
+		const nanMap = [0, 4, 8];
+		nanMap.NaN = 6;
+		assert.equal(
+			resolveInitialCursorPosition(
+				{ previewOffset: Number.NaN, previewToRaw: nanMap },
+				rawValue,
+			),
+			6,
+		);
+
+		for (const [previewOffset, previewToRaw] of [
+			[0, [Symbol("first")]],
+			[1, [0, Symbol("interior")]],
+		]) {
+			assert.throws(
+				() =>
+					resolveInitialCursorPosition(
+						{ previewOffset, previewToRaw },
+						rawValue,
+					),
+				TypeError,
+			);
+		}
+
+		const destructureEvents = [];
+		const mapFailure = new Error("preview map failed");
+		assert.throws(
+			() =>
+				resolveInitialCursorPosition(
+					{
+						get previewOffset() {
+							destructureEvents.push("previewOffset");
+							return "invalid";
+						},
+						get previewToRaw() {
+							destructureEvents.push("previewToRaw");
+							throw mapFailure;
+						},
+					},
+					rawValue,
+				),
+			(error) => error === mapFailure,
+		);
+		assert.deepEqual(destructureEvents, ["previewOffset", "previewToRaw"]);
+
+		const lengthEvents = [];
+		let lengthReads = 0;
+		const changingLengthMap = new Proxy([0, 4], {
+			get(target, property, receiver) {
+				if (property === "length") {
+					lengthReads += 1;
+					lengthEvents.push(`length:${lengthReads}`);
+					return lengthReads === 1 ? 2 : 1;
+				}
+				lengthEvents.push(`value:${String(property)}`);
+				return Reflect.get(target, property, receiver);
+			},
+		});
+		assert.equal(
+			resolveInitialCursorPosition(
+				{ previewOffset: 1, previewToRaw: changingLengthMap },
+				rawValue,
+			),
+			10,
+		);
+		assert.deepEqual(lengthEvents, ["length:1", "length:2"]);
+	},
+);
+
+await run("editor initial input selection preserves eligibility and position", () => {
+	for (const type of [
+		"textarea",
+		"text",
+		"search",
+		"tel",
+		"url",
+		"password",
+		"email",
+	]) {
+		assert.equal(
+			getInitialInputSelectionPosition(false, 2, type, "abcd"),
+			2,
+			type,
+		);
+	}
+	for (const type of [
+		"number",
+		"date",
+		"button",
+		"",
+		null,
+		undefined,
+		Symbol("type"),
+	]) {
+		assert.equal(
+			getInitialInputSelectionPosition(false, 2, type, "abcd"),
+			null,
+			String(type),
+		);
+	}
+	assert.equal(
+		getInitialInputSelectionPosition(false, null, "textarea", "abcd"),
+		null,
+	);
+	assert.equal(
+		getInitialInputSelectionPosition(false, undefined, "textarea", "abcd"),
+		null,
+	);
+	assert.equal(
+		getInitialInputSelectionPosition(true, 2, "textarea", "abcd"),
+		null,
+	);
+	assert.equal(
+		getInitialInputSelectionPosition(
+			new Boolean(false),
+			2,
+			"textarea",
+			"abcd",
+		),
+		null,
+	);
+	assert.equal(
+		getInitialInputSelectionPosition(false, 99, "textarea", "abcd"),
+		4,
+	);
+	assert.equal(
+		getInitialInputSelectionPosition(
+			false,
+			{ index: 3 },
+			"textarea",
+			"abcd",
+		),
+		3,
+	);
+	assert.equal(
+		getInitialInputSelectionPosition(
+			false,
+			{ previewOffset: 2, previewToRaw: [0, 2, 5] },
+			"textarea",
+			"abcdef",
+		),
+		5,
+	);
+});
+
+await run(
+	"editor initial input selection preserves lazy reads and failures",
+	() => {
+		const unreadSelection = {
+			get index() {
+				throw new Error("ineligible selection must stay unread");
+			},
+		};
+		const unreadRawValue = {
+			get length() {
+				throw new Error("ineligible raw value must stay unread");
+			},
+		};
+		assert.equal(
+			getInitialInputSelectionPosition(
+				true,
+				unreadSelection,
+				"textarea",
+				unreadRawValue,
+			),
+			null,
+		);
+		assert.equal(
+			getInitialInputSelectionPosition(
+				false,
+				unreadSelection,
+				"number",
+				unreadRawValue,
+			),
+			null,
+		);
+		assert.equal(
+			getInitialInputSelectionPosition(
+				false,
+				null,
+				"textarea",
+				unreadRawValue,
+			),
+			null,
+		);
+
+		const events = [];
+		let indexReads = 0;
+		const selection = {
+			get index() {
+				indexReads += 1;
+				events.push(`selection.index:${indexReads}`);
+				return indexReads === 1 ? 1 : 5;
+			},
+		};
+		const rawValue = {
+			get length() {
+				events.push("raw.length");
+				return 4;
+			},
+		};
+		assert.equal(
+			getInitialInputSelectionPosition(
+				false,
+				selection,
+				"textarea",
+				rawValue,
+			),
+			4,
+		);
+		assert.deepEqual(events, [
+			"selection.index:1",
+			"selection.index:2",
+			"raw.length",
+		]);
+
+		const indexFailure = new Error("index failed");
+		assert.throws(
+			() =>
+				getInitialInputSelectionPosition(
+					false,
+					{
+						get index() {
+							throw indexFailure;
+						},
+					},
+					"textarea",
+					"",
+				),
+			(error) => error === indexFailure,
+		);
+		const rawFailure = new Error("raw failed");
+		assert.throws(
+			() =>
+				getInitialInputSelectionPosition(false, 1, "textarea", {
+					get length() {
+						throw rawFailure;
+					},
+				}),
+			(error) => error === rawFailure,
+		);
+		assert.throws(
+			() =>
+				getInitialInputSelectionPosition(
+					false,
+					1,
+					"textarea",
+					null,
+				),
+			TypeError,
+		);
+	},
+);
+
+await run("editor input value and class projection preserves presentation", () => {
+	for (const [source, expected] of [
+		[{ value: ["one", "two"] }, "one,two"],
+		[{ value: [] }, ""],
+		[{ value: "text" }, "text"],
+		[{ value: "" }, ""],
+		[{ value: 0 }, "0"],
+		[{ value: 42 }, "42"],
+		[{ value: Number.NaN }, "NaN"],
+		[{ value: null }, ""],
+		[{ value: undefined }, ""],
+		[{}, ""],
+	]) {
+		assert.equal(getInputRawValue(source), expected);
+	}
+
+	for (const [label, type, value, expected] of [
+		[
+			"textarea mention",
+			"textarea",
+			"[NPC]",
+			{
+				baseClassName: "Input Input__textarea",
+				mentionClassName: "has-mentions",
+			},
+		],
+		[
+			"text without mention",
+			"text",
+			"NPC",
+			{ baseClassName: "Input", mentionClassName: false },
+		],
+		[
+			"string requires exact opening bracket",
+			"text",
+			"（NPC）",
+			{ baseClassName: "Input", mentionClassName: false },
+		],
+		[
+			"array values never receive mention class",
+			"textarea",
+			["[NPC]"],
+			{
+				baseClassName: "Input Input__textarea",
+				mentionClassName: false,
+			},
+		],
+		[
+			"unknown type uses input class",
+			"TEXTAREA",
+			"[NPC]",
+			{ baseClassName: "Input", mentionClassName: "has-mentions" },
+		],
+	]) {
+		assert.deepEqual(
+			getInputClassPresentation(type, { value }),
+			expected,
+			label,
+		);
+	}
+	assert.notEqual(
+		getInputClassPresentation("text", { value: "" }),
+		getInputClassPresentation("text", { value: "" }),
+	);
+});
+
+await run(
+	"editor input value and class projection preserves getter and failure order",
+	() => {
+		{
+			const events = [];
+			const firstValue = [];
+			const secondValue = {
+				join(separator) {
+					events.push(`join:${this === secondValue}:${separator}`);
+					return "joined";
+				},
+			};
+			let reads = 0;
+			const source = {
+				get value() {
+					reads += 1;
+					events.push(`value:${reads}`);
+					return reads === 1 ? firstValue : secondValue;
+				},
+			};
+			assert.equal(getInputRawValue(source), "joined");
+			assert.deepEqual(events, ["value:1", "value:2", "join:true:,"]);
+		}
+
+		{
+			const events = [];
+			const secondValue = {
+				[Symbol.toPrimitive](hint) {
+					events.push(`value.toPrimitive:${hint}`);
+					return "projected";
+				},
+			};
+			let reads = 0;
+			const source = {
+				get value() {
+					reads += 1;
+					events.push(`value:${reads}`);
+					return reads === 1 ? 0 : secondValue;
+				},
+			};
+			assert.equal(getInputRawValue(source), "projected");
+			assert.deepEqual(events, [
+				"value:1",
+				"value:2",
+				"value.toPrimitive:string",
+			]);
+		}
+
+		{
+			const events = [];
+			const secondValue = {
+				includes(marker) {
+					events.push(`includes:${this === secondValue}:${marker}`);
+					return true;
+				},
+			};
+			let reads = 0;
+			const source = {
+				get value() {
+					reads += 1;
+					events.push(`value:${reads}`);
+					return reads === 1 ? "string" : secondValue;
+				},
+			};
+			assert.deepEqual(getInputClassPresentation("textarea", source), {
+				baseClassName: "Input Input__textarea",
+				mentionClassName: "has-mentions",
+			});
+			assert.deepEqual(events, [
+				"value:1",
+				"value:2",
+				"includes:true:[",
+			]);
+		}
+
+		let nonStringReads = 0;
+		assert.deepEqual(
+			getInputClassPresentation("text", {
+				get value() {
+					nonStringReads += 1;
+					if (nonStringReads > 1) {
+						throw new Error("non-string value must be read once");
+					}
+					return 42;
+				},
+			}),
+			{ baseClassName: "Input", mentionClassName: false },
+		);
+		assert.equal(nonStringReads, 1);
+
+		assert.throws(() => getInputRawValue(null), TypeError);
+		assert.throws(
+			() =>
+				getInputRawValue({
+					get value() {
+						return this.reads++ === 0 ? [] : null;
+					},
+					reads: 0,
+				}),
+			TypeError,
+		);
+		assert.throws(
+			() =>
+				getInputClassPresentation("text", {
+					get value() {
+						return this.reads++ === 0 ? "string" : null;
+					},
+					reads: 0,
+				}),
+			TypeError,
+		);
+		assert.throws(() => getInputClassPresentation("text", null), TypeError);
+	},
+);
+
+await run("editor editable change events preserve source and fallback projection", () => {
+	for (const sourceEvent of [
+		null,
+		undefined,
+		false,
+		0,
+		"",
+		"event",
+		42,
+		Symbol("event"),
+		() => {},
+	]) {
+		assert.deepEqual(createEditableFieldChangeEvent(sourceEvent, "next"), {
+			currentTarget: { value: "next" },
+			target: { value: "next" },
+		});
+	}
+
+	const target = { id: "target", value: "old-target" };
+	const currentTarget = { id: "current", value: "old-current" };
+	const source = {
+		type: "change",
+		target,
+		currentTarget,
+	};
+	const result = createEditableFieldChangeEvent(source, "next");
+	assert.deepEqual(result, {
+		type: "change",
+		target: { id: "target", value: "next" },
+		currentTarget: { id: "current", value: "next" },
+	});
+	assert.notEqual(result, source);
+	assert.notEqual(result.target, target);
+	assert.notEqual(result.currentTarget, currentTarget);
+	assert.deepEqual(source, {
+		type: "change",
+		target: { id: "target", value: "old-target" },
+		currentTarget: { id: "current", value: "old-current" },
+	});
+
+	assert.deepEqual(
+		createEditableFieldChangeEvent(
+			{ target: { id: "shared" }, currentTarget: null },
+			"next",
+		),
+		{
+			target: { id: "shared", value: "next" },
+			currentTarget: { id: "shared", value: "next" },
+		},
+	);
+	assert.deepEqual(
+		createEditableFieldChangeEvent(
+			{ target: "invalid", currentTarget: { id: "current" } },
+			"next",
+		),
+		{
+			target: { value: "next" },
+			currentTarget: { id: "current", value: "next" },
+		},
+	);
+	assert.deepEqual(
+		createEditableFieldChangeEvent(
+			Object.assign(["zero", "one"], {
+				target: { id: "array-target" },
+			}),
+			"next",
+		),
+		{
+			0: "zero",
+			1: "one",
+			target: { id: "array-target", value: "next" },
+			currentTarget: { id: "array-target", value: "next" },
+		},
+	);
+
+	const symbolKey = Symbol("event");
+	const symbolSource = {
+		[symbolKey]: "symbol-value",
+		target: {},
+	};
+	const symbolResult = createEditableFieldChangeEvent(symbolSource, "next");
+	assert.equal(symbolResult[symbolKey], "symbol-value");
+	assert.equal(Object.getPrototypeOf(symbolResult), Object.prototype);
+});
+
+await run(
+	"editor editable change events preserve getter spread and failure order",
+	() => {
+		const events = [];
+		const targetSelection = {};
+		Object.defineProperty(targetSelection, "targetField", {
+			enumerable: true,
+			get() {
+				events.push("selectedTarget.targetField");
+				return "target";
+			},
+		});
+		const currentSelection = {};
+		Object.defineProperty(currentSelection, "currentField", {
+			enumerable: true,
+			get() {
+				events.push("selectedCurrent.currentField");
+				return "current";
+			},
+		});
+		let targetReads = 0;
+		let currentReads = 0;
+		const source = {};
+		Object.defineProperties(source, {
+			target: {
+				enumerable: true,
+				get() {
+					targetReads += 1;
+					events.push(`source.target:${targetReads}`);
+					if (targetReads < 3) return {};
+					if (targetReads === 3) return targetSelection;
+					return "outer-target";
+				},
+			},
+			currentTarget: {
+				enumerable: true,
+				get() {
+					currentReads += 1;
+					events.push(`source.currentTarget:${currentReads}`);
+					if (currentReads < 3) return {};
+					if (currentReads === 3) return currentSelection;
+					return "outer-current";
+				},
+			},
+			extra: {
+				enumerable: true,
+				get() {
+					events.push("source.extra");
+					return "extra";
+				},
+			},
+		});
+
+		assert.deepEqual(createEditableFieldChangeEvent(source, "next"), {
+			extra: "extra",
+			target: { targetField: "target", value: "next" },
+			currentTarget: { currentField: "current", value: "next" },
+		});
+		assert.deepEqual(events, [
+			"source.target:1",
+			"source.target:2",
+			"source.target:3",
+			"source.currentTarget:1",
+			"source.currentTarget:2",
+			"source.currentTarget:3",
+			"source.target:4",
+			"source.currentTarget:4",
+			"source.extra",
+			"selectedCurrent.currentField",
+			"selectedTarget.targetField",
+		]);
+
+		let primitiveReads = 0;
+		const primitiveTargetSource = {
+			get target() {
+				primitiveReads += 1;
+				if (primitiveReads < 3) return {};
+				return primitiveReads === 3 ? "xy" : null;
+			},
+		};
+		assert.deepEqual(
+			createEditableFieldChangeEvent(primitiveTargetSource, "next"),
+			{
+				currentTarget: { 0: "x", 1: "y", value: "next" },
+				target: { 0: "x", 1: "y", value: "next" },
+			},
+		);
+		assert.equal(primitiveReads, 4);
+
+		const firstReadFailure = new Error("first target read failed");
+		assert.throws(
+			() =>
+				createEditableFieldChangeEvent(
+					{
+						get target() {
+							throw firstReadFailure;
+						},
+					},
+					"next",
+				),
+			(error) => error === firstReadFailure,
+		);
+
+		const thirdReadFailure = new Error("third target read failed");
+		let failureReads = 0;
+		assert.throws(
+			() =>
+				createEditableFieldChangeEvent(
+					{
+						get target() {
+							failureReads += 1;
+							if (failureReads === 3) throw thirdReadFailure;
+							return {};
+						},
+					},
+					"next",
+				),
+			(error) => error === thirdReadFailure,
+		);
+		assert.equal(failureReads, 3);
+
+		const spreadFailure = new Error("current spread failed");
+		const spreadEvents = [];
+		const throwingCurrentTarget = {};
+		Object.defineProperty(throwingCurrentTarget, "field", {
+			enumerable: true,
+			get() {
+				spreadEvents.push("current.field");
+				throw spreadFailure;
+			},
+		});
+		const untouchedTarget = {};
+		Object.defineProperty(untouchedTarget, "field", {
+			enumerable: true,
+			get() {
+				spreadEvents.push("target.field");
+				return "target";
+			},
+		});
+		assert.throws(
+			() =>
+				createEditableFieldChangeEvent(
+					{
+						target: untouchedTarget,
+						currentTarget: throwingCurrentTarget,
+					},
+					"next",
+				),
+			(error) => error === spreadFailure,
+		);
+		assert.deepEqual(spreadEvents, ["current.field"]);
+	},
+);
+
+await run(
+	"EditableField change-event projection preserves controller ownership",
+	async () => {
+		const source = await fs.readFile(
+			path.join(
+				process.cwd(),
+				"src",
+				"features",
+				"editor",
+				"ui",
+				"EditableField.tsx",
+			),
+			"utf8",
+		);
+		const typeBarrel = await fs.readFile(
+			path.join(
+				process.cwd(),
+				"src",
+				"features",
+				"editor",
+				"ui",
+				"index.d.ts",
+			),
+			"utf8",
+		);
+		assert.match(
+			source,
+			/export type \{ EditableFieldChangeEvent \} from "\.\/editorPresentation\.ts"/,
+		);
+		const callStart = source.indexOf(
+			"onChange?.(\n\t\t\t\tcreateEditableFieldChangeEvent(",
+		);
+		assert.notEqual(callStart, -1);
+		const callEnd = source.indexOf(");", callStart);
+		const call = source.slice(callStart, callEnd);
+		const callTokens = [
+			"onChange?.(",
+			"createEditableFieldChangeEvent(",
+			"lastEventRef.current",
+			"nextValue",
+		];
+		let previousIndex = -1;
+		for (const token of callTokens) {
+			const index = call.indexOf(token, previousIndex + 1);
+			assert.ok(
+				index > previousIndex,
+				`${token} must retain EditableField change order`,
+			);
+			previousIndex = index;
+		}
+		assert.doesNotMatch(
+			source,
+			/function createChangeEvent|interface EditableFieldChangeEvent/,
+		);
+		assert.equal(
+			(source.match(/\bcreateEditableFieldChangeEvent\(/g) ?? []).length,
+			1,
+		);
+		assert.match(
+			typeBarrel,
+			/type EditableFieldChangeEvent,[\s\S]*from "\.\/EditableField\.tsx"/,
+		);
+	},
+);
+
+await run("editor editable mention activation preserves modifier routing", () => {
+	const unreadModifiers = {
+		get ctrlKey() {
+			throw new Error("missing mention must not read Ctrl");
+		},
+		get metaKey() {
+			throw new Error("missing mention must not read Meta");
+		},
+	};
+	for (const mention of [null, undefined, false, 0, "", Number.NaN]) {
+		assert.equal(
+			shouldActivateEditableMention(mention, unreadModifiers),
+			false,
+		);
+	}
+
+	const ctrlEvents = [];
+	assert.equal(
+		shouldActivateEditableMention({}, {
+			get ctrlKey() {
+				ctrlEvents.push("ctrl");
+				return "ctrl";
+			},
+			get metaKey() {
+				throw new Error("truthy Ctrl must skip Meta");
+			},
+		}),
+		true,
+	);
+	assert.deepEqual(ctrlEvents, ["ctrl"]);
+
+	const metaEvents = [];
+	assert.equal(
+		shouldActivateEditableMention({}, {
+			get ctrlKey() {
+				metaEvents.push("ctrl");
+				return 0;
+			},
+			get metaKey() {
+				metaEvents.push("meta");
+				return { active: true };
+			},
+		}),
+		true,
+	);
+	assert.deepEqual(metaEvents, ["ctrl", "meta"]);
+	assert.equal(
+		shouldActivateEditableMention({}, { ctrlKey: "", metaKey: 0 }),
+		false,
+	);
+	assert.equal(
+		shouldActivateEditableMention("mention", {
+			ctrlKey: Number.NaN,
+			metaKey: "meta",
+		}),
+		true,
+	);
+
+	const ctrlFailure = new Error("Ctrl failed");
+	assert.throws(
+		() =>
+			shouldActivateEditableMention({}, {
+				get ctrlKey() {
+					throw ctrlFailure;
+				},
+				metaKey: true,
+			}),
+		(error) => error === ctrlFailure,
+	);
+	const metaFailure = new Error("Meta failed");
+	assert.throws(
+		() =>
+			shouldActivateEditableMention({}, {
+				ctrlKey: false,
+				get metaKey() {
+					throw metaFailure;
+				},
+			}),
+		(error) => error === metaFailure,
+	);
+	assert.equal(shouldActivateEditableMention(null, null), false);
+	assert.throws(
+		() => shouldActivateEditableMention({}, null),
+		TypeError,
+	);
+});
+
+await run("editor editable link targeting preserves closest semantics", () => {
+	assert.equal(hasEditableLinkTarget(null), false);
+	assert.equal(hasEditableLinkTarget(undefined), false);
+
+	const events = [];
+	const target = {
+		get closest() {
+			events.push("closest.get");
+			return function (selector) {
+				events.push(`closest.call:${this === target}:${selector}`);
+				return { link: true };
+			};
+		},
+	};
+	assert.equal(hasEditableLinkTarget(target), true);
+	assert.deepEqual(events, ["closest.get", "closest.call:true:a"]);
+
+	const noLinkTarget = {
+		closest(selector) {
+			assert.equal(selector, "a");
+			return "";
+		},
+	};
+	assert.equal(hasEditableLinkTarget(noLinkTarget), false);
+
+	const nonCoercibleResult = {
+		[Symbol.toPrimitive]() {
+			throw new Error("Boolean must not coerce closest result");
+		},
+	};
+	assert.equal(
+		hasEditableLinkTarget({ closest: () => nonCoercibleResult }),
+		true,
+	);
+
+	const closestFailure = new Error("closest failed");
+	assert.throws(
+		() =>
+			hasEditableLinkTarget({
+				closest() {
+					throw closestFailure;
+				},
+			}),
+		(error) => error === closestFailure,
+	);
+	assert.throws(() => hasEditableLinkTarget({ closest: null }), TypeError);
+	assert.throws(() => hasEditableLinkTarget(0), TypeError);
+});
+
+await run("editor editable click plans preserve ordered mention and link routing", () => {
+	const unreadModifiers = {
+		get ctrlKey() {
+			throw new Error("missing target must not read Ctrl");
+		},
+		get metaKey() {
+			throw new Error("missing target must not read Meta");
+		},
+	};
+	assert.deepEqual(getEditableClickPlan(null, unreadModifiers), {
+		kind: "content",
+		preventDefault: false,
+	});
+
+	const mention = { name: "Mordenkainen" };
+	const mentionCalls = [];
+	const mentionTarget = {
+		closest(selector) {
+			mentionCalls.push(selector);
+			return selector === "[data-mention]" ? mention : null;
+		},
+	};
+	assert.deepEqual(
+		getEditableClickPlan(mentionTarget, {
+			ctrlKey: true,
+			get metaKey() {
+				throw new Error("truthy Ctrl must skip Meta and link lookup");
+			},
+		}),
+		{ kind: "mention", mention },
+	);
+	assert.deepEqual(mentionCalls, ["[data-mention]"]);
+
+	const contentCalls = [];
+	const contentTarget = {
+		closest(selector) {
+			contentCalls.push(selector);
+			return selector === "[data-mention]" ? mention : { link: true };
+		},
+	};
+	assert.deepEqual(
+		getEditableClickPlan(contentTarget, { ctrlKey: false, metaKey: false }),
+		{ kind: "content", preventDefault: true },
+	);
+	assert.deepEqual(contentCalls, ["[data-mention]", "a"]);
+});
+
+await run("editor editable mention names preserve dataset fallback semantics", () => {
+	assert.equal(getEditableMentionName({ dataset: { mention: "Strahd" } }), "Strahd");
+	assert.equal(getEditableMentionName({ dataset: { mention: "" } }), "");
+	assert.equal(getEditableMentionName({ dataset: {} }), "");
+
+	const failure = new Error("dataset failed");
+	assert.throws(
+		() =>
+			getEditableMentionName({
+				get dataset() {
+					throw failure;
+				},
+			}),
+		(error) => error === failure,
+	);
+	assert.throws(() => getEditableMentionName(null), TypeError);
+});
+
+await run(
+	"editor editable picker-result eligibility preserves lazy status and name reads",
+	() => {
+		const skippedName = {
+			get status() {
+				return "cancelled";
+			},
+			get name() {
+				throw new Error("cancelled result must not read name");
+			},
+		};
+		assert.equal(shouldInsertEditableMentionResult(skippedName), false);
+
+		const events = [];
+		const selected = {
+			get status() {
+				events.push("status");
+				return "selected";
+			},
+			get name() {
+				events.push("name");
+				return "Volo";
+			},
+		};
+		assert.equal(shouldInsertEditableMentionResult(selected), true);
+		assert.deepEqual(events, ["status", "name"]);
+
+		for (const name of [undefined, null, false, 0, "", Number.NaN]) {
+			assert.equal(
+				shouldInsertEditableMentionResult({ status: "selected", name }),
+				false,
+			);
+		}
+		const nonCoercibleName = {
+			[Symbol.toPrimitive]() {
+				throw new Error("Boolean must not coerce the result name");
+			},
+		};
+		assert.equal(
+			shouldInsertEditableMentionResult({
+				status: "selected",
+				name: nonCoercibleName,
+			}),
+			true,
+		);
+		assert.equal(
+			shouldInsertEditableMentionResult({
+				status: new String("selected"),
+				name: "Minsc",
+			}),
+			false,
+		);
+
+		const statusFailure = new Error("status failed");
+		assert.throws(
+			() =>
+				shouldInsertEditableMentionResult({
+					get status() {
+						throw statusFailure;
+					},
+				}),
+			(error) => error === statusFailure,
+		);
+		const nameFailure = new Error("name failed");
+		assert.throws(
+			() =>
+				shouldInsertEditableMentionResult({
+					status: "selected",
+					get name() {
+						throw nameFailure;
+					},
+				}),
+			(error) => error === nameFailure,
+		);
+		assert.throws(() => shouldInsertEditableMentionResult(null), TypeError);
+	},
+);
+
+await run("editor editable copy requests preserve truthiness and identity", () => {
+	const editor = { name: "editor" };
+	for (const missingEditor of [null, undefined, false, 0, "", Number.NaN]) {
+		assert.equal(getEditableCopyRequest(missingEditor, "markdown"), null);
+	}
+	for (const missingValue of [null, undefined, false, 0, "", Number.NaN]) {
+		assert.equal(getEditableCopyRequest(editor, missingValue), null);
+	}
+
+	const markdownValue = {
+		[Symbol.toPrimitive]() {
+			throw new Error("copy value truthiness must not coerce");
+		},
+	};
+	const request = getEditableCopyRequest(editor, markdownValue);
+	assert.deepEqual(request, { editor, markdownValue });
+	assert.equal(request.editor, editor);
+	assert.equal(request.markdownValue, markdownValue);
+	assert.notEqual(
+		request,
+		getEditableCopyRequest(editor, markdownValue),
+	);
+	const symbolEditor = Symbol("editor");
+	const symbolValue = Symbol("value");
+	assert.deepEqual(getEditableCopyRequest(symbolEditor, symbolValue), {
+		editor: symbolEditor,
+		markdownValue: symbolValue,
+	});
+});
+
+await run(
+	"editor lexical editable view presentation preserves mode and visibility",
+	() => {
+		assert.deepEqual(
+			getLexicalEditableFieldViewPresentation(true, false, "textarea"),
+			{
+				ariaMultiline: true,
+				historyShortcuts: undefined,
+				showHistory: true,
+				showRichText: true,
+				tabIndex: 0,
+			},
+		);
+		assert.deepEqual(
+			getLexicalEditableFieldViewPresentation(false, true, "text"),
+			{
+				ariaMultiline: false,
+				historyShortcuts: "true",
+				showHistory: false,
+				showRichText: false,
+				tabIndex: -1,
+			},
+		);
+		assert.deepEqual(
+			getLexicalEditableFieldViewPresentation("history", 0, "unknown"),
+			{
+				ariaMultiline: false,
+				historyShortcuts: undefined,
+				showHistory: "history",
+				showRichText: false,
+				tabIndex: 0,
+			},
+		);
+		assert.deepEqual(
+			getLexicalEditableFieldViewPresentation("", "disabled", "textarea"),
+			{
+				ariaMultiline: true,
+				historyShortcuts: "true",
+				showHistory: "",
+				showRichText: true,
+				tabIndex: -1,
+			},
+		);
+		assert.notEqual(
+			getLexicalEditableFieldViewPresentation(true, false, "text"),
+			getLexicalEditableFieldViewPresentation(true, false, "text"),
+		);
+	},
+);
+
+await run(
+	"LexicalEditableField preserves private controller and view ownership",
+	async () => {
+		const source = await fs.readFile(
+			path.join(
+				process.cwd(),
+				"src",
+				"features",
+				"editor",
+				"ui",
+				"EditableField.tsx",
+			),
+			"utf8",
+		);
+		const runtimeBarrel = await fs.readFile(
+			path.join(
+				process.cwd(),
+				"src",
+				"features",
+				"editor",
+				"ui",
+				"index.js",
+			),
+			"utf8",
+		);
+		const typeBarrel = await fs.readFile(
+			path.join(
+				process.cwd(),
+				"src",
+				"features",
+				"editor",
+				"ui",
+				"index.d.ts",
+			),
+			"utf8",
+		);
+
+		const viewStart = source.indexOf("function LexicalEditableFieldView(");
+		const viewEnd = source.indexOf("function LexicalEditableField(", viewStart);
+		assert.notEqual(viewStart, -1);
+		assert.notEqual(viewEnd, -1);
+		const view = source.slice(viewStart, viewEnd);
+		const viewTokens = [
+			"getLexicalEditableFieldViewPresentation(",
+			"enableHistory,",
+			"isDisabled,",
+			"type,",
+			"<ContentEditable",
+			'classNames("MarkdownView", "MarkdownView__editable"',
+			"MarkdownView__active: isActive",
+			"MarkdownView__disabled: isDisabled",
+			'role="textbox"',
+			"aria-multiline={presentation.ariaMultiline}",
+			"data-app-history-shortcuts={presentation.historyShortcuts}",
+			"data-placeholder={placeholder}",
+			"tabIndex={presentation.tabIndex}",
+			"onBlur={handleBlur}",
+			"onClick={handleClick}",
+			"onFocus={handleFocus}",
+			"onInput={handleInput}",
+			"onKeyDown={handleKeyDown}",
+			"onMouseDown={handleMouseDown}",
+			"onMouseLeave={handleMouseLeave}",
+			"onMouseMove={handleMouseMove}",
+			"onPaste={handlePaste}",
+			"<EditorContentPlugin",
+			"{presentation.showHistory && <HistoryPlugin />}",
+			"<MarkdownValuePlugin",
+			"<MarkdownChangePlugin",
+			"<EditableStatePlugin",
+			"{presentation.showRichText && (",
+			"<ListPlugin />",
+			"<MarkdownShortcutPlugin",
+		];
+		let previousIndex = -1;
+		for (const token of viewTokens) {
+			const index = view.indexOf(token, previousIndex + 1);
+			assert.ok(
+				index > previousIndex,
+				`${token} must retain lexical editable view order`,
+			);
+			previousIndex = index;
+		}
+		assert.equal((view.match(/<ContentEditable/g) ?? []).length, 1);
+		assert.equal((view.match(/<HistoryPlugin/g) ?? []).length, 1);
+		assert.equal((view.match(/<ListPlugin/g) ?? []).length, 1);
+		assert.equal((view.match(/<MarkdownShortcutPlugin/g) ?? []).length, 1);
+		assert.doesNotMatch(
+			view,
+			/useLexicalComposerContext|useCommandHandlers|getEventTargetElement|openMentionModal|onMentionHover/,
+		);
+
+		const controllerStart = viewEnd;
+		const controllerEnd = source.indexOf(
+			"export interface EditableFieldProps",
+			controllerStart,
+		);
+		assert.notEqual(controllerEnd, -1);
+		const controller = source.slice(controllerStart, controllerEnd);
+		const controllerTokens = [
+			"useLexicalComposerContext()",
+			"useCommandHandlers({",
+			"const handleFocus = useCallback(",
+			"const handleBlur = useCallback(",
+			"const handleClick = useCallback(",
+			"const handleInput = useCallback(",
+			"const handleKeyDown = useCallback(",
+			"const handlePaste = useCallback(",
+			"const handleMouseMove = useCallback(",
+			"const handleMouseDown = useCallback(",
+			"const handleMouseLeave = () =>",
+			"onMentionHover({ anchor: null, content: null })",
+			"<LexicalEditableFieldView",
+			"enableHistory={enableHistory}",
+			"handleBlur={handleBlur}",
+			"handleClick={handleClick}",
+			"handleFocus={handleFocus}",
+			"handleInput={handleInput}",
+			"handleKeyDown={handleKeyDown}",
+			"handleMouseDown={handleMouseDown}",
+			"handleMouseLeave={handleMouseLeave}",
+			"handleMouseMove={handleMouseMove}",
+			"handlePaste={handlePaste}",
+			"isActive={isActive}",
+			"isDisabled={isDisabled}",
+			"lastEventRef={lastEventRef}",
+			"lastValueRef={lastValueRef}",
+			"markdownValue={markdownValue}",
+			"onChange={onChange}",
+			"placeholder={placeholder}",
+			"type={type}",
+		];
+		previousIndex = -1;
+		for (const token of controllerTokens) {
+			const index = controller.indexOf(token, previousIndex + 1);
+			assert.ok(
+				index > previousIndex,
+				`${token} must retain lexical editable controller order`,
+			);
+			previousIndex = index;
+		}
+		assert.doesNotMatch(
+			controller,
+			/<ContentEditable|<HistoryPlugin|<ListPlugin|<MarkdownShortcutPlugin|getLexicalEditableFieldViewPresentation/,
+		);
+		assert.doesNotMatch(source, /export function LexicalEditableFieldView/);
+		for (const barrel of [runtimeBarrel, typeBarrel]) {
+			assert.doesNotMatch(
+				barrel,
+				/LexicalEditableFieldView|getLexicalEditableFieldViewPresentation/,
+			);
+		}
+	},
+);
+
+await run(
+	"EditableField formatted copy preserves controller and timer effect ownership",
+	async () => {
+		const source = await fs.readFile(
+			path.join(
+				process.cwd(),
+				"src",
+				"features",
+				"editor",
+				"ui",
+				"EditableField.tsx",
+			),
+			"utf8",
+		);
+		const timerStart = source.indexOf(
+			"function replaceEditableCopyResetTimer(",
+		);
+		const timerEnd = source.indexOf(
+			"export default function EditableField(",
+			timerStart,
+		);
+		assert.notEqual(timerStart, -1);
+		assert.notEqual(timerEnd, -1);
+		const timer = source.slice(timerStart, timerEnd);
+		const timerTokens = [
+			"if (copyTimeoutRef.current)",
+			"clearTimeout(copyTimeoutRef.current)",
+			"copyTimeoutRef.current = setTimeout(() =>",
+			"setCopied(false)",
+			"copyTimeoutRef.current = null",
+			"}, 2000)",
+		];
+		let previousIndex = -1;
+		for (const token of timerTokens) {
+			const index = timer.indexOf(token, previousIndex + 1);
+			assert.ok(
+				index > previousIndex,
+				`${token} must retain editable-copy timer order`,
+			);
+			previousIndex = index;
+		}
+		assert.equal(
+			(timer.match(/copyTimeoutRef\.current/g) ?? []).length,
+			4,
+		);
+		assert.equal((timer.match(/setTimeout\(/g) ?? []).length, 1);
+		assert.equal((timer.match(/clearTimeout\(/g) ?? []).length, 1);
+
+		const handlerStart = source.indexOf("const handleCopy = useCallback(");
+		const handlerEnd = source.indexOf(
+			"const handleFocus = useCallback(",
+			handlerStart,
+		);
+		assert.notEqual(handlerStart, -1);
+		assert.notEqual(handlerEnd, -1);
+		const handler = source.slice(handlerStart, handlerEnd);
+		const handlerTokens = [
+			"event.preventDefault()",
+			"event.stopPropagation()",
+			"const request = getEditableCopyRequest(",
+			"editorRef.current",
+			"normalizedMarkdownValue",
+			"if (!request) return",
+			'let html = ""',
+			"request.editor.getEditorState().read(() =>",
+			"html = $generateHtmlFromNodes(request.editor)",
+			"await navigator.clipboard.write([",
+			"new ClipboardItem({",
+			'"text/html": new Blob([html], { type: "text/html" })',
+			'"text/plain": new Blob([request.markdownValue]',
+			'type: "text/plain"',
+			"setCopied(true)",
+			"replaceEditableCopyResetTimer(copyTimeoutRef, setCopied)",
+			"} catch (error)",
+			'console.error("Failed to copy formatted text:", error)',
+			"[normalizedMarkdownValue]",
+		];
+		previousIndex = -1;
+		for (const token of handlerTokens) {
+			const index = handler.indexOf(token, previousIndex + 1);
+			assert.ok(
+				index > previousIndex,
+				`${token} must retain EditableField formatted-copy order`,
+			);
+			previousIndex = index;
+		}
+		assert.equal((handler.match(/getEditableCopyRequest\(/g) ?? []).length, 1);
+		assert.equal((handler.match(/navigator\.clipboard\.write\(/g) ?? []).length, 1);
+		assert.equal((handler.match(/new ClipboardItem\(/g) ?? []).length, 1);
+		assert.equal((handler.match(/new Blob\(/g) ?? []).length, 2);
+		assert.doesNotMatch(
+			handler,
+			/!\s*editor\s*\|\||copyTimeoutRef\.current|setTimeout\(|clearTimeout\(/,
+		);
+	},
+);
+
+await run(
+	"EditableField mention shortcut preserves selection and async effect ownership",
+	async () => {
+		const source = await fs.readFile(
+			path.join(
+				process.cwd(),
+				"src",
+				"features",
+				"editor",
+				"ui",
+				"EditableField.tsx",
+			),
+			"utf8",
+		);
+		const helperStart = source.indexOf(
+			"function getEditableSelectedMentionText(",
+		);
+		const helperEnd = source.indexOf(
+			"interface ExecuteEditableShortcutOptions",
+			helperStart,
+		);
+		assert.notEqual(helperStart, -1);
+		assert.notEqual(helperEnd, -1);
+		const helper = source.slice(helperStart, helperEnd);
+		const helperTokens = [
+			"$isRangeSelection(selection)",
+			"selection.isCollapsed()",
+			'return ""',
+			"normalizeEditableText(selection.getTextContent()).trim()",
+		];
+		let previousIndex = -1;
+		for (const token of helperTokens) {
+			const index = helper.indexOf(token, previousIndex + 1);
+			assert.ok(
+				index > previousIndex,
+				`${token} must retain mention-selection projection order`,
+			);
+			previousIndex = index;
+		}
+		assert.equal((helper.match(/\$isRangeSelection\(/g) ?? []).length, 1);
+		assert.equal((helper.match(/selection\.isCollapsed\(\)/g) ?? []).length, 1);
+		assert.equal(
+			(helper.match(/selection\.getTextContent\(\)/g) ?? []).length,
+			1,
+		);
+
+		const handlerStart = source.indexOf(
+			"const handleMentionShortcut = useCallback(",
+		);
+		const handlerEnd = source.indexOf(
+			"const handleKeyDown = useCallback(",
+			handlerStart,
+		);
+		assert.notEqual(handlerStart, -1);
+		assert.notEqual(handlerEnd, -1);
+		const handler = source.slice(handlerStart, handlerEnd);
+		const handlerTokens = [
+			"event.preventDefault()",
+			"event.stopPropagation()",
+			"getEditableSelectedMentionText($getSelection())",
+			"if (selectedText)",
+			"$insertMentionAtSelection(selectedText)",
+			"return",
+			"await requestMentionSelection(dispatch)",
+			"if (!shouldInsertEditableMentionResult(result)) return",
+			"editor.focus()",
+			"editor.update(() =>",
+			"$insertMentionAtSelection(result.name)",
+			"[dispatch, editor]",
+		];
+		previousIndex = -1;
+		for (const token of handlerTokens) {
+			const index = handler.indexOf(token, previousIndex + 1);
+			assert.ok(
+				index > previousIndex,
+				`${token} must retain mention-shortcut controller order`,
+			);
+			previousIndex = index;
+		}
+		assert.equal((handler.match(/\$getSelection\(\)/g) ?? []).length, 1);
+		assert.equal(
+			(handler.match(/requestMentionSelection\(dispatch\)/g) ?? []).length,
+			1,
+		);
+		assert.equal(
+			(handler.match(/\$insertMentionAtSelection\(/g) ?? []).length,
+			2,
+		);
+		assert.doesNotMatch(
+			handler,
+			/\$isRangeSelection|\.isCollapsed\(|normalizeEditableText|\.getTextContent\(|result\.status|!\s*result\.name/,
+		);
+	},
+);
+
+await run(
+	"EditableField click routing preserves controller effect ownership",
+	async () => {
+		const source = await fs.readFile(
+			path.join(
+				process.cwd(),
+				"src",
+				"features",
+				"editor",
+				"ui",
+				"EditableField.tsx",
+			),
+			"utf8",
+		);
+		const handlerStart = source.indexOf("const handleClick = useCallback(");
+		const handlerEnd = source.indexOf("const handleInput", handlerStart);
+		assert.notEqual(handlerStart, -1);
+		assert.notEqual(handlerEnd, -1);
+		const handler = source.slice(handlerStart, handlerEnd);
+		const tokens = [
+			"const target = getEventTargetElement(event)",
+			"const plan = getEditableClickPlan<HTMLElement>(target, event)",
+			'if (plan.kind === "mention")',
+			"event.preventDefault()",
+			"event.stopPropagation()",
+			"openMentionModal(getEditableMentionName(plan.mention))",
+			"return",
+			"if (plan.preventDefault)",
+			"event.preventDefault()",
+			"event.stopPropagation()",
+			"onClick?.(event)",
+			"[onClick, openMentionModal]",
+		];
+		let previousIndex = -1;
+		for (const token of tokens) {
+			const index = handler.indexOf(token, previousIndex + 1);
+			assert.ok(
+				index > previousIndex,
+				`${token} must retain EditableField click order`,
+			);
+			previousIndex = index;
+		}
+		assert.equal(
+			(handler.match(/getEditableClickPlan<HTMLElement>\(/g) ?? []).length,
+			1,
+		);
+		assert.equal(
+			(handler.match(/event\.preventDefault\(\)/g) ?? []).length,
+			2,
+		);
+		assert.equal(
+			(handler.match(/event\.stopPropagation\(\)/g) ?? []).length,
+			2,
+		);
+		assert.doesNotMatch(
+			handler,
+			/event\.(?:ctrlKey|metaKey)|closest\(|hasEditableLinkTarget|shouldActivateEditableMention/,
+		);
+	},
+);
+
+await run(
+	"editor mention toggles preserve bracket precedence and cursor arithmetic",
+	() => {
+		const cases = [
+			[
+				"add brackets",
+				["name", 0, 4],
+				{ value: "[name]", selectionStart: 1, selectionEnd: 5 },
+			],
+			[
+				"remove selected brackets",
+				["[name]", 0, 6],
+				{ value: "name", selectionStart: 0, selectionEnd: 4 },
+			],
+			[
+				"remove surrounding brackets",
+				["[name]", 1, 5],
+				{ value: "name", selectionStart: 0, selectionEnd: 4 },
+			],
+			[
+				"selected wrapper wins for nested brackets",
+				["[[name]]", 1, 7],
+				{ value: "[name]", selectionStart: 1, selectionEnd: 5 },
+			],
+			[
+				"surrounding wrapper removes nested brackets",
+				["[[name]]", 2, 6],
+				{ value: "[name]", selectionStart: 1, selectionEnd: 5 },
+			],
+			[
+				"outer selected wrapper",
+				["[[name]]", 0, 8],
+				{ value: "[name]", selectionStart: 0, selectionEnd: 6 },
+			],
+			[
+				"empty selected wrapper",
+				["[]", 0, 2],
+				{ value: "", selectionStart: 0, selectionEnd: 0 },
+			],
+			[
+				"single opening bracket",
+				["[", 0, 1],
+				{ value: "[[]", selectionStart: 1, selectionEnd: 2 },
+			],
+			[
+				"single closing bracket",
+				["]", 0, 1],
+				{ value: "[]]", selectionStart: 1, selectionEnd: 2 },
+			],
+			[
+				"empty selection",
+				["", 0, 0],
+				{ value: "[]", selectionStart: 1, selectionEnd: 1 },
+			],
+			[
+				"wrapped whitespace",
+				[" [ name ] ", 1, 9],
+				{ value: "  name  ", selectionStart: 1, selectionEnd: 7 },
+			],
+			[
+				"wrapped multiline value",
+				["[one\ntwo]", 0, 9],
+				{ value: "one\ntwo", selectionStart: 0, selectionEnd: 7 },
+			],
+			[
+				"reversed selection",
+				["abcd", 3, 1],
+				{
+					value: "abc[bc]bcd",
+					selectionStart: 4,
+					selectionEnd: 2,
+				},
+			],
+			[
+				"out-of-range selection",
+				["abcd", -5, 99],
+				{ value: "[abcd]", selectionStart: -4, selectionEnd: 100 },
+			],
+		];
+		for (const [label, args, expected] of cases) {
+			assert.deepEqual(toggleInputMention(...args), expected, label);
+		}
+	},
+);
+
+await run(
+	"editor mention toggles preserve short-circuit method order and failures",
+	() => {
+		const insideEvents = [];
+		let insideLengthReads = 0;
+		const insideSelection = {
+			startsWith(marker) {
+				insideEvents.push(["selection.startsWith", marker]);
+				return true;
+			},
+			endsWith(marker) {
+				insideEvents.push(["selection.endsWith", marker]);
+				return true;
+			},
+			get length() {
+				insideLengthReads += 1;
+				insideEvents.push(["selection.length", insideLengthReads]);
+				return 4;
+			},
+			substring(start, end) {
+				insideEvents.push(["selection.substring", start, end]);
+				return "xy";
+			},
+		};
+		let insideSubstringReads = 0;
+		const insideValue = {
+			substring(...args) {
+				insideSubstringReads += 1;
+				insideEvents.push(["value.substring", ...args]);
+				if (insideSubstringReads === 1) return insideSelection;
+				return insideSubstringReads === 2 ? "A" : "B";
+			},
+			get length() {
+				throw new Error("value length must stay lazy for selected wrapping");
+			},
+		};
+		assert.deepEqual(toggleInputMention(insideValue, 1, 3), {
+			value: "AxyB",
+			selectionStart: 1,
+			selectionEnd: 1,
+		});
+		assert.deepEqual(insideEvents, [
+			["value.substring", 1, 3],
+			["selection.startsWith", "["],
+			["selection.endsWith", "]"],
+			["selection.length", 1],
+			["value.substring", 0, 1],
+			["selection.length", 2],
+			["selection.substring", 1, 3],
+			["value.substring", 3],
+		]);
+
+		const aroundEvents = [];
+		const aroundSelection = {
+			startsWith(marker) {
+				aroundEvents.push(["selection.startsWith", marker]);
+				return false;
+			},
+			endsWith() {
+				throw new Error("endsWith must stay lazy after a failed startsWith");
+			},
+			[Symbol.toPrimitive]() {
+				aroundEvents.push(["selection.toPrimitive"]);
+				return "xy";
+			},
+		};
+		let aroundSubstringReads = 0;
+		const aroundValue = {
+			substring(...args) {
+				aroundSubstringReads += 1;
+				aroundEvents.push(["value.substring", ...args]);
+				if (aroundSubstringReads === 1) return aroundSelection;
+				return aroundSubstringReads === 2 ? "A" : "B";
+			},
+			get length() {
+				aroundEvents.push(["value.length"]);
+				return 5;
+			},
+			get 0() {
+				aroundEvents.push(["value.0"]);
+				return "[";
+			},
+			get 3() {
+				aroundEvents.push(["value.3"]);
+				return "]";
+			},
+		};
+		assert.deepEqual(toggleInputMention(aroundValue, 1, 3), {
+			value: "AxyB",
+			selectionStart: 0,
+			selectionEnd: 2,
+		});
+		assert.deepEqual(aroundEvents, [
+			["value.substring", 1, 3],
+			["selection.startsWith", "["],
+			["value.length"],
+			["value.0"],
+			["value.3"],
+			["value.substring", 0, 0],
+			["selection.toPrimitive"],
+			["value.substring", 4],
+		]);
+
+		const fallbackEvents = [];
+		const fallbackSelection = {
+			startsWith(marker) {
+				fallbackEvents.push(["selection.startsWith", marker]);
+				return false;
+			},
+			[Symbol.toPrimitive]() {
+				fallbackEvents.push(["selection.toPrimitive"]);
+				return "xy";
+			},
+		};
+		let fallbackSubstringReads = 0;
+		const fallbackValue = {
+			substring(...args) {
+				fallbackSubstringReads += 1;
+				fallbackEvents.push(["value.substring", ...args]);
+				if (fallbackSubstringReads === 1) return fallbackSelection;
+				return fallbackSubstringReads === 2 ? "<" : ">";
+			},
+			get length() {
+				throw new Error("value length must stay lazy at selection start zero");
+			},
+		};
+		assert.deepEqual(toggleInputMention(fallbackValue, 0, 2), {
+			value: "<[xy]>",
+			selectionStart: 1,
+			selectionEnd: 3,
+		});
+		assert.deepEqual(fallbackEvents, [
+			["value.substring", 0, 2],
+			["selection.startsWith", "["],
+			["value.substring", 0, 0],
+			["selection.toPrimitive"],
+			["value.substring", 2],
+		]);
+
+		const initialFailure = new Error("initial substring failed");
+		assert.throws(
+			() =>
+				toggleInputMention(
+					{
+						substring() {
+							throw initialFailure;
+						},
+					},
+					1,
+					2,
+				),
+			(error) => error === initialFailure,
+		);
+		assert.throws(() => toggleInputMention(null, 0, 0), TypeError);
+		assert.throws(
+			() => toggleInputMention("abc", Symbol("start"), 1),
+			TypeError,
+		);
+	},
+);
+
+await run(
+	"editor input shortcuts preserve aliases modifiers and lookup identities",
+	() => {
+		const shortcut = (key, overrides = {}) =>
+			getInputShortcutAction({
+				ctrlKey: true,
+				key,
+				metaKey: false,
+				type: "textarea",
+				...overrides,
+			});
+		const aliases = [
+			["k", { kind: "mention" }],
+			["л", { kind: "mention" }],
+			["b", { kind: "format", marker: "**" }],
+			["и", { kind: "format", marker: "**" }],
+			["i", { kind: "format", marker: "*" }],
+			["ш", { kind: "format", marker: "*" }],
+			["]", { kind: "list", add: true }],
+			["ї", { kind: "list", add: true }],
+			["[", { kind: "list", add: false }],
+			["х", { kind: "list", add: false }],
+			["q", { kind: "quote" }],
+			["й", { kind: "quote" }],
+		];
+		for (const [key, expected] of aliases) {
+			assert.deepEqual(shortcut(key), expected, key);
+		}
+		for (const [key, expected] of [
+			["K", { kind: "mention" }],
+			["Л", { kind: "mention" }],
+			["B", { kind: "format", marker: "**" }],
+			["И", { kind: "format", marker: "**" }],
+			["I", { kind: "format", marker: "*" }],
+			["Ш", { kind: "format", marker: "*" }],
+			["Ї", { kind: "list", add: true }],
+			["Х", { kind: "list", add: false }],
+			["Q", { kind: "quote" }],
+			["Й", { kind: "quote" }],
+		]) {
+			assert.deepEqual(shortcut(key), expected, key);
+		}
+
+		assert.deepEqual(
+			shortcut("Tab", { ctrlKey: false, metaKey: false }),
+			{ kind: "tab" },
+		);
+		assert.equal(shortcut("k", { ctrlKey: false, metaKey: false }), null);
+		assert.equal(shortcut("k", { ctrlKey: 0, metaKey: "" }), null);
+		assert.deepEqual(
+			shortcut("k", { ctrlKey: false, metaKey: "meta" }),
+			{ kind: "mention" },
+		);
+		assert.deepEqual(
+			shortcut("k", { ctrlKey: {}, metaKey: false }),
+			{ kind: "mention" },
+		);
+		assert.equal(shortcut("k", { type: "TEXTAREA" }), null);
+		assert.equal(shortcut("k", { type: "text" }), null);
+
+		for (let level = 1; level <= 6; level += 1) {
+			assert.deepEqual(shortcut(String(level)), {
+				kind: "heading",
+				level,
+			});
+		}
+		for (const key of ["0", "7", "01", " 1", "unknown"]) {
+			assert.equal(shortcut(key), null, key);
+		}
+
+		const latinMention = shortcut("k");
+		assert.equal(latinMention, shortcut("k"));
+		assert.notEqual(latinMention, shortcut("л"));
+		assert.equal(Object.isFrozen(latinMention), false);
+		latinMention.phase106Probe = "mutable";
+		assert.equal(shortcut("k").phase106Probe, "mutable");
+		delete latinMention.phase106Probe;
+
+		assert.notEqual(shortcut("1"), shortcut("1"));
+		assert.notEqual(
+			shortcut("tab", { ctrlKey: false }),
+			shortcut("tab", { ctrlKey: false }),
+		);
+		assert.equal(shortcut("toString"), null);
+		assert.equal(
+			shortcut({
+				toLowerCase() {
+					return "toString";
+				},
+			}),
+			Object.prototype.toString,
+		);
+		assert.equal(shortcut("constructor"), Object);
+		assert.equal(shortcut("__proto__"), Object.prototype);
+	},
+);
+
+await run(
+	"editor input shortcuts preserve destructuring coercion and failure order",
+	() => {
+		const nonTextareaEvents = [];
+		const nonTextareaKey = {
+			toLowerCase() {
+				nonTextareaEvents.push("key.toLowerCase");
+				return "k";
+			},
+		};
+		const nonTextareaOptions = {
+			get ctrlKey() {
+				nonTextareaEvents.push("ctrlKey");
+				return true;
+			},
+			get key() {
+				nonTextareaEvents.push("key");
+				return nonTextareaKey;
+			},
+			get metaKey() {
+				nonTextareaEvents.push("metaKey");
+				return false;
+			},
+			get type() {
+				nonTextareaEvents.push("type");
+				return "text";
+			},
+		};
+		assert.equal(getInputShortcutAction(nonTextareaOptions), null);
+		assert.deepEqual(nonTextareaEvents, [
+			"ctrlKey",
+			"key",
+			"metaKey",
+			"type",
+		]);
+
+		const textareaEvents = [];
+		const textareaKey = {
+			get toLowerCase() {
+				textareaEvents.push("key.toLowerCase");
+				return function lowerKey() {
+					assert.equal(this, textareaKey);
+					textareaEvents.push("key.toLowerCase()");
+					return "tab";
+				};
+			},
+		};
+		const textareaOptions = {
+			get ctrlKey() {
+				textareaEvents.push("ctrlKey");
+				return false;
+			},
+			get key() {
+				textareaEvents.push("key");
+				return textareaKey;
+			},
+			get metaKey() {
+				textareaEvents.push("metaKey");
+				return false;
+			},
+			get type() {
+				textareaEvents.push("type");
+				return "textarea";
+			},
+		};
+		assert.deepEqual(getInputShortcutAction(textareaOptions), { kind: "tab" });
+		assert.deepEqual(textareaEvents, [
+			"ctrlKey",
+			"key",
+			"metaKey",
+			"type",
+			"key.toLowerCase",
+			"key.toLowerCase()",
+		]);
+
+		const coercionEvents = [];
+		let stringCoercions = 0;
+		const normalizedKey = {
+			[Symbol.toPrimitive](hint) {
+				coercionEvents.push(`normalized:${hint}`);
+				if (hint === "string") {
+					stringCoercions += 1;
+					return stringCoercions === 1 ? "missing" : "1";
+				}
+				return "2";
+			},
+		};
+		assert.deepEqual(
+			getInputShortcutAction({
+				ctrlKey: true,
+				key: {
+					toLowerCase() {
+						coercionEvents.push("key.toLowerCase");
+						return normalizedKey;
+					},
+				},
+				metaKey: false,
+				type: "textarea",
+			}),
+			{ kind: "heading", level: 2 },
+		);
+		assert.deepEqual(coercionEvents, [
+			"key.toLowerCase",
+			"normalized:string",
+			"normalized:string",
+			"normalized:number",
+		]);
+
+		const disabledEvents = [];
+		const disabledNormalizedKey = {
+			[Symbol.toPrimitive]() {
+				disabledEvents.push("normalized.toPrimitive");
+				return "k";
+			},
+		};
+		assert.equal(
+			getInputShortcutAction({
+				ctrlKey: false,
+				key: {
+					toLowerCase() {
+						disabledEvents.push("key.toLowerCase");
+						return disabledNormalizedKey;
+					},
+				},
+				metaKey: false,
+				type: "textarea",
+			}),
+			null,
+		);
+		assert.deepEqual(disabledEvents, ["key.toLowerCase"]);
+
+		const lowerFailure = new Error("lowercase failed");
+		assert.throws(
+			() =>
+				getInputShortcutAction({
+					ctrlKey: true,
+					key: {
+						toLowerCase() {
+							throw lowerFailure;
+						},
+					},
+					metaKey: false,
+					type: "textarea",
+				}),
+			(error) => error === lowerFailure,
+		);
+		assert.throws(() => getInputShortcutAction(null), TypeError);
+		assert.equal(
+			getInputShortcutAction({
+				ctrlKey: true,
+				key: null,
+				metaKey: false,
+				type: "text",
+			}),
+			null,
+		);
+		assert.throws(
+			() =>
+				getInputShortcutAction({
+					ctrlKey: true,
+					key: null,
+					metaKey: false,
+					type: "textarea",
+				}),
+			TypeError,
+		);
+		assert.throws(
+			() =>
+				getInputShortcutAction({
+					ctrlKey: true,
+					key: {
+						toLowerCase() {
+							return Symbol("normalized");
+						},
+					},
+					metaKey: false,
+					type: "textarea",
+				}),
+			TypeError,
+		);
+	},
+);
+
+await run("editor input shortcut execution preserves every action route", () => {
+	const cases = [
+		[
+			"tab replaces the selected range",
+			[{ kind: "tab" }, "abcd", 1, 3],
+			{
+				kind: "edit",
+				edit: { value: "a\td", selectionStart: 2, selectionEnd: 2 },
+			},
+		],
+		[
+			"collapsed mention requests the picker",
+			[{ kind: "mention" }, "name", 2, 2],
+			{ kind: "mention-picker" },
+		],
+		[
+			"selected mention adds brackets",
+			[{ kind: "mention" }, "name", 0, 4],
+			{
+				kind: "edit",
+				edit: { value: "[name]", selectionStart: 1, selectionEnd: 5 },
+			},
+		],
+		[
+			"selected mention removes brackets",
+			[{ kind: "mention" }, "[name]", 0, 6],
+			{
+				kind: "edit",
+				edit: { value: "name", selectionStart: 0, selectionEnd: 4 },
+			},
+		],
+		[
+			"bold format",
+			[{ kind: "format", marker: "**" }, "word", 0, 4],
+			{
+				kind: "edit",
+				edit: { value: "**word**", selectionStart: 2, selectionEnd: 6 },
+			},
+		],
+		[
+			"surrounding italic format",
+			[{ kind: "format", marker: "*" }, "*word*", 1, 5],
+			{
+				kind: "edit",
+				edit: { value: "word", selectionStart: 0, selectionEnd: 4 },
+			},
+		],
+		[
+			"list add",
+			[{ kind: "list", add: true }, "one", 0, 3],
+			{
+				kind: "edit",
+				edit: { value: "- one", selectionStart: 2, selectionEnd: 5 },
+			},
+		],
+		[
+			"list remove",
+			[{ kind: "list", add: false }, "- one", 0, 5],
+			{
+				kind: "edit",
+				edit: { value: "one", selectionStart: -2, selectionEnd: 3 },
+			},
+		],
+		[
+			"heading",
+			[{ kind: "heading", level: 2 }, "one", 0, 3],
+			{
+				kind: "edit",
+				edit: { value: "## one", selectionStart: 3, selectionEnd: 6 },
+			},
+		],
+		[
+			"quote",
+			[{ kind: "quote" }, "one", 0, 3],
+			{
+				kind: "edit",
+				edit: { value: "> one", selectionStart: 2, selectionEnd: 5 },
+			},
+		],
+		[
+			"multiline block action",
+			[{ kind: "quote" }, "one\ntwo", 0, 7],
+			{
+				kind: "edit",
+				edit: {
+					value: "> one\n> two",
+					selectionStart: 2,
+					selectionEnd: 11,
+				},
+			},
+		],
+	];
+
+	for (const [label, args, expected] of cases) {
+		assert.deepEqual(getInputShortcutExecutionPlan(...args), expected, label);
+	}
+
+	const firstPicker = getInputShortcutExecutionPlan(
+		{ kind: "mention" },
+		"",
+		0,
+		0,
+	);
+	const secondPicker = getInputShortcutExecutionPlan(
+		{ kind: "mention" },
+		"",
+		0,
+		0,
+	);
+	assert.notEqual(firstPicker, secondPicker);
+
+	assert.deepEqual(
+		getInputShortcutExecutionPlan({ kind: "mention" }, "abc", 1, "1"),
+		{
+			kind: "edit",
+			edit: {
+				value: "a[]bc",
+				selectionStart: 2,
+				selectionEnd: "11",
+			},
+		},
+	);
+	assert.deepEqual(
+		getInputShortcutExecutionPlan(
+			Object.create({ kind: "quote" }),
+			"one",
+			0,
+			3,
+		),
+		{
+			kind: "edit",
+			edit: { value: "> one", selectionStart: 2, selectionEnd: 5 },
+		},
+	);
+	assert.deepEqual(getInputShortcutExecutionPlan(Object, "one", 0, 3), {
+		kind: "edit",
+		edit: { value: " one", selectionStart: 1, selectionEnd: 4 },
+	});
+});
+
+await run(
+	"editor input shortcut execution preserves getter and failure order",
+	() => {
+		{
+			const events = [];
+			const action = {
+				get kind() {
+					events.push("action.kind");
+					return "tab";
+				},
+			};
+			assert.deepEqual(
+				getInputShortcutExecutionPlan(action, "ab", 1, 1),
+				{
+					kind: "edit",
+					edit: { value: "a\tb", selectionStart: 2, selectionEnd: 2 },
+				},
+			);
+			assert.deepEqual(events, ["action.kind"]);
+		}
+
+		{
+			const events = [];
+			const action = {
+				get kind() {
+					events.push("action.kind");
+					return "mention";
+				},
+			};
+			const value = {
+				get substring() {
+					throw new Error("collapsed mention must not read value methods");
+				},
+			};
+			assert.deepEqual(
+				getInputShortcutExecutionPlan(action, value, 0, 0),
+				{ kind: "mention-picker" },
+			);
+			assert.deepEqual(events, ["action.kind", "action.kind"]);
+		}
+
+		{
+			const events = [];
+			const kinds = ["unknown", "unknown", "format"];
+			const action = {
+				get kind() {
+					const kind = kinds.shift();
+					events.push(`action.kind:${kind}`);
+					return kind;
+				},
+				get marker() {
+					events.push("action.marker");
+					return "*";
+				},
+			};
+			assert.deepEqual(
+				getInputShortcutExecutionPlan(action, "word", 0, 4),
+				{
+					kind: "edit",
+					edit: { value: "*word*", selectionStart: 1, selectionEnd: 5 },
+				},
+			);
+			assert.deepEqual(events, [
+				"action.kind:unknown",
+				"action.kind:unknown",
+				"action.kind:format",
+				"action.marker",
+			]);
+		}
+
+		{
+			const events = [];
+			const kinds = ["unknown", "unknown", "unknown", "list"];
+			const action = {
+				get kind() {
+					const kind = kinds.shift();
+					events.push(`action.kind:${kind}`);
+					return kind;
+				},
+				get add() {
+					events.push("action.add");
+					return true;
+				},
+			};
+			assert.deepEqual(
+				getInputShortcutExecutionPlan(action, "one", 0, 3),
+				{
+					kind: "edit",
+					edit: { value: "- one", selectionStart: 2, selectionEnd: 5 },
+				},
+			);
+			assert.deepEqual(events, [
+				"action.kind:unknown",
+				"action.kind:unknown",
+				"action.kind:unknown",
+				"action.kind:list",
+				"action.add",
+			]);
+		}
+
+		{
+			const events = [];
+			const kinds = [
+				"unknown",
+				"unknown",
+				"unknown",
+				"unknown",
+				"quote",
+			];
+			const action = {
+				get kind() {
+					const kind = kinds.shift();
+					events.push(`action.kind:${kind}`);
+					return kind;
+				},
+			};
+			assert.deepEqual(
+				getInputShortcutExecutionPlan(action, "one", 0, 3),
+				{
+					kind: "edit",
+					edit: { value: "> one", selectionStart: 2, selectionEnd: 5 },
+				},
+			);
+			assert.deepEqual(events, [
+				"action.kind:unknown",
+				"action.kind:unknown",
+				"action.kind:unknown",
+				"action.kind:unknown",
+				"action.kind:quote",
+			]);
+		}
+
+		const kindFailure = new Error("kind failed");
+		assert.throws(
+			() =>
+				getInputShortcutExecutionPlan(
+					{
+						get kind() {
+							throw kindFailure;
+						},
+					},
+					"",
+					0,
+					0,
+				),
+			(error) => error === kindFailure,
+		);
+
+		const markerFailure = new Error("marker failed");
+		assert.throws(
+			() =>
+				getInputShortcutExecutionPlan(
+					{
+						kind: "format",
+						get marker() {
+							throw markerFailure;
+						},
+					},
+					"word",
+					0,
+					4,
+				),
+			(error) => error === markerFailure,
+		);
+		assert.throws(
+			() => getInputShortcutExecutionPlan(null, "", 0, 0),
+			TypeError,
+		);
+		assert.throws(
+			() => getInputShortcutExecutionPlan({ kind: "tab" }, null, 0, 0),
+			TypeError,
+		);
+	},
+);
+
+await run("Input keyboard execution preserves controller effect ownership", async () => {
+	const source = await fs.readFile(
+		path.join(
+			process.cwd(),
+			"src",
+			"features",
+			"editor",
+			"ui",
+			"Input.tsx",
+		),
+		"utf8",
+	);
+	const viewSource = await fs.readFile(
+		path.join(
+			process.cwd(),
+			"src",
+			"features",
+			"editor",
+			"ui",
+			"InputView.tsx",
+		),
+		"utf8",
+	);
+	const typeSource = await fs.readFile(
+		path.join(
+			process.cwd(),
+			"src",
+			"features",
+			"editor",
+			"ui",
+			"inputTypes.ts",
+		),
+		"utf8",
+	);
+	const runtimeBarrel = await fs.readFile(
+		path.join(
+			process.cwd(),
+			"src",
+			"features",
+			"editor",
+			"ui",
+			"index.js",
+		),
+		"utf8",
+	);
+	const typeBarrel = await fs.readFile(
+		path.join(
+			process.cwd(),
+			"src",
+			"features",
+			"editor",
+			"ui",
+			"index.d.ts",
+		),
+		"utf8",
+	);
+	const handlerStart = source.indexOf("const handleKeyDown");
+	const handlerEnd = source.indexOf("const handlePaste", handlerStart);
+	assert.notEqual(handlerStart, -1);
+	assert.notEqual(handlerEnd, -1);
+	const handler = source.slice(handlerStart, handlerEnd);
+	const orderedTokens = [
+		"getInputShortcutAction({",
+		"if (!action)",
+		"props.onKeyDown?.(event)",
+		"event.preventDefault()",
+		"const { value, selectionStart, selectionEnd } = getInputSelectionState(",
+		"event.currentTarget",
+		"const execution = getInputShortcutExecutionPlan(",
+		'if (execution.kind === "mention-picker")',
+		"void insertMentionWithoutSelection(event)",
+		"applyTextEdit(event, execution.edit)",
+	];
+	let previousIndex = -1;
+	for (const token of orderedTokens) {
+		const index = handler.indexOf(token);
+		assert.ok(index > previousIndex, `${token} must retain handler order`);
+		previousIndex = index;
+	}
+	assert.equal((handler.match(/event\.preventDefault\(\)/g) ?? []).length, 1);
+	assert.doesNotMatch(handler, /action\.kind ===/);
+	const firstLayoutEffectStart = source.indexOf("useLayoutEffect(() => {");
+	const initialSelectionEffectStart = source.indexOf(
+		"useLayoutEffect(() => {",
+		firstLayoutEffectStart + 1,
+	);
+	const initialSelectionEffectEnd = source.indexOf(
+		"const setRefs",
+		initialSelectionEffectStart,
+	);
+	assert.notEqual(firstLayoutEffectStart, -1);
+	assert.notEqual(initialSelectionEffectStart, -1);
+	assert.notEqual(initialSelectionEffectEnd, -1);
+	const initialSelectionEffect = source.slice(
+		initialSelectionEffectStart,
+		initialSelectionEffectEnd,
+	);
+	const initialSelectionTokens = [
+		"const node = internalRef.current",
+		"if (!node) return",
+		"const position = getInitialInputSelectionPosition(",
+		"hasAppliedInitialSelectionRef.current",
+		"initialSelection",
+		"type",
+		"rawValue",
+		"if (position === null) return",
+		"node.focus({ preventScroll: true })",
+		"node.setSelectionRange(position, position)",
+		"hasAppliedInitialSelectionRef.current = true",
+		"}, [initialSelection, rawValue, type])",
+	];
+	previousIndex = -1;
+	for (const token of initialSelectionTokens) {
+		const index = initialSelectionEffect.indexOf(token, previousIndex + 1);
+		assert.ok(
+			index > previousIndex,
+			`${token} must retain initial-selection effect order`,
+		);
+		previousIndex = index;
+	}
+	assert.doesNotMatch(
+		initialSelectionEffect,
+		/\b(?:resolveInitialCursorPosition|supportsSelectionRange)\b/,
+	);
+	const selectionHelperStart = source.indexOf("function getInputSelectionState");
+	const selectionHelperEnd = source.indexOf("const Input =", selectionHelperStart);
+	assert.notEqual(selectionHelperStart, -1);
+	assert.notEqual(selectionHelperEnd, -1);
+	const selectionHelper = source.slice(selectionHelperStart, selectionHelperEnd);
+	assert.ok(
+		selectionHelper.indexOf("const value = target.value") <
+			selectionHelper.indexOf(
+				"const selectionStart = target.selectionStart ?? 0",
+			),
+	);
+	assert.ok(
+		selectionHelper.indexOf(
+			"const selectionStart = target.selectionStart ?? 0",
+		) <
+			selectionHelper.indexOf(
+				"selectionEnd: target.selectionEnd ?? selectionStart",
+			),
+	);
+	const mentionHandlerStart = source.indexOf(
+		"const insertMentionWithoutSelection",
+	);
+	const mentionHandlerEnd = source.indexOf(
+		"const handleKeyDown",
+		mentionHandlerStart,
+	);
+	assert.notEqual(mentionHandlerStart, -1);
+	assert.notEqual(mentionHandlerEnd, -1);
+	const mentionHandler = source.slice(mentionHandlerStart, mentionHandlerEnd);
+	const mentionHandlerTokens = [
+		"getInputSelectionState(event.currentTarget)",
+		"await requestMentionSelection(dispatch)",
+		"const insertion = getInputMentionInsertion(",
+		"if (!insertion) return",
+		"props.onChange?.(createInputChangeEvent(event, insertion.value))",
+		"const nextCursor = getInputMentionCursorPosition(",
+		"setTimeout(() =>",
+		"const node = internalRef.current",
+		"if (!node) return",
+		"node.focus()",
+		"node.setSelectionRange(nextCursor, nextCursor)",
+		"}, 0)",
+	];
+	previousIndex = -1;
+	for (const token of mentionHandlerTokens) {
+		const index = mentionHandler.indexOf(token);
+		assert.ok(
+			index > previousIndex,
+			`${token} must retain mention-handler order`,
+		);
+		previousIndex = index;
+	}
+	assert.doesNotMatch(mentionHandler, /result\.(?:status|name)/);
+	const pasteHandlerStart = source.indexOf("const handlePaste");
+	const pasteHandlerEnd = source.indexOf(
+		"return (",
+		pasteHandlerStart,
+	);
+	assert.notEqual(pasteHandlerStart, -1);
+	assert.notEqual(pasteHandlerEnd, -1);
+	const pasteHandler = source.slice(pasteHandlerStart, pasteHandlerEnd);
+	const pasteHandlerTokens = [
+		'if (type !== "textarea")',
+		"delegateInputPaste(props, event)",
+		"getInputSelectionState(",
+		"event.currentTarget",
+		"!isRangeInsideSquareBrackets(value, selectionStart, selectionEnd)",
+		"delegateInputPaste(props, event)",
+		"event.preventDefault()",
+		'event.clipboardData.getData("text/plain")',
+		"const edit = getInputBracketPasteEdit(",
+		"applyTextEdit(event, edit)",
+	];
+	previousIndex = -1;
+	for (const token of pasteHandlerTokens) {
+		const index = pasteHandler.indexOf(token, previousIndex + 1);
+		assert.ok(
+			index > previousIndex,
+			`${token} must retain paste-handler order`,
+		);
+		previousIndex = index;
+	}
+	assert.equal(
+		(pasteHandler.match(/delegateInputPaste\(props, event\)/g) ?? []).length,
+		2,
+	);
+	assert.equal(
+		(pasteHandler.match(/isRangeInsideSquareBrackets\(/g) ?? []).length,
+		1,
+	);
+	assert.doesNotMatch(pasteHandler, /\.replace\(|\.substring\(/);
+	const pasteDelegateStart = source.indexOf("function delegateInputPaste");
+	const pasteDelegateEnd = source.indexOf("const Input =", pasteDelegateStart);
+	assert.notEqual(pasteDelegateStart, -1);
+	assert.notEqual(pasteDelegateEnd, -1);
+	const pasteDelegate = source.slice(pasteDelegateStart, pasteDelegateEnd);
+	assert.match(pasteDelegate, /props\.onPaste\?\.\(event\)/);
+	const controllerRenderTokens = [
+		"const rawValue = getInputRawValue(props)",
+		"return (",
+		"<InputView",
+		"type={type}",
+		"className={className}",
+		"title={title}",
+		"nativeProps={props}",
+		"inputRef={setRefs}",
+		"onKeyDown={handleKeyDown}",
+		"onPaste={handlePaste}",
+	];
+	previousIndex = -1;
+	for (const token of controllerRenderTokens) {
+		const index = source.indexOf(token, previousIndex + 1);
+		assert.ok(index > previousIndex, `${token} must retain controller order`);
+		previousIndex = index;
+	}
+	assert.match(
+		source,
+		/export type \{ InputProps, InputValueChangeEvent \} from "\.\/inputTypes\.ts"/,
+	);
+	assert.doesNotMatch(
+		source,
+		/\b(?:classNames|Tooltip|TextareaHTMLAttributes)\b|<(?:input|textarea)\b/,
+	);
+
+	const viewTokens = [
+		"getInputClassPresentation(type, nativeProps)",
+		"classNames(",
+		"presentation.baseClassName",
+		"className",
+		"presentation.mentionClassName",
+		"renderNativeInput({",
+		"type",
+		"nativeProps",
+		"inputRef",
+		"className: combinedClassName",
+		"onKeyDown",
+		"onPaste",
+		"wrapInputWithTooltip(title, node)",
+	];
+	previousIndex = -1;
+	for (const token of viewTokens) {
+		const index = viewSource.indexOf(token, previousIndex + 1);
+		assert.ok(index > previousIndex, `${token} must retain view order`);
+		previousIndex = index;
+	}
+	const nativeRendererStart = viewSource.indexOf("function renderNativeInput");
+	const nativeRendererEnd = viewSource.indexOf(
+		"function wrapInputWithTooltip",
+		nativeRendererStart,
+	);
+	assert.notEqual(nativeRendererStart, -1);
+	assert.notEqual(nativeRendererEnd, -1);
+	const nativeRenderer = viewSource.slice(
+		nativeRendererStart,
+		nativeRendererEnd,
+	);
+	const textareaStart = nativeRenderer.indexOf('if (type === "textarea")');
+	const inputStart = nativeRenderer.indexOf("<input", textareaStart);
+	assert.ok(textareaStart >= 0);
+	assert.ok(inputStart > textareaStart);
+	const textareaRenderer = nativeRenderer.slice(textareaStart, inputStart);
+	for (const [earlier, later] of [
+		["rows={1}", "{...textareaProps}"],
+		["{...textareaProps}", "ref={inputRef}"],
+		["ref={inputRef}", "className={className}"],
+		["className={className}", "onKeyDown={onKeyDown}"],
+		["onKeyDown={onKeyDown}", "onPaste={onPaste}"],
+	]) {
+		assert.ok(
+			textareaRenderer.indexOf(earlier) < textareaRenderer.indexOf(later),
+			`${earlier} must precede ${later} for textarea`,
+		);
+	}
+	const inputRenderer = nativeRenderer.slice(inputStart);
+	for (const [earlier, later] of [
+		["{...nativeProps}", "ref={inputRef}"],
+		["ref={inputRef}", "className={className}"],
+		["className={className}", "type={type}"],
+		["type={type}", "onKeyDown={onKeyDown}"],
+		["onKeyDown={onKeyDown}", "onPaste={onPaste}"],
+	]) {
+		assert.ok(
+			inputRenderer.indexOf(earlier) < inputRenderer.indexOf(later),
+			`${earlier} must precede ${later} for input`,
+		);
+	}
+	const tooltipRenderer = viewSource.slice(
+		viewSource.indexOf("function wrapInputWithTooltip"),
+		viewSource.indexOf("export default function InputView"),
+	);
+	assert.ok(
+		tooltipRenderer.indexOf("if (!title) return node") <
+			tooltipRenderer.indexOf(
+				'<Tooltip content={title} className="Input__tooltip">',
+			),
+	);
+	assert.ok(
+		tooltipRenderer.indexOf(
+			'<Tooltip content={title} className="Input__tooltip">',
+		) < tooltipRenderer.indexOf("{node}"),
+	);
+	assert.match(typeSource, /export type InputElement =/);
+	assert.match(typeSource, /export type InputValueChangeEvent =/);
+	assert.match(typeSource, /export interface InputProps/);
+	assert.match(typeSource, /export type InputNativeProps =/);
+	assert.doesNotMatch(runtimeBarrel, /InputView|inputTypes/);
+	assert.doesNotMatch(typeBarrel, /InputView|inputTypes/);
+	assert.doesNotMatch(
+		source,
+		/\b(?:applyInputBlockEdit|insertInputTab|toggleInputFormat|toggleInputMention)\b/,
+	);
+});
+
+await run("editor input mention insertion preserves value and cursor policies", () => {
+	const selected = (name) => ({ status: "selected", name });
+	const insertionCases = [
+		[
+			"replace selected text",
+			["abc", 1, 2, selected("NPC")],
+			{ value: "a[NPC]c", mention: "[NPC]" },
+		],
+		[
+			"empty name",
+			["abc", 1, 2, selected("")],
+			{ value: "a[]c", mention: "[]" },
+		],
+		[
+			"whitespace name remains exact",
+			["abc", 1, 2, selected(" ")],
+			{ value: "a[ ]c", mention: "[ ]" },
+		],
+		[
+			"zero name uses empty brackets",
+			["abc", 1, 2, { status: "selected", name: 0 }],
+			{ value: "a[]c", mention: "[]" },
+		],
+		[
+			"truthy numeric name is string interpolated",
+			["abc", 1, 2, { status: "selected", name: 42 }],
+			{ value: "a[42]c", mention: "[42]" },
+		],
+		[
+			"unexpected status still inserts",
+			["abc", 1, 2, { status: "other", name: "NPC" }],
+			{ value: "a[NPC]c", mention: "[NPC]" },
+		],
+		[
+			"negative and oversized cursors use substring clamping",
+			["abc", -2, 99, selected("NPC")],
+			{ value: "[NPC]", mention: "[NPC]" },
+		],
+		[
+			"reversed cursors retain independent prefix and suffix reads",
+			["abc", 3, 1, selected("NPC")],
+			{ value: "abc[NPC]bc", mention: "[NPC]" },
+		],
+		[
+			"string cursors use native substring conversion",
+			["abc", "1", "2", selected("NPC")],
+			{ value: "a[NPC]c", mention: "[NPC]" },
+		],
+	];
+	for (const [label, args, expected] of insertionCases) {
+		assert.deepEqual(getInputMentionInsertion(...args), expected, label);
+	}
+
+	assert.equal(
+		getInputMentionInsertion(
+			{
+				get substring() {
+					throw new Error("cancelled insertion must not read value");
+				},
+			},
+			0,
+			0,
+			{ status: "cancelled" },
+		),
+		null,
+	);
+
+	assert.equal(
+		getInputMentionCursorPosition(2, selected("NPC"), "[NPC]"),
+		7,
+	);
+	assert.equal(
+		getInputMentionCursorPosition(2, { status: "cancelled" }, "[NPC]"),
+		3,
+	);
+	assert.equal(
+		getInputMentionCursorPosition(
+			2,
+			{ status: "other", name: "NPC" },
+			"[NPC]",
+		),
+		3,
+	);
+	assert.equal(
+		getInputMentionCursorPosition("2", selected("NPC"), "[NPC]"),
+		"25",
+	);
+});
+
+await run(
+	"editor input mention insertion preserves getter and failure order",
+	() => {
+		{
+			const events = [];
+			const name = {
+				[Symbol.toPrimitive](hint) {
+					events.push(`name.toPrimitive:${hint}`);
+					return "NPC";
+				},
+			};
+			let nameReads = 0;
+			const result = {
+				get status() {
+					events.push("result.status");
+					return "selected";
+				},
+				get name() {
+					nameReads += 1;
+					events.push(`result.name:${nameReads}`);
+					return nameReads === 1 ? true : name;
+				},
+			};
+			const value = {
+				substring(...args) {
+					events.push(`value.substring:${args.join(",")}`);
+					return args[0] === 0 ? "<" : ">";
+				},
+			};
+
+			assert.deepEqual(getInputMentionInsertion(value, 1, 2, result), {
+				value: "<[NPC]>",
+				mention: "[NPC]",
+			});
+			assert.deepEqual(events, [
+				"result.status",
+				"result.name:1",
+				"result.name:2",
+				"name.toPrimitive:string",
+				"value.substring:0,1",
+				"value.substring:2",
+			]);
+		}
+
+		{
+			const events = [];
+			const result = {
+				get status() {
+					events.push("result.status");
+					return "cancelled";
+				},
+				get name() {
+					throw new Error("cancelled result must not read name");
+				},
+			};
+			const value = {
+				get substring() {
+					throw new Error("cancelled result must not read value");
+				},
+			};
+			assert.equal(getInputMentionInsertion(value, 0, 0, result), null);
+			assert.deepEqual(events, ["result.status"]);
+		}
+
+		{
+			const events = [];
+			const cursorStart = {
+				[Symbol.toPrimitive](hint) {
+					events.push(`cursorStart.toPrimitive:${hint}`);
+					return 2;
+				},
+			};
+			const result = {
+				get status() {
+					events.push("result.status");
+					return "selected";
+				},
+			};
+			const mention = {
+				get length() {
+					events.push("mention.length");
+					return 5;
+				},
+			};
+			assert.equal(
+				getInputMentionCursorPosition(cursorStart, result, mention),
+				7,
+			);
+			assert.deepEqual(events, [
+				"result.status",
+				"mention.length",
+				"cursorStart.toPrimitive:default",
+			]);
+
+			events.length = 0;
+			Object.defineProperty(result, "status", {
+				configurable: true,
+				get() {
+					events.push("result.status");
+					return "other";
+				},
+			});
+			assert.equal(
+				getInputMentionCursorPosition(cursorStart, result, mention),
+				3,
+			);
+			assert.deepEqual(events, [
+				"result.status",
+				"cursorStart.toPrimitive:default",
+			]);
+		}
+
+		const substringFailure = new Error("substring failed");
+		const failureEvents = [];
+		assert.throws(
+			() =>
+				getInputMentionInsertion(
+					{
+						substring() {
+							failureEvents.push("value.substring");
+							throw substringFailure;
+						},
+					},
+					0,
+					1,
+					{
+						get status() {
+							failureEvents.push("result.status");
+							return "selected";
+						},
+						get name() {
+							failureEvents.push("result.name");
+							return "NPC";
+						},
+					},
+				),
+			(error) => error === substringFailure,
+		);
+		assert.deepEqual(failureEvents, [
+			"result.status",
+			"result.name",
+			"result.name",
+			"value.substring",
+		]);
+		assert.throws(
+			() => getInputMentionInsertion("", 0, 0, null),
+			TypeError,
+		);
+		assert.throws(
+			() =>
+				getInputMentionInsertion(
+					"abc",
+					Symbol("start"),
+					2,
+					{ status: "selected", name: "NPC" },
+				),
+			TypeError,
+		);
+		assert.throws(
+			() =>
+				getInputMentionCursorPosition(
+					Symbol("start"),
+					{ status: "selected", name: "NPC" },
+					"[NPC]",
+				),
+			TypeError,
+		);
+	},
+);
+
+await run("editor editable shortcuts preserve routing and precedence", () => {
+	const shortcut = (overrides = {}) =>
+		getEditableShortcutAction({
+			code: "",
+			ctrlKey: false,
+			enableHistory: true,
+			isDisabled: false,
+			key: "",
+			metaKey: false,
+			type: "textarea",
+			...overrides,
+		});
+
+	const mappedCases = [
+		["KeyB", "bold"],
+		["KeyI", "italic"],
+		["KeyK", "mention"],
+		["BracketRight", "list"],
+		["BracketLeft", "outdent"],
+		["KeyQ", "quote"],
+	];
+	for (const [code, expected] of mappedCases) {
+		assert.equal(shortcut({ code, ctrlKey: true, key: "x" }), expected);
+		assert.equal(shortcut({ code, key: "x", metaKey: true }), expected);
+		assert.equal(shortcut({ code, key: "x" }), null);
+	}
+
+	assert.equal(shortcut({ key: "Tab" }), "tab");
+	assert.equal(shortcut({ key: "TAB", ctrlKey: true }), "tab");
+	assert.equal(shortcut({ key: " " }), "space-after-mention");
+	assert.equal(shortcut({ key: " ", metaKey: true }), "space-after-mention");
+	for (let level = 1; level <= 6; level += 1) {
+		assert.equal(
+			shortcut({ ctrlKey: true, key: String(level) }),
+			`heading-${level}`,
+		);
+	}
+	assert.equal(shortcut({ ctrlKey: true, key: "0" }), null);
+	assert.equal(shortcut({ ctrlKey: true, key: "7" }), null);
+	assert.equal(shortcut({ ctrlKey: true, key: "11" }), null);
+	assert.equal(shortcut({ ctrlKey: true, key: "x" }), null);
+
+	assert.equal(shortcut({ key: "Enter", type: "text" }), "blur");
+	assert.equal(
+		shortcut({ ctrlKey: true, key: "Enter", type: "text" }),
+		"blur",
+	);
+	assert.equal(shortcut({ key: "x", type: "text" }), null);
+	assert.equal(
+		shortcut({ key: "x", metaKey: true, type: "text" }),
+		"delegate",
+	);
+	assert.equal(shortcut({ key: "Enter", type: "unknown" }), "blur");
+	assert.equal(shortcut({ ctrlKey: true, key: "x", type: null }), "delegate");
+
+	assert.equal(
+		shortcut({
+			code: "KeyZ",
+			ctrlKey: true,
+			enableHistory: false,
+			isDisabled: true,
+			key: "Tab",
+		}),
+		"delegate",
+	);
+	assert.equal(
+		shortcut({
+			code: "KeyY",
+			enableHistory: false,
+			key: "Tab",
+			metaKey: true,
+		}),
+		"delegate",
+	);
+	assert.equal(
+		shortcut({
+			code: "KeyZ",
+			ctrlKey: true,
+			enableHistory: true,
+			key: "Tab",
+		}),
+		"tab",
+	);
+	assert.equal(shortcut({ isDisabled: true, key: "Tab" }), "delegate");
+	assert.equal(
+		shortcut({
+			code: "KeyZ",
+			enableHistory: false,
+			isDisabled: true,
+			key: "Tab",
+		}),
+		"delegate",
+	);
+
+	assert.equal(shouldDelegateEditableHistory("KeyZ", true, false), true);
+	assert.equal(shouldDelegateEditableHistory("KeyY", {}, false), true);
+	assert.equal(shouldDelegateEditableHistory("KeyX", true, false), false);
+	assert.equal(shouldDelegateEditableHistory("KeyZ", true, true), false);
+	assert.equal(shouldDelegateEditableHistory("KeyZ", 0, false), 0);
+	assert.equal(shouldDelegateEditableHistory("KeyZ", "", false), "");
+	assert.equal(shouldDelegateEditableHistory("KeyZ", null, false), null);
+	assert.equal(shouldDelegateEditableHistory({ toString: null }, true, false), false);
+});
+
+await run("editor editable keydown plans preserve routing and action identity", () => {
+	const event = (overrides = {}) => ({
+		code: "",
+		ctrlKey: false,
+		key: "",
+		metaKey: false,
+		...overrides,
+	});
+
+	assert.deepEqual(
+		getEditableKeyDownPlan(
+			event({ code: "KeyZ", ctrlKey: true, key: "Tab" }),
+			false,
+			false,
+			"textarea",
+		),
+		{ kind: "history" },
+	);
+	assert.deepEqual(
+		getEditableKeyDownPlan(event({ key: "x" }), true, false, "textarea"),
+		{ kind: "delegate" },
+	);
+	assert.deepEqual(
+		getEditableKeyDownPlan(event({ key: "Tab" }), true, true, "textarea"),
+		{ kind: "delegate" },
+	);
+	assert.deepEqual(
+		getEditableKeyDownPlan(event({ key: "Tab" }), true, false, "textarea"),
+		{ kind: "execute", action: "tab" },
+	);
+	assert.deepEqual(
+		getEditableKeyDownPlan(
+			event({ code: "constructor", ctrlKey: true, key: "x" }),
+			true,
+			false,
+			"textarea",
+		),
+		{ kind: "execute", action: Object },
+	);
+	assert.notEqual(
+		getEditableKeyDownPlan(event({ key: "x" }), true, false, "textarea"),
+		getEditableKeyDownPlan(event({ key: "x" }), true, false, "textarea"),
+	);
+});
+
+await run(
+	"editor editable keydown plans preserve event getter and failure order",
+	() => {
+		const events = [];
+		let codeReads = 0;
+		const source = {
+			get ctrlKey() {
+				events.push("ctrlKey");
+				return false;
+			},
+			get metaKey() {
+				events.push("metaKey");
+				return true;
+			},
+			get code() {
+				codeReads += 1;
+				events.push(`code:${codeReads}`);
+				return codeReads === 1 ? "KeyB" : "KeyZ";
+			},
+			get key() {
+				events.push("key");
+				return "x";
+			},
+		};
+		assert.deepEqual(
+			getEditableKeyDownPlan(source, false, false, "textarea"),
+			{ kind: "history" },
+		);
+		assert.deepEqual(events, [
+			"ctrlKey",
+			"metaKey",
+			"code:1",
+			"ctrlKey",
+			"key",
+			"metaKey",
+			"code:2",
+		]);
+
+		events.length = 0;
+		codeReads = 0;
+		Object.defineProperty(source, "ctrlKey", {
+			configurable: true,
+			get() {
+				events.push("ctrlKey");
+				return true;
+			},
+		});
+		assert.deepEqual(
+			getEditableKeyDownPlan(source, true, false, "textarea"),
+			{ kind: "execute", action: "bold" },
+		);
+		assert.deepEqual(events, [
+			"ctrlKey",
+			"code:1",
+			"ctrlKey",
+			"key",
+			"metaKey",
+			"code:2",
+		]);
+
+		const firstCtrlFailure = new Error("first Ctrl failed");
+		assert.throws(
+			() =>
+				getEditableKeyDownPlan(
+					{
+						get ctrlKey() {
+							throw firstCtrlFailure;
+						},
+						get code() {
+							throw new Error("code must remain unread");
+						},
+					},
+					true,
+					false,
+					"textarea",
+				),
+			(error) => error === firstCtrlFailure,
+		);
+
+		const secondCodeFailure = new Error("second code failed");
+		let failureCodeReads = 0;
+		assert.throws(
+			() =>
+				getEditableKeyDownPlan(
+					{
+						ctrlKey: true,
+						metaKey: false,
+						get code() {
+							failureCodeReads += 1;
+							if (failureCodeReads === 2) throw secondCodeFailure;
+							return "KeyB";
+						},
+						key: "x",
+					},
+					true,
+					false,
+					"textarea",
+				),
+			(error) => error === secondCodeFailure,
+		);
+		assert.equal(failureCodeReads, 2);
+		assert.throws(
+			() => getEditableKeyDownPlan(null, true, false, "textarea"),
+			TypeError,
+		);
+	},
+);
+
+await run(
+	"EditableField keydown routing preserves controller effect ownership",
+	async () => {
+		const source = await fs.readFile(
+			path.join(
+				process.cwd(),
+				"src",
+				"features",
+				"editor",
+				"ui",
+				"EditableField.tsx",
+			),
+			"utf8",
+		);
+		const handlerStart = source.indexOf("const handleKeyDown = useCallback(");
+		const handlerEnd = source.indexOf("useLayoutEffect(() =>", handlerStart);
+		assert.notEqual(handlerStart, -1);
+		assert.notEqual(handlerEnd, -1);
+		const handler = source.slice(handlerStart, handlerEnd);
+		const tokens = [
+			"const plan = getEditableKeyDownPlan(",
+			"event,",
+			"enableHistory,",
+			"isDisabled,",
+			"type,",
+			'if (plan.kind === "history")',
+			"delegateKeyDown(event)",
+			"return",
+			"event.stopPropagation()",
+			'if (plan.kind === "delegate")',
+			"delegateKeyDown(event)",
+			"return",
+			"executeEditableShortcut({",
+			"action: plan.action",
+			"delegateKeyDown",
+			"editor",
+			"event",
+			"handleMentionShortcut",
+			"delegateKeyDown,",
+			"editor,",
+			"enableHistory,",
+			"handleMentionShortcut,",
+			"isDisabled,",
+			"type,",
+		];
+		let previousIndex = -1;
+		for (const token of tokens) {
+			const index = handler.indexOf(token, previousIndex + 1);
+			assert.ok(
+				index > previousIndex,
+				`${token} must retain EditableField keydown order`,
+			);
+			previousIndex = index;
+		}
+		assert.equal(
+			(handler.match(/getEditableKeyDownPlan\(/g) ?? []).length,
+			1,
+		);
+		assert.equal(
+			(handler.match(/delegateKeyDown\(event\)/g) ?? []).length,
+			2,
+		);
+		assert.equal(
+			(handler.match(/event\.stopPropagation\(\)/g) ?? []).length,
+			1,
+		);
+		assert.doesNotMatch(
+			handler,
+			/event\.(?:ctrlKey|metaKey|code|key)|getEditableShortcutAction|shouldDelegateEditableHistory|!\s*action|action\s*===\s*"delegate"/,
+		);
+	},
+);
+
+await run(
+	"editor editable shortcuts preserve lookup coercion and failure order",
+	() => {
+		const getterEvents = [];
+		const historyOptions = {};
+		for (const [name, value] of [
+			["code", "KeyZ"],
+			["ctrlKey", true],
+			["enableHistory", false],
+			["isDisabled", false],
+			["key", null],
+			["metaKey", false],
+			["type", "textarea"],
+		]) {
+			Object.defineProperty(historyOptions, name, {
+				get() {
+					getterEvents.push(name);
+					return value;
+				},
+			});
+		}
+		assert.equal(getEditableShortcutAction(historyOptions), "delegate");
+		assert.deepEqual(getterEvents, [
+			"code",
+			"ctrlKey",
+			"enableHistory",
+			"isDisabled",
+			"key",
+			"metaKey",
+			"type",
+		]);
+
+		const keyEvents = [];
+		const key = {
+			get toLowerCase() {
+				keyEvents.push("key.toLowerCase.get");
+				return function () {
+					keyEvents.push(`key.toLowerCase.call:${this === key}`);
+					return "tab";
+				};
+			},
+		};
+		assert.equal(
+			getEditableShortcutAction({
+				code: "",
+				ctrlKey: false,
+				enableHistory: true,
+				isDisabled: false,
+				key,
+				metaKey: false,
+				type: "textarea",
+			}),
+			"tab",
+		);
+		assert.deepEqual(keyEvents, [
+			"key.toLowerCase.get",
+			"key.toLowerCase.call:true",
+		]);
+
+		keyEvents.length = 0;
+		assert.equal(
+			getEditableShortcutAction({
+				code: "",
+				ctrlKey: false,
+				enableHistory: true,
+				isDisabled: true,
+				key,
+				metaKey: false,
+				type: "textarea",
+			}),
+			"delegate",
+		);
+		assert.deepEqual(keyEvents, []);
+		assert.equal(
+			getEditableShortcutAction({
+				code: "",
+				ctrlKey: false,
+				enableHistory: true,
+				isDisabled: false,
+				key: null,
+				metaKey: false,
+				type: "text",
+			}),
+			null,
+		);
+
+		const normalized = {
+			[Symbol.toPrimitive]() {
+				throw new Error("normalized key must not be coerced");
+			},
+		};
+		assert.equal(
+			getEditableShortcutAction({
+				code: "",
+				ctrlKey: false,
+				enableHistory: true,
+				isDisabled: false,
+				key: {
+					toLowerCase() {
+						return normalized;
+					},
+				},
+				metaKey: false,
+				type: "textarea",
+			}),
+			null,
+		);
+
+		const headingEvents = [];
+		let headingCoercions = 0;
+		const headingKey = {
+			toLowerCase() {
+				headingEvents.push("key.toLowerCase");
+				return "not-tab";
+			},
+			[Symbol.toPrimitive](hint) {
+				headingCoercions += 1;
+				headingEvents.push(`key.toPrimitive:${hint}:${headingCoercions}`);
+				return headingCoercions === 1 ? "1" : "2";
+			},
+		};
+		assert.equal(
+			getEditableShortcutAction({
+				code: "",
+				ctrlKey: true,
+				enableHistory: true,
+				isDisabled: false,
+				key: headingKey,
+				metaKey: false,
+				type: "textarea",
+			}),
+			"heading-2",
+		);
+		assert.deepEqual(headingEvents, [
+			"key.toLowerCase",
+			"key.toPrimitive:string:1",
+			"key.toPrimitive:string:2",
+		]);
+
+		const codeEvents = [];
+		const code = {
+			[Symbol.toPrimitive](hint) {
+				codeEvents.push(`code.toPrimitive:${hint}`);
+				return "KeyB";
+			},
+		};
+		assert.equal(
+			getEditableShortcutAction({
+				code,
+				ctrlKey: true,
+				enableHistory: true,
+				isDisabled: false,
+				key: "1",
+				metaKey: false,
+				type: "textarea",
+			}),
+			"bold",
+		);
+		assert.deepEqual(codeEvents, ["code.toPrimitive:string"]);
+		assert.equal(
+			getEditableShortcutAction({
+				code: Symbol("code"),
+				ctrlKey: true,
+				enableHistory: true,
+				isDisabled: false,
+				key: "1",
+				metaKey: false,
+				type: "textarea",
+			}),
+			"heading-1",
+		);
+
+		const inheritedAction = { kind: "inherited" };
+		Object.defineProperty(Object.prototype, "phase108TruthyShortcut", {
+			configurable: true,
+			value: inheritedAction,
+		});
+		Object.defineProperty(Object.prototype, "phase108FalsyShortcut", {
+			configurable: true,
+			value: 0,
+		});
+		try {
+			assert.equal(
+				getEditableShortcutAction({
+					code: "phase108TruthyShortcut",
+					ctrlKey: true,
+					enableHistory: true,
+					isDisabled: false,
+					key: "1",
+					metaKey: false,
+					type: "textarea",
+				}),
+				inheritedAction,
+			);
+			assert.equal(
+				getEditableShortcutAction({
+					code: "phase108FalsyShortcut",
+					ctrlKey: true,
+					enableHistory: true,
+					isDisabled: false,
+					key: "1",
+					metaKey: false,
+					type: "textarea",
+				}),
+				"heading-1",
+			);
+			assert.equal(
+				getEditableShortcutAction({
+					code: "constructor",
+					ctrlKey: true,
+					enableHistory: true,
+					isDisabled: false,
+					key: "x",
+					metaKey: false,
+					type: "textarea",
+				}),
+				Object,
+			);
+		} finally {
+			delete Object.prototype.phase108TruthyShortcut;
+			delete Object.prototype.phase108FalsyShortcut;
+		}
+
+		const getterFailure = new Error("meta getter failed");
+		assert.throws(
+			() =>
+				getEditableShortcutAction({
+					get code() {
+						return "KeyZ";
+					},
+					get ctrlKey() {
+						return true;
+					},
+					get enableHistory() {
+						return false;
+					},
+					get isDisabled() {
+						return false;
+					},
+					get key() {
+						return "z";
+					},
+					get metaKey() {
+						throw getterFailure;
+					},
+					get type() {
+						throw new Error("type must not be read");
+					},
+				}),
+			(error) => error === getterFailure,
+		);
+
+		const lowerFailure = new Error("lowercase failed");
+		assert.throws(
+			() =>
+				getEditableShortcutAction({
+					code: "",
+					ctrlKey: false,
+					enableHistory: true,
+					isDisabled: false,
+					key: {
+						toLowerCase() {
+							throw lowerFailure;
+						},
+					},
+					metaKey: false,
+					type: "textarea",
+				}),
+			(error) => error === lowerFailure,
+		);
+		assert.throws(() => getEditableShortcutAction(null), TypeError);
+		assert.throws(
+			() =>
+				getEditableShortcutAction({
+					code: "",
+					ctrlKey: false,
+					enableHistory: true,
+					isDisabled: false,
+					key: null,
+					metaKey: false,
+					type: "textarea",
+				}),
+			TypeError,
+		);
+		assert.throws(
+			() =>
+				getEditableShortcutAction({
+					code: "",
+					ctrlKey: true,
+					enableHistory: true,
+					isDisabled: false,
+					key: Symbol("key"),
+					metaKey: false,
+					type: "textarea",
+				}),
+			TypeError,
+		);
+	},
+);
+
+await run("editor input bracket paste preserves normalization and edit policies", () => {
+	const cases = [
+		[
+			"selected text replacement",
+			["[name]", 1, 5, "NPC"],
+			{ value: "[NPC]", selectionStart: 4, selectionEnd: 4 },
+		],
+		[
+			"all CRLF pairs normalize",
+			["[]", 1, 1, "a\r\nb\r\n"],
+			{ value: "[a\nb\n]", selectionStart: 5, selectionEnd: 5 },
+		],
+		[
+			"lone carriage returns remain",
+			["[]", 1, 1, "a\rb"],
+			{ value: "[a\rb]", selectionStart: 4, selectionEnd: 4 },
+		],
+		[
+			"empty clipboard text",
+			["[name]", 1, 5, ""],
+			{ value: "[]", selectionStart: 1, selectionEnd: 1 },
+		],
+		[
+			"negative and oversized cursors use substring clamping",
+			["abc", -2, 99, "x"],
+			{ value: "x", selectionStart: -1, selectionEnd: -1 },
+		],
+		[
+			"reversed cursors retain independent prefix and suffix reads",
+			["abc", 3, 1, "x"],
+			{ value: "abcxbc", selectionStart: 4, selectionEnd: 4 },
+		],
+		[
+			"string cursor keeps native addition",
+			["abc", "1", "2", "xy"],
+			{ value: "axyc", selectionStart: "12", selectionEnd: "12" },
+		],
+	];
+	for (const [label, args, expected] of cases) {
+		assert.deepEqual(getInputBracketPasteEdit(...args), expected, label);
+	}
+});
+
+await run(
+	"editor input bracket paste preserves getter coercion and failure order",
+	() => {
+		const events = [];
+		const normalizedText = {
+			[Symbol.toPrimitive](hint) {
+				events.push(`normalized.toPrimitive:${hint}`);
+				return "x";
+			},
+			get length() {
+				events.push("normalized.length");
+				return 1;
+			},
+		};
+		const plainText = {
+			get replace() {
+				events.push("plainText.replace");
+				return function (pattern, replacement) {
+					events.push(`replace.call:${this === plainText}`);
+					assert.equal(pattern.source, "\\r\\n");
+					assert.equal(pattern.global, true);
+					assert.equal(replacement, "\n");
+					return normalizedText;
+				};
+			},
+		};
+		const value = {
+			substring(...args) {
+				events.push(`value.substring:${args.join(",")}`);
+				return args[0] === 0 ? "<" : ">";
+			},
+		};
+		const selectionStart = {
+			[Symbol.toPrimitive](hint) {
+				events.push(`selectionStart.toPrimitive:${hint}`);
+				return 2;
+			},
+		};
+
+		assert.deepEqual(
+			getInputBracketPasteEdit(value, selectionStart, 3, plainText),
+			{ value: "<x>", selectionStart: 3, selectionEnd: 3 },
+		);
+		assert.deepEqual(events, [
+			"plainText.replace",
+			"replace.call:true",
+			"selectionStart.toPrimitive:string",
+			"value.substring:0,2",
+			"normalized.toPrimitive:default",
+			"value.substring:3",
+			"normalized.length",
+			"selectionStart.toPrimitive:default",
+			"normalized.length",
+			"selectionStart.toPrimitive:default",
+		]);
+
+		const replaceFailure = new Error("replace failed");
+		assert.throws(
+			() =>
+				getInputBracketPasteEdit("", 0, 0, {
+					replace() {
+						throw replaceFailure;
+					},
+				}),
+			(error) => error === replaceFailure,
+		);
+		assert.throws(
+			() => getInputBracketPasteEdit("", 0, 0, null),
+			TypeError,
+		);
+		assert.throws(
+			() => getInputBracketPasteEdit(null, 0, 0, ""),
+			TypeError,
+		);
+		assert.throws(
+			() => getInputBracketPasteEdit("abc", Symbol("start"), 1, "x"),
+			TypeError,
+		);
+	},
+);
+
+await run("editor input format preserves wrapper and conflict policies", () => {
+	const cases = [
+		[
+			"add bold",
+			["word", 0, 4, "**"],
+			{ value: "**word**", selectionStart: 2, selectionEnd: 6 },
+		],
+		[
+			"remove selected bold",
+			["**word**", 0, 8, "**"],
+			{ value: "word", selectionStart: 0, selectionEnd: 4 },
+		],
+		[
+			"remove surrounding bold",
+			["**word**", 2, 6, "**"],
+			{ value: "word", selectionStart: 0, selectionEnd: 4 },
+		],
+		[
+			"add italic",
+			["word", 0, 4, "*"],
+			{ value: "*word*", selectionStart: 1, selectionEnd: 5 },
+		],
+		[
+			"remove selected italic",
+			["*word*", 0, 6, "*"],
+			{ value: "word", selectionStart: 0, selectionEnd: 4 },
+		],
+		[
+			"remove surrounding italic",
+			["*word*", 1, 5, "*"],
+			{ value: "word", selectionStart: 0, selectionEnd: 4 },
+		],
+		[
+			"selected bold blocks italic removal",
+			["**word**", 0, 8, "*"],
+			{ value: "***word***", selectionStart: 1, selectionEnd: 9 },
+		],
+		[
+			"surrounding bold blocks italic removal",
+			["**word**", 2, 6, "*"],
+			{ value: "***word***", selectionStart: 3, selectionEnd: 7 },
+		],
+		[
+			"selected triple marker allows italic removal",
+			["***word***", 0, 10, "*"],
+			{ value: "**word**", selectionStart: 0, selectionEnd: 8 },
+		],
+		[
+			"surrounding triple marker allows italic removal",
+			["***word***", 3, 7, "*"],
+			{ value: "**word**", selectionStart: 2, selectionEnd: 6 },
+		],
+		[
+			"selected triple marker allows bold removal",
+			["***word***", 0, 10, "**"],
+			{ value: "*word*", selectionStart: 0, selectionEnd: 6 },
+		],
+		[
+			"inside conflict still allows surrounding italic removal",
+			["***word***", 1, 9, "*"],
+			{ value: "**word**", selectionStart: 0, selectionEnd: 8 },
+		],
+		[
+			"single selected marker is not a wrapper",
+			["*", 0, 1, "*"],
+			{ value: "***", selectionStart: 1, selectionEnd: 2 },
+		],
+		[
+			"empty selection",
+			["ab", 1, 1, "*"],
+			{ value: "a**b", selectionStart: 2, selectionEnd: 2 },
+		],
+		[
+			"partial marker",
+			["*word", 0, 5, "*"],
+			{ value: "**word*", selectionStart: 1, selectionEnd: 6 },
+		],
+		[
+			"multiline selected wrapper",
+			["*one\ntwo*", 0, 9, "*"],
+			{ value: "one\ntwo", selectionStart: 0, selectionEnd: 7 },
+		],
+		[
+			"whitespace remains exact",
+			[" word ", 1, 5, "**"],
+			{ value: " **word** ", selectionStart: 3, selectionEnd: 7 },
+		],
+		[
+			"reversed selection uses substring without cursor normalization",
+			["abcdef", 5, 2, "*"],
+			{
+				value: "abcde*cde*cdef",
+				selectionStart: 6,
+				selectionEnd: 3,
+			},
+		],
+		[
+			"out of range selection keeps raw cursor arithmetic",
+			["abc", -2, 99, "*"],
+			{ value: "*abc*", selectionStart: -1, selectionEnd: 100 },
+		],
+		[
+			"empty bold insertion",
+			["", 0, 0, "**"],
+			{ value: "****", selectionStart: 2, selectionEnd: 2 },
+		],
+	];
+
+	for (const [label, args, expected] of cases) {
+		assert.deepEqual(toggleInputFormat(...args), expected, label);
+	}
+});
+
+await run(
+	"editor input format preserves evaluation coercion and failure order",
+	() => {
+		{
+			const events = [];
+			const selection = {
+				get length() {
+					events.push("selection.length");
+					return 6;
+				},
+				startsWith(marker) {
+					events.push(`selection.startsWith:${marker}`);
+					return marker !== "**";
+				},
+				endsWith(marker) {
+					events.push(`selection.endsWith:${marker}`);
+					return true;
+				},
+				substring(start, end) {
+					events.push(`selection.substring:${start}:${end}`);
+					return "word";
+				},
+			};
+			const value = {
+				substring(...args) {
+					events.push(`value.substring:${args.join(",")}`);
+					if (args.length === 2 && args[0] === 1 && args[1] === 7) {
+						return selection;
+					}
+					return args[0] === 7 ? ">" : "<";
+				},
+			};
+
+			assert.deepEqual(toggleInputFormat(value, 1, 7, "*"), {
+				value: "<word>",
+				selectionStart: 1,
+				selectionEnd: 5,
+			});
+			assert.deepEqual(events, [
+				"value.substring:1,7",
+				"selection.startsWith:**",
+				"selection.startsWith:*",
+				"selection.endsWith:*",
+				"selection.length",
+				"value.substring:0,1",
+				"selection.length",
+				"selection.substring:1:5",
+				"value.substring:7",
+			]);
+		}
+
+		{
+			const events = [];
+			const selection = {
+				startsWith(marker) {
+					events.push(`selection.startsWith:${marker}`);
+					return false;
+				},
+				[Symbol.toPrimitive](hint) {
+					events.push(`selection.toPrimitive:${hint}`);
+					return "word";
+				},
+			};
+			const value = {
+				substring(...args) {
+					events.push(`value.substring:${args.join(",")}`);
+					const key = args.join(",");
+					if (key === "2,6") return selection;
+					if (key === "0,2") return "**";
+					if (key === "-1,2") return "**";
+					if (key === "1,2" || key === "6,7") return "*";
+					if (key === "0,2") return "<";
+					if (key === "6") return ">";
+					return "";
+				},
+			};
+
+			assert.deepEqual(toggleInputFormat(value, 2, 6, "*"), {
+				value: "***word*>",
+				selectionStart: 3,
+				selectionEnd: 7,
+			});
+			assert.deepEqual(events, [
+				"value.substring:2,6",
+				"selection.startsWith:**",
+				"selection.startsWith:*",
+				"value.substring:0,2",
+				"value.substring:-1,2",
+				"value.substring:1,2",
+				"value.substring:6,7",
+				"value.substring:0,2",
+				"selection.toPrimitive:default",
+				"value.substring:6",
+			]);
+		}
+
+		{
+			const events = [];
+			const marker = {
+				get length() {
+					events.push("marker.length");
+					return 1;
+				},
+				[Symbol.toPrimitive](hint) {
+					events.push(`marker.toPrimitive:${hint}`);
+					return "*";
+				},
+			};
+
+			assert.deepEqual(toggleInputFormat("*x*", 0, 3, marker), {
+				value: "x",
+				selectionStart: 0,
+				selectionEnd: 1,
+			});
+			assert.deepEqual(events, [
+				"marker.toPrimitive:string",
+				"marker.toPrimitive:string",
+				"marker.length",
+				"marker.length",
+				"marker.length",
+				"marker.length",
+			]);
+
+			events.length = 0;
+			assert.deepEqual(toggleInputFormat("*x*", 1, 2, marker), {
+				value: "**x**",
+				selectionStart: 2,
+				selectionEnd: 3,
+			});
+			assert.deepEqual(events, [
+				"marker.toPrimitive:string",
+				"marker.length",
+				"marker.length",
+				"marker.toPrimitive:default",
+				"marker.toPrimitive:default",
+				"marker.length",
+				"marker.length",
+			]);
+		}
+
+		{
+			const events = [];
+			let length = 0;
+			const marker = {
+				get length() {
+					length += 1;
+					events.push(`marker.length:${length}`);
+					return length;
+				},
+				[Symbol.toPrimitive](hint) {
+					events.push(`marker.toPrimitive:${hint}`);
+					return "*";
+				},
+			};
+
+			assert.deepEqual(toggleInputFormat("word", 0, 4, marker), {
+				value: "*word*",
+				selectionStart: 2,
+				selectionEnd: 7,
+			});
+			assert.deepEqual(events, [
+				"marker.toPrimitive:string",
+				"marker.length:1",
+				"marker.toPrimitive:default",
+				"marker.toPrimitive:default",
+				"marker.length:2",
+				"marker.length:3",
+			]);
+		}
+
+		const substringFailure = new Error("substring failed");
+		assert.throws(
+			() =>
+				toggleInputFormat(
+					{
+						substring() {
+							throw substringFailure;
+						},
+					},
+					0,
+					1,
+					"*",
+				),
+			(error) => error === substringFailure,
+		);
+
+		const startsWithFailure = new Error("startsWith failed");
+		assert.throws(
+			() =>
+				toggleInputFormat(
+					{
+						substring() {
+							return {
+								startsWith() {
+									throw startsWithFailure;
+								},
+							};
+						},
+					},
+					0,
+					1,
+					"*",
+				),
+			(error) => error === startsWithFailure,
+		);
+		assert.throws(() => toggleInputFormat(null, 0, 0, "*"), TypeError);
+		assert.throws(
+			() => toggleInputFormat("word", Symbol("start"), 4, "*"),
+			TypeError,
+		);
+		assert.throws(() => toggleInputFormat("word", 0, 4, null), TypeError);
+		assert.throws(
+			() => toggleInputFormat("word", 0, 4, Symbol("marker")),
+			TypeError,
+		);
+	},
+);
+
 await run("editor input policies preserve markdown shortcuts", () => {
 	assert.deepEqual(
 		getInputShortcutAction({
@@ -1691,6 +6670,282 @@ await run("editor input policies preserve markdown shortcuts", () => {
 		"delegate",
 	);
 });
+
+await run(
+	"editor block edits preserve exact marker heading and dispatch policies",
+	() => {
+		const applyWholeLine = (value, edit) =>
+			applyInputBlockEdit(value, 0, value.length, edit);
+		const cases = [
+			[
+				"list add",
+				"one",
+				{ kind: "list", add: true },
+				{ value: "- one", selectionStart: 2, selectionEnd: 5 },
+			],
+			[
+				"list remove",
+				"-  one",
+				{ kind: "list", add: false },
+				{ value: " one", selectionStart: -2, selectionEnd: 4 },
+			],
+			[
+				"list exact-marker no-op",
+				" - one",
+				{ kind: "list", add: false },
+				{ value: " - one", selectionStart: 0, selectionEnd: 6 },
+			],
+			[
+				"quote add",
+				"one",
+				{ kind: "quote" },
+				{ value: "> one", selectionStart: 2, selectionEnd: 5 },
+			],
+			[
+				"quote remove",
+				"> one",
+				{ kind: "quote" },
+				{ value: "one", selectionStart: -2, selectionEnd: 3 },
+			],
+			[
+				"heading add",
+				"title",
+				{ kind: "heading", level: 2 },
+				{ value: "## title", selectionStart: 3, selectionEnd: 8 },
+			],
+			[
+				"heading remove",
+				"###### title",
+				{ kind: "heading", level: 6 },
+				{ value: "title", selectionStart: -7, selectionEnd: 5 },
+			],
+			[
+				"heading replace",
+				"# title",
+				{ kind: "heading", level: 3 },
+				{ value: "### title", selectionStart: 2, selectionEnd: 9 },
+			],
+			[
+				"heading keeps extra whitespace",
+				"#  title",
+				{ kind: "heading", level: 2 },
+				{ value: "##  title", selectionStart: 1, selectionEnd: 9 },
+			],
+			[
+				"seven hashes are not a recognized heading",
+				"####### title",
+				{ kind: "heading", level: 2 },
+				{
+					value: "## ####### title",
+					selectionStart: 3,
+					selectionEnd: 16,
+				},
+			],
+			[
+				"zero heading level",
+				"# title",
+				{ kind: "heading", level: 0 },
+				{ value: " title", selectionStart: -1, selectionEnd: 6 },
+			],
+			[
+				"fractional heading level",
+				"title",
+				{ kind: "heading", level: 2.9 },
+				{ value: "## title", selectionStart: 3, selectionEnd: 8 },
+			],
+			[
+				"string heading level",
+				"title",
+				{ kind: "heading", level: "3" },
+				{ value: "### title", selectionStart: 4, selectionEnd: 9 },
+			],
+			[
+				"NaN heading level",
+				"title",
+				{ kind: "heading", level: Number.NaN },
+				{ value: " title", selectionStart: 1, selectionEnd: 6 },
+			],
+		];
+		for (const [label, value, edit, expected] of cases) {
+			assert.deepEqual(applyWholeLine(value, edit), expected, label);
+		}
+
+		assert.throws(
+			() => applyWholeLine("title", { kind: "heading", level: -1 }),
+			RangeError,
+		);
+		assert.throws(
+			() => applyWholeLine("title", { kind: "heading", level: Infinity }),
+			RangeError,
+		);
+		assert.throws(
+			() =>
+				applyWholeLine("title", {
+					kind: "heading",
+					level: Symbol("level"),
+				}),
+			TypeError,
+		);
+
+		const events = [];
+		let kindIndex = 0;
+		const dynamicEdit = {
+			get kind() {
+				const kind = ["list", "quote", "quote"][kindIndex];
+				events.push(["kind", kindIndex, kind]);
+				kindIndex += 1;
+				return kind;
+			},
+			get add() {
+				events.push(["add"]);
+				return true;
+			},
+			get level() {
+				throw new Error("heading level must stay lazy");
+			},
+		};
+		assert.deepEqual(
+			applyInputBlockEdit("one\ntwo", 0, 7, dynamicEdit),
+			{
+				value: "- one\n> two",
+				selectionStart: 2,
+				selectionEnd: 11,
+			},
+		);
+		assert.deepEqual(events, [
+			["kind", 0, "list"],
+			["add"],
+			["kind", 1, "quote"],
+			["kind", 2, "quote"],
+		]);
+
+		const headingEvents = [];
+		const dynamicHeading = {
+			get kind() {
+				headingEvents.push("kind");
+				return "unknown";
+			},
+			get add() {
+				throw new Error("list add must stay lazy");
+			},
+			get level() {
+				headingEvents.push("level");
+				return 1;
+			},
+		};
+		assert.deepEqual(applyWholeLine("title", dynamicHeading), {
+			value: "# title",
+			selectionStart: 2,
+			selectionEnd: 7,
+		});
+		assert.deepEqual(headingEvents, ["kind", "kind", "level"]);
+	},
+);
+
+await run(
+	"editor block edits preserve aggregate range and line failure boundaries",
+	() => {
+		const cases = [
+			[
+				"empty input",
+				["", 0, 0, { kind: "quote" }],
+				{ value: "> ", selectionStart: 2, selectionEnd: 2 },
+			],
+			[
+				"middle multiline selection",
+				["zero\none\ntwo\nthree", 6, 10, { kind: "quote" }],
+				{
+					value: "zero\n> one\n> two\nthree",
+					selectionStart: 8,
+					selectionEnd: 14,
+				},
+			],
+			[
+				"selection ending at newline",
+				["zero\none\ntwo\nthree", 6, 8, { kind: "quote" }],
+				{
+					value: "zero\n> one\ntwo\nthree",
+					selectionStart: 8,
+					selectionEnd: 10,
+				},
+			],
+			[
+				"mixed heading shifts",
+				["# one\nplain\n### three", 1, 21, { kind: "heading", level: 2 }],
+				{
+					value: "## one\n## plain\n## three",
+					selectionStart: 2,
+					selectionEnd: 24,
+				},
+			],
+			[
+				"reversed selection",
+				["one\ntwo", 7, 1, { kind: "quote" }],
+				{
+					value: "one\n> \n> \ntwo",
+					selectionStart: 9,
+					selectionEnd: 5,
+				},
+			],
+			[
+				"out-of-range selection",
+				["one", -5, 99, { kind: "quote" }],
+				{ value: "> one", selectionStart: -3, selectionEnd: 101 },
+			],
+		];
+		for (const [label, args, expected] of cases) {
+			assert.deepEqual(applyInputBlockEdit(...args), expected, label);
+		}
+
+		const lineFailure = new Error("line startsWith failed");
+		const events = [];
+		const syntheticLine = {
+			startsWith(marker) {
+				events.push(["startsWith", marker]);
+				throw lineFailure;
+			},
+		};
+		const selectedText = {
+			split(separator) {
+				events.push(["split", separator]);
+				return [syntheticLine];
+			},
+		};
+		const syntheticValue = {
+			lastIndexOf(search, fromIndex) {
+				events.push(["lastIndexOf", search, fromIndex]);
+				return -1;
+			},
+			indexOf(search, fromIndex) {
+				events.push(["indexOf", search, fromIndex]);
+				return -1;
+			},
+			get length() {
+				events.push(["length"]);
+				return 1;
+			},
+			substring(start, end) {
+				events.push(["substring", start, end]);
+				return selectedText;
+			},
+		};
+		assert.throws(
+			() =>
+				applyInputBlockEdit(syntheticValue, 0, 0, {
+					kind: "quote",
+				}),
+			(error) => error === lineFailure,
+		);
+		assert.deepEqual(events, [
+			["lastIndexOf", "\n", -1],
+			["indexOf", "\n", 0],
+			["length"],
+			["substring", 0, 1],
+			["split", "\n"],
+			["startsWith", "> "],
+		]);
+	},
+);
 
 await run(
 	"parseUrl supports campaign/session/encounter routes",
@@ -5166,6 +10421,378 @@ await run("AI user prompt preserves mode-specific scope and encounter rules", ()
 	assert.match(encounterPrompt, /Custom monster creation is allowed/);
 });
 
+await run("AI task instructions preserve the exact mode decision table", () => {
+	assert.deepEqual(Object.keys(userPromptPolicies), [
+		"buildTaskInstructions",
+		"buildUserPrompt",
+	]);
+	const characterTask =
+		'TASK: Create or update player character operations requested by USER INSTRUCTIONS. Use entity "character" only and identify existing targets by id when available.\n';
+	const customMonsterTask = `TASK: Create or update custom D&D 5.5e bestiary monster operations requested by USER INSTRUCTIONS. Use entity "monster" only and follow the custom monster schema from system instructions.
+If INPUT DATA.customBestiary.selectedMonster exists and selectedMonsterMode is "create-based", use it only as reference and create a new monster.
+When creating a monster based on an existing one, give the new monster a distinct "name" unless USER INSTRUCTIONS explicitly ask to replace or keep the same name.
+If selectedMonster exists and selectedMonsterMode is not "create-based", update that monster by id and return only changed fields in patch.\n`;
+	const npcSessionRule =
+		"Do not create session copies of campaign-scoped NPCs. If an existing campaign NPC is only referenced in session content, use [Exact Entity Name] in text fields. If the user request or the NPC's logical use means that campaign NPC should become session-only, use moveScope from campaign to session.\n";
+	const locationSessionRule =
+		"Do not create session copies of campaign-scoped locations/factions. If an existing campaign location/faction is only referenced in session content, use [Exact Entity Name] in text fields. If the user request or the location/faction's logical use means that campaign entity should become session-only, use moveScope from campaign to session.\n";
+	const sceneBase =
+		"TASK: Based on current session and context, apply the user's requested session changes.\n";
+	const sceneScopeRule =
+		'When existing campaign NPCs, locations, or factions are used in this session, write them as [Exact Entity Name] mentions in scene text or notes instead of creating copied session entities. For new NPCs/locations/factions, choose "scope": "session" by default; use "scope": "campaign" only for reusable campaign entities. Use moveScope whenever the entity\'s logical role shows it belongs in the other scope.\n';
+	const sceneEncounterRule =
+		"Encounter generation is enabled: any combat encounter you create must be connected to exactly one scene with encounterClientId in the same JSON response. Never create orphan encounters.\n";
+	const campaignTask =
+		'TASK: Apply the user\'s requested campaign changes.\nIf USER INSTRUCTIONS ask to create, rewrite, expand, summarize, or otherwise change the campaign premise, overview, story, concept, or main description, return an update operation for entity "campaign" with patch.description. Do not create a note for this unless USER INSTRUCTIONS explicitly ask for a note.\n';
+
+	assert.equal(
+		buildTaskInstructions({
+			useKey: "image",
+			imageTarget: { type: "npc" },
+			sceneId: "scene-ignored",
+		}),
+		"TASK: Generate a detailed image prompt for the selected npc from IMAGE TARGET.\n",
+	);
+	assert.equal(
+		buildTaskInstructions({
+			useKey: "image",
+			imageTarget: { type: 0 },
+			sceneId: "scene-1",
+		}),
+		"TASK: Generate an image prompt for scene ID: scene-1.\n",
+	);
+	assert.equal(
+		buildTaskInstructions({ useKey: "image", sceneId: 0 }),
+		"TASK: Generate a detailed image prompt based on INPUT DATA and USER INSTRUCTIONS. Use the current context to infer the subject, composition, mood, and relevant details.\n",
+	);
+	assert.equal(
+		buildTaskInstructions({ useKey: "character" }),
+		characterTask,
+	);
+	assert.equal(
+		buildTaskInstructions({ useKey: "custom-monster" }),
+		customMonsterTask,
+	);
+	assert.equal(
+		buildTaskInstructions({
+			useKey: "npc",
+			entityTargetScope: "mixed",
+		}),
+		`TASK: Create or update NPC operations for the current session and campaign as requested. Use entity "npc" only, identify existing targets by id, and choose "scope": "campaign" or "scope": "session" separately for each NPC operation. Default new NPCs to "scope": "session"; use "scope": "campaign" only for clearly recurring or campaign-important NPCs.\n${npcSessionRule}`,
+	);
+	assert.equal(
+		buildTaskInstructions({
+			useKey: "npc",
+			entityTargetScope: "session",
+		}),
+		`TASK: Create or update NPC operations for this current session as requested. Use entity "npc" only, identify existing targets by id, and use "session" scope by default.\n${npcSessionRule}`,
+	);
+	assert.equal(
+		buildTaskInstructions({
+			useKey: "npc",
+			entityTargetScope: "campaign",
+		}),
+		'TASK: Create or update NPC operations for this campaign as requested. Use entity "npc" only, identify existing targets by id, and use "campaign" scope by default.\n',
+	);
+	assert.equal(
+		buildTaskInstructions({ useKey: "npc" }),
+		'TASK: Create or update NPC operations for this campaign as requested. Use entity "npc" only, identify existing targets by id, and use "undefined" scope by default.\n',
+	);
+	assert.equal(
+		buildTaskInstructions({
+			useKey: "location",
+			entityTargetScope: "mixed",
+		}),
+		`TASK: Create or update location/faction operations for the current session and campaign as requested. Use entity "location" only, identify existing targets by id, and choose "scope": "campaign" or "scope": "session" separately for each location/faction operation. Default new locations/factions to "scope": "session"; use "scope": "campaign" only for major reusable places, factions, regions, organizations, or campaign hubs.\n${locationSessionRule}`,
+	);
+	assert.equal(
+		buildTaskInstructions({
+			useKey: "location",
+			entityTargetScope: "session",
+		}),
+		`TASK: Create or update location/faction operations for this current session as requested. Use entity "location" only, identify existing targets by id, and use "session" scope by default.\n${locationSessionRule}`,
+	);
+	assert.equal(
+		buildTaskInstructions({
+			useKey: "location",
+			entityTargetScope: "campaign",
+		}),
+		'TASK: Create or update location/faction operations for this campaign as requested. Use entity "location" only, identify existing targets by id, and use "campaign" scope by default.\n',
+	);
+	assert.equal(
+		buildTaskInstructions({
+			useKey: "location",
+			entityTargetScope: 0,
+		}),
+		'TASK: Create or update location/faction operations for this campaign as requested. Use entity "location" only, identify existing targets by id, and use "0" scope by default.\n',
+	);
+	assert.equal(
+		buildTaskInstructions({
+			useKey: "encounter",
+			encounterId: 0,
+			customMonsterGenerationEnabled: false,
+		}),
+		"TASK: Update current combat encounter (id: 0) according to USER INSTRUCTIONS. Use exact official monster names or exact INPUT DATA.customBestiary.monsterNames values in monsterName.\n",
+	);
+	assert.equal(
+		buildTaskInstructions({
+			useKey: "encounter",
+			encounterId: "enc-1",
+			customMonsterGenerationEnabled: [],
+		}),
+		"TASK: Update current combat encounter (id: enc-1) according to USER INSTRUCTIONS. Use exact official monster names or exact INPUT DATA.customBestiary.monsterNames values in monsterName.\nCustom monster creation is allowed only when existing official or custom monsters do not fit well.\n",
+	);
+	assert.equal(
+		buildTaskInstructions({
+			useKey: "scene",
+			entityTargetScope: "campaign",
+			encounterGenerationEnabled: false,
+		}),
+		sceneBase,
+	);
+	assert.equal(
+		buildTaskInstructions({
+			useKey: "scene",
+			entityTargetScope: "mixed",
+			encounterGenerationEnabled: false,
+		}),
+		sceneBase + sceneScopeRule,
+	);
+	assert.equal(
+		buildTaskInstructions({
+			useKey: "scene",
+			entityTargetScope: "campaign",
+			encounterGenerationEnabled: {},
+		}),
+		sceneBase + sceneEncounterRule,
+	);
+	assert.equal(
+		buildTaskInstructions({
+			useKey: "scene",
+			entityTargetScope: undefined,
+			encounterGenerationEnabled: "yes",
+		}),
+		sceneBase + sceneScopeRule + sceneEncounterRule,
+	);
+	assert.equal(
+		buildTaskInstructions({ useKey: "campaign" }),
+		campaignTask,
+	);
+	for (const useKey of [undefined, null, "", "unknown", 0, false, Symbol("mode")]) {
+		assert.equal(buildTaskInstructions({ useKey }), "");
+	}
+	assert.equal(
+		buildTaskInstructions({ useKey: new String("image"), sceneId: "scene" }),
+		"",
+	);
+	assert.throws(() => buildTaskInstructions(), TypeError);
+	assert.throws(
+		() =>
+			buildTaskInstructions({
+				useKey: "image",
+				imageTarget: { type: Symbol("target") },
+			}),
+		TypeError,
+	);
+	assert.throws(
+		() =>
+			buildTaskInstructions({
+				useKey: "npc",
+				entityTargetScope: Symbol("scope"),
+			}),
+		TypeError,
+	);
+	assert.throws(
+		() =>
+			buildTaskInstructions({
+				useKey: "encounter",
+				encounterId: Symbol("encounter"),
+			}),
+		TypeError,
+	);
+});
+
+await run(
+	"AI user prompt preserves exact assembly order and serialization failures",
+	() => {
+		const events = [];
+		const contextJson = {
+			toJSON() {
+				events.push("context:toJSON");
+				return { campaign: "Кампанія" };
+			},
+		};
+		const imageTarget = {
+			get type() {
+				events.push("image:type");
+				return "npc";
+			},
+			toJSON() {
+				events.push("image:toJSON");
+				return { selected: "Ірина" };
+			},
+		};
+		const values = {
+			contextJson,
+			useKey: "image",
+			imageTarget,
+			sceneId: "scene-unused",
+			entityTargetScope: "mixed",
+			encounterId: "enc-unused",
+			customMonsterGenerationEnabled: true,
+			encounterGenerationEnabled: true,
+			userInstructions: "Намалюй.",
+		};
+		const options = {};
+		for (const key of [
+			"contextJson",
+			"useKey",
+			"imageTarget",
+			"sceneId",
+			"entityTargetScope",
+			"encounterId",
+			"customMonsterGenerationEnabled",
+			"encounterGenerationEnabled",
+			"userInstructions",
+		]) {
+			Object.defineProperty(options, key, {
+				enumerable: true,
+				get() {
+					events.push(`options:${key}`);
+					return values[key];
+				},
+			});
+		}
+		assert.equal(
+			buildUserPrompt(options),
+			`INPUT DATA (JSON):
+{
+  "campaign": "Кампанія"
+}
+
+IMAGE TARGET (JSON):
+{
+  "selected": "Ірина"
+}
+
+TASK: Generate a detailed image prompt for the selected npc from IMAGE TARGET.
+USER INSTRUCTIONS (PRIORITY): Намалюй.
+`,
+		);
+		assert.deepEqual(events, [
+			"options:contextJson",
+			"options:useKey",
+			"options:imageTarget",
+			"options:sceneId",
+			"options:entityTargetScope",
+			"options:encounterId",
+			"options:customMonsterGenerationEnabled",
+			"options:encounterGenerationEnabled",
+			"options:userInstructions",
+			"context:toJSON",
+			"image:toJSON",
+			"image:type",
+			"image:type",
+		]);
+
+		assert.equal(
+			buildUserPrompt({
+				contextJson: undefined,
+				useKey: "unknown",
+				userInstructions: 0,
+			}),
+			"INPUT DATA (JSON):\nundefined\n\nUSER INSTRUCTIONS (PRIORITY): \n",
+		);
+		assert.equal(
+			buildUserPrompt({
+				contextJson: {},
+				useKey: "image",
+				imageTarget: [{ name: "Масив" }],
+				sceneId: "scene-array",
+				userInstructions: "",
+			}),
+			`INPUT DATA (JSON):
+{}
+
+IMAGE TARGET (JSON):
+[
+  {
+    "name": "Масив"
+  }
+]
+
+TASK: Generate an image prompt for scene ID: scene-array.
+` + "USER INSTRUCTIONS (PRIORITY): \n",
+		);
+		assert.equal(
+			buildUserPrompt({
+				contextJson: {},
+				useKey: "image",
+				imageTarget: null,
+			}),
+			"INPUT DATA (JSON):\n{}\n\nTASK: Generate a detailed image prompt based on INPUT DATA and USER INSTRUCTIONS. Use the current context to infer the subject, composition, mood, and relevant details.\nUSER INSTRUCTIONS (PRIORITY): \n",
+		);
+		const functionTarget = () => {};
+		functionTarget.type = "location";
+		assert.equal(
+			buildUserPrompt({
+				contextJson: {},
+				useKey: "image",
+				imageTarget: functionTarget,
+			}),
+			"INPUT DATA (JSON):\n{}\n\nTASK: Generate a detailed image prompt for the selected location from IMAGE TARGET.\nUSER INSTRUCTIONS (PRIORITY): \n",
+		);
+		assert.equal(
+			buildUserPrompt({
+				contextJson: { toJSON: () => undefined },
+				useKey: Symbol("mode"),
+				userInstructions: false,
+			}),
+			"INPUT DATA (JSON):\nundefined\n\nUSER INSTRUCTIONS (PRIORITY): \n",
+		);
+		assert.equal(
+			buildUserPrompt({
+				contextJson: {},
+				useKey: "image",
+				imageTarget: { toJSON: () => undefined },
+			}),
+			"INPUT DATA (JSON):\n{}\n\nIMAGE TARGET (JSON):\nundefined\n\nTASK: Generate a detailed image prompt based on INPUT DATA and USER INSTRUCTIONS. Use the current context to infer the subject, composition, mood, and relevant details.\nUSER INSTRUCTIONS (PRIORITY): \n",
+		);
+
+		const circularContext = {};
+		circularContext.self = circularContext;
+		assert.throws(
+			() => buildUserPrompt({ contextJson: circularContext }),
+			TypeError,
+		);
+		assert.throws(
+			() => buildUserPrompt({ contextJson: { value: 1n } }),
+			TypeError,
+		);
+		const circularTarget = {};
+		circularTarget.self = circularTarget;
+		assert.throws(
+			() =>
+				buildUserPrompt({
+					contextJson: {},
+					useKey: "image",
+					imageTarget: circularTarget,
+				}),
+			TypeError,
+		);
+		assert.throws(
+			() =>
+				buildUserPrompt({
+					contextJson: {},
+					useKey: "campaign",
+					userInstructions: Symbol("instructions"),
+				}),
+			TypeError,
+		);
+		assert.throws(() => buildUserPrompt(), TypeError);
+	},
+);
+
 await run("AI system instruction composes mode contracts and generation toggles", () => {
 	const instruction = buildSystemInstruction({
 		useKey: "scene",
@@ -5420,6 +11047,647 @@ await run("Gemini gateway owns SDK request shaping and refreshes changed keys", 
 	assert.deepEqual(createdKeys, ["first", "second"]);
 });
 
+await run(
+	"AI attachment URL policies preserve collection coercion and local path safety",
+	() => {
+		assert.deepEqual(Object.keys(attachmentParts), [
+			"buildFileParts",
+			"buildImageParts",
+			"collectImageUrls",
+			"resolveLocalImageUrl",
+		]);
+
+		const untouchedOutput = ["existing"];
+		assert.equal(collectImageUrls(null, untouchedOutput), untouchedOutput);
+		assert.deepEqual(collectImageUrls(null), []);
+		assert.notEqual(collectImageUrls(null), collectImageUrls(null));
+		assert.equal(collectImageUrls([], null), null);
+		assert.throws(() => collectImageUrls([{}], null), TypeError);
+
+		let dynamicUrlReads = 0;
+		let dynamicUrlStringReads = 0;
+		const dynamicUrlItem = {
+			get url() {
+				dynamicUrlReads += 1;
+				if (dynamicUrlReads === 1) return "/ignored-first-read.png";
+				return {
+					toString() {
+						dynamicUrlStringReads += 1;
+						return "  /api/images/кампанія/tokens/герой.png  ";
+					},
+				};
+			},
+		};
+		const collected = collectImageUrls([
+			{ url: "" },
+			{ url: 0 },
+			dynamicUrlItem,
+			{ url: "  /fourth.png  " },
+			{
+				get url() {
+					throw new Error("collection must stop at four URLs");
+				},
+			},
+		], ["first", "second"]);
+		assert.deepEqual(collected, [
+			"first",
+			"second",
+			"/api/images/кампанія/tokens/герой.png",
+			"/fourth.png",
+		]);
+		assert.equal(dynamicUrlReads, 2);
+		assert.equal(dynamicUrlStringReads, 1);
+
+		const alreadyFull = ["one", "two", "three", "four"];
+		collectImageUrls([{ url: "five" }, { url: "six" }], alreadyFull);
+		assert.deepEqual(alreadyFull, ["one", "two", "three", "four", "five"]);
+		let skippedAfterFullReads = 0;
+		collectImageUrls(
+			[
+				{},
+				{
+					get url() {
+						skippedAfterFullReads += 1;
+						return "never";
+					},
+				},
+			],
+			["one", "two", "three", "four"],
+		);
+		assert.equal(skippedAfterFullReads, 0);
+
+		const imageMimeCases = new Map([
+			["portrait.JPG", "image/jpeg"],
+			["portrait.jpeg", "image/jpeg"],
+			["portrait.PnG", "image/png"],
+			["portrait.WEBP", "image/webp"],
+			["portrait.gif", "image/gif"],
+		]);
+		for (const [fileName, mimeType] of imageMimeCases) {
+			const resolved = resolveLocalImageUrl(
+				`/api/images/кампанія/персонажі/портрети/${fileName}?raw=1#preview`,
+			);
+			assert.deepEqual(resolved, {
+				filePath: path.resolve(
+					storage.IMAGES_DIR,
+					"кампанія",
+					"персонажі",
+					"портрети",
+					fileName,
+				),
+				mimeType,
+			});
+		}
+
+		assert.deepEqual(
+			resolveLocalImageUrl(
+				"https://example.com/api/images/campaign/tokens/hero.png?download=1",
+			),
+			{
+				filePath: path.resolve(
+					storage.IMAGES_DIR,
+					"campaign",
+					"tokens",
+					"hero.png",
+				),
+				mimeType: "image/png",
+			},
+		);
+		assert.deepEqual(
+			resolveLocalImageUrl(
+				"/%61pi/%69mages/campaign//tokens///hero.png",
+			),
+			{
+				filePath: path.resolve(
+					storage.IMAGES_DIR,
+					"campaign",
+					"tokens",
+					"hero.png",
+				),
+				mimeType: "image/png",
+			},
+		);
+		assert.deepEqual(
+			resolveLocalImageUrl(
+				"/api/images/campaign/%252e%252e/hero.png",
+			),
+			{
+				filePath: path.resolve(
+					storage.IMAGES_DIR,
+					"campaign",
+					"%2e%2e",
+					"hero.png",
+				),
+				mimeType: "image/png",
+			},
+		);
+
+		for (const invalidUrl of [
+			"",
+			"/api/images",
+			"/api/images/campaign/category",
+			"/API/images/campaign/category/file.png",
+			"/api/IMAGES/campaign/category/file.png",
+			"/api/images/campaign/category/file.svg",
+			"/api/images/campaign/category/",
+			"/api/images/campaign/category/../file.png",
+			"/api/images/campaign/%2e%2e/other/file.png",
+			"/api/images/campaign/category%2Fescape/file.png",
+			"/api/images/campaign/category%5Cescape/file.png",
+			"https://example.com/image.png",
+		]) {
+			assert.equal(resolveLocalImageUrl(invalidUrl), null);
+		}
+		assert.equal(resolveLocalImageUrl(Symbol("image-url")), null);
+		assert.throws(
+			() =>
+				resolveLocalImageUrl(
+					"/api/images/campaign/category/%E0%A4%A.png",
+				),
+			URIError,
+		);
+
+		let validStringReads = 0;
+		assert.deepEqual(
+			resolveLocalImageUrl({
+				toString() {
+					validStringReads += 1;
+					return "/api/images/campaign/category/file.png";
+				},
+			}),
+			{
+				filePath: path.resolve(
+					storage.IMAGES_DIR,
+					"campaign",
+					"category",
+					"file.png",
+				),
+				mimeType: "image/png",
+			},
+		);
+		assert.equal(validStringReads, 1);
+
+		let fallbackStringReads = 0;
+		assert.deepEqual(
+			resolveLocalImageUrl({
+				toString() {
+					fallbackStringReads += 1;
+					return fallbackStringReads === 1
+						? "http://["
+						: "/api/images/fallback/category/file.webp";
+				},
+			}),
+			{
+				filePath: path.resolve(
+					storage.IMAGES_DIR,
+					"fallback",
+					"category",
+					"file.webp",
+				),
+				mimeType: "image/webp",
+			},
+		);
+		assert.equal(fallbackStringReads, 2);
+
+		const firstCoercionError = new Error("first URL coercion failed");
+		let throwingCoercionReads = 0;
+		assert.deepEqual(
+			resolveLocalImageUrl({
+				[Symbol.toPrimitive]() {
+					throwingCoercionReads += 1;
+					if (throwingCoercionReads === 1) {
+						throw firstCoercionError;
+					}
+					return "/api/images/recovered/category/file.gif";
+				},
+			}),
+			{
+				filePath: path.resolve(
+					storage.IMAGES_DIR,
+					"recovered",
+					"category",
+					"file.gif",
+				),
+				mimeType: "image/gif",
+			},
+		);
+		assert.equal(throwingCoercionReads, 2);
+	},
+);
+
+await run(
+	"AI attachment image parts preserve MIME URL ordering size and failures",
+	async () => {
+		const attachmentFs = require("fs/promises");
+		const originalStat = attachmentFs.stat;
+		const originalReadFile = attachmentFs.readFile;
+		const baseUrl = "/api/images/phase-86/tokens";
+		const filePath = (name) =>
+			path.resolve(storage.IMAGES_DIR, "phase-86", "tokens", name);
+		const events = [];
+		const readFailure = new Error("attachment image read failed");
+		try {
+			attachmentFs.stat = async (targetPath) => {
+				const name = path.basename(targetPath);
+				events.push(`stat:${name}`);
+				if (name === "missing.png") {
+					throw new Error("missing image");
+				}
+				return {
+					isFile() {
+						events.push(`isFile:${name}`);
+						return name !== "directory.png";
+					},
+					get size() {
+						events.push(`size:${name}`);
+						if (name === "oversized.png") {
+							return 10 * 1024 * 1024 + 1;
+						}
+						return 10 * 1024 * 1024;
+					},
+				};
+			};
+			attachmentFs.readFile = async (targetPath) => {
+				const name = path.basename(targetPath);
+				events.push(`read:${name}`);
+				if (name === "read-error.png") throw readFailure;
+				return Buffer.from(`content:${name}`, "utf8");
+			};
+
+			let declaredMimeReads = 0;
+			let inlineDataReads = 0;
+			const declaredInline = {
+				get mimeType() {
+					declaredMimeReads += 1;
+					return " IMAGE/PNG ";
+				},
+				get name() {
+					throw new Error("allowed declared MIME must skip name");
+				},
+				get data() {
+					inlineDataReads += 1;
+					return "data:image/png;base64, SGVyb8Op ";
+				},
+				get url() {
+					throw new Error("valid inline data must skip URL");
+				},
+			};
+			const mixedParts = await buildImageParts([
+				declaredInline,
+				{
+					mimeType: "invalid/type",
+					name: "fallback.bin",
+					data: "!!!!",
+					url: `  ${baseUrl}/one.png  `,
+				},
+				{ url: `${baseUrl}/missing.png` },
+				{ url: `${baseUrl}/oversized.png` },
+				{
+					get mimeType() {
+						throw new Error("fifth image must be capped");
+					},
+				},
+			]);
+			assert.equal(declaredMimeReads, 1);
+			assert.equal(inlineDataReads, 1);
+			assert.deepEqual(mixedParts, [
+				{
+					inlineData: {
+						data: "SGVyb8Op",
+						mimeType: "image/png",
+					},
+				},
+				{
+					inlineData: {
+						data: Buffer.from(
+							"content:one.png",
+							"utf8",
+						).toString("base64"),
+						mimeType: "image/png",
+					},
+				},
+			]);
+			assert.deepEqual(events, [
+				"stat:one.png",
+				"isFile:one.png",
+				"size:one.png",
+				"read:one.png",
+				"stat:missing.png",
+				"stat:oversized.png",
+				"isFile:oversized.png",
+				"size:oversized.png",
+			]);
+
+			events.length = 0;
+			const extensionInline = await buildImageParts([
+				{
+					mimeType: "not/allowed",
+					name: "portrait.WEBP",
+					data: "abc",
+					get url() {
+						throw new Error("extension inline must skip URL");
+					},
+				},
+			]);
+			assert.deepEqual(extensionInline, [
+				{
+					inlineData: {
+						data: "abc=",
+						mimeType: "image/webp",
+					},
+				},
+			]);
+			assert.deepEqual(events, []);
+
+			events.length = 0;
+			assert.deepEqual(
+				await buildImageParts([
+					{ url: `${baseUrl}/missing.png` },
+					{ url: ` ${baseUrl}/missing.png ` },
+				]),
+				[],
+			);
+			assert.deepEqual(events, ["stat:missing.png"]);
+
+			events.length = 0;
+			assert.deepEqual(
+				await buildImageParts([
+					{ url: `${baseUrl}/directory.png` },
+				]),
+				[],
+			);
+			assert.deepEqual(events, [
+				"stat:directory.png",
+				"isFile:directory.png",
+			]);
+
+			events.length = 0;
+			await assert.rejects(
+				() =>
+					buildImageParts([
+						{ url: `${baseUrl}/read-error.png` },
+					]),
+				(error) => error === readFailure,
+			);
+			assert.deepEqual(events, [
+				"stat:read-error.png",
+				"isFile:read-error.png",
+				"size:read-error.png",
+				"read:read-error.png",
+			]);
+
+			assert.deepEqual(await buildImageParts(null), []);
+			assert.deepEqual(await buildImageParts({ length: 1 }), []);
+			await assert.rejects(() => buildImageParts([null]), TypeError);
+			await assert.rejects(
+				() =>
+					buildImageParts([
+						{
+							mimeType: "invalid/type",
+							name: "invalid.bin",
+							data: "",
+							url: `${baseUrl}/%E0%A4%A.png`,
+						},
+					]),
+				URIError,
+			);
+
+			const oversizedInlineData = Buffer.alloc(
+				10 * 1024 * 1024 + 1,
+			).toString("base64");
+			assert.deepEqual(
+				await buildImageParts([
+					{
+						mimeType: "image/png",
+						data: oversizedInlineData,
+					},
+				]),
+				[],
+			);
+			assert.equal(
+				filePath("one.png"),
+				path.resolve(
+					storage.IMAGES_DIR,
+					"phase-86",
+					"tokens",
+					"one.png",
+				),
+			);
+		} finally {
+			attachmentFs.stat = originalStat;
+			attachmentFs.readFile = originalReadFile;
+		}
+	},
+);
+
+await run(
+	"AI attachment file parts preserve MIME data names limits and cap order",
+	() => {
+		assert.deepEqual(buildFileParts(null), []);
+		assert.deepEqual(buildFileParts({ length: 1 }), []);
+		assert.throws(() => buildFileParts([null]), TypeError);
+
+		const textData = Buffer.from("Вміст", "utf8").toString("base64");
+		const textMimeCases = new Map([
+			[".csv", "text/csv"],
+			[".css", "text/css"],
+			[".htm", "text/html"],
+			[".html", "text/html"],
+			[".js", "text/javascript"],
+			[".json", "application/json"],
+			[".md", "text/markdown"],
+			[".markdown", "text/markdown"],
+			[".scss", "text/css"],
+			[".txt", "text/plain"],
+			[".xml", "application/xml"],
+			[".yaml", "application/x-yaml"],
+			[".yml", "application/x-yaml"],
+		]);
+		for (const [extension, mimeType] of textMimeCases) {
+			const name = `Нотатки${extension.toUpperCase()}`;
+			assert.deepEqual(
+				buildFileParts([
+					{
+						name,
+						mimeType: "application/pdf",
+						data: textData,
+					},
+				]),
+				[
+					{
+						text: `ATTACHED FILE: ${name} (${mimeType})\n\nВміст`,
+					},
+				],
+			);
+		}
+
+		const pdfData = Buffer.from("fake pdf", "utf8").toString("base64");
+		assert.deepEqual(
+			buildFileParts([
+				{
+					name: "source.PDF",
+					mimeType: "text/plain",
+					data: `data:application/pdf;base64,${pdfData}`,
+				},
+			]),
+			[
+				{ text: "ATTACHED FILE: source.PDF (application/pdf)" },
+				{
+					inlineData: {
+						data: pdfData,
+						mimeType: "application/pdf",
+					},
+				},
+			],
+		);
+		assert.deepEqual(
+			buildFileParts([
+				{
+					name: "source.unknown",
+					mimeType: " TEXT/XML ",
+					data: textData,
+				},
+			]),
+			[
+				{
+					text: "ATTACHED FILE: source.unknown (text/xml)\n\nВміст",
+				},
+			],
+		);
+
+		let recognizedNameReads = 0;
+		let recognizedDataReads = 0;
+		const recognizedFile = {
+			get name() {
+				recognizedNameReads += 1;
+				return recognizedNameReads === 1
+					? "first.JSON"
+					: "  Друге\r\nім'я.JSON  ";
+			},
+			get mimeType() {
+				throw new Error("recognized extension must skip declared MIME");
+			},
+			get data() {
+				recognizedDataReads += 1;
+				return textData;
+			},
+		};
+		assert.deepEqual(buildFileParts([recognizedFile]), [
+			{
+				text: "ATTACHED FILE: Друге ім'я.JSON (application/json)\n\nВміст",
+			},
+		]);
+		assert.equal(recognizedNameReads, 2);
+		assert.equal(recognizedDataReads, 1);
+
+		let rejectedNameReads = 0;
+		let rejectedMimeReads = 0;
+		let rejectedDataReads = 0;
+		assert.deepEqual(
+			buildFileParts([
+				{
+					get name() {
+						rejectedNameReads += 1;
+						return "source.bin";
+					},
+					get mimeType() {
+						rejectedMimeReads += 1;
+						return "invalid/type";
+					},
+					get data() {
+						rejectedDataReads += 1;
+						return textData;
+					},
+				},
+			]),
+			[],
+		);
+		assert.equal(rejectedNameReads, 1);
+		assert.equal(rejectedMimeReads, 1);
+		assert.equal(rejectedDataReads, 0);
+
+		let invalidDataNameReads = 0;
+		assert.deepEqual(
+			buildFileParts([
+				{
+					get name() {
+						invalidDataNameReads += 1;
+						return "invalid.pdf";
+					},
+					data: "!!!!",
+				},
+			]),
+			[],
+		);
+		assert.equal(invalidDataNameReads, 1);
+
+		assert.deepEqual(
+			buildFileParts([
+				{ name: 0, mimeType: "application/pdf", data: "abc" },
+			]),
+			[
+				{ text: "ATTACHED FILE: attached-file (application/pdf)" },
+				{
+					inlineData: {
+						data: "abc=",
+						mimeType: "application/pdf",
+					},
+				},
+			],
+		);
+		assert.equal(
+			buildFileParts([
+				{
+					name: " \t ",
+					mimeType: "application/pdf",
+					data: pdfData,
+				},
+			])[0].text,
+			"ATTACHED FILE:  (application/pdf)",
+		);
+
+		const uppercaseDataUrl = "DATA:application/pdf;base64,SGk=";
+		assert.equal(
+			buildFileParts([
+				{
+					name: "uppercase.bin",
+					mimeType: "application/pdf",
+					data: uppercaseDataUrl,
+				},
+			])[1].inlineData.data,
+			Buffer.from(uppercaseDataUrl, "base64").toString("base64"),
+		);
+
+		const oversizedFileData = Buffer.alloc(
+			10 * 1024 * 1024 + 1,
+		).toString("base64");
+		assert.deepEqual(
+			buildFileParts([
+				{
+					name: "oversized.pdf",
+					data: oversizedFileData,
+				},
+			]),
+			[],
+		);
+
+		const cappedFiles = Array.from({ length: 5 }, (_, index) => {
+			if (index < 4) {
+				return {
+					name: `file-${index}.md`,
+					data: textData,
+				};
+			}
+			return {
+				get name() {
+					throw new Error("fifth file must be capped");
+				},
+			};
+		});
+		assert.equal(buildFileParts(cappedFiles).length, 4);
+	},
+);
+
 await run("AI attachment infrastructure converts text and binary files", () => {
 	const textData = Buffer.from("Session notes", "utf8").toString("base64");
 	assert.deepEqual(
@@ -5467,6 +11735,392 @@ await run("AI response parser handles plain parsed and invalid responses", () =>
 	);
 	assert.equal(parseErrors.length, 1);
 });
+
+await run(
+	"AI response parser preserves outer fences and object scanner state",
+	() => {
+		assert.deepEqual(Object.keys(aiResponseParser), [
+			"extractFirstJsonObject",
+			"normalizeEscapedNewLines",
+			"parseAiResponseText",
+			"stripOuterJsonFence",
+		]);
+		assert.equal(aiService.__test.stripOuterJsonFence, stripOuterJsonFence);
+		assert.equal(aiService.__test.extractFirstJsonObject, extractFirstJsonObject);
+
+		for (const value of [undefined, null, "", 0, false, Number.NaN]) {
+			assert.equal(stripOuterJsonFence(value), "");
+		}
+		assert.equal(stripOuterJsonFence(Symbol("текст")), "Symbol(текст)");
+		assert.equal(
+			stripOuterJsonFence("  ```JSON \n {\"name\":\"Ірина\"} \n```  "),
+			'{"name":"Ірина"}',
+		);
+		assert.equal(
+			stripOuterJsonFence("```\n [1, 2, 3] \n```"),
+			"[1, 2, 3]",
+		);
+		assert.equal(stripOuterJsonFence("```json\n\n```"), "");
+		for (const [value, expected] of [
+			["```javascript\n{}\n```", "javascript\n{}"],
+			["```jsonish\n{}\n```", "ish\n{}"],
+			["```json\n{}", "```json\n{}"],
+			["```json\n{}\n```\ntrailing", "```json\n{}\n```\ntrailing"],
+			["````json\n{}\n````", "`json\n{}\n`"],
+		]) {
+			assert.equal(stripOuterJsonFence(`  ${value}  `), expected);
+		}
+		const nestedFence = [
+			"```json",
+			'{"text":"```js\\nconst x = 1;\\n```"}',
+			"```",
+		].join("\n");
+		assert.equal(
+			stripOuterJsonFence(nestedFence),
+			'{"text":"```js\\nconst x = 1;\\n```"}',
+		);
+
+		assert.equal(extractFirstJsonObject("  Без JSON  "), "Без JSON");
+		assert.equal(
+			extractFirstJsonObject('Початок {"a":1} кінець {"b":2}'),
+			'{"a":1}',
+		);
+		assert.equal(
+			extractFirstJsonObject(
+				'Префікс {"a":{"b":[{"c":1}]},"text":"} { braces"} суфікс',
+			),
+			'{"a":{"b":[{"c":1}]},"text":"} { braces"}',
+		);
+		assert.equal(
+			extractFirstJsonObject('[1, {"inside":true}, 3] trailing'),
+			'{"inside":true}',
+		);
+		assert.equal(extractFirstJsonObject("before {} after"), "{}");
+		assert.equal(
+			extractFirstJsonObject("before {\"a\":{\"b\":1} after"),
+			'before {"a":{"b":1} after',
+		);
+		assert.equal(
+			extractFirstJsonObject('before {"a":"unterminated } after'),
+			'before {"a":"unterminated } after',
+		);
+
+		const oddBackslashes =
+			'prefix {"a":"odd ' +
+			"\\".repeat(3) +
+			'"} still string }","b":1} suffix';
+		assert.equal(
+			extractFirstJsonObject(oddBackslashes),
+			oddBackslashes.slice(
+				oddBackslashes.indexOf("{"),
+				oddBackslashes.lastIndexOf("}") + 1,
+			),
+		);
+		const evenBackslashes =
+			'prefix {"a":"even ' +
+			"\\".repeat(2) +
+			'"} first close } trailing } suffix';
+		assert.equal(
+			extractFirstJsonObject(evenBackslashes),
+			evenBackslashes.slice(
+				evenBackslashes.indexOf("{"),
+				evenBackslashes.indexOf("}") + 1,
+			),
+		);
+		const surrogateText = 'до {"emoji":"😀","lone":"\ud800"} після';
+		assert.equal(
+			extractFirstJsonObject(surrogateText),
+			'{"emoji":"😀","lone":"\ud800"}',
+		);
+		assert.equal(
+			extractFirstJsonObject("```json\n{\"fenced\":true}\n```"),
+			'{"fenced":true}',
+		);
+
+		let coercions = 0;
+		assert.equal(
+			stripOuterJsonFence({
+				toString() {
+					coercions += 1;
+					return "  {\"dynamic\":true}  ";
+				},
+			}),
+			'{"dynamic":true}',
+		);
+		assert.equal(coercions, 1);
+		const coercionFailure = new Error("fence coercion failed");
+		assert.throws(
+			() =>
+				stripOuterJsonFence({
+					toString() {
+						throw coercionFailure;
+					},
+				}),
+			coercionFailure,
+		);
+	},
+);
+
+await run(
+	"AI escaped-newline normalization preserves recursive projection boundaries",
+	() => {
+		assert.equal(
+			normalizeEscapedNewLines("A\\nB\\\\nC"),
+			"A\nB\\\nC",
+		);
+		const sparse = new Array(4);
+		sparse[1] = "Один\\nДва";
+		sparse[3] = { text: "Три\\nЧотири" };
+		sparse.extra = "ignored\\nproperty";
+		const normalizedSparse = normalizeEscapedNewLines(sparse);
+		assert.notEqual(normalizedSparse, sparse);
+		assert.equal(normalizedSparse.length, 4);
+		assert.equal(0 in normalizedSparse, false);
+		assert.equal(normalizedSparse[1], "Один\nДва");
+		assert.equal(2 in normalizedSparse, false);
+		assert.deepEqual(normalizedSparse[3], { text: "Три\nЧотири" });
+		assert.equal("extra" in normalizedSparse, false);
+
+		const symbolKey = Symbol("hidden");
+		const prototype = { inherited: "Батько\\nРядок" };
+		const source = Object.create(prototype);
+		let getterReads = 0;
+		source.own = "Свій\\nРядок";
+		source[symbolKey] = "Символ\\nРядок";
+		Object.defineProperty(source, "dynamic", {
+			enumerable: true,
+			get() {
+				getterReads += 1;
+				return ["A\\nB"];
+			},
+		});
+		const normalizedObject = normalizeEscapedNewLines(source);
+		assert.equal(getterReads, 1);
+		assert.equal(Object.getPrototypeOf(normalizedObject), Object.prototype);
+		assert.deepEqual(normalizedObject, {
+			own: "Свій\nРядок",
+			dynamic: ["A\nB"],
+			inherited: "Батько\nРядок",
+		});
+		assert.equal(normalizedObject[symbolKey], undefined);
+
+		const protoSource = {};
+		Object.defineProperty(protoSource, "__proto__", {
+			enumerable: true,
+			value: { inheritedLine: "X\\nY" },
+		});
+		const normalizedProto = normalizeEscapedNewLines(protoSource);
+		assert.equal(
+			Object.prototype.hasOwnProperty.call(normalizedProto, "__proto__"),
+			false,
+		);
+		assert.deepEqual(Object.getPrototypeOf(normalizedProto), {
+			inheritedLine: "X\nY",
+		});
+
+		assert.deepEqual(normalizeEscapedNewLines(new Date(0)), {});
+		const callback = () => "A\\nB";
+		assert.equal(normalizeEscapedNewLines(callback), callback);
+		for (const value of [undefined, null, false, 0, 1n, Symbol("value")]) {
+			assert.equal(normalizeEscapedNewLines(value), value);
+		}
+		const circularObject = {};
+		circularObject.self = circularObject;
+		assert.throws(
+			() => normalizeEscapedNewLines(circularObject),
+			RangeError,
+		);
+		const circularArray = [];
+		circularArray.push(circularArray);
+		assert.throws(
+			() => normalizeEscapedNewLines(circularArray),
+			RangeError,
+		);
+		const getterFailure = new Error("normalization getter failed");
+		assert.throws(
+			() =>
+				normalizeEscapedNewLines({
+					get value() {
+						throw getterFailure;
+					},
+				}),
+			getterFailure,
+		);
+	},
+);
+
+await run(
+	"AI response parsing preserves lazy plain mode and exact failure callbacks",
+	() => {
+		const plainEvents = [];
+		const plainOptions = {};
+		const plainText = {
+			toString() {
+				plainEvents.push("text:toString");
+				return "Рядок\\nДругий";
+			},
+		};
+		for (const [key, value] of [
+			["text", plainText],
+			["shouldParse", 0],
+			[
+				"onParseError",
+				() => {
+					plainEvents.push("callback:unexpected");
+				},
+			],
+		]) {
+			Object.defineProperty(plainOptions, key, {
+				enumerable: true,
+				get() {
+					plainEvents.push(`options:${key}`);
+					return value;
+				},
+			});
+		}
+		assert.equal(
+			parseAiResponseText(plainOptions),
+			"Рядок\nДругий",
+		);
+		assert.deepEqual(plainEvents, [
+			"options:text",
+			"options:shouldParse",
+			"options:onParseError",
+			"text:toString",
+		]);
+		for (const text of [undefined, null, "", 0, false, Number.NaN]) {
+			assert.equal(
+				parseAiResponseText({
+					text,
+					shouldParse: false,
+					onParseError() {
+						throw new Error("plain mode must not report");
+					},
+				}),
+				"",
+			);
+		}
+		assert.equal(
+			parseAiResponseText({
+				text: Symbol("plain"),
+				shouldParse: false,
+			}),
+			"Symbol(plain)",
+		);
+
+		assert.deepEqual(
+			parseAiResponseText({
+				text: 'Перед {"text":"Один\\\\nДва","nested":["A\\\\nB"]} після',
+				shouldParse: true,
+			}),
+			{ text: "Один\nДва", nested: ["A\nB"] },
+		);
+		assert.deepEqual(
+			parseAiResponseText({
+				text: "```json\n{\"value\":1}\n```",
+				shouldParse: true,
+			}),
+			{ value: 1 },
+		);
+		assert.equal(
+			parseAiResponseText({ text: "null", shouldParse: true }),
+			null,
+		);
+		assert.deepEqual(
+			parseAiResponseText({ text: '["A\\\\nB"]', shouldParse: true }),
+			["A\nB"],
+		);
+
+		const invalidText = { label: "original" };
+		const firstCoercionFailure = new Error("first coercion failed");
+		let coercionReads = 0;
+		invalidText.toString = () => {
+			coercionReads += 1;
+			if (coercionReads === 1) throw firstCoercionFailure;
+			return "raw\\nresponse";
+		};
+		const callbackCalls = [];
+		assert.deepEqual(
+			parseAiResponseText({
+				text: invalidText,
+				shouldParse: true,
+				onParseError: (...args) => callbackCalls.push(args),
+			}),
+			{
+				error: "AI returned invalid JSON. Try again.",
+				raw_response: "raw\nresponse",
+			},
+		);
+		assert.equal(coercionReads, 2);
+		assert.equal(callbackCalls.length, 1);
+		assert.equal(
+			callbackCalls[0][0],
+			"Failed to parse AI response as JSON:",
+		);
+		assert.equal(callbackCalls[0][1], invalidText);
+		assert.equal(callbackCalls[0][2], firstCoercionFailure);
+
+		const parseFailureCalls = [];
+		const invalidResult = parseAiResponseText({
+			text: "not-json\\nraw",
+			shouldParse: true,
+			onParseError: (...args) => parseFailureCalls.push(args),
+		});
+		assert.deepEqual(invalidResult, {
+			error: "AI returned invalid JSON. Try again.",
+			raw_response: "not-json\nraw",
+		});
+		assert.equal(parseFailureCalls.length, 1);
+		assert.equal(parseFailureCalls[0][1], "not-json\\nraw");
+		assert.equal(parseFailureCalls[0][2] instanceof SyntaxError, true);
+
+		const callbackFailure = new Error("callback failed");
+		assert.throws(
+			() =>
+				parseAiResponseText({
+					text: "invalid",
+					shouldParse: true,
+					onParseError() {
+						throw callbackFailure;
+					},
+				}),
+			callbackFailure,
+		);
+		assert.throws(
+			() =>
+				parseAiResponseText({
+					text: "invalid",
+					shouldParse: true,
+					onParseError: null,
+				}),
+			TypeError,
+		);
+
+		const secondCoercionFailure = new Error("second coercion failed");
+		let secondFailureReads = 0;
+		const secondFailureText = {
+			toString() {
+				secondFailureReads += 1;
+				if (secondFailureReads === 1) return "invalid";
+				throw secondCoercionFailure;
+			},
+		};
+		const secondFailureCallbacks = [];
+		assert.throws(
+			() =>
+				parseAiResponseText({
+					text: secondFailureText,
+					shouldParse: true,
+					onParseError: (...args) => secondFailureCallbacks.push(args),
+				}),
+			secondCoercionFailure,
+		);
+		assert.equal(secondFailureReads, 2);
+		assert.equal(secondFailureCallbacks.length, 1);
+		assert.equal(secondFailureCallbacks[0][1], secondFailureText);
+		assert.throws(() => parseAiResponseText(), TypeError);
+	},
+);
 
 await run("AI request resolution selects modes scopes and model fallbacks", () => {
 	const scene = resolveAiRequest({
@@ -7446,6 +14100,495 @@ await run("AI campaign context loader uses injected entity and session ports", a
 	assert.deepEqual(target.sessions[0].data.notes, [{ text: "Visible" }]);
 });
 
+await run(
+	"AI campaign context session filtering preserves arrays getters and scene identity",
+	() => {
+		assert.deepEqual(
+			Object.keys(
+				require("../server/modules/ai/application/campaignContext.js"),
+			),
+			[
+				"createAppendConfiguredCampaignContext",
+				"filterSessionDataForAiContext",
+			],
+		);
+
+		const reads = {
+			notes: 0,
+			npcs: 0,
+			locations: 0,
+			scenes: 0,
+			sceneNotes: 0,
+		};
+		const visibleNote = { text: "Видима", _aiIgnored: 0 };
+		const hiddenNote = { text: "Прихована", _aiIgnored: "yes" };
+		const visibleNpc = { id: "npc-visible", _aiIgnored: "" };
+		const hiddenNpc = { id: "npc-hidden", _aiIgnored: {} };
+		const visibleLocation = { id: "location-visible", _aiIgnored: false };
+		const hiddenLocation = { id: "location-hidden", _aiIgnored: 1 };
+		const scene = {
+			id: "scene-1",
+			_aiIgnored: true,
+			get notes() {
+				reads.sceneNotes += 1;
+				return [visibleNote, hiddenNote];
+			},
+		};
+		const source = {
+			extra: { stable: true },
+			get notes() {
+				reads.notes += 1;
+				return [visibleNote, hiddenNote];
+			},
+			get npcs() {
+				reads.npcs += 1;
+				return [visibleNpc, hiddenNpc];
+			},
+			get locations() {
+				reads.locations += 1;
+				return [visibleLocation, hiddenLocation];
+			},
+			get scenes() {
+				reads.scenes += 1;
+				return [scene];
+			},
+		};
+		const filtered = filterSessionDataForAiContext(source);
+		assert.notEqual(filtered, source);
+		assert.equal(filtered.extra, source.extra);
+		assert.deepEqual(filtered.notes, [visibleNote]);
+		assert.deepEqual(filtered.npcs, [visibleNpc]);
+		assert.deepEqual(filtered.locations, [visibleLocation]);
+		assert.equal(filtered.scenes.length, 1);
+		assert.notEqual(filtered.scenes[0], scene);
+		assert.equal(filtered.scenes[0].id, "scene-1");
+		assert.equal(filtered.scenes[0]._aiIgnored, true);
+		assert.deepEqual(filtered.scenes[0].notes, [visibleNote]);
+		assert.deepEqual(reads, {
+			notes: 2,
+			npcs: 3,
+			locations: 3,
+			scenes: 3,
+			sceneNotes: 2,
+		});
+
+		assert.deepEqual(filterSessionDataForAiContext(), {
+			notes: [],
+			npcs: [],
+			locations: [],
+			scenes: [],
+		});
+		assert.deepEqual(
+			filterSessionDataForAiContext({
+				notes: "not-an-array",
+				npcs: null,
+				locations: {},
+				scenes: false,
+			}),
+			{
+				notes: [],
+				npcs: [],
+				locations: [],
+				scenes: [],
+			},
+		);
+		assert.deepEqual(
+			filterSessionDataForAiContext(["перший", "другий"]),
+			{
+				0: "перший",
+				1: "другий",
+				notes: [],
+				npcs: [],
+				locations: [],
+				scenes: [],
+			},
+		);
+		assert.throws(() => filterSessionDataForAiContext(null), TypeError);
+		assert.throws(
+			() => filterSessionDataForAiContext({ scenes: [null] }),
+			TypeError,
+		);
+
+		let dynamicNpcReads = 0;
+		const dynamicData = { notes: [], locations: [], scenes: [] };
+		Object.defineProperty(dynamicData, "npcs", {
+			get() {
+				dynamicNpcReads += 1;
+				return dynamicNpcReads === 1 ? [] : "changed-after-array-check";
+			},
+		});
+		assert.throws(
+			() => filterSessionDataForAiContext(dynamicData),
+			TypeError,
+		);
+		assert.equal(dynamicNpcReads, 2);
+	},
+);
+
+await run(
+	"AI campaign context selection preserves keys ignored rows and NPC fallback reads",
+	async () => {
+		const events = [];
+		const ignoredCharacter = {
+			_aiIgnored: true,
+			get slug() {
+				throw new Error("ignored character key must stay lazy");
+			},
+		};
+		const characters = [
+			{ slug: "герой", firstName: "Ignored by slug precedence" },
+			{ id: "id-hidden-by-config", firstName: "Configured false" },
+			{ firstName: "Марта", lastName: "Коваль" },
+			{ name: "Not selected" },
+			ignoredCharacter,
+		];
+		const npcs = [
+			{ id: "npc-visible", firstName: "Видимий" },
+			{ id: "npc-hidden", _aiIgnored: 1 },
+		];
+		const locations = [
+			{ slug: "фортеця", name: "Ignored by slug precedence" },
+			{ id: "location-id", name: "By ID" },
+			{ name: "Без ключа" },
+		];
+		const characterConfig = {
+			items: {
+				герой: true,
+				"id-hidden-by-config": false,
+				"Марта Коваль": 0,
+			},
+		};
+		let characterConfigReads = 0;
+		let npcConfigReads = 0;
+		const contextConfig = {
+			campaignNotes: true,
+			get campaignCharacters() {
+				characterConfigReads += 1;
+				events.push(`config:characters:${characterConfigReads}`);
+				return characterConfig;
+			},
+			get campaignNpcs() {
+				npcConfigReads += 1;
+				events.push(`config:npcs:${npcConfigReads}`);
+				return undefined;
+			},
+			campaignLocations: {
+				items: {
+					фортеця: true,
+					"location-id": false,
+					"Без ключа": "yes",
+				},
+			},
+		};
+		const campaignNotes = [
+			{ text: "Видима" },
+			{ text: "Прихована", _aiIgnored: true },
+		];
+		const campaign = { notes: campaignNotes };
+		const target = { campaign: {}, sessions: [] };
+		const appendContext = createAppendConfiguredCampaignContext({
+			async listEntities(campaignSlug, type) {
+				events.push(`list:${campaignSlug}:${type}`);
+				if (type === "characters") return characters;
+				if (type === "npc") return npcs;
+				return locations;
+			},
+			async readSession() {
+				throw new Error("sessions are not configured");
+			},
+		});
+		const result = await appendContext(
+			target,
+			"кампанія",
+			campaign,
+			contextConfig,
+		);
+		assert.equal(result, undefined);
+		assert.deepEqual(target.campaign.notes, [{ text: "Видима" }]);
+		assert.deepEqual(target.campaign.characters, [
+			characters[0],
+			characters[2],
+		]);
+		assert.deepEqual(target.campaign.npcs, [npcs[0]]);
+		assert.deepEqual(target.campaign.locations, [
+			locations[0],
+			locations[2],
+		]);
+		assert.equal(characterConfigReads, 3);
+		assert.equal(npcConfigReads, 3);
+		assert.deepEqual(
+			events.filter((event) => event.startsWith("list:")),
+			[
+				"list:кампанія:characters",
+				"list:кампанія:npc",
+				"list:кампанія:locations",
+			],
+		);
+
+		const lazyKeyEntity = {
+			_aiIgnored: false,
+			get slug() {
+				throw new Error("empty items must not read entity keys");
+			},
+		};
+		const lazyTarget = { campaign: {}, sessions: [] };
+		const lazyAppend = createAppendConfiguredCampaignContext({
+			async listEntities(_campaignSlug, type) {
+				if (type === "characters") return [lazyKeyEntity];
+				throw new Error("only characters should load");
+			},
+			async readSession() {
+				throw new Error("sessions should not load");
+			},
+		});
+		await lazyAppend(lazyTarget, "campaign", {}, {
+			campaignCharacters: { items: {} },
+			campaignNpcs: false,
+		});
+		assert.deepEqual(lazyTarget.campaign.characters, [lazyKeyEntity]);
+
+		let changingConfigReads = 0;
+		let ignoredReads = 0;
+		const changingTarget = { campaign: {}, sessions: [] };
+		const changingAppend = createAppendConfiguredCampaignContext({
+			async listEntities(_campaignSlug, type) {
+				assert.equal(type, "characters");
+				return [
+					{
+						get _aiIgnored() {
+							ignoredReads += 1;
+							return false;
+						},
+					},
+				];
+			},
+			async readSession() {
+				throw new Error("sessions should not load");
+			},
+		});
+		await changingAppend(changingTarget, "campaign", {}, {
+			get campaignCharacters() {
+				changingConfigReads += 1;
+				return changingConfigReads === 1 ? true : undefined;
+			},
+			campaignNpcs: false,
+		});
+		assert.deepEqual(changingTarget.campaign.characters, []);
+		assert.equal(changingConfigReads, 2);
+		assert.equal(ignoredReads, 1);
+
+		let directNpcReads = 0;
+		const directNpcTarget = { campaign: {}, sessions: [] };
+		const directNpcAppend = createAppendConfiguredCampaignContext({
+			async listEntities(_campaignSlug, type) {
+				assert.equal(type, "npc");
+				return npcs;
+			},
+			async readSession() {
+				throw new Error("sessions should not load");
+			},
+		});
+		await directNpcAppend(directNpcTarget, "campaign", {}, {
+			campaignCharacters: false,
+			get campaignNpcs() {
+				directNpcReads += 1;
+				return true;
+			},
+		});
+		assert.equal(directNpcReads, 3);
+		assert.deepEqual(directNpcTarget.campaign.npcs, [npcs[0]]);
+	},
+);
+
+await run(
+	"AI campaign context append preserves no-op sequencing sessions and partial failures",
+	async () => {
+		const lazyCalls = [];
+		const lazyAppend = createAppendConfiguredCampaignContext({
+			async listEntities() {
+				lazyCalls.push("list");
+			},
+			async readSession() {
+				lazyCalls.push("session");
+			},
+		});
+		assert.equal(await lazyAppend(null, "campaign", {}, {}), undefined);
+		assert.equal(await lazyAppend({}, "campaign", null, {}), undefined);
+		assert.equal(await lazyAppend({}, "campaign", {}, null), undefined);
+		assert.deepEqual(lazyCalls, []);
+
+		const events = [];
+		const firstConfig = { included: true, notes: true };
+		const skippedConfig = { included: false };
+		const secondConfig = { included: "yes" };
+		const sessions = {
+			"сесія-1": firstConfig,
+			"пропущена": skippedConfig,
+			"сесія-2": secondConfig,
+		};
+		let sessionsConfigReads = 0;
+		const contextConfig = {
+			campaignNotes: true,
+			campaignCharacters: true,
+			campaignNpcs: false,
+			campaignLocations: true,
+			get sessions() {
+				sessionsConfigReads += 1;
+				events.push(`config:sessions:${sessionsConfigReads}`);
+				return sessions;
+			},
+		};
+		const storedSessions = {
+			"сесія-1": {
+				get name() {
+					events.push("session-name:сесія-1");
+					return "Перша";
+				},
+				get data() {
+					events.push("session-data:сесія-1");
+					return { notes: [{ text: "Нотатка" }] };
+				},
+			},
+			"сесія-2": {
+				get name() {
+					events.push("session-name:сесія-2");
+					return "Друга";
+				},
+				get data() {
+					events.push("session-data:сесія-2");
+					return { scenes: [] };
+				},
+			},
+		};
+		const targetState = { campaign: {}, sessionRows: [] };
+		const target = {
+			get campaign() {
+				events.push("target:campaign");
+				return targetState.campaign;
+			},
+			get sessions() {
+				events.push("target:sessions");
+				return targetState.sessionRows;
+			},
+		};
+		const appendContext = createAppendConfiguredCampaignContext({
+			async listEntities(campaignSlug, type) {
+				events.push(`list:${campaignSlug}:${type}`);
+				return [];
+			},
+			async readSession(campaignSlug, slug) {
+				events.push(`read:${campaignSlug}:${slug}`);
+				return storedSessions[slug];
+			},
+		});
+		await appendContext(
+			target,
+			0,
+			{ notes: [{ text: "Кампанія" }] },
+			contextConfig,
+		);
+		assert.equal(sessionsConfigReads, 2);
+		assert.equal(targetState.sessionRows.length, 2);
+		assert.deepEqual(targetState.sessionRows[0], {
+			slug: "сесія-1",
+			fileName: "сесія-1",
+			name: "Перша",
+			conf: firstConfig,
+			data: {
+				notes: [{ text: "Нотатка" }],
+				npcs: [],
+				locations: [],
+				scenes: [],
+			},
+		});
+		assert.equal(targetState.sessionRows[0].conf, firstConfig);
+		assert.equal(targetState.sessionRows[1].conf, secondConfig);
+		assert.deepEqual(
+			events.filter(
+				(event) =>
+					event.startsWith("list:") || event.startsWith("read:"),
+			),
+			[
+				"list:0:characters",
+				"list:0:locations",
+				"read:0:сесія-1",
+				"read:0:сесія-2",
+			],
+		);
+		assert.ok(
+			events.indexOf("target:sessions") <
+				events.indexOf("session-name:сесія-1"),
+		);
+		assert.ok(
+			events.indexOf("session-name:сесія-1") <
+				events.indexOf("session-data:сесія-1"),
+		);
+
+		const failure = new Error("second session failed");
+		const partialTarget = { campaign: {}, sessions: [] };
+		const partialEvents = [];
+		const partialAppend = createAppendConfiguredCampaignContext({
+			async listEntities(_campaignSlug, type) {
+				partialEvents.push(`list:${type}`);
+				if (type === "characters") return [{ firstName: "Герой" }];
+				throw new Error(`unexpected entity read: ${type}`);
+			},
+			async readSession(_campaignSlug, slug) {
+				partialEvents.push(`read:${slug}`);
+				if (slug === "second") throw failure;
+				return { name: "First", data: {} };
+			},
+		});
+		await assert.rejects(
+			partialAppend(
+				partialTarget,
+				"campaign",
+				{ notes: [{ text: "Kept" }] },
+				{
+					campaignNotes: true,
+					campaignCharacters: true,
+					campaignNpcs: false,
+					sessions: {
+						first: { included: true },
+						skip: { included: false },
+						second: { included: true },
+					},
+				},
+			),
+			(error) => error === failure,
+		);
+		assert.deepEqual(partialEvents, [
+			"list:characters",
+			"read:first",
+			"read:second",
+		]);
+		assert.deepEqual(partialTarget.campaign.notes, [{ text: "Kept" }]);
+		assert.deepEqual(partialTarget.campaign.characters, [
+			{ firstName: "Герой" },
+		]);
+		assert.equal(partialTarget.sessions.length, 1);
+		assert.equal(partialTarget.sessions[0].slug, "first");
+
+		const malformedTarget = { campaign: {}, sessions: [] };
+		const malformedAppend = createAppendConfiguredCampaignContext({
+			async listEntities() {
+				throw new Error("entities should not load");
+			},
+			async readSession() {
+				throw new Error("sessions should not read before config validation");
+			},
+		});
+		await assert.rejects(
+			malformedAppend(malformedTarget, "campaign", {}, {
+				campaignNpcs: false,
+				sessions: { broken: null },
+			}),
+			TypeError,
+		);
+		assert.deepEqual(malformedTarget.sessions, []);
+	},
+);
+
 await run("AI history repository port validates and maps filesystem storage", async () => {
 	assert.throws(
 		() => createAiHistoryRepositoryPort({}),
@@ -7571,6 +14714,458 @@ await run("AI history commands edit drafts and delegate apply undo snapshots", a
 	);
 });
 
+await run(
+	"AI history stable ID projection preserves aligned collection boundaries",
+	() => {
+		assert.deepEqual(Object.keys(aiHistoryCommandsModule), [
+			"createAiHistoryCommands",
+			"patchDraftAiChanges",
+			"preserveExistingIds",
+		]);
+
+		const objectAfter = { id: "after-object" };
+		const arrayAfter = [{ id: "after-array" }];
+		const callbackAfter = () => "after-function";
+		for (const [before, after] of [
+			[null, objectAfter],
+			[[], objectAfter],
+			[{}, arrayAfter],
+			[{}, callbackAfter],
+			["before", objectAfter],
+		]) {
+			assert.equal(preserveExistingIds(before, after), after);
+		}
+
+		const before = new Array(5);
+		before[0] = {
+			id: "stable-0",
+			nested: { id: "stable-nested" },
+		};
+		before[2] = { id: 0 };
+		const after = new Array(5);
+		after[0] = {
+			id: "changed-0",
+			nested: { id: "changed-nested", text: "Український текст" },
+		};
+		after[2] = { id: "changed-2" };
+		const afterOnly = { id: "after-only" };
+		after[4] = afterOnly;
+		after.extra = { id: "named-property" };
+
+		const projected = preserveExistingIds(before, after);
+		assert.notEqual(projected, after);
+		assert.equal(projected.length, 5);
+		assert.equal(1 in projected, false);
+		assert.equal(3 in projected, false);
+		assert.equal("extra" in projected, false);
+		assert.notEqual(projected[0], after[0]);
+		assert.notEqual(projected[0].nested, after[0].nested);
+		assert.deepEqual(projected[0], {
+			id: "stable-0",
+			nested: {
+				id: "stable-nested",
+				text: "Український текст",
+			},
+		});
+		assert.equal(projected[2].id, 0);
+		assert.equal(projected[4], afterOnly);
+		assert.equal(after[0].id, "changed-0");
+		assert.equal(after[0].nested.id, "changed-nested");
+
+		const afterOnlyRow = { id: "new-row" };
+		const nestedProjected = preserveExistingIds(
+			{ rows: [{ id: "stable-row" }] },
+			{ rows: [{ id: "changed-row" }, afterOnlyRow] },
+		);
+		assert.equal(nestedProjected.rows[0].id, "stable-row");
+		assert.equal(nestedProjected.rows[1], afterOnlyRow);
+
+		const dateProjected = preserveExistingIds(new Date(0), new Date(1));
+		assert.deepEqual(dateProjected, {});
+		assert.equal(Object.getPrototypeOf(dateProjected), Object.prototype);
+	},
+);
+
+await run(
+	"AI history stable ID projection preserves object traversal and failure timing",
+	() => {
+		const events = [];
+		const symbolKey = Symbol("symbol-row");
+		const stableSymbol = { id: "stable-symbol" };
+		const afterSymbol = { id: "changed-symbol" };
+		const before = Object.create({
+			inheritedNested: { id: "stable-inherited" },
+		});
+		let beforeIdReads = 0;
+		Object.defineProperty(before, "id", {
+			configurable: true,
+			get() {
+				beforeIdReads += 1;
+				events.push(`before:id:${beforeIdReads}`);
+				return "stable-root";
+			},
+		});
+		before.nested = { id: "stable-nested" };
+		before[symbolKey] = stableSymbol;
+		Object.defineProperty(before, "__proto__", {
+			enumerable: true,
+			value: { id: "stable-proto-key" },
+		});
+
+		const afterOnly = { id: "after-only" };
+		const after = Object.create({ ignoredInherited: true });
+		for (const [key, value] of [
+			["id", "changed-root"],
+			["nested", { id: "changed-nested", value: 1 }],
+			["inheritedNested", { id: "changed-inherited", value: 2 }],
+			["afterOnly", afterOnly],
+		]) {
+			Object.defineProperty(after, key, {
+				enumerable: true,
+				get() {
+					events.push(`after:${key}`);
+					return value;
+				},
+			});
+		}
+		Object.defineProperty(after, "hidden", {
+			value: "hidden",
+		});
+		Object.defineProperty(after, "__proto__", {
+			enumerable: true,
+			value: { id: "changed-proto-key", value: 3 },
+		});
+		after[symbolKey] = afterSymbol;
+
+		const projected = preserveExistingIds(before, after);
+		assert.deepEqual(events, [
+			"after:id",
+			"after:nested",
+			"after:inheritedNested",
+			"after:afterOnly",
+			"before:id:1",
+			"before:id:2",
+		]);
+		assert.equal(Object.getPrototypeOf(projected), Object.prototype);
+		assert.equal("ignoredInherited" in projected, false);
+		assert.equal("hidden" in projected, false);
+		assert.equal(projected.id, "stable-root");
+		assert.deepEqual(projected.nested, {
+			id: "stable-nested",
+			value: 1,
+		});
+		assert.deepEqual(projected.inheritedNested, {
+			id: "stable-inherited",
+			value: 2,
+		});
+		assert.equal(projected.afterOnly, afterOnly);
+		assert.equal(projected[symbolKey], afterSymbol);
+		assert.notEqual(projected[symbolKey], stableSymbol);
+		assert.equal(
+			Object.prototype.hasOwnProperty.call(projected, "__proto__"),
+			true,
+		);
+		assert.deepEqual(projected.__proto__, {
+			id: "stable-proto-key",
+			value: 3,
+		});
+		assert.equal(Object.getPrototypeOf(projected), Object.prototype);
+
+		let guardedBeforeIdReads = 0;
+		const guardedBefore = {};
+		Object.defineProperty(guardedBefore, "id", {
+			get() {
+				guardedBeforeIdReads += 1;
+				return "stable";
+			},
+		});
+		const spreadFailure = new Error("after spread failed");
+		const guardedAfter = {};
+		Object.defineProperty(guardedAfter, "value", {
+			enumerable: true,
+			get() {
+				throw spreadFailure;
+			},
+		});
+		assert.throws(
+			() => preserveExistingIds(guardedBefore, guardedAfter),
+			spreadFailure,
+		);
+		assert.equal(guardedBeforeIdReads, 0);
+
+		const afterCycle = {};
+		afterCycle.self = afterCycle;
+		const unalignedCycle = preserveExistingIds({}, afterCycle);
+		assert.notEqual(unalignedCycle, afterCycle);
+		assert.equal(unalignedCycle.self, afterCycle);
+		const beforeCycle = {};
+		beforeCycle.self = beforeCycle;
+		assert.throws(
+			() => preserveExistingIds(beforeCycle, afterCycle),
+			RangeError,
+		);
+	},
+);
+
+await run(
+	"AI history draft patching preserves validation mapping and assembly order",
+	() => {
+		const revoked = Proxy.revocable([], {});
+		revoked.revoke();
+		assert.throws(
+			() =>
+				patchDraftAiChanges(
+					{ applyState: "applied" },
+					revoked.proxy,
+					() => null,
+				),
+			(error) =>
+				error.status === 400 &&
+				error.message === "Only draft AI responses can be edited.",
+		);
+		assert.throws(
+			() =>
+				patchDraftAiChanges(
+					{ applyState: "draft" },
+					{},
+					() => null,
+				),
+			(error) =>
+				error.status === 400 &&
+				error.message === "resources must be an array.",
+		);
+
+		let dynamicIdCoercions = 0;
+		const dynamicId = {
+			toString() {
+				dynamicIdCoercions += 1;
+				return "resource-1";
+			},
+		};
+		const arrayResource = [];
+		arrayResource.id = "array-resource";
+		arrayResource.after = {
+			id: "changed-array",
+			nested: { id: "changed-array-nested" },
+		};
+		const numericResource = {
+			id: 1,
+			before: { id: "stable-number" },
+			after: { id: "old-number" },
+		};
+		const unmatchedResource = {
+			id: "unmatched",
+			before: null,
+			after: null,
+		};
+		const storedResources = [
+			{
+				id: "resource-1",
+				label: "Головний ресурс",
+				before: {
+					id: "stable-root",
+					nested: { id: "stable-nested" },
+				},
+				after: { id: "old-root" },
+			},
+			numericResource,
+			{
+				id: "",
+				before: { id: "stable-empty" },
+				after: { id: "old-empty" },
+			},
+			{
+				id: "array-resource",
+				before: {
+					id: "stable-array",
+					nested: { id: "stable-array-nested" },
+				},
+				after: null,
+			},
+			{
+				id: "null-after",
+				before: { id: "stable-null" },
+				after: { id: "old-null" },
+			},
+			unmatchedResource,
+		];
+		const summaryCalls = [];
+		const entry = {
+			applyState: "draft",
+			changes: {
+				label: "Попередні зміни",
+				summary: { stale: true },
+				resources: storedResources,
+			},
+		};
+		const changes = patchDraftAiChanges(
+			entry,
+			[
+				null,
+				false,
+				"ignored",
+				{ id: dynamicId, after: { id: "first-root" } },
+				{
+					id: "resource-1",
+					after: {
+						id: "last-root",
+						nested: { id: "last-nested", value: 1 },
+					},
+				},
+				{ id: 1, after: { id: "numeric-map-value" } },
+				{ id: 0, after: { id: "first-empty" } },
+				{ id: false, after: { id: "last-empty", value: 2 } },
+				arrayResource,
+				{ id: "null-after" },
+			],
+			(resources) => {
+				summaryCalls.push(resources);
+				return { count: resources.length };
+			},
+		);
+		assert.equal(dynamicIdCoercions, 1);
+		assert.equal(changes.label, "Попередні зміни");
+		assert.deepEqual(changes.summary, { count: 6 });
+		assert.equal(summaryCalls.length, 1);
+		assert.equal(summaryCalls[0], changes.resources);
+		assert.notEqual(changes.resources, storedResources);
+		assert.deepEqual(changes.resources[0].after, {
+			id: "stable-root",
+			nested: { id: "stable-nested", value: 1 },
+		});
+		assert.equal(changes.resources[0].label, "Головний ресурс");
+		assert.equal(changes.resources[1], numericResource);
+		assert.deepEqual(changes.resources[2].after, {
+			id: "stable-empty",
+			value: 2,
+		});
+		assert.deepEqual(changes.resources[3].after, {
+			id: "stable-array",
+			nested: { id: "stable-array-nested" },
+		});
+		assert.equal(changes.resources[4].after, null);
+		assert.equal(changes.resources[5], unmatchedResource);
+		assert.equal(entry.changes.resources, storedResources);
+
+		const assemblyEvents = [];
+		let changesReads = 0;
+		const dynamicEntry = {
+			get applyState() {
+				assemblyEvents.push("applyState");
+				return "draft";
+			},
+			get changes() {
+				changesReads += 1;
+				assemblyEvents.push(`changes:${changesReads}`);
+				return changesReads === 1
+					? { resources: [unmatchedResource] }
+					: { marker: "second changes" };
+			},
+		};
+		const assembled = patchDraftAiChanges(dynamicEntry, [], (resources) => {
+			assemblyEvents.push("summary");
+			return { count: resources.length };
+		});
+		assert.deepEqual(assemblyEvents, [
+			"applyState",
+			"changes:1",
+			"changes:2",
+			"summary",
+		]);
+		assert.equal(assembled.marker, "second changes");
+		assert.equal(assembled.resources[0], unmatchedResource);
+	},
+);
+
+await run(
+	"AI history command orchestration preserves repository and restore effects",
+	async () => {
+		const events = [];
+		const entry = {
+			id: "stored-id",
+			applyState: "draft",
+			changes: { resources: [] },
+		};
+		const updateResult = { updated: true };
+		const applyResult = { restored: "after" };
+		const undoResult = { restored: "before" };
+		const commands = createAiHistoryCommands({
+			repository: {
+				async get(campaignSlug, id) {
+					events.push(["get", campaignSlug, id]);
+					return id === "missing" ? null : entry;
+				},
+				async update(campaignSlug, id, patch) {
+					events.push(["update", campaignSlug, id, patch]);
+					return updateResult;
+				},
+			},
+			restoreSnapshot: async (receivedEntry, side, options) => {
+				events.push(["restore", receivedEntry, side, options]);
+				return side === "after" ? applyResult : undoResult;
+			},
+			buildChangeSummary: (resources) => {
+				events.push(["summary", resources]);
+				return { count: resources.length };
+			},
+		});
+		assert.deepEqual(Object.keys(commands), ["patchDraft", "apply", "undo"]);
+
+		assert.equal(
+			await commands.patchDraft({
+				campaignSlug: "кампанія",
+				id: "requested-id",
+				resources: [],
+			}),
+			updateResult,
+		);
+		assert.equal(
+			await commands.apply({
+				campaignSlug: "кампанія",
+				id: "apply-id",
+			}),
+			applyResult,
+		);
+		assert.equal(
+			await commands.undo({
+				campaignSlug: "кампанія",
+				id: "undo-id",
+				resourceIds: 0,
+			}),
+			undoResult,
+		);
+		assert.deepEqual(events, [
+			["get", "кампанія", "requested-id"],
+			["summary", events[1][1]],
+			["update", "кампанія", "stored-id", events[2][3]],
+			["get", "кампанія", "apply-id"],
+			["restore", entry, "after", { resourceIds: undefined }],
+			["get", "кампанія", "undo-id"],
+			["restore", entry, "before", { resourceIds: 0 }],
+		]);
+		assert.deepEqual(events[2][3], {
+			changes: {
+				resources: [],
+				summary: { count: 0 },
+			},
+		});
+
+		await assert.rejects(
+			commands.apply({
+				campaignSlug: "кампанія",
+				id: "missing",
+				resourceIds: ["ignored"],
+			}),
+			(error) =>
+				error.status === 404 &&
+				error.message === "AI response not found.",
+		);
+		assert.deepEqual(events.at(-1), ["get", "кампанія", "missing"]);
+		await assert.rejects(commands.patchDraft(), TypeError);
+		assert.throws(() => createAiHistoryCommands(), TypeError);
+	},
+);
+
 await run("Top-level AI generation command selects workflows and records failures", async () => {
 	const selected = [];
 	const historyWriter = {
@@ -7628,6 +15223,525 @@ await run("Top-level AI generation command selects workflows and records failure
 		},
 	});
 });
+
+await run(
+	"AI generation coordinator preserves export preparation and prepared-error order",
+	async () => {
+		assert.deepEqual(Object.keys(generateAiRequestModule), [
+			"createGenerateAiRequest",
+		]);
+		assert.throws(() => createGenerateAiRequest(), TypeError);
+
+		const events = [];
+		const payload = {};
+		Object.defineProperty(payload, "type", {
+			get() {
+				events.push("payload:type");
+				throw new Error("prepared errors must not inspect payload type");
+			},
+		});
+		const readSettings = async () => {
+			events.push("read-settings");
+			return {};
+		};
+		const preparedErrors = [
+			{ ignored: true },
+			{ status: 409 },
+			{ message: "Підготовку зупинено" },
+		];
+		let preparedErrorReads = 0;
+		const preparedRequest = {};
+		Object.defineProperty(preparedRequest, "error", {
+			get() {
+				preparedErrorReads += 1;
+				events.push(`prepared:error:${preparedErrorReads}`);
+				return preparedErrors[preparedErrorReads - 1];
+			},
+		});
+		const command = createGenerateAiRequest({
+			prepareRequest: async (input) => {
+				events.push("prepare");
+				assert.deepEqual(input, {
+					payload,
+					apiKeyConfigured: "configured",
+					readSettings,
+				});
+				return preparedRequest;
+			},
+			generateCustomMonster: () => {
+				throw new Error("unexpected custom-monster workflow");
+			},
+			generateBestiaryImagePrompt: () => {
+				throw new Error("unexpected image workflow");
+			},
+			generateCampaignContent: () => {
+				throw new Error("unexpected campaign workflow");
+			},
+			historyWriter: {
+				getUserInstructions(input) {
+					events.push("history-instructions");
+					assert.equal(input, payload);
+					return "Історичні інструкції";
+				},
+				saveFailed: () => {
+					throw new Error("prepared errors must not save failure history");
+				},
+			},
+			isApiKeyConfigured() {
+				events.push("api-key");
+				return "configured";
+			},
+			readSettings,
+		});
+
+		assert.deepEqual(await command(payload), {
+			status: 409,
+			body: { error: "Підготовку зупинено" },
+		});
+		assert.deepEqual(events, [
+			"history-instructions",
+			"api-key",
+			"prepare",
+			"prepared:error:1",
+			"prepared:error:2",
+			"prepared:error:3",
+		]);
+
+		const instructionFailure = new Error("history instructions failed");
+		let guardedCalls = 0;
+		const unguardedCommand = createGenerateAiRequest({
+			prepareRequest: async () => {
+				guardedCalls += 1;
+			},
+			generateCustomMonster: () => {},
+			generateBestiaryImagePrompt: () => {},
+			generateCampaignContent: () => {},
+			historyWriter: {
+				getUserInstructions() {
+					throw instructionFailure;
+				},
+				saveFailed: async () => {
+					guardedCalls += 1;
+				},
+			},
+			isApiKeyConfigured: () => {
+				guardedCalls += 1;
+			},
+			readSettings,
+		});
+		await assert.rejects(
+			unguardedCommand(payload),
+			(error) => error === instructionFailure,
+		);
+		assert.equal(guardedCalls, 0);
+	},
+);
+
+await run(
+	"AI generation coordinator preserves workflow precedence identities and rejection boundaries",
+	async () => {
+		const events = [];
+		const historyWriter = {
+			getUserInstructions(payload) {
+				events.push(["history", payload]);
+				return "Повторити контекст";
+			},
+			async saveFailed(payload, error, status) {
+				events.push(["save", payload, error, status]);
+				return { id: "saved-failure" };
+			},
+		};
+		const readSettings = async () => ({});
+		const createCommand = ({
+			preparedRequest,
+			custom = () => "custom",
+			image = () => "image",
+			campaign = () => "campaign",
+		}) =>
+			createGenerateAiRequest({
+				prepareRequest: async (input) => {
+					events.push(["prepare", input]);
+					return preparedRequest;
+				},
+				generateCustomMonster: custom,
+				generateBestiaryImagePrompt: image,
+				generateCampaignContent: campaign,
+				historyWriter,
+				isApiKeyConfigured: () => {
+					events.push(["api-key"]);
+					return true;
+				},
+				readSettings,
+			});
+
+		const customPayload = {};
+		Object.defineProperty(customPayload, "type", {
+			get() {
+				events.push(["type", "custom"]);
+				return "custom-monster";
+			},
+		});
+		const customPrepared = {};
+		Object.defineProperty(customPrepared, "isBestiaryImagePromptRequest", {
+			get() {
+				throw new Error("custom-monster must precede image selection");
+			},
+		});
+		let customInput;
+		const customResult = { status: 201, body: { kind: "custom" } };
+		assert.equal(
+			await createCommand({
+				preparedRequest: customPrepared,
+				custom(input) {
+					events.push(["custom", input]);
+					customInput = input;
+					return customResult;
+				},
+			})(customPayload),
+			customResult,
+		);
+		assert.deepEqual(customInput, {
+			payload: customPayload,
+			preparedRequest: customPrepared,
+			historyUserInstructions: "Повторити контекст",
+		});
+
+		const imagePayload = { type: "image" };
+		const imagePrepared = {};
+		Object.defineProperty(imagePrepared, "isBestiaryImagePromptRequest", {
+			get() {
+				events.push(["image-flag", true]);
+				return true;
+			},
+		});
+		let imageInput;
+		const imageResult = { status: 202, body: { kind: "image" } };
+		assert.equal(
+			await createCommand({
+				preparedRequest: imagePrepared,
+				image(input) {
+					events.push(["image", input]);
+					imageInput = input;
+					return imageResult;
+				},
+			})(imagePayload),
+			imageResult,
+		);
+		assert.deepEqual(imageInput, {
+			payload: imagePayload,
+			preparedRequest: imagePrepared,
+			historyUserInstructions: "Повторити контекст",
+		});
+
+		const campaignPayload = { type: "scene" };
+		const campaignPrepared = { isBestiaryImagePromptRequest: 0 };
+		let campaignInput;
+		const campaignResult = { status: 203, body: { kind: "campaign" } };
+		assert.equal(
+			await createCommand({
+				preparedRequest: campaignPrepared,
+				campaign(input) {
+					events.push(["campaign", input]);
+					campaignInput = input;
+					return campaignResult;
+				},
+			})(campaignPayload),
+			campaignResult,
+		);
+		assert.deepEqual(campaignInput, {
+			payload: campaignPayload,
+			preparedRequest: campaignPrepared,
+			historyUserInstructions: "Повторити контекст",
+		});
+
+		const syncFailure = Object.assign(new Error("sync workflow failed"), {
+			status: 418,
+		});
+		const syncPayload = { type: "scene" };
+		assert.deepEqual(
+			await createCommand({
+				preparedRequest: {},
+				campaign() {
+					throw syncFailure;
+				},
+			})(syncPayload),
+			{
+				status: 418,
+				body: {
+					error: "sync workflow failed",
+					aiResponse: { id: "saved-failure" },
+				},
+			},
+		);
+		assert.deepEqual(events.at(-1), [
+			"save",
+			syncPayload,
+			syncFailure,
+			418,
+		]);
+
+		const asyncFailure = new Error("async workflow failed");
+		const asyncPayload = { type: "scene" };
+		const saveCountBeforeAsyncFailure = events.filter(
+			(event) => event[0] === "save",
+		).length;
+		await assert.rejects(
+			createCommand({
+				preparedRequest: {},
+				campaign: async () => {
+					throw asyncFailure;
+				},
+			})(asyncPayload),
+			(error) => error === asyncFailure,
+		);
+		assert.equal(
+			events.filter((event) => event[0] === "save").length,
+			saveCountBeforeAsyncFailure,
+		);
+	},
+);
+
+await run(
+	"AI generation coordinator preserves failed-history response and rethrow policies",
+	async () => {
+		const createFailingCommand = ({
+			failure,
+			saveFailed,
+			onHistoryError,
+		}) =>
+			createGenerateAiRequest({
+				prepareRequest: async () => {
+					throw failure;
+				},
+				generateCustomMonster: () => {},
+				generateBestiaryImagePrompt: () => {},
+				generateCampaignContent: () => {},
+				historyWriter: {
+					getUserInstructions: () => "Інструкції",
+					saveFailed,
+				},
+				isApiKeyConfigured: () => true,
+				readSettings: async () => ({}),
+				onHistoryError,
+			});
+		const payload = { type: "scene" };
+
+		const dynamicEvents = [];
+		let statusReads = 0;
+		const dynamicFailure = {};
+		Object.defineProperties(dynamicFailure, {
+			status: {
+				get() {
+					statusReads += 1;
+					dynamicEvents.push(`status:${statusReads}`);
+					return statusReads === 1 ? 422 : 423;
+				},
+			},
+			message: {
+				get() {
+					dynamicEvents.push("message");
+					return "Динамічна помилка";
+				},
+			},
+		});
+		const savedEntry = { id: "dynamic-failure" };
+		assert.deepEqual(
+			await createFailingCommand({
+				failure: dynamicFailure,
+				saveFailed: async (...args) => {
+					dynamicEvents.push(["save", ...args]);
+					return savedEntry;
+				},
+				onHistoryError: () => {
+					throw new Error("unexpected history callback");
+				},
+			})(payload),
+			{
+				status: 423,
+				body: {
+					error: "Динамічна помилка",
+					aiResponse: savedEntry,
+				},
+			},
+		);
+		assert.deepEqual(dynamicEvents, [
+			"status:1",
+			["save", payload, dynamicFailure, 422],
+			"status:2",
+			"message",
+		]);
+
+		const unsavedFailure = new Error("unsaved");
+		let unsavedCaught;
+		try {
+			await createFailingCommand({
+				failure: unsavedFailure,
+				saveFailed: async () => 0,
+				onHistoryError: () => {
+					throw new Error("unexpected history callback");
+				},
+			})(payload);
+		} catch (error) {
+			unsavedCaught = error;
+		}
+		assert.equal(unsavedCaught, unsavedFailure);
+
+		const persistenceFailure = new Error("history persistence failed");
+		const persistenceEvents = [];
+		let persistenceCaught;
+		try {
+			await createFailingCommand({
+				failure: unsavedFailure,
+				saveFailed: async () => {
+					throw persistenceFailure;
+				},
+				onHistoryError: (...args) => persistenceEvents.push(args),
+			})(payload);
+		} catch (error) {
+			persistenceCaught = error;
+		}
+		assert.equal(persistenceCaught, unsavedFailure);
+		assert.deepEqual(persistenceEvents, [
+			["Failed to save failed AI request", persistenceFailure],
+		]);
+
+		const callbackFailure = new Error("history callback failed");
+		await assert.rejects(
+			createFailingCommand({
+				failure: unsavedFailure,
+				saveFailed: async () => {
+					throw persistenceFailure;
+				},
+				onHistoryError: () => {
+					throw callbackFailure;
+				},
+			})(payload),
+			(error) => error === callbackFailure,
+		);
+
+		const statusFailure = new Error("status getter failed");
+		const badStatusError = {};
+		Object.defineProperty(badStatusError, "status", {
+			get() {
+				throw statusFailure;
+			},
+		});
+		const statusEvents = [];
+		let statusCaught;
+		try {
+			await createFailingCommand({
+				failure: badStatusError,
+				saveFailed: async () => {
+					statusEvents.push("unexpected-save");
+				},
+				onHistoryError: (...args) => statusEvents.push(args),
+			})(payload);
+		} catch (error) {
+			statusCaught = error;
+		}
+		assert.equal(statusCaught, badStatusError);
+		assert.deepEqual(statusEvents, [
+			["Failed to save failed AI request", statusFailure],
+		]);
+
+		const messageFailure = new Error("message getter failed");
+		const badMessageError = { status: 400 };
+		Object.defineProperty(badMessageError, "message", {
+			get() {
+				throw messageFailure;
+			},
+		});
+		const messageEvents = [];
+		let messageCaught;
+		try {
+			await createFailingCommand({
+				failure: badMessageError,
+				saveFailed: async () => ({ id: "saved-before-message" }),
+				onHistoryError: (...args) => messageEvents.push(args),
+			})(payload);
+		} catch (error) {
+			messageCaught = error;
+		}
+		assert.equal(messageCaught, badMessageError);
+		assert.deepEqual(messageEvents, [
+			["Failed to save failed AI request", messageFailure],
+		]);
+
+		const primitiveResult = await createFailingCommand({
+			failure: "primitive failure",
+			saveFailed: async (_payload, error, status) => ({
+				error,
+				status,
+			}),
+			onHistoryError: () => {
+				throw new Error("unexpected history callback");
+			},
+		})(payload);
+		assert.deepEqual(primitiveResult, {
+			status: 500,
+			body: {
+				error: "AI request failed.",
+				aiResponse: { error: "primitive failure", status: 500 },
+			},
+		});
+
+		const nullEvents = [];
+		let nullCaught = Symbol("not caught");
+		try {
+			await createFailingCommand({
+				failure: null,
+				saveFailed: async () => {
+					nullEvents.push("unexpected-save");
+				},
+				onHistoryError: (...args) => nullEvents.push(args),
+			})(payload);
+		} catch (error) {
+			nullCaught = error;
+		}
+		assert.equal(nullCaught, null);
+		assert.equal(nullEvents.length, 1);
+		assert.equal(nullEvents[0][0], "Failed to save failed AI request");
+		assert.ok(nullEvents[0][1] instanceof TypeError);
+	},
+);
+
+await run(
+	"AI generation coordinator defaults failed-history logging to console error",
+	async () => {
+		const originalConsoleError = console.error;
+		const events = [];
+		const requestFailure = new Error("request failed");
+		const historyFailure = new Error("history failed");
+		try {
+			console.error = (...args) => events.push(args);
+			const command = createGenerateAiRequest({
+				prepareRequest: async () => {
+					throw requestFailure;
+				},
+				generateCustomMonster: () => {},
+				generateBestiaryImagePrompt: () => {},
+				generateCampaignContent: () => {},
+				historyWriter: {
+					getUserInstructions: () => "",
+					saveFailed: async () => {
+						throw historyFailure;
+					},
+				},
+				isApiKeyConfigured: () => false,
+				readSettings: async () => ({}),
+			});
+			await assert.rejects(
+				command({ type: "scene" }),
+				(error) => error === requestFailure,
+			);
+		} finally {
+			console.error = originalConsoleError;
+		}
+		assert.deepEqual(events, [
+			["Failed to save failed AI request", historyFailure],
+		]);
+	},
+);
 
 await run("Gemini API key command validates and persists through infrastructure", async () => {
 	assert.equal(updateEnvValue("A=1\n", "GEMINI_API_KEY", "key"), "A=1\nGEMINI_API_KEY=key\n");
@@ -7763,6 +15877,639 @@ await run("Campaign entity commands preserve ids defaults mentions and repositor
 	});
 	assert.equal(Object.isFrozen(adapter), true);
 });
+
+await run(
+	"Campaign entity commands preserve display-name and creation policies",
+	async () => {
+		assert.deepEqual(CAMPAIGN_ENTITY_TYPES, [
+			"characters",
+			"npc",
+			"locations",
+		]);
+		assert.equal(Object.isFrozen(CAMPAIGN_ENTITY_TYPES), true);
+
+		const displayReads = [];
+		assert.equal(
+			getServerCampaignEntityDisplayName(
+				{
+					get name() {
+						displayReads.push("location:name");
+						return " Київ ";
+					},
+					get title() {
+						throw new Error("location title must stay lazy");
+					},
+				},
+				"locations",
+			),
+			"Київ",
+		);
+		assert.equal(
+			getServerCampaignEntityDisplayName(
+				{
+					get name() {
+						displayReads.push("fallback:name");
+						return 0;
+					},
+					get title() {
+						displayReads.push("fallback:title");
+						return " Фортеця ";
+					},
+				},
+				"locations",
+			),
+			"Фортеця",
+		);
+		assert.equal(
+			getServerCampaignEntityDisplayName(
+				{
+					get firstName() {
+						displayReads.push("person:first");
+						return "Ірина";
+					},
+					get lastName() {
+						displayReads.push("person:last");
+						return "Коваль";
+					},
+					get name() {
+						throw new Error("person fallback must stay lazy");
+					},
+				},
+				"npc",
+			),
+			"Ірина Коваль",
+		);
+		assert.equal(
+			getServerCampaignEntityDisplayName(
+				{ firstName: 0, lastName: null, name: "", title: " Мандрівниця " },
+				"unknown",
+			),
+			"Мандрівниця",
+		);
+		assert.equal(getServerCampaignEntityDisplayName(null, "locations"), "");
+		assert.equal(
+			getServerCampaignEntityDisplayName({ name: Symbol("fort") }, "locations"),
+			"Symbol(fort)",
+		);
+		assert.throws(
+			() =>
+				getServerCampaignEntityDisplayName(
+					{ firstName: Symbol("hero") },
+					"characters",
+				),
+			TypeError,
+		);
+		assert.deepEqual(displayReads, [
+			"location:name",
+			"fallback:name",
+			"fallback:title",
+			"person:first",
+			"person:last",
+		]);
+
+		const events = [];
+		let generatedId = 0;
+		const repository = {
+			sanitizeName(value) {
+				events.push(["sanitize", value]);
+				return String(value || "").trim();
+			},
+			toSlug(value) {
+				events.push(["toSlug", value]);
+				return String(value).toLocaleLowerCase("uk-UA");
+			},
+			async ensureUniqueSlug(campaignSlug, type, slug) {
+				events.push(["ensureUniqueSlug", campaignSlug, type, slug]);
+				return `${slug}-unique`;
+			},
+			createId() {
+				generatedId += 1;
+				events.push(["createId", generatedId]);
+				return `generated-${generatedId}`;
+			},
+			async write(campaignSlug, type, slug, data) {
+				events.push(["write", campaignSlug, type, slug, data]);
+				return { ...data, slug };
+			},
+		};
+		const commands = createCampaignEntityCommands(repository);
+		let locationNameReads = 0;
+		let payloadIdReads = 0;
+		const locationPayload = {};
+		Object.defineProperties(locationPayload, {
+			name: {
+				enumerable: true,
+				get() {
+					locationNameReads += 1;
+					events.push(["locationName", locationNameReads]);
+					if (locationNameReads === 1) return " Фортеця ";
+					if (locationNameReads === 2) return "payload-name";
+					return "";
+				},
+			},
+			id: {
+				enumerable: true,
+				get() {
+					payloadIdReads += 1;
+					events.push(["payloadId", payloadIdReads]);
+					return "payload-id";
+				},
+			},
+		});
+		const location = await commands.create({
+			campaignSlug: "кампанія",
+			type: "locations",
+			payload: locationPayload,
+		});
+		assert.equal(location.id, "generated-1");
+		assert.equal(location.name, "Фортеця");
+		assert.equal(location.slug, "фортеця-unique");
+		assert.equal(location.description, "");
+		assert.deepEqual(location.notes, []);
+		assert.equal(location.imageUrl, null);
+		assert.equal(location.collapsed, false);
+		assert.equal(location.isNotesCollapsed, false);
+		assert.equal(locationNameReads, 3);
+		assert.equal(payloadIdReads, 1);
+		assert.ok(
+			events.findIndex(([event]) => event === "ensureUniqueSlug") <
+				events.findIndex(
+					([event, read]) => event === "locationName" && read === 2,
+				),
+		);
+		assert.ok(
+			events.findIndex(([event]) => event === "payloadId") <
+				events.findIndex(([event]) => event === "createId"),
+		);
+		assert.ok(
+			events.findIndex(([event]) => event === "createId") <
+				events.findIndex(
+					([event, read]) => event === "locationName" && read === 3,
+				),
+		);
+
+		const personPayload = {
+			firstName: "",
+			name: " Мандрівниця ",
+			lastName: 0,
+			race: null,
+			class: false,
+			level: "",
+			motivation: 0,
+			description: null,
+			trait: false,
+			notes: [{ text: "Власна нотатка" }],
+			id: "payload-person-id",
+		};
+		const personPayloadBefore = structuredClone(personPayload);
+		const person = await commands.create({
+			campaignSlug: "кампанія",
+			type: "npc",
+			payload: personPayload,
+		});
+		assert.equal(person.firstName, "");
+		assert.equal(person.lastName, 0);
+		assert.equal(person.race, null);
+		assert.equal(person.class, false);
+		assert.equal(person.level, "");
+		assert.equal(person.motivation, 0);
+		assert.equal(person.description, null);
+		assert.equal(person.trait, false);
+		assert.deepEqual(person.notes, [{ text: "Власна нотатка" }]);
+		assert.equal(person.id, "generated-2");
+		assert.deepEqual(personPayload, personPayloadBefore);
+
+		const defaultedPerson = await commands.create({
+			campaignSlug: "кампанія",
+			type: "characters",
+			payload: { firstName: "Олена" },
+		});
+		assert.deepEqual(
+			{
+				firstName: defaultedPerson.firstName,
+				lastName: defaultedPerson.lastName,
+				race: defaultedPerson.race,
+				class: defaultedPerson.class,
+				level: defaultedPerson.level,
+				motivation: defaultedPerson.motivation,
+				description: defaultedPerson.description,
+				trait: defaultedPerson.trait,
+				notes: defaultedPerson.notes,
+				id: defaultedPerson.id,
+			},
+			{
+				firstName: "Олена",
+				lastName: "",
+				race: "",
+				class: "",
+				level: 1,
+				motivation: "",
+				description: "",
+				trait: "",
+				notes: [],
+				id: "generated-3",
+			},
+		);
+
+		const eventCountBeforeMissingName = events.length;
+		await assert.rejects(
+			commands.create({
+				campaignSlug: "кампанія",
+				type: "npc",
+				payload: {},
+			}),
+			(error) =>
+				error.status === 400 && error.message === "Name is required.",
+		);
+		assert.deepEqual(events.slice(eventCountBeforeMissingName), [
+			["sanitize", undefined],
+		]);
+		await assert.rejects(
+			commands.create({
+				campaignSlug: "кампанія",
+				type: "npc",
+				payload: null,
+			}),
+			TypeError,
+		);
+		await assert.rejects(
+			commands.create({
+				campaignSlug: "кампанія",
+				type: "other",
+				payload: null,
+			}),
+			(error) =>
+				error.status === 400 && error.message === "Unknown entity type.",
+		);
+	},
+);
+
+await run(
+	"Campaign entity commands preserve update and move effect boundaries",
+	async () => {
+		const events = [];
+		const current = {
+			id: "stable-id",
+			slug: "old-slug",
+			firstName: "Стара",
+			lastName: "Назва",
+			keep: true,
+		};
+		const saved = {
+			id: "stable-id",
+			slug: "saved-slug",
+			firstName: "Нова",
+			lastName: "Назва",
+		};
+		const finalEntity = { ...saved, hydrated: true };
+		let readCount = 0;
+		const listResult = [{ id: "one" }];
+		const moveResult = { moved: true };
+		const repository = {
+			async list(...args) {
+				events.push(["list", ...args]);
+				return listResult;
+			},
+			async read(...args) {
+				readCount += 1;
+				events.push(["read", readCount, ...args]);
+				return readCount === 1 ? current : finalEntity;
+			},
+			async write(...args) {
+				events.push(["write", ...args]);
+				return saved;
+			},
+			async updateMentionReferences(...args) {
+				events.push(["mentions", ...args]);
+			},
+			async delete(...args) {
+				events.push(["delete", ...args]);
+			},
+			async move(...args) {
+				events.push(["move", ...args]);
+				return moveResult;
+			},
+		};
+		const commands = createCampaignEntityCommands(repository);
+		assert.equal(
+			await commands.list({ campaignSlug: "кампанія", type: "npc" }),
+			listResult,
+		);
+		const patch = {
+			id: "changed-id",
+			slug: "changed-slug",
+			firstName: "Нова",
+			keep: false,
+			_updateMentionReferences: "yes",
+			_mentionOldName: "  Вказане ім'я  ",
+		};
+		const patchBefore = structuredClone(patch);
+		const updated = await commands.update({
+			campaignSlug: "кампанія",
+			type: "npc",
+			entitySlug: "route-slug",
+			payload: patch,
+		});
+		assert.equal(updated, finalEntity);
+		assert.deepEqual(patch, patchBefore);
+		const writeEvent = events.find(([event]) => event === "write");
+		assert.deepEqual(writeEvent?.slice(1, 4), [
+			"кампанія",
+			"npc",
+			"route-slug",
+		]);
+		assert.deepEqual(writeEvent?.[4], {
+			id: "stable-id",
+			slug: "old-slug",
+			firstName: "Нова",
+			lastName: "Назва",
+			keep: false,
+		});
+		assert.deepEqual(
+			events.filter(([event]) =>
+				["read", "write", "mentions"].includes(event),
+			),
+			[
+				["read", 1, "кампанія", "npc", "route-slug"],
+				[
+					"write",
+					"кампанія",
+					"npc",
+					"route-slug",
+					{
+						id: "stable-id",
+						slug: "old-slug",
+						firstName: "Нова",
+						lastName: "Назва",
+						keep: false,
+					},
+				],
+				["mentions", "кампанія", "Вказане ім'я", "Нова Назва"],
+				["read", 2, "кампанія", "npc", "saved-slug"],
+			],
+		);
+
+		await commands.delete({
+			campaignSlug: "кампанія",
+			type: "locations",
+			entitySlug: "фортеця",
+		});
+		assert.deepEqual(events.at(-1), [
+			"delete",
+			"кампанія",
+			"locations",
+			"фортеця",
+		]);
+		assert.equal(
+			await commands.moveBetweenCharacterTypes({
+				campaignSlug: "кампанія",
+				type: "characters",
+				entitySlug: "герой",
+				targetType: "npc",
+			}),
+			moveResult,
+		);
+		assert.deepEqual(events.at(-1), [
+			"move",
+			"кампанія",
+			"characters",
+			"герой",
+			"npc",
+		]);
+
+		const invalidMoves = [
+			["characters", "characters", "Entity can only be moved"],
+			["npc", "npc", "Entity can only be moved"],
+			["locations", "npc", "Entity can only be moved"],
+			["unknown", "npc", "Unknown entity type."],
+			["npc", "unknown", "Unknown entity type."],
+		];
+		for (const [type, targetType, message] of invalidMoves) {
+			await assert.rejects(
+				commands.moveBetweenCharacterTypes({
+					campaignSlug: "кампанія",
+					type,
+					entitySlug: "entity",
+					targetType,
+				}),
+				(error) => error.status === 400 && error.message.includes(message),
+			);
+		}
+		assert.equal(
+			events.filter(([event]) => event === "move").length,
+			1,
+		);
+	},
+);
+
+await run(
+	"Campaign entity replacement preserves slug passes ordering and partial failures",
+	async () => {
+		const requested = [
+			{ slug: "keep", name: "ignored", firstName: "ignored", order: 99 },
+			{ slug: "", name: "Duplicate", firstName: "ignored", order: 99 },
+			{ name: "Duplicate", order: 99 },
+			null,
+			{ firstName: "Skip", order: 99 },
+		];
+		const requestedBefore = structuredClone(requested);
+		const events = [];
+		let listCount = 0;
+		const repository = {
+			async list(...args) {
+				listCount += 1;
+				events.push(["list", listCount, ...args]);
+				if (listCount === 1) {
+					return [
+						{ slug: "stale-one" },
+						{ slug: "keep" },
+						{ slug: "stale-two" },
+					];
+				}
+				return [{ slug: "final" }];
+			},
+			toSlug(value) {
+				events.push(["toSlug", value]);
+				if (value === undefined) return "";
+				if (value === "Skip") return "";
+				return String(value).toLowerCase();
+			},
+			async delete(...args) {
+				events.push(["delete", ...args]);
+			},
+			async write(...args) {
+				events.push(["write", ...args]);
+			},
+		};
+		const commands = createCampaignEntityCommands(repository);
+		assert.deepEqual(
+			await commands.replaceAll({
+				campaignSlug: "кампанія",
+				type: "npc",
+				entities: requested,
+			}),
+			[{ slug: "final" }],
+		);
+		assert.deepEqual(requested, requestedBefore);
+		assert.deepEqual(
+			events.filter(([event]) => event === "toSlug"),
+			[
+				["toSlug", "keep"],
+				["toSlug", "Duplicate"],
+				["toSlug", "Duplicate"],
+				["toSlug", undefined],
+				["toSlug", "Skip"],
+				["toSlug", "keep"],
+				["toSlug", "Duplicate"],
+				["toSlug", "Duplicate"],
+				["toSlug", undefined],
+				["toSlug", "Skip"],
+			],
+		);
+		assert.deepEqual(
+			events.filter(([event]) => event === "delete"),
+			[
+				["delete", "кампанія", "npc", "stale-one"],
+				["delete", "кампанія", "npc", "stale-two"],
+			],
+		);
+		assert.deepEqual(
+			events.filter(([event]) => event === "write"),
+			[
+				[
+					"write",
+					"кампанія",
+					"npc",
+					"keep",
+					{ slug: "keep", name: "ignored", firstName: "ignored", order: 0 },
+				],
+				[
+					"write",
+					"кампанія",
+					"npc",
+					"duplicate",
+					{ slug: "", name: "Duplicate", firstName: "ignored", order: 1 },
+				],
+				[
+					"write",
+					"кампанія",
+					"npc",
+					"duplicate",
+					{ name: "Duplicate", order: 2 },
+				],
+			],
+		);
+		const firstDeleteIndex = events.findIndex(([event]) => event === "delete");
+		const lastIndexPassIndex = events.findLastIndex(
+			([event]) => event === "toSlug",
+		);
+		const firstWriteIndex = events.findIndex(([event]) => event === "write");
+		assert.ok(firstDeleteIndex > 0);
+		assert.ok(firstWriteIndex > firstDeleteIndex);
+		assert.ok(lastIndexPassIndex > firstWriteIndex);
+		assert.deepEqual(events.at(-1), ["list", 2, "кампанія", "npc"]);
+
+		const nonArrayEvents = [];
+		const nonArrayCommands = createCampaignEntityCommands({
+			async list() {
+				nonArrayEvents.push("list");
+				return [{ slug: "one" }, { slug: "two" }];
+			},
+			toSlug() {
+				throw new Error("non-array input must not normalize entries");
+			},
+			async delete(_campaignSlug, _type, slug) {
+				nonArrayEvents.push(`delete:${slug}`);
+			},
+			async write() {
+				throw new Error("non-array input must not write entries");
+			},
+		});
+		await nonArrayCommands.replaceAll({
+			campaignSlug: "кампанія",
+			type: "locations",
+			entities: null,
+		});
+		assert.deepEqual(nonArrayEvents, [
+			"list",
+			"delete:one",
+			"delete:two",
+			"list",
+		]);
+
+		const deleteFailureEvents = [];
+		const deleteFailure = new Error("delete failed");
+		const deleteFailureCommands = createCampaignEntityCommands({
+			async list() {
+				deleteFailureEvents.push("list");
+				return [{ slug: "one" }, { slug: "two" }];
+			},
+			toSlug() {
+				return "";
+			},
+			async delete(_campaignSlug, _type, slug) {
+				deleteFailureEvents.push(`delete:${slug}`);
+				if (slug === "two") throw deleteFailure;
+			},
+			async write() {
+				deleteFailureEvents.push("write");
+			},
+		});
+		await assert.rejects(
+			deleteFailureCommands.replaceAll({
+				campaignSlug: "кампанія",
+				type: "npc",
+				entities: [],
+			}),
+			(error) => error === deleteFailure,
+		);
+		assert.deepEqual(deleteFailureEvents, [
+			"list",
+			"delete:one",
+			"delete:two",
+		]);
+
+		const writeFailureEvents = [];
+		const writeFailure = new Error("write failed");
+		let writeFailureListCount = 0;
+		const writeFailureCommands = createCampaignEntityCommands({
+			async list() {
+				writeFailureListCount += 1;
+				writeFailureEvents.push("list");
+				return writeFailureListCount === 1 ? [{ slug: "stale" }] : [];
+			},
+			toSlug(value) {
+				writeFailureEvents.push(`slug:${value}`);
+				return value;
+			},
+			async delete(_campaignSlug, _type, slug) {
+				writeFailureEvents.push(`delete:${slug}`);
+			},
+			async write(_campaignSlug, _type, slug) {
+				writeFailureEvents.push(`write:${slug}`);
+				if (slug === "second") throw writeFailure;
+			},
+		});
+		await assert.rejects(
+			writeFailureCommands.replaceAll({
+				campaignSlug: "кампанія",
+				type: "characters",
+				entities: [{ slug: "first" }, { slug: "second" }],
+			}),
+			(error) => error === writeFailure,
+		);
+		assert.deepEqual(writeFailureEvents, [
+			"list",
+			"slug:first",
+			"slug:second",
+			"delete:stale",
+			"slug:first",
+			"write:first",
+			"slug:second",
+			"write:second",
+		]);
+	},
+);
 
 await run("Campaign entity scope commands preserve ids and compensate partial writes", async () => {
 	const entities = new Map([
@@ -8753,6 +17500,450 @@ await run(
 );
 
 await run(
+	"AI history custom monster changes preserve list and matching policies",
+	() => {
+		assert.deepEqual(
+			aiResponseHistoryService.buildCustomMonsterChangeResources(
+				null,
+				{ malformed: true },
+			),
+			[],
+		);
+		assert.deepEqual(
+			aiResponseHistoryService.buildCustomMonsterChangeResources(),
+			[],
+		);
+
+		const arrayBefore = Object.assign(["before"], {
+			name: " Array Spirit ",
+		});
+		const arrayAfter = Object.assign(["after"], {
+			name: "array spirit",
+		});
+		const arrayResources =
+			aiResponseHistoryService.buildCustomMonsterChangeResources(
+				[
+					null,
+					0,
+					false,
+					"scalar",
+					() => "function",
+					{ changed: "ignored without identity" },
+					arrayBefore,
+				],
+				[arrayAfter],
+			);
+		assert.equal(arrayResources.length, 1);
+		assert.equal(
+			arrayResources[0].id,
+			"custom-monster:array spirit",
+		);
+		assert.equal(arrayResources[0].name, "array spirit");
+		assert.deepEqual(arrayResources[0].before, ["before"]);
+		assert.deepEqual(arrayResources[0].after, ["after"]);
+		assert.equal("name" in arrayResources[0].before, false);
+		assert.equal("name" in arrayResources[0].after, false);
+
+		const before = [
+			{
+				id: "stable",
+				name: "Stable Before",
+				version: 1,
+			},
+			{
+				name: "  Мавка  ",
+				version: 1,
+			},
+			{
+				id: "renamed-old",
+				name: "Same Identity",
+				version: 1,
+			},
+			{
+				id: "dup",
+				name: "Earlier Duplicate",
+				version: "earlier",
+			},
+			{
+				id: "dup",
+				name: "Mapped Duplicate",
+				version: "mapped-before",
+			},
+			{
+				name: "Repeated Name",
+				version: "first",
+			},
+			{
+				name: " repeated name ",
+				version: "last",
+			},
+			{
+				id: 0,
+				name: 0,
+				version: "ignored-zero",
+			},
+			{
+				version: "ignored-empty-identity",
+			},
+		];
+		const after = [
+			{
+				id: "stable",
+				name: "Stable After",
+				version: 2,
+			},
+			{
+				name: "мавка",
+				version: 2,
+			},
+			{
+				id: "renamed-new",
+				name: "Same Identity",
+				version: 2,
+			},
+			{
+				id: "dup",
+				name: "Mapped Duplicate",
+				version: "mapped-after",
+			},
+			{
+				name: "REPEATED NAME",
+				version: "after",
+			},
+			{
+				id: "0",
+				name: "Zero String",
+				version: 1,
+			},
+		];
+		const resources =
+			aiResponseHistoryService.buildCustomMonsterChangeResources(
+				before,
+				after,
+			);
+		assert.equal(resources.length, 8);
+		assert.equal(
+			resources.filter(
+				(resource) => resource.id === "custom-monster:dup",
+			).length,
+			2,
+		);
+		const findResource = (predicate) => {
+			const resource = resources.find(predicate);
+			assert.ok(resource);
+			return resource;
+		};
+		const stable = findResource(
+			(resource) => resource.id === "custom-monster:stable",
+		);
+		assert.equal(stable.before.name, "Stable Before");
+		assert.equal(stable.after.name, "Stable After");
+		const renamedDeletion = findResource(
+			(resource) =>
+				resource.id === "custom-monster:renamed-old",
+		);
+		assert.equal(renamedDeletion.before.name, "Same Identity");
+		assert.equal(renamedDeletion.after, null);
+		const renamedAddition = findResource(
+			(resource) =>
+				resource.id === "custom-monster:renamed-new",
+		);
+		assert.equal(renamedAddition.before, null);
+		assert.equal(renamedAddition.after.name, "Same Identity");
+		const duplicateMapped = findResource(
+			(resource) =>
+				resource.id === "custom-monster:dup" &&
+				resource.name === "Mapped Duplicate",
+		);
+		assert.equal(duplicateMapped.before.version, "mapped-before");
+		assert.equal(duplicateMapped.after.version, "mapped-after");
+		const duplicateResidual = findResource(
+			(resource) =>
+				resource.id === "custom-monster:dup" &&
+				resource.name === "Earlier Duplicate",
+		);
+		assert.equal(duplicateResidual.before.version, "earlier");
+		assert.equal(duplicateResidual.after, null);
+		const nameMatched = findResource(
+			(resource) => resource.id === "custom-monster:мавка",
+		);
+		assert.equal(nameMatched.before.version, 1);
+		assert.equal(nameMatched.after.version, 2);
+		const repeatedName = findResource(
+			(resource) =>
+				resource.id === "custom-monster:repeated name",
+		);
+		assert.equal(repeatedName.before.version, "last");
+		assert.equal(repeatedName.after.version, "after");
+		assert.equal(
+			resources.some(
+				(resource) => resource.before?.version === "first",
+			),
+			false,
+		);
+		assert.ok(
+			findResource(
+				(resource) => resource.id === "custom-monster:0",
+			),
+		);
+		assert.equal(
+			resources.some(
+				(resource) =>
+					resource.before?.version === "ignored-zero" ||
+					resource.before?.version === "ignored-empty-identity",
+			),
+			false,
+		);
+
+		const sorted = aiResponseHistoryService.buildCustomMonsterChangeResources(
+			[],
+			[
+				{ name: "Zulu", value: 1 },
+				{ name: "Alpha", value: 1 },
+				{ name: "Beta", value: 1 },
+			],
+		);
+		assert.deepEqual(
+			sorted.map((resource) => resource.name),
+			["Alpha", "Beta", "Zulu"],
+		);
+	},
+);
+
+await run(
+	"AI history custom monster changes preserve getter fallback and clone semantics",
+	() => {
+		const reads = {
+			beforeId: 0,
+			beforeName: 0,
+			afterId: 0,
+			afterName: 0,
+		};
+		const beforeNested = { value: 1 };
+		const afterNested = { value: 2 };
+		const before = {
+			get id() {
+				reads.beforeId += 1;
+				return "getter-id";
+			},
+			get name() {
+				reads.beforeName += 1;
+				return "Getter Before";
+			},
+			nested: beforeNested,
+		};
+		const after = {
+			get id() {
+				reads.afterId += 1;
+				return "getter-id";
+			},
+			get name() {
+				reads.afterName += 1;
+				return "Getter After";
+			},
+			nested: afterNested,
+		};
+		const getterResources =
+			aiResponseHistoryService.buildCustomMonsterChangeResources(
+				[before],
+				[after],
+			);
+		assert.deepEqual(reads, {
+			beforeId: 4,
+			beforeName: 2,
+			afterId: 5,
+			afterName: 3,
+		});
+		assert.equal(getterResources.length, 1);
+		assert.equal(getterResources[0].id, "custom-monster:getter-id");
+		assert.equal(getterResources[0].name, "Getter After");
+		assert.deepEqual(getterResources[0].before, {
+			id: "getter-id",
+			name: "Getter Before",
+			nested: { value: 1 },
+		});
+		assert.deepEqual(getterResources[0].after, {
+			id: "getter-id",
+			name: "Getter After",
+			nested: { value: 2 },
+		});
+		assert.notEqual(getterResources[0].before.nested, beforeNested);
+		assert.notEqual(getterResources[0].after.nested, afterNested);
+		assert.equal(beforeNested.value, 1);
+		assert.equal(afterNested.value, 2);
+
+		let dynamicNameReads = 0;
+		const dynamicNameMonster = {
+			get name() {
+				dynamicNameReads += 1;
+				return dynamicNameReads <= 2 ? " Key Name " : "";
+			},
+			value: "dynamic",
+		};
+		const fallbackResources =
+			aiResponseHistoryService.buildCustomMonsterChangeResources(
+				[],
+				[dynamicNameMonster],
+			);
+		assert.equal(dynamicNameReads, 6);
+		assert.equal(fallbackResources.length, 1);
+		assert.equal(
+			fallbackResources[0].id,
+			"custom-monster:key name",
+		);
+		assert.equal(fallbackResources[0].name, "key name");
+		assert.deepEqual(fallbackResources[0].after, {
+			name: "",
+			value: "dynamic",
+		});
+
+		let beforeToJsonCalls = 0;
+		let afterToJsonCalls = 0;
+		const beforeWithToJson = {
+			id: "json-id",
+			name: "JSON Monster",
+			toJSON() {
+				beforeToJsonCalls += 1;
+				return { version: 1 };
+			},
+		};
+		const afterWithToJson = {
+			id: "json-id",
+			name: "JSON Monster",
+			toJSON() {
+				afterToJsonCalls += 1;
+				return { version: 2 };
+			},
+		};
+		const jsonResources =
+			aiResponseHistoryService.buildCustomMonsterChangeResources(
+				[beforeWithToJson],
+				[afterWithToJson],
+			);
+		assert.equal(beforeToJsonCalls, 2);
+		assert.equal(afterToJsonCalls, 2);
+		assert.deepEqual(jsonResources[0].before, { version: 1 });
+		assert.deepEqual(jsonResources[0].after, { version: 2 });
+		assert.equal(jsonResources[0].id, "custom-monster:json-id");
+		assert.equal(jsonResources[0].name, "JSON Monster");
+	},
+);
+
+await run(
+	"AI history custom monster changes preserve JSON equality and failure boundaries",
+	() => {
+		assert.deepEqual(
+			aiResponseHistoryService.buildCustomMonsterChangeResources(
+				[
+					{
+						name: "Unchanged",
+						nested: { value: 1 },
+					},
+					{
+						name: "Undefined",
+						value: undefined,
+					},
+				],
+				[
+					{
+						name: "Unchanged",
+						nested: { value: 1 },
+					},
+					{
+						name: "Undefined",
+					},
+				],
+			),
+			[],
+		);
+
+		const propertyOrderResources =
+			aiResponseHistoryService.buildCustomMonsterChangeResources(
+				[
+					{
+						name: "Property Order",
+						first: 1,
+						second: 2,
+					},
+				],
+				[
+					{
+						name: "Property Order",
+						second: 2,
+						first: 1,
+					},
+				],
+			);
+		assert.equal(propertyOrderResources.length, 1);
+		assert.equal(
+			propertyOrderResources[0].id,
+			"custom-monster:property order",
+		);
+		assert.deepEqual(propertyOrderResources[0].before, {
+			name: "Property Order",
+			first: 1,
+			second: 2,
+		});
+		assert.deepEqual(propertyOrderResources[0].after, {
+			name: "Property Order",
+			second: 2,
+			first: 1,
+		});
+
+		let unchangedBeforeToJsonCalls = 0;
+		let unchangedAfterToJsonCalls = 0;
+		const unchangedByJson = {
+			before: {
+				id: "same-json",
+				name: "Same JSON",
+				toJSON() {
+					unchangedBeforeToJsonCalls += 1;
+					return { stable: true };
+				},
+			},
+			after: {
+				id: "same-json",
+				name: "Same JSON",
+				toJSON() {
+					unchangedAfterToJsonCalls += 1;
+					return { stable: true };
+				},
+			},
+		};
+		assert.deepEqual(
+			aiResponseHistoryService.buildCustomMonsterChangeResources(
+				[unchangedByJson.before],
+				[unchangedByJson.after],
+			),
+			[],
+		);
+		assert.equal(unchangedBeforeToJsonCalls, 1);
+		assert.equal(unchangedAfterToJsonCalls, 1);
+
+		const circular = {
+			name: "Circular",
+		};
+		circular.self = circular;
+		assert.throws(
+			() =>
+				aiResponseHistoryService.buildCustomMonsterChangeResources(
+					[circular],
+					[{ name: "Circular", value: "after" }],
+				),
+			TypeError,
+		);
+		assert.throws(
+			() =>
+				aiResponseHistoryService.buildCustomMonsterChangeResources(
+					[{ name: "BigInt", value: 1n }],
+					[{ name: "BigInt", value: 2n }],
+				),
+			TypeError,
+		);
+	},
+);
+
+await run(
 	"AI history change sets preserve indexing cloning ordering and summaries",
 	async () => {
 		const originalExportCampaignBundle = storage.exportCampaignBundle;
@@ -9239,6 +18430,818 @@ await run(
 		} finally {
 			Object.assign(storage, originalStorageMethods);
 			fs.rm = originalRm;
+		}
+	},
+);
+
+await run(
+	"AI history snapshot restore preserves full and partial state projection",
+	async () => {
+		const storageMethodNames = [
+			"writeJson",
+			"campaignMetaPath",
+			"updateAiResponse",
+			"readAiResponses",
+			"readCustomBestiaryMonsters",
+		];
+		const originalStorageMethods = Object.fromEntries(
+			storageMethodNames.map((name) => [name, storage[name]]),
+		);
+		const OriginalDate = globalThis.Date;
+		const fixedTimestamp = "2026-07-24T12:34:56.000Z";
+		const calls = [];
+		let lastPatch = null;
+		let activeEntry = null;
+		const historyRows = [{ id: "history-row" }];
+		const bestiaryRows = [{ id: "monster", name: "Лісова примара" }];
+
+		class FixedDate extends OriginalDate {
+			constructor(...args) {
+				if (args.length === 0) calls.push(["date"]);
+				super(...(args.length > 0 ? args : [fixedTimestamp]));
+			}
+		}
+
+		storage.campaignMetaPath = (campaign) => {
+			calls.push(["metaPath", campaign]);
+			return `meta:${campaign}`;
+		};
+		storage.writeJson = async (filePath, snapshot) => {
+			calls.push(["writeJson", filePath, snapshot]);
+		};
+		storage.updateAiResponse = async (campaign, id, patch) => {
+			calls.push(["updateHistory", campaign, id, patch]);
+			lastPatch = patch;
+			return { ...activeEntry, ...patch };
+		};
+		storage.readAiResponses = async (campaign) => {
+			calls.push(["readHistory", campaign]);
+			return historyRows;
+		};
+		storage.readCustomBestiaryMonsters = async () => {
+			calls.push(["readBestiary"]);
+			return bestiaryRows;
+		};
+		globalThis.Date = FixedDate;
+
+		const restore = async (
+			resources,
+			snapshotKey = "after",
+			options = {},
+			extraChanges = {},
+		) => {
+			activeEntry = {
+				id: "history-state",
+				path: { campaign: "bestiary" },
+				changes: {
+					...extraChanges,
+					resources,
+				},
+			};
+			return aiResponseHistoryService.restoreAiResponseSnapshot(
+				activeEntry,
+				snapshotKey,
+				options,
+			);
+		};
+
+		try {
+			let beforeReads = 0;
+			let afterReads = 0;
+			const firstResource = {
+				id: "first",
+				kind: "campaign",
+				campaign: "resource-campaign",
+				applyState: "draft",
+				get before() {
+					beforeReads += 1;
+					return null;
+				},
+				get after() {
+					afterReads += 1;
+					return false;
+				},
+			};
+			const secondResource = {
+				id: "second",
+				kind: "campaign",
+				campaign: "resource-campaign",
+				before: 0,
+				after: "",
+				applyState: "draft",
+			};
+			const fullResources = [firstResource, secondResource];
+			const fullApplyResult = await restore(
+				fullResources,
+				"after",
+				{},
+				{ marker: "keep", summary: { stale: true } },
+			);
+
+			assert.deepEqual(
+				calls.map(([kind]) => kind),
+				[
+					"metaPath",
+					"writeJson",
+					"metaPath",
+					"writeJson",
+					"date",
+					"updateHistory",
+					"readHistory",
+					"readBestiary",
+				],
+			);
+			assert.deepEqual(calls[1], [
+				"writeJson",
+				"meta:resource-campaign",
+				false,
+			]);
+			assert.deepEqual(calls[3], [
+				"writeJson",
+				"meta:resource-campaign",
+				"",
+			]);
+			assert.equal(beforeReads, 2);
+			assert.equal(afterReads, 3);
+			assert.equal(lastPatch.applyState, "applied");
+			assert.equal(lastPatch.appliedAt, fixedTimestamp);
+			assert.equal(lastPatch.changes.marker, "keep");
+			assert.deepEqual(lastPatch.changes.summary, {
+				added: 1,
+				deleted: 0,
+				modified: 1,
+				total: 2,
+			});
+			assert.notEqual(lastPatch.changes.resources, fullResources);
+			assert.notEqual(lastPatch.changes.resources[0], firstResource);
+			assert.notEqual(lastPatch.changes.resources[1], secondResource);
+			for (const resource of lastPatch.changes.resources) {
+				assert.equal(resource.applyState, "applied");
+				assert.equal(resource.appliedAt, fixedTimestamp);
+			}
+			assert.equal(firstResource.applyState, "draft");
+			assert.equal(secondResource.applyState, "draft");
+			assert.equal(fullApplyResult.response.changes, lastPatch.changes);
+			assert.equal(fullApplyResult.responses, historyRows);
+			assert.deepEqual(fullApplyResult.updated, {
+				monsters: bestiaryRows,
+			});
+			assert.equal(fullApplyResult.updated.monsters, bestiaryRows);
+
+			calls.length = 0;
+			lastPatch = null;
+			const originalChanges = {
+				marker: "undo-identity",
+				resources: [
+					{
+						id: "undo-first",
+						kind: "campaign",
+						campaign: "resource-campaign",
+						before: false,
+						after: true,
+						applyState: "applied",
+					},
+					{
+						id: "undo-second",
+						kind: "campaign",
+						campaign: "resource-campaign",
+						before: 0,
+						after: 2,
+						applyState: "applied",
+					},
+				],
+			};
+			activeEntry = {
+				id: "history-undo",
+				path: { campaign: "bestiary" },
+				changes: originalChanges,
+			};
+			await aiResponseHistoryService.restoreAiResponseSnapshot(
+				activeEntry,
+				"before",
+				{ resourceIds: "not-an-array" },
+			);
+			assert.equal(lastPatch.changes, originalChanges);
+			assert.equal(lastPatch.applyState, "undone");
+			assert.equal(lastPatch.appliedAt, fixedTimestamp);
+			assert.deepEqual(calls[1], [
+				"writeJson",
+				"meta:resource-campaign",
+				false,
+			]);
+			assert.deepEqual(calls[3], [
+				"writeJson",
+				"meta:resource-campaign",
+				0,
+			]);
+
+			const partialScenarios = [
+				{
+					name: "mixed",
+					snapshotKey: "after",
+					unselectedState: "draft",
+					expectedState: "draft",
+					expectedAppliedAt: null,
+				},
+				{
+					name: "applied",
+					snapshotKey: "after",
+					unselectedState: "applied",
+					expectedState: "applied",
+					expectedAppliedAt: fixedTimestamp,
+				},
+				{
+					name: "undone",
+					snapshotKey: "before",
+					unselectedState: "undone",
+					expectedState: "undone",
+					expectedAppliedAt: fixedTimestamp,
+				},
+			];
+			for (const scenario of partialScenarios) {
+				calls.length = 0;
+				lastPatch = null;
+				const selected = {
+					id: "selected",
+					kind: "campaign",
+					campaign: "resource-campaign",
+					before: { value: "before" },
+					after: { value: "after" },
+					applyState:
+						scenario.snapshotKey === "after" ? "draft" : "applied",
+				};
+				const unselected = {
+					id: "unselected",
+					kind: "campaign",
+					campaign: "resource-campaign",
+					before: { value: "old" },
+					after: { value: "new" },
+					applyState: scenario.unselectedState,
+				};
+				const sourceResources = [selected, unselected];
+				await restore(
+					sourceResources,
+					scenario.snapshotKey,
+					{
+						resourceIds: [
+							"",
+							false,
+							0,
+							"selected",
+							"selected",
+						],
+					},
+					{ marker: scenario.name },
+				);
+
+				assert.deepEqual(
+					calls.filter(([kind]) => kind === "writeJson").length,
+					1,
+				);
+				assert.notEqual(lastPatch.changes.resources[0], selected);
+				assert.equal(lastPatch.changes.resources[1], unselected);
+				assert.equal(
+					lastPatch.changes.resources[0].applyState,
+					scenario.expectedState === "undone"
+						? "undone"
+						: "applied",
+				);
+				assert.equal(
+					lastPatch.changes.resources[0].appliedAt,
+					fixedTimestamp,
+				);
+				assert.equal(lastPatch.applyState, scenario.expectedState);
+				assert.equal(
+					lastPatch.appliedAt,
+					scenario.expectedAppliedAt,
+				);
+				assert.equal(selected.applyState, scenario.snapshotKey === "after" ? "draft" : "applied");
+				assert.equal(unselected.applyState, scenario.unselectedState);
+			}
+
+			calls.length = 0;
+			const firstDuplicate = {
+				id: "duplicate",
+				kind: "campaign",
+				campaign: "resource-campaign",
+				before: 1,
+				after: 2,
+				applyState: "draft",
+			};
+			const secondDuplicate = {
+				id: "duplicate",
+				kind: "campaign",
+				campaign: "resource-campaign",
+				before: 3,
+				after: 4,
+				applyState: "draft",
+			};
+			await restore(
+				[firstDuplicate, secondDuplicate],
+				"after",
+				{ resourceIds: ["duplicate"] },
+			);
+			assert.equal(
+				calls.filter(([kind]) => kind === "writeJson").length,
+				2,
+			);
+			assert.notEqual(lastPatch.changes.resources[0], firstDuplicate);
+			assert.notEqual(lastPatch.changes.resources[1], secondDuplicate);
+		} finally {
+			globalThis.Date = OriginalDate;
+			Object.assign(storage, originalStorageMethods);
+		}
+	},
+);
+
+await run(
+	"AI history snapshot restore preserves selection and partial-progress failures",
+	async () => {
+		const storageMethodNames = [
+			"writeJson",
+			"campaignMetaPath",
+			"updateAiResponse",
+			"readAiResponses",
+		];
+		const originalStorageMethods = Object.fromEntries(
+			storageMethodNames.map((name) => [name, storage[name]]),
+		);
+		const OriginalDate = globalThis.Date;
+		const fixedTimestamp = "2026-07-24T13:00:00.000Z";
+		const calls = [];
+		let writeCount = 0;
+		let updateCount = 0;
+		let dateCount = 0;
+		let failWriteNumber = null;
+		let writeError = null;
+		let lastPatch = null;
+
+		class FixedDate extends OriginalDate {
+			constructor(...args) {
+				if (args.length === 0) dateCount += 1;
+				super(...(args.length > 0 ? args : [fixedTimestamp]));
+			}
+		}
+
+		storage.campaignMetaPath = (campaign) => `meta:${campaign}`;
+		storage.writeJson = async (filePath, snapshot) => {
+			writeCount += 1;
+			calls.push(["write", filePath, snapshot]);
+			if (writeCount === failWriteNumber) throw writeError;
+		};
+		storage.updateAiResponse = async (campaign, id, patch) => {
+			updateCount += 1;
+			lastPatch = patch;
+			calls.push(["update", campaign, id, patch]);
+			return { id, path: {}, ...patch };
+		};
+		storage.readAiResponses = async (campaign) => {
+			calls.push(["readHistory", campaign]);
+			return [];
+		};
+		globalThis.Date = FixedDate;
+
+		const createResource = (id, extra = {}) => ({
+			id,
+			kind: "campaign",
+			campaign: "resource-campaign",
+			before: { value: `before-${id}` },
+			after: { value: `after-${id}` },
+			...extra,
+		});
+		const createEntry = (resources) => ({
+			id: "history-selection",
+			path: {},
+			changes: { resources },
+		});
+		const expectSelectionError = async (promise, expectedMessage) => {
+			await assert.rejects(
+				promise,
+				(error) =>
+					error?.status === 400 &&
+					error.message === expectedMessage,
+			);
+		};
+
+		try {
+			await expectSelectionError(
+				aiResponseHistoryService.restoreAiResponseSnapshot(
+					null,
+					"after",
+				),
+				"This AI response has no saved changes.",
+			);
+			await expectSelectionError(
+				aiResponseHistoryService.restoreAiResponseSnapshot(
+					{ changes: { resources: [] } },
+					"after",
+				),
+				"This AI response has no saved changes.",
+			);
+			assert.equal(writeCount, 0);
+			assert.equal(updateCount, 0);
+			assert.equal(dateCount, 0);
+
+			const validEntry = createEntry([createResource("valid")]);
+			await assert.rejects(
+				() =>
+					aiResponseHistoryService.restoreAiResponseSnapshot(
+						validEntry,
+						"after",
+						null,
+					),
+				TypeError,
+			);
+			assert.equal(writeCount, 0);
+
+			await assert.rejects(
+				() =>
+					aiResponseHistoryService.restoreAiResponseSnapshot(
+						{
+							changes: {
+								resources: { length: 1 },
+							},
+						},
+						"after",
+					),
+				TypeError,
+			);
+			await assert.rejects(
+				() =>
+					aiResponseHistoryService.restoreAiResponseSnapshot(
+						{
+							changes: {
+								resources: { length: 1 },
+							},
+						},
+						"after",
+						{ resourceIds: ["valid"] },
+					),
+				TypeError,
+			);
+			assert.equal(writeCount, 0);
+
+			await expectSelectionError(
+				aiResponseHistoryService.restoreAiResponseSnapshot(
+					validEntry,
+					"after",
+					{ resourceIds: [] },
+				),
+				"Selected AI response changes were not found.",
+			);
+			await expectSelectionError(
+				aiResponseHistoryService.restoreAiResponseSnapshot(
+					createEntry([createResource(7)]),
+					"after",
+					{ resourceIds: [7] },
+				),
+				"Selected AI response changes were not found.",
+			);
+			assert.equal(writeCount, 0);
+
+			await aiResponseHistoryService.restoreAiResponseSnapshot(
+				createEntry([createResource("7")]),
+				"after",
+				{ resourceIds: [0, false, null, "", 7, 7] },
+			);
+			assert.equal(writeCount, 1);
+			assert.equal(updateCount, 1);
+			assert.equal(lastPatch.applyState, "applied");
+			assert.equal(lastPatch.appliedAt, fixedTimestamp);
+
+			calls.length = 0;
+			writeCount = 0;
+			updateCount = 0;
+			dateCount = 0;
+			await aiResponseHistoryService.restoreAiResponseSnapshot(
+				createEntry([
+					createResource("other", {
+						other: "",
+						applyState: "applied",
+					}),
+				]),
+				"other",
+				{ resourceIds: ["other"] },
+			);
+			assert.deepEqual(calls[0], [
+				"write",
+				"meta:resource-campaign",
+				"",
+			]);
+			assert.equal(lastPatch.applyState, "undone");
+			assert.equal(lastPatch.changes.resources[0].applyState, "undone");
+
+			calls.length = 0;
+			writeCount = 0;
+			updateCount = 0;
+			dateCount = 0;
+			await assert.rejects(
+				() =>
+					aiResponseHistoryService.restoreAiResponseSnapshot(
+						createEntry([createResource("missing")]),
+						"missingSnapshot",
+					),
+				/Campaign deletion cannot be restored/,
+			);
+			assert.equal(writeCount, 0);
+			assert.equal(updateCount, 0);
+			assert.equal(dateCount, 0);
+
+			calls.length = 0;
+			writeCount = 0;
+			updateCount = 0;
+			dateCount = 0;
+			failWriteNumber = 2;
+			writeError = new Error("second snapshot write failed");
+			const sequentialEntry = createEntry([
+				createResource("first"),
+				createResource("second"),
+				createResource("third"),
+			]);
+			await assert.rejects(
+				() =>
+					aiResponseHistoryService.restoreAiResponseSnapshot(
+						sequentialEntry,
+						"after",
+					),
+				(error) => error === writeError,
+			);
+			assert.deepEqual(
+				calls.map(([kind]) => kind),
+				["write", "write"],
+			);
+			assert.deepEqual(calls[0][2], {
+				value: "after-first",
+			});
+			assert.deepEqual(calls[1][2], {
+				value: "after-second",
+			});
+			assert.equal(updateCount, 0);
+			assert.equal(dateCount, 0);
+		} finally {
+			globalThis.Date = OriginalDate;
+			Object.assign(storage, originalStorageMethods);
+		}
+	},
+);
+
+await run(
+	"AI history snapshot restore preserves readback routing and failure order",
+	async () => {
+		const storageMethodNames = [
+			"writeCustomBestiaryMonsters",
+			"updateAiResponse",
+			"readAiResponses",
+			"readCustomBestiaryMonsters",
+			"sessionPath",
+			"campaignMetaPath",
+			"exists",
+			"readJson",
+		];
+		const originalStorageMethods = Object.fromEntries(
+			storageMethodNames.map((name) => [name, storage[name]]),
+		);
+		const calls = [];
+		const historyRows = [{ id: "history-refreshed" }];
+		const bestiaryRows = [{ id: "custom", name: "Мавка" }];
+		const existingPaths = new Map();
+		const readValues = new Map();
+		let updateResult = null;
+		let updateError = null;
+		let historyError = null;
+		let bestiaryError = null;
+
+		storage.writeCustomBestiaryMonsters = async (monsters) => {
+			calls.push(["writeBestiary", monsters]);
+			return monsters;
+		};
+		storage.updateAiResponse = async (campaign, id, patch) => {
+			calls.push(["updateHistory", campaign, id, patch]);
+			if (updateError) throw updateError;
+			return updateResult;
+		};
+		storage.readAiResponses = async (campaign) => {
+			calls.push(["readHistory", campaign]);
+			if (historyError) throw historyError;
+			return historyRows;
+		};
+		storage.readCustomBestiaryMonsters = async () => {
+			calls.push(["readBestiary"]);
+			if (bestiaryError) throw bestiaryError;
+			return bestiaryRows;
+		};
+		storage.sessionPath = (campaign, session) => {
+			calls.push(["sessionPath", campaign, session]);
+			return `session:${campaign}:${session}`;
+		};
+		storage.campaignMetaPath = (campaign) => {
+			calls.push(["metaPath", campaign]);
+			return `meta:${campaign}`;
+		};
+		storage.exists = async (filePath) => {
+			calls.push(["exists", filePath]);
+			return existingPaths.get(filePath) || false;
+		};
+		storage.readJson = async (filePath) => {
+			calls.push(["readJson", filePath]);
+			const value = readValues.get(filePath);
+			if (value instanceof Error) throw value;
+			return value;
+		};
+
+		const createEntry = (pathValue) => ({
+			id: "history-readback",
+			path: pathValue,
+			changes: {
+				resources: [
+					{
+						id: "custom-bestiary:all",
+						kind: "custom-bestiary",
+						before: [],
+						after: [],
+					},
+				],
+			},
+		});
+		const restore = (entry) =>
+			aiResponseHistoryService.restoreAiResponseSnapshot(
+				entry,
+				"after",
+			);
+		const reset = () => {
+			calls.length = 0;
+			existingPaths.clear();
+			readValues.clear();
+			updateResult = null;
+			updateError = null;
+			historyError = null;
+			bestiaryError = null;
+		};
+
+		try {
+			const noCampaignEntry = createEntry({});
+			updateResult = 0;
+			const noCampaignResult = await restore(noCampaignEntry);
+			assert.equal(noCampaignResult.response, 0);
+			assert.equal(noCampaignResult.responses, historyRows);
+			assert.equal(noCampaignResult.updated, null);
+			assert.deepEqual(
+				calls.map(([kind]) => kind),
+				["writeBestiary", "updateHistory", "readHistory"],
+			);
+
+			reset();
+			const bestiaryEntry = createEntry({
+				campaign: "bestiary",
+				session: "must-not-be-read.json",
+			});
+			updateResult = {
+				id: "updated-bestiary",
+				path: bestiaryEntry.path,
+			};
+			const bestiaryResult = await restore(bestiaryEntry);
+			assert.equal(bestiaryResult.response, updateResult);
+			assert.deepEqual(bestiaryResult.updated, {
+				monsters: bestiaryRows,
+			});
+			assert.equal(bestiaryResult.updated.monsters, bestiaryRows);
+			assert.deepEqual(
+				calls.map(([kind]) => kind),
+				[
+					"writeBestiary",
+					"updateHistory",
+					"readHistory",
+					"readBestiary",
+				],
+			);
+
+			reset();
+			const campaign = "кампанія";
+			const session = "сесія.json";
+			const sessionEntry = createEntry({ campaign, session });
+			const sessionFile = `session:${campaign}:${session}`;
+			existingPaths.set(sessionFile, true);
+			readValues.set(sessionFile, {
+				id: "session-id",
+				name: "Повернута сесія",
+				fileName: "wrong.json",
+			});
+			updateResult = 0;
+			const sessionResult = await restore(sessionEntry);
+			assert.equal(sessionResult.response, 0);
+			assert.deepEqual(sessionResult.updated, {
+				id: "session-id",
+				name: "Повернута сесія",
+				fileName: session,
+			});
+			assert.deepEqual(
+				calls.map(([kind]) => kind),
+				[
+					"writeBestiary",
+					"updateHistory",
+					"readHistory",
+					"sessionPath",
+					"exists",
+					"readJson",
+				],
+			);
+
+			reset();
+			const fallbackEntry = createEntry({
+				campaign,
+				session,
+			});
+			const metaFile = `meta:${campaign}`;
+			existingPaths.set(sessionFile, false);
+			existingPaths.set(metaFile, true);
+			const campaignMeta = {
+				id: "campaign-id",
+				name: "Кампанія після відновлення",
+			};
+			readValues.set(metaFile, campaignMeta);
+			updateResult = null;
+			const fallbackResult = await restore(fallbackEntry);
+			assert.equal(fallbackResult.response, null);
+			assert.equal(fallbackResult.updated, campaignMeta);
+			assert.deepEqual(
+				calls.map(([kind]) => kind),
+				[
+					"writeBestiary",
+					"updateHistory",
+					"readHistory",
+					"sessionPath",
+					"exists",
+					"metaPath",
+					"exists",
+					"readJson",
+				],
+			);
+
+			reset();
+			const missingResult = await restore(
+				createEntry({ campaign, session }),
+			);
+			assert.equal(missingResult.updated, null);
+			assert.deepEqual(
+				calls.map(([kind]) => kind),
+				[
+					"writeBestiary",
+					"updateHistory",
+					"readHistory",
+					"sessionPath",
+					"exists",
+					"metaPath",
+					"exists",
+				],
+			);
+
+			reset();
+			updateError = new Error("history update failed");
+			await assert.rejects(
+				() => restore(createEntry({ campaign: "bestiary" })),
+				(error) => error === updateError,
+			);
+			assert.deepEqual(
+				calls.map(([kind]) => kind),
+				["writeBestiary", "updateHistory"],
+			);
+
+			reset();
+			updateResult = {
+				id: "updated-history",
+				path: { campaign: "bestiary" },
+			};
+			historyError = new Error("history refresh failed");
+			await assert.rejects(
+				() => restore(createEntry({ campaign: "bestiary" })),
+				(error) => error === historyError,
+			);
+			assert.deepEqual(
+				calls.map(([kind]) => kind),
+				["writeBestiary", "updateHistory", "readHistory"],
+			);
+
+			reset();
+			updateResult = {
+				id: "updated-readback",
+				path: { campaign: "bestiary" },
+			};
+			bestiaryError = new Error("updated target read failed");
+			await assert.rejects(
+				() => restore(createEntry({ campaign: "bestiary" })),
+				(error) => error === bestiaryError,
+			);
+			assert.deepEqual(
+				calls.map(([kind]) => kind),
+				[
+					"writeBestiary",
+					"updateHistory",
+					"readHistory",
+					"readBestiary",
+				],
+			);
+		} finally {
+			Object.assign(storage, originalStorageMethods);
 		}
 	},
 );
@@ -13504,6 +23507,513 @@ await run("Scene encounter command persists one linked encounter idempotently", 
 	);
 });
 
+await run(
+	"Scene encounter lookup preserves collection identity coercion and failures",
+	() => {
+		assert.deepEqual(Object.keys(sceneEncounterCommandModule), [
+			"createSceneEncounterCommand",
+			"findById",
+		]);
+		for (const items of [undefined, null, false, 0, "", Number.NaN]) {
+			assert.equal(findSceneEncounterById(items, "unused"), undefined);
+		}
+		for (const items of [{}, "truthy", 1]) {
+			assert.throws(
+				() => findSceneEncounterById(items, "unused"),
+				TypeError,
+			);
+		}
+
+		const events = [];
+		let requestedIdReads = 0;
+		const requestedId = {
+			toString() {
+				requestedIdReads += 1;
+				events.push(`requested:${requestedIdReads}`);
+				return "7";
+			},
+		};
+		const first = {};
+		Object.defineProperty(first, "id", {
+			get() {
+				events.push("first:get");
+				return {
+					toString() {
+						events.push("first:string");
+						return "6";
+					},
+				};
+			},
+		});
+		const second = {};
+		Object.defineProperty(second, "id", {
+			get() {
+				events.push("second:get");
+				return {
+					toString() {
+						events.push("second:string");
+						return "7";
+					},
+				};
+			},
+		});
+		assert.equal(
+			findSceneEncounterById([first, second, { id: 7 }], requestedId),
+			second,
+		);
+		assert.deepEqual(events, [
+			"first:get",
+			"first:string",
+			"requested:1",
+			"second:get",
+			"second:string",
+			"requested:2",
+		]);
+		assert.equal(findSceneEncounterById([{ id: 1 }], 1n).id, 1);
+		assert.equal(
+			findSceneEncounterById([{ id: Symbol("scene") }], Symbol("scene")).id
+				.description,
+			"scene",
+		);
+		assert.throws(
+			() => findSceneEncounterById([null], "scene"),
+			TypeError,
+		);
+		const sparse = new Array(1);
+		assert.throws(
+			() => findSceneEncounterById(sparse, "scene"),
+			TypeError,
+		);
+		const idFailure = new Error("item ID coercion failed");
+		assert.throws(
+			() =>
+				findSceneEncounterById(
+					[
+						{
+							id: {
+								toString() {
+									throw idFailure;
+								},
+							},
+						},
+					],
+					{
+						toString() {
+							throw new Error("requested ID must stay lazy");
+						},
+					},
+				),
+			idFailure,
+		);
+	},
+);
+
+await run(
+	"Scene encounter existing links preserve request and session getter order",
+	async () => {
+		const events = [];
+		let dataReads = 0;
+		let sceneReads = 0;
+		let encounterReads = 0;
+		let linkReads = 0;
+		const existingEncounter = {};
+		Object.defineProperty(existingEncounter, "id", {
+			get() {
+				events.push("existing:id");
+				return "encounter-1";
+			},
+		});
+		const scene = { id: 7 };
+		Object.defineProperty(scene, "encounterId", {
+			get() {
+				linkReads += 1;
+				events.push(`scene:link:${linkReads}`);
+				return "encounter-1";
+			},
+		});
+		const data = {};
+		Object.defineProperties(data, {
+			scenes: {
+				enumerable: true,
+				get() {
+					sceneReads += 1;
+					events.push(`data:scenes:${sceneReads}`);
+					return [scene];
+				},
+			},
+			encounters: {
+				enumerable: true,
+				get() {
+					encounterReads += 1;
+					events.push(`data:encounters:${encounterReads}`);
+					return [existingEncounter];
+				},
+			},
+		});
+		const session = {
+			id: "session-1",
+			fileName: "stored-file",
+		};
+		Object.defineProperties(session, {
+			data: {
+				enumerable: true,
+				get() {
+					dataReads += 1;
+					events.push(`session:data:${dataReads}`);
+					return data;
+				},
+			},
+			marker: {
+				enumerable: true,
+				get() {
+					events.push("session:marker");
+					return "marker";
+				},
+			},
+		});
+		const command = createSceneEncounterCommand({
+			async read(campaignSlug, fileName) {
+				events.push(`repository:read:${campaignSlug}:${fileName}`);
+				return session;
+			},
+			createId() {
+				throw new Error("existing links must not create IDs");
+			},
+			async write() {
+				throw new Error("existing links must not write");
+			},
+		});
+		const request = {};
+		for (const [key, value] of [
+			["campaignSlug", "кампанія"],
+			["fileName", "requested-file"],
+			["sceneId", "7"],
+			[
+				"name",
+				{
+					toString() {
+						throw new Error("existing-link name must not be coerced");
+					},
+				},
+			],
+		]) {
+			Object.defineProperty(request, key, {
+				enumerable: true,
+				get() {
+					events.push(`request:${key}`);
+					return value;
+				},
+			});
+		}
+		const result = await command(request);
+		assert.equal(result.created, false);
+		assert.equal(result.encounter, existingEncounter);
+		assert.notEqual(result.session, session);
+		assert.equal(result.session.data, data);
+		assert.equal(result.session.fileName, "requested-file");
+		assert.equal(result.session.marker, "marker");
+		assert.deepEqual(events, [
+			"request:campaignSlug",
+			"request:fileName",
+			"request:sceneId",
+			"request:name",
+			"repository:read:кампанія:requested-file",
+			"session:data:1",
+			"data:scenes:1",
+			"session:data:2",
+			"data:scenes:2",
+			"session:data:3",
+			"data:encounters:1",
+			"session:data:4",
+			"data:encounters:2",
+			"scene:link:1",
+			"scene:link:2",
+			"scene:link:3",
+			"existing:id",
+			"session:data:5",
+			"session:marker",
+		]);
+
+		let forbiddenEffects = 0;
+		const missingCommand = createSceneEncounterCommand({
+			read: async () => ({
+				data: {
+					scenes: [],
+					get encounters() {
+						forbiddenEffects += 1;
+						throw new Error("encounters must remain unread");
+					},
+				},
+			}),
+			createId() {
+				forbiddenEffects += 1;
+			},
+			async write() {
+				forbiddenEffects += 1;
+			},
+		});
+		await assert.rejects(
+			missingCommand({
+				campaignSlug: "кампанія",
+				fileName: "сесія",
+				sceneId: "missing",
+				name: "Не використовується",
+			}),
+			(error) =>
+				error.status === 404 && error.message === "Scene not found.",
+		);
+		assert.equal(forbiddenEffects, 0);
+	},
+);
+
+await run(
+	"Scene encounter creation preserves projection timing IDs and saved identity",
+	async () => {
+		const events = [];
+		let dataReads = 0;
+		let sceneReads = 0;
+		let encounterReads = 0;
+		let linkReads = 0;
+		let sceneIdCoercions = 0;
+		const targetScene = { id: 7, title: "Основна сцена" };
+		Object.defineProperty(targetScene, "encounterId", {
+			get() {
+				linkReads += 1;
+				events.push(`scene:link:${linkReads}`);
+				return undefined;
+			},
+		});
+		const duplicateScene = { id: "7", title: "Дублікат" };
+		const otherScene = { id: 8, title: "Інша" };
+		const scenes = new Array(5);
+		scenes[0] = targetScene;
+		scenes[2] = duplicateScene;
+		scenes[4] = otherScene;
+		const existingEncounter = { id: "existing" };
+		const encounters = new Array(2);
+		encounters[1] = existingEncounter;
+		const data = { extra: "keep-data" };
+		Object.defineProperties(data, {
+			scenes: {
+				enumerable: true,
+				get() {
+					sceneReads += 1;
+					events.push(`data:scenes:${sceneReads}`);
+					return scenes;
+				},
+			},
+			encounters: {
+				enumerable: true,
+				get() {
+					encounterReads += 1;
+					events.push(`data:encounters:${encounterReads}`);
+					return encounters;
+				},
+			},
+		});
+		const session = {
+			id: "session-1",
+			fileName: "stored-file",
+		};
+		Object.defineProperties(session, {
+			data: {
+				enumerable: true,
+				get() {
+					dataReads += 1;
+					events.push(`session:data:${dataReads}`);
+					return data;
+				},
+			},
+			marker: {
+				enumerable: true,
+				get() {
+					events.push("session:marker");
+					return "marker";
+				},
+			},
+		});
+		const savedSession = { saved: true };
+		let writtenSession;
+		const repository = {
+			async read(campaignSlug, fileName) {
+				events.push(`repository:read:${campaignSlug}:${fileName}`);
+				return session;
+			},
+			createId() {
+				events.push("repository:createId");
+				return 0;
+			},
+			async write(campaignSlug, fileName, nextSession) {
+				events.push(`repository:write:${campaignSlug}:${fileName}`);
+				writtenSession = nextSession;
+				return savedSession;
+			},
+		};
+		const requestedSceneId = {
+			toString() {
+				sceneIdCoercions += 1;
+				events.push(`sceneId:string:${sceneIdCoercions}`);
+				return "7";
+			},
+		};
+		const requestedName = {
+			toString() {
+				events.push("name:string");
+				return "  Бій біля брами  ";
+			},
+		};
+		const result = await createSceneEncounterCommand(repository)({
+			campaignSlug: "кампанія",
+			fileName: "requested-file",
+			sceneId: requestedSceneId,
+			name: requestedName,
+		});
+		assert.equal(result.created, true);
+		assert.equal(result.encounter.id, 0);
+		assert.equal(result.encounter.name, "Бій біля брами");
+		assert.deepEqual(result.encounter.monsters, []);
+		assert.equal(result.session, savedSession);
+		assert.equal(writtenSession.fileName, "stored-file");
+		assert.equal(writtenSession.marker, "marker");
+		assert.equal(writtenSession.data.extra, "keep-data");
+		assert.equal(writtenSession.data.encounters.length, 3);
+		assert.equal(0 in writtenSession.data.encounters, true);
+		assert.equal(writtenSession.data.encounters[0], undefined);
+		assert.equal(writtenSession.data.encounters[1], existingEncounter);
+		assert.equal(writtenSession.data.encounters[2], result.encounter);
+		assert.equal(writtenSession.data.scenes.length, 5);
+		assert.equal(1 in writtenSession.data.scenes, false);
+		assert.equal(3 in writtenSession.data.scenes, false);
+		assert.notEqual(writtenSession.data.scenes[0], targetScene);
+		assert.equal(writtenSession.data.scenes[0].encounterId, 0);
+		assert.notEqual(writtenSession.data.scenes[2], duplicateScene);
+		assert.equal(writtenSession.data.scenes[2].encounterId, 0);
+		assert.equal(writtenSession.data.scenes[4], otherScene);
+		assert.equal(Object.hasOwn(targetScene, "encounterId"), true);
+		assert.equal(scenes[0], targetScene);
+		assert.equal(encounters.length, 2);
+		assert.deepEqual(events, [
+			"repository:read:кампанія:requested-file",
+			"session:data:1",
+			"data:scenes:1",
+			"session:data:2",
+			"data:scenes:2",
+			"sceneId:string:1",
+			"session:data:3",
+			"data:encounters:1",
+			"session:data:4",
+			"data:encounters:2",
+			"scene:link:1",
+			"scene:link:2",
+			"repository:createId",
+			"name:string",
+			"session:data:5",
+			"session:marker",
+			"session:data:6",
+			"data:scenes:3",
+			"data:encounters:3",
+			"sceneId:string:2",
+			"sceneId:string:3",
+			"sceneId:string:4",
+			"repository:write:кампанія:requested-file",
+		]);
+
+		const nameResults = [];
+		const nameRepository = {
+			read: async () => ({
+				data: { scenes: [{ id: 1 }], encounters: [] },
+			}),
+			createId: () => `id-${nameResults.length}`,
+			write: async (_campaign, _fileName, next) => {
+				nameResults.push(next.data.encounters.at(-1).name);
+				return next;
+			},
+		};
+		const createWithName = createSceneEncounterCommand(nameRepository);
+		await createWithName({
+			campaignSlug: "demo",
+			fileName: "session",
+			sceneId: 1,
+			name: "   ",
+		});
+		await createWithName({
+			campaignSlug: "demo",
+			fileName: "session",
+			sceneId: 1,
+			name: Symbol("Назва"),
+		});
+		await createWithName({
+			campaignSlug: "demo",
+			fileName: "session",
+			sceneId: 1,
+			name: 0,
+		});
+		assert.deepEqual(nameResults, [
+			"Encounter",
+			"Symbol(Назва)",
+			"Encounter",
+		]);
+
+		const coercionFailure = new Error("name coercion failed");
+		let generatedIds = 0;
+		let failedWrites = 0;
+		await assert.rejects(
+			createSceneEncounterCommand({
+				read: async () => ({
+					data: { scenes: [{ id: 1 }], encounters: [] },
+				}),
+				createId() {
+					generatedIds += 1;
+					return "generated-before-name";
+				},
+				async write() {
+					failedWrites += 1;
+				},
+			})({
+				campaignSlug: "demo",
+				fileName: "session",
+				sceneId: 1,
+				name: {
+					toString() {
+						throw coercionFailure;
+					},
+				},
+			}),
+			coercionFailure,
+		);
+		assert.equal(generatedIds, 1);
+		assert.equal(failedWrites, 0);
+
+		for (const [linkedValue, expectedReads] of [
+			[null, 1],
+			[undefined, 2],
+			["stale", 3],
+		]) {
+			let reads = 0;
+			const linkedScene = { id: 1 };
+			Object.defineProperty(linkedScene, "encounterId", {
+				get() {
+					reads += 1;
+					return linkedValue;
+				},
+			});
+			await createSceneEncounterCommand({
+				read: async () => ({
+					data: { scenes: [linkedScene], encounters: [] },
+				}),
+				createId: () => "created",
+				write: async (_campaign, _fileName, next) => next,
+			})({
+				campaignSlug: "demo",
+				fileName: "session",
+				sceneId: 1,
+				name: "Fight",
+			});
+			assert.equal(reads, expectedReads);
+		}
+	},
+);
+
 await run("Session commands own CRUD rename reorder and stable ids", async () => {
 	const files = new Map([
 		[
@@ -15162,6 +25672,537 @@ await run("MonsterStatBlockModel formats combat data", () => {
 	);
 });
 
+await run(
+	"shared Bestiary utilities preserve clone array and modifier contracts",
+	() => {
+		assert.deepEqual(Object.keys(bestiaryUtils), [
+			"applyArrayMod",
+			"calculateDiceFormulaAverage",
+			"clone",
+			"normalizeCustomMonsterHpAverage",
+			"stripMentionBrackets",
+			"toArray",
+		]);
+
+		assert.equal(bestiaryUtils.clone(undefined), undefined);
+		assert.equal(bestiaryUtils.clone(null), null);
+		const cloneSource = { nested: { value: "Україна" } };
+		const cloned = bestiaryUtils.clone(cloneSource);
+		assert.deepEqual(cloned, cloneSource);
+		assert.notEqual(cloned, cloneSource);
+		assert.notEqual(cloned.nested, cloneSource.nested);
+		let toJsonReads = 0;
+		assert.deepEqual(
+			bestiaryUtils.clone({
+				toJSON() {
+					toJsonReads += 1;
+					return { normalized: true };
+				},
+			}),
+			{ normalized: true },
+		);
+		assert.equal(toJsonReads, 1);
+		const circular = {};
+		circular.self = circular;
+		assert.throws(() => bestiaryUtils.clone(circular), TypeError);
+		assert.throws(() => bestiaryUtils.clone(1n), TypeError);
+		assert.throws(() => bestiaryUtils.clone(() => {}), SyntaxError);
+		assert.throws(() => bestiaryUtils.clone(Symbol("clone")), SyntaxError);
+
+		const undefinedArray = bestiaryUtils.toArray(undefined);
+		const nullArray = bestiaryUtils.toArray(null);
+		assert.deepEqual(undefinedArray, []);
+		assert.deepEqual(nullArray, []);
+		assert.notEqual(undefinedArray, nullArray);
+		const existingArray = ["same"];
+		assert.equal(bestiaryUtils.toArray(existingArray), existingArray);
+		assert.deepEqual(bestiaryUtils.toArray(false), [false]);
+		assert.deepEqual(bestiaryUtils.toArray(0), [0]);
+		assert.deepEqual(bestiaryUtils.toArray("item"), ["item"]);
+
+		const appendItems = [{ name: "Second", nested: { value: 2 } }];
+		const appendTarget = { rows: [{ name: "First" }] };
+		assert.equal(
+			bestiaryUtils.applyArrayMod(appendTarget, "rows", {
+				mode: "appendArr",
+				items: appendItems,
+			}),
+			undefined,
+		);
+		assert.deepEqual(appendTarget.rows, [
+			{ name: "First" },
+			{ name: "Second", nested: { value: 2 } },
+		]);
+		assert.notEqual(appendTarget.rows[1], appendItems[0]);
+		assert.notEqual(appendTarget.rows[1].nested, appendItems[0].nested);
+
+		const prependTarget = { rows: ["last"] };
+		bestiaryUtils.applyArrayMod(prependTarget, "rows", {
+			mode: "prependArr",
+			items: ["first", "middle"],
+		});
+		assert.deepEqual(prependTarget.rows, ["first", "middle", "last"]);
+
+		const uniqueTarget = {
+			rows: [{ a: 1, b: 2 }, "same"],
+		};
+		bestiaryUtils.applyArrayMod(uniqueTarget, "rows", {
+			mode: "appendIfNotExistsArr",
+			items: [
+				{ a: 1, b: 2 },
+				{ b: 2, a: 1 },
+				"same",
+				"new",
+				"new",
+			],
+		});
+		assert.deepEqual(uniqueTarget.rows, [
+			{ a: 1, b: 2 },
+			"same",
+			{ b: 2, a: 1 },
+			"new",
+		]);
+
+		const insertionCases = [
+			{ index: -3, expected: ["new", "a", "b"] },
+			{ index: Number.NaN, expected: ["new", "a", "b"] },
+			{ index: 1.8, expected: ["a", "new", "b"] },
+			{ index: 99, expected: ["a", "b", "new"] },
+			{ index: Number.POSITIVE_INFINITY, expected: ["a", "b", "new"] },
+		];
+		for (const { index, expected } of insertionCases) {
+			const target = { rows: ["a", "b"] };
+			bestiaryUtils.applyArrayMod(target, "rows", {
+				mode: "insertArr",
+				index,
+				items: "new",
+			});
+			assert.deepEqual(target.rows, expected);
+		}
+		const symbolIndexTarget = { rows: "normalized before index failure" };
+		assert.throws(
+			() =>
+				bestiaryUtils.applyArrayMod(symbolIndexTarget, "rows", {
+					mode: "insertArr",
+					index: Symbol("index"),
+					items: [],
+				}),
+			TypeError,
+		);
+		assert.deepEqual(symbolIndexTarget.rows, []);
+
+		let replaceReads = 0;
+		const unmatched = { name: "Keep" };
+		const replacementItem = { name: "Replacement" };
+		const replaceTarget = {
+			rows: [
+				{ name: "Target", id: "ignored-id" },
+				{ id: "target" },
+				{ title: "TARGET" },
+				unmatched,
+			],
+		};
+		const replaceMod = {
+			mode: "replaceArr",
+			items: replacementItem,
+			get replace() {
+				replaceReads += 1;
+				return "target";
+			},
+		};
+		bestiaryUtils.applyArrayMod(replaceTarget, "rows", replaceMod);
+		assert.equal(replaceReads, 4);
+		assert.equal(replaceTarget.rows.length, 4);
+		assert.deepEqual(replaceTarget.rows.slice(0, 3), [
+			replacementItem,
+			replacementItem,
+			replacementItem,
+		]);
+		assert.notEqual(replaceTarget.rows[0], replacementItem);
+		assert.equal(replaceTarget.rows[0], replaceTarget.rows[1]);
+		assert.equal(replaceTarget.rows[1], replaceTarget.rows[2]);
+		assert.equal(replaceTarget.rows[3], unmatched);
+
+		const removeTarget = {
+			rows: [
+				{ name: "Preferred", id: "remove-by-id" },
+				{ id: "Remove Me" },
+				{ title: "Also Remove" },
+				"REMOVE SCALAR",
+				{ name: "Keep" },
+			],
+		};
+		bestiaryUtils.applyArrayMod(removeTarget, "rows", {
+			mode: "removeArr",
+			names: ["remove me", "also remove", "remove scalar", "remove-by-id"],
+			items: ["keep"],
+		});
+		assert.deepEqual(removeTarget.rows, [
+			{ name: "Preferred", id: "remove-by-id" },
+			{ name: "Keep" },
+		]);
+		const nullishNamesTarget = { rows: ["one", "two"] };
+		bestiaryUtils.applyArrayMod(nullishNamesTarget, "rows", {
+			mode: "removeArr",
+			names: null,
+			items: "two",
+		});
+		assert.deepEqual(nullishNamesTarget.rows, ["one"]);
+
+		let dynamicModeReads = 0;
+		const dynamicModeTarget = { rows: ["last"] };
+		bestiaryUtils.applyArrayMod(dynamicModeTarget, "rows", {
+			get mode() {
+				dynamicModeReads += 1;
+				return dynamicModeReads === 1 ? "unknown" : "prependArr";
+			},
+			items: "first",
+		});
+		assert.equal(dynamicModeReads, 2);
+		assert.deepEqual(dynamicModeTarget.rows, ["first", "last"]);
+
+		let unknownModeReads = 0;
+		let unknownItemReads = 0;
+		const unknownTarget = { rows: "normalize me" };
+		bestiaryUtils.applyArrayMod(unknownTarget, "rows", {
+			get mode() {
+				unknownModeReads += 1;
+				return "unknown";
+			},
+			get items() {
+				unknownItemReads += 1;
+				return {
+					toJSON() {
+						unknownItemReads += 1;
+						return { cloned: true };
+					},
+				};
+			},
+		});
+		assert.equal(unknownModeReads, 6);
+		assert.equal(unknownItemReads, 2);
+		assert.deepEqual(unknownTarget.rows, []);
+
+		const accessEvents = [];
+		let storedRows = "not-an-array";
+		const accessorTarget = {};
+		Object.defineProperty(accessorTarget, "rows", {
+			configurable: true,
+			get() {
+				accessEvents.push("target:get");
+				return storedRows;
+			},
+			set(value) {
+				accessEvents.push("target:set");
+				storedRows = value;
+			},
+		});
+		const accessorMod = {
+			get items() {
+				accessEvents.push("mod:items");
+				return {
+					toJSON() {
+						accessEvents.push("item:toJSON");
+						return "item";
+					},
+				};
+			},
+			get mode() {
+				accessEvents.push("mod:mode");
+				return "appendArr";
+			},
+		};
+		bestiaryUtils.applyArrayMod(accessorTarget, "rows", accessorMod);
+		assert.deepEqual(accessEvents, [
+			"target:get",
+			"target:set",
+			"target:get",
+			"mod:items",
+			"item:toJSON",
+			"mod:mode",
+		]);
+		assert.deepEqual(storedRows, ["item"]);
+
+		const nullModTarget = { rows: "normalize before failure" };
+		assert.throws(
+			() => bestiaryUtils.applyArrayMod(nullModTarget, "rows", null),
+			TypeError,
+		);
+		assert.deepEqual(nullModTarget.rows, []);
+	},
+);
+
+await run(
+	"shared Bestiary dice and HP policies preserve grammar getters and identity",
+	() => {
+		const { calculateDiceFormulaAverage, normalizeCustomMonsterHpAverage } =
+			bestiaryUtils;
+		for (const input of [undefined, null, false, 0, "", " ", "+"]) {
+			assert.equal(calculateDiceFormulaAverage(input), null);
+		}
+		const validFormulas = new Map([
+			["d6", 3],
+			["0d6", 3],
+			["2d6", 7],
+			["2d6+3", 10],
+			["2d6-3", 4],
+			["2d6+-3", 4],
+			[" 2D8 + 1 ", 10],
+			["4d6h3", 10],
+			["4d6l3", 10],
+			["4d6h99", 14],
+			["4d6h0", 1],
+			["d1-100", 1],
+			["-5", 1],
+			["+5", 5],
+			["1++2", 3],
+		]);
+		for (const [formula, expected] of validFormulas) {
+			assert.equal(calculateDiceFormulaAverage(formula), expected);
+		}
+		for (const formula of [
+			"1d0",
+			"1d-6",
+			"1d6h",
+			"1d6k1",
+			"1--2",
+			"1.5",
+			"1e3",
+			"-1d6",
+		]) {
+			assert.equal(calculateDiceFormulaAverage(formula), null);
+		}
+		let formulaStringReads = 0;
+		assert.equal(
+			calculateDiceFormulaAverage({
+				toString() {
+					formulaStringReads += 1;
+					return "2D8 + 1";
+				},
+			}),
+			10,
+		);
+		assert.equal(formulaStringReads, 1);
+		assert.equal(calculateDiceFormulaAverage(Symbol("dice")), null);
+		const giantInteger = "9".repeat(400);
+		assert.equal(
+			calculateDiceFormulaAverage(giantInteger),
+			Number.POSITIVE_INFINITY,
+		);
+		assert.equal(calculateDiceFormulaAverage(`${giantInteger}d6`), null);
+		assert.equal(calculateDiceFormulaAverage(`1d${giantInteger}`), null);
+		assert.equal(
+			calculateDiceFormulaAverage(`4d6h${giantInteger}`),
+			14,
+		);
+
+		for (const monster of [
+			null,
+			undefined,
+			false,
+			0,
+			"monster",
+			() => {},
+			[],
+			{ hp: null },
+			{ hp: "12" },
+			{ hp: [] },
+		]) {
+			assert.equal(normalizeCustomMonsterHpAverage(monster), monster);
+		}
+		const invalidFormulaMonster = {
+			name: "Invalid",
+			hp: { average: 99, formula: "not-dice" },
+		};
+		assert.equal(
+			normalizeCustomMonsterHpAverage(invalidFormulaMonster),
+			invalidFormulaMonster,
+		);
+
+		const sharedNested = { stable: true };
+		const plainMonster = {
+			name: "Вартовий",
+			metadata: sharedNested,
+			hp: {
+				average: 1,
+				formula: "2d8+2",
+				note: sharedNested,
+			},
+		};
+		const normalizedMonster =
+			normalizeCustomMonsterHpAverage(plainMonster);
+		assert.notEqual(normalizedMonster, plainMonster);
+		assert.notEqual(normalizedMonster.hp, plainMonster.hp);
+		assert.equal(normalizedMonster.metadata, sharedNested);
+		assert.equal(normalizedMonster.hp.note, sharedNested);
+		assert.equal(normalizedMonster.hp.average, 11);
+		assert.equal(plainMonster.hp.average, 1);
+
+		let hpReads = 0;
+		let hpFormulaReads = 0;
+		const getterHp = {};
+		Object.defineProperty(getterHp, "formula", {
+			enumerable: true,
+			get() {
+				hpFormulaReads += 1;
+				return hpFormulaReads === 1 ? "2d6" : "changed";
+			},
+		});
+		const getterMonster = { name: "Getter monster" };
+		Object.defineProperty(getterMonster, "hp", {
+			enumerable: true,
+			get() {
+				hpReads += 1;
+				return getterHp;
+			},
+		});
+		const getterNormalized =
+			normalizeCustomMonsterHpAverage(getterMonster);
+		assert.equal(hpReads, 6);
+		assert.equal(hpFormulaReads, 2);
+		assert.equal(getterNormalized.hp.average, 7);
+		assert.equal(getterNormalized.hp.formula, "changed");
+
+		let invalidHpReads = 0;
+		let invalidFormulaReads = 0;
+		const invalidGetterHp = {};
+		Object.defineProperty(invalidGetterHp, "formula", {
+			get() {
+				invalidFormulaReads += 1;
+				return "invalid";
+			},
+		});
+		const invalidGetterMonster = {};
+		Object.defineProperty(invalidGetterMonster, "hp", {
+			get() {
+				invalidHpReads += 1;
+				return invalidGetterHp;
+			},
+		});
+		assert.equal(
+			normalizeCustomMonsterHpAverage(invalidGetterMonster),
+			invalidGetterMonster,
+		);
+		assert.equal(invalidHpReads, 4);
+		assert.equal(invalidFormulaReads, 1);
+
+		let dynamicHpReads = 0;
+		const dynamicHpMonster = {};
+		Object.defineProperty(dynamicHpMonster, "hp", {
+			get() {
+				dynamicHpReads += 1;
+				return dynamicHpReads === 1 ? { formula: "d6" } : "changed";
+			},
+		});
+		assert.equal(
+			normalizeCustomMonsterHpAverage(dynamicHpMonster),
+			dynamicHpMonster,
+		);
+		assert.equal(dynamicHpReads, 2);
+	},
+);
+
+await run(
+	"shared Bestiary mention cleanup preserves recursive projection boundaries",
+	() => {
+		const { stripMentionBrackets } = bestiaryUtils;
+		assert.equal(
+			stripMentionBrackets("[One] and [[Nested]] and [] [a[b]]"),
+			"One and [Nested] and [] [ab]",
+		);
+		assert.equal(stripMentionBrackets("[line one\nline two]"), "line one\nline two");
+		for (const value of [
+			null,
+			undefined,
+			false,
+			0,
+			42,
+			() => {},
+			Symbol("mention"),
+		]) {
+			assert.equal(stripMentionBrackets(value), value);
+		}
+
+		const sparse = [];
+		sparse.length = 4;
+		sparse[1] = "[one]";
+		sparse[3] = { text: "[three]" };
+		sparse.extra = "[not projected]";
+		const sparseResult = stripMentionBrackets(sparse);
+		assert.equal(sparseResult.length, 4);
+		assert.equal(0 in sparseResult, false);
+		assert.equal(2 in sparseResult, false);
+		assert.equal(sparseResult[1], "one");
+		assert.deepEqual(sparseResult[3], { text: "three" });
+		assert.equal(Object.hasOwn(sparseResult, "extra"), false);
+
+		const symbolKey = Symbol("hidden");
+		const prototype = { inherited: "[inherited]" };
+		const objectSource = Object.create(prototype);
+		let getterReads = 0;
+		objectSource.first = "[first]";
+		Object.defineProperty(objectSource, "second", {
+			enumerable: true,
+			get() {
+				getterReads += 1;
+				return { text: "[second]" };
+			},
+		});
+		Object.defineProperty(objectSource, "hidden", {
+			enumerable: false,
+			value: "[hidden]",
+		});
+		objectSource[symbolKey] = "[symbol]";
+		const objectResult = stripMentionBrackets(objectSource);
+		assert.deepEqual(objectResult, {
+			first: "first",
+			second: { text: "second" },
+		});
+		assert.equal(getterReads, 1);
+		assert.equal(Object.getPrototypeOf(objectResult), Object.prototype);
+		assert.equal(Object.hasOwn(objectResult, "hidden"), false);
+		assert.equal(Object.hasOwn(objectResult, symbolKey), false);
+		assert.deepEqual(Object.keys(objectResult), ["first", "second"]);
+		assert.equal(objectSource.first, "[first]");
+		assert.deepEqual(stripMentionBrackets(new Date(0)), {});
+		assert.deepEqual(stripMentionBrackets(new Map([["one", "[one]"]])), {});
+
+		const shared = { text: "[shared]" };
+		const projectedShared = stripMentionBrackets({
+			first: shared,
+			second: shared,
+		});
+		assert.deepEqual(projectedShared, {
+			first: { text: "shared" },
+			second: { text: "shared" },
+		});
+		assert.notEqual(projectedShared.first, shared);
+		assert.notEqual(projectedShared.first, projectedShared.second);
+
+		const circularObject = {};
+		circularObject.self = circularObject;
+		assert.throws(
+			() => stripMentionBrackets(circularObject),
+			RangeError,
+		);
+		const circularArray = [];
+		circularArray.push(circularArray);
+		assert.throws(() => stripMentionBrackets(circularArray), RangeError);
+		const getterError = new Error("mention getter failed");
+		const throwingObject = {};
+		Object.defineProperty(throwingObject, "value", {
+			enumerable: true,
+			get() {
+				throw getterError;
+			},
+		});
+		assert.throws(
+			() => stripMentionBrackets(throwingObject),
+			(error) => error === getterError,
+		);
+	},
+);
+
 await run("Bestiary commands own custom monsters favorites and search", async () => {
 	let monsters = [
 		{
@@ -15264,6 +26305,524 @@ await run("Bestiary commands own custom monsters favorites and search", async ()
 	});
 	assert.deepEqual(replaced, [{ name: "New One", source: "CUSTOM" }]);
 });
+
+await run(
+	"Bestiary legendary-group modifiers preserve dispatch order and copy failures",
+	() => {
+		assert.deepEqual(Object.keys(bestiaryCommandsModule), [
+			"CUSTOM_SOURCE",
+			"buildReplacementCustomMonster",
+			"createBestiaryCommands",
+			"findCustomMonsterIndex",
+			"normalizeSource",
+			"resolveLegendaryGroups",
+		]);
+		assert.equal(BESTIARY_CUSTOM_SOURCE, "CUSTOM");
+		assert.equal(
+			bestiaryRouter.__test.buildReplacementCustomMonster,
+			buildBestiaryReplacementMonster,
+		);
+		assert.equal(normalizeBestiarySource(" mm "), "MM");
+		assert.equal(
+			findCustomMonsterIndex(
+				[
+					{ id: "monster-1", name: "Перший" },
+					{ id: "monster-2", name: "Другий" },
+				],
+				" другий ",
+			),
+			1,
+		);
+
+		const modifierEvents = [];
+		const appendedMode = {};
+		Object.defineProperties(appendedMode, {
+			mode: {
+				enumerable: true,
+				get() {
+					modifierEvents.push("append:mode");
+					return "appendArr";
+				},
+			},
+			items: {
+				enumerable: true,
+				get() {
+					modifierEvents.push("append:items");
+					return ["controlled"];
+				},
+			},
+		});
+		const clonedSetting = { nested: { text: "Оригінал" } };
+		const setMode = {};
+		Object.defineProperties(setMode, {
+			mode: {
+				enumerable: true,
+				get() {
+					modifierEvents.push("set:mode");
+					return "setProp";
+				},
+			},
+			prop: {
+				enumerable: true,
+				get() {
+					modifierEvents.push("set:prop");
+					return "setting";
+				},
+			},
+			value: {
+				enumerable: true,
+				get() {
+					modifierEvents.push("set:value");
+					return clonedSetting;
+				},
+			},
+		});
+		const unknownMode = {};
+		Object.defineProperty(unknownMode, "mode", {
+			enumerable: true,
+			get() {
+				modifierEvents.push("unknown:mode");
+				return "unknown";
+			},
+		});
+		const groups = [
+			{
+				name: "Основа",
+				source: " mm ",
+				sequence: ["base"],
+				resettable: ["old"],
+				removed: "remove me",
+				control: [],
+			},
+			{
+				name: "Дитина",
+				source: "MM",
+				_copy: {
+					name: "Основа",
+					source: "mm",
+					_mod: {
+						sequence: [
+							{ mode: "appendArr", items: ["append"] },
+							{ mode: "prependArr", items: ["prepend"] },
+							{
+								mode: "appendIfNotExistsArr",
+								items: ["append", "unique"],
+							},
+							{ mode: "insertArr", index: 2, items: ["insert"] },
+							{
+								mode: "replaceArr",
+								replace: "base",
+								items: ["replaced"],
+							},
+							{ mode: "removeArr", names: ["append"] },
+						],
+						resettable: [
+							"remove",
+							{ mode: "appendArr", items: ["new"] },
+						],
+						removed: "remove",
+						ignored: [null, false, "ignored", unknownMode],
+						control: [appendedMode, setMode],
+					},
+				},
+			},
+		];
+		const resolved = resolveLegendaryGroups(groups);
+		assert.notEqual(resolved[0], groups[0]);
+		assert.equal(resolved[0].source, " mm ");
+		assert.deepEqual(resolved[1].sequence, [
+			"prepend",
+			"replaced",
+			"insert",
+			"unique",
+		]);
+		assert.deepEqual(resolved[1].resettable, ["new"]);
+		assert.equal(Object.hasOwn(resolved[1], "removed"), false);
+		assert.deepEqual(resolved[1].control, ["controlled"]);
+		assert.deepEqual(resolved[1].setting, clonedSetting);
+		assert.notEqual(resolved[1].setting, clonedSetting);
+		assert.equal(Object.hasOwn(resolved[1], "_copy"), false);
+		assert.equal(Object.hasOwn(resolved[1], "_mod"), false);
+		assert.deepEqual(modifierEvents, [
+			"unknown:mode",
+			"unknown:mode",
+			"append:mode",
+			"append:items",
+			"append:mode",
+			"set:mode",
+			"set:mode",
+			"set:prop",
+			"set:value",
+		]);
+		resolved[1].setting.nested.text = "Змінено";
+		assert.equal(clonedSetting.nested.text, "Оригінал");
+
+		assert.throws(
+			() =>
+				resolveLegendaryGroups([
+					{
+						name: "A",
+						source: "mm",
+						_copy: { name: "B", source: "MM" },
+					},
+					{
+						name: "B",
+						source: "MM",
+						_copy: { name: "A", source: "mm" },
+					},
+				]),
+			(error) =>
+				error.message ===
+				"Circular legendary group _copy chain: a|MM -> b|MM -> a|MM",
+		);
+		assert.throws(
+			() =>
+				resolveLegendaryGroups([
+					{
+						name: "Дитина",
+						source: "mm",
+						_copy: { name: "Відсутня", source: "MM" },
+					},
+				]),
+			(error) =>
+				error.message ===
+				"Base legendary group not found for Дитина (MM): Відсутня",
+		);
+	},
+);
+
+await run(
+	"Bestiary custom replacement preserves branch reads persistence and favorites",
+	async () => {
+		const events = [];
+		const previous = {
+			id: "stable-id",
+			name: " Старий Страж ",
+			source: "CUSTOM",
+			imageUrl: "/token-old.png",
+			hp: { average: 5 },
+		};
+		const other = { id: "other-id", name: "Інший", source: "CUSTOM" };
+		const monsters = [previous, other];
+		const matchingFavorite = {
+			name: "  СТАРИЙ СТРАЖ ",
+			source: " custom ",
+			pinned: true,
+		};
+		const officialFavorite = {
+			name: "Старий Страж",
+			source: "MM",
+		};
+		const unrelatedFavorite = {
+			name: "Інший",
+			source: "CUSTOM",
+		};
+		const favorites = [
+			matchingFavorite,
+			officialFavorite,
+			unrelatedFavorite,
+		];
+		const persisted = {
+			id: "persisted-id",
+			name: "  НОВИЙ СТРАЖ ",
+			source: "CUSTOM",
+			persisted: true,
+		};
+		let writtenMonsters;
+		let writtenFavorites;
+		const repository = {
+			async readCustomMonsters() {
+				events.push("readCustom");
+				return monsters;
+			},
+			async writeCustomMonsters(next) {
+				events.push("writeCustom");
+				writtenMonsters = next;
+				return [other, persisted];
+			},
+			async readFavorites() {
+				events.push("readFavorites");
+				return favorites;
+			},
+			async writeFavorites(next) {
+				events.push("writeFavorites");
+				writtenFavorites = next;
+				return next;
+			},
+		};
+		const rawMonster = {
+			id: "submitted-id",
+			name: "  Новий Страж  ",
+			hp: { average: "18" },
+		};
+		let monsterReads = 0;
+		const payload = {};
+		Object.defineProperty(payload, "monster", {
+			get() {
+				monsterReads += 1;
+				return rawMonster;
+			},
+		});
+		const result = await createBestiaryCommands(repository).updateCustom({
+			identifier: "stable-id",
+			payload,
+		});
+		assert.equal(monsterReads, 3);
+		assert.deepEqual(events, [
+			"readCustom",
+			"writeCustom",
+			"readFavorites",
+			"writeFavorites",
+		]);
+		assert.equal(writtenMonsters, monsters);
+		assert.notEqual(writtenMonsters[0], previous);
+		assert.deepEqual(writtenMonsters[0], {
+			id: "submitted-id",
+			name: "Новий Страж",
+			hp: { average: "18" },
+			source: "CUSTOM",
+			imageUrl: "/token-old.png",
+		});
+		assert.deepEqual(rawMonster, {
+			id: "submitted-id",
+			name: "  Новий Страж  ",
+			hp: { average: "18" },
+		});
+		assert.equal(result, persisted);
+		assert.notEqual(writtenFavorites[0], matchingFavorite);
+		assert.deepEqual(writtenFavorites[0], {
+			name: "Новий Страж",
+			source: "CUSTOM",
+			pinned: true,
+		});
+		assert.equal(writtenFavorites[1], officialFavorite);
+		assert.equal(writtenFavorites[2], unrelatedFavorite);
+
+		let normalizedWrite;
+		const fallbackResult = await createBestiaryCommands({
+			readCustomMonsters: async () => [
+				{
+					id: "same-id",
+					name: "Same",
+					source: "CUSTOM",
+					imageUrl: "/same.png",
+				},
+			],
+			writeCustomMonsters: async (next) => {
+				normalizedWrite = next;
+				return [];
+			},
+		}).updateCustom({
+			identifier: "same-id",
+			payload: {
+				monster: {
+					id: "same-id",
+					name: " same ",
+					hp: { average: 1, formula: "2d6" },
+				},
+			},
+		});
+		assert.equal(normalizedWrite[0].hp.average, 7);
+		assert.equal(fallbackResult.hp.average, 1);
+		assert.equal(fallbackResult.imageUrl, "/same.png");
+
+		const arrayMonster = [];
+		arrayMonster.toJSON = () => ({
+			id: "array-id",
+			name: "Array Form",
+		});
+		const arrayEvents = [];
+		const arrayResult = await createBestiaryCommands({
+			readCustomMonsters: async () => [
+				{ id: "array-id", name: "Before Array", source: "CUSTOM" },
+			],
+			writeCustomMonsters: async (next) => {
+				arrayEvents.push("writeCustom");
+				return next;
+			},
+			readFavorites: async () => {
+				arrayEvents.push("readFavorites");
+				return [];
+			},
+			writeFavorites: async () => {
+				arrayEvents.push("writeFavorites");
+			},
+		}).updateCustom({
+			identifier: "array-id",
+			payload: { monster: arrayMonster },
+		});
+		assert.equal(arrayResult.name, "Array Form");
+		assert.deepEqual(arrayEvents, [
+			"writeCustom",
+			"readFavorites",
+			"writeFavorites",
+		]);
+	},
+);
+
+await run(
+	"Bestiary custom updates preserve validation and image lookup boundaries",
+	async () => {
+		let invalidIdentifierReads = 0;
+		const invalidIdentifierCommands = createBestiaryCommands({
+			async readCustomMonsters() {
+				invalidIdentifierReads += 1;
+				return [];
+			},
+		});
+		await assert.rejects(
+			invalidIdentifierCommands.updateCustom({
+				identifier: " ",
+				payload: {},
+			}),
+			(error) =>
+				error.status === 400 &&
+				error.message === "Creature name is required.",
+		);
+		assert.equal(invalidIdentifierReads, 0);
+		await assert.rejects(
+			invalidIdentifierCommands.updateCustom({
+				identifier: "missing",
+				payload: {},
+			}),
+			(error) =>
+				error.status === 404 &&
+				error.message === "Custom creature not found.",
+		);
+		assert.equal(invalidIdentifierReads, 1);
+
+		let duplicateWrites = 0;
+		await assert.rejects(
+			createBestiaryCommands({
+				readCustomMonsters: async () => [
+					{ id: "one", name: "Один", source: "CUSTOM" },
+					{ id: "two", name: "  ДВА ", source: "CUSTOM" },
+				],
+				writeCustomMonsters: async () => {
+					duplicateWrites += 1;
+				},
+			}).updateCustom({
+				identifier: "one",
+				payload: { monster: { name: " два " } },
+			}),
+			(error) =>
+				error.status === 409 &&
+				error.message ===
+					"Custom creature with this name already exists.",
+		);
+		assert.equal(duplicateWrites, 0);
+
+		const imageEvents = [];
+		let writtenImageMonsters;
+		let selectedNameReads = 0;
+		const selectedPersisted = { id: "stable-id" };
+		Object.defineProperty(selectedPersisted, "name", {
+			enumerable: true,
+			get() {
+				selectedNameReads += 1;
+				throw new Error("selected name must remain lazy");
+			},
+		});
+		const imagePayload = {};
+		let monsterReads = 0;
+		let imageReads = 0;
+		Object.defineProperties(imagePayload, {
+			monster: {
+				get() {
+					monsterReads += 1;
+					imageEvents.push("payload:monster");
+					return null;
+				},
+			},
+			imageUrl: {
+				get() {
+					imageReads += 1;
+					imageEvents.push(`payload:image:${imageReads}`);
+					return "  /new-token.png  ";
+				},
+			},
+		});
+		const imageResult = await createBestiaryCommands({
+			async readCustomMonsters() {
+				imageEvents.push("readCustom");
+				return [
+					{
+						id: "stable-id",
+						name: "Старе ім'я",
+						source: "CUSTOM",
+						imageUrl: "/old-token.png",
+					},
+				];
+			},
+			async writeCustomMonsters(next) {
+				imageEvents.push("writeCustom");
+				writtenImageMonsters = next;
+				return [
+					{ id: "different", name: "Не збігається" },
+					selectedPersisted,
+				];
+			},
+		}).updateCustom({
+			identifier: "stable-id",
+			payload: imagePayload,
+		});
+		assert.equal(imageResult, selectedPersisted);
+		assert.equal(monsterReads, 1);
+		assert.equal(imageReads, 2);
+		assert.equal(selectedNameReads, 0);
+		assert.equal(writtenImageMonsters[0].imageUrl, "/new-token.png");
+		assert.deepEqual(imageEvents, [
+			"readCustom",
+			"payload:monster",
+			"payload:image:1",
+			"payload:image:2",
+			"writeCustom",
+		]);
+
+		let nullImageReads = 0;
+		const nullImagePayload = {
+			get monster() {
+				return false;
+			},
+			get imageUrl() {
+				nullImageReads += 1;
+				return null;
+			},
+		};
+		const nullImageResult = await createBestiaryCommands({
+			readCustomMonsters: async () => [
+				{ id: "null-id", name: "Null image", imageUrl: "/before.png" },
+			],
+			writeCustomMonsters: async () => [],
+		}).updateCustom({
+			identifier: "null-id",
+			payload: nullImagePayload,
+		});
+		assert.equal(nullImageReads, 1);
+		assert.equal(nullImageResult.imageUrl, null);
+
+		let falsyIdReads = 0;
+		const nameSelected = { name: "No ID" };
+		Object.defineProperty(nameSelected, "id", {
+			enumerable: true,
+			get() {
+				falsyIdReads += 1;
+				throw new Error("falsy previous ID must skip persisted ID reads");
+			},
+		});
+		const nameResult = await createBestiaryCommands({
+			readCustomMonsters: async () => [
+				{ id: 0, name: "No ID", imageUrl: null },
+			],
+			writeCustomMonsters: async () => [nameSelected],
+		}).updateCustom({
+			identifier: "No ID",
+			payload: { imageUrl: "" },
+		});
+		assert.equal(nameResult, nameSelected);
+		assert.equal(falsyIdReads, 0);
+	},
+);
 
 await run("custom monster replacement preserves token image when renamed", () => {
 	const { buildReplacementCustomMonster } = bestiaryRouter.__test;
@@ -20617,6 +32176,535 @@ await run("storage core helpers sanitize and build identifiers", () => {
 	);
 });
 
+async function withMockedStorageSettingsFile(testBody) {
+	const originalAccess = fs.access;
+	const originalReadFile = fs.readFile;
+	const originalMkdir = fs.mkdir;
+	const originalWriteFile = fs.writeFile;
+	const originalRename = fs.rename;
+	const originalRm = fs.rm;
+	const settingsPath = path.join(storage.DATA_DIR, "settings.json");
+	const state = {
+		fileExists: true,
+		fileContent: "{}",
+		readError: null,
+		writeErrors: [],
+		renameErrors: [],
+		events: [],
+		writePayloads: [],
+		pendingWrites: new Map(),
+		reset({
+			exists = true,
+			content = "{}",
+			readError = null,
+			writeErrors = [],
+			renameErrors = [],
+		} = {}) {
+			this.fileExists = exists;
+			this.fileContent = content;
+			this.readError = readError;
+			this.writeErrors = [...writeErrors];
+			this.renameErrors = [...renameErrors];
+			this.events.length = 0;
+			this.writePayloads.length = 0;
+			this.pendingWrites.clear();
+		},
+	};
+	try {
+		fs.access = async (filePath) => {
+			state.events.push(["access", filePath]);
+			assert.equal(filePath, settingsPath);
+			if (!state.fileExists) throw new Error("settings missing");
+		};
+		fs.readFile = async (filePath, encoding) => {
+			state.events.push(["read", filePath]);
+			assert.equal(filePath, settingsPath);
+			assert.equal(encoding, "utf8");
+			if (state.readError) throw state.readError;
+			return state.fileContent;
+		};
+		fs.mkdir = async (directory, options) => {
+			state.events.push(["mkdir", directory]);
+			assert.equal(directory, storage.DATA_DIR);
+			assert.deepEqual(options, { recursive: true });
+		};
+		fs.writeFile = async (filePath, content, encoding) => {
+			state.events.push(["write", filePath]);
+			assert.equal(path.dirname(filePath), storage.DATA_DIR);
+			assert.match(path.basename(filePath), /^\.settings\.json\..+\.tmp$/);
+			assert.equal(encoding, "utf8");
+			state.writePayloads.push(JSON.parse(content));
+			state.pendingWrites.set(filePath, content);
+			const error = state.writeErrors.shift();
+			if (error) throw error;
+		};
+		fs.rename = async (oldPath, newPath) => {
+			state.events.push(["rename", oldPath, newPath]);
+			assert.equal(newPath, settingsPath);
+			const error = state.renameErrors.shift();
+			if (error) throw error;
+			state.fileContent = state.pendingWrites.get(oldPath);
+			state.fileExists = true;
+			state.pendingWrites.delete(oldPath);
+		};
+		fs.rm = async (filePath, options) => {
+			state.events.push(["rm", filePath]);
+			assert.deepEqual(options, { force: true });
+			state.pendingWrites.delete(filePath);
+		};
+		await testBody(state, settingsPath);
+	} finally {
+		fs.access = originalAccess;
+		fs.readFile = originalReadFile;
+		fs.mkdir = originalMkdir;
+		fs.writeFile = originalWriteFile;
+		fs.rename = originalRename;
+		fs.rm = originalRm;
+	}
+}
+
+await run(
+	"storage settings reads normalize defaults prompts and exact rewrite policy",
+	async () => {
+		await withMockedStorageSettingsFile(async (state) => {
+			state.reset({ exists: false });
+			const firstDefaults = await storage.readSettings();
+			assert.deepEqual(state.writePayloads, [firstDefaults]);
+
+			state.reset({ content: JSON.stringify(firstDefaults) });
+			const stable = await storage.readSettings();
+			assert.deepEqual(stable, firstDefaults);
+			assert.notEqual(stable, firstDefaults);
+			assert.deepEqual(state.writePayloads, []);
+
+			state.reset({
+				content: JSON.stringify({
+					language: "uk",
+					theme: "dark",
+					encounterViewMode: "grid",
+					encounterGridColumns: "9px",
+					simplifiedNotes: "так",
+					aiBasePrompt: 0,
+					imagePromptBasePrompt: null,
+					campaignAiBasePrompts: {
+						"  Київ  ": "перша",
+						Київ: "остання",
+						"   ": "відкинути",
+						zero: 0,
+					},
+					campaignImagePromptBasePrompts: ["malformed"],
+					ignoreSourcesList: [" mm ", "MM", "phb", "", null],
+					autoApplyAiChanges: false,
+					useSearchDebounce: 0,
+				}),
+			});
+			const normalized = await storage.readSettings();
+			assert.deepEqual(normalized, {
+				language: "uk",
+				theme: "dark",
+				encounterViewMode: "grid",
+				encounterGridColumns: 4,
+				simplifiedNotes: true,
+				aiBasePrompt: "",
+				imagePromptBasePrompt: "",
+				campaignAiBasePrompts: {
+					Київ: "остання",
+					zero: "",
+				},
+				campaignImagePromptBasePrompts: {},
+				ignoreSourcesList: ["MM", "PHB"],
+				autoApplyAiChanges: false,
+				useSearchDebounce: true,
+			});
+			assert.deepEqual(state.writePayloads, [normalized]);
+
+			state.reset({
+				content: JSON.stringify({
+					encounterGridColumns: "-8",
+					imagePromptBasePrompt: false,
+					campaignAiBasePrompts: false,
+					campaignImagePromptBasePrompts: null,
+					autoApplyAiChanges: 0,
+					useSearchDebounce: null,
+				}),
+			});
+			const fallbacks = await storage.readSettings();
+			assert.equal(fallbacks.language, "en");
+			assert.equal(fallbacks.theme, "light");
+			assert.equal(fallbacks.encounterViewMode, "single");
+			assert.equal(fallbacks.encounterGridColumns, 1);
+			assert.equal(fallbacks.imagePromptBasePrompt, "");
+			assert.deepEqual(fallbacks.campaignAiBasePrompts, {});
+			assert.deepEqual(fallbacks.campaignImagePromptBasePrompts, {});
+			assert.equal(fallbacks.autoApplyAiChanges, true);
+			assert.equal(fallbacks.useSearchDebounce, true);
+		});
+	},
+);
+
+await run(
+	"storage settings recovery and updates preserve write order and failure boundaries",
+	async () => {
+		await withMockedStorageSettingsFile(async (state) => {
+			state.reset({ exists: false });
+			const defaults = await storage.readSettings();
+
+			state.reset({ content: "null" });
+			const nullRecovery = await storage.readSettings();
+			assert.deepEqual(nullRecovery, defaults);
+			assert.notEqual(nullRecovery, defaults);
+			assert.deepEqual(state.writePayloads, [defaults]);
+
+			const rewriteFailure = new Error("normalized rewrite failed");
+			state.reset({
+				content: JSON.stringify({ language: "uk" }),
+				writeErrors: [rewriteFailure, null],
+			});
+			const rewriteRecovery = await storage.readSettings();
+			assert.deepEqual(rewriteRecovery, defaults);
+			assert.equal(state.writePayloads.length, 2);
+			assert.equal(state.writePayloads[0].language, "uk");
+			assert.deepEqual(state.writePayloads[1], defaults);
+			assert.equal(
+				state.events.filter(([event]) => event === "rm").length,
+				1,
+			);
+
+			const fallbackFailure = new Error("default recovery failed");
+			state.reset({
+				content: "{broken",
+				writeErrors: [fallbackFailure],
+			});
+			await assert.rejects(storage.readSettings(), fallbackFailure);
+			assert.deepEqual(state.writePayloads, [defaults]);
+
+			const missingWriteFailure = new Error("missing-file write failed");
+			state.reset({
+				exists: false,
+				writeErrors: [missingWriteFailure],
+			});
+			await assert.rejects(storage.readSettings(), missingWriteFailure);
+			assert.deepEqual(state.writePayloads, [defaults]);
+
+			state.reset({ content: JSON.stringify(defaults) });
+			let languageReads = 0;
+			let promptReads = 0;
+			const patch = {
+				get language() {
+					languageReads += 1;
+					return "uk";
+				},
+				get campaignAiBasePrompts() {
+					promptReads += 1;
+					return { "  кампанія  ": "  Київ  " };
+				},
+				encounterGridColumns: "3.9",
+			};
+			const updated = await storage.updateSettings(patch);
+			assert.equal(languageReads, 1);
+			assert.equal(promptReads, 1);
+			assert.equal(updated.language, "uk");
+			assert.equal(updated.encounterGridColumns, 3);
+			assert.deepEqual(updated.campaignAiBasePrompts, {
+				кампанія: "  Київ  ",
+			});
+			assert.deepEqual(state.writePayloads, [updated]);
+			assert.deepEqual(
+				state.events.map(([event]) => event),
+				["access", "read", "mkdir", "write", "rename"],
+			);
+
+			state.reset({ content: "{broken" });
+			const recoveredUpdate = await storage.updateSettings({
+				theme: "dark",
+			});
+			assert.equal(recoveredUpdate.theme, "dark");
+			assert.deepEqual(state.writePayloads, [
+				defaults,
+				{ ...defaults, theme: "dark" },
+			]);
+
+			const updateFailure = new Error("final update failed");
+			state.reset({
+				content: JSON.stringify(defaults),
+				writeErrors: [updateFailure],
+			});
+			await assert.rejects(
+				storage.updateSettings({ language: "uk" }),
+				updateFailure,
+			);
+			assert.equal(state.writePayloads.length, 1);
+			assert.equal(state.writePayloads[0].language, "uk");
+		});
+	},
+);
+
+async function withMockedEntityListingFs(testBody) {
+	const originalMkdir = fs.mkdir;
+	const originalReadDir = fs.readdir;
+	const originalAccess = fs.access;
+	const originalReadFile = fs.readFile;
+	const state = {
+		entries: [],
+		existingPaths: new Set(),
+		fileContents: new Map(),
+		readErrors: new Map(),
+		mkdirError: null,
+		readdirError: null,
+		events: [],
+		reset({
+			entries = [],
+			existingPaths = [],
+			fileContents = [],
+			readErrors = [],
+			mkdirError = null,
+			readdirError = null,
+		} = {}) {
+			this.entries = entries;
+			this.existingPaths = new Set(existingPaths);
+			this.fileContents = new Map(fileContents);
+			this.readErrors = new Map(readErrors);
+			this.mkdirError = mkdirError;
+			this.readdirError = readdirError;
+			this.events.length = 0;
+		},
+	};
+	try {
+		fs.mkdir = async (directory, options) => {
+			state.events.push(["mkdir", directory]);
+			assert.deepEqual(options, { recursive: true });
+			if (state.mkdirError) throw state.mkdirError;
+		};
+		fs.readdir = async (directory, options) => {
+			state.events.push(["readdir", directory]);
+			assert.deepEqual(options, { withFileTypes: true });
+			if (state.readdirError) throw state.readdirError;
+			return state.entries;
+		};
+		fs.access = async (filePath) => {
+			state.events.push(["access", filePath]);
+			if (!state.existingPaths.has(filePath)) throw new Error("missing info");
+		};
+		fs.readFile = async (filePath, encoding) => {
+			state.events.push(["read", filePath]);
+			assert.equal(encoding, "utf8");
+			if (state.readErrors.has(filePath)) throw state.readErrors.get(filePath);
+			if (!state.fileContents.has(filePath)) {
+				throw new Error(`unexpected entity read: ${filePath}`);
+			}
+			return state.fileContents.get(filePath);
+		};
+		await testBody(state);
+	} finally {
+		fs.mkdir = originalMkdir;
+		fs.readdir = originalReadDir;
+		fs.access = originalAccess;
+		fs.readFile = originalReadFile;
+	}
+}
+
+await run(
+	"storage entity listing preserves traversal projection and entry access order",
+	async () => {
+		await withMockedEntityListingFs(async (state) => {
+			const campaignSlug = "../Кампанія";
+			const type = "npc";
+			const entitiesDir = path.join(storage.campaignDir(campaignSlug), type);
+			const infoPath = (slug) => path.join(entitiesDir, slug, "info.json");
+			const nameReads = new Map();
+			const entry = (names, isDirectory = true) => {
+				const values = Array.isArray(names) ? names : [names];
+				const label = values.join(" -> ");
+				return {
+					get name() {
+						const reads = (nameReads.get(label) || 0) + 1;
+						nameReads.set(label, reads);
+						return values[Math.min(reads - 1, values.length - 1)];
+					},
+					isDirectory() {
+						state.events.push(["isDirectory", label]);
+						return isDirectory;
+					},
+				};
+			};
+			const dynamicEntry = entry(["шлях-читання", "примусовий-slug"]);
+			state.reset({
+				entries: [
+					entry("не-каталог", false),
+					entry("відсутній"),
+					dynamicEntry,
+					entry("нуль"),
+					entry("рядок"),
+				],
+				existingPaths: [
+					infoPath("шлях-читання"),
+					infoPath("нуль"),
+					infoPath("рядок"),
+				],
+				fileContents: [
+					[
+						infoPath("шлях-читання"),
+						JSON.stringify({
+							slug: "збережений-slug",
+							name: "Лісовик",
+							order: 2,
+							updatedAt: "removed",
+						}),
+					],
+					[infoPath("нуль"), "null"],
+					[infoPath("рядок"), JSON.stringify("дух")],
+				],
+			});
+
+			const listed = await storage.listEntities(campaignSlug, type);
+			assert.equal(listed.length, 3);
+			const bySlug = new Map(listed.map((entity) => [entity.slug, entity]));
+			assert.deepEqual(bySlug.get("примусовий-slug"), {
+				name: "Лісовик",
+				order: 2,
+				slug: "примусовий-slug",
+			});
+			assert.deepEqual(bySlug.get("нуль"), { slug: "нуль" });
+			assert.deepEqual(bySlug.get("рядок"), {
+				0: "д",
+				1: "у",
+				2: "х",
+				slug: "рядок",
+			});
+			assert.equal(listed.at(-1).slug, "примусовий-slug");
+			assert.equal(nameReads.get("не-каталог") || 0, 0);
+			assert.equal(nameReads.get("відсутній"), 1);
+			assert.equal(nameReads.get("шлях-читання -> примусовий-slug"), 2);
+			assert.deepEqual(
+				state.events
+					.filter(([event]) => event === "read")
+					.map(([, filePath]) => filePath),
+				[
+					infoPath("шлях-читання"),
+					infoPath("нуль"),
+					infoPath("рядок"),
+				],
+			);
+			assert.deepEqual(state.events.slice(0, 2), [
+				["mkdir", entitiesDir],
+				["readdir", entitiesDir],
+			]);
+		});
+	},
+);
+
+await run(
+	"storage entity listing preserves sorting fallbacks stability and failures",
+	async () => {
+		await withMockedEntityListingFs(async (state) => {
+			const entitiesDir = path.join(storage.campaignDir("sorting"), "characters");
+			const infoPath = (slug) => path.join(entitiesDir, slug, "info.json");
+			const entry = (name, classifierError = null) => ({
+				name,
+				isDirectory() {
+					if (classifierError) throw classifierError;
+					return true;
+				},
+			});
+			const rows = [
+				["order-three", { order: 3, name: "Last" }],
+				["stable-one", { order: 1, name: "Same" }],
+				["invalid-z", { order: "Infinity", name: "Zulu" }],
+				["negative", { order: "-1", name: "Negative" }],
+				[
+					"person-name",
+					{ order: 1, name: "", firstName: "  Anna", lastName: "Bell  " },
+				],
+				["slug-fallback", { order: 1, name: 0, firstName: "", lastName: "" }],
+				["stable-two", { order: 1, name: "Same" }],
+				["decimal", { order: "2.9", name: "Decimal" }],
+				["invalid-a", { order: "bad", name: "Alpha" }],
+			];
+			state.reset({
+				entries: rows.map(([slug]) => entry(slug)),
+				existingPaths: rows.map(([slug]) => infoPath(slug)),
+				fileContents: rows.map(([slug, data]) => [
+					infoPath(slug),
+					JSON.stringify(data),
+				]),
+			});
+			const sorted = await storage.listEntities("sorting", "characters");
+			assert.equal(sorted[0].slug, "negative");
+			assert.deepEqual(
+				sorted.slice(1, 3).map((entity) => entity.slug),
+				["invalid-a", "invalid-z"],
+			);
+			assert.deepEqual(
+				sorted
+					.filter((entity) => Number(entity.order) === 1)
+					.map((entity) => entity.slug),
+				["person-name", "stable-one", "stable-two", "slug-fallback"],
+			);
+			assert.deepEqual(sorted.slice(-2).map((entity) => entity.slug), [
+				"decimal",
+				"order-three",
+			]);
+
+			const secondReadError = new Error("second entity read failed");
+			state.reset({
+				entries: [entry("first"), entry("second"), entry("third")],
+				existingPaths: [
+					infoPath("first"),
+					infoPath("second"),
+					infoPath("third"),
+				],
+				fileContents: [
+					[infoPath("first"), JSON.stringify({ name: "First" })],
+					[infoPath("third"), JSON.stringify({ name: "Third" })],
+				],
+				readErrors: [[infoPath("second"), secondReadError]],
+			});
+			await assert.rejects(
+				storage.listEntities("sorting", "characters"),
+				secondReadError,
+			);
+			assert.deepEqual(
+				state.events
+					.filter(([event]) => event === "read")
+					.map(([, filePath]) => filePath),
+				[infoPath("first"), infoPath("second")],
+			);
+
+			const classifierError = new Error("entry classification failed");
+			state.reset({
+				entries: [entry("broken", classifierError), entry("unread")],
+			});
+			await assert.rejects(
+				storage.listEntities("sorting", "characters"),
+				classifierError,
+			);
+			assert.equal(
+				state.events.some(([event]) => event === "access"),
+				false,
+			);
+
+			const mkdirError = new Error("entity directory create failed");
+			state.reset({ mkdirError });
+			await assert.rejects(
+				storage.listEntities("sorting", "characters"),
+				mkdirError,
+			);
+			assert.deepEqual(state.events.map(([event]) => event), ["mkdir"]);
+
+			const readdirError = new Error("entity directory read failed");
+			state.reset({ readdirError });
+			await assert.rejects(
+				storage.listEntities("sorting", "characters"),
+				readdirError,
+			);
+			assert.deepEqual(
+				state.events.map(([event]) => event),
+				["mkdir", "readdir"],
+			);
+		});
+	},
+);
+
 await run(
 	"storage writes JSON atomically and normalizes custom monsters",
 	async () => {
@@ -20653,6 +32741,292 @@ await run(
 			});
 		} finally {
 			await fs.rm(atomicPath, { force: true });
+		}
+	},
+);
+
+await run(
+	"storage custom Bestiary reads preserve envelope precedence and source forcing",
+	async () => {
+		const originalAccess = fs.access;
+		const originalReadFile = fs.readFile;
+		const customBestiaryPath = path.join(
+			storage.DATA_DIR,
+			"custom-bestiary.json",
+		);
+		let fileExists = false;
+		let fileValue = null;
+		const events = [];
+		try {
+			fs.access = async (filePath) => {
+				events.push(`access:${filePath}`);
+				assert.equal(filePath, customBestiaryPath);
+				if (!fileExists) throw new Error("missing");
+			};
+			fs.readFile = async (filePath, encoding) => {
+				events.push(`read:${filePath}`);
+				assert.equal(filePath, customBestiaryPath);
+				assert.equal(encoding, "utf8");
+				return JSON.stringify(fileValue);
+			};
+
+			const firstMissing = await storage.readCustomBestiary();
+			const secondMissing = await storage.readCustomBestiary();
+			assert.deepEqual(firstMissing, { monster: [] });
+			assert.deepEqual(secondMissing, { monster: [] });
+			assert.notEqual(firstMissing, secondMissing);
+			assert.equal(events.some((event) => event.startsWith("read:")), false);
+
+			fileExists = true;
+			fileValue = {
+				title: "Київський бестіарій",
+				monsters: [
+					{ name: "Мавка", source: "OTHER", updatedAt: "removed" },
+					null,
+					"дух",
+					7,
+					["рядок"],
+				],
+			};
+			assert.deepEqual(await storage.readCustomBestiary(), {
+				title: "Київський бестіарій",
+				monsters: [
+					{ name: "Мавка", source: "OTHER" },
+					null,
+					"дух",
+					7,
+					["рядок"],
+				],
+				monster: [
+					{ name: "Мавка", source: "CUSTOM" },
+					{ source: "CUSTOM" },
+					{ 0: "д", 1: "у", 2: "х", source: "CUSTOM" },
+					{ source: "CUSTOM" },
+					{ 0: "рядок", source: "CUSTOM" },
+				],
+			});
+
+			fileValue = {
+				monster: { name: "truthy malformed winner" },
+				monsters: [{ name: "must not fall through" }],
+				results: [{ name: "must not win" }],
+			};
+			assert.deepEqual(await storage.readCustomBestiaryMonsters(), []);
+
+			fileValue = [{ name: "Привид", extra: true }];
+			assert.deepEqual(await storage.readCustomBestiary(), {
+				monster: [{ name: "Привид", extra: true, source: "CUSTOM" }],
+			});
+
+			fileValue = null;
+			await assert.rejects(storage.readCustomBestiary(), TypeError);
+		} finally {
+			fs.access = originalAccess;
+			fs.readFile = originalReadFile;
+		}
+	},
+);
+
+await run(
+	"storage Bestiary index preserves custom-first aggregate and file fallback policy",
+	async () => {
+		const originalAccess = fs.access;
+		const originalReadDir = fs.readdir;
+		const originalReadFile = fs.readFile;
+		const customBestiaryPath = path.join(
+			storage.DATA_DIR,
+			"custom-bestiary.json",
+		);
+		const allPath = path.join(storage.BESTIARY_DIR, "all.json");
+		let existingPaths = new Set();
+		let fileValues = new Map();
+		let directoryEntries = [];
+		const events = [];
+		const entry = (name, isFile = true) => ({
+			get name() {
+				events.push(`name:${name}`);
+				return name;
+			},
+			isFile() {
+				events.push(`file:${name}`);
+				return isFile;
+			},
+		});
+		const setScenario = ({ existing, files, entries = [] }) => {
+			existingPaths = new Set(existing);
+			fileValues = new Map(files);
+			directoryEntries = entries;
+			events.length = 0;
+		};
+		try {
+			fs.access = async (filePath) => {
+				const key = String(filePath);
+				events.push(`access:${key}`);
+				if (!existingPaths.has(key)) throw new Error("missing");
+			};
+			fs.readFile = async (filePath, encoding) => {
+				const key = String(filePath);
+				events.push(`read:${key}`);
+				assert.equal(encoding, "utf8");
+				if (!fileValues.has(key)) {
+					throw new Error(`unexpected read: ${key}`);
+				}
+				const value = fileValues.get(key);
+				if (value instanceof Error) throw value;
+				return JSON.stringify(value);
+			};
+			fs.readdir = async (directory, options) => {
+				events.push(`readdir:${directory}`);
+				assert.equal(directory, storage.BESTIARY_DIR);
+				assert.deepEqual(options, { withFileTypes: true });
+				return directoryEntries;
+			};
+
+			setScenario({
+				existing: [customBestiaryPath],
+				files: [
+					[
+						customBestiaryPath,
+						{
+							monster: [
+								{ name: "  Мавка  ", marker: "first" },
+								{ name: "Мавка", marker: "last" },
+							],
+						},
+					],
+				],
+			});
+			const customOnly = await storage.getBestiaryIndex();
+			assert.deepEqual([...customOnly.keys()], ["мавка|CUSTOM"]);
+			assert.equal(customOnly.get("мавка|CUSTOM").marker, "last");
+			assert.deepEqual(events.slice(0, 3), [
+				`access:${customBestiaryPath}`,
+				`read:${customBestiaryPath}`,
+				`access:${storage.BESTIARY_DIR}`,
+			]);
+
+			setScenario({
+				existing: [customBestiaryPath, storage.BESTIARY_DIR, allPath],
+				files: [
+					[
+						customBestiaryPath,
+						{ monster: [{ name: "Спільний", marker: "custom" }] },
+					],
+					[
+						allPath,
+						[
+							{
+								name: "  Спільний  ",
+								source: "custom",
+								marker: "official",
+							},
+							{ name: "Вовк", source: "mm", marker: "first wolf" },
+							{ name: "Вовк", source: "MM", marker: "last wolf" },
+							{ name: "", source: "MM", marker: "ignored" },
+						],
+					],
+				],
+				entries: [entry("must-not-be-read.json")],
+			});
+			const aggregate = await storage.getBestiaryIndex();
+			assert.deepEqual([...aggregate.keys()], ["спільний|CUSTOM", "вовк|MM"]);
+			assert.deepEqual(
+				[...aggregate.values()].map((monster) => monster.marker),
+				["custom", "last wolf"],
+			);
+			assert.equal(
+				events.some((event) => event.startsWith("readdir:")),
+				false,
+			);
+
+			const firstPath = path.join(
+				storage.BESTIARY_DIR,
+				"bestiary-перший.json",
+			);
+			const secondPath = path.join(storage.BESTIARY_DIR, "bestiary-mm.json");
+			setScenario({
+				existing: [customBestiaryPath, storage.BESTIARY_DIR],
+				files: [
+					[customBestiaryPath, { monster: [{ name: "Свій" }] }],
+					[
+						firstPath,
+						{
+							_meta: { sources: [{ json: "укр" }] },
+							monster: [{ name: "Лісовик" }],
+						},
+					],
+					[secondPath, { results: [{ name: "Owlbear" }] }],
+				],
+				entries: [
+					entry("folder.json", false),
+					entry("index.json"),
+					entry("legendarygroups.json"),
+					entry("all.json"),
+					entry("ignored.JSON"),
+					entry("bestiary-перший.json"),
+					entry("bestiary-mm.json"),
+				],
+			});
+			const fallback = await storage.getBestiaryIndex();
+			assert.deepEqual([...fallback.keys()], [
+				"лісовик|УКР",
+				"owlbear|MM",
+				"свій|CUSTOM",
+			]);
+			assert.deepEqual(
+				events.filter((event) => event.startsWith("read:")),
+				[
+					`read:${customBestiaryPath}`,
+					`read:${firstPath}`,
+					`read:${secondPath}`,
+				],
+			);
+			assert.equal(events.includes("name:folder.json"), false);
+
+			const failedPath = path.join(storage.BESTIARY_DIR, "bestiary-fail.json");
+			const unreadPath = path.join(
+				storage.BESTIARY_DIR,
+				"bestiary-unread.json",
+			);
+			setScenario({
+				existing: [customBestiaryPath, storage.BESTIARY_DIR],
+				files: [
+					[customBestiaryPath, { monster: [] }],
+					[firstPath, { monster: [{ name: "First" }] }],
+					[failedPath, new Error("second file failed")],
+					[unreadPath, { monster: [{ name: "Too late" }] }],
+				],
+				entries: [
+					entry("bestiary-перший.json"),
+					entry("bestiary-fail.json"),
+					entry("bestiary-unread.json"),
+				],
+			});
+			await assert.rejects(
+				storage.getBestiaryIndex(),
+				/second file failed/,
+			);
+			assert.deepEqual(
+				events.filter((event) => event.startsWith("read:")),
+				[
+					`read:${customBestiaryPath}`,
+					`read:${firstPath}`,
+					`read:${failedPath}`,
+				],
+			);
+
+			setScenario({
+				existing: [customBestiaryPath, storage.BESTIARY_DIR, allPath],
+				files: [
+					[customBestiaryPath, { monster: [] }],
+					[allPath, { monster: { name: "not iterable" } }],
+				],
+			});
+			await assert.rejects(storage.getBestiaryIndex(), TypeError);
+		} finally {
+			fs.access = originalAccess;
+			fs.readdir = originalReadDir;
+			fs.readFile = originalReadFile;
 		}
 	},
 );
@@ -21529,6 +33903,205 @@ await run(
 );
 
 await run(
+	"partial campaign entity slugs preserve basename fallbacks and overwrite order",
+	async () => {
+		const targetSlug = makeTestSlug("partial-entity-slugs");
+		const events = [];
+		const lazyEntity = (id, fields) => {
+			const entity = { id };
+			for (const [field, value] of Object.entries(fields)) {
+				Object.defineProperty(entity, field, {
+					configurable: true,
+					get() {
+						events.push(`${id}:${field}`);
+						return typeof value === "function" ? value() : value;
+					},
+				});
+			}
+			return entity;
+		};
+		try {
+			await storage.writeJson(storage.campaignMetaPath(targetSlug), {
+				id: `${targetSlug}-id`,
+				name: "Цільова кампанія",
+				slug: targetSlug,
+			});
+
+			const firstName = {
+				[Symbol.toPrimitive](hint) {
+					events.push(`fallback-firstName:coerce:${hint}`);
+					return "Ім'я Героя";
+				},
+			};
+			const arrayEntity = [];
+			Object.defineProperty(arrayEntity, "slug", {
+				get() {
+					events.push("array-row:slug");
+					return "nested/array-row";
+				},
+			});
+			const npcRows = [
+				lazyEntity("posix", {
+					slug: "  ../nested/вартовий  ",
+					firstName: () => {
+						throw new Error("valid slug must not read firstName");
+					},
+				}),
+				lazyEntity("windows", {
+					slug: "..\\folder\\guardian",
+					firstName: () => {
+						throw new Error("valid slug must not read firstName");
+					},
+				}),
+				lazyEntity("fallback-firstName", {
+					slug: ".",
+					firstName,
+					name: () => {
+						throw new Error("truthy firstName must not read name");
+					},
+				}),
+				lazyEntity("fallback-name", {
+					slug: "..",
+					firstName: 0,
+					name: "Стара Брама",
+				}),
+				lazyEntity("fallback-type", {
+					slug: "",
+					firstName: "",
+					name: false,
+				}),
+				lazyEntity("symbol", { slug: Symbol("token") }),
+				lazyEntity("bigint", { slug: 7n }),
+				arrayEntity,
+				lazyEntity("duplicate-first", { slug: "repeat" }),
+				lazyEntity("duplicate-last", { slug: "nested/repeat" }),
+			];
+
+			const result = await storage.importCampaignPartialArchiveBundle(
+				targetSlug,
+				{
+					sections: ["locations", "npc"],
+					bundle: {
+						meta: { slug: "source-campaign" },
+						entities: {
+							npc: npcRows,
+							locations: [null, 42, false],
+						},
+					},
+				},
+			);
+
+			assert.equal(result.imported.npc, npcRows.length);
+			assert.equal(result.imported.locations, 3);
+			assert.deepEqual(events, [
+				"posix:slug",
+				"windows:slug",
+				"fallback-firstName:slug",
+				"fallback-firstName:firstName",
+				"fallback-firstName:coerce:string",
+				"fallback-name:slug",
+				"fallback-name:firstName",
+				"fallback-name:name",
+				"fallback-type:slug",
+				"fallback-type:firstName",
+				"fallback-type:name",
+				"symbol:slug",
+				"bigint:slug",
+				"array-row:slug",
+				"duplicate-first:slug",
+				"duplicate-last:slug",
+			]);
+
+			const importedNpcs = await storage.listEntities(targetSlug, "npc");
+			assert.deepEqual(
+				new Set(importedNpcs.map((entity) => entity.slug)),
+				new Set([
+					"вартовий",
+					"guardian",
+					"ім-я-героя",
+					"стара-брама",
+					"npc",
+					"Symbol(token)",
+					"7",
+					"array-row",
+					"repeat",
+				]),
+			);
+			assert.equal(
+				importedNpcs.find((entity) => entity.slug === "repeat")?.id,
+				"duplicate-last",
+			);
+			assert.equal(
+				await storage.exists(
+					path.join(storage.campaignDir(targetSlug), "npc", "repeat-2"),
+				),
+				false,
+			);
+			assert.deepEqual(
+				(await storage.listEntities(targetSlug, "locations")).map(
+					(entity) => entity.slug,
+				),
+				["locations"],
+			);
+		} finally {
+			await cleanupTestData(targetSlug);
+		}
+	},
+);
+
+await run(
+	"partial campaign entity slug coercion fails before entity persistence",
+	async () => {
+		const targetSlug = makeTestSlug("partial-entity-slug-failure");
+		const events = [];
+		const invalidSlug = {
+			[Symbol.toPrimitive](hint) {
+				events.push(`coerce:${hint}`);
+				throw new Error("entity slug coercion failed");
+			},
+		};
+		const entity = { id: "never-written" };
+		Object.defineProperty(entity, "slug", {
+			get() {
+				events.push("slug");
+				return invalidSlug;
+			},
+		});
+		Object.defineProperty(entity, "firstName", {
+			get() {
+				events.push("firstName");
+				throw new Error("firstName must remain lazy");
+			},
+		});
+		try {
+			await storage.writeJson(storage.campaignMetaPath(targetSlug), {
+				id: `${targetSlug}-id`,
+				name: "Цільова кампанія",
+				slug: targetSlug,
+			});
+			await assert.rejects(
+				storage.importCampaignPartialArchiveBundle(targetSlug, {
+					sections: ["npc"],
+					bundle: {
+						entities: { npc: [entity] },
+					},
+				}),
+				/entity slug coercion failed/,
+			);
+			assert.deepEqual(events, ["slug", "coerce:string"]);
+			assert.equal(
+				await storage.exists(
+					path.join(storage.campaignDir(targetSlug), "npc"),
+				),
+				false,
+			);
+		} finally {
+			await cleanupTestData(targetSlug);
+		}
+	},
+);
+
+await run(
 	"encounter monster helpers use special HP and detect formulas",
 	() => {
 		assert.equal(
@@ -21610,6 +34183,873 @@ await run("local encounter AI monster edits preserve source", () => {
 	assert.equal(editedMonster._localOverride, true);
 	assert.equal(editedMonster.hit_points, 30);
 });
+
+await run(
+	"local encounter AI flow preserves operation and history contracts",
+	async () => {
+		const events = [];
+		let skippedEntityReads = 0;
+		let skippedOperationReads = 0;
+		let patchReads = 0;
+		let snapshotInput = null;
+		let historyPayload = null;
+		const patch = {
+			name: "Orc Ascendant",
+			hp: { average: 30, formula: "4d10+8" },
+			imageUrl: undefined,
+			originalBestiaryName: undefined,
+		};
+		const generatedContent = {
+			narrative: "The orc changes.",
+			operations: [
+				{
+					get entity() {
+						skippedEntityReads += 1;
+						return "spell";
+					},
+					get op() {
+						skippedOperationReads += 1;
+						return "update";
+					},
+				},
+				{
+					entity: " Custom-Monster ",
+					op: " UPDATE ",
+					id: "operation-id",
+					targetId: "target-id",
+					get patch() {
+						patchReads += 1;
+						return patch;
+					},
+				},
+			],
+		};
+		const payload = {
+			historyMode: "encounter",
+			type: "custom-monster",
+			path: {
+				campaign: " camp ",
+				session: " session.json ",
+				encounter: " enc-1 ",
+			},
+			targetInstanceId: " inst-1 ",
+			attachedImages: [{ name: "token.png" }],
+			attachedFiles: [{ name: "notes.txt" }],
+		};
+		const customMonsterTarget = {
+			id: "orc-id",
+			instanceId: "inst-1",
+			name: "Orc Brute",
+			originalBestiaryName: "Orc",
+			imageUrl: "/api/images/orc.png",
+			hp: { average: 15 },
+		};
+		const customSession = {
+			fileName: "session.json",
+			data: {
+				encounters: [
+					{
+						id: "enc-1",
+						monsters: [
+							{
+								instanceId: "inst-1",
+								name: "Orc Brute",
+								source: "MM",
+								originalBestiaryName: "Orc",
+								currentHp: 25,
+								hit_points: 15,
+							},
+						],
+					},
+				],
+			},
+		};
+		const requestSnapshot = { snapshot: true };
+		const retryPayload = { retry: true };
+		const historyWriter = {
+			formatGeneratedContent(content) {
+				assert.equal(this, historyWriter);
+				assert.equal(content, generatedContent);
+				events.push("format");
+				return "formatted monster";
+			},
+			buildRequestSnapshot(input) {
+				assert.equal(this, historyWriter);
+				events.push("snapshot");
+				snapshotInput = input;
+				return requestSnapshot;
+			},
+			cloneRetryPayload(inputPayload) {
+				assert.equal(this, historyWriter);
+				assert.equal(inputPayload, payload);
+				events.push("retry");
+				return retryPayload;
+			},
+			get addResponse() {
+				events.push("lookup-add");
+				return function addResponse(input) {
+					assert.equal(this, historyWriter);
+					events.push("add");
+					historyPayload = input;
+					return { id: "response-1" };
+				};
+			},
+			saveFailed() {
+				throw new Error("saveFailed must not run");
+			},
+		};
+		const flow = new EncounterLocalMonsterAiFlow({
+			historyWriter,
+			buildAiChangeSummary() {
+				throw new Error("the constructor summary must be late-bound");
+			},
+		});
+		flow.buildAiChangeSummary = function summarize(resources) {
+			assert.equal(this, flow);
+			events.push("summary");
+			return resources.map((resource) => resource.id);
+		};
+
+		assert.equal(flow.isEnabled(payload), "enc-1");
+		assert.equal(
+			flow.isEnabled({ ...payload, historyMode: "campaign" }),
+			false,
+		);
+		assert.equal(
+			flow.isEnabled({
+				...payload,
+				path: { ...payload.path, encounter: "" },
+			}),
+			"",
+		);
+
+		const result = await flow.createDraft({
+			payload,
+			generatedContent,
+			customMonsterTarget,
+			customSession,
+			modelName: "test-model",
+			responseLanguage: "uk",
+			historyUserInstructions: "Make it stronger.",
+			customContextData: { source: "encounter" },
+			globalBasePrompt: "global",
+			imagePromptBasePrompt: "image",
+			campaignBasePrompt: "campaign",
+		});
+
+		assert.equal(skippedEntityReads, 1);
+		assert.equal(skippedOperationReads, 1);
+		assert.equal(patchReads, 6);
+		assert.deepEqual(events, [
+			"format",
+			"snapshot",
+			"retry",
+			"summary",
+			"lookup-add",
+			"add",
+		]);
+		assert.equal(result.status, 200);
+		assert.equal(result.body.draft, true);
+		assert.deepEqual(result.body.aiResponse, { id: "response-1" });
+		assert.equal(result.body.generated.narrative, generatedContent.narrative);
+		assert.equal(result.body.generated.operations, generatedContent.operations);
+		assert.equal(result.body.generated.monsters.length, 1);
+
+		const changedMonster = result.body.generated.monsters[0];
+		assert.equal(changedMonster.id, "orc-id");
+		assert.equal(changedMonster.name, "Orc Ascendant");
+		assert.equal(changedMonster.hp.average, 30);
+		assert.equal("imageUrl" in changedMonster, false);
+		assert.equal("originalBestiaryName" in changedMonster, false);
+
+		const responsePath = {
+			campaign: "camp",
+			session: "session.json",
+			encounter: "enc-1",
+		};
+		assert.deepEqual(snapshotInput, {
+			type: "custom-monster",
+			modelName: "test-model",
+			userInstructions: "Make it stronger.",
+			path: responsePath,
+			attachedImages: payload.attachedImages,
+			attachedFiles: payload.attachedFiles,
+			parseAIResponse: true,
+			shouldParseAIResponse: true,
+			generateCharacters: false,
+			generateNpcs: false,
+			generateLocations: false,
+			generateEncounters: false,
+			generateCustomMonsters: false,
+			entityScope: "custom-bestiary",
+			contextConfig: null,
+			contextData: { source: "encounter" },
+			language: "uk",
+			globalBasePrompt: "global",
+			imagePromptBasePrompt: "image",
+			campaignBasePrompt: "campaign",
+		});
+
+		const resource = historyPayload.changes.resources[0];
+		assert.equal(resource.id, "session:session.json");
+		assert.equal(resource.kind, "session");
+		assert.equal(resource.campaign, "camp");
+		assert.equal(resource.fileName, "session.json");
+		assert.equal(resource.label, "camp/sessions/session.json");
+		assert.notEqual(resource.before, customSession);
+		assert.notEqual(resource.after, customSession);
+		assert.deepEqual(resource.before, customSession);
+		assert.equal(
+			resource.after.data.encounters[0].monsters[0].source,
+			"MM",
+		);
+		assert.equal(
+			resource.after.data.encounters[0].monsters[0].currentHp,
+			25,
+		);
+		assert.deepEqual(historyPayload, {
+			text: "formatted monster",
+			path: responsePath,
+			type: "custom-monster",
+			modelName: "test-model",
+			language: "uk",
+			userInstructions: "Make it stronger.",
+			request: requestSnapshot,
+			retryPayload,
+			changes: {
+				resources: [resource],
+				summary: ["session:session.json"],
+			},
+			applyState: "draft",
+			appliedAt: null,
+		});
+	},
+);
+
+await run(
+	"local encounter AI operation routing preserves aliases and property precedence",
+	async () => {
+		const historyPayloads = [];
+		const historyWriter = {
+			formatGeneratedContent() {
+				return "formatted";
+			},
+			buildRequestSnapshot() {
+				return {};
+			},
+			cloneRetryPayload() {
+				return {};
+			},
+			addResponse(input) {
+				historyPayloads.push(input);
+				return { id: `response-${historyPayloads.length}` };
+			},
+			saveFailed() {
+				throw new Error("saveFailed must not run");
+			},
+		};
+		const flow = new EncounterLocalMonsterAiFlow({
+			historyWriter,
+			buildAiChangeSummary: () => [],
+		});
+		const payload = {
+			historyMode: "encounter",
+			type: "custom-monster",
+			path: {
+				campaign: "camp",
+				session: "session.json",
+				encounter: "enc",
+			},
+			targetInstanceId: "instance",
+		};
+		const customMonsterTarget = {
+			id: "fallback-id",
+			instanceId: "instance",
+			name: "Fallback Name",
+			hp: { average: 8 },
+		};
+		const createSession = () => ({
+			data: {
+				encounters: [
+					{
+						id: "enc",
+						monsters: [
+							{
+								instanceId: "instance",
+								source: "MM",
+								currentHp: 8,
+								hit_points: 8,
+							},
+						],
+					},
+				],
+			},
+		});
+
+		let dataReads = 0;
+		let monsterReads = 0;
+		let payloadReads = 0;
+		let selectedOperationReads = 0;
+		let laterOperationReads = 0;
+		const dataValues = [
+			{},
+			{},
+			null,
+			{},
+			{},
+			{ id: "sequence-id" },
+			{},
+			{},
+			{ name: "Sequence Beast" },
+		];
+		const selectedOperation = {
+			entity: " CUSTOMMONSTER ",
+			get op() {
+				selectedOperationReads += 1;
+				return " CREATE ";
+			},
+			get data() {
+				const value = dataValues[dataReads];
+				dataReads += 1;
+				return value;
+			},
+			get monster() {
+				monsterReads += 1;
+				return { id: "wrong-monster-id", name: "Wrong Monster" };
+			},
+			get payload() {
+				payloadReads += 1;
+				return { id: "wrong-payload-id", name: "Wrong Payload" };
+			},
+		};
+		const laterOperation = {
+			get entity() {
+				laterOperationReads += 1;
+				return "monster";
+			},
+			op: "update",
+			patch: { name: "Must Not Win" },
+		};
+		const firstResult = await flow.createDraft({
+			payload,
+			generatedContent: {
+				operations: [
+					{ entity: "spell", op: "create" },
+					selectedOperation,
+					laterOperation,
+				],
+			},
+			customMonsterTarget,
+			customSession: createSession(),
+		});
+
+		assert.equal(firstResult.status, 200);
+		assert.equal(dataReads, 9);
+		assert.equal(monsterReads, 0);
+		assert.equal(payloadReads, 0);
+		assert.equal(selectedOperationReads, 2);
+		assert.equal(laterOperationReads, 0);
+		assert.equal(
+			firstResult.body.generated.monsters[0].id,
+			"sequence-id",
+		);
+		assert.equal(
+			firstResult.body.generated.monsters[0].name,
+			"Sequence Beast",
+		);
+
+		const arrayData = Object.assign([], {
+			id: "array-id",
+			name: "Array Beast",
+			hp: { average: 19 },
+		});
+		const secondResult = await flow.createDraft({
+			payload,
+			generatedContent: {
+				operations: [
+					{
+						entity: " monster ",
+						op: " create ",
+						data: arrayData,
+						get monster() {
+							throw new Error("data must precede monster");
+						},
+						get payload() {
+							throw new Error("data must precede payload");
+						},
+					},
+				],
+			},
+			customMonsterTarget,
+			customSession: createSession(),
+		});
+
+		assert.equal(secondResult.status, 200);
+		assert.equal(secondResult.body.generated.monsters[0].id, "array-id");
+		assert.equal(secondResult.body.generated.monsters[0].name, "Array Beast");
+		assert.equal(secondResult.body.generated.monsters[0].hp.average, 19);
+
+		const monsterFallbackResult = await flow.createDraft({
+			payload,
+			generatedContent: {
+				operations: [
+					{
+						entity: "custom-monster",
+						op: "create",
+						data: null,
+						monster: {
+							id: "monster-fallback-id",
+							name: "Monster Fallback",
+						},
+						get payload() {
+							throw new Error("monster must precede payload");
+						},
+					},
+				],
+			},
+			customMonsterTarget,
+			customSession: createSession(),
+		});
+		assert.equal(
+			monsterFallbackResult.body.generated.monsters[0].id,
+			"monster-fallback-id",
+		);
+		assert.equal(
+			monsterFallbackResult.body.generated.monsters[0].name,
+			"Monster Fallback",
+		);
+
+		const payloadFallbackResult = await flow.createDraft({
+			payload,
+			generatedContent: {
+				operations: [
+					{
+						entity: "monster",
+						op: "create",
+						data: 0,
+						monster: "invalid",
+						payload: {
+							id: "payload-fallback-id",
+							name: "Payload Fallback",
+						},
+					},
+				],
+			},
+			customMonsterTarget,
+			customSession: createSession(),
+		});
+		assert.equal(
+			payloadFallbackResult.body.generated.monsters[0].id,
+			"payload-fallback-id",
+		);
+		assert.equal(
+			payloadFallbackResult.body.generated.monsters[0].name,
+			"Payload Fallback",
+		);
+		assert.equal(historyPayloads.length, 4);
+	},
+);
+
+await run(
+	"local encounter session changes preserve matching and HP edge cases",
+	() => {
+		const beforeSession = {
+			data: {
+				encounters: [
+					{
+						id: 7,
+						monsters: [
+							{
+								instanceId: 0,
+								name: "First",
+								source: "MM",
+								originalBestiaryName: "First Base",
+								currentHp: 20,
+								hit_points: 20,
+							},
+							{
+								instanceId: "0",
+								name: "Second",
+								source: "HB",
+								currentHp: "invalid",
+								hit_points: 17,
+							},
+							{
+								instanceId: "other",
+								name: "Untouched",
+								source: "MM",
+								currentHp: 4,
+								hit_points: 4,
+							},
+						],
+					},
+					{
+						id: "7",
+						monsters: [
+							{
+								instanceId: "0",
+								name: "Later duplicate encounter",
+							},
+						],
+					},
+				],
+			},
+		};
+		const originalSession = JSON.parse(JSON.stringify(beforeSession));
+		const change = buildLocalEncounterMonsterSessionChange({
+			campaignSlug: "camp",
+			sessionFile: "session.json",
+			encounterId: "7",
+			targetInstanceId: "0",
+			beforeSession,
+			nextMonster: {
+				id: "next-id",
+				name: "Next Monster",
+				originalBestiaryName: "Next Base",
+				source: "CUSTOM",
+				hp: { average: 0 },
+				hit_points: 99,
+			},
+		});
+
+		assert.deepEqual(beforeSession, originalSession);
+		assert.notEqual(change.before, beforeSession);
+		assert.notEqual(change.after, beforeSession);
+		assert.notEqual(change.before, change.after);
+		assert.deepEqual(change.before, originalSession);
+		const [first, second, untouched] =
+			change.after.data.encounters[0].monsters;
+		assert.equal(first.instanceId, "0");
+		assert.equal(first.source, "MM");
+		assert.equal(first.originalBestiaryName, "First Base");
+		assert.equal(first.hit_points, 0);
+		assert.equal(first.currentHp, 20);
+		assert.equal(second.instanceId, "0");
+		assert.equal(second.source, "HB");
+		assert.equal(second.originalBestiaryName, "Next Base");
+		assert.equal(second.hit_points, 0);
+		assert.equal(second.currentHp, 0);
+		assert.deepEqual(untouched, originalSession.data.encounters[0].monsters[2]);
+		assert.deepEqual(
+			change.after.data.encounters[1],
+			originalSession.data.encounters[1],
+		);
+
+		const circularSession = { data: { encounters: [] } };
+		circularSession.self = circularSession;
+		assert.equal(
+			buildLocalEncounterMonsterSessionChange({
+				campaignSlug: "camp",
+				sessionFile: "session.json",
+				encounterId: "7",
+				targetInstanceId: 0,
+				beforeSession: circularSession,
+				nextMonster: { name: "Next" },
+			}),
+			null,
+		);
+		assert.throws(
+			() =>
+				buildLocalEncounterMonsterSessionChange({
+					campaignSlug: "camp",
+					sessionFile: "session.json",
+					encounterId: "7",
+					targetInstanceId: "0",
+					beforeSession: circularSession,
+					nextMonster: { name: "Next" },
+				}),
+			TypeError,
+		);
+		assert.throws(
+			() =>
+				buildLocalEncounterMonsterSessionChange({
+					campaignSlug: "camp",
+					sessionFile: "session.json",
+					encounterId: "7",
+					targetInstanceId: "0",
+					beforeSession: { data: { encounters: {} } },
+					nextMonster: { name: "Next" },
+				}),
+			TypeError,
+		);
+		assert.equal(
+			buildLocalEncounterMonsterSessionChange({
+				campaignSlug: "camp",
+				sessionFile: "session.json",
+				encounterId: "duplicate",
+				targetInstanceId: "target",
+				beforeSession: {
+					data: {
+						encounters: [
+							{ id: "duplicate", monsters: {} },
+							{
+								id: "duplicate",
+								monsters: [{ instanceId: "target" }],
+							},
+						],
+					},
+				},
+				nextMonster: { name: "Next" },
+			}),
+			null,
+		);
+
+		const sparseMonsters = [];
+		sparseMonsters[2] = {
+			instanceId: "target",
+			source: "MM",
+			currentHp: 6,
+			hit_points: 6,
+		};
+		const sparseChange = buildLocalEncounterMonsterSessionChange({
+			campaignSlug: "camp",
+			sessionFile: "session.json",
+			encounterId: "sparse",
+			targetInstanceId: "target",
+			beforeSession: {
+				data: {
+					encounters: [{ id: "sparse", monsters: sparseMonsters }],
+				},
+			},
+			nextMonster: { name: "Sparse", hp: { average: 8 } },
+		});
+		assert.deepEqual(
+			sparseChange.after.data.encounters[0].monsters.slice(0, 2),
+			[null, null],
+		);
+		assert.equal(
+			sparseChange.after.data.encounters[0].monsters[2].currentHp,
+			6,
+		);
+
+		const projectHp = (nextMonster, currentHp, fallbackHp) => {
+			const hpChange = buildLocalEncounterMonsterSessionChange({
+				campaignSlug: "camp",
+				sessionFile: "session.json",
+				encounterId: "hp",
+				targetInstanceId: "target",
+				beforeSession: {
+					data: {
+						encounters: [
+							{
+								id: "hp",
+								monsters: [
+									{
+										instanceId: "target",
+										source: "MM",
+										currentHp,
+										hit_points: fallbackHp,
+									},
+								],
+							},
+						],
+					},
+				},
+				nextMonster,
+			});
+			return hpChange.after.data.encounters[0].monsters[0];
+		};
+		const arrayHp = [];
+		arrayHp.average = "12";
+		const averageHp = projectHp(
+			{ name: "Average", hp: arrayHp, hit_points: 31 },
+			40,
+			17,
+		);
+		assert.equal(averageHp.hit_points, 12);
+		assert.equal(averageHp.currentHp, 12);
+		const directHp = projectHp(
+			{ name: "Direct", hp: { average: "bad" }, hit_points: "31" },
+			40,
+			17,
+		);
+		assert.equal(directHp.hit_points, 31);
+		assert.equal(directHp.currentHp, 31);
+		const fallbackHp = projectHp(
+			{
+				name: "Fallback",
+				hp: { average: "bad" },
+				hit_points: "bad",
+			},
+			"invalid",
+			"17",
+		);
+		assert.equal(fallbackHp.hit_points, 17);
+		assert.equal(fallbackHp.currentHp, 17);
+		const negativeHp = projectHp(
+			{ name: "Negative", hp: { average: 10 } },
+			-4,
+			17,
+		);
+		assert.equal(negativeHp.hit_points, 10);
+		assert.equal(negativeHp.currentHp, -4);
+	},
+);
+
+await run(
+	"local encounter AI flow preserves failure and persistence boundaries",
+	async () => {
+		const calls = [];
+		const failedResponse = { id: "failed-response" };
+		const failingHistoryWriter = {
+			saveFailed(payload, error, status) {
+				calls.push({ kind: "failed", payload, error, status });
+				return failedResponse;
+			},
+			formatGeneratedContent() {
+				throw new Error("history formatting must not run");
+			},
+			buildRequestSnapshot() {
+				throw new Error("snapshot must not run");
+			},
+			cloneRetryPayload() {
+				throw new Error("retry cloning must not run");
+			},
+			addResponse() {
+				throw new Error("addResponse must not run");
+			},
+		};
+		const failingFlow = new EncounterLocalMonsterAiFlow({
+			historyWriter: failingHistoryWriter,
+			buildAiChangeSummary: () => {
+				throw new Error("summary must not run");
+			},
+		});
+		const payload = {
+			historyMode: "encounter",
+			path: {
+				campaign: "camp",
+				session: "session.json",
+				encounter: "enc",
+			},
+			targetInstanceId: "instance",
+		};
+		const target = {
+			id: "target-id",
+			instanceId: "instance",
+			name: "Target",
+		};
+		const session = {
+			data: {
+				encounters: [
+					{
+						id: "enc",
+						monsters: [
+							{
+								instanceId: "instance",
+								source: "MM",
+								currentHp: 5,
+								hit_points: 5,
+							},
+						],
+					},
+				],
+			},
+		};
+		const invalidGenerated = {
+			operations: [{ entity: "spell", op: "create" }],
+		};
+		const invalidResult = await failingFlow.createDraft({
+			payload,
+			generatedContent: invalidGenerated,
+			customMonsterTarget: target,
+			customSession: session,
+		});
+
+		assert.deepEqual(invalidResult, {
+			status: 400,
+			body: {
+				error: "AI did not return any valid creature.",
+				generated: invalidGenerated,
+				aiResponse: failedResponse,
+			},
+		});
+		assert.deepEqual(calls, [
+			{
+				kind: "failed",
+				payload,
+				error: {
+					message: "AI did not return any valid creature.",
+				},
+				status: 400,
+			},
+		]);
+
+		const validGenerated = {
+			operations: [
+				{
+					entity: "monster",
+					op: "update",
+					patch: { name: "Changed" },
+				},
+			],
+		};
+		const missingTargetResult = await failingFlow.createDraft({
+			payload,
+			generatedContent: validGenerated,
+			customMonsterTarget: target,
+			customSession: {
+				data: {
+					encounters: [{ id: "enc", monsters: [] }],
+				},
+			},
+		});
+		assert.equal(missingTargetResult.status, 400);
+		assert.equal(calls.length, 2);
+
+		let saveFailedCalls = 0;
+		const persistenceError = new Error("history persistence failed");
+		const throwingHistoryWriter = {
+			formatGeneratedContent: () => "formatted",
+			buildRequestSnapshot: () => ({}),
+			cloneRetryPayload: () => ({}),
+			addResponse() {
+				throw persistenceError;
+			},
+			saveFailed() {
+				saveFailedCalls += 1;
+			},
+		};
+		const throwingFlow = new EncounterLocalMonsterAiFlow({
+			historyWriter: throwingHistoryWriter,
+			buildAiChangeSummary: () => [],
+		});
+		await assert.rejects(
+			() =>
+				throwingFlow.createDraft({
+					payload,
+					generatedContent: validGenerated,
+					customMonsterTarget: target,
+					customSession: session,
+				}),
+			(error) => error === persistenceError,
+		);
+		assert.equal(saveFailedCalls, 0);
+		await assert.rejects(
+			() =>
+				throwingFlow.createDraft({
+					payload,
+					generatedContent: null,
+					customMonsterTarget: target,
+					customSession: session,
+				}),
+			TypeError,
+		);
+		assert.equal(saveFailedCalls, 0);
+
+		const destructuringError = new Error("draft destructuring failed");
+		const invalidInput = {};
+		Object.defineProperty(invalidInput, "payload", {
+			get() {
+				throw destructuringError;
+			},
+		});
+		await assert.rejects(
+			throwingFlow.createDraft(invalidInput),
+			(error) => error === destructuringError,
+		);
+	},
+);
 
 await run(
 	"storage moveEntity transfers characters and preserves data",
@@ -21695,30 +35135,1314 @@ await run(
 	},
 );
 
-await run("5etools updater downloads missing tokens for new monsters", async () => {
-	const source = await fs.readFile("scripts/update-5etools-data.mjs", "utf8");
+await run(
+	"database bundle spell-class policy preserves lookup and collection order",
+	() => {
+		assert.deepEqual(Object.keys(databaseBundlePolicies), [
+			"getSpellClassInfo",
+		]);
+		const { getSpellClassInfo } = databaseBundlePolicies;
+		assert.throws(() => getSpellClassInfo({}, null), TypeError);
 
-	assert.match(source, /const IMG_REPO = "5etools-img"/);
-	assert.match(
-		source,
-		/const BESTIARY_TOKENS_DIR = path\.join\(BESTIARY_DIR, "tokens"\)/,
-	);
-	assert.match(source, /function getRemoteTokenUrl\(monster\)/);
-	assert.match(
-		source,
-		/raw\.githubusercontent\.com\/\$\{IMG_OWNER\}\/\$\{IMG_REPO\}/,
-	);
-	assert.match(source, /\/bestiary\/\$\{encodeURIComponent\(source\)\}/);
-	assert.match(source, /async function downloadMissingNewBestiaryTokens/);
-	assert.match(source, /function getNewMonsters\(currentKeys, monsters = \[\]\)/);
-	assert.match(source, /collectCurrentBestiaryMonsterKeys\(\)/);
-	assert.match(source, /collectMonstersFromJsonFiles\(tmpBestiaryDir\)/);
-	assert.match(source, /downloadMissingNewBestiaryTokens\(newMonsters\)/);
-	assert.match(
-		source,
-		/New monsters: \$\{newMonsters\.length\}; tokens downloaded:/,
-	);
-});
+		const rootEvents = [];
+		const rootFailureSpell = {};
+		Object.defineProperty(rootFailureSpell, "name", {
+			get() {
+				rootEvents.push("name");
+				return "Bolt";
+			},
+		});
+		assert.throws(
+			() => getSpellClassInfo(null, rootFailureSpell),
+			TypeError,
+		);
+		assert.deepEqual(rootEvents, ["name"]);
+
+		const events = [];
+		let sourceReads = 0;
+		const spell = {};
+		Object.defineProperties(spell, {
+			name: {
+				get() {
+					events.push("spell:name");
+					return "Bolt|Display Source";
+				},
+			},
+			source: {
+				get() {
+					sourceReads += 1;
+					events.push(`spell:source:${sourceReads}`);
+					return sourceReads === 1 ? "miss" : "phb";
+				},
+			},
+		});
+		let dynamicNameReads = 0;
+		const dynamicEntry = {};
+		Object.defineProperty(dynamicEntry, "name", {
+			get() {
+				dynamicNameReads += 1;
+				events.push(`entry:name:${dynamicNameReads}`);
+				return dynamicNameReads === 1 ? "eligible" : "Beta";
+			},
+		});
+		const classEntries = {
+			*[Symbol.iterator]() {
+				events.push("class:iterate");
+				yield dynamicEntry;
+				yield null;
+				yield { name: "Alpha" };
+			},
+		};
+		const variantEntries = {
+			*[Symbol.iterator]() {
+				events.push("variant:iterate");
+				yield { name: "Beta" };
+				yield { name: "alpha" };
+				yield { name: 0 };
+			},
+		};
+		const info = {};
+		Object.defineProperties(info, {
+			class: {
+				get() {
+					events.push("info:class");
+					return classEntries;
+				},
+			},
+			classVariant: {
+				get() {
+					events.push("info:variant");
+					return variantEntries;
+				},
+			},
+		});
+		const spellSources = {};
+		Object.defineProperties(spellSources, {
+			FIRST: {
+				enumerable: true,
+				get() {
+					throw new Error("unmatched source value must remain lazy");
+				},
+			},
+			PhB: {
+				enumerable: true,
+				get() {
+					events.push("source-map:PhB");
+					return { Bolt: info };
+				},
+			},
+			LAST: {
+				enumerable: true,
+				get() {
+					throw new Error("search must stop at the first matching key");
+				},
+			},
+		});
+
+		assert.deepEqual(
+			getSpellClassInfo(spellSources, spell),
+			["Beta", "Alpha", "alpha"].sort((a, b) => a.localeCompare(b)),
+		);
+		assert.deepEqual(events, [
+			"spell:name",
+			"spell:source:1",
+			"spell:source:2",
+			"source-map:PhB",
+			"info:class",
+			"class:iterate",
+			"info:variant",
+			"variant:iterate",
+			"entry:name:1",
+			"entry:name:2",
+		]);
+
+		let emptySourceReads = 0;
+		const emptySourceMap = {};
+		Object.defineProperty(emptySourceMap, "", {
+			enumerable: true,
+			get() {
+				emptySourceReads += 1;
+				return { Bolt: { class: [{ name: "Ignored" }] } };
+			},
+		});
+		assert.deepEqual(
+			getSpellClassInfo(emptySourceMap, { name: "Bolt", source: "" }),
+			[],
+		);
+		assert.equal(emptySourceReads, 0);
+
+		assert.deepEqual(
+			getSpellClassInfo(
+				{
+					phb: { Bolt: { class: [{ name: "First" }] } },
+					PHB: { Bolt: { class: [{ name: "Second" }] } },
+				},
+				{ name: "Bolt|PHB", source: "pHb" },
+			),
+			["First"],
+		);
+		assert.deepEqual(
+			getSpellClassInfo(
+				{ PHB: { bolt: { class: [{ name: "Wrong case" }] } } },
+				{ name: "Bolt", source: "PHB" },
+			),
+			[],
+		);
+		assert.deepEqual(
+			getSpellClassInfo({}, { name: Symbol("Bolt"), source: Symbol("PHB") }),
+			[],
+		);
+	},
+);
+
+await run(
+	"database bundle spell-class policy preserves iterable and failure boundaries",
+	() => {
+		const { getSpellClassInfo } = databaseBundlePolicies;
+		const spell = { name: "Bolt", source: "PHB" };
+		const withInfo = (info) => ({ PHB: { Bolt: info } });
+
+		const missingInfoMap = { PHB: {} };
+		Object.defineProperty(missingInfoMap.PHB, "Bolt", {
+			get() {
+				return 0;
+			},
+		});
+		assert.deepEqual(getSpellClassInfo(missingInfoMap, spell), []);
+
+		const nonIterableEvents = [];
+		const nonIterableInfo = { class: {} };
+		Object.defineProperty(nonIterableInfo, "classVariant", {
+			get() {
+				nonIterableEvents.push("variant");
+				return [];
+			},
+		});
+		assert.throws(
+			() => getSpellClassInfo(withInfo(nonIterableInfo), spell),
+			TypeError,
+		);
+		assert.deepEqual(nonIterableEvents, []);
+
+		const iteratorFailure = new Error("class iterator failed");
+		const iteratorEvents = [];
+		const throwingClasses = {
+			[Symbol.iterator]() {
+				iteratorEvents.push("class:iterator");
+				return {
+					next() {
+						iteratorEvents.push("class:next");
+						throw iteratorFailure;
+					},
+				};
+			},
+		};
+		const throwingClassInfo = { class: throwingClasses };
+		Object.defineProperty(throwingClassInfo, "classVariant", {
+			get() {
+				iteratorEvents.push("variant");
+				return [];
+			},
+		});
+		assert.throws(
+			() => getSpellClassInfo(withInfo(throwingClassInfo), spell),
+			(error) => error === iteratorFailure,
+		);
+		assert.deepEqual(iteratorEvents, ["class:iterator", "class:next"]);
+
+		const variantEvents = [];
+		const badVariantInfo = {};
+		Object.defineProperties(badVariantInfo, {
+			class: {
+				get() {
+					variantEvents.push("class");
+					return {
+						*[Symbol.iterator]() {
+							variantEvents.push("class:iterate");
+							yield { name: "Collected before failure" };
+						},
+					};
+				},
+			},
+			classVariant: {
+				get() {
+					variantEvents.push("variant");
+					return {};
+				},
+			},
+		});
+		assert.throws(
+			() => getSpellClassInfo(withInfo(badVariantInfo), spell),
+			TypeError,
+		);
+		assert.deepEqual(variantEvents, [
+			"class",
+			"class:iterate",
+			"variant",
+		]);
+
+		const secondNameFailure = new Error("second name read failed");
+		let nameReads = 0;
+		const throwingNameEntry = {};
+		Object.defineProperty(throwingNameEntry, "name", {
+			get() {
+				nameReads += 1;
+				if (nameReads === 2) throw secondNameFailure;
+				return "Eligible";
+			},
+		});
+		assert.throws(
+			() =>
+				getSpellClassInfo(
+					withInfo({ class: [throwingNameEntry], classVariant: [] }),
+					spell,
+				),
+			(error) => error === secondNameFailure,
+		);
+		assert.equal(nameReads, 2);
+
+		const firstObjectName = {};
+		const secondObjectName = {};
+		assert.throws(
+			() =>
+				getSpellClassInfo(
+					withInfo({
+						class: [
+							{ name: firstObjectName },
+							{ name: secondObjectName },
+						],
+					}),
+					spell,
+				),
+			TypeError,
+		);
+		assert.deepEqual(
+			getSpellClassInfo(
+				withInfo({
+					class: [
+						null,
+						undefined,
+						"",
+						0,
+						{ name: "Wizard" },
+						{ name: "wizard" },
+						{ name: "Wizard" },
+					],
+				}),
+				spell,
+			),
+			["Wizard", "wizard"].sort((a, b) => a.localeCompare(b)),
+		);
+
+		const symbolName = Symbol("class");
+		assert.deepEqual(
+			getSpellClassInfo(
+				withInfo({ class: [{ name: symbolName }] }),
+				spell,
+			),
+			[symbolName],
+		);
+	},
+);
+
+function createUpdaterTestConfig(rootDir, overrides = {}) {
+	const databaseDir = path.join(rootDir, "database");
+	const bestiaryDir = path.join(databaseDir, "bestiary");
+	const spellsDir = path.join(databaseDir, "spells");
+	return {
+		rootDir,
+		databaseDir,
+		bestiaryDir,
+		spellsDir,
+		conditionsPath: path.join(databaseDir, "conditions.json"),
+		diseasesPath: path.join(databaseDir, "diseases.json"),
+		variantRulesPath: path.join(databaseDir, "variantrules.json"),
+		skillsPath: path.join(databaseDir, "skills.json"),
+		sensesPath: path.join(databaseDir, "senses.json"),
+		sourcesPath: path.join(databaseDir, "sources.json"),
+		bestiaryTokensDir: path.join(bestiaryDir, "tokens"),
+		tmpDir: path.join(rootDir, ".tmp-5etools-update"),
+		owner: "test-owner",
+		repo: "test-repo",
+		imageOwner: "test-image-owner",
+		imageRepo: "test-image-repo",
+		imageRef: "image-main",
+		ref: "feature/test",
+		isDryRun: false,
+		keepSources: false,
+		isVerbose: true,
+		...overrides,
+	};
+}
+
+function createUpdaterResponse({
+	status = 200,
+	jsonValue,
+	textValue = "",
+	binaryValue = Buffer.alloc(0),
+}) {
+	return {
+		ok: status >= 200 && status < 300,
+		status,
+		statusText: status === 200 ? "OK" : "Failure",
+		async json() {
+			return jsonValue;
+		},
+		async text() {
+			return textValue;
+		},
+		async arrayBuffer() {
+			return binaryValue;
+		},
+	};
+}
+
+await run(
+	"5etools updater policies preserve flags monsters conditions and sources",
+	() => {
+		assert.deepEqual(
+			updaterPolicies.parseUpdaterArgs(
+				[
+					"node",
+					"script",
+					"--check",
+					"--keep-sources",
+					"--verbose",
+					"--ref=first",
+					"--ref=second",
+					"-h",
+				],
+				"fallback",
+			),
+			{
+				isDryRun: true,
+				keepSources: true,
+				isVerbose: true,
+				help: true,
+				ref: "first",
+			},
+		);
+		assert.deepEqual(
+			updaterPolicies.parseUpdaterArgs(["node", "script"], "fallback"),
+			{
+				isDryRun: false,
+				keepSources: false,
+				isVerbose: false,
+				help: false,
+				ref: "fallback",
+			},
+		);
+		assert.equal(
+			updaterPolicies.parseUpdaterArgs(
+				["node", "script", "--ref="],
+				"fallback",
+			).ref,
+			"",
+		);
+		const helpText = updaterPolicies.getUpdaterHelpText({
+			owner: "owner",
+			repo: "repo",
+			imageOwner: "image-owner",
+			imageRepo: "image-repo",
+			imageRef: "image-ref",
+			ref: "branch",
+		});
+		assert.match(helpText, /owner\/repo\/tree\/branch\/data\/spells/);
+		assert.match(
+			helpText,
+			/image-owner\/image-repo\/tree\/image-ref\/bestiary/,
+		);
+
+		assert.equal(updaterPolicies.isJsonFile("MONSTER.JSON"), true);
+		assert.equal(updaterPolicies.isJsonFile("monster.json.bak"), false);
+		for (const name of [
+			"fluff.json",
+			"Foundry.json",
+			"foundy-data.json",
+			"template.json",
+		]) {
+			assert.equal(updaterPolicies.shouldKeepRemoteFile(name), false);
+		}
+		assert.equal(updaterPolicies.shouldKeepRemoteFile("monster.json"), true);
+		assert.deepEqual(
+			updaterPolicies.normalizeRemoteFileEntries([
+				{
+					type: "file",
+					name: "zeta.json",
+					download_url: "zeta",
+				},
+				{
+					type: "dir",
+					name: "alpha.json",
+					download_url: "ignored",
+				},
+				{
+					type: "file",
+					name: "fluff.json",
+					download_url: "ignored",
+				},
+				{
+					type: "file",
+					name: "Alpha.JSON",
+					download_url: null,
+				},
+			]),
+			[
+				{ name: "Alpha.JSON", downloadUrl: null },
+				{ name: "zeta.json", downloadUrl: "zeta" },
+			],
+		);
+		assert.equal(updaterPolicies.ensureTrailingNewline("{}"), "{}\n");
+		assert.equal(updaterPolicies.ensureTrailingNewline("{}\r\n"), "{}\r\n");
+		assert.equal(updaterPolicies.ensureTrailingNewline("{}\n"), "{}\n");
+
+		let monsterNameReads = 0;
+		let monsterSourceReads = 0;
+		const keyedMonster = {
+			get name() {
+				monsterNameReads += 1;
+				return "  Дракон  ";
+			},
+			get source() {
+				monsterSourceReads += 1;
+				return "  xphb ";
+			},
+		};
+		assert.equal(
+			updaterPolicies.normalizeMonsterKey(keyedMonster),
+			"дракон|XPHB",
+		);
+		assert.equal(monsterNameReads, 1);
+		assert.equal(monsterSourceReads, 1);
+		assert.equal(updaterPolicies.normalizeMonsterKey(null), "");
+		assert.equal(
+			updaterPolicies.normalizeMonsterKey({ name: "Only name" }),
+			"",
+		);
+		assert.deepEqual(
+			updaterPolicies.collectMonstersFromBestiaryData([
+				keyedMonster,
+				{ name: "Missing source" },
+			]),
+			[keyedMonster],
+		);
+		const envelopeMonster = { name: "Goblin", source: "MM" };
+		assert.deepEqual(
+			updaterPolicies.collectMonstersFromBestiaryData({
+				monster: [envelopeMonster],
+				results: [keyedMonster],
+			}),
+			[envelopeMonster],
+		);
+		assert.deepEqual(
+			updaterPolicies.collectMonstersFromBestiaryData({
+				monster: "invalid",
+			}),
+			[],
+		);
+		const firstNew = { name: "New", source: "MM" };
+		const duplicateNew = { name: " new ", source: "mm" };
+		const secondNew = { name: "Second", source: "XPHB" };
+		assert.deepEqual(
+			updaterPolicies.getNewMonsters(
+				new Set(["existing|MM"]),
+				[
+					{ name: "Existing", source: "mm" },
+					firstNew,
+					duplicateNew,
+					{ name: "", source: "MM" },
+					secondNew,
+				],
+			),
+			[firstNew, secondNew],
+		);
+		assert.equal(
+			updaterPolicies.getTokenFileName({ name: "  Герой  " }),
+			"Герой.webp",
+		);
+		assert.equal(updaterPolicies.getTokenFileName(null), "");
+		for (const unsafe of ["", "bad/name.webp", "bad?.webp", "bad."]) {
+			assert.equal(updaterPolicies.isSafeTokenFileName(unsafe), false);
+		}
+		assert.equal(
+			updaterPolicies.isSafeTokenFileName("Україна.webp"),
+			true,
+		);
+
+		assert.equal(updaterPolicies.conditionKey(null), "|");
+		assert.equal(
+			updaterPolicies.conditionKey({
+				name: "  Blinded ",
+				source: " xphb ",
+			}),
+			"blinded|XPHB",
+		);
+		assert.equal(updaterPolicies.getSourcePriority("XPHB"), 3);
+		assert.equal(updaterPolicies.getSourcePriority("xdmg"), 3);
+		assert.equal(updaterPolicies.getSourcePriority("PHB"), 2);
+		assert.equal(updaterPolicies.getSourcePriority("dmg"), 2);
+		assert.equal(updaterPolicies.getSourcePriority(" PHB "), 1);
+		assert.equal(updaterPolicies.getSourcePriority(null), 1);
+
+		const legacy = { name: "Blinded", source: "PHB" };
+		const modern = { name: "Blinded", source: "XPHB" };
+		const other = { name: "Blinded", source: "UA" };
+		const basic2024 = {
+			name: "Blinded",
+			source: "UA",
+			basicRules2024: true,
+		};
+		assert.equal(
+			updaterPolicies.pickPreferredCondition(null, modern),
+			modern,
+		);
+		assert.equal(
+			updaterPolicies.pickPreferredCondition(legacy, modern),
+			modern,
+		);
+		assert.equal(
+			updaterPolicies.pickPreferredCondition(modern, legacy),
+			modern,
+		);
+		assert.equal(
+			updaterPolicies.pickPreferredCondition(legacy, other),
+			legacy,
+		);
+		assert.equal(
+			updaterPolicies.pickPreferredCondition(legacy, basic2024),
+			basic2024,
+		);
+		assert.equal(
+			updaterPolicies.pickPreferredCondition(basic2024, modern),
+			basic2024,
+		);
+		assert.equal(
+			updaterPolicies.pickPreferredCondition(modern, {
+				...modern,
+				entries: ["later"],
+			}),
+			modern,
+		);
+		assert.deepEqual(
+			updaterPolicies.dedupeConditionsByName([
+				legacy,
+				modern,
+				{ name: " prone ", source: "PHB" },
+				{ name: "", source: "XPHB" },
+			]),
+			[{ name: " prone ", source: "PHB" }, modern],
+		);
+
+		assert.deepEqual(
+			updaterPolicies.pruneConditionMeta({
+				name: "Blinded",
+				source: "XPHB",
+				page: 1,
+				basicRules2024: true,
+				entries: ["kept"],
+			}),
+			{ name: "Blinded", entries: ["kept"] },
+		);
+		const inlineRule = {
+			name: "Customizing Ability Scores",
+			source: "XPHB",
+			entries: [
+				"Intro",
+				{ type: "inline", entries: ["remove"] },
+				{
+					type: "section",
+					entries: [
+						"Nested",
+						{ type: "inline", entries: ["remove nested"] },
+					],
+				},
+			],
+		};
+		const normalizedRule =
+			updaterPolicies.normalizeVariantRule(inlineRule);
+		assert.deepEqual(normalizedRule, {
+			name: "Customizing Ability Scores",
+			entries: [
+				"Intro",
+				{ type: "section", entries: ["Nested"] },
+				"[Point Buy Calculator](https://redcap.press/character-creation?method=Point+Buy)",
+			],
+		});
+		assert.equal(inlineRule.entries.length, 3);
+
+		const downloaded = { condition: "invalid" };
+		const localExhaustion = [
+			{ name: "Exhaustion", source: "LOCAL", page: 10 },
+			{ name: "exhaustion", source: "local", page: 11 },
+		];
+		updaterPolicies.appendLocalExhaustion(
+			downloaded,
+			localExhaustion,
+		);
+		assert.deepEqual(downloaded.condition, [localExhaustion[0]]);
+		const untouchedDownloaded = {};
+		updaterPolicies.appendLocalExhaustion(untouchedDownloaded, []);
+		assert.equal(Object.hasOwn(untouchedDownloaded, "condition"), false);
+		assert.deepEqual(
+			updaterPolicies.getLocalExhaustionEntries({
+				condition: [
+					{ name: "Exhaustion" },
+					{ name: " exhaustion " },
+				],
+			}),
+			[{ name: "Exhaustion" }],
+		);
+
+		assert.deepEqual(
+			updaterPolicies.normalizeSourceEntries({
+				adventure: [
+					{ name: "  Zebra ", source: " z1 " },
+					{ name: "Alpha", source: "A1" },
+					{ name: "", source: "BAD" },
+				],
+				book: [
+					{ name: "alpha", source: "a1" },
+					{ name: "Beta", source: " B1 " },
+					{ name: "Missing" },
+				],
+			}),
+			[
+				{ name: "Alpha", source: "A1" },
+				{ name: "Beta", source: "B1" },
+				{ name: "Zebra", source: "z1" },
+			],
+		);
+	},
+);
+
+await run(
+	"5etools updater runtime preserves download token filesystem and reference effects",
+	async () => {
+		const rootDir = path.join(
+			process.cwd(),
+			`.tmp-updater-runtime-${Date.now()}-${Math.random()
+				.toString(36)
+				.slice(2, 8)}`,
+		);
+		const config = createUpdaterTestConfig(rootDir);
+		const logs = [];
+		const warnings = [];
+		const fetchEvents = [];
+		const spawnEvents = [];
+		let spawnStatus = 0;
+		const demoApiUrl =
+			"https://api.github.com/repos/test-owner/test-repo/contents/data/demo?ref=feature%2Ftest";
+		const missingApiUrl =
+			"https://api.github.com/repos/test-owner/test-repo/contents/data/missing?ref=feature%2Ftest";
+		const downloadedTokenUrl =
+			"https://raw.githubusercontent.com/test-image-owner/test-image-repo/image-main/bestiary/XPHB/%D0%9D%D0%BE%D0%B2%D0%B8%D0%B9.webp";
+		const missingTokenUrl =
+			"https://raw.githubusercontent.com/test-image-owner/test-image-repo/image-main/bestiary/MM/Missing.webp";
+		const failedTokenUrl =
+			"https://raw.githubusercontent.com/test-image-owner/test-image-repo/image-main/bestiary/MM/Failed.webp";
+		const responses = new Map([
+			[
+				demoApiUrl,
+				createUpdaterResponse({
+					jsonValue: [
+						{
+							type: "file",
+							name: "zeta.json",
+							download_url: "memory://zeta",
+						},
+						{
+							type: "file",
+							name: "Alpha.JSON",
+							download_url: "memory://alpha",
+						},
+						{
+							type: "file",
+							name: "fluff.json",
+							download_url: "memory://ignored",
+						},
+					],
+				}),
+			],
+			[
+				missingApiUrl,
+				createUpdaterResponse({
+					jsonValue: [
+						{
+							type: "file",
+							name: "missing.json",
+							download_url: null,
+						},
+					],
+				}),
+			],
+			[
+				"memory://alpha",
+				createUpdaterResponse({ textValue: '{"alpha":1}' }),
+			],
+			[
+				"memory://zeta",
+				createUpdaterResponse({ textValue: '{"zeta":2}\n' }),
+			],
+			[
+				"https://raw.githubusercontent.com/test-owner/test-repo/feature/test/data/single.json",
+				createUpdaterResponse({ textValue: '{"single":true}' }),
+			],
+			[
+				downloadedTokenUrl,
+				createUpdaterResponse({
+					binaryValue: Buffer.from("token", "utf8"),
+				}),
+			],
+			[
+				missingTokenUrl,
+				createUpdaterResponse({ status: 404 }),
+			],
+			[
+				failedTokenUrl,
+				createUpdaterResponse({ status: 500 }),
+			],
+		]);
+		const updater = create5eToolsUpdater({
+			fs,
+			path,
+			spawnSync(command, args, options) {
+				spawnEvents.push({ command, args, options });
+				return { status: spawnStatus };
+			},
+			async fetchImpl(url) {
+				fetchEvents.push(url);
+				const response = responses.get(url);
+				if (!response) throw new Error(`unexpected fetch: ${url}`);
+				return response;
+			},
+			processRef: {
+				execPath: process.execPath,
+				env: { UPDATER_TEST: "yes" },
+			},
+			consoleRef: {
+				log: (message) => logs.push(message),
+				warn: (message) => warnings.push(message),
+			},
+			config,
+		});
+
+		try {
+			const targetDir = path.join(rootDir, "downloads");
+			assert.equal(await updater.downloadFiles("data/demo", targetDir), 2);
+			assert.equal(
+				await fs.readFile(path.join(targetDir, "Alpha.JSON"), "utf8"),
+				'{"alpha":1}\n',
+			);
+			assert.equal(
+				await fs.readFile(path.join(targetDir, "zeta.json"), "utf8"),
+				'{"zeta":2}\n',
+			);
+			assert.deepEqual(fetchEvents.slice(0, 3), [
+				demoApiUrl,
+				"memory://alpha",
+				"memory://zeta",
+			]);
+			await assert.rejects(
+				updater.downloadFiles(
+					"data/missing",
+					path.join(rootDir, "missing"),
+				),
+				/Missing download URL for data\/missing\/missing\.json/,
+			);
+			const singleTarget = path.join(rootDir, "single", "data.json");
+			assert.equal(
+				await updater.downloadFile("data/single.json", singleTarget),
+				1,
+			);
+			assert.equal(
+				await fs.readFile(singleTarget, "utf8"),
+				'{"single":true}\n',
+			);
+
+			await fs.mkdir(config.bestiaryDir, { recursive: true });
+			await fs.writeFile(
+				path.join(config.bestiaryDir, "all.json"),
+				JSON.stringify({
+					monster: [{ name: "Aggregate", source: "MM" }],
+				}),
+				"utf8",
+			);
+			await fs.writeFile(
+				path.join(config.bestiaryDir, "other.json"),
+				JSON.stringify({
+					monster: [{ name: "Other", source: "MM" }],
+				}),
+				"utf8",
+			);
+			assert.deepEqual(
+				[
+					...(await updater.collectCurrentBestiaryMonsterKeys()),
+				],
+				["aggregate|MM"],
+			);
+			await fs.rm(path.join(config.bestiaryDir, "all.json"));
+			assert.deepEqual(
+				[
+					...(await updater.collectCurrentBestiaryMonsterKeys()),
+				],
+				["other|MM"],
+			);
+
+			const existingTokenPath = path.join(
+				config.bestiaryTokensDir,
+				"MM",
+				"Existing.webp",
+			);
+			await fs.mkdir(path.dirname(existingTokenPath), {
+				recursive: true,
+			});
+			await fs.writeFile(existingTokenPath, "existing", "utf8");
+			const tokenResult =
+				await updater.downloadMissingNewBestiaryTokens([
+					{ name: "Bad/Name", source: "MM" },
+					{ name: "Existing", source: "MM" },
+					{ name: "Новий", source: "XPHB" },
+					{ name: "Missing", source: "MM" },
+					{ name: "Failed", source: "MM" },
+				]);
+			assert.deepEqual(tokenResult, {
+				downloaded: 1,
+				missing: 2,
+				skipped: 1,
+			});
+			assert.equal(
+				await fs.readFile(
+					path.join(
+						config.bestiaryTokensDir,
+						"XPHB",
+						"Новий.webp",
+					),
+					"utf8",
+				),
+				"token",
+			);
+			assert.equal(
+				fetchEvents.includes(downloadedTokenUrl),
+				true,
+			);
+			assert.equal(fetchEvents.includes(missingTokenUrl), true);
+			assert.equal(fetchEvents.includes(failedTokenUrl), true);
+			assert.equal(
+				warnings.some((message) =>
+					message.includes("unsafe local filename"),
+				),
+				true,
+			);
+			assert.equal(
+				warnings.some((message) =>
+					message.includes("500 Failure"),
+				),
+				true,
+			);
+
+			await fs.mkdir(config.databaseDir, { recursive: true });
+			await fs.writeFile(
+				config.conditionsPath,
+				JSON.stringify({
+					condition: [
+						{
+							name: "Exhaustion",
+							source: "LOCAL",
+							page: 10,
+							entries: ["local"],
+						},
+					],
+				}),
+				"utf8",
+			);
+			const downloadedConditionsPath = path.join(
+				rootDir,
+				"downloaded-conditions.json",
+			);
+			await fs.writeFile(
+				downloadedConditionsPath,
+				JSON.stringify({
+					condition: [
+						{
+							name: "Blinded",
+							source: "XPHB",
+							page: 1,
+							entries: ["new"],
+						},
+					],
+					status: [
+						{
+							name: "Invisible",
+							source: "PHB",
+							page: 2,
+						},
+					],
+					disease: [
+						{
+							name: "Cackle Fever",
+							source: "DMG",
+							page: 3,
+						},
+					],
+				}),
+				"utf8",
+			);
+			assert.equal(
+				await updater.writeConditionsWithLocalExhaustion(
+					downloadedConditionsPath,
+				),
+				1,
+			);
+			assert.deepEqual(
+				JSON.parse(await fs.readFile(config.conditionsPath, "utf8")),
+				{
+					condition: [
+						{ name: "Blinded", entries: ["new"] },
+						{ name: "Exhaustion", entries: ["local"] },
+					],
+					status: [{ name: "Invisible" }],
+				},
+			);
+			assert.deepEqual(
+				JSON.parse(await fs.readFile(config.diseasesPath, "utf8")),
+				{ disease: [{ name: "Cackle Fever" }] },
+			);
+
+			const removalDir = path.join(rootDir, "remove-json");
+			await fs.mkdir(path.join(removalDir, "nested"), {
+				recursive: true,
+			});
+			await fs.writeFile(path.join(removalDir, "one.JSON"), "{}", "utf8");
+			await fs.writeFile(path.join(removalDir, "keep.txt"), "keep", "utf8");
+			await fs.writeFile(
+				path.join(removalDir, "nested", "nested.json"),
+				"{}",
+				"utf8",
+			);
+			await updater.removeJsonFiles(removalDir);
+			assert.equal(
+				await fs
+					.access(path.join(removalDir, "one.JSON"))
+					.then(
+						() => true,
+						() => false,
+					),
+				false,
+			);
+			assert.equal(
+				await fs.readFile(path.join(removalDir, "keep.txt"), "utf8"),
+				"keep",
+			);
+			assert.equal(
+				await fs.readFile(
+					path.join(removalDir, "nested", "nested.json"),
+					"utf8",
+				),
+				"{}",
+			);
+			await updater.removeJsonFiles(path.join(rootDir, "absent"));
+
+			const copySource = path.join(rootDir, "copy-source");
+			const copyTarget = path.join(rootDir, "copy-target");
+			await fs.mkdir(copySource, { recursive: true });
+			await fs.writeFile(path.join(copySource, "copy.JSON"), "copy", "utf8");
+			await fs.writeFile(path.join(copySource, "skip.txt"), "skip", "utf8");
+			await updater.copyJsonFiles(copySource, copyTarget);
+			assert.equal(
+				await fs.readFile(path.join(copyTarget, "copy.JSON"), "utf8"),
+				"copy",
+			);
+			assert.equal(
+				await fs
+					.access(path.join(copyTarget, "skip.txt"))
+					.then(
+						() => true,
+						() => false,
+					),
+				false,
+			);
+
+			updater.runNodeScript(path.join("scripts", "ok.mjs"), ["--flag"]);
+			assert.equal(spawnEvents.length, 1);
+			assert.deepEqual(spawnEvents[0].args, [
+				path.join("scripts", "ok.mjs"),
+				"--flag",
+			]);
+			assert.equal(spawnEvents[0].options.cwd, rootDir);
+			spawnStatus = 7;
+			assert.throws(
+				() => updater.runNodeScript(path.join("scripts", "bad.mjs")),
+				/bad\.mjs failed with exit code 7/,
+			);
+		} finally {
+			await fs.rm(rootDir, { recursive: true, force: true });
+		}
+	},
+);
+
+await run(
+	"5etools updater workflow preserves dry-run and write phase boundaries",
+	async () => {
+		const runWorkflow = async ({ isDryRun }) => {
+			const rootDir = path.join(
+				process.cwd(),
+				`.tmp-updater-workflow-${isDryRun ? "dry" : "write"}-${Date.now()}-${Math.random()
+					.toString(36)
+					.slice(2, 8)}`,
+			);
+			const config = createUpdaterTestConfig(rootDir, {
+				ref: "main",
+				isDryRun,
+				isVerbose: false,
+			});
+			const logs = [];
+			const warnings = [];
+			const spawnEvents = [];
+			const bestiaryListUrl =
+				"https://api.github.com/repos/test-owner/test-repo/contents/data/bestiary?ref=main";
+			const spellsListUrl =
+				"https://api.github.com/repos/test-owner/test-repo/contents/data/spells?ref=main";
+			const responseMap = new Map([
+				[
+					bestiaryListUrl,
+					createUpdaterResponse({
+						jsonValue: [
+							{
+								type: "file",
+								name: "bestiary-test.json",
+								download_url: "memory://bestiary",
+							},
+						],
+					}),
+				],
+				[
+					spellsListUrl,
+					createUpdaterResponse({
+						jsonValue: [
+							{
+								type: "file",
+								name: "spells-test.json",
+								download_url: "memory://spells",
+							},
+						],
+					}),
+				],
+				[
+					"memory://bestiary",
+					createUpdaterResponse({
+						textValue: JSON.stringify({
+							monster: [
+								{ name: "Existing", source: "MM" },
+								{ name: "Новий", source: "XPHB" },
+							],
+						}),
+					}),
+				],
+				[
+					"memory://spells",
+					createUpdaterResponse({
+						textValue: JSON.stringify({
+							spell: [{ name: "Spell" }],
+						}),
+					}),
+				],
+				[
+					"https://raw.githubusercontent.com/test-owner/test-repo/main/data/conditionsdiseases.json",
+					createUpdaterResponse({
+						textValue: JSON.stringify({
+							condition: [
+								{ name: "Blinded", source: "XPHB" },
+							],
+							status: [],
+							disease: [],
+						}),
+					}),
+				],
+				[
+					"https://raw.githubusercontent.com/test-owner/test-repo/main/data/variantrules.json",
+					createUpdaterResponse({
+						textValue: JSON.stringify({ variantrule: [] }),
+					}),
+				],
+				[
+					"https://raw.githubusercontent.com/test-owner/test-repo/main/data/skills.json",
+					createUpdaterResponse({
+						textValue: JSON.stringify({ skill: [] }),
+					}),
+				],
+				[
+					"https://raw.githubusercontent.com/test-owner/test-repo/main/data/senses.json",
+					createUpdaterResponse({
+						textValue: JSON.stringify({ sense: [] }),
+					}),
+				],
+				[
+					"https://raw.githubusercontent.com/test-owner/test-repo/main/data/generated/gendata-nav-adventure-book-index.json",
+					createUpdaterResponse({
+						textValue: JSON.stringify({
+							adventure: [
+								{ name: "Adventure", source: "ADV" },
+							],
+						}),
+					}),
+				],
+				[
+					"https://raw.githubusercontent.com/test-image-owner/test-image-repo/image-main/bestiary/XPHB/%D0%9D%D0%BE%D0%B2%D0%B8%D0%B9.webp",
+					createUpdaterResponse({
+						binaryValue: Buffer.from("new-token", "utf8"),
+					}),
+				],
+			]);
+			const updater = create5eToolsUpdater({
+				fs,
+				path,
+				spawnSync(command, args) {
+					spawnEvents.push({ command, args });
+					return { status: 0 };
+				},
+				async fetchImpl(url) {
+					const response = responseMap.get(url);
+					if (!response) {
+						throw new Error(`unexpected workflow fetch: ${url}`);
+					}
+					return response;
+				},
+				processRef: {
+					execPath: process.execPath,
+					env: process.env,
+				},
+				consoleRef: {
+					log: (message) => logs.push(message),
+					warn: (message) => warnings.push(message),
+				},
+				config,
+			});
+			try {
+				await fs.mkdir(config.bestiaryDir, { recursive: true });
+				await fs.mkdir(config.spellsDir, { recursive: true });
+				await fs.writeFile(
+					path.join(config.bestiaryDir, "all.json"),
+					JSON.stringify({
+						monster: [{ name: "Existing", source: "MM" }],
+					}),
+					"utf8",
+				);
+				await fs.writeFile(
+					path.join(config.bestiaryDir, "index.json"),
+					"{}",
+					"utf8",
+				);
+				await fs.writeFile(
+					path.join(config.spellsDir, "old.json"),
+					"{}",
+					"utf8",
+				);
+				await fs.writeFile(
+					path.join(config.spellsDir, "index.json"),
+					"{}",
+					"utf8",
+				);
+				await fs.writeFile(
+					config.conditionsPath,
+					JSON.stringify({
+						condition: [
+							{
+								name: "Exhaustion",
+								source: "LOCAL",
+								entries: ["local"],
+							},
+						],
+					}),
+					"utf8",
+				);
+
+				await updater.run();
+				assert.equal(
+					await fs
+						.access(config.tmpDir)
+						.then(
+							() => true,
+							() => false,
+						),
+					false,
+				);
+				if (isDryRun) {
+					assert.equal(spawnEvents.length, 0);
+					assert.equal(
+						await fs
+							.access(
+								path.join(
+									config.bestiaryDir,
+									"bestiary-test.json",
+								),
+							)
+							.then(
+								() => true,
+								() => false,
+							),
+						false,
+					);
+					assert.equal(
+						logs.some((message) =>
+							message.startsWith("Dry run:"),
+						),
+						true,
+					);
+					return;
+				}
+
+				assert.equal(spawnEvents.length, 2);
+				assert.equal(
+					path.basename(spawnEvents[0].args[0]),
+					"materialize-bestiary-copies.mjs",
+				);
+				assert.deepEqual(spawnEvents[1].args.slice(1), [
+					"--delete-sources",
+				]);
+				assert.deepEqual(
+					JSON.parse(
+						await fs.readFile(config.sourcesPath, "utf8"),
+					),
+					[{ name: "Adventure", source: "ADV" }],
+				);
+				assert.equal(
+					await fs.readFile(
+						path.join(
+							config.bestiaryTokensDir,
+							"XPHB",
+							"Новий.webp",
+						),
+						"utf8",
+					),
+					"new-token",
+				);
+				assert.equal(
+					await fs
+						.access(path.join(config.bestiaryDir, "index.json"))
+						.then(
+							() => true,
+							() => false,
+						),
+					false,
+				);
+				assert.equal(
+					logs.some((message) =>
+						message.includes(
+							"New monsters: 1; tokens downloaded: 1",
+						),
+					),
+					true,
+				);
+				assert.deepEqual(warnings, []);
+			} finally {
+				await fs.rm(rootDir, { recursive: true, force: true });
+			}
+		};
+
+		await runWorkflow({ isDryRun: true });
+		await runWorkflow({ isDryRun: false });
+	},
+);
 
 await run("5etools materializer preserves modifier modes warnings and dry runs", async () => {
 	const tempRoot = path.join(
@@ -27686,6 +42410,200 @@ await run("storage keeps AI response history per campaign", async () => {
 	});
 });
 
+async function withMockedAiResponseFiles(testBody) {
+	const originalAccess = fs.access;
+	const originalReadFile = fs.readFile;
+	const state = {
+		existingPaths: new Set(),
+		fileContents: new Map(),
+		readErrors: new Map(),
+		events: [],
+		reset({
+			existingPaths = [],
+			fileContents = [],
+			readErrors = [],
+		} = {}) {
+			this.existingPaths = new Set(existingPaths);
+			this.fileContents = new Map(fileContents);
+			this.readErrors = new Map(readErrors);
+			this.events.length = 0;
+		},
+	};
+	try {
+		fs.access = async (filePath) => {
+			state.events.push(["access", filePath]);
+			if (!state.existingPaths.has(filePath)) {
+				throw new Error(`missing AI history: ${filePath}`);
+			}
+		};
+		fs.readFile = async (filePath, encoding) => {
+			state.events.push(["read", filePath, encoding]);
+			if (state.readErrors.has(filePath)) {
+				throw state.readErrors.get(filePath);
+			}
+			if (!state.fileContents.has(filePath)) {
+				throw new Error(`unexpected AI history read: ${filePath}`);
+			}
+			return state.fileContents.get(filePath);
+		};
+		await testBody(state);
+	} finally {
+		fs.access = originalAccess;
+		fs.readFile = originalReadFile;
+	}
+}
+
+await run(
+	"storage AI history reads preserve dedicated and legacy path selection order",
+	async () => {
+		await withMockedAiResponseFiles(async (state) => {
+			assert.deepEqual(await storage.readAiResponses("   "), []);
+			assert.deepEqual(state.events, []);
+
+			const regularPath = storage.aiResponsesPath("regular-history");
+			const oneEntry = JSON.stringify([
+				{
+					id: "regular",
+					text: "Звичайна історія",
+					createdAt: "2026-07-24T09:00:00.000Z",
+				},
+			]);
+			state.reset({
+				existingPaths: [regularPath],
+				fileContents: [[regularPath, oneEntry]],
+			});
+			assert.equal(
+				(await storage.readAiResponses("../regular-history"))[0].id,
+				"regular",
+			);
+			assert.deepEqual(state.events, [
+				["access", regularPath],
+				["access", regularPath],
+				["read", regularPath, "utf8"],
+			]);
+
+			const dedicatedPath = storage.aiResponsesPath("bestiary");
+			const legacyPath = storage.campaignAiResponsesPath("bestiary");
+			state.reset({
+				existingPaths: [dedicatedPath, legacyPath],
+				fileContents: [[dedicatedPath, oneEntry]],
+			});
+			await storage.readAiResponses("bestiary");
+			assert.deepEqual(state.events, [
+				["access", dedicatedPath],
+				["access", dedicatedPath],
+				["read", dedicatedPath, "utf8"],
+			]);
+
+			state.reset({
+				existingPaths: [legacyPath],
+				fileContents: [[legacyPath, oneEntry]],
+			});
+			await storage.readAiResponses("bestiary");
+			assert.deepEqual(state.events, [
+				["access", dedicatedPath],
+				["access", legacyPath],
+				["access", legacyPath],
+				["read", legacyPath, "utf8"],
+			]);
+
+			state.reset();
+			assert.deepEqual(await storage.readAiResponses("bestiary"), []);
+			assert.deepEqual(state.events, [
+				["access", dedicatedPath],
+				["access", legacyPath],
+				["access", dedicatedPath],
+			]);
+		});
+	},
+);
+
+await run(
+	"storage AI history reads preserve payload sorting and recovery boundaries",
+	async () => {
+		await withMockedAiResponseFiles(async (state) => {
+			const historyPath = storage.aiResponsesPath("history-payloads");
+			const setContent = (content) => {
+				state.reset({
+					existingPaths: [historyPath],
+					fileContents: [[historyPath, content]],
+				});
+			};
+			const rows = [
+				{
+					id: "equal-first",
+					text: "Перша рівна",
+					createdAt: "2026-07-24T10:00:00.000Z",
+				},
+				null,
+				{
+					id: "newest",
+					text: "Найновіша",
+					createdAt: "2026-07-24T11:00:00.000Z",
+				},
+				{ id: "blank", text: "   ", createdAt: "9999" },
+				{
+					id: "equal-second",
+					text: "Друга рівна",
+					createdAt: "2026-07-24T10:00:00.000Z",
+				},
+				{
+					id: "oldest",
+					text: "Найстаріша",
+					createdAt: "2026-07-24T09:00:00.000Z",
+				},
+			];
+
+			setContent(JSON.stringify(rows));
+			assert.deepEqual(
+				(await storage.readAiResponses("history-payloads")).map(
+					(entry) => entry.id,
+				),
+				["newest", "equal-first", "equal-second", "oldest"],
+			);
+
+			setContent(JSON.stringify({ responses: rows }));
+			assert.deepEqual(
+				(await storage.readAiResponses("history-payloads")).map(
+					(entry) => entry.id,
+				),
+				["newest", "equal-first", "equal-second", "oldest"],
+			);
+
+			setContent(JSON.stringify({ responses: "truthy malformed list" }));
+			assert.deepEqual(await storage.readAiResponses("history-payloads"), []);
+
+			setContent("{invalid json");
+			assert.deepEqual(await storage.readAiResponses("history-payloads"), []);
+
+			const readFailure = new Error("AI history read failed");
+			state.reset({
+				existingPaths: [historyPath],
+				readErrors: [[historyPath, readFailure]],
+			});
+			assert.deepEqual(await storage.readAiResponses("history-payloads"), []);
+
+			setContent("synthetic comparator payload");
+			const originalParse = JSON.parse;
+			const invalidTimestamp = () => {};
+			invalidTimestamp[Symbol.toPrimitive] = () => {
+				throw new Error("timestamp coercion failed");
+			};
+			let coercionResult;
+			try {
+				JSON.parse = () => [
+					{ id: "first", text: "Перша", createdAt: invalidTimestamp },
+					{ id: "second", text: "Друга", createdAt: "2026" },
+				];
+				coercionResult = await storage.readAiResponses("history-payloads");
+			} finally {
+				JSON.parse = originalParse;
+			}
+			assert.deepEqual(coercionResult, []);
+		});
+	},
+);
+
 await run(
 	"storage AI history normalization preserves legacy metadata and isolates malformed rows",
 	async () => {
@@ -28298,7 +43216,7 @@ await run(
 		assert.match(editableFieldSource, /enableHistory = true/);
 		assert.match(editableFieldSource, /\{enableHistory && <HistoryPlugin \/>}/);
 		assert.match(editableFieldSource, /data-app-history-shortcuts/);
-		assert.match(editableFieldSource, /shouldDelegateEditableHistory/);
+		assert.match(editableFieldSource, /getEditableKeyDownPlan/);
 		assert.match(campaignHookSource, /shouldUseAppHistoryForEvent/);
 		assert.match(sessionHookSource, /shouldUseAppHistoryForEvent/);
 		assert.match(noteCardSource, /enableHistory = true/);
@@ -29985,6 +44903,123 @@ await run("storage image gallery stats preserve exact filesystem totals", async 
 	});
 });
 
+await run(
+	"storage image slug replacement preserves JSON identity cloning and failures",
+	() => {
+		const oldSlug = "Стара кампанія/one";
+		const newSlug = "Нова кампанія & two";
+		const oldSegment = `/api/images/${encodeURIComponent(oldSlug)}/`;
+		const newSegment = `/api/images/${encodeURIComponent(newSlug)}/`;
+		const unchanged = {
+			url: "/api/images/another-campaign/maps/map.png",
+		};
+		assert.equal(
+			storage.replaceImageSlugReferences(unchanged, oldSlug, newSlug),
+			unchanged,
+		);
+		for (const value of [undefined, null, false, 0, "", Number.NaN]) {
+			assert.equal(
+				Object.is(
+					storage.replaceImageSlugReferences(value, oldSlug, newSlug),
+					value,
+				),
+				true,
+			);
+		}
+		assert.equal(
+			storage.replaceImageSlugReferences(unchanged, "", newSlug),
+			unchanged,
+		);
+		assert.equal(
+			storage.replaceImageSlugReferences(unchanged, oldSlug, null),
+			unchanged,
+		);
+		assert.equal(
+			storage.replaceImageSlugReferences(unchanged, oldSlug, oldSlug),
+			unchanged,
+		);
+
+		const source = {
+			url: `${oldSegment}maps/карта.png`,
+			nested: [
+				`${oldSegment}tokens/one.png and ${oldSegment}tokens/two.png`,
+				{ [`${oldSegment}key`]: `${oldSegment}value` },
+			],
+		};
+		const sourceBefore = structuredClone(source);
+		const replaced = storage.replaceImageSlugReferences(
+			source,
+			oldSlug,
+			newSlug,
+		);
+		assert.notEqual(replaced, source);
+		assert.deepEqual(source, sourceBefore);
+		assert.equal(JSON.stringify(replaced).includes(oldSegment), false);
+		assert.equal(JSON.stringify(replaced).includes(newSegment), true);
+		assert.equal(replaced.url, `${newSegment}maps/карта.png`);
+		assert.equal(
+			replaced.nested[0],
+			`${newSegment}tokens/one.png and ${newSegment}tokens/two.png`,
+		);
+		assert.deepEqual(replaced.nested[1], {
+			[`${newSegment}key`]: `${newSegment}value`,
+		});
+		assert.equal(
+			storage.replaceImageSlugReferences(
+				`${oldSegment}single.png`,
+				oldSlug,
+				newSlug,
+			),
+			`${newSegment}single.png`,
+		);
+
+		let toJsonReads = 0;
+		const withToJson = {
+			toJSON() {
+				toJsonReads += 1;
+				return { imageUrl: `${oldSegment}portrait.png` };
+			},
+		};
+		assert.deepEqual(
+			storage.replaceImageSlugReferences(withToJson, oldSlug, newSlug),
+			{ imageUrl: `${newSegment}portrait.png` },
+		);
+		assert.equal(toJsonReads, 1);
+
+		const circular = {};
+		circular.self = circular;
+		assert.throws(
+			() =>
+				storage.replaceImageSlugReferences(
+					circular,
+					oldSlug,
+					newSlug,
+				),
+			TypeError,
+		);
+		assert.throws(
+			() =>
+				storage.replaceImageSlugReferences(
+					{ count: 1n },
+					oldSlug,
+					newSlug,
+				),
+			TypeError,
+		);
+		for (const value of [() => {}, Symbol("image")]) {
+			assert.throws(
+				() =>
+					storage.replaceImageSlugReferences(
+						value,
+						oldSlug,
+						newSlug,
+					),
+				TypeError,
+			);
+		}
+	},
+);
+
 await run("storage detects campaign images recursively", async () => {
 	await withTestSlug("campaign-has-images", async (slug) => {
 		const category = "attachments";
@@ -29999,6 +45034,101 @@ await run("storage detects campaign images recursively", async () => {
 		assert.equal(await storage.campaignHasImages(slug), true);
 	});
 });
+
+await run(
+	"storage campaign image detection preserves recursive entry order and failures",
+	async () => {
+		const originalAccess = fs.access;
+		const originalReadDir = fs.readdir;
+		const root = path.join(storage.IMAGES_DIR, "Кампанія");
+		const emptyDirectory = path.join(root, "empty");
+		const deepDirectory = path.join(emptyDirectory, "deep");
+		const lateDirectory = path.join(root, "late");
+		const events = [];
+		const entry = (name, kind) => ({
+			name,
+			isFile() {
+				events.push(`file:${name}`);
+				return kind === "file";
+			},
+			isDirectory() {
+				events.push(`directory:${name}`);
+				return kind === "directory";
+			},
+		});
+		let rootExists = true;
+		let failDeepRead = false;
+		try {
+			fs.access = async (filePath) => {
+				events.push(`access:${filePath}`);
+				if (!rootExists) throw new Error("missing");
+			};
+			fs.readdir = async (directory, options) => {
+				events.push(`read:${directory}`);
+				assert.deepEqual(options, { withFileTypes: true });
+				if (failDeepRead && directory === deepDirectory) {
+					throw new Error("deep read failed");
+				}
+				if (directory === root) {
+					return [
+						entry("empty", "directory"),
+						entry("ignored", "other"),
+						entry("first.png", "file"),
+						entry("late", "directory"),
+					];
+				}
+				if (directory === emptyDirectory) {
+					return [entry("deep", "directory")];
+				}
+				if (directory === deepDirectory) return [];
+				if (directory === lateDirectory) {
+					throw new Error("late directory must not be read");
+				}
+				throw new Error(`unexpected directory: ${directory}`);
+			};
+
+			assert.equal(await storage.campaignHasImages("../Кампанія"), true);
+			assert.deepEqual(
+				events.filter((event) => event.startsWith("read:")),
+				[
+					`read:${root}`,
+					`read:${emptyDirectory}`,
+					`read:${deepDirectory}`,
+				],
+			);
+			assert.equal(events.includes("directory:first.png"), false);
+			assert.equal(events.some((event) => event.includes("late")), false);
+
+			events.length = 0;
+			rootExists = false;
+			assert.equal(await storage.campaignHasImages("Кампанія"), false);
+			assert.equal(events.some((event) => event.startsWith("read:")), false);
+
+			events.length = 0;
+			assert.equal(await storage.campaignHasImages(0), false);
+			assert.deepEqual(events, []);
+
+			events.length = 0;
+			rootExists = true;
+			failDeepRead = true;
+			await assert.rejects(
+				storage.campaignHasImages("Кампанія"),
+				/deep read failed/,
+			);
+			assert.deepEqual(
+				events.filter((event) => event.startsWith("read:")),
+				[
+					`read:${root}`,
+					`read:${emptyDirectory}`,
+					`read:${deepDirectory}`,
+				],
+			);
+		} finally {
+			fs.access = originalAccess;
+			fs.readdir = originalReadDir;
+		}
+	},
+);
 
 await run("storage renameImage handles success and collisions", async () => {
 	await withTestSlug("rename-image", async (slug) => {
@@ -31817,6 +46947,230 @@ await run("image gallery loaders normalize metadata and official token paths", a
 	scopedResponse = { images: "invalid" };
 	assert.deepEqual(await loadGalleryImages(scopedOptions), []);
 });
+
+await run(
+	"storage campaign rename preserves collision no-image and partial-reference outcomes",
+	async () => {
+		assert.equal(await storage.renameCampaignData("", "next"), undefined);
+		assert.equal(await storage.renameCampaignData("same", "same"), undefined);
+		await assert.rejects(storage.renameCampaignData(1, "next"), TypeError);
+
+		const collisionOld = makeTestSlug("rename-collision-old");
+		const collisionNew = makeTestSlug("rename-collision-new");
+		const collisionOldUrl = `/api/images/${encodeURIComponent(collisionOld)}/maps/old.png`;
+		try {
+			await cleanupTestData(collisionOld);
+			await cleanupTestData(collisionNew);
+			await storage.writeJson(storage.campaignMetaPath(collisionOld), {
+				id: "collision",
+				imageUrl: collisionOldUrl,
+			});
+			await storage.ensureDir(path.join(storage.IMAGES_DIR, collisionOld));
+			await storage.ensureDir(path.join(storage.IMAGES_DIR, collisionNew));
+			await fs.writeFile(
+				path.join(storage.IMAGES_DIR, collisionOld, "old.png"),
+				"old",
+				"utf8",
+			);
+			await fs.writeFile(
+				path.join(storage.IMAGES_DIR, collisionNew, "new.png"),
+				"new",
+				"utf8",
+			);
+
+			await assert.rejects(
+				storage.renameCampaignData(collisionOld, collisionNew),
+				/Campaign images folder already exists\./,
+			);
+			assert.equal(
+				await storage.exists(storage.campaignDir(collisionOld)),
+				false,
+			);
+			assert.equal(
+				await storage.exists(storage.campaignDir(collisionNew)),
+				true,
+			);
+			assert.equal(
+				await storage.exists(
+					path.join(storage.IMAGES_DIR, collisionOld, "old.png"),
+				),
+				true,
+			);
+			assert.equal(
+				await storage.exists(
+					path.join(storage.IMAGES_DIR, collisionNew, "new.png"),
+				),
+				true,
+			);
+			assert.equal(
+				(await storage.readJson(
+					storage.campaignMetaPath(collisionNew),
+				)).imageUrl,
+				collisionOldUrl,
+			);
+		} finally {
+			await cleanupTestData(collisionOld);
+			await cleanupTestData(collisionNew);
+		}
+
+		const noImagesOld = makeTestSlug("rename-no-images-old");
+		const noImagesNew = makeTestSlug("rename-no-images-new");
+		const noImagesOldUrl = `/api/images/${encodeURIComponent(noImagesOld)}/maps/old.png`;
+		const noImagesNewUrl = `/api/images/${encodeURIComponent(noImagesNew)}/maps/old.png`;
+		try {
+			await cleanupTestData(noImagesOld);
+			await cleanupTestData(noImagesNew);
+			await storage.writeJson(storage.campaignMetaPath(noImagesOld), {
+				id: "no-images",
+				imageUrl: noImagesOldUrl,
+			});
+			const entityPath = path.join(
+				storage.campaignDir(noImagesOld),
+				"characters",
+				"unchanged",
+				"info.json",
+			);
+			const sessionFile = storage.sessionPath(noImagesOld, "unchanged.json");
+			const aiFile = storage.campaignAiResponsesPath(noImagesOld);
+			const unchangedEntityText =
+				'{\n\t"id": "unchanged",\n\t"firstName": "Без зображення"\n}\n';
+			const unchangedSessionText =
+				'{\n\t"id": "session",\n\t"name": "Без зображення"\n}\n';
+			const unchangedAiText =
+				'[\n\t{\n\t\t"id": "history",\n\t\t"text": "Без зображення"\n\t}\n]\n';
+			await storage.ensureDir(path.dirname(entityPath));
+			await storage.ensureDir(path.dirname(sessionFile));
+			await fs.writeFile(entityPath, unchangedEntityText, "utf8");
+			await fs.writeFile(sessionFile, unchangedSessionText, "utf8");
+			await fs.writeFile(aiFile, unchangedAiText, "utf8");
+			await storage.ensureDir(path.join(storage.IMAGES_DIR, noImagesNew));
+			await fs.writeFile(
+				path.join(storage.IMAGES_DIR, noImagesNew, "keep.png"),
+				"keep",
+				"utf8",
+			);
+
+			await storage.renameCampaignData(noImagesOld, noImagesNew);
+			assert.equal(
+				(await storage.readJson(
+					storage.campaignMetaPath(noImagesNew),
+				)).imageUrl,
+				noImagesNewUrl,
+			);
+			assert.equal(
+				await fs.readFile(
+					path.join(
+						storage.campaignDir(noImagesNew),
+						"characters",
+						"unchanged",
+						"info.json",
+					),
+					"utf8",
+				),
+				unchangedEntityText,
+			);
+			assert.equal(
+				await fs.readFile(
+					storage.sessionPath(noImagesNew, "unchanged.json"),
+					"utf8",
+				),
+				unchangedSessionText,
+			);
+			assert.equal(
+				await fs.readFile(
+					storage.campaignAiResponsesPath(noImagesNew),
+					"utf8",
+				),
+				unchangedAiText,
+			);
+			assert.equal(
+				await fs.readFile(
+					path.join(storage.IMAGES_DIR, noImagesNew, "keep.png"),
+					"utf8",
+				),
+				"keep",
+			);
+		} finally {
+			await cleanupTestData(noImagesOld);
+			await cleanupTestData(noImagesNew);
+		}
+
+		const partialOld = makeTestSlug("rename-partial-old");
+		const partialNew = makeTestSlug("rename-partial-new");
+		const partialOldUrl = `/api/images/${encodeURIComponent(partialOld)}/tokens/hero.png`;
+		const partialNewUrl = `/api/images/${encodeURIComponent(partialNew)}/tokens/hero.png`;
+		try {
+			await cleanupTestData(partialOld);
+			await cleanupTestData(partialNew);
+			await storage.writeJson(storage.campaignMetaPath(partialOld), {
+				id: "partial",
+				imageUrl: partialOldUrl,
+			});
+			await storage.writeEntity(partialOld, "characters", "hero", {
+				id: "hero",
+				firstName: "Герой",
+				imageUrl: partialOldUrl,
+			});
+			const brokenSessionPath = storage.sessionPath(
+				partialOld,
+				"broken.json",
+			);
+			await storage.ensureDir(path.dirname(brokenSessionPath));
+			await fs.writeFile(brokenSessionPath, "{ broken json", "utf8");
+			await storage.writeJson(
+				storage.campaignAiResponsesPath(partialOld),
+				[{ id: "history", text: partialOldUrl }],
+			);
+
+			await assert.rejects(
+				storage.renameCampaignData(partialOld, partialNew),
+				SyntaxError,
+			);
+			assert.equal(
+				(await storage.readJson(
+					storage.campaignMetaPath(partialNew),
+				)).imageUrl,
+				partialNewUrl,
+			);
+			assert.equal(
+				(
+					await storage.listEntities(
+						partialNew,
+						"characters",
+					)
+				)[0].imageUrl,
+				partialNewUrl,
+			);
+			assert.equal(
+				JSON.stringify(
+					await storage.readJson(
+						storage.campaignAiResponsesPath(partialNew),
+					),
+				).includes(partialOldUrl),
+				true,
+			);
+			assert.equal(
+				JSON.stringify(
+					await storage.readJson(
+						storage.campaignAiResponsesPath(partialNew),
+					),
+				).includes(partialNewUrl),
+				false,
+			);
+			assert.equal(
+				await storage.exists(storage.campaignDir(partialOld)),
+				false,
+			);
+			assert.equal(
+				await storage.exists(storage.campaignDir(partialNew)),
+				true,
+			);
+		} finally {
+			await cleanupTestData(partialOld);
+			await cleanupTestData(partialNew);
+		}
+	},
+);
 
 await run(
 	"storage renames campaign data and image folders together",

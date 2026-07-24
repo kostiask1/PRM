@@ -4,9 +4,19 @@ const {
 	normalizeCustomMonsterHpAverage,
 	toArray,
 } = require("../../../../shared/bestiaryUtils.cjs");
-const { sortByNameQuery } = require("../../../routes/searchUtils");
+const {
+	sortByNameQuery,
+} = require("../../search/application/searchResults");
 
 const CUSTOM_SOURCE = "CUSTOM";
+const LEGENDARY_ARRAY_MODES = Object.freeze([
+	"appendArr",
+	"prependArr",
+	"appendIfNotExistsArr",
+	"insertArr",
+	"replaceArr",
+	"removeArr",
+]);
 
 const normalizeSource = (source) =>
 	String(source || "")
@@ -35,13 +45,24 @@ function fail(message, status) {
 	throw error;
 }
 
+function normalizeReplacementMonsterName(monster) {
+	return String(monster.name || "").trim();
+}
+
+function getReplacementMonsterImage(previousMonster) {
+	return previousMonster?.imageUrl || null;
+}
+
+function applyReplacementMonsterImageFallback(nextMonster, previousMonster) {
+	if (Object.prototype.hasOwnProperty.call(nextMonster, "imageUrl")) return;
+	nextMonster.imageUrl = getReplacementMonsterImage(previousMonster);
+}
+
 function buildReplacementCustomMonster(previousMonster, rawMonster) {
 	const nextMonster = clone(rawMonster);
-	nextMonster.name = String(nextMonster.name || "").trim();
+	nextMonster.name = normalizeReplacementMonsterName(nextMonster);
 	nextMonster.source = CUSTOM_SOURCE;
-	if (!Object.prototype.hasOwnProperty.call(nextMonster, "imageUrl")) {
-		nextMonster.imageUrl = previousMonster?.imageUrl || null;
-	}
+	applyReplacementMonsterImageFallback(nextMonster, previousMonster);
 	return nextMonster;
 }
 
@@ -49,58 +70,104 @@ function groupKey(name, source) {
 	return `${String(name || "").trim().toLowerCase()}|${normalizeSource(source)}`;
 }
 
+function isLegendaryArrayMod(mod) {
+	return LEGENDARY_ARRAY_MODES.includes(mod.mode);
+}
+
+function applyLegendarySetProp(target, mod) {
+	target[mod.prop] = clone(mod.value);
+}
+
+function applyLegendaryObjectMod(target, property, mod) {
+	if (isLegendaryArrayMod(mod)) {
+		applyArrayMod(target, property, mod);
+		return;
+	}
+	if (mod.mode === "setProp") applyLegendarySetProp(target, mod);
+}
+
+function applyLegendaryPropertyMod(target, property, mod) {
+	if (mod === "remove") {
+		delete target[property];
+		return;
+	}
+	if (!mod || typeof mod !== "object") return;
+	applyLegendaryObjectMod(target, property, mod);
+}
+
+function applyLegendaryPropertyMods(target, [property, rawMods]) {
+	for (const mod of toArray(rawMods)) {
+		applyLegendaryPropertyMod(target, property, mod);
+	}
+}
+
 function applyLegendaryGroupMods(target, mods) {
 	if (!mods || typeof mods !== "object") return;
-	for (const [property, rawMods] of Object.entries(mods)) {
-		for (const mod of toArray(rawMods)) {
-			if (mod === "remove") {
-				delete target[property];
-				continue;
-			}
-			if (!mod || typeof mod !== "object") continue;
-			if (
-				[
-					"appendArr",
-					"prependArr",
-					"appendIfNotExistsArr",
-					"insertArr",
-					"replaceArr",
-					"removeArr",
-				].includes(mod.mode)
-			) {
-				applyArrayMod(target, property, mod);
-			} else if (mod.mode === "setProp") {
-				target[mod.prop] = clone(mod.value);
-			}
-		}
+	for (const entry of Object.entries(mods)) {
+		applyLegendaryPropertyMods(target, entry);
 	}
+}
+
+function requireAcyclicLegendaryGroup(currentKey, stack) {
+	if (!stack.includes(currentKey)) return;
+	throw new Error(
+		`Circular legendary group _copy chain: ${[...stack, currentKey].join(" -> ")}`,
+	);
+}
+
+function isDirectLegendaryGroup(group) {
+	return !group._copy;
+}
+
+function cloneDirectLegendaryGroup(group, source) {
+	return { ...clone(group), source: group.source || source };
+}
+
+function getLegendaryCopySource(group) {
+	return normalizeSource(group._copy.source || group.source);
+}
+
+function createMissingLegendaryGroupError(group, source) {
+	return new Error(
+		`Base legendary group not found for ${group.name} (${source}): ${group._copy.name}`,
+	);
+}
+
+function requireLegendaryGroupBase(group, source, index) {
+	const base = index.get(groupKey(group._copy.name, source));
+	if (!base) throw createMissingLegendaryGroupError(group, source);
+	return base;
+}
+
+function isLegendaryCopyMetadataKey(key) {
+	return key === "_copy" || key === "_mod";
+}
+
+function overlayLegendaryGroup(resolved, group) {
+	for (const [key, value] of Object.entries(group)) {
+		if (isLegendaryCopyMetadataKey(key)) continue;
+		resolved[key] = clone(value);
+	}
+}
+
+function finalizeCopiedLegendaryGroup(resolved, group) {
+	overlayLegendaryGroup(resolved, group);
+	applyLegendaryGroupMods(resolved, group._copy._mod);
+	delete resolved._copy;
+	delete resolved._mod;
+	return resolved;
 }
 
 function resolveLegendaryGroup(group, index, stack = []) {
 	const source = normalizeSource(group.source);
 	const currentKey = groupKey(group.name, source);
-	if (stack.includes(currentKey)) {
-		throw new Error(
-			`Circular legendary group _copy chain: ${[...stack, currentKey].join(" -> ")}`,
-		);
-	}
-	if (!group._copy) return { ...clone(group), source: group.source || source };
-	const copySource = normalizeSource(group._copy.source || group.source);
-	const base = index.get(groupKey(group._copy.name, copySource));
-	if (!base) {
-		throw new Error(
-			`Base legendary group not found for ${group.name} (${source}): ${group._copy.name}`,
-		);
-	}
+	requireAcyclicLegendaryGroup(currentKey, stack);
+	if (isDirectLegendaryGroup(group))
+		return cloneDirectLegendaryGroup(group, source);
+	const copySource = getLegendaryCopySource(group);
+	const base = requireLegendaryGroupBase(group, copySource, index);
 	const resolved = resolveLegendaryGroup(base, index, [...stack, currentKey]);
-	for (const [key, value] of Object.entries(group)) {
-		if (key === "_copy" || key === "_mod") continue;
-		resolved[key] = clone(value);
-	}
-	applyLegendaryGroupMods(resolved, group._copy._mod);
-	delete resolved._copy;
-	delete resolved._mod;
-	return resolved;
+	return finalizeCopiedLegendaryGroup(resolved, group);
 }
 
 function resolveLegendaryGroups(groups) {
@@ -109,6 +176,219 @@ function resolveLegendaryGroups(groups) {
 		if (group?.name) index.set(groupKey(group.name, group.source), group);
 	}
 	return groups.map((group) => resolveLegendaryGroup(group, index));
+}
+
+function hasReplacementCustomMonster(payload) {
+	return payload.monster && typeof payload.monster === "object";
+}
+
+function requireReplacementMonsterName(monster) {
+	if (!monster.name) fail("Creature name is required.", 400);
+}
+
+function matchesOtherCustomMonsterName(
+	monster,
+	monsterIndex,
+	targetIndex,
+	nameKey,
+) {
+	if (monsterIndex === targetIndex) return false;
+	return monsterNameKey(monster) === nameKey;
+}
+
+function requireUniqueCustomMonsterName(monsters, targetIndex, nameKey) {
+	const duplicate = monsters.some((monster, monsterIndex) =>
+		matchesOtherCustomMonsterName(
+			monster,
+			monsterIndex,
+			targetIndex,
+			nameKey,
+		),
+	);
+	if (duplicate) fail("Custom creature with this name already exists.", 409);
+}
+
+function renameCustomFavorite(favorite, previousNameKey, nextName) {
+	if (monsterNameKey(favorite) !== previousNameKey) return favorite;
+	if (normalizeSource(favorite.source) !== CUSTOM_SOURCE) return favorite;
+	return { ...favorite, name: nextName, source: CUSTOM_SOURCE };
+}
+
+async function persistCustomMonsterRename(
+	repository,
+	previousNameKey,
+	nextNameKey,
+	nextName,
+) {
+	if (nextNameKey === previousNameKey) return;
+	const favorites = await repository.readFavorites();
+	await repository.writeFavorites(
+		favorites.map((favorite) =>
+			renameCustomFavorite(favorite, previousNameKey, nextName),
+		),
+	);
+}
+
+function selectPersistedReplacement(updated, nextNameKey, fallback) {
+	return (
+		updated.find((monster) => monsterNameKey(monster) === nextNameKey) ||
+		fallback
+	);
+}
+
+async function replaceCustomMonster({
+	repository,
+	monsters,
+	index,
+	previous,
+	previousNameKey,
+	rawMonster,
+}) {
+	const next = buildReplacementCustomMonster(previous, rawMonster);
+	requireReplacementMonsterName(next);
+	const nextNameKey = monsterNameKey(next);
+	requireUniqueCustomMonsterName(monsters, index, nextNameKey);
+	monsters[index] = normalizeCustomMonsterHpAverage(next);
+	const updated = await repository.writeCustomMonsters(monsters);
+	await persistCustomMonsterRename(
+		repository,
+		previousNameKey,
+		nextNameKey,
+		next.name,
+	);
+	return selectPersistedReplacement(updated, nextNameKey, next);
+}
+
+function normalizeCustomImageUrl(payload) {
+	return payload.imageUrl === null
+		? null
+		: String(payload.imageUrl || "").trim();
+}
+
+function matchesPersistedImageMonster(
+	monster,
+	previousId,
+	previousNameKey,
+) {
+	if (previousId && monsterId(monster) === previousId) return true;
+	return monsterNameKey(monster) === previousNameKey;
+}
+
+function selectPersistedImageMonster(
+	updated,
+	previousId,
+	previousNameKey,
+	fallback,
+) {
+	return (
+		updated.find((monster) =>
+			matchesPersistedImageMonster(
+				monster,
+				previousId,
+				previousNameKey,
+			),
+		) || fallback
+	);
+}
+
+async function updateCustomMonsterImage({
+	repository,
+	monsters,
+	index,
+	previous,
+	previousId,
+	previousNameKey,
+	payload,
+}) {
+	const imageUrl = normalizeCustomImageUrl(payload);
+	monsters[index] = { ...previous, imageUrl: imageUrl || null };
+	const updated = await repository.writeCustomMonsters(monsters);
+	return selectPersistedImageMonster(
+		updated,
+		previousId,
+		previousNameKey,
+		monsters[index],
+	);
+}
+
+function projectAllSourceMonster(monster) {
+	return {
+		...monster,
+		source: normalizeSource(monster.source),
+	};
+}
+
+async function readAllSourceMonsters(repository) {
+	const all = await repository.readAllMonsters();
+	return all.monsters.map(projectAllSourceMonster);
+}
+
+function projectDirectSourceMonster(monster, sourceData) {
+	return {
+		...monster,
+		source: normalizeSource(monster.source || sourceData.fileSource),
+	};
+}
+
+function projectDirectSourceMonsters(sourceData) {
+	return sourceData.monsters.map((monster) =>
+		projectDirectSourceMonster(monster, sourceData),
+	);
+}
+
+function matchesNormalizedMonsterSource(monster, normalizedSource) {
+	return normalizeSource(monster.source) === normalizedSource;
+}
+
+function projectFallbackSourceMonster(monster) {
+	return {
+		...monster,
+		source: normalizeSource(monster.source),
+	};
+}
+
+function projectFallbackSourceMonsters(monsters, normalizedSource) {
+	return monsters
+		.filter((monster) =>
+			matchesNormalizedMonsterSource(monster, normalizedSource),
+		)
+		.map(projectFallbackSourceMonster);
+}
+
+async function readNamedSourceMonsters(repository, source, normalizedSource) {
+	const sourceData = await repository.readSourceMonsters(source);
+	if (sourceData) return projectDirectSourceMonsters(sourceData);
+	const all = await repository.readAllMonsters();
+	if (!all.exists) fail("Source not found.", 404);
+	return projectFallbackSourceMonsters(all.monsters, normalizedSource);
+}
+
+function isAllBestiarySource(source) {
+	return String(source).toLowerCase() === "all";
+}
+
+function matchesBestiarySearchName(monster, nameQuery) {
+	if (!nameQuery) return true;
+	return monster.name?.toLowerCase().includes(nameQuery);
+}
+
+function matchesBestiarySearchType(monster, typeQuery) {
+	if (!typeQuery) return true;
+	return JSON.stringify(monster.type || "").toLowerCase().includes(typeQuery);
+}
+
+function matchesBestiarySearch(monster, nameQuery, typeQuery) {
+	const matchesName = matchesBestiarySearchName(monster, nameQuery);
+	const matchesType = matchesBestiarySearchType(monster, typeQuery);
+	return matchesName && matchesType;
+}
+
+function appendBestiarySearchResults(results, index, nameQuery, typeQuery) {
+	for (const monster of index.values()) {
+		if (matchesBestiarySearch(monster, nameQuery, typeQuery)) {
+			results.push(monster);
+		}
+	}
 }
 
 function createBestiaryCommands(repository) {
@@ -145,29 +425,14 @@ function createBestiaryCommands(repository) {
 
 		async getSource({ source }) {
 			const normalizedSource = normalizeSource(source);
-			if (String(source).toLowerCase() === "all") {
-				const all = await repository.readAllMonsters();
-				return all.monsters.map((monster) => ({
-					...monster,
-					source: normalizeSource(monster.source),
-				}));
-			}
+			if (isAllBestiarySource(source))
+				return readAllSourceMonsters(repository);
 			if (normalizedSource === CUSTOM_SOURCE) return listCustom();
-			const sourceData = await repository.readSourceMonsters(source);
-			if (sourceData) {
-				return sourceData.monsters.map((monster) => ({
-					...monster,
-					source: normalizeSource(monster.source || sourceData.fileSource),
-				}));
-			}
-			const all = await repository.readAllMonsters();
-			if (!all.exists) fail("Source not found.", 404);
-			return all.monsters
-				.filter((monster) => normalizeSource(monster.source) === normalizedSource)
-				.map((monster) => ({
-					...monster,
-					source: normalizeSource(monster.source),
-				}));
+			return readNamedSourceMonsters(
+				repository,
+				source,
+				normalizedSource,
+			);
 		},
 
 		listCustom,
@@ -175,15 +440,12 @@ function createBestiaryCommands(repository) {
 			const nameQuery = String(name).toLowerCase();
 			const typeQuery = String(type).toLowerCase();
 			const results = [];
-			for (const monster of (await repository.getIndex()).values()) {
-				const matchesName = nameQuery
-					? monster.name?.toLowerCase().includes(nameQuery)
-					: true;
-				const matchesType = typeQuery
-					? JSON.stringify(monster.type || "").toLowerCase().includes(typeQuery)
-					: true;
-				if (matchesName && matchesType) results.push(monster);
-			}
+			appendBestiarySearchResults(
+				results,
+				await repository.getIndex(),
+				nameQuery,
+				typeQuery,
+			);
 			sortByNameQuery(results, nameQuery);
 			return results;
 		},
@@ -214,45 +476,25 @@ function createBestiaryCommands(repository) {
 			const previous = monsters[index];
 			const previousNameKey = monsterNameKey(previous);
 			const previousId = monsterId(previous);
-			if (payload.monster && typeof payload.monster === "object") {
-				const next = buildReplacementCustomMonster(previous, payload.monster);
-				if (!next.name) fail("Creature name is required.", 400);
-				const nextNameKey = monsterNameKey(next);
-				if (
-					monsters.some(
-						(monster, monsterIndex) =>
-							monsterIndex !== index && monsterNameKey(monster) === nextNameKey,
-					)
-				) {
-					fail("Custom creature with this name already exists.", 409);
-				}
-				monsters[index] = normalizeCustomMonsterHpAverage(next);
-				const updated = await repository.writeCustomMonsters(monsters);
-				if (nextNameKey !== previousNameKey) {
-					const favorites = await repository.readFavorites();
-					await repository.writeFavorites(
-						favorites.map((favorite) =>
-							monsterNameKey(favorite) === previousNameKey &&
-							normalizeSource(favorite.source) === CUSTOM_SOURCE
-								? { ...favorite, name: next.name, source: CUSTOM_SOURCE }
-								: favorite,
-						),
-					);
-				}
-				return updated.find((monster) => monsterNameKey(monster) === nextNameKey) || next;
+			if (hasReplacementCustomMonster(payload)) {
+				return replaceCustomMonster({
+					repository,
+					monsters,
+					index,
+					previous,
+					previousNameKey,
+					rawMonster: payload.monster,
+				});
 			}
-
-			const imageUrl =
-				payload.imageUrl === null ? null : String(payload.imageUrl || "").trim();
-			monsters[index] = { ...previous, imageUrl: imageUrl || null };
-			const updated = await repository.writeCustomMonsters(monsters);
-			return (
-				updated.find(
-					(monster) =>
-						(previousId && monsterId(monster) === previousId) ||
-						monsterNameKey(monster) === previousNameKey,
-				) || monsters[index]
-			);
+			return updateCustomMonsterImage({
+				repository,
+				monsters,
+				index,
+				previous,
+				previousId,
+				previousNameKey,
+				payload,
+			});
 		},
 
 		async replaceCustom({ monsters = [] }) {

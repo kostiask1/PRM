@@ -34,86 +34,173 @@ function getCustomMonsterLabel(monster, fallbackName = "") {
 	return String(monster?.name || fallbackName || "custom-monster").trim();
 }
 
+function isCustomMonsterRecord(monster) {
+	return Boolean(monster && typeof monster === "object");
+}
+
+function getCustomMonsterRecordList(monsters) {
+	return (Array.isArray(monsters) ? monsters : []).filter(
+		isCustomMonsterRecord,
+	);
+}
+
+function createCustomMonsterIndex(monsters, getKey) {
+	return new Map(
+		monsters
+			.filter((monster) => getKey(monster))
+			.map((monster) => [getKey(monster), monster]),
+	);
+}
+
+function createUnmatchedCustomMonsterNameIndex(monsters, matched) {
+	return new Map(
+		monsters
+			.filter(
+				(monster) =>
+					!matched.has(monster) && getCustomMonsterNameKey(monster),
+			)
+			.map((monster) => [getCustomMonsterNameKey(monster), monster]),
+	);
+}
+
+function getOrderedCustomMonsterKeys(beforeIndex, afterIndex) {
+	return new Set([...beforeIndex.keys(), ...afterIndex.keys()]);
+}
+
+function getIndexedCustomMonster(index, key) {
+	return index.get(key) || null;
+}
+
+function addMatchedCustomMonster(matched, monster) {
+	if (monster) matched.add(monster);
+}
+
+function getCustomMonsterChangeId(before, after, fallbackKey) {
+	return (
+		getCustomMonsterId(after) ||
+		getCustomMonsterId(before) ||
+		getCustomMonsterNameKey(after || before) ||
+		fallbackKey
+	);
+}
+
+function createCustomMonsterChangeResource(
+	before,
+	after,
+	fallbackKey,
+) {
+	const monsterId = getCustomMonsterChangeId(
+		before,
+		after,
+		fallbackKey,
+	);
+	const name = getCustomMonsterLabel(after || before, fallbackKey);
+	return {
+		id: `custom-monster:${monsterId}`,
+		kind: "custom-monster",
+		campaign: "bestiary",
+		name,
+		label: `data/custom-bestiary.json / ${name}`,
+		before: cloneSnapshotValue(before),
+		after: cloneSnapshotValue(after),
+	};
+}
+
+function pushCustomMonsterChangeResource(
+	resources,
+	before,
+	after,
+	fallbackKey,
+) {
+	if (!snapshotValueChanged(before, after)) return;
+	resources.push(
+		createCustomMonsterChangeResource(
+			before,
+			after,
+			fallbackKey,
+		),
+	);
+}
+
+function collectIdMatchedCustomMonsterChanges({
+	beforeIndex,
+	afterIndex,
+	matchedBefore,
+	matchedAfter,
+	resources,
+}) {
+	for (const key of getOrderedCustomMonsterKeys(beforeIndex, afterIndex)) {
+		const before = getIndexedCustomMonster(beforeIndex, key);
+		const after = getIndexedCustomMonster(afterIndex, key);
+		addMatchedCustomMonster(matchedBefore, before);
+		addMatchedCustomMonster(matchedAfter, after);
+		pushCustomMonsterChangeResource(resources, before, after, key);
+	}
+}
+
+function collectNameMatchedCustomMonsterChanges(
+	beforeIndex,
+	afterIndex,
+	resources,
+) {
+	for (const key of getOrderedCustomMonsterKeys(beforeIndex, afterIndex)) {
+		pushCustomMonsterChangeResource(
+			resources,
+			getIndexedCustomMonster(beforeIndex, key),
+			getIndexedCustomMonster(afterIndex, key),
+			key,
+		);
+	}
+}
+
+function getCustomMonsterResourceSortKey(resource) {
+	return String(resource.label || resource.id || "");
+}
+
+function compareCustomMonsterResources(first, second) {
+	return getCustomMonsterResourceSortKey(first).localeCompare(
+		getCustomMonsterResourceSortKey(second),
+	);
+}
+
 function buildCustomMonsterChangeResources(
 	beforeMonsters = [],
 	afterMonsters = [],
 ) {
-	const beforeList = (
-		Array.isArray(beforeMonsters) ? beforeMonsters : []
-	).filter((monster) => monster && typeof monster === "object");
-	const afterList = (Array.isArray(afterMonsters) ? afterMonsters : []).filter(
-		(monster) => monster && typeof monster === "object",
+	const beforeList = getCustomMonsterRecordList(beforeMonsters);
+	const afterList = getCustomMonsterRecordList(afterMonsters);
+	const beforeById = createCustomMonsterIndex(
+		beforeList,
+		getCustomMonsterId,
 	);
-	const beforeById = new Map(
-		beforeList
-			.filter((monster) => getCustomMonsterId(monster))
-			.map((monster) => [getCustomMonsterId(monster), monster]),
-	);
-	const afterById = new Map(
-		afterList
-			.filter((monster) => getCustomMonsterId(monster))
-			.map((monster) => [getCustomMonsterId(monster), monster]),
+	const afterById = createCustomMonsterIndex(
+		afterList,
+		getCustomMonsterId,
 	);
 	const matchedBefore = new Set();
 	const matchedAfter = new Set();
 	const resources = [];
-
-	const pushResource = (before, after, fallbackKey = "") => {
-		if (!snapshotValueChanged(before, after)) return;
-		const monsterId =
-			getCustomMonsterId(after) ||
-			getCustomMonsterId(before) ||
-			getCustomMonsterNameKey(after || before) ||
-			fallbackKey;
-		const name = getCustomMonsterLabel(after || before, fallbackKey);
-		resources.push({
-			id: `custom-monster:${monsterId}`,
-			kind: "custom-monster",
-			campaign: "bestiary",
-			name,
-			label: `data/custom-bestiary.json / ${name}`,
-			before: cloneSnapshotValue(before),
-			after: cloneSnapshotValue(after),
-		});
-	};
-
-	for (const key of new Set([...beforeById.keys(), ...afterById.keys()])) {
-		const before = beforeById.get(key) || null;
-		const after = afterById.get(key) || null;
-		if (before) matchedBefore.add(before);
-		if (after) matchedAfter.add(after);
-		pushResource(before, after, key);
-	}
-
-	const beforeByName = new Map(
-		beforeList
-			.filter(
-				(monster) =>
-					!matchedBefore.has(monster) && getCustomMonsterNameKey(monster),
-			)
-			.map((monster) => [getCustomMonsterNameKey(monster), monster]),
+	collectIdMatchedCustomMonsterChanges({
+		beforeIndex: beforeById,
+		afterIndex: afterById,
+		matchedBefore,
+		matchedAfter,
+		resources,
+	});
+	const beforeByName = createUnmatchedCustomMonsterNameIndex(
+		beforeList,
+		matchedBefore,
 	);
-	const afterByName = new Map(
-		afterList
-			.filter(
-				(monster) =>
-					!matchedAfter.has(monster) && getCustomMonsterNameKey(monster),
-			)
-			.map((monster) => [getCustomMonsterNameKey(monster), monster]),
+	const afterByName = createUnmatchedCustomMonsterNameIndex(
+		afterList,
+		matchedAfter,
 	);
-
-	for (const key of new Set([...beforeByName.keys(), ...afterByName.keys()])) {
-		pushResource(
-			beforeByName.get(key) || null,
-			afterByName.get(key) || null,
-			key,
-		);
-	}
-	resources.sort((a, b) =>
-		String(a.label || a.id || "").localeCompare(
-			String(b.label || b.id || ""),
-		),
+	collectNameMatchedCustomMonsterChanges(
+		beforeByName,
+		afterByName,
+		resources,
 	);
+	resources.sort(compareCustomMonsterResources);
 	return resources;
 }
 
@@ -600,25 +687,34 @@ async function writeAiResourceSnapshot(resource, snapshotValue) {
 	await command({ resource, campaignSlug, snapshotValue });
 }
 
-async function readUpdatedObjectForAiResponse(entry) {
-	const targetPath = entry?.path || {};
-	if (!targetPath.campaign) return null;
+function getUpdatedObjectTargetPath(entry) {
+	return entry?.path || {};
+}
 
-	if (targetPath.campaign === "bestiary") {
-		return { monsters: await storage.readCustomBestiaryMonsters() };
+function isBestiaryUpdatedObjectTarget(targetPath) {
+	return targetPath.campaign === "bestiary";
+}
+
+async function readUpdatedBestiaryObject() {
+	return { monsters: await storage.readCustomBestiaryMonsters() };
+}
+
+async function readExistingUpdatedSession(targetPath) {
+	const sessionFile = storage.sessionPath(
+		targetPath.campaign,
+		targetPath.session,
+	);
+	if (!(await storage.exists(sessionFile))) {
+		return { found: false, value: null };
 	}
+	const session = await storage.readJson(sessionFile);
+	return {
+		found: true,
+		value: { ...session, fileName: targetPath.session },
+	};
+}
 
-	if (targetPath.session) {
-		const sessionFile = storage.sessionPath(
-			targetPath.campaign,
-			targetPath.session,
-		);
-		if (await storage.exists(sessionFile)) {
-			const session = await storage.readJson(sessionFile);
-			return { ...session, fileName: targetPath.session };
-		}
-	}
-
+async function readUpdatedCampaignObject(targetPath) {
 	const metaPath = storage.campaignMetaPath(targetPath.campaign);
 	if (await storage.exists(metaPath)) {
 		return storage.readJson(metaPath);
@@ -626,85 +722,225 @@ async function readUpdatedObjectForAiResponse(entry) {
 	return null;
 }
 
-async function restoreAiResponseSnapshot(entry, snapshotKey, options = {}) {
+async function readUpdatedSessionOrCampaignObject(targetPath) {
+	if (!targetPath.session) {
+		return readUpdatedCampaignObject(targetPath);
+	}
+	const sessionResult = await readExistingUpdatedSession(targetPath);
+	return sessionResult.found
+		? sessionResult.value
+		: readUpdatedCampaignObject(targetPath);
+}
+
+async function readUpdatedObjectForAiResponse(entry) {
+	const targetPath = getUpdatedObjectTargetPath(entry);
+	if (!targetPath.campaign) return null;
+	if (isBestiaryUpdatedObjectTarget(targetPath)) {
+		return readUpdatedBestiaryObject();
+	}
+	return readUpdatedSessionOrCampaignObject(targetPath);
+}
+
+function createRestoreSelectionError(message) {
+	const error = new Error(message);
+	error.status = 400;
+	return error;
+}
+
+function getAiRestoreResources(entry) {
 	const resources = entry?.changes?.resources || [];
 	if (!resources.length) {
-		const error = new Error("This AI response has no saved changes.");
-		error.status = 400;
-		throw error;
+		throw createRestoreSelectionError(
+			"This AI response has no saved changes.",
+		);
 	}
+	return resources;
+}
 
-	const resourceIds = Array.isArray(options.resourceIds)
+function getSelectedAiResourceIds(options) {
+	return Array.isArray(options.resourceIds)
 		? new Set(options.resourceIds.map((id) => String(id || "")).filter(Boolean))
 		: null;
+}
+
+function selectAiRestoreResources(resources, resourceIds) {
 	const selectedResources = resourceIds
 		? resources.filter((resource) => resourceIds.has(resource.id))
 		: resources;
 	if (!selectedResources.length) {
-		const error = new Error("Selected AI response changes were not found.");
-		error.status = 400;
-		throw error;
+		throw createRestoreSelectionError(
+			"Selected AI response changes were not found.",
+		);
 	}
+	return selectedResources;
+}
 
+async function writeSelectedAiResourceSnapshots(
+	selectedResources,
+	snapshotKey,
+) {
 	for (const resource of selectedResources) {
 		await writeAiResourceSnapshot(resource, resource[snapshotKey] ?? null);
 	}
+}
 
-	const campaignSlug = entry?.path?.campaign;
-	const appliedAt = new Date().toISOString();
-	const patch = resourceIds
-		? (() => {
-				const nextResources = resources.map((resource) =>
-					resourceIds.has(resource.id)
-						? {
-								...resource,
-								applyState: snapshotKey === "after" ? "applied" : "undone",
-								appliedAt,
-							}
-						: resource,
-				);
-				const allApplied = nextResources.every(
-					(resource) => resource.applyState === "applied",
-				);
-				const allUndone = nextResources.every(
-					(resource) => resource.applyState === "undone",
-				);
-				return {
-					changes: {
-						...(entry.changes || {}),
-						resources: nextResources,
-						summary: buildAiChangeSummary(nextResources),
-					},
-					applyState: allApplied ? "applied" : allUndone ? "undone" : "draft",
-					appliedAt: allApplied || allUndone ? appliedAt : null,
-				};
-			})()
-		: {
-				changes:
-					snapshotKey === "after"
-						? {
-								...(entry.changes || {}),
-								resources: resources.map((resource) => ({
-									...resource,
-									applyState: "applied",
-									appliedAt,
-								})),
-								summary: buildAiChangeSummary(resources),
-							}
-						: entry.changes,
-				applyState: snapshotKey === "after" ? "applied" : "undone",
+function getAiRestoreState(snapshotKey) {
+	return snapshotKey === "after" ? "applied" : "undone";
+}
+
+function projectSelectedAiRestoreResource(
+	resource,
+	resourceIds,
+	applyState,
+	appliedAt,
+) {
+	if (!resourceIds.has(resource.id)) return resource;
+	return {
+		...resource,
+		applyState,
+		appliedAt,
+	};
+}
+
+function projectSelectedAiRestoreResources(
+	resources,
+	resourceIds,
+	applyState,
+	appliedAt,
+) {
+	return resources.map((resource) =>
+		projectSelectedAiRestoreResource(
+			resource,
+			resourceIds,
+			applyState,
+			appliedAt,
+		),
+	);
+}
+
+function areAllAiResourcesInState(resources, applyState) {
+	return resources.every((resource) => resource.applyState === applyState);
+}
+
+function getPartialAiRestoreState(allApplied, allUndone) {
+	if (allApplied) return "applied";
+	return allUndone ? "undone" : "draft";
+}
+
+function createPartialAiRestorePatch({
+	entry,
+	resources,
+	resourceIds,
+	snapshotKey,
+	appliedAt,
+}) {
+	const applyState = getAiRestoreState(snapshotKey);
+	const nextResources = projectSelectedAiRestoreResources(
+		resources,
+		resourceIds,
+		applyState,
+		appliedAt,
+	);
+	const allApplied = areAllAiResourcesInState(nextResources, "applied");
+	const allUndone = areAllAiResourcesInState(nextResources, "undone");
+	return {
+		changes: {
+			...(entry.changes || {}),
+			resources: nextResources,
+			summary: buildAiChangeSummary(nextResources),
+		},
+		applyState: getPartialAiRestoreState(allApplied, allUndone),
+		appliedAt: allApplied || allUndone ? appliedAt : null,
+	};
+}
+
+function projectFullyAppliedAiResource(resource, appliedAt) {
+	return {
+		...resource,
+		applyState: "applied",
+		appliedAt,
+	};
+}
+
+function createFullyAppliedAiChanges(entry, resources, appliedAt) {
+	return {
+		...(entry.changes || {}),
+		resources: resources.map((resource) =>
+			projectFullyAppliedAiResource(resource, appliedAt),
+		),
+		summary: buildAiChangeSummary(resources),
+	};
+}
+
+function createFullAiRestorePatch({
+	entry,
+	resources,
+	snapshotKey,
+	appliedAt,
+}) {
+	const isApplied = snapshotKey === "after";
+	return {
+		changes: isApplied
+			? createFullyAppliedAiChanges(entry, resources, appliedAt)
+			: entry.changes,
+		applyState: isApplied ? "applied" : "undone",
+		appliedAt,
+	};
+}
+
+function createAiRestorePatch({
+	entry,
+	resources,
+	resourceIds,
+	snapshotKey,
+	appliedAt,
+}) {
+	return resourceIds
+		? createPartialAiRestorePatch({
+				entry,
+				resources,
+				resourceIds,
+				snapshotKey,
 				appliedAt,
-			};
+			})
+		: createFullAiRestorePatch({
+				entry,
+				resources,
+				snapshotKey,
+				appliedAt,
+			});
+}
+
+async function persistAiRestoreResult(entry, campaignSlug, patch) {
 	const response = await storage.updateAiResponse(
 		campaignSlug,
 		entry.id,
 		patch,
 	);
+	const responses = await storage.readAiResponses(campaignSlug);
+	const updated = await readUpdatedObjectForAiResponse(response || entry);
 	return {
 		response,
-		responses: await storage.readAiResponses(campaignSlug),
-		updated: await readUpdatedObjectForAiResponse(response || entry),
+		responses,
+		updated,
 	};
+}
+
+async function restoreAiResponseSnapshot(entry, snapshotKey, options = {}) {
+	const resources = getAiRestoreResources(entry);
+	const resourceIds = getSelectedAiResourceIds(options);
+	const selectedResources = selectAiRestoreResources(resources, resourceIds);
+	await writeSelectedAiResourceSnapshots(selectedResources, snapshotKey);
+	const campaignSlug = entry?.path?.campaign;
+	const appliedAt = new Date().toISOString();
+	const patch = createAiRestorePatch({
+		entry,
+		resources,
+		resourceIds,
+		snapshotKey,
+		appliedAt,
+	});
+	return persistAiRestoreResult(entry, campaignSlug, patch);
 }
 
 module.exports = {

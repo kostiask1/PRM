@@ -47,115 +47,144 @@ const AI_ALLOWED_FILE_MIME_TYPES = new Set([
 	"text/xml",
 ]);
 
+const UNSAFE_IMAGE_PATH_PARTS = new Set(["", ".", ".."]);
+const LOCAL_IMAGE_ROUTE_PREFIX = Object.freeze(["api", "images"]);
+
+function getCappedAttachmentList(value, limit) {
+	return Array.isArray(value) ? value.slice(0, limit) : [];
+}
+
+function appendCollectedImageUrl(output, item) {
+	if (item?.url) output.push(String(item.url).trim());
+}
+
+function hasCollectedMaximumImages(output) {
+	return output.length >= MAX_AI_IMAGES;
+}
+
 function collectImageUrls(value, output = []) {
 	if (!Array.isArray(value)) return output;
-	if (Array.isArray(value)) {
-		for (const item of value) {
-			if (item?.url) output.push(String(item.url).trim());
-			if (output.length >= MAX_AI_IMAGES) break;
-		}
+	for (const item of value) {
+		appendCollectedImageUrl(output, item);
+		if (hasCollectedMaximumImages(output)) break;
 	}
 	return output;
 }
 
-function isSafeImagePathPart(value) {
-	const part = String(value || "");
-	return (
-		part &&
-		part !== "." &&
-		part !== ".." &&
-		!part.includes("/") &&
-		!part.includes("\\")
-	);
+function toAttachmentString(value) {
+	return String(value || "");
 }
 
-function resolveLocalImageUrl(imageUrl) {
-	let pathname = "";
-	try {
-		pathname = new URL(String(imageUrl || ""), "http://local").pathname;
-	} catch {
-		pathname = String(imageUrl || "");
-	}
+function hasImagePathSeparator(part) {
+	return ["/", "\\"].some((separator) => part.includes(separator));
+}
 
-	const parts = pathname
+function isSafeImagePathPart(value) {
+	const part = toAttachmentString(value);
+	if (UNSAFE_IMAGE_PATH_PARTS.has(part)) return false;
+	return !hasImagePathSeparator(part);
+}
+
+function getLocalImageUrlPathname(imageUrl) {
+	try {
+		return new URL(toAttachmentString(imageUrl), "http://local").pathname;
+	} catch {
+		return toAttachmentString(imageUrl);
+	}
+}
+
+function decodeLocalImagePathParts(pathname) {
+	return pathname
 		.split("/")
 		.filter(Boolean)
 		.map((part) => decodeURIComponent(part));
-	if (parts.length < 5 || parts[0] !== "api" || parts[1] !== "images") {
-		return null;
-	}
+}
 
-	const [, , slug, category, ...relativeParts] = parts;
-	if (!slug || !category || relativeParts.length === 0) return null;
-	if (![slug, category, ...relativeParts].every(isSafeImagePathPart)) {
-		return null;
-	}
-
-	const filePath = path.resolve(
-		storage.IMAGES_DIR,
-		slug,
-		category,
-		...relativeParts,
+function hasLocalImageRoutePrefix(parts) {
+	return (
+		parts[0] === LOCAL_IMAGE_ROUTE_PREFIX[0] &&
+		parts[1] === LOCAL_IMAGE_ROUTE_PREFIX[1]
 	);
+}
+
+function hasCompleteLocalImageRoute(parts) {
+	return parts.length >= 5 && hasLocalImageRoutePrefix(parts);
+}
+
+function projectLocalImageRoute(parts) {
+	const [, , slug, category, ...relativeParts] = parts;
+	return { slug, category, relativeParts };
+}
+
+function hasCompleteLocalImageLocation(location) {
+	return Boolean(
+		location.slug &&
+		location.category &&
+		location.relativeParts.length > 0,
+	);
+}
+
+function hasSafeLocalImageLocation(location) {
+	return [
+		location.slug,
+		location.category,
+		...location.relativeParts,
+	].every(isSafeImagePathPart);
+}
+
+function getValidLocalImageLocation(parts) {
+	if (!hasCompleteLocalImageRoute(parts)) return null;
+	const location = projectLocalImageRoute(parts);
+	if (!hasCompleteLocalImageLocation(location)) return null;
+	if (!hasSafeLocalImageLocation(location)) return null;
+	return location;
+}
+
+function resolveLocalImageFilePath(location) {
+	return path.resolve(
+		storage.IMAGES_DIR,
+		location.slug,
+		location.category,
+		...location.relativeParts,
+	);
+}
+
+function isWithinLocalImageRoot(filePath) {
 	const rootPath = path.resolve(storage.IMAGES_DIR);
-	if (filePath !== rootPath && !filePath.startsWith(`${rootPath}${path.sep}`)) {
-		return null;
-	}
-
-	const mimeType = AI_IMAGE_MIME_TYPES[path.extname(filePath).toLowerCase()];
-	if (!mimeType) return null;
-	return { filePath, mimeType };
+	return (
+		filePath === rootPath ||
+		filePath.startsWith(`${rootPath}${path.sep}`)
+	);
 }
 
-async function imageUrlToInlinePart(imageUrl) {
-	const resolved = resolveLocalImageUrl(imageUrl);
-	if (!resolved) return null;
-
-	const stats = await fs.stat(resolved.filePath).catch(() => null);
-	if (!stats?.isFile() || stats.size > MAX_AI_IMAGE_BYTES) return null;
-
-	const data = await fs.readFile(resolved.filePath);
-	return {
-		inlineData: {
-			data: data.toString("base64"),
-			mimeType: resolved.mimeType,
-		},
-	};
+function getImageMimeTypeForPath(filePath) {
+	return AI_IMAGE_MIME_TYPES[path.extname(filePath).toLowerCase()];
 }
 
-function normalizeAttachedImageMimeType(image = {}) {
-	const mimeType = String(image.mimeType || "")
-		.trim()
-		.toLowerCase();
-	if (AI_ALLOWED_IMAGE_MIME_TYPES.has(mimeType)) return mimeType;
-	const byExtension = AI_IMAGE_MIME_TYPES[extensionFromName(image.name)];
-	return byExtension || "";
+function resolveLocalImageLocation(location) {
+	const filePath = resolveLocalImageFilePath(location);
+	if (!isWithinLocalImageRoot(filePath)) return null;
+	const mimeType = getImageMimeTypeForPath(filePath);
+	return mimeType ? { filePath, mimeType } : null;
 }
 
-function normalizeAttachedImageData(data) {
-	const value = String(data || "").trim();
-	if (!value) return "";
-	const commaIndex = value.indexOf(",");
-	return value.startsWith("data:") && commaIndex !== -1
-		? value.slice(commaIndex + 1)
-		: value;
+function resolveLocalImageUrl(imageUrl) {
+	const pathname = getLocalImageUrlPathname(imageUrl);
+	const parts = decodeLocalImagePathParts(pathname);
+	const location = getValidLocalImageLocation(parts);
+	return location ? resolveLocalImageLocation(location) : null;
 }
 
-function attachedImageToInlinePart(image = {}) {
-	const mimeType = normalizeAttachedImageMimeType(image);
-	if (!mimeType) return null;
+function readLocalImageStats(filePath) {
+	return fs.stat(filePath).catch(() => null);
+}
 
-	const data = normalizeAttachedImageData(image.data);
-	if (!data) return null;
+function isReadableLocalImage(stats) {
+	if (!stats?.isFile()) return false;
+	return stats.size <= MAX_AI_IMAGE_BYTES;
+}
 
-	let buffer;
-	try {
-		buffer = Buffer.from(data, "base64");
-	} catch {
-		return null;
-	}
-	if (!buffer.length || buffer.length > MAX_AI_IMAGE_BYTES) return null;
-
+function createInlinePart(buffer, mimeType) {
 	return {
 		inlineData: {
 			data: buffer.toString("base64"),
@@ -164,94 +193,144 @@ function attachedImageToInlinePart(image = {}) {
 	};
 }
 
-async function buildImageParts(attachedImages = []) {
-	const images = Array.isArray(attachedImages)
-		? attachedImages.slice(0, MAX_AI_IMAGES)
-		: [];
-	const parts = [];
-	const seenUrls = new Set();
-	for (const image of images) {
-		const inlinePart = attachedImageToInlinePart(image);
-		if (inlinePart) {
-			parts.push(inlinePart);
-			continue;
-		}
-
-		const url = String(image?.url || "").trim();
-		if (!url || seenUrls.has(url)) continue;
-		seenUrls.add(url);
-		const urlPart = await imageUrlToInlinePart(url);
-		if (urlPart) parts.push(urlPart);
-	}
-	return parts;
+async function imageUrlToInlinePart(imageUrl) {
+	const resolved = resolveLocalImageUrl(imageUrl);
+	if (!resolved) return null;
+	const stats = await readLocalImageStats(resolved.filePath);
+	if (!isReadableLocalImage(stats)) return null;
+	const data = await fs.readFile(resolved.filePath);
+	return createInlinePart(data, resolved.mimeType);
 }
 
 function extensionFromName(fileName) {
-	return path.extname(String(fileName || "")).toLowerCase();
+	return path.extname(toAttachmentString(fileName)).toLowerCase();
 }
 
-function normalizeAttachedFileMimeType(file = {}) {
-	const byExtension = AI_FILE_MIME_TYPES[extensionFromName(file.name)];
-	if (byExtension) return byExtension;
-	const mimeType = String(file.mimeType || "")
-		.trim()
-		.toLowerCase();
-	return AI_ALLOWED_FILE_MIME_TYPES.has(mimeType) ? mimeType : "";
+function normalizeDeclaredMimeType(mimeType) {
+	return toAttachmentString(mimeType).trim().toLowerCase();
 }
 
-function normalizeAttachedFileData(data) {
-	const value = String(data || "").trim();
-	if (!value) return "";
+function normalizeAttachedImageMimeType(image = {}) {
+	const mimeType = normalizeDeclaredMimeType(image.mimeType);
+	if (AI_ALLOWED_IMAGE_MIME_TYPES.has(mimeType)) return mimeType;
+	return AI_IMAGE_MIME_TYPES[extensionFromName(image.name)] || "";
+}
+
+function stripAttachedDataUrlPrefix(value) {
 	const commaIndex = value.indexOf(",");
 	return value.startsWith("data:") && commaIndex !== -1
 		? value.slice(commaIndex + 1)
 		: value;
 }
 
+function normalizeAttachedData(data) {
+	const value = toAttachmentString(data).trim();
+	return value ? stripAttachedDataUrlPrefix(value) : "";
+}
+
+function decodeAttachedBase64(data) {
+	try {
+		return Buffer.from(data, "base64");
+	} catch {
+		return null;
+	}
+}
+
+function hasAllowedAttachmentSize(buffer, maximumBytes) {
+	if (!buffer?.length) return false;
+	return buffer.length <= maximumBytes;
+}
+
+function attachedImageToInlinePart(image = {}) {
+	const mimeType = normalizeAttachedImageMimeType(image);
+	if (!mimeType) return null;
+	const data = normalizeAttachedData(image.data);
+	if (!data) return null;
+	const buffer = decodeAttachedBase64(data);
+	if (!hasAllowedAttachmentSize(buffer, MAX_AI_IMAGE_BYTES)) return null;
+	return createInlinePart(buffer, mimeType);
+}
+
+function getAttachedImageUrl(image) {
+	return toAttachmentString(image?.url).trim();
+}
+
+async function getUrlBackedImagePart(image, seenUrls) {
+	const url = getAttachedImageUrl(image);
+	if (!url || seenUrls.has(url)) return null;
+	seenUrls.add(url);
+	return imageUrlToInlinePart(url);
+}
+
+async function getAttachedImagePart(image, seenUrls) {
+	const inlinePart = attachedImageToInlinePart(image);
+	return inlinePart || getUrlBackedImagePart(image, seenUrls);
+}
+
+async function appendAttachedImagePart(parts, image, seenUrls) {
+	const part = await getAttachedImagePart(image, seenUrls);
+	if (part) parts.push(part);
+}
+
+async function buildImageParts(attachedImages = []) {
+	const images = getCappedAttachmentList(attachedImages, MAX_AI_IMAGES);
+	const parts = [];
+	const seenUrls = new Set();
+	for (const image of images) {
+		await appendAttachedImagePart(parts, image, seenUrls);
+	}
+	return parts;
+}
+
+function normalizeAttachedFileMimeType(file = {}) {
+	const byExtension = AI_FILE_MIME_TYPES[extensionFromName(file.name)];
+	if (byExtension) return byExtension;
+	const mimeType = normalizeDeclaredMimeType(file.mimeType);
+	return AI_ALLOWED_FILE_MIME_TYPES.has(mimeType) ? mimeType : "";
+}
+
 function attachmentNameForPrompt(name) {
-	return String(name || "attached-file").replace(/[\r\n]+/g, " ").trim();
+	return toAttachmentString(name || "attached-file")
+		.replace(/[\r\n]+/g, " ")
+		.trim();
+}
+
+function createTextFileParts(name, mimeType, buffer) {
+	return [
+		{
+			text: `ATTACHED FILE: ${name} (${mimeType})\n\n${buffer.toString("utf8")}`,
+		},
+	];
+}
+
+function createBinaryFileParts(name, mimeType, buffer) {
+	return [
+		{ text: `ATTACHED FILE: ${name} (${mimeType})` },
+		createInlinePart(buffer, mimeType),
+	];
+}
+
+function createAttachedFileParts(name, mimeType, buffer) {
+	return AI_TEXT_FILE_MIME_TYPES.has(mimeType)
+		? createTextFileParts(name, mimeType, buffer)
+		: createBinaryFileParts(name, mimeType, buffer);
 }
 
 function attachedFileToPart(file = {}) {
 	const mimeType = normalizeAttachedFileMimeType(file);
 	if (!mimeType) return [];
-
-	const data = normalizeAttachedFileData(file.data);
+	const data = normalizeAttachedData(file.data);
 	if (!data) return [];
-
-	let buffer;
-	try {
-		buffer = Buffer.from(data, "base64");
-	} catch {
-		return [];
-	}
-	if (!buffer.length || buffer.length > MAX_AI_FILE_BYTES) return [];
-
+	const buffer = decodeAttachedBase64(data);
+	if (!hasAllowedAttachmentSize(buffer, MAX_AI_FILE_BYTES)) return [];
 	const name = attachmentNameForPrompt(file.name);
-	if (AI_TEXT_FILE_MIME_TYPES.has(mimeType)) {
-		return [
-			{
-				text: `ATTACHED FILE: ${name} (${mimeType})\n\n${buffer.toString("utf8")}`,
-			},
-		];
-	}
-
-	return [
-		{ text: `ATTACHED FILE: ${name} (${mimeType})` },
-		{
-			inlineData: {
-				data: buffer.toString("base64"),
-				mimeType,
-			},
-		},
-	];
+	return createAttachedFileParts(name, mimeType, buffer);
 }
 
 function buildFileParts(attachedFiles = []) {
-	const files = Array.isArray(attachedFiles)
-		? attachedFiles.slice(0, MAX_AI_FILES)
-		: [];
-	return files.flatMap(attachedFileToPart);
+	return getCappedAttachmentList(attachedFiles, MAX_AI_FILES).flatMap(
+		attachedFileToPart,
+	);
 }
 
 module.exports = {

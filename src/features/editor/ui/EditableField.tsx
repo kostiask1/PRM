@@ -99,13 +99,21 @@ import type {
 	EntityLinkModalState,
 } from "../../entity-link/index.js";
 import {
-	getEditableShortcutAction,
+	createEditableFieldChangeEvent,
+	getEditableClickPlan,
+	getEditableCopyRequest,
+	getEditableKeyDownPlan,
+	getEditableMentionName,
+	getLexicalEditableFieldViewPresentation,
 	normalizeEditableMarkdown,
 	normalizeEditableText,
-	shouldDelegateEditableHistory,
+	shouldInsertEditableMentionResult,
 	type EditableShortcutAction,
+	type EditableFieldChangeEvent,
 	type EditableFieldType,
 } from "./editorPresentation.ts";
+
+export type { EditableFieldChangeEvent } from "./editorPresentation.ts";
 
 const MENTION_CLASS = "mention_link EditableField__mention";
 const MENTION_TOOLTIP_KEY = "Ctrl+click to open entity";
@@ -268,42 +276,6 @@ const MARKDOWN_TRANSFORMERS: Transformer[] = [
 	MENTION_TRANSFORMER,
 ];
 
-
-export interface EditableFieldChangeEvent {
-	target: { value: string; [key: string]: unknown };
-	currentTarget?: { value: string; [key: string]: unknown };
-	[key: string]: unknown;
-}
-
-function createChangeEvent(
-	sourceEvent: unknown,
-	value: string,
-): EditableFieldChangeEvent {
-	const source =
-		sourceEvent && typeof sourceEvent === "object"
-			? (sourceEvent as Record<string, unknown>)
-			: {};
-	const target =
-		source.target && typeof source.target === "object"
-			? (source.target as Record<string, unknown>)
-			: {};
-	const currentTarget =
-		source.currentTarget && typeof source.currentTarget === "object"
-			? (source.currentTarget as Record<string, unknown>)
-			: target;
-
-	return {
-		...source,
-		currentTarget: {
-			...currentTarget,
-			value,
-		},
-		target: {
-			...target,
-			value,
-		},
-	};
-}
 
 function $loadMarkdownValue(
 	markdownValue: string,
@@ -513,7 +485,9 @@ function MarkdownChangePlugin({
 			if (nextValue === lastValueRef.current) return;
 
 			lastValueRef.current = nextValue;
-			onChange?.(createChangeEvent(lastEventRef.current, nextValue));
+			onChange?.(
+				createEditableFieldChangeEvent(lastEventRef.current, nextValue),
+			);
 		},
 		[lastEventRef, lastValueRef, onChange, type],
 	);
@@ -569,6 +543,13 @@ function runEditableHeading(
 	editor.update(() =>
 		$toggleHeading(`h${action.slice(-1)}` as HeadingTagType),
 	);
+}
+
+function getEditableSelectedMentionText(
+	selection: ReturnType<typeof $getSelection>,
+): string {
+	if (!$isRangeSelection(selection) || selection.isCollapsed()) return "";
+	return normalizeEditableText(selection.getTextContent()).trim();
 }
 
 interface ExecuteEditableShortcutOptions {
@@ -631,19 +612,14 @@ function useCommandHandlers({
 			event.preventDefault();
 			event.stopPropagation();
 
-			const selection = $getSelection();
-			if ($isRangeSelection(selection) && !selection.isCollapsed()) {
-				const selectedText = normalizeEditableText(
-					selection.getTextContent(),
-				).trim();
-				if (selectedText) {
-					$insertMentionAtSelection(selectedText);
-					return;
-				}
+			const selectedText = getEditableSelectedMentionText($getSelection());
+			if (selectedText) {
+				$insertMentionAtSelection(selectedText);
+				return;
 			}
 
 			const result = await requestMentionSelection(dispatch);
-			if (result.status !== "selected" || !result.name) return;
+			if (!shouldInsertEditableMentionResult(result)) return;
 
 			editor.focus();
 			editor.update(() => {
@@ -655,27 +631,23 @@ function useCommandHandlers({
 
 	const handleKeyDown = useCallback(
 		(event: globalThis.KeyboardEvent) => {
-			const modified = event.ctrlKey || event.metaKey;
-			const action = getEditableShortcutAction({
-				code: event.code,
-				ctrlKey: event.ctrlKey,
+			const plan = getEditableKeyDownPlan(
+				event,
 				enableHistory,
 				isDisabled,
-				key: event.key,
-				metaKey: event.metaKey,
 				type,
-			});
-			if (shouldDelegateEditableHistory(event.code, modified, enableHistory)) {
+			);
+			if (plan.kind === "history") {
 				delegateKeyDown(event);
 				return;
 			}
 			event.stopPropagation();
-			if (!action || action === "delegate") {
+			if (plan.kind === "delegate") {
 				delegateKeyDown(event);
 				return;
 			}
 			executeEditableShortcut({
-				action,
+				action: plan.action,
 				delegateKeyDown,
 				editor,
 				event,
@@ -734,6 +706,105 @@ function getEventTargetElement(event: { target: EventTarget | null }) {
 	return event.target instanceof Element ? event.target : null;
 }
 
+interface LexicalEditableFieldViewProps {
+	enableHistory: boolean;
+	handleBlur: (event: FocusEvent<HTMLElement>) => void;
+	handleClick: (event: MouseEvent<HTMLElement>) => void;
+	handleFocus: (event: FocusEvent<HTMLElement>) => void;
+	handleInput: (event: FormEvent<HTMLElement>) => void;
+	handleKeyDown: (event: KeyboardEvent<HTMLElement>) => void;
+	handleMouseDown: (event: MouseEvent<HTMLElement>) => void;
+	handleMouseLeave: () => void;
+	handleMouseMove: (event: MouseEvent<HTMLElement>) => void;
+	handlePaste: (event: ClipboardEvent<HTMLElement>) => void;
+	isActive: boolean;
+	isDisabled: boolean;
+	lastEventRef: MutableRefObject<unknown>;
+	lastValueRef: MutableRefObject<string>;
+	markdownValue: string;
+	onChange?: (event: EditableFieldChangeEvent) => void;
+	placeholder?: string;
+	type: EditableFieldType;
+}
+
+function LexicalEditableFieldView({
+	enableHistory,
+	handleBlur,
+	handleClick,
+	handleFocus,
+	handleInput,
+	handleKeyDown,
+	handleMouseDown,
+	handleMouseLeave,
+	handleMouseMove,
+	handlePaste,
+	isActive,
+	isDisabled,
+	lastEventRef,
+	lastValueRef,
+	markdownValue,
+	onChange,
+	placeholder,
+	type,
+}: LexicalEditableFieldViewProps) {
+	const presentation = getLexicalEditableFieldViewPresentation(
+		enableHistory,
+		isDisabled,
+		type,
+	);
+	const editableNode = (
+		<ContentEditable
+			className={classNames("MarkdownView", "MarkdownView__editable", {
+				MarkdownView__active: isActive,
+				MarkdownView__disabled: isDisabled,
+			})}
+			role="textbox"
+			aria-multiline={presentation.ariaMultiline}
+			data-app-history-shortcuts={presentation.historyShortcuts}
+			data-placeholder={placeholder}
+			tabIndex={presentation.tabIndex}
+			onBlur={handleBlur}
+			onClick={handleClick}
+			onFocus={handleFocus}
+			onInput={handleInput}
+			onKeyDown={handleKeyDown}
+			onMouseDown={handleMouseDown}
+			onMouseLeave={handleMouseLeave}
+			onMouseMove={handleMouseMove}
+			onPaste={handlePaste}
+		/>
+	);
+
+	return (
+		<>
+			<EditorContentPlugin
+				editableNode={editableNode}
+				placeholder={placeholder}
+				type={type}
+			/>
+			{presentation.showHistory && <HistoryPlugin />}
+			<MarkdownValuePlugin
+				lastValueRef={lastValueRef}
+				markdownValue={markdownValue}
+				type={type}
+			/>
+			<MarkdownChangePlugin
+				lastEventRef={lastEventRef}
+				lastValueRef={lastValueRef}
+				onChange={onChange}
+				type={type}
+			/>
+			<EditableStatePlugin isDisabled={isDisabled} />
+			{presentation.showRichText && (
+				<>
+					<ListPlugin />
+					<MarkdownShortcutPlugin transformers={MARKDOWN_TRANSFORMERS} />
+				</>
+			)}
+		</>
+	);
+}
+
 function LexicalEditableField({
 	dispatch,
 	enableHistory,
@@ -782,15 +853,16 @@ function LexicalEditableField({
 	const handleClick = useCallback(
 		(event: MouseEvent<HTMLElement>) => {
 			const target = getEventTargetElement(event);
-			const mention = target?.closest<HTMLElement>("[data-mention]");
-			if (mention && (event.ctrlKey || event.metaKey)) {
+			const plan = getEditableClickPlan<HTMLElement>(target, event);
+
+			if (plan.kind === "mention") {
 				event.preventDefault();
 				event.stopPropagation();
-				openMentionModal(mention.dataset.mention || "");
+				openMentionModal(getEditableMentionName(plan.mention));
 				return;
 			}
 
-			if (target?.closest("a")) {
+			if (plan.preventDefault) {
 				event.preventDefault();
 			}
 
@@ -849,57 +921,30 @@ function LexicalEditableField({
 	const handleMouseDown = useCallback((event: MouseEvent<HTMLElement>) => {
 		event.stopPropagation();
 	}, []);
-
-	const editableNode = (
-		<ContentEditable
-			className={classNames("MarkdownView", "MarkdownView__editable", {
-				MarkdownView__active: isActive,
-				MarkdownView__disabled: isDisabled,
-			})}
-			role="textbox"
-			aria-multiline={isTextareaType(type)}
-			data-app-history-shortcuts={enableHistory ? undefined : "true"}
-			data-placeholder={placeholder}
-			tabIndex={isDisabled ? -1 : 0}
-			onBlur={handleBlur}
-			onClick={handleClick}
-			onFocus={handleFocus}
-			onInput={handleInput}
-			onKeyDown={handleKeyDown}
-			onMouseDown={handleMouseDown}
-			onMouseLeave={() => onMentionHover({ anchor: null, content: null })}
-			onMouseMove={handleMouseMove}
-			onPaste={handlePaste}
-		/>
-	);
+	const handleMouseLeave = () =>
+		onMentionHover({ anchor: null, content: null });
 
 	return (
-		<>
-			<EditorContentPlugin
-				editableNode={editableNode}
-				placeholder={placeholder}
-				type={type}
-			/>
-			{enableHistory && <HistoryPlugin />}
-			<MarkdownValuePlugin
-				lastValueRef={lastValueRef}
-				markdownValue={markdownValue}
-				type={type}
-			/>
-			<MarkdownChangePlugin
-				lastEventRef={lastEventRef}
-				lastValueRef={lastValueRef}
-				onChange={onChange}
-				type={type}
-			/>
-			<EditableStatePlugin isDisabled={isDisabled} />
-			{isTextareaType(type) && (
-				<>
-					<ListPlugin />
-					<MarkdownShortcutPlugin transformers={MARKDOWN_TRANSFORMERS} />
-				</>
-			)}
-		</>
+		<LexicalEditableFieldView
+			enableHistory={enableHistory}
+			handleBlur={handleBlur}
+			handleClick={handleClick}
+			handleFocus={handleFocus}
+			handleInput={handleInput}
+			handleKeyDown={handleKeyDown}
+			handleMouseDown={handleMouseDown}
+			handleMouseLeave={handleMouseLeave}
+			handleMouseMove={handleMouseMove}
+			handlePaste={handlePaste}
+			isActive={isActive}
+			isDisabled={isDisabled}
+			lastEventRef={lastEventRef}
+			lastValueRef={lastValueRef}
+			markdownValue={markdownValue}
+			onChange={onChange}
+			placeholder={placeholder}
+			type={type}
+		/>
 	);
 }
 
@@ -931,6 +976,17 @@ export interface EditableFieldProps
 	onInput?: (event: FormEvent<HTMLElement>) => void;
 	onKeyDown?: (event: KeyboardEvent<HTMLElement>) => void;
 	onPaste?: (event: ClipboardEvent<HTMLElement>) => void;
+}
+
+function replaceEditableCopyResetTimer(
+	copyTimeoutRef: MutableRefObject<ReturnType<typeof setTimeout> | null>,
+	setCopied: (copied: boolean) => void,
+): void {
+	if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+	copyTimeoutRef.current = setTimeout(() => {
+		setCopied(false);
+		copyTimeoutRef.current = null;
+	}, 2000);
 }
 
 export default function EditableField({
@@ -1009,29 +1065,28 @@ export default function EditableField({
 			event.preventDefault();
 			event.stopPropagation();
 
-			const editor = editorRef.current;
-			if (!editor || !normalizedMarkdownValue) return;
+			const request = getEditableCopyRequest(
+				editorRef.current,
+				normalizedMarkdownValue,
+			);
+			if (!request) return;
 
 			try {
 				let html = "";
-				editor.getEditorState().read(() => {
-					html = $generateHtmlFromNodes(editor);
+				request.editor.getEditorState().read(() => {
+					html = $generateHtmlFromNodes(request.editor);
 				});
 
 				await navigator.clipboard.write([
 					new ClipboardItem({
 						"text/html": new Blob([html], { type: "text/html" }),
-						"text/plain": new Blob([normalizedMarkdownValue], {
+						"text/plain": new Blob([request.markdownValue], {
 							type: "text/plain",
 						}),
 					}),
 				]);
 				setCopied(true);
-				if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
-				copyTimeoutRef.current = setTimeout(() => {
-					setCopied(false);
-					copyTimeoutRef.current = null;
-				}, 2000);
+				replaceEditableCopyResetTimer(copyTimeoutRef, setCopied);
 			} catch (error) {
 				console.error("Failed to copy formatted text:", error);
 			}

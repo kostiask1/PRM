@@ -1,4 +1,6 @@
-const { sortByNameQuery } = require("../../../routes/searchUtils");
+const {
+	sortByNameQuery,
+} = require("../../search/application/searchResults");
 
 const SOURCE_PRIORITIES = new Map([
 	["XPHB", 3],

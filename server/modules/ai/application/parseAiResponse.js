@@ -4,54 +4,107 @@ function stripOuterJsonFence(text) {
 	return match ? match[1].trim() : trimmed;
 }
 
+function createJsonObjectScanState() {
+	return {
+		depth: 0,
+		inString: false,
+		escaped: false,
+	};
+}
+
+function advanceJsonStringState(state, char) {
+	if (state.escaped) {
+		state.escaped = false;
+		return;
+	}
+	if (char === "\\") {
+		state.escaped = true;
+		return;
+	}
+	if (char === '"') state.inString = false;
+}
+
+function advanceJsonStructureState(state, char) {
+	if (char === '"') {
+		state.inString = true;
+		return false;
+	}
+	if (char === "{") {
+		state.depth += 1;
+		return false;
+	}
+	if (char !== "}") return false;
+	state.depth -= 1;
+	return state.depth === 0;
+}
+
+function isJsonObjectEnd(state, char) {
+	if (state.inString) {
+		advanceJsonStringState(state, char);
+		return false;
+	}
+	return advanceJsonStructureState(state, char);
+}
+
+function findJsonObjectEnd(source, firstBrace) {
+	const state = createJsonObjectScanState();
+	for (let index = firstBrace; index < source.length; index += 1) {
+		if (isJsonObjectEnd(state, source[index])) return index;
+	}
+	return -1;
+}
+
 function extractFirstJsonObject(text) {
 	const source = stripOuterJsonFence(text);
 	const firstBrace = source.indexOf("{");
 	if (firstBrace === -1) return source.trim();
-	let depth = 0;
-	let inString = false;
-	let escaped = false;
-	for (let index = firstBrace; index < source.length; index += 1) {
-		const char = source[index];
-		if (inString) {
-			if (escaped) escaped = false;
-			else if (char === "\\") escaped = true;
-			else if (char === '"') inString = false;
-			continue;
-		}
-		if (char === '"') inString = true;
-		else if (char === "{") depth += 1;
-		else if (char === "}") {
-			depth -= 1;
-			if (depth === 0) return source.slice(firstBrace, index + 1).trim();
-		}
+	const lastBrace = findJsonObjectEnd(source, firstBrace);
+	if (lastBrace === -1) return source.trim();
+	return source.slice(firstBrace, lastBrace + 1).trim();
+}
+
+function normalizeEscapedNewLinesInObject(value) {
+	const normalized = {};
+	for (const key in value) {
+		normalized[key] = normalizeEscapedNewLines(value[key]);
 	}
-	return source.trim();
+	return normalized;
+}
+
+function normalizeNonStringEscapedNewLines(value) {
+	if (Array.isArray(value)) return value.map(normalizeEscapedNewLines);
+	if (!value) return value;
+	if (typeof value !== "object") return value;
+	return normalizeEscapedNewLinesInObject(value);
 }
 
 function normalizeEscapedNewLines(value) {
 	if (typeof value === "string") return value.replace(/\\n/g, "\n");
-	if (Array.isArray(value)) return value.map(normalizeEscapedNewLines);
-	if (value && typeof value === "object") {
-		const normalized = {};
-		for (const key in value) {
-			normalized[key] = normalizeEscapedNewLines(value[key]);
-		}
-		return normalized;
-	}
-	return value;
+	return normalizeNonStringEscapedNewLines(value);
+}
+
+function normalizeRawAiText(text) {
+	return String(text || "").replace(/\\n/g, "\n");
+}
+
+function parseStructuredAiResponse(text) {
+	return normalizeEscapedNewLines(JSON.parse(extractFirstJsonObject(text)));
+}
+
+function createInvalidAiResponse(text) {
+	return {
+		error: "AI returned invalid JSON. Try again.",
+		raw_response: normalizeRawAiText(text),
+	};
 }
 
 function parseAiResponseText({ text, shouldParse, onParseError = console.error }) {
-	if (!shouldParse) return String(text || "").replace(/\\n/g, "\n");
+	if (!shouldParse) return normalizeRawAiText(text);
 	try {
-		return normalizeEscapedNewLines(JSON.parse(extractFirstJsonObject(text)));
+		return parseStructuredAiResponse(text);
 	} catch (error) {
 		onParseError("Failed to parse AI response as JSON:", text, error);
-		return {
-			error: "AI returned invalid JSON. Try again.",
-			raw_response: String(text || "").replace(/\\n/g, "\n"),
-		};
+		return createInvalidAiResponse(text);
 	}
 }
 

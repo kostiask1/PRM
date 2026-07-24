@@ -5,6 +5,12 @@ const {
 	calculateDiceFormulaAverage,
 	stripMentionBrackets,
 } = require("../shared/bestiaryUtils.cjs");
+const {
+	createCampaignMentionReferenceUpdater,
+} = require("./modules/campaign/infrastructure/campaignMentionReferences");
+const {
+	createCampaignArchiveImageRestorer,
+} = require("./modules/backups/infrastructure/archiveImageRestoration");
 
 const ROOT_DIR = path.join(__dirname, "..");
 const DATA_DIR = path.join(ROOT_DIR, "data");
@@ -267,77 +273,139 @@ async function listCampaignSlugs() {
 
 function addMonstersToBestiaryIndex(index, monsters, fallbackSource = "") {
 	for (const monster of monsters) {
-		if (!monster.name) continue;
-		const monsterSource = String(monster.source || fallbackSource).toUpperCase();
-		const key = `${monster.name.trim().toLowerCase()}|${monsterSource}`;
-		index.set(key, { ...monster, source: monsterSource });
+		const entry = getBestiaryIndexEntry(monster, fallbackSource);
+		if (entry) index.set(...entry);
 	}
+}
+
+function getBestiaryIndexEntry(monster, fallbackSource) {
+	if (!monster.name) return null;
+	const monsterSource = String(monster.source || fallbackSource).toUpperCase();
+	const key = `${monster.name.trim().toLowerCase()}|${monsterSource}`;
+	return [key, { ...monster, source: monsterSource }];
+}
+
+function createBestiaryIndex(monsters, fallbackSource = "") {
+	const index = new Map();
+	addMonstersToBestiaryIndex(index, monsters, fallbackSource);
+	return index;
+}
+
+function getBestiaryEnvelopeMonsters(data) {
+	return data.monster || data.monsters || data.results || [];
+}
+
+function getBestiaryMonsters(data) {
+	return Array.isArray(data) ? data : getBestiaryEnvelopeMonsters(data);
+}
+
+function appendCustomBestiaryMonsters(index, customMonsters) {
+	addMonstersToBestiaryIndex(index, customMonsters, CUSTOM_BESTIARY_SOURCE);
+	return index;
+}
+
+async function readAggregateBestiaryIndex(allPath, customMonsters) {
+	const data = await readJson(allPath);
+	const index = createBestiaryIndex(getBestiaryMonsters(data));
+	return appendCustomBestiaryMonsters(index, customMonsters);
+}
+
+function hasBestiaryJsonExtension(entry) {
+	return entry.name.endsWith(".json");
+}
+
+function isBestiaryAggregateFile(entry) {
+	return entry.name === "all.json";
+}
+
+function isBestiaryIndexFile(entry) {
+	return entry.name === "index.json";
+}
+
+function isBestiaryLegendaryGroupsFile(entry) {
+	return entry.name === "legendarygroups.json";
+}
+
+function isBestiaryControlFile(entry) {
+	if (isBestiaryAggregateFile(entry)) return true;
+	if (isBestiaryIndexFile(entry)) return true;
+	return isBestiaryLegendaryGroupsFile(entry);
+}
+
+function isBundledBestiaryFile(entry) {
+	if (!entry.isFile()) return false;
+	if (!hasBestiaryJsonExtension(entry)) return false;
+	return !isBestiaryControlFile(entry);
+}
+
+function getBestiaryFileFallbackSource(fileName) {
+	return path.parse(fileName).name.replace(/^bestiary-/i, "");
+}
+
+function getBestiaryFileSource(data, fileName) {
+	const source =
+		data._meta?.sources?.[0]?.json ||
+		getBestiaryFileFallbackSource(fileName);
+	return source.toUpperCase();
+}
+
+async function addBestiaryFileToIndex(index, file) {
+	const data = await readJson(path.join(BESTIARY_DIR, file.name));
+	const source = getBestiaryFileSource(data, file.name);
+	addMonstersToBestiaryIndex(index, getBestiaryMonsters(data), source);
+}
+
+async function readSplitBestiaryIndex(customMonsters) {
+	const entries = await fs.readdir(BESTIARY_DIR, { withFileTypes: true });
+	const files = entries.filter(isBundledBestiaryFile);
+	const index = new Map();
+	for (const file of files) {
+		await addBestiaryFileToIndex(index, file);
+	}
+	return appendCustomBestiaryMonsters(index, customMonsters);
 }
 
 async function getBestiaryIndex() {
 	const customMonsters = await readCustomBestiaryMonsters();
 	if (!(await exists(BESTIARY_DIR))) {
-		const customIndex = new Map();
-		addMonstersToBestiaryIndex(customIndex, customMonsters, "CUSTOM");
-		return customIndex;
+		return createBestiaryIndex(customMonsters, CUSTOM_BESTIARY_SOURCE);
 	}
-
 	const allPath = path.join(BESTIARY_DIR, "all.json");
 	if (await exists(allPath)) {
-		const data = await readJson(allPath);
-		const monsters = Array.isArray(data)
-			? data
-			: data.monster || data.monsters || data.results || [];
-		const index = new Map();
-		addMonstersToBestiaryIndex(index, monsters);
-		addMonstersToBestiaryIndex(index, customMonsters, "CUSTOM");
-		return index;
+		return readAggregateBestiaryIndex(allPath, customMonsters);
 	}
+	return readSplitBestiaryIndex(customMonsters);
+}
 
-	const entries = await fs.readdir(BESTIARY_DIR, { withFileTypes: true });
-	const files = entries.filter(
-		(e) =>
-			e.isFile() &&
-			e.name.endsWith(".json") &&
-			e.name !== "all.json" &&
-			e.name !== "index.json" &&
-			e.name !== "legendarygroups.json",
-	);
+function getCustomBestiaryEnvelope(data) {
+	return data && !Array.isArray(data) ? data : {};
+}
 
-	const index = new Map();
-	for (const file of files) {
-		const data = await readJson(path.join(BESTIARY_DIR, file.name));
+function forceCustomBestiarySource(monster) {
+	return {
+		...monster,
+		source: CUSTOM_BESTIARY_SOURCE,
+	};
+}
 
-		let fileSource = (
-			data._meta?.sources?.[0]?.json ||
-			path.parse(file.name).name.replace(/^bestiary-/i, "")
-		).toUpperCase();
+function getCustomBestiaryReadMonsters(monsters) {
+	return Array.isArray(monsters)
+		? monsters.map(forceCustomBestiarySource)
+		: [];
+}
 
-		const monsters = Array.isArray(data)
-			? data
-			: data.monster || data.monsters || data.results || [];
-
-		addMonstersToBestiaryIndex(index, monsters, fileSource);
-	}
-	addMonstersToBestiaryIndex(index, customMonsters, "CUSTOM");
-	return index;
+function projectCustomBestiary(data) {
+	const monsters = getBestiaryMonsters(data);
+	return {
+		...getCustomBestiaryEnvelope(data),
+		monster: getCustomBestiaryReadMonsters(monsters),
+	};
 }
 
 async function readCustomBestiary() {
 	if (!(await exists(CUSTOM_BESTIARY_PATH))) return { monster: [] };
 	const data = await readJson(CUSTOM_BESTIARY_PATH);
-	const monsters = Array.isArray(data)
-		? data
-		: data.monster || data.monsters || data.results || [];
-	return {
-		...(data && !Array.isArray(data) ? data : {}),
-		monster: Array.isArray(monsters)
-			? monsters.map((monster) => ({
-					...monster,
-					source: CUSTOM_BESTIARY_SOURCE,
-				}))
-			: [],
-	};
+	return projectCustomBestiary(data);
 }
 
 async function readCustomBestiaryMonsters() {
@@ -697,43 +765,65 @@ function normalizeSourceList(value) {
 	return [...seen].sort((a, b) => a.localeCompare(b));
 }
 
-async function readAiResponses(campaignSlugValue) {
-	const slug = normalizeCampaignSlug(campaignSlugValue);
-	if (!slug) return [];
+function getLegacyAiResponsesPath(slug) {
+	return slug === "bestiary" ? campaignAiResponsesPath(slug) : null;
+}
+
+async function shouldUsePrimaryAiResponsesPath(
+	responsesPath,
+	legacyResponsesPath,
+) {
+	if (await exists(responsesPath)) return true;
+	if (!legacyResponsesPath) return true;
+	return !(await exists(legacyResponsesPath));
+}
+
+async function resolveAiResponsesReadPath(slug) {
 	const responsesPath = aiResponsesPath(slug);
-	const legacyResponsesPath =
-		slug === "bestiary" ? campaignAiResponsesPath(slug) : null;
-	const readablePath =
-		(await exists(responsesPath)) ||
-		!legacyResponsesPath ||
-		!(await exists(legacyResponsesPath))
-			? responsesPath
-			: legacyResponsesPath;
-	if (!(await exists(readablePath))) return [];
+	const legacyResponsesPath = getLegacyAiResponsesPath(slug);
+	return (await shouldUsePrimaryAiResponsesPath(
+		responsesPath,
+		legacyResponsesPath,
+	))
+		? responsesPath
+		: legacyResponsesPath;
+}
+
+function getSavedAiResponseList(saved) {
+	return Array.isArray(saved) ? saved : saved?.responses || [];
+}
+
+function compareAiResponsesByCreatedAt(a, b) {
+	return String(b.createdAt).localeCompare(String(a.createdAt));
+}
+
+function normalizeSavedAiResponses(saved) {
+	return getSavedAiResponseList(saved)
+		.map(normalizeAiResponse)
+		.filter(Boolean)
+		.sort(compareAiResponsesByCreatedAt);
+}
+
+async function readNormalizedAiResponses(readablePath) {
 	try {
-		const saved = await readJson(readablePath);
-		const list = Array.isArray(saved) ? saved : saved?.responses || [];
-		return list
-			.map(normalizeAiResponse)
-			.filter(Boolean)
-			.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+		return normalizeSavedAiResponses(await readJson(readablePath));
 	} catch {
 		return [];
 	}
 }
 
+async function readAiResponses(campaignSlugValue) {
+	const slug = normalizeCampaignSlug(campaignSlugValue);
+	if (!slug) return [];
+	const readablePath = await resolveAiResponsesReadPath(slug);
+	if (!(await exists(readablePath))) return [];
+	return readNormalizedAiResponses(readablePath);
+}
+
 async function getAiResponsesStorageStats(campaignSlugValue) {
 	const slug = normalizeCampaignSlug(campaignSlugValue);
 	if (!slug) return { bytes: 0 };
-	const responsesPath = aiResponsesPath(slug);
-	const legacyResponsesPath =
-		slug === "bestiary" ? campaignAiResponsesPath(slug) : null;
-	const readablePath =
-		(await exists(responsesPath)) ||
-		!legacyResponsesPath ||
-		!(await exists(legacyResponsesPath))
-			? responsesPath
-			: legacyResponsesPath;
+	const readablePath = await resolveAiResponsesReadPath(slug);
 	return { bytes: await getFileSize(readablePath) };
 }
 
@@ -798,56 +888,74 @@ async function clearAiResponses(campaignSlugValue) {
 	return [];
 }
 
-function normalizeSettings(settings = {}) {
-	const encounterGridColumns = Number.parseInt(
-		settings.encounterGridColumns,
-		10,
-	);
-	const campaignAiBasePrompts =
-		settings.campaignAiBasePrompts &&
-		typeof settings.campaignAiBasePrompts === "object" &&
-		!Array.isArray(settings.campaignAiBasePrompts)
-			? Object.fromEntries(
-					Object.entries(settings.campaignAiBasePrompts)
-						.map(([slug, prompt]) => [
-							String(slug || "").trim(),
-							String(prompt || ""),
-						])
-						.filter(([slug]) => slug),
-				)
-			: {};
-	const campaignImagePromptBasePrompts =
-		settings.campaignImagePromptBasePrompts &&
-		typeof settings.campaignImagePromptBasePrompts === "object" &&
-		!Array.isArray(settings.campaignImagePromptBasePrompts)
-			? Object.fromEntries(
-					Object.entries(settings.campaignImagePromptBasePrompts)
-						.map(([slug, prompt]) => [
-							String(slug || "").trim(),
-							String(prompt || ""),
-						])
-						.filter(([slug]) => slug),
-				)
-			: {};
+function getNormalizedSettingsGridColumns(settings) {
+	const parsed = Number.parseInt(settings.encounterGridColumns, 10);
+	const finiteValue = Number.isFinite(parsed) ? parsed : 2;
+	return Math.min(4, Math.max(1, finiteValue));
+}
 
+function isSettingsPromptMap(settings, key) {
+	return (
+		settings[key] &&
+		typeof settings[key] === "object" &&
+		!Array.isArray(settings[key])
+	);
+}
+
+function normalizeSettingsPromptEntry([slug, prompt]) {
+	return [String(slug || "").trim(), String(prompt || "")];
+}
+
+function hasSettingsPromptSlug([slug]) {
+	return slug;
+}
+
+function normalizeSettingsPromptMap(settings, key) {
+	if (!isSettingsPromptMap(settings, key)) return {};
+	return Object.fromEntries(
+		Object.entries(settings[key])
+			.map(normalizeSettingsPromptEntry)
+			.filter(hasSettingsPromptSlug),
+	);
+}
+
+function getNormalizedSettingsLanguage(settings) {
+	return settings.language === "uk" ? "uk" : "en";
+}
+
+function getNormalizedSettingsTheme(settings) {
+	return settings.theme === "dark" ? "dark" : "light";
+}
+
+function getNormalizedEncounterViewMode(settings) {
+	return settings.encounterViewMode === "grid" ? "grid" : "single";
+}
+
+function getNormalizedImagePrompt(settings) {
+	if (settings.imagePromptBasePrompt === undefined) {
+		return DEFAULT_IMAGE_PROMPT_BASE_PROMPT;
+	}
+	return String(settings.imagePromptBasePrompt || "");
+}
+
+function normalizeSettings(settings = {}) {
+	const encounterGridColumns = getNormalizedSettingsGridColumns(settings);
+	const campaignAiBasePrompts = normalizeSettingsPromptMap(
+		settings,
+		"campaignAiBasePrompts",
+	);
+	const campaignImagePromptBasePrompts = normalizeSettingsPromptMap(
+		settings,
+		"campaignImagePromptBasePrompts",
+	);
 	return {
-		language: settings.language === "uk" ? "uk" : "en",
-		theme: settings.theme === "dark" ? "dark" : "light",
-		encounterViewMode:
-			settings.encounterViewMode === "grid" ? "grid" : "single",
-		encounterGridColumns: Math.min(
-			4,
-			Math.max(
-				1,
-				Number.isFinite(encounterGridColumns) ? encounterGridColumns : 2,
-			),
-		),
+		language: getNormalizedSettingsLanguage(settings),
+		theme: getNormalizedSettingsTheme(settings),
+		encounterViewMode: getNormalizedEncounterViewMode(settings),
+		encounterGridColumns,
 		simplifiedNotes: Boolean(settings.simplifiedNotes),
 		aiBasePrompt: String(settings.aiBasePrompt || ""),
-		imagePromptBasePrompt:
-			settings.imagePromptBasePrompt === undefined
-				? DEFAULT_IMAGE_PROMPT_BASE_PROMPT
-				: String(settings.imagePromptBasePrompt || ""),
+		imagePromptBasePrompt: getNormalizedImagePrompt(settings),
 		campaignAiBasePrompts,
 		campaignImagePromptBasePrompts,
 		ignoreSourcesList: normalizeSourceList(settings.ignoreSourcesList),
@@ -856,23 +964,37 @@ function normalizeSettings(settings = {}) {
 	};
 }
 
-async function readSettings() {
-	if (!(await exists(SETTINGS_PATH))) {
-		await writeJson(SETTINGS_PATH, DEFAULT_APP_SETTINGS);
-		return { ...DEFAULT_APP_SETTINGS };
-	}
+function cloneDefaultAppSettings() {
+	return { ...DEFAULT_APP_SETTINGS };
+}
 
+async function writeDefaultAppSettings() {
+	await writeJson(SETTINGS_PATH, DEFAULT_APP_SETTINGS);
+	return cloneDefaultAppSettings();
+}
+
+function settingsNeedRewrite(saved, normalized) {
+	return JSON.stringify(saved) !== JSON.stringify(normalized);
+}
+
+async function readExistingSettings() {
 	try {
 		const saved = await readJson(SETTINGS_PATH);
 		const normalized = normalizeSettings(saved);
-		if (JSON.stringify(saved) !== JSON.stringify(normalized)) {
+		if (settingsNeedRewrite(saved, normalized)) {
 			await writeJson(SETTINGS_PATH, normalized);
 		}
 		return normalized;
 	} catch {
-		await writeJson(SETTINGS_PATH, DEFAULT_APP_SETTINGS);
-		return { ...DEFAULT_APP_SETTINGS };
+		return writeDefaultAppSettings();
 	}
+}
+
+async function readSettings() {
+	if (!(await exists(SETTINGS_PATH))) {
+		return writeDefaultAppSettings();
+	}
+	return readExistingSettings();
 }
 
 async function updateSettings(patch = {}) {
@@ -885,40 +1007,45 @@ async function updateSettings(patch = {}) {
 	return next;
 }
 
+function getEntityListOrder(entity) {
+	return Number.isFinite(Number(entity.order)) ? Number(entity.order) : 0;
+}
+
+function getEntityListPersonName(entity) {
+	return `${entity.firstName || ""} ${entity.lastName || ""}`.trim();
+}
+
+function getEntityListName(entity) {
+	return String(
+		entity.name || getEntityListPersonName(entity) || entity.slug || "",
+	);
+}
+
+function compareEntityListItems(a, b) {
+	const aOrder = getEntityListOrder(a);
+	const bOrder = getEntityListOrder(b);
+	if (aOrder !== bOrder) return aOrder - bOrder;
+	return getEntityListName(a).localeCompare(getEntityListName(b));
+}
+
+async function readEntityListEntry(entitiesDir, entry) {
+	if (!entry.isDirectory()) return null;
+	const infoPath = path.join(entitiesDir, entry.name, "info.json");
+	if (!(await exists(infoPath))) return null;
+	const data = await readJson(infoPath);
+	return { ...data, slug: entry.name };
+}
+
 async function listEntities(campaignSlug, type) {
 	const entitiesDir = path.join(campaignDir(campaignSlug), type);
 	await ensureDir(entitiesDir);
 	const entries = await fs.readdir(entitiesDir, { withFileTypes: true });
 	const result = [];
-
 	for (const entry of entries) {
-		if (entry.isDirectory()) {
-			const infoPath = path.join(entitiesDir, entry.name, "info.json");
-			if (await exists(infoPath)) {
-				const data = await readJson(infoPath);
-				result.push({ ...data, slug: entry.name });
-			}
-		}
+		const entity = await readEntityListEntry(entitiesDir, entry);
+		if (entity) result.push(entity);
 	}
-	return result.sort((a, b) => {
-		const aOrder = Number.isFinite(Number(a.order)) ? Number(a.order) : 0;
-		const bOrder = Number.isFinite(Number(b.order)) ? Number(b.order) : 0;
-		if (aOrder !== bOrder) return aOrder - bOrder;
-
-		const aName = String(
-			a.name ||
-				`${a.firstName || ""} ${a.lastName || ""}`.trim() ||
-				a.slug ||
-				"",
-		);
-		const bName = String(
-			b.name ||
-				`${b.firstName || ""} ${b.lastName || ""}`.trim() ||
-				b.slug ||
-				"",
-		);
-		return aName.localeCompare(bName);
-	});
+	return result.sort(compareEntityListItems);
 }
 
 async function readEntity(campaignSlug, type, entitySlug) {
@@ -948,87 +1075,17 @@ async function deleteEntity(campaignSlug, type, entitySlug) {
 	await fs.rm(entityPath, { recursive: true, force: true });
 }
 
-function normalizeMentionName(value) {
-	return String(value || "")
-		.trim()
-		.replace(/\s+/g, " ")
-		.toLowerCase();
-}
-
-function replaceBracketedMentionNames(value, oldName, newName) {
-	if (typeof value !== "string") return value;
-	const normalizedOldName = normalizeMentionName(oldName);
-	const nextName = String(newName || "")
-		.trim()
-		.replace(/\s+/g, " ");
-	if (!normalizedOldName || !nextName) return value;
-
-	return value.replace(/\[([^[\]]+)\]/g, (fullMatch, rawName) => {
-		if (normalizeMentionName(rawName) !== normalizedOldName) return fullMatch;
-		return `[${nextName}]`;
-	});
-}
-
-function replaceMentionsInValue(value, oldName, newName) {
-	if (typeof value === "string") {
-		return replaceBracketedMentionNames(value, oldName, newName);
-	}
-	if (Array.isArray(value)) {
-		return value.map((item) => replaceMentionsInValue(item, oldName, newName));
-	}
-	if (value && typeof value === "object") {
-		return Object.fromEntries(
-			Object.entries(value).map(([key, item]) => [
-				key,
-				replaceMentionsInValue(item, oldName, newName),
-			]),
-		);
-	}
-	return value;
-}
-
-async function updateCampaignMentionReferences(campaignSlug, oldName, newName) {
-	if (
-		!normalizeMentionName(oldName) ||
-		!String(newName || "").trim() ||
-		normalizeMentionName(oldName) === normalizeMentionName(newName)
-	) {
-		return;
-	}
-
-	const metaPath = campaignMetaPath(campaignSlug);
-	if (await exists(metaPath)) {
-		const meta = await readJson(metaPath);
-		const nextMeta = replaceMentionsInValue(meta, oldName, newName);
-		if (JSON.stringify(nextMeta) !== JSON.stringify(meta)) {
-			await writeJson(metaPath, nextMeta);
-		}
-	}
-
-	for (const type of ENTITY_TYPES) {
-		const entities = await listEntities(campaignSlug, type);
-		for (const entity of entities) {
-			const nextEntity = replaceMentionsInValue(entity, oldName, newName);
-			if (JSON.stringify(nextEntity) !== JSON.stringify(entity)) {
-				await writeEntity(campaignSlug, type, entity.slug, nextEntity);
-			}
-		}
-	}
-
-	const sessions = await listSessions(campaignSlug);
-	for (const session of sessions) {
-		const filePath = sessionPath(campaignSlug, session.fileName);
-		const sessionData = await readJson(filePath);
-		const nextSessionData = replaceMentionsInValue(
-			sessionData,
-			oldName,
-			newName,
-		);
-		if (JSON.stringify(nextSessionData) !== JSON.stringify(sessionData)) {
-			await writeJson(filePath, nextSessionData);
-		}
-	}
-}
+const updateCampaignMentionReferences = createCampaignMentionReferenceUpdater({
+	entityTypes: ENTITY_TYPES,
+	campaignMetaPath,
+	exists,
+	readJson,
+	writeJson,
+	listEntities,
+	writeEntity,
+	listSessions,
+	sessionPath,
+});
 
 async function moveEntity(campaignSlug, sourceType, entitySlug, targetType) {
 	if (sourceType === targetType) {
@@ -1212,13 +1269,36 @@ async function resolvePartialImportSessionFileName(targetSlug, session) {
 	return importedSessionFileName(session);
 }
 
+const IMPORTED_ENTITY_DOT_SEGMENTS = new Set([".", ".."]);
+
+function getImportedEntityProperty(entity, property) {
+	if (entity == null) return undefined;
+	return entity[property];
+}
+
+function getImportedEntityRawSlug(entity) {
+	return String(getImportedEntityProperty(entity, "slug") || "").trim();
+}
+
+function getImportedEntityPathSlug(rawSlug) {
+	if (!rawSlug) return null;
+	const slug = path.basename(rawSlug);
+	return slug && !IMPORTED_ENTITY_DOT_SEGMENTS.has(slug) ? slug : null;
+}
+
+function getImportedEntityFallbackName(type, entity) {
+	const firstName = getImportedEntityProperty(entity, "firstName");
+	if (firstName) return firstName;
+	const name = getImportedEntityProperty(entity, "name");
+	if (name) return name;
+	return type;
+}
+
 function importedEntitySlug(type, entity) {
-	const rawSlug = String(entity?.slug || "").trim();
-	if (rawSlug) {
-		const slug = path.basename(rawSlug);
-		if (slug && slug !== "." && slug !== "..") return slug;
-	}
-	return campaignSlug(entity?.firstName || entity?.name || type);
+	const pathSlug = getImportedEntityPathSlug(
+		getImportedEntityRawSlug(entity),
+	);
+	return pathSlug || campaignSlug(getImportedEntityFallbackName(type, entity));
 }
 
 async function findCampaignSlugById(campaignId) {
@@ -1316,24 +1396,31 @@ async function moveCampaignImagesToGeneral(slug) {
 	return results;
 }
 
-async function campaignHasImages(slug) {
-	const safeSlug = path.basename(String(slug || ""));
-	if (!safeSlug) return false;
+function getSafeCampaignImageSlug(slug) {
+	return path.basename(String(slug || ""));
+}
 
+async function campaignImageEntryHasFiles(directory, entry) {
+	const fullPath = path.join(directory, entry.name);
+	if (entry.isFile()) return true;
+	if (!entry.isDirectory()) return false;
+	return campaignImageDirectoryHasFiles(fullPath);
+}
+
+async function campaignImageDirectoryHasFiles(directory) {
+	const entries = await fs.readdir(directory, { withFileTypes: true });
+	for (const entry of entries) {
+		if (await campaignImageEntryHasFiles(directory, entry)) return true;
+	}
+	return false;
+}
+
+async function campaignHasImages(slug) {
+	const safeSlug = getSafeCampaignImageSlug(slug);
+	if (!safeSlug) return false;
 	const root = path.join(IMAGES_DIR, safeSlug);
 	if (!(await exists(root))) return false;
-
-	async function walk(dir) {
-		const entries = await fs.readdir(dir, { withFileTypes: true });
-		for (const entry of entries) {
-			const fullPath = path.join(dir, entry.name);
-			if (entry.isFile()) return true;
-			if (entry.isDirectory() && (await walk(fullPath))) return true;
-		}
-		return false;
-	}
-
-	return walk(root);
+	return campaignImageDirectoryHasFiles(root);
 }
 
 async function deleteCampaignData(slug, options = {}) {
@@ -1357,76 +1444,195 @@ async function clearAllCampaignData() {
 	await ensureDir(IMAGES_DIR);
 }
 
+function canReplaceImageSlugReferences(value, oldSlug, newSlug) {
+	return Boolean(value && oldSlug && newSlug && oldSlug !== newSlug);
+}
+
+function getCampaignImageUrlSegment(slug) {
+	return `/api/images/${encodeURIComponent(slug)}/`;
+}
+
+function replaceSerializedImageSlugReferences(
+	serialized,
+	oldSegment,
+	newSegment,
+) {
+	return serialized.split(oldSegment).join(newSegment);
+}
+
 function replaceImageSlugReferences(value, oldSlug, newSlug) {
-	if (!value || !oldSlug || !newSlug || oldSlug === newSlug) return value;
-	const oldSegment = `/api/images/${encodeURIComponent(oldSlug)}/`;
-	const newSegment = `/api/images/${encodeURIComponent(newSlug)}/`;
+	if (!canReplaceImageSlugReferences(value, oldSlug, newSlug)) return value;
+	const oldSegment = getCampaignImageUrlSegment(oldSlug);
+	const newSegment = getCampaignImageUrlSegment(newSlug);
 	const serialized = JSON.stringify(value);
 	if (!serialized.includes(oldSegment)) return value;
-	return JSON.parse(serialized.split(oldSegment).join(newSegment));
+	return JSON.parse(
+		replaceSerializedImageSlugReferences(
+			serialized,
+			oldSegment,
+			newSegment,
+		),
+	);
+}
+
+async function updateExistingJsonImageSlugReferences(
+	filePath,
+	oldSlug,
+	newSlug,
+) {
+	if (!(await exists(filePath))) return;
+	const value = await readJson(filePath);
+	const normalized = replaceImageSlugReferences(value, oldSlug, newSlug);
+	if (normalized !== value) await writeJson(filePath, normalized);
+}
+
+async function updateCampaignEntityImageSlugReference(
+	campaignSlug,
+	type,
+	entity,
+	oldSlug,
+	newSlug,
+) {
+	const normalized = replaceImageSlugReferences(entity, oldSlug, newSlug);
+	if (normalized === entity) return;
+	await writeEntity(
+		campaignSlug,
+		type,
+		normalized.slug,
+		normalized,
+	);
+}
+
+async function updateCampaignEntityTypeImageSlugReferences(
+	campaignSlug,
+	type,
+	oldSlug,
+	newSlug,
+) {
+	const entities = await listEntities(campaignSlug, type);
+	for (const entity of entities) {
+		await updateCampaignEntityImageSlugReference(
+			campaignSlug,
+			type,
+			entity,
+			oldSlug,
+			newSlug,
+		);
+	}
+}
+
+async function updateCampaignEntityImageSlugReferences(
+	campaignSlug,
+	oldSlug,
+	newSlug,
+) {
+	for (const type of ENTITY_TYPES) {
+		await updateCampaignEntityTypeImageSlugReferences(
+			campaignSlug,
+			type,
+			oldSlug,
+			newSlug,
+		);
+	}
+}
+
+async function updateCampaignSessionImageSlugReference(
+	campaignSlug,
+	session,
+	oldSlug,
+	newSlug,
+) {
+	const filePath = sessionPath(campaignSlug, session.fileName);
+	const sessionData = await readJson(filePath);
+	const normalized = replaceImageSlugReferences(
+		sessionData,
+		oldSlug,
+		newSlug,
+	);
+	if (normalized !== sessionData) await writeJson(filePath, normalized);
+}
+
+async function updateCampaignSessionImageSlugReferences(
+	campaignSlug,
+	oldSlug,
+	newSlug,
+) {
+	const sessions = await listSessions(campaignSlug);
+	for (const session of sessions) {
+		await updateCampaignSessionImageSlugReference(
+			campaignSlug,
+			session,
+			oldSlug,
+			newSlug,
+		);
+	}
+}
+
+async function updateSingleCampaignImageSlugReferences(
+	campaignSlug,
+	oldSlug,
+	newSlug,
+) {
+	await updateExistingJsonImageSlugReferences(
+		campaignMetaPath(campaignSlug),
+		oldSlug,
+		newSlug,
+	);
+	await updateCampaignEntityImageSlugReferences(
+		campaignSlug,
+		oldSlug,
+		newSlug,
+	);
+	await updateCampaignSessionImageSlugReferences(
+		campaignSlug,
+		oldSlug,
+		newSlug,
+	);
+	await updateExistingJsonImageSlugReferences(
+		campaignAiResponsesPath(campaignSlug),
+		oldSlug,
+		newSlug,
+	);
+}
+
+function canUpdateCampaignImageSlugReferences(oldSlug, newSlug) {
+	return Boolean(oldSlug && newSlug && oldSlug !== newSlug);
 }
 
 async function updateCampaignImageSlugReferences(oldSlug, newSlug) {
-	if (!oldSlug || !newSlug || oldSlug === newSlug) return;
-
+	if (!canUpdateCampaignImageSlugReferences(oldSlug, newSlug)) return;
 	const campaigns = await listCampaignSlugs();
-	for (const slug of campaigns) {
-		const metaPath = campaignMetaPath(slug);
-		if (await exists(metaPath)) {
-			const meta = await readJson(metaPath);
-			const normalized = replaceImageSlugReferences(meta, oldSlug, newSlug);
-			if (normalized !== meta) await writeJson(metaPath, normalized);
-		}
-
-		for (const type of ENTITY_TYPES) {
-			const entities = await listEntities(slug, type);
-			for (const entity of entities) {
-				const normalized = replaceImageSlugReferences(entity, oldSlug, newSlug);
-				if (normalized !== entity) {
-					await writeEntity(slug, type, normalized.slug, normalized);
-				}
-			}
-		}
-
-		const sessions = await listSessions(slug);
-		for (const session of sessions) {
-			const sPath = sessionPath(slug, session.fileName);
-			const sessionData = await readJson(sPath);
-			const normalized = replaceImageSlugReferences(
-				sessionData,
-				oldSlug,
-				newSlug,
-			);
-			if (normalized !== sessionData) await writeJson(sPath, normalized);
-		}
-
-		const aiPath = campaignAiResponsesPath(slug);
-		if (await exists(aiPath)) {
-			const aiResponses = await readJson(aiPath);
-			const normalized = replaceImageSlugReferences(
-				aiResponses,
-				oldSlug,
-				newSlug,
-			);
-			if (normalized !== aiResponses) await writeJson(aiPath, normalized);
-		}
+	for (const campaignSlug of campaigns) {
+		await updateSingleCampaignImageSlugReferences(
+			campaignSlug,
+			oldSlug,
+			newSlug,
+		);
 	}
+}
+
+function getCampaignImageRenamePaths(oldSlug, newSlug) {
+	const oldImagesDir = path.join(IMAGES_DIR, path.basename(oldSlug));
+	const newImagesDir = path.join(IMAGES_DIR, path.basename(newSlug));
+	return { oldImagesDir, newImagesDir };
+}
+
+async function renameCampaignImageDirectory(oldSlug, newSlug) {
+	const { oldImagesDir, newImagesDir } = getCampaignImageRenamePaths(
+		oldSlug,
+		newSlug,
+	);
+	if (!(await exists(oldImagesDir))) return;
+	if (await exists(newImagesDir)) {
+		throw new Error("Campaign images folder already exists.");
+	}
+	await renameWithRetry(oldImagesDir, newImagesDir);
 }
 
 async function renameCampaignData(oldSlug, newSlug) {
 	if (!oldSlug || !newSlug || oldSlug === newSlug) return;
-
 	await renameWithRetry(campaignDir(oldSlug), campaignDir(newSlug));
-
-	const oldImagesDir = path.join(IMAGES_DIR, path.basename(oldSlug));
-	const newImagesDir = path.join(IMAGES_DIR, path.basename(newSlug));
-	if (await exists(oldImagesDir)) {
-		if (await exists(newImagesDir)) {
-			throw new Error("Campaign images folder already exists.");
-		}
-		await renameWithRetry(oldImagesDir, newImagesDir);
-	}
-
+	await renameCampaignImageDirectory(oldSlug, newSlug);
 	await updateCampaignImageSlugReferences(oldSlug, newSlug);
 }
 
@@ -1703,30 +1909,11 @@ async function listCampaignImagesForArchive(slug) {
 	return files;
 }
 
-async function restoreCampaignImagesFromArchive(slug, files = []) {
-	if (!Array.isArray(files) || files.length === 0) return;
-
-	const root = path.join(IMAGES_DIR, path.basename(String(slug || "")));
-	const resolvedRoot = path.resolve(root);
-
-	for (const file of files) {
-		const rel = String(file?.relativePath || "")
-			.replace(/\\/g, "/")
-			.replace(/^\/+/, "");
-		if (!rel || !file?.base64) continue;
-
-		const targetPath = path.resolve(root, rel);
-		if (
-			targetPath !== resolvedRoot &&
-			!targetPath.startsWith(`${resolvedRoot}${path.sep}`)
-		) {
-			continue;
-		}
-
-		await ensureDir(path.dirname(targetPath));
-		await fs.writeFile(targetPath, Buffer.from(file.base64, "base64"));
-	}
-}
+const restoreCampaignImagesFromArchive = createCampaignArchiveImageRestorer({
+	imagesDir: IMAGES_DIR,
+	ensureDir,
+	writeFile: (targetPath, buffer) => fs.writeFile(targetPath, buffer),
+});
 
 async function exportCampaignArchiveBundle(slug) {
 	return {
