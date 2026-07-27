@@ -1,6 +1,6 @@
 import Checkbox from "../form/Checkbox";
 import "../../assets/components/TodoItem.css";
-import classNames from "../../shared/lib/classNames.js";
+import classNames from "../../utils/classNames";
 
 export default function TodoItem({ title, note, checked, onChange, children }) {
 	return (

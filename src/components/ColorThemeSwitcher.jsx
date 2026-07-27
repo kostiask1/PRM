@@ -1,7 +1,8 @@
-import { setUiSettingsAction } from "../entities/settings/model.js";
-import { settingsApi } from "../entities/settings/api.js";
-import { lang, THEMES } from "../shared/config/index.js";
-import { useAppDispatch, useAppSelector } from "../shared/lib/index.js";
+import { setUiSettingsAction } from "../actions/app";
+import { api } from "../api";
+import { lang } from "../services/localization";
+import { THEMES } from "../services/uiSettings";
+import { useAppDispatch, useAppSelector } from "../store/appStore";
 import "../assets/components/ColorThemeSwitcher.css";
 import Icon from "./common/Icon";
 import Tooltip from "./common/Tooltip";
@@ -23,8 +24,8 @@ export default function ColorThemeSwitcher({
 		}
 
 		dispatch(setUiSettingsAction({ theme: nextTheme }));
-		settingsApi
-			.update({ theme: nextTheme })
+		api
+			.updateSettings({ theme: nextTheme })
 			.catch((error) => console.error("Failed to save theme setting", error));
 	};
 

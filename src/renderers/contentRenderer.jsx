@@ -13,7 +13,7 @@ import {
 	CONTENT_TOKEN_REGEX,
 	tokenFromContentMatch,
 } from "../utils/contentTokens.js";
-import { highlightText } from "../shared/ui/searchHighlight.jsx";
+import { highlightText } from "../utils/searchHighlight.jsx";
 
 export const renderRecursiveContent = (
 	content,

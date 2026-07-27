@@ -1,5 +1,5 @@
 import { createContext } from "react";
-import { getEntityDisplayName } from "../../entities/campaign/model.js";
+import { getEntityDisplayName } from "../../services/entities.js";
 
 function normalizeIdentityPart(value) {
 	return String(value || "").trim();

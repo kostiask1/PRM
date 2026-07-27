@@ -1,4 +1,4 @@
-const archiveExportService = require("../domains/archive/archiveExportService");
+const storage = require("../storage");
 const { applyAiOperations } = require("../aiPatchService");
 const {
 	buildCustomMonsterChangeResources,
@@ -78,8 +78,7 @@ class CampaignAiFlow {
 			};
 		}
 
-		const beforeApplyBundle =
-			await archiveExportService.exportCampaignBundle(path.campaign);
+		const beforeApplyBundle = await storage.exportCampaignBundle(path.campaign);
 		const applied = await applyAiOperations({
 			payload: generatedContent,
 			campaignSlug: path.campaign,

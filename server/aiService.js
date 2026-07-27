@@ -1,7 +1,7 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const fs = require("fs/promises");
 const path = require("path");
-const { IMAGES_DIR } = require("./infrastructure/storagePaths");
+const storage = require("./storage");
 
 const GEMINI_MODELS_ENDPOINT =
 	"https://generativelanguage.googleapis.com/v1beta/models";
@@ -613,12 +613,12 @@ function resolveLocalImageUrl(imageUrl) {
 	}
 
 	const filePath = path.resolve(
-		IMAGES_DIR,
+		storage.IMAGES_DIR,
 		slug,
 		category,
 		...relativeParts,
 	);
-	const rootPath = path.resolve(IMAGES_DIR);
+	const rootPath = path.resolve(storage.IMAGES_DIR);
 	if (filePath !== rootPath && !filePath.startsWith(`${rootPath}${path.sep}`)) {
 		return null;
 	}

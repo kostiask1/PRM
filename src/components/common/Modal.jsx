@@ -3,9 +3,9 @@ import { createPortal } from "react-dom";
 import Button from "../form/Button";
 import Checkbox from "../form/Checkbox";
 import Input from "../form/Input";
-import { lang } from "../../shared/config/index.js";
+import { lang } from "../../services/localization";
 import "../../assets/components/Modal.css";
-import classNames from "../../shared/lib/classNames.js";
+import classNames from "../../utils/classNames";
 import Icon from "./Icon";
 
 function createModalApi(setModalConfig) {

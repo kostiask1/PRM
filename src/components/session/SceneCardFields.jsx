@@ -1,6 +1,6 @@
 import EditableField from "../form/EditableField";
 import "../../assets/components/SceneCardFields.css";
-import { lang } from "../../shared/config/index.js";
+import { lang } from "../../services/localization";
 
 export default function SceneCardFields({
 	fields,

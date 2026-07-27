@@ -1,6 +1,6 @@
-import { lang } from "../../shared/config/index.js";
-import { useAppSelector } from "../../shared/lib/index.js";
-import classNames from "../../shared/lib/classNames.js";
+import { lang } from "../../services/localization";
+import { useAppSelector } from "../../store/appStore";
+import classNames from "../../utils/classNames";
 import "../../assets/components/NoteCard.css";
 import Button from "../form/Button";
 import EditableField from "../form/EditableField";

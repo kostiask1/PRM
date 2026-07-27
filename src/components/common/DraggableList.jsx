@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
 import "../../assets/components/DraggableList.css";
-import classNames from "../../shared/lib/classNames.js";
+import classNames from "../../utils/classNames";
 import Icon from "./Icon.jsx";
 
 const DRAG_START_THRESHOLD = 5;

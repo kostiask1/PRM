@@ -1,8 +1,8 @@
 import { useCallback, useContext, useMemo, useState } from "react";
 
-import { parseUrl } from "../../shared/lib/navigation.js";
+import { parseUrl } from "../../utils/navigation";
 import EntityModal from "./EntityModal";
-import classNames from "../../shared/lib/classNames.js";
+import classNames from "../../utils/classNames";
 import {
 	EntityLinkContext,
 	EntityLinkResolverContext,

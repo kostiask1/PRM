@@ -1,4 +1,4 @@
-const customBestiaryRepository = require("../domains/bestiary/customBestiaryRepository");
+const storage = require("../storage");
 const { applyAiOperations } = require("../aiPatchService");
 const {
 	buildCustomMonsterChangeResources,
@@ -99,9 +99,7 @@ class CustomMonsterAiFlow {
 			payload,
 			aiResponsePayload,
 		);
-		await customBestiaryRepository.writeCustomBestiaryMonsters(
-			beforeCustomMonsters,
-		);
+		await storage.writeCustomBestiaryMonsters(beforeCustomMonsters);
 		return {
 			status: 200,
 			body: {

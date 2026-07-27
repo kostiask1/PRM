@@ -1,36 +1,44 @@
 const express = require("express");
 const router = express.Router();
-const sessionRepository = require("../domains/session/sessionRepository");
-const {
-	validateSessionMutation,
-	validateSessionReorder,
-} = require("../domains/session/sessionRequestSchemas");
-const {
-	validateBody,
-} = require("../http/requestValidation");
+const storage = require("../storage");
 
-async function ensureSessionExists(campaignSlug, fileName, res) {
-	if (await sessionRepository.sessionExists(campaignSlug, fileName)) return true;
+async function getExistingSessionPath(campaignSlug, fileName, res) {
+	const fullPath = storage.sessionPath(campaignSlug, fileName);
+	if (await storage.exists(fullPath)) return fullPath;
 	res.status(404).json({ error: "Session not found." });
-	return false;
+	return null;
 }
 
 router.get("/", async (req, res, next) => {
 	try {
-		const sessions = await sessionRepository.listSessions(req.campaignSlug);
+		const sessions = await storage.listSessions(req.campaignSlug);
 		res.json(sessions);
 	} catch (error) {
 		next(error);
 	}
 });
 
-router.post("/", validateBody(validateSessionMutation), async (req, res, next) => {
+router.post("/", async (req, res, next) => {
 	try {
-		const session = await sessionRepository.createSession(
-			req.campaignSlug,
-			req.validatedBody,
+		const slug = req.campaignSlug;
+		const existingSessions = await storage.listSessions(slug);
+		const maxOrder = existingSessions.reduce(
+			(max, s) => Math.max(max, s.order || 0),
+			-1,
 		);
-		res.status(201).json(session);
+
+		const baseName =
+			storage.sanitizeName(req.body?.name) ||
+			new Date().toISOString().slice(0, 10);
+		const session = storage.makeDefaultSessionData(baseName);
+		session.order = maxOrder + 1;
+		const fileName = await storage.ensureUniqueSessionFile(slug, session.name);
+
+		if (req.body?.data && typeof req.body.data === "object")
+			session.data = req.body.data;
+		await storage.writeJson(storage.sessionPath(slug, fileName), session);
+
+		res.status(201).json({ ...session, fileName });
 	} catch (error) {
 		next(error);
 	}
@@ -38,74 +46,89 @@ router.post("/", validateBody(validateSessionMutation), async (req, res, next) =
 
 router.get("/:fileName", async (req, res, next) => {
 	try {
-		const exists = await ensureSessionExists(
+		const fullPath = await getExistingSessionPath(
 			req.campaignSlug,
 			req.params.fileName,
 			res,
 		);
-		if (!exists) return;
-		const session = await sessionRepository.readSession(
-			req.campaignSlug,
-			req.params.fileName,
-		);
+		if (!fullPath) return;
+		const session = await storage.readJson(fullPath);
 		res.json({ ...session, fileName: req.params.fileName });
 	} catch (error) {
 		next(error);
 	}
 });
 
-router.patch(
-	"/:fileName",
-	validateBody(validateSessionMutation),
-	async (req, res, next) => {
+router.patch("/:fileName", async (req, res, next) => {
 	try {
 		const { campaignSlug: slug } = req;
 		const { fileName } = req.params;
-		if (!(await ensureSessionExists(slug, fileName, res))) return;
-		const updated = await sessionRepository.updateSession(
+		const fullPath = await getExistingSessionPath(slug, fileName, res);
+		if (!fullPath) return;
+
+		const current = await storage.readJson(fullPath);
+		const nextName = req.body?.name
+			? storage.sanitizeName(req.body.name)
+			: current.name;
+		if (!nextName)
+			return res.status(400).json({ error: "Name cannot be empty." });
+
+		const nextFileName = await storage.ensureUniqueSessionFile(
 			slug,
+			nextName,
 			fileName,
-			req.validatedBody,
 		);
-		res.json(updated);
+		const updated = {
+			...current,
+			...req.body,
+			name: nextName,
+			id: current.id,
+		};
+
+		if (nextFileName !== fileName) {
+			await storage.renameWithRetry(
+				fullPath,
+				storage.sessionPath(slug, nextFileName),
+			);
+		}
+
+		await storage.writeJson(storage.sessionPath(slug, nextFileName), updated);
+		res.json({ ...updated, fileName: nextFileName });
 	} catch (error) {
 		next(error);
 	}
-	},
-);
+});
 
 router.delete("/:fileName", async (req, res, next) => {
 	try {
-		const exists = await ensureSessionExists(
+		const fullPath = await getExistingSessionPath(
 			req.campaignSlug,
 			req.params.fileName,
 			res,
 		);
-		if (!exists) return;
-		await sessionRepository.deleteSession(
-			req.campaignSlug,
-			req.params.fileName,
-		);
+		if (!fullPath) return;
+		await require("fs/promises").rm(fullPath, { force: true });
 		res.status(204).send();
 	} catch (error) {
 		next(error);
 	}
 });
 
-router.post(
-	"/reorder",
-	validateBody(validateSessionReorder),
-	async (req, res, next) => {
+router.post("/reorder", async (req, res, next) => {
 	try {
-		await sessionRepository.reorderSessions(
-			req.campaignSlug,
-			req.validatedBody.orders,
-		);
+		const { campaignSlug: slug } = req;
+		const { orders } = req.body;
+		for (const fileName of Object.keys(orders)) {
+			const session = await storage.readJson(
+				storage.sessionPath(slug, fileName),
+			);
+			session.order = orders[fileName];
+			await storage.writeJson(storage.sessionPath(slug, fileName), session);
+		}
 		res.json({ ok: true });
 	} catch (error) {
 		next(error);
 	}
-	},
-);
+});
 
 module.exports = router;

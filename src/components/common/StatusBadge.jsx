@@ -1,6 +1,6 @@
 import "../../assets/components/StatusBadge.css";
-import classNames from "../../shared/lib/classNames.js";
-import { lang } from "../../shared/config/index.js";
+import classNames from "../../utils/classNames";
+import { lang } from "../../services/localization";
 
 export default function StatusBadge({ completed, onClick, className = "" }) {
 	let label = "";

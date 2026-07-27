@@ -1,4 +1,4 @@
-import { requestRulesReferenceNavigation } from "../../features/reference-navigation/model.js";
+import { requestRulesReferenceNavigation } from "../../store/appStore.js";
 
 export function openRulesReferenceModal(
 	initialTab = "conditions",

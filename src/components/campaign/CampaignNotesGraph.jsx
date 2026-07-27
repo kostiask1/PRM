@@ -25,17 +25,18 @@ import Button from "../form/Button";
 import EditableField from "../form/EditableField";
 import EntityModal from "../common/EntityModal";
 import Icon from "../common/Icon";
-import classNames from "../../shared/lib/classNames.js";
+import classNames from "../../utils/classNames";
 import {
 	buildCampaignGraph,
+	normalizeGraphName,
+} from "../../utils/campaignGraph.js";
+import {
 	getCampaignGraphNodeSize,
 	layoutCampaignGraph,
-	normalizeGraphName,
 	resolveCampaignGraphNodeCollision,
-} from "../../entities/campaign/graph.js";
-import { lang } from "../../shared/config/index.js";
-import { openModalRequest } from "../../shared/model/index.js";
-import { useAppSelector } from "../../shared/lib/index.js";
+} from "../../utils/campaignGraphLayout.js";
+import { lang } from "../../services/localization";
+import { openModalRequest, useAppSelector } from "../../store/appStore";
 import { renderMentionText } from "../../renderers/contentRenderer.jsx";
 import "@xyflow/react/dist/style.css";
 import "../../assets/components/CampaignNotesGraph.css";

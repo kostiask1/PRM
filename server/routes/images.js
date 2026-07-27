@@ -1,9 +1,8 @@
 const express = require("express");
 const multer = require("multer");
 const path = require("path");
-const imageAssetRepository = require("../domains/image/imageAssetRepository");
-const imageGalleryReadService = require("../domains/image/imageGalleryReadService");
-const { sanitizeName } = require("../infrastructure/storagePaths");
+const fs = require("fs/promises");
+const storage = require("../storage");
 
 const router = express.Router();
 
@@ -28,34 +27,39 @@ const upload = multer({
 		destination: async (req, _file, cb) => {
 			const { slug, category } = req.params;
 			const subcategory = req.body.subcategory || "";
-			await imageAssetRepository.createSubcategory(
-				slug,
-				category,
-				subcategory,
-			);
-			cb(
-				null,
-				imageAssetRepository.imageDirectory(
-					slug,
-					category,
-					subcategory,
-				),
-			);
+			const dir = storage.campaignImagesDir(slug, category, subcategory);
+			await storage.ensureDir(dir);
+			cb(null, dir);
 		},
 		filename: (req, file, cb) => {
 			const originalName = Buffer.from(file.originalname, "latin1").toString(
 				"utf8",
 			);
 			const ext = path.extname(originalName);
-			const baseName = sanitizeName(path.parse(originalName).name) || "image";
-			imageAssetRepository
-				.ensureUniqueImageFileName(
-					req.params.slug,
-					req.params.category,
-					req.body.subcategory || "",
-					baseName,
-					ext,
-				)
+			const baseName =
+				storage.sanitizeName(path.parse(originalName).name) || "image";
+			const dir = storage.campaignImagesDir(
+				req.params.slug,
+				req.params.category,
+				req.body.subcategory || "",
+			);
+
+			const resolveFileName = async () => {
+				let candidate = `${baseName}${ext}`;
+				let counter = 2;
+				while (true) {
+					const candidatePath = path.join(dir, candidate);
+					try {
+						await fs.access(candidatePath);
+						candidate = `${baseName}-${counter}${ext}`;
+						counter += 1;
+					} catch {
+						return candidate;
+					}
+				}
+			};
+
+			resolveFileName()
 				.then((name) => cb(null, name))
 				.catch((err) => cb(err));
 		},
@@ -64,7 +68,7 @@ const upload = multer({
 
 router.get("/campaigns/:slug/images/:category", async (req, res, next) => {
 	try {
-		const images = await imageAssetRepository.listImages(
+		const images = await storage.listImages(
 			req.params.slug,
 			req.params.category,
 			req.query.subcategory || "",
@@ -78,7 +82,7 @@ router.get("/campaigns/:slug/images/:category", async (req, res, next) => {
 router.get("/images/stats", async (req, res, next) => {
 	try {
 		res.json(
-			await imageGalleryReadService.getImageGalleryStorageStats({
+			await storage.getImageGalleryStorageStats({
 				...parseImageGalleryQuery(req.query, "general"),
 			}),
 		);
@@ -90,7 +94,7 @@ router.get("/images/stats", async (req, res, next) => {
 router.get("/images/bestiary-tokens", async (req, res, next) => {
 	try {
 		res.json(
-			await imageGalleryReadService.listBestiaryTokenAssets({
+			await storage.listBestiaryTokenAssets({
 				subcategory: req.query.subcategory || "",
 				search: req.query.search || "",
 				recursive: req.query.recursive === "1",
@@ -108,7 +112,7 @@ router.get("/images/bestiary-tokens", async (req, res, next) => {
 router.get("/images/search", async (req, res, next) => {
 	try {
 		res.json(
-			await imageGalleryReadService.searchImageGalleryAssets({
+			await storage.searchImageGalleryAssets({
 				search: req.query.search || "",
 				...parseImageGalleryQuery(req.query),
 			}),
@@ -138,7 +142,7 @@ router.get(
 	"/campaigns/:slug/images/:category/subcategories",
 	async (req, res, next) => {
 		try {
-			const subs = await imageAssetRepository.listSubcategories(
+			const subs = await storage.listSubcategories(
 				req.params.slug,
 				req.params.category,
 				req.query.subcategory || "",
@@ -155,11 +159,12 @@ router.post(
 	"/campaigns/:slug/images/:category/subcategories",
 	async (req, res, next) => {
 		try {
-			await imageAssetRepository.createSubcategory(
+			const dir = storage.campaignImagesDir(
 				req.params.slug,
 				req.params.category,
 				req.body.name,
 			);
+			await storage.ensureDir(dir);
 			res.status(201).json({ ok: true });
 		} catch (error) {
 			next(error);
@@ -174,7 +179,7 @@ router.patch(
 			const { slug, category } = req.params;
 			const { subcategory, oldName, newName } = req.body;
 			res.json(
-				await imageAssetRepository.renameImage(
+				await storage.renameImage(
 					slug,
 					category,
 					subcategory,
@@ -194,12 +199,7 @@ router.patch(
 		try {
 			const { slug, category, oldName } = req.params;
 			const { newName } = req.body;
-			await imageAssetRepository.renameSubcategory(
-				slug,
-				category,
-				oldName,
-				newName,
-			);
+			await storage.renameSubcategory(slug, category, oldName, newName);
 			res.json({ ok: true });
 		} catch (error) {
 			next(error);
@@ -209,7 +209,7 @@ router.patch(
 
 router.post("/images/move", async (req, res, next) => {
 	try {
-		const results = await imageAssetRepository.moveImages(
+		const results = await storage.moveImages(
 			req.body.items,
 			req.body.src,
 			req.body.dest,
@@ -222,7 +222,7 @@ router.post("/images/move", async (req, res, next) => {
 
 router.post("/images/delete", async (req, res, next) => {
 	try {
-		await imageAssetRepository.deleteImages(
+		await storage.deleteImages(
 			req.body.items,
 			req.body.src,
 			req.body.options || {},

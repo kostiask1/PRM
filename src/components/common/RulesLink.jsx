@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { alert } from "../../shared/model/index.js";
+import { alert } from "../../actions/app.js";
 import "../../assets/components/RulesLink.css";
-import { lang } from "../../shared/config/index.js";
+import { lang } from "../../services/localization.js";
 import {
 	getConditionByName,
 	getCreatureByName,
@@ -10,18 +10,20 @@ import {
 	getSkillByName,
 	getSpellByName,
 	getVariantRuleByName,
+} from "../../services/referencePreview.js";
+import {
 	resolveConditionInput,
 	resolveDiseaseInput,
 	resolveSenseInput,
 	resolveSkillInput,
 	resolveSpellInput,
 	resolveVariantRuleInput,
-	requestRulesReferenceNavigation,
-} from "../../features/reference-navigation/model.js";
+} from "../../services/referenceResolvers.js";
 import {
+	requestRulesReferenceNavigation,
 	useAppDispatch,
-} from "../../shared/lib/index.js";
-import classNames from "../../shared/lib/classNames.js";
+} from "../../store/appStore.js";
+import classNames from "../../utils/classNames.js";
 import {
 	capitalizeWords,
 	formatModifier,
@@ -31,11 +33,9 @@ import {
 	CONTENT_TOKEN_REGEX,
 	tokenFromContentMatch,
 } from "../../utils/contentTokens.js";
-import {
-	getMonsterTypeString,
-	MonsterStatBlockModel,
-} from "../../entities/bestiary/model.js";
-import { getSpellMeta } from "../../entities/spell/meta.js";
+import { getMonsterTypeString } from "../../utils/bestiary.js";
+import MonsterStatBlockModel from "../../models/MonsterStatBlockModel.js";
+import { getSpellMeta } from "../../utils/spellMeta.js";
 import { formatSourceLabel } from "../../utils/sourceNames.js";
 import RollDice from "./RollDice.jsx";
 import Tooltip from "./Tooltip.jsx";

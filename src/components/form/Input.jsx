@@ -1,9 +1,9 @@
 import { forwardRef, useRef, useLayoutEffect } from "react";
 import "../../assets/components/Input.css";
 import Tooltip from "../common/Tooltip";
-import classNames from "../../shared/lib/classNames.js";
-import { useAppDispatch } from "../../shared/lib/index.js";
-import { requestMentionSelection } from "../../shared/model/index.js";
+import classNames from "../../utils/classNames";
+import { useAppDispatch } from "../../store/appStore";
+import { requestMentionSelection } from "../../utils/mentionPicker";
 
 function isRangeInsideSquareBrackets(value = "", start = 0, end = start) {
 	const openIndex = value.lastIndexOf("[", Math.max(0, start - 1));

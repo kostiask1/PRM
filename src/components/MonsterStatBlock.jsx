@@ -1,7 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { bestiaryApi } from "../entities/bestiary/api.js";
-import { MonsterStatBlockModel } from "../entities/bestiary/model.js";
-import { spellApi } from "../entities/spell/api.js";
+import { api } from "../api.js";
 import RollDice from "./common/RollDice.jsx";
 import Icon from "./common/Icon.jsx";
 import {
@@ -17,19 +15,20 @@ import {
 import "../assets/components/MonsterStatBlock.css";
 import ClickToCopy from "./common/ClickToCopy.jsx";
 import Button from "./form/Button.jsx";
+import MonsterStatBlockModel from "../models/MonsterStatBlockModel.js";
 import Tooltip from "./common/Tooltip.jsx";
-import classNames from "../shared/lib/classNames.js";
-import { requestDiceRollAction } from "../shared/model/index.js";
-import { openModalRequest } from "../shared/model/index.js";
+import classNames from "../utils/classNames";
+import { requestDiceRollAction } from "../actions/app";
 import {
+	openModalRequest,
 	useAppDispatch,
 	useAppSelector,
-} from "../shared/lib/index.js";
-import { lang } from "../shared/config/index.js";
+} from "../store/appStore";
+import { lang } from "../services/localization.js";
 import AddMonsterToEncounterModalContent from "./modals/AddMonsterToEncounterModalContent.jsx";
 import RulesLink from "./common/RulesLink.jsx";
-import { highlightText } from "../shared/ui/searchHighlight.jsx";
-import { ImageDropzone } from "../features/images/index.js";
+import { highlightText } from "../utils/searchHighlight.jsx";
+import ImageDropzone from "./form/ImageDropzone.jsx";
 import { formatSourceLabel } from "../utils/sourceNames.js";
 
 const SPELL_CACHE = new Map();
@@ -96,7 +95,7 @@ export default function MonsterStatBlock({
 
 		const checkFavoriteStatus = async () => {
 			try {
-				const favs = await bestiaryApi.getFavorites();
+				const favs = await api.getBestiaryFavorites();
 				const found = favs.some(
 					(f) =>
 						f.name === effectiveName &&
@@ -123,7 +122,7 @@ export default function MonsterStatBlock({
 
 	const handleToggleFavorite = async () => {
 		try {
-			const newFavs = await bestiaryApi.toggleFavorite(
+			const newFavs = await api.toggleBestiaryFavorite(
 				effectiveName,
 				monster.source,
 			);
@@ -170,7 +169,7 @@ export default function MonsterStatBlock({
 							const slug = url.split("/").filter(Boolean).pop();
 
 							if (SPELL_CACHE.has(slug)) return SPELL_CACHE.get(slug);
-							const results = await spellApi.search({ name: slug });
+							const results = await api.searchSpells({ name: slug });
 							const data = results?.[0] || null;
 							if (data) SPELL_CACHE.set(slug, data);
 							return data;
@@ -474,7 +473,7 @@ export default function MonsterStatBlock({
 			return;
 		}
 		try {
-			const updatedMonster = await bestiaryApi.updateCustomMonster(
+			const updatedMonster = await api.updateCustomBestiaryMonster(
 				monster.id || effectiveName || monster.name,
 				{
 					imageUrl: nextUrl,
@@ -496,7 +495,7 @@ export default function MonsterStatBlock({
 			return;
 		}
 		try {
-			await bestiaryApi.updateCustomMonster(
+			await api.updateCustomBestiaryMonster(
 				monster.id || effectiveName || monster.name,
 				{
 					imageUrl: null,

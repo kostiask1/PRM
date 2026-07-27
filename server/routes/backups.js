@@ -1,21 +1,7 @@
 const express = require("express");
 const multer = require("multer");
 const zlib = require("zlib");
-const archiveExportService = require("../domains/archive/archiveExportService");
-const archiveImportService = require("../domains/archive/archiveImportService");
-const {
-	campaignBundlesFromEnvelope,
-	validateCampaignArchiveEnvelope,
-	validateCampaignBundleCollection,
-	validatePartialArchiveBundle,
-} = require("../domains/archive/archiveRequestSchemas");
-const campaignRepository = require("../domains/campaign/campaignRepository");
-const {
-	assertValidRequest,
-	createRequestValidationError,
-	validateBody,
-	validationIssue,
-} = require("../http/requestValidation");
+const storage = require("../storage");
 
 const router = express.Router();
 
@@ -31,33 +17,12 @@ function parseArchivePayload(buffer) {
 	return JSON.parse(raw.toString("utf8"));
 }
 
-function readUploadedArchivePayload(req) {
+function readUploadedArchivePayload(req, res) {
 	if (!req.file?.buffer) {
-		throw createRequestValidationError(
-			[
-				validationIssue(
-					"archive",
-					"Archive file was not provided.",
-					"required",
-				),
-			],
-			"Invalid archive file.",
-		);
+		res.status(400).json({ error: "Archive file was not provided." });
+		return null;
 	}
-	try {
-		return parseArchivePayload(req.file.buffer);
-	} catch {
-		throw createRequestValidationError(
-			[
-				validationIssue(
-					"archive",
-					"Archive must contain valid JSON or gzip-compressed JSON.",
-					"invalid_archive",
-				),
-			],
-			"Invalid archive file.",
-		);
-	}
+	return parseArchivePayload(req.file.buffer);
 }
 
 function normalizeImportStrategy(strategy) {
@@ -115,12 +80,10 @@ function buildArchivePayload(scope, campaigns) {
 
 router.get("/export-all", async (_req, res, next) => {
 	try {
-		const slugs = await campaignRepository.listCampaignSlugs();
+		const slugs = await storage.listCampaignSlugs();
 		res.json(
 			await Promise.all(
-				slugs.map((slug) =>
-					archiveExportService.exportCampaignBundle(slug),
-				),
+				slugs.map((slug) => storage.exportCampaignBundle(slug)),
 			),
 		);
 	} catch (error) {
@@ -130,11 +93,9 @@ router.get("/export-all", async (_req, res, next) => {
 
 router.get("/export-all/archive", async (_req, res, next) => {
 	try {
-		const slugs = await campaignRepository.listCampaignSlugs();
+		const slugs = await storage.listCampaignSlugs();
 		const campaigns = await Promise.all(
-			slugs.map((slug) =>
-				archiveExportService.exportCampaignArchiveBundle(slug),
-			),
+			slugs.map((slug) => storage.exportCampaignArchiveBundle(slug)),
 		);
 		const payload = buildArchivePayload("all", campaigns);
 		sendDatedArchive(
@@ -150,9 +111,7 @@ router.get("/export-all/archive", async (_req, res, next) => {
 router.get("/campaigns/:slug/export/archive", async (req, res, next) => {
 	try {
 		const payload = buildArchivePayload("campaign", [
-			await archiveExportService.exportCampaignArchiveBundle(
-				req.params.slug,
-			),
+			await storage.exportCampaignArchiveBundle(req.params.slug),
 		]);
 		sendDatedArchive(
 			res,
@@ -172,8 +131,7 @@ router.get(
 				.split(",")
 				.map((section) => section.trim())
 				.filter(Boolean);
-			const payload =
-				await archiveExportService.exportCampaignPartialArchiveBundle(
+			const payload = await storage.exportCampaignPartialArchiveBundle(
 				req.params.slug,
 				sections,
 			);
@@ -191,9 +149,10 @@ router.get(
 router.post(
 	"/campaigns/:slug/import/partial-archive",
 	archiveUpload.single("archive"),
-		async (req, res, next) => {
+	async (req, res, next) => {
 		try {
-			const parsed = readUploadedArchivePayload(req);
+			const parsed = readUploadedArchivePayload(req, res);
+			if (!parsed) return;
 			const archiveBundle = Array.isArray(parsed?.campaigns)
 				? parsed.campaigns[0]
 				: parsed;
@@ -201,19 +160,14 @@ router.post(
 				.split(",")
 				.map((section) => section.trim())
 				.filter(Boolean);
-			const validatedArchive = assertValidRequest(
-				selectedSections.length > 0
-					? { ...archiveBundle, sections: selectedSections }
-					: archiveBundle,
-				validatePartialArchiveBundle,
-				"archive",
-			);
 			res
 				.status(201)
 				.json(
-					await archiveImportService.importCampaignPartialArchiveBundle(
+					await storage.importCampaignPartialArchiveBundle(
 						req.params.slug,
-						validatedArchive,
+						selectedSections.length > 0
+							? { ...archiveBundle, sections: selectedSections }
+							: archiveBundle,
 					),
 				);
 		} catch (error) {
@@ -222,39 +176,33 @@ router.post(
 	},
 );
 
-router.post(
-	"/import-all",
-	validateBody(validateCampaignBundleCollection),
-	async (req, res, next) => {
+router.post("/import-all", async (req, res, next) => {
 	try {
 		const strategy = normalizeImportStrategy(req.query.strategy);
-		const bundles = Array.isArray(req.validatedBody)
-			? req.validatedBody
-			: [req.validatedBody];
+		const bundles = Array.isArray(req.body) ? req.body : [req.body];
 		if (strategy === "wipe_and_replace") {
-			await archiveImportService.clearAllCampaignData();
+			await storage.clearAllCampaignData();
 		}
 		for (const bundle of bundles) {
 			if (strategy === "replace_by_id") {
-				const existingSlug = await archiveImportService.findCampaignSlugById(
+				const existingSlug = await storage.findCampaignSlugById(
 					bundle?.meta?.id,
 				);
 				if (existingSlug) {
-					await archiveImportService.importCampaignBundle(bundle, {
+					await storage.importCampaignBundle(bundle, {
 						forcedSlug: existingSlug,
 						replaceExisting: true,
 					});
 					continue;
 				}
 			}
-			await archiveImportService.importCampaignBundle(bundle);
+			await storage.importCampaignBundle(bundle);
 		}
 		res.status(201).json({ ok: true, imported: bundles.length, strategy });
 	} catch (error) {
 		next(error);
 	}
-	},
-);
+});
 
 router.post(
 	"/import-archive",
@@ -264,20 +212,21 @@ router.post(
 			const mode = req.query.mode === "campaign" ? "campaign" : "all";
 			const strategy = normalizeImportStrategy(req.query.strategy);
 			const effectiveStrategy = mode === "all" ? strategy : "append";
-			const parsed = assertValidRequest(
-				readUploadedArchivePayload(req),
-				validateCampaignArchiveEnvelope,
-				"archive",
-			);
-			const campaigns = campaignBundlesFromEnvelope(parsed);
+			const parsed = readUploadedArchivePayload(req, res);
+			if (!parsed) return;
+			const campaigns = Array.isArray(parsed)
+				? parsed
+				: Array.isArray(parsed?.campaigns)
+					? parsed.campaigns
+					: [parsed];
 			const selected = mode === "campaign" ? campaigns.slice(0, 1) : campaigns;
 
 			if (effectiveStrategy === "wipe_and_replace") {
-				await archiveImportService.clearAllCampaignData();
+				await storage.clearAllCampaignData();
 			}
 
 			for (const archiveBundle of selected) {
-				await archiveImportService.importCampaignArchiveBundleWithStrategy(
+				await storage.importCampaignArchiveBundleWithStrategy(
 					archiveBundle,
 					effectiveStrategy,
 				);

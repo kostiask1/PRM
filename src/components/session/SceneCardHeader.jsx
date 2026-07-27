@@ -1,7 +1,7 @@
 import Button from "../form/Button";
 import CollapseToggleButton from "../common/CollapseToggleButton";
 import Icon from "../common/Icon";
-import { lang } from "../../shared/config/index.js";
+import { lang } from "../../services/localization";
 import { renderMentionText } from "../../renderers/contentRenderer";
 
 export default function SceneCardHeader({

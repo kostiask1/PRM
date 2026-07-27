@@ -1,5 +1,5 @@
-import { ImageAssetField } from "../../features/images/index.js";
-import { lang } from "../../shared/config/index.js";
+﻿import ImageAssetField from "../form/ImageAssetField";
+import { lang } from "../../services/localization";
 
 export default function SceneCardMedia({
 	number,

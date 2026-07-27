@@ -2,7 +2,7 @@
 
 import Button from "../form/Button";
 import Input from "../form/Input";
-import { lang } from "../../shared/config/index.js";
+import { lang } from "../../services/localization";
 
 export default function MentionPickerModalContent({
 	entities,
