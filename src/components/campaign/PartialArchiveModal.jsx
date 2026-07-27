@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 
-import { lang } from "../../services/localization";
+import { lang } from "../../shared/config/index.js";
 import Button from "../form/Button";
 import Checkbox from "../form/Checkbox";
 import Modal from "../common/Modal";

@@ -2,7 +2,12 @@ const express = require("express");
 const fs = require("fs/promises");
 const path = require("path");
 const router = express.Router();
-const storage = require("../storage");
+const aiResponseRepository = require("../domains/ai/aiResponseRepository");
+const campaignRepository = require("../domains/campaign/campaignRepository");
+const customBestiaryRepository = require("../domains/bestiary/customBestiaryRepository");
+const entityRepository = require("../domains/entity/entityRepository");
+const sessionRepository = require("../domains/session/sessionRepository");
+const settingsRepository = require("../domains/settings/settingsRepository");
 const aiService = require("../aiService");
 const { AiHistoryWriter, asText } = require("../ai/AiHistoryWriter");
 const {
@@ -257,7 +262,10 @@ async function appendConfiguredCampaignContext(
 		targetContext.campaign.notes = filterNotesForAiContext(campaign.notes);
 	}
 	if (isContextListIncluded(contextConfig.campaignCharacters)) {
-		const chars = await storage.listEntities(campaignSlug, "characters");
+		const chars = await entityRepository.listEntities(
+			campaignSlug,
+			"characters",
+		);
 		targetContext.campaign.characters = filterEntitiesByContext(
 			chars,
 			contextConfig.campaignCharacters,
@@ -269,7 +277,7 @@ async function appendConfiguredCampaignContext(
 		(contextConfig.campaignNpcs === undefined &&
 			isContextListIncluded(contextConfig.campaignCharacters))
 	) {
-		const npcs = await storage.listEntities(campaignSlug, "npc");
+		const npcs = await entityRepository.listEntities(campaignSlug, "npc");
 		targetContext.campaign.npcs = filterEntitiesByContext(
 			npcs,
 			contextConfig.campaignNpcs === undefined
@@ -279,7 +287,10 @@ async function appendConfiguredCampaignContext(
 		);
 	}
 	if (isContextListIncluded(contextConfig.campaignLocations)) {
-		const locations = await storage.listEntities(campaignSlug, "locations");
+		const locations = await entityRepository.listEntities(
+			campaignSlug,
+			"locations",
+		);
 		targetContext.campaign.locations = filterLocationsByContext(
 			locations,
 			contextConfig.campaignLocations,
@@ -289,7 +300,10 @@ async function appendConfiguredCampaignContext(
 	if (contextConfig.sessions) {
 		for (const [slug, conf] of Object.entries(contextConfig.sessions)) {
 			if (!conf.included) continue;
-			const sData = await storage.readSession(campaignSlug, slug);
+			const sData = await sessionRepository.readSession(
+				campaignSlug,
+				slug,
+			);
 			targetContext.sessions.push({
 				slug,
 				fileName: slug,
@@ -635,7 +649,10 @@ async function handleAiHistoryRequest(req, res, next, handler) {
 
 async function handleAiResponseEntryRequest(req, res, next, handler) {
 	return handleAiHistoryRequest(req, res, next, async (campaignSlug) => {
-		const entry = await storage.getAiResponse(campaignSlug, req.params.id);
+		const entry = await aiResponseRepository.getAiResponse(
+			campaignSlug,
+			req.params.id,
+		);
 		if (!entry) {
 			const error = new Error("AI response not found.");
 			error.status = 404;
@@ -656,32 +673,34 @@ router.get("/models", async (_req, res, next) => {
 
 router.get("/responses", (req, res, next) =>
 	handleAiHistoryRequest(req, res, next, (campaignSlug) =>
-		storage.readAiResponses(campaignSlug),
+		aiResponseRepository.readAiResponses(campaignSlug),
 	),
 );
 
 router.get("/responses/stats", (req, res, next) =>
 	handleAiHistoryRequest(req, res, next, (campaignSlug) =>
-		storage.getAiResponsesStorageStats(campaignSlug),
+		aiResponseRepository.getAiResponsesStorageStats(campaignSlug),
 	),
 );
 
 router.delete("/responses/:id", (req, res, next) =>
 	handleAiHistoryRequest(req, res, next, (campaignSlug) =>
-		storage.deleteAiResponse(campaignSlug, req.params.id),
+		aiResponseRepository.deleteAiResponse(campaignSlug, req.params.id),
 	),
 );
 
 router.delete("/responses", (req, res, next) =>
 	handleAiHistoryRequest(req, res, next, (campaignSlug) =>
-		storage.clearAiResponses(campaignSlug),
+		aiResponseRepository.clearAiResponses(campaignSlug),
 	),
 );
 
 router.patch("/responses/:id", (req, res, next) =>
 	handleAiResponseEntryRequest(req, res, next, async (entry, campaignSlug) => {
 		const changes = patchDraftAiChanges(entry, req.body?.resources);
-		return storage.updateAiResponse(campaignSlug, entry.id, { changes });
+		return aiResponseRepository.updateAiResponse(campaignSlug, entry.id, {
+			changes,
+		});
 	}),
 );
 
@@ -797,7 +816,7 @@ router.post("/generate", async (req, res, next) => {
 			shouldParseAIResponse && requestPath?.session && !requestPath?.encounter
 				? "mixed"
 				: "campaign";
-		const settings = await storage.readSettings();
+		const settings = await settingsRepository.readSettings();
 		const simplifiedNotesEnabled = Boolean(settings.simplifiedNotes);
 		const autoApplyAiChanges = settings.autoApplyAiChanges !== false;
 		const globalBasePrompt = asText(settings.aiBasePrompt);
@@ -816,14 +835,16 @@ router.post("/generate", async (req, res, next) => {
 		);
 
 		if (type === "custom-monster") {
-			let customBestiary = await storage.readCustomBestiary();
+			let customBestiary =
+				await customBestiaryRepository.readCustomBestiary();
 			if (
 				Array.isArray(customBestiary.monster) &&
 				customBestiary.monster.some((monster) => !asText(monster?.id))
 			) {
-				const normalizedMonsters = await storage.writeCustomBestiaryMonsters(
-					customBestiary.monster,
-				);
+				const normalizedMonsters =
+					await customBestiaryRepository.writeCustomBestiaryMonsters(
+						customBestiary.monster,
+					);
 				customBestiary = { ...customBestiary, monster: normalizedMonsters };
 			}
 			const beforeCustomMonsters = Array.isArray(customBestiary.monster)
@@ -862,10 +883,10 @@ router.post("/generate", async (req, res, next) => {
 			let customCampaign = null;
 			let customSession = null;
 			if (requestPath?.campaign && requestPath.campaign !== "bestiary") {
-				customCampaign = await storage
+				customCampaign = await campaignRepository
 					.readCampaign(requestPath.campaign)
 					.catch(() => null);
-				customSession = await storage
+				customSession = await sessionRepository
 					.readSession(requestPath.campaign, requestPath.session)
 					.catch(() => null);
 
@@ -973,7 +994,7 @@ router.post("/generate", async (req, res, next) => {
 				return sendFailedGeneratedContent(req, res, generatedContent);
 			}
 
-			const aiResponse = await storage.addAiResponse({
+			const aiResponse = await aiResponseRepository.addAiResponse({
 				text: generatedContent,
 				path: { campaign: "bestiary" },
 				type: "image",
@@ -1013,8 +1034,10 @@ router.post("/generate", async (req, res, next) => {
 			return res.status(400).json({ error: "path.campaign is required." });
 		}
 
-		const campaign = await storage.readCampaign(requestPath.campaign);
-		const session = await storage
+		const campaign = await campaignRepository.readCampaign(
+			requestPath.campaign,
+		);
+		const session = await sessionRepository
 			.readSession(requestPath.campaign, requestPath.session)
 			.catch(() => null);
 
@@ -1034,7 +1057,8 @@ router.post("/generate", async (req, res, next) => {
 			};
 		}
 		if (requestPath?.encounter || encounterGenerationEnabled) {
-			const customBestiary = await storage.readCustomBestiary();
+			const customBestiary =
+				await customBestiaryRepository.readCustomBestiary();
 			const monsterNames = (
 				Array.isArray(customBestiary.monster) ? customBestiary.monster : []
 			)

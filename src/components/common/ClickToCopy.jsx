@@ -2,8 +2,8 @@ import { useState } from "react";
 import Notification from "./Notification";
 import Tooltip from "./Tooltip";
 import "../../assets/components/ClickToCopy.css";
-import classNames from "../../utils/classNames";
-import { lang } from "../../services/localization";
+import classNames from "../../shared/lib/classNames.js";
+import { lang } from "../../shared/config/index.js";
 
 /**
  * Generic component for copying text to the clipboard.

@@ -1,5 +1,5 @@
 import "../../assets/components/Switch.css";
-import classNames from "../../utils/classNames";
+import classNames from "../../shared/lib/classNames.js";
 
 export default function Switch({
 	checked,

@@ -1,5 +1,5 @@
 import Button from "../form/Button";
-import { lang } from "../../services/localization";
+import { lang } from "../../shared/config/index.js";
 
 export default function AiContextIgnoreButton({ ignored, onToggle }) {
 	return (

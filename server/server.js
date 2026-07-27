@@ -7,7 +7,8 @@ const http = require("http");
 const path = require("path");
 const os = require("os");
 const fs = require("fs/promises");
-const storage = require("./storage");
+const { ensureDir } = require("./infrastructure/jsonFileStore");
+const { CAMPAIGNS_DIR } = require("./infrastructure/storagePaths");
 const { realtimeMiddleware, setupRealtime } = require("./realtime");
 
 const app = express();
@@ -62,15 +63,18 @@ app.use((err, _req, res, _next) => {
 		status = 403;
 		message = "Access denied. Check permissions for the data folder.";
 	}
-	res.status(status).json({
+	const payload = {
 		error: message,
 		status,
 		code: err.code,
-	});
+	};
+	if (Array.isArray(err.details) && err.details.length > 0) {
+		payload.details = err.details;
+	}
+	res.status(status).json(payload);
 });
 
-storage
-	.ensureDir(storage.CAMPAIGNS_DIR)
+ensureDir(CAMPAIGNS_DIR)
 	.then(() => {
 		const server = http.createServer(app);
 		setupRealtime(server);

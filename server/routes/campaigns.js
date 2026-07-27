@@ -1,113 +1,108 @@
 const express = require("express");
 const router = express.Router();
-const storage = require("../storage");
+const archiveExportService = require("../domains/archive/archiveExportService");
+const campaignRepository = require("../domains/campaign/campaignRepository");
+const {
+	validateCampaignCreate,
+	validateCampaignPatch,
+	validateEntityMove,
+	validateReorderRequest,
+} = require("../domains/campaign/campaignRequestSchemas");
+const campaignLifecycleService = require("../domains/campaign/campaignLifecycleService");
+const entityRepository = require("../domains/entity/entityRepository");
+const imageAssetRepository = require("../domains/image/imageAssetRepository");
+const {
+	replaceImageSlugReferences,
+} = require("../domains/image/imageReferenceService");
+const {
+	normalizeSourceList,
+} = require("../domains/settings/settingsRepository");
+const {
+	campaignSlug,
+	sanitizeName,
+} = require("../infrastructure/storagePaths");
+const {
+	validateBody,
+} = require("../http/requestValidation");
 
 function validateEntityType(type, res) {
-	if (storage.ENTITY_TYPES.includes(type)) return true;
+	if (entityRepository.ENTITY_TYPES.includes(type)) return true;
 	res.status(400).json({ error: "Unknown entity type." });
 	return false;
 }
 
-function getEntityDisplayName(entity, type) {
-	if (type === "locations") {
-		return String(entity?.name || entity?.title || "").trim();
-	}
-	const fullName =
-		`${entity?.firstName || ""} ${entity?.lastName || ""}`.trim();
-	return fullName || String(entity?.name || entity?.title || "").trim();
-}
-
 router.get("/", async (req, res, next) => {
 	try {
-		const campaigns = await storage.listCampaignsDetailed();
+		const campaigns = await campaignRepository.listCampaignsDetailed();
 		res.json(campaigns);
 	} catch (error) {
 		next(error);
 	}
 });
 
-router.post("/", async (req, res, next) => {
+router.post("/", validateBody(validateCampaignCreate), async (req, res, next) => {
 	try {
-		const name = storage.sanitizeName(req.body?.name);
-		if (!name)
-			return res.status(400).json({ error: "Campaign name is required." });
-		const slug = await storage.ensureUniqueCampaignSlug(
-			storage.campaignSlug(name),
+		const campaign = await campaignRepository.createCampaign(
+			req.validatedBody,
 		);
-		const now = new Date().toISOString();
-		const meta = {
-			id: storage.createId(),
-			slug,
-			name,
-			completed: false,
-			completedAt: null,
-			order: 0,
-			createdAt: now,
-			notes: [
-				{
-					id: Date.now(),
-					title: "",
-					text: "",
-					collapsed: false,
-				},
-			],
-		};
-		await storage.ensureDir(
-			require("path").join(storage.campaignDir(slug), "sessions"),
-		);
-		await storage.writeJson(storage.campaignMetaPath(slug), meta);
-		res.status(201).json(meta);
+		res.status(201).json(campaign);
 	} catch (error) {
 		next(error);
 	}
 });
 
-router.patch("/:slug", async (req, res, next) => {
+router.patch(
+	"/:slug",
+	validateBody(validateCampaignPatch),
+	async (req, res, next) => {
 	try {
 		const oldSlug = req.params.slug;
-		if (!(await storage.exists(storage.campaignMetaPath(oldSlug)))) {
+		if (!(await campaignRepository.campaignExists(oldSlug))) {
 			return res.status(404).json({ error: "Campaign not found." });
 		}
-		const current = await storage.readCampaign(oldSlug);
-		const nextName = req.body?.name
-			? storage.sanitizeName(req.body.name)
+		const current = await campaignRepository.readCampaign(oldSlug);
+		const nextName = req.validatedBody.name
+			? sanitizeName(req.validatedBody.name)
 			: current.name;
-		if (!nextName)
-			return res.status(400).json({ error: "Campaign name cannot be empty." });
 
-		const nextSlug = await storage.ensureUniqueCampaignSlug(
-			storage.campaignSlug(nextName),
+		const nextSlug = await campaignRepository.ensureUniqueCampaignSlug(
+			campaignSlug(nextName),
 			oldSlug,
 		);
 		if (nextSlug !== oldSlug) {
-			await storage.renameCampaignData(oldSlug, nextSlug);
+			await campaignLifecycleService.renameCampaignData(oldSlug, nextSlug);
 		}
 		let updated = {
 			...current,
-			...req.body,
+			...req.validatedBody,
 			slug: nextSlug,
 			name: nextName,
 		};
-		updated = storage.replaceImageSlugReferences(updated, oldSlug, nextSlug);
-		if (Object.prototype.hasOwnProperty.call(req.body || {}, "ignoreSourcesList")) {
-			updated.ignoreSourcesList = storage.normalizeSourceList(
-				req.body.ignoreSourcesList,
+		updated = replaceImageSlugReferences(updated, oldSlug, nextSlug);
+		if (
+			Object.prototype.hasOwnProperty.call(
+				req.validatedBody,
+				"ignoreSourcesList",
+			)
+		) {
+			updated.ignoreSourcesList = normalizeSourceList(
+				req.validatedBody.ignoreSourcesList,
 			);
 		}
-		await storage.writeJson(storage.campaignMetaPath(nextSlug), updated);
+		await campaignRepository.writeCampaign(nextSlug, updated);
 		res.json(updated);
 	} catch (error) {
 		next(error);
 	}
-});
+	},
+);
 
 router.delete("/:slug", async (req, res, next) => {
 	try {
 		const slug = req.params.slug;
-		const dir = storage.campaignDir(slug);
-		if (!(await storage.exists(dir)))
+		if (!(await campaignRepository.campaignExists(slug)))
 			return res.status(404).json({ error: "Campaign not found." });
-		await storage.deleteCampaignData(slug, {
+		await campaignLifecycleService.deleteCampaignData(slug, {
 			moveImagesToGeneral: Boolean(req.body?.moveImagesToGeneral),
 		});
 		res.status(204).send();
@@ -118,7 +113,11 @@ router.delete("/:slug", async (req, res, next) => {
 
 router.get("/:slug/has-images", async (req, res, next) => {
 	try {
-		res.json({ hasImages: await storage.campaignHasImages(req.params.slug) });
+		res.json({
+			hasImages: await imageAssetRepository.campaignHasImages(
+				req.params.slug,
+			),
+		});
 	} catch (error) {
 		next(error);
 	}
@@ -126,7 +125,7 @@ router.get("/:slug/has-images", async (req, res, next) => {
 
 router.get("/:slug/export", async (req, res, next) => {
 	try {
-		res.json(await storage.exportCampaignBundle(req.params.slug));
+		res.json(await archiveExportService.exportCampaignBundle(req.params.slug));
 	} catch (error) {
 		next(error);
 	}
@@ -135,7 +134,7 @@ router.get("/:slug/export", async (req, res, next) => {
 router.get("/:slug/entities/:type", async (req, res, next) => {
 	try {
 		if (!validateEntityType(req.params.type, res)) return;
-		const entities = await storage.listEntities(
+		const entities = await entityRepository.listEntities(
 			req.params.slug,
 			req.params.type,
 		);
@@ -149,49 +148,14 @@ router.post("/:slug/entities/:type", async (req, res, next) => {
 	try {
 		const { slug: campaignSlug, type } = req.params;
 		if (!validateEntityType(type, res)) return;
-		const isLocation = type === "locations";
-		const name = storage.sanitizeName(
-			isLocation ? req.body.name : req.body.firstName || req.body.name,
+		const saved = await entityRepository.createEntity(
+			campaignSlug,
+			type,
+			req.body,
 		);
-		if (!name) {
+		if (!saved) {
 			return res.status(400).json({ error: "Name is required." });
 		}
-		const baseSlug = storage.campaignSlug(name);
-		const entitySlug = await storage.ensureUniqueEntitySlug(
-			campaignSlug,
-			type,
-			baseSlug,
-		);
-		const data = isLocation
-			? {
-					description: "",
-					notes: [],
-					imageUrl: null,
-					collapsed: false,
-					isNotesCollapsed: false,
-					...req.body,
-					id: storage.createId(),
-					name: req.body.name || name,
-				}
-			: {
-					firstName: req.body.firstName || name,
-					lastName: req.body.lastName || "",
-					race: req.body.race || "",
-					class: req.body.class || "",
-					level: req.body.level === "" ? "" : req.body.level || 1,
-					motivation: req.body.motivation || "",
-					description: req.body.description || "",
-					trait: req.body.trait || "",
-					notes: [],
-					...req.body,
-					id: storage.createId(),
-				};
-		const saved = await storage.writeEntity(
-			campaignSlug,
-			type,
-			entitySlug,
-			data,
-		);
 		res.status(201).json(saved);
 	} catch (error) {
 		next(error);
@@ -202,36 +166,13 @@ router.put("/:slug/entities/:type", async (req, res, next) => {
 	try {
 		const { slug: campaignSlug, type } = req.params;
 		if (!validateEntityType(type, res)) return;
-		const entities = Array.isArray(req.body?.entities) ? req.body.entities : [];
-		const current = await storage.listEntities(campaignSlug, type);
-		const targetSlugs = new Set(
-			entities
-				.map((entity) =>
-					storage.campaignSlug(
-						entity?.slug || entity?.name || entity?.firstName,
-					),
-				)
-				.filter(Boolean),
+		res.json(
+			await entityRepository.replaceEntities(
+				campaignSlug,
+				type,
+				req.body?.entities,
+			),
 		);
-
-		for (const entity of current) {
-			if (!targetSlugs.has(entity.slug)) {
-				await storage.deleteEntity(campaignSlug, type, entity.slug);
-			}
-		}
-
-		for (const [index, entity] of entities.entries()) {
-			const slug = storage.campaignSlug(
-				entity?.slug || entity?.name || entity?.firstName,
-			);
-			if (!slug) continue;
-			await storage.writeEntity(campaignSlug, type, slug, {
-				...entity,
-				order: index,
-			});
-		}
-
-		res.json(await storage.listEntities(campaignSlug, type));
 	} catch (error) {
 		next(error);
 	}
@@ -241,36 +182,14 @@ router.patch("/:slug/entities/:type/:entitySlug", async (req, res, next) => {
 	try {
 		const { slug: campaignSlug, type, entitySlug } = req.params;
 		if (!validateEntityType(type, res)) return;
-		const {
-			_updateMentionReferences: updateMentionReferences,
-			_mentionOldName: mentionOldName,
-			...patch
-		} = req.body || {};
-		const current = await storage.readEntity(campaignSlug, type, entitySlug);
-		const oldDisplayName =
-			String(mentionOldName || "").trim() ||
-			getEntityDisplayName(current, type);
-		const updated = {
-			...current,
-			...patch,
-			id: current.id,
-			slug: current.slug,
-		};
-		const saved = await storage.writeEntity(
-			campaignSlug,
-			type,
-			entitySlug,
-			updated,
-		);
-		if (updateMentionReferences) {
-			const newDisplayName = getEntityDisplayName(saved, type);
-			await storage.updateCampaignMentionReferences(
+		res.json(
+			await entityRepository.updateEntity(
 				campaignSlug,
-				oldDisplayName,
-				newDisplayName,
-			);
-		}
-		res.json(await storage.readEntity(campaignSlug, type, saved.slug));
+				type,
+				entitySlug,
+				req.body,
+			),
+		);
 	} catch (error) {
 		next(error);
 	}
@@ -280,7 +199,7 @@ router.delete("/:slug/entities/:type/:entitySlug", async (req, res, next) => {
 	try {
 		const { slug: campaignSlug, type, entitySlug } = req.params;
 		if (!validateEntityType(type, res)) return;
-		await storage.deleteEntity(campaignSlug, type, entitySlug);
+		await entityRepository.deleteEntity(campaignSlug, type, entitySlug);
 		res.status(204).send();
 	} catch (error) {
 		next(error);
@@ -289,12 +208,12 @@ router.delete("/:slug/entities/:type/:entitySlug", async (req, res, next) => {
 
 router.post(
 	"/:slug/entities/:type/:entitySlug/move",
+	validateBody(validateEntityMove),
 	async (req, res, next) => {
 		try {
 			const { slug: campaignSlug, type, entitySlug } = req.params;
-			const { targetType } = req.body || {};
+			const { targetType } = req.validatedBody;
 			if (!validateEntityType(type, res)) return;
-			if (!validateEntityType(targetType, res)) return;
 			if (
 				!(
 					(type === "characters" && targetType === "npc") ||
@@ -306,7 +225,7 @@ router.post(
 				});
 				return;
 			}
-			const moved = await storage.moveEntity(
+			const moved = await entityRepository.moveEntity(
 				campaignSlug,
 				type,
 				entitySlug,
@@ -319,16 +238,11 @@ router.post(
 	},
 );
 
-router.post("/reorder", async (req, res, next) => {
+router.post("/reorder", validateBody(validateReorderRequest), async (req, res, next) => {
 	try {
-		const { orders } = req.body;
-		for (const slug of Object.keys(orders)) {
-			if (await storage.exists(storage.campaignMetaPath(slug))) {
-				const meta = await storage.readCampaign(slug);
-				meta.order = orders[slug];
-				await storage.writeJson(storage.campaignMetaPath(slug), meta);
-			}
-		}
+		await campaignRepository.reorderCampaigns(
+			req.validatedBody.orders,
+		);
 		res.json({ ok: true });
 	} catch (error) {
 		next(error);

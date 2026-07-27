@@ -1,4 +1,4 @@
-import { resolveEntityByName } from "../../services/entities.js";
+import { resolveEntityByName } from "../../entities/campaign/api.js";
 import {
 	getEntityIdentity,
 	isSameEntityIdentity,

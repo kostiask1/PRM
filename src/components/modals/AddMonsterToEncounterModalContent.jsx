@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { alert, requestCampaignsReloadAction } from "../../actions/app";
-import { api } from "../../api";
-import { closeActiveModal, useAppDispatch } from "../../store/appStore";
-import { createEncounterMonsterInstance } from "../../utils/encounters";
+import { alert } from "../../shared/model/index.js";
+import { requestCampaignsReloadAction } from "../../entities/campaign/model.js";
+import { campaignApi } from "../../entities/campaign/api.js";
+import { sessionApi } from "../../entities/session/api.js";
+import { closeActiveModal } from "../../shared/model/index.js";
+import { useAppDispatch } from "../../shared/lib/index.js";
+import { createEncounterMonsterInstance } from "../../entities/encounter/model.js";
 import Button from "../form/Button";
-import { lang } from "../../services/localization";
+import { lang } from "../../shared/config/index.js";
 import "../../assets/components/AddMonsterToEncounterModal.css";
 
 const EMPTY_CAMPAIGNS = [];
@@ -37,16 +40,16 @@ export default function AddMonsterToEncounterModalContent({
 				const campaignsSource =
 					activeCampaigns.length > 0
 						? activeCampaigns
-						: (await api.listCampaigns()).filter(
+						: (await campaignApi.listCampaigns()).filter(
 								(campaign) => !campaign.completed,
 							);
 
 				const campaignGroups = await Promise.all(
 					campaignsSource.map(async (campaign) => {
-						const sessions = await api.listSessions(campaign.slug);
+						const sessions = await sessionApi.listSessions(campaign.slug);
 						const sessionDetails = await Promise.all(
 							sessions.map((session) =>
-								api
+								sessionApi
 									.getSession(campaign.slug, session.fileName)
 									.catch(() => null),
 							),
@@ -94,7 +97,7 @@ export default function AddMonsterToEncounterModalContent({
 		setAddingId(targetId);
 
 		try {
-			const currentSession = await api.getSession(
+			const currentSession = await sessionApi.getSession(
 				campaign.slug,
 				session.fileName,
 			);
@@ -120,7 +123,7 @@ export default function AddMonsterToEncounterModalContent({
 				throw new Error("Encounter not found");
 			}
 
-			await api.updateSession(campaign.slug, session.fileName, {
+			await sessionApi.updateSession(campaign.slug, session.fileName, {
 				...currentSession,
 				data: {
 					...currentSession.data,

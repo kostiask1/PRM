@@ -3,8 +3,8 @@ import { useContext } from "react";
 import Modal from "./Modal";
 import { EntityLinkScope } from "./EntityLinkContext";
 import { EntityLinkResolverContext } from "./EntityLinkIdentity";
-import { getEntityDisplayName } from "../../services/entities.js";
-import { lang } from "../../services/localization";
+import { getEntityDisplayName } from "../../entities/campaign/model.js";
+import { lang } from "../../shared/config/index.js";
 
 export default function EntityModal({ modalState, onClose }) {
 	const scopedEntityLinks = useContext(EntityLinkResolverContext);

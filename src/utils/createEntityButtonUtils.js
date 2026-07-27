@@ -1,5 +1,5 @@
-import { refreshEntitiesAction } from "../actions/app";
-import { api } from "../api";
+import { refreshEntitiesAction } from "../shared/model/index.js";
+import { campaignApi } from "../entities/campaign/api.js";
 
 export function buildCreateEntityPayload(defaults, draft) {
 	return {
@@ -25,6 +25,6 @@ export async function submitCreateEntity({
 	delete payload.id;
 	delete payload.slug;
 	delete payload.createdAt;
-	await api.createEntity(campaignSlug, entityType, payload);
+	await campaignApi.createEntity(campaignSlug, entityType, payload);
 	dispatch(refreshEntitiesAction());
 }

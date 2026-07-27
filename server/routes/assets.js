@@ -1,15 +1,16 @@
 const express = require("express");
-const path = require("path");
-const storage = require("../storage");
+const {
+	BESTIARY_TOKENS_DIR,
+	IMAGES_DIR,
+} = require("../infrastructure/storagePaths");
 
 const router = express.Router();
-const BESTIARY_TOKENS_DIR = path.join(storage.BESTIARY_DIR, "tokens");
 const STATIC_REFERENCE_ASSET_OPTIONS = {
 	maxAge: "30d",
 	immutable: true,
 };
 
-router.use("/api/images", express.static(storage.IMAGES_DIR));
+router.use("/api/images", express.static(IMAGES_DIR));
 router.use(
 	"/api/bestiary/tokens",
 	express.static(BESTIARY_TOKENS_DIR, STATIC_REFERENCE_ASSET_OPTIONS),

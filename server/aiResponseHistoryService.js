@@ -1,7 +1,20 @@
 const fs = require("fs/promises");
 const path = require("path");
 
-const storage = require("./storage");
+const aiResponseRepository = require("./domains/ai/aiResponseRepository");
+const archiveExportService = require("./domains/archive/archiveExportService");
+const customBestiaryRepository = require("./domains/bestiary/customBestiaryRepository");
+const entityRepository = require("./domains/entity/entityRepository");
+const {
+	exists,
+	readJson,
+	writeJson,
+} = require("./infrastructure/jsonFileStore");
+const {
+	campaignDir,
+	campaignMetaPath,
+	sessionPath,
+} = require("./infrastructure/storagePaths");
 const { formatGeneratedContentForHistory } = require("./aiHistoryService");
 const {
 	buildAiChangeSummary,
@@ -170,7 +183,7 @@ function buildAiChangeSet(beforeBundle, afterBundle, campaignSlug) {
 		});
 	}
 
-	for (const type of storage.ENTITY_TYPES) {
+	for (const type of entityRepository.ENTITY_TYPES) {
 		const beforeEntities = new Map(
 			(beforeBundle.entities?.[type] || []).map((entity) => [
 				entity.slug,
@@ -212,7 +225,7 @@ async function buildParsedAiChanges(
 	responsePath,
 	extraChangeResources = [],
 ) {
-	const afterApplyBundle = await storage.exportCampaignBundle(
+	const afterApplyBundle = await archiveExportService.exportCampaignBundle(
 		responsePath.campaign,
 	);
 	const changes = buildAiChangeSet(
@@ -277,7 +290,7 @@ async function saveParsedAiResponse({
 		responsePath,
 		extraChangeResources,
 	);
-	return storage.addAiResponse(
+	return aiResponseRepository.addAiResponse(
 		buildParsedAiResponsePayload({
 			generatedContent,
 			path: responsePath,
@@ -312,7 +325,7 @@ async function saveDraftParsedAiResponse({
 		extraChangeResources,
 	);
 
-	const response = await storage.addAiResponse(
+	const response = await aiResponseRepository.addAiResponse(
 		buildParsedAiResponsePayload({
 			generatedContent,
 			path: responsePath,
@@ -337,14 +350,15 @@ async function saveDraftParsedAiResponse({
 
 async function writeAiResourceSnapshot(resource, snapshotValue) {
 	if (resource.kind === "custom-bestiary") {
-		await storage.writeCustomBestiaryMonsters(
+		await customBestiaryRepository.writeCustomBestiaryMonsters(
 			Array.isArray(snapshotValue) ? snapshotValue : [],
 		);
 		return;
 	}
 
 	if (resource.kind === "custom-monster") {
-		const current = await storage.readCustomBestiaryMonsters();
+		const current =
+			await customBestiaryRepository.readCustomBestiaryMonsters();
 		const targetIds = [
 			resource.before?.id,
 			resource.after?.id,
@@ -379,7 +393,7 @@ async function writeAiResourceSnapshot(resource, snapshotValue) {
 		if (snapshotValue !== null) {
 			next.push(snapshotValue);
 		}
-		await storage.writeCustomBestiaryMonsters(next);
+		await customBestiaryRepository.writeCustomBestiaryMonsters(next);
 		return;
 	}
 
@@ -392,21 +406,18 @@ async function writeAiResourceSnapshot(resource, snapshotValue) {
 		if (snapshotValue === null) {
 			throw new Error("Campaign deletion cannot be restored from AI history.");
 		}
-		await storage.writeJson(
-			storage.campaignMetaPath(campaignSlug),
-			snapshotValue,
-		);
+		await writeJson(campaignMetaPath(campaignSlug), snapshotValue);
 		return;
 	}
 
 	if (resource.kind === "session") {
 		const fileName = path.basename(String(resource.fileName || ""));
 		if (!fileName) throw new Error("AI response change has no session target.");
-		const fullPath = storage.sessionPath(campaignSlug, fileName);
+		const fullPath = sessionPath(campaignSlug, fileName);
 		if (snapshotValue === null) {
 			await fs.rm(fullPath, { force: true });
 		} else {
-			await storage.writeJson(fullPath, snapshotValue);
+			await writeJson(fullPath, snapshotValue);
 		}
 		return;
 	}
@@ -414,14 +425,14 @@ async function writeAiResourceSnapshot(resource, snapshotValue) {
 	if (resource.kind === "entity") {
 		const type = resource.type;
 		const slug = path.basename(String(resource.slug || ""));
-		if (!storage.ENTITY_TYPES.includes(type) || !slug) {
+		if (!entityRepository.ENTITY_TYPES.includes(type) || !slug) {
 			throw new Error("AI response change has invalid entity target.");
 		}
 		if (snapshotValue === null) {
-			await storage.deleteEntity(campaignSlug, type, slug);
+			await entityRepository.deleteEntity(campaignSlug, type, slug);
 		} else {
-			await storage.writeJson(
-				path.join(storage.campaignDir(campaignSlug), type, slug, "info.json"),
+			await writeJson(
+				path.join(campaignDir(campaignSlug), type, slug, "info.json"),
 				{ ...snapshotValue, slug },
 			);
 		}
@@ -436,23 +447,26 @@ async function readUpdatedObjectForAiResponse(entry) {
 	if (!targetPath.campaign) return null;
 
 	if (targetPath.campaign === "bestiary") {
-		return { monsters: await storage.readCustomBestiaryMonsters() };
+		return {
+			monsters:
+				await customBestiaryRepository.readCustomBestiaryMonsters(),
+		};
 	}
 
 	if (targetPath.session) {
-		const sessionFile = storage.sessionPath(
+		const sessionFile = sessionPath(
 			targetPath.campaign,
 			targetPath.session,
 		);
-		if (await storage.exists(sessionFile)) {
-			const session = await storage.readJson(sessionFile);
+		if (await exists(sessionFile)) {
+			const session = await readJson(sessionFile);
 			return { ...session, fileName: targetPath.session };
 		}
 	}
 
-	const metaPath = storage.campaignMetaPath(targetPath.campaign);
-	if (await storage.exists(metaPath)) {
-		return storage.readJson(metaPath);
+	const metaPath = campaignMetaPath(targetPath.campaign);
+	if (await exists(metaPath)) {
+		return readJson(metaPath);
 	}
 	return null;
 }
@@ -526,14 +540,14 @@ async function restoreAiResponseSnapshot(entry, snapshotKey, options = {}) {
 				applyState: snapshotKey === "after" ? "applied" : "undone",
 				appliedAt,
 			};
-	const response = await storage.updateAiResponse(
+	const response = await aiResponseRepository.updateAiResponse(
 		campaignSlug,
 		entry.id,
 		patch,
 	);
 	return {
 		response,
-		responses: await storage.readAiResponses(campaignSlug),
+		responses: await aiResponseRepository.readAiResponses(campaignSlug),
 		updated: await readUpdatedObjectForAiResponse(response || entry),
 	};
 }

@@ -1,4 +1,4 @@
-const storage = require("../storage");
+const aiResponseRepository = require("../domains/ai/aiResponseRepository");
 const {
 	buildAiRequestSnapshot,
 	formatGeneratedContentForHistory,
@@ -85,12 +85,12 @@ class AiHistoryWriter {
 	}
 
 	async addResponse(payload) {
-		return storage.addAiResponse(payload);
+		return aiResponseRepository.addAiResponse(payload);
 	}
 
 	async addSavedOrEphemeral(requestPayload, responsePayload) {
 		return this.shouldSave(requestPayload)
-			? storage.addAiResponse(responsePayload)
+			? aiResponseRepository.addAiResponse(responsePayload)
 			: this.createEphemeral(responsePayload);
 	}
 
@@ -128,7 +128,7 @@ class AiHistoryWriter {
 			language: payload.language,
 		});
 
-		return storage.addAiResponse({
+		return aiResponseRepository.addAiResponse({
 			text: getFailedAiResponseText(error, status),
 			path,
 			type: payload.type || null,

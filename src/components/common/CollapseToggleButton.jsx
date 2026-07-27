@@ -1,6 +1,6 @@
 import Button from "../form/Button";
 import "../../assets/components/CollapseToggleButton.css";
-import classNames from "../../utils/classNames";
+import classNames from "../../shared/lib/classNames.js";
 
 /**
  * @param {Object} props

@@ -61,15 +61,15 @@ import {
 import { $setBlocksType } from "@lexical/selection";
 import Button from "./Button";
 import "../../assets/components/EditableField.css";
-import classNames from "../../utils/classNames";
-import { lang } from "../../services/localization";
-import { useAppDispatch } from "../../store/appStore";
-import { parseUrl } from "../../utils/navigation";
-import { requestMentionSelection } from "../../utils/mentionPicker";
+import classNames from "../../shared/lib/classNames.js";
+import { lang } from "../../shared/config/index.js";
+import { useAppDispatch } from "../../shared/lib/index.js";
+import { parseUrl } from "../../shared/lib/navigation.js";
+import { requestMentionSelection } from "../../shared/model/index.js";
 import {
 	createMentionBoundaryNode,
 	handleSpaceAfterMention,
-} from "../../utils/mentionEditor";
+} from "../../shared/lib/mentionEditor.js";
 import EntityModal from "../common/EntityModal";
 import Tooltip from "../common/Tooltip";
 import {

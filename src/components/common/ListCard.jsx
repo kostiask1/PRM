@@ -1,5 +1,5 @@
 import "../../assets/components/ListCard.css";
-import classNames from "../../utils/classNames";
+import classNames from "../../shared/lib/classNames.js";
 
 export default function ListCard({
 	children, // Main card content (title, meta)

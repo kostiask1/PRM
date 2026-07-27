@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-	setCampaignsAction,
 	setLanguageAction,
 	setUiSettingsAction,
-} from "../../actions/app";
-import { api } from "../../api";
-import { lang } from "../../services/localization";
-import { THEMES } from "../../services/uiSettings";
-import { useAppDispatch, useAppSelector } from "../../store/appStore";
+} from "../../entities/settings/model.js";
+import { setCampaignsAction } from "../../entities/campaign/model.js";
+import { settingsApi } from "../../entities/settings/api.js";
+import { bestiaryApi } from "../../entities/bestiary/api.js";
+import { campaignApi } from "../../entities/campaign/api.js";
+import { spellApi } from "../../entities/spell/api.js";
+import { lang, THEMES } from "../../shared/config/index.js";
+import { useAppDispatch, useAppSelector } from "../../shared/lib/index.js";
 import "../../assets/components/SettingsModal.css";
 import Button from "../form/Button";
 import EditableField from "../form/EditableField";
@@ -129,8 +131,8 @@ export default function SettingsModalContent({ onCancel }) {
 		const loadSourceOptions = async () => {
 			try {
 				const [bestiarySources, spellSources] = await Promise.all([
-					api.getBestiarySources(),
-					api.getSpellSources(),
+					bestiaryApi.getSources(),
+					spellApi.getSources(),
 				]);
 				const nextSources = Array.from(
 					new Set([
@@ -200,7 +202,7 @@ export default function SettingsModalContent({ onCancel }) {
 
 	const patchSettings = async (payload) => {
 		try {
-			await api.updateSettings(payload);
+			await settingsApi.update(payload);
 		} catch (error) {
 			console.error("Failed to save settings", error);
 		}
@@ -311,7 +313,7 @@ export default function SettingsModalContent({ onCancel }) {
 
 		setPromptStatus("saving");
 		try {
-			const saved = await api.updateSettings(payload);
+			const saved = await settingsApi.update(payload);
 			const nextUiSettings = {
 				aiBasePrompt: saved.aiBasePrompt,
 				imagePromptBasePrompt: saved.imagePromptBasePrompt,
@@ -342,7 +344,7 @@ export default function SettingsModalContent({ onCancel }) {
 		setSourceStatus("saving");
 		try {
 			if (isGlobalSourceScope) {
-				const saved = await api.updateSettings({ ignoreSourcesList });
+				const saved = await settingsApi.update({ ignoreSourcesList });
 				dispatch(
 					setUiSettingsAction({
 						ignoreSourcesList: saved.ignoreSourcesList,
@@ -350,11 +352,11 @@ export default function SettingsModalContent({ onCancel }) {
 				);
 				setIgnoreSourcesList(saved.ignoreSourcesList || []);
 			} else if (selectedSourceScope) {
-				await api.updateCampaign(selectedSourceScope, {
+				await campaignApi.updateCampaign(selectedSourceScope, {
 					ignoreSourcesList:
 						campaignIgnoreSourcesLists[selectedSourceScope] || [],
 				});
-				const nextCampaigns = await api.listCampaigns();
+				const nextCampaigns = await campaignApi.listCampaigns();
 				dispatch(setCampaignsAction(nextCampaigns));
 			}
 			setSourceStatus("idle");

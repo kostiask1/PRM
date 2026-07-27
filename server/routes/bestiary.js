@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const path = require("path");
-const storage = require("../storage");
+const bestiaryReferenceRepository = require("../domains/bestiary/bestiaryReferenceRepository");
+const customBestiaryRepository = require("../domains/bestiary/customBestiaryRepository");
 const { sortByNameQuery } = require("./searchUtils");
 const {
 	applyArrayMod,
@@ -16,7 +16,7 @@ function normalizeSource(source) {
 		.toUpperCase();
 }
 
-const CUSTOM_SOURCE = storage.CUSTOM_BESTIARY_SOURCE || "CUSTOM";
+const CUSTOM_SOURCE = customBestiaryRepository.CUSTOM_BESTIARY_SOURCE;
 
 function monsterNameKey(monster) {
 	return String(monster?.name || "")
@@ -57,7 +57,7 @@ async function readCustomMonsterTarget(identifier, res) {
 		return null;
 	}
 
-	const monsters = await storage.readCustomBestiaryMonsters();
+	const monsters = await customBestiaryRepository.readCustomBestiaryMonsters();
 	const index = findCustomMonsterIndex(monsters, targetIdentifier);
 	if (index < 0) {
 		res.status(404).json({ error: "Custom creature not found." });
@@ -67,21 +67,8 @@ async function readCustomMonsterTarget(identifier, res) {
 	return { monsters, index };
 }
 
-async function readAllDatabaseMonsters() {
-	const allPath = path.join(storage.BESTIARY_DIR, "all.json");
-	if (!(await storage.exists(allPath))) return [];
-	const data = await storage.readJson(allPath);
-	const monsters = Array.isArray(data)
-		? data
-		: data.monster || data.monsters || data.results || [];
-	return monsters.map((monster) => ({
-		...monster,
-		source: normalizeSource(monster.source),
-	}));
-}
-
 async function readCustomMonsters() {
-	const data = await storage.readCustomBestiary();
+	const data = await customBestiaryRepository.readCustomBestiary();
 	return (Array.isArray(data.monster) ? data.monster : []).map((monster) => ({
 		...monster,
 		source: CUSTOM_SOURCE,
@@ -185,7 +172,12 @@ router.get("/search", async (req, res, next) => {
 		const nameQuery = name?.toLowerCase() || "";
 		const typeQuery = type?.toLowerCase() || "";
 
-		const index = await storage.getBestiaryIndex();
+		const index = await bestiaryReferenceRepository.buildMonsterIndex();
+		const customMonsters = await readCustomMonsters();
+		for (const monster of customMonsters) {
+			const key = `${monsterNameKey(monster)}|${CUSTOM_SOURCE}`;
+			index.set(key, monster);
+		}
 		const results = [];
 
 		for (const monster of index.values()) {
@@ -213,7 +205,7 @@ router.get("/search", async (req, res, next) => {
 
 router.get("/favorites", async (req, res, next) => {
 	try {
-		const favorites = await storage.readFavorites();
+		const favorites = await customBestiaryRepository.readFavorites();
 		res.json(favorites.map((f) => ({ ...f, source: f.source?.toUpperCase() })));
 	} catch (error) {
 		next(error);
@@ -225,7 +217,7 @@ router.post("/favorites/toggle", async (req, res, next) => {
 		const { name, source } = req.body;
 		const normalizedSource = source?.toUpperCase();
 
-		let favorites = await storage.readFavorites();
+		let favorites = await customBestiaryRepository.readFavorites();
 		const index = favorites.findIndex(
 			(f) => f.name === name && f.source?.toUpperCase() === normalizedSource,
 		);
@@ -236,7 +228,7 @@ router.post("/favorites/toggle", async (req, res, next) => {
 			favorites.push({ name, source: normalizedSource });
 		}
 
-		await storage.writeFavorites(favorites);
+		await customBestiaryRepository.writeFavorites(favorites);
 		res.json(favorites);
 	} catch (error) {
 		next(error);
@@ -272,10 +264,13 @@ router.patch("/custom/:name", async (req, res, next) => {
 				});
 			}
 			monsters[index] = normalizeCustomMonsterHpAverage(nextMonster);
-			const updated = await storage.writeCustomBestiaryMonsters(monsters);
+			const updated =
+				await customBestiaryRepository.writeCustomBestiaryMonsters(
+					monsters,
+				);
 
 			if (nextNameKey !== previousNameKey) {
-				const favorites = await storage.readFavorites();
+				const favorites = await customBestiaryRepository.readFavorites();
 				const nextFavorites = favorites.map((favorite) =>
 					String(favorite.name || "")
 						.trim()
@@ -284,7 +279,7 @@ router.patch("/custom/:name", async (req, res, next) => {
 						? { ...favorite, name: nextName, source: CUSTOM_SOURCE }
 						: favorite,
 				);
-				await storage.writeFavorites(nextFavorites);
+				await customBestiaryRepository.writeFavorites(nextFavorites);
 			}
 
 			return res.json(
@@ -302,7 +297,8 @@ router.patch("/custom/:name", async (req, res, next) => {
 			...monsters[index],
 			imageUrl: imageUrl || null,
 		};
-		const updated = await storage.writeCustomBestiaryMonsters(monsters);
+		const updated =
+			await customBestiaryRepository.writeCustomBestiaryMonsters(monsters);
 		res.json(
 			updated.find(
 				(monster) =>
@@ -327,7 +323,10 @@ router.put("/custom", async (req, res, next) => {
 				source: CUSTOM_SOURCE,
 			}))
 			.filter((monster) => monster.name);
-		const updated = await storage.writeCustomBestiaryMonsters(normalized);
+		const updated =
+			await customBestiaryRepository.writeCustomBestiaryMonsters(
+				normalized,
+			);
 		res.json(updated);
 	} catch (error) {
 		next(error);
@@ -345,8 +344,11 @@ router.delete("/custom/:name", async (req, res, next) => {
 			(monster, monsterIndex) => monsterIndex !== index,
 		);
 
-		const updated = await storage.writeCustomBestiaryMonsters(nextMonsters);
-		const favorites = await storage.readFavorites();
+		const updated =
+			await customBestiaryRepository.writeCustomBestiaryMonsters(
+				nextMonsters,
+			);
+		const favorites = await customBestiaryRepository.readFavorites();
 		const nextFavorites = favorites.filter(
 			(favorite) =>
 				!(
@@ -357,7 +359,7 @@ router.delete("/custom/:name", async (req, res, next) => {
 				),
 		);
 		if (nextFavorites.length !== favorites.length) {
-			await storage.writeFavorites(nextFavorites);
+			await customBestiaryRepository.writeFavorites(nextFavorites);
 		}
 
 		res.json(updated);
@@ -368,43 +370,9 @@ router.delete("/custom/:name", async (req, res, next) => {
 
 router.get("/sources", async (req, res, next) => {
 	try {
-		const allPath = path.join(storage.BESTIARY_DIR, "all.json");
-		const customSources = [CUSTOM_SOURCE];
-		if (await storage.exists(allPath)) {
-			const data = await storage.readJson(allPath);
-			const monsters = Array.isArray(data)
-				? data
-				: data.monster || data.monsters || data.results || [];
-			const sources = [
-				...new Set([
-					...monsters.map((m) => m.source).filter(Boolean),
-					...customSources,
-				]),
-			].sort((a, b) => a.localeCompare(b));
-			return res.json(sources);
-		}
-		if (!(await storage.exists(storage.BESTIARY_DIR)))
-			return res.json(customSources);
-
-		const entries = await require("fs/promises").readdir(storage.BESTIARY_DIR, {
-			withFileTypes: true,
-		});
+		const sources = await bestiaryReferenceRepository.listSources();
 		res.json([
-			...new Set([
-				...entries
-					.filter((e) => {
-						const name = e.name.toLowerCase();
-						return (
-							e.isFile() &&
-							name.endsWith(".json") &&
-							name !== "all.json" &&
-							name !== "legendarygroups.json" &&
-							name !== "index.json"
-						);
-					})
-					.map((e) => path.parse(e.name).name.replace(/^bestiary-/i, "")),
-				...customSources,
-			]),
+			...new Set([...sources, CUSTOM_SOURCE]),
 		]);
 	} catch (error) {
 		next(error);
@@ -413,10 +381,7 @@ router.get("/sources", async (req, res, next) => {
 
 router.get("/legendarygroups", async (req, res, next) => {
 	try {
-		const filePath = path.join(storage.BESTIARY_DIR, "legendarygroups.json");
-		if (!(await storage.exists(filePath))) return res.json([]);
-
-		const groups = (await storage.readJson(filePath)).legendaryGroup || [];
+		const groups = await bestiaryReferenceRepository.readLegendaryGroups();
 		res.json(resolveLegendaryGroups(groups));
 	} catch (error) {
 		next(error);
@@ -429,62 +394,16 @@ router.get("/:source", async (req, res, next) => {
 		const normalizedSource = normalizeSource(sourceParam);
 		const customMonsters = await readCustomMonsters();
 
-		if (String(sourceParam).toLowerCase() === "all") {
-			return res.json(await readAllDatabaseMonsters());
-		}
-
 		if (normalizedSource === CUSTOM_SOURCE) {
 			disableResponseCache(res);
 			return res.json(customMonsters);
 		}
 
-		let filePath = path.join(
-			storage.BESTIARY_DIR,
-			`${path.basename(sourceParam)}.json`,
-		);
-
-		if (!(await storage.exists(filePath))) {
-			// Try the bestiary- prefix when the direct path is not found.
-			const prefixedPath = path.join(
-				storage.BESTIARY_DIR,
-				`bestiary-${path.basename(sourceParam)}.json`,
-			);
-			if (await storage.exists(prefixedPath)) {
-				filePath = prefixedPath;
-			}
-		}
-
-		if (!(await storage.exists(filePath))) {
-			const allPath = path.join(storage.BESTIARY_DIR, "all.json");
-			if (!(await storage.exists(allPath)))
-				return res.status(404).json({ error: "Source not found." });
-
-			const allData = await storage.readJson(allPath);
-			const allMonsters = Array.isArray(allData)
-				? allData
-				: allData.monster || allData.monsters || allData.results || [];
-			return res.json(
-				allMonsters
-					.filter((m) => m.source?.toUpperCase() === normalizedSource)
-					.map((monster) => ({
-						...monster,
-						source: normalizeSource(monster.source),
-					})),
-			);
-		}
-
-		const data = await storage.readJson(filePath);
-		const monsters = Array.isArray(data)
-			? data
-			: data.monster || data.monsters || data.results || [];
-
-		const fileSource = path.parse(filePath).name.replace(/^bestiary-/i, "");
-		const resolvedList = monsters.map((m) => ({
-			...m,
-			source: (m.source || fileSource).toUpperCase(),
-		}));
-
-		res.json(resolvedList);
+		const monsters =
+			await bestiaryReferenceRepository.getMonstersBySource(sourceParam);
+		if (!monsters)
+			return res.status(404).json({ error: "Source not found." });
+		res.json(monsters);
 	} catch (error) {
 		next(error);
 	}

@@ -44,7 +44,87 @@ export default [
         'ignoreRestSiblings': true,
         'argsIgnorePattern': '^_' 
       }],
-      'no-console': ['warn', { allow: ['warn', 'error', 'info', 'log'] }]
+      'no-console': ['warn', { allow: ['warn', 'error', 'info', 'log'] }],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '**/entities/*/api/**',
+                '**/entities/*/model/**',
+                '**/entities/*/ui/**',
+                '**/features/*/ui/**',
+                '**/features/*/model/**',
+                '**/widgets/*/ui/**',
+                '**/pages/*/ui/**',
+                '**/shared/api/httpClient*',
+                '**/shared/model/*State*',
+              ],
+              message:
+                'Import FSD slices through a public index.js or segment entry point.',
+            },
+            {
+              group: [
+                '**/utils/classNames*',
+                '**/utils/campaignGraph*',
+                '**/utils/deepSearch*',
+                '**/utils/domNavigation*',
+                '**/utils/download*',
+                '**/utils/formatBytes*',
+                '**/utils/id*',
+                '**/utils/json*',
+                '**/utils/mentionEditor*',
+                '**/utils/mentionPicker*',
+                '**/utils/navigation*',
+                '**/utils/searchHighlight*',
+                '**/utils/undoRedo*',
+              ],
+              message:
+                'Import retired generic utilities from their documented shared public modules; legacy src/utils ownership is closed.',
+            },
+            {
+              group: ['**/shared/model/mentionPickerSelection*'],
+              message:
+                'Import mention-selection orchestration through shared/model/index.js.',
+            },
+            {
+              group: [
+                '**/services/localization*',
+                '**/services/uiSettings*',
+                '**/services/entities*',
+                '**/shared/config/localization*',
+                '**/shared/config/theme*',
+              ],
+              message:
+                'Import localization and theme configuration through shared/config/index.js.',
+            },
+            {
+              group: ['**/hooks/useDebounce*'],
+              message:
+                'Import the generic debounce hook from shared/lib/useDebounce.js.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['server/**/*.js'],
+    rules: {
+      'no-restricted-modules': [
+        'error',
+        {
+          name: './storage',
+          message:
+            'Import the owning backend domain or infrastructure module instead of the legacy storage facade.',
+        },
+        {
+          name: '../storage',
+          message:
+            'Import the owning backend domain or infrastructure module instead of the legacy storage facade.',
+        },
+      ],
     },
   },
 ];

@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import Icon from "../common/Icon";
 import Button from "./Button";
 import Checkbox from "./Checkbox";
-import classNames from "../../utils/classNames";
+import classNames from "../../shared/lib/classNames.js";
 import "../../assets/components/MultiSelect.css";
 
 const DROPDOWN_OFFSET = 4;

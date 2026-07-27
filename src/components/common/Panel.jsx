@@ -1,5 +1,5 @@
 import "../../assets/components/Panel.css";
-import classNames from "../../utils/classNames";
+import classNames from "../../shared/lib/classNames.js";
 
 export default function Panel({ children, className = "" }) {
 	return (

@@ -1,4 +1,4 @@
-import classNames from "../../utils/classNames";
+import classNames from "../../shared/lib/classNames.js";
 
 const icons = {
 	plus: <path d="M12 5v14M5 12h14" />,

@@ -7,7 +7,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import "../../assets/components/Tooltip.css";
-import classNames from "../../utils/classNames";
+import classNames from "../../shared/lib/classNames.js";
 
 const GAP = 8;
 const VIEWPORT_MARGIN = 8;

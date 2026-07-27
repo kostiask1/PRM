@@ -1,11 +1,11 @@
 const express = require("express");
-const storage = require("../storage");
+const settingsRepository = require("../domains/settings/settingsRepository");
 
 const router = express.Router();
 
 router.get("/", async (_req, res, next) => {
 	try {
-		res.json(await storage.readSettings());
+		res.json(await settingsRepository.readSettings());
 	} catch (error) {
 		next(error);
 	}
@@ -13,7 +13,7 @@ router.get("/", async (_req, res, next) => {
 
 router.patch("/", async (req, res, next) => {
 	try {
-		res.json(await storage.updateSettings(req.body || {}));
+		res.json(await settingsRepository.updateSettings(req.body || {}));
 	} catch (error) {
 		next(error);
 	}

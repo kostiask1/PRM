@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import crypto from "node:crypto";
 import { createRequire } from "node:module";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -16,13 +17,23 @@ import {
 	createEditor,
 } from "lexical";
 
-import { idsEqual } from "../src/utils/id.js";
-import { isJsonObject, isJsonString } from "../src/utils/json.js";
+import { idsEqual } from "../src/shared/lib/id.js";
+import { isJsonObject, isJsonString } from "../src/shared/lib/json.js";
 import {
 	matchesMonsterSearch,
 	getMonsterTypeString,
-} from "../src/utils/bestiary.js";
-import classNames from "../src/utils/classNames.js";
+	MonsterStatBlockModel,
+} from "../src/entities/bestiary/model.js";
+import { bestiaryApi } from "../src/entities/bestiary/api.js";
+import { archiveApi } from "../src/entities/archive/api.js";
+import { rulesReferenceApi } from "../src/entities/rules-reference/api.js";
+import { spellApi } from "../src/entities/spell/api.js";
+import { settingsApi } from "../src/entities/settings/api.js";
+import {
+	httpClient,
+	isAbortError,
+} from "../src/shared/api/index.js";
+import classNames from "../src/shared/lib/classNames.js";
 import {
 	getDiceProbabilityDistribution,
 	rollDiceFormula,
@@ -37,11 +48,11 @@ import {
 	createUndoTransition,
 	isHistoryShortcutEvent,
 	shouldUseAppHistoryForEvent,
-} from "../src/utils/undoRedo.js";
+} from "../src/shared/lib/undoRedo.js";
 import {
 	normalizeConditionName,
 	loadConditionsMap,
-} from "../src/utils/conditions.js";
+} from "../src/entities/rules-reference/model.js";
 import {
 	createEmptyNote as createModelEmptyNote,
 	getNoteRenderKey,
@@ -55,26 +66,30 @@ import {
 	MENTION_BOUNDARY,
 	createMentionBoundaryNode,
 	handleSpaceAfterMention,
-} from "../src/utils/mentionEditor.js";
+} from "../src/shared/lib/mentionEditor.js";
 import {
 	buildNavigationUrl,
 	parseUrl,
 	shouldOpenInNewTabFromEvent,
-} from "../src/utils/navigation.js";
-import { downloadBlob, downloadJsonFile } from "../src/utils/download.js";
+} from "../src/shared/lib/navigation.js";
 import {
+	downloadBlob,
+	downloadJsonFile,
+} from "../src/shared/lib/download.js";
+import {
+	buildEncounterGridModel,
 	createEncounterMonsterInstance,
 	ensureEncounterMonsterId,
 	getMonsterBaseHp,
 	hasMonsterHpFormula,
-} from "../src/utils/encounters.js";
+} from "../src/entities/encounter/model.js";
 import {
 	addSourceMonsterImageToDraft,
 	getFirstChangedMonster,
 	getFirstChangedMonsterName,
 	isAiResponseVisibleForRoute,
 	updateDraftResourceAfterValues,
-} from "../src/utils/aiResponseHelpers.js";
+} from "../src/entities/ai/model.js";
 import {
 	getSpellByName,
 	getConditionByName,
@@ -82,53 +97,189 @@ import {
 	getSenseByName,
 	getSkillByName,
 	getVariantRuleByName,
-} from "../src/utils/referencePreview.js";
-import {
 	resolveSpellInput,
 	resolveConditionInput,
 	resolveDiseaseInput,
 	resolveSenseInput,
 	resolveSkillInput,
 	resolveVariantRuleInput,
-} from "../src/utils/referenceResolvers.js";
+} from "../src/features/reference-navigation/model.js";
 import {
 	buildCampaignGraph,
 	extractBracketMentions,
-	normalizeGraphName,
-} from "../src/utils/campaignGraph.js";
-import {
 	getCampaignGraphNodeSize,
 	layoutCampaignGraph,
+	normalizeGraphName,
 	resolveCampaignGraphNodeCollision,
-} from "../src/utils/campaignGraphLayout.js";
-import CampaignViewModel from "../src/models/CampaignViewModel.js";
-import SessionViewModel from "../src/models/SessionViewModel.js";
-import MonsterStatBlockModel from "../src/models/MonsterStatBlockModel.js";
-import SpellCardModel from "../src/models/SpellCardModel.js";
-import LocationCardModel from "../src/models/LocationCardModel.js";
+} from "../src/entities/campaign/graph.js";
+import { SessionViewModel } from "../src/entities/session/model.js";
+import { SpellCardModel } from "../src/entities/spell/model.js";
 import {
 	areHistoryStatesEqual,
+	CardNoteModel,
+	CampaignViewModel,
 	campaignHistoryPayload,
+	CharacterCardModel,
 	cloneHistoryList,
+	findEntityByName,
+	filterGlobalSearchIndex,
+	GLOBAL_SEARCH_RESULT_LIMIT,
+	getEntityDisplayName,
 	getLocationDisplayName as getCampaignLocationDisplayName,
+	LocationCardModel,
 	normalizeMentionName,
 	replaceBracketedMentionNames,
 	replaceMentionsInValue,
 	sanitizeEntityForSave,
 	sanitizeLoadedEntity,
-} from "../src/features/campaign/campaignStateUtils.js";
-import { IMAGE_GALLERY_CATEGORIES } from "../src/features/images/imageGalleryConfig.js";
+} from "../src/entities/campaign/model.js";
+import { filterBestiaryMonsters } from "../src/features/bestiary/model.js";
+import { filterSpells } from "../src/features/spells/model.js";
+import { IMAGE_GALLERY_CATEGORIES } from "../src/entities/image/model.js";
 import {
-	findEntityByName,
-	getEntityDisplayName,
+	campaignApi,
 	resolveEntityByName,
-} from "../src/services/entities.js";
-import { api } from "../src/api.js";
+} from "../src/entities/campaign/api.js";
+import { sessionApi } from "../src/entities/session/api.js";
+import { mapWithConcurrency } from "../src/shared/lib/index.js";
 
 const require = createRequire(import.meta.url);
-const storage = require("../server/storage.js");
-const spellsRouter = require("../server/routes/spells.js");
+const {
+	ensureDir,
+	exists,
+	readJson,
+	writeJson,
+} = require("../server/infrastructure/jsonFileStore.js");
+const {
+	CAMPAIGNS_DIR,
+	DATA_DIR,
+	IMAGES_DIR,
+	aiResponsesPath,
+	campaignAiResponsesPath,
+	campaignDir,
+	campaignImagesDir,
+	campaignMetaPath,
+	campaignSlug,
+	sanitizeName,
+	sessionFileName,
+	sessionPath,
+} = require("../server/infrastructure/storagePaths.js");
+const {
+	createReferenceDataRepository,
+} = require("../server/domains/reference/referenceDataRepository.js");
+const {
+	createBestiaryReferenceRepository,
+} = require("../server/domains/bestiary/bestiaryReferenceRepository.js");
+const {
+	createCustomBestiaryRepository,
+	normalizeCustomBestiaryMonster,
+} = require("../server/domains/bestiary/customBestiaryRepository.js");
+const {
+	createSessionRepository,
+	listSessions,
+	makeDefaultSessionData,
+	readSession,
+} = require("../server/domains/session/sessionRepository.js");
+const {
+	validateSessionMutation,
+	validateSessionReorder,
+} = require("../server/domains/session/sessionRequestSchemas.js");
+const {
+	createCampaignRepository,
+	readCampaign,
+} = require("../server/domains/campaign/campaignRepository.js");
+const campaignRepository = require("../server/domains/campaign/campaignRepository.js");
+const {
+	validateCampaignCreate,
+	validateCampaignPatch,
+	validateEntityMove,
+	validateReorderRequest,
+} = require("../server/domains/campaign/campaignRequestSchemas.js");
+const {
+	createEntityRepository,
+	listEntities,
+	moveEntity,
+	updateCampaignMentionReferences,
+	writeEntity,
+} = require("../server/domains/entity/entityRepository.js");
+const {
+	createImageReferenceService,
+} = require("../server/domains/image/imageReferenceService.js");
+const {
+	createImageAssetRepository,
+	campaignHasImages,
+	deleteImages,
+	listImages,
+	listSubcategories,
+	moveImages,
+	renameImage,
+	renameSubcategory,
+} = require("../server/domains/image/imageAssetRepository.js");
+const {
+	createImageGalleryReadService,
+	listBestiaryTokenAssets,
+	searchImageGalleryAssets,
+} = require("../server/domains/image/imageGalleryReadService.js");
+const {
+	createCampaignLifecycleService,
+	renameCampaignData,
+} = require("../server/domains/campaign/campaignLifecycleService.js");
+const archiveExportService = require("../server/domains/archive/archiveExportService.js");
+const {
+	createArchiveExportService,
+} = archiveExportService;
+const {
+	createArchiveImportService,
+	importCampaignPartialArchiveBundle,
+} = require("../server/domains/archive/archiveImportService.js");
+const {
+	validateCampaignArchiveEnvelope,
+	validateCampaignBundleCollection,
+	validatePartialArchiveBundle,
+} = require("../server/domains/archive/archiveRequestSchemas.js");
+const archiveImportService = require("../server/domains/archive/archiveImportService.js");
+const {
+	RequestValidationError,
+	assertValidRequest,
+} = require("../server/http/requestValidation.js");
+const {
+	createAiApplyAggregateService,
+} = require("../server/domains/ai/aiApplyAggregateService.js");
+const {
+	addAiResponse,
+	clearAiResponses,
+	createAiResponseRepository,
+	deleteAiResponse,
+	readAiResponses,
+	updateAiResponse,
+} = require("../server/domains/ai/aiResponseRepository.js");
+const {
+	dispatchAiOperations,
+} = require("../server/domains/ai/aiOperationDispatcher.js");
+const {
+	createCustomMonsterPatchService,
+} = require("../server/domains/ai/customMonsterPatchService.js");
+const {
+	createEncounterPatchService,
+} = require("../server/domains/ai/encounterPatchService.js");
+const {
+	createCampaignEntityGateway,
+} = require("../server/domains/ai/campaignEntityGateway.js");
+const {
+	createNotePatchService,
+} = require("../server/domains/ai/notePatchService.js");
+const {
+	createAiContentNormalizer,
+} = require("../server/domains/ai/aiContentNormalizer.js");
+const {
+	createEntityPatchService,
+} = require("../server/domains/ai/entityPatchService.js");
+const {
+	createScenePatchService,
+} = require("../server/domains/ai/scenePatchService.js");
 const backupsRouter = require("../server/routes/backups.js");
+const campaignsRouter = require("../server/routes/campaigns.js");
+const sessionsRouter = require("../server/routes/sessions.js");
 const aiRouter = require("../server/routes/ai.js");
 const bestiaryRouter = require("../server/routes/bestiary.js");
 const aiService = require("../server/aiService.js");
@@ -144,6 +295,9 @@ const {
 
 const results = [];
 const TEST_PREFIX = `autotest-${Date.now()}`;
+const TEST_FILTER = String(process.env.TEST_FILTER || "")
+	.trim()
+	.toLowerCase();
 
 function createEmptyNote() {
 	return {
@@ -175,11 +329,11 @@ function makeTestSlug(name) {
 }
 
 async function cleanupTestData(slug) {
-	await fs.rm(path.join(storage.IMAGES_DIR, slug), {
+	await fs.rm(path.join(IMAGES_DIR, slug), {
 		recursive: true,
 		force: true,
 	});
-	await fs.rm(storage.campaignDir(slug), { recursive: true, force: true });
+	await fs.rm(campaignDir(slug), { recursive: true, force: true });
 }
 
 async function withTestSlug(name, callback) {
@@ -192,6 +346,7 @@ async function withTestSlug(name, callback) {
 }
 
 async function run(name, fn) {
+	if (TEST_FILTER && !name.toLowerCase().includes(TEST_FILTER)) return;
 	try {
 		await fn();
 		results.push({ name, ok: true });
@@ -462,6 +617,46 @@ await run("CampaignViewModel formats links and creation date", () => {
 		"/campaign/my-campaign/session/session%201.json",
 	);
 	assert.notEqual(model.createdAtLabel, "-");
+});
+
+await run("campaign graph has campaign entity ownership", async () => {
+	for (const ownedPath of [
+		"src/entities/campaign/graph.js",
+		"src/entities/campaign/model/campaignGraph.js",
+		"src/entities/campaign/model/campaignGraphLayout.js",
+	]) {
+		await fs.access(ownedPath);
+	}
+	for (const legacyPath of [
+		"src/utils/campaignGraph.js",
+		"src/utils/campaignGraphLayout.js",
+	]) {
+		await assert.rejects(
+			fs.access(legacyPath),
+			(error) => error.code === "ENOENT",
+		);
+	}
+
+	const graphApiSource = await fs.readFile(
+		"src/entities/campaign/graph.js",
+		"utf8",
+	);
+	const campaignModelSource = await fs.readFile(
+		"src/entities/campaign/model.js",
+		"utf8",
+	);
+	const graphUiSource = await fs.readFile(
+		"src/components/campaign/CampaignNotesGraph.jsx",
+		"utf8",
+	);
+	assert.match(graphApiSource, /from "\.\/model\/campaignGraph\.js"/);
+	assert.match(graphApiSource, /from "\.\/model\/campaignGraphLayout\.js"/);
+	assert.doesNotMatch(campaignModelSource, /campaignGraph|d3-force/);
+	assert.match(graphUiSource, /entities\/campaign\/graph\.js/);
+	assert.doesNotMatch(graphUiSource, /utils\/campaignGraph/);
+
+	const eslintSource = await fs.readFile("eslint.config.js", "utf8");
+	assert.match(eslintSource, /\*\*\/utils\/campaignGraph\*/);
 });
 
 await run("campaign graph builds nodes and mention edges", () => {
@@ -985,7 +1180,7 @@ await run("AI service resolves attached images for Gemini inline data", () => {
 	assert.equal(
 		resolved.filePath,
 		path.resolve(
-			storage.IMAGES_DIR,
+			IMAGES_DIR,
 			"campaign-one",
 			"characters",
 			"portraits",
@@ -1390,24 +1585,7 @@ await run("SessionViewModel encounter lookup", () => {
 	assert.equal(model.findEncounterName({ encounterId: "missing" }), "Untitled");
 });
 
-await run("CharacterCardModel derives fields and maintains notes", async () => {
-	let CharacterCardModel;
-	try {
-		({ default: CharacterCardModel } =
-			await import("../src/models/CharacterCardModel.js"));
-	} catch (error) {
-		if (
-			error?.code === "ERR_MODULE_NOT_FOUND" ||
-			String(error?.message || "").includes("appStore")
-		) {
-			console.log(
-				"SKIP CharacterCardModel test in Node-only environment (appStore import).",
-			);
-			return;
-		}
-		throw error;
-	}
-
+await run("CharacterCardModel derives fields and maintains notes", () => {
 	const model = new CharacterCardModel({
 		firstName: "Ім'я",
 		lastName: "Прізвище",
@@ -1458,9 +1636,7 @@ await run(
 	},
 );
 
-await run("CardNoteModel shared helpers preserve entity note behavior", async () => {
-	const { CardNoteModel } = await import("../src/models/cardNoteModelUtils.js");
-
+await run("CardNoteModel shared helpers preserve entity note behavior", () => {
 	class TestCardModel extends CardNoteModel {
 		constructor(entity) {
 			super();
@@ -1492,8 +1668,288 @@ await run("CardNoteModel shared helpers preserve entity note behavior", async ()
 	assert.equal(materializedNotes[0].text, "First input");
 });
 
+await run(
+	"campaign card entity views receive higher-layer image and settings dependencies",
+	async () => {
+		const characterViewSource = await fs.readFile(
+			"src/entities/campaign/ui/CharacterCardView.jsx",
+			"utf8",
+		);
+		const locationViewSource = await fs.readFile(
+			"src/entities/campaign/ui/LocationCardView.jsx",
+			"utf8",
+		);
+		const compositionSources = await Promise.all(
+			[
+				"src/components/CreateCharacterButton.jsx",
+				"src/components/CreateLocationButton.jsx",
+				"src/app/providers/CampaignEntityModalProvider.jsx",
+				"src/pages/campaign/ui/CampaignPage.jsx",
+				"src/pages/session/ui/SessionPage.jsx",
+				"src/pages/encounter/ui/EncounterPage.jsx",
+				"src/widgets/ai-assistant/ui/AiResponseModal.jsx",
+			].map((filePath) => fs.readFile(filePath, "utf8")),
+		);
+
+		for (const source of [characterViewSource, locationViewSource]) {
+			assert.match(source, /ImageAssetFieldComponent/);
+			assert.match(source, /simplifiedNotesEnabled = false/);
+			assert.doesNotMatch(source, /features\/images/);
+			assert.doesNotMatch(source, /useAppSelector/);
+		}
+		for (const source of compositionSources) {
+			assert.match(source, /from ".+entities\/campaign\/ui\.js"/);
+			assert.match(source, /from ".+features\/images\/index\.js"/);
+			assert.match(source, /ImageAssetFieldComponent=\{ImageAssetField\}/);
+			assert.match(source, /simplifiedNotesEnabled/);
+		}
+		await assert.rejects(
+			fs.access("src/components/CharacterCard.jsx"),
+			(error) => error.code === "ENOENT",
+		);
+		await assert.rejects(
+			fs.access("src/components/LocationCard.jsx"),
+			(error) => error.code === "ENOENT",
+		);
+	},
+);
+
+await run(
+	"app shell owns routing providers overlays and realtime bootstrap",
+	async () => {
+		const appSource = await fs.readFile("src/app/App.jsx", "utf8");
+		const ownedPaths = [
+			"src/app/router/MainContent.jsx",
+			"src/app/router/ProjectGuide.jsx",
+			"src/app/providers/CampaignEntityModalProvider.jsx",
+			"src/app/services/realtimeSync.js",
+			"src/app/ui/DiceCalculator.jsx",
+			"src/app/ui/DiceProbabilityModalContent.jsx",
+			"src/app/ui/MessageBox.jsx",
+			"src/app/ui/RulesReferenceModalHost.jsx",
+			"src/app/ui/Sidebar.jsx",
+		];
+		for (const filePath of ownedPaths) {
+			await fs.access(filePath);
+		}
+		for (const legacyPath of [
+			"src/components/MainContent.jsx",
+			"src/components/ProjectGuide.jsx",
+			"src/components/DiceCalculator.jsx",
+			"src/components/DiceProbabilityModalContent.jsx",
+			"src/components/Sidebar.jsx",
+			"src/components/common/CampaignEntityModalProvider.jsx",
+			"src/components/common/MessageBox.jsx",
+			"src/components/modals/RulesReferenceModalHost.jsx",
+			"src/services/realtimeSync.js",
+		]) {
+			await assert.rejects(
+				fs.access(legacyPath),
+				(error) => error.code === "ENOENT",
+			);
+		}
+		assert.match(appSource, /from "\.\/router\/MainContent"/);
+		assert.match(appSource, /from "\.\/providers\/CampaignEntityModalProvider"/);
+		assert.match(appSource, /from "\.\/services\/realtimeSync"/);
+		assert.match(appSource, /from "\.\/ui\/Sidebar"/);
+	},
+);
+
+await run(
+	"app owns configured state while lower layers use the shared store port",
+	async () => {
+		const appStoreSource = await fs.readFile(
+			"src/app/store/appStore.js",
+			"utf8",
+		);
+		const storePortSource = await fs.readFile(
+			"src/shared/lib/appStorePort.js",
+			"utf8",
+		);
+		const modalStateSource = await fs.readFile(
+			"src/shared/model/modalState.js",
+			"utf8",
+		);
+		const navigationStateSource = await fs.readFile(
+			"src/shared/model/navigationState.js",
+			"utf8",
+		);
+
+		assert.match(appStoreSource, /bindAppStore\(appStore\)/);
+		assert.doesNotMatch(appStoreSource, /useSyncExternalStore/);
+		assert.match(storePortSource, /useSyncExternalStore/);
+		assert.match(storePortSource, /Application store has not been bound/);
+		assert.doesNotMatch(storePortSource, /actions\/app|entities\/|features\//);
+		assert.match(modalStateSource, /getAppStore\(\)\.dispatch/);
+		assert.match(navigationStateSource, /getAppStore\(\)\.dispatch/);
+		assert.doesNotMatch(modalStateSource, /src\/app|app\/store/);
+		assert.doesNotMatch(navigationStateSource, /src\/app|app\/store/);
+		const { appStore } = await import("../src/app/store/appStore.js");
+		const { getAppStore } = await import("../src/shared/lib/index.js");
+		const { setUiSettingsAction } = await import(
+			"../src/entities/settings/model.js"
+		);
+		assert.equal(getAppStore(), appStore);
+		const originalTheme = appStore.getState().ui.theme;
+		const nextTheme = originalTheme === "dark" ? "light" : "dark";
+		appStore.dispatch(setUiSettingsAction({ theme: nextTheme }));
+		assert.equal(getAppStore().getState().ui.theme, nextTheme);
+		appStore.dispatch(setUiSettingsAction({ theme: originalTheme }));
+		await assert.rejects(
+			fs.access("src/store/appStore.js"),
+			(error) => error.code === "ENOENT",
+		);
+		for (const obsoletePath of [
+			"src/actions/app.js",
+			"src/services/applicationRuntime.js",
+		]) {
+			await assert.rejects(
+				fs.access(obsoletePath),
+				(error) => error.code === "ENOENT",
+			);
+		}
+	},
+);
+
+await run(
+	"shared lib owns dependency-free generic helpers",
+	async () => {
+		const helperNames = [
+			"classNames",
+			"deepSearch",
+			"domNavigation",
+			"download",
+			"formatBytes",
+			"id",
+			"json",
+			"undoRedo",
+		];
+		for (const helperName of helperNames) {
+			await fs.access(`src/shared/lib/${helperName}.js`);
+			await assert.rejects(
+				fs.access(`src/utils/${helperName}.js`),
+				(error) => error.code === "ENOENT",
+			);
+		}
+
+		const sourceFiles = [
+			"src/app/ui/Sidebar.jsx",
+			"src/entities/session/model/SessionViewModel.js",
+			"src/features/bestiary/ui/Bestiary.jsx",
+			"src/pages/session/ui/SessionPage.jsx",
+			"src/widgets/global-search/ui/GlobalSearchModal.jsx",
+		];
+		for (const sourceFile of sourceFiles) {
+			const source = await fs.readFile(sourceFile, "utf8");
+			assert.doesNotMatch(
+				source,
+				/utils\/(classNames|deepSearch|domNavigation|download|formatBytes|id|json|undoRedo)/,
+			);
+		}
+
+		const eslintSource = await fs.readFile("eslint.config.js", "utf8");
+		assert.match(eslintSource, /\*\*\/utils\/classNames\*/);
+		assert.match(eslintSource, /legacy src\/utils ownership is closed/);
+	},
+);
+
+await run(
+	"shared config owns localization and theme",
+	async () => {
+		for (const ownedPath of [
+			"src/shared/config/index.js",
+			"src/shared/config/localization.js",
+			"src/shared/config/theme.js",
+		]) {
+			await fs.access(ownedPath);
+		}
+		for (const legacyPath of [
+			"src/services/localization.js",
+			"src/services/uiSettings.js",
+		]) {
+			await assert.rejects(
+				fs.access(legacyPath),
+				(error) => error.code === "ENOENT",
+			);
+		}
+
+		const configSource = await fs.readFile(
+			"src/shared/config/index.js",
+			"utf8",
+		);
+		const localizationSource = await fs.readFile(
+			"src/shared/config/localization.js",
+			"utf8",
+		);
+		assert.match(configSource, /from "\.\/localization\.js"/);
+		assert.match(configSource, /from "\.\/theme\.js"/);
+		assert.match(localizationSource, /import\.meta\.glob\("\.\.\/\.\.\/langs\/\*\.json"/);
+
+		const { THEMES, applyTheme, lang } = await import(
+			"../src/shared/config/index.js"
+		);
+		assert.deepEqual(THEMES, { LIGHT: "light", DARK: "dark" });
+		assert.equal(applyTheme(THEMES.DARK), undefined);
+		assert.equal(lang.t("Untranslated test phrase"), "Untranslated test phrase");
+
+		const representativeConsumers = [
+			"src/app/App.jsx",
+			"src/entities/spell/model/spellMeta.js",
+			"src/features/bestiary/ui/Bestiary.jsx",
+			"src/shared/api/httpClient.js",
+			"src/widgets/ai-assistant/ui/AiAssistantPanel.jsx",
+		];
+		for (const sourceFile of representativeConsumers) {
+			const source = await fs.readFile(sourceFile, "utf8");
+			assert.doesNotMatch(
+				source,
+				/services\/(localization|uiSettings)/,
+			);
+		}
+
+		const eslintSource = await fs.readFile("eslint.config.js", "utf8");
+		assert.match(eslintSource, /\*\*\/services\/localization\*/);
+		assert.match(eslintSource, /shared\/config\/index\.js/);
+	},
+);
+
+await run(
+	"shared lib owns the generic debounce hook",
+	async () => {
+		const sharedHookPath = "src/shared/lib/useDebounce.js";
+		await fs.access(sharedHookPath);
+		await assert.rejects(
+			fs.access("src/hooks/useDebounce.js"),
+			(error) => error.code === "ENOENT",
+		);
+
+		const hookSource = await fs.readFile(sharedHookPath, "utf8");
+		assert.match(hookSource, /useEffect, useState/);
+		assert.match(hookSource, /delay <= 0/);
+		assert.match(hookSource, /const timeoutId = setTimeout/);
+		assert.match(hookSource, /return \(\) => clearTimeout\(timeoutId\)/);
+		assert.match(hookSource, /\[delay, value\]/);
+
+		for (const consumerPath of [
+			"src/components/modals/PlayerQuestionsModalContent.jsx",
+			"src/features/bestiary/ui/Bestiary.jsx",
+			"src/features/images/model/useImageGallery.js",
+			"src/features/spells/ui/Spells.jsx",
+		]) {
+			const source = await fs.readFile(consumerPath, "utf8");
+			assert.match(source, /shared\/lib\/useDebounce\.js/);
+			assert.doesNotMatch(source, /hooks\/useDebounce/);
+		}
+
+		const eslintSource = await fs.readFile("eslint.config.js", "utf8");
+		assert.match(eslintSource, /\*\*\/hooks\/useDebounce\*/);
+	},
+);
+
 await run("mention picker helper resolves selected and cancelled states", async () => {
-	const { requestMentionSelection } = await import("../src/utils/mentionPicker.js");
+	const { requestMentionSelection } = await import(
+		"../src/shared/model/index.js"
+	);
 
 	let payload = null;
 	const selectedPromise = requestMentionSelection((action) => {
@@ -1511,6 +1967,73 @@ await run("mention picker helper resolves selected and cancelled states", async 
 	payload.cancel();
 	assert.deepEqual(await cancelledPromise, { status: "cancelled" });
 });
+
+await run(
+	"shared interaction utilities own routing mentions and highlighting",
+	async () => {
+		const ownershipPairs = [
+			["src/shared/lib/navigation.js", "src/utils/navigation.js"],
+			["src/shared/lib/mentionEditor.js", "src/utils/mentionEditor.js"],
+			[
+				"src/shared/model/mentionPickerSelection.js",
+				"src/utils/mentionPicker.js",
+			],
+			["src/shared/ui/searchHighlight.jsx", "src/utils/searchHighlight.jsx"],
+		];
+		for (const [ownedPath, legacyPath] of ownershipPairs) {
+			await fs.access(ownedPath);
+			await assert.rejects(
+				fs.access(legacyPath),
+				(error) => error.code === "ENOENT",
+			);
+		}
+
+		const modelApiSource = await fs.readFile(
+			"src/shared/model/index.js",
+			"utf8",
+		);
+		const mentionSelectionSource = await fs.readFile(
+			"src/shared/model/mentionPickerSelection.js",
+			"utf8",
+		);
+		const highlightSource = await fs.readFile(
+			"src/shared/ui/searchHighlight.jsx",
+			"utf8",
+		);
+		assert.match(
+			modelApiSource,
+			/from "\.\/mentionPickerSelection\.js"/,
+		);
+		assert.match(
+			mentionSelectionSource,
+			/from "\.\/mentionPickerState\.js"/,
+		);
+		assert.match(highlightSource, /className="SearchHighlight"/);
+		assert.match(highlightSource, /new RegExp\(.*"gi"\)/);
+
+		for (const consumerPath of [
+			"src/app/store/appStore.js",
+			"src/components/form/EditableField.jsx",
+			"src/features/bestiary/ui/BestiaryContent.jsx",
+			"src/shared/model/navigationState.js",
+			"src/widgets/global-search/ui/GlobalSearchModal.jsx",
+		]) {
+			const source = await fs.readFile(consumerPath, "utf8");
+			assert.doesNotMatch(
+				source,
+				/utils\/(navigation|mentionEditor|mentionPicker|searchHighlight)/,
+			);
+		}
+
+		const eslintSource = await fs.readFile("eslint.config.js", "utf8");
+		assert.match(eslintSource, /\*\*\/utils\/navigation\*/);
+		assert.match(eslintSource, /\*\*\/utils\/searchHighlight\*/);
+		assert.match(
+			eslintSource,
+			/\*\*\/shared\/model\/mentionPickerSelection\*/,
+		);
+	},
+);
 
 await run("entity link modal helper resolves entities and avoids current modal", async () => {
 	const { openEntityLinkModal } = await import(
@@ -1826,7 +2349,7 @@ await run("parser renders dice and creature tags as interactive components", asy
 		"utf8",
 	);
 	const rulesReferenceSource = await fs.readFile(
-		"src/components/modals/RulesReferenceModalContent.jsx",
+		"src/widgets/rules-reference/ui/RulesReferenceModalContent.jsx",
 		"utf8",
 	);
 	const monsterStatBlockSource = await fs.readFile(
@@ -1865,13 +2388,19 @@ await run("parser renders dice and creature tags as interactive components", asy
 	);
 	assert.match(rulesLinkSource, /function getCreatureReferenceName/);
 	assert.doesNotMatch(rulesLinkSource, /onNavigate/);
-	assert.match(rulesReferenceSource, /import Bestiary from "\.\.\/Bestiary\.jsx"/);
-	assert.match(rulesReferenceSource, /import MonsterStatBlock from "\.\.\/MonsterStatBlock\.jsx"/);
-	assert.match(rulesReferenceSource, /import MonsterStatBlockModel from "\.\.\/\.\.\/models\/MonsterStatBlockModel\.js"/);
+	assert.doesNotMatch(rulesReferenceSource, /import Bestiary from/);
+	assert.match(
+		rulesReferenceSource,
+		/import MonsterStatBlock from "\.\.\/\.\.\/\.\.\/components\/MonsterStatBlock\.jsx"/,
+	);
+	assert.match(
+		rulesReferenceSource,
+		/from "\.\.\/\.\.\/\.\.\/entities\/bestiary\/model\.js"/,
+	);
 	assert.match(rulesReferenceSource, /id: "bestiary"/);
-	assert.match(rulesReferenceSource, /api\.getBestiaryData\("all"\)/);
-	assert.match(rulesReferenceSource, /api\.getSpellData\("all"\)/);
-	assert.match(rulesReferenceSource, /<Bestiary/);
+	assert.match(rulesReferenceSource, /bestiaryApi\.getData\("all"\)/);
+	assert.match(rulesReferenceSource, /spellApi\.getData\("all"\)/);
+	assert.doesNotMatch(rulesReferenceSource, /<Bestiary/);
 	assert.match(rulesReferenceSource, /<MonsterStatBlock/);
 	assert.match(rulesReferenceSource, /Bestiary__item_token/);
 	assert.match(rulesReferenceSource, /normalizeCreatureReferenceName/);
@@ -1890,34 +2419,43 @@ await run("parser renders item filter display names", () => {
 	);
 });
 
-await run("rules reference modal owns spells and bestiary navigation", async () => {
+await run("rules reference modal owns spells and lightweight bestiary navigation", async () => {
 	const embeddedPropPattern = new RegExp("is" + "Embedded");
 	const mainContentSource = await fs.readFile(
-		"src/components/MainContent.jsx",
+		"src/app/router/MainContent.jsx",
 		"utf8",
 	);
-	const sidebarSource = await fs.readFile("src/components/Sidebar.jsx", "utf8");
+	const sidebarSource = await fs.readFile("src/app/ui/Sidebar.jsx", "utf8");
 	const bestiarySource = await fs.readFile(
-		"src/components/Bestiary.jsx",
+		"src/features/bestiary/ui/Bestiary.jsx",
 		"utf8",
 	);
 	const bestiaryContentSource = await fs.readFile(
-		"src/components/bestiary/BestiaryContent.jsx",
+		"src/features/bestiary/ui/BestiaryContent.jsx",
 		"utf8",
 	);
-	const spellsSource = await fs.readFile("src/components/Spells.jsx", "utf8");
+	const spellsSource = await fs.readFile(
+		"src/features/spells/ui/Spells.jsx",
+		"utf8",
+	);
 	const rulesReferenceSource = await fs.readFile(
-		"src/components/modals/RulesReferenceModalContent.jsx",
+		"src/widgets/rules-reference/ui/RulesReferenceModalContent.jsx",
 		"utf8",
 	);
 	const rulesReferenceHostSource = await fs.readFile(
-		"src/components/modals/RulesReferenceModalHost.jsx",
+		"src/app/ui/RulesReferenceModalHost.jsx",
 		"utf8",
 	);
-	const appActionsSource = await fs.readFile("src/actions/app.js", "utf8");
-	const appStoreSource = await fs.readFile("src/store/appStore.js", "utf8");
+	const rulesReferenceStateSource = await fs.readFile(
+		"src/features/reference-navigation/model/rulesReferenceAppState.js",
+		"utf8",
+	);
+	const appStoreSource = await fs.readFile(
+		"src/app/store/appStore.js",
+		"utf8",
+	);
 	const aiAssistantSource = await fs.readFile(
-		"src/components/ai/AiAssistantPanel.jsx",
+		"src/widgets/ai-assistant/ui/AiAssistantPanel.jsx",
 		"utf8",
 	);
 
@@ -1963,7 +2501,7 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.match(rulesReferenceSource, /if \(initialName\) \{/);
 	assert.doesNotMatch(rulesReferenceSource, /setNavigationHistory/);
 	assert.match(rulesReferenceSource, /onActiveSpellChange/);
-	assert.match(rulesReferenceSource, /onActiveMonsterChange/);
+	assert.match(rulesReferenceSource, /activeTab\.id === "bestiary"/);
 	assert.match(rulesReferenceSource, /getCreatureReferenceName/);
 	assert.match(rulesReferenceSource, /itemMatchesSelectedName/);
 	assert.match(
@@ -1971,7 +2509,10 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 		/handledRequestIdRef\.current = navigationRequest\.requestId;\s*if \(isOpen\) return;/,
 	);
 	assert.match(appStoreSource, /rulesReference:[\s\S]*history:[\s\S]*entries: \[\]/);
-	assert.match(appActionsSource, /forceTab: Boolean\(options\.forceTab\)/);
+	assert.match(
+		rulesReferenceStateSource,
+		/forceTab: Boolean\(options\.forceTab\)/,
+	);
 	assert.match(appStoreSource, /RECORD_RULES_REFERENCE_HISTORY_ENTRY/);
 	assert.match(appStoreSource, /SET_RULES_REFERENCE_HISTORY_INDEX/);
 	assert.match(aiAssistantSource, /aiHistoryCampaign = isBestiary \? "bestiary"/);
@@ -1982,6 +2523,362 @@ await run("rules reference modal owns spells and bestiary navigation", async () 
 	assert.match(aiAssistantSource, /resource: "custom-bestiary"/);
 	assert.match(aiAssistantSource, /monsterName:/);
 });
+
+await run(
+	"reference domain APIs forward cancellation options",
+	async () => {
+		const originalRequest = httpClient.request;
+		const controller = new AbortController();
+		const calls = [];
+		httpClient.request = async (requestPath, options = {}) => {
+			calls.push({ requestPath, options });
+			return [];
+		};
+
+		try {
+			await bestiaryApi.getSources({ signal: controller.signal });
+			await bestiaryApi.getData("all", {
+				signal: controller.signal,
+			});
+			await bestiaryApi.getCustomData({
+				signal: controller.signal,
+				headers: { "X-Test": "custom" },
+			});
+			await bestiaryApi.getFavorites({
+				signal: controller.signal,
+			});
+			await spellApi.getSources({ signal: controller.signal });
+			await spellApi.getData("all", {
+				signal: controller.signal,
+			});
+			await spellApi.search(
+				{ name: "shield" },
+				{ signal: controller.signal },
+			);
+			await rulesReferenceApi.getConditions({
+				signal: controller.signal,
+			});
+
+			assert.equal(calls.length, 8);
+			assert.equal(
+				calls.every(
+					(call) => call.options.signal === controller.signal,
+				),
+				true,
+			);
+			const customCall = calls.find((call) =>
+				call.requestPath.startsWith("/bestiary/custom?"),
+			);
+			assert.equal(customCall.options.cache, "no-store");
+			assert.equal(
+				customCall.options.headers["Cache-Control"],
+				"no-cache",
+			);
+			assert.equal(customCall.options.headers["X-Test"], "custom");
+			assert.equal(
+				calls.find((call) =>
+					call.requestPath.startsWith("/spells/search?"),
+				).options.signal,
+				controller.signal,
+			);
+			assert.equal(isAbortError({ name: "AbortError" }), true);
+			assert.equal(isAbortError(new Error("failure")), false);
+		} finally {
+			httpClient.request = originalRequest;
+		}
+	},
+);
+
+await run(
+	"settings and archive APIs replace the legacy frontend facade",
+	async () => {
+		const originalRequest = httpClient.request;
+		const originalRequestBlob = httpClient.requestBlob;
+		const calls = [];
+		httpClient.request = async (requestPath, options = {}) => {
+			calls.push({ kind: "json", requestPath, options });
+			return { ok: true };
+		};
+		httpClient.requestBlob = async (requestPath, options = {}) => {
+			calls.push({ kind: "blob", requestPath, options });
+			return new Blob([]);
+		};
+
+		try {
+			await settingsApi.get();
+			await settingsApi.update({ theme: "dark" });
+			await archiveApi.exportAll();
+			await archiveApi.exportAllArchive();
+			await archiveApi.importAll([], "replace_by_id");
+			await archiveApi.importArchive(
+				new Blob(["{}"], { type: "application/json" }),
+				"campaign",
+				"append",
+			);
+
+			assert.deepEqual(
+				calls.map((call) => call.requestPath),
+				[
+					"/settings",
+					"/settings",
+					"/export-all",
+					"/export-all/archive",
+					"/import-all?strategy=replace_by_id",
+					"/import-archive?mode=campaign&strategy=append",
+				],
+			);
+			assert.equal(calls[1].options.method, "PATCH");
+			assert.equal(calls[3].kind, "blob");
+			assert.equal(calls[4].options.method, "POST");
+			assert.ok(calls[5].options.body instanceof FormData);
+			await assert.rejects(
+				fs.access("src/api.js"),
+				(error) => error.code === "ENOENT",
+			);
+		} finally {
+			httpClient.request = originalRequest;
+			httpClient.requestBlob = originalRequestBlob;
+		}
+	},
+);
+
+await run(
+	"backend regression setup imports owning modules without a compatibility facade",
+	async () => {
+		const regressionSource = await fs.readFile("tests/run-tests.mjs", "utf8");
+		for (const modulePath of [
+			"server/infrastructure/jsonFileStore.js",
+			"server/infrastructure/storagePaths.js",
+			"server/domains/ai/aiResponseRepository.js",
+			"server/domains/archive/archiveImportService.js",
+			"server/domains/campaign/campaignRepository.js",
+			"server/domains/entity/entityRepository.js",
+			"server/domains/image/imageAssetRepository.js",
+			"server/domains/session/sessionRepository.js",
+		]) {
+			assert.match(regressionSource, new RegExp(modulePath.replaceAll("/", "\\/")));
+		}
+		assert.doesNotMatch(
+			regressionSource,
+			/require\("\.\/support\/backendTestFacade\.js"\)/,
+		);
+		await assert.rejects(
+			fs.access("tests/support/backendTestFacade.js"),
+			(error) => error.code === "ENOENT",
+		);
+	},
+);
+
+await run(
+	"global search read APIs forward cancellation and cap session concurrency",
+	async () => {
+		const originalRequest = httpClient.request;
+		const controller = new AbortController();
+		const calls = [];
+		httpClient.request = async (requestPath, options = {}) => {
+			calls.push({ requestPath, options });
+			return [];
+		};
+
+		try {
+			await campaignApi.getEntities(
+				"alpha",
+				"npc",
+				{ signal: controller.signal },
+			);
+			await sessionApi.listSessions("alpha", {
+				signal: controller.signal,
+			});
+			await sessionApi.getSession(
+				"alpha",
+				"one.json",
+				{ signal: controller.signal },
+			);
+			assert.equal(
+				calls.every(
+					(call) => call.options.signal === controller.signal,
+				),
+				true,
+			);
+		} finally {
+			httpClient.request = originalRequest;
+		}
+
+		let active = 0;
+		let maxActive = 0;
+		const completed = await mapWithConcurrency(
+			[0, 1, 2, 3, 4, 5],
+			2,
+			async (value) => {
+				active += 1;
+				maxActive = Math.max(maxActive, active);
+				await new Promise((resolve) => setTimeout(resolve, 1));
+				active -= 1;
+				return value * 2;
+			},
+		);
+		assert.equal(maxActive, 2);
+		assert.deepEqual(completed, [0, 2, 4, 6, 8, 10]);
+	},
+);
+
+await run(
+	"global search is widget-owned and aborts its request fan-out",
+	async () => {
+		const source = await fs.readFile(
+			"src/widgets/global-search/ui/GlobalSearchModal.jsx",
+			"utf8",
+		);
+		const campaignPageSource = await fs.readFile(
+			"src/pages/campaign/ui/CampaignPage.jsx",
+			"utf8",
+		);
+		const sessionPageSource = await fs.readFile(
+			"src/pages/session/ui/SessionPage.jsx",
+			"utf8",
+		);
+
+		assert.match(source, /const controller = new AbortController\(\)/);
+		assert.match(source, /SESSION_LOAD_CONCURRENCY = 6/);
+		assert.match(source, /mapWithConcurrency\(/);
+		assert.match(source, /return \(\) => controller\.abort\(\)/);
+		assert.match(source, /controller\.signal\.aborted/);
+		assert.match(
+			campaignPageSource,
+			/from "\.\.\/\.\.\/\.\.\/widgets\/global-search\/index\.js"/,
+		);
+		assert.match(
+			sessionPageSource,
+			/from "\.\.\/\.\.\/\.\.\/widgets\/global-search\/index\.js"/,
+		);
+		await assert.rejects(
+			fs.access("src/components/campaign/GlobalSearchModal.jsx"),
+			(error) => error.code === "ENOENT",
+		);
+	},
+);
+
+await run(
+	"large reference views abort loads and guard stale responses",
+	async () => {
+		const bestiarySource = await fs.readFile(
+			"src/features/bestiary/ui/Bestiary.jsx",
+			"utf8",
+		);
+		const spellsSource = await fs.readFile(
+			"src/features/spells/ui/Spells.jsx",
+			"utf8",
+		);
+		const rulesReferenceSource = await fs.readFile(
+			"src/widgets/rules-reference/ui/RulesReferenceModalContent.jsx",
+			"utf8",
+		);
+
+		assert.match(bestiarySource, /bestiaryApi\.getData\("all", options\)/);
+		assert.match(
+			bestiarySource,
+			/bestiaryApi\.getCustomData\(options\)/,
+		);
+		assert.match(bestiarySource, /controller\.signal\.aborted/);
+		assert.match(bestiarySource, /return \(\) => controller\.abort\(\)/);
+		assert.match(spellsSource, /spellApi\.getData\("all", \{/);
+		assert.match(spellsSource, /controller\.signal\.aborted/);
+		assert.match(spellsSource, /return \(\) => controller\.abort\(\)/);
+		assert.match(
+			rulesReferenceSource,
+			/tab\.load\(\{ signal: controller\.signal \}\)/,
+		);
+		assert.match(rulesReferenceSource, /requestControllersRef/);
+		assert.match(rulesReferenceSource, /controller\.abort\(\)/);
+		assert.match(rulesReferenceSource, /isAbortError\(error\)/);
+	},
+);
+
+await run(
+	"performance query models preserve filters and render budgets",
+	() => {
+		const monsters = [
+			{ name: "Red Dragon", source: "MM", type: "dragon" },
+			{ name: "Goblin", source: "MM", type: "humanoid" },
+			{ name: "Clockwork", source: "HB", type: "construct" },
+		];
+		assert.deepEqual(
+			filterBestiaryMonsters({
+				monsters,
+				selectedSources: ["MM"],
+				favorites: [{ name: "Red Dragon", source: "mm" }],
+				onlyFavorites: true,
+				search: "dragon",
+			}),
+			[monsters[0]],
+		);
+
+		const spells = [
+			{
+				name: "Fireball",
+				source: "PHB",
+				level: 3,
+				school: "V",
+				classes: ["Wizard"],
+			},
+			{
+				name: "Shield",
+				source: "PHB",
+				level: 1,
+				school: "A",
+				classes: ["Wizard"],
+			},
+		];
+		assert.deepEqual(
+			filterSpells({
+				spells,
+				selectedSources: ["PHB"],
+				search: "fire",
+				selectedLevel: "3",
+				selectedClass: "Wizard",
+				selectedSchool: "V",
+			}),
+			[spells[0]],
+		);
+
+		const searchIndex = Array.from(
+			{ length: GLOBAL_SEARCH_RESULT_LIMIT + 20 },
+			(_, index) => ({
+				id: index,
+				filter: "notes",
+				searchText: `dragon note ${index}`,
+			}),
+		);
+		assert.equal(
+			filterGlobalSearchIndex(
+				searchIndex,
+				new Set(["notes"]),
+				"dragon",
+			).length,
+			GLOBAL_SEARCH_RESULT_LIMIT,
+		);
+
+		const gridModel = buildEncounterGridModel([
+			{ instanceId: "goblin-1", name: "Goblin", source: "MM" },
+			{ instanceId: "goblin-2", name: "Goblin", source: "MM" },
+			{
+				instanceId: "local-goblin",
+				name: "Goblin",
+				source: "MM",
+				_localOverride: true,
+			},
+			{ instanceId: "hero", participantType: "character" },
+		]);
+		assert.deepEqual(
+			gridModel.gridMonsters.map((monster) => monster.instanceId),
+			["goblin-1", "local-goblin"],
+		);
+		assert.equal(
+			gridModel.gridRepresentativeByInstanceId.get("goblin-2"),
+			"goblin-1",
+		);
+	},
+);
 
 await run("undo redo helpers move snapshots between stacks", () => {
 	const original = { value: 1, nested: { label: "one" } };
@@ -2102,26 +2999,26 @@ await run("download helpers create and revoke blob URL", () => {
 
 await run("storage core helpers sanitize and build identifiers", () => {
 	const dirty = '  test<>:"/\\|?*\u0001  name...  ';
-	assert.equal(storage.sanitizeName(dirty), "test name");
-	assert.match(storage.campaignSlug(" Моя Кампанія !!! "), /^[\p{L}\p{N}-]+$/u);
+	assert.equal(sanitizeName(dirty), "test name");
+	assert.match(campaignSlug(" Моя Кампанія !!! "), /^[\p{L}\p{N}-]+$/u);
 	assert.equal(
-		storage.sessionFileName("Session <> Name").endsWith(".json"),
+		sessionFileName("Session <> Name").endsWith(".json"),
 		true,
 	);
-	const id1 = storage.createId();
-	const id2 = storage.createId();
+	const id1 = crypto.randomUUID();
+	const id2 = crypto.randomUUID();
 	assert.notEqual(id1, id2);
-	const session = storage.makeDefaultSessionData("My Session");
+	const session = makeDefaultSessionData("My Session");
 	assert.equal(session.name, "My Session");
 	assert.equal("completed" in session, false);
-	assert.equal(storage.campaignDir("../unsafe").includes(".."), false);
+	assert.equal(campaignDir("../unsafe").includes(".."), false);
 	assert.equal(
-		storage.aiResponsesPath("bestiary"),
-		path.join(storage.DATA_DIR, "_aiResponses-bestiary.json"),
+		aiResponsesPath("bestiary"),
+		path.join(DATA_DIR, "_aiResponses-bestiary.json"),
 	);
 	assert.equal(
-		storage.aiResponsesPath("regular"),
-		storage.campaignAiResponsesPath("regular"),
+		aiResponsesPath("regular"),
+		campaignAiResponsesPath("regular"),
 	);
 });
 
@@ -2129,17 +3026,17 @@ await run(
 	"storage writes JSON atomically and normalizes custom monsters",
 	async () => {
 		const atomicPath = path.join(
-			storage.CAMPAIGNS_DIR,
+			CAMPAIGNS_DIR,
 			`${TEST_PREFIX}-atomic.json`,
 		);
 		try {
-			await storage.writeJson(atomicPath, { title: "Проба", count: 1 });
-			assert.deepEqual(await storage.readJson(atomicPath), {
+			await writeJson(atomicPath, { title: "Проба", count: 1 });
+			assert.deepEqual(await readJson(atomicPath), {
 				title: "Проба",
 				count: 1,
 			});
 
-			const normalized = storage.normalizeCustomBestiaryMonster({
+			const normalized = normalizeCustomBestiaryMonster({
 				name: "[Glass Knight]",
 				source: "OTHER",
 				hp: { formula: "3d8 + 6", average: 1 },
@@ -2172,17 +3069,17 @@ await run(
 		const targetSlug = makeTestSlug("partial-target");
 		try {
 			for (const slug of [sourceSlug, targetSlug]) {
-				await storage.ensureDir(
-					path.join(storage.campaignDir(slug), "sessions"),
+				await ensureDir(
+					path.join(campaignDir(slug), "sessions"),
 				);
-				await storage.writeJson(storage.campaignMetaPath(slug), {
+				await writeJson(campaignMetaPath(slug), {
 					id: `${slug}-id`,
 					name: `Campaign ${slug}`,
 					slug,
 				});
 			}
 
-			await storage.writeJson(storage.sessionPath(targetSlug, "renamed.json"), {
+			await writeJson(sessionPath(targetSlug, "renamed.json"), {
 				id: "session-1",
 				name: "Old session",
 				data: {
@@ -2190,18 +3087,18 @@ await run(
 					locations: [{ id: "loc-1", name: "Old place", slug: "mill" }],
 				},
 			});
-			await storage.writeEntity(targetSlug, "npc", "mira", {
+			await writeEntity(targetSlug, "npc", "mira", {
 				id: "npc-1",
 				firstName: "Old",
 				slug: "mira",
 			});
-			await storage.writeEntity(targetSlug, "locations", "mill", {
+			await writeEntity(targetSlug, "locations", "mill", {
 				id: "loc-1",
 				name: "Old place",
 				slug: "mill",
 			});
 
-			await storage.importCampaignPartialArchiveBundle(targetSlug, {
+			await importCampaignPartialArchiveBundle(targetSlug, {
 				sections: ["sessions", "npc", "locations"],
 				bundle: {
 					meta: { slug: sourceSlug, name: "Source" },
@@ -2239,39 +3136,39 @@ await run(
 				},
 			});
 
-			const sessions = await storage.listSessions(targetSlug);
+			const sessions = await listSessions(targetSlug);
 			assert.equal(sessions.length, 1);
 			assert.equal(sessions[0].fileName, "renamed.json");
 			assert.equal(sessions[0].name, "Imported session");
 			assert.equal(
-				await storage.exists(storage.sessionPath(targetSlug, "session.json")),
+				await exists(sessionPath(targetSlug, "session.json")),
 				false,
 			);
 
-			const session = await storage.readSession(targetSlug, "renamed.json");
+			const session = await readSession(targetSlug, "renamed.json");
 			assert.equal(session.data.npcs.length, 1);
 			assert.equal(session.data.npcs[0].firstName, "Imported");
 			assert.equal(session.data.locations.length, 1);
 			assert.equal(session.data.locations[0].name, "Imported place");
 
-			const npcs = await storage.listEntities(targetSlug, "npc");
+			const npcs = await listEntities(targetSlug, "npc");
 			assert.equal(npcs.length, 1);
 			assert.equal(npcs[0].slug, "mira");
 			assert.equal(npcs[0].firstName, "Imported");
 			assert.equal(
-				await storage.exists(
-					path.join(storage.campaignDir(targetSlug), "npc", "mira-2"),
+				await exists(
+					path.join(campaignDir(targetSlug), "npc", "mira-2"),
 				),
 				false,
 			);
 
-			const locations = await storage.listEntities(targetSlug, "locations");
+			const locations = await listEntities(targetSlug, "locations");
 			assert.equal(locations.length, 1);
 			assert.equal(locations[0].slug, "mill");
 			assert.equal(locations[0].name, "Imported place");
 			assert.equal(
-				await storage.exists(
-					path.join(storage.campaignDir(targetSlug), "locations", "mill-2"),
+				await exists(
+					path.join(campaignDir(targetSlug), "locations", "mill-2"),
 				),
 				false,
 			);
@@ -2369,32 +3266,32 @@ await run(
 	"storage moveEntity transfers characters and preserves data",
 	async () => {
 		await withTestSlug("move-entity", async (slug) => {
-			await storage.writeEntity(slug, "characters", "hero", {
+			await writeEntity(slug, "characters", "hero", {
 				id: "hero-id",
 				firstName: "Hero",
 				lastName: "One",
 				notes: [{ id: 1, title: "N", text: "T" }],
 			});
 
-			const moved = await storage.moveEntity(slug, "characters", "hero", "npc");
+			const moved = await moveEntity(slug, "characters", "hero", "npc");
 
 			assert.equal(moved.slug, "hero");
 			assert.equal(moved.id, "hero-id");
 			assert.equal(moved.firstName, "Hero");
 			assert.equal(
-				await storage.exists(
-					path.join(storage.campaignDir(slug), "characters", "hero"),
+				await exists(
+					path.join(campaignDir(slug), "characters", "hero"),
 				),
 				false,
 			);
 			assert.equal(
-				await storage.exists(
-					path.join(storage.campaignDir(slug), "npc", "hero"),
+				await exists(
+					path.join(campaignDir(slug), "npc", "hero"),
 				),
 				true,
 			);
 
-			const npcs = await storage.listEntities(slug, "npc");
+			const npcs = await listEntities(slug, "npc");
 			assert.equal(npcs.length, 1);
 			assert.equal(npcs[0].notes[0].text, "T");
 		});
@@ -2405,24 +3302,24 @@ await run(
 	"storage updates bracketed entity mentions after rename",
 	async () => {
 		await withTestSlug("rename-mentions", async (slug) => {
-			await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
-			await storage.writeJson(storage.campaignMetaPath(slug), {
+			await ensureDir(path.join(campaignDir(slug), "sessions"));
+			await writeJson(campaignMetaPath(slug), {
 				id: "campaign-id",
 				name: "Mentions",
 				description: "Meet [Old Name] in the city.",
 			});
-			await storage.writeEntity(slug, "characters", "hero", {
+			await writeEntity(slug, "characters", "hero", {
 				id: "hero-id",
 				firstName: "New",
 				lastName: "Name",
 				motivation: "Formerly [Old Name].",
 			});
-			await storage.writeEntity(slug, "locations", "city", {
+			await writeEntity(slug, "locations", "city", {
 				id: "city-id",
 				name: "City",
 				description: "Rumors mention [ old   name ].",
 			});
-			await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+			await writeJson(sessionPath(slug, "session.json"), {
 				id: "session-id",
 				name: "Session",
 				data: {
@@ -2430,16 +3327,16 @@ await run(
 				},
 			});
 
-			await storage.updateCampaignMentionReferences(
+			await updateCampaignMentionReferences(
 				slug,
 				"Old Name",
 				"New Name",
 			);
 
-			const meta = await storage.readCampaign(slug);
-			const characters = await storage.listEntities(slug, "characters");
-			const locations = await storage.listEntities(slug, "locations");
-			const session = await storage.readSession(slug, "session.json");
+			const meta = await readCampaign(slug);
+			const characters = await listEntities(slug, "characters");
+			const locations = await listEntities(slug, "locations");
+			const session = await readSession(slug, "session.json");
 
 			assert.equal(meta.description, "Meet [New Name] in the city.");
 			assert.equal(characters[0].motivation, "Formerly [New Name].");
@@ -2613,14 +3510,14 @@ await run("5etools materializer preserves copied monster names", async () => {
 
 await run("AI patch service applies targeted session operations", async () => {
 	await withTestSlug("ai-patch-session", async (slug) => {
-		await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
-		await storage.writeJson(storage.campaignMetaPath(slug), {
+		await ensureDir(path.join(campaignDir(slug), "sessions"));
+		await writeJson(campaignMetaPath(slug), {
 			id: "campaign-id",
 			name: "Patch Campaign",
 			description: "",
 			notes: [],
 		});
-		await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+		await writeJson(sessionPath(slug, "session.json"), {
 			id: "session-id",
 			name: "Session",
 			data: {
@@ -2709,7 +3606,7 @@ await run("AI patch service applies targeted session operations", async () => {
 		});
 
 		assert.equal(result.updated.fileName, "session.json");
-		const session = await storage.readSession(slug, "session.json");
+		const session = await readSession(slug, "session.json");
 		assert.equal(session.data.npcs.length, 1);
 		assert.equal(session.data.npcs[0].trait, "Alert and impatient.");
 		assert.equal(session.data.locations.length, 1);
@@ -2730,14 +3627,14 @@ await run("AI patch service applies targeted session operations", async () => {
 
 await run("AI patch service skips orphan encounter creates", async () => {
 	await withTestSlug("ai-orphan-encounter", async (slug) => {
-		await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
-		await storage.writeJson(storage.campaignMetaPath(slug), {
+		await ensureDir(path.join(campaignDir(slug), "sessions"));
+		await writeJson(campaignMetaPath(slug), {
 			id: "campaign-id",
 			name: "Encounter Campaign",
 			description: "",
 			notes: [],
 		});
-		await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+		await writeJson(sessionPath(slug, "session.json"), {
 			id: "session-id",
 			name: "Session",
 			data: { scenes: [], encounters: [], notes: [], npcs: [], locations: [] },
@@ -2764,7 +3661,7 @@ await run("AI patch service skips orphan encounter creates", async () => {
 			permissions: { allowEncounters: true },
 		});
 
-		const session = await storage.readSession(slug, "session.json");
+		const session = await readSession(slug, "session.json");
 		assert.equal(session.data.encounters.length, 0);
 		assert.equal(result.updated, null);
 		assert.ok(
@@ -2777,14 +3674,14 @@ await run("AI patch service skips orphan encounter creates", async () => {
 
 await run("AI patch service links created encounters to scenes", async () => {
 	await withTestSlug("ai-linked-encounter", async (slug) => {
-		await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
-		await storage.writeJson(storage.campaignMetaPath(slug), {
+		await ensureDir(path.join(campaignDir(slug), "sessions"));
+		await writeJson(campaignMetaPath(slug), {
 			id: "campaign-id",
 			name: "Encounter Campaign",
 			description: "",
 			notes: [],
 		});
-		await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+		await writeJson(sessionPath(slug, "session.json"), {
 			id: "session-id",
 			name: "Session",
 			data: { scenes: [], encounters: [], notes: [], npcs: [], locations: [] },
@@ -2825,7 +3722,7 @@ await run("AI patch service links created encounters to scenes", async () => {
 			permissions: { allowEncounters: true },
 		});
 
-		const session = await storage.readSession(slug, "session.json");
+		const session = await readSession(slug, "session.json");
 		assert.equal(session.data.encounters.length, 1);
 		assert.equal(session.data.scenes.length, 1);
 		assert.equal(
@@ -2839,14 +3736,14 @@ await run(
 	"AI patch service removes created encounters when scene link is not applied",
 	async () => {
 		await withTestSlug("ai-unapplied-encounter-link", async (slug) => {
-			await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
-			await storage.writeJson(storage.campaignMetaPath(slug), {
+			await ensureDir(path.join(campaignDir(slug), "sessions"));
+			await writeJson(campaignMetaPath(slug), {
 				id: "campaign-id",
 				name: "Encounter Campaign",
 				description: "",
 				notes: [],
 			});
-			await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+			await writeJson(sessionPath(slug, "session.json"), {
 				id: "session-id",
 				name: "Session",
 				data: {
@@ -2885,7 +3782,7 @@ await run(
 				permissions: { allowEncounters: true },
 			});
 
-			const session = await storage.readSession(slug, "session.json");
+			const session = await readSession(slug, "session.json");
 			assert.equal(session.data.encounters.length, 0);
 			assert.ok(
 				result.warnings.some((warning) =>
@@ -2900,14 +3797,14 @@ await run(
 	"AI patch service keeps new session versions when creates duplicate campaign entities",
 	async () => {
 		await withTestSlug("ai-dedupe-session-entities", async (slug) => {
-			await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
-			await storage.writeJson(storage.campaignMetaPath(slug), {
+			await ensureDir(path.join(campaignDir(slug), "sessions"));
+			await writeJson(campaignMetaPath(slug), {
 				id: "campaign-id",
 				name: "Dedupe Campaign",
 				description: "",
 				notes: [],
 			});
-			await storage.writeEntity(slug, "npc", "mira", {
+			await writeEntity(slug, "npc", "mira", {
 				id: "campaign-npc-1",
 				slug: "mira",
 				firstName: "Mira",
@@ -2915,14 +3812,14 @@ await run(
 				trait: "Campaign original.",
 				notes: [],
 			});
-			await storage.writeEntity(slug, "locations", "old-mill", {
+			await writeEntity(slug, "locations", "old-mill", {
 				id: "campaign-location-1",
 				slug: "old-mill",
 				name: "Old Mill",
 				description: "Campaign location.",
 				notes: [],
 			});
-			await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+			await writeJson(sessionPath(slug, "session.json"), {
 				id: "session-id",
 				name: "Session",
 				data: {
@@ -2977,7 +3874,7 @@ await run(
 				},
 			});
 
-			const session = await storage.readSession(slug, "session.json");
+			const session = await readSession(slug, "session.json");
 			assert.equal(session.data.npcs.length, 1);
 			assert.equal(session.data.npcs[0].id, "campaign-npc-1");
 			assert.equal(session.data.npcs[0].trait, "Copied text.");
@@ -2989,8 +3886,8 @@ await run(
 				session.data.scenes[0].texts.summary,
 				"Meet [Mira] near [Old Mill].",
 			);
-			assert.equal((await storage.listEntities(slug, "npc")).length, 0);
-			assert.equal((await storage.listEntities(slug, "locations")).length, 0);
+			assert.equal((await listEntities(slug, "npc")).length, 0);
+			assert.equal((await listEntities(slug, "locations")).length, 0);
 			assert.ok(
 				result.warnings.some((warning) =>
 					warning.includes("Moved duplicate campaign npc to session"),
@@ -3009,14 +3906,14 @@ await run(
 	"AI patch service applies mixed campaign and session entity scopes",
 	async () => {
 		await withTestSlug("ai-mixed-entity-scopes", async (slug) => {
-			await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
-			await storage.writeJson(storage.campaignMetaPath(slug), {
+			await ensureDir(path.join(campaignDir(slug), "sessions"));
+			await writeJson(campaignMetaPath(slug), {
 				id: "campaign-id",
 				name: "Mixed Scope Campaign",
 				description: "",
 				notes: [],
 			});
-			await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+			await writeJson(sessionPath(slug, "session.json"), {
 				id: "session-id",
 				name: "Session",
 				data: {
@@ -3063,8 +3960,8 @@ await run(
 				},
 			});
 
-			const campaignNpcs = await storage.listEntities(slug, "npc");
-			const session = await storage.readSession(slug, "session.json");
+			const campaignNpcs = await listEntities(slug, "npc");
+			const session = await readSession(slug, "session.json");
 			assert.equal(campaignNpcs.length, 1);
 			assert.equal(campaignNpcs[0].firstName, "Recurring");
 			assert.equal(campaignNpcs[0].lastName, "Patron");
@@ -3079,14 +3976,14 @@ await run(
 	"AI patch service saves campaign changes from session AI operations",
 	async () => {
 		await withTestSlug("ai-session-campaign-change", async (slug) => {
-			await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
-			await storage.writeJson(storage.campaignMetaPath(slug), {
+			await ensureDir(path.join(campaignDir(slug), "sessions"));
+			await writeJson(campaignMetaPath(slug), {
 				id: "campaign-id",
 				name: "Session Campaign Change",
 				description: "Old premise.",
 				notes: [],
 			});
-			await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+			await writeJson(sessionPath(slug, "session.json"), {
 				id: "session-id",
 				name: "Session",
 				data: {
@@ -3132,8 +4029,8 @@ await run(
 				},
 			});
 
-			const campaign = await storage.readCampaign(slug);
-			const session = await storage.readSession(slug, "session.json");
+			const campaign = await readCampaign(slug);
+			const session = await readSession(slug, "session.json");
 			assert.equal(campaign.description, "New premise from session planning.");
 			assert.equal(session.data.scenes.length, 1);
 		});
@@ -3144,14 +4041,14 @@ await run(
 	"AI patch service keeps new campaign versions when creates duplicate session entities",
 	async () => {
 		await withTestSlug("ai-dedupe-campaign-entities", async (slug) => {
-			await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
-			await storage.writeJson(storage.campaignMetaPath(slug), {
+			await ensureDir(path.join(campaignDir(slug), "sessions"));
+			await writeJson(campaignMetaPath(slug), {
 				id: "campaign-id",
 				name: "Dedupe To Campaign",
 				description: "",
 				notes: [],
 			});
-			await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+			await writeJson(sessionPath(slug, "session.json"), {
 				id: "session-id",
 				name: "Session",
 				data: {
@@ -3195,8 +4092,8 @@ await run(
 				},
 			});
 
-			const session = await storage.readSession(slug, "session.json");
-			const campaignNpcs = await storage.listEntities(slug, "npc");
+			const session = await readSession(slug, "session.json");
+			const campaignNpcs = await listEntities(slug, "npc");
 			assert.equal(session.data.npcs.length, 0);
 			assert.equal(campaignNpcs.length, 1);
 			assert.equal(campaignNpcs[0].id, "session-npc-1");
@@ -3209,14 +4106,14 @@ await run(
 	"AI patch service moves campaign-created session entities by targetClientId",
 	async () => {
 		await withTestSlug("ai-move-created-session-entity", async (slug) => {
-			await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
-			await storage.writeJson(storage.campaignMetaPath(slug), {
+			await ensureDir(path.join(campaignDir(slug), "sessions"));
+			await writeJson(campaignMetaPath(slug), {
 				id: "campaign-id",
 				name: "Move Created Campaign",
 				description: "",
 				notes: [],
 			});
-			await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+			await writeJson(sessionPath(slug, "session.json"), {
 				id: "session-id",
 				name: "Session",
 				data: {
@@ -3268,8 +4165,8 @@ await run(
 				},
 			});
 
-			const session = await storage.readSession(slug, "session.json");
-			const campaignNpcs = await storage.listEntities(slug, "npc");
+			const session = await readSession(slug, "session.json");
+			const campaignNpcs = await listEntities(slug, "npc");
 			assert.equal(campaignNpcs.length, 0);
 			assert.equal(session.data.npcs.length, 1);
 			assert.equal(session.data.npcs[0].id, "old-session-npc");
@@ -3282,12 +4179,12 @@ await run(
 
 await run("AI patch service skips only fully empty scene creates", async () => {
 	await withTestSlug("ai-empty-scene", async (slug) => {
-		await storage.writeJson(storage.campaignMetaPath(slug), {
+		await writeJson(campaignMetaPath(slug), {
 			name: "AI Empty Scene",
 			description: "",
 			notes: [],
 		});
-		await storage.writeJson(storage.sessionPath(slug, "session.json"), {
+		await writeJson(sessionPath(slug, "session.json"), {
 			id: "session-id",
 			name: "Session",
 			data: { scenes: [], encounters: [], notes: [], npcs: [], locations: [] },
@@ -3322,7 +4219,7 @@ await run("AI patch service skips only fully empty scene creates", async () => {
 			},
 		});
 
-		const session = await storage.readSession(slug, "session.json");
+		const session = await readSession(slug, "session.json");
 		assert.equal(session.data.scenes.length, 1);
 		assert.equal(session.data.scenes[0].texts.summary, "Only a summary");
 		assert.equal(session.data.scenes[0].texts.goal, "");
@@ -3336,20 +4233,157 @@ await run("AI patch service skips only fully empty scene creates", async () => {
 	});
 });
 
+await run(
+	"AI response repository migrates legacy Bestiary history to canonical storage once",
+	async () => {
+		const canonicalPath = "ai/bestiary/canonical.json";
+		const legacyPath = "campaigns/bestiary/_aiResponses.json";
+		const legacyPayload = {
+			responses: [
+				{
+					id: "older",
+					text: "Стара відповідь",
+					createdAt: "2026-01-01T00:00:00.000Z",
+				},
+				{
+					id: "newer",
+					text: "Нова відповідь",
+					createdAt: "2026-02-01T00:00:00.000Z",
+				},
+			],
+		};
+		const files = new Map([[legacyPath, structuredClone(legacyPayload)]]);
+		let legacyReads = 0;
+		let canonicalWrites = 0;
+		const repository = createAiResponseRepository({
+			aiResponsesPath: () => canonicalPath,
+			campaignAiResponsesPath: () => legacyPath,
+			createId: () => "generated-id",
+			exists: async (filePath) => files.has(filePath),
+			getFileSize: async (filePath) =>
+				filePath === canonicalPath && files.has(filePath) ? 321 : 0,
+			readJson: async (filePath) => {
+				if (filePath === legacyPath) legacyReads += 1;
+				return structuredClone(files.get(filePath));
+			},
+			writeJson: async (filePath, value) => {
+				if (filePath === canonicalPath) canonicalWrites += 1;
+				files.set(filePath, structuredClone(value));
+			},
+		});
+
+		const [firstRead, concurrentRead] = await Promise.all([
+			repository.readAiResponses("bestiary"),
+			repository.readAiResponses("bestiary"),
+		]);
+		assert.deepEqual(
+			firstRead.map((entry) => entry.id),
+			["newer", "older"],
+		);
+		assert.deepEqual(concurrentRead, firstRead);
+		assert.equal(legacyReads, 1);
+		assert.equal(canonicalWrites, 1);
+		assert.deepEqual(
+			files.get(canonicalPath).map((entry) => entry.id),
+			["newer", "older"],
+		);
+
+		files.set(legacyPath, {
+			responses: [
+				{
+					id: "legacy-only",
+					text: "Не повинна замінити canonical history",
+					createdAt: "2026-03-01T00:00:00.000Z",
+				},
+			],
+		});
+		const canonicalRead = await repository.readAiResponses("bestiary");
+		assert.deepEqual(
+			canonicalRead.map((entry) => entry.id),
+			["newer", "older"],
+		);
+		assert.equal(legacyReads, 1);
+		assert.equal(canonicalWrites, 1);
+		assert.deepEqual(await repository.getAiResponsesStorageStats("bestiary"), {
+			bytes: 321,
+		});
+	},
+);
+
+await run(
+	"AI response repository preserves legacy history when migration write fails and retries",
+	async () => {
+		const canonicalPath = "ai/bestiary/canonical.json";
+		const legacyPath = "campaigns/bestiary/_aiResponses.json";
+		const legacyPayload = [
+			{
+				id: "legacy-entry",
+				text: "Збережена відповідь",
+				createdAt: "2026-01-01T00:00:00.000Z",
+			},
+		];
+		const files = new Map([[legacyPath, structuredClone(legacyPayload)]]);
+		let failCanonicalWrite = true;
+		let legacyReads = 0;
+		let canonicalWrites = 0;
+		const repository = createAiResponseRepository({
+			aiResponsesPath: () => canonicalPath,
+			campaignAiResponsesPath: () => legacyPath,
+			exists: async (filePath) => files.has(filePath),
+			getFileSize: async () => 0,
+			readJson: async (filePath) => {
+				if (filePath === legacyPath) legacyReads += 1;
+				return structuredClone(files.get(filePath));
+			},
+			writeJson: async (filePath, value) => {
+				canonicalWrites += 1;
+				if (failCanonicalWrite) {
+					throw new Error("temporary write failure");
+				}
+				files.set(filePath, structuredClone(value));
+			},
+		});
+
+		const availableDuringFailure =
+			await repository.readAiResponses("bestiary");
+		assert.deepEqual(
+			availableDuringFailure.map((entry) => entry.id),
+			["legacy-entry"],
+		);
+		assert.equal(files.has(canonicalPath), false);
+		assert.deepEqual(files.get(legacyPath), legacyPayload);
+
+		failCanonicalWrite = false;
+		const migrated = await repository.readAiResponses("bestiary");
+		assert.deepEqual(
+			migrated.map((entry) => entry.id),
+			["legacy-entry"],
+		);
+		assert.equal(files.has(canonicalPath), true);
+		assert.deepEqual(files.get(legacyPath), legacyPayload);
+		assert.equal(legacyReads, 2);
+		assert.equal(canonicalWrites, 2);
+
+		await repository.readAiResponses("bestiary");
+		assert.equal(legacyReads, 2);
+		assert.equal(canonicalWrites, 2);
+	},
+);
+
 await run("storage keeps AI response history per campaign", async () => {
 	await withTestSlug("ai-history-a", async (firstSlug) => {
 		await withTestSlug("ai-history-b", async (secondSlug) => {
-			const firstEntry = await storage.addAiResponse({
+			const firstEntry = await addAiResponse({
 				text: "Відповідь для першої кампанії",
 				path: { campaign: firstSlug, session: null, encounter: null },
 			});
-			const secondEntry = await storage.addAiResponse({
+			const secondEntry = await addAiResponse({
 				text: "Відповідь для другої кампанії",
 				path: { campaign: secondSlug, session: null, encounter: null },
 			});
 
-			const firstHistory = await storage.readAiResponses(firstSlug);
-			const secondHistory = await storage.readAiResponses(secondSlug);
+			const firstHistory = await readAiResponses(firstSlug);
+			const secondHistory = await readAiResponses(secondSlug);
 
 			assert.equal(firstHistory.length, 1);
 			assert.equal(secondHistory.length, 1);
@@ -3358,7 +4392,7 @@ await run("storage keeps AI response history per campaign", async () => {
 			assert.equal(firstHistory[0].text.includes("першої"), true);
 			assert.equal(secondHistory[0].text.includes("другої"), true);
 
-			const updatedFirst = await storage.updateAiResponse(
+			const updatedFirst = await updateAiResponse(
 				firstSlug,
 				firstEntry.id,
 				{
@@ -3378,22 +4412,22 @@ await run("storage keeps AI response history per campaign", async () => {
 				},
 			);
 			assert.equal(updatedFirst.applyState, "applied");
-			const afterUpdate = await storage.readAiResponses(firstSlug);
+			const afterUpdate = await readAiResponses(firstSlug);
 			assert.equal(afterUpdate[0].changes.resources.length, 1);
 			assert.equal(afterUpdate[0].changes.summary.modified, 1);
 			assert.equal(
-				await storage.updateAiResponse(firstSlug, "missing-response-id", {
+				await updateAiResponse(firstSlug, "missing-response-id", {
 					applyState: "undone",
 				}),
 				null,
 			);
-			assert.equal((await storage.readAiResponses(firstSlug)).length, 1);
+			assert.equal((await readAiResponses(firstSlug)).length, 1);
 
-			await storage.deleteAiResponse(secondSlug, secondEntry.id);
-			assert.equal((await storage.readAiResponses(secondSlug)).length, 0);
+			await deleteAiResponse(secondSlug, secondEntry.id);
+			assert.equal((await readAiResponses(secondSlug)).length, 0);
 
-			await storage.clearAiResponses(firstSlug);
-			assert.equal((await storage.readAiResponses(firstSlug)).length, 0);
+			await clearAiResponses(firstSlug);
+			assert.equal((await readAiResponses(firstSlug)).length, 0);
 		});
 	});
 });
@@ -3435,8 +4469,29 @@ await run(
 );
 
 await run(
-	"entity service resolves campaign entities by display names",
+	"campaign entity APIs resolve entities by display names",
 	async () => {
+		for (const ownedPath of [
+			"src/entities/campaign/model/entityIdentity.js",
+			"src/entities/campaign/api/resolveEntityByName.js",
+		]) {
+			await fs.access(ownedPath);
+		}
+		await assert.rejects(
+			fs.access("src/services/entities.js"),
+			(error) => error.code === "ENOENT",
+		);
+		const campaignModelSource = await fs.readFile(
+			"src/entities/campaign/model.js",
+			"utf8",
+		);
+		const campaignApiSource = await fs.readFile(
+			"src/entities/campaign/api.js",
+			"utf8",
+		);
+		assert.match(campaignModelSource, /from "\.\/model\/entityIdentity\.js"/);
+		assert.match(campaignApiSource, /from "\.\/api\/resolveEntityByName\.js"/);
+
 		const entities = [
 			{
 				type: "characters",
@@ -3462,9 +4517,9 @@ await run(
 		);
 		assert.equal(await resolveEntityByName("", "Hero"), null);
 
-		const originalGetEntities = api.getEntities;
+		const originalGetEntities = campaignApi.getEntities;
 		const calls = [];
-		api.getEntities = async (slug, type) => {
+		campaignApi.getEntities = async (slug, type) => {
 			calls.push([slug, type]);
 			if (type === "characters") {
 				return [{ firstName: "Hero", lastName: "One" }];
@@ -3488,8 +4543,11 @@ await run(
 				"locations",
 			]);
 		} finally {
-			api.getEntities = originalGetEntities;
+			campaignApi.getEntities = originalGetEntities;
 		}
+
+		const eslintSource = await fs.readFile("eslint.config.js", "utf8");
+		assert.match(eslintSource, /\*\*\/services\/entities\*/);
 	},
 );
 
@@ -3501,11 +4559,11 @@ await run(
 			"utf8",
 		);
 		const projectGuideSource = await fs.readFile(
-			"src/components/ProjectGuide.jsx",
+			"src/app/router/ProjectGuide.jsx",
 			"utf8",
 		);
 		const mainContentSource = await fs.readFile(
-			"src/components/MainContent.jsx",
+			"src/app/router/MainContent.jsx",
 			"utf8",
 		);
 		const tooltipSource = await fs.readFile(
@@ -3517,11 +4575,11 @@ await run(
 			"utf8",
 		);
 		const campaignViewSource = await fs.readFile(
-			"src/components/CampaignView.jsx",
+			"src/pages/campaign/ui/CampaignPage.jsx",
 			"utf8",
 		);
 		const sessionViewSource = await fs.readFile(
-			"src/components/SessionView.jsx",
+			"src/pages/session/ui/SessionPage.jsx",
 			"utf8",
 		);
 		const noteCardSource = await fs.readFile(
@@ -3537,15 +4595,15 @@ await run(
 			"utf8",
 		);
 		const mentionEditorSource = await fs.readFile(
-			"src/utils/mentionEditor.js",
+			"src/shared/lib/mentionEditor.js",
 			"utf8",
 		);
 		const characterCardSource = await fs.readFile(
-			"src/components/CharacterCard.jsx",
+			"src/entities/campaign/ui/CharacterCardView.jsx",
 			"utf8",
 		);
 		const locationCardSource = await fs.readFile(
-			"src/components/LocationCard.jsx",
+			"src/entities/campaign/ui/LocationCardView.jsx",
 			"utf8",
 		);
 		const graphSource = await fs.readFile(
@@ -3553,11 +4611,11 @@ await run(
 			"utf8",
 		);
 		const campaignHookSource = await fs.readFile(
-			"src/hooks/useCampaignView.js",
+			"src/features/campaign/model/useCampaignView.js",
 			"utf8",
 		);
 		const sessionHookSource = await fs.readFile(
-			"src/hooks/useSessionView.js",
+			"src/features/session/model/useSessionView.js",
 			"utf8",
 		);
 		const sceneFieldsSource = await fs.readFile(
@@ -3786,12 +4844,12 @@ await run("dice probability distribution supports dice formulas", () => {
 await run(
 	"conditions and reference resolvers use normalized keys and cache",
 	async () => {
-		const originalSearchSpells = api.searchSpells;
-		const originalGetConditions = api.getConditions;
-		const originalGetDiseases = api.getDiseases;
-		const originalGetVariantRules = api.getVariantRules;
-		const originalGetSkills = api.getSkills;
-		const originalGetSenses = api.getSenses;
+		const originalSearchSpells = spellApi.search;
+		const originalGetConditions = rulesReferenceApi.getConditions;
+		const originalGetDiseases = rulesReferenceApi.getDiseases;
+		const originalGetVariantRules = rulesReferenceApi.getVariantRules;
+		const originalGetSkills = rulesReferenceApi.getSkills;
+		const originalGetSenses = rulesReferenceApi.getSenses;
 		let spellCalls = 0;
 		let conditionCalls = 0;
 		let diseaseCalls = 0;
@@ -3799,7 +4857,7 @@ await run(
 		let skillCalls = 0;
 		let senseCalls = 0;
 
-		api.searchSpells = async (params = {}) => {
+		spellApi.search = async (params = {}) => {
 			spellCalls += 1;
 			if (String(params.name || "").includes("magic missile")) {
 				return [
@@ -3810,7 +4868,7 @@ await run(
 			return [{ name: "Shield|PHB", source: "PHB" }];
 		};
 
-		api.getConditions = async () => {
+		rulesReferenceApi.getConditions = async () => {
 			conditionCalls += 1;
 			if (conditionCalls === 1) {
 				throw new Error("temporary");
@@ -3821,7 +4879,7 @@ await run(
 			];
 		};
 
-		api.getDiseases = async () => {
+		rulesReferenceApi.getDiseases = async () => {
 			diseaseCalls += 1;
 			return [
 				{ name: "Bluerot", entries: ["..."] },
@@ -3829,7 +4887,7 @@ await run(
 			];
 		};
 
-		api.getVariantRules = async () => {
+		rulesReferenceApi.getVariantRules = async () => {
 			variantRuleCalls += 1;
 			return [
 				{ name: "Advantage", entries: ["..."] },
@@ -3837,7 +4895,7 @@ await run(
 			];
 		};
 
-		api.getSkills = async () => {
+		rulesReferenceApi.getSkills = async () => {
 			skillCalls += 1;
 			return [
 				{ name: "Medicine", ability: "wis", entries: ["..."] },
@@ -3845,7 +4903,7 @@ await run(
 			];
 		};
 
-		api.getSenses = async () => {
+		rulesReferenceApi.getSenses = async () => {
 			senseCalls += 1;
 			return [
 				{ name: "Darkvision", entries: ["..."] },
@@ -3945,28 +5003,28 @@ await run(
 			);
 			assert.equal(await resolveSenseInput({ foo: "bar" }), null);
 		} finally {
-			api.searchSpells = originalSearchSpells;
-			api.getConditions = originalGetConditions;
-			api.getDiseases = originalGetDiseases;
-			api.getVariantRules = originalGetVariantRules;
-			api.getSkills = originalGetSkills;
-			api.getSenses = originalGetSenses;
+			spellApi.search = originalSearchSpells;
+			rulesReferenceApi.getConditions = originalGetConditions;
+			rulesReferenceApi.getDiseases = originalGetDiseases;
+			rulesReferenceApi.getVariantRules = originalGetVariantRules;
+			rulesReferenceApi.getSkills = originalGetSkills;
+			rulesReferenceApi.getSenses = originalGetSenses;
 		}
 	},
 );
 
 await run("backups archive route sends gzip payload with dated filename", async () => {
-	const originalListCampaignSlugs = storage.listCampaignSlugs;
+	const originalListCampaignSlugs = campaignRepository.listCampaignSlugs;
 	const originalExportCampaignArchiveBundle =
-		storage.exportCampaignArchiveBundle;
+		archiveExportService.exportCampaignArchiveBundle;
 	const layer = backupsRouter.stack.find(
 		(item) => item.route?.path === "/export-all/archive",
 	);
 	assert.ok(layer);
 	const handler = layer.route.stack[0].handle;
 
-	storage.listCampaignSlugs = async () => ["alpha"];
-	storage.exportCampaignArchiveBundle = async (slug) => ({
+	campaignRepository.listCampaignSlugs = async () => ["alpha"];
+	archiveExportService.exportCampaignArchiveBundle = async (slug) => ({
 		meta: { slug, name: "Alpha" },
 	});
 
@@ -4000,275 +5058,1734 @@ await run("backups archive route sends gzip payload with dated filename", async 
 			{ meta: { slug: "alpha", name: "Alpha" } },
 		]);
 	} finally {
-		storage.listCampaignSlugs = originalListCampaignSlugs;
-		storage.exportCampaignArchiveBundle = originalExportCampaignArchiveBundle;
+		campaignRepository.listCampaignSlugs = originalListCampaignSlugs;
+		archiveExportService.exportCampaignArchiveBundle =
+			originalExportCampaignArchiveBundle;
 	}
 });
 
-await run(
-	"spells conditions route merges kinds and prefers newer sources",
-	async () => {
-		const originalExists = storage.exists;
-		const originalReadJson = storage.readJson;
-		const layer = spellsRouter.stack.find(
-			(item) => item.route?.path === "/conditions",
-		);
-		assert.ok(layer);
-		const handler = layer.route.stack[0].handle;
+await run("archive request schemas reject unsafe import payloads", () => {
+	const campaignBundle = {
+		meta: { id: "campaign-id", name: "Alpha" },
+		sessions: [],
+		entities: { characters: [], npc: [], locations: [] },
+		aiResponses: [],
+	};
+	const archiveBundle = { bundle: campaignBundle, images: [] };
+	const archiveEnvelope = { version: 2, campaigns: [archiveBundle] };
 
-		storage.exists = async () => true;
-		storage.readJson = async () => ({
-			condition: [
-				{ name: "Blinded", source: "PHB", page: 1, entries: ["old"] },
-				{ name: "Blinded", source: "XPHB", page: 2, entries: ["new"] },
-			],
-			status: [
-				{ name: "Concentration", source: "PHB", page: 3, entries: ["status"] },
-			],
-		});
+	assert.equal(
+		assertValidRequest(
+			campaignBundle,
+			validateCampaignBundleCollection,
+		),
+		campaignBundle,
+	);
+	assert.equal(
+		assertValidRequest(
+			archiveEnvelope,
+			validateCampaignArchiveEnvelope,
+		),
+		archiveEnvelope,
+	);
+	assert.throws(
+		() =>
+			assertValidRequest([], validateCampaignBundleCollection),
+		(error) =>
+			error instanceof RequestValidationError &&
+			error.status === 400 &&
+			error.code === "INVALID_REQUEST" &&
+			error.details[0]?.code === "min_items",
+	);
+	assert.throws(
+		() =>
+			assertValidRequest(
+				{ meta: {}, sessions: "not-an-array" },
+				validateCampaignBundleCollection,
+			),
+		(error) =>
+			error instanceof RequestValidationError &&
+			error.details.some(
+				(issue) => issue.path === "body.meta.name",
+			) &&
+			error.details.some(
+				(issue) => issue.path === "body.sessions",
+			),
+	);
+	assert.throws(
+		() =>
+			assertValidRequest(
+				{
+					bundle: campaignBundle,
+					sections: ["unknown"],
+					images: [],
+				},
+				validatePartialArchiveBundle,
+			),
+		(error) =>
+			error instanceof RequestValidationError &&
+			error.details[0]?.code === "invalid_enum",
+	);
+});
+
+await run(
+	"backup import validation runs before destructive replacement",
+	async () => {
+		const importAllRoute = backupsRouter.stack.find(
+			(item) => item.route?.path === "/import-all",
+		);
+		assert.ok(importAllRoute);
+		assert.equal(importAllRoute.route.stack.length, 2);
+
+		const originalClearAllCampaignData =
+			archiveImportService.clearAllCampaignData;
+		let clearCalls = 0;
+		archiveImportService.clearAllCampaignData = async () => {
+			clearCalls += 1;
+		};
 
 		try {
-			let jsonPayload = null;
-			await handler(
-				{},
+			let validationError = null;
+			importAllRoute.route.stack[0].handle(
 				{
-					json(value) {
-						jsonPayload = value;
-						return value;
-					},
+					body: [],
+					query: { strategy: "wipe_and_replace" },
 				},
+				{},
 				(error) => {
-					throw error;
+					validationError = error || null;
 				},
 			);
 
-			assert.ok(Array.isArray(jsonPayload));
-			assert.equal(jsonPayload.length, 2);
-			assert.deepEqual(
-				jsonPayload.map((item) => item.name),
-				["Blinded", "Concentration"],
-			);
+			assert.ok(validationError instanceof RequestValidationError);
+			assert.equal(validationError.code, "INVALID_REQUEST");
+			assert.equal(clearCalls, 0);
 
-			const blinded = jsonPayload.find((item) => item.name === "Blinded");
-			const concentration = jsonPayload.find(
-				(item) => item.name === "Concentration",
+			const importArchiveRoute = backupsRouter.stack.find(
+				(item) => item.route?.path === "/import-archive",
 			);
-			assert.equal(blinded.kind, "condition");
-			assert.equal(blinded.source, "XPHB");
-			assert.deepEqual(blinded.entries, ["new"]);
-			assert.equal(concentration.kind, "status");
-			assert.equal(concentration.source, "PHB");
+			assert.ok(importArchiveRoute);
+			const handler = importArchiveRoute.route.stack.at(-1).handle;
+			let archiveError = null;
+			await handler(
+				{
+					file: { buffer: Buffer.from("not-json", "utf8") },
+					query: { strategy: "wipe_and_replace" },
+				},
+				{},
+				(error) => {
+					archiveError = error;
+				},
+			);
+			assert.ok(archiveError instanceof RequestValidationError);
+			assert.equal(
+				archiveError.details[0]?.code,
+				"invalid_archive",
+			);
+			assert.equal(clearCalls, 0);
 		} finally {
-			storage.exists = originalExists;
-			storage.readJson = originalReadJson;
+			archiveImportService.clearAllCampaignData =
+				originalClearAllCampaignData;
 		}
 	},
 );
 
-await run("spells diseases route returns deduped disease list", async () => {
-	const originalExists = storage.exists;
-	const originalReadJson = storage.readJson;
-	const layer = spellsRouter.stack.find(
-		(item) => item.route?.path === "/diseases",
-	);
-	assert.ok(layer);
-	const handler = layer.route.stack[0].handle;
+await run(
+	"campaign and session mutation schemas protect identity and ordering",
+	() => {
+		assert.deepEqual(validateCampaignCreate({ name: "Alpha" }), []);
+		assert.deepEqual(validateCampaignPatch({ completed: true }), []);
+		assert.deepEqual(validateEntityMove({ targetType: "npc" }), []);
+		assert.deepEqual(
+			validateReorderRequest({ orders: { alpha: 0, beta: 1 } }),
+			[],
+		);
+		assert.deepEqual(validateSessionMutation({}), []);
+		assert.deepEqual(
+			validateSessionMutation({
+				name: "Session",
+				data: { scenes: [] },
+			}),
+			[],
+		);
+		assert.deepEqual(
+			validateSessionReorder({
+				orders: { "session.json": 0 },
+			}),
+			[],
+		);
 
-	storage.exists = async () => true;
-	storage.readJson = async () => ({
-		disease: [
-			{ name: "Sight Rot", source: "DMG", page: 257, entries: ["old"] },
-			{ name: "Sight Rot", source: "XDMG", page: 61, entries: ["new"] },
-			{ name: "Bluerot", source: "GoS", page: 234, entries: ["blue"] },
-		],
-	});
+		assert.equal(
+			validateCampaignCreate({})[0]?.path,
+			"body.name",
+		);
+		assert.equal(
+			validateCampaignPatch({ name: " " })[0]?.code,
+			"invalid_string",
+		);
+		assert.equal(
+			validateEntityMove({ targetType: "locations" })[0]?.code,
+			"invalid_enum",
+		);
+		assert.equal(
+			validateReorderRequest({ orders: { alpha: -1 } })[0]?.code,
+			"invalid_order",
+		);
+		assert.equal(
+			validateSessionMutation({ data: [] })[0]?.path,
+			"body.data",
+		);
+		assert.equal(
+			validateSessionReorder({ orders: { "session.json": 1.5 } })[0]
+				?.code,
+			"invalid_order",
+		);
+	},
+);
 
-	try {
-		let jsonPayload = null;
-		await handler(
-			{},
-			{
-				json(value) {
-					jsonPayload = value;
-					return value;
+await run(
+	"campaign and session routes validate before mutation handlers",
+	() => {
+		const campaignCreateRoute = campaignsRouter.stack.find(
+			(layer) =>
+				layer.route?.path === "/" &&
+				layer.route.methods.post,
+		);
+		const campaignMoveRoute = campaignsRouter.stack.find(
+			(layer) =>
+				layer.route?.path ===
+				"/:slug/entities/:type/:entitySlug/move",
+		);
+		const campaignReorderRoute = campaignsRouter.stack.find(
+			(layer) => layer.route?.path === "/reorder",
+		);
+		const sessionPatchRoute = sessionsRouter.stack.find(
+			(layer) =>
+				layer.route?.path === "/:fileName" &&
+				layer.route.methods.patch,
+		);
+		const sessionReorderRoute = sessionsRouter.stack.find(
+			(layer) => layer.route?.path === "/reorder",
+		);
+
+		for (const route of [
+			campaignCreateRoute,
+			campaignMoveRoute,
+			campaignReorderRoute,
+			sessionPatchRoute,
+			sessionReorderRoute,
+		]) {
+			assert.ok(route);
+			assert.equal(route.route.stack.length, 2);
+		}
+
+		const invalidRequests = [
+			[campaignCreateRoute, {}],
+			[campaignMoveRoute, { targetType: "locations" }],
+			[campaignReorderRoute, { orders: { alpha: -1 } }],
+			[sessionPatchRoute, { data: [] }],
+			[sessionReorderRoute, { orders: null }],
+		];
+		for (const [route, body] of invalidRequests) {
+			let validationError = null;
+			route.route.stack[0].handle(
+				{ body },
+				{},
+				(error) => {
+					validationError = error || null;
+				},
+			);
+			assert.ok(validationError instanceof RequestValidationError);
+			assert.equal(validationError.code, "INVALID_REQUEST");
+		}
+	},
+);
+
+await run(
+	"AI scene patch service links encounters and removes created orphans",
+	() => {
+		let nextSceneId = 0;
+		const service = createScenePatchService({
+			createId: () => `scene-${++nextSceneId}`,
+		});
+		const state = {
+			sessionData: {
+				data: {
+					scenes: [],
+					encounters: [
+						{ id: "encounter-1" },
+						{ id: "encounter-orphan" },
+					],
 				},
 			},
-			(error) => {
-				throw error;
+			clientIdMap: new Map(),
+			permissions: { allowEncounters: true },
+			warnings: [],
+			pendingSceneEncounterLinks: [],
+			createdEncounterIds: new Set([
+				"encounter-1",
+				"encounter-orphan",
+			]),
+		};
+		const operations = [
+			{
+				entity: "scene",
+				op: "create",
+				clientId: "scene-client",
+				data: {
+					texts: { summary: "Opening" },
+					encounterClientId: "encounter-client",
+				},
+			},
+		];
+
+		assert.deepEqual(
+			[
+				...service.collectSceneEncounterClientIds(
+					operations,
+				),
+			],
+			["encounter-client"],
+		);
+		const created = service.applySceneOperation(
+			state,
+			operations[0],
+			{},
+		);
+		assert.equal(created.saved.id, "scene-1");
+		assert.equal(
+			state.clientIdMap.get("scene-client").id,
+			"scene-1",
+		);
+		state.clientIdMap.set("encounter-client", {
+			entity: "encounter",
+			id: "encounter-1",
+		});
+
+		assert.equal(service.finalizeSceneEncounterLinks(state), true);
+		assert.equal(created.saved.encounterId, "encounter-1");
+		assert.deepEqual(
+			state.sessionData.data.encounters.map(
+				(encounter) => encounter.id,
+			),
+			["encounter-1"],
+		);
+		assert.ok(
+			state.warnings.some((warning) =>
+				warning.includes("without a final scene link"),
+			),
+		);
+	},
+);
+
+await run(
+	"AI scene patch service preserves content and encounter permissions",
+	() => {
+		const service = createScenePatchService({
+			createId: () => "scene-created",
+		});
+		const hiddenNote = {
+			id: "hidden-note",
+			title: "Hidden",
+			text: "Hidden",
+			_aiIgnored: true,
+		};
+		const existing = {
+			id: "scene-existing",
+			texts: {
+				summary: "Old",
+				goal: "Keep",
+				stakes: "",
+				location: "",
+			},
+			notes: [
+				{
+					id: "visible-note",
+					title: "Visible",
+					text: "Old",
+				},
+				hiddenNote,
+			],
+			npcs: [],
+			encounterId: "encounter-existing",
+		};
+		const state = {
+			sessionData: {
+				data: {
+					scenes: [existing],
+					encounters: [],
+				},
+			},
+			clientIdMap: new Map(),
+			permissions: { allowEncounters: false },
+			warnings: [],
+			pendingSceneEncounterLinks: [],
+			createdEncounterIds: new Set(),
+		};
+
+		const updated = service.applySceneOperation(
+			state,
+			{
+				entity: "scene",
+				op: "update",
+				id: "scene-existing",
+				patch: {
+					texts: { summary: "Updated" },
+					notes: [
+						{
+							id: "visible-note",
+							title: "Visible",
+							text: "Updated",
+						},
+					],
+					encounterId: "encounter-forbidden",
+				},
+			},
+			{},
+		);
+		assert.equal(updated.saved.texts.summary, "Updated");
+		assert.equal(updated.saved.texts.goal, "Keep");
+		assert.equal(
+			updated.saved.encounterId,
+			"encounter-existing",
+		);
+		assert.deepEqual(
+			updated.saved.notes.map((note) => note.id),
+			["visible-note", "hidden-note"],
+		);
+		assert.equal(updated.saved.notes[1], hiddenNote);
+
+		const partial = service.applySceneOperation(
+			state,
+			{
+				entity: "scene",
+				op: "create",
+				data: { texts: { summary: "Only summary" } },
+			},
+			{},
+		);
+		const empty = service.applySceneOperation(
+			state,
+			{
+				entity: "scene",
+				op: "create",
+				data: {},
+			},
+			{},
+		);
+		assert.equal(partial.saved.texts.summary, "Only summary");
+		assert.equal(empty, null);
+		assert.ok(
+			state.warnings.includes("Skipped empty scene create."),
+		);
+	},
+);
+
+await run(
+	"AI content normalizer preserves ignored notes and stable note ids",
+	() => {
+		let nextId = 0;
+		const normalizer = createAiContentNormalizer({
+			createId: () => `generated-${++nextId}`,
+			normalizeNoteValue: (note, { simplifiedNotes }) => ({
+				id: note.id || `note-${++nextId}`,
+				title: simplifiedNotes ? "" : note.title || "",
+				text: note.text || "",
+				collapsed: Boolean(note.collapsed),
+			}),
+		});
+		const hidden = {
+			id: 2,
+			title: "Hidden",
+			text: "Hidden",
+			_aiIgnored: true,
+		};
+		const result = normalizer.normalizeCharacter(
+			{
+				name: "New Name",
+				notes: [{ id: 1, title: "Visible", text: "Updated" }],
+			},
+			{
+				id: "character-1",
+				firstName: "Old",
+				lastName: "Name",
+				notes: [
+					{ id: 1, title: "Visible", text: "Old" },
+					hidden,
+				],
+			},
+			{ simplifiedNotes: true },
+		);
+
+		assert.equal(result.id, "character-1");
+		assert.equal(result.firstName, "New");
+		assert.equal(result.lastName, "Name");
+		assert.deepEqual(
+			result.notes.map((note) => note.id),
+			[1, 2],
+		);
+		assert.equal(result.notes[0].title, "");
+		assert.equal(result.notes[1], hidden);
+	},
+);
+
+await run(
+	"AI entity patch service preserves duplicates, mentions, permissions, and scope",
+	async () => {
+		const campaignEntities = {
+			npc: [
+				{
+					id: "campaign-npc",
+					slug: "guide",
+					firstName: "Guide",
+					lastName: "",
+				},
+			],
+			locations: [
+				{
+					id: "location-1",
+					slug: "old-town",
+					name: "Old Town",
+				},
+			],
+			characters: [],
+		};
+		const deletes = [];
+		const mentionUpdates = [];
+		const entityGateway = {
+			readCampaignEntityList: async (_campaignSlug, type) =>
+				campaignEntities[type] || [],
+			writeCampaignEntity: async (
+				_campaignSlug,
+				type,
+				payload,
+				existing,
+			) => {
+				const saved = {
+					...payload,
+					slug:
+						existing?.slug ||
+						payload.slug ||
+						`${type}-new`,
+				};
+				const list = campaignEntities[type];
+				const index = existing ? list.indexOf(existing) : -1;
+				if (index >= 0) list[index] = saved;
+				else list.push(saved);
+				return saved;
+			},
+		};
+		const repository = {
+			deleteEntity: async (_campaignSlug, type, slug) => {
+				deletes.push([type, slug]);
+				campaignEntities[type] = campaignEntities[type].filter(
+					(entity) => entity.slug !== slug,
+				);
+			},
+			updateCampaignMentionReferences: async (
+				_campaignSlug,
+				oldName,
+				newName,
+			) => mentionUpdates.push([oldName, newName]),
+		};
+		const normalizer = {
+			normalizeCharacter: (raw, existing) => ({
+				...(existing || {}),
+				...raw,
+				id: existing?.id || raw.id,
+				firstName:
+					raw.firstName ||
+					raw.name ||
+					existing?.firstName ||
+					"",
+				lastName: raw.lastName ?? existing?.lastName ?? "",
+			}),
+			normalizeLocation: (raw, existing) => ({
+				...(existing || {}),
+				...raw,
+				id: existing?.id || raw.id,
+				name: raw.name || existing?.name || "",
+			}),
+		};
+		const service = createEntityPatchService({
+			createId: () => "generated-id",
+			createSlug: (name) =>
+				String(name).toLowerCase().replaceAll(" ", "-"),
+			entityGateway,
+			normalizer,
+			repository,
+		});
+		const state = {
+			campaignSlug: "alpha",
+			sessionData: { data: { npcs: [], locations: [] } },
+			clientIdMap: new Map(),
+			defaultEntityScope: "session",
+			permissions: {
+				allowCharacters: true,
+				allowNpcs: true,
+				allowLocations: true,
+			},
+			warnings: [],
+		};
+
+		const duplicateResult = await service.applyEntityOperation(
+			state,
+			{
+				entity: "npc",
+				op: "create",
+				scope: "session",
+				clientId: "npc-client",
+				data: {
+					firstName: "Guide",
+					description: "New version",
+				},
+			},
+			{},
+		);
+		assert.equal(duplicateResult.saved.id, "campaign-npc");
+		assert.equal(state.sessionData.data.npcs.length, 1);
+		assert.equal(state.sessionData.data.npcs[0].slug, "guide");
+		assert.equal(
+			state.clientIdMap.get("npc-client").id,
+			"campaign-npc",
+		);
+		assert.deepEqual(deletes[0], ["npc", "guide"]);
+		assert.ok(
+			state.warnings.some((warning) =>
+				warning.includes("Moved duplicate campaign npc to session"),
+			),
+		);
+
+		const updateResult = await service.applyEntityOperation(
+			state,
+			{
+				entity: "location",
+				op: "update",
+				scope: "campaign",
+				id: "location-1",
+				patch: { name: "New Town" },
+			},
+			{},
+		);
+		assert.equal(updateResult.saved.id, "location-1");
+		assert.equal(updateResult.saved.slug, "old-town");
+		assert.deepEqual(mentionUpdates, [["Old Town", "New Town"]]);
+
+		const moveResult = await service.applyEntityOperation(
+			state,
+			{
+				entity: "location",
+				op: "moveScope",
+				id: "location-1",
+				from: "campaign",
+				to: "session",
+			},
+			{},
+		);
+		assert.equal(moveResult.moved, true);
+		assert.equal(moveResult.saved.id, "location-1");
+		assert.equal(state.sessionData.data.locations[0].slug, "old-town");
+		assert.ok(
+			deletes.some(
+				([type, slug]) =>
+					type === "locations" && slug === "old-town",
+			),
+		);
+
+		state.permissions.allowNpcs = false;
+		const denied = await service.applyEntityOperation(
+			state,
+			{
+				entity: "npc",
+				op: "create",
+				scope: "campaign",
+				data: { firstName: "Blocked" },
+			},
+			{},
+		);
+		assert.equal(denied, null);
+		assert.ok(
+			state.warnings.some((warning) =>
+				warning.includes("disabled npc"),
+			),
+		);
+	},
+);
+
+await run(
+	"campaign entity gateway preserves slugs while saving AI entities",
+	async () => {
+		const writes = [];
+		const gateway = createCampaignEntityGateway({
+			createSlug: (name) => String(name).toLowerCase(),
+			repository: {
+				listEntities: async () => [{ id: "entity-1" }],
+				ensureUniqueEntitySlug: async (_campaign, _type, slug) =>
+					`${slug}-unique`,
+				writeEntity: async (...args) => {
+					writes.push(args);
+					return args[3];
+				},
+			},
+		});
+
+		assert.equal(
+			(await gateway.readCampaignEntityList("alpha", "npc"))[0].id,
+			"entity-1",
+		);
+		const created = await gateway.writeCampaignEntity(
+			"alpha",
+			"npc",
+			{ firstName: "Guide" },
+		);
+		assert.equal(created.slug, "guide-unique");
+
+		const updated = await gateway.writeCampaignEntity(
+			"alpha",
+			"npc",
+			{ firstName: "Renamed" },
+			{ slug: "stable-slug" },
+		);
+		assert.equal(updated.slug, "stable-slug");
+		assert.equal(writes.length, 2);
+	},
+);
+
+await run(
+	"AI note patch service resolves aggregate and scoped entity targets",
+	async () => {
+		const writes = [];
+		const location = {
+			id: "location-1",
+			slug: "town",
+			name: "Town",
+			notes: [],
+		};
+		const service = createNotePatchService({
+			createId: () => "note-new",
+			entityGateway: {
+				readCampaignEntityList: async (_campaignSlug, type) =>
+					type === "locations" ? [location] : [],
+				writeCampaignEntity: async (...args) => {
+					writes.push(args);
+					return { ...args[2] };
+				},
+			},
+		});
+		const state = {
+			campaignSlug: "alpha",
+			campaignMeta: { notes: [] },
+			sessionData: {
+				data: {
+					notes: [{ id: 1, title: "Old", text: "Old" }],
+					scenes: [{ id: "scene-1", notes: [] }],
+					npcs: [{ id: "npc-1", firstName: "Guide", notes: [] }],
+				},
+			},
+			clientIdMap: new Map(),
+			defaultEntityScope: "session",
+			campaignEntityCache: new Map(),
+		};
+
+		await service.applyNoteOperation(
+			state,
+			{ entity: "campaign", op: "appendNote", note: "Campaign" },
+			{},
+		);
+		await service.applyNoteOperation(
+			state,
+			{
+				entity: "session",
+				op: "updateNote",
+				noteId: 1,
+				patch: { text: "Updated" },
+			},
+			{},
+		);
+		await service.applyNoteOperation(
+			state,
+			{
+				entity: "scene",
+				op: "appendNote",
+				id: "scene-1",
+				note: "Scene",
+			},
+			{},
+		);
+		await service.applyNoteOperation(
+			state,
+			{
+				entity: "npc",
+				op: "appendNote",
+				id: "npc-1",
+				scope: "session",
+				note: "NPC",
+			},
+			{},
+		);
+		await service.applyNoteOperation(
+			state,
+			{
+				entity: "location",
+				op: "appendNote",
+				id: "location-1",
+				scope: "campaign",
+				note: { title: "Hidden", text: "Town" },
+			},
+			{ simplifiedNotes: true },
+		);
+
+		assert.equal(state.campaignMeta.notes[0].text, "Campaign");
+		assert.equal(state.sessionData.data.notes[0].id, 1);
+		assert.equal(state.sessionData.data.notes[0].text, "Updated");
+		assert.equal(
+			state.sessionData.data.scenes[0].notes[0].text,
+			"Scene",
+		);
+		assert.equal(
+			state.sessionData.data.npcs[0].notes[0].text,
+			"NPC",
+		);
+		assert.equal(location.notes[0].title, "");
+		assert.equal(writes.length, 1);
+		assert.equal(writes[0][1], "locations");
+
+		const deleted = await service.applyNoteOperation(
+			state,
+			{
+				entity: "location",
+				op: "deleteNote",
+				id: "location-1",
+				noteId: "note-new",
+				scope: "campaign",
+			},
+			{},
+		);
+		assert.equal(deleted.id, "note-new");
+		assert.equal(location.notes.length, 0);
+		assert.equal(writes.length, 2);
+	},
+);
+
+await run(
+	"AI apply aggregate service isolates loading and persistence",
+	async () => {
+		const writes = [];
+		const service = createAiApplyAggregateService({
+			readCampaign: async (slug) => ({ slug, name: "Campaign" }),
+			readSession: async () => ({ id: "session-id", data: {} }),
+			writeAggregateJson: async (filePath, value) =>
+				writes.push([filePath, value]),
+			getCampaignMetaPath: (slug) => `campaign/${slug}/meta`,
+			getSessionPath: (slug, fileName) =>
+				`campaign/${slug}/session/${fileName}`,
+		});
+
+		const aggregate = await service.loadApplyAggregate({
+			campaignSlug: "alpha",
+			sessionFile: "one.json",
+		});
+		const updated = await service.persistApplyAggregate({
+			campaignSlug: "alpha",
+			sessionFile: "one.json",
+			...aggregate,
+			campaignMetaChanged: true,
+			sessionDataChanged: true,
+			hasAppliedChanges: true,
+		});
+
+		assert.equal(aggregate.campaignMeta.slug, "alpha");
+		assert.equal(aggregate.sessionData.id, "session-id");
+		assert.deepEqual(
+			writes.map(([filePath]) => filePath),
+			["campaign/alpha/meta", "campaign/alpha/session/one.json"],
+		);
+		assert.equal(updated.fileName, "one.json");
+
+		const bestiaryUpdate = await service.persistApplyAggregate({
+			campaignMeta: null,
+			sessionData: null,
+			customBestiaryChange: {
+				hasChanges: true,
+				after: [{ id: "monster-id" }],
+			},
+		});
+		assert.equal(bestiaryUpdate.monsters[0].id, "monster-id");
+	},
+);
+
+await run(
+	"AI operation dispatcher routes operations and tracks dirty aggregates",
+	async () => {
+		const calls = [];
+		const state = {
+			defaultEntityScope: "session",
+			clientIdMap: new Map(),
+		};
+		const recordAsync = async (name, result) => {
+			calls.push(name);
+			return result;
+		};
+		const result = await dispatchAiOperations({
+			operations: [
+				{ entity: "monster", op: "create" },
+				{ entity: "campaign", op: "update" },
+				{ entity: "scene", op: "update" },
+				{ entity: "encounter", op: "create" },
+				{ entity: "npc", op: "appendNote" },
+				{ entity: "location", op: "moveScope" },
+			],
+			state,
+			normalizerOptions: {},
+			text: (value) => String(value || ""),
+			isCustomMonsterOperation: (operation) =>
+				operation.entity === "monster",
+			entityTypeFromOperation: (entity) =>
+				entity === "npc"
+					? "npc"
+					: entity === "location"
+						? "locations"
+						: null,
+			operationScope: () => "session",
+			applyNoteOperation: () => recordAsync("note", {}),
+			applyCampaignOperation: () => {
+				calls.push("campaign");
+				return {};
+			},
+			applySceneOperation: () => {
+				calls.push("scene");
+				return {};
+			},
+			applyEncounterOperation: () => recordAsync("encounter", {}),
+			applyEntityOperation: () =>
+				recordAsync("entity", { moved: true }),
+		});
+
+		assert.deepEqual(calls, [
+			"campaign",
+			"scene",
+			"encounter",
+			"note",
+			"entity",
+		]);
+		assert.equal(result.hasAppliedChanges, true);
+		assert.equal(result.campaignMetaChanged, true);
+		assert.equal(result.sessionDataChanged, true);
+	},
+);
+
+await run(
+	"custom-monster patch service applies operations through its repository",
+	async () => {
+		let saved = [];
+		const service = createCustomMonsterPatchService({
+			repository: {
+				readCustomBestiaryMonsters: async () => [
+					{ id: "monster-1", name: "Old" },
+				],
+				writeCustomBestiaryMonsters: async (monsters) => {
+					saved = structuredClone(monsters);
+					return saved;
+				},
+			},
+			normalizeMonster: (monster) => ({
+				...monster,
+				id: monster.id || "monster-2",
+			}),
+		});
+
+		const result = await service.applyCustomMonsterOperations([
+			{
+				entity: "custom-monster",
+				op: "update",
+				id: "monster-1",
+				patch: { name: "Updated" },
+			},
+			{
+				entity: "monster",
+				op: "create",
+				data: { name: "Created" },
+			},
+		]);
+
+		assert.equal(result.hasChanges, true);
+		assert.equal(result.changedMonsters.length, 2);
+		assert.deepEqual(
+			saved.map((monster) => monster.name),
+			["Updated", "Created"],
+		);
+	},
+);
+
+await run(
+	"encounter patch service resolves monsters and preserves link contracts",
+	async () => {
+		const service = createEncounterPatchService({
+			getBestiaryIndex: async () =>
+				new Map([
+					[
+						"goblin|mm",
+						{
+							id: "goblin-mm",
+							name: "Goblin",
+							source: "MM",
+							hp: { average: 7 },
+							ac: [{ ac: 15 }],
+						},
+					],
+				]),
+			createId: () => "encounter-1",
+			createInstanceId: () => "instance-1",
+		});
+		const state = {
+			sessionData: { data: {} },
+			clientIdMap: new Map(),
+			permissions: {},
+			warnings: [],
+			linkedEncounterClientIds: new Set(["encounter-client"]),
+			createdEncounterIds: new Set(),
+		};
+
+		const result = await service.applyEncounterOperation(state, {
+			entity: "encounter",
+			op: "create",
+			clientId: "encounter-client",
+			data: {
+				name: "Ambush",
+				monsters: [{ name: "Goblin" }],
+			},
+		});
+
+		assert.equal(result.saved.id, "encounter-1");
+		assert.equal(result.saved.monsters[0].currentHp, 7);
+		assert.equal(result.saved.monsters[0].armor_class, 15);
+		assert.equal(
+			state.clientIdMap.get("encounter-client").id,
+			"encounter-1",
+		);
+	},
+);
+
+await run(
+	"archive export service composes full and selected campaign bundles",
+	async () => {
+		const service = createArchiveExportService({
+			exists: async () => true,
+			imagesDir: "images",
+			listEntities: async (_slug, type) => [
+				{ id: `${type}-id`, slug: `${type}-one` },
+			],
+			listSessions: async () => [{ fileName: "one.json" }],
+			readAiResponses: async () => [{ id: "response-id" }],
+			readCampaign: async (slug) => ({ id: "campaign-id", slug, name: "A" }),
+			readDir: async () => [
+				{
+					name: "token.png",
+					isDirectory: () => false,
+					isFile: () => true,
+				},
+			],
+			readFile: async () => Buffer.from("image"),
+			readSession: async () => ({ id: "session-id", name: "One" }),
+		});
+
+		const full = await service.exportCampaignArchiveBundle("alpha");
+		assert.equal(full.bundle.sessions[0].content.id, "session-id");
+		assert.equal(full.bundle.entities.characters[0].id, "characters-id");
+		assert.equal(full.images[0].base64, Buffer.from("image").toString("base64"));
+
+		const partial = await service.exportCampaignPartialArchiveBundle(
+			"alpha",
+			["sessions", "npc", "images", "sessions", "unknown"],
+		);
+		assert.deepEqual(partial.sections, ["sessions", "npc", "images"]);
+		assert.equal(partial.bundle.entities.locations, undefined);
+		assert.equal(partial.images.length, 1);
+	},
+);
+
+await run(
+	"archive import service restores aggregates and confines image paths",
+	async () => {
+		const jsonFiles = new Map();
+		const entities = [];
+		const aiWrites = [];
+		const imageWrites = [];
+		const normalize = (value) => String(value).replaceAll("\\", "/");
+		const service = createArchiveImportService({
+			campaignDir: (slug) => `campaign/${slug}`,
+			campaignMetaPath: (slug) => `campaign/${slug}/_campaign.json`,
+			campaignSlug: (name) => name.toLowerCase().replace(/\s+/g, "-"),
+			campaignsDir: "campaign",
+			createId: () => "new-response-id",
+			deleteCampaignData: async () => {},
+			ensureDir: async () => {},
+			ensureUniqueCampaignSlug: async () => "imported",
+			ensureUniqueEntitySlug: async (_slug, _type, entitySlug) =>
+				entitySlug,
+			ensureUniqueSessionFile: async () => "one.json",
+			exists: async () => false,
+			imagesDir: "images",
+			listCampaignSlugs: async () => [],
+			listSessions: async () => [],
+			now: () => new Date("2026-04-05T06:07:08.000Z"),
+			readAiResponses: async () => [],
+			readJson: async (filePath) => jsonFiles.get(normalize(filePath)),
+			remove: async () => {},
+			replaceImageSlugReferences: (value, oldSlug, newSlug) =>
+				JSON.parse(
+					JSON.stringify(value).replaceAll(
+						`/api/images/${oldSlug}/`,
+						`/api/images/${newSlug}/`,
+					),
+				),
+			sanitizeName: (name) => String(name || "").trim(),
+			sessionFileName: (name) => `${name}.json`,
+			sessionPath: (slug, fileName) => `session/${slug}/${fileName}`,
+			todayString: () => "2026-04-05",
+			writeAiResponses: async (slug, values) =>
+				aiWrites.push([slug, values]),
+			writeEntity: async (...args) => entities.push(args),
+			writeFile: async (filePath, value) =>
+				imageWrites.push([normalize(filePath), value]),
+			writeJson: async (filePath, value) =>
+				jsonFiles.set(normalize(filePath), structuredClone(value)),
+		});
+
+		const meta = await service.importCampaignBundle({
+			meta: {
+				id: "campaign-id",
+				slug: "source",
+				name: "Imported",
+				imageUrl: "/api/images/source/tokens/a.png",
+			},
+			sessions: [{ content: { id: "session-id" } }],
+			entities: {
+				npc: [{ id: "npc-id", slug: "npc-one" }],
+			},
+			aiResponses: [{ id: "old-response", path: { campaign: "source" } }],
+		});
+		assert.equal(meta.slug, "imported");
+		assert.match(meta.imageUrl, /\/imported\//);
+		assert.equal(
+			jsonFiles.get("session/imported/one.json").id,
+			"session-id",
+		);
+		assert.equal(entities[0][3].id, "npc-id");
+		assert.equal(aiWrites[0][1][0].path.campaign, "imported");
+
+		await service.restoreCampaignImagesFromArchive("imported", [
+			{ relativePath: "tokens/a.png", base64: Buffer.from("a").toString("base64") },
+			{ relativePath: "../outside.png", base64: Buffer.from("x").toString("base64") },
+		]);
+		assert.equal(imageWrites.length, 1);
+		assert.match(imageWrites[0][0], /images\/imported\/tokens\/a\.png$/);
+	},
+);
+
+await run(
+	"image gallery read service combines user and official token assets",
+	async () => {
+		const directory = (name) => ({
+			name,
+			isDirectory: () => true,
+			isFile: () => false,
+		});
+		const file = (name) => ({
+			name,
+			isDirectory: () => false,
+			isFile: () => true,
+		});
+		const entries = new Map([
+			["images", [directory("general")]],
+			["images/general", [directory("tokens")]],
+			["images/general/tokens", [file("hero.png")]],
+			["tokens", [directory("MM"), file("goblin.png")]],
+			["tokens/MM", [file("dragon.png")]],
+		]);
+		const normalize = (value) => String(value).replaceAll("\\", "/");
+		const service = createImageGalleryReadService({
+			bestiaryTokensDir: "tokens",
+			encodeUrlPathSegments: (...parts) =>
+				parts.flatMap((part) => String(part).split("/")).join("/"),
+			exists: async (filePath) => entries.has(normalize(filePath)),
+			getDirectorySize: async (filePath) => normalize(filePath).length,
+			getFileSize: async () => 5,
+			imagesDir: "images",
+			normalizePathSegments: (value) =>
+				String(value || "")
+					.split(/[\\/]+/)
+					.filter(Boolean),
+			normalizeSourceList: (sources) =>
+				sources.map((source) => source.toUpperCase()),
+			readDir: async (filePath) => entries.get(normalize(filePath)) || [],
+		});
+
+		const result = await service.searchImageGalleryAssets({
+			source: "general",
+			category: "tokens",
+		});
+		assert.deepEqual(
+			result.images.map((image) => image.name).sort(),
+			["goblin.png", "hero.png"],
+		);
+		const ignored = await service.listBestiaryTokenAssets({
+			ignoreSourcesList: ["mm"],
+		});
+		assert.deepEqual(ignored.subcategories, []);
+		const stats = await service.getImageGalleryStorageStats({
+			source: "general",
+			category: "tokens",
+		});
+		assert.equal(stats.categoryBytes, "images/general/tokens".length);
+	},
+);
+
+await run(
+	"image asset repository lists and renames files with reference updates",
+	async () => {
+		const files = new Set([
+			"images/alpha/tokens",
+			"images/alpha/tokens/old.png",
+		]);
+		const replacements = [];
+		const repository = createImageAssetRepository({
+			campaignImagesDir: (slug, category, subcategory = "") =>
+				["images", slug, category, subcategory].filter(Boolean).join("/"),
+			ensureDir: async () => {},
+			exists: async (filePath) =>
+				files.has(String(filePath).replaceAll("\\", "/")),
+			getFileSize: async () => 42,
+			imagesDir: "images",
+			readDir: async () => [
+				{
+					name: "old.png",
+					isFile: () => true,
+					isDirectory: () => false,
+				},
+			],
+			renameWithRetry: async (from, to) => {
+				files.delete(String(from).replaceAll("\\", "/"));
+				files.add(String(to).replaceAll("\\", "/"));
+			},
+			updateAllImageReferences: async (items) =>
+				replacements.push(...items),
+		});
+
+		const listed = await repository.listImages("alpha", "tokens");
+		assert.equal(listed[0].sizeBytes, 42);
+		const renamed = await repository.renameImage(
+			"alpha",
+			"tokens",
+			"",
+			"old.png",
+			"new.png",
+		);
+		assert.equal(files.has("images/alpha/tokens/new.png"), true);
+		assert.deepEqual(replacements, [renamed]);
+	},
+);
+
+await run(
+	"image reference service updates every persisted aggregate",
+	async () => {
+		const oldUrl = "/api/images/alpha/tokens/old.png";
+		const newUrl = "/api/images/general/tokens/new.png";
+		const files = new Map([
+			["meta/alpha", { imageUrl: oldUrl }],
+			["session/alpha/one.json", { data: { text: oldUrl } }],
+			["ai/alpha", [{ attachments: [{ url: oldUrl }] }]],
+		]);
+		const entities = {
+			characters: [{ slug: "hero", imageUrl: oldUrl }],
+			npc: [],
+			locations: [],
+		};
+		const service = createImageReferenceService({
+			campaignAiResponsesPath: (slug) => `ai/${slug}`,
+			campaignMetaPath: (slug) => `meta/${slug}`,
+			exists: async (filePath) => files.has(filePath),
+			listCampaignSlugs: async () => ["alpha"],
+			listEntities: async (_slug, type) => entities[type],
+			listSessions: async () => [{ fileName: "one.json" }],
+			readJson: async (filePath) => structuredClone(files.get(filePath)),
+			sessionPath: (slug, fileName) => `session/${slug}/${fileName}`,
+			writeEntity: async (_slug, type, _entitySlug, entity) => {
+				entities[type] = [structuredClone(entity)];
+			},
+			writeJson: async (filePath, value) =>
+				files.set(filePath, structuredClone(value)),
+		});
+
+		await service.updateAllImageReferences([{ oldUrl, newUrl }]);
+		assert.equal(files.get("meta/alpha").imageUrl, newUrl);
+		assert.equal(entities.characters[0].imageUrl, newUrl);
+		assert.equal(files.get("session/alpha/one.json").data.text, newUrl);
+
+		await service.updateCampaignImageSlugReferences("alpha", "renamed");
+		assert.match(files.get("meta/alpha").imageUrl, /\/general\//);
+		assert.match(
+			files.get("ai/alpha")[0].attachments[0].url,
+			/\/renamed\//,
+		);
+	},
+);
+
+await run(
+	"campaign lifecycle service coordinates campaign and image rename",
+	async () => {
+		const renames = [];
+		const referenceUpdates = [];
+		const service = createCampaignLifecycleService({
+			campaignDir: (slug) => `campaign/${slug}`,
+			deleteCampaignImages: async (slug) =>
+				referenceUpdates.push(["delete-images", slug]),
+			exists: async (filePath) => filePath === "images/old",
+			imagesDir: "images",
+			moveCampaignImagesToGeneral: async (slug) =>
+				referenceUpdates.push(["move-images", slug]),
+			removeCampaignDirectory: async (directoryPath) =>
+				referenceUpdates.push(["delete-campaign", directoryPath]),
+			renameWithRetry: async (from, to) => renames.push([from, to]),
+			updateCampaignImageSlugReferences: async (oldSlug, newSlug) =>
+				referenceUpdates.push([oldSlug, newSlug]),
+		});
+
+		await service.renameCampaignData("old", "new");
+		assert.deepEqual(renames, [
+			["campaign/old", "campaign/new"],
+			["images/old", "images/new"],
+		]);
+		assert.deepEqual(referenceUpdates, [["old", "new"]]);
+
+		await service.deleteCampaignData("new", { moveImagesToGeneral: true });
+		assert.deepEqual(referenceUpdates.slice(1), [
+			["move-images", "new"],
+			["delete-campaign", "campaign/new"],
+		]);
+	},
+);
+
+await run(
+	"campaign repository owns creation, listing, and reorder",
+	async () => {
+		const files = new Map();
+		const repository = createCampaignRepository({
+			campaignDir: (slug) => `campaign/${slug}`,
+			campaignMetaPath: (slug) => `campaign/${slug}/_campaign.json`,
+			campaignSlug: (name) => name.toLowerCase().replace(/\s+/g, "-"),
+			campaignsDir: "campaign",
+			createId: () => "campaign-id",
+			ensureDir: async () => {},
+			exists: async (filePath) => files.has(filePath),
+			imagesDir: "images",
+			listSessions: async () => [{ fileName: "one.json" }],
+			now: () => new Date("2026-03-04T05:06:07.000Z"),
+			readDir: async () => [
+				{
+					name: "my-campaign",
+					isDirectory: () => true,
+					isSymbolicLink: () => false,
+				},
+			],
+			readJson: async (filePath) => structuredClone(files.get(filePath)),
+			sanitizeName: (name) => String(name || "").trim(),
+			writeJson: async (filePath, value) =>
+				files.set(filePath, structuredClone(value)),
+		});
+
+		const campaign = await repository.createCampaign({
+			name: "My Campaign",
+		});
+		assert.equal(campaign.id, "campaign-id");
+		assert.equal(campaign.slug, "my-campaign");
+		assert.equal(campaign.notes[0].id, 1772600767000);
+
+		const listed = await repository.listCampaignsDetailed();
+		assert.equal(listed[0].sessionCount, 1);
+		await repository.reorderCampaigns({ "my-campaign": 4 });
+		assert.equal(
+			files.get("campaign/my-campaign/_campaign.json").order,
+			4,
+		);
+	},
+);
+
+await run(
+	"entity repository preserves IDs and updates cross-aggregate mentions",
+	async () => {
+		const files = new Map([
+			["meta/alpha", { notes: [{ text: "Meet [Old Name]." }] }],
+			[
+				"session/alpha/one.json",
+				{ id: "session-id", data: { text: "[Old Name]" } },
+			],
+		]);
+		const normalize = (value) => String(value).replaceAll("\\", "/");
+		const repository = createEntityRepository({
+			campaignDir: (slug) => `campaign/${slug}`,
+			campaignMetaPath: (slug) => `meta/${slug}`,
+			campaignSlug: (name) => name.toLowerCase().replace(/\s+/g, "-"),
+			createId: () => "entity-id",
+			ensureDir: async () => {},
+			exists: async (filePath) => files.has(normalize(filePath)),
+			listSessions: async () => [{ fileName: "one.json" }],
+			readDir: async (directoryPath) => {
+				const prefix = `${normalize(directoryPath)}/`;
+				return [...files.keys()]
+					.filter(
+						(filePath) =>
+							filePath.startsWith(prefix) &&
+							filePath.endsWith("/info.json"),
+					)
+					.map((filePath) => filePath.slice(prefix.length).split("/")[0])
+					.filter((slug, index, all) => all.indexOf(slug) === index)
+					.map((name) => ({ name, isDirectory: () => true }));
+			},
+			readJson: async (filePath) =>
+				structuredClone(files.get(normalize(filePath))),
+			sanitizeName: (name) => String(name || "").trim(),
+			sessionPath: (slug, fileName) => `session/${slug}/${fileName}`,
+			writeJson: async (filePath, value) =>
+				files.set(normalize(filePath), structuredClone(value)),
+		});
+
+		const created = await repository.createEntity("alpha", "npc", {
+			firstName: "Old",
+			lastName: "Name",
+		});
+		const updated = await repository.updateEntity(
+			"alpha",
+			"npc",
+			created.slug,
+			{
+				firstName: "New",
+				lastName: "Name",
+				id: "cannot-change",
+				_updateMentionReferences: true,
 			},
 		);
-
-		assert.ok(Array.isArray(jsonPayload));
-		assert.deepEqual(
-			jsonPayload.map((item) => item.name),
-			["Bluerot", "Sight Rot"],
+		assert.equal(updated.id, "entity-id");
+		assert.equal(files.get("meta/alpha").notes[0].text, "Meet [New Name].");
+		assert.equal(
+			files.get("session/alpha/one.json").data.text,
+			"[New Name]",
 		);
+	},
+);
 
-		const sightRot = jsonPayload.find((item) => item.name === "Sight Rot");
-		assert.equal(sightRot.kind, "disease");
-		assert.equal(sightRot.source, "XDMG");
-		assert.deepEqual(sightRot.entries, ["new"]);
-	} finally {
-		storage.exists = originalExists;
-		storage.readJson = originalReadJson;
-	}
+await run(
+	"session repository owns create, rename, reorder, and delete",
+	async () => {
+		const files = new Map([
+			[
+				"sessions/alpha/First.json",
+				{
+					id: "first-id",
+					name: "First",
+					order: 2,
+					createdAt: "2026-01-01T00:00:00.000Z",
+					data: {},
+				},
+			],
+		]);
+		const repository = createSessionRepository({
+			campaignDir: (slug) => `campaigns/${slug}`,
+			createId: () => "new-id",
+			ensureDir: async () => {},
+			exists: async (filePath) => files.has(filePath),
+			now: () => new Date("2026-02-03T04:05:06.000Z"),
+			readDir: async () =>
+				[...files.keys()].map((filePath) => ({
+					name: filePath.split("/").at(-1),
+					isFile: () => true,
+					isSymbolicLink: () => false,
+				})),
+			readJson: async (filePath) => structuredClone(files.get(filePath)),
+			removeFile: async (filePath) => files.delete(filePath),
+			renameWithRetry: async (from, to) => {
+				files.set(to, files.get(from));
+				files.delete(from);
+			},
+			sanitizeName: (name) => String(name || "").trim(),
+			sessionFileName: (name) => `${name}.json`,
+			sessionPath: (slug, fileName) => `sessions/${slug}/${fileName}`,
+			todayString: () => "2026-02-03",
+			writeJson: async (filePath, value) =>
+				files.set(filePath, structuredClone(value)),
+		});
+
+		const created = await repository.createSession("alpha", {
+			name: "Second",
+			data: { scenes: [] },
+		});
+		assert.equal(created.id, "new-id");
+		assert.equal(created.order, 3);
+		assert.equal(created.fileName, "Second.json");
+
+		const renamed = await repository.updateSession(
+			"alpha",
+			"Second.json",
+			{ name: "Renamed", id: "cannot-change" },
+		);
+		assert.equal(renamed.id, "new-id");
+		assert.equal(renamed.fileName, "Renamed.json");
+		assert.equal(files.has("sessions/alpha/Second.json"), false);
+
+		await repository.reorderSessions("alpha", { "Renamed.json": 0 });
+		assert.equal(files.get("sessions/alpha/Renamed.json").order, 0);
+		await repository.deleteSession("alpha", "Renamed.json");
+		assert.equal(files.has("sessions/alpha/Renamed.json"), false);
+	},
+);
+
+await run(
+	"reference repository searches and filters bundled spells",
+	async () => {
+		const spells = [
+			{ name: "Fire Bolt", level: 0, school: "V", source: "PHB" },
+			{ name: "Fireball", level: 3, school: "V", source: "XPHB" },
+			{ name: "Cure Wounds", level: 1, school: "A", source: "PHB" },
+		];
+		const repository = createReferenceDataRepository({
+			databaseDir: "database",
+			spellsDir: "spells",
+			exists: async (filePath) =>
+				filePath === "spells" || filePath.endsWith("all.json"),
+			readJson: async () => ({ spell: spells }),
+		});
+
+		assert.deepEqual(
+			(await repository.searchSpells({ name: "fire", school: "v" })).map(
+				(spell) => spell.name,
+			),
+			["Fire Bolt", "Fireball"],
+		);
+		assert.deepEqual(await repository.listSpellSources(), ["PHB", "XPHB"]);
+		assert.deepEqual(
+			(await repository.getSpellsBySource("phb")).map((spell) => spell.name),
+			["Fire Bolt", "Cure Wounds"],
+		);
+	},
+);
+
+await run(
+	"custom Bestiary repository normalizes monsters, IDs, and favorites",
+	async () => {
+		const files = new Map();
+		let nextId = 1;
+		const repository = createCustomBestiaryRepository({
+			addMonstersToIndex: (index, monsters, fallbackSource) => {
+				for (const monster of monsters) {
+					index.set(`${monster.name}|${fallbackSource}`, monster);
+				}
+			},
+			buildMonsterIndex: async () =>
+				new Map([["Goblin|MM", { name: "Goblin", source: "MM" }]]),
+			calculateDiceFormulaAverage: () => 7,
+			createId: () => `generated-${nextId++}`,
+			customBestiaryPath: "custom.json",
+			exists: async (filePath) => files.has(filePath),
+			favoritesPath: "favorites.json",
+			readJson: async (filePath) => structuredClone(files.get(filePath)),
+			stripMentionBrackets: (value) => value,
+			writeJson: async (filePath, value) =>
+				files.set(filePath, structuredClone(value)),
+		});
+
+		const monsters = await repository.writeCustomBestiaryMonsters([
+			{
+				id: "same",
+				name: "Zed",
+				hp: { formula: "2d6" },
+				action: ["Hit"],
+				spellcasting: { name: "Magic" },
+			},
+			{ id: "same", title: "Alpha" },
+		]);
+		assert.deepEqual(
+			monsters.map((monster) => monster.name),
+			["Alpha", "Zed"],
+		);
+		assert.equal(new Set(monsters.map((monster) => monster.id)).size, 2);
+		const zed = monsters.find((monster) => monster.name === "Zed");
+		assert.equal(zed.hp.average, 7);
+		assert.equal(Array.isArray(zed.spellcasting), true);
+		assert.deepEqual(zed.action[0].entries, ["Hit"]);
+
+		await repository.writeFavorites([{ name: "Zed", source: "CUSTOM" }]);
+		assert.equal((await repository.readFavorites())[0].name, "Zed");
+		const index = await repository.getBestiaryIndex();
+		assert.equal(index.has("Goblin|MM"), true);
+		assert.equal(index.has("Zed|CUSTOM"), true);
+	},
+);
+
+await run(
+	"bestiary reference repository normalizes official records",
+	async () => {
+		const repository = createBestiaryReferenceRepository({
+			bestiaryDir: "bestiary",
+			exists: async (filePath) => filePath.endsWith("all.json"),
+			readJson: async () => ({
+				monster: [
+					{ name: "Goblin", source: "mm" },
+					{ name: "Mage", source: "MM" },
+				],
+			}),
+		});
+
+		const index = await repository.buildMonsterIndex();
+		assert.equal(index.get("goblin|MM").source, "MM");
+		assert.deepEqual(
+			new Set(await repository.listSources()),
+			new Set(["mm", "MM"]),
+		);
+		assert.deepEqual(
+			(await repository.getMonstersBySource("mm")).map(
+				(monster) => monster.name,
+			),
+			["Goblin", "Mage"],
+		);
+	},
+);
+
+await run(
+	"reference repository merges condition kinds and prefers newer sources",
+	async () => {
+		const repository = createReferenceDataRepository({
+			exists: async () => true,
+			readJson: async () => ({
+				condition: [
+					{ name: "Blinded", source: "PHB", page: 1, entries: ["old"] },
+					{ name: "Blinded", source: "XPHB", page: 2, entries: ["new"] },
+				],
+				status: [
+					{
+						name: "Concentration",
+						source: "PHB",
+						page: 3,
+						entries: ["status"],
+					},
+				],
+			}),
+		});
+		const records = await repository.listConditions();
+		assert.equal(records.length, 2);
+		assert.deepEqual(
+			records.map((item) => item.name),
+			["Blinded", "Concentration"],
+		);
+		const blinded = records.find((item) => item.name === "Blinded");
+		const concentration = records.find(
+			(item) => item.name === "Concentration",
+		);
+		assert.equal(blinded.kind, "condition");
+		assert.equal(blinded.source, "XPHB");
+		assert.deepEqual(blinded.entries, ["new"]);
+		assert.equal(concentration.kind, "status");
+		assert.equal(concentration.source, "PHB");
+	},
+);
+
+await run("reference repository returns deduped disease list", async () => {
+	const repository = createReferenceDataRepository({
+		exists: async () => true,
+		readJson: async () => ({
+			disease: [
+				{ name: "Sight Rot", source: "DMG", page: 257, entries: ["old"] },
+				{ name: "Sight Rot", source: "XDMG", page: 61, entries: ["new"] },
+				{ name: "Bluerot", source: "GoS", page: 234, entries: ["blue"] },
+			],
+		}),
+	});
+	const records = await repository.listDiseases();
+	assert.deepEqual(
+		records.map((item) => item.name),
+		["Bluerot", "Sight Rot"],
+	);
+	const sightRot = records.find((item) => item.name === "Sight Rot");
+	assert.equal(sightRot.kind, "disease");
+	assert.equal(sightRot.source, "XDMG");
+	assert.deepEqual(sightRot.entries, ["new"]);
 });
 
-await run("spells variant rules route returns rule list", async () => {
-	const originalExists = storage.exists;
-	const originalReadJson = storage.readJson;
-	const layer = spellsRouter.stack.find(
-		(item) => item.route?.path === "/variantrules",
-	);
-	assert.ok(layer);
-	const handler = layer.route.stack[0].handle;
-
-	storage.exists = async () => true;
-	storage.readJson = async () => ({
-		variantrule: [
-			{ name: "Advantage", entries: ["adv"] },
-			{ name: "Cone [Area of Effect]", entries: ["cone"] },
-		],
+await run("reference repository returns variant rule list", async () => {
+	const repository = createReferenceDataRepository({
+		exists: async () => true,
+		readJson: async () => ({
+			variantrule: [
+				{ name: "Advantage", entries: ["adv"] },
+				{ name: "Cone [Area of Effect]", entries: ["cone"] },
+			],
+		}),
 	});
-
-	try {
-		let jsonPayload = null;
-		await handler(
-			{},
-			{
-				json(value) {
-					jsonPayload = value;
-					return value;
-				},
-			},
-			(error) => {
-				throw error;
-			},
-		);
-
-		assert.ok(Array.isArray(jsonPayload));
-		assert.deepEqual(
-			jsonPayload.map((item) => item.name),
-			["Advantage", "Cone [Area of Effect]"],
-		);
-		assert.equal(jsonPayload[0].kind, "variantrule");
-		assert.deepEqual(jsonPayload[0].entries, ["adv"]);
-	} finally {
-		storage.exists = originalExists;
-		storage.readJson = originalReadJson;
-	}
+	const records = await repository.listVariantRules();
+	assert.deepEqual(
+		records.map((item) => item.name),
+		["Advantage", "Cone [Area of Effect]"],
+	);
+	assert.equal(records[0].kind, "variantrule");
+	assert.deepEqual(records[0].entries, ["adv"]);
 });
 
-await run("spells skills route returns skill list", async () => {
-	const originalExists = storage.exists;
-	const originalReadJson = storage.readJson;
-	const layer = spellsRouter.stack.find(
-		(item) => item.route?.path === "/skills",
-	);
-	assert.ok(layer);
-	const handler = layer.route.stack[0].handle;
-
-	storage.exists = async () => true;
-	storage.readJson = async () => ({
-		skill: [
-			{ name: "Medicine", ability: "wis", entries: ["med"] },
-			{ name: "Arcana", ability: "int", entries: ["arc"] },
-		],
+await run("reference repository returns skill list", async () => {
+	const repository = createReferenceDataRepository({
+		exists: async () => true,
+		readJson: async () => ({
+			skill: [
+				{ name: "Medicine", ability: "wis", entries: ["med"] },
+				{ name: "Arcana", ability: "int", entries: ["arc"] },
+			],
+		}),
 	});
-
-	try {
-		let jsonPayload = null;
-		await handler(
-			{},
-			{
-				json(value) {
-					jsonPayload = value;
-					return value;
-				},
-			},
-			(error) => {
-				throw error;
-			},
-		);
-
-		assert.ok(Array.isArray(jsonPayload));
-		assert.deepEqual(
-			jsonPayload.map((item) => item.name),
-			["Arcana", "Medicine"],
-		);
-		assert.equal(jsonPayload[0].kind, "skill");
-		assert.equal(jsonPayload[0].ability, "int");
-		assert.deepEqual(jsonPayload[0].entries, ["arc"]);
-	} finally {
-		storage.exists = originalExists;
-		storage.readJson = originalReadJson;
-	}
+	const records = await repository.listSkills();
+	assert.deepEqual(
+		records.map((item) => item.name),
+		["Arcana", "Medicine"],
+	);
+	assert.equal(records[0].kind, "skill");
+	assert.equal(records[0].ability, "int");
+	assert.deepEqual(records[0].entries, ["arc"]);
 });
 
-await run("spells senses route returns sense list", async () => {
-	const originalExists = storage.exists;
-	const originalReadJson = storage.readJson;
-	const layer = spellsRouter.stack.find(
-		(item) => item.route?.path === "/senses",
-	);
-	assert.ok(layer);
-	const handler = layer.route.stack[0].handle;
-
-	storage.exists = async () => true;
-	storage.readJson = async () => ({
-		sense: [
-			{ name: "Darkvision", source: "PHB", entries: ["old"] },
-			{ name: "Darkvision", source: "XPHB", entries: ["new"] },
-			{ name: "Blindsight", source: "PHB", entries: ["blind"] },
-		],
+await run("reference repository returns sense list", async () => {
+	const repository = createReferenceDataRepository({
+		exists: async () => true,
+		readJson: async () => ({
+			sense: [
+				{ name: "Darkvision", source: "PHB", entries: ["old"] },
+				{ name: "Darkvision", source: "XPHB", entries: ["new"] },
+				{ name: "Blindsight", source: "PHB", entries: ["blind"] },
+			],
+		}),
 	});
-
-	try {
-		let jsonPayload = null;
-		await handler(
-			{},
-			{
-				json(value) {
-					jsonPayload = value;
-					return value;
-				},
-			},
-			(error) => {
-				throw error;
-			},
-		);
-
-		assert.ok(Array.isArray(jsonPayload));
-		assert.deepEqual(
-			jsonPayload.map((item) => item.name),
-			["Blindsight", "Darkvision"],
-		);
-
-		const darkvision = jsonPayload.find((item) => item.name === "Darkvision");
-		assert.equal(darkvision.kind, "sense");
-		assert.equal(darkvision.source, "XPHB");
-		assert.deepEqual(darkvision.entries, ["new"]);
-	} finally {
-		storage.exists = originalExists;
-		storage.readJson = originalReadJson;
-	}
+	const records = await repository.listSenses();
+	assert.deepEqual(
+		records.map((item) => item.name),
+		["Blindsight", "Darkvision"],
+	);
+	const darkvision = records.find((item) => item.name === "Darkvision");
+	assert.equal(darkvision.kind, "sense");
+	assert.equal(darkvision.source, "XPHB");
+	assert.deepEqual(darkvision.entries, ["new"]);
 });
 
 await run("storage image listing and subcategory discovery", async () => {
 	await withTestSlug("images-list", async (slug) => {
 		const category = "characters";
-		const rootDir = storage.campaignImagesDir(slug, category);
-		const nestedDir = storage.campaignImagesDir(slug, category, "nested");
-		const emptyDir = storage.campaignImagesDir(slug, category, "empty");
-		await storage.ensureDir(rootDir);
-		await storage.ensureDir(nestedDir);
-		await storage.ensureDir(emptyDir);
+		const rootDir = campaignImagesDir(slug, category);
+		const nestedDir = campaignImagesDir(slug, category, "nested");
+		const emptyDir = campaignImagesDir(slug, category, "empty");
+		await ensureDir(rootDir);
+		await ensureDir(nestedDir);
+		await ensureDir(emptyDir);
 		await fs.writeFile(path.join(rootDir, "a.png"), "a", "utf8");
 		await fs.writeFile(path.join(rootDir, "b.txt"), "b", "utf8");
 		await fs.writeFile(path.join(nestedDir, "c.webp"), "c", "utf8");
 		await fs.writeFile(path.join(emptyDir, "notes.txt"), "notes", "utf8");
 
-		const rootImages = await storage.listImages(slug, category);
+		const rootImages = await listImages(slug, category);
 		assert.deepEqual(
 			rootImages.map((item) => item.name),
 			["a.png"],
@@ -4276,9 +6793,9 @@ await run("storage image listing and subcategory discovery", async () => {
 		assert.match(rootImages[0].url, /\/api\/images\//);
 		assert.equal(rootImages[0].path, path.join(category, "", "a.png"));
 
-		const subcategories = await storage.listSubcategories(slug, category);
+		const subcategories = await listSubcategories(slug, category);
 		assert.deepEqual(subcategories, ["empty", "nested"]);
-		const subcategoryMeta = await storage.listSubcategories(
+		const subcategoryMeta = await listSubcategories(
 			slug,
 			category,
 			"",
@@ -4288,7 +6805,7 @@ await run("storage image listing and subcategory discovery", async () => {
 			{ name: "empty", hasFiles: false },
 			{ name: "nested", hasFiles: true },
 		]);
-		const nestedImages = await storage.listImages(slug, category, "nested");
+		const nestedImages = await listImages(slug, category, "nested");
 		assert.deepEqual(
 			nestedImages.map((item) => item.name),
 			["c.webp"],
@@ -4297,11 +6814,11 @@ await run("storage image listing and subcategory discovery", async () => {
 });
 
 await run("storage lists readonly official bestiary token assets", async () => {
-	const rootAssets = await storage.listBestiaryTokenAssets();
+	const rootAssets = await listBestiaryTokenAssets();
 	assert.ok(rootAssets.subcategories.includes("AATM"));
 	assert.deepEqual(rootAssets.images, []);
 
-	const sourceAssets = await storage.listBestiaryTokenAssets({
+	const sourceAssets = await listBestiaryTokenAssets({
 		subcategory: "AATM",
 	});
 	assert.ok(
@@ -4310,7 +6827,7 @@ await run("storage lists readonly official bestiary token assets", async () => {
 	assert.equal(sourceAssets.images[0].readonly, true);
 	assert.match(sourceAssets.images[0].url, /^\/api\/bestiary\/tokens\/AATM\//);
 
-	const searchAssets = await storage.listBestiaryTokenAssets({
+	const searchAssets = await listBestiaryTokenAssets({
 		search: "animated coffin",
 	});
 	assert.ok(
@@ -4325,18 +6842,18 @@ await run("storage lists readonly official bestiary token assets", async () => {
 await run("storage searches image gallery locally and globally", async () => {
 	await withTestSlug("images-search-a", async (firstSlug) => {
 		await withTestSlug("images-search-b", async (secondSlug) => {
-			const firstDir = storage.campaignImagesDir(
+			const firstDir = campaignImagesDir(
 				firstSlug,
 				"maps",
 				"city/deep",
 			);
-			const secondDir = storage.campaignImagesDir(secondSlug, "props");
-			await storage.ensureDir(firstDir);
-			await storage.ensureDir(secondDir);
+			const secondDir = campaignImagesDir(secondSlug, "props");
+			await ensureDir(firstDir);
+			await ensureDir(secondDir);
 			await fs.writeFile(path.join(firstDir, "hidden-map.png"), "a", "utf8");
 			await fs.writeFile(path.join(secondDir, "hidden-prop.webp"), "b", "utf8");
 
-			const local = await storage.searchImageGalleryAssets({
+			const local = await searchImageGalleryAssets({
 				search: "hidden",
 				source: firstSlug,
 				category: "maps",
@@ -4348,7 +6865,7 @@ await run("storage searches image gallery locally and globally", async () => {
 			);
 			assert.equal(local.images[0].subcategory, "city/deep");
 
-			const global = await storage.searchImageGalleryAssets({
+			const global = await searchImageGalleryAssets({
 				search: "hidden",
 				categories: IMAGE_GALLERY_CATEGORIES.map((category) => category.id),
 			});
@@ -4366,7 +6883,7 @@ await run("storage searches image gallery locally and globally", async () => {
 				),
 			);
 
-			const official = await storage.searchImageGalleryAssets({
+			const official = await searchImageGalleryAssets({
 				search: "animated coffin",
 				categories: IMAGE_GALLERY_CATEGORIES.map((category) => category.id),
 			});
@@ -4383,15 +6900,15 @@ await run("storage searches image gallery locally and globally", async () => {
 await run("storage detects campaign images recursively", async () => {
 	await withTestSlug("campaign-has-images", async (slug) => {
 		const category = "attachments";
-		const nestedDir = storage.campaignImagesDir(slug, category, "notes/nested");
+		const nestedDir = campaignImagesDir(slug, category, "notes/nested");
 
-		assert.equal(await storage.campaignHasImages(slug), false);
+		assert.equal(await campaignHasImages(slug), false);
 
-		await storage.ensureDir(nestedDir);
-		assert.equal(await storage.campaignHasImages(slug), false);
+		await ensureDir(nestedDir);
+		assert.equal(await campaignHasImages(slug), false);
 
 		await fs.writeFile(path.join(nestedDir, "map.png"), "x", "utf8");
-		assert.equal(await storage.campaignHasImages(slug), true);
+		assert.equal(await campaignHasImages(slug), true);
 	});
 });
 
@@ -4399,12 +6916,12 @@ await run("storage renameImage handles success and collisions", async () => {
 	await withTestSlug("rename-image", async (slug) => {
 		const category = "attachments";
 		const subcategory = "folder";
-		const dir = storage.campaignImagesDir(slug, category, subcategory);
-		await storage.ensureDir(dir);
+		const dir = campaignImagesDir(slug, category, subcategory);
+		await ensureDir(dir);
 		await fs.writeFile(path.join(dir, "old.png"), "x", "utf8");
 		await fs.writeFile(path.join(dir, "existing.png"), "y", "utf8");
 
-		const result = await storage.renameImage(
+		const result = await renameImage(
 			slug,
 			category,
 			subcategory,
@@ -4413,14 +6930,14 @@ await run("storage renameImage handles success and collisions", async () => {
 		);
 		assert.match(result.oldUrl, /old\.png$/);
 		assert.match(result.newUrl, /new\.png$/);
-		assert.equal(await storage.exists(path.join(dir, "new.png")), true);
-		assert.equal(await storage.exists(path.join(dir, "old.png")), false);
+		assert.equal(await exists(path.join(dir, "new.png")), true);
+		assert.equal(await exists(path.join(dir, "old.png")), false);
 
 		await assert.rejects(() =>
-			storage.renameImage(slug, category, subcategory, "missing.png", "x.png"),
+			renameImage(slug, category, subcategory, "missing.png", "x.png"),
 		);
 		await assert.rejects(() =>
-			storage.renameImage(
+			renameImage(
 				slug,
 				category,
 				subcategory,
@@ -4436,8 +6953,8 @@ await run("storage moveImages moves files and directories", async () => {
 		const category = "characters";
 		const srcSubcategory = "src";
 		const destSubcategory = "dest";
-		const srcDir = storage.campaignImagesDir(slug, category, srcSubcategory);
-		await storage.ensureDir(path.join(srcDir, "pack", "nested"));
+		const srcDir = campaignImagesDir(slug, category, srcSubcategory);
+		await ensureDir(path.join(srcDir, "pack", "nested"));
 		await fs.writeFile(path.join(srcDir, "a.png"), "a", "utf8");
 		await fs.writeFile(
 			path.join(srcDir, "pack", "nested", "b.png"),
@@ -4445,28 +6962,28 @@ await run("storage moveImages moves files and directories", async () => {
 			"utf8",
 		);
 
-		const results = await storage.moveImages(
+		const results = await moveImages(
 			["a.png", "pack"],
 			{ slug, category, subcategory: srcSubcategory },
 			{ slug, category, subcategory: destSubcategory },
 		);
 
 		assert.equal(results.length, 2);
-		assert.equal(await storage.exists(path.join(srcDir, "a.png")), false);
-		assert.equal(await storage.exists(path.join(srcDir, "pack")), false);
+		assert.equal(await exists(path.join(srcDir, "a.png")), false);
+		assert.equal(await exists(path.join(srcDir, "pack")), false);
 		assert.equal(
-			await storage.exists(
+			await exists(
 				path.join(
-					storage.campaignImagesDir(slug, category, destSubcategory),
+					campaignImagesDir(slug, category, destSubcategory),
 					"a.png",
 				),
 			),
 			true,
 		);
 		assert.equal(
-			await storage.exists(
+			await exists(
 				path.join(
-					storage.campaignImagesDir(slug, category, destSubcategory),
+					campaignImagesDir(slug, category, destSubcategory),
 					"pack",
 					"nested",
 					"b.png",
@@ -4483,13 +7000,13 @@ await run(
 		await withTestSlug("delete-images", async (slug) => {
 			const category = "tokens";
 			const baseSubcategory = "root";
-			const baseDir = storage.campaignImagesDir(
+			const baseDir = campaignImagesDir(
 				slug,
 				category,
 				baseSubcategory,
 			);
-			await storage.ensureDir(path.join(baseDir, "dropme", "nested"));
-			await storage.ensureDir(path.join(baseDir, "extractme", "inner"));
+			await ensureDir(path.join(baseDir, "dropme", "nested"));
+			await ensureDir(path.join(baseDir, "extractme", "inner"));
 			await fs.writeFile(
 				path.join(baseDir, "dropme", "nested", "a.png"),
 				"a",
@@ -4502,25 +7019,25 @@ await run(
 				"utf8",
 			);
 
-			await storage.deleteImages(
+			await deleteImages(
 				["dropme"],
 				{ slug, category, subcategory: baseSubcategory },
 				{ extractFolderContents: false },
 			);
-			assert.equal(await storage.exists(path.join(baseDir, "dropme")), false);
+			assert.equal(await exists(path.join(baseDir, "dropme")), false);
 
-			await storage.deleteImages(
+			await deleteImages(
 				["extractme"],
 				{ slug, category, subcategory: baseSubcategory },
 				{ extractFolderContents: true },
 			);
 			assert.equal(
-				await storage.exists(path.join(baseDir, "extractme")),
+				await exists(path.join(baseDir, "extractme")),
 				false,
 			);
-			assert.equal(await storage.exists(path.join(baseDir, "b.png")), true);
+			assert.equal(await exists(path.join(baseDir, "b.png")), true);
 			assert.equal(
-				await storage.exists(path.join(baseDir, "inner", "c.png")),
+				await exists(path.join(baseDir, "inner", "c.png")),
 				true,
 			);
 		});
@@ -4532,20 +7049,20 @@ await run(
 	async () => {
 		await withTestSlug("rename-subcategory", async (slug) => {
 			const category = "attachments";
-			const root = storage.campaignImagesDir(slug, category);
-			await storage.ensureDir(path.join(root, "old"));
-			await storage.ensureDir(path.join(root, "taken"));
+			const root = campaignImagesDir(slug, category);
+			await ensureDir(path.join(root, "old"));
+			await ensureDir(path.join(root, "taken"));
 
 			await assert.rejects(() =>
-				storage.renameSubcategory(slug, category, "missing", "target"),
+				renameSubcategory(slug, category, "missing", "target"),
 			);
 			await assert.rejects(() =>
-				storage.renameSubcategory(slug, category, "old", "taken"),
+				renameSubcategory(slug, category, "old", "taken"),
 			);
 
-			await storage.renameSubcategory(slug, category, "old", "renamed");
-			assert.equal(await storage.exists(path.join(root, "renamed")), true);
-			assert.equal(await storage.exists(path.join(root, "old")), false);
+			await renameSubcategory(slug, category, "old", "renamed");
+			assert.equal(await exists(path.join(root, "renamed")), true);
+			assert.equal(await exists(path.join(root, "old")), false);
 		});
 	},
 );
@@ -4556,21 +7073,21 @@ await run(
 		await withTestSlug("ref-update", async (slug) => {
 			const category = "characters";
 			const subcategory = "players";
-			const imagesDir = storage.campaignImagesDir(slug, category, subcategory);
-			await storage.ensureDir(imagesDir);
+			const imagesDir = campaignImagesDir(slug, category, subcategory);
+			await ensureDir(imagesDir);
 			await fs.writeFile(path.join(imagesDir, "old.png"), "x", "utf8");
 
 			const oldUrl = `/api/images/${encodeURIComponent(slug)}/${encodeURIComponent(category)}/${subcategory}/old.png`;
 			const expectedNewUrl = `/api/images/${encodeURIComponent(slug)}/${encodeURIComponent(category)}/${subcategory}/new.png`;
 
-			await storage.ensureDir(path.join(storage.campaignDir(slug), "sessions"));
-			await storage.writeJson(storage.campaignMetaPath(slug), {
+			await ensureDir(path.join(campaignDir(slug), "sessions"));
+			await writeJson(campaignMetaPath(slug), {
 				id: `${slug}-id`,
 				name: "Test Campaign",
 				slug,
 				imageUrl: oldUrl,
 			});
-			await storage.writeEntity(slug, "characters", "hero", {
+			await writeEntity(slug, "characters", "hero", {
 				id: "hero-1",
 				firstName: "Hero",
 				lastName: "One",
@@ -4579,7 +7096,7 @@ await run(
 				class: "Fighter",
 				imageUrl: oldUrl,
 			});
-			await storage.writeEntity(slug, "locations", "city", {
+			await writeEntity(slug, "locations", "city", {
 				id: "city-1",
 				name: "City",
 				description: "A test location",
@@ -4587,7 +7104,7 @@ await run(
 			});
 
 			const sessionFile = "session.json";
-			await storage.writeJson(storage.sessionPath(slug, sessionFile), {
+			await writeJson(sessionPath(slug, sessionFile), {
 				id: "s1",
 				name: "Session 1",
 				createdAt: new Date().toISOString(),
@@ -4599,7 +7116,7 @@ await run(
 				},
 			});
 
-			await storage.renameImage(
+			await renameImage(
 				slug,
 				category,
 				subcategory,
@@ -4607,13 +7124,13 @@ await run(
 				"new.png",
 			);
 
-			const meta = await storage.readCampaign(slug);
+			const meta = await readCampaign(slug);
 			assert.equal(meta.imageUrl, expectedNewUrl);
-			const entities = await storage.listEntities(slug, "characters");
+			const entities = await listEntities(slug, "characters");
 			assert.equal(entities[0].imageUrl, expectedNewUrl);
-			const locations = await storage.listEntities(slug, "locations");
+			const locations = await listEntities(slug, "locations");
 			assert.equal(locations[0].imageUrl, expectedNewUrl);
-			const session = await storage.readSession(slug, sessionFile);
+			const session = await readSession(slug, sessionFile);
 			assert.equal(JSON.stringify(session).includes(expectedNewUrl), true);
 			assert.equal(JSON.stringify(session).includes(oldUrl), false);
 		});
@@ -4631,56 +7148,56 @@ await run(
 
 			const category = "characters";
 			const subcategory = "players";
-			const imagesDir = storage.campaignImagesDir(
+			const imagesDir = campaignImagesDir(
 				oldSlug,
 				category,
 				subcategory,
 			);
-			await storage.ensureDir(imagesDir);
+			await ensureDir(imagesDir);
 			await fs.writeFile(path.join(imagesDir, "hero.png"), "x", "utf8");
 
 			const oldUrl = `/api/images/${encodeURIComponent(oldSlug)}/${encodeURIComponent(category)}/${subcategory}/hero.png`;
 			const newUrl = `/api/images/${encodeURIComponent(newSlug)}/${encodeURIComponent(category)}/${subcategory}/hero.png`;
 
-			await storage.ensureDir(path.join(storage.campaignDir(oldSlug), "sessions"));
-			await storage.writeJson(storage.campaignMetaPath(oldSlug), {
+			await ensureDir(path.join(campaignDir(oldSlug), "sessions"));
+			await writeJson(campaignMetaPath(oldSlug), {
 				id: `${oldSlug}-id`,
 				name: "Old Campaign",
 				slug: oldSlug,
 				imageUrl: oldUrl,
 			});
-			await storage.writeEntity(oldSlug, "characters", "hero", {
+			await writeEntity(oldSlug, "characters", "hero", {
 				id: "hero-1",
 				firstName: "Hero",
 				imageUrl: oldUrl,
 			});
-			await storage.writeJson(storage.sessionPath(oldSlug, "session.json"), {
+			await writeJson(sessionPath(oldSlug, "session.json"), {
 				id: "session-1",
 				name: "Session",
 				data: { notes: [{ id: 1, text: oldUrl }] },
 			});
-			await storage.addAiResponse({
+			await addAiResponse({
 				id: "response-1",
 				path: { campaign: oldSlug },
 				createdAt: new Date().toISOString(),
 				text: oldUrl,
 			});
 
-			await storage.renameCampaignData(oldSlug, newSlug);
+			await renameCampaignData(oldSlug, newSlug);
 
-			assert.equal(await storage.exists(storage.campaignDir(oldSlug)), false);
-			assert.equal(await storage.exists(storage.campaignDir(newSlug)), true);
-			assert.equal(await storage.exists(path.join(storage.IMAGES_DIR, oldSlug)), false);
-			assert.equal(await storage.exists(path.join(storage.IMAGES_DIR, newSlug)), true);
+			assert.equal(await exists(campaignDir(oldSlug)), false);
+			assert.equal(await exists(campaignDir(newSlug)), true);
+			assert.equal(await exists(path.join(IMAGES_DIR, oldSlug)), false);
+			assert.equal(await exists(path.join(IMAGES_DIR, newSlug)), true);
 
-			const meta = await storage.readCampaign(newSlug);
+			const meta = await readCampaign(newSlug);
 			assert.equal(meta.imageUrl, newUrl);
-			const characters = await storage.listEntities(newSlug, "characters");
+			const characters = await listEntities(newSlug, "characters");
 			assert.equal(characters[0].imageUrl, newUrl);
-			const session = await storage.readSession(newSlug, "session.json");
+			const session = await readSession(newSlug, "session.json");
 			assert.equal(JSON.stringify(session).includes(newUrl), true);
 			assert.equal(JSON.stringify(session).includes(oldUrl), false);
-			const history = await storage.readAiResponses(newSlug);
+			const history = await readAiResponses(newSlug);
 			assert.equal(JSON.stringify(history).includes(newUrl), true);
 			assert.equal(JSON.stringify(history).includes(oldUrl), false);
 		} finally {

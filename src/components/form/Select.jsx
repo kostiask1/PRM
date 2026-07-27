@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import Icon from "../common/Icon";
 import "../../assets/components/Select.css";
-import classNames from "../../utils/classNames";
+import classNames from "../../shared/lib/classNames.js";
 
 const DROPDOWN_OFFSET = 4;
 const DROPDOWN_VIEWPORT_GAP = 8;

@@ -1,7 +1,7 @@
 import "../../assets/components/Checkbox.css";
 import Icon from "../common/Icon";
 import Tooltip from "../common/Tooltip";
-import classNames from "../../utils/classNames";
+import classNames from "../../shared/lib/classNames.js";
 
 export default function Checkbox({
 	checked,

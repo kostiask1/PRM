@@ -1,7 +1,7 @@
 import { forwardRef } from "react";
 import Icon from "../common/Icon";
 import Tooltip from "../common/Tooltip";
-import classNames from "../../utils/classNames";
+import classNames from "../../shared/lib/classNames.js";
 import "../../assets/components/Button.css";
 
 const BUTTON_SIZES = Object.freeze({

@@ -1,5 +1,5 @@
 import Button from "../form/Button";
-import { lang } from "../../services/localization";
+import { lang } from "../../shared/config/index.js";
 
 export default function BulkCollapseButton({ items = [], onChange }) {
 	const realItems = items.filter((item) => !item._isVirtual);

@@ -7,14 +7,14 @@ import {
 } from "react";
 import ReactList from "react-list";
 
-import { requestDiceRollAction } from "../../actions/app";
+import { requestDiceRollAction } from "../../shared/model/index.js";
 import questions from "../../../database/questions.json";
 import "../../assets/components/PlayerQuestionsModalContent.css";
 import Button from "../form/Button";
 import Input from "../form/Input";
-import useDebounce from "../../hooks/useDebounce";
-import { lang } from "../../services/localization";
-import { useAppDispatch, useAppSelector } from "../../store/appStore";
+import useDebounce from "../../shared/lib/useDebounce.js";
+import { lang } from "../../shared/config/index.js";
+import { useAppDispatch, useAppSelector } from "../../shared/lib/index.js";
 
 const QUESTION_ROLL_CONTEXT = "playerQuestions";
 const SCROLL_DURATION_MS = 260;

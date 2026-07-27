@@ -1,11 +1,12 @@
 import { useState } from "react";
 
-import { alert } from "../actions/app";
-import { useAppDispatch } from "../store/appStore";
-import { lang } from "../services/localization";
+import { alert } from "../shared/model/index.js";
+import { LocationCardView as LocationCard } from "../entities/campaign/ui.js";
+import { ImageAssetField } from "../features/images/index.js";
+import { useAppDispatch, useAppSelector } from "../shared/lib/index.js";
+import { lang } from "../shared/config/index.js";
 import Button from "./form/Button";
 import Modal from "./common/Modal";
-import LocationCard from "./LocationCard";
 import {
 	buildCreateEntityPayload,
 	submitCreateEntity,
@@ -36,6 +37,9 @@ export default function CreateLocationButton({
 	onCreate = null,
 }) {
 	const dispatch = useAppDispatch();
+	const simplifiedNotesEnabled = useAppSelector(
+		(state) => state.ui.simplifiedNotes,
+	);
 	const [isOpen, setIsOpen] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [draft, setDraft] = useState(() => createEmptyDraft());
@@ -128,6 +132,8 @@ export default function CreateLocationButton({
 							viewMode="modal"
 							showDeleteButton={false}
 							showHeader={false}
+							ImageAssetFieldComponent={ImageAssetField}
+							simplifiedNotesEnabled={simplifiedNotesEnabled}
 						/>
 						<div className="CreateCharacterModal__actions">
 							<Button

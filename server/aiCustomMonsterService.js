@@ -1,4 +1,7 @@
-const storage = require("./storage");
+const crypto = require("crypto");
+const {
+	CUSTOM_BESTIARY_SOURCE,
+} = require("./domains/bestiary/customBestiaryRepository");
 const {
 	coerceAiText: asText,
 	sanitizeAiName: sanitizeMonsterName,
@@ -142,9 +145,9 @@ function normalizeCustomMonster(raw) {
 	if (!name) return null;
 
 	const monster = {
-		id: asText(raw.id) || storage.createId(),
+		id: asText(raw.id) || crypto.randomUUID(),
 		name,
-		source: storage.CUSTOM_BESTIARY_SOURCE || "CUSTOM",
+		source: CUSTOM_BESTIARY_SOURCE,
 		size: normalizeMonsterSize(raw.size),
 		type: normalizeMonsterTypedObject(raw.type),
 		alignment: normalizeMonsterStringArray(raw.alignment).length

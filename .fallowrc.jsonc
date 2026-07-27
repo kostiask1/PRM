@@ -1,4 +1,7 @@
 {
 	// Registered at runtime from src/main.jsx via navigator.serviceWorker.register.
-	"dynamicallyLoaded": ["public/service-worker.js"]
+	"dynamicallyLoaded": ["public/service-worker.js"],
+	"boundaries": {
+		"preset": "feature-sliced"
+	}
 }
