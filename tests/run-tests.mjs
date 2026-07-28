@@ -3594,9 +3594,7 @@ await run(
 			source,
 			/export type \{ EditableFieldChangeEvent \} from "\.\/editorPresentation\.ts"/,
 		);
-		const callStart = source.indexOf(
-			"onChange?.(\n\t\t\t\tcreateEditableFieldChangeEvent(",
-		);
+		const callStart = source.indexOf("onChange?.(");
 		assert.notEqual(callStart, -1);
 		const callEnd = source.indexOf(");", callStart);
 		const call = source.slice(callStart, callEnd);
@@ -43757,7 +43755,10 @@ await run(
 			false,
 		);
 		assert.match(editableFieldSource, /enableHistory = true/);
-		assert.match(editableFieldSource, /\{enableHistory && <HistoryPlugin \/>}/);
+		assert.match(
+			editableFieldSource,
+			/\{presentation\.showHistory && <HistoryPlugin \/>}/,
+		);
 		assert.match(editableFieldSource, /data-app-history-shortcuts/);
 		assert.match(editableFieldSource, /getEditableKeyDownPlan/);
 		assert.match(campaignHookSource, /shouldUseAppHistoryForEvent/);

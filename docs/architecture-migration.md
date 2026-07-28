@@ -633,9 +633,8 @@ Current checkpoint:
 
 Next:
 
-- Phase 119 implementation is ready but its required full regression gate remains pending. Node-safe `getLexicalEditableFieldViewPresentation` now projects strict textarea aria/rich-plugin visibility, raw history visibility with `undefined`/`"true"` data markers, and disabled tab index into a fresh result. Its staged matrix covers text/textarea/unknown modes, enabled/disabled states, raw truthy/falsy history values, shared textarea projection, exact keys, and fresh identity. Private same-file `LexicalEditableFieldView` owns only ContentEditable and plugin composition. The behavior controller retains editor access, command registration, focus/blur/click/input/key/paste/mouse callbacks, DOM/mention lookup, modal/hover effects, refs, and dependencies; mouse leave still allocates a fresh null hover state per call. The view preserves ContentEditable class, attribute, and handler order plus plugin order `EditorContentPlugin → conditional HistoryPlugin → MarkdownValuePlugin → MarkdownChangePlugin → EditableStatePlugin → conditional ListPlugin then MarkdownShortcutPlugin`. A source contract locks both ownership halves and confirms neither private view nor presentation policy enters runtime/type barrels. Typecheck, syntax, lint and UTF-8 validation across 214 files, architecture boundaries/cycles/dead code, diff hygiene, replacement-character checks, and focused Fallow analysis pass; Fallow reports zero findings for the former CC 5/cognitive 4/CRAP 30 component, private view, and policy without suppressions. The full `npm test` run was rejected before execution because the environment exhausted its approval-usage allowance, so Phase 119 must not be marked completed until that exact gate passes.
-- Finish Phase 119 by running the unchanged full `npm test` gate when the environment permits it; retain the last proven baseline of 385 passing tests from Phase 118 and do not infer the two new Phase 119 tests passed from static checks.
-- After Phase 119 is proven, start Phase 120 by splitting the outer `EditableField` behavior controller from a private root view and extracting its remaining derived-value decisions into focused Node-safe/private policies. Cover raw markdown-value projection, disabled/read-only projection, field/mention tooltip selection, campaign-slug fallback with lazy URL parsing, timeout cleanup, mention-hover state equality, copy-button visibility/icon, and tooltip disabling without moving store/context/editor/modal/clipboard effects.
+- Completed Phase 119. Node-safe `getLexicalEditableFieldViewPresentation` now projects strict textarea aria/rich-plugin visibility, raw history visibility with `undefined`/`"true"` data markers, and disabled tab index into a fresh result. Its matrix covers text/textarea/unknown modes, enabled/disabled states, raw truthy/falsy history values, shared textarea projection, exact keys, and fresh identity. Private same-file `LexicalEditableFieldView` owns only ContentEditable and plugin composition. The behavior controller retains editor access, command registration, focus/blur/click/input/key/paste/mouse callbacks, DOM/mention lookup, modal/hover effects, refs, and dependencies; mouse leave still allocates a fresh null hover state per call. The view preserves ContentEditable class, attribute, and handler order plus plugin order `EditorContentPlugin → conditional HistoryPlugin → MarkdownValuePlugin → MarkdownChangePlugin → EditableStatePlugin → conditional ListPlugin then MarkdownShortcutPlugin`. The full `npm test` gate exposed two aggregate source assertions that still described the pre-Phase-119 inline conditions; those contracts now follow the presentation owner without relaxing runtime behavior. The complete suite passes at 398 tests, closing the Phase 119 regression gate.
+- Start Phase 120 by splitting the outer `EditableField` behavior controller from a private root view and extracting its remaining derived-value decisions into focused Node-safe/private policies. Cover raw markdown-value projection, disabled/read-only projection, field/mention tooltip selection, campaign-slug fallback with lazy URL parsing, timeout cleanup, mention-hover state equality, copy-button visibility/icon, and tooltip disabling without moving store/context/editor/modal/clipboard effects.
 - Preserve the outer container spread/class/style and stop-event behavior; copy button order/props and exact `normalizedMarkdownValue && showCopyButton` truthiness; copied check/copy icon; Tooltip content/disabled/class/anchor; LexicalComposer key/config; EditorRefPlugin then LexicalEditableField prop order and identities; and EntityModal placement. Preserve `value || value === 0` precedence and String timing, `disabled || readOnly`, string-title trim gating, mention tooltip before field title, null anchor fallback, truthy campaign slug before lazy `parseUrl().campaign`, timeout cleanup reads, current-tooltip identity reuse, and all hook dependencies/error boundaries. Stage policy matrices and controller/view source contracts, then remove the final aggregate `EditableField` CC 9/cognitive 7/CRAP 90 finding without suppressions.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
@@ -643,8 +642,8 @@ Next:
 ## Selective recovery after Phase 119
 
 This recovery track does not renumber or rewrite the Phase 0-119 history above.
-Phase 119 still has a pending full regression gate, and Phase 120 remains the
-next numbered migration phase after that gate succeeds.
+Phase 119 passed its full regression gate at 398 tests. Phase 120 is the next
+numbered migration phase.
 
 ### Provenance and transfer rule
 
@@ -688,7 +687,7 @@ Status: **Complete**
 
 ### Recovery R1 — Read lifecycle and performance
 
-Status: **Implementation complete; full regression gate pending**
+Status: **Complete**
 
 - [x] Forward native request options through Bestiary, spell, reference,
   campaign, and session read APIs.
@@ -717,7 +716,7 @@ Status: **Complete**
 
 ### Recovery R3 — Canonical Bestiary AI history
 
-Status: **Implementation complete; full regression gate pending**
+Status: **Complete**
 
 - [x] Read the canonical Bestiary AI-history path first.
 - [x] If only legacy history exists, normalize it and attempt one canonical
@@ -759,8 +758,8 @@ Status: **In progress**
   syntax/diff hygiene, and UTF-8/replacement-character checks.
 - [ ] Run the complete lint and typecheck gates after the declared local
   tooling dependencies are available.
-- [ ] Run the full `npm test` gate when the environment permits it; this also
-  closes the independently pending Phase 119 gate.
+- [x] Run the full `npm test` gate; all 398 tests pass and the independently
+  pending Phase 119 gate is closed.
 
 ### Recovery R6 — Typed app-owned store composition
 
