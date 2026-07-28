@@ -989,11 +989,14 @@ const {
 	createBackupCommands,
 	parseArchivePayload,
 } = require("../server/modules/backups/application/backupCommands.js");
+const archiveRequestSchemas = require(
+	"../server/modules/backups/http/archiveRequestSchemas.js",
+);
 const {
 	validateCampaignArchiveEnvelope,
 	validateCampaignBundleCollection,
 	validatePartialArchiveBundle,
-} = require("../server/modules/backups/http/archiveRequestSchemas.js");
+} = archiveRequestSchemas;
 const {
 	validateCampaignCreate,
 	validateCampaignPatch,
@@ -1299,7 +1302,7 @@ await run(
 
 await run(
 	"recovered import boundaries reject deep and transport imports",
-	() => {
+	async () => {
 		const lintImports = (source, patterns) => {
 			const linter = new Linter({ configType: "flat" });
 			return linter.verify(source, {
@@ -1354,6 +1357,11 @@ await run(
 				REFERENCE_LOADER_IMPORT_PATTERNS,
 			),
 			[],
+		);
+		const eslintSource = await fs.readFile("eslint.config.js", "utf8");
+		assert.match(
+			eslintSource,
+			/group: \[\s*'\*\*\/entities\/reference\/api\/\*',\s*'\*\*\/entities\/reference\/model\/\*',\s*\]/,
 		);
 	},
 );
@@ -17054,9 +17062,21 @@ await run(
 		]);
 
 		const invalidMoves = [
-			["characters", "characters", "Entity can only be moved"],
-			["npc", "npc", "Entity can only be moved"],
-			["locations", "npc", "Entity can only be moved"],
+			[
+				"characters",
+				"characters",
+				"Entity can only be moved between characters and NPC.",
+			],
+			[
+				"npc",
+				"npc",
+				"Entity can only be moved between characters and NPC.",
+			],
+			[
+				"locations",
+				"npc",
+				"Entity can only be moved between characters and NPC.",
+			],
 			["unknown", "npc", "Unknown entity type."],
 			["npc", "unknown", "Unknown entity type."],
 		];
@@ -17068,7 +17088,7 @@ await run(
 					entitySlug: "entity",
 					targetType,
 				}),
-				(error) => error.status === 400 && error.message.includes(message),
+				(error) => error.status === 400 && error.message === message,
 			);
 		}
 		assert.equal(
@@ -29399,6 +29419,34 @@ await run("Bestiary browser policies preserve identity filtering and custom impo
 		["detailed", favoriteBear, filterSearch],
 	]);
 	assert.deepEqual(filterInput, [goblin, dragon, favoriteBear]);
+	const nulNameMonster = {
+		name: "Hydra\u0000",
+		source: "MM",
+	};
+	const favoriteCollisionOptions = {
+		selectedSources: ["MM"],
+		sourceFilter: "all",
+		onlyFavorites: true,
+		favorites: [{ name: "Hydra", source: "\u0000MM" }],
+		search: "",
+		isDetailedSearch: false,
+		matchesDetailedSearch: () => true,
+		matchesSimpleSearch: () => true,
+	};
+	assert.deepEqual(
+		filterBestiaryMonsters(
+			[nulNameMonster],
+			favoriteCollisionOptions,
+		),
+		[],
+	);
+	assert.deepEqual(
+		filterBestiaryMonsters([nulNameMonster], {
+			...favoriteCollisionOptions,
+			favorites: [{ name: "Hydra\u0000", source: "MM" }],
+		}),
+		[nulNameMonster],
+	);
 	let emptySelectionMatcherCalls = 0;
 	assert.deepEqual(
 		filterBestiaryMonsters([dragon], {
@@ -31102,6 +31150,92 @@ await run("rules reference modal orchestration plans preserve request, load, and
 		},
 	);
 });
+
+await run(
+	"rules reference modal load effects require active request identity",
+	async () => {
+		const source = await fs.readFile(
+			"src/widgets/rules-reference-modal/ui/RulesReferenceModalContent.tsx",
+			"utf8",
+		);
+		const loadStart = source.indexOf(
+			"const loadItems = async (tab: ReferenceTab) =>",
+		);
+		const loadEnd = source.indexOf(
+			"tabsToLoad.forEach((tab) =>",
+			loadStart,
+		);
+		assert.notEqual(loadStart, -1);
+		assert.notEqual(loadEnd, -1);
+		const loadItems = source.slice(loadStart, loadEnd);
+		const lifecycleTokens = [
+			"const controller = new AbortController()",
+			"const isCurrentRequest = () =>",
+			"requestControllersRef.current.get(tab.id) === controller",
+			"requestControllersRef.current.set(tab.id, controller)",
+			"requestedTabsRef.current.add(tab.id)",
+			"setLoadingByTab((current) =>",
+			"const list = await tab.load({ signal: controller.signal })",
+			"!isMountedRef.current",
+			"controller.signal.aborted",
+			"!isCurrentRequest()",
+			"runWhenMounted(isMountedRef, () =>",
+			"} catch (error: unknown)",
+			"if (isAbortError(error)) return",
+			"!isMountedRef.current",
+			"controller.signal.aborted",
+			"!isCurrentRequest()",
+			"requestedTabsRef.current.delete(tab.id)",
+			"dispatch(",
+			"} finally {",
+			"const ownsRequest = isCurrentRequest()",
+			"if (ownsRequest)",
+			"requestControllersRef.current.delete(tab.id)",
+			"ownsRequest &&",
+			"isMountedRef.current &&",
+			"!controller.signal.aborted",
+			"setLoadingByTab((current) =>",
+			"[tab.id]: false",
+		];
+		let previousIndex = -1;
+		for (const token of lifecycleTokens) {
+			const index = loadItems.indexOf(token, previousIndex + 1);
+			assert.ok(
+				index > previousIndex,
+				`${token} must retain active reference-request order`,
+			);
+			previousIndex = index;
+		}
+		assert.equal(
+			(
+				loadItems.match(
+					/requestControllersRef\.current\.get\(tab\.id\)/g,
+				) ?? []
+			).length,
+			1,
+		);
+		assert.equal(
+			(loadItems.match(/isCurrentRequest\(\)/g) ?? []).length,
+			3,
+		);
+		assert.equal(
+			(
+				loadItems.match(
+					/requestedTabsRef\.current\.delete\(tab\.id\)/g,
+				) ?? []
+			).length,
+			1,
+		);
+		assert.equal(
+			(
+				loadItems.match(
+					/requestControllersRef\.current\.delete\(tab\.id\)/g,
+				) ?? []
+			).length,
+			1,
+		);
+	},
+);
 
 await run("rules reference modal plans reconcile selections and consume scroll requests", () => {
 	assert.deepEqual(getReferenceHistoryAvailability(-1, 3), {
@@ -45048,12 +45182,53 @@ await run("request validation rejects unsafe import payloads", () => {
 				(issue) => issue.path === "body.sessions",
 			),
 	);
+	const tolerantImageRows = [
+		null,
+		{},
+		[],
+		{ relativePath: "", base64: null },
+		{ relativePath: "tokens/hero.png", base64: [100, 101] },
+	];
+	const tolerantArchive = {
+		bundle: campaignBundle,
+		images: tolerantImageRows,
+	};
+	assert.equal(
+		assertValidRequest(
+			tolerantArchive,
+			validateCampaignArchiveEnvelope,
+		),
+		tolerantArchive,
+	);
+	const tolerantArchiveEnvelope = {
+		version: 2,
+		campaigns: [tolerantArchive],
+	};
+	assert.equal(
+		assertValidRequest(
+			tolerantArchiveEnvelope,
+			validateCampaignArchiveEnvelope,
+		),
+		tolerantArchiveEnvelope,
+	);
+	const tolerantPartialArchive = {
+		bundle: campaignBundle,
+		sections: ["images"],
+		images: tolerantImageRows,
+	};
+	assert.equal(
+		assertValidRequest(
+			tolerantPartialArchive,
+			validatePartialArchiveBundle,
+		),
+		tolerantPartialArchive,
+	);
 	assert.throws(
 		() =>
 			assertValidRequest(
 				{
 					bundle: campaignBundle,
-					images: [{ relativePath: "", base64: null }],
+					images: {},
 				},
 				validateCampaignArchiveEnvelope,
 			),
@@ -45061,10 +45236,8 @@ await run("request validation rejects unsafe import payloads", () => {
 			error instanceof RequestValidationError &&
 			error.details.some(
 				(issue) =>
-					issue.path === "body.images[0].relativePath",
-			) &&
-			error.details.some(
-				(issue) => issue.path === "body.images[0].base64",
+					issue.path === "body.images" &&
+					issue.code === "invalid_type",
 			),
 	);
 	assert.throws(
@@ -45081,6 +45254,11 @@ await run("request validation rejects unsafe import payloads", () => {
 			error instanceof RequestValidationError &&
 			error.details[0]?.code === "invalid_enum",
 	);
+	assert.deepEqual(Object.keys(archiveRequestSchemas).sort(), [
+		"validateCampaignArchiveEnvelope",
+		"validateCampaignBundleCollection",
+		"validatePartialArchiveBundle",
+	]);
 });
 
 await run(
@@ -45172,8 +45350,12 @@ await run(
 			"invalid_string",
 		);
 		assert.equal(
-			validateEntityMove({ targetType: "locations" })[0]?.code,
-			"invalid_enum",
+			validateEntityMove({ targetType: "locations" }).length,
+			0,
+		);
+		assert.equal(
+			validateEntityMove(null)[0]?.code,
+			"invalid_type",
 		);
 		assert.equal(
 			validateReorderRequest({ orders: { alpha: -1 } })[0]?.code,
@@ -45225,7 +45407,6 @@ await run(
 
 		const invalidRequests = [
 			[campaignCreateRoute, {}],
-			[campaignMoveRoute, { targetType: "locations" }],
 			[campaignReorderRoute, { orders: { alpha: -1 } }],
 			[sessionPatchRoute, { data: [] }],
 			[sessionReorderRoute, { orders: null }],
@@ -45242,6 +45423,51 @@ await run(
 			assert.ok(validationError instanceof RequestValidationError);
 			assert.equal(validationError.code, "INVALID_REQUEST");
 		}
+
+		let bodyReads = 0;
+		let moveValidationError = null;
+		campaignMoveRoute.route.stack[0].handle(
+			{
+				params: { type: "unknown" },
+				get body() {
+					bodyReads += 1;
+					throw new Error("invalid source type must not read the body");
+				},
+			},
+			{},
+			(error) => {
+				moveValidationError = error || null;
+			},
+		);
+		assert.equal(bodyReads, 0);
+		assert.equal(moveValidationError?.status, 400);
+		assert.equal(moveValidationError?.message, "Unknown entity type.");
+
+		const moveBody = { targetType: "locations" };
+		const validMoveRequest = {
+			params: { type: "npc" },
+			body: moveBody,
+		};
+		let validMoveError = Symbol("not-called");
+		campaignMoveRoute.route.stack[0].handle(
+			validMoveRequest,
+			{},
+			(error) => {
+				validMoveError = error;
+			},
+		);
+		assert.equal(validMoveError, undefined);
+		assert.equal(validMoveRequest.validatedBody, moveBody);
+
+		let invalidMoveBodyError = null;
+		campaignMoveRoute.route.stack[0].handle(
+			{ params: { type: "characters" }, body: null },
+			{},
+			(error) => {
+				invalidMoveBodyError = error || null;
+			},
+		);
+		assert.ok(invalidMoveBodyError instanceof RequestValidationError);
 	},
 );
 

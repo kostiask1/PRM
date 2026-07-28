@@ -98,33 +98,7 @@ function validateCampaignBundle(value, path = "body") {
 }
 
 function validateArchiveImages(value, path, issues) {
-	if (!validateOptionalArray(value, path, issues)) return;
-	if (!Array.isArray(value)) return;
-	value.forEach((file, index) => {
-		const filePath = `${path}[${index}]`;
-		if (!requireObject(file, filePath, issues)) return;
-		if (
-			typeof file.relativePath !== "string" ||
-			!file.relativePath.trim()
-		) {
-			issues.push(
-				validationIssue(
-					`${filePath}.relativePath`,
-					"Image relativePath is required.",
-					"required",
-				),
-			);
-		}
-		if (typeof file.base64 !== "string" || !file.base64) {
-			issues.push(
-				validationIssue(
-					`${filePath}.base64`,
-					"Image base64 content is required.",
-					"required",
-				),
-			);
-		}
-	});
+	validateOptionalArray(value, path, issues);
 }
 
 function validateCampaignArchiveBundle(value, path = "archive") {
@@ -224,10 +198,7 @@ function validatePartialArchiveBundle(value, path = "archive") {
 }
 
 module.exports = {
-	PARTIAL_ARCHIVE_SECTIONS,
-	campaignBundlesFromEnvelope,
 	validateCampaignArchiveEnvelope,
-	validateCampaignBundle,
 	validateCampaignBundleCollection,
 	validatePartialArchiveBundle,
 };

@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const storage = require("../storage");
 const {
+	CAMPAIGN_ENTITY_TYPES,
 	createCampaignEntityCommands,
 } = require("../modules/campaign/application/campaignEntityCommands");
 const {
@@ -30,6 +31,17 @@ const campaignEntityCommands = createCampaignEntityCommands(
 const campaignCommands = createCampaignCommands(
 	createFileCampaignRepository(storage),
 );
+const validateEntityMoveBody = validateBody(validateEntityMove);
+
+function validateEntityMoveRequest(req, _res, next) {
+	if (CAMPAIGN_ENTITY_TYPES.includes(req.params.type)) {
+		validateEntityMoveBody(req, _res, next);
+		return;
+	}
+	const error = new Error("Unknown entity type.");
+	error.status = 400;
+	next(error);
+}
 
 router.get("/", async (req, res, next) => {
 	try {
@@ -174,7 +186,7 @@ router.delete("/:slug/entities/:type/:entitySlug", async (req, res, next) => {
 
 router.post(
 	"/:slug/entities/:type/:entitySlug/move",
-	validateBody(validateEntityMove),
+	validateEntityMoveRequest,
 	async (req, res, next) => {
 		try {
 			const { slug: campaignSlug, type, entitySlug } = req.params;

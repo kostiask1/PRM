@@ -7,8 +7,6 @@ const {
 	validateOrderMap,
 } = require("../../../http/requestSchemaUtils");
 
-const MOVABLE_ENTITY_TYPES = ["characters", "npc"];
-
 function validateCampaignCreate(value, path = "body") {
 	const issues = [];
 	if (!requireObject(value, path, issues)) return issues;
@@ -34,16 +32,7 @@ function validateCampaignPatch(value, path = "body") {
 
 function validateEntityMove(value, path = "body") {
 	const issues = [];
-	if (!requireObject(value, path, issues)) return issues;
-	if (!MOVABLE_ENTITY_TYPES.includes(value.targetType)) {
-		issues.push(
-			validationIssue(
-				`${path}.targetType`,
-				"targetType must be characters or npc.",
-				"invalid_enum",
-			),
-		);
-	}
+	requireObject(value, path, issues);
 	return issues;
 }
 

@@ -154,7 +154,10 @@ export default [
             message: 'Import the encounter entity through entities/encounter/index.js.',
           },
           {
-            group: ['**/entities/reference/model/*'],
+            group: [
+              '**/entities/reference/api/*',
+              '**/entities/reference/model/*',
+            ],
             message: 'Import the reference entity through entities/reference/index.js.',
           },
           {

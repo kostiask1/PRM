@@ -344,12 +344,20 @@ export default function RulesReferenceModalContent({
 
 		const loadItems = async (tab: ReferenceTab) => {
 			const controller = new AbortController();
+			const isCurrentRequest = () =>
+				requestControllersRef.current.get(tab.id) === controller;
 			requestControllersRef.current.set(tab.id, controller);
 			requestedTabsRef.current.add(tab.id);
 			setLoadingByTab((current) => ({ ...current, [tab.id]: true }));
 			try {
 				const list = await tab.load({ signal: controller.signal });
-				if (!isMountedRef.current || controller.signal.aborted) return;
+				if (
+					!isMountedRef.current ||
+					controller.signal.aborted ||
+					!isCurrentRequest()
+				) {
+					return;
+				}
 				runWhenMounted(isMountedRef, () => {
 					const normalizedList = normalizeReferenceList(list) as UiReferenceItem[];
 					setItemsByTab((current) => ({
@@ -362,6 +370,13 @@ export default function RulesReferenceModalContent({
 				});
 			} catch (error: unknown) {
 				if (isAbortError(error)) return;
+				if (
+					!isMountedRef.current ||
+					controller.signal.aborted ||
+					!isCurrentRequest()
+				) {
+					return;
+				}
 				requestedTabsRef.current.delete(tab.id);
 				runWhenMounted(isMountedRef, () => {
 					dispatch(
@@ -372,10 +387,15 @@ export default function RulesReferenceModalContent({
 					);
 				});
 			} finally {
-				if (requestControllersRef.current.get(tab.id) === controller) {
+				const ownsRequest = isCurrentRequest();
+				if (ownsRequest) {
 					requestControllersRef.current.delete(tab.id);
 				}
-				if (isMountedRef.current && !controller.signal.aborted) {
+				if (
+					ownsRequest &&
+					isMountedRef.current &&
+					!controller.signal.aborted
+				) {
 					setLoadingByTab((current) => ({
 						...current,
 						[tab.id]: false,

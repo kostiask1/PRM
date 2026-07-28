@@ -1428,7 +1428,7 @@ function getBestiaryFilterIdentityKey(
 ): string | null {
 	const name = normalizeMonsterName(monster.name);
 	if (!name) return null;
-	return `${name}\u0000${normalizeMonsterSource(monster.source)}`;
+	return JSON.stringify([name, normalizeMonsterSource(monster.source)]);
 }
 
 function createBestiaryFavoriteSet(
