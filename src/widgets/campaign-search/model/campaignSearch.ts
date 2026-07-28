@@ -1,6 +1,11 @@
-import { makeDomId } from "../../../shared/lib/index.js";
+import {
+	makeDomId,
+	mapWithConcurrency,
+} from "../../../shared/lib/index.js";
 
 export const CAMPAIGN_SEARCH_FILTERS = ["notes", "scenes", "npc", "locations"] as const;
+export const CAMPAIGN_SEARCH_RESULT_LIMIT = 80;
+export const CAMPAIGN_SEARCH_SESSION_LOAD_CONCURRENCY = 6;
 export type CampaignSearchFilter = (typeof CAMPAIGN_SEARCH_FILTERS)[number];
 
 export interface CampaignSearchTarget {
@@ -57,9 +62,17 @@ export type CampaignSearchTranslate = (
 ) => string;
 
 export interface CampaignSearchApi {
-	getEntities(slug: string, type: string): Promise<unknown>;
-	listSessions(slug: string): Promise<unknown>;
-	getSession(slug: string, fileName: string): Promise<unknown>;
+	getEntities(
+		slug: string,
+		type: string,
+		options?: RequestInit,
+	): Promise<unknown>;
+	listSessions(slug: string, options?: RequestInit): Promise<unknown>;
+	getSession(
+		slug: string,
+		fileName: string,
+		options?: RequestInit,
+	): Promise<unknown>;
 }
 
 function asRecord(value: unknown): CampaignSearchRecord {
@@ -287,9 +300,32 @@ function appendCampaignSearchSceneNotes(
 	}));
 }
 
-export function filterCampaignSearchResults(index: CampaignSearchResult[], query: unknown, activeFilters: ReadonlySet<CampaignSearchFilter>, limit = 80): CampaignSearchResult[] {
+export function filterCampaignSearchResults(
+	index: CampaignSearchResult[],
+	query: unknown,
+	activeFilters: ReadonlySet<CampaignSearchFilter>,
+	limit = CAMPAIGN_SEARCH_RESULT_LIMIT,
+): CampaignSearchResult[] {
 	const normalizedQuery = normalizeCampaignSearchText(query);
-	return index.filter((item) => activeFilters.has(item.filter)).filter((item) => !normalizedQuery || item.searchText.includes(normalizedQuery)).slice(0, limit);
+	if (!Number.isFinite(limit) || limit < 0) {
+		return index
+			.filter((item) => activeFilters.has(item.filter))
+			.filter(
+				(item) =>
+					!normalizedQuery || item.searchText.includes(normalizedQuery),
+			)
+			.slice(0, limit);
+	}
+	const cappedLimit = Math.trunc(limit);
+	if (cappedLimit === 0) return [];
+	const results: CampaignSearchResult[] = [];
+	for (const item of index) {
+		if (!activeFilters.has(item.filter)) continue;
+		if (normalizedQuery && !item.searchText.includes(normalizedQuery)) continue;
+		results.push(item);
+		if (results.length >= cappedLimit) break;
+	}
+	return results;
 }
 
 export function toggleCampaignSearchFilter(active: ReadonlySet<CampaignSearchFilter>, filter: CampaignSearchFilter): Set<CampaignSearchFilter> {
@@ -300,11 +336,32 @@ export function toggleCampaignSearchFilter(active: ReadonlySet<CampaignSearchFil
 }
 
 export async function loadCampaignSearchIndex(
-	options: { campaign: CampaignSearchCampaign; currentData?: CampaignSearchCampaign | null; api: CampaignSearchApi; translate: CampaignSearchTranslate },
+	options: {
+		campaign: CampaignSearchCampaign;
+		currentData?: CampaignSearchCampaign | null;
+		api: CampaignSearchApi;
+		translate: CampaignSearchTranslate;
+		requestOptions?: RequestInit;
+	},
 ): Promise<CampaignSearchResult[]> {
-	const { campaign, currentData, api, translate } = options;
-	const sources = await loadCampaignSearchSources(campaign.slug, api);
-	const details = await hydrateCampaignSearchSessions(campaign.slug, sources.rawSessions, api);
+	const {
+		campaign,
+		currentData,
+		api,
+		translate,
+		requestOptions = {},
+	} = options;
+	const sources = await loadCampaignSearchSources(
+		campaign.slug,
+		api,
+		requestOptions,
+	);
+	const details = await hydrateCampaignSearchSessions(
+		campaign.slug,
+		sources.rawSessions,
+		api,
+		requestOptions,
+	);
 	return buildCampaignSearchIndex({
 		campaign: mergeCampaignSearchCampaign(campaign, currentData),
 		entities: {
@@ -329,6 +386,7 @@ export interface CampaignSearchLoadExecutionOptions {
 	translate: CampaignSearchTranslate;
 	unknownErrorMessage: string;
 	isCancelled: () => boolean;
+	requestOptions?: RequestInit;
 	effects: CampaignSearchLoadEffects;
 }
 
@@ -364,12 +422,13 @@ interface CampaignSearchSources {
 async function loadCampaignSearchSources(
 	campaignSlug: string,
 	api: CampaignSearchApi,
+	requestOptions: RequestInit,
 ): Promise<CampaignSearchSources> {
 	const [characters, npc, locations, rawSessions] = await Promise.all([
-		api.getEntities(campaignSlug, "characters"),
-		api.getEntities(campaignSlug, "npc"),
-		api.getEntities(campaignSlug, "locations"),
-		api.listSessions(campaignSlug),
+		api.getEntities(campaignSlug, "characters", requestOptions),
+		api.getEntities(campaignSlug, "npc", requestOptions),
+		api.getEntities(campaignSlug, "locations", requestOptions),
+		api.listSessions(campaignSlug, requestOptions),
 	]);
 	return { characters, npc, locations, rawSessions };
 }
@@ -378,11 +437,14 @@ async function hydrateCampaignSearchSession(
 	campaignSlug: string,
 	session: CampaignSearchRecord,
 	api: CampaignSearchApi,
+	requestOptions: RequestInit,
 ): Promise<CampaignSearchSession> {
 	const fileName = stringifyTruthyCampaignSearchValue(session.fileName);
 	return {
 		...session,
-		detail: asRecord(await api.getSession(campaignSlug, fileName)),
+		detail: asRecord(
+			await api.getSession(campaignSlug, fileName, requestOptions),
+		),
 	};
 }
 
@@ -390,9 +452,20 @@ async function hydrateCampaignSearchSessions(
 	campaignSlug: string,
 	rawSessions: unknown,
 	api: CampaignSearchApi,
+	requestOptions: RequestInit,
 ): Promise<CampaignSearchSession[]> {
 	const sessions = normalizeCampaignSearchRecords(rawSessions);
-	return Promise.all(sessions.map((session) => hydrateCampaignSearchSession(campaignSlug, session, api)));
+	return mapWithConcurrency(
+		sessions,
+		CAMPAIGN_SEARCH_SESSION_LOAD_CONCURRENCY,
+		(session) =>
+			hydrateCampaignSearchSession(
+				campaignSlug,
+				session,
+				api,
+				requestOptions,
+			),
+	);
 }
 
 function mergeCampaignSearchCampaign(

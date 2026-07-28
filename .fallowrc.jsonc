@@ -1,9 +1,9 @@
 {
-	// Registered at runtime from src/main.jsx via navigator.serviceWorker.register.
+	// Registered at runtime from src/main.tsx via navigator.serviceWorker.register.
 	"dynamicallyLoaded": ["public/service-worker.js"],
 	"boundaries": {
 		"zones": [
-			{ "name": "app", "patterns": ["src/app/**", "src/App.jsx", "src/main.jsx"] },
+			{ "name": "app", "patterns": ["src/app/**", "src/App.tsx", "src/main.tsx"] },
 			{ "name": "pages", "patterns": ["src/pages/**"] },
 			{ "name": "widgets", "patterns": ["src/widgets/**"] },
 			{ "name": "features", "patterns": ["src/features/**"] },

@@ -13,6 +13,15 @@ const {
 const {
 	createFileCampaignRepository,
 } = require("../modules/campaign/infrastructure/fileCampaignRepository");
+const {
+	validateCampaignCreate,
+	validateCampaignPatch,
+	validateEntityMove,
+	validateReorderRequest,
+} = require("../modules/campaign/http/campaignRequestSchemas");
+const {
+	validateBody,
+} = require("../http/requestValidation");
 
 const campaignEntityRepository = createFileCampaignEntityRepository(storage);
 const campaignEntityCommands = createCampaignEntityCommands(
@@ -30,26 +39,40 @@ router.get("/", async (req, res, next) => {
 	}
 });
 
-router.post("/", async (req, res, next) => {
-	try {
-		res.status(201).json(await campaignCommands.create({ payload: req.body }));
-	} catch (error) {
-		next(error);
-	}
-});
+router.post(
+	"/",
+	validateBody(validateCampaignCreate),
+	async (req, res, next) => {
+		try {
+			res
+				.status(201)
+				.json(
+					await campaignCommands.create({
+						payload: req.validatedBody,
+					}),
+				);
+		} catch (error) {
+			next(error);
+		}
+	},
+);
 
-router.patch("/:slug", async (req, res, next) => {
-	try {
-		res.json(
-			await campaignCommands.update({
-				slug: req.params.slug,
-				patch: req.body,
-			}),
-		);
-	} catch (error) {
-		next(error);
-	}
-});
+router.patch(
+	"/:slug",
+	validateBody(validateCampaignPatch),
+	async (req, res, next) => {
+		try {
+			res.json(
+				await campaignCommands.update({
+					slug: req.params.slug,
+					patch: req.validatedBody,
+				}),
+			);
+		} catch (error) {
+			next(error);
+		}
+	},
+);
 
 router.delete("/:slug", async (req, res, next) => {
 	try {
@@ -151,10 +174,11 @@ router.delete("/:slug/entities/:type/:entitySlug", async (req, res, next) => {
 
 router.post(
 	"/:slug/entities/:type/:entitySlug/move",
+	validateBody(validateEntityMove),
 	async (req, res, next) => {
 		try {
 			const { slug: campaignSlug, type, entitySlug } = req.params;
-			const { targetType } = req.body || {};
+			const { targetType } = req.validatedBody;
 			res.json(
 				await campaignEntityCommands.moveBetweenCharacterTypes({
 					campaignSlug,
@@ -169,12 +193,20 @@ router.post(
 	},
 );
 
-router.post("/reorder", async (req, res, next) => {
-	try {
-		res.json(await campaignCommands.reorder({ orders: req.body?.orders }));
-	} catch (error) {
-		next(error);
-	}
-});
+router.post(
+	"/reorder",
+	validateBody(validateReorderRequest),
+	async (req, res, next) => {
+		try {
+			res.json(
+				await campaignCommands.reorder({
+					orders: req.validatedBody.orders,
+				}),
+			);
+		} catch (error) {
+			next(error);
+		}
+	},
+);
 
 module.exports = router;

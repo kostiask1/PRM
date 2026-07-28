@@ -1,4 +1,9 @@
 export function idsEqual(left: unknown, right: unknown): boolean;
+export function mapWithConcurrency<TItem, TResult>(
+	items: Iterable<TItem> | ArrayLike<TItem> | null | undefined,
+	concurrency: unknown,
+	mapper: (item: TItem, index: number) => TResult | Promise<TResult>,
+): Promise<TResult[]>;
 
 export type ClassNameValue =
 	| string

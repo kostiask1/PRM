@@ -1,7 +1,7 @@
 import {
-	spellApi,
+	referenceApi,
 	type ReferenceRecord,
-} from "../../spell/index.js";
+} from "../api/referenceApi.ts";
 
 let conditionMapCache: Map<string, ReferenceRecord> | null = null;
 let conditionPromise: Promise<Map<string, ReferenceRecord>> | null = null;
@@ -24,7 +24,7 @@ function toConditionMap(
 export async function loadConditionsMap(): Promise<Map<string, ReferenceRecord>> {
 	if (conditionMapCache) return conditionMapCache;
 	if (conditionPromise) return conditionPromise;
-	conditionPromise = spellApi
+	conditionPromise = referenceApi
 		.getConditions()
 		.then((list) => {
 			conditionMapCache = toConditionMap(list);

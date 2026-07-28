@@ -1,4 +1,5 @@
 export { default as classNames } from "./classNames.js";
+export { mapWithConcurrency } from "./asyncPool.ts";
 export { idsEqual } from "./id.js";
 export { objectMatchesSearch } from "./deepSearch.js";
 export { downloadBlob, downloadJsonFile } from "./download.js";

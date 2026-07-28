@@ -1,3 +1,7 @@
+export {
+	referenceApi,
+	type ReferenceRecord,
+} from "./api/referenceApi.ts";
 export * from "./model.d.ts";
 export {
 	getCampaignIgnoreSourcesList,

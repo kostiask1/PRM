@@ -19,6 +19,8 @@ import {
 
 import { idsEqual } from "../src/shared/lib/index.js";
 import { isJsonObject, isJsonString } from "../src/shared/lib/index.js";
+import { mapWithConcurrency } from "../src/shared/lib/index.js";
+import { isAbortError } from "../src/shared/api/index.ts";
 import {
 	SHOW_MESSAGE_BOX,
 	SET_UI_SETTINGS,
@@ -306,6 +308,8 @@ import {
 } from "../src/widgets/ai-response-modal/model.js";
 import {
 	CAMPAIGN_SEARCH_FILTERS,
+	CAMPAIGN_SEARCH_RESULT_LIMIT,
+	CAMPAIGN_SEARCH_SESSION_LOAD_CONCURRENCY,
 	buildCampaignSearchIndex,
 	buildCampaignSearchSnippet,
 	campaignSearchValueToText,
@@ -669,6 +673,9 @@ import {
 	resolveEntityByName,
 } from "../src/entities/campaign/index.js";
 import { campaignApi } from "../src/entities/campaign/index.js";
+import { bestiaryApi } from "../src/entities/bestiary/index.js";
+import { referenceApi } from "../src/entities/reference/index.js";
+import { sessionApi } from "../src/entities/session/index.js";
 import { spellApi } from "../src/entities/spell/index.js";
 import {
 	buildCreateEntityPayload,
@@ -839,9 +846,15 @@ import {
 import * as updaterPolicies from "../scripts/update-5etools-data-policies.mjs";
 import { create5eToolsUpdater } from "../scripts/update-5etools-data-runtime.mjs";
 import * as databaseBundlePolicies from "../scripts/build-database-bundles-policies.mjs";
+import {
+	CAMPAIGN_MODEL_IMPORT_PATTERNS,
+	RECOVERED_ENTITY_PUBLIC_API_PATTERN,
+	REFERENCE_LOADER_IMPORT_PATTERNS,
+} from "../scripts/eslint-import-boundaries.mjs";
 
 const require = createRequire(import.meta.url);
 const crypto = require("crypto");
+const { Linter } = require("eslint");
 const storage = require("../server/storage.js");
 const bestiaryUtils = require("../shared/bestiaryUtils.cjs");
 const searchResults = require("../server/modules/search/application/searchResults.js");
@@ -849,6 +862,8 @@ const campaignMentionReferences = require("../server/modules/campaign/infrastruc
 const { realtimeMiddleware, setupRealtime } = require("../server/realtime.js");
 const spellsRouter = require("../server/routes/spells.js");
 const backupsRouter = require("../server/routes/backups.js");
+const campaignsRouter = require("../server/routes/campaigns.js");
+const sessionsRouter = require("../server/routes/sessions.js");
 const aiRouter = require("../server/routes/ai.js");
 const mentionProcessing = require("../server/modules/ai/application/mentionProcessing.js");
 const bestiaryRouter = require("../server/routes/bestiary.js");
@@ -909,6 +924,9 @@ const {
 const {
 	createFileAiHistoryRepository,
 } = require("../server/modules/ai/infrastructure/fileAiHistoryRepository.js");
+const {
+	createBestiaryAiHistoryMigration,
+} = require("../server/modules/ai/infrastructure/bestiaryAiHistoryMigration.js");
 const aiHistoryCommandsModule = require(
 	"../server/modules/ai/application/aiHistoryCommands.js",
 );
@@ -964,6 +982,25 @@ const {
 	createBackupCommands,
 	parseArchivePayload,
 } = require("../server/modules/backups/application/backupCommands.js");
+const {
+	validateCampaignArchiveEnvelope,
+	validateCampaignBundleCollection,
+	validatePartialArchiveBundle,
+} = require("../server/modules/backups/http/archiveRequestSchemas.js");
+const {
+	validateCampaignCreate,
+	validateCampaignPatch,
+	validateEntityMove,
+	validateReorderRequest,
+} = require("../server/modules/campaign/http/campaignRequestSchemas.js");
+const {
+	validateSessionMutation,
+	validateSessionReorder,
+} = require("../server/modules/session/http/sessionRequestSchemas.js");
+const {
+	RequestValidationError,
+	assertValidRequest,
+} = require("../server/http/requestValidation.js");
 const archiveImageRestoration = require("../server/modules/backups/infrastructure/archiveImageRestoration.js");
 const {
 	createCampaignEntityScopeCommands,
@@ -1003,6 +1040,9 @@ const {
 
 const results = [];
 const TEST_PREFIX = `autotest-${Date.now()}`;
+const TEST_FILTER = String(process.env.TEST_FILTER || "")
+	.trim()
+	.toLowerCase();
 
 function createEmptyNote() {
 	return {
@@ -1051,6 +1091,7 @@ async function withTestSlug(name, callback) {
 }
 
 async function run(name, fn) {
+	if (TEST_FILTER && !name.toLowerCase().includes(TEST_FILTER)) return;
 	try {
 		await fn();
 		results.push({ name, ok: true });
@@ -1077,6 +1118,269 @@ await run("JSON helpers validate object and string payloads", () => {
 	assert.equal(isJsonString('{"a":1}'), false);
 	assert.equal(isJsonString("not-json"), false);
 });
+
+await run("recovered read APIs forward cancellation options", async () => {
+	const originalFetch = globalThis.fetch;
+	const controller = new AbortController();
+	const calls = [];
+	globalThis.fetch = async (url, options = {}) => {
+		calls.push({ url: String(url), options });
+		return {
+			status: 200,
+			ok: true,
+			json: async () => [],
+			blob: async () => new Blob([]),
+		};
+	};
+
+	try {
+		await bestiaryApi.getBestiarySources({ signal: controller.signal });
+		await bestiaryApi.getBestiaryData("all", {
+			signal: controller.signal,
+		});
+		await bestiaryApi.getCustomBestiaryData({
+			signal: controller.signal,
+			headers: { "X-Test": "custom" },
+		});
+		await bestiaryApi.getBestiaryFavorites({
+			signal: controller.signal,
+		});
+		await spellApi.getSpellSources({ signal: controller.signal });
+		await spellApi.getSpellData("all", {
+			signal: controller.signal,
+		});
+		await spellApi.searchSpells(
+			{ name: "shield" },
+			{ signal: controller.signal },
+		);
+		await referenceApi.getConditions({ signal: controller.signal });
+		await campaignApi.getEntities(
+			"alpha",
+			"npc",
+			{ signal: controller.signal },
+		);
+		await sessionApi.listSessions("alpha", {
+			signal: controller.signal,
+		});
+		await sessionApi.getSession(
+			"alpha",
+			"one.json",
+			{ signal: controller.signal },
+		);
+
+		assert.equal(calls.length, 11);
+		assert.equal(
+			calls.every((call) => call.options.signal === controller.signal),
+			true,
+		);
+		const customCall = calls.find((call) =>
+			call.url.startsWith("/api/bestiary/custom?"),
+		);
+		assert.equal(customCall.options.cache, "no-store");
+		const customHeaders = new Headers(customCall.options.headers);
+		assert.equal(customHeaders.get("Cache-Control"), "no-cache");
+		assert.equal(customHeaders.get("X-Test"), "custom");
+		assert.equal(isAbortError({ name: "AbortError" }), true);
+		assert.equal(isAbortError(new Error("failure")), false);
+	} finally {
+		globalThis.fetch = originalFetch;
+	}
+});
+
+await run(
+	"recovered campaign search caps concurrency and preserves order",
+	async () => {
+		let active = 0;
+		let maxActive = 0;
+		const completed = await mapWithConcurrency(
+			[0, 1, 2, 3, 4, 5],
+			2,
+			async (value) => {
+				active += 1;
+				maxActive = Math.max(maxActive, active);
+				await new Promise((resolve) => setTimeout(resolve, 1));
+				active -= 1;
+				return value * 2;
+			},
+		);
+		assert.equal(maxActive, 2);
+		assert.deepEqual(completed, [0, 2, 4, 6, 8, 10]);
+
+		const controller = new AbortController();
+		const sessions = Array.from({ length: 15 }, (_, index) => ({
+			fileName: `session-${index}.json`,
+		}));
+		const seenSignals = [];
+		active = 0;
+		maxActive = 0;
+		const index = await loadCampaignSearchIndex({
+			campaign: { slug: "alpha", name: "Alpha" },
+			api: {
+				getEntities: async (_slug, _type, options) => {
+					seenSignals.push(options?.signal);
+					return [];
+				},
+				listSessions: async (_slug, options) => {
+					seenSignals.push(options?.signal);
+					return sessions;
+				},
+				getSession: async (_slug, fileName, options) => {
+					seenSignals.push(options?.signal);
+					const sessionIndex = Number(
+						fileName.match(/\d+/)?.[0] || 0,
+					);
+					active += 1;
+					maxActive = Math.max(maxActive, active);
+					await new Promise((resolve) =>
+						setTimeout(resolve, (sessionIndex % 3) + 1),
+					);
+					active -= 1;
+					return {
+						name: `Session ${sessionIndex}`,
+						data: {
+							notes: [
+								{
+									id: sessionIndex,
+									title: `Note ${sessionIndex}`,
+									text: "",
+								},
+							],
+						},
+					};
+				},
+			},
+			translate: (key) => key,
+			requestOptions: { signal: controller.signal },
+		});
+
+		assert.equal(
+			maxActive <= CAMPAIGN_SEARCH_SESSION_LOAD_CONCURRENCY,
+			true,
+		);
+		assert.equal(maxActive > 1, true);
+		assert.equal(
+			seenSignals.every((signal) => signal === controller.signal),
+			true,
+		);
+		assert.deepEqual(
+			index
+				.filter((item) => item.title.startsWith("Note "))
+				.map((item) => item.title),
+			sessions.map((_, sessionIndex) => `Note ${sessionIndex}`),
+		);
+		assert.equal(
+			filterCampaignSearchResults(
+				Array.from(
+					{ length: CAMPAIGN_SEARCH_RESULT_LIMIT + 5 },
+					(_, resultIndex) => ({
+						id: String(resultIndex),
+						filter: "notes",
+						title: "Note",
+						subtitle: "",
+						text: "",
+						target: { campaignSlug: "alpha" },
+						searchText: "note",
+					}),
+				),
+				"note",
+				new Set(CAMPAIGN_SEARCH_FILTERS),
+			).length,
+			CAMPAIGN_SEARCH_RESULT_LIMIT,
+		);
+	},
+);
+
+await run(
+	"recovered import boundaries reject deep and transport imports",
+	() => {
+		const lintImports = (source, patterns) => {
+			const linter = new Linter({ configType: "flat" });
+			return linter.verify(source, {
+				languageOptions: {
+					ecmaVersion: "latest",
+					sourceType: "module",
+				},
+				rules: {
+					"no-restricted-imports": [
+						"error",
+						{ patterns },
+					],
+				},
+			});
+		};
+		const expectRestricted = (source, patterns) => {
+			const messages = lintImports(source, patterns);
+			assert.equal(messages.length, 1);
+			assert.equal(
+				messages[0].ruleId,
+				"no-restricted-imports",
+			);
+		};
+
+		expectRestricted(
+			'import value from "../../../entities/reference/api/referenceApi.ts";',
+			[RECOVERED_ENTITY_PUBLIC_API_PATTERN],
+		);
+		expectRestricted(
+			'import value from "../../api/campaignApi.ts";',
+			CAMPAIGN_MODEL_IMPORT_PATTERNS,
+		);
+		expectRestricted(
+			'import value from "../../../index.js";',
+			CAMPAIGN_MODEL_IMPORT_PATTERNS,
+		);
+		expectRestricted(
+			'import value from "../../../features/editor/ui/Input.tsx";',
+			CAMPAIGN_MODEL_IMPORT_PATTERNS,
+		);
+		expectRestricted(
+			'import value from "../../spell/api/spellApi.ts";',
+			REFERENCE_LOADER_IMPORT_PATTERNS,
+		);
+		expectRestricted(
+			'import value from "../../../features/rules-reference/model/private.ts";',
+			REFERENCE_LOADER_IMPORT_PATTERNS,
+		);
+		assert.deepEqual(
+			lintImports(
+				'import value from "../api/referenceApi.ts";',
+				REFERENCE_LOADER_IMPORT_PATTERNS,
+			),
+			[],
+		);
+	},
+);
+
+await run(
+	"recovered Bestiary sync parsing keeps a stable effect dependency",
+	async () => {
+		const source = await fs.readFile(
+			"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+			"utf8",
+		);
+		assert.match(
+			source,
+			/const rawSyncEvent = useAppSelector\(\(state\) => state\.sync\.event\);/,
+		);
+		assert.match(
+			source,
+			/const syncEvent = useMemo\(\s*\(\) => parseBestiarySyncEvent\(rawSyncEvent\),\s*\[rawSyncEvent\],\s*\);/,
+		);
+		assert.match(source, /\}, \[syncEvent\]\);/);
+		assert.doesNotMatch(
+			source,
+			/parseBestiarySyncEvent\(\s*useAppSelector/,
+		);
+		const rawEvent = {
+			resource: "custom-bestiary",
+			version: 1,
+		};
+		assert.notEqual(
+			parseBestiarySyncEvent(rawEvent),
+			parseBestiarySyncEvent(rawEvent),
+		);
+	},
+);
 
 await run(
 	"shared search ranking preserves lazy mutation tiers and malformed boundaries",
@@ -27288,8 +27592,15 @@ await run("parser renders dice and creature tags as interactive components", asy
 	assert.match(rulesReferenceSource, /bestiaryApi/);
 	assert.match(rulesReferenceSource, /MonsterStatBlockModel/);
 	assert.match(rulesReferenceSource, /id: "bestiary"/);
-	assert.match(rulesReferenceSource, /bestiaryApi\.getBestiaryData\("all"\)/);
-	assert.match(rulesReferenceSource, /spellApi\.getSpellData\("all"\)/);
+	assert.match(
+		rulesReferenceSource,
+		/bestiaryApi\.getBestiaryData\("all", options\)/,
+	);
+	assert.match(
+		rulesReferenceSource,
+		/spellApi\.getSpellData\("all", options\)/,
+	);
+	assert.match(rulesReferenceSource, /referenceApi\.getConditions\(options\)/);
 	assert.doesNotMatch(rulesReferenceSource, /<Bestiary(?:\s|\/|>)/);
 	assert.match(rulesReferenceSource, /<MonsterStatBlock/);
 	assert.match(rulesReferenceSource, /Bestiary__item_token/);
@@ -42410,6 +42721,250 @@ await run("storage keeps AI response history per campaign", async () => {
 	});
 });
 
+await run(
+	"canonical Bestiary history migration is concurrent and non-destructive",
+	async () => {
+		const canonicalPath = "ai/bestiary/canonical.json";
+		const legacyPath = "campaigns/bestiary/_aiResponses.json";
+		const legacyPayload = {
+			responses: [
+				{
+					id: "older",
+					text: "Стара відповідь",
+					createdAt: "2026-01-01T00:00:00.000Z",
+				},
+				{
+					id: "newer",
+					text: "Нова відповідь",
+					createdAt: "2026-02-01T00:00:00.000Z",
+				},
+			],
+		};
+		const files = new Map([[legacyPath, structuredClone(legacyPayload)]]);
+		let legacyReads = 0;
+		let canonicalWrites = 0;
+		const migration = createBestiaryAiHistoryMigration({
+			aiResponsesPath: () => canonicalPath,
+			campaignAiResponsesPath: () => legacyPath,
+			exists: async (filePath) => files.has(filePath),
+			normalizeResponses: (saved) =>
+				(Array.isArray(saved) ? saved : saved.responses)
+					.toSorted((left, right) =>
+						right.createdAt.localeCompare(left.createdAt),
+					),
+			readJson: async (filePath) => {
+				if (filePath === legacyPath) legacyReads += 1;
+				return structuredClone(files.get(filePath));
+			},
+			writeJson: async (filePath, value) => {
+				if (filePath === canonicalPath) canonicalWrites += 1;
+				files.set(filePath, structuredClone(value));
+			},
+		});
+
+		const [firstRead, concurrentRead] = await Promise.all([
+			migration.ensureCanonicalAiResponses("bestiary"),
+			migration.ensureCanonicalAiResponses("bestiary"),
+		]);
+		assert.deepEqual(firstRead, concurrentRead);
+		assert.deepEqual(
+			firstRead.responses.map((entry) => entry.id),
+			["newer", "older"],
+		);
+		assert.equal(legacyReads, 1);
+		assert.equal(canonicalWrites, 1);
+		assert.deepEqual(
+			files.get(canonicalPath).map((entry) => entry.id),
+			["newer", "older"],
+		);
+		assert.deepEqual(files.get(legacyPath), legacyPayload);
+
+		files.set(legacyPath, {
+			responses: [
+				{
+					id: "legacy-only",
+					text: "Не повинна замінити canonical history",
+					createdAt: "2026-03-01T00:00:00.000Z",
+				},
+			],
+		});
+		const canonicalRead =
+			await migration.ensureCanonicalAiResponses("bestiary");
+		assert.equal(canonicalRead.responses, undefined);
+		assert.equal(legacyReads, 1);
+		assert.equal(canonicalWrites, 1);
+	},
+);
+
+await run(
+	"canonical Bestiary history migration retries failed writes",
+	async () => {
+		const canonicalPath = "ai/bestiary/canonical.json";
+		const legacyPath = "campaigns/bestiary/_aiResponses.json";
+		const legacyPayload = [
+			{
+				id: "legacy-entry",
+				text: "Збережена відповідь",
+				createdAt: "2026-01-01T00:00:00.000Z",
+			},
+		];
+		const files = new Map([[legacyPath, structuredClone(legacyPayload)]]);
+		let failCanonicalWrite = true;
+		let legacyReads = 0;
+		let canonicalWrites = 0;
+		const migration = createBestiaryAiHistoryMigration({
+			aiResponsesPath: () => canonicalPath,
+			campaignAiResponsesPath: () => legacyPath,
+			exists: async (filePath) => files.has(filePath),
+			normalizeResponses: (saved) => structuredClone(saved),
+			readJson: async (filePath) => {
+				if (filePath === legacyPath) legacyReads += 1;
+				return structuredClone(files.get(filePath));
+			},
+			writeJson: async (filePath, value) => {
+				canonicalWrites += 1;
+				if (failCanonicalWrite) {
+					throw new Error("temporary write failure");
+				}
+				files.set(filePath, structuredClone(value));
+			},
+		});
+
+		const availableDuringFailure =
+			await migration.ensureCanonicalAiResponses("bestiary");
+		assert.deepEqual(availableDuringFailure.responses, legacyPayload);
+		assert.equal(files.has(canonicalPath), false);
+		assert.deepEqual(files.get(legacyPath), legacyPayload);
+
+		failCanonicalWrite = false;
+		const migrated =
+			await migration.ensureCanonicalAiResponses("bestiary");
+		assert.deepEqual(migrated.responses, legacyPayload);
+		assert.equal(files.has(canonicalPath), true);
+		assert.deepEqual(files.get(legacyPath), legacyPayload);
+		assert.equal(legacyReads, 2);
+		assert.equal(canonicalWrites, 2);
+
+		const canonicalRead =
+			await migration.ensureCanonicalAiResponses("bestiary");
+		assert.equal(canonicalRead.responses, undefined);
+		assert.equal(legacyReads, 2);
+		assert.equal(canonicalWrites, 2);
+	},
+);
+
+await run(
+	"canonical Bestiary history migration serializes concurrent writes",
+	async () => {
+		const canonicalPath = "ai/bestiary/canonical.json";
+		const legacyPath = "campaigns/bestiary/_aiResponses.json";
+		const legacyPayload = [{ id: "legacy-entry" }];
+		const livePayload = [{ id: "live-entry" }];
+		const files = new Map([[legacyPath, structuredClone(legacyPayload)]]);
+		const writeOrder = [];
+		let signalLegacyRead;
+		let releaseLegacyRead;
+		const legacyReadStarted = new Promise((resolve) => {
+			signalLegacyRead = resolve;
+		});
+		const legacyReadGate = new Promise((resolve) => {
+			releaseLegacyRead = resolve;
+		});
+		const migration = createBestiaryAiHistoryMigration({
+			aiResponsesPath: () => canonicalPath,
+			campaignAiResponsesPath: () => legacyPath,
+			exists: async (filePath) => files.has(filePath),
+			normalizeResponses: (saved) => structuredClone(saved),
+			readJson: async (filePath) => {
+				if (filePath === legacyPath) {
+					signalLegacyRead();
+					await legacyReadGate;
+				}
+				return structuredClone(files.get(filePath));
+			},
+			writeJson: async (filePath, value) => {
+				writeOrder.push(value[0]?.id);
+				files.set(filePath, structuredClone(value));
+			},
+		});
+
+		const migratingRead =
+			migration.ensureCanonicalAiResponses("bestiary");
+		await legacyReadStarted;
+		const liveWrite = migration.writeCanonicalAiResponses(
+			"bestiary",
+			livePayload,
+		);
+		releaseLegacyRead();
+
+		const migrated = await migratingRead;
+		await liveWrite;
+		assert.deepEqual(migrated.responses, legacyPayload);
+		assert.deepEqual(writeOrder, ["legacy-entry", "live-entry"]);
+		assert.deepEqual(files.get(canonicalPath), livePayload);
+		assert.deepEqual(files.get(legacyPath), legacyPayload);
+	},
+);
+
+await run(
+	"canonical Bestiary history migration does not poison queued writes",
+	async () => {
+		const canonicalPath = "ai/bestiary/canonical.json";
+		const files = new Map([[canonicalPath, [{ id: "current" }]]]);
+		let failNextWrite = true;
+		let signalFirstWrite;
+		let releaseFirstWrite;
+		const firstWriteStarted = new Promise((resolve) => {
+			signalFirstWrite = resolve;
+		});
+		const firstWriteGate = new Promise((resolve) => {
+			releaseFirstWrite = resolve;
+		});
+		const migration = createBestiaryAiHistoryMigration({
+			aiResponsesPath: () => canonicalPath,
+			campaignAiResponsesPath: () => "unused-legacy.json",
+			exists: async (filePath) => files.has(filePath),
+			normalizeResponses: (saved) => structuredClone(saved),
+			readJson: async (filePath) =>
+				structuredClone(files.get(filePath)),
+			writeJson: async (filePath, value) => {
+				if (failNextWrite) {
+					failNextWrite = false;
+					signalFirstWrite();
+					await firstWriteGate;
+					throw new Error("first live write failed");
+				}
+				files.set(filePath, structuredClone(value));
+			},
+		});
+
+		const firstWrite = migration.writeCanonicalAiResponses(
+			"bestiary",
+			[{ id: "failed" }],
+		);
+		const firstFailure = assert.rejects(
+			firstWrite,
+			/first live write failed/,
+		);
+		await firstWriteStarted;
+		const secondWrite = migration.writeCanonicalAiResponses(
+			"bestiary",
+			[{ id: "recovered" }],
+		);
+		releaseFirstWrite();
+
+		await firstFailure;
+		await secondWrite;
+		assert.deepEqual(files.get(canonicalPath), [
+			{ id: "recovered" },
+		]);
+		assert.deepEqual(
+			await migration.ensureCanonicalAiResponses("bestiary"),
+			{ responsesPath: canonicalPath },
+		);
+	},
+);
+
 async function withMockedAiResponseFiles(testBody) {
 	const originalAccess = fs.access;
 	const originalReadFile = fs.readFile;
@@ -42454,7 +43009,7 @@ async function withMockedAiResponseFiles(testBody) {
 }
 
 await run(
-	"storage AI history reads preserve dedicated and legacy path selection order",
+	"storage AI history reads preserve regular and canonical path order",
 	async () => {
 		await withMockedAiResponseFiles(async (state) => {
 			assert.deepEqual(await storage.readAiResponses("   "), []);
@@ -42493,18 +43048,6 @@ await run(
 				["access", dedicatedPath],
 				["access", dedicatedPath],
 				["read", dedicatedPath, "utf8"],
-			]);
-
-			state.reset({
-				existingPaths: [legacyPath],
-				fileContents: [[legacyPath, oneEntry]],
-			});
-			await storage.readAiResponses("bestiary");
-			assert.deepEqual(state.events, [
-				["access", dedicatedPath],
-				["access", legacyPath],
-				["access", legacyPath],
-				["read", legacyPath, "utf8"],
 			]);
 
 			state.reset();
@@ -43675,11 +44218,11 @@ await run(
 	"conditions and reference resolvers use normalized keys and cache",
 	async () => {
 		const originalSearchSpells = spellApi.searchSpells;
-		const originalGetConditions = spellApi.getConditions;
-		const originalGetDiseases = spellApi.getDiseases;
-		const originalGetVariantRules = spellApi.getVariantRules;
-		const originalGetSkills = spellApi.getSkills;
-		const originalGetSenses = spellApi.getSenses;
+		const originalGetConditions = referenceApi.getConditions;
+		const originalGetDiseases = referenceApi.getDiseases;
+		const originalGetVariantRules = referenceApi.getVariantRules;
+		const originalGetSkills = referenceApi.getSkills;
+		const originalGetSenses = referenceApi.getSenses;
 		let spellCalls = 0;
 		let conditionCalls = 0;
 		let diseaseCalls = 0;
@@ -43698,7 +44241,7 @@ await run(
 			return [{ name: "Shield|PHB", source: "PHB" }];
 		};
 
-		spellApi.getConditions = async () => {
+		referenceApi.getConditions = async () => {
 			conditionCalls += 1;
 			if (conditionCalls === 1) {
 				throw new Error("temporary");
@@ -43709,7 +44252,7 @@ await run(
 			];
 		};
 
-		spellApi.getDiseases = async () => {
+		referenceApi.getDiseases = async () => {
 			diseaseCalls += 1;
 			return [
 				{ name: "Bluerot", entries: ["..."] },
@@ -43717,7 +44260,7 @@ await run(
 			];
 		};
 
-		spellApi.getVariantRules = async () => {
+		referenceApi.getVariantRules = async () => {
 			variantRuleCalls += 1;
 			return [
 				{ name: "Advantage", entries: ["..."] },
@@ -43725,7 +44268,7 @@ await run(
 			];
 		};
 
-		spellApi.getSkills = async () => {
+		referenceApi.getSkills = async () => {
 			skillCalls += 1;
 			return [
 				{ name: "Medicine", ability: "wis", entries: ["..."] },
@@ -43733,7 +44276,7 @@ await run(
 			];
 		};
 
-		spellApi.getSenses = async () => {
+		referenceApi.getSenses = async () => {
 			senseCalls += 1;
 			return [
 				{ name: "Darkvision", entries: ["..."] },
@@ -43834,11 +44377,11 @@ await run(
 			assert.equal(await resolveSenseInput({ foo: "bar" }), null);
 		} finally {
 			spellApi.searchSpells = originalSearchSpells;
-			spellApi.getConditions = originalGetConditions;
-			spellApi.getDiseases = originalGetDiseases;
-			spellApi.getVariantRules = originalGetVariantRules;
-			spellApi.getSkills = originalGetSkills;
-			spellApi.getSenses = originalGetSenses;
+			referenceApi.getConditions = originalGetConditions;
+			referenceApi.getDiseases = originalGetDiseases;
+			referenceApi.getVariantRules = originalGetVariantRules;
+			referenceApi.getSkills = originalGetSkills;
+			referenceApi.getSenses = originalGetSenses;
 		}
 	},
 );
@@ -43962,6 +44505,267 @@ await run("backups archive route sends gzip payload with dated filename", async 
 		storage.exportCampaignArchiveBundle = originalExportCampaignArchiveBundle;
 	}
 });
+
+await run("request validation rejects unsafe import payloads", () => {
+	const campaignBundle = {
+		meta: { id: "campaign-id", name: "Українська кампанія" },
+		sessions: [
+			{
+				fileName: "session-1.json",
+				content: { name: "Перша сесія", scenes: [] },
+			},
+		],
+		entities: { characters: [], npc: [], locations: [] },
+		aiResponses: [],
+	};
+	const archiveBundle = {
+		bundle: campaignBundle,
+		images: [
+			{
+				relativePath: "locations/київ.webp",
+				base64: "dGVzdA==",
+			},
+		],
+	};
+	const archiveEnvelope = {
+		version: 2,
+		campaigns: [archiveBundle],
+	};
+
+	assert.equal(
+		assertValidRequest(
+			campaignBundle,
+			validateCampaignBundleCollection,
+		),
+		campaignBundle,
+	);
+	assert.equal(
+		assertValidRequest(
+			archiveEnvelope,
+			validateCampaignArchiveEnvelope,
+		),
+		archiveEnvelope,
+	);
+	assert.throws(
+		() =>
+			assertValidRequest([], validateCampaignBundleCollection),
+		(error) =>
+			error instanceof RequestValidationError &&
+			error.status === 400 &&
+			error.code === "INVALID_REQUEST" &&
+			error.details[0]?.code === "min_items",
+	);
+	assert.throws(
+		() =>
+			assertValidRequest(
+				{ meta: {}, sessions: "not-an-array" },
+				validateCampaignBundleCollection,
+			),
+		(error) =>
+			error instanceof RequestValidationError &&
+			error.details.some(
+				(issue) => issue.path === "body.meta.name",
+			) &&
+			error.details.some(
+				(issue) => issue.path === "body.sessions",
+			),
+	);
+	assert.throws(
+		() =>
+			assertValidRequest(
+				{
+					bundle: campaignBundle,
+					images: [{ relativePath: "", base64: null }],
+				},
+				validateCampaignArchiveEnvelope,
+			),
+		(error) =>
+			error instanceof RequestValidationError &&
+			error.details.some(
+				(issue) =>
+					issue.path === "body.images[0].relativePath",
+			) &&
+			error.details.some(
+				(issue) => issue.path === "body.images[0].base64",
+			),
+	);
+	assert.throws(
+		() =>
+			assertValidRequest(
+				{
+					bundle: campaignBundle,
+					sections: ["unknown"],
+					images: [],
+				},
+				validatePartialArchiveBundle,
+			),
+		(error) =>
+			error instanceof RequestValidationError &&
+			error.details[0]?.code === "invalid_enum",
+	);
+});
+
+await run(
+	"request validation runs before destructive backup replacement",
+	async () => {
+		const importAllRoute = backupsRouter.stack.find(
+			(item) => item.route?.path === "/import-all",
+		);
+		assert.ok(importAllRoute);
+		assert.equal(importAllRoute.route.stack.length, 2);
+
+		let validationError = null;
+		importAllRoute.route.stack[0].handle(
+			{
+				body: [],
+				query: { strategy: "wipe_and_replace" },
+			},
+			{},
+			(error) => {
+				validationError = error || null;
+			},
+		);
+		assert.ok(validationError instanceof RequestValidationError);
+		assert.equal(validationError.code, "INVALID_REQUEST");
+
+		const importArchiveRoute = backupsRouter.stack.find(
+			(item) => item.route?.path === "/import-archive",
+		);
+		assert.ok(importArchiveRoute);
+		const handler = importArchiveRoute.route.stack.at(-1).handle;
+		let archiveError = null;
+		await handler(
+			{
+				file: {
+					buffer: Buffer.from(
+						JSON.stringify({ campaigns: [] }),
+						"utf8",
+					),
+				},
+				query: { strategy: "wipe_and_replace" },
+			},
+			{
+				status() {
+					throw new Error(
+						"Invalid archive reached the mutation response.",
+					);
+				},
+			},
+			(error) => {
+				archiveError = error;
+			},
+		);
+		assert.ok(archiveError instanceof RequestValidationError);
+		assert.equal(archiveError.details[0]?.code, "min_items");
+	},
+);
+
+await run(
+	"request validation protects campaign and session mutations",
+	() => {
+		assert.deepEqual(validateCampaignCreate({ name: "Alpha" }), []);
+		assert.deepEqual(validateCampaignPatch({ completed: true }), []);
+		assert.deepEqual(validateEntityMove({ targetType: "npc" }), []);
+		assert.deepEqual(
+			validateReorderRequest({ orders: { alpha: 0, beta: 1 } }),
+			[],
+		);
+		assert.deepEqual(validateSessionMutation({}), []);
+		assert.deepEqual(
+			validateSessionMutation({
+				name: "Сесія",
+				data: { scenes: [] },
+			}),
+			[],
+		);
+		assert.deepEqual(
+			validateSessionReorder({
+				orders: { "session.json": 0 },
+			}),
+			[],
+		);
+
+		assert.equal(
+			validateCampaignCreate({})[0]?.path,
+			"body.name",
+		);
+		assert.equal(
+			validateCampaignPatch({ name: " " })[0]?.code,
+			"invalid_string",
+		);
+		assert.equal(
+			validateEntityMove({ targetType: "locations" })[0]?.code,
+			"invalid_enum",
+		);
+		assert.equal(
+			validateReorderRequest({ orders: { alpha: -1 } })[0]?.code,
+			"invalid_order",
+		);
+		assert.equal(
+			validateSessionMutation({ data: [] })[0]?.path,
+			"body.data",
+		);
+		assert.equal(
+			validateSessionReorder({
+				orders: { "session.json": 1.5 },
+			})[0]?.code,
+			"invalid_order",
+		);
+
+		const campaignCreateRoute = campaignsRouter.stack.find(
+			(layer) =>
+				layer.route?.path === "/" &&
+				layer.route.methods.post,
+		);
+		const campaignMoveRoute = campaignsRouter.stack.find(
+			(layer) =>
+				layer.route?.path ===
+				"/:slug/entities/:type/:entitySlug/move",
+		);
+		const campaignReorderRoute = campaignsRouter.stack.find(
+			(layer) => layer.route?.path === "/reorder",
+		);
+		const sessionPatchRoute = sessionsRouter.stack.find(
+			(layer) =>
+				layer.route?.path === "/:fileName" &&
+				layer.route.methods.patch,
+		);
+		const sessionReorderRoute = sessionsRouter.stack.find(
+			(layer) => layer.route?.path === "/reorder",
+		);
+
+		for (const route of [
+			campaignCreateRoute,
+			campaignMoveRoute,
+			campaignReorderRoute,
+			sessionPatchRoute,
+			sessionReorderRoute,
+		]) {
+			assert.ok(route);
+			assert.equal(route.route.stack.length, 2);
+		}
+
+		const invalidRequests = [
+			[campaignCreateRoute, {}],
+			[campaignMoveRoute, { targetType: "locations" }],
+			[campaignReorderRoute, { orders: { alpha: -1 } }],
+			[sessionPatchRoute, { data: [] }],
+			[sessionReorderRoute, { orders: null }],
+		];
+		for (const [route, body] of invalidRequests) {
+			let validationError = null;
+			route.route.stack[0].handle(
+				{ body },
+				{},
+				(error) => {
+					validationError = error || null;
+				},
+			);
+			assert.ok(validationError instanceof RequestValidationError);
+			assert.equal(validationError.code, "INVALID_REQUEST");
+		}
+	},
+);
 
 await run("Reference commands own spell search sources and named precedence", async () => {
 	const aggregateSpells = [

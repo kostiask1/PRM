@@ -1,4 +1,7 @@
-import { spellApi, type ReferenceRecord } from "../../spell/index.js";
+import {
+	referenceApi,
+	type ReferenceRecord,
+} from "../api/referenceApi.ts";
 
 let variantRuleMapCache: Map<string, ReferenceRecord> | null = null;
 let variantRulePromise: Promise<Map<string, ReferenceRecord>> | null = null;
@@ -21,7 +24,7 @@ function toVariantRuleMap(
 export async function loadVariantRulesMap(): Promise<Map<string, ReferenceRecord>> {
 	if (variantRuleMapCache) return variantRuleMapCache;
 	if (variantRulePromise) return variantRulePromise;
-	variantRulePromise = spellApi
+	variantRulePromise = referenceApi
 		.getVariantRules()
 		.then((list) => {
 			variantRuleMapCache = toVariantRuleMap(list);

@@ -9,6 +9,7 @@ import {
 } from "../../../entities/reference/index.js";
 import { spellApi, type SpellRecord } from "../../../entities/spell/index.js";
 import { settingsApi } from "../../../features/settings/index.js";
+import { isAbortError } from "../../../shared/api/index.ts";
 import type { RichContentRenderOptions } from "../../../features/rich-content/index.js";
 import { lang, objectMatchesSearch, useDebounce } from "../../../shared/lib/index.js";
 import {
@@ -110,22 +111,40 @@ export default function SpellsBrowser({
 	useEffect(() => { setSourceFilter((current) => getValidSourceFilter(current, selectedSources)); }, [selectedSources]);
 
 	useEffect(() => {
-		let cancelled = false;
-		void spellApi.getSpellSources()
-			.then((value) => { if (!cancelled) setSources(normalizeStringList(value)); })
-			.catch((error: unknown) => console.error("Failed to load spell sources", error));
-		return () => { cancelled = true; };
+		const controller = new AbortController();
+		void spellApi.getSpellSources({ signal: controller.signal })
+			.then((value) => {
+				if (!controller.signal.aborted) {
+					setSources(normalizeStringList(value));
+				}
+			})
+			.catch((error: unknown) => {
+				if (!isAbortError(error)) {
+					console.error("Failed to load spell sources", error);
+				}
+			});
+		return () => controller.abort();
 	}, []);
 
 	useEffect(() => {
 		if (sources.length === 0) return;
-		let cancelled = false;
+		const controller = new AbortController();
 		setLoading(true);
-		void spellApi.getSpellData("all")
-			.then((value) => { if (!cancelled) setAllSpells(normalizeSpellList(value)); })
-			.catch((error: unknown) => console.error("Failed to load local spells", error))
-			.finally(() => { if (!cancelled) setLoading(false); });
-		return () => { cancelled = true; };
+		void spellApi.getSpellData("all", { signal: controller.signal })
+			.then((value) => {
+				if (!controller.signal.aborted) {
+					setAllSpells(normalizeSpellList(value));
+				}
+			})
+			.catch((error: unknown) => {
+				if (!isAbortError(error)) {
+					console.error("Failed to load local spells", error);
+				}
+			})
+			.finally(() => {
+				if (!controller.signal.aborted) setLoading(false);
+			});
+		return () => controller.abort();
 	}, [sources]);
 
 	useEffect(() => {

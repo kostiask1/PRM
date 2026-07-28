@@ -22,6 +22,13 @@ const {
 const {
 	createFileSessionRepository,
 } = require("../modules/session/infrastructure/fileSessionRepository");
+const {
+	validateSessionMutation,
+	validateSessionReorder,
+} = require("../modules/session/http/sessionRequestSchemas");
+const {
+	validateBody,
+} = require("../http/requestValidation");
 
 const entityScopeCommands = createCampaignEntityScopeCommands(
 	createFileCampaignEntityScopeRepository(storage),
@@ -40,18 +47,22 @@ router.get("/", async (req, res, next) => {
 	}
 });
 
-router.post("/", async (req, res, next) => {
-	try {
-		res.status(201).json(
-			await sessionCommands.create({
-				campaignSlug: req.campaignSlug,
-				payload: req.body,
-			}),
-		);
-	} catch (error) {
-		next(error);
-	}
-});
+router.post(
+	"/",
+	validateBody(validateSessionMutation),
+	async (req, res, next) => {
+		try {
+			res.status(201).json(
+				await sessionCommands.create({
+					campaignSlug: req.campaignSlug,
+					payload: req.validatedBody,
+				}),
+			);
+		} catch (error) {
+			next(error);
+		}
+	},
+);
 
 router.post("/:fileName/entities/:type/:entityId/move-scope", async (req, res, next) => {
 	try {
@@ -129,19 +140,23 @@ router.get("/:fileName", async (req, res, next) => {
 	}
 });
 
-router.patch("/:fileName", async (req, res, next) => {
-	try {
-		res.json(
-			await sessionCommands.update({
-				campaignSlug: req.campaignSlug,
-				fileName: req.params.fileName,
-				patch: req.body,
-			}),
-		);
-	} catch (error) {
-		next(error);
-	}
-});
+router.patch(
+	"/:fileName",
+	validateBody(validateSessionMutation),
+	async (req, res, next) => {
+		try {
+			res.json(
+				await sessionCommands.update({
+					campaignSlug: req.campaignSlug,
+					fileName: req.params.fileName,
+					patch: req.validatedBody,
+				}),
+			);
+		} catch (error) {
+			next(error);
+		}
+	},
+);
 
 router.delete("/:fileName", async (req, res, next) => {
 	try {
@@ -155,17 +170,21 @@ router.delete("/:fileName", async (req, res, next) => {
 	}
 });
 
-router.post("/reorder", async (req, res, next) => {
-	try {
-		res.json(
-			await sessionCommands.reorder({
-				campaignSlug: req.campaignSlug,
-				orders: req.body?.orders,
-			}),
-		);
-	} catch (error) {
-		next(error);
-	}
-});
+router.post(
+	"/reorder",
+	validateBody(validateSessionReorder),
+	async (req, res, next) => {
+		try {
+			res.json(
+				await sessionCommands.reorder({
+					campaignSlug: req.campaignSlug,
+					orders: req.validatedBody.orders,
+				}),
+			);
+		} catch (error) {
+			next(error);
+		}
+	},
+);
 
 module.exports = router;

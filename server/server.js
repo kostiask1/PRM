@@ -62,11 +62,15 @@ app.use((err, _req, res, _next) => {
 		status = 403;
 		message = "Access denied. Check permissions for the data folder.";
 	}
-	res.status(status).json({
+	const payload = {
 		error: message,
 		status,
 		code: err.code,
-	});
+	};
+	if (Array.isArray(err.details) && err.details.length > 0) {
+		payload.details = err.details;
+	}
+	res.status(status).json(payload);
 });
 
 storage

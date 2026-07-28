@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type ReactList from "react-list";
 
+import { isAbortError } from "../../../shared/api/index.ts";
 import { alert } from "../../../shared/model/index.js";
 import {
 	bestiaryApi,
@@ -20,6 +21,7 @@ import {
 import {
 	formatSourceLabel,
 	getSpellMeta as formatSpellMeta,
+	referenceApi,
 } from "../../../entities/reference/index.js";
 import {
 	REFERENCE_TAB_POLICIES,
@@ -60,7 +62,7 @@ type UiReferenceItem = ReferenceItem &
 	Partial<SpellRecord>;
 
 interface ReferenceTab extends ReferenceTabPolicy {
-	load: () => Promise<unknown>;
+	load: (options?: RequestInit) => Promise<unknown>;
 	meta?: (item: UiReferenceItem) => string;
 }
 
@@ -100,24 +102,31 @@ function getMonsterCr(monster: UiReferenceItem = {}) {
 		: monster.cr;
 }
 
-async function loadSpellReferenceItems() {
-	return spellApi.getSpellData("all");
+async function loadSpellReferenceItems(options: RequestInit = {}) {
+	return spellApi.getSpellData("all", options);
 }
 
-async function loadBestiaryReferenceItems() {
+async function loadBestiaryReferenceItems(options: RequestInit = {}) {
 	const [officialData, customData] = await Promise.all([
-		bestiaryApi.getBestiaryData("all"),
-		bestiaryApi.getCustomBestiaryData().catch(() => []),
+		bestiaryApi.getBestiaryData("all", options),
+		bestiaryApi
+			.getCustomBestiaryData(options)
+			.catch((error) =>
+				isAbortError(error) ? Promise.reject(error) : [],
+			),
 	]);
 	return combineBestiaryLists(officialData, customData);
 }
 
-const LOADERS: Record<ReferenceTabId, () => Promise<unknown>> = {
-	conditions: () => spellApi.getConditions(),
-	diseases: () => spellApi.getDiseases(),
-	senses: () => spellApi.getSenses(),
-	skills: () => spellApi.getSkills(),
-	variantrules: () => spellApi.getVariantRules(),
+const LOADERS: Record<
+	ReferenceTabId,
+	(options?: RequestInit) => Promise<unknown>
+> = {
+	conditions: (options) => referenceApi.getConditions(options),
+	diseases: (options) => referenceApi.getDiseases(options),
+	senses: (options) => referenceApi.getSenses(options),
+	skills: (options) => referenceApi.getSkills(options),
+	variantrules: (options) => referenceApi.getVariantRules(options),
 	spells: loadSpellReferenceItems,
 	bestiary: loadBestiaryReferenceItems,
 };
@@ -175,6 +184,9 @@ export default function RulesReferenceModalContent({
 	const listRef = useRef<ReactList | null>(null);
 	const isMountedRef = useRef(false);
 	const requestedTabsRef = useRef(new Set<ReferenceTabId>());
+	const requestControllersRef = useRef(
+		new Map<ReferenceTabId, AbortController>(),
+	);
 	const handledNavigationRequestIdRef = useRef<number | null>(null);
 	const hasInitializedNavigationRef = useRef(false);
 	const shouldScrollToActiveRef = useRef(false);
@@ -254,10 +266,17 @@ export default function RulesReferenceModalContent({
 	}, []);
 
 	useEffect(() => {
+		const requestControllers = requestControllersRef.current;
+		const requestedTabs = requestedTabsRef.current;
 		isMountedRef.current = true;
 		setRulesReferenceModalOpen(true);
 		return () => {
 			isMountedRef.current = false;
+			for (const [tabId, controller] of requestControllers) {
+				controller.abort();
+				requestedTabs.delete(tabId);
+			}
+			requestControllers.clear();
 			setRulesReferenceModalOpen(false);
 		};
 	}, []);
@@ -324,10 +343,13 @@ export default function RulesReferenceModalContent({
 		if (!tabsToLoad.length) return undefined;
 
 		const loadItems = async (tab: ReferenceTab) => {
+			const controller = new AbortController();
+			requestControllersRef.current.set(tab.id, controller);
 			requestedTabsRef.current.add(tab.id);
 			setLoadingByTab((current) => ({ ...current, [tab.id]: true }));
 			try {
-				const list = await tab.load();
+				const list = await tab.load({ signal: controller.signal });
+				if (!isMountedRef.current || controller.signal.aborted) return;
 				runWhenMounted(isMountedRef, () => {
 					const normalizedList = normalizeReferenceList(list) as UiReferenceItem[];
 					setItemsByTab((current) => ({
@@ -339,6 +361,7 @@ export default function RulesReferenceModalContent({
 					);
 				});
 			} catch (error: unknown) {
+				if (isAbortError(error)) return;
 				requestedTabsRef.current.delete(tab.id);
 				runWhenMounted(isMountedRef, () => {
 					dispatch(
@@ -349,9 +372,15 @@ export default function RulesReferenceModalContent({
 					);
 				});
 			} finally {
-				runWhenMounted(isMountedRef, () => {
-					setLoadingByTab((current) => ({ ...current, [tab.id]: false }));
-				});
+				if (requestControllersRef.current.get(tab.id) === controller) {
+					requestControllersRef.current.delete(tab.id);
+				}
+				if (isMountedRef.current && !controller.signal.aborted) {
+					setLoadingByTab((current) => ({
+						...current,
+						[tab.id]: false,
+					}));
+				}
 			}
 		};
 

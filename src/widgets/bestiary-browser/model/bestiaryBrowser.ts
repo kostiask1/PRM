@@ -1408,52 +1408,96 @@ export function sortBestiaryMonsters(
 
 function matchesSelectedSource(
 	monster: BestiaryMonster,
-	selectedSources: string[],
+	selectedSources: ReadonlySet<string>,
 ): boolean {
-	const monsterSource = normalizeMonsterSource(monster.source);
-	return selectedSources.some(
-		(source) => normalizeMonsterSource(source) === monsterSource,
-	);
+	return selectedSources.has(normalizeMonsterSource(monster.source));
 }
 
 function matchesBestiarySourceFilter(
 	monster: BestiaryMonster,
-	sourceFilter: string,
+	sourceFilter: string | null,
 ): boolean {
-	if (sourceFilter === "all") return true;
 	return (
-		normalizeMonsterSource(monster.source) === normalizeMonsterSource(sourceFilter)
+		sourceFilter === null ||
+		normalizeMonsterSource(monster.source) === sourceFilter
 	);
+}
+
+function getBestiaryFilterIdentityKey(
+	monster: Pick<BestiaryMonster, "name" | "source"> | BestiaryFavorite,
+): string | null {
+	const name = normalizeMonsterName(monster.name);
+	if (!name) return null;
+	return `${name}\u0000${normalizeMonsterSource(monster.source)}`;
+}
+
+function createBestiaryFavoriteSet(
+	favorites: BestiaryFavorite[],
+): ReadonlySet<string> {
+	return new Set(
+		favorites
+			.map(getBestiaryFilterIdentityKey)
+			.filter((key): key is string => key !== null),
+	);
+}
+
+interface CompiledBestiaryFilter {
+	selectedSources: ReadonlySet<string>;
+	sourceFilter: string | null;
+	favorites: ReadonlySet<string> | null;
+	search: string;
+	searchMatcher: (
+		monster: BestiaryMonster,
+		search: string,
+	) => boolean;
+}
+
+function compileBestiaryFilter(
+	options: BestiaryFilterOptions,
+): CompiledBestiaryFilter {
+	return {
+		selectedSources: new Set(
+			options.selectedSources.map(normalizeMonsterSource),
+		),
+		sourceFilter:
+			options.sourceFilter === "all"
+				? null
+				: normalizeMonsterSource(options.sourceFilter),
+		favorites: options.onlyFavorites
+			? createBestiaryFavoriteSet(options.favorites)
+			: null,
+		search: options.search,
+		searchMatcher: options.isDetailedSearch
+			? options.matchesDetailedSearch
+			: options.matchesSimpleSearch,
+	};
 }
 
 function matchesBestiaryFavoriteFilter(
 	monster: BestiaryMonster,
-	options: BestiaryFilterOptions,
+	favorites: ReadonlySet<string> | null,
 ): boolean {
-	return !options.onlyFavorites || isFavoriteMonster(options.favorites, monster);
-}
-
-function getBestiarySearchMatcher(options: BestiaryFilterOptions) {
-	return options.isDetailedSearch
-		? options.matchesDetailedSearch
-		: options.matchesSimpleSearch;
+	if (favorites === null) return true;
+	const identity = getBestiaryFilterIdentityKey(monster);
+	return identity !== null && favorites.has(identity);
 }
 
 function matchesBestiaryMonster(
 	monster: BestiaryMonster,
-	options: BestiaryFilterOptions,
+	filter: CompiledBestiaryFilter,
 ): boolean {
-	if (!matchesSelectedSource(monster, options.selectedSources)) return false;
-	if (!matchesBestiarySourceFilter(monster, options.sourceFilter)) return false;
-	if (!matchesBestiaryFavoriteFilter(monster, options)) return false;
-	return getBestiarySearchMatcher(options)(monster, options.search);
+	if (!matchesSelectedSource(monster, filter.selectedSources)) return false;
+	if (!matchesBestiarySourceFilter(monster, filter.sourceFilter)) return false;
+	if (!matchesBestiaryFavoriteFilter(monster, filter.favorites)) return false;
+	return filter.searchMatcher(monster, filter.search);
 }
 
 export function filterBestiaryMonsters(
 	monsters: BestiaryMonster[],
 	options: BestiaryFilterOptions,
 ): BestiaryMonster[] {
-	return monsters.filter((monster) => matchesBestiaryMonster(monster, options));
+	const filter = compileBestiaryFilter(options);
+	return monsters.filter((monster) => matchesBestiaryMonster(monster, filter));
 }
 
 function getGeneratedMonsterSelection(

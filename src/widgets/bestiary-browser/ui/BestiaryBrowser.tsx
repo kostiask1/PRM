@@ -22,6 +22,7 @@ import type {
 } from "../../../features/ai/index.js";
 import type { AiUiAttachment } from "../../../features/ai/ui/index.js";
 import { settingsApi } from "../../../features/settings/index.js";
+import { isAbortError } from "../../../shared/api/index.ts";
 import {
 	alert,
 	confirm,
@@ -171,8 +172,10 @@ export default function BestiaryBrowser({
 	const globalIgnoreSourcesList = useAppSelector(
 		(state) => state.ui.ignoreSourcesList || [],
 	);
-	const syncEvent = parseBestiarySyncEvent(
-		useAppSelector((state) => state.sync.event),
+	const rawSyncEvent = useAppSelector((state) => state.sync.event);
+	const syncEvent = useMemo(
+		() => parseBestiarySyncEvent(rawSyncEvent),
+		[rawSyncEvent],
 	);
 	const initialMonsterReference = useMemo(
 		() => parseMonsterReference(initialSelectedName, initialSelectedSource),
@@ -444,17 +447,20 @@ export default function BestiaryBrowser({
 
 	// Load available source files.
 	useEffect(() => {
+		const controller = new AbortController();
 		const loadInitialData = async () => {
 			try {
 				const [sourcesData, legendaryData, favData] = await Promise.all([
-					api.getBestiarySources(),
-					api.getLegendaryGroups(),
-					api.getBestiaryFavorites(),
+					api.getBestiarySources({ signal: controller.signal }),
+					api.getLegendaryGroups({ signal: controller.signal }),
+					api.getBestiaryFavorites({ signal: controller.signal }),
 				]);
+				if (controller.signal.aborted) return;
 				setSources(getBestiarySourceCodes(sourcesData));
 				setLegendaryGroups(Array.isArray(legendaryData) ? legendaryData : []);
 				setFavorites(Array.isArray(favData) ? favData : []);
 			} catch (err) {
+				if (isAbortError(err)) return;
 				console.error(
 					"Failed to load bestiary sources or legendary groups",
 					err,
@@ -462,16 +468,25 @@ export default function BestiaryBrowser({
 			}
 		};
 		loadInitialData();
+		return () => controller.abort();
 	}, []);
 
 	useEffect(() => {
 		const plan = getBestiarySyncEventPlan(syncEvent);
+		if (!plan) return undefined;
+		const controller = new AbortController();
 		executeBestiarySyncEventPlan({
 			plan,
-			refreshFavorites: api.getBestiaryFavorites,
-			onFavorites: setFavorites,
-			onRefreshError: (error) =>
-				console.error("Failed to reload bestiary favorites", error),
+			refreshFavorites: () =>
+				api.getBestiaryFavorites({ signal: controller.signal }),
+			onFavorites: (favorites) => {
+				if (!controller.signal.aborted) setFavorites(favorites);
+			},
+			onRefreshError: (error) => {
+				if (!isAbortError(error)) {
+					console.error("Failed to reload bestiary favorites", error);
+				}
+			},
 			onPendingSelection: (selection) => {
 				pendingSyncSelectionRef.current = selection;
 			},
@@ -482,19 +497,22 @@ export default function BestiaryBrowser({
 				setReloadToken((current) => current + 1);
 			},
 		});
+		return () => controller.abort();
 	}, [syncEvent]);
 
 	// Load the full monster list once; sources are filtered locally after that.
 	useEffect(() => {
 		if (sources.length === 0) return;
 
+		const controller = new AbortController();
 		const loadData = async () => {
 			setLoading(true);
 			try {
 				const [officialData, customData] = await Promise.all([
-					api.getBestiaryData("all"),
-					api.getCustomBestiaryData(),
+					api.getBestiaryData("all", { signal: controller.signal }),
+					api.getCustomBestiaryData({ signal: controller.signal }),
 				]);
+				if (controller.signal.aborted) return;
 				const enrichedOfficialMonsters = enrichMonstersWithLegendaryGroups(
 					getMonsterListFromResponse(officialData),
 					legendaryGroups,
@@ -509,20 +527,27 @@ export default function BestiaryBrowser({
 					...enrichedCustomMonsters,
 				]);
 			} catch (error) {
-				console.error("Failed to load local monsters", error);
+				if (!isAbortError(error)) {
+					console.error("Failed to load local monsters", error);
+				}
 			} finally {
-				setLoading(false);
+				if (!controller.signal.aborted) setLoading(false);
 			}
 		};
 		loadData();
+		return () => controller.abort();
 	}, [sources, legendaryGroups]);
 
 	useEffect(() => {
 		if (sources.length === 0 || !hasLoadedInitialMonstersRef.current) return;
 
+		const controller = new AbortController();
 		const loadCustomData = async () => {
 			try {
-				const customData = await api.getCustomBestiaryData();
+				const customData = await api.getCustomBestiaryData({
+					signal: controller.signal,
+				});
+				if (controller.signal.aborted) return;
 				const enrichedCustomMonsters = enrichMonstersWithLegendaryGroups(
 					getMonsterListFromResponse(customData),
 					legendaryGroups,
@@ -543,10 +568,13 @@ export default function BestiaryBrowser({
 				selectedMonsterRef.current = nextSelected;
 				setSelectedMonster(nextSelected);
 			} catch (error) {
-				console.error("Failed to load custom monsters", error);
+				if (!isAbortError(error)) {
+					console.error("Failed to load custom monsters", error);
+				}
 			}
 		};
 		loadCustomData();
+		return () => controller.abort();
 	}, [sources, legendaryGroups, reloadToken]);
 
 	useEffect(() => {

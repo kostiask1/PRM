@@ -7,10 +7,10 @@ export {
 	type CampaignPartialArchiveSection,
 	type DomainId,
 } from "./api/campaignApi.ts";
+export { resolveEntityByName } from "./api/resolveEntityByName.ts";
 export {
 	findEntityByName,
 	getEntityDisplayName,
-	resolveEntityByName,
 	type CampaignEntity,
 	type CampaignEntityResolution,
 } from "./model/entityLookup.ts";

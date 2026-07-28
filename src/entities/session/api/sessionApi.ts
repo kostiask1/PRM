@@ -54,14 +54,19 @@ const sessionPath = (slug: string, fileName = "") =>
 	`/campaigns/${encodeURIComponent(slug)}/sessions${fileName ? `/${encodeURIComponent(fileName)}` : ""}`;
 
 export const sessionApi = {
-	listSessions: (slug: string) => request<SessionRecord[]>(sessionPath(slug)),
+	listSessions: (slug: string, options: RequestInit = {}) =>
+		request<SessionRecord[]>(sessionPath(slug), options),
 	createSession: (slug: string, name: string) =>
 		request<SessionRecord>(sessionPath(slug), {
 			method: "POST",
 			body: JSON.stringify({ name }),
 		}),
-	getSession: (slug: string, fileName: string) =>
-		request<SessionRecord>(sessionPath(slug, fileName)),
+	getSession: (
+		slug: string,
+		fileName: string,
+		options: RequestInit = {},
+	) =>
+		request<SessionRecord>(sessionPath(slug, fileName), options),
 	updateSession: (
 		slug: string,
 		fileName: string,

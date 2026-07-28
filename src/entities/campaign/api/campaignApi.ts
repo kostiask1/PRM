@@ -110,8 +110,12 @@ export const campaignApi = {
 			method: "POST",
 			body: JSON.stringify({ orders }),
 		}),
-	getEntities: (slug: string, type: CampaignEntityType) =>
-		request<CampaignEntityRecord[]>(entityPath(slug, type)),
+	getEntities: (
+		slug: string,
+		type: CampaignEntityType,
+		options: RequestInit = {},
+	) =>
+		request<CampaignEntityRecord[]>(entityPath(slug, type), options),
 	createEntity: (
 		slug: string,
 		type: CampaignEntityType,

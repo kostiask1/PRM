@@ -5,6 +5,11 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import tsParser from '@typescript-eslint/parser';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
+import {
+  CAMPAIGN_MODEL_IMPORT_PATTERNS,
+  REFERENCE_LOADER_IMPORT_PATTERNS,
+  TYPESCRIPT_PUBLIC_API_PATTERNS,
+} from './scripts/eslint-import-boundaries.mjs';
 
 export default [
   { ignores: ['dist', 'node_modules', 'data'] },
@@ -633,30 +638,25 @@ export default [
     rules: {
       ...tsPlugin.configs.recommended.rules,
       'no-restricted-imports': ['error', {
-        patterns: [
-          {
-            group: [
-              '**/features/editor/ui/Input',
-              '**/features/editor/ui/Input.jsx',
-              '**/features/editor/ui/Input.tsx',
-              '**/features/editor/ui/InputView',
-              '**/features/editor/ui/InputView.tsx',
-              '**/features/editor/ui/inputTypes',
-              '**/features/editor/ui/inputTypes.ts',
-              '**/features/editor/ui/EditableField',
-              '**/features/editor/ui/EditableField.jsx',
-              '**/features/editor/ui/EditableField.tsx',
-              '**/features/editor/ui/MentionPickerModalContent',
-              '**/features/editor/ui/MentionPickerModalContent.jsx',
-              '**/features/editor/ui/MentionPickerModalContent.tsx',
-            ],
-            message: 'Import editor UI through features/editor/ui/index.js.',
-          },
-          {
-            group: ['**/features/rules-reference/ui/*', '**/features/rules-reference/model/*'],
-            message: 'Import rules-reference behavior through features/rules-reference/index.js.',
-          },
-        ],
+        patterns: TYPESCRIPT_PUBLIC_API_PATTERNS,
+      }],
+    },
+  },
+  {
+    files: ['src/entities/campaign/model/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: CAMPAIGN_MODEL_IMPORT_PATTERNS,
+      }],
+    },
+  },
+  {
+    files: [
+      'src/entities/reference/model/{conditions,diseases,senses,skills,variantRules}.ts',
+    ],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: REFERENCE_LOADER_IMPORT_PATTERNS,
       }],
     },
   },

@@ -640,6 +640,143 @@ Next:
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
+## Selective recovery after Phase 119
+
+This recovery track does not renumber or rewrite the Phase 0-119 history above.
+Phase 119 still has a pending full regression gate, and Phase 120 remains the
+next numbered migration phase after that gate succeeds.
+
+### Provenance and transfer rule
+
+Accidental commit `25b5ccc40f57f104343a4ff4d3a1d6fd13c3883e` and the current
+`fsd` branch share pre-migration base
+`0f93e77a1d35cd097dda7d457d253ca5fecc166c`, but are sibling histories.
+The accidental commit was reverted on `main` by `8daaf4e`; it is not an
+ancestor of `fsd`. Its tree also predates the current branch's strict
+TypeScript/FSD and backend application-module work.
+
+Therefore the recovery rule is:
+
+- compare behavior and contracts, not file paths;
+- reimplement useful deltas in current owners;
+- do not cherry-pick the commit or copy its stale JavaScript/backend tree;
+- preserve all Phase 0-119 contracts and keep unrelated redesigns as explicit
+  debt.
+
+The detailed decisions are recorded in `docs/adr/0001-0004`; remaining work is
+tracked in `docs/migration-debt.md`.
+
+### Disposition summary
+
+| Side-commit area | Decision on `fsd` |
+| --- | --- |
+| Cancellation, bounded campaign search, filter/query performance, performance gate | Adapt to current strict TypeScript owners |
+| Campaign lookup and rules-reference endpoint ownership | Adapt through current entity public APIs |
+| Canonical Bestiary AI history and mutation request validation | Adapt through current backend modules, repositories, storage facade, and routes |
+| FSD/import enforcement, ADRs, recovery phases, debt register, agent rules | Recover and align with the current tree |
+| App-owned configured store | Defer to a dedicated typed design phase (`MD-R02`) |
+| Side commit's `server/domains` replacement, stale JS/JSX slices, graph ownership, and whole-file configuration/test rewrites | Skip because current `fsd` already has newer typed/application-module owners and stricter contracts |
+
+### Recovery R0 — Divergence audit
+
+Status: **Complete**
+
+- [x] Proved that `25b5ccc` and `fsd` diverged from `0f93e77`.
+- [x] Classified the side commit's changes as recover, adapt, defer, or skip.
+- [x] Rejected a wholesale cherry-pick because it would replace current typed
+  slices, tests, and backend commands.
+
+### Recovery R1 — Read lifecycle and performance
+
+Status: **Implementation complete; full regression gate pending**
+
+- [x] Forward native request options through Bestiary, spell, reference,
+  campaign, and session read APIs.
+- [x] Abort unmounted or superseded Bestiary, spell, rules-reference, and
+  campaign-search requests; suppress native abort failures and guard state
+  commits.
+- [x] Hydrate campaign sessions with an ordered concurrency limit of `6`.
+- [x] Cap campaign-search presentation at `80` results.
+- [x] Optimize Bestiary filtering and campaign-search early termination without
+  changing result order.
+- [x] Add `npm run check:performance` with executable Bestiary, spells,
+  campaign-search, and encounter budgets defined in ADR 0004.
+
+### Recovery R2 — Endpoint and model ownership
+
+Status: **Complete**
+
+- [x] Move API-backed campaign entity resolution to
+  `entities/campaign/api/resolveEntityByName.ts`.
+- [x] Keep name matching and entity-selection policy pure in
+  `entities/campaign/model/entityLookup.ts`.
+- [x] Move conditions, diseases, variant rules, skills, and senses to
+  `entities/reference/api/referenceApi.ts`.
+- [x] Keep the spell client limited to spell endpoints and update
+  rules-reference consumers through current public facades.
+
+### Recovery R3 — Canonical Bestiary AI history
+
+Status: **Implementation complete; full regression gate pending**
+
+- [x] Read the canonical Bestiary AI-history path first.
+- [x] If only legacy history exists, normalize it and attempt one canonical
+  write while retaining the legacy source.
+- [x] Deduplicate concurrent migration attempts.
+- [x] Serialize canonical Bestiary writes behind the same per-slug operation
+  queue so migration cannot overwrite a live write.
+- [x] Return normalized in-memory history when a canonical write fails and
+  retry on a later read.
+- [x] Keep non-Bestiary AI-history path behavior unchanged.
+
+### Recovery R4 — Validation before mutation
+
+Status: **Complete**
+
+- [x] Add shared validation/error mechanics and domain-owned campaign, session,
+  and archive request schemas.
+- [x] Attach schemas to all mutation routes listed in ADR 0003.
+- [x] Parse uploaded archives once, validate the complete payload, and only then
+  invoke an import command.
+- [x] Prove that invalid or empty wipe-and-replace archives cannot reach
+  persistence.
+- [x] Return one `400 / INVALID_REQUEST / details` contract for request-schema
+  and uploaded-archive validation failures.
+
+Focused contracts cover schema rejection, route middleware order, campaign and
+session guards, UTF-8 archive content, and the empty wipe-and-replace boundary.
+
+### Recovery R5 — Enforced ownership and verification
+
+Status: **In progress**
+
+- [x] Keep Fallow's
+  `app -> pages -> widgets -> features -> entities -> shared` direction.
+- [x] Correct the Fallow app-zone entry paths to current `.tsx` owners.
+- [x] Enforce the recovered campaign/reference public APIs through lint rules
+  and focused import scans.
+- [x] Run focused recovery tests, performance budgets, architecture checks,
+  syntax/diff hygiene, and UTF-8/replacement-character checks.
+- [ ] Run the complete lint and typecheck gates after the declared local
+  tooling dependencies are available.
+- [ ] Run the full `npm test` gate when the environment permits it; this also
+  closes the independently pending Phase 119 gate.
+
+### Recovery R6 — Typed app-owned store composition
+
+Status: **Deferred**
+
+- [ ] Design an app-owned configured store that composes lower-layer typed
+  reducers without making `shared` depend upward.
+- [ ] Migrate consumers incrementally behind an explicit typed compatibility
+  boundary.
+- [ ] Remove the shared composition owner only after behavior, realtime, modal,
+  navigation, settings, and selector contracts are preserved.
+
+The accidental commit's untyped JavaScript store is not a migration candidate.
+This work requires a dedicated design and implementation phase after the
+recovery gates, as recorded by `MD-R02`.
+
 ## Validation required for every phase
 
 Run:
@@ -648,6 +785,7 @@ Run:
 npm test
 npm run lint
 npm run check:architecture
+npm run check:performance
 npm run typecheck
 ```
 

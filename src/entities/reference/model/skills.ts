@@ -1,4 +1,7 @@
-import { spellApi, type ReferenceRecord } from "../../spell/index.js";
+import {
+	referenceApi,
+	type ReferenceRecord,
+} from "../api/referenceApi.ts";
 
 let skillMapCache: Map<string, ReferenceRecord> | null = null;
 let skillPromise: Promise<Map<string, ReferenceRecord>> | null = null;
@@ -21,7 +24,7 @@ function toSkillMap(
 export async function loadSkillsMap(): Promise<Map<string, ReferenceRecord>> {
 	if (skillMapCache) return skillMapCache;
 	if (skillPromise) return skillPromise;
-	skillPromise = spellApi
+	skillPromise = referenceApi
 		.getSkills()
 		.then((list) => {
 			skillMapCache = toSkillMap(list);

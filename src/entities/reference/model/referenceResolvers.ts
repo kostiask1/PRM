@@ -1,4 +1,5 @@
-import type { ReferenceRecord, SpellRecord } from "../../spell/index.js";
+import type { SpellRecord } from "../../spell/index.js";
+import type { ReferenceRecord } from "../api/referenceApi.ts";
 import {
 	getConditionByName,
 	getDiseaseByName,

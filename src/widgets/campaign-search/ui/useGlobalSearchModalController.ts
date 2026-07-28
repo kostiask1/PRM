@@ -48,7 +48,7 @@ export function useGlobalSearchModalController(): GlobalSearchModalController {
 			setIsLoading(false);
 			return undefined;
 		}
-		let cancelled = false;
+		const controller = new AbortController();
 		setIsLoading(true);
 		setError("");
 		void executeCampaignSearchIndexLoad({
@@ -57,10 +57,11 @@ export function useGlobalSearchModalController(): GlobalSearchModalController {
 			api,
 			translate: (key, params) => lang.t(key, params),
 			unknownErrorMessage: lang.t("Unknown error"),
-			isCancelled: () => cancelled,
+			isCancelled: () => controller.signal.aborted,
+			requestOptions: { signal: controller.signal },
 			effects: { setIndex, setError, setLoading: setIsLoading },
 		});
-		return () => { cancelled = true; };
+		return () => controller.abort();
 	}, [campaign]);
 
 	const results = useMemo(

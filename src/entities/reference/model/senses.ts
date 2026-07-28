@@ -1,4 +1,7 @@
-import { spellApi, type ReferenceRecord } from "../../spell/index.js";
+import {
+	referenceApi,
+	type ReferenceRecord,
+} from "../api/referenceApi.ts";
 
 let senseMapCache: Map<string, ReferenceRecord> | null = null;
 let sensePromise: Promise<Map<string, ReferenceRecord>> | null = null;
@@ -21,7 +24,7 @@ function toSenseMap(
 export async function loadSensesMap(): Promise<Map<string, ReferenceRecord>> {
 	if (senseMapCache) return senseMapCache;
 	if (sensePromise) return sensePromise;
-	sensePromise = spellApi
+	sensePromise = referenceApi
 		.getSenses()
 		.then((list) => {
 			senseMapCache = toSenseMap(list);

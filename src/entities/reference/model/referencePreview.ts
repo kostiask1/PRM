@@ -4,9 +4,9 @@ import {
 } from "../../bestiary/index.js";
 import {
 	spellApi,
-	type ReferenceRecord,
 	type SpellRecord,
 } from "../../spell/index.js";
+import type { ReferenceRecord } from "../api/referenceApi.ts";
 import { loadConditionsMap, normalizeConditionName } from "./conditions.ts";
 import { loadDiseasesMap, normalizeDiseaseName } from "./diseases.ts";
 import {

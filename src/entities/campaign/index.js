@@ -2,10 +2,10 @@ export {
 	CAMPAIGN_PARTIAL_ARCHIVE_SECTIONS,
 	campaignApi,
 } from "./api/campaignApi.ts";
+export { resolveEntityByName } from "./api/resolveEntityByName.ts";
 export {
 	findEntityByName,
 	getEntityDisplayName,
-	resolveEntityByName,
 } from "./model/entityLookup.ts";
 export { CardNoteModel } from "./model/cardNoteModel.ts";
 export { default as CampaignViewModel } from "./model/CampaignViewModel.ts";

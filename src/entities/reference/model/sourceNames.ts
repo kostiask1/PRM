@@ -1,4 +1,4 @@
-import sources from "../../../../database/sources.json";
+import sources from "../../../../database/sources.json" with { type: "json" };
 
 const CUSTOM_SOURCE_NAMES: Record<string, string> = {
 	CUSTOM: "Custom creatures",

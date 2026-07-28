@@ -9,10 +9,8 @@ import {
 	formatModifier,
 	preprocessTags,
 } from "../../../entities/reference/model.js";
-import type {
-	ReferenceRecord,
-	SpellRecord,
-} from "../../../entities/spell/index.js";
+import type { ReferenceRecord } from "../../../entities/reference/index.js";
+import type { SpellRecord } from "../../../entities/spell/index.js";
 
 export type RulesReferenceType =
 	| "spell"

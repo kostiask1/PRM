@@ -84,4 +84,8 @@ export async function requestBlob(
 	return response.blob();
 }
 
+export function isAbortError(error: unknown): boolean {
+	return (error as { name?: unknown } | null | undefined)?.name === "AbortError";
+}
+
 export const httpClient = { request, requestBlob };

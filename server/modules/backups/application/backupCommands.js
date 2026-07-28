@@ -88,8 +88,11 @@ function createBackupCommands(repository, { now = () => new Date() } = {}) {
 				`campaign-${slug}-partial-${date()}.prma.gz`,
 			);
 		},
-		async importPartialArchive({ slug, buffer, sections }) {
-			const parsed = parseArchivePayload(buffer);
+		async importPartialArchive({ slug, buffer, sections, payload }) {
+			const parsed =
+				payload === undefined
+					? parseArchivePayload(buffer)
+					: payload;
 			const bundle = Array.isArray(parsed?.campaigns) ? parsed.campaigns[0] : parsed;
 			const selected = parseList(sections);
 			return repository.importCampaignPartialArchiveBundle(
@@ -103,11 +106,19 @@ function createBackupCommands(repository, { now = () => new Date() } = {}) {
 			await importBundles(bundles, strategy);
 			return { ok: true, imported: bundles.length, strategy };
 		},
-		async importArchive({ buffer, mode: rawMode, strategy: rawStrategy }) {
+		async importArchive({
+			buffer,
+			payload,
+			mode: rawMode,
+			strategy: rawStrategy,
+		}) {
 			const mode = rawMode === "campaign" ? "campaign" : "all";
 			const strategy =
 				mode === "all" ? normalizeImportStrategy(rawStrategy) : "append";
-			const parsed = parseArchivePayload(buffer);
+			const parsed =
+				payload === undefined
+					? parseArchivePayload(buffer)
+					: payload;
 			const campaigns = Array.isArray(parsed)
 				? parsed
 				: Array.isArray(parsed?.campaigns)

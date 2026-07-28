@@ -11,6 +11,9 @@ const {
 const {
 	createCampaignArchiveImageRestorer,
 } = require("./modules/backups/infrastructure/archiveImageRestoration");
+const {
+	createBestiaryAiHistoryMigration,
+} = require("./modules/ai/infrastructure/bestiaryAiHistoryMigration");
 
 const ROOT_DIR = path.join(__dirname, "..");
 const DATA_DIR = path.join(ROOT_DIR, "data");
@@ -804,6 +807,22 @@ function normalizeSavedAiResponses(saved) {
 		.sort(compareAiResponsesByCreatedAt);
 }
 
+const bestiaryAiHistoryMigration = createBestiaryAiHistoryMigration({
+	aiResponsesPath,
+	campaignAiResponsesPath,
+	exists,
+	normalizeResponses: normalizeSavedAiResponses,
+	readJson,
+	writeJson,
+});
+
+async function resolveAiResponsesReadState(slug) {
+	if (slug === "bestiary") {
+		return bestiaryAiHistoryMigration.ensureCanonicalAiResponses(slug);
+	}
+	return { responsesPath: await resolveAiResponsesReadPath(slug) };
+}
+
 async function readNormalizedAiResponses(readablePath) {
 	try {
 		return normalizeSavedAiResponses(await readJson(readablePath));
@@ -815,16 +834,17 @@ async function readNormalizedAiResponses(readablePath) {
 async function readAiResponses(campaignSlugValue) {
 	const slug = normalizeCampaignSlug(campaignSlugValue);
 	if (!slug) return [];
-	const readablePath = await resolveAiResponsesReadPath(slug);
-	if (!(await exists(readablePath))) return [];
-	return readNormalizedAiResponses(readablePath);
+	const readState = await resolveAiResponsesReadState(slug);
+	if (readState.responses) return readState.responses;
+	if (!(await exists(readState.responsesPath))) return [];
+	return readNormalizedAiResponses(readState.responsesPath);
 }
 
 async function getAiResponsesStorageStats(campaignSlugValue) {
 	const slug = normalizeCampaignSlug(campaignSlugValue);
 	if (!slug) return { bytes: 0 };
-	const readablePath = await resolveAiResponsesReadPath(slug);
-	return { bytes: await getFileSize(readablePath) };
+	const readState = await resolveAiResponsesReadState(slug);
+	return { bytes: await getFileSize(readState.responsesPath) };
 }
 
 async function writeAiResponses(campaignSlugValue, responses) {
@@ -834,7 +854,14 @@ async function writeAiResponses(campaignSlugValue, responses) {
 		.map(normalizeAiResponse)
 		.filter(Boolean)
 		.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-	await writeJson(aiResponsesPath(slug), normalized);
+	if (slug === "bestiary") {
+		await bestiaryAiHistoryMigration.writeCanonicalAiResponses(
+			slug,
+			normalized,
+		);
+	} else {
+		await writeJson(aiResponsesPath(slug), normalized);
+	}
 	return normalized;
 }
 

@@ -1,4 +1,7 @@
-import { spellApi, type ReferenceRecord } from "../../spell/index.js";
+import {
+	referenceApi,
+	type ReferenceRecord,
+} from "../api/referenceApi.ts";
 
 let diseaseMapCache: Map<string, ReferenceRecord> | null = null;
 let diseasePromise: Promise<Map<string, ReferenceRecord>> | null = null;
@@ -21,7 +24,7 @@ function toDiseaseMap(
 export async function loadDiseasesMap(): Promise<Map<string, ReferenceRecord>> {
 	if (diseaseMapCache) return diseaseMapCache;
 	if (diseasePromise) return diseasePromise;
-	diseasePromise = spellApi
+	diseasePromise = referenceApi
 		.getDiseases()
 		.then((list) => {
 			diseaseMapCache = toDiseaseMap(list);
