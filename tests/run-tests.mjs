@@ -362,6 +362,10 @@ import {
 	filterMentionEntities,
 	getEditableClickPlan,
 	getEditableCopyRequest,
+	getEditableFieldCopyPresentation,
+	getEditableFieldMarkdownValue,
+	getEditableFieldTitleContent,
+	getEditableFieldTooltipPresentation,
 	getEditableKeyDownPlan,
 	getEditableMentionName,
 	getEditableShortcutAction,
@@ -374,11 +378,14 @@ import {
 	getInputShortcutAction,
 	getInputShortcutExecutionPlan,
 	getLexicalEditableFieldViewPresentation,
+	getNextEditableMentionTooltipState,
 	groupMentionEntities,
 	hasEditableLinkTarget,
 	insertInputTab,
+	isEditableFieldDisabled,
 	isRangeInsideSquareBrackets,
 	normalizeEditableMarkdown,
+	resolveEditableFieldCampaignSlug,
 	resolveInitialCursorPosition,
 	shouldActivateEditableMention,
 	shouldDelegateEditableHistory,
@@ -4143,6 +4150,473 @@ await run(
 );
 
 await run(
+	"EditableField root scalar policies preserve projection and coercion",
+	() => {
+		for (const [value, expected] of [
+			[undefined, ""],
+			[null, ""],
+			[false, ""],
+			["", ""],
+			[Number.NaN, ""],
+			[0n, ""],
+			[0, "0"],
+			[-0, "0"],
+			[true, "true"],
+			[42, "42"],
+			[1n, "1"],
+			[Symbol("value"), "Symbol(value)"],
+		]) {
+			assert.equal(getEditableFieldMarkdownValue(value), expected);
+		}
+
+		const coercionEvents = [];
+		const coercibleValue = {
+			[Symbol.toPrimitive](hint) {
+				coercionEvents.push(hint);
+				return "projected";
+			},
+		};
+		assert.equal(
+			getEditableFieldMarkdownValue(coercibleValue),
+			"projected",
+		);
+		assert.deepEqual(coercionEvents, ["string"]);
+		const coercionFailure = new Error("editable value coercion failed");
+		assert.throws(
+			() =>
+				getEditableFieldMarkdownValue({
+					[Symbol.toPrimitive]() {
+						throw coercionFailure;
+					},
+				}),
+			(error) => error === coercionFailure,
+		);
+
+		assert.equal(isEditableFieldDisabled(false, false), false);
+		assert.equal(isEditableFieldDisabled(0, ""), false);
+		assert.equal(isEditableFieldDisabled(null, "readonly"), true);
+		assert.equal(isEditableFieldDisabled(Symbol("disabled"), false), true);
+		assert.equal(
+			isEditableFieldDisabled(
+				{
+					[Symbol.toPrimitive]() {
+						throw new Error("must not coerce disabled");
+					},
+				},
+				false,
+			),
+			true,
+		);
+
+		assert.equal(getEditableFieldTitleContent("Title"), "Title");
+		assert.equal(getEditableFieldTitleContent("  Title  "), "  Title  ");
+		assert.equal(getEditableFieldTitleContent(" \t\n "), null);
+		assert.equal(getEditableFieldTitleContent(""), null);
+		assert.equal(getEditableFieldTitleContent(new String("Title")), null);
+		assert.equal(getEditableFieldTitleContent(Symbol("title")), null);
+	},
+);
+
+await run(
+	"EditableField tooltip policies preserve precedence, reads, and identity",
+	() => {
+		const anchor = { id: "mention-anchor" };
+		const reads = [];
+		const mentionTooltip = {
+			get content() {
+				reads.push("content");
+				return "Mention";
+			},
+			get anchor() {
+				reads.push("anchor");
+				return anchor;
+			},
+		};
+		const presentation = getEditableFieldTooltipPresentation(
+			mentionTooltip,
+			"Field",
+		);
+		assert.deepEqual(presentation, {
+			content: "Mention",
+			anchor,
+			disabled: false,
+		});
+		assert.deepEqual(reads, ["content", "anchor"]);
+		assert.notEqual(
+			presentation,
+			getEditableFieldTooltipPresentation(
+				{ content: "Mention", anchor },
+				"Field",
+			),
+		);
+
+		assert.deepEqual(
+			getEditableFieldTooltipPresentation(
+				{ content: "", anchor: 0 },
+				"Field",
+			),
+			{ content: "Field", anchor: null, disabled: false },
+		);
+		assert.deepEqual(
+			getEditableFieldTooltipPresentation(
+				{ content: null, anchor: false },
+				null,
+			),
+			{ content: null, anchor: null, disabled: true },
+		);
+		const objectContent = {
+			[Symbol.toPrimitive]() {
+				throw new Error("tooltip content must not coerce");
+			},
+		};
+		assert.equal(
+			getEditableFieldTooltipPresentation(
+				{ content: objectContent, anchor: null },
+				"Field",
+			).content,
+			objectContent,
+		);
+
+		const contentFailure = new Error("tooltip content failed");
+		const failureReads = [];
+		assert.throws(
+			() =>
+				getEditableFieldTooltipPresentation(
+					{
+						get content() {
+							failureReads.push("content");
+							throw contentFailure;
+						},
+						get anchor() {
+							failureReads.push("anchor");
+							return anchor;
+						},
+					},
+					"Field",
+				),
+			(error) => error === contentFailure,
+		);
+		assert.deepEqual(failureReads, ["content"]);
+
+		const anchorFailure = new Error("tooltip anchor failed");
+		assert.throws(
+			() =>
+				getEditableFieldTooltipPresentation(
+					{
+						content: "Mention",
+						get anchor() {
+							throw anchorFailure;
+						},
+					},
+					"Field",
+				),
+			(error) => error === anchorFailure,
+		);
+	},
+);
+
+await run(
+	"EditableField campaign and copy policies preserve lazy fallbacks",
+	() => {
+		const preferredSlug = {
+			[Symbol.toPrimitive]() {
+				throw new Error("campaign slug must not coerce");
+			},
+		};
+		let parseCalls = 0;
+		assert.equal(
+			resolveEditableFieldCampaignSlug(preferredSlug, () => {
+				parseCalls += 1;
+				return { campaign: "fallback" };
+			}),
+			preferredSlug,
+		);
+		assert.equal(parseCalls, 0);
+
+		const routeReads = [];
+		assert.equal(
+			resolveEditableFieldCampaignSlug("", () => {
+				parseCalls += 1;
+				return {
+					get campaign() {
+						routeReads.push("campaign");
+						return "parsed-campaign";
+					},
+				};
+			}),
+			"parsed-campaign",
+		);
+		assert.equal(parseCalls, 1);
+		assert.deepEqual(routeReads, ["campaign"]);
+		assert.equal(
+			resolveEditableFieldCampaignSlug(0, () => ({ campaign: null })),
+			null,
+		);
+		const parseFailure = new Error("route parsing failed");
+		assert.throws(
+			() =>
+				resolveEditableFieldCampaignSlug(null, () => {
+					throw parseFailure;
+				}),
+			(error) => error === parseFailure,
+		);
+
+		assert.deepEqual(getEditableFieldCopyPresentation("", true, false), {
+			showButton: "",
+			icon: "copy",
+		});
+		assert.deepEqual(
+			getEditableFieldCopyPresentation("markdown", false, true),
+			{ showButton: false, icon: "check" },
+		);
+		assert.deepEqual(
+			getEditableFieldCopyPresentation("markdown", true, false),
+			{ showButton: true, icon: "copy" },
+		);
+		assert.notEqual(
+			getEditableFieldCopyPresentation("markdown", true, false),
+			getEditableFieldCopyPresentation("markdown", true, false),
+		);
+	},
+);
+
+await run(
+	"EditableField mention hover reconciliation preserves equality boundaries",
+	() => {
+		const anchor = { id: "anchor" };
+		const current = { content: "Mention", anchor };
+		assert.equal(
+			getNextEditableMentionTooltipState(current, "Mention", anchor),
+			current,
+		);
+		assert.deepEqual(
+			getNextEditableMentionTooltipState(current, "Next", anchor),
+			{ content: "Next", anchor },
+		);
+		assert.notEqual(
+			getNextEditableMentionTooltipState(current, "Next", anchor),
+			current,
+		);
+		const nanCurrent = { content: Number.NaN, anchor };
+		assert.notEqual(
+			getNextEditableMentionTooltipState(
+				nanCurrent,
+				Number.NaN,
+				anchor,
+			),
+			nanCurrent,
+		);
+
+		const mismatchReads = [];
+		const mismatchCurrent = {
+			get content() {
+				mismatchReads.push("content");
+				return "Old";
+			},
+			get anchor() {
+				mismatchReads.push("anchor");
+				return anchor;
+			},
+		};
+		assert.deepEqual(
+			getNextEditableMentionTooltipState(
+				mismatchCurrent,
+				"New",
+				anchor,
+			),
+			{ content: "New", anchor },
+		);
+		assert.deepEqual(mismatchReads, ["content"]);
+
+		const matchReads = [];
+		const matchingCurrent = {
+			get content() {
+				matchReads.push("content");
+				return "Mention";
+			},
+			get anchor() {
+				matchReads.push("anchor");
+				return anchor;
+			},
+		};
+		assert.equal(
+			getNextEditableMentionTooltipState(
+				matchingCurrent,
+				"Mention",
+				anchor,
+			),
+			matchingCurrent,
+		);
+		assert.deepEqual(matchReads, ["content", "anchor"]);
+
+		const currentFailure = new Error("current tooltip failed");
+		assert.throws(
+			() =>
+				getNextEditableMentionTooltipState(
+					{
+						get content() {
+							throw currentFailure;
+						},
+						anchor,
+					},
+					"Mention",
+					anchor,
+				),
+			(error) => error === currentFailure,
+		);
+	},
+);
+
+await run(
+	"EditableField preserves private root view and controller ownership",
+	async () => {
+		const source = await fs.readFile(
+			"src/features/editor/ui/EditableField.tsx",
+			"utf8",
+		);
+		const runtimeBarrel = await fs.readFile(
+			"src/features/editor/ui/index.js",
+			"utf8",
+		);
+		const typeBarrel = await fs.readFile(
+			"src/features/editor/ui/index.d.ts",
+			"utf8",
+		);
+
+		const cleanupStart = source.indexOf(
+			"function clearEditableCopyResetTimer(",
+		);
+		const cleanupEnd = source.indexOf(
+			"interface EditableFieldViewProps",
+			cleanupStart,
+		);
+		assert.notEqual(cleanupStart, -1);
+		assert.notEqual(cleanupEnd, -1);
+		const cleanup = source.slice(cleanupStart, cleanupEnd);
+		assert.match(
+			cleanup,
+			/if \(copyTimeoutRef\.current\) clearTimeout\(copyTimeoutRef\.current\)/,
+		);
+		assert.equal(
+			(cleanup.match(/copyTimeoutRef\.current/g) ?? []).length,
+			2,
+		);
+
+		const viewStart = source.indexOf("function EditableFieldView(");
+		const controllerStart = source.indexOf(
+			"export default function EditableField(",
+			viewStart,
+		);
+		assert.notEqual(viewStart, -1);
+		assert.notEqual(controllerStart, -1);
+		const view = source.slice(viewStart, controllerStart);
+		const viewTokens = [
+			"<div",
+			"{...domProps}",
+			'className={classNames("EditableField", className',
+			"EditableField__active: isActive",
+			"EditableField__disabled: isDisabled",
+			"onClick={stopContainerEvent}",
+			"onMouseDown={stopContainerEvent}",
+			'style={{ position: "relative", ...domProps.style }}',
+			"{copyPresentation.showButton && (",
+			"<Button",
+			'key="copy"',
+			'variant="ghost"',
+			"size={Button.SIZES.SMALL}",
+			"icon={copyPresentation.icon}",
+			'className="EditableField__copy_btn"',
+			"onClick={handleCopy}",
+			'title={lang.t("Copy formatted text for Word")}',
+			"<Tooltip",
+			'key="editor"',
+			"content={tooltipPresentation.content}",
+			"disabled={tooltipPresentation.disabled}",
+			'className="EditableField__tooltip"',
+			"anchorElement={tooltipPresentation.anchor}",
+			'<div className="EditableField__editor_shell">',
+			"<LexicalComposer key={editorKey} initialConfig={initialConfig}>",
+			"<EditorRefPlugin editorRef={editorRef} />",
+			"<LexicalEditableField",
+			"dispatch={dispatch}",
+			"enableHistory={enableHistory}",
+			"isActive={isActive}",
+			"isDisabled={isDisabled}",
+			"lastEventRef={lastEventRef}",
+			"lastValueRef={lastValueRef}",
+			"markdownValue={markdownValue}",
+			"onBlur={onBlur}",
+			"onChange={onChange}",
+			"onClick={onClick}",
+			"onFocus={onFocus}",
+			"onInput={onInput}",
+			"onKeyDown={onKeyDown}",
+			"onMentionHover={onMentionHover}",
+			"onPaste={onPaste}",
+			"openMentionModal={openMentionModal}",
+			"placeholder={placeholder}",
+			"type={type}",
+			"<EntityModal",
+			'key="entity-modal"',
+			"modalState={modalState}",
+			"onClose={onCloseMentionModal}",
+		];
+		let previousIndex = -1;
+		for (const token of viewTokens) {
+			const index = view.indexOf(token, previousIndex + 1);
+			assert.ok(
+				index > previousIndex,
+				`${token} must retain EditableField root view order`,
+			);
+			previousIndex = index;
+		}
+		assert.doesNotMatch(
+			view,
+			/useAppDispatch|useContext|useState|useMemo|useEffect|useCallback|navigator\.clipboard|openEntityLinkModal|parseUrl|clearTimeout|setTimeout/,
+		);
+
+		const controller = source.slice(controllerStart);
+		const controllerTokens = [
+			"useAppDispatch()",
+			"useContext(EntityLinkContext)",
+			"useContext(EntityLinkResolverContext)",
+			"getEditableFieldMarkdownValue(value)",
+			"normalizeEditableMarkdown(markdownValue, type)",
+			"isEditableFieldDisabled(disabled, readOnly)",
+			"getEditableFieldTitleContent(title)",
+			"getEditableFieldTooltipPresentation(",
+			"getEditableFieldCopyPresentation(",
+			"resolveEditableFieldCampaignSlug(campaignSlug, parseUrl)",
+			"return () => clearEditableCopyResetTimer(copyTimeoutRef)",
+			"navigator.clipboard.write([",
+			"openEntityLinkModal({",
+			"getNextEditableMentionTooltipState(current, content, anchor)",
+			"<EditableFieldView",
+		];
+		previousIndex = -1;
+		for (const token of controllerTokens) {
+			const index = controller.indexOf(token, previousIndex + 1);
+			assert.ok(
+				index > previousIndex,
+				`${token} must retain EditableField controller order`,
+			);
+			previousIndex = index;
+		}
+		assert.doesNotMatch(
+			controller,
+			/<div|<Button|<Tooltip|<LexicalComposer|<EditorRefPlugin|<LexicalEditableField|<EntityModal|classNames\(/,
+		);
+		assert.doesNotMatch(source, /export function EditableFieldView/);
+
+		const privateApi =
+			/EditableFieldView|getEditableFieldMarkdownValue|isEditableFieldDisabled|getEditableFieldTitleContent|getEditableFieldTooltipPresentation|resolveEditableFieldCampaignSlug|getEditableFieldCopyPresentation|getNextEditableMentionTooltipState/;
+		for (const barrel of [runtimeBarrel, typeBarrel]) {
+			assert.doesNotMatch(barrel, privateApi);
+		}
+	},
+);
+
+await run(
 	"EditableField formatted copy preserves controller and timer effect ownership",
 	async () => {
 		const source = await fs.readFile(
@@ -4160,7 +4634,7 @@ await run(
 			"function replaceEditableCopyResetTimer(",
 		);
 		const timerEnd = source.indexOf(
-			"export default function EditableField(",
+			"function clearEditableCopyResetTimer(",
 			timerStart,
 		);
 		assert.notEqual(timerStart, -1);
@@ -43734,7 +44208,10 @@ await run(
 
 		assert.match(editableFieldSource, /data-mention-tooltip/);
 		assert.match(editableFieldSource, /onMouseMove=\{handleMouseMove\}/);
-		assert.match(editableFieldSource, /anchorElement=\{tooltipAnchor\}/);
+		assert.match(
+			editableFieldSource,
+			/anchorElement=\{tooltipPresentation\.anchor\}/,
+		);
 		assert.equal(editableFieldSource.includes("replace(/\\n{3,}/g"), false);
 		assert.equal(editableFieldSource.includes('paragraph.push("")'), false);
 		assert.match(editableFieldSource, /LexicalComposer/);

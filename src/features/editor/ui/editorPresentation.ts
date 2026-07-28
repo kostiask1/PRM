@@ -220,6 +220,84 @@ export function getLexicalEditableFieldViewPresentation(
 	};
 }
 
+export function getEditableFieldMarkdownValue(value: unknown): string {
+	return value || value === 0 ? String(value) : "";
+}
+
+export function isEditableFieldDisabled(
+	disabled: unknown,
+	readOnly: unknown,
+): boolean {
+	return Boolean(disabled || readOnly);
+}
+
+export function getEditableFieldTitleContent(title: unknown): string | null {
+	if (typeof title === "string" && title.trim()) return title;
+	return null;
+}
+
+interface EditableFieldTooltipSource<Content, Anchor> {
+	content: Content;
+	anchor: Anchor;
+}
+
+export interface EditableFieldTooltipPresentation<Content, Anchor> {
+	content: Content;
+	anchor: Anchor;
+	disabled: boolean;
+}
+
+export function getEditableFieldTooltipPresentation<
+	Content,
+	Anchor,
+	FieldContent,
+>(
+	mentionTooltip: EditableFieldTooltipSource<Content, Anchor>,
+	fieldTooltipContent: FieldContent,
+): EditableFieldTooltipPresentation<
+	Content | FieldContent,
+	Anchor | null
+> {
+	const content = mentionTooltip.content || fieldTooltipContent;
+	return {
+		content,
+		anchor: mentionTooltip.anchor || null,
+		disabled: !content,
+	};
+}
+
+export function resolveEditableFieldCampaignSlug(
+	campaignSlug: string | null | undefined,
+	parseCurrentUrl: () => { campaign: string | null },
+): string | null {
+	return campaignSlug || parseCurrentUrl().campaign;
+}
+
+export interface EditableFieldCopyPresentation {
+	showButton: string | boolean;
+	icon: "check" | "copy";
+}
+
+export function getEditableFieldCopyPresentation(
+	normalizedMarkdownValue: string,
+	showCopyButton: boolean,
+	copied: boolean,
+): EditableFieldCopyPresentation {
+	return {
+		showButton: normalizedMarkdownValue && showCopyButton,
+		icon: copied ? "check" : "copy",
+	};
+}
+
+export function getNextEditableMentionTooltipState<Content, Anchor>(
+	current: EditableFieldTooltipSource<Content, Anchor>,
+	content: Content,
+	anchor: Anchor,
+): EditableFieldTooltipSource<Content, Anchor> {
+	if (current.content === content && current.anchor === anchor) return current;
+	return { content, anchor };
+}
+
 export function getInputRawValue(source: InputValueSource): string {
 	if (Array.isArray(source.value)) return source.value.join(",");
 	return String(source.value ?? "");

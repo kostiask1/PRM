@@ -101,15 +101,24 @@ import type {
 import {
 	createEditableFieldChangeEvent,
 	getEditableClickPlan,
+	getEditableFieldCopyPresentation,
+	getEditableFieldMarkdownValue,
+	getEditableFieldTitleContent,
+	getEditableFieldTooltipPresentation,
 	getEditableCopyRequest,
 	getEditableKeyDownPlan,
 	getEditableMentionName,
 	getLexicalEditableFieldViewPresentation,
+	getNextEditableMentionTooltipState,
+	isEditableFieldDisabled,
 	normalizeEditableMarkdown,
 	normalizeEditableText,
+	resolveEditableFieldCampaignSlug,
 	shouldInsertEditableMentionResult,
+	type EditableFieldCopyPresentation,
 	type EditableShortcutAction,
 	type EditableFieldChangeEvent,
+	type EditableFieldTooltipPresentation,
 	type EditableFieldType,
 } from "./editorPresentation.ts";
 
@@ -989,6 +998,124 @@ function replaceEditableCopyResetTimer(
 	}, 2000);
 }
 
+function clearEditableCopyResetTimer(
+	copyTimeoutRef: MutableRefObject<ReturnType<typeof setTimeout> | null>,
+): void {
+	if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+}
+
+interface EditableFieldViewProps extends LexicalEditableFieldProps {
+	className?: string;
+	copyPresentation: EditableFieldCopyPresentation;
+	domProps: HTMLAttributes<HTMLDivElement>;
+	editorKey: string;
+	editorRef: LexicalEditorRef;
+	handleCopy: (event: MouseEvent<HTMLButtonElement>) => void | Promise<void>;
+	initialConfig: InitialConfigType;
+	modalState: EntityLinkModalState | null;
+	onCloseMentionModal: () => void;
+	stopContainerEvent: (event: MouseEvent<HTMLDivElement>) => void;
+	tooltipPresentation: EditableFieldTooltipPresentation<
+		string | null,
+		HTMLElement | null
+	>;
+}
+
+function EditableFieldView({
+	className,
+	copyPresentation,
+	dispatch,
+	domProps,
+	editorKey,
+	editorRef,
+	enableHistory,
+	handleCopy,
+	initialConfig,
+	isActive,
+	isDisabled,
+	lastEventRef,
+	lastValueRef,
+	markdownValue,
+	modalState,
+	onBlur,
+	onChange,
+	onClick,
+	onCloseMentionModal,
+	onFocus,
+	onInput,
+	onKeyDown,
+	onMentionHover,
+	onPaste,
+	openMentionModal,
+	placeholder,
+	stopContainerEvent,
+	tooltipPresentation,
+	type,
+}: EditableFieldViewProps) {
+	return (
+		<div
+			{...domProps}
+			className={classNames("EditableField", className, {
+				EditableField__active: isActive,
+				EditableField__disabled: isDisabled,
+			})}
+			onClick={stopContainerEvent}
+			onMouseDown={stopContainerEvent}
+			style={{ position: "relative", ...domProps.style }}
+		>
+			{copyPresentation.showButton && (
+				<Button
+					key="copy"
+					variant="ghost"
+					size={Button.SIZES.SMALL}
+					icon={copyPresentation.icon}
+					className="EditableField__copy_btn"
+					onClick={handleCopy}
+					title={lang.t("Copy formatted text for Word")}
+				/>
+			)}
+			<Tooltip
+				key="editor"
+				content={tooltipPresentation.content}
+				disabled={tooltipPresentation.disabled}
+				className="EditableField__tooltip"
+				anchorElement={tooltipPresentation.anchor}
+			>
+				<div className="EditableField__editor_shell">
+					<LexicalComposer key={editorKey} initialConfig={initialConfig}>
+						<EditorRefPlugin editorRef={editorRef} />
+						<LexicalEditableField
+							dispatch={dispatch}
+							enableHistory={enableHistory}
+							isActive={isActive}
+							isDisabled={isDisabled}
+							lastEventRef={lastEventRef}
+							lastValueRef={lastValueRef}
+							markdownValue={markdownValue}
+							onBlur={onBlur}
+							onChange={onChange}
+							onClick={onClick}
+							onFocus={onFocus}
+							onInput={onInput}
+							onKeyDown={onKeyDown}
+							onMentionHover={onMentionHover}
+							onPaste={onPaste}
+							openMentionModal={openMentionModal}
+							placeholder={placeholder}
+							type={type}
+						/>
+					</LexicalComposer>
+				</div>
+			</Tooltip>
+			<EntityModal
+				key="entity-modal"
+				modalState={modalState}
+				onClose={onCloseMentionModal}
+			/>
+		</div>
+	);
+}
+
 export default function EditableField({
 	value,
 	onChange,
@@ -1025,19 +1152,26 @@ export default function EditableField({
 	const editorRef = useRef<LexicalEditor | null>(null);
 	const lastEventRef = useRef<unknown>(null);
 	const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const markdownValue = value || value === 0 ? String(value) : "";
+	const markdownValue = getEditableFieldMarkdownValue(value);
 	const normalizedMarkdownValue = normalizeEditableMarkdown(markdownValue, type);
 	const lastValueRef = useRef(normalizedMarkdownValue);
-	const isDisabled = Boolean(disabled || readOnly);
-	const fieldTooltipContent = useMemo(() => {
-		if (typeof title === "string" && title.trim()) return title;
-		return null;
-	}, [title]);
-	const tooltipContent = mentionTooltip.content || fieldTooltipContent;
-	const tooltipAnchor = mentionTooltip.anchor || null;
+	const isDisabled = isEditableFieldDisabled(disabled, readOnly);
+	const fieldTooltipContent = useMemo(
+		() => getEditableFieldTitleContent(title),
+		[title],
+	);
+	const tooltipPresentation = getEditableFieldTooltipPresentation(
+		mentionTooltip,
+		fieldTooltipContent,
+	);
+	const copyPresentation = getEditableFieldCopyPresentation(
+		normalizedMarkdownValue,
+		showCopyButton,
+		copied,
+	);
 
-	const resolvedCampaignSlug = useMemo(
-		() => campaignSlug || parseUrl().campaign,
+	const resolvedCampaignSlug: string | null = useMemo(
+		() => resolveEditableFieldCampaignSlug(campaignSlug, parseUrl),
 		[campaignSlug],
 	);
 
@@ -1053,11 +1187,7 @@ export default function EditableField({
 	);
 
 	useEffect(() => {
-		return () => {
-			if (copyTimeoutRef.current) {
-				clearTimeout(copyTimeoutRef.current);
-			}
-		};
+		return () => clearEditableCopyResetTimer(copyTimeoutRef);
 	}, []);
 
 	const handleCopy = useCallback(
@@ -1134,9 +1264,7 @@ export default function EditableField({
 
 	const handleMentionHover = useCallback(({ anchor, content }: MentionTooltipState) => {
 		setMentionTooltip((current) =>
-			current.content === content && current.anchor === anchor
-				? current
-				: { content, anchor },
+			getNextEditableMentionTooltipState(current, content, anchor),
 		);
 	}, []);
 
@@ -1145,65 +1273,36 @@ export default function EditableField({
 	}, []);
 
 	return (
-		<div
-			{...domProps}
-			className={classNames("EditableField", className, {
-				EditableField__active: isActive,
-				EditableField__disabled: isDisabled,
-			})}
-			onClick={stopContainerEvent}
-			onMouseDown={stopContainerEvent}
-			style={{ position: "relative", ...domProps.style }}
-		>
-			{normalizedMarkdownValue && showCopyButton && (
-				<Button
-					key="copy"
-					variant="ghost"
-					size={Button.SIZES.SMALL}
-					icon={copied ? "check" : "copy"}
-					className="EditableField__copy_btn"
-					onClick={handleCopy}
-					title={lang.t("Copy formatted text for Word")}
-				/>
-			)}
-			<Tooltip
-				key="editor"
-				content={tooltipContent}
-				disabled={!tooltipContent}
-				className="EditableField__tooltip"
-				anchorElement={tooltipAnchor}
-			>
-				<div className="EditableField__editor_shell">
-					<LexicalComposer key={editorKey} initialConfig={initialConfig}>
-						<EditorRefPlugin editorRef={editorRef} />
-						<LexicalEditableField
-							dispatch={dispatch}
-							enableHistory={enableHistory}
-							isActive={isActive}
-							isDisabled={isDisabled}
-							lastEventRef={lastEventRef}
-							lastValueRef={lastValueRef}
-							markdownValue={normalizedMarkdownValue}
-							onBlur={handleBlur}
-							onChange={onChange}
-							onClick={onClick}
-							onFocus={handleFocus}
-							onInput={onInput}
-							onKeyDown={onKeyDown}
-							onMentionHover={handleMentionHover}
-							onPaste={onPaste}
-							openMentionModal={openMentionModal}
-							placeholder={placeholder}
-							type={type}
-						/>
-					</LexicalComposer>
-				</div>
-			</Tooltip>
-			<EntityModal
-				key="entity-modal"
-				modalState={modalState}
-				onClose={handleCloseMentionModal}
-			/>
-		</div>
+		<EditableFieldView
+			className={className}
+			copyPresentation={copyPresentation}
+			dispatch={dispatch}
+			domProps={domProps}
+			editorKey={editorKey}
+			editorRef={editorRef}
+			enableHistory={enableHistory}
+			handleCopy={handleCopy}
+			initialConfig={initialConfig}
+			isActive={isActive}
+			isDisabled={isDisabled}
+			lastEventRef={lastEventRef}
+			lastValueRef={lastValueRef}
+			markdownValue={normalizedMarkdownValue}
+			modalState={modalState}
+			onBlur={handleBlur}
+			onChange={onChange}
+			onClick={onClick}
+			onCloseMentionModal={handleCloseMentionModal}
+			onFocus={handleFocus}
+			onInput={onInput}
+			onKeyDown={onKeyDown}
+			onMentionHover={handleMentionHover}
+			onPaste={onPaste}
+			openMentionModal={openMentionModal}
+			placeholder={placeholder}
+			stopContainerEvent={stopContainerEvent}
+			tooltipPresentation={tooltipPresentation}
+			type={type}
+		/>
 	);
 }
