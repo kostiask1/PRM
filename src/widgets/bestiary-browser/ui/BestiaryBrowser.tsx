@@ -112,6 +112,10 @@ import {
 	type CustomBestiaryUpdateOptions,
 	type MonsterReference,
 } from "../model.js";
+import type {
+	BestiaryAssistantSlot,
+	BestiaryMonsterStatBlockSlot,
+} from "./bestiaryComposition.ts";
 
 const api = { ...campaignApi, ...bestiaryApi, ...aiApi, ...settingsApi };
 
@@ -137,6 +141,8 @@ interface ApplyCustomMonsterListOptions {
 }
 
 export interface BestiaryBrowserProps {
+	AiAssistantPanel: BestiaryAssistantSlot;
+	MonsterStatBlock: BestiaryMonsterStatBlockSlot;
 	ResponseModal: AiResponseModalComponent;
 	MonsterEditorModal: ComponentType<
 		Pick<
@@ -156,6 +162,8 @@ export interface BestiaryBrowserProps {
 }
 
 export default function BestiaryBrowser({
+	AiAssistantPanel,
+	MonsterStatBlock,
 	ResponseModal,
 	MonsterEditorModal,
 	onAddMonster,
@@ -1156,6 +1164,8 @@ export default function BestiaryBrowser({
 
 	const bestiaryContent = (
 		<BestiaryContent
+			AiAssistantPanel={AiAssistantPanel}
+			MonsterStatBlock={MonsterStatBlock}
 			displayedMonsters={displayedMonsters}
 			favorites={favorites}
 			headerActions={bestiaryActions}

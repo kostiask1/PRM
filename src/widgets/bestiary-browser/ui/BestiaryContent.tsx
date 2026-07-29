@@ -16,7 +16,6 @@ import { Button } from "../../../shared/ui/index.js";
 import { Icon } from "../../../shared/ui/index.js";
 import { Input } from "../../../features/editor/ui/index.js";
 import { ListCard } from "../../../shared/ui/index.js";
-import { MonsterStatBlock } from "../../monster-stat-block/index.js";
 import { MonsterStatBlockModel } from "../../../entities/bestiary/index.js";
 import { MultiSelect } from "../../../shared/ui/index.js";
 import { Tooltip } from "../../../shared/ui/index.js";
@@ -28,7 +27,6 @@ import {
 	getSourceFullName,
 } from "../../../entities/reference/index.js";
 import { lang } from "../../../shared/lib/index.js";
-import { AiAssistantPanel } from "../../ai-assistant/index.js";
 import {
 	getBestiaryDetailPresentation,
 	getBestiaryMonsterRowPresentation,
@@ -40,6 +38,10 @@ import {
 	type BestiaryMonsterRowPrimaryAction,
 	type BestiarySortOrder,
 } from "../model.js";
+import type {
+	BestiaryAssistantSlot,
+	BestiaryMonsterStatBlockSlot,
+} from "./bestiaryComposition.ts";
 
 function isMobileViewport() {
 	return (
@@ -283,6 +285,8 @@ interface MonsterListItemProps {
 }
 
 export interface BestiaryContentProps {
+	AiAssistantPanel: BestiaryAssistantSlot;
+	MonsterStatBlock: BestiaryMonsterStatBlockSlot;
 	displayedMonsters: BestiaryMonster[];
 	favorites: BestiaryFavorite[];
 	headerActions?: ReactNode;
@@ -471,6 +475,7 @@ function BestiaryList({
 
 type BestiaryDetailProps = Pick<
 	BestiaryContentProps,
+	| "MonsterStatBlock"
 	| "favorites"
 	| "onAddMonster"
 	| "onDeleteCustomMonster"
@@ -485,6 +490,7 @@ type BestiaryDetailProps = Pick<
 };
 
 function BestiaryDetail({
+	MonsterStatBlock,
 	detailRef,
 	favorites,
 	onAddMonster,
@@ -538,6 +544,8 @@ function BestiaryDetail({
 }
 
 export default function BestiaryContent({
+	AiAssistantPanel,
+	MonsterStatBlock,
 	displayedMonsters,
 	favorites,
 	headerActions = null,
@@ -648,6 +656,7 @@ export default function BestiaryContent({
 						loading={loading}
 					/>
 					<BestiaryDetail
+						MonsterStatBlock={MonsterStatBlock}
 						detailRef={detailRef}
 						favorites={favorites}
 						onAddMonster={onAddMonster}

@@ -1879,10 +1879,10 @@ await run(
 			declarations: 18,
 		});
 		await assertSameLayerBaselineShape("widgets", {
-			importers: 6,
-			edges: 10,
-			pairs: 10,
-			declarations: 10,
+			importers: 5,
+			edges: 8,
+			pairs: 8,
+			declarations: 8,
 		});
 
 		for (const layer of ["features", "widgets"]) {
@@ -2057,7 +2057,7 @@ await run(
 		);
 		assert.match(
 			bestiarySource,
-			/export interface BestiaryBrowserProps\s*\{\s*ResponseModal: AiResponseModalComponent;\s*MonsterEditorModal: ComponentType<\s*Pick<\s*MonsterFieldEditModalProps,\s*"editingMonster"\s*\|\s*"onCancel"\s*\|\s*"onSave"\s*>\s*>;/,
+			/export interface BestiaryBrowserProps\s*\{[\s\S]*?\bResponseModal: AiResponseModalComponent;\s*MonsterEditorModal: ComponentType<\s*Pick<\s*MonsterFieldEditModalProps,\s*"editingMonster"\s*\|\s*"onCancel"\s*\|\s*"onSave"\s*>\s*>;/,
 		);
 
 		const modalComposition = bestiarySource.match(
@@ -2179,6 +2179,177 @@ await run(
 		assert.match(
 			spellCardSource,
 			/spell\.entriesHigherLevel && <div className="SpellCard__higher">\{renderRecursiveContent\(spell\.entriesHigherLevel, searchHighlight, renderOptions\)\}<\/div>/,
+		);
+	},
+);
+
+await run(
+	"Phase 127 injects Bestiary content widgets from the page composition root",
+	async () => {
+		const [
+			bestiaryBrowserSource,
+			bestiaryContentSource,
+			compositionSource,
+			declarationSource,
+			encounterSource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/bestiary-browser/ui/BestiaryContent.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/bestiary-browser/ui/bestiaryComposition.ts",
+				"utf8",
+			),
+			fs.readFile("src/widgets/bestiary-browser/index.d.ts", "utf8"),
+			fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+		]);
+
+		for (const [filePath, source] of [
+			[
+				"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+				bestiaryBrowserSource,
+			],
+			[
+				"src/widgets/bestiary-browser/ui/BestiaryContent.tsx",
+				bestiaryContentSource,
+			],
+			[
+				"src/widgets/bestiary-browser/ui/bestiaryComposition.ts",
+				compositionSource,
+			],
+		]) {
+			const siblingWidgetImports = readStaticFsdSpecifiers(source)
+				.map((specifier) => [
+					specifier,
+					resolveTestModuleSpecifierPath(filePath, specifier),
+				])
+				.filter(
+					([, resolved]) =>
+						resolved?.startsWith("src/widgets/") &&
+						!resolved.startsWith("src/widgets/bestiary-browser/"),
+				);
+			assert.deepEqual(
+				siblingWidgetImports,
+				[],
+				`${filePath} must not import a sibling widget`,
+			);
+		}
+
+		assert.match(
+			compositionSource,
+			/export interface BestiaryAssistantSlotProps\s*\{[\s\S]*?\bisBestiary: boolean;[\s\S]*?\bonRegisterImagePromptAction:/,
+		);
+		assert.match(
+			compositionSource,
+			/export type BestiaryAssistantSlot\s*=\s*ComponentType<BestiaryAssistantSlotProps>;/,
+		);
+		assert.match(
+			compositionSource,
+			/export interface BestiaryMonsterStatBlockSlotProps\s*\{[\s\S]*?\bmonster: BestiaryMonster;[\s\S]*?\bonFavoriteChange: Dispatch<SetStateAction<BestiaryFavorite\[\]>>;[\s\S]*?\bsearchHighlight: string;/,
+		);
+		assert.match(
+			compositionSource,
+			/export type BestiaryMonsterStatBlockSlot\s*=\s*ComponentType<BestiaryMonsterStatBlockSlotProps>;/,
+		);
+		for (const publicType of [
+			"BestiaryAssistantSlot",
+			"BestiaryAssistantSlotProps",
+			"BestiaryMonsterStatBlockSlot",
+			"BestiaryMonsterStatBlockSlotProps",
+		]) {
+			assert.match(declarationSource, new RegExp(`\\b${publicType}\\b`));
+		}
+
+		assert.match(
+			bestiaryBrowserSource,
+			/export interface BestiaryBrowserProps\s*\{\s*AiAssistantPanel: BestiaryAssistantSlot;\s*MonsterStatBlock: BestiaryMonsterStatBlockSlot;/,
+		);
+		assert.match(
+			bestiaryBrowserSource,
+			/export default function BestiaryBrowser\(\{\s*AiAssistantPanel,\s*MonsterStatBlock,/,
+		);
+		const bestiaryContentTag = bestiaryBrowserSource.match(
+			/<BestiaryContent(?=\s|>)[\s\S]*?\/>/,
+		)?.[0];
+		assert.ok(bestiaryContentTag);
+		assert.match(
+			bestiaryContentTag,
+			/\bAiAssistantPanel=\{AiAssistantPanel\}/,
+		);
+		assert.match(
+			bestiaryContentTag,
+			/\bMonsterStatBlock=\{MonsterStatBlock\}/,
+		);
+
+		assert.match(
+			bestiaryContentSource,
+			/export interface BestiaryContentProps\s*\{\s*AiAssistantPanel: BestiaryAssistantSlot;\s*MonsterStatBlock: BestiaryMonsterStatBlockSlot;/,
+		);
+		assert.match(
+			bestiaryContentSource,
+			/export default function BestiaryContent\(\{\s*AiAssistantPanel,\s*MonsterStatBlock,/,
+		);
+		assert.match(
+			bestiaryContentSource,
+			/<BestiaryDetail(?=\s|>)[\s\S]*?\bMonsterStatBlock=\{MonsterStatBlock\}[\s\S]*?\/>/,
+		);
+		assert.match(
+			bestiaryContentSource,
+			/function BestiaryDetail\(\{\s*MonsterStatBlock,[\s\S]*?if \(!presentation\) return null;[\s\S]*?<MonsterStatBlock(?=\s|>)/,
+		);
+		assert.match(
+			bestiaryContentSource,
+			/<\/div>\s*<AiAssistantPanel\s+isBestiary\s+onRegisterImagePromptAction=\{onRegisterImagePromptAction\}\s*\/>/,
+		);
+
+		const bestiaryConsumers = [];
+		for (const filePath of await collectFsdSourceFiles("src")) {
+			const source = await fs.readFile(filePath, "utf8");
+			for (const specifier of readStaticFsdSpecifiers(source)) {
+				if (
+					resolveTestModuleSpecifierPath(filePath, specifier) ===
+					"src/widgets/bestiary-browser/index.js"
+				) {
+					bestiaryConsumers.push(filePath);
+				}
+			}
+		}
+		assert.deepEqual(bestiaryConsumers, [
+			"src/pages/encounter/ui/EncounterPage.tsx",
+		]);
+
+		assert.match(
+			encounterSource,
+			/import \{ AiAssistantPanel \} from "\.\.\/\.\.\/\.\.\/widgets\/ai-assistant\/index\.js";/,
+		);
+		assert.match(
+			encounterSource,
+			/import \{ MonsterStatBlock \} from "\.\.\/\.\.\/\.\.\/widgets\/monster-stat-block\/index\.js";/,
+		);
+		const encounterBestiaryOverlay = encounterSource.match(
+			/function EncounterBestiaryOverlay\([\s\S]*?(?=\ninterface EncounterCharacterOverlaysProps)/,
+		)?.[0];
+		assert.ok(encounterBestiaryOverlay);
+		assert.match(
+			encounterBestiaryOverlay,
+			/if \(!open\) return null;\s*return \(\s*<Modal/,
+		);
+		const encounterBestiaryTag = encounterBestiaryOverlay.match(
+			/<Bestiary(?=\s|>)[\s\S]*?\/>/,
+		)?.[0];
+		assert.ok(encounterBestiaryTag);
+		assert.match(
+			encounterBestiaryTag,
+			/\bAiAssistantPanel=\{AiAssistantPanel\}/,
+		);
+		assert.match(
+			encounterBestiaryTag,
+			/\bMonsterStatBlock=\{MonsterStatBlock\}/,
 		);
 	},
 );

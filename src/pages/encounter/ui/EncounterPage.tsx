@@ -33,6 +33,7 @@ import {
 	type MonsterAiAction,
 } from "../../../features/ai-edit-monster/index.js";
 import { AiResponseModal } from "../../../widgets/ai-response-modal/index.js";
+import { AiAssistantPanel } from "../../../widgets/ai-assistant/index.js";
 import { MonsterEditorModal } from "../../../widgets/monster-editor-modal/index.js";
 import { MonsterStatBlock } from "../../../widgets/monster-stat-block/index.js";
 import { CharacterCard } from "../../../widgets/campaign-entity-card/index.js";
@@ -625,6 +626,8 @@ function EncounterBestiaryOverlay({
 	return (
 		<Modal onConfirm={() => {}} title={lang.t("Choose monster")} onCancel={onClose} showFooter={false} type="custom">
 			<Bestiary
+				AiAssistantPanel={AiAssistantPanel}
+				MonsterStatBlock={MonsterStatBlock}
 				ResponseModal={AiResponseModal}
 				MonsterEditorModal={MonsterEditorModal}
 				onAddMonster={(monster) => onAdd(monster as EncounterViewParticipant)}
