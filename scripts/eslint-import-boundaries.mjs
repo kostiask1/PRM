@@ -104,9 +104,6 @@ export const FSD_SAME_LAYER_FILE_EDGE_BASELINE =
 				"monster-editor-modal",
 				"monster-stat-block",
 			],
-			"src/widgets/campaign-entity-modal/ui/CampaignEntityModalCard.tsx": [
-				"campaign-entity-card",
-			],
 			"src/widgets/monster-editor-modal/ui/MonsterEditorModal.tsx": [
 				"rules-reference-modal",
 			],

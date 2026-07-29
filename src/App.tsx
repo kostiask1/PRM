@@ -8,6 +8,10 @@ const api = { ...campaignApi, ...backupApi, ...settingsApi };
 import { DiceCalculator } from "./features/dice/index.js";
 import MainContent from "./app/routing/MainContent.tsx";
 import MessageBoxHost from "./app/ui/MessageBoxHost.tsx";
+import {
+	CharacterCard,
+	LocationCard,
+} from "./widgets/campaign-entity-card/index.js";
 import { CampaignEntityModalProvider } from "./widgets/campaign-entity-modal/index.js";
 import { Icon, Modal } from "./shared/ui/index.js";
 import { Sidebar } from "./widgets/sidebar/index.js";
@@ -371,7 +375,11 @@ export default function App() {
 
 	return (
 		<div className="App" data-lang={currentLanguage}>
-			<CampaignEntityModalProvider campaignSlug={activeCampaignSlug}>
+			<CampaignEntityModalProvider
+				CharacterCard={CharacterCard}
+				LocationCard={LocationCard}
+				campaignSlug={activeCampaignSlug}
+			>
 				<button
 					type="button"
 					className="App__mobileNavButton"

@@ -1879,10 +1879,10 @@ await run(
 			declarations: 18,
 		});
 		await assertSameLayerBaselineShape("widgets", {
-			importers: 5,
-			edges: 8,
-			pairs: 8,
-			declarations: 8,
+			importers: 4,
+			edges: 7,
+			pairs: 7,
+			declarations: 7,
 		});
 
 		for (const layer of ["features", "widgets"]) {
@@ -2351,6 +2351,252 @@ await run(
 			encounterBestiaryTag,
 			/\bMonsterStatBlock=\{MonsterStatBlock\}/,
 		);
+	},
+);
+
+await run(
+	"Phase 128 injects campaign entity cards from the app composition root",
+	async () => {
+		const [
+			appSource,
+			providerSource,
+			cardSource,
+			slotSource,
+			declarationSource,
+		] = await Promise.all([
+			fs.readFile("src/App.tsx", "utf8"),
+			fs.readFile(
+				"src/widgets/campaign-entity-modal/ui/CampaignEntityModalProvider.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/campaign-entity-modal/ui/CampaignEntityModalCard.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/campaign-entity-modal/ui/campaignEntityModalSlots.ts",
+				"utf8",
+			),
+			fs.readFile("src/widgets/campaign-entity-modal/index.d.ts", "utf8"),
+		]);
+
+		for (const filePath of await collectFsdSourceFiles(
+			"src/widgets/campaign-entity-modal",
+		)) {
+			const source = await fs.readFile(filePath, "utf8");
+			const siblingWidgetImports = readStaticFsdSpecifiers(source)
+				.map((specifier) => [
+					specifier,
+					resolveTestModuleSpecifierPath(filePath, specifier),
+				])
+				.filter(
+					([, resolved]) =>
+						resolved?.startsWith("src/widgets/") &&
+						!resolved.startsWith("src/widgets/campaign-entity-modal/"),
+				);
+			assert.deepEqual(
+				siblingWidgetImports,
+				[],
+				`${filePath} must not import a sibling widget`,
+			);
+		}
+
+		assert.match(
+			appSource,
+			/import \{\s*CharacterCard,\s*LocationCard,\s*\} from "\.\/widgets\/campaign-entity-card\/index\.js";/,
+		);
+		const appProviderTag = appSource.match(
+			/<CampaignEntityModalProvider(?=\s|>)[\s\S]*?>/,
+		)?.[0];
+		assert.ok(appProviderTag);
+		assert.match(appProviderTag, /\bCharacterCard=\{CharacterCard\}/);
+		assert.match(appProviderTag, /\bLocationCard=\{LocationCard\}/);
+		assert.match(appProviderTag, /\bcampaignSlug=\{activeCampaignSlug\}/);
+
+		assert.deepEqual(readStaticFsdSpecifiers(slotSource), [
+			"react",
+			"../../../entities/campaign/index.js",
+		]);
+		assert.match(
+			slotSource,
+			/import type \{ ComponentType \} from "react";/,
+		);
+		assert.match(
+			slotSource,
+			/import type \{\s*CharacterData,\s*LocationData,\s*\} from "\.\.\/\.\.\/\.\.\/entities\/campaign\/index\.js";/,
+		);
+		assert.doesNotMatch(
+			slotSource,
+			/\b(?:CharacterCardProps|LocationCardProps)\b/,
+		);
+		assert.match(
+			slotSource,
+			/export type CampaignEntityModalCardId = string \| number \| undefined;/,
+		);
+		assert.match(
+			slotSource,
+			/export interface CampaignEntityModalCharacterCardSlotProps\s*\{[\s\S]*?\bcharacter: CharacterData;[\s\S]*?\bonChange:[\s\S]*?\bonNameBlur\?:[\s\S]*?\bonDelete\?:[\s\S]*?\bonToggleCollapse\?:[\s\S]*?\bcampaignSlug\?: string \| null;[\s\S]*?\btype\?: string;[\s\S]*?\bviewMode\?: "card" \| "modal";[\s\S]*?\bshowDeleteButton\?: boolean;[\s\S]*?\bshowHeader\?: boolean;\s*\}/,
+		);
+		assert.match(
+			slotSource,
+			/export interface CampaignEntityModalLocationCardSlotProps\s*\{[\s\S]*?\blocation: LocationData;[\s\S]*?\bonChange:[\s\S]*?\bonNameBlur\?:[\s\S]*?\bonDelete\?:[\s\S]*?\bonToggleCollapse\?:[\s\S]*?\bcampaignSlug\?: string \| null;[\s\S]*?\bviewMode\?: "card" \| "modal";[\s\S]*?\bshowDeleteButton\?: boolean;[\s\S]*?\bshowHeader\?: boolean;\s*\}/,
+		);
+		assert.match(
+			slotSource,
+			/export type CampaignEntityModalCharacterCardComponent\s*=\s*ComponentType<CampaignEntityModalCharacterCardSlotProps>;/,
+		);
+		assert.match(
+			slotSource,
+			/export type CampaignEntityModalLocationCardComponent\s*=\s*ComponentType<CampaignEntityModalLocationCardSlotProps>;/,
+		);
+		for (const publicType of [
+			"CampaignEntityModalCardId",
+			"CampaignEntityModalCharacterCardComponent",
+			"CampaignEntityModalCharacterCardSlotProps",
+			"CampaignEntityModalLocationCardComponent",
+			"CampaignEntityModalLocationCardSlotProps",
+		]) {
+			assert.match(declarationSource, new RegExp(`\\b${publicType}\\b`));
+		}
+
+		assert.match(
+			providerSource,
+			/interface CampaignEntityModalContentProps\s*\{\s*CharacterCard: CampaignEntityModalCharacterCardComponent;\s*LocationCard: CampaignEntityModalLocationCardComponent;/,
+		);
+		assert.match(
+			providerSource,
+			/function CampaignEntityModalContent\(\{\s*CharacterCard,\s*LocationCard,/,
+		);
+		assert.match(
+			providerSource,
+			/export interface CampaignEntityModalProviderProps\s*\{\s*CharacterCard: CampaignEntityModalCharacterCardComponent;\s*LocationCard: CampaignEntityModalLocationCardComponent;/,
+		);
+		assert.match(
+			providerSource,
+			/export default function CampaignEntityModalProvider\(\{\s*CharacterCard,\s*LocationCard,/,
+		);
+		const contentTag = providerSource.match(
+			/<CampaignEntityModalContent(?=\s|>)[\s\S]*?\/>/,
+		)?.[0];
+		assert.ok(contentTag);
+		assert.match(contentTag, /\bCharacterCard=\{CharacterCard\}/);
+		assert.match(contentTag, /\bLocationCard=\{LocationCard\}/);
+		assert.match(contentTag, /\binitialEntity=\{modalState\.entity\}/);
+		assert.match(contentTag, /\bcampaignSlug=\{campaignSlug\}/);
+		assert.match(contentTag, /\btype=\{modalState\.type\}/);
+		assert.match(contentTag, /\bonClose=\{onClose\}/);
+
+		const modalCardTag = providerSource.match(
+			/<CampaignEntityModalCard(?=\s|>)[\s\S]*?\/>/,
+		)?.[0];
+		assert.ok(modalCardTag);
+		assert.match(modalCardTag, /\bCharacterCard=\{CharacterCard\}/);
+		assert.match(modalCardTag, /\bLocationCard=\{LocationCard\}/);
+		assert.match(modalCardTag, /\bentity=\{entity\}/);
+		assert.match(modalCardTag, /\bcampaignSlug=\{campaignSlug\}/);
+		assert.match(modalCardTag, /\btype=\{type\}/);
+		assert.match(modalCardTag, /\bonChange=\{handleUpdate\}/);
+		assert.match(modalCardTag, /\bonNameBlur=\{handleNameBlur\}/);
+		assert.match(modalCardTag, /\bonDelete=\{handleDelete\}/);
+
+		assert.match(
+			providerSource,
+			/const parentContent = parentEntityLinks\?\.renderModalContent\?\.\(\s*modalState,\s*onClose,\s*\);\s*if \(parentContent\) return parentContent;\s*if \(\s*!campaignSlug \|\|\s*!shouldRenderCampaignEntityModal\(campaignSlug, modalState\.scope\)\s*\) \{\s*return null;\s*\}/,
+		);
+		assert.match(
+			providerSource,
+			/\[CharacterCard, LocationCard, campaignSlug, parentEntityLinks\],\s*\);/,
+		);
+
+		assert.match(
+			cardSource,
+			/export interface CampaignEntityModalCardProps\s*\{\s*CharacterCard: CampaignEntityModalCharacterCardComponent;\s*LocationCard: CampaignEntityModalLocationCardComponent;/,
+		);
+		assert.match(
+			cardSource,
+			/export default function CampaignEntityModalCard\(\{\s*CharacterCard,\s*LocationCard,/,
+		);
+		assert.match(
+			cardSource,
+			/const plan = getCampaignEntityModalCardPlan\(type, entity\);\s*if \(plan\.kind === "location"\)/,
+		);
+
+		const readJsxPropNames = (tag) =>
+			Array.from(
+				tag.matchAll(/^\s+([A-Za-z][A-Za-z0-9]*)=(?:\{|")/gm),
+				(match) => match[1],
+			);
+		const locationTag = cardSource.match(
+			/<LocationCard(?=\s|>)[\s\S]*?\/>/,
+		)?.[0];
+		const characterTag = cardSource.match(
+			/<CharacterCard(?=\s|>)[\s\S]*?\/>/,
+		)?.[0];
+		assert.ok(locationTag);
+		assert.ok(characterTag);
+		assert.deepEqual(readJsxPropNames(locationTag), [
+			"key",
+			"location",
+			"onChange",
+			"onNameBlur",
+			"onDelete",
+			"onToggleCollapse",
+			"campaignSlug",
+			"viewMode",
+			"showDeleteButton",
+			"showHeader",
+		]);
+		assert.deepEqual(readJsxPropNames(characterTag), [
+			"key",
+			"character",
+			"onChange",
+			"onNameBlur",
+			"onDelete",
+			"onToggleCollapse",
+			"campaignSlug",
+			"type",
+			"viewMode",
+			"showDeleteButton",
+			"showHeader",
+		]);
+
+		const compactLocationTag = locationTag.replace(/\s+/g, " ");
+		const compactCharacterTag = characterTag.replace(/\s+/g, " ");
+		for (const fragment of [
+			"key={plan.key}",
+			"location={{ ...entity, collapsed: false } as LocationData}",
+			"onChange={(id, updated) => onChange(id, updated as CampaignModalEntity)}",
+			"onNameBlur={(id, updated, oldName, newName) => onNameBlur(id, updated as CampaignModalEntity, oldName, newName) }",
+			"onDelete={() => onDelete()}",
+			"onToggleCollapse={null}",
+			"campaignSlug={campaignSlug}",
+			'viewMode="modal"',
+			"showDeleteButton={false}",
+			"showHeader={false}",
+		]) {
+			assert.ok(
+				compactLocationTag.includes(fragment),
+				`LocationCard must preserve ${fragment}`,
+			);
+		}
+		for (const fragment of [
+			"key={plan.key}",
+			"character={{ ...entity, collapsed: false } as CharacterData}",
+			"onChange={(id, updated) => onChange(id, updated as CampaignModalEntity)}",
+			"onNameBlur={(id, updated, oldName, newName) => onNameBlur(id, updated as CampaignModalEntity, oldName, newName) }",
+			"onDelete={() => onDelete()}",
+			"onToggleCollapse={null}",
+			"campaignSlug={campaignSlug}",
+			"type={type}",
+			'viewMode="modal"',
+			"showDeleteButton={false}",
+			"showHeader={false}",
+		]) {
+			assert.ok(
+				compactCharacterTag.includes(fragment),
+				`CharacterCard must preserve ${fragment}`,
+			);
+		}
 	},
 );
 

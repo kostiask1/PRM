@@ -31,8 +31,14 @@ import {
 	type CampaignModalEntity,
 } from "../model.js";
 import CampaignEntityModalCard from "./CampaignEntityModalCard.tsx";
+import type {
+	CampaignEntityModalCharacterCardComponent,
+	CampaignEntityModalLocationCardComponent,
+} from "./campaignEntityModalSlots.ts";
 
 interface CampaignEntityModalContentProps {
+	CharacterCard: CampaignEntityModalCharacterCardComponent;
+	LocationCard: CampaignEntityModalLocationCardComponent;
 	initialEntity: CampaignEntity;
 	campaignSlug: string;
 	type: string;
@@ -40,6 +46,8 @@ interface CampaignEntityModalContentProps {
 }
 
 function CampaignEntityModalContent({
+	CharacterCard,
+	LocationCard,
 	initialEntity,
 	campaignSlug,
 	type,
@@ -109,6 +117,8 @@ function CampaignEntityModalContent({
 	if (!entity) return null;
 	return (
 		<CampaignEntityModalCard
+			CharacterCard={CharacterCard}
+			LocationCard={LocationCard}
 			entity={entity}
 			campaignSlug={campaignSlug}
 			type={type}
@@ -120,11 +130,15 @@ function CampaignEntityModalContent({
 }
 
 export interface CampaignEntityModalProviderProps {
+	CharacterCard: CampaignEntityModalCharacterCardComponent;
+	LocationCard: CampaignEntityModalLocationCardComponent;
 	campaignSlug?: string | null;
 	children?: ReactNode;
 }
 
 export default function CampaignEntityModalProvider({
+	CharacterCard,
+	LocationCard,
 	campaignSlug,
 	children,
 }: CampaignEntityModalProviderProps) {
@@ -145,6 +159,8 @@ export default function CampaignEntityModalProvider({
 			}
 			return (
 				<CampaignEntityModalContent
+					CharacterCard={CharacterCard}
+					LocationCard={LocationCard}
 					initialEntity={modalState.entity}
 					campaignSlug={campaignSlug}
 					type={modalState.type}
@@ -152,7 +168,7 @@ export default function CampaignEntityModalProvider({
 				/>
 			);
 		},
-		[campaignSlug, parentEntityLinks],
+		[CharacterCard, LocationCard, campaignSlug, parentEntityLinks],
 	);
 
 	const value = useMemo<EntityLinkResolver>(

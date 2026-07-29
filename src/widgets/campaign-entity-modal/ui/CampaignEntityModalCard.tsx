@@ -3,15 +3,17 @@ import type {
 	LocationData,
 } from "../../../entities/campaign/index.js";
 import {
-	CharacterCard,
-	LocationCard,
-} from "../../campaign-entity-card/index.js";
-import {
 	getCampaignEntityModalCardPlan,
 	type CampaignModalEntity,
 } from "../model.js";
+import type {
+	CampaignEntityModalCharacterCardComponent,
+	CampaignEntityModalLocationCardComponent,
+} from "./campaignEntityModalSlots.ts";
 
 export interface CampaignEntityModalCardProps {
+	CharacterCard: CampaignEntityModalCharacterCardComponent;
+	LocationCard: CampaignEntityModalLocationCardComponent;
 	entity: CampaignModalEntity;
 	campaignSlug: string;
 	type: string;
@@ -26,6 +28,8 @@ export interface CampaignEntityModalCardProps {
 }
 
 export default function CampaignEntityModalCard({
+	CharacterCard,
+	LocationCard,
 	entity,
 	campaignSlug,
 	type,
