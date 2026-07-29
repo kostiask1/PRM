@@ -1,8 +1,7 @@
 import type { ChangeEvent, KeyboardEvent } from "react";
 
 import { lang } from "../../../shared/lib/index.js";
-import { Button } from "../../../shared/ui/index.js";
-import { Input } from "../../editor/ui/index.js";
+import { Button, TextInput } from "../../../shared/ui/index.js";
 import {
 	isAiApiKeySaveDisabled,
 	shouldSubmitAiApiKey,
@@ -36,7 +35,7 @@ export default function AiApiKeyPanel({
 				)}
 			</div>
 			<div className="AiAssistant__api_key_row">
-				<Input
+				<TextInput
 					type="password"
 					value={apiKeyInput}
 					placeholder={lang.t("Gemini API key")}

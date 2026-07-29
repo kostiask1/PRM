@@ -8,6 +8,7 @@ export { default as MultiSelect } from "./MultiSelect.tsx";
 export { default as Notification } from "./Notification.tsx";
 export { default as Panel } from "./Panel.tsx";
 export { default as Switch } from "./Switch.tsx";
+export { default as TextInput } from "./TextInput.tsx";
 export { highlightText } from "./SearchHighlight.tsx";
 export { default as Select } from "./Select.tsx";
 export { default as Tooltip } from "./Tooltip.tsx";

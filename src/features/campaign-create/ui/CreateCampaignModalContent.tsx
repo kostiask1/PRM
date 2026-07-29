@@ -1,7 +1,6 @@
 import { useRef, useState, type ChangeEvent } from "react";
 import { lang } from "../../../shared/lib/index.js";
-import { Button } from "../../../shared/ui/index.js";
-import { Input } from "../../editor/ui/index.js";
+import { Button, TextInput } from "../../../shared/ui/index.js";
 
 export interface CreateCampaignModalContentProps {
 	onCreateCampaign: (name: string) => void | Promise<void>;
@@ -30,7 +29,7 @@ export default function CreateCampaignModalContent({
 			<label className="CreateCampaignModal__label">
 				{lang.t("Campaign name")}
 			</label>
-			<Input
+			<TextInput
 				value={name}
 				onChange={(event: ChangeEvent<HTMLInputElement>) =>
 					setName(event.target.value)

@@ -855,7 +855,9 @@ import { create5eToolsUpdater } from "../scripts/update-5etools-data-runtime.mjs
 import * as databaseBundlePolicies from "../scripts/build-database-bundles-policies.mjs";
 import {
 	CAMPAIGN_MODEL_IMPORT_PATTERNS,
+	FSD_BOUNDARY_PLUGIN,
 	FSD_PUBLIC_API_PATTERNS,
+	FSD_SAME_LAYER_FILE_EDGE_BASELINE,
 	FSD_SLICE_NAMES,
 	RECOVERED_ENTITY_PUBLIC_API_PATTERN,
 	REFERENCE_LOADER_IMPORT_PATTERNS,
@@ -1367,6 +1369,10 @@ await run(
 			FSD_PUBLIC_API_PATTERNS,
 		);
 		expectRestricted(
+			'import value from "/src/features/ai/model/aiDiff.ts";',
+			FSD_PUBLIC_API_PATTERNS,
+		);
+		expectRestricted(
 			'import value from "../../ai/model/aiDiff.ts";',
 			FSD_PUBLIC_API_PATTERNS,
 		);
@@ -1384,6 +1390,10 @@ await run(
 		);
 		expectAllowed(
 			'import value from "./features/ai/index.js";',
+			FSD_PUBLIC_API_PATTERNS,
+		);
+		expectAllowed(
+			'import value from "/src/features/ai/index.js";',
 			FSD_PUBLIC_API_PATTERNS,
 		);
 		expectAllowed(
@@ -1428,7 +1438,7 @@ await run(
 		const eslintSource = await fs.readFile("eslint.config.js", "utf8");
 		assert.match(
 			eslintSource,
-			/import \{\s*CAMPAIGN_MODEL_IMPORT_PATTERNS,\s*FSD_PUBLIC_API_PATTERNS,/,
+			/import \{\s*CAMPAIGN_MODEL_IMPORT_PATTERNS,\s*FSD_BOUNDARY_PLUGIN,\s*FSD_PUBLIC_API_PATTERNS,/,
 		);
 		assert.match(
 			eslintSource,
@@ -1437,6 +1447,418 @@ await run(
 		assert.match(
 			eslintSource,
 			/files: \['\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*ignores: \['src\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'no-restricted-imports': 'off',/,
+		);
+	},
+);
+
+const FSD_PUBLIC_ENTRY_RULE_ID = "fsd-boundaries/public-entry-imports";
+const FSD_SAME_LAYER_RULE_ID = "fsd-boundaries/same-layer-file-edges";
+
+function lintFsdBoundaryRule(source, fileName, ruleId) {
+	const linter = new Linter({ configType: "flat" });
+	return linter.verify(
+		source,
+		{
+			files: ["**/*.{js,jsx,ts,tsx}"],
+			languageOptions: {
+				ecmaVersion: "latest",
+				sourceType: "module",
+			},
+			plugins: {
+				"fsd-boundaries": FSD_BOUNDARY_PLUGIN,
+			},
+			rules: {
+				[ruleId]: "error",
+			},
+		},
+		{ filename: path.resolve(fileName) },
+	);
+}
+
+function lintFsdSameLayerEdges(source, fileName) {
+	return lintFsdBoundaryRule(source, fileName, FSD_SAME_LAYER_RULE_ID);
+}
+
+function lintFsdPublicEntries(source, fileName) {
+	return lintFsdBoundaryRule(source, fileName, FSD_PUBLIC_ENTRY_RULE_ID);
+}
+
+function isFsdSourceFile(entry) {
+	return entry.isFile() && /\.(?:js|jsx|ts|tsx)$/.test(entry.name);
+}
+
+async function collectFsdSourceFiles(directory) {
+	const entries = await fs.readdir(directory, { withFileTypes: true });
+	const files = [];
+	for (const entry of entries) {
+		const entryPath = path.join(directory, entry.name);
+		if (entry.isDirectory()) {
+			files.push(...(await collectFsdSourceFiles(entryPath)));
+		}
+		if (isFsdSourceFile(entry)) {
+			files.push(entryPath.replace(/\\/g, "/"));
+		}
+	}
+	return files;
+}
+
+function readFsdSpecifierMatches(source, codeMask, pattern) {
+	return Array.from(source.matchAll(pattern))
+		.filter((match) => codeMask[match.index] !== " ")
+		.map((match) => match[1]);
+}
+
+const FSD_COMMENT_OR_LITERAL_PATTERN =
+	/("(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'|`(?:\\[\s\S]|[^`\\])*`)|\/\/[^\r\n]*|\/\*[\s\S]*?\*\//g;
+
+function createFsdCodeMask(source) {
+	return source.replace(
+		FSD_COMMENT_OR_LITERAL_PATTERN,
+		(match) => match.replace(/[^\r\n]/g, " "),
+	);
+}
+
+function readStaticFsdSpecifiers(source) {
+	const codeMask = createFsdCodeMask(source);
+	return [
+		...readFsdSpecifierMatches(
+			source,
+			codeMask,
+			/\bfrom\s*["']([^"']+)["']/g,
+		),
+		...readFsdSpecifierMatches(
+			source,
+			codeMask,
+			/\bimport\s*["']([^"']+)["']/g,
+		),
+		...readFsdSpecifierMatches(
+			source,
+			codeMask,
+			/\b(?:import|require)\s*\(\s*["']([^"']+)["']/g,
+		),
+		...readFsdSpecifierMatches(
+			source,
+			codeMask,
+			/\b(?:import|require)\s*\(\s*`([^`]*)`/g,
+		),
+	].filter((specifier) => !specifier.includes("${"));
+}
+
+function getCataloguedTestSiblingSlice(layer, sourceSlice, targetSlice) {
+	if (targetSlice === sourceSlice) return null;
+	return FSD_SLICE_NAMES[layer].includes(targetSlice) ? targetSlice : null;
+}
+
+function resolveTestModuleSpecifierPath(filePath, specifier) {
+	const [cleanSpecifier] = specifier
+		.replaceAll("\\", "/")
+		.split(/[?#]/);
+	if (cleanSpecifier.startsWith("/src/")) {
+		return path.posix.normalize(cleanSpecifier).slice(1);
+	}
+	if (!cleanSpecifier.startsWith(".")) return null;
+	return path.posix.normalize(
+		path.posix.join(path.posix.dirname(filePath), cleanSpecifier),
+	);
+}
+
+function resolveTestSameLayerTarget(filePath, layer, sourceSlice, specifier) {
+	const resolved = resolveTestModuleSpecifierPath(filePath, specifier);
+	if (!resolved) return null;
+	const [root, resolvedLayer, targetSlice] = resolved.split("/");
+	if (root !== "src") return null;
+	if (resolvedLayer !== layer) return null;
+	return getCataloguedTestSiblingSlice(layer, sourceSlice, targetSlice);
+}
+
+async function getActualSameLayerTargets(filePath, layer) {
+	const sourceSlice = filePath.split("/")[2];
+	const source = await fs.readFile(filePath, "utf8");
+	const targets = new Set();
+	for (const specifier of readStaticFsdSpecifiers(source)) {
+		const targetSlice = resolveTestSameLayerTarget(
+			filePath,
+			layer,
+			sourceSlice,
+			specifier,
+		);
+		if (targetSlice) targets.add(targetSlice);
+	}
+	return [...targets].sort();
+}
+
+async function getActualSameLayerEntries(layer) {
+	const sourceFiles = await collectFsdSourceFiles(path.join("src", layer));
+	const actualEntries = [];
+	for (const filePath of sourceFiles) {
+		const targets = await getActualSameLayerTargets(filePath, layer);
+		if (targets.length > 0) actualEntries.push([filePath, targets]);
+	}
+	return actualEntries.sort(([left], [right]) => left.localeCompare(right));
+}
+
+async function assertSameLayerBaselineShape(layer, expectedCounts) {
+	const entries = FSD_SAME_LAYER_FILE_EDGE_BASELINE[layer];
+	const pairs = new Set();
+	let edgeCount = 0;
+	assert.ok(Object.isFrozen(entries));
+	for (const [filePath, targetSlices] of Object.entries(entries)) {
+		assert.ok(Object.isFrozen(targetSlices));
+		assert.deepEqual(targetSlices, [...new Set(targetSlices)].sort());
+		assert.match(
+			filePath,
+			new RegExp(`^src/${layer}/[^/]+/.+\\.(?:js|jsx|ts|tsx)$`),
+		);
+		await fs.access(filePath);
+		const sourceSlice = filePath.split("/")[2];
+		for (const targetSlice of targetSlices) {
+			assert.ok(FSD_SLICE_NAMES[layer].includes(targetSlice));
+			assert.notEqual(targetSlice, sourceSlice);
+			pairs.add(`${sourceSlice}->${targetSlice}`);
+			edgeCount += 1;
+		}
+	}
+	assert.equal(Object.keys(entries).length, expectedCounts.importers);
+	assert.equal(edgeCount, expectedCounts.edges);
+	assert.equal(pairs.size, expectedCounts.pairs);
+}
+
+function inspectFsdBoundaryVisitor(ruleName, fileName, visitorName, node) {
+	const reports = [];
+	const listeners = FSD_BOUNDARY_PLUGIN.rules[ruleName].create({
+		getFilename: () => path.resolve(fileName),
+		report: (report) => reports.push(report),
+	});
+	listeners[visitorName](node);
+	return reports;
+}
+
+await run(
+	"FSD public-entry rule closes non-static-import syntax gaps",
+	async () => {
+		const importer = "src/features/ai/ui/AiAssistantShell.tsx";
+		for (const source of [
+			'import { Modal } from "../../modal/ui/Private.tsx";',
+			'export { Modal } from "../../modal/ui/Private.tsx";',
+			'export * from "../../modal/ui/Private.tsx";',
+			'const lazyModal = import("../../modal/ui/Private.tsx");',
+			'const commonModal = require("../../modal/ui/Private.tsx");',
+			'const templateModal = import(`../../modal/ui/Private.tsx`);',
+			'const rootModal = import("/src/features/modal/ui/Private.tsx");',
+			'const traversedRootModal = import("/src/features/ai/../modal/ui/Private.tsx");',
+			'const windowsModal = require("../../modal\\\\ui\\\\Private.tsx");',
+			'const implicitEntry = import("../../modal");',
+		]) {
+			const messages = lintFsdPublicEntries(source, importer);
+			assert.equal(messages.length, 1, source);
+			assert.equal(messages[0].ruleId, FSD_PUBLIC_ENTRY_RULE_ID);
+			assert.match(messages[0].message, /public entry of features\/modal/);
+		}
+
+		for (const source of [
+			'import { Modal } from "../../modal/index.js";',
+			'const lazyModal = import("../../modal/ui/index.ts");',
+			'const modalModel = require("../../modal/model.js?worker");',
+			'import value from "../model/privateAiModel.ts";',
+			'import packageValue from "features/modal/ui/private";',
+			'const dynamic = import(`../../${slice}/ui/Private.tsx`);',
+		]) {
+			assert.deepEqual(lintFsdPublicEntries(source, importer), [], source);
+		}
+
+		const rootMessages = lintFsdPublicEntries(
+			'import("./features/modal/ui/Private.tsx");',
+			"src/App.tsx",
+		);
+		assert.equal(rootMessages.length, 1);
+		assert.match(rootMessages[0].message, /features\/modal/);
+
+		for (const [visitorName, node] of [
+			[
+				"TSImportType",
+				{
+					source: {
+						type: "Literal",
+						value: "../../modal/ui/Private.tsx",
+					},
+				},
+			],
+			[
+				"TSImportType",
+				{
+					argument: {
+						type: "TSLiteralType",
+						literal: {
+							type: "Literal",
+							value: "../../modal/ui/Private.tsx",
+						},
+					},
+				},
+			],
+			[
+				"TSExternalModuleReference",
+				{
+					expression: {
+						type: "Literal",
+						value: "../../modal/ui/Private.tsx",
+					},
+				},
+			],
+		]) {
+			const reports = inspectFsdBoundaryVisitor(
+				"public-entry-imports",
+				importer,
+				visitorName,
+				node,
+			);
+			assert.equal(reports.length, 1);
+			assert.equal(reports[0].messageId, "privateEntry");
+			assert.equal(reports[0].data.slice, "modal");
+		}
+	},
+);
+
+await run(
+	"same-layer FSD rule rejects growth and stale allowances",
+	async () => {
+		const allowedImporter =
+			"src/features/ai/ui/AiAssistantShell.tsx";
+		assert.deepEqual(
+			lintFsdSameLayerEdges(
+				'import { Modal } from "../../modal/index.js";',
+				allowedImporter,
+			),
+			[],
+		);
+
+		const unexpectedTarget = lintFsdSameLayerEdges(
+			[
+				'import { Modal } from "../../modal/index.js";',
+				'import { Input } from "../../editor/ui/index.js";',
+			].join("\n"),
+			allowedImporter,
+		);
+		assert.equal(unexpectedTarget.length, 1);
+		assert.equal(unexpectedTarget[0].ruleId, FSD_SAME_LAYER_RULE_ID);
+		assert.match(unexpectedTarget[0].message, /dependency on "editor"/);
+
+		const unexpectedImporter = lintFsdSameLayerEdges(
+			'import { Modal } from "../../modal/index.js";',
+			"src/features/ai/ui/NewAiPanel.tsx",
+		);
+		assert.equal(unexpectedImporter.length, 1);
+		assert.match(
+			unexpectedImporter[0].message,
+			/NewAiPanel\.tsx may not add/,
+		);
+		for (const source of [
+			'const lazyModal = import(`../../modal/index.js`);',
+			'const commonModal = require(`../../modal/index.js`);',
+			'import { Modal } from "/src/features/modal/index.js";',
+			'import { Modal } from "/src/features/ai/../modal/index.js";',
+		]) {
+			const messages = lintFsdSameLayerEdges(
+				source,
+				"src/features/ai/ui/NewAiPanel.tsx",
+			);
+			assert.equal(messages.length, 1);
+			assert.match(messages[0].message, /dependency on "modal"/);
+		}
+
+		const staleAllowance = lintFsdSameLayerEdges(
+			"export const value = 1;",
+			allowedImporter,
+		);
+		assert.equal(staleAllowance.length, 1);
+		assert.match(
+			staleAllowance[0].message,
+			/stale same-layer dependency allowance "modal"/,
+		);
+
+		assert.deepEqual(
+			lintFsdSameLayerEdges(
+				[
+					'import { Modal } from "../../modal/index.js";',
+					'import { MessageBox } from "../../modal/index.js";',
+				].join("\n"),
+				allowedImporter,
+			),
+			[],
+		);
+		assert.deepEqual(
+			lintFsdSameLayerEdges(
+				[
+					'export { Modal } from "../../modal/index.js";',
+					'const lazyModal = import("../../modal/index.js");',
+					'const commonModal = require("../../modal/index.js");',
+				].join("\n"),
+				allowedImporter,
+			),
+			[],
+		);
+		assert.deepEqual(
+			lintFsdSameLayerEdges(
+				[
+					'import value from "../model/aiModel.js";',
+					'import { bestiaryApi } from "../../../entities/bestiary/index.js";',
+				].join("\n"),
+				"src/features/ai/ui/NewAiModelConsumer.ts",
+			),
+			[],
+		);
+	},
+);
+
+await run(
+	"same-layer FSD baseline exactly matches the remaining source graph",
+	async () => {
+		assert.ok(Object.isFrozen(FSD_SAME_LAYER_FILE_EDGE_BASELINE));
+		assert.deepEqual(
+			readStaticFsdSpecifiers(
+				[
+					'// import "../../editor/index.js";',
+					'/* const hidden = require("../../editor/index.js"); */',
+					'const example = \'import("../../editor/index.js")\';',
+					'import { Modal } from "../../modal/index.js";',
+				].join("\n"),
+			),
+			["../../modal/index.js"],
+		);
+		await assertSameLayerBaselineShape("features", {
+			importers: 20,
+			edges: 25,
+			pairs: 18,
+		});
+		await assertSameLayerBaselineShape("widgets", {
+			importers: 8,
+			edges: 13,
+			pairs: 13,
+		});
+
+		for (const layer of ["features", "widgets"]) {
+			const actualEntries = await getActualSameLayerEntries(layer);
+			const expectedEntries = Object.entries(
+				FSD_SAME_LAYER_FILE_EDGE_BASELINE[layer],
+			).sort(([left], [right]) => left.localeCompare(right));
+			assert.deepEqual(actualEntries, expectedEntries);
+		}
+
+		const eslintSource = await fs.readFile("eslint.config.js", "utf8");
+		assert.match(
+			eslintSource,
+			/'src\/features\/\*\*\/\*\.\{js,jsx,ts,tsx\}',\s*'src\/widgets\/\*\*\/\*\.\{js,jsx,ts,tsx\}',/,
+		);
+		assert.match(
+			eslintSource,
+			/files: \['src\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*plugins: \{\s*'fsd-boundaries': FSD_BOUNDARY_PLUGIN,/,
+		);
+		assert.match(
+			eslintSource,
+			/'fsd-boundaries\/public-entry-imports': 'error'/,
+		);
+		assert.match(
+			eslintSource,
+			/'fsd-boundaries\/same-layer-file-edges': 'error'/,
 		);
 	},
 );
@@ -1534,6 +1956,75 @@ await run(
 		assert.match(
 			fallowConfig,
 			/\{ "from": "entities", "allow": \["shared"\] \}/,
+		);
+	},
+);
+
+await run(
+	"shared TextInput removes plain feature dependencies on the editor",
+	async () => {
+		const consumerPaths = [
+			"src/features/ai/ui/AiApiKeyPanel.tsx",
+			"src/features/campaign-create/ui/CreateCampaignModalContent.tsx",
+			"src/features/dice/ui/DiceCalculator.tsx",
+			"src/features/edit-monster/ui/MonsterFieldEditModal.tsx",
+			"src/features/player-questions/ui/PlayerQuestionsModalContent.tsx",
+		];
+		const [textInputSource, runtimeBarrel, declarationBarrel, ...consumers] =
+			await Promise.all([
+				fs.readFile("src/shared/ui/TextInput.tsx", "utf8"),
+				fs.readFile("src/shared/ui/index.js", "utf8"),
+				fs.readFile("src/shared/ui/index.d.ts", "utf8"),
+				...consumerPaths.map((filePath) => fs.readFile(filePath, "utf8")),
+			]);
+
+		assert.match(
+			textInputSource,
+			/export type TextInputProps = InputHTMLAttributes<HTMLInputElement>;/,
+		);
+		assert.match(
+			textInputSource,
+			/forwardRef<HTMLInputElement, TextInputProps>/,
+		);
+		assert.match(
+			textInputSource,
+			/import "\.\.\/\.\.\/assets\/components\/Input\.css";/,
+		);
+		assert.match(
+			textInputSource,
+			/<input\s*\{\.\.\.props\}\s*ref=\{ref\}\s*className=\{className \? `Input \$\{className\}` : "Input"\}/,
+		);
+		assert.doesNotMatch(
+			textInputSource,
+			/useApp|mention|textarea|initialSelection/,
+		);
+		assert.match(
+			runtimeBarrel,
+			/export \{ default as TextInput \} from "\.\/TextInput\.tsx";/,
+		);
+		assert.match(
+			declarationBarrel,
+			/default as TextInput,\s*type TextInputProps,\s*\} from "\.\/TextInput\.tsx";/,
+		);
+
+		for (const source of consumers) {
+			assert.match(
+				source,
+				/import \{[\s\S]*\bTextInput\b[\s\S]*\} from "\.\.\/\.\.\/\.\.\/shared\/ui\/index\.js";/,
+			);
+			assert.doesNotMatch(
+				source,
+				/from ["'][^"']*editor\/ui\/index\.js["']/,
+			);
+			assert.doesNotMatch(source, /<Input(?=[\s>])/);
+		}
+		assert.equal(
+			consumers.reduce(
+				(total, source) =>
+					total + Array.from(source.matchAll(/<TextInput\b/g)).length,
+				0,
+			),
+			6,
 		);
 	},
 );

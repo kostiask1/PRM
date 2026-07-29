@@ -8,8 +8,12 @@ import {
 	type KeyboardEvent as ReactKeyboardEvent,
 	type ReactNode,
 } from "react";
-import { Button, Icon, Tooltip } from "../../../shared/ui/index.js";
-import { Input } from "../../editor/ui/index.js";
+import {
+	Button,
+	Icon,
+	TextInput,
+	Tooltip,
+} from "../../../shared/ui/index.js";
 import { Modal } from "../../modal/index.js";
 import DiceProbabilityModalContent from "./DiceProbabilityModalContent.tsx";
 import { publishDiceResultAction, requestDiceRollAction } from "../../../shared/model/index.js";
@@ -382,7 +386,7 @@ export default function DiceCalculator() {
 					</div>
 
 					<div className="DiceCalculator__manual">
-						<Input
+						<TextInput
 							placeholder={lang.t("Formula (e.g. 1d12+5)")}
 							value={manualInput}
 							onChange={(event: ChangeEvent<HTMLInputElement>) =>

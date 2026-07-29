@@ -28,6 +28,10 @@ export {
 export { default as Tooltip, type TooltipProps } from "./Tooltip.tsx";
 export { default as Panel, type PanelProps } from "./Panel.tsx";
 export { default as Switch, type SwitchProps } from "./Switch.tsx";
+export {
+	default as TextInput,
+	type TextInputProps,
+} from "./TextInput.tsx";
 export { highlightText } from "./SearchHighlight.tsx";
 export {
 	default as Select,

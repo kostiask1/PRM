@@ -7,6 +7,7 @@ import tsParser from '@typescript-eslint/parser';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
 import {
   CAMPAIGN_MODEL_IMPORT_PATTERNS,
+  FSD_BOUNDARY_PLUGIN,
   FSD_PUBLIC_API_PATTERNS,
   REFERENCE_LOADER_IMPORT_PATTERNS,
   TYPESCRIPT_PUBLIC_API_PATTERNS,
@@ -652,6 +653,24 @@ export default [
     ignores: ['src/**/*.{js,jsx,ts,tsx}'],
     rules: {
       'no-restricted-imports': 'off',
+    },
+  },
+  {
+    files: ['src/**/*.{js,jsx,ts,tsx}'],
+    plugins: {
+      'fsd-boundaries': FSD_BOUNDARY_PLUGIN,
+    },
+    rules: {
+      'fsd-boundaries/public-entry-imports': 'error',
+    },
+  },
+  {
+    files: [
+      'src/features/**/*.{js,jsx,ts,tsx}',
+      'src/widgets/**/*.{js,jsx,ts,tsx}',
+    ],
+    rules: {
+      'fsd-boundaries/same-layer-file-edges': 'error',
     },
   },
   {

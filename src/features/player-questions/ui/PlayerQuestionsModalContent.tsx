@@ -16,8 +16,7 @@ import {
 	useAppDispatch,
 	useAppSelector,
 } from "../../../shared/model/index.js";
-import { Button } from "../../../shared/ui/index.js";
-import { Input } from "../../editor/ui/index.js";
+import { Button, TextInput } from "../../../shared/ui/index.js";
 import {
 	QUESTION_ROLL_CONTEXT,
 	getDiceResultId,
@@ -168,7 +167,7 @@ export default function PlayerQuestionsModalContent() {
 					{lang.t("Roll 1d{count}", { count: QUESTIONS_COUNT })}
 				</Button>
 				<div className="PlayerQuestionsModalContent__search">
-					<Input
+					<TextInput
 						value={questionSearch}
 						onChange={handleQuestionSearchChange}
 						inputMode="numeric"

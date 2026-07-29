@@ -11,8 +11,11 @@ import type {
 	MonsterEntry,
 } from "../../../entities/bestiary/index.js";
 import { lang } from "../../../shared/lib/index.js";
-import { Button, Select } from "../../../shared/ui/index.js";
-import { Input } from "../../editor/ui/index.js";
+import {
+	Button,
+	Select,
+	TextInput,
+} from "../../../shared/ui/index.js";
 import { Modal } from "../../modal/index.js";
 import {
 	ALIGNMENT_OPTIONS,
@@ -205,7 +208,7 @@ export default function MonsterFieldEditModal({
 			className={`MonsterFieldEditModal__field${options.disabled ? " is_disabled" : ""}`}
 		>
 			<span>{lang.t(label)}</span>
-			<Input
+			<TextInput
 				type={options.type || "text"}
 				disabled={options.disabled}
 				value={getCreatureEditableFieldInput(draft, key)}
@@ -317,7 +320,7 @@ export default function MonsterFieldEditModal({
 								<div className="MonsterFieldEditModal__action_title">
 									<label className="MonsterFieldEditModal__field">
 										<span>{lang.t("Name")}</span>
-										<Input
+										<TextInput
 											value={String(action?.name || "")}
 											onChange={(event) =>
 												updateAction(
