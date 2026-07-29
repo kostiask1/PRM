@@ -201,10 +201,6 @@ export default [
             message: 'Import campaign entity cards through widgets/campaign-entity-card/index.js or its Node-safe model.js facade.',
           },
           {
-            group: ['**/widgets/spell-card/ui/*'],
-            message: 'Import spell cards through widgets/spell-card/index.js.',
-          },
-          {
             group: [
               '**/widgets/spells-browser/model/*',
               '**/widgets/spells-browser/ui/*',

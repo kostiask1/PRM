@@ -1619,6 +1619,28 @@ async function getActualSameLayerEntries(layer) {
 	return actualEntries.sort(([left], [right]) => left.localeCompare(right));
 }
 
+async function countActualSameLayerDeclarations(layer) {
+	const sourceFiles = await collectFsdSourceFiles(path.join("src", layer));
+	let declarationCount = 0;
+	for (const filePath of sourceFiles) {
+		const sourceSlice = filePath.split("/")[2];
+		const source = await fs.readFile(filePath, "utf8");
+		for (const specifier of readStaticFsdSpecifiers(source)) {
+			if (
+				resolveTestSameLayerTarget(
+					filePath,
+					layer,
+					sourceSlice,
+					specifier,
+				)
+			) {
+				declarationCount += 1;
+			}
+		}
+	}
+	return declarationCount;
+}
+
 async function assertSameLayerBaselineShape(layer, expectedCounts) {
 	const entries = FSD_SAME_LAYER_FILE_EDGE_BASELINE[layer];
 	const pairs = new Set();
@@ -1643,6 +1665,10 @@ async function assertSameLayerBaselineShape(layer, expectedCounts) {
 	assert.equal(Object.keys(entries).length, expectedCounts.importers);
 	assert.equal(edgeCount, expectedCounts.edges);
 	assert.equal(pairs.size, expectedCounts.pairs);
+	assert.equal(
+		await countActualSameLayerDeclarations(layer),
+		expectedCounts.declarations,
+	);
 }
 
 function inspectFsdBoundaryVisitor(ruleName, fileName, visitorName, node) {
@@ -1850,11 +1876,13 @@ await run(
 			importers: 10,
 			edges: 14,
 			pairs: 12,
+			declarations: 18,
 		});
 		await assertSameLayerBaselineShape("widgets", {
-			importers: 7,
-			edges: 11,
-			pairs: 11,
+			importers: 6,
+			edges: 10,
+			pairs: 10,
+			declarations: 10,
 		});
 
 		for (const layer of ["features", "widgets"]) {
@@ -2069,6 +2097,88 @@ await run(
 		assert.match(
 			aiDraftModalSource,
 			/if \(!aiDraftResponseEntry\) return null;/,
+		);
+	},
+);
+
+await run(
+	"Phase 126 internalizes SpellCard in the spells-browser widget",
+	async () => {
+		await assert.rejects(
+			() => fs.access("src/widgets/spell-card"),
+			(error) => error?.code === "ENOENT",
+		);
+		await fs.access("src/widgets/spells-browser/ui/SpellCard.tsx");
+
+		const [
+			spellCardSource,
+			spellsBrowserContentSource,
+			boundarySource,
+			eslintSource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/widgets/spells-browser/ui/SpellCard.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/spells-browser/ui/SpellsBrowserContent.tsx",
+				"utf8",
+			),
+			fs.readFile("scripts/eslint-import-boundaries.mjs", "utf8"),
+			fs.readFile("eslint.config.js", "utf8"),
+		]);
+
+		assert.equal(FSD_SLICE_NAMES.widgets.includes("spell-card"), false);
+		assert.doesNotMatch(boundarySource, /widgets\/spell-card/);
+		assert.doesNotMatch(eslintSource, /widgets\/spell-card/);
+		assert.match(
+			spellsBrowserContentSource,
+			/import SpellCard from "\.\/SpellCard\.tsx";/,
+		);
+
+		for (const [filePath, source] of [
+			[
+				"src/widgets/spells-browser/ui/SpellCard.tsx",
+				spellCardSource,
+			],
+			[
+				"src/widgets/spells-browser/ui/SpellsBrowserContent.tsx",
+				spellsBrowserContentSource,
+			],
+		]) {
+			const siblingWidgetImports = readStaticFsdSpecifiers(source)
+				.map((specifier) => [
+					specifier,
+					resolveTestModuleSpecifierPath(filePath, specifier),
+				])
+				.filter(
+					([, resolved]) =>
+						resolved?.startsWith("src/widgets/") &&
+						!resolved.startsWith("src/widgets/spells-browser/"),
+				);
+			assert.deepEqual(
+				siblingWidgetImports,
+				[],
+				`${filePath} must not import a sibling widget`,
+			);
+		}
+
+		assert.match(
+			spellCardSource,
+			/export interface SpellCardProps\s*\{\s*spell\?: SpellData \| null;\s*searchHighlight\?: string;\s*renderOptions\?: RichContentRenderOptions;\s*\}/,
+		);
+		assert.match(
+			spellCardSource,
+			/function SpellCard\(\{\s*spell,\s*searchHighlight = "",\s*renderOptions = \{\}\s*\}: SpellCardProps\)/,
+		);
+		assert.match(spellCardSource, /if \(!spell\) return null;/);
+		assert.match(
+			spellCardSource,
+			/renderRecursiveContent\(spell\.entries, searchHighlight, renderOptions\)/,
+		);
+		assert.match(
+			spellCardSource,
+			/spell\.entriesHigherLevel && <div className="SpellCard__higher">\{renderRecursiveContent\(spell\.entriesHigherLevel, searchHighlight, renderOptions\)\}<\/div>/,
 		);
 	},
 );

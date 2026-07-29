@@ -49,7 +49,6 @@ export const FSD_SLICE_NAMES = Object.freeze({
 		"monster-stat-block",
 		"rules-reference-modal",
 		"sidebar",
-		"spell-card",
 		"spells-browser",
 	]),
 });
@@ -118,9 +117,6 @@ export const FSD_SAME_LAYER_FILE_EDGE_BASELINE =
 			"src/widgets/rules-reference-modal/ui/RulesReferenceModalView.tsx": [
 				"monster-stat-block",
 				"spells-browser",
-			],
-			"src/widgets/spells-browser/ui/SpellsBrowserContent.tsx": [
-				"spell-card",
 			],
 		},
 	});

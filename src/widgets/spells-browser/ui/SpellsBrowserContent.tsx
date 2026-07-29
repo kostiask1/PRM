@@ -5,12 +5,12 @@ import { capitalizeWords, getSourceFullName } from "../../../entities/reference/
 import type { RichContentRenderOptions } from "../../../features/rich-content/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import { Button, highlightText, ListCard, Tooltip } from "../../../shared/ui/index.js";
-import { SpellCard } from "../../spell-card/index.js";
 import {
 	executeSpellInsertAction,
 	getSpellListItemPresentation,
 	type SpellListItemPresentation,
 } from "../model/spellsBrowser.ts";
+import SpellCard from "./SpellCard.tsx";
 
 interface SpellListItemProps {
 	spell: SpellRecord;

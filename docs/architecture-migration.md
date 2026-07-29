@@ -644,6 +644,8 @@ Next:
 - Phase 124 also lowered the synchronized boundaries exactly: `modal` was removed from `FSD_SLICE_NAMES.features`, and all 11 importer-file → `modal` allowances were removed from `FSD_SAME_LAYER_FILE_EDGE_BASELINE`. The feature baseline fell from 20 importer files / 18 directed pairs / 25 file edges to 10 / 12 / 14, while feature import declarations fell from 29 to 18. Widgets remain at 13 directed pairs / 13 file edges / 13 declarations. Permanent source-inventory coverage locks the lowered catalog and baseline, and the complete suite passes 410/410 tests. Phase 125 is next and must review the first bounded widget-composition cluster; `MD-R05` remains open.
 - Completed Phase 125, the first widget-composition reduction. `BestiaryBrowser` now receives the required `ResponseModal` and `MonsterEditorModal` component contracts from its sole page-level composition owner, `EncounterPage`, through the widgets' public entries instead of importing the two sibling widget slices itself. This changes only composition ownership: the browser retains its existing modal state and handlers, the injected components keep the same render placement/order and forwarded props, and nullable response/editing behavior remains unchanged.
 - Phase 125 removed exactly the two corresponding importer-file → target-slice allowances. Widget debt fell from 8 importer files / 13 directed pairs / 13 file edges / 13 declarations to 7 / 11 / 11 / 11. Features remain at 10 importer files / 12 directed pairs / 14 file edges / 18 declarations. Permanent source-inventory coverage locks the reduced baseline, and the complete suite passes 411/411 tests. `MD-R05` remains open; Phase 126 must review the next bounded cluster without preselecting its strategy.
+- Completed Phase 126 after auditing the next bounded widget cluster. The redundant sole-consumer `widgets/spell-card` slice was absorbed unchanged into private `widgets/spells-browser/ui/SpellCard.tsx`; its public runtime/type barrels, synchronized widget-catalog entry, and now-stale same-layer lint allowance were deleted. `SpellsBrowserContent` remains the sole consumer, and every rendering contract is preserved: localized model labels, rich-content options, inline dice/spell parsing, source formatting, query highlighting, classes, higher-level entries, props, and output composition. Historical entries above describe the ownership at their original checkpoints; this Phase 126 entry records the corrected current boundary.
+- Phase 126 reduced the widget catalog from 12 to 11 slices and lowered widget debt from 7 importer files / 11 directed pairs / 11 file edges / 11 declarations to 6 / 10 / 10 / 10. Features remain unchanged at 10 importer files / 12 directed pairs / 14 file edges / 18 declarations. Permanent source-inventory coverage locks the deleted slice, catalog entry, and stale allowance, and the complete suite passes 412/412 tests. `MD-R05` remains open; Phase 127 must audit the next bounded cluster without preselecting its strategy.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -656,9 +658,10 @@ recovery-hardening gate at 404/404 tests, Phase 122 completed the
 public-entry/entity-isolation gate at 405/405 tests, and Phase 123 completed
 the exact same-layer baseline plus first reduction gate at 409/409 tests.
 Phase 124 completed the modal-ownership correction and lowered feature
-same-layer gate at 410/410 tests, and Phase 125 completed the first
-widget-composition reduction at 411/411 tests. Phase 126 is the next numbered
-migration phase.
+same-layer gate at 410/410 tests, Phase 125 completed the first
+widget-composition reduction at 411/411 tests, and Phase 126 absorbed the
+redundant sole-consumer spell-card slice at 412/412 tests. Phase 127 is the next
+numbered migration phase.
 
 ### Provenance and transfer rule
 
@@ -803,7 +806,13 @@ Status: **In progress**
   injecting `ResponseModal` and `MonsterEditorModal` from `EncounterPage` into
   `BestiaryBrowser`; reduce widget debt to 7 importer files / 11 directed pairs
   / 11 file edges / 11 declarations while features remain at 10 / 12 / 14 / 18.
-- [ ] Review and lower the next bounded cluster in Phase 126 without
+- [x] Absorb the redundant sole-consumer `widgets/spell-card` slice unchanged
+  into private `widgets/spells-browser/ui/SpellCard.tsx` in Phase 126; delete
+  its public barrels, catalog entry, and stale lint allowance, reduce the widget
+  catalog from 12 to 11 slices, and lower widget debt to 6 importer files / 10
+  directed pairs / 10 file edges / 10 declarations while features remain at
+  10 / 12 / 14 / 18.
+- [ ] Audit and lower the next bounded cluster in Phase 127 without
   preselecting its strategy, then continue cluster-by-cluster until no
   unapproved edge remains.
 - [x] Run focused recovery tests, performance budgets, architecture checks,
@@ -812,7 +821,7 @@ Status: **In progress**
   tooling dependencies are available.
 - [x] Run the full `npm test` gate; Phase 119 closed at 398 tests, Phase 122
   passed 405/405, Phase 123 passed 409/409, Phase 124 passed 410/410, and Phase
-  125 passes 411/411 tests.
+  125 passed 411/411; Phase 126 passes 412/412 tests.
 
 ### Recovery R6 — Typed app-owned store composition
 
