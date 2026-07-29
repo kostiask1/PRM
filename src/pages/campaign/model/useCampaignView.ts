@@ -16,7 +16,7 @@ import type {
 	CampaignPartialArchiveSection,
 } from "../../../entities/campaign/index.js";
 import { sessionApi } from "../../../entities/session/index.js";
-import type { SessionRecord } from "../../../entities/session/api/sessionApi.ts";
+import type { SessionRecord } from "../../../entities/session/index.js";
 import {
 	useCampaignEntityCollection,
 	useCampaignEntityOrdering,
@@ -47,7 +47,7 @@ import {
 	replaceMentionsInValue,
 	sanitizeEntityForSave,
 	sanitizeLoadedEntity,
-} from "../../../features/campaign/campaignStateUtils";
+} from "../../../features/campaign/index.js";
 import type {
 	CampaignAiUpdateOptions,
 	CampaignGraphNoteSave,

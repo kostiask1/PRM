@@ -4,22 +4,21 @@ export {
 	normalizeConditionName,
 } from "./model/conditions.ts";
 export {
-	getConditionByName,
-	getCreatureByName,
-	getDiseaseByName,
-	getSenseByName,
-	getSkillByName,
-	getSpellByName,
-	getVariantRuleByName,
-} from "./model/referencePreview.ts";
+	loadDiseasesMap,
+	normalizeDiseaseName,
+} from "./model/diseases.ts";
 export {
-	resolveConditionInput,
-	resolveDiseaseInput,
-	resolveSenseInput,
-	resolveSkillInput,
-	resolveSpellInput,
-	resolveVariantRuleInput,
-} from "./model/referenceResolvers.ts";
+	loadSensesMap,
+	normalizeSenseName,
+} from "./model/senses.ts";
+export {
+	loadSkillsMap,
+	normalizeSkillName,
+} from "./model/skills.ts";
+export {
+	loadVariantRulesMap,
+	normalizeVariantRuleName,
+} from "./model/variantRules.ts";
 export {
 	CONTENT_TOKEN_REGEX,
 	extractContentTokens,

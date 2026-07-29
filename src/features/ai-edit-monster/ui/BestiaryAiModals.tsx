@@ -5,8 +5,8 @@ import type {
 	AiHistoryEntry,
 	AiHistoryResource,
 	AiModelDescriptor,
-} from "../../ai/api/aiApi.ts";
-import type { DiffResource } from "../../ai/model/aiDiff.ts";
+	DiffResource,
+} from "../../ai/index.js";
 import type { AiUiAttachment } from "../../ai/ui/index.js";
 import type { MonsterAiEditMode } from "../model.ts";
 import BestiaryAiDraftModal, {

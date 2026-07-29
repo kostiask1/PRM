@@ -636,7 +636,9 @@ Next:
 - Completed Phase 119. Node-safe `getLexicalEditableFieldViewPresentation` now projects strict textarea aria/rich-plugin visibility, raw history visibility with `undefined`/`"true"` data markers, and disabled tab index into a fresh result. Its matrix covers text/textarea/unknown modes, enabled/disabled states, raw truthy/falsy history values, shared textarea projection, exact keys, and fresh identity. Private same-file `LexicalEditableFieldView` owns only ContentEditable and plugin composition. The behavior controller retains editor access, command registration, focus/blur/click/input/key/paste/mouse callbacks, DOM/mention lookup, modal/hover effects, refs, and dependencies; mouse leave still allocates a fresh null hover state per call. The view preserves ContentEditable class, attribute, and handler order plus plugin order `EditorContentPlugin → conditional HistoryPlugin → MarkdownValuePlugin → MarkdownChangePlugin → EditableStatePlugin → conditional ListPlugin then MarkdownShortcutPlugin`. The full `npm test` gate exposed two aggregate source assertions that still described the pre-Phase-119 inline conditions; those contracts now follow the presentation owner without relaxing runtime behavior. The complete suite passes at 398 tests, closing the Phase 119 regression gate.
 - Completed Phase 120 and split the outer `EditableField` behavior controller from private same-file `EditableFieldView`. Seven focused Node-safe policies now own raw markdown projection, disabled/read-only state, primitive-string title eligibility, mention/field tooltip resolution, lazy campaign-route fallback, copy-button presentation, and mention-hover reconciliation. Private `clearEditableCopyResetTimer` owns unmount cleanup without moving timer effects into the policy module. The controller retains store/context/hooks, refs, URL memoization, clipboard writes, modal opening, editor configuration, and callbacks; the view owns only root container, Button, Tooltip, Lexical composition, and trailing EntityModal presentation. The split preserves outer spread/class/stop/style order, exact raw copy visibility, translated-title laziness, copied icon selection, Tooltip order, EditorRefPlugin-before-editor order, every Lexical prop identity, `value || value === 0`/String timing, normalization timing, `disabled || readOnly`, original-title return, mention precedence, null anchor fallback, lazy `parseUrl().campaign`, cleanup reads, hover identity reuse, and hook dependencies. Five permanent matrices/source contracts raise the full suite to 403 passing tests. Fallow reports no finding for `EditableField.tsx`, and the architecture scan remains at zero reported issues, cycles, boundary violations, or unresolved imports. The performance gate, esbuild TS/TSX parse, diff hygiene, and UTF-8 checks pass; complete lint/typecheck remain tracked under `MD-R04` because the local install still lacks `@typescript-eslint/parser` and `tsc`.
 - Completed Phase 121 and corrected the recovered contract drift before widening FSD enforcement. Backup/archive HTTP schemas now validate `images` only as an optional array container, leave individual image rows to the intentionally tolerant archive restoration/storage policy, and expose only the three route-facing validators. Campaign entity-move transport validates the source entity type before reading or validating the body, while the campaign command retains target-type and valid-pair checks with their exact errors. Rules-reference modal reads now require active-controller identity for success, non-abort failure side effects, controller cleanup, and loading finalization, so a stale request cannot overwrite or dismantle its replacement. Bestiary favorite membership now uses collision-free JSON tuple encoding instead of delimiter concatenation. The JavaScript/JSX reference restriction now covers both `entities/reference/api/*` and `entities/reference/model/*`, matching the current TypeScript/TSX ownership rule. Focused regressions cover tolerant archive rows versus a strict array container, private schema exports, source-before-body move validation and exact command errors, stale request ownership, NUL-bearing favorite identities, and the reference API boundary. The complete suite passes 404/404 tests.
-- Start Phase 122 by applying the complete public-API/deep-import baseline to strict TypeScript and mirroring it for JavaScript, redirecting the 10 audited deep imports through current barrels, and classifying the measured same-layer dependencies before enforcing slice isolation. Move the sibling-entity/API orchestration currently owned by `entities/reference/model` into the rules-reference feature boundary, then enforce the corrected ownership without widening entity responsibilities. The current audit records 3 entity, 36 feature, and 13 widget cross-slice imports for explicit review rather than blanket grandfathering.
+- Completed Phase 122 and installed one language-symmetric FSD public-entry baseline for frontend code under `src`. Shared `FSD_PUBLIC_API_PATTERNS` and the synchronized `FSD_SLICE_NAMES` registry now drive both JavaScript/JSX and TypeScript/TSX restrictions. They reject root `./layer/slice/private` imports plus sibling or cross-layer private paths reached through one or more `../` levels, while allowing only the slice root `index`, `ui/index`, Node-safe `model.js`, and page `graph.js` facades. A non-`src` override prevents backend module names from being mistaken for frontend slices. All 10 audited private/deep imports now use explicit public APIs; campaign state utilities gained the minimal `features/campaign/index.js` plus `index.d.ts` facade instead of a broad barrel.
+- Phase 122 also corrected entity ownership. Fallow now uses `autoDiscover` to model every `src/entities/*` slice as its own zone, the entity rule allows only `shared`, and audited sibling-entity edges are zero. `referencePreview.ts` and `referenceResolvers.ts` moved from `entities/reference/model` to `features/rules-reference/model`, with a minimal JSON-free `features/rules-reference/model.js` facade and matching declaration. The five reference cache/normalizer modules for conditions, diseases, senses, skills, and variant rules remain entity-owned and public through `entities/reference/index.js`; the Node-facing entity model facade does not mirror unused browser exports. The complete suite passes 405/405 tests.
+- The Phase 122 same-layer audit is classified, not yet isolated: features currently have 22 directed slice pairs, 30 file edges, and 34 import declarations; widgets have 13 directed pairs, 13 file edges, and 13 declarations. Every measured edge already uses a public entry. Start Phase 123 by freezing this exact feature/widget file-edge baseline against growth, then eliminate the first dependency cluster and lower the baseline. Do not describe that freeze or same-layer slice isolation as enforced until the Phase 123 gate exists.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -644,9 +646,10 @@ Next:
 
 This recovery track does not renumber or rewrite the Phase 0-119 history above.
 Phase 119 passed its full regression gate at 398 tests, Phase 120 completed
-the editor root presentation split at 403 tests, and Phase 121 completed the
-recovery-hardening gate at 404/404 tests. Phase 122 is the next numbered
-migration phase.
+the editor root presentation split at 403 tests, Phase 121 completed the
+recovery-hardening gate at 404/404 tests, and Phase 122 completed the
+public-entry/entity-isolation gate at 405/405 tests. Phase 123 is the next
+numbered migration phase.
 
 ### Provenance and transfer rule
 
@@ -766,12 +769,23 @@ Status: **In progress**
   and focused import scans, including the JavaScript/JSX
   `entities/reference/api/*` and `entities/reference/model/*` group alongside
   the current TypeScript/TSX restrictions.
+- [x] Apply one shared `FSD_PUBLIC_API_PATTERNS` baseline and synchronized
+  `FSD_SLICE_NAMES` registry to JavaScript/JSX and TypeScript/TSX, redirect all
+  10 audited private/deep imports, and expose campaign state utilities through
+  the minimal `features/campaign` public facade.
+- [x] Discover entity slices independently with Fallow `autoDiscover`, reduce
+  entity sibling edges to zero, and move cross-entity preview/resolution
+  orchestration into `features/rules-reference` while retaining the five
+  public entity-owned reference cache/normalizer modules.
+- [ ] Freeze the exact measured same-layer feature/widget file-edge baseline
+  and eliminate the first dependency cluster in Phase 123. The Phase 122
+  counts are classified evidence, not an enforced baseline.
 - [x] Run focused recovery tests, performance budgets, architecture checks,
   syntax/diff hygiene, and UTF-8/replacement-character checks.
 - [ ] Run the complete lint and typecheck gates after the declared local
   tooling dependencies are available.
 - [x] Run the full `npm test` gate; Phase 119 closed at 398 tests and the Phase
-  121 recovery-hardening gate passes 404/404 tests.
+  122 public-entry/entity-isolation gate passes 405/405 tests.
 
 ### Recovery R6 — Typed app-owned store composition
 

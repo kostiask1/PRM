@@ -6,5 +6,5 @@ export type {
 	RulesReferencePreview,
 	RulesReferenceType,
 	TooltipTextPart,
-} from "./model/rulesLink.ts";
+} from "./model.d.ts";
 export { openRulesReferenceModal } from "./model/openRulesReferenceModal.ts";

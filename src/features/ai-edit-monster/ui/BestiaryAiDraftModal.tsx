@@ -3,13 +3,13 @@ import type { RefObject } from "react";
 import type {
 	AiHistoryEntry,
 	AiHistoryResource,
-} from "../../ai/api/aiApi.ts";
-import type { DiffResource } from "../../ai/model/aiDiff.ts";
+	DiffResource,
+} from "../../ai/index.js";
 import type {
 	AiResponseHistoryEntry,
 	AiResponseModalComponent,
 	AiResponseModalProps,
-} from "../../ai/ui/responseModalContracts.ts";
+} from "../../ai/ui/index.js";
 
 export type AiDraftHistoryEntry = AiResponseHistoryEntry;
 

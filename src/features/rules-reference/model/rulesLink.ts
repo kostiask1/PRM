@@ -8,8 +8,8 @@ import {
 	extractContentTokens,
 	formatModifier,
 	preprocessTags,
-} from "../../../entities/reference/model.js";
-import type { ReferenceRecord } from "../../../entities/reference/index.js";
+	type ReferenceRecord,
+} from "../../../entities/reference/index.js";
 import type { SpellRecord } from "../../../entities/spell/index.js";
 
 export type RulesReferenceType =

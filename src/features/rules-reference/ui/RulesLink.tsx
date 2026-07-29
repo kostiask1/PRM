@@ -6,21 +6,8 @@ import {
 } from "react";
 
 import {
-	getConditionByName,
-	getCreatureByName,
-	getDiseaseByName,
-	getSenseByName,
-	getSkillByName,
-	getSpellByName,
-	getVariantRuleByName,
 	formatSourceLabel,
 	getSpellMeta,
-	resolveConditionInput,
-	resolveDiseaseInput,
-	resolveSenseInput,
-	resolveSkillInput,
-	resolveSpellInput,
-	resolveVariantRuleInput,
 } from "../../../entities/reference/index.js";
 import { classNames, lang } from "../../../shared/lib/index.js";
 import {
@@ -32,13 +19,26 @@ import { Tooltip } from "../../../shared/ui/index.js";
 import { RollDice } from "../../dice/index.js";
 import {
 	buildTooltipTextParts,
+	getConditionByName,
+	getCreatureByName,
+	getDiseaseByName,
+	getSenseByName,
+	getSkillByName,
+	getSpellByName,
+	getVariantRuleByName,
 	loadRulesLinkPreview,
+	resolveConditionInput,
+	resolveDiseaseInput,
 	resolveRulesLinkNavigation,
+	resolveSenseInput,
+	resolveSkillInput,
+	resolveSpellInput,
+	resolveVariantRuleInput,
 	type RulesReferencePreview,
 	type RulesReferencePreviewLoaders,
 	type RulesReferenceResolvers,
 	type RulesReferenceType,
-} from "../model/rulesLink.ts";
+} from "../model.js";
 import "../../../assets/components/RulesLink.css";
 
 const RULES_REFERENCE_RESOLVERS: RulesReferenceResolvers = {

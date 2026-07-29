@@ -11,7 +11,7 @@ import ReactList from "react-list";
 import type {
 	BestiaryFavorite,
 	BestiaryMonster,
-} from "../../../entities/bestiary/api/bestiaryApi.ts";
+} from "../../../entities/bestiary/index.js";
 import { Button } from "../../../shared/ui/index.js";
 import { Icon } from "../../../shared/ui/index.js";
 import { Input } from "../../../features/editor/ui/index.js";

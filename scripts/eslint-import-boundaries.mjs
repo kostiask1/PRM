@@ -1,3 +1,85 @@
+export const FSD_SLICE_NAMES = Object.freeze({
+	entities: Object.freeze([
+		"bestiary",
+		"campaign",
+		"encounter",
+		"reference",
+		"session",
+		"spell",
+	]),
+	features: Object.freeze([
+		"ai",
+		"ai-edit-monster",
+		"backup",
+		"campaign",
+		"campaign-create",
+		"campaign-entity",
+		"clipboard",
+		"dice",
+		"edit-monster",
+		"editor",
+		"encounter-editor",
+		"entity-link",
+		"images",
+		"modal",
+		"monster-editor",
+		"notes",
+		"player-questions",
+		"rich-content",
+		"rules-reference",
+		"session-editor",
+		"settings",
+		"status-badge",
+	]),
+	pages: Object.freeze([
+		"bestiary",
+		"campaign",
+		"encounter",
+		"session",
+	]),
+	widgets: Object.freeze([
+		"ai-assistant",
+		"ai-response-modal",
+		"bestiary-browser",
+		"campaign-entity-card",
+		"campaign-entity-modal",
+		"campaign-search",
+		"monster-editor-modal",
+		"monster-stat-block",
+		"rules-reference-modal",
+		"sidebar",
+		"spell-card",
+		"spells-browser",
+	]),
+});
+
+const FSD_LAYERS = Object.keys(FSD_SLICE_NAMES);
+const FSD_SLICE_NAME_PATTERN = Array.from(
+	new Set(Object.values(FSD_SLICE_NAMES).flat()),
+)
+	.sort((left, right) => right.length - left.length)
+	.map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+	.join("|");
+const FSD_PUBLIC_ENTRY_PATTERN =
+	"(?:index(?:\\.(?:js|jsx|ts|tsx))?|model\\.js|graph\\.js|ui/index(?:\\.(?:js|jsx|ts|tsx))?)";
+
+export const FSD_PUBLIC_API_PATTERNS = Object.freeze([
+	Object.freeze({
+		regex:
+			`^(?:(?:\\.\\./)+|\\./)(?:${FSD_LAYERS.join("|")})/[^/]+/` +
+			`(?!${FSD_PUBLIC_ENTRY_PATTERN}$).+`,
+		message:
+			"Import a cross-layer FSD slice through its public entry point.",
+	}),
+	Object.freeze({
+		regex:
+			`^(?:\\.\\./)+(?:${FSD_SLICE_NAME_PATTERN})/` +
+			`(?!${FSD_PUBLIC_ENTRY_PATTERN}$).+`,
+		message:
+			"Import a same-layer FSD slice through its public entry point.",
+	}),
+]);
+
 export const RECOVERED_ENTITY_PUBLIC_API_PATTERN = {
 	group: [
 		"**/entities/campaign/api/*",
@@ -12,6 +94,7 @@ export const RECOVERED_ENTITY_PUBLIC_API_PATTERN = {
 };
 
 export const TYPESCRIPT_PUBLIC_API_PATTERNS = [
+	...FSD_PUBLIC_API_PATTERNS,
 	{
 		group: [
 			"**/features/editor/ui/Input",

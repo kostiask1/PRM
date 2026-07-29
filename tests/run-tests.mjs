@@ -560,7 +560,7 @@ import {
 	getSenseByName,
 	getSkillByName,
 	getVariantRuleByName,
-} from "../src/entities/reference/model.js";
+} from "../src/features/rules-reference/model.js";
 import {
 	resolveSpellInput,
 	resolveConditionInput,
@@ -568,7 +568,7 @@ import {
 	resolveSenseInput,
 	resolveSkillInput,
 	resolveVariantRuleInput,
-} from "../src/entities/reference/model.js";
+} from "../src/features/rules-reference/model.js";
 import {
 	buildCampaignGraph,
 	extractBracketMentions,
@@ -849,14 +849,17 @@ import {
 	formatRulesTooltipText,
 	loadRulesLinkPreview,
 	resolveRulesLinkNavigation,
-} from "../src/features/rules-reference/model/rulesLink.ts";
+} from "../src/features/rules-reference/model.js";
 import * as updaterPolicies from "../scripts/update-5etools-data-policies.mjs";
 import { create5eToolsUpdater } from "../scripts/update-5etools-data-runtime.mjs";
 import * as databaseBundlePolicies from "../scripts/build-database-bundles-policies.mjs";
 import {
 	CAMPAIGN_MODEL_IMPORT_PATTERNS,
+	FSD_PUBLIC_API_PATTERNS,
+	FSD_SLICE_NAMES,
 	RECOVERED_ENTITY_PUBLIC_API_PATTERN,
 	REFERENCE_LOADER_IMPORT_PATTERNS,
+	TYPESCRIPT_PUBLIC_API_PATTERNS,
 } from "../scripts/eslint-import-boundaries.mjs";
 
 const require = createRequire(import.meta.url);
@@ -1301,7 +1304,7 @@ await run(
 );
 
 await run(
-	"recovered import boundaries reject deep and transport imports",
+	"FSD import boundaries reject private paths through one language-symmetric baseline",
 	async () => {
 		const lintImports = (source, patterns) => {
 			const linter = new Linter({ configType: "flat" });
@@ -1320,11 +1323,15 @@ await run(
 		};
 		const expectRestricted = (source, patterns) => {
 			const messages = lintImports(source, patterns);
-			assert.equal(messages.length, 1);
-			assert.equal(
-				messages[0].ruleId,
-				"no-restricted-imports",
+			assert.ok(messages.length >= 1);
+			assert.ok(
+				messages.every(
+					(message) => message.ruleId === "no-restricted-imports",
+				),
 			);
+		};
+		const expectAllowed = (source, patterns) => {
+			assert.deepEqual(lintImports(source, patterns), []);
 		};
 
 		expectRestricted(
@@ -1351,17 +1358,182 @@ await run(
 			'import value from "../../../features/rules-reference/model/private.ts";',
 			REFERENCE_LOADER_IMPORT_PATTERNS,
 		);
-		assert.deepEqual(
-			lintImports(
-				'import value from "../api/referenceApi.ts";',
-				REFERENCE_LOADER_IMPORT_PATTERNS,
-			),
-			[],
+		expectRestricted(
+			'import value from "../../../entities/bestiary/api/bestiaryApi.ts";',
+			FSD_PUBLIC_API_PATTERNS,
 		);
+		expectRestricted(
+			'import value from "./features/ai/model/aiDiff.ts";',
+			FSD_PUBLIC_API_PATTERNS,
+		);
+		expectRestricted(
+			'import value from "../../ai/model/aiDiff.ts";',
+			FSD_PUBLIC_API_PATTERNS,
+		);
+		expectRestricted(
+			'import value from "../ai/model/aiDiff.ts";',
+			FSD_PUBLIC_API_PATTERNS,
+		);
+		expectRestricted(
+			'import value from "../../campaign/campaignStateUtils";',
+			FSD_PUBLIC_API_PATTERNS,
+		);
+		expectAllowed(
+			'import value from "../../../entities/session/index.js";',
+			FSD_PUBLIC_API_PATTERNS,
+		);
+		expectAllowed(
+			'import value from "./features/ai/index.js";',
+			FSD_PUBLIC_API_PATTERNS,
+		);
+		expectAllowed(
+			'import value from "../../ai/ui/index.js";',
+			FSD_PUBLIC_API_PATTERNS,
+		);
+		expectAllowed(
+			'import value from "../ai/index.js";',
+			FSD_PUBLIC_API_PATTERNS,
+		);
+		expectAllowed(
+			'import value from "../../../entities/reference/model.js";',
+			FSD_PUBLIC_API_PATTERNS,
+		);
+		expectAllowed(
+			'import value from "../../../pages/campaign/graph.js";',
+			FSD_PUBLIC_API_PATTERNS,
+		);
+		expectAllowed(
+			'import value from "../../model/campaignGraph.ts";',
+			FSD_PUBLIC_API_PATTERNS,
+		);
+		expectAllowed(
+			'import value from "../api/referenceApi.ts";',
+			REFERENCE_LOADER_IMPORT_PATTERNS,
+		);
+		for (const pattern of FSD_PUBLIC_API_PATTERNS) {
+			assert.ok(TYPESCRIPT_PUBLIC_API_PATTERNS.includes(pattern));
+		}
+
+		for (const [layer, expectedNames] of Object.entries(FSD_SLICE_NAMES)) {
+			const entries = await fs.readdir(path.join("src", layer), {
+				withFileTypes: true,
+			});
+			const actualNames = entries
+				.filter((entry) => entry.isDirectory())
+				.map((entry) => entry.name)
+				.sort();
+			assert.deepEqual(actualNames, [...expectedNames]);
+		}
+
 		const eslintSource = await fs.readFile("eslint.config.js", "utf8");
 		assert.match(
 			eslintSource,
-			/group: \[\s*'\*\*\/entities\/reference\/api\/\*',\s*'\*\*\/entities\/reference\/model\/\*',\s*\]/,
+			/import \{\s*CAMPAIGN_MODEL_IMPORT_PATTERNS,\s*FSD_PUBLIC_API_PATTERNS,/,
+		);
+		assert.match(
+			eslintSource,
+			/patterns: \[\s*\.\.\.FSD_PUBLIC_API_PATTERNS,/,
+		);
+		assert.match(
+			eslintSource,
+			/files: \['\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*ignores: \['src\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'no-restricted-imports': 'off',/,
+		);
+	},
+);
+
+await run(
+	"reference preview orchestration belongs to the rules-reference feature",
+	async () => {
+		const [
+			entityIndex,
+			entityIndexDeclaration,
+			entityModel,
+			entityModelDeclaration,
+			featureModel,
+			previewSource,
+			resolverSource,
+			rulesLinkSource,
+			fallowConfig,
+		] = await Promise.all([
+			fs.readFile("src/entities/reference/index.js", "utf8"),
+			fs.readFile("src/entities/reference/index.d.ts", "utf8"),
+			fs.readFile("src/entities/reference/model.js", "utf8"),
+			fs.readFile("src/entities/reference/model.d.ts", "utf8"),
+			fs.readFile("src/features/rules-reference/model.js", "utf8"),
+			fs.readFile(
+				"src/features/rules-reference/model/referencePreview.ts",
+				"utf8",
+			),
+			fs.readFile(
+				"src/features/rules-reference/model/referenceResolvers.ts",
+				"utf8",
+			),
+			fs.readFile(
+				"src/features/rules-reference/ui/RulesLink.tsx",
+				"utf8",
+			),
+			fs.readFile(".fallowrc.jsonc", "utf8"),
+		]);
+
+		await assert.rejects(
+			fs.access("src/entities/reference/model/referencePreview.ts"),
+		);
+		await assert.rejects(
+			fs.access("src/entities/reference/model/referenceResolvers.ts"),
+		);
+		assert.doesNotMatch(
+			`${entityIndex}\n${entityModel}`,
+			/getSpellByName|getCreatureByName|resolveSpellInput|resolveConditionInput/,
+		);
+		const entityCachePublicExports = [
+			"loadConditionsMap",
+			"normalizeConditionName",
+			"loadDiseasesMap",
+			"normalizeDiseaseName",
+			"loadVariantRulesMap",
+			"normalizeVariantRuleName",
+			"loadSkillsMap",
+			"normalizeSkillName",
+			"loadSensesMap",
+			"normalizeSenseName",
+		];
+		for (const name of entityCachePublicExports) {
+			assert.match(entityIndex, new RegExp(`\\b${name}\\b`));
+			assert.match(
+				`${entityIndexDeclaration}\n${entityModelDeclaration}`,
+				new RegExp(`\\b${name}\\b`),
+			);
+		}
+		assert.match(entityModel, /\bloadConditionsMap\b/);
+		assert.match(entityModel, /\bnormalizeConditionName\b/);
+		for (const name of entityCachePublicExports.slice(2)) {
+			assert.doesNotMatch(entityModel, new RegExp(`\\b${name}\\b`));
+		}
+		assert.match(featureModel, /from "\.\/model\/referencePreview\.ts"/);
+		assert.match(featureModel, /from "\.\/model\/referenceResolvers\.ts"/);
+		assert.match(
+			previewSource,
+			/from "\.\.\/\.\.\/\.\.\/entities\/reference\/index\.js"/,
+		);
+		assert.doesNotMatch(
+			`${previewSource}\n${resolverSource}`,
+			/from ["'][^"']*entities\/(?:bestiary|spell)\/(?:api|model)\//,
+		);
+		assert.match(
+			rulesLinkSource,
+			/from "\.\.\/model\.js"/,
+		);
+		assert.doesNotMatch(
+			rulesLinkSource,
+			/entities\/reference\/(?:api|model)\//,
+		);
+		assert.match(
+			fallowConfig,
+			/\{ "name": "entities", "autoDiscover": \["src\/entities"\] \}/,
+		);
+		assert.match(
+			fallowConfig,
+			/\{ "from": "entities", "allow": \["shared"\] \}/,
 		);
 	},
 );

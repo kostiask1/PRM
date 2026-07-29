@@ -1,20 +1,24 @@
 import {
 	bestiaryApi,
 	type BestiaryMonster,
-} from "../../bestiary/index.js";
+} from "../../../entities/bestiary/index.js";
 import {
 	spellApi,
 	type SpellRecord,
-} from "../../spell/index.js";
-import type { ReferenceRecord } from "../api/referenceApi.ts";
-import { loadConditionsMap, normalizeConditionName } from "./conditions.ts";
-import { loadDiseasesMap, normalizeDiseaseName } from "./diseases.ts";
+} from "../../../entities/spell/index.js";
 import {
+	loadConditionsMap,
+	loadDiseasesMap,
+	loadSensesMap,
+	loadSkillsMap,
 	loadVariantRulesMap,
+	normalizeConditionName,
+	normalizeDiseaseName,
+	normalizeSenseName,
+	normalizeSkillName,
 	normalizeVariantRuleName,
-} from "./variantRules.ts";
-import { loadSkillsMap, normalizeSkillName } from "./skills.ts";
-import { loadSensesMap, normalizeSenseName } from "./senses.ts";
+	type ReferenceRecord,
+} from "../../../entities/reference/index.js";
 
 const spellCache = new Map<string, SpellRecord>();
 const creatureCache = new Map<string, BestiaryMonster>();

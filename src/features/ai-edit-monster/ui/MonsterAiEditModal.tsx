@@ -3,7 +3,7 @@ import type { Dispatch, SetStateAction } from "react";
 import type { BestiaryMonster } from "../../../entities/bestiary/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import { Button, Select } from "../../../shared/ui/index.js";
-import type { AiModelDescriptor } from "../../ai/api/aiApi.ts";
+import type { AiModelDescriptor } from "../../ai/index.js";
 import {
 	AiAttachmentControls,
 	renderAiModelOptions,

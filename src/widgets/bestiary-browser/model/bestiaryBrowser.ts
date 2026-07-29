@@ -2,7 +2,7 @@ import type {
 	BestiaryFavorite,
 	BestiaryMonster,
 	LegendaryGroup,
-} from "../../../entities/bestiary/api/bestiaryApi.ts";
+} from "../../../entities/bestiary/index.js";
 import type {
 	AiHistoryEntry,
 	AiHistoryResource,

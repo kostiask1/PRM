@@ -7,6 +7,7 @@ import tsParser from '@typescript-eslint/parser';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
 import {
   CAMPAIGN_MODEL_IMPORT_PATTERNS,
+  FSD_PUBLIC_API_PATTERNS,
   REFERENCE_LOADER_IMPORT_PATTERNS,
   TYPESCRIPT_PUBLIC_API_PATTERNS,
 } from './scripts/eslint-import-boundaries.mjs';
@@ -54,6 +55,7 @@ export default [
       'no-console': ['warn', { allow: ['warn', 'error', 'info', 'log'] }],
       'no-restricted-imports': ['error', {
         patterns: [
+          ...FSD_PUBLIC_API_PATTERNS,
           {
             group: ['**/features/images/api/*', '**/features/images/model/*', '**/features/images/ui/*'],
             message: 'Import the images slice through features/images/index.js.',
@@ -643,6 +645,13 @@ export default [
       'no-restricted-imports': ['error', {
         patterns: TYPESCRIPT_PUBLIC_API_PATTERNS,
       }],
+    },
+  },
+  {
+    files: ['**/*.{js,jsx,ts,tsx}'],
+    ignores: ['src/**/*.{js,jsx,ts,tsx}'],
+    rules: {
+      'no-restricted-imports': 'off',
     },
   },
   {

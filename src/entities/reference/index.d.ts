@@ -4,6 +4,22 @@ export {
 } from "./api/referenceApi.ts";
 export * from "./model.d.ts";
 export {
+	loadDiseasesMap,
+	normalizeDiseaseName,
+} from "./model/diseases.ts";
+export {
+	loadSensesMap,
+	normalizeSenseName,
+} from "./model/senses.ts";
+export {
+	loadSkillsMap,
+	normalizeSkillName,
+} from "./model/skills.ts";
+export {
+	loadVariantRulesMap,
+	normalizeVariantRuleName,
+} from "./model/variantRules.ts";
+export {
 	getCampaignIgnoreSourcesList,
 	getIgnoreSourcesListFromSelectedSources,
 	getSelectedSourcesFromIgnoreList,
