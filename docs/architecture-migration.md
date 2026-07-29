@@ -642,6 +642,8 @@ Next:
 - Phase 123 also removed five plain `Input` dependencies by adding the strict native `shared/ui/TextInput` primitive and migrating `AiApiKeyPanel`, `CreateCampaignModalContent`, `DiceCalculator`, `MonsterFieldEditModal`, and `PlayerQuestionsModalContent`. Feature debt fell from 22 directed slice pairs / 30 file edges / 34 declarations to 18 / 25 / 29; widget debt remains 13 / 13 / 13. The complete suite passes 409/409 tests. Phase 124 is next and must review and lower the next bounded dependency cluster without preselecting its extraction strategy.
 - Completed Phase 124 and corrected modal ownership instead of preserving an app-aware feature abstraction. Generic `Modal` plus its Node-safe private `modalModel.ts` policies and private `useModalController.ts`/`ModalView.tsx` implementation now belong to `shared/ui` and are consumed through `shared/ui/index.js`. The synchronized `SHARED_MODAL_PUBLIC_API_PATTERN` protects those implementation paths for both JavaScript and TypeScript consumers; the stale `features/modal` restriction was removed. Store-backed global message rendering moved upward to `app/ui/MessageBoxHost.tsx`, composed only by `App.tsx`; lower layers do not import the app host. The obsolete imperative `Modal.createApi`/`createModalApi` surface and related unused status/API types were removed with the entire `features/modal` slice. Historical Phase 123 ownership statements above remain as the record of that checkpoint; this Phase 124 entry is the correction.
 - Phase 124 also lowered the synchronized boundaries exactly: `modal` was removed from `FSD_SLICE_NAMES.features`, and all 11 importer-file → `modal` allowances were removed from `FSD_SAME_LAYER_FILE_EDGE_BASELINE`. The feature baseline fell from 20 importer files / 18 directed pairs / 25 file edges to 10 / 12 / 14, while feature import declarations fell from 29 to 18. Widgets remain at 13 directed pairs / 13 file edges / 13 declarations. Permanent source-inventory coverage locks the lowered catalog and baseline, and the complete suite passes 410/410 tests. Phase 125 is next and must review the first bounded widget-composition cluster; `MD-R05` remains open.
+- Completed Phase 125, the first widget-composition reduction. `BestiaryBrowser` now receives the required `ResponseModal` and `MonsterEditorModal` component contracts from its sole page-level composition owner, `EncounterPage`, through the widgets' public entries instead of importing the two sibling widget slices itself. This changes only composition ownership: the browser retains its existing modal state and handlers, the injected components keep the same render placement/order and forwarded props, and nullable response/editing behavior remains unchanged.
+- Phase 125 removed exactly the two corresponding importer-file → target-slice allowances. Widget debt fell from 8 importer files / 13 directed pairs / 13 file edges / 13 declarations to 7 / 11 / 11 / 11. Features remain at 10 importer files / 12 directed pairs / 14 file edges / 18 declarations. Permanent source-inventory coverage locks the reduced baseline, and the complete suite passes 411/411 tests. `MD-R05` remains open; Phase 126 must review the next bounded cluster without preselecting its strategy.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -654,8 +656,9 @@ recovery-hardening gate at 404/404 tests, Phase 122 completed the
 public-entry/entity-isolation gate at 405/405 tests, and Phase 123 completed
 the exact same-layer baseline plus first reduction gate at 409/409 tests.
 Phase 124 completed the modal-ownership correction and lowered feature
-same-layer gate at 410/410 tests. Phase 125 is the next numbered migration
-phase.
+same-layer gate at 410/410 tests, and Phase 125 completed the first
+widget-composition reduction at 411/411 tests. Phase 126 is the next numbered
+migration phase.
 
 ### Provenance and transfer rule
 
@@ -796,14 +799,20 @@ Status: **In progress**
   the dead imperative API and `features/modal`, and lowering feature debt to
   12 directed pairs / 14 file edges / 18 declarations while widgets remain at
   13 / 13 / 13.
-- [ ] Review and lower the first bounded widget-composition cluster in Phase
-  125, then continue cluster-by-cluster until no unapproved edge remains.
+- [x] Lower the first bounded widget-composition cluster in Phase 125 by
+  injecting `ResponseModal` and `MonsterEditorModal` from `EncounterPage` into
+  `BestiaryBrowser`; reduce widget debt to 7 importer files / 11 directed pairs
+  / 11 file edges / 11 declarations while features remain at 10 / 12 / 14 / 18.
+- [ ] Review and lower the next bounded cluster in Phase 126 without
+  preselecting its strategy, then continue cluster-by-cluster until no
+  unapproved edge remains.
 - [x] Run focused recovery tests, performance budgets, architecture checks,
   syntax/diff hygiene, and UTF-8/replacement-character checks.
 - [ ] Run the complete lint and typecheck gates after the declared local
   tooling dependencies are available.
 - [x] Run the full `npm test` gate; Phase 119 closed at 398 tests, Phase 122
-  passed 405/405, Phase 123 passed 409/409, and Phase 124 passes 410/410 tests.
+  passed 405/405, Phase 123 passed 409/409, Phase 124 passed 410/410, and Phase
+  125 passes 411/411 tests.
 
 ### Recovery R6 — Typed app-owned store composition
 

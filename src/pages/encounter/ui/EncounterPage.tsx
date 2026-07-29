@@ -624,7 +624,11 @@ function EncounterBestiaryOverlay({
 	if (!open) return null;
 	return (
 		<Modal onConfirm={() => {}} title={lang.t("Choose monster")} onCancel={onClose} showFooter={false} type="custom">
-			<Bestiary onAddMonster={(monster) => onAdd(monster as EncounterViewParticipant)} />
+			<Bestiary
+				ResponseModal={AiResponseModal}
+				MonsterEditorModal={MonsterEditorModal}
+				onAddMonster={(monster) => onAdd(monster as EncounterViewParticipant)}
+			/>
 		</Modal>
 	);
 }

@@ -1852,9 +1852,9 @@ await run(
 			pairs: 12,
 		});
 		await assertSameLayerBaselineShape("widgets", {
-			importers: 8,
-			edges: 13,
-			pairs: 13,
+			importers: 7,
+			edges: 11,
+			pairs: 11,
 		});
 
 		for (const layer of ["features", "widgets"]) {
@@ -1978,6 +1978,98 @@ await run(
 				`${filePath} must import Modal through shared/ui`,
 			);
 		}
+	},
+);
+
+await run(
+	"Phase 125 injects Bestiary modal widgets from the page composition root",
+	async () => {
+		const [
+			bestiarySource,
+			encounterSource,
+			monsterFieldModalSource,
+			aiDraftModalSource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+				"utf8",
+			),
+			fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+			fs.readFile(
+				"src/features/edit-monster/ui/MonsterFieldEditModal.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/features/ai-edit-monster/ui/BestiaryAiDraftModal.tsx",
+				"utf8",
+			),
+		]);
+
+		const bestiaryPath =
+			"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx";
+		const siblingWidgetImports = readStaticFsdSpecifiers(bestiarySource)
+			.map((specifier) => [
+				specifier,
+				resolveTestModuleSpecifierPath(bestiaryPath, specifier),
+			])
+			.filter(
+				([, resolved]) =>
+					resolved?.startsWith("src/widgets/") &&
+					!resolved.startsWith("src/widgets/bestiary-browser/"),
+			);
+		assert.deepEqual(siblingWidgetImports, []);
+
+		assert.match(
+			bestiarySource,
+			/import type\s*\{[^}]*\bAiResponseModalComponent\b[^}]*\}\s*from "\.\.\/\.\.\/\.\.\/features\/ai\/ui\/index\.js";/,
+		);
+		assert.match(
+			bestiarySource,
+			/import type \{ MonsterFieldEditModalProps \} from "\.\.\/\.\.\/\.\.\/features\/edit-monster\/index\.js";/,
+		);
+		assert.match(
+			bestiarySource,
+			/export interface BestiaryBrowserProps\s*\{\s*ResponseModal: AiResponseModalComponent;\s*MonsterEditorModal: ComponentType<\s*Pick<\s*MonsterFieldEditModalProps,\s*"editingMonster"\s*\|\s*"onCancel"\s*\|\s*"onSave"\s*>\s*>;/,
+		);
+
+		const modalComposition = bestiarySource.match(
+			/const bestiaryModals\s*=\s*\(\s*<>\s*([\s\S]*?)\s*<\/>\s*\);/,
+		)?.[1];
+		assert.ok(modalComposition);
+		assert.match(modalComposition, /^\s*<MonsterEditorModal\b/);
+		assert.match(
+			modalComposition,
+			/<BestiaryAiModals[\s\S]*?\bResponseModal=\{ResponseModal\}/,
+		);
+		assert.match(
+			bestiarySource,
+			/return \(\s*<>\s*\{bestiaryContent\}\s*\{bestiaryModals\}\s*<\/>\s*\);/,
+		);
+
+		const encounterBestiaryTag = encounterSource.match(
+			/<Bestiary(?=\s|>)[\s\S]*?\/>/,
+		)?.[0];
+		assert.ok(encounterBestiaryTag);
+		assert.match(
+			encounterBestiaryTag,
+			/\bResponseModal=\{AiResponseModal\}/,
+		);
+		assert.match(
+			encounterBestiaryTag,
+			/\bMonsterEditorModal=\{MonsterEditorModal\}/,
+		);
+		assert.match(
+			encounterSource,
+			/function EncounterBestiaryOverlay\([\s\S]*?\)\s*\{\s*if \(!open\) return null;\s*return \(\s*<Modal[\s\S]*?<Bestiary(?=\s|>)/,
+		);
+		assert.match(
+			monsterFieldModalSource,
+			/if \(!editingMonster \|\| !draft\) return null;/,
+		);
+		assert.match(
+			aiDraftModalSource,
+			/if \(!aiDraftResponseEntry\) return null;/,
+		);
 	},
 );
 

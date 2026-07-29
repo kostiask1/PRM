@@ -5,6 +5,7 @@ import {
 	useRef,
 	useCallback,
 	type ChangeEvent,
+	type ComponentType,
 } from "react";
 import type ReactList from "react-list";
 import { campaignApi } from "../../../entities/campaign/index.js";
@@ -20,7 +21,11 @@ import type {
 	AiHistoryResource,
 	AiModelDescriptor,
 } from "../../../features/ai/index.js";
-import type { AiUiAttachment } from "../../../features/ai/ui/index.js";
+import type {
+	AiResponseModalComponent,
+	AiUiAttachment,
+} from "../../../features/ai/ui/index.js";
+import type { MonsterFieldEditModalProps } from "../../../features/edit-monster/index.js";
 import { settingsApi } from "../../../features/settings/index.js";
 import { isAbortError } from "../../../shared/api/index.ts";
 import {
@@ -37,9 +42,7 @@ import {
 	type MonsterAiAction,
 	type MonsterAiEditMode,
 } from "../../../features/ai-edit-monster/index.js";
-import { AiResponseModal } from "../../ai-response-modal/index.js";
 import BestiaryContent from "./BestiaryContent.tsx";
-import { MonsterEditorModal } from "../../monster-editor-modal/index.js";
 import { MonsterStatBlockModel } from "../../../entities/bestiary/index.js";
 import { useDebounce } from "../../../shared/lib/index.js";
 import { buildDiffResources } from "../../../features/ai/index.js";
@@ -134,6 +137,13 @@ interface ApplyCustomMonsterListOptions {
 }
 
 export interface BestiaryBrowserProps {
+	ResponseModal: AiResponseModalComponent;
+	MonsterEditorModal: ComponentType<
+		Pick<
+			MonsterFieldEditModalProps,
+			"editingMonster" | "onCancel" | "onSave"
+		>
+	>;
 	onAddMonster?: ((monster: BestiaryMonster) => void) | null;
 	initialSearch?: string;
 	initialDetailedSearch?: boolean;
@@ -146,6 +156,8 @@ export interface BestiaryBrowserProps {
 }
 
 export default function BestiaryBrowser({
+	ResponseModal,
+	MonsterEditorModal,
 	onAddMonster,
 	initialSearch = "",
 	initialDetailedSearch = false,
@@ -1197,7 +1209,7 @@ export default function BestiaryBrowser({
 				showImagePromptAction
 			/>
 			<BestiaryAiModals
-				ResponseModal={AiResponseModal}
+				ResponseModal={ResponseModal}
 				aiDraftDiffResources={aiDraftDiffResources}
 				aiDraftResponseEntry={aiDraftResponseEntry}
 				aiDraftResponseRef={aiDraftResponseRef}
