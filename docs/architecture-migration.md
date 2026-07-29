@@ -649,7 +649,9 @@ Next:
 - Completed Phase 127 by moving the remaining Bestiary content composition to its sole page owner. `EncounterPage` now supplies the stable public `AiAssistantPanel` and `MonsterStatBlock` component symbols through `BestiaryBrowser` to private `BestiaryContent`, so the browser content no longer imports either sibling widget. This changes only dependency direction: the closed overlay still returns `null` before mounting, the assistant remains unconditionally mounted in its existing position while the Bestiary is open, the stat block remains behind the existing detail-presentation guard, and component identity, prop forwarding, state, and callback ownership remain unchanged.
 - Phase 127 removed exactly the two corresponding importer-file → target-slice allowances. Widget debt fell from 6 importer files / 10 directed pairs / 10 file edges / 10 declarations to 5 / 8 / 8 / 8. Features remain unchanged at 10 importer files / 12 directed pairs / 14 file edges / 18 declarations, and the widget catalog remains at 11 slices. Permanent source-inventory coverage locks that checkpoint, and the complete suite passes 413/413 tests.
 - Completed Phase 128 by moving campaign-entity modal card composition to the app root. `App` now supplies the stable public `CharacterCard` and `LocationCard` component symbols to `CampaignEntityModalProvider`, which forwards the required slots through its private content composition to `CampaignEntityModalCard`; the modal widget no longer imports its sibling `campaign-entity-card` slice. This changes only dependency direction. Parent resolver delegation still runs first and short-circuits on handled content before the campaign/scope guard. Entity initialization, prop-driven reset, update, confirmed rename, delete, refresh, and close state remain with the modal content. The card still selects the location-versus-character branch through `getCampaignEntityModalCardPlan`, forwards the exact planned React key, retains the callback adapters, and preserves `collapsed: false`, `onToggleCollapse={null}`, `viewMode="modal"`, `showDeleteButton={false}`, and `showHeader={false}`.
-- Phase 128 removed exactly the corresponding importer-file → target-slice allowance. Widget debt fell from 5 importer files / 8 directed pairs / 8 file edges / 8 declarations to 4 / 7 / 7 / 7. Features remain unchanged at 10 importer files / 12 directed pairs / 14 file edges / 18 declarations, and the widget catalog remains at 11 slices. Permanent source-inventory coverage locks the required app-owned slots and reduced baseline, and the expanded complete suite passes 414/414 tests. `MD-R05` remains open; Phase 129 must audit and lower the next bounded cluster without preselecting its strategy.
+- Phase 128 removed exactly the corresponding importer-file → target-slice allowance. Widget debt fell from 5 importer files / 8 directed pairs / 8 file edges / 8 declarations to 4 / 7 / 7 / 7. Features remain unchanged at 10 importer files / 12 directed pairs / 14 file edges / 18 declarations, and the widget catalog remains at 11 slices. Permanent source-inventory coverage locks the required app-owned slots and reduced baseline, and the expanded complete suite passes 414/414 tests.
+- Completed Phase 129 by moving AI response-modal composition to the assistant's owners. `AiAssistantPanel` now requires an injected `ResponseModal` instead of importing its sibling `ai-response-modal` widget. `MainContent` supplies the stable public `AiResponseModal` symbol to route assistants, while the Bestiary path forwards its existing response component through `BestiaryBrowser` and private `BestiaryContent` into the injected assistant. This changes only dependency direction: `MainContent` retains the exact pathname/session/encounter route key and `showAiAssistant` mount guard; `AiAssistantPanel` retains its state, hooks, controllers, and history-dialog composition while forwarding the supplied component into the same `historyDialog.ResponseModal` slot; the Bestiary assistant remains unconditionally mounted in its existing position with `isBestiary` and its registration callback; and the existing closed-overlay and nullable response behaviors remain unchanged.
+- Phase 129 removed exactly the `AiAssistantPanel.tsx` → `ai-response-modal` importer-file edge and its stale allowance. Widget debt fell from 4 importer files / 7 directed pairs / 7 file edges / 7 declarations to 3 / 6 / 6 / 6. Features remain unchanged at 10 importer files / 12 directed pairs / 14 file edges / 18 declarations, and the widget catalog remains at 11 slices. Permanent source-inventory coverage locks both owner injection paths and the reduced baseline, and the expanded complete suite passes 415/415 tests. `MD-R05` remains open; Phase 130 must audit the next coordinated bounded cluster.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -667,8 +669,9 @@ widget-composition reduction at 411/411 tests, and Phase 126 absorbed the
 redundant sole-consumer spell-card slice at 412/412 tests. Phase 127 moved
 Bestiary content composition to its page owner and lowered the widget gate at
 413/413 tests. Phase 128 moved campaign-entity modal card composition to the
-app root and lowered the widget gate at 414/414 tests. Phase 129
-is the next numbered migration phase.
+app root and lowered the widget gate at 414/414 tests. Phase 129 moved AI
+response-modal composition to the assistant's owners and lowered the widget
+gate at 415/415 tests. Phase 130 is the next numbered migration phase.
 
 ### Provenance and transfer rule
 
@@ -831,17 +834,23 @@ Status: **In progress**
   stale same-layer allowance, and lower widget debt to 4 importer files / 7
   directed pairs / 7 file edges / 7 declarations while features remain at
   10 / 12 / 14 / 18 and the widget catalog remains at 11 slices.
-- [ ] Audit and lower the next bounded cluster in Phase 129 without
-  preselecting its strategy, then continue cluster-by-cluster until no
-  unapproved edge remains.
+- [x] Move AI response-modal composition to the assistant's owners in Phase
+  129: inject the stable public `AiResponseModal` from `MainContent` for route
+  assistants, forward the existing Bestiary `ResponseModal` through
+  `BestiaryBrowser`/`BestiaryContent`, remove the stale same-layer allowance,
+  and lower widget debt to 3 importer files / 6 directed pairs / 6 file edges /
+  6 declarations while features remain at 10 / 12 / 14 / 18 and the widget
+  catalog remains at 11 slices.
+- [ ] Audit the next coordinated bounded cluster in Phase 130, then continue
+  cluster-by-cluster until no unapproved edge remains.
 - [x] Run focused recovery tests, performance budgets, architecture checks,
   syntax/diff hygiene, and UTF-8/replacement-character checks.
 - [ ] Run the complete lint and typecheck gates after the declared local
   tooling dependencies are available.
 - [x] Run the full `npm test` gate; Phase 119 closed at 398 tests, Phase 122
   passed 405/405, Phase 123 passed 409/409, Phase 124 passed 410/410, and Phase
-  125 passed 411/411, Phase 126 passed 412/412, Phase 127 passed 413/413, and
-  the expanded Phase 128 suite passes 414/414 tests.
+  125 passed 411/411, Phase 126 passed 412/412, Phase 127 passed 413/413, Phase
+  128 passed 414/414, and the expanded Phase 129 suite passes 415/415 tests.
 
 ### Recovery R6 — Typed app-owned store composition
 

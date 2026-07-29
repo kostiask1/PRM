@@ -1879,10 +1879,10 @@ await run(
 			declarations: 18,
 		});
 		await assertSameLayerBaselineShape("widgets", {
-			importers: 4,
-			edges: 7,
-			pairs: 7,
-			declarations: 7,
+			importers: 3,
+			edges: 6,
+			pairs: 6,
+			declarations: 6,
 		});
 
 		for (const layer of ["features", "widgets"]) {
@@ -2304,7 +2304,7 @@ await run(
 		);
 		assert.match(
 			bestiaryContentSource,
-			/<\/div>\s*<AiAssistantPanel\s+isBestiary\s+onRegisterImagePromptAction=\{onRegisterImagePromptAction\}\s*\/>/,
+			/<\/div>\s*<AiAssistantPanel\s+ResponseModal=\{ResponseModal\}\s+isBestiary\s+onRegisterImagePromptAction=\{onRegisterImagePromptAction\}\s*\/>/,
 		);
 
 		const bestiaryConsumers = [];
@@ -2597,6 +2597,217 @@ await run(
 				`CharacterCard must preserve ${fragment}`,
 			);
 		}
+	},
+);
+
+await run(
+	"Phase 129 injects the AI response modal from composition roots",
+	async () => {
+		const [
+			panelSource,
+			panelDeclarationSource,
+			panelViewSource,
+			mainContentSource,
+			bestiaryBrowserSource,
+			bestiaryContentSource,
+			bestiaryCompositionSource,
+			encounterSource,
+			historyDialogSource,
+			responseModalSource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
+				"utf8",
+			),
+			fs.readFile("src/widgets/ai-assistant/index.d.ts", "utf8"),
+			fs.readFile(
+				"src/widgets/ai-assistant/ui/AiAssistantPanelView.tsx",
+				"utf8",
+			),
+			fs.readFile("src/app/routing/MainContent.tsx", "utf8"),
+			fs.readFile(
+				"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/bestiary-browser/ui/BestiaryContent.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/bestiary-browser/ui/bestiaryComposition.ts",
+				"utf8",
+			),
+			fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+			fs.readFile(
+				"src/features/ai/ui/AiHistoryResponseDialog.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/ai-response-modal/ui/AiResponseModal.tsx",
+				"utf8",
+			),
+		]);
+
+		for (const filePath of await collectFsdSourceFiles(
+			"src/widgets/ai-assistant",
+		)) {
+			const source = await fs.readFile(filePath, "utf8");
+			const siblingWidgetImports = readStaticFsdSpecifiers(source)
+				.map((specifier) => [
+					specifier,
+					resolveTestModuleSpecifierPath(filePath, specifier),
+				])
+				.filter(
+					([, resolved]) =>
+						resolved?.startsWith("src/widgets/") &&
+						!resolved.startsWith("src/widgets/ai-assistant/"),
+				);
+			assert.deepEqual(
+				siblingWidgetImports,
+				[],
+				`${filePath} must not import a sibling widget`,
+			);
+		}
+
+		assert.match(
+			panelSource,
+			/import type \{\s*AiResponseModalComponent,\s*AiUiAttachment,\s*\} from "\.\.\/\.\.\/\.\.\/features\/ai\/ui\/index\.js";/,
+		);
+		assert.match(
+			panelSource,
+			/export interface AiAssistantPanelProps\s*\{\s*ResponseModal: AiResponseModalComponent;/,
+		);
+		assert.doesNotMatch(panelSource, /\bResponseModal\?:/);
+		assert.match(
+			panelDeclarationSource,
+			/export \{\s*default as AiAssistantPanel,\s*type AiAssistantPanelProps,\s*\} from "\.\/ui\/AiAssistantPanel\.tsx";/,
+		);
+		assert.match(
+			panelSource,
+			/export default function AiAssistantPanel\(\{\s*ResponseModal,\s*isBestiary = false,/,
+		);
+
+		assert.match(
+			mainContentSource,
+			/import \{ AiAssistantPanel \} from "\.\.\/\.\.\/widgets\/ai-assistant\/index\.js";/,
+		);
+		assert.match(
+			mainContentSource,
+			/import \{ AiResponseModal \} from "\.\.\/\.\.\/widgets\/ai-response-modal\/index\.js";/,
+		);
+		assert.match(
+			mainContentSource,
+			/const aiAssistantRouteKey = \[\s*location\.pathname,\s*activeSessionFileName \|\| "",\s*activeEncounterId \|\| "",\s*\]\.join\(":"\);/,
+		);
+		const mainAssistantGuard = mainContentSource.match(
+			/\{showAiAssistant && \(\s*<AiAssistantPanel(?=\s|>)[\s\S]*?\/>\s*\)\}/,
+		)?.[0];
+		assert.ok(mainAssistantGuard);
+		assert.match(mainAssistantGuard, /\bkey=\{aiAssistantRouteKey\}/);
+		assert.match(mainAssistantGuard, /\bResponseModal=\{AiResponseModal\}/);
+
+		assert.match(
+			bestiaryCompositionSource,
+			/import type \{ AiResponseModalComponent \} from "\.\.\/\.\.\/\.\.\/features\/ai\/ui\/index\.js";/,
+		);
+		assert.match(
+			bestiaryCompositionSource,
+			/export interface BestiaryAssistantSlotProps\s*\{\s*ResponseModal: AiResponseModalComponent;\s*isBestiary: boolean;/,
+		);
+		const bestiaryContentTag = bestiaryBrowserSource.match(
+			/<BestiaryContent(?=\s|>)[\s\S]*?\/>/,
+		)?.[0];
+		assert.ok(bestiaryContentTag);
+		assert.match(bestiaryContentTag, /\bResponseModal=\{ResponseModal\}/);
+		assert.match(
+			bestiaryContentSource,
+			/export interface BestiaryContentProps\s*\{[\s\S]*?\bResponseModal: BestiaryAssistantSlotProps\["ResponseModal"\];/,
+		);
+		const bestiaryAssistantTag = bestiaryContentSource.match(
+			/<AiAssistantPanel(?=\s|>)[\s\S]*?\/>/,
+		)?.[0];
+		assert.ok(bestiaryAssistantTag);
+		assert.match(bestiaryAssistantTag, /\bResponseModal=\{ResponseModal\}/);
+		assert.match(bestiaryAssistantTag, /\bisBestiary\b/);
+		assert.match(
+			bestiaryAssistantTag,
+			/\bonRegisterImagePromptAction=\{onRegisterImagePromptAction\}/,
+		);
+		assert.match(
+			bestiaryContentSource,
+			/<\/div>\s*<AiAssistantPanel(?=\s|>)[\s\S]*?\/>\s*<\/div>\s*\);\s*\}/,
+		);
+
+		const encounterBestiaryOverlay = encounterSource.match(
+			/function EncounterBestiaryOverlay\([\s\S]*?(?=\ninterface EncounterCharacterOverlaysProps)/,
+		)?.[0];
+		assert.ok(encounterBestiaryOverlay);
+		assert.match(
+			encounterBestiaryOverlay,
+			/if \(!open\) return null;\s*return \(\s*<Modal/,
+		);
+		const encounterBestiaryTag = encounterBestiaryOverlay.match(
+			/<Bestiary(?=\s|>)[\s\S]*?\/>/,
+		)?.[0];
+		assert.ok(encounterBestiaryTag);
+		assert.match(
+			encounterBestiaryTag,
+			/\bResponseModal=\{AiResponseModal\}/,
+		);
+
+		assert.match(
+			panelViewSource,
+			/<AiContextSettingsModal \{\.\.\.contextModal\} \/>\s*<AiHistoryResponseDialog \{\.\.\.historyDialog\} \/>\s*<AiPromptComposer \{\.\.\.promptComposer\} \/>/,
+		);
+		assert.match(
+			panelSource,
+			/historyDialog=\{\{\s*ResponseModal,\s*generatedPrompt: optional\(generatedPrompt\),[\s\S]*?generatedPromptRef,[\s\S]*?isGeneratedPromptCopied,[\s\S]*?isRestoringResponse,[\s\S]*?markdownComponents: markdownMentionComponents,[\s\S]*?onRestore:[\s\S]*?onCancel: closeGeneratedPrompt,[\s\S]*?onCopy: copyGeneratedPrompt,[\s\S]*?onSaveDraftChanges:[\s\S]*?selectedResponseDetails,[\s\S]*?selectedResponseDiffResources,[\s\S]*?selectedResponseEntry,[\s\S]*?selectedResponseHasChanges,[\s\S]*?getDiffResourceState,[\s\S]*?getHistoryChangeSummary,\s*\}\}/,
+		);
+		const responseModalTag = historyDialogSource.match(
+			/<ResponseModal(?=\s|>)[\s\S]*?\/>/,
+		)?.[0];
+		assert.ok(responseModalTag);
+		assert.deepEqual(
+			Array.from(
+				responseModalTag.matchAll(
+					/^\s+([A-Za-z][A-Za-z0-9]*)=(?:\{|")/gm,
+				),
+				(match) => match[1],
+			),
+			[
+				"generatedPrompt",
+				"generatedPromptRef",
+				"isGeneratedPromptCopied",
+				"isRestoringResponse",
+				"markdownComponents",
+				"onApply",
+				"onApplyResource",
+				"onCancel",
+				"onCopy",
+				"onSaveDraftChanges",
+				"onUndo",
+				"onUndoResource",
+				"selectedResponseDetails",
+				"selectedResponseDiffResources",
+				"selectedResponseEntry",
+				"selectedResponseHasChanges",
+				"getDiffResourceState",
+				"getHistoryChangeSummary",
+			],
+		);
+
+		const stateHookIndex = responseModalSource.indexOf(
+			"useState<CreatureEditState | null>(null)",
+		);
+		const draftHookIndex = responseModalSource.indexOf(
+			"useAiResponseDraftController({",
+		);
+		const nullGuardIndex = responseModalSource.indexOf(
+			"if (!generatedPrompt) return null;",
+		);
+		assert.ok(stateHookIndex >= 0);
+		assert.ok(draftHookIndex > stateHookIndex);
+		assert.ok(nullGuardIndex > draftHookIndex);
 	},
 );
 

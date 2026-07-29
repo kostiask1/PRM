@@ -39,6 +39,7 @@ import {
 	type BestiarySortOrder,
 } from "../model.js";
 import type {
+	BestiaryAssistantSlotProps,
 	BestiaryAssistantSlot,
 	BestiaryMonsterStatBlockSlot,
 } from "./bestiaryComposition.ts";
@@ -287,6 +288,7 @@ interface MonsterListItemProps {
 export interface BestiaryContentProps {
 	AiAssistantPanel: BestiaryAssistantSlot;
 	MonsterStatBlock: BestiaryMonsterStatBlockSlot;
+	ResponseModal: BestiaryAssistantSlotProps["ResponseModal"];
 	displayedMonsters: BestiaryMonster[];
 	favorites: BestiaryFavorite[];
 	headerActions?: ReactNode;
@@ -546,6 +548,7 @@ function BestiaryDetail({
 export default function BestiaryContent({
 	AiAssistantPanel,
 	MonsterStatBlock,
+	ResponseModal,
 	displayedMonsters,
 	favorites,
 	headerActions = null,
@@ -671,6 +674,7 @@ export default function BestiaryContent({
 				</div>
 			</div>
 			<AiAssistantPanel
+				ResponseModal={ResponseModal}
 				isBestiary
 				onRegisterImagePromptAction={onRegisterImagePromptAction}
 			/>

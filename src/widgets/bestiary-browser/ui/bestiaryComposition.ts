@@ -8,8 +8,10 @@ import type {
 	BestiaryFavorite,
 	BestiaryMonster,
 } from "../../../entities/bestiary/index.js";
+import type { AiResponseModalComponent } from "../../../features/ai/ui/index.js";
 
 export interface BestiaryAssistantSlotProps {
+	ResponseModal: AiResponseModalComponent;
 	isBestiary: boolean;
 	onRegisterImagePromptAction: (
 		handler: ((monster: BestiaryMonster) => void) | null,

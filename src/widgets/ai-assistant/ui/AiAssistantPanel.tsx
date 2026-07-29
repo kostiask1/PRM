@@ -42,7 +42,10 @@ import {
 	type AiContextSession,
 	type BuildAiUpdatedDataPlanOptions,
 } from "../../../features/ai/index.js";
-import type { AiUiAttachment } from "../../../features/ai/ui/index.js";
+import type {
+	AiResponseModalComponent,
+	AiUiAttachment,
+} from "../../../features/ai/ui/index.js";
 const api = { ...campaignApi, ...sessionApi, ...bestiaryApi, ...aiApi };
 import AiImagePromptPickerModal from "./AiImagePromptPickerModal.tsx";
 import AiAssistantPanelView from "./AiAssistantPanelView.tsx";
@@ -57,7 +60,6 @@ import { useAiAssistantHistoryController } from "../model/useAiAssistantHistoryC
 import { useAiImagePromptController } from "../model/useAiImagePromptController.ts";
 import { useAiImagePromptState } from "../model/useAiImagePromptState.ts";
 import type { ImagePromptTarget } from "../model/imagePromptPicker.ts";
-import { AiResponseModal } from "../../ai-response-modal/index.js";
 import {
 	alert,
 	confirm,
@@ -204,6 +206,7 @@ const optional = <T,>(value: T | null | undefined): T | undefined =>
 	value ?? undefined;
 
 export interface AiAssistantPanelProps {
+	ResponseModal: AiResponseModalComponent;
 	isBestiary?: boolean;
 	onRegisterImagePromptAction?: (
 		handler: ((monster: BestiaryMonster) => void) | null,
@@ -211,6 +214,7 @@ export interface AiAssistantPanelProps {
 }
 
 export default function AiAssistantPanel({
+	ResponseModal,
 	isBestiary = false,
 	onRegisterImagePromptAction,
 }: AiAssistantPanelProps) {
@@ -979,8 +983,8 @@ export default function AiAssistantPanel({
 				updateContextConfig,
 			}}
 			historyDialog={{
-				ResponseModal: AiResponseModal,
-					generatedPrompt: optional(generatedPrompt),
+				ResponseModal,
+				generatedPrompt: optional(generatedPrompt),
 				generatedPromptRef,
 				isGeneratedPromptCopied,
 				isRestoringResponse,

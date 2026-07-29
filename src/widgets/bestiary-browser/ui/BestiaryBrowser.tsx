@@ -1166,6 +1166,7 @@ export default function BestiaryBrowser({
 		<BestiaryContent
 			AiAssistantPanel={AiAssistantPanel}
 			MonsterStatBlock={MonsterStatBlock}
+			ResponseModal={ResponseModal}
 			displayedMonsters={displayedMonsters}
 			favorites={favorites}
 			headerActions={bestiaryActions}

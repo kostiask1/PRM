@@ -3,6 +3,7 @@ import { SessionPage } from "../../pages/session/index.js";
 import { EncounterPage } from "../../pages/encounter/index.js";
 import ProjectGuide from "./ProjectGuide";
 import { AiAssistantPanel } from "../../widgets/ai-assistant/index.js";
+import { AiResponseModal } from "../../widgets/ai-response-modal/index.js";
 import { Outlet, Route, Routes, useLocation } from "react-router";
 import { useAppSelector } from "../../shared/model/index.js";
 import { lang } from "../../shared/lib/index.js";
@@ -42,7 +43,12 @@ function MainContentLayout({
 	return (
 		<main className={classNames("MainContent", className)}>
 			<Outlet />
-			{showAiAssistant && <AiAssistantPanel key={aiAssistantRouteKey} />}
+			{showAiAssistant && (
+				<AiAssistantPanel
+					key={aiAssistantRouteKey}
+					ResponseModal={AiResponseModal}
+				/>
+			)}
 		</main>
 	);
 }
