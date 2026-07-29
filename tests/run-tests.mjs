@@ -773,16 +773,14 @@ import {
 	shouldExpandNoteFromCardClick,
 } from "../src/features/notes/model.ts";
 import {
-	createModalApi,
 	executeModalClose,
 	executeModalKeyboardPlan,
-	formatModalStatusMessage,
 	getModalCloseAction,
 	getModalFocusTarget,
 	getModalKeyboardPlan,
 	getModalPresentationPlan,
 	resolveModalConfirmValue,
-} from "../src/features/modal/model.ts";
+} from "../src/shared/ui/modalModel.ts";
 import {
 	getDiceResultId,
 	getQuestionDiceRoll,
@@ -861,6 +859,7 @@ import {
 	FSD_SLICE_NAMES,
 	RECOVERED_ENTITY_PUBLIC_API_PATTERN,
 	REFERENCE_LOADER_IMPORT_PATTERNS,
+	SHARED_MODAL_PUBLIC_API_PATTERN,
 	TYPESCRIPT_PUBLIC_API_PATTERNS,
 } from "../scripts/eslint-import-boundaries.mjs";
 
@@ -1384,6 +1383,15 @@ await run(
 			'import value from "../../campaign/campaignStateUtils";',
 			FSD_PUBLIC_API_PATTERNS,
 		);
+		for (const source of [
+			'import { Modal } from "../../../shared/ui/Modal.tsx";',
+			'import { ModalView } from "../../../shared/ui/ModalView.tsx";',
+			'import { useModalController } from "../../../shared/ui/useModalController.ts";',
+			'import { ModalProps } from "../../../shared/ui/modalModel.ts";',
+		]) {
+			expectRestricted(source, [SHARED_MODAL_PUBLIC_API_PATTERN]);
+			expectRestricted(source, TYPESCRIPT_PUBLIC_API_PATTERNS);
+		}
 		expectAllowed(
 			'import value from "../../../entities/session/index.js";',
 			FSD_PUBLIC_API_PATTERNS,
@@ -1420,9 +1428,18 @@ await run(
 			'import value from "../api/referenceApi.ts";',
 			REFERENCE_LOADER_IMPORT_PATTERNS,
 		);
+		expectAllowed(
+			'import { Modal } from "../../../shared/ui/index.js";',
+			[SHARED_MODAL_PUBLIC_API_PATTERN],
+		);
 		for (const pattern of FSD_PUBLIC_API_PATTERNS) {
 			assert.ok(TYPESCRIPT_PUBLIC_API_PATTERNS.includes(pattern));
 		}
+		assert.ok(
+			TYPESCRIPT_PUBLIC_API_PATTERNS.includes(
+				SHARED_MODAL_PUBLIC_API_PATTERN,
+			),
+		);
 
 		for (const [layer, expectedNames] of Object.entries(FSD_SLICE_NAMES)) {
 			const entries = await fs.readdir(path.join("src", layer), {
@@ -1444,6 +1461,11 @@ await run(
 			eslintSource,
 			/patterns: \[\s*\.\.\.FSD_PUBLIC_API_PATTERNS,/,
 		);
+		assert.match(
+			eslintSource,
+			/\.\.\.FSD_PUBLIC_API_PATTERNS,\s*SHARED_MODAL_PUBLIC_API_PATTERN,/,
+		);
+		assert.doesNotMatch(eslintSource, /features\/modal/);
 		assert.match(
 			eslintSource,
 			/files: \['\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*ignores: \['src\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'no-restricted-imports': 'off',/,
@@ -1638,40 +1660,40 @@ await run(
 	async () => {
 		const importer = "src/features/ai/ui/AiAssistantShell.tsx";
 		for (const source of [
-			'import { Modal } from "../../modal/ui/Private.tsx";',
-			'export { Modal } from "../../modal/ui/Private.tsx";',
-			'export * from "../../modal/ui/Private.tsx";',
-			'const lazyModal = import("../../modal/ui/Private.tsx");',
-			'const commonModal = require("../../modal/ui/Private.tsx");',
-			'const templateModal = import(`../../modal/ui/Private.tsx`);',
-			'const rootModal = import("/src/features/modal/ui/Private.tsx");',
-			'const traversedRootModal = import("/src/features/ai/../modal/ui/Private.tsx");',
-			'const windowsModal = require("../../modal\\\\ui\\\\Private.tsx");',
-			'const implicitEntry = import("../../modal");',
+			'import { ImageGallery } from "../../images/ui/Private.tsx";',
+			'export { ImageGallery } from "../../images/ui/Private.tsx";',
+			'export * from "../../images/ui/Private.tsx";',
+			'const lazyImages = import("../../images/ui/Private.tsx");',
+			'const commonImages = require("../../images/ui/Private.tsx");',
+			'const templateImages = import(`../../images/ui/Private.tsx`);',
+			'const rootImages = import("/src/features/images/ui/Private.tsx");',
+			'const traversedRootImages = import("/src/features/ai/../images/ui/Private.tsx");',
+			'const windowsImages = require("../../images\\\\ui\\\\Private.tsx");',
+			'const implicitEntry = import("../../images");',
 		]) {
 			const messages = lintFsdPublicEntries(source, importer);
 			assert.equal(messages.length, 1, source);
 			assert.equal(messages[0].ruleId, FSD_PUBLIC_ENTRY_RULE_ID);
-			assert.match(messages[0].message, /public entry of features\/modal/);
+			assert.match(messages[0].message, /public entry of features\/images/);
 		}
 
 		for (const source of [
-			'import { Modal } from "../../modal/index.js";',
-			'const lazyModal = import("../../modal/ui/index.ts");',
-			'const modalModel = require("../../modal/model.js?worker");',
+			'import { ImageGallery } from "../../images/index.js";',
+			'const lazyImages = import("../../images/ui/index.ts");',
+			'const imagesModel = require("../../images/model.js?worker");',
 			'import value from "../model/privateAiModel.ts";',
-			'import packageValue from "features/modal/ui/private";',
+			'import packageValue from "features/images/ui/private";',
 			'const dynamic = import(`../../${slice}/ui/Private.tsx`);',
 		]) {
 			assert.deepEqual(lintFsdPublicEntries(source, importer), [], source);
 		}
 
 		const rootMessages = lintFsdPublicEntries(
-			'import("./features/modal/ui/Private.tsx");',
+			'import("./features/images/ui/Private.tsx");',
 			"src/App.tsx",
 		);
 		assert.equal(rootMessages.length, 1);
-		assert.match(rootMessages[0].message, /features\/modal/);
+		assert.match(rootMessages[0].message, /features\/images/);
 
 		for (const [visitorName, node] of [
 			[
@@ -1679,7 +1701,7 @@ await run(
 				{
 					source: {
 						type: "Literal",
-						value: "../../modal/ui/Private.tsx",
+						value: "../../images/ui/Private.tsx",
 					},
 				},
 			],
@@ -1690,7 +1712,7 @@ await run(
 						type: "TSLiteralType",
 						literal: {
 							type: "Literal",
-							value: "../../modal/ui/Private.tsx",
+							value: "../../images/ui/Private.tsx",
 						},
 					},
 				},
@@ -1700,7 +1722,7 @@ await run(
 				{
 					expression: {
 						type: "Literal",
-						value: "../../modal/ui/Private.tsx",
+						value: "../../images/ui/Private.tsx",
 					},
 				},
 			],
@@ -1713,7 +1735,7 @@ await run(
 			);
 			assert.equal(reports.length, 1);
 			assert.equal(reports[0].messageId, "privateEntry");
-			assert.equal(reports[0].data.slice, "modal");
+			assert.equal(reports[0].data.slice, "images");
 		}
 	},
 );
@@ -1722,10 +1744,10 @@ await run(
 	"same-layer FSD rule rejects growth and stale allowances",
 	async () => {
 		const allowedImporter =
-			"src/features/ai/ui/AiAssistantShell.tsx";
+			"src/features/ai/ui/AiAttachmentControls.tsx";
 		assert.deepEqual(
 			lintFsdSameLayerEdges(
-				'import { Modal } from "../../modal/index.js";',
+				'import { ImageGallery } from "../../images/index.js";',
 				allowedImporter,
 			),
 			[],
@@ -1733,7 +1755,7 @@ await run(
 
 		const unexpectedTarget = lintFsdSameLayerEdges(
 			[
-				'import { Modal } from "../../modal/index.js";',
+				'import { ImageGallery } from "../../images/index.js";',
 				'import { Input } from "../../editor/ui/index.js";',
 			].join("\n"),
 			allowedImporter,
@@ -1743,7 +1765,7 @@ await run(
 		assert.match(unexpectedTarget[0].message, /dependency on "editor"/);
 
 		const unexpectedImporter = lintFsdSameLayerEdges(
-			'import { Modal } from "../../modal/index.js";',
+			'import { ImageGallery } from "../../images/index.js";',
 			"src/features/ai/ui/NewAiPanel.tsx",
 		);
 		assert.equal(unexpectedImporter.length, 1);
@@ -1752,17 +1774,17 @@ await run(
 			/NewAiPanel\.tsx may not add/,
 		);
 		for (const source of [
-			'const lazyModal = import(`../../modal/index.js`);',
-			'const commonModal = require(`../../modal/index.js`);',
-			'import { Modal } from "/src/features/modal/index.js";',
-			'import { Modal } from "/src/features/ai/../modal/index.js";',
+			'const lazyImages = import(`../../images/index.js`);',
+			'const commonImages = require(`../../images/index.js`);',
+			'import { ImageGallery } from "/src/features/images/index.js";',
+			'import { ImageGallery } from "/src/features/ai/../images/index.js";',
 		]) {
 			const messages = lintFsdSameLayerEdges(
 				source,
 				"src/features/ai/ui/NewAiPanel.tsx",
 			);
 			assert.equal(messages.length, 1);
-			assert.match(messages[0].message, /dependency on "modal"/);
+			assert.match(messages[0].message, /dependency on "images"/);
 		}
 
 		const staleAllowance = lintFsdSameLayerEdges(
@@ -1772,14 +1794,14 @@ await run(
 		assert.equal(staleAllowance.length, 1);
 		assert.match(
 			staleAllowance[0].message,
-			/stale same-layer dependency allowance "modal"/,
+			/stale same-layer dependency allowance "images"/,
 		);
 
 		assert.deepEqual(
 			lintFsdSameLayerEdges(
 				[
-					'import { Modal } from "../../modal/index.js";',
-					'import { MessageBox } from "../../modal/index.js";',
+					'import { ImageGallery } from "../../images/index.js";',
+					'import { ImageAssetField } from "../../images/index.js";',
 				].join("\n"),
 				allowedImporter,
 			),
@@ -1788,9 +1810,9 @@ await run(
 		assert.deepEqual(
 			lintFsdSameLayerEdges(
 				[
-					'export { Modal } from "../../modal/index.js";',
-					'const lazyModal = import("../../modal/index.js");',
-					'const commonModal = require("../../modal/index.js");',
+					'export { ImageGallery } from "../../images/index.js";',
+					'const lazyImages = import("../../images/index.js");',
+					'const commonImages = require("../../images/index.js");',
 				].join("\n"),
 				allowedImporter,
 			),
@@ -1819,15 +1841,15 @@ await run(
 					'// import "../../editor/index.js";',
 					'/* const hidden = require("../../editor/index.js"); */',
 					'const example = \'import("../../editor/index.js")\';',
-					'import { Modal } from "../../modal/index.js";',
+					'import { ImageGallery } from "../../images/index.js";',
 				].join("\n"),
 			),
-			["../../modal/index.js"],
+			["../../images/index.js"],
 		);
 		await assertSameLayerBaselineShape("features", {
-			importers: 20,
-			edges: 25,
-			pairs: 18,
+			importers: 10,
+			edges: 14,
+			pairs: 12,
 		});
 		await assertSameLayerBaselineShape("widgets", {
 			importers: 8,
@@ -1860,6 +1882,102 @@ await run(
 			eslintSource,
 			/'fsd-boundaries\/same-layer-file-edges': 'error'/,
 		);
+	},
+);
+
+await run(
+	"Phase 124 moves generic modal ownership to shared and app layers",
+	async () => {
+		await assert.rejects(
+			() => fs.access("src/features/modal"),
+			(error) => error?.code === "ENOENT",
+		);
+
+		const [
+			appSource,
+			messageBoxHostSource,
+			modalSource,
+			modalModelSource,
+			runtimeBarrel,
+			declarationBarrel,
+			eslintSource,
+		] = await Promise.all([
+			fs.readFile("src/App.tsx", "utf8"),
+			fs.readFile("src/app/ui/MessageBoxHost.tsx", "utf8"),
+			fs.readFile("src/shared/ui/Modal.tsx", "utf8"),
+			fs.readFile("src/shared/ui/modalModel.ts", "utf8"),
+			fs.readFile("src/shared/ui/index.js", "utf8"),
+			fs.readFile("src/shared/ui/index.d.ts", "utf8"),
+			fs.readFile("eslint.config.js", "utf8"),
+		]);
+
+		assert.match(
+			runtimeBarrel,
+			/export \{ default as Modal \} from "\.\/Modal\.tsx";/,
+		);
+		assert.match(
+			declarationBarrel,
+			/export \{\s*default as Modal,\s*type ModalProps,?\s*\} from "\.\/Modal\.tsx";/,
+		);
+		assert.match(
+			modalSource,
+			/export type \{ ModalProps \} from "\.\/modalModel\.ts";/,
+		);
+		assert.match(modalSource, /from "\.\/modalModel\.ts"/);
+		assert.doesNotMatch(
+			modalModelSource,
+			/\b(?:createModalApi|formatModalStatusMessage|ModalApi\w*)\b/,
+		);
+		assert.match(
+			messageBoxHostSource,
+			/export default function MessageBoxHost\(/,
+		);
+		assert.match(messageBoxHostSource, /<Modal\b/);
+		assert.match(
+			appSource,
+			/import MessageBoxHost from "\.\/app\/ui\/MessageBoxHost\.tsx";/,
+		);
+		assert.match(appSource, /<MessageBoxHost\s*\/>/);
+		assert.doesNotMatch(appSource, /<MessageBox\s*\/>/);
+		assert.match(eslintSource, /\bSHARED_MODAL_PUBLIC_API_PATTERN\b/);
+		assert.doesNotMatch(eslintSource, /features\/modal/);
+
+		const sourceFiles = await collectFsdSourceFiles("src");
+		const legacyModalImports = [];
+		const runtimeModalConsumers = [];
+		const namedImportPattern =
+			/import\s*\{([\s\S]*?)\}\s*from\s*["']([^"']+)["']/g;
+		for (const filePath of sourceFiles) {
+			const source = await fs.readFile(filePath, "utf8");
+			const codeMask = createFsdCodeMask(source);
+			for (const specifier of readStaticFsdSpecifiers(source)) {
+				const resolved = resolveTestModuleSpecifierPath(filePath, specifier);
+				if (
+					resolved === "src/features/modal" ||
+					resolved?.startsWith("src/features/modal/")
+				) {
+					legacyModalImports.push([filePath, specifier]);
+				}
+			}
+			if (!/<Modal(?:\s|>)/.test(codeMask)) continue;
+			const imports = Array.from(source.matchAll(namedImportPattern))
+				.filter((match) => codeMask[match.index] !== " ")
+				.filter((match) => /\bModal\b/.test(match[1]))
+				.map((match) => match[2]);
+			runtimeModalConsumers.push([filePath, imports]);
+		}
+
+		assert.deepEqual(legacyModalImports, []);
+		assert.ok(runtimeModalConsumers.length > 0);
+		for (const [filePath, imports] of runtimeModalConsumers) {
+			assert.deepEqual(
+				imports.map((specifier) =>
+					resolveTestModuleSpecifierPath(filePath, specifier),
+				),
+				["src/shared/ui/index.js"],
+				`${filePath} must import Modal through shared/ui`,
+			);
+		}
 	},
 );
 
@@ -9956,12 +10074,7 @@ await run("note presentation preserves collapse and virtual-item decisions", () 
 	assert.equal(isRealNote({ _isVirtual: false }), true);
 });
 
-await run("modal model preserves API, focus, keyboard, and close contracts", async () => {
-	assert.equal(
-		formatModalStatusMessage("Failed", "403", "Status"),
-		"[Status: 403] Failed",
-	);
-	assert.equal(formatModalStatusMessage("Failed", null, "Status"), "Failed");
+await run("shared modal model preserves focus, keyboard, and close contracts", () => {
 	assert.equal(
 		resolveModalConfirmValue({
 			showInput: true,
@@ -10102,32 +10215,6 @@ await run("modal model preserves API, focus, keyboard, and close contracts", asy
 		},
 	);
 	assert.deepEqual(keyboardEvents, ["prevent"]);
-
-	let modalConfig = null;
-	let statusLabelCalls = 0;
-	const api = createModalApi(
-		(value) => {
-			modalConfig = value;
-		},
-		() => {
-			statusLabelCalls += 1;
-			return "Status";
-		},
-	);
-	const alertPromise = api.alert("Error", "Failed");
-	assert.equal(statusLabelCalls, 0);
-	assert.equal(modalConfig.message, "Failed");
-	assert.equal(modalConfig.onCancel, null);
-	modalConfig.onConfirm("acknowledged");
-	assert.equal(await alertPromise, "acknowledged");
-	assert.equal(modalConfig, null);
-
-	const confirmPromise = api.confirm("Confirm", "Continue?", "pending");
-	assert.equal(statusLabelCalls, 1);
-	assert.equal(modalConfig.message, "[Status: pending] Continue?");
-	modalConfig.onCancel();
-	assert.equal(await confirmPromise, null);
-	assert.equal(modalConfig, null);
 });
 
 await run("player questions preserve dice formulas and result targeting", () => {

@@ -5,8 +5,8 @@ import {
 	Button,
 	Checkbox,
 	CollapseToggleButton,
+	Modal,
 } from "../../../shared/ui/index.js";
-import { Modal } from "../../modal/index.js";
 import type { ContextListConfig } from "../model/contextConfig.ts";
 import type {
 	AiContextDataConfig,

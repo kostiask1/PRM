@@ -13,10 +13,10 @@ import type {
 import { lang } from "../../../shared/lib/index.js";
 import {
 	Button,
+	Modal,
 	Select,
 	TextInput,
 } from "../../../shared/ui/index.js";
-import { Modal } from "../../modal/index.js";
 import {
 	ALIGNMENT_OPTIONS,
 	CREATURE_ABILITY_KEYS,

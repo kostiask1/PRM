@@ -6,9 +6,8 @@ import {
 	type RefObject,
 	type SetStateAction,
 } from "react";
-import { Button, Icon, Tooltip } from "../../../shared/ui/index.js";
+import { Button, Icon, Modal, Tooltip } from "../../../shared/ui/index.js";
 import { classNames, formatBytes, lang } from "../../../shared/lib/index.js";
-import { Modal } from "../../modal/index.js";
 import type { ImageLocation } from "../api/imageApi.ts";
 import { imageApi as api } from "../api/imageApi.ts";
 import {

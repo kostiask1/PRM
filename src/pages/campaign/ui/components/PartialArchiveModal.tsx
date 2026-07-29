@@ -4,9 +4,8 @@ import {
 	CAMPAIGN_PARTIAL_ARCHIVE_SECTIONS,
 	type CampaignPartialArchiveSection,
 } from "../../../../entities/campaign/index.js";
-import { Modal } from "../../../../features/modal/index.js";
 import { lang } from "../../../../shared/lib/index.js";
-import { Button, Checkbox } from "../../../../shared/ui/index.js";
+import { Button, Checkbox, Modal } from "../../../../shared/ui/index.js";
 import {
 	createDefaultPartialArchiveSelection,
 	getOrderedPartialArchiveSections,

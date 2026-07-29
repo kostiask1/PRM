@@ -4,6 +4,7 @@ export { default as CollapseToggleButton } from "./CollapseToggleButton.tsx";
 export { default as DraggableList } from "./DraggableList.tsx";
 export { default as Icon } from "./Icon.tsx";
 export { default as ListCard } from "./ListCard.tsx";
+export { default as Modal } from "./Modal.tsx";
 export { default as MultiSelect } from "./MultiSelect.tsx";
 export { default as Notification } from "./Notification.tsx";
 export { default as Panel } from "./Panel.tsx";

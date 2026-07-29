@@ -1,7 +1,11 @@
 import type { ReactNode } from "react";
 
-import { Icon, Notification, Tooltip } from "../../../shared/ui/index.js";
-import { Modal } from "../../modal/index.js";
+import {
+	Icon,
+	Modal,
+	Notification,
+	Tooltip,
+} from "../../../shared/ui/index.js";
 
 export interface AiAssistantShellProps {
 	children?: ReactNode;

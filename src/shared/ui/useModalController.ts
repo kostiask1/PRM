@@ -12,7 +12,7 @@ import {
 	getModalKeyboardPlan,
 	resolveModalConfirmValue,
 	type ModalProps,
-} from "../model.ts";
+} from "./modalModel.ts";
 
 type ControlledMouseEvent = Pick<
 	ReactMouseEvent<HTMLElement>,

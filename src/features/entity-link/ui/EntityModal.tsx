@@ -1,6 +1,6 @@
 import { useContext } from "react";
 
-import { Modal } from "../../modal/index.js";
+import { Modal } from "../../../shared/ui/index.js";
 import { EntityLinkScope } from "./EntityLinkContext.tsx";
 import {
 	EntityLinkResolverContext,

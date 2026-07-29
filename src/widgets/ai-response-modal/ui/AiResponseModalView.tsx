@@ -6,9 +6,8 @@ import type {
 	AiResponseHistoryEntry,
 } from "../../../features/ai/ui/index.js";
 import { EditableField } from "../../../features/editor/ui/index.js";
-import { Modal } from "../../../features/modal/index.js";
 import { classNames, lang } from "../../../shared/lib/index.js";
-import { Button } from "../../../shared/ui/index.js";
+import { Button, Modal } from "../../../shared/ui/index.js";
 import { snapshotToText, type PreviewResource } from "../model/aiResponseModal.ts";
 import type { AiResponseDiffViewMode } from "../model/useAiResponseDraftController.ts";
 

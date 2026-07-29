@@ -10,6 +10,7 @@ import {
   FSD_BOUNDARY_PLUGIN,
   FSD_PUBLIC_API_PATTERNS,
   REFERENCE_LOADER_IMPORT_PATTERNS,
+  SHARED_MODAL_PUBLIC_API_PATTERN,
   TYPESCRIPT_PUBLIC_API_PATTERNS,
 } from './scripts/eslint-import-boundaries.mjs';
 
@@ -57,6 +58,7 @@ export default [
       'no-restricted-imports': ['error', {
         patterns: [
           ...FSD_PUBLIC_API_PATTERNS,
+          SHARED_MODAL_PUBLIC_API_PATTERN,
           {
             group: ['**/features/images/api/*', '**/features/images/model/*', '**/features/images/ui/*'],
             message: 'Import the images slice through features/images/index.js.',
@@ -72,10 +74,6 @@ export default [
           {
             group: ['**/features/entity-link/ui/*', '**/features/entity-link/model/*'],
             message: 'Import entity-link behavior through features/entity-link/index.js.',
-          },
-          {
-            group: ['**/features/modal/ui/*', '**/features/modal/model/*'],
-            message: 'Import modal behavior through features/modal/index.js.',
           },
           {
             group: ['**/features/campaign-create/ui/*'],

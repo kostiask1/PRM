@@ -3,8 +3,8 @@ import type {
 	AiModelOption,
 	AiUiAttachment,
 } from "../../../features/ai/ui/index.js";
-import { Modal } from "../../../features/modal/index.js";
 import { lang } from "../../../shared/lib/index.js";
+import { Modal } from "../../../shared/ui/index.js";
 import {
 	getImagePromptPickerState,
 	type ImagePromptEntity,

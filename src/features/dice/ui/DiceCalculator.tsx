@@ -11,10 +11,10 @@ import {
 import {
 	Button,
 	Icon,
+	Modal,
 	TextInput,
 	Tooltip,
 } from "../../../shared/ui/index.js";
-import { Modal } from "../../modal/index.js";
 import DiceProbabilityModalContent from "./DiceProbabilityModalContent.tsx";
 import { publishDiceResultAction, requestDiceRollAction } from "../../../shared/model/index.js";
 import {

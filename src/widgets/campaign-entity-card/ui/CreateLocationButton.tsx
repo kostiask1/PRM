@@ -1,10 +1,15 @@
 import { useState } from "react";
 import type { CampaignEntityRecord, LocationData } from "../../../entities/campaign/index.js";
 import { buildCreateEntityPayload, submitCreateEntity } from "../../../features/campaign-entity/index.js";
-import { Modal } from "../../../features/modal/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import { alert, useAppDispatch } from "../../../shared/model/index.js";
-import { Button, type ButtonSize, type ButtonVariant, type IconName } from "../../../shared/ui/index.js";
+import {
+	Button,
+	Modal,
+	type ButtonSize,
+	type ButtonVariant,
+	type IconName,
+} from "../../../shared/ui/index.js";
 import "../../../assets/components/CreateCharacterButton.css";
 import { createLocationDraft, isLocationDraftValid } from "../model/campaignEntityCard.ts";
 import LocationCard from "./LocationCard.tsx";

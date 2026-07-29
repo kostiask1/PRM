@@ -640,6 +640,8 @@ Next:
 - Phase 122 also corrected entity ownership. Fallow now uses `autoDiscover` to model every `src/entities/*` slice as its own zone, the entity rule allows only `shared`, and audited sibling-entity edges are zero. `referencePreview.ts` and `referenceResolvers.ts` moved from `entities/reference/model` to `features/rules-reference/model`, with a minimal JSON-free `features/rules-reference/model.js` facade and matching declaration. The five reference cache/normalizer modules for conditions, diseases, senses, skills, and variant rules remain entity-owned and public through `entities/reference/index.js`; the Node-facing entity model facade does not mirror unused browser exports. The complete suite passes 405/405 tests.
 - Completed Phase 123 and froze the remaining `src/features` and `src/widgets` same-layer dependencies as an exact importer-file → target-slice baseline. The local ESLint plugin in `scripts/eslint-import-boundaries.mjs` rejects both new edges and stale allowances, normalizes repository-relative and Windows filenames, resolves relative and Vite-root `/src/...` specifiers, and observes static imports, named/all re-exports, dynamic imports, `require` calls, TypeScript `import()` types, and external-module `require` references with static string/template literals. Its all-`src` public-entry rule independently rejects private paths even when the importer-file → target-slice edge itself is approved. Permanent `npm test` source-inventory contracts ignore module-like text in comments and literals, prove that the baseline matches the current tree, and exercise the rules while complete lint remains blocked under `MD-R04`.
 - Phase 123 also removed five plain `Input` dependencies by adding the strict native `shared/ui/TextInput` primitive and migrating `AiApiKeyPanel`, `CreateCampaignModalContent`, `DiceCalculator`, `MonsterFieldEditModal`, and `PlayerQuestionsModalContent`. Feature debt fell from 22 directed slice pairs / 30 file edges / 34 declarations to 18 / 25 / 29; widget debt remains 13 / 13 / 13. The complete suite passes 409/409 tests. Phase 124 is next and must review and lower the next bounded dependency cluster without preselecting its extraction strategy.
+- Completed Phase 124 and corrected modal ownership instead of preserving an app-aware feature abstraction. Generic `Modal` plus its Node-safe private `modalModel.ts` policies and private `useModalController.ts`/`ModalView.tsx` implementation now belong to `shared/ui` and are consumed through `shared/ui/index.js`. The synchronized `SHARED_MODAL_PUBLIC_API_PATTERN` protects those implementation paths for both JavaScript and TypeScript consumers; the stale `features/modal` restriction was removed. Store-backed global message rendering moved upward to `app/ui/MessageBoxHost.tsx`, composed only by `App.tsx`; lower layers do not import the app host. The obsolete imperative `Modal.createApi`/`createModalApi` surface and related unused status/API types were removed with the entire `features/modal` slice. Historical Phase 123 ownership statements above remain as the record of that checkpoint; this Phase 124 entry is the correction.
+- Phase 124 also lowered the synchronized boundaries exactly: `modal` was removed from `FSD_SLICE_NAMES.features`, and all 11 importer-file → `modal` allowances were removed from `FSD_SAME_LAYER_FILE_EDGE_BASELINE`. The feature baseline fell from 20 importer files / 18 directed pairs / 25 file edges to 10 / 12 / 14, while feature import declarations fell from 29 to 18. Widgets remain at 13 directed pairs / 13 file edges / 13 declarations. Permanent source-inventory coverage locks the lowered catalog and baseline, and the complete suite passes 410/410 tests. Phase 125 is next and must review the first bounded widget-composition cluster; `MD-R05` remains open.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -651,7 +653,9 @@ the editor root presentation split at 403 tests, Phase 121 completed the
 recovery-hardening gate at 404/404 tests, Phase 122 completed the
 public-entry/entity-isolation gate at 405/405 tests, and Phase 123 completed
 the exact same-layer baseline plus first reduction gate at 409/409 tests.
-Phase 124 is the next numbered migration phase.
+Phase 124 completed the modal-ownership correction and lowered feature
+same-layer gate at 410/410 tests. Phase 125 is the next numbered migration
+phase.
 
 ### Provenance and transfer rule
 
@@ -787,14 +791,19 @@ Status: **In progress**
   five plain editor `Input` dependencies with `shared/ui/TextInput`; reduce
   feature debt to 18 directed pairs / 25 file edges / 29 declarations while
   widgets remain at 13 / 13 / 13.
-- [ ] Review and lower the next bounded same-layer dependency cluster in Phase
-  124, then continue cluster-by-cluster until no unapproved edge remains.
+- [x] Correct the modal cluster in Phase 124 by moving generic modal UI and
+  policies to `shared/ui`, moving the store-backed host to `app/ui`, deleting
+  the dead imperative API and `features/modal`, and lowering feature debt to
+  12 directed pairs / 14 file edges / 18 declarations while widgets remain at
+  13 / 13 / 13.
+- [ ] Review and lower the first bounded widget-composition cluster in Phase
+  125, then continue cluster-by-cluster until no unapproved edge remains.
 - [x] Run focused recovery tests, performance budgets, architecture checks,
   syntax/diff hygiene, and UTF-8/replacement-character checks.
 - [ ] Run the complete lint and typecheck gates after the declared local
   tooling dependencies are available.
 - [x] Run the full `npm test` gate; Phase 119 closed at 398 tests, Phase 122
-  passed 405/405, and Phase 123 passes 409/409 tests.
+  passed 405/405, Phase 123 passed 409/409, and Phase 124 passes 410/410 tests.
 
 ### Recovery R6 — Typed app-owned store composition
 

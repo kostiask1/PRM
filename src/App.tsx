@@ -7,9 +7,9 @@ import { settingsApi } from "./features/settings/index.js";
 const api = { ...campaignApi, ...backupApi, ...settingsApi };
 import { DiceCalculator } from "./features/dice/index.js";
 import MainContent from "./app/routing/MainContent.tsx";
-import { MessageBox, Modal } from "./features/modal/index.js";
+import MessageBoxHost from "./app/ui/MessageBoxHost.tsx";
 import { CampaignEntityModalProvider } from "./widgets/campaign-entity-modal/index.js";
-import { Icon } from "./shared/ui/index.js";
+import { Icon, Modal } from "./shared/ui/index.js";
 import { Sidebar } from "./widgets/sidebar/index.js";
 import { MentionPickerModalContent } from "./features/editor/ui/index.js";
 import { CreateCampaignModalContent } from "./features/campaign-create/index.js";
@@ -427,7 +427,7 @@ export default function App() {
 						}
 					/>
 				)}
-				<MessageBox />
+				<MessageBoxHost />
 				<DiceCalculator />
 				<RulesReferenceModalHost />
 			</CampaignEntityModalProvider>

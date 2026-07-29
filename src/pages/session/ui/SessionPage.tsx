@@ -8,17 +8,22 @@ import {
 	type RefObject,
 } from "react";
 
-import { Button, Icon, Panel, Tooltip } from "../../../shared/ui/index.js";
+import {
+	Button,
+	CollapseToggleButton,
+	DraggableList,
+	Icon,
+	Modal,
+	Panel,
+	Tooltip,
+} from "../../../shared/ui/index.js";
 import { EditableField } from "../../../features/editor/ui/index.js";
-import { DraggableList } from "../../../shared/ui/index.js";
-import { Modal } from "../../../features/modal/index.js";
 import {
 	AiContextIgnoreButton,
 	BulkCollapseButton,
 	getAiIgnoredNoteListProps,
 	NoteCard,
 } from "../../../features/notes/ui/index.js";
-import { CollapseToggleButton } from "../../../shared/ui/index.js";
 import TodoSection from "./components/TodoSection.tsx";
 import TodoItem from "./components/TodoItem.tsx";
 import SceneCardHeader from "./components/SceneCardHeader.tsx";

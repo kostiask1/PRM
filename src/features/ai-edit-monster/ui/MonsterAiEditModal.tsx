@@ -2,7 +2,7 @@ import type { Dispatch, SetStateAction } from "react";
 
 import type { BestiaryMonster } from "../../../entities/bestiary/index.js";
 import { lang } from "../../../shared/lib/index.js";
-import { Button, Select } from "../../../shared/ui/index.js";
+import { Button, Modal, Select } from "../../../shared/ui/index.js";
 import type { AiModelDescriptor } from "../../ai/index.js";
 import {
 	AiAttachmentControls,
@@ -10,7 +10,6 @@ import {
 	type AiUiAttachment,
 } from "../../ai/ui/index.js";
 import { EditableField } from "../../editor/ui/index.js";
-import { Modal } from "../../modal/index.js";
 import {
 	getMonsterAiEditPresentation,
 	type MonsterAiEditMode,

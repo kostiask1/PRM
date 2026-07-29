@@ -23,7 +23,6 @@ export const FSD_SLICE_NAMES = Object.freeze({
 		"encounter-editor",
 		"entity-link",
 		"images",
-		"modal",
 		"monster-editor",
 		"notes",
 		"player-questions",
@@ -76,26 +75,15 @@ function freezeSameLayerFileEdgeBaseline(baseline) {
 export const FSD_SAME_LAYER_FILE_EDGE_BASELINE =
 	freezeSameLayerFileEdgeBaseline({
 		features: {
-			"src/features/ai/ui/AiAssistantShell.tsx": ["modal"],
 			"src/features/ai/ui/AiAttachmentControls.tsx": ["images"],
-			"src/features/ai/ui/AiContextSettingsModal.tsx": ["modal"],
 			"src/features/ai/ui/AiPromptComposer.tsx": ["editor"],
 			"src/features/ai-edit-monster/ui/BestiaryAiDraftModal.tsx": ["ai"],
 			"src/features/ai-edit-monster/ui/BestiaryAiModals.tsx": ["ai"],
-			"src/features/ai-edit-monster/ui/MonsterAiActionModal.tsx": ["modal"],
 			"src/features/ai-edit-monster/ui/MonsterAiEditModal.tsx": [
 				"ai",
 				"editor",
-				"modal",
 			],
-			"src/features/dice/ui/DiceCalculator.tsx": ["modal"],
-			"src/features/edit-monster/ui/MonsterFieldEditModal.tsx": ["modal"],
 			"src/features/editor/ui/EditableField.tsx": ["entity-link"],
-			"src/features/entity-link/ui/EntityModal.tsx": ["modal"],
-			"src/features/images/ui/ImageAssetFieldView.tsx": ["modal"],
-			"src/features/images/ui/ImageDropzone.tsx": ["modal"],
-			"src/features/images/ui/ImageGallerySections.tsx": ["modal"],
-			"src/features/images/ui/ImageGalleryView.tsx": ["modal"],
 			"src/features/notes/ui/NoteCardParts.tsx": [
 				"editor",
 				"rich-content",
@@ -453,8 +441,24 @@ export const RECOVERED_ENTITY_PUBLIC_API_PATTERN = {
 		"Import campaign, reference, and spell entities through their public entry points.",
 };
 
+export const SHARED_MODAL_PUBLIC_API_PATTERN = Object.freeze({
+	group: Object.freeze([
+		"**/shared/ui/Modal",
+		"**/shared/ui/Modal.*",
+		"**/shared/ui/ModalView",
+		"**/shared/ui/ModalView.*",
+		"**/shared/ui/useModalController",
+		"**/shared/ui/useModalController.*",
+		"**/shared/ui/modalModel",
+		"**/shared/ui/modalModel.*",
+	]),
+	message:
+		"Import Modal through shared/ui/index.js; its view, controller, and model are private.",
+});
+
 export const TYPESCRIPT_PUBLIC_API_PATTERNS = [
 	...FSD_PUBLIC_API_PATTERNS,
+	SHARED_MODAL_PUBLIC_API_PATTERN,
 	{
 		group: [
 			"**/features/editor/ui/Input",

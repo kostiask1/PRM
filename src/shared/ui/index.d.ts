@@ -17,6 +17,7 @@ export {
 } from "./DraggableList.tsx";
 export { default as Icon, type IconName, type IconProps } from "./Icon.tsx";
 export { default as ListCard, type ListCardProps } from "./ListCard.tsx";
+export { default as Modal, type ModalProps } from "./Modal.tsx";
 export {
 	default as MultiSelect,
 	type MultiSelectProps,

@@ -1,8 +1,11 @@
-import { hideMessageBox } from "../../../shared/model/index.js";
-import { useAppDispatch, useAppSelector } from "../../../shared/model/index.js";
-import Modal from "./Modal.tsx";
+import {
+	hideMessageBox,
+	useAppDispatch,
+	useAppSelector,
+} from "../../shared/model/index.js";
+import { Modal } from "../../shared/ui/index.js";
 
-export default function MessageBox() {
+export default function MessageBoxHost() {
 	const dispatch = useAppDispatch();
 	const messageBox = useAppSelector((state) => state.messageBox);
 

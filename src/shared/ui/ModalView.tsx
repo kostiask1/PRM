@@ -1,11 +1,13 @@
 import type { ReactNode } from "react";
-import { Button, Checkbox, Icon } from "../../../shared/ui/index.js";
-import { classNames, lang } from "../../../shared/lib/index.js";
+import Button from "./Button.tsx";
+import Checkbox from "./Checkbox.tsx";
+import Icon from "./Icon.tsx";
+import { classNames, lang } from "../lib/index.js";
 import {
 	getModalPresentationPlan,
 	type ModalPresentationPlan,
 	type ModalProps,
-} from "../model.ts";
+} from "./modalModel.ts";
 import type { ModalController } from "./useModalController.ts";
 
 interface ModalViewProps extends ModalProps {

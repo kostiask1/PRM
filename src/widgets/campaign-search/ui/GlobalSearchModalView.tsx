@@ -1,8 +1,7 @@
 import type { CSSProperties } from "react";
 
-import { Modal } from "../../../features/modal/index.js";
 import { lang } from "../../../shared/lib/index.js";
-import { Button } from "../../../shared/ui/index.js";
+import { Button, Modal } from "../../../shared/ui/index.js";
 import {
 	CAMPAIGN_SEARCH_FILTERS,
 	type CampaignSearchFilter,

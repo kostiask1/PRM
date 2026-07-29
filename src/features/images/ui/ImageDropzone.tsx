@@ -15,11 +15,9 @@ import { IMAGE_GALLERY_CATEGORIES } from "../imageGalleryConfig.ts";
 import { lang } from "../../../shared/lib/index.js";
 import { useAppDispatch } from "../../../shared/model/index.js";
 import { classNames } from "../../../shared/lib/index.js";
-import { Icon } from "../../../shared/ui/index.js";
-import { Modal } from "../../modal/index.js";
+import { Button, Icon, Modal } from "../../../shared/ui/index.js";
 import ImageGallery from "./ImageGallery";
 import ImageTargetSettings from "./ImageTargetSettings";
-import { Button } from "../../../shared/ui/index.js";
 import type { CampaignRecord } from "../../../entities/campaign/index.js";
 import type { ImageAsset } from "../api/imageApi.ts";
 import {

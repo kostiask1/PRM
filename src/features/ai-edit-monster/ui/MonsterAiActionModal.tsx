@@ -2,8 +2,7 @@ import type { ReactNode } from "react";
 
 import type { BestiaryMonster } from "../../../entities/bestiary/index.js";
 import { lang } from "../../../shared/lib/index.js";
-import { Button, type IconName } from "../../../shared/ui/index.js";
-import { Modal } from "../../modal/index.js";
+import { Button, Modal, type IconName } from "../../../shared/ui/index.js";
 import type { MonsterAiAction } from "../model.ts";
 
 export interface MonsterAiActionModalProps {

@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
-import { Button, Tooltip } from "../../../shared/ui/index.js";
-import { Modal } from "../../modal/index.js";
+import { Button, Modal, Tooltip } from "../../../shared/ui/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import type useImageAssetFieldController from "../model/useImageAssetFieldController.ts";
 import type { ImageAssetFieldContentState } from "../model/imageAssetField.ts";

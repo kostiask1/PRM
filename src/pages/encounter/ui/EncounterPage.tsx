@@ -7,8 +7,14 @@ import {
 	type ReactNode,
 	type RefObject,
 } from "react";
-import { Button, Notification, Panel, Tooltip } from "../../../shared/ui/index.js";
-import { Modal } from "../../../features/modal/index.js";
+import {
+	Button,
+	DraggableList,
+	Modal,
+	Notification,
+	Panel,
+	Tooltip,
+} from "../../../shared/ui/index.js";
 import { BestiaryBrowser as Bestiary } from "../../../widgets/bestiary-browser/index.js";
 import {
 	BestiaryAiModals,
@@ -30,7 +36,6 @@ import { AiResponseModal } from "../../../widgets/ai-response-modal/index.js";
 import { MonsterEditorModal } from "../../../widgets/monster-editor-modal/index.js";
 import { MonsterStatBlock } from "../../../widgets/monster-stat-block/index.js";
 import { CharacterCard } from "../../../widgets/campaign-entity-card/index.js";
-import { DraggableList } from "../../../shared/ui/index.js";
 import useEncounterView from "../model/useEncounterView.ts";
 import { classNames } from "../../../shared/lib/index.js";
 import "../../../assets/components/EncounterView.css";
