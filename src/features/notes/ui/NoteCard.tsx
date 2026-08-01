@@ -4,30 +4,23 @@ import { useAppSelector } from "../../../shared/model/index.js";
 import {
 	getNoteCardPresentation,
 	shouldExpandNoteFromCardClick,
-	type NoteCardNote,
-	type NoteId,
 } from "../model.ts";
 import {
 	NoteCardBody,
 	NoteCardHeader,
 	NoteCardSimplified,
 } from "./NoteCardParts.tsx";
+import type {
+	NoteCardComponent,
+	NoteCardCompositionSlots,
+	NoteCardProps,
+} from "./noteCardComposition.ts";
 
 const SHORT_TEXT_LENGTH = 50;
 
-export interface NoteCardProps {
-	note: NoteCardNote;
-	isLast: boolean;
-	campaignSlug?: string | null;
-	enableHistory?: boolean;
-	onToggleCollapse: (noteId: NoteId) => void;
-	onTitleChange: (noteId: NoteId, value: string) => void;
-	onTextChange: (noteId: NoteId, value: string) => void;
-	onDelete: (noteId: NoteId) => void;
-	highlightFields?: readonly string[] | null;
-}
+type NoteCardInternalProps = NoteCardProps & NoteCardCompositionSlots;
 
-export default function NoteCard({
+function NoteCard({
 	note,
 	isLast,
 	campaignSlug,
@@ -37,7 +30,9 @@ export default function NoteCard({
 	onTextChange,
 	onDelete,
 	highlightFields = null,
-}: NoteCardProps) {
+	EditableField,
+	renderMentionText,
+}: NoteCardInternalProps) {
 	const simplifiedNotesEnabled = useAppSelector(
 		(state) => state.ui.simplifiedNotes,
 	);
@@ -73,6 +68,7 @@ export default function NoteCard({
 				isCollapsed={presentation.isCollapsed}
 				enableHistory={enableHistory}
 				highlightFields={highlightFields}
+				EditableField={EditableField}
 				onToggleCollapse={onToggleCollapse}
 				onTitleChange={onTitleChange}
 				onDelete={onDelete}
@@ -84,6 +80,7 @@ export default function NoteCard({
 				isCollapsed={presentation.isCollapsed}
 				shortText={presentation.shortText}
 				hasTruncatedPreview={presentation.hasTruncatedPreview}
+				renderMentionText={renderMentionText}
 				onToggleCollapse={onToggleCollapse}
 				onDelete={onDelete}
 			/>
@@ -93,8 +90,26 @@ export default function NoteCard({
 				campaignSlug={campaignSlug}
 				enableHistory={enableHistory}
 				highlightFields={highlightFields}
+				EditableField={EditableField}
 				onTextChange={onTextChange}
 			/>
 		</div>
 	);
+}
+
+export function createNoteCardComponent({
+	EditableField,
+	renderMentionText,
+}: NoteCardCompositionSlots): NoteCardComponent {
+	function ConfiguredNoteCard(props: NoteCardProps) {
+		return (
+			<NoteCard
+				{...props}
+				EditableField={EditableField}
+				renderMentionText={renderMentionText}
+			/>
+		);
+	}
+
+	return ConfiguredNoteCard;
 }

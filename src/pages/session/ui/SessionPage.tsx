@@ -21,8 +21,8 @@ import { EditableField } from "../../../features/editor/ui/index.js";
 import {
 	AiContextIgnoreButton,
 	BulkCollapseButton,
+	createNoteCardComponent,
 	getAiIgnoredNoteListProps,
-	NoteCard,
 } from "../../../features/notes/ui/index.js";
 import TodoSection from "./components/TodoSection.tsx";
 import TodoItem from "./components/TodoItem.tsx";
@@ -87,6 +87,11 @@ import {
 	type SessionPageEntity,
 } from "../model/sessionEntityModel.ts";
 import type { SceneCardFieldDefinition } from "./components/SceneCardFields.tsx";
+
+const SessionNoteCard = createNoteCardComponent({
+	EditableField,
+	renderMentionText,
+});
 
 function isSessionEntityId(value: unknown): value is string | number {
 	return typeof value === "string" || typeof value === "number";
@@ -387,7 +392,7 @@ function SessionNotesSection({
 					}
 					renderItem={(note, _isDragging, index) => (
 						<div id={makeDomId("session", "note", note.id)}>
-							<NoteCard
+							<SessionNoteCard
 								note={note}
 								isLast={index === renderableNotes.length - 1}
 								campaignSlug={view.campaignSlug}
@@ -1202,7 +1207,7 @@ function SceneNotes(props: SceneNotesProps) {
 										props.onSceneNoteAiIgnoredChange,
 									)}
 									renderItem={(note, isDragging, index) => (
-										<NoteCard
+										<SessionNoteCard
 											note={note}
 											isLast={index === presentation.renderableNotes.length - 1}
 											campaignSlug={props.campaignSlug}

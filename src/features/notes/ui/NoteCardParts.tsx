@@ -1,14 +1,16 @@
 import { classNames, lang } from "../../../shared/lib/index.js";
 import { Button, CollapseToggleButton } from "../../../shared/ui/index.js";
-import { EditableField } from "../../editor/ui/index.js";
-import { renderMentionText } from "../../rich-content/index.js";
 import {
 	isNoteCardFieldHighlighted,
 	type NoteCardNote,
 	type NoteId,
 } from "../model.ts";
+import type {
+	NoteCardEditableFieldSlot,
+	NoteCardMentionRenderer,
+} from "./noteCardComposition.ts";
 
-interface NoteCardHeaderProps {
+export interface NoteCardHeaderProps {
 	visible: boolean;
 	note: NoteCardNote;
 	isLast: boolean;
@@ -19,6 +21,7 @@ interface NoteCardHeaderProps {
 	onToggleCollapse: (noteId: NoteId) => void;
 	onTitleChange: (noteId: NoteId, value: string) => void;
 	onDelete: (noteId: NoteId) => void;
+	EditableField: NoteCardEditableFieldSlot;
 }
 
 export function NoteCardHeader({
@@ -32,6 +35,7 @@ export function NoteCardHeader({
 	onToggleCollapse,
 	onTitleChange,
 	onDelete,
+	EditableField,
 }: NoteCardHeaderProps) {
 	if (!visible) return null;
 	return (
@@ -76,7 +80,7 @@ export function NoteCardHeader({
 	);
 }
 
-interface NoteCardSimplifiedProps {
+export interface NoteCardSimplifiedProps {
 	visible: boolean;
 	noteId: NoteId;
 	canCollapse: boolean;
@@ -85,6 +89,7 @@ interface NoteCardSimplifiedProps {
 	hasTruncatedPreview: boolean;
 	onToggleCollapse: (noteId: NoteId) => void;
 	onDelete: (noteId: NoteId) => void;
+	renderMentionText: NoteCardMentionRenderer;
 }
 
 export function NoteCardSimplified({
@@ -96,6 +101,7 @@ export function NoteCardSimplified({
 	hasTruncatedPreview,
 	onToggleCollapse,
 	onDelete,
+	renderMentionText,
 }: NoteCardSimplifiedProps) {
 	if (!visible) return null;
 	return (
@@ -135,13 +141,14 @@ export function NoteCardSimplified({
 	);
 }
 
-interface NoteCardBodyProps {
+export interface NoteCardBodyProps {
 	visible: boolean;
 	note: NoteCardNote;
 	campaignSlug?: string | null;
 	enableHistory: boolean;
 	highlightFields: readonly string[] | null;
 	onTextChange: (noteId: NoteId, value: string) => void;
+	EditableField: NoteCardEditableFieldSlot;
 }
 
 export function NoteCardBody({
@@ -151,6 +158,7 @@ export function NoteCardBody({
 	enableHistory,
 	highlightFields,
 	onTextChange,
+	EditableField,
 }: NoteCardBodyProps) {
 	if (!visible) return null;
 	return (

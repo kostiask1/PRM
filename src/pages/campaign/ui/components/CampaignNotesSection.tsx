@@ -2,8 +2,10 @@ import { Button, CollapseToggleButton, DraggableList } from "../../../../shared/
 import {
 	AiContextIgnoreButton,
 	BulkCollapseButton,
-	NoteCard,
+	createNoteCardComponent,
 } from "../../../../features/notes/ui/index.js";
+import { EditableField } from "../../../../features/editor/ui/index.js";
+import { renderMentionText } from "../../../../features/rich-content/index.js";
 import type { DomainId } from "../../../../entities/campaign/index.js";
 import {
 	getNoteRenderKey,
@@ -22,6 +24,11 @@ import {
 	type CampaignNotesViewMode,
 } from "../../model/campaignPagePresentation.ts";
 import CampaignNotesGraph from "./CampaignNotesGraph.tsx";
+
+const CampaignNoteCard = createNoteCardComponent({
+	EditableField,
+	renderMentionText,
+});
 
 type CampaignViewController = ReturnType<typeof useCampaignView>;
 type CampaignRenderableNote = ReturnType<typeof getNotesForRender>[number];
@@ -58,7 +65,7 @@ function CampaignNotesList({
 			}
 			renderItem={(note, _isDragging, index) => (
 				<div id={makeDomId("campaign", "note", note.id)}>
-					<NoteCard
+					<CampaignNoteCard
 						note={normalizeCampaignCardNote(note)}
 						isLast={index === notes.length - 1}
 						campaignSlug={campaignSlug}

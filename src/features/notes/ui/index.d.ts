@@ -10,4 +10,13 @@ export {
 	getAiIgnoredNoteListProps,
 	type AiIgnoredNoteListProps,
 } from "./aiIgnoredNoteListProps.tsx";
-export { default as NoteCard, type NoteCardProps } from "./NoteCard.tsx";
+export { createNoteCardComponent } from "./NoteCard.tsx";
+export type {
+	NoteCardComponent,
+	NoteCardCompositionSlots,
+	NoteCardEditableFieldChangeEvent,
+	NoteCardEditableFieldSlot,
+	NoteCardEditableFieldSlotProps,
+	NoteCardMentionRenderer,
+	NoteCardProps,
+} from "./noteCardComposition.ts";

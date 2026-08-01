@@ -9,7 +9,9 @@ import type {
 	AiResponseModalComponent,
 	AiResponseModalProps,
 } from "../../../features/ai/ui/index.js";
-import { NoteCard } from "../../../features/notes/ui/index.js";
+import { EditableField } from "../../../features/editor/ui/index.js";
+import { createNoteCardComponent } from "../../../features/notes/ui/index.js";
+import { renderMentionText } from "../../../features/rich-content/index.js";
 import { classNames } from "../../../shared/lib/index.js";
 import { formatSourceLabel } from "../../../entities/reference/index.js";
 import { lang } from "../../../shared/lib/index.js";
@@ -43,6 +45,11 @@ import { useAiResponseDraftController } from "../model/useAiResponseDraftControl
 import AiResponseResourceActions from "./AiResponseResourceActions.tsx";
 import AiResponseModalView from "./AiResponseModalView.tsx";
 import type { AiResponseModalCompositionSlots } from "./aiResponseModalComposition.ts";
+
+const AiResponseNoteCard = createNoteCardComponent({
+	EditableField,
+	renderMentionText,
+});
 
 const getEncounterParticipantName = (participant = {}) =>
 	buildEncounterParticipantName(participant, lang.t("Creature"));
@@ -263,7 +270,7 @@ function AiResponseModal({
 			collapsed: Boolean(note.collapsed),
 		};
 		return (
-			<NoteCard
+			<AiResponseNoteCard
 				note={normalizedNote}
 				isLast={false}
 				campaignSlug={campaignSlug}

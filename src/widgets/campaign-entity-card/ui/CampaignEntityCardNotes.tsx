@@ -4,7 +4,12 @@ import {
 	type CardEntity,
 	type CardNote,
 } from "../../../entities/campaign/index.js";
-import { getAiIgnoredNoteListProps, NoteCard } from "../../../features/notes/ui/index.js";
+import { EditableField } from "../../../features/editor/ui/index.js";
+import {
+	createNoteCardComponent,
+	getAiIgnoredNoteListProps,
+} from "../../../features/notes/ui/index.js";
+import { renderMentionText } from "../../../features/rich-content/index.js";
 import { sanitizeNotesForSave } from "../../../shared/lib/index.js";
 import { Button, CollapseToggleButton, DraggableList } from "../../../shared/ui/index.js";
 import {
@@ -14,7 +19,12 @@ import {
 	type CampaignEntityHighlightFields,
 } from "../model/campaignEntityCard.ts";
 
-interface CampaignEntityCardNotesProps<Entity extends CardEntity> {
+const CampaignEntityNoteCard = createNoteCardComponent({
+	EditableField,
+	renderMentionText,
+});
+
+export interface CampaignEntityCardNotesProps<Entity extends CardEntity> {
 	classPrefix: "character_card" | "location_card";
 	entityId: CampaignCardEntityId;
 	model: CardNoteModel<Entity>;
@@ -63,7 +73,7 @@ export default function CampaignEntityCardNotes<Entity extends CardEntity>({
 					onDrop={onReorderDrop}
 					{...getAiIgnoredNoteListProps((noteId, ignored) => updateNotes(setCampaignNoteAiIgnored(model.notes, noteId, ignored)))}
 					renderItem={(note, _isDragging, index) => (
-						<NoteCard
+						<CampaignEntityNoteCard
 							note={{ ...note, text: note.text ?? "" }}
 							isLast={index === notesForRender.length - 1}
 							campaignSlug={campaignSlug}

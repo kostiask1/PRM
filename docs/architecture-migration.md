@@ -658,6 +658,8 @@ Next:
 - Phase 131 removed all three remaining widget importer-file allowances. Widget debt fell from 2 importer files / 3 directed pairs / 3 file edges / 3 declarations to zero across all four measures. Features remain unchanged at 10 importer files / 12 directed pairs / 14 file edges / 18 declarations, and the widget catalog remains at 11 slices. Permanent source-inventory coverage locks the factories, stable owner bindings, render gates, adapter behavior, and empty widget baseline, and the expanded complete suite passes 417/417 tests. `MD-R05` remains open for feature debt; Phase 132 must audit the next coordinated feature cluster.
 - Completed Phase 132 by moving the cross-feature Bestiary AI edit/draft modal shell from `features/ai-edit-monster` to the encounter page composition owner, superseding the earlier Phase 2 and strict-TypeScript UI-ownership wording. `EncounterPage` owns one stable `EncounterBestiaryAiModals` symbol, reuses it in the direct encounter path, and injects it into the sole `BestiaryBrowser` consumer through the widget-owned callable structural slot contract. The feature retains AI-edit policies and `MonsterAiActionModal`; the widget retains its state and modal orchestration without importing the page implementation. Edit-before-draft order, null guards, `general` campaign scope, model and attachment controls, active-request cancellation, response composition, and resource-level apply/undo forwarding remain unchanged.
 - Phase 132 removed the three obsolete AI-edit importer-file allowances. Feature debt fell from 10 importer files / 12 directed pairs / 14 file edges / 18 declarations to 7 / 10 / 10 / 11. Widget debt remains zero across all four measures, and the widget catalog remains at 11 slices. Permanent source-inventory coverage locks the page owner, callable slot, public policy export, modal order, critical behavior, and reduced baseline; the expanded complete suite passes 418/418 tests. `MD-R05` remains open; Phase 133 must audit the coordinated Notes composition cluster.
+- Completed Phase 133 by replacing the raw public `NoteCard` with the Notes-owned `createNoteCardComponent` composition boundary. The factory accepts minimal callable `EditableField` and `renderMentionText` slots without importing sibling-feature types; private `NoteCard`/parts retain rendering ownership. `SessionPage`, `CampaignNotesSection`, `CampaignEntityCardNotes`, and `AiResponseModal` each configure exactly one named component at module scope, preventing Lexical editor remounts while keeping page/widget-to-feature dependency direction. Header/simplified/body order, collapse/null gates, title and textarea modes, history/campaign forwarding, event target callbacks, raw preview slicing, mention rendering, ellipsis order, highlight classes, and delete propagation remain unchanged.
+- Phase 133 removed the sole Notes importer-file allowance and both `notes → editor` and `notes → rich-content` edges. Feature debt fell from 7 importer files / 10 directed pairs / 10 file edges / 11 declarations to 6 / 8 / 8 / 9. Widget debt remains zero across all four measures, and the widget catalog remains at 11 slices. Permanent source-inventory coverage locks the private raw renderer, callable public contracts, four stable owners, slot precedence, behavior, and reduced baseline; the expanded complete suite passes 419/419 tests. `MD-R05` remains open; Phase 134 must audit the coordinated rich-content/rules-reference/dice/entity-link composition cluster.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -683,7 +685,9 @@ app/page composition roots and lowered the widget gate at 416/416 tests. Phase
 same-layer widget baseline to zero, and passed its expanded gate at 417/417
 tests. Phase 132 moved Bestiary AI modal composition to the encounter page,
 reduced feature debt to 7 / 10 / 10 / 11, and passed its expanded gate at
-418/418 tests. Phase 133 is the next numbered migration phase.
+418/418 tests. Phase 133 configured Notes rendering at four stable owners,
+reduced feature debt to 6 / 8 / 8 / 9, and passed its expanded gate at 419/419
+tests. Phase 134 is the next numbered migration phase.
 
 ### Provenance and transfer rule
 
@@ -876,8 +880,14 @@ Status: **In progress**
   feature, inject one stable callable modal slot into `BestiaryBrowser`, remove
   all three stale AI-edit allowances, keep widget debt at zero, and lower
   feature debt from 10 / 12 / 14 / 18 to 7 / 10 / 10 / 11.
-- [ ] Audit the coordinated Notes composition cluster in Phase 133, then
-  continue cluster-by-cluster until no unapproved edge remains.
+- [x] Configure the coordinated Notes cluster at stable page/widget owners in
+  Phase 133: replace the raw public card with `createNoteCardComponent`, retain
+  raw rendering in private Notes UI, remove both sibling-feature edges and the
+  stale allowance, keep widget debt at zero, and lower feature debt from
+  7 / 10 / 10 / 11 to 6 / 8 / 8 / 9.
+- [ ] Audit the coordinated rich-content/rules-reference/dice/entity-link
+  composition cluster in Phase 134, then continue cluster-by-cluster until no
+  unapproved edge remains.
 - [x] Run focused recovery tests, performance budgets, architecture checks,
   syntax/diff hygiene, and UTF-8/replacement-character checks.
 - [ ] Run the complete lint and typecheck gates after the declared local
@@ -886,7 +896,8 @@ Status: **In progress**
   passed 405/405, Phase 123 passed 409/409, Phase 124 passed 410/410, and Phase
   125 passed 411/411, Phase 126 passed 412/412, Phase 127 passed 413/413, Phase
   128 passed 414/414, Phase 129 passed 415/415, Phase 130 passed 416/416, Phase
-  131 passed 417/417, and the expanded Phase 132 suite passes 418/418 tests.
+  131 passed 417/417, Phase 132 passed 418/418, and the expanded Phase 133 suite
+  passes 419/419 tests.
 
 ### Recovery R6 — Typed app-owned store composition
 

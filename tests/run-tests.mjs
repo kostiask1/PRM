@@ -1995,10 +1995,10 @@ await run(
 			["../../images/index.js"],
 		);
 		await assertSameLayerBaselineShape("features", {
-			importers: 7,
-			edges: 10,
-			pairs: 10,
-			declarations: 11,
+			importers: 6,
+			edges: 8,
+			pairs: 8,
+			declarations: 9,
 		});
 		await assertSameLayerBaselineShape("widgets", {
 			importers: 0,
@@ -3891,6 +3891,233 @@ await run(
 		assert.match(
 			draftSource,
 			/onUndoResource=\{\(entry = aiDraftResponseEntry, resourceIds\) =>[\s\S]*?onUndoDraftResource\(entry, resourceIds\)/,
+		);
+	},
+);
+
+await run(
+	"Phase 133 configures NoteCard at stable composition owners",
+	async () => {
+		const [
+			runtimeEntry,
+			typeEntry,
+			noteCardSource,
+			partsSource,
+			compositionSource,
+		] = await Promise.all([
+			fs.readFile("src/features/notes/ui/index.js", "utf8"),
+			fs.readFile("src/features/notes/ui/index.d.ts", "utf8"),
+			fs.readFile("src/features/notes/ui/NoteCard.tsx", "utf8"),
+			fs.readFile("src/features/notes/ui/NoteCardParts.tsx", "utf8"),
+			fs.readFile(
+				"src/features/notes/ui/noteCardComposition.ts",
+				"utf8",
+			),
+		]);
+
+		assert.match(
+			runtimeEntry,
+			/export \{ createNoteCardComponent \} from "\.\/NoteCard\.tsx";/,
+		);
+		assert.doesNotMatch(runtimeEntry, /default as NoteCard/);
+		assert.doesNotMatch(typeEntry, /default as NoteCard/);
+		assertPublicTypeSurface(typeEntry, [
+			"createNoteCardComponent",
+			"NoteCardComponent",
+			"NoteCardCompositionSlots",
+			"NoteCardEditableFieldChangeEvent",
+			"NoteCardEditableFieldSlot",
+			"NoteCardEditableFieldSlotProps",
+			"NoteCardMentionRenderer",
+			"NoteCardProps",
+		]);
+		assertExportedInterfaceFragments(
+			compositionSource,
+			"NoteCardEditableFieldSlotProps",
+			[
+				"value: string | number | null | undefined;",
+				"enableHistory: boolean;",
+				"onChange: (event: NoteCardEditableFieldChangeEvent) => void;",
+				"placeholder: string;",
+				"className: string;",
+				'type?: "text" | "textarea";',
+				"campaignSlug?: string | null;",
+			],
+		);
+		assertExportedInterfaceFragments(
+			compositionSource,
+			"NoteCardCompositionSlots",
+			[
+				"EditableField: NoteCardEditableFieldSlot;",
+				"renderMentionText: NoteCardMentionRenderer;",
+			],
+		);
+		assert.match(
+			compositionSource,
+			/export type NoteCardEditableFieldSlot = \(\s*props: NoteCardEditableFieldSlotProps,\s*\) => ReactElement \| null;/,
+		);
+		assert.match(
+			compositionSource,
+			/export type NoteCardMentionRenderer = \(text: unknown\) => ReactNode;/,
+		);
+		assert.match(
+			compositionSource,
+			/export type NoteCardComponent = \(\s*props: NoteCardProps,\s*\) => ReactElement \| null;/,
+		);
+		assert.doesNotMatch(compositionSource, /\bComponentType\b/);
+		assert.doesNotMatch(compositionSource, /\bEditableFieldProps\b/);
+
+		const notesFiles = await collectFsdSourceFiles("src/features/notes");
+		for (const filePath of notesFiles) {
+			assert.deepEqual(
+				await getActualSameLayerTargets(filePath, "features"),
+				[],
+				`${filePath} must not import a sibling feature`,
+			);
+		}
+		assert.deepEqual(
+			Object.keys(FSD_SAME_LAYER_FILE_EDGE_BASELINE.features).filter((path) =>
+				path.includes("/notes/"),
+			),
+			[],
+		);
+
+		assert.doesNotMatch(noteCardSource, /export default function NoteCard/);
+		assert.match(noteCardSource, /type NoteCardInternalProps = NoteCardProps & NoteCardCompositionSlots;/);
+		assert.match(
+			noteCardSource,
+			/export function createNoteCardComponent\(\{\s*EditableField,\s*renderMentionText,\s*\}: NoteCardCompositionSlots\): NoteCardComponent/,
+		);
+		const factorySource = noteCardSource.slice(
+			noteCardSource.indexOf("export function createNoteCardComponent"),
+		);
+		assertSourceTokensInOrder(
+			factorySource,
+			["{...props}", "EditableField={EditableField}", "renderMentionText={renderMentionText}"],
+			"configured NoteCard prop precedence",
+		);
+		assertSourceTokensInOrder(
+			noteCardSource,
+			["<NoteCardHeader", "<NoteCardSimplified", "<NoteCardBody"],
+			"NoteCard parts",
+		);
+		assert.match(noteCardSource, /enableHistory = true/);
+		assert.match(noteCardSource, /shouldExpandNoteFromCardClick\(/);
+		assert.match(
+			noteCardSource,
+			/<NoteCardHeader[\s\S]*?EditableField=\{EditableField\}/,
+		);
+		assert.match(
+			noteCardSource,
+			/<NoteCardSimplified[\s\S]*?renderMentionText=\{renderMentionText\}/,
+		);
+		assert.match(
+			noteCardSource,
+			/<NoteCardBody[\s\S]*?EditableField=\{EditableField\}/,
+		);
+
+		for (const propsName of [
+			"NoteCardHeaderProps",
+			"NoteCardSimplifiedProps",
+			"NoteCardBodyProps",
+		]) {
+			assert.match(partsSource, new RegExp(`export interface ${propsName}`));
+			assert.doesNotMatch(typeEntry, new RegExp(`\\b${propsName}\\b`));
+		}
+		const headerSource = getRequiredSourceSlice(
+			partsSource,
+			"export function NoteCardHeader",
+			"export interface NoteCardSimplifiedProps",
+		);
+		const simplifiedSource = getRequiredSourceSlice(
+			partsSource,
+			"export function NoteCardSimplified",
+			"export interface NoteCardBodyProps",
+		);
+		const bodySource = partsSource.slice(
+			partsSource.indexOf("export function NoteCardBody"),
+		);
+		assert.match(headerSource, /value=\{note\.title \|\| ""\}/);
+		assert.match(headerSource, /enableHistory=\{enableHistory\}/);
+		assert.match(
+			headerSource,
+			/onChange=\{\(event\) => onTitleChange\(note\.id, event\.target\.value\)\}/,
+		);
+		assert.doesNotMatch(headerSource, /\stype=/);
+		assertSourceTokensInOrder(
+			simplifiedSource,
+			["{renderMentionText(shortText)}", '{hasTruncatedPreview && "..."}'],
+			"simplified mention preview",
+		);
+		assert.match(bodySource, /type="textarea"/);
+		assert.match(bodySource, /value=\{note\.text\}/);
+		assert.match(bodySource, /campaignSlug=\{campaignSlug\}/);
+		assert.match(bodySource, /enableHistory=\{enableHistory\}/);
+		assert.match(
+			bodySource,
+			/onChange=\{\(event\) => onTextChange\(note\.id, event\.target\.value\)\}/,
+		);
+
+		const consumers = [
+			{
+				path: "src/pages/campaign/ui/components/CampaignNotesSection.tsx",
+				symbol: "CampaignNoteCard",
+				anchor: "type CampaignViewController",
+				uses: 1,
+			},
+			{
+				path: "src/pages/session/ui/SessionPage.tsx",
+				symbol: "SessionNoteCard",
+				anchor: "function isSessionEntityId",
+				uses: 2,
+			},
+			{
+				path: "src/widgets/ai-response-modal/ui/AiResponseModal.tsx",
+				symbol: "AiResponseNoteCard",
+				anchor: "const getEncounterParticipantName",
+				uses: 1,
+			},
+			{
+				path: "src/widgets/campaign-entity-card/ui/CampaignEntityCardNotes.tsx",
+				symbol: "CampaignEntityNoteCard",
+				anchor: "interface CampaignEntityCardNotesProps",
+				uses: 1,
+			},
+		];
+		for (const consumer of consumers) {
+			const source = await fs.readFile(consumer.path, "utf8");
+			const bindingPattern = new RegExp(
+				`const ${consumer.symbol} = createNoteCardComponent\\(\\{\\s*EditableField,\\s*renderMentionText,\\s*\\}\\);`,
+			);
+			assert.match(source, bindingPattern);
+			assert.equal(
+				Array.from(source.matchAll(/createNoteCardComponent\(/g)).length,
+				1,
+			);
+			assert.equal(
+				Array.from(
+					source.matchAll(new RegExp(`<${consumer.symbol}(?=\\s|>)`, "g")),
+				).length,
+				consumer.uses,
+			);
+			assert.ok(
+				source.search(bindingPattern) < source.indexOf(consumer.anchor),
+				`${consumer.symbol} must be configured at module scope`,
+			);
+			assert.doesNotMatch(source, /<NoteCard(?=\s|>)/);
+		}
+
+		const configuredConsumers = [];
+		for (const filePath of await collectFsdSourceFiles("src")) {
+			if (filePath === "src/features/notes/ui/NoteCard.tsx") continue;
+			const source = await fs.readFile(filePath, "utf8");
+			if (source.includes("createNoteCardComponent(")) {
+				configuredConsumers.push(filePath);
+			}
+		}
+		assert.deepEqual(
+			configuredConsumers.sort(),
+			consumers.map(({ path }) => path).sort(),
 		);
 	},
 );
