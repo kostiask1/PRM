@@ -652,6 +652,8 @@ Next:
 - Phase 128 removed exactly the corresponding importer-file → target-slice allowance. Widget debt fell from 5 importer files / 8 directed pairs / 8 file edges / 8 declarations to 4 / 7 / 7 / 7. Features remain unchanged at 10 importer files / 12 directed pairs / 14 file edges / 18 declarations, and the widget catalog remains at 11 slices. Permanent source-inventory coverage locks the required app-owned slots and reduced baseline, and the expanded complete suite passes 414/414 tests.
 - Completed Phase 129 by moving AI response-modal composition to the assistant's owners. `AiAssistantPanel` now requires an injected `ResponseModal` instead of importing its sibling `ai-response-modal` widget. `MainContent` supplies the stable public `AiResponseModal` symbol to route assistants, while the Bestiary path forwards its existing response component through `BestiaryBrowser` and private `BestiaryContent` into the injected assistant. This changes only dependency direction: `MainContent` retains the exact pathname/session/encounter route key and `showAiAssistant` mount guard; `AiAssistantPanel` retains its state, hooks, controllers, and history-dialog composition while forwarding the supplied component into the same `historyDialog.ResponseModal` slot; the Bestiary assistant remains unconditionally mounted in its existing position with `isBestiary` and its registration callback; and the existing closed-overlay and nullable response behaviors remain unchanged.
 - Phase 129 removed exactly the `AiAssistantPanel.tsx` → `ai-response-modal` importer-file edge and its stale allowance. Widget debt fell from 4 importer files / 7 directed pairs / 7 file edges / 7 declarations to 3 / 6 / 6 / 6. Features remain unchanged at 10 importer files / 12 directed pairs / 14 file edges / 18 declarations, and the widget catalog remains at 11 slices. Permanent source-inventory coverage locks both owner injection paths and the reduced baseline, and the expanded complete suite passes 415/415 tests. `MD-R05` remains open; Phase 130 must audit the next coordinated bounded cluster.
+- Completed Phase 130 by turning the AI response modal into a configured widget boundary. The public `createAiResponseModalComponent` factory accepts lower-layer structural `CharacterCard`, `LocationCard`, `MonsterStatBlock`, and `MonsterEditorModal` slots while keeping the feature-owned `AiResponseModalComponent` contract unchanged. `MainContent` and `EncounterPage` each create one stable module-scope configured response component; both direct Encounter/Bestiary response consumers reuse the same page-owned symbol. The raw modal renderer is private and no longer imports sibling widgets. This preserves the route assistant key and mount guard, the Encounter overlay guard and Bestiary forwarding, raw `useState` → draft-controller → generated-prompt null-guard order, card/stat-block branches and conditional callbacks, editor state, and `AiResponseModalView` before the editor.
+- Phase 130 removed exactly the three `AiResponseModal.tsx` sibling-widget allowances. Widget debt fell from 3 importer files / 6 directed pairs / 6 file edges / 6 declarations to 2 / 3 / 3 / 3. Features remain unchanged at 10 importer files / 12 directed pairs / 14 file edges / 18 declarations, and the widget catalog remains at 11 slices. Permanent source-inventory coverage locks the factory, stable owner bindings, slot inventory, render order, and reduced baseline, and the expanded complete suite passes 416/416 tests. `MD-R05` remains open; Phase 131 must audit the remaining coordinated rules-reference/editor widget cluster.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -671,7 +673,9 @@ Bestiary content composition to its page owner and lowered the widget gate at
 413/413 tests. Phase 128 moved campaign-entity modal card composition to the
 app root and lowered the widget gate at 414/414 tests. Phase 129 moved AI
 response-modal composition to the assistant's owners and lowered the widget
-gate at 415/415 tests. Phase 130 is the next numbered migration phase.
+gate at 415/415 tests. Phase 130 configured the raw response renderer at stable
+app/page composition roots and lowered the widget gate at 416/416 tests. Phase
+131 is the next numbered migration phase.
 
 ### Provenance and transfer rule
 
@@ -841,8 +845,16 @@ Status: **In progress**
   and lower widget debt to 3 importer files / 6 directed pairs / 6 file edges /
   6 declarations while features remain at 10 / 12 / 14 / 18 and the widget
   catalog remains at 11 slices.
-- [ ] Audit the next coordinated bounded cluster in Phase 130, then continue
-  cluster-by-cluster until no unapproved edge remains.
+- [x] Configure the AI response modal at stable app/page composition roots in
+  Phase 130: expose `createAiResponseModalComponent`, inject the public
+  `CharacterCard`, `LocationCard`, `MonsterStatBlock`, and
+  `MonsterEditorModal` symbols once per owner, keep the raw renderer private,
+  remove its three stale same-layer allowances, and lower widget debt to 2
+  importer files / 3 directed pairs / 3 file edges / 3 declarations while
+  features remain at 10 / 12 / 14 / 18 and the widget catalog remains at 11
+  slices.
+- [ ] Audit the remaining coordinated rules-reference/editor widget cluster in
+  Phase 131, then continue cluster-by-cluster until no unapproved edge remains.
 - [x] Run focused recovery tests, performance budgets, architecture checks,
   syntax/diff hygiene, and UTF-8/replacement-character checks.
 - [ ] Run the complete lint and typecheck gates after the declared local
@@ -850,7 +862,8 @@ Status: **In progress**
 - [x] Run the full `npm test` gate; Phase 119 closed at 398 tests, Phase 122
   passed 405/405, Phase 123 passed 409/409, Phase 124 passed 410/410, and Phase
   125 passed 411/411, Phase 126 passed 412/412, Phase 127 passed 413/413, Phase
-  128 passed 414/414, and the expanded Phase 129 suite passes 415/415 tests.
+  128 passed 414/414, Phase 129 passed 415/415, and the expanded Phase 130 suite
+  passes 416/416 tests.
 
 ### Recovery R6 — Typed app-owned store composition
 

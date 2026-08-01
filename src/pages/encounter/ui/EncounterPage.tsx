@@ -32,11 +32,14 @@ import {
 	type MonsterAiEditMode,
 	type MonsterAiAction,
 } from "../../../features/ai-edit-monster/index.js";
-import { AiResponseModal } from "../../../widgets/ai-response-modal/index.js";
+import { createAiResponseModalComponent } from "../../../widgets/ai-response-modal/index.js";
 import { AiAssistantPanel } from "../../../widgets/ai-assistant/index.js";
 import { MonsterEditorModal } from "../../../widgets/monster-editor-modal/index.js";
 import { MonsterStatBlock } from "../../../widgets/monster-stat-block/index.js";
-import { CharacterCard } from "../../../widgets/campaign-entity-card/index.js";
+import {
+	CharacterCard,
+	LocationCard,
+} from "../../../widgets/campaign-entity-card/index.js";
 import useEncounterView from "../model/useEncounterView.ts";
 import { classNames } from "../../../shared/lib/index.js";
 import "../../../assets/components/EncounterView.css";
@@ -51,6 +54,13 @@ import {
 	buildCreateEntityPayload,
 	createCampaignEntity,
 } from "../../../features/campaign-entity/index.js";
+
+const EncounterAiResponseModal = createAiResponseModalComponent({
+	CharacterCard,
+	LocationCard,
+	MonsterStatBlock,
+	MonsterEditorModal,
+});
 
 const api = { ...campaignApi, ...bestiaryApi, ...aiApi, ...settingsApi };
 import {
@@ -628,7 +638,7 @@ function EncounterBestiaryOverlay({
 			<Bestiary
 				AiAssistantPanel={AiAssistantPanel}
 				MonsterStatBlock={MonsterStatBlock}
-				ResponseModal={AiResponseModal}
+				ResponseModal={EncounterAiResponseModal}
 				MonsterEditorModal={MonsterEditorModal}
 				onAddMonster={(monster) => onAdd(monster as EncounterViewParticipant)}
 			/>
@@ -1427,7 +1437,7 @@ function EncounterView() {
 				onChoose={chooseEditMonsterAction}
 			/>
 			<BestiaryAiModals
-				ResponseModal={AiResponseModal}
+				ResponseModal={EncounterAiResponseModal}
 				aiDraftDiffResources={aiDraftDiffResources}
 				aiDraftResponseEntry={aiDraftResponseEntry}
 				aiDraftResponseRef={aiDraftResponseRef}

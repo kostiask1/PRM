@@ -1879,10 +1879,10 @@ await run(
 			declarations: 18,
 		});
 		await assertSameLayerBaselineShape("widgets", {
-			importers: 3,
-			edges: 6,
-			pairs: 6,
-			declarations: 6,
+			importers: 2,
+			edges: 3,
+			pairs: 3,
+			declarations: 3,
 		});
 
 		for (const layer of ["features", "widgets"]) {
@@ -2080,7 +2080,7 @@ await run(
 		assert.ok(encounterBestiaryTag);
 		assert.match(
 			encounterBestiaryTag,
-			/\bResponseModal=\{AiResponseModal\}/,
+			/\bResponseModal=\{EncounterAiResponseModal\}/,
 		);
 		assert.match(
 			encounterBestiaryTag,
@@ -2693,7 +2693,7 @@ await run(
 		);
 		assert.match(
 			mainContentSource,
-			/import \{ AiResponseModal \} from "\.\.\/\.\.\/widgets\/ai-response-modal\/index\.js";/,
+			/import \{ createAiResponseModalComponent \} from "\.\.\/\.\.\/widgets\/ai-response-modal\/index\.js";/,
 		);
 		assert.match(
 			mainContentSource,
@@ -2704,7 +2704,10 @@ await run(
 		)?.[0];
 		assert.ok(mainAssistantGuard);
 		assert.match(mainAssistantGuard, /\bkey=\{aiAssistantRouteKey\}/);
-		assert.match(mainAssistantGuard, /\bResponseModal=\{AiResponseModal\}/);
+		assert.match(
+			mainAssistantGuard,
+			/\bResponseModal=\{MainContentAiResponseModal\}/,
+		);
 
 		assert.match(
 			bestiaryCompositionSource,
@@ -2752,7 +2755,7 @@ await run(
 		assert.ok(encounterBestiaryTag);
 		assert.match(
 			encounterBestiaryTag,
-			/\bResponseModal=\{AiResponseModal\}/,
+			/\bResponseModal=\{EncounterAiResponseModal\}/,
 		);
 
 		assert.match(
@@ -2808,6 +2811,353 @@ await run(
 		assert.ok(stateHookIndex >= 0);
 		assert.ok(draftHookIndex > stateHookIndex);
 		assert.ok(nullGuardIndex > draftHookIndex);
+	},
+);
+
+await run(
+	"Phase 130 configures the AI response modal at stable composition roots",
+	async () => {
+		const [
+			responseModalSource,
+			compositionSource,
+			runtimeEntrySource,
+			typeEntrySource,
+			mainContentSource,
+			encounterSource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/widgets/ai-response-modal/ui/AiResponseModal.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/ai-response-modal/ui/aiResponseModalComposition.ts",
+				"utf8",
+			),
+			fs.readFile("src/widgets/ai-response-modal/index.js", "utf8"),
+			fs.readFile("src/widgets/ai-response-modal/index.d.ts", "utf8"),
+			fs.readFile("src/app/routing/MainContent.tsx", "utf8"),
+			fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+		]);
+
+		for (const filePath of await collectFsdSourceFiles(
+			"src/widgets/ai-response-modal",
+		)) {
+			const source = await fs.readFile(filePath, "utf8");
+			const siblingWidgetImports = readStaticFsdSpecifiers(source)
+				.map((specifier) => [
+					specifier,
+					resolveTestModuleSpecifierPath(filePath, specifier),
+				])
+				.filter(
+					([, resolved]) =>
+						resolved?.startsWith("src/widgets/") &&
+						!resolved.startsWith("src/widgets/ai-response-modal/"),
+				);
+			assert.deepEqual(
+				siblingWidgetImports,
+				[],
+				`${filePath} must not import a sibling widget`,
+			);
+		}
+
+		assert.match(
+			runtimeEntrySource,
+			/export \{ createAiResponseModalComponent \} from "\.\/ui\/AiResponseModal\.tsx";/,
+		);
+		assert.doesNotMatch(
+			runtimeEntrySource,
+			/export\s*\{\s*default as AiResponseModal\b/,
+		);
+		assert.match(
+			typeEntrySource,
+			/export type \{\s*AiResponseModalComponent,\s*AiResponseModalProps,\s*\} from "\.\.\/\.\.\/features\/ai\/ui\/index\.js";/,
+		);
+		assert.match(
+			typeEntrySource,
+			/export \{ createAiResponseModalComponent \} from "\.\/ui\/AiResponseModal\.tsx";/,
+		);
+		for (const exportedType of [
+			"AiResponseModalCardHighlightFields",
+			"AiResponseModalCardId",
+			"AiResponseModalCharacterCardSlotProps",
+			"AiResponseModalCompositionSlots",
+			"AiResponseModalLocationCardSlotProps",
+			"AiResponseModalMonsterEditorSlotProps",
+			"AiResponseModalMonsterHighlightFields",
+			"AiResponseModalMonsterStatBlockSlotProps",
+		]) {
+			assert.match(typeEntrySource, new RegExp(`\\b${exportedType}\\b`));
+		}
+
+		assert.deepEqual(readStaticFsdSpecifiers(compositionSource), [
+			"react",
+			"../../../entities/bestiary/index.js",
+			"../../../entities/campaign/index.js",
+			"../../../features/edit-monster/index.js",
+		]);
+		assert.doesNotMatch(
+			compositionSource,
+			/\b(?:CharacterCardProps|LocationCardProps|MonsterStatBlockProps|MonsterEditorModalProps)\b/,
+		);
+		assert.match(
+			compositionSource,
+			/export type AiResponseModalMonsterEditorSlotProps = Pick<\s*MonsterFieldEditModalProps,\s*"editingMonster" \| "onCancel" \| "onSave"\s*>;/,
+		);
+		for (const [interfaceName, requiredFragments] of [
+			[
+				"AiResponseModalCharacterCardSlotProps",
+				[
+					"character: CharacterData;",
+					"onChange:",
+					"onNameBlur?:",
+					"onDelete?:",
+					"onReorderDrop?:",
+					"campaignSlug?: string | null;",
+					"type?: string;",
+					"showDeleteButton?: boolean;",
+					"highlightFields?: AiResponseModalCardHighlightFields | null;",
+				],
+			],
+			[
+				"AiResponseModalLocationCardSlotProps",
+				[
+					"location: LocationData;",
+					"onChange:",
+					"onNameBlur?:",
+					"onDelete?:",
+					"onReorderDrop?:",
+					"campaignSlug?: string | null;",
+					"showDeleteButton?: boolean;",
+					"highlightFields?: AiResponseModalCardHighlightFields | null;",
+				],
+			],
+			[
+				"AiResponseModalMonsterStatBlockSlotProps",
+				[
+					"monster: BestiaryMonster;",
+					"showFavoriteAction?: boolean;",
+					"allowTokenUpload?: boolean;",
+					"onFieldEdit?: (monster: BestiaryMonster) => void;",
+					"searchHighlight?: string;",
+					"highlightFields?: AiResponseModalMonsterHighlightFields | null;",
+				],
+			],
+		]) {
+			const interfaceSource = compositionSource.match(
+				new RegExp(
+					`export interface ${interfaceName} \\{([\\s\\S]*?)\\n\\}`,
+				),
+			)?.[1];
+			assert.ok(interfaceSource);
+			for (const fragment of requiredFragments) {
+				assert.ok(
+					interfaceSource.includes(fragment),
+					`${interfaceName} must preserve ${fragment}`,
+				);
+			}
+		}
+		assert.match(
+			compositionSource,
+			/export interface AiResponseModalCompositionSlots \{\s*CharacterCard: ComponentType<AiResponseModalCharacterCardSlotProps>;\s*LocationCard: ComponentType<AiResponseModalLocationCardSlotProps>;\s*MonsterStatBlock: ComponentType<AiResponseModalMonsterStatBlockSlotProps>;\s*MonsterEditorModal: ComponentType<AiResponseModalMonsterEditorSlotProps>;\s*\}/,
+		);
+		assert.match(
+			responseModalSource,
+			/interface AiResponseModalInternalProps\s*extends AiResponseModalProps,\s*AiResponseModalCompositionSlots \{\}/,
+		);
+		assert.doesNotMatch(responseModalSource, /export default function AiResponseModal/);
+		assert.match(
+			responseModalSource,
+			/export function createAiResponseModalComponent\(\{\s*CharacterCard,\s*LocationCard,\s*MonsterStatBlock,\s*MonsterEditorModal,\s*\}: AiResponseModalCompositionSlots\): AiResponseModalComponent \{/,
+		);
+		const configuredModalTag = responseModalSource.match(
+			/<AiResponseModal(?=\s|>)[\s\S]*?\/>/,
+		)?.[0];
+		assert.ok(configuredModalTag);
+		assert.match(configuredModalTag, /<AiResponseModal\s*\{\.\.\.props\}/);
+		for (const slot of [
+			"CharacterCard",
+			"LocationCard",
+			"MonsterStatBlock",
+			"MonsterEditorModal",
+		]) {
+			assert.match(configuredModalTag, new RegExp(`\\b${slot}=\\{${slot}\\}`));
+		}
+		assert.match(
+			responseModalSource,
+			/function ConfiguredAiResponseModal\(props: AiResponseModalProps\) \{[\s\S]*?return ConfiguredAiResponseModal;\s*\}/,
+		);
+
+		const nestedTagCounts = Object.fromEntries(
+			[
+				"CharacterCard",
+				"LocationCard",
+				"MonsterStatBlock",
+				"MonsterEditorModal",
+			].map((tagName) => [
+				tagName,
+				Array.from(
+					responseModalSource.matchAll(new RegExp(`<${tagName}(?=\\s|>)`, "g")),
+				).length,
+			]),
+		);
+		assert.deepEqual(nestedTagCounts, {
+			CharacterCard: 1,
+			LocationCard: 1,
+			MonsterStatBlock: 2,
+			MonsterEditorModal: 1,
+		});
+		const readTagProps = (tagSource) =>
+			Array.from(
+				tagSource.matchAll(/^\s+([A-Za-z][A-Za-z0-9]*)=(?:\{|\")/gm),
+				(match) => match[1],
+			);
+		const characterTag = responseModalSource.match(
+			/<CharacterCard(?=\s|>)[\s\S]*?\/>/,
+		)?.[0];
+		const locationTag = responseModalSource.match(
+			/<LocationCard(?=\s|>)[\s\S]*?\/>/,
+		)?.[0];
+		assert.ok(characterTag);
+		assert.ok(locationTag);
+		assert.deepEqual(readTagProps(characterTag), [
+			"character",
+			"campaignSlug",
+			"type",
+			"onChange",
+			"onNameBlur",
+			"onDelete",
+			"onReorderDrop",
+			"showDeleteButton",
+			"highlightFields",
+		]);
+		assert.deepEqual(readTagProps(locationTag), [
+			"location",
+			"campaignSlug",
+			"onChange",
+			"onNameBlur",
+			"onDelete",
+			"onReorderDrop",
+			"showDeleteButton",
+			"highlightFields",
+		]);
+		for (const cardTag of [characterTag, locationTag]) {
+			assert.match(
+				cardTag,
+				/editable\s*\? \(_id, next\) => updateDraftResourceAfter\(resource, next\)\s*: noop/,
+			);
+		}
+		const monsterTags = Array.from(responseModalSource.matchAll(
+			/<MonsterStatBlock(?=\s|>)[\s\S]*?\/>/g,
+		), (match) => match[0]);
+		for (const monsterTag of monsterTags) {
+			assert.deepEqual(readTagProps(monsterTag), [
+				"monster",
+				"showFavoriteAction",
+				"allowTokenUpload",
+				"onFieldEdit",
+				"searchHighlight",
+				"highlightFields",
+			]);
+			assert.match(monsterTag, /\bshowFavoriteAction=\{false\}/);
+			assert.match(monsterTag, /\ballowTokenUpload=\{false\}/);
+			assert.match(monsterTag, /\bsearchHighlight=""/);
+			assert.match(monsterTag, /\bhighlightFields=\{highlightFields\}/);
+		}
+		assert.match(
+			monsterTags[0],
+			/editable\s*\? \(monster\) => openCreatureFieldEdit\(resource, monster\)\s*: undefined/,
+		);
+		assert.match(
+			monsterTags[1],
+			/editOptions\s*\? \(monster\) =>\s*openCreatureFieldEdit\(editOptions\.resource, monster, \{\s*mode: "encounter-participant",\s*participantKey: editOptions\.participantKey,\s*\}\)\s*: undefined/,
+		);
+		const editorTag = responseModalSource.match(
+			/<MonsterEditorModal(?=\s|>)[\s\S]*?\/>/,
+		)?.[0];
+		assert.ok(editorTag);
+		assert.deepEqual(readTagProps(editorTag), [
+			"editingMonster",
+			"onCancel",
+			"onSave",
+		]);
+		assert.match(
+			editorTag,
+			/\beditingMonster=\{fieldEditingCreature\?\.monster \|\| null\}/,
+		);
+		assert.match(editorTag, /\bonCancel=\{closeCreatureFieldEdit\}/);
+		assert.match(editorTag, /\bonSave=\{saveCreatureFieldEdit\}/);
+
+		const stateHookIndex = responseModalSource.indexOf(
+			"useState<CreatureEditState | null>(null)",
+		);
+		const draftHookIndex = responseModalSource.indexOf(
+			"useAiResponseDraftController({",
+		);
+		const nullGuardIndex = responseModalSource.indexOf(
+			"if (!generatedPrompt) return null;",
+		);
+		const viewIndex = responseModalSource.indexOf("<AiResponseModalView");
+		const editorIndex = responseModalSource.indexOf("<MonsterEditorModal");
+		assert.ok(stateHookIndex >= 0);
+		assert.ok(draftHookIndex > stateHookIndex);
+		assert.ok(nullGuardIndex > draftHookIndex);
+		assert.ok(viewIndex > nullGuardIndex);
+		assert.ok(editorIndex > viewIndex);
+
+		const mainBinding = mainContentSource.match(
+			/const MainContentAiResponseModal = createAiResponseModalComponent\(\{[\s\S]*?\}\);/,
+		)?.[0];
+		assert.ok(mainBinding);
+		assert.ok(
+			mainContentSource.indexOf(mainBinding) <
+				mainContentSource.indexOf("function EmptyState"),
+		);
+		const encounterBinding = encounterSource.match(
+			/const EncounterAiResponseModal = createAiResponseModalComponent\(\{[\s\S]*?\}\);/,
+		)?.[0];
+		assert.ok(encounterBinding);
+		assert.ok(
+			encounterSource.indexOf(encounterBinding) <
+				encounterSource.indexOf("function EncounterBestiaryOverlay"),
+		);
+		for (const binding of [mainBinding, encounterBinding]) {
+			assert.deepEqual(
+				Array.from(
+					binding.matchAll(/^\s+([A-Za-z][A-Za-z0-9]*),$/gm),
+					(match) => match[1],
+				),
+				[
+					"CharacterCard",
+					"LocationCard",
+					"MonsterStatBlock",
+					"MonsterEditorModal",
+				],
+			);
+		}
+		assert.equal(
+			(mainContentSource.match(/createAiResponseModalComponent\(/g) || []).length,
+			1,
+		);
+		assert.equal(
+			(encounterSource.match(/createAiResponseModalComponent\(/g) || []).length,
+			1,
+		);
+		assert.match(
+			mainContentSource,
+			/\{showAiAssistant && \(\s*<AiAssistantPanel[\s\S]*?\bkey=\{aiAssistantRouteKey\}[\s\S]*?\bResponseModal=\{MainContentAiResponseModal\}[\s\S]*?\/>\s*\)\}/,
+		);
+		assert.equal(
+			(
+				encounterSource.match(
+					/\bResponseModal=\{EncounterAiResponseModal\}/g,
+				) || []
+			).length,
+			2,
+		);
+		assert.match(
+			encounterSource,
+			/<BestiaryAiModals(?=\s|>)[\s\S]*?\bResponseModal=\{EncounterAiResponseModal\}/,
+		);
 	},
 );
 

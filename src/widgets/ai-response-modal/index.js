@@ -1,1 +1,1 @@
-export { default as AiResponseModal } from "./ui/AiResponseModal.tsx";
+export { createAiResponseModalComponent } from "./ui/AiResponseModal.tsx";

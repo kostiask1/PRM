@@ -3,13 +3,26 @@ import { SessionPage } from "../../pages/session/index.js";
 import { EncounterPage } from "../../pages/encounter/index.js";
 import ProjectGuide from "./ProjectGuide";
 import { AiAssistantPanel } from "../../widgets/ai-assistant/index.js";
-import { AiResponseModal } from "../../widgets/ai-response-modal/index.js";
+import { createAiResponseModalComponent } from "../../widgets/ai-response-modal/index.js";
+import {
+	CharacterCard,
+	LocationCard,
+} from "../../widgets/campaign-entity-card/index.js";
+import { MonsterEditorModal } from "../../widgets/monster-editor-modal/index.js";
+import { MonsterStatBlock } from "../../widgets/monster-stat-block/index.js";
 import { Outlet, Route, Routes, useLocation } from "react-router";
 import { useAppSelector } from "../../shared/model/index.js";
 import { lang } from "../../shared/lib/index.js";
 import { classNames } from "../../shared/lib/index.js";
 import "../../assets/components/MainContent.css";
 import type { CampaignRecord } from "../../entities/campaign/index.js";
+
+const MainContentAiResponseModal = createAiResponseModalComponent({
+	CharacterCard,
+	LocationCard,
+	MonsterStatBlock,
+	MonsterEditorModal,
+});
 
 function EmptyState({ className = "" }: { className?: string }) {
 	return (
@@ -46,7 +59,7 @@ function MainContentLayout({
 			{showAiAssistant && (
 				<AiAssistantPanel
 					key={aiAssistantRouteKey}
-					ResponseModal={AiResponseModal}
+					ResponseModal={MainContentAiResponseModal}
 				/>
 			)}
 		</main>

@@ -5,15 +5,11 @@ import type {
 	CharacterData,
 	LocationData,
 } from "../../../entities/campaign/index.js";
-import type { AiResponseModalProps } from "../../../features/ai/ui/index.js";
-
-import {
-	CharacterCard,
-	LocationCard,
-} from "../../campaign-entity-card/index.js";
-import { MonsterStatBlock } from "../../monster-stat-block/index.js";
+import type {
+	AiResponseModalComponent,
+	AiResponseModalProps,
+} from "../../../features/ai/ui/index.js";
 import { NoteCard } from "../../../features/notes/ui/index.js";
-import { MonsterEditorModal } from "../../monster-editor-modal/index.js";
 import { classNames } from "../../../shared/lib/index.js";
 import { formatSourceLabel } from "../../../entities/reference/index.js";
 import { lang } from "../../../shared/lib/index.js";
@@ -46,6 +42,7 @@ import {
 import { useAiResponseDraftController } from "../model/useAiResponseDraftController.ts";
 import AiResponseResourceActions from "./AiResponseResourceActions.tsx";
 import AiResponseModalView from "./AiResponseModalView.tsx";
+import type { AiResponseModalCompositionSlots } from "./aiResponseModalComposition.ts";
 
 const getEncounterParticipantName = (participant = {}) =>
 	buildEncounterParticipantName(participant, lang.t("Creature"));
@@ -84,7 +81,15 @@ const getCampaignSlug = (
 	return typeof entryCampaign === "string" ? entryCampaign : null;
 };
 
-export default function AiResponseModal({
+interface AiResponseModalInternalProps
+	extends AiResponseModalProps,
+		AiResponseModalCompositionSlots {}
+
+function AiResponseModal({
+	CharacterCard,
+	LocationCard,
+	MonsterStatBlock,
+	MonsterEditorModal,
 	generatedPrompt,
 	generatedPromptRef,
 	isGeneratedPromptCopied,
@@ -103,7 +108,7 @@ export default function AiResponseModal({
 	selectedResponseHasChanges,
 	getDiffResourceState,
 	getHistoryChangeSummary,
-}: AiResponseModalProps) {
+}: AiResponseModalInternalProps) {
 	const [fieldEditingCreature, setFieldEditingCreature] =
 		useState<CreatureEditState | null>(null);
 	const {
@@ -956,4 +961,25 @@ export default function AiResponseModal({
 			/>
 		</>
 	);
+}
+
+export function createAiResponseModalComponent({
+	CharacterCard,
+	LocationCard,
+	MonsterStatBlock,
+	MonsterEditorModal,
+}: AiResponseModalCompositionSlots): AiResponseModalComponent {
+	function ConfiguredAiResponseModal(props: AiResponseModalProps) {
+		return (
+			<AiResponseModal
+				{...props}
+				CharacterCard={CharacterCard}
+				LocationCard={LocationCard}
+				MonsterStatBlock={MonsterStatBlock}
+				MonsterEditorModal={MonsterEditorModal}
+			/>
+		);
+	}
+
+	return ConfiguredAiResponseModal;
 }

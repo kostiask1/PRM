@@ -96,11 +96,6 @@ export const FSD_SAME_LAYER_FILE_EDGE_BASELINE =
 			"src/features/settings/ui/SettingsModalView.tsx": ["editor"],
 		},
 		widgets: {
-			"src/widgets/ai-response-modal/ui/AiResponseModal.tsx": [
-				"campaign-entity-card",
-				"monster-editor-modal",
-				"monster-stat-block",
-			],
 			"src/widgets/monster-editor-modal/ui/MonsterEditorModal.tsx": [
 				"rules-reference-modal",
 			],
