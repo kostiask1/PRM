@@ -660,6 +660,8 @@ Next:
 - Phase 132 removed the three obsolete AI-edit importer-file allowances. Feature debt fell from 10 importer files / 12 directed pairs / 14 file edges / 18 declarations to 7 / 10 / 10 / 11. Widget debt remains zero across all four measures, and the widget catalog remains at 11 slices. Permanent source-inventory coverage locks the page owner, callable slot, public policy export, modal order, critical behavior, and reduced baseline; the expanded complete suite passes 418/418 tests. `MD-R05` remains open; Phase 133 must audit the coordinated Notes composition cluster.
 - Completed Phase 133 by replacing the raw public `NoteCard` with the Notes-owned `createNoteCardComponent` composition boundary. The factory accepts minimal callable `EditableField` and `renderMentionText` slots without importing sibling-feature types; private `NoteCard`/parts retain rendering ownership. `SessionPage`, `CampaignNotesSection`, `CampaignEntityCardNotes`, and `AiResponseModal` each configure exactly one named component at module scope, preventing Lexical editor remounts while keeping page/widget-to-feature dependency direction. Header/simplified/body order, collapse/null gates, title and textarea modes, history/campaign forwarding, event target callbacks, raw preview slicing, mention rendering, ellipsis order, highlight classes, and delete propagation remain unchanged.
 - Phase 133 removed the sole Notes importer-file allowance and both `notes → editor` and `notes → rich-content` edges. Feature debt fell from 7 importer files / 10 directed pairs / 10 file edges / 11 declarations to 6 / 8 / 8 / 9. Widget debt remains zero across all four measures, and the widget catalog remains at 11 slices. Permanent source-inventory coverage locks the private raw renderer, callable public contracts, four stable owners, slot precedence, behavior, and reduced baseline; the expanded complete suite passes 419/419 tests. `MD-R05` remains open; Phase 134 must audit the coordinated rich-content/rules-reference/dice/entity-link composition cluster.
+- Completed Phase 134 by moving `renderMentionText` unchanged from rich-content to entity-link and replacing the raw public rich-content and rules-link renderers with callable composition factories. The mention helper now owns its private raw `EntityLink` implementation, whose obsolete facade export was removed. `createRulesLinkComponent` accepts the structural `RollDice` slot while keeping raw `RulesLink` private; `createRichContentRenderers` accepts structural `RollDice` and configured `RulesLink` slots while keeping raw `parseRollsAndSpells` and `renderRecursiveContent` private. `widgets/monster-stat-block`, `widgets/spells-browser`, and `widgets/rules-reference-modal` each configure stable module-scope rules-link and rich-content symbols through feature public entries. Falsy mention coercion, bracket splitting/trimming, numeric keys and link children, recursive content behavior, token-handler order, tooltip preview rendering, dice interactivity, consumer render options, and React component identity remain unchanged.
+- Phase 134 removed the remaining `rich-content → dice`, `rich-content → entity-link`, `rich-content → rules-reference`, and `rules-reference → dice` allowances without adding widget debt. Feature debt fell from 6 importer files / 8 directed pairs / 8 file edges / 9 declarations to 4 / 4 / 4 / 5. Widget debt remains zero across all four measures, and the widget catalog remains at 11 slices. Permanent source-inventory coverage locks helper ownership, runtime/type facade parity, private raw renderers, callable structural contracts, stable owners, slot precedence, preserved behavior, and the reduced baseline; the expanded complete suite passes 420/420 tests. `MD-R05` remains open; Phase 135 must audit the remaining AI/editor/images/entity-link/settings cluster.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -687,7 +689,10 @@ tests. Phase 132 moved Bestiary AI modal composition to the encounter page,
 reduced feature debt to 7 / 10 / 10 / 11, and passed its expanded gate at
 418/418 tests. Phase 133 configured Notes rendering at four stable owners,
 reduced feature debt to 6 / 8 / 8 / 9, and passed its expanded gate at 419/419
-tests. Phase 134 is the next numbered migration phase.
+tests. Phase 134 moved unchanged mention rendering to entity-link, configured
+private rules-link and rich-content renderers at three stable widget owners,
+reduced feature debt to 4 / 4 / 4 / 5, and passed its expanded gate at 420/420
+tests. Phase 135 is the next numbered migration phase.
 
 ### Provenance and transfer rule
 
@@ -885,9 +890,14 @@ Status: **In progress**
   raw rendering in private Notes UI, remove both sibling-feature edges and the
   stale allowance, keep widget debt at zero, and lower feature debt from
   7 / 10 / 10 / 11 to 6 / 8 / 8 / 9.
-- [ ] Audit the coordinated rich-content/rules-reference/dice/entity-link
-  composition cluster in Phase 134, then continue cluster-by-cluster until no
-  unapproved edge remains.
+- [x] Configure the coordinated rich-content/rules-reference/dice/entity-link
+  cluster in Phase 134: move unchanged `renderMentionText` to entity-link, keep
+  raw `RulesLink` and rich renderers private behind callable factories,
+  configure stable module-scope symbols in monster-stat-block, spells-browser,
+  and rules-reference-modal, keep widget debt at zero, and lower feature debt
+  from 6 / 8 / 8 / 9 to 4 / 4 / 4 / 5.
+- [ ] Audit the remaining AI/editor/images/entity-link/settings cluster in
+  Phase 135, then continue cluster-by-cluster until no unapproved edge remains.
 - [x] Run focused recovery tests, performance budgets, architecture checks,
   syntax/diff hygiene, and UTF-8/replacement-character checks.
 - [ ] Run the complete lint and typecheck gates after the declared local
@@ -896,8 +906,8 @@ Status: **In progress**
   passed 405/405, Phase 123 passed 409/409, Phase 124 passed 410/410, and Phase
   125 passed 411/411, Phase 126 passed 412/412, Phase 127 passed 413/413, Phase
   128 passed 414/414, Phase 129 passed 415/415, Phase 130 passed 416/416, Phase
-  131 passed 417/417, Phase 132 passed 418/418, and the expanded Phase 133 suite
-  passes 419/419 tests.
+  131 passed 417/417, Phase 132 passed 418/418, Phase 133 passed 419/419, and
+  the expanded Phase 134 suite passes 420/420 tests.
 
 ### Recovery R6 — Typed app-owned store composition
 

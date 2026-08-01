@@ -55,9 +55,9 @@ import {
 	scrollToHashTarget,
 	shouldOpenInNewTabFromEvent,
 } from "../../../shared/lib/index.js";
-import { renderMentionText } from "../../../features/rich-content/index.js";
 import {
 	EntityLinkResolverContext,
+	renderMentionText,
 	type EntityLinkModalState,
 	type EntityLinkResolver,
 } from "../../../features/entity-link/index.js";

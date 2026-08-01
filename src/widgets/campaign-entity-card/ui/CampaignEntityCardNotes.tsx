@@ -9,7 +9,7 @@ import {
 	createNoteCardComponent,
 	getAiIgnoredNoteListProps,
 } from "../../../features/notes/ui/index.js";
-import { renderMentionText } from "../../../features/rich-content/index.js";
+import { renderMentionText } from "../../../features/entity-link/index.js";
 import { sanitizeNotesForSave } from "../../../shared/lib/index.js";
 import { Button, CollapseToggleButton, DraggableList } from "../../../shared/ui/index.js";
 import {

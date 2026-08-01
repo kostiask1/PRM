@@ -1,7 +1,13 @@
 export {
-	default as RulesLink,
-	type RulesLinkProps,
+	createRulesLinkComponent,
 } from "./ui/RulesLink.tsx";
+export type {
+	RulesLinkComponent,
+	RulesLinkCompositionSlots,
+	RulesLinkProps,
+	RulesLinkRollDiceSlot,
+	RulesLinkRollDiceSlotProps,
+} from "./ui/rulesLinkComposition.ts";
 export type {
 	RulesReferencePreview,
 	RulesReferenceType,

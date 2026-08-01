@@ -1,9 +1,6 @@
 import { Fragment, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 
-import { RollDice } from "../../dice/index.js";
-import { RulesLink } from "../../rules-reference/index.js";
-import { EntityLink } from "../../entity-link/index.js";
 import {
 	extractContentTokens,
 	preprocessTags,
@@ -17,27 +14,35 @@ import {
 	type ContentTokenRenderPlan,
 	type RichContentRenderOptions,
 } from "../model/richContentPresentation.ts";
+import type {
+	RichContentCompositionSlots,
+	RichContentRenderers,
+} from "./richContentComposition.ts";
+
+type RichContentRuntime = Readonly<RichContentCompositionSlots>;
 
 interface RecursiveRenderProps {
 	content: unknown;
 	highlightQuery: string;
 	options: RichContentRenderOptions;
+	runtime: RichContentRuntime;
 }
 
-export function renderRecursiveContent(
+function renderRecursiveContent(
+	runtime: RichContentRuntime,
 	content: unknown,
-	highlightQuery = "",
-	options: RichContentRenderOptions = {},
+	highlightQuery: string,
+	options: RichContentRenderOptions,
 ): ReactNode {
 	if (content === undefined || content === null) return null;
 	if (typeof content === "string") {
-		return parseRollsAndSpells(content, highlightQuery, options);
+		return parseRollsAndSpells(runtime, content, highlightQuery, options);
 	}
 	if (typeof content === "number") return highlightText(content, highlightQuery);
 	if (Array.isArray(content)) {
 		return content.map((item, index) => (
 			<Fragment key={index}>
-				{renderRecursiveContent(item, highlightQuery, options)}
+				{renderRecursiveContent(runtime, item, highlightQuery, options)}
 			</Fragment>
 		));
 	}
@@ -47,6 +52,7 @@ export function renderRecursiveContent(
 			content={content}
 			highlightQuery={highlightQuery}
 			options={options}
+			runtime={runtime}
 		/>
 	);
 }
@@ -55,9 +61,10 @@ function RichObjectContent({
 	content,
 	highlightQuery,
 	options,
+	runtime,
 }: RecursiveRenderProps & { content: Record<string, unknown> }) {
 	if (content.entry) {
-		return renderRecursiveContent(content.entry, highlightQuery, options);
+		return renderRecursiveContent(runtime, content.entry, highlightQuery, options);
 	}
 	if (content.type === "list" && content.items) {
 		return (
@@ -65,6 +72,7 @@ function RichObjectContent({
 				content={content}
 				highlightQuery={highlightQuery}
 				options={options}
+				runtime={runtime}
 			/>
 		);
 	}
@@ -77,6 +85,7 @@ function RichObjectContent({
 				content={content}
 				highlightQuery={highlightQuery}
 				options={options}
+				runtime={runtime}
 			/>
 		);
 	}
@@ -86,16 +95,23 @@ function RichObjectContent({
 				content={content}
 				highlightQuery={highlightQuery}
 				options={options}
+				runtime={runtime}
 			/>
 		);
 	}
-	return parseRollsAndSpells(JSON.stringify(content), highlightQuery, options);
+	return parseRollsAndSpells(
+		runtime,
+		JSON.stringify(content),
+		highlightQuery,
+		options,
+	);
 }
 
 function RichContentList({
 	content,
 	highlightQuery,
 	options,
+	runtime,
 }: RecursiveRenderProps & { content: Record<string, unknown> }) {
 	const items = asRichContentArray(content.items);
 	return (
@@ -108,10 +124,10 @@ function RichContentList({
 					<li key={index}>
 						{Boolean(name) && (
 							<strong>
-								{renderRecursiveContent(name, highlightQuery, options)}.{" "}
+								{renderRecursiveContent(runtime, name, highlightQuery, options)}.{" "}
 							</strong>
 						)}
-						{renderRecursiveContent(value, highlightQuery, options)}
+						{renderRecursiveContent(runtime, value, highlightQuery, options)}
 					</li>
 				);
 			})}
@@ -123,15 +139,16 @@ function RichContentSection({
 	content,
 	highlightQuery,
 	options,
+	runtime,
 }: RecursiveRenderProps & { content: Record<string, unknown> }) {
 	return (
 		<div className="parser_section">
 			{Boolean(content.name) && (
 				<strong>
-					{renderRecursiveContent(content.name, highlightQuery, options)}.{" "}
+					{renderRecursiveContent(runtime, content.name, highlightQuery, options)}.{" "}
 				</strong>
 			)}
-			{renderRecursiveContent(content.entries, highlightQuery, options)}
+			{renderRecursiveContent(runtime, content.entries, highlightQuery, options)}
 		</div>
 	);
 }
@@ -140,6 +157,7 @@ function RichContentTable({
 	content,
 	highlightQuery,
 	options,
+	runtime,
 }: RecursiveRenderProps & { content: Record<string, unknown> }) {
 	const labels = asRichContentArray(content.colLabels);
 	const showLabels = Boolean(content.colLabels);
@@ -158,7 +176,7 @@ function RichContentTable({
 						<tr>
 							{labels.map((label, index) => (
 								<th key={index} className={styles[index]}>
-									{renderRecursiveContent(label, highlightQuery, options)}
+									{renderRecursiveContent(runtime, label, highlightQuery, options)}
 								</th>
 							))}
 						</tr>
@@ -169,7 +187,7 @@ function RichContentTable({
 						<tr key={rowIndex}>
 							{row.map((cell, columnIndex) => (
 								<td key={columnIndex} className={styles[columnIndex]}>
-									{renderRecursiveContent(cell, highlightQuery, options)}
+									{renderRecursiveContent(runtime, cell, highlightQuery, options)}
 								</td>
 							))}
 						</tr>
@@ -236,11 +254,13 @@ function getReferenceKey(prefix: string, index: number, name: string): string {
 }
 
 function pushTokenPlan(
+	runtime: RichContentRuntime,
 	elements: ReactNode[],
 	plan: ContentTokenRenderPlan,
 	index: number,
 	highlightQuery: string,
 ): void {
+	const { RollDice, RulesLink } = runtime;
 	const key = `${plan.keyPrefix}-${index}`;
 	if (plan.kind === "text") {
 		pushSafeMarkdownText(elements, plan.text, `${key}-plain`, highlightQuery);
@@ -281,10 +301,11 @@ function pushTokenPlan(
 	);
 }
 
-export function parseRollsAndSpells(
+function parseRollsAndSpells(
+	runtime: RichContentRuntime,
 	text: unknown,
-	highlightQuery = "",
-	options: RichContentRenderOptions = {},
+	highlightQuery: string,
+	options: RichContentRenderOptions,
 ): ReactNode {
 	if (!text) return text as ReactNode;
 	const cleanText = stripNotesReferenceText(text);
@@ -299,6 +320,7 @@ export function parseRollsAndSpells(
 			highlightQuery,
 		);
 		pushTokenPlan(
+			runtime,
 			elements,
 			getContentTokenRenderPlan(token, options),
 			index,
@@ -315,16 +337,15 @@ export function parseRollsAndSpells(
 	return elements;
 }
 
-export function renderMentionText(text: unknown): ReactNode[] {
-	return String(text || "")
-		.split(/(\[[^\]]+\])/g)
-		.map((part, index) => {
-			if (!part.startsWith("[") || !part.endsWith("]")) return part;
-			const name = part.slice(1, -1).trim();
-			return (
-				<EntityLink key={index} name={name}>
-					{name}
-				</EntityLink>
-			);
-		});
+export function createRichContentRenderers({
+	RollDice,
+	RulesLink,
+}: RichContentCompositionSlots): RichContentRenderers {
+	const runtime: RichContentRuntime = { RollDice, RulesLink };
+	return {
+		parseRollsAndSpells: (text, highlightQuery = "", options = {}) =>
+			parseRollsAndSpells(runtime, text, highlightQuery, options),
+		renderRecursiveContent: (content, highlightQuery = "", options = {}) =>
+			renderRecursiveContent(runtime, content, highlightQuery, options),
+	};
 }

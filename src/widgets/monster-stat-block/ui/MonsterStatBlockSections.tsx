@@ -8,7 +8,6 @@ import { capitalizeWords, formatModifier, getAbilityModifier, getDamageBonus } f
 import { ClickToCopy } from "../../../features/clipboard/index.js";
 import { RollDice } from "../../../features/dice/index.js";
 import { ImageDropzone } from "../../../features/images/index.js";
-import { RulesLink } from "../../../features/rules-reference/index.js";
 import { classNames, lang } from "../../../shared/lib/index.js";
 import { Button, Icon, Tooltip } from "../../../shared/ui/index.js";
 import type {
@@ -29,6 +28,7 @@ import {
 	getMonsterSpellcastingEntryPresentation,
 	getMonsterTokenSectionPresentation,
 } from "../model/monsterStatBlockPresentation.ts";
+import { MonsterStatBlockRulesLink } from "./monsterStatBlockRichContent.ts";
 
 export interface RenderHelpers {
 	highlight: (value: unknown) => ReactNode;
@@ -546,7 +546,7 @@ export function LegacySpellcastingSection({ loading, groups, helpers }: SpellSec
 }
 
 function SpellLinks({ spells, highlight }: { spells: LoadedMonsterSpell[]; highlight: RenderHelpers["highlight"] }) {
-	return <>{spells.map((spell, index) => <React.Fragment key={spell.slug ?? spell.name}><RulesLink type="spell" name={spell.name}>{highlight(capitalizeWords(spell.name.split("|")[0]))}</RulesLink>{index < spells.length - 1 ? ", " : ""}</React.Fragment>)}</>;
+	return <>{spells.map((spell, index) => <React.Fragment key={spell.slug ?? spell.name}><MonsterStatBlockRulesLink type="spell" name={spell.name}>{highlight(capitalizeWords(spell.name.split("|")[0]))}</MonsterStatBlockRulesLink>{index < spells.length - 1 ? ", " : ""}</React.Fragment>)}</>;
 }
 
 export function StructuredSpellcastingSection({ entries, helpers }: SpellSectionProps & { entries: MonsterSpellcastingEntry[] }) {
@@ -640,6 +640,6 @@ export function MonsterContentSection({ content, title, field, helpers }: { cont
 
 export function renderSenseParts(parts: SenseTextPart[], helpers: RenderHelpers): ReactNode {
 	return parts.map((part, index) => part.kind === "reference"
-		? <RulesLink key={`sense-link-${index}`} type="sense" name={part.name}>{helpers.highlight(part.name)}</RulesLink>
+		? <MonsterStatBlockRulesLink key={`sense-link-${index}`} type="sense" name={part.name}>{helpers.highlight(part.name)}</MonsterStatBlockRulesLink>
 		: <React.Fragment key={`sense-text-${index}`}>{helpers.renderInlineText(part.text)}</React.Fragment>);
 }

@@ -5,7 +5,7 @@ import {
 	Icon,
 } from "../../../../shared/ui/index.js";
 import { lang } from "../../../../shared/lib/index.js";
-import { renderMentionText } from "../../../../features/rich-content/index.js";
+import { renderMentionText } from "../../../../features/entity-link/index.js";
 
 export interface SceneCardHeaderProps {
 	number: number;

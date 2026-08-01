@@ -1,5 +1,1 @@
-export {
-	parseRollsAndSpells,
-	renderMentionText,
-	renderRecursiveContent,
-} from "./ui/RichContentRenderer.tsx";
+export { createRichContentRenderers } from "./ui/RichContentRenderer.tsx";

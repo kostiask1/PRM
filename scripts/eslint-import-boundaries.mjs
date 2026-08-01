@@ -77,12 +77,6 @@ export const FSD_SAME_LAYER_FILE_EDGE_BASELINE =
 			"src/features/ai/ui/AiAttachmentControls.tsx": ["images"],
 			"src/features/ai/ui/AiPromptComposer.tsx": ["editor"],
 			"src/features/editor/ui/EditableField.tsx": ["entity-link"],
-			"src/features/rich-content/ui/RichContentRenderer.tsx": [
-				"dice",
-				"entity-link",
-				"rules-reference",
-			],
-			"src/features/rules-reference/ui/RulesLink.tsx": ["dice"],
 			"src/features/settings/ui/SettingsModalView.tsx": ["editor"],
 		},
 		widgets: {},

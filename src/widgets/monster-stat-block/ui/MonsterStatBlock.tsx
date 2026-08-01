@@ -9,7 +9,6 @@ import { formatSourceLabel } from "../../../entities/reference/index.js";
 import type { CampaignRecord } from "../../../entities/campaign/index.js";
 import { spellApi } from "../../../entities/spell/index.js";
 import { AddMonsterToEncounterModalContent } from "../../../features/encounter-editor/ui/index.js";
-import { parseRollsAndSpells, renderRecursiveContent } from "../../../features/rich-content/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import {
 	openModalRequest,
@@ -47,6 +46,10 @@ import {
 	renderSenseParts,
 	type RenderHelpers,
 } from "./MonsterStatBlockSections.tsx";
+import {
+	parseMonsterStatBlockRollsAndSpells,
+	renderMonsterStatBlockContent,
+} from "./monsterStatBlockRichContent.ts";
 
 const SPELL_CACHE = new Map<string, LoadedMonsterSpell>();
 
@@ -126,9 +129,9 @@ export default function MonsterStatBlock({
 	const referenceRenderOptions = useMemo(() => ({ creatureSourceFallback: source }), [source]);
 	const helpers: RenderHelpers = {
 		highlight: (value) => highlightText(String(value ?? ""), searchHighlight),
-		renderContent: (content) => renderRecursiveContent(content, searchHighlight, referenceRenderOptions),
-		renderActionName: (content) => renderRecursiveContent(content, searchHighlight, { ...referenceRenderOptions, disableNonRechargeRolls: true }),
-		renderInlineText: (text) => parseRollsAndSpells(text, searchHighlight, referenceRenderOptions),
+		renderContent: (content) => renderMonsterStatBlockContent(content, searchHighlight, referenceRenderOptions),
+		renderActionName: (content) => renderMonsterStatBlockContent(content, searchHighlight, { ...referenceRenderOptions, disableNonRechargeRolls: true }),
+		renderInlineText: (text) => parseMonsterStatBlockRollsAndSpells(text, searchHighlight, referenceRenderOptions),
 		changedClass: (...fields) => getChangedFieldClass(highlightFields, fields),
 	};
 

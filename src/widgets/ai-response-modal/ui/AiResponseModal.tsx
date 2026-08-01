@@ -11,7 +11,7 @@ import type {
 } from "../../../features/ai/ui/index.js";
 import { EditableField } from "../../../features/editor/ui/index.js";
 import { createNoteCardComponent } from "../../../features/notes/ui/index.js";
-import { renderMentionText } from "../../../features/rich-content/index.js";
+import { renderMentionText } from "../../../features/entity-link/index.js";
 import { classNames } from "../../../shared/lib/index.js";
 import { formatSourceLabel } from "../../../entities/reference/index.js";
 import { lang } from "../../../shared/lib/index.js";

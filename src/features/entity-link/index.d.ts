@@ -1,4 +1,4 @@
-export { default as EntityLink, type EntityLinkProps } from "./ui/EntityLink.tsx";
+export { renderMentionText } from "./ui/renderMentionText.tsx";
 export { default as EntityModal, type EntityModalProps } from "./ui/EntityModal.tsx";
 export {
 	EntityLinkContext,

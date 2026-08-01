@@ -39,6 +39,7 @@ import {
 } from "../../../../features/editor/ui/index.js";
 import {
 	EntityModal,
+	renderMentionText,
 	type EntityModalProps,
 } from "../../../../features/entity-link/index.js";
 import { classNames } from "../../../../shared/lib/index.js";
@@ -99,7 +100,6 @@ import type { SessionRecord } from "../../../../entities/session/index.js";
 import type { SharedNote } from "../../../../shared/lib/index.js";
 import { lang } from "../../../../shared/lib/index.js";
 import { openModalRequest, useAppSelector } from "../../../../shared/model/index.js";
-import { renderMentionText } from "../../../../features/rich-content/index.js";
 import "@xyflow/react/dist/style.css";
 import "../../../../assets/components/CampaignNotesGraph.css";
 

@@ -1,13 +1,23 @@
 import type { ReactNode } from "react";
 import ReactList from "react-list";
 import type { BestiaryMonster } from "../../../entities/bestiary/index.js";
-import { renderRecursiveContent } from "../../../features/rich-content/index.js";
+import { RollDice } from "../../../features/dice/index.js";
+import { createRichContentRenderers } from "../../../features/rich-content/index.js";
+import { createRulesLinkComponent } from "../../../features/rules-reference/index.js";
 import { Input } from "../../../features/editor/ui/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import { Button, highlightText } from "../../../shared/ui/index.js";
 import { getReferenceItemKey, getSpellReferenceName, type ReferenceItem, type ReferenceTabId, type ReferenceTabPolicy } from "../model.js";
 import type { SpellRecord } from "../../../entities/spell/index.js";
 import type { RulesReferenceModalCompositionSlots } from "./rulesReferenceModalComposition.ts";
+
+const RulesReferenceModalRulesLink = createRulesLinkComponent({ RollDice });
+const rulesReferenceModalRichContent = createRichContentRenderers({
+	RollDice,
+	RulesLink: RulesReferenceModalRulesLink,
+});
+const renderRulesReferenceContent =
+	rulesReferenceModalRichContent.renderRecursiveContent;
 
 export interface ReferenceTabView extends ReferenceTabPolicy {
 	meta?: (item: ReferenceItem) => string;
@@ -88,7 +98,7 @@ function BestiaryReferenceEntry({ MonsterStatBlock, item, query }: ReferenceEntr
 }
 
 function GenericReferenceEntry({ item, query }: ReferenceEntryProps) {
-	return renderRecursiveContent(item.entries, query);
+	return renderRulesReferenceContent(item.entries, query);
 }
 
 function ReferenceDetails({ activeTab, query, selectedItem, selectedMeta, canInsertReference, onInsertReference, MonsterStatBlock }: Pick<RulesReferenceModalViewProps, "activeTab" | "query" | "selectedItem" | "selectedMeta" | "canInsertReference" | "onInsertReference" | "MonsterStatBlock">) {

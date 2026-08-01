@@ -1,10 +1,20 @@
 import type { ReactNode } from "react";
 import { SpellCardModel, type SpellData } from "../../../entities/spell/index.js";
 import { capitalizeWords, formatSourceLabel } from "../../../entities/reference/index.js";
-import { parseRollsAndSpells, renderRecursiveContent, type RichContentRenderOptions } from "../../../features/rich-content/index.js";
+import { RollDice } from "../../../features/dice/index.js";
+import { createRichContentRenderers, type RichContentRenderOptions } from "../../../features/rich-content/index.js";
+import { createRulesLinkComponent } from "../../../features/rules-reference/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import { highlightText } from "../../../shared/ui/index.js";
 import "../../../assets/components/SpellCard.css";
+
+const SpellCardRulesLink = createRulesLinkComponent({ RollDice });
+const spellCardRichContent = createRichContentRenderers({
+	RollDice,
+	RulesLink: SpellCardRulesLink,
+});
+const parseSpellCardRollsAndSpells = spellCardRichContent.parseRollsAndSpells;
+const renderSpellCardContent = spellCardRichContent.renderRecursiveContent;
 
 export interface SpellCardProps {
 	spell?: SpellData | null;
@@ -13,7 +23,7 @@ export interface SpellCardProps {
 }
 
 function SpellProperties({ model, searchHighlight }: { model: SpellCardModel; searchHighlight: string }) {
-	const renderInlineInfo = (value: unknown): ReactNode => parseRollsAndSpells(String(value || "-"), searchHighlight);
+	const renderInlineInfo = (value: unknown): ReactNode => parseSpellCardRollsAndSpells(String(value || "-"), searchHighlight);
 	const properties = [
 		[lang.t("Casting time"), model.castingTimeLabel],
 		[lang.t("Range"), model.rangeLabel],
@@ -37,8 +47,8 @@ export default function SpellCard({ spell, searchHighlight = "", renderOptions =
 			<div className="SpellCard__meta">{metaParts.map((part, index) => <span key={`${index}:${part}`}>{index > 0 ? " · " : ""}{highlightText(part, searchHighlight)}</span>)}</div>
 			<SpellProperties model={model} searchHighlight={searchHighlight} />
 			<div className="SpellCard__desc">
-				{renderRecursiveContent(spell.entries, searchHighlight, renderOptions)}
-				{spell.entriesHigherLevel && <div className="SpellCard__higher">{renderRecursiveContent(spell.entriesHigherLevel, searchHighlight, renderOptions)}</div>}
+				{renderSpellCardContent(spell.entries, searchHighlight, renderOptions)}
+				{spell.entriesHigherLevel && <div className="SpellCard__higher">{renderSpellCardContent(spell.entriesHigherLevel, searchHighlight, renderOptions)}</div>}
 			</div>
 		</div>
 	);

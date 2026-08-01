@@ -1995,10 +1995,10 @@ await run(
 			["../../images/index.js"],
 		);
 		await assertSameLayerBaselineShape("features", {
-			importers: 6,
-			edges: 8,
-			pairs: 8,
-			declarations: 9,
+			importers: 4,
+			edges: 4,
+			pairs: 4,
+			declarations: 5,
 		});
 		await assertSameLayerBaselineShape("widgets", {
 			importers: 0,
@@ -2300,11 +2300,11 @@ await run(
 		assert.match(spellCardSource, /if \(!spell\) return null;/);
 		assert.match(
 			spellCardSource,
-			/renderRecursiveContent\(spell\.entries, searchHighlight, renderOptions\)/,
+			/renderSpellCardContent\(spell\.entries, searchHighlight, renderOptions\)/,
 		);
 		assert.match(
 			spellCardSource,
-			/spell\.entriesHigherLevel && <div className="SpellCard__higher">\{renderRecursiveContent\(spell\.entriesHigherLevel, searchHighlight, renderOptions\)\}<\/div>/,
+			/spell\.entriesHigherLevel && <div className="SpellCard__higher">\{renderSpellCardContent\(spell\.entriesHigherLevel, searchHighlight, renderOptions\)\}<\/div>/,
 		);
 	},
 );
@@ -3558,7 +3558,7 @@ await run(
 		);
 		assert.match(
 			rulesViewSource,
-			/return renderRecursiveContent\(item\.entries, query\);/,
+			/return renderRulesReferenceContent\(item\.entries, query\);/,
 		);
 		const bestiaryStatTag = getRequiredSourceMatch(
 			rulesViewSource,
@@ -4119,6 +4119,435 @@ await run(
 			configuredConsumers.sort(),
 			consumers.map(({ path }) => path).sort(),
 		);
+	},
+);
+
+await run(
+	"Phase 134 configures rich content and rules links at stable owners",
+	async () => {
+		const [
+			richRuntimeEntry,
+			richTypeEntry,
+			richRendererSource,
+			richCompositionSource,
+			rulesRuntimeEntry,
+			rulesTypeEntry,
+			rulesLinkSource,
+			rulesCompositionSource,
+			entityRuntimeEntry,
+			entityTypeEntry,
+			mentionSource,
+			monsterCompositionSource,
+			monsterSource,
+			monsterSectionsSource,
+			spellCardSource,
+			rulesViewSource,
+		] = await Promise.all([
+			fs.readFile("src/features/rich-content/index.js", "utf8"),
+			fs.readFile("src/features/rich-content/index.d.ts", "utf8"),
+			fs.readFile(
+				"src/features/rich-content/ui/RichContentRenderer.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/features/rich-content/ui/richContentComposition.ts",
+				"utf8",
+			),
+			fs.readFile("src/features/rules-reference/index.js", "utf8"),
+			fs.readFile("src/features/rules-reference/index.d.ts", "utf8"),
+			fs.readFile(
+				"src/features/rules-reference/ui/RulesLink.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/features/rules-reference/ui/rulesLinkComposition.ts",
+				"utf8",
+			),
+			fs.readFile("src/features/entity-link/index.js", "utf8"),
+			fs.readFile("src/features/entity-link/index.d.ts", "utf8"),
+			fs.readFile(
+				"src/features/entity-link/ui/renderMentionText.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/monster-stat-block/ui/monsterStatBlockRichContent.ts",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/monster-stat-block/ui/MonsterStatBlock.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/monster-stat-block/ui/MonsterStatBlockSections.tsx",
+				"utf8",
+			),
+			fs.readFile("src/widgets/spells-browser/ui/SpellCard.tsx", "utf8"),
+			fs.readFile(
+				"src/widgets/rules-reference-modal/ui/RulesReferenceModalView.tsx",
+				"utf8",
+			),
+		]);
+
+		(() => {
+		assert.match(
+			richRuntimeEntry,
+			/export \{ createRichContentRenderers \} from "\.\/ui\/RichContentRenderer\.tsx";/,
+		);
+		assert.doesNotMatch(
+			richRuntimeEntry,
+			/parseRollsAndSpells|renderRecursiveContent|renderMentionText/,
+		);
+		for (const publicType of [
+			"ParseRollsAndSpells",
+			"RenderRecursiveContent",
+			"RichContentCompositionSlots",
+			"RichContentRenderers",
+			"RichContentRollDiceSlot",
+			"RichContentRulesLinkSlot",
+			"RichContentRenderOptions",
+		]) {
+			assert.match(richTypeEntry, new RegExp(`\\b${publicType}\\b`));
+		}
+		assertExportedInterfaceFragments(
+			richCompositionSource,
+			"RichContentCompositionSlots",
+			[
+				"RollDice: RichContentRollDiceSlot;",
+				"RulesLink: RichContentRulesLinkSlot;",
+			],
+		);
+		assertExportedInterfaceFragments(
+			richCompositionSource,
+			"RichContentRenderers",
+			[
+				"parseRollsAndSpells: ParseRollsAndSpells;",
+				"renderRecursiveContent: RenderRecursiveContent;",
+			],
+		);
+		assert.doesNotMatch(richCompositionSource, /ComponentType/);
+		assert.doesNotMatch(
+			richRendererSource,
+			/from "\.\.\/\.\.\/(?:dice|entity-link|rules-reference)\/index\.js"/,
+		);
+		assert.match(
+			richRendererSource,
+			/export function createRichContentRenderers\(\{\s*RollDice,\s*RulesLink,\s*\}: RichContentCompositionSlots\): RichContentRenderers/,
+		);
+		assertSourceTokensInOrder(
+			richRendererSource,
+			[
+				"const runtime: RichContentRuntime = { RollDice, RulesLink };",
+				'parseRollsAndSpells: (text, highlightQuery = "", options = {}) =>',
+				"parseRollsAndSpells(runtime, text, highlightQuery, options)",
+				'renderRecursiveContent: (content, highlightQuery = "", options = {}) =>',
+				"renderRecursiveContent(runtime, content, highlightQuery, options)",
+			],
+			"rich-content factory",
+		);
+		assertSourceTokensInOrder(
+			richRendererSource,
+			[
+				'if (plan.kind === "reference")',
+				"key={getReferenceKey(plan.keyPrefix, index, plan.name)}",
+				"type={plan.referenceType}",
+				"name={plan.name}",
+				'if (plan.kind === "damage")',
+				"<RollDice key={key} formula={plan.formula}>",
+				"`${key}-remainder`",
+				"<RollDice key={key} formula={plan.formula} context={plan.context}>",
+			],
+			"rich-content token rendering",
+		);
+		assert.match(
+			richRendererSource,
+			/return content\.map\(\(item, index\) => \(\s*<Fragment key=\{index\}>\s*\{renderRecursiveContent\(runtime, item, highlightQuery, options\)\}/,
+		);
+		})();
+
+		(() => {
+		assert.match(
+			rulesRuntimeEntry,
+			/export \{ createRulesLinkComponent \} from "\.\/ui\/RulesLink\.tsx";/,
+		);
+		assert.doesNotMatch(rulesRuntimeEntry, /default as RulesLink/);
+		for (const publicType of [
+			"RulesLinkComponent",
+			"RulesLinkCompositionSlots",
+			"RulesLinkProps",
+			"RulesLinkRollDiceSlot",
+			"RulesLinkRollDiceSlotProps",
+		]) {
+			assert.match(rulesTypeEntry, new RegExp(`\\b${publicType}\\b`));
+		}
+		assertExportedInterfaceFragments(
+			rulesCompositionSource,
+			"RulesLinkCompositionSlots",
+			["RollDice: RulesLinkRollDiceSlot;"],
+		);
+		assert.doesNotMatch(rulesCompositionSource, /ComponentType/);
+		assert.doesNotMatch(
+			rulesLinkSource,
+			/from "\.\.\/\.\.\/(?:dice|entity-link|rich-content)\/index\.js"/,
+		);
+		assert.match(
+			rulesLinkSource,
+			/type RulesLinkInternalProps = RulesLinkProps & RulesLinkCompositionSlots;/,
+		);
+		assert.match(
+			rulesLinkSource,
+			/export function createRulesLinkComponent\(\{\s*RollDice,\s*\}: RulesLinkCompositionSlots\): RulesLinkComponent/,
+		);
+		assert.match(
+			rulesLinkSource,
+			/return <RulesLink \{\.\.\.props\} RollDice=\{RollDice\} \/>;/,
+		);
+		const tooltipEntryTags = Array.from(
+			rulesLinkSource.matchAll(/<TooltipEntries(?=\s|>)[^>]*>/g),
+			(match) => match[0],
+		);
+		assert.equal(tooltipEntryTags.length, 7);
+		for (const tag of tooltipEntryTags) {
+			assert.match(tag, /RollDice=\{RollDice\}/);
+		}
+		assert.match(
+			rulesLinkSource,
+			/<RulesLinkPreview preview=\{tooltipPreview\} RollDice=\{RollDice\} \/>/,
+		);
+		assertSourceTokensInOrder(
+			rulesLinkSource,
+			[
+				'type = "spell"',
+				'const referenceName = name || String(children || "").trim();',
+				"activeTooltipLoadRef.current += 1;",
+				"setTooltipPreview(null);",
+				"setIsLoading(false);",
+				"resolveRulesLinkNavigation(",
+				"requestRulesReferenceNavigation(target.tab, target.name)",
+				"loadRulesLinkPreview(",
+				"if (activeTooltipLoadRef.current === loadId)",
+			],
+			"RulesLink behavior",
+		);
+		})();
+
+		(() => {
+		for (const entry of [entityRuntimeEntry, entityTypeEntry]) {
+			assert.match(
+				entry,
+				/export \{ renderMentionText \} from "\.\/ui\/renderMentionText\.tsx";/,
+			);
+			assert.doesNotMatch(entry, /default as EntityLink|EntityLinkProps/);
+		}
+		assert.match(mentionSource, /import EntityLink from "\.\/EntityLink\.tsx";/);
+		assert.match(
+			mentionSource,
+			/export function renderMentionText\(text: unknown\): ReactNode\[\]/,
+		);
+		assert.ok(mentionSource.includes(".split(/(\\[[^\\]]+\\])/g)"));
+		assertSourceTokensInOrder(
+			mentionSource,
+			[
+				'String(text || "")',
+				'if (!part.startsWith("[") || !part.endsWith("]")) return part;',
+				"const name = part.slice(1, -1).trim();",
+				"<EntityLink key={index} name={name}>",
+				"{name}",
+			],
+			"entity mention rendering",
+		);
+		})();
+
+		(() => {
+		assertSourceTokensInOrder(
+			monsterCompositionSource,
+			[
+				"createRulesLinkComponent({ RollDice })",
+				"createRichContentRenderers({",
+				"RulesLink: MonsterStatBlockRulesLink",
+				"monsterStatBlockRichContent.parseRollsAndSpells",
+				"monsterStatBlockRichContent.renderRecursiveContent",
+			],
+			"monster rich-content composition",
+		);
+		assert.match(monsterSource, /renderMonsterStatBlockContent\(content, searchHighlight, referenceRenderOptions\)/);
+		assert.match(monsterSource, /parseMonsterStatBlockRollsAndSpells\(text, searchHighlight, referenceRenderOptions\)/);
+		assert.match(
+			monsterSectionsSource,
+			/<MonsterStatBlockRulesLink type="spell" name=\{spell\.name\}>/,
+		);
+		assert.match(
+			monsterSectionsSource,
+			/<MonsterStatBlockRulesLink key=\{`sense-link-\$\{index\}`\} type="sense" name=\{part\.name\}>/,
+		);
+
+		const compositionConsumers = [
+			{
+				path: "src/widgets/monster-stat-block/ui/monsterStatBlockRichContent.ts",
+				source: monsterCompositionSource,
+				anchor: "export const parseMonsterStatBlockRollsAndSpells",
+			},
+			{
+				path: "src/widgets/spells-browser/ui/SpellCard.tsx",
+				source: spellCardSource,
+				anchor: "export interface SpellCardProps",
+			},
+			{
+				path: "src/widgets/rules-reference-modal/ui/RulesReferenceModalView.tsx",
+				source: rulesViewSource,
+				anchor: "export interface ReferenceTabView",
+			},
+		];
+		for (const consumer of compositionConsumers) {
+			assert.equal(
+				Array.from(consumer.source.matchAll(/createRulesLinkComponent\(/g)).length,
+				1,
+			);
+			assert.equal(
+				Array.from(consumer.source.matchAll(/createRichContentRenderers\(/g)).length,
+				1,
+			);
+			assert.ok(
+				consumer.source.indexOf("createRulesLinkComponent(") <
+					consumer.source.indexOf(consumer.anchor),
+				`${consumer.path} must configure RulesLink at module scope`,
+			);
+			assert.ok(
+				consumer.source.indexOf("createRichContentRenderers(") <
+					consumer.source.indexOf(consumer.anchor),
+				`${consumer.path} must configure rich content at module scope`,
+			);
+		}
+		assert.match(
+			spellCardSource,
+			/renderSpellCardContent\(spell\.entries, searchHighlight, renderOptions\)/,
+		);
+		assert.match(
+			rulesViewSource,
+			/return renderRulesReferenceContent\(item\.entries, query\);/,
+		);
+		})();
+
+		await (async () => {
+			const factoryConsumers = {
+				createRichContentRenderers: [],
+				createRulesLinkComponent: [],
+			};
+			const mentionConsumers = [];
+			const staleRawImports = [];
+			const recordFactoryConsumer = (
+				filePath,
+				source,
+				definitionPrefix,
+				factoryName,
+				target,
+			) => {
+				if (
+					!filePath.startsWith(definitionPrefix) &&
+					source.includes(`${factoryName}(`)
+				) {
+					target.push(filePath);
+				}
+			};
+			const recordNamedPublicImporter = (
+				filePath,
+				source,
+				bindingPattern,
+				specifierSuffix,
+				target,
+			) => {
+				for (const match of source.matchAll(
+					/import\s*\{([^}]*)\}\s*from\s*["']([^"']+)["'];/g,
+				)) {
+					const bindings = match[1];
+					const specifier = match[2].replaceAll("\\", "/");
+					if (
+						bindingPattern.test(bindings) &&
+						specifier.endsWith(specifierSuffix)
+					) {
+						target.push(filePath);
+					}
+				}
+			};
+			for (const filePath of await collectFsdSourceFiles("src")) {
+				const source = await fs.readFile(filePath, "utf8");
+				recordFactoryConsumer(
+					filePath,
+					source,
+					"src/features/rich-content/",
+					"createRichContentRenderers",
+					factoryConsumers.createRichContentRenderers,
+				);
+				recordFactoryConsumer(
+					filePath,
+					source,
+					"src/features/rules-reference/",
+					"createRulesLinkComponent",
+					factoryConsumers.createRulesLinkComponent,
+				);
+				recordNamedPublicImporter(
+					filePath,
+					source,
+					/\brenderMentionText\b/,
+					"/features/entity-link/index.js",
+					mentionConsumers,
+				);
+				recordNamedPublicImporter(
+					filePath,
+					source,
+					/\b(?:parseRollsAndSpells|renderRecursiveContent)\b/,
+					"/features/rich-content/index.js",
+					staleRawImports,
+				);
+				recordNamedPublicImporter(
+					filePath,
+					source,
+					/\bRulesLink\b/,
+					"/features/rules-reference/index.js",
+					staleRawImports,
+				);
+			}
+			const expectedCompositionConsumers = [
+				"src/widgets/monster-stat-block/ui/monsterStatBlockRichContent.ts",
+				"src/widgets/rules-reference-modal/ui/RulesReferenceModalView.tsx",
+				"src/widgets/spells-browser/ui/SpellCard.tsx",
+			].sort();
+			assert.deepEqual(
+				factoryConsumers.createRichContentRenderers.sort(),
+				expectedCompositionConsumers,
+			);
+			assert.deepEqual(
+				factoryConsumers.createRulesLinkComponent.sort(),
+				expectedCompositionConsumers,
+			);
+			assert.deepEqual(staleRawImports, []);
+			assert.deepEqual(mentionConsumers.sort(), [
+				"src/pages/campaign/ui/components/CampaignNotesGraph.tsx",
+				"src/pages/campaign/ui/components/CampaignNotesSection.tsx",
+				"src/pages/encounter/ui/EncounterPage.tsx",
+				"src/pages/session/ui/SessionPage.tsx",
+				"src/pages/session/ui/components/SceneCardHeader.tsx",
+				"src/widgets/ai-assistant/ui/AiAssistantPanel.tsx",
+				"src/widgets/ai-response-modal/ui/AiResponseModal.tsx",
+				"src/widgets/campaign-entity-card/ui/CampaignEntityCardNotes.tsx",
+				"src/widgets/campaign-entity-card/ui/CharacterCard.tsx",
+				"src/widgets/campaign-entity-card/ui/LocationCard.tsx",
+				"src/widgets/campaign-search/ui/CampaignSearchResults.tsx",
+			]);
+			assert.equal(
+				Object.hasOwn(
+					FSD_SAME_LAYER_FILE_EDGE_BASELINE.features,
+					"src/features/rich-content/ui/RichContentRenderer.tsx",
+				),
+				false,
+			);
+			assert.equal(
+				Object.hasOwn(
+					FSD_SAME_LAYER_FILE_EDGE_BASELINE.features,
+					"src/features/rules-reference/ui/RulesLink.tsx",
+				),
+				false,
+			);
+		})();
 	},
 );
 
@@ -30989,7 +31418,7 @@ await run("parser renders dice and creature tags as interactive components", asy
 	assert.match(rulesReferenceSource, /Bestiary__item_token/);
 	assert.match(rulesReferenceSource, /getCreatureReferenceMatchRank/);
 	assert.doesNotMatch(rulesReferenceSource, new RegExp("is" + "Embedded"));
-	assert.match(rulesReferenceSource, /renderRecursiveContent\(item\.entries/);
+	assert.match(rulesReferenceSource, /renderRulesReferenceContent\(item\.entries/);
 	assert.doesNotMatch(rulesReferenceSource, /onRuleNavigate/);
 	assert.match(rulesLinkCss, /\.RulesLink__creature/);
 });

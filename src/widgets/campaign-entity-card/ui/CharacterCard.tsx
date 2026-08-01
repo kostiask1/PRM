@@ -6,7 +6,7 @@ import {
 } from "../../../entities/campaign/index.js";
 import { EditableField } from "../../../features/editor/ui/index.js";
 import { ImageAssetField } from "../../../features/images/index.js";
-import { renderMentionText } from "../../../features/rich-content/index.js";
+import { renderMentionText } from "../../../features/entity-link/index.js";
 import { classNames, getNotesForRender, lang } from "../../../shared/lib/index.js";
 import { useAppSelector } from "../../../shared/model/index.js";
 import { Button, CollapseToggleButton, Select } from "../../../shared/ui/index.js";

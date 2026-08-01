@@ -5,7 +5,7 @@ import {
 	createNoteCardComponent,
 } from "../../../../features/notes/ui/index.js";
 import { EditableField } from "../../../../features/editor/ui/index.js";
-import { renderMentionText } from "../../../../features/rich-content/index.js";
+import { renderMentionText } from "../../../../features/entity-link/index.js";
 import type { DomainId } from "../../../../entities/campaign/index.js";
 import {
 	getNoteRenderKey,

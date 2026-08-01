@@ -1,6 +1,6 @@
 import React, { useMemo, type CSSProperties, type HTMLAttributes, type ReactNode } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
-import { renderMentionText } from "../../../features/rich-content/index.js";
+import { renderMentionText } from "../../../features/entity-link/index.js";
 import { lang, classNames } from "../../../shared/lib/index.js";
 import {
 	buildCampaignSearchSnippet,

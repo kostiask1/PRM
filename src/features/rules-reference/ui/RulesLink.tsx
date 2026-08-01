@@ -16,7 +16,6 @@ import {
 	useAppDispatch,
 } from "../../../shared/model/index.js";
 import { Tooltip } from "../../../shared/ui/index.js";
-import { RollDice } from "../../dice/index.js";
 import {
 	buildTooltipTextParts,
 	getConditionByName,
@@ -37,8 +36,13 @@ import {
 	type RulesReferencePreview,
 	type RulesReferencePreviewLoaders,
 	type RulesReferenceResolvers,
-	type RulesReferenceType,
 } from "../model.js";
+import type {
+	RulesLinkComponent,
+	RulesLinkCompositionSlots,
+	RulesLinkProps,
+	RulesLinkRollDiceSlot,
+} from "./rulesLinkComposition.ts";
 import "../../../assets/components/RulesLink.css";
 
 const RULES_REFERENCE_RESOLVERS: RulesReferenceResolvers = {
@@ -65,10 +69,8 @@ const RULES_REFERENCE_FORMATTERS = {
 	formatSpellMeta: getSpellMeta,
 };
 
-export interface RulesLinkProps {
-	children?: ReactNode;
-	name?: string;
-	type?: RulesReferenceType;
+interface TooltipRollDiceSlotProps {
+	RollDice: RulesLinkRollDiceSlot;
 }
 
 interface TooltipEntryRecord extends Record<string, unknown> {
@@ -87,7 +89,10 @@ function asTooltipEntryRecord(value: unknown): TooltipEntryRecord | null {
 		: null;
 }
 
-function TooltipTextContent({ value }: { value: unknown }) {
+function TooltipTextContent({
+	value,
+	RollDice,
+}: { value: unknown } & TooltipRollDiceSlotProps) {
 	return buildTooltipTextParts(value).map((part, index) =>
 		part.kind === "roll" ? (
 			<RollDice
@@ -103,28 +108,37 @@ function TooltipTextContent({ value }: { value: unknown }) {
 	);
 }
 
-function TooltipList({ items }: { items: unknown[] }) {
+function TooltipList({
+	items,
+	RollDice,
+}: { items: unknown[] } & TooltipRollDiceSlotProps) {
 	return (
 		<ul>
 			{items.map((item, index) => (
 				<li key={index}>
-					<TooltipEntries content={item} />
+					<TooltipEntries content={item} RollDice={RollDice} />
 				</li>
 			))}
 		</ul>
 	);
 }
 
-function TooltipSection({ content }: { content: TooltipEntryRecord }) {
+function TooltipSection({
+	content,
+	RollDice,
+}: { content: TooltipEntryRecord } & TooltipRollDiceSlotProps) {
 	return (
 		<div>
 			{content.name && <strong>{content.name}. </strong>}
-			<TooltipEntries content={content.entries} />
+			<TooltipEntries content={content.entries} RollDice={RollDice} />
 		</div>
 	);
 }
 
-function TooltipTable({ content }: { content: TooltipEntryRecord }) {
+function TooltipTable({
+	content,
+	RollDice,
+}: { content: TooltipEntryRecord } & TooltipRollDiceSlotProps) {
 	const rows = Array.isArray(content.rows) ? content.rows : [];
 	return (
 		<table>
@@ -133,7 +147,7 @@ function TooltipTable({ content }: { content: TooltipEntryRecord }) {
 					<tr>
 						{content.colLabels.map((label, index) => (
 							<th key={index}>
-								<TooltipEntries content={label} />
+								<TooltipEntries content={label} RollDice={RollDice} />
 							</th>
 						))}
 					</tr>
@@ -144,7 +158,7 @@ function TooltipTable({ content }: { content: TooltipEntryRecord }) {
 					<tr key={rowIndex}>
 						{(Array.isArray(row) ? row : [row]).map((cell, cellIndex) => (
 							<td key={cellIndex}>
-								<TooltipEntries content={cell} />
+								<TooltipEntries content={cell} RollDice={RollDice} />
 							</td>
 						))}
 					</tr>
@@ -154,39 +168,52 @@ function TooltipTable({ content }: { content: TooltipEntryRecord }) {
 	);
 }
 
-function TooltipObject({ content }: { content: TooltipEntryRecord }) {
+function TooltipObject({
+	content,
+	RollDice,
+}: { content: TooltipEntryRecord } & TooltipRollDiceSlotProps) {
 	if (content.entry !== undefined) {
-		return <TooltipEntries content={content.entry} />;
+		return <TooltipEntries content={content.entry} RollDice={RollDice} />;
 	}
 	if (content.type === "list" && Array.isArray(content.items)) {
-		return <TooltipList items={content.items} />;
+		return <TooltipList items={content.items} RollDice={RollDice} />;
 	}
 	if (
 		(content.type === "entries" || content.type === "section") &&
 		Array.isArray(content.entries)
 	) {
-		return <TooltipSection content={content} />;
+		return <TooltipSection content={content} RollDice={RollDice} />;
 	}
 	if (content.type === "table" && Array.isArray(content.rows)) {
-		return <TooltipTable content={content} />;
+		return <TooltipTable content={content} RollDice={RollDice} />;
 	}
-	return <TooltipTextContent value={JSON.stringify(content)} />;
+	return (
+		<TooltipTextContent
+			value={JSON.stringify(content)}
+			RollDice={RollDice}
+		/>
+	);
 }
 
-function TooltipEntries({ content }: { content: unknown }): ReactNode {
+function TooltipEntries({
+	content,
+	RollDice,
+}: { content: unknown } & TooltipRollDiceSlotProps): ReactNode {
 	if (content === undefined || content === null) return null;
 	if (typeof content === "string" || typeof content === "number") {
-		return <TooltipTextContent value={content} />;
+		return <TooltipTextContent value={content} RollDice={RollDice} />;
 	}
 	if (Array.isArray(content)) {
 		return content.map((item, index) => (
 			<span key={index}>
-				<TooltipEntries content={item} />
+				<TooltipEntries content={item} RollDice={RollDice} />
 			</span>
 		));
 	}
 	const record = asTooltipEntryRecord(content);
-	return record ? <TooltipObject content={record} /> : null;
+	return record ? (
+		<TooltipObject content={record} RollDice={RollDice} />
+	) : null;
 }
 
 function CreaturePreview({ preview }: { preview: Extract<RulesReferencePreview, { kind: "creature" }> }) {
@@ -222,14 +249,17 @@ function CreaturePreview({ preview }: { preview: Extract<RulesReferencePreview, 
 	);
 }
 
-function RulesLinkPreview({ preview }: { preview: RulesReferencePreview }) {
+function RulesLinkPreview({
+	preview,
+	RollDice,
+}: { preview: RulesReferencePreview } & TooltipRollDiceSlotProps) {
 	if (preview.kind === "creature") return <CreaturePreview preview={preview} />;
 	return (
 		<div className={preview.kind === "spell" ? "Tooltip__spell_card" : undefined}>
 			<div className="Tooltip__title">{preview.title}</div>
 			{preview.meta && <div className="Tooltip__meta">{preview.meta}</div>}
 			<div className="Tooltip__text">
-				<TooltipEntries content={preview.entries} />
+				<TooltipEntries content={preview.entries} RollDice={RollDice} />
 			</div>
 		</div>
 	);
@@ -241,11 +271,14 @@ function getErrorMessage(error: unknown): string {
 		: lang.t("Unknown error");
 }
 
-export default function RulesLink({
+type RulesLinkInternalProps = RulesLinkProps & RulesLinkCompositionSlots;
+
+function RulesLink({
 	children,
 	name,
 	type = "spell",
-}: RulesLinkProps) {
+	RollDice,
+}: RulesLinkInternalProps) {
 	const dispatch = useAppDispatch();
 	const [tooltipPreview, setTooltipPreview] =
 		useState<RulesReferencePreview | null>(null);
@@ -309,7 +342,7 @@ export default function RulesLink({
 	};
 
 	const resolvedContent = tooltipPreview ? (
-		<RulesLinkPreview preview={tooltipPreview} />
+		<RulesLinkPreview preview={tooltipPreview} RollDice={RollDice} />
 	) : isLoading ? (
 		<div className="Tooltip__text">{lang.t("Loading...")}</div>
 	) : null;
@@ -325,4 +358,14 @@ export default function RulesLink({
 			</span>
 		</Tooltip>
 	);
+}
+
+export function createRulesLinkComponent({
+	RollDice,
+}: RulesLinkCompositionSlots): RulesLinkComponent {
+	function ConfiguredRulesLink(props: RulesLinkProps) {
+		return <RulesLink {...props} RollDice={RollDice} />;
+	}
+
+	return ConfiguredRulesLink;
 }
