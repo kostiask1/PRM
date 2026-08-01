@@ -17,7 +17,6 @@ import {
 } from "../../../shared/ui/index.js";
 import { BestiaryBrowser as Bestiary } from "../../../widgets/bestiary-browser/index.js";
 import {
-	BestiaryAiModals,
 	MonsterAiActionModal,
 	applyMonsterAiDraftSaveResult,
 	buildMonsterAiRequestPayload,
@@ -56,6 +55,7 @@ import {
 	buildCreateEntityPayload,
 	createCampaignEntity,
 } from "../../../features/campaign-entity/index.js";
+import EncounterBestiaryAiModals from "./components/EncounterBestiaryAiModals.tsx";
 
 const EncounterRulesReferenceContent =
 	createRulesReferenceModalContentComponent({
@@ -646,6 +646,7 @@ function EncounterBestiaryOverlay({
 	return (
 		<Modal onConfirm={() => {}} title={lang.t("Choose monster")} onCancel={onClose} showFooter={false} type="custom">
 			<Bestiary
+				BestiaryAiModals={EncounterBestiaryAiModals}
 				AiAssistantPanel={AiAssistantPanel}
 				MonsterStatBlock={MonsterStatBlock}
 				ResponseModal={EncounterAiResponseModal}
@@ -1446,7 +1447,7 @@ function EncounterView() {
 				onCancel={closeEditMonsterAction}
 				onChoose={chooseEditMonsterAction}
 			/>
-			<BestiaryAiModals
+			<EncounterBestiaryAiModals
 				ResponseModal={EncounterAiResponseModal}
 				aiDraftDiffResources={aiDraftDiffResources}
 				aiDraftResponseEntry={aiDraftResponseEntry}

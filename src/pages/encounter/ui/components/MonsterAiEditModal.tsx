@@ -1,56 +1,50 @@
-import type { Dispatch, SetStateAction } from "react";
-
-import type { BestiaryMonster } from "../../../entities/bestiary/index.js";
-import { lang } from "../../../shared/lib/index.js";
-import { Button, Modal, Select } from "../../../shared/ui/index.js";
-import type { AiModelDescriptor } from "../../ai/index.js";
+import { getMonsterAiEditPresentation } from "../../../../features/ai-edit-monster/index.js";
 import {
 	AiAttachmentControls,
 	renderAiModelOptions,
-	type AiUiAttachment,
-} from "../../ai/ui/index.js";
-import { EditableField } from "../../editor/ui/index.js";
-import {
-	getMonsterAiEditPresentation,
-	type MonsterAiEditMode,
-} from "../model.ts";
+} from "../../../../features/ai/ui/index.js";
+import { EditableField } from "../../../../features/editor/ui/index.js";
+import { lang } from "../../../../shared/lib/index.js";
+import { Button, Modal, Select } from "../../../../shared/ui/index.js";
+import type { BestiaryAiModalsSlotProps } from "../../../../widgets/bestiary-browser/index.js";
 
-export interface MonsterAiEditModalProps {
-	attachedFiles?: AiUiAttachment[];
-	attachedImages?: AiUiAttachment[];
-	aiEditingMonster?: BestiaryMonster | null;
-	aiEditError?: string | null;
-	aiEditInstructions: string;
-	aiEditMode: MonsterAiEditMode;
-	aiModels: AiModelDescriptor[];
-	isAiEditingMonster: boolean;
-	onCancel: () => void;
-	onCancelRequest: () => void;
-	onInstructionsChange: (value: string) => void;
-	onModelChange: (value: string) => void;
-	onSave: () => void;
-	selectedAiModel: string;
-	setAttachedFiles?: Dispatch<SetStateAction<AiUiAttachment[]>>;
-	setAttachedImages?: Dispatch<SetStateAction<AiUiAttachment[]>>;
-}
+type MonsterAiEditModalProps = Pick<
+	BestiaryAiModalsSlotProps,
+	| "aiEditAttachedFiles"
+	| "aiEditAttachedImages"
+	| "aiEditingMonster"
+	| "aiEditError"
+	| "aiEditInstructions"
+	| "aiEditMode"
+	| "aiModels"
+	| "isAiEditingMonster"
+	| "onCancelEdit"
+	| "onCancelEditRequest"
+	| "onInstructionsChange"
+	| "onModelChange"
+	| "onSaveEdit"
+	| "selectedAiModel"
+	| "setAiEditAttachedFiles"
+	| "setAiEditAttachedImages"
+>;
 
 export default function MonsterAiEditModal({
-	attachedFiles,
-	attachedImages,
+	aiEditAttachedFiles,
+	aiEditAttachedImages,
 	aiEditingMonster,
 	aiEditError,
 	aiEditInstructions,
 	aiEditMode,
 	aiModels,
 	isAiEditingMonster,
-	onCancel,
-	onCancelRequest,
+	onCancelEdit,
+	onCancelEditRequest,
 	onInstructionsChange,
 	onModelChange,
-	onSave,
+	onSaveEdit,
 	selectedAiModel,
-	setAttachedFiles,
-	setAttachedImages,
+	setAiEditAttachedFiles,
+	setAiEditAttachedImages,
 }: MonsterAiEditModalProps) {
 	if (!aiEditingMonster) return null;
 
@@ -60,7 +54,7 @@ export default function MonsterAiEditModal({
 		<Modal
 			title={presentation.title}
 			onConfirm={() => {}}
-			onCancel={onCancel}
+			onCancel={onCancelEdit}
 			showFooter={false}
 			className="Bestiary__ai_edit_modal"
 			cancelDisabled={isAiEditingMonster}
@@ -89,12 +83,12 @@ export default function MonsterAiEditModal({
 					className="Bestiary__ai_edit_prompt"
 				/>
 				<AiAttachmentControls
-					attachedFiles={attachedFiles}
-					attachedImages={attachedImages}
+					attachedFiles={aiEditAttachedFiles}
+					attachedImages={aiEditAttachedImages}
 					campaignSlug="general"
 					disabled={isAiEditingMonster}
-					setAttachedFiles={setAttachedFiles}
-					setAttachedImages={setAttachedImages}
+					setAttachedFiles={setAiEditAttachedFiles}
+					setAttachedImages={setAiEditAttachedImages}
 				/>
 				{aiEditError && (
 					<div className="Bestiary__edit_error">{aiEditError}</div>
@@ -102,14 +96,16 @@ export default function MonsterAiEditModal({
 				<div className="Bestiary__edit_actions">
 					<Button
 						variant="ghost"
-						onClick={isAiEditingMonster ? onCancelRequest : onCancel}
+						onClick={
+							isAiEditingMonster ? onCancelEditRequest : onCancelEdit
+						}
 					>
 						{lang.t("Cancel")}
 					</Button>
 					<Button
 						variant="primary"
 						icon="wand"
-						onClick={onSave}
+						onClick={onSaveEdit}
 						disabled={isAiEditingMonster}
 					>
 						{isAiEditingMonster

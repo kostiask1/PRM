@@ -37,7 +37,6 @@ import {
 import { useAppDispatch, useAppSelector } from "../../../shared/model/index.js";
 import { Button } from "../../../shared/ui/index.js";
 import {
-	BestiaryAiModals,
 	MonsterAiActionModal,
 	type MonsterAiAction,
 	type MonsterAiEditMode,
@@ -113,6 +112,7 @@ import {
 	type MonsterReference,
 } from "../model.js";
 import type {
+	BestiaryAiModalsSlot,
 	BestiaryAssistantSlot,
 	BestiaryMonsterStatBlockSlot,
 } from "./bestiaryComposition.ts";
@@ -141,6 +141,7 @@ interface ApplyCustomMonsterListOptions {
 }
 
 export interface BestiaryBrowserProps {
+	BestiaryAiModals: BestiaryAiModalsSlot;
 	AiAssistantPanel: BestiaryAssistantSlot;
 	MonsterStatBlock: BestiaryMonsterStatBlockSlot;
 	ResponseModal: AiResponseModalComponent;
@@ -162,6 +163,7 @@ export interface BestiaryBrowserProps {
 }
 
 export default function BestiaryBrowser({
+	BestiaryAiModals,
 	AiAssistantPanel,
 	MonsterStatBlock,
 	ResponseModal,

@@ -1995,10 +1995,10 @@ await run(
 			["../../images/index.js"],
 		);
 		await assertSameLayerBaselineShape("features", {
-			importers: 10,
-			edges: 14,
-			pairs: 12,
-			declarations: 18,
+			importers: 7,
+			edges: 10,
+			pairs: 10,
+			declarations: 11,
 		});
 		await assertSameLayerBaselineShape("widgets", {
 			importers: 0,
@@ -2150,7 +2150,7 @@ await run(
 				"utf8",
 			),
 			fs.readFile(
-				"src/features/ai-edit-monster/ui/BestiaryAiDraftModal.tsx",
+				"src/pages/encounter/ui/components/BestiaryAiDraftModal.tsx",
 				"utf8",
 			),
 		]);
@@ -2200,6 +2200,10 @@ await run(
 			/<Bestiary(?=\s|>)[\s\S]*?\/>/,
 		)?.[0];
 		assert.ok(encounterBestiaryTag);
+		assert.match(
+			encounterBestiaryTag,
+			/\bBestiaryAiModals=\{EncounterBestiaryAiModals\}/,
+		);
 		assert.match(
 			encounterBestiaryTag,
 			/\bResponseModal=\{EncounterAiResponseModal\}/,
@@ -2389,11 +2393,11 @@ await run(
 
 		assert.match(
 			bestiaryBrowserSource,
-			/export interface BestiaryBrowserProps\s*\{\s*AiAssistantPanel: BestiaryAssistantSlot;\s*MonsterStatBlock: BestiaryMonsterStatBlockSlot;/,
+			/export interface BestiaryBrowserProps\s*\{\s*BestiaryAiModals: BestiaryAiModalsSlot;\s*AiAssistantPanel: BestiaryAssistantSlot;\s*MonsterStatBlock: BestiaryMonsterStatBlockSlot;/,
 		);
 		assert.match(
 			bestiaryBrowserSource,
-			/export default function BestiaryBrowser\(\{\s*AiAssistantPanel,\s*MonsterStatBlock,/,
+			/export default function BestiaryBrowser\(\{\s*BestiaryAiModals,\s*AiAssistantPanel,\s*MonsterStatBlock,/,
 		);
 		const bestiaryContentTag = bestiaryBrowserSource.match(
 			/<BestiaryContent(?=\s|>)[\s\S]*?\/>/,
@@ -2442,6 +2446,9 @@ await run(
 			}
 		}
 		assert.deepEqual(bestiaryConsumers, [
+			"src/pages/encounter/ui/components/BestiaryAiDraftModal.tsx",
+			"src/pages/encounter/ui/components/EncounterBestiaryAiModals.tsx",
+			"src/pages/encounter/ui/components/MonsterAiEditModal.tsx",
 			"src/pages/encounter/ui/EncounterPage.tsx",
 		]);
 
@@ -2833,7 +2840,7 @@ await run(
 
 		assert.match(
 			bestiaryCompositionSource,
-			/import type \{ AiResponseModalComponent \} from "\.\.\/\.\.\/\.\.\/features\/ai\/ui\/index\.js";/,
+			/import type\s*\{[^}]*\bAiResponseModalComponent\b[^}]*\}\s*from "\.\.\/\.\.\/\.\.\/features\/ai\/ui\/index\.js";/,
 		);
 		assert.match(
 			bestiaryCompositionSource,
@@ -3281,7 +3288,7 @@ await run(
 		);
 		assert.match(
 			encounterSource,
-			/<BestiaryAiModals(?=\s|>)[\s\S]*?\bResponseModal=\{EncounterAiResponseModal\}/,
+			/<EncounterBestiaryAiModals(?=\s|>)[\s\S]*?\bResponseModal=\{EncounterAiResponseModal\}/,
 		);
 	},
 );
@@ -3702,6 +3709,189 @@ await run(
 			"onSave",
 			"title",
 		]);
+	},
+);
+
+await run(
+	"Phase 132 moves AI edit modal composition to the encounter page owner",
+	async () => {
+		for (const oldPath of [
+			"src/features/ai-edit-monster/ui/BestiaryAiDraftModal.tsx",
+			"src/features/ai-edit-monster/ui/BestiaryAiModals.tsx",
+			"src/features/ai-edit-monster/ui/MonsterAiEditModal.tsx",
+		]) {
+			await assert.rejects(
+				() => fs.access(oldPath),
+				(error) => error?.code === "ENOENT",
+			);
+		}
+
+		const [
+			featureRuntimeEntry,
+			featureTypeEntry,
+			encounterSource,
+			aggregateSource,
+			draftSource,
+			editSource,
+			bestiarySource,
+			compositionSource,
+			bestiaryTypeEntry,
+		] = await Promise.all([
+			fs.readFile("src/features/ai-edit-monster/index.js", "utf8"),
+			fs.readFile("src/features/ai-edit-monster/index.d.ts", "utf8"),
+			fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+			fs.readFile(
+				"src/pages/encounter/ui/components/EncounterBestiaryAiModals.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/pages/encounter/ui/components/BestiaryAiDraftModal.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/pages/encounter/ui/components/MonsterAiEditModal.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/bestiary-browser/ui/BestiaryBrowser.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/bestiary-browser/ui/bestiaryComposition.ts",
+				"utf8",
+			),
+			fs.readFile("src/widgets/bestiary-browser/index.d.ts", "utf8"),
+		]);
+
+		assert.doesNotMatch(featureRuntimeEntry, /\bBestiaryAiModals\b/);
+		assert.doesNotMatch(featureTypeEntry, /\bBestiaryAiModals(?:Props)?\b/);
+		assert.match(
+			featureRuntimeEntry,
+			/\bgetMonsterAiEditPresentation\b[\s\S]*?from "\.\/model\.ts";/,
+		);
+		assertPublicTypeSurface(featureTypeEntry, [
+			"MonsterAiEditPresentation",
+			"getMonsterAiEditPresentation",
+		]);
+		assert.deepEqual(
+			Object.keys(FSD_SAME_LAYER_FILE_EDGE_BASELINE.features).filter((path) =>
+				path.includes("/ai-edit-monster/"),
+			),
+			[],
+		);
+
+		assertPublicTypeSurface(bestiaryTypeEntry, [
+			"BestiaryAiDraftRestore",
+			"BestiaryAiModalsSlot",
+			"BestiaryAiModalsSlotProps",
+		]);
+		assert.match(
+			compositionSource,
+			/export type BestiaryAiDraftRestore = \(\s*entry: AiResponseHistoryEntry,\s*resourceIds\?: string\[\],\s*\) => void \| Promise<void>;/,
+		);
+		assert.match(
+			compositionSource,
+			/export type BestiaryAiModalsSlot = \(\s*props: BestiaryAiModalsSlotProps,\s*\) => ReactElement \| null;/,
+		);
+		assertExportedInterfaceFragments(
+			compositionSource,
+			"BestiaryAiModalsSlotProps",
+			[
+				"ResponseModal: AiResponseModalComponent;",
+				"aiDraftDiffResources: DiffResource[];",
+				"aiDraftResponseRef: RefObject<HTMLDivElement | null>;",
+				"aiEditMode: MonsterAiEditMode;",
+				"aiModels: AiModelDescriptor[];",
+				"onSaveDraftChanges: AiResponseModalProps[\"onSaveDraftChanges\"];",
+				"setAiEditAttachedFiles?: Dispatch<SetStateAction<AiUiAttachment[]>>;",
+			],
+		);
+
+		assert.match(
+			bestiarySource,
+			/export interface BestiaryBrowserProps \{\s*BestiaryAiModals: BestiaryAiModalsSlot;/,
+		);
+		const browserModalComposition = getRequiredSourceSlice(
+			bestiarySource,
+			"const bestiaryModals = (",
+			"return (",
+		);
+		assertSourceTokensInOrder(
+			browserModalComposition,
+			[
+				"<MonsterEditorModal",
+				"<MonsterAiActionModal",
+				"<BestiaryAiModals",
+			],
+			"Bestiary modal composition",
+		);
+		assert.match(
+			browserModalComposition,
+			/<BestiaryAiModals[\s\S]*?\bResponseModal=\{ResponseModal\}/,
+		);
+
+		assert.match(
+			encounterSource,
+			/import EncounterBestiaryAiModals from "\.\/components\/EncounterBestiaryAiModals\.tsx";/,
+		);
+		const encounterBestiaryTag = getRequiredSourceMatch(
+			encounterSource,
+			/<Bestiary(?=\s|>)[\s\S]*?\/>/,
+		);
+		assert.match(
+			encounterBestiaryTag,
+			/\bBestiaryAiModals=\{EncounterBestiaryAiModals\}/,
+		);
+		const directModalTag = getRequiredSourceMatch(
+			encounterSource,
+			/<EncounterBestiaryAiModals(?=\s|>)[\s\S]*?\/>/,
+		);
+		assert.match(
+			directModalTag,
+			/\bResponseModal=\{EncounterAiResponseModal\}/,
+		);
+		assert.ok(
+			encounterSource.indexOf(
+				'import EncounterBestiaryAiModals from "./components/EncounterBestiaryAiModals.tsx";',
+			) < encounterSource.indexOf("function EncounterBestiaryOverlay"),
+		);
+
+		assert.match(
+			aggregateSource,
+			/import type \{ BestiaryAiModalsSlotProps \} from "\.\.\/\.\.\/\.\.\/\.\.\/widgets\/bestiary-browser\/index\.js";/,
+		);
+		assertSourceTokensInOrder(
+			aggregateSource,
+			["<MonsterAiEditModal", "<BestiaryAiDraftModal"],
+			"AI edit then draft modal render",
+		);
+		assert.match(editSource, /if \(!aiEditingMonster\) return null;/);
+		assert.match(editSource, /campaignSlug="general"/);
+		assert.match(
+			editSource,
+			/onChange=\{\(event\) => onInstructionsChange\(event\.target\.value\)\}/,
+		);
+		assert.match(
+			editSource,
+			/isAiEditingMonster \? onCancelEditRequest : onCancelEdit/,
+		);
+		assert.match(
+			editSource,
+			/disabled=\{isAiEditingMonster \|\| aiModels\.length === 0\}/,
+		);
+		assert.match(editSource, /\{renderAiModelOptions\(aiModels\)\}/);
+		assert.match(editSource, /\{aiEditError && \(/);
+		assert.match(draftSource, /if \(!aiDraftResponseEntry\) return null;/);
+		assert.match(draftSource, /markdownComponents=\{\{\}\}/);
+		assert.match(draftSource, /selectedResponseDetails=\{\[\]\}/);
+		assert.match(
+			draftSource,
+			/onApplyResource=\{\(entry = aiDraftResponseEntry, resourceIds\) =>[\s\S]*?onApplyDraftResource\(entry, resourceIds\)/,
+		);
+		assert.match(
+			draftSource,
+			/onUndoResource=\{\(entry = aiDraftResponseEntry, resourceIds\) =>[\s\S]*?onUndoDraftResource\(entry, resourceIds\)/,
+		);
 	},
 );
 

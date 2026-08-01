@@ -76,12 +76,6 @@ export const FSD_SAME_LAYER_FILE_EDGE_BASELINE =
 		features: {
 			"src/features/ai/ui/AiAttachmentControls.tsx": ["images"],
 			"src/features/ai/ui/AiPromptComposer.tsx": ["editor"],
-			"src/features/ai-edit-monster/ui/BestiaryAiDraftModal.tsx": ["ai"],
-			"src/features/ai-edit-monster/ui/BestiaryAiModals.tsx": ["ai"],
-			"src/features/ai-edit-monster/ui/MonsterAiEditModal.tsx": [
-				"ai",
-				"editor",
-			],
 			"src/features/editor/ui/EditableField.tsx": ["entity-link"],
 			"src/features/notes/ui/NoteCardParts.tsx": [
 				"editor",
