@@ -49,13 +49,17 @@ import {
 	itemMatchesQuery,
 	normalizeReferenceList,
 	type ReferenceItem,
-	type ReferenceSelection,
 	type ReferenceTabId,
 	type ReferenceTabPolicy,
 } from "../model.js";
 import type { RulesReferenceHistoryEntry } from "../../../shared/model/index.js";
 import RulesReferenceListItem from "./RulesReferenceListItem.tsx";
 import RulesReferenceModalView from "./RulesReferenceModalView.tsx";
+import type {
+	RulesReferenceModalCompositionSlots,
+	RulesReferenceModalContentComponent,
+	RulesReferenceModalContentProps,
+} from "./rulesReferenceModalComposition.ts";
 
 type UiReferenceItem = ReferenceItem &
 	Partial<BestiaryMonster> &
@@ -64,13 +68,6 @@ type UiReferenceItem = ReferenceItem &
 interface ReferenceTab extends ReferenceTabPolicy {
 	load: (options?: RequestInit) => Promise<unknown>;
 	meta?: (item: UiReferenceItem) => string;
-}
-
-export interface RulesReferenceModalContentProps {
-	initialTab?: ReferenceTabId;
-	initialName?: string;
-	forceTab?: boolean;
-	onSelectReference?: ((selection: ReferenceSelection<UiReferenceItem>) => void) | null;
 }
 
 const VARIANT_RULE_TYPE_LABELS = {
@@ -168,12 +165,17 @@ function runWhenMounted(mountedRef: { current: boolean }, effect: () => void): v
 	if (mountedRef.current) effect();
 }
 
+export type RulesReferenceModalContentInternalProps =
+	RulesReferenceModalContentProps & RulesReferenceModalCompositionSlots;
+
 export default function RulesReferenceModalContent({
 	initialTab = "conditions",
 	initialName = "",
 	forceTab = false,
 	onSelectReference = null,
-}: RulesReferenceModalContentProps) {
+	MonsterStatBlock,
+	SpellsBrowser,
+}: RulesReferenceModalContentInternalProps) {
 	const dispatch = useAppDispatch();
 	const navigationRequest = useAppSelector(
 		(state) => state.rulesReference.navigationRequest,
@@ -604,8 +606,29 @@ export default function RulesReferenceModalContent({
 			onEmbeddedSelection={recordEmbeddedReferenceSelection}
 			onSelectSpell={getEnabledHandler(onSelectReference, selectSpellReference)}
 			onInsertReference={insertReference}
+			MonsterStatBlock={MonsterStatBlock}
+			SpellsBrowser={SpellsBrowser}
 		/>
 	);
+}
+
+export function createRulesReferenceModalContentComponent({
+	MonsterStatBlock,
+	SpellsBrowser,
+}: RulesReferenceModalCompositionSlots): RulesReferenceModalContentComponent {
+	function ConfiguredRulesReferenceModalContent(
+		props: RulesReferenceModalContentProps,
+	) {
+		return (
+			<RulesReferenceModalContent
+				{...props}
+				MonsterStatBlock={MonsterStatBlock}
+				SpellsBrowser={SpellsBrowser}
+			/>
+		);
+	}
+
+	return ConfiguredRulesReferenceModalContent;
 }
 
 function deriveActiveState(

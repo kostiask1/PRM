@@ -34,8 +34,10 @@ import {
 } from "../../../features/ai-edit-monster/index.js";
 import { createAiResponseModalComponent } from "../../../widgets/ai-response-modal/index.js";
 import { AiAssistantPanel } from "../../../widgets/ai-assistant/index.js";
-import { MonsterEditorModal } from "../../../widgets/monster-editor-modal/index.js";
+import { createMonsterEditorModalComponent } from "../../../widgets/monster-editor-modal/index.js";
 import { MonsterStatBlock } from "../../../widgets/monster-stat-block/index.js";
+import { SpellsBrowser } from "../../../widgets/spells-browser/index.js";
+import { createRulesReferenceModalContentComponent } from "../../../widgets/rules-reference-modal/index.js";
 import {
 	CharacterCard,
 	LocationCard,
@@ -55,11 +57,19 @@ import {
 	createCampaignEntity,
 } from "../../../features/campaign-entity/index.js";
 
+const EncounterRulesReferenceContent =
+	createRulesReferenceModalContentComponent({
+		MonsterStatBlock,
+		SpellsBrowser,
+	});
+const EncounterMonsterEditorModal = createMonsterEditorModalComponent({
+	RulesReferenceContent: EncounterRulesReferenceContent,
+});
 const EncounterAiResponseModal = createAiResponseModalComponent({
 	CharacterCard,
 	LocationCard,
 	MonsterStatBlock,
-	MonsterEditorModal,
+	MonsterEditorModal: EncounterMonsterEditorModal,
 });
 
 const api = { ...campaignApi, ...bestiaryApi, ...aiApi, ...settingsApi };
@@ -639,7 +649,7 @@ function EncounterBestiaryOverlay({
 				AiAssistantPanel={AiAssistantPanel}
 				MonsterStatBlock={MonsterStatBlock}
 				ResponseModal={EncounterAiResponseModal}
-				MonsterEditorModal={MonsterEditorModal}
+				MonsterEditorModal={EncounterMonsterEditorModal}
 				onAddMonster={(monster) => onAdd(monster as EncounterViewParticipant)}
 			/>
 		</Modal>
@@ -1467,7 +1477,7 @@ function EncounterView() {
 				}
 				selectedAiModel={selectedAiModel}
 			/>
-			<MonsterEditorModal
+			<EncounterMonsterEditorModal
 				editingMonster={getEditingMonster(fieldEditingMonster)}
 				onCancel={closeEditMonsterFields}
 				onSave={saveEditedMonsterFields}

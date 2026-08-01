@@ -95,15 +95,7 @@ export const FSD_SAME_LAYER_FILE_EDGE_BASELINE =
 			"src/features/rules-reference/ui/RulesLink.tsx": ["dice"],
 			"src/features/settings/ui/SettingsModalView.tsx": ["editor"],
 		},
-		widgets: {
-			"src/widgets/monster-editor-modal/ui/MonsterEditorModal.tsx": [
-				"rules-reference-modal",
-			],
-			"src/widgets/rules-reference-modal/ui/RulesReferenceModalView.tsx": [
-				"monster-stat-block",
-				"spells-browser",
-			],
-		},
+		widgets: {},
 	});
 
 const FSD_LAYERS = Object.keys(FSD_SLICE_NAMES);

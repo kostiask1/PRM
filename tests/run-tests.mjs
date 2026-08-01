@@ -1671,6 +1671,128 @@ async function assertSameLayerBaselineShape(layer, expectedCounts) {
 	);
 }
 
+function getRequiredSourceMatch(source, pattern, message = String(pattern)) {
+	const match = source.match(pattern);
+	assert.ok(match, message);
+	return match[0];
+}
+
+function getRequiredSourceSlice(source, startToken, endToken) {
+	const startIndex = source.indexOf(startToken);
+	const endIndex = source.indexOf(endToken, startIndex);
+	assert.ok(startIndex >= 0, startToken);
+	assert.ok(endIndex > startIndex, endToken);
+	return source.slice(startIndex, endIndex);
+}
+
+function readSourceJsxPropNames(tagSource) {
+	return Array.from(
+		tagSource.matchAll(/\s+([A-Za-z][A-Za-z0-9]*)=(?:\{|\")/g),
+		(match) => match[1],
+	);
+}
+
+function assertSourceTokensInOrder(source, tokens, contractName) {
+	let previousIndex = -1;
+	for (const token of tokens) {
+		const tokenIndex = source.indexOf(token, previousIndex + 1);
+		assert.ok(
+			tokenIndex > previousIndex,
+			`${token} must retain ${contractName} order`,
+		);
+		previousIndex = tokenIndex;
+	}
+}
+
+function assertPublicTypeSurface(entrySource, publicTypes) {
+	for (const publicType of publicTypes) {
+		assert.match(entrySource, new RegExp(`\\b${publicType}\\b`));
+	}
+}
+
+function assertExportedInterfaceFragments(
+	source,
+	interfaceName,
+	requiredFragments,
+) {
+	const match = source.match(
+		new RegExp(`export interface ${interfaceName} \\{([\\s\\S]*?)\\n\\}`),
+	);
+	assert.ok(match);
+	for (const fragment of requiredFragments) {
+		assert.ok(
+			match[1].includes(fragment),
+			`${interfaceName} must preserve ${fragment}`,
+		);
+	}
+}
+
+function assertNoSiblingWidgetImportsInSource(filePath, source, slice) {
+	const siblingWidgetImports = readStaticFsdSpecifiers(source)
+		.map((specifier) => [
+			specifier,
+			resolveTestModuleSpecifierPath(filePath, specifier),
+		])
+		.filter(
+			([, resolved]) =>
+				resolved?.startsWith("src/widgets/") &&
+				!resolved.startsWith(`${slice}/`),
+		);
+	assert.deepEqual(
+		siblingWidgetImports,
+		[],
+		`${filePath} must not import a sibling widget`,
+	);
+}
+
+async function assertNoSiblingWidgetImports(slice) {
+	for (const filePath of await collectFsdSourceFiles(slice)) {
+		const source = await fs.readFile(filePath, "utf8");
+		assertNoSiblingWidgetImportsInSource(filePath, source, slice);
+	}
+}
+
+function assertReferenceOwnerComposition(source, owner, beforeToken) {
+	const rulesBinding = getRequiredSourceMatch(
+		source,
+		new RegExp(
+			`const ${owner}RulesReferenceContent =\\s*createRulesReferenceModalContentComponent\\(\\{[\\s\\S]*?\\}\\);`,
+		),
+	);
+	const editorBinding = getRequiredSourceMatch(
+		source,
+		new RegExp(
+			`const ${owner}MonsterEditorModal = createMonsterEditorModalComponent\\(\\{[\\s\\S]*?\\}\\);`,
+		),
+	);
+	assert.deepEqual(
+		Array.from(
+			rulesBinding.matchAll(/^\s+([A-Za-z][A-Za-z0-9]*),$/gm),
+			(match) => match[1],
+		),
+		["MonsterStatBlock", "SpellsBrowser"],
+	);
+	assert.match(
+		editorBinding,
+		new RegExp(`\\bRulesReferenceContent: ${owner}RulesReferenceContent,`),
+	);
+	const beforeIndex = source.indexOf(beforeToken);
+	assert.ok(source.indexOf(rulesBinding) < source.indexOf(editorBinding));
+	assert.ok(source.indexOf(editorBinding) < beforeIndex);
+	assert.equal(
+		(source.match(/createRulesReferenceModalContentComponent\(/g) || []).length,
+		1,
+	);
+	assert.equal(
+		(source.match(/createMonsterEditorModalComponent\(/g) || []).length,
+		1,
+	);
+	assert.match(
+		source,
+		new RegExp(`\\bMonsterEditorModal: ${owner}MonsterEditorModal,`),
+	);
+}
+
 function inspectFsdBoundaryVisitor(ruleName, fileName, visitorName, node) {
 	const reports = [];
 	const listeners = FSD_BOUNDARY_PLUGIN.rules[ruleName].create({
@@ -1879,10 +2001,10 @@ await run(
 			declarations: 18,
 		});
 		await assertSameLayerBaselineShape("widgets", {
-			importers: 2,
-			edges: 3,
-			pairs: 3,
-			declarations: 3,
+			importers: 0,
+			edges: 0,
+			pairs: 0,
+			declarations: 0,
 		});
 
 		for (const layer of ["features", "widgets"]) {
@@ -2084,7 +2206,7 @@ await run(
 		);
 		assert.match(
 			encounterBestiaryTag,
-			/\bMonsterEditorModal=\{MonsterEditorModal\}/,
+			/\bMonsterEditorModal=\{EncounterMonsterEditorModal\}/,
 		);
 		assert.match(
 			encounterSource,
@@ -3006,11 +3128,6 @@ await run(
 			MonsterStatBlock: 2,
 			MonsterEditorModal: 1,
 		});
-		const readTagProps = (tagSource) =>
-			Array.from(
-				tagSource.matchAll(/^\s+([A-Za-z][A-Za-z0-9]*)=(?:\{|\")/gm),
-				(match) => match[1],
-			);
 		const characterTag = responseModalSource.match(
 			/<CharacterCard(?=\s|>)[\s\S]*?\/>/,
 		)?.[0];
@@ -3019,7 +3136,7 @@ await run(
 		)?.[0];
 		assert.ok(characterTag);
 		assert.ok(locationTag);
-		assert.deepEqual(readTagProps(characterTag), [
+		assert.deepEqual(readSourceJsxPropNames(characterTag), [
 			"character",
 			"campaignSlug",
 			"type",
@@ -3030,7 +3147,7 @@ await run(
 			"showDeleteButton",
 			"highlightFields",
 		]);
-		assert.deepEqual(readTagProps(locationTag), [
+		assert.deepEqual(readSourceJsxPropNames(locationTag), [
 			"location",
 			"campaignSlug",
 			"onChange",
@@ -3050,7 +3167,7 @@ await run(
 			/<MonsterStatBlock(?=\s|>)[\s\S]*?\/>/g,
 		), (match) => match[0]);
 		for (const monsterTag of monsterTags) {
-			assert.deepEqual(readTagProps(monsterTag), [
+			assert.deepEqual(readSourceJsxPropNames(monsterTag), [
 				"monster",
 				"showFavoriteAction",
 				"allowTokenUpload",
@@ -3075,7 +3192,7 @@ await run(
 			/<MonsterEditorModal(?=\s|>)[\s\S]*?\/>/,
 		)?.[0];
 		assert.ok(editorTag);
-		assert.deepEqual(readTagProps(editorTag), [
+		assert.deepEqual(readSourceJsxPropNames(editorTag), [
 			"editingMonster",
 			"onCancel",
 			"onSave",
@@ -3120,7 +3237,10 @@ await run(
 			encounterSource.indexOf(encounterBinding) <
 				encounterSource.indexOf("function EncounterBestiaryOverlay"),
 		);
-		for (const binding of [mainBinding, encounterBinding]) {
+		for (const [binding, configuredEditor] of [
+			[mainBinding, "MainContentMonsterEditorModal"],
+			[encounterBinding, "EncounterMonsterEditorModal"],
+		]) {
 			assert.deepEqual(
 				Array.from(
 					binding.matchAll(/^\s+([A-Za-z][A-Za-z0-9]*),$/gm),
@@ -3130,8 +3250,13 @@ await run(
 					"CharacterCard",
 					"LocationCard",
 					"MonsterStatBlock",
-					"MonsterEditorModal",
 				],
+			);
+			assert.match(
+				binding,
+				new RegExp(
+					`\\bMonsterEditorModal: ${configuredEditor},`,
+				),
 			);
 		}
 		assert.equal(
@@ -3158,6 +3283,425 @@ await run(
 			encounterSource,
 			/<BestiaryAiModals(?=\s|>)[\s\S]*?\bResponseModal=\{EncounterAiResponseModal\}/,
 		);
+	},
+);
+
+await run(
+	"Phase 131 composes rules reference and monster editor widgets at stable owners",
+	async () => {
+		const [
+			appSource,
+			mainContentSource,
+			encounterSource,
+			rulesContentSource,
+			rulesViewSource,
+			rulesHostSource,
+			rulesCompositionSource,
+			rulesRuntimeEntrySource,
+			rulesTypeEntrySource,
+			editorSource,
+			editorCompositionSource,
+			editorRuntimeEntrySource,
+			editorTypeEntrySource,
+			featureEditorSource,
+		] = await Promise.all([
+			fs.readFile("src/App.tsx", "utf8"),
+			fs.readFile("src/app/routing/MainContent.tsx", "utf8"),
+			fs.readFile("src/pages/encounter/ui/EncounterPage.tsx", "utf8"),
+			fs.readFile(
+				"src/widgets/rules-reference-modal/ui/RulesReferenceModalContent.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/rules-reference-modal/ui/RulesReferenceModalView.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/rules-reference-modal/ui/RulesReferenceModalHost.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/rules-reference-modal/ui/rulesReferenceModalComposition.ts",
+				"utf8",
+			),
+			fs.readFile("src/widgets/rules-reference-modal/index.js", "utf8"),
+			fs.readFile("src/widgets/rules-reference-modal/index.d.ts", "utf8"),
+			fs.readFile(
+				"src/widgets/monster-editor-modal/ui/MonsterEditorModal.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/monster-editor-modal/ui/monsterEditorModalComposition.ts",
+				"utf8",
+			),
+			fs.readFile("src/widgets/monster-editor-modal/index.js", "utf8"),
+			fs.readFile("src/widgets/monster-editor-modal/index.d.ts", "utf8"),
+			fs.readFile(
+				"src/features/edit-monster/ui/MonsterFieldEditModal.tsx",
+				"utf8",
+			),
+		]);
+
+		await assertNoSiblingWidgetImports("src/widgets/rules-reference-modal");
+		await assertNoSiblingWidgetImports("src/widgets/monster-editor-modal");
+
+		assert.match(
+			rulesRuntimeEntrySource,
+			/export \{ createRulesReferenceModalContentComponent \} from "\.\/ui\/RulesReferenceModalContent\.tsx";/,
+		);
+		assert.match(
+			rulesRuntimeEntrySource,
+			/export \{ default as RulesReferenceModalHost \} from "\.\/ui\/RulesReferenceModalHost\.tsx";/,
+		);
+		assert.doesNotMatch(
+			rulesRuntimeEntrySource,
+			/export\s*\{[^}]*\bdefault as RulesReferenceModalContent\b/,
+		);
+		assertPublicTypeSurface(rulesTypeEntrySource, [
+			"RulesReferenceModalCompositionSlots",
+			"RulesReferenceModalContentComponent",
+			"RulesReferenceModalContentProps",
+			"RulesReferenceModalHostProps",
+			"RulesReferenceMonsterStatBlockSlotProps",
+			"RulesReferenceSpellsBrowserSlotProps",
+		]);
+		assert.match(
+			editorRuntimeEntrySource,
+			/export \{ createMonsterEditorModalComponent \} from "\.\/ui\/MonsterEditorModal\.tsx";/,
+		);
+		assert.doesNotMatch(
+			editorRuntimeEntrySource,
+			/export\s*\{[^}]*\bdefault as MonsterEditorModal\b/,
+		);
+		assertPublicTypeSurface(editorTypeEntrySource, [
+			"MonsterEditorModalComponent",
+			"MonsterEditorModalCompositionSlots",
+			"MonsterEditorModalProps",
+			"MonsterEditorRulesReferenceContentSlotProps",
+		]);
+
+		assert.doesNotMatch(
+			rulesCompositionSource,
+			/\b(?:MonsterStatBlockProps|SpellsBrowserProps)\b/,
+		);
+		assertExportedInterfaceFragments(
+			rulesCompositionSource,
+			"RulesReferenceMonsterStatBlockSlotProps",
+			[
+				"monster: BestiaryMonster;",
+				"allowTokenUpload?: boolean;",
+				"showFavoriteAction?: boolean;",
+				"searchHighlight?: string;",
+			],
+		);
+		assertExportedInterfaceFragments(
+			rulesCompositionSource,
+			"RulesReferenceSpellsBrowserSlotProps",
+			[
+				"hideSearchInput?: boolean;",
+				"initialSearch?: string;",
+				"initialDetailedSearch?: boolean;",
+				"initialSelectedName?: string;",
+				"onActiveSpellChange?: ((spell: SpellRecord) => void) | null;",
+				"onSelectSpell?: ((spell: SpellRecord) => void) | null;",
+				"renderOptions?: RichContentRenderOptions;",
+			],
+		);
+		assert.match(
+			rulesCompositionSource,
+			/export interface RulesReferenceModalCompositionSlots \{\s*MonsterStatBlock: ComponentType<RulesReferenceMonsterStatBlockSlotProps>;\s*SpellsBrowser: ComponentType<RulesReferenceSpellsBrowserSlotProps>;\s*\}/,
+		);
+		assert.match(
+			`${rulesCompositionSource}\n${rulesContentSource}`,
+			/export type RulesReferenceModalContentComponent\s*=\s*\(props: RulesReferenceModalContentProps\) => ReactNode;/,
+		);
+		assert.match(
+			rulesCompositionSource,
+			/onSelectReference\?: \(\(selection: ReferenceSelection\) => void\) \| null;/,
+		);
+		assert.doesNotMatch(
+			rulesContentSource,
+			/ReferenceSelection<UiReferenceItem>/,
+		);
+		assert.match(
+			rulesContentSource,
+			/export type RulesReferenceModalContentInternalProps\s*=\s*RulesReferenceModalContentProps & RulesReferenceModalCompositionSlots;/,
+		);
+		assert.match(
+			rulesViewSource,
+			/export interface ReferenceTabView extends ReferenceTabPolicy/,
+		);
+		assert.match(
+			rulesViewSource,
+			/export interface RulesReferenceModalViewProps\s*extends RulesReferenceModalCompositionSlots/,
+		);
+		assert.doesNotMatch(
+			rulesTypeEntrySource,
+			/\b(?:RulesReferenceModalContentInternalProps|ReferenceTabView|RulesReferenceModalViewProps)\b/,
+		);
+
+		assert.match(
+			rulesContentSource,
+			/export function createRulesReferenceModalContentComponent\(\{\s*MonsterStatBlock,\s*SpellsBrowser,\s*\}: RulesReferenceModalCompositionSlots\): RulesReferenceModalContentComponent \{/,
+		);
+		const configuredRulesContentTag = getRequiredSourceMatch(
+			rulesContentSource,
+			/<RulesReferenceModalContent(?=\s|>)[\s\S]*?\/>/,
+		);
+		assert.match(
+			configuredRulesContentTag,
+			/<RulesReferenceModalContent\s*\{\.\.\.props\}/,
+		);
+		assert.match(
+			configuredRulesContentTag,
+			/\bMonsterStatBlock=\{MonsterStatBlock\}/,
+		);
+		assert.match(
+			configuredRulesContentTag,
+			/\bSpellsBrowser=\{SpellsBrowser\}/,
+		);
+		assert.match(
+			rulesContentSource,
+			/function ConfiguredRulesReferenceModalContent\(\s*props: RulesReferenceModalContentProps,?\s*\) \{[\s\S]*?return ConfiguredRulesReferenceModalContent;\s*\}/,
+		);
+
+		const viewTag = getRequiredSourceMatch(
+			rulesContentSource,
+			/<RulesReferenceModalView(?=\s|>)[\s\S]*?\/>/,
+		);
+		assert.deepEqual(readSourceJsxPropNames(viewTag), [
+			"activeTab",
+			"tabs",
+			"query",
+			"isDetailedSearch",
+			"activeSelectedName",
+			"tabsWithSearchMatches",
+			"canNavigateBack",
+			"canNavigateForward",
+			"isLoading",
+			"normalizedQuery",
+			"filteredItems",
+			"selectedItem",
+			"selectedMeta",
+			"canInsertReference",
+			"listRef",
+			"renderReferenceItem",
+			"onNavigateHistory",
+			"onQueryChange",
+			"onToggleDetailedSearch",
+			"onSelectTab",
+			"onEmbeddedSelection",
+			"onSelectSpell",
+			"onInsertReference",
+			"MonsterStatBlock",
+			"SpellsBrowser",
+		]);
+		assert.match(viewTag, /\bcanInsertReference=\{Boolean\(onSelectReference\)\}/);
+		assert.match(
+			viewTag,
+			/\bonSelectSpell=\{getEnabledHandler\(onSelectReference, selectSpellReference\)\}/,
+		);
+
+		const searchSource = getRequiredSourceSlice(
+			rulesViewSource,
+			"function ReferenceSearch(",
+			"function ReferenceTabs(",
+		);
+		assertSourceTokensInOrder(
+			searchSource,
+			[
+				"onClick={() => onNavigateHistory(-1)}",
+				"disabled={!canNavigateBack}",
+				"onClick={() => onNavigateHistory(1)}",
+				"disabled={!canNavigateForward}",
+				"onChange={(event) => onQueryChange(event.target.value)}",
+				"onClick={onToggleDetailedSearch}",
+			],
+			"reference navigation",
+		);
+
+		const sidebarSource = getRequiredSourceSlice(
+			rulesViewSource,
+			"function ReferenceSidebar(",
+			"function StandardReferenceLayout(",
+		);
+		assertSourceTokensInOrder(
+			sidebarSource,
+			[
+				"if (isLoading)",
+				'lang.t("Loading...")',
+				"if (!filteredItems.length)",
+				"lang.t(activeTab.emptyLabel)",
+				"const searchMode = isDetailedSearch ? \"detailed\" : \"simple\"",
+				"<ReactList",
+				"itemRenderer={renderReferenceItem}",
+				"length={filteredItems.length}",
+				'type="uniform"',
+			],
+			"reference loading",
+		);
+
+		assert.match(
+			rulesViewSource,
+			/if \(!selectedItem\) return <div className="RulesReferenceModalContent__content" \/>;/,
+		);
+		assert.match(
+			rulesViewSource,
+			/const Entry = activeTab\.id === "bestiary" \? BestiaryReferenceEntry : GenericReferenceEntry;/,
+		);
+		assert.match(
+			rulesViewSource,
+			/return renderRecursiveContent\(item\.entries, query\);/,
+		);
+		const bestiaryStatTag = getRequiredSourceMatch(
+			rulesViewSource,
+			/<MonsterStatBlock(?=\s|>)[\s\S]*?\/>/,
+		);
+		assert.deepEqual(readSourceJsxPropNames(bestiaryStatTag), [
+			"monster",
+			"allowTokenUpload",
+			"showFavoriteAction",
+			"searchHighlight",
+		]);
+		assert.match(bestiaryStatTag, /\bmonster=\{item as BestiaryMonster\}/);
+		assert.match(bestiaryStatTag, /\ballowTokenUpload=\{false\}/);
+		assert.match(bestiaryStatTag, /\bshowFavoriteAction=\{false\}/);
+		assert.match(bestiaryStatTag, /\bsearchHighlight=\{query\}/);
+
+		const spellsTag = getRequiredSourceMatch(
+			rulesViewSource,
+			/<SpellsBrowser(?=\s|>)[\s\S]*?\/>/,
+		);
+		assert.match(spellsTag, /\bhideSearchInput\b/);
+		assert.deepEqual(readSourceJsxPropNames(spellsTag), [
+			"initialSearch",
+			"initialDetailedSearch",
+			"initialSelectedName",
+			"onActiveSpellChange",
+			"onSelectSpell",
+			"renderOptions",
+		]);
+		assert.match(spellsTag, /\binitialSearch=\{query\}/);
+		assert.match(spellsTag, /\binitialDetailedSearch=\{isDetailedSearch\}/);
+		assert.match(spellsTag, /\binitialSelectedName=\{activeSelectedName\}/);
+		assert.match(
+			spellsTag,
+			/onActiveSpellChange=\{\(spell\) =>\s*onEmbeddedSelection\("spells", getSpellReferenceName\(spell\)\)\}/,
+		);
+		assert.match(spellsTag, /\bonSelectSpell=\{onSelectSpell\}/);
+		assert.match(spellsTag, /\brenderOptions=\{\{\}\}/);
+		assert.match(
+			rulesViewSource,
+			/\{activeTab\.id === "spells" \? \(\s*<EmbeddedSpellReference[\s\S]*?\) : \(\s*<StandardReferenceLayout/,
+		);
+
+		assert.match(
+			rulesCompositionSource,
+			/export type RulesReferenceModalHostProps\s*=\s*RulesReferenceModalCompositionSlots;/,
+		);
+		assert.match(
+			rulesHostSource,
+			/export default function RulesReferenceModalHost\(\{\s*MonsterStatBlock,\s*SpellsBrowser,\s*\}: RulesReferenceModalHostProps\)/,
+		);
+		const hostContentTag = getRequiredSourceMatch(
+			rulesHostSource,
+			/<RulesReferenceModalContent(?=\s|>)[\s\S]*?\/>/,
+		);
+		assert.deepEqual(readSourceJsxPropNames(hostContentTag), [
+			"initialTab",
+			"initialName",
+			"forceTab",
+			"MonsterStatBlock",
+			"SpellsBrowser",
+		]);
+		assert.match(
+			rulesHostSource,
+			/handledRequestIdRef\.current = plan\.requestId;\s*if \(!plan\.shouldOpen\) return;/,
+		);
+
+		assert.doesNotMatch(
+			editorCompositionSource,
+			/\bRulesReferenceModalContentProps\b/,
+		);
+		assert.match(
+			editorCompositionSource,
+			/export interface MonsterEditorRulesReferenceContentSlotProps \{\s*onSelectReference: \(selection: \{ tag: string \}\) => void;\s*\}/,
+		);
+		assert.match(
+			editorCompositionSource,
+			/export interface MonsterEditorModalCompositionSlots \{\s*RulesReferenceContent: \(\s*props: MonsterEditorRulesReferenceContentSlotProps,?\s*\) => ReactNode;\s*\}/,
+		);
+		assert.match(
+			`${editorCompositionSource}\n${editorSource}`,
+			/export type MonsterEditorModalComponent\s*=\s*ComponentType<MonsterEditorModalProps>;/,
+		);
+		assert.match(
+			editorSource,
+			/export function createMonsterEditorModalComponent\(\{\s*RulesReferenceContent,\s*\}: MonsterEditorModalCompositionSlots\): MonsterEditorModalComponent \{/,
+		);
+		const adapterIndex = editorSource.indexOf("function RulesReferenceAdapter(");
+		const configuredEditorIndex = editorSource.indexOf(
+			"function ConfiguredMonsterEditorModal(",
+		);
+		const editorFactoryReturnIndex = editorSource.indexOf(
+			"return ConfiguredMonsterEditorModal;",
+		);
+		assert.ok(adapterIndex >= 0);
+		assert.ok(configuredEditorIndex > adapterIndex);
+		assert.ok(editorFactoryReturnIndex > configuredEditorIndex);
+		assert.match(
+			editorSource,
+			/onSelectReference=\{\(selection\) =>\s*onSelectReference\(\{ \.\.\.selection \}\)\s*\}/,
+		);
+		const configuredEditorTag = getRequiredSourceMatch(
+			editorSource,
+			/<MonsterEditorModal(?=\s|>)[\s\S]*?\/>/,
+		);
+		assert.match(configuredEditorTag, /<MonsterEditorModal\s*\{\.\.\.props\}/);
+		assert.match(
+			configuredEditorTag,
+			/\bRulesReferenceContent=\{RulesReferenceAdapter\}/,
+		);
+		assert.match(
+			featureEditorSource,
+			/\{ruleInsertTarget && RulesReferenceContent && \([\s\S]*?<RulesReferenceContent onSelectReference=\{applyRuleInsert\} \/>[\s\S]*?\)\}/,
+		);
+
+		const appHostTag = getRequiredSourceMatch(
+			appSource,
+			/<RulesReferenceModalHost(?=\s|>)[\s\S]*?\/>/,
+		);
+		assert.deepEqual(readSourceJsxPropNames(appHostTag), [
+			"MonsterStatBlock",
+			"SpellsBrowser",
+		]);
+		assert.doesNotMatch(appSource, /createRulesReferenceModalContentComponent\(/);
+
+		assertReferenceOwnerComposition(
+			mainContentSource,
+			"MainContent",
+			"function EmptyState",
+		);
+		assertReferenceOwnerComposition(
+			encounterSource,
+			"Encounter",
+			"const api =",
+		);
+
+		assert.match(
+			encounterSource,
+			/\bMonsterEditorModal=\{EncounterMonsterEditorModal\}/,
+		);
+		const directEncounterEditorTag = getRequiredSourceMatch(
+			encounterSource,
+			/<EncounterMonsterEditorModal(?=\s|>)[\s\S]*?\/>/,
+		);
+		assert.deepEqual(readSourceJsxPropNames(directEncounterEditorTag), [
+			"editingMonster",
+			"onCancel",
+			"onSave",
+			"title",
+		]);
 	},
 );
 
@@ -30007,9 +30551,9 @@ await run("parser renders dice and creature tags as interactive components", asy
 	assert.match(rulesLinkModelSource, /function getCreatureReferenceName/);
 	assert.doesNotMatch(rulesLinkSource, /onNavigate/);
 	assert.doesNotMatch(rulesReferenceSource, /import Bestiary from/);
-	assert.match(
+	assert.doesNotMatch(
 		rulesReferenceSource,
-		/import \{ MonsterStatBlock \} from "\.\.\/\.\.\/monster-stat-block\/index\.js"/,
+		/from "\.\.\/\.\.\/(?:monster-stat-block|spells-browser)\/index\.js"/,
 	);
 	assert.match(rulesReferenceSource, /bestiaryApi/);
 	assert.match(rulesReferenceSource, /MonsterStatBlockModel/);

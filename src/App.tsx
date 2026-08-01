@@ -18,6 +18,8 @@ import { Sidebar } from "./widgets/sidebar/index.js";
 import { MentionPickerModalContent } from "./features/editor/ui/index.js";
 import { CreateCampaignModalContent } from "./features/campaign-create/index.js";
 import { RulesReferenceModalHost } from "./widgets/rules-reference-modal/index.js";
+import { MonsterStatBlock } from "./widgets/monster-stat-block/index.js";
+import { SpellsBrowser } from "./widgets/spells-browser/index.js";
 import { lang } from "./shared/lib/index.js";
 import {
 	alert,
@@ -437,7 +439,10 @@ export default function App() {
 				)}
 				<MessageBoxHost />
 				<DiceCalculator />
-				<RulesReferenceModalHost />
+				<RulesReferenceModalHost
+					MonsterStatBlock={MonsterStatBlock}
+					SpellsBrowser={SpellsBrowser}
+				/>
 			</CampaignEntityModalProvider>
 		</div>
 	);

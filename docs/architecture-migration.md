@@ -654,6 +654,8 @@ Next:
 - Phase 129 removed exactly the `AiAssistantPanel.tsx` → `ai-response-modal` importer-file edge and its stale allowance. Widget debt fell from 4 importer files / 7 directed pairs / 7 file edges / 7 declarations to 3 / 6 / 6 / 6. Features remain unchanged at 10 importer files / 12 directed pairs / 14 file edges / 18 declarations, and the widget catalog remains at 11 slices. Permanent source-inventory coverage locks both owner injection paths and the reduced baseline, and the expanded complete suite passes 415/415 tests. `MD-R05` remains open; Phase 130 must audit the next coordinated bounded cluster.
 - Completed Phase 130 by turning the AI response modal into a configured widget boundary. The public `createAiResponseModalComponent` factory accepts lower-layer structural `CharacterCard`, `LocationCard`, `MonsterStatBlock`, and `MonsterEditorModal` slots while keeping the feature-owned `AiResponseModalComponent` contract unchanged. `MainContent` and `EncounterPage` each create one stable module-scope configured response component; both direct Encounter/Bestiary response consumers reuse the same page-owned symbol. The raw modal renderer is private and no longer imports sibling widgets. This preserves the route assistant key and mount guard, the Encounter overlay guard and Bestiary forwarding, raw `useState` → draft-controller → generated-prompt null-guard order, card/stat-block branches and conditional callbacks, editor state, and `AiResponseModalView` before the editor.
 - Phase 130 removed exactly the three `AiResponseModal.tsx` sibling-widget allowances. Widget debt fell from 3 importer files / 6 directed pairs / 6 file edges / 6 declarations to 2 / 3 / 3 / 3. Features remain unchanged at 10 importer files / 12 directed pairs / 14 file edges / 18 declarations, and the widget catalog remains at 11 slices. Permanent source-inventory coverage locks the factory, stable owner bindings, slot inventory, render order, and reduced baseline, and the expanded complete suite passes 416/416 tests. `MD-R05` remains open; Phase 131 must audit the remaining coordinated rules-reference/editor widget cluster.
+- Completed Phase 131 by configuring the remaining rules-reference/editor widget chain at its app and page owners. Public `createRulesReferenceModalContentComponent` binds the stable `MonsterStatBlock` and `SpellsBrowser` symbols into owner-specific rules-reference content in `MainContent` and `EncounterPage`, while `App` passes those same symbols directly to the public `RulesReferenceModalHost`. The configured content then feeds owner-specific monster editors, and each owner reuses its configured editor in every direct, Bestiary, and AI-response path. Raw rules content/view and monster-editor renderers remain private and no longer import sibling widgets. Host request gating, content loading/navigation/history, empty details, selected-Bestiary-only stat rendering, spells-tab-only browser rendering, exact embedded-selection projection, fresh render options, rule-picker gating, selection cloning, and editor prop precedence remain unchanged.
+- Phase 131 removed all three remaining widget importer-file allowances. Widget debt fell from 2 importer files / 3 directed pairs / 3 file edges / 3 declarations to zero across all four measures. Features remain unchanged at 10 importer files / 12 directed pairs / 14 file edges / 18 declarations, and the widget catalog remains at 11 slices. Permanent source-inventory coverage locks the factories, stable owner bindings, render gates, adapter behavior, and empty widget baseline, and the expanded complete suite passes 417/417 tests. `MD-R05` remains open for feature debt; Phase 132 must audit the next coordinated feature cluster.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -675,7 +677,9 @@ app root and lowered the widget gate at 414/414 tests. Phase 129 moved AI
 response-modal composition to the assistant's owners and lowered the widget
 gate at 415/415 tests. Phase 130 configured the raw response renderer at stable
 app/page composition roots and lowered the widget gate at 416/416 tests. Phase
-131 is the next numbered migration phase.
+131 configured the remaining rules-reference/editor chain, reduced the
+same-layer widget baseline to zero, and passed its expanded gate at 417/417
+tests. Phase 132 is the next numbered migration phase.
 
 ### Provenance and transfer rule
 
@@ -853,8 +857,18 @@ Status: **In progress**
   importer files / 3 directed pairs / 3 file edges / 3 declarations while
   features remain at 10 / 12 / 14 / 18 and the widget catalog remains at 11
   slices.
-- [ ] Audit the remaining coordinated rules-reference/editor widget cluster in
-  Phase 131, then continue cluster-by-cluster until no unapproved edge remains.
+- [x] Configure the remaining rules-reference/editor widget cluster at stable
+  app/page composition roots in Phase 131: bind `MonsterStatBlock` and
+  `SpellsBrowser` into owner-specific rules content through
+  `createRulesReferenceModalContentComponent`, pass both slots directly to the
+  public app-owned global host, configure owner-specific monster editors, keep
+  raw content/view/editor renderers private,
+  remove the final three stale widget allowances, and lower widget debt to zero
+  across importer files, directed pairs, file edges, and declarations while
+  features remain at 10 / 12 / 14 / 18 and the widget catalog remains at 11
+  slices.
+- [ ] Audit the next coordinated feature cluster in Phase 132, then continue
+  cluster-by-cluster until no unapproved edge remains.
 - [x] Run focused recovery tests, performance budgets, architecture checks,
   syntax/diff hygiene, and UTF-8/replacement-character checks.
 - [ ] Run the complete lint and typecheck gates after the declared local
@@ -862,8 +876,8 @@ Status: **In progress**
 - [x] Run the full `npm test` gate; Phase 119 closed at 398 tests, Phase 122
   passed 405/405, Phase 123 passed 409/409, Phase 124 passed 410/410, and Phase
   125 passed 411/411, Phase 126 passed 412/412, Phase 127 passed 413/413, Phase
-  128 passed 414/414, Phase 129 passed 415/415, and the expanded Phase 130 suite
-  passes 416/416 tests.
+  128 passed 414/414, Phase 129 passed 415/415, Phase 130 passed 416/416, and
+  the expanded Phase 131 suite passes 417/417 tests.
 
 ### Recovery R6 — Typed app-owned store composition
 

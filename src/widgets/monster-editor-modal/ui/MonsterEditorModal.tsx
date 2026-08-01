@@ -1,34 +1,41 @@
 import {
 	MonsterFieldEditModal,
 	type MonsterFieldEditModalProps,
-	type RuleReferenceSelection,
 } from "../../../features/edit-monster/index.js";
-import { RulesReferenceModalContent } from "../../rules-reference-modal/index.js";
+import type {
+	MonsterEditorModalComponent,
+	MonsterEditorModalCompositionSlots,
+	MonsterEditorModalProps,
+	MonsterEditorRulesReferenceContentSlotProps,
+} from "./monsterEditorModalComposition.ts";
 
-export type MonsterEditorModalProps = Omit<
-	MonsterFieldEditModalProps,
-	"RulesReferenceContent"
->;
-
-interface RulesReferenceAdapterProps {
-	onSelectReference: (selection: RuleReferenceSelection) => void;
+function MonsterEditorModal(props: MonsterFieldEditModalProps) {
+	return <MonsterFieldEditModal {...props} />;
 }
 
-function RulesReferenceAdapter({
-	onSelectReference,
-}: RulesReferenceAdapterProps) {
-	return (
-		<RulesReferenceModalContent
-			onSelectReference={(selection) => onSelectReference({ ...selection })}
-		/>
-	);
-}
+export function createMonsterEditorModalComponent({
+	RulesReferenceContent,
+}: MonsterEditorModalCompositionSlots): MonsterEditorModalComponent {
+	function RulesReferenceAdapter({
+		onSelectReference,
+	}: MonsterEditorRulesReferenceContentSlotProps) {
+		return (
+			<RulesReferenceContent
+				onSelectReference={(selection) =>
+					onSelectReference({ ...selection })
+				}
+			/>
+		);
+	}
 
-export default function MonsterEditorModal(props: MonsterEditorModalProps) {
-	return (
-		<MonsterFieldEditModal
-			{...props}
-			RulesReferenceContent={RulesReferenceAdapter}
-		/>
-	);
+	function ConfiguredMonsterEditorModal(props: MonsterEditorModalProps) {
+		return (
+			<MonsterEditorModal
+				{...props}
+				RulesReferenceContent={RulesReferenceAdapter}
+			/>
+		);
+	}
+
+	return ConfiguredMonsterEditorModal;
 }

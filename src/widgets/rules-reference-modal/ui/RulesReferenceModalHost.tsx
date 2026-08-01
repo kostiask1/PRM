@@ -3,10 +3,11 @@ import { useEffect, useRef } from "react";
 import { lang } from "../../../shared/lib/index.js";
 import { openModalRequest, useAppSelector } from "../../../shared/model/index.js";
 import RulesReferenceModalContent from "./RulesReferenceModalContent.tsx";
+import type { RulesReferenceModalHostProps } from "./rulesReferenceModalComposition.ts";
 
 import { getReferenceModalHostPlan, type ReferenceTabId } from "../model.js";
 
-interface OpenRulesReferenceModalOptions {
+interface OpenRulesReferenceModalOptions extends RulesReferenceModalHostProps {
 	initialTab?: ReferenceTabId;
 	initialName?: string;
 	forceTab?: boolean;
@@ -16,7 +17,9 @@ function openRulesReferenceModalContent({
 	initialTab = "conditions",
 	initialName = "",
 	forceTab = false,
-}: OpenRulesReferenceModalOptions = {}) {
+	MonsterStatBlock,
+	SpellsBrowser,
+}: OpenRulesReferenceModalOptions) {
 	openModalRequest({
 		title: lang.t("Rules Reference"),
 		type: "custom",
@@ -26,12 +29,17 @@ function openRulesReferenceModalContent({
 				initialTab={initialTab}
 				initialName={initialName}
 				forceTab={forceTab}
+				MonsterStatBlock={MonsterStatBlock}
+				SpellsBrowser={SpellsBrowser}
 			/>
 		),
 	});
 }
 
-export default function RulesReferenceModalHost() {
+export default function RulesReferenceModalHost({
+	MonsterStatBlock,
+	SpellsBrowser,
+}: RulesReferenceModalHostProps) {
 	const navigationRequest = useAppSelector(
 		(state) => state.rulesReference.navigationRequest,
 	);
@@ -52,8 +60,10 @@ export default function RulesReferenceModalHost() {
 			initialTab: plan.initialTab as ReferenceTabId,
 			initialName: plan.initialName,
 			forceTab: plan.forceTab,
+			MonsterStatBlock,
+			SpellsBrowser,
 		});
-	}, [isOpen, navigationRequest]);
+	}, [MonsterStatBlock, SpellsBrowser, isOpen, navigationRequest]);
 
 	return null;
 }

@@ -5,16 +5,16 @@ import { renderRecursiveContent } from "../../../features/rich-content/index.js"
 import { Input } from "../../../features/editor/ui/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import { Button, highlightText } from "../../../shared/ui/index.js";
-import { MonsterStatBlock } from "../../monster-stat-block/index.js";
-import { SpellsBrowser } from "../../spells-browser/index.js";
 import { getReferenceItemKey, getSpellReferenceName, type ReferenceItem, type ReferenceTabId, type ReferenceTabPolicy } from "../model.js";
 import type { SpellRecord } from "../../../entities/spell/index.js";
+import type { RulesReferenceModalCompositionSlots } from "./rulesReferenceModalComposition.ts";
 
-interface ReferenceTabView extends ReferenceTabPolicy {
+export interface ReferenceTabView extends ReferenceTabPolicy {
 	meta?: (item: ReferenceItem) => string;
 }
 
-export interface RulesReferenceModalViewProps {
+export interface RulesReferenceModalViewProps
+	extends RulesReferenceModalCompositionSlots {
 	activeTab: ReferenceTabView;
 	tabs: ReferenceTabView[];
 	query: string;
@@ -75,28 +75,36 @@ function ReferenceDetailsHeader({ activeTab, query, selectedItem, selectedMeta, 
 	);
 }
 
-function BestiaryReferenceEntry({ item, query }: { item: ReferenceItem; query: string }) {
+type ReferenceEntryProps = Pick<
+	RulesReferenceModalViewProps,
+	"MonsterStatBlock"
+> & {
+	item: ReferenceItem;
+	query: string;
+};
+
+function BestiaryReferenceEntry({ MonsterStatBlock, item, query }: ReferenceEntryProps) {
 	return <MonsterStatBlock monster={item as BestiaryMonster} allowTokenUpload={false} showFavoriteAction={false} searchHighlight={query} />;
 }
 
-function GenericReferenceEntry({ item, query }: { item: ReferenceItem; query: string }) {
+function GenericReferenceEntry({ item, query }: ReferenceEntryProps) {
 	return renderRecursiveContent(item.entries, query);
 }
 
-function ReferenceDetails({ activeTab, query, selectedItem, selectedMeta, canInsertReference, onInsertReference }: Pick<RulesReferenceModalViewProps, "activeTab" | "query" | "selectedItem" | "selectedMeta" | "canInsertReference" | "onInsertReference">) {
+function ReferenceDetails({ activeTab, query, selectedItem, selectedMeta, canInsertReference, onInsertReference, MonsterStatBlock }: Pick<RulesReferenceModalViewProps, "activeTab" | "query" | "selectedItem" | "selectedMeta" | "canInsertReference" | "onInsertReference" | "MonsterStatBlock">) {
 	if (!selectedItem) return <div className="RulesReferenceModalContent__content" />;
 	const Entry = activeTab.id === "bestiary" ? BestiaryReferenceEntry : GenericReferenceEntry;
 	return (
 		<div className="RulesReferenceModalContent__content">
 			<ReferenceDetailsHeader {...{ activeTab, query, selectedItem, selectedMeta, canInsertReference, onInsertReference }} />
 			<div key={getReferenceItemKey(activeTab.id, selectedItem)} className="RulesReferenceModalContent__entryContent">
-				<Entry item={selectedItem} query={query} />
+				<Entry MonsterStatBlock={MonsterStatBlock} item={selectedItem} query={query} />
 			</div>
 		</div>
 	);
 }
 
-function EmbeddedSpellReference({ query, isDetailedSearch, activeSelectedName, onEmbeddedSelection, onSelectSpell }: Pick<RulesReferenceModalViewProps, "query" | "isDetailedSearch" | "activeSelectedName" | "onEmbeddedSelection" | "onSelectSpell">) {
+function EmbeddedSpellReference({ query, isDetailedSearch, activeSelectedName, onEmbeddedSelection, onSelectSpell, SpellsBrowser }: Pick<RulesReferenceModalViewProps, "query" | "isDetailedSearch" | "activeSelectedName" | "onEmbeddedSelection" | "onSelectSpell" | "SpellsBrowser">) {
 	return (
 		<div className="RulesReferenceModalContent__spellBrowser">
 			<SpellsBrowser hideSearchInput initialSearch={query} initialDetailedSearch={isDetailedSearch} initialSelectedName={activeSelectedName} onActiveSpellChange={(spell) => onEmbeddedSelection("spells", getSpellReferenceName(spell))} onSelectSpell={onSelectSpell} renderOptions={{}} />
@@ -111,7 +119,7 @@ function ReferenceSidebar({ activeTab, isDetailedSearch, isLoading, normalizedQu
 	return <ReactList key={`${activeTab.id}:${normalizedQuery}:${searchMode}`} ref={listRef} itemRenderer={renderReferenceItem} length={filteredItems.length} type="uniform" />;
 }
 
-function StandardReferenceLayout(props: Pick<RulesReferenceModalViewProps, "activeTab" | "query" | "isDetailedSearch" | "isLoading" | "normalizedQuery" | "filteredItems" | "selectedItem" | "selectedMeta" | "canInsertReference" | "listRef" | "renderReferenceItem" | "onInsertReference">) {
+function StandardReferenceLayout(props: Pick<RulesReferenceModalViewProps, "activeTab" | "query" | "isDetailedSearch" | "isLoading" | "normalizedQuery" | "filteredItems" | "selectedItem" | "selectedMeta" | "canInsertReference" | "listRef" | "renderReferenceItem" | "onInsertReference" | "MonsterStatBlock">) {
 	return (
 		<div className="RulesReferenceModalContent__main">
 			<div className="RulesReferenceModalContent__sidebar"><div className="RulesReferenceModalContent__list">
@@ -123,15 +131,15 @@ function StandardReferenceLayout(props: Pick<RulesReferenceModalViewProps, "acti
 }
 
 export default function RulesReferenceModalView(props: RulesReferenceModalViewProps) {
-	const { activeTab, tabs, query, isDetailedSearch, activeSelectedName, tabsWithSearchMatches, canNavigateBack, canNavigateForward, isLoading, normalizedQuery, filteredItems, selectedItem, selectedMeta, canInsertReference, listRef, renderReferenceItem, onNavigateHistory, onQueryChange, onToggleDetailedSearch, onSelectTab, onEmbeddedSelection, onSelectSpell, onInsertReference } = props;
+	const { activeTab, tabs, query, isDetailedSearch, activeSelectedName, tabsWithSearchMatches, canNavigateBack, canNavigateForward, isLoading, normalizedQuery, filteredItems, selectedItem, selectedMeta, canInsertReference, listRef, renderReferenceItem, onNavigateHistory, onQueryChange, onToggleDetailedSearch, onSelectTab, onEmbeddedSelection, onSelectSpell, onInsertReference, MonsterStatBlock, SpellsBrowser } = props;
 	return (
 		<div className="RulesReferenceModalContent RulesReferenceModalContent__withTabs">
 			<ReferenceSearch {...{ query, isDetailedSearch, canNavigateBack, canNavigateForward, onNavigateHistory, onQueryChange, onToggleDetailedSearch }} />
 			<ReferenceTabs tabs={tabs} activeTab={activeTab} tabsWithSearchMatches={tabsWithSearchMatches} onSelectTab={onSelectTab} />
 			{activeTab.id === "spells" ? (
-				<EmbeddedSpellReference {...{ query, isDetailedSearch, activeSelectedName, onEmbeddedSelection, onSelectSpell }} />
+				<EmbeddedSpellReference {...{ query, isDetailedSearch, activeSelectedName, onEmbeddedSelection, onSelectSpell, SpellsBrowser }} />
 			) : (
-				<StandardReferenceLayout {...{ activeTab, query, isDetailedSearch, isLoading, normalizedQuery, filteredItems, selectedItem, selectedMeta, canInsertReference, listRef, renderReferenceItem, onInsertReference }} />
+				<StandardReferenceLayout {...{ activeTab, query, isDetailedSearch, isLoading, normalizedQuery, filteredItems, selectedItem, selectedMeta, canInsertReference, listRef, renderReferenceItem, onInsertReference, MonsterStatBlock }} />
 			)}
 		</div>
 	);

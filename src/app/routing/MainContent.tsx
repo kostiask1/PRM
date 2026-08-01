@@ -8,8 +8,10 @@ import {
 	CharacterCard,
 	LocationCard,
 } from "../../widgets/campaign-entity-card/index.js";
-import { MonsterEditorModal } from "../../widgets/monster-editor-modal/index.js";
+import { createMonsterEditorModalComponent } from "../../widgets/monster-editor-modal/index.js";
 import { MonsterStatBlock } from "../../widgets/monster-stat-block/index.js";
+import { SpellsBrowser } from "../../widgets/spells-browser/index.js";
+import { createRulesReferenceModalContentComponent } from "../../widgets/rules-reference-modal/index.js";
 import { Outlet, Route, Routes, useLocation } from "react-router";
 import { useAppSelector } from "../../shared/model/index.js";
 import { lang } from "../../shared/lib/index.js";
@@ -17,11 +19,19 @@ import { classNames } from "../../shared/lib/index.js";
 import "../../assets/components/MainContent.css";
 import type { CampaignRecord } from "../../entities/campaign/index.js";
 
+const MainContentRulesReferenceContent =
+	createRulesReferenceModalContentComponent({
+		MonsterStatBlock,
+		SpellsBrowser,
+	});
+const MainContentMonsterEditorModal = createMonsterEditorModalComponent({
+	RulesReferenceContent: MainContentRulesReferenceContent,
+});
 const MainContentAiResponseModal = createAiResponseModalComponent({
 	CharacterCard,
 	LocationCard,
 	MonsterStatBlock,
-	MonsterEditorModal,
+	MonsterEditorModal: MainContentMonsterEditorModal,
 });
 
 function EmptyState({ className = "" }: { className?: string }) {
