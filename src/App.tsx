@@ -14,6 +14,7 @@ import {
 	type AiAttachmentAlertRuntime,
 } from "./features/ai/ui/index.js";
 import MainContent from "./app/routing/MainContent.tsx";
+import CampaignEntityCreationRuntimeHost from "./app/ui/CampaignEntityCreationRuntimeHost.tsx";
 import DiceCalculatorHost from "./app/ui/DiceCalculatorHost.tsx";
 import ImageGalleryRuntimeHost from "./app/ui/ImageGalleryRuntimeHost.tsx";
 import MessageBoxHost from "./app/ui/MessageBoxHost.tsx";
@@ -451,7 +452,8 @@ export default function App() {
 
 	return (
 		<ImageGalleryRuntimeHost>
-			<DiceRequestRuntimeProvider runtime={diceRequestRuntime}>
+			<CampaignEntityCreationRuntimeHost>
+				<DiceRequestRuntimeProvider runtime={diceRequestRuntime}>
 				<EditorMentionPickerRuntimeProvider runtime={editorMentionPickerRuntime}>
 					<AiAttachmentAlertRuntimeProvider runtime={aiAttachmentAlertRuntime}>
 				<RulesReferenceRuntimeProvider runtime={rulesReferenceRuntime}>
@@ -535,7 +537,8 @@ export default function App() {
 				</RulesReferenceRuntimeProvider>
 					</AiAttachmentAlertRuntimeProvider>
 				</EditorMentionPickerRuntimeProvider>
-			</DiceRequestRuntimeProvider>
+				</DiceRequestRuntimeProvider>
+			</CampaignEntityCreationRuntimeHost>
 		</ImageGalleryRuntimeHost>
 	);
 }

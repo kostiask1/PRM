@@ -109,6 +109,8 @@ const AI_FEATURE_PATH_PREFIX = "src/features/ai/";
 const EDITOR_FEATURE_PATH_PREFIX = "src/features/editor/";
 const DICE_FEATURE_PATH_PREFIX = "src/features/dice/";
 const IMAGES_FEATURE_PATH_PREFIX = "src/features/images/";
+const CAMPAIGN_ENTITY_CARD_WIDGET_PATH_PREFIX =
+	"src/widgets/campaign-entity-card/";
 const SHARED_MODEL_PATH = "src/shared/model";
 const APP_MODEL_PATH = "src/app/model";
 
@@ -658,6 +660,16 @@ const IMAGES_STORE_FACADE_RULE = createInjectedRuntimeStoreFacadeRule({
 		"Images must receive app-global preferences and modal effects through its injected runtime and may not import shared/model or app/model directly.",
 });
 
+const CAMPAIGN_ENTITY_CARD_STORE_FACADE_RULE =
+	createInjectedRuntimeStoreFacadeRule({
+		featurePathPrefix: CAMPAIGN_ENTITY_CARD_WIDGET_PATH_PREFIX,
+		description:
+			"Require Campaign Entity Card creation controls to receive app-global effects through their injected runtime.",
+		messageId: "injectedRuntime",
+		message:
+			"Campaign Entity Card creation controls must receive app-global effects through their injected runtime and may not import shared/model or app/model directly.",
+	});
+
 export const FSD_BOUNDARY_PLUGIN = Object.freeze({
 	rules: Object.freeze({
 		"public-entry-imports": FSD_PUBLIC_ENTRY_IMPORT_RULE,
@@ -673,6 +685,8 @@ export const FSD_BOUNDARY_PLUGIN = Object.freeze({
 		"editor-store-facade": EDITOR_STORE_FACADE_RULE,
 		"dice-store-facade": DICE_STORE_FACADE_RULE,
 		"images-store-facade": IMAGES_STORE_FACADE_RULE,
+		"campaign-entity-card-store-facade":
+			CAMPAIGN_ENTITY_CARD_STORE_FACADE_RULE,
 	}),
 });
 

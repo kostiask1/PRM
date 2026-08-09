@@ -3,11 +3,6 @@ import type { CampaignEntityRecord, CampaignEntityType, CharacterData } from "..
 import { buildCreateEntityPayload, submitCreateEntity } from "../../../features/campaign-entity/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import {
-	alert,
-	refreshEntitiesAction,
-	useAppDispatch,
-} from "../../../shared/model/index.js";
-import {
 	Button,
 	Modal,
 	type ButtonSize,
@@ -17,6 +12,7 @@ import {
 import "../../../assets/components/CreateCharacterButton.css";
 import { createCharacterDraft, isCharacterDraftValid } from "../model/campaignEntityCard.ts";
 import CharacterCard from "./CharacterCard.tsx";
+import { useCampaignEntityCreationRuntime } from "./CampaignEntityCreationRuntime.tsx";
 
 export interface CreateCharacterButtonProps {
 	campaignSlug: string;
@@ -39,7 +35,7 @@ export default function CreateCharacterButton({
 	icon = "plus",
 	onCreate = null,
 }: CreateCharacterButtonProps) {
-	const dispatch = useAppDispatch();
+	const { notifyError, refreshEntities } = useCampaignEntityCreationRuntime();
 	const [isOpen, setIsOpen] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [draft, setDraft] = useState<CharacterData>(() => createCharacterDraft(entityType));
@@ -49,7 +45,7 @@ export default function CreateCharacterButton({
 	const closeModal = () => { if (!isSubmitting) setIsOpen(false); };
 	const handleSubmit = async () => {
 		if (!isCharacterDraftValid(draft)) {
-			dispatch(alert({ title: lang.t("Error"), message: lang.t("Name is required to create an entry.") }));
+			notifyError({ title: lang.t("Error"), message: lang.t("Name is required to create an entry.") });
 			return;
 		}
 		const payload = buildCreateEntityPayload({ firstName: "", lastName: "", race: "", class: "", level: 1, motivation: "", description: "", trait: "", notes: [], collapsed: false, isNotesCollapsed: false }, draft);
@@ -60,12 +56,12 @@ export default function CreateCharacterButton({
 				entityType,
 				payload,
 				onCreate: onCreate ?? undefined,
-				onRefreshEntities: () => dispatch(refreshEntitiesAction()),
+				onRefreshEntities: refreshEntities,
 			});
 			setIsOpen(false);
 		} catch (error) {
 			console.error("Failed to create entity from modal", error);
-			dispatch(alert({ title: lang.t("Error"), message: lang.t("Failed to create entity.") }));
+			notifyError({ title: lang.t("Error"), message: lang.t("Failed to create entity.") });
 		} finally {
 			setIsSubmitting(false);
 		}

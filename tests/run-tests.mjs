@@ -1496,6 +1496,8 @@ const FSD_EDITOR_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/editor-store-facade";
 const FSD_DICE_STORE_FACADE_RULE_ID = "fsd-boundaries/dice-store-facade";
 const FSD_IMAGES_STORE_FACADE_RULE_ID = "fsd-boundaries/images-store-facade";
+const FSD_CAMPAIGN_ENTITY_CARD_STORE_FACADE_RULE_ID =
+	"fsd-boundaries/campaign-entity-card-store-facade";
 
 function lintFsdBoundaryRule(
 	source,
@@ -5836,9 +5838,8 @@ await run(
 			assertSourceTokensInOrder(
 				source,
 				[
-					"refreshEntitiesAction",
 					"await submitCreateEntity({",
-					"onRefreshEntities: () => dispatch(refreshEntitiesAction()),",
+					"onRefreshEntities: refreshEntities,",
 				],
 				"widget-provided Campaign Entity refresh command",
 			);
@@ -7179,6 +7180,216 @@ await run(
 		assert.match(
 			eslintSource,
 			/files: \['src\/features\/images\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/images-store-facade': 'error'/,
+		);
+	},
+);
+
+await run(
+	"Phase 147 gives Campaign Entity Card an injected creation runtime",
+	async () => {
+		const [
+			runtimeSource,
+			characterButtonSource,
+			locationButtonSource,
+			hostSource,
+			widgetEntry,
+			widgetTypeEntry,
+			appSource,
+			eslintSource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/widgets/campaign-entity-card/ui/CampaignEntityCreationRuntime.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/campaign-entity-card/ui/CreateCharacterButton.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/campaign-entity-card/ui/CreateLocationButton.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/app/ui/CampaignEntityCreationRuntimeHost.tsx",
+				"utf8",
+			),
+			fs.readFile("src/widgets/campaign-entity-card/index.js", "utf8"),
+			fs.readFile("src/widgets/campaign-entity-card/index.d.ts", "utf8"),
+			fs.readFile("src/App.tsx", "utf8"),
+			fs.readFile("eslint.config.js", "utf8"),
+		]);
+
+		assert.match(
+			runtimeSource,
+			/export interface CampaignEntityCreationRuntime \{\s*notifyError\(payload: CampaignEntityCreationError\): void;\s*refreshEntities\(\): void;\s*\}/,
+		);
+		assertExportedInterfaceFragments(
+			runtimeSource,
+			"CampaignEntityCreationRuntimeProviderProps",
+			[
+				"runtime: CampaignEntityCreationRuntime;",
+				"children?: ReactNode;",
+			],
+		);
+		assertSourceTokensInOrder(
+			runtimeSource,
+			[
+				"createContext<CampaignEntityCreationRuntime | null>(null)",
+				"<CampaignEntityCreationRuntimeContext.Provider value={runtime}>",
+				"const runtime = useContext(CampaignEntityCreationRuntimeContext);",
+				'"CampaignEntityCreationRuntimeProvider is required to render creation controls"',
+			],
+			"Campaign Entity Card creation runtime provider",
+		);
+		assert.match(widgetEntry, /CampaignEntityCreationRuntimeProvider/);
+		assertPublicTypeSurface(widgetTypeEntry, [
+			"CampaignEntityCreationError",
+			"CampaignEntityCreationRuntime",
+			"CampaignEntityCreationRuntimeProviderProps",
+		]);
+		assert.doesNotMatch(
+			`${widgetEntry}\n${widgetTypeEntry}`,
+			/useCampaignEntityCreationRuntime/,
+		);
+		for (const source of [
+			runtimeSource,
+			characterButtonSource,
+			locationButtonSource,
+		]) {
+			assert.doesNotMatch(
+				source,
+				/shared\/model|app\/model|useAppDispatch|useAppSelector|refreshEntitiesAction|\bdispatch\(|\balert\(/,
+			);
+		}
+		assertSourceTokensInOrder(
+			characterButtonSource,
+			[
+				"const { notifyError, refreshEntities } = useCampaignEntityCreationRuntime();",
+				"if (!isCharacterDraftValid(draft)) {",
+				"notifyError({ title: lang.t(\"Error\"), message: lang.t(\"Name is required to create an entry.\") });",
+				"return;",
+				"await submitCreateEntity({",
+				"onCreate: onCreate ?? undefined,",
+				"onRefreshEntities: refreshEntities,",
+				"setIsOpen(false);",
+				"console.error(\"Failed to create entity from modal\", error);",
+				"notifyError({ title: lang.t(\"Error\"), message: lang.t(\"Failed to create entity.\") });",
+				"setIsSubmitting(false);",
+			],
+			"Character creation runtime and submit ordering",
+		);
+		assertSourceTokensInOrder(
+			locationButtonSource,
+			[
+				"const { notifyError, refreshEntities } = useCampaignEntityCreationRuntime();",
+				"if (!isLocationDraftValid(draft)) {",
+				"notifyError({ title: lang.t(\"Error\"), message: lang.t(\"Name is required to create an entry.\") });",
+				"return;",
+				"await submitCreateEntity({",
+				"onCreate: onCreate ?? undefined,",
+				"onRefreshEntities: refreshEntities,",
+				"setIsOpen(false);",
+				"console.error(\"Failed to create location from modal\", error);",
+				"notifyError({ title: lang.t(\"Error\"), message: lang.t(\"Failed to create entity.\") });",
+				"setIsSubmitting(false);",
+			],
+			"Location creation runtime and submit ordering",
+		);
+		assertSourceTokensInOrder(
+			hostSource,
+			[
+				"const dispatch = useAppDispatch();",
+				"const notifyError = useCallback<CampaignEntityCreationRuntime[\"notifyError\"]>(",
+				"dispatch(alert(payload));",
+				"const refreshEntities = useCallback<",
+				"dispatch(refreshEntitiesAction());",
+				"const runtime = useMemo<CampaignEntityCreationRuntime>(",
+				"<CampaignEntityCreationRuntimeProvider runtime={runtime}>",
+			],
+			"narrow Campaign Entity Card app runtime host",
+		);
+		assertSourceTokensInOrder(
+			appSource,
+			[
+				"<ImageGalleryRuntimeHost>",
+				"<CampaignEntityCreationRuntimeHost>",
+				"<DiceRequestRuntimeProvider",
+				"<MainContent />",
+				"</CampaignEntityCreationRuntimeHost>",
+			],
+			"App-owned Campaign Entity Card runtime scope",
+		);
+
+		const forbiddenCampaignEntityCardStoreImporters = [];
+		for (const filePath of await collectFsdSourceFiles(
+			"src/widgets/campaign-entity-card",
+		)) {
+			const source = await fs.readFile(filePath, "utf8");
+			for (const specifier of readStaticFsdSpecifiers(source)) {
+				const modulePath = resolveTestModuleSpecifierPath(filePath, specifier)
+					?.replace(/(?:\.d)?\.(?:[cm]?[jt]sx?)$/, "")
+					.toLowerCase();
+				if (
+					modulePath === "src/shared/model" ||
+					modulePath?.startsWith("src/shared/model/") ||
+					modulePath === "src/app/model" ||
+					modulePath?.startsWith("src/app/model/")
+				) {
+					forbiddenCampaignEntityCardStoreImporters.push([filePath, specifier]);
+				}
+			}
+		}
+		assert.deepEqual(forbiddenCampaignEntityCardStoreImporters, []);
+
+		for (const source of [
+			'import { refreshEntitiesAction } from "../../../shared/model/index.js";',
+			'import { futureStoreFacade } from "../../../shared/model/index.js";',
+			'export { useAppDispatch as dispatch } from "../../../shared/model/index.js";',
+			'export * from "../../../shared/model/index.js";',
+			'import { appStore } from "../../../shared/model/appStore";',
+			'const model = import("/src/shared/model/AppStore.ts?version=1");',
+			'import { appStore } from "/SRC/SHARED/MODEL/AppStore.ts";',
+			'import { appStore } from "/@fs/E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'import { appStore } from "E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'const model = require("..\\\\..\\\\..\\\\shared\\\\model\\\\index.js");',
+			'import.meta.glob("../../../shared/model/appStore.ts", { eager: true });',
+			'import.meta.globEager("../../../app/model/**/*.ts");',
+			'import.meta.glob(["../../../shared/model/appStore.ts"], { eager: true });',
+			'import.meta["glob"]("../../../shared/model/appStore.ts");',
+			'import { useAppSelector } from "../../../app/model/index";',
+		]) {
+			const reports = lintFsdBoundaryRule(
+				source,
+				"src/widgets/campaign-entity-card/ui/CreateCharacterButton.tsx",
+				FSD_CAMPAIGN_ENTITY_CARD_STORE_FACADE_RULE_ID,
+			);
+			assert.equal(reports.length, 1);
+			assert.equal(
+				reports[0].ruleId,
+				FSD_CAMPAIGN_ENTITY_CARD_STORE_FACADE_RULE_ID,
+			);
+		}
+		const mixedCaseImporterReports = lintFsdBoundaryRule(
+			'import { refreshEntitiesAction } from "../../../shared/model/index.js";',
+			"SRC/WIDGETS/CAMPAIGN-ENTITY-CARD/ui/CreateCharacterButton.tsx",
+			FSD_CAMPAIGN_ENTITY_CARD_STORE_FACADE_RULE_ID,
+		);
+		assert.equal(mixedCaseImporterReports.length, 1);
+		assert.equal(
+			mixedCaseImporterReports[0].ruleId,
+			FSD_CAMPAIGN_ENTITY_CARD_STORE_FACADE_RULE_ID,
+		);
+		assert.deepEqual(
+			lintFsdBoundaryRule(
+				'import { refreshEntitiesAction } from "../../../shared/model/index.js";',
+				"src/widgets/campaign-search/ui/GlobalSearchModal.tsx",
+				FSD_CAMPAIGN_ENTITY_CARD_STORE_FACADE_RULE_ID,
+			),
+			[],
+		);
+		assert.match(
+			eslintSource,
+			/files: \['src\/widgets\/campaign-entity-card\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/campaign-entity-card-store-facade': 'error'/,
 		);
 	},
 );

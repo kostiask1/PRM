@@ -720,6 +720,12 @@ export default [
     },
   },
   {
+    files: ['src/widgets/campaign-entity-card/**/*.{js,jsx,ts,tsx}'],
+    rules: {
+      'fsd-boundaries/campaign-entity-card-store-facade': 'error',
+    },
+  },
+  {
     files: [
       'src/features/**/*.{js,jsx,ts,tsx}',
       'src/widgets/**/*.{js,jsx,ts,tsx}',

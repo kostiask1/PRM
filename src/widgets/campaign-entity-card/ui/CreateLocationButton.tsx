@@ -3,11 +3,6 @@ import type { CampaignEntityRecord, LocationData } from "../../../entities/campa
 import { buildCreateEntityPayload, submitCreateEntity } from "../../../features/campaign-entity/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import {
-	alert,
-	refreshEntitiesAction,
-	useAppDispatch,
-} from "../../../shared/model/index.js";
-import {
 	Button,
 	Modal,
 	type ButtonSize,
@@ -17,6 +12,7 @@ import {
 import "../../../assets/components/CreateCharacterButton.css";
 import { createLocationDraft, isLocationDraftValid } from "../model/campaignEntityCard.ts";
 import LocationCard from "./LocationCard.tsx";
+import { useCampaignEntityCreationRuntime } from "./CampaignEntityCreationRuntime.tsx";
 
 export interface CreateLocationButtonProps {
 	campaignSlug: string;
@@ -37,7 +33,7 @@ export default function CreateLocationButton({
 	icon = "plus",
 	onCreate = null,
 }: CreateLocationButtonProps) {
-	const dispatch = useAppDispatch();
+	const { notifyError, refreshEntities } = useCampaignEntityCreationRuntime();
 	const [isOpen, setIsOpen] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [draft, setDraft] = useState<LocationData>(() => createLocationDraft());
@@ -46,7 +42,7 @@ export default function CreateLocationButton({
 	const closeModal = () => { if (!isSubmitting) setIsOpen(false); };
 	const handleSubmit = async () => {
 		if (!isLocationDraftValid(draft)) {
-			dispatch(alert({ title: lang.t("Error"), message: lang.t("Name is required to create an entry.") }));
+			notifyError({ title: lang.t("Error"), message: lang.t("Name is required to create an entry.") });
 			return;
 		}
 		const payload = buildCreateEntityPayload({ name: "", description: "", notes: [], imageUrl: null, collapsed: false, isNotesCollapsed: false }, draft);
@@ -57,12 +53,12 @@ export default function CreateLocationButton({
 				entityType: "locations",
 				payload,
 				onCreate: onCreate ?? undefined,
-				onRefreshEntities: () => dispatch(refreshEntitiesAction()),
+				onRefreshEntities: refreshEntities,
 			});
 			setIsOpen(false);
 		} catch (error) {
 			console.error("Failed to create location from modal", error);
-			dispatch(alert({ title: lang.t("Error"), message: lang.t("Failed to create entity.") }));
+			notifyError({ title: lang.t("Error"), message: lang.t("Failed to create entity.") });
 		} finally {
 			setIsSubmitting(false);
 		}
