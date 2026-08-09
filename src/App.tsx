@@ -69,7 +69,7 @@ import {
 	syncNavigationFromPath,
 	useAppDispatch,
 	useAppSelector,
-} from "./shared/model/index.js";
+} from "./app/model/index.js";
 
 const APP_EDITABLE_FIELD_ENTITY_LINK_RUNTIME = Object.freeze({
 	EntityLinkContext,

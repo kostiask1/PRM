@@ -13,7 +13,7 @@ import { MonsterStatBlock } from "../../widgets/monster-stat-block/index.js";
 import { SpellsBrowser } from "../../widgets/spells-browser/index.js";
 import { createRulesReferenceModalContentComponent } from "../../widgets/rules-reference-modal/index.js";
 import { Outlet, Route, Routes, useLocation } from "react-router";
-import { useAppSelector } from "../../shared/model/index.js";
+import { useAppSelector } from "../model/index.js";
 import { lang } from "../../shared/lib/index.js";
 import { classNames } from "../../shared/lib/index.js";
 import "../../assets/components/MainContent.css";

@@ -6,14 +6,16 @@ lineage and is not a migration baseline.
 
 | ID | Status | Debt and evidence | Removal condition | Target |
 | --- | --- | --- | --- | --- |
-| MD-R02 | Planned | The configured application store still lives in strict `src/shared/model/appStore.ts`. The accidental commit's JavaScript store design is incompatible with the current typed reducers and consumers. | Design an app-owned composition root that injects lower-layer reducers/contracts, migrate consumers incrementally, and retain a typed public compatibility boundary until no longer needed. | Phase 136 |
+| MD-R02 | In progress | Phase 136 moved the actual configured store to strict `src/app/model/appStore.ts`; `shared/model/appStore.ts` is now a typed delegation-only compatibility facade. Lower-layer consumers still use that facade while their ownership is migrated incrementally. The accidental commit's JavaScript store design remains incompatible with the current typed reducers and consumers. | Retire the compatibility facade only after its consumers no longer need it or a narrower public contract is explicitly established, while preserving reducer, realtime, modal, navigation, settings, selector, and dispatch behavior. | Phase 137+ |
 | MD-R04 | Verification | Recovered campaign/reference lint restrictions are installed and Fallow reports zero boundary violations or cycles. Complete lint/typecheck execution is blocked by the incomplete local dependency tree: `@typescript-eslint/parser` and the `tsc` binary are absent. | Restore/install the declared development dependencies and pass the unchanged complete lint and typecheck gates. | Recovery R5 |
 
 Phase 135 closes `MD-R05` at 421/421 tests with empty production feature and
-widget same-layer baselines (`0 / 0 / 0 / 0` each). This closes the measured
-same-layer dependency debt, not the whole FSD migration: `MD-R02` remains
-planned for Phase 136, and `MD-R04` remains verification-blocked until the
-declared local lint/typecheck tooling is available.
+widget same-layer baselines (`0 / 0 / 0 / 0` each). Phase 136 passes 422/422
+tests and establishes the app-owned store composition plus enforced typed
+compatibility boundary. This does not close the whole FSD migration: `MD-R02`
+remains in progress while lower-layer consumers migrate, and `MD-R04` remains
+verification-blocked until the declared local lint/typecheck tooling is
+available.
 
 ## Closed recovery items
 

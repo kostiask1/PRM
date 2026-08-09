@@ -664,6 +664,8 @@ Next:
 - Phase 134 removed the remaining `rich-content → dice`, `rich-content → entity-link`, `rich-content → rules-reference`, and `rules-reference → dice` allowances without adding widget debt. Feature debt fell from 6 importer files / 8 directed pairs / 8 file edges / 9 declarations to 4 / 4 / 4 / 5. Widget debt remains zero across all four measures, and the widget catalog remains at 11 slices. Permanent source-inventory coverage locks helper ownership, runtime/type facade parity, private raw renderers, callable structural contracts, stable owners, slot precedence, preserved behavior, and the reduced baseline; the expanded complete suite passes 420/420 tests. `MD-R05` remains open; Phase 135 must audit the remaining AI/editor/images/entity-link/settings cluster.
 - Completed Phase 135 with a hybrid explicit-composition boundary for the remaining AI/editor/images/entity-link/settings cluster. Raw AI attachment and prompt renderers are private behind `createAiAttachmentControlsComponent` and `createAiPromptComposerComponent`: `widgets/ai-assistant` configures stable attachment and prompt components at module scope, while the encounter owner configures its own stable attachment component. Raw settings modal content is private behind `createSettingsModalContentComponent`, and `widgets/sidebar` binds the public `EditableField` once at module scope. Structural callable contracts keep AI and settings independent of sibling-feature types while preserving attachment state, prompt callbacks, controller identity, modal behavior, render order, and Lexical component identity.
 - Phase 135 removed editor's entity-link edge through the narrow app-injected `EditableFieldEntityLinkProvider` runtime rather than turning static UI composition into a global service locator. `App` passes one frozen runtime containing the two entity-link Context objects, `EntityModal`, and `openEntityLinkModal`; `EditableField` obtains that runtime but reads both Context values locally at its own render position, so nested campaign/session resolver providers retain their existing scope and precedence. The production same-layer baselines are now empty for both features and widgets: zero importer files / zero directed pairs / zero file edges / zero declarations. The exported `createFsdSameLayerFileEdgeRule` seam exercises synthetic approved and stale allowances while the production baseline remains empty. Permanent source-inventory coverage locks factory ownership, runtime/type parity, stable owners, provider order, local Context reads, and the empty production graph; the expanded complete suite passes 421/421 tests. `MD-R05` is closed. Phase 136 is next and must establish typed app-owned store composition without claiming the wider migration complete.
+- Completed Phase 136 by moving the actual global store composition from `shared` to `src/app/model/appStore.ts`. The app owner now contains initial state, listeners, thunk dispatch, language side effect, `useSyncExternalStore`, modal resolver map, rules-reference commands, router adapter, and browser navigation; its local `appStateReducer.ts` performs the typed ordered root-reducer composition over lower shared policies. `src/shared/model/appStore.ts` becomes an effect-free typed compatibility facade for lower layers. `App`, `main`, realtime, routing, and the message-box host import the app public entry directly; remaining lower-layer consumers retain the facade without importing upward.
+- Phase 136 adds the narrow `appStoreRuntime.ts` registration port and `fsd-boundaries/app-store-runtime-owner` enforcement. Only the app composition owner and the single shared facade may reference that private port; the rule covers static imports and re-exports, dynamic imports, `require`, Vite-root paths, extensionless paths, and Windows case variants. The facade deliberately throws until the app owner configures it, so app/root entry code must import `app/model` before invoking a shared compatibility API. Permanent source-inventory coverage locks the state/effect ownership, reducer order, public facade parity, app-consumer migration, runtime behavior, and port boundary. The expanded complete suite passes 422/422 tests. `MD-R02` remains in progress until the compatibility facade is no longer needed; the wider FSD migration remains active.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -697,8 +699,10 @@ reduced feature debt to 4 / 4 / 4 / 5, and passed its expanded gate at 420/420
 tests. Phase 135 completed the hybrid AI/settings factories plus the narrow
 app-injected editor entity-link runtime, reduced both production same-layer
 baselines to zero across importer files, directed pairs, file edges, and
-declarations, and passed its expanded gate at 421/421 tests. `MD-R05` is
-closed; Phase 136 typed app-owned store composition is next, and the broader
+declarations, and passed its expanded gate at 421/421 tests. Phase 136 moved
+the actual configured store to the app layer, left a typed lower-layer
+compatibility facade, enforced the private runtime port, and passed 422/422
+tests. `MD-R05` is closed; `MD-R02` remains in progress and the broader
 migration remains active.
 
 ### Provenance and transfer rule
@@ -729,7 +733,7 @@ tracked in `docs/migration-debt.md`.
 | Campaign lookup and rules-reference endpoint ownership | Adapt through current entity public APIs |
 | Canonical Bestiary AI history and mutation request validation | Adapt through current backend modules, repositories, storage facade, and routes |
 | FSD/import enforcement, ADRs, recovery phases, debt register, agent rules | Recover and align with the current tree |
-| App-owned configured store | Defer to a dedicated typed design phase (`MD-R02`) |
+| App-owned configured store | Completed in Phase 136; keep only the typed shared compatibility facade while consumers migrate (`MD-R02`) |
 | Side commit's `server/domains` replacement, stale JS/JSX slices, graph ownership, and whole-file configuration/test rewrites | Skip because current `fsd` already has newer typed/application-module owners and stricter contracts |
 
 ### Recovery R0 — Divergence audit
@@ -918,22 +922,29 @@ Status: **In progress**
   125 passed 411/411, Phase 126 passed 412/412, Phase 127 passed 413/413, Phase
   128 passed 414/414, Phase 129 passed 415/415, Phase 130 passed 416/416, Phase
   131 passed 417/417, Phase 132 passed 418/418, Phase 133 passed 419/419, and
-  Phase 134 passed 420/420; the expanded Phase 135 suite passes 421/421 tests.
+  Phase 134 passed 420/420; Phase 135 passed 421/421; and the expanded Phase
+  136 suite passes 422/422 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
-Status: **Next**
+Status: **Completed**
 
-- [ ] Design an app-owned configured store that composes lower-layer typed
-  reducers without making `shared` depend upward.
-- [ ] Migrate consumers incrementally behind an explicit typed compatibility
-  boundary.
-- [ ] Remove the shared composition owner only after behavior, realtime, modal,
-  navigation, settings, and selector contracts are preserved.
+- [x] Move the configured store's stateful and root-reducer composition into
+  `src/app/model/appStore.ts` and its local `appStateReducer.ts`, while keeping
+  the typed lower-level reducer policies in `shared` without an upward
+  dependency.
+- [x] Keep `shared/model/appStore.ts` as a typed delegation-only compatibility
+  boundary, migrate app/root consumers to `app/model/index.js`, and preserve
+  lower-layer consumers behind that facade during incremental migration.
+- [x] Enforce the private runtime registration port so only the app composition
+  owner and its one shared facade can import it; preserve reducer, realtime,
+  modal, navigation, settings, selector, dispatch, and browser-history
+  behavior.
 
-The accidental commit's untyped JavaScript store is not a migration candidate.
-This work requires a dedicated design and implementation phase after the
-recovery gates, as recorded by `MD-R02`.
+The accidental commit's untyped JavaScript store was not a migration candidate.
+Phase 136 preserves the current typed reducer and consumer contracts, passes
+422/422 tests, and changes `MD-R02` from planned to in progress rather than
+claiming the compatibility facade is already removable.
 
 ## Validation required for every phase
 

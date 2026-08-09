@@ -2,7 +2,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router";
 import App from "./App.tsx";
 import { lang } from "./shared/lib/index.js";
-import { openModalRequest } from "./shared/model/index.js";
+import { openModalRequest } from "./app/model/index.js";
 import "./assets/scss/main.scss"; // Importing BEM styles
 
 const root = document.getElementById("root");

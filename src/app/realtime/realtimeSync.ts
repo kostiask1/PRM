@@ -3,7 +3,7 @@ import {
 	refreshEntitiesAction,
 	requestCampaignsReloadAction,
 } from "../../shared/model/index.js";
-import { appStore } from "../../shared/model/index.js";
+import { appStore } from "../model/index.js";
 
 const RECONNECT_BASE_DELAY = 1000;
 const RECONNECT_MAX_DELAY = 10000;

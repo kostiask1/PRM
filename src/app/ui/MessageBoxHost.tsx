@@ -1,8 +1,5 @@
-import {
-	hideMessageBox,
-	useAppDispatch,
-	useAppSelector,
-} from "../../shared/model/index.js";
+import { hideMessageBox } from "../../shared/model/index.js";
+import { useAppDispatch, useAppSelector } from "../model/index.js";
 import { Modal } from "../../shared/ui/index.js";
 
 export default function MessageBoxHost() {

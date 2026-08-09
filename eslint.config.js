@@ -656,6 +656,7 @@ export default [
     },
     rules: {
       'fsd-boundaries/public-entry-imports': 'error',
+	  'fsd-boundaries/app-store-runtime-owner': 'error',
     },
   },
   {
