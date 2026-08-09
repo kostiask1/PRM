@@ -12,9 +12,10 @@ type SettingsModalContentInternalProps = SettingsModalContentProps &
 
 function SettingsModalContent({
 	onCancel,
+	runtime,
 	EditableField,
 }: SettingsModalContentInternalProps) {
-	const viewProps = useSettingsModalController(onCancel);
+	const viewProps = useSettingsModalController(onCancel, runtime);
 	return <SettingsModalView {...viewProps} EditableField={EditableField} />;
 }
 

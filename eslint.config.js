@@ -656,7 +656,13 @@ export default [
     },
     rules: {
       'fsd-boundaries/public-entry-imports': 'error',
-	  'fsd-boundaries/app-store-runtime-owner': 'error',
+      'fsd-boundaries/app-store-runtime-owner': 'error',
+    },
+  },
+  {
+    files: ['src/features/settings/**/*.{js,jsx,ts,tsx}'],
+    rules: {
+      'fsd-boundaries/settings-store-facade': 'error',
     },
   },
   {

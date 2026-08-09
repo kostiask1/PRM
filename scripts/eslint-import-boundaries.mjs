@@ -96,10 +96,12 @@ const APP_STORE_RUNTIME_ALLOWED_IMPORTERS = new Set([
 	APP_STORE_RUNTIME_OWNER_PATH.toLowerCase(),
 	APP_STORE_RUNTIME_FACADE_PATH.toLowerCase(),
 ]);
-const APP_STORE_RUNTIME_MODULE_PATH = APP_STORE_RUNTIME_PATH.replace(
-	/\.(?:[cm]?[jt]sx?)$/,
-	"",
-).toLowerCase();
+const APP_STORE_RUNTIME_MODULE_PATH = normalizeModulePath(
+	APP_STORE_RUNTIME_PATH,
+);
+const SETTINGS_FEATURE_PATH_PREFIX = "src/features/settings/";
+const SETTINGS_SHARED_MODEL_PATH = "src/shared/model";
+const SETTINGS_APP_MODEL_PATH = "src/app/model";
 
 export const FSD_PUBLIC_API_PATTERNS = Object.freeze([
 	Object.freeze({
@@ -120,11 +122,19 @@ export const FSD_PUBLIC_API_PATTERNS = Object.freeze([
 
 function normalizeRepositoryFileName(fileName) {
 	const normalized = String(fileName || "").replace(/\\/g, "/");
-	if (normalized.startsWith("src/")) return normalized;
-	const sourceRootIndex = normalized.lastIndexOf("/src/");
+	const lowerCasePath = normalized.toLowerCase();
+	if (lowerCasePath.startsWith("src/")) return lowerCasePath;
+	const sourceRootIndex = lowerCasePath.lastIndexOf("/src/");
 	return sourceRootIndex >= 0
-		? normalized.slice(sourceRootIndex + 1)
-		: normalized.replace(/^\.\//, "");
+		? lowerCasePath.slice(sourceRootIndex + 1)
+		: lowerCasePath.replace(/^\.\//, "");
+}
+
+function normalizeModulePath(fileName) {
+	if (typeof fileName !== "string") return null;
+	return fileName
+		.replace(/(?:\.d)?\.(?:[cm]?[jt]sx?)$/, "")
+		.toLowerCase();
 }
 
 function getFsdSliceLocation(repositoryPath) {
@@ -148,16 +158,45 @@ function isRelativeModuleSpecifier(specifier) {
 	return typeof specifier === "string" && specifier.startsWith(".");
 }
 
+function normalizeResolvedModulePath(modulePath) {
+	return path.posix
+		.normalize(modulePath)
+		.replace(/^\/+/, "")
+		.replace(/\/+$/, "")
+		.toLowerCase();
+}
+
+function getRepositorySourcePath(fileName) {
+	const repositoryPath = normalizeRepositoryFileName(fileName);
+	return repositoryPath.startsWith("src/") ? repositoryPath : null;
+}
+
+function resolveFileSystemModulePath(canonicalSpecifier) {
+	const lowerCaseSpecifier = canonicalSpecifier.toLowerCase();
+	if (lowerCaseSpecifier.startsWith("/@fs/")) {
+		return getRepositorySourcePath(
+			canonicalSpecifier.slice("/@fs/".length),
+		);
+	}
+	if (/^[a-z]:\//i.test(canonicalSpecifier)) {
+		return getRepositorySourcePath(canonicalSpecifier);
+	}
+	return null;
+}
+
 function resolveModuleSpecifierPath(importer, specifier) {
 	if (typeof specifier !== "string") return null;
 	const normalizedSpecifier = specifier.replace(/\\/g, "/");
 	const cleanSpecifier = normalizedSpecifier.split(/[?#]/, 1)[0];
-	if (cleanSpecifier.startsWith("/src/")) {
-		return path.posix.normalize(cleanSpecifier).replace(/^\/+/, "");
+	const canonicalSpecifier = path.posix.normalize(cleanSpecifier);
+	const fileSystemModulePath = resolveFileSystemModulePath(canonicalSpecifier);
+	if (fileSystemModulePath) return fileSystemModulePath;
+	if (canonicalSpecifier.toLowerCase().startsWith("/src/")) {
+		return normalizeResolvedModulePath(canonicalSpecifier);
 	}
 	if (!isRelativeModuleSpecifier(cleanSpecifier)) return null;
-	return path.posix.normalize(
-		path.posix.join(path.posix.dirname(importer.fileName), cleanSpecifier),
+	return normalizeResolvedModulePath(
+		path.posix.join(path.posix.dirname(importer.fileName), canonicalSpecifier),
 	);
 }
 
@@ -186,6 +225,39 @@ function getRequireSource(node) {
 	if (callee.type !== "Identifier") return undefined;
 	if (callee.name !== "require") return undefined;
 	return node.arguments[0];
+}
+
+function getMemberPropertyName(member) {
+	if (member.computed) return getStaticModuleSpecifier(member.property);
+	return member.property.type === "Identifier" ? member.property.name : null;
+}
+
+function isImportMetaMetaProperty(node) {
+	if (node.type !== "MetaProperty") return false;
+	return node.meta.name === "import" && node.property.name === "meta";
+}
+
+function isImportMetaGlobCallee(callee) {
+	if (callee.type !== "MemberExpression") return false;
+	if (!isImportMetaMetaProperty(callee.object)) return false;
+	const propertyName = getMemberPropertyName(callee);
+	return propertyName === "glob" || propertyName === "globEager";
+}
+
+function getModulePatternSources(source) {
+	if (!source) return [];
+	if (source.type !== "ArrayExpression") return [source];
+	return source.elements.filter(Boolean);
+}
+
+function getImportMetaGlobSources(node) {
+	if (!isImportMetaGlobCallee(node.callee)) return [];
+	return getModulePatternSources(node.arguments[0]);
+}
+
+function getCallModuleSources(node) {
+	const requireSource = getRequireSource(node);
+	return requireSource ? [requireSource] : getImportMetaGlobSources(node);
 }
 
 function getTemplateQuasiValue(quasi) {
@@ -231,7 +303,9 @@ function createModuleReferenceVisitors(inspectLiteralSource, programExit) {
 			inspectLiteralSource(node, node.source);
 		},
 		CallExpression(node) {
-			inspectLiteralSource(node, getRequireSource(node));
+			for (const source of getCallModuleSources(node)) {
+				inspectLiteralSource(node, source);
+			}
 		},
 		TSImportType(node) {
 			inspectLiteralSource(node, getTsImportTypeSource(node));
@@ -328,8 +402,14 @@ export function createFsdSameLayerFileEdgeRule(
 			const importer = getSameLayerImporter(context.getFilename(), baseline);
 			if (!importer) return {};
 
+			const baselineTargets = Object.entries(
+				baseline[importer.layer] || {},
+			).find(
+				([fileName]) =>
+					normalizeRepositoryFileName(fileName) === importer.fileName,
+			)?.[1];
 			const allowedTargets = new Set(
-				baseline[importer.layer][importer.fileName] || [],
+				baselineTargets || [],
 			);
 			const observedTargets = new Set();
 			const reportedUnexpectedTargets = new Set();
@@ -393,7 +473,7 @@ const APP_STORE_RUNTIME_OWNER_RULE = Object.freeze({
 		},
 		schema: [],
 		messages: {
-		privateRuntime:
+			privateRuntime:
 				"Only src/app/model/appStore.ts and src/shared/model/appStore.ts may import the app-store runtime registration port.",
 		},
 	},
@@ -411,11 +491,9 @@ const APP_STORE_RUNTIME_OWNER_RULE = Object.freeze({
 
 		const inspectLiteralSource = (node, source) => {
 			const specifier = getStaticModuleSpecifier(source);
-			const resolvedPath = resolveModuleSpecifierPath(importer, specifier);
-			const resolvedModulePath = resolvedPath?.replace(
-				/\.(?:[cm]?[jt]sx?)$/,
-				"",
-			)?.toLowerCase();
+			const resolvedModulePath = normalizeModulePath(
+				resolveModuleSpecifierPath(importer, specifier),
+			);
 			if (resolvedModulePath !== APP_STORE_RUNTIME_MODULE_PATH) {
 				return;
 			}
@@ -429,11 +507,92 @@ const APP_STORE_RUNTIME_OWNER_RULE = Object.freeze({
 	},
 });
 
+function isModulePathWithin(modulePath, rootPath) {
+	return (
+		modulePath === rootPath || modulePath.startsWith(`${rootPath}/`)
+	);
+}
+
+function getSettingsStoreTarget(importer, source) {
+	const specifier = getStaticModuleSpecifier(source);
+	const modulePath = normalizeModulePath(
+		resolveModuleSpecifierPath(importer, specifier),
+	);
+	if (!modulePath) return null;
+	if (isModulePathWithin(modulePath, SETTINGS_SHARED_MODEL_PATH)) {
+		return "shared";
+	}
+	return isModulePathWithin(modulePath, SETTINGS_APP_MODEL_PATH)
+		? "app"
+		: null;
+}
+
+const SETTINGS_STORE_FACADE_RULE = Object.freeze({
+	meta: {
+		type: "problem",
+		docs: {
+			description:
+				"Require Settings to receive global-store access through its injected runtime.",
+		},
+		schema: [],
+		messages: {
+			injectedRuntime:
+				"Settings must receive app-global state through its injected Settings runtime and may not import shared/model or app/model directly.",
+		},
+	},
+	create(context) {
+		const importer = {
+			fileName: normalizeRepositoryFileName(context.getFilename()),
+		};
+		if (
+			!importer.fileName
+				.toLowerCase()
+				.startsWith(SETTINGS_FEATURE_PATH_PREFIX)
+		) {
+			return {};
+		}
+
+		const report = (node) => {
+			context.report({ node, messageId: "injectedRuntime" });
+		};
+		const inspectOpaqueReference = (node, source) => {
+			if (getSettingsStoreTarget(importer, source)) report(source || node);
+		};
+
+		return {
+			ImportDeclaration(node) {
+				inspectOpaqueReference(node, node.source);
+			},
+			ExportNamedDeclaration(node) {
+				if (node.source) inspectOpaqueReference(node, node.source);
+			},
+			ExportAllDeclaration(node) {
+				inspectOpaqueReference(node, node.source);
+			},
+			ImportExpression(node) {
+				inspectOpaqueReference(node, node.source);
+			},
+			CallExpression(node) {
+				for (const source of getCallModuleSources(node)) {
+					inspectOpaqueReference(node, source);
+				}
+			},
+			TSImportType(node) {
+				inspectOpaqueReference(node, getTsImportTypeSource(node));
+			},
+			TSExternalModuleReference(node) {
+				inspectOpaqueReference(node, getTsExternalModuleSource(node));
+			},
+		};
+	},
+});
+
 export const FSD_BOUNDARY_PLUGIN = Object.freeze({
 	rules: Object.freeze({
 		"public-entry-imports": FSD_PUBLIC_ENTRY_IMPORT_RULE,
 		"same-layer-file-edges": FSD_SAME_LAYER_FILE_EDGE_RULE,
 		"app-store-runtime-owner": APP_STORE_RUNTIME_OWNER_RULE,
+		"settings-store-facade": SETTINGS_STORE_FACADE_RULE,
 	}),
 });
 

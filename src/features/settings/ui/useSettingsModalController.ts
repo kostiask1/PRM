@@ -8,13 +8,6 @@ import {
 	normalizeIgnoreSourcesList,
 } from "../../../entities/reference/index.js";
 import { lang } from "../../../shared/lib/index.js";
-import {
-	setCampaignsAction,
-	setLanguageAction,
-	setUiSettingsAction,
-	useAppDispatch,
-	useAppSelector,
-} from "../../../shared/model/index.js";
 import { settingsApi } from "../api/settingsApi.ts";
 import {
 	DEFAULT_IMAGE_PROMPT_BASE_PROMPT,
@@ -36,6 +29,7 @@ import {
 } from "../model/settingsModal.ts";
 import { getNextTheme } from "../model/theme.ts";
 import type { SettingsModalViewProps } from "./SettingsModalView.tsx";
+import type { SettingsModalRuntime } from "./settingsModalComposition.ts";
 
 function useSettingsScopeRecovery(options: {
 	selectedScope: string;
@@ -57,49 +51,29 @@ function useSettingsScopeRecovery(options: {
 
 export function useSettingsModalController(
 	onCancel: () => void,
+	runtime: SettingsModalRuntime,
 ): SettingsModalViewProps {
-	const dispatch = useAppDispatch();
-	const currentLanguage = useAppSelector(
-		(state) => state.localization.language,
-	);
-	const availableLanguages = useAppSelector(
-		(state) => state.localization.availableLanguages,
-	);
-	const currentTheme = useAppSelector((state) => state.ui.theme);
-	const simplifiedNotesEnabled = useAppSelector(
-		(state) => state.ui.simplifiedNotes,
-	);
-	const storedCampaigns = useAppSelector((state) => state.campaigns.items);
+	const currentLanguage = runtime.currentLanguage;
+	const availableLanguages = runtime.availableLanguages;
+	const currentTheme = runtime.currentTheme;
+	const simplifiedNotesEnabled = runtime.simplifiedNotesEnabled;
+	const storedCampaigns = runtime.storedCampaigns;
 	const campaigns = useMemo(
 		() => normalizeSettingsCampaigns(storedCampaigns),
 		[storedCampaigns],
 	);
-	const activeCampaignSlug = useAppSelector(
-		(state) => state.navigation.activeCampaignSlug,
-	);
-	const storedAiBasePrompt = useAppSelector(
-		(state) => state.ui.aiBasePrompt || "",
-	);
-	const storedImagePromptBasePrompt = useAppSelector((state) =>
-		state.ui.imagePromptBasePrompt === undefined
+	const activeCampaignSlug = runtime.activeCampaignSlug;
+	const storedAiBasePrompt = runtime.storedAiBasePrompt || "";
+	const storedImagePromptBasePrompt =
+		runtime.storedImagePromptBasePrompt === undefined
 			? DEFAULT_IMAGE_PROMPT_BASE_PROMPT
-			: state.ui.imagePromptBasePrompt,
-	);
-	const storedCampaignAiBasePrompts = useAppSelector(
-		(state) => state.ui.campaignAiBasePrompts,
-	);
-	const storedCampaignImagePromptBasePrompts = useAppSelector(
-		(state) => state.ui.campaignImagePromptBasePrompts,
-	);
-	const storedIgnoreSourcesList = useAppSelector(
-		(state) => state.ui.ignoreSourcesList || [],
-	);
-	const autoApplyAiChanges = useAppSelector(
-		(state) => state.ui.autoApplyAiChanges !== false,
-	);
-	const useSearchDebounce = useAppSelector(
-		(state) => state.ui.useSearchDebounce !== false,
-	);
+			: runtime.storedImagePromptBasePrompt;
+	const storedCampaignAiBasePrompts = runtime.storedCampaignAiBasePrompts;
+	const storedCampaignImagePromptBasePrompts =
+		runtime.storedCampaignImagePromptBasePrompts;
+	const storedIgnoreSourcesList = runtime.storedIgnoreSourcesList || [];
+	const autoApplyAiChanges = runtime.autoApplyAiChanges !== false;
+	const useSearchDebounce = runtime.useSearchDebounce !== false;
 	const [aiBasePrompt, setAiBasePrompt] = useState(storedAiBasePrompt);
 	const [imagePromptBasePrompt, setImagePromptBasePrompt] = useState(
 		storedImagePromptBasePrompt,
@@ -210,23 +184,23 @@ export function useSettingsModalController(
 	};
 	const handleThemeToggle = () => {
 		const nextTheme = getNextTheme(currentTheme);
-		dispatch(setUiSettingsAction({ theme: nextTheme }));
+		runtime.patchUiSettings({ theme: nextTheme });
 		patchSettings({ theme: nextTheme });
 	};
 	const handleLanguageChange = (language: string) => {
-		dispatch(setLanguageAction(language));
+		runtime.setLanguage(language);
 		patchSettings({ language });
 	};
 	const handleSimplifiedNotesChange = (enabled: boolean) => {
-		dispatch(setUiSettingsAction({ simplifiedNotes: enabled }));
+		runtime.patchUiSettings({ simplifiedNotes: enabled });
 		patchSettings({ simplifiedNotes: enabled });
 	};
 	const handleAutoApplyAiChangesChange = (enabled: boolean) => {
-		dispatch(setUiSettingsAction({ autoApplyAiChanges: enabled }));
+		runtime.patchUiSettings({ autoApplyAiChanges: enabled });
 		patchSettings({ autoApplyAiChanges: enabled });
 	};
 	const handleUseSearchDebounceChange = (enabled: boolean) => {
-		dispatch(setUiSettingsAction({ useSearchDebounce: enabled }));
+		runtime.patchUiSettings({ useSearchDebounce: enabled });
 		patchSettings({ useSearchDebounce: enabled });
 	};
 	const handleSelectedBasePromptChange = (value: string) => {
@@ -288,7 +262,7 @@ export function useSettingsModalController(
 			const saved = await settingsApi.updateSettings(payload);
 			if (!saved) throw new Error("Settings response is empty");
 			const nextUiSettings = normalizeSavedPromptSettings(saved);
-			dispatch(setUiSettingsAction(nextUiSettings));
+			runtime.patchUiSettings(nextUiSettings);
 			setAiBasePrompt(nextUiSettings.aiBasePrompt);
 			setImagePromptBasePrompt(nextUiSettings.imagePromptBasePrompt);
 			setCampaignAiBasePrompts(nextUiSettings.campaignAiBasePrompts);
@@ -310,9 +284,9 @@ export function useSettingsModalController(
 				const saved = await settingsApi.updateSettings({ ignoreSourcesList });
 				if (!saved) throw new Error("Settings response is empty");
 				const savedIgnoreSourcesList = normalizeSavedIgnoreSources(saved);
-				dispatch(
-					setUiSettingsAction({ ignoreSourcesList: savedIgnoreSourcesList }),
-				);
+				runtime.patchUiSettings({
+					ignoreSourcesList: savedIgnoreSourcesList,
+				});
 				setIgnoreSourcesList(savedIgnoreSourcesList);
 			} else if (selectedSourceScope) {
 				await campaignApi.updateCampaign(selectedSourceScope, {
@@ -320,7 +294,7 @@ export function useSettingsModalController(
 						campaignIgnoreSourcesLists[selectedSourceScope] || [],
 				});
 				const nextCampaigns = await campaignApi.listCampaigns();
-				dispatch(setCampaignsAction(normalizeSettingsCampaigns(nextCampaigns)));
+				runtime.setCampaigns(normalizeSettingsCampaigns(nextCampaigns));
 			}
 			setSourceStatus("idle");
 			setNotification(lang.t("Source settings saved"));

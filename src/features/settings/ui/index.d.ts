@@ -12,4 +12,6 @@ export type {
 	SettingsModalEditableFieldChangeEvent,
 	SettingsModalEditableFieldSlot,
 	SettingsModalEditableFieldSlotProps,
+	SettingsModalRuntime,
+	SettingsModalUiPatch,
 } from "./settingsModalComposition.ts";

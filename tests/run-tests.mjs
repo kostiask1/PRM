@@ -1478,6 +1478,8 @@ const FSD_PUBLIC_ENTRY_RULE_ID = "fsd-boundaries/public-entry-imports";
 const FSD_SAME_LAYER_RULE_ID = "fsd-boundaries/same-layer-file-edges";
 const FSD_APP_STORE_RUNTIME_RULE_ID =
 	"fsd-boundaries/app-store-runtime-owner";
+const FSD_SETTINGS_STORE_FACADE_RULE_ID =
+	"fsd-boundaries/settings-store-facade";
 
 function lintFsdBoundaryRule(
 	source,
@@ -1738,7 +1740,9 @@ function assertExportedInterfaceFragments(
 	requiredFragments,
 ) {
 	const match = source.match(
-		new RegExp(`export interface ${interfaceName} \\{([\\s\\S]*?)\\n\\}`),
+		new RegExp(
+			`export interface ${interfaceName}(?: extends [^{]+)? \\{([\\s\\S]*?)\\n\\}`,
+		),
 	);
 	assert.ok(match);
 	for (const fragment of requiredFragments) {
@@ -1836,6 +1840,8 @@ await run(
 			'const lazyImages = import("../../images/ui/Private.tsx");',
 			'const commonImages = require("../../images/ui/Private.tsx");',
 			'const templateImages = import(`../../images/ui/Private.tsx`);',
+			'import.meta.glob("../../images/ui/Private.tsx");',
+			'import.meta.glob(["../../images/ui/*.tsx"]);',
 			'const rootImages = import("/src/features/images/ui/Private.tsx");',
 			'const traversedRootImages = import("/src/features/ai/../images/ui/Private.tsx");',
 			'const windowsImages = require("../../images\\\\ui\\\\Private.tsx");',
@@ -1957,7 +1963,7 @@ await run(
 		assert.equal(unexpectedImporter.length, 1);
 		assert.match(
 			unexpectedImporter[0].message,
-			/NewAiPanel\.tsx may not add/,
+			/newaipanel\.tsx may not add/,
 		);
 		for (const source of [
 			'const lazyImages = import(`../../images/index.js`);',
@@ -4892,8 +4898,8 @@ await run(
 				sidebarCompositionSource,
 				[
 					"import { EditableField }",
-					"import { createSettingsModalContentComponent }",
-					"export const SidebarSettingsModalContent =",
+					"createSettingsModalContentComponent,",
+					"const SidebarConfiguredSettingsModalContent =",
 					"createSettingsModalContentComponent({ EditableField })",
 				],
 				"sidebar settings composition",
@@ -5135,6 +5141,262 @@ await run(
 		assert.match(
 			eslintSource,
 			/'fsd-boundaries\/app-store-runtime-owner': 'error'/,
+		);
+	},
+);
+
+await run(
+	"Phase 137 gives Settings an injected Sidebar runtime instead of direct global-store access",
+	async () => {
+		const [
+			settingsCompositionSource,
+			settingsTypeEntry,
+			settingsControllerSource,
+			settingsContentSource,
+			themeSwitcherSource,
+			sidebarCompositionSource,
+			sidebarSource,
+			eslintSource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/features/settings/ui/settingsModalComposition.ts",
+				"utf8",
+			),
+			fs.readFile("src/features/settings/ui/index.d.ts", "utf8"),
+			fs.readFile(
+				"src/features/settings/ui/useSettingsModalController.ts",
+				"utf8",
+			),
+			fs.readFile(
+				"src/features/settings/ui/SettingsModalContent.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/features/settings/ui/ColorThemeSwitcher.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/sidebar/ui/sidebarSettingsComposition.ts",
+				"utf8",
+			),
+			fs.readFile("src/widgets/sidebar/ui/Sidebar.tsx", "utf8"),
+			fs.readFile("eslint.config.js", "utf8"),
+		]);
+
+		assertExportedInterfaceFragments(
+			settingsCompositionSource,
+			"SettingsModalUiPatch",
+			[
+				"theme?: Theme;",
+				"simplifiedNotes?: boolean;",
+				"aiBasePrompt?: string;",
+				"imagePromptBasePrompt?: string;",
+				"campaignAiBasePrompts?: SettingsPromptMap;",
+				"campaignImagePromptBasePrompts?: SettingsPromptMap;",
+				"ignoreSourcesList?: string[];",
+				"autoApplyAiChanges?: boolean;",
+				"useSearchDebounce?: boolean;",
+			],
+		);
+		assertExportedInterfaceFragments(
+			settingsCompositionSource,
+			"SettingsModalRuntime",
+			[
+				"currentLanguage: string;",
+				"availableLanguages: string[];",
+				"currentTheme: Theme;",
+				"simplifiedNotesEnabled: boolean;",
+				"storedCampaigns: unknown[];",
+				"activeCampaignSlug: string | null;",
+				"storedAiBasePrompt: string | undefined;",
+				"storedImagePromptBasePrompt: string | undefined;",
+				"storedCampaignAiBasePrompts: SettingsPromptMap;",
+				"storedCampaignImagePromptBasePrompts: SettingsPromptMap;",
+				"storedIgnoreSourcesList: string[] | undefined;",
+				"autoApplyAiChanges: boolean | undefined;",
+				"useSearchDebounce: boolean | undefined;",
+				"setLanguage(language: string): void;",
+				"patchUiSettings(patch: SettingsModalUiPatch): void;",
+				"setCampaigns(campaigns: unknown[]): void;",
+			],
+		);
+		for (const publicType of [
+			"SettingsModalRuntime",
+			"SettingsModalUiPatch",
+		]) {
+			assert.match(settingsTypeEntry, new RegExp(`\\b${publicType}\\b`));
+		}
+		assert.match(
+			settingsCompositionSource,
+			/export interface SettingsModalContentProps \{[\s\S]*?runtime: SettingsModalRuntime;/,
+		);
+
+		assert.doesNotMatch(
+			settingsControllerSource,
+			/shared\/model|app\/model|useAppDispatch|useAppSelector|dispatch\(/,
+		);
+		assertSourceTokensInOrder(
+			settingsControllerSource,
+			[
+				"const currentLanguage = runtime.currentLanguage;",
+				"const storedAiBasePrompt = runtime.storedAiBasePrompt || \"\";",
+				"runtime.storedImagePromptBasePrompt === undefined",
+				"const storedIgnoreSourcesList = runtime.storedIgnoreSourcesList || [];",
+				"const autoApplyAiChanges = runtime.autoApplyAiChanges !== false;",
+				"const useSearchDebounce = runtime.useSearchDebounce !== false;",
+				"runtime.patchUiSettings({ theme: nextTheme });",
+				"runtime.setLanguage(language);",
+				"runtime.patchUiSettings(nextUiSettings);",
+				"runtime.setCampaigns(normalizeSettingsCampaigns(nextCampaigns));",
+			],
+			"Settings runtime consumption and feature-owned fallback policy",
+		);
+		assert.match(
+			settingsContentSource,
+			/useSettingsModalController\(onCancel, runtime\)/,
+		);
+		assert.doesNotMatch(
+			themeSwitcherSource,
+			/shared\/model|settingsApi|useAppDispatch|useAppSelector/,
+		);
+		assertExportedInterfaceFragments(
+			themeSwitcherSource,
+			"ColorThemeSwitcherProps",
+			["theme: Theme;", "onToggle: (theme: Theme) => void;"],
+		);
+		assertSourceTokensInOrder(
+			themeSwitcherSource,
+			[
+				"const nextTheme = getNextTheme(currentTheme);",
+				"onToggle(nextTheme);",
+			],
+			"controlled Settings theme switcher",
+		);
+
+		assertSourceTokensInOrder(
+			sidebarCompositionSource,
+			[
+				"const SidebarConfiguredSettingsModalContent =",
+				"createSettingsModalContentComponent({ EditableField });",
+				"function useSidebarSettingsModalRuntime(): SettingsModalRuntime",
+				"return useMemo<SettingsModalRuntime>",
+				"setLanguage(language) {",
+				"dispatch(setLanguageAction(language));",
+				"patchUiSettings(patch) {",
+				"dispatch(setUiSettingsAction(patch));",
+				"setCampaigns(campaigns) {",
+				"dispatch(setCampaignsAction(campaigns));",
+				"export function SidebarSettingsModalContent({",
+				"const runtime = useSidebarSettingsModalRuntime();",
+				"return createElement(SidebarConfiguredSettingsModalContent, {",
+				"runtime,",
+			],
+			"live Sidebar Settings runtime composition",
+		);
+		for (const selectorField of [
+			"state.localization.language",
+			"state.localization.availableLanguages",
+			"state.ui.theme",
+			"state.ui.simplifiedNotes",
+			"state.campaigns.items",
+			"state.navigation.activeCampaignSlug",
+			"state.ui.aiBasePrompt",
+			"state.ui.imagePromptBasePrompt",
+			"state.ui.campaignAiBasePrompts",
+			"state.ui.campaignImagePromptBasePrompts",
+			"state.ui.ignoreSourcesList",
+			"state.ui.autoApplyAiChanges",
+			"state.ui.useSearchDebounce",
+		]) {
+			assert.ok(
+				sidebarCompositionSource.includes(selectorField),
+				`Sidebar Settings runtime must select ${selectorField}`,
+			);
+		}
+		assert.match(
+			sidebarSource,
+			/<SidebarSettingsModalContent\s+onCancel=\{\(\) => closeActiveModal\(\)\}/,
+		);
+
+		const forbiddenSettingsStoreImporters = [];
+		for (const filePath of await collectFsdSourceFiles("src/features/settings")) {
+			const source = await fs.readFile(filePath, "utf8");
+			for (const specifier of readStaticFsdSpecifiers(source)) {
+				const modulePath = resolveTestModuleSpecifierPath(
+					filePath,
+					specifier,
+				)
+					?.replace(/(?:\.d)?\.(?:[cm]?[jt]sx?)$/, "")
+					.toLowerCase();
+				if (
+					modulePath === "src/shared/model" ||
+					modulePath === "src/shared/model/index" ||
+					modulePath === "src/shared/model/appstore" ||
+					modulePath === "src/app/model" ||
+					modulePath?.startsWith("src/app/model/")
+				) {
+					forbiddenSettingsStoreImporters.push([filePath, specifier]);
+				}
+			}
+		}
+		assert.deepEqual(forbiddenSettingsStoreImporters, []);
+
+		for (const source of [
+			'import { setLanguageAction, setUiSettingsAction } from "../../../shared/model/index.js";',
+			'import { futureStoreFacade } from "../../../shared/model/index.js";',
+			'import { useAppSelector } from "../../../shared/model/index.js";',
+			'import { useAppSelector as select } from "../../../shared/model";',
+			'import { useAppSelector } from "../../../shared/model/";',
+			'import { useAppSelector } from "../../../shared/model//";',
+			'import * as model from "../../../shared/model/index.js";',
+			'import model from "../../../shared/model/index.js";',
+			'export { useAppDispatch as dispatch } from "../../../shared/model/index.js";',
+			'export * from "../../../shared/model/index.js";',
+			'import { appStore } from "../../../shared/model/appStore";',
+			'const model = import("/src/shared/model/AppStore.ts?version=1");',
+			'import { appStore } from "/SRC/SHARED/MODEL/AppStore.ts";',
+			'import { appStore } from "/@fs/E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'import { appStore } from "E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'const model = require("..\\\\..\\\\..\\\\shared\\\\model\\\\index.js");',
+			'import.meta.glob("../../../shared/model/appStore.ts", { eager: true });',
+			'import.meta.globEager("../../../app/model/**/*.ts");',
+			'import.meta.glob(["../../../shared/model/appStore.ts"], { eager: true });',
+			'import.meta.glob(["../../../app/model/**/*.ts"]);',
+			'import.meta["glob"]("../../../shared/model/appStore.ts");',
+			'import.meta.glob("../../../shared/model/*", { eager: true });',
+			'import.meta.glob("../../../shared/model/**", { eager: true });',
+			'import.meta.glob("../../../shared/model/appStore*.ts", { eager: true });',
+			'import { useAppSelector } from "../../../app/model/index";',
+		]) {
+			const reports = lintFsdBoundaryRule(
+				source,
+				"src/features/settings/ui/SettingsModalContent.tsx",
+				FSD_SETTINGS_STORE_FACADE_RULE_ID,
+			);
+			assert.equal(reports.length, 1);
+			assert.equal(reports[0].ruleId, FSD_SETTINGS_STORE_FACADE_RULE_ID);
+		}
+		const mixedCaseImporterReports = lintFsdBoundaryRule(
+			'import { useAppSelector } from "../../../shared/model/index.js";',
+			"SRC/FEATURES/SETTINGS/ui/SettingsModalContent.tsx",
+			FSD_SETTINGS_STORE_FACADE_RULE_ID,
+		);
+		assert.equal(mixedCaseImporterReports.length, 1);
+		assert.equal(
+			mixedCaseImporterReports[0].ruleId,
+			FSD_SETTINGS_STORE_FACADE_RULE_ID,
+		);
+		assert.deepEqual(
+			lintFsdBoundaryRule(
+				'import { useAppSelector } from "../../../shared/model/index.js";',
+				"src/features/ai/ui/AiPromptComposer.tsx",
+				FSD_SETTINGS_STORE_FACADE_RULE_ID,
+			),
+			[],
+		);
+		assert.match(
+			eslintSource,
+			/files: \['src\/features\/settings\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/settings-store-facade': 'error'/,
 		);
 	},
 );
