@@ -11,6 +11,11 @@ export {
 	type AiIgnoredNoteListProps,
 } from "./aiIgnoredNoteListProps.tsx";
 export { createNoteCardComponent } from "./NoteCard.tsx";
+export {
+	SimplifiedNotesProvider,
+	useSimplifiedNotesEnabled,
+	type SimplifiedNotesProviderProps,
+} from "./SimplifiedNotesRuntime.tsx";
 export type {
 	NoteCardComponent,
 	NoteCardCompositionSlots,

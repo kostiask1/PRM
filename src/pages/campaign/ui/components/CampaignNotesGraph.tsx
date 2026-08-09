@@ -37,6 +37,7 @@ import {
 	EditableField,
 	type EditableFieldChangeEvent,
 } from "../../../../features/editor/ui/index.js";
+import { useSimplifiedNotesEnabled } from "../../../../features/notes/ui/index.js";
 import {
 	EntityModal,
 	renderMentionText,
@@ -1000,9 +1001,7 @@ export default function CampaignNotesGraph({
 	const positionedCampaignRef = useRef(campaign.slug);
 	const hasManualPositionsRef = useRef(false);
 	const shouldRelayoutForFilterRef = useRef(false);
-	const simplifiedNotesEnabled = useAppSelector(
-		(state) => state.ui.simplifiedNotes,
-	);
+	const simplifiedNotesEnabled = useSimplifiedNotesEnabled();
 	const currentTheme = useAppSelector((state) => state.ui.theme);
 	const currentLanguage = useAppSelector(
 		(state) => state.localization.language,

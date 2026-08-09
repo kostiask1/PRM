@@ -7,8 +7,8 @@ import {
 import { EditableField } from "../../../features/editor/ui/index.js";
 import { ImageAssetField } from "../../../features/images/index.js";
 import { renderMentionText } from "../../../features/entity-link/index.js";
+import { useSimplifiedNotesEnabled } from "../../../features/notes/ui/index.js";
 import { classNames, getNotesForRender, lang } from "../../../shared/lib/index.js";
-import { useAppSelector } from "../../../shared/model/index.js";
 import { Button, CollapseToggleButton } from "../../../shared/ui/index.js";
 import "../../../assets/components/LocationCard.css";
 import {
@@ -83,7 +83,7 @@ export default function LocationCard({
 	const model = new LocationCardModel(location);
 	const initialName = getLocationDisplayName(location);
 	const editingStartNameRef = useRef(initialName);
-	const simplifiedNotes = useAppSelector((state) => state.ui.simplifiedNotes);
+	const simplifiedNotes = useSimplifiedNotesEnabled();
 	const notesForRender = getNotesForRender(model.notes, { simplifiedNotes });
 	const presentation = getLocationCardPresentation(location, model.notes, viewMode, typeof onToggleCollapse === "function");
 	const displayName = model.displayName || lang.t("New location/faction");

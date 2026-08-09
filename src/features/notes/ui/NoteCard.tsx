@@ -1,6 +1,5 @@
 import "../../../assets/components/NoteCard.css";
 import { classNames } from "../../../shared/lib/index.js";
-import { useAppSelector } from "../../../shared/model/index.js";
 import {
 	getNoteCardPresentation,
 	shouldExpandNoteFromCardClick,
@@ -15,6 +14,7 @@ import type {
 	NoteCardCompositionSlots,
 	NoteCardProps,
 } from "./noteCardComposition.ts";
+import { useSimplifiedNotesEnabled } from "./SimplifiedNotesRuntime.tsx";
 
 const SHORT_TEXT_LENGTH = 50;
 
@@ -33,9 +33,7 @@ function NoteCard({
 	EditableField,
 	renderMentionText,
 }: NoteCardInternalProps) {
-	const simplifiedNotesEnabled = useAppSelector(
-		(state) => state.ui.simplifiedNotes,
-	);
+	const simplifiedNotesEnabled = useSimplifiedNotesEnabled();
 	const presentation = getNoteCardPresentation(
 		note,
 		isLast,

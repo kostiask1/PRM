@@ -23,6 +23,7 @@ import {
 	BulkCollapseButton,
 	createNoteCardComponent,
 	getAiIgnoredNoteListProps,
+	useSimplifiedNotesEnabled,
 } from "../../../features/notes/ui/index.js";
 import TodoSection from "./components/TodoSection.tsx";
 import TodoItem from "./components/TodoItem.tsx";
@@ -870,9 +871,7 @@ function SessionView() {
 	const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);
 	const headerActionsRef = useRef<HTMLDivElement | null>(null);
 	const session = view.session;
-	const simplifiedNotesEnabled = useAppSelector(
-		(state) => state.ui.simplifiedNotes,
-	);
+	const simplifiedNotesEnabled = useSimplifiedNotesEnabled();
 	const parentEntityLinks = useContext(EntityLinkResolverContext);
 	const sessionScopedEntityLinks = useSessionScopedEntityLinks(
 		view,

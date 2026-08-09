@@ -20,6 +20,7 @@ import {
 	MentionPickerModalContent,
 	type EditableFieldEntityLinkRuntime,
 } from "./features/editor/ui/index.js";
+import { SimplifiedNotesProvider } from "./features/notes/ui/index.js";
 import {
 	EntityLinkContext,
 	EntityLinkResolverContext,
@@ -99,6 +100,9 @@ export default function App() {
 		(store) => store.localization.language,
 	);
 	const currentTheme = useAppSelector((store) => store.ui.theme);
+	const simplifiedNotesEnabled = useAppSelector(
+		(store) => store.ui.simplifiedNotes,
+	);
 	const syncEvent = useAppSelector((store) => store.sync.event);
 
 	const loadCampaigns = useCallback(async () => {
@@ -393,78 +397,82 @@ export default function App() {
 	};
 
 	return (
-		<EditableFieldEntityLinkProvider
-			runtime={APP_EDITABLE_FIELD_ENTITY_LINK_RUNTIME}
+		<SimplifiedNotesProvider
+			simplifiedNotesEnabled={simplifiedNotesEnabled}
 		>
-			<div className="App" data-lang={currentLanguage}>
-				<CampaignEntityModalProvider
-					CharacterCard={CharacterCard}
-					LocationCard={LocationCard}
-					campaignSlug={activeCampaignSlug}
-				>
-					<button
-						type="button"
-						className="App__mobileNavButton"
-						aria-label={
-							isMobileSidebarOpen
-								? lang.t("Close navigation")
-								: lang.t("Open navigation")
-						}
-						aria-expanded={isMobileSidebarOpen}
-						onClick={() => setMobileSidebarOpen((isOpen) => !isOpen)}
+			<EditableFieldEntityLinkProvider
+				runtime={APP_EDITABLE_FIELD_ENTITY_LINK_RUNTIME}
+			>
+				<div className="App" data-lang={currentLanguage}>
+					<CampaignEntityModalProvider
+						CharacterCard={CharacterCard}
+						LocationCard={LocationCard}
+						campaignSlug={activeCampaignSlug}
 					>
-						<Icon name={isMobileSidebarOpen ? "x" : "menu"} size={22} />
-					</button>
-					{isMobileSidebarOpen && (
 						<button
 							type="button"
-							className="App__sidebarBackdrop"
-							aria-label={lang.t("Close navigation")}
-							onClick={() => setMobileSidebarOpen(false)}
+							className="App__mobileNavButton"
+							aria-label={
+								isMobileSidebarOpen
+									? lang.t("Close navigation")
+									: lang.t("Open navigation")
+							}
+							aria-expanded={isMobileSidebarOpen}
+							onClick={() => setMobileSidebarOpen((isOpen) => !isOpen)}
+						>
+							<Icon name={isMobileSidebarOpen ? "x" : "menu"} size={22} />
+						</button>
+						{isMobileSidebarOpen && (
+							<button
+								type="button"
+								className="App__sidebarBackdrop"
+								aria-label={lang.t("Close navigation")}
+								onClick={() => setMobileSidebarOpen(false)}
+							/>
+						)}
+						<Sidebar
+							campaigns={campaigns}
+							activeCampaignId={activeCampaignSlug}
+							isMobileOpen={isMobileSidebarOpen}
+							onClose={() => setMobileSidebarOpen(false)}
+							onSelectCampaign={(slug) => {
+								setMobileSidebarOpen(false);
+								navigateTo(slug, null, false, null, isCTRLPressed);
+							}}
+							onCreateCampaign={() => {
+								setMobileSidebarOpen(false);
+								openCreateCampaignModal();
+							}}
+							onToggleCampaignStatus={handleToggleCampaignStatus}
 						/>
-					)}
-					<Sidebar
-						campaigns={campaigns}
-						activeCampaignId={activeCampaignSlug}
-						isMobileOpen={isMobileSidebarOpen}
-						onClose={() => setMobileSidebarOpen(false)}
-						onSelectCampaign={(slug) => {
-							setMobileSidebarOpen(false);
-							navigateTo(slug, null, false, null, isCTRLPressed);
-						}}
-						onCreateCampaign={() => {
-							setMobileSidebarOpen(false);
-							openCreateCampaignModal();
-						}}
-						onToggleCampaignStatus={handleToggleCampaignStatus}
-					/>
-					<MainContent />
+						<MainContent />
 
-					{modalState.config && (
-						<Modal
-							{...modalState.config}
-							onConfirm={(value) =>
-								resolveModalRequest(modalState.requestId, value)
-							}
-							onCancel={
-								modalState.config?.isAlert
-									? null
-									: () => {
-											const cancelAction = modalState.config?.onCancelAction;
-											if (typeof cancelAction === "function") cancelAction();
-											resolveModalRequest(modalState.requestId, null);
-										}
-							}
+						{modalState.config && (
+							<Modal
+								{...modalState.config}
+								onConfirm={(value) =>
+									resolveModalRequest(modalState.requestId, value)
+								}
+								onCancel={
+									modalState.config?.isAlert
+										? null
+										: () => {
+												const cancelAction = modalState.config?.onCancelAction;
+												if (typeof cancelAction === "function") cancelAction();
+												resolveModalRequest(modalState.requestId, null);
+											}
+								}
+							/>
+						)}
+						<MessageBoxHost />
+						<DiceCalculator />
+						<RulesReferenceModalHost
+							MonsterStatBlock={MonsterStatBlock}
+							SpellsBrowser={SpellsBrowser}
 						/>
-					)}
-					<MessageBoxHost />
-					<DiceCalculator />
-					<RulesReferenceModalHost
-						MonsterStatBlock={MonsterStatBlock}
-						SpellsBrowser={SpellsBrowser}
-					/>
-				</CampaignEntityModalProvider>
-			</div>
-		</EditableFieldEntityLinkProvider>
+					</CampaignEntityModalProvider>
+				</div>
+			</EditableFieldEntityLinkProvider>
+		</SimplifiedNotesProvider>
 	);
 }

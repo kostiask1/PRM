@@ -666,6 +666,12 @@ export default [
     },
   },
   {
+    files: ['src/features/notes/**/*.{js,jsx,ts,tsx}'],
+    rules: {
+      'fsd-boundaries/notes-store-facade': 'error',
+    },
+  },
+  {
     files: [
       'src/features/**/*.{js,jsx,ts,tsx}',
       'src/widgets/**/*.{js,jsx,ts,tsx}',

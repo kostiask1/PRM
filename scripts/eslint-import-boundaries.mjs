@@ -100,8 +100,9 @@ const APP_STORE_RUNTIME_MODULE_PATH = normalizeModulePath(
 	APP_STORE_RUNTIME_PATH,
 );
 const SETTINGS_FEATURE_PATH_PREFIX = "src/features/settings/";
-const SETTINGS_SHARED_MODEL_PATH = "src/shared/model";
-const SETTINGS_APP_MODEL_PATH = "src/app/model";
+const NOTES_FEATURE_PATH_PREFIX = "src/features/notes/";
+const SHARED_MODEL_PATH = "src/shared/model";
+const APP_MODEL_PATH = "src/app/model";
 
 export const FSD_PUBLIC_API_PATTERNS = Object.freeze([
 	Object.freeze({
@@ -513,78 +514,65 @@ function isModulePathWithin(modulePath, rootPath) {
 	);
 }
 
-function getSettingsStoreTarget(importer, source) {
+function getGlobalStoreTarget(importer, source) {
 	const specifier = getStaticModuleSpecifier(source);
 	const modulePath = normalizeModulePath(
 		resolveModuleSpecifierPath(importer, specifier),
 	);
 	if (!modulePath) return null;
-	if (isModulePathWithin(modulePath, SETTINGS_SHARED_MODEL_PATH)) {
+	if (isModulePathWithin(modulePath, SHARED_MODEL_PATH)) {
 		return "shared";
 	}
-	return isModulePathWithin(modulePath, SETTINGS_APP_MODEL_PATH)
+	return isModulePathWithin(modulePath, APP_MODEL_PATH)
 		? "app"
 		: null;
 }
 
-const SETTINGS_STORE_FACADE_RULE = Object.freeze({
-	meta: {
-		type: "problem",
-		docs: {
-			description:
-				"Require Settings to receive global-store access through its injected runtime.",
+function createInjectedRuntimeStoreFacadeRule({
+	featurePathPrefix,
+	description,
+	messageId,
+	message,
+}) {
+	return Object.freeze({
+		meta: {
+			type: "problem",
+			docs: { description },
+			schema: [],
+			messages: { [messageId]: message },
 		},
-		schema: [],
-		messages: {
-			injectedRuntime:
-				"Settings must receive app-global state through its injected Settings runtime and may not import shared/model or app/model directly.",
+		create(context) {
+			const importer = {
+				fileName: normalizeRepositoryFileName(context.getFilename()),
+			};
+			if (!importer.fileName.startsWith(featurePathPrefix)) return {};
+
+			const inspectOpaqueReference = (node, source) => {
+				if (!getGlobalStoreTarget(importer, source)) return;
+				context.report({ node: source || node, messageId });
+			};
+
+			return createModuleReferenceVisitors(inspectOpaqueReference);
 		},
-	},
-	create(context) {
-		const importer = {
-			fileName: normalizeRepositoryFileName(context.getFilename()),
-		};
-		if (
-			!importer.fileName
-				.toLowerCase()
-				.startsWith(SETTINGS_FEATURE_PATH_PREFIX)
-		) {
-			return {};
-		}
+	});
+}
 
-		const report = (node) => {
-			context.report({ node, messageId: "injectedRuntime" });
-		};
-		const inspectOpaqueReference = (node, source) => {
-			if (getSettingsStoreTarget(importer, source)) report(source || node);
-		};
+const SETTINGS_STORE_FACADE_RULE = createInjectedRuntimeStoreFacadeRule({
+	featurePathPrefix: SETTINGS_FEATURE_PATH_PREFIX,
+	description:
+		"Require Settings to receive global-store access through its injected runtime.",
+	messageId: "injectedRuntime",
+	message:
+		"Settings must receive app-global state through its injected Settings runtime and may not import shared/model or app/model directly.",
+});
 
-		return {
-			ImportDeclaration(node) {
-				inspectOpaqueReference(node, node.source);
-			},
-			ExportNamedDeclaration(node) {
-				if (node.source) inspectOpaqueReference(node, node.source);
-			},
-			ExportAllDeclaration(node) {
-				inspectOpaqueReference(node, node.source);
-			},
-			ImportExpression(node) {
-				inspectOpaqueReference(node, node.source);
-			},
-			CallExpression(node) {
-				for (const source of getCallModuleSources(node)) {
-					inspectOpaqueReference(node, source);
-				}
-			},
-			TSImportType(node) {
-				inspectOpaqueReference(node, getTsImportTypeSource(node));
-			},
-			TSExternalModuleReference(node) {
-				inspectOpaqueReference(node, getTsExternalModuleSource(node));
-			},
-		};
-	},
+const NOTES_STORE_FACADE_RULE = createInjectedRuntimeStoreFacadeRule({
+	featurePathPrefix: NOTES_FEATURE_PATH_PREFIX,
+	description:
+		"Require Notes to receive simplified-note presentation state through its injected provider.",
+	messageId: "injectedRuntime",
+	message:
+		"Notes must receive simplified-note presentation state through SimplifiedNotesProvider and may not import shared/model or app/model directly.",
 });
 
 export const FSD_BOUNDARY_PLUGIN = Object.freeze({
@@ -593,6 +581,7 @@ export const FSD_BOUNDARY_PLUGIN = Object.freeze({
 		"same-layer-file-edges": FSD_SAME_LAYER_FILE_EDGE_RULE,
 		"app-store-runtime-owner": APP_STORE_RUNTIME_OWNER_RULE,
 		"settings-store-facade": SETTINGS_STORE_FACADE_RULE,
+		"notes-store-facade": NOTES_STORE_FACADE_RULE,
 	}),
 });
 

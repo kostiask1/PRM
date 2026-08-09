@@ -668,6 +668,8 @@ Next:
 - Phase 136 adds the narrow `appStoreRuntime.ts` registration port and `fsd-boundaries/app-store-runtime-owner` enforcement. Only the app composition owner and the single shared facade may reference that private port; the rule covers static imports and re-exports, dynamic imports, `require`, Vite-root paths, extensionless paths, and Windows case variants. The facade deliberately throws until the app owner configures it, so app/root entry code must import `app/model` before invoking a shared compatibility API. Permanent source-inventory coverage locks the state/effect ownership, reducer order, public facade parity, app-consumer migration, runtime behavior, and port boundary. The expanded complete suite passes 422/422 tests. `MD-R02` remains in progress until the compatibility facade is no longer needed; the wider FSD migration remains active.
 - Completed Phase 137 by replacing Settings' direct global-store dependency with the explicit typed `SettingsModalRuntime` contract. `features/settings/ui/settingsModalComposition.ts` owns the read/command surface, `SettingsModalContent` passes it into the private controller, and `ColorThemeSwitcher` is controlled-only. `useSettingsModalController` retains API orchestration, effects, local save state, normalization, and fallback policy, but no longer selects, dispatches, or imports the shared store facade. `widgets/sidebar/ui/sidebarSettingsComposition.ts` configures the Settings component once at module scope and mounts a live runtime-owning adapter inside the modal, so delayed modal rendering subscribes to current store state rather than receiving a click-time snapshot.
 - Phase 137 adds scoped `fsd-boundaries/settings-store-facade` enforcement for `src/features/settings/**/*.{js,jsx,ts,tsx}`. It blocks every `app/model` and `shared/model` reference across imports, re-exports, dynamic imports, `require`, Vite glob calls, and TypeScript module references. Source-inventory and lint-rule tests lock the runtime contract, controlled theme ownership, sidebar adapter, relative/Vite-root/filesystem/extensionless/Windows variants, glob patterns, and rule scope. The expanded complete suite passes 423/423 tests. `MD-R02` remains in progress because other lower-layer consumers still use the compatibility facade; `MD-R04` remains blocked only on the missing lint/typecheck tooling.
+- Completed Phase 138 by moving the one live simplified-note preference read out of `features/notes` and into `App` composition. `SimplifiedNotesProvider` is a deliberately scalar feature-owned Context contract: it takes a required boolean, preserves `false`, and fails fast if a Note renderer is mounted outside the provider. The app root wraps its full rendered subtree, including route, modal, and widget trees, so the four stable module-scope NoteCard factory owners retain live preference updates without a stale factory closure or wider component-prop threading. `NoteCard`, campaign/session note presentation, campaign graph notes, and character/location cards consume the public `useSimplifiedNotesEnabled` hook; the latter two no longer import the global-store facade at all.
+- Phase 138 factors the existing injected-store check and adds scoped `fsd-boundaries/notes-store-facade` enforcement for `src/features/notes/**/*.{js,jsx,ts,tsx}`. The Settings rule remains intact, while both rules reject every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. Source-inventory coverage locks the nullable-context false/missing-provider behavior, public provider surface, app-root order, presentation consumers, and relative/Vite-root/filesystem/glob bypass matrix. The expanded complete suite passes 424/424 tests. `MD-R02` remains in progress because the compatibility facade still has other lower-layer consumers.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -706,9 +708,12 @@ the actual configured store to the app layer, left a typed lower-layer
 compatibility facade, enforced the private runtime port, and passed 422/422
 tests. Phase 137 removes Settings' direct global-store facade dependency
 through a live sidebar-provided runtime, makes theme switching controlled-only,
-enforces the focused Settings store boundary, and passes 423/423 tests.
-`MD-R05` is closed; `MD-R02` remains in progress and the broader migration
-remains active.
+enforces the focused Settings store boundary, and passes 423/423 tests. Phase
+138 gives Notes a live app-root simplified-preference provider, removes its
+direct facade read plus duplicate note-render reads from higher owners,
+enforces the focused Notes store boundary, and passes 424/424 tests. `MD-R05`
+is closed; `MD-R02` remains in progress and the broader migration remains
+active.
 
 ### Provenance and transfer rule
 
@@ -738,7 +743,7 @@ tracked in `docs/migration-debt.md`.
 | Campaign lookup and rules-reference endpoint ownership | Adapt through current entity public APIs |
 | Canonical Bestiary AI history and mutation request validation | Adapt through current backend modules, repositories, storage facade, and routes |
 | FSD/import enforcement, ADRs, recovery phases, debt register, agent rules | Recover and align with the current tree |
-| App-owned configured store | Phase 136 owns configured store composition in `app`; Phase 137 removes the Settings UI's direct facade dependency through a sidebar-provided runtime. Retain the typed shared facade only while remaining consumers migrate (`MD-R02`). |
+| App-owned configured store | Phase 136 owns configured store composition in `app`; Phase 137 removes the Settings UI's direct facade dependency through a sidebar-provided runtime; Phase 138 gives Notes a live app-root preference provider. Retain the typed shared facade only while remaining consumers migrate (`MD-R02`). |
 | Side commit's `server/domains` replacement, stale JS/JSX slices, graph ownership, and whole-file configuration/test rewrites | Skip because current `fsd` already has newer typed/application-module owners and stricter contracts |
 
 ### Recovery R0 — Divergence audit
@@ -922,6 +927,11 @@ Status: **In progress**
   Settings API/effect/save behavior feature-owned, inject a live typed runtime
   from the sidebar modal owner, make the theme switcher controlled-only, and
   enforce that Settings cannot regain direct app/shared-store facade access.
+- [x] Migrate the next bounded lower-layer store read in Phase 138: keep the
+  simplified-note preference live through one App-root `SimplifiedNotesProvider`,
+  preserve all stable NoteCard factory identities and `false` behavior, move
+  note-render consumers to the public hook, and enforce that Notes cannot
+  regain direct app/shared-store facade access.
 - [x] Run focused recovery tests, performance budgets, architecture checks,
   syntax/diff hygiene, and UTF-8/replacement-character checks.
 - [ ] Run the complete lint and typecheck gates after the declared local
@@ -932,7 +942,8 @@ Status: **In progress**
   128 passed 414/414, Phase 129 passed 415/415, Phase 130 passed 416/416, Phase
   131 passed 417/417, Phase 132 passed 418/418, Phase 133 passed 419/419, and
   Phase 134 passed 420/420; Phase 135 passed 421/421; Phase 136 passed
-  422/422; and the expanded Phase 137 suite passes 423/423 tests.
+  422/422; Phase 137 passes 423/423; and the expanded Phase 138 suite passes
+  424/424 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -972,6 +983,25 @@ defaulting, empty ignored-source fallback, and false-only disabling for
 auto-apply/search debounce. It passes 423/423 tests. Complete lint/typecheck
 remain tracked under `MD-R04`; this phase does not claim that the shared
 compatibility facade is removable.
+
+### Recovery R8 / Phase 138 — Notes simplified preference provider
+
+Status: **Completed**
+
+- [x] Define the browser-only public `SimplifiedNotesProvider` and
+  `useSimplifiedNotesEnabled` contract while keeping its nullable Context
+  implementation private to `features/notes/ui`.
+- [x] Select the one live `ui.simplifiedNotes` value at `App` and provide it
+  around routes, modal hosts, and widgets; preserve valid `false` and fail fast
+  when a note renderer is outside the provider.
+- [x] Move NoteCard plus campaign/session/graph/entity-card presentation reads
+  onto the public Notes hook, retain module-scope card factories, and prevent
+  direct Notes access to `app/model` or `shared/model` with the scoped rule.
+
+Phase 138 avoids both stale factory snapshots and wider NoteCard prop-threading
+while preserving the exact simplified/classic presentation policy. It passes
+424/424 tests. Complete lint/typecheck remain tracked under `MD-R04`; the
+shared compatibility facade remains in progress under `MD-R02`.
 
 ## Validation required for every phase
 

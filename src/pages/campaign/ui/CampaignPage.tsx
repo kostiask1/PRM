@@ -14,6 +14,7 @@ import { DraggableList, ListCard } from "../../../shared/ui/index.js";
 import {
 	AiContextIgnoreButton,
 	BulkCollapseButton,
+	useSimplifiedNotesEnabled,
 } from "../../../features/notes/ui/index.js";
 import {
 	CharacterCard,
@@ -444,9 +445,7 @@ function CampaignView({ campaign }: { campaign: CampaignPageCampaign }) {
 	const [isPartialArchiveOpen, setIsPartialArchiveOpen] = useState(false);
 	const [isHeaderActionsOpen, setIsHeaderActionsOpen] = useState(false);
 	const headerActionsRef = useRef<HTMLDivElement | null>(null);
-	const simplifiedNotesEnabled = useAppSelector(
-		(state) => state.ui.simplifiedNotes,
-	);
+	const simplifiedNotesEnabled = useSimplifiedNotesEnabled();
 	const {
 		hasDescriptionData,
 		hasNotesData,

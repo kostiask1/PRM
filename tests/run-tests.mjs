@@ -1480,6 +1480,8 @@ const FSD_APP_STORE_RUNTIME_RULE_ID =
 	"fsd-boundaries/app-store-runtime-owner";
 const FSD_SETTINGS_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/settings-store-facade";
+const FSD_NOTES_STORE_FACADE_RULE_ID =
+	"fsd-boundaries/notes-store-facade";
 
 function lintFsdBoundaryRule(
 	source,
@@ -5397,6 +5399,199 @@ await run(
 		assert.match(
 			eslintSource,
 			/files: \['src\/features\/settings\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/settings-store-facade': 'error'/,
+		);
+	},
+);
+
+await run(
+	"Phase 138 gives Notes a live app-provided simplified-note runtime",
+	async () => {
+		const [
+			runtimeSource,
+			runtimeEntry,
+			typeEntry,
+			noteCardSource,
+			appSource,
+			characterCardSource,
+			locationCardSource,
+			campaignPageSource,
+			campaignGraphSource,
+			sessionPageSource,
+			eslintSource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/features/notes/ui/SimplifiedNotesRuntime.tsx",
+				"utf8",
+			),
+			fs.readFile("src/features/notes/ui/index.js", "utf8"),
+			fs.readFile("src/features/notes/ui/index.d.ts", "utf8"),
+			fs.readFile("src/features/notes/ui/NoteCard.tsx", "utf8"),
+			fs.readFile("src/App.tsx", "utf8"),
+			fs.readFile(
+				"src/widgets/campaign-entity-card/ui/CharacterCard.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/campaign-entity-card/ui/LocationCard.tsx",
+				"utf8",
+			),
+			fs.readFile("src/pages/campaign/ui/CampaignPage.tsx", "utf8"),
+			fs.readFile(
+				"src/pages/campaign/ui/components/CampaignNotesGraph.tsx",
+				"utf8",
+			),
+			fs.readFile("src/pages/session/ui/SessionPage.tsx", "utf8"),
+			fs.readFile("eslint.config.js", "utf8"),
+		]);
+
+		assertExportedInterfaceFragments(
+			runtimeSource,
+			"SimplifiedNotesProviderProps",
+			["simplifiedNotesEnabled: boolean;", "children?: ReactNode;"],
+		);
+		assert.match(
+			runtimeSource,
+			/const SimplifiedNotesContext = createContext<boolean \| null>\(null\);/,
+		);
+		assertSourceTokensInOrder(
+			runtimeSource,
+			[
+				"<SimplifiedNotesContext.Provider value={simplifiedNotesEnabled}>",
+				"const simplifiedNotesEnabled = useContext(SimplifiedNotesContext);",
+				"if (simplifiedNotesEnabled === null)",
+				"SimplifiedNotesProvider is required to render note presentation",
+				"return simplifiedNotesEnabled;",
+			],
+			"live simplified-notes provider semantics",
+		);
+		assert.match(
+			runtimeEntry,
+			/export \{\s*SimplifiedNotesProvider,\s*useSimplifiedNotesEnabled,\s*\} from "\.\/SimplifiedNotesRuntime\.tsx";/,
+		);
+		assertPublicTypeSurface(typeEntry, [
+			"SimplifiedNotesProvider",
+			"useSimplifiedNotesEnabled",
+			"SimplifiedNotesProviderProps",
+		]);
+
+		assert.doesNotMatch(
+			noteCardSource,
+			/shared\/model|app\/model|useAppSelector/,
+		);
+		assertSourceTokensInOrder(
+			noteCardSource,
+			[
+				'import { useSimplifiedNotesEnabled } from "./SimplifiedNotesRuntime.tsx";',
+				"const simplifiedNotesEnabled = useSimplifiedNotesEnabled();",
+				"getNoteCardPresentation(",
+				"note_card_simple__simplified: simplifiedNotesEnabled",
+				"shouldExpandNoteFromCardClick(",
+			],
+			"Notes presentation runtime consumption",
+		);
+
+		assert.match(
+			appSource,
+			/const simplifiedNotesEnabled = useAppSelector\(\s*\(store\) => store\.ui\.simplifiedNotes,\s*\);/,
+		);
+		assertSourceTokensInOrder(
+			appSource,
+			[
+				"<SimplifiedNotesProvider",
+				"simplifiedNotesEnabled={simplifiedNotesEnabled}",
+				"<EditableFieldEntityLinkProvider",
+				"<div className=\"App\" data-lang={currentLanguage}>",
+				"</EditableFieldEntityLinkProvider>",
+				"</SimplifiedNotesProvider>",
+			],
+			"App-owned live Notes runtime composition",
+		);
+
+		for (const [filePath, source] of [
+			[
+				"src/widgets/campaign-entity-card/ui/CharacterCard.tsx",
+				characterCardSource,
+			],
+			[
+				"src/widgets/campaign-entity-card/ui/LocationCard.tsx",
+				locationCardSource,
+			],
+			["src/pages/campaign/ui/CampaignPage.tsx", campaignPageSource],
+			[
+				"src/pages/campaign/ui/components/CampaignNotesGraph.tsx",
+				campaignGraphSource,
+			],
+			["src/pages/session/ui/SessionPage.tsx", sessionPageSource],
+		]) {
+			assert.match(
+				source,
+				/useSimplifiedNotesEnabled\(\)/,
+				`${filePath} must consume the feature-owned live note preference`,
+			);
+			assert.doesNotMatch(
+				source,
+				/state\.ui\.simplifiedNotes/,
+				`${filePath} must not select note presentation state directly`,
+			);
+		}
+		assert.doesNotMatch(characterCardSource, /shared\/model/);
+		assert.doesNotMatch(locationCardSource, /shared\/model/);
+
+		const forbiddenNotesStoreImporters = [];
+		for (const filePath of await collectFsdSourceFiles("src/features/notes")) {
+			const source = await fs.readFile(filePath, "utf8");
+			for (const specifier of readStaticFsdSpecifiers(source)) {
+				const modulePath = resolveTestModuleSpecifierPath(filePath, specifier)
+					?.replace(/(?:\.d)?\.(?:[cm]?[jt]sx?)$/, "")
+					.toLowerCase();
+				if (
+					modulePath === "src/shared/model" ||
+					modulePath?.startsWith("src/shared/model/") ||
+					modulePath === "src/app/model" ||
+					modulePath?.startsWith("src/app/model/")
+				) {
+					forbiddenNotesStoreImporters.push([filePath, specifier]);
+				}
+			}
+		}
+		assert.deepEqual(forbiddenNotesStoreImporters, []);
+
+		for (const source of [
+			'import { useAppSelector } from "../../../shared/model/index.js";',
+			'import { futureStoreFacade } from "../../../shared/model/index.js";',
+			'export { useAppDispatch as dispatch } from "../../../shared/model/index.js";',
+			'export * from "../../../shared/model/index.js";',
+			'import { appStore } from "../../../shared/model/appStore";',
+			'const model = import("/src/shared/model/AppStore.ts?version=1");',
+			'import { appStore } from "/SRC/SHARED/MODEL/AppStore.ts";',
+			'import { appStore } from "/@fs/E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'import { appStore } from "E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'const model = require("..\\\\..\\\\..\\\\shared\\\\model\\\\index.js");',
+			'import.meta.glob("../../../shared/model/appStore.ts", { eager: true });',
+			'import.meta.globEager("../../../app/model/**/*.ts");',
+			'import.meta.glob(["../../../shared/model/appStore.ts"], { eager: true });',
+			'import.meta["glob"]("../../../shared/model/appStore.ts");',
+			'import { useAppSelector } from "../../../app/model/index";',
+		]) {
+			const reports = lintFsdBoundaryRule(
+				source,
+				"src/features/notes/ui/NoteCard.tsx",
+				FSD_NOTES_STORE_FACADE_RULE_ID,
+			);
+			assert.equal(reports.length, 1);
+			assert.equal(reports[0].ruleId, FSD_NOTES_STORE_FACADE_RULE_ID);
+		}
+		assert.deepEqual(
+			lintFsdBoundaryRule(
+				'import { useAppSelector } from "../../../shared/model/index.js";',
+				"src/features/ai/ui/AiPromptComposer.tsx",
+				FSD_NOTES_STORE_FACADE_RULE_ID,
+			),
+			[],
+		);
+		assert.match(
+			eslintSource,
+			/files: \['src\/features\/notes\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/notes-store-facade': 'error'/,
 		);
 	},
 );
