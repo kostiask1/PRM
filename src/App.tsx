@@ -5,12 +5,16 @@ import { backupApi } from "./features/backup/index.js";
 import { settingsApi } from "./features/settings/index.js";
 
 const api = { ...campaignApi, ...backupApi, ...settingsApi };
-import { DiceCalculator } from "./features/dice/index.js";
+import {
+	DiceRequestRuntimeProvider,
+	type DiceRequestRuntime,
+} from "./features/dice/index.js";
 import {
 	AiAttachmentAlertRuntimeProvider,
 	type AiAttachmentAlertRuntime,
 } from "./features/ai/ui/index.js";
 import MainContent from "./app/routing/MainContent.tsx";
+import DiceCalculatorHost from "./app/ui/DiceCalculatorHost.tsx";
 import MessageBoxHost from "./app/ui/MessageBoxHost.tsx";
 import {
 	CharacterCard,
@@ -47,6 +51,7 @@ import {
 	closeMentionPickerAction,
 	confirm,
 	openMentionPickerAction,
+	requestDiceRollAction,
 	requestCampaignsReloadAction,
 	requestRulesReferenceNavigationAction,
 	setLanguageAction,
@@ -139,6 +144,14 @@ export default function App() {
 		() => ({
 			openMentionPicker(request) {
 				dispatch(openMentionPickerAction(request));
+			},
+		}),
+		[dispatch],
+	);
+	const diceRequestRuntime = useMemo<DiceRequestRuntime>(
+		() => ({
+			requestRoll(payload) {
+				dispatch(requestDiceRollAction(payload));
 			},
 		}),
 		[dispatch],
@@ -436,8 +449,9 @@ export default function App() {
 	};
 
 	return (
-		<EditorMentionPickerRuntimeProvider runtime={editorMentionPickerRuntime}>
-			<AiAttachmentAlertRuntimeProvider runtime={aiAttachmentAlertRuntime}>
+		<DiceRequestRuntimeProvider runtime={diceRequestRuntime}>
+			<EditorMentionPickerRuntimeProvider runtime={editorMentionPickerRuntime}>
+				<AiAttachmentAlertRuntimeProvider runtime={aiAttachmentAlertRuntime}>
 				<RulesReferenceRuntimeProvider runtime={rulesReferenceRuntime}>
 					<SimplifiedNotesProvider
 						simplifiedNotesEnabled={simplifiedNotesEnabled}
@@ -507,7 +521,7 @@ export default function App() {
 							/>
 						)}
 						<MessageBoxHost />
-						<DiceCalculator />
+						<DiceCalculatorHost />
 						<RulesReferenceModalHost
 							MonsterStatBlock={MonsterStatBlock}
 							SpellsBrowser={SpellsBrowser}
@@ -517,7 +531,8 @@ export default function App() {
 						</EditableFieldEntityLinkProvider>
 					</SimplifiedNotesProvider>
 				</RulesReferenceRuntimeProvider>
-			</AiAttachmentAlertRuntimeProvider>
-		</EditorMentionPickerRuntimeProvider>
+				</AiAttachmentAlertRuntimeProvider>
+			</EditorMentionPickerRuntimeProvider>
+		</DiceRequestRuntimeProvider>
 	);
 }

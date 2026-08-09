@@ -1,12 +1,9 @@
 import type { MouseEvent, ReactNode } from "react";
 import "../../../assets/components/RollDice.css";
 import { lang } from "../../../shared/lib/index.js";
-import {
-	requestDiceRollAction,
-	useAppDispatch,
-} from "../../../shared/model/index.js";
 import { Tooltip } from "../../../shared/ui/index.js";
 import { createRollDicePayload } from "../model.ts";
+import { useDiceRequestRuntime } from "./DiceRuntime.tsx";
 
 export interface RollDiceProps {
 	formula: string;
@@ -19,11 +16,11 @@ export default function RollDice({
 	children,
 	context = null,
 }: RollDiceProps) {
-	const dispatch = useAppDispatch();
+	const { requestRoll } = useDiceRequestRuntime();
 	const handleClick = (event: MouseEvent<HTMLSpanElement>) => {
 		event.preventDefault();
 		event.stopPropagation();
-		dispatch(requestDiceRollAction(createRollDicePayload(formula, context)));
+		requestRoll(createRollDicePayload(formula, context));
 	};
 
 	return (

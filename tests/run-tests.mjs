@@ -1494,6 +1494,7 @@ const FSD_RULES_REFERENCE_STORE_FACADE_RULE_ID =
 const FSD_AI_STORE_FACADE_RULE_ID = "fsd-boundaries/ai-store-facade";
 const FSD_EDITOR_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/editor-store-facade";
+const FSD_DICE_STORE_FACADE_RULE_ID = "fsd-boundaries/dice-store-facade";
 
 function lintFsdBoundaryRule(
 	source,
@@ -6453,7 +6454,7 @@ await run(
 				"<AiAttachmentAlertRuntimeProvider runtime={aiAttachmentAlertRuntime}>",
 				"<RulesReferenceRuntimeProvider",
 				"<MainContent />",
-				"<DiceCalculator />",
+				"<DiceCalculatorHost />",
 				"<RulesReferenceModalHost",
 			],
 			"App-owned AI attachment alert runtime",
@@ -6666,7 +6667,7 @@ await run(
 				"<AiAttachmentAlertRuntimeProvider",
 				"<MainContent />",
 				"<MessageBoxHost />",
-				"<DiceCalculator />",
+				"<DiceCalculatorHost />",
 			],
 			"App-owned Editor mention picker runtime",
 		);
@@ -6737,6 +6738,201 @@ await run(
 		assert.match(
 			eslintSource,
 			/files: \['src\/features\/editor\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/editor-store-facade': 'error'/,
+		);
+	},
+);
+
+await run(
+	"Phase 145 gives Dice an injected roll runtime",
+	async () => {
+		const [
+			runtimeSource,
+			calculatorSource,
+			rollDiceSource,
+			hostSource,
+			featureEntry,
+			featureTypeEntry,
+			appSource,
+			eslintSource,
+		] = await Promise.all([
+			fs.readFile("src/features/dice/ui/DiceRuntime.tsx", "utf8"),
+			fs.readFile("src/features/dice/ui/DiceCalculator.tsx", "utf8"),
+			fs.readFile("src/features/dice/ui/RollDice.tsx", "utf8"),
+			fs.readFile("src/app/ui/DiceCalculatorHost.tsx", "utf8"),
+			fs.readFile("src/features/dice/index.js", "utf8"),
+			fs.readFile("src/features/dice/index.d.ts", "utf8"),
+			fs.readFile("src/App.tsx", "utf8"),
+			fs.readFile("eslint.config.js", "utf8"),
+		]);
+
+		assert.match(
+			runtimeSource,
+			/export interface DiceRequestRuntime \{\s*requestRoll\(payload: DiceRollPayload\): void;\s*\}/,
+		);
+		assertExportedInterfaceFragments(
+			runtimeSource,
+			"DiceRequestRuntimeProviderProps",
+			[
+			"runtime: DiceRequestRuntime;",
+			"children?: ReactNode;",
+			],
+		);
+		assertSourceTokensInOrder(
+			runtimeSource,
+			[
+				"createContext<DiceRequestRuntime | null>(null)",
+				"<DiceRequestRuntimeContext.Provider value={runtime}>",
+				"const runtime = useContext(DiceRequestRuntimeContext);",
+				'"DiceRequestRuntimeProvider is required to render dice controls"',
+			],
+			"Dice runtime provider",
+		);
+		assert.match(featureEntry, /DiceRequestRuntimeProvider/);
+		assertPublicTypeSurface(featureTypeEntry, [
+			"DiceCalculatorProps",
+			"DiceRequestRuntime",
+			"DiceRequestRuntimeProviderProps",
+		]);
+		assert.doesNotMatch(
+			`${featureEntry}\n${featureTypeEntry}`,
+			/useDiceRequestRuntime/,
+		);
+		assert.match(
+			calculatorSource,
+			/export interface DiceCalculatorProps \{\s*diceRollRequest: unknown;\s*publishResult\(result: DiceResultEntry, context: unknown\): void;\s*\}/,
+		);
+		for (const source of [calculatorSource, rollDiceSource, runtimeSource]) {
+			assert.doesNotMatch(
+				source,
+				/shared\/model|app\/model|useAppDispatch|useAppSelector|requestDiceRollAction|publishDiceResultAction|dispatch\(/,
+			);
+		}
+		assertSourceTokensInOrder(
+			rollDiceSource,
+			[
+				"const { requestRoll } = useDiceRequestRuntime();",
+				"const handleClick = (event: MouseEvent<HTMLSpanElement>) => {",
+				"event.preventDefault();",
+				"event.stopPropagation();",
+				"requestRoll(createRollDicePayload(formula, context));",
+			],
+			"RollDice injected request lifecycle",
+		);
+		assertSourceTokensInOrder(
+			calculatorSource,
+			[
+				"const { requestRoll } = useDiceRequestRuntime();",
+				"const parseAndRoll = useCallback(",
+				"setLastResult(resultEntry);",
+				"setHistory((prev) => prependDiceHistory(prev, resultEntry));",
+				"setIsOpen(true);",
+				"publishResult(resultEntry, context);",
+				"[publishResult]",
+				"readPendingDiceRoll(diceRollRequest)",
+				"[diceRollRequest, parseAndRoll]",
+				"requestRoll(trimmedInput);",
+				"requestRoll(manualInput);",
+				"requestRoll(createHistoryRollPayload(roll))",
+			],
+			"Dice Calculator runtime command and request ordering",
+		);
+		assertSourceTokensInOrder(
+			hostSource,
+			[
+				"const dispatch = useAppDispatch();",
+				"const diceRollRequest = useAppSelector((state) => state.dice.rollRequest);",
+				"const publishResult = useCallback<DicePublishResult>(",
+				"dispatch(publishDiceResultAction(result, context));",
+				"[dispatch]",
+				"<DiceCalculator",
+				"diceRollRequest={diceRollRequest}",
+				"publishResult={publishResult}",
+			],
+			"narrow Dice Calculator app host",
+		);
+		assert.doesNotMatch(hostSource, /requestDiceRollAction/);
+		assertSourceTokensInOrder(
+			appSource,
+			[
+				"const diceRequestRuntime = useMemo<DiceRequestRuntime>(",
+				"requestRoll(payload) {",
+				"dispatch(requestDiceRollAction(payload));",
+				"<DiceRequestRuntimeProvider runtime={diceRequestRuntime}>",
+				"<EditorMentionPickerRuntimeProvider",
+				"<MainContent />",
+				"<DiceCalculatorHost />",
+				"<RulesReferenceModalHost",
+			],
+			"App-owned Dice runtime",
+		);
+		assert.doesNotMatch(appSource, /state\.dice\.rollRequest/);
+		assert.doesNotMatch(appSource, /<DiceCalculator\b/);
+
+		const forbiddenDiceStoreImporters = [];
+		for (const filePath of await collectFsdSourceFiles("src/features/dice")) {
+			const source = await fs.readFile(filePath, "utf8");
+			for (const specifier of readStaticFsdSpecifiers(source)) {
+				const modulePath = resolveTestModuleSpecifierPath(filePath, specifier)
+					?.replace(/(?:\.d)?\.(?:[cm]?[jt]sx?)$/, "")
+					.toLowerCase();
+				if (
+					modulePath === "src/shared/model" ||
+					modulePath?.startsWith("src/shared/model/") ||
+					modulePath === "src/app/model" ||
+					modulePath?.startsWith("src/app/model/")
+				) {
+					forbiddenDiceStoreImporters.push([filePath, specifier]);
+				}
+			}
+		}
+		assert.deepEqual(forbiddenDiceStoreImporters, []);
+
+		for (const source of [
+			'import { requestDiceRollAction } from "../../../shared/model/index.js";',
+			'import { futureStoreFacade } from "../../../shared/model/index.js";',
+			'export { useAppDispatch as dispatch } from "../../../shared/model/index.js";',
+			'export * from "../../../shared/model/index.js";',
+			'import { appStore } from "../../../shared/model/appStore";',
+			'const model = import("/src/shared/model/AppStore.ts?version=1");',
+			'import { appStore } from "/SRC/SHARED/MODEL/AppStore.ts";',
+			'import { appStore } from "/@fs/E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'import { appStore } from "E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'const model = require("..\\\\..\\\\..\\\\shared\\\\model\\\\index.js");',
+			'import.meta.glob("../../../shared/model/appStore.ts", { eager: true });',
+			'import.meta.globEager("../../../app/model/**/*.ts");',
+			'import.meta.glob(["../../../shared/model/appStore.ts"], { eager: true });',
+			'import.meta["glob"]("../../../shared/model/appStore.ts");',
+			'import { useAppSelector } from "../../../app/model/index";',
+		]) {
+			const reports = lintFsdBoundaryRule(
+				source,
+				"src/features/dice/ui/RollDice.tsx",
+				FSD_DICE_STORE_FACADE_RULE_ID,
+			);
+			assert.equal(reports.length, 1);
+			assert.equal(reports[0].ruleId, FSD_DICE_STORE_FACADE_RULE_ID);
+		}
+		const mixedCaseImporterReports = lintFsdBoundaryRule(
+			'import { requestDiceRollAction } from "../../../shared/model/index.js";',
+			"SRC/FEATURES/DICE/ui/RollDice.tsx",
+			FSD_DICE_STORE_FACADE_RULE_ID,
+		);
+		assert.equal(mixedCaseImporterReports.length, 1);
+		assert.equal(
+			mixedCaseImporterReports[0].ruleId,
+			FSD_DICE_STORE_FACADE_RULE_ID,
+		);
+		assert.deepEqual(
+			lintFsdBoundaryRule(
+				'import { requestDiceRollAction } from "../../../shared/model/index.js";',
+				"src/features/editor/ui/Input.tsx",
+				FSD_DICE_STORE_FACADE_RULE_ID,
+			),
+			[],
+		);
+		assert.match(
+			eslintSource,
+			/files: \['src\/features\/dice\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/dice-store-facade': 'error'/,
 		);
 	},
 );

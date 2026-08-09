@@ -16,13 +16,11 @@ import {
 	Tooltip,
 } from "../../../shared/ui/index.js";
 import DiceProbabilityModalContent from "./DiceProbabilityModalContent.tsx";
-import { publishDiceResultAction, requestDiceRollAction } from "../../../shared/model/index.js";
 import {
 	classNames,
 	rollDiceFormula,
 	type DiceBreakdownEntry,
 } from "../../../shared/lib/index.js";
-import { useAppDispatch, useAppSelector } from "../../../shared/model/index.js";
 import { lang } from "../../../shared/lib/index.js";
 
 import "../../../assets/components/DiceCalculator.css";
@@ -39,13 +37,22 @@ import {
 	readPendingDiceRoll,
 	type DiceResultEntry,
 } from "../model.ts";
+import { useDiceRequestRuntime } from "./DiceRuntime.tsx";
 
 const PLAYER_QUESTIONS_HIDE_DELAY_MS = 2200;
 const PANEL_HIDE_ANIMATION_MS = 220;
 
 const DICE_TYPES = [4, 6, 8, 10, 12, 20, 100] as const;
 
-export default function DiceCalculator() {
+export interface DiceCalculatorProps {
+	diceRollRequest: unknown;
+	publishResult(result: DiceResultEntry, context: unknown): void;
+}
+
+export default function DiceCalculator({
+	diceRollRequest,
+	publishResult,
+}: DiceCalculatorProps) {
 	const [isOpen, setIsOpen] = useState(false);
 	const [isPanelMounted, setIsPanelMounted] = useState(false);
 	const [isRolling, setIsRolling] = useState(false);
@@ -53,8 +60,7 @@ export default function DiceCalculator() {
 	const [lastResult, setLastResult] = useState<DiceResultEntry | null>(null);
 	const [manualInput, setManualInput] = useState("");
 	const [probabilityFormula, setProbabilityFormula] = useState("");
-	const dispatch = useAppDispatch();
-	const diceRollRequest = useAppSelector((state) => state.dice.rollRequest);
+	const { requestRoll } = useDiceRequestRuntime();
 	const rootRef = useRef<HTMLDivElement>(null);
 	const processedRollRequestIdRef = useRef<unknown>(null);
 	const rollingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -187,7 +193,7 @@ export default function DiceCalculator() {
 			setLastResult(resultEntry);
 			setHistory((prev) => prependDiceHistory(prev, resultEntry));
 			setIsOpen(true);
-			dispatch(publishDiceResultAction(resultEntry, context));
+			publishResult(resultEntry, context);
 
 			if (autoCloseTimeoutRef.current) {
 				clearTimeout(autoCloseTimeoutRef.current);
@@ -200,7 +206,7 @@ export default function DiceCalculator() {
 				}, PLAYER_QUESTIONS_HIDE_DELAY_MS);
 			}
 		},
-		[dispatch],
+		[publishResult],
 	);
 
 	useEffect(() => {
@@ -234,7 +240,7 @@ export default function DiceCalculator() {
 	const executeRoll = () => {
 		const trimmedInput = manualInput.trim();
 		if (trimmedInput) {
-			dispatch(requestDiceRollAction(trimmedInput));
+			requestRoll(trimmedInput);
 		}
 	};
 
@@ -394,7 +400,7 @@ export default function DiceCalculator() {
 							}
 							onKeyDown={(event: ReactKeyboardEvent<HTMLInputElement>) => {
 								if (event.key === "Enter" && manualInput.trim()) {
-									dispatch(requestDiceRollAction(manualInput));
+									requestRoll(manualInput);
 								}
 							}}
 						/>
@@ -466,11 +472,7 @@ export default function DiceCalculator() {
 								<div
 									className="DiceCalculator__historyItem"
 									onClick={() =>
-										dispatch(
-											requestDiceRollAction(
-												createHistoryRollPayload(roll),
-											),
-										)
+										requestRoll(createHistoryRollPayload(roll))
 									}
 									key={roll.id}
 								>
