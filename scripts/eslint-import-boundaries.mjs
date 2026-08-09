@@ -103,6 +103,7 @@ const SETTINGS_FEATURE_PATH_PREFIX = "src/features/settings/";
 const NOTES_FEATURE_PATH_PREFIX = "src/features/notes/";
 const PLAYER_QUESTIONS_FEATURE_PATH_PREFIX = "src/features/player-questions/";
 const CAMPAIGN_ENTITY_FEATURE_PATH_PREFIX = "src/features/campaign-entity/";
+const ENCOUNTER_EDITOR_FEATURE_PATH_PREFIX = "src/features/encounter-editor/";
 const SHARED_MODEL_PATH = "src/shared/model";
 const APP_MODEL_PATH = "src/app/model";
 
@@ -596,6 +597,16 @@ const CAMPAIGN_ENTITY_STORE_FACADE_RULE =
 			"Campaign Entity must receive app-global refresh effects through injected commands and may not import shared/model or app/model directly.",
 	});
 
+const ENCOUNTER_EDITOR_STORE_FACADE_RULE =
+	createInjectedRuntimeStoreFacadeRule({
+		featurePathPrefix: ENCOUNTER_EDITOR_FEATURE_PATH_PREFIX,
+		description:
+			"Require Encounter Editor to receive app-global modal and refresh effects through its injected runtime.",
+		messageId: "injectedRuntime",
+		message:
+			"Encounter Editor must receive app-global modal and refresh effects through its injected runtime and may not import shared/model or app/model directly.",
+	});
+
 export const FSD_BOUNDARY_PLUGIN = Object.freeze({
 	rules: Object.freeze({
 		"public-entry-imports": FSD_PUBLIC_ENTRY_IMPORT_RULE,
@@ -605,6 +616,7 @@ export const FSD_BOUNDARY_PLUGIN = Object.freeze({
 		"notes-store-facade": NOTES_STORE_FACADE_RULE,
 		"player-questions-store-facade": PLAYER_QUESTIONS_STORE_FACADE_RULE,
 		"campaign-entity-store-facade": CAMPAIGN_ENTITY_STORE_FACADE_RULE,
+		"encounter-editor-store-facade": ENCOUNTER_EDITOR_STORE_FACADE_RULE,
 	}),
 });
 

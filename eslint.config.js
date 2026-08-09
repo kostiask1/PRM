@@ -684,6 +684,12 @@ export default [
     },
   },
   {
+    files: ['src/features/encounter-editor/**/*.{js,jsx,ts,tsx}'],
+    rules: {
+      'fsd-boundaries/encounter-editor-store-facade': 'error',
+    },
+  },
+  {
     files: [
       'src/features/**/*.{js,jsx,ts,tsx}',
       'src/widgets/**/*.{js,jsx,ts,tsx}',

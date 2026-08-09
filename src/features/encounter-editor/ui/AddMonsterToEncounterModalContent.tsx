@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { alert, requestCampaignsReloadAction } from "../../../shared/model/index.js";
 import {
 	campaignApi,
 	type CampaignRecord,
 } from "../../../entities/campaign/index.js";
 import { sessionApi } from "../../../entities/session/index.js";
-import { closeActiveModal, useAppDispatch } from "../../../shared/model/index.js";
 import {
 	createEncounterMonsterInstance,
 	type EncounterMonster,
@@ -27,16 +25,29 @@ import {
 
 const EMPTY_CAMPAIGNS: CampaignRecord[] = [];
 
+export interface AddMonsterToEncounterError {
+	title: string;
+	message: string;
+}
+
+export interface AddMonsterToEncounterModalRuntime {
+	notifyError(error: AddMonsterToEncounterError): void;
+	requestCampaignsReload(): void;
+	closeModal(value: boolean): void;
+}
+
 export interface AddMonsterToEncounterModalContentProps {
 	monster: EncounterMonster;
 	campaigns?: CampaignRecord[] | null;
+	runtime: AddMonsterToEncounterModalRuntime;
 }
 
 export default function AddMonsterToEncounterModalContent({
 	monster,
 	campaigns = EMPTY_CAMPAIGNS,
+	runtime,
 }: AddMonsterToEncounterModalContentProps) {
-	const dispatch = useAppDispatch();
+	const { closeModal, notifyError, requestCampaignsReload } = runtime;
 	const [groups, setGroups] = useState<EncounterTargetCampaignGroup[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [addingId, setAddingId] = useState<string | null>(null);
@@ -83,12 +94,10 @@ export default function AddMonsterToEncounterModalContent({
 			} catch (error) {
 				console.error("Failed to load encounters", error);
 				if (isMounted) {
-					dispatch(
-						alert({
-							title: lang.t("Error"),
-							message: lang.t("Failed to load encounters"),
-						}),
-					);
+					notifyError({
+						title: lang.t("Error"),
+						message: lang.t("Failed to load encounters"),
+					});
 				}
 			} finally {
 				if (isMounted) setLoading(false);
@@ -100,7 +109,7 @@ export default function AddMonsterToEncounterModalContent({
 		return () => {
 			isMounted = false;
 		};
-	}, [activeCampaigns, dispatch]);
+	}, [activeCampaigns, notifyError]);
 
 	const handleAdd = async ({
 		campaign,
@@ -125,16 +134,14 @@ export default function AddMonsterToEncounterModalContent({
 				encounter.id,
 				createEncounterMonsterInstance(monster),
 			);
-			dispatch(requestCampaignsReloadAction());
-			closeActiveModal(true);
+			requestCampaignsReload();
+			closeModal(true);
 		} catch (error) {
 			console.error("Failed to add monster to encounter", error);
-			dispatch(
-				alert({
-					title: lang.t("Error"),
-					message: lang.t("Failed to add monster to encounter"),
-				}),
-			);
+			notifyError({
+				title: lang.t("Error"),
+				message: lang.t("Failed to add monster to encounter"),
+			});
 			setAddingId(null);
 		}
 	};

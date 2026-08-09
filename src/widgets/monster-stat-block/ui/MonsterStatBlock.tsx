@@ -8,10 +8,16 @@ import {
 import { formatSourceLabel } from "../../../entities/reference/index.js";
 import type { CampaignRecord } from "../../../entities/campaign/index.js";
 import { spellApi } from "../../../entities/spell/index.js";
-import { AddMonsterToEncounterModalContent } from "../../../features/encounter-editor/ui/index.js";
+import {
+	AddMonsterToEncounterModalContent,
+	type AddMonsterToEncounterModalRuntime,
+} from "../../../features/encounter-editor/ui/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import {
+	alert,
+	closeActiveModal,
 	openModalRequest,
+	requestCampaignsReloadAction,
 	requestDiceRollAction,
 	useAppDispatch,
 	useAppSelector,
@@ -123,6 +129,20 @@ export default function MonsterStatBlock({
 	const [isReplacingToken, setIsReplacingToken] = useState(false);
 
 	const model = useMemo(() => new MonsterStatBlockModel(monster), [monster]);
+	const addMonsterToEncounterRuntime = useMemo<AddMonsterToEncounterModalRuntime>(
+		() => ({
+			notifyError(error) {
+				dispatch(alert(error));
+			},
+			requestCampaignsReload() {
+				dispatch(requestCampaignsReloadAction());
+			},
+			closeModal(value) {
+				closeActiveModal(value);
+			},
+		}),
+		[dispatch],
+	);
 	const effectiveName = model.effectiveName;
 	const source = getStringField(monster, "source");
 	const sourceLabel = formatSourceLabel(source);
@@ -187,7 +207,7 @@ export default function MonsterStatBlock({
 			title: lang.t("Add to encounter"),
 			type: "confirm",
 			showFooter: false,
-			children: <AddMonsterToEncounterModalContent monster={monster} campaigns={campaigns.filter(isCampaignRecord)} />,
+			children: <AddMonsterToEncounterModalContent monster={monster} campaigns={campaigns.filter(isCampaignRecord)} runtime={addMonsterToEncounterRuntime} />,
 		});
 	};
 

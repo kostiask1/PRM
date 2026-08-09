@@ -674,6 +674,8 @@ Next:
 - Phase 139 adds scoped `fsd-boundaries/player-questions-store-facade` enforcement for `src/features/player-questions/**/*.{js,jsx,ts,tsx}` through the common injected-runtime checker. It rejects every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. Source-inventory and lint-rule coverage lock the public type surface, live Sidebar adapter, false-only debounce policy, result-ID initialization, modal mount, and relative/Vite-root/filesystem/glob bypass matrix. The expanded complete suite passes 425/425 tests. `MD-R02` remains in progress because the compatibility facade still has other lower-layer consumers.
 - Completed Phase 140 by removing Campaign Entity's embedded `refreshEntitiesAction` dependency. `submitCreateEntity` retains its public feature-owned orchestration but now receives one narrow `onRefreshEntities` command from the two campaign-entity-card widget owners. An awaited custom `onCreate` still returns without fallback API work or refresh; the default branch still awaits the campaign API creation before exactly one refresh, and rejected creation never refreshes.
 - Phase 140 adds scoped `fsd-boundaries/campaign-entity-store-facade` enforcement for `src/features/campaign-entity/**/*.{js,jsx,ts,tsx}` through the common injected-runtime checker. It rejects every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. Source-inventory, action-order, mocked-create, custom-create, and failure-path coverage lock the callback boundary and both host bindings. The expanded complete suite passes 426/426 tests. `MD-R02` remains in progress because the compatibility facade still has other lower-layer consumers.
+- Completed Phase 141 by removing Encounter Editor's direct modal/reload facade dependency from the Add Monster to Encounter modal. The feature keeps campaign/session/encounter discovery, active-campaign fallback, mounted-state guards, focused `addEncounterMonster` command, instance construction, and single-submit state; the Monster Stat Block widget supplies only typed error notification, campaign reload, and modal-close commands. The existing click-time filtered campaign snapshot and API success -> reload -> close ordering remain unchanged.
+- Phase 141 adds scoped `fsd-boundaries/encounter-editor-store-facade` enforcement for `src/features/encounter-editor/**/*.{js,jsx,ts,tsx}` through the common injected-runtime checker. It rejects every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. Source-inventory and regression coverage lock the public runtime contract, mounted-only load errors, add success/failure ordering, host mapping, override short-circuit, and bypass matrix. The expanded complete suite passes 427/427 tests. `MD-R02` remains in progress because the compatibility facade still has other lower-layer consumers.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -720,8 +722,11 @@ gives Player Questions a live Sidebar dice runtime, removes its direct store
 facade dependency, enforces the focused Player Questions store boundary, and
 passes 425/425 tests. Phase 140 gives Campaign Entity an injected widget refresh
 command, removes its embedded facade action, enforces the focused Campaign
-Entity store boundary, and passes 426/426 tests. `MD-R05` is closed; `MD-R02`
-remains in progress and the broader migration remains active.
+Entity store boundary, and passes 426/426 tests. Phase 141 gives Encounter
+Editor an injected Monster Stat Block modal runtime, removes its direct facade
+effects, enforces the focused Encounter Editor store boundary, and passes
+427/427 tests. `MD-R05` is closed; `MD-R02` remains in progress and the broader
+migration remains active.
 
 ### Provenance and transfer rule
 
@@ -751,7 +756,7 @@ tracked in `docs/migration-debt.md`.
 | Campaign lookup and rules-reference endpoint ownership | Adapt through current entity public APIs |
 | Canonical Bestiary AI history and mutation request validation | Adapt through current backend modules, repositories, storage facade, and routes |
 | FSD/import enforcement, ADRs, recovery phases, debt register, agent rules | Recover and align with the current tree |
-| App-owned configured store | Phase 136 owns configured store composition in `app`; Phase 137 removes the Settings UI's direct facade dependency through a sidebar-provided runtime; Phase 138 gives Notes a live app-root preference provider; Phase 139 gives Player Questions a live Sidebar dice runtime; Phase 140 gives Campaign Entity a widget-provided refresh command. Retain the typed shared facade only while remaining consumers migrate (`MD-R02`). |
+| App-owned configured store | Phase 136 owns configured store composition in `app`; Phase 137 removes the Settings UI's direct facade dependency through a sidebar-provided runtime; Phase 138 gives Notes a live app-root preference provider; Phase 139 gives Player Questions a live Sidebar dice runtime; Phase 140 gives Campaign Entity a widget-provided refresh command; Phase 141 gives Encounter Editor a Monster Stat Block-provided modal runtime. Retain the typed shared facade only while remaining consumers migrate (`MD-R02`). |
 | Side commit's `server/domains` replacement, stale JS/JSX slices, graph ownership, and whole-file configuration/test rewrites | Skip because current `fsd` already has newer typed/application-module owners and stricter contracts |
 
 ### Recovery R0 — Divergence audit
@@ -950,6 +955,11 @@ Status: **In progress**
   action with a narrow widget-provided callback, preserve default create then
   refresh order and failed-create propagation, and enforce that Campaign Entity
   cannot regain direct app/shared-store facade access.
+- [x] Migrate Encounter Editor in Phase 141: retain feature-owned campaign and
+  session discovery plus focused add-monster orchestration, inject only modal
+  error/reload/close commands from Monster Stat Block, preserve the existing
+  campaign snapshot and command/error ordering, and enforce that Encounter
+  Editor cannot regain direct app/shared-store facade access.
 - [x] Run focused recovery tests, performance budgets, architecture checks,
   syntax/diff hygiene, and UTF-8/replacement-character checks.
 - [ ] Run the complete lint and typecheck gates after the declared local
@@ -961,7 +971,8 @@ Status: **In progress**
   131 passed 417/417, Phase 132 passed 418/418, Phase 133 passed 419/419, and
   Phase 134 passed 420/420; Phase 135 passed 421/421; Phase 136 passed
   422/422; Phase 137 passes 423/423; Phase 138 passes 424/424; Phase 139
-  passes 425/425; and the expanded Phase 140 suite passes 426/426 tests.
+  passes 425/425; Phase 140 passes 426/426; and the expanded Phase 141 suite
+  passes 427/427 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -1058,6 +1069,23 @@ Phase 140 passes 426/426 tests, including mocked successful and failed default
 creation plus custom-create behavior. Complete lint/typecheck remain tracked
 under `MD-R04`; the shared compatibility facade remains in progress under
 `MD-R02`.
+
+### Recovery R11 / Phase 141 - Encounter Editor injected modal runtime
+
+Status: **Completed**
+
+- [x] Define and publicly type the narrow `AddMonsterToEncounterModalRuntime`
+  error, reload, and close commands without exposing action creators or the
+  global store to Encounter Editor.
+- [x] Move the alert, campaign-reload action, and active-modal close mapping to
+  the Monster Stat Block widget while retaining feature-owned discovery,
+  focused mutation, mounted loading guard, and local submit locking.
+- [x] Prevent direct Encounter Editor access to `app/model` or `shared/model`
+  with the scoped boundary rule, preserving the custom add override,
+  click-time campaign snapshot, success order, and failure unlock behavior.
+
+Phase 141 passes 427/427 tests. Complete lint/typecheck remain tracked under
+`MD-R04`; the shared compatibility facade remains in progress under `MD-R02`.
 
 ## Validation required for every phase
 
