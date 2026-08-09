@@ -1,32 +1,16 @@
 import { lang } from "../../../shared/lib/index.js";
 import { Button } from "../../../shared/ui/index.js";
-import { EditableField } from "../../editor/ui/index.js";
-import type { AiTokenEstimate } from "../model/tokenEstimation.ts";
-import AiAttachmentControls from "./AiAttachmentControls.tsx";
 import { getAiPromptTokenVisibility } from "./presentationModel.ts";
-import type { AiAttachmentStateSetter, AiUiAttachment } from "./types.ts";
+import type {
+	AiPromptComposerComponent,
+	AiPromptComposerCompositionSlots,
+	AiPromptComposerProps,
+} from "./aiPromptComposition.ts";
 
-export interface AiPromptComposerProps {
-	attachedFiles: AiUiAttachment[];
-	attachedImages: AiUiAttachment[];
-	campaignSlug?: string | null;
-	canCancel: boolean;
-	formattedFileTokenEstimate: string;
-	formattedImageTokenEstimate: string;
-	formattedTextTokenEstimate: string;
-	formattedTokenEstimate: string;
-	isLoading: boolean;
-	onCancel: () => void;
-	onGenerate: () => void;
-	onInstructionsChange: (value: string) => void;
-	placeholder?: string;
-	setAttachedFiles: AiAttachmentStateSetter;
-	setAttachedImages: AiAttachmentStateSetter;
-	tokenEstimate: AiTokenEstimate;
-	userInstructions: string;
-}
+type AiPromptComposerInternalProps = AiPromptComposerProps &
+	AiPromptComposerCompositionSlots;
 
-export default function AiPromptComposer({
+function AiPromptComposer({
 	attachedFiles,
 	attachedImages,
 	campaignSlug,
@@ -44,7 +28,9 @@ export default function AiPromptComposer({
 	setAttachedImages,
 	tokenEstimate,
 	userInstructions,
-}: AiPromptComposerProps) {
+	AiAttachmentControls,
+	EditableField,
+}: AiPromptComposerInternalProps) {
 	const { showFileTokens, showImageTokens } =
 		getAiPromptTokenVisibility(tokenEstimate);
 
@@ -113,4 +99,21 @@ export default function AiPromptComposer({
 			</div>
 		</div>
 	);
+}
+
+export function createAiPromptComposerComponent({
+	AiAttachmentControls,
+	EditableField,
+}: AiPromptComposerCompositionSlots): AiPromptComposerComponent {
+	function ConfiguredAiPromptComposer(props: AiPromptComposerProps) {
+		return (
+			<AiPromptComposer
+				{...props}
+				AiAttachmentControls={AiAttachmentControls}
+				EditableField={EditableField}
+			/>
+		);
+	}
+
+	return ConfiguredAiPromptComposer;
 }

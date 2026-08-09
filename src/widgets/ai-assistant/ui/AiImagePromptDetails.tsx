@@ -3,14 +3,12 @@ import type {
 	AiModelOption,
 	AiUiAttachment,
 } from "../../../features/ai/ui/index.js";
-import {
-	AiAttachmentControls,
-	renderAiModelOptions,
-} from "../../../features/ai/ui/index.js";
+import { renderAiModelOptions } from "../../../features/ai/ui/index.js";
 import { EditableField } from "../../../features/editor/ui/index.js";
 import { lang } from "../../../shared/lib/index.js";
 import { Button, Select } from "../../../shared/ui/index.js";
 import type { ImagePromptTarget } from "../model/imagePromptPicker.ts";
+import { AiAssistantAttachmentControls } from "./aiAssistantUiComposition.ts";
 
 interface AiImagePromptDetailsProps {
 	attachedFiles: AiUiAttachment[];
@@ -115,7 +113,7 @@ export default function AiImagePromptDetails({
 					className="AiAssistant__image_prompt_model AiAssistant__image_prompt_instructions"
 				/>
 			</label>
-			<AiAttachmentControls
+			<AiAssistantAttachmentControls
 				attachedFiles={attachedFiles}
 				attachedImages={attachedImages}
 				campaignSlug={campaignSlug}

@@ -4,6 +4,11 @@ export {
 	type EditableFieldProps,
 } from "./EditableField.tsx";
 export {
+	EditableFieldEntityLinkProvider,
+	type EditableFieldEntityLinkProviderProps,
+	type EditableFieldEntityLinkRuntime,
+} from "./EditableFieldEntityLinkRuntime.tsx";
+export {
 	default as Input,
 	type InputProps,
 	type InputValueChangeEvent,

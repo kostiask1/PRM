@@ -3,6 +3,13 @@ export {
 	type ColorThemeSwitcherProps,
 } from "./ColorThemeSwitcher.tsx";
 export {
-	default as SettingsModalContent,
-	type SettingsModalContentProps,
+	createSettingsModalContentComponent,
 } from "./SettingsModalContent.tsx";
+export type {
+	SettingsModalCompositionSlots,
+	SettingsModalContentComponent,
+	SettingsModalContentProps,
+	SettingsModalEditableFieldChangeEvent,
+	SettingsModalEditableFieldSlot,
+	SettingsModalEditableFieldSlotProps,
+} from "./settingsModalComposition.ts";

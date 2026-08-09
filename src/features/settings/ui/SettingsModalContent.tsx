@@ -1,14 +1,31 @@
 import "../../../assets/components/SettingsModal.css";
 import SettingsModalView from "./SettingsModalView.tsx";
+import type {
+	SettingsModalCompositionSlots,
+	SettingsModalContentComponent,
+	SettingsModalContentProps,
+} from "./settingsModalComposition.ts";
 import { useSettingsModalController } from "./useSettingsModalController.ts";
 
-export interface SettingsModalContentProps {
-	onCancel: () => void;
+type SettingsModalContentInternalProps = SettingsModalContentProps &
+	SettingsModalCompositionSlots;
+
+function SettingsModalContent({
+	onCancel,
+	EditableField,
+}: SettingsModalContentInternalProps) {
+	const viewProps = useSettingsModalController(onCancel);
+	return <SettingsModalView {...viewProps} EditableField={EditableField} />;
 }
 
-export default function SettingsModalContent({
-	onCancel,
-}: SettingsModalContentProps) {
-	const viewProps = useSettingsModalController(onCancel);
-	return <SettingsModalView {...viewProps} />;
+export function createSettingsModalContentComponent({
+	EditableField,
+}: SettingsModalCompositionSlots): SettingsModalContentComponent {
+	function ConfiguredSettingsModalContent(props: SettingsModalContentProps) {
+		return (
+			<SettingsModalContent {...props} EditableField={EditableField} />
+		);
+	}
+
+	return ConfiguredSettingsModalContent;
 }

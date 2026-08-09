@@ -3,7 +3,6 @@ import { type ChangeEvent, type RefObject, useRef, useState } from "react";
 import { formatBytes, lang } from "../../../shared/lib/index.js";
 import { alert, useAppDispatch } from "../../../shared/model/index.js";
 import { Button, Icon } from "../../../shared/ui/index.js";
-import { ImageGallery, type ImageAsset } from "../../images/index.js";
 import {
 	AI_FILE_ACCEPT,
 	AI_IMAGE_ACCEPT,
@@ -24,20 +23,16 @@ import {
 	removeAiAttachmentAt,
 	shouldReportAiAttachmentSelectionError,
 } from "./presentationModel.ts";
+import type {
+	AiAttachmentControlsComponent,
+	AiAttachmentControlsCompositionSlots,
+	AiAttachmentControlsProps,
+	AiAttachmentGalleryImage,
+} from "./aiAttachmentComposition.ts";
 import type { AiAttachmentStateSetter, AiUiAttachment } from "./types.ts";
 import "../../../assets/components/AiAttachmentControls.css";
 
 const ignoreAttachmentUpdate: AiAttachmentStateSetter = () => {};
-
-export interface AiAttachmentControlsProps {
-	attachedFiles?: AiUiAttachment[];
-	attachedImages?: AiUiAttachment[];
-	campaignSlug?: string | null;
-	disabled?: boolean;
-	fileInputRef?: RefObject<HTMLInputElement>;
-	setAttachedFiles?: AiAttachmentStateSetter;
-	setAttachedImages?: AiAttachmentStateSetter;
-}
 
 interface AiAttachmentActionsProps {
 	disabled: boolean;
@@ -167,7 +162,10 @@ function AttachedFileList({
 	);
 }
 
-export default function AiAttachmentControls({
+type AiAttachmentControlsInternalProps = AiAttachmentControlsProps &
+	AiAttachmentControlsCompositionSlots;
+
+function AiAttachmentControls({
 	attachedFiles = [],
 	attachedImages = [],
 	campaignSlug,
@@ -175,7 +173,8 @@ export default function AiAttachmentControls({
 	fileInputRef,
 	setAttachedFiles = ignoreAttachmentUpdate,
 	setAttachedImages = ignoreAttachmentUpdate,
-}: AiAttachmentControlsProps) {
+	ImageGallery,
+}: AiAttachmentControlsInternalProps) {
 	const dispatch = useAppDispatch();
 	const internalFileInputRef = useRef<HTMLInputElement>(null);
 	const imageInputRef = useRef<HTMLInputElement>(null);
@@ -307,7 +306,9 @@ export default function AiAttachmentControls({
 		);
 	};
 
-	const selectGalleryImage = (image: ImageAsset | null | undefined) => {
+	const selectGalleryImage = (
+		image: AiAttachmentGalleryImage | null | undefined,
+	) => {
 		if (image?.url) {
 			addAttachedImage({
 				name: image.name || String(image.url).split("/").pop() || image.url,
@@ -364,4 +365,21 @@ export default function AiAttachmentControls({
 			/>
 		</div>
 	);
+}
+
+export function createAiAttachmentControlsComponent({
+	ImageGallery,
+}: AiAttachmentControlsCompositionSlots): AiAttachmentControlsComponent {
+	function ConfiguredAiAttachmentControls(
+		props: AiAttachmentControlsProps,
+	) {
+		return (
+			<AiAttachmentControls
+				{...props}
+				ImageGallery={ImageGallery}
+			/>
+		);
+	}
+
+	return ConfiguredAiAttachmentControls;
 }

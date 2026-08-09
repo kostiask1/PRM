@@ -15,9 +15,9 @@ import {
 	Select,
 	Switch,
 } from "../../../shared/ui/index.js";
-import { EditableField } from "../../editor/ui/index.js";
 import ColorThemeSwitcher from "./ColorThemeSwitcher.tsx";
 import CampaignScopeOptions from "./CampaignScopeOptions.tsx";
+import type { SettingsModalCompositionSlots } from "./settingsModalComposition.ts";
 
 export interface SettingsGeneralViewProps {
 	currentTheme: Theme;
@@ -67,6 +67,8 @@ export interface SettingsModalViewProps {
 	onNotificationClose: () => void;
 	onCancel: () => void;
 }
+
+type SettingsAiGroupProps = SettingsAiViewProps & SettingsModalCompositionSlots;
 
 function SettingsGeneralGroup({
 	currentTheme,
@@ -227,7 +229,8 @@ function SettingsAiGroup({
 	onBasePromptChange,
 	onImagePromptChange,
 	onSave,
-}: SettingsAiViewProps) {
+	EditableField,
+}: SettingsAiGroupProps) {
 	return (
 		<div className="SettingsModal__group SettingsModal__section SettingsModal__section_ai">
 			<div className="SettingsModal__sectionHeader">
@@ -321,7 +324,8 @@ export default function SettingsModalView({
 	ai,
 	onNotificationClose,
 	onCancel,
-}: SettingsModalViewProps) {
+	EditableField,
+}: SettingsModalViewProps & SettingsModalCompositionSlots) {
 	return (
 		<div className="SettingsModal">
 			{notification && (
@@ -329,7 +333,7 @@ export default function SettingsModalView({
 			)}
 			<SettingsGeneralGroup {...general} />
 			<SettingsSourcesGroup {...sources} />
-			<SettingsAiGroup {...ai} />
+			<SettingsAiGroup {...ai} EditableField={EditableField} />
 			<div className="SettingsModal__actions">
 				<Button variant="ghost" onClick={onCancel}>
 					{lang.t("Close")}

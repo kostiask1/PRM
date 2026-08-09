@@ -1,12 +1,16 @@
 import { getMonsterAiEditPresentation } from "../../../../features/ai-edit-monster/index.js";
 import {
-	AiAttachmentControls,
+	createAiAttachmentControlsComponent,
 	renderAiModelOptions,
 } from "../../../../features/ai/ui/index.js";
 import { EditableField } from "../../../../features/editor/ui/index.js";
+import { ImageGallery } from "../../../../features/images/index.js";
 import { lang } from "../../../../shared/lib/index.js";
 import { Button, Modal, Select } from "../../../../shared/ui/index.js";
 import type { BestiaryAiModalsSlotProps } from "../../../../widgets/bestiary-browser/index.js";
+
+const EncounterAiAttachmentControls =
+	createAiAttachmentControlsComponent({ ImageGallery });
 
 type MonsterAiEditModalProps = Pick<
 	BestiaryAiModalsSlotProps,
@@ -82,7 +86,7 @@ export default function MonsterAiEditModal({
 					placeholder={presentation.placeholder}
 					className="Bestiary__ai_edit_prompt"
 				/>
-				<AiAttachmentControls
+				<EncounterAiAttachmentControls
 					attachedFiles={aiEditAttachedFiles}
 					attachedImages={aiEditAttachedImages}
 					campaignSlug="general"

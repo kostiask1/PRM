@@ -5,9 +5,9 @@ import {
 	AiAssistantToolbar,
 	AiContextSettingsModal,
 	AiHistoryResponseDialog,
-	AiPromptComposer,
 	AiResponseHistory,
 } from "../../../features/ai/ui/index.js";
+import { AiAssistantPromptComposer } from "./aiAssistantUiComposition.ts";
 
 export interface AiAssistantPanelViewProps {
 	shell: Omit<ComponentProps<typeof AiAssistantShell>, "children">;
@@ -15,7 +15,7 @@ export interface AiAssistantPanelViewProps {
 	apiKey: ComponentProps<typeof AiApiKeyPanel> | null;
 	contextModal: ComponentProps<typeof AiContextSettingsModal>;
 	historyDialog: ComponentProps<typeof AiHistoryResponseDialog>;
-	promptComposer: ComponentProps<typeof AiPromptComposer>;
+	promptComposer: ComponentProps<typeof AiAssistantPromptComposer>;
 	error: string;
 	history: ComponentProps<typeof AiResponseHistory>;
 }
@@ -36,7 +36,7 @@ export default function AiAssistantPanelView({
 			{apiKey ? <AiApiKeyPanel {...apiKey} /> : null}
 			<AiContextSettingsModal {...contextModal} />
 			<AiHistoryResponseDialog {...historyDialog} />
-			<AiPromptComposer {...promptComposer} />
+			<AiAssistantPromptComposer {...promptComposer} />
 			{error ? <div className="AiAssistant__error">{error}</div> : null}
 			<AiResponseHistory {...history} />
 		</AiAssistantShell>

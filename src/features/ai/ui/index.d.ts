@@ -3,9 +3,16 @@ export {
 	type AiApiKeyPanelProps,
 } from "./AiApiKeyPanel.tsx";
 export {
-	default as AiAttachmentControls,
-	type AiAttachmentControlsProps,
+	createAiAttachmentControlsComponent,
 } from "./AiAttachmentControls.tsx";
+export type {
+	AiAttachmentControlsComponent,
+	AiAttachmentControlsCompositionSlots,
+	AiAttachmentControlsProps,
+	AiAttachmentGalleryImage,
+	AiAttachmentGallerySlot,
+	AiAttachmentGallerySlotProps,
+} from "./aiAttachmentComposition.ts";
 export {
 	default as AiAssistantShell,
 	type AiAssistantShellProps,
@@ -23,9 +30,16 @@ export {
 	type AiHistoryResponseDialogProps,
 } from "./AiHistoryResponseDialog.tsx";
 export {
-	default as AiPromptComposer,
-	type AiPromptComposerProps,
+	createAiPromptComposerComponent,
 } from "./AiPromptComposer.tsx";
+export type {
+	AiPromptComposerComponent,
+	AiPromptComposerCompositionSlots,
+	AiPromptComposerEditableFieldChangeEvent,
+	AiPromptComposerEditableFieldSlot,
+	AiPromptComposerEditableFieldSlotProps,
+	AiPromptComposerProps,
+} from "./aiPromptComposition.ts";
 export {
 	default as AiResponseHistory,
 	type AiResponseHistoryProps,

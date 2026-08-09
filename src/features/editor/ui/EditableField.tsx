@@ -90,14 +90,10 @@ import {
 	handleSpaceAfterMention,
 } from "../model/mentionEditor.ts";
 import {
-	EntityLinkContext,
-	EntityLinkResolverContext,
-	EntityModal,
-	openEntityLinkModal,
-} from "../../entity-link/index.js";
-import type {
-	EntityLinkModalState,
-} from "../../entity-link/index.js";
+	type EditableFieldEntityModal,
+	type EditableFieldEntityModalState,
+	useEditableFieldEntityLinkRuntime,
+} from "./EditableFieldEntityLinkRuntime.tsx";
 import {
 	createEditableFieldChangeEvent,
 	getEditableClickPlan,
@@ -1010,9 +1006,10 @@ interface EditableFieldViewProps extends LexicalEditableFieldProps {
 	domProps: HTMLAttributes<HTMLDivElement>;
 	editorKey: string;
 	editorRef: LexicalEditorRef;
+	EntityModal: EditableFieldEntityModal;
 	handleCopy: (event: MouseEvent<HTMLButtonElement>) => void | Promise<void>;
 	initialConfig: InitialConfigType;
-	modalState: EntityLinkModalState | null;
+	modalState: EditableFieldEntityModalState | null;
 	onCloseMentionModal: () => void;
 	stopContainerEvent: (event: MouseEvent<HTMLDivElement>) => void;
 	tooltipPresentation: EditableFieldTooltipPresentation<
@@ -1028,6 +1025,7 @@ function EditableFieldView({
 	domProps,
 	editorKey,
 	editorRef,
+	EntityModal,
 	enableHistory,
 	handleCopy,
 	initialConfig,
@@ -1140,11 +1138,18 @@ export default function EditableField({
 		...domProps
 	} = props;
 	const dispatch = useAppDispatch();
+	const {
+		EntityLinkContext,
+		EntityLinkResolverContext,
+		EntityModal,
+		openEntityLinkModal,
+	} = useEditableFieldEntityLinkRuntime();
 	const currentEntityIdentity = useContext(EntityLinkContext);
 	const scopedEntityLinks = useContext(EntityLinkResolverContext);
 	const [isActive, setIsActive] = useState(false);
 	const [copied, setCopied] = useState(false);
-	const [modalState, setModalState] = useState<EntityLinkModalState | null>(null);
+	const [modalState, setModalState] =
+		useState<EditableFieldEntityModalState | null>(null);
 	const [mentionTooltip, setMentionTooltip] = useState<MentionTooltipState>({
 		content: null,
 		anchor: null,
@@ -1280,6 +1285,7 @@ export default function EditableField({
 			domProps={domProps}
 			editorKey={editorKey}
 			editorRef={editorRef}
+			EntityModal={EntityModal}
 			enableHistory={enableHistory}
 			handleCopy={handleCopy}
 			initialConfig={initialConfig}

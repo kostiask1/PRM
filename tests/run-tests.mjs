@@ -853,6 +853,7 @@ import { create5eToolsUpdater } from "../scripts/update-5etools-data-runtime.mjs
 import * as databaseBundlePolicies from "../scripts/build-database-bundles-policies.mjs";
 import {
 	CAMPAIGN_MODEL_IMPORT_PATTERNS,
+	createFsdSameLayerFileEdgeRule,
 	FSD_BOUNDARY_PLUGIN,
 	FSD_PUBLIC_API_PATTERNS,
 	FSD_SAME_LAYER_FILE_EDGE_BASELINE,
@@ -1476,7 +1477,12 @@ await run(
 const FSD_PUBLIC_ENTRY_RULE_ID = "fsd-boundaries/public-entry-imports";
 const FSD_SAME_LAYER_RULE_ID = "fsd-boundaries/same-layer-file-edges";
 
-function lintFsdBoundaryRule(source, fileName, ruleId) {
+function lintFsdBoundaryRule(
+	source,
+	fileName,
+	ruleId,
+	plugin = FSD_BOUNDARY_PLUGIN,
+) {
 	const linter = new Linter({ configType: "flat" });
 	return linter.verify(
 		source,
@@ -1487,7 +1493,7 @@ function lintFsdBoundaryRule(source, fileName, ruleId) {
 				sourceType: "module",
 			},
 			plugins: {
-				"fsd-boundaries": FSD_BOUNDARY_PLUGIN,
+				"fsd-boundaries": plugin,
 			},
 			rules: {
 				[ruleId]: "error",
@@ -1499,6 +1505,20 @@ function lintFsdBoundaryRule(source, fileName, ruleId) {
 
 function lintFsdSameLayerEdges(source, fileName) {
 	return lintFsdBoundaryRule(source, fileName, FSD_SAME_LAYER_RULE_ID);
+}
+
+function lintFsdSameLayerEdgesWithBaseline(source, fileName, baseline) {
+	return lintFsdBoundaryRule(
+		source,
+		fileName,
+		FSD_SAME_LAYER_RULE_ID,
+		{
+			rules: {
+				"same-layer-file-edges":
+					createFsdSameLayerFileEdgeRule(baseline),
+			},
+		},
+	);
 }
 
 function lintFsdPublicEntries(source, fileName) {
@@ -1889,24 +1909,40 @@ await run(
 );
 
 await run(
-	"same-layer FSD rule rejects growth and stale allowances",
+	"same-layer FSD rule rejects growth and reports synthetic stale allowances",
 	async () => {
-		const allowedImporter =
+		const auditedImporter =
 			"src/features/ai/ui/AiAttachmentControls.tsx";
+		const productionViolation = lintFsdSameLayerEdges(
+			'import { ImageGallery } from "../../images/index.js";',
+			auditedImporter,
+		);
+		assert.equal(productionViolation.length, 1);
+		assert.equal(productionViolation[0].ruleId, FSD_SAME_LAYER_RULE_ID);
+		assert.match(productionViolation[0].message, /dependency on "images"/);
+
+		const syntheticBaseline = {
+			features: {
+				[auditedImporter]: ["images"],
+			},
+			widgets: {},
+		};
 		assert.deepEqual(
-			lintFsdSameLayerEdges(
+			lintFsdSameLayerEdgesWithBaseline(
 				'import { ImageGallery } from "../../images/index.js";',
-				allowedImporter,
+				auditedImporter,
+				syntheticBaseline,
 			),
 			[],
 		);
 
-		const unexpectedTarget = lintFsdSameLayerEdges(
+		const unexpectedTarget = lintFsdSameLayerEdgesWithBaseline(
 			[
 				'import { ImageGallery } from "../../images/index.js";',
 				'import { Input } from "../../editor/ui/index.js";',
 			].join("\n"),
-			allowedImporter,
+			auditedImporter,
+			syntheticBaseline,
 		);
 		assert.equal(unexpectedTarget.length, 1);
 		assert.equal(unexpectedTarget[0].ruleId, FSD_SAME_LAYER_RULE_ID);
@@ -1935,34 +1971,37 @@ await run(
 			assert.match(messages[0].message, /dependency on "images"/);
 		}
 
-		const staleAllowance = lintFsdSameLayerEdges(
+		const syntheticStaleAllowance = lintFsdSameLayerEdgesWithBaseline(
 			"export const value = 1;",
-			allowedImporter,
+			auditedImporter,
+			syntheticBaseline,
 		);
-		assert.equal(staleAllowance.length, 1);
+		assert.equal(syntheticStaleAllowance.length, 1);
 		assert.match(
-			staleAllowance[0].message,
+			syntheticStaleAllowance[0].message,
 			/stale same-layer dependency allowance "images"/,
 		);
 
 		assert.deepEqual(
-			lintFsdSameLayerEdges(
+			lintFsdSameLayerEdgesWithBaseline(
 				[
 					'import { ImageGallery } from "../../images/index.js";',
 					'import { ImageAssetField } from "../../images/index.js";',
 				].join("\n"),
-				allowedImporter,
+				auditedImporter,
+				syntheticBaseline,
 			),
 			[],
 		);
 		assert.deepEqual(
-			lintFsdSameLayerEdges(
+			lintFsdSameLayerEdgesWithBaseline(
 				[
 					'export { ImageGallery } from "../../images/index.js";',
 					'const lazyImages = import("../../images/index.js");',
 					'const commonImages = require("../../images/index.js");',
 				].join("\n"),
-				allowedImporter,
+				auditedImporter,
+				syntheticBaseline,
 			),
 			[],
 		);
@@ -1995,10 +2034,10 @@ await run(
 			["../../images/index.js"],
 		);
 		await assertSameLayerBaselineShape("features", {
-			importers: 4,
-			edges: 4,
-			pairs: 4,
-			declarations: 5,
+			importers: 0,
+			edges: 0,
+			pairs: 0,
+			declarations: 0,
 		});
 		await assertSameLayerBaselineShape("widgets", {
 			importers: 0,
@@ -2889,7 +2928,7 @@ await run(
 
 		assert.match(
 			panelViewSource,
-			/<AiContextSettingsModal \{\.\.\.contextModal\} \/>\s*<AiHistoryResponseDialog \{\.\.\.historyDialog\} \/>\s*<AiPromptComposer \{\.\.\.promptComposer\} \/>/,
+			/<AiContextSettingsModal \{\.\.\.contextModal\} \/>\s*<AiHistoryResponseDialog \{\.\.\.historyDialog\} \/>\s*<AiAssistantPromptComposer \{\.\.\.promptComposer\} \/>/,
 		);
 		assert.match(
 			panelSource,
@@ -4548,6 +4587,323 @@ await run(
 				false,
 			);
 		})();
+	},
+);
+
+await run(
+	"Phase 135 removes the final feature sibling edges through explicit composition",
+	async () => {
+		const [
+			appSource,
+			editorRuntimeEntry,
+			editorTypeEntry,
+			editorRuntimeSource,
+			editableFieldSource,
+			aiRuntimeEntry,
+			aiTypeEntry,
+			attachmentCompositionSource,
+			attachmentSource,
+			promptCompositionSource,
+			promptSource,
+			aiOwnerSource,
+			aiPanelViewSource,
+			aiImageDetailsSource,
+			encounterAiSource,
+			settingsRuntimeEntry,
+			settingsTypeEntry,
+			settingsCompositionSource,
+			settingsContentSource,
+			settingsViewSource,
+			sidebarCompositionSource,
+			sidebarSource,
+		] = await Promise.all([
+			fs.readFile("src/App.tsx", "utf8"),
+			fs.readFile("src/features/editor/ui/index.js", "utf8"),
+			fs.readFile("src/features/editor/ui/index.d.ts", "utf8"),
+			fs.readFile(
+				"src/features/editor/ui/EditableFieldEntityLinkRuntime.tsx",
+				"utf8",
+			),
+			fs.readFile("src/features/editor/ui/EditableField.tsx", "utf8"),
+			fs.readFile("src/features/ai/ui/index.js", "utf8"),
+			fs.readFile("src/features/ai/ui/index.d.ts", "utf8"),
+			fs.readFile(
+				"src/features/ai/ui/aiAttachmentComposition.ts",
+				"utf8",
+			),
+			fs.readFile(
+				"src/features/ai/ui/AiAttachmentControls.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/features/ai/ui/aiPromptComposition.ts",
+				"utf8",
+			),
+			fs.readFile("src/features/ai/ui/AiPromptComposer.tsx", "utf8"),
+			fs.readFile(
+				"src/widgets/ai-assistant/ui/aiAssistantUiComposition.ts",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/ai-assistant/ui/AiAssistantPanelView.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/ai-assistant/ui/AiImagePromptDetails.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/pages/encounter/ui/components/MonsterAiEditModal.tsx",
+				"utf8",
+			),
+			fs.readFile("src/features/settings/ui/index.js", "utf8"),
+			fs.readFile("src/features/settings/ui/index.d.ts", "utf8"),
+			fs.readFile(
+				"src/features/settings/ui/settingsModalComposition.ts",
+				"utf8",
+			),
+			fs.readFile(
+				"src/features/settings/ui/SettingsModalContent.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/features/settings/ui/SettingsModalView.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/sidebar/ui/sidebarSettingsComposition.ts",
+				"utf8",
+			),
+			fs.readFile("src/widgets/sidebar/ui/Sidebar.tsx", "utf8"),
+		]);
+
+		(() => {
+			assert.match(
+				editorRuntimeEntry,
+				/export \{ EditableFieldEntityLinkProvider \} from "\.\/EditableFieldEntityLinkRuntime\.tsx";/,
+			);
+			for (const publicType of [
+				"EditableFieldEntityLinkProviderProps",
+				"EditableFieldEntityLinkRuntime",
+			]) {
+				assert.match(editorTypeEntry, new RegExp(`\\b${publicType}\\b`));
+			}
+			assert.doesNotMatch(editorRuntimeSource, /features\/entity-link/);
+			assert.match(
+				editorRuntimeSource,
+				/import type \{ CampaignEntityResolution \} from "\.\.\/\.\.\/\.\.\/entities\/campaign\/index\.js";/,
+			);
+			assertExportedInterfaceFragments(
+				editorRuntimeSource,
+				"EditableFieldEntityLinkRuntime",
+				[
+					"EntityLinkContext: Context<EditableFieldEntityIdentity | null>;",
+					"EntityLinkResolverContext: Context<EditableFieldEntityLinkResolver | null>;",
+					"EntityModal: EditableFieldEntityModal;",
+					"openEntityLinkModal: EditableFieldOpenEntityLinkModal;",
+				],
+			);
+			assertSourceTokensInOrder(
+				appSource,
+				[
+					"const APP_EDITABLE_FIELD_ENTITY_LINK_RUNTIME = Object.freeze({",
+					"EntityLinkContext,",
+					"EntityLinkResolverContext,",
+					"EntityModal,",
+					"openEntityLinkModal,",
+					"}) satisfies EditableFieldEntityLinkRuntime;",
+					"export default function App()",
+					"<EditableFieldEntityLinkProvider",
+					"runtime={APP_EDITABLE_FIELD_ENTITY_LINK_RUNTIME}",
+					"<CampaignEntityModalProvider",
+				],
+				"app-owned editable-field entity-link runtime",
+			);
+			assert.doesNotMatch(
+				editableFieldSource,
+				/from "\.\.\/\.\.\/entity-link\/index\.js"/,
+			);
+			assertSourceTokensInOrder(
+				editableFieldSource,
+				[
+					"useEditableFieldEntityLinkRuntime()",
+					"useContext(EntityLinkContext)",
+					"useContext(EntityLinkResolverContext)",
+					"useState<EditableFieldEntityModalState | null>(null)",
+					"await openEntityLinkModal({",
+					"<EditableFieldView",
+					"EntityModal={EntityModal}",
+				],
+				"editable-field runtime consumption",
+			);
+		})();
+
+		(() => {
+			assert.match(
+				aiRuntimeEntry,
+				/export \{ createAiAttachmentControlsComponent \} from "\.\/AiAttachmentControls\.tsx";/,
+			);
+			assert.match(
+				aiRuntimeEntry,
+				/export \{ createAiPromptComposerComponent \} from "\.\/AiPromptComposer\.tsx";/,
+			);
+			assert.doesNotMatch(
+				aiRuntimeEntry,
+				/default as AiAttachmentControls|default as AiPromptComposer/,
+			);
+			for (const publicType of [
+				"AiAttachmentControlsComponent",
+				"AiAttachmentControlsCompositionSlots",
+				"AiAttachmentGallerySlot",
+				"AiPromptComposerComponent",
+				"AiPromptComposerCompositionSlots",
+				"AiPromptComposerEditableFieldSlot",
+			]) {
+				assert.match(aiTypeEntry, new RegExp(`\\b${publicType}\\b`));
+			}
+			for (const compositionSource of [
+				attachmentCompositionSource,
+				promptCompositionSource,
+			]) {
+				assert.doesNotMatch(
+					compositionSource,
+					/ComponentType|EditableFieldProps|ImageAsset|features\/(?:editor|images)/,
+				);
+			}
+			assertExportedInterfaceFragments(
+				attachmentCompositionSource,
+				"AiAttachmentControlsCompositionSlots",
+				["ImageGallery: AiAttachmentGallerySlot;"],
+			);
+			assertExportedInterfaceFragments(
+				promptCompositionSource,
+				"AiPromptComposerCompositionSlots",
+				[
+					"AiAttachmentControls: AiAttachmentControlsComponent;",
+					"EditableField: AiPromptComposerEditableFieldSlot;",
+				],
+			);
+			for (const featureSource of [attachmentSource, promptSource]) {
+				assert.doesNotMatch(
+					featureSource,
+					/from "\.\.\/\.\.\/(?:editor|images)\//,
+				);
+			}
+			assert.match(
+				attachmentSource,
+				/export function createAiAttachmentControlsComponent\(\{\s*ImageGallery,\s*\}: AiAttachmentControlsCompositionSlots\): AiAttachmentControlsComponent/,
+			);
+			assert.match(
+				promptSource,
+				/export function createAiPromptComposerComponent\(\{\s*AiAttachmentControls,\s*EditableField,\s*\}: AiPromptComposerCompositionSlots\): AiPromptComposerComponent/,
+			);
+			assertSourceTokensInOrder(
+				attachmentSource,
+				[
+					"const selectGalleryImage = (",
+					"if (image?.url)",
+					"name: image.name || String(image.url).split(\"/\").pop() || image.url",
+					"setIsGalleryOpen(false)",
+					"<AttachedImageList",
+					"<AttachedFileList",
+					"<ImageGallery",
+					'initialSource={view.gallerySource}',
+					'initialCategory="attachments"',
+					'initialSubcategory=""',
+				],
+				"AI attachment gallery behavior",
+			);
+			assertSourceTokensInOrder(
+				aiOwnerSource,
+				[
+					"createAiAttachmentControlsComponent({ ImageGallery })",
+					"createAiPromptComposerComponent({",
+					"AiAttachmentControls: AiAssistantAttachmentControls",
+					"EditableField,",
+				],
+				"AI assistant composition",
+			);
+			assert.match(
+				aiPanelViewSource,
+				/<AiAssistantPromptComposer \{\.\.\.promptComposer\} \/>/,
+			);
+			assert.match(
+				aiImageDetailsSource,
+				/<AiAssistantAttachmentControls/,
+			);
+			assertSourceTokensInOrder(
+				encounterAiSource,
+				[
+					"const EncounterAiAttachmentControls =",
+					"createAiAttachmentControlsComponent({ ImageGallery })",
+					"export default function MonsterAiEditModal(",
+					"<EncounterAiAttachmentControls",
+				],
+				"encounter AI attachment composition",
+			);
+		})();
+
+		(() => {
+			assert.match(
+				settingsRuntimeEntry,
+				/export \{ createSettingsModalContentComponent \} from "\.\/SettingsModalContent\.tsx";/,
+			);
+			assert.doesNotMatch(
+				settingsRuntimeEntry,
+				/default as SettingsModalContent/,
+			);
+			for (const publicType of [
+				"SettingsModalCompositionSlots",
+				"SettingsModalContentComponent",
+				"SettingsModalEditableFieldSlot",
+			]) {
+				assert.match(settingsTypeEntry, new RegExp(`\\b${publicType}\\b`));
+			}
+			assert.doesNotMatch(
+				settingsCompositionSource,
+				/ComponentType|EditableFieldProps|features\/editor/,
+			);
+			assertExportedInterfaceFragments(
+				settingsCompositionSource,
+				"SettingsModalCompositionSlots",
+				["EditableField: SettingsModalEditableFieldSlot;"],
+			);
+			assert.doesNotMatch(
+				settingsViewSource,
+				/from "\.\.\/\.\.\/editor\//,
+			);
+			assert.match(
+				settingsContentSource,
+				/export function createSettingsModalContentComponent\(\{\s*EditableField,\s*\}: SettingsModalCompositionSlots\): SettingsModalContentComponent/,
+			);
+			assertSourceTokensInOrder(
+				settingsViewSource,
+				[
+					"<SettingsGeneralGroup {...general} />",
+					"<SettingsSourcesGroup {...sources} />",
+					"<SettingsAiGroup {...ai} EditableField={EditableField} />",
+					'<div className="SettingsModal__actions">',
+				],
+				"settings modal groups",
+			);
+			assertSourceTokensInOrder(
+				sidebarCompositionSource,
+				[
+					"import { EditableField }",
+					"import { createSettingsModalContentComponent }",
+					"export const SidebarSettingsModalContent =",
+					"createSettingsModalContentComponent({ EditableField })",
+				],
+				"sidebar settings composition",
+			);
+			assert.match(
+				sidebarSource,
+				/<SidebarSettingsModalContent\s+onCancel=\{\(\) => closeActiveModal\(\)\}/,
+			);
+		})();
+
+		assert.deepEqual(FSD_SAME_LAYER_FILE_EDGE_BASELINE.features, {});
+		assert.deepEqual(FSD_SAME_LAYER_FILE_EDGE_BASELINE.widgets, {});
 	},
 );
 
@@ -27013,7 +27369,7 @@ await run("AI assistant delegates stable visual composition to feature UI", asyn
 
 	assert.match(panelSource, /<AiAssistantPanelView/);
 	assert.match(panelViewSource, /<AiAssistantShell/);
-	assert.match(panelViewSource, /<AiPromptComposer/);
+	assert.match(panelViewSource, /<AiAssistantPromptComposer/);
 	assert.match(panelViewSource, /<AiHistoryResponseDialog/);
 	assert.doesNotMatch(panelSource, /className="AiAssistant__prompt_area"/);
 	assert.doesNotMatch(panelSource, /<AiResponseModal/);

@@ -73,12 +73,7 @@ function freezeSameLayerFileEdgeBaseline(baseline) {
 
 export const FSD_SAME_LAYER_FILE_EDGE_BASELINE =
 	freezeSameLayerFileEdgeBaseline({
-		features: {
-			"src/features/ai/ui/AiAttachmentControls.tsx": ["images"],
-			"src/features/ai/ui/AiPromptComposer.tsx": ["editor"],
-			"src/features/editor/ui/EditableField.tsx": ["entity-link"],
-			"src/features/settings/ui/SettingsModalView.tsx": ["editor"],
-		},
+		features: {},
 		widgets: {},
 	});
 
@@ -129,12 +124,12 @@ function getFsdSliceLocation(repositoryPath) {
 	return { layer, slice, entryPath: entryParts.join("/") };
 }
 
-function getSameLayerImporter(fileName) {
+function getSameLayerImporter(fileName, baseline) {
 	const repositoryFileName = normalizeRepositoryFileName(fileName);
 	const location = getFsdSliceLocation(repositoryFileName);
 	if (!location) return null;
 	const { layer, slice: sourceSlice } = location;
-	if (!Object.hasOwn(FSD_SAME_LAYER_FILE_EDGE_BASELINE, layer)) return null;
+	if (!Object.hasOwn(baseline, layer)) return null;
 	return { fileName: repositoryFileName, layer, sourceSlice };
 }
 
@@ -300,79 +295,83 @@ const FSD_PUBLIC_ENTRY_IMPORT_RULE = Object.freeze({
 	},
 });
 
-const FSD_SAME_LAYER_FILE_EDGE_RULE = Object.freeze({
-	meta: {
-		type: "problem",
-		docs: {
-			description:
-				"Prevent feature and widget sibling-slice dependencies from growing beyond the exact audited file-edge baseline.",
-		},
-		schema: [],
-		messages: {
-			unexpected:
-				'{{fileName}} may not add a same-layer dependency on "{{targetSlice}}". Remove the edge or explicitly lower/review the file-edge baseline.',
-			stale:
-				'Remove stale same-layer dependency allowance "{{targetSlice}}" from {{fileName}}.',
-		},
-	},
-	create(context) {
-		const importer = getSameLayerImporter(context.getFilename());
-		if (!importer) return {};
-
-		const allowedTargets = new Set(
-			FSD_SAME_LAYER_FILE_EDGE_BASELINE[importer.layer][
-				importer.fileName
-			] || [],
-		);
-		const observedTargets = new Set();
-		const reportedUnexpectedTargets = new Set();
-
-		const inspectSpecifier = (node, rawSpecifier) => {
-			const targetSlice = resolveSameLayerTarget(importer, rawSpecifier);
-			if (!targetSlice) return;
-			observedTargets.add(targetSlice);
-			if (
-				allowedTargets.has(targetSlice) ||
-				reportedUnexpectedTargets.has(targetSlice)
-			) {
-				return;
-			}
-			reportedUnexpectedTargets.add(targetSlice);
-			context.report({
-				node,
-				messageId: "unexpected",
-				data: {
-					fileName: importer.fileName,
-					targetSlice,
-				},
-			});
-		};
-
-		const inspectLiteralSource = (node, source) => {
-			inspectSpecifier(
-				source || node,
-				getStaticModuleSpecifier(source),
-			);
-		};
-
-		return createModuleReferenceVisitors(
-			inspectLiteralSource,
-			(node) => {
-				for (const targetSlice of allowedTargets) {
-					if (observedTargets.has(targetSlice)) continue;
-					context.report({
-						node,
-						messageId: "stale",
-						data: {
-							fileName: importer.fileName,
-							targetSlice,
-						},
-					});
-				}
+export function createFsdSameLayerFileEdgeRule(
+	baseline = FSD_SAME_LAYER_FILE_EDGE_BASELINE,
+) {
+	return Object.freeze({
+		meta: {
+			type: "problem",
+			docs: {
+				description:
+					"Prevent feature and widget sibling-slice dependencies from growing beyond the exact audited file-edge baseline.",
 			},
-		);
-	},
-});
+			schema: [],
+			messages: {
+				unexpected:
+					'{{fileName}} may not add a same-layer dependency on "{{targetSlice}}". Remove the edge or explicitly lower/review the file-edge baseline.',
+				stale:
+					'Remove stale same-layer dependency allowance "{{targetSlice}}" from {{fileName}}.',
+			},
+		},
+		create(context) {
+			const importer = getSameLayerImporter(context.getFilename(), baseline);
+			if (!importer) return {};
+
+			const allowedTargets = new Set(
+				baseline[importer.layer][importer.fileName] || [],
+			);
+			const observedTargets = new Set();
+			const reportedUnexpectedTargets = new Set();
+
+			const inspectSpecifier = (node, rawSpecifier) => {
+				const targetSlice = resolveSameLayerTarget(importer, rawSpecifier);
+				if (!targetSlice) return;
+				observedTargets.add(targetSlice);
+				if (
+					allowedTargets.has(targetSlice) ||
+					reportedUnexpectedTargets.has(targetSlice)
+				) {
+					return;
+				}
+				reportedUnexpectedTargets.add(targetSlice);
+				context.report({
+					node,
+					messageId: "unexpected",
+					data: {
+						fileName: importer.fileName,
+						targetSlice,
+					},
+				});
+			};
+
+			const inspectLiteralSource = (node, source) => {
+				inspectSpecifier(
+					source || node,
+					getStaticModuleSpecifier(source),
+				);
+			};
+
+			return createModuleReferenceVisitors(
+				inspectLiteralSource,
+				(node) => {
+					for (const targetSlice of allowedTargets) {
+						if (observedTargets.has(targetSlice)) continue;
+						context.report({
+							node,
+							messageId: "stale",
+							data: {
+								fileName: importer.fileName,
+								targetSlice,
+							},
+						});
+					}
+				},
+			);
+		},
+	});
+}
+
+const FSD_SAME_LAYER_FILE_EDGE_RULE = createFsdSameLayerFileEdgeRule();
 
 export const FSD_BOUNDARY_PLUGIN = Object.freeze({
 	rules: Object.freeze({

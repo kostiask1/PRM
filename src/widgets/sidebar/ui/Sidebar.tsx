@@ -15,7 +15,6 @@ import {
 import { ImageGallery } from "../../../features/images/index.js";
 import { PlayerQuestionsModalContent } from "../../../features/player-questions/index.js";
 import { openRulesReferenceModal } from "../../../features/rules-reference/index.js";
-import { SettingsModalContent } from "../../../features/settings/ui/index.js";
 import { downloadBlob, lang } from "../../../shared/lib/index.js";
 import {
 	alert,
@@ -39,6 +38,7 @@ import SidebarArchiveControls from "./SidebarArchiveControls.tsx";
 import SidebarCampaignSection from "./SidebarCampaignSection.tsx";
 import SidebarLinks from "./SidebarLinks.tsx";
 import SidebarResources from "./SidebarResources.tsx";
+import { SidebarSettingsModalContent } from "./sidebarSettingsComposition.ts";
 import "../../../assets/components/Sidebar.css";
 
 const DB_IMPORT_STRATEGIES: Array<{
@@ -203,7 +203,11 @@ export default function Sidebar({
 			title: lang.t("Settings"),
 			type: "confirm",
 			showFooter: false,
-			children: <SettingsModalContent onCancel={() => closeActiveModal()} />,
+			children: (
+				<SidebarSettingsModalContent
+					onCancel={() => closeActiveModal()}
+				/>
+			),
 		});
 	};
 

@@ -662,6 +662,8 @@ Next:
 - Phase 133 removed the sole Notes importer-file allowance and both `notes → editor` and `notes → rich-content` edges. Feature debt fell from 7 importer files / 10 directed pairs / 10 file edges / 11 declarations to 6 / 8 / 8 / 9. Widget debt remains zero across all four measures, and the widget catalog remains at 11 slices. Permanent source-inventory coverage locks the private raw renderer, callable public contracts, four stable owners, slot precedence, behavior, and reduced baseline; the expanded complete suite passes 419/419 tests. `MD-R05` remains open; Phase 134 must audit the coordinated rich-content/rules-reference/dice/entity-link composition cluster.
 - Completed Phase 134 by moving `renderMentionText` unchanged from rich-content to entity-link and replacing the raw public rich-content and rules-link renderers with callable composition factories. The mention helper now owns its private raw `EntityLink` implementation, whose obsolete facade export was removed. `createRulesLinkComponent` accepts the structural `RollDice` slot while keeping raw `RulesLink` private; `createRichContentRenderers` accepts structural `RollDice` and configured `RulesLink` slots while keeping raw `parseRollsAndSpells` and `renderRecursiveContent` private. `widgets/monster-stat-block`, `widgets/spells-browser`, and `widgets/rules-reference-modal` each configure stable module-scope rules-link and rich-content symbols through feature public entries. Falsy mention coercion, bracket splitting/trimming, numeric keys and link children, recursive content behavior, token-handler order, tooltip preview rendering, dice interactivity, consumer render options, and React component identity remain unchanged.
 - Phase 134 removed the remaining `rich-content → dice`, `rich-content → entity-link`, `rich-content → rules-reference`, and `rules-reference → dice` allowances without adding widget debt. Feature debt fell from 6 importer files / 8 directed pairs / 8 file edges / 9 declarations to 4 / 4 / 4 / 5. Widget debt remains zero across all four measures, and the widget catalog remains at 11 slices. Permanent source-inventory coverage locks helper ownership, runtime/type facade parity, private raw renderers, callable structural contracts, stable owners, slot precedence, preserved behavior, and the reduced baseline; the expanded complete suite passes 420/420 tests. `MD-R05` remains open; Phase 135 must audit the remaining AI/editor/images/entity-link/settings cluster.
+- Completed Phase 135 with a hybrid explicit-composition boundary for the remaining AI/editor/images/entity-link/settings cluster. Raw AI attachment and prompt renderers are private behind `createAiAttachmentControlsComponent` and `createAiPromptComposerComponent`: `widgets/ai-assistant` configures stable attachment and prompt components at module scope, while the encounter owner configures its own stable attachment component. Raw settings modal content is private behind `createSettingsModalContentComponent`, and `widgets/sidebar` binds the public `EditableField` once at module scope. Structural callable contracts keep AI and settings independent of sibling-feature types while preserving attachment state, prompt callbacks, controller identity, modal behavior, render order, and Lexical component identity.
+- Phase 135 removed editor's entity-link edge through the narrow app-injected `EditableFieldEntityLinkProvider` runtime rather than turning static UI composition into a global service locator. `App` passes one frozen runtime containing the two entity-link Context objects, `EntityModal`, and `openEntityLinkModal`; `EditableField` obtains that runtime but reads both Context values locally at its own render position, so nested campaign/session resolver providers retain their existing scope and precedence. The production same-layer baselines are now empty for both features and widgets: zero importer files / zero directed pairs / zero file edges / zero declarations. The exported `createFsdSameLayerFileEdgeRule` seam exercises synthetic approved and stale allowances while the production baseline remains empty. Permanent source-inventory coverage locks factory ownership, runtime/type parity, stable owners, provider order, local Context reads, and the empty production graph; the expanded complete suite passes 421/421 tests. `MD-R05` is closed. Phase 136 is next and must establish typed app-owned store composition without claiming the wider migration complete.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -692,7 +694,12 @@ reduced feature debt to 6 / 8 / 8 / 9, and passed its expanded gate at 419/419
 tests. Phase 134 moved unchanged mention rendering to entity-link, configured
 private rules-link and rich-content renderers at three stable widget owners,
 reduced feature debt to 4 / 4 / 4 / 5, and passed its expanded gate at 420/420
-tests. Phase 135 is the next numbered migration phase.
+tests. Phase 135 completed the hybrid AI/settings factories plus the narrow
+app-injected editor entity-link runtime, reduced both production same-layer
+baselines to zero across importer files, directed pairs, file edges, and
+declarations, and passed its expanded gate at 421/421 tests. `MD-R05` is
+closed; Phase 136 typed app-owned store composition is next, and the broader
+migration remains active.
 
 ### Provenance and transfer rule
 
@@ -896,8 +903,12 @@ Status: **In progress**
   configure stable module-scope symbols in monster-stat-block, spells-browser,
   and rules-reference-modal, keep widget debt at zero, and lower feature debt
   from 6 / 8 / 8 / 9 to 4 / 4 / 4 / 5.
-- [ ] Audit the remaining AI/editor/images/entity-link/settings cluster in
-  Phase 135, then continue cluster-by-cluster until no unapproved edge remains.
+- [x] Complete the remaining AI/editor/images/entity-link/settings cluster in
+  Phase 135: configure private AI and settings renderers through stable
+  page/widget-owned factories, inject only the narrow editor entity-link
+  runtime from `App`, preserve local scoped Context reads, remove the final
+  production allowances, and reduce both feature and widget debt to zero
+  across importer files, directed pairs, file edges, and declarations.
 - [x] Run focused recovery tests, performance budgets, architecture checks,
   syntax/diff hygiene, and UTF-8/replacement-character checks.
 - [ ] Run the complete lint and typecheck gates after the declared local
@@ -907,11 +918,11 @@ Status: **In progress**
   125 passed 411/411, Phase 126 passed 412/412, Phase 127 passed 413/413, Phase
   128 passed 414/414, Phase 129 passed 415/415, Phase 130 passed 416/416, Phase
   131 passed 417/417, Phase 132 passed 418/418, Phase 133 passed 419/419, and
-  the expanded Phase 134 suite passes 420/420 tests.
+  Phase 134 passed 420/420; the expanded Phase 135 suite passes 421/421 tests.
 
-### Recovery R6 — Typed app-owned store composition
+### Recovery R6 / Phase 136 — Typed app-owned store composition
 
-Status: **Deferred**
+Status: **Next**
 
 - [ ] Design an app-owned configured store that composes lower-layer typed
   reducers without making `shared` depend upward.
