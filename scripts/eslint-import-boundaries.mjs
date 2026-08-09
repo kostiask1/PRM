@@ -102,6 +102,7 @@ const APP_STORE_RUNTIME_MODULE_PATH = normalizeModulePath(
 const SETTINGS_FEATURE_PATH_PREFIX = "src/features/settings/";
 const NOTES_FEATURE_PATH_PREFIX = "src/features/notes/";
 const PLAYER_QUESTIONS_FEATURE_PATH_PREFIX = "src/features/player-questions/";
+const CAMPAIGN_ENTITY_FEATURE_PATH_PREFIX = "src/features/campaign-entity/";
 const SHARED_MODEL_PATH = "src/shared/model";
 const APP_MODEL_PATH = "src/app/model";
 
@@ -585,6 +586,16 @@ const PLAYER_QUESTIONS_STORE_FACADE_RULE = createInjectedRuntimeStoreFacadeRule(
 		"Player Questions must receive app-global dice state and requests through its injected runtime and may not import shared/model or app/model directly.",
 });
 
+const CAMPAIGN_ENTITY_STORE_FACADE_RULE =
+	createInjectedRuntimeStoreFacadeRule({
+		featurePathPrefix: CAMPAIGN_ENTITY_FEATURE_PATH_PREFIX,
+		description:
+			"Require Campaign Entity to receive app-global refresh effects through injected commands.",
+		messageId: "injectedRuntime",
+		message:
+			"Campaign Entity must receive app-global refresh effects through injected commands and may not import shared/model or app/model directly.",
+	});
+
 export const FSD_BOUNDARY_PLUGIN = Object.freeze({
 	rules: Object.freeze({
 		"public-entry-imports": FSD_PUBLIC_ENTRY_IMPORT_RULE,
@@ -593,6 +604,7 @@ export const FSD_BOUNDARY_PLUGIN = Object.freeze({
 		"settings-store-facade": SETTINGS_STORE_FACADE_RULE,
 		"notes-store-facade": NOTES_STORE_FACADE_RULE,
 		"player-questions-store-facade": PLAYER_QUESTIONS_STORE_FACADE_RULE,
+		"campaign-entity-store-facade": CAMPAIGN_ENTITY_STORE_FACADE_RULE,
 	}),
 });
 

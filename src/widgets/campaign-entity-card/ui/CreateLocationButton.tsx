@@ -2,7 +2,11 @@ import { useState } from "react";
 import type { CampaignEntityRecord, LocationData } from "../../../entities/campaign/index.js";
 import { buildCreateEntityPayload, submitCreateEntity } from "../../../features/campaign-entity/index.js";
 import { lang } from "../../../shared/lib/index.js";
-import { alert, useAppDispatch } from "../../../shared/model/index.js";
+import {
+	alert,
+	refreshEntitiesAction,
+	useAppDispatch,
+} from "../../../shared/model/index.js";
 import {
 	Button,
 	Modal,
@@ -48,7 +52,13 @@ export default function CreateLocationButton({
 		const payload = buildCreateEntityPayload({ name: "", description: "", notes: [], imageUrl: null, collapsed: false, isNotesCollapsed: false }, draft);
 		setIsSubmitting(true);
 		try {
-			await submitCreateEntity({ campaignSlug, entityType: "locations", payload, onCreate: onCreate ?? undefined, dispatch });
+			await submitCreateEntity({
+				campaignSlug,
+				entityType: "locations",
+				payload,
+				onCreate: onCreate ?? undefined,
+				onRefreshEntities: () => dispatch(refreshEntitiesAction()),
+			});
 			setIsOpen(false);
 		} catch (error) {
 			console.error("Failed to create location from modal", error);

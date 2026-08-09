@@ -2,7 +2,11 @@ import { useState } from "react";
 import type { CampaignEntityRecord, CampaignEntityType, CharacterData } from "../../../entities/campaign/index.js";
 import { buildCreateEntityPayload, submitCreateEntity } from "../../../features/campaign-entity/index.js";
 import { lang } from "../../../shared/lib/index.js";
-import { alert, useAppDispatch } from "../../../shared/model/index.js";
+import {
+	alert,
+	refreshEntitiesAction,
+	useAppDispatch,
+} from "../../../shared/model/index.js";
 import {
 	Button,
 	Modal,
@@ -51,7 +55,13 @@ export default function CreateCharacterButton({
 		const payload = buildCreateEntityPayload({ firstName: "", lastName: "", race: "", class: "", level: 1, motivation: "", description: "", trait: "", notes: [], collapsed: false, isNotesCollapsed: false }, draft);
 		setIsSubmitting(true);
 		try {
-			await submitCreateEntity({ campaignSlug, entityType, payload, onCreate: onCreate ?? undefined, dispatch });
+			await submitCreateEntity({
+				campaignSlug,
+				entityType,
+				payload,
+				onCreate: onCreate ?? undefined,
+				onRefreshEntities: () => dispatch(refreshEntitiesAction()),
+			});
 			setIsOpen(false);
 		} catch (error) {
 			console.error("Failed to create entity from modal", error);

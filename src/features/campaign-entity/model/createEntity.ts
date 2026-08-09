@@ -3,7 +3,6 @@ import type {
 	CampaignEntityRecord,
 	CampaignEntityType,
 } from "../../../entities/campaign/index.js";
-import { refreshEntitiesAction } from "../../../shared/model/index.js";
 
 export type EntityDraft = Record<string, unknown>;
 
@@ -64,12 +63,12 @@ export function createCampaignEntityClient(
 
 const campaignEntityClient = createCampaignEntityClient(campaignApi);
 
-interface SubmitCreateEntityOptions {
+export interface SubmitCreateEntityOptions {
 	campaignSlug: string;
 	entityType: CampaignEntityType;
 	payload: CampaignEntityRecord;
 	onCreate?: (payload: CampaignEntityRecord) => void | Promise<void>;
-	dispatch: (action: ReturnType<typeof refreshEntitiesAction>) => unknown;
+	onRefreshEntities: () => unknown;
 }
 
 export async function submitCreateEntity({
@@ -77,14 +76,14 @@ export async function submitCreateEntity({
 	entityType,
 	payload,
 	onCreate,
-	dispatch,
+	onRefreshEntities,
 }: SubmitCreateEntityOptions): Promise<void> {
 	if (typeof onCreate === "function") {
 		await onCreate(payload);
 		return;
 	}
 	await createCampaignEntity(campaignSlug, entityType, payload);
-	dispatch(refreshEntitiesAction());
+	onRefreshEntities();
 }
 
 export async function createCampaignEntity(

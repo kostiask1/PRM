@@ -672,6 +672,8 @@ Next:
 - Phase 138 factors the existing injected-store check and adds scoped `fsd-boundaries/notes-store-facade` enforcement for `src/features/notes/**/*.{js,jsx,ts,tsx}`. The Settings rule remains intact, while both rules reject every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. Source-inventory coverage locks the nullable-context false/missing-provider behavior, public provider surface, app-root order, presentation consumers, and relative/Vite-root/filesystem/glob bypass matrix. The expanded complete suite passes 424/424 tests. `MD-R02` remains in progress because the compatibility facade still has other lower-layer consumers.
 - Completed Phase 139 by replacing Player Questions' direct dice store dependency with the explicit typed `PlayerQuestionsRuntime` contract. The feature keeps list virtualization, scrolling, result-ID deduplication, exact context/target filtering, roll-formula construction, and debounce behavior; it now receives only the current opaque dice result, an already-normalized debounce boolean, and a narrow request command. `widgets/sidebar/ui/sidebarPlayerQuestionsComposition.tsx` owns the selectors and action dispatch, then mounts a live adapter as the delayed modal child so a result published after opening reaches the rendered modal without a click-time snapshot.
 - Phase 139 adds scoped `fsd-boundaries/player-questions-store-facade` enforcement for `src/features/player-questions/**/*.{js,jsx,ts,tsx}` through the common injected-runtime checker. It rejects every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. Source-inventory and lint-rule coverage lock the public type surface, live Sidebar adapter, false-only debounce policy, result-ID initialization, modal mount, and relative/Vite-root/filesystem/glob bypass matrix. The expanded complete suite passes 425/425 tests. `MD-R02` remains in progress because the compatibility facade still has other lower-layer consumers.
+- Completed Phase 140 by removing Campaign Entity's embedded `refreshEntitiesAction` dependency. `submitCreateEntity` retains its public feature-owned orchestration but now receives one narrow `onRefreshEntities` command from the two campaign-entity-card widget owners. An awaited custom `onCreate` still returns without fallback API work or refresh; the default branch still awaits the campaign API creation before exactly one refresh, and rejected creation never refreshes.
+- Phase 140 adds scoped `fsd-boundaries/campaign-entity-store-facade` enforcement for `src/features/campaign-entity/**/*.{js,jsx,ts,tsx}` through the common injected-runtime checker. It rejects every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. Source-inventory, action-order, mocked-create, custom-create, and failure-path coverage lock the callback boundary and both host bindings. The expanded complete suite passes 426/426 tests. `MD-R02` remains in progress because the compatibility facade still has other lower-layer consumers.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -716,8 +718,10 @@ direct facade read plus duplicate note-render reads from higher owners,
 enforces the focused Notes store boundary, and passes 424/424 tests. Phase 139
 gives Player Questions a live Sidebar dice runtime, removes its direct store
 facade dependency, enforces the focused Player Questions store boundary, and
-passes 425/425 tests. `MD-R05` is closed; `MD-R02` remains in progress and the
-broader migration remains active.
+passes 425/425 tests. Phase 140 gives Campaign Entity an injected widget refresh
+command, removes its embedded facade action, enforces the focused Campaign
+Entity store boundary, and passes 426/426 tests. `MD-R05` is closed; `MD-R02`
+remains in progress and the broader migration remains active.
 
 ### Provenance and transfer rule
 
@@ -747,7 +751,7 @@ tracked in `docs/migration-debt.md`.
 | Campaign lookup and rules-reference endpoint ownership | Adapt through current entity public APIs |
 | Canonical Bestiary AI history and mutation request validation | Adapt through current backend modules, repositories, storage facade, and routes |
 | FSD/import enforcement, ADRs, recovery phases, debt register, agent rules | Recover and align with the current tree |
-| App-owned configured store | Phase 136 owns configured store composition in `app`; Phase 137 removes the Settings UI's direct facade dependency through a sidebar-provided runtime; Phase 138 gives Notes a live app-root preference provider; Phase 139 gives Player Questions a live Sidebar dice runtime. Retain the typed shared facade only while remaining consumers migrate (`MD-R02`). |
+| App-owned configured store | Phase 136 owns configured store composition in `app`; Phase 137 removes the Settings UI's direct facade dependency through a sidebar-provided runtime; Phase 138 gives Notes a live app-root preference provider; Phase 139 gives Player Questions a live Sidebar dice runtime; Phase 140 gives Campaign Entity a widget-provided refresh command. Retain the typed shared facade only while remaining consumers migrate (`MD-R02`). |
 | Side commit's `server/domains` replacement, stale JS/JSX slices, graph ownership, and whole-file configuration/test rewrites | Skip because current `fsd` already has newer typed/application-module owners and stricter contracts |
 
 ### Recovery R0 — Divergence audit
@@ -941,6 +945,11 @@ Status: **In progress**
   minimal live dice runtime from the Sidebar modal owner; mount that adapter as
   delayed modal content rather than take a click-time snapshot; and enforce
   that Player Questions cannot regain direct app/shared-store facade access.
+- [x] Migrate Campaign Entity in Phase 140: retain feature-owned creation
+  sanitization and custom-create short-circuiting, replace its embedded refresh
+  action with a narrow widget-provided callback, preserve default create then
+  refresh order and failed-create propagation, and enforce that Campaign Entity
+  cannot regain direct app/shared-store facade access.
 - [x] Run focused recovery tests, performance budgets, architecture checks,
   syntax/diff hygiene, and UTF-8/replacement-character checks.
 - [ ] Run the complete lint and typecheck gates after the declared local
@@ -951,8 +960,8 @@ Status: **In progress**
   128 passed 414/414, Phase 129 passed 415/415, Phase 130 passed 416/416, Phase
   131 passed 417/417, Phase 132 passed 418/418, Phase 133 passed 419/419, and
   Phase 134 passed 420/420; Phase 135 passed 421/421; Phase 136 passed
-  422/422; Phase 137 passes 423/423; Phase 138 passes 424/424; and the
-  expanded Phase 139 suite passes 425/425 tests.
+  422/422; Phase 137 passes 423/423; Phase 138 passes 424/424; Phase 139
+  passes 425/425; and the expanded Phase 140 suite passes 426/426 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -1030,6 +1039,25 @@ and bounded integer target validation, false-only debounce behavior, one-time
 result handling, and two-frame scrolling. It passes 425/425 tests. Complete
 lint/typecheck remain tracked under `MD-R04`; the shared compatibility facade
 remains in progress under `MD-R02`.
+
+### Recovery R10 / Phase 140 — Campaign Entity injected refresh command
+
+Status: **Completed**
+
+- [x] Define and publicly type the narrow `SubmitCreateEntityOptions`
+  `onRefreshEntities` command without exposing the global-store action to the
+  feature.
+- [x] Move refresh action construction to the two campaign-entity-card widget
+  owners while retaining feature ownership of payload cleanup, client
+  delegation, awaited custom creation, and fallback creation.
+- [x] Prevent direct Campaign Entity access to `app/model` or `shared/model`
+  with the scoped boundary rule, preserving custom-create short-circuiting,
+  default create-then-refresh order, and failed-create propagation.
+
+Phase 140 passes 426/426 tests, including mocked successful and failed default
+creation plus custom-create behavior. Complete lint/typecheck remain tracked
+under `MD-R04`; the shared compatibility facade remains in progress under
+`MD-R02`.
 
 ## Validation required for every phase
 

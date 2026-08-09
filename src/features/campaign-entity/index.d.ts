@@ -8,6 +8,7 @@ export {
 	type CampaignEntityApiPort,
 	type CampaignEntityClient,
 	type EntityDraft,
+	type SubmitCreateEntityOptions,
 } from "./model/createEntity.ts";
 export {
 	useCampaignEntityPersistence,
