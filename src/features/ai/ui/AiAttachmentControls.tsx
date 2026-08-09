@@ -1,7 +1,6 @@
 import { type ChangeEvent, type RefObject, useRef, useState } from "react";
 
 import { formatBytes, lang } from "../../../shared/lib/index.js";
-import { alert, useAppDispatch } from "../../../shared/model/index.js";
 import { Button, Icon } from "../../../shared/ui/index.js";
 import {
 	AI_FILE_ACCEPT,
@@ -29,6 +28,7 @@ import type {
 	AiAttachmentControlsProps,
 	AiAttachmentGalleryImage,
 } from "./aiAttachmentComposition.ts";
+import { useAiAttachmentAlertRuntime } from "./AiAttachmentAlertRuntime.tsx";
 import type { AiAttachmentStateSetter, AiUiAttachment } from "./types.ts";
 import "../../../assets/components/AiAttachmentControls.css";
 
@@ -175,7 +175,7 @@ function AiAttachmentControls({
 	setAttachedImages = ignoreAttachmentUpdate,
 	ImageGallery,
 }: AiAttachmentControlsInternalProps) {
-	const dispatch = useAppDispatch();
+	const { showAlert } = useAiAttachmentAlertRuntime();
 	const internalFileInputRef = useRef<HTMLInputElement>(null);
 	const imageInputRef = useRef<HTMLInputElement>(null);
 	const [isGalleryOpen, setIsGalleryOpen] = useState(false);
@@ -242,14 +242,12 @@ function AiAttachmentControls({
 				selection.skippedNames.length,
 			)
 		) {
-			dispatch(
-				alert({
-					title: lang.t("Image attachment error"),
-					message: lang.t(
-						"Some images could not be attached. Supported images: JPG, PNG, WEBP, GIF. Maximum size: 10 MB.",
-					),
-				}),
-			);
+			showAlert({
+				title: lang.t("Image attachment error"),
+				message: lang.t(
+					"Some images could not be attached. Supported images: JPG, PNG, WEBP, GIF. Maximum size: 10 MB.",
+				),
+			});
 		}
 	};
 
@@ -289,14 +287,12 @@ function AiAttachmentControls({
 				selection.skippedNames.length,
 			)
 		) {
-			dispatch(
-				alert({
-					title: lang.t("File attachment error"),
-					message: lang.t(
-						"Some files could not be attached. Supported files: TXT, MD, JSON, CSV, HTML, XML, YAML, PDF. Maximum size: 10 MB.",
-					),
-				}),
-			);
+			showAlert({
+				title: lang.t("File attachment error"),
+				message: lang.t(
+					"Some files could not be attached. Supported files: TXT, MD, JSON, CSV, HTML, XML, YAML, PDF. Maximum size: 10 MB.",
+				),
+			});
 		}
 	};
 

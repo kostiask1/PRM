@@ -678,6 +678,8 @@ Next:
 - Phase 141 adds scoped `fsd-boundaries/encounter-editor-store-facade` enforcement for `src/features/encounter-editor/**/*.{js,jsx,ts,tsx}` through the common injected-runtime checker. It rejects every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. Source-inventory and regression coverage lock the public runtime contract, mounted-only load errors, add success/failure ordering, host mapping, override short-circuit, and bypass matrix. The expanded complete suite passes 427/427 tests. `MD-R02` remains in progress because the compatibility facade still has other lower-layer consumers.
 - Completed Phase 142 by removing Rules Reference's direct global navigation/error facade. `RulesLink` retains its resolver, preview, tooltip lifecycle, and stable factory API while consuming a typed feature-owned `RulesReferenceRuntime`; `App` maps that contract to the existing navigation action and alert dispatch. The Sidebar now dispatches the typed navigation action itself, so the thin `openRulesReferenceModal` helper is retired without changing close-before-navigation behavior.
 - Phase 142 adds scoped `fsd-boundaries/rules-reference-store-facade` enforcement for `src/features/rules-reference/**/*.{js,jsx,ts,tsx}` through the common injected-runtime checker. It rejects every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. Source-inventory and regression coverage lock the nullable provider, public types, resolver/error order, App mapping, Sidebar action dispatch, deleted helper, and bypass matrix. The expanded complete suite passes 428/428 tests. `MD-R02` remains in progress because the compatibility facade still has other lower-layer consumers.
+- Completed Phase 143 by removing AI attachment controls' direct alert facade dependency. The controls retain native input clearing, no-file/no-slot exits, asynchronous validation/preparation, functional attachment merge-before-notice ordering, gallery lifecycle, and their two module-scope factories; a narrow `AiAttachmentAlertRuntime` only publishes validation alerts from the app root. The unrelated AI generation request identity is now the feature's own numeric lifecycle value instead of a global-store `RequestId` type import.
+- Phase 143 adds scoped `fsd-boundaries/ai-store-facade` enforcement for `src/features/ai/**/*.{js,jsx,ts,tsx}` through the common injected-runtime checker. It rejects every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. Source-inventory and regression coverage lock the nullable provider, UI-only public surface, App mapping/scope, attachment ordering, lifecycle identity, factory preservation, and bypass matrix. The expanded complete suite passes 429/429 tests. `MD-R02` remains in progress because the compatibility facade still has other lower-layer consumers.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -730,7 +732,10 @@ effects, enforces the focused Encounter Editor store boundary, and passes
 427/427 tests. Phase 142 gives Rules Reference an App-provided navigation/error
 runtime, removes its direct facade dependency, enforces the focused Rules
 Reference store boundary, and passes 428/428 tests. `MD-R05` is closed;
-`MD-R02` remains in progress and the broader migration remains active.
+Phase 143 gives AI attachment controls an App-provided validation-alert runtime,
+removes their direct facade dependency, enforces the focused AI store boundary,
+and passes 429/429 tests. `MD-R02` remains in progress and the broader
+migration remains active.
 
 ### Provenance and transfer rule
 
@@ -760,7 +765,7 @@ tracked in `docs/migration-debt.md`.
 | Campaign lookup and rules-reference endpoint ownership | Adapt through current entity public APIs |
 | Canonical Bestiary AI history and mutation request validation | Adapt through current backend modules, repositories, storage facade, and routes |
 | FSD/import enforcement, ADRs, recovery phases, debt register, agent rules | Recover and align with the current tree |
-| App-owned configured store | Phase 136 owns configured store composition in `app`; Phase 137 removes the Settings UI's direct facade dependency through a sidebar-provided runtime; Phase 138 gives Notes a live app-root preference provider; Phase 139 gives Player Questions a live Sidebar dice runtime; Phase 140 gives Campaign Entity a widget-provided refresh command; Phase 141 gives Encounter Editor a Monster Stat Block-provided modal runtime; Phase 142 gives Rules Reference an App-provided navigation/error runtime while Sidebar directly dispatches navigation. Retain the typed shared facade only while remaining consumers migrate (`MD-R02`). |
+| App-owned configured store | Phase 136 owns configured store composition in `app`; Phase 137 removes the Settings UI's direct facade dependency through a sidebar-provided runtime; Phase 138 gives Notes a live app-root preference provider; Phase 139 gives Player Questions a live Sidebar dice runtime; Phase 140 gives Campaign Entity a widget-provided refresh command; Phase 141 gives Encounter Editor a Monster Stat Block-provided modal runtime; Phase 142 gives Rules Reference an App-provided navigation/error runtime while Sidebar directly dispatches navigation; Phase 143 gives AI attachment controls an App-provided validation-alert runtime. Retain the typed shared facade only while remaining consumers migrate (`MD-R02`). |
 | Side commit's `server/domains` replacement, stale JS/JSX slices, graph ownership, and whole-file configuration/test rewrites | Skip because current `fsd` already has newer typed/application-module owners and stricter contracts |
 
 ### Recovery R0 — Divergence audit
@@ -969,6 +974,11 @@ Status: **In progress**
   commands through the App-provided runtime; let Sidebar dispatch its own
   navigation action; retire the thin helper; and enforce that Rules Reference
   cannot regain direct app/shared-store facade access.
+- [x] Migrate AI attachment controls in Phase 143: retain their input,
+  preparation, merge, gallery, and stable-factory behavior; inject only
+  validation alerts through the App-provided runtime; keep its hook out of the
+  feature root; detach the lifecycle request-ID type; and enforce that AI
+  cannot regain direct app/shared-store facade access.
 - [x] Run focused recovery tests, performance budgets, architecture checks,
   syntax/diff hygiene, and UTF-8/replacement-character checks.
 - [ ] Run the complete lint and typecheck gates after the declared local
@@ -981,7 +991,8 @@ Status: **In progress**
   Phase 134 passed 420/420; Phase 135 passed 421/421; Phase 136 passed
   422/422; Phase 137 passes 423/423; Phase 138 passes 424/424; Phase 139
   passes 425/425; Phase 140 passes 426/426; and the expanded Phase 141 suite
-  passes 427/427 tests; Phase 142 passes 428/428 tests.
+  passes 427/427 tests; Phase 142 passes 428/428 tests; Phase 143 passes
+  429/429 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -1115,6 +1126,26 @@ console/error-notice behavior, tooltip lifecycle, stable composition factories,
 and Sidebar close-before-navigation ordering. It passes 428/428 tests.
 Complete lint/typecheck remain tracked under `MD-R04`; the shared compatibility
 facade remains in progress under `MD-R02`.
+
+### Recovery R13 / Phase 143 - AI attachment injected alert runtime
+
+Status: **Completed**
+
+- [x] Define and publicly type the UI-only `AiAttachmentAlertRuntime` provider
+  while keeping its nullable Context hook private to `features/ai/ui` and out
+  of the Node/model-safe feature root.
+- [x] Map the alert command once in `App` around route, modal, and widget trees
+  so both existing attachment-control factories receive live behavior without
+  a dispatch import or factory-signature change.
+- [x] Keep attachment preparation/merge/error ordering unchanged, make AI
+  generation request IDs feature-owned numbers, and prevent all AI code from
+  importing `app/model` or `shared/model` with the scoped boundary rule.
+
+Phase 143 preserves native input clearing, no-file/no-slot exits, async
+attachment validation, functional merge-before-non-awaited-notice ordering,
+gallery state, factory identity, and generation lifecycle stale-request checks.
+It passes 429/429 tests. Complete lint/typecheck remain tracked under `MD-R04`;
+the shared compatibility facade remains in progress under `MD-R02`.
 
 ## Validation required for every phase
 

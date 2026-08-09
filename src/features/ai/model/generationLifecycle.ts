@@ -1,5 +1,3 @@
-import type { RequestId } from "../../../shared/model/contracts.ts";
-
 export const AI_GENERATION_STATUS = Object.freeze({
 	IDLE: "idle",
 	GENERATING: "generating",
@@ -14,17 +12,17 @@ export type AiGenerationStatus =
 
 export interface AiGenerationLifecycle {
 	readonly status: AiGenerationStatus;
-	readonly requestId: RequestId | null;
+	readonly requestId: number | null;
 }
 
 type StartGenerationEvent = {
 	type: "start-generation" | "start-retry";
-	requestId: RequestId;
+	requestId: number;
 };
 
 type FinishGenerationEvent = {
 	type: "succeed" | "fail" | "cancel";
-	requestId: RequestId;
+	requestId: number;
 };
 
 type ResetGenerationEvent = { type: "reset" };

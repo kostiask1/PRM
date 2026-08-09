@@ -1,4 +1,5 @@
 export { default as AiApiKeyPanel } from "./AiApiKeyPanel.tsx";
+export { AiAttachmentAlertRuntimeProvider } from "./AiAttachmentAlertRuntime.tsx";
 export { createAiAttachmentControlsComponent } from "./AiAttachmentControls.tsx";
 export { default as renderAiModelOptions } from "./AiModelOptions.tsx";
 export { default as AiAssistantShell } from "./AiAssistantShell.tsx";

@@ -6,6 +6,10 @@ import { settingsApi } from "./features/settings/index.js";
 
 const api = { ...campaignApi, ...backupApi, ...settingsApi };
 import { DiceCalculator } from "./features/dice/index.js";
+import {
+	AiAttachmentAlertRuntimeProvider,
+	type AiAttachmentAlertRuntime,
+} from "./features/ai/ui/index.js";
 import MainContent from "./app/routing/MainContent.tsx";
 import MessageBoxHost from "./app/ui/MessageBoxHost.tsx";
 import {
@@ -116,6 +120,14 @@ export default function App() {
 			},
 			reportError(error) {
 				dispatch(alert(error));
+			},
+		}),
+		[dispatch],
+	);
+	const aiAttachmentAlertRuntime = useMemo<AiAttachmentAlertRuntime>(
+		() => ({
+			showAlert(copy) {
+				dispatch(alert({ title: copy.title, message: copy.message }));
 			},
 		}),
 		[dispatch],
@@ -413,14 +425,15 @@ export default function App() {
 	};
 
 	return (
-		<RulesReferenceRuntimeProvider runtime={rulesReferenceRuntime}>
-			<SimplifiedNotesProvider
-				simplifiedNotesEnabled={simplifiedNotesEnabled}
-			>
-				<EditableFieldEntityLinkProvider
-					runtime={APP_EDITABLE_FIELD_ENTITY_LINK_RUNTIME}
+		<AiAttachmentAlertRuntimeProvider runtime={aiAttachmentAlertRuntime}>
+			<RulesReferenceRuntimeProvider runtime={rulesReferenceRuntime}>
+				<SimplifiedNotesProvider
+					simplifiedNotesEnabled={simplifiedNotesEnabled}
 				>
-					<div className="App" data-lang={currentLanguage}>
+					<EditableFieldEntityLinkProvider
+						runtime={APP_EDITABLE_FIELD_ENTITY_LINK_RUNTIME}
+					>
+						<div className="App" data-lang={currentLanguage}>
 					<CampaignEntityModalProvider
 						CharacterCard={CharacterCard}
 						LocationCard={LocationCard}
@@ -488,9 +501,10 @@ export default function App() {
 							SpellsBrowser={SpellsBrowser}
 						/>
 					</CampaignEntityModalProvider>
-					</div>
-				</EditableFieldEntityLinkProvider>
-			</SimplifiedNotesProvider>
-		</RulesReferenceRuntimeProvider>
+						</div>
+					</EditableFieldEntityLinkProvider>
+				</SimplifiedNotesProvider>
+			</RulesReferenceRuntimeProvider>
+		</AiAttachmentAlertRuntimeProvider>
 	);
 }

@@ -105,6 +105,7 @@ const PLAYER_QUESTIONS_FEATURE_PATH_PREFIX = "src/features/player-questions/";
 const CAMPAIGN_ENTITY_FEATURE_PATH_PREFIX = "src/features/campaign-entity/";
 const ENCOUNTER_EDITOR_FEATURE_PATH_PREFIX = "src/features/encounter-editor/";
 const RULES_REFERENCE_FEATURE_PATH_PREFIX = "src/features/rules-reference/";
+const AI_FEATURE_PATH_PREFIX = "src/features/ai/";
 const SHARED_MODEL_PATH = "src/shared/model";
 const APP_MODEL_PATH = "src/app/model";
 
@@ -618,6 +619,15 @@ const RULES_REFERENCE_STORE_FACADE_RULE =
 			"Rules Reference must receive app-global navigation and error effects through its injected runtime and may not import shared/model or app/model directly.",
 	});
 
+const AI_STORE_FACADE_RULE = createInjectedRuntimeStoreFacadeRule({
+	featurePathPrefix: AI_FEATURE_PATH_PREFIX,
+	description:
+		"Require AI to receive app-global attachment alerts through its injected runtime.",
+	messageId: "injectedRuntime",
+	message:
+		"AI must receive app-global attachment alerts through its injected runtime and may not import shared/model or app/model directly.",
+});
+
 export const FSD_BOUNDARY_PLUGIN = Object.freeze({
 	rules: Object.freeze({
 		"public-entry-imports": FSD_PUBLIC_ENTRY_IMPORT_RULE,
@@ -629,6 +639,7 @@ export const FSD_BOUNDARY_PLUGIN = Object.freeze({
 		"campaign-entity-store-facade": CAMPAIGN_ENTITY_STORE_FACADE_RULE,
 		"encounter-editor-store-facade": ENCOUNTER_EDITOR_STORE_FACADE_RULE,
 		"rules-reference-store-facade": RULES_REFERENCE_STORE_FACADE_RULE,
+		"ai-store-facade": AI_STORE_FACADE_RULE,
 	}),
 });
 

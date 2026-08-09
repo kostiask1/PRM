@@ -3,6 +3,12 @@ export {
 	type AiApiKeyPanelProps,
 } from "./AiApiKeyPanel.tsx";
 export {
+	AiAttachmentAlertRuntimeProvider,
+	type AiAttachmentAlert,
+	type AiAttachmentAlertRuntime,
+	type AiAttachmentAlertRuntimeProviderProps,
+} from "./AiAttachmentAlertRuntime.tsx";
+export {
 	createAiAttachmentControlsComponent,
 } from "./AiAttachmentControls.tsx";
 export type {
