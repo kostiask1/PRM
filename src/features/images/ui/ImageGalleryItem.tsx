@@ -1,9 +1,9 @@
 import type { Dispatch, SetStateAction } from "react";
 import { Icon, Tooltip } from "../../../shared/ui/index.js";
 import { classNames, lang } from "../../../shared/lib/index.js";
-import { prompt, type useAppDispatch } from "../../../shared/model/index.js";
 import type { ImageAsset } from "../api/imageApi.ts";
 import type { GalleryDragOverTarget, GalleryImage } from "../model/contracts.ts";
+import type { ImageGalleryRuntime } from "../model/ImageGalleryRuntime.tsx";
 import {
 	getGalleryFolderPresentation,
 	type GalleryFolderPresentation,
@@ -21,7 +21,6 @@ type ImageGalleryController = ReturnType<typeof useImageGallery>;
 
 interface ImageGalleryItemProps {
 	controller: ImageGalleryController;
-	dispatch: ReturnType<typeof useAppDispatch>;
 	formatFolderLabel: (value: string, isBestiaryPath: boolean) => string;
 	formatLocationLabel: (label: string) => string;
 	highlightedImageName: string;
@@ -29,6 +28,7 @@ interface ImageGalleryItemProps {
 	itemIndex: number;
 	onOpenGlobalResult: (image: GalleryImage) => boolean;
 	onSelect?: (image: ImageAsset | null | undefined) => void;
+	requestPrompt: ImageGalleryRuntime["requestPrompt"];
 	resetContentScope: () => void;
 	setPreviewImage: Dispatch<SetStateAction<GalleryImage | null>>;
 }
@@ -60,10 +60,10 @@ export default function ImageGalleryItem(props: ImageGalleryItemProps) {
 
 function ImageGalleryFolderItem({
 	controller,
-	dispatch,
 	formatFolderLabel,
 	item,
 	itemIndex,
+	requestPrompt,
 	resetContentScope,
 }: ImageGalleryItemProps & {
 	item: Extract<GalleryPresentationItem, { type: "sub" }>;
@@ -153,10 +153,10 @@ function ImageGalleryFolderItem({
 				toggleSelect={toggleSelect}
 			/>
 			<ImageGalleryFolderName
-				dispatch={dispatch}
 				folderLabel={folderLabel}
 				handleRenameSub={handleRenameSub}
 				presentation={presentation}
+				requestPrompt={requestPrompt}
 				sub={sub}
 			/>
 		</div>
@@ -193,16 +193,16 @@ function ImageGalleryFolderVisual({
 }
 
 function ImageGalleryFolderName({
-	dispatch,
 	folderLabel,
 	handleRenameSub,
 	presentation,
+	requestPrompt,
 	sub,
 }: {
-	dispatch: ReturnType<typeof useAppDispatch>;
 	folderLabel: string;
 	handleRenameSub: ImageGalleryController["handleRenameSub"];
 	presentation: GalleryFolderPresentation;
+	requestPrompt: ImageGalleryRuntime["requestPrompt"];
 	sub: string;
 }) {
 	return (
@@ -214,13 +214,11 @@ function ImageGalleryFolderName({
 					onClick={async (event) => {
 						if (!presentation.canInteract) return;
 						event.stopPropagation();
-						const result = await dispatch(
-							prompt({
-								title: lang.t("Rename folder"),
-								message: lang.t("Enter a new name:"),
-								defaultValue: sub,
-							}),
-						);
+						const result = await requestPrompt({
+							title: lang.t("Rename folder"),
+							message: lang.t("Enter a new name:"),
+							defaultValue: sub,
+						});
 						const newName = getGalleryFolderRenameName(result);
 						if (newName) void handleRenameSub(sub, newName);
 					}}
@@ -234,13 +232,13 @@ function ImageGalleryFolderName({
 
 function ImageGalleryImageItem({
 	controller,
-	dispatch,
 	formatLocationLabel,
 	highlightedImageName,
 	item,
 	itemIndex,
 	onOpenGlobalResult,
 	onSelect,
+	requestPrompt,
 	setPreviewImage,
 }: ImageGalleryItemProps & {
 	item: Extract<GalleryPresentationItem, { type: "image" }>;
@@ -310,13 +308,11 @@ function ImageGalleryImageItem({
 								if (imageReadonly) return;
 								event.stopPropagation();
 								const currentClean = getCleanName(image.name);
-								const newBaseName = await dispatch(
-									prompt({
-										title: lang.t("Rename file"),
-										message: lang.t("Enter a new name:"),
-										defaultValue: currentClean,
-									}),
-								);
+								const newBaseName = await requestPrompt({
+									title: lang.t("Rename file"),
+									message: lang.t("Enter a new name:"),
+									defaultValue: currentClean,
+								});
 								if (
 									typeof newBaseName === "string" &&
 									newBaseName &&

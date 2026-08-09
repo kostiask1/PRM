@@ -9,11 +9,6 @@ import {
 
 import { lang } from "../../../shared/lib/index.js";
 import {
-	alert,
-	confirm,
-	useAppDispatch,
-} from "../../../shared/model/index.js";
-import {
 	imageApi,
 	type ImageLocation,
 } from "../api/imageApi.ts";
@@ -40,6 +35,7 @@ import {
 	type GalleryKeyboardPlan,
 } from "./imageGalleryInteraction.ts";
 import { hasNonEmptyGalleryFolders } from "./imageGalleryLoading.ts";
+import { useImageGalleryRuntime } from "./ImageGalleryRuntime.tsx";
 
 const api = imageApi;
 
@@ -120,7 +116,7 @@ export function useImageGalleryMutations({
 	setSelectedSub,
 	setSelectedSubs,
 }: ImageGalleryMutationOptions) {
-	const dispatch = useAppDispatch();
+	const { requestConfirmation, showAlert } = useImageGalleryRuntime();
 	const [isCreatingSub, setIsCreatingSub] = useState(false);
 	const [newSubName, setNewSubName] = useState("");
 	const [isDraggingOver, setIsDraggingOver] = useState(false);
@@ -252,9 +248,7 @@ export function useImageGalleryMutations({
 				return true;
 			} catch (error) {
 				console.error("Move failed", error);
-				dispatch(
-					alert({ title: lang.t("Move error"), message: getErrorMessage(error) }),
-				);
+				showAlert({ title: lang.t("Move error"), message: getErrorMessage(error) });
 				return false;
 			} finally {
 				setLoading(false);
@@ -262,7 +256,6 @@ export function useImageGalleryMutations({
 		},
 		[
 			clearSelection,
-			dispatch,
 			getMovableSelectedItems,
 			loadImages,
 			loadStorageStats,
@@ -271,6 +264,7 @@ export function useImageGalleryMutations({
 			selectedSource,
 			selectedSub,
 			setLoading,
+			showAlert,
 		],
 	);
 
@@ -287,10 +281,9 @@ export function useImageGalleryMutations({
 			void loadSubcategories();
 			setSelectedSub(fullPath);
 		} catch (error) {
-			dispatch(alert({ title: lang.t("Error"), message: getErrorMessage(error) }));
+			showAlert({ title: lang.t("Error"), message: getErrorMessage(error) });
 		}
 	}, [
-		dispatch,
 		isReadonlyCurrentFolder,
 		loadSubcategories,
 		newSubName,
@@ -298,6 +291,7 @@ export function useImageGalleryMutations({
 		selectedSource,
 		selectedSub,
 		setSelectedSub,
+		showAlert,
 	]);
 
 	const handleRenameSub = useCallback(
@@ -321,22 +315,20 @@ export function useImageGalleryMutations({
 					setSelectedSub(plan.selectedSubcategory);
 				}
 			} catch (error) {
-				dispatch(
-					alert({
-						title: lang.t("Rename error"),
-						message: getErrorMessage(error),
-					}),
-				);
+				showAlert({
+					title: lang.t("Rename error"),
+					message: getErrorMessage(error),
+				});
 			}
 		},
 		[
-			dispatch,
 			loadImages,
 			loadSubcategories,
 			selectedCat.id,
 			selectedSource,
 			selectedSub,
 			setSelectedSub,
+			showAlert,
 		],
 	);
 
@@ -354,16 +346,16 @@ export function useImageGalleryMutations({
 				void loadImages();
 				void loadStorageStats();
 			} catch (error) {
-				dispatch(alert({ title: lang.t("Error"), message: getErrorMessage(error) }));
+				showAlert({ title: lang.t("Error"), message: getErrorMessage(error) });
 			}
 		},
 		[
-			dispatch,
 			loadImages,
 			loadStorageStats,
 			selectedCat.id,
 			selectedSource,
 			selectedSub,
+			showAlert,
 		],
 	);
 
@@ -388,22 +380,20 @@ export function useImageGalleryMutations({
 				total: summary.total,
 			});
 			const confirmed = normalizeGalleryBulkDeleteConfirmation(
-				await dispatch(
-					confirm({
-						title: lang.t("Delete"),
-						message: lang.t("Delete selected items ({count})?", {
-							count: confirmationPlan.count,
-						}),
-						checkboxLabel: confirmationPlan.showExtractFolderContents
-							? lang.t("Extract contents from folder?")
-							: null,
-						checkboxDefaultChecked: false,
-						getConfirmValue: (
-							_value: unknown,
-							extractFolderContents: boolean,
-						) => createGalleryBulkDeleteConfirmation(extractFolderContents),
+				await requestConfirmation({
+					title: lang.t("Delete"),
+					message: lang.t("Delete selected items ({count})?", {
+						count: confirmationPlan.count,
 					}),
-				),
+					checkboxLabel: confirmationPlan.showExtractFolderContents
+						? lang.t("Extract contents from folder?")
+						: null,
+					checkboxDefaultChecked: false,
+					getConfirmValue: (
+						_value: unknown,
+						extractFolderContents: boolean,
+					) => createGalleryBulkDeleteConfirmation(extractFolderContents),
+				}),
 			);
 			if (!confirmed) return;
 
@@ -427,14 +417,11 @@ export function useImageGalleryMutations({
 			void loadSubcategories();
 			void loadStorageStats();
 		} catch (error) {
-			dispatch(
-				alert({ title: lang.t("Delete error"), message: getErrorMessage(error) }),
-			);
+			showAlert({ title: lang.t("Delete error"), message: getErrorMessage(error) });
 		} finally {
 			setLoading(false);
 		}
 	}, [
-		dispatch,
 		getMovableSelectedItems,
 		loadImages,
 		loadStorageStats,
@@ -442,9 +429,11 @@ export function useImageGalleryMutations({
 		selectedCat.id,
 		selectedSource,
 		selectedSub,
+		requestConfirmation,
 		setLoading,
 		setSelectedFilenames,
 		setSelectedSubs,
+		showAlert,
 	]);
 
 	useEffect(() => {

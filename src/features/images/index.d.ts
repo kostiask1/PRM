@@ -45,3 +45,9 @@ export {
 	default as ImageGallery,
 	type ImageGalleryProps,
 } from "./ui/ImageGallery.tsx";
+export {
+	ImageGalleryRuntimeProvider,
+	type ImageGalleryMessageBoxPayload,
+	type ImageGalleryRuntime,
+	type ImageGalleryRuntimeProviderProps,
+} from "./model/ImageGalleryRuntime.tsx";

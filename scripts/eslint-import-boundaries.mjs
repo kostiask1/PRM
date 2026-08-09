@@ -108,6 +108,7 @@ const RULES_REFERENCE_FEATURE_PATH_PREFIX = "src/features/rules-reference/";
 const AI_FEATURE_PATH_PREFIX = "src/features/ai/";
 const EDITOR_FEATURE_PATH_PREFIX = "src/features/editor/";
 const DICE_FEATURE_PATH_PREFIX = "src/features/dice/";
+const IMAGES_FEATURE_PATH_PREFIX = "src/features/images/";
 const SHARED_MODEL_PATH = "src/shared/model";
 const APP_MODEL_PATH = "src/app/model";
 
@@ -648,6 +649,15 @@ const DICE_STORE_FACADE_RULE = createInjectedRuntimeStoreFacadeRule({
 		"Dice must receive app-global roll commands through its injected runtime and may not import shared/model or app/model directly.",
 });
 
+const IMAGES_STORE_FACADE_RULE = createInjectedRuntimeStoreFacadeRule({
+	featurePathPrefix: IMAGES_FEATURE_PATH_PREFIX,
+	description:
+		"Require Images to receive app-global preferences and modal effects through its injected runtime.",
+	messageId: "injectedRuntime",
+	message:
+		"Images must receive app-global preferences and modal effects through its injected runtime and may not import shared/model or app/model directly.",
+});
+
 export const FSD_BOUNDARY_PLUGIN = Object.freeze({
 	rules: Object.freeze({
 		"public-entry-imports": FSD_PUBLIC_ENTRY_IMPORT_RULE,
@@ -662,6 +672,7 @@ export const FSD_BOUNDARY_PLUGIN = Object.freeze({
 		"ai-store-facade": AI_STORE_FACADE_RULE,
 		"editor-store-facade": EDITOR_STORE_FACADE_RULE,
 		"dice-store-facade": DICE_STORE_FACADE_RULE,
+		"images-store-facade": IMAGES_STORE_FACADE_RULE,
 	}),
 });
 

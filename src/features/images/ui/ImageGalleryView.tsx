@@ -3,10 +3,10 @@ import ReactList from "react-list";
 
 import { getSourceFullName } from "../../../entities/reference/index.js";
 import { classNames, formatBytes, lang } from "../../../shared/lib/index.js";
-import { useAppDispatch } from "../../../shared/model/index.js";
 import { Icon, Modal, type IconName } from "../../../shared/ui/index.js";
 import type { ImageAsset } from "../api/imageApi.ts";
 import type { GalleryPresentationItem } from "../model/imageGalleryPresentation.ts";
+import { useImageGalleryRuntime } from "../model/ImageGalleryRuntime.tsx";
 import ImageGalleryItem from "./ImageGalleryItem.tsx";
 import {
 	ImageGalleryDialogs,
@@ -218,7 +218,7 @@ function ImageGalleryItems({
 	controller: ImageGalleryUiController;
 	onSelect?: (image: ImageAsset | null | undefined) => void;
 }) {
-	const dispatch = useAppDispatch();
+	const { requestPrompt } = useImageGalleryRuntime();
 	const {
 		galleryColumns,
 		galleryController,
@@ -237,7 +237,6 @@ function ImageGalleryItems({
 	) => (
 		<ImageGalleryItem
 			controller={galleryController}
-			dispatch={dispatch}
 			formatFolderLabel={formatBestiaryFolderLabel}
 			formatLocationLabel={formatImageLocationLabel}
 			highlightedImageName={highlightedImageName}
@@ -245,6 +244,7 @@ function ImageGalleryItems({
 			itemIndex={itemIndex}
 			onOpenGlobalResult={openGlobalResultPath}
 			onSelect={onSelect}
+			requestPrompt={requestPrompt}
 			resetContentScope={resetContentScope}
 			setPreviewImage={setPreviewImage}
 		/>

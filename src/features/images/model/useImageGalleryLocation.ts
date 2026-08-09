@@ -2,15 +2,14 @@ import { useMemo, useState } from "react";
 
 import {
 	getCampaignIgnoreSourcesList,
-	type CampaignSourceSettings,
 } from "../../../entities/reference/index.js";
 import { useDebounce } from "../../../shared/lib/index.js";
-import { useAppSelector } from "../../../shared/model/index.js";
 import { IMAGE_GALLERY_CATEGORIES } from "../imageGalleryConfig.js";
 import type {
 	ImageGalleryCategory,
 	ImageGalleryContentScope,
 } from "./contracts.ts";
+import { useImageGalleryRuntime } from "./ImageGalleryRuntime.tsx";
 
 function deriveGallerySearchState(
 	searchQuery: string,
@@ -32,17 +31,15 @@ function deriveGallerySearchState(
 }
 
 export function useImageGalleryLocation() {
-	const useSearchDebounce = useAppSelector(
-		(state) => state.ui.useSearchDebounce !== false,
-	);
-	const activeCampaign = useAppSelector((state) => state.active.campaign);
-	const globalIgnoreSourcesList = useAppSelector(
-		(state) => state.ui.ignoreSourcesList || [],
-	);
+	const {
+		activeCampaign,
+		globalIgnoreSourcesList,
+		useSearchDebounce,
+	} = useImageGalleryRuntime();
 	const ignoreSourcesList = useMemo(
 		() =>
 			getCampaignIgnoreSourcesList(
-				activeCampaign as CampaignSourceSettings | null,
+				activeCampaign,
 				globalIgnoreSourcesList,
 			),
 		[activeCampaign, globalIgnoreSourcesList],

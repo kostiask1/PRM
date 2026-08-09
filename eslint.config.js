@@ -714,6 +714,12 @@ export default [
     },
   },
   {
+    files: ['src/features/images/**/*.{js,jsx,ts,tsx}'],
+    rules: {
+      'fsd-boundaries/images-store-facade': 'error',
+    },
+  },
+  {
     files: [
       'src/features/**/*.{js,jsx,ts,tsx}',
       'src/widgets/**/*.{js,jsx,ts,tsx}',

@@ -5,7 +5,6 @@ import {
 	useMemo,
 	useState,
 } from "react";
-import { alert } from "../../../shared/model/index.js";
 import { campaignApi } from "../../../entities/campaign/index.js";
 import { imageApi } from "../api/imageApi.ts";
 
@@ -13,7 +12,6 @@ const api = { ...campaignApi, ...imageApi };
 import "../../../assets/components/ImageDropzone.css";
 import { IMAGE_GALLERY_CATEGORIES } from "../imageGalleryConfig.ts";
 import { lang } from "../../../shared/lib/index.js";
-import { useAppDispatch } from "../../../shared/model/index.js";
 import { classNames } from "../../../shared/lib/index.js";
 import { Button, Icon, Modal } from "../../../shared/ui/index.js";
 import ImageGallery from "./ImageGallery";
@@ -30,6 +28,7 @@ import {
 	splitImageFileName,
 } from "../model/imageUpload.ts";
 import type { ImageTargetValue } from "../model/imageTargetSettings.ts";
+import { useImageGalleryRuntime } from "../model/ImageGalleryRuntime.tsx";
 
 export interface ImageDropzoneProps {
 	campaignSlug?: string | null;
@@ -46,7 +45,7 @@ export default function ImageDropzone({
 	initialCategory = "maps",
 	initialSubcategory = "",
 }: ImageDropzoneProps) {
-	const dispatch = useAppDispatch();
+	const { showAlert } = useImageGalleryRuntime();
 	const [isDragging, setIsDragging] = useState(false);
 	const [pendingFile, setPendingFile] = useState<File | null>(null);
 	const [pendingFileBaseName, setPendingFileBaseName] = useState("");
@@ -150,12 +149,10 @@ export default function ImageDropzone({
 			onUploadSuccess?.(result);
 			setPendingFile(null);
 		} catch (err: unknown) {
-			dispatch(
-				alert({
-					title: lang.t("Error"),
-					message: getImageUploadErrorMessage(err),
-				}),
-			);
+			showAlert({
+				title: lang.t("Error"),
+				message: getImageUploadErrorMessage(err),
+			});
 		} finally {
 			setIsUploading(false);
 		}

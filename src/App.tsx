@@ -15,6 +15,7 @@ import {
 } from "./features/ai/ui/index.js";
 import MainContent from "./app/routing/MainContent.tsx";
 import DiceCalculatorHost from "./app/ui/DiceCalculatorHost.tsx";
+import ImageGalleryRuntimeHost from "./app/ui/ImageGalleryRuntimeHost.tsx";
 import MessageBoxHost from "./app/ui/MessageBoxHost.tsx";
 import {
 	CharacterCard,
@@ -449,9 +450,10 @@ export default function App() {
 	};
 
 	return (
-		<DiceRequestRuntimeProvider runtime={diceRequestRuntime}>
-			<EditorMentionPickerRuntimeProvider runtime={editorMentionPickerRuntime}>
-				<AiAttachmentAlertRuntimeProvider runtime={aiAttachmentAlertRuntime}>
+		<ImageGalleryRuntimeHost>
+			<DiceRequestRuntimeProvider runtime={diceRequestRuntime}>
+				<EditorMentionPickerRuntimeProvider runtime={editorMentionPickerRuntime}>
+					<AiAttachmentAlertRuntimeProvider runtime={aiAttachmentAlertRuntime}>
 				<RulesReferenceRuntimeProvider runtime={rulesReferenceRuntime}>
 					<SimplifiedNotesProvider
 						simplifiedNotesEnabled={simplifiedNotesEnabled}
@@ -531,8 +533,9 @@ export default function App() {
 						</EditableFieldEntityLinkProvider>
 					</SimplifiedNotesProvider>
 				</RulesReferenceRuntimeProvider>
-				</AiAttachmentAlertRuntimeProvider>
-			</EditorMentionPickerRuntimeProvider>
-		</DiceRequestRuntimeProvider>
+					</AiAttachmentAlertRuntimeProvider>
+				</EditorMentionPickerRuntimeProvider>
+			</DiceRequestRuntimeProvider>
+		</ImageGalleryRuntimeHost>
 	);
 }

@@ -1495,6 +1495,7 @@ const FSD_AI_STORE_FACADE_RULE_ID = "fsd-boundaries/ai-store-facade";
 const FSD_EDITOR_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/editor-store-facade";
 const FSD_DICE_STORE_FACADE_RULE_ID = "fsd-boundaries/dice-store-facade";
+const FSD_IMAGES_STORE_FACADE_RULE_ID = "fsd-boundaries/images-store-facade";
 
 function lintFsdBoundaryRule(
 	source,
@@ -6933,6 +6934,251 @@ await run(
 		assert.match(
 			eslintSource,
 			/files: \['src\/features\/dice\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/dice-store-facade': 'error'/,
+		);
+	},
+);
+
+await run(
+	"Phase 146 gives Images an injected gallery runtime",
+	async () => {
+		const [
+			runtimeSource,
+			locationSource,
+			mutationsSource,
+			dropzoneSource,
+			viewSource,
+			itemSource,
+			hostSource,
+			featureEntry,
+			featureTypeEntry,
+			appSource,
+			eslintSource,
+		] = await Promise.all([
+			fs.readFile("src/features/images/model/ImageGalleryRuntime.tsx", "utf8"),
+			fs.readFile("src/features/images/model/useImageGalleryLocation.ts", "utf8"),
+			fs.readFile("src/features/images/model/useImageGalleryMutations.ts", "utf8"),
+			fs.readFile("src/features/images/ui/ImageDropzone.tsx", "utf8"),
+			fs.readFile("src/features/images/ui/ImageGalleryView.tsx", "utf8"),
+			fs.readFile("src/features/images/ui/ImageGalleryItem.tsx", "utf8"),
+			fs.readFile("src/app/ui/ImageGalleryRuntimeHost.tsx", "utf8"),
+			fs.readFile("src/features/images/index.js", "utf8"),
+			fs.readFile("src/features/images/index.d.ts", "utf8"),
+			fs.readFile("src/App.tsx", "utf8"),
+			fs.readFile("eslint.config.js", "utf8"),
+		]);
+
+		assertExportedInterfaceFragments(runtimeSource, "ImageGalleryRuntime", [
+			"activeCampaign: CampaignSourceSettings | null;",
+			"globalIgnoreSourcesList: string[];",
+			"requestConfirmation(",
+			"requestPrompt(payload: ImageGalleryMessageBoxPayload): Promise<unknown>;",
+			"showAlert(payload: ImageGalleryMessageBoxPayload): Promise<unknown>;",
+			"useSearchDebounce: boolean;",
+		]);
+		assertExportedInterfaceFragments(
+			runtimeSource,
+			"ImageGalleryRuntimeProviderProps",
+			["runtime: ImageGalleryRuntime;", "children?: ReactNode;"],
+		);
+		assertSourceTokensInOrder(
+			runtimeSource,
+			[
+				"createContext<ImageGalleryRuntime | null>(",
+				"<ImageGalleryRuntimeContext.Provider value={runtime}>",
+				"const runtime = useContext(ImageGalleryRuntimeContext);",
+				'"ImageGalleryRuntimeProvider is required to render image controls"',
+			],
+			"Images runtime provider",
+		);
+		assert.match(featureEntry, /ImageGalleryRuntimeProvider/);
+		assertPublicTypeSurface(featureTypeEntry, [
+			"ImageGalleryMessageBoxPayload",
+			"ImageGalleryRuntime",
+			"ImageGalleryRuntimeProviderProps",
+		]);
+		assert.doesNotMatch(
+			`${featureEntry}\n${featureTypeEntry}`,
+			/useImageGalleryRuntime/,
+		);
+
+		for (const source of [
+			runtimeSource,
+			locationSource,
+			mutationsSource,
+			dropzoneSource,
+			viewSource,
+			itemSource,
+		]) {
+			assert.doesNotMatch(
+				source,
+				/shared\/model|app\/model|useAppDispatch|useAppSelector|\bdispatch\(|\balert\(|\bconfirm\(|\bprompt\(/,
+			);
+		}
+		assertSourceTokensInOrder(
+			locationSource,
+			[
+				"const {",
+				"activeCampaign,",
+				"globalIgnoreSourcesList,",
+				"useSearchDebounce,",
+				"} = useImageGalleryRuntime();",
+				"getCampaignIgnoreSourcesList(",
+				"activeCampaign,",
+				"globalIgnoreSourcesList,",
+				"useSearchDebounce ? 250 : 0",
+			],
+			"Images live preference and debounce policy",
+		);
+		assertSourceTokensInOrder(
+			mutationsSource,
+			[
+				"const { requestConfirmation, showAlert } = useImageGalleryRuntime();",
+				"const handleBulkDelete = useCallback(async () => {",
+				"setLoading(true);",
+				"hasNonEmptyGalleryFolders({",
+				"const confirmationPlan = getGalleryBulkDeleteConfirmationPlan({",
+				"normalizeGalleryBulkDeleteConfirmation(",
+				"await requestConfirmation({",
+				"if (!confirmed) return;",
+				"await Promise.all(",
+				"void loadImages();",
+				"showAlert({ title: lang.t(\"Delete error\"), message: getErrorMessage(error) });",
+				"setLoading(false);",
+			],
+			"Images bulk-delete runtime and lifecycle ordering",
+		);
+		assertSourceTokensInOrder(
+			dropzoneSource,
+			[
+				"const { showAlert } = useImageGalleryRuntime();",
+				"setIsUploading(true);",
+				"requireUploadedImage(await api.uploadImage(",
+				"onUploadSuccess?.(result);",
+				"setPendingFile(null);",
+				"showAlert({",
+				"setIsUploading(false);",
+			],
+			"Image Dropzone alert and upload lifecycle",
+		);
+		assertSourceTokensInOrder(
+			viewSource,
+			[
+				"const { requestPrompt } = useImageGalleryRuntime();",
+				"<ImageGalleryItem",
+				"requestPrompt={requestPrompt}",
+			],
+			"Images prompt composition",
+		);
+		assertSourceTokensInOrder(
+			itemSource,
+			[
+				"if (!presentation.canInteract) return;",
+				"event.stopPropagation();",
+				"const result = await requestPrompt({",
+				"const newName = getGalleryFolderRenameName(result);",
+				"if (newName) void handleRenameSub(sub, newName);",
+				"if (imageReadonly) return;",
+				"event.stopPropagation();",
+				"const newBaseName = await requestPrompt({",
+				"void handleRenameImage(",
+			],
+			"Images prompt and rename ordering",
+		);
+		assertSourceTokensInOrder(
+			hostSource,
+			[
+				"const dispatch = useAppDispatch();",
+				"state.ui.useSearchDebounce !== false",
+				"const activeCampaign = useAppSelector((state) => state.active.campaign);",
+				"state.ui.ignoreSourcesList || []",
+				"const showAlert = useCallback<ImageGalleryRuntime[\"showAlert\"]>(",
+				"dispatch(alert(payload))",
+				"const requestConfirmation = useCallback<",
+				"dispatch(confirm(payload))",
+				"const requestPrompt = useCallback<ImageGalleryRuntime[\"requestPrompt\"]>(",
+				"dispatch(prompt(payload))",
+				"const runtime = useMemo<ImageGalleryRuntime>(",
+				"<ImageGalleryRuntimeProvider runtime={runtime}>",
+			],
+			"narrow Images app runtime host",
+		);
+		assertSourceTokensInOrder(
+			appSource,
+			[
+				"<ImageGalleryRuntimeHost>",
+				"<DiceRequestRuntimeProvider",
+				"<MainContent />",
+				"</ImageGalleryRuntimeHost>",
+			],
+			"App-owned Images runtime scope",
+		);
+		assert.doesNotMatch(appSource, /state\.ui\.ignoreSourcesList|state\.active\.campaign/);
+
+		const forbiddenImagesStoreImporters = [];
+		for (const filePath of await collectFsdSourceFiles("src/features/images")) {
+			const source = await fs.readFile(filePath, "utf8");
+			for (const specifier of readStaticFsdSpecifiers(source)) {
+				const modulePath = resolveTestModuleSpecifierPath(filePath, specifier)
+					?.replace(/(?:\.d)?\.(?:[cm]?[jt]sx?)$/, "")
+					.toLowerCase();
+				if (
+					modulePath === "src/shared/model" ||
+					modulePath?.startsWith("src/shared/model/") ||
+					modulePath === "src/app/model" ||
+					modulePath?.startsWith("src/app/model/")
+				) {
+					forbiddenImagesStoreImporters.push([filePath, specifier]);
+				}
+			}
+		}
+		assert.deepEqual(forbiddenImagesStoreImporters, []);
+
+		for (const source of [
+			'import { alert } from "../../../shared/model/index.js";',
+			'import { futureStoreFacade } from "../../../shared/model/index.js";',
+			'export { useAppDispatch as dispatch } from "../../../shared/model/index.js";',
+			'export * from "../../../shared/model/index.js";',
+			'import { appStore } from "../../../shared/model/appStore";',
+			'const model = import("/src/shared/model/AppStore.ts?version=1");',
+			'import { appStore } from "/SRC/SHARED/MODEL/AppStore.ts";',
+			'import { appStore } from "/@fs/E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'import { appStore } from "E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'const model = require("..\\\\..\\\\..\\\\shared\\\\model\\\\index.js");',
+			'import.meta.glob("../../../shared/model/appStore.ts", { eager: true });',
+			'import.meta.globEager("../../../app/model/**/*.ts");',
+			'import.meta.glob(["../../../shared/model/appStore.ts"], { eager: true });',
+			'import.meta["glob"]("../../../shared/model/appStore.ts");',
+			'import { useAppSelector } from "../../../app/model/index";',
+		]) {
+			const reports = lintFsdBoundaryRule(
+				source,
+				"src/features/images/ui/ImageGallery.tsx",
+				FSD_IMAGES_STORE_FACADE_RULE_ID,
+			);
+			assert.equal(reports.length, 1);
+			assert.equal(reports[0].ruleId, FSD_IMAGES_STORE_FACADE_RULE_ID);
+		}
+		const mixedCaseImporterReports = lintFsdBoundaryRule(
+			'import { alert } from "../../../shared/model/index.js";',
+			"SRC/FEATURES/IMAGES/ui/ImageGallery.tsx",
+			FSD_IMAGES_STORE_FACADE_RULE_ID,
+		);
+		assert.equal(mixedCaseImporterReports.length, 1);
+		assert.equal(
+			mixedCaseImporterReports[0].ruleId,
+			FSD_IMAGES_STORE_FACADE_RULE_ID,
+		);
+		assert.deepEqual(
+			lintFsdBoundaryRule(
+				'import { alert } from "../../../shared/model/index.js";',
+				"src/features/dice/ui/RollDice.tsx",
+				FSD_IMAGES_STORE_FACADE_RULE_ID,
+			),
+			[],
+		);
+		assert.match(
+			eslintSource,
+			/files: \['src\/features\/images\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/images-store-facade': 'error'/,
 		);
 	},
 );
