@@ -6,7 +6,7 @@ lineage and is not a migration baseline.
 
 | ID | Status | Debt and evidence | Removal condition | Target |
 | --- | --- | --- | --- | --- |
-| MD-R02 | In progress | Phase 136 moved the actual configured store to strict `src/app/model/appStore.ts`; `shared/model/appStore.ts` is now a typed delegation-only compatibility facade. Phase 137 removes the first bounded lower-layer direct-facade dependency: `features/settings` receives a typed live `SettingsModalRuntime` from `widgets/sidebar` while retaining its own API/effect/save logic. Phase 138 removes Notes' direct read and the related note-render consumers' duplicate reads through one app-root `SimplifiedNotesProvider`; other lower-layer consumers still use the facade, and the accidental commit's JavaScript store design remains incompatible with the current typed reducers and consumers. | Retire the compatibility facade only after its remaining consumers no longer need it or a narrower public contract is explicitly established, while preserving reducer, realtime, modal, navigation, selector, dispatch, and remaining settings behavior. | Phase 139+ |
+| MD-R02 | In progress | Phase 136 moved the actual configured store to strict `src/app/model/appStore.ts`; `shared/model/appStore.ts` is now a typed delegation-only compatibility facade. Phase 137 removes the first bounded lower-layer direct-facade dependency: `features/settings` receives a typed live `SettingsModalRuntime` from `widgets/sidebar` while retaining its own API/effect/save logic. Phase 138 removes Notes' direct read and the related note-render consumers' duplicate reads through one app-root `SimplifiedNotesProvider`. Phase 139 removes Player Questions' direct dice state/dispatch dependency through a live Sidebar-provided `PlayerQuestionsRuntime`; other lower-layer consumers still use the facade, and the accidental commit's JavaScript store design remains incompatible with the current typed reducers and consumers. | Retire the compatibility facade only after its remaining consumers no longer need it or a narrower public contract is explicitly established, while preserving reducer, realtime, modal, navigation, selector, dispatch, and remaining settings behavior. | Phase 140+ |
 | MD-R04 | Verification | Recovered campaign/reference lint restrictions are installed and Fallow reports zero boundary violations or cycles. Complete lint/typecheck execution is blocked by the incomplete local dependency tree: `@typescript-eslint/parser` and the `tsc` binary are absent. | Restore/install the declared development dependencies and pass the unchanged complete lint and typecheck gates. | Recovery R5 |
 
 Phase 135 closes `MD-R05` at 421/421 tests with empty production feature and
@@ -15,9 +15,11 @@ tests and establishes the app-owned store composition plus enforced typed
 compatibility boundary. Phase 137 passes 423/423 tests and removes Settings'
 direct store-facade dependency through a live sidebar-provided runtime. Phase
 138 passes 424/424 tests and gives Notes a live app-root simplified-preference
-provider without letting the feature import the facade. This does not close the
-whole FSD migration: `MD-R02` remains in progress while remaining lower-layer
-consumers migrate, and `MD-R04` remains
+provider without letting the feature import the facade. Phase 139 passes
+425/425 tests and gives Player Questions a live Sidebar dice runtime without
+letting the feature import the facade. This does not close the whole FSD
+migration: `MD-R02` remains in progress while remaining lower-layer consumers
+migrate, and `MD-R04` remains
 verification-blocked until the declared local lint/typecheck tooling is
 available.
 

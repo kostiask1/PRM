@@ -101,6 +101,7 @@ const APP_STORE_RUNTIME_MODULE_PATH = normalizeModulePath(
 );
 const SETTINGS_FEATURE_PATH_PREFIX = "src/features/settings/";
 const NOTES_FEATURE_PATH_PREFIX = "src/features/notes/";
+const PLAYER_QUESTIONS_FEATURE_PATH_PREFIX = "src/features/player-questions/";
 const SHARED_MODEL_PATH = "src/shared/model";
 const APP_MODEL_PATH = "src/app/model";
 
@@ -575,6 +576,15 @@ const NOTES_STORE_FACADE_RULE = createInjectedRuntimeStoreFacadeRule({
 		"Notes must receive simplified-note presentation state through SimplifiedNotesProvider and may not import shared/model or app/model directly.",
 });
 
+const PLAYER_QUESTIONS_STORE_FACADE_RULE = createInjectedRuntimeStoreFacadeRule({
+	featurePathPrefix: PLAYER_QUESTIONS_FEATURE_PATH_PREFIX,
+	description:
+		"Require Player Questions to receive dice state and requests through its injected runtime.",
+	messageId: "injectedRuntime",
+	message:
+		"Player Questions must receive app-global dice state and requests through its injected runtime and may not import shared/model or app/model directly.",
+});
+
 export const FSD_BOUNDARY_PLUGIN = Object.freeze({
 	rules: Object.freeze({
 		"public-entry-imports": FSD_PUBLIC_ENTRY_IMPORT_RULE,
@@ -582,6 +592,7 @@ export const FSD_BOUNDARY_PLUGIN = Object.freeze({
 		"app-store-runtime-owner": APP_STORE_RUNTIME_OWNER_RULE,
 		"settings-store-facade": SETTINGS_STORE_FACADE_RULE,
 		"notes-store-facade": NOTES_STORE_FACADE_RULE,
+		"player-questions-store-facade": PLAYER_QUESTIONS_STORE_FACADE_RULE,
 	}),
 });
 

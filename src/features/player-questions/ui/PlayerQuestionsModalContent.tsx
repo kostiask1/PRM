@@ -11,11 +11,6 @@ import ReactList from "react-list";
 import questions from "../../../../database/questions.json";
 import "../../../assets/components/PlayerQuestionsModalContent.css";
 import { lang, useDebounce } from "../../../shared/lib/index.js";
-import {
-	requestDiceRollAction,
-	useAppDispatch,
-	useAppSelector,
-} from "../../../shared/model/index.js";
 import { Button, TextInput } from "../../../shared/ui/index.js";
 import {
 	QUESTION_ROLL_CONTEXT,
@@ -25,6 +20,7 @@ import {
 	getQuestionSearchTarget,
 	normalizeQuestionSearch,
 } from "../model.ts";
+import type { PlayerQuestionsModalContentProps } from "./playerQuestionsComposition.ts";
 
 const SCROLL_DURATION_MS = 260;
 const SEARCH_DEBOUNCE_MS = 250;
@@ -64,12 +60,10 @@ function scrollToQuestion(
 	requestAnimationFrame(step);
 }
 
-export default function PlayerQuestionsModalContent() {
-	const dispatch = useAppDispatch();
-	const rolledResult = useAppSelector((state) => state.dice.rolledResult);
-	const useSearchDebounce = useAppSelector(
-		(state) => state.ui.useSearchDebounce !== false,
-	);
+export default function PlayerQuestionsModalContent({
+	runtime,
+}: PlayerQuestionsModalContentProps) {
+	const { rolledResult, useSearchDebounce } = runtime;
 	const processedResultIdRef = useRef<unknown>(getDiceResultId(rolledResult));
 	const listRef = useRef<ReactList>(null);
 	const rootRef = useRef<HTMLDivElement>(null);
@@ -117,12 +111,10 @@ export default function PlayerQuestionsModalContent() {
 	}, [debouncedQuestionSearch, scrollToQuestionId]);
 
 	const rollQuestion = () => {
-		dispatch(
-			requestDiceRollAction({
-				formula: questionRollFormula,
-				context: { type: QUESTION_ROLL_CONTEXT },
-			}),
-		);
+		runtime.requestDiceRoll({
+			formula: questionRollFormula,
+			context: { type: QUESTION_ROLL_CONTEXT },
+		});
 	};
 
 	const handleQuestionSearchChange = (event: ChangeEvent<HTMLInputElement>) => {

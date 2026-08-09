@@ -1,4 +1,5 @@
 export const QUESTION_ROLL_CONTEXT = "playerQuestions";
+export type PlayerQuestionsRollContext = typeof QUESTION_ROLL_CONTEXT;
 export const STANDARD_QUESTION_DICE = [100, 20, 12, 10, 8, 6, 4] as const;
 
 interface UnknownRecord {

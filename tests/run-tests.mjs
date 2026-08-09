@@ -1482,6 +1482,8 @@ const FSD_SETTINGS_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/settings-store-facade";
 const FSD_NOTES_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/notes-store-facade";
+const FSD_PLAYER_QUESTIONS_STORE_FACADE_RULE_ID =
+	"fsd-boundaries/player-questions-store-facade";
 
 function lintFsdBoundaryRule(
 	source,
@@ -5592,6 +5594,178 @@ await run(
 		assert.match(
 			eslintSource,
 			/files: \['src\/features\/notes\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/notes-store-facade': 'error'/,
+		);
+	},
+);
+
+await run(
+	"Phase 139 gives Player Questions a live Sidebar dice runtime",
+	async () => {
+		const [
+			compositionSource,
+			typeEntry,
+			contentSource,
+			sidebarCompositionSource,
+			sidebarSource,
+			eslintSource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/features/player-questions/ui/playerQuestionsComposition.ts",
+				"utf8",
+			),
+			fs.readFile("src/features/player-questions/index.d.ts", "utf8"),
+			fs.readFile(
+				"src/features/player-questions/ui/PlayerQuestionsModalContent.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/widgets/sidebar/ui/sidebarPlayerQuestionsComposition.tsx",
+				"utf8",
+			),
+			fs.readFile("src/widgets/sidebar/ui/Sidebar.tsx", "utf8"),
+			fs.readFile("eslint.config.js", "utf8"),
+		]);
+
+		assertExportedInterfaceFragments(
+			compositionSource,
+			"PlayerQuestionsDiceRollRequest",
+			[
+				"formula: string;",
+				"context: { type: PlayerQuestionsRollContext };",
+			],
+		);
+		assertExportedInterfaceFragments(
+			compositionSource,
+			"PlayerQuestionsRuntime",
+			[
+				"rolledResult: unknown;",
+				"useSearchDebounce: boolean;",
+				"requestDiceRoll(request: PlayerQuestionsDiceRollRequest): void;",
+			],
+		);
+		assertExportedInterfaceFragments(
+			compositionSource,
+			"PlayerQuestionsModalContentProps",
+			["runtime: PlayerQuestionsRuntime;"],
+		);
+		assertPublicTypeSurface(typeEntry, [
+			"PlayerQuestionsDiceRollRequest",
+			"PlayerQuestionsModalContentProps",
+			"PlayerQuestionsRuntime",
+		]);
+
+		assert.doesNotMatch(
+			contentSource,
+			/shared\/model|app\/model|useAppDispatch|useAppSelector|dispatch\(/,
+		);
+		assertSourceTokensInOrder(
+			contentSource,
+			[
+				"export default function PlayerQuestionsModalContent({",
+				"runtime,",
+				"const { rolledResult, useSearchDebounce } = runtime;",
+				"const processedResultIdRef = useRef<unknown>(getDiceResultId(rolledResult));",
+				"useSearchDebounce ? SEARCH_DEBOUNCE_MS : 0",
+				"const roll = getQuestionDiceRoll(rolledResult, QUESTIONS_COUNT);",
+				"runtime.requestDiceRoll({",
+				"formula: questionRollFormula,",
+				"context: { type: QUESTION_ROLL_CONTEXT },",
+			],
+			"Player Questions live runtime consumption",
+		);
+
+		assertSourceTokensInOrder(
+			sidebarCompositionSource,
+			[
+				"function useSidebarPlayerQuestionsRuntime(): PlayerQuestionsRuntime",
+				"const dispatch = useAppDispatch();",
+				"state.dice.rolledResult",
+				"state.ui.useSearchDebounce !== false",
+				"return useMemo<PlayerQuestionsRuntime>",
+				"requestDiceRoll(request) {",
+				"dispatch(requestDiceRollAction(request));",
+				"export function SidebarPlayerQuestionsModalContent()",
+				"const runtime = useSidebarPlayerQuestionsRuntime();",
+				"<PlayerQuestionsModalContent runtime={runtime} />",
+			],
+			"live Sidebar Player Questions runtime composition",
+		);
+		assert.match(
+			sidebarSource,
+			/children: <SidebarPlayerQuestionsModalContent\s*\/>/,
+		);
+		assert.doesNotMatch(sidebarSource, /<PlayerQuestionsModalContent\s*\/>/);
+
+		const forbiddenPlayerQuestionsStoreImporters = [];
+		for (const filePath of await collectFsdSourceFiles(
+			"src/features/player-questions",
+		)) {
+			const source = await fs.readFile(filePath, "utf8");
+			for (const specifier of readStaticFsdSpecifiers(source)) {
+				const modulePath = resolveTestModuleSpecifierPath(filePath, specifier)
+					?.replace(/(?:\.d)?\.(?:[cm]?[jt]sx?)$/, "")
+					.toLowerCase();
+				if (
+					modulePath === "src/shared/model" ||
+					modulePath?.startsWith("src/shared/model/") ||
+					modulePath === "src/app/model" ||
+					modulePath?.startsWith("src/app/model/")
+				) {
+					forbiddenPlayerQuestionsStoreImporters.push([filePath, specifier]);
+				}
+			}
+		}
+		assert.deepEqual(forbiddenPlayerQuestionsStoreImporters, []);
+
+		for (const source of [
+			'import { useAppSelector } from "../../../shared/model/index.js";',
+			'import { futureStoreFacade } from "../../../shared/model/index.js";',
+			'export { useAppDispatch as dispatch } from "../../../shared/model/index.js";',
+			'export * from "../../../shared/model/index.js";',
+			'import { appStore } from "../../../shared/model/appStore";',
+			'const model = import("/src/shared/model/AppStore.ts?version=1");',
+			'import { appStore } from "/SRC/SHARED/MODEL/AppStore.ts";',
+			'import { appStore } from "/@fs/E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'import { appStore } from "E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'const model = require("..\\\\..\\\\..\\\\shared\\\\model\\\\index.js");',
+			'import.meta.glob("../../../shared/model/appStore.ts", { eager: true });',
+			'import.meta.globEager("../../../app/model/**/*.ts");',
+			'import.meta.glob(["../../../shared/model/appStore.ts"], { eager: true });',
+			'import.meta["glob"]("../../../shared/model/appStore.ts");',
+			'import { useAppSelector } from "../../../app/model/index";',
+		]) {
+			const reports = lintFsdBoundaryRule(
+				source,
+				"src/features/player-questions/ui/PlayerQuestionsModalContent.tsx",
+				FSD_PLAYER_QUESTIONS_STORE_FACADE_RULE_ID,
+			);
+			assert.equal(reports.length, 1);
+			assert.equal(
+				reports[0].ruleId,
+				FSD_PLAYER_QUESTIONS_STORE_FACADE_RULE_ID,
+			);
+		}
+		const mixedCaseImporterReports = lintFsdBoundaryRule(
+			'import { useAppSelector } from "../../../shared/model/index.js";',
+			"SRC/FEATURES/PLAYER-QUESTIONS/ui/PlayerQuestionsModalContent.tsx",
+			FSD_PLAYER_QUESTIONS_STORE_FACADE_RULE_ID,
+		);
+		assert.equal(mixedCaseImporterReports.length, 1);
+		assert.equal(
+			mixedCaseImporterReports[0].ruleId,
+			FSD_PLAYER_QUESTIONS_STORE_FACADE_RULE_ID,
+		);
+		assert.deepEqual(
+			lintFsdBoundaryRule(
+				'import { useAppSelector } from "../../../shared/model/index.js";',
+				"src/features/ai/ui/AiPromptComposer.tsx",
+				FSD_PLAYER_QUESTIONS_STORE_FACADE_RULE_ID,
+			),
+			[],
+		);
+		assert.match(
+			eslintSource,
+			/files: \['src\/features\/player-questions\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/player-questions-store-facade': 'error'/,
 		);
 	},
 );

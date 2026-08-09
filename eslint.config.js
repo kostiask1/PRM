@@ -672,6 +672,12 @@ export default [
     },
   },
   {
+    files: ['src/features/player-questions/**/*.{js,jsx,ts,tsx}'],
+    rules: {
+      'fsd-boundaries/player-questions-store-facade': 'error',
+    },
+  },
+  {
     files: [
       'src/features/**/*.{js,jsx,ts,tsx}',
       'src/widgets/**/*.{js,jsx,ts,tsx}',

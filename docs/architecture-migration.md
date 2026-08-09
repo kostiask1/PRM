@@ -670,6 +670,8 @@ Next:
 - Phase 137 adds scoped `fsd-boundaries/settings-store-facade` enforcement for `src/features/settings/**/*.{js,jsx,ts,tsx}`. It blocks every `app/model` and `shared/model` reference across imports, re-exports, dynamic imports, `require`, Vite glob calls, and TypeScript module references. Source-inventory and lint-rule tests lock the runtime contract, controlled theme ownership, sidebar adapter, relative/Vite-root/filesystem/extensionless/Windows variants, glob patterns, and rule scope. The expanded complete suite passes 423/423 tests. `MD-R02` remains in progress because other lower-layer consumers still use the compatibility facade; `MD-R04` remains blocked only on the missing lint/typecheck tooling.
 - Completed Phase 138 by moving the one live simplified-note preference read out of `features/notes` and into `App` composition. `SimplifiedNotesProvider` is a deliberately scalar feature-owned Context contract: it takes a required boolean, preserves `false`, and fails fast if a Note renderer is mounted outside the provider. The app root wraps its full rendered subtree, including route, modal, and widget trees, so the four stable module-scope NoteCard factory owners retain live preference updates without a stale factory closure or wider component-prop threading. `NoteCard`, campaign/session note presentation, campaign graph notes, and character/location cards consume the public `useSimplifiedNotesEnabled` hook; the latter two no longer import the global-store facade at all.
 - Phase 138 factors the existing injected-store check and adds scoped `fsd-boundaries/notes-store-facade` enforcement for `src/features/notes/**/*.{js,jsx,ts,tsx}`. The Settings rule remains intact, while both rules reject every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. Source-inventory coverage locks the nullable-context false/missing-provider behavior, public provider surface, app-root order, presentation consumers, and relative/Vite-root/filesystem/glob bypass matrix. The expanded complete suite passes 424/424 tests. `MD-R02` remains in progress because the compatibility facade still has other lower-layer consumers.
+- Completed Phase 139 by replacing Player Questions' direct dice store dependency with the explicit typed `PlayerQuestionsRuntime` contract. The feature keeps list virtualization, scrolling, result-ID deduplication, exact context/target filtering, roll-formula construction, and debounce behavior; it now receives only the current opaque dice result, an already-normalized debounce boolean, and a narrow request command. `widgets/sidebar/ui/sidebarPlayerQuestionsComposition.tsx` owns the selectors and action dispatch, then mounts a live adapter as the delayed modal child so a result published after opening reaches the rendered modal without a click-time snapshot.
+- Phase 139 adds scoped `fsd-boundaries/player-questions-store-facade` enforcement for `src/features/player-questions/**/*.{js,jsx,ts,tsx}` through the common injected-runtime checker. It rejects every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. Source-inventory and lint-rule coverage lock the public type surface, live Sidebar adapter, false-only debounce policy, result-ID initialization, modal mount, and relative/Vite-root/filesystem/glob bypass matrix. The expanded complete suite passes 425/425 tests. `MD-R02` remains in progress because the compatibility facade still has other lower-layer consumers.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -711,9 +713,11 @@ through a live sidebar-provided runtime, makes theme switching controlled-only,
 enforces the focused Settings store boundary, and passes 423/423 tests. Phase
 138 gives Notes a live app-root simplified-preference provider, removes its
 direct facade read plus duplicate note-render reads from higher owners,
-enforces the focused Notes store boundary, and passes 424/424 tests. `MD-R05`
-is closed; `MD-R02` remains in progress and the broader migration remains
-active.
+enforces the focused Notes store boundary, and passes 424/424 tests. Phase 139
+gives Player Questions a live Sidebar dice runtime, removes its direct store
+facade dependency, enforces the focused Player Questions store boundary, and
+passes 425/425 tests. `MD-R05` is closed; `MD-R02` remains in progress and the
+broader migration remains active.
 
 ### Provenance and transfer rule
 
@@ -743,7 +747,7 @@ tracked in `docs/migration-debt.md`.
 | Campaign lookup and rules-reference endpoint ownership | Adapt through current entity public APIs |
 | Canonical Bestiary AI history and mutation request validation | Adapt through current backend modules, repositories, storage facade, and routes |
 | FSD/import enforcement, ADRs, recovery phases, debt register, agent rules | Recover and align with the current tree |
-| App-owned configured store | Phase 136 owns configured store composition in `app`; Phase 137 removes the Settings UI's direct facade dependency through a sidebar-provided runtime; Phase 138 gives Notes a live app-root preference provider. Retain the typed shared facade only while remaining consumers migrate (`MD-R02`). |
+| App-owned configured store | Phase 136 owns configured store composition in `app`; Phase 137 removes the Settings UI's direct facade dependency through a sidebar-provided runtime; Phase 138 gives Notes a live app-root preference provider; Phase 139 gives Player Questions a live Sidebar dice runtime. Retain the typed shared facade only while remaining consumers migrate (`MD-R02`). |
 | Side commit's `server/domains` replacement, stale JS/JSX slices, graph ownership, and whole-file configuration/test rewrites | Skip because current `fsd` already has newer typed/application-module owners and stricter contracts |
 
 ### Recovery R0 — Divergence audit
@@ -932,6 +936,11 @@ Status: **In progress**
   preserve all stable NoteCard factory identities and `false` behavior, move
   note-render consumers to the public hook, and enforce that Notes cannot
   regain direct app/shared-store facade access.
+- [x] Migrate Player Questions in Phase 139: retain feature-owned result
+  targeting, debouncing, scrolling, and request construction; inject its
+  minimal live dice runtime from the Sidebar modal owner; mount that adapter as
+  delayed modal content rather than take a click-time snapshot; and enforce
+  that Player Questions cannot regain direct app/shared-store facade access.
 - [x] Run focused recovery tests, performance budgets, architecture checks,
   syntax/diff hygiene, and UTF-8/replacement-character checks.
 - [ ] Run the complete lint and typecheck gates after the declared local
@@ -942,8 +951,8 @@ Status: **In progress**
   128 passed 414/414, Phase 129 passed 415/415, Phase 130 passed 416/416, Phase
   131 passed 417/417, Phase 132 passed 418/418, Phase 133 passed 419/419, and
   Phase 134 passed 420/420; Phase 135 passed 421/421; Phase 136 passed
-  422/422; Phase 137 passes 423/423; and the expanded Phase 138 suite passes
-  424/424 tests.
+  422/422; Phase 137 passes 423/423; Phase 138 passes 424/424; and the
+  expanded Phase 139 suite passes 425/425 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -1002,6 +1011,25 @@ Phase 138 avoids both stale factory snapshots and wider NoteCard prop-threading
 while preserving the exact simplified/classic presentation policy. It passes
 424/424 tests. Complete lint/typecheck remain tracked under `MD-R04`; the
 shared compatibility facade remains in progress under `MD-R02`.
+
+### Recovery R9 / Phase 139 — Player Questions injected dice runtime
+
+Status: **Completed**
+
+- [x] Define and publicly type the minimal `PlayerQuestionsRuntime`, request,
+  and modal-props contracts without exposing the Sidebar adapter to the feature.
+- [x] Move Player Questions' global dice result read, debounce preference read,
+  and request dispatch into a live Sidebar-owned modal adapter; retain feature
+  ownership of result targeting, refs, virtual-list scrolling, and local state.
+- [x] Prevent direct Player Questions access to `app/model` or `shared/model`
+  with the scoped boundary rule while preserving the existing DiceCalculator
+  request/publish pipeline and delayed modal rendering behavior.
+
+Phase 139 preserves initial result-ID capture, exact `playerQuestions` context
+and bounded integer target validation, false-only debounce behavior, one-time
+result handling, and two-frame scrolling. It passes 425/425 tests. Complete
+lint/typecheck remain tracked under `MD-R04`; the shared compatibility facade
+remains in progress under `MD-R02`.
 
 ## Validation required for every phase
 

@@ -13,7 +13,6 @@ import {
 	type BackupImportStrategy,
 } from "../../../features/backup/index.js";
 import { ImageGallery } from "../../../features/images/index.js";
-import { PlayerQuestionsModalContent } from "../../../features/player-questions/index.js";
 import { openRulesReferenceModal } from "../../../features/rules-reference/index.js";
 import { downloadBlob, lang } from "../../../shared/lib/index.js";
 import {
@@ -38,6 +37,7 @@ import SidebarArchiveControls from "./SidebarArchiveControls.tsx";
 import SidebarCampaignSection from "./SidebarCampaignSection.tsx";
 import SidebarLinks from "./SidebarLinks.tsx";
 import SidebarResources from "./SidebarResources.tsx";
+import { SidebarPlayerQuestionsModalContent } from "./sidebarPlayerQuestionsComposition.tsx";
 import { SidebarSettingsModalContent } from "./sidebarSettingsComposition.ts";
 import "../../../assets/components/Sidebar.css";
 
@@ -193,7 +193,7 @@ export default function Sidebar({
 			type: "confirm",
 			className: "PlayerQuestionsModal",
 			showFooter: false,
-			children: <PlayerQuestionsModalContent />,
+			children: <SidebarPlayerQuestionsModalContent />,
 		});
 	};
 
