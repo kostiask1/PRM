@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import { campaignApi } from "../../../entities/campaign/index.js";
 import { sessionApi } from "../../../entities/session/index.js";
 import { lang } from "../../../shared/lib/index.js";
-import { useAppSelector } from "../../../shared/model/index.js";
 import {
 	CAMPAIGN_SEARCH_FILTERS,
 	executeCampaignSearchIndexLoad,
@@ -13,6 +12,7 @@ import {
 	type CampaignSearchFilter,
 	type CampaignSearchResult,
 } from "../model.js";
+import { useCampaignSearchRuntime } from "./CampaignSearchRuntime.tsx";
 
 const api = { ...campaignApi, ...sessionApi };
 
@@ -33,7 +33,7 @@ export interface GlobalSearchModalController {
 }
 
 export function useGlobalSearchModalController(): GlobalSearchModalController {
-	const activeCampaign = useAppSelector((state) => state.active.campaign);
+	const { activeCampaign } = useCampaignSearchRuntime();
 	const campaign = isCampaignSearchCampaign(activeCampaign) ? activeCampaign : null;
 	const [query, setQuery] = useState("");
 	const [activeFilters, setActiveFilters] = useState<Set<CampaignSearchFilter>>(

@@ -688,6 +688,8 @@ Next:
 - Phase 146 adds scoped `fsd-boundaries/images-store-facade` enforcement for `src/features/images/**/*.{js,jsx,ts,tsx}` through the common injected-runtime checker. It rejects every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. Source-inventory and regression coverage lock the private Context hook, public runtime/type surface, separately selected host inputs, alert/prompt/confirmation mappings, closed-gallery scope, controller order, and bypass matrix. The expanded complete suite passes 432/432 tests. `MD-R02` remains in progress because the compatibility facade still has page/widget consumers outside the completed feature slices.
 - Completed Phase 147 by removing Campaign Entity Card's two direct global-facade consumers. The widget-owned `CampaignEntityCreationRuntime` provides only error-notification and entity-refresh commands; `app/ui/CampaignEntityCreationRuntimeHost.tsx` maps those commands and wraps the existing App tree. The card widget retains draft validation, payload construction, feature-owned create orchestration, custom-create no-refresh behavior, success close, failure notification, and finally unlock behavior without receiving raw dispatch or state.
 - Phase 147 adds scoped `fsd-boundaries/campaign-entity-card-store-facade` enforcement for `src/widgets/campaign-entity-card/**/*.{js,jsx,ts,tsx}` through the common injected-runtime checker. It rejects every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. Source-inventory and regression coverage lock the private Context hook, public provider/type surface, app host mapping/scope, creation ordering, and bypass matrix. The expanded complete suite passes 433/433 tests. `MD-R02` remains in progress because the compatibility facade still has other page/widget consumers.
+- Completed Phase 148 by removing Campaign Search's direct active-campaign selector and navigation facade. The widget-owned `CampaignSearchRuntime` carries only the active campaign value and ordinary target navigation; `app/ui/CampaignSearchRuntimeHost.tsx` selects/maps them and wraps only `MainContentLayout`'s persistent route `<Outlet />`. The widget retains malformed-campaign narrowing, abortable index loading, query/filter state, cancel-before-navigation, target coercion, URL/hash construction, delayed scrolling, and conditional hash cleanup without receiving raw app state, dispatch, replace, or new-tab controls.
+- Phase 148 adds scoped `fsd-boundaries/campaign-search-store-facade` enforcement for `src/widgets/campaign-search/**/*.{js,jsx,ts,tsx}` through the common injected-runtime checker. It rejects every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. Source-inventory and regression coverage lock the private Context hook, public provider/type surface, single selector/fixed-navigation host mapping, stable Outlet scope, controller cancellation, navigation/hash ordering, and bypass matrix. The expanded complete suite passes 434/434 tests. `MD-R02` remains in progress because the compatibility facade still has other page/widget consumers.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -752,8 +754,11 @@ feature-owned provider, removes every direct feature facade dependency, enforces
 the focused Images store boundary, and passes 432/432 tests. Phase 147 gives
 Campaign Entity Card a widget-owned creation runtime plus an app-local host,
 removes both direct widget facade dependencies, enforces the focused widget
-store boundary, and passes 433/433 tests. `MD-R02` remains in progress and the
-broader migration remains active.
+store boundary, and passes 433/433 tests. Phase 148 gives Campaign Search a
+widget-owned runtime plus a route-layout host, removes both direct widget
+facade dependencies, enforces the focused widget store boundary, and passes
+434/434 tests. `MD-R02` remains in progress and the broader migration remains
+active.
 
 ### Provenance and transfer rule
 
@@ -783,7 +788,7 @@ tracked in `docs/migration-debt.md`.
 | Campaign lookup and rules-reference endpoint ownership | Adapt through current entity public APIs |
 | Canonical Bestiary AI history and mutation request validation | Adapt through current backend modules, repositories, storage facade, and routes |
 | FSD/import enforcement, ADRs, recovery phases, debt register, agent rules | Recover and align with the current tree |
-| App-owned configured store | Phase 136 owns configured store composition in `app`; Phase 137 removes the Settings UI's direct facade dependency through a sidebar-provided runtime; Phase 138 gives Notes a live app-root preference provider; Phase 139 gives Player Questions a live Sidebar dice runtime; Phase 140 gives Campaign Entity a widget-provided refresh command; Phase 141 gives Encounter Editor a Monster Stat Block-provided modal runtime; Phase 142 gives Rules Reference an App-provided navigation/error runtime while Sidebar directly dispatches navigation; Phase 143 gives AI attachment controls an App-provided validation-alert runtime; Phase 144 gives Editor an App-provided mention-picker runtime; Phase 145 gives Dice an App-provided request runtime plus an app-local live request host; Phase 146 gives Images a feature-owned gallery runtime supplied by a narrow app-local host; Phase 147 gives Campaign Entity Card a widget-owned creation runtime supplied by a narrow app-local host. Retain the typed shared facade only while remaining consumers migrate (`MD-R02`). |
+| App-owned configured store | Phase 136 owns configured store composition in `app`; Phase 137 removes the Settings UI's direct facade dependency through a sidebar-provided runtime; Phase 138 gives Notes a live app-root preference provider; Phase 139 gives Player Questions a live Sidebar dice runtime; Phase 140 gives Campaign Entity a widget-provided refresh command; Phase 141 gives Encounter Editor a Monster Stat Block-provided modal runtime; Phase 142 gives Rules Reference an App-provided navigation/error runtime while Sidebar directly dispatches navigation; Phase 143 gives AI attachment controls an App-provided validation-alert runtime; Phase 144 gives Editor an App-provided mention-picker runtime; Phase 145 gives Dice an App-provided request runtime plus an app-local live request host; Phase 146 gives Images a feature-owned gallery runtime supplied by a narrow app-local host; Phase 147 gives Campaign Entity Card a widget-owned creation runtime supplied by a narrow app-local host; Phase 148 gives Campaign Search a widget-owned runtime supplied by a narrow route-layout host. Retain the typed shared facade only while remaining consumers migrate (`MD-R02`). |
 | Side commit's `server/domains` replacement, stale JS/JSX slices, graph ownership, and whole-file configuration/test rewrites | Skip because current `fsd` already has newer typed/application-module owners and stricter contracts |
 
 ### Recovery R0 — Divergence audit
@@ -1018,6 +1023,12 @@ Status: **In progress**
   inject only error-notification and entity-refresh commands through the
   app-local host; keep the Context hook private; and enforce that the widget
   cannot regain direct app/shared-store facade access.
+- [x] Migrate Campaign Search in Phase 148: retain widget-owned malformed
+  campaign narrowing, abortable loading, query/filter state, close-before-
+  navigation, target coercion, and URL/hash/timer lifecycle; inject only the
+  active campaign value and ordinary target navigation through the route-layout
+  host around the persistent Outlet; keep the Context hook private; and enforce
+  that the widget cannot regain direct app/shared-store facade access.
 - [x] Run focused recovery tests, performance budgets, architecture checks,
   syntax/diff hygiene, and UTF-8/replacement-character checks.
 - [ ] Run the complete lint and typecheck gates after the declared local
@@ -1032,7 +1043,8 @@ Status: **In progress**
   passes 425/425; Phase 140 passes 426/426; and the expanded Phase 141 suite
   passes 427/427 tests; Phase 142 passes 428/428 tests; Phase 143 passes
   429/429 tests; Phase 144 passes 430/430 tests; Phase 145 passes 431/431
-  tests; Phase 146 passes 432/432 tests; Phase 147 passes 433/433 tests.
+  tests; Phase 146 passes 432/432 tests; Phase 147 passes 433/433 tests; Phase
+  148 passes 434/434 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -1271,6 +1283,28 @@ exactly one refresh, custom create without fallback refresh, success close,
 error notification, and submitting-state finalization. It passes 433/433 tests.
 Complete lint/typecheck remain tracked under `MD-R04`; the shared compatibility
 facade remains in progress under `MD-R02`.
+
+### Recovery R18 / Phase 148 - Campaign Search injected runtime
+
+Status: **Completed**
+
+- [x] Define the narrow `CampaignSearchRuntime` provider in widget UI, expose
+  only its provider/types through the widget root, and keep its Context hook
+  private to the slice.
+- [x] Let the app-local host own the sole active-campaign selector and map only
+  ordinary target navigation, then mount it around the persistent
+  `MainContentLayout` Outlet shared by Campaign and Session routes.
+- [x] Keep malformed-campaign narrowing, index loading/cancellation, query and
+  filter state, close-before-navigation, target coercion, URL/hash construction,
+  80 ms scroll, and 2400 ms conditional cleanup widget-owned; prevent all
+  Campaign Search code from importing `app/model` or `shared/model` with the
+  scoped boundary rule.
+
+Phase 148 preserves current campaign identity without cloning, the null-
+campaign no-load path, abort suppression after every await, ordinary navigation,
+and the exact hash lifecycle. It passes 434/434 tests. Complete lint/typecheck
+remain tracked under `MD-R04`; the shared compatibility facade remains in
+progress under `MD-R02`.
 
 ## Validation required for every phase
 

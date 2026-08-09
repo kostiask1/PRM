@@ -726,6 +726,12 @@ export default [
     },
   },
   {
+    files: ['src/widgets/campaign-search/**/*.{js,jsx,ts,tsx}'],
+    rules: {
+      'fsd-boundaries/campaign-search-store-facade': 'error',
+    },
+  },
+  {
     files: [
       'src/features/**/*.{js,jsx,ts,tsx}',
       'src/widgets/**/*.{js,jsx,ts,tsx}',

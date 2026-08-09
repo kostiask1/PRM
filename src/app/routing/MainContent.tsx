@@ -14,6 +14,7 @@ import { SpellsBrowser } from "../../widgets/spells-browser/index.js";
 import { createRulesReferenceModalContentComponent } from "../../widgets/rules-reference-modal/index.js";
 import { Outlet, Route, Routes, useLocation } from "react-router";
 import { useAppSelector } from "../model/index.js";
+import CampaignSearchRuntimeHost from "../ui/CampaignSearchRuntimeHost.tsx";
 import { lang } from "../../shared/lib/index.js";
 import { classNames } from "../../shared/lib/index.js";
 import "../../assets/components/MainContent.css";
@@ -65,7 +66,9 @@ function MainContentLayout({
 
 	return (
 		<main className={classNames("MainContent", className)}>
-			<Outlet />
+			<CampaignSearchRuntimeHost>
+				<Outlet />
+			</CampaignSearchRuntimeHost>
 			{showAiAssistant && (
 				<AiAssistantPanel
 					key={aiAssistantRouteKey}
