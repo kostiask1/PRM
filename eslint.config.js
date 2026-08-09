@@ -702,6 +702,12 @@ export default [
     },
   },
   {
+    files: ['src/features/editor/**/*.{js,jsx,ts,tsx}'],
+    rules: {
+      'fsd-boundaries/editor-store-facade': 'error',
+    },
+  },
+  {
     files: [
       'src/features/**/*.{js,jsx,ts,tsx}',
       'src/widgets/**/*.{js,jsx,ts,tsx}',

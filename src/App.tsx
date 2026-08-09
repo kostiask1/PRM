@@ -21,8 +21,10 @@ import { Icon, Modal } from "./shared/ui/index.js";
 import { Sidebar } from "./widgets/sidebar/index.js";
 import {
 	EditableFieldEntityLinkProvider,
+	EditorMentionPickerRuntimeProvider,
 	MentionPickerModalContent,
 	type EditableFieldEntityLinkRuntime,
+	type EditorMentionPickerRuntime,
 } from "./features/editor/ui/index.js";
 import { SimplifiedNotesProvider } from "./features/notes/ui/index.js";
 import {
@@ -44,6 +46,7 @@ import {
 	alert,
 	closeMentionPickerAction,
 	confirm,
+	openMentionPickerAction,
 	requestCampaignsReloadAction,
 	requestRulesReferenceNavigationAction,
 	setLanguageAction,
@@ -128,6 +131,14 @@ export default function App() {
 		() => ({
 			showAlert(copy) {
 				dispatch(alert({ title: copy.title, message: copy.message }));
+			},
+		}),
+		[dispatch],
+	);
+	const editorMentionPickerRuntime = useMemo<EditorMentionPickerRuntime>(
+		() => ({
+			openMentionPicker(request) {
+				dispatch(openMentionPickerAction(request));
 			},
 		}),
 		[dispatch],
@@ -425,13 +436,14 @@ export default function App() {
 	};
 
 	return (
-		<AiAttachmentAlertRuntimeProvider runtime={aiAttachmentAlertRuntime}>
-			<RulesReferenceRuntimeProvider runtime={rulesReferenceRuntime}>
-				<SimplifiedNotesProvider
-					simplifiedNotesEnabled={simplifiedNotesEnabled}
+		<EditorMentionPickerRuntimeProvider runtime={editorMentionPickerRuntime}>
+			<AiAttachmentAlertRuntimeProvider runtime={aiAttachmentAlertRuntime}>
+				<RulesReferenceRuntimeProvider runtime={rulesReferenceRuntime}>
+					<SimplifiedNotesProvider
+						simplifiedNotesEnabled={simplifiedNotesEnabled}
 				>
-					<EditableFieldEntityLinkProvider
-						runtime={APP_EDITABLE_FIELD_ENTITY_LINK_RUNTIME}
+						<EditableFieldEntityLinkProvider
+							runtime={APP_EDITABLE_FIELD_ENTITY_LINK_RUNTIME}
 					>
 						<div className="App" data-lang={currentLanguage}>
 					<CampaignEntityModalProvider
@@ -502,9 +514,10 @@ export default function App() {
 						/>
 					</CampaignEntityModalProvider>
 						</div>
-					</EditableFieldEntityLinkProvider>
-				</SimplifiedNotesProvider>
-			</RulesReferenceRuntimeProvider>
-		</AiAttachmentAlertRuntimeProvider>
+						</EditableFieldEntityLinkProvider>
+					</SimplifiedNotesProvider>
+				</RulesReferenceRuntimeProvider>
+			</AiAttachmentAlertRuntimeProvider>
+		</EditorMentionPickerRuntimeProvider>
 	);
 }

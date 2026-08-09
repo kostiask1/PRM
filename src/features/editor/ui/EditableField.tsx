@@ -82,7 +82,6 @@ import { Button, Tooltip } from "../../../shared/ui/index.js";
 import "../../../assets/components/EditableField.css";
 import { classNames } from "../../../shared/lib/index.js";
 import { lang } from "../../../shared/lib/index.js";
-import { useAppDispatch } from "../../../shared/model/index.js";
 import { parseUrl } from "../../../shared/lib/index.js";
 import { requestMentionSelection } from "../model/mentionPicker.ts";
 import {
@@ -94,6 +93,7 @@ import {
 	type EditableFieldEntityModalState,
 	useEditableFieldEntityLinkRuntime,
 } from "./EditableFieldEntityLinkRuntime.tsx";
+import { useEditorMentionPickerRuntime } from "./EditorMentionPickerRuntime.tsx";
 import {
 	createEditableFieldChangeEvent,
 	getEditableClickPlan,
@@ -528,7 +528,7 @@ function EditorContentPlugin({
 }
 
 interface CommandHandlerOptions {
-	dispatch: Parameters<typeof requestMentionSelection>[0];
+	openMentionPicker: Parameters<typeof requestMentionSelection>[0];
 	enableHistory: boolean;
 	isDisabled: boolean;
 	onKeyDown?: (event: KeyboardEvent<HTMLElement>) => void;
@@ -599,7 +599,7 @@ function executeEditableShortcut({
 }
 
 function useCommandHandlers({
-	dispatch,
+	openMentionPicker,
 	enableHistory,
 	isDisabled,
 	onKeyDown,
@@ -623,7 +623,7 @@ function useCommandHandlers({
 				return;
 			}
 
-			const result = await requestMentionSelection(dispatch);
+			const result = await requestMentionSelection(openMentionPicker);
 			if (!shouldInsertEditableMentionResult(result)) return;
 
 			editor.focus();
@@ -631,7 +631,7 @@ function useCommandHandlers({
 				$insertMentionAtSelection(result.name);
 			});
 		},
-		[dispatch, editor],
+		[editor, openMentionPicker],
 	);
 
 	const handleKeyDown = useCallback(
@@ -687,7 +687,7 @@ interface MentionTooltipState {
 }
 
 interface LexicalEditableFieldProps {
-	dispatch: Parameters<typeof requestMentionSelection>[0];
+	openMentionPicker: Parameters<typeof requestMentionSelection>[0];
 	enableHistory: boolean;
 	isActive: boolean;
 	isDisabled: boolean;
@@ -811,7 +811,7 @@ function LexicalEditableFieldView({
 }
 
 function LexicalEditableField({
-	dispatch,
+	openMentionPicker,
 	enableHistory,
 	isActive,
 	isDisabled,
@@ -832,7 +832,7 @@ function LexicalEditableField({
 }: LexicalEditableFieldProps) {
 	const [editor] = useLexicalComposerContext();
 	useCommandHandlers({
-		dispatch,
+		openMentionPicker,
 		enableHistory,
 		isDisabled,
 		onKeyDown,
@@ -1021,7 +1021,7 @@ interface EditableFieldViewProps extends LexicalEditableFieldProps {
 function EditableFieldView({
 	className,
 	copyPresentation,
-	dispatch,
+	openMentionPicker,
 	domProps,
 	editorKey,
 	editorRef,
@@ -1083,7 +1083,7 @@ function EditableFieldView({
 					<LexicalComposer key={editorKey} initialConfig={initialConfig}>
 						<EditorRefPlugin editorRef={editorRef} />
 						<LexicalEditableField
-							dispatch={dispatch}
+							openMentionPicker={openMentionPicker}
 							enableHistory={enableHistory}
 							isActive={isActive}
 							isDisabled={isDisabled}
@@ -1137,7 +1137,7 @@ export default function EditableField({
 		readOnly,
 		...domProps
 	} = props;
-	const dispatch = useAppDispatch();
+	const { openMentionPicker } = useEditorMentionPickerRuntime();
 	const {
 		EntityLinkContext,
 		EntityLinkResolverContext,
@@ -1281,7 +1281,7 @@ export default function EditableField({
 		<EditableFieldView
 			className={className}
 			copyPresentation={copyPresentation}
-			dispatch={dispatch}
+			openMentionPicker={openMentionPicker}
 			domProps={domProps}
 			editorKey={editorKey}
 			editorRef={editorRef}

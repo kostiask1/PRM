@@ -8,7 +8,6 @@ import {
 	useRef,
 } from "react";
 
-import { useAppDispatch } from "../../../shared/model/index.js";
 import { requestMentionSelection } from "../model/mentionPicker.ts";
 import {
 	getInitialInputSelectionPosition,
@@ -22,6 +21,7 @@ import {
 	type InputTextEdit,
 } from "./editorPresentation.ts";
 import InputView from "./InputView.tsx";
+import { useEditorMentionPickerRuntime } from "./EditorMentionPickerRuntime.tsx";
 import type {
 	InputElement,
 	InputProps,
@@ -78,7 +78,7 @@ const Input = forwardRef<InputElement, InputProps>(function Input(
 	{ type = "text", className = "", initialSelection, title, ...props },
 	forwardedRef,
 ) {
-	const dispatch = useAppDispatch();
+	const { openMentionPicker } = useEditorMentionPickerRuntime();
 	const internalRef = useRef<InputElement | null>(null);
 	const hasAppliedInitialSelectionRef = useRef(false);
 	const rawValue = getInputRawValue(props);
@@ -135,7 +135,7 @@ const Input = forwardRef<InputElement, InputProps>(function Input(
 			selectionStart: cursorStart,
 			selectionEnd: cursorEnd,
 		} = getInputSelectionState(event.currentTarget);
-		const result = await requestMentionSelection(dispatch);
+		const result = await requestMentionSelection(openMentionPicker);
 		const insertion = getInputMentionInsertion(
 			value,
 			cursorStart,

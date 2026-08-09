@@ -680,6 +680,8 @@ Next:
 - Phase 142 adds scoped `fsd-boundaries/rules-reference-store-facade` enforcement for `src/features/rules-reference/**/*.{js,jsx,ts,tsx}` through the common injected-runtime checker. It rejects every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. Source-inventory and regression coverage lock the nullable provider, public types, resolver/error order, App mapping, Sidebar action dispatch, deleted helper, and bypass matrix. The expanded complete suite passes 428/428 tests. `MD-R02` remains in progress because the compatibility facade still has other lower-layer consumers.
 - Completed Phase 143 by removing AI attachment controls' direct alert facade dependency. The controls retain native input clearing, no-file/no-slot exits, asynchronous validation/preparation, functional attachment merge-before-notice ordering, gallery lifecycle, and their two module-scope factories; a narrow `AiAttachmentAlertRuntime` only publishes validation alerts from the app root. The unrelated AI generation request identity is now the feature's own numeric lifecycle value instead of a global-store `RequestId` type import.
 - Phase 143 adds scoped `fsd-boundaries/ai-store-facade` enforcement for `src/features/ai/**/*.{js,jsx,ts,tsx}` through the common injected-runtime checker. It rejects every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. Source-inventory and regression coverage lock the nullable provider, UI-only public surface, App mapping/scope, attachment ordering, lifecycle identity, factory preservation, and bypass matrix. The expanded complete suite passes 429/429 tests. `MD-R02` remains in progress because the compatibility facade still has other lower-layer consumers.
+- Completed Phase 144 by removing Editor's three direct mention-picker facade consumers. `Input` retains its target snapshot, asynchronous selection, change, and cursor-restoration order; `EditableField` retains its selected-text immediate path plus picker -> eligibility -> focus -> update path. A narrow `EditorMentionPickerRuntime` carries only the global picker request from `App`, while the feature-owned `requestMentionSelection` continues to own the selected/cancelled promise contract separately from the entity-link runtime.
+- Phase 144 adds scoped `fsd-boundaries/editor-store-facade` enforcement for `src/features/editor/**/*.{js,jsx,ts,tsx}` through the common injected-runtime checker. It rejects every `app/model` and `shared/model` reference across static/re-export/dynamic/require/Vite-glob/TypeScript forms. Source-inventory and regression coverage lock the private Context hook, public provider/type surface, direct App action mapping, preserved controller order, separate entity-link contract, and bypass matrix. The expanded complete suite passes 430/430 tests. `MD-R02` remains in progress because the compatibility facade still has other lower-layer consumers.
 - Apply the typed API results to focused feature models as those modules migrate; avoid repository-wide component conversion.
 - Keep repository ports and HTTP payload types type-only until their owning runtime modules can migrate independently.
 
@@ -734,8 +736,10 @@ runtime, removes its direct facade dependency, enforces the focused Rules
 Reference store boundary, and passes 428/428 tests. `MD-R05` is closed;
 Phase 143 gives AI attachment controls an App-provided validation-alert runtime,
 removes their direct facade dependency, enforces the focused AI store boundary,
-and passes 429/429 tests. `MD-R02` remains in progress and the broader
-migration remains active.
+and passes 429/429 tests. Phase 144 gives Editor an App-provided mention-picker
+runtime, removes its direct facade dependency, enforces the focused Editor store
+boundary, and passes 430/430 tests. `MD-R02` remains in progress and the
+broader migration remains active.
 
 ### Provenance and transfer rule
 
@@ -765,7 +769,7 @@ tracked in `docs/migration-debt.md`.
 | Campaign lookup and rules-reference endpoint ownership | Adapt through current entity public APIs |
 | Canonical Bestiary AI history and mutation request validation | Adapt through current backend modules, repositories, storage facade, and routes |
 | FSD/import enforcement, ADRs, recovery phases, debt register, agent rules | Recover and align with the current tree |
-| App-owned configured store | Phase 136 owns configured store composition in `app`; Phase 137 removes the Settings UI's direct facade dependency through a sidebar-provided runtime; Phase 138 gives Notes a live app-root preference provider; Phase 139 gives Player Questions a live Sidebar dice runtime; Phase 140 gives Campaign Entity a widget-provided refresh command; Phase 141 gives Encounter Editor a Monster Stat Block-provided modal runtime; Phase 142 gives Rules Reference an App-provided navigation/error runtime while Sidebar directly dispatches navigation; Phase 143 gives AI attachment controls an App-provided validation-alert runtime. Retain the typed shared facade only while remaining consumers migrate (`MD-R02`). |
+| App-owned configured store | Phase 136 owns configured store composition in `app`; Phase 137 removes the Settings UI's direct facade dependency through a sidebar-provided runtime; Phase 138 gives Notes a live app-root preference provider; Phase 139 gives Player Questions a live Sidebar dice runtime; Phase 140 gives Campaign Entity a widget-provided refresh command; Phase 141 gives Encounter Editor a Monster Stat Block-provided modal runtime; Phase 142 gives Rules Reference an App-provided navigation/error runtime while Sidebar directly dispatches navigation; Phase 143 gives AI attachment controls an App-provided validation-alert runtime; Phase 144 gives Editor an App-provided mention-picker runtime. Retain the typed shared facade only while remaining consumers migrate (`MD-R02`). |
 | Side commit's `server/domains` replacement, stale JS/JSX slices, graph ownership, and whole-file configuration/test rewrites | Skip because current `fsd` already has newer typed/application-module owners and stricter contracts |
 
 ### Recovery R0 — Divergence audit
@@ -979,6 +983,11 @@ Status: **In progress**
   validation alerts through the App-provided runtime; keep its hook out of the
   feature root; detach the lifecycle request-ID type; and enforce that AI
   cannot regain direct app/shared-store facade access.
+- [x] Migrate Editor in Phase 144: retain feature-owned selected/cancelled
+  promise behavior plus Input and EditableField ordering; inject only mention
+  picker requests through the App-provided runtime; keep its hook private and
+  its entity-link runtime separate; and enforce that Editor cannot regain
+  direct app/shared-store facade access.
 - [x] Run focused recovery tests, performance budgets, architecture checks,
   syntax/diff hygiene, and UTF-8/replacement-character checks.
 - [ ] Run the complete lint and typecheck gates after the declared local
@@ -992,7 +1001,7 @@ Status: **In progress**
   422/422; Phase 137 passes 423/423; Phase 138 passes 424/424; Phase 139
   passes 425/425; Phase 140 passes 426/426; and the expanded Phase 141 suite
   passes 427/427 tests; Phase 142 passes 428/428 tests; Phase 143 passes
-  429/429 tests.
+  429/429 tests; Phase 144 passes 430/430 tests.
 
 ### Recovery R6 / Phase 136 — Typed app-owned store composition
 
@@ -1146,6 +1155,28 @@ attachment validation, functional merge-before-non-awaited-notice ordering,
 gallery state, factory identity, and generation lifecycle stale-request checks.
 It passes 429/429 tests. Complete lint/typecheck remain tracked under `MD-R04`;
 the shared compatibility facade remains in progress under `MD-R02`.
+
+### Recovery R14 / Phase 144 - Editor injected mention picker runtime
+
+Status: **Completed**
+
+- [x] Define and publicly type the UI-only `EditorMentionPickerRuntime`
+  provider while keeping its nullable Context hook private to `features/editor/ui`
+  and separate from the entity-link runtime.
+- [x] Map `openMentionPicker(request)` once in `App` directly to the existing
+  `openMentionPickerAction(request)` around the editor consumers without
+  nesting the feature's promise adapter.
+- [x] Keep selected/cancelled promise policy and Input/EditableField selection,
+  insertion, focus, update, and timer ordering feature-owned; prevent all
+  Editor code from importing `app/model` or `shared/model` with the scoped
+  boundary rule.
+
+Phase 144 preserves synchronous picker opening, callback/promise behavior,
+Input target snapshots and cursor restoration, EditableField's selected-text
+short circuit and focus-before-update picker path, and independent entity-link
+resolution. It passes 430/430 tests. Complete lint/typecheck remain tracked
+under `MD-R04`; the shared compatibility facade remains in progress under
+`MD-R02`.
 
 ## Validation required for every phase
 

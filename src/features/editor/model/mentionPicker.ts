@@ -1,22 +1,22 @@
-import { openMentionPickerAction } from "../../../shared/model/index.js";
-
 export type MentionSelectionResult =
 	| { status: "selected"; name: string }
 	| { status: "cancelled" };
 
-type MentionPickerAction = ReturnType<typeof openMentionPickerAction>;
-type MentionPickerDispatch = (action: MentionPickerAction) => unknown;
+export interface MentionPickerRequest {
+	select(name: string): void;
+	cancel(): void;
+}
+
+export type OpenMentionPicker = (request: MentionPickerRequest) => unknown;
 
 export function requestMentionSelection(
-	dispatch: MentionPickerDispatch,
+	openMentionPicker: OpenMentionPicker,
 ): Promise<MentionSelectionResult> {
 	return new Promise((resolve) => {
-		dispatch(
-			openMentionPickerAction({
-				select: (name) =>
-					resolve({ status: "selected", name: name || "" }),
-				cancel: () => resolve({ status: "cancelled" }),
-			}),
-		);
+		openMentionPicker({
+			select: (name) =>
+				resolve({ status: "selected", name: name || "" }),
+			cancel: () => resolve({ status: "cancelled" }),
+		});
 	});
 }

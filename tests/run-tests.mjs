@@ -1492,6 +1492,8 @@ const FSD_ENCOUNTER_EDITOR_STORE_FACADE_RULE_ID =
 const FSD_RULES_REFERENCE_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/rules-reference-store-facade";
 const FSD_AI_STORE_FACADE_RULE_ID = "fsd-boundaries/ai-store-facade";
+const FSD_EDITOR_STORE_FACADE_RULE_ID =
+	"fsd-boundaries/editor-store-facade";
 
 function lintFsdBoundaryRule(
 	source,
@@ -6527,6 +6529,219 @@ await run(
 );
 
 await run(
+	"Phase 144 gives Editor an injected mention picker runtime",
+	async () => {
+		const [
+			runtimeSource,
+			inputSource,
+			editableFieldSource,
+			mentionPickerSource,
+			entityLinkRuntimeSource,
+			uiEntry,
+			uiTypeEntry,
+			appSource,
+			eslintSource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/features/editor/ui/EditorMentionPickerRuntime.tsx",
+				"utf8",
+			),
+			fs.readFile("src/features/editor/ui/Input.tsx", "utf8"),
+			fs.readFile("src/features/editor/ui/EditableField.tsx", "utf8"),
+			fs.readFile("src/features/editor/model/mentionPicker.ts", "utf8"),
+			fs.readFile(
+				"src/features/editor/ui/EditableFieldEntityLinkRuntime.tsx",
+				"utf8",
+			),
+			fs.readFile("src/features/editor/ui/index.js", "utf8"),
+			fs.readFile("src/features/editor/ui/index.d.ts", "utf8"),
+			fs.readFile("src/App.tsx", "utf8"),
+			fs.readFile("eslint.config.js", "utf8"),
+		]);
+
+		assert.match(
+			runtimeSource,
+			/export interface EditorMentionPickerRuntime \{\s*openMentionPicker\(request: MentionPickerRequest\): void;\s*\}/,
+		);
+		assertExportedInterfaceFragments(
+			runtimeSource,
+			"EditorMentionPickerRuntimeProviderProps",
+			[
+				"runtime: EditorMentionPickerRuntime;",
+				"children?: ReactNode;",
+			],
+		);
+		assertSourceTokensInOrder(
+			runtimeSource,
+			[
+				"createContext<EditorMentionPickerRuntime | null>(null)",
+				"<EditorMentionPickerRuntimeContext.Provider value={runtime}>",
+				"const runtime = useContext(EditorMentionPickerRuntimeContext);",
+				'"EditorMentionPickerRuntimeProvider is required to render editor controls"',
+			],
+			"Editor mention picker runtime provider",
+		);
+		assert.match(uiEntry, /EditorMentionPickerRuntimeProvider/);
+		assertPublicTypeSurface(uiTypeEntry, [
+			"EditorMentionPickerRuntime",
+			"EditorMentionPickerRuntimeProviderProps",
+		]);
+		assert.doesNotMatch(
+			`${uiEntry}\n${uiTypeEntry}`,
+			/useEditorMentionPickerRuntime/,
+		);
+		assert.doesNotMatch(
+			entityLinkRuntimeSource,
+			/EditorMentionPickerRuntime|openMentionPicker|MentionPickerRequest/,
+		);
+		assert.doesNotMatch(
+			mentionPickerSource,
+			/shared\/model|app\/model|openMentionPickerAction/,
+		);
+		assertSourceTokensInOrder(
+			mentionPickerSource,
+			[
+				"export interface MentionPickerRequest",
+				"export type OpenMentionPicker",
+				"export function requestMentionSelection(",
+				"openMentionPicker({",
+				"select: (name) =>",
+				'resolve({ status: "selected", name: name || "" })',
+				"cancel: () => resolve({ status: \"cancelled\" })",
+			],
+			"Editor mention selection promise adapter",
+		);
+		for (const source of [inputSource, editableFieldSource]) {
+			assert.doesNotMatch(
+				source,
+				/shared\/model|app\/model|useAppDispatch|useAppSelector/,
+			);
+		}
+		assertSourceTokensInOrder(
+			inputSource,
+			[
+				"const { openMentionPicker } = useEditorMentionPickerRuntime();",
+				"const insertMentionWithoutSelection = async (",
+				"getInputSelectionState(event.currentTarget)",
+				"await requestMentionSelection(openMentionPicker)",
+				"const insertion = getInputMentionInsertion(",
+				"if (!insertion) return",
+				"props.onChange?.(createInputChangeEvent(event, insertion.value))",
+				"const nextCursor = getInputMentionCursorPosition(",
+				"setTimeout(() =>",
+				"node.setSelectionRange(nextCursor, nextCursor)",
+			],
+			"Input mention picker selection lifecycle",
+		);
+		const editableMentionHandler = getRequiredSourceSlice(
+			editableFieldSource,
+			"const handleMentionShortcut = useCallback(",
+			"const handleKeyDown = useCallback(",
+		);
+		assertSourceTokensInOrder(
+			editableMentionHandler,
+			[
+				"event.preventDefault()",
+				"event.stopPropagation()",
+				"getEditableSelectedMentionText($getSelection())",
+				"if (selectedText)",
+				"$insertMentionAtSelection(selectedText)",
+				"return",
+				"await requestMentionSelection(openMentionPicker)",
+				"if (!shouldInsertEditableMentionResult(result)) return",
+				"editor.focus()",
+				"editor.update(() =>",
+				"$insertMentionAtSelection(result.name)",
+				"[editor, openMentionPicker]",
+			],
+			"EditableField mention picker selection lifecycle",
+		);
+		assertSourceTokensInOrder(
+			appSource,
+			[
+				"const editorMentionPickerRuntime = useMemo<EditorMentionPickerRuntime>(",
+				"openMentionPicker(request) {",
+				"dispatch(openMentionPickerAction(request));",
+				"<EditorMentionPickerRuntimeProvider runtime={editorMentionPickerRuntime}>",
+				"<AiAttachmentAlertRuntimeProvider",
+				"<MainContent />",
+				"<MessageBoxHost />",
+				"<DiceCalculator />",
+			],
+			"App-owned Editor mention picker runtime",
+		);
+		assert.doesNotMatch(appSource, /requestMentionSelection/);
+
+		const forbiddenEditorStoreImporters = [];
+		for (const filePath of await collectFsdSourceFiles("src/features/editor")) {
+			const source = await fs.readFile(filePath, "utf8");
+			for (const specifier of readStaticFsdSpecifiers(source)) {
+				const modulePath = resolveTestModuleSpecifierPath(filePath, specifier)
+					?.replace(/(?:\.d)?\.(?:[cm]?[jt]sx?)$/, "")
+					.toLowerCase();
+				if (
+					modulePath === "src/shared/model" ||
+					modulePath?.startsWith("src/shared/model/") ||
+					modulePath === "src/app/model" ||
+					modulePath?.startsWith("src/app/model/")
+				) {
+					forbiddenEditorStoreImporters.push([filePath, specifier]);
+				}
+			}
+		}
+		assert.deepEqual(forbiddenEditorStoreImporters, []);
+
+		for (const source of [
+			'import { openMentionPickerAction } from "../../../shared/model/index.js";',
+			'import { futureStoreFacade } from "../../../shared/model/index.js";',
+			'export { useAppDispatch as dispatch } from "../../../shared/model/index.js";',
+			'export * from "../../../shared/model/index.js";',
+			'import { appStore } from "../../../shared/model/appStore";',
+			'const model = import("/src/shared/model/AppStore.ts?version=1");',
+			'import { appStore } from "/SRC/SHARED/MODEL/AppStore.ts";',
+			'import { appStore } from "/@fs/E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'import { appStore } from "E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'const model = require("..\\\\..\\\\..\\\\shared\\\\model\\\\index.js");',
+			'import.meta.glob("../../../shared/model/appStore.ts", { eager: true });',
+			'import.meta.globEager("../../../app/model/**/*.ts");',
+			'import.meta.glob(["../../../shared/model/appStore.ts"], { eager: true });',
+			'import.meta["glob"]("../../../shared/model/appStore.ts");',
+			'import { useAppSelector } from "../../../app/model/index";',
+		]) {
+			const reports = lintFsdBoundaryRule(
+				source,
+				"src/features/editor/ui/Input.tsx",
+				FSD_EDITOR_STORE_FACADE_RULE_ID,
+			);
+			assert.equal(reports.length, 1);
+			assert.equal(reports[0].ruleId, FSD_EDITOR_STORE_FACADE_RULE_ID);
+		}
+		const mixedCaseImporterReports = lintFsdBoundaryRule(
+			'import { openMentionPickerAction } from "../../../shared/model/index.js";',
+			"SRC/FEATURES/EDITOR/ui/Input.tsx",
+			FSD_EDITOR_STORE_FACADE_RULE_ID,
+		);
+		assert.equal(mixedCaseImporterReports.length, 1);
+		assert.equal(
+			mixedCaseImporterReports[0].ruleId,
+			FSD_EDITOR_STORE_FACADE_RULE_ID,
+		);
+		assert.deepEqual(
+			lintFsdBoundaryRule(
+				'import { openMentionPickerAction } from "../../../shared/model/index.js";',
+				"src/features/ai/ui/AiAttachmentControls.tsx",
+				FSD_EDITOR_STORE_FACADE_RULE_ID,
+			),
+			[],
+		);
+		assert.match(
+			eslintSource,
+			/files: \['src\/features\/editor\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/editor-store-facade': 'error'/,
+		);
+	},
+);
+
+await run(
 	"reference preview orchestration belongs to the rules-reference feature",
 	async () => {
 		const [
@@ -9872,7 +10087,7 @@ await run(
 			"<LexicalComposer key={editorKey} initialConfig={initialConfig}>",
 			"<EditorRefPlugin editorRef={editorRef} />",
 			"<LexicalEditableField",
-			"dispatch={dispatch}",
+			"openMentionPicker={openMentionPicker}",
 			"enableHistory={enableHistory}",
 			"isActive={isActive}",
 			"isDisabled={isDisabled}",
@@ -9911,7 +10126,7 @@ await run(
 
 		const controller = source.slice(controllerStart);
 		const controllerTokens = [
-			"useAppDispatch()",
+			"const { openMentionPicker } = useEditorMentionPickerRuntime();",
 			"useContext(EntityLinkContext)",
 			"useContext(EntityLinkResolverContext)",
 			"getEditableFieldMarkdownValue(value)",
@@ -10110,12 +10325,12 @@ await run(
 			"if (selectedText)",
 			"$insertMentionAtSelection(selectedText)",
 			"return",
-			"await requestMentionSelection(dispatch)",
+			"await requestMentionSelection(openMentionPicker)",
 			"if (!shouldInsertEditableMentionResult(result)) return",
 			"editor.focus()",
 			"editor.update(() =>",
 			"$insertMentionAtSelection(result.name)",
-			"[dispatch, editor]",
+			"[editor, openMentionPicker]",
 		];
 		previousIndex = -1;
 		for (const token of handlerTokens) {
@@ -10128,7 +10343,7 @@ await run(
 		}
 		assert.equal((handler.match(/\$getSelection\(\)/g) ?? []).length, 1);
 		assert.equal(
-			(handler.match(/requestMentionSelection\(dispatch\)/g) ?? []).length,
+			(handler.match(/requestMentionSelection\(openMentionPicker\)/g) ?? []).length,
 			1,
 		);
 		assert.equal(
@@ -11199,7 +11414,7 @@ await run("Input keyboard execution preserves controller effect ownership", asyn
 	const mentionHandler = source.slice(mentionHandlerStart, mentionHandlerEnd);
 	const mentionHandlerTokens = [
 		"getInputSelectionState(event.currentTarget)",
-		"await requestMentionSelection(dispatch)",
+		"await requestMentionSelection(openMentionPicker)",
 		"const insertion = getInputMentionInsertion(",
 		"if (!insertion) return",
 		"props.onChange?.(createInputChangeEvent(event, insertion.value))",
@@ -31524,8 +31739,8 @@ await run("mention picker helper resolves selected and cancelled states", async 
 	const { requestMentionSelection } = await import("../src/features/editor/model.js");
 
 	let payload = null;
-	const selectedPromise = requestMentionSelection((action) => {
-		payload = action.payload;
+	const selectedPromise = requestMentionSelection((request) => {
+		payload = request;
 	});
 	payload.select("NPC Name");
 	assert.deepEqual(await selectedPromise, {
@@ -31533,8 +31748,8 @@ await run("mention picker helper resolves selected and cancelled states", async 
 		name: "NPC Name",
 	});
 
-	const cancelledPromise = requestMentionSelection((action) => {
-		payload = action.payload;
+	const cancelledPromise = requestMentionSelection((request) => {
+		payload = request;
 	});
 	payload.cancel();
 	assert.deepEqual(await cancelledPromise, { status: "cancelled" });
@@ -49648,7 +49863,10 @@ await run(
 		assert.match(editableFieldSource, /\$readMarkdownValue/);
 		assert.match(editableFieldSource, /MentionNode extends TextNode/);
 		assert.equal(editableFieldSource.includes("$replaceMentionWithText"), false);
-		assert.match(editableFieldSource, /requestMentionSelection\(dispatch\)/);
+		assert.match(
+			editableFieldSource,
+			/requestMentionSelection\(openMentionPicker\)/,
+		);
 		assert.match(
 			mentionSelectionPolicySource,
 			/offset <= MENTION_BOUNDARY\.length/,
