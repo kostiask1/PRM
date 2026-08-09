@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { campaignApi } from "./entities/campaign/index.js";
 import { backupApi } from "./features/backup/index.js";
@@ -22,6 +22,10 @@ import {
 } from "./features/editor/ui/index.js";
 import { SimplifiedNotesProvider } from "./features/notes/ui/index.js";
 import {
+	RulesReferenceRuntimeProvider,
+	type RulesReferenceRuntime,
+} from "./features/rules-reference/index.js";
+import {
 	EntityLinkContext,
 	EntityLinkResolverContext,
 	EntityModal,
@@ -37,6 +41,7 @@ import {
 	closeMentionPickerAction,
 	confirm,
 	requestCampaignsReloadAction,
+	requestRulesReferenceNavigationAction,
 	setLanguageAction,
 	setCampaignsAction,
 	setUiSettingsAction,
@@ -104,6 +109,17 @@ export default function App() {
 		(store) => store.ui.simplifiedNotes,
 	);
 	const syncEvent = useAppSelector((store) => store.sync.event);
+	const rulesReferenceRuntime = useMemo<RulesReferenceRuntime>(
+		() => ({
+			navigate(tab, name) {
+				dispatch(requestRulesReferenceNavigationAction(tab, name));
+			},
+			reportError(error) {
+				dispatch(alert(error));
+			},
+		}),
+		[dispatch],
+	);
 
 	const loadCampaigns = useCallback(async () => {
 		try {
@@ -397,13 +413,14 @@ export default function App() {
 	};
 
 	return (
-		<SimplifiedNotesProvider
-			simplifiedNotesEnabled={simplifiedNotesEnabled}
-		>
-			<EditableFieldEntityLinkProvider
-				runtime={APP_EDITABLE_FIELD_ENTITY_LINK_RUNTIME}
+		<RulesReferenceRuntimeProvider runtime={rulesReferenceRuntime}>
+			<SimplifiedNotesProvider
+				simplifiedNotesEnabled={simplifiedNotesEnabled}
 			>
-				<div className="App" data-lang={currentLanguage}>
+				<EditableFieldEntityLinkProvider
+					runtime={APP_EDITABLE_FIELD_ENTITY_LINK_RUNTIME}
+				>
+					<div className="App" data-lang={currentLanguage}>
 					<CampaignEntityModalProvider
 						CharacterCard={CharacterCard}
 						LocationCard={LocationCard}
@@ -471,8 +488,9 @@ export default function App() {
 							SpellsBrowser={SpellsBrowser}
 						/>
 					</CampaignEntityModalProvider>
-				</div>
-			</EditableFieldEntityLinkProvider>
-		</SimplifiedNotesProvider>
+					</div>
+				</EditableFieldEntityLinkProvider>
+			</SimplifiedNotesProvider>
+		</RulesReferenceRuntimeProvider>
 	);
 }

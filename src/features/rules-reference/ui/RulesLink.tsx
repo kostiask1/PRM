@@ -10,11 +10,6 @@ import {
 	getSpellMeta,
 } from "../../../entities/reference/index.js";
 import { classNames, lang } from "../../../shared/lib/index.js";
-import {
-	alert,
-	requestRulesReferenceNavigation,
-	useAppDispatch,
-} from "../../../shared/model/index.js";
 import { Tooltip } from "../../../shared/ui/index.js";
 import {
 	buildTooltipTextParts,
@@ -43,6 +38,7 @@ import type {
 	RulesLinkProps,
 	RulesLinkRollDiceSlot,
 } from "./rulesLinkComposition.ts";
+import { useRulesReferenceRuntime } from "./RulesReferenceRuntime.tsx";
 import "../../../assets/components/RulesLink.css";
 
 const RULES_REFERENCE_RESOLVERS: RulesReferenceResolvers = {
@@ -279,7 +275,7 @@ function RulesLink({
 	type = "spell",
 	RollDice,
 }: RulesLinkInternalProps) {
-	const dispatch = useAppDispatch();
+	const { navigate, reportError } = useRulesReferenceRuntime();
 	const [tooltipPreview, setTooltipPreview] =
 		useState<RulesReferencePreview | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
@@ -295,12 +291,10 @@ function RulesLink({
 
 	const showLoadError = (error: unknown) => {
 		console.error("Failed to load rule reference", error);
-		dispatch(
-			alert({
-				title: lang.t("Error"),
-				message: getErrorMessage(error),
-			}),
-		);
+		reportError({
+			title: lang.t("Error"),
+			message: getErrorMessage(error),
+		});
 	};
 
 	const handleClick = async () => {
@@ -310,7 +304,7 @@ function RulesLink({
 				referenceName,
 				RULES_REFERENCE_RESOLVERS,
 			);
-			if (target) requestRulesReferenceNavigation(target.tab, target.name);
+			if (target) navigate(target.tab, target.name);
 		} catch (error) {
 			showLoadError(error);
 		}

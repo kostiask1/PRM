@@ -1,6 +1,12 @@
 export {
 	createRulesLinkComponent,
 } from "./ui/RulesLink.tsx";
+export {
+	RulesReferenceRuntimeProvider,
+	type RulesReferenceErrorNotice,
+	type RulesReferenceRuntime,
+	type RulesReferenceRuntimeProviderProps,
+} from "./ui/RulesReferenceRuntime.tsx";
 export type {
 	RulesLinkComponent,
 	RulesLinkCompositionSlots,
@@ -13,4 +19,3 @@ export type {
 	RulesReferenceType,
 	TooltipTextPart,
 } from "./model.d.ts";
-export { openRulesReferenceModal } from "./model/openRulesReferenceModal.ts";

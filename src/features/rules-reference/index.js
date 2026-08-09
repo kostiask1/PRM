@@ -1,2 +1,2 @@
 export { createRulesLinkComponent } from "./ui/RulesLink.tsx";
-export { openRulesReferenceModal } from "./model/openRulesReferenceModal.ts";
+export { RulesReferenceRuntimeProvider } from "./ui/RulesReferenceRuntime.tsx";

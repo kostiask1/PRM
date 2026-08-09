@@ -1489,6 +1489,8 @@ const FSD_CAMPAIGN_ENTITY_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/campaign-entity-store-facade";
 const FSD_ENCOUNTER_EDITOR_STORE_FACADE_RULE_ID =
 	"fsd-boundaries/encounter-editor-store-facade";
+const FSD_RULES_REFERENCE_STORE_FACADE_RULE_ID =
+	"fsd-boundaries/rules-reference-store-facade";
 
 function lintFsdBoundaryRule(
 	source,
@@ -4378,7 +4380,7 @@ await run(
 				"setTooltipPreview(null);",
 				"setIsLoading(false);",
 				"resolveRulesLinkNavigation(",
-				"requestRulesReferenceNavigation(target.tab, target.name)",
+				"navigate(target.tab, target.name)",
 				"loadRulesLinkPreview(",
 				"if (activeTooltipLoadRef.current === loadId)",
 			],
@@ -6131,6 +6133,199 @@ await run(
 		assert.match(
 			eslintSource,
 			/files: \['src\/features\/encounter-editor\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/encounter-editor-store-facade': 'error'/,
+		);
+	},
+);
+
+await run(
+	"Phase 142 gives Rules Reference an injected navigation runtime",
+	async () => {
+		const [
+			runtimeSource,
+			rulesLinkSource,
+			runtimeEntry,
+			typeEntry,
+			appSource,
+			sidebarSource,
+			eslintSource,
+		] = await Promise.all([
+			fs.readFile(
+				"src/features/rules-reference/ui/RulesReferenceRuntime.tsx",
+				"utf8",
+			),
+			fs.readFile(
+				"src/features/rules-reference/ui/RulesLink.tsx",
+				"utf8",
+			),
+			fs.readFile("src/features/rules-reference/index.js", "utf8"),
+			fs.readFile("src/features/rules-reference/index.d.ts", "utf8"),
+			fs.readFile("src/App.tsx", "utf8"),
+			fs.readFile("src/widgets/sidebar/ui/Sidebar.tsx", "utf8"),
+			fs.readFile("eslint.config.js", "utf8"),
+		]);
+
+		assert.match(
+			runtimeSource,
+			/export interface RulesReferenceRuntime \{\s*navigate\(\s*tab: RulesReferenceNavigationTarget\["tab"\],\s*name: string,\s*\): void;\s*reportError\(error: RulesReferenceErrorNotice\): void;/,
+		);
+		assertExportedInterfaceFragments(
+			runtimeSource,
+			"RulesReferenceRuntimeProviderProps",
+			[
+				"runtime: RulesReferenceRuntime;",
+				"children?: ReactNode;",
+			],
+		);
+		assertSourceTokensInOrder(
+			runtimeSource,
+			[
+				"createContext<RulesReferenceRuntime | null>(null)",
+				"<RulesReferenceRuntimeContext.Provider value={runtime}>",
+				"const runtime = useContext(RulesReferenceRuntimeContext);",
+				'"RulesReferenceRuntimeProvider is required to render rules-reference controls"',
+			],
+			"Rules Reference runtime provider",
+		);
+		assert.match(
+			runtimeEntry,
+			/RulesReferenceRuntimeProvider/,
+		);
+		assertPublicTypeSurface(typeEntry, [
+			"RulesReferenceErrorNotice",
+			"RulesReferenceRuntime",
+			"RulesReferenceRuntimeProviderProps",
+		]);
+		assert.doesNotMatch(
+			`${runtimeEntry}\n${typeEntry}`,
+			/openRulesReferenceModal/,
+		);
+		await assert.rejects(
+			fs.access(
+				"src/features/rules-reference/model/openRulesReferenceModal.ts",
+			),
+		);
+		assert.doesNotMatch(
+			rulesLinkSource,
+			/shared\/model|app\/model|useAppDispatch|dispatch\(/,
+		);
+		assertSourceTokensInOrder(
+			rulesLinkSource,
+			[
+				"const { navigate, reportError } = useRulesReferenceRuntime();",
+				"const showLoadError = (error: unknown) => {",
+				'console.error("Failed to load rule reference", error);',
+				"reportError({",
+				'title: lang.t("Error"),',
+				"const handleClick = async () => {",
+				"await resolveRulesLinkNavigation(",
+				"if (target) navigate(target.tab, target.name);",
+			],
+			"Rules Reference runtime error and navigation order",
+		);
+		assertSourceTokensInOrder(
+			appSource,
+			[
+				"const rulesReferenceRuntime = useMemo<RulesReferenceRuntime>(",
+				"navigate(tab, name) {",
+				"dispatch(requestRulesReferenceNavigationAction(tab, name));",
+				"reportError(error) {",
+				"dispatch(alert(error));",
+				"<RulesReferenceRuntimeProvider runtime={rulesReferenceRuntime}>",
+				"<SimplifiedNotesProvider",
+				"<MainContent />",
+				"<RulesReferenceModalHost",
+			],
+			"App-owned Rules Reference runtime",
+		);
+		const sidebarRulesHandler = getRequiredSourceSlice(
+			sidebarSource,
+			"const handleOpenRulesReference",
+			"const handleOpenPlayerQuestions",
+		);
+		assert.doesNotMatch(sidebarRulesHandler, /openRulesReferenceModal/);
+		assertSourceTokensInOrder(
+			sidebarRulesHandler,
+			[
+				"onClose?.();",
+				"dispatch(requestRulesReferenceNavigationAction(initialTab, \"\", options));",
+			],
+			"Sidebar direct rules-navigation request",
+		);
+		assert.match(
+			sidebarSource,
+			/requestRulesReferenceNavigationAction,\s*useAppDispatch/,
+		);
+
+		const forbiddenRulesReferenceStoreImporters = [];
+		for (const filePath of await collectFsdSourceFiles(
+			"src/features/rules-reference",
+		)) {
+			const source = await fs.readFile(filePath, "utf8");
+			for (const specifier of readStaticFsdSpecifiers(source)) {
+				const modulePath = resolveTestModuleSpecifierPath(filePath, specifier)
+					?.replace(/(?:\.d)?\.(?:[cm]?[jt]sx?)$/, "")
+					.toLowerCase();
+				if (
+					modulePath === "src/shared/model" ||
+					modulePath?.startsWith("src/shared/model/") ||
+					modulePath === "src/app/model" ||
+					modulePath?.startsWith("src/app/model/")
+				) {
+					forbiddenRulesReferenceStoreImporters.push([filePath, specifier]);
+				}
+			}
+		}
+		assert.deepEqual(forbiddenRulesReferenceStoreImporters, []);
+
+		for (const source of [
+			'import { requestRulesReferenceNavigation } from "../../../shared/model/index.js";',
+			'import { futureStoreFacade } from "../../../shared/model/index.js";',
+			'export { useAppDispatch as dispatch } from "../../../shared/model/index.js";',
+			'export * from "../../../shared/model/index.js";',
+			'import { appStore } from "../../../shared/model/appStore";',
+			'const model = import("/src/shared/model/AppStore.ts?version=1");',
+			'import { appStore } from "/SRC/SHARED/MODEL/AppStore.ts";',
+			'import { appStore } from "/@fs/E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'import { appStore } from "E:/Web/dev/PRM/src/shared/model/appStore.ts";',
+			'const model = require("..\\\\..\\\\..\\\\shared\\\\model\\\\index.js");',
+			'import.meta.glob("../../../shared/model/appStore.ts", { eager: true });',
+			'import.meta.globEager("../../../app/model/**/*.ts");',
+			'import.meta.glob(["../../../shared/model/appStore.ts"], { eager: true });',
+			'import.meta["glob"]("../../../shared/model/appStore.ts");',
+			'import { useAppSelector } from "../../../app/model/index";',
+		]) {
+			const reports = lintFsdBoundaryRule(
+				source,
+				"src/features/rules-reference/ui/RulesLink.tsx",
+				FSD_RULES_REFERENCE_STORE_FACADE_RULE_ID,
+			);
+			assert.equal(reports.length, 1);
+			assert.equal(
+				reports[0].ruleId,
+				FSD_RULES_REFERENCE_STORE_FACADE_RULE_ID,
+			);
+		}
+		const mixedCaseImporterReports = lintFsdBoundaryRule(
+			'import { requestRulesReferenceNavigation } from "../../../shared/model/index.js";',
+			"SRC/FEATURES/RULES-REFERENCE/ui/RulesLink.tsx",
+			FSD_RULES_REFERENCE_STORE_FACADE_RULE_ID,
+		);
+		assert.equal(mixedCaseImporterReports.length, 1);
+		assert.equal(
+			mixedCaseImporterReports[0].ruleId,
+			FSD_RULES_REFERENCE_STORE_FACADE_RULE_ID,
+		);
+		assert.deepEqual(
+			lintFsdBoundaryRule(
+				'import { requestRulesReferenceNavigation } from "../../../shared/model/index.js";',
+				"src/features/ai/ui/AiPromptComposer.tsx",
+				FSD_RULES_REFERENCE_STORE_FACADE_RULE_ID,
+			),
+			[],
+		);
+		assert.match(
+			eslintSource,
+			/files: \['src\/features\/rules-reference\/\*\*\/\*\.\{js,jsx,ts,tsx\}'\],\s*rules: \{\s*'fsd-boundaries\/rules-reference-store-facade': 'error'/,
 		);
 	},
 );
@@ -32977,7 +33172,7 @@ await run("parser renders dice and creature tags as interactive components", asy
 	assert.match(rulesLinkModelSource, /extractContentTokens/);
 	assert.match(rulesLinkSource, /<RollDice/);
 	assert.match(rulesLinkModelSource, /type:\s*"recharge"/);
-	assert.match(rulesLinkSource, /requestRulesReferenceNavigation\(target\.tab, target\.name\)/);
+	assert.match(rulesLinkSource, /navigate\(target\.tab, target\.name\)/);
 	assert.match(rulesLinkModelSource, /function getCreatureReferenceName/);
 	assert.doesNotMatch(rulesLinkSource, /onNavigate/);
 	assert.doesNotMatch(rulesReferenceSource, /import Bestiary from/);

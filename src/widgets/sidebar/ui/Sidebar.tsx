@@ -13,12 +13,12 @@ import {
 	type BackupImportStrategy,
 } from "../../../features/backup/index.js";
 import { ImageGallery } from "../../../features/images/index.js";
-import { openRulesReferenceModal } from "../../../features/rules-reference/index.js";
 import { downloadBlob, lang } from "../../../shared/lib/index.js";
 import {
 	alert,
 	closeActiveModal,
 	openModalRequest,
+	requestRulesReferenceNavigationAction,
 	useAppDispatch,
 	useAppSelector,
 } from "../../../shared/model/index.js";
@@ -183,7 +183,7 @@ export default function Sidebar({
 		options: Record<string, unknown> = {},
 	) => {
 		onClose?.();
-		openRulesReferenceModal(initialTab, "", options);
+		dispatch(requestRulesReferenceNavigationAction(initialTab, "", options));
 	};
 
 	const handleOpenPlayerQuestions = () => {
